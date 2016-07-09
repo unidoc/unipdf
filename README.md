@@ -7,30 +7,45 @@ of the FoxyUtils.com website.
 This library is used to power many of the services offered by the FoxyUtils.com website. The goal is to extend it to
 eventually support all of the offered services.
 
+[![GoDoc](https://godoc.org/github.com/unidoc/unidoc?status.svg)](https://godoc.org/github.com/unidoc/unidoc)
+
 ## Getting the code
+
 Open source users can use the master branch.
-Commercial users get a special URL with their license key. Only the commercial URLs are eligible for commercial support.
+Commercial users get a special URL with their customer id. Only the commercial URLs are eligible for commercial support.
 
-## Features
+## Overview
 
- * Read PDF metadata
+ * Read ane extract PDF metadata
  * Merge PDF
  * Split PDF
  * Protect PDF
  * Unlock PDF
+ * Self contained with no external dependencies
+ * Developer friendly
 
-This package is fully self contained and written in pure-Go.
+## Examples
+
+See the [examples](https://github.com/unidoc/unidoc/tree/master/examples) folder.
+
 
 ## Roadmap
+
+The following features are on the roadmap, these are all subjects to change.
+
  * Compress PDF
  * Create PDF (high level API)
  * Fill out Forms
  * Create Forms
  * Bindings for Python (and C#/Java if there is interest)
+ * Create Doc and DocX files
+ * Convert PDF to Word
+ * OCR Engine
+ * And many more...
 
-## Copying
+## Copying/License
 
-UniDoc source code is available under GNU Affero General Public License/FOSS License Exception, see LICENSE.txt in the source.
+UniDoc source code is available under GNU Affero General Public License/FOSS License Exception, see [LICENSE.txt](https://raw.githubusercontent.com/unidoc/unidoc/master/LICENSE.txt).
 Alternative commercial licensing is also available by filling out our [Price Quote](https://docs.google.com/a/owlglobal.io/forms/d/1m3ZHBAhQlo95IQoKg8gbi9c5hfFbW3VMziqH5DagxKo/viewform).
 
 ## Contributing
