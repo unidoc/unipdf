@@ -4,11 +4,11 @@
  */
 
 /*
- * Splits PDF files, tries to decrypt encrypted documents with an empty password
- * as best effort.
+ * Unlocks PDF files, tries to decrypt encrypted documents with the given password,
+ * if that fails it tries an empty password as best effort.
  *
- * Run as: go run pdf_split.go page_from page_to output.pdf input.pdf
- * To get only page 1 and 2 from input.pdf and save as output.pdf run: go run pdf_split.go 1 2 output.pdf input.pdf
+ * Run as: go run pdf_unlock.go password output.pdf input.pdf
+ * To unlock input.pdf with password 'test' and save as output.pdf run: go run pdf_unlock.go test output.pdf input.pdf
  */
 
 package main
@@ -16,7 +16,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	unicommon "github.com/unidoc/unidoc/common"
 	unilicense "github.com/unidoc/unidoc/license"
@@ -40,36 +39,24 @@ func initUniDoc(licenseKey string) error {
 }
 
 func main() {
-	if len(os.Args) < 5 {
-		fmt.Printf("Requires at least 4 arguments: page_from page_to output.pdf input.pdf\n")
-		fmt.Printf("Usage: To get only page 1 and 2 from input.pdf and save as output.pdf run: go run pdf_split.go 1 2 output.pdf input.pdf\n")
+	if len(os.Args) < 4 {
+		fmt.Printf("Requires at least 3 arguments: password output.pdf input.pdf\n")
+		fmt.Printf("Usage: To unlock input.pdf with password 'test' and save as output.pdf run: go run pdf_unlock.go test output.pdf input.pdf")
 		os.Exit(1)
 	}
 
-	strSplitFrom := os.Args[1]
-	splitFrom, err := strconv.Atoi(strSplitFrom)
+	password := os.Args[1]
+
+	outputPath := os.Args[2]
+	inputPath := os.Args[3]
+
+	err := initUniDoc("")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	strSplitTo := os.Args[2]
-	splitTo, err := strconv.Atoi(strSplitTo)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	outputPath := os.Args[3]
-	inputPath := os.Args[4]
-
-	err = initUniDoc("")
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	err = splitPdf(inputPath, outputPath, splitFrom, splitTo)
+	err = unlockPdf(inputPath, outputPath, password)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -78,7 +65,7 @@ func main() {
 	fmt.Printf("Complete, see output file: %s\n", outputPath)
 }
 
-func splitPdf(inputPath string, outputPath string, pageFrom int, pageTo int) error {
+func unlockPdf(inputPath string, outputPath string, password string) error {
 	pdfWriter := unipdf.NewPdfWriter()
 
 	f, err := os.Open(inputPath)
@@ -98,10 +85,15 @@ func splitPdf(inputPath string, outputPath string, pageFrom int, pageTo int) err
 		return err
 	}
 
+	// Try decrypting both with given password and an empty one if that fails.
 	if isEncrypted {
-		_, err = pdfReader.Decrypt([]byte(""))
+		_, err = pdfReader.Decrypt([]byte(password))
 		if err != nil {
-			return err
+			// Fails, try fallback with empty password.
+			_, err = pdfReader.Decrypt([]byte(""))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -110,12 +102,8 @@ func splitPdf(inputPath string, outputPath string, pageFrom int, pageTo int) err
 		return err
 	}
 
-	if numPages < pageTo {
-		return err
-	}
-
-	for i := pageFrom; i <= pageTo; i++ {
-		pageNum := i
+	for i := 0; i < numPages; i++ {
+		pageNum := i + 1
 
 		page, err := pdfReader.GetPage(pageNum)
 		if err != nil {
