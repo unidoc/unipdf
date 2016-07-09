@@ -41,6 +41,17 @@ type PdfCrypt struct {
 	stringFilter string
 }
 
+type AccessPermissions struct {
+	Printing          bool
+	Modify            bool
+	ExtractGraphics   bool
+	Annotate          bool
+	FillForms         bool
+	DisabilityExtract bool // not clear what this means!
+	RotateInsert      bool
+	LimitPrintQuality bool
+}
+
 const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 	"\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C" +
 	"\xA9\xFE\x64\x53\x69\x7A"
@@ -253,6 +264,67 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	crypter.id0 = string(id0)
 
 	return crypter, nil
+}
+
+func (this *PdfCrypt) GetAccessPermissions() AccessPermissions {
+	perms := AccessPermissions{}
+
+	P := this.P
+	if P&(1<<2) > 0 {
+		perms.Printing = true
+	}
+	if P&(1<<3) > 0 {
+		perms.Modify = true
+	}
+	if P&(1<<4) > 0 {
+		perms.ExtractGraphics = true
+	}
+	if P&(1<<5) > 0 {
+		perms.Annotate = true
+	}
+	if P&(1<<8) > 0 {
+		perms.FillForms = true
+	}
+	if P&(1<<9) > 0 {
+		perms.DisabilityExtract = true
+	}
+	if P&(1<<10) > 0 {
+		perms.RotateInsert = true
+	}
+	if P&(1<<11) > 0 {
+		perms.LimitPrintQuality = true
+	}
+	return perms
+}
+
+func (perms AccessPermissions) GetP() int32 {
+	var P int32 = 0
+
+	if perms.Printing { // bit 3
+		P |= (1 << 2)
+	}
+	if perms.Modify { // bit 4
+		P |= (1 << 3)
+	}
+	if perms.ExtractGraphics { // bit 5
+		P |= (1 << 4)
+	}
+	if perms.Annotate { // bit 6
+		P |= (1 << 5)
+	}
+	if perms.FillForms {
+		P |= (1 << 8) // bit 9
+	}
+	if perms.DisabilityExtract {
+		P |= (1 << 9) // bit 10, what means?
+	}
+	if perms.RotateInsert {
+		P |= (1 << 10) // bit 11
+	}
+	if perms.LimitPrintQuality {
+		P |= (1 << 11) // bit 12
+	}
+	return P
 }
 
 // Check whether the specified password can be used to decrypt the

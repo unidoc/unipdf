@@ -415,8 +415,12 @@ func (this *PdfWriter) updateObjectNumbers() {
 	}
 }
 
+type EncryptOptions struct {
+	Permissions AccessPermissions
+}
+
 // Encrypt the output file with a specified user/owner password.
-func (this *PdfWriter) Encrypt(userPass, ownerPass []byte) error {
+func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
 	crypter := PdfCrypt{}
 	this.crypter = &crypter
 
@@ -431,6 +435,9 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte) error {
 	crypter.R = 3
 	crypter.length = 128
 	crypter.encryptMetadata = true
+	if options != nil {
+		crypter.P = int(options.Permissions.GetP())
+	}
 
 	// Prepare the ID object for the trailer.
 	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
