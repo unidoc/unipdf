@@ -39,8 +39,8 @@ func initUniDoc(licenseKey string) error {
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Printf("Requires at least 3 arguments: output_path and 2 input paths")
-		fmt.Printf("Usage: go run pdf_merge.go output.pdf input1.pdf input2.pdf input3.pdf")
+		fmt.Printf("Requires at least 3 arguments: output_path and 2 input paths\n")
+		fmt.Printf("Usage: go run pdf_merge.go output.pdf input1.pdf input2.pdf input3.pdf\n")
 		os.Exit(1)
 	}
 
@@ -59,7 +59,6 @@ func main() {
 		inputPaths = append(inputPaths, arg)
 	}
 
-	// Set the commercial license if you are a commercial customer.
 	err := initUniDoc("")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
