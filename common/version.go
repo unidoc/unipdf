@@ -3,6 +3,7 @@
  * file 'LICENSE.txt', which is part of this source code package.
  */
 
+// Package common contains common properties used by the subpackages.
 package common
 
 import (

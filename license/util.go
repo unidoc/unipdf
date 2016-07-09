@@ -3,6 +3,7 @@
  * file 'LICENSE.txt', which is part of this source code package.
  */
 
+// Package license contains customer opensource and commercial license handling.
 package license
 
 // Defaults to the open source license.
