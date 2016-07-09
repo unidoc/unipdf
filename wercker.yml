@@ -36,11 +36,10 @@ build:
     - script:
         name: go build
         code: |
-          go build ./...
+          go build $(go list ./... | grep -v examples)
 
     # Test the project
     - script:
         name: go test
         code: |
-          go test ./...
-
+          go test $(go list ./... | grep -v examples)
