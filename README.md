@@ -7,6 +7,7 @@ of the FoxyUtils.com website.
 This library is used to power many of the services offered by the FoxyUtils.com website. The goal is to extend it to
 eventually support all of the offered services.
 
+[![wercker status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
 [![GoDoc](https://godoc.org/github.com/unidoc/unidoc?status.svg)](https://godoc.org/github.com/unidoc/unidoc)
 
 ## Getting the code
