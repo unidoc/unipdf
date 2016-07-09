@@ -4,11 +4,16 @@
  */
 
 /*
- * Unlocks PDF files, tries to decrypt encrypted documents with the given password,
- * if that fails it tries an empty password as best effort.
+ * Protects PDF files by setting a password on it. This example both sets user
+ * and opening password and hard-codes the protection bits here, but easily adjusted
+ * in the code here although not on the command line.
  *
- * Run as: go run pdf_unlock.go password output.pdf input.pdf
- * To unlock input.pdf with password 'test' and save as output.pdf run: go run pdf_unlock.go test output.pdf input.pdf
+ *
+ * When reading the input it tries to decrypt with empty password if the input file
+ * is encrypted, if that fails we fail also.
+ *
+ * Run as: go run pdf_protect.go password output.pdf input.pdf
+ * To protect input.pdf with password 'test' and save as output.pdf run: go run pdf_protect.go test output.pdf input.pdf
  */
 
 package main
@@ -41,7 +46,7 @@ func initUniDoc(licenseKey string) error {
 func main() {
 	if len(os.Args) < 4 {
 		fmt.Printf("Requires at least 3 arguments: password output.pdf input.pdf\n")
-		fmt.Printf("Usage: To unlock input.pdf with password 'test' and save as output.pdf run: go run pdf_unlock.go test output.pdf input.pdf\n")
+		fmt.Printf("Usage: To protect input.pdf with password 'test' and save as output.pdf run: go run pdf_protect.go test output.pdf input.pdf\n")
 		os.Exit(1)
 	}
 
@@ -56,7 +61,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = unlockPdf(inputPath, outputPath, password)
+	err = protectPdf(inputPath, outputPath, password)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -65,8 +70,32 @@ func main() {
 	fmt.Printf("Complete, see output file: %s\n", outputPath)
 }
 
-func unlockPdf(inputPath string, outputPath string, password string) error {
+func protectPdf(inputPath string, outputPath string, password string) error {
 	pdfWriter := unipdf.NewPdfWriter()
+
+	// Feel free to change these values when testing.
+	allowPrinting := false
+	allowModifications := true
+	allowCopying := true
+	allowForm := false
+
+	permissions := unipdf.AccessPermissions{}
+	permissions.Printing = allowPrinting
+	permissions.Modify = allowModifications
+	permissions.Annotate = allowModifications
+	permissions.RotateInsert = allowModifications
+	permissions.ExtractGraphics = allowCopying
+	permissions.DisabilityExtract = allowCopying
+	permissions.FillForms = allowForm
+	permissions.LimitPrintQuality = false
+
+	encryptOptions := &unipdf.EncryptOptions{}
+	encryptOptions.Permissions = permissions
+
+	err := pdfWriter.Encrypt([]byte(password), []byte(password), encryptOptions)
+	if err != nil {
+		return err
+	}
 
 	f, err := os.Open(inputPath)
 	if err != nil {
