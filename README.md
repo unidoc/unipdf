@@ -51,7 +51,7 @@ The following features are on the roadmap, these are all subjects to change.
 ## Copying/License
 
 UniDoc source code is available under GNU Affero General Public License/FOSS License Exception, see [LICENSE.txt](https://raw.githubusercontent.com/unidoc/unidoc/master/LICENSE.txt).
-Alternative commercial licensing is also available [here](https://unidoc.io/pricing).
+Alternative commercial licensing is also available [here](http://unidoc.io/pricing).
 
 ## Contributing
 
