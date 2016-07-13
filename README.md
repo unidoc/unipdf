@@ -1,6 +1,6 @@
 # UniDoc
 
-[UniDoc](http://unidoc.io) is a fast and powerful package for document manipulation starting off as a PDF
+[UniDoc](http://unidoc.io) is a fast and powerful open source library for document manipulation starting off as a PDF
 toolkit. This is a commercial library written and supported by the owners
 of the FoxyUtils.com website.
 
