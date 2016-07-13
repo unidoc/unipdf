@@ -15,20 +15,24 @@ eventually support all of the offered services.
 Open source users can use the master branch.
 Commercial users get a special URL with their customer id. Only the commercial URLs are eligible for commercial support.
 
+## Installation
+~~~
+go get github.com/unidoc/unidoc
+~~~
+
 ## Overview
 
- * Read ane extract PDF metadata
- * Merge PDF
- * Split PDF
- * Protect PDF
- * Unlock PDF
+ * Read and extract PDF metadata
+ * Merge PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_merge.go)).
+ * Split PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_split.go)).
+ * Protect PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_protect.go)).
+ * Unlock PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_unlock.go)).
  * Self contained with no external dependencies
  * Developer friendly
 
 ## Examples
 
 See the [examples](https://github.com/unidoc/unidoc/tree/master/examples) folder.
-
 
 ## Roadmap
 
@@ -47,7 +51,7 @@ The following features are on the roadmap, these are all subjects to change.
 ## Copying/License
 
 UniDoc source code is available under GNU Affero General Public License/FOSS License Exception, see [LICENSE.txt](https://raw.githubusercontent.com/unidoc/unidoc/master/LICENSE.txt).
-Alternative commercial licensing is also available by filling out our [Price Quote](https://docs.google.com/a/owlglobal.io/forms/d/1m3ZHBAhQlo95IQoKg8gbi9c5hfFbW3VMziqH5DagxKo/viewform).
+Alternative commercial licensing is also available [here](https://unidoc.io/pricing).
 
 ## Contributing
 

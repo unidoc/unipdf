@@ -51,7 +51,7 @@ func NewPdfWriter() PdfWriter {
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
 	infoDict[PdfObjectName("Producer")] = makeString(producer)
-	infoDict[PdfObjectName("Creator")] = makeString("FoxyUtils Online PDF http://foxyutils.com")
+	infoDict[PdfObjectName("Creator")] = makeString("FoxyUtils Online PDF https://foxyutils.com")
 	infoObj := PdfIndirectObject{}
 	infoObj.PdfObject = &infoDict
 	w.infoObj = &infoObj
