@@ -16,9 +16,18 @@ import (
 // Supports FlateDecode, ASCIIHexDecode.
 func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 	log.Debug("Decode stream")
-
 	log.Debug("filter %s", (*obj).PdfObjectDictionary)
-	method := (*(obj.PdfObjectDictionary))["Filter"].(*PdfObjectName)
+
+	filterObj, hasFilter := (*(obj.PdfObjectDictionary))["Filter"]
+	if !hasFilter {
+		// No filter, return raw data back.
+		return obj.Stream, nil
+	}
+
+	method, ok := filterObj.(*PdfObjectName)
+	if !ok {
+		return nil, fmt.Errorf("Filter not a Name object")
+	}
 	if *method == "FlateDecode" {
 		// Refactor to a separate function.
 		// Revamp this support to handle TIFF predictor (2).
