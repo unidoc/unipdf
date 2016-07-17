@@ -191,8 +191,15 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	common.Log.Debug("%s", page)
 	common.Log.Debug("%s", page.PdfObject)
 
-	pDict := page.PdfObject.(*PdfObjectDictionary)
-	otype := (*pDict)["Type"].(*PdfObjectName)
+	pDict, ok := page.PdfObject.(*PdfObjectDictionary)
+	if !ok {
+		return errors.New("Page object should be a dictionary")
+	}
+
+	otype, ok := (*pDict)["Type"].(*PdfObjectName)
+	if !ok {
+		return errors.New("Page should have a Type key with a value of type name")
+	}
 	if *otype != "Page" {
 		return errors.New("Type != Page (Required).")
 	}
@@ -232,10 +239,20 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	page.PdfObject = pDict
 
 	// Add to Pages.
-	pagesDict := this.pages.PdfObject.(*PdfObjectDictionary)
-	kids := (*pagesDict)["Kids"].(*PdfObjectArray)
+	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
+	if !ok {
+		return errors.New("Invalid Pages obj (not a dict)")
+	}
+	kids, ok := (*pagesDict)["Kids"].(*PdfObjectArray)
+	if !ok {
+		return errors.New("Invalid Pages Kids obj (not an array)")
+	}
 	*kids = append(*kids, page)
-	pageCount := (*pagesDict)["Count"].(*PdfObjectInteger)
+	pageCount, ok := (*pagesDict)["Count"].(*PdfObjectInteger)
+	if !ok {
+		return errors.New("Invalid Pages Count object (not an integer)")
+	}
+	// Update the count.
 	*pageCount = *pageCount + 1
 
 	this.addObject(page)

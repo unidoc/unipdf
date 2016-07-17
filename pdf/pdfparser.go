@@ -773,8 +773,16 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	var b []int64
 	for i := 0; i < 3; i++ {
-		w := (*wArr)[i].(PdfObject)
-		b = append(b, int64(*(w.(*PdfObjectInteger))))
+		w, ok := (*wArr)[i].(PdfObject)
+		if !ok {
+			return nil, errors.New("Invalid W")
+		}
+		wVal, ok := w.(*PdfObjectInteger)
+		if !ok {
+			return nil, errors.New("Invalid w object type")
+		}
+
+		b = append(b, int64(*wVal))
 	}
 
 	ds, err := this.decodeStream(xs)
@@ -1038,7 +1046,10 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	// Check the XrefStm object also from the trailer.
 	xx, present := (*trailerDict)["XRefStm"]
 	if present {
-		xo := xx.(*PdfObjectInteger)
+		xo, ok := xx.(*PdfObjectInteger)
+		if !ok {
+			return nil, errors.New("XRefStm != int")
+		}
 		_, err = this.parseXrefStream(xo)
 		if err != nil {
 			return nil, err

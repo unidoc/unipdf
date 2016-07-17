@@ -82,8 +82,14 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 			return nil, errors.New("Object stream type != ObjStm")
 		}
 
-		N := (*sod)["N"].(*PdfObjectInteger)
-		firstOffset := (*sod)["First"].(*PdfObjectInteger)
+		N, ok := (*sod)["N"].(*PdfObjectInteger)
+		if !ok {
+			return nil, errors.New("Invalid N in stream dictionary")
+		}
+		firstOffset, ok := (*sod)["First"].(*PdfObjectInteger)
+		if !ok {
+			return nil, errors.New("Invalid First in stream dictionary")
+		}
 
 		common.Log.Debug("type: %s number of objects: %d", name, *N)
 		ds, err := this.decodeStream(so)
