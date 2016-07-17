@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unidoc/unidoc/common"
+	_ "github.com/unidoc/unidoc/common"
 )
 
 const (
@@ -26,7 +26,6 @@ const (
 	licenseKeyFooter = "-----END UNIDOC LICENSE KEY-----"
 )
 
-var log = common.GetLogger()
 var pubKey = pubProdKey
 
 // Returns signed content in a base64 format which is in format:

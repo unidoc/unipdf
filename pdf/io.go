@@ -9,6 +9,8 @@ import (
 	"bufio"
 	"errors"
 	"os"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
@@ -18,7 +20,7 @@ func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	for remaining > 0 {
 		nRead, err := this.reader.Read(p[start:])
 		if err != nil {
-			log.Error("Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
+			common.Log.Error("Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
 			return start, errors.New("Failed reading")
 		}
 		numRounds++

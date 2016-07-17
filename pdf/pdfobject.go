@@ -8,6 +8,8 @@ package pdf
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 type PdfObject interface {
@@ -160,7 +162,7 @@ func (this *PdfObjectName) DefaultWriteString() string {
 	var output bytes.Buffer
 
 	if len(*this) > 127 {
-		log.Error("Name too long (%s)", *this)
+		common.Log.Error("Name too long (%s)", *this)
 	}
 
 	output.WriteString("/")
@@ -212,7 +214,7 @@ func (this *PdfObjectDictionary) String() string {
 func (this *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
 	for k, v := range *this {
-		log.Debug("Writing k: %s %T", k, v)
+		common.Log.Debug("Writing k: %s %T", k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "
 		outStr += v.DefaultWriteString()

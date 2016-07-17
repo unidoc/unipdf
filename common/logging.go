@@ -5,6 +5,10 @@
 
 package common
 
+import (
+	"fmt"
+)
+
 type Logger interface {
 	Error(format string, args ...interface{})
 	Warning(format string, args ...interface{})
@@ -31,12 +35,36 @@ func (this DummyLogger) Info(format string, args ...interface{}) {
 func (this DummyLogger) Debug(format string, args ...interface{}) {
 }
 
-var log Logger = DummyLogger{}
+// Simple Console Logger that the tests use.
+type ConsoleLogger struct{}
 
-func SetLogger(logger Logger) {
-	log = logger
+func (this ConsoleLogger) Error(format string, args ...interface{}) {
+	prefix := "[ERROR] "
+	fmt.Printf(prefix+format+"\n", args...)
 }
 
-func GetLogger() Logger {
-	return log
+func (this ConsoleLogger) Warning(format string, args ...interface{}) {
+	prefix := "[WARNING] "
+	fmt.Printf(prefix+format+"\n", args...)
+}
+
+func (this ConsoleLogger) Notice(format string, args ...interface{}) {
+	prefix := "[NOTICE] "
+	fmt.Printf(prefix+format+"\n", args...)
+}
+
+func (this ConsoleLogger) Info(format string, args ...interface{}) {
+	prefix := "[INFO] "
+	fmt.Printf(prefix+format+"\n", args...)
+}
+
+func (this ConsoleLogger) Debug(format string, args ...interface{}) {
+	prefix := "[DEBUG] "
+	fmt.Printf(prefix+format+"\n", args...)
+}
+
+var Log Logger = DummyLogger{}
+
+func SetLogger(logger Logger) {
+	Log = logger
 }
