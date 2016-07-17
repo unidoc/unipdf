@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 type PdfCrypt struct {
@@ -79,7 +81,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		}
 
 		if name == "Identity" {
-			log.Error("Cannot overwrite the identity filter")
+			common.Log.Error("Cannot overwrite the identity filter")
 			continue
 		}
 
@@ -164,11 +166,11 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 
 	filter, ok := (*ed)["Filter"].(*PdfObjectName)
 	if !ok {
-		log.Error("Crypt dictionary missing required Filter field!")
+		common.Log.Error("Crypt dictionary missing required Filter field!")
 		return crypter, errors.New("Required crypt field Filter missing")
 	}
 	if *filter != "Standard" {
-		log.Error("Unsupported filter (%s)", *filter)
+		common.Log.Error("Unsupported filter (%s)", *filter)
 		return crypter, errors.New("Unsupported Filter")
 	}
 	crypter.Filter = string(*filter)
@@ -176,12 +178,12 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	subfilter, ok := (*ed)["SubFilter"].(*PdfObjectString)
 	if ok {
 		crypter.Subfilter = string(*subfilter)
-		log.Debug("Using subfilter %s", subfilter)
+		common.Log.Debug("Using subfilter %s", subfilter)
 	}
 
 	if L, ok := (*ed)["Length"].(*PdfObjectInteger); ok {
 		if (*L % 8) != 0 {
-			log.Error("Invalid encryption length")
+			common.Log.Error("Invalid encryption length")
 			return crypter, errors.New("Invalid encryption length")
 		}
 		crypter.length = int(*L)
@@ -202,7 +204,7 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 				return crypter, err
 			}
 		} else {
-			log.Error("Unsupported encryption algo V = %d", *V)
+			common.Log.Error("Unsupported encryption algo V = %d", *V)
 			return crypter, errors.New("Unsupported algorithm")
 		}
 	} else {
@@ -254,7 +256,7 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	// but clearly not everyone is following the specification.
 	id0 := PdfObjectString("")
 	if idArray, ok := (*trailer)["ID"].(*PdfObjectArray); ok {
-		log.Debug("Trailer ID array missing!")
+		common.Log.Debug("Trailer ID array missing!")
 		id0obj, ok := (*idArray)[0].(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
@@ -335,13 +337,13 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 	this.authenticated = false
 
 	// Try user password.
-	log.Debug("Debugging authentication - user pass")
+	common.Log.Debug("Debugging authentication - user pass")
 	authenticated, err := this.alg6(password)
 	if err != nil {
 		return false, err
 	}
 	if authenticated {
-		log.Debug("this.authenticated = True")
+		common.Log.Debug("this.authenticated = True")
 		this.authenticated = true
 		return true, nil
 	}
@@ -349,13 +351,13 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// Try owner password also.
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
-	log.Debug("Debugging authentication - owner pass")
+	common.Log.Debug("Debugging authentication - owner pass")
 	authenticated, err = this.alg7(password, password)
 	if err != nil {
 		return false, err
 	}
 	if authenticated {
-		log.Debug("this.authenticated = True")
+		common.Log.Debug("this.authenticated = True")
 		this.authenticated = true
 		return true, nil
 	}
@@ -385,7 +387,7 @@ func (this *PdfCrypt) paddedPass(pass []byte) []byte {
 func (this *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
 	cf, ok := this.cryptFilters[filter]
 	if !ok {
-		log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Error("Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 	isAES := false
@@ -431,20 +433,20 @@ func (this *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte)
 func (this *PdfCrypt) isDecrypted(obj PdfObject) bool {
 	_, ok := this.decryptedObjects[obj]
 	if ok {
-		log.Debug("Already decrypted")
+		common.Log.Debug("Already decrypted")
 		return true
 	} else {
-		log.Debug("Not decrypted yet")
+		common.Log.Debug("Not decrypted yet")
 		return false
 	}
 }
 
 // Decrypt a buffer with a selected crypt filter.
 func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
-	log.Debug("Decrypt bytes")
+	common.Log.Debug("Decrypt bytes")
 	cf, ok := this.cryptFilters[filter]
 	if !ok {
-		log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Error("Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 
@@ -455,9 +457,9 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 		if err != nil {
 			return nil, err
 		}
-		log.Debug("RC4 Decrypt: % x", buf)
+		common.Log.Debug("RC4 Decrypt: % x", buf)
 		ciph.XORKeyStream(buf, buf)
-		log.Debug("to: % x", buf)
+		common.Log.Debug("to: % x", buf)
 		return buf, nil
 	} else if cfMethod == "AESV2" {
 		// Strings and streams encrypted with AES shall use a padding
@@ -484,26 +486,26 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
 		if len(buf) < 16 {
-			log.Error("AES invalid buf %s", buf)
+			common.Log.Error("AES invalid buf %s", buf)
 			return buf, fmt.Errorf("AES: Buf len < 16 (%d)", len(buf))
 		}
 		iv := buf[:16]
 		buf = buf[16:]
 
 		if len(buf)%16 != 0 {
-			log.Debug(" iv (%d): % x", len(iv), iv)
-			log.Debug("buf (%d): % x", len(buf), buf)
+			common.Log.Debug(" iv (%d): % x", len(iv), iv)
+			common.Log.Debug("buf (%d): % x", len(buf), buf)
 			return buf, fmt.Errorf("AES buf length not multiple of 16 (%d)", len(buf))
 		}
 
 		mode := cipher.NewCBCDecrypter(ciph, iv)
 
-		log.Debug("AES Decrypt (%d): % x", len(buf), buf)
-		log.Debug("chop AES Decrypt (%d): % x", len(buf), buf)
+		common.Log.Debug("AES Decrypt (%d): % x", len(buf), buf)
+		common.Log.Debug("chop AES Decrypt (%d): % x", len(buf), buf)
 		mode.CryptBlocks(buf, buf)
-		log.Debug("to (%d): % x", len(buf), buf)
+		common.Log.Debug("to (%d): % x", len(buf), buf)
 		//copy(buf[0:], buf[16:])
-		//log.Debug("chop to (%d): % x", len(buf), buf)
+		//common.Log.Debug("chop to (%d): % x", len(buf), buf)
 		return buf, nil
 	}
 	return nil, fmt.Errorf("Unsupported crypt filter method (%s)", cfMethod)
@@ -523,7 +525,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		this.decryptedObjects[io] = true
 
-		log.Debug("Decrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
+		common.Log.Debug("Decrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
 
 		objNum := (*io).ObjectNumber
 		genNum := (*io).GenerationNumber
@@ -541,7 +543,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		this.decryptedObjects[so] = true
 		objNum := (*so).ObjectNumber
 		genNum := (*so).GenerationNumber
-		log.Debug("Decrypting stream %d %d !", objNum, genNum)
+		common.Log.Debug("Decrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
@@ -551,7 +553,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		streamFilter := "Default" // Default RC4.
 		if this.V >= 4 {
 			streamFilter = this.streamFilter
-			log.Debug("this.streamFilter = %s", this.streamFilter)
+			common.Log.Debug("this.streamFilter = %s", this.streamFilter)
 
 			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
@@ -565,7 +567,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						if decodeParams, ok := (*dict)["DecodeParms"].(*PdfObjectDictionary); ok {
 							if filterName, ok := (*decodeParams)["Name"].(*PdfObjectName); ok {
 								if _, ok := this.cryptFilters[string(*filterName)]; ok {
-									log.Debug("Using stream filter %s", *filterName)
+									common.Log.Debug("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
 								}
 							}
@@ -574,7 +576,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 				}
 			}
 
-			log.Debug("with %s filter", streamFilter)
+			common.Log.Debug("with %s filter", streamFilter)
 			if streamFilter == "Identity" {
 				// Identity: pass unchanged.
 				return nil
@@ -601,12 +603,12 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		return nil
 	}
 	if s, isString := obj.(*PdfObjectString); isString {
-		log.Debug("Decrypting string!")
+		common.Log.Debug("Decrypting string!")
 
 		stringFilter := "Default"
 		if this.V >= 4 {
 			// Currently only support Identity / RC4.
-			log.Debug("with %s filter", this.stringFilter)
+			common.Log.Debug("with %s filter", this.stringFilter)
 			if this.stringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
@@ -625,7 +627,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		for i := 0; i < len(*s); i++ {
 			decrypted[i] = (*s)[i]
 		}
-		log.Debug("Decrypt string: %s : % x", decrypted, decrypted)
+		common.Log.Debug("Decrypt string: %s : % x", decrypted, decrypted)
 		decrypted, err = this.decryptBytes(decrypted, stringFilter, key)
 		if err != nil {
 			return err
@@ -666,20 +668,20 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 func (this *PdfCrypt) isEncrypted(obj PdfObject) bool {
 	_, ok := this.encryptedObjects[obj]
 	if ok {
-		log.Debug("Already encrypted")
+		common.Log.Debug("Already encrypted")
 		return true
 	} else {
-		log.Debug("Not encrypted yet")
+		common.Log.Debug("Not encrypted yet")
 		return false
 	}
 }
 
 // Encrypt a buffer with the specified crypt filter and key.
 func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
-	log.Debug("Encrypt bytes")
+	common.Log.Debug("Encrypt bytes")
 	cf, ok := this.cryptFilters[filter]
 	if !ok {
-		log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Error("Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 
@@ -690,9 +692,9 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 		if err != nil {
 			return nil, err
 		}
-		log.Debug("RC4 Encrypt: % x", buf)
+		common.Log.Debug("RC4 Encrypt: % x", buf)
 		ciph.XORKeyStream(buf, buf)
-		log.Debug("to: % x", buf)
+		common.Log.Debug("to: % x", buf)
 		return buf, nil
 	} else if cfMethod == "AESV2" {
 		// Strings and streams encrypted with AES shall use a padding
@@ -713,7 +715,7 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 			return nil, err
 		}
 
-		log.Debug("AES Encrypt (%d): % x", len(buf), buf)
+		common.Log.Debug("AES Encrypt (%d): % x", len(buf), buf)
 
 		// If using the AES algorithm, the Cipher Block Chaining (CBC)
 		// mode, which requires an initialization vector, is used. The
@@ -724,7 +726,7 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 		for i := 0; i < pad; i++ {
 			buf = append(buf, byte(pad))
 		}
-		log.Debug("Padded to %d bytes", len(buf))
+		common.Log.Debug("Padded to %d bytes", len(buf))
 
 		// Generate random 16 bytes, place in beginning of buffer.
 		ciphertext := make([]byte, 16+len(buf))
@@ -737,7 +739,7 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 		mode.CryptBlocks(ciphertext[aes.BlockSize:], buf)
 
 		buf = ciphertext
-		log.Debug("to (%d): % x", len(buf), buf)
+		common.Log.Debug("to (%d): % x", len(buf), buf)
 
 		return buf, nil
 	}
@@ -758,7 +760,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		this.encryptedObjects[io] = true
 
-		log.Debug("Encrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
+		common.Log.Debug("Encrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
 
 		objNum := (*io).ObjectNumber
 		genNum := (*io).GenerationNumber
@@ -775,7 +777,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		this.encryptedObjects[so] = true
 		objNum := (*so).ObjectNumber
 		genNum := (*so).GenerationNumber
-		log.Debug("Encrypting stream %d %d !", objNum, genNum)
+		common.Log.Debug("Encrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
@@ -787,7 +789,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			// For now.  Need to change when we add support for more than
 			// Identity / RC4.
 			streamFilter = this.streamFilter
-			log.Debug("this.streamFilter = %s", this.streamFilter)
+			common.Log.Debug("this.streamFilter = %s", this.streamFilter)
 
 			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
@@ -801,7 +803,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						if decodeParams, ok := (*dict)["DecodeParms"].(*PdfObjectDictionary); ok {
 							if filterName, ok := (*decodeParams)["Name"].(*PdfObjectName); ok {
 								if _, ok := this.cryptFilters[string(*filterName)]; ok {
-									log.Debug("Using stream filter %s", *filterName)
+									common.Log.Debug("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
 								}
 							}
@@ -810,7 +812,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 				}
 			}
 
-			log.Debug("with %s filter", streamFilter)
+			common.Log.Debug("with %s filter", streamFilter)
 			if streamFilter == "Identity" {
 				// Identity: pass unchanged.
 				return nil
@@ -837,11 +839,11 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		return nil
 	}
 	if s, isString := obj.(*PdfObjectString); isString {
-		log.Debug("Encrypting string!")
+		common.Log.Debug("Encrypting string!")
 
 		stringFilter := "Default"
 		if this.V >= 4 {
-			log.Debug("with %s filter", this.stringFilter)
+			common.Log.Debug("with %s filter", this.stringFilter)
 			if this.stringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
@@ -859,7 +861,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		for i := 0; i < len(*s); i++ {
 			encrypted[i] = (*s)[i]
 		}
-		log.Debug("Encrypt string: %s : % x", encrypted, encrypted)
+		common.Log.Debug("Encrypt string: %s : % x", encrypted, encrypted)
 		encrypted, err = this.encryptBytes(encrypted, stringFilter, key)
 		if err != nil {
 			return err
@@ -898,7 +900,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 // Algorithm 2: Computing an encryption key.
 func (this *PdfCrypt) alg2(pass []byte) []byte {
-	log.Debug("Alg2")
+	common.Log.Debug("Alg2")
 	key := this.paddedPass(pass)
 
 	h := md5.New()
@@ -914,12 +916,12 @@ func (this *PdfCrypt) alg2(pass []byte) []byte {
 		pb = append(pb, byte(((p >> uint(8*i)) & 0xff)))
 	}
 	h.Write(pb)
-	log.Debug("go P: % x", pb)
+	common.Log.Debug("go P: % x", pb)
 
 	// Pass ID[0] from the trailer
 	h.Write([]byte(this.id0))
 
-	log.Debug("this.R = %d encryptMetadata %v", this.R, this.encryptMetadata)
+	common.Log.Debug("this.R = %d encryptMetadata %v", this.R, this.encryptMetadata)
 	if (this.R >= 4) && !this.encryptMetadata {
 		h.Write([]byte{0xff, 0xff, 0xff, 0xff})
 	}
@@ -1034,9 +1036,9 @@ func (this *PdfCrypt) alg5(upass []byte) (PdfObjectString, []byte, error) {
 	h.Write([]byte(this.id0))
 	hash := h.Sum(nil)
 
-	log.Debug("Alg5")
-	log.Debug("ekey: % x", ekey)
-	log.Debug("ID: % x", this.id0)
+	common.Log.Debug("Alg5")
+	common.Log.Debug("ekey: % x", ekey)
+	common.Log.Debug("ID: % x", this.id0)
 
 	if len(hash) != 16 {
 		return U, ekey, errors.New("Hash length not 16 bytes")
@@ -1065,8 +1067,8 @@ func (this *PdfCrypt) alg5(upass []byte) (PdfObjectString, []byte, error) {
 			return U, ekey, errors.New("Failed rc4 ciph")
 		}
 		ciph.XORKeyStream(encrypted, encrypted)
-		log.Debug("i = %d, ekey: % x", i, ekey2)
-		log.Debug("i = %d -> % x", i, encrypted)
+		common.Log.Debug("i = %d, ekey: % x", i, ekey2)
+		common.Log.Debug("i = %d -> % x", i, encrypted)
 	}
 
 	bb := make([]byte, 32)
@@ -1103,7 +1105,7 @@ func (this *PdfCrypt) alg6(upass []byte) (bool, error) {
 		return false, err
 	}
 
-	log.Debug("check: % x == % x ?", string(uo), string(this.U))
+	common.Log.Debug("check: % x == % x ?", string(uo), string(this.U))
 
 	uGen := string(uo)     // Generated U from specified pass.
 	uDoc := string(this.U) // U from the document.

@@ -9,7 +9,13 @@ import (
 	"bytes"
 	"compress/zlib"
 	"testing"
+
+	"github.com/unidoc/unidoc/common"
 )
+
+func init() {
+	common.SetLogger(common.ConsoleLogger{})
+}
 
 // Compare the equality of content of two slices.
 func compareSlices(a, b []byte) bool {
@@ -53,7 +59,7 @@ func TestFlateTiffPredictor(t *testing.T) {
 	w.Close()
 
 	encoded := b.Bytes()
-	log.Debug("Compressed length: %d", len(encoded))
+	common.Log.Debug("Compressed length: %d", len(encoded))
 
 	rawText := `99 0 obj
 <<
@@ -83,9 +89,9 @@ endobj`
 		return
 	}
 
-	log.Debug("%q", stream)
+	common.Log.Debug("%q", stream)
 	dict := stream.PdfObjectDictionary
-	log.Debug("dict: %q", dict)
+	common.Log.Debug("dict: %q", dict)
 
 	if len(stream.Stream) != len(encoded) {
 		t.Errorf("Length not %d (%d)", len(encoded), len(stream.Stream))
@@ -98,10 +104,10 @@ endobj`
 		return
 	}
 
-	log.Debug("Orig stream: % x\n", stream.Stream)
-	log.Debug("Decoded stream: % x\n", bdec)
+	common.Log.Debug("Orig stream: % x\n", stream.Stream)
+	common.Log.Debug("Decoded stream: % x\n", bdec)
 	if !compareSlices(bdec, expected) {
-		log.Debug("Expected: % x\n", expected)
+		common.Log.Debug("Expected: % x\n", expected)
 		t.Errorf("decoded != expected")
 		return
 	}

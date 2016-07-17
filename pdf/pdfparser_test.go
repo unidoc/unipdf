@@ -12,7 +12,13 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/unidoc/unidoc/common"
 )
+
+func init() {
+	common.SetLogger(common.ConsoleLogger{})
+}
 
 func makeReaderForText(txt string) *bufio.Reader {
 	buf := []byte(txt)
@@ -443,7 +449,7 @@ endobj
 		return
 	}
 
-	log.Debug("Parsed obj: %s", obj)
+	common.Log.Debug("Parsed obj: %s", obj)
 }
 
 // Test /Prev and xref tables.  Check if the priority order is right.
@@ -501,7 +507,7 @@ endobj`
 		return
 	}
 
-	log.Debug("Xref dict: %s", xrefDict)
+	common.Log.Debug("Xref dict: %s", xrefDict)
 }
 
 func TestObjectParse(t *testing.T) {

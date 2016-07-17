@@ -10,7 +10,13 @@ package pdf
 import (
 	"fmt"
 	"testing"
+
+	"github.com/unidoc/unidoc/common"
 )
+
+func init() {
+	common.SetLogger(common.ConsoleLogger{})
+}
 
 func TestPadding(t *testing.T) {
 	crypter := PdfCrypt{}
@@ -126,8 +132,8 @@ func TestAlg5(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
 	if string(U[0:16]) != string(Uexp[0:16]) {
-		log.Info("   U (%d): % x\n", len(U), U)
-		log.Info("Uexp (%d): % x\n", len(Uexp), Uexp)
+		common.Log.Info("   U (%d): % x\n", len(U), U)
+		common.Log.Info("Uexp (%d): % x\n", len(Uexp), Uexp)
 		t.Errorf("U != expected\n")
 	}
 }
