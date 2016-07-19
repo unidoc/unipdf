@@ -27,6 +27,8 @@ go get github.com/unidoc/unidoc
  * Split PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_split.go)).
  * Protect PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_protect.go)).
  * Unlock PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_unlock.go)).
+ * Rotate PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_rotate.go)).
+ * Crop PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_crop.go)).
  * Self contained with no external dependencies
  * Developer friendly
 
