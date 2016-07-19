@@ -3,6 +3,11 @@
  * file 'LICENSE.txt', which is part of this source code package.
  */
 
+// Defines PDF primitive objects as per the standard. Also defines a PdfObject
+// interface allowing to universally work with these objects. It allows
+// recursive writing of the objects to file as well and stringifying for
+// debug purposes.
+
 package pdf
 
 import (
@@ -50,6 +55,11 @@ func makeName(s string) *PdfObjectName {
 
 func makeInteger(val int64) *PdfObjectInteger {
 	num := PdfObjectInteger(val)
+	return &num
+}
+
+func makeFloat(val float64) *PdfObjectFloat {
+	num := PdfObjectFloat(val)
 	return &num
 }
 
@@ -221,6 +231,16 @@ func (this *PdfObjectDictionary) DefaultWriteString() string {
 	}
 	outStr += ">>"
 	return outStr
+}
+
+func (d *PdfObjectDictionary) Set(key PdfObjectName, val PdfObject) {
+	(*d)[key] = val
+}
+
+func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
+	if val != nil {
+		(*d)[key] = val
+	}
 }
 
 func (this *PdfObjectReference) String() string {

@@ -1234,49 +1234,6 @@ func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
 	return &indirect, nil
 }
 
-/*
- * Parse open PDF file, validate and load cross references and
- * trailer dictionary information.
- */
-/*
-func Parse(filePath string) (*PdfParser, error) {
-	parser := &PdfParser{}
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	parser.rs = f
-
-	parser.ObjCache = make(ObjectCache)
-
-	// Start by reading xrefs from bottom
-	trailer, err := parser.loadXrefs()
-	if err != nil {
-		common.Log.Error("Failed to load xref table! %s", err)
-		// Try to rebuild entire xref table?
-		return nil, err
-	}
-
-	common.Log.Debug("Trailer: %s", trailer)
-
-	if len(parser.xrefs) == 0 {
-		return nil, fmt.Errorf("Empty XREF table. Invalid.")
-	}
-	printXrefTable(parser.xrefs)
-
-	_, err = parser.parsePdfVersion()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse version (%s)", err)
-	}
-
-	parser.trailer = trailer
-
-	return parser, nil
-}
-*/
-
 // Creates a new parser for a PDF file via ReadSeeker.  Loads the
 // cross reference stream and trailer.
 func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
@@ -1299,12 +1256,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 		return nil, fmt.Errorf("Empty XREF table. Invalid.")
 	}
 
-	printXrefTable(parser.xrefs)
-
-	_, err = parser.parsePdfVersion()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse version (%s)", err)
-	}
+	// printXrefTable(parser.xrefs)
 
 	_, err = parser.parsePdfVersion()
 	if err != nil {

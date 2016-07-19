@@ -155,9 +155,6 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 // Prepare the document crypt handler based on the encryption dictionary
 // and trailer dictionary.
-// Make based on a Parser or Reader ?  This clearly for parsing,
-// Not generating a new document.
-// Better on the reader, the parser should not care whether encrypted.
 func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	crypter := PdfCrypt{}
 	crypter.decryptedObjects = map[PdfObject]bool{}
