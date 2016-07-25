@@ -23,18 +23,18 @@ go get github.com/unidoc/unidoc
 ## Overview
 
  * Read and extract PDF metadata
- * Merge PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_merge.go)).
- * Split PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_split.go)).
- * Protect PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_protect.go)).
- * Unlock PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_unlock.go)).
- * Rotate PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_rotate.go)).
- * Crop PDF ([example](https://github.com/unidoc/unidoc/blob/master/examples/pdf/pdf_crop.go)).
+ * Merge PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_merge.go)).
+ * Split PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_split.go)).
+ * Protect PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_protect.go)).
+ * Unlock PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_unlock.go)).
+ * Rotate PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_rotate.go)).
+ * Crop PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_crop.go)).
  * Self contained with no external dependencies
  * Developer friendly
 
 ## Examples
 
-See the [examples](https://github.com/unidoc/unidoc/tree/master/examples) folder.
+See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master/examples) project.
 
 ## Roadmap
 
