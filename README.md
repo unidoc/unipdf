@@ -34,7 +34,7 @@ go get github.com/unidoc/unidoc
 
 ## Examples
 
-See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master/examples) project.
+See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master) folder.
 
 ## Roadmap
 
