@@ -48,22 +48,23 @@ type PdfObjectStream struct {
 	Stream []byte
 }
 
-func makeName(s string) *PdfObjectName {
+// Quick functions to make pdf objects form primitive objects.
+func MakeName(s string) *PdfObjectName {
 	name := PdfObjectName(s)
 	return &name
 }
 
-func makeInteger(val int64) *PdfObjectInteger {
+func MakeInteger(val int64) *PdfObjectInteger {
 	num := PdfObjectInteger(val)
 	return &num
 }
 
-func makeFloat(val float64) *PdfObjectFloat {
+func MakeFloat(val float64) *PdfObjectFloat {
 	num := PdfObjectFloat(val)
 	return &num
 }
 
-func makeString(s string) *PdfObjectString {
+func MakeString(s string) *PdfObjectString {
 	str := PdfObjectString(s)
 	return &str
 }

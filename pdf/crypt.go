@@ -595,7 +595,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			return err
 		}
 		// Update the length based on the decrypted stream.
-		(*dict)["Length"] = makeInteger(int64(len(so.Stream)))
+		(*dict)["Length"] = MakeInteger(int64(len(so.Stream)))
 
 		return nil
 	}
@@ -831,7 +831,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			return err
 		}
 		// Update the length based on the encrypted stream.
-		(*dict)["Length"] = makeInteger(int64(len(so.Stream)))
+		(*dict)["Length"] = MakeInteger(int64(len(so.Stream)))
 
 		return nil
 	}

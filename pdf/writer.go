@@ -51,8 +51,8 @@ func NewPdfWriter() PdfWriter {
 
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
-	infoDict[PdfObjectName("Producer")] = makeString(producer)
-	infoDict[PdfObjectName("Creator")] = makeString("FoxyUtils Online PDF https://foxyutils.com")
+	infoDict[PdfObjectName("Producer")] = MakeString(producer)
+	infoDict[PdfObjectName("Creator")] = MakeString("FoxyUtils Online PDF https://foxyutils.com")
 	infoObj := PdfIndirectObject{}
 	infoObj.PdfObject = &infoDict
 	w.infoObj = &infoObj
@@ -61,8 +61,8 @@ func NewPdfWriter() PdfWriter {
 	// Root catalog.
 	catalog := PdfIndirectObject{}
 	catalogDict := PdfObjectDictionary{}
-	catalogDict[PdfObjectName("Type")] = makeName("Catalog")
-	catalogDict[PdfObjectName("Version")] = makeName("1.3")
+	catalogDict[PdfObjectName("Type")] = MakeName("Catalog")
+	catalogDict[PdfObjectName("Version")] = MakeName("1.3")
 	catalog.PdfObject = &catalogDict
 
 	w.root = &catalog
@@ -71,10 +71,10 @@ func NewPdfWriter() PdfWriter {
 	// Pages.
 	pages := PdfIndirectObject{}
 	pagedict := PdfObjectDictionary{}
-	pagedict[PdfObjectName("Type")] = makeName("Pages")
+	pagedict[PdfObjectName("Type")] = MakeName("Pages")
 	kids := PdfObjectArray{}
 	pagedict[PdfObjectName("Kids")] = &kids
-	pagedict[PdfObjectName("Count")] = makeInteger(0)
+	pagedict[PdfObjectName("Count")] = MakeInteger(0)
 	pages.PdfObject = &pagedict
 
 	w.pages = &pages
@@ -490,11 +490,11 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 
 	// Generate the encryption dictionary.
 	encDict := &PdfObjectDictionary{}
-	(*encDict)[PdfObjectName("Filter")] = makeName("Standard")
-	(*encDict)[PdfObjectName("P")] = makeInteger(int64(crypter.P))
-	(*encDict)[PdfObjectName("V")] = makeInteger(int64(crypter.V))
-	(*encDict)[PdfObjectName("R")] = makeInteger(int64(crypter.R))
-	(*encDict)[PdfObjectName("Length")] = makeInteger(int64(crypter.length))
+	(*encDict)[PdfObjectName("Filter")] = MakeName("Standard")
+	(*encDict)[PdfObjectName("P")] = MakeInteger(int64(crypter.P))
+	(*encDict)[PdfObjectName("V")] = MakeInteger(int64(crypter.V))
+	(*encDict)[PdfObjectName("R")] = MakeInteger(int64(crypter.R))
+	(*encDict)[PdfObjectName("Length")] = MakeInteger(int64(crypter.length))
 	(*encDict)[PdfObjectName("O")] = &O
 	(*encDict)[PdfObjectName("U")] = &U
 	this.encryptDict = encDict
@@ -517,7 +517,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		// for writing.
 		outlines := PdfIndirectObject{}
 		outlinesDict := PdfObjectDictionary{}
-		outlinesDict[PdfObjectName("Type")] = makeName("Outlines")
+		outlinesDict[PdfObjectName("Type")] = MakeName("Outlines")
 		outlinesDict[PdfObjectName("First")] = this.outlines[0]
 		outlinesDict[PdfObjectName("Last")] = this.outlines[len(this.outlines)-1]
 		outlines.PdfObject = &outlinesDict
@@ -606,7 +606,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	trailer := PdfObjectDictionary{}
 	trailer["Info"] = this.infoObj
 	trailer["Root"] = this.root
-	trailer["Size"] = makeInteger(int64(len(this.objects) + 1))
+	trailer["Size"] = MakeInteger(int64(len(this.objects) + 1))
 	// If encrypted!
 	if this.crypter != nil {
 		trailer["Encrypt"] = this.encryptObj
