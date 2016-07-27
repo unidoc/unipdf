@@ -26,9 +26,22 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 		return obj.Stream, nil
 	}
 
+	// The filter should be a name or an array with a list of filter names.
+	// Currently only supporting a single filter.
 	method, ok := filterObj.(*PdfObjectName)
 	if !ok {
-		return nil, fmt.Errorf("Filter not a Name object")
+		array, ok := filterObj.(*PdfObjectArray)
+		if !ok {
+			return nil, fmt.Errorf("Filter not a Name or Array object")
+		}
+		if len(*array) != 1 {
+			return nil, fmt.Errorf("Currently not supporting serial multi filter decoding")
+		}
+		filterObj = (*array)[0]
+		method, ok = filterObj.(*PdfObjectName)
+		if !ok {
+			return nil, fmt.Errorf("Filter array member not a Name object")
+		}
 	}
 
 	if *method == "FlateDecode" {
