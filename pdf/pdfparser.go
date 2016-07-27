@@ -87,14 +87,56 @@ func (this *PdfParser) skipSpaces() (int, error) {
 	return cnt, nil
 }
 
+// Skip over comments and spaces. Can handle multi-line comments.
+func (this *PdfParser) skipComments() error {
+	if _, err := this.skipSpaces(); err != nil {
+		return err
+	}
+
+	isFirst := true
+	for {
+		bb, err := this.reader.Peek(1)
+		if err != nil {
+			common.Log.Error("Error %s", err.Error())
+			return err
+		}
+		if isFirst && bb[0] != '%' {
+			// Not a comment clearly.
+			return nil
+		} else {
+			isFirst = false
+		}
+		if (bb[0] != '\r') && (bb[0] != '\n') {
+			this.reader.ReadByte()
+		} else {
+			break
+		}
+	}
+
+	// Call recursively to handle multiline comments.
+	return this.skipComments()
+}
+
 // Read a comment starting with '%'.
 func (this *PdfParser) readComment() (string, error) {
 	commentText := ""
+
+	_, err := this.skipSpaces()
+	if err != nil {
+		return commentText, err
+	}
+
+	isFirst := true
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
 			common.Log.Error("Error %s", err.Error())
 			return commentText, err
+		}
+		if isFirst && bb[0] != '%' {
+			return commentText, errors.New("Comment should start with %")
+		} else {
+			isFirst = false
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := this.reader.ReadByte()
@@ -548,6 +590,7 @@ func (this *PdfParser) parseDict() (*PdfObjectDictionary, error) {
 
 	for {
 		this.skipSpaces()
+		this.skipComments()
 
 		bb, err := this.reader.Peek(2)
 		if err != nil {
