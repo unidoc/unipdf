@@ -52,7 +52,7 @@ The following features are on the roadmap, these are all subjects to change.
 
 ## Copying/License
 
-UniDoc is licensed as [AGPL][agpl] software. See [LICENSE.md](https://raw.githubusercontent.com/unidoc/unidoc/master/LICENSE.md).
+UniDoc is licensed as [AGPL][agpl] software (with extra terms as specified in our license).
 
 AGPL is a free / open source software license.
 
