@@ -1,6 +1,6 @@
 /*
  * This file is subject to the terms and conditions defined in
- * file 'LICENSE.txt', which is part of this source code package.
+ * file 'LICENSE.md', which is part of this source code package.
  */
 
 // Defines PDF primitive objects as per the standard. Also defines a PdfObject
