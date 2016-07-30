@@ -491,6 +491,7 @@ func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) {
 
 type WatermarkImageOptions struct {
 	Alpha               float64
+	FitToWidth          bool
 	PreserveAspectRatio bool
 }
 
@@ -503,7 +504,12 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	pWidth := bbox.Urx - bbox.Llx
 	pHeight := bbox.Ury - bbox.Lly
 
-	wWidth := pWidth
+	wWidth := float64(*ximg.Width)
+	xOffset := (float64(pWidth) - float64(wWidth)) / 2
+	if opt.FitToWidth {
+		wWidth = pWidth
+		xOffset = 0
+	}
 	wHeight := pHeight
 	yOffset := float64(0)
 	if opt.PreserveAspectRatio {
@@ -522,9 +528,9 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 
 	contentStr := fmt.Sprintf("q\n"+
 		"/GS0 gs\n"+
-		"%.0f 0 0 %.0f 0 %.4f cm\n"+
+		"%.0f 0 0 %.0f %.4f %.4f cm\n"+
 		"/%s Do\n"+
-		"Q", wWidth, wHeight, yOffset, imgName)
+		"Q", wWidth, wHeight, xOffset, yOffset, imgName)
 	this.AddContentStreamByString(contentStr)
 
 	return nil
