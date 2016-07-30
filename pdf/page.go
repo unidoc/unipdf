@@ -475,6 +475,61 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 	(*egsDict)[name] = egs
 }
 
+// Add a font dictionary to the Font resources.
+func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) {
+	if this.Resources == nil {
+		this.Resources = &PdfPageResources{}
+	}
+
+	if this.Resources.Font == nil {
+		this.Resources.Font = &PdfObjectDictionary{}
+	}
+
+	fontDict := this.Resources.Font.(*PdfObjectDictionary)
+	(*fontDict)[name] = font
+}
+
+type WatermarkImageOptions struct {
+	Alpha               float64
+	PreserveAspectRatio bool
+}
+
+// Add a watermark to the page.
+func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOptions) error {
+	bbox, err := this.GetMediaBox()
+	if err != nil {
+		return err
+	}
+	pWidth := bbox.Urx - bbox.Llx
+	pHeight := bbox.Ury - bbox.Lly
+
+	wWidth := pWidth
+	wHeight := pHeight
+	yOffset := float64(0)
+	if opt.PreserveAspectRatio {
+		wHeight = wWidth * float64(*ximg.Height) / float64(*ximg.Width)
+		yOffset = (pHeight - wHeight) / 2
+	}
+
+	imgName := PdfObjectName("Imw0")
+	this.AddImageResource(imgName, ximg)
+
+	gs0 := PdfObjectDictionary{}
+	gs0["BM"] = MakeName("Normal")
+	gs0["CA"] = MakeFloat(opt.Alpha)
+	gs0["ca"] = MakeFloat(opt.Alpha)
+	this.AddExtGState("GS0", &gs0)
+
+	contentStr := fmt.Sprintf("q\n"+
+		"/GS0 gs\n"+
+		"%.0f 0 0 %.0f 0 %.4f cm\n"+
+		"/%s Do\n"+
+		"Q", wWidth, wHeight, yOffset, imgName)
+	this.AddContentStreamByString(contentStr)
+
+	return nil
+}
+
 // Add content stream by string.  Puts the content string into a stream
 // object and points the content stream towards it.
 func (this *PdfPage) AddContentStreamByString(contentStr string) {
@@ -486,7 +541,20 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) {
 	sDict["Length"] = MakeInteger(int64(len(contentStr)))
 	stream.Stream = []byte(contentStr)
 
-	this.Contents = &stream
+	if this.Contents == nil {
+		// If not set, place it directly.
+		this.Contents = &stream
+	} else if contArray, isArray := this.Contents.(*PdfObjectArray); isArray {
+		// If an array of content streams, append it.
+		*contArray = append(*contArray, &stream)
+	} else {
+		// Only 1 element in place. Wrap inside a new array and add the new one.
+		contArray := PdfObjectArray{}
+		contArray = append(contArray, this.Contents)
+		contArray = append(contArray, &stream)
+		this.Contents = &contArray
+	}
+
 }
 
 // Page resources.

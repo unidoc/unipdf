@@ -326,7 +326,7 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 				}
 				this.reader.Discard(len(numeric) - 1)
 
-				common.Log.Debug("numeric string \"%s\"", numeric)
+				common.Log.Debug("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
 					return PdfObjectString(bytes), err
