@@ -22,13 +22,15 @@ go get github.com/unidoc/unidoc
 
 ## Overview
 
- * Read and extract PDF metadata
+ * Read and extract PDF metadata ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_extract_metadata.go)).
  * Merge PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_merge.go)).
  * Split PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_split.go)).
  * Protect PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_protect.go)).
  * Unlock PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_unlock.go)).
  * Rotate PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_rotate.go)).
  * Crop PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_crop.go)).
+ * Add Images ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_add_images.go)).
+ * Add Images Fast with VIP ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_add_images_fast.go)).
  * Self contained with no external dependencies
  * Developer friendly
 
