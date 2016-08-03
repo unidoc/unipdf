@@ -70,7 +70,7 @@ Contributors need to approve the [Contributor License Agreement](https://docs.go
 
 ## Support
 
-Open source users can create a GitHub issue and we will look at it. Commercial users can either create a GitHub issue and also email us at support@unidoc.io and we will assist them directly.
+Please email us at support@unidoc.io for any queries.
 
 ## Stay up to date
 
