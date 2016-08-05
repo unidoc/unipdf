@@ -32,17 +32,7 @@ See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master)
 
 ## Roadmap
 
-The following features are on the roadmap, these are all subjects to change.
-
- * Compress PDF
- * Create PDF (high level API)
- * Fill out Forms
- * Create Forms
- * Bindings for Python (and C#/Java if there is interest)
- * Create Doc and DocX files
- * Convert PDF to Word
- * OCR Engine
- * And many more...
+Our [roadmap](https://trello.com/b/JcliaYYI) is publically available and features can be voted upon.
 
 ## Copying/License
 
