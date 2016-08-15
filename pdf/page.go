@@ -38,6 +38,23 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 	return 0, errors.New("Not a number")
 }
 
+func getNumberAsFloatOrNull(obj PdfObject) (*float64, error) {
+	if fObj, ok := obj.(*PdfObjectFloat); ok {
+		num := float64(*fObj)
+		return &num, nil
+	}
+
+	if iObj, ok := obj.(*PdfObjectInteger); ok {
+		num := float64(*iObj)
+		return &num, nil
+	}
+	if _, ok := obj.(*PdfObjectNull); ok {
+		return nil, nil
+	}
+
+	return nil, errors.New("Not a number")
+}
+
 // Create a PDF rectangle object based on an input array of 4 integers.
 // Defining the lower left (LL) and upper right (UR) corners with
 // floating point numbers.
@@ -133,6 +150,21 @@ func (date *PdfDate) ToPdfObject() PdfObject {
 	return &pdfStr
 }
 
+type PdfPageTreeNode struct {
+	Parent *PdfPageTreeNode
+	Kids   *PdfPageTreeNode
+	Count  *int64
+}
+
+type PdfPages struct {
+	PdfPageTreeNode
+	// Inheritable attributes.
+	Resources *PdfPageResources
+	MediaBox  *PdfRectangle
+	CropBox   *PdfRectangle
+	Rotate    *PdfRectangle
+}
+
 // PDF page object (7.7.3.3 - Table 30).
 type PdfPage struct {
 	Parent               PdfObject
@@ -164,13 +196,92 @@ type PdfPage struct {
 	PresSteps            PdfObject
 	UserUnit             PdfObject
 	VP                   PdfObject
+	pageDict             *PdfObjectDictionary
+}
+
+/*
+ * Rather than storing the page tree exactly as it is kept in the PDF file, let's store it as a
+ * list.  Then once we create our own PDF we can make it into a more balanced tree, depending on the
+ * output.
+ * For example merging pdf files, might be better to maek our own tree structure etc.
+ * Maybe 20-50 pages per tree node or something, or using a balanced tree approach.
+ * Makes more sense to make it when writing it out.
+ */
+/*
+func BuildPageList() ([]*PdfPage) {
+	name, ok := dict["Type"].(*PdfObjectName)
+	if !ok {
+		return nil, errors.New("Type not a name")
+	}
+	if *name == "Pages" {
+		list := []*PdfPage{}
+		for
+		page[]
+		AddPageTreeNode(...)
+		BuildPageTree()
+		BuildPageList(dict.Kids, )
+	}
+
+	if *name == "Page" {
+		page, err := NewPdfPageFromDict(dict)...
+		if err != nil {
+			return err
+		}
+
+		doc.hashmap[*PdfPage]           -> *PdfIndirectObject
+		doc.hashmap[*PdfIndirectObject] -> *PdfPage
+		doc.pages = append(doc.pages, page)
+	}
+}
+*/
+
+func NewPdfPagesFromDict(dict PdfObjectDictionary) (*PdfPages, error) {
+	pages := PdfPages{}
+
+	name, ok := dict["Type"].(*PdfObjectName)
+	if !ok {
+		return nil, errors.New("Type not a name")
+	}
+	if *name != "Pages" {
+		return nil, errors.New("Name != Pages")
+	}
+
+	// XXX pass in the parent object directly?
+	/*
+		parent, ok := dict["Parent"].(*PdfIndirectObject)
+		if !ok {
+			return nil, errors.New("Parent not an indirect object")
+		}
+		pages.Parent = parent
+	*/
+
+	// Better syntax could be:
+	/*
+		kids, ok := TraceToDirectObject(dict["Kids"]).(*PdfObjectArray)
+		if !ok {
+			return nil, errors.New("Kids not an array")
+		}
+		pages.Kids = kids
+	*/
+
+	count, ok := TraceToDirectObject(dict["Count"]).(*PdfObjectInteger)
+	if !ok {
+		return nil, errors.New("Count is not an integer")
+	}
+	val := int64(*count)
+	pages.Count = &val
+
+	return nil, nil
 }
 
 // Build a PdfPage based on the underlying dictionary.
-func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
+func NewPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := PdfPage{}
+	page.pageDict = &PdfObjectDictionary{}
 
-	pType, ok := p["Type"].(*PdfObjectName)
+	d := *p
+
+	pType, ok := d["Type"].(*PdfObjectName)
 	if !ok {
 		return nil, errors.New("Missing/Invalid Page dictionary Type")
 	}
@@ -178,11 +289,11 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 		return nil, errors.New("Page dictionary Type != Page")
 	}
 
-	if obj, isDefined := p["Parent"]; isDefined {
+	if obj, isDefined := d["Parent"]; isDefined {
 		page.Parent = obj
 	}
 
-	if obj, isDefined := p["LastModified"]; isDefined {
+	if obj, isDefined := d["LastModified"]; isDefined {
 		strObj, ok := obj.(*PdfObjectString)
 		if !ok {
 			return nil, errors.New("Page dictionary LastModified != string")
@@ -194,7 +305,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 		page.LastModified = &lastmod
 	}
 
-	if obj, isDefined := p["Resources"]; isDefined {
+	if obj, isDefined := d["Resources"]; isDefined {
 		dict, ok := obj.(*PdfObjectDictionary)
 		if !ok {
 			return nil, errors.New("Invalid resource dictionary")
@@ -207,7 +318,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 		}
 	}
 
-	if obj, isDefined := p["MediaBox"]; isDefined {
+	if obj, isDefined := d["MediaBox"]; isDefined {
 		boxArr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page MediaBox not an array")
@@ -218,7 +329,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 			return nil, err
 		}
 	}
-	if obj, isDefined := p["CropBox"]; isDefined {
+	if obj, isDefined := d["CropBox"]; isDefined {
 		boxArr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page CropBox not an array")
@@ -229,7 +340,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 			return nil, err
 		}
 	}
-	if obj, isDefined := p["BleedBox"]; isDefined {
+	if obj, isDefined := d["BleedBox"]; isDefined {
 		boxArr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page BleedBox not an array")
@@ -240,7 +351,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 			return nil, err
 		}
 	}
-	if obj, isDefined := p["TrimBox"]; isDefined {
+	if obj, isDefined := d["TrimBox"]; isDefined {
 		boxArr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page TrimBox not an array")
@@ -251,7 +362,7 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 			return nil, err
 		}
 	}
-	if obj, isDefined := p["ArtBox"]; isDefined {
+	if obj, isDefined := d["ArtBox"]; isDefined {
 		boxArr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page ArtBox not an array")
@@ -262,13 +373,13 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 			return nil, err
 		}
 	}
-	if obj, isDefined := p["BoxColorInfo"]; isDefined {
+	if obj, isDefined := d["BoxColorInfo"]; isDefined {
 		page.BoxColorInfo = obj
 	}
-	if obj, isDefined := p["Contents"]; isDefined {
+	if obj, isDefined := d["Contents"]; isDefined {
 		page.Contents = obj
 	}
-	if obj, isDefined := p["Rotate"]; isDefined {
+	if obj, isDefined := d["Rotate"]; isDefined {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid Page Rotate object")
@@ -276,58 +387,58 @@ func NewPdfPage(p PdfObjectDictionary) (*PdfPage, error) {
 		iVal := int64(*iObj)
 		page.Rotate = &iVal
 	}
-	if obj, isDefined := p["Group"]; isDefined {
+	if obj, isDefined := d["Group"]; isDefined {
 		page.Group = obj
 	}
-	if obj, isDefined := p["Thumb"]; isDefined {
+	if obj, isDefined := d["Thumb"]; isDefined {
 		page.Thumb = obj
 	}
-	if obj, isDefined := p["B"]; isDefined {
+	if obj, isDefined := d["B"]; isDefined {
 		page.B = obj
 	}
-	if obj, isDefined := p["Dur"]; isDefined {
+	if obj, isDefined := d["Dur"]; isDefined {
 		page.Dur = obj
 	}
-	if obj, isDefined := p["Trans"]; isDefined {
+	if obj, isDefined := d["Trans"]; isDefined {
 		page.Trans = obj
 	}
-	if obj, isDefined := p["Annots"]; isDefined {
+	if obj, isDefined := d["Annots"]; isDefined {
 		page.Annots = obj
 	}
-	if obj, isDefined := p["AA"]; isDefined {
+	if obj, isDefined := d["AA"]; isDefined {
 		page.AA = obj
 	}
-	if obj, isDefined := p["Metadata"]; isDefined {
+	if obj, isDefined := d["Metadata"]; isDefined {
 		page.Metadata = obj
 	}
-	if obj, isDefined := p["PieceInfo"]; isDefined {
+	if obj, isDefined := d["PieceInfo"]; isDefined {
 		page.PieceInfo = obj
 	}
-	if obj, isDefined := p["StructParents"]; isDefined {
+	if obj, isDefined := d["StructParents"]; isDefined {
 		page.StructParents = obj
 	}
-	if obj, isDefined := p["ID"]; isDefined {
+	if obj, isDefined := d["ID"]; isDefined {
 		page.ID = obj
 	}
-	if obj, isDefined := p["PZ"]; isDefined {
+	if obj, isDefined := d["PZ"]; isDefined {
 		page.PZ = obj
 	}
-	if obj, isDefined := p["SeparationInfo"]; isDefined {
+	if obj, isDefined := d["SeparationInfo"]; isDefined {
 		page.SeparationInfo = obj
 	}
-	if obj, isDefined := p["Tabs"]; isDefined {
+	if obj, isDefined := d["Tabs"]; isDefined {
 		page.Tabs = obj
 	}
-	if obj, isDefined := p["TemplateInstantiated"]; isDefined {
+	if obj, isDefined := d["TemplateInstantiated"]; isDefined {
 		page.TemplateInstantiated = obj
 	}
-	if obj, isDefined := p["PresSteps"]; isDefined {
+	if obj, isDefined := d["PresSteps"]; isDefined {
 		page.PresSteps = obj
 	}
-	if obj, isDefined := p["UserUnit"]; isDefined {
+	if obj, isDefined := d["UserUnit"]; isDefined {
 		page.UserUnit = obj
 	}
-	if obj, isDefined := p["VP"]; isDefined {
+	if obj, isDefined := d["VP"]; isDefined {
 		page.VP = obj
 	}
 
@@ -375,7 +486,7 @@ func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 
 // Convert the Page to a PDF object dictionary.
 func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
-	p := &PdfObjectDictionary{}
+	p := this.pageDict
 	(*p)["Type"] = MakeName("Page")
 	(*p)["Parent"] = this.Parent
 

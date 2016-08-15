@@ -144,7 +144,7 @@ endobj
 		return
 	}
 
-	page, err := NewPdfPage(*pageDict)
+	page, err := NewPdfPageFromDict(pageDict)
 	if err != nil {
 		t.Errorf("Unable to load page (%s)", err)
 		return
