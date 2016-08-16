@@ -342,12 +342,12 @@ func (this *PdfReader) loadStructure() error {
 	if err != nil {
 		return err
 	}
-	this.outlineTree, err = this.buildOutlines2()
+	this.outlineTree, err = this.loadOutlines()
 	if err != nil {
 		common.Log.Error("Failed to build outline tree (%s)", err)
 		return err
 	}
-	common.Log.Debug("Outine tree: %v", this.outlineTree)
+	common.Log.Debug("Outline tree: %v", this.outlineTree)
 
 	// Get forms.
 	this.forms, err = this.GetForms()
@@ -464,8 +464,7 @@ func (this *PdfReader) traceToObject(obj PdfObject) (PdfObject, error) {
 	return this.traceToObjectWrapper(obj, refList)
 }
 
-// Testing.
-func (this *PdfReader) buildOutlines2() (*PdfOutlineTreeNode, error) {
+func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
@@ -501,37 +500,11 @@ func (this *PdfReader) buildOutlines2() (*PdfOutlineTreeNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return outlineTree, nil
-
-	// So far here.
-	// Traverse starting at First of each node, then go to next, etc.
-	//outlineDict := TraceToDirectObject(outlinesObj)
-	/*
-		traversed := map[*PdfIndirectObject]bool{}
-
-		node, ok := (*dict)["First"].(*PdfIndirectObject)
-		for ok {
-			if _, alreadyTraversed := traversed[node]; alreadyTraversed {
-				common.Log.Error("Circular outline reference")
-				return outlines, errors.New("Circular outline reference")
-			}
-			traversed[node] = true
-			dict, ok := node.PdfObject.(*PdfObjectDictionary)
-			if !ok {
-				common.Log.Debug("Invalid outline objects (not dict)")
-				break
-			}
-			outlinesList = append(outlinesList, node)
-
-			node, ok = (*dict)["Next"].(*PdfIndirectObject)
-			if !ok {
-				break
-			}
-		}
-
-		return outlinesList, nil */
 }
 
+// Recursive build outline tree.
 func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
 	dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
 	if !ok {
@@ -587,6 +560,11 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 
 	// End node.
 	return nil, nil
+}
+
+func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err) {
+	outlines := []*PdfOutlineTreeNode{}
+	flattenedTitles := []string{}
 }
 
 func (this *PdfReader) finalizeOutlineTree() {

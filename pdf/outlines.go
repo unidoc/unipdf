@@ -119,7 +119,7 @@ func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, erro
 	if !hasTitle {
 		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
 	}
-	title, ok := obj.(*PdfObjectString)
+	title, ok := TraceToDirectObject(obj).(*PdfObjectString)
 	if !ok {
 		return nil, fmt.Errorf("Title not a string (%T)", obj)
 	}
@@ -135,11 +135,23 @@ func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, erro
 		item.Count = &count
 	}
 
-	// Dest.
-	// A.
-	// SE.
-	// C.
-	// F.
+	// Other keys.
+
+	if obj, hasKey := (*dict)["Dest"]; hasKey {
+		item.Dest = obj
+	}
+	if obj, hasKey := (*dict)["A"]; hasKey {
+		item.A = obj
+	}
+	if obj, hasKey := (*dict)["SE"]; hasKey {
+		item.SE = obj
+	}
+	if obj, hasKey := (*dict)["C"]; hasKey {
+		item.C = obj
+	}
+	if obj, hasKey := (*dict)["F"]; hasKey {
+		item.F = obj
+	}
 
 	return &item, nil
 }

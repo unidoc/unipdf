@@ -112,7 +112,7 @@ type PdfDate struct {
 	utOffsetMins  int64 // mm (00-59)
 }
 
-var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])(\d{2})'(\d{2})`)
+var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])(\d{2})'(\d{2})?`)
 
 // Make a new PdfDate object from a PDF date string (see 7.9.4 Dates).
 // format: "D: YYYYMMDDHHmmSSOHH'mm"
@@ -121,7 +121,7 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 
 	matches := reDate.FindAllStringSubmatch(dateStr, 1)
 	if len(matches) < 1 {
-		return d, errors.New("Invalid date string")
+		return d, fmt.Errorf("Invalid date string (%s)", dateStr)
 	}
 	if len(matches[0]) != 10 {
 		return d, errors.New("Invalid regexp group match length != 10")
