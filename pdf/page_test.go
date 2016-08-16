@@ -144,7 +144,10 @@ endobj
 		return
 	}
 
-	page, err := NewPdfPageFromDict(pageDict)
+	// Bit of a hacky way to do this.  PDF reader is needed if need to resolve external references,
+	// but none in this case, so can just use a dummy instance.
+	dummyPdfReader := PdfReader{}
+	page, err := dummyPdfReader.newPdfPageFromDict(pageDict)
 	if err != nil {
 		t.Errorf("Unable to load page (%s)", err)
 		return
