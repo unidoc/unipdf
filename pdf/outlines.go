@@ -1,24 +1,30 @@
 package pdf
 
 import (
-//"fmt"
+	"fmt"
 )
+
+type PdfOutlineTreeNode struct {
+	First *PdfOutlineTreeNode
+	Last  *PdfOutlineTreeNode
+}
 
 // PDF outline dictionary (Table 152 - p. 376)
 type PdfOutline struct {
-	Type  *PdfObjectName
-	First *PdfOutlineItem
-	Last  *PdfOutlineItem
+	PdfOutlineTreeNode
+	//First *PdfOutlineItem
+	//Last  *PdfOutlineItem
 	Count *int64
 }
 
 // Pdf outline item dictionary (Table 153 - pp. 376 - 377)
 type PdfOutlineItem struct {
+	PdfOutlineTreeNode
 	Title *PdfObjectString
-	Prev  *PdfOutlineItem
-	Next  *PdfOutlineItem
-	First *PdfOutlineItem
-	Last  *PdfOutlineItem
+	//First *PdfOutlineItem
+	//Last  *PdfOutlineItem
+	Prev  *PdfOutlineTreeNode
+	Next  *PdfOutlineTreeNode
 	Count *int64
 	Dest  PdfObject
 	A     PdfObject
@@ -77,6 +83,65 @@ type PdfDestinationFitBV struct {
 
 type PdfDestinationNamed struct {
 	name *PdfObjectName
+}
+
+// Does not traverse the tree.
+func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
+	outline := PdfOutline{}
+
+	if obj, hasType := (*dict)["Type"]; hasType {
+		typeVal, ok := obj.(*PdfObjectName)
+		if ok {
+			if *typeVal != "Outlines" {
+				return nil, fmt.Errorf("Type != Outlines (%s)", *typeVal)
+			}
+		}
+	}
+
+	if obj, hasCount := (*dict)["Count"]; hasCount {
+		countVal, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("Count not an integer (%T)", obj)
+		}
+		count := int64(*countVal)
+		outline.Count = &count
+	}
+
+	return &outline, nil
+}
+
+// Does not traverse the tree.
+func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, error) {
+	item := PdfOutlineItem{}
+
+	// Title (required).
+	obj, hasTitle := (*dict)["Title"]
+	if !hasTitle {
+		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
+	}
+	title, ok := obj.(*PdfObjectString)
+	if !ok {
+		return nil, fmt.Errorf("Title not a string (%T)", obj)
+	}
+	item.Title = title
+
+	// Count (optional).
+	if obj, hasCount := (*dict)["Count"]; hasCount {
+		countVal, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("Count not an integer (%T)", obj)
+		}
+		count := int64(*countVal)
+		item.Count = &count
+	}
+
+	// Dest.
+	// A.
+	// SE.
+	// C.
+	// F.
+
+	return &item, nil
 }
 
 // Build the PDF destination from an explicit destination array.

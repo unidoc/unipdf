@@ -200,15 +200,16 @@ func NewPdfCatalogFromDict(dict *PdfObjectDictionary) (*PdfCatalog, error) {
 */
 
 type PdfReader struct {
-	parser    *PdfParser
-	root      PdfObject
-	pages     *PdfObjectDictionary
-	pageList  []*PdfIndirectObject
-	PageList  []*PdfPage
-	pageCount int
-	catalog   *PdfObjectDictionary
-	outlines  []*PdfIndirectObject
-	forms     *PdfObjectDictionary
+	parser      *PdfParser
+	root        PdfObject
+	pages       *PdfObjectDictionary
+	pageList    []*PdfIndirectObject
+	PageList    []*PdfPage
+	pageCount   int
+	catalog     *PdfObjectDictionary
+	outlines    []*PdfIndirectObject
+	outlineTree *PdfOutlineTreeNode
+	forms       *PdfObjectDictionary
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
@@ -341,6 +342,13 @@ func (this *PdfReader) loadStructure() error {
 	if err != nil {
 		return err
 	}
+	this.outlineTree, err = this.buildOutlines2()
+	if err != nil {
+		common.Log.Error("Failed to build outline tree (%s)", err)
+		return err
+	}
+	common.Log.Debug("Outine tree: %v", this.outlineTree)
+
 	// Get forms.
 	this.forms, err = this.GetForms()
 	if err != nil {
@@ -357,7 +365,7 @@ func (this *PdfReader) loadStructure() error {
 // to their objects which are fully loaded in memory.
 func (this *PdfReader) GetOutlines() ([]*PdfIndirectObject, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
-		return nil, fmt.Errorf("File need to be decrypted first")
+		return nil, fmt.Errorf("File needs to be decrypted first")
 	}
 	outlinesList := []*PdfIndirectObject{}
 
@@ -457,21 +465,22 @@ func (this *PdfReader) traceToObject(obj PdfObject) (PdfObject, error) {
 }
 
 // Testing.
-func (this *PdfReader) buildOutlines2() (*PdfOutline, error) {
+func (this *PdfReader) buildOutlines2() (*PdfOutlineTreeNode, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 
 	outlines := &PdfOutline{}
 
-	// Has outlines?
+	// Has outlines? Otherwise return an empty outlines structure.
 	catalog := this.catalog
 	outlinesObj, hasOutlines := (*catalog)["Outlines"]
 	if !hasOutlines {
-		return outlines, nil
+		return &outlines.PdfOutlineTreeNode, nil
 	}
 
 	common.Log.Debug("Has outlines")
+	// Trace references to the object.
 	outlineRootObj, err := this.traceToObject(outlinesObj)
 	if err != nil {
 		common.Log.Error("Failed to read outlines")
@@ -480,52 +489,108 @@ func (this *PdfReader) buildOutlines2() (*PdfOutline, error) {
 
 	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
 	if !ok {
-		return outlines, nil
+		return &outlines.PdfOutlineTreeNode, errors.New("Outline root should be an indirect object")
 	}
 
 	dict, ok := outlineRoot.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return outlines, nil
+		return &outlines.PdfOutlineTreeNode, errors.New("Outline indirect object should contain a dictionary")
 	}
 
-	outlineDict := TraceToDirectObject(outlinesObj)
-
-	traversed := map[*PdfIndirectObject]bool{}
-
-	node, ok := (*dict)["First"].(*PdfIndirectObject)
-	for ok {
-		if _, alreadyTraversed := traversed[node]; alreadyTraversed {
-			common.Log.Error("Circular outline reference")
-			return outlines, errors.New("Circular outline reference")
-		}
-		traversed[node] = true
-		dict, ok := node.PdfObject.(*PdfObjectDictionary)
-		if !ok {
-			common.Log.Debug("Invalid outline objects (not dict)")
-			break
-		}
-		outlinesList = append(outlinesList, node)
-
-		node, ok = (*dict)["Next"].(*PdfIndirectObject)
-		if !ok {
-			break
-		}
+	outlineTree, err := this.buildOutlineTree(dict)
+	if err != nil {
+		return nil, err
 	}
+	return outlineTree, nil
 
-	return outlinesList, nil
+	// So far here.
+	// Traverse starting at First of each node, then go to next, etc.
+	//outlineDict := TraceToDirectObject(outlinesObj)
+	/*
+		traversed := map[*PdfIndirectObject]bool{}
+
+		node, ok := (*dict)["First"].(*PdfIndirectObject)
+		for ok {
+			if _, alreadyTraversed := traversed[node]; alreadyTraversed {
+				common.Log.Error("Circular outline reference")
+				return outlines, errors.New("Circular outline reference")
+			}
+			traversed[node] = true
+			dict, ok := node.PdfObject.(*PdfObjectDictionary)
+			if !ok {
+				common.Log.Debug("Invalid outline objects (not dict)")
+				break
+			}
+			outlinesList = append(outlinesList, node)
+
+			node, ok = (*dict)["Next"].(*PdfIndirectObject)
+			if !ok {
+				break
+			}
+		}
+
+		return outlinesList, nil */
 }
 
-func (this *pdfReader) buildOutlineTree(obj PdfObject) error {
+func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
 	dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Not a dictionary object")
+		return nil, errors.New("Not a dictionary object")
 	}
 
-	if _, hasTitle := d["Title"]; hasTitle {
+	if _, hasTitle := (*dict)["Title"]; hasTitle {
 		// OutlineItem
-		item := PdfOutlineItem{}
-		newOutlineItemFromDict(d)
+		outlineItem, err := newPdfOutlineItemFromDict(dict)
+		if err != nil {
+			return nil, err
+		}
+		// Resolve the reference to next
+		if nextObj, hasNext := (*dict)["Next"]; hasNext {
+			nextDict, ok := TraceToDirectObject(nextObj).(*PdfObjectDictionary)
+			if !ok {
+				return nil, errors.New("Next not a dictionary object")
+			}
+			outlineItem.Next, err = this.buildOutlineTree(nextDict)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+			firstDict, ok := TraceToDirectObject(firstObj).(*PdfObjectDictionary)
+			if !ok {
+				return nil, errors.New("First not a dictionary object")
+			}
+			outlineItem.First, err = this.buildOutlineTree(firstDict)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// Outline dictionary.
+		outline, err := newPdfOutlineFromDict(dict)
+		if err != nil {
+			return nil, err
+		}
+
+		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+			firstDict, ok := TraceToDirectObject(firstObj).(*PdfObjectDictionary)
+			if !ok {
+				return nil, errors.New("First not a dictionary object")
+			}
+			outline.First, err = this.buildOutlineTree(firstDict)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 	}
+
+	// End node.
+	return nil, nil
+}
+
+func (this *PdfReader) finalizeOutlineTree() {
+	// update prev, last, count entries.
 }
 
 // Get document form data.
@@ -599,7 +664,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	}
 	common.Log.Debug("buildPageList node type: %s", *objType)
 	if *objType == "Page" {
-		p, err := NewPdfPageFromDict(nodeDict)
+		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
 			return err
 		}

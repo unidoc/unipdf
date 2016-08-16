@@ -275,7 +275,7 @@ func NewPdfPagesFromDict(dict PdfObjectDictionary) (*PdfPages, error) {
 }
 
 // Build a PdfPage based on the underlying dictionary.
-func NewPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
+func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := PdfPage{}
 	page.pageDict = &PdfObjectDictionary{}
 
@@ -306,12 +306,16 @@ func NewPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	}
 
 	if obj, isDefined := d["Resources"]; isDefined {
-		dict, ok := obj.(*PdfObjectDictionary)
-		if !ok {
-			return nil, errors.New("Invalid resource dictionary")
+		obj, err := reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
 		}
 
-		var err error
+		dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+		if !ok {
+			return nil, fmt.Errorf("Invalid resource dictionary (%T)", obj)
+		}
+
 		page.Resources, err = NewPdfPageResourcesFromDict(dict)
 		if err != nil {
 			return nil, err
