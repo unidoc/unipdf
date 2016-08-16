@@ -24,7 +24,7 @@ import (
 var rePdfVersion = regexp.MustCompile(`%PDF-(\d\.\d)`)
 var reEOF = regexp.MustCompile("%%EOF")
 var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
-var reStartXref = regexp.MustCompile(`startxref\s*(\d+)`)
+var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
 var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
 var reExponential = regexp.MustCompile(`^[\+-.]*([0-9.]+)e[\+-.]*([0-9.]+)`)
 var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
@@ -1070,13 +1070,22 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		return nil, errors.New("Startxref not found")
 	}
 	if len(result) > 2 {
-		// GH: Take the last one?
+		// GH: Take the last one?  Make a test case.
 		common.Log.Error("Multiple startxref (%s)!", b2)
 		return nil, errors.New("Multiple startxref entries?")
 	}
-	offsetXref, _ := strconv.Atoi(result[1])
+	offsetXref, _ := strconv.ParseInt(result[1], 10, 64)
 	common.Log.Debug("startxref at %d", offsetXref)
 
+	if offsetXref > fSize {
+		common.Log.Error("Xref offset outside of file")
+		common.Log.Error("Attempting repair")
+		offsetXref, err = this.repairLocateXref()
+		if err != nil {
+			common.Log.Error("Repair attempt failed (%s)")
+			return nil, err
+		}
+	}
 	// Read the xref.
 	this.rs.Seek(int64(offsetXref), os.SEEK_SET)
 	this.reader = bufio.NewReader(this.rs)
