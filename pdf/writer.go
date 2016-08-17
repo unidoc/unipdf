@@ -184,7 +184,16 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 				if err != nil {
 					return err
 				}
-
+			} else {
+				// How to handle the parent?  Make sure it is present?
+				if parentObj, parentIsRef := (*dict)["Parent"].(*PdfObjectReference); parentIsRef {
+					// Parent is a reference.  Means we can drop it?
+					// Could refer to somewhere outside of the scope of the output doc.
+					// Should be done by the reader already.
+					// -> ERROR.
+					common.Log.Error("Parent is a reference object - Cannot be in writer (needs to be resolved)")
+					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
+				}
 			}
 		}
 		return nil
