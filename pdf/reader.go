@@ -313,6 +313,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 	}
 }
 
+// Return a flattened list of tree nodes and titles.
 func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
 	outlineNodeList := []*PdfOutlineTreeNode{}
 	flattenedTitleList := []string{}
