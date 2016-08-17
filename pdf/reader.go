@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 )
@@ -200,14 +201,14 @@ func NewPdfCatalogFromDict(dict *PdfObjectDictionary) (*PdfCatalog, error) {
 */
 
 type PdfReader struct {
-	parser      *PdfParser
-	root        PdfObject
-	pages       *PdfObjectDictionary
-	pageList    []*PdfIndirectObject
-	PageList    []*PdfPage
-	pageCount   int
-	catalog     *PdfObjectDictionary
-	outlines    []*PdfIndirectObject
+	parser    *PdfParser
+	root      PdfObject
+	pages     *PdfObjectDictionary
+	pageList  []*PdfIndirectObject
+	PageList  []*PdfPage
+	pageCount int
+	catalog   *PdfObjectDictionary
+	//outlines    []*PdfIndirectObject
 	outlineTree *PdfOutlineTreeNode
 	forms       *PdfObjectDictionary
 
@@ -338,10 +339,10 @@ func (this *PdfReader) loadStructure() error {
 	common.Log.Debug("%d: %s", len(this.pageList), this.pageList)
 
 	// Get outlines.
-	this.outlines, err = this.GetOutlines()
-	if err != nil {
-		return err
-	}
+	//this.outlines, err = this.GetOutlines()
+	//if err != nil {
+	//	return err
+	//}
 	this.outlineTree, err = this.loadOutlines()
 	if err != nil {
 		common.Log.Error("Failed to build outline tree (%s)", err)
@@ -356,79 +357,6 @@ func (this *PdfReader) loadStructure() error {
 	}
 
 	return nil
-}
-
-// Load the document outlines.
-// Returns a list of the outermost layer of the Outlines dictionary,
-// which then has connections to the inner layers.
-// The inner layers are also fully traversed and references traced
-// to their objects which are fully loaded in memory.
-func (this *PdfReader) GetOutlines() ([]*PdfIndirectObject, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
-		return nil, fmt.Errorf("File needs to be decrypted first")
-	}
-	outlinesList := []*PdfIndirectObject{}
-
-	// Has outlines?
-	catalog := this.catalog
-	outlinesRef, hasOutlines := (*catalog)["Outlines"].(*PdfObjectReference)
-	if !hasOutlines {
-		return outlinesList, nil
-	}
-
-	common.Log.Debug("Has outlines")
-	outlinesObj, err := this.parser.LookupByReference(*outlinesRef)
-	if err != nil {
-		common.Log.Error("Failed to read outlines")
-		return outlinesList, err
-	}
-	common.Log.Debug("Traverse outlines")
-	nofollowList := map[PdfObjectName]bool{
-		"Parent": true,
-	}
-	// XXX: Make less generic, only follow certain fields...
-	// make into our own static object.. follow whats needed..
-	// BuildOutlinesFromDict
-
-	err = this.traverseObjectData(outlinesObj, nofollowList)
-	if err != nil {
-		return nil, err
-	}
-	common.Log.Debug("Traverse outlines - done")
-
-	outlines, ok := outlinesObj.(*PdfIndirectObject)
-	if !ok {
-		return outlinesList, nil
-	}
-
-	dict, ok := outlines.PdfObject.(*PdfObjectDictionary)
-	if !ok {
-		return outlinesList, nil
-	}
-
-	traversed := map[*PdfIndirectObject]bool{}
-
-	node, ok := (*dict)["First"].(*PdfIndirectObject)
-	for ok {
-		if _, alreadyTraversed := traversed[node]; alreadyTraversed {
-			common.Log.Error("Circular outline reference")
-			return outlinesList, errors.New("Circular outline reference")
-		}
-		traversed[node] = true
-		dict, ok := node.PdfObject.(*PdfObjectDictionary)
-		if !ok {
-			common.Log.Debug("Invalid outline objects (not dict)")
-			break
-		}
-		outlinesList = append(outlinesList, node)
-
-		node, ok = (*dict)["Next"].(*PdfIndirectObject)
-		if !ok {
-			break
-		}
-	}
-
-	return outlinesList, nil
 }
 
 //
@@ -478,13 +406,14 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 		return &outlines.PdfOutlineTreeNode, nil
 	}
 
-	common.Log.Debug("Has outlines")
+	common.Log.Debug("-Has outlines")
 	// Trace references to the object.
 	outlineRootObj, err := this.traceToObject(outlinesObj)
 	if err != nil {
 		common.Log.Error("Failed to read outlines")
 		return nil, err
 	}
+	common.Log.Debug("Outline root: %v", outlineRootObj)
 
 	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
 	if !ok {
@@ -496,10 +425,13 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 		return &outlines.PdfOutlineTreeNode, errors.New("Outline indirect object should contain a dictionary")
 	}
 
+	common.Log.Debug("Outline root dict: %v", dict)
+
 	outlineTree, err := this.buildOutlineTree(dict)
 	if err != nil {
 		return nil, err
 	}
+	common.Log.Debug("Resulting outline tree: %v", outlineTree)
 
 	return outlineTree, nil
 }
@@ -510,18 +442,23 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 	if !ok {
 		return nil, errors.New("Not a dictionary object")
 	}
+	common.Log.Debug("build outline tree: dict: %v", dict)
 
 	if _, hasTitle := (*dict)["Title"]; hasTitle {
-		// OutlineItem
+		// Outline item has a title.
 		outlineItem, err := newPdfOutlineItemFromDict(dict)
 		if err != nil {
 			return nil, err
 		}
 		// Resolve the reference to next
 		if nextObj, hasNext := (*dict)["Next"]; hasNext {
+			nextObj, err = this.traceToObject(nextObj)
+			if err != nil {
+				return nil, err
+			}
 			nextDict, ok := TraceToDirectObject(nextObj).(*PdfObjectDictionary)
 			if !ok {
-				return nil, errors.New("Next not a dictionary object")
+				return nil, fmt.Errorf("Next not a dictionary object (%T)", nextObj)
 			}
 			outlineItem.Next, err = this.buildOutlineTree(nextDict)
 			if err != nil {
@@ -529,46 +466,77 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 			}
 		}
 		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+			firstObj, err = this.traceToObject(firstObj)
+			if err != nil {
+				return nil, err
+			}
 			firstDict, ok := TraceToDirectObject(firstObj).(*PdfObjectDictionary)
 			if !ok {
-				return nil, errors.New("First not a dictionary object")
+				return nil, fmt.Errorf("First not a dictionary object (%T)", firstObj)
 			}
 			outlineItem.First, err = this.buildOutlineTree(firstDict)
 			if err != nil {
 				return nil, err
 			}
 		}
+		return &outlineItem.PdfOutlineTreeNode, nil
 	} else {
-		// Outline dictionary.
+		// Outline dictionary (structure element).
 		outline, err := newPdfOutlineFromDict(dict)
 		if err != nil {
 			return nil, err
 		}
 
 		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+			firstObj, err = this.traceToObject(firstObj)
+			if err != nil {
+				return nil, err
+			}
 			firstDict, ok := TraceToDirectObject(firstObj).(*PdfObjectDictionary)
 			if !ok {
-				return nil, errors.New("First not a dictionary object")
+				return nil, fmt.Errorf("First not a dictionary object (%T)", firstObj)
 			}
 			outline.First, err = this.buildOutlineTree(firstDict)
 			if err != nil {
 				return nil, err
 			}
 		}
-
+		return &outline.PdfOutlineTreeNode, nil
 	}
-
-	// End node.
-	return nil, nil
 }
 
-func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err) {
-	outlines := []*PdfOutlineTreeNode{}
-	flattenedTitles := []string{}
-}
+func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
+	outlineNodeList := []*PdfOutlineTreeNode{}
+	flattenedTitleList := []string{}
 
-func (this *PdfReader) finalizeOutlineTree() {
-	// update prev, last, count entries.
+	// Recursive flattening function.
+	var flattenFunc func(*PdfOutlineTreeNode, *[]*PdfOutlineTreeNode, *[]string, int)
+	flattenFunc = func(node *PdfOutlineTreeNode, outlineList *[]*PdfOutlineTreeNode, titleList *[]string, depth int) {
+		if node == nil {
+			return
+		}
+		if node.context == nil {
+			common.Log.Error("Missing node.context") // Should not happen ever.
+			return
+		}
+
+		if item, isItem := node.context.(*PdfOutlineItem); isItem {
+			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
+			title := strings.Repeat(" ", depth*2) + string(*item.Title)
+			*titleList = append(*titleList, title)
+			if item.Next != nil {
+				flattenFunc(item.Next, outlineList, titleList, depth)
+			}
+		}
+
+		if node.First != nil {
+			title := strings.Repeat(" ", depth*2) + "+"
+			*titleList = append(*titleList, title)
+			flattenFunc(node.First, outlineList, titleList, depth+1)
+		}
+	}
+	flattenFunc(this.outlineTree, &outlineNodeList, &flattenedTitleList, 0)
+	return outlineNodeList, flattenedTitleList, nil
 }
 
 // Get document form data.
@@ -837,6 +805,7 @@ func (this *PdfReader) traverseObjectData(o PdfObject, nofollowKeys map[PdfObjec
 
 // Get outlines referring to a specific page.  Only checks the outermost
 // outlines.
+/*
 func (this *PdfReader) GetOutlinesForPage(page PdfObject) ([]*PdfIndirectObject, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
@@ -893,6 +862,7 @@ func (this *PdfReader) GetOutlinesForPage(page PdfObject) ([]*PdfIndirectObject,
 	}
 	return pageOutlines, nil
 }
+*/
 
 // Get a page by the page number.
 // Indirect object with type /Page.

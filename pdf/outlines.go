@@ -5,15 +5,14 @@ import (
 )
 
 type PdfOutlineTreeNode struct {
-	First *PdfOutlineTreeNode
-	Last  *PdfOutlineTreeNode
+	context interface{} // Allow accessing outer structure.
+	First   *PdfOutlineTreeNode
+	Last    *PdfOutlineTreeNode
 }
 
 // PDF outline dictionary (Table 152 - p. 376)
 type PdfOutline struct {
 	PdfOutlineTreeNode
-	//First *PdfOutlineItem
-	//Last  *PdfOutlineItem
 	Count *int64
 }
 
@@ -21,8 +20,6 @@ type PdfOutline struct {
 type PdfOutlineItem struct {
 	PdfOutlineTreeNode
 	Title *PdfObjectString
-	//First *PdfOutlineItem
-	//Last  *PdfOutlineItem
 	Prev  *PdfOutlineTreeNode
 	Next  *PdfOutlineTreeNode
 	Count *int64
@@ -88,6 +85,7 @@ type PdfDestinationNamed struct {
 // Does not traverse the tree.
 func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
 	outline := PdfOutline{}
+	outline.context = &outline
 
 	if obj, hasType := (*dict)["Type"]; hasType {
 		typeVal, ok := obj.(*PdfObjectName)
@@ -113,6 +111,7 @@ func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
 // Does not traverse the tree.
 func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, error) {
 	item := PdfOutlineItem{}
+	item.context = &item
 
 	// Title (required).
 	obj, hasTitle := (*dict)["Title"]
