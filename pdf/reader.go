@@ -14,201 +14,14 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-// The root catalog dictionary (table 28).
-type PdfCatalog struct {
-	Version           *PdfObjectName
-	Extensions        PdfObject
-	Pages             PdfPages
-	PageLabels        PdfObject
-	Names             PdfObject
-	Dests             PdfObject
-	ViewerPreferences PdfObject
-	PageLayout        *PdfObjectName
-	PageMode          *PdfObjectName
-	Outlines          PdfObject //*PdfOutlines
-	Threads           PdfObject
-	OpenAction        PdfObject
-	AA                PdfObject
-	URI               PdfObject
-	AcroForm          PdfObject
-	Metadata          PdfObject
-	StructTreeRoot    PdfObject
-	MarkInfo          PdfObject
-	Lang              *PdfObjectString
-	SpiderInfo        PdfObject
-	OutputIntents     PdfObject
-	PieceInfo         PdfObject
-	OCProperties      PdfObject
-	Perms             PdfObject
-	Legal             PdfObject
-	Requirements      PdfObject
-	Collection        PdfObject
-	NeedsRendering    PdfObject
-}
-
-// Build the PDF catalog object based on the Catalog dictionary.
-/*
-func NewPdfCatalogFromDict(dict *PdfObjectDictionary) (*PdfCatalog, error) {
-	if dict == nil {
-		return nil, errors.New("Catalog dict is nil")
-	}
-
-	catalog := PdfCatalog{}
-
-	dType, ok := dict["Type"].(*PdfObjectName)
-	if !ok {
-		return nil, errors.New("Missing/Invalid Catalog dictionary type")
-	}
-	if *dType != "Catalog" {
-		return nil, errors.New("Catalog dictionary Type != Catalog")
-	}
-
-	if obj, isDefined := dict["Version"]; isDefined {
-		version, ok := obj.(*PdfObjectName)
-		if !ok {
-			return nil, errors.New("Version not a name object")
-		}
-		catalog.Version = version
-	}
-
-	if obj, isDefined := dict["Extensions"]; isDefined {
-		catalog.Extensions = obj
-	}
-
-	if obj, isDefined := dict["Pages"]; isDefined {
-		// Can be indirect.. Make a function that traces indirect objects to its object.
-		pagesDict, ok := obj.(*PdfObjectDictionary)
-		if !ok {
-			return nil, errors.New("Pages value not a dictionary")
-		}
-		catalog.Pages, err = NewPagesFromDict(pagesDict)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if obj, isDefined := dict["PageLabels"]; isDefined {
-		catalog.PageLabels = obj
-	}
-
-	if obj, isDefined := dict["Names"]; isDefined {
-		catalog.Names = obj
-	}
-
-	if obj, isDefined := dict["Dests"]; isDefined {
-		catalog.Dests = obj
-	}
-
-	if obj, isDefined := dict["ViewerPreferences"]; isDefined {
-		catalog.ViewerPreferences = obj
-	}
-
-	if obj, isDefined := dict["PageLayout"]; isDefined {
-		layout, ok := obj.(*PdfObjectName)
-		if !ok {
-			return nil, errors.New("PageLayout not a name object")
-		}
-		catalog.PageLayout = layout
-	}
-
-	if obj, isDefined := dict["PageMode"]; isDefined {
-		layout, ok := obj.(*PdfObjectName)
-		if !ok {
-			return nil, errors.New("PageMode not a name object")
-		}
-		catalog.PageMode = layout
-	}
-
-	if obj, isDefined := dict["Outlines"]; isDefined {
-		// Can be indirect.. Make a function that traces indirect objects to its object.
-		// obj = TraceToDirect(obj)
-		outlinesDict, ok := obj.(*PdfObjectDictionary)
-		if !ok {
-			return nil, errors.New("Outlines value not a dictionary")
-		}
-		catalog.Outlines, err = NewOutlinesFromDict(outlinesDict)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if obj, isDefined := dict["Threads"]; isDefined {
-		catalog.Threads = obj
-	}
-	if obj, isDefined := dict["OpenAction"]; isDefined {
-		catalog.OpenAction = obj
-	}
-	if obj, isDefined := dict["AA"]; isDefined {
-		catalog.AA = obj
-	}
-	if obj, isDefined := dict["URI"]; isDefined {
-		catalog.URI = obj
-	}
-	if obj, isDefined := dict["AcroForm"]; isDefined {
-		catalog.URI = obj
-	}
-	if obj, isDefined := dict["Metadata"]; isDefined {
-		catalog.URI = obj
-	}
-	if obj, isDefined := dict["StructTreeRoot"]; isDefined {
-		catalog.URI = obj
-	}
-	if obj, isDefined := dict["MarkInfo"]; isDefined {
-		catalog.URI = obj
-	}
-	if obj, isDefined := dict["URI"]; isDefined {
-		catalog.URI = obj
-	}
-
-	if obj, isDefined := dict["Lang"]; isDefined {
-		lang, ok := obj.(*PdfObjectString)
-		if !ok {
-			return nil, errors.New("Lang not a string object")
-		}
-		catalog.Lang = lang
-	}
-
-	if obj, isDefined := dict["SpiderInfo"]; isDefined {
-		catalog.SpiderInfo = obj
-	}
-	if obj, isDefined := dict["OutputIntents"]; isDefined {
-		catalog.OutputIntents = obj
-	}
-	if obj, isDefined := dict["PieceInfo"]; isDefined {
-		catalog.PieceInfo = obj
-	}
-	if obj, isDefined := dict["OCProperties"]; isDefined {
-		catalog.OCProperties = obj
-	}
-	if obj, isDefined := dict["Perms"]; isDefined {
-		catalog.Perms = obj
-	}
-	if obj, isDefined := dict["Legal"]; isDefined {
-		catalog.Legal = obj
-	}
-	if obj, isDefined := dict["Requirements"]; isDefined {
-		catalog.Requirements = obj
-	}
-	if obj, isDefined := dict["Collection"]; isDefined {
-		catalog.Collection = obj
-	}
-	if obj, isDefined := dict["NeedsRendering"]; isDefined {
-		catalog.NeedsRendering = obj
-	}
-
-	return &catalog
-}
-*/
-
 type PdfReader struct {
-	parser    *PdfParser
-	root      PdfObject
-	pages     *PdfObjectDictionary
-	pageList  []*PdfIndirectObject
-	PageList  []*PdfPage
-	pageCount int
-	catalog   *PdfObjectDictionary
-	//outlines    []*PdfIndirectObject
+	parser      *PdfParser
+	root        PdfObject
+	pages       *PdfObjectDictionary
+	pageList    []*PdfIndirectObject
+	PageList    []*PdfPage
+	pageCount   int
+	catalog     *PdfObjectDictionary
 	outlineTree *PdfOutlineTreeNode
 	forms       *PdfObjectDictionary
 
@@ -338,17 +151,12 @@ func (this *PdfReader) loadStructure() error {
 	common.Log.Debug("Pages")
 	common.Log.Debug("%d: %s", len(this.pageList), this.pageList)
 
-	// Get outlines.
-	//this.outlines, err = this.GetOutlines()
-	//if err != nil {
-	//	return err
-	//}
+	// Outlines.
 	this.outlineTree, err = this.loadOutlines()
 	if err != nil {
 		common.Log.Error("Failed to build outline tree (%s)", err)
 		return err
 	}
-	common.Log.Debug("Outline tree: %v", this.outlineTree)
 
 	// Get forms.
 	this.forms, err = this.GetForms()
