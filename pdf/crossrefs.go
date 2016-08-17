@@ -245,7 +245,18 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 
 		obj, err := this.parseIndirectObject()
 		if err != nil {
-			common.Log.Error("Failed reading xref")
+			common.Log.Error("Failed reading xref (%s)", err)
+			// Offset pointing to a non-object.  Try to repair the file.
+			if attemptRepairs {
+				common.Log.Error("Attempting to repair xrefs (top down)")
+				xrefTable, err := this.repairRebuildXrefsTopDown()
+				if err != nil {
+					common.Log.Error("Failed repair (%s)", err)
+					return nil, false, err
+				}
+				this.xrefs = *xrefTable
+				return this.lookupByNumber(objNumber, false)
+			}
 			return nil, false, err
 		}
 
@@ -332,29 +343,6 @@ func (this *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
 	}
 
 	return o, nil
-}
-
-func (this *PdfParser) rebuildXrefTable() error {
-	newXrefs := XrefTable{}
-	for objNum, xref := range this.xrefs {
-		obj, _, err := this.lookupByNumberWrapper(objNum, false)
-		if err != nil {
-			return err
-		}
-		actObjNum, actGenNum, err := getObjectNumber(obj)
-		if err != nil {
-			return err
-		}
-
-		xref.objectNumber = int(actObjNum)
-		xref.generation = int(actGenNum)
-		newXrefs[int(actObjNum)] = xref
-	}
-
-	this.xrefs = newXrefs
-	common.Log.Debug("New xref table built")
-	printXrefTable(this.xrefs)
-	return nil
 }
 
 func printXrefTable(xrefTable XrefTable) {

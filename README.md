@@ -22,33 +22,17 @@ go get github.com/unidoc/unidoc
 
 ## Overview
 
- * Read and extract PDF metadata
- * Merge PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_merge.go)).
- * Split PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_split.go)).
- * Protect PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_protect.go)).
- * Unlock PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_unlock.go)).
- * Rotate PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_rotate.go)).
- * Crop PDF ([example](https://github.com/unidoc/unidoc-examples/blob/master/pdf/pdf_crop.go)).
+ * Many [features](http://unidoc.io/features) with documented examples.
  * Self contained with no external dependencies
  * Developer friendly
+
+## Roadmap
+
+Our [roadmap](https://trello.com/b/JcliaYYI) is publicly available and features can be voted upon.
 
 ## Examples
 
 See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master) folder.
-
-## Roadmap
-
-The following features are on the roadmap, these are all subjects to change.
-
- * Compress PDF
- * Create PDF (high level API)
- * Fill out Forms
- * Create Forms
- * Bindings for Python (and C#/Java if there is interest)
- * Create Doc and DocX files
- * Convert PDF to Word
- * OCR Engine
- * And many more...
 
 ## Copying/License
 
@@ -76,7 +60,7 @@ Contributors need to approve the [Contributor License Agreement](https://docs.go
 
 ## Support
 
-Open source users can create a GitHub issue and we will look at it. Commercial users can either create a GitHub issue and also email us at support@unidoc.io and we will assist them directly.
+Please email us at support@unidoc.io for any queries.
 
 ## Stay up to date
 

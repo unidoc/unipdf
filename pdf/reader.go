@@ -381,10 +381,7 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 	common.Log.Debug("Has Acro forms")
 
 	common.Log.Debug("Traverse the Acroforms structure")
-	nofollowList := map[PdfObjectName]bool{
-		"Parent": true,
-	}
-	err := this.traverseObjectData(formsDict, nofollowList)
+	err := this.traverseObjectData(formsDict)
 	if err != nil {
 		common.Log.Error("Unable to traverse AcroForms (%s)", err)
 		return nil, err
@@ -442,13 +439,8 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		(*nodeDict)["Parent"] = parent
 	}
 
-	// Resolve the object recursively, not following Parents or Kids fields.
-	// Later can refactor and use only one smart recursive function.
-	nofollowList := map[PdfObjectName]bool{
-		"Parent": true,
-		"Kids":   true,
-	}
-	err := this.traverseObjectData(node, nofollowList)
+	// Resolve the object recursively.
+	err := this.traverseObjectData(node)
 	if err != nil {
 		return err
 	}
@@ -473,20 +465,9 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	}
 	common.Log.Debug("Kids: %s", kids)
 	for idx, child := range *kids {
-		childRef, ok := child.(*PdfObjectReference)
+		child, ok := child.(*PdfIndirectObject)
 		if !ok {
-			return errors.New("Invalid kid, non-reference")
-		}
-
-		common.Log.Debug("look up ref %s", childRef)
-		pchild, err := this.parser.LookupByReference(*childRef)
-		if err != nil {
-			common.Log.Error("Unable to lookup page ref")
-			return errors.New("Unable to lookup page ref")
-		}
-		child, ok := pchild.(*PdfIndirectObject)
-		if !ok {
-			common.Log.Error("Page not indirect object - %s (%s)", childRef, pchild)
+			common.Log.Error("Page not indirect object - (%s)", child)
 			return errors.New("Page not indirect object")
 		}
 		(*kids)[idx] = child
@@ -526,11 +507,10 @@ func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, boo
 /*
  * Recursively traverse through the page object data and look up
  * references to indirect objects.
- * GH: Consider to define a smarter traversing engine, defining explicitly
- * - how deep we can go in terms of following certain Trees by name etc.
- * GH: Are we fully protected against circular references?
+ *
+ * GH: Are we fully protected against circular references? (Add tests).
  */
-func (this *PdfReader) traverseObjectData(o PdfObject, nofollowKeys map[PdfObjectName]bool) error {
+func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	common.Log.Debug("Traverse object data")
 	if _, isTraversed := this.traversed[o]; isTraversed {
 		return nil
@@ -540,37 +520,30 @@ func (this *PdfReader) traverseObjectData(o PdfObject, nofollowKeys map[PdfObjec
 	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
 		common.Log.Debug("io: %s", io)
 		common.Log.Debug("- %s", io.PdfObject)
-		err := this.traverseObjectData(io.PdfObject, nofollowKeys)
+		err := this.traverseObjectData(io.PdfObject)
 		return err
 	}
 
 	if so, isStreamObj := o.(*PdfObjectStream); isStreamObj {
-		err := this.traverseObjectData(so.PdfObjectDictionary, nofollowKeys)
+		err := this.traverseObjectData(so.PdfObjectDictionary)
 		return err
 	}
 
 	if dict, isDict := o.(*PdfObjectDictionary); isDict {
 		common.Log.Debug("- dict: %s", dict)
 		for name, v := range *dict {
-			if nofollowKeys != nil {
-				if _, nofollow := nofollowKeys[name]; nofollow {
-					// Do not retraverse up the tree.
-					continue
-				}
-			}
-
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
 				if err != nil {
 					return err
 				}
 				(*dict)[name] = resolvedObj
-				err = this.traverseObjectData(resolvedObj, nofollowKeys)
+				err = this.traverseObjectData(resolvedObj)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v, nofollowKeys)
+				err := this.traverseObjectData(v)
 				if err != nil {
 					return err
 				}
@@ -589,12 +562,12 @@ func (this *PdfReader) traverseObjectData(o PdfObject, nofollowKeys map[PdfObjec
 				}
 				(*arr)[idx] = resolvedObj
 
-				err = this.traverseObjectData(resolvedObj, nofollowKeys)
+				err = this.traverseObjectData(resolvedObj)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v, nofollowKeys)
+				err := this.traverseObjectData(v)
 				if err != nil {
 					return err
 				}
@@ -683,11 +656,8 @@ func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 	}
 	page := this.pageList[pageNumber-1]
 
-	nofollowList := map[PdfObjectName]bool{
-		"Parent": true,
-	}
 	// Look up all references related to page and load everything.
-	err := this.traverseObjectData(page, nofollowList)
+	err := this.traverseObjectData(page)
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,43 @@ import (
 	"github.com/unidoc/unidoc/license"
 )
 
+var pdfProducer = ""
+var pdfCreator = ""
+
+func getPdfProducer() string {
+	if len(pdfProducer) > 0 {
+		return pdfProducer
+	}
+
+	// Return default.
+	licenseKey := license.GetLicenseKey()
+	return fmt.Sprintf("UniDoc Library version %s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+}
+
+func SetPdfProducer(producer string) {
+	licenseKey := license.GetLicenseKey()
+	commercial := licenseKey.Type == license.LicenseTypeCommercial
+	if !commercial {
+		// Only commercial users can modify the producer.
+		return
+	}
+
+	pdfProducer = producer
+}
+
+func getPdfCreator() string {
+	if len(pdfCreator) > 0 {
+		return pdfCreator
+	}
+
+	// Return default.
+	return "UniDoc - http://unidoc.io"
+}
+
+func SetPdfCreator(creator string) {
+	pdfCreator = creator
+}
+
 type PdfWriter struct {
 	root       *PdfIndirectObject
 	pages      *PdfIndirectObject
@@ -45,14 +82,10 @@ func NewPdfWriter() PdfWriter {
 	w.objectsMap = map[PdfObject]bool{}
 	w.objects = []PdfObject{}
 
-	licenseKey := license.GetLicenseKey()
-
-	producer := fmt.Sprintf("UniDoc Library version %s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
-
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
-	infoDict[PdfObjectName("Producer")] = MakeString(producer)
-	infoDict[PdfObjectName("Creator")] = MakeString("FoxyUtils Online PDF https://foxyutils.com")
+	infoDict[PdfObjectName("Producer")] = MakeString(getPdfProducer())
+	infoDict[PdfObjectName("Creator")] = MakeString(getPdfCreator())
 	infoObj := PdfIndirectObject{}
 	infoObj.PdfObject = &infoDict
 	w.infoObj = &infoObj
@@ -151,7 +184,16 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 				if err != nil {
 					return err
 				}
-
+			} else {
+				// How to handle the parent?  Make sure it is present?
+				if parentObj, parentIsRef := (*dict)["Parent"].(*PdfObjectReference); parentIsRef {
+					// Parent is a reference.  Means we can drop it?
+					// Could refer to somewhere outside of the scope of the output doc.
+					// Should be done by the reader already.
+					// -> ERROR.
+					common.Log.Error("Parent is a reference object - Cannot be in writer (needs to be resolved)")
+					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
+				}
 			}
 		}
 		return nil
