@@ -313,6 +313,11 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 	}
 }
 
+// Get the outline tree.
+func (this *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
+	return this.outlineTree
+}
+
 // Return a flattened list of tree nodes and titles.
 func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
 	outlineNodeList := []*PdfOutlineTreeNode{}
@@ -380,7 +385,6 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 	}
 
 	common.Log.Debug("Has Acro forms")
-
 	common.Log.Debug("Traverse the Acroforms structure")
 	err := this.traverseObjectData(formsDict)
 	if err != nil {
@@ -670,8 +674,7 @@ func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 }
 
 // Get a page by the page number.
-// Indirect object with type /Page.
-// GetPageAsIndirectObject
+// Returns the PdfPage entry.
 func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
