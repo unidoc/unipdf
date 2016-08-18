@@ -648,6 +648,7 @@ func (this *PdfReader) GetOutlinesForPage(page PdfObject) ([]*PdfIndirectObject,
 
 // Get a page by the page number.
 // Indirect object with type /Page.
+// GetPageAsIndirectObject
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
@@ -664,6 +665,21 @@ func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 	}
 	common.Log.Debug("Page: %T %s", page, page)
 	common.Log.Debug("- %T %s", page.PdfObject, page.PdfObject)
+
+	return page, nil
+}
+
+// Get a page by the page number.
+// Indirect object with type /Page.
+// GetPageAsIndirectObject
+func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
+	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+		return nil, fmt.Errorf("File need to be decrypted first")
+	}
+	if len(this.pageList) < pageNumber {
+		return nil, errors.New("Invalid page number (page count too short)")
+	}
+	page := this.PageList[pageNumber-1]
 
 	return page, nil
 }

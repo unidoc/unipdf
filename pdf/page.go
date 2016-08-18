@@ -275,6 +275,7 @@ func NewPdfPagesFromDict(dict PdfObjectDictionary) (*PdfPages, error) {
 }
 
 // Build a PdfPage based on the underlying dictionary.
+// Used in loading existing PDF files.
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := PdfPage{}
 	page.pageDict = &PdfObjectDictionary{}

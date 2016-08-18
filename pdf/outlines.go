@@ -2,7 +2,15 @@ package pdf
 
 import (
 	"fmt"
+
+	"github.com/unidoc/unidoc/common"
 )
+
+type PdfObjectConverter interface {
+	ToPdfObject() PdfObject
+}
+
+var PdfObjectConverterCache map[PdfObjectConverter]PdfObject = map[PdfObjectConverter]PdfObject{}
 
 type PdfOutlineTreeNode struct {
 	context interface{} // Allow accessing outer structure.
@@ -28,6 +36,26 @@ type PdfOutlineItem struct {
 	SE    PdfObject
 	C     PdfObject
 	F     PdfObject
+}
+
+func NewPdfOutlineTree() *PdfOutline {
+	outlineTree := PdfOutline{}
+	outlineTree.context = &outlineTree
+	return &outlineTree
+}
+
+func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
+	bookmark := PdfOutlineItem{}
+	bookmark.context = &bookmark
+
+	bookmark.Title = MakeString(title)
+
+	destArray := PdfObjectArray{}
+	destArray = append(destArray, page)
+	destArray = append(destArray, MakeName("Fit"))
+	bookmark.Dest = &destArray
+
+	return &bookmark
 }
 
 // Does not traverse the tree.
@@ -100,4 +128,88 @@ func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, erro
 	}
 
 	return &item, nil
+}
+
+func (this *PdfOutlineTreeNode) ToPdfObject() PdfObject {
+	if outline, isOutline := this.context.(*PdfOutline); isOutline {
+		return outline.ToPdfObject()
+	}
+	if outlineItem, isOutlineItem := this.context.(*PdfOutlineItem); isOutlineItem {
+		return outlineItem.ToPdfObject()
+	}
+
+	common.Log.Error("Invalid outline tree node item") // Should never happen.
+	return nil
+}
+
+// Recursively build the Outline tree PDF object.
+func (this *PdfOutline) ToPdfObject() PdfObject {
+	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
+		return cachedObj
+	}
+
+	outlines := PdfIndirectObject{}
+
+	outlinesDict := PdfObjectDictionary{}
+	outlinesDict[PdfObjectName("Type")] = MakeName("Outlines")
+
+	if this.First != nil {
+		outlinesDict[PdfObjectName("First")] = this.First.ToPdfObject()
+	}
+
+	if this.Last != nil {
+		outlinesDict[PdfObjectName("Last")] = this.Last.ToPdfObject()
+	}
+
+	outlines.PdfObject = &outlinesDict
+
+	PdfObjectConverterCache[this] = &outlines
+
+	return &outlines
+}
+
+// Outline item.
+// Recursively build the Outline tree PDF object.
+func (this *PdfOutlineItem) ToPdfObject() PdfObject {
+	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
+		return cachedObj
+	}
+
+	container := PdfIndirectObject{}
+
+	dict := PdfObjectDictionary{}
+	dict["Title"] = this.Title
+	if this.A != nil {
+		dict["A"] = this.A
+	}
+	if this.C != nil {
+		dict["C"] = this.C
+	}
+	if this.Dest != nil {
+		dict["Dest"] = this.Dest
+	}
+	if this.F != nil {
+		dict["F"] = this.F
+	}
+	if this.Count != nil {
+		dict["Count"] = MakeInteger(*this.Count)
+	}
+
+	if this.Next != nil {
+		dict["Next"] = this.Next.ToPdfObject()
+	}
+	if this.First != nil {
+		dict["First"] = this.First.ToPdfObject()
+	}
+	if this.Prev != nil {
+		dict["Prev"] = this.Prev.ToPdfObject()
+	}
+	if this.Last != nil {
+		dict["Last"] = this.Last.ToPdfObject()
+	}
+
+	container.PdfObject = &dict
+	PdfObjectConverterCache[this] = &container
+
+	return &container
 }

@@ -60,15 +60,16 @@ func SetPdfCreator(creator string) {
 }
 
 type PdfWriter struct {
-	root       *PdfIndirectObject
-	pages      *PdfIndirectObject
-	objects    []PdfObject
-	objectsMap map[PdfObject]bool // Quick lookup table.
-	writer     *bufio.Writer
-	outlines   []*PdfIndirectObject
-	catalog    *PdfObjectDictionary
-	fields     []PdfObject
-	infoObj    *PdfIndirectObject
+	root        *PdfIndirectObject
+	pages       *PdfIndirectObject
+	objects     []PdfObject
+	objectsMap  map[PdfObject]bool // Quick lookup table.
+	writer      *bufio.Writer
+	outlines    []*PdfIndirectObject
+	outlineTree *PdfOutlineTreeNode
+	catalog     *PdfObjectDictionary
+	fields      []PdfObject
+	infoObj     *PdfIndirectObject
 	// Encryption
 	crypter     *PdfCrypt
 	encryptDict *PdfObjectDictionary
@@ -317,6 +318,11 @@ func (this *PdfWriter) AddOutlines(outlinesList []*PdfIndirectObject) error {
 	return nil
 }
 
+// Add outlines to a PDF file.
+func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
+	this.outlineTree = outlineTree
+}
+
 // Look for a specific key.  Returns a list of entries.
 // What if something appears on many pages?
 func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
@@ -352,10 +358,6 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 		}
 		return list, nil
 	}
-
-	// Ignore arrays.
-	//if arr, isArray := obj.(*PdfObjectArray); isArray {
-	//}
 
 	return list, nil
 }
@@ -553,6 +555,16 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 // Write the pdf out.
 func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Debug("Write()")
+	// Outlines.
+	if this.outlineTree != nil {
+		outlines := this.outlineTree.ToPdfObject()
+		(*this.catalog)["Outlines"] = outlines
+		err := this.addObjects(outlines)
+		if err != nil {
+			return err
+		}
+	}
+	// Phase this one out.
 	if len(this.outlines) > 0 {
 		// Add the outlines dictionary if some outlines added.
 		// Assume they are correct, not referencing anything not added
