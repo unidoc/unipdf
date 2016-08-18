@@ -118,7 +118,6 @@ func NewPdfWriter() PdfWriter {
 	w.catalog = &catalogDict
 
 	common.Log.Info("Catalog %s", catalog)
-	w.outlines = []*PdfIndirectObject{}
 
 	return w
 }
@@ -306,15 +305,6 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 		return err
 	}
 
-	return nil
-}
-
-// Add outlines to a PDF file.
-func (this *PdfWriter) AddOutlines(outlinesList []*PdfIndirectObject) error {
-	// Add the outlines.
-	for _, outline := range outlinesList {
-		this.outlines = append(this.outlines, outline)
-	}
 	return nil
 }
 
@@ -564,37 +554,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 			return err
 		}
 	}
-	// Phase this one out.
-	if len(this.outlines) > 0 {
-		// Add the outlines dictionary if some outlines added.
-		// Assume they are correct, not referencing anything not added
-		// for writing.
-		outlines := PdfIndirectObject{}
-		outlinesDict := PdfObjectDictionary{}
-		outlinesDict[PdfObjectName("Type")] = MakeName("Outlines")
-		outlinesDict[PdfObjectName("First")] = this.outlines[0]
-		outlinesDict[PdfObjectName("Last")] = this.outlines[len(this.outlines)-1]
-		outlines.PdfObject = &outlinesDict
-		(*this.catalog)[PdfObjectName("Outlines")] = &outlines
-
-		for idx, outline := range this.outlines {
-			dict, ok := outline.PdfObject.(*PdfObjectDictionary)
-			if !ok {
-				continue
-			}
-			if idx < len(this.outlines)-1 {
-				(*dict)[PdfObjectName("Next")] = this.outlines[idx+1]
-			}
-			if idx > 0 {
-				(*dict)[PdfObjectName("Prev")] = this.outlines[idx-1]
-			}
-			(*dict)[PdfObjectName("Parent")] = &outlines
-		}
-		err := this.addObjects(&outlines)
-		if err != nil {
-			return err
-		}
-	}
+	// Form fields.
 	if len(this.fields) > 0 {
 		forms := PdfIndirectObject{}
 		formsDict := PdfObjectDictionary{}
