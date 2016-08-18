@@ -557,7 +557,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Debug("Write()")
 	// Outlines.
 	if this.outlineTree != nil {
-		outlines := this.outlineTree.ToPdfObject()
+		outlines := this.outlineTree.ToPdfObject(true)
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {
