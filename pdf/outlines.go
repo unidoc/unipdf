@@ -88,7 +88,7 @@ func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
 }
 
 // Does not traverse the tree.
-func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, error) {
+func (this *PdfReader) newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, error) {
 	item := PdfOutlineItem{}
 	item.context = &item
 
@@ -96,6 +96,10 @@ func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, erro
 	obj, hasTitle := (*dict)["Title"]
 	if !hasTitle {
 		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
+	}
+	obj, err := this.traceToObject(obj)
+	if err != nil {
+		return nil, err
 	}
 	title, ok := TraceToDirectObject(obj).(*PdfObjectString)
 	if !ok {
@@ -115,19 +119,42 @@ func newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, erro
 
 	// Other keys.
 	if obj, hasKey := (*dict)["Dest"]; hasKey {
-		item.Dest = obj
+		item.Dest, err = this.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		err := this.traverseObjectData(item.Dest)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if obj, hasKey := (*dict)["A"]; hasKey {
-		item.A = obj
+		item.A, err = this.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		err := this.traverseObjectData(item.A)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if obj, hasKey := (*dict)["SE"]; hasKey {
-		item.SE = obj
+		item.SE, err = this.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if obj, hasKey := (*dict)["C"]; hasKey {
-		item.C = obj
+		item.C, err = this.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if obj, hasKey := (*dict)["F"]; hasKey {
-		item.F = obj
+		item.F, err = this.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &item, nil

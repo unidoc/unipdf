@@ -205,13 +205,11 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 
-	outlines := &PdfOutline{}
-
 	// Has outlines? Otherwise return an empty outlines structure.
 	catalog := this.catalog
 	outlinesObj, hasOutlines := (*catalog)["Outlines"]
 	if !hasOutlines {
-		return &outlines.PdfOutlineTreeNode, nil
+		return nil, nil
 	}
 
 	common.Log.Debug("-Has outlines")
@@ -225,12 +223,12 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
 	if !ok {
-		return &outlines.PdfOutlineTreeNode, errors.New("Outline root should be an indirect object")
+		return nil, errors.New("Outline root should be an indirect object")
 	}
 
 	dict, ok := outlineRoot.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return &outlines.PdfOutlineTreeNode, errors.New("Outline indirect object should contain a dictionary")
+		return nil, errors.New("Outline indirect object should contain a dictionary")
 	}
 
 	common.Log.Debug("Outline root dict: %v", dict)
@@ -254,7 +252,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, err
 
 	if _, hasTitle := (*dict)["Title"]; hasTitle {
 		// Outline item has a title.
-		outlineItem, err := newPdfOutlineItemFromDict(dict)
+		outlineItem, err := this.newPdfOutlineItemFromDict(dict)
 		if err != nil {
 			return nil, err
 		}
