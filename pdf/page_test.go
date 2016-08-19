@@ -125,6 +125,48 @@ func TestDateParse(t *testing.T) {
 		t.Errorf("Invalid offset minutes")
 		return
 	}
+
+	// Case 5: Missing some more parameters.
+	// Seems that many implementations consider some stuff optional...
+	// Not following the standard, but we need to handle it.
+	// D:20050823042205
+	str = "D:20050823042205"
+	date, err = NewPdfDate(str)
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if date.year != 2005 {
+		t.Errorf("Year != 2005")
+		return
+	}
+	if date.month != 8 {
+		t.Errorf("month != 8")
+		return
+	}
+	if date.day != 23 {
+		t.Errorf("Day != 23")
+		return
+	}
+	if date.hour != 04 {
+		t.Errorf("Hour != 11 (%d)", date.hour)
+		return
+	}
+	if date.minute != 22 {
+		t.Errorf("Minute != 29 (%d)", date.minute)
+	}
+	if date.second != 05 {
+		t.Errorf("Second != 37 (%d)", date.second)
+		return
+	}
+	if date.utOffsetHours != 0 {
+		t.Errorf("Invalid offset hours")
+		return
+	}
+	if date.utOffsetMins != 0 {
+		t.Errorf("Invalid offset minutes")
+		return
+	}
 }
 
 // Test parsing and building the date.

@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 type PdfRectangle struct {
@@ -33,6 +35,21 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 
 	if iObj, ok := obj.(*PdfObjectInteger); ok {
 		return float64(*iObj), nil
+	}
+
+	return 0, errors.New("Not a number")
+}
+
+// Cases where expecting an integer, but some implementations actually
+// store the number in a floating point format.
+func getNumberAsInt64(obj PdfObject) (int64, error) {
+	if iObj, ok := obj.(*PdfObjectInteger); ok {
+		return int64(*iObj), nil
+	}
+
+	if fObj, ok := obj.(*PdfObjectFloat); ok {
+		common.Log.Debug("Number expected as integer was stored as float (type casting used)")
+		return int64(*fObj), nil
 	}
 
 	return 0, errors.New("Not a number")
@@ -112,7 +129,7 @@ type PdfDate struct {
 	utOffsetMins  int64 // mm (00-59)
 }
 
-var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])(\d{2})'(\d{2})?`)
+var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])?(\d{2})?'?(\d{2})?`)
 
 // Make a new PdfDate object from a PDF date string (see 7.9.4 Dates).
 // format: "D: YYYYMMDDHHmmSSOHH'mm"
@@ -134,9 +151,22 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 	d.hour, _ = strconv.ParseInt(matches[0][4], 10, 32)
 	d.minute, _ = strconv.ParseInt(matches[0][5], 10, 32)
 	d.second, _ = strconv.ParseInt(matches[0][6], 10, 32)
-	d.utOffsetSign = matches[0][7][0]
-	d.utOffsetHours, _ = strconv.ParseInt(matches[0][8], 10, 32)
-	d.utOffsetMins, _ = strconv.ParseInt(matches[0][9], 10, 32)
+	// Some poor implementations do not include the offset.
+	if len(matches[0][7]) > 0 {
+		d.utOffsetSign = matches[0][7][0]
+	} else {
+		d.utOffsetSign = '+'
+	}
+	if len(matches[0][8]) > 0 {
+		d.utOffsetHours, _ = strconv.ParseInt(matches[0][8], 10, 32)
+	} else {
+		d.utOffsetHours = 0
+	}
+	if len(matches[0][9]) > 0 {
+		d.utOffsetMins, _ = strconv.ParseInt(matches[0][9], 10, 32)
+	} else {
+		d.utOffsetMins = 0
+	}
 
 	return d, nil
 }

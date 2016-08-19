@@ -70,17 +70,20 @@ func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
 		typeVal, ok := obj.(*PdfObjectName)
 		if ok {
 			if *typeVal != "Outlines" {
-				return nil, fmt.Errorf("Type != Outlines (%s)", *typeVal)
+				common.Log.Error("Type != Outlines (%s)", *typeVal)
+				// Should be "Outlines" if there, but some files have other types
+				// Log as an error but do not quit.
+				// Might be a good idea to log this kind of deviation from the standard separately.
 			}
 		}
 	}
 
 	if obj, hasCount := (*dict)["Count"]; hasCount {
-		countVal, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, fmt.Errorf("Count not an integer (%T)", obj)
+		// This should always be an integer, but in a few cases has been a float.
+		count, err := getNumberAsInt64(obj)
+		if err != nil {
+			return nil, err
 		}
-		count := int64(*countVal)
 		outline.Count = &count
 	}
 
