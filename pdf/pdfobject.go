@@ -292,7 +292,8 @@ func (this *PdfObjectNull) DefaultWriteString() string {
 //
 // Return parent too? And an error if not found?
 //
-// XXX: This function does not trace/resolve references.
+// Note: This function does not trace/resolve references.
+// That needs to be done beforehand.
 func TraceToDirectObject(obj PdfObject) PdfObject {
 	iobj, isIndirectObj := obj.(*PdfIndirectObject)
 	for isIndirectObj == true {

@@ -186,15 +186,6 @@ type PdfPageTreeNode struct {
 	Count  *int64
 }
 
-type PdfPages struct {
-	PdfPageTreeNode
-	// Inheritable attributes.
-	Resources *PdfPageResources
-	MediaBox  *PdfRectangle
-	CropBox   *PdfRectangle
-	Rotate    *PdfRectangle
-}
-
 // PDF page object (7.7.3.3 - Table 30).
 type PdfPage struct {
 	Parent               PdfObject
@@ -227,81 +218,6 @@ type PdfPage struct {
 	UserUnit             PdfObject
 	VP                   PdfObject
 	pageDict             *PdfObjectDictionary
-}
-
-/*
- * Rather than storing the page tree exactly as it is kept in the PDF file, let's store it as a
- * list.  Then once we create our own PDF we can make it into a more balanced tree, depending on the
- * output.
- * For example merging pdf files, might be better to maek our own tree structure etc.
- * Maybe 20-50 pages per tree node or something, or using a balanced tree approach.
- * Makes more sense to make it when writing it out.
- */
-/*
-func BuildPageList() ([]*PdfPage) {
-	name, ok := dict["Type"].(*PdfObjectName)
-	if !ok {
-		return nil, errors.New("Type not a name")
-	}
-	if *name == "Pages" {
-		list := []*PdfPage{}
-		for
-		page[]
-		AddPageTreeNode(...)
-		BuildPageTree()
-		BuildPageList(dict.Kids, )
-	}
-
-	if *name == "Page" {
-		page, err := NewPdfPageFromDict(dict)...
-		if err != nil {
-			return err
-		}
-
-		doc.hashmap[*PdfPage]           -> *PdfIndirectObject
-		doc.hashmap[*PdfIndirectObject] -> *PdfPage
-		doc.pages = append(doc.pages, page)
-	}
-}
-*/
-
-func NewPdfPagesFromDict(dict PdfObjectDictionary) (*PdfPages, error) {
-	pages := PdfPages{}
-
-	name, ok := dict["Type"].(*PdfObjectName)
-	if !ok {
-		return nil, errors.New("Type not a name")
-	}
-	if *name != "Pages" {
-		return nil, errors.New("Name != Pages")
-	}
-
-	// XXX pass in the parent object directly?
-	/*
-		parent, ok := dict["Parent"].(*PdfIndirectObject)
-		if !ok {
-			return nil, errors.New("Parent not an indirect object")
-		}
-		pages.Parent = parent
-	*/
-
-	// Better syntax could be:
-	/*
-		kids, ok := TraceToDirectObject(dict["Kids"]).(*PdfObjectArray)
-		if !ok {
-			return nil, errors.New("Kids not an array")
-		}
-		pages.Kids = kids
-	*/
-
-	count, ok := TraceToDirectObject(dict["Count"]).(*PdfObjectInteger)
-	if !ok {
-		return nil, errors.New("Count is not an integer")
-	}
-	val := int64(*count)
-	pages.Count = &val
-
-	return nil, nil
 }
 
 func NewPdfPage() *PdfPage {
