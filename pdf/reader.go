@@ -587,70 +587,8 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	return nil
 }
 
-// Get outlines referring to a specific page.  Only checks the outermost
-// outlines.
-/*
-func (this *PdfReader) GetOutlinesForPage(page PdfObject) ([]*PdfIndirectObject, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
-		return nil, fmt.Errorf("File need to be decrypted first")
-	}
-	pageOutlines := []*PdfIndirectObject{}
-
-	for _, outlineObj := range this.outlines {
-		dict, ok := (*outlineObj).PdfObject.(*PdfObjectDictionary)
-		if !ok {
-			common.Log.Error("Invalid outlines entry")
-			return pageOutlines, fmt.Errorf("Invalid outlines entry")
-		}
-
-		if dest, hasDest := (*dict)["Dest"].(*PdfObjectArray); hasDest {
-			if len(*dest) > 0 {
-				if (*dest)[0] == page {
-					pageOutlines = append(pageOutlines, outlineObj)
-				}
-			}
-		}
-		// Action: GoTo destination (page) can refer directly to a page.
-		// TODO: Support more potential actions.  Make generic.
-		// Can we make those sub conditionals cleaner?  Some kind of
-		// generic tree traversal / unmarshalling.
-		if dict, hasAdict := (*dict)["A"].(*PdfObjectDictionary); hasAdict {
-			if s, hasS := (*dict)["S"].(*PdfObjectName); hasS {
-				if *s == "GoTo" {
-					if d, hasD := (*dict)["D"].(*PdfObjectArray); hasD {
-						if len(*d) > 0 {
-							if (*d)[0] == page {
-								pageOutlines = append(pageOutlines, outlineObj)
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if a, hasA := (*dict)["A"].(*PdfIndirectObject); hasA {
-			if dict, ok := a.PdfObject.(*PdfObjectDictionary); ok {
-				if s, hasS := (*dict)["S"].(*PdfObjectName); hasS {
-					if *s == "GoTo" {
-						if d, hasD := (*dict)["D"].(*PdfObjectArray); hasD {
-							if len(*d) > 0 {
-								if (*d)[0] == page {
-									pageOutlines = append(pageOutlines, outlineObj)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return pageOutlines, nil
-}
-*/
-
-// Get a page by the page number.
-// Indirect object with type /Page.
-// GetPageAsIndirectObject
+// Get a page by the page number. Indirect object with type /Page.
+// Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
