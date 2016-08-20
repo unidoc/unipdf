@@ -304,11 +304,16 @@ func NewPdfPagesFromDict(dict PdfObjectDictionary) (*PdfPages, error) {
 	return nil, nil
 }
 
+func NewPdfPage() *PdfPage {
+	page := PdfPage{}
+	page.pageDict = &PdfObjectDictionary{}
+	return &page
+}
+
 // Build a PdfPage based on the underlying dictionary.
 // Used in loading existing PDF files.
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
-	page := PdfPage{}
-	page.pageDict = &PdfObjectDictionary{}
+	page := NewPdfPage()
 
 	d := *p
 
@@ -477,7 +482,7 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		page.VP = obj
 	}
 
-	return &page, nil
+	return page, nil
 }
 
 // Get the inheritable media box value, either from the page
