@@ -81,6 +81,92 @@ func TestDateParse(t *testing.T) {
 		t.Errorf("Offset mins != 30")
 		return
 	}
+
+	// Case 4.  Another test from failed file.
+	// Minutes not specified at end (assume is 0).
+	str = "D:20061023115457-04'"
+	date, err = NewPdfDate(str)
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if date.year != 2006 {
+		t.Errorf("Year != 2006")
+		return
+	}
+	if date.month != 10 {
+		t.Errorf("month != 10")
+		return
+	}
+	if date.day != 23 {
+		t.Errorf("Day != 23")
+		return
+	}
+	if date.hour != 11 {
+		t.Errorf("Hour != 11 (%d)", date.hour)
+		return
+	}
+	if date.minute != 54 {
+		t.Errorf("Minute != 29 (%d)", date.minute)
+	}
+	if date.second != 57 {
+		t.Errorf("Second != 37 (%d)", date.second)
+		return
+	}
+	if date.utOffsetSign != '-' {
+		t.Errorf("Invalid offset sign")
+		return
+	}
+	if date.utOffsetHours != 4 {
+		t.Errorf("Invalid offset hours")
+		return
+	}
+	if date.utOffsetMins != 0 {
+		t.Errorf("Invalid offset minutes")
+		return
+	}
+
+	// Case 5: Missing some more parameters.
+	// Seems that many implementations consider some stuff optional...
+	// Not following the standard, but we need to handle it.
+	// D:20050823042205
+	str = "D:20050823042205"
+	date, err = NewPdfDate(str)
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if date.year != 2005 {
+		t.Errorf("Year != 2005")
+		return
+	}
+	if date.month != 8 {
+		t.Errorf("month != 8")
+		return
+	}
+	if date.day != 23 {
+		t.Errorf("Day != 23")
+		return
+	}
+	if date.hour != 04 {
+		t.Errorf("Hour != 11 (%d)", date.hour)
+		return
+	}
+	if date.minute != 22 {
+		t.Errorf("Minute != 29 (%d)", date.minute)
+	}
+	if date.second != 05 {
+		t.Errorf("Second != 37 (%d)", date.second)
+		return
+	}
+	if date.utOffsetHours != 0 {
+		t.Errorf("Invalid offset hours")
+		return
+	}
+	if date.utOffsetMins != 0 {
+		t.Errorf("Invalid offset minutes")
+		return
+	}
 }
 
 // Test parsing and building the date.
@@ -144,7 +230,10 @@ endobj
 		return
 	}
 
-	page, err := NewPdfPage(*pageDict)
+	// Bit of a hacky way to do this.  PDF reader is needed if need to resolve external references,
+	// but none in this case, so can just use a dummy instance.
+	dummyPdfReader := PdfReader{}
+	page, err := dummyPdfReader.newPdfPageFromDict(pageDict)
 	if err != nil {
 		t.Errorf("Unable to load page (%s)", err)
 		return

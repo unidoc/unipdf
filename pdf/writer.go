@@ -60,15 +60,16 @@ func SetPdfCreator(creator string) {
 }
 
 type PdfWriter struct {
-	root       *PdfIndirectObject
-	pages      *PdfIndirectObject
-	objects    []PdfObject
-	objectsMap map[PdfObject]bool // Quick lookup table.
-	writer     *bufio.Writer
-	outlines   []*PdfIndirectObject
-	catalog    *PdfObjectDictionary
-	fields     []PdfObject
-	infoObj    *PdfIndirectObject
+	root        *PdfIndirectObject
+	pages       *PdfIndirectObject
+	objects     []PdfObject
+	objectsMap  map[PdfObject]bool // Quick lookup table.
+	writer      *bufio.Writer
+	outlines    []*PdfIndirectObject
+	outlineTree *PdfOutlineTreeNode
+	catalog     *PdfObjectDictionary
+	fields      []PdfObject
+	infoObj     *PdfIndirectObject
 	// Encryption
 	crypter     *PdfCrypt
 	encryptDict *PdfObjectDictionary
@@ -117,7 +118,6 @@ func NewPdfWriter() PdfWriter {
 	w.catalog = &catalogDict
 
 	common.Log.Info("Catalog %s", catalog)
-	w.outlines = []*PdfIndirectObject{}
 
 	return w
 }
@@ -309,12 +309,8 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 }
 
 // Add outlines to a PDF file.
-func (this *PdfWriter) AddOutlines(outlinesList []*PdfIndirectObject) error {
-	// Add the outlines.
-	for _, outline := range outlinesList {
-		this.outlines = append(this.outlines, outline)
-	}
-	return nil
+func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
+	this.outlineTree = outlineTree
 }
 
 // Look for a specific key.  Returns a list of entries.
@@ -352,10 +348,6 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 		}
 		return list, nil
 	}
-
-	// Ignore arrays.
-	//if arr, isArray := obj.(*PdfObjectArray); isArray {
-	//}
 
 	return list, nil
 }
@@ -553,36 +545,17 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 // Write the pdf out.
 func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Debug("Write()")
-	if len(this.outlines) > 0 {
-		// Add the outlines dictionary if some outlines added.
-		// Assume they are correct, not referencing anything not added
-		// for writing.
-		outlines := PdfIndirectObject{}
-		outlinesDict := PdfObjectDictionary{}
-		outlinesDict[PdfObjectName("Type")] = MakeName("Outlines")
-		outlinesDict[PdfObjectName("First")] = this.outlines[0]
-		outlinesDict[PdfObjectName("Last")] = this.outlines[len(this.outlines)-1]
-		outlines.PdfObject = &outlinesDict
-		(*this.catalog)[PdfObjectName("Outlines")] = &outlines
-
-		for idx, outline := range this.outlines {
-			dict, ok := outline.PdfObject.(*PdfObjectDictionary)
-			if !ok {
-				continue
-			}
-			if idx < len(this.outlines)-1 {
-				(*dict)[PdfObjectName("Next")] = this.outlines[idx+1]
-			}
-			if idx > 0 {
-				(*dict)[PdfObjectName("Prev")] = this.outlines[idx-1]
-			}
-			(*dict)[PdfObjectName("Parent")] = &outlines
-		}
-		err := this.addObjects(&outlines)
+	// Outlines.
+	if this.outlineTree != nil {
+		common.Log.Debug("OutlineTree: %v", this.outlineTree)
+		outlines := this.outlineTree.ToPdfObject(true)
+		(*this.catalog)["Outlines"] = outlines
+		err := this.addObjects(outlines)
 		if err != nil {
 			return err
 		}
 	}
+	// Form fields.
 	if len(this.fields) > 0 {
 		forms := PdfIndirectObject{}
 		formsDict := PdfObjectDictionary{}

@@ -69,6 +69,11 @@ func MakeString(s string) *PdfObjectString {
 	return &str
 }
 
+func MakeNull() *PdfObjectNull {
+	null := PdfObjectNull{}
+	return &null
+}
+
 func (this *PdfObjectBool) String() string {
 	if *this {
 		return "true"
@@ -278,4 +283,19 @@ func (this *PdfObjectNull) String() string {
 
 func (this *PdfObjectNull) DefaultWriteString() string {
 	return "null"
+}
+
+// Handy functions to work with primitive objects.
+// Traces a pdf object to a direct object.  For example contained
+// in indirect objects (can be double referenced even).
+//
+// Note: This function does not trace/resolve references.
+// That needs to be done beforehand.
+func TraceToDirectObject(obj PdfObject) PdfObject {
+	iobj, isIndirectObj := obj.(*PdfIndirectObject)
+	for isIndirectObj == true {
+		obj = iobj.PdfObject
+		iobj, isIndirectObj = obj.(*PdfIndirectObject)
+	}
+	return obj
 }
