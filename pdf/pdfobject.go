@@ -286,11 +286,8 @@ func (this *PdfObjectNull) DefaultWriteString() string {
 }
 
 // Handy functions to work with primitive objects.
-// Traces a pdf object to a direct object.  For example if multiple
-// references via indirect objects etc.
-// (Move to pdfobject.go?)
-//
-// Return parent too? And an error if not found?
+// Traces a pdf object to a direct object.  For example contained
+// in indirect objects (can be double referenced even).
 //
 // Note: This function does not trace/resolve references.
 // That needs to be done beforehand.
