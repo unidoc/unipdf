@@ -92,7 +92,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		}
 
 		common.Log.Debug("type: %s number of objects: %d", name, *N)
-		ds, err := this.decodeStream(so)
+		ds, err := decodeStream(so)
 		if err != nil {
 			return nil, err
 		}

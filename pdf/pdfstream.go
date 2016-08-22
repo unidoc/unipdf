@@ -16,7 +16,7 @@ import (
 
 // Decodes the stream.
 // Supports FlateDecode, ASCIIHexDecode.
-func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
+func decodeStream(obj *PdfObjectStream) ([]byte, error) {
 	common.Log.Debug("Decode stream")
 	common.Log.Debug("filter %s", (*obj).PdfObjectDictionary)
 

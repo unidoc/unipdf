@@ -98,7 +98,7 @@ endobj`
 		return
 	}
 
-	bdec, err := parser.decodeStream(stream)
+	bdec, err := decodeStream(stream)
 	if err != nil {
 		t.Errorf("Failed to decode stream (%s)", err)
 		return

@@ -828,7 +828,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		b = append(b, int64(*wVal))
 	}
 
-	ds, err := this.decodeStream(xs)
+	ds, err := decodeStream(xs)
 	if err != nil {
 		common.Log.Error("Unable to decode stream")
 		return nil, err

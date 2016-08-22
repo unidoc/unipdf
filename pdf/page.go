@@ -630,6 +630,49 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) {
 
 }
 
+func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
+	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectString); ok {
+		return string(*cstream), nil
+
+	}
+
+	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectStream); ok {
+		buf, err := decodeStream(cstream)
+		if err != nil {
+			return "", err
+		}
+
+		return string(buf), nil
+	}
+	return "", fmt.Errorf("Invalid content stream object holder (%T)", cstreamObj)
+}
+
+// Get Content Stream as an array of strings.
+func (this *PdfPage) GetContentStreams() ([]string, error) {
+	if this.Contents == nil {
+		return nil, nil
+	} else if contArray, isArray := this.Contents.(*PdfObjectArray); isArray {
+		// If an array of content streams, append it.
+		cstreams := []string{}
+		for _, cstreamObj := range *contArray {
+			cstreamStr, err := getContentStreamAsString(cstreamObj)
+			if err != nil {
+				return nil, err
+			}
+			cstreams = append(cstreams, cstreamStr)
+		}
+		return cstreams, nil
+	} else {
+		// Only 1 element in place. Wrap inside a new array and add the new one.
+		cstreamStr, err := getContentStreamAsString(this.Contents)
+		if err != nil {
+			return nil, err
+		}
+		cstreams := []string{cstreamStr}
+		return cstreams, nil
+	}
+}
+
 // Page resources.
 type PdfPageResources struct {
 	ExtGState  PdfObject
