@@ -3,6 +3,9 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// The content stream parser provides functionality to parse the content stream into a list of
+// operands that can then be processed further for rendering or extraction of information.
+
 package pdf
 
 import (
@@ -27,6 +30,8 @@ type ContentStreamOperation struct {
 	Operand string
 }
 
+// Create a new instance of the content stream parser from an input content
+// stream string.
 func NewContentStreamParser(contentStr string) *ContentStreamParser {
 	// Each command has parameters and an operand (command).
 
@@ -38,6 +43,7 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 	return &parser
 }
 
+// Parses all commands in content stream, returning a list of operation data.
 func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 	operations := []*ContentStreamOperation{}
 
@@ -60,11 +66,51 @@ func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 				operation.Params = append(operation.Params, obj)
 			}
 		}
-		fmt.Printf("Operation: %v\n", operation)
 	}
-	fmt.Printf("==========\n")
-	fmt.Printf("Operation list: %v\n", operations)
+
+	common.Log.Debug("Operation list: %v\n", operations)
 	return operations, nil
+}
+
+// Parses and extracts all text data in content streams and returns as a string.
+func (this *ContentStreamParser) ExtractText() (string, error) {
+	operations, err := this.Parse()
+	if err != nil {
+		return "", err
+	}
+	inText := false
+	txt := ""
+	for _, op := range operations {
+		if op.Operand == "BT" {
+			inText = true
+		} else if op.Operand == "ET" {
+			inText = false
+		}
+		if inText && op.Operand == "TJ" {
+			if len(op.Params) < 1 {
+				continue
+			}
+			paramList, ok := op.Params[0].(*PdfObjectArray)
+			if !ok {
+				return "", fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
+			}
+			for _, obj := range *paramList {
+				if strObj, ok := obj.(*PdfObjectString); ok {
+					txt += string(*strObj)
+				}
+			}
+		} else if inText && op.Operand == "Tj" {
+			if len(op.Params) < 1 {
+				continue
+			}
+			param, ok := op.Params[0].(*PdfObjectString)
+			if !ok {
+				return "", fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
+			}
+			txt += string(*param)
+		}
+	}
+	return txt, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and
@@ -369,6 +415,9 @@ func (this *ContentStreamParser) parseOperand() (PdfObjectString, error) {
 	return PdfObjectString(bytes), nil
 }
 
+// Parse a generic object.  Returns the object, an error code, and a bool
+// value indicating whether the object is an operand.  An operand
+// is contained in a pdf string object.
 func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 	// Determine the kind of object.
 	// parse it!
