@@ -393,6 +393,40 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 	return formsDict, nil
 }
 
+// XXX: Under construction.
+func (this *PdfReader) LoadForms() error {
+	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+		return nil, fmt.Errorf("File need to be decrypted first")
+	}
+
+	// Has forms?
+	catalog := this.catalog
+	obj, has := (*catalog)["AcroForm"]
+	if !has {
+		// Nothing to load.
+		return nil
+	}
+	var err error
+	obj, err = this.traceToObject(obj)
+	if err != nil {
+		return err
+	}
+	formsDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("Invalid AcroForm entry %T", obj)
+		common.Log.Debug("Does not have forms")
+		return nil
+	}
+	common.Log.Debug("Has Acro forms")
+	// Load it.
+
+}
+
+// Recursive build form field tree.
+func (this *PdfReader) buildFieldTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
+	// Describe how to do this first by hand.
+}
+
 func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
 	// can be indirect, direct, or reference
 	// look up the corresponding page
