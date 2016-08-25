@@ -275,55 +275,75 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["MediaBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page MediaBox not an array")
 		}
-		var err error
 		page.MediaBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["CropBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page CropBox not an array")
 		}
-		var err error
 		page.CropBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["BleedBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page BleedBox not an array")
 		}
-		var err error
 		page.BleedBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["TrimBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page TrimBox not an array")
 		}
-		var err error
 		page.TrimBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["ArtBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page ArtBox not an array")
 		}
-		var err error
 		page.ArtBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
