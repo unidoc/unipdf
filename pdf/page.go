@@ -246,7 +246,12 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["LastModified"]; isDefined {
-		strObj, ok := obj.(*PdfObjectString)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		strObj, ok := TraceToDirectObject(obj).(*PdfObjectString)
 		if !ok {
 			return nil, errors.New("Page dictionary LastModified != string")
 		}
@@ -258,7 +263,8 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["Resources"]; isDefined {
-		obj, err := reader.traceToObject(obj)
+		var err error
+		obj, err = reader.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -356,7 +362,12 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		page.Contents = obj
 	}
 	if obj, isDefined := d["Rotate"]; isDefined {
-		iObj, ok := obj.(*PdfObjectInteger)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		iObj, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid Page Rotate object")
 		}
