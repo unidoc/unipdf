@@ -425,6 +425,54 @@ func (this *PdfReader) LoadForms() error {
 // Recursive build form field tree.
 func (this *PdfReader) buildFieldTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
 	// Describe how to do this first by hand.
+
+	var err error
+	obj, err = this.traceToObject(obj)
+
+	d, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+	if !ok {
+		return nil, fmt.Errorf("Field object != dictionary (%T)", obj)
+	}
+
+	field, err := this.newPdfFieldDict(d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Field dict?  Check kids.
+	var isTerminal bool
+	kidsObj, hasKids := (*d)["Kids"]
+	if hasKids {
+		kidsObj, err = this.traceToObject(kidsObj)
+		if err != nil {
+			return nil, err
+		}
+		kidsArray, ok := TraceToDirectObject(kidsObj).(*PdfObjectArray)
+		if !ok {
+			return nil, fmt.Errorf("Kids not an array")
+		}
+		if len(kidsArray) == 0 {
+			isTerminal = true
+		} else {
+			// Check the kids.
+		}
+		for _, childObj := range kidsArray {
+			childObj, err = this.traceToObject(childObj)
+			if err != nil {
+				return nil, err
+			}
+			cd, ok := TraceToDirectObject(childObj).(*PdfObjectDictionary)
+			if !ok {
+				return nil, fmt.Errorf("Child object not a dictionary (%T)", childObj)
+			}
+			if nameObj, ok := cd["Subtype"].(*PdfObjectName); ok {
+				if *nameObj == "Widget" {
+					// Widget subtype.
+				}
+			}
+		}
+	}
+
 }
 
 func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
