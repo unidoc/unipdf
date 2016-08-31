@@ -420,12 +420,17 @@ func (this *PdfReader) LoadForms() error {
 	common.Log.Debug("Has Acro forms")
 	// Load it.
 
+	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
+	if err != nil {
+		return err
+	}
+
+	this.fields := this.buildFieldTree(obj)
+
 }
 
 // Recursive build form field tree.
-func (this *PdfReader) buildFieldTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
-	// Describe how to do this first by hand.
-
+func (this *PdfReader) buildFieldTree(obj PdfObject) (*[]*PdfField, error) {
 	var err error
 	obj, err = this.traceToObject(obj)
 
@@ -441,6 +446,14 @@ func (this *PdfReader) buildFieldTree(obj PdfObject) (*PdfOutlineTreeNode, error
 
 	// Field dict?  Check kids.
 	var isTerminal bool
+
+	subtypObj, hasType := (*d)["Subtype"].(*PdfObjectName)
+	if hasType && *subtypObj == "Widget" {
+		widget := this.newPdfAnnotationWidgetFromDict(d)
+		node.Kids = widget
+		isterminal = true
+	}
+
 	kidsObj, hasKids := (*d)["Kids"]
 	if hasKids {
 		kidsObj, err = this.traceToObject(kidsObj)

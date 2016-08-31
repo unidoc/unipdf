@@ -29,6 +29,7 @@ type PdfAcroForm struct {
 	XFA             PdfObject
 }
 
+// Used when loading forms from PDF files.
 func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm, error) {
 	acroForm := PdfAcroForm{}
 
@@ -84,9 +85,38 @@ func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm,
 }
 
 func (this *PdfAcroForm) ToPdfObject() PdfObject {
+	dict := PdfObjectDictionary{}
 
+	if this.Fields != nil {
+		d["Fields"] = this.Fields.ToPdfObject()
+	}
+
+	if this.NeedAppearances != nil {
+		d["NeedAppearances"] = this.NeedAppearances
+	}
+	if this.SigFlags != nil {
+		d["SigFlags"] = this.SigFlags
+	}
+	if this.CO != nil {
+		d["CO"] = this.CO
+	}
+	if this.DR != nil {
+		d["DR"] = this.DR
+	}
+	if this.DA != nil {
+		d["DA"] = this.DA
+	}
+	if this.Q != nil {
+		d["Q"] = this.Q
+	}
+	if this.XFA != nil {
+		d["XFA"] = this.XFA
+	}
+
+	return &d
 }
 
+// Used when loading fields from PDF files.
 func (r *PdfReader) newPdfFieldDict(d PdfObjectDictionary) (*PdfField, error) {
 	field := PdfField{}
 
@@ -171,7 +201,7 @@ type PdfField struct {
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
 	// with this field. However, if there is only one associated widget annotation, and its contents have been merged into the field
 	// dictionary, Kids shall be omitted.
-	Kids PdfObject
+	Kids PdfObject // Kids can be array of other fields or widgets (PdfObjectConvertible)
 	T    PdfObject
 	TU   PdfObject
 	TM   PdfObject
@@ -185,33 +215,36 @@ type PdfField struct {
 
 func (this *PdfField) ToPdfObject() {
 	// If Kids refer only to a single pdf widget annotation widget, then can merge it in.
-}
+	dict := PdfObjectDictionary{}
 
-type PdfFieldVariableText struct {
-	PdfField
-	DA PdfObject
-	Q  PdfObject
-	DS PdfObject
-	RV PdfObject
-}
+	if this.Parent != nil {
+		dict["Parent"] = this.Parent.ToPdfObjectReference()
+		// ToPdfObjectAsReference
+		// ToDirectPdfObject
+	}
+	if this.Kids != nil {
+		dict["Kids"] = this.Kids
+	}
 
-type PdfFieldText struct {
-	PdfField
-	// Text field
-	MaxLen PdfObject // inheritable
-}
-
-type PdfFieldChoice struct {
-	PdfField
-	// Choice fields.
-	Opt PdfObject
-	TI  PdfObject
-	I   PdfObject
-}
-
-type PdfFieldSignature struct {
-	PdfField
-	// Signature fields (Table 232).
-	Lock PdfObject
-	SV   PdfObject
+	if this.T != nil {
+		dict["T"] = this.T
+	}
+	if this.TU != nil {
+		dict["TU"] = this.Tu
+	}
+	if this.TM != nil {
+		dict["TM"] = this.TM
+	}
+	if this.Ff != nil {
+		dict["Ff"] = this.Ff
+	}
+	if this.V != nil {
+		dict["V"] = this.V
+	}
+	if this.DV != nil {
+		dict["DV"] = this.DV
+	}
+	if this.AA != nil {
+		dict["AA"] = this.AA
+	}
 }
