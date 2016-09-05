@@ -17,6 +17,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// PDF Primitives.
 type PdfObject interface {
 	String() string
 	DefaultWriteString() string

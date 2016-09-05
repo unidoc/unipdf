@@ -24,6 +24,7 @@ type PdfReader struct {
 	catalog     *PdfObjectDictionary
 	outlineTree *PdfOutlineTreeNode
 	forms       *PdfObjectDictionary
+	AcroForm    *PdfAcroForm
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
@@ -160,6 +161,11 @@ func (this *PdfReader) loadStructure() error {
 
 	// Get forms.
 	this.forms, err = this.GetForms()
+	if err != nil {
+		return err
+	}
+	// Get fields
+	this.AcroForm, err = this.LoadForms()
 	if err != nil {
 		return err
 	}
@@ -394,7 +400,7 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 }
 
 // XXX: Under construction.
-func (this *PdfReader) LoadForms() error {
+func (this *PdfReader) LoadForms() (*PdfAcroForm, error) {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
@@ -404,88 +410,29 @@ func (this *PdfReader) LoadForms() error {
 	obj, has := (*catalog)["AcroForm"]
 	if !has {
 		// Nothing to load.
-		return nil
+		return nil, nil
 	}
 	var err error
 	obj, err = this.traceToObject(obj)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	formsDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Invalid AcroForm entry %T", obj)
 		common.Log.Debug("Does not have forms")
-		return nil
+		return nil, fmt.Errorf("Invalid acroform entry %T", obj)
 	}
 	common.Log.Debug("Has Acro forms")
 	// Load it.
 
-	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
-	if err != nil {
-		return err
-	}
-
-	this.fields := this.buildFieldTree(obj)
-
-}
-
-// Recursive build form field tree.
-func (this *PdfReader) buildFieldTree(obj PdfObject) (*[]*PdfField, error) {
-	var err error
-	obj, err = this.traceToObject(obj)
-
-	d, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
-	if !ok {
-		return nil, fmt.Errorf("Field object != dictionary (%T)", obj)
-	}
-
-	field, err := this.newPdfFieldDict(d)
+	acroForm, err := this.newPdfAcroFormFromDict(*formsDict)
 	if err != nil {
 		return nil, err
 	}
 
-	// Field dict?  Check kids.
-	var isTerminal bool
-
-	subtypObj, hasType := (*d)["Subtype"].(*PdfObjectName)
-	if hasType && *subtypObj == "Widget" {
-		widget := this.newPdfAnnotationWidgetFromDict(d)
-		node.Kids = widget
-		isterminal = true
-	}
-
-	kidsObj, hasKids := (*d)["Kids"]
-	if hasKids {
-		kidsObj, err = this.traceToObject(kidsObj)
-		if err != nil {
-			return nil, err
-		}
-		kidsArray, ok := TraceToDirectObject(kidsObj).(*PdfObjectArray)
-		if !ok {
-			return nil, fmt.Errorf("Kids not an array")
-		}
-		if len(kidsArray) == 0 {
-			isTerminal = true
-		} else {
-			// Check the kids.
-		}
-		for _, childObj := range kidsArray {
-			childObj, err = this.traceToObject(childObj)
-			if err != nil {
-				return nil, err
-			}
-			cd, ok := TraceToDirectObject(childObj).(*PdfObjectDictionary)
-			if !ok {
-				return nil, fmt.Errorf("Child object not a dictionary (%T)", childObj)
-			}
-			if nameObj, ok := cd["Subtype"].(*PdfObjectName); ok {
-				if *nameObj == "Widget" {
-					// Widget subtype.
-				}
-			}
-		}
-	}
-
+	//this.fields := this.buildFieldTree(obj)
+	return acroForm, nil
 }
 
 func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
