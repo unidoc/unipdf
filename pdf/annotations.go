@@ -10,6 +10,15 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// Higher level object convertible to a PDF primitive.
+type PdfObjectAnnotationConvertible interface {
+	ToPdfObject() PdfObject
+	//ToPdfObjectRef() PdfObject
+}
+
+// Avoid global.  Should go into the reader or builder.
+var PdfObjectAnnotationCache map[PdfObjectAnnotationConvertible]PdfObject = map[PdfObjectAnnotationConvertible]PdfObject{}
+
 //type PdfAnnotation interface{}
 
 type PdfAnnotation struct {
@@ -259,6 +268,7 @@ type PdfAnnotationRedact struct {
 	Q           PdfObject
 }
 
+/*
 func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	switch t := this.context.(type) {
 	case *PdfAnnotationText:
@@ -311,6 +321,7 @@ func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	common.Log.Error("Unknown type %T", this.context)
 	return nil
 }
+*/
 
 func (r *PdfReader) newPdfAnnotationFromDict(d PdfObjectDictionary) (*PdfAnnotation, error) {
 	annot := PdfAnnotation{}
@@ -1056,13 +1067,12 @@ func newPdfAnnotationRedactFromDict(d PdfObjectDictionary) (*PdfAnnotationRedact
 	return &annot, nil
 }
 
-
 func (this *PdfAnnotation) ToPdfObjectRef() PdfObject {
 	var container *PdfIndirectObject
 	var d *PdfObjectDictionary
 
-	if cachedObj, isCached := PdfObjectConverterCache[this] {
-		container = cachedObj
+	if cachedObj, isCached := PdfObjectAnnotationCache[this]; isCached {
+		container = cachedObj.(*PdfIndirectObject)
 		d = container.PdfObject.(*PdfObjectDictionary)
 	} else {
 		container := &PdfIndirectObject{}
@@ -1074,7 +1084,7 @@ func (this *PdfAnnotation) ToPdfObjectRef() PdfObject {
 }
 
 func (this *PdfAnnotation) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject() 
+	container := this.ToPdfObjectRef().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("AP", this.AP)
@@ -1088,9 +1098,8 @@ func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	return container
 }
 
-
 func (this *PdfAnnotationText) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject() 
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Open", this.Open)
@@ -1100,8 +1109,8 @@ func (this *PdfAnnotationText) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationLink) ToPdfObject()   PdfObject        {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationLink) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("A", this.A)
@@ -1113,10 +1122,9 @@ func (this *PdfAnnotationLink) ToPdfObject()   PdfObject        {
 	return container
 }
 
-func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject      {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
-
 
 	d.SetIfNotNil("DA", this.DA)
 	d.SetIfNotNil("Q", this.Q)
@@ -1131,8 +1139,8 @@ func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject      {
 
 	return container
 }
-func (this *PdfAnnotationLine) ToPdfObject() PdfObject          {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationLine) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("L", this.L)
@@ -1152,7 +1160,7 @@ func (this *PdfAnnotationLine) ToPdfObject() PdfObject          {
 }
 
 func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject() 
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("BS", this.BS)
@@ -1163,8 +1171,8 @@ func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationCircle) ToPdfObject()         {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationCircle) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("BS", this.BS)
@@ -1175,8 +1183,8 @@ func (this *PdfAnnotationCircle) ToPdfObject()         {
 	return container
 }
 
-func (this *PdfAnnotationPolygon) ToPdfObject()        {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationPolygon) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Vertices", this.Vertices)
@@ -1190,8 +1198,8 @@ func (this *PdfAnnotationPolygon) ToPdfObject()        {
 	return container
 }
 
-func (this *PdfAnnotationPolyLine) ToPdfObject()       {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationPolyLine) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Vertices", this.Vertices)
@@ -1205,94 +1213,158 @@ func (this *PdfAnnotationPolyLine) ToPdfObject()       {
 	return container
 }
 
-func (this *PdfAnnotationHighlight) ToPdfObject()      {
-	container := this.PdfAnnotation.ToPdfObject() 
+func (this *PdfAnnotationHighlight) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("QuadPoints", this.QuadPoints)
 	return container
 }
 
-func (this *PdfAnnotationUnderline) ToPdfObject()      {
-		QuadPoints PdfObject
-}
-func (this *PdfAnnotationSquiggly) ToPdfObject()      {
-		QuadPoints PdfObject
-}
-func (this *PdfAnnotationStrikeOut) ToPdfObject()      {
-		QuadPoints PdfObject
-}
-func (this *PdfAnnotationCaret) ToPdfObject()          {
-		RD PdfObject
-	Sy PdfObject
-}
-func (this *PdfAnnotationStamp) ToPdfObject()          {
-Name PdfObject
-}
-func (this *PdfAnnotationInk) ToPdfObject()            {
-		InkList PdfObject
-	BS      PdfObject
-}
-func (this *PdfAnnotationPopup) ToPdfObject()          {
-	Parent PdfObject
-	Open   PdfObject
-}
-func (this *PdfAnnotationFileAttachment) ToPdfObject() {
-	FS   PdfObject
-	Name PdfObject
-}
-func (this *PdfAnnotationSound) ToPdfObject()          {
-Sound PdfObject
-	Name  PdfObject
-}
-func (this *PdfAnnotationMovie) ToPdfObject()          {
-	T     PdfObject
-	Movie PdfObject
-	A     PdfObject
-}
-func (this *PdfAnnotationScreen) ToPdfObject()         {
-T  PdfObject
-	MK PdfObject
-	A  PdfObject
-	AA PdfObject
+func (this *PdfAnnotationUnderline) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
 
+	d.SetIfNotNil("QuadPoints", this.QuadPoints)
+	return container
 }
-func (this *PdfAnnotationWidget) ToPdfObject()         {
-H      PdfObject
-	MK     PdfObject
-	A      PdfObject
-	AA     PdfObject
-	BS     PdfObject
-	Parent PdfObject
+func (this *PdfAnnotationSquiggly) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
 
+	d.SetIfNotNil("QuadPoints", this.QuadPoints)
+	return container
 }
-func (this *PdfAnnotationPrinterMark) ToPdfObject()    {
-	MN PdfObject
+func (this *PdfAnnotationStrikeOut) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
 
+	d.SetIfNotNil("QuadPoints", this.QuadPoints)
+	return container
 }
-func (this *PdfAnnotationTrapNet) ToPdfObject()        {
-}
-func (this *PdfAnnotationWatermark) ToPdfObject()      {
-FixedPrint PdfObject
-}
-func (this *PdfAnnotation3D) ToPdfObject()             {
-	T3DD PdfObject
-	T3DV PdfObject
-	T3DA PdfObject
-	T3DI PdfObject
-	T3DB PdfObject
-}
-func (this *PdfAnnotationRedact) ToPdfObject() {
-	QuadPoints  PdfObject
-	IC          PdfObject
-	RO          PdfObject
-	OverlayText PdfObject
-	Repeat      PdfObject
-	DA          PdfObject
-	Q           PdfObject
+func (this *PdfAnnotationCaret) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("RD", this.RD)
+	d.SetIfNotNil("Sy", this.Sy)
+	return container
 }
 
+func (this *PdfAnnotationStamp) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
 
+	d.SetIfNotNil("Name", this.Name)
+	return container
+}
+func (this *PdfAnnotationInk) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("InkList", this.InkList)
+	d.SetIfNotNil("BS", this.BS)
+	return container
+}
+func (this *PdfAnnotationPopup) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("Parent", this.Parent)
+	d.SetIfNotNil("Open", this.Open)
+	return container
+}
+func (this *PdfAnnotationFileAttachment) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("FS", this.FS)
+	d.SetIfNotNil("Name", this.Name)
+	return container
+}
+func (this *PdfAnnotationSound) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("Sound", this.Sound)
+	d.SetIfNotNil("Name", this.Name)
+	return container
+}
+func (this *PdfAnnotationMovie) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("T", this.T)
+	d.SetIfNotNil("Movie", this.Movie)
+	d.SetIfNotNil("A", this.A)
+	return container
+}
+func (this *PdfAnnotationScreen) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("T", this.T)
+	d.SetIfNotNil("MK", this.MK)
+	d.SetIfNotNil("A", this.A)
+	d.SetIfNotNil("AA", this.AA)
+	return container
+}
+func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("H", this.H)
+	d.SetIfNotNil("MK", this.MK)
+	d.SetIfNotNil("A", this.A)
+	d.SetIfNotNil("AA", this.AA)
+	d.SetIfNotNil("BS", this.BS)
+	d.SetIfNotNil("Parent", this.Parent)
+	return container
+}
+func (this *PdfAnnotationPrinterMark) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("MN", this.MN)
+	return container
+}
+
+func (this *PdfAnnotationTrapNet) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	return container
+}
+func (this *PdfAnnotationWatermark) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("FixedPrint", this.FixedPrint)
+	return container
+}
+
+func (this *PdfAnnotation3D) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("3DD", this.T3DD)
+	d.SetIfNotNil("3DV", this.T3DV)
+	d.SetIfNotNil("3DA", this.T3DA)
+	d.SetIfNotNil("3DI", this.T3DI)
+	d.SetIfNotNil("3DB", this.T3DB)
+	return container
+}
+func (this *PdfAnnotationRedact) ToPdfObject() PdfObject {
+	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+	d := container.PdfObject.(*PdfObjectDictionary)
+
+	d.SetIfNotNil("QuadPoints", this.QuadPoints)
+	d.SetIfNotNil("IC", this.IC)
+	d.SetIfNotNil("RO", this.RO)
+	d.SetIfNotNil("OverlayText", this.OverlayText)
+	d.SetIfNotNil("Repeat", this.Repeat)
+	d.SetIfNotNil("DA", this.DA)
+	d.SetIfNotNil("Q", this.Q)
+	return container
+}
 
 /////////
 
