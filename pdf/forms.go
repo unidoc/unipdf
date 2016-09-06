@@ -14,9 +14,13 @@ import (
 )
 
 // Higher level object convertible to a PDF primitive.
-// type PdfObjectConvertible interface {
-//	ToPdfObject(updateIfExists bool) PdfObject
-//}
+type PdfObjectConvertible interface {
+	ToPdfObject() PdfObject
+	ToPdfObjectRef() PdfObject
+}
+
+// Avoid global.  Should go into the reader or builder.
+var PdfObjectConvertibleCache map[PdfObjectConvertible]PdfObject = map[PdfObjectConvertible]PdfObject{}
 
 type PdfAcroForm struct {
 	Fields          *[]*PdfField
@@ -90,7 +94,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm,
 func (this *PdfAcroForm) ToPdfObject(updateIfExists bool) PdfObject {
 	var container PdfIndirectObject
 
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
+	if cachedObj, isCached := PdfObjectConvertibleCache[this]; isCached {
 		if !updateIfExists {
 			return cachedObj
 		}
@@ -132,7 +136,7 @@ func (this *PdfAcroForm) ToPdfObject(updateIfExists bool) PdfObject {
 		dict["XFA"] = this.XFA
 	}
 
-	PdfObjectConverterCache[this] = &container
+	PdfObjectConvertibleCache[this] = &container
 	return &container
 }
 
@@ -143,7 +147,7 @@ type PdfField struct {
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
 	// with this field. However, if there is only one associated widget annotation, and its contents have been merged into the field
 	// dictionary, Kids shall be omitted.
-	Kids []PdfObjectConverter // Kids can be array of other fields or widgets (PdfObjectConverter)
+	Kids []PdfObjectConvertible // Kids can be array of other fields or widgets (PdfObjectConvertible)
 	T    PdfObject
 	TU   PdfObject
 	TM   PdfObject
@@ -227,8 +231,13 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 		}
 		if *name == "Widget" {
 			// Is a merged field / widget dict.
-			widget := r.newPdfAnnotationWidgetFromDict(d, &field)
-			field.Kids = append(field.Kids, PdfObjectConverter(widget))
+			widget, err := newPdfAnnotationWidgetFromDict(d)
+			if err != nil {
+				return nil, err
+			}
+
+			widget.Parent = field.ToPdfObject(false)
+			field.Kids = append(field.Kids, PdfObjectConvertible(widget))
 			return &field, nil
 		}
 	}
@@ -243,7 +252,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 			return nil, fmt.Errorf("Fields not an array (%T)", obj)
 		}
 
-		field.Kids = []PdfObjectConverter{}
+		field.Kids = []PdfObjectConvertible{}
 		for _, obj := range *fieldArray {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
@@ -271,7 +280,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 func (this *PdfField) ToPdfObject(updateIfExists bool) PdfObject {
 	var container PdfIndirectObject
 
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
+	if cachedObj, isCached := PdfObjectConvertibleCache[this]; isCached {
 		if !updateIfExists {
 			return cachedObj
 		}
@@ -318,73 +327,6 @@ func (this *PdfField) ToPdfObject(updateIfExists bool) PdfObject {
 		dict["AA"] = this.AA
 	}
 
-	PdfObjectConverterCache[this] = &container
-	return &container
-}
-
-/*
-type PdfAnnotationWidget struct {
-	Subtype PdfObject // Widget (required)
-	H       PdfObject
-	MK      PdfObject
-	A       PdfObject
-	AA      PdfObject
-	BS      PdfObject
-	Parent  PdfObjectConverter
-}*/
-
-func (r *PdfReader) newPdfAnnotationWidgetFromDict(d PdfObjectDictionary, parent *PdfField) *PdfAnnotationWidget {
-	annotation := PdfAnnotationWidget{}
-
-	if obj, has := d["Subtype"]; has {
-		annotation.Subtype = obj
-	}
-	if obj, has := d["H"]; has {
-		annotation.H = obj
-	}
-	if obj, has := d["MK"]; has {
-		annotation.MK = obj
-	}
-	if obj, has := d["A"]; has {
-		annotation.A = obj
-	}
-	if obj, has := d["AA"]; has {
-		annotation.AA = obj
-	}
-	if obj, has := d["BS"]; has {
-		annotation.BS = obj
-	}
-
-	annotation.Parent = parent
-	return &annotation
-}
-
-func (this *PdfAnnotationWidget) ToPdfObject(updateIfExists bool) PdfObject {
-	var container PdfIndirectObject
-
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
-		if !updateIfExists {
-			return cachedObj
-		}
-		obj := cachedObj.(*PdfIndirectObject)
-		container = *obj
-	}
-
-	container = PdfIndirectObject{}
-	dict := PdfObjectDictionary{}
-	container.PdfObject = &dict
-	d := PdfObjectDictionary{}
-
-	d.SetIfNotNil("Subtype", this.Subtype)
-	d.SetIfNotNil("H", this.H)
-	d.SetIfNotNil("MK", this.MK)
-	d.SetIfNotNil("A", this.A)
-	d.SetIfNotNil("AA", this.AA)
-	d.SetIfNotNil("BS", this.BS)
-	if this.Parent != nil {
-		d["Parent"] = this.Parent.ToPdfObject(false)
-	}
-
-	PdfObjectConverterCache[this] = &container
+	PdfObjectConvertibleCache[this] = &container
 	return &container
 }
