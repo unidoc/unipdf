@@ -15,8 +15,7 @@ import (
 
 // Higher level object convertible to a PDF primitive.
 type PdfObjectConvertible interface {
-	ToPdfObject() PdfObject
-	ToPdfObjectRef() PdfObject
+	ToPdfObject(bool) PdfObject
 }
 
 // Avoid global.  Should go into the reader or builder.
@@ -147,14 +146,15 @@ type PdfField struct {
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
 	// with this field. However, if there is only one associated widget annotation, and its contents have been merged into the field
 	// dictionary, Kids shall be omitted.
-	Kids []PdfObjectConvertible // Kids can be array of other fields or widgets (PdfObjectConvertible)
-	T    PdfObject
-	TU   PdfObject
-	TM   PdfObject
-	Ff   PdfObject // field flag
-	V    PdfObject //value
-	DV   PdfObject
-	AA   PdfObject
+	KidsF []PdfObjectConvertible // Kids can be array of other fields or widgets (PdfObjectConvertible)
+	KidsA []PdfAnnotation
+	T     PdfObject
+	TU    PdfObject
+	TM    PdfObject
+	Ff    PdfObject // field flag
+	V     PdfObject //value
+	DV    PdfObject
+	AA    PdfObject
 	// Widget annotation can be merged in.
 	// PdfAnnotationWidget
 }
@@ -225,19 +225,22 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 		if err != nil {
 			return nil, err
 		}
+		fmt.Printf("Merged in annotation (%T)\n", obj)
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Invalid type of Subtype (%T)", obj)
 		}
 		if *name == "Widget" {
 			// Is a merged field / widget dict.
-			widget, err := newPdfAnnotationWidgetFromDict(d)
+			widget, err := newPdfAnnotationWidgetFromDict(&d)
 			if err != nil {
 				return nil, err
 			}
+			fmt.Printf("Widget: %+v\n", *widget)
 
 			widget.Parent = field.ToPdfObject(false)
-			field.Kids = append(field.Kids, PdfObjectConvertible(widget))
+			field.KidsA = append(field.KidsA, widget.PdfAnnotation)
+			fmt.Printf("Field: %+v\n", field)
 			return &field, nil
 		}
 	}
@@ -252,7 +255,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 			return nil, fmt.Errorf("Fields not an array (%T)", obj)
 		}
 
-		field.Kids = []PdfObjectConvertible{}
+		field.KidsF = []PdfObjectConvertible{}
 		for _, obj := range *fieldArray {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
@@ -268,7 +271,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 				return nil, err
 			}
 
-			field.Kids = append(field.Kids, childField)
+			field.KidsF = append(field.KidsF, childField)
 		}
 	}
 
@@ -296,13 +299,25 @@ func (this *PdfField) ToPdfObject(updateIfExists bool) PdfObject {
 		dict["Parent"] = this.Parent.ToPdfObject(false)
 	}
 
-	if this.Kids != nil {
+	if this.KidsF != nil {
 		// Create an array of the kids (fields or widgets).
+		fmt.Printf("KidsF: %+v\n", this.KidsF)
 		arr := PdfObjectArray{}
-		for _, child := range this.Kids {
+		for _, child := range this.KidsF {
 			arr = append(arr, child.ToPdfObject(false))
 		}
 		dict["Kids"] = &arr
+	}
+	if this.KidsA != nil {
+		fmt.Printf("KidsA: %+v\n", this.KidsA)
+		_, hasKids := dict["Kids"].(*PdfObjectArray)
+		if !hasKids {
+			dict["Kids"] = &PdfObjectArray{}
+		}
+		arr := dict["Kids"].(*PdfObjectArray)
+		for _, child := range this.KidsA {
+			*arr = append(*arr, child.ToPdfObject())
+		}
 	}
 
 	if this.T != nil {

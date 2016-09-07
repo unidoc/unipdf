@@ -81,6 +81,12 @@ func (this *PdfParser) rebuildXrefTable() error {
 // Currently not supporting object streams...
 // Also need to detect object streams and load the object numbers.
 func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
+	if this.repairsAttempted {
+		// Avoid multiple repairs (only try once).
+		return nil, fmt.Errorf("Repair failed")
+	}
+	this.repairsAttempted = true
+
 	reRepairIndirectObject := regexp.MustCompile(`^(\d+)\s+(\d+)\s+obj`)
 
 	this.SetFileOffset(0)

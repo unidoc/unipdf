@@ -75,6 +75,8 @@ type PdfWriter struct {
 	encryptDict *PdfObjectDictionary
 	encryptObj  *PdfIndirectObject
 	ids         *PdfObjectArray
+	// Forms.
+	acroForm *PdfAcroForm
 }
 
 func NewPdfWriter() PdfWriter {
@@ -427,6 +429,13 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 	return nil
 }
 
+// Add Acroforms to a PDF file.
+func (this *PdfWriter) AddForms2(form *PdfAcroForm) error {
+	//form.ToPdfObject(true)
+	this.acroForm = form
+	return nil
+}
+
 // Write out an indirect / stream object.
 func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 	common.Log.Debug("Write obj #%d\n", num)
@@ -567,6 +576,15 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		formsDict[PdfObjectName("Fields")] = &fieldsArray
 		(*this.catalog)[PdfObjectName("AcroForm")] = &forms
 		err := this.addObjects(&forms)
+		if err != nil {
+			return err
+		}
+	}
+	// Acroform.
+	if this.acroForm != nil {
+		indObj := this.acroForm.ToPdfObject(true)
+		(*this.catalog)[PdfObjectName("AcroForm2")] = indObj
+		err := this.addObjects(indObj)
 		if err != nil {
 			return err
 		}

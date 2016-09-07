@@ -218,6 +218,8 @@ type PdfPage struct {
 	UserUnit             PdfObject
 	VP                   PdfObject
 	pageDict             *PdfObjectDictionary
+	//Annotations
+	Annotations []*PdfAnnotation
 }
 
 func NewPdfPage() *PdfPage {
@@ -398,7 +400,55 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		page.VP = obj
 	}
 
+	var err error
+	page.Annotations, err = reader.LoadAnnotations(&d)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("Annotations: %+v\n", page.Annotations)
+	for i, annot := range page.Annotations {
+		fmt.Printf("%d : %+v (%T)\n", i+1, annot, annot.GetContext())
+		fmt.Printf("- %+v\n", annot.GetContext())
+	}
+
 	return page, nil
+}
+
+func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, error) {
+	annotsObj, hasAnnots := (*d)["Annots"]
+	if !hasAnnots {
+		fmt.Printf("Page does not have annotations!\n")
+		return nil, nil
+	}
+
+	var err error
+	annotsObj, err = reader.traceToObject(annotsObj)
+	if err != nil {
+		return nil, err
+	}
+	annotsArr, ok := TraceToDirectObject(annotsObj).(*PdfObjectArray)
+	if !ok {
+		return nil, fmt.Errorf("Annots not an array")
+	}
+
+	annotations := []*PdfAnnotation{}
+	for _, obj := range *annotsArr {
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+		if !ok {
+			return nil, fmt.Errorf("Annotation not a dictionary")
+		}
+		annot, err := reader.newPdfAnnotationFromDict(dict)
+		if err != nil {
+			return nil, err
+		}
+		annotations = append(annotations, annot)
+	}
+
+	return annotations, nil
 }
 
 // Get the inheritable media box value, either from the page
@@ -479,7 +529,7 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("B", this.B)
 	p.SetIfNotNil("Dur", this.Dur)
 	p.SetIfNotNil("Trans", this.Trans)
-	p.SetIfNotNil("Annots", this.Annots)
+	p.SetIfNotNil("Annots2", this.Annots)
 	p.SetIfNotNil("AA", this.AA)
 	p.SetIfNotNil("Metadata", this.Metadata)
 	p.SetIfNotNil("PieceInfo", this.PieceInfo)
@@ -492,6 +542,17 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("PresSteps", this.PresSteps)
 	p.SetIfNotNil("UserUnit", this.UserUnit)
 	p.SetIfNotNil("VP", this.VP)
+
+	fmt.Printf("Writing annotations\n")
+	if this.Annotations != nil {
+		fmt.Printf("...\n")
+		arr := PdfObjectArray{}
+		for i, annot := range this.Annotations {
+			fmt.Printf("Annotation %d\n", i+1)
+			arr = append(arr, annot.GetContext().ToPdfObject())
+		}
+		p.SetIfNotNil("Annots", &arr)
+	}
 
 	return p
 }

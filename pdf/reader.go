@@ -430,6 +430,7 @@ func (this *PdfReader) LoadForms() (*PdfAcroForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("Acro form: %+v\n", acroForm)
 
 	//this.fields := this.buildFieldTree(obj)
 	return acroForm, nil
