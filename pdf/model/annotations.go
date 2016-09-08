@@ -3,28 +3,17 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package model
 
 import (
 	"fmt"
+
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// Higher level object convertible to a PDF primitive.
-type PdfObjectAnnotationConvertible interface {
-	ToPdfObject() PdfObject
-	//ToPdfObjectRef() PdfObject
-}
-
-// Avoid global.  Should go into the reader or builder.
-var PdfObjectAnnotationCache map[PdfObjectAnnotationConvertible]PdfObject = map[PdfObjectAnnotationConvertible]PdfObject{}
-
-//type PdfAnnotation interface{}
-
 type PdfAnnotation struct {
-	context PdfObjectAnnotationConvertible //interface{}
-	//Type         PdfObject                      // Annot
-	//Subtype      PdfObject
+	context      interface{} // Sub-annotation.
 	Rect         PdfObject
 	Contents     PdfObject
 	P            PdfObject // Reference to page object.
@@ -39,14 +28,9 @@ type PdfAnnotation struct {
 	OC           PdfObject
 }
 
-func (this *PdfAnnotation) GetContext() PdfObjectAnnotationConvertible {
-	//interface{} {
+func (this *PdfAnnotation) GetContext() interface{} {
 	return this.context
 }
-
-/*
-Subtype
-*/
 
 // Subtype: Text
 type PdfAnnotationText struct {
@@ -1075,24 +1059,94 @@ func newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*PdfAnnotationRedac
 	return &annot, nil
 }
 
-func (this *PdfAnnotation) ToPdfObjectRef() PdfObject {
-	var container *PdfIndirectObject
-	var d *PdfObjectDictionary
-
-	if cachedObj, isCached := PdfObjectAnnotationCache[this]; isCached {
-		container = cachedObj.(*PdfIndirectObject)
-		d = container.PdfObject.(*PdfObjectDictionary)
+func (this *PdfAnnotation) GetContainingPdfObject() PdfObject {
+	if cachedObj, isCached := PdfObjectConvertibleCache[this]; isCached {
+		container := cachedObj.(*PdfIndirectObject)
+		return container
 	} else {
-		container = &PdfIndirectObject{}
-		d = &PdfObjectDictionary{}
-		container.PdfObject = d
+		container := &PdfIndirectObject{}
+		container.PdfObject = &PdfObjectDictionary{}
+		PdfObjectConvertibleCache[this] = container
+		return container
 	}
-
-	return container
 }
 
+/*
+
+func (this *PdfAnnotationText) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+
+func (this *PdfAnnotationLink) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationFreeText) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationLine) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationSquare) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationCircle) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationPolygon) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationPolyLine) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationHighlight) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationCaret) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationStamp) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationInk) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationPopup) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationFileAttachment) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationSound) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationMovie) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationScreen) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationWidget) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationPrinterMark) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationTrapNet) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationWatermark) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotation3D) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+func (this *PdfAnnotationRedact) GetContainingPdfObject() PdfObject {
+	return this.PdfAnnotation.GetContainingPdfObject()
+}
+*/
+
 func (this *PdfAnnotation) ToPdfObject() PdfObject {
-	container := this.ToPdfObjectRef().(*PdfIndirectObject)
+	container := this.GetContainingPdfObject().(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Type", MakeName("Annot"))
@@ -1354,6 +1408,9 @@ func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
 	d.SetIfNotNil("AA", this.AA)
 	d.SetIfNotNil("BS", this.BS)
 	d.SetIfNotNil("Parent", this.Parent)
+
+	fmt.Printf("WIDGET: %s\n", d.String())
+	fmt.Printf("Container: %+v\n", *container)
 	return container
 }
 func (this *PdfAnnotationPrinterMark) ToPdfObject() PdfObject {
@@ -1404,63 +1461,3 @@ func (this *PdfAnnotationRedact) ToPdfObject() PdfObject {
 	d.SetIfNotNil("Q", this.Q)
 	return container
 }
-
-/////////
-
-/*
-func (r *PdfReader) newPdfAnnotationWidgetFromDict(d PdfObjectDictionary, parent *PdfField) *PdfAnnotationWidget {
-	annotation := PdfAnnotationWidget{}
-
-	if obj, has := d["Subtype"]; has {
-		annotation.Subtype = obj
-	}
-	if obj, has := d["H"]; has {
-		annotation.H = obj
-	}
-	if obj, has := d["MK"]; has {
-		annotation.MK = obj
-	}
-	if obj, has := d["A"]; has {
-		annotation.A = obj
-	}
-	if obj, has := d["AA"]; has {
-		annotation.AA = obj
-	}
-	if obj, has := d["BS"]; has {
-		annotation.BS = obj
-	}
-
-	annotation.Parent = parent
-	return &annotation
-}
-
-func (this *PdfAnnotationWidget) ToPdfObject(updateIfExists bool) PdfObject {
-	var container PdfIndirectObject
-
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
-		if !updateIfExists {
-			return cachedObj
-		}
-		obj := cachedObj.(*PdfIndirectObject)
-		container = *obj
-	}
-
-	container = PdfIndirectObject{}
-	dict := PdfObjectDictionary{}
-	container.PdfObject = &dict
-	d := PdfObjectDictionary{}
-
-	d.SetIfNotNil("Subtype", this.Subtype)
-	d.SetIfNotNil("H", this.H)
-	d.SetIfNotNil("MK", this.MK)
-	d.SetIfNotNil("A", this.A)
-	d.SetIfNotNil("AA", this.AA)
-	d.SetIfNotNil("BS", this.BS)
-	if this.Parent != nil {
-		d["Parent"] = this.Parent.ToPdfObject(false)
-	}
-
-	PdfObjectConverterCache[this] = &container
-	return &container
-}
-*/

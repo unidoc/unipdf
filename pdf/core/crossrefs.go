@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package core
 
 import (
 	"bufio"
@@ -92,7 +92,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		}
 
 		common.Log.Debug("type: %s number of objects: %d", name, *N)
-		ds, err := decodeStream(so)
+		ds, err := DecodeStream(so)
 		if err != nil {
 			return nil, err
 		}

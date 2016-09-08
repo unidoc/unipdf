@@ -5,7 +5,7 @@
 
 // Routines related to repairing malformed pdf files.
 
-package pdf
+package core
 
 import (
 	"errors"

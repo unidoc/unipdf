@@ -3,17 +3,13 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package core
 
 import (
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
 )
-
-func (this *PdfReader) Inspect() {
-	this.parser.inspect()
-}
 
 func getUniDocVersion() string {
 	return common.Version
@@ -22,6 +18,7 @@ func getUniDocVersion() string {
 /*
  * Inspect object types.
  * Go through all objects in the cross ref table and detect the types.
+ * Mostly for debugging purposes and inspecting odd PDF files.
  */
 func (this *PdfParser) inspect() {
 	common.Log.Debug("--------INSPECT ----------")

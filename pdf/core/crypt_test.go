@@ -5,7 +5,7 @@
 
 // Test the PDF crypt support.
 
-package pdf
+package core
 
 import (
 	"fmt"

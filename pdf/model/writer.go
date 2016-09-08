@@ -6,7 +6,7 @@
 // Default writing implementation.  Basic output with version 1.3
 // for compatibility.
 
-package pdf
+package model
 
 import (
 	"bufio"
@@ -20,6 +20,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/license"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 var pdfProducer = ""
@@ -187,6 +188,9 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					return err
 				}
 			} else {
+				if hasObj := this.hasObject(v); !hasObj {
+					fmt.Printf("Parent obj is missing!! %T %p %v\n", v, v, v)
+				}
 				// How to handle the parent?  Make sure it is present?
 				if parentObj, parentIsRef := (*dict)["Parent"].(*PdfObjectReference); parentIsRef {
 					// Parent is a reference.  Means we can drop it?
@@ -557,7 +561,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	// Outlines.
 	if this.outlineTree != nil {
 		common.Log.Debug("OutlineTree: %v", this.outlineTree)
-		outlines := this.outlineTree.ToPdfObject(true)
+		outlines := this.outlineTree.ToPdfObject()
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {
@@ -565,25 +569,26 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}
 	}
 	// Form fields.
-	if len(this.fields) > 0 {
-		forms := PdfIndirectObject{}
-		formsDict := PdfObjectDictionary{}
-		forms.PdfObject = &formsDict
-		fieldsArray := PdfObjectArray{}
-		for _, field := range this.fields {
-			fieldsArray = append(fieldsArray, field)
-		}
-		formsDict[PdfObjectName("Fields")] = &fieldsArray
-		(*this.catalog)[PdfObjectName("AcroForm")] = &forms
-		err := this.addObjects(&forms)
-		if err != nil {
-			return err
-		}
-	}
+	/*
+		if len(this.fields) > 0 {
+			forms := PdfIndirectObject{}
+			formsDict := PdfObjectDictionary{}
+			forms.PdfObject = &formsDict
+			fieldsArray := PdfObjectArray{}
+			for _, field := range this.fields {
+				fieldsArray = append(fieldsArray, field)
+			}
+			formsDict[PdfObjectName("Fields")] = &fieldsArray
+			(*this.catalog)[PdfObjectName("AcroForm")] = &forms
+			err := this.addObjects(&forms)
+			if err != nil {
+				return err
+			}
+		}*/
 	// Acroform.
 	if this.acroForm != nil {
-		indObj := this.acroForm.ToPdfObject(true)
-		(*this.catalog)[PdfObjectName("AcroForm2")] = indObj
+		indObj := this.acroForm.ToPdfObject()
+		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
 		err := this.addObjects(indObj)
 		if err != nil {
 			return err

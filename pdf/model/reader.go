@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package model
 
 import (
 	"errors"
@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 type PdfReader struct {
@@ -664,4 +665,8 @@ func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
 	page := this.PageList[pageNumber-1]
 
 	return page, nil
+}
+
+func (this *PdfReader) Inspect() {
+	this.parser.inspect()
 }

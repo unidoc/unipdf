@@ -10,7 +10,7 @@
 // can later be replaced and fully defined.
 //
 
-package pdf
+package model
 
 import (
 	"errors"
@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 type PdfRectangle struct {
@@ -698,7 +699,7 @@ func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 	}
 
 	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectStream); ok {
-		buf, err := decodeStream(cstream)
+		buf, err := DecodeStream(cstream)
 		if err != nil {
 			return "", err
 		}

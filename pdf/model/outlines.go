@@ -3,21 +3,14 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package model
 
 import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
-
-// Convertible to a PDF object interface.
-type PdfObjectConverter interface {
-	ToPdfObject(updateIfExists bool) PdfObject
-}
-
-// Object cache.
-var PdfObjectConverterCache map[PdfObjectConverter]PdfObject = map[PdfObjectConverter]PdfObject{}
 
 type PdfOutlineTreeNode struct {
 	context interface{} // Allow accessing outer structure.
@@ -169,7 +162,7 @@ func (this *PdfReader) newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*Pd
 }
 
 // Get the outer object of the tree node (Outline or OutlineItem).
-func (n *PdfOutlineTreeNode) getOuter() PdfObjectConverter {
+func (n *PdfOutlineTreeNode) getOuter() PdfObjectConvertible {
 	if outline, isOutline := n.context.(*PdfOutline); isOutline {
 		return outline
 	}
@@ -181,89 +174,97 @@ func (n *PdfOutlineTreeNode) getOuter() PdfObjectConverter {
 	return nil
 }
 
-func (this *PdfOutlineTreeNode) ToPdfObject(updateIfExists bool) PdfObject {
-	return this.getOuter().ToPdfObject(updateIfExists)
+func (this *PdfOutlineTreeNode) GetContainingPdfObject() PdfObject {
+	return this.getOuter().GetContainingPdfObject()
+}
+
+func (this *PdfOutlineTreeNode) ToPdfObject() PdfObject {
+	return this.getOuter().ToPdfObject()
+}
+
+func (this *PdfOutline) GetContainingPdfObject() PdfObject {
+	container := getCachedPdfObject(this)
+	if container == nil {
+		container := &PdfIndirectObject{}
+		container.PdfObject = &PdfObjectDictionary{}
+		cachePdfObjectConvertible(container, this)
+		return container
+	} else {
+		return container
+	}
 }
 
 // Recursively build the Outline tree PDF object.
-func (this *PdfOutline) ToPdfObject(updateIfExists bool) PdfObject {
-	var container PdfIndirectObject
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
-		if !updateIfExists {
-			return cachedObj
-		}
-		obj := cachedObj.(*PdfIndirectObject)
-		container = *obj
-	} else {
-		container = PdfIndirectObject{}
-	}
-	PdfObjectConverterCache[this] = &container
+func (this *PdfOutline) ToPdfObject() PdfObject {
+	container := this.GetContainingPdfObject().(*PdfIndirectObject)
+	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	outlinesDict := PdfObjectDictionary{}
-	outlinesDict["Type"] = MakeName("Outlines")
+	(*dict)["Type"] = MakeName("Outlines")
 
 	if this.First != nil {
-		outlinesDict["First"] = this.First.ToPdfObject(false)
+		(*dict)["First"] = this.First.ToPdfObject()
 	}
 
 	if this.Last != nil {
-		outlinesDict["Last"] = PdfObjectConverterCache[this.Last.getOuter()]
+		(*dict)["Last"] = this.Last.getOuter().GetContainingPdfObject()
+		//PdfObjectConverterCache[this.Last.getOuter()]
 	}
 
-	container.PdfObject = &outlinesDict
+	return container
+}
 
-	return &container
+func (this *PdfOutlineItem) GetContainingPdfObject() PdfObject {
+	container := getCachedPdfObject(this)
+	if container == nil {
+		container := &PdfIndirectObject{}
+		container.PdfObject = &PdfObjectDictionary{}
+		cachePdfObjectConvertible(container, this)
+		return container
+	} else {
+		return container
+	}
 }
 
 // Outline item.
 // Recursively build the Outline tree PDF object.
-func (this *PdfOutlineItem) ToPdfObject(updateIfExists bool) PdfObject {
-	var container PdfIndirectObject
-	if cachedObj, isCached := PdfObjectConverterCache[this]; isCached {
-		if !updateIfExists {
-			return cachedObj
-		}
-		obj := cachedObj.(*PdfIndirectObject)
-		container = *obj
-	} else {
-		container = PdfIndirectObject{}
-	}
-	PdfObjectConverterCache[this] = &container
+func (this *PdfOutlineItem) ToPdfObject() PdfObject {
+	container := this.GetContainingPdfObject().(*PdfIndirectObject)
+	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	dict := PdfObjectDictionary{}
-	dict["Title"] = this.Title
+	(*dict)["Title"] = this.Title
 	if this.A != nil {
-		dict["A"] = this.A
+		(*dict)["A"] = this.A
 	}
 	if this.C != nil {
-		dict["C"] = this.C
+		(*dict)["C"] = this.C
 	}
 	if this.Dest != nil {
-		dict["Dest"] = this.Dest
+		(*dict)["Dest"] = this.Dest
 	}
 	if this.F != nil {
-		dict["F"] = this.F
+		(*dict)["F"] = this.F
 	}
 	if this.Count != nil {
-		dict["Count"] = MakeInteger(*this.Count)
+		(*dict)["Count"] = MakeInteger(*this.Count)
 	}
 	if this.Next != nil {
-		dict["Next"] = this.Next.ToPdfObject(false)
+		(*dict)["Next"] = this.Next.ToPdfObject()
 	}
 	if this.First != nil {
-		dict["First"] = this.First.ToPdfObject(false)
+		(*dict)["First"] = this.First.ToPdfObject()
 	}
 	if this.Prev != nil {
-		dict["Prev"] = PdfObjectConverterCache[this.Prev.getOuter()]
+		(*dict)["Prev"] = getCachedPdfObject(this.Prev.getOuter())
+		//PdfObjectConverterCache[this.Prev.getOuter()]
 	}
 	if this.Last != nil {
-		dict["Last"] = PdfObjectConverterCache[this.Last.getOuter()]
+		(*dict)["Last"] = getCachedPdfObject(this.Last.getOuter())
+		// PdfObjectConverterCache[this.Last.getOuter()]
 	}
 	if this.Parent != nil {
-		dict["Parent"] = PdfObjectConverterCache[this.Parent.getOuter()]
+		(*dict)["Parent"] = getCachedPdfObject(this.Parent.getOuter())
+		//PdfObjectConverterCache[this.Parent.getOuter()]
 	}
 
-	container.PdfObject = &dict
-
-	return &container
+	return container
 }

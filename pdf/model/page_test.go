@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package model
 
 import (
 	"testing"

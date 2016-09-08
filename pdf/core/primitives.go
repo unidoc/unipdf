@@ -8,7 +8,7 @@
 // recursive writing of the objects to file as well and stringifying for
 // debug purposes.
 
-package pdf
+package core
 
 import (
 	"bytes"
@@ -17,11 +17,10 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-// PDF Primitives.
+// PDF Primitives implement the PdfObject interface.
 type PdfObject interface {
-	String() string
-	DefaultWriteString() string
-	// Make a recursive traverse function too with a handler function?
+	String() string             // Output a string representation of the primitive (for debugging).
+	DefaultWriteString() string // Output the PDF primitive as expected by the standard.
 }
 
 type PdfObjectBool bool
@@ -143,38 +142,6 @@ func (this *PdfObjectName) String() string {
 	return fmt.Sprintf("%s", string(*this))
 }
 
-// Regular characters that are outside the range EXCLAMATION MARK(21h)
-// (!) to TILDE (7Eh) (~) should be written using the hexadecimal notation.
-func isPrintable(char byte) bool {
-	if char < 0x21 || char > 0x7E {
-		return false
-	}
-	return true
-}
-
-func isDelimiter(char byte) bool {
-	if char == '(' || char == ')' {
-		return true
-	}
-	if char == '<' || char == '>' {
-		return true
-	}
-	if char == '[' || char == ']' {
-		return true
-	}
-	if char == '{' || char == '}' {
-		return true
-	}
-	if char == '/' {
-		return true
-	}
-	if char == '%' {
-		return true
-	}
-
-	return false
-}
-
 func (this *PdfObjectName) DefaultWriteString() string {
 	var output bytes.Buffer
 
@@ -185,7 +152,7 @@ func (this *PdfObjectName) DefaultWriteString() string {
 	output.WriteString("/")
 	for i := 0; i < len(*this); i++ {
 		char := (*this)[i]
-		if !isPrintable(char) || char == '#' || isDelimiter(char) {
+		if !IsPrintable(char) || char == '#' || IsDelimiter(char) {
 			output.WriteString(fmt.Sprintf("#%.2x", char))
 		} else {
 			output.WriteByte(char)

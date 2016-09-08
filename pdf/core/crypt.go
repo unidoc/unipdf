@@ -3,11 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-/*
- * The PDF standard supports encryption of strings and streams.
- * Section 7.6.
- */
-package pdf
+package core
 
 import (
 	"crypto/aes"
@@ -22,6 +18,10 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+/*
+ * The PDF standard supports encryption of strings and streams.
+ * Section 7.6.
+ */
 type PdfCrypt struct {
 	Filter           string
 	Subfilter        string

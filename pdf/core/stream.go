@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package core
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 
 // Decodes the stream.
 // Supports FlateDecode, ASCIIHexDecode.
-func decodeStream(obj *PdfObjectStream) ([]byte, error) {
+func DecodeStream(obj *PdfObjectStream) ([]byte, error) {
 	common.Log.Debug("Decode stream")
 	common.Log.Debug("filter %s", (*obj).PdfObjectDictionary)
 
@@ -205,7 +205,7 @@ func decodeStream(obj *PdfObjectStream) ([]byte, error) {
 			if b == '>' {
 				break
 			}
-			if isWhiteSpace(b) {
+			if IsWhiteSpace(b) {
 				continue
 			}
 			if (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F') || (b >= '0' && b <= '9') {

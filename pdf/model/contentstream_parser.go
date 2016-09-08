@@ -6,7 +6,7 @@
 // The content stream parser provides functionality to parse the content stream into a list of
 // operands that can then be processed further for rendering or extraction of information.
 
-package pdf
+package model
 
 import (
 	"bufio"
@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 // Content stream parser.
@@ -122,7 +123,7 @@ func (this *ContentStreamParser) skipSpaces() (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if isWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			this.reader.ReadByte()
 			cnt++
 		} else {
@@ -156,7 +157,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
-			if isWhiteSpace(bb[0]) {
+			if IsWhiteSpace(bb[0]) {
 				break
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
@@ -223,7 +224,7 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if isDecimalDigit(bb[0]) {
+		} else if IsDecimalDigit(bb[0]) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
@@ -272,7 +273,7 @@ func (this *ContentStreamParser) parseString() (PdfObjectString, error) {
 			}
 
 			// Octal '\ddd' number (base 8).
-			if isOctalDigit(b) {
+			if IsOctalDigit(b) {
 				bb, err := this.reader.Peek(2)
 				if err != nil {
 					return PdfObjectString(bytes), err
@@ -281,7 +282,7 @@ func (this *ContentStreamParser) parseString() (PdfObjectString, error) {
 				numeric := []byte{}
 				numeric = append(numeric, b)
 				for _, val := range bb {
-					if isOctalDigit(val) {
+					if IsOctalDigit(val) {
 						numeric = append(numeric, val)
 					} else {
 						break
@@ -401,10 +402,10 @@ func (this *ContentStreamParser) parseOperand() (PdfObjectString, error) {
 		if err != nil {
 			return PdfObjectString(bytes), err
 		}
-		if isDelimiter(bb[0]) {
+		if IsDelimiter(bb[0]) {
 			break
 		}
-		if isWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			break
 		}
 
@@ -444,7 +445,7 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 			common.Log.Debug("->Array!")
 			arr, err := this.parseArray()
 			return &arr, err, false
-		} else if isDecimalDigit(bb[0]) || (bb[0] == '-' && isDecimalDigit(bb[1])) {
+		} else if IsDecimalDigit(bb[0]) || (bb[0] == '-' && IsDecimalDigit(bb[1])) {
 			common.Log.Debug("->Number!")
 			number, err := this.parseNumber()
 			return number, err, false

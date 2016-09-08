@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package pdf
+package core
 
 import (
 	"bufio"
@@ -43,32 +43,6 @@ type PdfParser struct {
 	repairsAttempted bool // Avoid multiple attempts for repair.
 }
 
-func isWhiteSpace(ch byte) bool {
-	// Table 1 white-space characters (7.2.2 Character Set)
-	// spaceCharacters := string([]byte{0x00, 0x09, 0x0A, 0x0C, 0x0D, 0x20})
-	if (ch == 0x00) || (ch == 0x09) || (ch == 0x0A) || (ch == 0x0C) || (ch == 0x0D) || (ch == 0x20) {
-		return true
-	} else {
-		return false
-	}
-}
-
-func isDecimalDigit(c byte) bool {
-	if c >= '0' && c <= '9' {
-		return true
-	} else {
-		return false
-	}
-}
-
-func isOctalDigit(c byte) bool {
-	if c >= '0' && c <= '7' {
-		return true
-	} else {
-		return false
-	}
-}
-
 // Skip over any spaces.
 func (this *PdfParser) skipSpaces() (int, error) {
 	cnt := 0
@@ -77,7 +51,7 @@ func (this *PdfParser) skipSpaces() (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if isWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			this.reader.ReadByte()
 			cnt++
 		} else {
@@ -194,7 +168,7 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
-			if isWhiteSpace(bb[0]) {
+			if IsWhiteSpace(bb[0]) {
 				break
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
@@ -261,7 +235,7 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if isDecimalDigit(bb[0]) {
+		} else if IsDecimalDigit(bb[0]) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
@@ -310,7 +284,7 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 			}
 
 			// Octal '\ddd' number (base 8).
-			if isOctalDigit(b) {
+			if IsOctalDigit(b) {
 				bb, err := this.reader.Peek(2)
 				if err != nil {
 					return PdfObjectString(bytes), err
@@ -319,7 +293,7 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 				numeric := []byte{}
 				numeric = append(numeric, b)
 				for _, val := range bb {
-					if isOctalDigit(val) {
+					if IsOctalDigit(val) {
 						numeric = append(numeric, val)
 					} else {
 						break
@@ -829,7 +803,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		b = append(b, int64(*wVal))
 	}
 
-	ds, err := decodeStream(xs)
+	ds, err := DecodeStream(xs)
 	if err != nil {
 		common.Log.Error("Unable to decode stream")
 		return nil, err
@@ -1200,7 +1174,7 @@ func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
 			return &indirect, err
 		}
 
-		if isWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			this.skipSpaces()
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			indirect.PdfObject, err = this.parseDict()
