@@ -33,13 +33,14 @@ var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
 var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
 
 type PdfParser struct {
-	rs       io.ReadSeeker
-	reader   *bufio.Reader
-	xrefs    XrefTable
-	objstms  ObjectStreams
-	trailer  *PdfObjectDictionary
-	ObjCache ObjectCache
-	crypter  *PdfCrypt
+	rs               io.ReadSeeker
+	reader           *bufio.Reader
+	xrefs            XrefTable
+	objstms          ObjectStreams
+	trailer          *PdfObjectDictionary
+	ObjCache         ObjectCache
+	crypter          *PdfCrypt
+	repairsAttempted bool // Avoid multiple attempts for repair.
 }
 
 func isWhiteSpace(ch byte) bool {
