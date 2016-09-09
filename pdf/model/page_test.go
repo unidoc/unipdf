@@ -7,7 +7,18 @@ package model
 
 import (
 	"testing"
+
+	. "github.com/unidoc/unidoc/pdf/core"
 )
+
+/*
+func makeReaderForText(txt string) *bufio.Reader {
+	buf := []byte(txt)
+	bufReader := bytes.NewReader(buf)
+	bufferedReader := bufio.NewReader(bufReader)
+	return bufferedReader
+}
+*/
 
 // Test PDF date parsing from string.
 func TestDateParse(t *testing.T) {
@@ -210,10 +221,11 @@ func TestPdfPage1(t *testing.T) {
 >>
 endobj
     `
-	parser := PdfParser{}
-	parser.reader = makeReaderForText(rawText)
+	//parser := PdfParser{}
+	//parser.reader = makeReaderForText(rawText)
+	parser := NewParserFromString(rawText)
 
-	obj, err := parser.parseIndirectObject()
+	obj, err := parser.ParseIndirectObject()
 	if err != nil {
 		t.Errorf("Failed to parse indirect obj (%s)", err)
 		return
@@ -254,10 +266,11 @@ endobj
 func TestRect(t *testing.T) {
 	rawText := `<< /MediaBox [0 0 613.644043 802.772034] >>`
 
-	parser := PdfParser{}
-	parser.reader = makeReaderForText(rawText)
+	//parser := PdfParser{}
+	//parser.reader = makeReaderForText(rawText)
+	parser := NewParserFromString(rawText)
 
-	dict, err := parser.parseDict()
+	dict, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("Failed to parse dict obj (%s)", err)
 		return

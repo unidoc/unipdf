@@ -13,7 +13,7 @@ import (
 )
 
 type PdfAnnotation struct {
-	context      interface{} // Sub-annotation.
+	context      PdfModel // Sub-annotation.
 	Rect         PdfObject
 	Contents     PdfObject
 	P            PdfObject // Reference to page object.
@@ -28,7 +28,7 @@ type PdfAnnotation struct {
 	OC           PdfObject
 }
 
-func (this *PdfAnnotation) GetContext() interface{} {
+func (this *PdfAnnotation) GetContext() PdfModel {
 	return this.context
 }
 
@@ -1059,14 +1059,14 @@ func newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*PdfAnnotationRedac
 	return &annot, nil
 }
 
-func (this *PdfAnnotation) GetContainingPdfObject() PdfObject {
-	if cachedObj, isCached := PdfObjectConvertibleCache[this]; isCached {
-		container := cachedObj.(*PdfIndirectObject)
+func (this *PdfAnnotation) GetContainingPdfObject(mm *ModelManager) PdfObject {
+	if primitiveObj := mm.GetPrimitiveFromModel(this); primitiveObj != nil {
+		container := primitiveObj.(*PdfIndirectObject)
 		return container
 	} else {
 		container := &PdfIndirectObject{}
 		container.PdfObject = &PdfObjectDictionary{}
-		PdfObjectConvertibleCache[this] = container
+		mm.Register(container, this)
 		return container
 	}
 }
@@ -1145,8 +1145,8 @@ func (this *PdfAnnotationRedact) GetContainingPdfObject() PdfObject {
 }
 */
 
-func (this *PdfAnnotation) ToPdfObject() PdfObject {
-	container := this.GetContainingPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotation) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.GetContainingPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Type", MakeName("Annot"))
@@ -1166,8 +1166,8 @@ func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationText) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationText) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Text"))
@@ -1178,8 +1178,8 @@ func (this *PdfAnnotationText) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationLink) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationLink) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Link"))
@@ -1192,8 +1192,8 @@ func (this *PdfAnnotationLink) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationFreeText) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("FreeText"))
@@ -1210,8 +1210,8 @@ func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject {
 
 	return container
 }
-func (this *PdfAnnotationLine) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationLine) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Line"))
@@ -1231,8 +1231,8 @@ func (this *PdfAnnotationLine) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationSquare) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Square"))
@@ -1244,8 +1244,8 @@ func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationCircle) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationCircle) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Circle"))
@@ -1257,8 +1257,8 @@ func (this *PdfAnnotationCircle) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationPolygon) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationPolygon) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Polygon"))
@@ -1273,8 +1273,8 @@ func (this *PdfAnnotationPolygon) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationPolyLine) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationPolyLine) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("PolyLine"))
@@ -1289,8 +1289,8 @@ func (this *PdfAnnotationPolyLine) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationHighlight) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationHighlight) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Highlight"))
@@ -1298,32 +1298,32 @@ func (this *PdfAnnotationHighlight) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationUnderline) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationUnderline) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Underline"))
 	d.SetIfNotNil("QuadPoints", this.QuadPoints)
 	return container
 }
-func (this *PdfAnnotationSquiggly) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationSquiggly) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Squiggly"))
 	d.SetIfNotNil("QuadPoints", this.QuadPoints)
 	return container
 }
-func (this *PdfAnnotationStrikeOut) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationStrikeOut) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("StrikeOut"))
 	d.SetIfNotNil("QuadPoints", this.QuadPoints)
 	return container
 }
-func (this *PdfAnnotationCaret) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationCaret) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Caret"))
@@ -1332,16 +1332,16 @@ func (this *PdfAnnotationCaret) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationStamp) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationStamp) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Stamp"))
 	d.SetIfNotNil("Name", this.Name)
 	return container
 }
-func (this *PdfAnnotationInk) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationInk) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Ink"))
@@ -1349,8 +1349,8 @@ func (this *PdfAnnotationInk) ToPdfObject() PdfObject {
 	d.SetIfNotNil("BS", this.BS)
 	return container
 }
-func (this *PdfAnnotationPopup) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationPopup) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Popup"))
@@ -1358,8 +1358,8 @@ func (this *PdfAnnotationPopup) ToPdfObject() PdfObject {
 	d.SetIfNotNil("Open", this.Open)
 	return container
 }
-func (this *PdfAnnotationFileAttachment) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationFileAttachment) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("FileAttachment"))
@@ -1367,8 +1367,8 @@ func (this *PdfAnnotationFileAttachment) ToPdfObject() PdfObject {
 	d.SetIfNotNil("Name", this.Name)
 	return container
 }
-func (this *PdfAnnotationSound) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationSound) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Sound"))
@@ -1376,8 +1376,8 @@ func (this *PdfAnnotationSound) ToPdfObject() PdfObject {
 	d.SetIfNotNil("Name", this.Name)
 	return container
 }
-func (this *PdfAnnotationMovie) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationMovie) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Movie"))
@@ -1386,8 +1386,8 @@ func (this *PdfAnnotationMovie) ToPdfObject() PdfObject {
 	d.SetIfNotNil("A", this.A)
 	return container
 }
-func (this *PdfAnnotationScreen) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationScreen) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Screen"))
@@ -1397,8 +1397,8 @@ func (this *PdfAnnotationScreen) ToPdfObject() PdfObject {
 	d.SetIfNotNil("AA", this.AA)
 	return container
 }
-func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationWidget) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Widget"))
@@ -1413,8 +1413,8 @@ func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
 	fmt.Printf("Container: %+v\n", *container)
 	return container
 }
-func (this *PdfAnnotationPrinterMark) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationPrinterMark) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("PrinterMark"))
@@ -1422,22 +1422,22 @@ func (this *PdfAnnotationPrinterMark) ToPdfObject() PdfObject {
 	return container
 }
 
-func (this *PdfAnnotationTrapNet) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationTrapNet) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 	d.SetIfNotNil("Subtype", MakeName("PrinterMark"))
 	return container
 }
-func (this *PdfAnnotationWatermark) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationWatermark) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 	d.SetIfNotNil("Subtype", MakeName("Watermark"))
 	d.SetIfNotNil("FixedPrint", this.FixedPrint)
 	return container
 }
 
-func (this *PdfAnnotation3D) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotation3D) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 	d.SetIfNotNil("Subtype", MakeName("3D"))
 	d.SetIfNotNil("3DD", this.T3DD)
@@ -1447,8 +1447,8 @@ func (this *PdfAnnotation3D) ToPdfObject() PdfObject {
 	d.SetIfNotNil("3DB", this.T3DB)
 	return container
 }
-func (this *PdfAnnotationRedact) ToPdfObject() PdfObject {
-	container := this.PdfAnnotation.ToPdfObject().(*PdfIndirectObject)
+func (this *PdfAnnotationRedact) ToPdfObject(mm *ModelManager) PdfObject {
+	container := this.PdfAnnotation.ToPdfObject(mm).(*PdfIndirectObject)
 	d := container.PdfObject.(*PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", MakeName("Redact"))

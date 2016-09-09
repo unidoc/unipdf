@@ -8,9 +8,9 @@ package core
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	//"fmt"
 	"io"
-	"os"
+	//"os"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -597,6 +597,7 @@ func TestObjectParse(t *testing.T) {
 	}
 }
 
+/*
 var file1 = "../testfiles/minimal.pdf"
 
 func TestMinimalPDFFile(t *testing.T) {
@@ -710,3 +711,4 @@ func TestMinimalPDFFile(t *testing.T) {
 		t.Error("Invalid base font (should be Times-Roman not %s)", *baseFont)
 	}
 }
+*/

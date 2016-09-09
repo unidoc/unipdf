@@ -243,7 +243,7 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 		this.rs.Seek(xref.offset, os.SEEK_SET)
 		this.reader = bufio.NewReader(this.rs)
 
-		obj, err := this.parseIndirectObject()
+		obj, err := this.ParseIndirectObject()
 		if err != nil {
 			common.Log.Error("Failed reading xref (%s)", err)
 			// Offset pointing to a non-object.  Try to repair the file.
@@ -302,7 +302,7 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 			if this.crypter != nil {
 				// Mark as decrypted (inside object stream) for caching.
 				// and avoid decrypting decrypted object.
-				this.crypter.decryptedObjects[optr] = true
+				this.crypter.DecryptedObjects[optr] = true
 			}
 			return optr, true, nil
 		} else {

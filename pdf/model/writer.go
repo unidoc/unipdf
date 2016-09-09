@@ -78,6 +78,8 @@ type PdfWriter struct {
 	ids         *PdfObjectArray
 	// Forms.
 	acroForm *PdfAcroForm
+	// Model manager.
+	modelManager *ModelManager
 }
 
 func NewPdfWriter() PdfWriter {
@@ -85,6 +87,8 @@ func NewPdfWriter() PdfWriter {
 
 	w.objectsMap = map[PdfObject]bool{}
 	w.objects = []PdfObject{}
+
+	w.modelManager = NewModelManager()
 
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
@@ -489,17 +493,17 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	crypter := PdfCrypt{}
 	this.crypter = &crypter
 
-	crypter.encryptedObjects = map[PdfObject]bool{}
+	crypter.EncryptedObjects = map[PdfObject]bool{}
 
-	crypter.cryptFilters = CryptFilters{}
-	crypter.cryptFilters["Default"] = CryptFilter{cfm: "V2", length: 128}
+	crypter.CryptFilters = CryptFilters{}
+	crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: 128}
 
 	// Set
 	crypter.P = -1
 	crypter.V = 2
 	crypter.R = 3
-	crypter.length = 128
-	crypter.encryptMetadata = true
+	crypter.Length = 128
+	crypter.EncryptMetadata = true
 	if options != nil {
 		crypter.P = int(options.Permissions.GetP())
 	}
@@ -516,24 +520,24 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	this.ids = &PdfObjectArray{&id0, &id1}
 	common.Log.Debug("Gen Id 0: % x", id0)
 
-	crypter.id0 = string(id0)
+	crypter.Id0 = string(id0)
 
 	// Make the O and U objects.
-	O, err := crypter.alg3(userPass, ownerPass)
+	O, err := crypter.Alg3(userPass, ownerPass)
 	if err != nil {
 		common.Log.Error("Error generating O for encryption (%s)", err)
 		return err
 	}
 	crypter.O = []byte(O)
 	common.Log.Debug("gen O: % x", O)
-	U, key, err := crypter.alg5(userPass)
+	U, key, err := crypter.Alg5(userPass)
 	if err != nil {
 		common.Log.Error("Error generating O for encryption (%s)", err)
 		return err
 	}
 	common.Log.Debug("gen U: % x", U)
 	crypter.U = []byte(U)
-	crypter.encryptionKey = key
+	crypter.EncryptionKey = key
 
 	// Generate the encryption dictionary.
 	encDict := &PdfObjectDictionary{}
@@ -541,7 +545,7 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	(*encDict)[PdfObjectName("P")] = MakeInteger(int64(crypter.P))
 	(*encDict)[PdfObjectName("V")] = MakeInteger(int64(crypter.V))
 	(*encDict)[PdfObjectName("R")] = MakeInteger(int64(crypter.R))
-	(*encDict)[PdfObjectName("Length")] = MakeInteger(int64(crypter.length))
+	(*encDict)[PdfObjectName("Length")] = MakeInteger(int64(crypter.Length))
 	(*encDict)[PdfObjectName("O")] = &O
 	(*encDict)[PdfObjectName("U")] = &U
 	this.encryptDict = encDict
@@ -561,7 +565,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	// Outlines.
 	if this.outlineTree != nil {
 		common.Log.Debug("OutlineTree: %v", this.outlineTree)
-		outlines := this.outlineTree.ToPdfObject()
+		outlines := this.outlineTree.ToPdfObject(this.modelManager)
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {
@@ -587,7 +591,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}*/
 	// Acroform.
 	if this.acroForm != nil {
-		indObj := this.acroForm.ToPdfObject()
+		indObj := this.acroForm.ToPdfObject(this.modelManager)
 		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
 		err := this.addObjects(indObj)
 		if err != nil {

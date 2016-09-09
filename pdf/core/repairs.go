@@ -106,7 +106,7 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 		// Indirect object?
 		results := reRepairIndirectObject.FindIndex(peakBuf)
 		if len(results) > 0 {
-			obj, err := this.parseIndirectObject()
+			obj, err := this.ParseIndirectObject()
 			if err != nil {
 				common.Log.Error("Unable to parse indirect object (%s)", err)
 				return nil, err

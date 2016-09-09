@@ -43,6 +43,18 @@ type PdfParser struct {
 	repairsAttempted bool // Avoid multiple attempts for repair.
 }
 
+func (this *PdfParser) GetCrypter() *PdfCrypt {
+	return this.crypter
+}
+
+func (this *PdfParser) IsAuthenticated() bool {
+	return this.crypter.Authenticated
+}
+
+func (this *PdfParser) GetTrailer() *PdfObjectDictionary {
+	return this.trailer
+}
+
 // Skip over any spaces.
 func (this *PdfParser) skipSpaces() (int, error) {
 	cnt := 0
@@ -485,7 +497,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 			return &arr, err
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Debug("->Dict!")
-			dict, err := this.parseDict()
+			dict, err := this.ParseDict()
 			return dict, err
 		} else if bb[0] == '<' {
 			common.Log.Debug("->Hex string!")
@@ -548,7 +560,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 }
 
 // Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
-func (this *PdfParser) parseDict() (*PdfObjectDictionary, error) {
+func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Debug("Reading PDF Dict!")
 
 	dict := make(PdfObjectDictionary)
@@ -726,7 +738,7 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			this.skipSpaces()
 			common.Log.Debug("Reading trailer dict!")
 			common.Log.Debug("peek: \"%s\"", txt)
-			trailer, err = this.parseDict()
+			trailer, err = this.ParseDict()
 			common.Log.Debug("EOF reading trailer dict!")
 			if err != nil {
 				common.Log.Error("Error parsing trailer dict (%s)", err)
@@ -756,7 +768,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		this.reader = bufio.NewReader(this.rs)
 	}
 
-	xrefObj, err := this.parseIndirectObject()
+	xrefObj, err := this.ParseIndirectObject()
 	if err != nil {
 		common.Log.Error("Failed to read xref object")
 		return nil, errors.New("Failed to read xref object")
@@ -1128,7 +1140,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 
 // Parse an indirect object from the input stream.
 // Can also be an object stream.
-func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
+func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	indirect := PdfIndirectObject{}
 
 	common.Log.Debug("-Read indirect obj")
@@ -1177,7 +1189,7 @@ func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
 		if IsWhiteSpace(bb[0]) {
 			this.skipSpaces()
 		} else if (bb[0] == '<') && (bb[1] == '<') {
-			indirect.PdfObject, err = this.parseDict()
+			indirect.PdfObject, err = this.ParseDict()
 			if err != nil {
 				return &indirect, err
 			}
@@ -1259,6 +1271,16 @@ func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
 		}
 	}
 	return &indirect, nil
+}
+
+// For testing purposes.
+func NewParserFromString(txt string) *PdfParser {
+	parser := PdfParser{}
+	buf := []byte(txt)
+	bufReader := bytes.NewReader(buf)
+	bufferedReader := bufio.NewReader(bufReader)
+	parser.reader = bufferedReader
+	return &parser
 }
 
 // Creates a new parser for a PDF file via ReadSeeker.  Loads the

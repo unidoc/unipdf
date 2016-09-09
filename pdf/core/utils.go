@@ -11,16 +11,12 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-func getUniDocVersion() string {
-	return common.Version
-}
-
 /*
  * Inspect object types.
  * Go through all objects in the cross ref table and detect the types.
  * Mostly for debugging purposes and inspecting odd PDF files.
  */
-func (this *PdfParser) inspect() {
+func (this *PdfParser) Inspect() {
 	common.Log.Debug("--------INSPECT ----------")
 	common.Log.Debug("Xref table:")
 

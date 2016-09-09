@@ -26,6 +26,8 @@ type PdfReader struct {
 	outlineTree *PdfOutlineTreeNode
 	forms       *PdfObjectDictionary
 	AcroForm    *PdfAcroForm
+	// Model manager.
+	modelManager *ModelManager
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
@@ -34,6 +36,7 @@ type PdfReader struct {
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
+	pdfReader.modelManager = NewModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
@@ -85,14 +88,19 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 
 // Loads the structure of the pdf file: pages, outlines, etc.
 func (this *PdfReader) loadStructure() error {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return fmt.Errorf("File need to be decrypted first")
 	}
 
+	trailerDict := this.parser.GetTrailer()
+	if trailerDict == nil {
+		return fmt.Errorf("Missing trailer")
+	}
+
 	// Catalog.
-	root, ok := (*(this.parser.trailer))["Root"].(*PdfObjectReference)
+	root, ok := (*trailerDict)["Root"].(*PdfObjectReference)
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", *(this.parser.trailer))
+		return fmt.Errorf("Invalid Root (trailer: %s)", *trailerDict)
 	}
 	oc, err := this.parser.LookupByReference(*root)
 	if err != nil {
@@ -101,7 +109,7 @@ func (this *PdfReader) loadStructure() error {
 	}
 	pcatalog, ok := oc.(*PdfIndirectObject)
 	if !ok {
-		common.Log.Error("Missing catalog: (root %q) (trailer %s)", oc, *(this.parser.trailer))
+		common.Log.Error("Missing catalog: (root %q) (trailer %s)", oc, *trailerDict)
 		return errors.New("Missing catalog")
 	}
 	catalog, ok := (*pcatalog).PdfObject.(*PdfObjectDictionary)
@@ -208,7 +216,7 @@ func (this *PdfReader) traceToObject(obj PdfObject) (PdfObject, error) {
 }
 
 func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 
@@ -360,7 +368,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 
 // Get document form data.
 func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 	// Has forms?
@@ -402,7 +410,7 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 
 // XXX: Under construction.
 func (this *PdfReader) LoadForms() (*PdfAcroForm, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 
@@ -529,8 +537,8 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 
 // Get the number of pages in the document.
 func (this *PdfReader) GetNumPages() (int, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
-		return -1, fmt.Errorf("File need to be decrypted first")
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
+		return 0, fmt.Errorf("File need to be decrypted first")
 	}
 	return len(this.pageList), nil
 }
@@ -634,7 +642,7 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 // Get a page by the page number. Indirect object with type /Page.
 // Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 	if len(this.pageList) < pageNumber {
@@ -656,7 +664,7 @@ func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 // Get a page by the page number.
 // Returns the PdfPage entry.
 func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
-	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
+	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
 	if len(this.pageList) < pageNumber {
@@ -668,5 +676,5 @@ func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
 }
 
 func (this *PdfReader) Inspect() {
-	this.parser.inspect()
+	this.parser.Inspect()
 }
