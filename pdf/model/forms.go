@@ -4,7 +4,7 @@
  */
 
 //
-// Higher level manipulation of forms (AcroForm).
+// High level manipulation of forms (AcroForm).
 //
 
 package model
@@ -24,11 +24,23 @@ type PdfAcroForm struct {
 	DA              PdfObject
 	Q               PdfObject
 	XFA             PdfObject
+
+	primitive *PdfIndirectObject
+}
+
+func NewPdfAcroForm() *PdfAcroForm {
+	acroForm := &PdfAcroForm{}
+
+	container := &PdfIndirectObject{}
+	container.PdfObject = &PdfObjectDictionary{}
+
+	acroForm.primitive = container
+	return acroForm
 }
 
 // Used when loading forms from PDF files.
 func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm, error) {
-	acroForm := PdfAcroForm{}
+	acroForm := NewPdfAcroForm()
 
 	if obj, has := d["Fields"]; has {
 		obj, err := r.traceToObject(obj)
@@ -82,30 +94,21 @@ func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm,
 		acroForm.XFA = obj
 	}
 
-	return &acroForm, nil
+	return acroForm, nil
 }
 
-func (this *PdfAcroForm) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	if primitive := mm.GetPrimitiveFromModel(this); primitive != nil {
-		container := primitive.(*PdfIndirectObject)
-		return container
-	}
-
-	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
-	mm.Register(container, this)
-
-	return container
+func (this *PdfAcroForm) GetContainingPdfObject() PdfObject {
+	return this.primitive
 }
 
-func (this *PdfAcroForm) ToPdfObject(mm *ModelManager) PdfObject {
-	container := this.GetContainingPdfObject(mm).(*PdfIndirectObject)
+func (this *PdfAcroForm) ToPdfObject() PdfObject {
+	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	if this.Fields != nil {
 		arr := PdfObjectArray{}
 		for _, field := range *this.Fields {
-			arr = append(arr, field.ToPdfObject(mm))
+			arr = append(arr, field.ToPdfObject())
 		}
 		(*dict)["Fields"] = &arr
 	}
@@ -135,6 +138,8 @@ func (this *PdfAcroForm) ToPdfObject(mm *ModelManager) PdfObject {
 	return container
 }
 
+// PdfField represents a field of an interactive form.
+// Implements PdfModel interface.
 type PdfField struct {
 	FT     *PdfObjectName // field type
 	Parent *PdfField
@@ -151,11 +156,23 @@ type PdfField struct {
 	V     PdfObject //value
 	DV    PdfObject
 	AA    PdfObject
+
+	primitive *PdfIndirectObject
+}
+
+func NewPdfField() *PdfField {
+	field := &PdfField{}
+
+	container := &PdfIndirectObject{}
+	container.PdfObject = &PdfObjectDictionary{}
+
+	field.primitive = container
+	return field
 }
 
 // Used when loading fields from PDF files.
 func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField) (*PdfField, error) {
-	field := PdfField{}
+	field := NewPdfField()
 
 	// Field type (required in terminal fields).
 	// Can be /Btn /Tx /Ch /Sig
@@ -236,7 +253,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 				return nil, fmt.Errorf("Invalid widget")
 			}
 
-			widget.Parent = field.GetContainingPdfObject(r.modelManager)
+			widget.Parent = field.GetContainingPdfObject()
 			fmt.Printf("Widget.Parent: %T\n", widget.Parent)
 			fmt.Printf("Widget.Parent: %+v\n", widget.Parent)
 
@@ -245,7 +262,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 			fmt.Printf("dict: %s\n", d.String())
 			fmt.Printf("Widget: %+v\n", *widget)
 			fmt.Printf("Field MERGED: %+v\n", field)
-			return &field, nil
+			return field, nil
 		}
 	}
 
@@ -270,7 +287,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
 			}
 
-			childField, err := r.newPdfFieldFromDict(*fDict, &field)
+			childField, err := r.newPdfFieldFromDict(*fDict, field)
 			if err != nil {
 				return nil, err
 			}
@@ -279,29 +296,21 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 		}
 	}
 
-	return &field, nil
+	return field, nil
 }
 
-func (this *PdfField) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	if primitive := mm.GetPrimitiveFromModel(this); primitive != nil {
-		container := primitive.(*PdfIndirectObject)
-		return container
-	}
-
-	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
-	mm.Register(container, this)
-	return container
+func (this *PdfField) GetContainingPdfObject() PdfObject {
+	return this.primitive
 }
 
 // If Kids refer only to a single pdf widget annotation widget, then can merge it in.
 // Currently not merging it in.
-func (this *PdfField) ToPdfObject(mm *ModelManager) PdfObject {
-	container := this.GetContainingPdfObject(mm).(*PdfIndirectObject)
+func (this *PdfField) ToPdfObject() PdfObject {
+	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	if this.Parent != nil {
-		(*dict)["Parent"] = this.Parent.GetContainingPdfObject(mm)
+		(*dict)["Parent"] = this.Parent.GetContainingPdfObject()
 	}
 
 	if this.KidsF != nil {
@@ -309,7 +318,7 @@ func (this *PdfField) ToPdfObject(mm *ModelManager) PdfObject {
 		fmt.Printf("KidsF: %+v\n", this.KidsF)
 		arr := PdfObjectArray{}
 		for _, child := range this.KidsF {
-			arr = append(arr, child.ToPdfObject(mm))
+			arr = append(arr, child.ToPdfObject())
 		}
 		(*dict)["Kids"] = &arr
 	}
@@ -321,7 +330,7 @@ func (this *PdfField) ToPdfObject(mm *ModelManager) PdfObject {
 		}
 		arr := (*dict)["Kids"].(*PdfObjectArray)
 		for _, child := range this.KidsA {
-			*arr = append(*arr, child.GetContext().ToPdfObject(mm))
+			*arr = append(*arr, child.GetContext().ToPdfObject())
 		}
 	}
 

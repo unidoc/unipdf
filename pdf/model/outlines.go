@@ -22,6 +22,8 @@ type PdfOutlineTreeNode struct {
 type PdfOutline struct {
 	PdfOutlineTreeNode
 	Count *int64
+
+	primitive *PdfIndirectObject
 }
 
 // Pdf outline item dictionary (Table 153 - pp. 376 - 377).
@@ -37,12 +39,35 @@ type PdfOutlineItem struct {
 	SE     PdfObject
 	C      PdfObject
 	F      PdfObject
+
+	primitive *PdfIndirectObject
+}
+
+func NewPdfOutline() *PdfOutline {
+	outline := &PdfOutline{}
+
+	container := &PdfIndirectObject{}
+	container.PdfObject = &PdfObjectDictionary{}
+
+	outline.primitive = container
+
+	return outline
 }
 
 func NewPdfOutlineTree() *PdfOutline {
-	outlineTree := PdfOutline{}
+	outlineTree := NewPdfOutline()
 	outlineTree.context = &outlineTree
-	return &outlineTree
+	return outlineTree
+}
+
+func NewPdfOutlineItem() *PdfOutlineItem {
+	outlineItem := &PdfOutlineItem{}
+
+	container := &PdfIndirectObject{}
+	container.PdfObject = &PdfObjectDictionary{}
+
+	outlineItem.primitive = container
+	return outlineItem
 }
 
 func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
@@ -174,61 +199,45 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 	return nil
 }
 
-func (this *PdfOutlineTreeNode) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	return this.getOuter().GetContainingPdfObject(mm)
+func (this *PdfOutlineTreeNode) GetContainingPdfObject() PdfObject {
+	return this.getOuter().GetContainingPdfObject()
 }
 
-func (this *PdfOutlineTreeNode) ToPdfObject(mm *ModelManager) PdfObject {
-	return this.getOuter().ToPdfObject(mm)
+func (this *PdfOutlineTreeNode) ToPdfObject() PdfObject {
+	return this.getOuter().ToPdfObject()
 }
 
-func (this *PdfOutline) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	if primitive := mm.GetPrimitiveFromModel(this); primitive != nil {
-		container := primitive.(*PdfIndirectObject)
-		return container
-	} else {
-		container := &PdfIndirectObject{}
-		container.PdfObject = &PdfObjectDictionary{}
-		mm.Register(container, this)
-		return container
-	}
+func (this *PdfOutline) GetContainingPdfObject() PdfObject {
+	return this.primitive
 }
 
 // Recursively build the Outline tree PDF object.
-func (this *PdfOutline) ToPdfObject(mm *ModelManager) PdfObject {
-	container := this.GetContainingPdfObject(mm).(*PdfIndirectObject)
+func (this *PdfOutline) ToPdfObject() PdfObject {
+	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	(*dict)["Type"] = MakeName("Outlines")
+	dict.Set("Type", MakeName("Outlines"))
 
 	if this.First != nil {
-		(*dict)["First"] = this.First.ToPdfObject(mm)
+		dict.Set("First", this.First.ToPdfObject())
 	}
 
 	if this.Last != nil {
-		(*dict)["Last"] = this.Last.getOuter().GetContainingPdfObject(mm)
+		dict.Set("Last", this.Last.getOuter().GetContainingPdfObject())
 		//PdfObjectConverterCache[this.Last.getOuter()]
 	}
 
 	return container
 }
 
-func (this *PdfOutlineItem) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	if primitive := mm.GetPrimitiveFromModel(this); primitive != nil {
-		container := primitive.(*PdfIndirectObject)
-		return container
-	} else {
-		container := &PdfIndirectObject{}
-		container.PdfObject = &PdfObjectDictionary{}
-		mm.Register(container, this)
-		return container
-	}
+func (this *PdfOutlineItem) GetContainingPdfObject() PdfObject {
+	return this.primitive
 }
 
 // Outline item.
 // Recursively build the Outline tree PDF object.
-func (this *PdfOutlineItem) ToPdfObject(mm *ModelManager) PdfObject {
-	container := this.GetContainingPdfObject(mm).(*PdfIndirectObject)
+func (this *PdfOutlineItem) ToPdfObject() PdfObject {
+	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	(*dict)["Title"] = this.Title
@@ -248,21 +257,21 @@ func (this *PdfOutlineItem) ToPdfObject(mm *ModelManager) PdfObject {
 		(*dict)["Count"] = MakeInteger(*this.Count)
 	}
 	if this.Next != nil {
-		(*dict)["Next"] = this.Next.ToPdfObject(mm)
+		(*dict)["Next"] = this.Next.ToPdfObject()
 	}
 	if this.First != nil {
-		(*dict)["First"] = this.First.ToPdfObject(mm)
+		(*dict)["First"] = this.First.ToPdfObject()
 	}
 	if this.Prev != nil {
-		(*dict)["Prev"] = mm.GetPrimitiveFromModel(this.Prev.getOuter())
+		(*dict)["Prev"] = this.Prev.getOuter().GetContainingPdfObject()
 		//PdfObjectConverterCache[this.Prev.getOuter()]
 	}
 	if this.Last != nil {
-		(*dict)["Last"] = mm.GetPrimitiveFromModel(this.Last.getOuter())
+		(*dict)["Last"] = this.Last.getOuter().GetContainingPdfObject()
 		// PdfObjectConverterCache[this.Last.getOuter()]
 	}
 	if this.Parent != nil {
-		(*dict)["Parent"] = mm.GetPrimitiveFromModel(this.Parent.getOuter())
+		(*dict)["Parent"] = this.Parent.getOuter().GetContainingPdfObject()
 		//PdfObjectConverterCache[this.Parent.getOuter()]
 	}
 

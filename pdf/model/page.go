@@ -19,12 +19,6 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-type PdfPageTreeNode struct {
-	Parent *PdfPageTreeNode
-	Kids   *PdfPageTreeNode
-	Count  *int64
-}
-
 // PDF page object (7.7.3.3 - Table 30).
 type PdfPage struct {
 	Parent               PdfObject
@@ -56,14 +50,22 @@ type PdfPage struct {
 	PresSteps            PdfObject
 	UserUnit             PdfObject
 	VP                   PdfObject
-	pageDict             *PdfObjectDictionary
 	//Annotations
 	Annotations []*PdfAnnotation
+
+	// Primitive container.
+	pageDict  *PdfObjectDictionary
+	primitive *PdfIndirectObject
 }
 
 func NewPdfPage() *PdfPage {
 	page := PdfPage{}
 	page.pageDict = &PdfObjectDictionary{}
+
+	container := PdfIndirectObject{}
+	container.PdfObject = page.pageDict
+	page.primitive = &container
+
 	return &page
 }
 
@@ -330,7 +332,7 @@ func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 }
 
 // Convert the Page to a PDF object dictionary.
-func (this *PdfPage) GetPageDict(mm *ModelManager) *PdfObjectDictionary {
+func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p := this.pageDict
 	(*p)["Type"] = MakeName("Page")
 	(*p)["Parent"] = this.Parent
@@ -388,7 +390,7 @@ func (this *PdfPage) GetPageDict(mm *ModelManager) *PdfObjectDictionary {
 		arr := PdfObjectArray{}
 		for i, annot := range this.Annotations {
 			fmt.Printf("Annotation %d\n", i+1)
-			arr = append(arr, annot.GetContext().ToPdfObject(mm))
+			arr = append(arr, annot.GetContext().ToPdfObject())
 		}
 		p.SetIfNotNil("Annots", &arr)
 	}
@@ -398,26 +400,18 @@ func (this *PdfPage) GetPageDict(mm *ModelManager) *PdfObjectDictionary {
 
 // Get the page object as an indirect objects.  Wraps the Page
 // dictionary into an indirect object.
-func (this *PdfPage) GetPageAsIndirectObject(mm *ModelManager) *PdfIndirectObject {
-	dict := this.GetPageDict(mm)
-	iobj := PdfIndirectObject{}
-	iobj.PdfObject = dict
-	return &iobj
+func (this *PdfPage) GetPageAsIndirectObject() *PdfIndirectObject {
+	return this.primitive
 }
 
-func (this *PdfPage) GetContainingPdfObject(mm *ModelManager) PdfObject {
-	if primitive := mm.GetPrimitiveFromModel(this); primitive != nil {
-		container := primitive.(*PdfIndirectObject)
-		return container
-	} else {
-		container := this.GetPageAsIndirectObject(mm)
-		mm.Register(container, this)
-		return container
-	}
+func (this *PdfPage) GetContainingPdfObject() PdfObject {
+	return this.primitive
 }
 
-func (this *PdfPage) ToPdfObject(mm *ModelManager) PdfObject {
-	return this.GetContainingPdfObject(mm)
+func (this *PdfPage) ToPdfObject() PdfObject {
+	container := this.primitive
+	this.GetPageDict() // update.
+	return container
 }
 
 // Add an image to the XObject resources.
@@ -587,7 +581,8 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 	}
 }
 
-// Page resources.
+// Page resources model.
+// Implements PdfModel.
 type PdfPageResources struct {
 	ExtGState  PdfObject
 	ColorSpace PdfObject
@@ -596,10 +591,18 @@ type PdfPageResources struct {
 	XObject    PdfObject
 	Font       PdfObject
 	ProcSet    PdfObject
+	// Primitive.
+	primitive *PdfObjectDictionary
+}
+
+func NewPdfPageResources() *PdfPageResources {
+	r := &PdfPageResources{}
+	r.primitive = &PdfObjectDictionary{}
+	return r
 }
 
 func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, error) {
-	r := PdfPageResources{}
+	r := NewPdfPageResources()
 
 	if obj, isDefined := (*dict)["ExtGState"]; isDefined {
 		r.ExtGState = obj
@@ -623,11 +626,15 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 		r.ProcSet = obj
 	}
 
-	return &r, nil
+	return r, nil
+}
+
+func (r *PdfPageResources) GetContainingPdfObject() PdfObject {
+	return r.primitive
 }
 
 func (r *PdfPageResources) ToPdfObject() PdfObject {
-	d := &PdfObjectDictionary{}
+	d := r.primitive
 	d.SetIfNotNil("ExtGState", r.ExtGState)
 	d.SetIfNotNil("ColorSpace", r.ColorSpace)
 	d.SetIfNotNil("Pattern", r.Pattern)
@@ -638,7 +645,8 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	return d
 }
 
-// Image XObject (Table 89 in 8.9.5.1).
+// XObjectImage (Table 89 in 8.9.5.1).
+// Implements PdfModel interface.
 type XObjectImage struct {
 	Width            *int64
 	Height           *int64
@@ -659,12 +667,22 @@ type XObjectImage struct {
 	Metadata         PdfObject
 	OC               PdfObject
 	Stream           []byte
+	// Primitive
+	primitive *PdfObjectStream
+}
+
+func NewXObjectImage() *XObjectImage {
+	xobj := &XObjectImage{}
+	stream := &PdfObjectStream{}
+	stream.PdfObjectDictionary = &PdfObjectDictionary{}
+	xobj.primitive = stream
+	return xobj
 }
 
 // Creates a new XObject Image from an image object with default
 // options.
-func NewXObjectImage(name PdfObjectName, img *Image) (*XObjectImage, error) {
-	xobj := XObjectImage{}
+func NewXObjectImageFromImage(name PdfObjectName, img *Image) (*XObjectImage, error) {
+	xobj := NewXObjectImage()
 
 	xobj.Name = &name
 	xobj.Stream = img.Data.Bytes()
@@ -681,12 +699,12 @@ func NewXObjectImage(name PdfObjectName, img *Image) (*XObjectImage, error) {
 
 	xobj.ColorSpace = MakeName("DeviceRGB")
 
-	return &xobj, nil
+	return xobj, nil
 }
 
 // Build the image xobject from a stream object.
 func NewXObjectImageFromStream(stream PdfObjectStream) (*XObjectImage, error) {
-	img := XObjectImage{}
+	img := NewXObjectImage()
 
 	dict := *(stream.PdfObjectDictionary)
 
@@ -766,26 +784,28 @@ func NewXObjectImageFromStream(stream PdfObjectStream) (*XObjectImage, error) {
 
 	img.Stream = stream.Stream
 
-	return &img, nil
+	return img, nil
+}
+
+func (ximg *XObjectImage) GetContainingPdfObject() PdfObject {
+	return ximg.primitive
 }
 
 // Return a stream object.
 func (ximg *XObjectImage) ToPdfObject() PdfObject {
-	stream := PdfObjectStream{}
+	stream := ximg.primitive
 	stream.Stream = ximg.Stream
 
-	dict := PdfObjectDictionary{}
-	stream.PdfObjectDictionary = &dict
+	dict := stream.PdfObjectDictionary
 
-	// XXX/FIXME: Continue defining these.
-	dict["Type"] = MakeName("XObject")
-	dict["Subtype"] = MakeName("Image")
-	dict["Width"] = MakeInteger(*(ximg.Width))
-	dict["Height"] = MakeInteger(*(ximg.Height))
-	dict["Filter"] = MakeName("DCTDecode")
+	dict.Set("Type", MakeName("XObject"))
+	dict.Set("Subtype", MakeName("Image"))
+	dict.Set("Width", MakeInteger(*(ximg.Width)))
+	dict.Set("Height", MakeInteger(*(ximg.Height)))
+	dict.Set("Filter", MakeName("DCTDecode"))
 
 	if ximg.BitsPerComponent != nil {
-		dict["BitsPerComponent"] = MakeInteger(*(ximg.BitsPerComponent))
+		dict.Set("BitsPerComponent", MakeInteger(*(ximg.BitsPerComponent)))
 	}
 
 	dict.SetIfNotNil("ColorSpace", ximg.ColorSpace)
@@ -804,8 +824,8 @@ func (ximg *XObjectImage) ToPdfObject() PdfObject {
 	dict.SetIfNotNil("Metadata", ximg.Metadata)
 	dict.SetIfNotNil("OC", ximg.OC)
 
-	dict["Length"] = MakeInteger(int64(len(ximg.Stream)))
+	dict.Set("Length", MakeInteger(int64(len(ximg.Stream))))
 	stream.Stream = ximg.Stream
 
-	return &stream
+	return stream
 }

@@ -13,9 +13,11 @@ import (
 // Each PDFModel has an underlying Primitive and vice versa.
 // Copies can be made, but care must be taken to do it properly.
 type PdfModel interface {
-	ToPdfObject(*ModelManager) PdfObject
-	GetContainingPdfObject(*ModelManager) PdfObject
+	ToPdfObject() PdfObject
+	GetContainingPdfObject() PdfObject
 }
+
+/*
 
 type ModelManager struct {
 	primitiveCache map[PdfModel]PdfObject
@@ -50,3 +52,4 @@ func (this *ModelManager) GetModelFromPrimitive(primitive PdfObject) PdfModel {
 	}
 	return model
 }
+*/

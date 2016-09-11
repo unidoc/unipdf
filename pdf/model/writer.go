@@ -78,8 +78,6 @@ type PdfWriter struct {
 	ids         *PdfObjectArray
 	// Forms.
 	acroForm *PdfAcroForm
-	// Model manager.
-	modelManager *ModelManager
 }
 
 func NewPdfWriter() PdfWriter {
@@ -87,8 +85,6 @@ func NewPdfWriter() PdfWriter {
 
 	w.objectsMap = map[PdfObject]bool{}
 	w.objects = []PdfObject{}
-
-	w.modelManager = NewModelManager()
 
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
@@ -565,7 +561,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	// Outlines.
 	if this.outlineTree != nil {
 		common.Log.Debug("OutlineTree: %v", this.outlineTree)
-		outlines := this.outlineTree.ToPdfObject(this.modelManager)
+		outlines := this.outlineTree.ToPdfObject()
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {
@@ -591,7 +587,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}*/
 	// Acroform.
 	if this.acroForm != nil {
-		indObj := this.acroForm.ToPdfObject(this.modelManager)
+		indObj := this.acroForm.ToPdfObject()
 		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
 		err := this.addObjects(indObj)
 		if err != nil {

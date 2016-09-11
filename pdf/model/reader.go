@@ -26,8 +26,6 @@ type PdfReader struct {
 	outlineTree *PdfOutlineTreeNode
 	forms       *PdfObjectDictionary
 	AcroForm    *PdfAcroForm
-	// Model manager.
-	modelManager *ModelManager
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
@@ -36,7 +34,6 @@ type PdfReader struct {
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
-	pdfReader.modelManager = NewModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
