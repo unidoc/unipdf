@@ -17,8 +17,15 @@ type PdfModel interface {
 	GetContainingPdfObject() PdfObject
 }
 
-/*
-
+// The model manager is used to cache Primitive <-> Model mappings where needed.
+// In many cases only Model -> Primitive mapping is needed and only a reference to the Primitive
+// is stored in the Model.  In some cases, the Model needs to be found from the Primitive,
+// and that is where the ModelManager can be used (in both directions).
+//
+// Note that it is not always used, the Primitive <-> Model mapping needs to be registered
+// for each time it is used.  Thus, it is only used for special cases, commonly where the same
+// object is used by two higher level objects. (Example PDF Widgets owned by both Page Annotations,
+// and the interactive form - AcroForm).
 type ModelManager struct {
 	primitiveCache map[PdfModel]PdfObject
 	modelCache     map[PdfObject]PdfModel
@@ -52,4 +59,3 @@ func (this *ModelManager) GetModelFromPrimitive(primitive PdfObject) PdfModel {
 	}
 	return model
 }
-*/

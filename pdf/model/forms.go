@@ -39,10 +39,10 @@ func NewPdfAcroForm() *PdfAcroForm {
 }
 
 // Used when loading forms from PDF files.
-func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm, error) {
+func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm, error) {
 	acroForm := NewPdfAcroForm()
 
-	if obj, has := d["Fields"]; has {
+	if obj, has := (*d)["Fields"]; has {
 		obj, err := r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -62,7 +62,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm,
 			if !ok {
 				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
 			}
-			field, err := r.newPdfFieldFromDict(*fDict, nil)
+			field, err := r.newPdfFieldFromDict(fDict, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -72,25 +72,25 @@ func (r *PdfReader) newPdfAcroFormFromDict(d PdfObjectDictionary) (*PdfAcroForm,
 		acroForm.Fields = &fields
 	}
 
-	if obj, has := d["NeedAppearances"]; has {
+	if obj, has := (*d)["NeedAppearances"]; has {
 		acroForm.NeedAppearances = obj
 	}
-	if obj, has := d["SigFlags"]; has {
+	if obj, has := (*d)["SigFlags"]; has {
 		acroForm.SigFlags = obj
 	}
-	if obj, has := d["CO"]; has {
+	if obj, has := (*d)["CO"]; has {
 		acroForm.CO = obj
 	}
-	if obj, has := d["DR"]; has {
+	if obj, has := (*d)["DR"]; has {
 		acroForm.DR = obj
 	}
-	if obj, has := d["DA"]; has {
+	if obj, has := (*d)["DA"]; has {
 		acroForm.DA = obj
 	}
-	if obj, has := d["Q"]; has {
+	if obj, has := (*d)["Q"]; has {
 		acroForm.Q = obj
 	}
-	if obj, has := d["XFA"]; has {
+	if obj, has := (*d)["XFA"]; has {
 		acroForm.XFA = obj
 	}
 
@@ -171,14 +171,14 @@ func NewPdfField() *PdfField {
 }
 
 // Used when loading fields from PDF files.
-func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField) (*PdfField, error) {
+func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField) (*PdfField, error) {
 	field := NewPdfField()
 
 	// Field type (required in terminal fields).
 	// Can be /Btn /Tx /Ch /Sig
 	// Required for a terminal field (inheritable).
 	var err error
-	if obj, has := d["FT"]; has {
+	if obj, has := (*d)["FT"]; has {
 		obj, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -192,31 +192,31 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 	}
 
 	// Partial field name (Optional)
-	if obj, has := d["T"]; has {
+	if obj, has := (*d)["T"]; has {
 		field.T = obj
 	}
 	// Alternate description (Optional)
-	if obj, has := d["TU"]; has {
+	if obj, has := (*d)["TU"]; has {
 		field.TU = obj
 	}
 	// Mapping name (Optional)
-	if obj, has := d["TM"]; has {
+	if obj, has := (*d)["TM"]; has {
 		field.TM = obj
 	}
 	// Field flag. (Optional; inheritable)
-	if obj, has := d["Ff"]; has {
+	if obj, has := (*d)["Ff"]; has {
 		field.Ff = obj
 	}
 	// Value (Optional; inheritable) - Various types depending on the field type.
-	if obj, has := d["V"]; has {
+	if obj, has := (*d)["V"]; has {
 		field.V = obj
 	}
 	// Default value for reset (Optional; inheritable)
-	if obj, has := d["DV"]; has {
+	if obj, has := (*d)["DV"]; has {
 		field.DV = obj
 	}
 	// Additional actions dictionary (Optional)
-	if obj, has := d["AA"]; has {
+	if obj, has := (*d)["AA"]; has {
 		field.AA = obj
 	}
 
@@ -231,7 +231,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 	}
 
 	// Has a merged-in widget annotation?
-	if obj, has := d["Subtype"]; has {
+	if obj, has := (*d)["Subtype"]; has {
 		obj, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -243,8 +243,11 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 		}
 		if *name == "Widget" {
 			// Is a merged field / widget dict.
+
 			// Check if the annotation has already been loaded?
-			annot, err := r.newPdfAnnotationFromDict(&d)
+			// Most likely referenced to by a page...  Could be in either direction.
+			// r.newPdfAnntoationFromDict should act as a caching mechanism.
+			annot, err := r.newPdfAnnotationFromDict(d)
 			if err != nil {
 				return nil, err
 			}
@@ -266,7 +269,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 		}
 	}
 
-	if obj, has := d["Kids"]; has {
+	if obj, has := (*d)["Kids"]; has {
 		obj, err := r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -287,7 +290,7 @@ func (r *PdfReader) newPdfFieldFromDict(d PdfObjectDictionary, parent *PdfField)
 				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
 			}
 
-			childField, err := r.newPdfFieldFromDict(*fDict, field)
+			childField, err := r.newPdfFieldFromDict(fDict, field)
 			if err != nil {
 				return nil, err
 			}

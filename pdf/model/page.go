@@ -21,23 +21,23 @@ import (
 
 // PDF page object (7.7.3.3 - Table 30).
 type PdfPage struct {
-	Parent               PdfObject
-	LastModified         *PdfDate
-	Resources            *PdfPageResources
-	CropBox              *PdfRectangle
-	MediaBox             *PdfRectangle
-	BleedBox             *PdfRectangle
-	TrimBox              *PdfRectangle
-	ArtBox               *PdfRectangle
-	BoxColorInfo         PdfObject
-	Contents             PdfObject
-	Rotate               *int64
-	Group                PdfObject
-	Thumb                PdfObject
-	B                    PdfObject
-	Dur                  PdfObject
-	Trans                PdfObject
-	Annots               PdfObject
+	Parent       PdfObject
+	LastModified *PdfDate
+	Resources    *PdfPageResources
+	CropBox      *PdfRectangle
+	MediaBox     *PdfRectangle
+	BleedBox     *PdfRectangle
+	TrimBox      *PdfRectangle
+	ArtBox       *PdfRectangle
+	BoxColorInfo PdfObject
+	Contents     PdfObject
+	Rotate       *int64
+	Group        PdfObject
+	Thumb        PdfObject
+	B            PdfObject
+	Dur          PdfObject
+	Trans        PdfObject
+	//Annots               PdfObject
 	AA                   PdfObject
 	Metadata             PdfObject
 	PieceInfo            PdfObject
@@ -201,9 +201,9 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	if obj, isDefined := d["Trans"]; isDefined {
 		page.Trans = obj
 	}
-	if obj, isDefined := d["Annots"]; isDefined {
-		page.Annots = obj
-	}
+	//if obj, isDefined := d["Annots"]; isDefined {
+	//	page.Annots = obj
+	//}
 	if obj, isDefined := d["AA"]; isDefined {
 		page.AA = obj
 	}
@@ -370,7 +370,7 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("B", this.B)
 	p.SetIfNotNil("Dur", this.Dur)
 	p.SetIfNotNil("Trans", this.Trans)
-	p.SetIfNotNil("Annots2", this.Annots)
+	//p.SetIfNotNil("AnnotsOLD", this.Annots)
 	p.SetIfNotNil("AA", this.AA)
 	p.SetIfNotNil("Metadata", this.Metadata)
 	p.SetIfNotNil("PieceInfo", this.PieceInfo)

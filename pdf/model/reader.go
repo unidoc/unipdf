@@ -27,6 +27,8 @@ type PdfReader struct {
 	forms       *PdfObjectDictionary
 	AcroForm    *PdfAcroForm
 
+	modelManager *ModelManager
+
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
 }
@@ -34,6 +36,8 @@ type PdfReader struct {
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
+
+	pdfReader.modelManager = NewModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
@@ -170,8 +174,9 @@ func (this *PdfReader) loadStructure() error {
 	if err != nil {
 		return err
 	}
+
 	// Get fields
-	this.AcroForm, err = this.LoadForms()
+	this.AcroForm, err = this.loadForms()
 	if err != nil {
 		return err
 	}
@@ -405,8 +410,7 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 	return formsDict, nil
 }
 
-// XXX: Under construction.
-func (this *PdfReader) LoadForms() (*PdfAcroForm, error) {
+func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
@@ -432,7 +436,7 @@ func (this *PdfReader) LoadForms() (*PdfAcroForm, error) {
 	common.Log.Debug("Has Acro forms")
 	// Load it.
 
-	acroForm, err := this.newPdfAcroFormFromDict(*formsDict)
+	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
 	if err != nil {
 		return nil, err
 	}
