@@ -246,11 +246,6 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Annotations: %+v\n", page.Annotations)
-	for i, annot := range page.Annotations {
-		fmt.Printf("%d : %+v (%T)\n", i+1, annot, annot.GetContext())
-		fmt.Printf("- %+v\n", annot.GetContext())
-	}
 
 	return page, nil
 }
@@ -258,7 +253,6 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, error) {
 	annotsObj, hasAnnots := (*d)["Annots"]
 	if !hasAnnots {
-		fmt.Printf("Page does not have annotations!\n")
 		return nil, nil
 	}
 
@@ -384,15 +378,12 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("UserUnit", this.UserUnit)
 	p.SetIfNotNil("VP", this.VP)
 
-	fmt.Printf("Writing annotations\n")
 	if this.Annotations != nil {
-		fmt.Printf("...\n")
 		arr := PdfObjectArray{}
-		for i, annot := range this.Annotations {
-			fmt.Printf("Annotation %d\n", i+1)
+		for _, annot := range this.Annotations {
 			arr = append(arr, annot.GetContext().ToPdfObject())
 		}
-		p.SetIfNotNil("Annots", &arr)
+		p.Set("Annots", &arr)
 	}
 
 	return p

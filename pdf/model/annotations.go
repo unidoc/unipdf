@@ -12,6 +12,17 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
+/*
+
+markup annotations:
+T, popup, ..., ExData
+
+markup annotaitons are:
+Text, FreeText, Line, Square, Circle, Polygon, PolyLine, Highlight, Underline, Squiggly, StrikeOut, Stamp, Caret, Ink, FileAttachment,
+Sound, Redact
+
+
+*/
 type PdfAnnotation struct {
 	context      PdfModel // Sub-annotation.
 	Rect         PdfObject
@@ -1329,8 +1340,6 @@ func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
 	d.SetIfNotNil("BS", this.BS)
 	d.SetIfNotNil("Parent", this.Parent)
 
-	fmt.Printf("WIDGET: %s\n", d.String())
-	fmt.Printf("Container: %+v\n", *container)
 	return container
 }
 

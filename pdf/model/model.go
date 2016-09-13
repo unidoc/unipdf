@@ -3,6 +3,10 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// The model package provides a higher-level access to PDF, where more complicated structures can be built
+// and converted to primitive models.  It provides functions for reading and writing PDF documents and
+// representing pages and other constructs.  It uses the core package to parse the file and handle
+// primitive PDF objects.
 package model
 
 import (

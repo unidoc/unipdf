@@ -231,7 +231,6 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	common.Log.Debug("==========")
 	common.Log.Debug("Appending to page list %T", pageObj)
-	fmt.Printf("Appending to page list %T\n", pageObj)
 
 	page, ok := pageObj.(*PdfIndirectObject)
 	if !ok {
@@ -244,7 +243,6 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	if !ok {
 		return errors.New("Page object should be a dictionary")
 	}
-	fmt.Printf("pDict: %s\n", pDict.String())
 
 	otype, ok := (*pDict)["Type"].(*PdfObjectName)
 	if !ok {

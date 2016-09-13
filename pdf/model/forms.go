@@ -157,6 +157,12 @@ type PdfField struct {
 	DV    PdfObject
 	AA    PdfObject
 
+	// Variable Text:
+	DA PdfObject
+	Q  PdfObject
+	DS PdfObject
+	RV PdfObject
+
 	primitive *PdfIndirectObject
 }
 
@@ -220,6 +226,20 @@ func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField
 		field.AA = obj
 	}
 
+	// Variable text:
+	if obj, has := (*d)["DA"]; has {
+		field.DA = obj
+	}
+	if obj, has := (*d)["Q"]; has {
+		field.Q = obj
+	}
+	if obj, has := (*d)["DS"]; has {
+		field.DS = obj
+	}
+	if obj, has := (*d)["RV"]; has {
+		field.RV = obj
+	}
+
 	// In a non-terminal field, the Kids array shall refer to field dictionaries that are immediate descendants of this field.
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
 	// with this field. However, if there is only one associated widget annotation, and its contents have been merged into the field
@@ -257,14 +277,7 @@ func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField
 			}
 
 			widget.Parent = field.GetContainingPdfObject()
-			fmt.Printf("Widget.Parent: %T\n", widget.Parent)
-			fmt.Printf("Widget.Parent: %+v\n", widget.Parent)
-
 			field.KidsA = append(field.KidsA, annot)
-
-			fmt.Printf("dict: %s\n", d.String())
-			fmt.Printf("Widget: %+v\n", *widget)
-			fmt.Printf("Field MERGED: %+v\n", field)
 			return field, nil
 		}
 	}
@@ -337,6 +350,10 @@ func (this *PdfField) ToPdfObject() PdfObject {
 		}
 	}
 
+	if this.FT != nil {
+		(*dict)["FT"] = this.FT
+	}
+
 	if this.T != nil {
 		(*dict)["T"] = this.T
 	}
@@ -358,6 +375,12 @@ func (this *PdfField) ToPdfObject() PdfObject {
 	if this.AA != nil {
 		(*dict)["AA"] = this.AA
 	}
+
+	// Variable text:
+	dict.SetIfNotNil("DA", this.DA)
+	dict.SetIfNotNil("Q", this.Q)
+	dict.SetIfNotNil("DS", this.DS)
+	dict.SetIfNotNil("RV", this.RV)
 
 	return container
 }
