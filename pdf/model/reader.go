@@ -427,7 +427,14 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if err != nil {
 		return nil, err
 	}
-	formsDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+	obj = TraceToDirectObject(obj)
+	if _, isNull := obj.(*PdfObjectNull); isNull {
+		common.Log.Debug("Acroform is a null object (empty)\n")
+
+		return nil, nil
+	}
+
+	formsDict, ok := obj.(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Invalid AcroForm entry %T", obj)
 		common.Log.Debug("Does not have forms")

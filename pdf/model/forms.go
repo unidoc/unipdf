@@ -12,6 +12,7 @@ package model
 import (
 	"fmt"
 
+	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -58,7 +59,12 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 			if err != nil {
 				return nil, err
 			}
-			fDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+			obj = TraceToDirectObject(obj)
+			if _, isNull := obj.(*PdfObjectNull); isNull {
+				common.Log.Debug("Empty field - skipping over\n")
+				continue
+			}
+			fDict, ok := obj.(*PdfObjectDictionary)
 			if !ok {
 				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
 			}
@@ -298,7 +304,12 @@ func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField
 			if err != nil {
 				return nil, err
 			}
-			fDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+			obj = TraceToDirectObject(obj)
+			if _, isNull := obj.(*PdfObjectNull); isNull {
+				fmt.Printf("Null field")
+				return nil, nil
+			}
+			fDict, ok := obj.(*PdfObjectDictionary)
 			if !ok {
 				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
 			}
