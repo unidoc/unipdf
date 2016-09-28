@@ -552,7 +552,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.streamFilter
 			common.Log.Debug("this.streamFilter = %s", this.streamFilter)
 
-			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
+			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -645,9 +645,21 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	}
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		isSig := false
+		if t, hasType := (*d)["Type"]; hasType {
+			typeStr, ok := t.(*PdfObjectName)
+			if ok && *typeStr == "Sig" {
+				isSig = true
+			}
+		}
 		for keyidx, o := range *d {
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
+			if isSig && string(keyidx) == "Contents" {
+				// Leave the Contents of a Signature dictionary.
+				continue
+			}
+
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
 				err := this.Decrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
@@ -788,7 +800,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.streamFilter
 			common.Log.Debug("this.streamFilter = %s", this.streamFilter)
 
-			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
+			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -879,9 +891,21 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	}
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		isSig := false
+		if t, hasType := (*d)["Type"]; hasType {
+			typeStr, ok := t.(*PdfObjectName)
+			if ok && *typeStr == "Sig" {
+				isSig = true
+			}
+		}
+
 		for keyidx, o := range *d {
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
+			if isSig && string(keyidx) == "Contents" {
+				// Leave the Contents of a Signature dictionary.
+				continue
+			}
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
 				err := this.Encrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
