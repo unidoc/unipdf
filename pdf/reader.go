@@ -221,6 +221,11 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	}
 	common.Log.Debug("Outline root: %v", outlineRootObj)
 
+	if _, isNull := outlineRootObj.(*PdfObjectNull); isNull {
+		common.Log.Debug("Outline root is null - no outlines")
+		return nil, nil
+	}
+
 	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
 	if !ok {
 		return nil, errors.New("Outline root should be an indirect object")
