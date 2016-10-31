@@ -40,7 +40,7 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	// Load the image with the native implementation.
 	img, _, err := image.Decode(reader)
 	if err != nil {
-		common.Log.Error("Error decoding file: %s", err)
+		common.Log.Debug("Error decoding file: %s", err)
 		return nil, err
 	}
 

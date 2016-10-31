@@ -178,7 +178,7 @@ func (this *PdfObjectName) DefaultWriteString() string {
 	var output bytes.Buffer
 
 	if len(*this) > 127 {
-		common.Log.Error("Name too long (%s)", *this)
+		common.Log.Debug("ERROR: Name too long (%s)", *this)
 	}
 
 	output.WriteString("/")

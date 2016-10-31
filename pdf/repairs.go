@@ -33,7 +33,7 @@ func (this *PdfParser) repairLocateXref() (int64, error) {
 
 	results := repairReXrefTable.FindAllStringIndex(string(b2), -1)
 	if len(results) < 1 {
-		common.Log.Error("Repair: xref not found!")
+		common.Log.Debug("ERROR: Repair: xref not found!")
 		return 0, errors.New("Repair: xref not found")
 	}
 
@@ -50,11 +50,11 @@ func (this *PdfParser) rebuildXrefTable() error {
 	for objNum, xref := range this.xrefs {
 		obj, _, err := this.lookupByNumberWrapper(objNum, false)
 		if err != nil {
-			common.Log.Error("Unable to look up object (%s)", err)
-			common.Log.Error("Xref table completely broken - attempting to repair ")
+			common.Log.Debug("ERROR: Unable to look up object (%s)", err)
+			common.Log.Debug("ERROR: Xref table completely broken - attempting to repair ")
 			xrefTable, err := this.repairRebuildXrefsTopDown()
 			if err != nil {
-				common.Log.Error("Failed xref rebuild repair (%s)", err)
+				common.Log.Debug("ERROR: Failed xref rebuild repair (%s)", err)
 				return err
 			}
 			this.xrefs = *xrefTable
@@ -108,7 +108,7 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 		if len(results) > 0 {
 			obj, err := this.parseIndirectObject()
 			if err != nil {
-				common.Log.Error("Unable to parse indirect object (%s)", err)
+				common.Log.Debug("ERROR: Unable to parse indirect object (%s)", err)
 				return nil, err
 			}
 

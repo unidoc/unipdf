@@ -61,7 +61,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 			if hasbits {
 				pbits, ok := obits.(*PdfObjectInteger)
 				if !ok {
-					common.Log.Error("Invalid BitsPerComponent")
+					common.Log.Debug("ERROR: Invalid BitsPerComponent")
 					return nil, fmt.Errorf("Invalid BitsPerComponent")
 				}
 				if *pbits != 8 {
@@ -92,7 +92,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 
 				columns, ok := (*decodeParams)["Columns"].(*PdfObjectInteger)
 				if !ok {
-					common.Log.Error("Predictor Column missing\n")
+					common.Log.Debug("ERROR: Predictor Column missing\n")
 					return nil, fmt.Errorf("Predictor column missing")
 				}
 
@@ -107,7 +107,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 				rowLength := int(*columns) * colors
 				rows := len(outData) / rowLength
 				if len(outData)%rowLength != 0 {
-					common.Log.Error("TIFF encoding: Invalid row length...")
+					common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
 					return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 				}
 
@@ -139,13 +139,13 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 				common.Log.Debug("PNG Encoding")
 				columns, ok := (*decodeParams)["Columns"].(*PdfObjectInteger)
 				if !ok {
-					common.Log.Error("Predictor Column missing\n")
+					common.Log.Debug("ERROR: Predictor Column missing\n")
 					return nil, fmt.Errorf("Predictor column missing")
 				}
 				rowLength := int(*columns + 1) // 1 byte to specify predictor algorithms per row.
 				rows := len(outData) / rowLength
 				if len(outData)%rowLength != 0 {
-					common.Log.Error("Invalid row length...")
+					common.Log.Debug("ERROR: Invalid row length...")
 					return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 				}
 
@@ -176,7 +176,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 							rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
 						}
 					default:
-						common.Log.Error("Invalid filter byte (%d)", fb)
+						common.Log.Debug("ERROR: Invalid filter byte (%d)", fb)
 						return nil, fmt.Errorf("Invalid filter byte (%d)", fb)
 					}
 
@@ -188,7 +188,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 				pOutData := pOutBuffer.Bytes()
 				return pOutData, nil
 			} else {
-				common.Log.Error("Unsupported predictor (%d)", predictor)
+				common.Log.Debug("ERROR: Unsupported predictor (%d)", predictor)
 				return nil, fmt.Errorf("Unsupported predictor (%d)", predictor)
 			}
 		}
@@ -211,7 +211,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 			if (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F') || (b >= '0' && b <= '9') {
 				inb = append(inb, b)
 			} else {
-				common.Log.Error("Invalid ascii hex character (%c)", b)
+				common.Log.Debug("ERROR: Invalid ascii hex character (%c)", b)
 				return nil, fmt.Errorf("Invalid ascii hex character (%c)", b)
 			}
 		}
@@ -227,6 +227,6 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 		return outb, nil
 	}
 
-	common.Log.Error("Unsupported encoding method!")
+	common.Log.Debug("ERROR: Unsupported encoding method!")
 	return nil, fmt.Errorf("Unsupported encoding method")
 }

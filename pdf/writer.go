@@ -191,7 +191,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					// Could refer to somewhere outside of the scope of the output doc.
 					// Should be done by the reader already.
 					// -> ERROR.
-					common.Log.Error("Parent is a reference object - Cannot be in writer (needs to be resolved)")
+					common.Log.Debug("ERROR: Parent is a reference object - Cannot be in writer (needs to be resolved)")
 					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
 				}
 			}
@@ -213,7 +213,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 	if _, isReference := obj.(*PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
-		common.Log.Error("Cannot be a reference!")
+		common.Log.Debug("ERROR: Cannot be a reference!")
 		return errors.New("Reference not allowed")
 	}
 
@@ -407,7 +407,7 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 					return errors.New("P pointing outside of write pages")
 				}
 			} else {
-				common.Log.Error("P entry not an indirect object (%T)", p)
+				common.Log.Debug("ERROR: P entry not an indirect object (%T)", p)
 			}
 		}
 
@@ -508,14 +508,14 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	// Make the O and U objects.
 	O, err := crypter.alg3(userPass, ownerPass)
 	if err != nil {
-		common.Log.Error("Error generating O for encryption (%s)", err)
+		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
 		return err
 	}
 	crypter.O = []byte(O)
 	common.Log.Debug("gen O: % x", O)
 	U, key, err := crypter.alg5(userPass)
 	if err != nil {
-		common.Log.Error("Error generating O for encryption (%s)", err)
+		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
 		return err
 	}
 	common.Log.Debug("gen U: % x", U)
@@ -596,7 +596,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		if this.crypter != nil && obj != this.encryptObj {
 			err := this.crypter.Encrypt(obj, int64(idx+1), 0)
 			if err != nil {
-				common.Log.Error("Failed encrypting (%s)", err)
+				common.Log.Debug("ERROR: Failed encrypting (%s)", err)
 				return err
 			}
 
