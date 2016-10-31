@@ -1263,7 +1263,7 @@ func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
 					stream := make([]byte, streamLength)
 					_, err = this.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
-						common.Log.Error("ERROR stream (%d): %X", len(stream), stream)
+						common.Log.Debug("ERROR stream (%d): %X", len(stream), stream)
 						return nil, err
 					}
 

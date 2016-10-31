@@ -76,7 +76,7 @@ func (this *PdfParser) decodeStream(obj *PdfObjectStream) ([]byte, error) {
 		bufReader := bytes.NewReader(obj.Stream)
 		r, err := zlib.NewReader(bufReader)
 		if err != nil {
-			common.Log.Error("Decoding error %s\n", err)
+			common.Log.Debug("Decoding error %v\n", err)
 			common.Log.Debug("Stream (%d) % x", len(obj.Stream), obj.Stream)
 			return nil, err
 		}
