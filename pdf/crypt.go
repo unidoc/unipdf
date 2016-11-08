@@ -231,7 +231,10 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
 	if len(*U) != 32 {
-		return crypter, errors.New("Length(U) != 32")
+		// Strictly this does not cause an error.
+		// If O is OK and others then can still read the file.
+		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(*U))
+		//return crypter, errors.New("Length(U) != 32")
 	}
 	crypter.U = []byte(*U)
 
