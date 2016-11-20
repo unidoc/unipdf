@@ -601,6 +601,88 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	return nil
 }
 
+/*
+ * Recursively traverse through the page object data and look up
+ * references to indirect objects.
+ *
+ * GH: Are we fully protected against circular references? (Add tests).
+ */
+func (this *PdfReader) ObjectTraverse(o PdfObject) ([]interface{}, error) {
+	common.Log.Debug("ObjectTraverse")
+	objs := []interface{}{}
+	traversed := map[PdfObject]bool{}
+	err := this.objectTraverse(&objs, &traversed, 0, o)
+	return objs, err
+}
+func (this *PdfReader) objectTraverse(objs *[]interface{}, traversed *map[PdfObject]bool,
+	depth int, o PdfObject) error {
+	common.Log.Debug("objectTraverse: depth=%d", depth)
+	if _, isTraversed := (*traversed)[o]; isTraversed {
+		return nil
+	}
+	(*traversed)[o] = true
+	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
+		common.Log.Debug("io: %s", io)
+		common.Log.Debug("- %s", io.PdfObject)
+		err := this.objectTraverse(objs, traversed, depth+1, io.PdfObject)
+		return err
+	}
+	if so, isStreamObj := o.(*PdfObjectStream); isStreamObj {
+		err := this.objectTraverse(objs, traversed, depth+1, so.PdfObjectDictionary)
+		return err
+	}
+	if dict, isDict := o.(*PdfObjectDictionary); isDict {
+		common.Log.Debug("- dict: %s", dict)
+		o := append(*objs, dict)
+		*objs = o
+		for name, v := range *dict {
+			if ref, isRef := v.(*PdfObjectReference); isRef {
+				resolvedObj, _, err := this.resolveReference(ref)
+				if err != nil {
+					return err
+				}
+				(*dict)[name] = resolvedObj
+				err = this.objectTraverse(objs, traversed, depth+1, resolvedObj)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := this.objectTraverse(objs, traversed, depth+1, v)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	if arr, isArray := o.(*PdfObjectArray); isArray {
+		common.Log.Debug("- array: %s", arr)
+		for idx, v := range *arr {
+			if ref, isRef := v.(*PdfObjectReference); isRef {
+				resolvedObj, _, err := this.resolveReference(ref)
+				if err != nil {
+					return err
+				}
+				(*arr)[idx] = resolvedObj
+				err = this.objectTraverse(objs, traversed, depth+1, resolvedObj)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := this.objectTraverse(objs, traversed, depth+1, v)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	if _, isRef := o.(*PdfObjectReference); isRef {
+		common.Log.Debug("ERROR: Reader tracing a reference!")
+		return errors.New("Reader tracing a reference!")
+	}
+	return nil
+}
 // Get a page by the page number. Indirect object with type /Page.
 // Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {

@@ -5,7 +5,7 @@
 
 //
 // Allow higher level manipulation of PDF files and pages.
-// This can be continously expanded to support more and more features.
+// This can be continuously expanded to support more and more features.
 // Generic handling can be done by defining elements as PdfObject which
 // can later be replaced and fully defined.
 //
@@ -591,6 +591,9 @@ type WatermarkImageOptions struct {
 	Alpha               float64
 	FitToWidth          bool
 	PreserveAspectRatio bool
+	Width               float64
+	Height              float64
+	X, Y                float64
 }
 
 // Add a watermark to the page.
@@ -602,17 +605,37 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	pWidth := bbox.Urx - bbox.Llx
 	pHeight := bbox.Ury - bbox.Lly
 
-	wWidth := float64(*ximg.Width)
-	xOffset := (float64(pWidth) - float64(wWidth)) / 2
+	fmt.Printf("AddWatermarkImage: bbox=%+v opt=%+v\n", bbox, opt)
+	var wWidth float64
+	var wHeight float64
+	var xOffset float64
+	var yOffset float64
+	if opt.Width > 0 {
+		wWidth = opt.Width
+		wHeight = opt.Height
+		if opt.X < 0 {
+			xOffset = pWidth + opt.X - opt.Width
+		} else {
+			xOffset = opt.X
+		}
+		if opt.Y < 0 {
+			yOffset = pHeight + opt.Y - opt.Height
+		} else {
+			yOffset = opt.Y
+		}
+	} else {
+		wWidth = float64(*ximg.Width)
+		xOffset = (float64(pWidth) - float64(wWidth)) / 2
 	if opt.FitToWidth {
 		wWidth = pWidth
 		xOffset = 0
 	}
-	wHeight := pHeight
-	yOffset := float64(0)
+		wHeight = pHeight
+		yOffset = float64(0)
 	if opt.PreserveAspectRatio {
 		wHeight = wWidth * float64(*ximg.Height) / float64(*ximg.Width)
 		yOffset = (pHeight - wHeight) / 2
+		}
 	}
 
 	imgName := PdfObjectName("Imw0")
@@ -629,6 +652,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 		"%.0f 0 0 %.0f %.4f %.4f cm\n"+
 		"/%s Do\n"+
 		"Q", wWidth, wHeight, xOffset, yOffset, imgName)
+	fmt.Printf("AddWatermarkImage: contentStr=%q\n", contentStr)
 	this.AddContentStreamByString(contentStr)
 
 	return nil
