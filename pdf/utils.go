@@ -6,13 +6,15 @@
 package pdf
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
 )
 
-func (this *PdfReader) Inspect() {
-	this.parser.inspect()
+// Inspect analyzes the document object structure.
+func (this *PdfReader) Inspect() (map[string]int, error) {
+	return this.parser.inspect()
 }
 
 func getUniDocVersion() string {
@@ -23,7 +25,7 @@ func getUniDocVersion() string {
  * Inspect object types.
  * Go through all objects in the cross ref table and detect the types.
  */
-func (this *PdfParser) inspect() {
+func (this *PdfParser) inspect() (map[string]int, error) {
 	common.Log.Debug("--------INSPECT ----------")
 	common.Log.Debug("Xref table:")
 
@@ -89,11 +91,11 @@ func (this *PdfParser) inspect() {
 				ot, isName := (*dict)["Type"].(*PdfObjectName)
 				if isName {
 					otype := string(*ot)
-					common.Log.Debug("AAA obj type %s", otype)
+					common.Log.Debug("--- obj type %s", otype)
 					objTypes[otype]++
 				}
 			}
-			common.Log.Debug("DIR OOBJ %d: %s", xref.objectNumber, o)
+			common.Log.Debug("DIRECT OBJ %d: %s", xref.objectNumber, o)
 		}
 
 		i++
@@ -109,12 +111,15 @@ func (this *PdfParser) inspect() {
 
 	if len(this.xrefs) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
-		return
+		return nil, fmt.Errorf("Invalid document (xref table missing)")
 	}
+
 	fontObjs, ok := objTypes["Font"]
 	if !ok || fontObjs < 2 {
 		common.Log.Debug("This document is probably scanned!")
 	} else {
 		common.Log.Debug("This document is valid for extraction!")
 	}
+
+	return objTypes, nil
 }
