@@ -695,6 +695,7 @@ func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
 	return page, nil
 }
 
-func (this *PdfReader) Inspect() {
-	this.parser.Inspect()
+// Inspect the object types, subtypes and content in the PDF file.
+func (this *PdfReader) Inspect() (map[string]int, error) {
+	return this.parser.Inspect()
 }
