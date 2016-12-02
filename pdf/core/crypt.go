@@ -122,7 +122,12 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 			// Standard security handler expresses the length in multiples of 8 (16 means 128)
 			// We only deal with standard so far. (Public key not supported yet).
 			if *length < 5 || *length > 16 {
-				return fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", *length)
+				if *length == 64 || *length == 128 {
+					common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", *length)
+					*length /= 8
+				} else {
+					return fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", *length)
+				}
 			}
 			cf.Length = int(*length)
 		}
