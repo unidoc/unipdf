@@ -89,7 +89,12 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["LastModified"]; isDefined {
-		strObj, ok := obj.(*PdfObjectString)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		strObj, ok := TraceToDirectObject(obj).(*PdfObjectString)
 		if !ok {
 			return nil, errors.New("Page dictionary LastModified != string")
 		}
@@ -101,7 +106,8 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["Resources"]; isDefined {
-		obj, err := reader.traceToObject(obj)
+		var err error
+		obj, err = reader.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -118,55 +124,75 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj, isDefined := d["MediaBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page MediaBox not an array")
 		}
-		var err error
 		page.MediaBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["CropBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page CropBox not an array")
 		}
-		var err error
 		page.CropBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["BleedBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page BleedBox not an array")
 		}
-		var err error
 		page.BleedBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["TrimBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page TrimBox not an array")
 		}
-		var err error
 		page.TrimBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj, isDefined := d["ArtBox"]; isDefined {
-		boxArr, ok := obj.(*PdfObjectArray)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
 			return nil, errors.New("Page ArtBox not an array")
 		}
-		var err error
 		page.ArtBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
@@ -179,7 +205,12 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		page.Contents = obj
 	}
 	if obj, isDefined := d["Rotate"]; isDefined {
-		iObj, ok := obj.(*PdfObjectInteger)
+		var err error
+		obj, err = reader.traceToObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		iObj, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid Page Rotate object")
 		}

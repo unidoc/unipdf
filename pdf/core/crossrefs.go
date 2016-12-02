@@ -57,7 +57,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 	if !cached {
 		soi, err := this.LookupByNumber(sobjNumber)
 		if err != nil {
-			common.Log.Error("Missing object stream with number %d", sobjNumber)
+			common.Log.Debug("Missing object stream with number %d", sobjNumber)
 			return nil, err
 		}
 
@@ -74,11 +74,11 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		common.Log.Debug("so d: %s\n", *sod)
 		name, ok := (*sod)["Type"].(*PdfObjectName)
 		if !ok {
-			common.Log.Error("ERROR: Object stream should always have a Type")
+			common.Log.Debug("ERROR: Object stream should always have a Type")
 			return nil, errors.New("Object stream missing Type")
 		}
 		if strings.ToLower(string(*name)) != "objstm" {
-			common.Log.Error("ERROR: Object stream type shall always be ObjStm !")
+			common.Log.Debug("ERROR: Object stream type shall always be ObjStm !")
 			return nil, errors.New("Object stream type != ObjStm")
 		}
 
@@ -162,7 +162,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 
 	val, err := this.parseObject()
 	if err != nil {
-		common.Log.Error("Fail to read object (%s)", err)
+		common.Log.Debug("ERROR Fail to read object (%s)", err)
 		return nil, err
 	}
 	if val == nil {
@@ -245,13 +245,13 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 
 		obj, err := this.ParseIndirectObject()
 		if err != nil {
-			common.Log.Error("Failed reading xref (%s)", err)
+			common.Log.Debug("ERROR Failed reading xref (%s)", err)
 			// Offset pointing to a non-object.  Try to repair the file.
 			if attemptRepairs {
-				common.Log.Error("Attempting to repair xrefs (top down)")
+				common.Log.Debug("Attempting to repair xrefs (top down)")
 				xrefTable, err := this.repairRebuildXrefsTopDown()
 				if err != nil {
-					common.Log.Error("Failed repair (%s)", err)
+					common.Log.Debug("ERROR Failed repair (%s)", err)
 					return nil, false, err
 				}
 				this.xrefs = *xrefTable
@@ -287,14 +287,14 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 		common.Log.Debug("Object stream available in object %d/%d", xref.osObjNumber, xref.osObjIndex)
 
 		if xref.osObjNumber == objNumber {
-			common.Log.Error("Circular reference!?!")
+			common.Log.Debug("ERROR Circular reference!?!")
 			return nil, true, errors.New("Xref circular reference")
 		}
 		_, exists := this.xrefs[xref.osObjNumber]
 		if exists {
 			optr, err := this.lookupObjectViaOS(xref.osObjNumber, objNumber) //xref.osObjIndex)
 			if err != nil {
-				common.Log.Error("Returning ERR (%s)", err)
+				common.Log.Debug("ERROR Returning ERR (%s)", err)
 				return nil, true, err
 			}
 			common.Log.Debug("<Loaded via OS")

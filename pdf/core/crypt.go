@@ -81,7 +81,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		}
 
 		if name == "Identity" {
-			common.Log.Error("Cannot overwrite the identity filter")
+			common.Log.Debug("ERROR - Cannot overwrite the identity filter - Trying next")
 			continue
 		}
 
@@ -163,11 +163,11 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 
 	filter, ok := (*ed)["Filter"].(*PdfObjectName)
 	if !ok {
-		common.Log.Error("Crypt dictionary missing required Filter field!")
+		common.Log.Debug("ERROR Crypt dictionary missing required Filter field!")
 		return crypter, errors.New("Required crypt field Filter missing")
 	}
 	if *filter != "Standard" {
-		common.Log.Error("Unsupported filter (%s)", *filter)
+		common.Log.Debug("ERROR Unsupported filter (%s)", *filter)
 		return crypter, errors.New("Unsupported Filter")
 	}
 	crypter.Filter = string(*filter)
@@ -180,7 +180,7 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 
 	if L, ok := (*ed)["Length"].(*PdfObjectInteger); ok {
 		if (*L % 8) != 0 {
-			common.Log.Error("Invalid encryption length")
+			common.Log.Debug("ERROR Invalid encryption length")
 			return crypter, errors.New("Invalid encryption length")
 		}
 		crypter.Length = int(*L)
@@ -201,7 +201,7 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 				return crypter, err
 			}
 		} else {
-			common.Log.Error("Unsupported encryption algo V = %d", *V)
+			common.Log.Debug("ERROR Unsupported encryption algo V = %d", *V)
 			return crypter, errors.New("Unsupported algorithm")
 		}
 	} else {
@@ -231,7 +231,10 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
 	if len(*U) != 32 {
-		return crypter, errors.New("Length(U) != 32")
+		// Strictly this does not cause an error.
+		// If O is OK and others then can still read the file.
+		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(*U))
+		//return crypter, errors.New("Length(U) != 32")
 	}
 	crypter.U = []byte(*U)
 
@@ -384,7 +387,7 @@ func (this *PdfCrypt) paddedPass(pass []byte) []byte {
 func (this *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
 	cf, ok := this.CryptFilters[filter]
 	if !ok {
-		common.Log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 	isAES := false
@@ -443,7 +446,7 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 	common.Log.Debug("Decrypt bytes")
 	cf, ok := this.CryptFilters[filter]
 	if !ok {
-		common.Log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 
@@ -483,7 +486,7 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
 		if len(buf) < 16 {
-			common.Log.Error("AES invalid buf %s", buf)
+			common.Log.Debug("ERROR AES invalid buf %s", buf)
 			return buf, fmt.Errorf("AES: Buf len < 16 (%d)", len(buf))
 		}
 		iv := buf[:16]
@@ -552,7 +555,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.StreamFilter
 			common.Log.Debug("this.StreamFilter = %s", this.StreamFilter)
 
-			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
+			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -645,9 +648,21 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	}
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		isSig := false
+		if t, hasType := (*d)["Type"]; hasType {
+			typeStr, ok := t.(*PdfObjectName)
+			if ok && *typeStr == "Sig" {
+				isSig = true
+			}
+		}
 		for keyidx, o := range *d {
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
+			if isSig && string(keyidx) == "Contents" {
+				// Leave the Contents of a Signature dictionary.
+				continue
+			}
+
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
 				err := this.Decrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
@@ -678,7 +693,7 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 	common.Log.Debug("Encrypt bytes")
 	cf, ok := this.CryptFilters[filter]
 	if !ok {
-		common.Log.Error("Unsupported crypt filter (%s)", filter)
+		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
 
@@ -788,7 +803,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.StreamFilter
 			common.Log.Debug("this.StreamFilter = %s", this.StreamFilter)
 
-			if filters, ok := (*dict)["Filters"].(*PdfObjectArray); ok {
+			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -879,9 +894,21 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	}
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		isSig := false
+		if t, hasType := (*d)["Type"]; hasType {
+			typeStr, ok := t.(*PdfObjectName)
+			if ok && *typeStr == "Sig" {
+				isSig = true
+			}
+		}
+
 		for keyidx, o := range *d {
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
+			if isSig && string(keyidx) == "Contents" {
+				// Leave the Contents of a Signature dictionary.
+				continue
+			}
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
 				err := this.Encrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
