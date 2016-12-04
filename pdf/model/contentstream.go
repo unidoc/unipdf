@@ -111,6 +111,7 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			txt += string(*param)
 		}
 	}
+
 	return txt, nil
 }
 
@@ -336,6 +337,40 @@ func (this *ContentStreamParser) parseString() (PdfObjectString, error) {
 	return PdfObjectString(bytes), nil
 }
 
+// Starts with '<' ends with '>'.
+func (this *ContentStreamParser) parseHexString() (PdfObjectString, error) {
+	this.reader.ReadByte()
+
+	hextable := []byte("0123456789abcdefABCDEF")
+
+	tmp := []byte{}
+	for {
+		this.skipSpaces()
+
+		bb, err := this.reader.Peek(1)
+		if err != nil {
+			return PdfObjectString(""), err
+		}
+
+		if bb[0] == '>' {
+			this.reader.ReadByte()
+			break
+		}
+
+		b, _ := this.reader.ReadByte()
+		if bytes.IndexByte(hextable, b) >= 0 {
+			tmp = append(tmp, b)
+		}
+	}
+
+	if len(tmp)%2 == 1 {
+		tmp = append(tmp, '0')
+	}
+
+	buf, _ := hex.DecodeString(string(tmp))
+	return PdfObjectString(buf), nil
+}
+
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
 func (this *ContentStreamParser) parseArray() (PdfObjectArray, error) {
 	arr := make(PdfObjectArray, 0)
@@ -394,6 +429,74 @@ func (this *ContentStreamParser) parseNull() (PdfObjectNull, error) {
 	return PdfObjectNull{}, err
 }
 
+func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
+	common.Log.Debug("Reading content stream dict!")
+
+	dict := make(PdfObjectDictionary)
+
+	// Pass the '<<'
+	c, _ := this.reader.ReadByte()
+	if c != '<' {
+		return nil, errors.New("Invalid dict")
+	}
+	c, _ = this.reader.ReadByte()
+	if c != '<' {
+		return nil, errors.New("Invalid dict")
+	}
+
+	for {
+		this.skipSpaces()
+
+		bb, err := this.reader.Peek(2)
+		if err != nil {
+			return nil, err
+		}
+
+		common.Log.Debug("Dict peek: %s (% x)!", string(bb), string(bb))
+		if (bb[0] == '>') && (bb[1] == '>') {
+			common.Log.Debug("EOF dictionary")
+			this.reader.ReadByte()
+			this.reader.ReadByte()
+			break
+		}
+		common.Log.Debug("Parse the name!")
+
+		keyName, err := this.parseName()
+		common.Log.Debug("Key: %s", keyName)
+		if err != nil {
+			common.Log.Debug("ERROR Returning name err %s", err)
+			return nil, err
+		}
+
+		if len(keyName) > 4 && keyName[len(keyName)-4:] == "null" {
+			// Some writers have a bug where the null is appended without
+			// space.  For example "\Boundsnull"
+			newKey := keyName[0 : len(keyName)-4]
+			common.Log.Debug("Taking care of null bug (%s)", keyName)
+			common.Log.Debug("New key \"%s\" = null", newKey)
+			this.skipSpaces()
+			bb, _ := this.reader.Peek(1)
+			if bb[0] == '/' {
+				var nullObj PdfObjectNull
+				dict[newKey] = &nullObj
+				continue
+			}
+		}
+
+		this.skipSpaces()
+
+		val, err, _ := this.parseObject()
+		if err != nil {
+			return nil, err
+		}
+		dict[keyName] = val
+
+		common.Log.Debug("dict[%s] = %s", keyName, val.String())
+	}
+
+	return &dict, nil
+}
+
 // An operand is a text command represented by a word.
 func (this *ContentStreamParser) parseOperand() (PdfObjectString, error) {
 	bytes := []byte{}
@@ -441,6 +544,10 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 			common.Log.Debug("->String!")
 			str, err := this.parseString()
 			return &str, err, false
+		} else if bb[0] == '<' && bb[1] != '<' {
+			common.Log.Debug("->Hex String!")
+			str, err := this.parseHexString()
+			return &str, err, false
 		} else if bb[0] == '[' {
 			common.Log.Debug("->Array!")
 			arr, err := this.parseArray()
@@ -449,6 +556,9 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 			common.Log.Debug("->Number!")
 			number, err := this.parseNumber()
 			return number, err, false
+		} else if bb[0] == '<' && bb[1] == '<' {
+			dict, err := this.parseDict()
+			return dict, err, false
 		} else {
 			common.Log.Debug("->Operand or bool?")
 			// Let's peek farther to find out.
