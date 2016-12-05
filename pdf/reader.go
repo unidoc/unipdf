@@ -413,7 +413,7 @@ func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
 	return nil, errors.New("Page not found")
 }
 
-// Build the table of contents.
+// Build the table of contents.  !@#$
 // tree, ex: Pages -> Pages -> Pages -> Page
 // Traverse through the whole thing recursively.
 func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectObject) error {
@@ -602,10 +602,9 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 }
 
 /*
- * Recursively traverse through the page object data and look up
- * references to indirect objects.
- *
- * GH: Are we fully protected against circular references? (Add tests).
+ * ObjectTraverse recursively traverses the page object data and looks up* references to indirect
+ * objects. !@#$
+ * It returns the objects as a []interface{}
  */
 func (this *PdfReader) ObjectTraverse(o PdfObject) ([]interface{}, error) {
 	common.Log.Debug("ObjectTraverse")
@@ -614,6 +613,13 @@ func (this *PdfReader) ObjectTraverse(o PdfObject) ([]interface{}, error) {
 	err := this.objectTraverse(&objs, &traversed, 0, o)
 	return objs, err
 }
+
+/*
+ * objectTraverse recursively traverses `o` and looks up references to indirect objects.
+ * It (and its recursions) append the objects to `objs`
+ * `traversed` is the set of objects traversed so far
+ * `depth` is the recursion depth
+ */
 func (this *PdfReader) objectTraverse(objs *[]interface{}, traversed *map[PdfObject]bool,
 	depth int, o PdfObject) error {
 	common.Log.Debug("objectTraverse: depth=%d", depth)
@@ -683,6 +689,7 @@ func (this *PdfReader) objectTraverse(objs *[]interface{}, traversed *map[PdfObj
 	}
 	return nil
 }
+
 // Get a page by the page number. Indirect object with type /Page.
 // Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {

@@ -13,13 +13,14 @@ package pdf
 import (
 	"bytes"
 	"fmt"
+	"sort"
 
 	"github.com/unidoc/unidoc/common"
 )
 
 type PdfObject interface {
-	String() string
-	DefaultWriteString() string
+	String() string             // The stringer interface for debugging/logging
+	DefaultWriteString() string // The string that gets written to the output PDF file
 	// Make a recursive traverse function too with a handler function?
 }
 
@@ -48,7 +49,7 @@ type PdfObjectStream struct {
 	Stream []byte
 }
 
-// Quick functions to make pdf objects form primitive objects.
+// Quick functions to make pdf objects from primitive objects.
 func MakeName(s string) *PdfObjectName {
 	name := PdfObjectName(s)
 	return &name
@@ -218,9 +219,33 @@ func (this *PdfObjectArray) DefaultWriteString() string {
 	return outStr
 }
 
+// byName sorts slices of PdfObjectName. It is needed because sort.Strings(keys) gives a typecheck
+// error which I find strange because a PdfObjectName is a string.
+type byName []PdfObjectName
+
+func (x byName) Len() int { return len(x) }
+
+func (x byName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+
+func (x byName) Less(i, j int) bool {
+	return x[i] < x[j]
+}
+
+// sortedKeys returns the keys of `this` sorted in the way Go sorts strings
+// We do this to give deterministic output PDFs
+func (this *PdfObjectDictionary) sortedKeys() []PdfObjectName {
+	keys := []PdfObjectName{}
+	for k, _ := range *this {
+		keys = append(keys, k)
+	}
+	sort.Sort(byName(keys))
+	return keys
+}
+
 func (this *PdfObjectDictionary) String() string {
 	outStr := "Dict("
-	for k, v := range *this {
+	for _, k := range this.sortedKeys() {
+		v := (*this)[k]
 		outStr += fmt.Sprintf("\"%s\": %s, ", k, v.String())
 	}
 	outStr += ")"
@@ -229,7 +254,8 @@ func (this *PdfObjectDictionary) String() string {
 
 func (this *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
-	for k, v := range *this {
+	for _, k := range this.sortedKeys() {
+		v := (*this)[k]
 		common.Log.Debug("Writing k: %s %T", k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "

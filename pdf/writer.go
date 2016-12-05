@@ -133,9 +133,8 @@ func (this *PdfWriter) hasObject(obj PdfObject) bool {
 	return false
 }
 
-// Adds the object to list of objects and returns true if the obj was
-// not already added.
-// Returns false if the object was previously added.
+// addObject adds `obj` to list of objects.
+// Returns true if `obj` was not already in list of objects, or false it was.
 func (this *PdfWriter) addObject(obj PdfObject) bool {
 	hasObj := this.hasObject(obj)
 	if !hasObj {
@@ -146,6 +145,9 @@ func (this *PdfWriter) addObject(obj PdfObject) bool {
 	return false
 }
 
+// addObjects recursively adds `obj` to the list of objects.
+// If `obj` is a container then its elements are added with a recursive call to addObjects.
+// In `obj` is a PdfIndirectObject or PdfObjectStream, its contents are added after it is added.
 func (this *PdfWriter) addObjects(obj PdfObject) error {
 	common.Log.Debug("Adding objects!")
 
@@ -177,7 +179,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
 		common.Log.Debug("Dict")
 		common.Log.Debug("- %s", obj)
-		for k, v := range *dict {
+		for _, k := range dict.sortedKeys() {
+			v := (*dict)[k]
 			common.Log.Debug("Key %s", k)
 			if k != "Parent" {
 				err := this.addObjects(v)
