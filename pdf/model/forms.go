@@ -59,16 +59,11 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 			if err != nil {
 				return nil, err
 			}
-			obj = TraceToDirectObject(obj)
-			if _, isNull := obj.(*PdfObjectNull); isNull {
-				common.Log.Debug("Empty field - skipping over\n")
-				continue
+			container, isIndirect := obj.(*PdfIndirectObject)
+			if !isIndirect {
+				return nil, fmt.Errorf("Field not in an indirect object")
 			}
-			fDict, ok := obj.(*PdfObjectDictionary)
-			if !ok {
-				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
-			}
-			field, err := r.newPdfFieldFromDict(fDict, nil)
+			field, err := r.newPdfFieldFromIndirectObject(container, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -183,7 +178,12 @@ func NewPdfField() *PdfField {
 }
 
 // Used when loading fields from PDF files.
-func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField) (*PdfField, error) {
+func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, parent *PdfField) (*PdfField, error) {
+	d, isDict := container.PdfObject.(*PdfObjectDictionary)
+	if !isDict {
+		return nil, fmt.Errorf("Pdf Field indirect object not containing a dictionary")
+	}
+
 	field := NewPdfField()
 
 	// Field type (required in terminal fields).
@@ -272,8 +272,8 @@ func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField
 
 			// Check if the annotation has already been loaded?
 			// Most likely referenced to by a page...  Could be in either direction.
-			// r.newPdfAnntoationFromDict should act as a caching mechanism.
-			annot, err := r.newPdfAnnotationFromDict(d)
+			// r.newPdfAnnotationFromIndirectObject acts as a caching mechanism.
+			annot, err := r.newPdfAnnotationFromIndirectObject(container)
 			if err != nil {
 				return nil, err
 			}
@@ -304,17 +304,13 @@ func (r *PdfReader) newPdfFieldFromDict(d *PdfObjectDictionary, parent *PdfField
 			if err != nil {
 				return nil, err
 			}
-			obj = TraceToDirectObject(obj)
-			if _, isNull := obj.(*PdfObjectNull); isNull {
-				fmt.Printf("Null field")
-				return nil, nil
-			}
-			fDict, ok := obj.(*PdfObjectDictionary)
-			if !ok {
-				return nil, fmt.Errorf("Invalid Fields entry: %T", obj)
+
+			container, isIndirect := obj.(*PdfIndirectObject)
+			if !isIndirect {
+				return nil, fmt.Errorf("Not an indirect object (form field)")
 			}
 
-			childField, err := r.newPdfFieldFromDict(fDict, field)
+			childField, err := r.newPdfFieldFromIndirectObject(container, field)
 			if err != nil {
 				return nil, err
 			}

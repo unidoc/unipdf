@@ -71,11 +71,18 @@ type PdfWriter struct {
 	catalog     *PdfObjectDictionary
 	fields      []PdfObject
 	infoObj     *PdfIndirectObject
+
 	// Encryption
 	crypter     *PdfCrypt
 	encryptDict *PdfObjectDictionary
 	encryptObj  *PdfIndirectObject
 	ids         *PdfObjectArray
+
+	// Objects to be followed up on prior to writing.
+	// These are objects that are added and reference objects that are not included
+	// for writing.
+	pendingObjects map[PdfObject]bool
+
 	// Forms.
 	acroForm *PdfAcroForm
 }
@@ -85,6 +92,7 @@ func NewPdfWriter() PdfWriter {
 
 	w.objectsMap = map[PdfObject]bool{}
 	w.objects = []PdfObject{}
+	w.pendingObjects = map[PdfObject]bool{}
 
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
@@ -188,8 +196,15 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					return err
 				}
 			} else {
+				if _, parentIsNull := (*dict)["Parent"].(*PdfObjectNull); parentIsNull {
+					// Parent is null.  We can ignore it.
+					continue
+				}
+
 				if hasObj := this.hasObject(v); !hasObj {
 					fmt.Printf("Parent obj is missing!! %T %p %v\n", v, v, v)
+					this.pendingObjects[v] = true
+					// Although it is missing at this point, it could be added later...
 				}
 				// How to handle the parent?  Make sure it is present?
 				if parentObj, parentIsRef := (*dict)["Parent"].(*PdfObjectReference); parentIsRef {
@@ -589,11 +604,21 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}*/
 	// Acroform.
 	if this.acroForm != nil {
+		common.Log.Debug("Writing acro forms")
 		indObj := this.acroForm.ToPdfObject()
+		common.Log.Debug("AcroForm: %+v", indObj)
 		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
 		err := this.addObjects(indObj)
 		if err != nil {
 			return err
+		}
+	}
+
+	// Check pending objects prior to write.
+	for pendingObj, _ := range this.pendingObjects {
+		if !this.hasObject(pendingObj) {
+			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
+			return fmt.Errorf("Pending object %+v %T never added for writing", pendingObj, pendingObj)
 		}
 	}
 

@@ -49,7 +49,7 @@ func (this *PdfAnnotation) GetContext() PdfModel {
 // Additional elements for mark-up annotations.
 type PdfAnnotationMarkup struct {
 	T            PdfObject
-	Popup        PdfObject
+	Popup        *PdfAnnotationPopup
 	CA           PdfObject
 	RC           PdfObject
 	CreationDate PdfObject
@@ -330,7 +330,12 @@ func NewPdfAnnotation() *PdfAnnotation {
 
 // Used for PDF parsing.  Loads a PDF annotation model from a PDF primitive dictionary object.
 // Loads the common PDF annotation dictionary, and anything needed for the annotation subtype.
-func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnotation, error) {
+func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObject) (*PdfAnnotation, error) {
+	d, isDict := container.PdfObject.(*PdfObjectDictionary)
+	if !isDict {
+		return nil, fmt.Errorf("Annotation indirect object not containing a dictionary")
+	}
+
 	// Check if cached, return cached model if exists.
 	if model := r.modelManager.GetModelFromPrimitive(d); model != nil {
 		annot, ok := model.(*PdfAnnotation)
@@ -340,7 +345,8 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		return annot, nil
 	}
 
-	annot := NewPdfAnnotation()
+	annot := &PdfAnnotation{}
+	annot.primitive = container
 	r.modelManager.Register(d, annot)
 
 	if obj, has := (*d)["Type"]; has {
@@ -413,7 +419,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 	}
 	switch *subtype {
 	case "Text":
-		ctx, err := newPdfAnnotationTextFromDict(d)
+		ctx, err := r.newPdfAnnotationTextFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +427,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Link":
-		ctx, err := newPdfAnnotationLinkFromDict(d)
+		ctx, err := r.newPdfAnnotationLinkFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -429,7 +435,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "FreeText":
-		ctx, err := newPdfAnnotationFreeTextFromDict(d)
+		ctx, err := r.newPdfAnnotationFreeTextFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -437,15 +443,19 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Line":
-		ctx, err := newPdfAnnotationLineFromDict(d)
+		ctx, err := r.newPdfAnnotationLineFromDict(d)
 		if err != nil {
 			return nil, err
 		}
 		ctx.PdfAnnotation = annot
 		annot.context = ctx
+		fmt.Printf("LINE ANNOTATION: annot (%T): %+v\n", annot, annot)
+		fmt.Printf("LINE ANNOTATION: ctx (%T): %+v\n", ctx, ctx)
+		fmt.Printf("LINE ANNOTATION Markup: ctx (%T): %+v\n", ctx.PdfAnnotationMarkup, ctx.PdfAnnotationMarkup)
+
 		return annot, nil
 	case "Square":
-		ctx, err := newPdfAnnotationSquareFromDict(d)
+		ctx, err := r.newPdfAnnotationSquareFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -453,7 +463,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Circle":
-		ctx, err := newPdfAnnotationCircleFromDict(d)
+		ctx, err := r.newPdfAnnotationCircleFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -461,7 +471,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Polygon":
-		ctx, err := newPdfAnnotationPolygonFromDict(d)
+		ctx, err := r.newPdfAnnotationPolygonFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -469,7 +479,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "PolyLine":
-		ctx, err := newPdfAnnotationPolyLineFromDict(d)
+		ctx, err := r.newPdfAnnotationPolyLineFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -477,7 +487,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Highlight":
-		ctx, err := newPdfAnnotationHighlightFromDict(d)
+		ctx, err := r.newPdfAnnotationHighlightFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -485,7 +495,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Underline":
-		ctx, err := newPdfAnnotationUnderlineFromDict(d)
+		ctx, err := r.newPdfAnnotationUnderlineFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -493,7 +503,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Squiggly":
-		ctx, err := newPdfAnnotationSquigglyFromDict(d)
+		ctx, err := r.newPdfAnnotationSquigglyFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -501,7 +511,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "StrikeOut":
-		ctx, err := newPdfAnnotationStrikeOut(d)
+		ctx, err := r.newPdfAnnotationStrikeOut(d)
 		if err != nil {
 			return nil, err
 		}
@@ -509,7 +519,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Caret":
-		ctx, err := newPdfAnnotationCaretFromDict(d)
+		ctx, err := r.newPdfAnnotationCaretFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -517,7 +527,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Stamp":
-		ctx, err := newPdfAnnotationStampFromDict(d)
+		ctx, err := r.newPdfAnnotationStampFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -525,7 +535,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Ink":
-		ctx, err := newPdfAnnotationInkFromDict(d)
+		ctx, err := r.newPdfAnnotationInkFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -533,7 +543,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Popup":
-		ctx, err := newPdfAnnotationPopupFromDict(d)
+		ctx, err := r.newPdfAnnotationPopupFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -541,7 +551,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "FileAttachment":
-		ctx, err := newPdfAnnotationFileAttachmentFromDict(d)
+		ctx, err := r.newPdfAnnotationFileAttachmentFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -549,7 +559,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Sound":
-		ctx, err := newPdfAnnotationSoundFromDict(d)
+		ctx, err := r.newPdfAnnotationSoundFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -557,7 +567,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "RichMedia":
-		ctx, err := newPdfAnnotationRichMediaFromDict(d)
+		ctx, err := r.newPdfAnnotationRichMediaFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -565,7 +575,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Movie":
-		ctx, err := newPdfAnnotationMovieFromDict(d)
+		ctx, err := r.newPdfAnnotationMovieFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -573,7 +583,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Screen":
-		ctx, err := newPdfAnnotationScreenFromDict(d)
+		ctx, err := r.newPdfAnnotationScreenFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -581,7 +591,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Widget":
-		ctx, err := newPdfAnnotationWidgetFromDict(d)
+		ctx, err := r.newPdfAnnotationWidgetFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -589,7 +599,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "PrinterMark":
-		ctx, err := newPdfAnnotationPrinterMarkFromDict(d)
+		ctx, err := r.newPdfAnnotationPrinterMarkFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -597,7 +607,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "TrapNet":
-		ctx, err := newPdfAnnotationTrapNetFromDict(d)
+		ctx, err := r.newPdfAnnotationTrapNetFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +615,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Watermark":
-		ctx, err := newPdfAnnotationWatermarkFromDict(d)
+		ctx, err := r.newPdfAnnotationWatermarkFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -613,7 +623,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "3D":
-		ctx, err := newPdfAnnotation3DFromDict(d)
+		ctx, err := r.newPdfAnnotation3DFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -621,7 +631,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Projection":
-		ctx, err := newPdfAnnotationProjectionFromDict(d)
+		ctx, err := r.newPdfAnnotationProjectionFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -629,7 +639,7 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 		annot.context = ctx
 		return annot, nil
 	case "Redact":
-		ctx, err := newPdfAnnotationRedactFromDict(d)
+		ctx, err := r.newPdfAnnotationRedactFromDict(d)
 		if err != nil {
 			return nil, err
 		}
@@ -643,35 +653,51 @@ func (r *PdfReader) newPdfAnnotationFromDict(d *PdfObjectDictionary) (*PdfAnnota
 }
 
 // Load data for markup annotation subtypes.
-func newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*PdfAnnotationMarkup, error) {
+func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*PdfAnnotationMarkup, error) {
 	annot := &PdfAnnotationMarkup{}
 
 	if obj, has := (*d)["T"]; has {
 		annot.T = obj
 	}
 
+	if obj, has := (*d)["Popup"]; has {
+		indObj, isIndirect := obj.(*PdfIndirectObject)
+		if !isIndirect {
+			if _, isNull := obj.(*PdfObjectNull); !isNull {
+				return nil, fmt.Errorf("Popup should point to an indirect object")
+			}
+		}
+
+		popupAnnotObj, err := r.newPdfAnnotationFromIndirectObject(indObj)
+		if err != nil {
+			return nil, err
+		}
+		popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
+		if !isPopupAnnot {
+			return nil, fmt.Errorf("Popup not referring to a popup annotation!")
+		}
+
+		annot.Popup = popupAnnot
+	}
+
 	if obj, has := (*d)["CA"]; has {
 		annot.CA = obj
 	}
-
 	if obj, has := (*d)["RC"]; has {
 		annot.RC = obj
 	}
-
 	if obj, has := (*d)["CreationDate"]; has {
 		annot.CreationDate = obj
 	}
 	if obj, has := (*d)["IRT"]; has {
 		annot.IRT = obj
 	}
-
 	if obj, has := (*d)["Subj"]; has {
 		annot.Subj = obj
 	}
 	if obj, has := (*d)["RT"]; has {
 		annot.RT = obj
 	}
-
 	if obj, has := (*d)["IT"]; has {
 		annot.IT = obj
 	}
@@ -682,10 +708,10 @@ func newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*PdfAnnotationMarku
 	return annot, nil
 }
 
-func newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationText, error) {
+func (r *PdfReader) newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationText, error) {
 	annot := PdfAnnotationText{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -710,7 +736,7 @@ func newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationText, e
 	return &annot, nil
 }
 
-func newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAnnotationLink, error) {
+func (r *PdfReader) newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAnnotationLink, error) {
 	annot := PdfAnnotationLink{}
 
 	if obj, has := (*d)["A"]; has {
@@ -735,10 +761,10 @@ func newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAnnotationLink, e
 	return &annot, nil
 }
 
-func newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationFreeText, error) {
+func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationFreeText, error) {
 	annot := PdfAnnotationFreeText{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -778,10 +804,10 @@ func newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationFre
 	return &annot, nil
 }
 
-func newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationLine, error) {
+func (r *PdfReader) newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationLine, error) {
 	annot := PdfAnnotationLine{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -827,10 +853,10 @@ func newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationLine, e
 	return &annot, nil
 }
 
-func newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquare, error) {
+func (r *PdfReader) newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquare, error) {
 	annot := PdfAnnotationSquare{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -852,10 +878,10 @@ func newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquar
 	return &annot, nil
 }
 
-func newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*PdfAnnotationCircle, error) {
+func (r *PdfReader) newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*PdfAnnotationCircle, error) {
 	annot := PdfAnnotationCircle{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -877,10 +903,10 @@ func newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*PdfAnnotationCircl
 	return &annot, nil
 }
 
-func newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolygon, error) {
+func (r *PdfReader) newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolygon, error) {
 	annot := PdfAnnotationPolygon{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -911,10 +937,10 @@ func newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*PdfAnnotationPoly
 	return &annot, nil
 }
 
-func newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolyLine, error) {
+func (r *PdfReader) newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolyLine, error) {
 	annot := PdfAnnotationPolyLine{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -945,10 +971,10 @@ func newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationPol
 	return &annot, nil
 }
 
-func newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*PdfAnnotationHighlight, error) {
+func (r *PdfReader) newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*PdfAnnotationHighlight, error) {
 	annot := PdfAnnotationHighlight{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -961,10 +987,10 @@ func newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*PdfAnnotationHi
 	return &annot, nil
 }
 
-func newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*PdfAnnotationUnderline, error) {
+func (r *PdfReader) newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*PdfAnnotationUnderline, error) {
 	annot := PdfAnnotationUnderline{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -977,10 +1003,10 @@ func newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*PdfAnnotationUn
 	return &annot, nil
 }
 
-func newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquiggly, error) {
+func (r *PdfReader) newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquiggly, error) {
 	annot := PdfAnnotationSquiggly{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -993,10 +1019,10 @@ func newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*PdfAnnotationSqu
 	return &annot, nil
 }
 
-func newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnotationStrikeOut, error) {
+func (r *PdfReader) newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnotationStrikeOut, error) {
 	annot := PdfAnnotationStrikeOut{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1009,10 +1035,10 @@ func newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnotationStrikeOut,
 	return &annot, nil
 }
 
-func newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfAnnotationCaret, error) {
+func (r *PdfReader) newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfAnnotationCaret, error) {
 	annot := PdfAnnotationCaret{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1028,10 +1054,10 @@ func newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfAnnotationCaret,
 
 	return &annot, nil
 }
-func newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfAnnotationStamp, error) {
+func (r *PdfReader) newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfAnnotationStamp, error) {
 	annot := PdfAnnotationStamp{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1044,10 +1070,10 @@ func newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfAnnotationStamp,
 	return &annot, nil
 }
 
-func newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnnotationInk, error) {
+func (r *PdfReader) newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnnotationInk, error) {
 	annot := PdfAnnotationInk{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,7 +1090,7 @@ func newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnnotationInk, err
 	return &annot, nil
 }
 
-func newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfAnnotationPopup, error) {
+func (r *PdfReader) newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfAnnotationPopup, error) {
 	annot := PdfAnnotationPopup{}
 
 	if obj, has := (*d)["Parent"]; has {
@@ -1078,10 +1104,10 @@ func newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfAnnotationPopup,
 	return &annot, nil
 }
 
-func newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionary) (*PdfAnnotationFileAttachment, error) {
+func (r *PdfReader) newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionary) (*PdfAnnotationFileAttachment, error) {
 	annot := PdfAnnotationFileAttachment{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1098,10 +1124,10 @@ func newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionary) (*PdfAnnotat
 	return &annot, nil
 }
 
-func newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfAnnotationSound, error) {
+func (r *PdfReader) newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfAnnotationSound, error) {
 	annot := PdfAnnotationSound{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1118,7 +1144,7 @@ func newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfAnnotationSound,
 	return &annot, nil
 }
 
-func newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*PdfAnnotationRichMedia, error) {
+func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*PdfAnnotationRichMedia, error) {
 	annot := &PdfAnnotationRichMedia{}
 
 	if obj, has := (*d)["RichMediaSettings"]; has {
@@ -1132,7 +1158,7 @@ func newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*PdfAnnotationRi
 	return annot, nil
 }
 
-func newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfAnnotationMovie, error) {
+func (r *PdfReader) newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfAnnotationMovie, error) {
 	annot := PdfAnnotationMovie{}
 
 	if obj, has := (*d)["T"]; has {
@@ -1150,7 +1176,7 @@ func newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfAnnotationMovie,
 	return &annot, nil
 }
 
-func newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*PdfAnnotationScreen, error) {
+func (r *PdfReader) newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*PdfAnnotationScreen, error) {
 	annot := PdfAnnotationScreen{}
 
 	if obj, has := (*d)["T"]; has {
@@ -1172,7 +1198,7 @@ func newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*PdfAnnotationScree
 	return &annot, nil
 }
 
-func newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*PdfAnnotationWidget, error) {
+func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*PdfAnnotationWidget, error) {
 	annot := PdfAnnotationWidget{}
 
 	if obj, has := (*d)["H"]; has {
@@ -1204,7 +1230,7 @@ func newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*PdfAnnotationWidge
 	return &annot, nil
 }
 
-func newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationPrinterMark, error) {
+func (r *PdfReader) newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationPrinterMark, error) {
 	annot := PdfAnnotationPrinterMark{}
 
 	if obj, has := (*d)["MN"]; has {
@@ -1214,13 +1240,13 @@ func newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) (*PdfAnnotation
 	return &annot, nil
 }
 
-func newPdfAnnotationTrapNetFromDict(d *PdfObjectDictionary) (*PdfAnnotationTrapNet, error) {
+func (r *PdfReader) newPdfAnnotationTrapNetFromDict(d *PdfObjectDictionary) (*PdfAnnotationTrapNet, error) {
 	annot := PdfAnnotationTrapNet{}
 	// empty?e
 	return &annot, nil
 }
 
-func newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationWatermark, error) {
+func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationWatermark, error) {
 	annot := PdfAnnotationWatermark{}
 
 	if obj, has := (*d)["FixedPrint"]; has {
@@ -1230,7 +1256,7 @@ func newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationWa
 	return &annot, nil
 }
 
-func newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnnotation3D, error) {
+func (r *PdfReader) newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnnotation3D, error) {
 	annot := PdfAnnotation3D{}
 
 	if obj, has := (*d)["3DD"]; has {
@@ -1252,10 +1278,10 @@ func newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnnotation3D, error
 	return &annot, nil
 }
 
-func newPdfAnnotationProjectionFromDict(d *PdfObjectDictionary) (*PdfAnnotationProjection, error) {
+func (r *PdfReader) newPdfAnnotationProjectionFromDict(d *PdfObjectDictionary) (*PdfAnnotationProjection, error) {
 	annot := &PdfAnnotationProjection{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1264,10 +1290,10 @@ func newPdfAnnotationProjectionFromDict(d *PdfObjectDictionary) (*PdfAnnotationP
 	return annot, nil
 }
 
-func newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*PdfAnnotationRedact, error) {
+func (r *PdfReader) newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*PdfAnnotationRedact, error) {
 	annot := PdfAnnotationRedact{}
 
-	markup, err := newPdfAnnotationMarkupFromDict(d)
+	markup, err := r.newPdfAnnotationMarkupFromDict(d)
 	if err != nil {
 		return nil, err
 	}
@@ -1326,6 +1352,9 @@ func (this *PdfAnnotation) ToPdfObject() PdfObject {
 // Markup portion of the annotation.
 func (this *PdfAnnotationMarkup) appendToPdfDictionary(d *PdfObjectDictionary) {
 	d.SetIfNotNil("T", this.T)
+	if this.Popup != nil {
+		d.Set("Popup", this.Popup.ToPdfObject())
+	}
 	d.SetIfNotNil("CA", this.CA)
 	d.SetIfNotNil("RC", this.RC)
 	d.SetIfNotNil("CreationDate", this.CreationDate)

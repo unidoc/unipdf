@@ -309,11 +309,27 @@ func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotati
 		if err != nil {
 			return nil, err
 		}
-		dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
-		if !ok {
-			return nil, fmt.Errorf("Annotation not a dictionary")
+
+		// Technically all annotation dictionaries should be inside indirect objects.
+		// In reality, sometimes the annotation dictionary is inline within the Annots array.
+		if _, isNull := obj.(*PdfObjectNull); isNull {
+			// Can safely ignore.
+			continue
 		}
-		annot, err := reader.newPdfAnnotationFromDict(dict)
+
+		annotDict, isDict := obj.(*PdfObjectDictionary)
+		indirectObj, isIndirect := obj.(*PdfIndirectObject)
+		if isDict {
+			// Create a container; indirect object; around the dictionary.
+			indirectObj = &PdfIndirectObject{}
+			indirectObj.PdfObject = annotDict
+		} else {
+			if !isIndirect {
+				return nil, fmt.Errorf("Annotation not in an indirect object")
+			}
+		}
+
+		annot, err := reader.newPdfAnnotationFromIndirectObject(indirectObj)
 		if err != nil {
 			return nil, err
 		}
