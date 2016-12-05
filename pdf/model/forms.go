@@ -342,7 +342,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 
 	if this.KidsF != nil {
 		// Create an array of the kids (fields or widgets).
-		fmt.Printf("KidsF: %+v\n", this.KidsF)
+		common.Log.Debug("KidsF: %+v", this.KidsF)
 		arr := PdfObjectArray{}
 		for _, child := range this.KidsF {
 			arr = append(arr, child.ToPdfObject())
@@ -350,7 +350,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 		(*dict)["Kids"] = &arr
 	}
 	if this.KidsA != nil {
-		fmt.Printf("KidsA: %+v\n", this.KidsA)
+		common.Log.Debug("KidsA: %+v", this.KidsA)
 		_, hasKids := (*dict)["Kids"].(*PdfObjectArray)
 		if !hasKids {
 			(*dict)["Kids"] = &PdfObjectArray{}

@@ -231,7 +231,6 @@ func (this *PdfOutline) GetContainingPdfObject() PdfObject {
 
 // Recursively build the Outline tree PDF object.
 func (this *PdfOutline) ToPdfObject() PdfObject {
-	fmt.Printf("Outline primitive: %+v\n", this.primitive)
 	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 

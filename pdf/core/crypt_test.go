@@ -70,8 +70,8 @@ func TestAlg2(t *testing.T) {
 		0x30, 0xb8, 0x91, 0xc1, 0xbb, 0x2c, 0x4f, 0xf5}
 
 	if string(key) != string(keyExp) {
-		fmt.Printf("   Key (%d): % x\n", len(key), key)
-		fmt.Printf("KeyExp (%d): % x\n", len(keyExp), keyExp)
+		common.Log.Debug("   Key (%d): % x", len(key), key)
+		common.Log.Debug("KeyExp (%d): % x", len(keyExp), keyExp)
 		t.Errorf("alg2 -> key != expected\n")
 	}
 
@@ -99,9 +99,9 @@ func TestAlg3(t *testing.T) {
 	}
 
 	if string(O) != string(Oexp) {
-		fmt.Printf("   O (%d): % x\n", len(O), O)
-		fmt.Printf("Oexp (%d): % x\n", len(Oexp), Oexp)
-		t.Errorf("alg3 -> key != expected\n")
+		common.Log.Debug("   O (%d): % x", len(O), O)
+		common.Log.Debug("Oexp (%d): % x", len(Oexp), Oexp)
+		t.Errorf("alg3 -> key != expected")
 	}
 }
 
@@ -132,8 +132,8 @@ func TestAlg5(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
 	if string(U[0:16]) != string(Uexp[0:16]) {
-		common.Log.Info("   U (%d): % x\n", len(U), U)
-		common.Log.Info("Uexp (%d): % x\n", len(Uexp), Uexp)
+		common.Log.Info("   U (%d): % x", len(U), U)
+		common.Log.Info("Uexp (%d): % x", len(Uexp), Uexp)
 		t.Errorf("U != expected\n")
 	}
 }
