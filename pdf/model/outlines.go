@@ -21,7 +21,8 @@ type PdfOutlineTreeNode struct {
 // PDF outline dictionary (Table 152 - p. 376).
 type PdfOutline struct {
 	PdfOutlineTreeNode
-	Count *int64
+	Parent *PdfOutlineTreeNode
+	Count  *int64
 
 	primitive *PdfIndirectObject
 }
@@ -85,8 +86,14 @@ func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
 }
 
 // Does not traverse the tree.
-func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
+func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline, error) {
+	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
+	if !isDict {
+		return nil, fmt.Errorf("Outline object not a dictionary")
+	}
+
 	outline := PdfOutline{}
+	outline.primitive = container
 	outline.context = &outline
 
 	if obj, hasType := (*dict)["Type"]; hasType {
@@ -114,8 +121,14 @@ func newPdfOutlineFromDict(dict *PdfObjectDictionary) (*PdfOutline, error) {
 }
 
 // Does not traverse the tree.
-func (this *PdfReader) newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*PdfOutlineItem, error) {
+func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectObject) (*PdfOutlineItem, error) {
+	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
+	if !isDict {
+		return nil, fmt.Errorf("Outline object not a dictionary")
+	}
+
 	item := PdfOutlineItem{}
+	item.primitive = container
 	item.context = &item
 
 	// Title (required).
@@ -164,11 +177,16 @@ func (this *PdfReader) newPdfOutlineItemFromDict(dict *PdfObjectDictionary) (*Pd
 			return nil, err
 		}
 	}
-	if obj, hasKey := (*dict)["SE"]; hasKey {
-		item.SE, err = this.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
+	if _, hasKey := (*dict)["SE"]; hasKey {
+		// XXX: To add structure element support.
+		// Currently not supporting structure elements.
+		item.SE = nil
+		/*
+			item.SE, err = this.traceToObject(obj)
+			if err != nil {
+				return nil, err
+			}
+		*/
 	}
 	if obj, hasKey := (*dict)["C"]; hasKey {
 		item.C, err = this.traceToObject(obj)
@@ -213,6 +231,7 @@ func (this *PdfOutline) GetContainingPdfObject() PdfObject {
 
 // Recursively build the Outline tree PDF object.
 func (this *PdfOutline) ToPdfObject() PdfObject {
+	fmt.Printf("Outline primitive: %+v\n", this.primitive)
 	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
@@ -225,6 +244,10 @@ func (this *PdfOutline) ToPdfObject() PdfObject {
 	if this.Last != nil {
 		dict.Set("Last", this.Last.getOuter().GetContainingPdfObject())
 		//PdfObjectConverterCache[this.Last.getOuter()]
+	}
+
+	if this.Parent != nil {
+		dict.Set("Parent", this.Parent.getOuter().GetContainingPdfObject())
 	}
 
 	return container
@@ -244,6 +267,16 @@ func (this *PdfOutlineItem) ToPdfObject() PdfObject {
 	if this.A != nil {
 		(*dict)["A"] = this.A
 	}
+	if _, hasSE := (*dict)["SE"]; hasSE {
+		// XXX: Currently not supporting structure element hierarchy.
+		// Remove it.
+		delete(*dict, "SE")
+	}
+	/*
+		if this.SE != nil {
+			(*dict)["SE"] = this.SE
+		}
+	*/
 	if this.C != nil {
 		(*dict)["C"] = this.C
 	}

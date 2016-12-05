@@ -154,7 +154,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
 		common.Log.Debug("Indirect")
-		common.Log.Debug("- %s", obj)
+		common.Log.Debug("- %s (%p)", obj, io)
 		common.Log.Debug("- %s", io.PdfObject)
 		if this.addObject(io) {
 			err := this.addObjects(io.PdfObject)
@@ -561,8 +561,9 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Debug("Write()")
 	// Outlines.
 	if this.outlineTree != nil {
-		common.Log.Debug("OutlineTree: %v", this.outlineTree)
+		common.Log.Debug("OutlineTree: %+v", this.outlineTree)
 		outlines := this.outlineTree.ToPdfObject()
+		common.Log.Debug("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {

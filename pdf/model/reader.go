@@ -255,7 +255,7 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	common.Log.Debug("Outline root dict: %v", dict)
 
-	outlineTree, err := this.buildOutlineTree(dict)
+	outlineTree, _, err := this.buildOutlineTree(outlineRoot, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -265,80 +265,105 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 }
 
 // Recursive build outline tree.
-func (this *PdfReader) buildOutlineTree(obj PdfObject) (*PdfOutlineTreeNode, error) {
-	dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
-	if !ok {
-		return nil, errors.New("Not a dictionary object")
+// prev PdfObject,
+// Input: The indirect object containing an Outlines or Outline item dictionary.
+// Parent, Prev are the parent or previous node in the hierarchy.
+// The function returns the corresponding tree node and the last node which is used
+// for setting the Last pointer of the tree node structures.
+func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
+	container, isInd := obj.(*PdfIndirectObject)
+	if !isInd {
+		return nil, nil, fmt.Errorf("Outline container not an indirect object %T", obj)
 	}
-	common.Log.Debug("build outline tree: dict: %v", dict)
+	dict, ok := container.PdfObject.(*PdfObjectDictionary)
+	if !ok {
+		return nil, nil, errors.New("Not a dictionary object")
+	}
+	common.Log.Debug("build outline tree: dict: %v (%v) p: %p", dict, container, container)
 
 	if _, hasTitle := (*dict)["Title"]; hasTitle {
-		// Outline item has a title.
-		outlineItem, err := this.newPdfOutlineItemFromDict(dict)
+		// Outline item has a title. (required)
+		outlineItem, err := this.newPdfOutlineItemFromIndirectObject(container)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		outlineItem.Parent = parent
+		outlineItem.Prev = prev
+
+		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+			firstObj, err = this.traceToObject(firstObj)
+			if err != nil {
+				return nil, nil, err
+			}
+			if _, isNull := firstObj.(*PdfObjectNull); !isNull {
+				first, last, err := this.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
+				if err != nil {
+					return nil, nil, err
+				}
+				outlineItem.First = first
+				outlineItem.Last = last
+			}
+		}
+
 		// Resolve the reference to next
 		if nextObj, hasNext := (*dict)["Next"]; hasNext {
 			nextObj, err = this.traceToObject(nextObj)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			nextObj = TraceToDirectObject(nextObj)
 			if _, isNull := nextObj.(*PdfObjectNull); !isNull {
-				nextDict, ok := nextObj.(*PdfObjectDictionary)
-				if !ok {
-					return nil, fmt.Errorf("Next not a dictionary object (%T)", nextObj)
-				}
-				outlineItem.Next, err = this.buildOutlineTree(nextDict)
+				next, last, err := this.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
+				outlineItem.Next = next
+				return &outlineItem.PdfOutlineTreeNode, last, nil
 			}
 		}
-		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
-			firstObj, err = this.traceToObject(firstObj)
-			if err != nil {
-				return nil, err
-			}
-			firstObj = TraceToDirectObject(firstObj)
-			if _, isNull := firstObj.(*PdfObjectNull); !isNull {
-				firstDict, ok := firstObj.(*PdfObjectDictionary)
-				if !ok {
-					return nil, fmt.Errorf("First not a dictionary object (%T)", firstObj)
-				}
-				outlineItem.First, err = this.buildOutlineTree(firstDict)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-		return &outlineItem.PdfOutlineTreeNode, nil
+
+		return &outlineItem.PdfOutlineTreeNode, &outlineItem.PdfOutlineTreeNode, nil
 	} else {
 		// Outline dictionary (structure element).
-		outline, err := newPdfOutlineFromDict(dict)
+
+		outline, err := newPdfOutlineFromIndirectObject(container)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		outline.Parent = parent
+		//outline.Prev = parent
 
 		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
 			firstObj, err = this.traceToObject(firstObj)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			firstObj = TraceToDirectObject(firstObj)
 			if _, isNull := firstObj.(*PdfObjectNull); !isNull {
-				firstDict, ok := firstObj.(*PdfObjectDictionary)
-				if !ok {
-					return nil, fmt.Errorf("First not a dictionary object (%T)", firstObj)
-				}
-				outline.First, err = this.buildOutlineTree(firstDict)
+				first, last, err := this.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
+				outline.First = first
+				outline.Last = last
 			}
 		}
-		return &outline.PdfOutlineTreeNode, nil
+
+		/*
+			if nextObj, hasNext := (*dict)["Next"]; hasNext {
+				nextObj, err = this.traceToObject(nextObj)
+				if err != nil {
+					return nil, nil, err
+				}
+				if _, isNull := nextObj.(*PdfObjectNull); !isNull {
+					next, last, err := this.buildOutlineTree(nextObj, parent, &outline.PdfOutlineTreeNode)
+					if err != nil {
+						return nil, nil, err
+					}
+					outline.Next = next
+					return &outline.PdfOutlineTreeNode, last, nil
+				}
+			}*/
+
+		return &outline.PdfOutlineTreeNode, &outline.PdfOutlineTreeNode, nil
 	}
 }
 
@@ -494,6 +519,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		if err != nil {
 			return err
 		}
+		p.setContainer(node)
 
 		if parent != nil {
 			// Set the parent (in case missing or incorrect).

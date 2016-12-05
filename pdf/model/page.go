@@ -69,8 +69,14 @@ func NewPdfPage() *PdfPage {
 	return &page
 }
 
+func (this *PdfPage) setContainer(container *PdfIndirectObject) {
+	container.PdfObject = this.pageDict
+	this.primitive = container
+}
+
 // Build a PdfPage based on the underlying dictionary.
 // Used in loading existing PDF files.
+// Note that a new container is created (indirect object).
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
 
