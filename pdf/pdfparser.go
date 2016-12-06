@@ -40,6 +40,7 @@ type PdfParser struct {
 	trailer          *PdfObjectDictionary
 	ObjCache         ObjectCache
 	crypter          *PdfCrypt
+	version          float64
 	repairsAttempted bool // Avoid multiple attempts for repair.
 }
 
@@ -279,6 +280,7 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 		}
 	}
 
+	// !@#$ Bug here seen in 508_icmlpaper.pdf
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
 		o := PdfObjectFloat(fVal)
@@ -1023,8 +1025,8 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 // 3. Check the Prev xref
 // 4. Continue looking for Prev until not found.
 //
-// The earlier xrefs have higher precedance.  If objects already
-// loaded will ignore older versions.
+// The earlier xrefs have higher precedence.  If objects are already
+// loaded then older versions of them will be ignored.
 //
 func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	this.xrefs = make(XrefTable)
@@ -1292,7 +1294,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	parser := &PdfParser{}
 
 	parser.rs = rs
-	parser.ObjCache = make(ObjectCache)
+	parser.ObjCache = make(ObjectCache) // !@#$ Doesn't get used?
 
 	// Start by reading xrefs from bottom
 	trailer, err := parser.loadXrefs()
@@ -1310,12 +1312,13 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 
 	// printXrefTable(parser.xrefs)
 
-	_, err = parser.parsePdfVersion()
+	version, err := parser.parsePdfVersion()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse version (%s)", err)
 	}
 
 	parser.trailer = trailer
+	parser.version = version
 
 	return parser, nil
 }

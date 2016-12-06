@@ -29,6 +29,8 @@ type PdfReader struct {
 	traversed map[PdfObject]bool
 }
 
+// NewPdfReader returns a PdfReader
+// the trailer, cross-reference table and "structure" are loaded.
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
@@ -54,6 +56,14 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	}
 
 	return pdfReader, nil
+}
+
+func (this *PdfReader) Version() float64 {
+	return this.parser.version
+}
+
+func (this *PdfReader) Xrefs() XrefTable {
+	return this.parser.xrefs
 }
 
 func (this *PdfReader) IsEncrypted() (bool, error) {
