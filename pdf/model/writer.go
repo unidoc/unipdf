@@ -81,7 +81,9 @@ type PdfWriter struct {
 	// Objects to be followed up on prior to writing.
 	// These are objects that are added and reference objects that are not included
 	// for writing.
-	pendingObjects map[PdfObject]bool
+	// The map stores the object and the dictionary it is contained in.
+	// Only way so we can access the dictionary entry later.
+	pendingObjects map[PdfObject]*PdfObjectDictionary
 
 	// Forms.
 	acroForm *PdfAcroForm
@@ -92,7 +94,7 @@ func NewPdfWriter() PdfWriter {
 
 	w.objectsMap = map[PdfObject]bool{}
 	w.objects = []PdfObject{}
-	w.pendingObjects = map[PdfObject]bool{}
+	w.pendingObjects = map[PdfObject]*PdfObjectDictionary{}
 
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
@@ -202,8 +204,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 				}
 
 				if hasObj := this.hasObject(v); !hasObj {
-					fmt.Printf("Parent obj is missing!! %T %p %v\n", v, v, v)
-					this.pendingObjects[v] = true
+					common.Log.Debug("Parent obj is missing!! %T %p %v\n", v, v, v)
+					this.pendingObjects[v] = dict
 					// Although it is missing at this point, it could be added later...
 				}
 				// How to handle the parent?  Make sure it is present?
@@ -615,10 +617,16 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	}
 
 	// Check pending objects prior to write.
-	for pendingObj, _ := range this.pendingObjects {
+	for pendingObj, pendingObjDict := range this.pendingObjects {
 		if !this.hasObject(pendingObj) {
 			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
-			return fmt.Errorf("Pending object %+v %T never added for writing", pendingObj, pendingObj)
+			for key, val := range *pendingObjDict {
+				if val == pendingObj {
+					common.Log.Debug("Pending object found! and replaced with null")
+					(*pendingObjDict)[key] = MakeNull()
+					break
+				}
+			}
 		}
 	}
 
