@@ -30,10 +30,12 @@ type PdfRectangle struct {
 
 func getNumberAsFloat(obj PdfObject) (float64, error) {
 	if fObj, ok := obj.(*PdfObjectFloat); ok {
+		//		fmt.Printf("$$ getNumberAsFloat: fObj=%v\n", *fObj)
 		return float64(*fObj), nil
 	}
 
 	if iObj, ok := obj.(*PdfObjectInteger); ok {
+		//		fmt.Printf("$$ getNumberAsFloat: iObj=%v\n", *iObj)
 		return float64(*iObj), nil
 	}
 
@@ -231,6 +233,8 @@ func NewPdfPage() *PdfPage {
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
 
+	fmt.Printf("newPdfPageFromDict %+v\n", p)
+
 	d := *p
 
 	pType, ok := d["Type"].(*PdfObjectName)
@@ -294,6 +298,13 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		if err != nil {
 			return nil, err
 		}
+		//		fmt.Printf("** MediaBox=%+v", page.MediaBox)
+		// arr := page.MediaBox.ToPdfObject()
+		//		fmt.Printf("=%s\n", arr.DefaultWriteString())
+		// for _, x := range *(arr.(PdfObjectArray)) {
+		// 	fmt.Printf("  Llx  %s\n", (*x).DefaultWriteString()) // !@#$
+		// }
+
 	}
 	if obj, isDefined := d["CropBox"]; isDefined {
 		var err error
@@ -527,12 +538,10 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	return p
 }
 
-// Get the page object as an indirect objects.  Wraps the Page
+// Get the page object as an indirect object.  Wraps the Page
 // dictionary into an indirect object.
 func (this *PdfPage) GetPageAsIndirectObject() *PdfIndirectObject {
-	dict := this.GetPageDict()
-	iobj := PdfIndirectObject{}
-	iobj.PdfObject = dict
+	iobj := PdfIndirectObject{PdfObject: this.GetPageDict()}
 	return &iobj
 }
 
@@ -626,15 +635,15 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	} else {
 		wWidth = float64(*ximg.Width)
 		xOffset = (float64(pWidth) - float64(wWidth)) / 2
-	if opt.FitToWidth {
-		wWidth = pWidth
-		xOffset = 0
-	}
+		if opt.FitToWidth {
+			wWidth = pWidth
+			xOffset = 0
+		}
 		wHeight = pHeight
 		yOffset = float64(0)
-	if opt.PreserveAspectRatio {
-		wHeight = wWidth * float64(*ximg.Height) / float64(*ximg.Width)
-		yOffset = (pHeight - wHeight) / 2
+		if opt.PreserveAspectRatio {
+			wHeight = wWidth * float64(*ximg.Height) / float64(*ximg.Width)
+			yOffset = (pHeight - wHeight) / 2
 		}
 	}
 

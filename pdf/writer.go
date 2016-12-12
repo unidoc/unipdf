@@ -432,7 +432,7 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 
 // Write out an indirect / stream object.
 func (this *PdfWriter) writeObject(num int, obj PdfObject) {
-	common.Log.Debug("Write obj #%d\n", num)
+	common.Log.Debug("Write obj #%d", num)
 
 	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
