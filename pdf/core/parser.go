@@ -1211,6 +1211,10 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 				if string(bb[:6]) == "stream" {
 					discardBytes := 6
 					if len(bb) > 6 {
+						if IsWhiteSpace(bb[discardBytes]) {
+							common.Log.Debug("Non-conformant PDF not ending stream line properly with EOL marker")
+							discardBytes++
+						}
 						if bb[discardBytes] == '\r' {
 							discardBytes++
 							if bb[discardBytes] == '\n' {
