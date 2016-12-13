@@ -687,7 +687,7 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 
 // Get a page by the page number. Indirect object with type /Page.
 // Rename to GetPageAsIndirectObject in the future?
-func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
+func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}
@@ -709,7 +709,7 @@ func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
 
 // Get a page by the page number.
 // Returns the PdfPage entry.
-func (this *PdfReader) GetPageAsPdfPage(pageNumber int) (*PdfPage, error) {
+func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}

@@ -14,7 +14,6 @@ package model
 
 import (
 	"errors"
-	"fmt"
 
 	. "github.com/unidoc/unidoc/pdf/core"
 )
@@ -378,6 +377,46 @@ func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	return nil, errors.New("Media box not defined")
 }
 
+// Get the inheritable resources, either from the page or
+// or a higher up page/pages struct.
+func (this *PdfPage) GetResources() (*PdfPageResources, error) {
+	if this.Resources != nil {
+		return this.Resources, nil
+	}
+
+	node := this.Parent
+	for node != nil {
+		dictObj, ok := node.(*PdfIndirectObject)
+		if !ok {
+			return nil, errors.New("Invalid parent object")
+		}
+
+		dict, ok := dictObj.PdfObject.(*PdfObjectDictionary)
+		if !ok {
+			return nil, errors.New("Invalid parent objects dictionary")
+		}
+
+		if obj, hasResources := (*dict)["Resources"]; hasResources {
+			prDict, ok := obj.(*PdfObjectDictionary)
+			if !ok {
+				return nil, errors.New("Invalid resource dict!")
+			}
+			resources, err := NewPdfPageResourcesFromDict(prDict)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return resources, nil
+		}
+
+		// Keep moving up the tree...
+		node = (*dict)["Parent"]
+	}
+
+	return nil, errors.New("Resources not defined (required)")
+}
+
 // Convert the Page to a PDF object dictionary.
 func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p := this.pageDict
@@ -461,8 +500,18 @@ func (this *PdfPage) ToPdfObject() PdfObject {
 // Add an image to the XObject resources.
 func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error {
 	if this.Resources == nil {
-		this.Resources = &PdfPageResources{}
+		// Get the resources (is required, should be there..), can be defined by parent object.
+		resources, err := this.GetResources()
+		if err != nil {
+			return err
+		}
+		if resources != nil {
+			this.Resources = resources
+		} else {
+			this.Resources = NewPdfPageResources()
+		}
 	}
+
 	var xresDict *PdfObjectDictionary
 	if this.Resources.XObject == nil {
 		xresDict = &PdfObjectDictionary{}
@@ -484,7 +533,8 @@ func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) er
 // Add a graphics state to the XObject resources.
 func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) {
 	if this.Resources == nil {
-		this.Resources = &PdfPageResources{}
+		//this.Resources = &PdfPageResources{}
+		this.Resources = NewPdfPageResources()
 	}
 
 	if this.Resources.ExtGState == nil {
@@ -498,7 +548,8 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 // Add a font dictionary to the Font resources.
 func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) {
 	if this.Resources == nil {
-		this.Resources = &PdfPageResources{}
+		//this.Resources = &PdfPageResources{}
+		this.Resources = NewPdfPageResources()
 	}
 
 	if this.Resources.Font == nil {

@@ -245,18 +245,19 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 // Add a page to the PDF file. The new page should be an indirect
 // object.
-func (this *PdfWriter) AddPage(pageObj PdfObject) error {
+func (this *PdfWriter) AddPage(page *PdfPage) error {
+	obj := page.ToPdfObject()
 	common.Log.Debug("==========")
-	common.Log.Debug("Appending to page list %T", pageObj)
+	common.Log.Debug("Appending to page list %T", obj)
 
-	page, ok := pageObj.(*PdfIndirectObject)
+	pageObj, ok := obj.(*PdfIndirectObject)
 	if !ok {
 		return errors.New("Page should be an indirect object")
 	}
-	common.Log.Debug("%s", page)
-	common.Log.Debug("%s", page.PdfObject)
+	common.Log.Debug("%s", pageObj)
+	common.Log.Debug("%s", pageObj.PdfObject)
 
-	pDict, ok := page.PdfObject.(*PdfObjectDictionary)
+	pDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
 	if !ok {
 		return errors.New("Page object should be a dictionary")
 	}
@@ -302,7 +303,7 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	// Update the dictionary.
 	// Reuses the input object, updating the fields.
 	(*pDict)["Parent"] = this.pages
-	page.PdfObject = pDict
+	pageObj.PdfObject = pDict
 
 	// Add to Pages.
 	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
@@ -313,7 +314,7 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	if !ok {
 		return errors.New("Invalid Pages Kids obj (not an array)")
 	}
-	*kids = append(*kids, page)
+	*kids = append(*kids, pageObj)
 	pageCount, ok := (*pagesDict)["Count"].(*PdfObjectInteger)
 	if !ok {
 		return errors.New("Invalid Pages Count object (not an integer)")
@@ -321,7 +322,7 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	// Update the count.
 	*pageCount = *pageCount + 1
 
-	this.addObject(page)
+	this.addObject(pageObj)
 
 	// Traverse the page and record all object references.
 	err := this.addObjects(pDict)
