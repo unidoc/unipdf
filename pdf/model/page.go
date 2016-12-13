@@ -14,6 +14,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 
 	. "github.com/unidoc/unidoc/pdf/core"
 )
