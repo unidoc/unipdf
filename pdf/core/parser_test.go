@@ -283,7 +283,7 @@ func TestDictParsing1(t *testing.T) {
 	txt1 := "<<\n\t/Name /Game /key/val/data\t[0 1 2 3.14 5]\t\n\n>>"
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(txt1)
-	dict, err := parser.parseDict()
+	dict, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("Error parsing dict")
 	}
@@ -327,7 +327,7 @@ func TestDictParsing2(t *testing.T) {
 
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(rawText)
-	dict, err := parser.parseDict()
+	dict, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("Error parsing dict")
 	}
@@ -365,7 +365,7 @@ func TestDictParsing3(t *testing.T) {
 
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(rawText)
-	dict, err := parser.parseDict()
+	dict, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("Error parsing dict")
 	}
@@ -381,7 +381,7 @@ func TestDictParsing4(t *testing.T) {
 
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(rawText)
-	dict, err := parser.parseDict()
+	dict, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("Error parsing dict (%s)", err)
 		return
@@ -443,7 +443,7 @@ endobj
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(rawText)
 
-	obj, err := parser.parseIndirectObject()
+	obj, err := parser.ParseIndirectObject()
 	if err != nil {
 		t.Errorf("Failed to parse indirect obj (%s)", err)
 		return

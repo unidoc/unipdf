@@ -8,7 +8,6 @@
 package core
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -183,7 +182,7 @@ func TestDecryption1(t *testing.T) {
 	parser.reader = makeReaderForText(rawText)
 	parser.crypter = &crypter
 
-	obj, err := parser.parseIndirectObject()
+	obj, err := parser.ParseIndirectObject()
 	if err != nil {
 		t.Errorf("Error parsing object")
 		return

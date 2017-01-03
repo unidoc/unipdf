@@ -77,7 +77,7 @@ endobj`
 	parser := PdfParser{}
 	parser.reader = makeReaderForText(rawText)
 
-	obj, err := parser.parseIndirectObject()
+	obj, err := parser.ParseIndirectObject()
 	if err != nil {
 		t.Errorf("Invalid stream object (%s)", err)
 		return
