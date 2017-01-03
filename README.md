@@ -1,3 +1,13 @@
+# Version 2
+
+The version 2 of UniDoc is currently in alpha. The pdf functionality has been split into two parts.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
+
+# Migrating from version 1.
+
+Migrating is fairly straightforward.  A few things are incompatible and will be listed here prior to release.
+
+---
+
 # UniDoc
 
 [UniDoc](http://unidoc.io) is a fast and powerful open source library for document manipulation starting off as a PDF
