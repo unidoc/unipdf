@@ -45,3 +45,5 @@ gin-bin
 pkg/buildinfo/buildinfo.go
 temp/
 buildinfo.json
+
+pdf/font.go

@@ -531,6 +531,25 @@ func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) er
 	return nil
 }
 
+// Check if has image resource by name.
+func (this *PdfPage) HasImageResource(name PdfObjectName) bool {
+	resources, err := this.GetResources()
+	if err != nil {
+		return false
+	}
+
+	xresDict, has := resources.XObject.(*PdfObjectDictionary)
+	if !has {
+		return false
+	}
+
+	if _, has := (*xresDict)[name]; has {
+		return true
+	} else {
+		return false
+	}
+}
+
 // Add a graphics state to the XObject resources.
 func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) {
 	if this.Resources == nil {
