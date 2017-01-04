@@ -52,13 +52,12 @@ AGPL is a free / open source software license.
 
 This doesn't mean the software is gratis!
 
-Buying a license is mandatory as soon as you develop commercial activities
+Buying a license is mandatory as soon as you develop activities
 distributing the UniDoc software inside your product or deploying it on a network
 without disclosing the source code of your own applications under the AGPL license.
 These activities include:
 
- * developing commercial applications
- * offering paid services to customers as an application service provider
+ * offering services to customers as an application service provider
  * serving PDFs on the fly in the cloud or in a web application
  * shipping UniDoc with a closed source product
 

@@ -67,7 +67,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 			if err != nil {
 				return nil, err
 			}
-			fmt.Printf("AcroForm Field: %+v\n", *field)
+			common.Log.Debug("AcroForm Field: %+v", *field)
 			fields = append(fields, field)
 		}
 		acroForm.Fields = &fields
@@ -262,7 +262,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("Merged in annotation (%T)\n", obj)
+		common.Log.Debug("Merged in annotation (%T)", obj)
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Invalid type of Subtype (%T)", obj)

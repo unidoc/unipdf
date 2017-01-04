@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -31,19 +30,12 @@ func getPdfProducer() string {
 		return pdfProducer
 	}
 
-	// Return default.
-	licenseKey := license.GetLicenseKey()
-	return fmt.Sprintf("UniDoc Library version %s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+	// We kindly request that users of UniDoc and derived versions refer to UniDoc in the Producer line.
+	// Something like "(based on UniDoc)" would be great.
+	return fmt.Sprintf("UniDoc Library version %s - http://unidoc.io", getUniDocVersion())
 }
 
 func SetPdfProducer(producer string) {
-	licenseKey := license.GetLicenseKey()
-	commercial := licenseKey.Type == license.LicenseTypeCommercial
-	if !commercial {
-		// Only commercial users can modify the producer.
-		return
-	}
-
 	pdfProducer = producer
 }
 
