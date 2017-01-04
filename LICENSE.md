@@ -6,8 +6,6 @@ This covered work is distributed in the hope that it will be useful, but WITHOUT
 
 The interactive user interfaces in modified source and object code versions of this covered work must display Appropriate Legal Notices, as required under Section 5 of the License.
 
-In accordance with Section 7(b) of the License, a covered work must retain the producer line in every PDF file that is created or manipulated using UniDoc.
-
-You can be released from the requirements of the license by purchasing a commercial license. Buying such a license is mandatory as soon as you develop commercial activities involving software obtained from the Company without disclosing the source code of your own applications. These activities include offering paid services to customers, incorporating the information in any product/software you intend to sell and any other commercial purposes.
+You can be released from the requirements of the license by purchasing a commercial license. Buying such a license is mandatory as soon as you develop commercial activities involving UniDoc without disclosing the source code of your own applications under the AGPL license. These activities include offering services as an application service provider or providing an over-network based application programming interface (API), creating or manipulating documents for users in a web/server/cloud application, incorporating UniDoc into a closed source product.
 
 For more information, please contact the Company by emailing sales@unidoc.io.
