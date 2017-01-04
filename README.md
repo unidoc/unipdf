@@ -47,9 +47,8 @@ distributing the UniDoc software inside your product or deploying it on a networ
 without disclosing the source code of your own applications under the AGPL license.
 These activities include:
 
- * developing commercial applications
- * offering paid services to customers as an application service provider
- * serving PDFs on the fly in the cloud or in a web application
+ * offering paid services to customers as an application service provider or over-network application programming interface (API)
+ * creating/manipulating documents for users in a web/server/cloud application
  * shipping UniDoc with a closed source product
 
 Contact sales for more info: sales@unidoc.io.
