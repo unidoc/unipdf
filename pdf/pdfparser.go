@@ -21,16 +21,18 @@ import (
 )
 
 // Regular Expressions for parsing and identifying object signatures.
-var rePdfVersion = regexp.MustCompile(`%PDF-(\d\.\d)`)
-var reEOF = regexp.MustCompile("%%EOF")
-var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
-var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
-var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
-var reExponential = regexp.MustCompile(`^[\+-.]*([0-9.]+)e[\+-.]*([0-9.]+)`)
-var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
-var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
-var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
-var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
+var (
+	rePdfVersion     = regexp.MustCompile(`%PDF-(\d\.\d)`)
+	reEOF            = regexp.MustCompile("%%EOF")
+	reXrefTable      = regexp.MustCompile(`\s*xref\s*`)
+	reStartXref      = regexp.MustCompile(`startx?ref\s*(\d+)`)
+	reNumeric        = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
+	reExponential    = regexp.MustCompile(`^[\+-.]*([0-9.]+)e[\+-.]*([0-9.]+)`)
+	reReference      = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
+	reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
+	reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
+	reXrefEntry      = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
+)
 
 type PdfParser struct {
 	rs               io.ReadSeeker
@@ -44,30 +46,18 @@ type PdfParser struct {
 	repairsAttempted bool // Avoid multiple attempts for repair.
 }
 
-func isWhiteSpace(ch byte) bool {
+func isWhiteSpace(c byte) bool {
 	// Table 1 white-space characters (7.2.2 Character Set)
 	// spaceCharacters := string([]byte{0x00, 0x09, 0x0A, 0x0C, 0x0D, 0x20})
-	if (ch == 0x00) || (ch == 0x09) || (ch == 0x0A) || (ch == 0x0C) || (ch == 0x0D) || (ch == 0x20) {
-		return true
-	} else {
-		return false
-	}
+	return (c == 0x00) || (c == 0x09) || (c == 0x0A) || (c == 0x0C) || (c == 0x0D) || (c == 0x20)
 }
 
 func isDecimalDigit(c byte) bool {
-	if c >= '0' && c <= '9' {
-		return true
-	} else {
-		return false
-	}
+	return '0' <= c && c <= '9'
 }
 
 func isOctalDigit(c byte) bool {
-	if c >= '0' && c <= '7' {
-		return true
-	} else {
-		return false
-	}
+	return '0' <= c && c <= '7'
 }
 
 // Skip over any spaces.
@@ -836,6 +826,8 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		common.Log.Debug("ERROR: Unable to decode stream")
 		return nil, err
 	}
+	fmt.Printf("@@ ds=%d %T %+v\n", len(ds), ds, ds)
+	// panic(fmt.Errorf("WWWWWWWW"))
 
 	s0 := int(b[0])
 	s1 := int(b[0] + b[1])
@@ -1040,7 +1032,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	if err != nil {
 		return nil, err
 	}
-	common.Log.Debug("fsize: %d", fSize)
+	common.Log.Debug("loadXrefs: fsize: %d", fSize)
 	if fSize <= offset {
 		offset = fSize
 	}

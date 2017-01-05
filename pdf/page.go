@@ -233,7 +233,7 @@ func NewPdfPage() *PdfPage {
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
 
-	fmt.Printf("newPdfPageFromDict %+v\n", p)
+	// fmt.Printf("newPdfPageFromDict %+v\n", p)
 
 	d := *p
 
@@ -614,7 +614,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	pWidth := bbox.Urx - bbox.Llx
 	pHeight := bbox.Ury - bbox.Lly
 
-	fmt.Printf("AddWatermarkImage: bbox=%+v opt=%+v\n", bbox, opt)
+	// fmt.Printf("AddWatermarkImage: bbox=%+v opt=%+v\n", bbox, opt)
 	var wWidth float64
 	var wHeight float64
 	var xOffset float64
@@ -661,7 +661,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 		"%.0f 0 0 %.0f %.4f %.4f cm\n"+
 		"/%s Do\n"+
 		"Q", wWidth, wHeight, xOffset, yOffset, imgName)
-	fmt.Printf("AddWatermarkImage: contentStr=%q\n", contentStr)
+	// fmt.Printf("AddWatermarkImage: contentStr=%q\n", contentStr)
 	this.AddContentStreamByString(contentStr)
 
 	return nil

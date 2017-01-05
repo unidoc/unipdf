@@ -100,11 +100,19 @@ func (this *PdfObjectInteger) DefaultWriteString() string {
 }
 
 func (this *PdfObjectFloat) String() string {
-	return fmt.Sprintf("%f", *this)
+	return fmt.Sprintf("%f", pinNumber(*this))
 }
 
 func (this *PdfObjectFloat) DefaultWriteString() string {
-	return fmt.Sprintf("%f", *this)
+	return fmt.Sprintf("%f", pinNumber(*this))
+}
+
+func pinNumber(x float64) float64 {
+	// n := math.Floor(x + 0.5)
+	// if math.Abs(x) > 1.0 && math.Abs(x-n) < 1e-5 {
+	// 	x = n
+	// }
+	return x
 }
 
 func (this *PdfObjectString) String() string {
@@ -220,7 +228,7 @@ func (this *PdfObjectArray) DefaultWriteString() string {
 }
 
 // byName sorts slices of PdfObjectName. It is needed because sort.Strings(keys) gives a typecheck
-// error which I find strange because a PdfObjectName is a string.
+// error, which I find strange because a PdfObjectName is a string.
 type byName []PdfObjectName
 
 func (x byName) Len() int { return len(x) }

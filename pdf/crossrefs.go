@@ -205,6 +205,7 @@ func (this *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool)
 	return obj, inObjStream, nil
 }
 
+// getObjectNumber returns object number, generation number, error for `obj`
 func getObjectNumber(obj PdfObject) (int64, int64, error) {
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		return io.ObjectNumber, io.GenerationNumber, nil
