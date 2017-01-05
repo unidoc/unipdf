@@ -60,6 +60,10 @@ func isOctalDigit(c byte) bool {
 	return '0' <= c && c <= '7'
 }
 
+func (this *PdfParser) SetReader(reader *bufio.Reader) {
+	this.reader = reader
+}
+
 // Skip over any spaces.
 func (this *PdfParser) skipSpaces() (int, error) {
 	cnt := 0
@@ -479,7 +483,7 @@ func (this *PdfParser) parseNull() (PdfObjectNull, error) {
 // Detect the signature at the current file position and parse
 // the corresponding object.
 func (this *PdfParser) parseObject() (PdfObject, error) {
-	common.Log.Debug("Read direct object")
+	common.Log.Debug("-Read direct object")
 	this.skipSpaces()
 	for {
 		bb, err := this.reader.Peek(2)
@@ -487,7 +491,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 			return nil, err
 		}
 
-		common.Log.Debug("Peek string: %s", string(bb))
+		common.Log.Debug("Peek string: %q", string(bb))
 		// Determine type.
 		if bb[0] == '/' {
 			name, err := this.parseName()
@@ -557,7 +561,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 				return num, err
 			}
 
-			common.Log.Debug("ERROR Unknown (peek \"%s\")", peekStr)
+			common.Log.Debug("ERROR Unknown (peek %q)", peekStr)
 			return nil, errors.New("Object parsing error - unexpected pattern")
 		}
 	}
@@ -826,8 +830,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		common.Log.Debug("ERROR: Unable to decode stream")
 		return nil, err
 	}
-	fmt.Printf("@@ ds=%d %T %+v\n", len(ds), ds, ds)
-	// panic(fmt.Errorf("WWWWWWWW"))
+	common.Log.Debug("@@ ds=%d %T %+v\n", len(ds), ds, ds)
 
 	s0 := int(b[0])
 	s1 := int(b[0] + b[1])
@@ -1145,47 +1148,57 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	return trailerDict, nil
 }
 
+func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
+	return this.parseIndirectObjectBase(false)
+}
+
+func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
+	return this.parseIndirectObjectBase(true)
+}
+
 // Parse an indirect object from the input stream.
 // Can also be an object stream.
-func (this *PdfParser) parseIndirectObject() (PdfObject, error) {
+func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, error) {
 	indirect := PdfIndirectObject{}
 
 	common.Log.Debug("-Read indirect obj")
-	bb, err := this.reader.Peek(20)
-	if err != nil {
-		common.Log.Debug("ERROR: Fail to read indirect obj")
-		return &indirect, err
-	}
-	common.Log.Debug("(indirect obj peek \"%s\"", string(bb))
+	if isIndirect {
+		bb, err := this.reader.Peek(20)
+		if err != nil {
+			common.Log.Debug("ERROR: Fail to read indirect obj")
+			return &indirect, err
+		}
+		common.Log.Debug("(indirect obj peek \"%s\"", string(bb))
 
-	indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
-	if len(indices) < 6 {
-		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
-		return &indirect, errors.New("Unable to detect indirect object signature")
-	}
-	this.reader.Discard(indices[0]) // Take care of any small offset.
-	common.Log.Debug("Offsets % d", indices)
+		indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
+		if len(indices) < 6 {
+			common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
+			return &indirect, errors.New("Unable to detect indirect object signature")
+		}
+		this.reader.Discard(indices[0]) // Take care of any small offset.
+		common.Log.Debug("Offsets % d", indices)
 
-	// Read the object header.
-	hlen := indices[1] - indices[0]
-	hb := make([]byte, hlen)
-	_, err = this.ReadAtLeast(hb, hlen)
-	if err != nil {
-		common.Log.Debug("ERROR: unable to read - %s", err)
-		return nil, err
-	}
-	common.Log.Debug("textline: %s", hb)
+		// Read the object header.
+		hlen := indices[1] - indices[0]
+		hb := make([]byte, hlen)
+		_, err = this.ReadAtLeast(hb, hlen)
+		if err != nil {
+			common.Log.Debug("ERROR: unable to read - %s", err)
+			return nil, err
+		}
+		common.Log.Debug("textline: %s", hb)
 
-	result := reIndirectObject.FindStringSubmatch(string(hb))
-	if len(result) < 3 {
-		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(hb))
-		return &indirect, errors.New("Unable to detect indirect object signature")
-	}
+		result := reIndirectObject.FindStringSubmatch(string(hb))
+		if len(result) < 3 {
+			common.Log.Debug("ERROR: Unable to find object signature (%s)", string(hb))
+			return &indirect, errors.New("Unable to detect indirect object signature")
+		}
 
-	on, _ := strconv.Atoi(result[1])
-	gn, _ := strconv.Atoi(result[2])
-	indirect.ObjectNumber = int64(on)
-	indirect.GenerationNumber = int64(gn)
+		on, _ := strconv.Atoi(result[1])
+		gn, _ := strconv.Atoi(result[2])
+		indirect.ObjectNumber = int64(on)
+		indirect.GenerationNumber = int64(gn)
+	}
 
 	for {
 		bb, err := this.reader.Peek(2)
