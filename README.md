@@ -15,6 +15,10 @@ eventually support all of the offered services.
 go get github.com/unidoc/unidoc
 ~~~
 
+## Vendoring
+For reliability, we recommend using specific versions and the vendoring capability of golang.
+Check out the Releases section to see the tagged releases.
+
 ## Overview
 
  * Many [features](http://unidoc.io/features) with documented examples.
