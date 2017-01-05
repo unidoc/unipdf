@@ -19,7 +19,7 @@ type PdfReader struct {
 	root        PdfObject
 	pages       *PdfObjectDictionary
 	pageList    []*PdfIndirectObject
-	PageList    []*PdfPage
+	PageList    []*PdfPage // !@#$ What does this add beyond pageList?
 	pageCount   int
 	catalog     *PdfObjectDictionary
 	outlineTree *PdfOutlineTreeNode
@@ -66,6 +66,10 @@ func (this *PdfReader) Xrefs() XrefTable {
 	return this.parser.xrefs
 }
 
+// func (this *PdfReader) Inspect() (map[string]int, error) {
+// 	return this.parser.inspect()
+// }
+
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
 }
@@ -91,7 +95,7 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 	return true, nil
 }
 
-// Loads the structure of the pdf file: pages, outlines, etc.
+// Loads the structure of the pdf file: pages, outlines, etc. !@#$
 func (this *PdfReader) loadStructure() error {
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return fmt.Errorf("File need to be decrypted first")
@@ -442,6 +446,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	}
 	common.Log.Debug("buildPageList node type: %s", *objType)
 	if *objType == "Page" {
+		common.Log.Debug("**** obj %d %d\n", node.ObjectNumber, node.GenerationNumber)
 		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
 			return err
