@@ -2,9 +2,9 @@
 
 [UniDoc](http://unidoc.io) is a fast and powerful open source library for document manipulation starting off as a PDF
 toolkit. This is a commercial library written and supported by the owners
-of the FoxyUtils.com website.
+of the [FoxyUtils.com](https://foxyutils.com) website.
 
-This library is used to power many of the services offered by the FoxyUtils.com website. The goal is to extend it to
+This library is used to power many of the PDF services offered by [FoxyUtils](https://foxyutils.com). The goal is to extend it to
 eventually support all of the offered services.
 
 [![wercker status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
