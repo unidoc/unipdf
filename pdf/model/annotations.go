@@ -449,9 +449,9 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 		}
 		ctx.PdfAnnotation = annot
 		annot.context = ctx
-		fmt.Printf("LINE ANNOTATION: annot (%T): %+v\n", annot, annot)
-		fmt.Printf("LINE ANNOTATION: ctx (%T): %+v\n", ctx, ctx)
-		fmt.Printf("LINE ANNOTATION Markup: ctx (%T): %+v\n", ctx.PdfAnnotationMarkup, ctx.PdfAnnotationMarkup)
+		common.Log.Debug("LINE ANNOTATION: annot (%T): %+v\n", annot, annot)
+		common.Log.Debug("LINE ANNOTATION: ctx (%T): %+v\n", ctx, ctx)
+		common.Log.Debug("LINE ANNOTATION Markup: ctx (%T): %+v\n", ctx.PdfAnnotationMarkup, ctx.PdfAnnotationMarkup)
 
 		return annot, nil
 	case "Square":
