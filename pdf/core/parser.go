@@ -625,6 +625,7 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 
 		common.Log.Debug("dict[%s] = %s", keyName, val.String())
 	}
+	common.Log.Debug("returning PDF Dict!")
 
 	return &dict, nil
 }
@@ -1184,19 +1185,26 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 		if err != nil {
 			return &indirect, err
 		}
+		common.Log.Debug("Ind. peek: %s (% x)!", string(bb), string(bb))
 
 		if IsWhiteSpace(bb[0]) {
 			this.skipSpaces()
+		} else if bb[0] == '%' {
+			this.skipComments()
 		} else if (bb[0] == '<') && (bb[1] == '<') {
+			common.Log.Debug("Call ParseDict")
 			indirect.PdfObject, err = this.ParseDict()
+			common.Log.Debug("EOF Call ParseDict: %v", err)
 			if err != nil {
 				return &indirect, err
 			}
+			common.Log.Debug("Parsed dictionary... finished.")
 		} else if (bb[0] == '/') || (bb[0] == '(') || (bb[0] == '[') || (bb[0] == '<') {
 			indirect.PdfObject, err = this.parseObject()
 			if err != nil {
 				return &indirect, err
 			}
+			common.Log.Debug("Parsed object ... finished.")
 		} else {
 			if bb[0] == 'e' {
 				lineStr, err := this.readTextLine()
@@ -1239,7 +1247,6 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					if err != nil {
 						return nil, err
 					}
-
 					common.Log.Debug("Stream length? %s", slo)
 
 					pstreamLength, ok := slo.(*PdfObjectInteger)
@@ -1275,6 +1282,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 			return &indirect, err
 		}
 	}
+	common.Log.Debug("Returning indirect!")
 	return &indirect, nil
 }
 
