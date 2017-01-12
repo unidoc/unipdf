@@ -135,6 +135,36 @@ func (this *ContentStreamParser) skipSpaces() (int, error) {
 	return cnt, nil
 }
 
+// Skip over comments and spaces. Can handle multi-line comments.
+func (this *ContentStreamParser) skipComments() error {
+	if _, err := this.skipSpaces(); err != nil {
+		return err
+	}
+
+	isFirst := true
+	for {
+		bb, err := this.reader.Peek(1)
+		if err != nil {
+			common.Log.Debug("Error %s", err.Error())
+			return err
+		}
+		if isFirst && bb[0] != '%' {
+			// Not a comment clearly.
+			return nil
+		} else {
+			isFirst = false
+		}
+		if (bb[0] != '\r') && (bb[0] != '\n') {
+			this.reader.ReadByte()
+		} else {
+			break
+		}
+	}
+
+	// Call recursively to handle multiline comments.
+	return this.skipComments()
+}
+
 // Parse a name starting with '/'.
 func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 	name := ""
@@ -536,7 +566,10 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 
 		common.Log.Debug("Peek string: %s", string(bb))
 		// Determine type.
-		if bb[0] == '/' {
+		if bb[0] == '%' {
+			this.skipComments()
+			continue
+		} else if bb[0] == '/' {
 			name, err := this.parseName()
 			common.Log.Debug("->Name: '%s'", name)
 			return &name, err, false
