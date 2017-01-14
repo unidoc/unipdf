@@ -352,12 +352,13 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 	if obj, has := (*d)["Type"]; has {
 		str, ok := obj.(*PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Invalid type of Type (%T)", obj)
-		}
-		if *str != "Annot" {
-			// Log a debug message.
-			// Not returning an error on this.
-			common.Log.Debug("Unsuspected Type != Annot (%s)", *str)
+			common.Log.Debug("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
+		} else {
+			if *str != "Annot" {
+				// Log a debug message.
+				// Not returning an error on this.
+				common.Log.Debug("Unsuspected Type != Annot (%s)", *str)
+			}
 		}
 	}
 
