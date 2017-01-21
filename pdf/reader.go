@@ -38,12 +38,14 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
 	if err != nil {
+		panic(err)
 		return nil, err
 	}
 	pdfReader.parser = parser
 
 	isEncrypted, err := pdfReader.IsEncrypted()
 	if err != nil {
+		panic(err)
 		return nil, err
 	}
 
@@ -51,9 +53,12 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	if !isEncrypted {
 		err = pdfReader.loadStructure()
 		if err != nil {
+			panic(err)
 			return nil, err
 		}
 	}
+
+	// pdfReader.parser.ResolveXObjects()
 
 	return pdfReader, nil
 }
@@ -62,13 +67,13 @@ func (this *PdfReader) Version() float64 {
 	return this.parser.version
 }
 
+func (this *PdfReader) LookupByNumber(objNumber int) (PdfObject, error) {
+	return this.parser.LookupByNumber(objNumber)
+}
+
 func (this *PdfReader) Xrefs() XrefTable {
 	return this.parser.xrefs
 }
-
-// func (this *PdfReader) Inspect() (map[string]int, error) {
-// 	return this.parser.inspect()
-// }
 
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
@@ -446,7 +451,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	}
 	common.Log.Debug("buildPageList node type: %s", *objType)
 	if *objType == "Page" {
-		common.Log.Debug("**** obj %d %d\n", node.ObjectNumber, node.GenerationNumber)
+		common.Log.Debug("**** obj %d %d", node.ObjectNumber, node.GenerationNumber)
 		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
 			return err
@@ -495,11 +500,13 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 			return errors.New("Invalid Kids indirect object")
 		}
 	}
-	common.Log.Debug("Kids: %s", kids)
+	common.Log.Debug("**Kids: %d - %s", len(*kids), kids)
 	for idx, child := range *kids {
+		common.Log.Debug("**Child: %d - %s", idx, child)
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
+			panic(errors.New("Page not indirect object"))
 			return errors.New("Page not indirect object")
 		}
 		(*kids)[idx] = child
@@ -543,21 +550,32 @@ func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, boo
  * GH: Are we fully protected against circular references? (Add tests).
  */
 func (this *PdfReader) traverseObjectData(o PdfObject) error {
-	common.Log.Debug("Traverse object data")
+	err := this._traverseObjectData(o, 0)
+	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
+		common.Log.Debug("traverseObjectData: io= %s - %s", io, io.PdfObject)
+	} else if so, isStreamObj := o.(*PdfObjectStream); isStreamObj {
+		common.Log.Debug("traverseObjectData: so= %s - %s", so, so.PdfObjectDictionary)
+	} else {
+		common.Log.Debug("traverseObjectData: o=%#v", o)
+	}
+	return err
+}
+
+func (this *PdfReader) _traverseObjectData(o PdfObject, level int) error {
+	common.Log.Debug("Traverse object data: Level=%d o=%T=%s", level, o, o)
 	if _, isTraversed := this.traversed[o]; isTraversed {
 		return nil
 	}
 	this.traversed[o] = true
 
 	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
-		common.Log.Debug("io: %s", io)
-		common.Log.Debug("- %s", io.PdfObject)
-		err := this.traverseObjectData(io.PdfObject)
+		common.Log.Debug("io: %s - %s", io, io.PdfObject)
+		err := this._traverseObjectData(io.PdfObject, level+1)
 		return err
 	}
 
 	if so, isStreamObj := o.(*PdfObjectStream); isStreamObj {
-		err := this.traverseObjectData(so.PdfObjectDictionary)
+		err := this._traverseObjectData(so.PdfObjectDictionary, level+1)
 		return err
 	}
 
@@ -570,12 +588,12 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 					return err
 				}
 				(*dict)[name] = resolvedObj
-				err = this.traverseObjectData(resolvedObj)
+				err = this._traverseObjectData(resolvedObj, level+1)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v)
+				err := this._traverseObjectData(v, level+1)
 				if err != nil {
 					return err
 				}
@@ -594,12 +612,12 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 				}
 				(*arr)[idx] = resolvedObj
 
-				err = this.traverseObjectData(resolvedObj)
+				err = this._traverseObjectData(resolvedObj, level+1)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v)
+				err := this._traverseObjectData(v, level+1)
 				if err != nil {
 					return err
 				}
@@ -708,6 +726,7 @@ func (this *PdfReader) objectTraverse(objs *[]interface{}, traversed *map[PdfObj
 // Get a page by the page number. Indirect object with type /Page.
 // Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPage(pageNumber int) (PdfObject, error) {
+	common.Log.Debug("GetPage: %d of %d", pageNumber, len(this.pageList))
 	if this.parser.crypter != nil && !this.parser.crypter.authenticated {
 		return nil, fmt.Errorf("File need to be decrypted first")
 	}

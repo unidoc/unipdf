@@ -7,6 +7,7 @@ package pdf
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
@@ -141,4 +142,34 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	}
 
 	return objTypes, nil
+}
+
+func ShowDict(w *os.File, name string, d *PdfObjectDictionary) {
+	keys := []string{}
+	for k := range *d {
+		keys = append(keys, string(k))
+	}
+	sort.Strings(keys)
+	fmt.Fprintf(w, "ShowDict: %q %d\n", name, len(*d))
+	for i, k := range keys {
+		v := (*d)[PdfObjectName(k)]
+		ref := ""
+		if io, ok := v.(*PdfIndirectObject); ok {
+			v = (*io).PdfObject
+			ref = (*io).PdfObjectReference.String()
+		}
+		s := fmt.Sprintf("%T", v)
+		if i, ok := v.(*PdfObjectInteger); ok {
+			s = fmt.Sprintf("%d", *i)
+		} else if n, ok := v.(*PdfObjectName); ok {
+			s = fmt.Sprintf("%s", *n)
+		} else if n, ok := v.(*PdfObjectString); ok {
+			s = fmt.Sprintf("%q", *n)
+		} else if x, ok := v.(*PdfObjectFloat); ok {
+			s = fmt.Sprintf("%f", *x)
+		} else if b, ok := v.(*PdfObjectBool); ok {
+			s = fmt.Sprintf("%b", *b)
+		}
+		fmt.Fprintf(w, "%4d: %20#q: %10s %s\n", i, k, s, ref)
+	}
 }

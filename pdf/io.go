@@ -20,7 +20,8 @@ func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	for remaining > 0 {
 		nRead, err := this.reader.Read(p[start:])
 		if err != nil {
-			common.Log.Debug("ERROR Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
+			common.Log.Error("ERROR Failed reading (%d;%d) err=%#v", nRead, numRounds, err.Error())
+			panic(err)
 			return start, errors.New("Failed reading")
 		}
 		numRounds++

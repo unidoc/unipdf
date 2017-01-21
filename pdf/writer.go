@@ -152,9 +152,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	common.Log.Debug("Adding objects!")
 
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
-		common.Log.Debug("Indirect")
-		common.Log.Debug("- %s", obj)
-		common.Log.Debug("- %s", io.PdfObject)
+		common.Log.Debug("addObjects: Indirect. %s - %s", obj, io.PdfObject)
 		if this.addObject(io) {
 			err := this.addObjects(io.PdfObject)
 			if err != nil {
@@ -165,8 +163,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
-		common.Log.Debug("Stream")
-		common.Log.Debug("- %s", obj)
+		common.Log.Debug("addObjects: Stream. %s", obj)
 		if this.addObject(so) {
 			err := this.addObjects(so.PdfObjectDictionary)
 			if err != nil {
@@ -177,11 +174,10 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
-		common.Log.Debug("Dict")
-		common.Log.Debug("- %s", obj)
+		common.Log.Debug("addObjects: Dict. %s", obj)
 		for _, k := range dict.sortedKeys() {
 			v := (*dict)[k]
-			common.Log.Debug("Key %s", k)
+			common.Log.Debug("Key %+v", k)
 			if k != "Parent" {
 				err := this.addObjects(v)
 				if err != nil {
@@ -203,8 +199,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if arr, isArray := obj.(*PdfObjectArray); isArray {
-		common.Log.Debug("Array")
-		common.Log.Debug("- %s", obj)
+		common.Log.Debug("addObjects: Array. %s", obj)
 		for _, v := range *arr {
 			err := this.addObjects(v)
 			if err != nil {
@@ -223,23 +218,25 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	return nil
 }
 
-// Add a page to the PDF file. The new page should be an indirect
+// AddPage adds a page to the PDF file. The new page should be an indirect
 // object.
 func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	common.Log.Debug("==========")
-	common.Log.Debug("Appending to page list")
+	common.Log.Debug("Appending to page list. pageObj=%+v", pageObj)
 
 	page, ok := pageObj.(*PdfIndirectObject)
 	if !ok {
-		return errors.New("Page should be an indirect object")
+		return errors.New("Page should be an indirect object.")
 	}
-	common.Log.Debug("%s", page)
-	common.Log.Debug("%s", page.PdfObject)
+	common.Log.Debug("page=%s", page)
+	common.Log.Debug("page.PdfObject=%s", page.PdfObject)
 
 	pDict, ok := page.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Page object should be a dictionary")
+		return errors.New("Page object should be a dictionary.")
 	}
+
+	ShowDict(os.Stderr, "AddPage: page dict", pDict)
 
 	otype, ok := (*pDict)["Type"].(*PdfObjectName)
 	if !ok {
@@ -282,6 +279,17 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	// Reuses the input object, updating the fields.
 	(*pDict)["Parent"] = this.pages
 	page.PdfObject = pDict
+
+	{
+		common.Log.Error("+AddPage: page dict %d", len(*pDict))
+		res := (*pDict)["Resources"]
+		rres, ok := res.(*PdfObjectDictionary)
+		if !ok {
+			panic("RRRR")
+		}
+		xobj := (*rres)["XObject"]
+		ShowDict(os.Stderr, "+AddPage: xobj", xobj.(*PdfObjectDictionary))
+	}
 
 	// Add to Pages.
 	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
@@ -432,9 +440,13 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 
 // Write out an indirect / stream object.
 func (this *PdfWriter) writeObject(num int, obj PdfObject) {
-	common.Log.Debug("Write obj #%d", num)
+	_, isIndirect := obj.(*PdfIndirectObject)
+	_, isStream := obj.(*PdfObjectStream)
 
-	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
+	common.Log.Debug("Write obj #%d %b %b", num, isIndirect, isStream)
+
+	if isIndirect {
+		pobj := obj.(*PdfIndirectObject)
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObject.DefaultWriteString()
 		outStr += "\nendobj\n"
@@ -442,7 +454,8 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		return
 	}
 
-	if pobj, isStream := obj.(*PdfObjectStream); isStream {
+	if isStream {
+		pobj := obj.(*PdfObjectStream)
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
 		outStr += "\nstream\n"
@@ -545,7 +558,7 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	return nil
 }
 
-// Write the pdf out.
+// Write out the pdf.
 func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Debug("Write()")
 	// Outlines.

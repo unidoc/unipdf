@@ -100,16 +100,20 @@ func (this *PdfObjectInteger) DefaultWriteString() string {
 }
 
 func (this *PdfObjectFloat) String() string {
-	return fmt.Sprintf("%f", pinNumber(*this))
+	return fmt.Sprintf("%f", pinNumber(float64(*this)))
 }
 
 func (this *PdfObjectFloat) DefaultWriteString() string {
-	return fmt.Sprintf("%f", pinNumber(*this))
+	return fmt.Sprintf("%f", pinNumber(float64(*this)))
 }
 
+// pinNumber replaces floating point values very close to integers with the float approximation
+// of the integer.
+// The goal is for integers stored as floats to not change values due to rounding errors such
+// as  x := (x / 10.0) * 10.o
 func pinNumber(x float64) float64 {
 	// n := math.Floor(x + 0.5)
-	// if math.Abs(x) > 1.0 && math.Abs(x-n) < 1e-5 {
+	// if math.Abs(x) > 1.0 && math.Abs(x-n) < 1e-6 {
 	// 	x = n
 	// }
 	return x
@@ -187,7 +191,7 @@ func (this *PdfObjectName) DefaultWriteString() string {
 	var output bytes.Buffer
 
 	if len(*this) > 127 {
-		common.Log.Debug("ERROR: Name too long (%s)", *this)
+		common.Log.Error("Name too long (%s)", *this)
 	}
 
 	output.WriteString("/")

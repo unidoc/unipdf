@@ -30,12 +30,10 @@ type PdfRectangle struct {
 
 func getNumberAsFloat(obj PdfObject) (float64, error) {
 	if fObj, ok := obj.(*PdfObjectFloat); ok {
-		//		fmt.Printf("$$ getNumberAsFloat: fObj=%v\n", *fObj)
 		return float64(*fObj), nil
 	}
 
 	if iObj, ok := obj.(*PdfObjectInteger); ok {
-		//		fmt.Printf("$$ getNumberAsFloat: iObj=%v\n", *iObj)
 		return float64(*iObj), nil
 	}
 
@@ -233,7 +231,7 @@ func NewPdfPage() *PdfPage {
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
 
-	// fmt.Printf("newPdfPageFromDict %+v\n", p)
+	common.Log.Debug("newPdfPageFromDict %+v", p)
 
 	d := *p
 
@@ -298,13 +296,6 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		if err != nil {
 			return nil, err
 		}
-		//		fmt.Printf("** MediaBox=%+v", page.MediaBox)
-		// arr := page.MediaBox.ToPdfObject()
-		//		fmt.Printf("=%s\n", arr.DefaultWriteString())
-		// for _, x := range *(arr.(PdfObjectArray)) {
-		// 	fmt.Printf("  Llx  %s\n", (*x).DefaultWriteString()) // !@#$
-		// }
-
 	}
 	if obj, isDefined := d["CropBox"]; isDefined {
 		var err error
@@ -614,7 +605,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	pWidth := bbox.Urx - bbox.Llx
 	pHeight := bbox.Ury - bbox.Lly
 
-	// fmt.Printf("AddWatermarkImage: bbox=%+v opt=%+v\n", bbox, opt)
+	common.Log.Debug("AddWatermarkImage: bbox=%+v opt=%+v", bbox, opt)
 	var wWidth float64
 	var wHeight float64
 	var xOffset float64
@@ -661,7 +652,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 		"%.0f 0 0 %.0f %.4f %.4f cm\n"+
 		"/%s Do\n"+
 		"Q", wWidth, wHeight, xOffset, yOffset, imgName)
-	// fmt.Printf("AddWatermarkImage: contentStr=%q\n", contentStr)
+	common.Log.Debug("AddWatermarkImage: contentStr=%q", contentStr)
 	this.AddContentStreamByString(contentStr)
 
 	return nil

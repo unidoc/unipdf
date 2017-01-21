@@ -187,7 +187,8 @@ func (this *PdfParser) LookupByNumber(objNumber int) (PdfObject, error) {
 }
 
 // Wrapper for lookupByNumber, checks if object encrypted etc.
-func (this *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
+func (this *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool) (
+	PdfObject, bool, error) {
 	obj, inObjStream, err := this.lookupByNumber(objNumber, attemptRepairs)
 	if err != nil {
 		return nil, inObjStream, err
@@ -237,9 +238,8 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 
 	common.Log.Debug("Lookup obj number %d", objNumber)
 	if xref.xtype == XREF_TABLE_ENTRY {
-		common.Log.Debug("xrefobj obj num %d", xref.objectNumber)
-		common.Log.Debug("xrefobj gen %d", xref.generation)
-		common.Log.Debug("xrefobj offset %d", xref.offset)
+		common.Log.Debug("xrefobj obj num %d gen %d offset %d",
+			xref.objectNumber, xref.generation, xref.offset)
 
 		this.rs.Seek(xref.offset, os.SEEK_SET)
 		this.reader = bufio.NewReader(this.rs)

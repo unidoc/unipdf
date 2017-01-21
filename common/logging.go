@@ -7,6 +7,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 )
@@ -41,26 +42,26 @@ func (this DummyLogger) Debug(format string, args ...interface{}) {
 type ConsoleLogger struct{}
 
 func (this ConsoleLogger) Error(format string, args ...interface{}) {
-	this.output("[ERROR] ", format, args...)
+	this.output(os.Stderr, "[ERROR] ", format, args...)
 }
 
 func (this ConsoleLogger) Warning(format string, args ...interface{}) {
-	this.output("[WARNING] ", format, args...)
+	this.output(os.Stdout, "[WARNING] ", format, args...)
 }
 
 func (this ConsoleLogger) Notice(format string, args ...interface{}) {
-	this.output("[NOTICE] ", format, args...)
+	this.output(os.Stdout, "[NOTICE] ", format, args...)
 }
 
 func (this ConsoleLogger) Info(format string, args ...interface{}) {
-	this.output("[INFO] ", format, args...)
+	this.output(os.Stdout, "[INFO] ", format, args...)
 }
 
 func (this ConsoleLogger) Debug(format string, args ...interface{}) {
-	this.output("[DEBUG] ", format, args...)
+	this.output(os.Stdout, "[DEBUG] ", format, args...)
 }
 
-func (this ConsoleLogger) output(prefix, format string, args ...interface{}) {
+func (this ConsoleLogger) output(f *os.File, prefix, format string, args ...interface{}) {
 	_, file, line, ok := runtime.Caller(3)
 	if !ok {
 		file = "???"
@@ -68,8 +69,8 @@ func (this ConsoleLogger) output(prefix, format string, args ...interface{}) {
 	} else {
 		file = filepath.Base(file)
 	}
-	src := fmt.Sprintf("%s:%d %s", file, line, prefix) + format + "\n"
-	fmt.Printf(src, args...)
+	src := fmt.Sprintf("%s%s:%d ", prefix, file, line) + format + "\n"
+	fmt.Fprintf(f, src, args...)
 }
 
 var Log Logger = DummyLogger{}

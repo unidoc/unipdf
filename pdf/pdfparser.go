@@ -20,6 +20,8 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+var ObjCounts = map[int]int{}
+
 // Regular Expressions for parsing and identifying object signatures.
 var (
 	rePdfVersion     = regexp.MustCompile(`%PDF-(\d\.\d)`)
@@ -231,7 +233,7 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 // A conforming writer shall not use the PostScript syntax for numbers
 // with non-decimal radices (such as 16#FFFE) or in exponential format
 // (such as 6.02E23).
-// Nontheless, we sometimes get numbers with exponential format, so
+// Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (this *PdfParser) parseNumber() (PdfObject, error) {
@@ -239,7 +241,7 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 	allowSigns := true
 	numStr := ""
 	for {
-		common.Log.Debug("Parsing number \"%s\"", numStr)
+		// common.Log.Debug("Parsing number %q", numStr)
 		bb, err := this.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
@@ -248,7 +250,7 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 			break // Handle like EOF
 		}
 		if err != nil {
-			common.Log.Debug("ERROR %s", err)
+			common.Log.Error("ERROR %s", err)
 			return nil, err
 		}
 		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
@@ -323,7 +325,7 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 				}
 				this.reader.Discard(len(numeric) - 1)
 
-				common.Log.Debug("Numeric string \"%s\"", numeric)
+				common.Log.Debug("Numeric string %q", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
 					return PdfObjectString(bytes), err
@@ -480,10 +482,23 @@ func (this *PdfParser) parseNull() (PdfObjectNull, error) {
 	return PdfObjectNull{}, err
 }
 
+var (
+	dbgStackDepth    = 0
+	dbgMaxStackDepth = 0
+)
+
 // Detect the signature at the current file position and parse
 // the corresponding object.
 func (this *PdfParser) parseObject() (PdfObject, error) {
-	common.Log.Debug("-Read direct object")
+	common.Log.Debug("-Read direct object: dbgStackDepth=%d dbgMaxStackDepth=%d",
+		dbgStackDepth, dbgMaxStackDepth)
+	dbgStackDepth++
+	if dbgMaxStackDepth < dbgStackDepth {
+		dbgMaxStackDepth = dbgStackDepth
+	}
+	defer func() {
+		dbgStackDepth--
+	}()
 	this.skipSpaces()
 	for {
 		bb, err := this.reader.Peek(2)
@@ -606,7 +621,7 @@ func (this *PdfParser) parseDict() (*PdfObjectDictionary, error) {
 		keyName, err := this.parseName()
 		common.Log.Debug("Key: %s", keyName)
 		if err != nil {
-			common.Log.Debug("ERROR Returning name err %s", err)
+			common.Log.Error("Could not parse name err=%#v", err)
 			return nil, err
 		}
 
@@ -615,7 +630,7 @@ func (this *PdfParser) parseDict() (*PdfObjectDictionary, error) {
 			// space.  For example "\Boundsnull"
 			newKey := keyName[0 : len(keyName)-4]
 			common.Log.Debug("Taking care of null bug (%s)", keyName)
-			common.Log.Debug("New key \"%s\" = null", newKey)
+			common.Log.Debug("New key %q = null", newKey)
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
@@ -636,6 +651,8 @@ func (this *PdfParser) parseDict() (*PdfObjectDictionary, error) {
 		common.Log.Debug("dict[%s] = %s", keyName, val.String())
 	}
 
+	common.Log.Debug("+parseDict: dict=%+v", dict)
+
 	return &dict, nil
 }
 
@@ -648,7 +665,7 @@ func (this *PdfParser) parsePdfVersion() (float64, error) {
 
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
 	if len(result1) < 2 {
-		common.Log.Debug("Error: PDF Version not found!")
+		common.Log.Error("PDF Version not found!")
 		return -1, errors.New("PDF version not found")
 	}
 
@@ -657,7 +674,6 @@ func (this *PdfParser) parsePdfVersion() (float64, error) {
 		return 0, err
 	}
 
-	//version, _ := strconv.Atoi(result1[1])
 	common.Log.Debug("Pdf version %f", version)
 
 	return version, nil
@@ -747,18 +763,18 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 
 			this.skipSpaces()
 			common.Log.Debug("Reading trailer dict!")
-			common.Log.Debug("peek: \"%s\"", txt)
+			common.Log.Debug("peek: %q", txt)
 			trailer, err = this.parseDict()
 			common.Log.Debug("EOF reading trailer dict!")
 			if err != nil {
-				common.Log.Debug("Error parsing trailer dict (%s)", err)
+				common.Log.Error("Error parsing trailer dict (%s)", err)
 				return nil, err
 			}
 			break
 		}
 
 		if txt == "%%EOF" {
-			common.Log.Debug("ERROR: end of file - trailer not found - error!")
+			common.Log.Error("Eend of file - trailer not found - error!")
 			return nil, errors.New("End of file - trailer not found!")
 		}
 
@@ -984,7 +1000,7 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 	bb, _ := this.reader.Peek(20)
 	if reIndirectObject.MatchString(string(bb)) {
 		common.Log.Debug("xref points to an object.  Probably xref object")
-		common.Log.Debug("starting with \"%s\"", string(bb))
+		common.Log.Debug("starting with %q", string(bb))
 		trailerDict, err = this.parseXrefStream(nil)
 		if err != nil {
 			return nil, err
@@ -997,7 +1013,7 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 			return nil, err
 		}
 	} else {
-		common.Log.Debug("ERROR: Invalid xref.... starting with \"%s\"", string(bb))
+		common.Log.Debug("ERROR: Invalid xref.... starting with %q", string(bb))
 		return nil, errors.New("Invalid xref format")
 	}
 
@@ -1045,7 +1061,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	}
 	b1 := make([]byte, offset)
 	this.rs.Read(b1)
-	common.Log.Debug("Looking for EOF marker: \"%s\"", string(b1))
+	common.Log.Debug("Looking for EOF marker: %q", string(b1))
 	ind := reEOF.FindAllStringIndex(string(b1), -1)
 	if ind == nil {
 		common.Log.Debug("Error: EOF marker not found!")
@@ -1168,7 +1184,7 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 			common.Log.Debug("ERROR: Fail to read indirect obj")
 			return &indirect, err
 		}
-		common.Log.Debug("(indirect obj peek \"%s\"", string(bb))
+		common.Log.Debug("(indirect obj peek %q", string(bb))
 
 		indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
 		if len(indices) < 6 {
@@ -1198,6 +1214,8 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 		gn, _ := strconv.Atoi(result[2])
 		indirect.ObjectNumber = int64(on)
 		indirect.GenerationNumber = int64(gn)
+
+		ObjCounts[on]++
 	}
 
 	for {
