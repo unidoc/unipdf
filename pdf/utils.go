@@ -8,6 +8,8 @@ package pdf
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
@@ -150,7 +152,14 @@ func ShowDict(w *os.File, name string, d *PdfObjectDictionary) {
 		keys = append(keys, string(k))
 	}
 	sort.Strings(keys)
-	fmt.Fprintf(w, "ShowDict: %q %d\n", name, len(*d))
+	_, file, line, ok := runtime.Caller(1)
+	if !ok {
+		file = "???"
+		line = 0
+	} else {
+		file = filepath.Base(file)
+	}
+	fmt.Fprintf(w, "ShowDict: %s:%d %q %d\n", file, line, name, len(*d))
 	for i, k := range keys {
 		v := (*d)[PdfObjectName(k)]
 		ref := ""
@@ -162,14 +171,39 @@ func ShowDict(w *os.File, name string, d *PdfObjectDictionary) {
 		if i, ok := v.(*PdfObjectInteger); ok {
 			s = fmt.Sprintf("%d", *i)
 		} else if n, ok := v.(*PdfObjectName); ok {
-			s = fmt.Sprintf("%s", *n)
+			s = fmt.Sprintf("%#q", *n)
 		} else if n, ok := v.(*PdfObjectString); ok {
 			s = fmt.Sprintf("%q", *n)
 		} else if x, ok := v.(*PdfObjectFloat); ok {
 			s = fmt.Sprintf("%f", *x)
 		} else if b, ok := v.(*PdfObjectBool); ok {
-			s = fmt.Sprintf("%b", *b)
+			s = fmt.Sprintf("%t", *b)
 		}
-		fmt.Fprintf(w, "%4d: %20#q: %10s %s\n", i, k, s, ref)
+		fmt.Fprintf(w, "%4d: %#20q: %10s %s\n", i, k, s, ref)
 	}
+}
+
+func Trace(obj PdfObject) PdfObject {
+	refList := map[PdfObjectReference]bool{}
+	return traceToObject(obj, refList)
+}
+
+func traceToObject(obj PdfObject, refList map[PdfObjectReference]bool) PdfObject {
+	io, isIndirect := obj.(*PdfIndirectObject)
+	if !isIndirect {
+		// Not a reference, an object.  Can be indirect or any direct pdf object (other than reference).
+		return obj
+	}
+
+	// Make sure not already visited (circular ref).
+	if _, alreadyTraversed := refList[io.PdfObjectReference]; alreadyTraversed {
+		panic("Circular reference")
+	}
+	refList[io.PdfObjectReference] = true
+	if len(refList) > 1 {
+		common.Log.Error("traceToObject: refList=%#v", refList)
+		panic("Reference to reference")
+	}
+
+	return traceToObject(io.PdfObject, refList)
 }

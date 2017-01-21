@@ -236,7 +236,7 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 		return errors.New("Page object should be a dictionary.")
 	}
 
-	ShowDict(os.Stderr, "AddPage: page dict", pDict)
+	ShowDict(os.Stdout, "AddPage: page dict", pDict)
 
 	otype, ok := (*pDict)["Type"].(*PdfObjectName)
 	if !ok {
@@ -281,14 +281,18 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	page.PdfObject = pDict
 
 	{
-		common.Log.Error("+AddPage: page dict %d", len(*pDict))
+		common.Log.Debug("+AddPage: page dict %d", len(*pDict))
 		res := (*pDict)["Resources"]
 		rres, ok := res.(*PdfObjectDictionary)
 		if !ok {
 			panic("RRRR")
 		}
-		xobj := (*rres)["XObject"]
-		ShowDict(os.Stderr, "+AddPage: xobj", xobj.(*PdfObjectDictionary))
+		xobj, ok := (*rres)["XObject"]
+		if !ok {
+			ShowDict(os.Stdout, "AddPage: No xobj res", rres)
+		} else {
+			ShowDict(os.Stdout, "+AddPage: xobj", xobj.(*PdfObjectDictionary))
+		}
 	}
 
 	// Add to Pages.
@@ -443,7 +447,7 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 	_, isIndirect := obj.(*PdfIndirectObject)
 	_, isStream := obj.(*PdfObjectStream)
 
-	common.Log.Debug("Write obj #%d %b %b", num, isIndirect, isStream)
+	common.Log.Debug("Write obj #%d %t %t", num, isIndirect, isStream)
 
 	if isIndirect {
 		pobj := obj.(*PdfIndirectObject)

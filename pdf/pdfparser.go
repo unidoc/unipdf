@@ -774,7 +774,7 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 		}
 
 		if txt == "%%EOF" {
-			common.Log.Error("Eend of file - trailer not found - error!")
+			common.Log.Error("End of file - trailer not found - error!")
 			return nil, errors.New("End of file - trailer not found!")
 		}
 
@@ -796,14 +796,14 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	xrefObj, err := this.parseIndirectObject()
 	if err != nil {
-		common.Log.Debug("ERROR: Failed to read xref object")
+		common.Log.Error("Failed to read xref object")
 		return nil, errors.New("Failed to read xref object")
 	}
 
 	common.Log.Debug("XRefStm object: %s", xrefObj)
 	xs, ok := xrefObj.(*PdfObjectStream)
 	if !ok {
-		common.Log.Debug("ERROR: XRefStm pointing to non-stream object!")
+		common.Log.Error("XRefStm pointing to non-stream object!")
 		return nil, errors.New("XRefStm pointing to a non-stream object!")
 	}
 
@@ -811,7 +811,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	sizeObj, ok := (*(xs.PdfObjectDictionary))["Size"].(*PdfObjectInteger)
 	if !ok {
-		common.Log.Debug("ERROR: Missing size from xref stm")
+		common.Log.Error("Missing size from xref stm")
 		return nil, errors.New("Missing Size from xref stm")
 	}
 
@@ -843,7 +843,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	ds, err := this.decodeStream(xs)
 	if err != nil {
-		common.Log.Debug("ERROR: Unable to decode stream")
+		common.Log.Error("Unable to decode stream")
 		return nil, err
 	}
 	common.Log.Debug("@@ ds=%d %T %+v\n", len(ds), ds, ds)
@@ -1181,14 +1181,14 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 	if isIndirect {
 		bb, err := this.reader.Peek(20)
 		if err != nil {
-			common.Log.Debug("ERROR: Fail to read indirect obj")
+			common.Log.Error("Failed to read indirect obj")
 			return &indirect, err
 		}
 		common.Log.Debug("(indirect obj peek %q", string(bb))
 
 		indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
 		if len(indices) < 6 {
-			common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
+			common.Log.Error("Unable to find object signature (%s)", string(bb))
 			return &indirect, errors.New("Unable to detect indirect object signature")
 		}
 		this.reader.Discard(indices[0]) // Take care of any small offset.
