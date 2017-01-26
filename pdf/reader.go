@@ -58,8 +58,6 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 		}
 	}
 
-	// pdfReader.parser.ResolveXObjects()
-
 	return pdfReader, nil
 }
 
@@ -141,7 +139,7 @@ func (this *PdfReader) loadStructure() error {
 	ppages, ok := op.(*PdfIndirectObject)
 	if !ok {
 		common.Log.Error("Pages object invalid")
-		common.Log.Debug("op: %p", ppages)
+		common.Log.Error("op: %p", ppages)
 		return errors.New("Pages object invalid")
 	}
 	pages, ok := ppages.PdfObject.(*PdfObjectDictionary)

@@ -146,6 +146,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	return objTypes, nil
 }
 
+// ShowDict prints dict `o` to file `w`
 func ShowDict(w *os.File, name string, o PdfObject) {
 	_, file, line, ok := runtime.Caller(1)
 	if !ok {

@@ -187,7 +187,7 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 				this.readComment()
 				this.skipSpaces()
 			} else {
-				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
+				common.Log.Error("Name starting with %s (% x)", bb, bb)
 				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
@@ -576,7 +576,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 				return num, err
 			}
 
-			common.Log.Debug("ERROR Unknown (peek %q)", peekStr)
+			common.Log.Error("Unknown (peek %q)", peekStr)
 			return nil, errors.New("Object parsing error - unexpected pattern")
 		}
 	}
@@ -718,7 +718,7 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 		result2 := reXrefEntry.FindStringSubmatch(txt)
 		if len(result2) == 4 {
 			if insideSubsection == false {
-				common.Log.Debug("ERROR Xref invalid format!\n")
+				common.Log.Error("Xref invalid format!\n")
 				return nil, errors.New("Xref invalid format")
 			}
 
