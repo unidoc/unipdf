@@ -1199,14 +1199,14 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 		hb := make([]byte, hlen)
 		_, err = this.ReadAtLeast(hb, hlen)
 		if err != nil {
-			common.Log.Debug("ERROR: unable to read - %s", err)
+			common.Log.Error("unable to read - %s", err)
 			return nil, err
 		}
 		common.Log.Debug("textline: %s", hb)
 
 		result := reIndirectObject.FindStringSubmatch(string(hb))
 		if len(result) < 3 {
-			common.Log.Debug("ERROR: Unable to find object signature (%s)", string(hb))
+			common.Log.Error("Unable to find object signature (%s)", string(hb))
 			return &indirect, errors.New("Unable to detect indirect object signature")
 		}
 
@@ -1280,18 +1280,18 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 						return nil, errors.New("Stream length needs to be an integer")
 					}
 					streamLength := *pstreamLength
-					if streamLength < 0 {
+					if streamLength < 0 { // !@#$ < 1 ?
 						return nil, errors.New("Stream needs to be longer than 0")
 					}
 
 					stream := make([]byte, streamLength)
 					_, err = this.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
-						common.Log.Debug("ERROR stream (%d): %X", len(stream), stream)
+						common.Log.Error("stream (%d): %X", len(stream), stream)
 						return nil, err
 					}
 
-					streamobj := PdfObjectStream{}
+					streamobj := PdfObjectStream{} // !@#$
 					streamobj.Stream = stream
 					streamobj.PdfObjectDictionary = indirect.PdfObject.(*PdfObjectDictionary)
 					streamobj.ObjectNumber = indirect.ObjectNumber

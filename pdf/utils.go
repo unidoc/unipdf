@@ -146,12 +146,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	return objTypes, nil
 }
 
-func ShowDict(w *os.File, name string, d *PdfObjectDictionary) {
-	keys := []string{}
-	for k := range *d {
-		keys = append(keys, string(k))
-	}
-	sort.Strings(keys)
+func ShowDict(w *os.File, name string, o PdfObject) {
 	_, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "???"
@@ -159,28 +154,68 @@ func ShowDict(w *os.File, name string, d *PdfObjectDictionary) {
 	} else {
 		file = filepath.Base(file)
 	}
-	fmt.Fprintf(w, "ShowDict: %s:%d %q %d\n", file, line, name, len(*d))
-	for i, k := range keys {
-		v := (*d)[PdfObjectName(k)]
-		ref := ""
-		if io, ok := v.(*PdfIndirectObject); ok {
-			v = (*io).PdfObject
-			ref = (*io).PdfObjectReference.String()
-		}
-		s := fmt.Sprintf("%T", v)
-		if i, ok := v.(*PdfObjectInteger); ok {
-			s = fmt.Sprintf("%d", *i)
-		} else if n, ok := v.(*PdfObjectName); ok {
-			s = fmt.Sprintf("%#q", *n)
-		} else if n, ok := v.(*PdfObjectString); ok {
-			s = fmt.Sprintf("%q", *n)
-		} else if x, ok := v.(*PdfObjectFloat); ok {
-			s = fmt.Sprintf("%f", *x)
-		} else if b, ok := v.(*PdfObjectBool); ok {
-			s = fmt.Sprintf("%t", *b)
-		}
-		fmt.Fprintf(w, "%4d: %#20q: %10s %s\n", i, k, s, ref)
+
+	if o == nil {
+		fmt.Fprintf(w, "ShowDict: %s:%d %q nil\n", file, line, name)
+		return
 	}
+	ref := ""
+	if io, isIndirect := o.(*PdfIndirectObject); isIndirect {
+		o = io.PdfObject
+		ref = (*io).PdfObjectReference.String()
+	}
+	d := o.(*PdfObjectDictionary)
+	fmt.Fprintf(w, "ShowDict: %s:%d %q %d %s\n", file, line, name, len(*d), ref)
+	showDict(w, d, "")
+}
+
+func showDict(w *os.File, d *PdfObjectDictionary, indent string) {
+	for i, k := range sortedKeys(d) {
+		v := (*d)[PdfObjectName(k)]
+		if e, ok := v.(*PdfObjectDictionary); ok {
+			fmt.Fprintf(w, indent+"%4d: %#10q:\n", i, k)
+			showDict(w, e, indent+"  ")
+		} else {
+			fmt.Fprintf(w, indent+"%4d: %#10q: %s\n", i, k, ObjStr(v))
+		}
+	}
+}
+
+func sortedKeys(d *PdfObjectDictionary) []string {
+	keys := []string{}
+	for k := range *d {
+		keys = append(keys, string(k))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func ObjStr(v PdfObject) string {
+	ref := "--- ---"
+	if io, ok := v.(*PdfIndirectObject); ok {
+		v = (*io).PdfObject
+		ref = (*io).PdfObjectReference.String()
+	}
+	s := fmt.Sprintf("%T", v)
+	if i, ok := v.(*PdfObjectInteger); ok {
+		s = fmt.Sprintf("%d", *i)
+	} else if n, ok := v.(*PdfObjectName); ok {
+		s = fmt.Sprintf("%#q", *n)
+	} else if n, ok := v.(*PdfObjectString); ok {
+		s = fmt.Sprintf("%q", *n)
+	} else if x, ok := v.(*PdfObjectFloat); ok {
+		s = fmt.Sprintf("%f", *x)
+	} else if b, ok := v.(*PdfObjectBool); ok {
+		s = fmt.Sprintf("%t", *b)
+	} else if x, ok := v.(*PdfObjectStream); ok {
+		s = fmt.Sprintf("%s %s", s, (*x).PdfObjectDictionary)
+	} else if d, ok := v.(*PdfObjectDictionary); ok {
+		s = fmt.Sprintf("%s %s", s, *d)
+	} else if d, ok := v.(*PdfObjectArray); ok {
+		s = fmt.Sprintf("%s %s", s, *d)
+	}
+
+	return fmt.Sprintf("%-9s %s", ref, s)
 }
 
 func Trace(obj PdfObject) PdfObject {

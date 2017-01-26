@@ -41,6 +41,8 @@ func (this DummyLogger) Debug(format string, args ...interface{}) {
 // Simple Console Logger that the tests use.
 type ConsoleLogger struct{}
 
+const DebugOutput = false
+
 func (this ConsoleLogger) Error(format string, args ...interface{}) {
 	this.output(os.Stderr, "[ERROR] ", format, args...)
 }
@@ -58,7 +60,9 @@ func (this ConsoleLogger) Info(format string, args ...interface{}) {
 }
 
 func (this ConsoleLogger) Debug(format string, args ...interface{}) {
-	this.output(os.Stdout, "[DEBUG] ", format, args...)
+	if DebugOutput {
+		this.output(os.Stdout, "[DEBUG] ", format, args...)
+	}
 }
 
 func (this ConsoleLogger) output(f *os.File, prefix, format string, args ...interface{}) {

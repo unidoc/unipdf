@@ -15,6 +15,7 @@ package pdf
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 
@@ -218,6 +219,16 @@ type PdfPage struct {
 	UserUnit             PdfObject
 	VP                   PdfObject
 	pageDict             *PdfObjectDictionary
+}
+
+func (this *PdfPage) Show(pageNum int) {
+	this.GetPageDict()
+	common.Log.Info("-PdfPage.Show page %d ========================================", pageNum)
+	fmt.Printf("BoxColorInfo=%s\n", Trace(this.BoxColorInfo))
+	fmt.Printf("Contents=%s\n", Trace(this.Contents))
+	ShowDict(os.Stdout, "PdfPage.pageDict", this.pageDict)
+	this.Resources.Show()
+	common.Log.Info("+PdfPage.Show page %d ========================================", pageNum)
 }
 
 func NewPdfPage() *PdfPage {
@@ -694,6 +705,20 @@ type PdfPageResources struct {
 	XObject    PdfObject
 	Font       PdfObject
 	ProcSet    PdfObject
+}
+
+func (this *PdfPageResources) Show() {
+	common.Log.Info("-PdfPageResources.Show ========================================")
+	fmt.Printf("ExtGState=%s\n", Trace(this.ExtGState))
+	fmt.Printf("ColorSpace=%s\n", Trace(this.ColorSpace))
+	fmt.Printf("Pattern=%s\n", Trace(this.Pattern))
+	fmt.Printf("Shading=%s\n", Trace(this.Shading))
+	ShowDict(os.Stdout, "PdfPageResources.XObject", this.XObject)
+	ShowDict(os.Stdout, "PdfPageResources.Font", this.Font)
+	// fmt.Printf("Font=%s\n", Trace(this.Font))
+	fmt.Printf("ProcSet=%s\n", Trace(this.ProcSet))
+	common.Log.Info("+PdfPageResources.Show ========================================")
+
 }
 
 func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, error) {

@@ -467,7 +467,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return nil
 	}
 	if *objType != "Pages" {
-		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
+		common.Log.Error("Table of content containing non Page/Pages object! (%s)", objType)
 		return errors.New("Table of content containing non Page/Pages object!")
 	}
 
@@ -484,7 +484,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 
 	kidsObj, err := this.parser.Trace((*nodeDict)["Kids"])
 	if err != nil {
-		common.Log.Debug("ERROR: Failed loading Kids object")
+		common.Log.Error("Failed loading Kids object")
 		return err
 	}
 
@@ -505,7 +505,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		common.Log.Debug("**Child: %d - %s", idx, child)
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
-			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
+			common.Log.Error("Page not indirect object - (%s)", child)
 			panic(errors.New("Page not indirect object"))
 			return errors.New("Page not indirect object")
 		}

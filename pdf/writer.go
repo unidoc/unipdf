@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/unidoc/unidoc/common"
@@ -75,6 +76,83 @@ type PdfWriter struct {
 	encryptDict *PdfObjectDictionary
 	encryptObj  *PdfIndirectObject
 	ids         *PdfObjectArray
+}
+
+// Show prints information about a PdfWriter's contents
+func (this *PdfWriter) Show() {
+	typeCounts := map[string]int{}
+
+	common.Log.Info("-PdfWriter.Show ========================================")
+	fmt.Printf("root=%s\n", Trace(this.root))
+	fmt.Printf("catalog=%s\n", Trace(this.pages))
+	fmt.Printf("infoObj=%s\n", Trace(this.infoObj))
+	fmt.Printf("pages=%s\n", Trace(this.pages))
+	fmt.Printf("objects=%d\n", len(this.objects))
+	sort.Stable(byObject(this.objects))
+	for i, o := range this.objects {
+		_, _, t, u := ObjStreamType(o)
+		fmt.Printf("%10d: [%s:%s] %s\n", i, t, u, ObjStr(o))
+		typeCounts[t]++
+	}
+	fmt.Printf("ids=%s\n", Trace(this.ids))
+	common.Log.Info("+PdfWriter.Show ========================================")
+	for t, n := range typeCounts {
+		fmt.Printf("%#20q: %3d\n", t, n)
+	}
+}
+
+// byObject sorts slices of PdfObject by "Type" and "Subtype" keys. See ObjStreamType
+type byObject []PdfObject
+
+func (x byObject) Len() int { return len(x) }
+
+func (x byObject) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+
+func (x byObject) Less(i, j int) bool {
+	si, di, ti, ui := ObjStreamType(x[i])
+	sj, dj, tj, uj := ObjStreamType(x[j])
+
+	if ti != tj {
+		return ti > tj
+	}
+	if ui != uj {
+		return ui > uj
+	}
+	if si != sj {
+		return si
+	}
+	if di != dj {
+		return si
+	}
+	return false
+}
+
+// ObjStreamType returns information about streams and dicts: isStream, isDict, typ, subtyp
+//	isStream: is `o`a PdfObjectStream?
+//	isDict: is `o`a PdfObjectDictionary?
+//	type: "Type" value of dict or stream
+//	type: "Subtype" value of dict or stream
+func ObjStreamType(o PdfObject) (isStream, isDict bool, typ, subtyp string) {
+	if io, ok := o.(*PdfIndirectObject); ok {
+		o = (*io).PdfObject
+	}
+	var d *PdfObjectDictionary = nil
+	if s, ok := o.(*PdfObjectStream); ok {
+		d = (*s).PdfObjectDictionary
+		isStream = true
+	} else if s, ok := o.(*PdfObjectDictionary); ok {
+		d = s
+		isDict = true
+	}
+	if d != nil {
+		if v, ok := (*d)["Type"]; ok {
+			typ = string(*(v.(*PdfObjectName)))
+		}
+		if v, ok := (*d)["Subtype"]; ok {
+			subtyp = string(*(v.(*PdfObjectName)))
+		}
+	}
+	return
 }
 
 func NewPdfWriter() PdfWriter {
@@ -211,7 +289,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 	if _, isReference := obj.(*PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
-		common.Log.Debug("ERROR: Cannot be a reference!")
+		common.Log.Error("Cannot be a reference!")
 		return errors.New("Reference not allowed")
 	}
 
