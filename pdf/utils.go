@@ -53,7 +53,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 		common.Log.Debug("Looking up object number: %d", xref.objectNumber)
 		o, err := this.LookupByNumber(xref.objectNumber)
 		if err != nil {
-			common.Log.Debug("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
+			common.Log.Error("Fail to lookup obj %d (%s)", xref.objectNumber, err)
 			failedCount++
 			continue
 		}
@@ -132,7 +132,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	common.Log.Debug("=======")
 
 	if len(this.xrefs) < 1 {
-		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
+		common.Log.Error("This document is invalid (xref table missing!)")
 		return nil, fmt.Errorf("Invalid document (xref table missing)")
 	}
 

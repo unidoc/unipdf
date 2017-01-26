@@ -823,7 +823,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	wLen := len(*wArr)
 	if wLen != 3 {
-		common.Log.Debug("ERROR: Unsupported xref stm (len(W) != 3 - %d)", wLen)
+		common.Log.Error("Unsupported xref stm (len(W) != 3 - %d)", wLen)
 		return nil, errors.New("Unsupported xref stm len(W) != 3")
 	}
 
@@ -911,7 +911,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	if entries != len(indexList) {
 		// If mismatch -> error (already allowing mismatch of 1 if Index not specified).
-		common.Log.Debug("ERROR: xref stm: num entries != len(indices) (%d != %d)", entries, len(indexList))
+		common.Log.Error("xref stm: num entries != len(indices) (%d != %d)", entries, len(indexList))
 		return nil, errors.New("Xref stm num entries != len(indices)")
 	}
 
@@ -975,7 +975,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 				common.Log.Debug("entry: %s", this.xrefs[objNum])
 			}
 		} else {
-			common.Log.Debug("ERROR: --------INVALID TYPE XrefStm invalid?-------")
+			common.Log.Error("--------INVALID TYPE XrefStm invalid?-------")
 			// Continue, we do not define anything -> null object.
 			// 7.5.8.3:
 			//
@@ -1013,7 +1013,7 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 			return nil, err
 		}
 	} else {
-		common.Log.Debug("ERROR: Invalid xref.... starting with %q", string(bb))
+		common.Log.Error("Invalid xref.... starting with %q", string(bb))
 		return nil, errors.New("Invalid xref format")
 	}
 
@@ -1084,18 +1084,18 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	}
 	if len(result) > 2 {
 		// GH: Take the last one?  Make a test case.
-		common.Log.Debug("ERROR: Multiple startxref (%s)!", b2)
+		common.Log.Error("Multiple startxref (%s)!", b2)
 		return nil, errors.New("Multiple startxref entries?")
 	}
 	offsetXref, _ := strconv.ParseInt(result[1], 10, 64)
 	common.Log.Debug("startxref at %d", offsetXref)
 
 	if offsetXref > fSize {
-		common.Log.Debug("ERROR: Xref offset outside of file")
+		common.Log.Error("Xref offset outside of file")
 		common.Log.Debug("Attempting repair")
 		offsetXref, err = this.repairLocateXref()
 		if err != nil {
-			common.Log.Debug("ERROR: Repair attempt failed (%s)")
+			common.Log.Error("Repair attempt failed (%s)")
 			return nil, err
 		}
 	}
@@ -1145,7 +1145,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 
 		ptrailerDict, err := this.parseXref()
 		if err != nil {
-			common.Log.Debug("ERROR: Failed loading another (Prev) trailer")
+			common.Log.Error("Failed loading another (Prev) trailer")
 			return nil, err
 		}
 
@@ -1322,7 +1322,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	// Start by reading xrefs from bottom
 	trailer, err := parser.loadXrefs()
 	if err != nil {
-		common.Log.Debug("ERROR: Failed to load xref table! %s", err)
+		common.Log.Error("Failed to load xref table! %s", err)
 		// Try to rebuild entire xref table?
 		return nil, err
 	}

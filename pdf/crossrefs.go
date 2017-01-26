@@ -74,11 +74,11 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		common.Log.Debug("so d: %s\n", *sod)
 		name, ok := (*sod)["Type"].(*PdfObjectName)
 		if !ok {
-			common.Log.Debug("ERROR: Object stream should always have a Type")
+			common.Log.Error("Object stream should always have a Type")
 			return nil, errors.New("Object stream missing Type")
 		}
 		if strings.ToLower(string(*name)) != "objstm" {
-			common.Log.Debug("ERROR: Object stream type shall always be ObjStm !")
+			common.Log.Error("Object stream type shall always be ObjStm !")
 			return nil, errors.New("Object stream type != ObjStm")
 		}
 
