@@ -97,7 +97,7 @@ func TestStringParsing(t *testing.T) {
 			t.Errorf("Unable to parse string, error: %s", err)
 		}
 		if string(o) != entry.expected {
-			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", entry.raw, o, entry.expected)
+			t.Errorf("String Mismatch %s: %q != %q", entry.raw, o, entry.expected)
 		}
 	}
 }

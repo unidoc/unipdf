@@ -95,7 +95,7 @@ func (this *PdfParser) skipComments() error {
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			common.Log.Debug("Error %s", err.Error())
+			common.Log.Error("Error %s", err)
 			return err
 		}
 		if isFirst && bb[0] != '%' {
@@ -128,7 +128,7 @@ func (this *PdfParser) readComment() (string, error) {
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			common.Log.Debug("Error %s", err.Error())
+			common.Log.Error("Error %s", err)
 			return commentText, err
 		}
 		if isFirst && bb[0] != '%' {
@@ -152,7 +152,7 @@ func (this *PdfParser) readTextLine() (string, error) {
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			common.Log.Debug("Error %s", err.Error())
+			common.Log.Error("Error %s", err)
 			return lineStr, err
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
@@ -187,7 +187,7 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 				this.readComment()
 				this.skipSpaces()
 			} else {
-				common.Log.Error("Name starting with %s (% x)", bb, bb)
+				common.Log.Error("Error: Name starting with %s (% x)", bb, bb)
 				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
@@ -464,7 +464,7 @@ func parseReference(refStr string) (PdfObjectReference, error) {
 
 	result := reReference.FindStringSubmatch(string(refStr))
 	if len(result) < 3 {
-		common.Log.Debug("Error parsing reference")
+		common.Log.Error("Error parsing reference")
 		return objref, errors.New("Unable to parse reference")
 	}
 
@@ -482,23 +482,10 @@ func (this *PdfParser) parseNull() (PdfObjectNull, error) {
 	return PdfObjectNull{}, err
 }
 
-var (
-	dbgStackDepth    = 0
-	dbgMaxStackDepth = 0
-)
-
 // Detect the signature at the current file position and parse
 // the corresponding object.
 func (this *PdfParser) parseObject() (PdfObject, error) {
-	common.Log.Debug("-Read direct object: dbgStackDepth=%d dbgMaxStackDepth=%d",
-		dbgStackDepth, dbgMaxStackDepth)
-	dbgStackDepth++
-	if dbgMaxStackDepth < dbgStackDepth {
-		dbgMaxStackDepth = dbgStackDepth
-	}
-	defer func() {
-		dbgStackDepth--
-	}()
+	common.Log.Debug("-Read direct object")
 	this.skipSpaces()
 	for {
 		bb, err := this.reader.Peek(2)
@@ -1287,7 +1274,7 @@ func (this *PdfParser) parseIndirectObjectBase(isIndirect bool) (PdfObject, erro
 					stream := make([]byte, streamLength)
 					_, err = this.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
-						common.Log.Error("stream (%d): %X", len(stream), stream)
+						common.Log.Error("Error: stream (%d): %X", len(stream), stream)
 						return nil, err
 					}
 

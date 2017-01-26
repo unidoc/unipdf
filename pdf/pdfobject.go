@@ -258,7 +258,7 @@ func (this *PdfObjectDictionary) String() string {
 	outStr := "Dict("
 	for _, k := range this.sortedKeys() {
 		v := (*this)[k]
-		outStr += fmt.Sprintf("\"%s\": %s, ", k, v.String())
+		outStr += fmt.Sprintf("%q: %s, ", k, v.String())
 	}
 	outStr += ")"
 	return outStr

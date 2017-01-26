@@ -359,7 +359,7 @@ func (this *PdfWriter) AddPage(pageObj PdfObject) error {
 	(*pDict)["Parent"] = this.pages
 	page.PdfObject = pDict
 
-	{
+	{ // Peter's junk. Remove !@#$
 		common.Log.Debug("+AddPage: page dict %d", len(*pDict))
 		res := (*pDict)["Resources"]
 		rres, ok := res.(*PdfObjectDictionary)

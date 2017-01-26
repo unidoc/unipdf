@@ -158,7 +158,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 	this.reader = bufio.NewReader(bufReader)
 
 	bb, _ := this.reader.Peek(100)
-	common.Log.Debug("OBJ peek \"%s\"", string(bb))
+	common.Log.Debug("OBJ peek %q", string(bb))
 
 	val, err := this.parseObject()
 	if err != nil {

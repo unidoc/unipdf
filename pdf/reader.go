@@ -38,14 +38,12 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 	pdfReader.parser = parser
 
 	isEncrypted, err := pdfReader.IsEncrypted()
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 
@@ -53,7 +51,6 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	if !isEncrypted {
 		err = pdfReader.loadStructure()
 		if err != nil {
-			panic(err)
 			return nil, err
 		}
 	}
@@ -504,7 +501,6 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Error("Page not indirect object - (%s)", child)
-			panic(errors.New("Page not indirect object"))
 			return errors.New("Page not indirect object")
 		}
 		(*kids)[idx] = child
