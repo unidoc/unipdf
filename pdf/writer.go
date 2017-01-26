@@ -101,7 +101,8 @@ func (this *PdfWriter) Show() {
 	}
 }
 
-// byObject sorts slices of PdfObject by "Type" and "Subtype" keys. See ObjStreamType
+// byObject sorts slices of PdfObject by "Type" and "Subtype" key if they are PdfObjectStream
+// or PdfObjectDictionary then  by if whether are dfObjectStream or PdfObjectDictionary.
 type byObject []PdfObject
 
 func (x byObject) Len() int { return len(x) }
@@ -122,7 +123,7 @@ func (x byObject) Less(i, j int) bool {
 		return si
 	}
 	if di != dj {
-		return si
+		return di
 	}
 	return false
 }
