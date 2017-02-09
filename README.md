@@ -50,7 +50,7 @@ These activities include:
  * creating/manipulating documents for users in a web/server/cloud application
  * shipping UniDoc with a closed source product
 
-Contact sales for more info: sales@unidoc.io.
+Please see [pricing](http://unidoc.io/pricing) to purchase a commercial license or contact sales at sales@unidoc.io for more info.
 
 ## Contributing
 
