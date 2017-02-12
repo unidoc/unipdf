@@ -44,6 +44,194 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 	return &parser
 }
 
+// A representation of an inline image in a Content stream.
+// Everything between the BI and EI operands.
+// ContentStreamInlineImage implements the PdfObject interface
+// although strictly it is not a PDF object.
+type ContentStreamInlineImage struct {
+	BitsPerComponent PdfObject
+	ColorSpace       PdfObject
+	Decode           PdfObject
+	DecodeParms      PdfObject
+	Filter           PdfObject
+	Height           PdfObject
+	ImageMask        PdfObject
+	Intent           PdfObject
+	Interpolate      PdfObject
+	Width            PdfObject
+	stream           []byte
+}
+
+func (this *ContentStreamInlineImage) String() string {
+	str := fmt.Sprintf("InlineImage(len=%d)", len(this.stream))
+	return str
+}
+
+func (this *ContentStreamInlineImage) DefaultWriteString() string {
+	var output bytes.Buffer
+
+	// We do not start with "BI" as that is the operand and is written out separately.
+	// Write out the parameters
+	s := "BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
+	s += "CS " + this.ColorSpace.DefaultWriteString() + "\n"
+	s += "D " + this.Decode.DefaultWriteString() + "\n"
+	s += "DP " + this.DecodeParms.DefaultWriteString() + "\n"
+	s += "F " + this.Filter.DefaultWriteString() + "\n"
+	s += "H " + this.Height.DefaultWriteString() + "\n"
+	s += "IM " + this.ImageMask.DefaultWriteString() + "\n"
+	s += "Intent " + this.Intent.DefaultWriteString() + "\n"
+	s += "I " + this.Interpolate.DefaultWriteString() + "\n"
+	s += "W " + this.Width.DefaultWriteString() + "\n"
+	output.WriteString(s)
+
+	output.WriteString("ID ")
+	output.Write(this.stream)
+
+	return output.String()
+}
+
+// Parse an inline image from a content stream, both read its properties and
+// binary data.
+// When called, "BI" has already been read from the stream.  This function
+// finishes reading through "EI" and then returns the ContentStreamInlineImage.
+func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {
+	// Reading parameters.
+	im := ContentStreamInlineImage{}
+
+	for {
+		this.skipSpaces()
+		obj, err, isOperand := this.parseObject()
+		if err != nil {
+			return nil, err
+		}
+
+		if !isOperand {
+			// Not an operand.. Read key value properties..
+			param, ok := obj.(*PdfObjectName)
+			if !ok {
+				return nil, fmt.Errorf("Invalid inline image property (expecting name) - %T", obj)
+			}
+
+			valueObj, err, isOperand := this.parseObject()
+			if err != nil {
+				return nil, err
+			}
+			if isOperand {
+				return nil, fmt.Errorf("Not expecting an operand")
+			}
+
+			if *param == "BPC" {
+				im.BitsPerComponent = valueObj
+			} else if *param == "CS" {
+				im.ColorSpace = valueObj
+			} else if *param == "D" {
+				im.Decode = valueObj
+			} else if *param == "DP" {
+				im.DecodeParms = valueObj
+			} else if *param == "F" {
+				im.Filter = valueObj
+			} else if *param == "H" {
+				im.Height = valueObj
+			} else if *param == "IM" {
+				im.ImageMask = valueObj
+			} else if *param == "Intent" {
+				im.Intent = valueObj
+			} else if *param == "I" {
+				im.Interpolate = valueObj
+			} else if *param == "W" {
+				im.Width = valueObj
+			} else {
+				return nil, fmt.Errorf("Unknown inline image parameter %s", *param)
+			}
+		}
+
+		if isOperand {
+			operand, ok := obj.(*PdfObjectString)
+			if !ok {
+				return nil, fmt.Errorf("Failed to read inline image - invalid operand")
+			}
+
+			if *operand == "EI" {
+				// Image fully defined
+				common.Log.Debug("Inline image finished...")
+				return &im, nil
+			} else if *operand == "ID" {
+				// Inline image data.
+				// Should get a single space (0x20) followed by the data and then EI.
+				common.Log.Debug("ID start")
+
+				// Skip the space if its there.
+				b, err := this.reader.Peek(1)
+				if err != nil {
+					return nil, err
+				}
+				if IsWhiteSpace(b[0]) {
+					this.reader.Discard(1)
+				}
+
+				// Unfortunately there is no good way to know how many bytes to read since it
+				// depends on the Filter and encoding etc.
+				// Therefore we will simply read until we find "<ws>EI<ws>" where <ws> is whitespace
+				// although of course that could be a part of the data (even if unlikely).
+				im.stream = []byte{}
+				state := 0
+				var skipBytes []byte
+				for {
+					c, err := this.reader.ReadByte()
+					if err != nil {
+						common.Log.Debug("Unable to find end of image EI in inline image data")
+						return nil, err
+					}
+
+					if state == 0 {
+						if IsWhiteSpace(c) {
+							skipBytes = []byte{}
+							skipBytes = append(skipBytes, c)
+							state = 1
+						} else {
+							im.stream = append(im.stream, c)
+						}
+					} else if state == 1 {
+						skipBytes = append(skipBytes, c)
+						if c == 'E' {
+							state = 2
+						} else {
+							im.stream = append(im.stream, skipBytes...)
+							// Need an extra check to decide if we fall back to state 0 or 1.
+							if IsWhiteSpace(c) {
+								state = 1
+							} else {
+								state = 0
+							}
+						}
+					} else if state == 2 {
+						skipBytes = append(skipBytes, c)
+						if c == 'I' {
+							state = 3
+						} else {
+							im.stream = append(im.stream, skipBytes...)
+							state = 0
+						}
+					} else if state == 3 {
+						skipBytes = append(skipBytes, c)
+						if IsWhiteSpace(c) {
+							// image data finished.
+							common.Log.Debug("Image stream (%d): % x", len(im.stream), im.stream)
+							// Exit point.
+							return &im, nil
+						} else {
+							// Seems like "<ws>EI" was part of the data.
+							im.stream = append(im.stream, skipBytes...)
+							state = 0
+						}
+					}
+				}
+				// Never reached (exit point is at end of EI).
+			}
+		}
+	}
+}
+
 // Parses all commands in content stream, returning a list of operation data.
 func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 	operations := []*ContentStreamOperation{}
@@ -67,6 +255,16 @@ func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 				operation.Params = append(operation.Params, obj)
 			}
 		}
+
+		if operation.Operand == "BI" {
+			// Parse an inline image, reads everything between the "BI" and "EI".
+			// The image is stored as the parameter.
+			im, err := this.ParseInlineImage()
+			if err != nil {
+				return nil, err
+			}
+			operation.Params = append(operation.Params, im)
+		}
 	}
 
 	common.Log.Debug("Operation list: %v\n", operations)
@@ -74,6 +272,7 @@ func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 }
 
 // Parses and extracts all text data in content streams and returns as a string.
+// Does not take into account Encoding table, the output is simply the character codes.
 func (this *ContentStreamParser) ExtractText() (string, error) {
 	operations, err := this.Parse()
 	if err != nil {
@@ -86,6 +285,10 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			inText = true
 		} else if op.Operand == "ET" {
 			inText = false
+		}
+		if op.Operand == "Td" || op.Operand == "TD" || op.Operand == "T*" {
+			// Move to next line...
+			txt += "\n"
 		}
 		if inText && op.Operand == "TJ" {
 			if len(op.Params) < 1 {

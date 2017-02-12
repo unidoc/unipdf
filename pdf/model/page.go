@@ -674,7 +674,10 @@ func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 func (this *PdfPage) GetContentStreams() ([]string, error) {
 	if this.Contents == nil {
 		return nil, nil
-	} else if contArray, isArray := this.Contents.(*PdfObjectArray); isArray {
+	}
+
+	contents := TraceToDirectObject(this.Contents)
+	if contArray, isArray := contents.(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
 		cstreams := []string{}
 		for _, cstreamObj := range *contArray {
@@ -687,7 +690,7 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 		return cstreams, nil
 	} else {
 		// Only 1 element in place. Wrap inside a new array and add the new one.
-		cstreamStr, err := getContentStreamAsString(this.Contents)
+		cstreamStr, err := getContentStreamAsString(contents)
 		if err != nil {
 			return nil, err
 		}

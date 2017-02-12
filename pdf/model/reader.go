@@ -725,3 +725,9 @@ func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 func (this *PdfReader) Inspect() (map[string]int, error) {
 	return this.parser.Inspect()
 }
+
+// Get specific object number
+func (this *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
+	obj, err := this.parser.LookupByNumber(number)
+	return obj, err
+}
