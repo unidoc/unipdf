@@ -27,9 +27,18 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		if !ok {
 			return nil, fmt.Errorf("Filter not a Name or Array object")
 		}
-		if len(*array) != 1 {
-			return nil, fmt.Errorf("Currently not supporting serial multi filter decoding")
+		if len(*array) == 0 {
+			// Empty array -> indicates raw filter (no filter).
+			return NewRawEncoder(), nil
 		}
+
+		if len(*array) != 1 {
+			menc, err := newMultiEncoderFromStream(streamObj)
+			common.Log.Debug("Multi enc: %s\n", menc)
+			return menc, err
+		}
+
+		// Single element.
 		filterObj = (*array)[0]
 		method, ok = filterObj.(*PdfObjectName)
 		if !ok {
@@ -37,12 +46,12 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		}
 	}
 
-	if *method == "FlateDecode" {
-		return newFlateEncoderFromStream(streamObj)
-	} else if *method == "ASCIIHexDecode" {
+	if *method == StreamEncodingFilterNameFlate {
+		return newFlateEncoderFromStream(streamObj, nil)
+	} else if *method == StreamEncodingFilterNameASCIIHex {
 		return NewASCIIHexEncoder(), nil
-	} else if *method == "LZWDecode" {
-		return newLZWEncoderFromStream(streamObj)
+	} else if *method == StreamEncodingFilterNameLZW {
+		return newLZWEncoderFromStream(streamObj, nil)
 	}
 
 	common.Log.Debug("ERROR: Unsupported encoding method!")

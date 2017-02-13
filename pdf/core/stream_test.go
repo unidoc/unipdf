@@ -8,6 +8,7 @@ package core
 import (
 	"bytes"
 	"compress/zlib"
+	"fmt"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -108,6 +109,67 @@ endobj`
 	common.Log.Debug("Decoded stream: % x\n", bdec)
 	if !compareSlices(bdec, expected) {
 		common.Log.Debug("Expected: % x\n", expected)
+		t.Errorf("decoded != expected")
+		return
+	}
+}
+
+// Tests a stream with multi encoded.
+func TestMultiEncodedStream(t *testing.T) {
+	// 2 rows of data, 3 colors, 2 columns per row
+
+	encoded := []byte("78 9C 2A C9 C8 2C 56 00 A2 44 85 94 D2 DC DC 4A 85 92 D4 8A 12 85 F2 CC 92 0C 85 E2 FC DC 54 05 46 26 66 85 A4 CC " +
+		"BC C4 A2 4A 85 94 C4 92 44 40 00 00 00 FF FF 78 87 0F 9C >")
+
+	expected := []byte("this is a dummy text with some \x01\x02\x03 binary data")
+
+	common.Log.Debug("Compressed length: %d", len(encoded))
+
+	rawText := `99 0 obj
+<<
+/DecodeParms << /Predictor 1 >>
+/Filter [/FlateDecode /ASCIIHexDecode]
+/Length ` + fmt.Sprintf("%d", len(encoded)) + ` 
+>>
+stream
+` + string(encoded) + `endstream
+endobj`
+
+	parser := PdfParser{}
+	parser.reader = makeReaderForText(rawText)
+
+	obj, err := parser.ParseIndirectObject()
+	if err != nil {
+		t.Errorf("Invalid stream object (%s)", err)
+		return
+	}
+
+	stream, ok := obj.(*PdfObjectStream)
+	if !ok {
+		t.Errorf("Not a valid pdf stream")
+		return
+	}
+
+	common.Log.Debug("%q", stream)
+	dict := stream.PdfObjectDictionary
+	common.Log.Debug("dict: %q", dict)
+
+	if len(stream.Stream) != len(encoded) {
+		t.Errorf("Length not %d (%d)", len(encoded), len(stream.Stream))
+		return
+	}
+
+	bdec, err := DecodeStream(stream)
+	if err != nil {
+		t.Errorf("Failed to decode stream (%s)", err)
+		return
+	}
+
+	common.Log.Debug("Stream: %s", stream.Stream)
+	common.Log.Debug("Decoded stream: % x", bdec)
+
+	if !compareSlices(bdec, expected) {
+		common.Log.Debug("Expected: % x", expected)
 		t.Errorf("decoded != expected")
 		return
 	}

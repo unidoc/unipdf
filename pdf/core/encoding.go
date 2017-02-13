@@ -25,11 +25,20 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+const (
+	StreamEncodingFilterNameFlate    = "FlateDecode"
+	StreamEncodingFilterNameLZW      = "LZWDecode"
+	StreamEncodingFilterNameASCIIHex = "ASCIIHexDecode"
+)
+
 type StreamEncoder interface {
+	GetFilterName() string
+	MakeDecodeParams() PdfObject
+	MakeStreamDict() *PdfObjectDictionary
+
 	EncodeBytes(data []byte) ([]byte, error)
 	DecodeBytes(encoded []byte) ([]byte, error)
 	DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
-	MakeEncodingDict() *PdfObjectDictionary
 }
 
 // Flate encoding.
@@ -57,20 +66,40 @@ func NewFlateEncoder() *FlateEncoder {
 	return encoder
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
-// Has the Filter set and the DecodeParms.
-func (this *FlateEncoder) MakeEncodingDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
+func (this *FlateEncoder) GetFilterName() string {
+	return "FlateDecode"
+}
 
-	dict["Filter"] = MakeName("FlateDecode")
-
+func (this *FlateEncoder) MakeDecodeParams() PdfObject {
 	if this.Predictor > 1 {
 		decodeParams := PdfObjectDictionary{}
 		decodeParams["Predictor"] = MakeInteger(int64(this.Predictor))
-		decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
-		decodeParams["Columns"] = MakeInteger(int64(this.Columns))
-		decodeParams["Colors"] = MakeInteger(int64(this.BitsPerComponent))
-		dict["DecodeParms"] = &decodeParams
+
+		// Only add if not default option.
+		if this.BitsPerComponent != 8 {
+			decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
+		}
+		if this.Columns != 1 {
+			decodeParams["Columns"] = MakeInteger(int64(this.Columns))
+		}
+		if this.Colors != 1 {
+			decodeParams["Colors"] = MakeInteger(int64(this.Colors))
+		}
+		return &decodeParams
+	}
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+// Has the Filter set and the DecodeParms.
+func (this *FlateEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := PdfObjectDictionary{}
+
+	dict["Filter"] = MakeName(this.GetFilterName())
+
+	decodeParams := this.MakeDecodeParams()
+	if decodeParams != nil {
+		dict["DecodeParms"] = decodeParams
 	}
 
 	return &dict
@@ -78,7 +107,7 @@ func (this *FlateEncoder) MakeEncodingDict() *PdfObjectDictionary {
 
 // Create a new flate decoder from a stream object, getting all the encoding parameters
 // from the DecodeParms stream object dictionary entry.
-func newFlateEncoderFromStream(streamObj *PdfObjectStream) (*FlateEncoder, error) {
+func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*FlateEncoder, error) {
 	encoder := NewFlateEncoder()
 
 	encDict := streamObj.PdfObjectDictionary
@@ -87,17 +116,21 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream) (*FlateEncoder, error
 		return encoder, nil
 	}
 
-	obj := (*encDict)["DecodeParms"]
-	if obj == nil {
-		// No decode parameters (optional).
-		return encoder, nil
+	// If decodeParams not provided, see if we can get from the stream.
+	if decodeParams == nil {
+		obj := (*encDict)["DecodeParms"]
+		if obj != nil {
+			dp, isDict := obj.(*PdfObjectDictionary)
+			if !isDict {
+				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
+				return nil, fmt.Errorf("Invalid DecodeParms")
+			}
+			decodeParams = dp
+		}
 	}
-
-	decodeParams, isDict := obj.(*PdfObjectDictionary)
-	if !isDict {
-		common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
-		// No decode parameters.
-		return nil, fmt.Errorf("Invalid DecodeParms")
+	if decodeParams == nil {
+		// Can safely return here if no decode params, as the following depend on the decode params.
+		return encoder, nil
 	}
 
 	common.Log.Debug("decode params: %s", decodeParams.String())
@@ -317,20 +350,40 @@ func NewLZWEncoder() *LZWEncoder {
 	return encoder
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
-// Has the Filter set and the DecodeParms.
-func (this *LZWEncoder) MakeEncodingDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
+func (this *LZWEncoder) GetFilterName() string {
+	return "LZWDecode"
+}
 
-	dict["Filter"] = MakeName("LZWDecode")
-
+func (this *LZWEncoder) MakeDecodeParams() PdfObject {
 	if this.Predictor > 1 {
 		decodeParams := PdfObjectDictionary{}
 		decodeParams["Predictor"] = MakeInteger(int64(this.Predictor))
-		decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
-		decodeParams["Columns"] = MakeInteger(int64(this.Columns))
-		decodeParams["Colors"] = MakeInteger(int64(this.BitsPerComponent))
-		dict["DecodeParms"] = &decodeParams
+
+		// Only add if not default option.
+		if this.BitsPerComponent != 8 {
+			decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
+		}
+		if this.Columns != 1 {
+			decodeParams["Columns"] = MakeInteger(int64(this.Columns))
+		}
+		if this.Colors != 1 {
+			decodeParams["Colors"] = MakeInteger(int64(this.Colors))
+		}
+		return &decodeParams
+	}
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+// Has the Filter set and the DecodeParms.
+func (this *LZWEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := PdfObjectDictionary{}
+
+	dict["Filter"] = MakeName(this.GetFilterName())
+
+	decodeParams := this.MakeDecodeParams()
+	if decodeParams != nil {
+		dict["DecodeParms"] = decodeParams
 	}
 
 	dict["EarlyChange"] = MakeInteger(int64(this.EarlyChange))
@@ -340,7 +393,7 @@ func (this *LZWEncoder) MakeEncodingDict() *PdfObjectDictionary {
 
 // Create a new LZW encoder/decoder from a stream object, getting all the encoding parameters
 // from the DecodeParms stream object dictionary entry.
-func newLZWEncoderFromStream(streamObj *PdfObjectStream) (*LZWEncoder, error) {
+func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*LZWEncoder, error) {
 	// Start with default settings.
 	encoder := NewLZWEncoder()
 
@@ -350,16 +403,17 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream) (*LZWEncoder, error) {
 		return encoder, nil
 	}
 
-	obj := (*encDict)["DecodeParms"]
-	if obj == nil {
-		// No decode parameters (optional).
-		return encoder, nil
-	}
-
-	decodeParams, isDict := obj.(*PdfObjectDictionary)
-	if !isDict {
-		common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
-		return nil, fmt.Errorf("Invalid DecodeParms")
+	// If decodeParams not provided, see if we can get from the stream.
+	if decodeParams == nil {
+		obj := (*encDict)["DecodeParms"]
+		if obj != nil {
+			dp, isDict := obj.(*PdfObjectDictionary)
+			if !isDict {
+				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
+				return nil, fmt.Errorf("Invalid DecodeParms")
+			}
+			decodeParams = dp
+		}
 	}
 
 	// The EarlyChange indicates when to increase code length, as different
@@ -378,6 +432,12 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream) (*LZWEncoder, error) {
 		}
 
 		encoder.EarlyChange = int(*earlyChange)
+	}
+
+	if decodeParams == nil {
+		// No decode parameters. Can safely return here if not set as the following options
+		// are related to the decode Params.
+		return encoder, nil
 	}
 
 	obj, has = (*decodeParams)["Predictor"]
@@ -592,12 +652,19 @@ func NewASCIIHexEncoder() *ASCIIHexEncoder {
 	return encoder
 }
 
+func (this *ASCIIHexEncoder) GetFilterName() string {
+	return "ASCIIHexDecode"
+}
+
+func (this *ASCIIHexEncoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
 // Make a new instance of an encoding dictionary for a stream object.
-// Has the Filter set and the DecodeParms.
-func (this *ASCIIHexEncoder) MakeEncodingDict() *PdfObjectDictionary {
+func (this *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := PdfObjectDictionary{}
 
-	dict["Filter"] = MakeName("ASCIIHexDecode")
+	dict["Filter"] = MakeName(this.GetFilterName())
 	return &dict
 }
 
@@ -659,7 +726,16 @@ func NewRawEncoder() *RawEncoder {
 	return &RawEncoder{}
 }
 
-func (this *RawEncoder) MakeEncodingDict() *PdfObjectDictionary {
+func (this *RawEncoder) GetFilterName() string {
+	return ""
+}
+
+func (this *RawEncoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *RawEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return &PdfObjectDictionary{}
 }
 
@@ -673,4 +749,205 @@ func (this *RawEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 
 func (this *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
+}
+
+//
+// Multi encoder: support serial encoding.
+//
+type MultiEncoder struct {
+	// Encoders in the order that they are to be applied.
+	encoders []StreamEncoder
+}
+
+func NewMultiEncoder() *MultiEncoder {
+	encoder := MultiEncoder{}
+	encoder.encoders = []StreamEncoder{}
+
+	return &encoder
+}
+
+func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error) {
+	mencoder := NewMultiEncoder()
+
+	encDict := streamObj.PdfObjectDictionary
+	if encDict == nil {
+		// No encoding dictionary.
+		return mencoder, nil
+	}
+
+	// Prepare the decode params array (one for each filter type)
+	var decodeParamsDict *PdfObjectDictionary
+	decodeParamsArray := []PdfObject{}
+	obj := (*encDict)["DecodeParms"]
+	if obj != nil {
+		// If it is a dictionary, assume it applies to all
+		dict, isDict := obj.(*PdfObjectDictionary)
+		if isDict {
+			decodeParamsDict = dict
+		}
+
+		// If it is an array, assume there is one for each
+		arr, isArray := obj.(*PdfObjectArray)
+		if isArray {
+			for _, dictObj := range *arr {
+				if dict, is := dictObj.(*PdfObjectDictionary); is {
+					decodeParamsArray = append(decodeParamsArray, dict)
+				} else {
+					decodeParamsArray = append(decodeParamsArray, nil)
+				}
+			}
+		}
+	}
+
+	obj = (*encDict)["Filter"]
+	if obj == nil {
+		return nil, fmt.Errorf("Filter missing")
+	}
+
+	array, ok := obj.(*PdfObjectArray)
+	if !ok {
+		return nil, fmt.Errorf("Multi filter can only be made from array")
+	}
+
+	for idx, obj := range *array {
+		name, ok := obj.(*PdfObjectName)
+		if !ok {
+			return nil, fmt.Errorf("Multi filter array element not a name")
+		}
+
+		var dp PdfObject
+
+		// If decode params dict is set, use it.  Otherwise take from array..
+		if decodeParamsDict != nil {
+			dp = decodeParamsDict
+		} else {
+			if idx >= len(decodeParamsArray) {
+				return nil, fmt.Errorf("Missing elements in decode params array")
+			}
+			dp = decodeParamsArray[idx]
+		}
+
+		var dParams *PdfObjectDictionary
+		if dict, is := dp.(*PdfObjectDictionary); is {
+			dParams = dict
+		}
+
+		if *name == StreamEncodingFilterNameFlate {
+			// XXX: need to separate out the DecodeParms..
+			encoder, err := newFlateEncoderFromStream(streamObj, dParams)
+			if err != nil {
+				return nil, err
+			}
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameLZW {
+			encoder, err := newLZWEncoderFromStream(streamObj, dParams)
+			if err != nil {
+				return nil, err
+			}
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameASCIIHex {
+			encoder := NewASCIIHexEncoder()
+			mencoder.AddEncoder(encoder)
+		} else {
+			return nil, fmt.Errorf("Invalid filter in multi filter array")
+		}
+	}
+
+	return mencoder, nil
+}
+
+func (this *MultiEncoder) GetFilterName() string {
+	name := ""
+	for idx, encoder := range this.encoders {
+		name += encoder.GetFilterName()
+		if idx < len(this.encoders)-1 {
+			name += " "
+		}
+	}
+	return name
+}
+
+func (this *MultiEncoder) MakeDecodeParams() PdfObject {
+	if len(this.encoders) == 0 {
+		return nil
+	}
+
+	if len(this.encoders) == 1 {
+		return this.encoders[0].MakeDecodeParams()
+	}
+
+	array := PdfObjectArray{}
+	for _, encoder := range this.encoders {
+		decodeParams := encoder.MakeDecodeParams()
+		if decodeParams == nil {
+			array = append(array, MakeNull())
+		} else {
+			array = append(array, decodeParams)
+		}
+	}
+
+	return &array
+}
+
+func (this *MultiEncoder) AddEncoder(encoder StreamEncoder) {
+	this.encoders = append(this.encoders, encoder)
+}
+
+func (this *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := PdfObjectDictionary{}
+
+	dict["Filter"] = MakeName(this.GetFilterName())
+
+	// Pass all values from children, except Filter and DecodeParms.
+	for _, encoder := range this.encoders {
+		encDict := encoder.MakeStreamDict()
+		for key, val := range *encDict {
+			if key != "Filter" && key != "DecodeParms" {
+				dict[key] = val
+			}
+		}
+	}
+
+	// Make the decode params array or dict.
+	decodeParams := this.MakeDecodeParams()
+	if decodeParams != nil {
+		dict["DecodeParms"] = decodeParams
+	}
+
+	return &dict
+}
+
+func (this *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	decoded := encoded
+	var err error
+	// Apply in inverse order.
+	for i := len(this.encoders) - 1; i >= 0; i-- {
+		encoder := this.encoders[i]
+
+		decoded, err = encoder.DecodeBytes(decoded)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return decoded, nil
+}
+
+func (this *MultiEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return this.DecodeBytes(streamObj.Stream)
+}
+
+func (this *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	encoded := data
+	var err error
+
+	// Apply in inverse order.
+	for _, encoder := range this.encoders {
+		encoded, err = encoder.EncodeBytes(encoded)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return encoded, nil
 }

@@ -673,7 +673,7 @@ func (this *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder)
 		stream := &PdfObjectStream{}
 
 		// Make a new stream dict based on the encoding parameters.
-		sDict := encoder.MakeEncodingDict()
+		sDict := encoder.MakeStreamDict()
 
 		encoded, err := encoder.EncodeBytes([]byte(cStream))
 		if err != nil {
