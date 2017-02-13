@@ -651,7 +651,56 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) {
 		contArray = append(contArray, &stream)
 		this.Contents = &contArray
 	}
+}
 
+// Set the content streams based on a string array.  Will make 1 object stream
+// for each string and reference from the page Contents.  Each stream will be
+// encoded using the encoding specified by the StreamEncoder, if empty, will
+// use identity encoding (raw data).
+func (this *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) error {
+	if len(cStreams) == 0 {
+		this.Contents = nil
+		return nil
+	}
+
+	// If encoding is not set, use default raw encoder.
+	if encoder == nil {
+		encoder = NewRawEncoder()
+	}
+
+	streamObjs := []*PdfObjectStream{}
+	for _, cStream := range cStreams {
+		stream := &PdfObjectStream{}
+
+		// Make a new stream dict based on the encoding parameters.
+		sDict := encoder.MakeEncodingDict()
+
+		encoded, err := encoder.EncodeBytes([]byte(cStream))
+		if err != nil {
+			return err
+		}
+
+		(*sDict)["Length"] = MakeInteger(int64(len(encoded)))
+
+		stream.PdfObjectDictionary = sDict
+		stream.Stream = []byte(encoded)
+
+		streamObjs = append(streamObjs, stream)
+	}
+
+	// Set the page contents.
+	// Point directly to the object stream if only one, or embed in an array.
+	if len(streamObjs) == 1 {
+		this.Contents = streamObjs[0]
+	} else {
+		contArray := PdfObjectArray{}
+		for _, streamObj := range streamObjs {
+			contArray = append(contArray, streamObj)
+		}
+		this.Contents = &contArray
+	}
+
+	return nil
 }
 
 func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
