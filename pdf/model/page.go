@@ -758,6 +758,7 @@ type PdfPageResources struct {
 	XObject    PdfObject
 	Font       PdfObject
 	ProcSet    PdfObject
+	Properties PdfObject
 	// Primitive.
 	primitive *PdfObjectDictionary
 }
@@ -792,6 +793,9 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 	if obj, isDefined := (*dict)["ProcSet"]; isDefined {
 		r.ProcSet = obj
 	}
+	if obj, isDefined := (*dict)["Properties"]; isDefined {
+		r.Properties = obj
+	}
 
 	return r, nil
 }
@@ -809,6 +813,7 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	d.SetIfNotNil("XObject", r.XObject)
 	d.SetIfNotNil("Font", r.Font)
 	d.SetIfNotNil("ProcSet", r.ProcSet)
+	d.SetIfNotNil("Properties", r.Properties)
 	return d
 }
 

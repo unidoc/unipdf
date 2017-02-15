@@ -737,6 +737,7 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			}
 
 			this.skipSpaces()
+			this.skipComments()
 			common.Log.Debug("Reading trailer dict!")
 			common.Log.Debug("peek: \"%s\"", txt)
 			trailer, err = this.ParseDict()

@@ -721,6 +721,28 @@ func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	return page, nil
 }
 
+// Get optional content properties
+func (this *PdfReader) GetOCProperties() (PdfObject, error) {
+	dict := this.catalog
+	obj := (*dict)["OCProperties"]
+	var err error
+	obj, err = this.traceToObject(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve all references...
+	// Should be pretty safe. Should not be referencing to pages or
+	// any large structures.  Local structures and references
+	// to OC Groups.
+	err = this.traverseObjectData(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
 // Inspect the object types, subtypes and content in the PDF file.
 func (this *PdfReader) Inspect() (map[string]int, error) {
 	return this.parser.Inspect()

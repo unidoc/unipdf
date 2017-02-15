@@ -127,6 +127,20 @@ func NewPdfWriter() PdfWriter {
 	return w
 }
 
+// Set the optional content properties.
+func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
+	dict := this.catalog
+
+	if ocProperties != nil {
+		common.Log.Debug("Setting OC Properties...")
+		(*dict)["OCProperties"] = ocProperties
+		// Any risk of infinite loops?
+		this.addObjects(ocProperties)
+	}
+
+	return nil
+}
+
 func (this *PdfWriter) hasObject(obj PdfObject) bool {
 	// Check if already added.
 	for _, o := range this.objects {
