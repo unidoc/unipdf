@@ -90,6 +90,11 @@ func (this *ContentStreamInlineImage) DefaultWriteString() string {
 	return output.String()
 }
 
+// Export the inline image to Image which can be transformed or exported easily.
+func (this *ContentStreamInlineImage) ToImage() (*Image, error) {
+	return nil, fmt.Errorf("Not implemented yet")
+}
+
 // Parse an inline image from a content stream, both read its properties and
 // binary data.
 // When called, "BI" has already been read from the stream.  This function

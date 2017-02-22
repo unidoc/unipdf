@@ -748,11 +748,61 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 	}
 }
 
+type PdfPageResourcesColorspaces struct {
+	Names       []string
+	Colorspaces map[string]PdfColorspace
+
+	container *PdfIndirectObject
+}
+
+func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
+	colorspaces := &PdfPageResourcesColorspaces{}
+
+	if indObj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
+		colorspaces.container = indObj
+		obj = indObj.PdfObject
+	}
+
+	dict, ok := obj.(*PdfObjectDictionary)
+	if !ok {
+		return nil, errors.New("CS attribute type error")
+	}
+
+	colorspaces.Names = []string{}
+	colorspaces.Colorspaces = map[string]PdfColorspace{}
+
+	for csName, csObj := range *dict {
+		colorspaces.Names = append(colorspaces.Names, string(csName))
+		cs, err := newPdfColorspaceFromPdfObject(csObj)
+		if err != nil {
+			return nil, err
+		}
+		colorspaces.Colorspaces[string(csName)] = cs
+	}
+
+	return colorspaces, nil
+}
+
+func (this *PdfPageResourcesColorspaces) ToPdfObject() PdfObject {
+	dict := &PdfObjectDictionary{}
+	for _, csName := range this.Names {
+		(*dict)[PdfObjectName(csName)] = this.Colorspaces[csName].ToPdfObject()
+	}
+
+	if this.container != nil {
+		this.container.PdfObject = dict
+		return this.container
+	}
+
+	return dict
+}
+
 // Page resources model.
 // Implements PdfModel.
 type PdfPageResources struct {
-	ExtGState  PdfObject
-	ColorSpace PdfObject
+	ExtGState PdfObject
+	//ColorSpace PdfObject
+	ColorSpace *PdfPageResourcesColorspaces
 	Pattern    PdfObject
 	Shading    PdfObject
 	XObject    PdfObject
@@ -776,7 +826,13 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 		r.ExtGState = obj
 	}
 	if obj, isDefined := (*dict)["ColorSpace"]; isDefined {
-		r.ColorSpace = obj
+		//r.ColorSpace = obj
+
+		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
+		if err != nil {
+			return nil, err
+		}
+		r.ColorSpace = colorspaces
 	}
 	if obj, isDefined := (*dict)["Pattern"]; isDefined {
 		r.Pattern = obj
@@ -807,197 +863,15 @@ func (r *PdfPageResources) GetContainingPdfObject() PdfObject {
 func (r *PdfPageResources) ToPdfObject() PdfObject {
 	d := r.primitive
 	d.SetIfNotNil("ExtGState", r.ExtGState)
-	d.SetIfNotNil("ColorSpace", r.ColorSpace)
+	if r.ColorSpace != nil {
+		d.SetIfNotNil("ColorSpace", r.ColorSpace.ToPdfObject())
+	}
 	d.SetIfNotNil("Pattern", r.Pattern)
 	d.SetIfNotNil("Shading", r.Shading)
 	d.SetIfNotNil("XObject", r.XObject)
 	d.SetIfNotNil("Font", r.Font)
 	d.SetIfNotNil("ProcSet", r.ProcSet)
 	d.SetIfNotNil("Properties", r.Properties)
+
 	return d
-}
-
-// XObjectImage (Table 89 in 8.9.5.1).
-// Implements PdfModel interface.
-type XObjectImage struct {
-	Width            *int64
-	Height           *int64
-	ColorSpace       PdfObject
-	BitsPerComponent *int64
-	Intent           PdfObject
-	ImageMask        PdfObject
-	Mask             PdfObject
-	Decode           PdfObject
-	Interpolate      PdfObject
-	Alternatives     PdfObject
-	SMask            PdfObject
-	SMaskInData      PdfObject
-	Name             PdfObject
-	StructParent     PdfObject
-	ID               PdfObject
-	OPI              PdfObject
-	Metadata         PdfObject
-	OC               PdfObject
-	Stream           []byte
-	// Primitive
-	primitive *PdfObjectStream
-}
-
-func NewXObjectImage() *XObjectImage {
-	xobj := &XObjectImage{}
-	stream := &PdfObjectStream{}
-	stream.PdfObjectDictionary = &PdfObjectDictionary{}
-	xobj.primitive = stream
-	return xobj
-}
-
-// Creates a new XObject Image from an image object with default
-// options.
-func NewXObjectImageFromImage(name PdfObjectName, img *Image) (*XObjectImage, error) {
-	xobj := NewXObjectImage()
-
-	xobj.Name = &name
-	xobj.Stream = img.Data.Bytes()
-
-	// Width and height.
-	imWidth := img.Width
-	imHeight := img.Height
-	xobj.Width = &imWidth
-	xobj.Height = &imHeight
-
-	// Bits.
-	bitDepth := int64(8)
-	xobj.BitsPerComponent = &bitDepth
-
-	xobj.ColorSpace = MakeName("DeviceRGB")
-
-	return xobj, nil
-}
-
-// Build the image xobject from a stream object.
-func NewXObjectImageFromStream(stream PdfObjectStream) (*XObjectImage, error) {
-	img := NewXObjectImage()
-
-	dict := *(stream.PdfObjectDictionary)
-
-	if obj, isDefined := dict["Width"]; isDefined {
-		iObj, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, errors.New("Invalid image width object")
-		}
-		iVal := int64(*iObj)
-		img.Width = &iVal
-	}
-
-	if obj, isDefined := dict["Height"]; isDefined {
-		iObj, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, errors.New("Invalid image height object")
-		}
-		iVal := int64(*iObj)
-		img.Height = &iVal
-	}
-
-	if obj, isDefined := dict["ColorSpace"]; isDefined {
-		img.ColorSpace = obj
-	}
-
-	if obj, isDefined := dict["BitsPerComponent"]; isDefined {
-		iObj, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, errors.New("Invalid image height object")
-		}
-		iVal := int64(*iObj)
-		img.BitsPerComponent = &iVal
-	}
-
-	if obj, isDefined := dict["Intent"]; isDefined {
-		img.Intent = obj
-	}
-	if obj, isDefined := dict["ImageMask"]; isDefined {
-		img.ImageMask = obj
-	}
-	if obj, isDefined := dict["Mask"]; isDefined {
-		img.Mask = obj
-	}
-	if obj, isDefined := dict["Decode"]; isDefined {
-		img.Decode = obj
-	}
-	if obj, isDefined := dict["Interpolate"]; isDefined {
-		img.Interpolate = obj
-	}
-	if obj, isDefined := dict["Alternatives"]; isDefined {
-		img.Alternatives = obj
-	}
-	if obj, isDefined := dict["SMask"]; isDefined {
-		img.SMask = obj
-	}
-	if obj, isDefined := dict["SMaskInData"]; isDefined {
-		img.SMaskInData = obj
-	}
-	if obj, isDefined := dict["Name"]; isDefined {
-		img.Name = obj
-	}
-	if obj, isDefined := dict["StructParent"]; isDefined {
-		img.StructParent = obj
-	}
-	if obj, isDefined := dict["ID"]; isDefined {
-		img.ID = obj
-	}
-	if obj, isDefined := dict["OPI"]; isDefined {
-		img.OPI = obj
-	}
-	if obj, isDefined := dict["Metadata"]; isDefined {
-		img.Metadata = obj
-	}
-	if obj, isDefined := dict["OC"]; isDefined {
-		img.OC = obj
-	}
-
-	img.Stream = stream.Stream
-
-	return img, nil
-}
-
-func (ximg *XObjectImage) GetContainingPdfObject() PdfObject {
-	return ximg.primitive
-}
-
-// Return a stream object.
-func (ximg *XObjectImage) ToPdfObject() PdfObject {
-	stream := ximg.primitive
-	stream.Stream = ximg.Stream
-
-	dict := stream.PdfObjectDictionary
-
-	dict.Set("Type", MakeName("XObject"))
-	dict.Set("Subtype", MakeName("Image"))
-	dict.Set("Width", MakeInteger(*(ximg.Width)))
-	dict.Set("Height", MakeInteger(*(ximg.Height)))
-	dict.Set("Filter", MakeName("DCTDecode"))
-
-	if ximg.BitsPerComponent != nil {
-		dict.Set("BitsPerComponent", MakeInteger(*(ximg.BitsPerComponent)))
-	}
-
-	dict.SetIfNotNil("ColorSpace", ximg.ColorSpace)
-	dict.SetIfNotNil("Intent", ximg.Intent)
-	dict.SetIfNotNil("ImageMask", ximg.ImageMask)
-	dict.SetIfNotNil("Mask", ximg.Mask)
-	dict.SetIfNotNil("Decode", ximg.Decode)
-	dict.SetIfNotNil("Interpolate", ximg.Interpolate)
-	dict.SetIfNotNil("Alternatives", ximg.Alternatives)
-	dict.SetIfNotNil("SMask", ximg.SMask)
-	dict.SetIfNotNil("SMaskInData", ximg.SMaskInData)
-	dict.SetIfNotNil("Name", ximg.Name)
-	dict.SetIfNotNil("StructParent", ximg.StructParent)
-	dict.SetIfNotNil("ID", ximg.ID)
-	dict.SetIfNotNil("OPI", ximg.OPI)
-	dict.SetIfNotNil("Metadata", ximg.Metadata)
-	dict.SetIfNotNil("OC", ximg.OC)
-
-	dict.Set("Length", MakeInteger(int64(len(ximg.Stream))))
-	stream.Stream = ximg.Stream
-
-	return stream
 }

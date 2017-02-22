@@ -34,8 +34,13 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 
 		if len(*array) != 1 {
 			menc, err := newMultiEncoderFromStream(streamObj)
+			if err != nil {
+				common.Log.Error("Failed creating multi encoder: %v", err)
+				return nil, err
+			}
+
 			common.Log.Debug("Multi enc: %s\n", menc)
-			return menc, err
+			return menc, nil
 		}
 
 		// Single element.

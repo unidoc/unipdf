@@ -59,6 +59,14 @@ func MakeInteger(val int64) *PdfObjectInteger {
 	return &num
 }
 
+func MakeArray(objects ...PdfObject) *PdfObjectArray {
+	array := PdfObjectArray{}
+	for _, obj := range objects {
+		array = append(array, obj)
+	}
+	return &array
+}
+
 func MakeFloat(val float64) *PdfObjectFloat {
 	num := PdfObjectFloat(val)
 	return &num
@@ -162,6 +170,36 @@ func (this *PdfObjectName) DefaultWriteString() string {
 	return output.String()
 }
 
+func (this *PdfObjectArray) ToFloat64Array() ([]float64, error) {
+	vals := []float64{}
+
+	for _, obj := range *this {
+		if number, is := obj.(*PdfObjectInteger); is {
+			vals = append(vals, float64(*number))
+		} else if number, is := obj.(*PdfObjectFloat); is {
+			vals = append(vals, float64(*number))
+		} else {
+			return nil, fmt.Errorf("Type error")
+		}
+	}
+
+	return vals, nil
+}
+
+func (this *PdfObjectArray) ToIntegerArray() ([]int, error) {
+	vals := []int{}
+
+	for _, obj := range *this {
+		if number, is := obj.(*PdfObjectInteger); is {
+			vals = append(vals, int(*number))
+		} else {
+			return nil, fmt.Errorf("Type error")
+		}
+	}
+
+	return vals, nil
+}
+
 func (this *PdfObjectArray) String() string {
 	outStr := "["
 	for ind, o := range *this {
@@ -186,6 +224,39 @@ func (this *PdfObjectArray) DefaultWriteString() string {
 	return outStr
 }
 
+func (this *PdfObjectArray) Append(obj PdfObject) {
+	*this = append(*this, obj)
+}
+
+func getNumberAsFloat(obj PdfObject) (float64, error) {
+	if fObj, ok := obj.(*PdfObjectFloat); ok {
+		return float64(*fObj), nil
+	}
+
+	if iObj, ok := obj.(*PdfObjectInteger); ok {
+		return float64(*iObj), nil
+	}
+
+	return 0, fmt.Errorf("Not a number")
+}
+
+// For numeric array: Get the array in []float64 slice representation.
+// Will return error if not entirely numeric.
+func (this *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
+	slice := []float64{}
+
+	for _, obj := range *this {
+		obj := TraceToDirectObject(obj)
+		number, err := getNumberAsFloat(obj)
+		if err != nil {
+			return nil, fmt.Errorf("Array element not a number")
+		}
+		slice = append(slice, number)
+	}
+
+	return slice, nil
+}
+
 func (this *PdfObjectDictionary) String() string {
 	outStr := "Dict("
 	for k, v := range *this {
@@ -198,7 +269,7 @@ func (this *PdfObjectDictionary) String() string {
 func (this *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
 	for k, v := range *this {
-		common.Log.Debug("Writing k: %s %T", k, v)
+		common.Log.Debug("Writing k: %s %T %v %v", k, v, k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "
 		outStr += v.DefaultWriteString()
@@ -259,11 +330,19 @@ func (this *PdfObjectNull) DefaultWriteString() string {
 //
 // Note: This function does not trace/resolve references.
 // That needs to be done beforehand.
+const TraceMaxDepth = 20
+
 func TraceToDirectObject(obj PdfObject) PdfObject {
 	iobj, isIndirectObj := obj.(*PdfIndirectObject)
+	depth := 0
 	for isIndirectObj == true {
 		obj = iobj.PdfObject
 		iobj, isIndirectObj = obj.(*PdfIndirectObject)
+		depth++
+		if depth > TraceMaxDepth {
+			common.Log.Error("Trace depth level beyond 20 - error!")
+			return nil
+		}
 	}
 	return obj
 }

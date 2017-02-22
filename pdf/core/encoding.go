@@ -776,6 +776,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 	}
 
 	// Prepare the decode params array (one for each filter type)
+	// Optional, not always present.
 	var decodeParamsDict *PdfObjectDictionary
 	decodeParamsArray := []PdfObject{}
 	obj := (*encDict)["DecodeParms"]
@@ -821,10 +822,14 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		if decodeParamsDict != nil {
 			dp = decodeParamsDict
 		} else {
-			if idx >= len(decodeParamsArray) {
-				return nil, fmt.Errorf("Missing elements in decode params array")
+			// Only get the dp if provided.  Oftentimes there is no decode params dict
+			// provided.
+			if len(decodeParamsArray) > 0 {
+				if idx >= len(decodeParamsArray) {
+					return nil, fmt.Errorf("Missing elements in decode params array")
+				}
+				dp = decodeParamsArray[idx]
 			}
-			dp = decodeParamsArray[idx]
 		}
 
 		var dParams *PdfObjectDictionary
@@ -849,6 +854,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			encoder := NewASCIIHexEncoder()
 			mencoder.AddEncoder(encoder)
 		} else {
+			common.Log.Error("Unsupported filter %s", *name)
 			return nil, fmt.Errorf("Invalid filter in multi filter array")
 		}
 	}

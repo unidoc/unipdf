@@ -183,7 +183,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
 		common.Log.Debug("Stream")
-		common.Log.Debug("- %s", obj)
+		common.Log.Debug("- %s %p", obj, obj)
 		if this.addObject(so) {
 			err := this.addObjects(so.PdfObjectDictionary)
 			if err != nil {
@@ -477,6 +477,8 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		return
 	}
 
+	// XXX/TODO: Add a default encoder if Filter not specified?
+	// Still need to make sure is encrypted.
 	if pobj, isStream := obj.(*PdfObjectStream); isStream {
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
