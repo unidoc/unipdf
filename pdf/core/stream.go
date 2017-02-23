@@ -57,10 +57,12 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		return NewASCIIHexEncoder(), nil
 	} else if *method == StreamEncodingFilterNameLZW {
 		return newLZWEncoderFromStream(streamObj, nil)
+	} else if *method == StreamEncodingFilterNameASCII85 {
+		return NewASCII85Encoder(), nil
+	} else {
+		common.Log.Debug("ERROR: Unsupported encoding method!")
+		return nil, fmt.Errorf("Unsupported encoding method (%s)", *method)
 	}
-
-	common.Log.Debug("ERROR: Unsupported encoding method!")
-	return nil, fmt.Errorf("Unsupported encoding method (%s)", *method)
 }
 
 // Decodes the stream.

@@ -6,6 +6,7 @@
 package core
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -87,6 +88,101 @@ func TestASCIIHexEncoding(t *testing.T) {
 		t.Errorf("Expected (%d): %s", len(expected), expected)
 		t.Errorf("Encoded  (%d): %s", len(encoded), encoded)
 		return
+	}
+}
+
+// ASCII85.
+func TestASCII85EncodingWikipediaExample(t *testing.T) {
+	expected := `Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure.`
+	// Base 64 encoded, Ascii85 encoded version (wikipedia).
+	encodedInBase64 := `OWpxb15CbGJELUJsZUIxREorKitGKGYscS8wSmhLRjxHTD5DakAuNEdwJGQ3RiEsTDdAPDZAKS8wSkRFRjxHJTwrRVY6MkYhLE88REorKi5APCpLMEA8NkwoRGYtXDBFYzVlO0RmZlooRVplZS5CbC45cEYiQUdYQlBDc2krREdtPkAzQkIvRiomT0NBZnUyL0FLWWkoREliOkBGRCwqKStDXVU9QDNCTiNFY1lmOEFURDNzQHE/ZCRBZnRWcUNoW05xRjxHOjgrRVY6LitDZj4tRkQ1VzhBUmxvbERJYWwoRElkPGpAPD8zckA6RiVhK0Q1OCdBVEQ0JEJsQGwzRGU6LC1ESnNgOEFSb0ZiLzBKTUtAcUI0XkYhLFI8QUtaJi1EZlRxQkclRz51RC5SVHBBS1lvJytDVC81K0NlaSNESUk/KEUsOSlvRioyTTcvY34+`
+	encoded, _ := base64.StdEncoding.DecodeString(encodedInBase64)
+
+	encoder := NewASCII85Encoder()
+	enc1, err := encoder.EncodeBytes([]byte(expected))
+	if err != nil {
+		t.Errorf("Fail")
+		return
+	}
+	if string(enc1) != string(encoded) {
+		t.Errorf("ASCII85 encoding wiki example fail")
+		return
+	}
+
+	decoded, err := encoder.DecodeBytes([]byte(encoded))
+	if err != nil {
+		t.Errorf("Fail, error: %v", err)
+		return
+	}
+	if expected != string(decoded) {
+		t.Errorf("Mismatch! '%s' vs '%s'", decoded, expected)
+		return
+	}
+}
+
+func TestASCII85Encoding(t *testing.T) {
+	encoded := `FD,B0+EVmJAKYo'+D#G#De*R"B-:o0+E_a:A0>T(+AbuZ@;]Tu:ddbqAnc'mEr~>`
+	expected := "this type of encoding is used in PS and PDF files"
+
+	encoder := NewASCII85Encoder()
+
+	enc1, err := encoder.EncodeBytes([]byte(expected))
+	if err != nil {
+		t.Errorf("Fail")
+		return
+	}
+	if encoded != string(enc1) {
+		t.Errorf("Encoding error")
+		return
+	}
+
+	decoded, err := encoder.DecodeBytes([]byte(encoded))
+	if err != nil {
+		t.Errorf("Fail, error: %v", err)
+		return
+	}
+	if expected != string(decoded) {
+		t.Errorf("Mismatch! '%s' vs '%s'", decoded, expected)
+		return
+	}
+}
+
+type TestASCII85DecodingTestCase struct {
+	Encoded  string
+	Expected string
+}
+
+func TestASCII85Decoding(t *testing.T) {
+	// Map encoded -> Decoded
+	testcases := []TestASCII85DecodingTestCase{
+		{"z~>", "\x00\x00\x00\x00"},
+		{"z ~>", "\x00\x00\x00\x00"},
+		{"zz~>", "\x00\x00\x00\x00\x00\x00\x00\x00"},
+		{" zz~>", "\x00\x00\x00\x00\x00\x00\x00\x00"},
+		{" z z~>", "\x00\x00\x00\x00\x00\x00\x00\x00"},
+		{" z z ~>", "\x00\x00\x00\x00\x00\x00\x00\x00"},
+		{"+T~>", `!`},
+		{"+`d~>", `!s`},
+		{"+`hr~>", `!sz`},
+		{"+`hsS~>", `!szx`},
+		{"+`hsS+T~>", `!szx!`},
+		{"+ `hs S +T ~>", `!szx!`},
+	}
+
+	encoder := NewASCII85Encoder()
+
+	for _, testcase := range testcases {
+		encoded := testcase.Encoded
+		expected := testcase.Expected
+		decoded, err := encoder.DecodeBytes([]byte(encoded))
+		if err != nil {
+			t.Errorf("Fail, error: %v", err)
+			return
+		}
+		if expected != string(decoded) {
+			t.Errorf("Mismatch! '%s' vs '%s'", decoded, expected)
+			return
+		}
 	}
 }
 

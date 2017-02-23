@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 
@@ -29,6 +30,7 @@ const (
 	StreamEncodingFilterNameFlate    = "FlateDecode"
 	StreamEncodingFilterNameLZW      = "LZWDecode"
 	StreamEncodingFilterNameASCIIHex = "ASCIIHexDecode"
+	StreamEncodingFilterNameASCII85  = "ASCII85Decode"
 )
 
 type StreamEncoder interface {
@@ -67,7 +69,7 @@ func NewFlateEncoder() *FlateEncoder {
 }
 
 func (this *FlateEncoder) GetFilterName() string {
-	return "FlateDecode"
+	return StreamEncodingFilterNameFlate
 }
 
 func (this *FlateEncoder) MakeDecodeParams() PdfObject {
@@ -351,7 +353,7 @@ func NewLZWEncoder() *LZWEncoder {
 }
 
 func (this *LZWEncoder) GetFilterName() string {
-	return "LZWDecode"
+	return StreamEncodingFilterNameLZW
 }
 
 func (this *LZWEncoder) MakeDecodeParams() PdfObject {
@@ -646,14 +648,14 @@ func (this *LZWEncoder) EncodeBytes(data []byte) ([]byte, error) {
 type ASCIIHexEncoder struct {
 }
 
-// Make a new LZW encoder with default parameters.
+// Make a new ASCII hex encoder.
 func NewASCIIHexEncoder() *ASCIIHexEncoder {
 	encoder := &ASCIIHexEncoder{}
 	return encoder
 }
 
 func (this *ASCIIHexEncoder) GetFilterName() string {
-	return "ASCIIHexDecode"
+	return StreamEncodingFilterNameASCIIHex
 }
 
 func (this *ASCIIHexEncoder) MakeDecodeParams() PdfObject {
@@ -714,6 +716,174 @@ func (this *ASCIIHexEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 	encoded.WriteByte('>')
 
+	return encoded.Bytes(), nil
+}
+
+//
+// ASCII85 encoder/decoder.
+//
+type ASCII85Encoder struct {
+}
+
+// Make a new ASCII85 encoder.
+func NewASCII85Encoder() *ASCII85Encoder {
+	encoder := &ASCII85Encoder{}
+	return encoder
+}
+
+func (this *ASCII85Encoder) GetFilterName() string {
+	return StreamEncodingFilterNameASCII85
+}
+
+func (this *ASCII85Encoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := PdfObjectDictionary{}
+
+	dict["Filter"] = MakeName(this.GetFilterName())
+	return &dict
+}
+
+// 5 ASCII characters -> 4 raw binary bytes
+func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	decoded := []byte{}
+
+	i := 0
+	eod := false
+
+	for i < len(encoded) && !eod {
+		codes := [5]byte{0, 0, 0, 0, 0}
+		spaces := 0 // offset due to whitespace.
+		j := 0
+		toWrite := 4
+		for j < 5+spaces {
+			if i+j == len(encoded) {
+				break
+			}
+			code := encoded[i+j]
+			if IsWhiteSpace(code) {
+				// Skip whitespace.
+				spaces++
+				j++
+				continue
+			} else if code == '~' && i+j+1 < len(encoded) && encoded[i+j+1] == '>' {
+				toWrite = (j - spaces) - 1
+				if toWrite < 0 {
+					toWrite = 0
+				}
+				// EOD marker.  Marks end of data.
+				eod = true
+				break
+			} else if code >= '!' && code <= 'u' {
+				// Valid code.
+				code -= '!'
+			} else if code == 'z' && j-spaces == 0 {
+				// 'z' in beginning of the byte sequence means that all 5 codes are 0.
+				// Already all 0 initialized, so can break here.
+				toWrite = 4
+				j++
+				break
+			} else {
+				common.Log.Error("Failed decoding, invalid code")
+				return nil, errors.New("Invalid code encountered")
+			}
+
+			codes[j-spaces] = code
+			j++
+		}
+		i += j
+
+		// Pad with 'u' 84 (unused ones)
+		// Takes care of issues at ends for input data that is not a multiple of 4-bytes.
+		for m := toWrite + 1; m < 5; m++ {
+			codes[m] = 84
+		}
+
+		// Convert to a uint32 value.
+		value := uint32(codes[0])*85*85*85*85 + uint32(codes[1])*85*85*85 + uint32(codes[2])*85*85 + uint32(codes[3])*85 + uint32(codes[4])
+
+		// Convert to 4 bytes.
+		decodedBytes := []byte{
+			byte((value >> 24) & 0xff),
+			byte((value >> 16) & 0xff),
+			byte((value >> 8) & 0xff),
+			byte(value & 0xff)}
+
+		// This accounts for the end of data, where the original data length is not a multiple of 4.
+		// In that case, 0 bytes are assumed but only
+		decoded = append(decoded, decodedBytes[:toWrite]...)
+	}
+
+	return decoded, nil
+}
+
+// ASCII85 stream decoding.
+func (this *ASCII85Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return this.DecodeBytes(streamObj.Stream)
+}
+
+// Convert a base 256 number to a series of base 85 values (5 codes).
+//  85^5 = 4437053125 > 256^4 = 4294967296
+// So 5 base-85 numbers will always be enough to cover 4 base-256 numbers.
+// The base 256 value is already converted to an uint32 value.
+func (this *ASCII85Encoder) base256Tobase85(base256val uint32) [5]byte {
+	base85 := [5]byte{0, 0, 0, 0, 0}
+	remainder := base256val
+	for i := 0; i < 5; i++ {
+		divider := uint32(1)
+		for j := 0; j < 4-i; j++ {
+			divider *= 85
+		}
+		val := remainder / divider
+		remainder = remainder % divider
+		base85[i] = byte(val)
+	}
+	return base85
+}
+
+// Encode data into ASCII85 encoded format.
+func (this *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	var encoded bytes.Buffer
+
+	for i := 0; i < len(data); i += 4 {
+		b1 := data[i]
+		n := 1
+
+		b2 := byte(0)
+		if i+1 < len(data) {
+			b2 = data[i+1]
+			n++
+		}
+
+		b3 := byte(0)
+		if i+2 < len(data) {
+			b3 = data[i+2]
+			n++
+		}
+
+		b4 := byte(0)
+		if i+3 < len(data) {
+			b4 = data[i+3]
+			n++
+		}
+
+		// Convert to a uint32 number.
+		base256 := (uint32(b1) << 24) | (uint32(b2) << 16) | (uint32(b3) << 8) | uint32(b4)
+		if base256 == 0 {
+			encoded.WriteByte('z')
+		} else {
+			base85vals := this.base256Tobase85(base256)
+			for _, val := range base85vals[:n+1] {
+				encoded.WriteByte(val + '!')
+			}
+		}
+	}
+
+	// EOD.
+	encoded.WriteString("~>")
 	return encoded.Bytes(), nil
 }
 
@@ -852,6 +1022,9 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			mencoder.AddEncoder(encoder)
 		} else if *name == StreamEncodingFilterNameASCIIHex {
 			encoder := NewASCIIHexEncoder()
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameASCII85 {
+			encoder := NewASCII85Encoder()
 			mencoder.AddEncoder(encoder)
 		} else {
 			common.Log.Error("Unsupported filter %s", *name)
