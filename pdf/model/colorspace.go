@@ -1023,7 +1023,23 @@ func (this *PdfColorspaceICCBased) ToPdfObject() PdfObject {
 
 func (this *PdfColorspaceICCBased) ToRGB(img Image) (Image, error) {
 	if this.Alternate == nil {
-		return img, errors.New("ICC Based colorspace missing alternative")
+		common.Log.Debug("ICC Based colorspace missing alternative")
+		if this.N == 1 {
+			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceGray (N=1)")
+			grayCS := NewPdfColorspaceDeviceGray()
+			return grayCS.ToRGB(img)
+		} else if this.N == 3 {
+			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceRGB (N=3)")
+			// Already in RGB.
+			return img, nil
+		} else if this.N == 4 {
+			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceCMYK (N=4)")
+			// CMYK
+			cmykCS := NewPdfColorspaceDeviceCMYK()
+			return cmykCS.ToRGB(img)
+		} else {
+			return img, errors.New("ICC Based colorspace missing alternative")
+		}
 	}
 
 	return this.Alternate.ToRGB(img)

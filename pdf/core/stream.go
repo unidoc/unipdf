@@ -53,10 +53,12 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 
 	if *method == StreamEncodingFilterNameFlate {
 		return newFlateEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameASCIIHex {
-		return NewASCIIHexEncoder(), nil
 	} else if *method == StreamEncodingFilterNameLZW {
 		return newLZWEncoderFromStream(streamObj, nil)
+	} else if *method == StreamEncodingFilterNameDCT {
+		return newDCTEncoderFromStream(streamObj)
+	} else if *method == StreamEncodingFilterNameASCIIHex {
+		return NewASCIIHexEncoder(), nil
 	} else if *method == StreamEncodingFilterNameASCII85 {
 		return NewASCII85Encoder(), nil
 	} else {
@@ -85,4 +87,37 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	}
 
 	return decoded, nil
+}
+
+// Encodes the stream.
+// Uses the encoding specified by the object.
+func EncodeStream(streamObj *PdfObjectStream) error {
+	common.Log.Debug("Encode stream")
+
+	encoder, err := NewEncoderFromStream(streamObj)
+	if err != nil {
+		common.Log.Debug("Stream decoding failed: %v", err)
+		return err
+	}
+
+	if lzwenc, is := encoder.(*LZWEncoder); is {
+		// If LZW:
+		// Make sure to use EarlyChange 0.. We do not have write support for 1 yet.
+		lzwenc.EarlyChange = 0
+		(*streamObj.PdfObjectDictionary)["EarlyChange"] = MakeInteger(0)
+	}
+
+	common.Log.Debug("Encoder: %+v\n", encoder)
+	encoded, err := encoder.EncodeBytes(streamObj.Stream)
+	if err != nil {
+		common.Log.Debug("Stream encoding failed: %v", err)
+		return err
+	}
+
+	streamObj.Stream = encoded
+
+	// Update length
+	(*streamObj.PdfObjectDictionary)["Length"] = MakeInteger(int64(len(encoded)))
+
+	return nil
 }

@@ -19,22 +19,23 @@ type XObjectImage struct {
 	Height           *int64
 	ColorSpace       PdfColorspace
 	BitsPerComponent *int64
-	Filter           *PdfObjectName
-	Intent           PdfObject
-	ImageMask        PdfObject
-	Mask             PdfObject
-	Decode           PdfObject
-	Interpolate      PdfObject
-	Alternatives     PdfObject
-	SMask            PdfObject
-	SMaskInData      PdfObject
-	Name             PdfObject
-	StructParent     PdfObject
-	ID               PdfObject
-	OPI              PdfObject
-	Metadata         PdfObject
-	OC               PdfObject
-	Stream           []byte
+	//Filter           *PdfObjectName
+	Filter       StreamEncoder
+	Intent       PdfObject
+	ImageMask    PdfObject
+	Mask         PdfObject
+	Decode       PdfObject
+	Interpolate  PdfObject
+	Alternatives PdfObject
+	SMask        PdfObject
+	SMaskInData  PdfObject
+	Name         PdfObject
+	StructParent PdfObject
+	ID           PdfObject
+	OPI          PdfObject
+	Metadata     PdfObject
+	OC           PdfObject
+	Stream       []byte
 	// Primitive
 	primitive *PdfObjectStream
 }
@@ -80,13 +81,19 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 
 	dict := *(stream.PdfObjectDictionary)
 
-	if obj, isDefined := dict["Filter"]; isDefined {
-		name, ok := obj.(*PdfObjectName)
-		if !ok {
-			return nil, errors.New("Invalid image Filter (not name)")
-		}
-		img.Filter = name
+	encoder, err := NewEncoderFromStream(stream)
+	if err != nil {
+		return nil, err
 	}
+	img.Filter = encoder
+	/*
+		if obj, isDefined := dict["Filter"]; isDefined {
+			name, ok := obj.(*PdfObjectName)
+			if !ok {
+				return nil, errors.New("Invalid image Filter (not name)")
+			}
+			img.Filter = name
+		}*/
 
 	if obj, isDefined := dict["Width"]; isDefined {
 		iObj, ok := obj.(*PdfObjectInteger)
@@ -177,7 +184,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 }
 
 // This will convert to an Image which can be transformed or saved out.
-// The image is returned in RGB colormap.
+// The image data is decoded and the Image returned.
 func (ximg *XObjectImage) ToImage() (*Image, error) {
 	image := &Image{}
 
@@ -202,9 +209,7 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 	}
 	image.Data = decoded
 
-	// Convert to RGB image representation.
-	rgbImage, err := ximg.ColorSpace.ToRGB(*image)
-	return &rgbImage, err
+	return image, nil
 }
 
 func (ximg *XObjectImage) GetContainingPdfObject() PdfObject {
@@ -214,15 +219,19 @@ func (ximg *XObjectImage) GetContainingPdfObject() PdfObject {
 // Return a stream object.
 func (ximg *XObjectImage) ToPdfObject() PdfObject {
 	stream := ximg.primitive
-	stream.Stream = ximg.Stream
 
 	dict := stream.PdfObjectDictionary
-
+	if ximg.Filter != nil {
+		//dict.Set("Filter", ximg.Filter)
+		// Pre-populate the stream dictionary with the
+		// encoding related fields.
+		dict = ximg.Filter.MakeStreamDict()
+		stream.PdfObjectDictionary = dict
+	}
 	dict.Set("Type", MakeName("XObject"))
 	dict.Set("Subtype", MakeName("Image"))
 	dict.Set("Width", MakeInteger(*(ximg.Width)))
 	dict.Set("Height", MakeInteger(*(ximg.Height)))
-	dict.Set("Filter", MakeName("DCTDecode"))
 
 	if ximg.BitsPerComponent != nil {
 		dict.Set("BitsPerComponent", MakeInteger(*(ximg.BitsPerComponent)))

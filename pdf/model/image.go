@@ -7,7 +7,7 @@ package model
 
 import (
 	"bytes"
-	"image"
+	goimage "image"
 	"image/draw"
 	_ "image/gif"
 	"image/jpeg"
@@ -36,11 +36,12 @@ func (this *Image) GetSamples() []uint32 {
 
 // Convert samples to byte-data.
 func (this *Image) SetSamples(samples []uint32) {
-	resampled := sampling.ResampleUint32(samples, 8)
+	resampled := sampling.ResampleUint32(samples, int(this.BitsPerComponent), 8)
 	data := []byte{}
 	for _, val := range resampled {
 		data = append(data, byte(val))
 	}
+
 	this.Data = data
 }
 
@@ -59,7 +60,7 @@ type DefaultImageHandler struct{}
 // colormap and 8 bits per component.
 func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	// Load the image with the native implementation.
-	img, _, err := image.Decode(reader)
+	img, _, err := goimage.Decode(reader)
 	if err != nil {
 		common.Log.Debug("Error decoding file: %s", err)
 		return nil, err
@@ -74,7 +75,7 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
 	b := img.Bounds()
-	m := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	m := goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
 	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
 	err = jpeg.Encode(&buf, m, &opt)
 	if err != nil {

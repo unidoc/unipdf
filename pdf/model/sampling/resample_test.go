@@ -137,7 +137,7 @@ func TestResamplingUint32(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		b := ResampleUint32(testcase.InputData, testcase.BitsPerSample)
+		b := ResampleUint32(testcase.InputData, 32, testcase.BitsPerSample)
 		fmt.Println(b)
 		if !samplesEqual(b, testcase.Expected) {
 			t.Errorf("Test case failed. Got: % d, expected: % d", b, testcase.Expected)

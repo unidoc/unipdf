@@ -17,6 +17,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	goimage "image"
+	gocolor "image/color"
+	"image/jpeg"
 	"io"
 
 	// Need two slightly different implementations of LZW (EarlyChange parameter).
@@ -29,6 +32,7 @@ import (
 const (
 	StreamEncodingFilterNameFlate    = "FlateDecode"
 	StreamEncodingFilterNameLZW      = "LZWDecode"
+	StreamEncodingFilterNameDCT      = "DCTDecode"
 	StreamEncodingFilterNameASCIIHex = "ASCIIHexDecode"
 	StreamEncodingFilterNameASCII85  = "ASCII85Decode"
 )
@@ -422,7 +426,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	// implementations use a different mechanisms. Essentially this chooses
 	// which LZW implementation to use.
 	// The default is 1 (one code early)
-	obj, has := (*decodeParams)["EarlyChange"]
+	obj, has := (*encDict)["EarlyChange"]
 	if has {
 		earlyChange, ok := obj.(*PdfObjectInteger)
 		if !ok {
@@ -434,6 +438,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		}
 
 		encoder.EarlyChange = int(*earlyChange)
+	} else {
+		encoder.EarlyChange = 1 // default
 	}
 
 	if decodeParams == nil {
@@ -641,6 +647,293 @@ func (this *LZWEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	w.Close()
 
 	return b.Bytes(), nil
+}
+
+//
+// DCT (JPG) encoding/decoding functionality for images.
+type DCTEncoder struct {
+	ColorComponents  int // 1 (gray), 3 (rgb), 4 (cmyk)
+	BitsPerComponent int // 8 or 16 bit
+	Width            int
+	Height           int
+}
+
+// Make a new DCT encoder with default parameters.
+func NewDCTEncoder() *DCTEncoder {
+	encoder := &DCTEncoder{}
+
+	encoder.ColorComponents = 3
+	encoder.BitsPerComponent = 8
+
+	return encoder
+}
+
+func (this *DCTEncoder) GetFilterName() string {
+	return StreamEncodingFilterNameDCT
+}
+
+func (this *DCTEncoder) MakeDecodeParams() PdfObject {
+	// Does not have decode params.
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+// Has the Filter set.  Some other parameters are generated elsewhere.
+func (this *DCTEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := PdfObjectDictionary{}
+
+	dict["Filter"] = MakeName(this.GetFilterName())
+
+	return &dict
+}
+
+// Create a new DCT encoder/decoder from a stream object, getting all the encoding parameters
+// from the stream object dictionary entry and the image data itself.
+func newDCTEncoderFromStream(streamObj *PdfObjectStream) (*DCTEncoder, error) {
+	// Start with default settings.
+	encoder := NewDCTEncoder()
+
+	encDict := streamObj.PdfObjectDictionary
+	if encDict == nil {
+		// No encoding dictionary.
+		return encoder, nil
+	}
+
+	bufReader := bytes.NewReader(streamObj.Stream)
+
+	cfg, err := jpeg.DecodeConfig(bufReader)
+	//img, _, err := goimage.Decode(bufReader)
+	if err != nil {
+		common.Log.Debug("Error decoding file: %s", err)
+		return nil, err
+	}
+
+	switch cfg.ColorModel {
+	case gocolor.RGBAModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 3 // alpha is not included in pdf.
+	case gocolor.RGBA64Model:
+		encoder.BitsPerComponent = 16
+		encoder.ColorComponents = 3
+	case gocolor.GrayModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 1
+	case gocolor.Gray16Model:
+		encoder.BitsPerComponent = 16
+		encoder.ColorComponents = 1
+	case gocolor.CMYKModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 4
+	case gocolor.YCbCrModel:
+		// YCbCr is not supported by PDF, but it could be a different colorspace
+		// with 3 components.  Would be specified by the ColorSpace entry.
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 3
+	default:
+		return nil, errors.New("Unsupported color model")
+	}
+	encoder.Width = cfg.Width
+	encoder.Height = cfg.Height
+	common.Log.Debug("DCT Encoder: %+v", encoder)
+
+	return encoder, nil
+}
+
+func (this *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	bufReader := bytes.NewReader(encoded)
+	img, _, err := goimage.Decode(bufReader)
+	if err != nil {
+		common.Log.Debug("Error decoding image: %s", err)
+		return nil, err
+	}
+	bounds := img.Bounds()
+
+	var decoded = make([]byte, bounds.Dx()*bounds.Dy()*this.ColorComponents*this.BitsPerComponent/8)
+	index := 0
+
+	for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
+		for i := bounds.Min.X; i < bounds.Max.X; i++ {
+			color := img.At(i, j)
+
+			// Gray scale.
+			if this.ColorComponents == 1 {
+				if this.BitsPerComponent == 16 {
+					// Gray - 16 bit.
+					val, ok := color.(gocolor.Gray16)
+					if !ok {
+						return nil, errors.New("Color type error")
+					}
+					decoded[index] = byte((val.Y >> 8) & 0xff)
+					index++
+					decoded[index] = byte(val.Y & 0xff)
+					index++
+				} else {
+					// Gray - 8 bit.
+					val, ok := color.(gocolor.Gray)
+					if !ok {
+						return nil, errors.New("Color type error")
+					}
+					decoded[index] = byte(val.Y & 0xff)
+					index++
+				}
+			} else if this.ColorComponents == 3 {
+				if this.BitsPerComponent == 16 {
+					val, ok := color.(gocolor.RGBA64)
+					if !ok {
+						return nil, errors.New("Color type error")
+					}
+					decoded[index] = byte((val.R >> 8) & 0xff)
+					index++
+					decoded[index] = byte(val.R & 0xff)
+					index++
+					decoded[index] = byte((val.G >> 8) & 0xff)
+					index++
+					decoded[index] = byte(val.G & 0xff)
+					index++
+					decoded[index] = byte((val.B >> 8) & 0xff)
+					index++
+					decoded[index] = byte(val.B & 0xff)
+					index++
+				} else {
+					// RGB - 8 bit.
+					val, isRGB := color.(gocolor.RGBA)
+					if isRGB {
+						decoded[index] = val.R & 0xff
+						index++
+						decoded[index] = val.G & 0xff
+						index++
+						decoded[index] = val.B & 0xff
+						index++
+					} else {
+						// Hack around YCbCr from go jpeg package.
+						val, ok := color.(gocolor.YCbCr)
+						if !ok {
+							return nil, errors.New("Color type error")
+						}
+						r, g, b, _ := val.RGBA()
+						// The fact that we cannot use the Y, Cb, Cr values directly,
+						// indicates that either the jpeg package is converting the raw
+						// data into YCbCr with some kind of mapping, or that the original
+						// data is not in R,G,B...
+						// XXX: This is not good as it means we end up with R, G, B... even
+						// if the original colormap was different.  Unless calling the RGBA()
+						// call exactly reverses the previous conversion to YCbCr (even if
+						// real data is not rgb)... ?
+						// TODO: Test more. Consider whether we need to implement our own jpeg filter.
+						decoded[index] = byte(r >> 8) //byte(val.Y & 0xff)
+						index++
+						decoded[index] = byte(g >> 8) //val.Cb & 0xff)
+						index++
+						decoded[index] = byte(b >> 8) //val.Cr & 0xff)
+						index++
+					}
+				}
+			} else if this.ColorComponents == 4 {
+				// CMYK - 8 bit.
+				val, ok := color.(gocolor.CMYK)
+				if !ok {
+					return nil, errors.New("Color type error")
+				}
+				decoded[index] = val.C & 0xff
+				index++
+				decoded[index] = val.M & 0xff
+				index++
+				decoded[index] = val.Y & 0xff
+				index++
+				decoded[index] = val.K & 0xff
+				index++
+			}
+		}
+	}
+
+	return decoded, nil
+}
+
+func (this *DCTEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return this.DecodeBytes(streamObj.Stream)
+}
+
+type DrawableImage interface {
+	ColorModel() gocolor.Model
+	Bounds() goimage.Rectangle
+	At(x, y int) gocolor.Color
+	Set(x, y int, c gocolor.Color)
+}
+
+func (this *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	bounds := goimage.Rect(0, 0, this.Width, this.Height)
+	var img DrawableImage
+	if this.ColorComponents == 1 {
+		if this.BitsPerComponent == 16 {
+			img = goimage.NewGray16(bounds)
+		} else {
+			img = goimage.NewGray(bounds)
+		}
+	} else if this.ColorComponents == 3 {
+		if this.BitsPerComponent == 16 {
+			img = goimage.NewRGBA64(bounds)
+		} else {
+			img = goimage.NewRGBA(bounds)
+		}
+	} else if this.ColorComponents == 4 {
+		img = goimage.NewCMYK(bounds)
+	} else {
+		return nil, errors.New("Unsupported")
+	}
+
+	// Draw the data on the image..
+	x := 0
+	y := 0
+	bytesPerColor := this.ColorComponents * this.BitsPerComponent / 8
+	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
+		var c gocolor.Color
+		if this.ColorComponents == 1 {
+			if this.BitsPerComponent == 16 {
+				val := uint16(data[i])<<8 | uint16(data[i+1])
+				c = gocolor.Gray16{val}
+			} else {
+				val := uint8(data[i] & 0xff)
+				c = gocolor.Gray{val}
+			}
+		} else if this.ColorComponents == 3 {
+			if this.BitsPerComponent == 16 {
+				r := uint16(data[i])<<8 | uint16(data[i+1])
+				g := uint16(data[i+2])<<8 | uint16(data[i+3])
+				b := uint16(data[i+4])<<8 | uint16(data[i+5])
+				c = gocolor.RGBA64{R: r, G: g, B: b, A: 0}
+			} else {
+				r := uint8(data[i] & 0xff)
+				g := uint8(data[i+1] & 0xff)
+				b := uint8(data[i+2] & 0xff)
+				c = gocolor.RGBA{R: r, G: g, B: b, A: 0}
+			}
+		} else if this.ColorComponents == 4 {
+			c1 := uint8(data[i] & 0xff)
+			m1 := uint8(data[i+1] & 0xff)
+			y1 := uint8(data[i+2] & 0xff)
+			k1 := uint8(data[i+3] & 0xff)
+			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
+		}
+
+		img.Set(x, y, c)
+		x++
+		if x == this.Width {
+			x = 0
+			y++
+		}
+	}
+
+	// Use full quality.
+	opt := jpeg.Options{}
+	opt.Quality = 100
+
+	var buf bytes.Buffer
+	err := jpeg.Encode(&buf, img, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 /////

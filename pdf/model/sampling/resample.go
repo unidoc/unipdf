@@ -96,12 +96,15 @@ func ResampleBytes(data []byte, bitsPerSample int) []uint32 {
 	return samples
 }
 
-// Resample the raw data which is in 32-bit (uint 32) format as a different
+// Resample the raw data which is in <=32-bit (uint32) format as a different
 // bit count per sample, up to 32 bits (uint32).
-func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
+//
+// bitsPerOutputSample is the number of bits for each output sample (up to 32)
+// bitsPerInputSample is the number of bits used in each input sample (up to 32)
+func ResampleUint32(data []uint32, bitsPerInputSample int, bitsPerOutputSample int) []uint32 {
 	samples := []uint32{}
 
-	bitsLeftPerSample := bitsPerSample
+	bitsLeftPerSample := bitsPerOutputSample
 	var sample uint32
 	var remainder uint32
 	remainderBits := 0
@@ -117,7 +120,7 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 				take = bitsLeftPerSample
 			}
 
-			sample = (sample << uint(take)) | uint32(remainder>>uint(32-take))
+			sample = (sample << uint(take)) | uint32(remainder>>uint(bitsPerInputSample-take))
 			remainderBits -= take
 			if remainderBits > 0 {
 				remainder = remainder << uint(take)
@@ -128,7 +131,7 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 			if bitsLeftPerSample == 0 {
 				//samples[index] = sample
 				samples = append(samples, sample)
-				bitsLeftPerSample = bitsPerSample
+				bitsLeftPerSample = bitsPerOutputSample
 				sample = 0
 				index++
 			}
@@ -138,14 +141,14 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 			i++
 
 			// 32 bits.
-			take := 32
+			take := bitsPerInputSample
 			if bitsLeftPerSample < take {
 				take = bitsLeftPerSample
 			}
-			remainderBits = 32 - take
+			remainderBits = bitsPerInputSample - take
 			sample = (sample << uint(take)) | uint32(b>>uint(remainderBits))
 
-			if take < 32 {
+			if take < bitsPerInputSample {
 				remainder = b << uint(take)
 			}
 
@@ -153,7 +156,7 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 			if bitsLeftPerSample == 0 {
 				//samples[index] = sample
 				samples = append(samples, sample)
-				bitsLeftPerSample = bitsPerSample
+				bitsLeftPerSample = bitsPerOutputSample
 				sample = 0
 				index++
 			}
@@ -161,13 +164,13 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 	}
 
 	// Take care of remaining samples (if enough data available).
-	for remainderBits >= bitsPerSample {
+	for remainderBits >= bitsPerOutputSample {
 		take := remainderBits
 		if bitsLeftPerSample < take {
 			take = bitsLeftPerSample
 		}
 
-		sample = (sample << uint(take)) | uint32(remainder>>uint(32-take))
+		sample = (sample << uint(take)) | uint32(remainder>>uint(bitsPerInputSample-take))
 		remainderBits -= take
 		if remainderBits > 0 {
 			remainder = remainder << uint(take)
@@ -177,7 +180,7 @@ func ResampleUint32(data []uint32, bitsPerSample int) []uint32 {
 		bitsLeftPerSample -= take
 		if bitsLeftPerSample == 0 {
 			samples = append(samples, sample)
-			bitsLeftPerSample = bitsPerSample
+			bitsLeftPerSample = bitsPerOutputSample
 			sample = 0
 			index++
 		}
