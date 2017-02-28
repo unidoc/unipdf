@@ -15,6 +15,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	. "github.com/unidoc/unidoc/pdf/core"
 )
@@ -746,6 +747,15 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 		cstreams := []string{cstreamStr}
 		return cstreams, nil
 	}
+}
+
+// Get all the content streams for a page as one string.
+func (this *PdfPage) GetAllContentStreams() (string, error) {
+	cstreams, err := this.GetContentStreams()
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(cstreams, " "), nil
 }
 
 type PdfPageResourcesColorspaces struct {
