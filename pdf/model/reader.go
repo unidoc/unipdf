@@ -118,7 +118,7 @@ func (this *PdfReader) loadStructure() error {
 		common.Log.Debug("ERROR: Invalid catalog (%s)", pcatalog.PdfObject)
 		return errors.New("Invalid catalog")
 	}
-	common.Log.Debug("Catalog: %s", catalog)
+	common.Log.Trace("Catalog: %s", catalog)
 
 	// Pages.
 	pagesRef, ok := (*catalog)["Pages"].(*PdfObjectReference)
@@ -157,10 +157,10 @@ func (this *PdfReader) loadStructure() error {
 	if err != nil {
 		return err
 	}
-	common.Log.Debug("---")
-	common.Log.Debug("TOC")
-	common.Log.Debug("Pages")
-	common.Log.Debug("%d: %s", len(this.pageList), this.pageList)
+	common.Log.Trace("---")
+	common.Log.Trace("TOC")
+	common.Log.Trace("Pages")
+	common.Log.Trace("%d: %s", len(this.pageList), this.pageList)
 
 	// Outlines.
 	this.outlineTree, err = this.loadOutlines()
@@ -229,17 +229,17 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 		return nil, nil
 	}
 
-	common.Log.Debug("-Has outlines")
+	common.Log.Trace("-Has outlines")
 	// Trace references to the object.
 	outlineRootObj, err := this.traceToObject(outlinesObj)
 	if err != nil {
 		common.Log.Debug("ERROR: Failed to read outlines")
 		return nil, err
 	}
-	common.Log.Debug("Outline root: %v", outlineRootObj)
+	common.Log.Trace("Outline root: %v", outlineRootObj)
 
 	if _, isNull := outlineRootObj.(*PdfObjectNull); isNull {
-		common.Log.Debug("Outline root is null - no outlines")
+		common.Log.Trace("Outline root is null - no outlines")
 		return nil, nil
 	}
 
@@ -253,13 +253,13 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 		return nil, errors.New("Outline indirect object should contain a dictionary")
 	}
 
-	common.Log.Debug("Outline root dict: %v", dict)
+	common.Log.Trace("Outline root dict: %v", dict)
 
 	outlineTree, _, err := this.buildOutlineTree(outlineRoot, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	common.Log.Debug("Resulting outline tree: %v", outlineTree)
+	common.Log.Trace("Resulting outline tree: %v", outlineTree)
 
 	return outlineTree, nil
 }
@@ -279,7 +279,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 	if !ok {
 		return nil, nil, errors.New("Not a dictionary object")
 	}
-	common.Log.Debug("build outline tree: dict: %v (%v) p: %p", dict, container, container)
+	common.Log.Trace("build outline tree: dict: %v (%v) p: %p", dict, container, container)
 
 	if _, hasTitle := (*dict)["Title"]; hasTitle {
 		// Outline item has a title. (required)
@@ -418,10 +418,10 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 	var formsDict *PdfObjectDictionary
 
 	if dict, hasFormsDict := (*catalog)["AcroForm"].(*PdfObjectDictionary); hasFormsDict {
-		common.Log.Debug("Has Acro forms - dictionary under Catalog")
+		common.Log.Trace("Has Acro forms - dictionary under Catalog")
 		formsDict = dict
 	} else if formsRef, hasFormsRef := (*catalog)["AcroForm"].(*PdfObjectReference); hasFormsRef {
-		common.Log.Debug("Has Acro forms - Indirect object")
+		common.Log.Trace("Has Acro forms - Indirect object")
 		formsObj, err := this.parser.LookupByReference(*formsRef)
 		if err != nil {
 			common.Log.Debug("ERROR: Failed to read forms")
@@ -434,12 +434,12 @@ func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
 		}
 	}
 	if formsDict == nil {
-		common.Log.Debug("Does not have forms")
+		common.Log.Trace("Does not have forms")
 		return nil, nil
 	}
 
-	common.Log.Debug("Has Acro forms")
-	common.Log.Debug("Traverse the Acroforms structure")
+	common.Log.Trace("Has Acro forms")
+	common.Log.Trace("Traverse the Acroforms structure")
 	err := this.traverseObjectData(formsDict)
 	if err != nil {
 		common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
@@ -468,8 +468,7 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	}
 	obj = TraceToDirectObject(obj)
 	if _, isNull := obj.(*PdfObjectNull); isNull {
-		common.Log.Debug("Acroform is a null object (empty)\n")
-
+		common.Log.Trace("Acroform is a null object (empty)\n")
 		return nil, nil
 	}
 
@@ -479,7 +478,7 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 		common.Log.Debug("Does not have forms")
 		return nil, fmt.Errorf("Invalid acroform entry %T", obj)
 	}
-	common.Log.Debug("Has Acro forms")
+	common.Log.Trace("Has Acro forms")
 	// Load it.
 
 	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
@@ -513,7 +512,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	if !ok {
 		return errors.New("Node missing Type (Required)")
 	}
-	common.Log.Debug("buildPageList node type: %s", *objType)
+	common.Log.Trace("buildPageList node type: %s", *objType)
 	if *objType == "Page" {
 		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
@@ -531,7 +530,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return nil
 	}
 	if *objType != "Pages" {
-		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
+		common.Log.Trace("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
 		return errors.New("Table of content containing non Page/Pages object!")
 	}
 
@@ -564,7 +563,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 			return errors.New("Invalid Kids indirect object")
 		}
 	}
-	common.Log.Debug("Kids: %s", kids)
+	common.Log.Trace("Kids: %s", kids)
 	for idx, child := range *kids {
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
@@ -594,7 +593,7 @@ func (this *PdfReader) GetNumPages() (int, error) {
 func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, bool, error) {
 	cachedObj, isCached := this.parser.ObjCache[int(ref.ObjectNumber)]
 	if !isCached {
-		common.Log.Debug("Reader Lookup ref: %s", ref)
+		common.Log.Trace("Reader Lookup ref: %s", ref)
 		obj, err := this.parser.LookupByReference(*ref)
 		if err != nil {
 			return nil, false, err
@@ -612,15 +611,15 @@ func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, boo
  * GH: Are we fully protected against circular references? (Add tests).
  */
 func (this *PdfReader) traverseObjectData(o PdfObject) error {
-	common.Log.Debug("Traverse object data")
+	common.Log.Trace("Traverse object data")
 	if _, isTraversed := this.traversed[o]; isTraversed {
 		return nil
 	}
 	this.traversed[o] = true
 
 	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
-		common.Log.Debug("io: %s", io)
-		common.Log.Debug("- %s", io.PdfObject)
+		common.Log.Trace("io: %s", io)
+		common.Log.Trace("- %s", io.PdfObject)
 		err := this.traverseObjectData(io.PdfObject)
 		return err
 	}
@@ -631,7 +630,7 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	}
 
 	if dict, isDict := o.(*PdfObjectDictionary); isDict {
-		common.Log.Debug("- dict: %s", dict)
+		common.Log.Trace("- dict: %s", dict)
 		for name, v := range *dict {
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
@@ -654,7 +653,7 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	}
 
 	if arr, isArray := o.(*PdfObjectArray); isArray {
-		common.Log.Debug("- array: %s", arr)
+		common.Log.Trace("- array: %s", arr)
 		for idx, v := range *arr {
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
@@ -701,8 +700,8 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	if err != nil {
 		return nil, err
 	}
-	common.Log.Debug("Page: %T %s", page, page)
-	common.Log.Debug("- %T %s", page.PdfObject, page.PdfObject)
+	common.Log.Trace("Page: %T %s", page, page)
+	common.Log.Trace("- %T %s", page.PdfObject, page.PdfObject)
 
 	return page, nil
 }

@@ -269,7 +269,7 @@ func (this *PdfObjectDictionary) String() string {
 func (this *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
 	for k, v := range *this {
-		common.Log.Debug("Writing k: %s %T %v %v", k, v, k, v)
+		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "
 		outStr += v.DefaultWriteString()

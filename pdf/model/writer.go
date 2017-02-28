@@ -130,7 +130,7 @@ func NewPdfWriter() PdfWriter {
 	catalogDict[PdfObjectName("Pages")] = &pages
 	w.catalog = &catalogDict
 
-	common.Log.Info("Catalog %s", catalog)
+	common.Log.Trace("Catalog %s", catalog)
 
 	return w
 }
@@ -146,7 +146,7 @@ func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
 	dict := this.catalog
 
 	if ocProperties != nil {
-		common.Log.Debug("Setting OC Properties...")
+		common.Log.Trace("Setting OC Properties...")
 		(*dict)["OCProperties"] = ocProperties
 		// Any risk of infinite loops?
 		this.addObjects(ocProperties)
@@ -180,12 +180,12 @@ func (this *PdfWriter) addObject(obj PdfObject) bool {
 }
 
 func (this *PdfWriter) addObjects(obj PdfObject) error {
-	common.Log.Debug("Adding objects!")
+	common.Log.Trace("Adding objects!")
 
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
-		common.Log.Debug("Indirect")
-		common.Log.Debug("- %s (%p)", obj, io)
-		common.Log.Debug("- %s", io.PdfObject)
+		common.Log.Trace("Indirect")
+		common.Log.Trace("- %s (%p)", obj, io)
+		common.Log.Trace("- %s", io.PdfObject)
 		if this.addObject(io) {
 			err := this.addObjects(io.PdfObject)
 			if err != nil {
@@ -196,8 +196,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
-		common.Log.Debug("Stream")
-		common.Log.Debug("- %s %p", obj, obj)
+		common.Log.Trace("Stream")
+		common.Log.Trace("- %s %p", obj, obj)
 		if this.addObject(so) {
 			err := this.addObjects(so.PdfObjectDictionary)
 			if err != nil {
@@ -208,10 +208,10 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
-		common.Log.Debug("Dict")
-		common.Log.Debug("- %s", obj)
+		common.Log.Trace("Dict")
+		common.Log.Trace("- %s", obj)
 		for k, v := range *dict {
-			common.Log.Debug("Key %s", k)
+			common.Log.Trace("Key %s", k)
 			if k != "Parent" {
 				err := this.addObjects(v)
 				if err != nil {
@@ -243,8 +243,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	}
 
 	if arr, isArray := obj.(*PdfObjectArray); isArray {
-		common.Log.Debug("Array")
-		common.Log.Debug("- %s", obj)
+		common.Log.Trace("Array")
+		common.Log.Trace("- %s", obj)
 		for _, v := range *arr {
 			err := this.addObjects(v)
 			if err != nil {
@@ -267,15 +267,15 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 // object.
 func (this *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
-	common.Log.Debug("==========")
-	common.Log.Debug("Appending to page list %T", obj)
+	common.Log.Trace("==========")
+	common.Log.Trace("Appending to page list %T", obj)
 
 	pageObj, ok := obj.(*PdfIndirectObject)
 	if !ok {
 		return errors.New("Page should be an indirect object")
 	}
-	common.Log.Debug("%s", pageObj)
-	common.Log.Debug("%s", pageObj.PdfObject)
+	common.Log.Trace("%s", pageObj)
+	common.Log.Trace("%s", pageObj.PdfObject)
 
 	pDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
 	if !ok {
@@ -294,31 +294,31 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	// Copy inherited fields if missing.
 	inheritedFields := []PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
 	parent, hasParent := (*pDict)["Parent"].(*PdfIndirectObject)
-	common.Log.Debug("Page Parent: %T (%v)", (*pDict)["Parent"], hasParent)
+	common.Log.Trace("Page Parent: %T (%v)", (*pDict)["Parent"], hasParent)
 	for hasParent {
-		common.Log.Debug("Page Parent: %T", parent)
+		common.Log.Trace("Page Parent: %T", parent)
 		parentDict, ok := parent.PdfObject.(*PdfObjectDictionary)
 		if !ok {
 			return errors.New("Invalid Parent object")
 		}
 		for _, field := range inheritedFields {
-			common.Log.Debug("Field %s", field)
+			common.Log.Trace("Field %s", field)
 			if _, hasAlready := (*pDict)[field]; hasAlready {
-				common.Log.Debug("- page has already")
+				common.Log.Trace("- page has already")
 				continue
 			}
 
 			if obj, hasField := (*parentDict)[field]; hasField {
 				// Parent has the field.  Inherit, pass to the new page.
-				common.Log.Debug("Inheriting field %s", field)
+				common.Log.Trace("Inheriting field %s", field)
 				(*pDict)[field] = obj
 			}
 		}
 		parent, hasParent = (*parentDict)["Parent"].(*PdfIndirectObject)
-		common.Log.Debug("Next parent: %T", (*parentDict)["Parent"])
+		common.Log.Trace("Next parent: %T", (*parentDict)["Parent"])
 	}
 
-	common.Log.Debug("Traversal done")
+	common.Log.Trace("Traversal done")
 
 	// Update the dictionary.
 	// Reuses the input object, updating the fields.
@@ -361,7 +361,7 @@ func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
 // Look for a specific key.  Returns a list of entries.
 // What if something appears on many pages?
 func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
-	common.Log.Debug("Seek by name.. %T", obj)
+	common.Log.Trace("Seek by name.. %T", obj)
 	list := []PdfObject{}
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
 		return this.seekByName(io.PdfObject, followKeys, key)
@@ -372,14 +372,14 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 	}
 
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
-		common.Log.Debug("Dict")
+		common.Log.Trace("Dict")
 		for k, v := range *dict {
 			if string(k) == key {
 				list = append(list, v)
 			}
 			for _, followKey := range followKeys {
 				if string(k) == followKey {
-					common.Log.Debug("Follow key %s", followKey)
+					common.Log.Trace("Follow key %s", followKey)
 					items, err := this.seekByName(v, followKeys, key)
 					if err != nil {
 						return list, err
@@ -433,11 +433,11 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 
 		followKeys := []string{"Fields", "Kids"}
 		list, err := this.seekByName(fieldObj, followKeys, "P")
-		common.Log.Debug("Done seeking!")
+		common.Log.Trace("Done seeking!")
 		if err != nil {
 			return err
 		}
-		common.Log.Debug("List of P objects %d", len(list))
+		common.Log.Trace("List of P objects %d", len(list))
 		if len(list) < 1 {
 			continue
 		}
@@ -445,7 +445,7 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 		includeField := false
 		for _, p := range list {
 			if po, ok := p.(*PdfIndirectObject); ok {
-				common.Log.Debug("P entry is an indirect object (page)")
+				common.Log.Trace("P entry is an indirect object (page)")
 				if this.hasObject(po) {
 					includeField = true
 				} else {
@@ -460,13 +460,13 @@ func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
 		// Need to specifically go and check the page object!
 		// P or the appearance dictionary.
 		if includeField {
-			common.Log.Debug("Add the field! (%T)", field)
+			common.Log.Trace("Add the field! (%T)", field)
 			// Add if nothing referenced outside of the writer.
 			// Probably need to add some objects first...
 			this.addObject(field)
 			this.fields = append(this.fields, field)
 		} else {
-			common.Log.Debug("Field not relevant!")
+			common.Log.Trace("Field not relevant!")
 		}
 	}
 	return nil
@@ -481,7 +481,7 @@ func (this *PdfWriter) AddForms2(form *PdfAcroForm) error {
 
 // Write out an indirect / stream object.
 func (this *PdfWriter) writeObject(num int, obj PdfObject) {
-	common.Log.Debug("Write obj #%d\n", num)
+	common.Log.Trace("Write obj #%d\n", num)
 
 	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
@@ -552,10 +552,10 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	rand.Read(b)
 	hashcode = md5.Sum(b)
 	id1 := PdfObjectString(hashcode[:])
-	common.Log.Debug("Random b: % x", b)
+	common.Log.Trace("Random b: % x", b)
 
 	this.ids = &PdfObjectArray{&id0, &id1}
-	common.Log.Debug("Gen Id 0: % x", id0)
+	common.Log.Trace("Gen Id 0: % x", id0)
 
 	crypter.Id0 = string(id0)
 
@@ -566,13 +566,13 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 		return err
 	}
 	crypter.O = []byte(O)
-	common.Log.Debug("gen O: % x", O)
+	common.Log.Trace("gen O: % x", O)
 	U, key, err := crypter.Alg5(userPass)
 	if err != nil {
 		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
 		return err
 	}
-	common.Log.Debug("gen U: % x", U)
+	common.Log.Trace("gen U: % x", U)
 	crypter.U = []byte(U)
 	crypter.EncryptionKey = key
 
@@ -598,12 +598,12 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 
 // Write the pdf out.
 func (this *PdfWriter) Write(ws io.WriteSeeker) error {
-	common.Log.Debug("Write()")
+	common.Log.Trace("Write()")
 	// Outlines.
 	if this.outlineTree != nil {
-		common.Log.Debug("OutlineTree: %+v", this.outlineTree)
+		common.Log.Trace("OutlineTree: %+v", this.outlineTree)
 		outlines := this.outlineTree.ToPdfObject()
-		common.Log.Debug("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
+		common.Log.Trace("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
 		(*this.catalog)["Outlines"] = outlines
 		err := this.addObjects(outlines)
 		if err != nil {
@@ -629,9 +629,9 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}*/
 	// Acroform.
 	if this.acroForm != nil {
-		common.Log.Debug("Writing acro forms")
+		common.Log.Trace("Writing acro forms")
 		indObj := this.acroForm.ToPdfObject()
-		common.Log.Debug("AcroForm: %+v", indObj)
+		common.Log.Trace("AcroForm: %+v", indObj)
 		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
 		err := this.addObjects(indObj)
 		if err != nil {
@@ -667,9 +667,9 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	offsets := []int64{}
 
 	// Write objects
-	common.Log.Debug("Writing %d obj", len(this.objects))
+	common.Log.Trace("Writing %d obj", len(this.objects))
 	for idx, obj := range this.objects {
-		common.Log.Debug("Writing %d", idx)
+		common.Log.Trace("Writing %d", idx)
 		this.writer.Flush()
 		offset, _ := ws.Seek(0, os.SEEK_CUR)
 		offsets = append(offsets, offset)
@@ -709,7 +709,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	if this.crypter != nil {
 		trailer["Encrypt"] = this.encryptObj
 		trailer[PdfObjectName("ID")] = this.ids
-		common.Log.Debug("Ids: %s", this.ids)
+		common.Log.Trace("Ids: %s", this.ids)
 	}
 	this.writer.WriteString("trailer\n")
 	this.writer.WriteString(trailer.DefaultWriteString())

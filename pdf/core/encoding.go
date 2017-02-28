@@ -148,7 +148,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		return encoder, nil
 	}
 
-	common.Log.Debug("decode params: %s", decodeParams.String())
+	common.Log.Trace("decode params: %s", decodeParams.String())
 	obj, has := (*decodeParams)["Predictor"]
 	if !has {
 		common.Log.Debug("Error: Predictor missing from DecodeParms - Continue with default (1)")
@@ -221,8 +221,8 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 	// TODO: Revamp this support to handle TIFF predictor (2).
 	// Also handle more filter bytes and support more values of BitsPerComponent.
 
-	common.Log.Debug("FlateDecode")
-	common.Log.Debug("Predictor: %d", this.Predictor)
+	common.Log.Trace("FlateDecode")
+	common.Log.Trace("Predictor: %d", this.Predictor)
 	if this.BitsPerComponent != 8 {
 		return nil, fmt.Errorf("Invalid BitsPerComponent (only 8 supported)")
 	}
@@ -231,13 +231,13 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	common.Log.Debug("En: % x\n", streamObj.Stream)
-	common.Log.Debug("De: % x\n", outData)
+	common.Log.Trace("En: % x\n", streamObj.Stream)
+	common.Log.Trace("De: % x\n", outData)
 
 	if this.Predictor > 1 {
 		if this.Predictor == 2 { // TIFF encoding: Needs some tests.
-			common.Log.Debug("Tiff encoding")
-			common.Log.Debug("Colors: %d", this.Colors)
+			common.Log.Trace("Tiff encoding")
+			common.Log.Trace("Colors: %d", this.Colors)
 
 			rowLength := int(this.Columns) * this.Colors
 			rows := len(outData) / rowLength
@@ -249,14 +249,13 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
 			}
-			common.Log.Debug("inp outData (%d): % x", len(outData), outData)
+			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
 			pOutBuffer := bytes.NewBuffer(nil)
 
 			// 0-255  -255 255 ; 0-255=-255;
 			for i := 0; i < rows; i++ {
 				rowData := outData[rowLength*i : rowLength*(i+1)]
-				//common.Log.Debug("RowData before: % d", rowData)
 				// Predicts the same as the sample to the left.
 				// Interleaved by colors.
 				for j := this.Colors; j < rowLength; j++ {
@@ -265,10 +264,10 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 				pOutBuffer.Write(rowData)
 			}
 			pOutData := pOutBuffer.Bytes()
-			common.Log.Debug("POutData (%d): % x", len(pOutData), pOutData)
+			common.Log.Trace("POutData (%d): % x", len(pOutData), pOutData)
 			return pOutData, nil
 		} else if this.Predictor >= 10 && this.Predictor <= 15 {
-			common.Log.Debug("PNG Encoding")
+			common.Log.Trace("PNG Encoding")
 			rowLength := int(this.Columns + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
@@ -278,8 +277,8 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 
 			pOutBuffer := bytes.NewBuffer(nil)
 
-			common.Log.Debug("Predictor columns: %d", this.Columns)
-			common.Log.Debug("Length: %d / %d = %d rows", len(outData), rowLength, rows)
+			common.Log.Trace("Predictor columns: %d", this.Columns)
+			common.Log.Trace("Length: %d / %d = %d rows", len(outData), rowLength, rows)
 			prevRowData := make([]byte, rowLength)
 			for i := 0; i < rowLength; i++ {
 				prevRowData[i] = 0
@@ -536,7 +535,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		}
 	}
 
-	common.Log.Debug("decode params: %s", decodeParams.String())
+	common.Log.Trace("decode params: %s", decodeParams.String())
 	return encoder, nil
 }
 
@@ -568,20 +567,20 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 	// BitsPerComponent.  Default value is 8, currently we are only
 	// supporting that one.
 
-	common.Log.Debug("LZW Decoding")
-	common.Log.Debug("Predictor: %d", this.Predictor)
+	common.Log.Trace("LZW Decoding")
+	common.Log.Trace("Predictor: %d", this.Predictor)
 
 	outData, err := this.DecodeBytes(streamObj.Stream)
 	if err != nil {
 		return nil, err
 	}
 
-	common.Log.Debug(" IN: (%d) % x", len(streamObj.Stream), streamObj.Stream)
-	common.Log.Debug("OUT: (%d) % x", len(outData), outData)
+	common.Log.Trace(" IN: (%d) % x", len(streamObj.Stream), streamObj.Stream)
+	common.Log.Trace("OUT: (%d) % x", len(outData), outData)
 
 	if this.Predictor > 1 {
 		if this.Predictor == 2 { // TIFF encoding: Needs some tests.
-			common.Log.Debug("Tiff encoding")
+			common.Log.Trace("Tiff encoding")
 
 			rowLength := int(this.Columns) * this.Colors
 			rows := len(outData) / rowLength
@@ -593,14 +592,13 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
 			}
-			common.Log.Debug("inp outData (%d): % x", len(outData), outData)
+			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
 			pOutBuffer := bytes.NewBuffer(nil)
 
 			// 0-255  -255 255 ; 0-255=-255;
 			for i := 0; i < rows; i++ {
 				rowData := outData[rowLength*i : rowLength*(i+1)]
-				//common.Log.Debug("RowData before: % d", rowData)
 				// Predicts the same as the sample to the left.
 				// Interleaved by colors.
 				for j := this.Colors; j < rowLength; j++ {
@@ -611,10 +609,10 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 				pOutBuffer.Write(rowData)
 			}
 			pOutData := pOutBuffer.Bytes()
-			common.Log.Debug("POutData (%d): % x", len(pOutData), pOutData)
+			common.Log.Trace("POutData (%d): % x", len(pOutData), pOutData)
 			return pOutData, nil
 		} else if this.Predictor >= 10 && this.Predictor <= 15 {
-			common.Log.Debug("PNG Encoding")
+			common.Log.Trace("PNG Encoding")
 			rowLength := int(this.Columns + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
@@ -624,8 +622,8 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 
 			pOutBuffer := bytes.NewBuffer(nil)
 
-			common.Log.Debug("Predictor columns: %d", this.Columns)
-			common.Log.Debug("Length: %d / %d = %d rows", len(outData), rowLength, rows)
+			common.Log.Trace("Predictor columns: %d", this.Columns)
+			common.Log.Trace("Length: %d / %d = %d rows", len(outData), rowLength, rows)
 			prevRowData := make([]byte, rowLength)
 			for i := 0; i < rowLength; i++ {
 				prevRowData[i] = 0
@@ -775,7 +773,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream) (*DCTEncoder, error) {
 	}
 	encoder.Width = cfg.Width
 	encoder.Height = cfg.Height
-	common.Log.Debug("DCT Encoder: %+v", encoder)
+	common.Log.Trace("DCT Encoder: %+v", encoder)
 
 	return encoder, nil
 }
@@ -1028,7 +1026,7 @@ func (this *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	if len(inb)%2 == 1 {
 		inb = append(inb, '0')
 	}
-	common.Log.Debug("Inbound %s", inb)
+	common.Log.Trace("Inbound %s", inb)
 	outb := make([]byte, hex.DecodedLen(len(inb)))
 	_, err := hex.Decode(outb, inb)
 	if err != nil {

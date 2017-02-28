@@ -39,7 +39,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 				return nil, err
 			}
 
-			common.Log.Debug("Multi enc: %s\n", menc)
+			common.Log.Trace("Multi enc: %s\n", menc)
 			return menc, nil
 		}
 
@@ -70,15 +70,14 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 // Decodes the stream.
 // Supports FlateDecode, ASCIIHexDecode, LZW.
 func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	common.Log.Debug("Decode stream")
+	common.Log.Trace("Decode stream")
 
 	encoder, err := NewEncoderFromStream(streamObj)
 	if err != nil {
 		common.Log.Debug("Stream decoding failed: %v", err)
 		return nil, err
 	}
-
-	common.Log.Debug("Encoder: %+v\n", encoder)
+	common.Log.Trace("Encoder: %+v\n", encoder)
 
 	decoded, err := encoder.DecodeStream(streamObj)
 	if err != nil {
@@ -92,7 +91,7 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 // Encodes the stream.
 // Uses the encoding specified by the object.
 func EncodeStream(streamObj *PdfObjectStream) error {
-	common.Log.Debug("Encode stream")
+	common.Log.Trace("Encode stream")
 
 	encoder, err := NewEncoderFromStream(streamObj)
 	if err != nil {
@@ -107,7 +106,7 @@ func EncodeStream(streamObj *PdfObjectStream) error {
 		(*streamObj.PdfObjectDictionary)["EarlyChange"] = MakeInteger(0)
 	}
 
-	common.Log.Debug("Encoder: %+v\n", encoder)
+	common.Log.Trace("Encoder: %+v\n", encoder)
 	encoded, err := encoder.EncodeBytes(streamObj.Stream)
 	if err != nil {
 		common.Log.Debug("Stream encoding failed: %v", err)
