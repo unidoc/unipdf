@@ -72,6 +72,15 @@ func NewFlateEncoder() *FlateEncoder {
 	return encoder
 }
 
+// Set the predictor function.  Specify the number of columns per row.
+// The columns indicates the number of samples per row.
+// Used for grouping data together for compression.
+func (this *FlateEncoder) SetPredictor(columns int) {
+	// Only supporting PNG sub predictor for encoding.
+	this.Predictor = 11
+	this.Columns = columns
+}
+
 func (this *FlateEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameFlate
 }
@@ -316,8 +325,40 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 
 // Encode a bytes array and return the encoded value based on the encoder parameters.
 func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	if this.Predictor != 1 {
-		return nil, fmt.Errorf("FlateEncoder Predictor = 1 only supported yet")
+	if this.Predictor != 1 && this.Predictor != 11 {
+		return nil, fmt.Errorf("FlateEncoder Predictor = 1, 11 only supported")
+	}
+
+	if this.Predictor == 11 {
+		// The length of each output row in number of samples.
+		// N.B. Each output row has one extra sample as compared to the input to indicate the
+		// predictor type.
+		rowLength := int(this.Columns)
+		rows := len(data) / rowLength
+		if len(data)%rowLength != 0 {
+			common.Log.Error("Invalid column length")
+			return nil, errors.New("Invalid row length")
+		}
+
+		pOutBuffer := bytes.NewBuffer(nil)
+
+		tmpData := make([]byte, rowLength)
+
+		for i := 0; i < rows; i++ {
+			rowData := data[rowLength*i : rowLength*(i+1)]
+
+			// PNG SUB method.
+			// Sub: Predicts the same as the sample to the left.
+			tmpData[0] = rowData[0]
+			for j := 1; j < rowLength; j++ {
+				tmpData[j] = byte(int(rowData[j]-rowData[j-1]) % 256)
+			}
+
+			pOutBuffer.WriteByte(1) // sub method
+			pOutBuffer.Write(tmpData)
+		}
+
+		data = pOutBuffer.Bytes()
 	}
 
 	var b bytes.Buffer
