@@ -70,6 +70,10 @@ type PdfWriter struct {
 	encryptObj  *PdfIndirectObject
 	ids         *PdfObjectArray
 
+	// PDF version
+	majorVersion int
+	minorVersion int
+
 	// Objects to be followed up on prior to writing.
 	// These are objects that are added and reference objects that are not included
 	// for writing.
@@ -88,6 +92,11 @@ func NewPdfWriter() PdfWriter {
 	w.objects = []PdfObject{}
 	w.pendingObjects = map[PdfObject]*PdfObjectDictionary{}
 
+	// PDF Version.  Can be changed if using more advanced features in PDF.
+	// By default it is set to 1.3.
+	w.majorVersion = 1
+	w.minorVersion = 3
+
 	// Creation info.
 	infoDict := PdfObjectDictionary{}
 	infoDict[PdfObjectName("Producer")] = MakeString(getPdfProducer())
@@ -101,7 +110,6 @@ func NewPdfWriter() PdfWriter {
 	catalog := PdfIndirectObject{}
 	catalogDict := PdfObjectDictionary{}
 	catalogDict[PdfObjectName("Type")] = MakeName("Catalog")
-	catalogDict[PdfObjectName("Version")] = MakeName("1.3")
 	catalog.PdfObject = &catalogDict
 
 	w.root = &catalog
@@ -125,6 +133,12 @@ func NewPdfWriter() PdfWriter {
 	common.Log.Info("Catalog %s", catalog)
 
 	return w
+}
+
+// Set the PDF version of the output file.
+func (this *PdfWriter) SetVersion(majorVersion, minorVersion int) {
+	this.majorVersion = majorVersion
+	this.minorVersion = minorVersion
 }
 
 // Set the optional content properties.
@@ -638,11 +652,13 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 			}
 		}
 	}
+	// Set version in the catalog.
+	(*this.catalog)["Version"] = MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion))
 
 	w := bufio.NewWriter(ws)
 	this.writer = w
 
-	w.WriteString("%PDF-1.3\n")
+	w.WriteString(fmt.Sprintf("%%PDF-%d.%d\n", this.majorVersion, this.minorVersion))
 	w.WriteString("%âãÏÓ\n")
 	w.Flush()
 

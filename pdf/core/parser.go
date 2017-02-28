@@ -21,7 +21,7 @@ import (
 )
 
 // Regular Expressions for parsing and identifying object signatures.
-var rePdfVersion = regexp.MustCompile(`%PDF-(\d\.\d)`)
+var rePdfVersion = regexp.MustCompile(`%PDF-(\d)\.(\d)`)
 var reEOF = regexp.MustCompile("%%EOF")
 var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
 var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
@@ -33,6 +33,9 @@ var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
 var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
 
 type PdfParser struct {
+	majorVersion int
+	minorVersion int
+
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
 	xrefs            XrefTable
@@ -631,27 +634,34 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 }
 
 // Parse the pdf version from the beginning of the file.
-func (this *PdfParser) parsePdfVersion() (float64, error) {
+// Returns the major and minor parts of the version.
+// E.g. for "PDF-1.7" would return 1 and 7.
+func (this *PdfParser) parsePdfVersion() (int, int, error) {
 	this.rs.Seek(0, os.SEEK_SET)
 	var offset int64 = 20
 	b := make([]byte, offset)
 	this.rs.Read(b)
 
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
-	if len(result1) < 2 {
+	if len(result1) < 3 {
 		common.Log.Debug("Error: PDF Version not found!")
-		return -1, errors.New("PDF version not found")
+		return 0, 0, errors.New("PDF version not found")
 	}
 
-	version, err := strconv.ParseFloat(result1[1], 64)
+	majorVersion, err := strconv.ParseInt(result1[1], 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
+	}
+
+	minorVersion, err := strconv.ParseInt(result1[2], 10, 64)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	//version, _ := strconv.Atoi(result1[1])
-	common.Log.Debug("Pdf version %f", version)
+	common.Log.Debug("Pdf version %d.%d", majorVersion, minorVersion)
 
-	return version, nil
+	return int(majorVersion), int(minorVersion), nil
 }
 
 // Conventional xref table starting with 'xref'.
@@ -1321,10 +1331,13 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 
 	// printXrefTable(parser.xrefs)
 
-	_, err = parser.parsePdfVersion()
+	majorVersion, minorVersion, err := parser.parsePdfVersion()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse version (%s)", err)
+		common.Log.Error("Unable to parse version: %v", err)
+		return nil, err
 	}
+	parser.majorVersion = majorVersion
+	parser.minorVersion = minorVersion
 
 	parser.trailer = trailer
 
