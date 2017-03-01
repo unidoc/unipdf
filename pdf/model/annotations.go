@@ -12,17 +12,8 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-/*
-
-markup annotations:
-T, popup, ..., ExData
-
-markup annotaitons are:
-Text, FreeText, Line, Square, Circle, Polygon, PolyLine, Highlight, Underline, Squiggly, StrikeOut, Stamp, Caret, Ink, FileAttachment,
-Sound, Redact
-
-
-*/
+// PDFAnnotation contains common attributes of an annotation.  The context object contains the subannotation,
+// which can be a markup annotation or other types.
 type PdfAnnotation struct {
 	context      PdfModel // Sub-annotation.
 	Rect         PdfObject

@@ -8,8 +8,163 @@ package model
 import (
 	"errors"
 
+	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
+
+// XObjectForm (Table 95 in 8.10.2).
+type XObjectForm struct {
+	Filter StreamEncoder
+
+	FormType      PdfObject
+	BBox          PdfObject
+	Matrix        PdfObject
+	Resources     PdfObject
+	Group         PdfObject
+	Ref           PdfObject
+	MetaData      PdfObject
+	PieceInfo     PdfObject
+	LastModified  PdfObject
+	StructParent  PdfObject
+	StructParents PdfObject
+	OPI           PdfObject
+	OC            PdfObject
+	Name          PdfObject
+	// Stream data.
+	Stream []byte
+	// Primitive
+	primitive *PdfObjectStream
+}
+
+// Create a brand new XObject Form. Creates a new underlying PDF object stream primitive.
+func NewXObjectForm() *XObjectForm {
+	xobj := &XObjectForm{}
+	stream := &PdfObjectStream{}
+	stream.PdfObjectDictionary = &PdfObjectDictionary{}
+	xobj.primitive = stream
+	return xobj
+}
+
+// Build the Form XObject from a stream object.
+// XXX: Should this be exposed? Consider different access points.
+func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
+	form := &XObjectForm{}
+	form.primitive = stream
+
+	dict := *(stream.PdfObjectDictionary)
+
+	encoder, err := NewEncoderFromStream(stream)
+	if err != nil {
+		return nil, err
+	}
+	form.Filter = encoder
+
+	if obj, isDefined := dict["Subtype"]; isDefined {
+		name, ok := obj.(*PdfObjectName)
+		if !ok {
+			return nil, errors.New("Type error")
+		}
+		if *name != "Form" {
+			common.Log.Debug("Invalid form subtype")
+			return nil, errors.New("Invalid form subtype")
+		}
+	}
+
+	if obj, isDefined := dict["FormType"]; isDefined {
+		form.FormType = obj
+	}
+	if obj, isDefined := dict["BBox"]; isDefined {
+		form.BBox = obj
+	}
+	if obj, isDefined := dict["Matrix"]; isDefined {
+		form.Matrix = obj
+	}
+	if obj, isDefined := dict["Resources"]; isDefined {
+		form.Resources = obj
+	}
+	if obj, isDefined := dict["Group"]; isDefined {
+		form.Group = obj
+	}
+	if obj, isDefined := dict["Ref"]; isDefined {
+		form.Ref = obj
+	}
+	if obj, isDefined := dict["MetaData"]; isDefined {
+		form.MetaData = obj
+	}
+	if obj, isDefined := dict["PieceInfo"]; isDefined {
+		form.PieceInfo = obj
+	}
+	if obj, isDefined := dict["LastModified"]; isDefined {
+		form.LastModified = obj
+	}
+	if obj, isDefined := dict["StructParent"]; isDefined {
+		form.StructParent = obj
+	}
+	if obj, isDefined := dict["StructParents"]; isDefined {
+		form.StructParents = obj
+	}
+	if obj, isDefined := dict["OPI"]; isDefined {
+		form.OPI = obj
+	}
+	if obj, isDefined := dict["OC"]; isDefined {
+		form.OC = obj
+	}
+	if obj, isDefined := dict["Name"]; isDefined {
+		form.Name = obj
+	}
+
+	form.Stream = stream.Stream
+
+	return form, nil
+}
+
+func (xform *XObjectForm) GetContainingPdfObject() PdfObject {
+	return xform.primitive
+}
+
+func (xform *XObjectForm) GetContentStream() ([]byte, error) {
+	decoded, err := DecodeStream(xform.primitive)
+	if err != nil {
+		return nil, err
+	}
+
+	return decoded, nil
+}
+
+// Return a stream object.
+func (xform *XObjectForm) ToPdfObject() PdfObject {
+	stream := xform.primitive
+
+	dict := stream.PdfObjectDictionary
+	if xform.Filter != nil {
+		// Pre-populate the stream dictionary with the
+		// encoding related fields.
+		dict = xform.Filter.MakeStreamDict()
+		stream.PdfObjectDictionary = dict
+	}
+	dict.Set("Type", MakeName("XObject"))
+	dict.Set("Subtype", MakeName("Form"))
+
+	dict.SetIfNotNil("FormType", xform.FormType)
+	dict.SetIfNotNil("BBox", xform.BBox)
+	dict.SetIfNotNil("Matrix", xform.Matrix)
+	dict.SetIfNotNil("Resources", xform.Resources)
+	dict.SetIfNotNil("Group", xform.Group)
+	dict.SetIfNotNil("Ref", xform.Ref)
+	dict.SetIfNotNil("MetaData", xform.MetaData)
+	dict.SetIfNotNil("PieceInfo", xform.PieceInfo)
+	dict.SetIfNotNil("LastModified", xform.LastModified)
+	dict.SetIfNotNil("StructParent", xform.StructParent)
+	dict.SetIfNotNil("StructParents", xform.StructParents)
+	dict.SetIfNotNil("OPI", xform.OPI)
+	dict.SetIfNotNil("OC", xform.OC)
+	dict.SetIfNotNil("Name", xform.Name)
+
+	dict.Set("Length", MakeInteger(int64(len(xform.Stream))))
+	stream.Stream = xform.Stream
+
+	return stream
+}
 
 // XObjectImage (Table 89 in 8.9.5.1).
 // Implements PdfModel interface.
@@ -19,8 +174,8 @@ type XObjectImage struct {
 	Height           *int64
 	ColorSpace       PdfColorspace
 	BitsPerComponent *int64
-	//Filter           *PdfObjectName
-	Filter       StreamEncoder
+	Filter           StreamEncoder
+
 	Intent       PdfObject
 	ImageMask    PdfObject
 	Mask         PdfObject

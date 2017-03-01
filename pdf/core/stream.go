@@ -20,7 +20,6 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	}
 
 	// The filter should be a name or an array with a list of filter names.
-	// Currently only supporting a single filter.
 	method, ok := filterObj.(*PdfObjectName)
 	if !ok {
 		array, ok := filterObj.(*PdfObjectArray)

@@ -3,10 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The content stream parser provides functionality to parse the content stream into a list of
-// operands that can then be processed further for rendering or extraction of information.
-
-package model
+package contentstream
 
 import (
 	"bufio"
@@ -26,11 +23,6 @@ type ContentStreamParser struct {
 	reader *bufio.Reader
 }
 
-type ContentStreamOperation struct {
-	Params  []PdfObject
-	Operand string
-}
-
 // Create a new instance of the content stream parser from an input content
 // stream string.
 func NewContentStreamParser(contentStr string) *ContentStreamParser {
@@ -42,199 +34,6 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 	parser.reader = bufio.NewReader(buffer)
 
 	return &parser
-}
-
-// A representation of an inline image in a Content stream.
-// Everything between the BI and EI operands.
-// ContentStreamInlineImage implements the PdfObject interface
-// although strictly it is not a PDF object.
-type ContentStreamInlineImage struct {
-	BitsPerComponent PdfObject
-	ColorSpace       PdfObject
-	Decode           PdfObject
-	DecodeParms      PdfObject
-	Filter           PdfObject
-	Height           PdfObject
-	ImageMask        PdfObject
-	Intent           PdfObject
-	Interpolate      PdfObject
-	Width            PdfObject
-	stream           []byte
-}
-
-func (this *ContentStreamInlineImage) String() string {
-	str := fmt.Sprintf("InlineImage(len=%d)", len(this.stream))
-	return str
-}
-
-func (this *ContentStreamInlineImage) DefaultWriteString() string {
-	var output bytes.Buffer
-
-	// We do not start with "BI" as that is the operand and is written out separately.
-	// Write out the parameters
-	s := "BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
-	s += "CS " + this.ColorSpace.DefaultWriteString() + "\n"
-	s += "D " + this.Decode.DefaultWriteString() + "\n"
-	s += "DP " + this.DecodeParms.DefaultWriteString() + "\n"
-	s += "F " + this.Filter.DefaultWriteString() + "\n"
-	s += "H " + this.Height.DefaultWriteString() + "\n"
-	s += "IM " + this.ImageMask.DefaultWriteString() + "\n"
-	s += "Intent " + this.Intent.DefaultWriteString() + "\n"
-	s += "I " + this.Interpolate.DefaultWriteString() + "\n"
-	s += "W " + this.Width.DefaultWriteString() + "\n"
-	output.WriteString(s)
-
-	output.WriteString("ID ")
-	output.Write(this.stream)
-
-	return output.String()
-}
-
-// Export the inline image to Image which can be transformed or exported easily.
-func (this *ContentStreamInlineImage) ToImage() (*Image, error) {
-	return nil, fmt.Errorf("Not implemented yet")
-}
-
-// Parse an inline image from a content stream, both read its properties and
-// binary data.
-// When called, "BI" has already been read from the stream.  This function
-// finishes reading through "EI" and then returns the ContentStreamInlineImage.
-func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {
-	// Reading parameters.
-	im := ContentStreamInlineImage{}
-
-	for {
-		this.skipSpaces()
-		obj, err, isOperand := this.parseObject()
-		if err != nil {
-			return nil, err
-		}
-
-		if !isOperand {
-			// Not an operand.. Read key value properties..
-			param, ok := obj.(*PdfObjectName)
-			if !ok {
-				return nil, fmt.Errorf("Invalid inline image property (expecting name) - %T", obj)
-			}
-
-			valueObj, err, isOperand := this.parseObject()
-			if err != nil {
-				return nil, err
-			}
-			if isOperand {
-				return nil, fmt.Errorf("Not expecting an operand")
-			}
-
-			if *param == "BPC" {
-				im.BitsPerComponent = valueObj
-			} else if *param == "CS" {
-				im.ColorSpace = valueObj
-			} else if *param == "D" {
-				im.Decode = valueObj
-			} else if *param == "DP" {
-				im.DecodeParms = valueObj
-			} else if *param == "F" {
-				im.Filter = valueObj
-			} else if *param == "H" {
-				im.Height = valueObj
-			} else if *param == "IM" {
-				im.ImageMask = valueObj
-			} else if *param == "Intent" {
-				im.Intent = valueObj
-			} else if *param == "I" {
-				im.Interpolate = valueObj
-			} else if *param == "W" {
-				im.Width = valueObj
-			} else {
-				return nil, fmt.Errorf("Unknown inline image parameter %s", *param)
-			}
-		}
-
-		if isOperand {
-			operand, ok := obj.(*PdfObjectString)
-			if !ok {
-				return nil, fmt.Errorf("Failed to read inline image - invalid operand")
-			}
-
-			if *operand == "EI" {
-				// Image fully defined
-				common.Log.Debug("Inline image finished...")
-				return &im, nil
-			} else if *operand == "ID" {
-				// Inline image data.
-				// Should get a single space (0x20) followed by the data and then EI.
-				common.Log.Debug("ID start")
-
-				// Skip the space if its there.
-				b, err := this.reader.Peek(1)
-				if err != nil {
-					return nil, err
-				}
-				if IsWhiteSpace(b[0]) {
-					this.reader.Discard(1)
-				}
-
-				// Unfortunately there is no good way to know how many bytes to read since it
-				// depends on the Filter and encoding etc.
-				// Therefore we will simply read until we find "<ws>EI<ws>" where <ws> is whitespace
-				// although of course that could be a part of the data (even if unlikely).
-				im.stream = []byte{}
-				state := 0
-				var skipBytes []byte
-				for {
-					c, err := this.reader.ReadByte()
-					if err != nil {
-						common.Log.Debug("Unable to find end of image EI in inline image data")
-						return nil, err
-					}
-
-					if state == 0 {
-						if IsWhiteSpace(c) {
-							skipBytes = []byte{}
-							skipBytes = append(skipBytes, c)
-							state = 1
-						} else {
-							im.stream = append(im.stream, c)
-						}
-					} else if state == 1 {
-						skipBytes = append(skipBytes, c)
-						if c == 'E' {
-							state = 2
-						} else {
-							im.stream = append(im.stream, skipBytes...)
-							// Need an extra check to decide if we fall back to state 0 or 1.
-							if IsWhiteSpace(c) {
-								state = 1
-							} else {
-								state = 0
-							}
-						}
-					} else if state == 2 {
-						skipBytes = append(skipBytes, c)
-						if c == 'I' {
-							state = 3
-						} else {
-							im.stream = append(im.stream, skipBytes...)
-							state = 0
-						}
-					} else if state == 3 {
-						skipBytes = append(skipBytes, c)
-						if IsWhiteSpace(c) {
-							// image data finished.
-							common.Log.Debug("Image stream (%d): % x", len(im.stream), im.stream)
-							// Exit point.
-							return &im, nil
-						} else {
-							// Seems like "<ws>EI" was part of the data.
-							im.stream = append(im.stream, skipBytes...)
-							state = 0
-						}
-					}
-				}
-				// Never reached (exit point is at end of EI).
-			}
-		}
-	}
 }
 
 // Parses all commands in content stream, returning a list of operation data.
@@ -274,53 +73,6 @@ func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
 
 	common.Log.Debug("Operation list: %v\n", operations)
 	return operations, nil
-}
-
-// Parses and extracts all text data in content streams and returns as a string.
-// Does not take into account Encoding table, the output is simply the character codes.
-func (this *ContentStreamParser) ExtractText() (string, error) {
-	operations, err := this.Parse()
-	if err != nil {
-		return "", err
-	}
-	inText := false
-	txt := ""
-	for _, op := range operations {
-		if op.Operand == "BT" {
-			inText = true
-		} else if op.Operand == "ET" {
-			inText = false
-		}
-		if op.Operand == "Td" || op.Operand == "TD" || op.Operand == "T*" {
-			// Move to next line...
-			txt += "\n"
-		}
-		if inText && op.Operand == "TJ" {
-			if len(op.Params) < 1 {
-				continue
-			}
-			paramList, ok := op.Params[0].(*PdfObjectArray)
-			if !ok {
-				return "", fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
-			}
-			for _, obj := range *paramList {
-				if strObj, ok := obj.(*PdfObjectString); ok {
-					txt += string(*strObj)
-				}
-			}
-		} else if inText && op.Operand == "Tj" {
-			if len(op.Params) < 1 {
-				continue
-			}
-			param, ok := op.Params[0].(*PdfObjectString)
-			if !ok {
-				return "", fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
-			}
-			txt += string(*param)
-		}
-	}
-
-	return txt, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and
@@ -446,7 +198,7 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 	allowSigns := true
 	numStr := ""
 	for {
-		common.Log.Debug("Parsing number \"%s\"", numStr)
+		common.Log.Trace("Parsing number \"%s\"", numStr)
 		bb, err := this.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
@@ -529,7 +281,7 @@ func (this *ContentStreamParser) parseString() (PdfObjectString, error) {
 				}
 				this.reader.Discard(len(numeric) - 1)
 
-				common.Log.Debug("Numeric string \"%s\"", numeric)
+				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
 					return PdfObjectString(bytes), err
@@ -668,7 +420,7 @@ func (this *ContentStreamParser) parseNull() (PdfObjectNull, error) {
 }
 
 func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
-	common.Log.Debug("Reading content stream dict!")
+	common.Log.Trace("Reading content stream dict!")
 
 	dict := make(PdfObjectDictionary)
 
@@ -690,17 +442,17 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 			return nil, err
 		}
 
-		common.Log.Debug("Dict peek: %s (% x)!", string(bb), string(bb))
+		common.Log.Trace("Dict peek: %s (% x)!", string(bb), string(bb))
 		if (bb[0] == '>') && (bb[1] == '>') {
-			common.Log.Debug("EOF dictionary")
+			common.Log.Trace("EOF dictionary")
 			this.reader.ReadByte()
 			this.reader.ReadByte()
 			break
 		}
-		common.Log.Debug("Parse the name!")
+		common.Log.Trace("Parse the name!")
 
 		keyName, err := this.parseName()
-		common.Log.Debug("Key: %s", keyName)
+		common.Log.Trace("Key: %s", keyName)
 		if err != nil {
 			common.Log.Debug("ERROR Returning name err %s", err)
 			return nil, err
@@ -710,8 +462,8 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 			// Some writers have a bug where the null is appended without
 			// space.  For example "\Boundsnull"
 			newKey := keyName[0 : len(keyName)-4]
-			common.Log.Debug("Taking care of null bug (%s)", keyName)
-			common.Log.Debug("New key \"%s\" = null", newKey)
+			common.Log.Trace("Taking care of null bug (%s)", keyName)
+			common.Log.Trace("New key \"%s\" = null", newKey)
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
@@ -729,7 +481,7 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 		}
 		dict[keyName] = val
 
-		common.Log.Debug("dict[%s] = %s", keyName, val.String())
+		common.Log.Trace("dict[%s] = %s", keyName, val.String())
 	}
 
 	return &dict, nil
@@ -772,40 +524,40 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 			return nil, err, false
 		}
 
-		common.Log.Debug("Peek string: %s", string(bb))
+		common.Log.Trace("Peek string: %s", string(bb))
 		// Determine type.
 		if bb[0] == '%' {
 			this.skipComments()
 			continue
 		} else if bb[0] == '/' {
 			name, err := this.parseName()
-			common.Log.Debug("->Name: '%s'", name)
+			common.Log.Trace("->Name: '%s'", name)
 			return &name, err, false
 		} else if bb[0] == '(' {
-			common.Log.Debug("->String!")
+			common.Log.Trace("->String!")
 			str, err := this.parseString()
 			return &str, err, false
 		} else if bb[0] == '<' && bb[1] != '<' {
-			common.Log.Debug("->Hex String!")
+			common.Log.Trace("->Hex String!")
 			str, err := this.parseHexString()
 			return &str, err, false
 		} else if bb[0] == '[' {
-			common.Log.Debug("->Array!")
+			common.Log.Trace("->Array!")
 			arr, err := this.parseArray()
 			return &arr, err, false
 		} else if IsDecimalDigit(bb[0]) || (bb[0] == '-' && IsDecimalDigit(bb[1])) {
-			common.Log.Debug("->Number!")
+			common.Log.Trace("->Number!")
 			number, err := this.parseNumber()
 			return number, err, false
 		} else if bb[0] == '<' && bb[1] == '<' {
 			dict, err := this.parseDict()
 			return dict, err, false
 		} else {
-			common.Log.Debug("->Operand or bool?")
+			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
 			bb, _ = this.reader.Peek(5)
 			peekStr := string(bb)
-			common.Log.Debug("Peek str: %s", peekStr)
+			common.Log.Trace("Peek str: %s", peekStr)
 
 			if (len(peekStr) > 3) && (peekStr[:4] == "null") {
 				null, err := this.parseNull()
