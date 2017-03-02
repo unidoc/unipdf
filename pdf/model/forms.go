@@ -61,13 +61,18 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 			}
 			container, isIndirect := obj.(*PdfIndirectObject)
 			if !isIndirect {
+				if _, isNull := obj.(*PdfObjectNull); isNull {
+					common.Log.Trace("Skipping over null field")
+					continue
+				}
+				common.Log.Debug("Field not contained in indirect object %T", obj)
 				return nil, fmt.Errorf("Field not in an indirect object")
 			}
 			field, err := r.newPdfFieldFromIndirectObject(container, nil)
 			if err != nil {
 				return nil, err
 			}
-			common.Log.Debug("AcroForm Field: %+v", *field)
+			common.Log.Trace("AcroForm Field: %+v", *field)
 			fields = append(fields, field)
 		}
 		acroForm.Fields = &fields
@@ -262,7 +267,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		if err != nil {
 			return nil, err
 		}
-		common.Log.Debug("Merged in annotation (%T)", obj)
+		common.Log.Trace("Merged in annotation (%T)", obj)
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Invalid type of Subtype (%T)", obj)
@@ -338,7 +343,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 
 	if this.KidsF != nil {
 		// Create an array of the kids (fields or widgets).
-		common.Log.Debug("KidsF: %+v", this.KidsF)
+		common.Log.Trace("KidsF: %+v", this.KidsF)
 		arr := PdfObjectArray{}
 		for _, child := range this.KidsF {
 			arr = append(arr, child.ToPdfObject())
@@ -346,7 +351,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 		(*dict)["Kids"] = &arr
 	}
 	if this.KidsA != nil {
-		common.Log.Debug("KidsA: %+v", this.KidsA)
+		common.Log.Trace("KidsA: %+v", this.KidsA)
 		_, hasKids := (*dict)["Kids"].(*PdfObjectArray)
 		if !hasKids {
 			(*dict)["Kids"] = &PdfObjectArray{}
