@@ -1065,6 +1065,7 @@ func (this *PdfColorspaceSpecialPattern) GetNumComponents() int {
 }
 
 func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceSpecialPattern, error) {
+	common.Log.Trace("New Pattern CS from obj: %s %T", obj.String(), obj)
 	cs := NewPdfColorspaceSpecialPattern()
 
 	if indObj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
@@ -1096,8 +1097,6 @@ func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceS
 			common.Log.Error("Invalid Pattern CS array name: %#v", name)
 			return nil, fmt.Errorf("Invalid name")
 		}
-
-		return cs, nil
 	}
 
 	// Has an underlying color space.
@@ -1111,6 +1110,7 @@ func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceS
 		cs.UnderlyingCS = baseCS
 	}
 
+	common.Log.Trace("Returning Pattern with underlying cs: %T", cs.UnderlyingCS)
 	return cs, nil
 }
 
