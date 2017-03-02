@@ -3,6 +3,9 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// The core package provides fundamental functionality for handling PDFs, including definitions of the core PDF objects
+// (primitives), parsing a PDF file as a series of primitives, io, cross references, repairs, encryption, encoding and
+// other core capabilities.
 package core
 
 import (

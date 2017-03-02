@@ -6,7 +6,6 @@
 // The content stream parser provides functionality to parse the content stream into a list of
 // operands that can then be processed further for rendering or extraction of information.
 // The contentstream package uses the core and model packages.
-
 package contentstream
 
 import (
