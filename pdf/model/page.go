@@ -80,6 +80,7 @@ func (this *PdfPage) setContainer(container *PdfIndirectObject) {
 // Note that a new container is created (indirect object).
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
+	page.pageDict = p //XXX?
 
 	d := *p
 
