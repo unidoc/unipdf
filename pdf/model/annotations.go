@@ -343,12 +343,12 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 	if obj, has := (*d)["Type"]; has {
 		str, ok := obj.(*PdfObjectName)
 		if !ok {
-			common.Log.Debug("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
+			common.Log.Trace("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
 		} else {
 			if *str != "Annot" {
 				// Log a debug message.
 				// Not returning an error on this.
-				common.Log.Debug("Unsuspected Type != Annot (%s)", *str)
+				common.Log.Trace("Unsuspected Type != Annot (%s)", *str)
 			}
 		}
 	}
@@ -441,9 +441,9 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 		}
 		ctx.PdfAnnotation = annot
 		annot.context = ctx
-		common.Log.Debug("LINE ANNOTATION: annot (%T): %+v\n", annot, annot)
-		common.Log.Debug("LINE ANNOTATION: ctx (%T): %+v\n", ctx, ctx)
-		common.Log.Debug("LINE ANNOTATION Markup: ctx (%T): %+v\n", ctx.PdfAnnotationMarkup, ctx.PdfAnnotationMarkup)
+		common.Log.Trace("LINE ANNOTATION: annot (%T): %+v\n", annot, annot)
+		common.Log.Trace("LINE ANNOTATION: ctx (%T): %+v\n", ctx, ctx)
+		common.Log.Trace("LINE ANNOTATION Markup: ctx (%T): %+v\n", ctx.PdfAnnotationMarkup, ctx.PdfAnnotationMarkup)
 
 		return annot, nil
 	case "Square":

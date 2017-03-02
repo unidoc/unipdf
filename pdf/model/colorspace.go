@@ -1217,13 +1217,13 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	if str, ok := obj.(*PdfObjectString); ok {
 		data = []byte(*str)
 	} else if stream, ok := obj.(*PdfObjectStream); ok {
-		common.Log.Debug("Indexed stream: %s", obj.String())
-		common.Log.Debug("Encoded (%d) : %# x", len(stream.Stream), stream.Stream)
+		common.Log.Trace("Indexed stream: %s", obj.String())
+		common.Log.Trace("Encoded (%d) : %# x", len(stream.Stream), stream.Stream)
 		decoded, err := DecodeStream(stream)
 		if err != nil {
 			return nil, err
 		}
-		common.Log.Debug("Decoded (%d) : % X", len(decoded), decoded)
+		common.Log.Trace("Decoded (%d) : % X", len(decoded), decoded)
 		data = decoded
 	} else {
 		return nil, fmt.Errorf("Indexed CS: Invalid table format")

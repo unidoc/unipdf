@@ -65,32 +65,32 @@ func (this *PSParser) parseFunction() (*PSProgram, error) {
 			return nil, err
 		}
 
-		common.Log.Debug("Peek string: %s", string(bb))
+		common.Log.Trace("Peek string: %s", string(bb))
 		// Determine type.
 		if bb[0] == '}' {
-			common.Log.Debug("EOF function")
+			common.Log.Trace("EOF function")
 			this.reader.ReadByte()
 			break
 		} else if bb[0] == '{' {
-			common.Log.Debug("Function!")
+			common.Log.Trace("Function!")
 			inlineF, err := this.parseFunction()
 			if err != nil {
 				return nil, err
 			}
 			function.Append(inlineF)
 		} else if pdfcore.IsDecimalDigit(bb[0]) || (bb[0] == '-' && pdfcore.IsDecimalDigit(bb[1])) {
-			common.Log.Debug("->Number!")
+			common.Log.Trace("->Number!")
 			number, err := this.parseNumber()
 			if err != nil {
 				return nil, err
 			}
 			function.Append(number)
 		} else {
-			common.Log.Debug("->Operand or bool?")
+			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
 			bb, _ = this.reader.Peek(5)
 			peekStr := string(bb)
-			common.Log.Debug("Peek str: %s", peekStr)
+			common.Log.Trace("Peek str: %s", peekStr)
 
 			if (len(peekStr) > 4) && (peekStr[:5] == "false") {
 				b, err := this.parseBool()
@@ -144,7 +144,7 @@ func (this *PSParser) parseNumber() (PSObject, error) {
 	allowSigns := true
 	numStr := ""
 	for {
-		common.Log.Debug("Parsing number \"%s\"", numStr)
+		common.Log.Trace("Parsing number \"%s\"", numStr)
 		bb, err := this.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with

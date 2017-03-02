@@ -441,7 +441,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 		return nil, errors.New("Type check error")
 	}
 
-	common.Log.Debug("FUNC2: %s", dict.String())
+	common.Log.Trace("FUNC2: %s", dict.String())
 
 	// Domain
 	array, has := TraceToDirectObject((*dict)["Domain"]).(*PdfObjectArray)

@@ -27,8 +27,8 @@ func getUniDocVersion() string {
  * Mostly for debugging purposes and inspecting odd PDF files.
  */
 func (this *PdfParser) inspect() (map[string]int, error) {
-	common.Log.Debug("--------INSPECT ----------")
-	common.Log.Debug("Xref table:")
+	common.Log.Trace("--------INSPECT ----------")
+	common.Log.Trace("Xref table:")
 
 	objTypes := map[string]int{}
 	objCount := 0
@@ -47,26 +47,26 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 			continue
 		}
 		objCount++
-		common.Log.Debug("==========")
-		common.Log.Debug("Looking up object number: %d", xref.objectNumber)
+		common.Log.Trace("==========")
+		common.Log.Trace("Looking up object number: %d", xref.objectNumber)
 		o, err := this.LookupByNumber(xref.objectNumber)
 		if err != nil {
-			common.Log.Debug("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
+			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
 			failedCount++
 			continue
 		}
 
-		common.Log.Debug("obj: %s", o)
+		common.Log.Trace("obj: %s", o)
 
 		iobj, isIndirect := o.(*PdfIndirectObject)
 		if isIndirect {
-			common.Log.Debug("IND OOBJ %d: %s", xref.objectNumber, iobj)
+			common.Log.Trace("IND OOBJ %d: %s", xref.objectNumber, iobj)
 			dict, isDict := iobj.PdfObject.(*PdfObjectDictionary)
 			if isDict {
 				// Check if has Type parameter.
 				if ot, has := (*dict)["Type"].(*PdfObjectName); has {
 					otype := string(*ot)
-					common.Log.Debug("---> Obj type: %s", otype)
+					common.Log.Trace("---> Obj type: %s", otype)
 					_, isDefined := objTypes[otype]
 					if isDefined {
 						objTypes[otype]++
@@ -76,7 +76,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 				} else if ot, has := (*dict)["Subtype"].(*PdfObjectName); has {
 					// Check if subtype
 					otype := string(*ot)
-					common.Log.Debug("---> Obj subtype: %s", otype)
+					common.Log.Trace("---> Obj subtype: %s", otype)
 					_, isDefined := objTypes[otype]
 					if isDefined {
 						objTypes[otype]++
@@ -97,7 +97,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 			}
 		} else if sobj, isStream := o.(*PdfObjectStream); isStream {
 			if otype, ok := (*(sobj.PdfObjectDictionary))["Type"].(*PdfObjectName); ok {
-				common.Log.Debug("--> Stream object type: %s", *otype)
+				common.Log.Trace("--> Stream object type: %s", *otype)
 				k := string(*otype)
 				if _, isDefined := objTypes[k]; isDefined {
 					objTypes[k]++
@@ -111,23 +111,23 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 				ot, isName := (*dict)["Type"].(*PdfObjectName)
 				if isName {
 					otype := string(*ot)
-					common.Log.Debug("--- obj type %s", otype)
+					common.Log.Trace("--- obj type %s", otype)
 					objTypes[otype]++
 				}
 			}
-			common.Log.Debug("DIRECT OBJ %d: %s", xref.objectNumber, o)
+			common.Log.Trace("DIRECT OBJ %d: %s", xref.objectNumber, o)
 		}
 
 		i++
 	}
-	common.Log.Debug("--------EOF INSPECT ----------")
-	common.Log.Debug("=======")
-	common.Log.Debug("Object count: %d", objCount)
-	common.Log.Debug("Failed lookup: %d", failedCount)
+	common.Log.Trace("--------EOF INSPECT ----------")
+	common.Log.Trace("=======")
+	common.Log.Trace("Object count: %d", objCount)
+	common.Log.Trace("Failed lookup: %d", failedCount)
 	for t, c := range objTypes {
-		common.Log.Debug("%s: %d", t, c)
+		common.Log.Trace("%s: %d", t, c)
 	}
-	common.Log.Debug("=======")
+	common.Log.Trace("=======")
 
 	if len(this.xrefs) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
@@ -136,9 +136,9 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 
 	fontObjs, ok := objTypes["Font"]
 	if !ok || fontObjs < 2 {
-		common.Log.Debug("This document is probably scanned!")
+		common.Log.Trace("This document is probably scanned!")
 	} else {
-		common.Log.Debug("This document is valid for extraction!")
+		common.Log.Trace("This document is valid for extraction!")
 	}
 
 	return objTypes, nil
