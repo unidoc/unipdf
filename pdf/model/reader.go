@@ -530,7 +530,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return nil
 	}
 	if *objType != "Pages" {
-		common.Log.Trace("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
+		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
 		return errors.New("Table of content containing non Page/Pages object!")
 	}
 
@@ -747,8 +747,17 @@ func (this *PdfReader) Inspect() (map[string]int, error) {
 	return this.parser.Inspect()
 }
 
-// Get specific object number
+// Get specific object number.
 func (this *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
 	obj, err := this.parser.LookupByNumber(number)
 	return obj, err
+}
+
+func (this *PdfReader) GetTrailer() (*PdfObjectDictionary, error) {
+	trailerDict := this.parser.GetTrailer()
+	if trailerDict == nil {
+		return nil, errors.New("Trailer missing")
+	}
+
+	return trailerDict, nil
 }
