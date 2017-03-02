@@ -24,6 +24,7 @@ import (
 
 	// Need two slightly different implementations of LZW (EarlyChange parameter).
 	lzw0 "compress/lzw"
+
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unidoc/common"
@@ -202,6 +203,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 }
 
 func (this *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Trace("FlateDecode bytes")
+
 	bufReader := bytes.NewReader(encoded)
 	r, err := zlib.NewReader(bufReader)
 	if err != nil {
@@ -221,7 +224,7 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 	// TODO: Revamp this support to handle TIFF predictor (2).
 	// Also handle more filter bytes and support more values of BitsPerComponent.
 
-	common.Log.Trace("FlateDecode")
+	common.Log.Trace("FlateDecode stream")
 	common.Log.Trace("Predictor: %d", this.Predictor)
 	if this.BitsPerComponent != 8 {
 		return nil, fmt.Errorf("Invalid BitsPerComponent (only 8 supported)")
@@ -1083,6 +1086,8 @@ func (this *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
 func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	decoded := []byte{}
 
+	common.Log.Trace("ASCII85 Decode")
+
 	i := 0
 	eod := false
 
@@ -1148,6 +1153,9 @@ func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		// In that case, 0 bytes are assumed but only
 		decoded = append(decoded, decodedBytes[:toWrite]...)
 	}
+
+	common.Log.Trace("ASCII85, encoded: % X", encoded)
+	common.Log.Trace("ASCII85, decoded: % X", decoded)
 
 	return decoded, nil
 }
@@ -1431,9 +1439,9 @@ func (this *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 func (this *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	decoded := encoded
 	var err error
-	// Apply in inverse order.
-	for i := len(this.encoders) - 1; i >= 0; i-- {
-		encoder := this.encoders[i]
+	// Apply in forward order.
+	for _, encoder := range this.encoders {
+		common.Log.Trace("Multi Encoder Decode: Applying Filter: %v %T", encoder, encoder)
 
 		decoded, err = encoder.DecodeBytes(decoded)
 		if err != nil {
@@ -1453,7 +1461,8 @@ func (this *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	var err error
 
 	// Apply in inverse order.
-	for _, encoder := range this.encoders {
+	for i := len(this.encoders) - 1; i >= 0; i-- {
+		encoder := this.encoders[i]
 		encoded, err = encoder.EncodeBytes(encoded)
 		if err != nil {
 			return nil, err
