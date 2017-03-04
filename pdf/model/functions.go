@@ -11,6 +11,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model/sampling"
 	"github.com/unidoc/unidoc/pdf/ps"
 )
 
@@ -341,64 +342,8 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 // in a uint32 array.  This is somewhat wasteful in the case of a small BitsPerSample, but these tables are
 // presumably not huge at any rate.
 func (this *PdfFunctionType0) processSamples() error {
-	this.data = []uint32{}
-
-	bitsLeftPerSample := this.BitsPerSample
-	var sample uint32
-	var remainder byte
-	remainderBits := 0
-
-	index := 0
-
-	i := 0
-	for i < len(this.rawData) {
-		// Start with the remainder.
-		if remainderBits > 0 {
-			take := remainderBits
-			if bitsLeftPerSample < take {
-				take = bitsLeftPerSample
-			}
-
-			sample = (sample << uint(take)) | uint32(remainder>>uint(8-take))
-			remainderBits -= take
-			if remainderBits > 0 {
-				remainder = remainder << uint(take)
-			} else {
-				remainder = 0
-			}
-			bitsLeftPerSample -= take
-			if bitsLeftPerSample == 0 {
-				this.data[index] = sample
-				bitsLeftPerSample = this.BitsPerSample
-				sample = 0
-				index++
-			}
-		} else {
-			// Take next byte
-			b := this.rawData[i]
-			i++
-
-			// 8 bits.
-			take := 8
-			if bitsLeftPerSample < take {
-				take = bitsLeftPerSample
-			}
-			remainderBits = 8 - take
-			sample = (sample << uint(take)) | uint32(b>>uint(remainderBits))
-
-			if take < 8 {
-				remainder = b << uint(take)
-			}
-
-			bitsLeftPerSample -= take
-			if bitsLeftPerSample == 0 {
-				this.data[index] = sample
-				bitsLeftPerSample = this.BitsPerSample
-				sample = 0
-				index++
-			}
-		}
-	}
+	data := sampling.ResampleBytes(this.rawData, this.BitsPerSample)
+	this.data = data
 
 	return nil
 }

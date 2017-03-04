@@ -7,7 +7,9 @@ package model
 
 import (
 	"bytes"
+	"errors"
 	goimage "image"
+	gocolor "image/color"
 	"image/draw"
 	_ "image/gif"
 	"image/jpeg"
@@ -15,6 +17,7 @@ import (
 	"io"
 
 	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/sampling"
 )
 
@@ -24,6 +27,7 @@ type Image struct {
 	Width            int64  // The width of the image in samples
 	Height           int64  // The height of the image in samples
 	BitsPerComponent int64  // The number of bits per color component
+	ColorComponents  int    // Color components per pixel
 	Data             []byte // Image data stored as bytes.
 }
 
@@ -31,6 +35,15 @@ type Image struct {
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
 func (this *Image) GetSamples() []uint32 {
 	samples := sampling.ResampleBytes(this.Data, int(this.BitsPerComponent))
+
+	expectedLen := int(this.Width) * int(this.Height) * this.ColorComponents
+	if len(samples) < expectedLen {
+		// Return error, or fill with 0s?
+		common.Log.Debug("Error: Too few samples (got %d, expecting %d)", len(samples), expectedLen)
+		return samples
+	} else if len(samples) > expectedLen {
+		samples = samples[:expectedLen]
+	}
 	return samples
 }
 
@@ -43,6 +56,83 @@ func (this *Image) SetSamples(samples []uint32) {
 	}
 
 	this.Data = data
+}
+
+func (this *Image) ToGoImage() (goimage.Image, error) {
+	common.Log.Trace("Converting to go image")
+	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
+	var img DrawableImage
+	common.Log.Trace("Img: %+v", this)
+	/*
+		if this.BitsPerComponent != 8 && this.BitsPerComponent != 16 {
+			return nil, errors.New("Unsupported bpc")
+		}*/
+	if this.ColorComponents == 1 {
+		if this.BitsPerComponent == 16 {
+			img = goimage.NewGray16(bounds)
+		} else {
+			img = goimage.NewGray(bounds)
+		}
+	} else if this.ColorComponents == 3 {
+		if this.BitsPerComponent == 16 {
+			img = goimage.NewRGBA64(bounds)
+		} else {
+			img = goimage.NewRGBA(bounds)
+		}
+	} else if this.ColorComponents == 4 {
+		img = goimage.NewCMYK(bounds)
+	} else {
+		// XXX? Force RGB convert?
+		common.Log.Debug("Unsupported number of colors components per sample: %d", this.ColorComponents)
+		return nil, errors.New("Unsupported colors")
+	}
+
+	// Draw the data on the image..
+	x := 0
+	y := 0
+
+	samples := this.GetSamples()
+	//bytesPerColor := colorComponents * int(this.BitsPerComponent) / 8
+	bytesPerColor := this.ColorComponents
+	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
+		var c gocolor.Color
+		if this.ColorComponents == 1 {
+			if this.BitsPerComponent == 16 {
+				val := uint16(samples[i])<<8 | uint16(samples[i+1])
+				c = gocolor.Gray16{val}
+			} else {
+				val := uint8(samples[i] & 0xff)
+				c = gocolor.Gray{val}
+			}
+		} else if this.ColorComponents == 3 {
+			if this.BitsPerComponent == 16 {
+				r := uint16(samples[i])<<8 | uint16(samples[i+1])
+				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
+				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
+				c = gocolor.RGBA64{R: r, G: g, B: b, A: 0}
+			} else {
+				r := uint8(samples[i] & 0xff)
+				g := uint8(samples[i+1] & 0xff)
+				b := uint8(samples[i+2] & 0xff)
+				c = gocolor.RGBA{R: r, G: g, B: b, A: 0}
+			}
+		} else if this.ColorComponents == 4 {
+			c1 := uint8(samples[i] & 0xff)
+			m1 := uint8(samples[i+1] & 0xff)
+			y1 := uint8(samples[i+2] & 0xff)
+			k1 := uint8(samples[i+3] & 0xff)
+			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
+		}
+
+		img.Set(x, y, c)
+		x++
+		if x == int(this.Width) {
+			x = 0
+			y++
+		}
+	}
+
+	return img, nil
 }
 
 type ImageHandler interface {
@@ -92,6 +182,8 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 }
 
 // To be implemented.
+// Should be able to compress in terms of JPEG quality parameter,
+// and DPI threshold (need to know bounding area dimensions).
 func (this DefaultImageHandler) Compress(input *Image, quality int64) (*Image, error) {
 	return input, nil
 }

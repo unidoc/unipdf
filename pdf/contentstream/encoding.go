@@ -17,7 +17,7 @@ import (
 )
 
 // Creates the encoder for the inline image's Filter and DecodeParms.
-func NewEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEncoder, error) {
+func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEncoder, error) {
 	if inlineImage.Filter == nil {
 		// No filter, return raw data back.
 		return NewRawEncoder(), nil

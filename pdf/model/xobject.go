@@ -30,6 +30,8 @@ type XObjectForm struct {
 	OPI           PdfObject
 	OC            PdfObject
 	Name          PdfObject
+
+	FormResources *PdfPageResources
 	// Stream data.
 	Stream []byte
 	// Primitive
@@ -81,7 +83,21 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 	}
 	if obj, isDefined := dict["Resources"]; isDefined {
 		form.Resources = obj
+		obj = TraceToDirectObject(obj)
+		d, ok := obj.(*PdfObjectDictionary)
+		if !ok {
+			common.Log.Debug("Invalid XObject Form Resources object, pointing to non-dictionary")
+			return nil, errors.New("Type check error")
+		}
+		res, err := NewPdfPageResourcesFromDict(d)
+		if err != nil {
+			common.Log.Debug("Failed getting form resources")
+			return nil, err
+		}
+		form.FormResources = res
+		common.Log.Trace("Form resources: %#v", form.FormResources)
 	}
+
 	if obj, isDefined := dict["Group"]; isDefined {
 		form.Group = obj
 	}
@@ -357,6 +373,13 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 		return nil, errors.New("Bits per component missing")
 	}
 	image.BitsPerComponent = *ximg.BitsPerComponent
+
+	if ximg.ColorSpace != nil {
+		image.ColorComponents = ximg.ColorSpace.GetNumComponents()
+	} else {
+		common.Log.Debug("XObject Image colorspace not specified - assuming 1 color component")
+		image.ColorComponents = 1
+	}
 
 	decoded, err := DecodeStream(ximg.primitive)
 	if err != nil {

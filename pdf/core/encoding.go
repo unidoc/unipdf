@@ -1237,7 +1237,7 @@ func NewRawEncoder() *RawEncoder {
 }
 
 func (this *RawEncoder) GetFilterName() string {
-	return ""
+	return "Raw (no encoding)"
 }
 
 func (this *RawEncoder) MakeDecodeParams() PdfObject {

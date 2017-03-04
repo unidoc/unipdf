@@ -89,12 +89,12 @@ func (this *ContentStreamInlineImage) DefaultWriteString() string {
 	return output.String()
 }
 
-func (this *ContentStreamInlineImage) GetColorSpace() (PdfColorspace, error) {
+func (this *ContentStreamInlineImage) GetColorSpace(resources *PdfPageResources) (PdfColorspace, error) {
 	if this.ColorSpace == nil {
-		return nil, nil
+		// Default.
+		common.Log.Debug("Inline image not having specified colorspace, assuming Gray")
+		return NewPdfColorspaceDeviceGray(), nil
 	}
-
-	// Can also refer to a name in the PDF page resources...
 
 	name, ok := this.ColorSpace.(*PdfObjectName)
 	if !ok {
@@ -108,20 +108,30 @@ func (this *ContentStreamInlineImage) GetColorSpace() (PdfColorspace, error) {
 		return NewPdfColorspaceDeviceRGB(), nil
 	} else if *name == "CMYK" {
 		return NewPdfColorspaceDeviceCMYK(), nil
-		//} else if *name == "I" {
-		//	cs := NewPdfColorspaceSpecialIndexed()
-		//	return cs, nil
+	} else if *name == "I" {
+		return nil, errors.New("Unsupported Index colorspace")
 	} else {
-		common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)
-		return nil, errors.New("Invalid parameter")
+		cs, has := resources.ColorSpace.Colorspaces[string(*name)]
+		if !has {
+			// Can also refer to a name in the PDF page resources...
+			common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)
+			return nil, errors.New("Unknown colorspace")
+		}
+
+		return cs, nil
 	}
 
 }
 
+func (this *ContentStreamInlineImage) GetEncoder() (StreamEncoder, error) {
+	return newEncoderFromInlineImage(this)
+}
+
 // Export the inline image to Image which can be transformed or exported easily.
-func (this *ContentStreamInlineImage) ToImage() (*Image, error) {
+// Page resources are needed to look up colorspace information.
+func (this *ContentStreamInlineImage) ToImage(resources *PdfPageResources) (*Image, error) {
 	// Decode the imaging data if encoded.
-	encoder, err := NewEncoderFromInlineImage(this)
+	encoder, err := newEncoderFromInlineImage(this)
 	if err != nil {
 		return nil, err
 	}
@@ -165,6 +175,19 @@ func (this *ContentStreamInlineImage) ToImage() (*Image, error) {
 			return nil, errors.New("BPC Type error")
 		}
 		image.BitsPerComponent = int64(*bpc)
+	}
+
+	// Color components.
+	if this.ColorSpace != nil {
+		cs, err := this.GetColorSpace(resources)
+		if err != nil {
+			return nil, err
+		}
+		image.ColorComponents = cs.GetNumComponents()
+	} else {
+		// Default gray if not specified.
+		common.Log.Debug("Inline Image colorspace not specified - assuming 1 color component")
+		image.ColorComponents = 1
 	}
 
 	image.Data = decoded
@@ -234,12 +257,12 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 
 			if *operand == "EI" {
 				// Image fully defined
-				common.Log.Debug("Inline image finished...")
+				common.Log.Trace("Inline image finished...")
 				return &im, nil
 			} else if *operand == "ID" {
 				// Inline image data.
 				// Should get a single space (0x20) followed by the data and then EI.
-				common.Log.Debug("ID start")
+				common.Log.Trace("ID start")
 
 				// Skip the space if its there.
 				b, err := this.reader.Peek(1)
@@ -297,7 +320,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 						skipBytes = append(skipBytes, c)
 						if IsWhiteSpace(c) {
 							// image data finished.
-							common.Log.Debug("Image stream (%d): % x", len(im.stream), im.stream)
+							common.Log.Trace("Image stream (%d): % x", len(im.stream), im.stream)
 							// Exit point.
 							return &im, nil
 						} else {

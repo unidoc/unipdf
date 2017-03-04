@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -885,4 +886,97 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	d.SetIfNotNil("Properties", r.Properties)
 
 	return d
+}
+
+func (r *PdfPageResources) HasXObjectByName(keyName string) bool {
+	obj, _ := r.GetXObjectByName(keyName)
+	if obj != nil {
+		return true
+	} else {
+		return false
+	}
+}
+
+type XObjectType int
+
+const (
+	XObjectTypeUndefined XObjectType = iota
+	XObjectTypeImage     XObjectType = iota
+	XObjectTypeForm      XObjectType = iota
+	XObjectTypePS        XObjectType = iota
+	XObjectTypeUnknown   XObjectType = iota
+)
+
+// Returns the XObject with the specified keyName and the object type.
+func (r *PdfPageResources) GetXObjectByName(keyName string) (*PdfObjectStream, XObjectType) {
+	if r.XObject == nil {
+		return nil, XObjectTypeUndefined
+	}
+
+	xresDict, has := r.XObject.(*PdfObjectDictionary)
+	if !has {
+		return nil, XObjectTypeUndefined
+	}
+
+	if obj, has := (*xresDict)[PdfObjectName(keyName)]; has {
+		stream, ok := obj.(*PdfObjectStream)
+		if !ok {
+			common.Log.Debug("XObject not pointing to a stream %T", obj)
+			return nil, XObjectTypeUndefined
+		}
+		dict := stream.PdfObjectDictionary
+
+		name, ok := (*dict)["Subtype"].(*PdfObjectName)
+		if !ok {
+			common.Log.Debug("XObject Subtype not a Name, dict: %s", dict.String())
+			return nil, XObjectTypeUndefined
+		}
+
+		if *name == "Image" {
+			return stream, XObjectTypeImage
+		} else if *name == "Form" {
+			return stream, XObjectTypeForm
+		} else if *name == "PS" {
+			return stream, XObjectTypePS
+		} else {
+			common.Log.Debug("XObject Subtype not known (%s)", *name)
+			return nil, XObjectTypeUndefined
+		}
+	} else {
+		return nil, XObjectTypeUndefined
+	}
+}
+
+func (r *PdfPageResources) GetXObjectImageByName(keyName string) (*XObjectImage, error) {
+	stream, xtype := r.GetXObjectByName(keyName)
+	if stream == nil {
+		return nil, nil
+	}
+	if xtype != XObjectTypeImage {
+		return nil, errors.New("Not an image")
+	}
+
+	ximg, err := NewXObjectImageFromStream(stream)
+	if err != nil {
+		return nil, err
+	}
+
+	return ximg, nil
+}
+
+func (r *PdfPageResources) GetXObjectFormByName(keyName string) (*XObjectForm, error) {
+	stream, xtype := r.GetXObjectByName(keyName)
+	if stream == nil {
+		return nil, nil
+	}
+	if xtype != XObjectTypeForm {
+		return nil, errors.New("Not a form")
+	}
+
+	xform, err := NewXObjectFormFromStream(stream)
+	if err != nil {
+		return nil, err
+	}
+
+	return xform, nil
 }
