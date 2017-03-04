@@ -240,6 +240,13 @@ func (this *PdfColorspaceDeviceCMYK) ToRGB(img Image) (Image, error) {
 
 	samples := img.GetSamples()
 
+	if len(samples)%4 != 0 {
+		//common.Log.Debug("samples: % d", samples)
+		common.Log.Debug("Input image: %#v", img)
+		common.Log.Debug("CMYK -> RGB fail, len samples: %d", len(samples))
+		return img, errors.New("CMYK data not a multiple of 4")
+	}
+
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 	rgbSamples := []uint32{}
 	for i := 0; i < len(samples); i += 4 {
@@ -1452,6 +1459,8 @@ func (this *PdfColorspaceSpecialSeparation) ToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
+	common.Log.Trace("Separation color space -> ToRGB conversion")
+	common.Log.Trace("samples in: %d", len(samples))
 	common.Log.Trace("TintTransform: %+v", this.TintTransform)
 
 	altSamples := []uint32{}
@@ -1460,9 +1469,10 @@ func (this *PdfColorspaceSpecialSeparation) ToRGB(img Image) (Image, error) {
 		// A single tint component is in the range 0.0 - 1.0
 		tint := float64(samples[i]) / maxVal
 
-		common.Log.Trace("Converting tint value: %f", tint)
 		// Convert the tint value to the alternate space value.
 		outputs, err := this.TintTransform.Evaluate([]float64{tint})
+		//common.Log.Trace("Converting tint value: %f -> [% f]", tint, outputs)
+
 		if err != nil {
 			return img, err
 		}
@@ -1476,7 +1486,9 @@ func (this *PdfColorspaceSpecialSeparation) ToRGB(img Image) (Image, error) {
 
 		}
 	}
+	common.Log.Trace("Samples out: %d", len(altSamples))
 	altImage.SetSamples(altSamples)
+	altImage.ColorComponents = this.AlternateSpace.GetNumComponents()
 
 	// Convert to RGB via the alternate colorspace.
 	return this.AlternateSpace.ToRGB(altImage)

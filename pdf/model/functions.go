@@ -288,6 +288,20 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 		}
 	}
 
+	// Fall back to default Encode/Decode params if not set.
+	encode := this.Encode
+	if encode == nil {
+		encode = []float64{}
+		for i := 0; i < len(this.Size); i++ {
+			encode = append(encode, 0)
+			encode = append(encode, float64(this.Size[i]-1))
+		}
+	}
+	decode := this.Decode
+	if decode == nil {
+		decode = this.Range
+	}
+
 	indices := []int{}
 	// Start with nearest neighbour interpolation.
 	for i := 0; i < len(x); i++ {
@@ -295,7 +309,7 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 
 		xip := math.Min(math.Max(xi, this.Domain[2*i]), this.Domain[2*i+1])
 
-		ei := interpolate(xip, this.Domain[2*i], this.Domain[2*i+1], this.Encode[2*i], this.Encode[2*i+1])
+		ei := interpolate(xip, this.Domain[2*i], this.Domain[2*i+1], encode[2*i], encode[2*i+1])
 		eip := math.Min(math.Max(ei, 0), float64(this.Size[i]))
 		// eip represents coordinate into the data table.
 		// At this point it is real values.
@@ -330,7 +344,7 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	outputs := []float64{}
 	for j := 0; j < this.NumOutputs; j++ {
 		rj := this.data[m+j]
-		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(this.BitsPerSample)), this.Decode[2*j], this.Decode[2*j+1])
+		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(this.BitsPerSample)), decode[2*j], decode[2*j+1])
 		yj := math.Min(math.Max(rjp, this.Range[2*j]), this.Range[2*j+1])
 		outputs = append(outputs, yj)
 	}
