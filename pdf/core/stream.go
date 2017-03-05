@@ -55,7 +55,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	} else if *method == StreamEncodingFilterNameLZW {
 		return newLZWEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameDCT {
-		return newDCTEncoderFromStream(streamObj)
+		return newDCTEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameASCIIHex {
 		return NewASCIIHexEncoder(), nil
 	} else if *method == StreamEncodingFilterNameASCII85 {

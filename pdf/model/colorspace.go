@@ -240,6 +240,10 @@ func (this *PdfColorspaceDeviceCMYK) ToRGB(img Image) (Image, error) {
 
 	samples := img.GetSamples()
 
+	common.Log.Trace("CMYK -> RGB")
+	common.Log.Trace("image bpc: %d, color comps: %d", img.BitsPerComponent, img.ColorComponents)
+	common.Log.Trace("Len data: %d, len samples: %d", len(img.Data), len(samples))
+	common.Log.Trace("Height: %d, Width: %d", img.Height, img.Width)
 	if len(samples)%4 != 0 {
 		//common.Log.Debug("samples: % d", samples)
 		common.Log.Debug("Input image: %#v", img)
@@ -247,24 +251,39 @@ func (this *PdfColorspaceDeviceCMYK) ToRGB(img Image) (Image, error) {
 		return img, errors.New("CMYK data not a multiple of 4")
 	}
 
+	decode := img.decode
+	if decode == nil {
+		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
+	}
+	if len(decode) != 8 {
+		common.Log.Debug("Invalid decode array (%d): % d", len(decode), decode)
+		return img, errors.New("Invalid decode array")
+	}
+	common.Log.Trace("Decode array: % f", decode)
+
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
+	common.Log.Trace("MaxVal: %f", maxVal)
 	rgbSamples := []uint32{}
 	for i := 0; i < len(samples); i += 4 {
 		// Normalized c, m, y, k values.
-		c := float64(samples[i]) / maxVal
-		m := float64(samples[i+1]) / maxVal
-		y := float64(samples[i+2]) / maxVal
-		k := float64(samples[i+3]) / maxVal
+		c := interpolate(float64(samples[i]), 0, maxVal, decode[0], decode[1])
+		m := interpolate(float64(samples[i+1]), 0, maxVal, decode[2], decode[3])
+		y := interpolate(float64(samples[i+2]), 0, maxVal, decode[4], decode[5])
+		k := interpolate(float64(samples[i+3]), 0, maxVal, decode[6], decode[7])
 
-		// K(ey) is black.
-		r := 1.0 - math.Min(1.0, c+k)
-		g := 1.0 - math.Min(1.0, m+k)
-		b := 1.0 - math.Min(1.0, y+k)
+		c = c*(1-k) + k
+		m = m*(1-k) + k
+		y = y*(1-k) + k
+
+		r := 1 - c
+		g := 1 - m
+		b := 1 - y
 
 		// Convert to uint32 format.
 		R := uint32(r * maxVal)
 		G := uint32(g * maxVal)
 		B := uint32(b * maxVal)
+		//common.Log.Trace("(%f,%f,%f,%f) -> (%f,%f,%f) [%d,%d,%d]", c, m, y, k, r, g, b, R, G, B)
 
 		rgbSamples = append(rgbSamples, R, G, B)
 	}

@@ -257,14 +257,6 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		return nil, err
 	}
 	img.Filter = encoder
-	/*
-		if obj, isDefined := dict["Filter"]; isDefined {
-			name, ok := obj.(*PdfObjectName)
-			if !ok {
-				return nil, errors.New("Invalid image Filter (not name)")
-			}
-			img.Filter = name
-		}*/
 
 	if obj, isDefined := dict["Width"]; isDefined {
 		iObj, ok := obj.(*PdfObjectInteger)
@@ -295,6 +287,10 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 			return nil, err
 		}
 		img.ColorSpace = cs
+	} else {
+		// If not specified, assume gray..
+		common.Log.Debug("XObject Image colorspace not specified - assuming 1 color component")
+		img.ColorSpace = NewPdfColorspaceDeviceGray()
 	}
 
 	if obj, isDefined := dict["BitsPerComponent"]; isDefined {
@@ -374,18 +370,26 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 	}
 	image.BitsPerComponent = *ximg.BitsPerComponent
 
-	if ximg.ColorSpace != nil {
-		image.ColorComponents = ximg.ColorSpace.GetNumComponents()
-	} else {
-		common.Log.Debug("XObject Image colorspace not specified - assuming 1 color component")
-		image.ColorComponents = 1
-	}
+	image.ColorComponents = ximg.ColorSpace.GetNumComponents()
 
 	decoded, err := DecodeStream(ximg.primitive)
 	if err != nil {
 		return nil, err
 	}
 	image.Data = decoded
+
+	if ximg.Decode != nil {
+		darr, ok := ximg.Decode.(*PdfObjectArray)
+		if !ok {
+			common.Log.Debug("Invalid Decode object")
+			return nil, errors.New("Invalid type")
+		}
+		decode, err := darr.ToFloat64Array()
+		if err != nil {
+			return nil, err
+		}
+		image.decode = decode
+	}
 
 	return image, nil
 }
