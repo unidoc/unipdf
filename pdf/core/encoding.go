@@ -216,6 +216,10 @@ func (this *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 	var outBuf bytes.Buffer
 	outBuf.ReadFrom(r)
+
+	common.Log.Trace("En: % x\n", encoded)
+	common.Log.Trace("De: % x\n", outBuf.Bytes())
+
 	return outBuf.Bytes(), nil
 }
 
@@ -731,7 +735,9 @@ func (this *DCTEncoder) MakeStreamDict() *PdfObjectDictionary {
 
 // Create a new DCT encoder/decoder from a stream object, getting all the encoding parameters
 // from the stream object dictionary entry and the image data itself.
-func newDCTEncoderFromStream(streamObj *PdfObjectStream) (*DCTEncoder, error) {
+// TODO: Support if used with other filters [ASCII85Decode FlateDecode DCTDecode]...
+// need to apply the other filters prior to this one...
+func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder) (*DCTEncoder, error) {
 	// Start with default settings.
 	encoder := NewDCTEncoder()
 
@@ -741,7 +747,18 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream) (*DCTEncoder, error) {
 		return encoder, nil
 	}
 
-	bufReader := bytes.NewReader(streamObj.Stream)
+	// If using DCTDecode in combination with other filters, make sure to decode that first...
+	encoded := streamObj.Stream
+	if multiEnc != nil {
+		e, err := multiEnc.DecodeBytes(encoded)
+		if err != nil {
+			return nil, err
+		}
+		encoded = e
+
+	}
+
+	bufReader := bytes.NewReader(encoded)
 
 	cfg, err := jpeg.DecodeConfig(bufReader)
 	//img, _, err := goimage.Decode(bufReader)
@@ -783,7 +800,8 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream) (*DCTEncoder, error) {
 
 func (this *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
-	img, _, err := goimage.Decode(bufReader)
+	//img, _, err := goimage.Decode(bufReader)
+	img, err := jpeg.Decode(bufReader)
 	if err != nil {
 		common.Log.Debug("Error decoding image: %s", err)
 		return nil, err
@@ -876,13 +894,15 @@ func (this *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 				if !ok {
 					return nil, errors.New("Color type error")
 				}
-				decoded[index] = val.C & 0xff
+				// TODO: Is the inversion not handled right in the JPEG package for APP14?
+				// Should not need to invert here...
+				decoded[index] = 255 - val.C&0xff
 				index++
-				decoded[index] = val.M & 0xff
+				decoded[index] = 255 - val.M&0xff
 				index++
-				decoded[index] = val.Y & 0xff
+				decoded[index] = 255 - val.Y&0xff
 				index++
-				decoded[index] = val.K & 0xff
+				decoded[index] = 255 - val.K&0xff
 				index++
 			}
 		}
@@ -1347,6 +1367,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			dParams = dict
 		}
 
+		common.Log.Trace("Next name: %s", *name)
 		if *name == StreamEncodingFilterNameFlate {
 			// XXX: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)
@@ -1366,6 +1387,14 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		} else if *name == StreamEncodingFilterNameASCII85 {
 			encoder := NewASCII85Encoder()
 			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameDCT {
+			encoder, err := newDCTEncoderFromStream(streamObj, mencoder)
+			if err != nil {
+				return nil, err
+			}
+			mencoder.AddEncoder(encoder)
+			common.Log.Trace("Added DCT encoder...")
+			common.Log.Trace("Multi encoder: %#v", mencoder)
 		} else {
 			common.Log.Error("Unsupported filter %s", *name)
 			return nil, fmt.Errorf("Invalid filter in multi filter array")

@@ -29,6 +29,8 @@ type Image struct {
 	BitsPerComponent int64  // The number of bits per color component
 	ColorComponents  int    // Color components per pixel
 	Data             []byte // Image data stored as bytes.
+
+	decode []float64 // [Dmin Dmax ... values for each color component]
 }
 
 // Convert the raw byte slice into samples which are stored in a uint32 bit array.
@@ -62,7 +64,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
 	var img DrawableImage
-	common.Log.Trace("Img: %+v", this)
+	//common.Log.Trace("Img: %+v", this)
 	/*
 		if this.BitsPerComponent != 8 && this.BitsPerComponent != 16 {
 			return nil, errors.New("Unsupported bpc")
