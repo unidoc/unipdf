@@ -37,6 +37,22 @@ func (this *PdfAnnotation) GetContext() PdfModel {
 	return this.context
 }
 
+// Set the sub annotation (context).
+func (this *PdfAnnotation) SetContext(ctx PdfModel) {
+	this.context = ctx
+}
+
+func (this *PdfAnnotation) String() string {
+	s := ""
+
+	obj, ok := this.ToPdfObject().(*PdfIndirectObject)
+	if ok {
+		s = fmt.Sprintf("%T: %s", this.context, obj.PdfObject.String())
+	}
+
+	return s
+}
+
 // Additional elements for mark-up annotations.
 type PdfAnnotationMarkup struct {
 	T            PdfObject
@@ -307,8 +323,7 @@ type PdfAnnotationRedact struct {
 	Q           PdfObject
 }
 
-// Construct a new PDF annotation model and initializes the underlying
-// PDF primitive.
+// Construct a new PDF annotation model and initializes the underlying PDF primitive.
 func NewPdfAnnotation() *PdfAnnotation {
 	annot := &PdfAnnotation{}
 
@@ -1361,7 +1376,9 @@ func (this *PdfAnnotationText) ToPdfObject() PdfObject {
 	this.PdfAnnotation.ToPdfObject()
 	container := this.primitive
 	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	if this.PdfAnnotationMarkup != nil {
+		this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	}
 
 	d.SetIfNotNil("Subtype", MakeName("Text"))
 	d.SetIfNotNil("Open", this.Open)
@@ -1676,7 +1693,7 @@ func (this *PdfAnnotationTrapNet) ToPdfObject() PdfObject {
 	container := this.primitive
 	d := container.PdfObject.(*PdfObjectDictionary)
 
-	d.SetIfNotNil("Subtype", MakeName("PrinterMark"))
+	d.SetIfNotNil("Subtype", MakeName("TrapNet"))
 	return container
 }
 
