@@ -6,13 +6,11 @@
 package model
 
 import (
-	"bytes"
 	"errors"
 	goimage "image"
 	gocolor "image/color"
 	"image/draw"
 	_ "image/gif"
-	"image/jpeg"
 	_ "image/png"
 	"io"
 
@@ -64,11 +62,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
 	var img DrawableImage
-	//common.Log.Trace("Img: %+v", this)
-	/*
-		if this.BitsPerComponent != 8 && this.BitsPerComponent != 16 {
-			return nil, errors.New("Unsupported bpc")
-		}*/
+
 	if this.ColorComponents == 1 {
 		if this.BitsPerComponent == 16 {
 			img = goimage.NewGray16(bounds)
@@ -158,27 +152,23 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 		return nil, err
 	}
 
-	// Write image stream.
-	var buf bytes.Buffer
-	opt := jpeg.Options{}
-	// Use full quality.
-	opt.Quality = 100
-
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
 	b := img.Bounds()
 	m := goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
 	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
-	err = jpeg.Encode(&buf, m, &opt)
-	if err != nil {
-		return nil, err
+
+	data := []byte{}
+	for i := 0; i < len(m.Pix); i += 4 {
+		data = append(data, m.Pix[i], m.Pix[i+1], m.Pix[i+2])
 	}
 
 	imag := Image{}
 	imag.Width = int64(b.Dx())
 	imag.Height = int64(b.Dy())
 	imag.BitsPerComponent = 8 // RGBA colormap
-	imag.Data = buf.Bytes()
+	imag.ColorComponents = 3
+	imag.Data = data // buf.Bytes()
 
 	return &imag, nil
 }
