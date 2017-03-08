@@ -320,7 +320,11 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 						skipBytes = append(skipBytes, c)
 						if IsWhiteSpace(c) {
 							// image data finished.
-							common.Log.Trace("Image stream (%d): % x", len(im.stream), im.stream)
+							if len(im.stream) > 100 {
+								common.Log.Trace("Image stream (%d): % x ...", len(im.stream), im.stream[:100])
+							} else {
+								common.Log.Trace("Image stream (%d): % x", len(im.stream), im.stream)
+							}
 							// Exit point.
 							return &im, nil
 						} else {

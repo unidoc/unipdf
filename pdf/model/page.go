@@ -418,7 +418,8 @@ func (this *PdfPage) GetResources() (*PdfPageResources, error) {
 		node = (*dict)["Parent"]
 	}
 
-	return nil, errors.New("Resources not defined (required)")
+	// No resources defined...
+	return nil, nil
 }
 
 // Convert the Page to a PDF object dictionary.
@@ -460,7 +461,6 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("B", this.B)
 	p.SetIfNotNil("Dur", this.Dur)
 	p.SetIfNotNil("Trans", this.Trans)
-	//p.SetIfNotNil("AnnotsOLD", this.Annots)
 	p.SetIfNotNil("AA", this.AA)
 	p.SetIfNotNil("Metadata", this.Metadata)
 	p.SetIfNotNil("PieceInfo", this.PieceInfo)
