@@ -350,6 +350,34 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	return img, nil
 }
 
+// Compress with default settings, updating the underlying stream also.
+// XXX/TODO: Add flate encoding as an option (although lossy).  Need to be able
+// to set default settings and override.
+func (ximg *XObjectImage) Compress() error {
+	if ximg.Filter != nil {
+		common.Log.Error("XImage already compressed...")
+		return errors.New("Already compressed")
+	}
+	//encoder := NewFlateEncoder()
+	//encoder.SetPredictor(int(*ximg.Width))
+	encoder := NewDCTEncoder()
+	encoder.ColorComponents = ximg.ColorSpace.GetNumComponents()
+	encoder.Height = int(*ximg.Height)
+	encoder.Width = int(*ximg.Width)
+	encoder.BitsPerComponent = int(*ximg.BitsPerComponent)
+	ximg.Filter = encoder
+
+	encoded, err := ximg.Filter.EncodeBytes(ximg.Stream)
+	if err != nil {
+		common.Log.Debug("Error encoding: %v\n", err)
+		return err
+	}
+	ximg.Stream = encoded
+
+	_ = ximg.ToPdfObject()
+	return nil
+}
+
 // This will convert to an Image which can be transformed or saved out.
 // The image data is decoded and the Image returned.
 func (ximg *XObjectImage) ToImage() (*Image, error) {
