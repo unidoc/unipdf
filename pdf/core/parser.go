@@ -1152,6 +1152,17 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	return trailerDict, nil
 }
 
+// Return the closest object following offset from the xrefs table.
+func (this *PdfParser) xrefNextObjectOffset(offset int64) int64 {
+	nextOffset := int64(0)
+	for _, xref := range this.xrefs {
+		if xref.offset > offset && (xref.offset < nextOffset || nextOffset == 0) {
+			nextOffset = xref.offset
+		}
+	}
+	return nextOffset
+}
+
 // Parse an indirect object from the input stream.
 // Can also be an object stream.
 func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
@@ -1272,10 +1283,30 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 						return nil, errors.New("Stream needs to be longer than 0")
 					}
 
+					// Validate the stream length based on the cross references.
+					// Find next object with closest offset to current object and calculate
+					// the expected stream length based on that.
+					streamStartOffset := this.GetFileOffset()
+					nextObjectOffset := this.xrefNextObjectOffset(streamStartOffset)
+					if streamStartOffset+int64(streamLength) > nextObjectOffset && nextObjectOffset > streamStartOffset {
+						common.Log.Debug("Expected ending at %d", streamStartOffset+int64(streamLength))
+						common.Log.Debug("Next object starting at %d", nextObjectOffset)
+						// endstream + "\n" endobj + "\n" (17)
+						newLength := nextObjectOffset - streamStartOffset - 17
+						if newLength < 0 {
+							return nil, errors.New("Invalid stream length, going past boundaries")
+						}
+
+						common.Log.Debug("Attempting a length correction to %d...", newLength)
+						streamLength = PdfObjectInteger(newLength)
+						(*dict)["Length"] = MakeInteger(newLength)
+					}
+
 					stream := make([]byte, streamLength)
 					_, err = this.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
 						common.Log.Debug("ERROR stream (%d): %X", len(stream), stream)
+						common.Log.Debug("ERROR: %v", err)
 						return nil, err
 					}
 
