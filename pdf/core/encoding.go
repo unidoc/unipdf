@@ -275,10 +275,11 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			return pOutData, nil
 		} else if this.Predictor >= 10 && this.Predictor <= 15 {
 			common.Log.Trace("PNG Encoding")
-			rowLength := int(this.Columns + 1) // 1 byte to specify predictor algorithms per row.
+			// Columns represents the number of samples per row; Each sample can contain multiple color
+			// components.
+			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				common.Log.Debug("ERROR: Invalid row length...")
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
@@ -309,7 +310,7 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 						rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
 					}
 				default:
-					common.Log.Debug("ERROR: Invalid filter byte (%d)", fb)
+					common.Log.Debug("ERROR: Invalid filter byte (%d) @row %d", fb, i)
 					return nil, fmt.Errorf("Invalid filter byte (%d)", fb)
 				}
 
@@ -985,7 +986,8 @@ func (this *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		}
 	}
 
-	// Use full quality.
+	// Use full quality. N.B. even 100 is lossy, as still is transformed, but as good as it gets for DCT.
+	// TODO: Add option to override the quality, can be used in compression.
 	opt := jpeg.Options{}
 	opt.Quality = 100
 
