@@ -621,10 +621,11 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			return pOutData, nil
 		} else if this.Predictor >= 10 && this.Predictor <= 15 {
 			common.Log.Trace("PNG Encoding")
-			rowLength := int(this.Columns + 1) // 1 byte to specify predictor algorithms per row.
+			// Columns represents the number of samples per row; Each sample can contain multiple color
+			// components.
+			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				common.Log.Debug("ERROR: Invalid row length...")
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
