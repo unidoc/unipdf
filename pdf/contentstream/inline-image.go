@@ -71,16 +71,38 @@ func (this *ContentStreamInlineImage) DefaultWriteString() string {
 
 	// We do not start with "BI" as that is the operand and is written out separately.
 	// Write out the parameters
-	s := "BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
-	s += "CS " + this.ColorSpace.DefaultWriteString() + "\n"
-	s += "D " + this.Decode.DefaultWriteString() + "\n"
-	s += "DP " + this.DecodeParms.DefaultWriteString() + "\n"
-	s += "F " + this.Filter.DefaultWriteString() + "\n"
-	s += "H " + this.Height.DefaultWriteString() + "\n"
-	s += "IM " + this.ImageMask.DefaultWriteString() + "\n"
-	s += "Intent " + this.Intent.DefaultWriteString() + "\n"
-	s += "I " + this.Interpolate.DefaultWriteString() + "\n"
-	s += "W " + this.Width.DefaultWriteString() + "\n"
+	s := ""
+
+	if this.BitsPerComponent != nil {
+		s += "BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
+	}
+	if this.ColorSpace != nil {
+		s += "CS " + this.ColorSpace.DefaultWriteString() + "\n"
+	}
+	if this.Decode != nil {
+		s += "D " + this.Decode.DefaultWriteString() + "\n"
+	}
+	if this.DecodeParms != nil {
+		s += "DP " + this.DecodeParms.DefaultWriteString() + "\n"
+	}
+	if this.Filter != nil {
+		s += "F " + this.Filter.DefaultWriteString() + "\n"
+	}
+	if this.Height != nil {
+		s += "H " + this.Height.DefaultWriteString() + "\n"
+	}
+	if this.ImageMask != nil {
+		s += "IM " + this.ImageMask.DefaultWriteString() + "\n"
+	}
+	if this.Intent != nil {
+		s += "Intent " + this.Intent.DefaultWriteString() + "\n"
+	}
+	if this.Interpolate != nil {
+		s += "I " + this.Interpolate.DefaultWriteString() + "\n"
+	}
+	if this.Width != nil {
+		s += "W " + this.Width.DefaultWriteString() + "\n"
+	}
 	output.WriteString(s)
 
 	output.WriteString("ID ")
@@ -193,7 +215,6 @@ func (this *ContentStreamInlineImage) ToImage(resources *PdfPageResources) (*Ima
 		image.BitsPerComponent = 1
 		image.ColorComponents = 1
 	} else {
-
 		// BPC.
 		if this.BitsPerComponent == nil {
 			common.Log.Debug("Inline Bits per component missing - assuming 8")
