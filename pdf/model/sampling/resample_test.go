@@ -86,9 +86,10 @@ func TestResamplingBytes(t *testing.T) {
 }
 
 type TestResamplingTest2 struct {
-	InputData     []uint32
-	BitsPerSample int
-	Expected      []uint32
+	InputData           []uint32
+	BitsPerInputSample  int
+	BitsPerOutputSample int
+	Expected            []uint32
 }
 
 // Test resampling example data with different bits per sample.
@@ -122,22 +123,40 @@ func TestResamplingUint32(t *testing.T) {
 	// 0xde 0xad 0xbe 0xef 0x15 0x13 0x37
 
 	testcases := []TestResamplingTest2{
-		{[]uint32{0xB55D2A00}, 1, []uint32{1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-		{[]uint32{0xB55D2A00}, 2, []uint32{2, 3, 1, 1, 1, 1, 3, 1, 0, 2, 2, 2, 0, 0, 0, 0}},
-		{[]uint32{0xB55D2A00}, 3, []uint32{5, 5, 2, 5, 6, 4, 5, 2, 0, 0}},
-		{[]uint32{0xB55D2A00}, 4, []uint32{11, 5, 5, 13, 2, 10, 0, 0}},
-		{[]uint32{0xB55D2A00}, 5, []uint32{22, 21, 14, 18, 20, 0}},
-		{[]uint32{0xB55D2A00}, 8, []uint32{0xB5, 0x5D, 0x2A, 0x00}},
-		{[]uint32{0xB55D2A00}, 12, []uint32{2901, 3370}},
-		{[]uint32{0xB55D2A00}, 13, []uint32{5803, 5288}},
-		{[]uint32{0xB55D2A00}, 16, []uint32{0xB55D, 0x2A00}},
-		{[]uint32{0xB55D2A00}, 24, []uint32{0xB55D2A}},
-		{[]uint32{0xdeadbeef, 0x15133720}, 24, []uint32{0xdeadbe, 0xef1513}},
-		{[]uint32{0xdeadbeef, 0x15133720}, 32, []uint32{0xdeadbeef, 0x15133720c}},
+		{[]uint32{0xB55D2A00}, 32, 1, []uint32{1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{[]uint32{0xB55D2A00}, 32, 2, []uint32{2, 3, 1, 1, 1, 1, 3, 1, 0, 2, 2, 2, 0, 0, 0, 0}},
+		{[]uint32{0xB55D2A00}, 32, 3, []uint32{5, 5, 2, 5, 6, 4, 5, 2, 0, 0}},
+		{[]uint32{0xB55D2A00}, 32, 4, []uint32{11, 5, 5, 13, 2, 10, 0, 0}},
+		{[]uint32{0xB55D2A00}, 32, 5, []uint32{22, 21, 14, 18, 20, 0}},
+		{[]uint32{0xB55D2A00}, 32, 8, []uint32{0xB5, 0x5D, 0x2A, 0x00}},
+		{[]uint32{0xB55D2A00}, 32, 12, []uint32{2901, 3370}},
+		{[]uint32{0xB55D2A00}, 32, 13, []uint32{5803, 5288}},
+		{[]uint32{0xB55D2A00}, 32, 16, []uint32{0xB55D, 0x2A00}},
+		{[]uint32{0xB55D2A00}, 32, 24, []uint32{0xB55D2A}},
+		{[]uint32{0xdeadbeef, 0x15133720}, 32, 24, []uint32{0xdeadbe, 0xef1513}},
+		{[]uint32{0xdeadbeef, 0x15133720}, 32, 32, []uint32{0xdeadbeef, 0x15133720}},
 	}
 
 	for _, testcase := range testcases {
-		b := ResampleUint32(testcase.InputData, 32, testcase.BitsPerSample)
+		b := ResampleUint32(testcase.InputData, testcase.BitsPerInputSample, testcase.BitsPerOutputSample)
+		fmt.Println(b)
+		if !samplesEqual(b, testcase.Expected) {
+			//t.Errorf("Test case failed. Got: % d, expected: % d", b, testcase.Expected)
+			t.Errorf("Test case failed. Got: % X, expected: % X", b, testcase.Expected)
+		}
+	}
+}
+
+// Test resampling example data with different bits per sample.
+// Input is in uint32, certain number of bits.
+func TestResamplingUint32xx(t *testing.T) {
+	testcases := []TestResamplingTest2{
+		{[]uint32{0, 0, 0}, 1, 8, []uint32{0}},
+		{[]uint32{0, 1, 0}, 1, 8, []uint32{64}},
+	}
+
+	for _, testcase := range testcases {
+		b := ResampleUint32(testcase.InputData, testcase.BitsPerInputSample, testcase.BitsPerOutputSample)
 		fmt.Println(b)
 		if !samplesEqual(b, testcase.Expected) {
 			t.Errorf("Test case failed. Got: % d, expected: % d", b, testcase.Expected)

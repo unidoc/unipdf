@@ -186,5 +186,11 @@ func ResampleUint32(data []uint32, bitsPerInputSample int, bitsPerOutputSample i
 		}
 	}
 
+	// If there are partial output samples, pad with 0s.
+	if bitsLeftPerSample > 0 && bitsLeftPerSample < bitsPerOutputSample {
+		sample <<= uint(bitsLeftPerSample)
+		samples = append(samples, sample)
+	}
+
 	return samples
 }

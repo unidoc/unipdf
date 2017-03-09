@@ -127,6 +127,24 @@ func (this *ContentStreamInlineImage) GetEncoder() (StreamEncoder, error) {
 	return newEncoderFromInlineImage(this)
 }
 
+// Is a mask ?
+// The image mask entry in the image dictionary specifies that the image data shall be used as a stencil
+// mask for painting in the current color. The mask data is 1bpc, grayscale.
+func (this *ContentStreamInlineImage) IsMask() (bool, error) {
+	if this.ImageMask != nil {
+		imMask, ok := this.ImageMask.(*PdfObjectBool)
+		if !ok {
+			common.Log.Debug("Image mask not a boolean")
+			return false, errors.New("Invalid object type")
+		}
+
+		return bool(*imMask), nil
+	} else {
+		return false, nil
+	}
+
+}
+
 // Export the inline image to Image which can be transformed or exported easily.
 // Page resources are needed to look up colorspace information.
 func (this *ContentStreamInlineImage) ToImage(resources *PdfPageResources) (*Image, error) {
@@ -164,30 +182,43 @@ func (this *ContentStreamInlineImage) ToImage(resources *PdfPageResources) (*Ima
 	}
 	image.Width = int64(*width)
 
-	// BPC.
-	if this.BitsPerComponent == nil {
-		common.Log.Debug("Inline Bits per component missing - assuming 8")
-		image.BitsPerComponent = 8
-	} else {
-		bpc, ok := this.BitsPerComponent.(*PdfObjectInteger)
-		if !ok {
-			common.Log.Debug("Error invalid bits per component value, type %T", this.BitsPerComponent)
-			return nil, errors.New("BPC Type error")
-		}
-		image.BitsPerComponent = int64(*bpc)
+	// Image mask?
+	isMask, err := this.IsMask()
+	if err != nil {
+		return nil, err
 	}
 
-	// Color components.
-	if this.ColorSpace != nil {
-		cs, err := this.GetColorSpace(resources)
-		if err != nil {
-			return nil, err
-		}
-		image.ColorComponents = cs.GetNumComponents()
-	} else {
-		// Default gray if not specified.
-		common.Log.Debug("Inline Image colorspace not specified - assuming 1 color component")
+	if isMask {
+		// Masks are grayscale 1bpc.
+		image.BitsPerComponent = 1
 		image.ColorComponents = 1
+	} else {
+
+		// BPC.
+		if this.BitsPerComponent == nil {
+			common.Log.Debug("Inline Bits per component missing - assuming 8")
+			image.BitsPerComponent = 8
+		} else {
+			bpc, ok := this.BitsPerComponent.(*PdfObjectInteger)
+			if !ok {
+				common.Log.Debug("Error invalid bits per component value, type %T", this.BitsPerComponent)
+				return nil, errors.New("BPC Type error")
+			}
+			image.BitsPerComponent = int64(*bpc)
+		}
+
+		// Color components.
+		if this.ColorSpace != nil {
+			cs, err := this.GetColorSpace(resources)
+			if err != nil {
+				return nil, err
+			}
+			image.ColorComponents = cs.GetNumComponents()
+		} else {
+			// Default gray if not specified.
+			common.Log.Debug("Inline Image colorspace not specified - assuming 1 color component")
+			image.ColorComponents = 1
+		}
 	}
 
 	image.Data = decoded
