@@ -704,6 +704,7 @@ type DCTEncoder struct {
 	BitsPerComponent int // 8 or 16 bit
 	Width            int
 	Height           int
+	Quality          int
 }
 
 // Make a new DCT encoder with default parameters.
@@ -712,6 +713,8 @@ func NewDCTEncoder() *DCTEncoder {
 
 	encoder.ColorComponents = 3
 	encoder.BitsPerComponent = 8
+
+	encoder.Quality = 75
 
 	return encoder
 }
@@ -796,6 +799,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	encoder.Width = cfg.Width
 	encoder.Height = cfg.Height
 	common.Log.Trace("DCT Encoder: %+v", encoder)
+	encoder.Quality = 75
 
 	return encoder, nil
 }
@@ -987,10 +991,12 @@ func (this *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		}
 	}
 
-	// Use full quality. N.B. even 100 is lossy, as still is transformed, but as good as it gets for DCT.
-	// TODO: Add option to override the quality, can be used in compression.
+	// The quality is specified from 0-100 (with 100 being the best quality) in the DCT structure.
+	// N.B. even 100 is lossy, as still is transformed, but as good as it gets for DCT.
+	// This is not related to the DPI, but rather inherent transformation losses.
+
 	opt := jpeg.Options{}
-	opt.Quality = 100
+	opt.Quality = this.Quality
 
 	var buf bytes.Buffer
 	err := jpeg.Encode(&buf, img, &opt)

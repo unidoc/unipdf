@@ -147,6 +147,23 @@ func (xform *XObjectForm) GetContentStream() ([]byte, error) {
 	return decoded, nil
 }
 
+// Update the content stream, encode if needed.
+func (xform *XObjectForm) SetContentStream(content []byte) error {
+	encoded := content
+	if xform.Filter != nil {
+		enc, err := xform.Filter.EncodeBytes(encoded)
+		if err != nil {
+			return err
+		}
+		encoded = enc
+	}
+
+	xform.primitive.Stream = encoded
+	xform.primitive.PdfObjectDictionary.Set("Length", MakeInteger(int64(len(encoded))))
+
+	return nil
+}
+
 // Return a stream object.
 func (xform *XObjectForm) ToPdfObject() PdfObject {
 	stream := xform.primitive
@@ -221,7 +238,7 @@ func NewXObjectImage() *XObjectImage {
 
 // Creates a new XObject Image from an image object with default
 // options.
-func NewXObjectImageFromImage(name PdfObjectName, img *Image) (*XObjectImage, error) {
+func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
 
 	xobj.Name = &name
@@ -236,10 +253,21 @@ func NewXObjectImageFromImage(name PdfObjectName, img *Image) (*XObjectImage, er
 	// Bits.
 	xobj.BitsPerComponent = &img.BitsPerComponent
 
-	//xobj.ColorSpace = MakeName("DeviceRGB")
-	xobj.ColorSpace = NewPdfColorspaceDeviceRGB()
+	// Guess colorspace if not explicitly set.
+	if cs == nil {
+		if img.ColorComponents == 1 {
+			xobj.ColorSpace = NewPdfColorspaceDeviceGray()
+		} else if img.ColorComponents == 3 {
+			xobj.ColorSpace = NewPdfColorspaceDeviceRGB()
+		} else if img.ColorComponents == 4 {
+			xobj.ColorSpace = NewPdfColorspaceDeviceCMYK()
+		} else {
+			return nil, errors.New("Colorspace undefined")
+		}
+	} else {
+		xobj.ColorSpace = cs
 
-	// define color space?
+	}
 
 	return xobj, nil
 }
@@ -348,6 +376,38 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	img.Stream = stream.Stream
 
 	return img, nil
+}
+
+// Update XObject Image with new image data.
+func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
+	encoded, err := ximg.Filter.EncodeBytes(img.Data)
+	if err != nil {
+		return err
+	}
+
+	ximg.Stream = encoded
+
+	// Width, height and bits.
+	ximg.Width = &img.Width
+	ximg.Height = &img.Height
+	ximg.BitsPerComponent = &img.BitsPerComponent
+
+	// Guess colorspace if not explicitly set.
+	if cs == nil {
+		if img.ColorComponents == 1 {
+			ximg.ColorSpace = NewPdfColorspaceDeviceGray()
+		} else if img.ColorComponents == 3 {
+			ximg.ColorSpace = NewPdfColorspaceDeviceRGB()
+		} else if img.ColorComponents == 4 {
+			ximg.ColorSpace = NewPdfColorspaceDeviceCMYK()
+		} else {
+			return errors.New("Colorspace undefined")
+		}
+	} else {
+		ximg.ColorSpace = cs
+	}
+
+	return nil
 }
 
 // Compress with default settings, updating the underlying stream also.

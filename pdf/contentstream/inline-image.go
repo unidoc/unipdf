@@ -31,6 +31,42 @@ type ContentStreamInlineImage struct {
 	stream           []byte
 }
 
+// Make a new content stream inline image object from an image.
+func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamInlineImage, error) {
+	if encoder == nil {
+		encoder = NewRawEncoder()
+	}
+
+	inlineImage := ContentStreamInlineImage{}
+	if img.ColorComponents == 1 {
+		inlineImage.ColorSpace = MakeName("DeviceGray")
+	} else if img.ColorComponents == 3 {
+		inlineImage.ColorSpace = MakeName("DeviceRGB")
+	} else if img.ColorComponents == 4 {
+		inlineImage.ColorSpace = MakeName("DeviceCMYK")
+	} else {
+		common.Log.Debug("Invalid number of color components for inline image: %d", img.ColorComponents)
+		return nil, errors.New("Invalid number of color components")
+	}
+	inlineImage.BitsPerComponent = MakeInteger(img.BitsPerComponent)
+	inlineImage.Width = MakeInteger(img.Width)
+	inlineImage.Height = MakeInteger(img.Height)
+
+	encoded, err := encoder.EncodeBytes(img.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	inlineImage.stream = encoded
+	filterName := encoder.GetFilterName()
+	if len(filterName) > 0 {
+		inlineImage.Filter = MakeName(filterName)
+	}
+	// XXX/FIXME: Add decode params?
+
+	return &inlineImage, nil
+}
+
 func (this *ContentStreamInlineImage) String() string {
 	s := fmt.Sprintf("InlineImage(len=%d)\n", len(this.stream))
 	if this.BitsPerComponent != nil {
@@ -107,6 +143,7 @@ func (this *ContentStreamInlineImage) DefaultWriteString() string {
 
 	output.WriteString("ID ")
 	output.Write(this.stream)
+	output.WriteString("\n")
 
 	return output.String()
 }

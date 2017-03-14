@@ -947,6 +947,20 @@ func (r *PdfPageResources) GetXObjectByName(keyName string) (*PdfObjectStream, X
 	}
 }
 
+func (r *PdfPageResources) setXObjectByName(keyName string, stream *PdfObjectStream) error {
+	if r.XObject == nil {
+		r.XObject = &PdfObjectDictionary{}
+	}
+
+	xresDict, has := r.XObject.(*PdfObjectDictionary)
+	if !has {
+		return errors.New("Type check error")
+	}
+
+	(*xresDict)[PdfObjectName(keyName)] = stream
+	return nil
+}
+
 func (r *PdfPageResources) GetXObjectImageByName(keyName string) (*XObjectImage, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
@@ -964,6 +978,12 @@ func (r *PdfPageResources) GetXObjectImageByName(keyName string) (*XObjectImage,
 	return ximg, nil
 }
 
+func (r *PdfPageResources) SetXObjectImageByName(keyName string, ximg *XObjectImage) error {
+	stream := ximg.ToPdfObject().(*PdfObjectStream)
+	err := r.setXObjectByName(keyName, stream)
+	return err
+}
+
 func (r *PdfPageResources) GetXObjectFormByName(keyName string) (*XObjectForm, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
@@ -979,4 +999,10 @@ func (r *PdfPageResources) GetXObjectFormByName(keyName string) (*XObjectForm, e
 	}
 
 	return xform, nil
+}
+
+func (r *PdfPageResources) SetXObjectFormByName(keyName string, xform *XObjectForm) error {
+	stream := xform.ToPdfObject().(*PdfObjectStream)
+	err := r.setXObjectByName(keyName, stream)
+	return err
 }

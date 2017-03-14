@@ -9,6 +9,7 @@
 package contentstream
 
 import (
+	"bytes"
 	"fmt"
 
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -17,6 +18,38 @@ import (
 type ContentStreamOperation struct {
 	Params  []PdfObject
 	Operand string
+}
+
+type ContentStreamOperations []*ContentStreamOperation
+
+// Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
+// stored as a PDF stream or string format.
+func (this ContentStreamOperations) Bytes() []byte {
+	var buf bytes.Buffer
+
+	for _, op := range this {
+		if op == nil {
+			continue
+		}
+
+		if op.Operand == "BI" {
+			// Inline image requires special handling.
+			buf.WriteString(op.Operand + "\n")
+			buf.WriteString(op.Params[0].DefaultWriteString())
+
+		} else {
+			// Default handler.
+			for _, param := range op.Params {
+				buf.WriteString(param.DefaultWriteString())
+				buf.WriteString(" ")
+
+			}
+
+			buf.WriteString(op.Operand + "\n")
+		}
+	}
+
+	return buf.Bytes()
 }
 
 // Parses and extracts all text data in content streams and returns as a string.

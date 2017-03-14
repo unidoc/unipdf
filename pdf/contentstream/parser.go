@@ -27,18 +27,17 @@ type ContentStreamParser struct {
 // stream string.
 func NewContentStreamParser(contentStr string) *ContentStreamParser {
 	// Each command has parameters and an operand (command).
-
 	parser := ContentStreamParser{}
 
-	buffer := bytes.NewBufferString(contentStr)
+	buffer := bytes.NewBufferString(contentStr + "\n") // Add newline at end to get last operand without EOF error.
 	parser.reader = bufio.NewReader(buffer)
 
 	return &parser
 }
 
 // Parses all commands in content stream, returning a list of operation data.
-func (this *ContentStreamParser) Parse() ([]*ContentStreamOperation, error) {
-	operations := []*ContentStreamOperation{}
+func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
+	operations := ContentStreamOperations{}
 
 	for {
 		operation := ContentStreamOperation{}

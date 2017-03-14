@@ -28,6 +28,20 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 	return 0, errors.New("Not a number")
 }
 
+// Convert a list of pdf objects representing floats or integers to a slice of float64 values.
+func getNumbersAsFloat(objects []PdfObject) ([]float64, error) {
+	floats := []float64{}
+	for _, obj := range objects {
+		val, err := getNumberAsFloat(obj)
+		if err != nil {
+			return nil, err
+		}
+		floats = append(floats, val)
+
+	}
+	return floats, nil
+}
+
 // Cases where expecting an integer, but some implementations actually
 // store the number in a floating point format.
 func getNumberAsInt64(obj PdfObject) (int64, error) {
