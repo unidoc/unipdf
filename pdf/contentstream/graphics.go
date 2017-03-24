@@ -148,7 +148,21 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 		return NewPdfColorLab(l, a, b), nil
 	case *PdfColorspaceICCBased:
 		if cs.Alternate == nil {
-			return nil, errors.New("Alternate space not defined for ICC")
+			// Alternate not defined.
+			// Try to fall back to DeviceGray, DeviceRGB or DeviceCMYK.
+			common.Log.Trace("ICC Based not defined - attempting fall back (N = %d)", cs.N)
+			if cs.N == 1 {
+				common.Log.Trace("Falling back to DeviceGray")
+				return csp.getInitialColor(NewPdfColorspaceDeviceGray())
+			} else if cs.N == 3 {
+				common.Log.Trace("Falling back to DeviceRGB")
+				return csp.getInitialColor(NewPdfColorspaceDeviceRGB())
+			} else if cs.N == 4 {
+				common.Log.Trace("Falling back to DeviceCMYK")
+				return csp.getInitialColor(NewPdfColorspaceDeviceCMYK())
+			} else {
+				return nil, errors.New("Alternate space not defined for ICC")
+			}
 		}
 		return csp.getInitialColor(cs.Alternate)
 	case *PdfColorspaceSpecialIndexed:

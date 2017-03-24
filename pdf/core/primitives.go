@@ -67,6 +67,22 @@ func MakeArray(objects ...PdfObject) *PdfObjectArray {
 	return &array
 }
 
+func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
+	array := PdfObjectArray{}
+	for _, val := range vals {
+		array = append(array, MakeInteger(int64(val)))
+	}
+	return &array
+}
+
+func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
+	array := PdfObjectArray{}
+	for _, val := range vals {
+		array = append(array, MakeFloat(val))
+	}
+	return &array
+}
+
 func MakeFloat(val float64) *PdfObjectFloat {
 	num := PdfObjectFloat(val)
 	return &num

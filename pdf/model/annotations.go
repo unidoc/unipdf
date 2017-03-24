@@ -8,6 +8,7 @@ package model
 import (
 	"fmt"
 
+	"github.com/kardianos/govendor/vendor/github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
@@ -332,6 +333,22 @@ func NewPdfAnnotation() *PdfAnnotation {
 
 	annot.primitive = container
 	return annot
+}
+
+// Create a new square annotation.
+func NewPdfAnnotationSquare() *PdfAnnotationSquare {
+	annotation := NewPdfAnnotation()
+	rectAnnotation := &PdfAnnotationSquare{PdfAnnotation: annotation}
+	annotation.SetContext(rectAnnotation)
+	return rectAnnotation
+}
+
+// Create a new text annotation.
+func NewPdfAnnotationText() *PdfAnnotationText {
+	annotation := NewPdfAnnotation()
+	textAnnotation := &PdfAnnotationText{PdfAnnotation: annotation}
+	annotation.SetContext(textAnnotation)
+	return textAnnotation
 }
 
 // Used for PDF parsing.  Loads a PDF annotation model from a PDF primitive dictionary object.
@@ -1450,7 +1467,9 @@ func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
 	this.PdfAnnotation.ToPdfObject()
 	container := this.primitive
 	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	if this.PdfAnnotationMarkup != nil {
+		this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	}
 
 	d.SetIfNotNil("Subtype", MakeName("Square"))
 	d.SetIfNotNil("BS", this.BS)
@@ -1744,4 +1763,177 @@ func (this *PdfAnnotationRedact) ToPdfObject() PdfObject {
 	d.SetIfNotNil("DA", this.DA)
 	d.SetIfNotNil("Q", this.Q)
 	return container
+}
+
+// Border definitions.
+
+type BorderStyle int
+
+const (
+	BorderStyleSolid     BorderStyle = iota
+	BorderStyleDashed    BorderStyle = iota
+	BorderStyleBeveled   BorderStyle = iota
+	BorderStyleInset     BorderStyle = iota
+	BorderStyleUnderline BorderStyle = iota
+)
+
+func (this *BorderStyle) GetPdfName() string {
+	switch *this {
+	case BorderStyleSolid:
+		return "S"
+	case BorderStyleDashed:
+		return "D"
+	case BorderStyleBeveled:
+		return "B"
+	case BorderStyleInset:
+		return "I"
+	case BorderStyleUnderline:
+		return "U"
+	}
+
+	return "" // Should not happen.
+}
+
+// Border style
+type PdfBorderStyle struct {
+	W *float64     // Border width
+	S *BorderStyle // Border style
+	D *[]int       // Dash array.
+
+	container PdfObject
+}
+
+func NewBorderStyle() *PdfBorderStyle {
+	bs := &PdfBorderStyle{}
+	return bs
+}
+
+func (this *PdfBorderStyle) SetBorderWidth(width float64) {
+	this.W = &width
+}
+
+func (this *PdfBorderStyle) GetBorderWidth() float64 {
+	if this.W == nil {
+		return 1 // Default.
+	}
+	return *this.W
+}
+
+func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
+	bs := &PdfBorderStyle{}
+	bs.container = obj
+
+	var d *PdfObjectDictionary
+	obj = TraceToDirectObject(obj)
+	d, ok := obj.(*PdfObjectDictionary)
+	if !ok {
+		return nil, errors.New("Type check")
+	}
+
+	// Type.
+	if obj, has := (*d)["Type"]; has {
+		name, ok := obj.(*PdfObjectName)
+		if !ok {
+			common.Log.Debug("Incompatibility with Type not a name object: %T", obj)
+		} else {
+			if *name != "Border" {
+				common.Log.Debug("Warning, Type != Border: %s", *name)
+			}
+		}
+	}
+
+	// Border width.
+	if obj, has := (*d)["W"]; has {
+		val, err := getNumberAsFloat(obj)
+		if err != nil {
+			common.Log.Debug("Error retrieving W: %v", err)
+			return nil, err
+		}
+		bs.W = &val
+	}
+
+	// Border style.
+	if obj, has := (*d)["S"]; has {
+		name, ok := obj.(*PdfObjectName)
+		if !ok {
+			return nil, errors.New("Border S not a name object")
+		}
+
+		var style BorderStyle
+		switch *name {
+		case "S":
+			style = BorderStyleSolid
+		case "D":
+			style = BorderStyleDashed
+		case "B":
+			style = BorderStyleBeveled
+		case "I":
+			style = BorderStyleInset
+		case "U":
+			style = BorderStyleUnderline
+		default:
+			common.Log.Debug("Invalid style name %s", *name)
+			return nil, errors.New("Style type range check")
+		}
+
+		bs.S = &style
+	}
+
+	// Dash array.
+	if obj, has := (*d)["D"]; has {
+		vec, ok := obj.(*PdfObjectArray)
+		if !ok {
+			common.Log.Debug("Border D dash not an array: %T", obj)
+			return nil, errors.New("Border D type check error")
+		}
+
+		vals, err := vec.ToIntegerArray()
+		if err != nil {
+			common.Log.Debug("Border D Problem converting to integer array: %v", err)
+			return nil, err
+		}
+
+		bs.D = &vals
+	}
+
+	return bs, nil
+}
+
+func (this *PdfBorderStyle) ToPdfObject() PdfObject {
+	d := &PdfObjectDictionary{}
+	if this.container != nil {
+		if indObj, is := this.container.(*PdfIndirectObject); is {
+			indObj.PdfObject = d
+		}
+	}
+
+	d.Set("Subtype", MakeName("Border"))
+	if this.W != nil {
+		d.Set("W", MakeFloat(*this.W))
+	}
+	if this.S != nil {
+		d.Set("S", MakeName(this.S.GetPdfName()))
+	}
+	if this.D != nil {
+		d.Set("D", MakeArrayFromIntegers(*this.D))
+	}
+
+	if this.container != nil {
+		return this.container
+	} else {
+		return d
+	}
+}
+
+// Border effect
+type BorderEffect int
+
+const (
+	BorderEffectNoEffect BorderEffect = iota
+	BorderEffectCloudy   BorderEffect = iota
+)
+
+type PdfBorderEffect struct {
+	S *BorderEffect // Border effect type
+	I *float64      // Intensity of the effect
 }
