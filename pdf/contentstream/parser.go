@@ -544,7 +544,7 @@ func (this *ContentStreamParser) parseObject() (PdfObject, error, bool) {
 			common.Log.Trace("->Array!")
 			arr, err := this.parseArray()
 			return &arr, err, false
-		} else if IsDecimalDigit(bb[0]) || (bb[0] == '-' && IsDecimalDigit(bb[1])) {
+		} else if IsFloatDigit(bb[0]) || (bb[0] == '-' && IsFloatDigit(bb[1])) {
 			common.Log.Trace("->Number!")
 			number, err := this.parseNumber()
 			return number, err, false

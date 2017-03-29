@@ -15,6 +15,10 @@ func IsWhiteSpace(ch byte) bool {
 	}
 }
 
+func IsFloatDigit(c byte) bool {
+	return ('0' <= c && c <= '9') || c == '.'
+}
+
 func IsDecimalDigit(c byte) bool {
 	if c >= '0' && c <= '9' {
 		return true
