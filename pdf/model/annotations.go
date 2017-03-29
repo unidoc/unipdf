@@ -6,9 +6,9 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/kardianos/govendor/vendor/github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
