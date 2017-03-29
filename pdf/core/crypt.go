@@ -41,6 +41,8 @@ type PdfCrypt struct {
 	CryptFilters CryptFilters
 	StreamFilter string
 	StringFilter string
+
+	parser *PdfParser
 }
 
 type AccessPermissions struct {
@@ -69,15 +71,36 @@ type CryptFilters map[string]CryptFilter
 func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	this.CryptFilters = CryptFilters{}
 
-	cf, ok := (*ed)["CF"].(*PdfObjectDictionary)
+	obj := (*ed)["CF"]
+	obj = TraceToDirectObject(obj) // XXX may need to resolve reference...
+	if ref, isRef := obj.(*PdfObjectReference); isRef {
+		o, err := this.parser.LookupByReference(*ref)
+		if err != nil {
+			common.Log.Debug("Error looking up CF reference")
+			return err
+		}
+		obj = TraceToDirectObject(o)
+	}
+
+	cf, ok := obj.(*PdfObjectDictionary)
 	if !ok {
+		common.Log.Debug("Invalid CF, type: %T", obj)
 		return errors.New("Invalid CF")
 	}
 
 	for name, v := range *cf {
+		if ref, isRef := v.(*PdfObjectReference); isRef {
+			o, err := this.parser.LookupByReference(*ref)
+			if err != nil {
+				common.Log.Debug("Error lookup up dictionary reference")
+				return err
+			}
+			v = TraceToDirectObject(o)
+		}
+
 		dict, ok := v.(*PdfObjectDictionary)
 		if !ok {
-			return fmt.Errorf("Invalid dict in CF (name %s)", name)
+			return fmt.Errorf("Invalid dict in CF (name %s) - not a dictionary but %T", name, v)
 		}
 
 		if name == "Identity" {
@@ -160,11 +183,12 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 // Prepare the document crypt handler based on the encryption dictionary
 // and trailer dictionary.
-func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
+func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	crypter := PdfCrypt{}
 	crypter.DecryptedObjects = map[PdfObject]bool{}
 	crypter.EncryptedObjects = map[PdfObject]bool{}
 	crypter.Authenticated = false
+	crypter.parser = parser
 
 	filter, ok := (*ed)["Filter"].(*PdfObjectName)
 	if !ok {
@@ -261,12 +285,13 @@ func PdfCryptMakeNew(ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	// but clearly not everyone is following the specification.
 	id0 := PdfObjectString("")
 	if idArray, ok := (*trailer)["ID"].(*PdfObjectArray); ok {
-		common.Log.Debug("Trailer ID array missing!")
 		id0obj, ok := (*idArray)[0].(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
 		}
 		id0 = *id0obj
+	} else {
+		common.Log.Debug("Trailer ID array missing or invalid!")
 	}
 	crypter.Id0 = string(id0)
 

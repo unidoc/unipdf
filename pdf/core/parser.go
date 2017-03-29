@@ -1404,7 +1404,7 @@ func (this *PdfParser) IsEncrypted() (bool, error) {
 			if !ok {
 				return false, errors.New("Trailer Encrypt object non dictionary")
 			}
-			crypter, err := PdfCryptMakeNew(encDict, this.trailer)
+			crypter, err := PdfCryptMakeNew(this, encDict, this.trailer)
 			if err != nil {
 				return false, err
 			}
