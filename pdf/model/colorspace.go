@@ -1689,7 +1689,11 @@ func (this *PdfColorspaceICCBased) ToPdfObject() PdfObject {
 		(*dict)["Metadata"] = this.Metadata
 	}
 	if this.Range != nil {
-		(*dict)["Range"] = MakeArray(MakeFloat(this.Range[0]), MakeFloat(this.Range[1]), MakeFloat(this.Range[2]), MakeFloat(this.Range[3]))
+		ranges := []PdfObject{}
+		for _, r := range this.Range {
+			ranges = append(ranges, MakeFloat(r))
+		}
+		(*dict)["Range"] = MakeArray(ranges...)
 	}
 
 	// Encode with a default encoder?
