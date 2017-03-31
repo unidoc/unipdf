@@ -335,20 +335,265 @@ func NewPdfAnnotation() *PdfAnnotation {
 	return annot
 }
 
+// Create a new text annotation.
+func NewPdfAnnotationText() *PdfAnnotationText {
+	annotation := NewPdfAnnotation()
+	textAnnotation := &PdfAnnotationText{}
+	textAnnotation.PdfAnnotation = annotation
+	textAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(textAnnotation)
+	return textAnnotation
+}
+
+// Create a new link annotation.
+func NewPdfAnnotationLink() *PdfAnnotationLink {
+	annotation := NewPdfAnnotation()
+	linkAnnotation := &PdfAnnotationLink{}
+	linkAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(linkAnnotation)
+	return linkAnnotation
+}
+
+// Create a new free text annotation.
+func NewPdfAnnotationFreeText() *PdfAnnotationFreeText {
+	annotation := NewPdfAnnotation()
+	freetextAnnotation := &PdfAnnotationFreeText{}
+	freetextAnnotation.PdfAnnotation = annotation
+	freetextAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(freetextAnnotation)
+	return freetextAnnotation
+}
+
+// Create a new line annotation.
+func NewPdfAnnotationLine() *PdfAnnotationLine {
+	annotation := NewPdfAnnotation()
+	lineAnnotation := &PdfAnnotationLine{}
+	lineAnnotation.PdfAnnotation = annotation
+	lineAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(lineAnnotation)
+	return lineAnnotation
+}
+
 // Create a new square annotation.
 func NewPdfAnnotationSquare() *PdfAnnotationSquare {
 	annotation := NewPdfAnnotation()
-	rectAnnotation := &PdfAnnotationSquare{PdfAnnotation: annotation}
+	rectAnnotation := &PdfAnnotationSquare{}
+	rectAnnotation.PdfAnnotation = annotation
+	rectAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
 	annotation.SetContext(rectAnnotation)
 	return rectAnnotation
 }
 
-// Create a new text annotation.
-func NewPdfAnnotationText() *PdfAnnotationText {
+// Create a new circle annotation.
+func NewPdfAnnotationCircle() *PdfAnnotationCircle {
 	annotation := NewPdfAnnotation()
-	textAnnotation := &PdfAnnotationText{PdfAnnotation: annotation}
-	annotation.SetContext(textAnnotation)
-	return textAnnotation
+	circAnnotation := &PdfAnnotationCircle{}
+	circAnnotation.PdfAnnotation = annotation
+	circAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(circAnnotation)
+	return circAnnotation
+}
+
+// Create a new polygon annotation.
+func NewPdfAnnotationPolygon() *PdfAnnotationPolygon {
+	annotation := NewPdfAnnotation()
+	polygonAnnotation := &PdfAnnotationPolygon{}
+	polygonAnnotation.PdfAnnotation = annotation
+	polygonAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(polygonAnnotation)
+	return polygonAnnotation
+}
+
+// Create a new polyline annotation.
+func NewPdfAnnotationPolyLine() *PdfAnnotationPolyLine {
+	annotation := NewPdfAnnotation()
+	polylineAnnotation := &PdfAnnotationPolyLine{}
+	polylineAnnotation.PdfAnnotation = annotation
+	polylineAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(polylineAnnotation)
+	return polylineAnnotation
+}
+
+// Create a new text highlight annotation.
+func NewPdfAnnotationHighlight() *PdfAnnotationHighlight {
+	annotation := NewPdfAnnotation()
+	highlightAnnotation := &PdfAnnotationHighlight{}
+	highlightAnnotation.PdfAnnotation = annotation
+	highlightAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(highlightAnnotation)
+	return highlightAnnotation
+}
+
+// Create a new text underline annotation.
+func NewPdfAnnotationUnderline() *PdfAnnotationUnderline {
+	annotation := NewPdfAnnotation()
+	underlineAnnotation := &PdfAnnotationUnderline{}
+	underlineAnnotation.PdfAnnotation = annotation
+	underlineAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(underlineAnnotation)
+	return underlineAnnotation
+}
+
+// Create a new text squiggly annotation.
+func NewPdfAnnotationSquiggly() *PdfAnnotationSquiggly {
+	annotation := NewPdfAnnotation()
+	squigglyAnnotation := &PdfAnnotationSquiggly{}
+	squigglyAnnotation.PdfAnnotation = annotation
+	squigglyAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(squigglyAnnotation)
+	return squigglyAnnotation
+}
+
+// Create a new text strikeout annotation.
+func NewPdfAnnotationStrikeOut() *PdfAnnotationStrikeOut {
+	annotation := NewPdfAnnotation()
+	strikeoutAnnotation := &PdfAnnotationStrikeOut{}
+	strikeoutAnnotation.PdfAnnotation = annotation
+	strikeoutAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(strikeoutAnnotation)
+	return strikeoutAnnotation
+}
+
+// Create a new caret annotation.
+func NewPdfAnnotationCaret() *PdfAnnotationCaret {
+	annotation := NewPdfAnnotation()
+	caretAnnotation := &PdfAnnotationCaret{}
+	caretAnnotation.PdfAnnotation = annotation
+	caretAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(caretAnnotation)
+	return caretAnnotation
+}
+
+// Create a new stamp annotation.
+func NewPdfAnnotationStamp() *PdfAnnotationStamp {
+	annotation := NewPdfAnnotation()
+	stampAnnotation := &PdfAnnotationStamp{}
+	stampAnnotation.PdfAnnotation = annotation
+	stampAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(stampAnnotation)
+	return stampAnnotation
+}
+
+// Create a new ink annotation.
+func NewPdfAnnotationInk() *PdfAnnotationInk {
+	annotation := NewPdfAnnotation()
+	inkAnnotation := &PdfAnnotationInk{}
+	inkAnnotation.PdfAnnotation = annotation
+	inkAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(inkAnnotation)
+	return inkAnnotation
+}
+
+// Create a new popup annotation.
+func NewPdfAnnotationPopup() *PdfAnnotationPopup {
+	annotation := NewPdfAnnotation()
+	popupAnnotation := &PdfAnnotationPopup{}
+	popupAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(popupAnnotation)
+	return popupAnnotation
+}
+
+// Create a new file attachment annotation.
+func NewPdfAnnotationFileAttachment() *PdfAnnotationFileAttachment {
+	annotation := NewPdfAnnotation()
+	fileAnnotation := &PdfAnnotationFileAttachment{}
+	fileAnnotation.PdfAnnotation = annotation
+	fileAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(fileAnnotation)
+	return fileAnnotation
+}
+
+// Create a new sound annotation.
+func NewPdfAnnotationSound() *PdfAnnotationSound {
+	annotation := NewPdfAnnotation()
+	soundAnnotation := &PdfAnnotationSound{}
+	soundAnnotation.PdfAnnotation = annotation
+	soundAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(soundAnnotation)
+	return soundAnnotation
+}
+
+// Create a new rich media annotation.
+func NewPdfAnnotationRichMedia() *PdfAnnotationRichMedia {
+	annotation := NewPdfAnnotation()
+	richmediaAnnotation := &PdfAnnotationRichMedia{}
+	richmediaAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(richmediaAnnotation)
+	return richmediaAnnotation
+}
+
+// Create a new movie annotation.
+func NewPdfAnnotationMovie() *PdfAnnotationMovie {
+	annotation := NewPdfAnnotation()
+	movieAnnotation := &PdfAnnotationMovie{}
+	movieAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(movieAnnotation)
+	return movieAnnotation
+}
+
+// Create a new screen annotation.
+func NewPdfAnnotationScreen() *PdfAnnotationScreen {
+	annotation := NewPdfAnnotation()
+	screenAnnotation := &PdfAnnotationScreen{}
+	screenAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(screenAnnotation)
+	return screenAnnotation
+}
+
+// Create a new watermark annotation.
+func NewPdfAnnotationWatermark() *PdfAnnotationWatermark {
+	annotation := NewPdfAnnotation()
+	watermarkAnnotation := &PdfAnnotationWatermark{}
+	watermarkAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(watermarkAnnotation)
+	return watermarkAnnotation
+}
+
+// Create a new printermark annotation.
+func NewPdfAnnotationPrinterMark() *PdfAnnotationPrinterMark {
+	annotation := NewPdfAnnotation()
+	printermarkAnnotation := &PdfAnnotationPrinterMark{}
+	printermarkAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(printermarkAnnotation)
+	return printermarkAnnotation
+}
+
+// Create a new trapnet annotation.
+func NewPdfAnnotationTrapNet() *PdfAnnotationTrapNet {
+	annotation := NewPdfAnnotation()
+	trapnetAnnotation := &PdfAnnotationTrapNet{}
+	trapnetAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(trapnetAnnotation)
+	return trapnetAnnotation
+}
+
+// Create a new 3d annotation.
+func NewPdfAnnotation3D() *PdfAnnotation3D {
+	annotation := NewPdfAnnotation()
+	x3dAnnotation := &PdfAnnotation3D{}
+	x3dAnnotation.PdfAnnotation = annotation
+	annotation.SetContext(x3dAnnotation)
+	return x3dAnnotation
+}
+
+// Create a new projection annotation.
+func NewPdfAnnotationProjection() *PdfAnnotationProjection {
+	annotation := NewPdfAnnotation()
+	projectionAnnotation := &PdfAnnotationProjection{}
+	projectionAnnotation.PdfAnnotation = annotation
+	projectionAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(projectionAnnotation)
+	return projectionAnnotation
+}
+
+// Create a new redact annotation.
+func NewPdfAnnotationRedact() *PdfAnnotationRedact {
+	annotation := NewPdfAnnotation()
+	redactAnnotation := &PdfAnnotationRedact{}
+	redactAnnotation.PdfAnnotation = annotation
+	redactAnnotation.PdfAnnotationMarkup = &PdfAnnotationMarkup{}
+	annotation.SetContext(redactAnnotation)
+	return redactAnnotation
 }
 
 // Used for PDF parsing.  Loads a PDF annotation model from a PDF primitive dictionary object.
