@@ -19,7 +19,7 @@ type XObjectForm struct {
 	FormType      PdfObject
 	BBox          PdfObject
 	Matrix        PdfObject
-	Resources     PdfObject
+	Resources     *PdfPageResources
 	Group         PdfObject
 	Ref           PdfObject
 	MetaData      PdfObject
@@ -31,7 +31,6 @@ type XObjectForm struct {
 	OC            PdfObject
 	Name          PdfObject
 
-	FormResources *PdfPageResources
 	// Stream data.
 	Stream []byte
 	// Primitive
@@ -82,7 +81,6 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 		form.Matrix = obj
 	}
 	if obj, isDefined := dict["Resources"]; isDefined {
-		form.Resources = obj
 		obj = TraceToDirectObject(obj)
 		d, ok := obj.(*PdfObjectDictionary)
 		if !ok {
@@ -94,8 +92,8 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 			common.Log.Debug("Failed getting form resources")
 			return nil, err
 		}
-		form.FormResources = res
-		common.Log.Trace("Form resources: %#v", form.FormResources)
+		form.Resources = res
+		common.Log.Trace("Form resources: %#v", form.Resources)
 	}
 
 	if obj, isDefined := dict["Group"]; isDefined {
@@ -158,8 +156,7 @@ func (xform *XObjectForm) SetContentStream(content []byte) error {
 		encoded = enc
 	}
 
-	xform.primitive.Stream = encoded
-	xform.primitive.PdfObjectDictionary.Set("Length", MakeInteger(int64(len(encoded))))
+	xform.Stream = encoded
 
 	return nil
 }
@@ -170,8 +167,7 @@ func (xform *XObjectForm) ToPdfObject() PdfObject {
 
 	dict := stream.PdfObjectDictionary
 	if xform.Filter != nil {
-		// Pre-populate the stream dictionary with the
-		// encoding related fields.
+		// Pre-populate the stream dictionary with the encoding related fields.
 		dict = xform.Filter.MakeStreamDict()
 		stream.PdfObjectDictionary = dict
 	}
@@ -181,7 +177,9 @@ func (xform *XObjectForm) ToPdfObject() PdfObject {
 	dict.SetIfNotNil("FormType", xform.FormType)
 	dict.SetIfNotNil("BBox", xform.BBox)
 	dict.SetIfNotNil("Matrix", xform.Matrix)
-	dict.SetIfNotNil("Resources", xform.Resources)
+	if xform.Resources != nil {
+		dict.SetIfNotNil("Resources", xform.Resources.ToPdfObject())
+	}
 	dict.SetIfNotNil("Group", xform.Group)
 	dict.SetIfNotNil("Ref", xform.Ref)
 	dict.SetIfNotNil("MetaData", xform.MetaData)
