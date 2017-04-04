@@ -397,3 +397,14 @@ func (this *ContentCreator) Add_k(c, m, y, k float64) *ContentCreator {
 	this.operands = append(this.operands, &op)
 	return this
 }
+
+/* Shading operators. */
+
+// sh: Paint the shape and color described by a shading dictionary.
+func (this *ContentCreator) Add_sh(name PdfObjectName) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "sh"
+	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	this.operands = append(this.operands, &op)
+	return this
+}

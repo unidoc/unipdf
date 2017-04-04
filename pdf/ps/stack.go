@@ -63,7 +63,7 @@ func (stack *PSStack) PopNumberAsFloat64() (float64, error) {
 func (this *PSStack) ToString() string {
 	s := "[ "
 	for _, obj := range *this {
-		s += obj.ToString()
+		s += obj.String()
 		s += " "
 	}
 	s += "]"

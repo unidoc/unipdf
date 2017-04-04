@@ -1814,14 +1814,13 @@ func (this *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 //////////////////////
 // Pattern color.
 
-// TODO: Should we define a PatternColor?  Need to investigate the definitions of patterns to see if this makes
-// sense and fulfills requirements for usability.
+type PdfColorPattern struct {
+	Color       PdfColor // Color defined in underlying colorspace.
+	PatternName string   // Name of the pattern (reference via resource dicts).
+}
 
-// Pattern color.
-// See 8.6 for info about color spaces and 11.6.7 patterns and transparency.
-// Simply /Pattern ?
-// Can be [/Pattern /DeviceRGB] too?
-// Need to investigate more, specs not clear... XXX
+// Pattern colorspace.
+// Can be defined either as /Pattern or with an underlying colorspace [/Pattern cs].
 type PdfColorspaceSpecialPattern struct {
 	UnderlyingCS PdfColorspace
 
@@ -1907,19 +1906,72 @@ func (this *PdfColorspaceSpecialPattern) ToPdfObject() PdfObject {
 }
 
 func (this *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfColor, error) {
-	return nil, errors.New("Not implemented")
+	if this.UnderlyingCS == nil {
+		return nil, errors.New("Underlying CS not specified")
+	}
+	return this.UnderlyingCS.ColorFromFloats(vals)
 }
 
+// The first objects (if present) represent the color in underlying colorspace.  The last one represents
+// the name of the pattern.
 func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
-	return nil, errors.New("Not implemented")
+	if len(objects) < 1 {
+		return nil, errors.New("Invalid number of parameters")
+	}
+	patternColor := &PdfColorPattern{}
+
+	// Pattern name.
+	pname, ok := objects[len(objects)-1].(*PdfObjectName)
+	if !ok {
+		common.Log.Debug("Pattern name not a name (got %T)", objects[len(objects)-1])
+		return nil, ErrTypeError
+	}
+	patternColor.PatternName = string(*pname)
+
+	// Pattern color if specified.
+	if len(objects) > 1 {
+		colorObjs := objects[0 : len(objects)-1]
+		if this.UnderlyingCS == nil {
+			common.Log.Debug("Pattern color with defined color components but underlying cs missing")
+			return nil, errors.New("Underlying CS not defined")
+		}
+		color, err := this.UnderlyingCS.ColorFromPdfObjects(colorObjs)
+		if err != nil {
+			common.Log.Debug("ERROR: Unable to convert color via underlying cs: %v", err)
+			return nil, err
+		}
+		patternColor.Color = color
+	}
+
+	return patternColor, nil
 }
 
+// Only converts color used with uncolored patterns (defined in underlying colorspace).  Does not go into the
+// pattern objects and convert those.  If that is desired, needs to be done separately.  See for example
+// grayscale conversion example in unidoc-examples repo.
 func (this *PdfColorspaceSpecialPattern) ColorToRGB(color PdfColor) (PdfColor, error) {
-	return color, errors.New("Not implemented")
+	patternColor, ok := color.(*PdfColorPattern)
+	if !ok {
+		common.Log.Debug("Color not pattern (got %T)", color)
+		return nil, ErrTypeError
+	}
+
+	if patternColor.Color == nil {
+		// No color defined, can return same back.  No transform needed.
+		return color, nil
+	}
+
+	if this.UnderlyingCS == nil {
+		return nil, errors.New("Underlying CS not defined.")
+	}
+
+	return this.UnderlyingCS.ColorToRGB(patternColor.Color)
 }
 
+// An image cannot be defined in a pattern colorspace, returns an error.
 func (this *PdfColorspaceSpecialPattern) ImageToRGB(img Image) (Image, error) {
-	return img, errors.New("Not implemented")
+	common.Log.Debug("Error: Image cannot be specified in Pattern colorspace")
+	return img, errors.New("Invalid colorspace for image (pattern)")
 }
 
 //////////////////////
