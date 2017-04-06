@@ -767,6 +767,8 @@ type PdfPageResourcesColorspaces struct {
 	container *PdfIndirectObject
 }
 
+
+
 func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
 	colorspaces := &PdfPageResourcesColorspaces{}
 
@@ -913,7 +915,9 @@ func (r *PdfPageResources) GetXObjectByName(keyName string) (*PdfObjectStream, X
 		return nil, XObjectTypeUndefined
 	}
 
-	xresDict, has := r.XObject.(*PdfObjectDictionary)
+	xobj := TraceToDirectObject(r.XObject)
+
+	xresDict, has := xobj.(*PdfObjectDictionary)
 	if !has {
 		return nil, XObjectTypeUndefined
 	}
