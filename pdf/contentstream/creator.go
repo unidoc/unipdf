@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package contentstream
 
 import . "github.com/unidoc/unidoc/pdf/core"
@@ -394,6 +399,17 @@ func (this *ContentCreator) Add_k(c, m, y, k float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "k"
 	op.Params = makeParamsFromFloats([]float64{c, m, y, k})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+/* Shading operators. */
+
+// sh: Paint the shape and color described by a shading dictionary.
+func (this *ContentCreator) Add_sh(name PdfObjectName) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "sh"
+	op.Params = makeParamsFromNames([]PdfObjectName{name})
 	this.operands = append(this.operands, &op)
 	return this
 }

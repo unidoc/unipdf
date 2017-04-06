@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package contentstream
 
 import (
@@ -181,8 +186,8 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 		}
 		return csp.getInitialColor(cs.AlternateSpace)
 	case *PdfColorspaceSpecialPattern:
-		// TODO: Define color for pattern space.
-		return nil, errors.New("Initial color for pattern space undefined")
+		// FIXME/check: A pattern does not have an initial color...
+		return nil, nil
 	}
 
 	common.Log.Debug("Unable to determine initial color for unknown colorspace: %T", cs)
@@ -370,25 +375,24 @@ func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation,
 	}
 
 	this.graphicsState.ColorStroking = color
-
 	return nil
+}
+
+func isPatternCS(cs PdfColorspace) bool {
+	_, isPattern := cs.(*PdfColorspaceSpecialPattern)
+	return isPattern
 }
 
 // SCN: Same as SC but also supports Pattern, Separation, DeviceN and ICCBased color spaces.
 func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceStroking
 
-	if _, isPattern := cs.(*PdfColorspaceSpecialPattern); isPattern {
-		// TODO handle pattern space spearately. See p. 180.
-		common.Log.Debug("Pattern not handled yet")
-		// Return error?
-		return errors.New("SCN - pattern not handled yet")
-	}
-
-	if len(op.Params) != this.graphicsState.ColorspaceStroking.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
-		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
-		return errors.New("Invalid number of parameters")
+	if !isPatternCS(cs) {
+		if len(op.Params) != cs.GetNumComponents() {
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
+			return errors.New("Invalid number of parameters")
+		}
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
@@ -404,10 +408,13 @@ func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation
 // sc: Same as SC except used for non-stroking operations.
 func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceNonStroking
-	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
-		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
-		return errors.New("Invalid number of parameters")
+
+	if !isPatternCS(cs) {
+		if len(op.Params) != cs.GetNumComponents() {
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
+			return errors.New("Invalid number of parameters")
+		}
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
@@ -424,16 +431,12 @@ func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation,
 func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceNonStroking
 
-	if _, isPattern := cs.(*PdfColorspaceSpecialPattern); isPattern {
-		// TODO handle pattern space spearately. See p. 180.
-		common.Log.Debug("Pattern not handled yet")
-		return errors.New("SCN - pattern not handled yet")
-	}
-
-	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
-		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
-		return errors.New("Invalid number of parameters")
+	if !isPatternCS(cs) {
+		if len(op.Params) != cs.GetNumComponents() {
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
+			return errors.New("Invalid number of parameters")
+		}
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)

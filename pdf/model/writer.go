@@ -245,6 +245,9 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	if arr, isArray := obj.(*PdfObjectArray); isArray {
 		common.Log.Trace("Array")
 		common.Log.Trace("- %s", obj)
+		if arr == nil {
+			return errors.New("Array is nil")
+		}
 		for _, v := range *arr {
 			err := this.addObjects(v)
 			if err != nil {

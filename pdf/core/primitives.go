@@ -273,6 +273,15 @@ func (this *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	return slice, nil
 }
 
+// Merge in key/values from another dictionary.  Overwriting if has same keys.
+func (this *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
+	if another != nil {
+		for key, val := range *another {
+			(*this)[key] = val
+		}
+	}
+}
+
 func (this *PdfObjectDictionary) String() string {
 	outStr := "Dict("
 	for k, v := range *this {
@@ -298,6 +307,9 @@ func (d *PdfObjectDictionary) Set(key PdfObjectName, val PdfObject) {
 	(*d)[key] = val
 }
 
+// Only use if the original value is a PdfObject.  If for example using *PdfObjectArray or other primitives
+// then the nil check will not fail, will be a new interface referring the nil (not a nil PdfObject).
+// TODO: Consider removing. Better to avoid the casting and nil check before calling.
 func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
 	if val != nil {
 		(*d)[key] = val

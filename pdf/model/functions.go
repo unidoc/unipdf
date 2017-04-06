@@ -822,8 +822,9 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 
 func (this *PdfFunctionType4) ToPdfObject() PdfObject {
 	container := this.container
-	if container != nil {
+	if container == nil {
 		this.container = &PdfObjectStream{}
+		container = this.container
 	}
 
 	dict := &PdfObjectDictionary{}
@@ -842,6 +843,11 @@ func (this *PdfFunctionType4) ToPdfObject() PdfObject {
 		rangeArray.Append(MakeFloat(val))
 	}
 	(*dict)["Range"] = rangeArray
+
+	if this.decodedData == nil && this.Program != nil {
+		// Update data.  This is used for created functions (not parsed ones).
+		this.decodedData = []byte(this.Program.String())
+	}
 
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.

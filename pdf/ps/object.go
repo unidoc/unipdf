@@ -11,7 +11,8 @@ import (
 
 type PSObject interface {
 	Duplicate() PSObject
-	ToString() string
+	DebugString() string // Only for debugging.
+	String() string
 }
 
 // Integer.
@@ -25,8 +26,12 @@ func (this *PSInteger) Duplicate() PSObject {
 	return &obj
 }
 
-func (this *PSInteger) ToString() string {
+func (this *PSInteger) DebugString() string {
 	return fmt.Sprintf("int:%d", this.Val)
+}
+
+func (this *PSInteger) String() string {
+	return fmt.Sprintf("%d", this.Val)
 }
 
 // Real number.
@@ -34,8 +39,12 @@ type PSReal struct {
 	Val float64
 }
 
-func (this *PSReal) ToString() string {
+func (this *PSReal) DebugString() string {
 	return fmt.Sprintf("real:%.5f", this.Val)
+}
+
+func (this *PSReal) String() string {
+	return fmt.Sprintf("%.5f", this.Val)
 }
 
 func (this *PSReal) Duplicate() PSObject {
@@ -49,8 +58,12 @@ type PSBoolean struct {
 	Val bool
 }
 
-func (this *PSBoolean) ToString() string {
+func (this *PSBoolean) DebugString() string {
 	return fmt.Sprintf("bool:%v", this.Val)
+}
+
+func (this *PSBoolean) String() string {
+	return fmt.Sprintf("%v", this.Val)
 }
 
 func (this *PSBoolean) Duplicate() PSObject {
@@ -70,10 +83,21 @@ func (this *PSProgram) Append(obj PSObject) {
 	*this = append(*this, obj)
 }
 
-func (this *PSProgram) ToString() string {
+func (this *PSProgram) DebugString() string {
 	s := "{ "
 	for _, obj := range *this {
-		s += obj.ToString()
+		s += obj.DebugString()
+		s += " "
+	}
+	s += "}"
+
+	return s
+}
+
+func (this *PSProgram) String() string {
+	s := "{ "
+	for _, obj := range *this {
+		s += obj.String()
 		s += " "
 	}
 	s += "}"
@@ -115,8 +139,12 @@ func (this *PSProgram) Exec(stack *PSStack) error {
 // Operand.
 type PSOperand string
 
-func (this *PSOperand) ToString() string {
+func (this *PSOperand) DebugString() string {
 	return fmt.Sprintf("op:'%s'", *this)
+}
+
+func (this *PSOperand) String() string {
+	return fmt.Sprintf("%s", *this)
 }
 
 func (this *PSOperand) Duplicate() PSObject {

@@ -3,10 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-//
-// High level manipulation of forms (AcroForm).
-//
-
 package model
 
 import (
@@ -16,6 +12,9 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
+//
+// High level manipulation of forms (AcroForm).
+//
 type PdfAcroForm struct {
 	Fields          *[]*PdfField
 	NeedAppearances PdfObject

@@ -767,8 +767,19 @@ type PdfPageResourcesColorspaces struct {
 	container *PdfIndirectObject
 }
 
-
-
+func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
+	return &PdfPageResourcesColorspaces{
+		Names:       []string{},
+		Colorspaces: map[string]PdfColorspace{},
+	}
+}
+func (this *PdfPageResourcesColorspaces) Add(name string, colorspace PdfColorspace) {
+	if _, ok := this.Colorspaces[name]; ok {
+		common.Log.Error("Colorspace name=%#q already exists", name)
+	}
+	this.Names = append(this.Names, name)
+	this.Colorspaces[name] = colorspace
+}
 func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
 	colorspaces := &PdfPageResourcesColorspaces{}
 
@@ -890,6 +901,88 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	return d
 }
 
+// Get the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
+// or not.
+func (r *PdfPageResources) GetShadingByName(keyName string) (*PdfShading, bool) {
+	if r.Shading == nil {
+		return nil, false
+	}
+
+	shadingDict, ok := r.Shading.(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ERROR: Invalid Shading entry - not a dict (got %T)", r.Shading)
+		return nil, false
+	}
+
+	if obj, has := (*shadingDict)[PdfObjectName(keyName)]; has {
+		shading, err := newPdfShadingFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("ERROR: failed to load pdf shading: %v", err)
+			return nil, false
+		}
+		return shading, true
+	} else {
+		return nil, false
+	}
+}
+
+// Set a shading resource specified by keyName.
+func (r *PdfPageResources) SetShadingByName(keyName string, shadingObj PdfObject) error {
+	if r.Shading == nil {
+		r.Shading = &PdfObjectDictionary{}
+	}
+
+	shadingDict, has := r.Shading.(*PdfObjectDictionary)
+	if !has {
+		return ErrTypeError
+	}
+
+	(*shadingDict)[PdfObjectName(keyName)] = shadingObj
+	return nil
+}
+
+// Get the pattern specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
+// or not.
+func (r *PdfPageResources) GetPatternByName(keyName string) (*PdfPattern, bool) {
+	if r.Pattern == nil {
+		return nil, false
+	}
+
+	patternDict, ok := r.Pattern.(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ERROR: Invalid Pattern entry - not a dict (got %T)", r.Pattern)
+		return nil, false
+	}
+
+	if obj, has := (*patternDict)[PdfObjectName(keyName)]; has {
+		pattern, err := newPdfPatternFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("ERROR: failed to load pdf pattern: %v", err)
+			return nil, false
+		}
+
+		return pattern, true
+	} else {
+		return nil, false
+	}
+}
+
+// Set a pattern resource specified by keyName.
+func (r *PdfPageResources) SetPatternByName(keyName string, pattern PdfObject) error {
+	if r.Pattern == nil {
+		r.Pattern = &PdfObjectDictionary{}
+	}
+
+	patternDict, has := r.Pattern.(*PdfObjectDictionary)
+	if !has {
+		return ErrTypeError
+	}
+
+	(*patternDict)[PdfObjectName(keyName)] = pattern
+	return nil
+}
+
+// Check if an XObject with a specified keyName is defined.
 func (r *PdfPageResources) HasXObjectByName(keyName string) bool {
 	obj, _ := r.GetXObjectByName(keyName)
 	if obj != nil {
@@ -915,10 +1008,10 @@ func (r *PdfPageResources) GetXObjectByName(keyName string) (*PdfObjectStream, X
 		return nil, XObjectTypeUndefined
 	}
 
-	xobj := TraceToDirectObject(r.XObject)
+	xresDict, has := TraceToDirectObject(r.XObject).(*PdfObjectDictionary)
 
-	xresDict, has := xobj.(*PdfObjectDictionary)
 	if !has {
+		common.Log.Debug("ERROR: XObject not a dictionary! (got %T)", TraceToDirectObject(r.XObject))
 		return nil, XObjectTypeUndefined
 	}
 
