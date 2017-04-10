@@ -39,7 +39,7 @@ func makeLineAnnotationAppearanceStream(lineDef LineAnnotationDef) (*pdfcore.Pdf
 		gsName = "gs1"
 	}
 
-	content, linebbox, err := drawPdfLine(lineDef, gsName)
+	content, localBbox, globalBbox, err := drawPdfLine(lineDef, gsName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -49,16 +49,18 @@ func makeLineAnnotationAppearanceStream(lineDef LineAnnotationDef) (*pdfcore.Pdf
 		return nil, nil, err
 	}
 
-	form.BBox = linebbox.ToPdfObject()
+	// Local bounding box for the XObject Form.
+	form.BBox = localBbox.ToPdfObject()
 
 	apDict := &pdfcore.PdfObjectDictionary{}
 	apDict.Set("N", form.ToPdfObject())
 
-	return apDict, linebbox, nil
+	return apDict, globalBbox, nil
 }
 
 // Draw a line in PDF.  Generates the content stream which can be used in page contents or appearance stream of annotation.
-func drawPdfLine(lineDef LineAnnotationDef, gsName string) ([]byte, *pdf.PdfRectangle, error) {
+// Returns the stream content, XForm bounding box (local), Rect bounding box (global/page) and an error if one occurred.
+func drawPdfLine(lineDef LineAnnotationDef, gsName string) ([]byte, *pdf.PdfRectangle, *pdf.PdfRectangle, error) {
 	x1, x2 := lineDef.X1, lineDef.X2
 	y1, y2 := lineDef.Y1, lineDef.Y2
 
@@ -184,6 +186,7 @@ func drawPdfLine(lineDef LineAnnotationDef, gsName string) ([]byte, *pdf.PdfRect
 	}
 
 	pathBbox := path.GetBoundingBox()
+
 	creator := pdfcontent.NewContentCreator()
 
 	// Draw line with arrow
@@ -199,11 +202,23 @@ func drawPdfLine(lineDef LineAnnotationDef, gsName string) ([]byte, *pdf.PdfRect
 		//creator.Add_S().
 		Add_Q()
 
-	bbox := &pdf.PdfRectangle{}
-	bbox.Llx = pathBbox.X
-	bbox.Lly = pathBbox.Y
-	bbox.Urx = pathBbox.X + pathBbox.Width
-	bbox.Ury = pathBbox.Y + pathBbox.Height
+	// Offsets (needed for placement of annotations bbox).
+	offX := x1 - VsX
+	offY := y1 - VsY
 
-	return creator.Bytes(), bbox, nil
+	// Bounding box - local coordinate system (without offset).
+	localBbox := &pdf.PdfRectangle{}
+	localBbox.Llx = pathBbox.X
+	localBbox.Lly = pathBbox.Y
+	localBbox.Urx = pathBbox.X + pathBbox.Width
+	localBbox.Ury = pathBbox.Y + pathBbox.Height
+
+	// Bounding box - global page coordinate system (with offset).
+	globalBbox := &pdf.PdfRectangle{}
+	globalBbox.Llx = offX + pathBbox.X
+	globalBbox.Lly = offY + pathBbox.Y
+	globalBbox.Urx = offX + pathBbox.X + pathBbox.Width
+	globalBbox.Ury = offY + pathBbox.Y + pathBbox.Height
+
+	return creator.Bytes(), localBbox, globalBbox, nil
 }
