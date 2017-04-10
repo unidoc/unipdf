@@ -145,16 +145,24 @@ func (xform *XObjectForm) GetContentStream() ([]byte, error) {
 	return decoded, nil
 }
 
-// Update the content stream, encode if needed.
-func (xform *XObjectForm) SetContentStream(content []byte) error {
+// Update the content stream with specified encoding.  If encoding is null, will use the xform.Filter object
+// or Raw encoding if not set.
+func (xform *XObjectForm) SetContentStream(content []byte, encoder StreamEncoder) error {
 	encoded := content
-	if xform.Filter != nil {
-		enc, err := xform.Filter.EncodeBytes(encoded)
-		if err != nil {
-			return err
+
+	if encoder == nil {
+		if xform.Filter != nil {
+			encoder = xform.Filter
+		} else {
+			encoder = NewRawEncoder()
 		}
-		encoded = enc
 	}
+
+	enc, err := encoder.EncodeBytes(encoded)
+	if err != nil {
+		return err
+	}
+	encoded = enc
 
 	xform.Stream = encoded
 
