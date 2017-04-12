@@ -5,6 +5,7 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
+// The currently supported line ending styles are None, Arrow (ClosedArrow) and Butt.
 type LineEndingStyle int
 
 const (
@@ -13,16 +14,18 @@ const (
 	LineEndingStyleButt  LineEndingStyle = 2
 )
 
+// Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
+// or arrows at either end.  The line also has a specified width, color and opacity.
 type LineAnnotationDef struct {
 	X1               float64
 	Y1               float64
 	X2               float64
 	Y2               float64
 	LineColor        *pdf.PdfColorDeviceRGB
-	Opacity          float64
+	Opacity          float64 // Alpha value (0-1).
 	LineWidth        float64
-	LineEndingStyle1 LineEndingStyle
-	LineEndingStyle2 LineEndingStyle
+	LineEndingStyle1 LineEndingStyle // Line ending style of point 1.
+	LineEndingStyle2 LineEndingStyle // Line ending style of point 2.
 }
 
 // Creates a line annotation object that can be added to page PDF annotations.
@@ -68,4 +71,59 @@ func CreateLineAnnotation(lineDef LineAnnotationDef) (*pdf.PdfAnnotation, error)
 	lineAnnotation.Rect = pdfcore.MakeArrayFromFloats([]float64{bbox.Llx, bbox.Lly, bbox.Urx, bbox.Ury})
 
 	return lineAnnotation.PdfAnnotation, nil
+}
+
+// A rectangle defined with a specified Width and Height and a lower left corner at (X,Y).  The rectangle can
+// optionally have a border and a filling color.
+// The Width/Height includes the border (if any specified).
+type RectangleAnnotationDef struct {
+	X             float64
+	Y             float64
+	Width         float64
+	Height        float64
+	FillEnabled   bool // Show fill?
+	FillColor     *pdf.PdfColorDeviceRGB
+	BorderEnabled bool // Show border?
+	BorderWidth   float64
+	BorderColor   *pdf.PdfColorDeviceRGB
+	Opacity       float64 // Alpha value (0-1).
+}
+
+// Creates a rectangle annotation object that can be added to page PDF annotations.
+func CreateRectangleAnnotation(rectDef RectangleAnnotationDef) (*pdf.PdfAnnotation, error) {
+	rectAnnotation := pdf.NewPdfAnnotationSquare()
+
+	if rectDef.BorderEnabled {
+		r, g, b := rectDef.BorderColor.R(), rectDef.BorderColor.G(), rectDef.BorderColor.B()
+		rectAnnotation.C = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+		bs := pdf.NewBorderStyle()
+		bs.SetBorderWidth(rectDef.BorderWidth)
+		rectAnnotation.BS = bs.ToPdfObject()
+	}
+
+	if rectDef.FillEnabled {
+		r, g, b := rectDef.FillColor.R(), rectDef.FillColor.G(), rectDef.FillColor.B()
+		rectAnnotation.IC = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+	} else {
+		rectAnnotation.IC = pdfcore.MakeArrayFromIntegers([]int{}) // No fill.
+	}
+
+	if rectDef.Opacity < 1.0 {
+		rectAnnotation.CA = pdfcore.MakeFloat(rectDef.Opacity)
+	}
+
+	// Make the appearance stream (for uniform appearance).
+	apDict, bbox, err := makeRectangleAnnotationAppearanceStream(rectDef)
+	if err != nil {
+		return nil, err
+	}
+
+	rectAnnotation.AP = apDict
+	rectAnnotation.Rect = pdfcore.MakeArrayFromFloats([]float64{bbox.Llx, bbox.Lly, bbox.Urx, bbox.Ury})
+
+	return rectAnnotation.PdfAnnotation, nil
+
+}
+
+type CircleAnnotationDef struct {
 }
