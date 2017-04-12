@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package annotator
 
 import (
@@ -126,4 +131,50 @@ func CreateRectangleAnnotation(rectDef RectangleAnnotationDef) (*pdf.PdfAnnotati
 }
 
 type CircleAnnotationDef struct {
+	X             float64
+	Y             float64
+	Width         float64
+	Height        float64
+	FillEnabled   bool // Show fill?
+	FillColor     *pdf.PdfColorDeviceRGB
+	BorderEnabled bool // Show border?
+	BorderWidth   float64
+	BorderColor   *pdf.PdfColorDeviceRGB
+	Opacity       float64 // Alpha value (0-1).
+}
+
+// Creates a circle/ellipse annotation object with appearance stream that can be added to page PDF annotations.
+func CreateCircleAnnotation(circDef CircleAnnotationDef) (*pdf.PdfAnnotation, error) {
+	circAnnotation := pdf.NewPdfAnnotationCircle()
+
+	if circDef.BorderEnabled {
+		r, g, b := circDef.BorderColor.R(), circDef.BorderColor.G(), circDef.BorderColor.B()
+		circAnnotation.C = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+		bs := pdf.NewBorderStyle()
+		bs.SetBorderWidth(circDef.BorderWidth)
+		circAnnotation.BS = bs.ToPdfObject()
+	}
+
+	if circDef.FillEnabled {
+		r, g, b := circDef.FillColor.R(), circDef.FillColor.G(), circDef.FillColor.B()
+		circAnnotation.IC = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+	} else {
+		circAnnotation.IC = pdfcore.MakeArrayFromIntegers([]int{}) // No fill.
+	}
+
+	if circDef.Opacity < 1.0 {
+		circAnnotation.CA = pdfcore.MakeFloat(circDef.Opacity)
+	}
+
+	// Make the appearance stream (for uniform appearance).
+	apDict, bbox, err := makeCircleAnnotationAppearanceStream(circDef)
+	if err != nil {
+		return nil, err
+	}
+
+	circAnnotation.AP = apDict
+	circAnnotation.Rect = pdfcore.MakeArrayFromFloats([]float64{bbox.Llx, bbox.Lly, bbox.Urx, bbox.Ury})
+
+	return circAnnotation.PdfAnnotation, nil
+
 }
