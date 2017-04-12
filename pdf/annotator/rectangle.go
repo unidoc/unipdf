@@ -76,7 +76,14 @@ func drawPdfRectangle(rectDef RectangleAnnotationDef, gsName string) ([]byte, *p
 		creator.Add_gs(pdfcore.PdfObjectName(gsName))
 	}
 	drawPathWithCreator(path, creator)
-	creator.Add_B() // fill and stroke.
+
+	if rectDef.FillEnabled && rectDef.BorderEnabled {
+		creator.Add_B() // fill and stroke.
+	} else if rectDef.FillEnabled {
+		creator.Add_f() // Fill.
+	} else if rectDef.BorderEnabled {
+		creator.Add_S() // Stroke.
+	}
 	creator.Add_Q()
 
 	// Offsets (needed for placement of annotations bbox).

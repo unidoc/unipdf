@@ -102,7 +102,13 @@ func drawPdfCircle(circDef CircleAnnotationDef, gsName string) ([]byte, *pdf.Pdf
 
 	drawBezierPathWithCreator(bpath, creator)
 
-	creator.Add_B() // fill and stroke.
+	if circDef.FillEnabled && circDef.BorderEnabled {
+		creator.Add_B() // fill and stroke.
+	} else if circDef.FillEnabled {
+		creator.Add_f() // Fill.
+	} else if circDef.BorderEnabled {
+		creator.Add_S() // Stroke.
+	}
 	creator.Add_Q()
 
 	// Offsets (needed for placement of annotations bbox).
