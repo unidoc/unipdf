@@ -33,18 +33,21 @@ type ContentStreamInlineImage struct {
 
 // Make a new content stream inline image object from an image.
 func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamInlineImage, error) {
+	filterName := ""
 	if encoder == nil {
 		encoder = NewRawEncoder()
+	} else {
+		filterName = encoder.GetFilterName()
 	}
 	common.Log.Debug("NewInlineImageFromImage: encoder=%T", encoder)
 
 	inlineImage := ContentStreamInlineImage{}
 	if img.ColorComponents == 1 {
-		inlineImage.ColorSpace = MakeName("DeviceGray")
+		inlineImage.ColorSpace = MakeName("G") // G short for DeviceGray
 	} else if img.ColorComponents == 3 {
-		inlineImage.ColorSpace = MakeName("DeviceRGB")
+		inlineImage.ColorSpace = MakeName("RGB") // RGB short for DeviceRGB
 	} else if img.ColorComponents == 4 {
-		inlineImage.ColorSpace = MakeName("DeviceCMYK")
+		inlineImage.ColorSpace = MakeName("CMYK") // CMYK short for DeviceCMYK
 	} else {
 		common.Log.Debug("Invalid number of color components for inline image: %d", img.ColorComponents)
 		return nil, errors.New("Invalid number of color components")
@@ -59,7 +62,6 @@ func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamIn
 	}
 
 	inlineImage.stream = encoded
-	filterName := encoder.GetFilterName()
 	if len(filterName) > 0 {
 		inlineImage.Filter = MakeName(filterName)
 	}
@@ -111,40 +113,40 @@ func (this *ContentStreamInlineImage) DefaultWriteString() string {
 	s := ""
 
 	if this.BitsPerComponent != nil {
-		s += "BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
+		s += "/BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
 	}
 	if this.ColorSpace != nil {
-		s += "CS " + this.ColorSpace.DefaultWriteString() + "\n"
+		s += "/CS " + this.ColorSpace.DefaultWriteString() + "\n"
 	}
 	if this.Decode != nil {
-		s += "D " + this.Decode.DefaultWriteString() + "\n"
+		s += "/D " + this.Decode.DefaultWriteString() + "\n"
 	}
 	if this.DecodeParms != nil {
-		s += "DP " + this.DecodeParms.DefaultWriteString() + "\n"
+		s += "/DP " + this.DecodeParms.DefaultWriteString() + "\n"
 	}
 	if this.Filter != nil {
-		s += "F " + this.Filter.DefaultWriteString() + "\n"
+		s += "/F " + this.Filter.DefaultWriteString() + "\n"
 	}
 	if this.Height != nil {
-		s += "H " + this.Height.DefaultWriteString() + "\n"
+		s += "/H " + this.Height.DefaultWriteString() + "\n"
 	}
 	if this.ImageMask != nil {
-		s += "IM " + this.ImageMask.DefaultWriteString() + "\n"
+		s += "/IM " + this.ImageMask.DefaultWriteString() + "\n"
 	}
 	if this.Intent != nil {
-		s += "Intent " + this.Intent.DefaultWriteString() + "\n"
+		s += "/Intent " + this.Intent.DefaultWriteString() + "\n"
 	}
 	if this.Interpolate != nil {
-		s += "I " + this.Interpolate.DefaultWriteString() + "\n"
+		s += "/I " + this.Interpolate.DefaultWriteString() + "\n"
 	}
 	if this.Width != nil {
-		s += "W " + this.Width.DefaultWriteString() + "\n"
+		s += "/W " + this.Width.DefaultWriteString() + "\n"
 	}
 	output.WriteString(s)
 
 	output.WriteString("ID ")
 	output.Write(this.stream)
-	output.WriteString("\n")
+	output.WriteString("\nEI\n")
 
 	return output.String()
 }
@@ -171,6 +173,12 @@ func (this *ContentStreamInlineImage) GetColorSpace(resources *PdfPageResources)
 	} else if *name == "I" {
 		return nil, errors.New("Unsupported Index colorspace")
 	} else {
+		if resources.ColorSpace == nil {
+			// Can also refer to a name in the PDF page resources...
+			common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)
+			return nil, errors.New("Unknown colorspace")
+		}
+
 		cs, has := resources.ColorSpace.Colorspaces[string(*name)]
 		if !has {
 			// Can also refer to a name in the PDF page resources...
@@ -214,6 +222,7 @@ func (this *ContentStreamInlineImage) ToImage(resources *PdfPageResources) (*Ima
 		return nil, err
 	}
 	common.Log.Trace("encoder: %+v %T", encoder, encoder)
+	common.Log.Trace("inline image: %+v", this)
 
 	decoded, err := encoder.DecodeBytes(this.stream)
 	if err != nil {
@@ -303,6 +312,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 			// Not an operand.. Read key value properties..
 			param, ok := obj.(*PdfObjectName)
 			if !ok {
+				common.Log.Debug("Invalid inline image property (expecting name) - %T", obj)
 				return nil, fmt.Errorf("Invalid inline image property (expecting name) - %T", obj)
 			}
 
@@ -391,6 +401,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 							state = 2
 						} else {
 							im.stream = append(im.stream, skipBytes...)
+							skipBytes = []byte{} // Clear.
 							// Need an extra check to decide if we fall back to state 0 or 1.
 							if IsWhiteSpace(c) {
 								state = 1
@@ -404,6 +415,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 							state = 3
 						} else {
 							im.stream = append(im.stream, skipBytes...)
+							skipBytes = []byte{} // Clear.
 							state = 0
 						}
 					} else if state == 3 {
@@ -420,6 +432,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 						} else {
 							// Seems like "<ws>EI" was part of the data.
 							im.stream = append(im.stream, skipBytes...)
+							skipBytes = []byte{} // Clear.
 							state = 0
 						}
 					}

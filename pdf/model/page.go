@@ -1067,8 +1067,10 @@ func (r *PdfPageResources) setXObjectByName(keyName string, stream *PdfObjectStr
 		r.XObject = &PdfObjectDictionary{}
 	}
 
-	xresDict, has := r.XObject.(*PdfObjectDictionary)
+	obj := TraceToDirectObject(r.XObject)
+	xresDict, has := obj.(*PdfObjectDictionary)
 	if !has {
+		common.Log.Debug("Invalid XObject, got %T/%T", r.XObject, obj)
 		return errors.New("Type check error")
 	}
 
