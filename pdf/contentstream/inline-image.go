@@ -36,6 +36,7 @@ func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamIn
 	if encoder == nil {
 		encoder = NewRawEncoder()
 	}
+	common.Log.Debug("NewInlineImageFromImage: encoder=%T", encoder)
 
 	inlineImage := ContentStreamInlineImage{}
 	if img.ColorComponents == 1 {
