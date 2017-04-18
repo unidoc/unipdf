@@ -249,12 +249,16 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			rowLength := int(this.Columns) * this.Colors
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
+				common.Log.Error("TIFF encoding: Invalid row length (%d/%d)",
+					len(outData), rowLength)
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
 			if rowLength%this.Colors != 0 {
-				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
+				common.Log.Error("Invalid row length (%d) for colors %d",
+					rowLength, this.Colors)
+				return nil, fmt.Errorf("Invalid row length (%d) for colors %d",
+					rowLength, this.Colors)
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -280,6 +284,7 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
+				common.Log.Error("Invalid row length (%d/%d)", len(outData), rowLength)
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
@@ -332,11 +337,12 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 
 // Encode a bytes array and return the encoded value based on the encoder parameters.
 func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	if this.Predictor != 1 && this.Predictor != 11 {
-		return nil, fmt.Errorf("FlateEncoder Predictor = 1, 11 only supported")
+	if this.Predictor != 1 && !(11 <= this.Predictor && this.Predictor <= 15) {
+		common.Log.Error("FlateEncoder: Predictor=%d. Only 1, 11-15 supported", this.Predictor)
+		return nil, fmt.Errorf("FlateEncoder Predictor = 1, 11-15 only supported")
 	}
 
-	if this.Predictor == 11 {
+	if 11 <= this.Predictor && this.Predictor <= 15 {
 		// The length of each output row in number of samples.
 		// N.B. Each output row has one extra sample as compared to the input to indicate the
 		// predictor type.
@@ -593,7 +599,7 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			rowLength := int(this.Columns) * this.Colors
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
+				common.Log.Error("TIFF encoding: Invalid row length...")
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
@@ -626,6 +632,7 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
+				common.Log.Error("Invalid row length (%d/%d)", len(outData), rowLength)
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 

@@ -67,7 +67,7 @@ func NewConsoleLogger(logLevel LogLevel) *ConsoleLogger {
 func (this ConsoleLogger) Error(format string, args ...interface{}) {
 	if this.LogLevel >= LogLevelError {
 		prefix := "[ERROR] "
-		this.output(os.Stdout, prefix, format, args...)
+		this.output(os.Stderr, prefix, format, args...)
 	}
 }
 
