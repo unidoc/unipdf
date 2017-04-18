@@ -29,7 +29,7 @@ type PdfShading struct {
 	AntiAlias   *PdfObjectBool
 
 	context   PdfModel  // The sub shading type entry (types 1-7).  Represented by PdfShadingType1-7.
-	container PdfObject // The container.
+	container PdfObject // The container.  Can be stream, indirect object, or dictionary.
 }
 
 func (this *PdfShading) GetContainingPdfObject() PdfObject {
@@ -58,6 +58,8 @@ func (this *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
 		return d, nil
 	} else if streamObj, isStream := obj.(*PdfObjectStream); isStream {
 		return streamObj.PdfObjectDictionary, nil
+	} else if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		return d, nil
 	} else {
 		common.Log.Debug("Unable to access shading dictionary")
 		return nil, ErrTypeError
@@ -150,6 +152,9 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	} else if streamObj, isStream := obj.(*PdfObjectStream); isStream {
 		shading.container = streamObj
 		dict = streamObj.PdfObjectDictionary
+	} else if d, isDict := obj.(*PdfObjectDictionary); isDict {
+		shading.container = d
+		dict = d
 	} else {
 		common.Log.Debug("Object type unexpected (%T)", obj)
 		return nil, ErrTypeError

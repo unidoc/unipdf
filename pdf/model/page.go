@@ -901,6 +901,24 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	return d
 }
 
+// Add External Graphics State (GState).  The gsDict can be specified either directly as a dictionary or an indirect
+// object containing a dictionary.
+func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) error {
+	if r.ExtGState == nil {
+		r.ExtGState = &PdfObjectDictionary{}
+	}
+
+	obj := r.ExtGState
+	dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ExtGState type error (got %T/%T)", obj, TraceToDirectObject(obj))
+		return ErrTypeError
+	}
+
+	(*dict)[gsName] = gsDict
+	return nil
+}
+
 // Get the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
 // or not.
 func (r *PdfPageResources) GetShadingByName(keyName string) (*PdfShading, bool) {
@@ -1049,8 +1067,10 @@ func (r *PdfPageResources) setXObjectByName(keyName string, stream *PdfObjectStr
 		r.XObject = &PdfObjectDictionary{}
 	}
 
-	xresDict, has := r.XObject.(*PdfObjectDictionary)
+	obj := TraceToDirectObject(r.XObject)
+	xresDict, has := obj.(*PdfObjectDictionary)
 	if !has {
+		common.Log.Debug("Invalid XObject, got %T/%T", r.XObject, obj)
 		return errors.New("Type check error")
 	}
 
