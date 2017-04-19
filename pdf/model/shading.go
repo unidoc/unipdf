@@ -420,8 +420,8 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Coords not an array (got %T)", obj)
 		return nil, ErrTypeError
 	}
-	if len(*arr) != 4 {
-		common.Log.Debug("Coords length not 4 (got %d)", len(*arr))
+	if len(*arr) != 6 {
+		common.Log.Debug("Coords length not 6 (got %d)", len(*arr))
 		return nil, ErrInvalidAttribute
 	}
 	shading.Coords = arr
