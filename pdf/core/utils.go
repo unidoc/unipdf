@@ -143,3 +143,11 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 
 	return objTypes, nil
 }
+
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	} else {
+		return x
+	}
+}

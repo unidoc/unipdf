@@ -36,6 +36,11 @@ const (
 	StreamEncodingFilterNameDCT      = "DCTDecode"
 	StreamEncodingFilterNameASCIIHex = "ASCIIHexDecode"
 	StreamEncodingFilterNameASCII85  = "ASCII85Decode"
+	StreamEncodingFilterNameRaw      = "Raw"
+)
+
+const (
+	DefaultJPEGQuality = 75
 )
 
 type StreamEncoder interface {
@@ -309,6 +314,41 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 					for j := 1; j < rowLength; j++ {
 						rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
 					}
+				case 3:
+					// Avg: Predicts the same as the average of the sample to the left and above.
+					for j := 1; j < rowLength; j++ {
+						if j == 1 {
+							rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
+						} else {
+							avg := (rowData[j-1] + prevRowData[j]) / 2
+							rowData[j] = byte(int(rowData[j]+avg) % 256)
+						}
+					}
+				case 4:
+					// Paeth: a nonlinear function of the sample above, the sample to the left and the sample
+					// to the upper left.
+					for j := 2; j < rowLength; j++ {
+						a := rowData[j-1]     // left
+						b := prevRowData[j]   // above
+						c := prevRowData[j-1] // upper left
+
+						p := int(a + b - c)
+						pa := absInt(p - int(a))
+						pb := absInt(p - int(b))
+						pc := absInt(p - int(c))
+
+						if pa <= pb && pa <= pc {
+							// Use a (left).
+							rowData[j] = byte(int(rowData[j]+a) % 256)
+						} else if pb <= pc {
+							// Use b (upper).
+							rowData[j] = byte(int(rowData[j]+b) % 256)
+						} else {
+							// Use c (upper left).
+							rowData[j] = byte(int(rowData[j]+c) % 256)
+						}
+					}
+
 				default:
 					common.Log.Debug("ERROR: Invalid filter byte (%d) @row %d", fb, i)
 					return nil, fmt.Errorf("Invalid filter byte (%d)", fb)
@@ -333,7 +373,8 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 // Encode a bytes array and return the encoded value based on the encoder parameters.
 func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	if this.Predictor != 1 && this.Predictor != 11 {
-		return nil, fmt.Errorf("FlateEncoder Predictor = 1, 11 only supported")
+		common.Log.Debug("Encoding error: FlateEncoder Predictor = 1, 11 only supported")
+		return nil, ErrUnsupportedEncodingParameters
 	}
 
 	if this.Predictor == 11 {
@@ -714,7 +755,7 @@ func NewDCTEncoder() *DCTEncoder {
 	encoder.ColorComponents = 3
 	encoder.BitsPerComponent = 8
 
-	encoder.Quality = 75
+	encoder.Quality = DefaultJPEGQuality
 
 	return encoder
 }
@@ -799,7 +840,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	encoder.Width = cfg.Width
 	encoder.Height = cfg.Height
 	common.Log.Trace("DCT Encoder: %+v", encoder)
-	encoder.Quality = 75
+	encoder.Quality = DefaultJPEGQuality
 
 	return encoder, nil
 }
@@ -1266,7 +1307,7 @@ func NewRawEncoder() *RawEncoder {
 }
 
 func (this *RawEncoder) GetFilterName() string {
-	return "Raw (no encoding)"
+	return StreamEncodingFilterNameRaw
 }
 
 func (this *RawEncoder) MakeDecodeParams() PdfObject {
