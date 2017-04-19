@@ -73,3 +73,20 @@ func getNumberAsFloatOrNull(obj PdfObject) (*float64, error) {
 
 	return nil, errors.New("Not a number")
 }
+
+// Handy function for debugging in development.
+func debugObject(obj PdfObject) {
+	common.Log.Debug("obj: %T %s", obj, obj.String())
+
+	if stream, is := obj.(*PdfObjectStream); is {
+		decoded, err := DecodeStream(stream)
+		if err != nil {
+			common.Log.Debug("Error: %v", err)
+			return
+		}
+		common.Log.Debug("Decoded: %s", decoded)
+	} else if indObj, is := obj.(*PdfIndirectObject); is {
+		common.Log.Debug("%T %v", indObj.PdfObject, indObj.PdfObject)
+		common.Log.Debug("%s", indObj.PdfObject.String())
+	}
+}

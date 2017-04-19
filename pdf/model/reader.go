@@ -24,7 +24,6 @@ type PdfReader struct {
 	pageCount   int
 	catalog     *PdfObjectDictionary
 	outlineTree *PdfOutlineTreeNode
-	forms       *PdfObjectDictionary
 	AcroForm    *PdfAcroForm
 
 	modelManager *ModelManager
@@ -199,13 +198,7 @@ func (this *PdfReader) loadStructure() error {
 		return err
 	}
 
-	// Get forms.
-	this.forms, err = this.GetForms()
-	if err != nil {
-		return err
-	}
-
-	// Get fields
+	// Load interactive forms and fields.
 	this.AcroForm, err = this.loadForms()
 	if err != nil {
 		return err
@@ -437,48 +430,6 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 	return outlineNodeList, flattenedTitleList, nil
 }
 
-// Get document form data.
-func (this *PdfReader) GetForms() (*PdfObjectDictionary, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
-	}
-	// Has forms?
-	catalog := this.catalog
-
-	var formsDict *PdfObjectDictionary
-
-	if dict, hasFormsDict := (*catalog)["AcroForm"].(*PdfObjectDictionary); hasFormsDict {
-		common.Log.Trace("Has Acro forms - dictionary under Catalog")
-		formsDict = dict
-	} else if formsRef, hasFormsRef := (*catalog)["AcroForm"].(*PdfObjectReference); hasFormsRef {
-		common.Log.Trace("Has Acro forms - Indirect object")
-		formsObj, err := this.parser.LookupByReference(*formsRef)
-		if err != nil {
-			common.Log.Debug("ERROR: Failed to read forms")
-			return nil, err
-		}
-		if iobj, ok := formsObj.(*PdfIndirectObject); ok {
-			if dict, ok := iobj.PdfObject.(*PdfObjectDictionary); ok {
-				formsDict = dict
-			}
-		}
-	}
-	if formsDict == nil {
-		common.Log.Trace("Does not have forms")
-		return nil, nil
-	}
-
-	common.Log.Trace("Has Acro forms")
-	common.Log.Trace("Traverse the Acroforms structure")
-	err := this.traverseObjectData(formsDict)
-	if err != nil {
-		common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
-		return nil, err
-	}
-
-	return formsDict, nil
-}
-
 func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
@@ -513,6 +464,14 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 
 	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
 	if err != nil {
+		return nil, err
+	}
+
+	// Ensure we have access to everything.
+	common.Log.Trace("Traverse the Acroforms structure")
+	err = this.traverseObjectData(formsDict)
+	if err != nil {
+		common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
 		return nil, err
 	}
 

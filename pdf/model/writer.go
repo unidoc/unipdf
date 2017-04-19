@@ -224,7 +224,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 				}
 
 				if hasObj := this.hasObject(v); !hasObj {
-					common.Log.Debug("Parent obj is missing!! %T %p %v\n", v, v, v)
+					common.Log.Debug("Parent obj is missing!! %T %p %v", v, v, v)
 					this.pendingObjects[v] = dict
 					// Although it is missing at this point, it could be added later...
 				}
@@ -400,84 +400,8 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 	return list, nil
 }
 
-// Add Acroforms to a PDF file.
-func (this *PdfWriter) AddForms(forms *PdfObjectDictionary) error {
-	// Traverse the forms object...
-	// Keep a list of stuff?
-
-	// Forms dictionary should have:
-	// Fields array.
-	if forms == nil {
-		return errors.New("forms == nil")
-	}
-
-	// For now, support only regular forms with fields
-	var fieldsArray *PdfObjectArray
-	if fields, hasFields := (*forms)["Fields"]; hasFields {
-		if arr, isArray := fields.(*PdfObjectArray); isArray {
-			fieldsArray = arr
-		} else if ind, isInd := fields.(*PdfIndirectObject); isInd {
-			if arr, isArray := ind.PdfObject.(*PdfObjectArray); isArray {
-				fieldsArray = arr
-			}
-		}
-	}
-	if fieldsArray == nil {
-		common.Log.Debug("Writer - no fields to be added to forms")
-		return nil
-	}
-
-	// Add the fields.
-	for _, field := range *fieldsArray {
-		fieldObj, ok := field.(*PdfIndirectObject)
-		if !ok {
-			return errors.New("Field not pointing indirect object")
-		}
-
-		followKeys := []string{"Fields", "Kids"}
-		list, err := this.seekByName(fieldObj, followKeys, "P")
-		common.Log.Trace("Done seeking!")
-		if err != nil {
-			return err
-		}
-		common.Log.Trace("List of P objects %d", len(list))
-		if len(list) < 1 {
-			continue
-		}
-
-		includeField := false
-		for _, p := range list {
-			if po, ok := p.(*PdfIndirectObject); ok {
-				common.Log.Trace("P entry is an indirect object (page)")
-				if this.hasObject(po) {
-					includeField = true
-				} else {
-					return errors.New("P pointing outside of write pages")
-				}
-			} else {
-				common.Log.Debug("ERROR: P entry not an indirect object (%T)", p)
-			}
-		}
-
-		// This won't work.  There can be many sub objects.
-		// Need to specifically go and check the page object!
-		// P or the appearance dictionary.
-		if includeField {
-			common.Log.Trace("Add the field! (%T)", field)
-			// Add if nothing referenced outside of the writer.
-			// Probably need to add some objects first...
-			this.addObject(field)
-			this.fields = append(this.fields, field)
-		} else {
-			common.Log.Trace("Field not relevant!")
-		}
-	}
-	return nil
-}
-
-// Add Acroforms to a PDF file.
-func (this *PdfWriter) AddForms2(form *PdfAcroForm) error {
-	//form.ToPdfObject(true)
+// Add Acroforms to a PDF file.  Sets the specified form for writing.
+func (this *PdfWriter) SetForms(form *PdfAcroForm) error {
 	this.acroForm = form
 	return nil
 }
@@ -613,24 +537,8 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 			return err
 		}
 	}
+
 	// Form fields.
-	/*
-		if len(this.fields) > 0 {
-			forms := PdfIndirectObject{}
-			formsDict := PdfObjectDictionary{}
-			forms.PdfObject = &formsDict
-			fieldsArray := PdfObjectArray{}
-			for _, field := range this.fields {
-				fieldsArray = append(fieldsArray, field)
-			}
-			formsDict[PdfObjectName("Fields")] = &fieldsArray
-			(*this.catalog)[PdfObjectName("AcroForm")] = &forms
-			err := this.addObjects(&forms)
-			if err != nil {
-				return err
-			}
-		}*/
-	// Acroform.
 	if this.acroForm != nil {
 		common.Log.Trace("Writing acro forms")
 		indObj := this.acroForm.ToPdfObject()
