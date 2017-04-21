@@ -22,23 +22,22 @@ import (
 
 // PDF page object (7.7.3.3 - Table 30).
 type PdfPage struct {
-	Parent       PdfObject
-	LastModified *PdfDate
-	Resources    *PdfPageResources
-	CropBox      *PdfRectangle
-	MediaBox     *PdfRectangle
-	BleedBox     *PdfRectangle
-	TrimBox      *PdfRectangle
-	ArtBox       *PdfRectangle
-	BoxColorInfo PdfObject
-	Contents     PdfObject
-	Rotate       *int64
-	Group        PdfObject
-	Thumb        PdfObject
-	B            PdfObject
-	Dur          PdfObject
-	Trans        PdfObject
-	//Annots               PdfObject
+	Parent               PdfObject
+	LastModified         *PdfDate
+	Resources            *PdfPageResources
+	CropBox              *PdfRectangle
+	MediaBox             *PdfRectangle
+	BleedBox             *PdfRectangle
+	TrimBox              *PdfRectangle
+	ArtBox               *PdfRectangle
+	BoxColorInfo         PdfObject
+	Contents             PdfObject
+	Rotate               *int64
+	Group                PdfObject
+	Thumb                PdfObject
+	B                    PdfObject
+	Dur                  PdfObject
+	Trans                PdfObject
 	AA                   PdfObject
 	Metadata             PdfObject
 	PieceInfo            PdfObject
@@ -51,7 +50,7 @@ type PdfPage struct {
 	PresSteps            PdfObject
 	UserUnit             PdfObject
 	VP                   PdfObject
-	//Annotations
+
 	Annotations []*PdfAnnotation
 
 	// Primitive container.
