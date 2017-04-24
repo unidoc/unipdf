@@ -475,7 +475,12 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	if this.Annotations != nil {
 		arr := PdfObjectArray{}
 		for _, annot := range this.Annotations {
-			arr = append(arr, annot.GetContext().ToPdfObject())
+			if subannot := annot.GetContext(); subannot != nil {
+				arr = append(arr, subannot.ToPdfObject())
+			} else {
+				// Generic annotation dict (without subtype).
+				arr = append(arr, annot.ToPdfObject())
+			}
 		}
 		p.Set("Annots", &arr)
 	}
