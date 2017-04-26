@@ -1008,6 +1008,48 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 	return trailerDict, err
 }
 
+// Look for EOF marker and seek to its beginning.
+// Define an offset position from the end of the file.
+func (this *PdfParser) seekToEOFMarker(fSize int64) error {
+	// Define the starting point (from the end of the file) to search from.
+	var offset int64 = 0
+
+	// Define an buffer length in terms of how many bytes to read from the end of the file.
+	var buflen int64 = 1000
+
+	for offset < fSize {
+		if fSize <= (buflen + offset) {
+			buflen = fSize - offset
+		}
+
+		// Move back enough (as we need to read forward).
+		_, err := this.rs.Seek(-offset-buflen, os.SEEK_END)
+		if err != nil {
+			return err
+		}
+
+		// Read the data.
+		b1 := make([]byte, buflen)
+		this.rs.Read(b1)
+		common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
+		ind := reEOF.FindAllStringIndex(string(b1), -1)
+		if ind != nil {
+			// Found it.
+			lastInd := ind[len(ind)-1]
+			common.Log.Trace("Ind: % d", ind)
+			this.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
+			return nil
+		} else {
+			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
+		}
+
+		offset += buflen
+	}
+
+	common.Log.Debug("Error: EOF marker was not found.")
+	return errors.New("EOF not found")
+}
+
 //
 // Load the xrefs from the bottom of file prior to parsing the file.
 // 1. Look for %%EOF marker, then
@@ -1031,39 +1073,29 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	this.xrefs = make(XrefTable)
 	this.objstms = make(ObjectStreams)
 
-	// Look for EOF marker and seek to its beginning.
-	// Define an offset position from the end of the file.
-	var offset int64 = 1000
 	// Get the file size.
 	fSize, err := this.rs.Seek(0, os.SEEK_END)
 	if err != nil {
 		return nil, err
 	}
 	common.Log.Trace("fsize: %d", fSize)
-	if fSize <= offset {
-		offset = fSize
-	}
-	_, err = this.rs.Seek(-offset, os.SEEK_END)
+
+	// Seek the EOF marker.
+	err = this.seekToEOFMarker(fSize)
 	if err != nil {
+		common.Log.Debug("Failed seek to eof marker: %v", err)
 		return nil, err
 	}
-	b1 := make([]byte, offset)
-	this.rs.Read(b1)
-	common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
-	ind := reEOF.FindAllStringIndex(string(b1), -1)
-	if ind == nil {
-		common.Log.Debug("Error: EOF marker not found!")
-		return nil, errors.New("EOF marker not found")
-	}
-	lastInd := ind[len(ind)-1]
-	common.Log.Trace("Ind: % d", ind)
-	this.rs.Seek(-offset+int64(lastInd[0]), os.SEEK_END)
 
 	// Look for startxref and get the xref offset.
-	offset = 64
+	var offset int64 = 64
 	this.rs.Seek(-offset, os.SEEK_CUR)
 	b2 := make([]byte, offset)
-	this.rs.Read(b2)
+	_, err = this.rs.Read(b2)
+	if err != nil {
+		common.Log.Debug("Failed reading while looking for startxref: %v", err)
+		return nil, err
+	}
 
 	result := reStartXref.FindStringSubmatch(string(b2))
 	if len(result) < 2 {
