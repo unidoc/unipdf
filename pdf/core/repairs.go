@@ -13,6 +13,10 @@ import (
 	"os"
 	"regexp"
 
+	"bufio"
+	"io"
+	"strconv"
+
 	"github.com/unidoc/unidoc/common"
 )
 
@@ -77,9 +81,22 @@ func (this *PdfParser) rebuildXrefTable() error {
 	return nil
 }
 
+// Parses and returns the object and generation number from a string such as "12 0 obj" -> (12,0,nil).
+func parseObjectNumberFromString(str string) (int, int, error) {
+	result := reIndirectObject.FindStringSubmatch(str)
+	if len(result) < 3 {
+		return 0, 0, errors.New("Unable to detect indirect object signature")
+	}
+
+	on, _ := strconv.Atoi(result[1])
+	gn, _ := strconv.Atoi(result[2])
+
+	return on, gn, nil
+}
+
 // Parse the entire file from top down.
-// Currently not supporting object streams...
-// Also need to detect object streams and load the object numbers.
+// Goes through the file byte-by-byte looking for "<num> <generation> obj" patterns.
+// N.B. This collects the XREF_TABLE_ENTRY data only.
 func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 	if this.repairsAttempted {
 		// Avoid multiple repairs (only try once).
@@ -87,59 +104,81 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 	}
 	this.repairsAttempted = true
 
-	reRepairIndirectObject := regexp.MustCompile(`^(\d+)\s+(\d+)\s+obj`)
+	// Go to beginning, reset reader.
+	this.rs.Seek(0, os.SEEK_SET)
+	this.reader = bufio.NewReader(this.rs)
 
-	this.SetFileOffset(0)
+	// Keep a running buffer of last bytes.
+	bufLen := 20
+	last := make([]byte, bufLen)
 
 	xrefTable := XrefTable{}
 	for {
-		this.skipComments()
-
-		curOffset := this.GetFileOffset()
-
-		peakBuf, err := this.reader.Peek(10)
+		b, err := this.reader.ReadByte()
 		if err != nil {
-			// EOF
-			break
+			if err == io.EOF {
+				break
+			} else {
+				return nil, err
+			}
 		}
 
-		// Indirect object?
-		results := reRepairIndirectObject.FindIndex(peakBuf)
-		if len(results) > 0 {
-			obj, err := this.ParseIndirectObject()
+		// Format:
+		// object number - whitespace - generation number - obj
+		// e.g. "12 0 obj"
+		if b == 'j' && last[bufLen-1] == 'b' && last[bufLen-2] == 'o' && IsWhiteSpace(last[bufLen-3]) {
+			i := bufLen - 4
+			// Go past whitespace
+			for IsWhiteSpace(last[i]) && i > 0 {
+				i--
+			}
+			if i == 0 || !IsDecimalDigit(last[i]) {
+				continue
+			}
+			// Go past generation number
+			for IsDecimalDigit(last[i]) && i > 0 {
+				i--
+			}
+			if i == 0 || !IsWhiteSpace(last[i]) {
+				continue
+			}
+			// Go past whitespace
+			for IsWhiteSpace(last[i]) && i > 0 {
+				i--
+			}
+			if i == 0 || !IsDecimalDigit(last[i]) {
+				continue
+			}
+			// Go past object number.
+			for IsDecimalDigit(last[i]) && i > 0 {
+				i--
+			}
+			if i == 0 {
+				continue // Probably too long to be a valid object...
+			}
+
+			objOffset := this.GetFileOffset() - int64(bufLen-i)
+
+			objstr := append(last[i+1:], b)
+			objNum, genNum, err := parseObjectNumberFromString(string(objstr))
 			if err != nil {
-				common.Log.Debug("ERROR: Unable to parse indirect object (%s)", err)
+				common.Log.Debug("Unable to parse object number: %v", err)
 				return nil, err
 			}
 
-			if indObj, ok := obj.(*PdfIndirectObject); ok {
+			// Create and insert the XREF entry if not existing, or the generation number is higher.
+			if curXref, has := xrefTable[objNum]; !has || curXref.generation < genNum {
 				// Make the entry for the cross ref table.
 				xrefEntry := XrefObject{}
 				xrefEntry.xtype = XREF_TABLE_ENTRY
-				xrefEntry.objectNumber = int(indObj.ObjectNumber)
-				xrefEntry.generation = int(indObj.GenerationNumber)
-				xrefEntry.offset = curOffset
-				xrefTable[int(indObj.ObjectNumber)] = xrefEntry
-			} else if streamObj, ok := obj.(*PdfObjectStream); ok {
-				// Make the entry for the cross ref table.
-				xrefEntry := XrefObject{}
-				xrefEntry.xtype = XREF_TABLE_ENTRY
-				xrefEntry.objectNumber = int(streamObj.ObjectNumber)
-				xrefEntry.generation = int(streamObj.GenerationNumber)
-				xrefEntry.offset = curOffset
-				xrefTable[int(streamObj.ObjectNumber)] = xrefEntry
-			} else {
-				return nil, fmt.Errorf("Not an indirect object or stream (%T)", obj) // Should never happen.
+				xrefEntry.objectNumber = int(objNum)
+				xrefEntry.generation = int(genNum)
+				xrefEntry.offset = objOffset
+				xrefTable[objNum] = xrefEntry
 			}
-		} else if string(peakBuf[0:6]) == "endobj" {
-			this.reader.Discard(6)
-		} else {
-			// Stop once we reach xrefs/trailer section etc.  Technically this could fail for complex
-			// cases, but lets keep it simple for now.  Add more complexity when needed (problematic user committed files).
-			// In general more likely that more complex files would have better understanding of the PDF standard.
-			common.Log.Debug("Not an object - stop repair rebuilding xref here (%s)", peakBuf)
-			break
 		}
+
+		last = append(last[1:bufLen], b)
 	}
 
 	return &xrefTable, nil
