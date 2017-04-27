@@ -183,3 +183,104 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 
 	return &xrefTable, nil
 }
+
+// Look for first sign of xref table from end of file.
+func (this *PdfParser) repairSeekXrefMarker() error {
+	// Get the file size.
+	fSize, err := this.rs.Seek(0, os.SEEK_END)
+	if err != nil {
+		return err
+	}
+
+	reXrefTableStart := regexp.MustCompile(`\sxref\s*`)
+
+	// Define the starting point (from the end of the file) to search from.
+	var offset int64 = 0
+
+	// Define an buffer length in terms of how many bytes to read from the end of the file.
+	var buflen int64 = 1000
+
+	for offset < fSize {
+		if fSize <= (buflen + offset) {
+			buflen = fSize - offset
+		}
+
+		// Move back enough (as we need to read forward).
+		_, err := this.rs.Seek(-offset-buflen, os.SEEK_END)
+		if err != nil {
+			return err
+		}
+
+		// Read the data.
+		b1 := make([]byte, buflen)
+		this.rs.Read(b1)
+
+		common.Log.Trace("Looking for xref : \"%s\"", string(b1))
+		ind := reXrefTableStart.FindAllStringIndex(string(b1), -1)
+		if ind != nil {
+			// Found it.
+			lastInd := ind[len(ind)-1]
+			common.Log.Trace("Ind: % d", ind)
+			this.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
+			this.reader = bufio.NewReader(this.rs)
+			// Go past whitespace, finish at 'x'.
+			for {
+				bb, err := this.reader.Peek(1)
+				if err != nil {
+					return err
+				}
+				common.Log.Trace("B: %d %c", bb[0], bb[0])
+				if !IsWhiteSpace(bb[0]) {
+					break
+				}
+				this.reader.Discard(1)
+			}
+
+			return nil
+		} else {
+			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
+		}
+
+		offset += buflen
+	}
+
+	common.Log.Debug("Error: Xref table marker was not found.")
+	return errors.New("xref not found ")
+}
+
+// Called when Pdf version not found normally.  Looks for the PDF version by scanning top-down.
+// %PDF-1.7
+func (this *PdfParser) seekPdfVersionTopDown() (int, int, error) {
+	// Go to beginning, reset reader.
+	this.rs.Seek(0, os.SEEK_SET)
+	this.reader = bufio.NewReader(this.rs)
+
+	// Keep a running buffer of last bytes.
+	bufLen := 20
+	last := make([]byte, bufLen)
+
+	for {
+		b, err := this.reader.ReadByte()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return 0, 0, err
+			}
+		}
+
+		// Format:
+		// object number - whitespace - generation number - obj
+		// e.g. "12 0 obj"
+		if IsDecimalDigit(b) && last[bufLen-1] == '.' && IsDecimalDigit(last[bufLen-2]) && last[bufLen-3] == '-' &&
+			last[bufLen-4] == 'F' && last[bufLen-5] == 'D' && last[bufLen-6] == 'P' {
+			major := int(last[bufLen-2] - '0')
+			minor := int(b - '0')
+			return major, minor, nil
+		}
+
+		last = append(last[1:bufLen], b)
+	}
+
+	return 0, 0, errors.New("Version not found")
+}
