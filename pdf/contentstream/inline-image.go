@@ -33,11 +33,8 @@ type ContentStreamInlineImage struct {
 
 // Make a new content stream inline image object from an image.
 func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamInlineImage, error) {
-	filterName := ""
 	if encoder == nil {
 		encoder = NewRawEncoder()
-	} else {
-		filterName = encoder.GetFilterName()
 	}
 	common.Log.Debug("NewInlineImageFromImage: encoder=%T", encoder)
 
@@ -62,7 +59,9 @@ func NewInlineImageFromImage(img Image, encoder StreamEncoder) (*ContentStreamIn
 	}
 
 	inlineImage.stream = encoded
-	if len(filterName) > 0 {
+
+	filterName := encoder.GetFilterName()
+	if filterName != StreamEncodingFilterNameRaw {
 		inlineImage.Filter = MakeName(filterName)
 	}
 	// XXX/FIXME: Add decode params?

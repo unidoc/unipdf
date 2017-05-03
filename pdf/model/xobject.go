@@ -242,13 +242,24 @@ func NewXObjectImage() *XObjectImage {
 	return xobj
 }
 
-// Creates a new XObject Image from an image object with default
-// options.
-func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace) (*XObjectImage, error) {
+// Creates a new XObject Image from an image object with default options.
+// If encoder is nil, uses raw encoding (none).
+func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
 
+	if encoder == nil {
+		encoder = NewRawEncoder()
+	}
+
+	encoded, err := encoder.EncodeBytes(img.Data)
+	if err != nil {
+		common.Log.Debug("Error with encoding: %v", err)
+		return nil, err
+	}
+
 	xobj.Name = &name
-	xobj.Stream = img.Data
+	xobj.Filter = encoder
+	xobj.Stream = encoded
 
 	// Width and height.
 	imWidth := img.Width
@@ -413,6 +424,24 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 		ximg.ColorSpace = cs
 	}
 
+	return nil
+}
+
+// Set compression filter.  Decodes with current filter sets and encodes the data with the new filter.
+func (ximg *XObjectImage) SetFilter(encoder StreamEncoder) error {
+	encoded := ximg.Stream
+	decoded, err := ximg.Filter.DecodeBytes(encoded)
+	if err != nil {
+		return err
+	}
+
+	ximg.Filter = encoder
+	encoded, err = encoder.EncodeBytes(decoded)
+	if err != nil {
+		return err
+	}
+
+	ximg.Stream = encoded
 	return nil
 }
 
