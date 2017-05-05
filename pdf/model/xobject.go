@@ -245,7 +245,13 @@ func NewXObjectImage() *XObjectImage {
 // Creates a new XObject Image from an image object with default options.
 // If encoder is nil, uses raw encoding (none).
 func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
-	xobj := NewXObjectImage()
+	baseXObj := NewXObjectImage()
+	return UpdateXObjectImageFromImage(baseXObj, name, img, cs, encoder)
+}
+
+func UpdateXObjectImageFromImage(baseXObj *XObjectImage, name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+	dupObj := *baseXObj
+	xobj := &dupObj
 
 	if encoder == nil {
 		encoder = NewRawEncoder()
