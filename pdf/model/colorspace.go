@@ -354,6 +354,7 @@ func (this *PdfColorspaceDeviceRGB) ImageToRGB(img Image) (Image, error) {
 }
 
 func (this *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
+
 	grayImage := img
 
 	samples := img.GetSamples()
@@ -374,7 +375,9 @@ func (this *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 
 		// Convert to uint32
 		val := uint32(grayValue * maxVal)
+
 		graySamples = append(graySamples, val)
+
 	}
 	grayImage.SetSamples(graySamples)
 	grayImage.ColorComponents = 1
@@ -893,7 +896,7 @@ func (this *PdfColorspaceCalRGB) String() string {
 }
 
 func (this *PdfColorspaceCalRGB) GetNumComponents() int {
-	return 1
+	return 3
 }
 
 func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, error) {
@@ -1119,7 +1122,7 @@ func (this *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	rgbSamples := []uint32{}
-	for i := 0; i < len(samples); i++ {
+	for i := 0; i < len(samples)-2; i++ {
 		// A, B, C in range 0.0 to 1.0
 		aVal := float64(samples[i]) / maxVal
 		bVal := float64(samples[i+1]) / maxVal
@@ -1916,6 +1919,7 @@ func (this *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfCol
 // the name of the pattern.
 func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) < 1 {
+		common.Log.Error("ColorFromPdfObjects: len(objects)=%d", len(objects))
 		return nil, errors.New("Invalid number of parameters")
 	}
 	patternColor := &PdfColorPattern{}
