@@ -40,7 +40,7 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 	if obj, isDefined := (*dict)["ExtGState"]; isDefined {
 		r.ExtGState = obj
 	}
-	if obj, isDefined := (*dict)["ColorSpace"]; isDefined {
+	if obj, isDefined := (*dict)["ColorSpace"]; isDefined && !isNullObject(obj) {
 		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
 		if err != nil {
 			return nil, err

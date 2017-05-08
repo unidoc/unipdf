@@ -647,7 +647,13 @@ func (this *PdfParser) parsePdfVersion() (int, int, error) {
 
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
 	if len(result1) < 3 {
-		common.Log.Debug("Error: PDF Version not found!")
+		major, minor, err := this.seekPdfVersionTopDown()
+		if err == nil {
+			common.Log.Debug("Failed recovery - unable to find version")
+			return 0, 0, err
+		}
+
+		return major, minor, nil
 		return 0, 0, errors.New("PDF version not found")
 	}
 
@@ -742,6 +748,7 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			continue
 		}
 		if (len(txt) > 6) && (txt[:7] == "trailer") {
+			common.Log.Trace("Found trailer - %s", txt)
 			// Sometimes get "trailer << ...."
 			// Need to rewind to end of trailer text.
 			if len(txt) > 9 {
@@ -1001,11 +1008,62 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 			return nil, err
 		}
 	} else {
-		common.Log.Debug("ERROR: Invalid xref.... starting with \"%s\"", string(bb))
-		return nil, errors.New("Invalid xref format")
+		common.Log.Debug("Warning: Unable to find xref table or stream. Repair attempted: Looking for earliest xref from bottom.")
+		err := this.repairSeekXrefMarker()
+		if err != nil {
+			common.Log.Debug("Repair failed - %v", err)
+			return nil, err
+		}
+
+		trailerDict, err = this.parseXrefTable()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return trailerDict, err
+}
+
+// Look for EOF marker and seek to its beginning.
+// Define an offset position from the end of the file.
+func (this *PdfParser) seekToEOFMarker(fSize int64) error {
+	// Define the starting point (from the end of the file) to search from.
+	var offset int64 = 0
+
+	// Define an buffer length in terms of how many bytes to read from the end of the file.
+	var buflen int64 = 1000
+
+	for offset < fSize {
+		if fSize <= (buflen + offset) {
+			buflen = fSize - offset
+		}
+
+		// Move back enough (as we need to read forward).
+		_, err := this.rs.Seek(-offset-buflen, os.SEEK_END)
+		if err != nil {
+			return err
+		}
+
+		// Read the data.
+		b1 := make([]byte, buflen)
+		this.rs.Read(b1)
+		common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
+		ind := reEOF.FindAllStringIndex(string(b1), -1)
+		if ind != nil {
+			// Found it.
+			lastInd := ind[len(ind)-1]
+			common.Log.Trace("Ind: % d", ind)
+			this.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
+			return nil
+		} else {
+			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
+		}
+
+		offset += buflen
+	}
+
+	common.Log.Debug("Error: EOF marker was not found.")
+	return errors.New("EOF not found")
 }
 
 //
@@ -1031,39 +1089,29 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	this.xrefs = make(XrefTable)
 	this.objstms = make(ObjectStreams)
 
-	// Look for EOF marker and seek to its beginning.
-	// Define an offset position from the end of the file.
-	var offset int64 = 1000
 	// Get the file size.
 	fSize, err := this.rs.Seek(0, os.SEEK_END)
 	if err != nil {
 		return nil, err
 	}
 	common.Log.Trace("fsize: %d", fSize)
-	if fSize <= offset {
-		offset = fSize
-	}
-	_, err = this.rs.Seek(-offset, os.SEEK_END)
+
+	// Seek the EOF marker.
+	err = this.seekToEOFMarker(fSize)
 	if err != nil {
+		common.Log.Debug("Failed seek to eof marker: %v", err)
 		return nil, err
 	}
-	b1 := make([]byte, offset)
-	this.rs.Read(b1)
-	common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
-	ind := reEOF.FindAllStringIndex(string(b1), -1)
-	if ind == nil {
-		common.Log.Debug("Error: EOF marker not found!")
-		return nil, errors.New("EOF marker not found")
-	}
-	lastInd := ind[len(ind)-1]
-	common.Log.Trace("Ind: % d", ind)
-	this.rs.Seek(-offset+int64(lastInd[0]), os.SEEK_END)
 
 	// Look for startxref and get the xref offset.
-	offset = 64
+	var offset int64 = 64
 	this.rs.Seek(-offset, os.SEEK_CUR)
 	b2 := make([]byte, offset)
-	this.rs.Read(b2)
+	_, err = this.rs.Read(b2)
+	if err != nil {
+		common.Log.Debug("Failed reading while looking for startxref: %v", err)
+		return nil, err
+	}
 
 	result := reStartXref.FindStringSubmatch(string(b2))
 	if len(result) < 2 {
@@ -1071,7 +1119,6 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		return nil, errors.New("Startxref not found")
 	}
 	if len(result) > 2 {
-		// GH: Take the last one?  Make a test case.
 		common.Log.Debug("ERROR: Multiple startxref (%s)!", b2)
 		return nil, errors.New("Multiple startxref entries?")
 	}
@@ -1133,8 +1180,9 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 
 		ptrailerDict, err := this.parseXref()
 		if err != nil {
-			common.Log.Debug("ERROR: Failed loading another (Prev) trailer")
-			return nil, err
+			common.Log.Debug("Warning: Error - Failed loading another (Prev) trailer")
+			common.Log.Debug("Attempting to continue by ignoring it")
+			break
 		}
 
 		xx, present = (*ptrailerDict)["Prev"]

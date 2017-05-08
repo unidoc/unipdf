@@ -519,6 +519,7 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 			common.Log.Debug("ERROR AES invalid buf %s", buf)
 			return buf, fmt.Errorf("AES: Buf len < 16 (%d)", len(buf))
 		}
+
 		iv := buf[:16]
 		buf = buf[16:]
 
@@ -534,8 +535,20 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 		common.Log.Trace("chop AES Decrypt (%d): % x", len(buf), buf)
 		mode.CryptBlocks(buf, buf)
 		common.Log.Trace("to (%d): % x", len(buf), buf)
-		//copy(buf[0:], buf[16:])
-		//common.Log.Debug("chop to (%d): % x", len(buf), buf)
+
+		if len(buf) == 0 {
+			common.Log.Trace("Empty buf, returning empty string")
+			return buf, nil
+		}
+
+		// The padded length is indicated by the last values.  Remove those.
+		padLen := int(buf[len(buf)-1])
+		if padLen >= len(buf) {
+			common.Log.Debug("Illegal pad length")
+			return buf, fmt.Errorf("Invalid pad length")
+		}
+		buf = buf[:len(buf)-padLen]
+
 		return buf, nil
 	}
 	return nil, fmt.Errorf("Unsupported crypt filter method (%s)", cfMethod)

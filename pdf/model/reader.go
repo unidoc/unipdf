@@ -462,16 +462,17 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	common.Log.Trace("Has Acro forms")
 	// Load it.
 
-	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
-	if err != nil {
-		return nil, err
-	}
-
 	// Ensure we have access to everything.
 	common.Log.Trace("Traverse the Acroforms structure")
 	err = this.traverseObjectData(formsDict)
 	if err != nil {
 		common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
+		return nil, err
+	}
+
+	// Create the acro forms object.
+	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
+	if err != nil {
 		return nil, err
 	}
 

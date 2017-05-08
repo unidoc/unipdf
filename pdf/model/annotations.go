@@ -680,10 +680,13 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 
 	subtypeObj, has := (*d)["Subtype"]
 	if !has {
-		return nil, fmt.Errorf("Missing Subtype")
+		common.Log.Debug("WARNING: Compatibility issue - annotation Subtype missing - assuming no subtype")
+		annot.context = nil
+		return annot, nil
 	}
 	subtype, ok := subtypeObj.(*PdfObjectName)
 	if !ok {
+		common.Log.Debug("ERROR: Invalid Subtype object type != name (%T)", subtypeObj)
 		return nil, fmt.Errorf("Invalid Subtype object type != name (%T)", subtypeObj)
 	}
 	switch *subtype {
@@ -1597,6 +1600,8 @@ func (this *PdfAnnotation) GetContainingPdfObject() PdfObject {
 	return this.primitive
 }
 
+// Note: Call the sub-annotation's ToPdfObject to set both the generic and non-generic information.
+// TODO/FIXME: Consider doing it here instead.
 func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	container := this.primitive
 	d := container.PdfObject.(*PdfObjectDictionary)
