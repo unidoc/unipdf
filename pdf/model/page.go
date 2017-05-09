@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -772,19 +771,7 @@ type PdfPageResourcesColorspaces struct {
 	container *PdfIndirectObject
 }
 
-func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
-	return &PdfPageResourcesColorspaces{
-		Names:       []string{},
-		Colorspaces: map[string]PdfColorspace{},
-	}
-}
-func (this *PdfPageResourcesColorspaces) Add(name string, colorspace PdfColorspace) {
-	if _, ok := this.Colorspaces[name]; ok {
-		common.Log.Error("Colorspace name=%#q already exists", name)
-	}
-	this.Names = append(this.Names, name)
-	this.Colorspaces[name] = colorspace
-}
+
 func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
 	colorspaces := &PdfPageResourcesColorspaces{}
 
