@@ -19,6 +19,11 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		return NewRawEncoder(), nil
 	}
 
+	if _, isNull := filterObj.(*PdfObjectNull); isNull {
+		// Filter is null -> raw data.
+		return NewRawEncoder(), nil
+	}
+
 	// The filter should be a name or an array with a list of filter names.
 	method, ok := filterObj.(*PdfObjectName)
 	if !ok {
