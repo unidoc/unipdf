@@ -41,6 +41,15 @@ func (this *ContentCreator) Add_Q() *ContentCreator {
 	return this
 }
 
+// Display XObject - image or form.
+func (this *ContentCreator) Add_Do(name PdfObjectName) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Do"
+	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
 // Modify the current transformation matrix (ctm).
 func (this *ContentCreator) Add_cm(a, b, c, d, e, f float64) *ContentCreator {
 	op := ContentStreamOperation{}
