@@ -14,6 +14,58 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
+// A rectangle defined with a specified Width and Height and a lower left corner at (X,Y).  The rectangle can
+// optionally have a border and a filling color.
+// The Width/Height includes the border (if any specified).
+type RectangleAnnotationDef struct {
+	X             float64
+	Y             float64
+	Width         float64
+	Height        float64
+	FillEnabled   bool // Show fill?
+	FillColor     *pdf.PdfColorDeviceRGB
+	BorderEnabled bool // Show border?
+	BorderWidth   float64
+	BorderColor   *pdf.PdfColorDeviceRGB
+	Opacity       float64 // Alpha value (0-1).
+}
+
+// Creates a rectangle annotation object that can be added to page PDF annotations.
+func CreateRectangleAnnotation(rectDef RectangleAnnotationDef) (*pdf.PdfAnnotation, error) {
+	rectAnnotation := pdf.NewPdfAnnotationSquare()
+
+	if rectDef.BorderEnabled {
+		r, g, b := rectDef.BorderColor.R(), rectDef.BorderColor.G(), rectDef.BorderColor.B()
+		rectAnnotation.C = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+		bs := pdf.NewBorderStyle()
+		bs.SetBorderWidth(rectDef.BorderWidth)
+		rectAnnotation.BS = bs.ToPdfObject()
+	}
+
+	if rectDef.FillEnabled {
+		r, g, b := rectDef.FillColor.R(), rectDef.FillColor.G(), rectDef.FillColor.B()
+		rectAnnotation.IC = pdfcore.MakeArrayFromFloats([]float64{r, g, b})
+	} else {
+		rectAnnotation.IC = pdfcore.MakeArrayFromIntegers([]int{}) // No fill.
+	}
+
+	if rectDef.Opacity < 1.0 {
+		rectAnnotation.CA = pdfcore.MakeFloat(rectDef.Opacity)
+	}
+
+	// Make the appearance stream (for uniform appearance).
+	apDict, bbox, err := makeRectangleAnnotationAppearanceStream(rectDef)
+	if err != nil {
+		return nil, err
+	}
+
+	rectAnnotation.AP = apDict
+	rectAnnotation.Rect = pdfcore.MakeArrayFromFloats([]float64{bbox.Llx, bbox.Lly, bbox.Urx, bbox.Ury})
+
+	return rectAnnotation.PdfAnnotation, nil
+
+}
+
 func makeRectangleAnnotationAppearanceStream(rectDef RectangleAnnotationDef) (*pdfcore.PdfObjectDictionary, *pdf.PdfRectangle, error) {
 	form := pdf.NewXObjectForm()
 	form.Resources = pdf.NewPdfPageResources()

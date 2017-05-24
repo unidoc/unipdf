@@ -15,8 +15,7 @@ import (
 // Page resources model.
 // Implements PdfModel.
 type PdfPageResources struct {
-	ExtGState PdfObject
-	//ColorSpace PdfObject
+	ExtGState  PdfObject
 	ColorSpace *PdfPageResourcesColorspaces
 	Pattern    PdfObject
 	Shading    PdfObject

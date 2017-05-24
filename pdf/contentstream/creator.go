@@ -414,11 +414,170 @@ func (this *ContentCreator) Add_k(c, m, y, k float64) *ContentCreator {
 
 /* Shading operators. */
 
-// sh: Paint the shape and color described by a shading dictionary.
 func (this *ContentCreator) Add_sh(name PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "sh"
 	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+/* Text related operators */
+
+/* Text state operators */
+
+// BT: Begin text.
+func (this *ContentCreator) Add_BT() *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "BT"
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// ET: End text.
+func (this *ContentCreator) Add_ET() *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "ET"
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tc: Set character spacing.
+func (this *ContentCreator) Add_Tc(charSpace float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tc"
+	op.Params = makeParamsFromFloats([]float64{charSpace})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tw: Set word spacing.
+func (this *ContentCreator) Add_Tw(wordSpace float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tw"
+	op.Params = makeParamsFromFloats([]float64{wordSpace})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tz: Set horizontal scaling.
+func (this *ContentCreator) Add_Tz(scale float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tz"
+	op.Params = makeParamsFromFloats([]float64{scale})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// TL: Set leading.
+func (this *ContentCreator) Add_Tl(leading float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tl"
+	op.Params = makeParamsFromFloats([]float64{leading})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tf: Set font and font size.
+func (this *ContentCreator) Add_Tf(fontName PdfObjectName, fontSize float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tf"
+	op.Params = makeParamsFromNames([]PdfObjectName{fontName})
+	op.Params = append(op.Params, makeParamsFromFloats([]float64{fontSize})...)
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tr: Set text rendering mode.
+func (this *ContentCreator) Add_Tr(render int64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tr"
+	op.Params = makeParamsFromInts([]int64{render})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Ts: Set text rise.
+func (this *ContentCreator) Add_Ts(rise float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Ts"
+	op.Params = makeParamsFromFloats([]float64{rise})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+/* Text positioning operators. */
+
+// Td: Move to start of next line with offset (tx, ty).
+func (this *ContentCreator) Add_Td(tx, ty float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Td"
+	op.Params = makeParamsFromFloats([]float64{tx, ty})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// TD: Move to start of next line with offset (tx, ty).
+func (this *ContentCreator) Add_TD(tx, ty float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "TD"
+	op.Params = makeParamsFromFloats([]float64{tx, ty})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// Tm: Set the text line matrix.
+func (this *ContentCreator) Add_Tm(a, b, c, d, e, f float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tm"
+	op.Params = makeParamsFromFloats([]float64{a, b, c, d, e, f})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// T*: Move to the start of next line.
+func (this *ContentCreator) Add_Tstar() *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "T*"
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+/* Text showing operators */
+
+// Tj: Show a text string.
+func (this *ContentCreator) Add_Tj(textstr PdfObjectString) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "Tj"
+	op.Params = makeParamsFromStrings([]PdfObjectString{textstr})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// ': Move to next line and show a string.
+func (this *ContentCreator) Add_quote(textstr PdfObjectString) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "'"
+	op.Params = makeParamsFromStrings([]PdfObjectString{textstr})
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// '': Move to next line and show a string, using aw and ac as word and character spacing respectively.
+func (this *ContentCreator) Add_quotes(textstr PdfObjectString, aw, ac float64) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "''"
+	op.Params = makeParamsFromFloats([]float64{aw, ac})
+	op.Params = append(op.Params, makeParamsFromStrings([]PdfObjectString{textstr})...)
+	this.operands = append(this.operands, &op)
+	return this
+}
+
+// TJ. Show one or more text string.  Array of numbers (displacement) and strings.
+func (this *ContentCreator) Add_TJ(vals ...PdfObject) *ContentCreator {
+	op := ContentStreamOperation{}
+	op.Operand = "TJ"
+	op.Params = vals
 	this.operands = append(this.operands, &op)
 	return this
 }

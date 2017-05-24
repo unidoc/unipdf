@@ -554,6 +554,26 @@ func (this *PdfPage) HasImageResource(name PdfObjectName) bool {
 	} else {
 		return false
 	}
+
+}
+
+// Check if has font resource by name.
+func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
+	resources, err := this.GetResources()
+	if err != nil {
+		return false
+	}
+
+	fontDict, has := resources.Font.(*PdfObjectDictionary)
+	if !has {
+		return false
+	}
+
+	if _, has := (*fontDict)[name]; has {
+		return true
+	} else {
+		return false
+	}
 }
 
 // Add a graphics state to the XObject resources.
