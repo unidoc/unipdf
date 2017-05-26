@@ -23,6 +23,11 @@ func (this *ContentCreator) Bytes() []byte {
 	return this.operands.Bytes()
 }
 
+// Same as Bytes() except returns as a string for convenience.
+func (this *ContentCreator) String() string {
+	return string(this.operands.Bytes())
+}
+
 /* Graphics state operators. */
 
 // Save the current graphics state on the stack - push.
@@ -470,9 +475,9 @@ func (this *ContentCreator) Add_Tz(scale float64) *ContentCreator {
 }
 
 // TL: Set leading.
-func (this *ContentCreator) Add_Tl(leading float64) *ContentCreator {
+func (this *ContentCreator) Add_TL(leading float64) *ContentCreator {
 	op := ContentStreamOperation{}
-	op.Operand = "Tl"
+	op.Operand = "TL"
 	op.Params = makeParamsFromFloats([]float64{leading})
 	this.operands = append(this.operands, &op)
 	return this
