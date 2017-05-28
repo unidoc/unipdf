@@ -576,6 +576,22 @@ func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
 	}
 }
 
+// Check if ExtGState name is available.
+func (this *PdfPage) HasExtGState(name PdfObjectName) bool {
+	if this.Resources == nil {
+		return true
+	}
+
+	if this.Resources.ExtGState == nil {
+		return true
+	}
+
+	egsDict := this.Resources.ExtGState.(*PdfObjectDictionary)
+	_, has := (*egsDict)[name]
+
+	return has
+}
+
 // Add a graphics state to the XObject resources.
 func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) {
 	if this.Resources == nil {
