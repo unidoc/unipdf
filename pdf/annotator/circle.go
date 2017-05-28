@@ -8,7 +8,6 @@ package annotator
 import (
 	"github.com/unidoc/unidoc/common"
 
-	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
@@ -102,81 +101,31 @@ func makeCircleAnnotationAppearanceStream(circDef CircleAnnotationDef) (*pdfcore
 }
 
 func drawPdfCircle(circDef CircleAnnotationDef, gsName string) ([]byte, *pdf.PdfRectangle, *pdf.PdfRectangle, error) {
-	xRad := circDef.Width / 2
-	yRad := circDef.Height / 2
-	if circDef.BorderEnabled {
-		xRad -= circDef.BorderWidth / 2
-		yRad -= circDef.BorderWidth / 2
+	// The annotation is drawn locally in a relative coordinate system with 0,0 as the origin rather than an offset.
+	circle := draw.Circle{
+		X:             circDef.X,
+		Y:             circDef.Y,
+		Width:         circDef.Width,
+		Height:        circDef.Height,
+		FillEnabled:   circDef.FillEnabled,
+		FillColor:     circDef.FillColor,
+		BorderEnabled: circDef.BorderEnabled,
+		BorderWidth:   circDef.BorderWidth,
+		BorderColor:   circDef.BorderColor,
+		Opacity:       circDef.Opacity,
 	}
 
-	magic := 0.551784
-	xMagic := xRad * magic
-	yMagic := yRad * magic
-
-	bpath := draw.NewCubicBezierPath()
-	bpath = bpath.AppendCurve(draw.NewCubicBezierCurve(-xRad, 0, -xRad, yMagic, -xMagic, yRad, 0, yRad))
-	bpath = bpath.AppendCurve(draw.NewCubicBezierCurve(0, yRad, xMagic, yRad, xRad, yMagic, xRad, 0))
-	bpath = bpath.AppendCurve(draw.NewCubicBezierCurve(xRad, 0, xRad, -yMagic, xMagic, -yRad, 0, -yRad))
-	bpath = bpath.AppendCurve(draw.NewCubicBezierCurve(0, -yRad, -xMagic, -yRad, -xRad, -yMagic, -xRad, 0))
-	bpath = bpath.Offset(xRad, yRad)
-	if circDef.BorderEnabled {
-		bpath = bpath.Offset(circDef.BorderWidth/2, circDef.BorderWidth/2)
+	content, localBbox, err := circle.Draw(gsName)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-
-	creator := pdfcontent.NewContentCreator()
-
-	creator.Add_q()
-
-	if circDef.FillEnabled {
-		creator.Add_rg(circDef.FillColor.R(), circDef.FillColor.G(), circDef.FillColor.B())
-	}
-	if circDef.BorderEnabled {
-		creator.Add_RG(circDef.BorderColor.R(), circDef.BorderColor.G(), circDef.BorderColor.B())
-		creator.Add_w(circDef.BorderWidth)
-	}
-	if len(gsName) > 1 {
-		// If a graphics state is provided, use it. (Used for transparency settings here).
-		creator.Add_gs(pdfcore.PdfObjectName(gsName))
-	}
-
-	drawBezierPathWithCreator(bpath, creator)
-
-	if circDef.FillEnabled && circDef.BorderEnabled {
-		creator.Add_B() // fill and stroke.
-	} else if circDef.FillEnabled {
-		creator.Add_f() // Fill.
-	} else if circDef.BorderEnabled {
-		creator.Add_S() // Stroke.
-	}
-	creator.Add_Q()
-
-	// Offsets (needed for placement of annotations bbox).
-	offX := circDef.X
-	offY := circDef.Y
-
-	// Get bounding box.
-	pathBbox := bpath.GetBoundingBox()
-	if circDef.BorderEnabled {
-		// Account for stroke width.
-		pathBbox.Height += circDef.BorderWidth
-		pathBbox.Width += circDef.BorderWidth
-		pathBbox.X -= circDef.BorderWidth / 2
-		pathBbox.Y -= circDef.BorderWidth / 2
-	}
-
-	// Bounding box - local coordinate system (without offset).
-	localBbox := &pdf.PdfRectangle{}
-	localBbox.Llx = pathBbox.X
-	localBbox.Lly = pathBbox.Y
-	localBbox.Urx = pathBbox.X + pathBbox.Width
-	localBbox.Ury = pathBbox.Y + pathBbox.Height
 
 	// Bounding box - global page coordinate system (with offset).
 	globalBbox := &pdf.PdfRectangle{}
-	globalBbox.Llx = offX + pathBbox.X
-	globalBbox.Lly = offY + pathBbox.Y
-	globalBbox.Urx = offX + pathBbox.X + pathBbox.Width
-	globalBbox.Ury = offY + pathBbox.Y + pathBbox.Height
+	globalBbox.Llx = circDef.X + localBbox.Llx
+	globalBbox.Lly = circDef.Y + localBbox.Lly
+	globalBbox.Urx = circDef.X + localBbox.Urx
+	globalBbox.Ury = circDef.Y + localBbox.Ury
 
-	return creator.Bytes(), localBbox, globalBbox, nil
+	return content, localBbox, globalBbox, nil
 }
