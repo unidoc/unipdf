@@ -579,11 +579,11 @@ func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
 // Check if ExtGState name is available.
 func (this *PdfPage) HasExtGState(name PdfObjectName) bool {
 	if this.Resources == nil {
-		return true
+		return false
 	}
 
 	if this.Resources.ExtGState == nil {
-		return true
+		return false
 	}
 
 	egsDict := this.Resources.ExtGState.(*PdfObjectDictionary)
