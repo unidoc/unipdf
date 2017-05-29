@@ -65,6 +65,7 @@ func (c Circle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	}
 
 	DrawBezierPathWithCreator(bpath, creator)
+	creator.Add_h() // Close the path.
 
 	if c.FillEnabled && c.BorderEnabled {
 		creator.Add_B() // fill and stroke.
