@@ -142,6 +142,7 @@ func (rect Rectangle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 		creator.Add_gs(pdfcore.PdfObjectName(gsName))
 	}
 	DrawPathWithCreator(path, creator)
+	creator.Add_h() // Close the path.
 
 	if rect.FillEnabled && rect.BorderEnabled {
 		creator.Add_B() // fill and stroke.
