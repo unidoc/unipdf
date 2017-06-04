@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -608,9 +609,8 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 }
 
 // Add a font dictionary to the Font resources.
-func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) {
+func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) error {
 	if this.Resources == nil {
-		//this.Resources = &PdfPageResources{}
 		this.Resources = NewPdfPageResources()
 	}
 
@@ -618,8 +618,16 @@ func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) {
 		this.Resources.Font = &PdfObjectDictionary{}
 	}
 
-	fontDict := this.Resources.Font.(*PdfObjectDictionary)
+	fontDict, ok := TraceToDirectObject(this.Resources.Font).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("Expected font dictionary is not a dictionary: %v", TraceToDirectObject(this.Resources.Font))
+		return errors.New("Type check error")
+	}
+
+	// Update the dictionary.
 	(*fontDict)[name] = font
+
+	return nil
 }
 
 type WatermarkImageOptions struct {
