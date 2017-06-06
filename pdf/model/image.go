@@ -28,6 +28,11 @@ type Image struct {
 	ColorComponents  int    // Color components per pixel
 	Data             []byte // Image data stored as bytes.
 
+	// Transparency data: alpha channel.
+	// Stored in same bits per component as original data with 1 color component.
+	alphaData []byte // Alpha channel data.
+	hasAlpha  bool   // Indicates whether the alpha channel data is available.
+
 	decode []float64 // [Dmin Dmax ... values for each color component]
 }
 
@@ -86,6 +91,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	// Draw the data on the image..
 	x := 0
 	y := 0
+	aidx := 0
 
 	samples := this.GetSamples()
 	//bytesPerColor := colorComponents * int(this.BitsPerComponent) / 8
@@ -105,12 +111,22 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				r := uint16(samples[i])<<8 | uint16(samples[i+1])
 				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
 				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				c = gocolor.RGBA64{R: r, G: g, B: b, A: 0}
+				a := uint16(0)
+				if this.alphaData != nil && len(this.alphaData) > aidx+1 {
+					a = uint16(this.alphaData[aidx]<<8) | uint16(this.alphaData[aidx+1])
+					aidx += 2
+				}
+				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}
 			} else {
 				r := uint8(samples[i] & 0xff)
 				g := uint8(samples[i+1] & 0xff)
 				b := uint8(samples[i+2] & 0xff)
-				c = gocolor.RGBA{R: r, G: g, B: b, A: 0}
+				a := uint8(0)
+				if this.alphaData != nil && len(this.alphaData) > aidx {
+					a = uint8(this.alphaData[aidx])
+					aidx++
+				}
+				c = gocolor.RGBA{R: r, G: g, B: b, A: a}
 			}
 		} else if this.ColorComponents == 4 {
 			c1 := uint8(samples[i] & 0xff)
@@ -158,9 +174,18 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	m := goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
 	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
 
+	alphaData := []byte{}
+	hasAlpha := false
+
 	data := []byte{}
 	for i := 0; i < len(m.Pix); i += 4 {
 		data = append(data, m.Pix[i], m.Pix[i+1], m.Pix[i+2])
+
+		alpha := m.Pix[i+3]
+		if alpha != 0 {
+			hasAlpha = true
+		}
+		alphaData = append(alphaData, alpha)
 	}
 
 	imag := Image{}
@@ -169,6 +194,11 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	imag.BitsPerComponent = 8 // RGBA colormap
 	imag.ColorComponents = 3
 	imag.Data = data // buf.Bytes()
+
+	imag.hasAlpha = hasAlpha
+	if hasAlpha {
+		imag.alphaData = alphaData
+	}
 
 	return &imag, nil
 }

@@ -283,7 +283,25 @@ func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, 
 		}
 	} else {
 		xobj.ColorSpace = cs
+	}
 
+	if img.hasAlpha {
+		// Add the alpha channel information as a stencil mask (SMask).
+		// Has same width and height as original and stored in same
+		// bits per component (1 component, hence the DeviceGray channel).
+		smask := NewXObjectImage()
+		smask.Filter = encoder
+		encoded, err := encoder.EncodeBytes(img.alphaData)
+		if err != nil {
+			common.Log.Debug("Error with encoding: %v", err)
+			return nil, err
+		}
+		smask.Stream = encoded
+		smask.BitsPerComponent = &img.BitsPerComponent
+		smask.Width = &img.Width
+		smask.Height = &img.Height
+		smask.ColorSpace = NewPdfColorspaceDeviceGray()
+		xobj.SMask = smask.ToPdfObject()
 	}
 
 	return xobj, nil
