@@ -587,14 +587,20 @@ func (this *PdfPage) HasExtGState(name PdfObjectName) bool {
 		return false
 	}
 
-	egsDict := this.Resources.ExtGState.(*PdfObjectDictionary)
+	egsDict, ok := TraceToDirectObject(this.Resources.ExtGState).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", TraceToDirectObject(this.Resources.ExtGState))
+		return false
+	}
+
+	// Update the dictionary.
 	_, has := (*egsDict)[name]
 
 	return has
 }
 
 // Add a graphics state to the XObject resources.
-func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) {
+func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) error {
 	if this.Resources == nil {
 		//this.Resources = &PdfPageResources{}
 		this.Resources = NewPdfPageResources()
@@ -604,8 +610,14 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 		this.Resources.ExtGState = &PdfObjectDictionary{}
 	}
 
-	egsDict := this.Resources.ExtGState.(*PdfObjectDictionary)
+	egsDict, ok := TraceToDirectObject(this.Resources.ExtGState).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", TraceToDirectObject(this.Resources.ExtGState))
+		return errors.New("Type check error")
+	}
+
 	(*egsDict)[name] = egs
+	return nil
 }
 
 // Add a font dictionary to the Font resources.
