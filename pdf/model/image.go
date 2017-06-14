@@ -182,7 +182,8 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 		data = append(data, m.Pix[i], m.Pix[i+1], m.Pix[i+2])
 
 		alpha := m.Pix[i+3]
-		if alpha != 0 {
+		if alpha != 255 {
+			// If all alpha values are 255 (opaque), means that the alpha transparency channel is unnecessary.
 			hasAlpha = true
 		}
 		alphaData = append(alphaData, alpha)
