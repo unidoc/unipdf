@@ -114,7 +114,7 @@ func drawPdfLine(lineDef LineAnnotationDef, gsName string) ([]byte, *pdf.PdfRect
 		X1:               0,
 		Y1:               0,
 		X2:               lineDef.X2 - lineDef.X1,
-		Y2:               lineDef.Y2 - lineDef.Y2,
+		Y2:               lineDef.Y2 - lineDef.Y1,
 		LineColor:        lineDef.LineColor,
 		Opacity:          lineDef.Opacity,
 		LineWidth:        lineDef.LineWidth,
