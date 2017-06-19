@@ -113,7 +113,7 @@ func drawPdfRectangle(rectDef RectangleAnnotationDef, gsName string) ([]byte, *p
 		FillEnabled:   rectDef.FillEnabled,
 		FillColor:     rectDef.FillColor,
 		BorderEnabled: rectDef.BorderEnabled,
-		BorderWidth:   rectDef.BorderWidth,
+		BorderWidth:   2 * rectDef.BorderWidth,
 		BorderColor:   rectDef.BorderColor,
 		Opacity:       rectDef.Opacity,
 	}
