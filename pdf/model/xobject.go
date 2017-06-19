@@ -223,7 +223,7 @@ type XObjectImage struct {
 	Alternatives PdfObject
 	SMask        PdfObject
 	SMaskInData  PdfObject
-	Name         PdfObject
+	Name         PdfObject // Obsolete. Currently read if available and write if available. Not setting on new created files.
 	StructParent PdfObject
 	ID           PdfObject
 	OPI          PdfObject
@@ -244,7 +244,7 @@ func NewXObjectImage() *XObjectImage {
 
 // Creates a new XObject Image from an image object with default options.
 // If encoder is nil, uses raw encoding (none).
-func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
 
 	if encoder == nil {
@@ -257,7 +257,6 @@ func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, 
 		return nil, err
 	}
 
-	xobj.Name = &name
 	xobj.Filter = encoder
 	xobj.Stream = encoded
 
@@ -460,34 +459,6 @@ func (ximg *XObjectImage) SetFilter(encoder StreamEncoder) error {
 	}
 
 	ximg.Stream = encoded
-	return nil
-}
-
-// Compress with default settings, updating the underlying stream also.
-// XXX/TODO: Add flate encoding as an option (although lossy).  Need to be able
-// to set default settings and override.
-func (ximg *XObjectImage) Compress() error {
-	if ximg.Filter != nil {
-		common.Log.Error("XImage already compressed...")
-		return errors.New("Already compressed")
-	}
-	//encoder := NewFlateEncoder()
-	//encoder.SetPredictor(int(*ximg.Width))
-	encoder := NewDCTEncoder()
-	encoder.ColorComponents = ximg.ColorSpace.GetNumComponents()
-	encoder.Height = int(*ximg.Height)
-	encoder.Width = int(*ximg.Width)
-	encoder.BitsPerComponent = int(*ximg.BitsPerComponent)
-	ximg.Filter = encoder
-
-	encoded, err := ximg.Filter.EncodeBytes(ximg.Stream)
-	if err != nil {
-		common.Log.Debug("Error encoding: %v\n", err)
-		return err
-	}
-	ximg.Stream = encoded
-
-	_ = ximg.ToPdfObject()
 	return nil
 }
 

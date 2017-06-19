@@ -650,6 +650,7 @@ type WatermarkImageOptions struct {
 
 // Add a watermark to the page.
 func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOptions) error {
+	// Page dimensions.
 	bbox, err := this.GetMediaBox()
 	if err != nil {
 		return err
@@ -670,20 +671,39 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 		yOffset = (pHeight - wHeight) / 2
 	}
 
-	imgName := PdfObjectName("Imw0")
-	this.AddImageResource(imgName, ximg)
+	// Find available image name for this page.
+	i := 0
+	imgName := PdfObjectName(fmt.Sprintf("Imw%d", i))
+	for this.HasImageResource(imgName) {
+		i++
+		imgName = PdfObjectName(fmt.Sprintf("Imw%d", i))
+	}
 
+	err = this.AddImageResource(imgName, ximg)
+	if err != nil {
+		return err
+	}
+
+	i = 0
+	gsName := PdfObjectName(fmt.Sprintf("GS%d", i))
+	for this.HasExtGState(gsName) {
+		i++
+		gsName = PdfObjectName(fmt.Sprintf("GS%d", i))
+	}
 	gs0 := PdfObjectDictionary{}
 	gs0["BM"] = MakeName("Normal")
 	gs0["CA"] = MakeFloat(opt.Alpha)
 	gs0["ca"] = MakeFloat(opt.Alpha)
-	this.AddExtGState("GS0", &gs0)
+	err = this.AddExtGState(gsName, &gs0)
+	if err != nil {
+		return err
+	}
 
 	contentStr := fmt.Sprintf("q\n"+
-		"/GS0 gs\n"+
+		"/%s gs\n"+
 		"%.0f 0 0 %.0f %.4f %.4f cm\n"+
 		"/%s Do\n"+
-		"Q", wWidth, wHeight, xOffset, yOffset, imgName)
+		"Q", gsName, wWidth, wHeight, xOffset, yOffset, imgName)
 	this.AddContentStreamByString(contentStr)
 
 	return nil
