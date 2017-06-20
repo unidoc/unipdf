@@ -36,6 +36,16 @@ type Image struct {
 	decode []float64 // [Dmin Dmax ... values for each color component]
 }
 
+// Threshold alpha channel.  Set all alpha values below threshold to transparent.
+type AlphaMapFunc func(alpha byte) byte
+
+// Allow mapping of alpha data for transformations.  Can allow custom filtering of alpha data etc.
+func (this Image) AlphaMap(mapFunc AlphaMapFunc) {
+	for idx, alpha := range this.alphaData {
+		this.alphaData[idx] = mapFunc(alpha)
+	}
+}
+
 // Convert the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
 func (this *Image) GetSamples() []uint32 {
