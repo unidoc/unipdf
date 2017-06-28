@@ -98,6 +98,27 @@ func MakeNull() *PdfObjectNull {
 	return &null
 }
 
+func MakeIndirectObject(obj PdfObject) *PdfIndirectObject {
+	ind := &PdfIndirectObject{}
+	ind.PdfObject = obj
+	return ind
+}
+
+func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error) {
+	stream := &PdfObjectStream{}
+
+	stream.PdfObjectDictionary = encoder.MakeStreamDict()
+
+	encoded, err := encoder.EncodeBytes(contents)
+	if err != nil {
+		return nil, err
+	}
+	stream.PdfObjectDictionary.Set("Length", MakeInteger(int64(len(encoded))))
+
+	stream.Stream = encoded
+	return stream, nil
+}
+
 func (this *PdfObjectBool) String() string {
 	if *this {
 		return "true"
