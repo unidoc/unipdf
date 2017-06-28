@@ -582,7 +582,7 @@ func (this *ContentCreator) Add_quotes(textstr PdfObjectString, aw, ac float64) 
 func (this *ContentCreator) Add_TJ(vals ...PdfObject) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "TJ"
-	op.Params = vals
+	op.Params = []PdfObject{MakeArray(vals...)}
 	this.operands = append(this.operands, &op)
 	return this
 }

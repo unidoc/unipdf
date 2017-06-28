@@ -19,12 +19,62 @@ type ContentStreamOperation struct {
 
 type ContentStreamOperations []*ContentStreamOperation
 
+// Check if the content stream operations are fully wrapped (within q ... Q)
+func (this *ContentStreamOperations) isWrapped() bool {
+	if len(*this) < 2 {
+		return false
+	}
+
+	depth := 0
+	for _, op := range *this {
+		if op.Operand == "q" {
+			depth++
+		} else if op.Operand == "Q" {
+			depth--
+		} else {
+			if depth < 1 {
+				return false
+			}
+		}
+	}
+
+	// Should end at depth == 0
+	return depth == 0
+}
+
+// Wrap entire contents within q ... Q.  If unbalanced, then adds extra Qs at the end.
+// Only does if needed. Ensures that when adding new content, one start with all states
+// in the default condition.
+func (this *ContentStreamOperations) WrapIfNeeded() {
+	if this.isWrapped() {
+		return
+	}
+
+	*this = append([]*ContentStreamOperation{&ContentStreamOperation{Operand: "q"}}, *this...)
+
+	depth := 0
+	for _, op := range *this {
+		if op.Operand == "q" {
+			depth++
+		} else if op.Operand == "Q" {
+			depth--
+		}
+	}
+
+	for depth > 0 {
+		*this = append(*this, &ContentStreamOperation{Operand: "Q"})
+		depth--
+	}
+
+	return
+}
+
 // Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
 // stored as a PDF stream or string format.
-func (this ContentStreamOperations) Bytes() []byte {
+func (this *ContentStreamOperations) Bytes() []byte {
 	var buf bytes.Buffer
 
-	for _, op := range this {
+	for _, op := range *this {
 		if op == nil {
 			continue
 		}
@@ -58,7 +108,7 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 	}
 	inText := false
 	txt := ""
-	for _, op := range operations {
+	for _, op := range *operations {
 		if op.Operand == "BT" {
 			inText = true
 		} else if op.Operand == "ET" {

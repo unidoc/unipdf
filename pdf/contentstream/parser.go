@@ -36,7 +36,7 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 }
 
 // Parses all commands in content stream, returning a list of operation data.
-func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
+func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 	operations := ContentStreamOperations{}
 
 	for {
@@ -46,9 +46,9 @@ func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
 			obj, err, isOperand := this.parseObject()
 			if err != nil {
 				if err == io.EOF {
-					return operations, nil
+					return &operations, nil
 				}
-				return nil, err
+				return &operations, err
 			}
 			if isOperand {
 				operation.Operand = string(*obj.(*PdfObjectString))
@@ -64,14 +64,14 @@ func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
 			// The image is stored as the parameter.
 			im, err := this.ParseInlineImage()
 			if err != nil {
-				return nil, err
+				return &operations, err
 			}
 			operation.Params = append(operation.Params, im)
 		}
 	}
 
 	common.Log.Debug("Operation list: %v\n", operations)
-	return operations, nil
+	return &operations, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and
