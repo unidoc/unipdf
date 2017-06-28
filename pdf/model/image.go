@@ -73,6 +73,7 @@ func (this *Image) SetSamples(samples []uint32) {
 	this.Data = data
 }
 
+// Converts the unidoc Image to a golang Image structure.
 func (this *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
@@ -157,9 +158,16 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	return img, nil
 }
 
+// The ImageHandler interface implements common image loading and processing tasks.
+// Implementing as an interface allows for the possibility to use non-standard libraries for faster
+// loading and processing of images.
 type ImageHandler interface {
 	// Read any image type and load into a new Image object.
 	Read(r io.Reader) (*Image, error)
+
+	// Load a unidoc Image from a standard Go image structure.
+	NewImageFromGoImage(goimg goimage.Image) (*Image, error)
+
 	// Compress an image.
 	Compress(input *Image, quality int64) (*Image, error)
 }
@@ -168,21 +176,13 @@ type ImageHandler interface {
 
 type DefaultImageHandler struct{}
 
-// Reads an image and loads into a new Image object with an RGB
-// colormap and 8 bits per component.
-func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
-	// Load the image with the native implementation.
-	img, _, err := goimage.Decode(reader)
-	if err != nil {
-		common.Log.Debug("Error decoding file: %s", err)
-		return nil, err
-	}
-
+// Create a unidoc Image from a golang Image.
+func (this DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
-	b := img.Bounds()
+	b := goimg.Bounds()
 	m := goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
-	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+	draw.Draw(m, m.Bounds(), goimg, b.Min, draw.Src)
 
 	alphaData := []byte{}
 	hasAlpha := false
@@ -212,6 +212,19 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	}
 
 	return &imag, nil
+}
+
+// Reads an image and loads into a new Image object with an RGB
+// colormap and 8 bits per component.
+func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
+	// Load the image with the native implementation.
+	goimg, _, err := goimage.Decode(reader)
+	if err != nil {
+		common.Log.Debug("Error decoding file: %s", err)
+		return nil, err
+	}
+
+	return this.NewImageFromGoImage(goimg)
 }
 
 // To be implemented.
