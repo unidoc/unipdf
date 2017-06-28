@@ -75,6 +75,15 @@ func (this *PdfPage) setContainer(container *PdfIndirectObject) {
 	this.primitive = container
 }
 
+func (this *PdfPage) Duplicate() *PdfPage {
+	var dup PdfPage
+	dup = *this
+	dup.pageDict = &PdfObjectDictionary{}
+	dup.primitive = MakeIndirectObject(dup.pageDict)
+
+	return &dup
+}
+
 // Build a PdfPage based on the underlying dictionary.
 // Used in loading existing PDF files.
 // Note that a new container is created (indirect object).
@@ -538,8 +547,8 @@ func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) er
 	return nil
 }
 
-// Check if has image resource by name.
-func (this *PdfPage) HasImageResource(name PdfObjectName) bool {
+// Check if has XObject resource by name.
+func (this *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 	resources, err := this.GetResources()
 	if err != nil {
 		return false
@@ -555,7 +564,26 @@ func (this *PdfPage) HasImageResource(name PdfObjectName) bool {
 	} else {
 		return false
 	}
+}
 
+// Get XObject by name.
+func (this *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
+	resources, err := this.GetResources()
+	if err != nil {
+		return nil, false
+	}
+
+	xresDict, has := resources.XObject.(*PdfObjectDictionary)
+	if !has {
+		return nil, false
+	}
+
+	if obj, has := (*xresDict)[name]; has {
+		return obj, true
+
+	} else {
+		return nil, false
+	}
 }
 
 // Check if has font resource by name.
@@ -621,7 +649,7 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 }
 
 // Add a font dictionary to the Font resources.
-func (this *PdfPage) AddFont(name PdfObjectName, font *PdfObjectDictionary) error {
+func (this *PdfPage) AddFont(name PdfObjectName, font PdfObject) error {
 	if this.Resources == nil {
 		this.Resources = NewPdfPageResources()
 	}
@@ -671,10 +699,14 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 		yOffset = (pHeight - wHeight) / 2
 	}
 
+	if this.Resources == nil {
+		this.Resources = NewPdfPageResources()
+	}
+
 	// Find available image name for this page.
 	i := 0
 	imgName := PdfObjectName(fmt.Sprintf("Imw%d", i))
-	for this.HasImageResource(imgName) {
+	for this.Resources.HasXObjectByName(imgName) {
 		i++
 		imgName = PdfObjectName(fmt.Sprintf("Imw%d", i))
 	}
@@ -845,6 +877,22 @@ type PdfPageResourcesColorspaces struct {
 	Colorspaces map[string]PdfColorspace
 
 	container *PdfIndirectObject
+}
+
+func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
+	colorspaces := &PdfPageResourcesColorspaces{}
+	colorspaces.Names = []string{}
+	colorspaces.Colorspaces = map[string]PdfColorspace{}
+	colorspaces.container = &PdfIndirectObject{}
+	return colorspaces
+}
+
+// Set the colorspace corresponding to key.  Add to Names if not set.
+func (this *PdfPageResourcesColorspaces) Set(key PdfObjectName, val PdfColorspace) {
+	if _, has := this.Colorspaces[string(key)]; !has {
+		this.Names = append(this.Names, string(key))
+	}
+	this.Colorspaces[string(key)] = val
 }
 
 func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
