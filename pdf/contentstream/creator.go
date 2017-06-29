@@ -17,6 +17,11 @@ func NewContentCreator() *ContentCreator {
 	return creator
 }
 
+// Get the list of operations.
+func (this *ContentCreator) Operations() *ContentStreamOperations {
+	return &this.operands
+}
+
 // Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
 // stored as a PDF stream or string format.
 func (this *ContentCreator) Bytes() []byte {
