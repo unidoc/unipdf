@@ -138,6 +138,9 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		// Convenient to have this always accessible.  Should almost always be existent at any rate.
+		page.Resources = NewPdfPageResources()
 	}
 
 	if obj, isDefined := d["MediaBox"]; isDefined {
@@ -755,7 +758,7 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) {
 	if this.Contents == nil {
 		// If not set, place it directly.
 		this.Contents = &stream
-	} else if contArray, isArray := this.Contents.(*PdfObjectArray); isArray {
+	} else if contArray, isArray := TraceToDirectObject(this.Contents).(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
 		*contArray = append(*contArray, &stream)
 	} else {
@@ -830,7 +833,7 @@ func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 
 		return string(buf), nil
 	}
-	return "", fmt.Errorf("Invalid content stream object holder (%T)", cstreamObj)
+	return "", fmt.Errorf("Invalid content stream object holder (%T)", TraceToDirectObject(cstreamObj))
 }
 
 // Get Content Stream as an array of strings.

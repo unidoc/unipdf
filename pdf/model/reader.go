@@ -675,10 +675,9 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 }
 
 // Get a page by the page number. Indirect object with type /Page.
-// Rename to GetPageAsIndirectObject in the future?
 func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+		return nil, fmt.Errorf("File needs to be decrypted first")
 	}
 	if len(this.pageList) < pageNumber {
 		return nil, errors.New("Invalid page number (page count too short)")
@@ -700,7 +699,7 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 // Returns the PdfPage entry.
 func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+		return nil, fmt.Errorf("File needs to be decrypted first")
 	}
 	if len(this.pageList) < pageNumber {
 		return nil, errors.New("Invalid page number (page count too short)")
