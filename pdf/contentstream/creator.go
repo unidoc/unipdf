@@ -5,7 +5,11 @@
 
 package contentstream
 
-import . "github.com/unidoc/unidoc/pdf/core"
+import (
+	"math"
+
+	. "github.com/unidoc/unidoc/pdf/core"
+)
 
 type ContentCreator struct {
 	operands ContentStreamOperations
@@ -67,6 +71,25 @@ func (this *ContentCreator) Add_cm(a, b, c, d, e, f float64) *ContentCreator {
 	op.Params = makeParamsFromFloats([]float64{a, b, c, d, e, f})
 	this.operands = append(this.operands, &op)
 	return this
+}
+
+// Convenience function for generating a cm operation to translate the transformation matrix.
+func (this *ContentCreator) Translate(tx, ty float64) *ContentCreator {
+	return this.Add_cm(1, 0, 0, 1, tx, ty)
+}
+
+// Convenience function for generating a cm command to scale the transformation matrix.
+func (this *ContentCreator) Scale(sx, sy float64) *ContentCreator {
+	return this.Add_cm(sx, 0, 0, sy, 0, 0)
+}
+
+// Convenience function for generating a cm command to rotate transformation matrix.
+func (this *ContentCreator) RotateDeg(angle float64) *ContentCreator {
+	u1 := math.Cos(angle * math.Pi / 180.0)
+	u2 := math.Sin(angle * math.Pi / 180.0)
+	u3 := -math.Sin(angle * math.Pi / 180.0)
+	u4 := math.Cos(angle * math.Pi / 180.0)
+	return this.Add_cm(u1, u2, u3, u4, 0, 0)
 }
 
 // Set the line width.

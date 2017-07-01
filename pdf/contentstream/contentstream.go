@@ -45,9 +45,13 @@ func (this *ContentStreamOperations) isWrapped() bool {
 // Wrap entire contents within q ... Q.  If unbalanced, then adds extra Qs at the end.
 // Only does if needed. Ensures that when adding new content, one start with all states
 // in the default condition.
-func (this *ContentStreamOperations) WrapIfNeeded() {
+func (this *ContentStreamOperations) WrapIfNeeded() *ContentStreamOperations {
+	if len(*this) == 0 {
+		// No need to wrap if empty.
+		return this
+	}
 	if this.isWrapped() {
-		return
+		return this
 	}
 
 	*this = append([]*ContentStreamOperation{&ContentStreamOperation{Operand: "q"}}, *this...)
@@ -66,7 +70,7 @@ func (this *ContentStreamOperations) WrapIfNeeded() {
 		depth--
 	}
 
-	return
+	return this
 }
 
 // Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
