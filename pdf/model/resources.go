@@ -106,6 +106,31 @@ func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) 
 	return nil
 }
 
+// Get the ExtGState specified by keyName.  Returns a bool indicating whether it was found or not.
+func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool) {
+	if r.ExtGState == nil {
+		return nil, false
+	}
+
+	dict, ok := TraceToDirectObject(r.ExtGState).(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ERROR: Invalid ExtGState entry - not a dict (got %T)", r.ExtGState)
+		return nil, false
+	}
+
+	if obj, has := (*dict)[keyName]; has {
+		return obj, true
+	} else {
+		return nil, false
+	}
+}
+
+// Check whether a font is defined by the specified keyName.
+func (r *PdfPageResources) HasExtGState(keyName PdfObjectName) bool {
+	_, has := r.GetFontByName(keyName)
+	return has
+}
+
 // Get the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
 // or not.
 func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading, bool) {
