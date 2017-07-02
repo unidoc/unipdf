@@ -1826,8 +1826,8 @@ func (this *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 // Pattern color.
 
 type PdfColorPattern struct {
-	Color       PdfColor // Color defined in underlying colorspace.
-	PatternName string   // Name of the pattern (reference via resource dicts).
+	Color       PdfColor      // Color defined in underlying colorspace.
+	PatternName PdfObjectName // Name of the pattern (reference via resource dicts).
 }
 
 // Pattern colorspace.
@@ -1937,7 +1937,7 @@ func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject
 		common.Log.Debug("Pattern name not a name (got %T)", objects[len(objects)-1])
 		return nil, ErrTypeError
 	}
-	patternColor.PatternName = string(*pname)
+	patternColor.PatternName = *pname
 
 	// Pattern color if specified.
 	if len(objects) > 1 {
