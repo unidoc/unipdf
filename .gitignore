@@ -1,3 +1,4 @@
+*.gox
 .idea
 *.mdb
 *.userprefs

@@ -17,12 +17,12 @@ import (
 //
 type PdfAcroForm struct {
 	Fields          *[]*PdfField
-	NeedAppearances PdfObject
-	SigFlags        PdfObject
-	CO              PdfObject
-	DR              PdfObject
-	DA              PdfObject
-	Q               PdfObject
+	NeedAppearances *PdfObjectBool
+	SigFlags        *PdfObjectInteger
+	CO              *PdfObjectArray
+	DR              *PdfPageResources
+	DA              *PdfObjectString
+	Q               *PdfObjectInteger
 	XFA             PdfObject
 
 	primitive *PdfIndirectObject
@@ -78,23 +78,66 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 	}
 
 	if obj, has := (*d)["NeedAppearances"]; has {
-		acroForm.NeedAppearances = obj
+		val, ok := obj.(*PdfObjectBool)
+		if ok {
+			acroForm.NeedAppearances = val
+		} else {
+			common.Log.Debug("ERROR: NeedAppearances invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["SigFlags"]; has {
-		acroForm.SigFlags = obj
+		val, ok := obj.(*PdfObjectInteger)
+		if ok {
+			acroForm.SigFlags = val
+		} else {
+			common.Log.Debug("ERROR: SigFlags invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["CO"]; has {
-		acroForm.CO = obj
+		obj = TraceToDirectObject(obj)
+		arr, ok := obj.(*PdfObjectArray)
+		if ok {
+			acroForm.CO = arr
+		} else {
+			common.Log.Debug("ERROR: CO invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["DR"]; has {
-		acroForm.DR = obj
+		obj = TraceToDirectObject(obj)
+		if d, ok := obj.(*PdfObjectDictionary); ok {
+			resources, err := NewPdfPageResourcesFromDict(d)
+			if err != nil {
+				common.Log.Error("Invalid DR: %v", err)
+				return nil, err
+			}
+
+			acroForm.DR = resources
+		} else {
+			common.Log.Debug("ERROR: DR invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["DA"]; has {
-		acroForm.DA = obj
+		str, ok := obj.(*PdfObjectString)
+		if ok {
+			acroForm.DA = str
+		} else {
+			common.Log.Debug("ERROR: DA invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["Q"]; has {
-		acroForm.Q = obj
+		val, ok := obj.(*PdfObjectInteger)
+		if ok {
+			acroForm.Q = val
+		} else {
+			common.Log.Debug("ERROR: Q invalid (got %T)", obj)
+		}
 	}
+
 	if obj, has := (*d)["XFA"]; has {
 		acroForm.XFA = obj
 	}
@@ -128,7 +171,7 @@ func (this *PdfAcroForm) ToPdfObject() PdfObject {
 		(*dict)["CO"] = this.CO
 	}
 	if this.DR != nil {
-		(*dict)["DR"] = this.DR
+		(*dict)["DR"] = this.DR.ToPdfObject()
 	}
 	if this.DA != nil {
 		(*dict)["DA"] = this.DA
