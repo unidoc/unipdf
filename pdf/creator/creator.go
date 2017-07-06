@@ -22,7 +22,7 @@ type Creator struct {
 
 	pagesize PageSize
 
-	context drawContext
+	context DrawContext
 
 	pageMargins margins
 
@@ -32,11 +32,13 @@ type Creator struct {
 	chapters int
 
 	genFrontPageFunc      func(pageNum int, totPages int)
-	genTableOfContentFunc func(pageNum int, totPages int)
+	genTableOfContentFunc func(toc *TableOfContents) *Chapter
 	drawHeaderFunc        func(pageNum int, totPages int)
 	drawFooterFunc        func(pageNum int, totPages int)
 
 	finalized bool
+
+	toc *TableOfContents
 }
 
 type margins struct {
@@ -58,16 +60,18 @@ func New() *Creator {
 	c.pageMargins.top = m
 	c.pageMargins.bottom = m
 
+	c.toc = newTableOfContents()
+
 	return c
 }
 
-// Returns the current page width.
+// Returns the current Page width.
 func (c *Creator) Width() float64 {
 	//return c.context.Width
 	return c.pageWidth
 }
 
-// Returns the current page height.
+// Returns the current Page height.
 func (c *Creator) Height() float64 {
 	//return c.context.Height
 	return c.pageHeight
@@ -88,7 +92,7 @@ func (c *Creator) getActivePage() *model.PdfPage {
 	}
 }
 
-// Set a new page size.  Pages that are added after this will be created with this page size.
+// Set a new Page size.  Pages that are added after this will be created with this Page size.
 // Does not affect pages already created.
 func (c *Creator) SetPageSize(size PageSize) {
 	c.pagesize = size
@@ -108,17 +112,17 @@ func (c *Creator) DrawFooter(drawFooterFunc func(int, int)) {
 	c.drawFooterFunc = drawFooterFunc
 }
 
-// Set a function to generate a front page.
+// Set a function to generate a front Page.
 func (c *Creator) CreateFrontPage(genFrontPageFunc func(pageNum int, numPages int)) {
 	c.genFrontPageFunc = genFrontPageFunc
 }
 
 // Seta function to generate table of contents.
-func (c *Creator) CreateTableOfContents(genTOCFunc func(pageNum int, numPages int)) {
+func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) *Chapter) {
 	c.genTableOfContentFunc = genTOCFunc
 }
 
-// Create a new page with current parameters.
+// Create a new Page with current parameters.
 func (c *Creator) newPage() *model.PdfPage {
 	page := model.NewPdfPage()
 
@@ -134,19 +138,24 @@ func (c *Creator) newPage() *model.PdfPage {
 	c.pageWidth = width
 	c.pageHeight = height
 
+	c.initContext()
+
+	return page
+}
+
+// Initialize the drawing context, moving to upper left corner.
+func (c *Creator) initContext() {
 	// Update context, move to upper left corner.
 	c.context.X = c.pageMargins.left
 	c.context.Y = c.pageMargins.top
 	c.context.Width = c.pageWidth - c.pageMargins.right - c.pageMargins.left
 	c.context.Height = c.pageHeight - c.pageMargins.bottom - c.pageMargins.top
-	c.context.pageHeight = c.pageHeight
-	c.context.pageWidth = c.pageWidth
-	c.context.margins = c.pageMargins
-
-	return page
+	c.context.PageHeight = c.pageHeight
+	c.context.PageWidth = c.pageWidth
+	c.context.Margins = c.pageMargins
 }
 
-// Adds a new page to the creator and sets as the active page.
+// Adds a new Page to the creator and sets as the active Page.
 func (c *Creator) NewPage() {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
@@ -156,12 +165,37 @@ func (c *Creator) AddPage(page *model.PdfPage) {
 	c.pages = append(c.pages, page)
 }
 
-// Call before writing out.  Takes care of adding headers and footers, as well as generating front page and
+// Call before writing out.  Takes care of adding headers and footers, as well as generating front Page and
 // table of contents.
 func (c *Creator) finalize() {
 	totPages := len(c.pages)
 
+	// Estimate number of additional generated pages and update TOC.
+	genpages := 0
+	if c.genFrontPageFunc != nil {
+		genpages++
+	}
+	if c.genTableOfContentFunc != nil {
+		c.initContext()
+		c.context.Page = genpages + 1
+		ch := c.genTableOfContentFunc(c.toc)
+		if ch != nil {
+			// Make an estimate of the number of pages.
+			blocks, _, _ := ch.GeneratePageBlocks(c.context)
+			genpages += len(blocks)
+
+			// Update the table of content Page numbers, accounting for front Page and TOC.
+			for idx, _ := range c.toc.entries {
+				c.toc.entries[idx].PageNumber += genpages
+			}
+
+			// Remove the TOC chapter entry.
+			c.toc.entries = c.toc.entries[:len(c.toc.entries)-1]
+		}
+	}
+
 	hasFrontPage := false
+	// Generate the front Page.
 	if c.genFrontPageFunc != nil {
 		totPages++
 		p := c.newPage()
@@ -174,18 +208,32 @@ func (c *Creator) finalize() {
 	}
 
 	if c.genTableOfContentFunc != nil {
-		totPages++
-		p := c.newPage()
-		// Place at front.
-		pageNum := 1
-		if hasFrontPage {
-			c.pages = append([]*model.PdfPage{c.pages[0], p}, c.pages[1:]...)
-			pageNum = 2
-		} else {
-			c.pages = append([]*model.PdfPage{p}, c.pages...)
+		c.initContext()
+		ch := c.genTableOfContentFunc(c.toc)
+		ch.SetShowNumbering(false)
+		ch.SetIncludeInTOC(false)
+
+		blocks, _, _ := ch.GeneratePageBlocks(c.context)
+		tocpages := []*model.PdfPage{}
+		for _, block := range blocks {
+			block.SetPos(0, 0)
+			totPages++
+			p := c.newPage()
+			// Place at front.
+			tocpages = append(tocpages, p)
+			c.setActivePage(p)
+			c.Draw(block)
 		}
-		c.setActivePage(p)
-		c.genTableOfContentFunc(pageNum, totPages)
+
+		if hasFrontPage {
+			front := c.pages[0]
+			rest := c.pages[1:]
+			c.pages = append([]*model.PdfPage{front}, tocpages...)
+			c.pages = append(c.pages, rest...)
+		} else {
+			c.pages = append(tocpages, c.pages...)
+		}
+
 	}
 
 	for idx, page := range c.pages {
@@ -207,32 +255,33 @@ func (c *Creator) MoveTo(x, y float64) {
 	c.context.Y = y
 }
 
-// Move absolute position x.
+// Move draw context to absolute position x.
 func (c *Creator) MoveX(x float64) {
 	c.context.X = x
 }
 
-// Move absolute position x.
+// Move draw context to absolute position y.
 func (c *Creator) MoveY(y float64) {
 	c.context.Y = y
 }
 
-// Move relative position x.
-func (c *Creator) MoveXRel(dx float64) {
+// Move draw context right by relative position dx (negative goes left).
+func (c *Creator) MoveRight(dx float64) {
 	c.context.X += dx
 }
 
-// Move relative position y.
-func (c *Creator) MoveYRel(dy float64) {
+// Move draw context down by relative position dy (negative goes up).
+func (c *Creator) MoveDown(dy float64) {
 	c.context.Y += dy
 }
 
 // Draw the drawable widget to the document.  This can span over 1 or more pages. Additional pages are added if
-// the contents go over the current page.
+// the contents go over the current Page.
 func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
-		// Add a new page if none added already.
+		// Add a new Page if none added already.
 		c.NewPage()
+		c.context.Page = 1
 	}
 
 	blocks, ctx, err := d.GeneratePageBlocks(c.context)
@@ -243,6 +292,7 @@ func (c *Creator) Draw(d Drawable) error {
 	for idx, blk := range blocks {
 		if idx > 0 {
 			c.NewPage()
+			c.context.Page++
 		}
 
 		p := c.getActivePage()
@@ -255,7 +305,7 @@ func (c *Creator) Draw(d Drawable) error {
 	// Inner elements can affect X, Y position and available height.
 	c.context.X = ctx.X
 	c.context.Y = ctx.Y
-	c.context.Height = ctx.pageHeight - ctx.Y - ctx.margins.bottom
+	c.context.Height = ctx.PageHeight - ctx.Y - ctx.Margins.bottom
 
 	return nil
 }
@@ -270,7 +320,7 @@ func (c *Creator) WriteToFile(outputPath string) error {
 	for _, page := range c.pages {
 		err := pdfWriter.AddPage(page)
 		if err != nil {
-			common.Log.Error("Failed to add page: %s", err)
+			common.Log.Error("Failed to add Page: %s", err)
 			return err
 		}
 	}

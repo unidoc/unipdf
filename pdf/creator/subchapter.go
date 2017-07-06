@@ -30,14 +30,17 @@ type subchapter struct {
 	// Absolute coordinates (when in absolute mode).
 	xPos, yPos float64
 
-	// Margins to be applied around the block when drawing on page.
+	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
 	// Chapter sizing is set to occupy available space.
 	sizing Sizing
+
+	// Reference to the creator's TOC.
+	toc *TableOfContents
 }
 
-func (c *Creator) NewSubchapter(ch *chapter, title string) *subchapter {
+func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	subchap := &subchapter{}
 
 	ch.subchapters++
@@ -60,6 +63,9 @@ func (c *Creator) NewSubchapter(ch *chapter, title string) *subchapter {
 
 	// Add subchapter to ch.
 	ch.Add(subchap)
+
+	// Keep a reference for toc.
+	subchap.toc = c.toc
 
 	return subchap
 }
@@ -94,7 +100,7 @@ func (subchap *subchapter) SetPos(x, y float64) {
 	subchap.yPos = y
 }
 
-// Set chapter margins.  Typically not needed as the page margins are used.
+// Set chapter Margins.  Typically not needed as the Page Margins are used.
 func (subchap *subchapter) SetMargins(left, right, top, bottom float64) {
 	subchap.margins.left = left
 	subchap.margins.right = right
@@ -102,7 +108,7 @@ func (subchap *subchapter) SetMargins(left, right, top, bottom float64) {
 	subchap.margins.bottom = bottom
 }
 
-// Get the subchapter margins: left, right, top, bototm.
+// Get the subchapter Margins: left, right, top, bototm.
 func (subchap *subchapter) GetMargins() (float64, float64, float64, float64) {
 	return subchap.margins.left, subchap.margins.right, subchap.margins.top, subchap.margins.bottom
 }
@@ -110,23 +116,28 @@ func (subchap *subchapter) GetMargins() (float64, float64, float64, float64) {
 // Add a new drawable to the chapter.
 func (subchap *subchapter) Add(d Drawable) {
 	switch d.(type) {
-	case *chapter, *subchapter:
+	case *Chapter, *subchapter:
 		common.Log.Debug("Error: Cannot add chapter or subchapter to a subchapter")
-	case *paragraph, *image, *block:
+	case *paragraph, *image, *Block:
 		subchap.contents = append(subchap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
 	}
 }
 
-// XXX/FIXME: Need to know actual page numbers to keep track for TOC.
-// TODO: Add page number to context... ?
-func (subchap *subchapter) GeneratePageBlocks(ctx drawContext) ([]*block, drawContext, error) {
+// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
+// multiple pages.
+func (subchap *subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	ctx.Y += subchap.margins.top
 	blocks, ctx, err := subchap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
 	}
+	if len(blocks) > 1 {
+		ctx.Page++ // did not fit - moved to next Page.
+	}
+	// Add to TOC.
+	subchap.toc.add(subchap.title, subchap.chapterNum, subchap.subchapterNum, ctx.Page)
 
 	for _, d := range subchap.contents {
 		newBlocks, c, err := d.GeneratePageBlocks(ctx)

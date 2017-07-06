@@ -51,7 +51,7 @@ type paragraph struct {
 	// Rotation angle (degrees).
 	angle float64
 
-	// Margins to be applied around the block when drawing on page.
+	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
 	// Positioning: relative / absolute.
@@ -154,7 +154,7 @@ func (p *paragraph) SetAngle(angle float64) {
 	p.angle = angle
 }
 
-// Set paragraph margins.
+// Set paragraph Margins.
 func (p *paragraph) SetMargins(left, right, top, bottom float64) {
 	p.margins.left = left
 	p.margins.right = right
@@ -162,7 +162,7 @@ func (p *paragraph) SetMargins(left, right, top, bottom float64) {
 	p.margins.bottom = bottom
 }
 
-// Get paragraph margins: left, right, top, bottom.
+// Get paragraph Margins: left, right, top, bottom.
 func (p *paragraph) GetMargins() (float64, float64, float64, float64) {
 	return p.margins.left, p.margins.right, p.margins.top, p.margins.bottom
 }
@@ -178,7 +178,7 @@ func (p *paragraph) Width() float64 {
 }
 
 // The height is calculated based on the input text and how it is wrapped within the container.
-// Height does not include margins.
+// Height does not include Margins.
 func (p *paragraph) Height() float64 {
 	if p.textLines == nil || len(p.textLines) == 0 {
 		p.wrapText()
@@ -303,15 +303,15 @@ func (p *paragraph) wrapText() error {
 	return nil
 }
 
-// Generate the page blocks.  Multiple blocks are generated if the contents wrap over
+// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
 // multiple pages.
-func (p *paragraph) GeneratePageBlocks(ctx drawContext) ([]*block, drawContext, error) {
+func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
-	blocks := []*block{}
+	blocks := []*Block{}
 
-	blk := NewBlock(ctx.pageWidth, ctx.pageHeight)
+	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if p.positioning.isRelative() {
-		// Account for paragraph margins.
+		// Account for paragraph Margins.
 		ctx.X += p.margins.left
 		ctx.Y += p.margins.top
 		ctx.Width -= p.margins.left + p.margins.right
@@ -323,17 +323,19 @@ func (p *paragraph) GeneratePageBlocks(ctx drawContext) ([]*block, drawContext, 
 		if p.Height() > ctx.Height {
 			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
 			// left corner.
-			// XXX/TODO: Handle case when paragraph is larger than the page...
+			// XXX/TODO: Handle case when paragraph is larger than the Page...
 			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
 
 			blocks = append(blocks, blk)
-			blk = NewBlock(ctx.pageWidth, ctx.pageHeight)
+			blk = NewBlock(ctx.PageWidth, ctx.PageHeight)
 
+			// New Page.
+			ctx.Page++
 			newContext := ctx
-			newContext.Y = ctx.margins.top // + p.margins.top
-			newContext.X = ctx.margins.left + p.margins.left
-			newContext.Height = ctx.pageHeight - ctx.margins.top - ctx.margins.bottom - p.margins.bottom
-			newContext.Width = ctx.pageWidth - ctx.margins.left - ctx.margins.right - p.margins.left - p.margins.right
+			newContext.Y = ctx.Margins.top // + p.Margins.top
+			newContext.X = ctx.Margins.left + p.margins.left
+			newContext.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - p.margins.bottom
+			newContext.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - p.margins.left - p.margins.right
 			ctx = newContext
 		}
 	} else {
@@ -362,8 +364,8 @@ func (p *paragraph) GeneratePageBlocks(ctx drawContext) ([]*block, drawContext, 
 	}
 }
 
-// Draw block on specified location on page, adding to the content stream.
-func drawParagraphOnBlock(blk *block, p *paragraph, ctx drawContext) (drawContext, error) {
+// Draw block on specified location on Page, adding to the content stream.
+func drawParagraphOnBlock(blk *Block, p *paragraph, ctx DrawContext) (DrawContext, error) {
 	// Find a free name for the font.
 	num := 1
 	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))
@@ -372,7 +374,7 @@ func drawParagraphOnBlock(blk *block, p *paragraph, ctx drawContext) (drawContex
 		fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 	}
 
-	// Add to the page resources.
+	// Add to the Page resources.
 	err := blk.resources.SetFontByName(fontName, p.textFont.ToPdfObject())
 	if err != nil {
 		return ctx, err
@@ -385,7 +387,7 @@ func drawParagraphOnBlock(blk *block, p *paragraph, ctx drawContext) (drawContex
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 
-	yPos := ctx.pageHeight - ctx.Y - p.fontSize*p.lineHeight
+	yPos := ctx.PageHeight - ctx.Y - p.fontSize*p.lineHeight
 
 	cc.Translate(ctx.X, yPos)
 	if p.angle != 0 {

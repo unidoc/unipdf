@@ -38,7 +38,7 @@ type image struct {
 	xPos float64
 	yPos float64
 
-	// Margins to be applied around the block when drawing on page.
+	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
 	// Rotional origin.  Default (0,0 - upper left corner of block).
@@ -136,7 +136,7 @@ func (img *image) Width() float64 {
 	return img.width
 }
 
-// Set the image margins.
+// Set the image Margins.
 func (img *image) SetMargins(left, right, top, bottom float64) {
 	img.margins.left = left
 	img.margins.right = right
@@ -144,30 +144,32 @@ func (img *image) SetMargins(left, right, top, bottom float64) {
 	img.margins.bottom = bottom
 }
 
-// Get image margins: left, right, top, bottom.
+// Get image Margins: left, right, top, bottom.
 func (img *image) GetMargins() (float64, float64, float64, float64) {
 	return img.margins.left, img.margins.right, img.margins.top, img.margins.bottom
 }
 
-// Generate the page blocks.
-func (img *image) GeneratePageBlocks(ctx drawContext) ([]*block, drawContext, error) {
-	blocks := []*block{}
+// Generate the Page blocks.
+func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	blocks := []*Block{}
 	origCtx := ctx
 
-	blk := NewBlock(ctx.pageWidth, ctx.pageHeight)
+	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if img.positioning.isRelative() {
 		if img.height > ctx.Height {
 			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
 			// left corner.
 
 			blocks = append(blocks, blk)
-			blk = NewBlock(ctx.pageWidth, ctx.pageHeight)
+			blk = NewBlock(ctx.PageWidth, ctx.PageHeight)
 
+			// New Page.
+			ctx.Page++
 			newContext := ctx
-			newContext.Y = ctx.margins.top // + p.margins.top
-			newContext.X = ctx.margins.left + img.margins.left
-			newContext.Height = ctx.pageHeight - ctx.margins.top - ctx.margins.bottom - img.margins.bottom
-			newContext.Width = ctx.pageWidth - ctx.margins.left - ctx.margins.right - img.margins.left - img.margins.right
+			newContext.Y = ctx.Margins.top // + p.Margins.top
+			newContext.X = ctx.Margins.left + img.margins.left
+			newContext.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - img.margins.bottom
+			newContext.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - img.margins.left - img.margins.right
 			ctx = newContext
 		}
 	} else {
@@ -238,7 +240,7 @@ func (img *image) SetAngle(angle float64) {
 }
 
 // Draw the image onto the specified blk.
-func drawImageOnBlock(blk *block, img *image, ctx drawContext) (drawContext, error) {
+func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, error) {
 	origCtx := ctx
 
 	// Find a free name for the image.
@@ -249,7 +251,7 @@ func drawImageOnBlock(blk *block, img *image, ctx drawContext) (drawContext, err
 		imgName = core.PdfObjectName(fmt.Sprintf("Img%d", num))
 	}
 
-	// Add to the page resources.
+	// Add to the Page resources.
 	err := blk.resources.SetXObjectImageByName(imgName, img.xobj)
 	if err != nil {
 		return ctx, err
@@ -272,10 +274,10 @@ func drawImageOnBlock(blk *block, img *image, ctx drawContext) (drawContext, err
 	}
 
 	xPos := ctx.X
-	yPos := ctx.pageHeight - ctx.Y - img.Height()
+	yPos := ctx.PageHeight - ctx.Y - img.Height()
 	angle := img.angle
 
-	// Create content stream to add to the page contents.
+	// Create content stream to add to the Page contents.
 	contentCreator := contentstream.NewContentCreator()
 
 	contentCreator.Add_gs(gsName) // Set graphics state.

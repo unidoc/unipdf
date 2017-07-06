@@ -139,8 +139,16 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 			return nil, err
 		}
 	} else {
-		// Convenient to have this always accessible.  Should almost always be existent at any rate.
-		page.Resources = NewPdfPageResources()
+		// If Resources not explicitly defined, look up the tree (Parent objects) using
+		// the getResources() function. Resources should always be accessible.
+		resources, err := page.getResources()
+		if err != nil {
+			return nil, err
+		}
+		if resources == nil {
+			resources = NewPdfPageResources()
+		}
+		page.Resources = resources
 	}
 
 	if obj, isDefined := d["MediaBox"]; isDefined {
@@ -392,9 +400,8 @@ func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	return nil, errors.New("Media box not defined")
 }
 
-// Get the inheritable resources, either from the page or
-// or a higher up page/pages struct.
-func (this *PdfPage) GetResources() (*PdfPageResources, error) {
+// Get the inheritable resources, either from the page or or a higher up page/pages struct.
+func (this *PdfPage) getResources() (*PdfPageResources, error) {
 	if this.Resources != nil {
 		return this.Resources, nil
 	}
@@ -519,19 +526,6 @@ func (this *PdfPage) ToPdfObject() PdfObject {
 
 // Add an image to the XObject resources.
 func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error {
-	if this.Resources == nil {
-		// Get the resources (is required, should be there..), can be defined by parent object.
-		resources, err := this.GetResources()
-		if err != nil {
-			return err
-		}
-		if resources != nil {
-			this.Resources = resources
-		} else {
-			this.Resources = NewPdfPageResources()
-		}
-	}
-
 	var xresDict *PdfObjectDictionary
 	if this.Resources.XObject == nil {
 		xresDict = &PdfObjectDictionary{}
@@ -552,12 +546,7 @@ func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) er
 
 // Check if has XObject resource by name.
 func (this *PdfPage) HasXObjectByName(name PdfObjectName) bool {
-	resources, err := this.GetResources()
-	if err != nil {
-		return false
-	}
-
-	xresDict, has := resources.XObject.(*PdfObjectDictionary)
+	xresDict, has := this.Resources.XObject.(*PdfObjectDictionary)
 	if !has {
 		return false
 	}
@@ -571,12 +560,7 @@ func (this *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 
 // Get XObject by name.
 func (this *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
-	resources, err := this.GetResources()
-	if err != nil {
-		return nil, false
-	}
-
-	xresDict, has := resources.XObject.(*PdfObjectDictionary)
+	xresDict, has := this.Resources.XObject.(*PdfObjectDictionary)
 	if !has {
 		return nil, false
 	}
@@ -591,12 +575,7 @@ func (this *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
 
 // Check if has font resource by name.
 func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
-	resources, err := this.GetResources()
-	if err != nil {
-		return false
-	}
-
-	fontDict, has := resources.Font.(*PdfObjectDictionary)
+	fontDict, has := this.Resources.Font.(*PdfObjectDictionary)
 	if !has {
 		return false
 	}
