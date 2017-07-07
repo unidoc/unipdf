@@ -89,11 +89,6 @@ func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	return b, nil
 }
 
-// Block sizing is always based on specified size.  Returns SizingSpecifiedSize.
-func (blk *Block) GetSizingMechanism() Sizing {
-	return SizingSpecifiedSize
-}
-
 // Set the rotation angle in degrees.
 func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
@@ -277,6 +272,27 @@ func (blk *Block) Draw(d Drawable) error {
 	ctx.X = 0 // Upper left corner of block
 	ctx.Y = 0
 
+	blocks, _, err := d.GeneratePageBlocks(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(blocks) != 1 {
+		return errors.New("Too many output blocks")
+	}
+
+	for _, newBlock := range blocks {
+		err := mergeContents(blk.contents, blk.resources, newBlock.contents, newBlock.resources)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Draw with context.
+func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	blocks, _, err := d.GeneratePageBlocks(ctx)
 	if err != nil {
 		return err

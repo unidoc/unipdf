@@ -66,9 +66,6 @@ type paragraph struct {
 
 	// Text lines after wrapping to available width.
 	textLines []string
-
-	// Sizing mechanism. Defaults to occupy available width (SizingOccupyAvailableSpace).
-	sizing Sizing
 }
 
 // Create a new text block.  Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
@@ -90,14 +87,7 @@ func NewParagraph(text string) *paragraph {
 
 	p.positioning = positionRelative
 
-	p.sizing = SizingOccupyAvailableSpace
-
 	return p
-}
-
-// Paragraph sizing is typically set to occupy available space (width).
-func (p *paragraph) GetSizingMechanism() Sizing {
-	return p.sizing
 }
 
 func (p *paragraph) SetFont(font fonts.Font) {

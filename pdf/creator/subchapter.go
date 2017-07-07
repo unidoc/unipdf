@@ -33,9 +33,6 @@ type subchapter struct {
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
-	// Chapter sizing is set to occupy available space.
-	sizing Sizing
-
 	// Reference to the creator's TOC.
 	toc *TableOfContents
 }
@@ -58,9 +55,6 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	subchap.heading = p
 	subchap.contents = []Drawable{}
 
-	// Chapter sizing is fixed to occupy available size.
-	subchap.sizing = SizingOccupyAvailableSpace
-
 	// Add subchapter to ch.
 	ch.Add(subchap)
 
@@ -68,11 +62,6 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	subchap.toc = c.toc
 
 	return subchap
-}
-
-// Chapter sizing is fixed to occupy available space in the drawing context.
-func (subchap *subchapter) GetSizingMechanism() Sizing {
-	return subchap.sizing
 }
 
 // Chapter height is a sum of the content heights.

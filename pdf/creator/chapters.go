@@ -6,8 +6,8 @@
 package creator
 
 import (
+	"errors"
 	"fmt"
-
 	"math"
 
 	"github.com/unidoc/unidoc/common"
@@ -38,9 +38,6 @@ type Chapter struct {
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
-	// Chapter sizing is set to occupy available space.
-	sizing Sizing
-
 	// Reference to the creator's TOC.
 	toc *TableOfContents
 }
@@ -62,9 +59,6 @@ func (c *Creator) NewChapter(title string) *Chapter {
 
 	chap.heading = p
 	chap.contents = []Drawable{}
-
-	// Chapter sizing is fixed to occupy available size.
-	chap.sizing = SizingOccupyAvailableSpace
 
 	// Keep a reference for toc.
 	chap.toc = c.toc
@@ -89,13 +83,9 @@ func (chap *Chapter) SetIncludeInTOC(includeInTOC bool) {
 	chap.includeInTOC = includeInTOC
 }
 
+// Get access to the heading paragraph to address style etc.
 func (chap *Chapter) GetHeading() *paragraph {
 	return chap.heading
-}
-
-// Chapter sizing is fixed to occupy available space in the drawing context.
-func (chap *Chapter) GetSizingMechanism() Sizing {
-	return chap.sizing
 }
 
 // Chapter height is a sum of the content heights.
@@ -137,20 +127,24 @@ func (chap *Chapter) GetMargins() (float64, float64, float64, float64) {
 }
 
 // Add a new drawable to the chapter.
-func (chap *Chapter) Add(d Drawable) {
+func (chap *Chapter) Add(d Drawable) error {
 	if Drawable(chap) == d {
 		common.Log.Debug("ERROR: Cannot add itself")
-		return
+		return errors.New("Range check error")
 	}
 
 	switch d.(type) {
 	case *Chapter:
 		common.Log.Debug("Error: Cannot add chapter to a chapter")
-	case *paragraph, *image, *Block, *subchapter:
+		return errors.New("Type check error")
+	case *paragraph, *image, *Block, *subchapter, *Table:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
+		return errors.New("Type check error")
 	}
+
+	return nil
 }
 
 // Generate the Page blocks.  Multiple blocks are generated if the contents wrap over

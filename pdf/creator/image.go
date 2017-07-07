@@ -121,11 +121,6 @@ func NewImageFromGoImage(goimg goimage.Image) (*image, error) {
 	return image, nil
 }
 
-// Image sizing is always based on specified size.  Returns SizingSpecifiedSize.
-func (img *image) GetSizingMechanism() Sizing {
-	return SizingSpecifiedSize
-}
-
 // Get image document height.
 func (img *image) Height() float64 {
 	return img.height

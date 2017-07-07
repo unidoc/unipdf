@@ -47,18 +47,3 @@ func (p positioning) isRelative() bool {
 func (p positioning) isAbsolute() bool {
 	return p == positionAbsolute
 }
-
-// Sizing type: Either drawable size is fully specified or occupies available space in the drawing context.
-type Sizing int
-
-const (
-	SizingOccupyAvailableSpace Sizing = iota
-	SizingSpecifiedSize
-)
-
-func (s Sizing) occupyAvailableSpace() bool {
-	return s == SizingOccupyAvailableSpace
-}
-func (s Sizing) specifiedSize() bool {
-	return s == SizingSpecifiedSize
-}

@@ -32,7 +32,7 @@ type Creator struct {
 	chapters int
 
 	genFrontPageFunc      func(pageNum int, totPages int)
-	genTableOfContentFunc func(toc *TableOfContents) *Chapter
+	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
 	drawHeaderFunc        func(pageNum int, totPages int)
 	drawFooterFunc        func(pageNum int, totPages int)
 
@@ -118,7 +118,7 @@ func (c *Creator) CreateFrontPage(genFrontPageFunc func(pageNum int, numPages in
 }
 
 // Seta function to generate table of contents.
-func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) *Chapter) {
+func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) (*Chapter, error)) {
 	c.genTableOfContentFunc = genTOCFunc
 }
 
@@ -167,7 +167,7 @@ func (c *Creator) AddPage(page *model.PdfPage) {
 
 // Call before writing out.  Takes care of adding headers and footers, as well as generating front Page and
 // table of contents.
-func (c *Creator) finalize() {
+func (c *Creator) finalize() error {
 	totPages := len(c.pages)
 
 	// Estimate number of additional generated pages and update TOC.
@@ -178,20 +178,26 @@ func (c *Creator) finalize() {
 	if c.genTableOfContentFunc != nil {
 		c.initContext()
 		c.context.Page = genpages + 1
-		ch := c.genTableOfContentFunc(c.toc)
-		if ch != nil {
-			// Make an estimate of the number of pages.
-			blocks, _, _ := ch.GeneratePageBlocks(c.context)
-			genpages += len(blocks)
-
-			// Update the table of content Page numbers, accounting for front Page and TOC.
-			for idx, _ := range c.toc.entries {
-				c.toc.entries[idx].PageNumber += genpages
-			}
-
-			// Remove the TOC chapter entry.
-			c.toc.entries = c.toc.entries[:len(c.toc.entries)-1]
+		ch, err := c.genTableOfContentFunc(c.toc)
+		if err != nil {
+			return err
 		}
+
+		// Make an estimate of the number of pages.
+		blocks, _, err := ch.GeneratePageBlocks(c.context)
+		if err != nil {
+			common.Log.Debug("Failed to generate blocks: %v", err)
+			return err
+		}
+		genpages += len(blocks)
+
+		// Update the table of content Page numbers, accounting for front Page and TOC.
+		for idx, _ := range c.toc.entries {
+			c.toc.entries[idx].PageNumber += genpages
+		}
+
+		// Remove the TOC chapter entry.
+		c.toc.entries = c.toc.entries[:len(c.toc.entries)-1]
 	}
 
 	hasFrontPage := false
@@ -209,7 +215,11 @@ func (c *Creator) finalize() {
 
 	if c.genTableOfContentFunc != nil {
 		c.initContext()
-		ch := c.genTableOfContentFunc(c.toc)
+		ch, err := c.genTableOfContentFunc(c.toc)
+		if err != nil {
+			common.Log.Debug("Error generating TOC: %v", err)
+			return err
+		}
 		ch.SetShowNumbering(false)
 		ch.SetIncludeInTOC(false)
 
@@ -247,6 +257,8 @@ func (c *Creator) finalize() {
 	}
 
 	c.finalized = true
+
+	return nil
 }
 
 // Move absolute position to x, y.

@@ -7,9 +7,6 @@ package creator
 
 // All widgets that can be used to draw with the creator need to implement the Drawable interface.
 type Drawable interface {
-	// Sizing can either by occupy available space or a specified size.
-	GetSizingMechanism() Sizing
-
 	// Set absolute position of the widget on the Page/template to be drawn onto.
 	SetPos(x, y float64)
 
