@@ -3,9 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package license contains customer license handling with open source license as default.
-// The main purpose of the license package is to serve commercial license users to help identify version eligibility
-// based on purchase date etc.
+// The license package helps manage commercial licenses and check if they are valid for the version of unidoc used.
 package license
 
 // Defaults to the open source license.

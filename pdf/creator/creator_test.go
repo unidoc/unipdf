@@ -18,6 +18,7 @@ import (
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
+
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
@@ -27,10 +28,6 @@ const testPdfLoremIpsumFile = "../../testfiles/lorem.pdf"
 const testPdfTemplatesFile1 = "../../testfiles/templates1.pdf"
 const testImageFile1 = "../../testfiles/logo.png"
 const testImageFile2 = "../../testfiles/signature.png"
-
-func init() {
-	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-}
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -299,6 +296,63 @@ func TestParagraphFonts(t *testing.T) {
 	}
 
 	err = creator.WriteToFile("/tmp/2_pArial.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func TestParagraphStandardFonts(t *testing.T) {
+	creator := New()
+
+	names := []string{
+		"Courier",
+		"Courier-Bold",
+		"Courier-BoldOblique",
+		"Courier-Oblique",
+		"Helvetica",
+		"Helvetica-Bold",
+		"Helvetica-BoldOblique",
+		"Helvetica-Oblique",
+		"Times-Bold",
+		"Times-BoldItalic",
+		"Times-Italic",
+		"Times-Roman",
+		"Symbol",
+		"ZapfDingbats",
+	}
+	fonts := []fonts.Font{
+		fonts.NewFontCourier(),
+		fonts.NewFontCourierBold(),
+		fonts.NewFontCourierBoldOblique(),
+		fonts.NewFontCourierOblique(),
+		fonts.NewFontHelvetica(),
+		fonts.NewFontHelveticaBold(),
+		fonts.NewFontHelveticaBoldOblique(),
+		fonts.NewFontHelveticaOblique(),
+		fonts.NewFontTimesBold(),
+		fonts.NewFontTimesBoldItalic(),
+		fonts.NewFontTimesItalic(),
+		fonts.NewFontTimesRoman(),
+		fonts.NewFontSymbol(),
+		fonts.NewFontZapfDingbats(),
+	}
+
+	for idx, font := range fonts {
+		p := NewParagraph(names[idx] + ": Lorem ipsum dolor sit amet, consectetur adipiscing elit...")
+		p.SetFont(font)
+		p.SetFontSize(12)
+		p.SetLineHeight(1.2)
+		p.SetMargins(0, 0, 5, 0)
+
+		err := creator.Draw(p)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+	}
+
+	err := creator.WriteToFile("/tmp/2_standard14fonts.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
