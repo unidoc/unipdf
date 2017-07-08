@@ -72,7 +72,7 @@ func makeRectangleAnnotationAppearanceStream(rectDef RectangleAnnotationDef) (*p
 	gsName := ""
 	if rectDef.Opacity < 1.0 {
 		// Create graphics state with right opacity.
-		gsState := &pdfcore.PdfObjectDictionary{}
+		gsState := pdfcore.MakeDict()
 		gsState.Set("ca", pdfcore.MakeFloat(rectDef.Opacity))
 		gsState.Set("CA", pdfcore.MakeFloat(rectDef.Opacity))
 		err := form.Resources.AddExtGState("gs1", gsState)
@@ -97,7 +97,7 @@ func makeRectangleAnnotationAppearanceStream(rectDef RectangleAnnotationDef) (*p
 	// Local bounding box for the XObject Form.
 	form.BBox = localBbox.ToPdfObject()
 
-	apDict := &pdfcore.PdfObjectDictionary{}
+	apDict := pdfcore.MakeDict()
 	apDict.Set("N", form.ToPdfObject())
 
 	return apDict, globalBbox, nil

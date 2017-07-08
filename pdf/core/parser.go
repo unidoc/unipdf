@@ -569,7 +569,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
-	dict := make(PdfObjectDictionary)
+	dict := MakeDict()
 
 	// Pass the '<<'
 	c, _ := this.reader.ReadByte()
@@ -615,8 +615,7 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
-				var nullObj PdfObjectNull
-				dict[newKey] = &nullObj
+				dict.Set(newKey, MakeNull())
 				continue
 			}
 		}
@@ -627,13 +626,13 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 		if err != nil {
 			return nil, err
 		}
-		dict[keyName] = val
+		dict.Set(keyName, val)
 
 		common.Log.Trace("dict[%s] = %s", keyName, val.String())
 	}
 	common.Log.Trace("returning PDF Dict!")
 
-	return &dict, nil
+	return dict, nil
 }
 
 // Parse the pdf version from the beginning of the file.
@@ -805,13 +804,13 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	trailerDict := xs.PdfObjectDictionary
 
-	sizeObj, ok := (*(xs.PdfObjectDictionary))["Size"].(*PdfObjectInteger)
-	if !ok {
+	sizeObj := xs.PdfObjectDictionary.Get("Size").(*PdfObjectInteger)
+	if sizeObj == nil {
 		common.Log.Debug("ERROR: Missing size from xref stm")
 		return nil, errors.New("Missing Size from xref stm")
 	}
 
-	wObj := (*(xs.PdfObjectDictionary))["W"]
+	wObj := xs.PdfObjectDictionary.Get("W")
 	wArr, ok := wObj.(*PdfObjectArray)
 	if !ok {
 		return nil, errors.New("Invalid W in xref stream")
@@ -854,7 +853,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 	// Get the object indices.
 
 	objCount := 0
-	indexObj := (*(xs.PdfObjectDictionary))["Index"]
+	indexObj := xs.PdfObjectDictionary.Get("Index")
 	// Table 17 (7.5.8.2 Cross-Reference Stream Dictionary)
 	// (Optional) An array containing a pair of integers for each
 	// subsection in this section. The first integer shall be the first
@@ -1144,8 +1143,8 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	}
 
 	// Check the XrefStm object also from the trailer.
-	xx, present := (*trailerDict)["XRefStm"]
-	if present {
+	xx := trailerDict.Get("XRefStm")
+	if xx != nil {
 		xo, ok := xx.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("XRefStm != int")
@@ -1169,8 +1168,8 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 
 	// Load any Previous xref tables (old versions), which can
 	// refer to objects also.
-	xx, present = (*trailerDict)["Prev"]
-	for present {
+	xx = trailerDict.Get("Prev")
+	for xx != nil {
 		off := *(xx.(*PdfObjectInteger))
 		common.Log.Trace("Another Prev xref table object at %d", off)
 
@@ -1185,8 +1184,8 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 			break
 		}
 
-		xx, present = (*ptrailerDict)["Prev"]
-		if present {
+		xx = ptrailerDict.Get("Prev")
+		if xx != nil {
 			prevoff := *(xx.(*PdfObjectInteger))
 			if intInSlice(int64(prevoff), prevList) {
 				// Prevent circular reference!
@@ -1316,7 +1315,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					}
 					common.Log.Trace("Stream dict %s", dict)
 
-					slo, err := this.Trace((*dict)["Length"])
+					slo, err := this.Trace(dict.Get("Length"))
 					if err != nil {
 						return nil, err
 					}
@@ -1347,7 +1346,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 
 						common.Log.Debug("Attempting a length correction to %d...", newLength)
 						streamLength = PdfObjectInteger(newLength)
-						(*dict)["Length"] = MakeInteger(newLength)
+						dict.Set("Length", MakeInteger(newLength))
 					}
 
 					stream := make([]byte, streamLength)
@@ -1383,9 +1382,13 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}
 	buf := []byte(txt)
+
 	bufReader := bytes.NewReader(buf)
+	parser.rs = bufReader
+
 	bufferedReader := bufio.NewReader(bufReader)
 	parser.reader = bufferedReader
+
 	return &parser
 }
 
@@ -1438,7 +1441,7 @@ func (this *PdfParser) IsEncrypted() (bool, error) {
 
 	if this.trailer != nil {
 		common.Log.Trace("Checking encryption dictionary!")
-		encDictRef, isEncrypted := (*(this.trailer))["Encrypt"].(*PdfObjectReference)
+		encDictRef, isEncrypted := this.trailer.Get("Encrypt").(*PdfObjectReference)
 		if isEncrypted {
 			common.Log.Trace("Is encrypted!")
 			common.Log.Trace("0: Look up ref %q", encDictRef)

@@ -56,7 +56,7 @@ func newPdfFontFromPdfObject(obj core.PdfObject) (*PdfFont, error) {
 		return nil, errors.New("Type check error")
 	}
 
-	if obj, isDefined := (*d)["Type"]; isDefined {
+	if obj := d.Get("Type"); obj != nil {
 		oname, is := obj.(*core.PdfObjectName)
 		if !is || string(*oname) != "Font" {
 			common.Log.Debug("Incompatibility ERROR: Type (Required) defined but not Font name")
@@ -67,8 +67,8 @@ func newPdfFontFromPdfObject(obj core.PdfObject) (*PdfFont, error) {
 		return nil, errors.New("Required attribute missing")
 	}
 
-	obj, isDefined := (*d)["Subtype"]
-	if !isDefined {
+	obj = d.Get("Subtype")
+	if obj == nil {
 		common.Log.Debug("Incompatibility ERROR: Subtype (Required) missing")
 		return nil, errors.New("Required attribute missing")
 	}
@@ -176,25 +176,23 @@ func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, erro
 		return nil, errors.New("Type check error")
 	}
 
-	if obj, isDefined := (*d)["Type"]; isDefined {
+	if obj := d.Get("Type"); obj != nil {
 		oname, is := obj.(*core.PdfObjectName)
 		if !is || oname.String() != "Font" {
 			common.Log.Debug("Incompatibility: Type defined but not Font")
 		}
 	}
 
-	if obj, isDefined := (*d)["Subtype"]; isDefined {
+	if obj := d.Get("Subtype"); obj != nil {
 		oname, is := obj.(*core.PdfObjectName)
 		if !is || oname.String() != "TrueType" {
 			common.Log.Debug("Incompatibility: Loading TrueType font but Subtype != TrueType")
 		}
 	}
 
-	if obj, isDefined := (*d)["BaseFont"]; isDefined {
-		font.BaseFont = obj
-	}
+	font.BaseFont = d.Get("BaseFont")
 
-	if obj, isDefined := (*d)["FirstChar"]; isDefined {
+	if obj := d.Get("FirstChar"); obj != nil {
 		font.FirstChar = obj
 
 		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
@@ -208,7 +206,7 @@ func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, erro
 		return nil, errors.New("Required attribute missing")
 	}
 
-	if obj, isDefined := (*d)["LastChar"]; isDefined {
+	if obj := d.Get("LastChar"); obj != nil {
 		font.LastChar = obj
 
 		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
@@ -223,7 +221,7 @@ func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, erro
 	}
 
 	font.charWidths = []float64{}
-	if obj, isDefined := (*d)["Widths"]; isDefined {
+	if obj := d.Get("Widths"); obj != nil {
 		font.Widths = obj
 
 		arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
@@ -249,7 +247,7 @@ func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, erro
 		return nil, errors.New("Required attribute missing")
 	}
 
-	if obj, isDefined := (*d)["FontDescriptor"]; isDefined {
+	if obj := d.Get("FontDescriptor"); obj != nil {
 		descriptor, err := newPdfFontDescriptorFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("Error loading font descriptor: %v", err)
@@ -259,13 +257,8 @@ func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, erro
 		font.FontDescriptor = descriptor
 	}
 
-	if obj, isDefined := (*d)["Encoding"]; isDefined {
-		font.Encoding = obj
-	}
-
-	if obj, isDefined := (*d)["ToUnicode"]; isDefined {
-		font.ToUnicode = obj
-	}
+	font.Encoding = d.Get("Encoding")
+	font.ToUnicode = d.Get("ToUnicode")
 
 	return font, nil
 }
@@ -274,7 +267,7 @@ func (this *pdfFontTrueType) ToPdfObject() core.PdfObject {
 	if this.container == nil {
 		this.container = &core.PdfIndirectObject{}
 	}
-	d := &core.PdfObjectDictionary{}
+	d := core.MakeDict()
 	this.container.PdfObject = d
 
 	d.Set("Type", core.MakeName("Font"))
@@ -463,7 +456,7 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 		return nil, errors.New("Type check error")
 	}
 
-	if obj, isDefined := (*d)["Type"]; isDefined {
+	if obj := d.Get("Type"); obj != nil {
 		oname, is := obj.(*core.PdfObjectName)
 		if !is || string(*oname) != "FontDescriptor" {
 			common.Log.Debug("Incompatibility: Font descriptor Type invalid (%T)", obj)
@@ -472,114 +465,43 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 		common.Log.Debug("Incompatibility: Type (Required) missing")
 	}
 
-	if obj, isDefined := (*d)["FontName"]; isDefined {
+	if obj := d.Get("FontName"); obj != nil {
 		descriptor.FontName = obj
 	} else {
 		common.Log.Debug("Incompatibility: FontName (Required) missing")
 	}
 
-	if obj, isDefined := (*d)["FontFamily"]; isDefined {
-		descriptor.FontFamily = obj
-	}
-
-	if obj, isDefined := (*d)["FontStretch"]; isDefined {
-		descriptor.FontStretch = obj
-	}
-
-	if obj, isDefined := (*d)["FontWeight"]; isDefined {
-		descriptor.FontWeight = obj
-	}
-
-	if obj, isDefined := (*d)["Flags"]; isDefined {
-		descriptor.Flags = obj
-	}
-
-	if obj, isDefined := (*d)["FontBBox"]; isDefined {
-		descriptor.FontBBox = obj
-	}
-
-	if obj, isDefined := (*d)["ItalicAngle"]; isDefined {
-		descriptor.ItalicAngle = obj
-	}
-
-	if obj, isDefined := (*d)["Ascent"]; isDefined {
-		descriptor.Ascent = obj
-	}
-
-	if obj, isDefined := (*d)["Descent"]; isDefined {
-		descriptor.Descent = obj
-	}
-
-	if obj, isDefined := (*d)["Leading"]; isDefined {
-		descriptor.Leading = obj
-	}
-
-	if obj, isDefined := (*d)["CapHeight"]; isDefined {
-		descriptor.CapHeight = obj
-	}
-
-	if obj, isDefined := (*d)["XHeight"]; isDefined {
-		descriptor.XHeight = obj
-	}
-
-	if obj, isDefined := (*d)["StemV"]; isDefined {
-		descriptor.StemV = obj
-	}
-
-	if obj, isDefined := (*d)["StemH"]; isDefined {
-		descriptor.StemH = obj
-	}
-
-	if obj, isDefined := (*d)["AvgWidth"]; isDefined {
-		descriptor.AvgWidth = obj
-	}
-
-	if obj, isDefined := (*d)["MaxWidth"]; isDefined {
-		descriptor.MaxWidth = obj
-	}
-
-	if obj, isDefined := (*d)["MissingWidth"]; isDefined {
-		descriptor.MissingWidth = obj
-	}
-
-	if obj, isDefined := (*d)["FontFile"]; isDefined {
-		descriptor.FontFile = obj
-	}
-
-	if obj, isDefined := (*d)["FontFile2"]; isDefined {
-		descriptor.FontFile2 = obj
-	}
-
-	if obj, isDefined := (*d)["FontFile3"]; isDefined {
-		descriptor.FontFile3 = obj
-	}
-
-	if obj, isDefined := (*d)["CharSet"]; isDefined {
-		descriptor.CharSet = obj
-	}
-
-	if obj, isDefined := (*d)["Style"]; isDefined {
-		descriptor.Style = obj
-	}
-
-	if obj, isDefined := (*d)["Lang"]; isDefined {
-		descriptor.Lang = obj
-	}
-
-	if obj, isDefined := (*d)["FD"]; isDefined {
-		descriptor.FD = obj
-	}
-
-	if obj, isDefined := (*d)["CIDSet"]; isDefined {
-		descriptor.CIDSet = obj
-	}
+	descriptor.FontFamily = d.Get("FontFamily")
+	descriptor.FontStretch = d.Get("FontStretch")
+	descriptor.FontWeight = d.Get("FontWeight")
+	descriptor.Flags = d.Get("Flags")
+	descriptor.FontBBox = d.Get("FontBBox")
+	descriptor.ItalicAngle = d.Get("ItalicAngle")
+	descriptor.Ascent = d.Get("Ascent")
+	descriptor.Descent = d.Get("Descent")
+	descriptor.Leading = d.Get("Leading")
+	descriptor.CapHeight = d.Get("CapHeight")
+	descriptor.XHeight = d.Get("XHeight")
+	descriptor.StemV = d.Get("StemV")
+	descriptor.StemH = d.Get("StemH")
+	descriptor.AvgWidth = d.Get("AvgWidth")
+	descriptor.MaxWidth = d.Get("MaxWidth")
+	descriptor.MissingWidth = d.Get("MissingWidth")
+	descriptor.FontFile = d.Get("FontFile")
+	descriptor.FontFile2 = d.Get("FontFile2")
+	descriptor.FontFile3 = d.Get("FontFile3")
+	descriptor.CharSet = d.Get("CharSet")
+	descriptor.Style = d.Get("Style")
+	descriptor.Lang = d.Get("Lang")
+	descriptor.FD = d.Get("FD")
+	descriptor.CIDSet = d.Get("CIDSet")
 
 	return descriptor, nil
 }
 
 // Convert to a PDF dictionary inside an indirect object.
 func (this *PdfFontDescriptor) ToPdfObject() core.PdfObject {
-	d := &core.PdfObjectDictionary{}
+	d := core.MakeDict()
 	if this.container == nil {
 		this.container = &core.PdfIndirectObject{}
 	}

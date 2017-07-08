@@ -276,7 +276,7 @@ func TestRect(t *testing.T) {
 		return
 	}
 
-	obj, _ := (*dict)["MediaBox"]
+	obj := dict.Get("MediaBox")
 	arr, ok := obj.(*PdfObjectArray)
 	if !ok {
 		t.Errorf("Type != Array")

@@ -94,8 +94,8 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 	}
 
 	common.Log.Trace("decode params: %s", decodeParams.String())
-	obj, has := (*decodeParams)["Predictor"]
-	if !has {
+	obj := decodeParams.Get("Predictor")
+	if obj == nil {
 		common.Log.Debug("Error: Predictor missing from DecodeParms - Continue with default (1)")
 	} else {
 		predictor, ok := obj.(*PdfObjectInteger)
@@ -107,8 +107,8 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 	}
 
 	// Bits per component.  Use default if not specified (8).
-	obj, has = (*decodeParams)["BitsPerComponent"]
-	if has {
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
@@ -120,8 +120,8 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 	if encoder.Predictor > 1 {
 		// Columns.
 		encoder.Columns = 1
-		obj, has = (*decodeParams)["Columns"]
-		if has {
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
@@ -133,8 +133,8 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		// Colors.
 		// Number of interleaved color components per sample (Default 1 if not specified)
 		encoder.Colors = 1
-		obj, has = (*decodeParams)["Colors"]
-		if has {
+		obj := decodeParams.Get("Colors")
+		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")
@@ -178,8 +178,8 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 	// The EarlyChange parameter is specified in the object stream dictionary for regular streams,
 	// but it is not specified explicitly where to check for it in the case of inline images.
 	// We will check in the decodeParms for now, we can adjust later if we come across cases of this.
-	obj, has := (*decodeParams)["EarlyChange"]
-	if has {
+	obj := decodeParams.Get("EarlyChange")
+	if obj != nil {
 		earlyChange, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
@@ -194,8 +194,8 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		encoder.EarlyChange = 1 // default
 	}
 
-	obj, has = (*decodeParams)["Predictor"]
-	if has {
+	obj = decodeParams.Get("Predictor")
+	if obj != nil {
 		predictor, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
@@ -205,8 +205,8 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 	}
 
 	// Bits per component.  Use default if not specified (8).
-	obj, has = (*decodeParams)["BitsPerComponent"]
-	if has {
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
@@ -218,8 +218,8 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 	if encoder.Predictor > 1 {
 		// Columns.
 		encoder.Columns = 1
-		obj, has = (*decodeParams)["Columns"]
-		if has {
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
@@ -231,8 +231,8 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		// Colors.
 		// Number of interleaved color components per sample (Default 1 if not specified)
 		encoder.Colors = 1
-		obj, has = (*decodeParams)["Colors"]
-		if has {
+		obj = decodeParams.Get("Colors")
+		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")

@@ -64,7 +64,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 			dict, isDict := iobj.PdfObject.(*PdfObjectDictionary)
 			if isDict {
 				// Check if has Type parameter.
-				if ot, has := (*dict)["Type"].(*PdfObjectName); has {
+				if ot, has := dict.Get("Type").(*PdfObjectName); has {
 					otype := string(*ot)
 					common.Log.Trace("---> Obj type: %s", otype)
 					_, isDefined := objTypes[otype]
@@ -73,7 +73,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 					} else {
 						objTypes[otype] = 1
 					}
-				} else if ot, has := (*dict)["Subtype"].(*PdfObjectName); has {
+				} else if ot, has := dict.Get("Subtype").(*PdfObjectName); has {
 					// Check if subtype
 					otype := string(*ot)
 					common.Log.Trace("---> Obj subtype: %s", otype)
@@ -84,7 +84,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 						objTypes[otype] = 1
 					}
 				}
-				if val, has := (*dict)["S"].(*PdfObjectName); has && *val == "JavaScript" {
+				if val, has := dict.Get("S").(*PdfObjectName); has && *val == "JavaScript" {
 					// Check if Javascript.
 					_, isDefined := objTypes["JavaScript"]
 					if isDefined {
@@ -96,7 +96,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 
 			}
 		} else if sobj, isStream := o.(*PdfObjectStream); isStream {
-			if otype, ok := (*(sobj.PdfObjectDictionary))["Type"].(*PdfObjectName); ok {
+			if otype, ok := sobj.PdfObjectDictionary.Get("Type").(*PdfObjectName); ok {
 				common.Log.Trace("--> Stream object type: %s", *otype)
 				k := string(*otype)
 				if _, isDefined := objTypes[k]; isDefined {
@@ -108,7 +108,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 		} else { // Direct.
 			dict, isDict := o.(*PdfObjectDictionary)
 			if isDict {
-				ot, isName := (*dict)["Type"].(*PdfObjectName)
+				ot, isName := dict.Get("Type").(*PdfObjectName)
 				if isName {
 					otype := string(*ot)
 					common.Log.Trace("--- obj type %s", otype)

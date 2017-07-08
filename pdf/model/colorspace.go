@@ -669,7 +669,7 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 	}
 
 	// WhitePoint (Required): [Xw, Yw, Zw]
-	obj = (*dict)["WhitePoint"]
+	obj = dict.Get("WhitePoint")
 	obj = TraceToDirectObject(obj)
 	whitePointArray, ok := obj.(*PdfObjectArray)
 	if !ok {
@@ -685,7 +685,7 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 	cs.WhitePoint = whitePoint
 
 	// BlackPoint (Optional)
-	obj = (*dict)["BlackPoint"]
+	obj = dict.Get("BlackPoint")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		blackPointArray, ok := obj.(*PdfObjectArray)
@@ -703,7 +703,7 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 	}
 
 	// Gamma (Optional)
-	obj = (*dict)["Gamma"]
+	obj = dict.Get("Gamma")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		gamma, err := getNumberAsFloat(obj)
@@ -723,19 +723,19 @@ func (this *PdfColorspaceCalGray) ToPdfObject() PdfObject {
 
 	cspace.Append(MakeName("CalGray"))
 
-	dict := PdfObjectDictionary{}
+	dict := MakeDict()
 	if this.WhitePoint != nil {
-		dict["WhitePoint"] = MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+		dict.Set("WhitePoint", MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2])))
 	} else {
 		common.Log.Error("CalGray: Missing WhitePoint (Required)")
 	}
 
 	if this.BlackPoint != nil {
-		dict["BlackPoint"] = MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+		dict.Set("BlackPoint", MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2])))
 	}
 
-	dict["Gamma"] = MakeFloat(this.Gamma)
-	cspace.Append(&dict)
+	dict.Set("Gamma", MakeFloat(this.Gamma))
+	cspace.Append(dict)
 
 	if this.container != nil {
 		this.container.PdfObject = cspace
@@ -942,7 +942,7 @@ func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, e
 	}
 
 	// WhitePoint (Required): [Xw, Yw, Zw]
-	obj = (*dict)["WhitePoint"]
+	obj = dict.Get("WhitePoint")
 	obj = TraceToDirectObject(obj)
 	whitePointArray, ok := obj.(*PdfObjectArray)
 	if !ok {
@@ -958,7 +958,7 @@ func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, e
 	cs.WhitePoint = whitePoint
 
 	// BlackPoint (Optional)
-	obj = (*dict)["BlackPoint"]
+	obj = dict.Get("BlackPoint")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		blackPointArray, ok := obj.(*PdfObjectArray)
@@ -976,7 +976,7 @@ func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, e
 	}
 
 	// Gamma (Optional)
-	obj = (*dict)["Gamma"]
+	obj = dict.Get("Gamma")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		gammaArray, ok := obj.(*PdfObjectArray)
@@ -994,7 +994,7 @@ func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, e
 	}
 
 	// Matrix (Optional).
-	obj = (*dict)["Matrix"]
+	obj = dict.Get("Matrix")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		matrixArray, ok := obj.(*PdfObjectArray)
@@ -1022,25 +1022,29 @@ func (this *PdfColorspaceCalRGB) ToPdfObject() PdfObject {
 
 	cspace.Append(MakeName("CalRGB"))
 
-	dict := PdfObjectDictionary{}
+	dict := MakeDict()
 	if this.WhitePoint != nil {
-		dict["WhitePoint"] = MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+		wp := MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+		dict.Set("WhitePoint", wp)
 	} else {
 		common.Log.Error("CalRGB: Missing WhitePoint (Required)")
 	}
 
 	if this.BlackPoint != nil {
-		dict["BlackPoint"] = MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+		bp := MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+		dict.Set("BlackPoint", bp)
 	}
 	if this.Gamma != nil {
-		dict["Gamma"] = MakeArray(MakeFloat(this.Gamma[0]), MakeFloat(this.Gamma[1]), MakeFloat(this.Gamma[2]))
+		g := MakeArray(MakeFloat(this.Gamma[0]), MakeFloat(this.Gamma[1]), MakeFloat(this.Gamma[2]))
+		dict.Set("Gamma", g)
 	}
 	if this.Matrix != nil {
-		dict["Matrix"] = MakeArray(MakeFloat(this.Matrix[0]), MakeFloat(this.Matrix[1]), MakeFloat(this.Matrix[2]),
+		matrix := MakeArray(MakeFloat(this.Matrix[0]), MakeFloat(this.Matrix[1]), MakeFloat(this.Matrix[2]),
 			MakeFloat(this.Matrix[3]), MakeFloat(this.Matrix[4]), MakeFloat(this.Matrix[5]),
 			MakeFloat(this.Matrix[6]), MakeFloat(this.Matrix[7]), MakeFloat(this.Matrix[8]))
+		dict.Set("Matrix", matrix)
 	}
-	cspace.Append(&dict)
+	cspace.Append(dict)
 
 	if this.container != nil {
 		this.container.PdfObject = cspace
@@ -1263,7 +1267,7 @@ func newPdfColorspaceLabFromPdfObject(obj PdfObject) (*PdfColorspaceLab, error) 
 	}
 
 	// WhitePoint (Required): [Xw, Yw, Zw]
-	obj = (*dict)["WhitePoint"]
+	obj = dict.Get("WhitePoint")
 	obj = TraceToDirectObject(obj)
 	whitePointArray, ok := obj.(*PdfObjectArray)
 	if !ok {
@@ -1279,7 +1283,7 @@ func newPdfColorspaceLabFromPdfObject(obj PdfObject) (*PdfColorspaceLab, error) 
 	cs.WhitePoint = whitePoint
 
 	// BlackPoint (Optional)
-	obj = (*dict)["BlackPoint"]
+	obj = dict.Get("BlackPoint")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		blackPointArray, ok := obj.(*PdfObjectArray)
@@ -1297,7 +1301,7 @@ func newPdfColorspaceLabFromPdfObject(obj PdfObject) (*PdfColorspaceLab, error) 
 	}
 
 	// Range (Optional)
-	obj = (*dict)["Range"]
+	obj = dict.Get("Range")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		rangeArray, ok := obj.(*PdfObjectArray)
@@ -1326,21 +1330,24 @@ func (this *PdfColorspaceLab) ToPdfObject() PdfObject {
 
 	csObj.Append(MakeName("Lab"))
 
-	dict := PdfObjectDictionary{}
+	dict := MakeDict()
 	if this.WhitePoint != nil {
-		dict["WhitePoint"] = MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+		wp := MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+		dict.Set("WhitePoint", wp)
 	} else {
 		common.Log.Error("Lab: Missing WhitePoint (Required)")
 	}
 
 	if this.BlackPoint != nil {
-		dict["BlackPoint"] = MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+		bp := MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+		dict.Set("BlackPoint", bp)
 	}
 
 	if this.Range != nil {
-		dict["Range"] = MakeArray(MakeFloat(this.Range[0]), MakeFloat(this.Range[1]), MakeFloat(this.Range[2]), MakeFloat(this.Range[3]))
+		val := MakeArray(MakeFloat(this.Range[0]), MakeFloat(this.Range[1]), MakeFloat(this.Range[2]), MakeFloat(this.Range[3]))
+		dict.Set("Range", val)
 	}
-	csObj.Append(&dict)
+	csObj.Append(dict)
 
 	if this.container != nil {
 		this.container.PdfObject = csObj
@@ -1625,7 +1632,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 
 	dict := stream.PdfObjectDictionary
 
-	n, ok := (*dict)["N"].(*PdfObjectInteger)
+	n, ok := dict.Get("N").(*PdfObjectInteger)
 	if !ok {
 		return nil, fmt.Errorf("ICCBased missing N from stream dict")
 	}
@@ -1634,7 +1641,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 	}
 	cs.N = int(*n)
 
-	if obj, has := (*dict)["Alternate"]; has {
+	if obj := dict.Get("Alternate"); obj != nil {
 		alternate, err := newPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
@@ -1642,7 +1649,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 		cs.Alternate = alternate
 	}
 
-	if obj, has := (*dict)["Range"]; has {
+	if obj := dict.Get("Range"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		array, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -1658,7 +1665,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 		cs.Range = r
 	}
 
-	if obj, has := (*dict)["Metadata"]; has {
+	if obj := dict.Get("Metadata"); obj != nil {
 		stream, ok := obj.(*PdfObjectStream)
 		if !ok {
 			return nil, fmt.Errorf("ICCBased Metadata not a stream")
@@ -1688,27 +1695,27 @@ func (this *PdfColorspaceICCBased) ToPdfObject() PdfObject {
 	} else {
 		stream = &PdfObjectStream{}
 	}
-	dict := &PdfObjectDictionary{}
+	dict := MakeDict()
 
-	(*dict)["N"] = MakeInteger(int64(this.N))
+	dict.Set("N", MakeInteger(int64(this.N)))
 
 	if this.Alternate != nil {
-		(*dict)["Alternate"] = this.Alternate.ToPdfObject()
+		dict.Set("Alternate", this.Alternate.ToPdfObject())
 	}
 
 	if this.Metadata != nil {
-		(*dict)["Metadata"] = this.Metadata
+		dict.Set("Metadata", this.Metadata)
 	}
 	if this.Range != nil {
 		ranges := []PdfObject{}
 		for _, r := range this.Range {
 			ranges = append(ranges, MakeFloat(r))
 		}
-		(*dict)["Range"] = MakeArray(ranges...)
+		dict.Set("Range", MakeArray(ranges...))
 	}
 
 	// Encode with a default encoder?
-	(*dict)["Length"] = MakeInteger(int64(len(this.Data)))
+	dict.Set("Length", MakeInteger(int64(len(this.Data))))
 	// Need to have a representation of the stream...
 	stream.Stream = this.Data
 	stream.PdfObjectDictionary = dict
@@ -2606,7 +2613,7 @@ func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspa
 		return nil, errors.New("Type error")
 	}
 
-	if obj, has := (*dict)["Subtype"]; has {
+	if obj := dict.Get("Subtype"); obj != nil {
 		name, ok := TraceToDirectObject(obj).(*PdfObjectName)
 		if !ok {
 			common.Log.Error("DeviceN attribute Subtype type error")
@@ -2616,15 +2623,15 @@ func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspa
 		attr.Subtype = name
 	}
 
-	if obj, has := (*dict)["Colorants"]; has {
+	if obj := dict.Get("Colorants"); obj != nil {
 		attr.Colorants = obj
 	}
 
-	if obj, has := (*dict)["Process"]; has {
+	if obj := dict.Get("Process"); obj != nil {
 		attr.Process = obj
 	}
 
-	if obj, has := (*dict)["MixingHints"]; has {
+	if obj := dict.Get("MixingHints"); obj != nil {
 		attr.MixingHints = obj
 	}
 
@@ -2632,7 +2639,7 @@ func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspa
 }
 
 func (this *PdfColorspaceDeviceNAttributes) ToPdfObject() PdfObject {
-	dict := &PdfObjectDictionary{}
+	dict := MakeDict()
 
 	if this.Subtype != nil {
 		dict.Set("Subtype", this.Subtype)

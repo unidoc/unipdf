@@ -261,9 +261,9 @@ func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, err
 	}
 
 	// Graphics state with normal blend mode.
-	gs0 := core.PdfObjectDictionary{}
-	gs0[core.PdfObjectName("BM")] = core.MakeName("Normal")
-	err = blk.resources.AddExtGState(gsName, &gs0)
+	gs0 := core.MakeDict()
+	gs0.Set("BM", core.MakeName("Normal"))
+	err = blk.resources.AddExtGState(gsName, gs0)
 	if err != nil {
 		return ctx, err
 	}

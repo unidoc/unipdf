@@ -71,7 +71,7 @@ type CryptFilters map[string]CryptFilter
 func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	this.CryptFilters = CryptFilters{}
 
-	obj := (*ed)["CF"]
+	obj := ed.Get("CF")
 	obj = TraceToDirectObject(obj) // XXX may need to resolve reference...
 	if ref, isRef := obj.(*PdfObjectReference); isRef {
 		o, err := this.parser.LookupByReference(*ref)
@@ -88,7 +88,9 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		return errors.New("Invalid CF")
 	}
 
-	for name, v := range *cf {
+	for _, name := range cf.Keys() {
+		v := cf.Get(name)
+
 		if ref, isRef := v.(*PdfObjectReference); isRef {
 			o, err := this.parser.LookupByReference(*ref)
 			if err != nil {
@@ -109,7 +111,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		}
 
 		// If Type present, should be CryptFilter.
-		if typename, ok := (*dict)["Type"].(*PdfObjectName); ok {
+		if typename, ok := dict.Get("Type").(*PdfObjectName); ok {
 			if string(*typename) != "CryptFilter" {
 				return fmt.Errorf("CF dict type != CryptFilter (%s)", typename)
 			}
@@ -119,7 +121,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 		// Method.
 		cfMethod := "None" // Default.
-		cfm, ok := (*dict)["CFM"].(*PdfObjectName)
+		cfm, ok := dict.Get("CFM").(*PdfObjectName)
 		if ok {
 			if *cfm == "V2" {
 				cfMethod = "V2"
@@ -136,7 +138,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 		// Length.
 		cf.Length = 0
-		length, ok := (*dict)["Length"].(*PdfObjectInteger)
+		length, ok := dict.Get("Length").(*PdfObjectInteger)
 		if ok {
 			if *length%8 != 0 {
 				return fmt.Errorf("Crypt filter length not multiple of 8 (%d)", *length)
@@ -162,7 +164,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 	// StrF strings filter.
 	this.StringFilter = "Identity"
-	if strf, ok := (*ed)["StrF"].(*PdfObjectName); ok {
+	if strf, ok := ed.Get("StrF").(*PdfObjectName); ok {
 		if _, exists := this.CryptFilters[string(*strf)]; !exists {
 			return fmt.Errorf("Crypt filter for StrF not specified in CF dictionary (%s)", *strf)
 		}
@@ -171,7 +173,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 
 	// StmF streams filter.
 	this.StreamFilter = "Identity"
-	if stmf, ok := (*ed)["StmF"].(*PdfObjectName); ok {
+	if stmf, ok := ed.Get("StmF").(*PdfObjectName); ok {
 		if _, exists := this.CryptFilters[string(*stmf)]; !exists {
 			return fmt.Errorf("Crypt filter for StmF not specified in CF dictionary (%s)", *stmf)
 		}
@@ -190,7 +192,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	crypter.Authenticated = false
 	crypter.parser = parser
 
-	filter, ok := (*ed)["Filter"].(*PdfObjectName)
+	filter, ok := ed.Get("Filter").(*PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR Crypt dictionary missing required Filter field!")
 		return crypter, errors.New("Required crypt field Filter missing")
@@ -201,13 +203,13 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.Filter = string(*filter)
 
-	subfilter, ok := (*ed)["SubFilter"].(*PdfObjectString)
+	subfilter, ok := ed.Get("SubFilter").(*PdfObjectString)
 	if ok {
 		crypter.Subfilter = string(*subfilter)
 		common.Log.Debug("Using subfilter %s", subfilter)
 	}
 
-	if L, ok := (*ed)["Length"].(*PdfObjectInteger); ok {
+	if L, ok := ed.Get("Length").(*PdfObjectInteger); ok {
 		if (*L % 8) != 0 {
 			common.Log.Debug("ERROR Invalid encryption length")
 			return crypter, errors.New("Invalid encryption length")
@@ -217,7 +219,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.Length = 40
 	}
 
-	V, ok := (*ed)["V"].(*PdfObjectInteger)
+	V, ok := ed.Get("V").(*PdfObjectInteger)
 	if ok {
 		if *V >= 1 && *V <= 2 {
 			crypter.V = int(*V)
@@ -237,7 +239,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.V = 0
 	}
 
-	R, ok := (*ed)["R"].(*PdfObjectInteger)
+	R, ok := ed.Get("R").(*PdfObjectInteger)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing R")
 	}
@@ -246,7 +248,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.R = int(*R)
 
-	O, ok := (*ed)["O"].(*PdfObjectString)
+	O, ok := ed.Get("O").(*PdfObjectString)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing O")
 	}
@@ -255,7 +257,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.O = []byte(*O)
 
-	U, ok := (*ed)["U"].(*PdfObjectString)
+	U, ok := ed.Get("U").(*PdfObjectString)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
@@ -267,13 +269,13 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.U = []byte(*U)
 
-	P, ok := (*ed)["P"].(*PdfObjectInteger)
+	P, ok := ed.Get("P").(*PdfObjectInteger)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing permissions attr")
 	}
 	crypter.P = int(*P)
 
-	em, ok := (*ed)["EncryptMetadata"].(*PdfObjectBool)
+	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)
 	if ok {
 		crypter.EncryptMetadata = bool(*em)
 	} else {
@@ -284,7 +286,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	// Strictly, if file is encrypted, the ID should always be specified
 	// but clearly not everyone is following the specification.
 	id0 := PdfObjectString("")
-	if idArray, ok := (*trailer)["ID"].(*PdfObjectArray); ok {
+	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok {
 		id0obj, ok := (*idArray)[0].(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
@@ -598,7 +600,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.StreamFilter
 			common.Log.Trace("this.StreamFilter = %s", this.StreamFilter)
 
-			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
+			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -607,8 +609,8 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						streamFilter = "Identity"
 
 						// Check if valid crypt filter specified in the decode params.
-						if decodeParams, ok := (*dict)["DecodeParms"].(*PdfObjectDictionary); ok {
-							if filterName, ok := (*decodeParams)["Name"].(*PdfObjectName); ok {
+						if decodeParams, ok := dict.Get("DecodeParms").(*PdfObjectDictionary); ok {
+							if filterName, ok := decodeParams.Get("Name").(*PdfObjectName); ok {
 								if _, ok := this.CryptFilters[string(*filterName)]; ok {
 									common.Log.Trace("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
@@ -641,7 +643,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			return err
 		}
 		// Update the length based on the decrypted stream.
-		(*dict)["Length"] = MakeInteger(int64(len(so.Stream)))
+		dict.Set("Length", MakeInteger(int64(len(so.Stream))))
 
 		return nil
 	}
@@ -692,13 +694,14 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
 		isSig := false
-		if t, hasType := (*d)["Type"]; hasType {
+		if t := d.Get("Type"); t != nil {
 			typeStr, ok := t.(*PdfObjectName)
 			if ok && *typeStr == "Sig" {
 				isSig = true
 			}
 		}
-		for keyidx, o := range *d {
+		for _, keyidx := range d.Keys() {
+			o := d.Get(keyidx)
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
 			if isSig && string(keyidx) == "Contents" {
@@ -846,7 +849,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			streamFilter = this.StreamFilter
 			common.Log.Trace("this.StreamFilter = %s", this.StreamFilter)
 
-			if filters, ok := (*dict)["Filter"].(*PdfObjectArray); ok {
+			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
 				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
 					if *firstFilter == "Crypt" {
@@ -855,8 +858,8 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						streamFilter = "Identity"
 
 						// Check if valid crypt filter specified in the decode params.
-						if decodeParams, ok := (*dict)["DecodeParms"].(*PdfObjectDictionary); ok {
-							if filterName, ok := (*decodeParams)["Name"].(*PdfObjectName); ok {
+						if decodeParams, ok := dict.Get("DecodeParms").(*PdfObjectDictionary); ok {
+							if filterName, ok := decodeParams.Get("Name").(*PdfObjectName); ok {
 								if _, ok := this.CryptFilters[string(*filterName)]; ok {
 									common.Log.Trace("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
@@ -889,7 +892,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			return err
 		}
 		// Update the length based on the encrypted stream.
-		(*dict)["Length"] = MakeInteger(int64(len(so.Stream)))
+		dict.Set("Length", MakeInteger(int64(len(so.Stream))))
 
 		return nil
 	}
@@ -938,14 +941,15 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 	if d, isDict := obj.(*PdfObjectDictionary); isDict {
 		isSig := false
-		if t, hasType := (*d)["Type"]; hasType {
+		if t := d.Get("Type"); t != nil {
 			typeStr, ok := t.(*PdfObjectName)
 			if ok && *typeStr == "Sig" {
 				isSig = true
 			}
 		}
 
-		for keyidx, o := range *d {
+		for _, keyidx := range d.Keys() {
+			o := d.Get(keyidx)
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
 			if isSig && string(keyidx) == "Contents" {

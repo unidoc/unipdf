@@ -42,12 +42,11 @@ func (font fontHelvetica) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 func (font fontHelvetica) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
-	fontDict := &core.PdfObjectDictionary{
-		"Type":     core.MakeName("Font"),
-		"Subtype":  core.MakeName("Type1"),
-		"BaseFont": core.MakeName("Helvetica"),
-		"Encoding": font.encoder.ToPdfObject(),
-	}
+	fontDict := core.MakeDict()
+	fontDict.Set("Type", core.MakeName("Font"))
+	fontDict.Set("Subtype", core.MakeName("Type1"))
+	fontDict.Set("BaseFont", core.MakeName("Helvetica"))
+	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict
 	return obj

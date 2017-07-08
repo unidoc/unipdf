@@ -128,7 +128,7 @@ func (this *PdfReader) loadStructure() error {
 	}
 
 	// Catalog.
-	root, ok := (*trailerDict)["Root"].(*PdfObjectReference)
+	root, ok := trailerDict.Get("Root").(*PdfObjectReference)
 	if !ok {
 		return fmt.Errorf("Invalid Root (trailer: %s)", *trailerDict)
 	}
@@ -150,7 +150,7 @@ func (this *PdfReader) loadStructure() error {
 	common.Log.Trace("Catalog: %s", catalog)
 
 	// Pages.
-	pagesRef, ok := (*catalog)["Pages"].(*PdfObjectReference)
+	pagesRef, ok := catalog.Get("Pages").(*PdfObjectReference)
 	if !ok {
 		return errors.New("Pages in catalog should be a reference")
 	}
@@ -170,7 +170,7 @@ func (this *PdfReader) loadStructure() error {
 		common.Log.Debug("ERROR: Pages object invalid (%s)", ppages)
 		return errors.New("Pages object invalid")
 	}
-	pageCount, ok := (*pages)["Count"].(*PdfObjectInteger)
+	pageCount, ok := pages.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("ERROR: Pages count object invalid")
 		return errors.New("Pages count invalid")
@@ -247,8 +247,8 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	// Has outlines? Otherwise return an empty outlines structure.
 	catalog := this.catalog
-	outlinesObj, hasOutlines := (*catalog)["Outlines"]
-	if !hasOutlines {
+	outlinesObj := catalog.Get("Outlines")
+	if outlinesObj == nil {
 		return nil, nil
 	}
 
@@ -304,7 +304,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 	}
 	common.Log.Trace("build outline tree: dict: %v (%v) p: %p", dict, container, container)
 
-	if _, hasTitle := (*dict)["Title"]; hasTitle {
+	if obj := dict.Get("Title"); obj != nil {
 		// Outline item has a title. (required)
 		outlineItem, err := this.newPdfOutlineItemFromIndirectObject(container)
 		if err != nil {
@@ -313,7 +313,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 		outlineItem.Parent = parent
 		outlineItem.Prev = prev
 
-		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+		if firstObj := dict.Get("First"); firstObj != nil {
 			firstObj, err = this.traceToObject(firstObj)
 			if err != nil {
 				return nil, nil, err
@@ -329,7 +329,7 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 		}
 
 		// Resolve the reference to next
-		if nextObj, hasNext := (*dict)["Next"]; hasNext {
+		if nextObj := dict.Get("Next"); nextObj != nil {
 			nextObj, err = this.traceToObject(nextObj)
 			if err != nil {
 				return nil, nil, err
@@ -355,7 +355,8 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 		outline.Parent = parent
 		//outline.Prev = parent
 
-		if firstObj, hasChildren := (*dict)["First"]; hasChildren {
+		if firstObj := dict.Get("First"); firstObj != nil {
+			// Has children...
 			firstObj, err = this.traceToObject(firstObj)
 			if err != nil {
 				return nil, nil, err
@@ -437,8 +438,8 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 
 	// Has forms?
 	catalog := this.catalog
-	obj, has := (*catalog)["AcroForm"]
-	if !has {
+	obj := catalog.Get("AcroForm")
+	if obj == nil {
 		// Nothing to load.
 		return nil, nil
 	}
@@ -498,7 +499,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return errors.New("Node not a dictionary")
 	}
 
-	objType, ok := (*nodeDict)["Type"].(*PdfObjectName)
+	objType, ok := (*nodeDict).Get("Type").(*PdfObjectName)
 	if !ok {
 		return errors.New("Node missing Type (Required)")
 	}
@@ -512,7 +513,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 
 		if parent != nil {
 			// Set the parent (in case missing or incorrect).
-			(*nodeDict)["Parent"] = parent
+			nodeDict.Set("Parent", parent)
 		}
 		this.pageList = append(this.pageList, node)
 		this.PageList = append(this.PageList, p)
@@ -526,7 +527,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 
 	// A Pages object.  Update the parent.
 	if parent != nil {
-		(*nodeDict)["Parent"] = parent
+		nodeDict.Set("Parent", parent)
 	}
 
 	// Resolve the object recursively.
@@ -535,7 +536,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return err
 	}
 
-	kidsObj, err := this.parser.Trace((*nodeDict)["Kids"])
+	kidsObj, err := this.parser.Trace(nodeDict.Get("Kids"))
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading Kids object")
 		return err
@@ -621,13 +622,14 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 
 	if dict, isDict := o.(*PdfObjectDictionary); isDict {
 		common.Log.Trace("- dict: %s", dict)
-		for name, v := range *dict {
+		for _, name := range dict.Keys() {
+			v := dict.Get(name)
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
 				if err != nil {
 					return err
 				}
-				(*dict)[name] = resolvedObj
+				dict.Set(name, resolvedObj)
 				err = this.traverseObjectData(resolvedObj)
 				if err != nil {
 					return err
@@ -712,7 +714,7 @@ func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 // Get optional content properties
 func (this *PdfReader) GetOCProperties() (PdfObject, error) {
 	dict := this.catalog
-	obj := (*dict)["OCProperties"]
+	obj := dict.Get("OCProperties")
 	var err error
 	obj, err = this.traceToObject(obj)
 	if err != nil {

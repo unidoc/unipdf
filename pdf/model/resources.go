@@ -29,39 +29,39 @@ type PdfPageResources struct {
 
 func NewPdfPageResources() *PdfPageResources {
 	r := &PdfPageResources{}
-	r.primitive = &PdfObjectDictionary{}
+	r.primitive = MakeDict()
 	return r
 }
 
 func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, error) {
 	r := NewPdfPageResources()
 
-	if obj, isDefined := (*dict)["ExtGState"]; isDefined {
+	if obj := dict.Get("ExtGState"); obj != nil {
 		r.ExtGState = obj
 	}
-	if obj, isDefined := (*dict)["ColorSpace"]; isDefined && !isNullObject(obj) {
+	if obj := dict.Get("ColorSpace"); obj != nil && !isNullObject(obj) {
 		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
 		if err != nil {
 			return nil, err
 		}
 		r.ColorSpace = colorspaces
 	}
-	if obj, isDefined := (*dict)["Pattern"]; isDefined {
+	if obj := dict.Get("Pattern"); obj != nil {
 		r.Pattern = obj
 	}
-	if obj, isDefined := (*dict)["Shading"]; isDefined {
+	if obj := dict.Get("Shading"); obj != nil {
 		r.Shading = obj
 	}
-	if obj, isDefined := (*dict)["XObject"]; isDefined {
+	if obj := dict.Get("XObject"); obj != nil {
 		r.XObject = obj
 	}
-	if obj, isDefined := (*dict)["Font"]; isDefined {
+	if obj := dict.Get("Font"); obj != nil {
 		r.Font = obj
 	}
-	if obj, isDefined := (*dict)["ProcSet"]; isDefined {
+	if obj := dict.Get("ProcSet"); obj != nil {
 		r.ProcSet = obj
 	}
-	if obj, isDefined := (*dict)["Properties"]; isDefined {
+	if obj := dict.Get("Properties"); obj != nil {
 		r.Properties = obj
 	}
 
@@ -92,7 +92,7 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 // object containing a dictionary.
 func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) error {
 	if r.ExtGState == nil {
-		r.ExtGState = &PdfObjectDictionary{}
+		r.ExtGState = MakeDict()
 	}
 
 	obj := r.ExtGState
@@ -102,7 +102,7 @@ func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) 
 		return ErrTypeError
 	}
 
-	(*dict)[gsName] = gsDict
+	dict.Set(gsName, gsDict)
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool)
 		return nil, false
 	}
 
-	if obj, has := (*dict)[keyName]; has {
+	if obj := dict.Get(keyName); obj != nil {
 		return obj, true
 	} else {
 		return nil, false
@@ -144,7 +144,7 @@ func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading,
 		return nil, false
 	}
 
-	if obj, has := (*shadingDict)[PdfObjectName(keyName)]; has {
+	if obj := shadingDict.Get(keyName); obj != nil {
 		shading, err := newPdfShadingFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("ERROR: failed to load pdf shading: %v", err)
@@ -159,7 +159,7 @@ func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading,
 // Set a shading resource specified by keyName.
 func (r *PdfPageResources) SetShadingByName(keyName PdfObjectName, shadingObj PdfObject) error {
 	if r.Shading == nil {
-		r.Shading = &PdfObjectDictionary{}
+		r.Shading = MakeDict()
 	}
 
 	shadingDict, has := r.Shading.(*PdfObjectDictionary)
@@ -167,7 +167,7 @@ func (r *PdfPageResources) SetShadingByName(keyName PdfObjectName, shadingObj Pd
 		return ErrTypeError
 	}
 
-	(*shadingDict)[PdfObjectName(keyName)] = shadingObj
+	shadingDict.Set(keyName, shadingObj)
 	return nil
 }
 
@@ -184,7 +184,7 @@ func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern,
 		return nil, false
 	}
 
-	if obj, has := (*patternDict)[PdfObjectName(keyName)]; has {
+	if obj := patternDict.Get(keyName); obj != nil {
 		pattern, err := newPdfPatternFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("ERROR: failed to load pdf pattern: %v", err)
@@ -200,7 +200,7 @@ func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern,
 // Set a pattern resource specified by keyName.
 func (r *PdfPageResources) SetPatternByName(keyName PdfObjectName, pattern PdfObject) error {
 	if r.Pattern == nil {
-		r.Pattern = &PdfObjectDictionary{}
+		r.Pattern = MakeDict()
 	}
 
 	patternDict, has := r.Pattern.(*PdfObjectDictionary)
@@ -208,7 +208,7 @@ func (r *PdfPageResources) SetPatternByName(keyName PdfObjectName, pattern PdfOb
 		return ErrTypeError
 	}
 
-	(*patternDict)[keyName] = pattern
+	patternDict.Set(keyName, pattern)
 	return nil
 }
 
@@ -225,7 +225,7 @@ func (r *PdfPageResources) GetFontByName(keyName PdfObjectName) (PdfObject, bool
 		return nil, false
 	}
 
-	if obj, has := (*fontDict)[keyName]; has {
+	if obj := fontDict.Get(keyName); obj != nil {
 		return obj, true
 	} else {
 		return nil, false
@@ -242,7 +242,7 @@ func (r *PdfPageResources) HasFontByName(keyName PdfObjectName) bool {
 func (r *PdfPageResources) SetFontByName(keyName PdfObjectName, obj PdfObject) error {
 	if r.Font == nil {
 		// Create if not existing.
-		r.Font = &PdfObjectDictionary{}
+		r.Font = MakeDict()
 	}
 
 	fontDict, has := TraceToDirectObject(r.Font).(*PdfObjectDictionary)
@@ -318,7 +318,7 @@ func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectSt
 		return nil, XObjectTypeUndefined
 	}
 
-	if obj, has := (*xresDict)[keyName]; has {
+	if obj := xresDict.Get(keyName); obj != nil {
 		stream, ok := obj.(*PdfObjectStream)
 		if !ok {
 			common.Log.Debug("XObject not pointing to a stream %T", obj)
@@ -326,7 +326,7 @@ func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectSt
 		}
 		dict := stream.PdfObjectDictionary
 
-		name, ok := (*dict)["Subtype"].(*PdfObjectName)
+		name, ok := dict.Get("Subtype").(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("XObject Subtype not a Name, dict: %s", dict.String())
 			return nil, XObjectTypeUndefined
@@ -349,7 +349,7 @@ func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectSt
 
 func (r *PdfPageResources) SetXObjectByName(keyName PdfObjectName, stream *PdfObjectStream) error {
 	if r.XObject == nil {
-		r.XObject = &PdfObjectDictionary{}
+		r.XObject = MakeDict()
 	}
 
 	obj := TraceToDirectObject(r.XObject)
@@ -359,7 +359,7 @@ func (r *PdfPageResources) SetXObjectByName(keyName PdfObjectName, stream *PdfOb
 		return errors.New("Type check error")
 	}
 
-	(*xresDict)[PdfObjectName(keyName)] = stream
+	xresDict.Set(keyName, stream)
 	return nil
 }
 

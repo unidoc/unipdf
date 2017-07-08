@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 // Package ps implements a small subset of the postscript language used in PDF for type 4 functions.
 // Only objects are integers, real numbers, and boolean values only.
 //

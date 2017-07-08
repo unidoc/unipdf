@@ -421,7 +421,7 @@ func (this *ContentStreamParser) parseNull() (PdfObjectNull, error) {
 func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading content stream dict!")
 
-	dict := make(PdfObjectDictionary)
+	dict := MakeDict()
 
 	// Pass the '<<'
 	c, _ := this.reader.ReadByte()
@@ -466,8 +466,7 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
-				var nullObj PdfObjectNull
-				dict[newKey] = &nullObj
+				dict.Set(newKey, MakeNull())
 				continue
 			}
 		}
@@ -478,12 +477,12 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 		if err != nil {
 			return nil, err
 		}
-		dict[keyName] = val
+		dict.Set(keyName, val)
 
 		common.Log.Trace("dict[%s] = %s", keyName, val.String())
 	}
 
-	return &dict, nil
+	return dict, nil
 }
 
 // An operand is a text command represented by a word.

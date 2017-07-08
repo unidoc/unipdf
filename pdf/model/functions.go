@@ -31,7 +31,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 	if stream, is := obj.(*PdfObjectStream); is {
 		dict := stream.PdfObjectDictionary
 
-		ftype, ok := (*dict)["FunctionType"].(*PdfObjectInteger)
+		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
 			return nil, errors.New("Invalid parameter or missing")
@@ -53,7 +53,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 			return nil, errors.New("Invalid parameter or missing")
 		}
 
-		ftype, ok := (*dict)["FunctionType"].(*PdfObjectInteger)
+		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
 			return nil, errors.New("Invalid parameter or missing")
@@ -67,7 +67,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 			return nil, errors.New("Invalid function type")
 		}
 	} else if dict, is := obj.(*PdfObjectDictionary); is {
-		ftype, ok := (*dict)["FunctionType"].(*PdfObjectInteger)
+		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
 			return nil, errors.New("Invalid parameter or missing")
@@ -128,7 +128,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	dict := stream.PdfObjectDictionary
 
 	// Domain
-	array, has := TraceToDirectObject((*dict)["Domain"]).(*PdfObjectArray)
+	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -145,7 +145,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	fun.Domain = domain
 
 	// Range
-	array, has = TraceToDirectObject((*dict)["Range"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Range not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -161,7 +161,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	fun.Range = rang
 
 	// Number of samples in each input dimension
-	array, has = TraceToDirectObject((*dict)["Size"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Size")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Size not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -177,7 +177,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	fun.Size = tablesize
 
 	// BitsPerSample
-	bps, has := TraceToDirectObject((*dict)["BitsPerSample"]).(*PdfObjectInteger)
+	bps, has := TraceToDirectObject(dict.Get("BitsPerSample")).(*PdfObjectInteger)
 	if !has {
 		common.Log.Error("BitsPerSample not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -189,7 +189,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	fun.BitsPerSample = int(*bps)
 
 	fun.Order = 1
-	order, has := TraceToDirectObject((*dict)["Order"]).(*PdfObjectInteger)
+	order, has := TraceToDirectObject(dict.Get("Order")).(*PdfObjectInteger)
 	if has {
 		if *order != 1 && *order != 3 {
 			common.Log.Error("Invalid order (%d)", *order)
@@ -200,7 +200,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 
 	// Encode: is a 2*m array specifying the linear mapping of input values into the domain of the function's
 	// sample table.
-	array, has = TraceToDirectObject((*dict)["Encode"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Encode")).(*PdfObjectArray)
 	if has {
 		encode, err := array.ToFloat64Array()
 		if err != nil {
@@ -210,7 +210,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	}
 
 	// Decode
-	array, has = TraceToDirectObject((*dict)["Decode"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Decode")).(*PdfObjectArray)
 	if has {
 		decode, err := array.ToFloat64Array()
 		if err != nil {
@@ -234,40 +234,39 @@ func (this *PdfFunctionType0) ToPdfObject() PdfObject {
 		this.container = &PdfObjectStream{}
 	}
 
-	dict := &PdfObjectDictionary{}
-
-	(*dict)["FunctionType"] = MakeInteger(0)
+	dict := MakeDict()
+	dict.Set("FunctionType", MakeInteger(0))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
 	for _, val := range this.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
-	(*dict)["Domain"] = domainArray
+	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	rangeArray := &PdfObjectArray{}
 	for _, val := range this.Range {
 		rangeArray.Append(MakeFloat(val))
 	}
-	(*dict)["Range"] = rangeArray
+	dict.Set("Range", rangeArray)
 
 	// Size (required).
 	sizeArray := &PdfObjectArray{}
 	for _, val := range this.Size {
 		sizeArray.Append(MakeInteger(int64(val)))
 	}
-	(*dict)["Size"] = sizeArray
+	dict.Set("Size", sizeArray)
 
-	(*dict)["BitsPerSample"] = MakeInteger(int64(this.BitsPerSample))
+	dict.Set("BitsPerSample", MakeInteger(int64(this.BitsPerSample)))
 
 	if this.Order != 1 {
-		(*dict)["Order"] = MakeInteger(int64(this.Order))
+		dict.Set("Order", MakeInteger(int64(this.Order)))
 	}
 
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.
-	(*dict)["Length"] = MakeInteger(int64(len(this.rawData)))
+	dict.Set("Length", MakeInteger(int64(len(this.rawData))))
 	container.Stream = this.rawData
 
 	container.PdfObjectDictionary = dict
@@ -403,7 +402,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	common.Log.Trace("FUNC2: %s", dict.String())
 
 	// Domain
-	array, has := TraceToDirectObject((*dict)["Domain"]).(*PdfObjectArray)
+	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -419,7 +418,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	fun.Domain = domain
 
 	// Range
-	array, has = TraceToDirectObject((*dict)["Range"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if len(*array) < 0 || len(*array)%2 != 0 {
 			return nil, errors.New("Invalid range")
@@ -433,7 +432,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	}
 
 	// C0.
-	array, has = TraceToDirectObject((*dict)["C0"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("C0")).(*PdfObjectArray)
 	if has {
 		c0, err := array.ToFloat64Array()
 		if err != nil {
@@ -443,7 +442,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	}
 
 	// C1.
-	array, has = TraceToDirectObject((*dict)["C1"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("C1")).(*PdfObjectArray)
 	if has {
 		c1, err := array.ToFloat64Array()
 		if err != nil {
@@ -458,7 +457,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	}
 
 	// Exponent.
-	N, err := getNumberAsFloat(TraceToDirectObject((*dict)["N"]))
+	N, err := getNumberAsFloat(TraceToDirectObject(dict.Get("N")))
 	if err != nil {
 		common.Log.Error("N missing or invalid, dict: %s", dict.String())
 		return nil, err
@@ -469,16 +468,16 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 }
 
 func (this *PdfFunctionType2) ToPdfObject() PdfObject {
-	dict := &PdfObjectDictionary{}
+	dict := MakeDict()
 
-	(*dict)["FunctionType"] = MakeInteger(2)
+	dict.Set("FunctionType", MakeInteger(2))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
 	for _, val := range this.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
-	(*dict)["Domain"] = domainArray
+	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	if this.Range != nil {
@@ -486,7 +485,7 @@ func (this *PdfFunctionType2) ToPdfObject() PdfObject {
 		for _, val := range this.Range {
 			rangeArray.Append(MakeFloat(val))
 		}
-		(*dict)["Range"] = rangeArray
+		dict.Set("Range", rangeArray)
 	}
 
 	// C0.
@@ -495,7 +494,7 @@ func (this *PdfFunctionType2) ToPdfObject() PdfObject {
 		for _, val := range this.C0 {
 			c0Array.Append(MakeFloat(val))
 		}
-		(*dict)["C0"] = c0Array
+		dict.Set("C0", c0Array)
 	}
 
 	// C1.
@@ -504,11 +503,11 @@ func (this *PdfFunctionType2) ToPdfObject() PdfObject {
 		for _, val := range this.C1 {
 			c1Array.Append(MakeFloat(val))
 		}
-		(*dict)["C1"] = c1Array
+		dict.Set("C1", c1Array)
 	}
 
 	// exponent
-	(*dict)["N"] = MakeFloat(this.N)
+	dict.Set("N", MakeFloat(this.N))
 
 	// Wrap in a container if we have one already specified.
 	if this.container != nil {
@@ -591,7 +590,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	}
 
 	// Domain
-	array, has := TraceToDirectObject((*dict)["Domain"]).(*PdfObjectArray)
+	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -607,7 +606,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	fun.Domain = domain
 
 	// Range
-	array, has = TraceToDirectObject((*dict)["Range"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if len(*array) < 0 || len(*array)%2 != 0 {
 			return nil, errors.New("Invalid range")
@@ -620,7 +619,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	}
 
 	// Functions.
-	array, has = TraceToDirectObject((*dict)["Functions"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Functions")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Functions not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -635,7 +634,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	}
 
 	// Bounds
-	array, has = TraceToDirectObject((*dict)["Bounds"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Bounds")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Bounds not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -651,7 +650,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	}
 
 	// Encode.
-	array, has = TraceToDirectObject((*dict)["Encode"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Encode")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Encode not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -670,16 +669,16 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 }
 
 func (this *PdfFunctionType3) ToPdfObject() PdfObject {
-	dict := &PdfObjectDictionary{}
+	dict := MakeDict()
 
-	(*dict)["FunctionType"] = MakeInteger(3)
+	dict.Set("FunctionType", MakeInteger(3))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
 	for _, val := range this.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
-	(*dict)["Domain"] = domainArray
+	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	if this.Range != nil {
@@ -687,7 +686,7 @@ func (this *PdfFunctionType3) ToPdfObject() PdfObject {
 		for _, val := range this.Range {
 			rangeArray.Append(MakeFloat(val))
 		}
-		(*dict)["Range"] = rangeArray
+		dict.Set("Range", rangeArray)
 	}
 
 	// Functions
@@ -696,7 +695,7 @@ func (this *PdfFunctionType3) ToPdfObject() PdfObject {
 		for _, fun := range this.Functions {
 			fArray.Append(fun.ToPdfObject())
 		}
-		(*dict)["Functions"] = fArray
+		dict.Set("Functions", fArray)
 	}
 
 	// Bounds.
@@ -705,7 +704,7 @@ func (this *PdfFunctionType3) ToPdfObject() PdfObject {
 		for _, val := range this.Bounds {
 			bArray.Append(MakeFloat(val))
 		}
-		(*dict)["Bounds"] = bArray
+		dict.Set("Bounds", bArray)
 	}
 
 	// Encode.
@@ -714,7 +713,7 @@ func (this *PdfFunctionType3) ToPdfObject() PdfObject {
 		for _, val := range this.Encode {
 			eArray.Append(MakeFloat(val))
 		}
-		(*dict)["Encode"] = eArray
+		dict.Set("Encode", eArray)
 	}
 
 	// Wrap in a container if we have one already specified.
@@ -775,7 +774,7 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	dict := stream.PdfObjectDictionary
 
 	// Domain
-	array, has := TraceToDirectObject((*dict)["Domain"]).(*PdfObjectArray)
+	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
@@ -791,7 +790,7 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	fun.Domain = domain
 
 	// Range
-	array, has = TraceToDirectObject((*dict)["Range"]).(*PdfObjectArray)
+	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if len(*array) < 0 || len(*array)%2 != 0 {
 			return nil, errors.New("Invalid range")
@@ -827,22 +826,22 @@ func (this *PdfFunctionType4) ToPdfObject() PdfObject {
 		container = this.container
 	}
 
-	dict := &PdfObjectDictionary{}
-	(*dict)["FunctionType"] = MakeInteger(4)
+	dict := MakeDict()
+	dict.Set("FunctionType", MakeInteger(4))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
 	for _, val := range this.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
-	(*dict)["Domain"] = domainArray
+	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	rangeArray := &PdfObjectArray{}
 	for _, val := range this.Range {
 		rangeArray.Append(MakeFloat(val))
 	}
-	(*dict)["Range"] = rangeArray
+	dict.Set("Range", rangeArray)
 
 	if this.decodedData == nil && this.Program != nil {
 		// Update data.  This is used for created functions (not parsed ones).
@@ -851,7 +850,7 @@ func (this *PdfFunctionType4) ToPdfObject() PdfObject {
 
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.
-	(*dict)["Length"] = MakeInteger(int64(len(this.decodedData)))
+	dict.Set("Length", MakeInteger(int64(len(this.decodedData))))
 
 	container.Stream = this.decodedData
 	container.PdfObjectDictionary = dict

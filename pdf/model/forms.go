@@ -32,7 +32,7 @@ func NewPdfAcroForm() *PdfAcroForm {
 	acroForm := &PdfAcroForm{}
 
 	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
+	container.PdfObject = MakeDict()
 
 	acroForm.primitive = container
 	return acroForm
@@ -42,7 +42,7 @@ func NewPdfAcroForm() *PdfAcroForm {
 func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm, error) {
 	acroForm := NewPdfAcroForm()
 
-	if obj, has := (*d)["Fields"]; has {
+	if obj := d.Get("Fields"); obj != nil {
 		obj, err := r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -77,7 +77,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		acroForm.Fields = &fields
 	}
 
-	if obj, has := (*d)["NeedAppearances"]; has {
+	if obj := d.Get("NeedAppearances"); obj != nil {
 		val, ok := obj.(*PdfObjectBool)
 		if ok {
 			acroForm.NeedAppearances = val
@@ -86,7 +86,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["SigFlags"]; has {
+	if obj := d.Get("SigFlags"); obj != nil {
 		val, ok := obj.(*PdfObjectInteger)
 		if ok {
 			acroForm.SigFlags = val
@@ -95,7 +95,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["CO"]; has {
+	if obj := d.Get("CO"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if ok {
@@ -105,7 +105,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["DR"]; has {
+	if obj := d.Get("DR"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		if d, ok := obj.(*PdfObjectDictionary); ok {
 			resources, err := NewPdfPageResourcesFromDict(d)
@@ -120,7 +120,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["DA"]; has {
+	if obj := d.Get("DA"); obj != nil {
 		str, ok := obj.(*PdfObjectString)
 		if ok {
 			acroForm.DA = str
@@ -129,7 +129,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["Q"]; has {
+	if obj := d.Get("Q"); obj != nil {
 		val, ok := obj.(*PdfObjectInteger)
 		if ok {
 			acroForm.Q = val
@@ -138,7 +138,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 	}
 
-	if obj, has := (*d)["XFA"]; has {
+	if obj := d.Get("XFA"); obj != nil {
 		acroForm.XFA = obj
 	}
 
@@ -158,29 +158,30 @@ func (this *PdfAcroForm) ToPdfObject() PdfObject {
 		for _, field := range *this.Fields {
 			arr = append(arr, field.ToPdfObject())
 		}
-		(*dict)["Fields"] = &arr
+		dict.Set("Fields", &arr)
 	}
 
 	if this.NeedAppearances != nil {
-		(*dict)["NeedAppearances"] = this.NeedAppearances
+		dict.Set("NeedAppearances", this.NeedAppearances)
 	}
 	if this.SigFlags != nil {
-		(*dict)["SigFlags"] = this.SigFlags
+		dict.Set("SigFlags", this.SigFlags)
+
 	}
 	if this.CO != nil {
-		(*dict)["CO"] = this.CO
+		dict.Set("CO", this.CO)
 	}
 	if this.DR != nil {
-		(*dict)["DR"] = this.DR.ToPdfObject()
+		dict.Set("DR", this.DR.ToPdfObject())
 	}
 	if this.DA != nil {
-		(*dict)["DA"] = this.DA
+		dict.Set("DA", this.DA)
 	}
 	if this.Q != nil {
-		(*dict)["Q"] = this.Q
+		dict.Set("Q", this.Q)
 	}
 	if this.XFA != nil {
-		(*dict)["XFA"] = this.XFA
+		dict.Set("XFA", this.XFA)
 	}
 
 	return container
@@ -218,7 +219,7 @@ func NewPdfField() *PdfField {
 	field := &PdfField{}
 
 	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
+	container.PdfObject = MakeDict()
 
 	field.primitive = container
 	return field
@@ -237,7 +238,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 	// Can be /Btn /Tx /Ch /Sig
 	// Required for a terminal field (inheritable).
 	var err error
-	if obj, has := (*d)["FT"]; has {
+	if obj := d.Get("FT"); obj != nil {
 		obj, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -251,47 +252,25 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 	}
 
 	// Partial field name (Optional)
-	if obj, has := (*d)["T"]; has {
-		field.T = obj
-	}
+	field.T = d.Get("T")
 	// Alternate description (Optional)
-	if obj, has := (*d)["TU"]; has {
-		field.TU = obj
-	}
+	field.TU = d.Get("TU")
 	// Mapping name (Optional)
-	if obj, has := (*d)["TM"]; has {
-		field.TM = obj
-	}
+	field.TM = d.Get("TM")
 	// Field flag. (Optional; inheritable)
-	if obj, has := (*d)["Ff"]; has {
-		field.Ff = obj
-	}
+	field.Ff = d.Get("Ff")
 	// Value (Optional; inheritable) - Various types depending on the field type.
-	if obj, has := (*d)["V"]; has {
-		field.V = obj
-	}
+	field.V = d.Get("V")
 	// Default value for reset (Optional; inheritable)
-	if obj, has := (*d)["DV"]; has {
-		field.DV = obj
-	}
+	field.DV = d.Get("DV")
 	// Additional actions dictionary (Optional)
-	if obj, has := (*d)["AA"]; has {
-		field.AA = obj
-	}
+	field.AA = d.Get("AA")
 
 	// Variable text:
-	if obj, has := (*d)["DA"]; has {
-		field.DA = obj
-	}
-	if obj, has := (*d)["Q"]; has {
-		field.Q = obj
-	}
-	if obj, has := (*d)["DS"]; has {
-		field.DS = obj
-	}
-	if obj, has := (*d)["RV"]; has {
-		field.RV = obj
-	}
+	field.DA = d.Get("DA")
+	field.Q = d.Get("Q")
+	field.DS = d.Get("DS")
+	field.RV = d.Get("RV")
 
 	// In a non-terminal field, the Kids array shall refer to field dictionaries that are immediate descendants of this field.
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
@@ -304,7 +283,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 	}
 
 	// Has a merged-in widget annotation?
-	if obj, has := (*d)["Subtype"]; has {
+	if obj := d.Get("Subtype"); obj != nil {
 		obj, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -335,7 +314,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		}
 	}
 
-	if obj, has := (*d)["Kids"]; has {
+	if obj := d.Get("Kids"); obj != nil {
 		obj, err := r.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -380,7 +359,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	if this.Parent != nil {
-		(*dict)["Parent"] = this.Parent.GetContainingPdfObject()
+		dict.Set("Parent", this.Parent.GetContainingPdfObject())
 	}
 
 	if this.KidsF != nil {
@@ -390,44 +369,44 @@ func (this *PdfField) ToPdfObject() PdfObject {
 		for _, child := range this.KidsF {
 			arr = append(arr, child.ToPdfObject())
 		}
-		(*dict)["Kids"] = &arr
+		dict.Set("Kids", &arr)
 	}
 	if this.KidsA != nil {
 		common.Log.Trace("KidsA: %+v", this.KidsA)
-		_, hasKids := (*dict)["Kids"].(*PdfObjectArray)
+		_, hasKids := dict.Get("Kids").(*PdfObjectArray)
 		if !hasKids {
-			(*dict)["Kids"] = &PdfObjectArray{}
+			dict.Set("Kids", &PdfObjectArray{})
 		}
-		arr := (*dict)["Kids"].(*PdfObjectArray)
+		arr := dict.Get("Kids").(*PdfObjectArray)
 		for _, child := range this.KidsA {
 			*arr = append(*arr, child.GetContext().ToPdfObject())
 		}
 	}
 
 	if this.FT != nil {
-		(*dict)["FT"] = this.FT
+		dict.Set("FT", this.FT)
 	}
 
 	if this.T != nil {
-		(*dict)["T"] = this.T
+		dict.Set("T", this.T)
 	}
 	if this.TU != nil {
-		(*dict)["TU"] = this.TU
+		dict.Set("TU", this.TU)
 	}
 	if this.TM != nil {
-		(*dict)["TM"] = this.TM
+		dict.Set("TM", this.TM)
 	}
 	if this.Ff != nil {
-		(*dict)["Ff"] = this.Ff
+		dict.Set("Ff", this.Ff)
 	}
 	if this.V != nil {
-		(*dict)["V"] = this.V
+		dict.Set("V", this.V)
 	}
 	if this.DV != nil {
-		(*dict)["DV"] = this.DV
+		dict.Set("DV", this.DV)
 	}
 	if this.AA != nil {
-		(*dict)["AA"] = this.AA
+		dict.Set("AA", this.AA)
 	}
 
 	// Variable text:

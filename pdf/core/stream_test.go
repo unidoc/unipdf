@@ -15,7 +15,8 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.ConsoleLogger{})
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // Compare the equality of content of two slices.
@@ -76,7 +77,7 @@ stream
 endobj`
 
 	parser := PdfParser{}
-	parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader = makeReaderForText(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -117,7 +118,6 @@ endobj`
 // Tests a stream with multi encoded.
 func TestMultiEncodedStream(t *testing.T) {
 	// 2 rows of data, 3 colors, 2 columns per row
-
 	encoded := []byte("78 9C 2A C9 C8 2C 56 00 A2 44 85 94 D2 DC DC 4A 85 92 D4 8A 12 85 F2 CC 92 0C 85 E2 FC DC 54 05 46 26 66 85 A4 CC " +
 		"BC C4 A2 4A 85 94 C4 92 44 40 00 00 00 FF FF 78 87 0F 9C >")
 
@@ -127,16 +127,16 @@ func TestMultiEncodedStream(t *testing.T) {
 
 	rawText := `99 0 obj
 <<
-/DecodeParms << /Predictor 1 >>
-/Filter [/FlateDecode /ASCIIHexDecode]
-/Length ` + fmt.Sprintf("%d", len(encoded)) + ` 
+/DecodeParms << /Predictor 1 /Colors 3 /Columns 2 >>
+/Filter [/ASCIIHexDecode /FlateDecode]
+/Length ` + fmt.Sprintf("%d", len(encoded)) + `
 >>
 stream
 ` + string(encoded) + `endstream
 endobj`
 
 	parser := PdfParser{}
-	parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader = makeReaderForText(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -173,4 +173,5 @@ endobj`
 		t.Errorf("decoded != expected")
 		return
 	}
+
 }

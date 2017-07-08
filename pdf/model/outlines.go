@@ -48,7 +48,7 @@ func NewPdfOutline() *PdfOutline {
 	outline := &PdfOutline{}
 
 	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
+	container.PdfObject = MakeDict()
 
 	outline.primitive = container
 
@@ -65,7 +65,7 @@ func NewPdfOutlineItem() *PdfOutlineItem {
 	outlineItem := &PdfOutlineItem{}
 
 	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
+	container.PdfObject = MakeDict()
 
 	outlineItem.primitive = container
 	return outlineItem
@@ -96,7 +96,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 	outline.primitive = container
 	outline.context = &outline
 
-	if obj, hasType := (*dict)["Type"]; hasType {
+	if obj := dict.Get("Type"); obj != nil {
 		typeVal, ok := obj.(*PdfObjectName)
 		if ok {
 			if *typeVal != "Outlines" {
@@ -108,7 +108,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 		}
 	}
 
-	if obj, hasCount := (*dict)["Count"]; hasCount {
+	if obj := dict.Get("Count"); obj != nil {
 		// This should always be an integer, but in a few cases has been a float.
 		count, err := getNumberAsInt64(obj)
 		if err != nil {
@@ -132,8 +132,8 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 	item.context = &item
 
 	// Title (required).
-	obj, hasTitle := (*dict)["Title"]
-	if !hasTitle {
+	obj := dict.Get("Title")
+	if obj == nil {
 		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
 	}
 	obj, err := this.traceToObject(obj)
@@ -147,7 +147,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 	item.Title = title
 
 	// Count (optional).
-	if obj, hasCount := (*dict)["Count"]; hasCount {
+	if obj := dict.Get("Count"); obj != nil {
 		countVal, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, fmt.Errorf("Count not an integer (%T)", obj)
@@ -157,7 +157,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 	}
 
 	// Other keys.
-	if obj, hasKey := (*dict)["Dest"]; hasKey {
+	if obj := dict.Get("Dest"); obj != nil {
 		item.Dest, err = this.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -167,7 +167,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 			return nil, err
 		}
 	}
-	if obj, hasKey := (*dict)["A"]; hasKey {
+	if obj := dict.Get("A"); obj != nil {
 		item.A, err = this.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -177,7 +177,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 			return nil, err
 		}
 	}
-	if _, hasKey := (*dict)["SE"]; hasKey {
+	if obj := dict.Get("SE"); obj != nil {
 		// XXX: To add structure element support.
 		// Currently not supporting structure elements.
 		item.SE = nil
@@ -188,13 +188,13 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 			}
 		*/
 	}
-	if obj, hasKey := (*dict)["C"]; hasKey {
+	if obj := dict.Get("C"); obj != nil {
 		item.C, err = this.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if obj, hasKey := (*dict)["F"]; hasKey {
+	if obj := dict.Get("F"); obj != nil {
 		item.F, err = this.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -262,14 +262,15 @@ func (this *PdfOutlineItem) ToPdfObject() PdfObject {
 	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	(*dict)["Title"] = this.Title
+	dict.Set("Title", this.Title)
 	if this.A != nil {
-		(*dict)["A"] = this.A
+		dict.Set("A", this.A)
 	}
-	if _, hasSE := (*dict)["SE"]; hasSE {
+	if obj := dict.Get("SE"); obj != nil {
 		// XXX: Currently not supporting structure element hierarchy.
 		// Remove it.
-		delete(*dict, "SE")
+		dict.Remove("SE")
+		//	delete(*dict, "SE")
 	}
 	/*
 		if this.SE != nil {
@@ -277,33 +278,33 @@ func (this *PdfOutlineItem) ToPdfObject() PdfObject {
 		}
 	*/
 	if this.C != nil {
-		(*dict)["C"] = this.C
+		dict.Set("C", this.C)
 	}
 	if this.Dest != nil {
-		(*dict)["Dest"] = this.Dest
+		dict.Set("Dest", this.Dest)
 	}
 	if this.F != nil {
-		(*dict)["F"] = this.F
+		dict.Set("F", this.F)
 	}
 	if this.Count != nil {
-		(*dict)["Count"] = MakeInteger(*this.Count)
+		dict.Set("Count", MakeInteger(*this.Count))
 	}
 	if this.Next != nil {
-		(*dict)["Next"] = this.Next.ToPdfObject()
+		dict.Set("Next", this.Next.ToPdfObject())
 	}
 	if this.First != nil {
-		(*dict)["First"] = this.First.ToPdfObject()
+		dict.Set("First", this.First.ToPdfObject())
 	}
 	if this.Prev != nil {
-		(*dict)["Prev"] = this.Prev.getOuter().GetContainingPdfObject()
+		dict.Set("Prev", this.Prev.getOuter().GetContainingPdfObject())
 		//PdfObjectConverterCache[this.Prev.getOuter()]
 	}
 	if this.Last != nil {
-		(*dict)["Last"] = this.Last.getOuter().GetContainingPdfObject()
+		dict.Set("Last", this.Last.getOuter().GetContainingPdfObject())
 		// PdfObjectConverterCache[this.Last.getOuter()]
 	}
 	if this.Parent != nil {
-		(*dict)["Parent"] = this.Parent.getOuter().GetContainingPdfObject()
+		dict.Set("Parent", this.Parent.getOuter().GetContainingPdfObject())
 		//PdfObjectConverterCache[this.Parent.getOuter()]
 	}
 
