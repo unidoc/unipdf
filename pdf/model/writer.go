@@ -19,24 +19,15 @@ import (
 	"time"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-var pdfProducer = ""
 var pdfCreator = ""
 
 func getPdfProducer() string {
-	if len(pdfProducer) > 0 {
-		return pdfProducer
-	}
-
-	// We kindly request that users of UniDoc and derived versions refer to UniDoc in the Producer line.
-	// Something like "(based on UniDoc)" would be great.
-	return fmt.Sprintf("UniDoc Library version %s - http://unidoc.io", getUniDocVersion())
-}
-
-func SetPdfProducer(producer string) {
-	pdfProducer = producer
+	licenseKey := license.GetLicenseKey()
+	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
 }
 
 func getPdfCreator() string {
