@@ -19,9 +19,15 @@ import (
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
+
+func init() {
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+}
 
 const testPdfFile1 = "../../testfiles/minimal.pdf"
 const testPdfLoremIpsumFile = "../../testfiles/lorem.pdf"
@@ -314,10 +320,10 @@ func TestParagraphStandardFonts(t *testing.T) {
 		"Helvetica-Bold",
 		"Helvetica-BoldOblique",
 		"Helvetica-Oblique",
+		"Times-Roman",
 		"Times-Bold",
 		"Times-BoldItalic",
 		"Times-Italic",
-		"Times-Roman",
 		"Symbol",
 		"ZapfDingbats",
 	}
@@ -330,20 +336,43 @@ func TestParagraphStandardFonts(t *testing.T) {
 		fonts.NewFontHelveticaBold(),
 		fonts.NewFontHelveticaBoldOblique(),
 		fonts.NewFontHelveticaOblique(),
+		fonts.NewFontTimesRoman(),
 		fonts.NewFontTimesBold(),
 		fonts.NewFontTimesBoldItalic(),
 		fonts.NewFontTimesItalic(),
-		fonts.NewFontTimesRoman(),
 		fonts.NewFontSymbol(),
 		fonts.NewFontZapfDingbats(),
 	}
+	texts := []string{
+		"Courier: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Courier-Bold: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Courier-BoldOblique: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Courier-Oblique: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+
+		"Helvetica: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Helvetica-Bold: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Helvetica-BoldOblique: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Helvetica-Oblique: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+
+		"Times-Roman: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Times-Bold: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Times-BoldItalic: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"Times-Italic: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+		"\u2206\u0393\u0020\u2192\u0020\u0030", // Delta Gamma space arrowright space zero (demonstrate Symbol font)
+		"",
+	}
 
 	for idx, font := range fonts {
-		p := NewParagraph(names[idx] + ": Lorem ipsum dolor sit amet, consectetur adipiscing elit...")
+		p := NewParagraph(texts[idx])
 		p.SetFont(font)
 		p.SetFontSize(12)
 		p.SetLineHeight(1.2)
 		p.SetMargins(0, 0, 5, 0)
+
+		if names[idx] == "Symbol" {
+			// For symbol font, need to use Symbol Encoder.
+			p.SetEncoder(textencoding.NewSymbolEncoder())
+		}
 
 		err := creator.Draw(p)
 		if err != nil {
