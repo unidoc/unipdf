@@ -135,7 +135,7 @@ func (font pdfFontTrueType) SetEncoder(encoder textencoding.TextEncoder) {
 func (font pdfFontTrueType) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	metrics := fonts.CharMetrics{}
 
-	code, found := font.Encoder.GlyphNameToCharcode(glyph)
+	code, found := font.Encoder.GlyphToCharcode(glyph)
 	if !found {
 		return metrics, false
 	}

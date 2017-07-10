@@ -359,7 +359,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 		"Times-BoldItalic: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
 		"Times-Italic: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
 		"\u2206\u0393\u0020\u2192\u0020\u0030", // Delta Gamma space arrowright space zero (demonstrate Symbol font)
-		"",
+		"\u2702\u0020\u2709\u261e\u2711\u2714", // a2 (scissors) space a117 (mail) a12 (finger) a17 (pen) a20 (checkmark)
 	}
 
 	for idx, font := range fonts {
@@ -369,9 +369,13 @@ func TestParagraphStandardFonts(t *testing.T) {
 		p.SetLineHeight(1.2)
 		p.SetMargins(0, 0, 5, 0)
 
+		fmt.Printf("%s\n", names[idx])
 		if names[idx] == "Symbol" {
-			// For symbol font, need to use Symbol Encoder.
+			// For Symbol font, need to use Symbol encoder.
 			p.SetEncoder(textencoding.NewSymbolEncoder())
+		} else if names[idx] == "ZapfDingbats" {
+			// Font ZapfDingbats font, need to use ZapfDingbats encoder.
+			p.SetEncoder(textencoding.NewZapfDingbatsEncoder())
 		}
 
 		err := creator.Draw(p)

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package textencoding
 
 import (
@@ -14,12 +19,10 @@ func NewSymbolEncoder() SymbolEncoder {
 	return encoder
 }
 
-// Raw utf-8 rune string -> encoded string for use in PDF.
+// Convert a raw utf8 string (series of runes) to an encoded string (series of character codes) to be used in PDF.
 func (enc SymbolEncoder) Encode(raw string) string {
 	encoded := []byte{}
 	for _, rune := range raw {
-		// rune -> glyph -> code ?:
-
 		code, found := enc.RuneToCharcode(rune)
 		if !found {
 			continue
@@ -31,8 +34,9 @@ func (enc SymbolEncoder) Encode(raw string) string {
 	return string(encoded)
 }
 
-// Symbol char code -> glyph name. Returns the glyph and a bool to indicate whether or not it was found.
-func (enc SymbolEncoder) CharcodeToGlyphName(code byte) (string, bool) {
+// Conversion between character code and glyph name.
+// The bool return flag is true if there was a match, and false otherwise.
+func (enc SymbolEncoder) CharcodeToGlyph(code byte) (string, bool) {
 	glyph, has := symbolEncodingCharcodeToGlyphMap[code]
 	if !has {
 		common.Log.Debug("Symbol encoding error: unable to find charcode->glyph entry (%v)", code)
@@ -41,9 +45,22 @@ func (enc SymbolEncoder) CharcodeToGlyphName(code byte) (string, bool) {
 	return glyph, true
 }
 
-// Convert utf-8 input rune to a charcode.
+// Conversion between glyph name and character code.
+// The bool return flag is true if there was a match, and false otherwise.
+func (enc SymbolEncoder) GlyphToCharcode(glyph string) (byte, bool) {
+	code, found := symbolEncodingGlyphToCharcodeMap[glyph]
+	if !found {
+		common.Log.Debug("Symbol encoding error: unable to find glyph->charcode entry (%s)", glyph)
+		return 0, false
+	}
+
+	return code, found
+}
+
+// Convert rune to character code.
+// The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) RuneToCharcode(val rune) (byte, bool) {
-	glyph, found := symbolEncodingRuneToGlyphMap[val]
+	glyph, found := runeToGlyph(val, glyphlistRuneToGlyphMap)
 	if !found {
 		common.Log.Debug("Symbol encoding error: unable to find rune->glyph entry (%v)", val)
 		return 0, false
@@ -58,29 +75,8 @@ func (enc SymbolEncoder) RuneToCharcode(val rune) (byte, bool) {
 	return code, true
 }
 
-// Convert utf-8 input rune to glyph name.
-func (enc SymbolEncoder) RuneToGlyphName(val rune) (string, bool) {
-	glyph, found := symbolEncodingRuneToGlyphMap[val]
-	if !found {
-		common.Log.Debug("Symbol encoding error: unable to find rune->glyph entry (%v)", val)
-		return "", false
-	}
-
-	return glyph, true
-}
-
-// Convert glyph name to char code in this encoding.
-func (enc SymbolEncoder) GlyphNameToCharcode(glyph string) (byte, bool) {
-	code, found := symbolEncodingGlyphToCharcodeMap[glyph]
-	if !found {
-		common.Log.Debug("Symbol encoding error: unable to find glyph->charcode entry (%s)", glyph)
-		return 0, false
-	}
-
-	return code, found
-}
-
-// Convert charcode to utf-8 rune.
+// Convert character code to rune.
+// The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) CharcodeToRune(charcode byte) (rune, bool) {
 	glyph, found := symbolEncodingCharcodeToGlyphMap[charcode]
 	if !found {
@@ -88,13 +84,24 @@ func (enc SymbolEncoder) CharcodeToRune(charcode byte) (rune, bool) {
 		return 0, false
 	}
 
-	val, found := symbolEncodingGlyphToRuneMap[glyph]
+	val, found := glyphToRune(glyph, glyphlistGlyphToRuneMap)
 	if !found {
-		common.Log.Debug("Symbol encoding error: unable to find glyph->rune entry (%v)", glyph)
 		return 0, false
 	}
 
 	return val, true
+}
+
+// Convert rune to glyph name.
+// The bool return flag is true if there was a match, and false otherwise.
+func (enc SymbolEncoder) RuneToGlyph(val rune) (string, bool) {
+	return runeToGlyph(val, glyphlistRuneToGlyphMap)
+}
+
+// Convert glyph to rune.
+// The bool return flag is true if there was a match, and false otherwise.
+func (enc SymbolEncoder) GlyphToRune(glyph string) (rune, bool) {
+	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
 }
 
 // Convert to PDF Object.
@@ -107,6 +114,7 @@ func (enc SymbolEncoder) ToPdfObject() core.PdfObject {
 	return core.MakeIndirectObject(dict)
 }
 
+// Charcode to Glyph map (Symbol encoding)
 var symbolEncodingCharcodeToGlyphMap map[byte]string = map[byte]string{
 	32:  "space",
 	33:  "exclam",
@@ -299,390 +307,7 @@ var symbolEncodingCharcodeToGlyphMap map[byte]string = map[byte]string{
 	254: "bracerightbt",
 }
 
-var symbolEncodingGlyphToRuneMap map[string]rune = map[string]rune{
-	"space":          '\u0020',
-	"exclam":         '\u0021',
-	"universal":      '\u2200',
-	"numbersign":     '\u0023',
-	"existential":    '\u2203',
-	"percent":        '\u0025',
-	"ampersand":      '\u0026',
-	"suchthat":       '\u220b',
-	"parenleft":      '\u0028',
-	"parenright":     '\u0029',
-	"asteriskmath":   '\u2217',
-	"plus":           '\u002b',
-	"comma":          '\u002c',
-	"minus":          '\u2212',
-	"period":         '\u002e',
-	"slash":          '\u002f',
-	"zero":           '\u0030',
-	"one":            '\u0031',
-	"two":            '\u0032',
-	"three":          '\u0033',
-	"four":           '\u0034',
-	"five":           '\u0035',
-	"six":            '\u0036',
-	"seven":          '\u0037',
-	"eight":          '\u0038',
-	"nine":           '\u0039',
-	"colon":          '\u003a',
-	"semicolon":      '\u003b',
-	"less":           '\u003c',
-	"equal":          '\u003d',
-	"greater":        '\u003e',
-	"question":       '\u003f',
-	"congruent":      '\u2245',
-	"Alpha":          '\u0391',
-	"Beta":           '\u0392',
-	"Chi":            '\u03a7',
-	"Delta":          '\u2206',
-	"Epsilon":        '\u0395',
-	"Phi":            '\u03a6',
-	"Gamma":          '\u0393',
-	"Eta":            '\u0397',
-	"Iota":           '\u0399',
-	"theta1":         '\u03d1',
-	"Kappa":          '\u039a',
-	"Lambda":         '\u039b',
-	"Mu":             '\u039c',
-	"Nu":             '\u039d',
-	"Omicron":        '\u039f',
-	"Pi":             '\u03a0',
-	"Theta":          '\u0398',
-	"Rho":            '\u03a1',
-	"Sigma":          '\u03a3',
-	"Tau":            '\u03a4',
-	"Upsilon":        '\u03a5',
-	"sigma1":         '\u03c2',
-	"Omega":          '\u2126',
-	"Xi":             '\u039e',
-	"Psi":            '\u03a8',
-	"Zeta":           '\u0396',
-	"bracketleft":    '\u005b',
-	"therefore":      '\u2234',
-	"bracketright":   '\u005d',
-	"perpendicular":  '\u22a5',
-	"underscore":     '\u005f',
-	"radicalex":      '\uf8e5',
-	"alpha":          '\u03b1',
-	"beta":           '\u03b2',
-	"chi":            '\u03c7',
-	"delta":          '\u03b4',
-	"epsilon":        '\u03b5',
-	"phi":            '\u03c6',
-	"gamma":          '\u03b3',
-	"eta":            '\u03b7',
-	"iota":           '\u03b9',
-	"phi1":           '\u03d5',
-	"kappa":          '\u03ba',
-	"lambda":         '\u03bb',
-	"mu":             '\u00b5',
-	"nu":             '\u03bd',
-	"omicron":        '\u03bf',
-	"pi":             '\u03c0',
-	"theta":          '\u03b8',
-	"rho":            '\u03c1',
-	"sigma":          '\u03c3',
-	"tau":            '\u03c4',
-	"upsilon":        '\u03c5',
-	"omega1":         '\u03d6',
-	"omega":          '\u03c9',
-	"xi":             '\u03be',
-	"psi":            '\u03c8',
-	"zeta":           '\u03b6',
-	"braceleft":      '\u007b',
-	"bar":            '\u007c',
-	"braceright":     '\u007d',
-	"similar":        '\u223c',
-	"Euro":           '\u20ac',
-	"Upsilon1":       '\u03d2',
-	"minute":         '\u2032',
-	"lessequal":      '\u2264',
-	"fraction":       '\u2044',
-	"infinity":       '\u221e',
-	"florin":         '\u0192',
-	"club":           '\u2663',
-	"diamond":        '\u2666',
-	"heart":          '\u2665',
-	"spade":          '\u2660',
-	"arrowboth":      '\u2194',
-	"arrowleft":      '\u2190',
-	"arrowup":        '\u2191',
-	"arrowright":     '\u2192',
-	"arrowdown":      '\u2193',
-	"degree":         '\u00b0',
-	"plusminus":      '\u00b1',
-	"second":         '\u2033',
-	"greaterequal":   '\u2265',
-	"multiply":       '\u00d7',
-	"proportional":   '\u221d',
-	"partialdiff":    '\u2202',
-	"bullet":         '\u2022',
-	"divide":         '\u00f7',
-	"notequal":       '\u2260',
-	"equivalence":    '\u2261',
-	"approxequal":    '\u2248',
-	"ellipsis":       '\u2026',
-	"arrowvertex":    '\uf8e6',
-	"arrowhorizex":   '\uf8e7',
-	"carriagereturn": '\u21b5',
-	"aleph":          '\u2135',
-	"Ifraktur":       '\u2111',
-	"Rfraktur":       '\u211c',
-	"weierstrass":    '\u2118',
-	"circlemultiply": '\u2297',
-	"circleplus":     '\u2295',
-	"emptyset":       '\u2205',
-	"intersection":   '\u2229',
-	"union":          '\u222a',
-	"propersuperset": '\u2283',
-	"reflexsuperset": '\u2287',
-	"notsubset":      '\u2284',
-	"propersubset":   '\u2282',
-	"reflexsubset":   '\u2286',
-	"element":        '\u2208',
-	"notelement":     '\u2209',
-	"angle":          '\u2220',
-	"gradient":       '\u2207',
-	"registerserif":  '\uf6da',
-	"copyrightserif": '\uf6d9',
-	"trademarkserif": '\uf6db',
-	"product":        '\u220f',
-	"radical":        '\u221a',
-	"dotmath":        '\u22c5',
-	"logicalnot":     '\u00ac',
-	"logicaland":     '\u2227',
-	"logicalor":      '\u2228',
-	"arrowdblboth":   '\u21d4',
-	"arrowdblleft":   '\u21d0',
-	"arrowdblup":     '\u21d1',
-	"arrowdblright":  '\u21d2',
-	"arrowdbldown":   '\u21d3',
-	"lozenge":        '\u25ca',
-	"angleleft":      '\u2329',
-	"registersans":   '\uf8e8',
-	"copyrightsans":  '\uf8e9',
-	"trademarksans":  '\uf8ea',
-	"summation":      '\u2211',
-	"parenlefttp":    '\uf8eb',
-	"parenleftex":    '\uf8ec',
-	"parenleftbt":    '\uf8ed',
-	"bracketlefttp":  '\uf8ee',
-	"bracketleftex":  '\uf8ef',
-	"bracketleftbt":  '\uf8f0',
-	"bracelefttp":    '\uf8f1',
-	"braceleftmid":   '\uf8f2',
-	"braceleftbt":    '\uf8f3',
-	"braceex":        '\uf8f4',
-	"angleright":     '\u232a',
-	"integral":       '\u222b',
-	"integraltp":     '\u2320',
-	"integralex":     '\uf8f5',
-	"integralbt":     '\u2321',
-	"parenrighttp":   '\uf8f6',
-	"parenrightex":   '\uf8f7',
-	"parenrightbt":   '\uf8f8',
-	"bracketrighttp": '\uf8f9',
-	"bracketrightex": '\uf8fa',
-	"bracketrightbt": '\uf8fb',
-	"bracerighttp":   '\uf8fc',
-	"bracerightmid":  '\uf8fd',
-	"bracerightbt":   '\uf8fe',
-}
-
-var symbolEncodingRuneToGlyphMap map[rune]string = map[rune]string{
-	'\u0020': "space",
-	'\u0021': "exclam",
-	'\u2200': "universal",
-	'\u0023': "numbersign",
-	'\u2203': "existential",
-	'\u0025': "percent",
-	'\u0026': "ampersand",
-	'\u220b': "suchthat",
-	'\u0028': "parenleft",
-	'\u0029': "parenright",
-	'\u2217': "asteriskmath",
-	'\u002b': "plus",
-	'\u002c': "comma",
-	'\u2212': "minus",
-	'\u002e': "period",
-	'\u002f': "slash",
-	'\u0030': "zero",
-	'\u0031': "one",
-	'\u0032': "two",
-	'\u0033': "three",
-	'\u0034': "four",
-	'\u0035': "five",
-	'\u0036': "six",
-	'\u0037': "seven",
-	'\u0038': "eight",
-	'\u0039': "nine",
-	'\u003a': "colon",
-	'\u003b': "semicolon",
-	'\u003c': "less",
-	'\u003d': "equal",
-	'\u003e': "greater",
-	'\u003f': "question",
-	'\u2245': "congruent",
-	'\u0391': "Alpha",
-	'\u0392': "Beta",
-	'\u03a7': "Chi",
-	'\u2206': "Delta",
-	'\u0395': "Epsilon",
-	'\u03a6': "Phi",
-	'\u0393': "Gamma",
-	'\u0397': "Eta",
-	'\u0399': "Iota",
-	'\u03d1': "theta1",
-	'\u039a': "Kappa",
-	'\u039b': "Lambda",
-	'\u039c': "Mu",
-	'\u039d': "Nu",
-	'\u039f': "Omicron",
-	'\u03a0': "Pi",
-	'\u0398': "Theta",
-	'\u03a1': "Rho",
-	'\u03a3': "Sigma",
-	'\u03a4': "Tau",
-	'\u03a5': "Upsilon",
-	'\u03c2': "sigma1",
-	'\u2126': "Omega",
-	'\u039e': "Xi",
-	'\u03a8': "Psi",
-	'\u0396': "Zeta",
-	'\u005b': "bracketleft",
-	'\u2234': "therefore",
-	'\u005d': "bracketright",
-	'\u22a5': "perpendicular",
-	'\u005f': "underscore",
-	'\uf8e5': "radicalex",
-	'\u03b1': "alpha",
-	'\u03b2': "beta",
-	'\u03c7': "chi",
-	'\u03b4': "delta",
-	'\u03b5': "epsilon",
-	'\u03c6': "phi",
-	'\u03b3': "gamma",
-	'\u03b7': "eta",
-	'\u03b9': "iota",
-	'\u03d5': "phi1",
-	'\u03ba': "kappa",
-	'\u03bb': "lambda",
-	'\u00b5': "mu",
-	'\u03bd': "nu",
-	'\u03bf': "omicron",
-	'\u03c0': "pi",
-	'\u03b8': "theta",
-	'\u03c1': "rho",
-	'\u03c3': "sigma",
-	'\u03c4': "tau",
-	'\u03c5': "upsilon",
-	'\u03d6': "omega1",
-	'\u03c9': "omega",
-	'\u03be': "xi",
-	'\u03c8': "psi",
-	'\u03b6': "zeta",
-	'\u007b': "braceleft",
-	'\u007c': "bar",
-	'\u007d': "braceright",
-	'\u223c': "similar",
-	'\u20ac': "Euro",
-	'\u03d2': "Upsilon1",
-	'\u2032': "minute",
-	'\u2264': "lessequal",
-	'\u2044': "fraction",
-	'\u221e': "infinity",
-	'\u0192': "florin",
-	'\u2663': "club",
-	'\u2666': "diamond",
-	'\u2665': "heart",
-	'\u2660': "spade",
-	'\u2194': "arrowboth",
-	'\u2190': "arrowleft",
-	'\u2191': "arrowup",
-	'\u2192': "arrowright",
-	'\u2193': "arrowdown",
-	'\u00b0': "degree",
-	'\u00b1': "plusminus",
-	'\u2033': "second",
-	'\u2265': "greaterequal",
-	'\u00d7': "multiply",
-	'\u221d': "proportional",
-	'\u2202': "partialdiff",
-	'\u2022': "bullet",
-	'\u00f7': "divide",
-	'\u2260': "notequal",
-	'\u2261': "equivalence",
-	'\u2248': "approxequal",
-	'\u2026': "ellipsis",
-	'\uf8e6': "arrowvertex",
-	'\uf8e7': "arrowhorizex",
-	'\u21b5': "carriagereturn",
-	'\u2135': "aleph",
-	'\u2111': "Ifraktur",
-	'\u211c': "Rfraktur",
-	'\u2118': "weierstrass",
-	'\u2297': "circlemultiply",
-	'\u2295': "circleplus",
-	'\u2205': "emptyset",
-	'\u2229': "intersection",
-	'\u222a': "union",
-	'\u2283': "propersuperset",
-	'\u2287': "reflexsuperset",
-	'\u2284': "notsubset",
-	'\u2282': "propersubset",
-	'\u2286': "reflexsubset",
-	'\u2208': "element",
-	'\u2209': "notelement",
-	'\u2220': "angle",
-	'\u2207': "gradient",
-	'\uf6da': "registerserif",
-	'\uf6d9': "copyrightserif",
-	'\uf6db': "trademarkserif",
-	'\u220f': "product",
-	'\u221a': "radical",
-	'\u22c5': "dotmath",
-	'\u00ac': "logicalnot",
-	'\u2227': "logicaland",
-	'\u2228': "logicalor",
-	'\u21d4': "arrowdblboth",
-	'\u21d0': "arrowdblleft",
-	'\u21d1': "arrowdblup",
-	'\u21d2': "arrowdblright",
-	'\u21d3': "arrowdbldown",
-	'\u25ca': "lozenge",
-	'\u2329': "angleleft",
-	'\uf8e8': "registersans",
-	'\uf8e9': "copyrightsans",
-	'\uf8ea': "trademarksans",
-	'\u2211': "summation",
-	'\uf8eb': "parenlefttp",
-	'\uf8ec': "parenleftex",
-	'\uf8ed': "parenleftbt",
-	'\uf8ee': "bracketlefttp",
-	'\uf8ef': "bracketleftex",
-	'\uf8f0': "bracketleftbt",
-	'\uf8f1': "bracelefttp",
-	'\uf8f2': "braceleftmid",
-	'\uf8f3': "braceleftbt",
-	'\uf8f4': "braceex",
-	'\u232a': "angleright",
-	'\u222b': "integral",
-	'\u2320': "integraltp",
-	'\uf8f5': "integralex",
-	'\u2321': "integralbt",
-	'\uf8f6': "parenrighttp",
-	'\uf8f7': "parenrightex",
-	'\uf8f8': "parenrightbt",
-	'\uf8f9': "bracketrighttp",
-	'\uf8fa': "bracketrightex",
-	'\uf8fb': "bracketrightbt",
-	'\uf8fc': "bracerighttp",
-	'\uf8fd': "bracerightmid",
-	'\uf8fe': "bracerightbt",
-}
-
+// Glyph to charcode map (Symbol encoding).
 var symbolEncodingGlyphToCharcodeMap map[string]byte = map[string]byte{
 	"space":          32,
 	"exclam":         33,

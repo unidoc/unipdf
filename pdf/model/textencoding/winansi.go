@@ -10,34 +10,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-func splitWords(raw string, encoder TextEncoder) []string {
-	runes := []rune(raw)
-
-	words := []string{}
-
-	startsAt := 0
-	for idx, code := range runes {
-		glyph, found := encoder.RuneToGlyphName(code)
-		if !found {
-			common.Log.Debug("Glyph not found for code: %s\n", string(code))
-			continue
-		}
-
-		if glyph == "space" {
-			word := runes[startsAt:idx]
-			words = append(words, string(word))
-			startsAt = idx + 1
-		}
-	}
-
-	word := runes[startsAt:]
-	if len(word) > 0 {
-		words = append(words, string(word))
-	}
-
-	return words
-}
-
+// WinAnsiEncoding.
 type WinAnsiEncoder struct {
 }
 
@@ -50,11 +23,12 @@ func (winenc WinAnsiEncoder) ToPdfObject() core.PdfObject {
 	return core.MakeName("WinAnsiEncoding")
 }
 
-// Convert utf8 runes to WinAnsiEncoded encoded string (series of char codes).
+// Convert a raw utf8 string (series of runes) to an encoded string (series of character codes) to be used in PDF.
 func (winenc WinAnsiEncoder) Encode(raw string) string {
 	encoded := []byte{}
 	for _, rune := range raw {
-		if code, has := utf8ToWinAnsiEncodingMap[rune]; has {
+		code, has := winenc.RuneToCharcode(rune)
+		if has {
 			encoded = append(encoded, code)
 		}
 	}
@@ -62,72 +36,77 @@ func (winenc WinAnsiEncoder) Encode(raw string) string {
 	return string(encoded)
 }
 
-func (winenc WinAnsiEncoder) RuneToGlyphName(val rune) (string, bool) {
-	code, found := winenc.RuneToCharcode(val)
-	if !found {
-		return "", false
-	}
-
-	glyph, found := winenc.CharcodeToGlyphName(code)
-	if !found {
-		return "", false
-	}
-
-	return glyph, true
-}
-
-func (winenc WinAnsiEncoder) CharcodeToGlyphName(code byte) (string, bool) {
-	glyph, has := winAnsiEncodingGlyphMap[code]
+// Conversion between character code and glyph name.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) CharcodeToGlyph(code byte) (string, bool) {
+	glyph, has := winansiEncodingCharcodeToGlyphMap[code]
 	if !has {
+		common.Log.Debug("Charcode -> Glyph error: charcode not found: %d\n", code)
 		return "", false
 	}
 	return glyph, true
 }
 
-func (winenc WinAnsiEncoder) GlyphNameToCharcode(glyph string) (byte, bool) {
-	for code, name := range winAnsiEncodingGlyphMap {
-		if name == glyph {
-			return code, true
-		}
-	}
-
-	// Not found.
-	return 0, false
-}
-
-// Convert UTF-8 rune to character code.  If applicable.
-func (winenc WinAnsiEncoder) RuneToCharcode(val rune) (byte, bool) {
-	code, has := utf8ToWinAnsiEncodingMap[val]
-	if !has {
+// Conversion between glyph name and character code.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) GlyphToCharcode(glyph string) (byte, bool) {
+	code, found := winansiEncodingGlyphToCharcodeMap[glyph]
+	if !found {
+		common.Log.Debug("Glyph -> Charcode error: glyph not found: %s\n", glyph)
 		return 0, false
 	}
+
 	return code, true
 }
 
-func (winenc WinAnsiEncoder) CharcodeToRune(charcode byte) (rune, bool) {
-	val, has := winAnsiEncodingToUtf8Map[charcode]
-	if !has {
+// Convert rune to character code.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) RuneToCharcode(val rune) (byte, bool) {
+	glyph, found := winenc.RuneToGlyph(val)
+	if !found {
 		return 0, false
 	}
 
-	return val, true
-}
-
-// WinAnsiEncoding.
-
-// Convert a UTF8 string to WinAnsiEncoding byte string.
-func utf8ToWinAnsiEncoding(strUtf8 string) string {
-	encoded := []byte{}
-	for _, rune := range strUtf8 {
-		if code, has := utf8ToWinAnsiEncodingMap[rune]; has {
-			encoded = append(encoded, code)
-		}
+	code, found := winansiEncodingGlyphToCharcodeMap[glyph]
+	if !found {
+		common.Log.Debug("Glyph -> Charcode error: glyph not found %s\n", glyph)
+		return 0, false
 	}
-	return string(encoded)
+
+	return code, true
 }
 
-// Maps to enable conversion of WinAnsiEncoding character codes to glyphs, utf8 and vice versa.
-var winAnsiEncodingGlyphMap = map[byte]string{
+// Convert character code to rune.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) CharcodeToRune(charcode byte) (rune, bool) {
+	glyph, found := winansiEncodingCharcodeToGlyphMap[charcode]
+	if !found {
+		common.Log.Debug("Charcode -> Glyph error: charcode not found: %d\n", charcode)
+		return 0, false
+	}
+
+	ucode, found := glyphToRune(glyph, glyphlistGlyphToRuneMap)
+	if !found {
+		return 0, false
+	}
+
+	return ucode, true
+}
+
+// Convert rune to glyph name.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) RuneToGlyph(val rune) (string, bool) {
+	return runeToGlyph(val, glyphlistRuneToGlyphMap)
+}
+
+// Convert glyph to rune.
+// The bool return flag is true if there was a match, and false otherwise.
+func (winenc WinAnsiEncoder) GlyphToRune(glyph string) (rune, bool) {
+	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
+}
+
+// Charcode to glyph name map (WinAnsiEncoding).
+var winansiEncodingCharcodeToGlyphMap = map[byte]string{
 	32:  "space",
 	33:  "exclam",
 	34:  "quotedbl",
@@ -354,456 +333,230 @@ var winAnsiEncodingGlyphMap = map[byte]string{
 	255: "ydieresis",
 }
 
-var winAnsiEncodingToUtf8Map = map[byte]rune{
-	32:  '\u0020',
-	33:  '\u0021',
-	34:  '\u0022',
-	35:  '\u0023',
-	36:  '\u0024',
-	37:  '\u0025',
-	38:  '\u0026',
-	39:  '\u0027',
-	40:  '\u0028',
-	41:  '\u0029',
-	42:  '\u002a',
-	43:  '\u002b',
-	44:  '\u002c',
-	45:  '\u002d',
-	46:  '\u002e',
-	47:  '\u002f',
-	48:  '\u0030',
-	49:  '\u0031',
-	50:  '\u0032',
-	51:  '\u0033',
-	52:  '\u0034',
-	53:  '\u0035',
-	54:  '\u0036',
-	55:  '\u0037',
-	56:  '\u0038',
-	57:  '\u0039',
-	58:  '\u003a',
-	59:  '\u003b',
-	60:  '\u003c',
-	61:  '\u003d',
-	62:  '\u003e',
-	63:  '\u003f',
-	64:  '\u0040',
-	65:  '\u0041',
-	66:  '\u0042',
-	67:  '\u0043',
-	68:  '\u0044',
-	69:  '\u0045',
-	70:  '\u0046',
-	71:  '\u0047',
-	72:  '\u0048',
-	73:  '\u0049',
-	74:  '\u004a',
-	75:  '\u004b',
-	76:  '\u004c',
-	77:  '\u004d',
-	78:  '\u004e',
-	79:  '\u004f',
-	80:  '\u0050',
-	81:  '\u0051',
-	82:  '\u0052',
-	83:  '\u0053',
-	84:  '\u0054',
-	85:  '\u0055',
-	86:  '\u0056',
-	87:  '\u0057',
-	88:  '\u0058',
-	89:  '\u0059',
-	90:  '\u005a',
-	91:  '\u005b',
-	92:  '\u005c',
-	93:  '\u005d',
-	94:  '\u005e',
-	95:  '\u005f',
-	96:  '\u0060',
-	97:  '\u0061',
-	98:  '\u0062',
-	99:  '\u0063',
-	100: '\u0064',
-	101: '\u0065',
-	102: '\u0066',
-	103: '\u0067',
-	104: '\u0068',
-	105: '\u0069',
-	106: '\u006a',
-	107: '\u006b',
-	108: '\u006c',
-	109: '\u006d',
-	110: '\u006e',
-	111: '\u006f',
-	112: '\u0070',
-	113: '\u0071',
-	114: '\u0072',
-	115: '\u0073',
-	116: '\u0074',
-	117: '\u0075',
-	118: '\u0076',
-	119: '\u0077',
-	120: '\u0078',
-	121: '\u0079',
-	122: '\u007a',
-	123: '\u007b',
-	124: '\u007c',
-	125: '\u007d',
-	126: '\u007e',
-	127: '\u2022',
-	128: '\u20ac',
-	129: '\u2022',
-	130: '\u201a',
-	131: '\u0192',
-	132: '\u201e',
-	133: '\u2026',
-	134: '\u2020',
-	135: '\u2021',
-	136: '\u02c6',
-	137: '\u2030',
-	138: '\u0160',
-	139: '\u2039',
-	140: '\u0152',
-	141: '\u2022',
-	142: '\u017d',
-	143: '\u2022',
-	144: '\u2022',
-	145: '\u2018',
-	146: '\u2019',
-	147: '\u201c',
-	148: '\u201d',
-	149: '\u2022',
-	150: '\u2013',
-	151: '\u2014',
-	152: '\u02dc',
-	153: '\u2122',
-	154: '\u0161',
-	155: '\u203a',
-	156: '\u0153',
-	157: '\u2022',
-	158: '\u017e',
-	159: '\u0178',
-	160: '\u0020',
-	161: '\u00a1',
-	162: '\u00a2',
-	163: '\u00a3',
-	164: '\u00a4',
-	165: '\u00a5',
-	166: '\u00a6',
-	167: '\u00a7',
-	168: '\u00a8',
-	169: '\u00a9',
-	170: '\u00aa',
-	171: '\u00ab',
-	172: '\u00ac',
-	173: '\u002d',
-	174: '\u00ae',
-	175: '\u00af',
-	176: '\u00b0',
-	177: '\u00b1',
-	178: '\u00b2',
-	179: '\u00b3',
-	180: '\u00b4',
-	181: '\u00b5',
-	182: '\u00b6',
-	183: '\u00b7',
-	184: '\u00b8',
-	185: '\u00b9',
-	186: '\u00ba',
-	187: '\u00bb',
-	188: '\u00bc',
-	189: '\u00bd',
-	190: '\u00be',
-	191: '\u00bf',
-	192: '\u00c0',
-	193: '\u00c1',
-	194: '\u00c2',
-	195: '\u00c3',
-	196: '\u00c4',
-	197: '\u00c5',
-	198: '\u00c6',
-	199: '\u00c7',
-	200: '\u00c8',
-	201: '\u00c9',
-	202: '\u00ca',
-	203: '\u00cb',
-	204: '\u00cc',
-	205: '\u00cd',
-	206: '\u00ce',
-	207: '\u00cf',
-	208: '\u00d0',
-	209: '\u00d1',
-	210: '\u00d2',
-	211: '\u00d3',
-	212: '\u00d4',
-	213: '\u00d5',
-	214: '\u00d6',
-	215: '\u00d7',
-	216: '\u00d8',
-	217: '\u00d9',
-	218: '\u00da',
-	219: '\u00db',
-	220: '\u00dc',
-	221: '\u00dd',
-	222: '\u00de',
-	223: '\u00df',
-	224: '\u00e0',
-	225: '\u00e1',
-	226: '\u00e2',
-	227: '\u00e3',
-	228: '\u00e4',
-	229: '\u00e5',
-	230: '\u00e6',
-	231: '\u00e7',
-	232: '\u00e8',
-	233: '\u00e9',
-	234: '\u00ea',
-	235: '\u00eb',
-	236: '\u00ec',
-	237: '\u00ed',
-	238: '\u00ee',
-	239: '\u00ef',
-	240: '\u00f0',
-	241: '\u00f1',
-	242: '\u00f2',
-	243: '\u00f3',
-	244: '\u00f4',
-	245: '\u00f5',
-	246: '\u00f6',
-	247: '\u00f7',
-	248: '\u00f8',
-	249: '\u00f9',
-	250: '\u00fa',
-	251: '\u00fb',
-	252: '\u00fc',
-	253: '\u00fd',
-	254: '\u00fe',
-	255: '\u00ff',
-}
-
-var utf8ToWinAnsiEncodingMap = map[rune]byte{
-	'\u0020': 32,
-	'\u0021': 33,
-	'\u0022': 34,
-	'\u0023': 35,
-	'\u0024': 36,
-	'\u0025': 37,
-	'\u0026': 38,
-	'\u0027': 39,
-	'\u0028': 40,
-	'\u0029': 41,
-	'\u002a': 42,
-	'\u002b': 43,
-	'\u002c': 44,
-	'\u002d': 45,
-	'\u002e': 46,
-	'\u002f': 47,
-	'\u0030': 48,
-	'\u0031': 49,
-	'\u0032': 50,
-	'\u0033': 51,
-	'\u0034': 52,
-	'\u0035': 53,
-	'\u0036': 54,
-	'\u0037': 55,
-	'\u0038': 56,
-	'\u0039': 57,
-	'\u003a': 58,
-	'\u003b': 59,
-	'\u003c': 60,
-	'\u003d': 61,
-	'\u003e': 62,
-	'\u003f': 63,
-	'\u0040': 64,
-	'\u0041': 65,
-	'\u0042': 66,
-	'\u0043': 67,
-	'\u0044': 68,
-	'\u0045': 69,
-	'\u0046': 70,
-	'\u0047': 71,
-	'\u0048': 72,
-	'\u0049': 73,
-	'\u004a': 74,
-	'\u004b': 75,
-	'\u004c': 76,
-	'\u004d': 77,
-	'\u004e': 78,
-	'\u004f': 79,
-	'\u0050': 80,
-	'\u0051': 81,
-	'\u0052': 82,
-	'\u0053': 83,
-	'\u0054': 84,
-	'\u0055': 85,
-	'\u0056': 86,
-	'\u0057': 87,
-	'\u0058': 88,
-	'\u0059': 89,
-	'\u005a': 90,
-	'\u005b': 91,
-	'\u005c': 92,
-	'\u005d': 93,
-	'\u005e': 94,
-	'\u005f': 95,
-	'\u0060': 96,
-	'\u0061': 97,
-	'\u0062': 98,
-	'\u0063': 99,
-	'\u0064': 100,
-	'\u0065': 101,
-	'\u0066': 102,
-	'\u0067': 103,
-	'\u0068': 104,
-	'\u0069': 105,
-	'\u006a': 106,
-	'\u006b': 107,
-	'\u006c': 108,
-	'\u006d': 109,
-	'\u006e': 110,
-	'\u006f': 111,
-	'\u0070': 112,
-	'\u0071': 113,
-	'\u0072': 114,
-	'\u0073': 115,
-	'\u0074': 116,
-	'\u0075': 117,
-	'\u0076': 118,
-	'\u0077': 119,
-	'\u0078': 120,
-	'\u0079': 121,
-	'\u007a': 122,
-	'\u007b': 123,
-	'\u007c': 124,
-	'\u007d': 125,
-	'\u007e': 126,
-	'\u2022': 127,
-	'\u20ac': 128,
-	// '\u2022': 129, // duplicate
-	'\u201a': 130,
-	'\u0192': 131,
-	'\u201e': 132,
-	'\u2026': 133,
-	'\u2020': 134,
-	'\u2021': 135,
-	'\u02c6': 136,
-	'\u2030': 137,
-	'\u0160': 138,
-	'\u2039': 139,
-	'\u0152': 140,
-	//'\u2022': 141, // duplicate
-	'\u017d': 142,
-	//'\u2022': 143, // duplicate
-	// '\u2022': 144, // duplicate
-	'\u2018': 145,
-	'\u2019': 146,
-	'\u201c': 147,
-	'\u201d': 148,
-	//'\u2022': 149, // duplicate
-	'\u2013': 150,
-	'\u2014': 151,
-	'\u02dc': 152,
-	'\u2122': 153,
-	'\u0161': 154,
-	'\u203a': 155,
-	'\u0153': 156,
-	//'\u2022': 157, // duplicate
-	'\u017e': 158,
-	'\u0178': 159,
-	//'\u0020': 160, // duplicate
-	'\u00a1': 161,
-	'\u00a2': 162,
-	'\u00a3': 163,
-	'\u00a4': 164,
-	'\u00a5': 165,
-	'\u00a6': 166,
-	'\u00a7': 167,
-	'\u00a8': 168,
-	'\u00a9': 169,
-	'\u00aa': 170,
-	'\u00ab': 171,
-	'\u00ac': 172,
-	//'\u002d': 173, // duplicate
-	'\u00ae': 174,
-	'\u00af': 175,
-	'\u00b0': 176,
-	'\u00b1': 177,
-	'\u00b2': 178,
-	'\u00b3': 179,
-	'\u00b4': 180,
-	'\u00b5': 181,
-	'\u00b6': 182,
-	'\u00b7': 183,
-	'\u00b8': 184,
-	'\u00b9': 185,
-	'\u00ba': 186,
-	'\u00bb': 187,
-	'\u00bc': 188,
-	'\u00bd': 189,
-	'\u00be': 190,
-	'\u00bf': 191,
-	'\u00c0': 192,
-	'\u00c1': 193,
-	'\u00c2': 194,
-	'\u00c3': 195,
-	'\u00c4': 196,
-	'\u00c5': 197,
-	'\u00c6': 198,
-	'\u00c7': 199,
-	'\u00c8': 200,
-	'\u00c9': 201,
-	'\u00ca': 202,
-	'\u00cb': 203,
-	'\u00cc': 204,
-	'\u00cd': 205,
-	'\u00ce': 206,
-	'\u00cf': 207,
-	'\u00d0': 208,
-	'\u00d1': 209,
-	'\u00d2': 210,
-	'\u00d3': 211,
-	'\u00d4': 212,
-	'\u00d5': 213,
-	'\u00d6': 214,
-	'\u00d7': 215,
-	'\u00d8': 216,
-	'\u00d9': 217,
-	'\u00da': 218,
-	'\u00db': 219,
-	'\u00dc': 220,
-	'\u00dd': 221,
-	'\u00de': 222,
-	'\u00df': 223,
-	'\u00e0': 224,
-	'\u00e1': 225,
-	'\u00e2': 226,
-	'\u00e3': 227,
-	'\u00e4': 228,
-	'\u00e5': 229,
-	'\u00e6': 230,
-	'\u00e7': 231,
-	'\u00e8': 232,
-	'\u00e9': 233,
-	'\u00ea': 234,
-	'\u00eb': 235,
-	'\u00ec': 236,
-	'\u00ed': 237,
-	'\u00ee': 238,
-	'\u00ef': 239,
-	'\u00f0': 240,
-	'\u00f1': 241,
-	'\u00f2': 242,
-	'\u00f3': 243,
-	'\u00f4': 244,
-	'\u00f5': 245,
-	'\u00f6': 246,
-	'\u00f7': 247,
-	'\u00f8': 248,
-	'\u00f9': 249,
-	'\u00fa': 250,
-	'\u00fb': 251,
-	'\u00fc': 252,
-	'\u00fd': 253,
-	'\u00fe': 254,
-	'\u00ff': 255,
+// Glyph to charcode map (WinAnsiEncoding).
+var winansiEncodingGlyphToCharcodeMap = map[string]byte{
+	"space":       32,
+	"exclam":      33,
+	"quotedbl":    34,
+	"numbersign":  35,
+	"dollar":      36,
+	"percent":     37,
+	"ampersand":   38,
+	"quotesingle": 39,
+	"parenleft":   40,
+	"parenright":  41,
+	"asterisk":    42,
+	"plus":        43,
+	"comma":       44,
+	//"hyphen":         45,
+	"period":       46,
+	"slash":        47,
+	"zero":         48,
+	"one":          49,
+	"two":          50,
+	"three":        51,
+	"four":         52,
+	"five":         53,
+	"six":          54,
+	"seven":        55,
+	"eight":        56,
+	"nine":         57,
+	"colon":        58,
+	"semicolon":    59,
+	"less":         60,
+	"equal":        61,
+	"greater":      62,
+	"question":     63,
+	"at":           64,
+	"A":            65,
+	"B":            66,
+	"C":            67,
+	"D":            68,
+	"E":            69,
+	"F":            70,
+	"G":            71,
+	"H":            72,
+	"I":            73,
+	"J":            74,
+	"K":            75,
+	"L":            76,
+	"M":            77,
+	"N":            78,
+	"O":            79,
+	"P":            80,
+	"Q":            81,
+	"R":            82,
+	"S":            83,
+	"T":            84,
+	"U":            85,
+	"V":            86,
+	"W":            87,
+	"X":            88,
+	"Y":            89,
+	"Z":            90,
+	"bracketleft":  91,
+	"backslash":    92,
+	"bracketright": 93,
+	"asciicircum":  94,
+	"underscore":   95,
+	"grave":        96,
+	"a":            97,
+	"b":            98,
+	"c":            99,
+	"d":            100,
+	"e":            101,
+	"f":            102,
+	"g":            103,
+	"h":            104,
+	"i":            105,
+	"j":            106,
+	"k":            107,
+	"l":            108,
+	"m":            109,
+	"n":            110,
+	"o":            111,
+	"p":            112,
+	"q":            113,
+	"r":            114,
+	"s":            115,
+	"t":            116,
+	"u":            117,
+	"v":            118,
+	"w":            119,
+	"x":            120,
+	"y":            121,
+	"z":            122,
+	"braceleft":    123,
+	"bar":          124,
+	"braceright":   125,
+	"asciitilde":   126,
+	"bullet":       127,
+	"Euro":         128,
+	//"bullet":         129,
+	"quotesinglbase": 130,
+	"florin":         131,
+	"quotedblbase":   132,
+	"ellipsis":       133,
+	"dagger":         134,
+	"daggerdbl":      135,
+	"circumflex":     136,
+	"perthousand":    137,
+	"Scaron":         138,
+	"guilsinglleft":  139,
+	"OE":             140,
+	//"bullet":         141,
+	"Zcaron": 142,
+	//"bullet":         143,
+	//"bullet":         144,
+	"quoteleft":     145,
+	"quoteright":    146,
+	"quotedblleft":  147,
+	"quotedblright": 148,
+	//"bullet":         149,
+	"endash":         150,
+	"emdash":         151,
+	"tilde":          152,
+	"trademark":      153,
+	"scaron":         154,
+	"guilsinglright": 155,
+	"oe":             156,
+	//"bullet":         157,
+	"zcaron":    158,
+	"Ydieresis": 159,
+	//"space":          160,
+	"exclamdown":     161,
+	"cent":           162,
+	"sterling":       163,
+	"currency":       164,
+	"yen":            165,
+	"brokenbar":      166,
+	"section":        167,
+	"dieresis":       168,
+	"copyright":      169,
+	"ordfeminine":    170,
+	"guillemotleft":  171,
+	"logicalnot":     172,
+	"hyphen":         173,
+	"registered":     174,
+	"macron":         175,
+	"degree":         176,
+	"plusminus":      177,
+	"twosuperior":    178,
+	"threesuperior":  179,
+	"acute":          180,
+	"mu":             181,
+	"paragraph":      182,
+	"periodcentered": 183,
+	"cedilla":        184,
+	"onesuperior":    185,
+	"ordmasculine":   186,
+	"guillemotright": 187,
+	"onequarter":     188,
+	"onehalf":        189,
+	"threequarters":  190,
+	"questiondown":   191,
+	"Agrave":         192,
+	"Aacute":         193,
+	"Acircumflex":    194,
+	"Atilde":         195,
+	"Adieresis":      196,
+	"Aring":          197,
+	"AE":             198,
+	"Ccedilla":       199,
+	"Egrave":         200,
+	"Eacute":         201,
+	"Ecircumflex":    202,
+	"Edieresis":      203,
+	"Igrave":         204,
+	"Iacute":         205,
+	"Icircumflex":    206,
+	"Idieresis":      207,
+	"Eth":            208,
+	"Ntilde":         209,
+	"Ograve":         210,
+	"Oacute":         211,
+	"Ocircumflex":    212,
+	"Otilde":         213,
+	"Odieresis":      214,
+	"multiply":       215,
+	"Oslash":         216,
+	"Ugrave":         217,
+	"Uacute":         218,
+	"Ucircumflex":    219,
+	"Udieresis":      220,
+	"Yacute":         221,
+	"Thorn":          222,
+	"germandbls":     223,
+	"agrave":         224,
+	"aacute":         225,
+	"acircumflex":    226,
+	"atilde":         227,
+	"adieresis":      228,
+	"aring":          229,
+	"ae":             230,
+	"ccedilla":       231,
+	"egrave":         232,
+	"eacute":         233,
+	"ecircumflex":    234,
+	"edieresis":      235,
+	"igrave":         236,
+	"iacute":         237,
+	"icircumflex":    238,
+	"idieresis":      239,
+	"eth":            240,
+	"ntilde":         241,
+	"ograve":         242,
+	"oacute":         243,
+	"ocircumflex":    244,
+	"otilde":         245,
+	"odieresis":      246,
+	"divide":         247,
+	"oslash":         248,
+	"ugrave":         249,
+	"uacute":         250,
+	"ucircumflex":    251,
+	"udieresis":      252,
+	"yacute":         253,
+	"thorn":          254,
+	"ydieresis":      255,
 }

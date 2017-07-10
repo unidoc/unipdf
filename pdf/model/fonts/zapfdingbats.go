@@ -17,12 +17,12 @@ import (
 // Font ZapfDingbats.  Implements Font interface.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontZapfDingbats struct {
+	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
 func NewFontZapfDingbats() fontZapfDingbats {
 	font := fontZapfDingbats{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
@@ -46,7 +46,9 @@ func (font fontZapfDingbats) ToPdfObject() core.PdfObject {
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("ZapfDingbats"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
+	if font.encoder != nil {
+		fontDict.Set("Encoding", font.encoder.ToPdfObject())
+	}
 
 	obj.PdfObject = fontDict
 	return obj

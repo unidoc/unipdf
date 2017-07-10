@@ -198,7 +198,7 @@ func (p *paragraph) getTextWidth() float64 {
 	w := float64(0.0)
 
 	for _, rune := range p.text {
-		glyph, found := p.encoder.RuneToGlyphName(rune)
+		glyph, found := p.encoder.RuneToGlyph(rune)
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
 			return -1 // XXX/FIXME: return error.
@@ -232,7 +232,7 @@ func (p *paragraph) wrapText() error {
 	widths := []float64{}
 
 	for _, val := range runes {
-		glyph, found := p.encoder.RuneToGlyphName(val)
+		glyph, found := p.encoder.RuneToGlyph(val)
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %v\n", val)
 			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
@@ -401,7 +401,7 @@ func drawParagraphOnBlock(blk *Block, p *paragraph, ctx DrawContext) (DrawContex
 		w := float64(0)
 		spaces := 0
 		for _, runeVal := range runes {
-			glyph, found := p.encoder.RuneToGlyphName(runeVal)
+			glyph, found := p.encoder.RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
 				return ctx, errors.New("Unsupported rune in text encoding")
@@ -444,7 +444,7 @@ func drawParagraphOnBlock(blk *Block, p *paragraph, ctx DrawContext) (DrawContex
 		encStr := ""
 		for _, runeVal := range runes {
 			//creator.Add_Tj(core.PdfObjectString(tb.Encoder.Encode(line)))
-			glyph, found := p.encoder.RuneToGlyphName(runeVal)
+			glyph, found := p.encoder.RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
 				return ctx, errors.New("Unsupported rune in text encoding")
