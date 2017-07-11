@@ -172,6 +172,21 @@ func (blk *Block) addContents(operations *contentstream.ContentStreamOperations)
 	*blk.contents = append(*blk.contents, *operations...)
 }
 
+// Add contents to a block by contents string.
+func (blk *Block) addContentsByString(contents string) error {
+	cc := contentstream.NewContentStreamParser(contents)
+	operations, err := cc.Parse()
+	if err != nil {
+		return err
+	}
+
+	blk.contents.WrapIfNeeded()
+	operations.WrapIfNeeded()
+	*blk.contents = append(*blk.contents, *operations...)
+
+	return nil
+}
+
 // Set block Margins.
 func (blk *Block) SetMargins(left, right, top, bottom float64) {
 	blk.margins.left = left
