@@ -192,6 +192,56 @@ func TestShapes1(t *testing.T) {
 	}
 }
 
+// Example drawing image and line shape on a block and applying to pages, also demonstrating block rotation.
+func TestShapesOnBlock(t *testing.T) {
+	creator := New()
+
+	block := NewBlock(creator.Width(), 200)
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img, err := NewImage(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img.SetPos(50, 75)
+	img.ScaleToHeight(100.0)
+	block.Draw(img)
+
+	// Add line.
+	line := NewLine(0, 180, creator.Width(), 180)
+	line.SetLineWidth(10.0)
+	r, g, b, _ := ColorRGBFromHex("#ff0000")
+	line.SetColorRGB(r, g, b)
+	block.Draw(line)
+
+	creator.NewPage()
+	creator.MoveTo(0, 0)
+	creator.Draw(block)
+
+	creator.NewPage()
+	creator.MoveTo(0, 200)
+	creator.Draw(block)
+
+	creator.NewPage()
+	creator.MoveTo(0, 700)
+	block.SetAngle(90)
+	creator.Draw(block)
+
+	err = creator.WriteToFile("/tmp/1_shapes_on_block.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// Test image wrapping between pages when using relative context mode.
 func TestImageWrapping(t *testing.T) {
 	creator := New()
 
@@ -224,6 +274,7 @@ func TestImageWrapping(t *testing.T) {
 	}
 }
 
+// Test rotating image.  Rotating about upper left corner.
 func TestImageRotation(t *testing.T) {
 	creator := New()
 
@@ -263,6 +314,8 @@ func TestImageRotation(t *testing.T) {
 	}
 }
 
+// Test image, rotation and page wrapping.  Disadvantage here is that content is overlapping.  May be reconsidered
+// in the future.  And actually reconsider overall how images are used in the relative context mode.
 func TestImageRotationAndWrap(t *testing.T) {
 	creator := New()
 
@@ -303,6 +356,7 @@ func TestImageRotationAndWrap(t *testing.T) {
 	}
 }
 
+// Test basic paragraph with default font.
 func TestParagraph1(t *testing.T) {
 	creator := New()
 
@@ -325,6 +379,10 @@ func TestParagraph1(t *testing.T) {
 	}
 }
 
+// Test paragraph and page and text wrapping with left, justify, center and right modes.
+// TODO: In the future we would like the paragraph to split up between pages.  Split up on line, never allowing
+// less than 2 lines to go over (common practice).
+// TODO: In the future we would like to implement Donald Knuth's line wrapping algorithm or something similar.
 func TestParagraphWrapping(t *testing.T) {
 	creator := New()
 
@@ -355,6 +413,7 @@ func TestParagraphWrapping(t *testing.T) {
 	}
 }
 
+// Test writing with various TTF fonts.  Assumes MacOS system, where fonts are stored under /Library/Fonts.
 func TestParagraphFonts(t *testing.T) {
 	creator := New()
 
@@ -398,6 +457,7 @@ func TestParagraphFonts(t *testing.T) {
 	}
 }
 
+// Test writing with the 14 built in fonts.
 func TestParagraphStandardFonts(t *testing.T) {
 	creator := New()
 
@@ -459,7 +519,6 @@ func TestParagraphStandardFonts(t *testing.T) {
 		p.SetLineHeight(1.2)
 		p.SetMargins(0, 0, 5, 0)
 
-		fmt.Printf("%s\n", names[idx])
 		if names[idx] == "Symbol" {
 			// For Symbol font, need to use Symbol encoder.
 			p.SetEncoder(textencoding.NewSymbolEncoder())
@@ -482,12 +541,11 @@ func TestParagraphStandardFonts(t *testing.T) {
 	}
 }
 
+// Tests creating a chapter with paragraphs.
 func TestChapter(t *testing.T) {
 	c := New()
 
 	ch1 := c.NewChapter("Introduction")
-
-	//subCh1 := NewSubchapter(ch1, "Workflow")
 
 	p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
 		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
@@ -509,6 +567,8 @@ func TestChapter(t *testing.T) {
 	}
 }
 
+// Test creating and drawing subchapters with text content.
+// Also generates a front page, and a table of contents.
 func TestSubchaptersSimple(t *testing.T) {
 	c := New()
 
@@ -742,6 +802,7 @@ func TestSubchapters(t *testing.T) {
 	}
 }
 
+// Test creating and drawing a table.
 func TestTable(t *testing.T) {
 	table := NewTable(4, 4) // 4x4 table
 	// Default, equal column sizes (4x0.25)...
@@ -789,6 +850,7 @@ func TestTable(t *testing.T) {
 	}
 }
 
+// Add headers and footers via creator.
 func addHeadersAndFooters(c *Creator) {
 	c.DrawHeader(func(pageNum int, totPages int) {
 		/*
@@ -834,6 +896,7 @@ func addHeadersAndFooters(c *Creator) {
 	})
 }
 
+// Test creating headers and footers.
 func TestHeadersAndFooters(t *testing.T) {
 	c := New()
 
