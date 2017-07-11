@@ -85,6 +85,14 @@ func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
 	return &array
 }
 
+func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
+	array := PdfObjectArray{}
+	for _, val := range vals {
+		array = append(array, MakeInteger(val))
+	}
+	return &array
+}
+
 func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
 	array := PdfObjectArray{}
 	for _, val := range vals {

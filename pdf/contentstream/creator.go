@@ -132,7 +132,9 @@ func (this *ContentCreator) Add_M(miterlimit float64) *ContentCreator {
 func (this *ContentCreator) Add_d(dashArray []int64, dashPhase int64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "d"
-	op.Params = makeParamsFromInts(dashArray)
+
+	op.Params = []PdfObject{}
+	op.Params = append(op.Params, MakeArrayFromIntegers64(dashArray))
 	op.Params = append(op.Params, MakeInteger(dashPhase))
 	this.operands = append(this.operands, &op)
 	return this
