@@ -8,7 +8,6 @@ package creator
 import (
 	"errors"
 	"fmt"
-	"math"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
@@ -86,24 +85,6 @@ func (chap *Chapter) SetIncludeInTOC(includeInTOC bool) {
 // Get access to the heading paragraph to address style etc.
 func (chap *Chapter) GetHeading() *paragraph {
 	return chap.heading
-}
-
-// Chapter height is a sum of the content heights.
-func (chap *Chapter) Height() float64 {
-	h := float64(0)
-	for _, d := range chap.contents {
-		h += d.Height()
-	}
-	return h
-}
-
-// Chapter width is the maximum of the content widths.
-func (chap *Chapter) Width() float64 {
-	maxW := float64(0)
-	for _, d := range chap.contents {
-		maxW = math.Max(maxW, d.Width())
-	}
-	return maxW
 }
 
 // Set absolute coordinates.

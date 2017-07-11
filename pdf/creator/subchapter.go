@@ -8,8 +8,6 @@ package creator
 import (
 	"fmt"
 
-	"math"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
@@ -62,24 +60,6 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	subchap.toc = c.toc
 
 	return subchap
-}
-
-// Chapter height is a sum of the content heights.
-func (subchap *subchapter) Height() float64 {
-	h := float64(0)
-	for _, d := range subchap.contents {
-		h += d.Height()
-	}
-	return h
-}
-
-// Chapter width is the maximum of the content widths.
-func (subchap *subchapter) Width() float64 {
-	maxW := float64(0)
-	for _, d := range subchap.contents {
-		maxW = math.Max(maxW, d.Width())
-	}
-	return maxW
 }
 
 // Set absolute coordinates.
