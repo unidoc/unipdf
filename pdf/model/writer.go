@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/license"
+	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
