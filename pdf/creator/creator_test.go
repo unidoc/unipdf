@@ -102,6 +102,96 @@ func TestImage1(t *testing.T) {
 	}
 }
 
+func TestShapes1(t *testing.T) {
+	creator := New()
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img, err := NewImage(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img.SetPos(0, 100)
+	img.ScaleToWidth(1.0 * creator.Width())
+
+	err = creator.Draw(img)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Add line.
+	line := NewLine(0, 0, 100, 100)
+	line.SetLineWidth(3.0)
+	r, g, b, _ := ColorRGBFromHex("#ff0000")
+	line.SetColorRGB(r, g, b)
+	err = creator.Draw(line)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Add rect with default params.
+	rect := NewRectangle(100, 100, 100, 100)
+	err = creator.Draw(rect)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Add rect with fill and large border
+	rect = NewRectangle(100, 500, 100, 100)
+	r, g, b, _ = ColorRGBFromHex("#00ff00") // Green border
+	rect.SetBorderColorRGB(r, g, b)
+	rect.SetBorderWidth(15.0)
+	r, g, b, _ = ColorRGBFromHex("#0000ff") // Blue fill
+	rect.SetFillColorRGB(r, g, b)
+	err = creator.Draw(rect)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Draw a circle. (inscribed inside the previous rectangle).
+	ell := NewEllipse(100, 100, 100, 100)
+	err = creator.Draw(ell)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Draw a circle around upper right page corner.
+	ell = NewEllipse(creator.Width(), 0, 100, 100)
+	err = creator.Draw(ell)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Draw an ellipse with fill and border.
+	ell = NewEllipse(500, 100, 100, 200)
+	r, g, b, _ = ColorRGBFromHex("#ccc") // Gray fill
+	ell.SetFillColorRGB(r, g, b)
+	ell.SetBorderWidth(10.0)
+	err = creator.Draw(ell)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = creator.WriteToFile("/tmp/1_shapes.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestImageWrapping(t *testing.T) {
 	creator := New()
 
