@@ -931,7 +931,7 @@ func makeQrCodeImage(text string, width float64, oversampling int) (goimage.Imag
 		return nil, err
 	}
 
-	pixelWidth := 5 * int(math.Ceil(width))
+	pixelWidth := oversampling * int(math.Ceil(width))
 	qrCode, err = barcode.Scale(qrCode, pixelWidth, pixelWidth)
 	if err != nil {
 		return nil, err

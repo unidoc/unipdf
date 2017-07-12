@@ -161,8 +161,21 @@ func (c *Creator) NewPage() {
 	c.pages = append(c.pages, page)
 }
 
-func (c *Creator) AddPage(page *model.PdfPage) {
+func (c *Creator) AddPage(page *model.PdfPage) error {
+	mbox, err := page.GetMediaBox()
+	if err != nil {
+		common.Log.Debug("Failed to get page mediabox: %v", err)
+		return err
+	}
+
+	c.context.X = mbox.Llx + c.pageMargins.left
+	c.context.Y = c.pageMargins.top
+	c.context.PageHeight = mbox.Ury - mbox.Lly
+	c.context.PageWidth = mbox.Urx - mbox.Llx
+
 	c.pages = append(c.pages, page)
+
+	return nil
 }
 
 // Call before writing out.  Takes care of adding headers and footers, as well as generating front Page and
