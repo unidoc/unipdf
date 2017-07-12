@@ -116,6 +116,16 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 	return true, nil
 }
 
+// Check access rights and permissions for a specified password.  If either user/owner password is specified,
+// full rights are granted, otherwise the access rights are specified by the Permissions flag.
+//
+// The bool flag indicates that the user can access and view the file.
+// The AccessPermissions shows what access the user has for editing etc.
+// An error is returned if there was a problem performing the authentication.
+func (this *PdfReader) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+	return this.parser.CheckAccessRights(password)
+}
+
 // Loads the structure of the pdf file: pages, outlines, etc.
 func (this *PdfReader) loadStructure() error {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {

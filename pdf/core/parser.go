@@ -1488,3 +1488,28 @@ func (this *PdfParser) Decrypt(password []byte) (bool, error) {
 
 	return authenticated, err
 }
+
+// Check access rights and permissions for a specified password.  If either user/owner password is specified,
+// full rights are granted, otherwise the access rights are specified by the Permissions flag.
+//
+// The bool flag indicates that the user can access and view the file.
+// The AccessPermissions shows what access the user has for editing etc.
+// An error is returned if there was a problem performing the authentication.
+func (this *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+	// Also build the encryption/decryption key.
+	if this.crypter == nil {
+		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
+		perms := AccessPermissions{}
+		perms.Printing = true
+		perms.Modify = true
+		perms.FillForms = true
+		perms.RotateInsert = true
+		perms.ExtractGraphics = true
+		perms.DisabilityExtract = true
+		perms.Annotate = true
+		perms.FullPrintQuality = true
+		return true, perms, nil
+	}
+
+	return this.crypter.checkAccessRights(password)
+}

@@ -46,14 +46,20 @@ type PdfCrypt struct {
 }
 
 type AccessPermissions struct {
-	Printing          bool
-	Modify            bool
-	ExtractGraphics   bool
-	Annotate          bool
+	Printing        bool
+	Modify          bool
+	ExtractGraphics bool
+	Annotate        bool
+
+	// Allow form filling, if annotation is disabled?  If annotation enabled, is not looked at.
 	FillForms         bool
 	DisabilityExtract bool // not clear what this means!
-	RotateInsert      bool
-	LimitPrintQuality bool
+
+	// Allow rotating, editing page order.
+	RotateInsert bool
+
+	// Limit print quality (lowres), assuming Printing is true.
+	FullPrintQuality bool
 }
 
 const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
@@ -326,7 +332,7 @@ func (this *PdfCrypt) GetAccessPermissions() AccessPermissions {
 		perms.RotateInsert = true
 	}
 	if P&(1<<11) > 0 {
-		perms.LimitPrintQuality = true
+		perms.FullPrintQuality = true
 	}
 	return perms
 }
@@ -350,12 +356,12 @@ func (perms AccessPermissions) GetP() int32 {
 		P |= (1 << 8) // bit 9
 	}
 	if perms.DisabilityExtract {
-		P |= (1 << 9) // bit 10, what means?
+		P |= (1 << 9) // bit 10
 	}
 	if perms.RotateInsert {
 		P |= (1 << 10) // bit 11
 	}
-	if perms.LimitPrintQuality {
+	if perms.FullPrintQuality {
 		P |= (1 << 11) // bit 12
 	}
 	return P
@@ -384,7 +390,7 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
 	common.Log.Trace("Debugging authentication - owner pass")
-	authenticated, err = this.Alg7(password, password)
+	authenticated, err = this.Alg7(password)
 	if err != nil {
 		return false, err
 	}
@@ -395,6 +401,47 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// Check access rights and permissions for a specified password.  If either user/owner password is specified,
+// full rights are granted, otherwise the access rights are specified by the Permissions flag.
+//
+// The bool flag indicates that the user can access and can view the file.
+// The AccessPermissions shows what access the user has for editing etc.
+// An error is returned if there was a problem performing the authentication.
+func (this *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissions, error) {
+	perms := AccessPermissions{}
+
+	// Try owner password -> full rights.
+	isOwner, err := this.Alg7(password)
+	if err != nil {
+		return false, perms, err
+	}
+	if isOwner {
+		// owner -> full rights.
+		perms.Annotate = true
+		perms.DisabilityExtract = true
+		perms.ExtractGraphics = true
+		perms.FillForms = true
+		perms.FullPrintQuality = true
+		perms.Modify = true
+		perms.Printing = true
+		perms.RotateInsert = true
+		return true, perms, nil
+	}
+
+	// Try user password.
+	isUser, err := this.Alg6(password)
+	if err != nil {
+		return false, perms, err
+	}
+	if isUser {
+		// User password specified correctly -> access granted with specified permissions.
+		return true, this.GetAccessPermissions(), nil
+	}
+
+	// Cannot even view the file.
+	return false, perms, nil
 }
 
 func (this *PdfCrypt) paddedPass(pass []byte) []byte {
@@ -1195,7 +1242,7 @@ func (this *PdfCrypt) Alg6(upass []byte) (bool, error) {
 }
 
 // Algorithm 7: Authenticating the owner password.
-func (this *PdfCrypt) Alg7(upass, opass []byte) (bool, error) {
+func (this *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	encKey := this.alg3_key(opass)
 
 	decrypted := make([]byte, len(this.O))
@@ -1206,27 +1253,28 @@ func (this *PdfCrypt) Alg7(upass, opass []byte) (bool, error) {
 		}
 		ciph.XORKeyStream(decrypted, this.O)
 	} else if this.R >= 3 {
-		s := this.O
-		newKey := encKey
+		s := append([]byte{}, this.O...)
 		for i := 0; i < 20; i++ {
+			//newKey := encKey
+			newKey := append([]byte{}, encKey...)
 			for j := 0; j < len(encKey); j++ {
-				newKey[j] ^= byte(i)
+				newKey[j] ^= byte(19 - i)
 			}
 			ciph, err := rc4.NewCipher(newKey)
 			if err != nil {
 				return false, errors.New("Failed cipher")
 			}
 			ciph.XORKeyStream(decrypted, s)
-			s = decrypted
+			s = append([]byte{}, decrypted...)
 		}
 	} else {
 		return false, errors.New("invalid R")
 	}
 
-	if string(decrypted) == string(upass) {
-		// Correct.
-		return true, nil
-	} else {
+	auth, err := this.Alg6(decrypted)
+	if err != nil {
 		return false, nil
 	}
+
+	return auth, nil
 }
