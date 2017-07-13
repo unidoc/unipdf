@@ -6,6 +6,7 @@
 package creator
 
 import (
+	"io"
 	"os"
 
 	"github.com/unidoc/unidoc/common"
@@ -94,12 +95,14 @@ func (c *Creator) getActivePage() *model.PdfPage {
 
 // Set a new Page size.  Pages that are added after this will be created with this Page size.
 // Does not affect pages already created.
+// Use the PPMM (points per mm) and PPI (points per inch) when defining those based on physical page sizes:
+// Example 1: 10x15 sq. mm: SetPageSize(PageSize{10*creator.PPMM, 15*creator.PPMM}) where PPMM is points per mm.
+// Example 2: 3x2 sq. inches: SetPageSize(PageSize{3*creator.PPI, 2*creator.PPI}) where PPI is points per inch.
 func (c *Creator) SetPageSize(size PageSize) {
 	c.pagesize = size
 
-	dimensions := dimensionsMMtoPoints(pageSizesMM[size], float64(72.0))
-	c.pageWidth = dimensions[0]
-	c.pageHeight = dimensions[1]
+	c.pageWidth = size[0]
+	c.pageHeight = size[1]
 }
 
 // Set a function to draw a header on created output pages.
@@ -126,11 +129,8 @@ func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) (*
 func (c *Creator) newPage() *model.PdfPage {
 	page := model.NewPdfPage()
 
-	// Default: 72 points per inch.
-	ppi := float64(72.0)
-	dimensions := dimensionsMMtoPoints(pageSizesMM[c.pagesize], ppi)
-	width := dimensions[0]
-	height := dimensions[1]
+	width := c.pagesize[0]
+	height := c.pagesize[1]
 
 	bbox := model.PdfRectangle{0, 0, width, height}
 	page.MediaBox = &bbox
@@ -176,6 +176,11 @@ func (c *Creator) AddPage(page *model.PdfPage) error {
 	c.pages = append(c.pages, page)
 
 	return nil
+}
+
+// Get current context.
+func (c *Creator) Context() DrawContext {
+	return c.context
 }
 
 // Call before writing out.  Takes care of adding headers and footers, as well as generating front Page and
@@ -335,11 +340,12 @@ func (c *Creator) Draw(d Drawable) error {
 	return nil
 }
 
-// Write output of creator to file.
-func (c *Creator) WriteToFile(outputPath string) error {
+// Write output of creator to io.WriteSeeker interface.
+func (c *Creator) Write(ws io.WriteSeeker) error {
 	if !c.finalized {
 		c.finalize()
 	}
+
 	pdfWriter := model.NewPdfWriter()
 
 	for _, page := range c.pages {
@@ -350,6 +356,16 @@ func (c *Creator) WriteToFile(outputPath string) error {
 		}
 	}
 
+	err := pdfWriter.Write(ws)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Write output of creator to file.
+func (c *Creator) WriteToFile(outputPath string) error {
 	fWrite, err := os.Create(outputPath)
 	if err != nil {
 		return err
@@ -357,7 +373,7 @@ func (c *Creator) WriteToFile(outputPath string) error {
 
 	defer fWrite.Close()
 
-	err = pdfWriter.Write(fWrite)
+	err = c.Write(fWrite)
 	if err != nil {
 		return err
 	}

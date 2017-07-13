@@ -5,24 +5,28 @@
 
 package creator
 
-type PageSize int
+type PageSize [2]float64
 
-const (
-	PageSizeA3     PageSize = iota
-	PageSizeA4              = iota
-	PageSizeA5              = iota
-	PageSizeLetter          = iota
-	PageSizeLegal           = iota
+//
+// Common page sizes in mm:
+// A3: {297, 420}
+// A4: {210, 297}
+// A5: {148, 210}
+// Letter: {216, 280}
+// Legal: {216, 356}
+// Converted to points at standard resolution 72ppi and rounded to 2 digits:
+//
+
+var PPI float64 = 72               // Points per inch. (Default resolution).
+var PPMM float64 = 72 * 1.0 / 25.4 // Points per mm. (Default resolution).
+
+var (
+	PageSizeA3     = PageSize{297 * PPMM, 420 * PPMM}
+	PageSizeA4     = PageSize{210 * PPMM, 297 * PPMM}
+	PageSizeA5     = PageSize{148 * PPMM, 210 * PPMM}
+	PageSizeLetter = PageSize{8.5 * PPI, 11 * PPI}
+	PageSizeLegal  = PageSize{8.5 * PPI, 14 * PPI}
 )
-
-// Page sizes in mm.
-var pageSizesMM map[PageSize][2]float64 = map[PageSize][2]float64{
-	PageSizeA3:     {297, 420},
-	PageSizeA4:     {210, 297},
-	PageSizeA5:     {148, 210},
-	PageSizeLetter: {216, 280},
-	PageSizeLegal:  {216, 356},
-}
 
 type TextAlignment int
 
