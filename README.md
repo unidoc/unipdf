@@ -35,10 +35,6 @@ Check out the Releases section to see the tagged releases.
  * Self contained with no external dependencies
  * Developer friendly
 
-## Roadmap
-
-Our [roadmap](https://trello.com/b/JcliaYYI) is publicly available and features can be voted upon.
-
 ## Examples
 
 See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master) folder.
