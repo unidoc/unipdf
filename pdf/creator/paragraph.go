@@ -347,6 +347,7 @@ func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	blocks = append(blocks, blk)
 	if p.positioning.isRelative() {
+		ctx.X -= p.margins.left // Move back.
 		return blocks, ctx, nil
 	} else {
 		// Absolute: not changing the context.
