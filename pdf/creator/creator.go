@@ -6,6 +6,7 @@
 package creator
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -174,6 +175,30 @@ func (c *Creator) AddPage(page *model.PdfPage) error {
 	c.context.PageWidth = mbox.Urx - mbox.Llx
 
 	c.pages = append(c.pages, page)
+
+	return nil
+}
+
+// Rotate the current active page by angle degrees.
+// NOTE: angleDeg must be a multiple of 90.
+func (c *Creator) RotateDeg(angleDeg int64) error {
+	page := c.getActivePage()
+	if page == nil {
+		common.Log.Debug("Fail to rotate: no page currently active")
+		return errors.New("No page active")
+	}
+	if angleDeg%90 != 0 {
+		common.Log.Debug("Error: Page rotation angle not a multiple of 90")
+		return errors.New("Range check error")
+	}
+
+	// Do the rotation.
+	var rotation int64 = 0
+	if page.Rotate != nil {
+		rotation = *(page.Rotate)
+	}
+	rotation += angleDeg // Rotate by angleDeg degrees.
+	page.Rotate = &rotation
 
 	return nil
 }
