@@ -38,6 +38,9 @@ type image struct {
 	xPos float64
 	yPos float64
 
+	// Opacity (alpha value).
+	opacity float64
+
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
@@ -71,6 +74,7 @@ func NewImage(data []byte) (*image, error) {
 	image.width = image.origWidth
 	image.height = image.origHeight
 	image.angle = 0
+	image.opacity = 1.0
 
 	image.positioning = positionRelative
 
@@ -129,6 +133,11 @@ func (img *image) Height() float64 {
 // Get image document width.
 func (img *image) Width() float64 {
 	return img.width
+}
+
+// Set opacity
+func (img *image) SetOpacity(opacity float64) {
+	img.opacity = opacity
 }
 
 // Set the image Margins.
@@ -263,7 +272,12 @@ func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, err
 	// Graphics state with normal blend mode.
 	gs0 := core.MakeDict()
 	gs0.Set("BM", core.MakeName("Normal"))
-	err = blk.resources.AddExtGState(gsName, gs0)
+	if img.opacity < 1.0 {
+		gs0.Set("CA", core.MakeFloat(img.opacity))
+		gs0.Set("ca", core.MakeFloat(img.opacity))
+	}
+
+	err = blk.resources.AddExtGState(gsName, core.MakeIndirectObject(gs0))
 	if err != nil {
 		return ctx, err
 	}

@@ -8,6 +8,8 @@ package creator
 import (
 	"errors"
 
+	"fmt"
+
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -348,6 +350,7 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 	xobjectMap := map[core.PdfObjectName]core.PdfObjectName{}
 	fontMap := map[core.PdfObjectName]core.PdfObjectName{}
 	csMap := map[core.PdfObjectName]core.PdfObjectName{}
+	gstateMap := map[core.PdfObjectName]core.PdfObjectName{}
 
 	for _, op := range *contentsToAdd {
 		switch op.Operand {
@@ -429,6 +432,35 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 					}
 
 					useName := csMap[*name]
+					op.Params[0] = &useName
+				}
+			}
+		case "gs":
+			// ExtGState.
+			if len(op.Params) == 1 {
+				if name, ok := op.Params[0].(*core.PdfObjectName); ok {
+					if _, processed := gstateMap[*name]; !processed {
+						var useName core.PdfObjectName
+						// Process if not already processed.
+						gs, found := resourcesToAdd.GetExtGState(*name)
+						if found {
+							useName = *name
+							i := 1
+							for {
+								gs2, found := resources.GetExtGState(useName)
+								if !found || gs == gs2 {
+									break
+								}
+								useName = core.PdfObjectName(fmt.Sprintf("GS%d", i))
+								i++
+							}
+						}
+
+						resources.AddExtGState(useName, gs)
+						gstateMap[*name] = useName
+					}
+
+					useName := gstateMap[*name]
 					op.Params[0] = &useName
 				}
 			}
