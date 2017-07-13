@@ -119,6 +119,7 @@ func NewImageFromGoImage(goimg goimage.Image) (*image, error) {
 	image.width = image.origWidth
 	image.height = image.origHeight
 	image.angle = 0
+	image.opacity = 1
 
 	image.positioning = positionRelative
 
