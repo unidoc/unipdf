@@ -908,6 +908,80 @@ func TestTable(t *testing.T) {
 	}
 }
 
+func getNormalRgb(r, g, b float64) (float64, float64, float64) {
+	return r / 255.0, g / 255.0, b / 255.0
+}
+
+func TestTableInSubchapter(t *testing.T) {
+	c := New()
+
+	fontRegular := fonts.NewFontHelvetica()
+	fontBold := fonts.NewFontHelveticaBold()
+
+	ch := c.NewChapter("Document control")
+	ch.SetMargins(0, 0, 40, 0)
+	ch.GetHeading().SetFont(fontRegular)
+	ch.GetHeading().SetFontSize(18)
+	ch.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+
+	sc := c.NewSubchapter(ch, "Issuer details")
+	sc.SetMargins(0, 0, 5, 0)
+	sc.GetHeading().SetFont(fontRegular)
+	sc.GetHeading().SetFontSize(18)
+	sc.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+
+	issuerTable := NewTable(2)
+
+	p := NewParagraph("Issuer")
+	p.SetFont(fontBold)
+	p.SetFontSize(10)
+
+	cell := issuerTable.NewCell()
+	cell.SetContent(p)
+
+	p = NewParagraph("Company Inc.")
+	p.SetFont(fontRegular)
+	p.SetFontSize(10)
+	cell = issuerTable.NewCell()
+	cell.SetContent(p)
+
+	issuerTable.SetMargins(10, 10, 10, 10)
+
+	ch.Add(issuerTable)
+
+	sc = c.NewSubchapter(ch, "My Statement")
+	sc.SetMargins(0, 0, 5, 0)
+	sc.GetHeading().SetFont(fontRegular)
+	sc.GetHeading().SetFontSize(18)
+	sc.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+
+	myText := "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum."
+
+	myPara := NewParagraph(myText)
+	myPara.SetFont(fontRegular)
+	myPara.SetFontSize(10)
+	myPara.SetColor(getNormalRgb(72.0, 86.0, 95.0))
+	myPara.SetTextAlignment(TextAlignmentJustify)
+	myPara.SetLineHeight(1.5)
+	sc.Add(myPara)
+
+	err := c.Draw(ch)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = c.WriteToFile("/tmp/4_tables_in_subchap.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 // Add headers and footers via creator.
 func addHeadersAndFooters(c *Creator) {
 	c.DrawHeader(func(pageNum int, totPages int) {

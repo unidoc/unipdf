@@ -149,6 +149,12 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	if table.positioning.isAbsolute() {
 		ctx.X = table.xPos
 		ctx.Y = table.yPos
+	} else {
+		// Relative mode: add margins.
+		ctx.X += table.margins.left
+		ctx.Y += table.margins.top
+		ctx.Width -= table.margins.left + table.margins.right
+		ctx.Height -= table.margins.bottom + table.margins.top
 	}
 
 	// Store table's upper left corner.
@@ -220,6 +226,8 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X = origCtx.X
 		// Return original width
 		ctx.Width = origCtx.Width
+		// Add the bottom margin
+		ctx.Y += table.margins.bottom
 	}
 
 	return blocks, ctx, nil
