@@ -75,7 +75,7 @@ func NewParagraph(text string) *paragraph {
 	p.fontSize = 10
 	p.lineHeight = 1.0
 	p.enableWrap = true
-	p.SetColor(0, 0, 0)
+	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
 	p.angle = 0
 
@@ -121,10 +121,22 @@ func (p *paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
 }
 
-// Set RGB color.
-func (p *paragraph) SetColor(r, g, b float64) {
-	color := model.NewPdfColorDeviceRGB(r, g, b)
-	p.color = *color
+// Set color of paragraph text.
+//
+// Example:
+// 1.   p := NewParagraph("Red paragraph")
+//      // Set to red color with a hex code:
+//      p.SetColor(creator.ColorRGBFromHex("#ff0000"))
+//
+// 2. Make paragraph green with 8-bit rgb values (0-255 each component)
+//      p.SetColor(creator.ColorRGBFrom8bit(0, 255, 0)
+//
+// 3. Make paragraph blue with arithmetic (0-1) rgb components.
+//      p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
+//
+func (p *paragraph) SetColor(color rgbColor) {
+	pdfColor := model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+	p.color = *pdfColor
 }
 
 // Drawable interface implementations.

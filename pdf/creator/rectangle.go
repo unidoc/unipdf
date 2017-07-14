@@ -50,14 +50,14 @@ func (rect *rectangle) SetBorderWidth(bw float64) {
 	rect.borderWidth = bw
 }
 
-// Set border color: r,g,b values from [0-1].
-func (rect *rectangle) SetBorderColorRGB(r, g, b float64) {
-	rect.borderColor = model.NewPdfColorDeviceRGB(r, g, b)
+// Set border color.
+func (rect *rectangle) SetBorderColor(color rgbColor) {
+	rect.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
 }
 
-// Set fill color: r,g,b values from [0-1].
-func (rect *rectangle) SetFillColorRGB(r, g, b float64) {
-	rect.fillColor = model.NewPdfColorDeviceRGB(r, g, b)
+// Set fill color.
+func (rect *rectangle) SetFillColor(color rgbColor) {
+	rect.fillColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
 }
 
 // Draws the rectangle on a new block representing the page.

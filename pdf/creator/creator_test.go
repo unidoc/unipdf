@@ -129,8 +129,7 @@ func TestShapes1(t *testing.T) {
 	// Add line.
 	line := NewLine(0, 0, 100, 100)
 	line.SetLineWidth(3.0)
-	r, g, b, _ := ColorRGBFromHex("#ff0000")
-	line.SetColorRGB(r, g, b)
+	line.SetColor(ColorRGBFromHex("#ff0000"))
 	err = creator.Draw(line)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -147,11 +146,9 @@ func TestShapes1(t *testing.T) {
 
 	// Add rect with fill and large border
 	rect = NewRectangle(100, 500, 100, 100)
-	r, g, b, _ = ColorRGBFromHex("#00ff00") // Green border
-	rect.SetBorderColorRGB(r, g, b)
+	rect.SetBorderColor(ColorRGBFromHex("#00ff00")) // Green border
 	rect.SetBorderWidth(15.0)
-	r, g, b, _ = ColorRGBFromHex("#0000ff") // Blue fill
-	rect.SetFillColorRGB(r, g, b)
+	rect.SetFillColor(ColorRGBFromHex("#0000ff")) // Blue fill
 	err = creator.Draw(rect)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -176,8 +173,7 @@ func TestShapes1(t *testing.T) {
 
 	// Draw an ellipse with fill and border.
 	ell = NewEllipse(500, 100, 100, 200)
-	r, g, b, _ = ColorRGBFromHex("#ccc") // Gray fill
-	ell.SetFillColorRGB(r, g, b)
+	ell.SetFillColor(ColorRGBFromHex("#ccc")) // Gray fill
 	ell.SetBorderWidth(10.0)
 	err = creator.Draw(ell)
 	if err != nil {
@@ -217,8 +213,7 @@ func TestShapesOnBlock(t *testing.T) {
 	// Add line.
 	line := NewLine(0, 180, creator.Width(), 180)
 	line.SetLineWidth(10.0)
-	r, g, b, _ := ColorRGBFromHex("#ff0000")
-	line.SetColorRGB(r, g, b)
+	line.SetColor(ColorRGBFromHex("#ff0000"))
 	block.Draw(line)
 
 	creator.NewPage()
@@ -689,7 +684,7 @@ func TestSubchaptersSimple(t *testing.T) {
 	// Should be able to wrap..
 	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
 		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(0.5, 0.5, 0.5)
+		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
 		ch.GetHeading().SetFontSize(28)
 		ch.GetHeading().SetMargins(0, 0, 0, 30)
 
@@ -802,7 +797,7 @@ func TestSubchapters(t *testing.T) {
 	// Set a function to create the table of contents.
 	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
 		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(0.5, 0.5, 0.5)
+		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
 		ch.GetHeading().SetFontSize(28)
 		ch.GetHeading().SetMargins(0, 0, 0, 30)
 
@@ -908,10 +903,6 @@ func TestTable(t *testing.T) {
 	}
 }
 
-func getNormalRgb(r, g, b float64) (float64, float64, float64) {
-	return r / 255.0, g / 255.0, b / 255.0
-}
-
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
@@ -922,13 +913,13 @@ func TestTableInSubchapter(t *testing.T) {
 	ch.SetMargins(0, 0, 40, 0)
 	ch.GetHeading().SetFont(fontRegular)
 	ch.GetHeading().SetFontSize(18)
-	ch.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+	ch.GetHeading().SetColor(ColorRGBFrom8bit(72, 86, 95))
 
 	sc := c.NewSubchapter(ch, "Issuer details")
 	sc.SetMargins(0, 0, 5, 0)
 	sc.GetHeading().SetFont(fontRegular)
 	sc.GetHeading().SetFontSize(18)
-	sc.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+	sc.GetHeading().SetColor(ColorRGBFrom8bit(72, 86, 95))
 
 	issuerTable := NewTable(2)
 
@@ -953,7 +944,7 @@ func TestTableInSubchapter(t *testing.T) {
 	sc.SetMargins(0, 0, 5, 0)
 	sc.GetHeading().SetFont(fontRegular)
 	sc.GetHeading().SetFontSize(18)
-	sc.GetHeading().SetColor(getNormalRgb(72.0, 86.0, 95.0))
+	sc.GetHeading().SetColor(ColorRGBFrom8bit(72, 86, 95))
 
 	myText := "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
 		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
@@ -964,7 +955,7 @@ func TestTableInSubchapter(t *testing.T) {
 	myPara := NewParagraph(myText)
 	myPara.SetFont(fontRegular)
 	myPara.SetFontSize(10)
-	myPara.SetColor(getNormalRgb(72.0, 86.0, 95.0))
+	myPara.SetColor(ColorRGBFrom8bit(72, 86, 95))
 	myPara.SetTextAlignment(TextAlignmentJustify)
 	myPara.SetLineHeight(1.5)
 	sc.Add(myPara)
