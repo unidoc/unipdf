@@ -67,15 +67,22 @@ func New() *Creator {
 	return c
 }
 
+// Set the page margins: left, right, top, bottom.
+// The default page margins are 10% of document width.
+func (c *Creator) SetPageMargins(left, right, top, bottom float64) {
+	c.pageMargins.left = left
+	c.pageMargins.right = right
+	c.pageMargins.top = top
+	c.pageMargins.bottom = bottom
+}
+
 // Returns the current Page width.
 func (c *Creator) Width() float64 {
-	//return c.context.Width
 	return c.pageWidth
 }
 
 // Returns the current Page height.
 func (c *Creator) Height() float64 {
-	//return c.context.Height
 	return c.pageHeight
 }
 
@@ -96,14 +103,33 @@ func (c *Creator) getActivePage() *model.PdfPage {
 
 // Set a new Page size.  Pages that are added after this will be created with this Page size.
 // Does not affect pages already created.
-// Use the PPMM (points per mm) and PPI (points per inch) when defining those based on physical page sizes:
-// Example 1: 10x15 sq. mm: SetPageSize(PageSize{10*creator.PPMM, 15*creator.PPMM}) where PPMM is points per mm.
-// Example 2: 3x2 sq. inches: SetPageSize(PageSize{3*creator.PPI, 2*creator.PPI}) where PPI is points per inch.
+//
+// Common page sizes are defined as constants.
+// Examples:
+// 1. c.SetPageSize(creator.PageSizeA4)
+// 2. c.SetPageSize(creator.PageSizeA3)
+// 3. c.SetPageSize(creator.PageSizeLegal)
+// 4. c.SetPageSize(creator.PageSizeLetter)
+//
+// For custom sizes: Use the PPMM (points per mm) and PPI (points per inch) when defining those based on
+// physical page sizes:
+//
+// Examples:
+// 1. 10x15 sq. mm: SetPageSize(PageSize{10*creator.PPMM, 15*creator.PPMM}) where PPMM is points per mm.
+// 2. 3x2 sq. inches: SetPageSize(PageSize{3*creator.PPI, 2*creator.PPI}) where PPI is points per inch.
+//
 func (c *Creator) SetPageSize(size PageSize) {
 	c.pagesize = size
 
 	c.pageWidth = size[0]
 	c.pageHeight = size[1]
+
+	// Update default margins to 10% of width.
+	m := 0.1 * c.pageWidth
+	c.pageMargins.left = m
+	c.pageMargins.right = m
+	c.pageMargins.top = m
+	c.pageMargins.bottom = m
 }
 
 // Set a function to draw a header on created output pages.
