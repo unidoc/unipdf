@@ -87,12 +87,14 @@ func (chap *Chapter) GetHeading() *paragraph {
 	return chap.heading
 }
 
+/*
 // Set absolute coordinates.
 func (chap *Chapter) SetPos(x, y float64) {
 	chap.positioning = positionAbsolute
 	chap.xPos = x
 	chap.yPos = y
 }
+*/
 
 // Set chapter Margins.  Typically not needed as the Page Margins are used.
 func (chap *Chapter) SetMargins(left, right, top, bottom float64) {
@@ -131,6 +133,16 @@ func (chap *Chapter) Add(d Drawable) error {
 // Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
 // multiple pages.
 func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	origCtx := ctx
+
+	if chap.positioning.isRelative() {
+		// Update context.
+		ctx.X += chap.margins.left
+		ctx.Y += chap.margins.top
+		ctx.Width -= chap.margins.left + chap.margins.right
+		ctx.Height -= chap.margins.top
+	}
+
 	blocks, ctx, err := chap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
@@ -158,6 +170,17 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		blocks = append(blocks, newBlocks[1:]...)
 
 		ctx = c
+	}
+
+	if chap.positioning.isRelative() {
+		// Move back X to same start of line.
+		ctx.X = origCtx.X
+	}
+
+	if chap.positioning.isAbsolute() {
+		// If absolute: return original context.
+		return blocks, origCtx, nil
+
 	}
 
 	return blocks, ctx, nil

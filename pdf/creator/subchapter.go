@@ -94,11 +94,13 @@ func (subchap *subchapter) GetHeading() *paragraph {
 }
 
 // Set absolute coordinates.
+/*
 func (subchap *subchapter) SetPos(x, y float64) {
 	subchap.positioning = positionAbsolute
 	subchap.xPos = x
 	subchap.yPos = y
 }
+*/
 
 // Set chapter Margins.  Typically not needed as the Page Margins are used.
 func (subchap *subchapter) SetMargins(left, right, top, bottom float64) {
@@ -128,7 +130,16 @@ func (subchap *subchapter) Add(d Drawable) {
 // Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
 // multiple pages.
 func (subchap *subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	ctx.Y += subchap.margins.top
+	origCtx := ctx
+
+	if subchap.positioning.isRelative() {
+		// Update context.
+		ctx.X += subchap.margins.left
+		ctx.Y += subchap.margins.top
+		ctx.Width -= subchap.margins.left + subchap.margins.right
+		ctx.Height -= subchap.margins.top
+	}
+
 	blocks, ctx, err := subchap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
@@ -155,6 +166,17 @@ func (subchap *subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 		blocks = append(blocks, newBlocks[1:]...)
 
 		ctx = c
+	}
+
+	if subchap.positioning.isRelative() {
+		// Move back X to same start of line.
+		ctx.X = origCtx.X
+	}
+
+	if subchap.positioning.isAbsolute() {
+		// If absolute: return original context.
+		return blocks, origCtx, nil
+
 	}
 
 	return blocks, ctx, nil

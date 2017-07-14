@@ -596,6 +596,33 @@ func TestChapter(t *testing.T) {
 	}
 }
 
+// Tests creating a chapter with paragraphs.
+func TestChapterMargins(t *testing.T) {
+	c := New()
+
+	for j := 0; j < 20; j++ {
+		ch := c.NewChapter(fmt.Sprintf("Chapter %d", j+1))
+		if j < 5 {
+			ch.SetMargins(3*float64(j), 3*float64(j), 5+float64(j), 0)
+		}
+
+		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+			"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+			"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+			"mollit anim id est laborum.")
+		p.SetTextAlignment(TextAlignmentJustify)
+		ch.Add(p)
+		c.Draw(ch)
+	}
+
+	err := c.WriteToFile("/tmp/3_chapters_margins.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 // Test creating and drawing subchapters with text content.
 // Also generates a front page, and a table of contents.
 func TestSubchaptersSimple(t *testing.T) {
