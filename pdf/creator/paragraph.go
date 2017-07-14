@@ -17,9 +17,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// XXX/TODO: Under consideration.  Should allow paragraph to scale?  Makes more sense to change font size.
-// Alternatively can draw to a block and scale the block, if need to fit into a specific slot.
-
 // A paragraph represents text drawn with a specified font and can wrap across lines and pages.
 // By default occupies the available width in the drawing context.
 type paragraph struct {

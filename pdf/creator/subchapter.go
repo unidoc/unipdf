@@ -22,6 +22,12 @@ type subchapter struct {
 
 	contents []Drawable
 
+	// Show chapter numbering
+	showNumbering bool
+
+	// Include in TOC.
+	includeInTOC bool
+
 	// Positioning: relative / absolute.
 	positioning positioning
 
@@ -50,6 +56,9 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	p.SetFontSize(14)
 	p.SetFont(fonts.NewFontHelvetica()) // bold?
 
+	subchap.showNumbering = true
+	subchap.includeInTOC = true
+
 	subchap.heading = p
 	subchap.contents = []Drawable{}
 
@@ -60,6 +69,28 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	subchap.toc = c.toc
 
 	return subchap
+}
+
+// Set flag to indicate whether or not to show chapter numbers as part of title.
+func (subchap *subchapter) SetShowNumbering(show bool) {
+	if show {
+		heading := fmt.Sprintf("%d.%d. %s", subchap.chapterNum, subchap.subchapterNum, subchap.title)
+		subchap.heading.SetText(heading)
+	} else {
+		heading := fmt.Sprintf("%s", subchap.title)
+		subchap.heading.SetText(heading)
+	}
+	subchap.showNumbering = show
+}
+
+// Set flag to indicate whether or not to include in the table of contents.
+func (subchap *subchapter) SetIncludeInTOC(includeInTOC bool) {
+	subchap.includeInTOC = includeInTOC
+}
+
+// Get access to the heading paragraph to address style etc.
+func (subchap *subchapter) GetHeading() *paragraph {
+	return subchap.heading
 }
 
 // Set absolute coordinates.
@@ -105,8 +136,10 @@ func (subchap *subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 	if len(blocks) > 1 {
 		ctx.Page++ // did not fit - moved to next Page.
 	}
-	// Add to TOC.
-	subchap.toc.add(subchap.title, subchap.chapterNum, subchap.subchapterNum, ctx.Page)
+	if subchap.includeInTOC {
+		// Add to TOC.
+		subchap.toc.add(subchap.title, subchap.chapterNum, subchap.subchapterNum, ctx.Page)
+	}
 
 	for _, d := range subchap.contents {
 		newBlocks, c, err := d.GeneratePageBlocks(ctx)

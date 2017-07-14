@@ -413,6 +413,35 @@ func TestParagraphWrapping(t *testing.T) {
 	}
 }
 
+func TestParagraphWrapping2(t *testing.T) {
+	creator := New()
+
+	p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore" +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+
+	alignments := []TextAlignment{TextAlignmentLeft, TextAlignmentJustify, TextAlignmentCenter, TextAlignmentRight}
+	for j := 0; j < 25; j++ {
+		//p.SetAlignment(alignments[j%4])
+		p.SetMargins(50, 50, 50, 50)
+		p.SetTextAlignment(alignments[1])
+
+		err := creator.Draw(p)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+	}
+
+	err := creator.WriteToFile("/tmp/2_pwrap2.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 // Test writing with various TTF fonts.  Assumes MacOS system, where fonts are stored under /Library/Fonts.
 func TestParagraphFonts(t *testing.T) {
 	creator := New()
