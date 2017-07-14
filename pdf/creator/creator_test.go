@@ -711,9 +711,9 @@ func TestSubchaptersSimple(t *testing.T) {
 			p.SetFontSize(14)
 			cell := table.NewCell(row, 1)
 			cell.SetContent(p)
-			// Set the width so the height can be determined correctly.
-			p.SetWidth(c.Width() - c.pageMargins.left - c.pageMargins.right)
-			table.SetRowHeight(row, p.Height()+5)
+			// Set the paragraph width to the cell width.
+			p.SetWidth(cell.Width(c.Context()))
+			table.SetRowHeight(row, p.Height()*1.2)
 
 			// Col 1. Page number.
 			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
@@ -828,9 +828,9 @@ func TestSubchapters(t *testing.T) {
 			p.SetFontSize(14)
 			cell := table.NewCell(row, 1)
 			cell.SetContent(p)
-			// Set the width so the height can be determined correctly.
-			p.SetWidth(c.Width() - c.pageMargins.left - c.pageMargins.right)
-			table.SetRowHeight(row, p.Height()+5)
+			// Set the paragraph width to the cell width.
+			p.SetWidth(cell.Width(c.Context()))
+			table.SetRowHeight(row, p.Height()*1.2)
 
 			// Col 1. Page number.
 			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))

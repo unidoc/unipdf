@@ -218,6 +218,9 @@ type tableCell struct {
 
 	// Each cell can contain 1 drawable.
 	content Drawable
+
+	// Table reference
+	table *Table
 }
 
 // Make a new cell and insert into the table at specified row and column.
@@ -231,7 +234,20 @@ func (table *Table) NewCell(row, col int) *tableCell {
 
 	table.cells = append(table.cells, cell)
 
+	// Keep reference to the table.
+	cell.table = table
+
 	return cell
+}
+
+// Get cell width based on input draw context.
+func (cell *tableCell) Width(ctx DrawContext) float64 {
+	fraction := float64(0.0)
+	for j := 0; j < cell.colspan; j++ {
+		fraction += cell.table.colWidths[cell.col+j-1]
+	}
+	w := ctx.Width * fraction
+	return w
 }
 
 // Set cell content.
