@@ -693,12 +693,10 @@ func TestSubchaptersSimple(t *testing.T) {
 		ch.GetHeading().SetFontSize(28)
 		ch.GetHeading().SetMargins(0, 0, 0, 30)
 
-		numRows := len(toc.entries)
-		table := NewTable(numRows, 2) // Nx3 table
+		table := NewTable(2) // 2 column table.
 		// Default, equal column sizes (4x0.25)...
 		table.SetColumnWidths(0.9, 0.1)
 
-		row := 1
 		for _, entry := range toc.entries {
 			// Col 1. Chapter number, title.
 			var str string
@@ -709,19 +707,17 @@ func TestSubchaptersSimple(t *testing.T) {
 			}
 			p := NewParagraph(str)
 			p.SetFontSize(14)
-			cell := table.NewCell(row, 1)
+			cell := table.NewCell()
 			cell.SetContent(p)
 			// Set the paragraph width to the cell width.
 			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(row, p.Height()*1.2)
+			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
 
 			// Col 1. Page number.
 			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
 			p.SetFontSize(14)
-			cell = table.NewCell(row, 2)
+			cell = table.NewCell()
 			cell.SetContent(p)
-
-			row++
 		}
 		err := ch.Add(table)
 		if err != nil {
@@ -810,12 +806,10 @@ func TestSubchapters(t *testing.T) {
 		ch.GetHeading().SetFontSize(28)
 		ch.GetHeading().SetMargins(0, 0, 0, 30)
 
-		numRows := len(toc.entries)
-		table := NewTable(numRows, 2) // Nx3 table
+		table := NewTable(2)
 		// Default, equal column sizes (4x0.25)...
 		table.SetColumnWidths(0.9, 0.1)
 
-		row := 1
 		for _, entry := range toc.entries {
 			// Col 1. Chapter number, title.
 			var str string
@@ -826,19 +820,17 @@ func TestSubchapters(t *testing.T) {
 			}
 			p := NewParagraph(str)
 			p.SetFontSize(14)
-			cell := table.NewCell(row, 1)
+			cell := table.NewCell()
 			cell.SetContent(p)
 			// Set the paragraph width to the cell width.
 			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(row, p.Height()*1.2)
+			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
 
 			// Col 1. Page number.
 			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
 			p.SetFontSize(14)
-			cell = table.NewCell(row, 2)
+			cell = table.NewCell()
 			cell.SetContent(p)
-
-			row++
 		}
 		err := ch.Add(table)
 		if err != nil {
@@ -860,40 +852,50 @@ func TestSubchapters(t *testing.T) {
 
 // Test creating and drawing a table.
 func TestTable(t *testing.T) {
-	table := NewTable(4, 4) // 4x4 table
+	table := NewTable(4) // Mx4 table
 	// Default, equal column sizes (4x0.25)...
 	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
 
-	cell := table.NewCell(1, 1)
+	cell := table.NewCell()
 	p := NewParagraph("1,1")
 	cell.SetContent(p)
 
-	cell = table.NewCell(1, 2)
+	cell = table.NewCell()
 	p = NewParagraph("1,2")
 	cell.SetContent(p)
 
-	cell = table.NewCell(1, 3)
+	cell = table.NewCell()
 	p = NewParagraph("1,3")
 	cell.SetContent(p)
 
-	cell = table.NewCell(1, 4)
+	cell = table.NewCell()
 	p = NewParagraph("1,4")
 	cell.SetContent(p)
 
-	cell = table.NewCell(2, 1)
+	cell = table.NewCell()
 	p = NewParagraph("2,1")
 	cell.SetContent(p)
 
-	cell = table.NewCell(2, 2)
+	cell = table.NewCell()
 	p = NewParagraph("2,2")
 	cell.SetContent(p)
 
-	cell = table.NewCell(2, 4)
+	table.SkipCells(1) // Skip over 2,3.
+
+	cell = table.NewCell()
 	p = NewParagraph("2,4")
 	cell.SetContent(p)
 
-	cell = table.NewCell(4, 4)
+	// Skip over two rows.
+	table.SkipRows(2)
+	cell = table.NewCell()
 	p = NewParagraph("4,4")
+	cell.SetContent(p)
+
+	// Move down 3 rows, 2 to the left.
+	table.SkipOver(3, -2)
+	cell = table.NewCell()
+	p = NewParagraph("7,2")
 	cell.SetContent(p)
 
 	c := New()

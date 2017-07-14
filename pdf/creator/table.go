@@ -17,6 +17,11 @@ type Table struct {
 	rows int
 	cols int
 
+	// Current cell.  Current cell in the table.
+	// For 4x4 table, if in the 2nd row, 3rd column, then
+	// curCell = 4+3 = 7
+	curCell int
+
 	// Column width fractions: should add up to 1.
 	colWidths []float64
 
@@ -24,7 +29,7 @@ type Table struct {
 	rowHeights []float64
 
 	// Default row height.
-	rowHeight float64
+	defaultRowHeight float64
 
 	// Content cells.
 	cells []*tableCell
@@ -40,10 +45,12 @@ type Table struct {
 }
 
 // Create a new table with a fixed rows and column size.
-func NewTable(rows, cols int) *Table {
+func NewTable(cols int) *Table {
 	t := &Table{}
-	t.rows = rows
+	t.rows = 0
 	t.cols = cols
+
+	t.curCell = 0
 
 	// Initialize column widths as all equal.
 	t.colWidths = []float64{}
@@ -52,13 +59,11 @@ func NewTable(rows, cols int) *Table {
 		t.colWidths = append(t.colWidths, colWidth)
 	}
 
-	// Initialize row heights all to 10.
 	t.rowHeights = []float64{}
-	for i := 0; i < rows; i++ {
-		t.rowHeights = append(t.rowHeights, 10.0)
-	}
+
 	// Default row height
-	t.rowHeight = 10.0
+	// XXX/TODO: Base on contents instead?
+	t.defaultRowHeight = 10.0
 
 	t.cells = []*tableCell{}
 
@@ -76,11 +81,6 @@ func (table *Table) SetColumnWidths(widths ...float64) error {
 	table.colWidths = widths
 
 	return nil
-}
-
-// Table occupies whatever width is available. Returns -1.
-func (table *Table) Width() float64 {
-	return -1 // Occupy whatever width is available.
 }
 
 // Total height of all rows.
@@ -116,8 +116,21 @@ func (table *Table) SetRowHeight(row int, h float64) error {
 	return nil
 }
 
+// Get row of the current cell position.
+func (table *Table) CurRow() int {
+	curRow := (table.curCell-1)/table.cols + 1
+	return curRow
+}
+
+// Get column of the current cell position.
+func (table *Table) CurCol() int {
+	curCol := (table.curCell-1)%(table.cols) + 1
+	return curCol
+}
+
 // Set absolute coordinates.
 // Note that this is only sensible to use when the table does not wrap over multiple pages.
+// XXX/TODO: Should be able to set width too (not just based on context/relative positioning mode).
 func (table *Table) SetPos(x, y float64) {
 	table.positioning = positionAbsolute
 	table.xPos = x
@@ -172,7 +185,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		// Get total height.
 		h := float64(0.0)
 		for i := 0; i < cell.rowspan; i++ {
-			h += table.rowHeights[cell.col+i-1]
+			h += table.rowHeights[cell.row+i-1]
 		}
 
 		ctx.Height = origHeight - yrel
@@ -224,10 +237,19 @@ type tableCell struct {
 }
 
 // Make a new cell and insert into the table at specified row and column.
-func (table *Table) NewCell(row, col int) *tableCell {
+func (table *Table) NewCell() *tableCell {
+	table.curCell++
+
+	curRow := (table.curCell-1)/table.cols + 1
+	for curRow > table.rows {
+		table.rows++
+		table.rowHeights = append(table.rowHeights, table.defaultRowHeight)
+	}
+	curCol := (table.curCell-1)%(table.cols) + 1
+
 	cell := &tableCell{}
-	cell.row = row
-	cell.col = col
+	cell.row = curRow
+	cell.col = curCol
 
 	cell.rowspan = 1
 	cell.colspan = 1
@@ -238,6 +260,35 @@ func (table *Table) NewCell(row, col int) *tableCell {
 	cell.table = table
 
 	return cell
+}
+
+// Skip over a specified number of cells.
+func (table *Table) SkipCells(num int) {
+	if num < 0 {
+		common.Log.Debug("Table: cannot skip back to previous cells")
+		return
+	}
+	table.curCell += num
+}
+
+// Skip over a specified number of rows.
+func (table *Table) SkipRows(num int) {
+	ncells := num*table.cols - 1
+	if ncells < 0 {
+		common.Log.Debug("Table: cannot skip back to previous cells")
+		return
+	}
+	table.curCell += ncells
+}
+
+// Skip over rows, cols.
+func (table *Table) SkipOver(rows, cols int) {
+	ncells := rows*table.cols + cols - 1
+	if ncells < 0 {
+		common.Log.Debug("Table: cannot skip back to previous cells")
+		return
+	}
+	table.curCell += ncells
 }
 
 // Get cell width based on input draw context.
