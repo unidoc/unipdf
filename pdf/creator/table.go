@@ -215,6 +215,11 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	if table.positioning.isAbsolute() {
 		return blocks, origCtx, nil
+	} else {
+		// Move back X after.
+		ctx.X = origCtx.X
+		// Return original width
+		ctx.Width = origCtx.Width
 	}
 
 	return blocks, ctx, nil
