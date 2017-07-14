@@ -186,6 +186,7 @@ func (c *Creator) initContext() {
 func (c *Creator) NewPage() {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
+	c.context.Page++
 }
 
 func (c *Creator) AddPage(page *model.PdfPage) error {
@@ -201,6 +202,7 @@ func (c *Creator) AddPage(page *model.PdfPage) error {
 	c.context.PageWidth = mbox.Urx - mbox.Llx
 
 	c.pages = append(c.pages, page)
+	c.context.Page++
 
 	return nil
 }
@@ -362,7 +364,6 @@ func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
 		// Add a new Page if none added already.
 		c.NewPage()
-		c.context.Page = 1
 	}
 
 	blocks, ctx, err := d.GeneratePageBlocks(c.context)
@@ -373,7 +374,6 @@ func (c *Creator) Draw(d Drawable) error {
 	for idx, blk := range blocks {
 		if idx > 0 {
 			c.NewPage()
-			c.context.Page++
 		}
 
 		p := c.getActivePage()
