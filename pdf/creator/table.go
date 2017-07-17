@@ -8,8 +8,6 @@ package creator
 import (
 	"errors"
 
-	"fmt"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
 )
@@ -154,9 +152,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		// Relative mode: add margins.
 		ctx.X += table.margins.left
 		ctx.Y += table.margins.top
-		fmt.Printf("Width: %v\n", ctx.Width)
 		ctx.Width -= table.margins.left + table.margins.right
-		fmt.Printf("-> Width: %v\n", ctx.Width)
 		ctx.Height -= table.margins.bottom + table.margins.top
 	}
 	tableWidth := ctx.Width
