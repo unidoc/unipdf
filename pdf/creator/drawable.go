@@ -13,6 +13,13 @@ type Drawable interface {
 	GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error)
 }
 
+// A vector drawable is a Drawable with a specified width and height.
+type VectorDrawable interface {
+	Drawable
+	Width() float64
+	Height() float64
+}
+
 // Drawing context.  Continuously used when drawing the page contents.  Keeps track of current X, Y position,
 // available height as well as other page parameters such as margins and dimensions.
 type DrawContext struct {

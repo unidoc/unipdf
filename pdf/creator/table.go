@@ -247,13 +247,50 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			}
 		}
 
-		// Account for indent.
-		ctx.X += cell.indent
-		ctx.Width -= cell.indent
+		if cell.content != nil {
+			// Account for horizontal alignment:
+			cw := cell.content.Width() // content width.
+			switch cell.horizontalAlignment {
+			case CellHorizontalAlignmentLeft:
+				// Account for indent.
+				ctx.X += cell.indent
+				ctx.Width -= cell.indent
+			case CellHorizontalAlignmentCenter:
+				// Difference between available space and content space.
+				dw := w - cw
+				if dw > 0 {
+					ctx.X += dw / 2
+					ctx.Width -= dw / 2
+				}
+			case CellHorizontalAlignmentRight:
+				if w > cw {
+					ctx.X = ctx.X + w - cw - cell.indent
+					ctx.Width = cw
+				}
+			}
 
-		err := block.DrawWithContext(cell.content, ctx)
-		if err != nil {
-			common.Log.Debug("Error: %v\n", err)
+			// Account for vertical alignment.
+			ch := cell.content.Height() // content height.
+			switch cell.verticalAlignment {
+			case CellVerticalAlignmentTop:
+				// Default: do nothing.
+			case CellVerticalAlignmentMiddle:
+				dh := h - ch
+				if dh > 0 {
+					ctx.Y += dh / 2
+					ctx.Height -= dh / 2
+				}
+			case CellVerticalAlignmentBottom:
+				if h > ch {
+					ctx.Y = ctx.Y + h - ch
+					ctx.Height = ch
+				}
+			}
+
+			err := block.DrawWithContext(cell.content, ctx)
+			if err != nil {
+				common.Log.Debug("Error: %v\n", err)
+			}
 		}
 
 		ctx.Y += h
@@ -279,8 +316,39 @@ type CellBorderStyle int
 
 // Currently supported table styles are: None (no border) and boxed (line along each side).
 const (
+	// No border
 	CellBorderStyleNone CellBorderStyle = iota
+
+	// Borders along all sides (boxed).
 	CellBorderStyleBox
+)
+
+// Define table cell's horizontal alignment.
+type CellHorizontalAlignment int
+
+const (
+	// Align cell content on the left (with specified indent); unused space on the right.
+	CellHorizontalAlignmentLeft CellHorizontalAlignment = iota
+
+	// Align cell content in the middle (unused space divided equally on the left/right).
+	CellHorizontalAlignmentCenter
+
+	// Align the cell content on the right; unsued space on the left.
+	CellHorizontalAlignmentRight
+)
+
+// Define table cell's vertical alignment.
+type CellVerticalAlignment int
+
+const (
+	// Align cell content vertically to the top; unused space below.
+	CellVerticalAlignmentTop CellVerticalAlignment = iota
+
+	// Align cell content in the middle; unused space divided equally above and below.
+	CellVerticalAlignmentMiddle
+
+	// Align cell content on the bottom; unused space above.
+	CellVerticalAlignmentBottom
 )
 
 // Table cell
@@ -301,7 +369,11 @@ type tableCell struct {
 	colspan int
 
 	// Each cell can contain 1 drawable.
-	content Drawable
+	content VectorDrawable
+
+	// Alignment
+	horizontalAlignment CellHorizontalAlignment
+	verticalAlignment   CellVerticalAlignment
 
 	// Left indent.
 	indent float64
@@ -330,6 +402,10 @@ func (table *Table) NewCell() *tableCell {
 
 	cell.borderStyle = CellBorderStyleNone
 	cell.borderColor = model.NewPdfColorDeviceRGB(0, 0, 0)
+
+	// Alignment defaults.
+	cell.horizontalAlignment = CellHorizontalAlignmentLeft
+	cell.verticalAlignment = CellVerticalAlignmentTop
 
 	cell.rowspan = 1
 	cell.colspan = 1
@@ -376,6 +452,24 @@ func (cell *tableCell) SetIndent(indent float64) {
 	cell.indent = indent
 }
 
+// Set cell's horizontal alignment of content.
+// Can be one of:
+// - CellHorizontalAlignmentLeft
+// - CellHorizontalAlignmentCenter
+// - CellHorizontalAlignmentRight
+func (cell *tableCell) SetHorizontalAlignment(halign CellHorizontalAlignment) {
+	cell.horizontalAlignment = halign
+}
+
+// Set cell's vertical alignment of content.
+// Can be one of:
+// - CellHorizontalAlignmentTop
+// - CellHorizontalAlignmentMiddle
+// - CellHorizontalAlignmentBottom
+func (cell *tableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
+	cell.verticalAlignment = valign
+}
+
 // Set cell's border style.
 func (cell *tableCell) SetBorder(style CellBorderStyle, width float64) {
 	cell.borderStyle = style
@@ -402,9 +496,9 @@ func (cell *tableCell) Width(ctx DrawContext) float64 {
 	return w
 }
 
-// Set cell content.
-func (cell *tableCell) SetContent(d Drawable) error {
-	switch t := d.(type) {
+// Set cell content.  The content is a vector drawable, i.e. a drawable with a known height and width.
+func (cell *tableCell) SetContent(vd VectorDrawable) error {
+	switch t := vd.(type) {
 	case *paragraph:
 		// Default paragraph settings in table:
 		t.SetEnableWrap(false) // No wrapping.
@@ -414,9 +508,9 @@ func (cell *tableCell) SetContent(d Drawable) error {
 		if nh > h {
 			cell.table.SetRowHeight(cell.row, nh)
 		}
-		cell.content = d
+		cell.content = vd
 	default:
-		common.Log.Debug("Error: unsupported cell content type %T\n", d)
+		common.Log.Debug("Error: unsupported cell content type %T\n", vd)
 		return errors.New("Type check error")
 	}
 

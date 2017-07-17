@@ -175,7 +175,11 @@ func (p *paragraph) SetWidth(width float64) {
 }
 
 func (p *paragraph) Width() float64 {
-	return p.wrapWidth
+	if p.enableWrap {
+		return p.wrapWidth
+	} else {
+		return p.getTextWidth() / 1000.0
+	}
 }
 
 // The height is calculated based on the input text and how it is wrapped within the container.

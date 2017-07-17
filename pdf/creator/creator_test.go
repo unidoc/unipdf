@@ -1031,6 +1031,8 @@ func TestTableInSubchapter(t *testing.T) {
 	cell.SetBackgroundColor(ColorRed)
 	cell.SetBorder(CellBorderStyleBox, 1.0)
 	cell.SetIndent(5)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+	//cell.SetVerticalAlignment(CellVerticalAlignmentMiddle)
 
 	issuerTable.SetMargins(5, 5, 10, 10)
 
