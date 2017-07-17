@@ -7,19 +7,13 @@ package creator
 
 type PageSize [2]float64
 
-//
-// Common page sizes in mm:
-// A3: {297, 420}
-// A4: {210, 297}
-// A5: {148, 210}
-// Letter: {216, 280}
-// Legal: {216, 356}
-// Converted to points at standard resolution 72ppi and rounded to 2 digits:
-//
-
+// Default PDF resolution (points/inch, points/mm).
 var PPI float64 = 72               // Points per inch. (Default resolution).
 var PPMM float64 = 72 * 1.0 / 25.4 // Points per mm. (Default resolution).
 
+//
+// Commonly used page sizes
+//
 var (
 	PageSizeA3     = PageSize{297 * PPMM, 420 * PPMM}
 	PageSizeA4     = PageSize{210 * PPMM, 297 * PPMM}
@@ -28,6 +22,7 @@ var (
 	PageSizeLegal  = PageSize{8.5 * PPI, 14 * PPI}
 )
 
+// TextAlignment options for paragraph.
 type TextAlignment int
 
 const (

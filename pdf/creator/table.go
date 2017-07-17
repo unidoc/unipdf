@@ -278,8 +278,10 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	return blocks, ctx, nil
 }
 
+// Define table cell's border style.
 type CellBorderStyle int
 
+// Currently supported table styles are: None (no border) and boxed (line along each side).
 const (
 	CellBorderStyleNone CellBorderStyle = iota
 	CellBorderStyleBox
@@ -312,7 +314,7 @@ type tableCell struct {
 	table *Table
 }
 
-// Make a new cell and insert into the table at specified row and column.
+// Make a new cell and insert into the table at current position in the table.
 func (table *Table) NewCell() *tableCell {
 	table.curCell++
 
