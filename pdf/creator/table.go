@@ -8,7 +8,10 @@ package creator
 import (
 	"errors"
 
+	"fmt"
+
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Table allows organizing content in an rows X columns matrix, which can spawn across multiple pages.
@@ -139,8 +142,6 @@ func (table *Table) SetPos(x, y float64) {
 
 // Generate the Page blocks.  Multiple blocks are generated if the contents wrap over multiple pages.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	// Iterate through all the cells
-	tableWidth := ctx.Width
 
 	blocks := []*Block{}
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
@@ -153,9 +154,12 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		// Relative mode: add margins.
 		ctx.X += table.margins.left
 		ctx.Y += table.margins.top
+		fmt.Printf("Width: %v\n", ctx.Width)
 		ctx.Width -= table.margins.left + table.margins.right
+		fmt.Printf("-> Width: %v\n", ctx.Width)
 		ctx.Height -= table.margins.bottom + table.margins.top
 	}
+	tableWidth := ctx.Width
 
 	// Store table's upper left corner.
 	ulX := ctx.X
@@ -212,10 +216,51 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X = ulX + xrel
 		ctx.Y = ulY + yrel
 
+		if cell.backgroundColor != nil {
+			// Draw background (fill)
+			rect := NewRectangle(ctx.X, ctx.Y, w, h)
+			r := cell.backgroundColor.R()
+			g := cell.backgroundColor.G()
+			b := cell.backgroundColor.B()
+			rect.SetFillColor(ColorRGBFromArithmetic(r, g, b))
+			if cell.borderStyle != CellBorderStyleNone {
+				// and border.
+				rect.SetBorderWidth(cell.borderWidth)
+				r := cell.borderColor.R()
+				g := cell.borderColor.G()
+				b := cell.borderColor.B()
+				rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
+			} else {
+				rect.SetBorderWidth(0)
+			}
+			err := block.Draw(rect)
+			if err != nil {
+				common.Log.Debug("Error: %v\n", err)
+			}
+		} else if cell.borderStyle != CellBorderStyleNone {
+			// Draw border (no fill).
+			rect := NewRectangle(ctx.X, ctx.Y, w, h)
+			rect.SetBorderWidth(cell.borderWidth)
+			r := cell.borderColor.R()
+			g := cell.borderColor.G()
+			b := cell.borderColor.B()
+			rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
+			err := block.Draw(rect)
+			if err != nil {
+				common.Log.Debug("Error: %v\n", err)
+			}
+		}
+
+		// Account for indent.
+		ctx.X += cell.indent
+		ctx.Width -= cell.indent
+
 		err := block.DrawWithContext(cell.content, ctx)
 		if err != nil {
 			common.Log.Debug("Error: %v\n", err)
 		}
+
+		ctx.Y += h
 	}
 	blocks = append(blocks, block)
 
@@ -233,8 +278,23 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	return blocks, ctx, nil
 }
 
+type CellBorderStyle int
+
+const (
+	CellBorderStyleNone CellBorderStyle = iota
+	CellBorderStyleBox
+)
+
 // Table cell
 type tableCell struct {
+	// Background
+	backgroundColor *model.PdfColorDeviceRGB
+
+	// Border
+	borderStyle CellBorderStyle
+	borderColor *model.PdfColorDeviceRGB
+	borderWidth float64
+
 	// The row and column which the cell starts from.
 	row, col int
 
@@ -244,6 +304,9 @@ type tableCell struct {
 
 	// Each cell can contain 1 drawable.
 	content Drawable
+
+	// Left indent.
+	indent float64
 
 	// Table reference
 	table *Table
@@ -263,6 +326,12 @@ func (table *Table) NewCell() *tableCell {
 	cell := &tableCell{}
 	cell.row = curRow
 	cell.col = curCol
+
+	// Default left indent
+	cell.indent = 5
+
+	cell.borderStyle = CellBorderStyleNone
+	cell.borderColor = model.NewPdfColorDeviceRGB(0, 0, 0)
 
 	cell.rowspan = 1
 	cell.colspan = 1
@@ -304,6 +373,27 @@ func (table *Table) SkipOver(rows, cols int) {
 	table.curCell += ncells
 }
 
+// Set cell's left indent.
+func (cell *tableCell) SetIndent(indent float64) {
+	cell.indent = indent
+}
+
+// Set cell's border style.
+func (cell *tableCell) SetBorder(style CellBorderStyle, width float64) {
+	cell.borderStyle = style
+	cell.borderWidth = width
+}
+
+// Set border color.
+func (cell *tableCell) SetBorderColor(color rgbColor) {
+	cell.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+}
+
+// Set cell's background color.
+func (cell *tableCell) SetBackgroundColor(col color) {
+	cell.backgroundColor = model.NewPdfColorDeviceRGB(col.ToRGB())
+}
+
 // Get cell width based on input draw context.
 func (cell *tableCell) Width(ctx DrawContext) float64 {
 	fraction := float64(0.0)
@@ -316,8 +406,16 @@ func (cell *tableCell) Width(ctx DrawContext) float64 {
 
 // Set cell content.
 func (cell *tableCell) SetContent(d Drawable) error {
-	switch d.(type) {
+	switch t := d.(type) {
 	case *paragraph:
+		// Default paragraph settings in table:
+		t.SetEnableWrap(false) // No wrapping.
+		h := cell.table.rowHeights[cell.row-1]
+		nh := t.Height() * 1.5 // Default multiplier 1.5.
+		// Increase height if needed.
+		if nh > h {
+			cell.table.SetRowHeight(cell.row, nh)
+		}
 		cell.content = d
 	default:
 		common.Log.Debug("Error: unsupported cell content type %T\n", d)

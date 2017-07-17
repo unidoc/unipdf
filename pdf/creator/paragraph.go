@@ -74,6 +74,8 @@ func NewParagraph(text string) *paragraph {
 	p.SetEncoder(textencoding.NewWinAnsiTextEncoder())
 	p.fontSize = 10
 	p.lineHeight = 1.0
+
+	// TODO: Can we wrap intellectually, only if given width is known?
 	p.enableWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
@@ -134,8 +136,8 @@ func (p *paragraph) SetEnableWrap(enableWrap bool) {
 // 3. Make paragraph blue with arithmetic (0-1) rgb components.
 //      p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
 //
-func (p *paragraph) SetColor(color rgbColor) {
-	pdfColor := model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (p *paragraph) SetColor(col color) {
+	pdfColor := model.NewPdfColorDeviceRGB(col.ToRGB())
 	p.color = *pdfColor
 }
 

@@ -51,13 +51,13 @@ func (rect *rectangle) SetBorderWidth(bw float64) {
 }
 
 // Set border color.
-func (rect *rectangle) SetBorderColor(color rgbColor) {
-	rect.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (rect *rectangle) SetBorderColor(col color) {
+	rect.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Set fill color.
-func (rect *rectangle) SetFillColor(color rgbColor) {
-	rect.fillColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (rect *rectangle) SetFillColor(col color) {
+	rect.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Draws the rectangle on a new block representing the page.
@@ -75,7 +75,7 @@ func (rect *rectangle) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContex
 		drawrect.FillEnabled = true
 		drawrect.FillColor = rect.fillColor
 	}
-	if rect.borderColor != nil {
+	if rect.borderColor != nil && rect.borderWidth > 0 {
 		drawrect.BorderEnabled = true
 		drawrect.BorderColor = rect.borderColor
 		drawrect.BorderWidth = rect.borderWidth

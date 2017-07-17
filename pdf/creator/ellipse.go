@@ -51,13 +51,13 @@ func (ell *ellipse) SetBorderWidth(bw float64) {
 }
 
 // Set border color.
-func (ell *ellipse) SetBorderColor(color rgbColor) {
-	ell.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (ell *ellipse) SetBorderColor(col color) {
+	ell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Set fill color.
-func (ell *ellipse) SetFillColor(color rgbColor) {
-	ell.fillColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (ell *ellipse) SetFillColor(col color) {
+	ell.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Draws the rectangle on a new block representing the page.
