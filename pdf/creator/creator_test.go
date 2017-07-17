@@ -1071,7 +1071,7 @@ func TestTableInSubchapter(t *testing.T) {
 
 // Add headers and footers via creator.
 func addHeadersAndFooters(c *Creator) {
-	c.DrawHeader(func(args HeaderFunctionArgs) {
+	c.DrawHeader(func(header *Block, args HeaderFunctionArgs) {
 		/*
 			if pageNum == 1 {
 				// Skip on front Page.
@@ -1081,8 +1081,8 @@ func addHeadersAndFooters(c *Creator) {
 
 		// Add Page number
 		p := NewParagraph(fmt.Sprintf("Page %d / %d", args.PageNum, args.TotalPages))
-		p.SetPos(0.8*c.pageWidth, 20)
-		c.Draw(p)
+		p.SetPos(0.8*header.Width(), 20)
+		header.Draw(p)
 
 		// Draw on the template...
 		img, err := NewImageFromFile(testImageFile1)
@@ -1092,10 +1092,10 @@ func addHeadersAndFooters(c *Creator) {
 		img.ScaleToHeight(0.4 * c.pageMargins.top)
 		img.SetPos(20, 10)
 
-		c.Draw(img)
+		header.Draw(img)
 	})
 
-	c.DrawFooter(func(args FooterFunctionArgs) {
+	c.DrawFooter(func(footer *Block, args FooterFunctionArgs) {
 		/*
 			if pageNum == 1 {
 				// Skip on front Page.
@@ -1106,12 +1106,12 @@ func addHeadersAndFooters(c *Creator) {
 		// Add company name.
 		companyName := "Company inc."
 		p := NewParagraph(companyName)
-		p.SetPos(0.1*c.pageWidth, c.pageHeight-c.pageMargins.bottom+10)
-		c.Draw(p)
+		p.SetPos(0.1*footer.Width(), 10)
+		footer.Draw(p)
 
 		p = NewParagraph("July 2017")
-		p.SetPos(0.8*c.pageWidth, c.pageHeight-c.pageMargins.bottom+10)
-		c.Draw(p)
+		p.SetPos(0.8*footer.Width(), 10)
+		footer.Draw(p)
 	})
 }
 

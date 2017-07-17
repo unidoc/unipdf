@@ -35,8 +35,8 @@ type Creator struct {
 
 	genFrontPageFunc      func(args FrontpageFunctionArgs)
 	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
-	drawHeaderFunc        func(args HeaderFunctionArgs)
-	drawFooterFunc        func(args FooterFunctionArgs)
+	drawHeaderFunc        func(header *Block, args HeaderFunctionArgs)
+	drawFooterFunc        func(footer *Block, args FooterFunctionArgs)
 
 	finalized bool
 
@@ -152,12 +152,12 @@ func (c *Creator) SetPageSize(size PageSize) {
 }
 
 // Set a function to draw a header on created output pages.
-func (c *Creator) DrawHeader(drawHeaderFunc func(args HeaderFunctionArgs)) {
+func (c *Creator) DrawHeader(drawHeaderFunc func(header *Block, args HeaderFunctionArgs)) {
 	c.drawHeaderFunc = drawHeaderFunc
 }
 
 // Set a function to draw a footer on created output pages.
-func (c *Creator) DrawFooter(drawFooterFunc func(args FooterFunctionArgs)) {
+func (c *Creator) DrawFooter(drawFooterFunc func(footer *Block, args FooterFunctionArgs)) {
 	c.drawFooterFunc = drawFooterFunc
 }
 
@@ -343,18 +343,39 @@ func (c *Creator) finalize() error {
 	for idx, page := range c.pages {
 		c.setActivePage(page)
 		if c.drawHeaderFunc != nil {
+			// Prepare a block to draw on.
+			// Header is drawn on the top of the page. Has width of the page, but height limited to the page
+			// margin top height.
+			headerBlock := NewBlock(c.pageWidth, c.pageMargins.top)
 			args := HeaderFunctionArgs{
 				PageNum:    idx + 1,
 				TotalPages: totPages,
 			}
-			c.drawHeaderFunc(args)
+			c.drawHeaderFunc(headerBlock, args)
+			headerBlock.SetPos(0, 0)
+			err := c.Draw(headerBlock)
+			if err != nil {
+				common.Log.Debug("Error drawing header: %v", err)
+				return err
+			}
+
 		}
 		if c.drawFooterFunc != nil {
+			// Prepare a block to draw on.
+			// Footer is drawn on the bottom of the page. Has width of the page, but height limited to the page
+			// margin bottom height.
+			footerBlock := NewBlock(c.pageWidth, c.pageMargins.bottom)
 			args := FooterFunctionArgs{
 				PageNum:    idx + 1,
 				TotalPages: totPages,
 			}
-			c.drawFooterFunc(args)
+			c.drawFooterFunc(footerBlock, args)
+			footerBlock.SetPos(0, c.pageHeight-footerBlock.height)
+			err := c.Draw(footerBlock)
+			if err != nil {
+				common.Log.Debug("Error drawing footer: %v", err)
+				return err
+			}
 		}
 	}
 
