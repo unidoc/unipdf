@@ -666,7 +666,7 @@ func TestSubchaptersSimple(t *testing.T) {
 	c.Draw(ch2)
 
 	// Set a function to create the front Page.
-	c.CreateFrontPage(func(pageNum int, numPages int) {
+	c.CreateFrontPage(func(args FrontpageFunctionArgs) {
 		p := NewParagraph("Example Report")
 		p.SetWidth(c.Width())
 		p.SetTextAlignment(TextAlignmentCenter)
@@ -780,7 +780,7 @@ func TestSubchapters(t *testing.T) {
 	}
 
 	// Set a function to create the front Page.
-	c.CreateFrontPage(func(pageNum int, numPages int) {
+	c.CreateFrontPage(func(args FrontpageFunctionArgs) {
 		p := NewParagraph("Example Report")
 		p.SetWidth(c.Width())
 		p.SetTextAlignment(TextAlignmentCenter)
@@ -904,6 +904,74 @@ func TestTable(t *testing.T) {
 	}
 }
 
+// Test creating and drawing a table.
+func TestBorderedTable(t *testing.T) {
+	table := NewTable(4) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
+
+	cell := table.NewCell()
+	p := NewParagraph("1,1")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("1,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("1,3")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("1,4")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,1")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	table.SkipCells(1) // Skip over 2,3.
+
+	cell = table.NewCell()
+	p = NewParagraph("2,4")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	// Skip over two rows.
+	table.SkipRows(2)
+	cell = table.NewCell()
+	p = NewParagraph("4,4")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	// Move down 3 rows, 2 to the left.
+	table.SkipOver(3, -2)
+	cell = table.NewCell()
+	p = NewParagraph("7,2")
+	cell.SetContent(p)
+	cell.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	c := New()
+	c.Draw(table)
+
+	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
@@ -1003,7 +1071,7 @@ func TestTableInSubchapter(t *testing.T) {
 
 // Add headers and footers via creator.
 func addHeadersAndFooters(c *Creator) {
-	c.DrawHeader(func(pageNum int, totPages int) {
+	c.DrawHeader(func(args HeaderFunctionArgs) {
 		/*
 			if pageNum == 1 {
 				// Skip on front Page.
@@ -1012,7 +1080,7 @@ func addHeadersAndFooters(c *Creator) {
 		*/
 
 		// Add Page number
-		p := NewParagraph(fmt.Sprintf("Page %d / %d", pageNum, totPages))
+		p := NewParagraph(fmt.Sprintf("Page %d / %d", args.PageNum, args.TotalPages))
 		p.SetPos(0.8*c.pageWidth, 20)
 		c.Draw(p)
 
@@ -1027,7 +1095,7 @@ func addHeadersAndFooters(c *Creator) {
 		c.Draw(img)
 	})
 
-	c.DrawFooter(func(pageNum int, totPages int) {
+	c.DrawFooter(func(args FooterFunctionArgs) {
 		/*
 			if pageNum == 1 {
 				// Skip on front Page.

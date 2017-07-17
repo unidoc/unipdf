@@ -33,16 +33,35 @@ type Creator struct {
 	// Keep track of number of chapters for indexing.
 	chapters int
 
-	genFrontPageFunc      func(pageNum int, totPages int)
+	genFrontPageFunc      func(args FrontpageFunctionArgs)
 	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
-	drawHeaderFunc        func(pageNum int, totPages int)
-	drawFooterFunc        func(pageNum int, totPages int)
+	drawHeaderFunc        func(args HeaderFunctionArgs)
+	drawFooterFunc        func(args FooterFunctionArgs)
 
 	finalized bool
 
 	toc *TableOfContents
 }
 
+// Input arguments to a front page drawing function.
+type FrontpageFunctionArgs struct {
+	PageNum    int
+	TotalPages int
+}
+
+// Input arguments to a header drawing function.
+type HeaderFunctionArgs struct {
+	PageNum    int
+	TotalPages int
+}
+
+// Input arguments to a footer drawing function.
+type FooterFunctionArgs struct {
+	PageNum    int
+	TotalPages int
+}
+
+// Margins.  Can be page margins, or margins around an element.
 type margins struct {
 	left   float64
 	right  float64
@@ -133,17 +152,17 @@ func (c *Creator) SetPageSize(size PageSize) {
 }
 
 // Set a function to draw a header on created output pages.
-func (c *Creator) DrawHeader(drawHeaderFunc func(int, int)) {
+func (c *Creator) DrawHeader(drawHeaderFunc func(args HeaderFunctionArgs)) {
 	c.drawHeaderFunc = drawHeaderFunc
 }
 
 // Set a function to draw a footer on created output pages.
-func (c *Creator) DrawFooter(drawFooterFunc func(int, int)) {
+func (c *Creator) DrawFooter(drawFooterFunc func(args FooterFunctionArgs)) {
 	c.drawFooterFunc = drawFooterFunc
 }
 
 // Set a function to generate a front Page.
-func (c *Creator) CreateFrontPage(genFrontPageFunc func(pageNum int, numPages int)) {
+func (c *Creator) CreateFrontPage(genFrontPageFunc func(args FrontpageFunctionArgs)) {
 	c.genFrontPageFunc = genFrontPageFunc
 }
 
@@ -280,7 +299,11 @@ func (c *Creator) finalize() error {
 		c.pages = append([]*model.PdfPage{p}, c.pages...)
 		c.setActivePage(p)
 
-		c.genFrontPageFunc(1, totPages)
+		args := FrontpageFunctionArgs{
+			PageNum:    1,
+			TotalPages: totPages,
+		}
+		c.genFrontPageFunc(args)
 		hasFrontPage = true
 	}
 
@@ -320,10 +343,18 @@ func (c *Creator) finalize() error {
 	for idx, page := range c.pages {
 		c.setActivePage(page)
 		if c.drawHeaderFunc != nil {
-			c.drawHeaderFunc(idx+1, totPages)
+			args := HeaderFunctionArgs{
+				PageNum:    idx + 1,
+				TotalPages: totPages,
+			}
+			c.drawHeaderFunc(args)
 		}
 		if c.drawFooterFunc != nil {
-			c.drawFooterFunc(idx+1, totPages)
+			args := FooterFunctionArgs{
+				PageNum:    idx + 1,
+				TotalPages: totPages,
+			}
+			c.drawFooterFunc(args)
 		}
 	}
 
