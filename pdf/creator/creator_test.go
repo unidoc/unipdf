@@ -992,7 +992,7 @@ func TestTableInSubchapter(t *testing.T) {
 
 	issuerTable := NewTable(2)
 
-	p := NewParagraph("Issuer")
+	p := NewParagraph("Non-Disclosure")
 	p.SetFont(fontBold)
 	p.SetFontSize(10)
 	p.SetColor(ColorWhite)
