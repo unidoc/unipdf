@@ -80,7 +80,7 @@ func TestImage1(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -111,7 +111,7 @@ func TestShapes1(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -200,7 +200,7 @@ func TestShapesOnBlock(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -246,7 +246,7 @@ func TestImageWrapping(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -279,7 +279,7 @@ func TestImageRotation(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -320,7 +320,7 @@ func TestImageRotationAndWrap(t *testing.T) {
 		return
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

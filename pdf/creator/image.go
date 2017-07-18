@@ -48,17 +48,9 @@ type image struct {
 	rotOriginX, rotOriginY float64
 }
 
-// Create an image from image data.
-func NewImage(data []byte) (*image, error) {
+// Create a new image from a unidoc image model.
+func NewImage(img *model.Image) (*image, error) {
 	image := &image{}
-	imgReader := bytes.NewReader(data)
-
-	// Load the image with default handler.
-	img, err := model.ImageHandling.Read(imgReader)
-	if err != nil {
-		common.Log.Error("Error loading image: %s", err)
-		return nil, err
-	}
 
 	// Create the XObject image.
 	ximg, err := model.NewXObjectImageFromImage(img, nil, core.NewFlateEncoder())
@@ -66,6 +58,7 @@ func NewImage(data []byte) (*image, error) {
 		common.Log.Error("Failed to create xobject image: %s", err)
 		return nil, err
 	}
+
 	image.xobj = ximg
 
 	// Image original size in points = pixel size.
@@ -81,6 +74,20 @@ func NewImage(data []byte) (*image, error) {
 	return image, nil
 }
 
+// Create an image from image data.
+func NewImageFromData(data []byte) (*image, error) {
+	imgReader := bytes.NewReader(data)
+
+	// Load the image with default handler.
+	img, err := model.ImageHandling.Read(imgReader)
+	if err != nil {
+		common.Log.Error("Error loading image: %s", err)
+		return nil, err
+	}
+
+	return NewImage(img)
+}
+
 // Create image from a file.
 func NewImageFromFile(path string) (*image, error) {
 	imgData, err := ioutil.ReadFile(path)
@@ -88,7 +95,7 @@ func NewImageFromFile(path string) (*image, error) {
 		return nil, err
 	}
 
-	img, err := NewImage(imgData)
+	img, err := NewImageFromData(imgData)
 	if err != nil {
 		return nil, err
 	}
@@ -98,32 +105,12 @@ func NewImageFromFile(path string) (*image, error) {
 
 // Create image from a go image.Image datastructure.
 func NewImageFromGoImage(goimg goimage.Image) (*image, error) {
-	image := &image{}
-
 	img, err := model.ImageHandling.NewImageFromGoImage(goimg)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create the XObject image.
-	ximg, err := model.NewXObjectImageFromImage(img, nil, core.NewFlateEncoder())
-	if err != nil {
-		common.Log.Error("Failed to create xobject image: %s", err)
-		return nil, err
-	}
-	image.xobj = ximg
-
-	// Image original size in points = pixel size.
-	image.origWidth = float64(img.Width)
-	image.origHeight = float64(img.Height)
-	image.width = image.origWidth
-	image.height = image.origHeight
-	image.angle = 0
-	image.opacity = 1
-
-	image.positioning = positionRelative
-
-	return image, nil
+	return NewImage(img)
 }
 
 // Get image document height.
