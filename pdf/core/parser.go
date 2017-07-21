@@ -804,8 +804,8 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 	trailerDict := xs.PdfObjectDictionary
 
-	sizeObj := xs.PdfObjectDictionary.Get("Size").(*PdfObjectInteger)
-	if sizeObj == nil {
+	sizeObj, ok := xs.PdfObjectDictionary.Get("Size").(*PdfObjectInteger)
+	if !ok {
 		common.Log.Debug("ERROR: Missing size from xref stm")
 		return nil, errors.New("Missing Size from xref stm")
 	}
