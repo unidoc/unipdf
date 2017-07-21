@@ -49,3 +49,5 @@ temp/
 buildinfo.json
 
 pdf/font.go
+
+fuzz.go

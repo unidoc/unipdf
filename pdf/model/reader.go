@@ -192,7 +192,8 @@ func (this *PdfReader) loadStructure() error {
 	this.pageCount = int(*pageCount)
 	this.pageList = []*PdfIndirectObject{}
 
-	err = this.buildPageList(ppages, nil)
+	traversedPageNodes := map[PdfObject]bool{}
+	err = this.buildPageList(ppages, nil, traversedPageNodes)
 	if err != nil {
 		return err
 	}
@@ -499,10 +500,16 @@ func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
 // Build the table of contents.
 // tree, ex: Pages -> Pages -> Pages -> Page
 // Traverse through the whole thing recursively.
-func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectObject) error {
+func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectObject, traversedPageNodes map[PdfObject]bool) error {
 	if node == nil {
 		return nil
 	}
+
+	if _, alreadyTraversed := traversedPageNodes[node]; alreadyTraversed {
+		common.Log.Debug("Cyclic recursion, skipping")
+		return nil
+	}
+	traversedPageNodes[node] = true
 
 	nodeDict, ok := node.PdfObject.(*PdfObjectDictionary)
 	if !ok {
@@ -572,7 +579,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 			return errors.New("Page not indirect object")
 		}
 		(*kids)[idx] = child
-		err = this.buildPageList(child, node)
+		err = this.buildPageList(child, node, traversedPageNodes)
 		if err != nil {
 			return err
 		}
@@ -614,6 +621,7 @@ func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, boo
 func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	common.Log.Trace("Traverse object data")
 	if _, isTraversed := this.traversed[o]; isTraversed {
+		common.Log.Trace("-Already traversed...")
 		return nil
 	}
 	this.traversed[o] = true
