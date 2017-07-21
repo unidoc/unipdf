@@ -1315,6 +1315,13 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					}
 					common.Log.Trace("Stream dict %s", dict)
 
+					if lengthRef, isRef := dict.Get("Length").(*PdfObjectReference); isRef {
+						if lengthRef.ObjectNumber == indirect.ObjectNumber {
+							common.Log.Debug("Stream Length reference pointing to self stream object (illegal)")
+							return nil, errors.New("Missing required attribute")
+						}
+					}
+
 					slo, err := this.Trace(dict.Get("Length"))
 					if err != nil {
 						return nil, err

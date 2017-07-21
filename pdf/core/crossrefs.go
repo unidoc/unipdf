@@ -337,7 +337,7 @@ func (this *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
 
 	io, isInd := o.(*PdfIndirectObject)
 	if !isInd {
-		// Not indirect (must be a PdfObjectNull object)...
+		// Not indirect (Stream or null object).
 		return o, nil
 	}
 	o = io.PdfObject

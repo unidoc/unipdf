@@ -125,6 +125,10 @@ func MakeIndirectObject(obj PdfObject) *PdfIndirectObject {
 func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error) {
 	stream := &PdfObjectStream{}
 
+	if encoder == nil {
+		encoder = NewRawEncoder()
+	}
+
 	stream.PdfObjectDictionary = encoder.MakeStreamDict()
 
 	encoded, err := encoder.EncodeBytes(contents)
