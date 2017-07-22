@@ -875,7 +875,7 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 		// Expect indLen to be a multiple of 2.
 		if len(*indices)%2 != 0 {
 			common.Log.Debug("WARNING Failure loading xref stm index not multiple of 2.")
-			return nil, err
+			return nil, errors.New("Range check error")
 		}
 
 		objCount = 0
