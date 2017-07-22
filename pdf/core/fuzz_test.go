@@ -54,6 +54,7 @@ endstream
 	parser.xrefs = make(XrefTable)
 	parser.objstms = make(ObjectStreams)
 	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
 	parser.xrefs[13] = XrefObject{
