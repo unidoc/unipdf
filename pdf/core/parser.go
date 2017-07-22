@@ -1487,7 +1487,14 @@ func (this *PdfParser) IsEncrypted() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			encDict, ok := encObj.(*PdfIndirectObject).PdfObject.(*PdfObjectDictionary)
+
+			encIndObj, ok := encObj.(*PdfIndirectObject)
+			if !ok {
+				common.Log.Debug("Encryption object not an indirect object")
+				return false, errors.New("Type check error")
+			}
+			encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
+
 			common.Log.Trace("2: %q", encDict)
 			if !ok {
 				return false, errors.New("Trailer Encrypt object non dictionary")

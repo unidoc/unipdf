@@ -104,3 +104,22 @@ endstream
 		t.Errorf("Should fail with an error")
 	}
 }
+
+// Problem where:
+//
+func TestFuzzIsEncryptedFail1(t *testing.T) {
+	parser := PdfParser{}
+	parser.rs, parser.reader = makeReaderForText(" /Name")
+
+	ref := &PdfObjectReference{ObjectNumber: -1}
+
+	parser.trailer = MakeDict()
+	parser.trailer.Set("Encrypt", ref)
+
+	_, err := parser.IsEncrypted()
+	if err == nil {
+		t.Errorf("err == nil: %v.  Should fail.", err)
+		return
+	}
+
+}
