@@ -70,3 +70,37 @@ endstream
 		t.Errorf("Should fail with an error")
 	}
 }
+
+// Slightly more complex case where the reference number is incorrect, but still points to the same object.
+func TestFuzzSelfReference2(t *testing.T) {
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+
+	rawText := `13 0 obj
+<< /Length 12 0 R >>
+stream
+xxx
+endstream
+`
+
+	parser := PdfParser{}
+	parser.xrefs = make(XrefTable)
+	parser.objstms = make(ObjectStreams)
+	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
+
+	// Point to the start of the stream (where obj 13 starts).
+	// NOTE: using incorrect object number here:
+	parser.xrefs[12] = XrefObject{
+		XREF_TABLE_ENTRY,
+		12,
+		0,
+		0,
+		0,
+		0,
+	}
+
+	_, err := parser.ParseIndirectObject()
+	if err == nil {
+		t.Errorf("Should fail with an error")
+	}
+}

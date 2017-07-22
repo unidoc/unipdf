@@ -47,6 +47,12 @@ type PdfParser struct {
 	ObjCache         ObjectCache
 	crypter          *PdfCrypt
 	repairsAttempted bool // Avoid multiple attempts for repair.
+
+	// Tracker for reference lookups when looking up Length entry of stream objects.
+	// The Length entries of stream objects are a special case, as they can require recursive parsing, i.e. look up
+	// the length reference (if not object) prior to reading the actual stream.  This has risks of endless looping.
+	// Tracking is necessary to avoid recursive loops.
+	streamLengthReferenceLookupInProgress map[int64]bool
 }
 
 func (this *PdfParser) GetCrypter() *PdfCrypt {
@@ -1210,6 +1216,34 @@ func (this *PdfParser) xrefNextObjectOffset(offset int64) int64 {
 	return nextOffset
 }
 
+// Get stream length, avoiding recursive loops.
+// The input is the PdfObject that is to be traced to a direct object.
+func (this *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, error) {
+	lengthRef, isRef := lengthObj.(*PdfObjectReference)
+	if isRef {
+		lookupInProgress, has := this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber]
+		if has && lookupInProgress {
+			common.Log.Debug("Stream Length reference unresolved (illegal)")
+			return nil, errors.New("Illegal recursive loop")
+		}
+		// Mark lookup as in progress.
+		this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = true
+	}
+
+	slo, err := this.Trace(lengthObj)
+	if err != nil {
+		return nil, err
+	}
+	common.Log.Trace("Stream length? %s", slo)
+
+	if isRef {
+		// Mark as completed lookup
+		this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = false
+	}
+
+	return slo, nil
+}
+
 // Parse an indirect object from the input stream.
 // Can also be an object stream.
 func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
@@ -1315,15 +1349,10 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					}
 					common.Log.Trace("Stream dict %s", dict)
 
-					if lengthRef, isRef := dict.Get("Length").(*PdfObjectReference); isRef {
-						if lengthRef.ObjectNumber == indirect.ObjectNumber {
-							common.Log.Debug("Stream Length reference pointing to self stream object (illegal)")
-							return nil, errors.New("Missing required attribute")
-						}
-					}
-
-					slo, err := this.Trace(dict.Get("Length"))
+					// Special stream length tracing function used to avoid endless recursive looping.
+					slo, err := this.traceStreamLength(dict.Get("Length"))
 					if err != nil {
+						common.Log.Debug("Fail to trace stream length: %v", err)
 						return nil, err
 					}
 					common.Log.Trace("Stream length? %s", slo)
@@ -1406,6 +1435,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 
 	parser.rs = rs
 	parser.ObjCache = make(ObjectCache)
+	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Start by reading xrefs from bottom
 	trailer, err := parser.loadXrefs()
