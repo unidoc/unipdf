@@ -292,7 +292,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	// Strictly, if file is encrypted, the ID should always be specified
 	// but clearly not everyone is following the specification.
 	id0 := PdfObjectString("")
-	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok {
+	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && len(*idArray) >= 1 {
 		id0obj, ok := (*idArray)[0].(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
