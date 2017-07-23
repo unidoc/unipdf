@@ -95,7 +95,16 @@ func newPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 			csObject = csArray
 		}
 		if name, is := (*csArray)[0].(*PdfObjectName); is {
-			if *name == "CalGray" {
+			if *name == "DeviceGray" && len(*csArray) == 1 {
+				cs := NewPdfColorspaceDeviceGray()
+				return cs, nil
+			} else if *name == "DeviceRGB" && len(*csArray) == 1 {
+				cs := NewPdfColorspaceDeviceRGB()
+				return cs, nil
+			} else if *name == "DeviceCMYK" && len(*csArray) == 1 {
+				cs := NewPdfColorspaceDeviceCMYK()
+				return cs, nil
+			} else if *name == "CalGray" {
 				cs, err := newPdfColorspaceCalGrayFromPdfObject(csObject)
 				return cs, err
 			} else if *name == "CalRGB" {
@@ -119,6 +128,8 @@ func newPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 			} else if *name == "DeviceN" {
 				cs, err := newPdfColorspaceDeviceNFromPdfObject(csObject)
 				return cs, err
+			} else {
+				common.Log.Debug("Array with invalid name: %s", *name)
 			}
 		}
 	}

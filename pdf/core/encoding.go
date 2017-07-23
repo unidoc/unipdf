@@ -377,13 +377,12 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 
 // Encode a bytes array and return the encoded value based on the encoder parameters.
 func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	if this.Predictor != 1 && !(11 <= this.Predictor && this.Predictor <= 11) {
-		common.Log.Debug("Encoding error: FlateEncoder Predictor=%d. Only 1, 11 supported",
-			this.Predictor)
+	if this.Predictor != 1 && this.Predictor != 11 {
+		common.Log.Debug("Encoding error: FlateEncoder Predictor = 1, 11 only supported")
 		return nil, ErrUnsupportedEncodingParameters
 	}
 
-	if 11 <= this.Predictor && this.Predictor <= 15 {
+	if this.Predictor == 11 {
 		// The length of each output row in number of samples.
 		// N.B. Each output row has one extra sample as compared to the input to indicate the
 		// predictor type.
