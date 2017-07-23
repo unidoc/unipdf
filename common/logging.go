@@ -18,6 +18,7 @@ type Logger interface {
 	Notice(format string, args ...interface{})
 	Info(format string, args ...interface{})
 	Debug(format string, args ...interface{})
+	Trace(format string, args ...interface{})
 }
 
 // Dummy Logger does nothing.
@@ -38,43 +39,73 @@ func (this DummyLogger) Info(format string, args ...interface{}) {
 func (this DummyLogger) Debug(format string, args ...interface{}) {
 }
 
+func (this DummyLogger) Trace(format string, args ...interface{}) {
+}
+
 // Simple Console Logger that the tests use.
-type ConsoleLogger struct{}
+type LogLevel int
+
+const (
+	LogLevelTrace   LogLevel = 5
+	LogLevelDebug   LogLevel = 4
+	LogLevelInfo    LogLevel = 3
+	LogLevelNotice  LogLevel = 2
+	LogLevelWarning LogLevel = 1
+	LogLevelError   LogLevel = 0
+)
+
+type ConsoleLogger struct {
+	LogLevel LogLevel
+}
+
+func NewConsoleLogger(logLevel LogLevel) *ConsoleLogger {
+	logger := ConsoleLogger{}
+	logger.LogLevel = logLevel
+	return &logger
+}
 
 const DebugOutput = false
 
 func (this ConsoleLogger) Error(format string, args ...interface{}) {
-	this.output(os.Stderr, "[ERROR] ", format, args...)
+	if this.LogLevel >= LogLevelError {
+		prefix := "[ERROR] "
+		this.output(os.Stderr, prefix, format, args...)
+	}
 }
 
 func (this ConsoleLogger) Warning(format string, args ...interface{}) {
-	this.output(os.Stdout, "[WARNING] ", format, args...)
+	if this.LogLevel >= LogLevelWarning {
+		prefix := "[WARNING] "
+		this.output(os.Stdout, prefix, format, args...)
+	}
 }
 
 func (this ConsoleLogger) Notice(format string, args ...interface{}) {
-	this.output(os.Stdout, "[NOTICE] ", format, args...)
+	if this.LogLevel >= LogLevelNotice {
+		prefix := "[NOTICE] "
+		this.output(os.Stdout, prefix, format, args...)
+	}
 }
 
 func (this ConsoleLogger) Info(format string, args ...interface{}) {
-	this.output(os.Stdout, "[INFO] ", format, args...)
+	if this.LogLevel >= LogLevelInfo {
+		prefix := "[INFO] "
+		this.output(os.Stdout, prefix, format, args...)
+	}
 }
 
 func (this ConsoleLogger) Debug(format string, args ...interface{}) {
-	if DebugOutput {
-		this.output(os.Stdout, "[DEBUG] ", format, args...)
+	if this.LogLevel >= LogLevelDebug {
+		prefix := "[DEBUG] "
+		this.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) output(f *os.File, prefix, format string, args ...interface{}) {
-	_, file, line, ok := runtime.Caller(3)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		file = filepath.Base(file)
+func (this ConsoleLogger) Trace(format string, args ...interface{}) {
+	if this.LogLevel >= LogLevelTrace {
+		prefix := "[TRACE] "
+		this.output(os.Stdout, prefix, format, args...)
 	}
-	src := fmt.Sprintf("%s%s:%d ", prefix, file, line) + format + "\n"
-	fmt.Fprintf(f, src, args...)
 }
 
 var Log Logger = DummyLogger{}
@@ -82,4 +113,18 @@ var Log Logger = DummyLogger{}
 func SetLogger(logger Logger) {
 	Log = logger
 	fmt.Printf("SetLogger: logger=%+v\n", logger)
+}
+
+// output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
+func (this ConsoleLogger) output(f *os.File, prefix string, format string, args ...interface{}) {
+	_, file, line, ok := runtime.Caller(3)
+	if !ok {
+		file = "???"
+		line = 0
+	} else {
+		file = filepath.Base(file)
+	}
+
+	src := fmt.Sprintf("%s %s:%d ", prefix, file, line) + format + "\n"
+	fmt.Fprintf(f, src, args...)
 }

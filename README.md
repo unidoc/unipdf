@@ -1,24 +1,33 @@
+# Version 2
+
+The version 2 of UniDoc is currently in alpha. The pdf functionality has been split into two parts.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
+
+# Migrating from version 1.
+
+Migrating is fairly straightforward.  A few things are incompatible and will be listed here prior to release.
+
+---
+
 # UniDoc
 
 [UniDoc](http://unidoc.io) is a fast and powerful open source library for document manipulation starting off as a PDF
-toolkit. This is a commercial library written and supported by the owners
-of the FoxyUtils.com website.
+toolkit. This is a library written and supported by the owners
+of the [FoxyUtils.com](https://foxyutils.com) website.
 
-This library is used to power many of the services offered by the FoxyUtils.com website. The goal is to extend it to
+This library is used to power many of the PDF services offered by [FoxyUtils](https://foxyutils.com). The goal is to extend it to
 eventually support all of the offered services.
 
 [![wercker status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
 [![GoDoc](https://godoc.org/github.com/unidoc/unidoc?status.svg)](https://godoc.org/github.com/unidoc/unidoc)
 
-## Getting the code
-
-Open source users can use the master branch.
-Commercial users get a special URL with their customer id. Only the commercial URLs are eligible for commercial support.
-
 ## Installation
 ~~~
 go get github.com/unidoc/unidoc
 ~~~
+
+## Vendoring
+For reliability, we recommend using specific versions and the vendoring capability of golang.
+Check out the Releases section to see the tagged releases.
 
 ## Overview
 
@@ -42,14 +51,13 @@ AGPL is a free / open source software license.
 
 This doesn't mean the software is gratis!
 
-Buying a license is mandatory as soon as you develop commercial activities
+Buying a license is mandatory as soon as you develop activities
 distributing the UniDoc software inside your product or deploying it on a network
 without disclosing the source code of your own applications under the AGPL license.
 These activities include:
 
- * developing commercial applications
- * offering paid services to customers as an application service provider
- * serving PDFs on the fly in the cloud or in a web application
+ * offering services as an application service provider or over-network application programming interface (API)
+ * creating/manipulating documents for users in a web/server/cloud application
  * shipping UniDoc with a closed source product
 
 Contact sales for more info: sales@unidoc.io.
