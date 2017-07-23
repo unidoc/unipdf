@@ -944,6 +944,10 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 			ftype = 1
 		}
 
+		if objIndex >= len(indexList) {
+			common.Log.Debug("XRef stream - Trying to access index out of bounds - breaking")
+			break
+		}
 		objNum := indexList[objIndex]
 		objIndex++
 
