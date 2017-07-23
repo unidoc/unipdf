@@ -106,8 +106,7 @@ endstream
 	}
 }
 
-// Problem where:
-//
+// Test for problem where Encrypt pointing a reference to a non-existing object.
 func TestFuzzIsEncryptedFail1(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader = makeReaderForText(" /Name")
@@ -120,6 +119,29 @@ func TestFuzzIsEncryptedFail1(t *testing.T) {
 	_, err := parser.IsEncrypted()
 	if err == nil {
 		t.Errorf("err == nil: %v.  Should fail.", err)
+		return
+	}
+}
+
+// Test for trailer Prev entry pointing to an incorrect object type.
+func TestFuzzInvalidXrefPrev1(t *testing.T) {
+	parser := PdfParser{}
+	parser.rs, parser.reader = makeReaderForText(`
+xref
+0 1
+0000000000 65535 f
+0000000001 00000 n
+trailer
+<</Info 1 0 R/Root 2 0 R/Size 17/Prev /Invalid>>
+startxref
+0
+%%EOF
+`)
+
+	_, err := parser.loadXrefs()
+	if err != nil {
+		t.Errorf("Should not error - just log a debug message regarding an invalid Prev")
+		t.Errorf("Err: %v", err)
 		return
 	}
 

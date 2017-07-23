@@ -1044,7 +1044,7 @@ func (this *PdfParser) seekToEOFMarker(fSize int64) error {
 		}
 
 		// Move back enough (as we need to read forward).
-		_, err := this.rs.Seek(-offset-buflen, os.SEEK_END)
+		_, err := this.rs.Seek(-offset-buflen, io.SeekEnd)
 		if err != nil {
 			return err
 		}
@@ -1058,7 +1058,7 @@ func (this *PdfParser) seekToEOFMarker(fSize int64) error {
 			// Found it.
 			lastInd := ind[len(ind)-1]
 			common.Log.Trace("Ind: % d", ind)
-			this.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
+			this.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
 		} else {
 			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
@@ -1095,7 +1095,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	this.objstms = make(ObjectStreams)
 
 	// Get the file size.
-	fSize, err := this.rs.Seek(0, os.SEEK_END)
+	fSize, err := this.rs.Seek(0, io.SeekEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -1109,9 +1109,23 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	}
 
 	// Look for startxref and get the xref offset.
-	var offset int64 = 64
-	this.rs.Seek(-offset, os.SEEK_CUR)
-	b2 := make([]byte, offset)
+	curOffset, err := this.rs.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return nil, err
+	}
+
+	// Seek 64 bytes (numBytes) back from EOF marker start.
+	var numBytes int64 = 64
+	offset := curOffset - numBytes
+	if offset < 0 {
+		offset = 0
+	}
+	_, err = this.rs.Seek(offset, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	b2 := make([]byte, numBytes)
 	_, err = this.rs.Read(b2)
 	if err != nil {
 		common.Log.Debug("Failed reading while looking for startxref: %v", err)
@@ -1140,7 +1154,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		}
 	}
 	// Read the xref.
-	this.rs.Seek(int64(offsetXref), os.SEEK_SET)
+	this.rs.Seek(int64(offsetXref), io.SeekStart)
 	this.reader = bufio.NewReader(this.rs)
 
 	trailerDict, err := this.parseXref()
@@ -1176,7 +1190,15 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	// refer to objects also.
 	xx = trailerDict.Get("Prev")
 	for xx != nil {
-		off := *(xx.(*PdfObjectInteger))
+		prevInt, ok := xx.(*PdfObjectInteger)
+		if !ok {
+			// For compatibility: If Prev is invalid, just go with whatever xrefs are loaded already.
+			// i.e. not returning an error.  A debug message is logged.
+			common.Log.Debug("Invalid Prev reference: Not a *PdfObjectInteger (%T)", xx)
+			return trailerDict, nil
+		}
+
+		off := *prevInt
 		common.Log.Trace("Another Prev xref table object at %d", off)
 
 		// Can be either regular table, or an xref object...
