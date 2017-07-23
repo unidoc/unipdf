@@ -253,6 +253,10 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			common.Log.Trace("Colors: %d", this.Colors)
 
 			rowLength := int(this.Columns) * this.Colors
+			if rowLength < 1 {
+				// No data. Return empty set.
+				return []byte{}, nil
+			}
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")

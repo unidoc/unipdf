@@ -1230,8 +1230,12 @@ func (this *PdfCrypt) Alg6(upass []byte) (bool, error) {
 	if this.R >= 3 {
 		// comparing on the first 16 bytes in the case of security
 		// handlers of revision 3 or greater),
-		uGen = uGen[0:16]
-		uDoc = uDoc[0:16]
+		if len(uGen) > 16 {
+			uGen = uGen[0:16]
+		}
+		if len(uDoc) > 16 {
+			uDoc = uDoc[0:16]
+		}
 	}
 	if uGen == uDoc {
 		this.EncryptionKey = key

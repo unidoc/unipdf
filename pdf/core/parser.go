@@ -940,9 +940,27 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 	common.Log.Trace("Decoded stream length: %d", len(ds))
 	objIndex := 0
 	for i := 0; i < len(ds); i += deltab {
+		err := checkBounds(len(ds), i, i+s0)
+		if err != nil {
+			common.Log.Debug("Invalid slice range: %v", err)
+			return nil, err
+		}
 		p1 := ds[i : i+s0]
+
+		err = checkBounds(len(ds), i+s0, i+s1)
+		if err != nil {
+			common.Log.Debug("Invalid slice range: %v", err)
+			return nil, err
+		}
 		p2 := ds[i+s0 : i+s1]
+
+		err = checkBounds(len(ds), i+s1, i+s2)
+		if err != nil {
+			common.Log.Debug("Invalid slice range: %v", err)
+			return nil, err
+		}
 		p3 := ds[i+s1 : i+s2]
+
 		ftype := convertBytes(p1)
 		n2 := convertBytes(p2)
 		n3 := convertBytes(p3)
