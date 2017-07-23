@@ -872,23 +872,31 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 	indexList := []int{}
 	if indexObj != nil {
 		common.Log.Trace("Index: %b", indexObj)
-		indices, ok := indexObj.(*PdfObjectArray)
+		indicesArray, ok := indexObj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Invalid Index object (should be an array)")
 			return nil, errors.New("Invalid Index object")
 		}
 
 		// Expect indLen to be a multiple of 2.
-		if len(*indices)%2 != 0 {
+		if len(*indicesArray)%2 != 0 {
 			common.Log.Debug("WARNING Failure loading xref stm index not multiple of 2.")
 			return nil, errors.New("Range check error")
 		}
 
 		objCount = 0
-		for i := 0; i < len(*indices); i += 2 {
+
+		indices, err := indicesArray.ToIntegerArray()
+		if err != nil {
+			common.Log.Debug("Error getting index array as integers: %v", err)
+			return nil, err
+		}
+
+		for i := 0; i < len(indices); i += 2 {
 			// add the indices to the list..
-			startIdx := int(*(*indices)[i].(*PdfObjectInteger))
-			numObjs := int(*(*indices)[i+1].(*PdfObjectInteger))
+
+			startIdx := indices[i]
+			numObjs := indices[i+1]
 			for j := 0; j < numObjs; j++ {
 				indexList = append(indexList, startIdx+j)
 			}
