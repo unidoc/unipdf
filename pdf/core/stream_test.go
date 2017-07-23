@@ -77,7 +77,7 @@ stream
 endobj`
 
 	parser := PdfParser{}
-	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -136,7 +136,7 @@ stream
 endobj`
 
 	parser := PdfParser{}
-	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {

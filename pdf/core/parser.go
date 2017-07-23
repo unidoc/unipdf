@@ -41,6 +41,7 @@ type PdfParser struct {
 
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
+	fileSize         int64
 	xrefs            XrefTable
 	objstms          ObjectStreams
 	trailer          *PdfObjectDictionary
@@ -1112,6 +1113,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		return nil, err
 	}
 	common.Log.Trace("fsize: %d", fSize)
+	this.fileSize = fSize
 
 	// Seek the EOF marker.
 	err = this.seekToEOFMarker(fSize)
@@ -1419,6 +1421,12 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 						dict.Set("Length", MakeInteger(newLength))
 					}
 
+					// Make sure is less than actual file size.
+					if int64(streamLength) > this.fileSize {
+						common.Log.Debug("ERROR: Stream length cannot be larger than file size")
+						return nil, errors.New("Invalid stream length, larger than file size")
+					}
+
 					stream := make([]byte, streamLength)
 					_, err = this.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
@@ -1458,6 +1466,8 @@ func NewParserFromString(txt string) *PdfParser {
 
 	bufferedReader := bufio.NewReader(bufReader)
 	parser.reader = bufferedReader
+
+	parser.fileSize = int64(len(txt))
 
 	return &parser
 }
