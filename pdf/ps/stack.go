@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ps
 
 type PSStack []PSObject
@@ -60,10 +65,21 @@ func (stack *PSStack) PopNumberAsFloat64() (float64, error) {
 	}
 }
 
-func (this *PSStack) ToString() string {
+func (this *PSStack) String() string {
 	s := "[ "
 	for _, obj := range *this {
 		s += obj.String()
+		s += " "
+	}
+	s += "]"
+
+	return s
+}
+
+func (this *PSStack) DebugString() string {
+	s := "[ "
+	for _, obj := range *this {
+		s += obj.DebugString()
 		s += " "
 	}
 	s += "]"

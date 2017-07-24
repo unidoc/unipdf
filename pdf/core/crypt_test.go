@@ -179,7 +179,7 @@ func TestDecryption1(t *testing.T) {
 	parser := PdfParser{}
 	parser.xrefs = make(XrefTable)
 	parser.objstms = make(ObjectStreams)
-	parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader = makeReaderForText(rawText)
 	parser.crypter = &crypter
 
 	obj, err := parser.ParseIndirectObject()

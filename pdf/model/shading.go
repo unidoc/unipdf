@@ -166,8 +166,8 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	}
 
 	// Shading type (required).
-	obj, has := (*dict)["ShadingType"]
-	if !has {
+	obj = dict.Get("ShadingType")
+	if obj == nil {
 		common.Log.Debug("Required shading type missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -184,8 +184,8 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	shading.ShadingType = shadingType
 
 	// Color space (required).
-	obj, has = (*dict)["ColorSpace"]
-	if !has {
+	obj = dict.Get("ColorSpace")
+	if obj == nil {
 		common.Log.Debug("Required ColorSpace entry missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -197,8 +197,8 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	shading.ColorSpace = cs
 
 	// Background (optional). Array of color components.
-	obj, has = (*dict)["Background"]
-	if has {
+	obj = dict.Get("Background")
+	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -209,8 +209,8 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	}
 
 	// BBox.
-	obj, has = (*dict)["BBox"]
-	if has {
+	obj = dict.Get("BBox")
+	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -226,8 +226,8 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	}
 
 	// AntiAlias.
-	obj, has = (*dict)["AntiAlias"]
-	if has {
+	obj = dict.Get("AntiAlias")
+	if obj != nil {
 		obj = TraceToDirectObject(obj)
 		val, ok := obj.(*PdfObjectBool)
 		if !ok {
@@ -305,7 +305,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType1{}
 
 	// Domain (optional).
-	if obj, has := (*dict)["Domain"]; has {
+	if obj := dict.Get("Domain"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -316,7 +316,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 
 	// Matrix (optional).
-	if obj, has := (*dict)["Matrix"]; has {
+	if obj := dict.Get("Matrix"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -327,8 +327,8 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 
 	// Function (required).
-	obj, ok := (*dict)["Function"]
-	if !ok {
+	obj := dict.Get("Function")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Function")
 		return nil, errors.New("Required attribute missing")
 	}
@@ -347,8 +347,8 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType2{}
 
 	// Coords (required).
-	obj, ok := (*dict)["Coords"]
-	if !ok {
+	obj := dict.Get("Coords")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Coords")
 		return nil, errors.New("Required attribute missing")
 	}
@@ -364,7 +364,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Coords = arr
 
 	// Domain (optional).
-	if obj, has := (*dict)["Domain"]; has {
+	if obj := dict.Get("Domain"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -375,8 +375,8 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 
 	// Function (required).
-	obj, ok = (*dict)["Function"]
-	if !ok {
+	obj = dict.Get("Function")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Function")
 		return nil, errors.New("Required attribute missing")
 	}
@@ -388,7 +388,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Function = function
 
 	// Extend (optional).
-	if obj, has := (*dict)["Extend"]; has {
+	if obj := dict.Get("Extend"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -410,8 +410,8 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType3{}
 
 	// Coords (required).
-	obj, ok := (*dict)["Coords"]
-	if !ok {
+	obj := dict.Get("Coords")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Coords")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -427,7 +427,7 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Coords = arr
 
 	// Domain (optional).
-	if obj, has := (*dict)["Domain"]; has {
+	if obj := dict.Get("Domain"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -438,8 +438,8 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 
 	// Function (required).
-	obj, ok = (*dict)["Function"]
-	if !ok {
+	obj = dict.Get("Function")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Function")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -451,7 +451,7 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Function = function
 
 	// Extend (optional).
-	if obj, has := (*dict)["Extend"]; has {
+	if obj := dict.Get("Extend"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
@@ -473,8 +473,8 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType4{}
 
 	// BitsPerCoordinate (required).
-	obj, ok := (*dict)["BitsPerCoordinate"]
-	if !ok {
+	obj := dict.Get("BitsPerCoordinate")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -486,8 +486,8 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerCoordinate = integer
 
 	// BitsPerComponent (required).
-	obj, ok = (*dict)["BitsPerComponent"]
-	if !ok {
+	obj = dict.Get("BitsPerComponent")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -499,8 +499,8 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// BitsPerFlag (required).
-	obj, ok = (*dict)["BitsPerFlag"]
-	if !ok {
+	obj = dict.Get("BitsPerFlag")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -512,8 +512,8 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// Decode (required).
-	obj, ok = (*dict)["Decode"]
-	if !ok {
+	obj = dict.Get("Decode")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -525,8 +525,8 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Decode = arr
 
 	// Function (required).
-	obj, ok = (*dict)["Function"]
-	if !ok {
+	obj = dict.Get("Function")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Function")
 		return nil, errors.New("Required attribute missing")
 	}
@@ -545,8 +545,8 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType5{}
 
 	// BitsPerCoordinate (required).
-	obj, ok := (*dict)["BitsPerCoordinate"]
-	if !ok {
+	obj := dict.Get("BitsPerCoordinate")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -558,8 +558,8 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerCoordinate = integer
 
 	// BitsPerComponent (required).
-	obj, ok = (*dict)["BitsPerComponent"]
-	if !ok {
+	obj = dict.Get("BitsPerComponent")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -571,8 +571,8 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// VerticesPerRow (required).
-	obj, ok = (*dict)["VerticesPerRow"]
-	if !ok {
+	obj = dict.Get("VerticesPerRow")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: VerticesPerRow")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -584,8 +584,8 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.VerticesPerRow = integer
 
 	// Decode (required).
-	obj, ok = (*dict)["Decode"]
-	if !ok {
+	obj = dict.Get("Decode")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -597,7 +597,7 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Decode = arr
 
 	// Function (optional).
-	if obj, has := (*dict)["Function"]; has {
+	if obj := dict.Get("Function"); obj != nil {
 		function, err := newPdfFunctionFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("Error parsing function: %v", err)
@@ -614,8 +614,8 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType6{}
 
 	// BitsPerCoordinate (required).
-	obj, ok := (*dict)["BitsPerCoordinate"]
-	if !ok {
+	obj := dict.Get("BitsPerCoordinate")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -627,8 +627,8 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerCoordinate = integer
 
 	// BitsPerComponent (required).
-	obj, ok = (*dict)["BitsPerComponent"]
-	if !ok {
+	obj = dict.Get("BitsPerComponent")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -640,8 +640,8 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// BitsPerFlag (required).
-	obj, ok = (*dict)["BitsPerFlag"]
-	if !ok {
+	obj = dict.Get("BitsPerFlag")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -653,8 +653,8 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// Decode (required).
-	obj, ok = (*dict)["Decode"]
-	if !ok {
+	obj = dict.Get("Decode")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -666,7 +666,7 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Decode = arr
 
 	// Function (optional).
-	if obj, has := (*dict)["Function"]; has {
+	if obj := dict.Get("Function"); obj != nil {
 		function, err := newPdfFunctionFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("Error parsing function: %v", err)
@@ -683,8 +683,8 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading := PdfShadingType7{}
 
 	// BitsPerCoordinate (required).
-	obj, ok := (*dict)["BitsPerCoordinate"]
-	if !ok {
+	obj := dict.Get("BitsPerCoordinate")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -696,8 +696,8 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerCoordinate = integer
 
 	// BitsPerComponent (required).
-	obj, ok = (*dict)["BitsPerComponent"]
-	if !ok {
+	obj = dict.Get("BitsPerComponent")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -709,8 +709,8 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// BitsPerFlag (required).
-	obj, ok = (*dict)["BitsPerFlag"]
-	if !ok {
+	obj = dict.Get("BitsPerFlag")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -722,8 +722,8 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.BitsPerComponent = integer
 
 	// Decode (required).
-	obj, ok = (*dict)["Decode"]
-	if !ok {
+	obj = dict.Get("Decode")
+	if obj == nil {
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -735,7 +735,7 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	shading.Decode = arr
 
 	// Function (optional).
-	if obj, has := (*dict)["Function"]; has {
+	if obj := dict.Get("Function"); obj != nil {
 		function, err := newPdfFunctionFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("Error parsing function: %v", err)

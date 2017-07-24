@@ -9,7 +9,9 @@ package core
 // - Raw (Identity)
 // - FlateDecode
 // - LZW
+// - DCT Decode (JPEG)
 // - ASCII Hex
+// - ASCII85
 
 import (
 	"bytes"
@@ -93,37 +95,37 @@ func (this *FlateEncoder) GetFilterName() string {
 
 func (this *FlateEncoder) MakeDecodeParams() PdfObject {
 	if this.Predictor > 1 {
-		decodeParams := PdfObjectDictionary{}
-		decodeParams["Predictor"] = MakeInteger(int64(this.Predictor))
+		decodeParams := MakeDict()
+		decodeParams.Set("Predictor", MakeInteger(int64(this.Predictor)))
 
 		// Only add if not default option.
 		if this.BitsPerComponent != 8 {
-			decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
+			decodeParams.Set("BitsPerComponent", MakeInteger(int64(this.BitsPerComponent)))
 		}
 		if this.Columns != 1 {
-			decodeParams["Columns"] = MakeInteger(int64(this.Columns))
+			decodeParams.Set("Columns", MakeInteger(int64(this.Columns)))
 		}
 		if this.Colors != 1 {
-			decodeParams["Colors"] = MakeInteger(int64(this.Colors))
+			decodeParams.Set("Colors", MakeInteger(int64(this.Colors)))
 		}
-		return &decodeParams
+		return decodeParams
 	}
+
 	return nil
 }
 
 // Make a new instance of an encoding dictionary for a stream object.
 // Has the Filter set and the DecodeParms.
 func (this *FlateEncoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
-
-	dict["Filter"] = MakeName(this.GetFilterName())
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
 
 	decodeParams := this.MakeDecodeParams()
 	if decodeParams != nil {
-		dict["DecodeParms"] = decodeParams
+		dict.Set("DecodeParms", decodeParams)
 	}
 
-	return &dict
+	return dict
 }
 
 // Create a new flate decoder from a stream object, getting all the encoding parameters
@@ -139,7 +141,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := (*encDict)["DecodeParms"]
+		obj := encDict.Get("DecodeParms")
 		if obj != nil {
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
@@ -155,8 +157,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	}
 
 	common.Log.Trace("decode params: %s", decodeParams.String())
-	obj, has := (*decodeParams)["Predictor"]
-	if !has {
+	obj := decodeParams.Get("Predictor")
+	if obj == nil {
 		common.Log.Debug("Error: Predictor missing from DecodeParms - Continue with default (1)")
 	} else {
 		predictor, ok := obj.(*PdfObjectInteger)
@@ -168,8 +170,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	}
 
 	// Bits per component.  Use default if not specified (8).
-	obj, has = (*decodeParams)["BitsPerComponent"]
-	if has {
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
@@ -181,8 +183,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	if encoder.Predictor > 1 {
 		// Columns.
 		encoder.Columns = 1
-		obj, has = (*decodeParams)["Columns"]
-		if has {
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
@@ -194,8 +196,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		// Colors.
 		// Number of interleaved color components per sample (Default 1 if not specified)
 		encoder.Colors = 1
-		obj, has = (*decodeParams)["Colors"]
-		if has {
+		obj = decodeParams.Get("Colors")
+		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")
@@ -230,8 +232,7 @@ func (this *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 // Decode a FlateEncoded stream object and give back decoded bytes.
 func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	// TODO: Revamp this support to handle TIFF predictor (2).
-	// Also handle more filter bytes and support more values of BitsPerComponent.
+	// TODO: Handle more filter bytes and support more values of BitsPerComponent.
 
 	common.Log.Trace("FlateDecode stream")
 	common.Log.Trace("Predictor: %d", this.Predictor)
@@ -456,20 +457,20 @@ func (this *LZWEncoder) GetFilterName() string {
 
 func (this *LZWEncoder) MakeDecodeParams() PdfObject {
 	if this.Predictor > 1 {
-		decodeParams := PdfObjectDictionary{}
-		decodeParams["Predictor"] = MakeInteger(int64(this.Predictor))
+		decodeParams := MakeDict()
+		decodeParams.Set("Predictor", MakeInteger(int64(this.Predictor)))
 
 		// Only add if not default option.
 		if this.BitsPerComponent != 8 {
-			decodeParams["BitsPerComponent"] = MakeInteger(int64(this.BitsPerComponent))
+			decodeParams.Set("BitsPerComponent", MakeInteger(int64(this.BitsPerComponent)))
 		}
 		if this.Columns != 1 {
-			decodeParams["Columns"] = MakeInteger(int64(this.Columns))
+			decodeParams.Set("Columns", MakeInteger(int64(this.Columns)))
 		}
 		if this.Colors != 1 {
-			decodeParams["Colors"] = MakeInteger(int64(this.Colors))
+			decodeParams.Set("Colors", MakeInteger(int64(this.Colors)))
 		}
-		return &decodeParams
+		return decodeParams
 	}
 	return nil
 }
@@ -477,18 +478,18 @@ func (this *LZWEncoder) MakeDecodeParams() PdfObject {
 // Make a new instance of an encoding dictionary for a stream object.
 // Has the Filter set and the DecodeParms.
 func (this *LZWEncoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
+	dict := MakeDict()
 
-	dict["Filter"] = MakeName(this.GetFilterName())
+	dict.Set("Filter", MakeName(this.GetFilterName()))
 
 	decodeParams := this.MakeDecodeParams()
 	if decodeParams != nil {
-		dict["DecodeParms"] = decodeParams
+		dict.Set("DecodeParms", decodeParams)
 	}
 
-	dict["EarlyChange"] = MakeInteger(int64(this.EarlyChange))
+	dict.Set("EarlyChange", MakeInteger(int64(this.EarlyChange)))
 
-	return &dict
+	return dict
 }
 
 // Create a new LZW encoder/decoder from a stream object, getting all the encoding parameters
@@ -505,7 +506,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := (*encDict)["DecodeParms"]
+		obj := encDict.Get("DecodeParms")
 		if obj != nil {
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
@@ -520,8 +521,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	// implementations use a different mechanisms. Essentially this chooses
 	// which LZW implementation to use.
 	// The default is 1 (one code early)
-	obj, has := (*encDict)["EarlyChange"]
-	if has {
+	obj := encDict.Get("EarlyChange")
+	if obj != nil {
 		earlyChange, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
@@ -542,8 +543,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		return encoder, nil
 	}
 
-	obj, has = (*decodeParams)["Predictor"]
-	if has {
+	obj = decodeParams.Get("Predictor")
+	if obj != nil {
 		predictor, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
@@ -553,8 +554,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	}
 
 	// Bits per component.  Use default if not specified (8).
-	obj, has = (*decodeParams)["BitsPerComponent"]
-	if has {
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
@@ -566,8 +567,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	if encoder.Predictor > 1 {
 		// Columns.
 		encoder.Columns = 1
-		obj, has = (*decodeParams)["Columns"]
-		if has {
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
@@ -579,8 +580,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		// Colors.
 		// Number of interleaved color components per sample (Default 1 if not specified)
 		encoder.Colors = 1
-		obj, has = (*decodeParams)["Colors"]
-		if has {
+		obj = decodeParams.Get("Colors")
+		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")
@@ -778,11 +779,11 @@ func (this *DCTEncoder) MakeDecodeParams() PdfObject {
 // Make a new instance of an encoding dictionary for a stream object.
 // Has the Filter set.  Some other parameters are generated elsewhere.
 func (this *DCTEncoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
+	dict := MakeDict()
 
-	dict["Filter"] = MakeName(this.GetFilterName())
+	dict.Set("Filter", MakeName(this.GetFilterName()))
 
-	return &dict
+	return dict
 }
 
 // Create a new DCT encoder/decoder from a stream object, getting all the encoding parameters
@@ -1075,10 +1076,9 @@ func (this *ASCIIHexEncoder) MakeDecodeParams() PdfObject {
 
 // Make a new instance of an encoding dictionary for a stream object.
 func (this *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
-
-	dict["Filter"] = MakeName(this.GetFilterName())
-	return &dict
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
+	return dict
 }
 
 func (this *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
@@ -1152,10 +1152,9 @@ func (this *ASCII85Encoder) MakeDecodeParams() PdfObject {
 
 // Make a new instance of an encoding dictionary for a stream object.
 func (this *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
-
-	dict["Filter"] = MakeName(this.GetFilterName())
-	return &dict
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
+	return dict
 }
 
 // 5 ASCII characters -> 4 raw binary bytes
@@ -1322,7 +1321,7 @@ func (this *RawEncoder) MakeDecodeParams() PdfObject {
 
 // Make a new instance of an encoding dictionary for a stream object.
 func (this *RawEncoder) MakeStreamDict() *PdfObjectDictionary {
-	return &PdfObjectDictionary{}
+	return MakeDict()
 }
 
 func (this *RawEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
@@ -1365,7 +1364,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 	// Optional, not always present.
 	var decodeParamsDict *PdfObjectDictionary
 	decodeParamsArray := []PdfObject{}
-	obj := (*encDict)["DecodeParms"]
+	obj := encDict.Get("DecodeParms")
 	if obj != nil {
 		// If it is a dictionary, assume it applies to all
 		dict, isDict := obj.(*PdfObjectDictionary)
@@ -1386,7 +1385,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		}
 	}
 
-	obj = (*encDict)["Filter"]
+	obj = encDict.Get("Filter")
 	if obj == nil {
 		return nil, fmt.Errorf("Filter missing")
 	}
@@ -1498,16 +1497,16 @@ func (this *MultiEncoder) AddEncoder(encoder StreamEncoder) {
 }
 
 func (this *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := PdfObjectDictionary{}
-
-	dict["Filter"] = MakeName(this.GetFilterName())
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
 
 	// Pass all values from children, except Filter and DecodeParms.
 	for _, encoder := range this.encoders {
 		encDict := encoder.MakeStreamDict()
-		for key, val := range *encDict {
+		for _, key := range encDict.Keys() {
+			val := encDict.Get(key)
 			if key != "Filter" && key != "DecodeParms" {
-				dict[key] = val
+				dict.Set(key, val)
 			}
 		}
 	}
@@ -1515,10 +1514,10 @@ func (this *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	// Make the decode params array or dict.
 	decodeParams := this.MakeDecodeParams()
 	if decodeParams != nil {
-		dict["DecodeParms"] = decodeParams
+		dict.Set("DecodeParms", decodeParams)
 	}
 
-	return &dict
+	return dict
 }
 
 func (this *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {

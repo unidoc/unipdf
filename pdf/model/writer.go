@@ -19,24 +19,15 @@ import (
 	"time"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-var pdfProducer = ""
 var pdfCreator = ""
 
 func getPdfProducer() string {
-	if len(pdfProducer) > 0 {
-		return pdfProducer
-	}
-
-	// We kindly request that users of UniDoc and derived versions refer to UniDoc in the Producer line.
-	// Something like "(based on UniDoc)" would be great.
-	return fmt.Sprintf("UniDoc Library version %s - http://unidoc.io", getUniDocVersion())
-}
-
-func SetPdfProducer(producer string) {
-	pdfProducer = producer
+	licenseKey := license.GetLicenseKey()
+	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
 }
 
 func getPdfCreator() string {
@@ -83,12 +74,6 @@ type PdfWriter struct {
 
 	// Forms.
 	acroForm *PdfAcroForm
-
-
-
-
-
-
 }
 
 func NewPdfWriter() PdfWriter {
@@ -104,37 +89,37 @@ func NewPdfWriter() PdfWriter {
 	w.minorVersion = 3
 
 	// Creation info.
-	infoDict := PdfObjectDictionary{}
-	infoDict[PdfObjectName("Producer")] = MakeString(getPdfProducer())
-	infoDict[PdfObjectName("Creator")] = MakeString(getPdfCreator())
+	infoDict := MakeDict()
+	infoDict.Set("Producer", MakeString(getPdfProducer()))
+	infoDict.Set("Creator", MakeString(getPdfCreator()))
 	infoObj := PdfIndirectObject{}
-	infoObj.PdfObject = &infoDict
+	infoObj.PdfObject = infoDict
 	w.infoObj = &infoObj
 	w.addObject(&infoObj)
 
 	// Root catalog.
 	catalog := PdfIndirectObject{}
-	catalogDict := PdfObjectDictionary{}
-	catalogDict[PdfObjectName("Type")] = MakeName("Catalog")
-	catalog.PdfObject = &catalogDict
+	catalogDict := MakeDict()
+	catalogDict.Set("Type", MakeName("Catalog"))
+	catalog.PdfObject = catalogDict
 
 	w.root = &catalog
 	w.addObject(&catalog)
 
 	// Pages.
 	pages := PdfIndirectObject{}
-	pagedict := PdfObjectDictionary{}
-	pagedict[PdfObjectName("Type")] = MakeName("Pages")
+	pagedict := MakeDict()
+	pagedict.Set("Type", MakeName("Pages"))
 	kids := PdfObjectArray{}
-	pagedict[PdfObjectName("Kids")] = &kids
-	pagedict[PdfObjectName("Count")] = MakeInteger(0)
-	pages.PdfObject = &pagedict
+	pagedict.Set("Kids", &kids)
+	pagedict.Set("Count", MakeInteger(0))
+	pages.PdfObject = pagedict
 
 	w.pages = &pages
 	w.addObject(&pages)
 
-	catalogDict[PdfObjectName("Pages")] = &pages
-	w.catalog = &catalogDict
+	catalogDict.Set("Pages", &pages)
+	w.catalog = catalogDict
 
 	common.Log.Trace("Catalog %s", catalog)
 
@@ -153,7 +138,7 @@ func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
 
 	if ocProperties != nil {
 		common.Log.Trace("Setting OC Properties...")
-		(*dict)["OCProperties"] = ocProperties
+		dict.Set("OCProperties", ocProperties)
 		// Any risk of infinite loops?
 		this.addObjects(ocProperties)
 	}
@@ -218,7 +203,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
 		common.Log.Trace("Dict")
 		common.Log.Trace("- %s", obj)
-		for k, v := range *dict {
+		for _, k := range dict.Keys() {
+			v := dict.Get(k)
 			common.Log.Trace("Key %s", k)
 			if k != "Parent" {
 				err := this.addObjects(v)
@@ -226,7 +212,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					return err
 				}
 			} else {
-				if _, parentIsNull := (*dict)["Parent"].(*PdfObjectNull); parentIsNull {
+				if _, parentIsNull := dict.Get("Parent").(*PdfObjectNull); parentIsNull {
 					// Parent is null.  We can ignore it.
 					continue
 				}
@@ -237,7 +223,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					// Although it is missing at this point, it could be added later...
 				}
 				// How to handle the parent?  Make sure it is present?
-				if parentObj, parentIsRef := (*dict)["Parent"].(*PdfObjectReference); parentIsRef {
+				if parentObj, parentIsRef := dict.Get("Parent").(*PdfObjectReference); parentIsRef {
 					// Parent is a reference.  Means we can drop it?
 					// Could refer to somewhere outside of the scope of the output doc.
 					// Should be done by the reader already.
@@ -293,10 +279,9 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 		return errors.New("Page object should be a dictionary.")
 	}
 
-
-	otype, ok := (*pDict)["Type"].(*PdfObjectName)
+	otype, ok := pDict.Get("Type").(*PdfObjectName)
 	if !ok {
-		return fmt.Errorf("Page should have a Type key with a value of type name (%T)", (*pDict)["Type"])
+		return fmt.Errorf("Page should have a Type key with a value of type name (%T)", pDict.Get("Type"))
 
 	}
 	if *otype != "Page" {
@@ -305,8 +290,8 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 
 	// Copy inherited fields if missing.
 	inheritedFields := []PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
-	parent, hasParent := (*pDict)["Parent"].(*PdfIndirectObject)
-	common.Log.Trace("Page Parent: %T (%v)", (*pDict)["Parent"], hasParent)
+	parent, hasParent := pDict.Get("Parent").(*PdfIndirectObject)
+	common.Log.Trace("Page Parent: %T (%v)", pDict.Get("Parent"), hasParent)
 	for hasParent {
 		common.Log.Trace("Page Parent: %T", parent)
 		parentDict, ok := parent.PdfObject.(*PdfObjectDictionary)
@@ -315,40 +300,39 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 		}
 		for _, field := range inheritedFields {
 			common.Log.Trace("Field %s", field)
-			if _, hasAlready := (*pDict)[field]; hasAlready {
+			if pDict.Get(field) != nil {
 				common.Log.Trace("- page has already")
 				continue
 			}
 
-			if obj, hasField := (*parentDict)[field]; hasField {
+			if obj := parentDict.Get(field); obj != nil {
 				// Parent has the field.  Inherit, pass to the new page.
 				common.Log.Trace("Inheriting field %s", field)
-				(*pDict)[field] = obj
+				pDict.Set(field, obj)
 			}
 		}
-		parent, hasParent = (*parentDict)["Parent"].(*PdfIndirectObject)
-		common.Log.Trace("Next parent: %T", (*parentDict)["Parent"])
+		parent, hasParent = parentDict.Get("Parent").(*PdfIndirectObject)
+		common.Log.Trace("Next parent: %T", parentDict.Get("Parent"))
 	}
 
 	common.Log.Trace("Traversal done")
 
 	// Update the dictionary.
 	// Reuses the input object, updating the fields.
-	(*pDict)["Parent"] = this.pages
+	pDict.Set("Parent", this.pages)
 	pageObj.PdfObject = pDict
-
 
 	// Add to Pages.
 	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
 	if !ok {
 		return errors.New("Invalid Pages obj (not a dict)")
 	}
-	kids, ok := (*pagesDict)["Kids"].(*PdfObjectArray)
+	kids, ok := pagesDict.Get("Kids").(*PdfObjectArray)
 	if !ok {
 		return errors.New("Invalid Pages Kids obj (not an array)")
 	}
 	*kids = append(*kids, pageObj)
-	pageCount, ok := (*pagesDict)["Count"].(*PdfObjectInteger)
+	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		return errors.New("Invalid Pages Count object (not an integer)")
 	}
@@ -386,7 +370,8 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
 		common.Log.Trace("Dict")
-		for k, v := range *dict {
+		for _, k := range dict.Keys() {
+			v := dict.Get(k)
 			if string(k) == key {
 				list = append(list, v)
 			}
@@ -499,14 +484,14 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	// Make the O and U objects.
 	O, err := crypter.Alg3(userPass, ownerPass)
 	if err != nil {
-		common.Log.Error("Error generating O for encryption (%s)", err)
+		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
 		return err
 	}
 	crypter.O = []byte(O)
 	common.Log.Trace("gen O: % x", O)
 	U, key, err := crypter.Alg5(userPass)
 	if err != nil {
-		common.Log.Error("Error generating O for encryption (%s)", err)
+		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
 		return err
 	}
 	common.Log.Trace("gen U: % x", U)
@@ -514,19 +499,18 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	crypter.EncryptionKey = key
 
 	// Generate the encryption dictionary.
-	encDict := &PdfObjectDictionary{}
-	(*encDict)[PdfObjectName("Filter")] = MakeName("Standard")
-	(*encDict)[PdfObjectName("P")] = MakeInteger(int64(crypter.P))
-	(*encDict)[PdfObjectName("V")] = MakeInteger(int64(crypter.V))
-	(*encDict)[PdfObjectName("R")] = MakeInteger(int64(crypter.R))
-	(*encDict)[PdfObjectName("Length")] = MakeInteger(int64(crypter.Length))
-	(*encDict)[PdfObjectName("O")] = &O
-	(*encDict)[PdfObjectName("U")] = &U
+	encDict := MakeDict()
+	encDict.Set("Filter", MakeName("Standard"))
+	encDict.Set("P", MakeInteger(int64(crypter.P)))
+	encDict.Set("V", MakeInteger(int64(crypter.V)))
+	encDict.Set("R", MakeInteger(int64(crypter.R)))
+	encDict.Set("Length", MakeInteger(int64(crypter.Length)))
+	encDict.Set("O", &O)
+	encDict.Set("U", &U)
 	this.encryptDict = encDict
 
 	// Make an object to contain it.
-	io := &PdfIndirectObject{}
-	io.PdfObject = encDict
+	io := MakeIndirectObject(encDict)
 	this.encryptObj = io
 	this.addObject(io)
 
@@ -541,7 +525,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		common.Log.Trace("OutlineTree: %+v", this.outlineTree)
 		outlines := this.outlineTree.ToPdfObject()
 		common.Log.Trace("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
-		(*this.catalog)["Outlines"] = outlines
+		this.catalog.Set("Outlines", outlines)
 		err := this.addObjects(outlines)
 		if err != nil {
 			return err
@@ -553,7 +537,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		common.Log.Trace("Writing acro forms")
 		indObj := this.acroForm.ToPdfObject()
 		common.Log.Trace("AcroForm: %+v", indObj)
-		(*this.catalog)[PdfObjectName("AcroForm")] = indObj
+		this.catalog.Set("AcroForm", indObj)
 		err := this.addObjects(indObj)
 		if err != nil {
 			return err
@@ -564,17 +548,18 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	for pendingObj, pendingObjDict := range this.pendingObjects {
 		if !this.hasObject(pendingObj) {
 			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
-			for key, val := range *pendingObjDict {
+			for _, key := range pendingObjDict.Keys() {
+				val := pendingObjDict.Get(key)
 				if val == pendingObj {
 					common.Log.Debug("Pending object found! and replaced with null")
-					(*pendingObjDict)[key] = MakeNull()
+					pendingObjDict.Set(key, MakeNull())
 					break
 				}
 			}
 		}
 	}
 	// Set version in the catalog.
-	(*this.catalog)["Version"] = MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion))
+	this.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion)))
 
 	w := bufio.NewWriter(ws)
 	this.writer = w
@@ -622,14 +607,14 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	}
 
 	// Generate & write trailer
-	trailer := PdfObjectDictionary{}
-	trailer["Info"] = this.infoObj
-	trailer["Root"] = this.root
-	trailer["Size"] = MakeInteger(int64(len(this.objects) + 1))
+	trailer := MakeDict()
+	trailer.Set("Info", this.infoObj)
+	trailer.Set("Root", this.root)
+	trailer.Set("Size", MakeInteger(int64(len(this.objects)+1)))
 	// If encrypted!
 	if this.crypter != nil {
-		trailer["Encrypt"] = this.encryptObj
-		trailer[PdfObjectName("ID")] = this.ids
+		trailer.Set("Encrypt", this.encryptObj)
+		trailer.Set("ID", this.ids)
 		common.Log.Trace("Ids: %s", this.ids)
 	}
 	this.writer.WriteString("trailer\n")

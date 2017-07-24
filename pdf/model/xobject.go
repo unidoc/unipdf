@@ -41,7 +41,7 @@ type XObjectForm struct {
 func NewXObjectForm() *XObjectForm {
 	xobj := &XObjectForm{}
 	stream := &PdfObjectStream{}
-	stream.PdfObjectDictionary = &PdfObjectDictionary{}
+	stream.PdfObjectDictionary = MakeDict()
 	xobj.primitive = stream
 	return xobj
 }
@@ -60,7 +60,7 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 	}
 	form.Filter = encoder
 
-	if obj, isDefined := dict["Subtype"]; isDefined {
+	if obj := dict.Get("Subtype"); obj != nil {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, errors.New("Type error")
@@ -71,16 +71,16 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 		}
 	}
 
-	if obj, isDefined := dict["FormType"]; isDefined {
+	if obj := dict.Get("FormType"); obj != nil {
 		form.FormType = obj
 	}
-	if obj, isDefined := dict["BBox"]; isDefined {
+	if obj := dict.Get("BBox"); obj != nil {
 		form.BBox = obj
 	}
-	if obj, isDefined := dict["Matrix"]; isDefined {
+	if obj := dict.Get("Matrix"); obj != nil {
 		form.Matrix = obj
 	}
-	if obj, isDefined := dict["Resources"]; isDefined {
+	if obj := dict.Get("Resources"); obj != nil {
 		obj = TraceToDirectObject(obj)
 		d, ok := obj.(*PdfObjectDictionary)
 		if !ok {
@@ -96,36 +96,16 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 		common.Log.Trace("Form resources: %#v", form.Resources)
 	}
 
-	if obj, isDefined := dict["Group"]; isDefined {
-		form.Group = obj
-	}
-	if obj, isDefined := dict["Ref"]; isDefined {
-		form.Ref = obj
-	}
-	if obj, isDefined := dict["MetaData"]; isDefined {
-		form.MetaData = obj
-	}
-	if obj, isDefined := dict["PieceInfo"]; isDefined {
-		form.PieceInfo = obj
-	}
-	if obj, isDefined := dict["LastModified"]; isDefined {
-		form.LastModified = obj
-	}
-	if obj, isDefined := dict["StructParent"]; isDefined {
-		form.StructParent = obj
-	}
-	if obj, isDefined := dict["StructParents"]; isDefined {
-		form.StructParents = obj
-	}
-	if obj, isDefined := dict["OPI"]; isDefined {
-		form.OPI = obj
-	}
-	if obj, isDefined := dict["OC"]; isDefined {
-		form.OC = obj
-	}
-	if obj, isDefined := dict["Name"]; isDefined {
-		form.Name = obj
-	}
+	form.Group = dict.Get("Group")
+	form.Ref = dict.Get("Ref")
+	form.MetaData = dict.Get("MetaData")
+	form.PieceInfo = dict.Get("PieceInfo")
+	form.LastModified = dict.Get("LastModified")
+	form.StructParent = dict.Get("StructParent")
+	form.StructParents = dict.Get("StructParents")
+	form.OPI = dict.Get("OPI")
+	form.OC = dict.Get("OC")
+	form.Name = dict.Get("Name")
 
 	form.Stream = stream.Stream
 
@@ -223,7 +203,7 @@ type XObjectImage struct {
 	Alternatives PdfObject
 	SMask        PdfObject
 	SMaskInData  PdfObject
-	Name         PdfObject
+	Name         PdfObject // Obsolete. Currently read if available and write if available. Not setting on new created files.
 	StructParent PdfObject
 	ID           PdfObject
 	OPI          PdfObject
@@ -237,19 +217,19 @@ type XObjectImage struct {
 func NewXObjectImage() *XObjectImage {
 	xobj := &XObjectImage{}
 	stream := &PdfObjectStream{}
-	stream.PdfObjectDictionary = &PdfObjectDictionary{}
+	stream.PdfObjectDictionary = MakeDict()
 	xobj.primitive = stream
 	return xobj
 }
 
 // Creates a new XObject Image from an image object with default options.
 // If encoder is nil, uses raw encoding (none).
-func NewXObjectImageFromImage(name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
 	baseXObj := NewXObjectImage()
-	return UpdateXObjectImageFromImage(baseXObj, name, img, cs, encoder)
+	return UpdateXObjectImageFromImage(baseXObj, img, cs, encoder)
 }
 
-func UpdateXObjectImageFromImage(baseXObj *XObjectImage, name PdfObjectName, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+func UpdateXObjectImageFromImage(baseXObj *XObjectImage, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
 	dupObj := *baseXObj
 	xobj := &dupObj
 
@@ -263,7 +243,6 @@ func UpdateXObjectImageFromImage(baseXObj *XObjectImage, name PdfObjectName, img
 		return nil, err
 	}
 
-	xobj.Name = &name
 	xobj.Filter = encoder
 	xobj.Stream = encoded
 
@@ -289,7 +268,25 @@ func UpdateXObjectImageFromImage(baseXObj *XObjectImage, name PdfObjectName, img
 		}
 	} else {
 		xobj.ColorSpace = cs
+	}
 
+	if img.hasAlpha {
+		// Add the alpha channel information as a stencil mask (SMask).
+		// Has same width and height as original and stored in same
+		// bits per component (1 component, hence the DeviceGray channel).
+		smask := NewXObjectImage()
+		smask.Filter = encoder
+		encoded, err := encoder.EncodeBytes(img.alphaData)
+		if err != nil {
+			common.Log.Debug("Error with encoding: %v", err)
+			return nil, err
+		}
+		smask.Stream = encoded
+		smask.BitsPerComponent = &img.BitsPerComponent
+		smask.Width = &img.Width
+		smask.Height = &img.Height
+		smask.ColorSpace = NewPdfColorspaceDeviceGray()
+		xobj.SMask = smask.ToPdfObject()
 	}
 
 	return xobj, nil
@@ -309,7 +306,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	}
 	img.Filter = encoder
 
-	if obj, isDefined := dict["Width"]; isDefined {
+	if obj := dict.Get("Width"); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image width object")
@@ -320,7 +317,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		return nil, errors.New("Width missing")
 	}
 
-	if obj, isDefined := dict["Height"]; isDefined {
+	if obj := dict.Get("Height"); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image height object")
@@ -331,8 +328,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		return nil, errors.New("Height missing")
 	}
 
-	if obj, isDefined := dict["ColorSpace"]; isDefined {
-		//img.ColorSpace = obj
+	if obj := dict.Get("ColorSpace"); obj != nil {
 		cs, err := newPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
@@ -344,7 +340,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		img.ColorSpace = NewPdfColorspaceDeviceGray()
 	}
 
-	if obj, isDefined := dict["BitsPerComponent"]; isDefined {
+	if obj := dict.Get("BitsPerComponent"); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image height object")
@@ -353,48 +349,20 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		img.BitsPerComponent = &iVal
 	}
 
-	if obj, isDefined := dict["Intent"]; isDefined {
-		img.Intent = obj
-	}
-	if obj, isDefined := dict["ImageMask"]; isDefined {
-		img.ImageMask = obj
-	}
-	if obj, isDefined := dict["Mask"]; isDefined {
-		img.Mask = obj
-	}
-	if obj, isDefined := dict["Decode"]; isDefined {
-		img.Decode = obj
-	}
-	if obj, isDefined := dict["Interpolate"]; isDefined {
-		img.Interpolate = obj
-	}
-	if obj, isDefined := dict["Alternatives"]; isDefined {
-		img.Alternatives = obj
-	}
-	if obj, isDefined := dict["SMask"]; isDefined {
-		img.SMask = obj
-	}
-	if obj, isDefined := dict["SMaskInData"]; isDefined {
-		img.SMaskInData = obj
-	}
-	if obj, isDefined := dict["Name"]; isDefined {
-		img.Name = obj
-	}
-	if obj, isDefined := dict["StructParent"]; isDefined {
-		img.StructParent = obj
-	}
-	if obj, isDefined := dict["ID"]; isDefined {
-		img.ID = obj
-	}
-	if obj, isDefined := dict["OPI"]; isDefined {
-		img.OPI = obj
-	}
-	if obj, isDefined := dict["Metadata"]; isDefined {
-		img.Metadata = obj
-	}
-	if obj, isDefined := dict["OC"]; isDefined {
-		img.OC = obj
-	}
+	img.Intent = dict.Get("Intent")
+	img.ImageMask = dict.Get("ImageMask")
+	img.Mask = dict.Get("Mask")
+	img.Decode = dict.Get("Decode")
+	img.Interpolate = dict.Get("Interpolate")
+	img.Alternatives = dict.Get("Alternatives")
+	img.SMask = dict.Get("SMask")
+	img.SMaskInData = dict.Get("SMaskInData")
+	img.Name = dict.Get("Name")
+	img.StructParent = dict.Get("StructParent")
+	img.ID = dict.Get("ID")
+	img.OPI = dict.Get("OPI")
+	img.Metadata = dict.Get("Metadata")
+	img.OC = dict.Get("OC")
 
 	img.Stream = stream.Stream
 
@@ -448,34 +416,6 @@ func (ximg *XObjectImage) SetFilter(encoder StreamEncoder) error {
 	}
 
 	ximg.Stream = encoded
-	return nil
-}
-
-// Compress with default settings, updating the underlying stream also.
-// XXX/TODO: Add flate encoding as an option (although lossy).  Need to be able
-// to set default settings and override.
-func (ximg *XObjectImage) Compress() error {
-	if ximg.Filter != nil {
-		common.Log.Error("XImage already compressed...")
-		return errors.New("Already compressed")
-	}
-	//encoder := NewFlateEncoder()
-	//encoder.SetPredictor(int(*ximg.Width))
-	encoder := NewDCTEncoder()
-	encoder.ColorComponents = ximg.ColorSpace.GetNumComponents()
-	encoder.Height = int(*ximg.Height)
-	encoder.Width = int(*ximg.Width)
-	encoder.BitsPerComponent = int(*ximg.BitsPerComponent)
-	ximg.Filter = encoder
-
-	encoded, err := ximg.Filter.EncodeBytes(ximg.Stream)
-	if err != nil {
-		common.Log.Debug("Error encoding: %v\n", err)
-		return err
-	}
-	ximg.Stream = encoded
-
-	_ = ximg.ToPdfObject()
 	return nil
 }
 

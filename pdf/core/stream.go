@@ -13,9 +13,14 @@ import (
 
 // Creates the encoder from the stream's dictionary.
 func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
-	filterObj, hasFilter := (*(streamObj.PdfObjectDictionary))["Filter"]
-	if !hasFilter {
+	filterObj := streamObj.PdfObjectDictionary.Get("Filter")
+	if filterObj == nil {
 		// No filter, return raw data back.
+		return NewRawEncoder(), nil
+	}
+
+	if _, isNull := filterObj.(*PdfObjectNull); isNull {
+		// Filter is null -> raw data.
 		return NewRawEncoder(), nil
 	}
 
@@ -76,7 +81,7 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 		common.Log.Debug("Stream decoding failed: %v", err)
 		return nil, err
 	}
-	common.Log.Trace("Encoder: %+v\n", encoder)
+	common.Log.Trace("Encoder: %#v\n", encoder)
 
 	decoded, err := encoder.DecodeStream(streamObj)
 	if err != nil {
@@ -102,7 +107,7 @@ func EncodeStream(streamObj *PdfObjectStream) error {
 		// If LZW:
 		// Make sure to use EarlyChange 0.. We do not have write support for 1 yet.
 		lzwenc.EarlyChange = 0
-		(*streamObj.PdfObjectDictionary)["EarlyChange"] = MakeInteger(0)
+		streamObj.PdfObjectDictionary.Set("EarlyChange", MakeInteger(0))
 	}
 
 	common.Log.Trace("Encoder: %+v\n", encoder)
@@ -115,7 +120,7 @@ func EncodeStream(streamObj *PdfObjectStream) error {
 	streamObj.Stream = encoded
 
 	// Update length
-	(*streamObj.PdfObjectDictionary)["Length"] = MakeInteger(int64(len(encoded)))
+	streamObj.PdfObjectDictionary.Set("Length", MakeInteger(int64(len(encoded))))
 
 	return nil
 }

@@ -1,6 +1,8 @@
 # Version 2
 
-The version 2 of UniDoc is currently in alpha. The pdf functionality has been split into two parts.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
+The version 2 of UniDoc is currently in alpha. 
+The pdf functionality has been split into modules.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
+The creator package provides a convenient interface for creating image and text based PDF files and reports.
 
 # Migrating from version 1.
 
@@ -35,13 +37,11 @@ Check out the Releases section to see the tagged releases.
  * Self contained with no external dependencies
  * Developer friendly
 
-## Roadmap
-
-Our [roadmap](https://trello.com/b/JcliaYYI) is publicly available and features can be voted upon.
-
 ## Examples
 
+Multiple examples are provided in our example repository.
 See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master) folder.
+Contact us if you need any specific examples.
 
 ## Copying/License
 

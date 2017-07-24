@@ -124,7 +124,7 @@ func (this *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEnc
 	}
 
 	// Update length.
-	(*streamDict)["Length"] = MakeInteger(int64(len(encoded)))
+	streamDict.Set("Length", MakeInteger(int64(len(encoded))))
 
 	streamObj.Stream = []byte(encoded)
 
@@ -163,8 +163,8 @@ func newPdfPatternFromPdfObject(container PdfObject) (*PdfPattern, error) {
 	}
 
 	// PatternType.
-	obj, ok := (*dict)["PatternType"]
-	if !ok {
+	obj := dict.Get("PatternType")
+	if obj == nil {
 		common.Log.Debug("Pdf Pattern not containing PatternType")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -206,8 +206,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern := &PdfTilingPattern{}
 
 	// PaintType (required).
-	obj, ok := (*dict)["PaintType"]
-	if !ok {
+	obj := dict.Get("PaintType")
+	if obj == nil {
 		common.Log.Debug("PaintType missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -219,8 +219,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.PaintType = paintType
 
 	// TilingType (required).
-	obj, ok = (*dict)["TilingType"]
-	if !ok {
+	obj = dict.Get("TilingType")
+	if obj == nil {
 		common.Log.Debug("TilingType missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -232,8 +232,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.TilingType = tilingType
 
 	// BBox (required).
-	obj, ok = (*dict)["BBox"]
-	if !ok {
+	obj = dict.Get("BBox")
+	if obj == nil {
 		common.Log.Debug("BBox missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -251,8 +251,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.BBox = rect
 
 	// XStep (required).
-	obj, ok = (*dict)["XStep"]
-	if !ok {
+	obj = dict.Get("XStep")
+	if obj == nil {
 		common.Log.Debug("XStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -264,8 +264,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.XStep = MakeFloat(xStep)
 
 	// YStep (required).
-	obj, ok = (*dict)["YStep"]
-	if !ok {
+	obj = dict.Get("YStep")
+	if obj == nil {
 		common.Log.Debug("YStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -277,8 +277,8 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.YStep = MakeFloat(yStep)
 
 	// Resources (required).
-	obj, ok = (*dict)["Resources"]
-	if !ok {
+	obj = dict.Get("Resources")
+	if obj == nil {
 		common.Log.Debug("Resources missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -293,7 +293,7 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	pattern.Resources = resources
 
 	// Matrix (optional).
-	if obj, has := (*dict)["Matrix"]; has {
+	if obj := dict.Get("Matrix"); obj != nil {
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
@@ -310,8 +310,8 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 	pattern := &PdfShadingPattern{}
 
 	// Shading (required).
-	obj, ok := (*dict)["Shading"]
-	if !ok {
+	obj := dict.Get("Shading")
+	if obj == nil {
 		common.Log.Debug("Shading missing")
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -323,7 +323,7 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 	pattern.Shading = shading
 
 	// Matrix (optional).
-	if obj, has := (*dict)["Matrix"]; has {
+	if obj := dict.Get("Matrix"); obj != nil {
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
@@ -333,7 +333,7 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 	}
 
 	// ExtGState (optional).
-	if obj, has := (*dict)["ExtGState"]; has {
+	if obj := dict.Get("ExtGState"); obj != nil {
 		pattern.ExtGState = obj
 	}
 

@@ -36,7 +36,7 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 }
 
 // Parses all commands in content stream, returning a list of operation data.
-func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
+func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 	operations := ContentStreamOperations{}
 
 	for {
@@ -46,9 +46,9 @@ func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
 			obj, err, isOperand := this.parseObject()
 			if err != nil {
 				if err == io.EOF {
-					return operations, nil
+					return &operations, nil
 				}
-				return nil, err
+				return &operations, err
 			}
 			if isOperand {
 				operation.Operand = string(*obj.(*PdfObjectString))
@@ -64,14 +64,14 @@ func (this *ContentStreamParser) Parse() (ContentStreamOperations, error) {
 			// The image is stored as the parameter.
 			im, err := this.ParseInlineImage()
 			if err != nil {
-				return nil, err
+				return &operations, err
 			}
 			operation.Params = append(operation.Params, im)
 		}
 	}
 
 	common.Log.Debug("Operation list: %v\n", operations)
-	return operations, nil
+	return &operations, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and
@@ -421,7 +421,7 @@ func (this *ContentStreamParser) parseNull() (PdfObjectNull, error) {
 func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading content stream dict!")
 
-	dict := make(PdfObjectDictionary)
+	dict := MakeDict()
 
 	// Pass the '<<'
 	c, _ := this.reader.ReadByte()
@@ -466,8 +466,7 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
-				var nullObj PdfObjectNull
-				dict[newKey] = &nullObj
+				dict.Set(newKey, MakeNull())
 				continue
 			}
 		}
@@ -478,12 +477,12 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 		if err != nil {
 			return nil, err
 		}
-		dict[keyName] = val
+		dict.Set(keyName, val)
 
 		common.Log.Trace("dict[%s] = %s", keyName, val.String())
 	}
 
-	return &dict, nil
+	return dict, nil
 }
 
 // An operand is a text command represented by a word.

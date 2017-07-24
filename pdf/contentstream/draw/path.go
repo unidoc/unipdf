@@ -58,8 +58,8 @@ func (path Path) Offset(offX, offY float64) Path {
 	return path
 }
 
-func (path Path) GetBoundingBox() Rectangle {
-	bbox := Rectangle{}
+func (path Path) GetBoundingBox() BoundingBox {
+	bbox := BoundingBox{}
 
 	minX := 0.0
 	maxX := 0.0
@@ -95,7 +95,7 @@ func (path Path) GetBoundingBox() Rectangle {
 	return bbox
 }
 
-type Rectangle struct {
+type BoundingBox struct {
 	X      float64
 	Y      float64
 	Width  float64

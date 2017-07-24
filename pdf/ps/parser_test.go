@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ps
 
 import (
@@ -28,8 +33,9 @@ func quickEval(progText string) (PSObject, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	fmt.Printf("%s\n", progText)
-	fmt.Printf("-> Program: %s\n", prog.ToString())
+	fmt.Printf("-> Program: %s\n", prog.DebugString())
 
 	exec := NewPSExecutor(prog)
 
@@ -43,7 +49,7 @@ func quickEval(progText string) (PSObject, error) {
 	}
 
 	stack := PSStack(outputs)
-	fmt.Printf("=> Result Stack: %s\n", stack.ToString())
+	fmt.Printf("=> Result Stack: %s\n", stack.DebugString())
 
 	return outputs[0], nil
 }
@@ -56,7 +62,7 @@ func quickTest(progText string) (*PSStack, error) {
 		return nil, err
 	}
 	fmt.Printf("%s\n", progText)
-	fmt.Printf("-> Program: %s\n", prog.ToString())
+	fmt.Printf("-> Program: %s\n", prog.DebugString())
 
 	exec := NewPSExecutor(prog)
 
@@ -202,8 +208,8 @@ func TestArithmetics(t *testing.T) {
 		}
 
 		// Maybe not the most robust test (comparing the strings), but should do.
-		if obj.ToString() != testcase.expected.ToString() {
-			t.Errorf("Wrong result: %s != %s", obj.ToString(), testcase.expected.ToString())
+		if obj.DebugString() != testcase.expected.DebugString() {
+			t.Errorf("Wrong result: %s != %s", obj.DebugString(), testcase.expected.DebugString())
 			return
 		}
 	}
@@ -231,8 +237,8 @@ func TestStackOperations(t *testing.T) {
 		}
 
 		// Maybe not the most robust test (comparing the strings), but should do.
-		if stack.ToString() != testcase.expected {
-			t.Errorf("Wrong result: '%s' != '%s'", stack.ToString(), testcase.expected)
+		if stack.DebugString() != testcase.expected {
+			t.Errorf("Wrong result: '%s' != '%s'", stack.DebugString(), testcase.expected)
 			return
 		}
 	}
@@ -255,8 +261,8 @@ func TestFunctionOperations(t *testing.T) {
 		}
 
 		// Maybe not the most robust test (comparing the strings), but should do.
-		if stack.ToString() != testcase.expected {
-			t.Errorf("Wrong result: '%s' != '%s'", stack.ToString(), testcase.expected)
+		if stack.DebugString() != testcase.expected {
+			t.Errorf("Wrong result: '%s' != '%s'", stack.DebugString(), testcase.expected)
 			return
 		}
 	}
@@ -393,8 +399,8 @@ func TestVariousCases(t *testing.T) {
 		}
 
 		// Maybe not the most robust test (comparing the strings), but should do.
-		if stack.ToString() != testcase.expected {
-			t.Errorf("Wrong result: '%s' != '%s'", stack.ToString(), testcase.expected)
+		if stack.DebugString() != testcase.expected {
+			t.Errorf("Wrong result: '%s' != '%s'", stack.DebugString(), testcase.expected)
 			return
 		}
 	}

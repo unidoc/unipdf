@@ -29,7 +29,10 @@ type PdfObjectFloat float64
 type PdfObjectString string
 type PdfObjectName string
 type PdfObjectArray []PdfObject
-type PdfObjectDictionary map[PdfObjectName]PdfObject
+type PdfObjectDictionary struct {
+	dict map[PdfObjectName]PdfObject
+	keys []PdfObjectName
+}
 type PdfObjectNull struct{}
 
 type PdfObjectReference struct {
@@ -48,7 +51,14 @@ type PdfObjectStream struct {
 	Stream []byte
 }
 
-// Quick functions to make pdf objects from primitive objects.
+// Quick functions to make pdf objects form primitive objects.
+func MakeDict() *PdfObjectDictionary {
+	d := &PdfObjectDictionary{}
+	d.dict = map[PdfObjectName]PdfObject{}
+	d.keys = []PdfObjectName{}
+	return d
+}
+
 func MakeName(s string) *PdfObjectName {
 	name := PdfObjectName(s)
 	return &name
@@ -75,6 +85,14 @@ func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
 	return &array
 }
 
+func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
+	array := PdfObjectArray{}
+	for _, val := range vals {
+		array = append(array, MakeInteger(val))
+	}
+	return &array
+}
+
 func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
 	array := PdfObjectArray{}
 	for _, val := range vals {
@@ -96,6 +114,31 @@ func MakeString(s string) *PdfObjectString {
 func MakeNull() *PdfObjectNull {
 	null := PdfObjectNull{}
 	return &null
+}
+
+func MakeIndirectObject(obj PdfObject) *PdfIndirectObject {
+	ind := &PdfIndirectObject{}
+	ind.PdfObject = obj
+	return ind
+}
+
+func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error) {
+	stream := &PdfObjectStream{}
+
+	if encoder == nil {
+		encoder = NewRawEncoder()
+	}
+
+	stream.PdfObjectDictionary = encoder.MakeStreamDict()
+
+	encoded, err := encoder.EncodeBytes(contents)
+	if err != nil {
+		return nil, err
+	}
+	stream.PdfObjectDictionary.Set("Length", MakeInteger(int64(len(encoded))))
+
+	stream.Stream = encoded
+	return stream, nil
 }
 
 func (this *PdfObjectBool) String() string {
@@ -277,15 +320,17 @@ func (this *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 // Merge in key/values from another dictionary.  Overwriting if has same keys.
 func (this *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
 	if another != nil {
-		for key, val := range *another {
-			(*this)[key] = val
+		for _, key := range another.Keys() {
+			val := another.Get(key)
+			this.Set(key, val)
 		}
 	}
 }
 
 func (this *PdfObjectDictionary) String() string {
 	outStr := "Dict("
-	for k, v := range *this {
+	for _, k := range this.keys {
+		v := this.dict[k]
 		outStr += fmt.Sprintf("\"%s\": %s, ", k, v.String())
 	}
 	outStr += ")"
@@ -294,7 +339,8 @@ func (this *PdfObjectDictionary) String() string {
 
 func (this *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
-	for k, v := range *this {
+	for _, k := range this.keys {
+		v := this.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "
@@ -305,15 +351,115 @@ func (this *PdfObjectDictionary) DefaultWriteString() string {
 }
 
 func (d *PdfObjectDictionary) Set(key PdfObjectName, val PdfObject) {
-	(*d)[key] = val
+	found := false
+	for _, k := range d.keys {
+		if k == key {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		d.keys = append(d.keys, key)
+	}
+
+	d.dict[key] = val
 }
 
-// Only use if the original value is a PdfObject.  If for example using *PdfObjectArray or other primitives
-// then the nil check will not fail, will be a new interface referring the nil (not a nil PdfObject).
-// TODO: Consider removing. Better to avoid the casting and nil check before calling.
+// Get PdfObject corresponding to the specified key.
+// Returns a nil value if the key is not set.
+//
+// The design is such that we only return 1 value.
+// The reason is that, it will be easy to do type casts such as
+// name, ok := dict.Get("mykey").(*PdfObjectName)
+// if !ok ....
+func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
+	val, has := d.dict[key]
+	if !has {
+		return nil
+	}
+	return val
+}
+
+// Get the list of keys.
+func (d *PdfObjectDictionary) Keys() []PdfObjectName {
+	return d.keys
+}
+
+// Remove an element specified by key.
+func (d *PdfObjectDictionary) Remove(key PdfObjectName) {
+	idx := -1
+	for i, k := range d.keys {
+		if k == key {
+			idx = i
+			break
+		}
+	}
+
+	if idx >= 0 {
+		// Found. Remove from key list and map.
+		d.keys = append(d.keys[:idx], d.keys[idx+1:]...)
+		delete(d.dict, key)
+	}
+}
+
+// Check if the value's PdfObject interface, or its containing value is nil.  Only set the
+// key/value pair if not nil.
+//
+// Note that we take care to perform a type switch.  Otherwise if we would supply a nil value
+// of another type, e.g. (PdfObjectArray*)(nil), then it would not be a PdfObject(nil) and thus
+// would get set.
+//
 func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
 	if val != nil {
-		(*d)[key] = val
+		switch t := val.(type) {
+		case *PdfObjectName:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectDictionary:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectStream:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectString:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectNull:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectInteger:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectArray:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectBool:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectFloat:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfObjectReference:
+			if t != nil {
+				d.Set(key, val)
+			}
+		case *PdfIndirectObject:
+			if t != nil {
+				d.Set(key, val)
+			}
+		default:
+			common.Log.Error("ERROR: Unknown type: %T - should never happen!", val)
+		}
 	}
 }
 

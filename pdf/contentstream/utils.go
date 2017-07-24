@@ -23,6 +23,14 @@ func makeParamsFromNames(vals []PdfObjectName) []PdfObject {
 	return params
 }
 
+func makeParamsFromStrings(vals []PdfObjectString) []PdfObject {
+	params := []PdfObject{}
+	for _, val := range vals {
+		params = append(params, MakeString(string(val)))
+	}
+	return params
+}
+
 func makeParamsFromInts(vals []int64) []PdfObject {
 	params := []PdfObject{}
 	for _, val := range vals {

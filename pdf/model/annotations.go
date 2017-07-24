@@ -329,7 +329,7 @@ func NewPdfAnnotation() *PdfAnnotation {
 	annot := &PdfAnnotation{}
 
 	container := &PdfIndirectObject{}
-	container.PdfObject = &PdfObjectDictionary{}
+	container.PdfObject = MakeDict()
 
 	annot.primitive = container
 	return annot
@@ -617,7 +617,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 	annot.primitive = container
 	r.modelManager.Register(d, annot)
 
-	if obj, has := (*d)["Type"]; has {
+	if obj := d.Get("Type"); obj != nil {
 		str, ok := obj.(*PdfObjectName)
 		if !ok {
 			common.Log.Trace("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
@@ -630,56 +630,56 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 		}
 	}
 
-	if obj, has := (*d)["Rect"]; has {
+	if obj := d.Get("Rect"); obj != nil {
 		annot.Rect = obj
 	}
 
-	if obj, has := (*d)["Contents"]; has {
+	if obj := d.Get("Contents"); obj != nil {
 		annot.Contents = obj
 	}
 
-	if obj, has := (*d)["P"]; has {
+	if obj := d.Get("P"); obj != nil {
 		annot.P = obj
 	}
 
-	if obj, has := (*d)["NM"]; has {
+	if obj := d.Get("NM"); obj != nil {
 		annot.NM = obj
 	}
 
-	if obj, has := (*d)["M"]; has {
+	if obj := d.Get("M"); obj != nil {
 		annot.M = obj
 	}
 
-	if obj, has := (*d)["F"]; has {
+	if obj := d.Get("F"); obj != nil {
 		annot.F = obj
 	}
 
-	if obj, has := (*d)["AP"]; has {
+	if obj := d.Get("AP"); obj != nil {
 		annot.AP = obj
 	}
 
-	if obj, has := (*d)["AS"]; has {
+	if obj := d.Get("AS"); obj != nil {
 		annot.AS = obj
 	}
 
-	if obj, has := (*d)["Border"]; has {
+	if obj := d.Get("Border"); obj != nil {
 		annot.Border = obj
 	}
 
-	if obj, has := (*d)["C"]; has {
+	if obj := d.Get("C"); obj != nil {
 		annot.C = obj
 	}
 
-	if obj, has := (*d)["StructParent"]; has {
+	if obj := d.Get("StructParent"); obj != nil {
 		annot.StructParent = obj
 	}
 
-	if obj, has := (*d)["OC"]; has {
+	if obj := d.Get("OC"); obj != nil {
 		annot.OC = obj
 	}
 
-	subtypeObj, has := (*d)["Subtype"]
-	if !has {
+	subtypeObj := d.Get("Subtype")
+	if subtypeObj == nil {
 		common.Log.Debug("WARNING: Compatibility issue - annotation Subtype missing - assuming no subtype")
 		annot.context = nil
 		return annot, nil
@@ -928,11 +928,11 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*PdfAnnotationMarkup, error) {
 	annot := &PdfAnnotationMarkup{}
 
-	if obj, has := (*d)["T"]; has {
+	if obj := d.Get("T"); obj != nil {
 		annot.T = obj
 	}
 
-	if obj, has := (*d)["Popup"]; has {
+	if obj := d.Get("Popup"); obj != nil {
 		indObj, isIndirect := obj.(*PdfIndirectObject)
 		if !isIndirect {
 			if _, isNull := obj.(*PdfObjectNull); !isNull {
@@ -952,28 +952,28 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*Pdf
 		annot.Popup = popupAnnot
 	}
 
-	if obj, has := (*d)["CA"]; has {
+	if obj := d.Get("CA"); obj != nil {
 		annot.CA = obj
 	}
-	if obj, has := (*d)["RC"]; has {
+	if obj := d.Get("RC"); obj != nil {
 		annot.RC = obj
 	}
-	if obj, has := (*d)["CreationDate"]; has {
+	if obj := d.Get("CreationDate"); obj != nil {
 		annot.CreationDate = obj
 	}
-	if obj, has := (*d)["IRT"]; has {
+	if obj := d.Get("IRT"); obj != nil {
 		annot.IRT = obj
 	}
-	if obj, has := (*d)["Subj"]; has {
+	if obj := d.Get("Subj"); obj != nil {
 		annot.Subj = obj
 	}
-	if obj, has := (*d)["RT"]; has {
+	if obj := d.Get("RT"); obj != nil {
 		annot.RT = obj
 	}
-	if obj, has := (*d)["IT"]; has {
+	if obj := d.Get("IT"); obj != nil {
 		annot.IT = obj
 	}
-	if obj, has := (*d)["ExData"]; has {
+	if obj := d.Get("ExData"); obj != nil {
 		annot.ExData = obj
 	}
 
@@ -989,21 +989,10 @@ func (r *PdfReader) newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAn
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["Open"]; has {
-		annot.Open = obj
-	}
-
-	if obj, has := (*d)["Name"]; has {
-		annot.Name = obj
-	}
-
-	if obj, has := (*d)["State"]; has {
-		annot.State = obj
-	}
-
-	if obj, has := (*d)["StateModel"]; has {
-		annot.StateModel = obj
-	}
+	annot.Open = d.Get("Open")
+	annot.Name = d.Get("Name")
+	annot.State = d.Get("State")
+	annot.StateModel = d.Get("StateModel")
 
 	return &annot, nil
 }
@@ -1011,24 +1000,12 @@ func (r *PdfReader) newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAn
 func (r *PdfReader) newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAnnotationLink, error) {
 	annot := PdfAnnotationLink{}
 
-	if obj, has := (*d)["A"]; has {
-		annot.A = obj
-	}
-	if obj, has := (*d)["Dest"]; has {
-		annot.Dest = obj
-	}
-	if obj, has := (*d)["H"]; has {
-		annot.H = obj
-	}
-	if obj, has := (*d)["PA"]; has {
-		annot.PA = obj
-	}
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
+	annot.A = d.Get("A")
+	annot.Dest = d.Get("Dest")
+	annot.H = d.Get("H")
+	annot.PA = d.Get("PA")
+	annot.QuadPoints = d.Get("QuadPoints")
+	annot.BS = d.Get("BS")
 
 	return &annot, nil
 }
@@ -1042,36 +1019,16 @@ func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*P
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["DA"]; has {
-		annot.DA = obj
-	}
-	if obj, has := (*d)["Q"]; has {
-		annot.Q = obj
-	}
-	if obj, has := (*d)["RC"]; has {
-		annot.RC = obj
-	}
-	if obj, has := (*d)["DS"]; has {
-		annot.DS = obj
-	}
-	if obj, has := (*d)["CL"]; has {
-		annot.CL = obj
-	}
-	if obj, has := (*d)["IT"]; has {
-		annot.IT = obj
-	}
-	if obj, has := (*d)["BE"]; has {
-		annot.BE = obj
-	}
-	if obj, has := (*d)["RD"]; has {
-		annot.RD = obj
-	}
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["LE"]; has {
-		annot.LE = obj
-	}
+	annot.DA = d.Get("DA")
+	annot.Q = d.Get("Q")
+	annot.RC = d.Get("RC")
+	annot.DS = d.Get("DS")
+	annot.CL = d.Get("CL")
+	annot.IT = d.Get("IT")
+	annot.BE = d.Get("BE")
+	annot.RD = d.Get("RD")
+	annot.BS = d.Get("BS")
+	annot.LE = d.Get("LE")
 
 	return &annot, nil
 }
@@ -1085,42 +1042,18 @@ func (r *PdfReader) newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAn
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["L"]; has {
-		annot.L = obj
-	}
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["LE"]; has {
-		annot.LE = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["LL"]; has {
-		annot.LL = obj
-	}
-	if obj, has := (*d)["LLE"]; has {
-		annot.LLE = obj
-	}
-	if obj, has := (*d)["Cap"]; has {
-		annot.Cap = obj
-	}
-	if obj, has := (*d)["IT"]; has {
-		annot.IT = obj
-	}
-	if obj, has := (*d)["LLO"]; has {
-		annot.LLO = obj
-	}
-	if obj, has := (*d)["CP"]; has {
-		annot.CP = obj
-	}
-	if obj, has := (*d)["Measure"]; has {
-		annot.Measure = obj
-	}
-	if obj, has := (*d)["CO"]; has {
-		annot.CO = obj
-	}
+	annot.L = d.Get("L")
+	annot.BS = d.Get("BS")
+	annot.LE = d.Get("LE")
+	annot.IC = d.Get("IC")
+	annot.LL = d.Get("LL")
+	annot.LLE = d.Get("LLE")
+	annot.Cap = d.Get("Cap")
+	annot.IT = d.Get("IT")
+	annot.LLO = d.Get("LLO")
+	annot.CP = d.Get("CP")
+	annot.Measure = d.Get("Measure")
+	annot.CO = d.Get("CO")
 
 	return &annot, nil
 }
@@ -1134,18 +1067,10 @@ func (r *PdfReader) newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*Pdf
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["BE"]; has {
-		annot.BE = obj
-	}
-	if obj, has := (*d)["RD"]; has {
-		annot.RD = obj
-	}
+	annot.BS = d.Get("BS")
+	annot.IC = d.Get("IC")
+	annot.BE = d.Get("BE")
+	annot.RD = d.Get("RD")
 
 	return &annot, nil
 }
@@ -1159,18 +1084,10 @@ func (r *PdfReader) newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*Pdf
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["BE"]; has {
-		annot.BE = obj
-	}
-	if obj, has := (*d)["RD"]; has {
-		annot.RD = obj
-	}
+	annot.BS = d.Get("BS")
+	annot.IC = d.Get("IC")
+	annot.BE = d.Get("BE")
+	annot.RD = d.Get("RD")
 
 	return &annot, nil
 }
@@ -1184,27 +1101,13 @@ func (r *PdfReader) newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*Pd
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["Vertices"]; has {
-		annot.Vertices = obj
-	}
-	if obj, has := (*d)["LE"]; has {
-		annot.LE = obj
-	}
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["BE"]; has {
-		annot.BE = obj
-	}
-	if obj, has := (*d)["IT"]; has {
-		annot.IT = obj
-	}
-	if obj, has := (*d)["Measure"]; has {
-		annot.Measure = obj
-	}
+	annot.Vertices = d.Get("Vertices")
+	annot.LE = d.Get("LE")
+	annot.BS = d.Get("BS")
+	annot.IC = d.Get("IC")
+	annot.BE = d.Get("BE")
+	annot.IT = d.Get("IT")
+	annot.Measure = d.Get("Measure")
 
 	return &annot, nil
 }
@@ -1218,27 +1121,13 @@ func (r *PdfReader) newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*P
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["Vertices"]; has {
-		annot.Vertices = obj
-	}
-	if obj, has := (*d)["LE"]; has {
-		annot.LE = obj
-	}
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["BE"]; has {
-		annot.BE = obj
-	}
-	if obj, has := (*d)["IT"]; has {
-		annot.IT = obj
-	}
-	if obj, has := (*d)["Measure"]; has {
-		annot.Measure = obj
-	}
+	annot.Vertices = d.Get("Vertices")
+	annot.LE = d.Get("LE")
+	annot.BS = d.Get("BS")
+	annot.IC = d.Get("IC")
+	annot.BE = d.Get("BE")
+	annot.IT = d.Get("IT")
+	annot.Measure = d.Get("Measure")
 
 	return &annot, nil
 }
@@ -1252,9 +1141,7 @@ func (r *PdfReader) newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
+	annot.QuadPoints = d.Get("QuadPoints")
 
 	return &annot, nil
 }
@@ -1268,9 +1155,7 @@ func (r *PdfReader) newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
+	annot.QuadPoints = d.Get("QuadPoints")
 
 	return &annot, nil
 }
@@ -1284,9 +1169,7 @@ func (r *PdfReader) newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*P
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
+	annot.QuadPoints = d.Get("QuadPoints")
 
 	return &annot, nil
 }
@@ -1300,9 +1183,7 @@ func (r *PdfReader) newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnot
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
+	annot.QuadPoints = d.Get("QuadPoints")
 
 	return &annot, nil
 }
@@ -1316,13 +1197,8 @@ func (r *PdfReader) newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfA
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["RD"]; has {
-		annot.RD = obj
-	}
-
-	if obj, has := (*d)["Sy"]; has {
-		annot.Sy = obj
-	}
+	annot.RD = d.Get("RD")
+	annot.Sy = d.Get("Sy")
 
 	return &annot, nil
 }
@@ -1335,9 +1211,7 @@ func (r *PdfReader) newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfA
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["Name"]; has {
-		annot.Name = obj
-	}
+	annot.Name = d.Get("Name")
 
 	return &annot, nil
 }
@@ -1351,13 +1225,8 @@ func (r *PdfReader) newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnn
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["InkList"]; has {
-		annot.InkList = obj
-	}
-
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
+	annot.InkList = d.Get("InkList")
+	annot.BS = d.Get("BS")
 
 	return &annot, nil
 }
@@ -1365,13 +1234,8 @@ func (r *PdfReader) newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnn
 func (r *PdfReader) newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfAnnotationPopup, error) {
 	annot := PdfAnnotationPopup{}
 
-	if obj, has := (*d)["Parent"]; has {
-		annot.Parent = obj
-	}
-
-	if obj, has := (*d)["Open"]; has {
-		annot.Open = obj
-	}
+	annot.Parent = d.Get("Parent")
+	annot.Open = d.Get("Open")
 
 	return &annot, nil
 }
@@ -1385,13 +1249,8 @@ func (r *PdfReader) newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionar
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["FS"]; has {
-		annot.FS = obj
-	}
-
-	if obj, has := (*d)["Name"]; has {
-		annot.Name = obj
-	}
+	annot.FS = d.Get("FS")
+	annot.Name = d.Get("Name")
 
 	return &annot, nil
 }
@@ -1405,13 +1264,8 @@ func (r *PdfReader) newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfA
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["Name"]; has {
-		annot.Name = obj
-	}
-
-	if obj, has := (*d)["Sound"]; has {
-		annot.Sound = obj
-	}
+	annot.Name = d.Get("Name")
+	annot.Sound = d.Get("Sound")
 
 	return &annot, nil
 }
@@ -1419,13 +1273,8 @@ func (r *PdfReader) newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfA
 func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*PdfAnnotationRichMedia, error) {
 	annot := &PdfAnnotationRichMedia{}
 
-	if obj, has := (*d)["RichMediaSettings"]; has {
-		annot.RichMediaSettings = obj
-	}
-
-	if obj, has := (*d)["RichMediaContent"]; has {
-		annot.RichMediaContent = obj
-	}
+	annot.RichMediaSettings = d.Get("RichMediaSettings")
+	annot.RichMediaContent = d.Get("RichMediaContent")
 
 	return annot, nil
 }
@@ -1433,17 +1282,9 @@ func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*
 func (r *PdfReader) newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfAnnotationMovie, error) {
 	annot := PdfAnnotationMovie{}
 
-	if obj, has := (*d)["T"]; has {
-		annot.T = obj
-	}
-
-	if obj, has := (*d)["Movie"]; has {
-		annot.Movie = obj
-	}
-
-	if obj, has := (*d)["A"]; has {
-		annot.A = obj
-	}
+	annot.T = d.Get("T")
+	annot.Movie = d.Get("Movie")
+	annot.A = d.Get("A")
 
 	return &annot, nil
 }
@@ -1451,21 +1292,10 @@ func (r *PdfReader) newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfA
 func (r *PdfReader) newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*PdfAnnotationScreen, error) {
 	annot := PdfAnnotationScreen{}
 
-	if obj, has := (*d)["T"]; has {
-		annot.T = obj
-	}
-
-	if obj, has := (*d)["MK"]; has {
-		annot.MK = obj
-	}
-
-	if obj, has := (*d)["A"]; has {
-		annot.A = obj
-	}
-
-	if obj, has := (*d)["AA"]; has {
-		annot.AA = obj
-	}
+	annot.T = d.Get("T")
+	annot.MK = d.Get("MK")
+	annot.A = d.Get("A")
+	annot.AA = d.Get("AA")
 
 	return &annot, nil
 }
@@ -1473,31 +1303,16 @@ func (r *PdfReader) newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*Pdf
 func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*PdfAnnotationWidget, error) {
 	annot := PdfAnnotationWidget{}
 
-	if obj, has := (*d)["H"]; has {
-		annot.H = obj
-	}
+	annot.H = d.Get("H")
 
-	if obj, has := (*d)["MK"]; has {
-		annot.MK = obj
-		// MK can be an indirect object...
-		// Expected to be a dictionary.
-	}
+	annot.MK = d.Get("MK")
+	// MK can be an indirect object...
+	// Expected to be a dictionary.
 
-	if obj, has := (*d)["A"]; has {
-		annot.A = obj
-	}
-
-	if obj, has := (*d)["AA"]; has {
-		annot.AA = obj
-	}
-
-	if obj, has := (*d)["BS"]; has {
-		annot.BS = obj
-	}
-
-	if obj, has := (*d)["Parent"]; has {
-		annot.Parent = obj
-	}
+	annot.A = d.Get("A")
+	annot.AA = d.Get("AA")
+	annot.BS = d.Get("BS")
+	annot.Parent = d.Get("Parent")
 
 	return &annot, nil
 }
@@ -1505,9 +1320,7 @@ func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*Pdf
 func (r *PdfReader) newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationPrinterMark, error) {
 	annot := PdfAnnotationPrinterMark{}
 
-	if obj, has := (*d)["MN"]; has {
-		annot.MN = obj
-	}
+	annot.MN = d.Get("MN")
 
 	return &annot, nil
 }
@@ -1521,9 +1334,7 @@ func (r *PdfReader) newPdfAnnotationTrapNetFromDict(d *PdfObjectDictionary) (*Pd
 func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationWatermark, error) {
 	annot := PdfAnnotationWatermark{}
 
-	if obj, has := (*d)["FixedPrint"]; has {
-		annot.FixedPrint = obj
-	}
+	annot.FixedPrint = d.Get("FixedPrint")
 
 	return &annot, nil
 }
@@ -1531,21 +1342,11 @@ func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*
 func (r *PdfReader) newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnnotation3D, error) {
 	annot := PdfAnnotation3D{}
 
-	if obj, has := (*d)["3DD"]; has {
-		annot.T3DD = obj
-	}
-	if obj, has := (*d)["3DV"]; has {
-		annot.T3DV = obj
-	}
-	if obj, has := (*d)["3DA"]; has {
-		annot.T3DA = obj
-	}
-	if obj, has := (*d)["3DI"]; has {
-		annot.T3DI = obj
-	}
-	if obj, has := (*d)["3DB"]; has {
-		annot.T3DB = obj
-	}
+	annot.T3DD = d.Get("3DD")
+	annot.T3DV = d.Get("3DV")
+	annot.T3DA = d.Get("3DA")
+	annot.T3DI = d.Get("3DI")
+	annot.T3DB = d.Get("3DB")
 
 	return &annot, nil
 }
@@ -1571,27 +1372,13 @@ func (r *PdfReader) newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*Pdf
 	}
 	annot.PdfAnnotationMarkup = markup
 
-	if obj, has := (*d)["QuadPoints"]; has {
-		annot.QuadPoints = obj
-	}
-	if obj, has := (*d)["IC"]; has {
-		annot.IC = obj
-	}
-	if obj, has := (*d)["RO"]; has {
-		annot.RO = obj
-	}
-	if obj, has := (*d)["OverlayText"]; has {
-		annot.OverlayText = obj
-	}
-	if obj, has := (*d)["Repeat"]; has {
-		annot.Repeat = obj
-	}
-	if obj, has := (*d)["DA"]; has {
-		annot.DA = obj
-	}
-	if obj, has := (*d)["Q"]; has {
-		annot.Q = obj
-	}
+	annot.QuadPoints = d.Get("QuadPoints")
+	annot.IC = d.Get("IC")
+	annot.RO = d.Get("RO")
+	annot.OverlayText = d.Get("OverlayText")
+	annot.Repeat = d.Get("Repeat")
+	annot.DA = d.Get("DA")
+	annot.Q = d.Get("Q")
 
 	return &annot, nil
 }
@@ -1606,7 +1393,7 @@ func (this *PdfAnnotation) ToPdfObject() PdfObject {
 	container := this.primitive
 	d := container.PdfObject.(*PdfObjectDictionary)
 
-	d.SetIfNotNil("Type", MakeName("Annot"))
+	d.Set("Type", MakeName("Annot"))
 	d.SetIfNotNil("Rect", this.Rect)
 	d.SetIfNotNil("Contents", this.Contents)
 	d.SetIfNotNil("P", this.P)
@@ -2081,7 +1868,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 	}
 
 	// Type.
-	if obj, has := (*d)["Type"]; has {
+	if obj := d.Get("Type"); obj != nil {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("Incompatibility with Type not a name object: %T", obj)
@@ -2093,7 +1880,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 	}
 
 	// Border width.
-	if obj, has := (*d)["W"]; has {
+	if obj := d.Get("W"); obj != nil {
 		val, err := getNumberAsFloat(obj)
 		if err != nil {
 			common.Log.Debug("Error retrieving W: %v", err)
@@ -2103,7 +1890,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 	}
 
 	// Border style.
-	if obj, has := (*d)["S"]; has {
+	if obj := d.Get("S"); obj != nil {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, errors.New("Border S not a name object")
@@ -2130,7 +1917,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 	}
 
 	// Dash array.
-	if obj, has := (*d)["D"]; has {
+	if obj := d.Get("D"); obj != nil {
 		vec, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Border D dash not an array: %T", obj)
@@ -2150,7 +1937,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 }
 
 func (this *PdfBorderStyle) ToPdfObject() PdfObject {
-	d := &PdfObjectDictionary{}
+	d := MakeDict()
 	if this.container != nil {
 		if indObj, is := this.container.(*PdfIndirectObject); is {
 			indObj.PdfObject = d

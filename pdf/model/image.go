@@ -28,7 +28,22 @@ type Image struct {
 	ColorComponents  int    // Color components per pixel
 	Data             []byte // Image data stored as bytes.
 
+	// Transparency data: alpha channel.
+	// Stored in same bits per component as original data with 1 color component.
+	alphaData []byte // Alpha channel data.
+	hasAlpha  bool   // Indicates whether the alpha channel data is available.
+
 	decode []float64 // [Dmin Dmax ... values for each color component]
+}
+
+// Threshold alpha channel.  Set all alpha values below threshold to transparent.
+type AlphaMapFunc func(alpha byte) byte
+
+// Allow mapping of alpha data for transformations.  Can allow custom filtering of alpha data etc.
+func (this Image) AlphaMap(mapFunc AlphaMapFunc) {
+	for idx, alpha := range this.alphaData {
+		this.alphaData[idx] = mapFunc(alpha)
+	}
 }
 
 // Convert the raw byte slice into samples which are stored in a uint32 bit array.
@@ -58,6 +73,7 @@ func (this *Image) SetSamples(samples []uint32) {
 	this.Data = data
 }
 
+// Converts the unidoc Image to a golang Image structure.
 func (this *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
@@ -86,6 +102,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	// Draw the data on the image..
 	x := 0
 	y := 0
+	aidx := 0
 
 	samples := this.GetSamples()
 	//bytesPerColor := colorComponents * int(this.BitsPerComponent) / 8
@@ -105,12 +122,22 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				r := uint16(samples[i])<<8 | uint16(samples[i+1])
 				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
 				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				c = gocolor.RGBA64{R: r, G: g, B: b, A: 0}
+				a := uint16(0)
+				if this.alphaData != nil && len(this.alphaData) > aidx+1 {
+					a = uint16(this.alphaData[aidx]<<8) | uint16(this.alphaData[aidx+1])
+					aidx += 2
+				}
+				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}
 			} else {
 				r := uint8(samples[i] & 0xff)
 				g := uint8(samples[i+1] & 0xff)
 				b := uint8(samples[i+2] & 0xff)
-				c = gocolor.RGBA{R: r, G: g, B: b, A: 0}
+				a := uint8(0)
+				if this.alphaData != nil && len(this.alphaData) > aidx {
+					a = uint8(this.alphaData[aidx])
+					aidx++
+				}
+				c = gocolor.RGBA{R: r, G: g, B: b, A: a}
 			}
 		} else if this.ColorComponents == 4 {
 			c1 := uint8(samples[i] & 0xff)
@@ -131,9 +158,16 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	return img, nil
 }
 
+// The ImageHandler interface implements common image loading and processing tasks.
+// Implementing as an interface allows for the possibility to use non-standard libraries for faster
+// loading and processing of images.
 type ImageHandler interface {
 	// Read any image type and load into a new Image object.
 	Read(r io.Reader) (*Image, error)
+
+	// Load a unidoc Image from a standard Go image structure.
+	NewImageFromGoImage(goimg goimage.Image) (*Image, error)
+
 	// Compress an image.
 	Compress(input *Image, quality int64) (*Image, error)
 }
@@ -142,25 +176,27 @@ type ImageHandler interface {
 
 type DefaultImageHandler struct{}
 
-// Reads an image and loads into a new Image object with an RGB
-// colormap and 8 bits per component.
-func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
-	// Load the image with the native implementation.
-	img, _, err := goimage.Decode(reader)
-	if err != nil {
-		common.Log.Debug("Error decoding file: %s", err)
-		return nil, err
-	}
-
+// Create a unidoc Image from a golang Image.
+func (this DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
-	b := img.Bounds()
+	b := goimg.Bounds()
 	m := goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
-	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+	draw.Draw(m, m.Bounds(), goimg, b.Min, draw.Src)
+
+	alphaData := []byte{}
+	hasAlpha := false
 
 	data := []byte{}
 	for i := 0; i < len(m.Pix); i += 4 {
 		data = append(data, m.Pix[i], m.Pix[i+1], m.Pix[i+2])
+
+		alpha := m.Pix[i+3]
+		if alpha != 255 {
+			// If all alpha values are 255 (opaque), means that the alpha transparency channel is unnecessary.
+			hasAlpha = true
+		}
+		alphaData = append(alphaData, alpha)
 	}
 
 	imag := Image{}
@@ -170,7 +206,25 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	imag.ColorComponents = 3
 	imag.Data = data // buf.Bytes()
 
+	imag.hasAlpha = hasAlpha
+	if hasAlpha {
+		imag.alphaData = alphaData
+	}
+
 	return &imag, nil
+}
+
+// Reads an image and loads into a new Image object with an RGB
+// colormap and 8 bits per component.
+func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
+	// Load the image with the native implementation.
+	goimg, _, err := goimage.Decode(reader)
+	if err != nil {
+		common.Log.Debug("Error decoding file: %s", err)
+		return nil, err
+	}
+
+	return this.NewImageFromGoImage(goimg)
 }
 
 // To be implemented.

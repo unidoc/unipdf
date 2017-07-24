@@ -72,7 +72,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 
 		sod := so.PdfObjectDictionary
 		common.Log.Trace("so d: %s\n", *sod)
-		name, ok := (*sod)["Type"].(*PdfObjectName)
+		name, ok := sod.Get("Type").(*PdfObjectName)
 		if !ok {
 			common.Log.Error("Object stream should always have a Type")
 			return nil, errors.New("Object stream missing Type")
@@ -82,11 +82,11 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 			return nil, errors.New("Object stream type != ObjStm")
 		}
 
-		N, ok := (*sod)["N"].(*PdfObjectInteger)
+		N, ok := sod.Get("N").(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid N in stream dictionary")
 		}
-		firstOffset, ok := (*sod)["First"].(*PdfObjectInteger)
+		firstOffset, ok := sod.Get("First").(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid First in stream dictionary")
 		}
@@ -337,7 +337,11 @@ func (this *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
 		return nil, err
 	}
 
-	io, _ := o.(*PdfIndirectObject)
+	io, isInd := o.(*PdfIndirectObject)
+	if !isInd {
+		// Not indirect (Stream or null object).
+		return o, nil
+	}
 	o = io.PdfObject
 	_, isRef = o.(*PdfObjectReference)
 	if isRef {
