@@ -1263,3 +1263,36 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	// Write the example to file.
 	creator.WriteToFile("/tmp/4_barcode_on_tpl.pdf")
 }
+
+// Test adding encryption to output.
+func TestEncrypting1(t *testing.T) {
+	c := New()
+
+	ch1 := c.NewChapter("Introduction")
+
+	p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+	p.SetMargins(0, 0, 10, 0)
+
+	for j := 0; j < 55; j++ {
+		ch1.Add(p) // Can add any drawable..
+	}
+
+	c.Draw(ch1)
+
+	c.SetPdfWriterAccessFunc(func(w *model.PdfWriter) error {
+		userPass := []byte("password")
+		ownerPass := []byte("password")
+		err := w.Encrypt(userPass, ownerPass, nil)
+		return err
+	})
+
+	err := c.WriteToFile("/tmp/6_chapters_encrypted_password.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}

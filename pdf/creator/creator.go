@@ -33,10 +33,12 @@ type Creator struct {
 	// Keep track of number of chapters for indexing.
 	chapters int
 
+	// Hooks.
 	genFrontPageFunc      func(args FrontpageFunctionArgs)
 	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
 	drawHeaderFunc        func(header *Block, args HeaderFunctionArgs)
 	drawFooterFunc        func(footer *Block, args FooterFunctionArgs)
+	pdfWriterAccessFunc   func(writer *model.PdfWriter) error
 
 	finalized bool
 
@@ -451,6 +453,15 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 
 	pdfWriter := model.NewPdfWriter()
 
+	// Pdf Writer access hook.  Can be used to encrypt, etc. via the PdfWriter instance.
+	if c.pdfWriterAccessFunc != nil {
+		err := c.pdfWriterAccessFunc(&pdfWriter)
+		if err != nil {
+			common.Log.Debug("Failure: %v", err)
+			return err
+		}
+	}
+
 	for _, page := range c.pages {
 		err := pdfWriter.AddPage(page)
 		if err != nil {
@@ -465,6 +476,23 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	}
 
 	return nil
+}
+
+// Set Writer access hook.
+// Exposes the PdfWriter just prior to writing the PDF.  Can be used to encrypt the output PDF, etc.
+//
+// Example of encrypting with a user/owner password "password"
+// Prior to calling c.WriteFile():
+//
+// c.SetPdfWriterAccessFunc(func(w *model.PdfWriter) error {
+//	userPass := []byte("password")
+//	ownerPass := []byte("password")
+//	err := w.Encrypt(userPass, ownerPass, nil)
+//	return err
+// })
+//
+func (c *Creator) SetPdfWriterAccessFunc(pdfWriterAccessFunc func(writer *model.PdfWriter) error) {
+	c.pdfWriterAccessFunc = pdfWriterAccessFunc
 }
 
 // Write output of creator to file.
