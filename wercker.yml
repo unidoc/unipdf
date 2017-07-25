@@ -32,7 +32,7 @@ build:
         code: |
           cd $WERCKER_SOURCE_DIR
           go version
-          go get ./...
+          go get $(go list ./... | grep -v textencoding/glyphlist)
 
     # Build the project
     - script:
