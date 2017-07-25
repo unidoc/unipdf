@@ -1,3 +1,5 @@
+// +build unidev
+
 package main
 
 // Utility to generate static maps of glyph <-> rune conversions for a glyphlist.
