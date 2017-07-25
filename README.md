@@ -1,38 +1,37 @@
-# UniDoc Version 2
-
-Version 2.0.0 has been released.
-The pdf functionality has been split into modules.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
-The creator package provides a convenient interface for creating image and text based PDF files and reports.
-
----
-
 # UniDoc
 
-[UniDoc](http://unidoc.io) is a fast and powerful open source PDF toolkit library for Go (golang). The library is written and supported by the owners of the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power many of the PDF services offered. 
+[UniDoc](http://unidoc.io) is a fast and powerful open source PDF library for Go (golang). The library is written and supported by the owners of the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power many of the PDF services offered. 
 
 [![wercker status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
 [![GoDoc](https://godoc.org/github.com/unidoc/unidoc?status.svg)](https://godoc.org/github.com/unidoc/unidoc)
 
+# Version 2
+
+Version 2.0.0 has been released. Version 2 represents a major improvement over version 1 with capabilities for modifying
+and generating PDF contents. The library has been split up into three major packages and a
+few smaller ones. The **core** package contains core PDF file parsing functionality and
+primitive objects, whereas the **model** subpackage provides a higher level interface to the PDF.
+The **creator** package provides a convenient interface for creating image and text based PDF files
+and reports.
+
+See the release announcement: [https://unidoc.io/news/unidoc-v2-released](https://unidoc.io/news/unidoc-v2-released)
+
+
 ## Installation
 ~~~
-go get github.com/unidoc/unidoc
+go get github.com/unidoc/unidoc/...
 ~~~
-
-## Vendoring
-For reliability, we recommend using specific versions and the vendoring capability of golang.
-Check out the Releases section to see the tagged releases.
-
-## Overview
-
- * Many features for procesing PDF files with [documented examples](https://unidoc.io/examples) on our website.
- * Self contained with no external dependencies
- * Developer friendly
 
 ## Examples
 
 Multiple examples are provided in our example repository.
-See the [unidoc-examples](https://github.com/unidoc/unidoc-examples/tree/master) folder.
+Many features for processing PDF files with [documented examples](https://unidoc.io/examples) on our website.
+
 Contact us if you need any specific examples.
+
+## Vendoring
+For reliability, we recommend using specific versions and the vendoring capability of golang.
+Check out the Releases section to see the tagged releases.
 
 ## Copying/License
 
