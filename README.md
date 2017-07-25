@@ -1,12 +1,8 @@
-# Version 2
+# UniDoc Version 2
 
-The version 2 of UniDoc is currently in alpha. 
+Version 2.0.0 has been released.
 The pdf functionality has been split into modules.  The core subpackage contains core PDF file parsing functionality and primitive objects, whereas the model subpackage provides a higher level interface to the PDF.
 The creator package provides a convenient interface for creating image and text based PDF files and reports.
-
-# Migrating from version 1.
-
-Migrating is fairly straightforward.  A few things are incompatible and will be listed here prior to release.
 
 ---
 
@@ -28,7 +24,7 @@ Check out the Releases section to see the tagged releases.
 
 ## Overview
 
- * Many [features](http://unidoc.io/features) with documented examples.
+ * Many features for procesing PDF files with [documented examples](https://unidoc.io/examples) on our website.
  * Self contained with no external dependencies
  * Developer friendly
 
@@ -67,7 +63,8 @@ Please email us at support@unidoc.io for any queries.
 
 Technical support is included with a purchase of a license, as listed on our [pricing](http://unidoc.io/pricing) page.
 
-If you have any specific tasks that need to be done, we offer consulting at an hourly rate of $150 or $1000 per day. Please contact us with a brief summary of what you need and we will get back to you with a quote, if appropriate.
+If you have any specific tasks that need to be done, we offer consulting in certain cases.
+Please contact us with a brief summary of what you need and we will get back to you with a quote, if appropriate.
 
 ## Stay up to date
 
