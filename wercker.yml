@@ -38,10 +38,10 @@ build:
     - script:
         name: go build
         code: |
-          go build $(go list ./... | grep -v examples)
+          go build $(go list ./... | grep -v examples | grep -v textencoding/glyphlist)
 
     # Test the project
     - script:
         name: go test
         code: |
-          go test $(go list ./... | grep -v examples)
+          go test $(go list ./... | grep -v examples| grep -v textencoding/glyphlist)
