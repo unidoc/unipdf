@@ -34,6 +34,8 @@ const testPdfLoremIpsumFile = "../../testfiles/lorem.pdf"
 const testPdfTemplatesFile1 = "../../testfiles/templates1.pdf"
 const testImageFile1 = "../../testfiles/logo.png"
 const testImageFile2 = "../../testfiles/signature.png"
+const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
+const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -437,23 +439,23 @@ func TestParagraphWrapping2(t *testing.T) {
 	}
 }
 
-// Test writing with various TTF fonts.  Assumes MacOS system, where fonts are stored under /Library/Fonts.
+// Test writing with TTF fonts.
 func TestParagraphFonts(t *testing.T) {
 	creator := New()
 
-	verdana, err := model.NewPdfFontFromTTFFile("/Library/Fonts/Verdana.ttf")
+	roboto, err := model.NewPdfFontFromTTFFile(testRobotoRegularTTFFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	arialBold, err := model.NewPdfFontFromTTFFile("/Library/Fonts/Arial Bold.ttf")
+	robotoBold, err := model.NewPdfFontFromTTFFile(testRobotoBoldTTFFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fonts := []fonts.Font{verdana, arialBold, fonts.NewFontHelvetica(), verdana, arialBold, fonts.NewFontHelvetica()}
+	fonts := []fonts.Font{roboto, robotoBold, fonts.NewFontHelvetica(), roboto, robotoBold, fonts.NewFontHelvetica()}
 	for _, font := range fonts {
 		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
 			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
