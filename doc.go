@@ -14,9 +14,3 @@
 //
 
 package unidoc
-
-import (
-	_ "github.com/unidoc/unidoc/common"
-	_ "github.com/unidoc/unidoc/license"
-	_ "github.com/unidoc/unidoc/pdf"
-)

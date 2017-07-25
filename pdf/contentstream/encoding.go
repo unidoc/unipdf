@@ -1,0 +1,386 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
+package contentstream
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	gocolor "image/color"
+	"image/jpeg"
+
+	"github.com/unidoc/unidoc/common"
+	. "github.com/unidoc/unidoc/pdf/core"
+)
+
+// Creates the encoder for the inline image's Filter and DecodeParms.
+func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEncoder, error) {
+	if inlineImage.Filter == nil {
+		// No filter, return raw data back.
+		return NewRawEncoder(), nil
+	}
+
+	// The filter should be a name or an array with a list of filter names.
+	filterName, ok := inlineImage.Filter.(*PdfObjectName)
+	if !ok {
+		array, ok := inlineImage.Filter.(*PdfObjectArray)
+		if !ok {
+			return nil, fmt.Errorf("Filter not a Name or Array object")
+		}
+		if len(*array) == 0 {
+			// Empty array -> indicates raw filter (no filter).
+			return NewRawEncoder(), nil
+		}
+
+		if len(*array) != 1 {
+			menc, err := newMultiEncoderFromInlineImage(inlineImage)
+			if err != nil {
+				common.Log.Error("Failed creating multi encoder: %v", err)
+				return nil, err
+			}
+
+			common.Log.Trace("Multi enc: %s\n", menc)
+			return menc, nil
+		}
+
+		// Single element.
+		filterObj := (*array)[0]
+		filterName, ok = filterObj.(*PdfObjectName)
+		if !ok {
+			return nil, fmt.Errorf("Filter array member not a Name object")
+		}
+	}
+
+	if *filterName == "AHx" {
+		return NewASCIIHexEncoder(), nil
+	} else if *filterName == "A85" {
+		return NewASCII85Encoder(), nil
+	} else if *filterName == "DCT" {
+		return newDCTEncoderFromInlineImage(inlineImage)
+	} else if *filterName == "Fl" {
+		return newFlateEncoderFromInlineImage(inlineImage, nil)
+	} else if *filterName == "LZW" {
+		return newLZWEncoderFromInlineImage(inlineImage, nil)
+	} else {
+		common.Log.Debug("Unsupported inline image encoding filter name : %s", *filterName)
+		return nil, errors.New("Unsupported inline encoding method")
+	}
+}
+
+// Create a new flate decoder from an inline image object, getting all the encoding parameters
+// from the DecodeParms stream object dictionary entry that can be provided optionally, usually
+// only when a multi filter is used.
+func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *PdfObjectDictionary) (*FlateEncoder, error) {
+	encoder := NewFlateEncoder()
+
+	// If decodeParams not provided, see if we can get from the stream.
+	if decodeParams == nil {
+		obj := inlineImage.DecodeParms
+		if obj != nil {
+			dp, isDict := obj.(*PdfObjectDictionary)
+			if !isDict {
+				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
+				return nil, fmt.Errorf("Invalid DecodeParms")
+			}
+			decodeParams = dp
+		}
+	}
+	if decodeParams == nil {
+		// Can safely return here if no decode params, as the following depend on the decode params.
+		return encoder, nil
+	}
+
+	common.Log.Trace("decode params: %s", decodeParams.String())
+	obj := decodeParams.Get("Predictor")
+	if obj == nil {
+		common.Log.Debug("Error: Predictor missing from DecodeParms - Continue with default (1)")
+	} else {
+		predictor, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
+			return nil, fmt.Errorf("Invalid Predictor")
+		}
+		encoder.Predictor = int(*predictor)
+	}
+
+	// Bits per component.  Use default if not specified (8).
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
+		bpc, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("ERROR: Invalid BitsPerComponent")
+			return nil, fmt.Errorf("Invalid BitsPerComponent")
+		}
+		encoder.BitsPerComponent = int(*bpc)
+	}
+
+	if encoder.Predictor > 1 {
+		// Columns.
+		encoder.Columns = 1
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
+			columns, ok := obj.(*PdfObjectInteger)
+			if !ok {
+				return nil, fmt.Errorf("Predictor column invalid")
+			}
+
+			encoder.Columns = int(*columns)
+		}
+
+		// Colors.
+		// Number of interleaved color components per sample (Default 1 if not specified)
+		encoder.Colors = 1
+		obj := decodeParams.Get("Colors")
+		if obj != nil {
+			colors, ok := obj.(*PdfObjectInteger)
+			if !ok {
+				return nil, fmt.Errorf("Predictor colors not an integer")
+			}
+			encoder.Colors = int(*colors)
+		}
+	}
+
+	return encoder, nil
+}
+
+// Create a new LZW encoder/decoder based on an inline image object, getting all the encoding parameters
+// from the DecodeParms stream object dictionary entry.
+func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *PdfObjectDictionary) (*LZWEncoder, error) {
+	// Start with default settings.
+	encoder := NewLZWEncoder()
+
+	// If decodeParams not provided, see if we can get from the inline image directly.
+	if decodeParams == nil {
+		if inlineImage.DecodeParms != nil {
+			dp, isDict := inlineImage.DecodeParms.(*PdfObjectDictionary)
+			if !isDict {
+				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", inlineImage.DecodeParms)
+				return nil, fmt.Errorf("Invalid DecodeParms")
+			}
+			decodeParams = dp
+		}
+	}
+
+	if decodeParams == nil {
+		// No decode parameters. Can safely return here if not set as the following options
+		// are related to the decode Params.
+		return encoder, nil
+	}
+
+	// The EarlyChange indicates when to increase code length, as different
+	// implementations use a different mechanisms. Essentially this chooses
+	// which LZW implementation to use.
+	// The default is 1 (one code early)
+	//
+	// The EarlyChange parameter is specified in the object stream dictionary for regular streams,
+	// but it is not specified explicitly where to check for it in the case of inline images.
+	// We will check in the decodeParms for now, we can adjust later if we come across cases of this.
+	obj := decodeParams.Get("EarlyChange")
+	if obj != nil {
+		earlyChange, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
+			return nil, fmt.Errorf("Invalid EarlyChange")
+		}
+		if *earlyChange != 0 && *earlyChange != 1 {
+			return nil, fmt.Errorf("Invalid EarlyChange value (not 0 or 1)")
+		}
+
+		encoder.EarlyChange = int(*earlyChange)
+	} else {
+		encoder.EarlyChange = 1 // default
+	}
+
+	obj = decodeParams.Get("Predictor")
+	if obj != nil {
+		predictor, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
+			return nil, fmt.Errorf("Invalid Predictor")
+		}
+		encoder.Predictor = int(*predictor)
+	}
+
+	// Bits per component.  Use default if not specified (8).
+	obj = decodeParams.Get("BitsPerComponent")
+	if obj != nil {
+		bpc, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("ERROR: Invalid BitsPerComponent")
+			return nil, fmt.Errorf("Invalid BitsPerComponent")
+		}
+		encoder.BitsPerComponent = int(*bpc)
+	}
+
+	if encoder.Predictor > 1 {
+		// Columns.
+		encoder.Columns = 1
+		obj = decodeParams.Get("Columns")
+		if obj != nil {
+			columns, ok := obj.(*PdfObjectInteger)
+			if !ok {
+				return nil, fmt.Errorf("Predictor column invalid")
+			}
+
+			encoder.Columns = int(*columns)
+		}
+
+		// Colors.
+		// Number of interleaved color components per sample (Default 1 if not specified)
+		encoder.Colors = 1
+		obj = decodeParams.Get("Colors")
+		if obj != nil {
+			colors, ok := obj.(*PdfObjectInteger)
+			if !ok {
+				return nil, fmt.Errorf("Predictor colors not an integer")
+			}
+			encoder.Colors = int(*colors)
+		}
+	}
+
+	common.Log.Trace("decode params: %s", decodeParams.String())
+	return encoder, nil
+}
+
+// Create a new DCT encoder/decoder based on an inline image, getting all the encoding parameters
+// from the stream object dictionary entry and the image data itself.
+func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*DCTEncoder, error) {
+	// Start with default settings.
+	encoder := NewDCTEncoder()
+
+	bufReader := bytes.NewReader(inlineImage.stream)
+
+	cfg, err := jpeg.DecodeConfig(bufReader)
+	//img, _, err := goimage.Decode(bufReader)
+	if err != nil {
+		common.Log.Debug("Error decoding file: %s", err)
+		return nil, err
+	}
+
+	switch cfg.ColorModel {
+	case gocolor.RGBAModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 3 // alpha is not included in pdf.
+	case gocolor.RGBA64Model:
+		encoder.BitsPerComponent = 16
+		encoder.ColorComponents = 3
+	case gocolor.GrayModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 1
+	case gocolor.Gray16Model:
+		encoder.BitsPerComponent = 16
+		encoder.ColorComponents = 1
+	case gocolor.CMYKModel:
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 4
+	case gocolor.YCbCrModel:
+		// YCbCr is not supported by PDF, but it could be a different colorspace
+		// with 3 components.  Would be specified by the ColorSpace entry.
+		encoder.BitsPerComponent = 8
+		encoder.ColorComponents = 3
+	default:
+		return nil, errors.New("Unsupported color model")
+	}
+	encoder.Width = cfg.Width
+	encoder.Height = cfg.Height
+	common.Log.Trace("DCT Encoder: %+v", encoder)
+
+	return encoder, nil
+}
+
+// Create a new multi-filter encoder/decoder based on an inline image, getting all the encoding parameters
+// from the filter specification and the DecodeParms (DP) dictionaries.
+func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*MultiEncoder, error) {
+	mencoder := NewMultiEncoder()
+
+	// Prepare the decode params array (one for each filter type)
+	// Optional, not always present.
+	var decodeParamsDict *PdfObjectDictionary
+	decodeParamsArray := []PdfObject{}
+	if obj := inlineImage.DecodeParms; obj != nil {
+		// If it is a dictionary, assume it applies to all
+		dict, isDict := obj.(*PdfObjectDictionary)
+		if isDict {
+			decodeParamsDict = dict
+		}
+
+		// If it is an array, assume there is one for each
+		arr, isArray := obj.(*PdfObjectArray)
+		if isArray {
+			for _, dictObj := range *arr {
+				if dict, is := dictObj.(*PdfObjectDictionary); is {
+					decodeParamsArray = append(decodeParamsArray, dict)
+				} else {
+					decodeParamsArray = append(decodeParamsArray, nil)
+				}
+			}
+		}
+	}
+
+	obj := inlineImage.Filter
+	if obj == nil {
+		return nil, fmt.Errorf("Filter missing")
+	}
+
+	array, ok := obj.(*PdfObjectArray)
+	if !ok {
+		return nil, fmt.Errorf("Multi filter can only be made from array")
+	}
+
+	for idx, obj := range *array {
+		name, ok := obj.(*PdfObjectName)
+		if !ok {
+			return nil, fmt.Errorf("Multi filter array element not a name")
+		}
+
+		var dp PdfObject
+
+		// If decode params dict is set, use it.  Otherwise take from array..
+		if decodeParamsDict != nil {
+			dp = decodeParamsDict
+		} else {
+			// Only get the dp if provided.  Oftentimes there is no decode params dict
+			// provided.
+			if len(decodeParamsArray) > 0 {
+				if idx >= len(decodeParamsArray) {
+					return nil, fmt.Errorf("Missing elements in decode params array")
+				}
+				dp = decodeParamsArray[idx]
+			}
+		}
+
+		var dParams *PdfObjectDictionary
+		if dict, is := dp.(*PdfObjectDictionary); is {
+			dParams = dict
+		}
+
+		if *name == StreamEncodingFilterNameFlate {
+			// XXX: need to separate out the DecodeParms..
+			encoder, err := newFlateEncoderFromInlineImage(inlineImage, dParams)
+			if err != nil {
+				return nil, err
+			}
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameLZW {
+			encoder, err := newLZWEncoderFromInlineImage(inlineImage, dParams)
+			if err != nil {
+				return nil, err
+			}
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameASCIIHex {
+			encoder := NewASCIIHexEncoder()
+			mencoder.AddEncoder(encoder)
+		} else if *name == StreamEncodingFilterNameASCII85 {
+			encoder := NewASCII85Encoder()
+			mencoder.AddEncoder(encoder)
+		} else {
+			common.Log.Error("Unsupported filter %s", *name)
+			return nil, fmt.Errorf("Invalid filter in multi filter array")
+		}
+	}
+
+	return mencoder, nil
+}
