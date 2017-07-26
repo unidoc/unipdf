@@ -163,6 +163,11 @@ func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			newContext.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - img.margins.bottom
 			newContext.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - img.margins.left - img.margins.right
 			ctx = newContext
+		} else {
+			ctx.Y += img.margins.top
+			ctx.Height -= img.margins.top + img.margins.bottom
+			ctx.X += img.margins.left
+			ctx.Width -= img.margins.left + img.margins.right
 		}
 	} else {
 		// Absolute.
@@ -183,7 +188,8 @@ func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		ctx = origCtx
 	} else {
 		// XXX/TODO: Use projected height.
-		ctx.Y += img.height
+		ctx.Y += img.margins.bottom
+		ctx.Height -= img.margins.bottom
 	}
 
 	return blocks, ctx, nil
@@ -296,9 +302,9 @@ func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, err
 
 	blk.addContents(ops)
 
-	ctx.Y += img.Height()
-
 	if img.positioning.isRelative() {
+		ctx.Y += img.Height()
+		ctx.Height -= img.Height()
 		return ctx, nil
 	} else {
 		// Absolute positioning - return original context.
