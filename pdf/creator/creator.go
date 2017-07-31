@@ -14,10 +14,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-//
-// The content creator is a wrapper around functionality for creating PDF reports and/or adding new
-// content onto imported PDF pages.
-//
+// Creator is a wrapper around functionality for creating PDF reports and/or adding new
+// content onto imported PDF pages, etc.
 type Creator struct {
 	pages      []*model.PdfPage
 	activePage *model.PdfPage
@@ -45,19 +43,22 @@ type Creator struct {
 	toc *TableOfContents
 }
 
-// Input arguments to a front page drawing function.
+// FrontpageFunctionArgs holds the input arguments to a front page drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
 type FrontpageFunctionArgs struct {
 	PageNum    int
 	TotalPages int
 }
 
-// Input arguments to a header drawing function.
+// HeaderFunctionArgs holds the input arguments to a header drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
 type HeaderFunctionArgs struct {
 	PageNum    int
 	TotalPages int
 }
 
-// Input arguments to a footer drawing function.
+// FooterFunctionArgs holds the input arguments to a footer drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
 type FooterFunctionArgs struct {
 	PageNum    int
 	TotalPages int
@@ -71,7 +72,7 @@ type margins struct {
 	bottom float64
 }
 
-// Create a new instance of the PDF creator.
+// New creates a new instance of the PDF Creator.
 func New() *Creator {
 	c := &Creator{}
 	c.pages = []*model.PdfPage{}
@@ -88,7 +89,7 @@ func New() *Creator {
 	return c
 }
 
-// Set the page margins: left, right, top, bottom.
+// SetPageMargins sets the page margins: left, right, top, bottom.
 // The default page margins are 10% of document width.
 func (c *Creator) SetPageMargins(left, right, top, bottom float64) {
 	c.pageMargins.left = left
@@ -97,12 +98,12 @@ func (c *Creator) SetPageMargins(left, right, top, bottom float64) {
 	c.pageMargins.bottom = bottom
 }
 
-// Returns the current Page width.
+// Width returns the current page width.
 func (c *Creator) Width() float64 {
 	return c.pageWidth
 }
 
-// Returns the current Page height.
+// Height returns the current page height.
 func (c *Creator) Height() float64 {
 	return c.pageHeight
 }
@@ -117,12 +118,11 @@ func (c *Creator) getActivePage() *model.PdfPage {
 			return nil
 		}
 		return c.pages[len(c.pages)-1]
-	} else {
-		return c.activePage
 	}
+	return c.activePage
 }
 
-// Set a new Page size.  Pages that are added after this will be created with this Page size.
+// SetPageSize sets the Creator's page size.  Pages that are added after this will be created with this Page size.
 // Does not affect pages already created.
 //
 // Common page sizes are defined as constants.
@@ -153,22 +153,22 @@ func (c *Creator) SetPageSize(size PageSize) {
 	c.pageMargins.bottom = m
 }
 
-// Set a function to draw a header on created output pages.
+// DrawHeader sets a function to draw a header on created output pages.
 func (c *Creator) DrawHeader(drawHeaderFunc func(header *Block, args HeaderFunctionArgs)) {
 	c.drawHeaderFunc = drawHeaderFunc
 }
 
-// Set a function to draw a footer on created output pages.
+// DrawFooter sets a function to draw a footer on created output pages.
 func (c *Creator) DrawFooter(drawFooterFunc func(footer *Block, args FooterFunctionArgs)) {
 	c.drawFooterFunc = drawFooterFunc
 }
 
-// Set a function to generate a front Page.
+// CreateFrontPage sets a function to generate a front Page.
 func (c *Creator) CreateFrontPage(genFrontPageFunc func(args FrontpageFunctionArgs)) {
 	c.genFrontPageFunc = genFrontPageFunc
 }
 
-// Seta function to generate table of contents.
+// CreateTableOfContents sets a function to generate table of contents.
 func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) (*Chapter, error)) {
 	c.genTableOfContentFunc = genTOCFunc
 }
@@ -203,13 +203,14 @@ func (c *Creator) initContext() {
 	c.context.Margins = c.pageMargins
 }
 
-// Adds a new Page to the creator and sets as the active Page.
+// NewPage adds a new Page to the Creator and sets as the active Page.
 func (c *Creator) NewPage() {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
 	c.context.Page++
 }
 
+// AddPage adds the specified page to the creator.
 func (c *Creator) AddPage(page *model.PdfPage) error {
 	mbox, err := page.GetMediaBox()
 	if err != nil {
@@ -228,8 +229,8 @@ func (c *Creator) AddPage(page *model.PdfPage) error {
 	return nil
 }
 
-// Rotate the current active page by angle degrees.
-// NOTE: angleDeg must be a multiple of 90.
+// RotateDeg rotates the current active page by angle degrees.  An error is returned on failure, which can be
+// if there is no currently active page, or the angleDeg is not a multiple of 90 degrees.
 func (c *Creator) RotateDeg(angleDeg int64) error {
 	page := c.getActivePage()
 	if page == nil {
@@ -252,7 +253,7 @@ func (c *Creator) RotateDeg(angleDeg int64) error {
 	return nil
 }
 
-// Get current context.
+// Context returns the current drawing context.
 func (c *Creator) Context() DrawContext {
 	return c.context
 }
@@ -284,7 +285,7 @@ func (c *Creator) finalize() error {
 		genpages += len(blocks)
 
 		// Update the table of content Page numbers, accounting for front Page and TOC.
-		for idx, _ := range c.toc.entries {
+		for idx := range c.toc.entries {
 			c.toc.entries[idx].PageNumber += genpages
 		}
 
@@ -386,33 +387,33 @@ func (c *Creator) finalize() error {
 	return nil
 }
 
-// Move absolute position to x, y.
+// MoveTo moves the drawing context to absolute coordinates (x, y).
 func (c *Creator) MoveTo(x, y float64) {
 	c.context.X = x
 	c.context.Y = y
 }
 
-// Move draw context to absolute position x.
+// MoveX moves the drawing context to absolute position x.
 func (c *Creator) MoveX(x float64) {
 	c.context.X = x
 }
 
-// Move draw context to absolute position y.
+// MoveY moves the drawing context to absolute position y.
 func (c *Creator) MoveY(y float64) {
 	c.context.Y = y
 }
 
-// Move draw context right by relative position dx (negative goes left).
+// MoveRight moves the drawing context right by relative displacement dx (negative goes left).
 func (c *Creator) MoveRight(dx float64) {
 	c.context.X += dx
 }
 
-// Move draw context down by relative position dy (negative goes up).
+// MoveDown moves the drawing context down by relative displacement dy (negative goes up).
 func (c *Creator) MoveDown(dy float64) {
 	c.context.Y += dy
 }
 
-// Draw the drawable widget to the document.  This can span over 1 or more pages. Additional pages are added if
+// Draw draws the Drawable widget to the document.  This can span over 1 or more pages. Additional pages are added if
 // the contents go over the current Page.
 func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
@@ -478,7 +479,7 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	return nil
 }
 
-// Set Writer access hook.
+// SetPdfWriterAccessFunc sets a PdfWriter access function/hook.
 // Exposes the PdfWriter just prior to writing the PDF.  Can be used to encrypt the output PDF, etc.
 //
 // Example of encrypting with a user/owner password "password"
@@ -495,7 +496,7 @@ func (c *Creator) SetPdfWriterAccessFunc(pdfWriterAccessFunc func(writer *model.
 	c.pdfWriterAccessFunc = pdfWriterAccessFunc
 }
 
-// Write output of creator to file.
+// WriteToFile writes the Creator output to file specified by path.
 func (c *Creator) WriteToFile(outputPath string) error {
 	fWrite, err := os.Create(outputPath)
 	if err != nil {
