@@ -12,12 +12,10 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-//
-// Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
+// Line defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
 // or arrows at either end.  The line also has a specified width, color and opacity.
 // Implements the Drawable interface and can be drawn on PDF using the Creator.
-//
-type line struct {
+type Line struct {
 	x1        float64
 	y1        float64
 	x2        float64
@@ -26,9 +24,9 @@ type line struct {
 	lineWidth float64
 }
 
-// Generate a new line with default parameters between (x1,y1) to (x2,y2).
-func NewLine(x1, y1, x2, y2 float64) *line {
-	l := &line{}
+// NewLine creates a new Line with default parameters between (x1,y1) to (x2,y2).
+func NewLine(x1, y1, x2, y2 float64) *Line {
+	l := &Line{}
 
 	l.x1 = x1
 	l.y1 = y1
@@ -41,29 +39,29 @@ func NewLine(x1, y1, x2, y2 float64) *line {
 	return l
 }
 
-// Get the (x1, y1), (x2, y2) points defining the line.
-func (l *line) GetCoords() (float64, float64, float64, float64) {
+// GetCoords returns the (x1, y1), (x2, y2) points defining the Line.
+func (l *Line) GetCoords() (float64, float64, float64, float64) {
 	return l.x1, l.y1, l.x2, l.y2
 }
 
-// Set line width.
-func (l *line) SetLineWidth(lw float64) {
+// SetLineWidth sets the line width.
+func (l *Line) SetLineWidth(lw float64) {
 	l.lineWidth = lw
 }
 
-// Set line color.
+// SetColor sets the line color.
 // Use ColorRGBFromHex, ColorRGBFrom8bit or ColorRGBFromArithmetic to make the color object.
-func (l *line) SetColor(col Color) {
+func (l *Line) SetColor(col Color) {
 	l.lineColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Calculate line length.
-func (l *line) Length() float64 {
+// Length calculates and returns the line length.
+func (l *Line) Length() float64 {
 	return math.Sqrt(math.Pow(l.x2-l.x1, 2.0) + math.Pow(l.y2-l.y1, 2.0))
 }
 
-// Draws the line on a new block representing the page.
-func (l *line) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+// GeneratePageBlocks draws the line on a new block representing the page. Implements the Drawable interface.
+func (l *Line) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	drawline := draw.Line{
