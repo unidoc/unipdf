@@ -52,7 +52,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	failedCount := 0
 
 	keys := []int{}
-	for k, _ := range this.xrefs {
+	for k := range this.xrefs {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)

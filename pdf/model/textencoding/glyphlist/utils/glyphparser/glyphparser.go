@@ -58,8 +58,8 @@ func main() {
 
 func printGlyphToRuneList(glyphToUnicodeMap map[string]string) {
 	keys := []string{}
-	for k, _ := range glyphToUnicodeMap {
-		keys = append(keys, k)
+	for key := range glyphToUnicodeMap {
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
@@ -73,8 +73,8 @@ func printGlyphToRuneList(glyphToUnicodeMap map[string]string) {
 
 func printRuneToGlyphList(glyphToUnicodeMap map[string]string) {
 	keys := []string{}
-	for k, _ := range glyphToUnicodeMap {
-		keys = append(keys, k)
+	for key := range glyphToUnicodeMap {
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 

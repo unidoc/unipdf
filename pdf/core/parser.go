@@ -542,7 +542,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 			result1 := reReference.FindStringSubmatch(string(peekStr))
 			if len(result1) > 1 {
 				bb, _ = this.reader.ReadBytes('R')
-				common.Log.Trace("-> !Ref: '%s'", string(bb[:len(bb)]))
+				common.Log.Trace("-> !Ref: '%s'", string(bb[:]))
 				ref, err := parseReference(string(bb))
 				return &ref, err
 			}

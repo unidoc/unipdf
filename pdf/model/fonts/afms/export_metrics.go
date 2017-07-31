@@ -58,7 +58,7 @@ func runCharmetricsOnFile(path string) error {
 	}
 
 	keys := []string{}
-	for key, _ := range metrics {
+	for key := range metrics {
 		keys = append(keys, key)
 	}
 
@@ -79,7 +79,7 @@ func runCharcodeToGlyphRetrievalOnFile(afmpath string) error {
 	}
 
 	keys := []int{}
-	for key, _ := range charcodeToGlyphMap {
+	for key := range charcodeToGlyphMap {
 		keys = append(keys, int(key))
 	}
 	sort.Ints(keys)
@@ -100,7 +100,7 @@ func runGlyphToCharcodeRetrievalOnFile(afmpath string) error {
 	}
 
 	keys := []int{}
-	for key, _ := range charcodeToGlyphMap {
+	for key := range charcodeToGlyphMap {
 		keys = append(keys, int(key))
 	}
 	sort.Ints(keys)

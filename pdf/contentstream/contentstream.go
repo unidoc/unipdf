@@ -54,7 +54,7 @@ func (this *ContentStreamOperations) WrapIfNeeded() *ContentStreamOperations {
 		return this
 	}
 
-	*this = append([]*ContentStreamOperation{&ContentStreamOperation{Operand: "q"}}, *this...)
+	*this = append([]*ContentStreamOperation{{Operand: "q"}}, *this...)
 
 	depth := 0
 	for _, op := range *this {
