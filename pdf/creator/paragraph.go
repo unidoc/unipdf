@@ -17,9 +17,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// A paragraph represents text drawn with a specified font and can wrap across lines and pages.
+// Paragraph represents text drawn with a specified font and can wrap across lines and pages.
 // By default occupies the available width in the drawing context.
-type paragraph struct {
+type Paragraph struct {
 	// The input utf-8 text as a string (series of runes).
 	text string
 
@@ -67,8 +67,8 @@ type paragraph struct {
 
 // Create a new text block.  Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
 // with a wrap width of 100 points.
-func NewParagraph(text string) *paragraph {
-	p := &paragraph{}
+func NewParagraph(text string) *Paragraph {
+	p := &Paragraph{}
 	p.text = text
 	p.textFont = fonts.NewFontHelvetica()
 	p.SetEncoder(textencoding.NewWinAnsiTextEncoder())
@@ -89,54 +89,54 @@ func NewParagraph(text string) *paragraph {
 	return p
 }
 
-func (p *paragraph) SetFont(font fonts.Font) {
+func (p *Paragraph) SetFont(font fonts.Font) {
 	p.textFont = font
 }
 
-func (p *paragraph) SetFontSize(fontSize float64) {
+func (p *Paragraph) SetFontSize(fontSize float64) {
 	p.fontSize = fontSize
 }
 
 // Alignment of the text within the width provided.
-func (p *paragraph) SetTextAlignment(align TextAlignment) {
+func (p *Paragraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
 }
 
 // Set text encoding.
-func (p *paragraph) SetEncoder(encoder textencoding.TextEncoder) {
+func (p *Paragraph) SetEncoder(encoder textencoding.TextEncoder) {
 	p.encoder = encoder
 	// Sync with the text font too.
 	// XXX/FIXME: Keep in 1 place only.
 	p.textFont.SetEncoder(encoder)
 }
 
-func (p *paragraph) SetLineHeight(lineheight float64) {
+func (p *Paragraph) SetLineHeight(lineheight float64) {
 	p.lineHeight = lineheight
 }
 
-func (p *paragraph) SetText(text string) {
+func (p *Paragraph) SetText(text string) {
 	p.text = text
 }
 
 // Set line wrapping enabled flag.
-func (p *paragraph) SetEnableWrap(enableWrap bool) {
+func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
 }
 
-// Set color of paragraph text.
+// Set color of Paragraph text.
 //
 // Example:
 // 1.   p := NewParagraph("Red paragraph")
 //      // Set to red color with a hex code:
 //      p.SetColor(creator.ColorRGBFromHex("#ff0000"))
 //
-// 2. Make paragraph green with 8-bit rgb values (0-255 each component)
+// 2. Make Paragraph green with 8-bit rgb values (0-255 each component)
 //      p.SetColor(creator.ColorRGBFrom8bit(0, 255, 0)
 //
-// 3. Make paragraph blue with arithmetic (0-1) rgb components.
+// 3. Make Paragraph blue with arithmetic (0-1) rgb components.
 //      p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
 //
-func (p *paragraph) SetColor(col color) {
+func (p *Paragraph) SetColor(col color) {
 	pdfColor := model.NewPdfColorDeviceRGB(col.ToRGB())
 	p.color = *pdfColor
 }
@@ -144,37 +144,37 @@ func (p *paragraph) SetColor(col color) {
 // Drawable interface implementations.
 
 // Set absolute positioning with specified coordinates.
-func (p *paragraph) SetPos(x, y float64) {
+func (p *Paragraph) SetPos(x, y float64) {
 	p.positioning = positionAbsolute
 	p.xPos = x
 	p.yPos = y
 }
 
 // Set rotation angle.
-func (p *paragraph) SetAngle(angle float64) {
+func (p *Paragraph) SetAngle(angle float64) {
 	p.angle = angle
 }
 
-// Set paragraph Margins.
-func (p *paragraph) SetMargins(left, right, top, bottom float64) {
+// Set Paragraph Margins.
+func (p *Paragraph) SetMargins(left, right, top, bottom float64) {
 	p.margins.left = left
 	p.margins.right = right
 	p.margins.top = top
 	p.margins.bottom = bottom
 }
 
-// Get paragraph Margins: left, right, top, bottom.
-func (p *paragraph) GetMargins() (float64, float64, float64, float64) {
+// Get Paragraph Margins: left, right, top, bottom.
+func (p *Paragraph) GetMargins() (float64, float64, float64, float64) {
 	return p.margins.left, p.margins.right, p.margins.top, p.margins.bottom
 }
 
-// Set the paragraph width. Esentially the wrapping width, the width the text can extend to prior to wrapping.
-func (p *paragraph) SetWidth(width float64) {
+// Set the Paragraph width. Esentially the wrapping width, the width the text can extend to prior to wrapping.
+func (p *Paragraph) SetWidth(width float64) {
 	p.wrapWidth = width
 	p.wrapText()
 }
 
-func (p *paragraph) Width() float64 {
+func (p *Paragraph) Width() float64 {
 	if p.enableWrap {
 		return p.wrapWidth
 	} else {
@@ -184,7 +184,7 @@ func (p *paragraph) Width() float64 {
 
 // The height is calculated based on the input text and how it is wrapped within the container.
 // Height does not include Margins.
-func (p *paragraph) Height() float64 {
+func (p *Paragraph) Height() float64 {
 	if p.textLines == nil || len(p.textLines) == 0 {
 		p.wrapText()
 	}
@@ -193,23 +193,23 @@ func (p *paragraph) Height() float64 {
 	return h
 }
 
-func (p *paragraph) Scale(sx, sy float64) {
+func (p *Paragraph) Scale(sx, sy float64) {
 	p.scaleX = sx
 	p.scaleY = sy
 }
 
-func (p *paragraph) ScaleToHeight(h float64) {
+func (p *Paragraph) ScaleToHeight(h float64) {
 	ratio := h / p.Height()
 	p.Scale(ratio, ratio)
 }
 
-func (p *paragraph) ScaleToWidth(w float64) {
+func (p *Paragraph) ScaleToWidth(w float64) {
 	ratio := w / p.Width()
 	p.Scale(ratio, ratio)
 }
 
 // Calculate the text width (if not wrapped).
-func (p *paragraph) getTextWidth() float64 {
+func (p *Paragraph) getTextWidth() float64 {
 	w := float64(0.0)
 
 	for _, rune := range p.text {
@@ -232,7 +232,7 @@ func (p *paragraph) getTextWidth() float64 {
 
 // Simple algorithm to wrap the text into lines (greedy algorithm - fill the lines).
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
-func (p *paragraph) wrapText() error {
+func (p *Paragraph) wrapText() error {
 	if !p.enableWrap {
 		p.textLines = []string{p.encoder.Encode(p.text)}
 		return nil
@@ -310,13 +310,13 @@ func (p *paragraph) wrapText() error {
 
 // Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
 // multiple pages.
-func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
 	blocks := []*Block{}
 
 	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if p.positioning.isRelative() {
-		// Account for paragraph Margins.
+		// Account for Paragraph Margins.
 		ctx.X += p.margins.left
 		ctx.Y += p.margins.top
 		ctx.Width -= p.margins.left + p.margins.right
@@ -328,7 +328,7 @@ func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		if p.Height() > ctx.Height {
 			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
 			// left corner.
-			// XXX/TODO: Handle case when paragraph is larger than the Page...
+			// XXX/TODO: Handle case when Paragraph is larger than the Page...
 			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
 
 			blocks = append(blocks, blk)
@@ -353,7 +353,7 @@ func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.Y = p.yPos
 	}
 
-	// Place the paragraph on the template at position (x,y) based on the ctx.
+	// Place the Paragraph on the template at position (x,y) based on the ctx.
 	ctx, err := drawParagraphOnBlock(blk, p, ctx)
 	if err != nil {
 		common.Log.Debug("ERROR: %v", err)
@@ -372,7 +372,7 @@ func (p *paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 }
 
 // Draw block on specified location on Page, adding to the content stream.
-func drawParagraphOnBlock(blk *Block, p *paragraph, ctx DrawContext) (DrawContext, error) {
+func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContext, error) {
 	// Find a free name for the font.
 	num := 1
 	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))

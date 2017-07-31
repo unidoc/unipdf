@@ -18,7 +18,7 @@ type subchapter struct {
 	chapterNum    int
 	subchapterNum int
 	title         string
-	heading       *paragraph
+	heading       *Paragraph
 
 	contents []Drawable
 
@@ -88,8 +88,8 @@ func (subchap *subchapter) SetIncludeInTOC(includeInTOC bool) {
 	subchap.includeInTOC = includeInTOC
 }
 
-// Get access to the heading paragraph to address style etc.
-func (subchap *subchapter) GetHeading() *paragraph {
+// Get access to the heading Paragraph to address style etc.
+func (subchap *subchapter) GetHeading() *Paragraph {
 	return subchap.heading
 }
 
@@ -120,7 +120,7 @@ func (subchap *subchapter) Add(d Drawable) {
 	switch d.(type) {
 	case *Chapter, *subchapter:
 		common.Log.Debug("Error: Cannot add chapter or subchapter to a subchapter")
-	case *paragraph, *image, *Block, *Table:
+	case *Paragraph, *image, *Block, *Table:
 		subchap.contents = append(subchap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)

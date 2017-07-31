@@ -499,7 +499,7 @@ func (cell *tableCell) Width(ctx DrawContext) float64 {
 // Set cell content.  The content is a vector drawable, i.e. a drawable with a known height and width.
 func (cell *tableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
-	case *paragraph:
+	case *Paragraph:
 		// Default paragraph settings in table:
 		t.SetEnableWrap(false) // No wrapping.
 		h := cell.table.rowHeights[cell.row-1]

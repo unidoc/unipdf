@@ -13,10 +13,12 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
+// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section. The concept is
+// the same as a book or a report chapter.
 type Chapter struct {
 	number  int
 	title   string
-	heading *paragraph
+	heading *Paragraph
 
 	subchapters int
 
@@ -41,6 +43,7 @@ type Chapter struct {
 	toc *TableOfContents
 }
 
+// NewChapter creates a new chapter with the specified title as the heading.
 func (c *Creator) NewChapter(title string) *Chapter {
 	chap := &Chapter{}
 
@@ -65,7 +68,7 @@ func (c *Creator) NewChapter(title string) *Chapter {
 	return chap
 }
 
-// Set flag to indicate whether or not to show chapter numbers as part of title.
+// SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
 func (chap *Chapter) SetShowNumbering(show bool) {
 	if show {
 		heading := fmt.Sprintf("%d. %s", chap.number, chap.title)
@@ -77,26 +80,18 @@ func (chap *Chapter) SetShowNumbering(show bool) {
 	chap.showNumbering = show
 }
 
-// Set flag to indicate whether or not to include in tOC.
+// SetIncludeInTOC sets a flag to indicate whether or not to include in tOC.
 func (chap *Chapter) SetIncludeInTOC(includeInTOC bool) {
 	chap.includeInTOC = includeInTOC
 }
 
-// Get access to the heading paragraph to address style etc.
-func (chap *Chapter) GetHeading() *paragraph {
+// GetHeading returns the chapter heading paragraph. Used to give access to address style: font, sizing etc.
+func (chap *Chapter) GetHeading() *Paragraph {
 	return chap.heading
 }
 
-/*
-// Set absolute coordinates.
-func (chap *Chapter) SetPos(x, y float64) {
-	chap.positioning = positionAbsolute
-	chap.xPos = x
-	chap.yPos = y
-}
-*/
-
-// Set chapter Margins.  Typically not needed as the Page Margins are used.
+// SetMargins sets the Chapter margins: left, right, top, bottom.
+// Typically not needed as the creator's page margins are used.
 func (chap *Chapter) SetMargins(left, right, top, bottom float64) {
 	chap.margins.left = left
 	chap.margins.right = right
@@ -104,12 +99,12 @@ func (chap *Chapter) SetMargins(left, right, top, bottom float64) {
 	chap.margins.bottom = bottom
 }
 
-// Get chapter Margins: left, right, top, bottom.
+// GetMargins returns the Chapter's margin: left, right, top, bottom.
 func (chap *Chapter) GetMargins() (float64, float64, float64, float64) {
 	return chap.margins.left, chap.margins.right, chap.margins.top, chap.margins.bottom
 }
 
-// Add a new drawable to the chapter.
+// Add adds a new Drawable to the chapter.
 func (chap *Chapter) Add(d Drawable) error {
 	if Drawable(chap) == d {
 		common.Log.Debug("ERROR: Cannot add itself")
@@ -120,7 +115,7 @@ func (chap *Chapter) Add(d Drawable) error {
 	case *Chapter:
 		common.Log.Debug("Error: Cannot add chapter to a chapter")
 		return errors.New("Type check error")
-	case *paragraph, *image, *Block, *subchapter, *Table:
+	case *Paragraph, *image, *Block, *subchapter, *Table:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
@@ -130,7 +125,7 @@ func (chap *Chapter) Add(d Drawable) error {
 	return nil
 }
 
-// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
+// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
 // multiple pages.
 func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
