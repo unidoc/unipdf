@@ -51,12 +51,12 @@ func (ell *ellipse) SetBorderWidth(bw float64) {
 }
 
 // Set border color.
-func (ell *ellipse) SetBorderColor(col color) {
+func (ell *ellipse) SetBorderColor(col Color) {
 	ell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Set fill color.
-func (ell *ellipse) SetFillColor(col color) {
+func (ell *ellipse) SetFillColor(col Color) {
 	ell.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 

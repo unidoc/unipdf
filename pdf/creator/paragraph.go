@@ -136,7 +136,7 @@ func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 // 3. Make Paragraph blue with arithmetic (0-1) rgb components.
 //      p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
 //
-func (p *Paragraph) SetColor(col color) {
+func (p *Paragraph) SetColor(col Color) {
 	pdfColor := model.NewPdfColorDeviceRGB(col.ToRGB())
 	p.color = *pdfColor
 }

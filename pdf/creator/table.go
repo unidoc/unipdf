@@ -482,7 +482,7 @@ func (cell *tableCell) SetBorderColor(color rgbColor) {
 }
 
 // Set cell's background color.
-func (cell *tableCell) SetBackgroundColor(col color) {
+func (cell *tableCell) SetBackgroundColor(col Color) {
 	cell.backgroundColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 

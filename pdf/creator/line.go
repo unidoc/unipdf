@@ -53,7 +53,7 @@ func (l *line) SetLineWidth(lw float64) {
 
 // Set line color.
 // Use ColorRGBFromHex, ColorRGBFrom8bit or ColorRGBFromArithmetic to make the color object.
-func (l *line) SetColor(col color) {
+func (l *line) SetColor(col Color) {
 	l.lineColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 

@@ -51,12 +51,12 @@ func (rect *rectangle) SetBorderWidth(bw float64) {
 }
 
 // Set border color.
-func (rect *rectangle) SetBorderColor(col color) {
+func (rect *rectangle) SetBorderColor(col Color) {
 	rect.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // Set fill color.
-func (rect *rectangle) SetFillColor(col color) {
+func (rect *rectangle) SetFillColor(col Color) {
 	rect.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
