@@ -674,6 +674,10 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			if len(outData)%rowLength != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
+			if rowLength > len(outData) {
+				common.Log.Trace("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
+			}
 
 			pOutBuffer := bytes.NewBuffer(nil)
 
