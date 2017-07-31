@@ -15,7 +15,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// A block can contain a portion of PDF Page contents. It has a width and a position and can
+// Block contains a portion of PDF Page contents. It has a width and a position and can
 // be placed anywhere on a Page.  It can even contain a whole Page, and is used in the creator
 // where each Drawable object can output one or more blocks, each representing content for separate pages
 // (typically needed when Page breaks occur).
@@ -41,7 +41,7 @@ type Block struct {
 	margins margins
 }
 
-// Create a new block with specified width and height.
+// NewBlock creates a new Block with specified width and height.
 func NewBlock(width float64, height float64) *Block {
 	b := &Block{}
 	b.contents = &contentstream.ContentStreamOperations{}
@@ -51,8 +51,8 @@ func NewBlock(width float64, height float64) *Block {
 	return b
 }
 
-// Create a block from a PDF Page.  Useful for loading template pages as blocks from a PDF document and additional
-// content with the creator.
+// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks from a PDF document
+// and additional content with the creator.
 func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	b := &Block{}
 
@@ -91,7 +91,7 @@ func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	return b, nil
 }
 
-// Set the rotation angle in degrees.
+// SetAngle sets the rotation angle in degrees.
 func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
 }
@@ -112,7 +112,8 @@ func (blk *Block) duplicate() *Block {
 	return dup
 }
 
-// Draws the block contents on a template Page block.
+// GeneratePageBlocks draws the block contents on a template Page block.
+// Implements the Drawable interface.
 func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	blocks := []*Block{}
 
@@ -156,12 +157,12 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	return blocks, ctx, nil
 }
 
-// Get block height.
+// Height returns the Block's height.
 func (blk *Block) Height() float64 {
 	return blk.height
 }
 
-// Get block width.
+// Width returns the Block's width.
 func (blk *Block) Width() float64 {
 	return blk.width
 }
@@ -189,7 +190,7 @@ func (blk *Block) addContentsByString(contents string) error {
 	return nil
 }
 
-// Set block Margins.
+// SetMargins sets the Block's left, right, top, bottom, margins.
 func (blk *Block) SetMargins(left, right, top, bottom float64) {
 	blk.margins.left = left
 	blk.margins.right = right
@@ -197,12 +198,12 @@ func (blk *Block) SetMargins(left, right, top, bottom float64) {
 	blk.margins.bottom = bottom
 }
 
-// Return block Margins: left, right, top, bottom Margins.
+// GetMargins returns the Block's margins: left, right, top, bottom.
 func (blk *Block) GetMargins() (float64, float64, float64, float64) {
 	return blk.margins.left, blk.margins.right, blk.margins.top, blk.margins.bottom
 }
 
-// Set block positioning to absolute and set the absolute position coordinates as specified.
+// SetPos sets the Block's positioning to absolute mode with the specified coordinates.
 func (blk *Block) SetPos(x, y float64) {
 	blk.positioning = positionAbsolute
 	blk.xPos = x
@@ -222,13 +223,13 @@ func (blk *Block) Scale(sx, sy float64) {
 	blk.height *= sy
 }
 
-// Scale to a specified width, maintaining aspect ratio.
+// ScaleToWidth scales the Block to a specified width, maintaining the same aspect ratio.
 func (blk *Block) ScaleToWidth(w float64) {
 	ratio := w / blk.width
 	blk.Scale(ratio, ratio)
 }
 
-// Scale to a specified height, maintaining aspect ratio.
+// ScaleToHeight scales the Block to a specified height, maintaining the same aspect ratio.
 func (blk *Block) ScaleToHeight(h float64) {
 	ratio := h / blk.height
 	blk.Scale(ratio, ratio)
@@ -308,7 +309,7 @@ func (blk *Block) Draw(d Drawable) error {
 	return nil
 }
 
-// Draw with context.
+// DrawWithContext draws the Block using the specified drawing context.
 func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	blocks, _, err := d.GeneratePageBlocks(ctx)
 	if err != nil {
