@@ -65,7 +65,7 @@ type Paragraph struct {
 	textLines []string
 }
 
-// Create a new text block.  Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
+// NewParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
 // with a wrap width of 100 points.
 func NewParagraph(text string) *Paragraph {
 	p := &Paragraph{}
@@ -89,20 +89,22 @@ func NewParagraph(text string) *Paragraph {
 	return p
 }
 
+// SetFont sets the Paragraph's font.
 func (p *Paragraph) SetFont(font fonts.Font) {
 	p.textFont = font
 }
 
+// SetFontSize sets the font size in document units (points).
 func (p *Paragraph) SetFontSize(fontSize float64) {
 	p.fontSize = fontSize
 }
 
-// Alignment of the text within the width provided.
+// SetTextAlignment sets the horizontal alignment of the text within the space provided.
 func (p *Paragraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
 }
 
-// Set text encoding.
+// SetEncoder sets the text encoding.
 func (p *Paragraph) SetEncoder(encoder textencoding.TextEncoder) {
 	p.encoder = encoder
 	// Sync with the text font too.
@@ -110,20 +112,22 @@ func (p *Paragraph) SetEncoder(encoder textencoding.TextEncoder) {
 	p.textFont.SetEncoder(encoder)
 }
 
+// SetLineHeight sets the line height (1.0 default).
 func (p *Paragraph) SetLineHeight(lineheight float64) {
 	p.lineHeight = lineheight
 }
 
+// SetText sets the text content of the Paragraph.
 func (p *Paragraph) SetText(text string) {
 	p.text = text
 }
 
-// Set line wrapping enabled flag.
+// SetEnableWrap sets the line wrapping enabled flag.
 func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
 }
 
-// Set color of Paragraph text.
+// SetColor set the color of the Paragraph text.
 //
 // Example:
 // 1.   p := NewParagraph("Red paragraph")
@@ -141,21 +145,19 @@ func (p *Paragraph) SetColor(col Color) {
 	p.color = *pdfColor
 }
 
-// Drawable interface implementations.
-
-// Set absolute positioning with specified coordinates.
+// SetPos sets absolute positioning with specified coordinates.
 func (p *Paragraph) SetPos(x, y float64) {
 	p.positioning = positionAbsolute
 	p.xPos = x
 	p.yPos = y
 }
 
-// Set rotation angle.
+// SetAngle sets the rotation angle of the text.
 func (p *Paragraph) SetAngle(angle float64) {
 	p.angle = angle
 }
 
-// Set Paragraph Margins.
+// SetMargins sets the Paragraph's margins.
 func (p *Paragraph) SetMargins(left, right, top, bottom float64) {
 	p.margins.left = left
 	p.margins.right = right
@@ -163,17 +165,19 @@ func (p *Paragraph) SetMargins(left, right, top, bottom float64) {
 	p.margins.bottom = bottom
 }
 
-// Get Paragraph Margins: left, right, top, bottom.
+// GetMargins returns the Paragraph's margins: left, right, top, bottom.
 func (p *Paragraph) GetMargins() (float64, float64, float64, float64) {
 	return p.margins.left, p.margins.right, p.margins.top, p.margins.bottom
 }
 
-// Set the Paragraph width. Esentially the wrapping width, the width the text can extend to prior to wrapping.
+// SetWidth sets the the Paragraph width. This is essentially the wrapping width, i.e. the width the text can extend to
+// prior to wrapping over to next line.
 func (p *Paragraph) SetWidth(width float64) {
 	p.wrapWidth = width
 	p.wrapText()
 }
 
+// Width returns the width of the Paragraph.
 func (p *Paragraph) Width() float64 {
 	if p.enableWrap {
 		return p.wrapWidth
@@ -182,8 +186,8 @@ func (p *Paragraph) Width() float64 {
 	}
 }
 
-// The height is calculated based on the input text and how it is wrapped within the container.
-// Height does not include Margins.
+// Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
+// within the container. Does not include Margins.
 func (p *Paragraph) Height() float64 {
 	if p.textLines == nil || len(p.textLines) == 0 {
 		p.wrapText()
@@ -191,21 +195,6 @@ func (p *Paragraph) Height() float64 {
 
 	h := float64(len(p.textLines)) * p.lineHeight * p.fontSize
 	return h
-}
-
-func (p *Paragraph) Scale(sx, sy float64) {
-	p.scaleX = sx
-	p.scaleY = sy
-}
-
-func (p *Paragraph) ScaleToHeight(h float64) {
-	ratio := h / p.Height()
-	p.Scale(ratio, ratio)
-}
-
-func (p *Paragraph) ScaleToWidth(w float64) {
-	ratio := w / p.Width()
-	p.Scale(ratio, ratio)
 }
 
 // Calculate the text width (if not wrapped).
@@ -308,8 +297,8 @@ func (p *Paragraph) wrapText() error {
 	return nil
 }
 
-// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
+// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap over
+// multiple pages. Implements the Drawable interface.
 func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
 	blocks := []*Block{}

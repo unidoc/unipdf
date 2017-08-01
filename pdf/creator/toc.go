@@ -5,26 +5,26 @@
 
 package creator
 
-// The table of contents has overview over chapters and subchapters.
+// TableOfContents provides an overview over chapters and subchapters when creating a document with Creator.
 type TableOfContents struct {
-	entries []tableOfContentsEntry
+	entries []TableOfContentsEntry
 }
 
 // Make a new table of contents.
 func newTableOfContents() *TableOfContents {
 	toc := TableOfContents{}
-	toc.entries = []tableOfContentsEntry{}
+	toc.entries = []TableOfContentsEntry{}
 	return &toc
 }
 
-// Get table of content entries.
-func (toc *TableOfContents) Entries() []tableOfContentsEntry {
+// Entries returns the table of content entries.
+func (toc *TableOfContents) Entries() []TableOfContentsEntry {
 	return toc.entries
 }
 
 // Add a TOC entry.
 func (toc *TableOfContents) add(title string, chapter, subchapter, pageNum int) {
-	entry := tableOfContentsEntry{}
+	entry := TableOfContentsEntry{}
 	entry.Title = title
 	entry.Chapter = chapter
 	entry.Subchapter = subchapter
@@ -33,8 +33,9 @@ func (toc *TableOfContents) add(title string, chapter, subchapter, pageNum int) 
 	toc.entries = append(toc.entries, entry)
 }
 
-// Each TOC entry has title, chapter number, sub chapter (0 if chapter) and the page number.
-type tableOfContentsEntry struct {
+// TableOfContentsEntry defines a single entry in the TableOfContents.
+// Each entry has a title, chapter number, sub chapter (0 if chapter) and the page number.
+type TableOfContentsEntry struct {
 	Title      string
 	Chapter    int
 	Subchapter int // 0 if chapter

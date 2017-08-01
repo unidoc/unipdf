@@ -10,12 +10,10 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-//
-// Defines a rectangle with upper left corner at (x,y) and a specified width and height.  The rectangle
+// Rectangle defines a rectangle with upper left corner at (x,y) and a specified width and height.  The rectangle
 // can have a colored fill and/or border with a specified width.
 // Implements the Drawable interface and can be drawn on PDF using the Creator.
-//
-type rectangle struct {
+type Rectangle struct {
 	x           float64 // Upper left corner
 	y           float64
 	width       float64
@@ -25,9 +23,9 @@ type rectangle struct {
 	borderWidth float64
 }
 
-// Generate a new line with default parameters between (x1,y1) to (x2,y2).
-func NewRectangle(x, y, width, height float64) *rectangle {
-	rect := &rectangle{}
+// NewRectangle creates a new Rectangle with default parameters with left corner at (x,y) and width, height as specified.
+func NewRectangle(x, y, width, height float64) *Rectangle {
+	rect := &Rectangle{}
 
 	rect.x = x
 	rect.y = y
@@ -40,28 +38,28 @@ func NewRectangle(x, y, width, height float64) *rectangle {
 	return rect
 }
 
-// Get the coords of the upper left corner (x,y).
-func (rect *rectangle) GetCoords() (float64, float64) {
+// GetCoords returns coordinates of the Rectangle's upper left corner (x,y).
+func (rect *Rectangle) GetCoords() (float64, float64) {
 	return rect.x, rect.y
 }
 
-// Set border width.
-func (rect *rectangle) SetBorderWidth(bw float64) {
+// SetBorderWidth sets the border width.
+func (rect *Rectangle) SetBorderWidth(bw float64) {
 	rect.borderWidth = bw
 }
 
-// Set border color.
-func (rect *rectangle) SetBorderColor(col Color) {
+// SetBorderColor sets border color.
+func (rect *Rectangle) SetBorderColor(col Color) {
 	rect.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Set fill color.
-func (rect *rectangle) SetFillColor(col Color) {
+// SetFillColor sets the fill color.
+func (rect *Rectangle) SetFillColor(col Color) {
 	rect.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Draws the rectangle on a new block representing the page.
-func (rect *rectangle) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+// GeneratePageBlocks draws the rectangle on a new block representing the page. Implements the Drawable interface.
+func (rect *Rectangle) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	drawrect := draw.Rectangle{
