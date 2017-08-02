@@ -11,7 +11,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-// Creates the encoder from the stream's dictionary.
+// NewEncoderFromStream creates a StreamEncoder based on the stream's dictionary.
 func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	filterObj := streamObj.PdfObjectDictionary.Get("Filter")
 	if filterObj == nil {
@@ -71,8 +71,8 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	}
 }
 
-// Decodes the stream.
-// Supports FlateDecode, ASCIIHexDecode, LZW.
+// DecodeStream decodes the stream data and returns the decoded data.
+// An error is returned upon failure.
 func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	common.Log.Trace("Decode stream")
 
@@ -92,8 +92,7 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return decoded, nil
 }
 
-// Encodes the stream.
-// Uses the encoding specified by the object.
+// EncodeStream encodes the stream data using the encoded specified by the stream's dictionary.
 func EncodeStream(streamObj *PdfObjectStream) error {
 	common.Log.Trace("Encode stream")
 
