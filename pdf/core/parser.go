@@ -857,6 +857,15 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 	s2 := int(b[0] + b[1] + b[2])
 	deltab := int(b[0] + b[1] + b[2])
 
+	if s0 < 0 || s1 < 0 || s2 < 0 {
+		common.Log.Debug("Error s value < 0 (%d,%d,%d)", s0, s1, s2)
+		return nil, errors.New("Range check error")
+	}
+	if deltab == 0 {
+		common.Log.Debug("No xref objects in stream (deltab == 0)")
+		return trailerDict, nil
+	}
+
 	// Calculate expected entries.
 	entries := len(ds) / deltab
 
