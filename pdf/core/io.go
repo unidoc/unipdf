@@ -13,6 +13,8 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// ReadAtLeast reads at least n bytes into slice p.
+// Returns the number of bytes read (should always be == n), and an error on failure.
 func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	remaining := n
 	start := 0

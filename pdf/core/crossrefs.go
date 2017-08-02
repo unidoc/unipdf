@@ -15,8 +15,13 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// TODO (v3): Create a new type xrefType which can be an integer and can be used for improved type checking.
+// TODO (v3): Unexport these constants and rename with camelCase.
 const (
-	XREF_TABLE_ENTRY   = iota
+	// XREF_TABLE_ENTRY indicates a normal xref table entry.
+	XREF_TABLE_ENTRY = iota
+
+	// XREF_OBJECT_STREAM indicates an xref entry in an xref object stream.
 	XREF_OBJECT_STREAM = iota
 )
 
@@ -67,7 +72,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		}
 
 		if this.crypter != nil && !this.crypter.isDecrypted(so) {
-			return nil, errors.New("Need to decrypt the stream !")
+			return nil, errors.New("Need to decrypt the stream")
 		}
 
 		sod := so.PdfObjectDictionary
