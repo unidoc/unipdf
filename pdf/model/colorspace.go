@@ -138,6 +138,55 @@ func newPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	return nil, errors.New("Type error")
 }
 
+// determine PDF colorspace from a PdfObject.  Returns the colorspace name and an error on failure.
+// If the colorspace was not found, will return an empty string.
+func determineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) {
+	var csName *PdfObjectName
+	var csArray *PdfObjectArray
+
+	if indObj, is := obj.(*PdfIndirectObject); is {
+		if array, is := indObj.PdfObject.(*PdfObjectArray); is {
+			csArray = array
+		} else if name, is := indObj.PdfObject.(*PdfObjectName); is {
+			csName = name
+		}
+	} else if array, is := obj.(*PdfObjectArray); is {
+		csArray = array
+	} else if name, is := obj.(*PdfObjectName); is {
+		csName = name
+	}
+
+	// If specified by a name directly: Device colorspace or Pattern.
+	if csName != nil {
+		switch *csName {
+		case "DeviceGray", "DeviceRGB", "DeviceCMYK":
+			return *csName, nil
+		case "Pattern":
+			return *csName, nil
+		}
+	}
+
+	if csArray != nil && len(*csArray) > 0 {
+		if name, is := (*csArray)[0].(*PdfObjectName); is {
+			switch *name {
+			case "DeviceGray", "DeviceRGB", "DeviceCMYK":
+				if len(*csArray) == 1 {
+					return *name, nil
+				}
+			case "CalGray", "CalRGB", "Lab":
+				return *name, nil
+			case "ICCBased", "Pattern", "Indexed":
+				return *name, nil
+			case "Separation", "DeviceN":
+				return *name, nil
+			}
+		}
+	}
+
+	// Not found
+	return "", nil
+}
+
 // Gray scale component.
 // No specific parameters
 
@@ -2049,6 +2098,14 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 
 	// Get base colormap.
 	obj = (*array)[1]
+
+	// Base cs cannot be another /Indexed or /Pattern space.
+	baseName, err := determineColorspaceNameFromPdfObject(obj)
+	if baseName == "Indexed" || baseName == "Pattern" {
+		common.Log.Debug("Error: Indexed colorspace cannot have Indexed/Pattern CS as base (%v)", baseName)
+		return nil, ErrRangeError
+	}
+
 	baseCs, err := newPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		return nil, err
