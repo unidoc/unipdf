@@ -63,14 +63,14 @@ type ObjectStreams map[int]ObjectStream
 type ObjectCache map[int]PdfObject
 
 // Get an object from an object stream.
-func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject, error) {
+func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject, error) {
 	var bufReader *bytes.Reader
 	var objstm ObjectStream
 	var cached bool
 
-	objstm, cached = this.objstms[sobjNumber]
+	objstm, cached = parser.objstms[sobjNumber]
 	if !cached {
-		soi, err := this.LookupByNumber(sobjNumber)
+		soi, err := parser.LookupByNumber(sobjNumber)
 		if err != nil {
 			common.Log.Debug("Missing object stream with number %d", sobjNumber)
 			return nil, err
@@ -81,7 +81,7 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 			return nil, errors.New("Invalid object stream")
 		}
 
-		if this.crypter != nil && !this.crypter.isDecrypted(so) {
+		if parser.crypter != nil && !parser.crypter.isDecrypted(so) {
 			return nil, errors.New("Need to decrypt the stream")
 		}
 
@@ -116,20 +116,20 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 
 		// Temporarily change the reader object to this decoded buffer.
 		// Change back afterwards.
-		bakOffset := this.GetFileOffset()
-		defer func() { this.SetFileOffset(bakOffset) }()
+		bakOffset := parser.GetFileOffset()
+		defer func() { parser.SetFileOffset(bakOffset) }()
 
 		bufReader = bytes.NewReader(ds)
-		this.reader = bufio.NewReader(bufReader)
+		parser.reader = bufio.NewReader(bufReader)
 
 		common.Log.Trace("Parsing offset map")
 		// Load the offset map (relative to the beginning of the stream...)
 		offsets := map[int]int64{}
 		// Object list and offsets.
 		for i := 0; i < int(*N); i++ {
-			this.skipSpaces()
+			parser.skipSpaces()
 			// Object number.
-			obj, err := this.parseNumber()
+			obj, err := parser.parseNumber()
 			if err != nil {
 				return nil, err
 			}
@@ -138,9 +138,9 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 				return nil, errors.New("Invalid object stream offset table")
 			}
 
-			this.skipSpaces()
+			parser.skipSpaces()
 			// Offset.
-			obj, err = this.parseNumber()
+			obj, err = parser.parseNumber()
 			if err != nil {
 				return nil, err
 			}
@@ -154,28 +154,28 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 		}
 
 		objstm = ObjectStream{N: int(*N), ds: ds, offsets: offsets}
-		this.objstms[sobjNumber] = objstm
+		parser.objstms[sobjNumber] = objstm
 	} else {
 		// Temporarily change the reader object to this decoded buffer.
 		// Point back afterwards.
-		bakOffset := this.GetFileOffset()
-		defer func() { this.SetFileOffset(bakOffset) }()
+		bakOffset := parser.GetFileOffset()
+		defer func() { parser.SetFileOffset(bakOffset) }()
 
 		bufReader = bytes.NewReader(objstm.ds)
 		// Temporarily change the reader object to this decoded buffer.
-		this.reader = bufio.NewReader(bufReader)
+		parser.reader = bufio.NewReader(bufReader)
 	}
 
 	offset := objstm.offsets[objNum]
 	common.Log.Trace("ACTUAL offset[%d] = %d", objNum, offset)
 
 	bufReader.Seek(offset, os.SEEK_SET)
-	this.reader = bufio.NewReader(bufReader)
+	parser.reader = bufio.NewReader(bufReader)
 
-	bb, _ := this.reader.Peek(100)
+	bb, _ := parser.reader.Peek(100)
 	common.Log.Trace("OBJ peek \"%s\"", string(bb))
 
-	val, err := this.parseObject()
+	val, err := parser.parseObject()
 	if err != nil {
 		common.Log.Debug("ERROR Fail to read object (%s)", err)
 		return nil, err
@@ -194,23 +194,23 @@ func (this *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject,
 
 // LookupByNumber looks up a PdfObject by object number.  Returns an error on failure.
 // TODO (v3): Unexport.
-func (this *PdfParser) LookupByNumber(objNumber int) (PdfObject, error) {
+func (parser *PdfParser) LookupByNumber(objNumber int) (PdfObject, error) {
 	// Outside interface for lookupByNumberWrapper.  Default attempts repairs of bad xref tables.
-	obj, _, err := this.lookupByNumberWrapper(objNumber, true)
+	obj, _, err := parser.lookupByNumberWrapper(objNumber, true)
 	return obj, err
 }
 
 // Wrapper for lookupByNumber, checks if object encrypted etc.
-func (this *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
-	obj, inObjStream, err := this.lookupByNumber(objNumber, attemptRepairs)
+func (parser *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
+	obj, inObjStream, err := parser.lookupByNumber(objNumber, attemptRepairs)
 	if err != nil {
 		return nil, inObjStream, err
 	}
 
 	// If encrypted, decrypt it prior to returning.
 	// Do not attempt to decrypt objects within object streams.
-	if !inObjStream && this.crypter != nil && !this.crypter.isDecrypted(obj) {
-		err := this.crypter.Decrypt(obj, 0, 0)
+	if !inObjStream && parser.crypter != nil && !parser.crypter.isDecrypted(obj) {
+		err := parser.crypter.Decrypt(obj, 0, 0)
 		if err != nil {
 			return nil, inObjStream, err
 		}
@@ -231,14 +231,14 @@ func getObjectNumber(obj PdfObject) (int64, int64, error) {
 
 // LookupByNumber
 // Repair signals whether to repair if broken.
-func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
-	obj, ok := this.ObjCache[objNumber]
+func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
+	obj, ok := parser.ObjCache[objNumber]
 	if ok {
 		common.Log.Trace("Returning cached object %d", objNumber)
 		return obj, false, nil
 	}
 
-	xref, ok := this.xrefs[objNumber]
+	xref, ok := parser.xrefs[objNumber]
 	if !ok {
 		// An indirect reference to an undefined object shall not be
 		// considered an error by a conforming reader; it shall be
@@ -254,22 +254,22 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 		common.Log.Trace("xrefobj gen %d", xref.generation)
 		common.Log.Trace("xrefobj offset %d", xref.offset)
 
-		this.rs.Seek(xref.offset, os.SEEK_SET)
-		this.reader = bufio.NewReader(this.rs)
+		parser.rs.Seek(xref.offset, os.SEEK_SET)
+		parser.reader = bufio.NewReader(parser.rs)
 
-		obj, err := this.ParseIndirectObject()
+		obj, err := parser.ParseIndirectObject()
 		if err != nil {
 			common.Log.Debug("ERROR Failed reading xref (%s)", err)
 			// Offset pointing to a non-object.  Try to repair the file.
 			if attemptRepairs {
 				common.Log.Debug("Attempting to repair xrefs (top down)")
-				xrefTable, err := this.repairRebuildXrefsTopDown()
+				xrefTable, err := parser.repairRebuildXrefsTopDown()
 				if err != nil {
 					common.Log.Debug("ERROR Failed repair (%s)", err)
 					return nil, false, err
 				}
-				this.xrefs = *xrefTable
-				return this.lookupByNumber(objNumber, false)
+				parser.xrefs = *xrefTable
+				return parser.lookupByNumber(objNumber, false)
 			}
 			return nil, false, err
 		}
@@ -281,19 +281,19 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 			realObjNum, _, _ := getObjectNumber(obj)
 			if int(realObjNum) != objNumber {
 				common.Log.Debug("Invalid xrefs: Rebuilding")
-				err := this.rebuildXrefTable()
+				err := parser.rebuildXrefTable()
 				if err != nil {
 					return nil, false, err
 				}
 				// Empty the cache.
-				this.ObjCache = ObjectCache{}
+				parser.ObjCache = ObjectCache{}
 				// Try looking up again and return.
-				return this.lookupByNumberWrapper(objNumber, false)
+				return parser.lookupByNumberWrapper(objNumber, false)
 			}
 		}
 
 		common.Log.Trace("Returning obj")
-		this.ObjCache[objNumber] = obj
+		parser.ObjCache[objNumber] = obj
 		return obj, false, nil
 	} else if xref.xtype == XREF_OBJECT_STREAM {
 		common.Log.Trace("xref from object stream!")
@@ -304,19 +304,19 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 			common.Log.Debug("ERROR Circular reference!?!")
 			return nil, true, errors.New("Xref circular reference")
 		}
-		_, exists := this.xrefs[xref.osObjNumber]
+		_, exists := parser.xrefs[xref.osObjNumber]
 		if exists {
-			optr, err := this.lookupObjectViaOS(xref.osObjNumber, objNumber) //xref.osObjIndex)
+			optr, err := parser.lookupObjectViaOS(xref.osObjNumber, objNumber) //xref.osObjIndex)
 			if err != nil {
 				common.Log.Debug("ERROR Returning ERR (%s)", err)
 				return nil, true, err
 			}
 			common.Log.Trace("<Loaded via OS")
-			this.ObjCache[objNumber] = optr
-			if this.crypter != nil {
+			parser.ObjCache[objNumber] = optr
+			if parser.crypter != nil {
 				// Mark as decrypted (inside object stream) for caching.
 				// and avoid decrypting decrypted object.
-				this.crypter.DecryptedObjects[optr] = true
+				parser.crypter.DecryptedObjects[optr] = true
 			}
 			return optr, true, nil
 		} else {
@@ -328,24 +328,24 @@ func (this *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfOb
 }
 
 // LookupByReference looks up a PdfObject by a reference.
-func (this *PdfParser) LookupByReference(ref PdfObjectReference) (PdfObject, error) {
+func (parser *PdfParser) LookupByReference(ref PdfObjectReference) (PdfObject, error) {
 	common.Log.Trace("Looking up reference %s", ref.String())
-	return this.LookupByNumber(int(ref.ObjectNumber))
+	return parser.LookupByNumber(int(ref.ObjectNumber))
 }
 
 // Trace traces a PdfObject to direct object, looking up and resolving references as needed (unlike TraceToDirect).
 // TODO (v3): Unexport.
-func (this *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
+func (parser *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
 	ref, isRef := obj.(*PdfObjectReference)
 	if !isRef {
 		// Direct object already.
 		return obj, nil
 	}
 
-	bakOffset := this.GetFileOffset()
-	defer func() { this.SetFileOffset(bakOffset) }()
+	bakOffset := parser.GetFileOffset()
+	defer func() { parser.SetFileOffset(bakOffset) }()
 
-	o, err := this.LookupByReference(*ref)
+	o, err := parser.LookupByReference(*ref)
 	if err != nil {
 		return nil, err
 	}

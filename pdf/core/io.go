@@ -16,12 +16,12 @@ import (
 // ReadAtLeast reads at least n bytes into slice p.
 // Returns the number of bytes read (should always be == n), and an error on failure.
 // TODO (v3): Unexport.
-func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
+func (parser *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	remaining := n
 	start := 0
 	numRounds := 0
 	for remaining > 0 {
-		nRead, err := this.reader.Read(p[start:])
+		nRead, err := parser.reader.Read(p[start:])
 		if err != nil {
 			common.Log.Debug("ERROR Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
 			return start, errors.New("Failed reading")
@@ -35,15 +35,15 @@ func (this *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 
 // Get the current file offset, accounting for buffered position.
 // TODO (v3): Unexport.
-func (this *PdfParser) GetFileOffset() int64 {
-	offset, _ := this.rs.Seek(0, os.SEEK_CUR)
-	offset -= int64(this.reader.Buffered())
+func (parser *PdfParser) GetFileOffset() int64 {
+	offset, _ := parser.rs.Seek(0, os.SEEK_CUR)
+	offset -= int64(parser.reader.Buffered())
 	return offset
 }
 
 // Seek the file to an offset position.
 // TODO (v3): Unexport.
-func (this *PdfParser) SetFileOffset(offset int64) {
-	this.rs.Seek(offset, os.SEEK_SET)
-	this.reader = bufio.NewReader(this.rs)
+func (parser *PdfParser) SetFileOffset(offset int64) {
+	parser.rs.Seek(offset, os.SEEK_SET)
+	parser.reader = bufio.NewReader(parser.rs)
 }

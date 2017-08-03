@@ -55,31 +55,31 @@ type PdfParser struct {
 }
 
 // GetCrypter returns the PdfCrypt instance which has information about the PDFs encryption.
-func (this *PdfParser) GetCrypter() *PdfCrypt {
-	return this.crypter
+func (parser *PdfParser) GetCrypter() *PdfCrypt {
+	return parser.crypter
 }
 
 // IsAuthenticated returns true if the PDF has already been authenticated for accessing.
-func (this *PdfParser) IsAuthenticated() bool {
-	return this.crypter.Authenticated
+func (parser *PdfParser) IsAuthenticated() bool {
+	return parser.crypter.Authenticated
 }
 
 // GetTrailer returns the PDFs trailer dictionary. The trailer dictionary is typically the starting point for a PDF,
 // referencing other key objects that are important in the document structure.
-func (this *PdfParser) GetTrailer() *PdfObjectDictionary {
-	return this.trailer
+func (parser *PdfParser) GetTrailer() *PdfObjectDictionary {
+	return parser.trailer
 }
 
 // Skip over any spaces.
-func (this *PdfParser) skipSpaces() (int, error) {
+func (parser *PdfParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			return 0, err
 		}
 		if IsWhiteSpace(bb[0]) {
-			this.reader.ReadByte()
+			parser.reader.ReadByte()
 			cnt++
 		} else {
 			break
@@ -90,14 +90,14 @@ func (this *PdfParser) skipSpaces() (int, error) {
 }
 
 // Skip over comments and spaces. Can handle multi-line comments.
-func (this *PdfParser) skipComments() error {
-	if _, err := this.skipSpaces(); err != nil {
+func (parser *PdfParser) skipComments() error {
+	if _, err := parser.skipSpaces(); err != nil {
 		return err
 	}
 
 	isFirst := true
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
 			return err
@@ -109,28 +109,28 @@ func (this *PdfParser) skipComments() error {
 			isFirst = false
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
-			this.reader.ReadByte()
+			parser.reader.ReadByte()
 		} else {
 			break
 		}
 	}
 
 	// Call recursively to handle multiline comments.
-	return this.skipComments()
+	return parser.skipComments()
 }
 
 // Read a comment starting with '%'.
-func (this *PdfParser) readComment() (string, error) {
+func (parser *PdfParser) readComment() (string, error) {
 	commentText := ""
 
-	_, err := this.skipSpaces()
+	_, err := parser.skipSpaces()
 	if err != nil {
 		return commentText, err
 	}
 
 	isFirst := true
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
 			return commentText, err
@@ -141,7 +141,7 @@ func (this *PdfParser) readComment() (string, error) {
 			isFirst = false
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			commentText += string(b)
 		} else {
 			break
@@ -151,16 +151,16 @@ func (this *PdfParser) readComment() (string, error) {
 }
 
 // Read a single line of text from current position.
-func (this *PdfParser) readTextLine() (string, error) {
+func (parser *PdfParser) readTextLine() (string, error) {
 	lineStr := ""
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
 			return lineStr, err
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			lineStr += string(b)
 		} else {
 			break
@@ -170,11 +170,11 @@ func (this *PdfParser) readTextLine() (string, error) {
 }
 
 // Parse a name starting with '/'.
-func (this *PdfParser) parseName() (PdfObjectName, error) {
+func (parser *PdfParser) parseName() (PdfObjectName, error) {
 	name := ""
 	nameStarted := false
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err == io.EOF {
 			break // Can happen when loading from object stream.
 		}
@@ -186,10 +186,10 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 			// Should always start with '/', otherwise not valid.
 			if bb[0] == '/' {
 				nameStarted = true
-				this.reader.ReadByte()
+				parser.reader.ReadByte()
 			} else if bb[0] == '%' {
-				this.readComment()
-				this.skipSpaces()
+				parser.readComment()
+				parser.skipSpaces()
 			} else {
 				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
 				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
@@ -200,11 +200,11 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
 			} else if bb[0] == '#' {
-				hexcode, err := this.reader.Peek(3)
+				hexcode, err := parser.reader.Peek(3)
 				if err != nil {
 					return PdfObjectName(name), err
 				}
-				this.reader.Discard(3)
+				parser.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
@@ -212,7 +212,7 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 				}
 				name += string(code)
 			} else {
-				b, _ := this.reader.ReadByte()
+				b, _ := parser.reader.ReadByte()
 				name += string(b)
 			}
 		}
@@ -240,13 +240,13 @@ func (this *PdfParser) parseName() (PdfObjectName, error) {
 // Nontheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
-func (this *PdfParser) parseNumber() (PdfObject, error) {
+func (parser *PdfParser) parseNumber() (PdfObject, error) {
 	isFloat := false
 	allowSigns := true
 	numStr := ""
 	for {
 		common.Log.Trace("Parsing number \"%s\"", numStr)
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
 			// encoded object streams that the object is at the end.
@@ -259,19 +259,19 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 		}
 		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
 			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
 		} else if IsDecimalDigit(bb[0]) {
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
-			b, _ := this.reader.ReadByte()
+			b, _ := parser.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 			allowSigns = true
@@ -292,27 +292,27 @@ func (this *PdfParser) parseNumber() (PdfObject, error) {
 }
 
 // A string starts with '(' and ends with ')'.
-func (this *PdfParser) parseString() (PdfObjectString, error) {
-	this.reader.ReadByte()
+func (parser *PdfParser) parseString() (PdfObjectString, error) {
+	parser.reader.ReadByte()
 
 	bytes := []byte{}
 	count := 1
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			return PdfObjectString(bytes), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
-			this.reader.ReadByte() // Skip the escape \ byte.
-			b, err := this.reader.ReadByte()
+			parser.reader.ReadByte() // Skip the escape \ byte.
+			b, err := parser.reader.ReadByte()
 			if err != nil {
 				return PdfObjectString(bytes), err
 			}
 
 			// Octal '\ddd' number (base 8).
 			if IsOctalDigit(b) {
-				bb, err := this.reader.Peek(2)
+				bb, err := parser.reader.Peek(2)
 				if err != nil {
 					return PdfObjectString(bytes), err
 				}
@@ -326,7 +326,7 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 						break
 					}
 				}
-				this.reader.Discard(len(numeric) - 1)
+				parser.reader.Discard(len(numeric) - 1)
 
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
@@ -362,12 +362,12 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 		} else if bb[0] == ')' {
 			count--
 			if count == 0 {
-				this.reader.ReadByte()
+				parser.reader.ReadByte()
 				break
 			}
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := parser.reader.ReadByte()
 		bytes = append(bytes, b)
 	}
 
@@ -376,26 +376,26 @@ func (this *PdfParser) parseString() (PdfObjectString, error) {
 
 // Starts with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
-func (this *PdfParser) parseHexString() (PdfObjectString, error) {
-	this.reader.ReadByte()
+func (parser *PdfParser) parseHexString() (PdfObjectString, error) {
+	parser.reader.ReadByte()
 
 	hextable := []byte("0123456789abcdefABCDEF")
 
 	tmp := []byte{}
 	for {
-		this.skipSpaces()
+		parser.skipSpaces()
 
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			return PdfObjectString(""), err
 		}
 
 		if bb[0] == '>' {
-			this.reader.ReadByte()
+			parser.reader.ReadByte()
 			break
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := parser.reader.ReadByte()
 		if bytes.IndexByte(hextable, b) >= 0 {
 			tmp = append(tmp, b)
 		}
@@ -410,25 +410,25 @@ func (this *PdfParser) parseHexString() (PdfObjectString, error) {
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (this *PdfParser) parseArray() (PdfObjectArray, error) {
+func (parser *PdfParser) parseArray() (PdfObjectArray, error) {
 	arr := make(PdfObjectArray, 0)
 
-	this.reader.ReadByte()
+	parser.reader.ReadByte()
 
 	for {
-		this.skipSpaces()
+		parser.skipSpaces()
 
-		bb, err := this.reader.Peek(1)
+		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			return arr, err
 		}
 
 		if bb[0] == ']' {
-			this.reader.ReadByte()
+			parser.reader.ReadByte()
 			break
 		}
 
-		obj, err := this.parseObject()
+		obj, err := parser.parseObject()
 		if err != nil {
 			return arr, err
 		}
@@ -439,22 +439,22 @@ func (this *PdfParser) parseArray() (PdfObjectArray, error) {
 }
 
 // Parse bool object.
-func (this *PdfParser) parseBool() (PdfObjectBool, error) {
-	bb, err := this.reader.Peek(4)
+func (parser *PdfParser) parseBool() (PdfObjectBool, error) {
+	bb, err := parser.reader.Peek(4)
 	if err != nil {
 		return PdfObjectBool(false), err
 	}
 	if (len(bb) >= 4) && (string(bb[:4]) == "true") {
-		this.reader.Discard(4)
+		parser.reader.Discard(4)
 		return PdfObjectBool(true), nil
 	}
 
-	bb, err = this.reader.Peek(5)
+	bb, err = parser.reader.Peek(5)
 	if err != nil {
 		return PdfObjectBool(false), err
 	}
 	if (len(bb) >= 5) && (string(bb[:5]) == "false") {
-		this.reader.Discard(5)
+		parser.reader.Discard(5)
 		return PdfObjectBool(false), nil
 	}
 
@@ -480,18 +480,18 @@ func parseReference(refStr string) (PdfObjectReference, error) {
 }
 
 // Parse null object.
-func (this *PdfParser) parseNull() (PdfObjectNull, error) {
-	_, err := this.reader.Discard(4)
+func (parser *PdfParser) parseNull() (PdfObjectNull, error) {
+	_, err := parser.reader.Discard(4)
 	return PdfObjectNull{}, err
 }
 
 // Detect the signature at the current file position and parse
 // the corresponding object.
-func (this *PdfParser) parseObject() (PdfObject, error) {
+func (parser *PdfParser) parseObject() (PdfObject, error) {
 	common.Log.Trace("Read direct object")
-	this.skipSpaces()
+	parser.skipSpaces()
 	for {
-		bb, err := this.reader.Peek(2)
+		bb, err := parser.reader.Peek(2)
 		if err != nil {
 			return nil, err
 		}
@@ -499,51 +499,51 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 		common.Log.Trace("Peek string: %s", string(bb))
 		// Determine type.
 		if bb[0] == '/' {
-			name, err := this.parseName()
+			name, err := parser.parseName()
 			common.Log.Trace("->Name: '%s'", name)
 			return &name, err
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
-			str, err := this.parseString()
+			str, err := parser.parseString()
 			return &str, err
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
-			arr, err := this.parseArray()
+			arr, err := parser.parseArray()
 			return &arr, err
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Trace("->Dict!")
-			dict, err := this.ParseDict()
+			dict, err := parser.ParseDict()
 			return dict, err
 		} else if bb[0] == '<' {
 			common.Log.Trace("->Hex string!")
-			str, err := this.parseHexString()
+			str, err := parser.parseHexString()
 			return &str, err
 		} else if bb[0] == '%' {
-			this.readComment()
-			this.skipSpaces()
+			parser.readComment()
+			parser.skipSpaces()
 		} else {
 			common.Log.Trace("->Number or ref?")
 			// Reference or number?
 			// Let's peek farther to find out.
-			bb, _ = this.reader.Peek(15)
+			bb, _ = parser.reader.Peek(15)
 			peekStr := string(bb)
 			common.Log.Trace("Peek str: %s", peekStr)
 
 			if (len(peekStr) > 3) && (peekStr[:4] == "null") {
-				null, err := this.parseNull()
+				null, err := parser.parseNull()
 				return &null, err
 			} else if (len(peekStr) > 4) && (peekStr[:5] == "false") {
-				b, err := this.parseBool()
+				b, err := parser.parseBool()
 				return &b, err
 			} else if (len(peekStr) > 3) && (peekStr[:4] == "true") {
-				b, err := this.parseBool()
+				b, err := parser.parseBool()
 				return &b, err
 			}
 
 			// Match reference.
 			result1 := reReference.FindStringSubmatch(string(peekStr))
 			if len(result1) > 1 {
-				bb, _ = this.reader.ReadBytes('R')
+				bb, _ = parser.reader.ReadBytes('R')
 				common.Log.Trace("-> !Ref: '%s'", string(bb[:]))
 				ref, err := parseReference(string(bb))
 				return &ref, err
@@ -553,7 +553,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 			if len(result2) > 1 {
 				// Number object.
 				common.Log.Trace("-> Number!")
-				num, err := this.parseNumber()
+				num, err := parser.parseNumber()
 				return num, err
 			}
 
@@ -562,7 +562,7 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 				// Number object (exponential)
 				common.Log.Trace("-> Exponential Number!")
 				common.Log.Trace("% s", result2)
-				num, err := this.parseNumber()
+				num, err := parser.parseNumber()
 				return num, err
 			}
 
@@ -576,26 +576,26 @@ func (this *PdfParser) parseObject() (PdfObject, error) {
 
 // Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
 // TODO: Unexport (v3).
-func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
+func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
 	dict := MakeDict()
 
 	// Pass the '<<'
-	c, _ := this.reader.ReadByte()
+	c, _ := parser.reader.ReadByte()
 	if c != '<' {
 		return nil, errors.New("Invalid dict")
 	}
-	c, _ = this.reader.ReadByte()
+	c, _ = parser.reader.ReadByte()
 	if c != '<' {
 		return nil, errors.New("Invalid dict")
 	}
 
 	for {
-		this.skipSpaces()
-		this.skipComments()
+		parser.skipSpaces()
+		parser.skipComments()
 
-		bb, err := this.reader.Peek(2)
+		bb, err := parser.reader.Peek(2)
 		if err != nil {
 			return nil, err
 		}
@@ -603,13 +603,13 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 		common.Log.Trace("Dict peek: %s (% x)!", string(bb), string(bb))
 		if (bb[0] == '>') && (bb[1] == '>') {
 			common.Log.Trace("EOF dictionary")
-			this.reader.ReadByte()
-			this.reader.ReadByte()
+			parser.reader.ReadByte()
+			parser.reader.ReadByte()
 			break
 		}
 		common.Log.Trace("Parse the name!")
 
-		keyName, err := this.parseName()
+		keyName, err := parser.parseName()
 		common.Log.Trace("Key: %s", keyName)
 		if err != nil {
 			common.Log.Debug("ERROR Returning name err %s", err)
@@ -622,17 +622,17 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 			newKey := keyName[0 : len(keyName)-4]
 			common.Log.Debug("Taking care of null bug (%s)", keyName)
 			common.Log.Debug("New key \"%s\" = null", newKey)
-			this.skipSpaces()
-			bb, _ := this.reader.Peek(1)
+			parser.skipSpaces()
+			bb, _ := parser.reader.Peek(1)
 			if bb[0] == '/' {
 				dict.Set(newKey, MakeNull())
 				continue
 			}
 		}
 
-		this.skipSpaces()
+		parser.skipSpaces()
 
-		val, err := this.parseObject()
+		val, err := parser.parseObject()
 		if err != nil {
 			return nil, err
 		}
@@ -648,15 +648,15 @@ func (this *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 // Parse the pdf version from the beginning of the file.
 // Returns the major and minor parts of the version.
 // E.g. for "PDF-1.7" would return 1 and 7.
-func (this *PdfParser) parsePdfVersion() (int, int, error) {
-	this.rs.Seek(0, os.SEEK_SET)
+func (parser *PdfParser) parsePdfVersion() (int, int, error) {
+	parser.rs.Seek(0, os.SEEK_SET)
 	var offset int64 = 20
 	b := make([]byte, offset)
-	this.rs.Read(b)
+	parser.rs.Read(b)
 
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
 	if len(result1) < 3 {
-		major, minor, err := this.seekPdfVersionTopDown()
+		major, minor, err := parser.seekPdfVersionTopDown()
 		if err == nil {
 			common.Log.Debug("Failed recovery - unable to find version")
 			return 0, 0, err
@@ -683,10 +683,10 @@ func (this *PdfParser) parsePdfVersion() (int, int, error) {
 }
 
 // Conventional xref table starting with 'xref'.
-func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
+func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 	var trailer *PdfObjectDictionary
 
-	txt, err := this.readTextLine()
+	txt, err := parser.readTextLine()
 	if err != nil {
 		return nil, err
 	}
@@ -696,13 +696,13 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 	secObjects := 0
 	insideSubsection := false
 	for {
-		this.skipSpaces()
-		_, err := this.reader.Peek(1)
+		parser.skipSpaces()
+		_, err := parser.reader.Peek(1)
 		if err != nil {
 			return nil, err
 		}
 
-		txt, err = this.readTextLine()
+		txt, err = parser.readTextLine()
 		if err != nil {
 			return nil, err
 		}
@@ -744,12 +744,12 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 				// Load if not existing or higher generation number than previous.
 				// Usually should not happen, lower generation numbers
 				// would be marked as free.  But can still happen!
-				x, ok := this.xrefs[curObjNum]
+				x, ok := parser.xrefs[curObjNum]
 				if !ok || gen > x.generation {
 					obj := XrefObject{objectNumber: curObjNum,
 						xtype:  XREF_TABLE_ENTRY,
 						offset: first, generation: gen}
-					this.xrefs[curObjNum] = obj
+					parser.xrefs[curObjNum] = obj
 				}
 			}
 
@@ -761,15 +761,15 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			// Sometimes get "trailer << ...."
 			// Need to rewind to end of trailer text.
 			if len(txt) > 9 {
-				offset := this.GetFileOffset()
-				this.SetFileOffset(offset - int64(len(txt)) + 7)
+				offset := parser.GetFileOffset()
+				parser.SetFileOffset(offset - int64(len(txt)) + 7)
 			}
 
-			this.skipSpaces()
-			this.skipComments()
+			parser.skipSpaces()
+			parser.skipComments()
 			common.Log.Trace("Reading trailer dict!")
 			common.Log.Trace("peek: \"%s\"", txt)
-			trailer, err = this.ParseDict()
+			trailer, err = parser.ParseDict()
 			common.Log.Trace("EOF reading trailer dict!")
 			if err != nil {
 				common.Log.Debug("Error parsing trailer dict (%s)", err)
@@ -792,14 +792,14 @@ func (this *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 
 // Load the cross references from an xref stream object (XRefStm).
 // Also load the dictionary information (trailer dictionary).
-func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictionary, error) {
+func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictionary, error) {
 	if xstm != nil {
 		common.Log.Trace("XRefStm xref table object at %d", xstm)
-		this.rs.Seek(int64(*xstm), os.SEEK_SET)
-		this.reader = bufio.NewReader(this.rs)
+		parser.rs.Seek(int64(*xstm), os.SEEK_SET)
+		parser.reader = bufio.NewReader(parser.rs)
 	}
 
-	xrefObj, err := this.ParseIndirectObject()
+	xrefObj, err := parser.ParseIndirectObject()
 	if err != nil {
 		common.Log.Debug("ERROR: Failed to read xref object")
 		return nil, errors.New("Failed to read xref object")
@@ -1000,21 +1000,21 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 			common.Log.Trace("- In use - uncompressed via offset %b", p2)
 			// Object type 1: Objects that are in use but are not
 			// compressed, i.e. defined by an offset (normal entry)
-			if xr, ok := this.xrefs[objNum]; !ok || int(n3) > xr.generation {
+			if xr, ok := parser.xrefs[objNum]; !ok || int(n3) > xr.generation {
 				// Only overload if not already loaded!
 				// or has a newer generation number. (should not happen)
 				obj := XrefObject{objectNumber: objNum,
 					xtype: XREF_TABLE_ENTRY, offset: n2, generation: int(n3)}
-				this.xrefs[objNum] = obj
+				parser.xrefs[objNum] = obj
 			}
 		} else if ftype == 2 {
 			// Object type 2: Compressed object.
 			common.Log.Trace("- In use - compressed object")
-			if _, ok := this.xrefs[objNum]; !ok {
+			if _, ok := parser.xrefs[objNum]; !ok {
 				obj := XrefObject{objectNumber: objNum,
 					xtype: XREF_OBJECT_STREAM, osObjNumber: int(n2), osObjIndex: int(n3)}
-				this.xrefs[objNum] = obj
-				common.Log.Trace("entry: %s", this.xrefs[objNum])
+				parser.xrefs[objNum] = obj
+				common.Log.Trace("entry: %s", parser.xrefs[objNum])
 			}
 		} else {
 			common.Log.Debug("ERROR: --------INVALID TYPE XrefStm invalid?-------")
@@ -1034,35 +1034,35 @@ func (this *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictio
 
 // Parse xref table at the current file position.  Can either be a
 // standard xref table, or an xref stream.
-func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
+func (parser *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 	var err error
 	var trailerDict *PdfObjectDictionary
 
 	// Points to xref table or xref stream object?
-	bb, _ := this.reader.Peek(20)
+	bb, _ := parser.reader.Peek(20)
 	if reIndirectObject.MatchString(string(bb)) {
 		common.Log.Trace("xref points to an object.  Probably xref object")
 		common.Log.Trace("starting with \"%s\"", string(bb))
-		trailerDict, err = this.parseXrefStream(nil)
+		trailerDict, err = parser.parseXrefStream(nil)
 		if err != nil {
 			return nil, err
 		}
 	} else if reXrefTable.MatchString(string(bb)) {
 		common.Log.Trace("Standard xref section table!")
 		var err error
-		trailerDict, err = this.parseXrefTable()
+		trailerDict, err = parser.parseXrefTable()
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		common.Log.Debug("Warning: Unable to find xref table or stream. Repair attempted: Looking for earliest xref from bottom.")
-		err := this.repairSeekXrefMarker()
+		err := parser.repairSeekXrefMarker()
 		if err != nil {
 			common.Log.Debug("Repair failed - %v", err)
 			return nil, err
 		}
 
-		trailerDict, err = this.parseXrefTable()
+		trailerDict, err = parser.parseXrefTable()
 		if err != nil {
 			return nil, err
 		}
@@ -1073,7 +1073,7 @@ func (this *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 
 // Look for EOF marker and seek to its beginning.
 // Define an offset position from the end of the file.
-func (this *PdfParser) seekToEOFMarker(fSize int64) error {
+func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 	// Define the starting point (from the end of the file) to search from.
 	var offset int64 = 0
 
@@ -1086,21 +1086,21 @@ func (this *PdfParser) seekToEOFMarker(fSize int64) error {
 		}
 
 		// Move back enough (as we need to read forward).
-		_, err := this.rs.Seek(-offset-buflen, io.SeekEnd)
+		_, err := parser.rs.Seek(-offset-buflen, io.SeekEnd)
 		if err != nil {
 			return err
 		}
 
 		// Read the data.
 		b1 := make([]byte, buflen)
-		this.rs.Read(b1)
+		parser.rs.Read(b1)
 		common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
 		ind := reEOF.FindAllStringIndex(string(b1), -1)
 		if ind != nil {
 			// Found it.
 			lastInd := ind[len(ind)-1]
 			common.Log.Trace("Ind: % d", ind)
-			this.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
+			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
 		} else {
 			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
@@ -1132,27 +1132,27 @@ func (this *PdfParser) seekToEOFMarker(fSize int64) error {
 // The earlier xrefs have higher precedence.  If objects already
 // loaded will ignore older versions.
 //
-func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
-	this.xrefs = make(XrefTable)
-	this.objstms = make(ObjectStreams)
+func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
+	parser.xrefs = make(XrefTable)
+	parser.objstms = make(ObjectStreams)
 
 	// Get the file size.
-	fSize, err := this.rs.Seek(0, io.SeekEnd)
+	fSize, err := parser.rs.Seek(0, io.SeekEnd)
 	if err != nil {
 		return nil, err
 	}
 	common.Log.Trace("fsize: %d", fSize)
-	this.fileSize = fSize
+	parser.fileSize = fSize
 
 	// Seek the EOF marker.
-	err = this.seekToEOFMarker(fSize)
+	err = parser.seekToEOFMarker(fSize)
 	if err != nil {
 		common.Log.Debug("Failed seek to eof marker: %v", err)
 		return nil, err
 	}
 
 	// Look for startxref and get the xref offset.
-	curOffset, err := this.rs.Seek(0, io.SeekCurrent)
+	curOffset, err := parser.rs.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return nil, err
 	}
@@ -1163,13 +1163,13 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	if offset < 0 {
 		offset = 0
 	}
-	_, err = this.rs.Seek(offset, io.SeekStart)
+	_, err = parser.rs.Seek(offset, io.SeekStart)
 	if err != nil {
 		return nil, err
 	}
 
 	b2 := make([]byte, numBytes)
-	_, err = this.rs.Read(b2)
+	_, err = parser.rs.Read(b2)
 	if err != nil {
 		common.Log.Debug("Failed reading while looking for startxref: %v", err)
 		return nil, err
@@ -1190,17 +1190,17 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	if offsetXref > fSize {
 		common.Log.Debug("ERROR: Xref offset outside of file")
 		common.Log.Debug("Attempting repair")
-		offsetXref, err = this.repairLocateXref()
+		offsetXref, err = parser.repairLocateXref()
 		if err != nil {
 			common.Log.Debug("ERROR: Repair attempt failed (%s)")
 			return nil, err
 		}
 	}
 	// Read the xref.
-	this.rs.Seek(int64(offsetXref), io.SeekStart)
-	this.reader = bufio.NewReader(this.rs)
+	parser.rs.Seek(int64(offsetXref), io.SeekStart)
+	parser.reader = bufio.NewReader(parser.rs)
 
-	trailerDict, err := this.parseXref()
+	trailerDict, err := parser.parseXref()
 	if err != nil {
 		return nil, err
 	}
@@ -1212,7 +1212,7 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		if !ok {
 			return nil, errors.New("XRefStm != int")
 		}
-		_, err = this.parseXrefStream(xo)
+		_, err = parser.parseXrefStream(xo)
 		if err != nil {
 			return nil, err
 		}
@@ -1245,10 +1245,10 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 		common.Log.Trace("Another Prev xref table object at %d", off)
 
 		// Can be either regular table, or an xref object...
-		this.rs.Seek(int64(off), os.SEEK_SET)
-		this.reader = bufio.NewReader(this.rs)
+		parser.rs.Seek(int64(off), os.SEEK_SET)
+		parser.reader = bufio.NewReader(parser.rs)
 
-		ptrailerDict, err := this.parseXref()
+		ptrailerDict, err := parser.parseXref()
 		if err != nil {
 			common.Log.Debug("Warning: Error - Failed loading another (Prev) trailer")
 			common.Log.Debug("Attempting to continue by ignoring it")
@@ -1271,9 +1271,9 @@ func (this *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 }
 
 // Return the closest object following offset from the xrefs table.
-func (this *PdfParser) xrefNextObjectOffset(offset int64) int64 {
+func (parser *PdfParser) xrefNextObjectOffset(offset int64) int64 {
 	nextOffset := int64(0)
-	for _, xref := range this.xrefs {
+	for _, xref := range parser.xrefs {
 		if xref.offset > offset && (xref.offset < nextOffset || nextOffset == 0) {
 			nextOffset = xref.offset
 		}
@@ -1283,19 +1283,19 @@ func (this *PdfParser) xrefNextObjectOffset(offset int64) int64 {
 
 // Get stream length, avoiding recursive loops.
 // The input is the PdfObject that is to be traced to a direct object.
-func (this *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, error) {
+func (parser *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, error) {
 	lengthRef, isRef := lengthObj.(*PdfObjectReference)
 	if isRef {
-		lookupInProgress, has := this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber]
+		lookupInProgress, has := parser.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber]
 		if has && lookupInProgress {
 			common.Log.Debug("Stream Length reference unresolved (illegal)")
 			return nil, errors.New("Illegal recursive loop")
 		}
 		// Mark lookup as in progress.
-		this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = true
+		parser.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = true
 	}
 
-	slo, err := this.Trace(lengthObj)
+	slo, err := parser.Trace(lengthObj)
 	if err != nil {
 		return nil, err
 	}
@@ -1303,7 +1303,7 @@ func (this *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, error)
 
 	if isRef {
 		// Mark as completed lookup
-		this.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = false
+		parser.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = false
 	}
 
 	return slo, nil
@@ -1312,11 +1312,11 @@ func (this *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, error)
 // Parse an indirect object from the input stream. Can also be an object stream.
 // Returns the indirect object (*PdfIndirectObject) or the stream object (*PdfObjectStream).
 // TODO: Unexport (v3).
-func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
+func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	indirect := PdfIndirectObject{}
 
 	common.Log.Trace("-Read indirect obj")
-	bb, err := this.reader.Peek(20)
+	bb, err := parser.reader.Peek(20)
 	if err != nil {
 		common.Log.Debug("ERROR: Fail to read indirect obj")
 		return &indirect, err
@@ -1328,13 +1328,13 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
 		return &indirect, errors.New("Unable to detect indirect object signature")
 	}
-	this.reader.Discard(indices[0]) // Take care of any small offset.
+	parser.reader.Discard(indices[0]) // Take care of any small offset.
 	common.Log.Trace("Offsets % d", indices)
 
 	// Read the object header.
 	hlen := indices[1] - indices[0]
 	hb := make([]byte, hlen)
-	_, err = this.ReadAtLeast(hb, hlen)
+	_, err = parser.ReadAtLeast(hb, hlen)
 	if err != nil {
 		common.Log.Debug("ERROR: unable to read - %s", err)
 		return nil, err
@@ -1353,33 +1353,33 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	indirect.GenerationNumber = int64(gn)
 
 	for {
-		bb, err := this.reader.Peek(2)
+		bb, err := parser.reader.Peek(2)
 		if err != nil {
 			return &indirect, err
 		}
 		common.Log.Trace("Ind. peek: %s (% x)!", string(bb), string(bb))
 
 		if IsWhiteSpace(bb[0]) {
-			this.skipSpaces()
+			parser.skipSpaces()
 		} else if bb[0] == '%' {
-			this.skipComments()
+			parser.skipComments()
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Trace("Call ParseDict")
-			indirect.PdfObject, err = this.ParseDict()
+			indirect.PdfObject, err = parser.ParseDict()
 			common.Log.Trace("EOF Call ParseDict: %v", err)
 			if err != nil {
 				return &indirect, err
 			}
 			common.Log.Trace("Parsed dictionary... finished.")
 		} else if (bb[0] == '/') || (bb[0] == '(') || (bb[0] == '[') || (bb[0] == '<') {
-			indirect.PdfObject, err = this.parseObject()
+			indirect.PdfObject, err = parser.parseObject()
 			if err != nil {
 				return &indirect, err
 			}
 			common.Log.Trace("Parsed object ... finished.")
 		} else {
 			if bb[0] == 'e' {
-				lineStr, err := this.readTextLine()
+				lineStr, err := parser.readTextLine()
 				if err != nil {
 					return nil, err
 				}
@@ -1387,7 +1387,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					break
 				}
 			} else if bb[0] == 's' {
-				bb, _ = this.reader.Peek(10)
+				bb, _ = parser.reader.Peek(10)
 				if string(bb[:6]) == "stream" {
 					discardBytes := 6
 					if len(bb) > 6 {
@@ -1407,7 +1407,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 						}
 					}
 
-					this.reader.Discard(discardBytes)
+					parser.reader.Discard(discardBytes)
 
 					dict, isDict := indirect.PdfObject.(*PdfObjectDictionary)
 					if !isDict {
@@ -1416,7 +1416,7 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					common.Log.Trace("Stream dict %s", dict)
 
 					// Special stream length tracing function used to avoid endless recursive looping.
-					slo, err := this.traceStreamLength(dict.Get("Length"))
+					slo, err := parser.traceStreamLength(dict.Get("Length"))
 					if err != nil {
 						common.Log.Debug("Fail to trace stream length: %v", err)
 						return nil, err
@@ -1435,8 +1435,8 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					// Validate the stream length based on the cross references.
 					// Find next object with closest offset to current object and calculate
 					// the expected stream length based on that.
-					streamStartOffset := this.GetFileOffset()
-					nextObjectOffset := this.xrefNextObjectOffset(streamStartOffset)
+					streamStartOffset := parser.GetFileOffset()
+					nextObjectOffset := parser.xrefNextObjectOffset(streamStartOffset)
 					if streamStartOffset+int64(streamLength) > nextObjectOffset && nextObjectOffset > streamStartOffset {
 						common.Log.Debug("Expected ending at %d", streamStartOffset+int64(streamLength))
 						common.Log.Debug("Next object starting at %d", nextObjectOffset)
@@ -1452,13 +1452,13 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					}
 
 					// Make sure is less than actual file size.
-					if int64(streamLength) > this.fileSize {
+					if int64(streamLength) > parser.fileSize {
 						common.Log.Debug("ERROR: Stream length cannot be larger than file size")
 						return nil, errors.New("Invalid stream length, larger than file size")
 					}
 
 					stream := make([]byte, streamLength)
-					_, err = this.ReadAtLeast(stream, int(streamLength))
+					_, err = parser.ReadAtLeast(stream, int(streamLength))
 					if err != nil {
 						common.Log.Debug("ERROR stream (%d): %X", len(stream), stream)
 						common.Log.Debug("ERROR: %v", err)
@@ -1471,14 +1471,14 @@ func (this *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					streamobj.ObjectNumber = indirect.ObjectNumber
 					streamobj.GenerationNumber = indirect.GenerationNumber
 
-					this.skipSpaces()
-					this.reader.Discard(9) // endstream
-					this.skipSpaces()
+					parser.skipSpaces()
+					parser.reader.Discard(9) // endstream
+					parser.skipSpaces()
 					return &streamobj, nil
 				}
 			}
 
-			indirect.PdfObject, err = this.parseObject()
+			indirect.PdfObject, err = parser.parseObject()
 			return &indirect, err
 		}
 	}
@@ -1542,18 +1542,18 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 // First time when called, will check if the Encrypt dictionary is accessible through the trailer dictionary.
 // If encrypted, prepares a crypt datastructure which can be used to authenticate and decrypt the document.
 // On failure, an error is returned.
-func (this *PdfParser) IsEncrypted() (bool, error) {
-	if this.crypter != nil {
+func (parser *PdfParser) IsEncrypted() (bool, error) {
+	if parser.crypter != nil {
 		return true, nil
 	}
 
-	if this.trailer != nil {
+	if parser.trailer != nil {
 		common.Log.Trace("Checking encryption dictionary!")
-		encDictRef, isEncrypted := this.trailer.Get("Encrypt").(*PdfObjectReference)
+		encDictRef, isEncrypted := parser.trailer.Get("Encrypt").(*PdfObjectReference)
 		if isEncrypted {
 			common.Log.Trace("Is encrypted!")
 			common.Log.Trace("0: Look up ref %q", encDictRef)
-			encObj, err := this.LookupByReference(*encDictRef)
+			encObj, err := parser.LookupByReference(*encDictRef)
 			common.Log.Trace("1: %q", encObj)
 			if err != nil {
 				return false, err
@@ -1570,12 +1570,12 @@ func (this *PdfParser) IsEncrypted() (bool, error) {
 			if !ok {
 				return false, errors.New("Trailer Encrypt object non dictionary")
 			}
-			crypter, err := PdfCryptMakeNew(this, encDict, this.trailer)
+			crypter, err := PdfCryptMakeNew(parser, encDict, parser.trailer)
 			if err != nil {
 				return false, err
 			}
 
-			this.crypter = &crypter
+			parser.crypter = &crypter
 			common.Log.Trace("Crypter object %b", crypter)
 			return true, nil
 		}
@@ -1586,19 +1586,19 @@ func (this *PdfParser) IsEncrypted() (bool, error) {
 // Decrypt attempts to decrypt the PDF file with a specified password.  Also tries to
 // decrypt with an empty password.  Returns true if successful, false otherwise.
 // An error is returned when there is a problem with decrypting.
-func (this *PdfParser) Decrypt(password []byte) (bool, error) {
+func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 	// Also build the encryption/decryption key.
-	if this.crypter == nil {
+	if parser.crypter == nil {
 		return false, errors.New("Check encryption first")
 	}
 
-	authenticated, err := this.crypter.authenticate(password)
+	authenticated, err := parser.crypter.authenticate(password)
 	if err != nil {
 		return false, err
 	}
 
 	if !authenticated {
-		authenticated, err = this.crypter.authenticate([]byte(""))
+		authenticated, err = parser.crypter.authenticate([]byte(""))
 	}
 
 	return authenticated, err
@@ -1610,9 +1610,9 @@ func (this *PdfParser) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (this *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (parser *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
 	// Also build the encryption/decryption key.
-	if this.crypter == nil {
+	if parser.crypter == nil {
 		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
 		perms := AccessPermissions{}
 		perms.Printing = true
@@ -1626,5 +1626,5 @@ func (this *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissio
 		return true, perms, nil
 	}
 
-	return this.crypter.checkAccessRights(password)
+	return parser.crypter.checkAccessRights(password)
 }

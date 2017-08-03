@@ -173,8 +173,8 @@ func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error
 	return stream, nil
 }
 
-func (this *PdfObjectBool) String() string {
-	if *this {
+func (bool *PdfObjectBool) String() string {
+	if *bool {
 		return "true"
 	} else {
 		return "false"
@@ -182,38 +182,38 @@ func (this *PdfObjectBool) String() string {
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectBool) DefaultWriteString() string {
-	if *this {
+func (bool *PdfObjectBool) DefaultWriteString() string {
+	if *bool {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (this *PdfObjectInteger) String() string {
-	return fmt.Sprintf("%d", *this)
+func (int *PdfObjectInteger) String() string {
+	return fmt.Sprintf("%d", *int)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectInteger) DefaultWriteString() string {
-	return fmt.Sprintf("%d", *this)
+func (int *PdfObjectInteger) DefaultWriteString() string {
+	return fmt.Sprintf("%d", *int)
 }
 
-func (this *PdfObjectFloat) String() string {
-	return fmt.Sprintf("%f", *this)
-}
-
-// DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectFloat) DefaultWriteString() string {
-	return fmt.Sprintf("%f", *this)
-}
-
-func (this *PdfObjectString) String() string {
-	return fmt.Sprintf("%s", string(*this))
+func (float *PdfObjectFloat) String() string {
+	return fmt.Sprintf("%f", *float)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectString) DefaultWriteString() string {
+func (float *PdfObjectFloat) DefaultWriteString() string {
+	return fmt.Sprintf("%f", *float)
+}
+
+func (str *PdfObjectString) String() string {
+	return fmt.Sprintf("%s", string(*str))
+}
+
+// DefaultWriteString outputs the object as it is to be written to file.
+func (str *PdfObjectString) DefaultWriteString() string {
 	var output bytes.Buffer
 
 	escapeSequences := map[byte]string{
@@ -228,8 +228,8 @@ func (this *PdfObjectString) DefaultWriteString() string {
 	}
 
 	output.WriteString("(")
-	for i := 0; i < len(*this); i++ {
-		char := (*this)[i]
+	for i := 0; i < len(*str); i++ {
+		char := (*str)[i]
 		if escStr, useEsc := escapeSequences[char]; useEsc {
 			output.WriteString(escStr)
 		} else {
@@ -241,21 +241,21 @@ func (this *PdfObjectString) DefaultWriteString() string {
 	return output.String()
 }
 
-func (this *PdfObjectName) String() string {
-	return fmt.Sprintf("%s", string(*this))
+func (name *PdfObjectName) String() string {
+	return fmt.Sprintf("%s", string(*name))
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectName) DefaultWriteString() string {
+func (name *PdfObjectName) DefaultWriteString() string {
 	var output bytes.Buffer
 
-	if len(*this) > 127 {
-		common.Log.Debug("ERROR: Name too long (%s)", *this)
+	if len(*name) > 127 {
+		common.Log.Debug("ERROR: Name too long (%s)", *name)
 	}
 
 	output.WriteString("/")
-	for i := 0; i < len(*this); i++ {
-		char := (*this)[i]
+	for i := 0; i < len(*name); i++ {
+		char := (*name)[i]
 		if !IsPrintable(char) || char == '#' || IsDelimiter(char) {
 			output.WriteString(fmt.Sprintf("#%.2x", char))
 		} else {
@@ -268,10 +268,10 @@ func (this *PdfObjectName) DefaultWriteString() string {
 
 // ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is returned if the array
 // contains non-numeric objects (each element can be either PdfObjectInteger or PdfObjectFloat).
-func (this *PdfObjectArray) ToFloat64Array() ([]float64, error) {
+func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 	vals := []float64{}
 
-	for _, obj := range *this {
+	for _, obj := range *array {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, float64(*number))
 		} else if number, is := obj.(*PdfObjectFloat); is {
@@ -286,10 +286,10 @@ func (this *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 
 // ToIntegerArray returns a slice of all array elements as an int slice. An error is returned if the array contains
 // non-integer objects. Each element can only be PdfObjectInteger.
-func (this *PdfObjectArray) ToIntegerArray() ([]int, error) {
+func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	vals := []int{}
 
-	for _, obj := range *this {
+	for _, obj := range *array {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, int(*number))
 		} else {
@@ -300,11 +300,11 @@ func (this *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	return vals, nil
 }
 
-func (this *PdfObjectArray) String() string {
+func (array *PdfObjectArray) String() string {
 	outStr := "["
-	for ind, o := range *this {
+	for ind, o := range *array {
 		outStr += o.String()
-		if ind < (len(*this) - 1) {
+		if ind < (len(*array) - 1) {
 			outStr += ", "
 		}
 	}
@@ -313,11 +313,11 @@ func (this *PdfObjectArray) String() string {
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectArray) DefaultWriteString() string {
+func (array *PdfObjectArray) DefaultWriteString() string {
 	outStr := "["
-	for ind, o := range *this {
+	for ind, o := range *array {
 		outStr += o.DefaultWriteString()
-		if ind < (len(*this) - 1) {
+		if ind < (len(*array) - 1) {
 			outStr += " "
 		}
 	}
@@ -326,8 +326,8 @@ func (this *PdfObjectArray) DefaultWriteString() string {
 }
 
 // Append adds an PdfObject to the array.
-func (this *PdfObjectArray) Append(obj PdfObject) {
-	*this = append(*this, obj)
+func (array *PdfObjectArray) Append(obj PdfObject) {
+	*array = append(*array, obj)
 }
 
 func getNumberAsFloat(obj PdfObject) (float64, error) {
@@ -344,10 +344,10 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 
 // GetAsFloat64Slice returns the array as []float64 slice.
 // Returns an error if not entirely numeric (only PdfObjectIntegers, PdfObjectFloats).
-func (this *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
+func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	slice := []float64{}
 
-	for _, obj := range *this {
+	for _, obj := range *array {
 		obj := TraceToDirectObject(obj)
 		number, err := getNumberAsFloat(obj)
 		if err != nil {
@@ -360,19 +360,19 @@ func (this *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 }
 
 // Merge merges in key/values from another dictionary. Overwriting if has same keys.
-func (this *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
+func (d *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
 	if another != nil {
 		for _, key := range another.Keys() {
 			val := another.Get(key)
-			this.Set(key, val)
+			d.Set(key, val)
 		}
 	}
 }
 
-func (this *PdfObjectDictionary) String() string {
+func (d *PdfObjectDictionary) String() string {
 	outStr := "Dict("
-	for _, k := range this.keys {
-		v := this.dict[k]
+	for _, k := range d.keys {
+		v := d.dict[k]
 		outStr += fmt.Sprintf("\"%s\": %s, ", k, v.String())
 	}
 	outStr += ")"
@@ -380,10 +380,10 @@ func (this *PdfObjectDictionary) String() string {
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectDictionary) DefaultWriteString() string {
+func (d *PdfObjectDictionary) DefaultWriteString() string {
 	outStr := "<<"
-	for _, k := range this.keys {
-		v := this.dict[k]
+	for _, k := range d.keys {
+		v := d.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
 		outStr += k.DefaultWriteString()
 		outStr += " "
@@ -505,43 +505,43 @@ func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
 	}
 }
 
-func (this *PdfObjectReference) String() string {
-	return fmt.Sprintf("Ref(%d %d)", this.ObjectNumber, this.GenerationNumber)
+func (ref *PdfObjectReference) String() string {
+	return fmt.Sprintf("Ref(%d %d)", ref.ObjectNumber, ref.GenerationNumber)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectReference) DefaultWriteString() string {
-	return fmt.Sprintf("%d %d R", this.ObjectNumber, this.GenerationNumber)
+func (ref *PdfObjectReference) DefaultWriteString() string {
+	return fmt.Sprintf("%d %d R", ref.ObjectNumber, ref.GenerationNumber)
 }
 
-func (this *PdfIndirectObject) String() string {
+func (ind *PdfIndirectObject) String() string {
 	// Avoid printing out the object, can cause problems with circular
 	// references.
-	return fmt.Sprintf("IObject:%d", (*this).ObjectNumber)
+	return fmt.Sprintf("IObject:%d", (*ind).ObjectNumber)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfIndirectObject) DefaultWriteString() string {
-	outStr := fmt.Sprintf("%d 0 R", (*this).ObjectNumber)
+func (ind *PdfIndirectObject) DefaultWriteString() string {
+	outStr := fmt.Sprintf("%d 0 R", (*ind).ObjectNumber)
 	return outStr
 }
 
-func (this *PdfObjectStream) String() string {
-	return fmt.Sprintf("Object stream %d: %s", this.ObjectNumber, this.PdfObjectDictionary)
+func (stream *PdfObjectStream) String() string {
+	return fmt.Sprintf("Object stream %d: %s", stream.ObjectNumber, stream.PdfObjectDictionary)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectStream) DefaultWriteString() string {
-	outStr := fmt.Sprintf("%d 0 R", (*this).ObjectNumber)
+func (stream *PdfObjectStream) DefaultWriteString() string {
+	outStr := fmt.Sprintf("%d 0 R", (*stream).ObjectNumber)
 	return outStr
 }
 
-func (this *PdfObjectNull) String() string {
+func (null *PdfObjectNull) String() string {
 	return "null"
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
-func (this *PdfObjectNull) DefaultWriteString() string {
+func (null *PdfObjectNull) DefaultWriteString() string {
 	return "null"
 }
 

@@ -30,8 +30,8 @@ func checkBounds(sliceLen, a, b int) error {
 }
 
 // Inspect analyzes the document object structure.
-func (this *PdfParser) Inspect() (map[string]int, error) {
-	return this.inspect()
+func (parser *PdfParser) Inspect() (map[string]int, error) {
+	return parser.inspect()
 }
 
 func getUniDocVersion() string {
@@ -43,7 +43,7 @@ func getUniDocVersion() string {
  * Go through all objects in the cross ref table and detect the types.
  * Mostly for debugging purposes and inspecting odd PDF files.
  */
-func (this *PdfParser) inspect() (map[string]int, error) {
+func (parser *PdfParser) inspect() (map[string]int, error) {
 	common.Log.Trace("--------INSPECT ----------")
 	common.Log.Trace("Xref table:")
 
@@ -52,21 +52,21 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	failedCount := 0
 
 	keys := []int{}
-	for k := range this.xrefs {
+	for k := range parser.xrefs {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
 
 	i := 0
 	for _, k := range keys {
-		xref := this.xrefs[k]
+		xref := parser.xrefs[k]
 		if xref.objectNumber == 0 {
 			continue
 		}
 		objCount++
 		common.Log.Trace("==========")
 		common.Log.Trace("Looking up object number: %d", xref.objectNumber)
-		o, err := this.LookupByNumber(xref.objectNumber)
+		o, err := parser.LookupByNumber(xref.objectNumber)
 		if err != nil {
 			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
 			failedCount++
@@ -146,7 +146,7 @@ func (this *PdfParser) inspect() (map[string]int, error) {
 	}
 	common.Log.Trace("=======")
 
-	if len(this.xrefs) < 1 {
+	if len(parser.xrefs) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
 		return nil, fmt.Errorf("Invalid document (xref table missing)")
 	}
