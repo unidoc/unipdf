@@ -18,10 +18,9 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-/*
- * The PDF standard supports encryption of strings and streams.
- * Section 7.6.
- */
+// PdfCrypt provides PDF encryption/decryption support.
+// The PDF standard supports encryption of strings and streams (Section 7.6).
+// TODO (v3): Consider unexporting.
 type PdfCrypt struct {
 	Filter           string
 	Subfilter        string
@@ -45,6 +44,7 @@ type PdfCrypt struct {
 	parser *PdfParser
 }
 
+// AccessPermissions is a list of access permissions for a PDF file.
 type AccessPermissions struct {
 	Printing        bool
 	Modify          bool
@@ -66,21 +66,26 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 	"\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C" +
 	"\xA9\xFE\x64\x53\x69\x7A"
 
+// CryptFilter represents information from a CryptFilter dictionary.
+// TODO (v3): Unexport.
 type CryptFilter struct {
 	Cfm    string
 	Length int
 }
 
+// CryptFilters is a map of crypt filter name and underlying CryptFilter info.
+// TODO (v3): Unexport.
 type CryptFilters map[string]CryptFilter
 
-// Load crypt filter information from the encryption dictionary (V4 only).
-func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
-	this.CryptFilters = CryptFilters{}
+// LoadCryptFilters loads crypt filter information from the encryption dictionary (V4 only).
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
+	crypt.CryptFilters = CryptFilters{}
 
 	obj := ed.Get("CF")
 	obj = TraceToDirectObject(obj) // XXX may need to resolve reference...
 	if ref, isRef := obj.(*PdfObjectReference); isRef {
-		o, err := this.parser.LookupByReference(*ref)
+		o, err := crypt.parser.LookupByReference(*ref)
 		if err != nil {
 			common.Log.Debug("Error looking up CF reference")
 			return err
@@ -98,7 +103,7 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		v := cf.Get(name)
 
 		if ref, isRef := v.(*PdfObjectReference); isRef {
-			o, err := this.parser.LookupByReference(*ref)
+			o, err := crypt.parser.LookupByReference(*ref)
 			if err != nil {
 				common.Log.Debug("Error lookup up dictionary reference")
 				return err
@@ -163,34 +168,34 @@ func (this *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 			cf.Length = int(*length)
 		}
 
-		this.CryptFilters[string(name)] = cf
+		crypt.CryptFilters[string(name)] = cf
 	}
 	// Cannot be overwritten.
-	this.CryptFilters["Identity"] = CryptFilter{}
+	crypt.CryptFilters["Identity"] = CryptFilter{}
 
 	// StrF strings filter.
-	this.StringFilter = "Identity"
+	crypt.StringFilter = "Identity"
 	if strf, ok := ed.Get("StrF").(*PdfObjectName); ok {
-		if _, exists := this.CryptFilters[string(*strf)]; !exists {
+		if _, exists := crypt.CryptFilters[string(*strf)]; !exists {
 			return fmt.Errorf("Crypt filter for StrF not specified in CF dictionary (%s)", *strf)
 		}
-		this.StringFilter = string(*strf)
+		crypt.StringFilter = string(*strf)
 	}
 
 	// StmF streams filter.
-	this.StreamFilter = "Identity"
+	crypt.StreamFilter = "Identity"
 	if stmf, ok := ed.Get("StmF").(*PdfObjectName); ok {
-		if _, exists := this.CryptFilters[string(*stmf)]; !exists {
+		if _, exists := crypt.CryptFilters[string(*stmf)]; !exists {
 			return fmt.Errorf("Crypt filter for StmF not specified in CF dictionary (%s)", *stmf)
 		}
-		this.StreamFilter = string(*stmf)
+		crypt.StreamFilter = string(*stmf)
 	}
 
 	return nil
 }
 
-// Prepare the document crypt handler based on the encryption dictionary
-// and trailer dictionary.
+// PdfCryptMakeNew makes the document crypt handler based on the encryption dictionary
+// and trailer dictionary. Returns an error on failure to process.
 func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
 	crypter := PdfCrypt{}
 	crypter.DecryptedObjects = map[PdfObject]bool{}
@@ -306,10 +311,11 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	return crypter, nil
 }
 
-func (this *PdfCrypt) GetAccessPermissions() AccessPermissions {
+// GetAccessPermissions returns the PDF access permissions as an AccessPermissions object.
+func (crypt *PdfCrypt) GetAccessPermissions() AccessPermissions {
 	perms := AccessPermissions{}
 
-	P := this.P
+	P := crypt.P
 	if P&(1<<2) > 0 {
 		perms.Printing = true
 	}
@@ -337,6 +343,7 @@ func (this *PdfCrypt) GetAccessPermissions() AccessPermissions {
 	return perms
 }
 
+// GetP returns the P entry to be used in Encrypt dictionary based on AccessPermissions settings.
 func (perms AccessPermissions) GetP() int32 {
 	var P int32 = 0
 
@@ -367,22 +374,21 @@ func (perms AccessPermissions) GetP() int32 {
 	return P
 }
 
-// Check whether the specified password can be used to decrypt the
-// document.
-func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
+// Check whether the specified password can be used to decrypt the document.
+func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// Also build the encryption/decryption key.
 
-	this.Authenticated = false
+	crypt.Authenticated = false
 
 	// Try user password.
 	common.Log.Trace("Debugging authentication - user pass")
-	authenticated, err := this.Alg6(password)
+	authenticated, err := crypt.Alg6(password)
 	if err != nil {
 		return false, err
 	}
 	if authenticated {
 		common.Log.Trace("this.Authenticated = True")
-		this.Authenticated = true
+		crypt.Authenticated = true
 		return true, nil
 	}
 
@@ -390,13 +396,13 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
 	common.Log.Trace("Debugging authentication - owner pass")
-	authenticated, err = this.Alg7(password)
+	authenticated, err = crypt.Alg7(password)
 	if err != nil {
 		return false, err
 	}
 	if authenticated {
 		common.Log.Trace("this.Authenticated = True")
-		this.Authenticated = true
+		crypt.Authenticated = true
 		return true, nil
 	}
 
@@ -409,11 +415,11 @@ func (this *PdfCrypt) authenticate(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and can view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (this *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissions, error) {
 	perms := AccessPermissions{}
 
 	// Try owner password -> full rights.
-	isOwner, err := this.Alg7(password)
+	isOwner, err := crypt.Alg7(password)
 	if err != nil {
 		return false, perms, err
 	}
@@ -431,20 +437,20 @@ func (this *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermission
 	}
 
 	// Try user password.
-	isUser, err := this.Alg6(password)
+	isUser, err := crypt.Alg6(password)
 	if err != nil {
 		return false, perms, err
 	}
 	if isUser {
 		// User password specified correctly -> access granted with specified permissions.
-		return true, this.GetAccessPermissions(), nil
+		return true, crypt.GetAccessPermissions(), nil
 	}
 
 	// Cannot even view the file.
 	return false, perms, nil
 }
 
-func (this *PdfCrypt) paddedPass(pass []byte) []byte {
+func (crypt *PdfCrypt) paddedPass(pass []byte) []byte {
 	key := make([]byte, 32)
 	if len(pass) >= 32 {
 		for i := 0; i < 32; i++ {
@@ -463,8 +469,8 @@ func (this *PdfCrypt) paddedPass(pass []byte) []byte {
 
 // Generates a key for encrypting a specific object based on the
 // object and generation number, as well as the document encryption key.
-func (this *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
-	cf, ok := this.CryptFilters[filter]
+func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
+	cf, ok := crypt.CryptFilters[filter]
 	if !ok {
 		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
@@ -503,27 +509,27 @@ func (this *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte)
 
 	if len(ekey)+5 < 16 {
 		return hashb[0 : len(ekey)+5], nil
-	} else {
-		return hashb, nil
 	}
+
+	return hashb, nil
 }
 
 // Check if object has already been processed.
-func (this *PdfCrypt) isDecrypted(obj PdfObject) bool {
-	_, ok := this.DecryptedObjects[obj]
+func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
+	_, ok := crypt.DecryptedObjects[obj]
 	if ok {
 		common.Log.Trace("Already decrypted")
 		return true
-	} else {
-		common.Log.Trace("Not decrypted yet")
-		return false
 	}
+
+	common.Log.Trace("Not decrypted yet")
+	return false
 }
 
 // Decrypt a buffer with a selected crypt filter.
-func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
+func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Decrypt bytes")
-	cf, ok := this.CryptFilters[filter]
+	cf, ok := crypt.CryptFilters[filter]
 	if !ok {
 		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
@@ -609,20 +615,20 @@ func (this *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]by
 // Traverses through all the subobjects (recursive).
 //
 // Does not look up references..  That should be done prior to calling.
-func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) error {
-	if this.isDecrypted(obj) {
+func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) error {
+	if crypt.isDecrypted(obj) {
 		return nil
 	}
 
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-		this.DecryptedObjects[io] = true
+		crypt.DecryptedObjects[io] = true
 
 		common.Log.Trace("Decrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
 
 		objNum := (*io).ObjectNumber
 		genNum := (*io).GenerationNumber
 
-		err := this.Decrypt(io.PdfObject, objNum, genNum)
+		err := crypt.Decrypt(io.PdfObject, objNum, genNum)
 		if err != nil {
 			return err
 		}
@@ -632,7 +638,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 	if so, isStream := obj.(*PdfObjectStream); isStream {
 		// Mark as decrypted first to avoid recursive issues.
-		this.DecryptedObjects[so] = true
+		crypt.DecryptedObjects[so] = true
 		objNum := (*so).ObjectNumber
 		genNum := (*so).GenerationNumber
 		common.Log.Trace("Decrypting stream %d %d !", objNum, genNum)
@@ -643,9 +649,9 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		dict := so.PdfObjectDictionary
 
 		streamFilter := "Default" // Default RC4.
-		if this.V >= 4 {
-			streamFilter = this.StreamFilter
-			common.Log.Trace("this.StreamFilter = %s", this.StreamFilter)
+		if crypt.V >= 4 {
+			streamFilter = crypt.StreamFilter
+			common.Log.Trace("this.StreamFilter = %s", crypt.StreamFilter)
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
@@ -658,7 +664,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						// Check if valid crypt filter specified in the decode params.
 						if decodeParams, ok := dict.Get("DecodeParms").(*PdfObjectDictionary); ok {
 							if filterName, ok := decodeParams.Get("Name").(*PdfObjectName); ok {
-								if _, ok := this.CryptFilters[string(*filterName)]; ok {
+								if _, ok := crypt.CryptFilters[string(*filterName)]; ok {
 									common.Log.Trace("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
 								}
@@ -675,17 +681,17 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			}
 		}
 
-		err := this.Decrypt(so.PdfObjectDictionary, objNum, genNum)
+		err := crypt.Decrypt(so.PdfObjectDictionary, objNum, genNum)
 		if err != nil {
 			return err
 		}
 
-		okey, err := this.makeKey(streamFilter, uint32(objNum), uint32(genNum), this.EncryptionKey)
+		okey, err := crypt.makeKey(streamFilter, uint32(objNum), uint32(genNum), crypt.EncryptionKey)
 		if err != nil {
 			return err
 		}
 
-		so.Stream, err = this.decryptBytes(so.Stream, streamFilter, okey)
+		so.Stream, err = crypt.decryptBytes(so.Stream, streamFilter, okey)
 		if err != nil {
 			return err
 		}
@@ -698,18 +704,18 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		common.Log.Trace("Decrypting string!")
 
 		stringFilter := "Default"
-		if this.V >= 4 {
+		if crypt.V >= 4 {
 			// Currently only support Identity / RC4.
-			common.Log.Trace("with %s filter", this.StringFilter)
-			if this.StringFilter == "Identity" {
+			common.Log.Trace("with %s filter", crypt.StringFilter)
+			if crypt.StringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
 			} else {
-				stringFilter = this.StringFilter
+				stringFilter = crypt.StringFilter
 			}
 		}
 
-		key, err := this.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), this.EncryptionKey)
+		key, err := crypt.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), crypt.EncryptionKey)
 		if err != nil {
 			return err
 		}
@@ -720,7 +726,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			decrypted[i] = (*s)[i]
 		}
 		common.Log.Trace("Decrypt string: %s : % x", decrypted, decrypted)
-		decrypted, err = this.decryptBytes(decrypted, stringFilter, key)
+		decrypted, err = crypt.decryptBytes(decrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
@@ -731,7 +737,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 	if a, isArray := obj.(*PdfObjectArray); isArray {
 		for _, o := range *a {
-			err := this.Decrypt(o, parentObjNum, parentGenNum)
+			err := crypt.Decrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
 			}
@@ -757,7 +763,7 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			}
 
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
-				err := this.Decrypt(o, parentObjNum, parentGenNum)
+				err := crypt.Decrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
 					return err
 				}
@@ -770,21 +776,21 @@ func (this *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 }
 
 // Check if object has already been processed.
-func (this *PdfCrypt) isEncrypted(obj PdfObject) bool {
-	_, ok := this.EncryptedObjects[obj]
+func (crypt *PdfCrypt) isEncrypted(obj PdfObject) bool {
+	_, ok := crypt.EncryptedObjects[obj]
 	if ok {
 		common.Log.Trace("Already encrypted")
 		return true
-	} else {
-		common.Log.Trace("Not encrypted yet")
-		return false
 	}
+
+	common.Log.Trace("Not encrypted yet")
+	return false
 }
 
 // Encrypt a buffer with the specified crypt filter and key.
-func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
+func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Encrypt bytes")
-	cf, ok := this.CryptFilters[filter]
+	cf, ok := crypt.CryptFilters[filter]
 	if !ok {
 		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
@@ -857,20 +863,20 @@ func (this *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]by
 // Traverses through all the subobjects (recursive).
 //
 // Does not look up references..  That should be done prior to calling.
-func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) error {
-	if this.isEncrypted(obj) {
+func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) error {
+	if crypt.isEncrypted(obj) {
 		return nil
 	}
 
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-		this.EncryptedObjects[io] = true
+		crypt.EncryptedObjects[io] = true
 
 		common.Log.Trace("Encrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
 
 		objNum := (*io).ObjectNumber
 		genNum := (*io).GenerationNumber
 
-		err := this.Encrypt(io.PdfObject, objNum, genNum)
+		err := crypt.Encrypt(io.PdfObject, objNum, genNum)
 		if err != nil {
 			return err
 		}
@@ -879,7 +885,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	}
 
 	if so, isStream := obj.(*PdfObjectStream); isStream {
-		this.EncryptedObjects[so] = true
+		crypt.EncryptedObjects[so] = true
 		objNum := (*so).ObjectNumber
 		genNum := (*so).GenerationNumber
 		common.Log.Trace("Encrypting stream %d %d !", objNum, genNum)
@@ -890,11 +896,11 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		dict := so.PdfObjectDictionary
 
 		streamFilter := "Default" // Default RC4.
-		if this.V >= 4 {
+		if crypt.V >= 4 {
 			// For now.  Need to change when we add support for more than
 			// Identity / RC4.
-			streamFilter = this.StreamFilter
-			common.Log.Trace("this.StreamFilter = %s", this.StreamFilter)
+			streamFilter = crypt.StreamFilter
+			common.Log.Trace("this.StreamFilter = %s", crypt.StreamFilter)
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
@@ -907,7 +913,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 						// Check if valid crypt filter specified in the decode params.
 						if decodeParams, ok := dict.Get("DecodeParms").(*PdfObjectDictionary); ok {
 							if filterName, ok := decodeParams.Get("Name").(*PdfObjectName); ok {
-								if _, ok := this.CryptFilters[string(*filterName)]; ok {
+								if _, ok := crypt.CryptFilters[string(*filterName)]; ok {
 									common.Log.Trace("Using stream filter %s", *filterName)
 									streamFilter = string(*filterName)
 								}
@@ -924,17 +930,17 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			}
 		}
 
-		err := this.Encrypt(so.PdfObjectDictionary, objNum, genNum)
+		err := crypt.Encrypt(so.PdfObjectDictionary, objNum, genNum)
 		if err != nil {
 			return err
 		}
 
-		okey, err := this.makeKey(streamFilter, uint32(objNum), uint32(genNum), this.EncryptionKey)
+		okey, err := crypt.makeKey(streamFilter, uint32(objNum), uint32(genNum), crypt.EncryptionKey)
 		if err != nil {
 			return err
 		}
 
-		so.Stream, err = this.encryptBytes(so.Stream, streamFilter, okey)
+		so.Stream, err = crypt.encryptBytes(so.Stream, streamFilter, okey)
 		if err != nil {
 			return err
 		}
@@ -947,17 +953,17 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 		common.Log.Trace("Encrypting string!")
 
 		stringFilter := "Default"
-		if this.V >= 4 {
-			common.Log.Trace("with %s filter", this.StringFilter)
-			if this.StringFilter == "Identity" {
+		if crypt.V >= 4 {
+			common.Log.Trace("with %s filter", crypt.StringFilter)
+			if crypt.StringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
 			} else {
-				stringFilter = this.StringFilter
+				stringFilter = crypt.StringFilter
 			}
 		}
 
-		key, err := this.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), this.EncryptionKey)
+		key, err := crypt.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), crypt.EncryptionKey)
 		if err != nil {
 			return err
 		}
@@ -967,7 +973,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 			encrypted[i] = (*s)[i]
 		}
 		common.Log.Trace("Encrypt string: %s : % x", encrypted, encrypted)
-		encrypted, err = this.encryptBytes(encrypted, stringFilter, key)
+		encrypted, err = crypt.encryptBytes(encrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
@@ -978,7 +984,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 
 	if a, isArray := obj.(*PdfObjectArray); isArray {
 		for _, o := range *a {
-			err := this.Encrypt(o, parentObjNum, parentGenNum)
+			err := crypt.Encrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
 			}
@@ -1004,7 +1010,7 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 				continue
 			}
 			if string(keyidx) != "Parent" && string(keyidx) != "Prev" && string(keyidx) != "Last" { // Check not needed?
-				err := this.Encrypt(o, parentObjNum, parentGenNum)
+				err := crypt.Encrypt(o, parentObjNum, parentGenNum)
 				if err != nil {
 					return err
 				}
@@ -1016,19 +1022,20 @@ func (this *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) e
 	return nil
 }
 
-// Algorithm 2: Computing an encryption key.
-func (this *PdfCrypt) Alg2(pass []byte) []byte {
+// Alg2 computes an encryption key.
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg2(pass []byte) []byte {
 	common.Log.Trace("Alg2")
-	key := this.paddedPass(pass)
+	key := crypt.paddedPass(pass)
 
 	h := md5.New()
 	h.Write(key)
 
 	// Pass O.
-	h.Write(this.O)
+	h.Write(crypt.O)
 
 	// Pass P (Lower order byte first).
-	var p uint32 = uint32(this.P)
+	var p uint32 = uint32(crypt.P)
 	var pb = []byte{}
 	for i := 0; i < 4; i++ {
 		pb = append(pb, byte(((p >> uint(8*i)) & 0xff)))
@@ -1037,36 +1044,36 @@ func (this *PdfCrypt) Alg2(pass []byte) []byte {
 	common.Log.Trace("go P: % x", pb)
 
 	// Pass ID[0] from the trailer
-	h.Write([]byte(this.Id0))
+	h.Write([]byte(crypt.Id0))
 
-	common.Log.Trace("this.R = %d encryptMetadata %v", this.R, this.EncryptMetadata)
-	if (this.R >= 4) && !this.EncryptMetadata {
+	common.Log.Trace("this.R = %d encryptMetadata %v", crypt.R, crypt.EncryptMetadata)
+	if (crypt.R >= 4) && !crypt.EncryptMetadata {
 		h.Write([]byte{0xff, 0xff, 0xff, 0xff})
 	}
 	hashb := h.Sum(nil)
 
-	if this.R >= 3 {
+	if crypt.R >= 3 {
 		for i := 0; i < 50; i++ {
 			h = md5.New()
-			h.Write(hashb[0 : this.Length/8])
+			h.Write(hashb[0 : crypt.Length/8])
 			hashb = h.Sum(nil)
 		}
 	}
 
-	if this.R >= 3 {
-		return hashb[0 : this.Length/8]
+	if crypt.R >= 3 {
+		return hashb[0 : crypt.Length/8]
 	}
 
 	return hashb[0:5]
 }
 
 // Create the RC4 encryption key.
-func (this *PdfCrypt) alg3_key(pass []byte) []byte {
+func (crypt *PdfCrypt) alg3Key(pass []byte) []byte {
 	h := md5.New()
-	okey := this.paddedPass(pass)
+	okey := crypt.paddedPass(pass)
 	h.Write(okey)
 
-	if this.R >= 3 {
+	if crypt.R >= 3 {
 		for i := 0; i < 50; i++ {
 			hashb := h.Sum(nil)
 			h = md5.New()
@@ -1075,25 +1082,25 @@ func (this *PdfCrypt) alg3_key(pass []byte) []byte {
 	}
 
 	encKey := h.Sum(nil)
-	if this.R == 2 {
+	if crypt.R == 2 {
 		encKey = encKey[0:5]
 	} else {
-		encKey = encKey[0 : this.Length/8]
+		encKey = encKey[0 : crypt.Length/8]
 	}
 	return encKey
 }
 
-// Algorithm 3: Computing the encryption dictionary’s O
-// (owner password) value.
-func (this *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
+// Alg3 computes the encryption dictionary’s O (owner password) value.
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
 	// Return O string val.
 	O := PdfObjectString("")
 
 	var encKey []byte
 	if len(opass) > 0 {
-		encKey = this.alg3_key(opass)
+		encKey = crypt.alg3Key(opass)
 	} else {
-		encKey = this.alg3_key(upass)
+		encKey = crypt.alg3Key(upass)
 	}
 
 	ociph, err := rc4.NewCipher(encKey)
@@ -1101,11 +1108,11 @@ func (this *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
 		return O, errors.New("Failed rc4 ciph")
 	}
 
-	ukey := this.paddedPass(upass)
+	ukey := crypt.paddedPass(upass)
 	encrypted := make([]byte, len(ukey))
 	ociph.XORKeyStream(encrypted, ukey)
 
-	if this.R >= 3 {
+	if crypt.R >= 3 {
 		encKey2 := make([]byte, len(encKey))
 		for i := 0; i < 19; i++ {
 			for j := 0; j < len(encKey); j++ {
@@ -1123,12 +1130,12 @@ func (this *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
 	return O, nil
 }
 
-// Algorithm 4: Computing the encryption dictionary’s U (user password)
-// value (Security handlers of revision 2).
-func (this *PdfCrypt) Alg4(upass []byte) (PdfObjectString, []byte, error) {
+// Alg4 computes the encryption dictionary’s U (user password) value (Security handlers of revision 2).
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg4(upass []byte) (PdfObjectString, []byte, error) {
 	U := PdfObjectString("")
 
-	ekey := this.Alg2(upass)
+	ekey := crypt.Alg2(upass)
 	ciph, err := rc4.NewCipher(ekey)
 	if err != nil {
 		return U, ekey, errors.New("Failed rc4 ciph")
@@ -1142,21 +1149,21 @@ func (this *PdfCrypt) Alg4(upass []byte) (PdfObjectString, []byte, error) {
 	return U, ekey, nil
 }
 
-// Algorithm 5: Computing the encryption dictionary’s U (user password)
-// value (Security handlers of revision 3 or greater).
-func (this *PdfCrypt) Alg5(upass []byte) (PdfObjectString, []byte, error) {
+// Alg5 computes the encryption dictionary’s U (user password) value (Security handlers of revision 3 or greater).
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg5(upass []byte) (PdfObjectString, []byte, error) {
 	U := PdfObjectString("")
 
-	ekey := this.Alg2(upass)
+	ekey := crypt.Alg2(upass)
 
 	h := md5.New()
 	h.Write([]byte(padding))
-	h.Write([]byte(this.Id0))
+	h.Write([]byte(crypt.Id0))
 	hash := h.Sum(nil)
 
 	common.Log.Trace("Alg5")
 	common.Log.Trace("ekey: % x", ekey)
-	common.Log.Trace("ID: % x", this.Id0)
+	common.Log.Trace("ID: % x", crypt.Id0)
 
 	if len(hash) != 16 {
 		return U, ekey, errors.New("Hash length not 16 bytes")
@@ -1206,15 +1213,16 @@ func (this *PdfCrypt) Alg5(upass []byte) (PdfObjectString, []byte, error) {
 	return U, ekey, nil
 }
 
-// Algorithm 6: Authenticating the user password
-func (this *PdfCrypt) Alg6(upass []byte) (bool, error) {
+// Alg6 authenticates the user password.
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg6(upass []byte) (bool, error) {
 	var uo PdfObjectString
 	var err error
 	var key []byte
-	if this.R == 2 {
-		uo, key, err = this.Alg4(upass)
-	} else if this.R >= 3 {
-		uo, key, err = this.Alg5(upass)
+	if crypt.R == 2 {
+		uo, key, err = crypt.Alg4(upass)
+	} else if crypt.R >= 3 {
+		uo, key, err = crypt.Alg5(upass)
 	} else {
 		return false, errors.New("invalid R")
 	}
@@ -1223,11 +1231,11 @@ func (this *PdfCrypt) Alg6(upass []byte) (bool, error) {
 		return false, err
 	}
 
-	common.Log.Trace("check: % x == % x ?", string(uo), string(this.U))
+	common.Log.Trace("check: % x == % x ?", string(uo), string(crypt.U))
 
-	uGen := string(uo)     // Generated U from specified pass.
-	uDoc := string(this.U) // U from the document.
-	if this.R >= 3 {
+	uGen := string(uo)      // Generated U from specified pass.
+	uDoc := string(crypt.U) // U from the document.
+	if crypt.R >= 3 {
 		// comparing on the first 16 bytes in the case of security
 		// handlers of revision 3 or greater),
 		if len(uGen) > 16 {
@@ -1237,27 +1245,29 @@ func (this *PdfCrypt) Alg6(upass []byte) (bool, error) {
 			uDoc = uDoc[0:16]
 		}
 	}
+
 	if uGen == uDoc {
-		this.EncryptionKey = key
+		crypt.EncryptionKey = key
 		return true, nil
-	} else {
-		return false, nil
 	}
+
+	return false, nil
 }
 
-// Algorithm 7: Authenticating the owner password.
-func (this *PdfCrypt) Alg7(opass []byte) (bool, error) {
-	encKey := this.alg3_key(opass)
+// Alg7 authenticates the owner password.
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
+	encKey := crypt.alg3Key(opass)
 
-	decrypted := make([]byte, len(this.O))
-	if this.R == 2 {
+	decrypted := make([]byte, len(crypt.O))
+	if crypt.R == 2 {
 		ciph, err := rc4.NewCipher(encKey)
 		if err != nil {
 			return false, errors.New("Failed cipher")
 		}
-		ciph.XORKeyStream(decrypted, this.O)
-	} else if this.R >= 3 {
-		s := append([]byte{}, this.O...)
+		ciph.XORKeyStream(decrypted, crypt.O)
+	} else if crypt.R >= 3 {
+		s := append([]byte{}, crypt.O...)
 		for i := 0; i < 20; i++ {
 			//newKey := encKey
 			newKey := append([]byte{}, encKey...)
@@ -1275,7 +1285,7 @@ func (this *PdfCrypt) Alg7(opass []byte) (bool, error) {
 		return false, errors.New("invalid R")
 	}
 
-	auth, err := this.Alg6(decrypted)
+	auth, err := crypt.Alg6(decrypted)
 	if err != nil {
 		return false, nil
 	}
