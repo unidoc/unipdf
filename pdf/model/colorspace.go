@@ -590,7 +590,7 @@ func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 	}
 	if len(decode) != 8 {
-		common.Log.Debug("Invalid decode array (%d): % d", len(decode), decode)
+		common.Log.Debug("Invalid decode array (%d): % .3f", len(decode), decode)
 		return img, errors.New("Invalid decode array")
 	}
 	common.Log.Trace("Decode array: % f", decode)
@@ -809,7 +809,7 @@ func (this *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, err
 }
 
 func (this *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
-	if len(objects) != 4 {
+	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
 
@@ -953,7 +953,7 @@ func (this *PdfColorspaceCalRGB) String() string {
 }
 
 func (this *PdfColorspaceCalRGB) GetNumComponents() int {
-	return 1
+	return 3
 }
 
 func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, error) {
@@ -1183,7 +1183,7 @@ func (this *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	rgbSamples := []uint32{}
-	for i := 0; i < len(samples); i++ {
+	for i := 0; i < len(samples)-2; i++ {
 		// A, B, C in range 0.0 to 1.0
 		aVal := float64(samples[i]) / maxVal
 		bVal := float64(samples[i+1]) / maxVal

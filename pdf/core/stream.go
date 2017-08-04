@@ -13,7 +13,7 @@ import (
 
 // NewEncoderFromStream creates a StreamEncoder based on the stream's dictionary.
 func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
-	filterObj := streamObj.PdfObjectDictionary.Get("Filter")
+	filterObj := TraceToDirectObject(streamObj.PdfObjectDictionary.Get("Filter"))
 	if filterObj == nil {
 		// No filter, return raw data back.
 		return NewRawEncoder(), nil
@@ -61,6 +61,8 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		return newLZWEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameDCT {
 		return newDCTEncoderFromStream(streamObj, nil)
+	} else if *method == StreamEncodingFilterNameRunLength {
+		return newRunLengthEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameASCIIHex {
 		return NewASCIIHexEncoder(), nil
 	} else if *method == StreamEncodingFilterNameASCII85 {

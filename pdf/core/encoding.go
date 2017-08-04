@@ -10,6 +10,7 @@ package core
 // - FlateDecode
 // - LZW
 // - DCT Decode (JPEG)
+// - RunLength
 // - ASCII Hex
 // - ASCII85
 
@@ -33,12 +34,13 @@ import (
 )
 
 const (
-	StreamEncodingFilterNameFlate    = "FlateDecode"
-	StreamEncodingFilterNameLZW      = "LZWDecode"
-	StreamEncodingFilterNameDCT      = "DCTDecode"
-	StreamEncodingFilterNameASCIIHex = "ASCIIHexDecode"
-	StreamEncodingFilterNameASCII85  = "ASCII85Decode"
-	StreamEncodingFilterNameRaw      = "Raw"
+	StreamEncodingFilterNameFlate     = "FlateDecode"
+	StreamEncodingFilterNameLZW       = "LZWDecode"
+	StreamEncodingFilterNameDCT       = "DCTDecode"
+	StreamEncodingFilterNameRunLength = "RunLengthDecode"
+	StreamEncodingFilterNameASCIIHex  = "ASCIIHexDecode"
+	StreamEncodingFilterNameASCII85   = "ASCII85Decode"
+	StreamEncodingFilterNameRaw       = "Raw"
 )
 
 const (
@@ -141,7 +143,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
+		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
@@ -507,12 +509,19 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	if decodeParams == nil {
 		obj := encDict.Get("DecodeParms")
 		if obj != nil {
-			dp, isDict := obj.(*PdfObjectDictionary)
-			if !isDict {
-				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
+			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
+				decodeParams = dp
+			} else if a, isArr := obj.(*PdfObjectArray); isArr {
+				if len(*a) == 1 {
+					if dp, isDict := (*a)[0].(*PdfObjectDictionary); isDict {
+						decodeParams = dp
+					}
+				}
+			}
+			if decodeParams == nil {
+				common.Log.Error("DecodeParms not a dictionary %#v", obj)
 				return nil, fmt.Errorf("Invalid DecodeParms")
 			}
-			decodeParams = dp
 		}
 	}
 
@@ -1055,6 +1064,137 @@ func (this *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// Run length encoding.
+type RunLengthEncoder struct {
+}
+
+// Make a new run length encoder
+func NewRunLengthEncoder() *RunLengthEncoder {
+	return &RunLengthEncoder{}
+}
+
+func (this *RunLengthEncoder) GetFilterName() string {
+	return StreamEncodingFilterNameRunLength
+}
+
+// Create a new run length decoder from a stream object.
+func newRunLengthEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*RunLengthEncoder, error) {
+	return NewRunLengthEncoder(), nil
+}
+
+/*
+	7.4.5 RunLengthDecode Filter
+	The RunLengthDecode filter decodes data that has been encoded in a simple byte-oriented format based on run length.
+	The encoded data shall be a sequence of runs, where each run shall consist of a length byte followed by 1 to 128
+	bytes of data. If the length byte is in the range 0 to 127, the following length + 1 (1 to 128) bytes shall be
+	copied literally during decompression. If length is in the range 129 to 255, the following single byte shall be
+	copied 257 - length (2 to 128) times during decompression. A length value of 128 shall denote EOD.
+*/
+func (this *RunLengthEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	bufReader := bytes.NewReader(encoded)
+	inb := []byte{}
+	for {
+		b, err := bufReader.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		if b > 128 {
+			v, err := bufReader.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			for i := 0; i < 257-int(b); i++ {
+				inb = append(inb, v)
+			}
+		} else if b < 128 {
+			for i := 0; i < int(b)+1; i++ {
+				v, err := bufReader.ReadByte()
+				if err != nil {
+					return nil, err
+				}
+				inb = append(inb, v)
+			}
+		} else {
+			break
+		}
+	}
+
+	return inb, nil
+}
+
+// Decode RunLengthEncoded stream object and give back decoded bytes.
+func (this *RunLengthEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return this.DecodeBytes(streamObj.Stream)
+}
+
+// Encode a bytes array and return the encoded value based on the encoder parameters.
+func (this *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	bufReader := bytes.NewReader(data)
+	inb := []byte{}
+	literal := []byte{}
+
+	b0, err := bufReader.ReadByte()
+	if err == io.EOF {
+		return []byte{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	runLen := 1
+
+	for {
+		b, err := bufReader.ReadByte()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		if b == b0 {
+
+			if len(literal) > 0 {
+				inb = append(inb, byte(len(literal)-1))
+				inb = append(inb, literal...)
+			}
+			runLen++
+			if runLen > 127 {
+				inb = append(inb, byte(257-runLen), b0)
+				runLen = 1
+			}
+
+		} else {
+			if runLen > 0 {
+				inb = append(inb, byte(257-runLen), b0)
+				runLen = 0
+			}
+			literal = append(literal, b)
+			if len(literal) > 127 {
+				inb = append(inb, byte(len(literal)-1))
+				inb = append(inb, literal...)
+				literal = []byte{}
+			}
+		}
+		b0 = b
+	}
+	if len(literal) > 0 {
+		inb = append(inb, byte(len(literal)-2))
+		inb = append(inb, literal...)
+	} else if runLen > 0 {
+		inb = append(inb, byte(runLen-2), b0)
+	}
+	return inb, nil
+}
+
+func (this *RunLengthEncoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *RunLengthEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
+	return dict
 }
 
 /////

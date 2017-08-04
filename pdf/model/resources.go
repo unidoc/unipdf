@@ -138,7 +138,7 @@ func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading,
 		return nil, false
 	}
 
-	shadingDict, ok := r.Shading.(*PdfObjectDictionary)
+	shadingDict, ok := TraceToDirectObject(r.Shading).(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Shading entry - not a dict (got %T)", r.Shading)
 		return nil, false
@@ -178,7 +178,7 @@ func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern,
 		return nil, false
 	}
 
-	patternDict, ok := r.Pattern.(*PdfObjectDictionary)
+	patternDict, ok := TraceToDirectObject(r.Pattern).(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Pattern entry - not a dict (got %T)", r.Pattern)
 		return nil, false
@@ -326,7 +326,7 @@ func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectSt
 		}
 		dict := stream.PdfObjectDictionary
 
-		name, ok := dict.Get("Subtype").(*PdfObjectName)
+		name, ok := TraceToDirectObject(dict.Get("Subtype")).(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("XObject Subtype not a Name, dict: %s", dict.String())
 			return nil, XObjectTypeUndefined

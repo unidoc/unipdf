@@ -151,7 +151,7 @@ func TestBoolParsing(t *testing.T) {
 			return
 		}
 		if bool(val) != expected {
-			t.Errorf("bool not as expected (%b)", val)
+			t.Errorf("bool not as expected (%t)", val)
 			return
 		}
 	}
