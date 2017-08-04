@@ -570,8 +570,6 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 			return nil, errors.New("Object parsing error - unexpected pattern")
 		}
 	}
-
-	return nil, errors.New("Object parsing error - unexpected pattern")
 }
 
 // Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
@@ -657,13 +655,12 @@ func (parser *PdfParser) parsePdfVersion() (int, int, error) {
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
 	if len(result1) < 3 {
 		major, minor, err := parser.seekPdfVersionTopDown()
-		if err == nil {
+		if err != nil {
 			common.Log.Debug("Failed recovery - unable to find version")
 			return 0, 0, err
 		}
 
 		return major, minor, nil
-		return 0, 0, errors.New("PDF version not found")
 	}
 
 	majorVersion, err := strconv.ParseInt(result1[1], 10, 64)

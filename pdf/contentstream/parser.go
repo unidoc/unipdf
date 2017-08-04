@@ -46,6 +46,7 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 			obj, err, isOperand := this.parseObject()
 			if err != nil {
 				if err == io.EOF {
+					// End of data. Successful exit point.
 					return &operations, nil
 				}
 				return &operations, err
@@ -69,9 +70,6 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 			operation.Params = append(operation.Params, im)
 		}
 	}
-
-	common.Log.Debug("Operation list: %v\n", operations)
-	return &operations, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and

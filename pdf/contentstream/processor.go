@@ -7,7 +7,6 @@ package contentstream
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -24,10 +23,6 @@ type GraphicsState struct {
 }
 
 type GraphicStateStack []GraphicsState
-
-func (gs *GraphicsState) String() string {
-	return fmt.Sprintf("%+v", gs)
-}
 
 func (gsStack *GraphicStateStack) Push(gs GraphicsState) {
 	*gsStack = append(*gsStack, gs)
