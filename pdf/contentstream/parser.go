@@ -189,7 +189,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 // A conforming writer shall not use the PostScript syntax for numbers
 // with non-decimal radices (such as 16#FFFE) or in exponential format
 // (such as 6.02E23).
-// Nontheless, we sometimes get numbers with exponential format, so
+// Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
