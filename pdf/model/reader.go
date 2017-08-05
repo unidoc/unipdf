@@ -756,6 +756,15 @@ func (this *PdfReader) Inspect() (map[string]int, error) {
 	return this.parser.Inspect()
 }
 
+// GetObjectNums returns the object numbers of the PDF objects in the file
+// Numbered objects are either indirect objects or stream objects.
+// e.g. objNums := pdfReader.GetObjectNums()
+// The underlying objects can then be accessed with
+// pdfReader.GetIndirectObjectByNumber(objNums[0]) for the first available object.
+func (r *PdfReader) GetObjectNums() []int {
+	return r.parser.GetObjectNums()
+}
+
 // Get specific object number.
 func (this *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
 	obj, err := this.parser.LookupByNumber(number)
