@@ -42,6 +42,7 @@ type XrefObject struct {
 
 // XrefTable is a map between object number and corresponding XrefObject.
 // TODO (v3): Unexport.
+// TODO: Consider changing to a slice, so can maintain the object order without sorting when analyzing.
 type XrefTable map[int]XrefObject
 
 // ObjectStream represents an object stream's information which can contain multiple indirect objects.

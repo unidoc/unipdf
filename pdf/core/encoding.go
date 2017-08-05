@@ -1152,24 +1152,33 @@ func (this *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		}
 
 		if b == b0 {
-
 			if len(literal) > 0 {
-				inb = append(inb, byte(len(literal)-1))
-				inb = append(inb, literal...)
+				literal = literal[:len(literal)-1]
+				if len(literal) > 0 {
+					inb = append(inb, byte(len(literal)-1))
+					inb = append(inb, literal...)
+				}
+				runLen = 1
+				literal = []byte{}
 			}
 			runLen++
-			if runLen > 127 {
+			if runLen >= 127 {
 				inb = append(inb, byte(257-runLen), b0)
-				runLen = 1
+				runLen = 0
 			}
 
 		} else {
 			if runLen > 0 {
-				inb = append(inb, byte(257-runLen), b0)
+				if runLen == 1 {
+					literal = []byte{b0}
+				} else {
+					inb = append(inb, byte(257-runLen), b0)
+				}
+
 				runLen = 0
 			}
 			literal = append(literal, b)
-			if len(literal) > 127 {
+			if len(literal) >= 127 {
 				inb = append(inb, byte(len(literal)-1))
 				inb = append(inb, literal...)
 				literal = []byte{}
@@ -1177,12 +1186,14 @@ func (this *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		}
 		b0 = b
 	}
+
 	if len(literal) > 0 {
-		inb = append(inb, byte(len(literal)-2))
+		inb = append(inb, byte(len(literal)-1))
 		inb = append(inb, literal...)
 	} else if runLen > 0 {
-		inb = append(inb, byte(runLen-2), b0)
+		inb = append(inb, byte(257-runLen), b0)
 	}
+	inb = append(inb, 128)
 	return inb, nil
 }
 

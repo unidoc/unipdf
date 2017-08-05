@@ -237,7 +237,7 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 // A conforming writer shall not use the PostScript syntax for numbers
 // with non-decimal radices (such as 16#FFFE) or in exponential format
 // (such as 6.02E23).
-// Nontheless, we sometimes get numbers with exponential format, so
+// Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (parser *PdfParser) parseNumber() (PdfObject, error) {
@@ -570,8 +570,6 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 			return nil, errors.New("Object parsing error - unexpected pattern")
 		}
 	}
-
-	return nil, errors.New("Object parsing error - unexpected pattern")
 }
 
 // Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
@@ -657,13 +655,12 @@ func (parser *PdfParser) parsePdfVersion() (int, int, error) {
 	result1 := rePdfVersion.FindStringSubmatch(string(b))
 	if len(result1) < 3 {
 		major, minor, err := parser.seekPdfVersionTopDown()
-		if err == nil {
+		if err != nil {
 			common.Log.Debug("Failed recovery - unable to find version")
 			return 0, 0, err
 		}
 
 		return major, minor, nil
-		return 0, 0, errors.New("PDF version not found")
 	}
 
 	majorVersion, err := strconv.ParseInt(result1[1], 10, 64)

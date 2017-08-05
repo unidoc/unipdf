@@ -34,6 +34,20 @@ func (parser *PdfParser) Inspect() (map[string]int, error) {
 	return parser.inspect()
 }
 
+// GetObjectNums returns a sorted list of object numbers of the PDF objects in the file.
+func (parser *PdfParser) GetObjectNums() []int {
+	objNums := []int{}
+	for _, x := range parser.xrefs {
+		objNums = append(objNums, x.objectNumber)
+	}
+
+	// Sort the object numbers to give consistent ordering of PDF objects in output.
+	// Needed since parser.xrefs is a map.
+	sort.Ints(objNums)
+
+	return objNums
+}
+
 func getUniDocVersion() string {
 	return common.Version
 }

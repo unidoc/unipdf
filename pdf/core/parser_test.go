@@ -151,7 +151,7 @@ func TestBoolParsing(t *testing.T) {
 			return
 		}
 		if bool(val) != expected {
-			t.Errorf("bool not as expected (%t)", val)
+			t.Errorf("bool not as expected (got %t, expected %t)", bool(val), expected)
 			return
 		}
 	}
@@ -188,7 +188,7 @@ func TestNumericParsing1(t *testing.T) {
 			return
 		}
 		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx)
+			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
 		}
 	}
 
@@ -230,7 +230,7 @@ func TestNumericParsing2(t *testing.T) {
 			return
 		}
 		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx)
+			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
 		}
 	}
 }
@@ -265,7 +265,7 @@ func TestNumericParsing3(t *testing.T) {
 			return
 		}
 		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx)
+			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
 		}
 	}
 }
