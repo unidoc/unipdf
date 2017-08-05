@@ -135,6 +135,10 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 		return NewPdfColorDeviceRGB(0.0, 0.0, 0.0), nil
 	case *PdfColorspaceDeviceCMYK:
 		return NewPdfColorDeviceCMYK(0.0, 0.0, 0.0, 1.0), nil
+	case *PdfColorspaceCalGray:
+		return NewPdfColorCalGray(0.0), nil
+	case *PdfColorspaceCalRGB:
+		return NewPdfColorCalRGB(0.0, 0.0, 0.0), nil
 	case *PdfColorspaceLab:
 		l := 0.0
 		a := 0.0
