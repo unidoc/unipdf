@@ -264,9 +264,12 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
-
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
+			}
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -293,6 +296,10 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+			}
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
 			}
 
 			pOutBuffer := bytes.NewBuffer(nil)
@@ -660,6 +667,11 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
 			}
+
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
+			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
 			pOutBuffer := bytes.NewBuffer(nil)
@@ -693,7 +705,7 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 			if rowLength > len(outData) {
-				common.Log.Trace("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
 				return nil, errors.New("Range check error")
 			}
 
