@@ -646,6 +646,11 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			common.Log.Trace("Tiff encoding")
 
 			rowLength := int(this.Columns) * this.Colors
+			if rowLength < 1 {
+				// No data. Return empty set.
+				return []byte{}, nil
+			}
+
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
@@ -679,6 +684,10 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			// Columns represents the number of samples per row; Each sample can contain multiple color
 			// components.
 			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
+			if rowLength < 1 {
+				// No data. Return empty set.
+				return []byte{}, nil
+			}
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)

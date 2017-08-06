@@ -70,6 +70,7 @@ func TestLZWEncoding(t *testing.T) {
 		return
 	}
 }
+
 // Test run length encoding.
 func TestRunLengthEncoding(t *testing.T) {
 	rawStream := []byte("this is a dummy text with some \x01\x02\x03 binary data")
