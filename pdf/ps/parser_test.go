@@ -16,7 +16,8 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.ConsoleLogger{})
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 func makeReaderForText(txt string) *bufio.Reader {
@@ -270,6 +271,8 @@ func TestFunctionOperations(t *testing.T) {
 
 func TestVariousCases(t *testing.T) {
 	testcases := []ComplexTestEntry{
+		// dup
+		{progText: "{ 99 dup }", expected: "[ int:99 int:99 ]"},
 		// ceiling
 		{progText: "{ 3.2 ceiling }", expected: "[ real:4.00000 ]"},
 		{progText: "{ -4.8 ceiling }", expected: "[ real:-4.00000 ]"},
@@ -389,6 +392,27 @@ func TestVariousCases(t *testing.T) {
 		{progText: "{ false false xor }", expected: "[ bool:false ]"},
 		{progText: "{ 7 3 xor }", expected: "[ int:4 ]"},
 		{progText: "{ 12 3 xor }", expected: "[ int:15 ]"},
+	}
+
+	for _, testcase := range testcases {
+		stack, err := quickTest(testcase.progText)
+		if err != nil {
+			t.Errorf("Error: %v", err)
+			return
+		}
+
+		// Maybe not the most robust test (comparing the strings), but should do.
+		if stack.DebugString() != testcase.expected {
+			t.Errorf("Wrong result: '%s' != '%s'", stack.DebugString(), testcase.expected)
+			return
+		}
+	}
+}
+
+func TestTintTransform1(t *testing.T) {
+	testcases := []ComplexTestEntry{
+		// from corpus epson_pages3_color_pages1.pdf.
+		{progText: "{ 0.0000 dup 0 mul exch dup 0 mul exch dup 0 mul exch 1 mul }", expected: "[ real:0.00000 real:0.00000 real:0.00000 real:0.00000 ]"},
 	}
 
 	for _, testcase := range testcases {

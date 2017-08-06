@@ -587,6 +587,12 @@ func (this *PSOperand) Dup(stack *PSStack) error {
 		return err
 	}
 
+	// Push it back.
+	err = stack.Push(obj)
+	if err != nil {
+		return err
+	}
+	// Push the duplicate.
 	err = stack.Push(obj.Duplicate())
 	return err
 }
