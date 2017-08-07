@@ -9,6 +9,8 @@ package ps
 
 import (
 	"fmt"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 // A PSExecutor has its own execution stack and is used to executre a PS routine (program).
@@ -52,6 +54,7 @@ func (this *PSExecutor) Execute(objects []PSObject) ([]PSObject, error) {
 
 	err := this.program.Exec(this.Stack)
 	if err != nil {
+		common.Log.Debug("Exec failed: %v", err)
 		return nil, err
 	}
 

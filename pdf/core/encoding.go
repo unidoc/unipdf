@@ -270,9 +270,12 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
-
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
+			}
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -299,6 +302,10 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+			}
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
 			}
 
 			pOutBuffer := bytes.NewBuffer(nil)
@@ -652,6 +659,11 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			common.Log.Trace("Tiff encoding")
 
 			rowLength := int(this.Columns) * this.Colors
+			if rowLength < 1 {
+				// No data. Return empty set.
+				return []byte{}, nil
+			}
+
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
@@ -660,6 +672,11 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 
 			if rowLength%this.Colors != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, this.Colors)
+			}
+
+			if rowLength > len(outData) {
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				return nil, errors.New("Range check error")
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -685,12 +702,16 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 			// Columns represents the number of samples per row; Each sample can contain multiple color
 			// components.
 			rowLength := int(this.Columns*this.Colors + 1) // 1 byte to specify predictor algorithms per row.
+			if rowLength < 1 {
+				// No data. Return empty set.
+				return []byte{}, nil
+			}
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
 			}
 			if rowLength > len(outData) {
-				common.Log.Trace("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
+				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
 				return nil, errors.New("Range check error")
 			}
 
