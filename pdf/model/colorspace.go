@@ -1413,19 +1413,19 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 
 	// L
 	l := vals[0]
-	if l < 0.0 || l > 1.0 {
+	if l < 0.0 || l > 100.0 {
 		return nil, errors.New("Range check")
 	}
 
 	// A
 	a := vals[1]
-	if a < 0.0 || a > 1.0 {
+	if a < -128.0 || a > 127.0 {
 		return nil, errors.New("Range check")
 	}
 
 	// B.
 	b := vals[2]
-	if b < 0.0 || b > 1.0 {
+	if b < -128.0 || b > 127.0 {
 		return nil, errors.New("Range check")
 	}
 
