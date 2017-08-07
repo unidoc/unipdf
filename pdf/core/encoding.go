@@ -13,6 +13,9 @@ package core
 // - RunLength
 // - ASCII Hex
 // - ASCII85
+// - CCITT Fax (dummy)
+// - JBIG2 (dummy)
+// - JPX (dummy)
 
 import (
 	"bytes"
@@ -40,6 +43,9 @@ const (
 	StreamEncodingFilterNameRunLength = "RunLengthDecode"
 	StreamEncodingFilterNameASCIIHex  = "ASCIIHexDecode"
 	StreamEncodingFilterNameASCII85   = "ASCII85Decode"
+	StreamEncodingFilterNameCCITTFax  = "CCITTFaxDecode"
+	StreamEncodingFilterNameJBIG2     = "JBIG2Decode"
+	StreamEncodingFilterNameJPX       = "JPXDecode"
 	StreamEncodingFilterNameRaw       = "Raw"
 )
 
@@ -239,7 +245,7 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 	common.Log.Trace("FlateDecode stream")
 	common.Log.Trace("Predictor: %d", this.Predictor)
 	if this.BitsPerComponent != 8 {
-		return nil, fmt.Errorf("Invalid BitsPerComponent (only 8 supported)")
+		return nil, fmt.Errorf("Invalid BitsPerComponent=%d (only 8 supported)", this.BitsPerComponent)
 	}
 
 	outData, err := this.DecodeBytes(streamObj.Stream)
@@ -1508,6 +1514,117 @@ func (this *RawEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 
 func (this *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
+}
+
+//
+// CCITTFax encoder/decoder (dummy, for now)
+//
+type CCITTFaxEncoder struct{}
+
+func NewCCITTFaxEncoder() *CCITTFaxEncoder {
+	return &CCITTFaxEncoder{}
+}
+
+func (this *CCITTFaxEncoder) GetFilterName() string {
+	return StreamEncodingFilterNameCCITTFax
+}
+
+func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
+	return MakeDict()
+}
+
+func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return encoded, ErrNoCCITTFaxDecode
+}
+
+func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return streamObj.Stream, ErrNoCCITTFaxDecode
+}
+
+func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return data, ErrNoCCITTFaxDecode
+}
+
+//
+// JBIG2 encoder/decoder (dummy, for now)
+//
+type JBIG2Encoder struct{}
+
+func NewJBIG2Encoder() *JBIG2Encoder {
+	return &JBIG2Encoder{}
+}
+
+func (this *JBIG2Encoder) GetFilterName() string {
+	return StreamEncodingFilterNameJBIG2
+}
+
+func (this *JBIG2Encoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
+	return MakeDict()
+}
+
+func (this *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return encoded, ErrNoJBIG2Decode
+}
+
+func (this *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return streamObj.Stream, ErrNoJBIG2Decode
+}
+
+func (this *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return data, ErrNoJBIG2Decode
+}
+
+//
+// JPX encoder/decoder (dummy, for now)
+//
+type JPXEncoder struct{}
+
+func NewJPXEncoder() *JPXEncoder {
+	return &JPXEncoder{}
+}
+
+func (this *JPXEncoder) GetFilterName() string {
+	return StreamEncodingFilterNameJPX
+}
+
+func (this *JPXEncoder) MakeDecodeParams() PdfObject {
+	return nil
+}
+
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *JPXEncoder) MakeStreamDict() *PdfObjectDictionary {
+	return MakeDict()
+}
+
+func (this *JPXEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return encoded, ErrNoJPXDecode
+}
+
+func (this *JPXEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return streamObj.Stream, ErrNoJPXDecode
+}
+
+func (this *JPXEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+	return data, ErrNoJPXDecode
 }
 
 //
