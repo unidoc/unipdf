@@ -1413,19 +1413,34 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 
 	// L
 	l := vals[0]
-	if l < 0.0 || l > 1.0 {
+	if l < 0.0 || l > 100.0 {
+		common.Log.Debug("L out of range (got %v should be 0-100)", l)
 		return nil, errors.New("Range check")
 	}
 
 	// A
 	a := vals[1]
-	if a < 0.0 || a > 1.0 {
+	aMin := float64(-100)
+	aMax := float64(100)
+	if len(this.Range) > 1 {
+		aMin = this.Range[0]
+		aMax = this.Range[1]
+	}
+	if a < aMin || a > aMax {
+		common.Log.Debug("A out of range (got %v; range %v to %v)", a, aMin, aMax)
 		return nil, errors.New("Range check")
 	}
 
 	// B.
 	b := vals[2]
-	if b < 0.0 || b > 1.0 {
+	bMin := float64(-100)
+	bMax := float64(100)
+	if len(this.Range) > 3 {
+		bMin = this.Range[2]
+		bMax = this.Range[3]
+	}
+	if b < bMin || b > bMax {
+		common.Log.Debug("b out of range (got %v; range %v to %v)", b, bMin, bMax)
 		return nil, errors.New("Range check")
 	}
 
@@ -1462,6 +1477,8 @@ func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	}
 
 	// Get normalized L*, a*, b* values. [0-1]
+	// XXX/FIXME: According to the pdf standard these values are going to be in range 0-100, -100 - 100, -100 - 100
+	// by default.
 	LNorm := lab.L()
 	ANorm := lab.A()
 	BNorm := lab.B()
@@ -2207,7 +2224,15 @@ func (this *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, e
 
 // Convert an indexed image to RGB.
 func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
-	baseImage := img
+	//baseImage := img
+	// Make a new representation of the image to be converted with the base colorspace.
+	baseImage := Image{}
+	baseImage.Height = img.Height
+	baseImage.Width = img.Width
+	baseImage.alphaData = img.alphaData
+	baseImage.BitsPerComponent = img.BitsPerComponent
+	baseImage.hasAlpha = img.hasAlpha
+	baseImage.ColorComponents = img.ColorComponents
 
 	samples := img.GetSamples()
 	N := this.Base.GetNumComponents()
@@ -2371,11 +2396,15 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (Pdf
 	input := []float64{tint}
 	output, err := this.TintTransform.Evaluate(input)
 	if err != nil {
+		common.Log.Debug("Error, failed to evaluate: %v", err)
+		common.Log.Trace("Tint transform: %+v", this.TintTransform)
 		return nil, err
 	}
 
+	common.Log.Trace("Processing ColorFromFloats(%+v) on AlternateSpace: %#v", output, this.AlternateSpace)
 	color, err := this.AlternateSpace.ColorFromFloats(output)
 	if err != nil {
+		common.Log.Debug("Error, failed to evaluate in alternate space: %v", err)
 		return nil, err
 	}
 
@@ -2469,6 +2498,7 @@ func (this *PdfColorspaceDeviceN) String() string {
 	return "DeviceN"
 }
 
+// GetNumComponents returns the number of input color components, i.e. that are input to the tint transform.
 func (this *PdfColorspaceDeviceN) GetNumComponents() int {
 	return len(*this.ColorantNames)
 }
