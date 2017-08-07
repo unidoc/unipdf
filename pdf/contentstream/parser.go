@@ -232,6 +232,11 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			common.Log.Error("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
+			fVal = 0.0
+			err = nil
+		}
 		o := PdfObjectFloat(fVal)
 		return &o, err
 	} else {
