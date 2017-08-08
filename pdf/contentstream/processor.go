@@ -202,6 +202,8 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 	this.graphicsState.ColorNonStroking = NewPdfColorDeviceGray(0)
 
 	for _, op := range this.operations {
+		var err error
+
 		// Internal handling.
 		switch op.Operand {
 		case "q":
@@ -211,65 +213,34 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 
 		// Color operations (Table 74 p. 179)
 		case "CS":
-			err := this.handleCommand_CS(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_CS(op, resources)
 		case "cs":
-			err := this.handleCommand_cs(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_cs(op, resources)
 		case "SC":
-			err := this.handleCommand_SC(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_SC(op, resources)
 		case "SCN":
-			err := this.handleCommand_SCN(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_SCN(op, resources)
 		case "sc":
-			err := this.handleCommand_sc(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_sc(op, resources)
 		case "scn":
-			err := this.handleCommand_scn(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_scn(op, resources)
 		case "G":
-			err := this.handleCommand_G(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_G(op, resources)
 		case "g":
-			err := this.handleCommand_g(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_g(op, resources)
 		case "RG":
-			err := this.handleCommand_RG(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_RG(op, resources)
 		case "rg":
-			err := this.handleCommand_rg(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_rg(op, resources)
 		case "K":
-			err := this.handleCommand_K(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_K(op, resources)
 		case "k":
-			err := this.handleCommand_k(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_k(op, resources)
+		}
+		if err != nil {
+			common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
+			common.Log.Debug("Operand: %#v", op.Operand)
+			return err
 		}
 
 		// Check if have external handler also, and process if so.
@@ -440,6 +411,7 @@ func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
 	if err != nil {
+		common.Log.Debug("ERROR: Fail to get color from params: %+v (CS is %+v)", op.Params, cs)
 		return err
 	}
 
