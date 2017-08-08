@@ -1539,17 +1539,17 @@ func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
 }
 
 func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	panic(ErrNoCCITTFaxDecode)
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return encoded, ErrNoCCITTFaxDecode
 }
 
 func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	panic(ErrNoCCITTFaxDecode)
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return streamObj.Stream, ErrNoCCITTFaxDecode
 }
 
 func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	panic(ErrNoCCITTFaxDecode)
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return data, ErrNoCCITTFaxDecode
 }
 
@@ -1576,14 +1576,17 @@ func (this *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 }
 
 func (this *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return encoded, ErrNoJBIG2Decode
 }
 
 func (this *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return streamObj.Stream, ErrNoJBIG2Decode
 }
 
 func (this *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return data, ErrNoJBIG2Decode
 }
 
@@ -1610,14 +1613,17 @@ func (this *JPXEncoder) MakeStreamDict() *PdfObjectDictionary {
 }
 
 func (this *JPXEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return encoded, ErrNoJPXDecode
 }
 
 func (this *JPXEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return streamObj.Stream, ErrNoJPXDecode
 }
 
 func (this *JPXEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return data, ErrNoJPXDecode
 }
 
