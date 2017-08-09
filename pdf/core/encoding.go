@@ -151,6 +151,14 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	if decodeParams == nil {
 		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
+			if arr, isArr := obj.(*PdfObjectArray); isArr {
+				if len(*arr) != 1 {
+					common.Log.Debug("Error: DecodeParms array length != 1 (%d)", len(*arr))
+					return nil, errors.New("Range check error")
+				}
+				obj = TraceToDirectObject((*arr)[0])
+			}
+
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
