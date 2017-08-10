@@ -189,7 +189,7 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 		common.Log.Debug("Required ColorSpace entry missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	cs, err := newPdfColorspaceFromPdfObject(obj)
+	cs, err := NewPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		common.Log.Debug("Failed loading colorspace: %v", err)
 		return nil, err

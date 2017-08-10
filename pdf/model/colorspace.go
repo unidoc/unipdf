@@ -50,7 +50,9 @@ type PdfColorspace interface {
 type PdfColor interface {
 }
 
-func newPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
+// NewPdfColorspaceFromPdfObject loads a PdfColorspace from a PdfObject.  Returns an error if there is
+// a failure in loading.
+func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	var container *PdfIndirectObject
 	var csName *PdfObjectName
 	var csArray *PdfObjectArray
@@ -1476,24 +1478,10 @@ func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 		return nil, errors.New("Type check error")
 	}
 
-	// Get normalized L*, a*, b* values. [0-1]
-	// XXX/FIXME: According to the pdf standard these values are going to be in range 0-100, -100 - 100, -100 - 100
-	// by default.
-	LNorm := lab.L()
-	ANorm := lab.A()
-	BNorm := lab.B()
-
-	// Rescale them.  Not very clearly specified.
-	// L: [0,1] -> [0, 100]
-	// a*: [0,1] -> [-128, 127] or Range if specified
-	// b*: [0,1] -> [-100, 100] or Range if specified
-	LStar := float64(LNorm * 100.0)
-	rng := []float64{-128.0, 127.0}
-	if this.Range != nil {
-		rng = this.Range
-	}
-	AStar := interpolate(ANorm, 0.0, 1.0, rng[0], rng[1])
-	BStar := interpolate(BNorm, 0.0, 1.0, rng[0], rng[1])
+	// Get L*, a*, b* values.
+	LStar := lab.L()
+	AStar := lab.A()
+	BStar := lab.B()
 
 	// Convert L*,a*,b* -> L, M, N
 	L := (LStar+16)/116 + AStar/500
@@ -1531,6 +1519,17 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 
 	rgbImage := img
 
+	// Each n-bit unit within the bit stream shall be interpreted as an unsigned integer in the range 0 to 2n- 1,
+	// with the high-order bit first.
+	// The image dictionary’s Decode entry maps this integer to a colour component value, equivalent to what could be
+	// used with colour operators such as sc or g.
+
+	componentRanges := img.decode
+	if len(componentRanges) != 6 {
+		common.Log.Debug("Error: Image in CS Lab with len(Decode) != 6 (%d)", len(componentRanges))
+		return rgbImage, errors.New("Range check error")
+	}
+
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
@@ -1541,17 +1540,14 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		ANorm := float64(samples[i+1]) / maxVal
 		BNorm := float64(samples[i+2]) / maxVal
 
-		// Rescale them.  Not very clearly specified.
-		// L: [0,1] -> [0, 100]
-		// a*: [0,1] -> [-128, 127] or Range if specified
-		// b*: [0,1] -> [-100, 100] or Range if specified
-		LStar := float64(LNorm * 100.0)
-		rng := []float64{-128.0, 127.0}
-		if this.Range != nil {
-			rng = this.Range
-		}
-		AStar := interpolate(ANorm, 0.0, 1.0, rng[0], rng[1])
-		BStar := interpolate(BNorm, 0.0, 1.0, rng[0], rng[1])
+		// TODO: Fall back to this.Range if img.decode not specified or erroneous?
+		//if this.Range != nil {
+		//  Add the range for L which is not defined in CS's Range but is always 0-100.
+		//	componentRanges := append([]float64{0, 100}, componentRanges...)
+		//}
+		LStar := interpolate(LNorm, 0.0, 1.0, componentRanges[0], componentRanges[1])
+		AStar := interpolate(ANorm, 0.0, 1.0, componentRanges[2], componentRanges[3])
+		BStar := interpolate(BNorm, 0.0, 1.0, componentRanges[4], componentRanges[5])
 
 		// Convert L*,a*,b* -> L, M, N
 		L := (LStar+16)/116 + AStar/500
@@ -1708,7 +1704,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 	cs.N = int(*n)
 
 	if obj := dict.Get("Alternate"); obj != nil {
-		alternate, err := newPdfColorspaceFromPdfObject(obj)
+		alternate, err := NewPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -1962,7 +1958,7 @@ func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	if len(*array) > 1 {
 		obj = (*array)[1]
 		obj = TraceToDirectObject(obj)
-		baseCS, err := newPdfColorspaceFromPdfObject(obj)
+		baseCS, err := NewPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -2123,7 +2119,7 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 		return nil, ErrRangeError
 	}
 
-	baseCs, err := newPdfColorspaceFromPdfObject(obj)
+	baseCs, err := NewPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -2353,7 +2349,7 @@ func newPdfColorspaceSpecialSeparationFromPdfObject(obj PdfObject) (*PdfColorspa
 
 	// Get base colormap.
 	obj = (*array)[2]
-	alternativeCs, err := newPdfColorspaceFromPdfObject(obj)
+	alternativeCs, err := NewPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -2545,7 +2541,7 @@ func newPdfColorspaceDeviceNFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceN,
 
 	// Get base colormap.
 	obj = (*csArray)[2]
-	alternativeCs, err := newPdfColorspaceFromPdfObject(obj)
+	alternativeCs, err := NewPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		return nil, err
 	}

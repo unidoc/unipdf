@@ -13,26 +13,26 @@ import (
 	"image/jpeg"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // Creates the encoder for the inline image's Filter and DecodeParms.
-func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEncoder, error) {
+func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.StreamEncoder, error) {
 	if inlineImage.Filter == nil {
 		// No filter, return raw data back.
-		return NewRawEncoder(), nil
+		return core.NewRawEncoder(), nil
 	}
 
 	// The filter should be a name or an array with a list of filter names.
-	filterName, ok := inlineImage.Filter.(*PdfObjectName)
+	filterName, ok := inlineImage.Filter.(*core.PdfObjectName)
 	if !ok {
-		array, ok := inlineImage.Filter.(*PdfObjectArray)
+		array, ok := inlineImage.Filter.(*core.PdfObjectArray)
 		if !ok {
 			return nil, fmt.Errorf("Filter not a Name or Array object")
 		}
 		if len(*array) == 0 {
 			// Empty array -> indicates raw filter (no filter).
-			return NewRawEncoder(), nil
+			return core.NewRawEncoder(), nil
 		}
 
 		if len(*array) != 1 {
@@ -48,16 +48,16 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEnc
 
 		// Single element.
 		filterObj := (*array)[0]
-		filterName, ok = filterObj.(*PdfObjectName)
+		filterName, ok = filterObj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Filter array member not a Name object")
 		}
 	}
 
 	if *filterName == "AHx" {
-		return NewASCIIHexEncoder(), nil
+		return core.NewASCIIHexEncoder(), nil
 	} else if *filterName == "A85" {
-		return NewASCII85Encoder(), nil
+		return core.NewASCII85Encoder(), nil
 	} else if *filterName == "DCT" {
 		return newDCTEncoderFromInlineImage(inlineImage)
 	} else if *filterName == "Fl" {
@@ -65,7 +65,7 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEnc
 	} else if *filterName == "LZW" {
 		return newLZWEncoderFromInlineImage(inlineImage, nil)
 	} else if *filterName == "CCF" {
-		return NewCCITTFaxEncoder(), nil
+		return core.NewCCITTFaxEncoder(), nil
 	} else {
 		common.Log.Debug("Unsupported inline image encoding filter name : %s", *filterName)
 		return nil, errors.New("Unsupported inline encoding method")
@@ -75,14 +75,14 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEnc
 // Create a new flate decoder from an inline image object, getting all the encoding parameters
 // from the DecodeParms stream object dictionary entry that can be provided optionally, usually
 // only when a multi filter is used.
-func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *PdfObjectDictionary) (*FlateEncoder, error) {
-	encoder := NewFlateEncoder()
+func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *core.PdfObjectDictionary) (*core.FlateEncoder, error) {
+	encoder := core.NewFlateEncoder()
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
 		obj := inlineImage.DecodeParms
 		if obj != nil {
-			dp, isDict := obj.(*PdfObjectDictionary)
+			dp, isDict := obj.(*core.PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
 				return nil, fmt.Errorf("Invalid DecodeParms")
@@ -100,7 +100,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 	if obj == nil {
 		common.Log.Debug("Error: Predictor missing from DecodeParms - Continue with default (1)")
 	} else {
-		predictor, ok := obj.(*PdfObjectInteger)
+		predictor, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
 			return nil, fmt.Errorf("Invalid Predictor")
@@ -111,7 +111,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 	// Bits per component.  Use default if not specified (8).
 	obj = decodeParams.Get("BitsPerComponent")
 	if obj != nil {
-		bpc, ok := obj.(*PdfObjectInteger)
+		bpc, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
 			return nil, fmt.Errorf("Invalid BitsPerComponent")
@@ -124,7 +124,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		encoder.Columns = 1
 		obj = decodeParams.Get("Columns")
 		if obj != nil {
-			columns, ok := obj.(*PdfObjectInteger)
+			columns, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
 			}
@@ -137,7 +137,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		encoder.Colors = 1
 		obj := decodeParams.Get("Colors")
 		if obj != nil {
-			colors, ok := obj.(*PdfObjectInteger)
+			colors, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")
 			}
@@ -150,14 +150,14 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 
 // Create a new LZW encoder/decoder based on an inline image object, getting all the encoding parameters
 // from the DecodeParms stream object dictionary entry.
-func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *PdfObjectDictionary) (*LZWEncoder, error) {
+func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *core.PdfObjectDictionary) (*core.LZWEncoder, error) {
 	// Start with default settings.
-	encoder := NewLZWEncoder()
+	encoder := core.NewLZWEncoder()
 
 	// If decodeParams not provided, see if we can get from the inline image directly.
 	if decodeParams == nil {
 		if inlineImage.DecodeParms != nil {
-			dp, isDict := inlineImage.DecodeParms.(*PdfObjectDictionary)
+			dp, isDict := inlineImage.DecodeParms.(*core.PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", inlineImage.DecodeParms)
 				return nil, fmt.Errorf("Invalid DecodeParms")
@@ -182,7 +182,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 	// We will check in the decodeParms for now, we can adjust later if we come across cases of this.
 	obj := decodeParams.Get("EarlyChange")
 	if obj != nil {
-		earlyChange, ok := obj.(*PdfObjectInteger)
+		earlyChange, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
 			return nil, fmt.Errorf("Invalid EarlyChange")
@@ -198,7 +198,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 
 	obj = decodeParams.Get("Predictor")
 	if obj != nil {
-		predictor, ok := obj.(*PdfObjectInteger)
+		predictor, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
 			return nil, fmt.Errorf("Invalid Predictor")
@@ -209,7 +209,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 	// Bits per component.  Use default if not specified (8).
 	obj = decodeParams.Get("BitsPerComponent")
 	if obj != nil {
-		bpc, ok := obj.(*PdfObjectInteger)
+		bpc, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
 			return nil, fmt.Errorf("Invalid BitsPerComponent")
@@ -222,7 +222,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		encoder.Columns = 1
 		obj = decodeParams.Get("Columns")
 		if obj != nil {
-			columns, ok := obj.(*PdfObjectInteger)
+			columns, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor column invalid")
 			}
@@ -235,7 +235,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		encoder.Colors = 1
 		obj = decodeParams.Get("Colors")
 		if obj != nil {
-			colors, ok := obj.(*PdfObjectInteger)
+			colors, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
 				return nil, fmt.Errorf("Predictor colors not an integer")
 			}
@@ -249,9 +249,9 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 
 // Create a new DCT encoder/decoder based on an inline image, getting all the encoding parameters
 // from the stream object dictionary entry and the image data itself.
-func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*DCTEncoder, error) {
+func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*core.DCTEncoder, error) {
 	// Start with default settings.
-	encoder := NewDCTEncoder()
+	encoder := core.NewDCTEncoder()
 
 	bufReader := bytes.NewReader(inlineImage.stream)
 
@@ -295,25 +295,25 @@ func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*DCTEn
 
 // Create a new multi-filter encoder/decoder based on an inline image, getting all the encoding parameters
 // from the filter specification and the DecodeParms (DP) dictionaries.
-func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*MultiEncoder, error) {
-	mencoder := NewMultiEncoder()
+func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*core.MultiEncoder, error) {
+	mencoder := core.NewMultiEncoder()
 
 	// Prepare the decode params array (one for each filter type)
 	// Optional, not always present.
-	var decodeParamsDict *PdfObjectDictionary
-	decodeParamsArray := []PdfObject{}
+	var decodeParamsDict *core.PdfObjectDictionary
+	decodeParamsArray := []core.PdfObject{}
 	if obj := inlineImage.DecodeParms; obj != nil {
 		// If it is a dictionary, assume it applies to all
-		dict, isDict := obj.(*PdfObjectDictionary)
+		dict, isDict := obj.(*core.PdfObjectDictionary)
 		if isDict {
 			decodeParamsDict = dict
 		}
 
 		// If it is an array, assume there is one for each
-		arr, isArray := obj.(*PdfObjectArray)
+		arr, isArray := obj.(*core.PdfObjectArray)
 		if isArray {
 			for _, dictObj := range *arr {
-				if dict, is := dictObj.(*PdfObjectDictionary); is {
+				if dict, is := dictObj.(*core.PdfObjectDictionary); is {
 					decodeParamsArray = append(decodeParamsArray, dict)
 				} else {
 					decodeParamsArray = append(decodeParamsArray, nil)
@@ -327,18 +327,18 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*Mul
 		return nil, fmt.Errorf("Filter missing")
 	}
 
-	array, ok := obj.(*PdfObjectArray)
+	array, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		return nil, fmt.Errorf("Multi filter can only be made from array")
 	}
 
 	for idx, obj := range *array {
-		name, ok := obj.(*PdfObjectName)
+		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Multi filter array element not a name")
 		}
 
-		var dp PdfObject
+		var dp core.PdfObject
 
 		// If decode params dict is set, use it.  Otherwise take from array..
 		if decodeParamsDict != nil {
@@ -354,29 +354,29 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*Mul
 			}
 		}
 
-		var dParams *PdfObjectDictionary
-		if dict, is := dp.(*PdfObjectDictionary); is {
+		var dParams *core.PdfObjectDictionary
+		if dict, is := dp.(*core.PdfObjectDictionary); is {
 			dParams = dict
 		}
 
-		if *name == StreamEncodingFilterNameFlate {
+		if *name == core.StreamEncodingFilterNameFlate {
 			// XXX: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromInlineImage(inlineImage, dParams)
 			if err != nil {
 				return nil, err
 			}
 			mencoder.AddEncoder(encoder)
-		} else if *name == StreamEncodingFilterNameLZW {
+		} else if *name == core.StreamEncodingFilterNameLZW {
 			encoder, err := newLZWEncoderFromInlineImage(inlineImage, dParams)
 			if err != nil {
 				return nil, err
 			}
 			mencoder.AddEncoder(encoder)
-		} else if *name == StreamEncodingFilterNameASCIIHex {
-			encoder := NewASCIIHexEncoder()
+		} else if *name == core.StreamEncodingFilterNameASCIIHex {
+			encoder := core.NewASCIIHexEncoder()
 			mencoder.AddEncoder(encoder)
-		} else if *name == StreamEncodingFilterNameASCII85 {
-			encoder := NewASCII85Encoder()
+		} else if *name == core.StreamEncodingFilterNameASCII85 {
+			encoder := core.NewASCII85Encoder()
 			mencoder.AddEncoder(encoder)
 		} else {
 			common.Log.Error("Unsupported filter %s", *name)
