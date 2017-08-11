@@ -63,7 +63,7 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 		common.Log.Debug("Error: Invalid cs array first element not a name (array: %#v)", *arr)
 		return nil, errors.New("Type check error")
 	}
-	if *name != "I" {
+	if *name != "I" && *name != "Indexed" {
 		common.Log.Debug("Error: Invalid cs array first element != I (got: %v)", *name)
 		return nil, errors.New("Range check error")
 	}
@@ -74,17 +74,17 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 		common.Log.Debug("Error: Invalid cs array 2nd element not a name (array: %#v)", *arr)
 		return nil, errors.New("Type check error")
 	}
-	if *name != "G" && *name != "RGB" && *name != "CMYK" {
+	if *name != "G" && *name != "RGB" && *name != "CMYK" && *name != "DeviceGray" && *name != "DeviceRGB" && *name != "DeviceCMYK" {
 		common.Log.Debug("Error: Invalid cs array 2nd element != G/RGB/CMYK (got: %v)", *name)
 		return nil, errors.New("Range check error")
 	}
 	basename := ""
 	switch *name {
-	case "G":
+	case "G", "DeviceGray":
 		basename = "DeviceGray"
-	case "RGB":
+	case "RGB", "DeviceRGB":
 		basename = "DeviceRGB"
-	case "CMYK":
+	case "CMYK", "DeviceCMYK":
 		basename = "DeviceCMYK"
 	}
 
