@@ -45,6 +45,9 @@ type PdfColorspace interface {
 	ToPdfObject() PdfObject
 	ColorFromPdfObjects(objects []PdfObject) (PdfColor, error)
 	ColorFromFloats(vals []float64) (PdfColor, error)
+
+	// Returns the decode array for the CS, i.e. the range of each component.
+	DecodeArray() []float64
 }
 
 type PdfColor interface {
@@ -225,6 +228,11 @@ func (this *PdfColorspaceDeviceGray) GetNumComponents() int {
 	return 1
 }
 
+// DecodeArray returns the range of color component values in DeviceGray colorspace.
+func (this *PdfColorspaceDeviceGray) DecodeArray() []float64 {
+	return []float64{0, 1.0}
+}
+
 func (this *PdfColorspaceDeviceGray) ToPdfObject() PdfObject {
 	return MakeName("DeviceGray")
 }
@@ -354,6 +362,11 @@ func (this *PdfColorspaceDeviceRGB) String() string {
 
 func (this *PdfColorspaceDeviceRGB) GetNumComponents() int {
 	return 3
+}
+
+// DecodeArray returns the range of color component values in DeviceRGB colorspace.
+func (this *PdfColorspaceDeviceRGB) DecodeArray() []float64 {
+	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
 func (this *PdfColorspaceDeviceRGB) ToPdfObject() PdfObject {
@@ -495,6 +508,11 @@ func (this *PdfColorspaceDeviceCMYK) String() string {
 
 func (this *PdfColorspaceDeviceCMYK) GetNumComponents() int {
 	return 4
+}
+
+// DecodeArray returns the range of color component values in DeviceCMYK colorspace.
+func (this *PdfColorspaceDeviceCMYK) DecodeArray() []float64 {
+	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
 func (this *PdfColorspaceDeviceCMYK) ToPdfObject() PdfObject {
@@ -680,6 +698,11 @@ func (this *PdfColorspaceCalGray) String() string {
 
 func (this *PdfColorspaceCalGray) GetNumComponents() int {
 	return 1
+}
+
+// DecodeArray returns the range of color component values in CalGray colorspace.
+func (this *PdfColorspaceCalGray) DecodeArray() []float64 {
+	return []float64{0.0, 1.0}
 }
 
 func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray, error) {
@@ -956,6 +979,11 @@ func (this *PdfColorspaceCalRGB) String() string {
 
 func (this *PdfColorspaceCalRGB) GetNumComponents() int {
 	return 3
+}
+
+// DecodeArray returns the range of color component values in CalRGB colorspace.
+func (this *PdfColorspaceCalRGB) DecodeArray() []float64 {
+	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
 func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, error) {
@@ -1272,6 +1300,21 @@ func (this *PdfColorspaceLab) GetNumComponents() int {
 	return 3
 }
 
+// DecodeArray returns the range of color component values in the Lab colorspace.
+func (this *PdfColorspaceLab) DecodeArray() []float64 {
+	// Range for L
+	decode := []float64{0, 100}
+
+	// Range for A,B specified by range or default
+	if this.Range != nil && len(this.Range) == 4 {
+		decode = append(decode, this.Range...)
+	} else {
+		decode = append(decode, -100, 100, -100, 100)
+	}
+
+	return decode
+}
+
 // require parameters?
 func NewPdfColorspaceLab() *PdfColorspaceLab {
 	cs := &PdfColorspaceLab{}
@@ -1526,8 +1569,9 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 
 	componentRanges := img.decode
 	if len(componentRanges) != 6 {
-		common.Log.Debug("Error: Image in CS Lab with len(Decode) != 6 (%d)", len(componentRanges))
-		return rgbImage, errors.New("Range check error")
+		// If image's Decode not appropriate, fall back to default decode array.
+		common.Log.Trace("Image - Lab Decode range != 6... use [0 100 amin amax bmin bmax] default decode array")
+		componentRanges = this.DecodeArray()
 	}
 
 	samples := img.GetSamples()
@@ -1540,11 +1584,6 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		ANorm := float64(samples[i+1]) / maxVal
 		BNorm := float64(samples[i+2]) / maxVal
 
-		// TODO: Fall back to this.Range if img.decode not specified or erroneous?
-		//if this.Range != nil {
-		//  Add the range for L which is not defined in CS's Range but is always 0-100.
-		//	componentRanges := append([]float64{0, 100}, componentRanges...)
-		//}
 		LStar := interpolate(LNorm, 0.0, 1.0, componentRanges[0], componentRanges[1])
 		AStar := interpolate(ANorm, 0.0, 1.0, componentRanges[2], componentRanges[3])
 		BStar := interpolate(BNorm, 0.0, 1.0, componentRanges[4], componentRanges[5])
@@ -1639,6 +1678,11 @@ type PdfColorspaceICCBased struct {
 
 func (this *PdfColorspaceICCBased) GetNumComponents() int {
 	return this.N
+}
+
+// DecodeArray returns the range of color component values in the ICCBased colorspace.
+func (this *PdfColorspaceICCBased) DecodeArray() []float64 {
+	return this.Range
 }
 
 func (this *PdfColorspaceICCBased) String() string {
@@ -1919,6 +1963,11 @@ func (this *PdfColorspaceSpecialPattern) GetNumComponents() int {
 	return this.UnderlyingCS.GetNumComponents()
 }
 
+// DecodeArray returns an empty slice as there are no components associated with pattern colorspace.
+func (this *PdfColorspaceSpecialPattern) DecodeArray() []float64 {
+	return []float64{}
+}
+
 func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceSpecialPattern, error) {
 	common.Log.Trace("New Pattern CS from obj: %s %T", obj.String(), obj)
 	cs := NewPdfColorspaceSpecialPattern()
@@ -2080,6 +2129,11 @@ func (this *PdfColorspaceSpecialIndexed) String() string {
 
 func (this *PdfColorspaceSpecialIndexed) GetNumComponents() int {
 	return 1
+}
+
+// DecodeArray returns the component range values for the Indexed colorspace.
+func (this *PdfColorspaceSpecialIndexed) DecodeArray() []float64 {
+	return []float64{0, float64(this.HiVal)}
 }
 
 func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceSpecialIndexed, error) {
@@ -2308,6 +2362,11 @@ func (this *PdfColorspaceSpecialSeparation) GetNumComponents() int {
 	return 1
 }
 
+// DecodeArray returns the component range values for the Separation colorspace.
+func (this *PdfColorspaceSpecialSeparation) DecodeArray() []float64 {
+	return []float64{0, 1.0}
+}
+
 // Object is an array or indirect object containing the array.
 func newPdfColorspaceSpecialSeparationFromPdfObject(obj PdfObject) (*PdfColorspaceSpecialSeparation, error) {
 	cs := NewPdfColorspaceSpecialSeparation()
@@ -2428,6 +2487,8 @@ func (this *PdfColorspaceSpecialSeparation) ColorToRGB(color PdfColor) (PdfColor
 	return this.AlternateSpace.ColorToRGB(color)
 }
 
+// ImageToRGB converts an image with samples in Separation CS to an image with samples specified in
+// DeviceRGB CS.
 func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 	altImage := img
 
@@ -2438,6 +2499,8 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 	common.Log.Trace("samples in: %d", len(samples))
 	common.Log.Trace("TintTransform: %+v", this.TintTransform)
 
+	altDecode := this.AlternateSpace.DecodeArray()
+
 	altSamples := []uint32{}
 	// Convert tints to color data in the alternate colorspace.
 	for i := 0; i < len(samples); i++ {
@@ -2446,24 +2509,28 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 
 		// Convert the tint value to the alternate space value.
 		outputs, err := this.TintTransform.Evaluate([]float64{tint})
-		//common.Log.Trace("Converting tint value: %f -> [% f]", tint, outputs)
+		//common.Log.Trace("%v Converting tint value: %f -> [% f]", this.AlternateSpace, tint, outputs)
 
 		if err != nil {
 			return img, err
 		}
 
-		for _, val := range outputs {
-			// Clip.
-			val = math.Min(math.Max(0, val), 1.0)
-			// Rescale to [0, maxVal]
-			altComponent := uint32(val * maxVal)
-			altSamples = append(altSamples, altComponent)
+		for i, val := range outputs {
+			// Convert component value to 0-1 range.
+			altVal := interpolate(val, altDecode[i*2], altDecode[i*2+1], 0, 1)
 
+			// Rescale to [0, maxVal]
+			altComponent := uint32(altVal * maxVal)
+
+			altSamples = append(altSamples, altComponent)
 		}
 	}
 	common.Log.Trace("Samples out: %d", len(altSamples))
 	altImage.SetSamples(altSamples)
 	altImage.ColorComponents = this.AlternateSpace.GetNumComponents()
+
+	// Set the image's decode parameters for interpretation in the alternative CS.
+	altImage.decode = altDecode
 
 	// Convert to RGB via the alternate colorspace.
 	return this.AlternateSpace.ImageToRGB(altImage)
@@ -2497,6 +2564,16 @@ func (this *PdfColorspaceDeviceN) String() string {
 // GetNumComponents returns the number of input color components, i.e. that are input to the tint transform.
 func (this *PdfColorspaceDeviceN) GetNumComponents() int {
 	return len(*this.ColorantNames)
+}
+
+// DecodeArray returns the component range values for the DeviceN colorspace.
+// [0 1.0 0 1.0 ...] for each color component.
+func (this *PdfColorspaceDeviceN) DecodeArray() []float64 {
+	decode := []float64{}
+	for i := 0; i < this.GetNumComponents(); i++ {
+		decode = append(decode, 0.0, 1.0)
+	}
+	return decode
 }
 
 func newPdfColorspaceDeviceNFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceN, error) {
