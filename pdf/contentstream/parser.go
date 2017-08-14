@@ -241,6 +241,11 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 		return &o, err
 	} else {
 		intVal, err := strconv.ParseInt(numStr, 10, 64)
+		if err != nil {
+			common.Log.Debug("Error parsing integer %q err=%v. Using 0. Output may be incorrect", numStr, err)
+			intVal = 0
+			err = nil
+		}
 		o := PdfObjectInteger(intVal)
 		return &o, err
 	}

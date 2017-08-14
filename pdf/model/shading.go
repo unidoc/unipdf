@@ -524,18 +524,16 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Decode = arr
 
-	// Function (required).
+	// Function (optional).
 	obj = dict.Get("Function")
-	if obj == nil {
-		common.Log.Debug("Required attribute missing:  Function")
-		return nil, errors.New("Required attribute missing")
+	if obj != nil {
+		function, err := newPdfFunctionFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error parsing function: %v", err)
+			return nil, err
+		}
+		shading.Function = function
 	}
-	function, err := newPdfFunctionFromPdfObject(obj)
-	if err != nil {
-		common.Log.Debug("Error parsing function: %v", err)
-		return nil, err
-	}
-	shading.Function = function
 
 	return &shading, nil
 }

@@ -359,7 +359,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 			dParams = dict
 		}
 
-		if *name == core.StreamEncodingFilterNameFlate {
+		if *name == core.StreamEncodingFilterNameFlate || *name == "Fl" {
 			// XXX: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromInlineImage(inlineImage, dParams)
 			if err != nil {
@@ -375,7 +375,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 		} else if *name == core.StreamEncodingFilterNameASCIIHex {
 			encoder := core.NewASCIIHexEncoder()
 			mencoder.AddEncoder(encoder)
-		} else if *name == core.StreamEncodingFilterNameASCII85 {
+		} else if *name == core.StreamEncodingFilterNameASCII85 || *name == "A85" {
 			encoder := core.NewASCII85Encoder()
 			mencoder.AddEncoder(encoder)
 		} else {

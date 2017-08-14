@@ -327,17 +327,17 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				return nil, fmt.Errorf("Not expecting an operand")
 			}
 
-			if *param == "BPC" {
+			if *param == "BPC" || *param == "BitsPerComponent" {
 				im.BitsPerComponent = valueObj
-			} else if *param == "CS" {
+			} else if *param == "CS" || *param == "ColorSpace" {
 				im.ColorSpace = valueObj
 			} else if *param == "D" {
 				im.Decode = valueObj
-			} else if *param == "DP" {
+			} else if *param == "DP" || *param == "DecodeParms" {
 				im.DecodeParms = valueObj
-			} else if *param == "F" {
+			} else if *param == "F" || *param == "Filter" {
 				im.Filter = valueObj
-			} else if *param == "H" {
+			} else if *param == "H" || *param == "Height" {
 				im.Height = valueObj
 			} else if *param == "IM" {
 				im.ImageMask = valueObj
@@ -345,7 +345,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				im.Intent = valueObj
 			} else if *param == "I" {
 				im.Interpolate = valueObj
-			} else if *param == "W" {
+			} else if *param == "W" || *param == "Width" {
 				im.Width = valueObj
 			} else {
 				return nil, fmt.Errorf("Unknown inline image parameter %s", *param)
