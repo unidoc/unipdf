@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Times-BoldItalic.  Implements Font interface.
+// fontTimesBoldItalic represents the Times-BoldItalic font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontTimesBoldItalic struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBoldItalic() fontTimesBoldItalic {
 	font := fontTimesBoldItalic{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontTimesBoldItalic) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontTimesBoldItalic) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontTimesBoldItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := timesBoldItalicCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontTimesBoldItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, 
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontTimesBoldItalic) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontTimesBoldItalic) ToPdfObject() core.PdfObject {
 }
 
 // Times-BoldItalic font metics loaded from afms/Times-BoldItalic.afm.  See afms/MustRead.html for license information.
-var timesBoldItalicCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var timesBoldItalicCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 944.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},

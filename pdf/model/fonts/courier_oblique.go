@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Courier-Oblique.  Implements Font interface.
+// fontCourierOblique represents the Courier-Oblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontCourierOblique struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontCourierOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierOblique() fontCourierOblique {
 	font := fontCourierOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontCourierOblique) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontCourierOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontCourierOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierObliqueCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontCourierOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, b
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontCourierOblique) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontCourierOblique) ToPdfObject() core.PdfObject {
 }
 
 // Courier-Oblique font metics loaded from afms/Courier-Oblique.afm.  See afms/MustRead.html for license information.
-var courierObliqueCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var courierObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Times-Bold.  Implements Font interface.
+// fontTimesBold represents the Times-Bold font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontTimesBold struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBold() fontTimesBold {
 	font := fontTimesBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontTimesBold) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := timesBoldCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontTimesBold) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontTimesBold) ToPdfObject() core.PdfObject {
 }
 
 // Times-Bold font metics loaded from afms/Times-Bold.afm.  See afms/MustRead.html for license information.
-var timesBoldCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var timesBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

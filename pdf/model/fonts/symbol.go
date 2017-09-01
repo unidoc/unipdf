@@ -14,22 +14,31 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Symbol.  Implements Font interface.
+// fontSymbol represents the Symbol font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontSymbol struct {
 	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
+// NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
 func NewFontSymbol() fontSymbol {
 	font := fontSymbol{}
+	font.encoder = textencoding.NewSymbolEncoder()
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontSymbol) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := symbolCharMetrics[glyph]
 	if !has {
@@ -39,6 +48,7 @@ func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontSymbol) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -55,7 +65,7 @@ func (font fontSymbol) ToPdfObject() core.PdfObject {
 }
 
 // Symbol font metics loaded from afms/Symbol.afm.  See afms/MustRead.html for license information.
-var symbolCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var symbolCharMetrics = map[string]CharMetrics{
 	"Alpha":          {GlyphName: "Alpha", Wx: 722.000000, Wy: 0.000000},
 	"Beta":           {GlyphName: "Beta", Wx: 667.000000, Wy: 0.000000},
 	"Chi":            {GlyphName: "Chi", Wx: 722.000000, Wy: 0.000000},

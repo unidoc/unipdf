@@ -45,7 +45,9 @@ type TtfType struct {
 	Xmin, Ymin, Xmax, Ymax int16
 	CapHeight              int16
 	Widths                 []uint16
-	Chars                  map[uint16]uint16
+
+	// Map of rune values (unicode) to glyph index.
+	Chars map[uint16]uint16
 }
 
 type ttfParser struct {
@@ -178,26 +180,8 @@ func (t *ttfParser) ParseHmtx() (err error) {
 	return
 }
 
-func (t *ttfParser) ParseCmap() (err error) {
-	var offset int64
-	if err = t.Seek("cmap"); err != nil {
-		return
-	}
-	t.Skip(2) // version
-	numTables := int(t.ReadUShort())
-	offset31 := int64(0)
-	for j := 0; j < numTables; j++ {
-		platformID := t.ReadUShort()
-		encodingID := t.ReadUShort()
-		offset = int64(t.ReadULong())
-		if platformID == 3 && encodingID == 1 {
-			offset31 = offset
-		}
-	}
-	if offset31 == 0 {
-		err = fmt.Errorf("no Unicode encoding found")
-		return
-	}
+// parseCmapSubtable31 parses information from an (3,1) subtable (Windows Unicode).
+func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
 	startCount := make([]uint16, 0, 8)
 	endCount := make([]uint16, 0, 8)
 	idDelta := make([]int16, 0, 8)
@@ -222,7 +206,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 	for j := 0; j < segCount; j++ {
 		idDelta = append(idDelta, t.ReadShort())
 	}
-	offset, _ = t.f.Seek(int64(0), os.SEEK_CUR)
+	offset, _ := t.f.Seek(int64(0), os.SEEK_CUR)
 	for j := 0; j < segCount; j++ {
 		idRangeOffset = append(idRangeOffset, t.ReadUShort())
 	}
@@ -255,6 +239,93 @@ func (t *ttfParser) ParseCmap() (err error) {
 			}
 		}
 	}
+	return
+}
+
+// parseCmapSubtable10 parses information from an (1,0) subtable (symbol).
+func (t *ttfParser) parseCmapSubtable10(offset10 int64) (err error) {
+
+	//startCount := make([]uint16, 0, 8)
+	//endCount := make([]uint16, 0, 8)
+	//idDelta := make([]int16, 0, 8)
+	//idRangeOffset := make([]uint16, 0, 8)
+
+	if t.rec.Chars == nil {
+		t.rec.Chars = make(map[uint16]uint16)
+	}
+
+	//t.rec.Chars = make(map[uint16]uint16)
+
+	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
+	format := t.ReadUShort()
+	if format != 6 {
+		err = fmt.Errorf("unexpected subtable format: %d", format)
+		return
+	}
+	length := t.ReadUShort()
+	language := t.ReadUShort()
+	firstCode := t.ReadUShort()
+	entryCount := t.ReadUShort()
+
+	curCode := firstCode
+	for i := 0; i < int(entryCount); i++ {
+		glyphId := t.ReadUShort()
+		t.rec.Chars[curCode] = glyphId
+		fmt.Printf("%d -> %d\n", curCode, glyphId)
+
+		curCode++
+	}
+
+	fmt.Printf("Length: %d, language: %d\n", length, language)
+	fmt.Printf("First code: %d, entry count: %d\n", firstCode, entryCount)
+
+	err = nil
+	return
+}
+
+func (t *ttfParser) ParseCmap() (err error) {
+	var offset int64
+	if err = t.Seek("cmap"); err != nil {
+		return
+	}
+	t.Skip(2) // version
+	numTables := int(t.ReadUShort())
+	//offset10 := int64(0)
+	offset31 := int64(0)
+	for j := 0; j < numTables; j++ {
+		platformID := t.ReadUShort()
+		encodingID := t.ReadUShort()
+		offset = int64(t.ReadULong())
+		if platformID == 3 && encodingID == 1 {
+			// (3,1) subtable. Windows Unicode.
+			offset31 = offset
+		} /*else if platformID == 1 && encodingID == 0 {
+			// (1,0) subtable.
+			offset10 = offset
+
+		}*/
+		//fmt.Printf("(%d,%d) subtable @ %d\n", platformID, encodingID, offset)
+	}
+
+	// Latin font support based on (3,1) table encoding.
+	if offset31 != 0 {
+		err = t.parseCmapSubtable31(offset31)
+		if err != nil {
+			return
+		}
+	}
+
+	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
+	/*
+		if offset10 != 0 {
+			fmt.Printf("Offset 10: %d\n", offset10)
+			err = t.parseCmapSubtable10(offset10)
+			if err != nil {
+				return
+			}
+		}
+	*/
+
 	return
 }
 
@@ -320,12 +391,47 @@ func (t *ttfParser) ParseOS2() (err error) {
 func (t *ttfParser) ParsePost() (err error) {
 	err = t.Seek("post")
 	if err == nil {
+		//versionUpper := t.ReadShort()
+		//versionFraction := t.ReadUShort()
+
 		t.Skip(4) // version
+		//fmt.Printf("Post version: %d.%d\n", versionUpper, versionFraction)
+
 		t.rec.ItalicAngle = t.ReadShort()
 		t.Skip(2) // Skip decimal part
 		t.rec.UnderlinePosition = t.ReadShort()
 		t.rec.UnderlineThickness = t.ReadShort()
 		t.rec.IsFixedPitch = t.ReadULong() != 0
+
+		/*
+			t.Skip(4 * 4) // Skip over memory specs.
+
+			if versionUpper == 2 && versionFraction == 0 {
+				numGlyps := t.ReadUShort()
+
+				glyphNameIndexList := []uint16{}
+				maxIndex := uint16(0)
+				for i := 0; i < int(numGlyps); i++ {
+					index := t.ReadUShort()
+					glyphNameIndexList = append(glyphNameIndexList, index)
+					if index > maxIndex {
+						maxIndex = index
+					}
+				}
+
+				numberNewGlyphs := maxIndex + 1
+				if maxIndex > 257 {
+					numberNewGlyphs -= 258
+				}
+				for i := 0; i < int(numberNewGlyphs); i++ {
+					len := t.ReadByte()
+					glyphName, err := t.ReadStr(int(len))
+					if err != nil {
+						return err
+					}
+				}
+			}
+		*/
 	}
 	return
 }
@@ -355,6 +461,11 @@ func (t *ttfParser) ReadStr(length int) (str string, err error) {
 			err = fmt.Errorf("unable to read %d bytes", length)
 		}
 	}
+	return
+}
+
+func (t *ttfParser) ReadByte() (val uint8) {
+	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 

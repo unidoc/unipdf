@@ -28,7 +28,7 @@ func (enc SymbolEncoder) Encode(raw string) string {
 			continue
 		}
 
-		encoded = append(encoded, code)
+		encoded = append(encoded, byte(code))
 	}
 
 	return string(encoded)
@@ -36,7 +36,7 @@ func (enc SymbolEncoder) Encode(raw string) string {
 
 // Conversion between character code and glyph name.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) CharcodeToGlyph(code byte) (string, bool) {
+func (enc SymbolEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	glyph, has := symbolEncodingCharcodeToGlyphMap[code]
 	if !has {
 		common.Log.Debug("Symbol encoding error: unable to find charcode->glyph entry (%v)", code)
@@ -47,7 +47,7 @@ func (enc SymbolEncoder) CharcodeToGlyph(code byte) (string, bool) {
 
 // Conversion between glyph name and character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) GlyphToCharcode(glyph string) (byte, bool) {
+func (enc SymbolEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	code, found := symbolEncodingGlyphToCharcodeMap[glyph]
 	if !found {
 		common.Log.Debug("Symbol encoding error: unable to find glyph->charcode entry (%s)", glyph)
@@ -59,7 +59,7 @@ func (enc SymbolEncoder) GlyphToCharcode(glyph string) (byte, bool) {
 
 // Convert rune to character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) RuneToCharcode(val rune) (byte, bool) {
+func (enc SymbolEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	glyph, found := runeToGlyph(val, glyphlistRuneToGlyphMap)
 	if !found {
 		common.Log.Debug("Symbol encoding error: unable to find rune->glyph entry (%v)", val)
@@ -77,7 +77,7 @@ func (enc SymbolEncoder) RuneToCharcode(val rune) (byte, bool) {
 
 // Convert character code to rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) CharcodeToRune(charcode byte) (rune, bool) {
+func (enc SymbolEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	glyph, found := symbolEncodingCharcodeToGlyphMap[charcode]
 	if !found {
 		common.Log.Debug("Symbol encoding error: unable to find charcode->glyph entry (%d)", charcode)
@@ -115,7 +115,7 @@ func (enc SymbolEncoder) ToPdfObject() core.PdfObject {
 }
 
 // Charcode to Glyph map (Symbol encoding)
-var symbolEncodingCharcodeToGlyphMap map[byte]string = map[byte]string{
+var symbolEncodingCharcodeToGlyphMap map[uint16]string = map[uint16]string{
 	32:  "space",
 	33:  "exclam",
 	34:  "universal",
@@ -308,7 +308,7 @@ var symbolEncodingCharcodeToGlyphMap map[byte]string = map[byte]string{
 }
 
 // Glyph to charcode map (Symbol encoding).
-var symbolEncodingGlyphToCharcodeMap map[string]byte = map[string]byte{
+var symbolEncodingGlyphToCharcodeMap map[string]uint16 = map[string]uint16{
 	"space":          32,
 	"exclam":         33,
 	"universal":      34,

@@ -8,15 +8,13 @@ package model
 import (
 	"errors"
 
-	"io/ioutil"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// The PdfFont structure represents an underlying font structure which can be of type:
+// PdfFont represents an underlying font structure which can be of type:
 // - Type0
 // - Type1
 // - TrueType
@@ -25,7 +23,21 @@ type PdfFont struct {
 	context interface{} // The underlying font: Type0, Type1, Truetype, etc..
 }
 
-// Set the encoding for the underlying font.
+// Encoder returns the font's text encoder.
+func (font PdfFont) Encoder() textencoding.TextEncoder {
+	switch t := font.context.(type) {
+	case *pdfFontTrueType:
+		return t.Encoder()
+	case *pdfFontType0:
+		return t.Encoder()
+	case *pdfCIDFontType2:
+		return t.Encoder()
+	}
+
+	return nil
+}
+
+// SetEncoder sets the encoding for the underlying font.
 func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 	switch t := font.context.(type) {
 	case *pdfFontTrueType:
@@ -33,16 +45,25 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 	}
 }
 
+// GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
 func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	switch t := font.context.(type) {
 	case *pdfFontTrueType:
 		return t.GetGlyphCharMetrics(glyph)
+	case *pdfFontType0:
+		return t.GetGlyphCharMetrics(glyph)
+	case *pdfCIDFontType2:
+		return t.GetGlyphCharMetrics(glyph)
 	}
+	common.Log.Debug("GetGlyphCharMetrics unsupported font type %T", font.context)
 
 	return fonts.CharMetrics{}, false
 }
 
-func newPdfFontFromPdfObject(obj core.PdfObject) (*PdfFont, error) {
+// newPdfFontFromPdfObject loads a PdfFont from a dictionary.  If there is a problem an error is returned.
+// The allowType0 indicates whether loading Type0 font should be supported.  Flag used to avoid
+// cyclical loading.
+func newPdfFontFromPdfObject(obj core.PdfObject, allowType0 bool) (*PdfFont, error) {
 	font := &PdfFont{}
 
 	dictObj := obj
@@ -80,14 +101,33 @@ func newPdfFontFromPdfObject(obj core.PdfObject) (*PdfFont, error) {
 	}
 
 	switch subtype.String() {
+	case "Type0":
+		if !allowType0 {
+			common.Log.Debug("Loading type0 not allowed")
+			return nil, errors.New("Cyclical type0 loading error")
+		}
+		type0font, err := newPdfFontType0FromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error loading Type0 font: %v", err)
+			return nil, err
+		}
+		font.context = type0font
 	case "TrueType":
 		truefont, err := newPdfFontTrueTypeFromPdfObject(obj)
 		if err != nil {
-			common.Log.Debug("Error loading truetype font: %v", truefont)
+			common.Log.Debug("Error loading truetype font: %v", err)
 			return nil, err
 		}
 
 		font.context = truefont
+	case "CIDFontType2":
+		cidfont, err := newPdfCIDFontType2FromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error loading cid font type2 font: %v", err)
+			return nil, err
+		}
+
+		font.context = cidfont
 	default:
 		common.Log.Debug("Unsupported font type: %s", subtype.String())
 		return nil, errors.New("Unsupported font type")
@@ -96,9 +136,14 @@ func newPdfFontFromPdfObject(obj core.PdfObject) (*PdfFont, error) {
 	return font, nil
 }
 
+// ToPdfObject converts the PdfFont object to its PDF representation.
 func (font PdfFont) ToPdfObject() core.PdfObject {
 	switch f := font.context.(type) {
 	case *pdfFontTrueType:
+		return f.ToPdfObject()
+	case *pdfFontType0:
+		return f.ToPdfObject()
+	case *pdfCIDFontType2:
 		return f.ToPdfObject()
 	}
 
@@ -107,306 +152,7 @@ func (font PdfFont) ToPdfObject() core.PdfObject {
 	return core.MakeNull()
 }
 
-type pdfFontTrueType struct {
-	Encoder textencoding.TextEncoder
-
-	firstChar  int
-	lastChar   int
-	charWidths []float64
-
-	// Subtype shall be TrueType.
-	// Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
-	// BaseFont is derived differently.
-	BaseFont       core.PdfObject
-	FirstChar      core.PdfObject
-	LastChar       core.PdfObject
-	Widths         core.PdfObject
-	FontDescriptor *PdfFontDescriptor
-	Encoding       core.PdfObject
-	ToUnicode      core.PdfObject
-
-	container *core.PdfIndirectObject
-}
-
-func (font pdfFontTrueType) SetEncoder(encoder textencoding.TextEncoder) {
-	font.Encoder = encoder
-}
-
-func (font pdfFontTrueType) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
-	metrics := fonts.CharMetrics{}
-
-	code, found := font.Encoder.GlyphToCharcode(glyph)
-	if !found {
-		return metrics, false
-	}
-
-	if int(code) < font.firstChar {
-		common.Log.Debug("Code lower than firstchar (%d < %d)", code, font.firstChar)
-		return metrics, false
-	}
-
-	if int(code) > font.lastChar {
-		common.Log.Debug("Code higher than lastchar (%d < %d)", code, font.lastChar)
-		return metrics, false
-	}
-
-	index := int(code) - font.firstChar
-	if index >= len(font.charWidths) {
-		common.Log.Debug("Code outside of widths range")
-		return metrics, false
-	}
-
-	width := font.charWidths[index]
-	metrics.Wx = width
-
-	return metrics, true
-}
-
-func newPdfFontTrueTypeFromPdfObject(obj core.PdfObject) (*pdfFontTrueType, error) {
-	font := &pdfFontTrueType{}
-
-	if ind, is := obj.(*core.PdfIndirectObject); is {
-		font.container = ind
-		obj = ind.PdfObject
-	}
-
-	d, ok := obj.(*core.PdfObjectDictionary)
-	if !ok {
-		common.Log.Debug("Font object invalid, not a dictionary (%T)", obj)
-		return nil, errors.New("Type check error")
-	}
-
-	if obj := d.Get("Type"); obj != nil {
-		oname, is := obj.(*core.PdfObjectName)
-		if !is || oname.String() != "Font" {
-			common.Log.Debug("Incompatibility: Type defined but not Font")
-		}
-	}
-
-	if obj := d.Get("Subtype"); obj != nil {
-		oname, is := obj.(*core.PdfObjectName)
-		if !is || oname.String() != "TrueType" {
-			common.Log.Debug("Incompatibility: Loading TrueType font but Subtype != TrueType")
-		}
-	}
-
-	font.BaseFont = d.Get("BaseFont")
-
-	if obj := d.Get("FirstChar"); obj != nil {
-		font.FirstChar = obj
-
-		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
-		if !ok {
-			common.Log.Debug("Invalid FirstChar type (%T)", obj)
-			return nil, errors.New("Type check error")
-		}
-		font.firstChar = int(*intVal)
-	} else {
-		common.Log.Debug("ERROR: FirstChar attribute missing")
-		return nil, errors.New("Required attribute missing")
-	}
-
-	if obj := d.Get("LastChar"); obj != nil {
-		font.LastChar = obj
-
-		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
-		if !ok {
-			common.Log.Debug("Invalid LastChar type (%T)", obj)
-			return nil, errors.New("Type check error")
-		}
-		font.lastChar = int(*intVal)
-	} else {
-		common.Log.Debug("ERROR: FirstChar attribute missing")
-		return nil, errors.New("Required attribute missing")
-	}
-
-	font.charWidths = []float64{}
-	if obj := d.Get("Widths"); obj != nil {
-		font.Widths = obj
-
-		arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
-		if !ok {
-			common.Log.Debug("Widths attribute != array (%T)", arr)
-			return nil, errors.New("Type check error")
-		}
-
-		widths, err := arr.ToFloat64Array()
-		if err != nil {
-			common.Log.Debug("Error converting widths to array")
-			return nil, err
-		}
-
-		if len(widths) != (font.lastChar - font.firstChar + 1) {
-			common.Log.Debug("Invalid widths length != %d (%d)", font.lastChar-font.firstChar+1, len(widths))
-			return nil, errors.New("Range check error")
-		}
-
-		font.charWidths = widths
-	} else {
-		common.Log.Debug("Widths missing from font")
-		return nil, errors.New("Required attribute missing")
-	}
-
-	if obj := d.Get("FontDescriptor"); obj != nil {
-		descriptor, err := newPdfFontDescriptorFromPdfObject(obj)
-		if err != nil {
-			common.Log.Debug("Error loading font descriptor: %v", err)
-			return nil, err
-		}
-
-		font.FontDescriptor = descriptor
-	}
-
-	font.Encoding = d.Get("Encoding")
-	font.ToUnicode = d.Get("ToUnicode")
-
-	return font, nil
-}
-
-func (this *pdfFontTrueType) ToPdfObject() core.PdfObject {
-	if this.container == nil {
-		this.container = &core.PdfIndirectObject{}
-	}
-	d := core.MakeDict()
-	this.container.PdfObject = d
-
-	d.Set("Type", core.MakeName("Font"))
-	d.Set("Subtype", core.MakeName("TrueType"))
-
-	if this.BaseFont != nil {
-		d.Set("BaseFont", this.BaseFont)
-	}
-	if this.FirstChar != nil {
-		d.Set("FirstChar", this.FirstChar)
-	}
-	if this.LastChar != nil {
-		d.Set("LastChar", this.LastChar)
-	}
-	if this.Widths != nil {
-		d.Set("Widths", this.Widths)
-	}
-	if this.FontDescriptor != nil {
-		d.Set("FontDescriptor", this.FontDescriptor.ToPdfObject())
-	}
-	if this.Encoding != nil {
-		d.Set("Encoding", this.Encoding)
-	}
-	if this.ToUnicode != nil {
-		d.Set("ToUnicode", this.ToUnicode)
-	}
-
-	return this.container
-}
-
-func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
-	ttf, err := fonts.TtfParse(filePath)
-	if err != nil {
-		common.Log.Debug("Error loading ttf font: %v", err)
-		return nil, err
-	}
-
-	truefont := &pdfFontTrueType{}
-
-	truefont.Encoder = textencoding.NewWinAnsiTextEncoder()
-	truefont.firstChar = 32
-	truefont.lastChar = 255
-
-	truefont.BaseFont = core.MakeName(ttf.PostScriptName)
-	truefont.FirstChar = core.MakeInteger(32)
-	truefont.LastChar = core.MakeInteger(255)
-
-	k := 1000.0 / float64(ttf.UnitsPerEm)
-
-	if len(ttf.Widths) <= 0 {
-		return nil, errors.New("Missing required attribute (Widths)")
-	}
-
-	missingWidth := k * float64(ttf.Widths[0])
-	vals := []float64{}
-
-	for charcode := 32; charcode <= 255; charcode++ {
-		runeVal, found := truefont.Encoder.CharcodeToRune(byte(charcode))
-		if !found {
-			common.Log.Debug("Rune not found (charcode: %d)", charcode)
-			vals = append(vals, missingWidth)
-			continue
-		}
-
-		pos, ok := ttf.Chars[uint16(runeVal)]
-		if !ok {
-			common.Log.Debug("Rune not in TTF Chars")
-			vals = append(vals, missingWidth)
-			continue
-		}
-
-		w := k * float64(ttf.Widths[pos])
-
-		vals = append(vals, w)
-	}
-
-	truefont.Widths = &core.PdfIndirectObject{PdfObject: core.MakeArrayFromFloats(vals)}
-
-	if len(vals) < (255 - 32 + 1) {
-		common.Log.Debug("Invalid length of widths, %d < %d", len(vals), 255-32+1)
-		return nil, errors.New("Range check error")
-	}
-
-	truefont.charWidths = vals[:255-32+1]
-
-	// Default.
-	// XXX/FIXME TODO: Only use the encoder object.
-
-	truefont.Encoding = core.MakeName("WinAnsiEncoding")
-
-	descriptor := &PdfFontDescriptor{}
-	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
-	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
-	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
-	descriptor.FontBBox = core.MakeArrayFromFloats([]float64{k * float64(ttf.Xmin), k * float64(ttf.Ymin), k * float64(ttf.Xmax), k * float64(ttf.Ymax)})
-	descriptor.ItalicAngle = core.MakeFloat(float64(ttf.ItalicAngle))
-	descriptor.MissingWidth = core.MakeFloat(k * float64(ttf.Widths[0]))
-
-	ttfBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		common.Log.Debug("Unable to read file contents: %v", err)
-		return nil, err
-	}
-
-	// XXX/TODO: Encode the file...
-	stream, err := core.MakeStream(ttfBytes, core.NewFlateEncoder())
-	if err != nil {
-		common.Log.Debug("Unable to make stream: %v", err)
-		return nil, err
-	}
-	stream.PdfObjectDictionary.Set("Length1", core.MakeInteger(int64(len(ttfBytes))))
-	descriptor.FontFile2 = stream
-
-	if ttf.Bold {
-		descriptor.StemV = core.MakeInteger(120)
-	} else {
-		descriptor.StemV = core.MakeInteger(70)
-	}
-
-	// Flags.
-	flags := 1 << 5
-	if ttf.IsFixedPitch {
-		flags |= 1
-	}
-	if ttf.ItalicAngle != 0 {
-		flags |= 1 << 6
-	}
-	descriptor.Flags = core.MakeInteger(int64(flags))
-
-	// Build Font.
-	truefont.FontDescriptor = descriptor
-
-	font := &PdfFont{}
-	font.context = truefont
-
-	return font, nil
-}
-
-// Font descriptors specifies metrics and other attributes of a font.
+// PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile for embedded fonts.
 type PdfFontDescriptor struct {
 	FontName     core.PdfObject
 	FontFamily   core.PdfObject
@@ -440,7 +186,7 @@ type PdfFontDescriptor struct {
 	container *core.PdfIndirectObject
 }
 
-// Load the font descriptor from a PdfObject.  Can either be a *PdfIndirectObject or
+// newPdfFontDescriptorFromPdfObject loads the font descriptor from a PdfObject.  Can either be a *PdfIndirectObject or
 // a *PdfObjectDictionary.
 func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, error) {
 	descriptor := &PdfFontDescriptor{}
@@ -499,7 +245,7 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 	return descriptor, nil
 }
 
-// Convert to a PDF dictionary inside an indirect object.
+// ToPdfObject returns the PdfFontDescriptor as a PDF dictionary inside an indirect object.
 func (this *PdfFontDescriptor) ToPdfObject() core.PdfObject {
 	d := core.MakeDict()
 	if this.container == nil {

@@ -29,7 +29,7 @@ func (winenc WinAnsiEncoder) Encode(raw string) string {
 	for _, rune := range raw {
 		code, has := winenc.RuneToCharcode(rune)
 		if has {
-			encoded = append(encoded, code)
+			encoded = append(encoded, byte(code))
 		}
 	}
 
@@ -38,7 +38,7 @@ func (winenc WinAnsiEncoder) Encode(raw string) string {
 
 // Conversion between character code and glyph name.
 // The bool return flag is true if there was a match, and false otherwise.
-func (winenc WinAnsiEncoder) CharcodeToGlyph(code byte) (string, bool) {
+func (winenc WinAnsiEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	glyph, has := winansiEncodingCharcodeToGlyphMap[code]
 	if !has {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: %d\n", code)
@@ -49,7 +49,7 @@ func (winenc WinAnsiEncoder) CharcodeToGlyph(code byte) (string, bool) {
 
 // Conversion between glyph name and character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (winenc WinAnsiEncoder) GlyphToCharcode(glyph string) (byte, bool) {
+func (winenc WinAnsiEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	code, found := winansiEncodingGlyphToCharcodeMap[glyph]
 	if !found {
 		common.Log.Debug("Glyph -> Charcode error: glyph not found: %s\n", glyph)
@@ -61,7 +61,7 @@ func (winenc WinAnsiEncoder) GlyphToCharcode(glyph string) (byte, bool) {
 
 // Convert rune to character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (winenc WinAnsiEncoder) RuneToCharcode(val rune) (byte, bool) {
+func (winenc WinAnsiEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	glyph, found := winenc.RuneToGlyph(val)
 	if !found {
 		return 0, false
@@ -78,7 +78,7 @@ func (winenc WinAnsiEncoder) RuneToCharcode(val rune) (byte, bool) {
 
 // Convert character code to rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (winenc WinAnsiEncoder) CharcodeToRune(charcode byte) (rune, bool) {
+func (winenc WinAnsiEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	glyph, found := winansiEncodingCharcodeToGlyphMap[charcode]
 	if !found {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: %d\n", charcode)
@@ -106,7 +106,7 @@ func (winenc WinAnsiEncoder) GlyphToRune(glyph string) (rune, bool) {
 }
 
 // Charcode to glyph name map (WinAnsiEncoding).
-var winansiEncodingCharcodeToGlyphMap = map[byte]string{
+var winansiEncodingCharcodeToGlyphMap = map[uint16]string{
 	32:  "space",
 	33:  "exclam",
 	34:  "quotedbl",
@@ -334,7 +334,7 @@ var winansiEncodingCharcodeToGlyphMap = map[byte]string{
 }
 
 // Glyph to charcode map (WinAnsiEncoding).
-var winansiEncodingGlyphToCharcodeMap = map[string]byte{
+var winansiEncodingGlyphToCharcodeMap = map[string]uint16{
 	"space":        32,
 	"exclam":       33,
 	"quotedbl":     34,

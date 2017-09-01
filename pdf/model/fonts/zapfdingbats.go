@@ -14,22 +14,31 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font ZapfDingbats.  Implements Font interface.
+// fontZapfDingbats represents the ZapfDingbats font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontZapfDingbats struct {
 	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
+// NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
 func NewFontZapfDingbats() fontZapfDingbats {
 	font := fontZapfDingbats{}
+	font.encoder = textencoding.NewZapfDingbatsEncoder()
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontZapfDingbats) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontZapfDingbats) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := zapfDingbatsCharMetrics[glyph]
 	if !has {
@@ -39,6 +48,7 @@ func (font fontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, boo
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontZapfDingbats) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -55,7 +65,7 @@ func (font fontZapfDingbats) ToPdfObject() core.PdfObject {
 }
 
 // ZapfDingbats font metics loaded from afms/ZapfDingbats.afm.  See afms/MustRead.html for license information.
-var zapfDingbatsCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var zapfDingbatsCharMetrics = map[string]CharMetrics{
 	"a1":    {GlyphName: "a1", Wx: 974.000000, Wy: 0.000000},
 	"a10":   {GlyphName: "a10", Wx: 692.000000, Wy: 0.000000},
 	"a100":  {GlyphName: "a100", Wx: 668.000000, Wy: 0.000000},

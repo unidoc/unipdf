@@ -28,7 +28,7 @@ func (enc ZapfDingbatsEncoder) Encode(raw string) string {
 			continue
 		}
 
-		encoded = append(encoded, code)
+		encoded = append(encoded, byte(code))
 	}
 
 	return string(encoded)
@@ -36,7 +36,7 @@ func (enc ZapfDingbatsEncoder) Encode(raw string) string {
 
 // Conversion between character code and glyph name.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc ZapfDingbatsEncoder) CharcodeToGlyph(code byte) (string, bool) {
+func (enc ZapfDingbatsEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	glyph, has := zapfDingbatsEncodingCharcodeToGlyphMap[code]
 	if !has {
 		common.Log.Debug("ZapfDingbats encoding error: unable to find charcode->glyph entry (%v)", code)
@@ -47,7 +47,7 @@ func (enc ZapfDingbatsEncoder) CharcodeToGlyph(code byte) (string, bool) {
 
 // Conversion between glyph name and character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc ZapfDingbatsEncoder) GlyphToCharcode(glyph string) (byte, bool) {
+func (enc ZapfDingbatsEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	code, found := zapfDingbatsEncodingGlyphToCharcodeMap[glyph]
 	if !found {
 		common.Log.Debug("ZapfDingbats encoding error: unable to find glyph->charcode entry (%s)", glyph)
@@ -59,7 +59,7 @@ func (enc ZapfDingbatsEncoder) GlyphToCharcode(glyph string) (byte, bool) {
 
 // Convert rune to character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc ZapfDingbatsEncoder) RuneToCharcode(val rune) (byte, bool) {
+func (enc ZapfDingbatsEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	glyph, found := enc.RuneToGlyph(val)
 	if !found {
 		common.Log.Debug("ZapfDingbats encoding error: unable to find rune->glyph entry (%v)", val)
@@ -77,7 +77,7 @@ func (enc ZapfDingbatsEncoder) RuneToCharcode(val rune) (byte, bool) {
 
 // Convert character code to rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc ZapfDingbatsEncoder) CharcodeToRune(charcode byte) (rune, bool) {
+func (enc ZapfDingbatsEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	glyph, found := zapfDingbatsEncodingCharcodeToGlyphMap[charcode]
 	if !found {
 		common.Log.Debug("ZapfDingbats encoding error: unable to find charcode->glyph entry (%d)", charcode)
@@ -131,7 +131,7 @@ func (enc ZapfDingbatsEncoder) ToPdfObject() core.PdfObject {
 	return core.MakeIndirectObject(dict)
 }
 
-var zapfDingbatsEncodingCharcodeToGlyphMap = map[byte]string{
+var zapfDingbatsEncodingCharcodeToGlyphMap = map[uint16]string{
 	32:  "space",
 	33:  "a1",
 	34:  "a2",
@@ -336,7 +336,7 @@ var zapfDingbatsEncodingCharcodeToGlyphMap = map[byte]string{
 	254: "a191",
 }
 
-var zapfDingbatsEncodingGlyphToCharcodeMap = map[string]byte{
+var zapfDingbatsEncodingGlyphToCharcodeMap = map[string]uint16{
 	"space": 32,
 	"a1":    33,
 	"a2":    34,

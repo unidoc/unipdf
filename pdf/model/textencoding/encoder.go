@@ -8,24 +8,24 @@ package textencoding
 import "github.com/unidoc/unidoc/pdf/core"
 
 type TextEncoder interface {
-	// Convert a raw utf8 string (series of runes) to an encoded string (series of character codes) to be used in PDF.
+	// Convert a raw utf8 string (series of runes) to an encoded string (series of bytes) to be used in PDF.
 	Encode(raw string) string
 
 	// Conversion between character code and glyph name.
 	// The bool return flag is true if there was a match, and false otherwise.
-	CharcodeToGlyph(code byte) (string, bool)
+	CharcodeToGlyph(code uint16) (string, bool)
 
 	// Conversion between glyph name and character code.
 	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToCharcode(glyph string) (byte, bool)
+	GlyphToCharcode(glyph string) (uint16, bool)
 
 	// Convert rune to character code.
 	// The bool return flag is true if there was a match, and false otherwise.
-	RuneToCharcode(val rune) (byte, bool)
+	RuneToCharcode(val rune) (uint16, bool)
 
 	// Convert character code to rune.
 	// The bool return flag is true if there was a match, and false otherwise.
-	CharcodeToRune(charcode byte) (rune, bool)
+	CharcodeToRune(charcode uint16) (rune, bool)
 
 	// Convert rune to glyph name.
 	// The bool return flag is true if there was a match, and false otherwise.

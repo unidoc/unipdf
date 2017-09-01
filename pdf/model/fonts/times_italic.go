@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Times-Italic.  Implements Font interface.
+// fontTimesItalic represents the Times-Italic font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontTimesItalic struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesItalic() fontTimesItalic {
 	font := fontTimesItalic{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontTimesItalic) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontTimesItalic) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontTimesItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := timesItalicCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontTimesItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontTimesItalic) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontTimesItalic) ToPdfObject() core.PdfObject {
 }
 
 // Times-Italic font metics loaded from afms/Times-Italic.afm.  See afms/MustRead.html for license information.
-var timesItalicCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var timesItalicCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 611.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 611.000000, Wy: 0.000000},

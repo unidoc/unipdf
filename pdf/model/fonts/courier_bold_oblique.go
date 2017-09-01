@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Courier-BoldOblique.  Implements Font interface.
+// fontCourierBoldOblique represents the Courier-BoldOblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontCourierBoldOblique struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontCourierBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierBoldOblique() fontCourierBoldOblique {
 	font := fontCourierBoldOblique{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
+	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontCourierBoldOblique) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontCourierBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierBoldObliqueCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetric
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontCourierBoldOblique) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontCourierBoldOblique) ToPdfObject() core.PdfObject {
 }
 
 // Courier-BoldOblique font metics loaded from afms/Courier-BoldOblique.afm.  See afms/MustRead.html for license information.
-var courierBoldObliqueCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var courierBoldObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

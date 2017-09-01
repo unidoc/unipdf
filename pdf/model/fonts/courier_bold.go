@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Courier-Bold.  Implements Font interface.
+// fontCourierBold represents the Courier-Bold PDF font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontCourierBold struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierBold() fontCourierBold {
 	font := fontCourierBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontCourierBold) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontCourierBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontCourierBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierBoldCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontCourierBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontCourierBold) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontCourierBold) ToPdfObject() core.PdfObject {
 }
 
 // Courier-Bold font metics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.
-var courierBoldCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var courierBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

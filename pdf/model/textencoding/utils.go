@@ -40,7 +40,7 @@ func splitWords(raw string, encoder TextEncoder) []string {
 			continue
 		}
 
-		if glyph == "space" {
+		if glyph == "space" || glyph == "uni0020" {
 			word := runes[startsAt:idx]
 			words = append(words, string(word))
 			startsAt = idx + 1

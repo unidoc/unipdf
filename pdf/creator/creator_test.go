@@ -36,6 +36,8 @@ const testImageFile1 = "../../testfiles/logo.png"
 const testImageFile2 = "../../testfiles/signature.png"
 const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
+const testWts11TTFFile = "../../testfiles/wts11.ttf"
+const testFreeSansTTFFile = "../../testfiles/FreeSans.ttf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -561,6 +563,92 @@ func TestParagraphStandardFonts(t *testing.T) {
 	}
 
 	err := creator.WriteToFile("/tmp/2_standard14fonts.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// Test paragraph with Chinese characters.
+func TestParagraphChinese(t *testing.T) {
+	creator := New()
+
+	p := NewParagraph("你好")
+
+	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	p.SetFont(font)
+
+	err = creator.Draw(p)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = creator.WriteToFile("/tmp/2_p_nihao.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// Test paragraph with composite font and various unicode characters.
+func TestParagraphUnicode(t *testing.T) {
+	creator := New()
+
+	font, err := model.NewCompositePdfFontFromTTFFile(testFreeSansTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	texts := []string{
+		"Testing of letters \u010c,\u0106,\u0160,\u017d,\u0110",
+		"Vous \u00eates d'o\u00f9?",
+		"\u00c0 tout \u00e0 l'heure. \u00c0 bient\u00f4t.",
+		"Je me pr\u00e9sente.",
+		"C'est un \u00e9tudiant.",
+		"\u00c7a va?",
+		"Il est ing\u00e9nieur. Elle est m\u00e9decin.",
+		"C'est une fen\u00eatre.",
+		"R\u00e9p\u00e9tez, s'il vous pla\u00eet.",
+		"Odkud jste?",
+		"Uvid\u00edme se za chvilku. M\u011bj se.",
+		"Dovolte, abych se p\u0159edstavil.",
+		"To je studentka.",
+		"V\u0161echno v po\u0159\u00e1dku?",
+		"On je in\u017een\u00fdr. Ona je l\u00e9ka\u0159.",
+		"Toto je okno.",
+		"Zopakujte to pros\u00edm.",
+		"\u041e\u0442\u043a\u0443\u0434\u0430 \u0442\u044b?",
+		"\u0423\u0432\u0438\u0434\u0438\u043c\u0441\u044f \u0432 \u043d\u0435\u043c\u043d\u043e\u0433\u043e. \u0423\u0432\u0438\u0434\u0438\u043c\u0441\u044f.",
+		"\u041f\u043e\u0437\u0432\u043e\u043b\u044c\u0442\u0435 \u043c\u043d\u0435 \u043f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u0438\u0442\u044c\u0441\u044f.",
+		"\u042d\u0442\u043e \u0441\u0442\u0443\u0434\u0435\u043d\u0442.",
+		"\u0425\u043e\u0440\u043e\u0448\u043e?",
+		"\u041e\u043d \u0438\u043d\u0436\u0435\u043d\u0435\u0440. \u041e\u043d\u0430 \u0434\u043e\u043a\u0442\u043e\u0440.",
+		"\u042d\u0442\u043e \u043e\u043a\u043d\u043e.",
+		"\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430.",
+		`Lorem Ipsum - это текст-"рыба", часто используемый в печати и вэб-дизайне. Lorem Ipsum является стандартной "рыбой" для текстов на латинице с начала XVI века. В то время некий безымянный печатник создал большую коллекцию размеров и форм шрифтов, используя Lorem Ipsum для распечатки образцов. Lorem Ipsum не только успешно пережил без заметных изменений пять веков, но и перешагнул в электронный дизайн. Его популяризации в новое время послужили публикация листов Letraset с образцами Lorem Ipsum в 60-х годах и, в более недавнее время, программы электронной вёрстки типа Aldus PageMaker, в шаблонах которых используется Lorem Ipsum.`,
+	}
+
+	for _, text := range texts {
+		fmt.Printf("Text: %s\n", text)
+
+		p := NewParagraph(text)
+		p.SetFont(font)
+
+		err = creator.Draw(p)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+	}
+
+	err = creator.WriteToFile("/tmp/2_p_multi.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

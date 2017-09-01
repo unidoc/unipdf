@@ -14,22 +14,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Courier.  Implements Font interface.
+// fontCourier represents the Courier font.
 // This is a built-in font and it is assumed that every reader has access to it.
 type fontCourier struct {
 	encoder textencoding.TextEncoder
 }
 
+// NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourier() fontCourier {
 	font := fontCourier{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
+	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
+// Encoder returns the font's text encoder.
+func (font fontCourier) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
 func (font fontCourier) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
+// GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierCharMetrics[glyph]
 	if !has {
@@ -39,6 +47,7 @@ func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	return metrics, true
 }
 
+// ToPdfObject returns a primitive PDF object representation of the font.
 func (font fontCourier) ToPdfObject() core.PdfObject {
 	obj := &core.PdfIndirectObject{}
 
@@ -53,7 +62,7 @@ func (font fontCourier) ToPdfObject() core.PdfObject {
 }
 
 // Courier font metics loaded from afms/Courier.afm.  See afms/MustRead.html for license information.
-var courierCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+var courierCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

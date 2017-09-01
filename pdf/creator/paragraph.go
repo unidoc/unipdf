@@ -23,9 +23,6 @@ type Paragraph struct {
 	// The input utf-8 text as a string (series of runes).
 	text string
 
-	// The text encoder which can convert the text (as runes) into a series of glyphs and get character metrics.
-	encoder textencoding.TextEncoder
-
 	// The font to be used to draw the text.
 	textFont fonts.Font
 
@@ -106,9 +103,6 @@ func (p *Paragraph) SetTextAlignment(align TextAlignment) {
 
 // SetEncoder sets the text encoding.
 func (p *Paragraph) SetEncoder(encoder textencoding.TextEncoder) {
-	p.encoder = encoder
-	// Sync with the text font too.
-	// XXX/FIXME: Keep in 1 place only.
 	p.textFont.SetEncoder(encoder)
 }
 
@@ -202,7 +196,7 @@ func (p *Paragraph) getTextWidth() float64 {
 	w := float64(0.0)
 
 	for _, rune := range p.text {
-		glyph, found := p.encoder.RuneToGlyph(rune)
+		glyph, found := p.textFont.Encoder().RuneToGlyph(rune)
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
 			return -1 // XXX/FIXME: return error.
@@ -223,7 +217,7 @@ func (p *Paragraph) getTextWidth() float64 {
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *Paragraph) wrapText() error {
 	if !p.enableWrap {
-		p.textLines = []string{p.encoder.Encode(p.text)}
+		p.textLines = []string{p.textFont.Encoder().Encode(p.text)}
 		return nil
 	}
 
@@ -236,7 +230,7 @@ func (p *Paragraph) wrapText() error {
 	widths := []float64{}
 
 	for _, val := range runes {
-		glyph, found := p.encoder.RuneToGlyph(val)
+		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %v\n", val)
 			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
@@ -245,6 +239,8 @@ func (p *Paragraph) wrapText() error {
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
 			common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+			common.Log.Debug("Font: %#v", p.textFont)
+			common.Log.Debug("Encoder: %#v", p.textFont.Encoder())
 			return errors.New("Glyph char metrics missing") // XXX/FIXME: return error.
 		}
 
@@ -407,7 +403,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		w := float64(0)
 		spaces := 0
 		for _, runeVal := range runes {
-			glyph, found := p.encoder.RuneToGlyph(runeVal)
+			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
 				return ctx, errors.New("Unsupported rune in text encoding")
@@ -450,7 +446,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		encStr := ""
 		for _, runeVal := range runes {
 			//creator.Add_Tj(core.PdfObjectString(tb.Encoder.Encode(line)))
-			glyph, found := p.encoder.RuneToGlyph(runeVal)
+			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
 				return ctx, errors.New("Unsupported rune in text encoding")
@@ -468,7 +464,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 				}
 				objs = append(objs, core.MakeFloat(-spaceWidth))
 			} else {
-				encStr += string(p.encoder.Encode(string(runeVal)))
+				encStr += string(p.textFont.Encoder().Encode(string(runeVal)))
 			}
 		}
 		if len(encStr) > 0 {
