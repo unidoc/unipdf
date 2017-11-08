@@ -41,6 +41,15 @@ type Creator struct {
 	finalized bool
 
 	toc *TableOfContents
+
+	// Forms.
+	acroForm *model.PdfAcroForm
+}
+
+// SetForms Add Acroforms to a PDF file.  Sets the specified form for writing.
+func (c *Creator) SetForms(form *model.PdfAcroForm) error {
+	c.acroForm = form
+	return nil
 }
 
 // FrontpageFunctionArgs holds the input arguments to a front page drawing function.
@@ -453,6 +462,14 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	}
 
 	pdfWriter := model.NewPdfWriter()
+	// Form fields.
+	if c.acroForm != nil {
+		errF := pdfWriter.SetForms(c.acroForm)
+		if errF != nil {
+			common.Log.Debug("Failure: %v", errF)
+			return errF
+		}
+	}
 
 	// Pdf Writer access hook.  Can be used to encrypt, etc. via the PdfWriter instance.
 	if c.pdfWriterAccessFunc != nil {
