@@ -323,7 +323,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	}
 
 	if obj := TraceToDirectObject(dict.Get("ColorSpace")); obj != nil {
-		cs, err := newPdfColorspaceFromPdfObject(obj)
+		cs, err := NewPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
 		}

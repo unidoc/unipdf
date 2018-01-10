@@ -233,7 +233,7 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
 		if err != nil {
-			common.Log.Error("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
+			common.Log.Debug("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
 			fVal = 0.0
 			err = nil
 		}
@@ -241,6 +241,11 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 		return &o, err
 	} else {
 		intVal, err := strconv.ParseInt(numStr, 10, 64)
+		if err != nil {
+			common.Log.Debug("Error parsing integer %q err=%v. Using 0. Output may be incorrect", numStr, err)
+			intVal = 0
+			err = nil
+		}
 		o := PdfObjectInteger(intVal)
 		return &o, err
 	}

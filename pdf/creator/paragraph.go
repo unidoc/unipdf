@@ -223,7 +223,7 @@ func (p *Paragraph) getTextWidth() float64 {
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *Paragraph) wrapText() error {
 	if !p.enableWrap {
-		p.textLines = []string{p.encoder.Encode(p.text)}
+		p.textLines = []string{p.text}
 		return nil
 	}
 

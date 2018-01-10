@@ -21,6 +21,7 @@ import (
 // The Image type is used to draw an image onto PDF.
 type Image struct {
 	xobj *model.XObjectImage
+	img  *model.Image
 
 	// Rotation angle.
 	angle float64
@@ -46,20 +47,15 @@ type Image struct {
 
 	// Rotional origin.  Default (0,0 - upper left corner of block).
 	rotOriginX, rotOriginY float64
+
+	// Encoder
+	encoder core.StreamEncoder
 }
 
 // NewImage create a new image from a unidoc image (model.Image).
 func NewImage(img *model.Image) (*Image, error) {
 	image := &Image{}
-
-	// Create the XObject image.
-	ximg, err := model.NewXObjectImageFromImage(img, nil, core.NewFlateEncoder())
-	if err != nil {
-		common.Log.Error("Failed to create xobject image: %s", err)
-		return nil, err
-	}
-
-	image.xobj = ximg
+	image.img = img
 
 	// Image original size in points = pixel size.
 	image.origWidth = float64(img.Width)
@@ -113,6 +109,11 @@ func NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	return NewImage(img)
 }
 
+// SetEncoder sets the encoding/compression mechanism for the image.
+func (img *Image) SetEncoder(encoder core.StreamEncoder) {
+	img.encoder = encoder
+}
+
 // Height returns Image's document height.
 func (img *Image) Height() float64 {
 	return img.height
@@ -141,8 +142,32 @@ func (img *Image) GetMargins() (float64, float64, float64, float64) {
 	return img.margins.left, img.margins.right, img.margins.top, img.margins.bottom
 }
 
+// makeXObject makes the encoded XObject Image that will be used in the PDF.
+func (img *Image) makeXObject() error {
+	encoder := img.encoder
+	if encoder == nil {
+		// Default: Use flate encoder.
+		encoder = core.NewFlateEncoder()
+	}
+
+	// Create the XObject image.
+	ximg, err := model.NewXObjectImageFromImage(img.img, nil, encoder)
+	if err != nil {
+		common.Log.Error("Failed to create xobject image: %s", err)
+		return err
+	}
+
+	img.xobj = ximg
+	return nil
+}
+
 // GeneratePageBlocks generate the Page blocks. Draws the Image on a block, implementing the Drawable interface.
 func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	if img.xobj == nil {
+		// Build the XObject Image if not already prepared.
+		img.makeXObject()
+	}
+
 	blocks := []*Block{}
 	origCtx := ctx
 

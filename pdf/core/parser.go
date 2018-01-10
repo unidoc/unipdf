@@ -816,6 +816,11 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 		common.Log.Debug("ERROR: Missing size from xref stm")
 		return nil, errors.New("Missing Size from xref stm")
 	}
+	// Sanity check to avoid DoS attacks. Maximum number of indirect objects on 32 bit system.
+	if int64(*sizeObj) > 8388607 {
+		common.Log.Debug("ERROR: xref Size exceeded limit, over 8388607 (%d)", *sizeObj)
+		return nil, errors.New("Range check error")
+	}
 
 	wObj := xs.PdfObjectDictionary.Get("W")
 	wArr, ok := wObj.(*PdfObjectArray)

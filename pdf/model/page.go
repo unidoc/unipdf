@@ -896,7 +896,7 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourc
 	for _, csName := range dict.Keys() {
 		csObj := dict.Get(csName)
 		colorspaces.Names = append(colorspaces.Names, string(csName))
-		cs, err := newPdfColorspaceFromPdfObject(csObj)
+		cs, err := NewPdfColorspaceFromPdfObject(csObj)
 		if err != nil {
 			return nil, err
 		}

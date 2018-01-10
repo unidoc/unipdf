@@ -151,6 +151,14 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	if decodeParams == nil {
 		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
+			if arr, isArr := obj.(*PdfObjectArray); isArr {
+				if len(*arr) != 1 {
+					common.Log.Debug("Error: DecodeParms array length != 1 (%d)", len(*arr))
+					return nil, errors.New("Range check error")
+				}
+				obj = TraceToDirectObject((*arr)[0])
+			}
+
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
@@ -1667,10 +1675,11 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		arr, isArray := obj.(*PdfObjectArray)
 		if isArray {
 			for _, dictObj := range *arr {
+				dictObj = TraceToDirectObject(dictObj)
 				if dict, is := dictObj.(*PdfObjectDictionary); is {
 					decodeParamsArray = append(decodeParamsArray, dict)
 				} else {
-					decodeParamsArray = append(decodeParamsArray, nil)
+					decodeParamsArray = append(decodeParamsArray, MakeDict())
 				}
 			}
 		}
@@ -1713,7 +1722,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			dParams = dict
 		}
 
-		common.Log.Trace("Next name: %s", *name)
+		common.Log.Trace("Next name: %s, dp: %v, dParams: %v", *name, dp, dParams)
 		if *name == StreamEncodingFilterNameFlate {
 			// XXX: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)
