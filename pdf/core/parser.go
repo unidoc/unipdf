@@ -20,7 +20,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-
 // Regular Expressions for parsing and identifying object signatures.
 var rePdfVersion = regexp.MustCompile(`%PDF-(\d)\.(\d)`)
 var reEOF = regexp.MustCompile("%%EOF")
@@ -281,7 +280,6 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 		}
 	}
 
-	// !@#$ Bug here seen in 508_icmlpaper.pdf
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
 		o := PdfObjectFloat(fVal)
@@ -1355,7 +1353,6 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	gn, _ := strconv.Atoi(result[2])
 	indirect.ObjectNumber = int64(on)
 	indirect.GenerationNumber = int64(gn)
-
 
 	for {
 		bb, err := parser.reader.Peek(2)

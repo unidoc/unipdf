@@ -400,7 +400,6 @@ func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	return nil, errors.New("Media box not defined")
 }
 
-
 // Get the inheritable resources, either from the page or or a higher up page/pages struct.
 func (this *PdfPage) getResources() (*PdfPageResources, error) {
 	if this.Resources != nil {
@@ -897,7 +896,7 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourc
 	for _, csName := range dict.Keys() {
 		csObj := dict.Get(csName)
 		colorspaces.Names = append(colorspaces.Names, string(csName))
-		cs, err := newPdfColorspaceFromPdfObject(csObj)
+		cs, err := NewPdfColorspaceFromPdfObject(csObj)
 		if err != nil {
 			return nil, err
 		}

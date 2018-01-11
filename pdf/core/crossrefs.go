@@ -202,7 +202,6 @@ func (parser *PdfParser) LookupByNumber(objNumber int) (PdfObject, error) {
 }
 
 // Wrapper for lookupByNumber, checks if object encrypted etc.
-
 func (parser *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
 	obj, inObjStream, err := parser.lookupByNumber(objNumber, attemptRepairs)
 	if err != nil {

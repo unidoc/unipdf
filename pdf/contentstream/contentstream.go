@@ -131,8 +131,17 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 				return "", fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
 			}
 			for _, obj := range *paramList {
-				if strObj, ok := obj.(*PdfObjectString); ok {
-					txt += string(*strObj)
+				switch v := obj.(type) {
+				case *PdfObjectString:
+					txt += string(*v)
+				case *PdfObjectFloat:
+					if *v < -100 {
+						txt += " "
+					}
+				case *PdfObjectInteger:
+					if *v < -100 {
+						txt += " "
+					}
 				}
 			}
 		} else if inText && op.Operand == "Tj" {

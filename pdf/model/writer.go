@@ -583,7 +583,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		if this.crypter != nil && obj != this.encryptObj {
 			err := this.crypter.Encrypt(obj, int64(idx+1), 0)
 			if err != nil {
-				common.Log.Error("Failed encrypting (%s)", err)
+				common.Log.Debug("ERROR: Failed encrypting (%s)", err)
 				return err
 			}
 

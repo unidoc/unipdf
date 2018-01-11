@@ -158,6 +158,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 				}
 				obj = TraceToDirectObject((*arr)[0])
 			}
+
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)

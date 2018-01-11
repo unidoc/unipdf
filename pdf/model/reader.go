@@ -59,9 +59,6 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	}
 
 	return pdfReader, nil
-
-
-
 }
 
 func (this *PdfReader) IsEncrypted() (bool, error) {
@@ -694,8 +691,6 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 		return errors.New("Reader tracing a reference!")
 	}
 
-
-
 	return nil
 }
 
@@ -729,7 +724,11 @@ func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	if len(this.pageList) < pageNumber {
 		return nil, errors.New("Invalid page number (page count too short)")
 	}
-	page := this.PageList[pageNumber-1]
+	idx := pageNumber - 1
+	if idx < 0 {
+		return nil, fmt.Errorf("Page numbering must start at 1")
+	}
+	page := this.PageList[idx]
 
 	return page, nil
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/boombuler/barcode/qr"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
@@ -73,6 +74,7 @@ func TestTemplate1(t *testing.T) {
 	return
 }
 
+// TestImage1 tests loading an image and adding to file at an absolute position.
 func TestImage1(t *testing.T) {
 	creator := New()
 
@@ -98,6 +100,45 @@ func TestImage1(t *testing.T) {
 	}
 
 	err = creator.WriteToFile("/tmp/1.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// TestImageWithEncoder tests loading inserting an image with a specified encoder.
+func TestImageWithEncoder(t *testing.T) {
+	creator := New()
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img, err := NewImageFromData(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// JPEG encoder (DCT) with quality factor 70.
+	encoder := core.NewDCTEncoder()
+	encoder.Quality = 70
+	encoder.Width = int(img.Width())
+	encoder.Height = int(img.Height())
+	img.SetEncoder(encoder)
+
+	img.SetPos(0, 100)
+	img.ScaleToWidth(1.0 * creator.Width())
+
+	err = creator.Draw(img)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = creator.WriteToFile("/tmp/1_dct.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

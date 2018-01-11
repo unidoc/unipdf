@@ -73,6 +73,61 @@ func (this *Image) SetSamples(samples []uint32) {
 	this.Data = data
 }
 
+// Resample resamples the image data converting from current BitsPerComponent to a target BitsPerComponent
+// value.  Sets the image's BitsPerComponent to the target value following resampling.
+//
+// For example, converting an 8-bit RGB image to 1-bit grayscale (common for scanned images):
+//   // Convert RGB image to grayscale.
+//   rgbColorSpace := pdf.NewPdfColorspaceDeviceRGB()
+//   grayImage, err := rgbColorSpace.ImageToGray(rgbImage)
+//   if err != nil {
+//     return err
+//   }
+//   // Resample as 1 bit.
+//   grayImage.Resample(1)
+func (this *Image) Resample(targetBitsPerComponent int64) {
+	samples := this.GetSamples()
+
+	// Image data are stored row by row.  If the number of bits per row is not a multiple of 8, the end of the
+	// row needs to be padded with extra bits to fill out the last byte.
+	// Thus the processing is done on a row by row basis below.
+
+	// This one simply resamples the data so that each component has target bits per component...
+	// So if the original data was 10011010, then will have 1 0 0 1 1 0 1 0... much longer
+	// The key to resampling is that we need to upsample/downsample,
+	// i.e. 10011010 >> targetBitsPerComponent
+	// Current bits: 8, target bits: 1... need to downsample by 8-1 = 7
+
+	if targetBitsPerComponent < this.BitsPerComponent {
+		downsampling := this.BitsPerComponent - targetBitsPerComponent
+		for i := range samples {
+			samples[i] >>= uint(downsampling)
+		}
+	} else if targetBitsPerComponent > this.BitsPerComponent {
+		upsampling := targetBitsPerComponent - this.BitsPerComponent
+		for i := range samples {
+			samples[i] <<= uint(upsampling)
+		}
+	} else {
+		return
+	}
+
+	// Write out row by row...
+	data := []byte{}
+	for i := int64(0); i < this.Height; i++ {
+		ind1 := i * this.Width * int64(this.ColorComponents)
+		ind2 := (i+1)*this.Width*int64(this.ColorComponents) - 1
+
+		resampled := sampling.ResampleUint32(samples[ind1:ind2], int(targetBitsPerComponent), 8)
+		for _, val := range resampled {
+			data = append(data, byte(val))
+		}
+	}
+
+	this.Data = data
+	this.BitsPerComponent = int64(targetBitsPerComponent)
+}
+
 // Converts the unidoc Image to a golang Image structure.
 func (this *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
@@ -122,7 +177,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				r := uint16(samples[i])<<8 | uint16(samples[i+1])
 				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
 				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				a := uint16(0)
+				a := uint16(0xffff) // Default: solid (0xffff) whereas transparent=0.
 				if this.alphaData != nil && len(this.alphaData) > aidx+1 {
 					a = (uint16(this.alphaData[aidx]) << 8) | uint16(this.alphaData[aidx+1])
 					aidx += 2
@@ -132,7 +187,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				r := uint8(samples[i] & 0xff)
 				g := uint8(samples[i+1] & 0xff)
 				b := uint8(samples[i+2] & 0xff)
-				a := uint8(0)
+				a := uint8(0xff) // Default: solid (0xff) whereas transparent=0.
 				if this.alphaData != nil && len(this.alphaData) > aidx {
 					a = uint8(this.alphaData[aidx])
 					aidx++
