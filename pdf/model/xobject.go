@@ -226,6 +226,17 @@ func NewXObjectImage() *XObjectImage {
 // If encoder is nil, uses raw encoding (none).
 func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
+	return UpdateXObjectImageFromImage(xobj, img, cs, encoder)
+}
+
+// UpdateXObjectImageFromImage reates a new XObject Image from an image object with default options except
+// that is has the masks from xobjIn
+// If encoder is nil, uses raw encoding (none).
+func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+	xobj := NewXObjectImage()
+	xobj.SMask = xobjIn.SMask
+	xobj.Mask = xobjIn.Mask
+	xobj.ImageMask = xobjIn.ImageMask
 
 	if encoder == nil {
 		encoder = NewRawEncoder()
