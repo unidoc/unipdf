@@ -163,11 +163,11 @@ func (this *ContentStreamInlineImage) GetColorSpace(resources *PdfPageResources)
 		return nil, errors.New("Invalid type")
 	}
 
-	if *name == "G" {
+	if *name == "G" || *name == "DeviceGray" {
 		return NewPdfColorspaceDeviceGray(), nil
-	} else if *name == "RGB" {
+	} else if *name == "RGB" || *name == "DeviceRGB" {
 		return NewPdfColorspaceDeviceRGB(), nil
-	} else if *name == "CMYK" {
+	} else if *name == "CMYK" || *name == "DeviceCMYK" {
 		return NewPdfColorspaceDeviceCMYK(), nil
 	} else if *name == "I" {
 		return nil, errors.New("Unsupported Index colorspace")

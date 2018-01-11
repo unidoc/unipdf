@@ -938,18 +938,18 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*Pdf
 			if _, isNull := obj.(*PdfObjectNull); !isNull {
 				return nil, fmt.Errorf("Popup should point to an indirect object")
 			}
-		}
+		} else {
+			popupAnnotObj, err := r.newPdfAnnotationFromIndirectObject(indObj)
+			if err != nil {
+				return nil, err
+			}
+			popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
+			if !isPopupAnnot {
+				return nil, fmt.Errorf("Popup not referring to a popup annotation!")
+			}
 
-		popupAnnotObj, err := r.newPdfAnnotationFromIndirectObject(indObj)
-		if err != nil {
-			return nil, err
+			annot.Popup = popupAnnot
 		}
-		popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
-		if !isPopupAnnot {
-			return nil, fmt.Errorf("Popup not referring to a popup annotation!")
-		}
-
-		annot.Popup = popupAnnot
 	}
 
 	if obj := d.Get("CA"); obj != nil {

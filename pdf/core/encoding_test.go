@@ -71,6 +71,28 @@ func TestLZWEncoding(t *testing.T) {
 	}
 }
 
+// Test run length encoding.
+func TestRunLengthEncoding(t *testing.T) {
+	rawStream := []byte("this is a dummy text with some \x01\x02\x03 binary data")
+	encoder := NewRunLengthEncoder()
+	encoded, err := encoder.EncodeBytes(rawStream)
+	if err != nil {
+		t.Errorf("Failed to RunLength encode data: %v", err)
+		return
+	}
+	decoded, err := encoder.DecodeBytes(encoded)
+	if err != nil {
+		t.Errorf("Failed to RunLength decode data: %v", err)
+		return
+	}
+	if !compareSlices(decoded, rawStream) {
+		t.Errorf("Slices not matching. RunLength")
+		t.Errorf("Decoded (%d): % x", len(encoded), encoded)
+		t.Errorf("Raw     (%d): % x", len(rawStream), rawStream)
+		return
+	}
+}
+
 // Test ASCII hex encoding.
 func TestASCIIHexEncoding(t *testing.T) {
 	byteData := []byte{0xDE, 0xAD, 0xBE, 0xEF}

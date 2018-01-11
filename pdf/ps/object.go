@@ -587,6 +587,12 @@ func (this *PSOperand) Dup(stack *PSStack) error {
 		return err
 	}
 
+	// Push it back.
+	err = stack.Push(obj)
+	if err != nil {
+		return err
+	}
+	// Push the duplicate.
 	err = stack.Push(obj.Duplicate())
 	return err
 }
@@ -1217,7 +1223,7 @@ func (this *PSOperand) Roll(stack *PSStack) error {
 		} else {
 			// if j < 0: put the bottom element on top
 			bottom := substack[len(substack)-n.Val]
-			substack = append(substack[1:len(substack)], bottom)
+			substack = append(substack[1:], bottom)
 		}
 
 		s := append((*stack)[0:len(*stack)-n.Val], substack...)

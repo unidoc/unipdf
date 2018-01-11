@@ -157,8 +157,9 @@ func (this *PdfWriter) hasObject(obj PdfObject) bool {
 	return false
 }
 
-// addObject adds `obj` to list of objects.
-// Returns true if `obj` was not already in list of objects, or false it was.
+// Adds the object to list of objects and returns true if the obj was
+// not already added.
+// Returns false if the object was previously added.
 func (this *PdfWriter) addObject(obj PdfObject) bool {
 	hasObj := this.hasObject(obj)
 	if !hasObj {
@@ -169,9 +170,6 @@ func (this *PdfWriter) addObject(obj PdfObject) bool {
 	return false
 }
 
-// addObjects recursively adds `obj` to the list of objects.
-// If `obj` is a container then its elements are added with a recursive call to addObjects.
-// In `obj` is a PdfIndirectObject or PdfObjectStream, its contents are added after it is added.
 func (this *PdfWriter) addObjects(obj PdfObject) error {
 	common.Log.Trace("Adding objects!")
 
@@ -228,7 +226,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					// Could refer to somewhere outside of the scope of the output doc.
 					// Should be done by the reader already.
 					// -> ERROR.
-					common.Log.Error("Parent is a reference object - Cannot be in writer (needs to be resolved)")
+					common.Log.Debug("ERROR: Parent is a reference object - Cannot be in writer (needs to be resolved)")
 					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
 				}
 			}
@@ -253,14 +251,14 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 
 	if _, isReference := obj.(*PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
-		common.Log.Error("Cannot be a reference!")
+		common.Log.Debug("ERROR: Cannot be a reference!")
 		return errors.New("Reference not allowed")
 	}
 
 	return nil
 }
 
-// AddPage adds a page to the PDF file. The new page should be an indirect
+// Add a page to the PDF file. The new page should be an indirect
 // object.
 func (this *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
@@ -269,14 +267,14 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 
 	pageObj, ok := obj.(*PdfIndirectObject)
 	if !ok {
-		return errors.New("Page should be an indirect object.")
+		return errors.New("Page should be an indirect object")
 	}
 	common.Log.Trace("%s", pageObj)
 	common.Log.Trace("%s", pageObj.PdfObject)
 
 	pDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Page object should be a dictionary.")
+		return errors.New("Page object should be a dictionary")
 	}
 
 	otype, ok := pDict.Get("Type").(*PdfObjectName)
@@ -517,7 +515,7 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	return nil
 }
 
-// Write out the pdf.
+// Write the pdf out.
 func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Trace("Write()")
 	// Outlines.

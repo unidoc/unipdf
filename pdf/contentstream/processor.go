@@ -7,7 +7,6 @@ package contentstream
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -24,10 +23,6 @@ type GraphicsState struct {
 }
 
 type GraphicStateStack []GraphicsState
-
-func (gs *GraphicsState) String() string {
-	return fmt.Sprintf("%+v", gs)
-}
 
 func (gsStack *GraphicStateStack) Push(gs GraphicsState) {
 	*gsStack = append(*gsStack, gs)
@@ -127,7 +122,7 @@ func (csp *ContentStreamProcessor) getColorspace(name string, resources *PdfPage
 	}
 
 	// Otherwise unsupported.
-	common.Log.Error("Unknown colorspace requested: %s", name)
+	common.Log.Debug("Unknown colorspace requested: %s", name)
 	return nil, errors.New("Unsupported colorspace")
 }
 
@@ -194,7 +189,7 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 		return nil, nil
 	}
 
-	common.Log.Error("Unable to determine initial color for unknown colorspace: %T", cs)
+	common.Log.Debug("Unable to determine initial color for unknown colorspace: %T", cs)
 	return nil, errors.New("Unsupported colorspace")
 }
 
@@ -207,6 +202,8 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 	this.graphicsState.ColorNonStroking = NewPdfColorDeviceGray(0)
 
 	for _, op := range this.operations {
+		var err error
+
 		// Internal handling.
 		switch op.Operand {
 		case "q":
@@ -216,65 +213,34 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 
 		// Color operations (Table 74 p. 179)
 		case "CS":
-			err := this.handleCommand_CS(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_CS(op, resources)
 		case "cs":
-			err := this.handleCommand_cs(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_cs(op, resources)
 		case "SC":
-			err := this.handleCommand_SC(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_SC(op, resources)
 		case "SCN":
-			err := this.handleCommand_SCN(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_SCN(op, resources)
 		case "sc":
-			err := this.handleCommand_sc(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_sc(op, resources)
 		case "scn":
-			err := this.handleCommand_scn(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_scn(op, resources)
 		case "G":
-			err := this.handleCommand_G(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_G(op, resources)
 		case "g":
-			err := this.handleCommand_g(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_g(op, resources)
 		case "RG":
-			err := this.handleCommand_RG(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_RG(op, resources)
 		case "rg":
-			err := this.handleCommand_rg(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_rg(op, resources)
 		case "K":
-			err := this.handleCommand_K(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_K(op, resources)
 		case "k":
-			err := this.handleCommand_k(op, resources)
-			if err != nil {
-				return err
-			}
+			err = this.handleCommand_k(op, resources)
+		}
+		if err != nil {
+			common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
+			common.Log.Debug("Operand: %#v", op.Operand)
+			return err
 		}
 
 		// Check if have external handler also, and process if so.
@@ -368,8 +334,8 @@ func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation,
 
 	cs := this.graphicsState.ColorspaceStroking
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -393,8 +359,8 @@ func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
-			common.Log.Error("Invalid number of parameters for SC")
-			common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 			return errors.New("Invalid number of parameters")
 		}
 	}
@@ -415,8 +381,8 @@ func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation,
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
-			common.Log.Error("Invalid number of parameters for SC")
-			common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 			return errors.New("Invalid number of parameters")
 		}
 	}
@@ -437,14 +403,15 @@ func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
-			common.Log.Error("Invalid number of parameters for SC")
-			common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+			common.Log.Debug("Invalid number of parameters for SC")
+			common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 			return errors.New("Invalid number of parameters")
 		}
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
 	if err != nil {
+		common.Log.Debug("ERROR: Fail to get color from params: %+v (CS is %+v)", op.Params, cs)
 		return err
 	}
 
@@ -458,8 +425,8 @@ func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -479,8 +446,8 @@ func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, 
 func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -500,8 +467,8 @@ func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, 
 func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -520,8 +487,8 @@ func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation,
 func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -541,8 +508,8 @@ func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation,
 func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
@@ -561,8 +528,8 @@ func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, 
 func (this *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Error("Invalid number of parameters for SC")
-		common.Log.Error("Number %d not matching colorspace %T", len(op.Params), cs)
+		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 

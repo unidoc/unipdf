@@ -100,7 +100,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 		typeVal, ok := obj.(*PdfObjectName)
 		if ok {
 			if *typeVal != "Outlines" {
-				common.Log.Error("Type != Outlines (%s)", *typeVal)
+				common.Log.Debug("ERROR Type != Outlines (%s)", *typeVal)
 				// Should be "Outlines" if there, but some files have other types
 				// Log as an error but do not quit.
 				// Might be a good idea to log this kind of deviation from the standard separately.
@@ -213,7 +213,7 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 		return outlineItem
 	}
 
-	common.Log.Error("Invalid outline tree node item") // Should never happen.
+	common.Log.Debug("ERROR Invalid outline tree node item") // Should never happen.
 	return nil
 }
 

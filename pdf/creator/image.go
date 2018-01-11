@@ -18,8 +18,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// The image type is used to draw an image onto PDF.
-type image struct {
+// The Image type is used to draw an image onto PDF.
+type Image struct {
 	xobj *model.XObjectImage
 
 	// Rotation angle.
@@ -48,9 +48,9 @@ type image struct {
 	rotOriginX, rotOriginY float64
 }
 
-// Create a new image from a unidoc image model.
-func NewImage(img *model.Image) (*image, error) {
-	image := &image{}
+// NewImage create a new image from a unidoc image (model.Image).
+func NewImage(img *model.Image) (*Image, error) {
+	image := &Image{}
 
 	// Create the XObject image.
 	ximg, err := model.NewXObjectImageFromImage(img, nil, core.NewFlateEncoder())
@@ -74,8 +74,8 @@ func NewImage(img *model.Image) (*image, error) {
 	return image, nil
 }
 
-// Create an image from image data.
-func NewImageFromData(data []byte) (*image, error) {
+// NewImageFromData creates an Image from image data.
+func NewImageFromData(data []byte) (*Image, error) {
 	imgReader := bytes.NewReader(data)
 
 	// Load the image with default handler.
@@ -88,8 +88,8 @@ func NewImageFromData(data []byte) (*image, error) {
 	return NewImage(img)
 }
 
-// Create image from a file.
-func NewImageFromFile(path string) (*image, error) {
+// NewImageFromFile creates an Image from a file.
+func NewImageFromFile(path string) (*Image, error) {
 	imgData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -103,8 +103,8 @@ func NewImageFromFile(path string) (*image, error) {
 	return img, nil
 }
 
-// Create image from a go image.Image datastructure.
-func NewImageFromGoImage(goimg goimage.Image) (*image, error) {
+// NewImageFromGoImage creates an Image from a go image.Image datastructure.
+func NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	img, err := model.ImageHandling.NewImageFromGoImage(goimg)
 	if err != nil {
 		return nil, err
@@ -113,36 +113,36 @@ func NewImageFromGoImage(goimg goimage.Image) (*image, error) {
 	return NewImage(img)
 }
 
-// Get image document height.
-func (img *image) Height() float64 {
+// Height returns Image's document height.
+func (img *Image) Height() float64 {
 	return img.height
 }
 
-// Get image document width.
-func (img *image) Width() float64 {
+// Width returns Image's document width.
+func (img *Image) Width() float64 {
 	return img.width
 }
 
-// Set opacity
-func (img *image) SetOpacity(opacity float64) {
+// SetOpacity sets opacity for Image.
+func (img *Image) SetOpacity(opacity float64) {
 	img.opacity = opacity
 }
 
-// Set the image Margins.
-func (img *image) SetMargins(left, right, top, bottom float64) {
+// SetMargins sets the margins for the Image (in relative mode): left, right, top, bottom.
+func (img *Image) SetMargins(left, right, top, bottom float64) {
 	img.margins.left = left
 	img.margins.right = right
 	img.margins.top = top
 	img.margins.bottom = bottom
 }
 
-// Get image Margins: left, right, top, bottom.
-func (img *image) GetMargins() (float64, float64, float64, float64) {
+// GetMargins returns the Image's margins: left, right, top, bottom.
+func (img *Image) GetMargins() (float64, float64, float64, float64) {
 	return img.margins.left, img.margins.right, img.margins.top, img.margins.bottom
 }
 
-// Generate the Page blocks.
-func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+// GeneratePageBlocks generate the Page blocks. Draws the Image on a block, implementing the Drawable interface.
+func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	blocks := []*Block{}
 	origCtx := ctx
 
@@ -163,6 +163,11 @@ func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			newContext.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - img.margins.bottom
 			newContext.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - img.margins.left - img.margins.right
 			ctx = newContext
+		} else {
+			ctx.Y += img.margins.top
+			ctx.Height -= img.margins.top + img.margins.bottom
+			ctx.X += img.margins.left
+			ctx.Width -= img.margins.left + img.margins.right
 		}
 	} else {
 		// Absolute.
@@ -170,7 +175,7 @@ func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		ctx.Y = img.yPos
 	}
 
-	// Place the image on the template at position (x,y) based on the ctx.
+	// Place the Image on the template at position (x,y) based on the ctx.
 	ctx, err := drawImageOnBlock(blk, img, ctx)
 	if err != nil {
 		return nil, ctx, err
@@ -183,56 +188,58 @@ func (img *image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		ctx = origCtx
 	} else {
 		// XXX/TODO: Use projected height.
-		ctx.Y += img.height
+		ctx.Y += img.margins.bottom
+		ctx.Height -= img.margins.bottom
 	}
 
 	return blocks, ctx, nil
 }
 
-// Set absolute position.  Changes object positioning to absolute.
-func (img *image) SetPos(x, y float64) {
+// SetPos sets the absolute position. Changes object positioning to absolute.
+func (img *Image) SetPos(x, y float64) {
 	img.positioning = positionAbsolute
 	img.xPos = x
 	img.yPos = y
 }
 
-// Scale image by a constant factor, both width and height.
-func (img *image) Scale(xFactor, yFactor float64) {
+// Scale scales Image by a constant factor, both width and height.
+func (img *Image) Scale(xFactor, yFactor float64) {
 	img.width = xFactor * img.width
 	img.height = yFactor * img.height
 }
 
-// Scale image to a specified width w, maintaining the aspect ratio.
-func (img *image) ScaleToWidth(w float64) {
+// ScaleToWidth scale Image to a specified width w, maintaining the aspect ratio.
+func (img *Image) ScaleToWidth(w float64) {
 	ratio := img.height / img.width
 	img.width = w
 	img.height = w * ratio
 }
 
-// Scale image to a specified height h, maintaining the aspect ratio.
-func (img *image) ScaleToHeight(h float64) {
+// ScaleToHeight scale Image to a specified height h, maintaining the aspect ratio.
+func (img *Image) ScaleToHeight(h float64) {
 	ratio := img.width / img.height
 	img.height = h
 	img.width = h * ratio
 }
 
-// Set the image document width to specified w.
-func (img *image) SetWidth(w float64) {
+// SetWidth set the Image's document width to specified w. This does not change the raw image data, i.e.
+// no actual scaling of data is performed. That is handled by the PDF viewer.
+func (img *Image) SetWidth(w float64) {
 	img.width = w
 }
 
-// Set the image document height to specified h.
-func (img *image) SetHeight(h float64) {
+// SetHeight sets the Image's document height to specified h.
+func (img *Image) SetHeight(h float64) {
 	img.height = h
 }
 
-// Set image rotation angle in degrees.
-func (img *image) SetAngle(angle float64) {
+// SetAngle sets Image rotation angle in degrees.
+func (img *Image) SetAngle(angle float64) {
 	img.angle = angle
 }
 
 // Draw the image onto the specified blk.
-func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, error) {
+func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, error) {
 	origCtx := ctx
 
 	// Find a free name for the image.
@@ -296,9 +303,9 @@ func drawImageOnBlock(blk *Block, img *image, ctx DrawContext) (DrawContext, err
 
 	blk.addContents(ops)
 
-	ctx.Y += img.Height()
-
 	if img.positioning.isRelative() {
+		ctx.Y += img.Height()
+		ctx.Height -= img.Height()
 		return ctx, nil
 	} else {
 		// Absolute positioning - return original context.

@@ -138,6 +138,55 @@ func newPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	return nil, errors.New("Type error")
 }
 
+// determine PDF colorspace from a PdfObject.  Returns the colorspace name and an error on failure.
+// If the colorspace was not found, will return an empty string.
+func determineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) {
+	var csName *PdfObjectName
+	var csArray *PdfObjectArray
+
+	if indObj, is := obj.(*PdfIndirectObject); is {
+		if array, is := indObj.PdfObject.(*PdfObjectArray); is {
+			csArray = array
+		} else if name, is := indObj.PdfObject.(*PdfObjectName); is {
+			csName = name
+		}
+	} else if array, is := obj.(*PdfObjectArray); is {
+		csArray = array
+	} else if name, is := obj.(*PdfObjectName); is {
+		csName = name
+	}
+
+	// If specified by a name directly: Device colorspace or Pattern.
+	if csName != nil {
+		switch *csName {
+		case "DeviceGray", "DeviceRGB", "DeviceCMYK":
+			return *csName, nil
+		case "Pattern":
+			return *csName, nil
+		}
+	}
+
+	if csArray != nil && len(*csArray) > 0 {
+		if name, is := (*csArray)[0].(*PdfObjectName); is {
+			switch *name {
+			case "DeviceGray", "DeviceRGB", "DeviceCMYK":
+				if len(*csArray) == 1 {
+					return *name, nil
+				}
+			case "CalGray", "CalRGB", "Lab":
+				return *name, nil
+			case "ICCBased", "Pattern", "Indexed":
+				return *name, nil
+			case "Separation", "DeviceN":
+				return *name, nil
+			}
+		}
+	}
+
+	// Not found
+	return "", nil
+}
+
 // Gray scale component.
 // No specific parameters
 
@@ -544,7 +593,7 @@ func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 	}
 	if len(decode) != 8 {
-		common.Log.Debug("Invalid decode array (%d): % d", len(decode), decode)
+		common.Log.Debug("Invalid decode array (%d): % .3f", len(decode), decode)
 		return img, errors.New("Invalid decode array")
 	}
 	common.Log.Trace("Decode array: % f", decode)
@@ -763,7 +812,7 @@ func (this *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, err
 }
 
 func (this *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
-	if len(objects) != 4 {
+	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
 
@@ -1367,19 +1416,34 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 
 	// L
 	l := vals[0]
-	if l < 0.0 || l > 1.0 {
+	if l < 0.0 || l > 100.0 {
+		common.Log.Debug("L out of range (got %v should be 0-100)", l)
 		return nil, errors.New("Range check")
 	}
 
 	// A
 	a := vals[1]
-	if a < 0.0 || a > 1.0 {
+	aMin := float64(-100)
+	aMax := float64(100)
+	if len(this.Range) > 1 {
+		aMin = this.Range[0]
+		aMax = this.Range[1]
+	}
+	if a < aMin || a > aMax {
+		common.Log.Debug("A out of range (got %v; range %v to %v)", a, aMin, aMax)
 		return nil, errors.New("Range check")
 	}
 
 	// B.
 	b := vals[2]
-	if b < 0.0 || b > 1.0 {
+	bMin := float64(-100)
+	bMax := float64(100)
+	if len(this.Range) > 3 {
+		bMin = this.Range[2]
+		bMax = this.Range[3]
+	}
+	if b < bMin || b > bMax {
+		common.Log.Debug("b out of range (got %v; range %v to %v)", b, bMin, bMax)
 		return nil, errors.New("Range check")
 	}
 
@@ -1416,6 +1480,8 @@ func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	}
 
 	// Get normalized L*, a*, b* values. [0-1]
+	// XXX/FIXME: According to the pdf standard these values are going to be in range 0-100, -100 - 100, -100 - 100
+	// by default.
 	LNorm := lab.L()
 	ANorm := lab.A()
 	BNorm := lab.B()
@@ -1937,7 +2003,6 @@ func (this *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfCol
 // the name of the pattern.
 func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) < 1 {
-		common.Log.Error("ColorFromPdfObjects: len(objects)=%d", len(objects))
 		return nil, errors.New("Invalid number of parameters")
 	}
 	patternColor := &PdfColorPattern{}
@@ -2053,6 +2118,14 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 
 	// Get base colormap.
 	obj = (*array)[1]
+
+	// Base cs cannot be another /Indexed or /Pattern space.
+	baseName, err := determineColorspaceNameFromPdfObject(obj)
+	if baseName == "Indexed" || baseName == "Pattern" {
+		common.Log.Debug("Error: Indexed colorspace cannot have Indexed/Pattern CS as base (%v)", baseName)
+		return nil, ErrRangeError
+	}
+
 	baseCs, err := newPdfColorspaceFromPdfObject(obj)
 	if err != nil {
 		return nil, err
@@ -2154,7 +2227,15 @@ func (this *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, e
 
 // Convert an indexed image to RGB.
 func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
-	baseImage := img
+	//baseImage := img
+	// Make a new representation of the image to be converted with the base colorspace.
+	baseImage := Image{}
+	baseImage.Height = img.Height
+	baseImage.Width = img.Width
+	baseImage.alphaData = img.alphaData
+	baseImage.BitsPerComponent = img.BitsPerComponent
+	baseImage.hasAlpha = img.hasAlpha
+	baseImage.ColorComponents = img.ColorComponents
 
 	samples := img.GetSamples()
 	N := this.Base.GetNumComponents()
@@ -2318,11 +2399,15 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (Pdf
 	input := []float64{tint}
 	output, err := this.TintTransform.Evaluate(input)
 	if err != nil {
+		common.Log.Debug("Error, failed to evaluate: %v", err)
+		common.Log.Trace("Tint transform: %+v", this.TintTransform)
 		return nil, err
 	}
 
+	common.Log.Trace("Processing ColorFromFloats(%+v) on AlternateSpace: %#v", output, this.AlternateSpace)
 	color, err := this.AlternateSpace.ColorFromFloats(output)
 	if err != nil {
+		common.Log.Debug("Error, failed to evaluate in alternate space: %v", err)
 		return nil, err
 	}
 
@@ -2416,6 +2501,7 @@ func (this *PdfColorspaceDeviceN) String() string {
 	return "DeviceN"
 }
 
+// GetNumComponents returns the number of input color components, i.e. that are input to the tint transform.
 func (this *PdfColorspaceDeviceN) GetNumComponents() int {
 	return len(*this.ColorantNames)
 }

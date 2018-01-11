@@ -30,16 +30,18 @@ build:
     - script:
         name: go get
         code: |
-          go get
+          cd $WERCKER_SOURCE_DIR
+          go version
+          go get -t $(go list ./... | grep -v textencoding/glyphlist)
 
     # Build the project
     - script:
         name: go build
         code: |
-          go build $(go list ./... | grep -v examples)
+          go build $(go list ./... | grep -v examples | grep -v textencoding/glyphlist)
 
     # Test the project
     - script:
         name: go test
         code: |
-          go test $(go list ./... | grep -v examples)
+          go test $(go list ./... | grep -v examples| grep -v textencoding/glyphlist)

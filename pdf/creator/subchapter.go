@@ -12,13 +12,13 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
-// A subchapter simply represents a subchapter pertaining to a specific chapter.  It can contain multiple
-// drawables, just like a chapter.
-type subchapter struct {
+// Subchapter simply represents a sub chapter pertaining to a specific Chapter.  It can contain multiple
+// Drawables, just like a chapter.
+type Subchapter struct {
 	chapterNum    int
 	subchapterNum int
 	title         string
-	heading       *paragraph
+	heading       *Paragraph
 
 	contents []Drawable
 
@@ -41,8 +41,10 @@ type subchapter struct {
 	toc *TableOfContents
 }
 
-func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
-	subchap := &subchapter{}
+// NewSubchapter creates a new Subchapter under Chapter ch with specified title.
+// All other parameters are set to their defaults.
+func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
+	subchap := &Subchapter{}
 
 	ch.subchapters++
 	subchap.subchapterNum = ch.subchapters
@@ -71,8 +73,8 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *subchapter {
 	return subchap
 }
 
-// Set flag to indicate whether or not to show chapter numbers as part of title.
-func (subchap *subchapter) SetShowNumbering(show bool) {
+// SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
+func (subchap *Subchapter) SetShowNumbering(show bool) {
 	if show {
 		heading := fmt.Sprintf("%d.%d. %s", subchap.chapterNum, subchap.subchapterNum, subchap.title)
 		subchap.heading.SetText(heading)
@@ -83,13 +85,13 @@ func (subchap *subchapter) SetShowNumbering(show bool) {
 	subchap.showNumbering = show
 }
 
-// Set flag to indicate whether or not to include in the table of contents.
-func (subchap *subchapter) SetIncludeInTOC(includeInTOC bool) {
+// SetIncludeInTOC sets a flag to indicate whether or not to include in the table of contents.
+func (subchap *Subchapter) SetIncludeInTOC(includeInTOC bool) {
 	subchap.includeInTOC = includeInTOC
 }
 
-// Get access to the heading paragraph to address style etc.
-func (subchap *subchapter) GetHeading() *paragraph {
+// GetHeading returns the Subchapter's heading Paragraph to address style (font type, size, etc).
+func (subchap *Subchapter) GetHeading() *Paragraph {
 	return subchap.heading
 }
 
@@ -102,34 +104,36 @@ func (subchap *subchapter) SetPos(x, y float64) {
 }
 */
 
-// Set chapter Margins.  Typically not needed as the Page Margins are used.
-func (subchap *subchapter) SetMargins(left, right, top, bottom float64) {
+// SetMargins sets the Subchapter's margins (left, right, top, bottom).
+// These margins are typically not needed as the Creator's page margins are used preferably.
+func (subchap *Subchapter) SetMargins(left, right, top, bottom float64) {
 	subchap.margins.left = left
 	subchap.margins.right = right
 	subchap.margins.top = top
 	subchap.margins.bottom = bottom
 }
 
-// Get the subchapter Margins: left, right, top, bototm.
-func (subchap *subchapter) GetMargins() (float64, float64, float64, float64) {
+// GetMargins returns the Subchapter's margins: left, right, top, bottom.
+func (subchap *Subchapter) GetMargins() (float64, float64, float64, float64) {
 	return subchap.margins.left, subchap.margins.right, subchap.margins.top, subchap.margins.bottom
 }
 
-// Add a new drawable to the chapter.
-func (subchap *subchapter) Add(d Drawable) {
+// Add adds a new Drawable to the chapter.
+// The currently supported Drawables are: *Paragraph, *Image, *Block, *Table.
+func (subchap *Subchapter) Add(d Drawable) {
 	switch d.(type) {
-	case *Chapter, *subchapter:
+	case *Chapter, *Subchapter:
 		common.Log.Debug("Error: Cannot add chapter or subchapter to a subchapter")
-	case *paragraph, *image, *Block, *Table:
+	case *Paragraph, *Image, *Block, *Table:
 		subchap.contents = append(subchap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
 	}
 }
 
-// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
-func (subchap *subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap over
+// multiple pages. Implements the Drawable interface.
+func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
 	if subchap.positioning.isRelative() {

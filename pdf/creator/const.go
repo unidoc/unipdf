@@ -5,10 +5,13 @@
 
 package creator
 
+// PageSize represents the page size as a 2 element array representing the width and height in PDF document units (points).
 type PageSize [2]float64
 
-// Default PDF resolution (points/inch, points/mm).
-var PPI float64 = 72               // Points per inch. (Default resolution).
+// PPI specifies the default PDF resolution in points/inch.
+var PPI float64 = 72 // Points per inch. (Default resolution).
+
+// PPMM specifies the default PDF resolution in points/mm.
 var PPMM float64 = 72 * 1.0 / 25.4 // Points per mm. (Default resolution).
 
 //
@@ -25,6 +28,11 @@ var (
 // TextAlignment options for paragraph.
 type TextAlignment int
 
+// The options supported for text alignment are:
+// left - TextAlignmentLeft
+// right - TextAlignmentRight
+// center - TextAlignmentCenter
+// justify - TextAlignmentJustify
 const (
 	TextAlignmentLeft TextAlignment = iota
 	TextAlignmentRight

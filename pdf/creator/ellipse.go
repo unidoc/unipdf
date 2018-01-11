@@ -10,12 +10,10 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-//
-// Defines an ellipse with a center at (xc,yc) and a specified width and height.  The ellipse can have a colored
+// Ellipse defines an ellipse with a center at (xc,yc) and a specified width and height.  The ellipse can have a colored
 // fill and/or border with a specified width.
 // Implements the Drawable interface and can be drawn on PDF using the Creator.
-//
-type ellipse struct {
+type Ellipse struct {
 	xc          float64
 	yc          float64
 	width       float64
@@ -25,9 +23,9 @@ type ellipse struct {
 	borderWidth float64
 }
 
-// Generates a new ellipse centered at (xc,yc) with a width and height specified.
-func NewEllipse(xc, yc, width, height float64) *ellipse {
-	ell := &ellipse{}
+// NewEllipse creates a new ellipse centered at (xc,yc) with a width and height specified.
+func NewEllipse(xc, yc, width, height float64) *Ellipse {
+	ell := &Ellipse{}
 
 	ell.xc = xc
 	ell.yc = yc
@@ -40,28 +38,28 @@ func NewEllipse(xc, yc, width, height float64) *ellipse {
 	return ell
 }
 
-// Get the coordinates of the ellipse center (xc,yc).
-func (ell *ellipse) GetCoords() (float64, float64) {
+// GetCoords returns the coordinates of the Ellipse's center (xc,yc).
+func (ell *Ellipse) GetCoords() (float64, float64) {
 	return ell.xc, ell.yc
 }
 
-// Set border width.
-func (ell *ellipse) SetBorderWidth(bw float64) {
+// SetBorderWidth sets the border width.
+func (ell *Ellipse) SetBorderWidth(bw float64) {
 	ell.borderWidth = bw
 }
 
-// Set border color.
-func (ell *ellipse) SetBorderColor(col color) {
+// SetBorderColor sets the border color.
+func (ell *Ellipse) SetBorderColor(col Color) {
 	ell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Set fill color.
-func (ell *ellipse) SetFillColor(col color) {
+// SetFillColor sets the fill color.
+func (ell *Ellipse) SetFillColor(col Color) {
 	ell.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Draws the rectangle on a new block representing the page.
-func (ell *ellipse) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+// GeneratePageBlocks draws the rectangle on a new block representing the page.
+func (ell *Ellipse) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	drawell := draw.Circle{

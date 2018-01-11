@@ -46,6 +46,7 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 			obj, err, isOperand := this.parseObject()
 			if err != nil {
 				if err == io.EOF {
+					// End of data. Successful exit point.
 					return &operations, nil
 				}
 				return &operations, err
@@ -69,9 +70,6 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 			operation.Params = append(operation.Params, im)
 		}
 	}
-
-	common.Log.Debug("Operation list: %v\n", operations)
-	return &operations, nil
 }
 
 // Skip over any spaces.  Returns the number of spaces skipped and
@@ -189,7 +187,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 // A conforming writer shall not use the PostScript syntax for numbers
 // with non-decimal radices (such as 16#FFFE) or in exponential format
 // (such as 6.02E23).
-// Nontheless, we sometimes get numbers with exponential format, so
+// Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
@@ -234,6 +232,11 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			common.Log.Debug("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
+			fVal = 0.0
+			err = nil
+		}
 		o := PdfObjectFloat(fVal)
 		return &o, err
 	} else {

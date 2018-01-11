@@ -306,7 +306,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	}
 	img.Filter = encoder
 
-	if obj := dict.Get("Width"); obj != nil {
+	if obj := TraceToDirectObject(dict.Get("Width")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image width object")
@@ -317,7 +317,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		return nil, errors.New("Width missing")
 	}
 
-	if obj := dict.Get("Height"); obj != nil {
+	if obj := TraceToDirectObject(dict.Get("Height")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image height object")
@@ -328,7 +328,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		return nil, errors.New("Height missing")
 	}
 
-	if obj := dict.Get("ColorSpace"); obj != nil {
+	if obj := TraceToDirectObject(dict.Get("ColorSpace")); obj != nil {
 		cs, err := newPdfColorspaceFromPdfObject(obj)
 		if err != nil {
 			return nil, err
@@ -340,7 +340,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 		img.ColorSpace = NewPdfColorspaceDeviceGray()
 	}
 
-	if obj := dict.Get("BitsPerComponent"); obj != nil {
+	if obj := TraceToDirectObject(dict.Get("BitsPerComponent")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("Invalid image height object")

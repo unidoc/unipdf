@@ -17,7 +17,7 @@ func init() {
 // when passing a reference to a non-existing object.
 func TestFuzzParserTrace1(t *testing.T) {
 	parser := PdfParser{}
-	parser.rs, parser.reader = makeReaderForText(" /Name")
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(" /Name")
 
 	ref := &PdfObjectReference{ObjectNumber: -1}
 	obj, err := parser.Trace(ref)
@@ -53,7 +53,7 @@ endstream
 	parser := PdfParser{}
 	parser.xrefs = make(XrefTable)
 	parser.objstms = make(ObjectStreams)
-	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
@@ -86,7 +86,7 @@ endstream
 	parser := PdfParser{}
 	parser.xrefs = make(XrefTable)
 	parser.objstms = make(ObjectStreams)
-	parser.rs, parser.reader = makeReaderForText(rawText)
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
@@ -109,7 +109,7 @@ endstream
 // Test for problem where Encrypt pointing a reference to a non-existing object.
 func TestFuzzIsEncryptedFail1(t *testing.T) {
 	parser := PdfParser{}
-	parser.rs, parser.reader = makeReaderForText(" /Name")
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(" /Name")
 
 	ref := &PdfObjectReference{ObjectNumber: -1}
 
@@ -126,7 +126,7 @@ func TestFuzzIsEncryptedFail1(t *testing.T) {
 // Test for trailer Prev entry pointing to an incorrect object type.
 func TestFuzzInvalidXrefPrev1(t *testing.T) {
 	parser := PdfParser{}
-	parser.rs, parser.reader = makeReaderForText(`
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(`
 xref
 0 1
 0000000000 65535 f

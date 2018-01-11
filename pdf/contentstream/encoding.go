@@ -64,6 +64,8 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (StreamEnc
 		return newFlateEncoderFromInlineImage(inlineImage, nil)
 	} else if *filterName == "LZW" {
 		return newLZWEncoderFromInlineImage(inlineImage, nil)
+	} else if *filterName == "CCF" {
+		return NewCCITTFaxEncoder(), nil
 	} else {
 		common.Log.Debug("Unsupported inline image encoding filter name : %s", *filterName)
 		return nil, errors.New("Unsupported inline encoding method")

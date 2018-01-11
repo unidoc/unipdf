@@ -124,7 +124,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
 				a := uint16(0)
 				if this.alphaData != nil && len(this.alphaData) > aidx+1 {
-					a = uint16(this.alphaData[aidx]<<8) | uint16(this.alphaData[aidx+1])
+					a = (uint16(this.alphaData[aidx]) << 8) | uint16(this.alphaData[aidx+1])
 					aidx += 2
 				}
 				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}

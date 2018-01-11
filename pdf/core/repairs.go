@@ -24,16 +24,16 @@ var repairReXrefTable = regexp.MustCompile(`[\r\n]\s*(xref)\s*[\r\n]`)
 
 // Locates a standard Xref table by looking for the "xref" entry.
 // Xref object stream not supported.
-func (this *PdfParser) repairLocateXref() (int64, error) {
+func (parser *PdfParser) repairLocateXref() (int64, error) {
 	readBuf := int64(1000)
-	this.rs.Seek(-readBuf, os.SEEK_CUR)
+	parser.rs.Seek(-readBuf, os.SEEK_CUR)
 
-	curOffset, err := this.rs.Seek(0, os.SEEK_CUR)
+	curOffset, err := parser.rs.Seek(0, os.SEEK_CUR)
 	if err != nil {
 		return 0, err
 	}
 	b2 := make([]byte, readBuf)
-	this.rs.Read(b2)
+	parser.rs.Read(b2)
 
 	results := repairReXrefTable.FindAllStringIndex(string(b2), -1)
 	if len(results) < 1 {
@@ -49,19 +49,19 @@ func (this *PdfParser) repairLocateXref() (int64, error) {
 // Renumbers the xref table.
 // Useful when the cross reference is pointing to an object with the wrong number.
 // Update the table.
-func (this *PdfParser) rebuildXrefTable() error {
+func (parser *PdfParser) rebuildXrefTable() error {
 	newXrefs := XrefTable{}
-	for objNum, xref := range this.xrefs {
-		obj, _, err := this.lookupByNumberWrapper(objNum, false)
+	for objNum, xref := range parser.xrefs {
+		obj, _, err := parser.lookupByNumberWrapper(objNum, false)
 		if err != nil {
 			common.Log.Debug("ERROR: Unable to look up object (%s)", err)
 			common.Log.Debug("ERROR: Xref table completely broken - attempting to repair ")
-			xrefTable, err := this.repairRebuildXrefsTopDown()
+			xrefTable, err := parser.repairRebuildXrefsTopDown()
 			if err != nil {
 				common.Log.Debug("ERROR: Failed xref rebuild repair (%s)", err)
 				return err
 			}
-			this.xrefs = *xrefTable
+			parser.xrefs = *xrefTable
 			common.Log.Debug("Repaired xref table built")
 			return nil
 		}
@@ -75,9 +75,9 @@ func (this *PdfParser) rebuildXrefTable() error {
 		newXrefs[int(actObjNum)] = xref
 	}
 
-	this.xrefs = newXrefs
+	parser.xrefs = newXrefs
 	common.Log.Debug("New xref table built")
-	printXrefTable(this.xrefs)
+	printXrefTable(parser.xrefs)
 	return nil
 }
 
@@ -97,16 +97,16 @@ func parseObjectNumberFromString(str string) (int, int, error) {
 // Parse the entire file from top down.
 // Goes through the file byte-by-byte looking for "<num> <generation> obj" patterns.
 // N.B. This collects the XREF_TABLE_ENTRY data only.
-func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
-	if this.repairsAttempted {
+func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
+	if parser.repairsAttempted {
 		// Avoid multiple repairs (only try once).
 		return nil, fmt.Errorf("Repair failed")
 	}
-	this.repairsAttempted = true
+	parser.repairsAttempted = true
 
 	// Go to beginning, reset reader.
-	this.rs.Seek(0, os.SEEK_SET)
-	this.reader = bufio.NewReader(this.rs)
+	parser.rs.Seek(0, os.SEEK_SET)
+	parser.reader = bufio.NewReader(parser.rs)
 
 	// Keep a running buffer of last bytes.
 	bufLen := 20
@@ -114,7 +114,7 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 
 	xrefTable := XrefTable{}
 	for {
-		b, err := this.reader.ReadByte()
+		b, err := parser.reader.ReadByte()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -157,7 +157,7 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 				continue // Probably too long to be a valid object...
 			}
 
-			objOffset := this.GetFileOffset() - int64(bufLen-i)
+			objOffset := parser.GetFileOffset() - int64(bufLen-i)
 
 			objstr := append(last[i+1:], b)
 			objNum, genNum, err := parseObjectNumberFromString(string(objstr))
@@ -185,9 +185,9 @@ func (this *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 }
 
 // Look for first sign of xref table from end of file.
-func (this *PdfParser) repairSeekXrefMarker() error {
+func (parser *PdfParser) repairSeekXrefMarker() error {
 	// Get the file size.
-	fSize, err := this.rs.Seek(0, os.SEEK_END)
+	fSize, err := parser.rs.Seek(0, os.SEEK_END)
 	if err != nil {
 		return err
 	}
@@ -206,14 +206,14 @@ func (this *PdfParser) repairSeekXrefMarker() error {
 		}
 
 		// Move back enough (as we need to read forward).
-		_, err := this.rs.Seek(-offset-buflen, os.SEEK_END)
+		_, err := parser.rs.Seek(-offset-buflen, os.SEEK_END)
 		if err != nil {
 			return err
 		}
 
 		// Read the data.
 		b1 := make([]byte, buflen)
-		this.rs.Read(b1)
+		parser.rs.Read(b1)
 
 		common.Log.Trace("Looking for xref : \"%s\"", string(b1))
 		ind := reXrefTableStart.FindAllStringIndex(string(b1), -1)
@@ -221,11 +221,11 @@ func (this *PdfParser) repairSeekXrefMarker() error {
 			// Found it.
 			lastInd := ind[len(ind)-1]
 			common.Log.Trace("Ind: % d", ind)
-			this.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
-			this.reader = bufio.NewReader(this.rs)
+			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), os.SEEK_END)
+			parser.reader = bufio.NewReader(parser.rs)
 			// Go past whitespace, finish at 'x'.
 			for {
-				bb, err := this.reader.Peek(1)
+				bb, err := parser.reader.Peek(1)
 				if err != nil {
 					return err
 				}
@@ -233,7 +233,7 @@ func (this *PdfParser) repairSeekXrefMarker() error {
 				if !IsWhiteSpace(bb[0]) {
 					break
 				}
-				this.reader.Discard(1)
+				parser.reader.Discard(1)
 			}
 
 			return nil
@@ -250,17 +250,17 @@ func (this *PdfParser) repairSeekXrefMarker() error {
 
 // Called when Pdf version not found normally.  Looks for the PDF version by scanning top-down.
 // %PDF-1.7
-func (this *PdfParser) seekPdfVersionTopDown() (int, int, error) {
+func (parser *PdfParser) seekPdfVersionTopDown() (int, int, error) {
 	// Go to beginning, reset reader.
-	this.rs.Seek(0, os.SEEK_SET)
-	this.reader = bufio.NewReader(this.rs)
+	parser.rs.Seek(0, os.SEEK_SET)
+	parser.reader = bufio.NewReader(parser.rs)
 
 	// Keep a running buffer of last bytes.
 	bufLen := 20
 	last := make([]byte, bufLen)
 
 	for {
-		b, err := this.reader.ReadByte()
+		b, err := parser.reader.ReadByte()
 		if err != nil {
 			if err == io.EOF {
 				break

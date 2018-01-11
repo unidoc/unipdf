@@ -33,7 +33,7 @@ type Table struct {
 	defaultRowHeight float64
 
 	// Content cells.
-	cells []*tableCell
+	cells []*TableCell
 
 	// Positioning: relative / absolute.
 	positioning positioning
@@ -45,7 +45,7 @@ type Table struct {
 	margins margins
 }
 
-// Create a new table with a fixed rows and column size.
+// NewTable create a new Table with a specified number of columns.
 func NewTable(cols int) *Table {
 	t := &Table{}
 	t.rows = 0
@@ -66,13 +66,14 @@ func NewTable(cols int) *Table {
 	// XXX/TODO: Base on contents instead?
 	t.defaultRowHeight = 10.0
 
-	t.cells = []*tableCell{}
+	t.cells = []*TableCell{}
 
 	return t
 }
 
-// Set the fractional column widths. Number of width inputs must match number of columns.
+// SetColumnWidths sets the fractional column widths.
 // Each width should be in the range 0-1 and is a fraction of the table width.
+// The number of width inputs must match number of columns, otherwise an error is returned.
 func (table *Table) SetColumnWidths(widths ...float64) error {
 	if len(widths) != table.cols {
 		common.Log.Debug("Mismatching number of widths and columns")
@@ -84,7 +85,7 @@ func (table *Table) SetColumnWidths(widths ...float64) error {
 	return nil
 }
 
-// Total height of all rows.
+// Height returns the total height of all rows.
 func (table *Table) Height() float64 {
 	sum := float64(0.0)
 	for _, h := range table.rowHeights {
@@ -94,7 +95,7 @@ func (table *Table) Height() float64 {
 	return sum
 }
 
-// Set the left, right, top, bottom Margins.
+// SetMargins sets the Table's left, right, top, bottom margins.
 func (table *Table) SetMargins(left, right, top, bottom float64) {
 	table.margins.left = left
 	table.margins.right = right
@@ -102,12 +103,12 @@ func (table *Table) SetMargins(left, right, top, bottom float64) {
 	table.margins.bottom = bottom
 }
 
-// Get the left, right, top, bottom Margins.
+// GetMargins returns the left, right, top, bottom Margins.
 func (table *Table) GetMargins() (float64, float64, float64, float64) {
 	return table.margins.left, table.margins.right, table.margins.top, table.margins.bottom
 }
 
-// Set the height for a specified row.
+// SetRowHeight sets the height for a specified row.
 func (table *Table) SetRowHeight(row int, h float64) error {
 	if row < 1 || row > len(table.rowHeights) {
 		return errors.New("Range check error")
@@ -117,30 +118,30 @@ func (table *Table) SetRowHeight(row int, h float64) error {
 	return nil
 }
 
-// Get row of the current cell position.
+// CurRow returns the currently active cell's row number.
 func (table *Table) CurRow() int {
 	curRow := (table.curCell-1)/table.cols + 1
 	return curRow
 }
 
-// Get column of the current cell position.
+// CurCol returns the currently active cell's column number.
 func (table *Table) CurCol() int {
 	curCol := (table.curCell-1)%(table.cols) + 1
 	return curCol
 }
 
-// Set absolute coordinates.
+// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner coordinates as (x,y).
 // Note that this is only sensible to use when the table does not wrap over multiple pages.
-// XXX/TODO: Should be able to set width too (not just based on context/relative positioning mode).
+// TODO: Should be able to set width too (not just based on context/relative positioning mode).
 func (table *Table) SetPos(x, y float64) {
 	table.positioning = positionAbsolute
 	table.xPos = x
 	table.yPos = y
 }
 
-// Generate the Page blocks.  Multiple blocks are generated if the contents wrap over multiple pages.
+// GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap over multiple pages.
+// Implements the Drawable interface.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-
 	blocks := []*Block{}
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
@@ -311,7 +312,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	return blocks, ctx, nil
 }
 
-// Define table cell's border style.
+// CellBorderStyle defines the table cell's border style.
 type CellBorderStyle int
 
 // Currently supported table styles are: None (no border) and boxed (line along each side).
@@ -323,9 +324,10 @@ const (
 	CellBorderStyleBox
 )
 
-// Define table cell's horizontal alignment.
+// CellHorizontalAlignment defines the table cell's horizontal alignment.
 type CellHorizontalAlignment int
 
+// Table cells have three horizontal alignment modes: left, center and right.
 const (
 	// Align cell content on the left (with specified indent); unused space on the right.
 	CellHorizontalAlignmentLeft CellHorizontalAlignment = iota
@@ -337,9 +339,10 @@ const (
 	CellHorizontalAlignmentRight
 )
 
-// Define table cell's vertical alignment.
+// CellVerticalAlignment defines the table cell's vertical alignment.
 type CellVerticalAlignment int
 
+// Table cells have three vertical alignment modes: top, middle and bottom.
 const (
 	// Align cell content vertically to the top; unused space below.
 	CellVerticalAlignmentTop CellVerticalAlignment = iota
@@ -351,8 +354,8 @@ const (
 	CellVerticalAlignmentBottom
 )
 
-// Table cell
-type tableCell struct {
+// TableCell defines a table cell which can contain a Drawable as content.
+type TableCell struct {
 	// Background
 	backgroundColor *model.PdfColorDeviceRGB
 
@@ -382,8 +385,8 @@ type tableCell struct {
 	table *Table
 }
 
-// Make a new cell and insert into the table at current position in the table.
-func (table *Table) NewCell() *tableCell {
+// NewCell makes a new cell and inserts into the table at current position in the table.
+func (table *Table) NewCell() *TableCell {
 	table.curCell++
 
 	curRow := (table.curCell-1)/table.cols + 1
@@ -393,7 +396,7 @@ func (table *Table) NewCell() *tableCell {
 	}
 	curCol := (table.curCell-1)%(table.cols) + 1
 
-	cell := &tableCell{}
+	cell := &TableCell{}
 	cell.row = curRow
 	cell.col = curCol
 
@@ -418,7 +421,7 @@ func (table *Table) NewCell() *tableCell {
 	return cell
 }
 
-// Skip over a specified number of cells.
+// SkipCells skips over a specified number of cells in the table.
 func (table *Table) SkipCells(num int) {
 	if num < 0 {
 		common.Log.Debug("Table: cannot skip back to previous cells")
@@ -427,7 +430,7 @@ func (table *Table) SkipCells(num int) {
 	table.curCell += num
 }
 
-// Skip over a specified number of rows.
+// SkipRows skips over a specified number of rows in the table.
 func (table *Table) SkipRows(num int) {
 	ncells := num*table.cols - 1
 	if ncells < 0 {
@@ -437,7 +440,7 @@ func (table *Table) SkipRows(num int) {
 	table.curCell += ncells
 }
 
-// Skip over rows, cols.
+// SkipOver skips over a specified number of rows and cols.
 func (table *Table) SkipOver(rows, cols int) {
 	ncells := rows*table.cols + cols - 1
 	if ncells < 0 {
@@ -447,47 +450,47 @@ func (table *Table) SkipOver(rows, cols int) {
 	table.curCell += ncells
 }
 
-// Set cell's left indent.
-func (cell *tableCell) SetIndent(indent float64) {
+// SetIndent sets the cell's left indent.
+func (cell *TableCell) SetIndent(indent float64) {
 	cell.indent = indent
 }
 
-// Set cell's horizontal alignment of content.
+// SetHorizontalAlignment sets the cell's horizontal alignment of content.
 // Can be one of:
 // - CellHorizontalAlignmentLeft
 // - CellHorizontalAlignmentCenter
 // - CellHorizontalAlignmentRight
-func (cell *tableCell) SetHorizontalAlignment(halign CellHorizontalAlignment) {
+func (cell *TableCell) SetHorizontalAlignment(halign CellHorizontalAlignment) {
 	cell.horizontalAlignment = halign
 }
 
-// Set cell's vertical alignment of content.
+// SetVerticalAlignment set the cell's vertical alignment of content.
 // Can be one of:
 // - CellHorizontalAlignmentTop
 // - CellHorizontalAlignmentMiddle
 // - CellHorizontalAlignmentBottom
-func (cell *tableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
+func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 	cell.verticalAlignment = valign
 }
 
-// Set cell's border style.
-func (cell *tableCell) SetBorder(style CellBorderStyle, width float64) {
+// SetBorder sets the cell's border style.
+func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
 	cell.borderStyle = style
 	cell.borderWidth = width
 }
 
-// Set border color.
-func (cell *tableCell) SetBorderColor(color rgbColor) {
+// SetBorderColor sets the cell's border color.
+func (cell *TableCell) SetBorderColor(color rgbColor) {
 	cell.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
 }
 
-// Set cell's background color.
-func (cell *tableCell) SetBackgroundColor(col color) {
+// SetBackgroundColor sets the cell's background color.
+func (cell *TableCell) SetBackgroundColor(col Color) {
 	cell.backgroundColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// Get cell width based on input draw context.
-func (cell *tableCell) Width(ctx DrawContext) float64 {
+// Width returns the cell's width based on the input draw context.
+func (cell *TableCell) Width(ctx DrawContext) float64 {
 	fraction := float64(0.0)
 	for j := 0; j < cell.colspan; j++ {
 		fraction += cell.table.colWidths[cell.col+j-1]
@@ -496,10 +499,12 @@ func (cell *tableCell) Width(ctx DrawContext) float64 {
 	return w
 }
 
-// Set cell content.  The content is a vector drawable, i.e. a drawable with a known height and width.
-func (cell *tableCell) SetContent(vd VectorDrawable) error {
+// SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
+// The currently supported VectorDrawable is: *Paragraph.
+// TODO: Add support for *Image, *Block.
+func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
-	case *paragraph:
+	case *Paragraph:
 		// Default paragraph settings in table:
 		t.SetEnableWrap(false) // No wrapping.
 		h := cell.table.rowHeights[cell.row-1]

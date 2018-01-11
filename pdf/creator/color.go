@@ -13,8 +13,8 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-// Represents colors in the PDF creator.
-type color interface {
+// Color interface represents colors in the PDF creator.
+type Color interface {
 	ToRGB() (float64, float64, float64)
 }
 
@@ -38,10 +38,10 @@ var (
 	ColorYellow = ColorRGBFromArithmetic(1, 1, 0)
 )
 
-// Convert color hex code to rgb color for using with creator.
+// ColorRGBFromHex converts color hex code to rgb color for using with creator.
 // NOTE: If there is a problem interpreting the string, then will use black color and log a debug message.
 // Example hex code: #ffffff -> (1,1,1) white.
-func ColorRGBFromHex(hexStr string) color {
+func ColorRGBFromHex(hexStr string) Color {
 	color := rgbColor{}
 	if (len(hexStr) != 4 && len(hexStr) != 7) || hexStr[0] != '#' {
 		common.Log.Debug("Invalid hex code: %s", hexStr)
@@ -90,10 +90,10 @@ func ColorRGBFromHex(hexStr string) color {
 	return color
 }
 
-// Color from 8bit (0-255) r,g,b values.
+// ColorRGBFrom8bit creates a Color from 8bit (0-255) r,g,b values.
 // Example:
 //   red := ColorRGBFrom8Bit(255, 0, 0)
-func ColorRGBFrom8bit(r, g, b byte) color {
+func ColorRGBFrom8bit(r, g, b byte) Color {
 	color := rgbColor{}
 	color.r = float64(r) / 255.0
 	color.g = float64(g) / 255.0
@@ -101,10 +101,10 @@ func ColorRGBFrom8bit(r, g, b byte) color {
 	return color
 }
 
-// Color from arithmetic (0-1.0) color values.
+// ColorRGBFromArithmetic creates a Color from arithmetic (0-1.0) color values.
 // Example:
 //   green := ColorRGBFromArithmetic(0, 1.0, 0)
-func ColorRGBFromArithmetic(r, g, b float64) color {
+func ColorRGBFromArithmetic(r, g, b float64) Color {
 	// Ensure is in the range 0-1:
 	r = math.Max(math.Min(r, 1.0), 0.0)
 	g = math.Max(math.Min(g, 1.0), 0.0)
