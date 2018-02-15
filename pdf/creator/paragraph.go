@@ -122,6 +122,11 @@ func (p *Paragraph) SetText(text string) {
 	p.text = text
 }
 
+// Text sets the text content of the Paragraph.
+func (p *Paragraph) Text() string {
+	return p.text
+}
+
 // SetEnableWrap sets the line wrapping enabled flag.
 func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
