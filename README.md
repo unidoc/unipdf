@@ -1,26 +1,24 @@
 # UniDoc
 
-[UniDoc](http://unidoc.io) is a fast and powerful open source PDF library for Go (golang). The library is written and supported by the owners of the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power many of the PDF services offered. 
+[UniDoc](http://unidoc.io) is a powerful PDF library for Go (golang). The library is written and supported by the owners of the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power many of the PDF services offered. 
 
 [![wercker status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
 [![GoDoc](https://godoc.org/github.com/unidoc/unidoc?status.svg)](https://godoc.org/github.com/unidoc/unidoc)
-
-# Version 2
-
-Version 2.0.0 has been released. Version 2 represents a major improvement over version 1 with capabilities for modifying
-and generating PDF contents. The library has been split up into three major packages and a
-few smaller ones. The **core** package contains core PDF file parsing functionality and
-primitive objects, whereas the **model** subpackage provides a higher level interface to the PDF.
-The **creator** package provides a convenient interface for creating image and text based PDF files
-and reports.
-
-See the release announcement: [https://unidoc.io/news/unidoc-v2-released](https://unidoc.io/news/unidoc-v2-released)
-
 
 ## Installation
 ~~~
 go get github.com/unidoc/unidoc/...
 ~~~
+
+## Getting Rid of the Watermark - Get a License
+Out of the box - unidoc is unlicensed and outputs a watermark on all pages, perfect for prototyping.
+To use unidoc in your projects, you need to get a license. We have 3 license types:
+
+* Community: For open source AGPLv3 projects
+* Business Individual
+* Business Unlimited
+
+Get your license on [https://unidoc.io](https://unidoc.io).
 
 ## Examples
 
