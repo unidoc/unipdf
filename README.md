@@ -20,6 +20,16 @@ To use unidoc in your projects, you need to get a license. We have 3 license typ
 
 Get your license on [https://unidoc.io](https://unidoc.io).
 
+To load your license, simply do:
+```
+unidocLicenseKey := "... your license here ..."
+err := license.SetLicenseKey(unidocLicenseKey)
+if err != nil {
+    fmt.Printf("Error loading license: %v\n", err)
+    os.Exit(1)
+}
+```
+
 ## Examples
 
 Multiple examples are provided in our example repository.
@@ -59,8 +69,6 @@ Contributors need to approve the [Contributor License Agreement](https://docs.go
 ## Support and consulting
 
 Please email us at support@unidoc.io for any queries.
-
-Technical support is included with a purchase of a license, as listed on our [pricing](http://unidoc.io/pricing) page.
 
 If you have any specific tasks that need to be done, we offer consulting in certain cases.
 Please contact us with a brief summary of what you need and we will get back to you with a quote, if appropriate.
