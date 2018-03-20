@@ -152,21 +152,21 @@ func (parser *PdfParser) readComment() (string, error) {
 
 // Read a single line of text from current position.
 func (parser *PdfParser) readTextLine() (string, error) {
-	lineStr := ""
+	var r bytes.Buffer
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
-			return lineStr, err
+			return r.String(), err
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := parser.reader.ReadByte()
-			lineStr += string(b)
+			r.WriteByte(b)
 		} else {
 			break
 		}
 	}
-	return lineStr, nil
+	return r.String(), nil
 }
 
 // Parse a name starting with '/'.

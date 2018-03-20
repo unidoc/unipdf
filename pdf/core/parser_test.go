@@ -102,6 +102,21 @@ func TestStringParsing(t *testing.T) {
 	}
 }
 
+func TestReadTextLine(t *testing.T) {
+	// reading text ling + rewinding should be idempotent, that is:
+	// if we rewind back len(str) bytes after reading string str we should arrive at beginning of str
+	rawText := "abc\xb0cde"
+	parser := PdfParser{}
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
+	s, err := parser.readTextLine()
+	if err != nil && err != io.EOF {
+		t.Errorf("Unable to parse string, error: %s", err)
+	}
+	if parser.GetFileOffset() != int64(len(s)) {
+		t.Errorf("File offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
+	}
+}
+
 func TestBinStringParsing(t *testing.T) {
 	// From an example O entry in Encrypt dictionary.
 	rawText1 := "(\xE6\x00\xEC\xC2\x02\x88\xAD\x8B\\r\x64\xA9" +
