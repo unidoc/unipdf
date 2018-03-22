@@ -103,8 +103,10 @@ func (this *ContentStreamOperations) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// Parses and extracts all text data in content streams and returns as a string.
+// ExtractText parses and extracts all text data in content streams and returns as a string.
 // Does not take into account Encoding table, the output is simply the character codes.
+//
+// Deprecated: More advanced text extraction is offered in package extractor with character encoding support.
 func (this *ContentStreamParser) ExtractText() (string, error) {
 	operations, err := this.Parse()
 	if err != nil {
