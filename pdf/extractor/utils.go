@@ -34,10 +34,10 @@ func procBuf(buf *bytes.Buffer) {
 
 	lk := license.GetLicenseKey()
 	if lk != nil && lk.IsLicensed() {
-		fmt.Printf("Unlicensed copy of unidoc\n")
-		fmt.Printf("To get rid of the watermark and keep entire text - Please get a license on https://unidoc.io\n")
 		return
 	}
+	fmt.Printf("Unlicensed copy of unidoc\n")
+	fmt.Printf("To get rid of the watermark and keep entire text - Please get a license on https://unidoc.io\n")
 
 	s := "- [Unlicensed UniDoc - Get a license on https://unidoc.io]"
 	if buf.Len() > 100 {
