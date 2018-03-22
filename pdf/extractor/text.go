@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/cmap"
@@ -222,5 +223,21 @@ func (e *Extractor) ExtractText() (string, error) {
 		return buf.String(), err
 	}
 
+	procBuf(&buf)
+
 	return buf.String(), nil
+}
+
+func procBuf(buf *bytes.Buffer) {
+	lk := license.GetLicenseKey()
+	if lk != nil && lk.IsLicensed() {
+		return
+	}
+
+	s := "- [Unlicensed UniDoc - Get a license on https://unidoc.io]"
+	if buf.Len() > 100 {
+		s = "... [Truncated - Unlicensed UniDoc - Get a license on https://unidoc.io]"
+		buf.Truncate(buf.Len() - 100)
+	}
+	buf.WriteString(s)
 }
