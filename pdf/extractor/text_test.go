@@ -1,6 +1,15 @@
 package extractor
 
-import "testing"
+import (
+	"flag"
+	"testing"
+)
+
+func init() {
+	if flag.Lookup("test.v") != nil {
+		isTesting = true
+	}
+}
 
 const testContents1 = `
 BT

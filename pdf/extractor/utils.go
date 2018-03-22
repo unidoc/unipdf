@@ -1,8 +1,11 @@
 package extractor
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 
+	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -17,4 +20,24 @@ func getNumberAsFloat(obj core.PdfObject) (float64, error) {
 	}
 
 	return 0, errors.New("Not a number")
+}
+
+func procBuf(buf *bytes.Buffer) {
+	if isTesting {
+		return
+	}
+
+	lk := license.GetLicenseKey()
+	if lk != nil && lk.IsLicensed() {
+		fmt.Printf("Unlicensed copy of unidoc\n")
+		fmt.Printf("To get rid of the watermark and keep entire text - Please get a license on https://unidoc.io\n")
+		return
+	}
+
+	s := "- [Unlicensed UniDoc - Get a license on https://unidoc.io]"
+	if buf.Len() > 100 {
+		s = "... [Truncated - Unlicensed UniDoc - Get a license on https://unidoc.io]"
+		buf.Truncate(buf.Len() - 100)
+	}
+	buf.WriteString(s)
 }
