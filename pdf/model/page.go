@@ -419,6 +419,8 @@ func (this *PdfPage) getResources() (*PdfPageResources, error) {
 		}
 
 		if obj := dict.Get("Resources"); obj != nil {
+			obj = TraceToDirectObject(obj)
+
 			prDict, ok := obj.(*PdfObjectDictionary)
 			if !ok {
 				return nil, errors.New("Invalid resource dict!")
