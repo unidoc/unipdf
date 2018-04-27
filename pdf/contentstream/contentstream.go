@@ -103,14 +103,17 @@ func (this *ContentStreamOperations) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// Parses and extracts all text data in content streams and returns as a string.
+// ExtractText parses and extracts all text data in content streams and returns as a string.
 // Does not take into account Encoding table, the output is simply the character codes.
+//
+// Deprecated: More advanced text extraction is offered in package extractor with character encoding support.
 func (this *ContentStreamParser) ExtractText() (string, error) {
 	operations, err := this.Parse()
 	if err != nil {
 		return "", err
 	}
 	inText := false
+	xPos, yPos := float64(-1), float64(-1)
 	txt := ""
 	for _, op := range *operations {
 		if op.Operand == "BT" {
@@ -121,6 +124,41 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 		if op.Operand == "Td" || op.Operand == "TD" || op.Operand == "T*" {
 			// Move to next line...
 			txt += "\n"
+		}
+		if op.Operand == "Tm" {
+			if len(op.Params) != 6 {
+				continue
+			}
+			xfloat, ok := op.Params[4].(*PdfObjectFloat)
+			if !ok {
+				xint, ok := op.Params[4].(*PdfObjectInteger)
+				if !ok {
+					continue
+				}
+				xfloat = MakeFloat(float64(*xint))
+			}
+			yfloat, ok := op.Params[5].(*PdfObjectFloat)
+			if !ok {
+				yint, ok := op.Params[5].(*PdfObjectInteger)
+				if !ok {
+					continue
+				}
+				yfloat = MakeFloat(float64(*yint))
+			}
+			if yPos == -1 {
+				yPos = float64(*yfloat)
+			} else if yPos > float64(*yfloat) {
+				txt += "\n"
+				xPos = float64(*xfloat)
+				yPos = float64(*yfloat)
+				continue
+			}
+			if xPos == -1 {
+				xPos = float64(*xfloat)
+			} else if xPos < float64(*xfloat) {
+				txt += "\t"
+				xPos = float64(*xfloat)
+			}
 		}
 		if inText && op.Operand == "TJ" {
 			if len(op.Params) < 1 {

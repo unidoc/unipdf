@@ -480,8 +480,8 @@ func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
 }
 
 // SetBorderColor sets the cell's border color.
-func (cell *TableCell) SetBorderColor(color rgbColor) {
-	cell.borderColor = model.NewPdfColorDeviceRGB(color.r, color.g, color.b)
+func (cell *TableCell) SetBorderColor(col Color) {
+	cell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
 // SetBackgroundColor sets the cell's background color.

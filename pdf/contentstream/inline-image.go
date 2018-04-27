@@ -331,7 +331,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				im.BitsPerComponent = valueObj
 			} else if *param == "CS" || *param == "ColorSpace" {
 				im.ColorSpace = valueObj
-			} else if *param == "D" {
+			} else if *param == "D" || *param == "Decode" {
 				im.Decode = valueObj
 			} else if *param == "DP" || *param == "DecodeParms" {
 				im.DecodeParms = valueObj

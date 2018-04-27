@@ -124,7 +124,7 @@ func (subchap *Subchapter) Add(d Drawable) {
 	switch d.(type) {
 	case *Chapter, *Subchapter:
 		common.Log.Debug("Error: Cannot add chapter or subchapter to a subchapter")
-	case *Paragraph, *Image, *Block, *Table:
+	case *Paragraph, *Image, *Block, *Table, *PageBreak:
 		subchap.contents = append(subchap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)

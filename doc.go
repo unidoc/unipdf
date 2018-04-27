@@ -39,4 +39,8 @@
 //     and graphical reports. It is designed with simplicity in mind, with the goal of
 //     making it easy to create reports without needing any knowledge about the PDF
 //     format or specifications.
+//
+//   - pdf/extractor: Package extractor is used for quickly extracting PDF content
+//     through a simple interface. Currently offers functionality for extracting textual
+//     content.
 package unidoc

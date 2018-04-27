@@ -12,9 +12,8 @@ func IsWhiteSpace(ch byte) bool {
 	// spaceCharacters := string([]byte{0x00, 0x09, 0x0A, 0x0C, 0x0D, 0x20})
 	if (ch == 0x00) || (ch == 0x09) || (ch == 0x0A) || (ch == 0x0C) || (ch == 0x0D) || (ch == 0x20) {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 // IsFloatDigit checks if a character can be a part of a float number string.

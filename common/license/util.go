@@ -7,7 +7,7 @@
 package license
 
 // Defaults to the open source license.
-var licenseKey *LicenseKey = MakeOpensourceLicenseKey()
+var licenseKey *LicenseKey = MakeUnlicensedKey()
 
 // Sets and validates the license key.
 func SetLicenseKey(content string) error {
@@ -27,5 +27,11 @@ func SetLicenseKey(content string) error {
 }
 
 func GetLicenseKey() *LicenseKey {
-	return licenseKey
+	if licenseKey == nil {
+		return nil
+	}
+
+	// Copy.
+	lk2 := *licenseKey
+	return &lk2
 }

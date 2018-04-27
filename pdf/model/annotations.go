@@ -596,6 +596,15 @@ func NewPdfAnnotationRedact() *PdfAnnotationRedact {
 	return redactAnnotation
 }
 
+// Create a new annotation widget and initializes the underlying primitive.
+func NewPdfAnnotationWidget() *PdfAnnotationWidget {
+	annotation := NewPdfAnnotation()
+	annotationWidget := &PdfAnnotationWidget{}
+	annotationWidget.PdfAnnotation = annotation
+	annotation.SetContext(annotationWidget)
+	return annotationWidget
+}
+
 // Used for PDF parsing.  Loads a PDF annotation model from a PDF primitive dictionary object.
 // Loads the common PDF annotation dictionary, and anything needed for the annotation subtype.
 func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObject) (*PdfAnnotation, error) {
