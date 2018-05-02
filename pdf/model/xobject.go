@@ -198,6 +198,7 @@ type XObjectImage struct {
 	Intent       PdfObject
 	ImageMask    PdfObject
 	Mask         PdfObject
+	Matte        PdfObject
 	Decode       PdfObject
 	Interpolate  PdfObject
 	Alternatives PdfObject
@@ -229,17 +230,13 @@ func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder StreamEncode
 	return UpdateXObjectImageFromImage(xobj, img, cs, encoder)
 }
 
-// UpdateXObjectImageFromImage reates a new XObject Image from an image object with default options except
-// that is has the masks from xobjIn
-// If encoder is nil, uses raw encoding (none).
-func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace, encoder StreamEncoder) (*XObjectImage, error) {
+// UpdateXObjectImageFromImage creates a new XObject Image from an Image object `img` and default
+//  masks from xobjIn.
+// The default masks are overriden if img.hasAlpha
+// If `encoder` is nil, uses raw encoding (none).
+func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace,
+	encoder StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
-	xobj.SMask = xobjIn.SMask
-	// xobj.Mask = xobjIn.Mask
-	// xobj.ImageMask = xobjIn.ImageMask
-
-	// dupObj := *xobjIn
-	// xobj := &dupObj
 
 	if encoder == nil {
 		encoder = NewRawEncoder()
@@ -295,9 +292,72 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		smask.Height = &img.Height
 		smask.ColorSpace = NewPdfColorspaceDeviceGray()
 		xobj.SMask = smask.ToPdfObject()
+	} else {
+		xobj.SMask = xobjIn.SMask
+		xobj.ImageMask = xobjIn.ImageMask
+		if xobj.ColorSpace.GetNumComponents() == 1 {
+			smaskMatteToGray(xobj)
+		}
 	}
 
 	return xobj, nil
+}
+
+// smaskMatteToGray converts to gray the Matte value in the SMask image referenced by `xobj` (if
+// there is one)
+func smaskMatteToGray(xobj *XObjectImage) error {
+	if xobj.SMask == nil {
+		return nil
+	}
+	stream := xobj.SMask.(*PdfObjectStream)
+	dict := stream.PdfObjectDictionary
+	matte := dict.Get("Matte")
+	if matte == nil {
+		return nil
+	}
+
+	gray, err := toGray(matte.(*PdfObjectArray))
+	if err != nil {
+		return err
+	}
+	grayMatte := MakeArrayFromFloats([]float64{gray})
+	dict.SetIfNotNil("Matte", grayMatte)
+	return nil
+}
+
+// toGray converts a 1, 3 or 4 dimensional color `matte` to gray
+// If `matte` is not a 1, 3 or 4 dimensional color then an error is returned
+func toGray(matte *PdfObjectArray) (float64, error) {
+	colors, err := matte.ToFloat64Array()
+	if err != nil {
+		common.Log.Debug("Bad Matte array: matte=%s err=%v", matte, err)
+	}
+	switch len(colors) {
+	case 1:
+		return colors[0], nil
+	case 3:
+		cs := PdfColorspaceDeviceRGB{}
+		rgbColor, err := cs.ColorFromFloats(colors)
+		if err != nil {
+			return 0.0, err
+		}
+		return rgbColor.(*PdfColorDeviceRGB).ToGray().Val(), nil
+
+	case 4:
+		cs := PdfColorspaceDeviceCMYK{}
+		cmykColor, err := cs.ColorFromFloats(colors)
+		if err != nil {
+			return 0.0, err
+		}
+		rgbColor, err := cs.ColorToRGB(cmykColor.(*PdfColorDeviceCMYK))
+		if err != nil {
+			return 0.0, err
+		}
+		return rgbColor.(*PdfColorDeviceRGB).ToGray().Val(), nil
+	}
+	err = errors.New("Bad Matte color")
+	common.Log.Error("toGray: matte=%s err=%v", matte, err)
+	return 0.0, err
 }
 
 // Build the image xobject from a stream object.
@@ -365,6 +425,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	img.Alternatives = dict.Get("Alternatives")
 	img.SMask = dict.Get("SMask")
 	img.SMaskInData = dict.Get("SMaskInData")
+	img.Matte = dict.Get("Matte")
 	img.Name = dict.Get("Name")
 	img.StructParent = dict.Get("StructParent")
 	img.ID = dict.Get("ID")
@@ -507,6 +568,7 @@ func (ximg *XObjectImage) ToPdfObject() PdfObject {
 	dict.SetIfNotNil("Alternatives", ximg.Alternatives)
 	dict.SetIfNotNil("SMask", ximg.SMask)
 	dict.SetIfNotNil("SMaskInData", ximg.SMaskInData)
+	dict.SetIfNotNil("Matte", ximg.Matte)
 	dict.SetIfNotNil("Name", ximg.Name)
 	dict.SetIfNotNil("StructParent", ximg.StructParent)
 	dict.SetIfNotNil("ID", ximg.ID)
