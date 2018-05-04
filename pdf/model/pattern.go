@@ -81,8 +81,15 @@ func (this *PdfTilingPattern) IsColored() bool {
 	}
 }
 
-// Get the pattern cell's content stream.
-func (this *PdfTilingPattern) GetContentStream() ([]byte, StreamEncoder, error) {
+// GetContentStream returns the pattern cell's content stream
+func (this *PdfTilingPattern) GetContentStream() ([]byte, error) {
+	decoded, _, nil := this.GetContentStreamWithEncoder()
+	return decoded, nil
+}
+
+// GetContentStreamWithEncoder returns the pattern cell's content stream and its encoder
+// TODO (v3): Change GetContentStreamWithEncoder to GetContentStream
+func (this *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncoder, error) {
 	streamObj, ok := this.container.(*PdfObjectStream)
 	if !ok {
 		common.Log.Debug("Tiling pattern container not a stream (got %T)", this.container)
