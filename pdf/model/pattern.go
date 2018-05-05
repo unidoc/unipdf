@@ -83,8 +83,8 @@ func (this *PdfTilingPattern) IsColored() bool {
 
 // GetContentStream returns the pattern cell's content stream
 func (this *PdfTilingPattern) GetContentStream() ([]byte, error) {
-	decoded, _, nil := this.GetContentStreamWithEncoder()
-	return decoded, nil
+	decoded, _, err := this.GetContentStreamWithEncoder()
+	return decoded, err
 }
 
 // GetContentStreamWithEncoder returns the pattern cell's content stream and its encoder
