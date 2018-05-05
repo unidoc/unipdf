@@ -37,6 +37,8 @@ type XObjectForm struct {
 	primitive *PdfObjectStream
 }
 
+var ErrTypeCheck = errors.New("Type check error")
+
 // Create a brand new XObject Form. Creates a new underlying PDF object stream primitive.
 func NewXObjectForm() *XObjectForm {
 	xobj := &XObjectForm{}
@@ -309,7 +311,11 @@ func smaskMatteToGray(xobj *XObjectImage) error {
 	if xobj.SMask == nil {
 		return nil
 	}
-	stream := xobj.SMask.(*PdfObjectStream)
+	stream, ok := xobj.SMask.(*PdfObjectStream)
+	if !ok {
+		common.Log.Debug("SMask is not *PdfObjectStream")
+		return ErrTypeCheck
+	}
 	dict := stream.PdfObjectDictionary
 	matte := dict.Get("Matte")
 	if matte == nil {
