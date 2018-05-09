@@ -23,8 +23,8 @@ func hexToString(shex cmapHexString) string {
 
 	// Assumes unicode in format <HHLL> with 2 bytes HH and LL representing a rune.
 	for i := 0; i < len(shex.b)-1; i += 2 {
-		b1 := shex.b[i]
-		b2 := shex.b[i+1]
+		b1 := uint64(shex.b[i])
+		b2 := uint64(shex.b[i+1])
 		r := rune((b1 << 8) | b2)
 
 		buf.WriteRune(r)
