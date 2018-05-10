@@ -65,6 +65,8 @@ func (cmap *CMap) CharcodeBytesToUnicode(src []byte) string {
 			if has {
 				buf.WriteString(tgt)
 				break
+			} else if j == maxLen-1 || i+j == len(src)-1 {
+				break
 			}
 		}
 		i += j + 1
