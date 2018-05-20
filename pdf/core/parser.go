@@ -282,6 +282,11 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 
 	if isFloat {
 		fVal, err := strconv.ParseFloat(r.String(), 64)
+		if err != nil {
+			common.Log.Debug("Error parsing number %v err=%v. Using 0.0. Output may be incorrect", r.String(), err)
+			fVal = 0.0
+			err = nil
+		}
 		o := PdfObjectFloat(fVal)
 		return &o, err
 	} else {
