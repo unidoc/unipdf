@@ -71,7 +71,7 @@ type PdfShadingType1 struct {
 	*PdfShading
 	Domain   *PdfObjectArray
 	Matrix   *PdfObjectArray
-	Function PdfFunction
+	Function []PdfFunction
 }
 
 // Shading type 2: Axial shading.
@@ -79,7 +79,7 @@ type PdfShadingType2 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
 	Domain   *PdfObjectArray
-	Function PdfFunction
+	Function []PdfFunction
 	Extend   *PdfObjectArray
 }
 
@@ -88,7 +88,7 @@ type PdfShadingType3 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
 	Domain   *PdfObjectArray
-	Function PdfFunction
+	Function []PdfFunction
 	Extend   *PdfObjectArray
 }
 
@@ -99,7 +99,7 @@ type PdfShadingType4 struct {
 	BitsPerComponent  *PdfObjectInteger
 	BitsPerFlag       *PdfObjectInteger
 	Decode            *PdfObjectArray
-	Function          PdfFunction
+	Function          []PdfFunction
 }
 
 // Shading type 5: Lattice-form Gouraud-shaded triangle mesh.
@@ -109,7 +109,7 @@ type PdfShadingType5 struct {
 	BitsPerComponent  *PdfObjectInteger
 	VerticesPerRow    *PdfObjectInteger
 	Decode            *PdfObjectArray
-	Function          PdfFunction
+	Function          []PdfFunction
 }
 
 // Shading type 6: Coons patch mesh.
@@ -119,7 +119,7 @@ type PdfShadingType6 struct {
 	BitsPerComponent  *PdfObjectInteger
 	BitsPerFlag       *PdfObjectInteger
 	Decode            *PdfObjectArray
-	Function          PdfFunction
+	Function          []PdfFunction
 }
 
 // Shading type 7: Tensor-product patch mesh.
@@ -129,7 +129,7 @@ type PdfShadingType7 struct {
 	BitsPerComponent  *PdfObjectInteger
 	BitsPerFlag       *PdfObjectInteger
 	Decode            *PdfObjectArray
-	Function          PdfFunction
+	Function          []PdfFunction
 }
 
 // Used for PDF parsing. Loads the PDF shading from a PDF object.
@@ -330,14 +330,26 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	obj := dict.Get("Function")
 	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Function")
-		return nil, errors.New("Required attribute missing")
+		return nil, ErrRequiredAttributeMissing
 	}
-	function, err := newPdfFunctionFromPdfObject(obj)
-	if err != nil {
-		common.Log.Debug("Error parsing function: %v", err)
-		return nil, err
+	shading.Function = []PdfFunction{}
+	if array, is := obj.(*PdfObjectArray); is {
+		for _, obj := range *array {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
+		}
+	} else {
+		function, err := newPdfFunctionFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error parsing function: %v", err)
+			return nil, err
+		}
+		shading.Function = append(shading.Function, function)
 	}
-	shading.Function = function
 
 	return &shading, nil
 }
@@ -350,7 +362,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	obj := dict.Get("Coords")
 	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Coords")
-		return nil, errors.New("Required attribute missing")
+		return nil, ErrRequiredAttributeMissing
 	}
 	arr, ok := obj.(*PdfObjectArray)
 	if !ok {
@@ -378,14 +390,26 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	obj = dict.Get("Function")
 	if obj == nil {
 		common.Log.Debug("Required attribute missing:  Function")
-		return nil, errors.New("Required attribute missing")
+		return nil, ErrRequiredAttributeMissing
 	}
-	function, err := newPdfFunctionFromPdfObject(obj)
-	if err != nil {
-		common.Log.Debug("Error parsing function: %v", err)
-		return nil, err
+	shading.Function = []PdfFunction{}
+	if array, is := obj.(*PdfObjectArray); is {
+		for _, obj := range *array {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
+		}
+	} else {
+		function, err := newPdfFunctionFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error parsing function: %v", err)
+			return nil, err
+		}
+		shading.Function = append(shading.Function, function)
 	}
-	shading.Function = function
 
 	// Extend (optional).
 	if obj := dict.Get("Extend"); obj != nil {
@@ -393,11 +417,11 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, errors.New("Type check error")
+			return nil, ErrTypeCheck
 		}
 		if len(*arr) != 2 {
 			common.Log.Debug("Extend length not 2 (got %d)", len(*arr))
-			return nil, errors.New("Invalid attribute")
+			return nil, ErrInvalidAttribute
 		}
 		shading.Extend = arr
 	}
@@ -440,15 +464,27 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	// Function (required).
 	obj = dict.Get("Function")
 	if obj == nil {
-		common.Log.Debug("Required attribute missing: Function")
+		common.Log.Debug("Required attribute missing:  Function")
 		return nil, ErrRequiredAttributeMissing
 	}
-	function, err := newPdfFunctionFromPdfObject(obj)
-	if err != nil {
-		common.Log.Debug("Error parsing function: %v", err)
-		return nil, err
+	shading.Function = []PdfFunction{}
+	if array, is := obj.(*PdfObjectArray); is {
+		for _, obj := range *array {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
+		}
+	} else {
+		function, err := newPdfFunctionFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("Error parsing function: %v", err)
+			return nil, err
+		}
+		shading.Function = append(shading.Function, function)
 	}
-	shading.Function = function
 
 	// Extend (optional).
 	if obj := dict.Get("Extend"); obj != nil {
@@ -524,15 +560,29 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Decode = arr
 
-	// Function (optional).
+	// Function (required).
 	obj = dict.Get("Function")
-	if obj != nil {
+	if obj == nil {
+		common.Log.Debug("Required attribute missing:  Function")
+		return nil, ErrRequiredAttributeMissing
+	}
+	shading.Function = []PdfFunction{}
+	if array, is := obj.(*PdfObjectArray); is {
+		for _, obj := range *array {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
+		}
+	} else {
 		function, err := newPdfFunctionFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("Error parsing function: %v", err)
 			return nil, err
 		}
-		shading.Function = function
+		shading.Function = append(shading.Function, function)
 	}
 
 	return &shading, nil
@@ -596,12 +646,25 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Function (optional).
 	if obj := dict.Get("Function"); obj != nil {
-		function, err := newPdfFunctionFromPdfObject(obj)
-		if err != nil {
-			common.Log.Debug("Error parsing function: %v", err)
-			return nil, err
+		// Function (required).
+		shading.Function = []PdfFunction{}
+		if array, is := obj.(*PdfObjectArray); is {
+			for _, obj := range *array {
+				function, err := newPdfFunctionFromPdfObject(obj)
+				if err != nil {
+					common.Log.Debug("Error parsing function: %v", err)
+					return nil, err
+				}
+				shading.Function = append(shading.Function, function)
+			}
+		} else {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
 		}
-		shading.Function = function
 	}
 
 	return &shading, nil
@@ -665,12 +728,24 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Function (optional).
 	if obj := dict.Get("Function"); obj != nil {
-		function, err := newPdfFunctionFromPdfObject(obj)
-		if err != nil {
-			common.Log.Debug("Error parsing function: %v", err)
-			return nil, err
+		shading.Function = []PdfFunction{}
+		if array, is := obj.(*PdfObjectArray); is {
+			for _, obj := range *array {
+				function, err := newPdfFunctionFromPdfObject(obj)
+				if err != nil {
+					common.Log.Debug("Error parsing function: %v", err)
+					return nil, err
+				}
+				shading.Function = append(shading.Function, function)
+			}
+		} else {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
 		}
-		shading.Function = function
 	}
 
 	return &shading, nil
@@ -734,12 +809,24 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Function (optional).
 	if obj := dict.Get("Function"); obj != nil {
-		function, err := newPdfFunctionFromPdfObject(obj)
-		if err != nil {
-			common.Log.Debug("Error parsing function: %v", err)
-			return nil, err
+		shading.Function = []PdfFunction{}
+		if array, is := obj.(*PdfObjectArray); is {
+			for _, obj := range *array {
+				function, err := newPdfFunctionFromPdfObject(obj)
+				if err != nil {
+					common.Log.Debug("Error parsing function: %v", err)
+					return nil, err
+				}
+				shading.Function = append(shading.Function, function)
+			}
+		} else {
+			function, err := newPdfFunctionFromPdfObject(obj)
+			if err != nil {
+				common.Log.Debug("Error parsing function: %v", err)
+				return nil, err
+			}
+			shading.Function = append(shading.Function, function)
 		}
-		shading.Function = function
 	}
 
 	return &shading, nil
@@ -791,7 +878,15 @@ func (this *PdfShadingType1) ToPdfObject() PdfObject {
 		d.Set("Matrix", this.Matrix)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 
 	return this.container
@@ -816,7 +911,15 @@ func (this *PdfShadingType2) ToPdfObject() PdfObject {
 		d.Set("Domain", this.Domain)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 	if this.Extend != nil {
 		d.Set("Extend", this.Extend)
@@ -841,7 +944,15 @@ func (this *PdfShadingType3) ToPdfObject() PdfObject {
 		d.Set("Domain", this.Domain)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 	if this.Extend != nil {
 		d.Set("Extend", this.Extend)
@@ -872,7 +983,15 @@ func (this *PdfShadingType4) ToPdfObject() PdfObject {
 		d.Set("Decode", this.Decode)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 
 	return this.container
@@ -900,7 +1019,15 @@ func (this *PdfShadingType5) ToPdfObject() PdfObject {
 		d.Set("Decode", this.Decode)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 
 	return this.container
@@ -928,7 +1055,15 @@ func (this *PdfShadingType6) ToPdfObject() PdfObject {
 		d.Set("Decode", this.Decode)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 
 	return this.container
@@ -956,7 +1091,15 @@ func (this *PdfShadingType7) ToPdfObject() PdfObject {
 		d.Set("Decode", this.Decode)
 	}
 	if this.Function != nil {
-		d.Set("Function", this.Function.ToPdfObject())
+		if len(this.Function) == 1 {
+			d.Set("Function", this.Function[0].ToPdfObject())
+		} else {
+			farr := MakeArray()
+			for _, f := range this.Function {
+				farr.Append(f.ToPdfObject())
+			}
+			d.Set("Function", farr)
+		}
 	}
 
 	return this.container
