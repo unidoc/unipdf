@@ -9,188 +9,13 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
-
-//
-// High level manipulation of forms (AcroForm).
-//
-type PdfAcroForm struct {
-	Fields          *[]*PdfField
-	NeedAppearances *PdfObjectBool
-	SigFlags        *PdfObjectInteger
-	CO              *PdfObjectArray
-	DR              *PdfPageResources
-	DA              *PdfObjectString
-	Q               *PdfObjectInteger
-	XFA             PdfObject
-
-	primitive *PdfIndirectObject
-}
-
-func NewPdfAcroForm() *PdfAcroForm {
-	acroForm := &PdfAcroForm{}
-
-	container := &PdfIndirectObject{}
-	container.PdfObject = MakeDict()
-
-	acroForm.primitive = container
-	return acroForm
-}
-
-// Used when loading forms from PDF files.
-func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm, error) {
-	acroForm := NewPdfAcroForm()
-
-	if obj := d.Get("Fields"); obj != nil {
-		obj, err := r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		fieldArray, ok := TraceToDirectObject(obj).(*PdfObjectArray)
-		if !ok {
-			return nil, fmt.Errorf("Fields not an array (%T)", obj)
-		}
-
-		fields := []*PdfField{}
-		for _, obj := range *fieldArray {
-			obj, err := r.traceToObject(obj)
-			if err != nil {
-				return nil, err
-			}
-			container, isIndirect := obj.(*PdfIndirectObject)
-			if !isIndirect {
-				if _, isNull := obj.(*PdfObjectNull); isNull {
-					common.Log.Trace("Skipping over null field")
-					continue
-				}
-				common.Log.Debug("Field not contained in indirect object %T", obj)
-				return nil, fmt.Errorf("Field not in an indirect object")
-			}
-			field, err := r.newPdfFieldFromIndirectObject(container, nil)
-			if err != nil {
-				return nil, err
-			}
-			common.Log.Trace("AcroForm Field: %+v", *field)
-			fields = append(fields, field)
-		}
-		acroForm.Fields = &fields
-	}
-
-	if obj := d.Get("NeedAppearances"); obj != nil {
-		val, ok := obj.(*PdfObjectBool)
-		if ok {
-			acroForm.NeedAppearances = val
-		} else {
-			common.Log.Debug("ERROR: NeedAppearances invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("SigFlags"); obj != nil {
-		val, ok := obj.(*PdfObjectInteger)
-		if ok {
-			acroForm.SigFlags = val
-		} else {
-			common.Log.Debug("ERROR: SigFlags invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("CO"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
-		if ok {
-			acroForm.CO = arr
-		} else {
-			common.Log.Debug("ERROR: CO invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("DR"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		if d, ok := obj.(*PdfObjectDictionary); ok {
-			resources, err := NewPdfPageResourcesFromDict(d)
-			if err != nil {
-				common.Log.Error("Invalid DR: %v", err)
-				return nil, err
-			}
-
-			acroForm.DR = resources
-		} else {
-			common.Log.Debug("ERROR: DR invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("DA"); obj != nil {
-		str, ok := obj.(*PdfObjectString)
-		if ok {
-			acroForm.DA = str
-		} else {
-			common.Log.Debug("ERROR: DA invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("Q"); obj != nil {
-		val, ok := obj.(*PdfObjectInteger)
-		if ok {
-			acroForm.Q = val
-		} else {
-			common.Log.Debug("ERROR: Q invalid (got %T)", obj)
-		}
-	}
-
-	if obj := d.Get("XFA"); obj != nil {
-		acroForm.XFA = obj
-	}
-
-	return acroForm, nil
-}
-
-func (this *PdfAcroForm) GetContainingPdfObject() PdfObject {
-	return this.primitive
-}
-
-func (this *PdfAcroForm) ToPdfObject() PdfObject {
-	container := this.primitive
-	dict := container.PdfObject.(*PdfObjectDictionary)
-
-	if this.Fields != nil {
-		arr := PdfObjectArray{}
-		for _, field := range *this.Fields {
-			arr = append(arr, field.ToPdfObject())
-		}
-		dict.Set("Fields", &arr)
-	}
-
-	if this.NeedAppearances != nil {
-		dict.Set("NeedAppearances", this.NeedAppearances)
-	}
-	if this.SigFlags != nil {
-		dict.Set("SigFlags", this.SigFlags)
-
-	}
-	if this.CO != nil {
-		dict.Set("CO", this.CO)
-	}
-	if this.DR != nil {
-		dict.Set("DR", this.DR.ToPdfObject())
-	}
-	if this.DA != nil {
-		dict.Set("DA", this.DA)
-	}
-	if this.Q != nil {
-		dict.Set("Q", this.Q)
-	}
-	if this.XFA != nil {
-		dict.Set("XFA", this.XFA)
-	}
-
-	return container
-}
 
 // PdfField represents a field of an interactive form.
 // Implements PdfModel interface.
 type PdfField struct {
-	FT     *PdfObjectName // field type
+	FT     *core.PdfObjectName // field type
 	Parent *PdfField
 	// In a non-terminal field, the Kids array shall refer to field dictionaries that are immediate descendants of this field.
 	// In a terminal field, the Kids array ordinarily shall refer to one or more separate widget annotations that are associated
@@ -198,36 +23,33 @@ type PdfField struct {
 	// dictionary, Kids shall be omitted.
 	KidsF []PdfModel // Kids can be array of other fields or widgets (PdfModel).
 	KidsA []*PdfAnnotation
-	T     PdfObject
-	TU    PdfObject
-	TM    PdfObject
-	Ff    PdfObject // field flag
-	V     PdfObject //value
-	DV    PdfObject
-	AA    PdfObject
+	T     core.PdfObject
+	TU    core.PdfObject
+	TM    core.PdfObject
+	Ff    core.PdfObject // field flag
+	V     core.PdfObject //value
+	DV    core.PdfObject
+	AA    core.PdfObject
 
 	// Variable Text:
-	DA PdfObject
-	Q  PdfObject
-	DS PdfObject
-	RV PdfObject
+	DA core.PdfObject
+	Q  core.PdfObject
+	DS core.PdfObject
+	RV core.PdfObject
 
-	primitive *PdfIndirectObject
+	primitive *core.PdfIndirectObject
 }
 
 func NewPdfField() *PdfField {
 	field := &PdfField{}
-
-	container := &PdfIndirectObject{}
-	container.PdfObject = MakeDict()
-
+	container := core.MakeIndirectObject(core.MakeDict())
 	field.primitive = container
 	return field
 }
 
-// Used when loading fields from PDF files.
-func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, parent *PdfField) (*PdfField, error) {
-	d, isDict := container.PdfObject.(*PdfObjectDictionary)
+// newPdfFieldFromIndirectObject is used to load fields from PDF files.
+func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObject, parent *PdfField) (*PdfField, error) {
+	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
 	if !isDict {
 		return nil, fmt.Errorf("Pdf Field indirect object not containing a dictionary")
 	}
@@ -243,7 +65,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		if err != nil {
 			return nil, err
 		}
-		name, ok := obj.(*PdfObjectName)
+		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Invalid type of FT field (%T)", obj)
 		}
@@ -289,7 +111,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 			return nil, err
 		}
 		common.Log.Trace("Merged in annotation (%T)", obj)
-		name, ok := obj.(*PdfObjectName)
+		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Invalid type of Subtype (%T)", obj)
 		}
@@ -314,12 +136,13 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		}
 	}
 
+	// Has kids (can be field and/or widget annotations).
 	if obj := d.Get("Kids"); obj != nil {
 		obj, err := r.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
-		fieldArray, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		fieldArray, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, fmt.Errorf("Kids not an array (%T)", obj)
 		}
@@ -331,7 +154,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 				return nil, err
 			}
 
-			container, isIndirect := obj.(*PdfIndirectObject)
+			container, isIndirect := obj.(*core.PdfIndirectObject)
 			if !isIndirect {
 				return nil, fmt.Errorf("Not an indirect object (form field)")
 			}
@@ -348,15 +171,18 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 	return field, nil
 }
 
-func (this *PdfField) GetContainingPdfObject() PdfObject {
+// GetContainingPdfObject returns the containing object for the PdfField, i.e. an indirect object
+// containing the field dictionary.
+func (this *PdfField) GetContainingPdfObject() core.PdfObject {
 	return this.primitive
 }
 
+// ToPdfObject returns the Field as a field dictionary within an indirect object as container.
 // If Kids refer only to a single pdf widget annotation widget, then can merge it in.
 // Currently not merging it in.
-func (this *PdfField) ToPdfObject() PdfObject {
+func (this *PdfField) ToPdfObject() core.PdfObject {
 	container := this.primitive
-	dict := container.PdfObject.(*PdfObjectDictionary)
+	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
 	if this.Parent != nil {
 		dict.Set("Parent", this.Parent.GetContainingPdfObject())
@@ -365,7 +191,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 	if this.KidsF != nil {
 		// Create an array of the kids (fields or widgets).
 		common.Log.Trace("KidsF: %+v", this.KidsF)
-		arr := PdfObjectArray{}
+		arr := core.PdfObjectArray{}
 		for _, child := range this.KidsF {
 			arr = append(arr, child.ToPdfObject())
 		}
@@ -373,11 +199,11 @@ func (this *PdfField) ToPdfObject() PdfObject {
 	}
 	if this.KidsA != nil {
 		common.Log.Trace("KidsA: %+v", this.KidsA)
-		_, hasKids := dict.Get("Kids").(*PdfObjectArray)
+		_, hasKids := dict.Get("Kids").(*core.PdfObjectArray)
 		if !hasKids {
-			dict.Set("Kids", &PdfObjectArray{})
+			dict.Set("Kids", &core.PdfObjectArray{})
 		}
-		arr := dict.Get("Kids").(*PdfObjectArray)
+		arr := dict.Get("Kids").(*core.PdfObjectArray)
 		for _, child := range this.KidsA {
 			*arr = append(*arr, child.GetContext().ToPdfObject())
 		}
