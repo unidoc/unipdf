@@ -330,6 +330,22 @@ func (array *PdfObjectArray) Append(obj PdfObject) {
 	*array = append(*array, obj)
 }
 
+// Len returns the number of elements in the array.
+func (array *PdfObjectArray) Len() int {
+	if array == nil {
+		return 0
+	}
+	return len(*array)
+}
+
+// Get returns the i-th element of the array or nil if out of bounds.
+func (array *PdfObjectArray) Get(i int) PdfObject {
+	if array == nil || i >= len(*array) || i < 0 {
+		return nil
+	}
+	return (*array)[i]
+}
+
 func getNumberAsFloat(obj PdfObject) (float64, error) {
 	if fObj, ok := obj.(*PdfObjectFloat); ok {
 		return float64(*fObj), nil
