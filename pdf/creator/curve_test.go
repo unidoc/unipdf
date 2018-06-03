@@ -1,8 +1,11 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package creator
 
 import "testing"
-
-const testPdfFileWithCurve = "../../testfiles/curve.pdf"
 
 func TestNewCurve(t *testing.T) {
 	creator := New()
@@ -16,7 +19,7 @@ func TestNewCurve(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile(testPdfFileWithCurve)
+	err = creator.WriteToFile("/tmp/curve.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return
@@ -60,7 +63,7 @@ func TestNewCurveWithGlass(t *testing.T) {
 	creator.Draw(CreateCurve(51, 399, 75, 445, 150, 450, ColorRed))
 	creator.Draw(CreateCurve(150, 450, 225, 445, 251, 399, ColorGreen))
 
-	err := creator.WriteToFile(testPdfFileWithCurve)
+	err := creator.WriteToFile("/tmp/curve_glass.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return

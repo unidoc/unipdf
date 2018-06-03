@@ -1,12 +1,18 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package creator
 
 import (
-	"strings"
 	"fmt"
+	"strings"
+
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// NewCurve returns new instance of Curve
+// NewCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
 func NewCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
 	c := &Curve{}
 
@@ -24,6 +30,7 @@ func NewCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
 	return c
 }
 
+// Curve represents a cubic Bezier curve with a control point.
 type Curve struct {
 	x1 float64
 	y1 float64
@@ -36,7 +43,7 @@ type Curve struct {
 	lineWidth float64
 }
 
-// SetWidth sets line width
+// SetWidth sets line width.
 func (c *Curve) SetWidth(width float64) {
 	c.lineWidth = width
 }
@@ -46,7 +53,7 @@ func (c *Curve) SetColor(col Color) {
 	c.lineColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// GeneratePageBlocks generates page blocks
+// GeneratePageBlocks draws the curve onto page blocks.
 func (c *Curve) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 

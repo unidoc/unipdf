@@ -1,12 +1,18 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package creator
 
 import (
-	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
+	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
+// FilledCurve represents a closed path of Bezier curves with a border and fill.
 type FilledCurve struct {
 	curves        []draw.CubicBezierCurve
 	FillEnabled   bool // Show fill?
@@ -14,31 +20,32 @@ type FilledCurve struct {
 	BorderEnabled bool // Show border?
 	BorderWidth   float64
 	borderColor   *pdf.PdfColorDeviceRGB
-	Opacity       float64 // Alpha value (0-1).
 }
 
-// NewFilledCurve returns a instance of filled curve
+// NewFilledCurve returns a instance of filled curve.
 func NewFilledCurve() *FilledCurve {
 	curve := FilledCurve{}
 	curve.curves = []draw.CubicBezierCurve{}
 	return &curve
 }
 
-// AppendCurve appends curve to filled curve
+// AppendCurve appends a Bezier curve to the filled curve.
 func (this *FilledCurve) AppendCurve(curve draw.CubicBezierCurve) *FilledCurve {
 	this.curves = append(this.curves, curve)
 	return this
 }
 
+// SetFillColor sets the fill color for the path.
 func (this *FilledCurve) SetFillColor(color Color) {
 	this.fillColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
 }
 
+// SetBorderColor sets the border color for the path.
 func (this *FilledCurve) SetBorderColor(color Color) {
 	this.borderColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
 }
 
-// Draw a circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
+// draw draws the filled curve. Can specify a graphics state (gsName) for setting opacity etc. Otherwise leave empty ("").
 // Returns the content stream as a byte array, the bounding box and an error on failure.
 func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	bpath := draw.NewCubicBezierPath()
@@ -57,7 +64,7 @@ func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) 
 		creator.Add_w(this.BorderWidth)
 	}
 	if len(gsName) > 1 {
-		// If a graphics state is provided, use it. (Used for transparency settings here).
+		// If a graphics state is provided, use it. (can support transparency).
 		creator.Add_gs(pdfcore.PdfObjectName(gsName))
 	}
 
@@ -92,7 +99,7 @@ func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) 
 	return creator.Bytes(), bbox, nil
 }
 
-// GeneratePageBlocks generates page blocks
+// GeneratePageBlocks draws the filled curve on page blocks.
 func (this *FilledCurve) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 

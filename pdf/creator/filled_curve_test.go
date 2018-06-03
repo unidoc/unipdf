@@ -1,11 +1,15 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package creator
 
 import (
 	"testing"
+
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 )
-
-const testPdfFileWithFilledCurve = "../../testfiles/filledCurve.pdf"
 
 func CreateFillCurve(x0, y0, x1, y1, x2, y2, x3, y3 float64) draw.CubicBezierCurve {
 	return draw.NewCubicBezierCurve(x0, y0, x1, y1, x2, y2, x3, y3)
@@ -34,7 +38,7 @@ func TestNewFilledCurve(t *testing.T) {
 	creator.NewPage()
 	creator.Draw(filledCurve)
 
-	err := creator.WriteToFile(testPdfFileWithFilledCurve)
+	err := creator.WriteToFile("/tmp/filledCurve.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return
