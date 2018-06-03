@@ -17,7 +17,8 @@ type cmapOperand struct {
 }
 
 type cmapHexString struct {
-	b []byte
+	numBytes int // original number of bytes in the raw representation
+	b        []byte
 }
 
 type cmapString struct {

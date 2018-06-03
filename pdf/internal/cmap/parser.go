@@ -279,7 +279,7 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 
 		bb, err := p.reader.Peek(1)
 		if err != nil {
-			return cmapHexString{[]byte("")}, err
+			return cmapHexString{numBytes: 0, b: []byte("")}, err
 		}
 
 		if bb[0] == '>' {
@@ -296,10 +296,10 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	if buf.Len()%2 == 1 {
 		buf.WriteByte('0')
 	}
+	numBytes := buf.Len() / 2
 
 	hexb, _ := hex.DecodeString(buf.String())
-
-	return cmapHexString{hexb}, nil
+	return cmapHexString{numBytes: numBytes, b: hexb}, nil
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
