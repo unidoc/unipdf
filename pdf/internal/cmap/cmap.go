@@ -21,7 +21,8 @@ type CMap struct {
 	// Text encoder to look up runes from input glyph names.
 	encoder textencoding.TextEncoder
 
-	codeMap map[uint64]string
+	// map of character code to string (sequence of runes) for 1-4 byte codes separately.
+	codeMap [4]map[uint64]string
 
 	name       string
 	ctype      int
@@ -30,8 +31,9 @@ type CMap struct {
 
 // codespace represents a single codespace range used in the CMap.
 type codespace struct {
-	low  uint64
-	high uint64
+	numBytes int
+	low      uint64
+	high     uint64
 }
 
 // Name returns the name of the CMap.
@@ -61,7 +63,7 @@ func (cmap *CMap) CharcodeBytesToUnicode(src []byte) string {
 			code <<= 8
 			code |= uint64(b)
 
-			tgt, has := cmap.codeMap[code]
+			tgt, has := cmap.codeMap[j][code]
 			if has {
 				buf.WriteString(tgt)
 				break
@@ -76,9 +78,13 @@ func (cmap *CMap) CharcodeBytesToUnicode(src []byte) string {
 }
 
 // CharcodeToUnicode converts a single character code to unicode string.
+// Note that CharcodeBytesToUnicode is typically more efficient.
 func (cmap *CMap) CharcodeToUnicode(srcCode uint64) string {
-	if c, has := cmap.codeMap[srcCode]; has {
-		return c
+	// Search through different code lengths.
+	for numBytes := 1; numBytes <= 4; numBytes++ {
+		if c, has := cmap.codeMap[numBytes-1][srcCode]; has {
+			return c
+		}
 	}
 
 	// Not found.
@@ -89,7 +95,12 @@ func (cmap *CMap) CharcodeToUnicode(srcCode uint64) string {
 func newCMap() *CMap {
 	cmap := &CMap{}
 	cmap.codespaces = []codespace{}
-	cmap.codeMap = map[uint64]string{}
+	cmap.codeMap = [4]map[uint64]string{}
+	// Maps for 1-4 bytes are initialized. Minimal overhead if not used (most commonly used are 1-2 bytes).
+	cmap.codeMap[0] = map[uint64]string{}
+	cmap.codeMap[1] = map[uint64]string{}
+	cmap.codeMap[2] = map[uint64]string{}
+	cmap.codeMap[3] = map[uint64]string{}
 	return cmap
 }
 
@@ -208,10 +219,15 @@ func (cmap *CMap) parseCodespaceRange() error {
 			return errors.New("Non-hex high")
 		}
 
+		if hexLow.numBytes != hexHigh.numBytes {
+			return errors.New("Unequal number of bytes in range")
+		}
+
 		low := hexToUint64(hexLow)
 		high := hexToUint64(hexHigh)
+		numBytes := hexLow.numBytes
 
-		cspace := codespace{low, high}
+		cspace := codespace{numBytes: numBytes, low: low, high: high}
 		cmap.codespaces = append(cmap.codespaces, cspace)
 
 		common.Log.Trace("Codespace low: 0x%X, high: 0x%X", low, high)
@@ -232,6 +248,7 @@ func (cmap *CMap) parseBfchar() error {
 			return err
 		}
 		var srcCode uint64
+		var numBytes int
 
 		switch v := o.(type) {
 		case cmapOperand:
@@ -241,6 +258,7 @@ func (cmap *CMap) parseBfchar() error {
 			return errors.New("Unexpected operand")
 		case cmapHexString:
 			srcCode = hexToUint64(v)
+			numBytes = v.numBytes
 		default:
 			return errors.New("Unexpected type")
 		}
@@ -274,7 +292,11 @@ func (cmap *CMap) parseBfchar() error {
 			return errors.New("Unexpected type")
 		}
 
-		cmap.codeMap[srcCode] = toCode
+		if numBytes <= 0 || numBytes > 4 {
+			return errors.New("Invalid code length")
+		}
+
+		cmap.codeMap[numBytes-1][srcCode] = toCode
 	}
 
 	return nil
@@ -289,6 +311,7 @@ func (cmap *CMap) parseBfrange() error {
 
 		// Src code from.
 		var srcCodeFrom uint64
+		var numBytes int
 		{
 			o, err := cmap.parseObject()
 			if err != nil {
@@ -306,6 +329,7 @@ func (cmap *CMap) parseBfrange() error {
 				return errors.New("Unexpected operand")
 			case cmapHexString:
 				srcCodeFrom = hexToUint64(v)
+				numBytes = v.numBytes
 			default:
 				return errors.New("Unexpected type")
 			}
@@ -344,6 +368,10 @@ func (cmap *CMap) parseBfrange() error {
 			return err
 		}
 
+		if numBytes <= 0 || numBytes > 4 {
+			return errors.New("Invalid code length")
+		}
+
 		switch v := o.(type) {
 		case cmapArray:
 			sc := srcCodeFrom
@@ -352,7 +380,7 @@ func (cmap *CMap) parseBfrange() error {
 				if !ok {
 					return errors.New("Non-hex string in array")
 				}
-				cmap.codeMap[sc] = hexToString(hexs)
+				cmap.codeMap[numBytes-1][sc] = hexToString(hexs)
 				sc++
 			}
 			if sc != srcCodeTo+1 {
@@ -365,7 +393,7 @@ func (cmap *CMap) parseBfrange() error {
 			i := uint64(0)
 			for sc := srcCodeFrom; sc <= srcCodeTo; sc++ {
 				r := target + i
-				cmap.codeMap[sc] = string(r)
+				cmap.codeMap[numBytes-1][sc] = string(r)
 				i++
 			}
 		default:
