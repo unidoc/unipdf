@@ -81,6 +81,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 			return nil, errors.New("Invalid function type")
 		}
 	} else {
+		common.Log.Debug("Function Type error: %#v", obj)
 		return nil, errors.New("Type error")
 	}
 }

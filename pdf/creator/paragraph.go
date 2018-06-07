@@ -116,6 +116,11 @@ func (p *Paragraph) SetText(text string) {
 	p.text = text
 }
 
+// Text sets the text content of the Paragraph.
+func (p *Paragraph) Text() string {
+	return p.text
+}
+
 // SetEnableWrap sets the line wrapping enabled flag.
 func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
@@ -238,9 +243,9 @@ func (p *Paragraph) wrapText() error {
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
-			common.Log.Debug("Font: %#v", p.textFont)
-			common.Log.Debug("Encoder: %#v", p.textFont.Encoder())
+			common.Log.Debug("Glyph char metrics not found! %s (%s)\n", glyph, string(val))
+			common.Log.Trace("Font: %#v", p.textFont)
+			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
 			return errors.New("Glyph char metrics missing") // XXX/FIXME: return error.
 		}
 

@@ -7,9 +7,9 @@ package creator
 
 import (
 	"errors"
-
 	"fmt"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -344,13 +344,15 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 	// To properly add contents from a block, we need to handle the resources that the block is
 	// using and make sure it is accessible in the modified Page.
 	//
-	// Currently only supporting: Font, XObject, Colormap resources
+	// Currently supporting: Font, XObject, Colormap, Pattern, Shading, GState resources
 	// from the block.
 	//
 
 	xobjectMap := map[core.PdfObjectName]core.PdfObjectName{}
 	fontMap := map[core.PdfObjectName]core.PdfObjectName{}
 	csMap := map[core.PdfObjectName]core.PdfObjectName{}
+	patternMap := map[core.PdfObjectName]core.PdfObjectName{}
+	shadingMap := map[core.PdfObjectName]core.PdfObjectName{}
 	gstateMap := map[core.PdfObjectName]core.PdfObjectName{}
 
 	for _, op := range *contentsToAdd {
@@ -426,14 +428,86 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 								}
 								useName = useName + "0"
 							}
-						}
 
-						resources.SetColorspaceByName(useName, cs)
-						csMap[*name] = useName
+							resources.SetColorspaceByName(useName, cs)
+							csMap[*name] = useName
+						} else {
+							common.Log.Debug("Colorspace not found")
+						}
 					}
 
-					useName := csMap[*name]
-					op.Params[0] = &useName
+					if useName, has := csMap[*name]; has {
+						op.Params[0] = &useName
+					} else {
+						common.Log.Debug("Error: Colorspace %s not found", *name)
+					}
+				}
+			}
+		case "SCN", "scn":
+			if len(op.Params) == 1 {
+				if name, ok := op.Params[0].(*core.PdfObjectName); ok {
+					if _, processed := patternMap[*name]; !processed {
+						var useName core.PdfObjectName
+						p, found := resourcesToAdd.GetPatternByName(*name)
+						if found {
+							useName = *name
+							for {
+								p2, found := resources.GetPatternByName(useName)
+								if !found || p2 == p {
+									break
+								}
+								useName = useName + "0"
+							}
+
+							err := resources.SetPatternByName(useName, p.ToPdfObject())
+							if err != nil {
+								return err
+							}
+
+							patternMap[*name] = useName
+						}
+					}
+
+					if useName, has := patternMap[*name]; has {
+						op.Params[0] = &useName
+					}
+				}
+			}
+		case "sh":
+			// Shading.
+			if len(op.Params) == 1 {
+				if name, ok := op.Params[0].(*core.PdfObjectName); ok {
+					if _, processed := shadingMap[*name]; !processed {
+						var useName core.PdfObjectName
+						// Process if not already processed.
+						sh, found := resourcesToAdd.GetShadingByName(*name)
+						if found {
+							useName = *name
+							for {
+								sh2, found := resources.GetShadingByName(useName)
+								if !found || sh == sh2 {
+									break
+								}
+								useName = useName + "0"
+							}
+
+							err := resources.SetShadingByName(useName, sh.ToPdfObject())
+							if err != nil {
+								common.Log.Debug("ERROR Set shading: %v", err)
+								return err
+							}
+
+							shadingMap[*name] = useName
+						} else {
+							common.Log.Debug("Shading not found")
+						}
+					}
+
+					if useName, has := shadingMap[*name]; has {
+						op.Params[0] = &useName
+					} else {
+						common.Log.Debug("Error: Shading %s not found", *name)
+					}
 				}
 			}
 		case "gs":

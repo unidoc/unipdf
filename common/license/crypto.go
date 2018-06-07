@@ -158,7 +158,6 @@ func licenseKeyDecode(content string) (LicenseKey, error) {
 	}
 
 	ret.CreatedAt = time.Unix(ret.CreatedAtInt, 0)
-	ret.ExpiresAt = time.Unix(ret.ExpiresAtInt, 0)
 
 	return ret, nil
 }

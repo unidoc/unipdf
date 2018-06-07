@@ -8,6 +8,7 @@ package core
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	//"fmt"
 	"io"
 	//"os"
@@ -27,27 +28,54 @@ func makeReaderForText(txt string) (*bytes.Reader, *bufio.Reader, int64) {
 	return bufReader, bufferedReader, int64(len(txt))
 }
 
+func makeParserForText(txt string) *PdfParser {
+	rs, reader, fileSize := makeReaderForText(txt)
+	return &PdfParser{rs: rs, reader: reader, fileSize: fileSize}
+}
+
+func BenchmarkSkipSpaces(b *testing.B) {
+	parser := makeParserForText("       \t\t    \tABC")
+	for n := 0; n < b.N; n++ {
+		parser.skipSpaces()
+		parser.SetFileOffset(0)
+	}
+}
+
+var namePairs = map[string]string{
+	"/Name1":                             "Name1",
+	"/ASomewhatLongerName":               "ASomewhatLongerName",
+	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
+	"/1.2":                     "1.2",
+	"/$$":                      "$$",
+	"/@pattern":                "@pattern",
+	"/.notdef":                 ".notdef",
+	"/Lime#20Green":            "Lime Green",
+	"/paired#28#29parentheses": "paired()parentheses",
+	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
+	"/A#42":                    "AB",
+	"/":                        "",
+	"/ ":                       "",
+	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
+}
+
+func BenchmarkNameParsing(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		for str, name := range namePairs {
+			parser := makeParserForText(str)
+			o, err := parser.parseName()
+			if err != nil && err != io.EOF {
+				b.Errorf("Unable to parse name string, error: %s", err)
+			}
+			if string(o) != name {
+				b.Errorf("Mismatch %s != %s", o, name)
+			}
+		}
+	}
+}
+
 func TestNameParsing(t *testing.T) {
-	namePairs := map[string]string{}
-
-	namePairs["/Name1"] = "Name1"
-	namePairs["/ASomewhatLongerName"] = "ASomewhatLongerName"
-	namePairs["/A;Name_With-Various***Characters?"] = "A;Name_With-Various***Characters?"
-	namePairs["/1.2"] = "1.2"
-	namePairs["/$$"] = "$$"
-	namePairs["/@pattern"] = "@pattern"
-	namePairs["/.notdef"] = ".notdef"
-	namePairs["/Lime#20Green"] = "Lime Green"
-	namePairs["/paired#28#29parentheses"] = "paired()parentheses"
-	namePairs["/The_Key_of_F#23_Minor"] = "The_Key_of_F#_Minor"
-	namePairs["/A#42"] = "AB"
-	namePairs["/"] = ""
-	namePairs["/ "] = ""
-	namePairs["/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E"] = "<BC88><C5ED><D544><C694>"
-
 	for str, name := range namePairs {
-		parser := PdfParser{}
-		parser.rs, parser.reader, parser.fileSize = makeReaderForText(str)
+		parser := makeParserForText(str)
 		o, err := parser.parseName()
 		if err != nil && err != io.EOF {
 			t.Errorf("Unable to parse name string, error: %s", err)
@@ -58,8 +86,7 @@ func TestNameParsing(t *testing.T) {
 	}
 
 	// Should fail (require starting with '/')
-	parser := PdfParser{}
-	parser.rs, parser.reader, parser.fileSize = makeReaderForText(" /Name")
+	parser := makeParserForText(" /Name")
 	_, err := parser.parseName()
 	if err == nil || err == io.EOF {
 		t.Errorf("Should be invalid name")
@@ -71,34 +98,57 @@ type testStringEntry struct {
 	expected string
 }
 
-func TestStringParsing(t *testing.T) {
-	testEntries := []testStringEntry{
-		{"(This is a string)", "This is a string"},
-		{"(Strings may contain\n newlines and such)", "Strings may contain\n newlines and such"},
-		{"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)",
-			"Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on)."},
-		{"(These \\\ntwo strings \\\nare the same.)", "These two strings are the same."},
-		{"(These two strings are the same.)", "These two strings are the same."},
-		{"(\\\\)", "\\"},
-		{"(This string has an end-of-line at the end of it.\n)",
-			"This string has an end-of-line at the end of it.\n"},
-		{"(So does this one.\\n)", "So does this one.\n"},
-		{"(\\0053)", "\0053"},
-		{"(\\053)", "\053"},
-		{"(\\53)", "\053"},
-		{"(\\053)", "+"},
-		{"(\\53\\101)", "+A"},
+func BenchmarkStringParsing(b *testing.B) {
+	entry := "(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)"
+	parser := makeParserForText(entry)
+	for n := 0; n < b.N; n++ {
+		_, err := parser.parseString()
+		if err != nil && err != io.EOF {
+			b.Errorf("Unable to parse string, error: %s", err)
+		}
+		parser.SetFileOffset(0)
 	}
-	for _, entry := range testEntries {
-		parser := PdfParser{}
-		parser.rs, parser.reader, parser.fileSize = makeReaderForText(entry.raw)
+}
+
+var stringPairs = map[string]string{
+	"(This is a string)":                                                                        "This is a string",
+	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
+	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
+	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
+	"(These two strings are the same.)":                                                         "These two strings are the same.",
+	"(\\\\)": "\\",
+	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                               "So does this one.\n",
+	"(\\0053)":                                             "\0053",
+	"(\\53)":                                               "\053",
+	"(\\053)":                                              "+",
+	"(\\53\\101)":                                          "+A",
+}
+
+func TestStringParsing(t *testing.T) {
+	for raw, expected := range stringPairs {
+		parser := makeParserForText(raw)
 		o, err := parser.parseString()
 		if err != nil && err != io.EOF {
 			t.Errorf("Unable to parse string, error: %s", err)
 		}
-		if string(o) != entry.expected {
-			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", entry.raw, o, entry.expected)
+		if string(o) != expected {
+			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", raw, o, expected)
 		}
+	}
+}
+
+func TestReadTextLine(t *testing.T) {
+	// reading text ling + rewinding should be idempotent, that is:
+	// if we rewind back len(str) bytes after reading string str we should arrive at beginning of str
+	rawText := "abc\xb0cde"
+	parser := makeParserForText(rawText)
+	s, err := parser.readTextLine()
+	if err != nil && err != io.EOF {
+		t.Errorf("Unable to parse string, error: %s", err)
+	}
+	if parser.GetFileOffset() != int64(len(s)) {
+		t.Errorf("File offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
 	}
 }
 
@@ -154,6 +204,21 @@ func TestBoolParsing(t *testing.T) {
 			t.Errorf("bool not as expected (got %t, expected %t)", bool(val), expected)
 			return
 		}
+	}
+}
+
+func BenchmarkNumbericParsing(b *testing.B) {
+	txt1 := "[34.5 -3.62 1 +123.6 4. -.002 0.0]"
+	parser := PdfParser{}
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(txt1)
+
+	for n := 0; n < b.N; n++ {
+		_, err := parser.parseArray()
+		if err != nil {
+			b.Errorf("Error parsing array")
+			return
+		}
+		parser.SetFileOffset(0)
 	}
 }
 
@@ -267,6 +332,25 @@ func TestNumericParsing3(t *testing.T) {
 		if float32(*num) != val {
 			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
 		}
+	}
+}
+
+func BenchmarkHexStringParsing(b *testing.B) {
+	var ref bytes.Buffer
+	for i := 0; i < 0xff; i++ {
+		ref.WriteByte(byte(i))
+	}
+	parser := makeParserForText("<" + hex.EncodeToString(ref.Bytes()) + ">")
+	for n := 0; n < b.N; n++ {
+		hs, err := parser.parseHexString()
+		if err != nil {
+			b.Errorf("Error parsing hex string: %s", err.Error())
+			return
+		}
+		if string(hs) != ref.String() {
+			b.Errorf("Reference and parsed hex strings mismatch")
+		}
+		parser.SetFileOffset(0)
 	}
 }
 

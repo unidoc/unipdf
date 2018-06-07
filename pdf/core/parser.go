@@ -74,14 +74,14 @@ func (parser *PdfParser) GetTrailer() *PdfObjectDictionary {
 func (parser *PdfParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
-		bb, err := parser.reader.Peek(1)
+		b, err := parser.reader.ReadByte()
 		if err != nil {
 			return 0, err
 		}
-		if IsWhiteSpace(bb[0]) {
-			parser.reader.ReadByte()
+		if IsWhiteSpace(b) {
 			cnt++
 		} else {
+			parser.reader.UnreadByte()
 			break
 		}
 	}
@@ -121,11 +121,11 @@ func (parser *PdfParser) skipComments() error {
 
 // Read a comment starting with '%'.
 func (parser *PdfParser) readComment() (string, error) {
-	commentText := ""
+	var r bytes.Buffer
 
 	_, err := parser.skipSpaces()
 	if err != nil {
-		return commentText, err
+		return r.String(), err
 	}
 
 	isFirst := true
@@ -133,45 +133,45 @@ func (parser *PdfParser) readComment() (string, error) {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
-			return commentText, err
+			return r.String(), err
 		}
 		if isFirst && bb[0] != '%' {
-			return commentText, errors.New("Comment should start with %")
+			return r.String(), errors.New("Comment should start with %")
 		} else {
 			isFirst = false
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := parser.reader.ReadByte()
-			commentText += string(b)
+			r.WriteByte(b)
 		} else {
 			break
 		}
 	}
-	return commentText, nil
+	return r.String(), nil
 }
 
 // Read a single line of text from current position.
 func (parser *PdfParser) readTextLine() (string, error) {
-	lineStr := ""
+	var r bytes.Buffer
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
-			return lineStr, err
+			return r.String(), err
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := parser.reader.ReadByte()
-			lineStr += string(b)
+			r.WriteByte(b)
 		} else {
 			break
 		}
 	}
-	return lineStr, nil
+	return r.String(), nil
 }
 
 // Parse a name starting with '/'.
 func (parser *PdfParser) parseName() (PdfObjectName, error) {
-	name := ""
+	var r bytes.Buffer
 	nameStarted := false
 	for {
 		bb, err := parser.reader.Peek(1)
@@ -179,7 +179,7 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 			break // Can happen when loading from object stream.
 		}
 		if err != nil {
-			return PdfObjectName(name), err
+			return PdfObjectName(r.String()), err
 		}
 
 		if !nameStarted {
@@ -192,7 +192,7 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 				parser.skipSpaces()
 			} else {
 				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
-				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
+				return PdfObjectName(r.String()), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
 			if IsWhiteSpace(bb[0]) {
@@ -202,22 +202,22 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 			} else if bb[0] == '#' {
 				hexcode, err := parser.reader.Peek(3)
 				if err != nil {
-					return PdfObjectName(name), err
+					return PdfObjectName(r.String()), err
 				}
 				parser.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
-					return PdfObjectName(name), err
+					return PdfObjectName(r.String()), err
 				}
-				name += string(code)
+				r.Write(code)
 			} else {
 				b, _ := parser.reader.ReadByte()
-				name += string(b)
+				r.WriteByte(b)
 			}
 		}
 	}
-	return PdfObjectName(name), nil
+	return PdfObjectName(r.String()), nil
 }
 
 // Numeric objects.
@@ -243,9 +243,9 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 func (parser *PdfParser) parseNumber() (PdfObject, error) {
 	isFloat := false
 	allowSigns := true
-	numStr := ""
+	var r bytes.Buffer
 	for {
-		common.Log.Trace("Parsing number \"%s\"", numStr)
+		common.Log.Trace("Parsing number \"%s\"", r.String())
 		bb, err := parser.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
@@ -260,19 +260,19 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
 			// Only appear in the beginning, otherwise serves as a delimiter.
 			b, _ := parser.reader.ReadByte()
-			numStr += string(b)
+			r.WriteByte(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
 		} else if IsDecimalDigit(bb[0]) {
 			b, _ := parser.reader.ReadByte()
-			numStr += string(b)
+			r.WriteByte(b)
 		} else if bb[0] == '.' {
 			b, _ := parser.reader.ReadByte()
-			numStr += string(b)
+			r.WriteByte(b)
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
 			b, _ := parser.reader.ReadByte()
-			numStr += string(b)
+			r.WriteByte(b)
 			isFloat = true
 			allowSigns = true
 		} else {
@@ -281,11 +281,16 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 	}
 
 	if isFloat {
-		fVal, err := strconv.ParseFloat(numStr, 64)
+		fVal, err := strconv.ParseFloat(r.String(), 64)
+		if err != nil {
+			common.Log.Debug("Error parsing number %v err=%v. Using 0.0. Output may be incorrect", r.String(), err)
+			fVal = 0.0
+			err = nil
+		}
 		o := PdfObjectFloat(fVal)
 		return &o, err
 	} else {
-		intVal, err := strconv.ParseInt(numStr, 10, 64)
+		intVal, err := strconv.ParseInt(r.String(), 10, 64)
 		o := PdfObjectInteger(intVal)
 		return &o, err
 	}
@@ -295,26 +300,26 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 func (parser *PdfParser) parseString() (PdfObjectString, error) {
 	parser.reader.ReadByte()
 
-	bytes := []byte{}
+	var r bytes.Buffer
 	count := 1
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
-			return PdfObjectString(bytes), err
+			return PdfObjectString(r.String()), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
 			parser.reader.ReadByte() // Skip the escape \ byte.
 			b, err := parser.reader.ReadByte()
 			if err != nil {
-				return PdfObjectString(bytes), err
+				return PdfObjectString(r.String()), err
 			}
 
 			// Octal '\ddd' number (base 8).
 			if IsOctalDigit(b) {
 				bb, err := parser.reader.Peek(2)
 				if err != nil {
-					return PdfObjectString(bytes), err
+					return PdfObjectString(r.String()), err
 				}
 
 				numeric := []byte{}
@@ -331,29 +336,29 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
-					return PdfObjectString(bytes), err
+					return PdfObjectString(r.String()), err
 				}
-				bytes = append(bytes, byte(code))
+				r.WriteByte(byte(code))
 				continue
 			}
 
 			switch b {
 			case 'n':
-				bytes = append(bytes, '\n')
+				r.WriteRune('\n')
 			case 'r':
-				bytes = append(bytes, '\r')
+				r.WriteRune('\r')
 			case 't':
-				bytes = append(bytes, '\t')
+				r.WriteRune('\t')
 			case 'b':
-				bytes = append(bytes, '\b')
+				r.WriteRune('\b')
 			case 'f':
-				bytes = append(bytes, '\f')
+				r.WriteRune('\f')
 			case '(':
-				bytes = append(bytes, '(')
+				r.WriteRune('(')
 			case ')':
-				bytes = append(bytes, ')')
+				r.WriteRune(')')
 			case '\\':
-				bytes = append(bytes, '\\')
+				r.WriteRune('\\')
 			}
 
 			continue
@@ -368,10 +373,10 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 		}
 
 		b, _ := parser.reader.ReadByte()
-		bytes = append(bytes, b)
+		r.WriteByte(b)
 	}
 
-	return PdfObjectString(bytes), nil
+	return PdfObjectString(r.String()), nil
 }
 
 // Starts with '<' ends with '>'.
@@ -379,12 +384,8 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 func (parser *PdfParser) parseHexString() (PdfObjectString, error) {
 	parser.reader.ReadByte()
 
-	hextable := []byte("0123456789abcdefABCDEF")
-
-	tmp := []byte{}
+	var r bytes.Buffer
 	for {
-		parser.skipSpaces()
-
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
 			return PdfObjectString(""), err
@@ -396,16 +397,16 @@ func (parser *PdfParser) parseHexString() (PdfObjectString, error) {
 		}
 
 		b, _ := parser.reader.ReadByte()
-		if bytes.IndexByte(hextable, b) >= 0 {
-			tmp = append(tmp, b)
+		if !IsWhiteSpace(b) {
+			r.WriteByte(b)
 		}
 	}
 
-	if len(tmp)%2 == 1 {
-		tmp = append(tmp, '0')
+	if r.Len()%2 == 1 {
+		r.WriteRune('0')
 	}
 
-	buf, _ := hex.DecodeString(string(tmp))
+	buf, _ := hex.DecodeString(r.String())
 	return PdfObjectString(buf), nil
 }
 

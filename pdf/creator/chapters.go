@@ -115,7 +115,7 @@ func (chap *Chapter) Add(d Drawable) error {
 	case *Chapter:
 		common.Log.Debug("Error: Cannot add chapter to a chapter")
 		return errors.New("Type check error")
-	case *Paragraph, *Image, *Block, *Subchapter, *Table:
+	case *Paragraph, *Image, *Block, *Subchapter, *Table, *PageBreak:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
