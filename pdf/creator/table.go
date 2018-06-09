@@ -215,34 +215,43 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 		if cell.backgroundColor != nil {
 			// Draw background (fill)
-			rect := NewRectangle(ctx.X, ctx.Y, w, h)
+			border := NewBorder(ctx.X, ctx.Y, w, h)
 			r := cell.backgroundColor.R()
 			g := cell.backgroundColor.G()
 			b := cell.backgroundColor.B()
-			rect.SetFillColor(ColorRGBFromArithmetic(r, g, b))
+			border.SetFillColor(ColorRGBFromArithmetic(r, g, b))
 			if cell.borderStyle != CellBorderStyleNone {
 				// and border.
-				rect.SetBorderWidth(cell.borderWidth)
-				r := cell.borderColor.R()
-				g := cell.borderColor.G()
-				b := cell.borderColor.B()
-				rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
+				border.SetBorderColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
+				border.SetBorderColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
+				border.SetBorderColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
+				border.SetBorderColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
+				border.SetBorderWidthBottom(cell.borderWidthBottom)
+				border.SetBorderWidthLeft(cell.borderWidthLeft)
+				border.SetBorderWidthRight(cell.borderWidthRight)
+				border.SetBorderWidthTop(cell.borderWidthTop)
 			} else {
-				rect.SetBorderWidth(0)
+				border.SetBorderWidthBottom(0)
+				border.SetBorderWidthLeft(0)
+				border.SetBorderWidthRight(0)
+				border.SetBorderWidthTop(0)
 			}
-			err := block.Draw(rect)
+			err := block.Draw(border)
 			if err != nil {
 				common.Log.Debug("Error: %v\n", err)
 			}
 		} else if cell.borderStyle != CellBorderStyleNone {
-			// Draw border (no fill).
-			rect := NewRectangle(ctx.X, ctx.Y, w, h)
-			rect.SetBorderWidth(cell.borderWidth)
-			r := cell.borderColor.R()
-			g := cell.borderColor.G()
-			b := cell.borderColor.B()
-			rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
-			err := block.Draw(rect)
+			//Draw border (no fill).
+			border := NewBorder(ctx.X, ctx.Y, w, h)
+			border.SetBorderColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
+			border.SetBorderColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
+			border.SetBorderColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
+			border.SetBorderColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
+			border.SetBorderWidthBottom(cell.borderWidthBottom)
+			border.SetBorderWidthLeft(cell.borderWidthLeft)
+			border.SetBorderWidthRight(cell.borderWidthRight)
+			border.SetBorderWidthTop(cell.borderWidthTop)
+			err := block.Draw(border)
 			if err != nil {
 				common.Log.Debug("Error: %v\n", err)
 			}
@@ -322,6 +331,10 @@ const (
 
 	// Borders along all sides (boxed).
 	CellBorderStyleBox
+	CellBorderStyleBoxLeft
+	CellBorderStyleBoxTop
+	CellBorderStyleBoxRight
+	CellBorderStyleBoxBottom
 )
 
 // CellHorizontalAlignment defines the table cell's horizontal alignment.
@@ -360,9 +373,16 @@ type TableCell struct {
 	backgroundColor *model.PdfColorDeviceRGB
 
 	// Border
-	borderStyle CellBorderStyle
-	borderColor *model.PdfColorDeviceRGB
-	borderWidth float64
+	borderStyle        CellBorderStyle
+	borderColorDefault *model.PdfColorDeviceRGB
+	borderColorLeft    *model.PdfColorDeviceRGB
+	borderWidthLeft    float64
+	borderColorBottom  *model.PdfColorDeviceRGB
+	borderWidthBottom  float64
+	borderColorRight   *model.PdfColorDeviceRGB
+	borderWidthRight   float64
+	borderColorTop     *model.PdfColorDeviceRGB
+	borderWidthTop     float64
 
 	// The row and column which the cell starts from.
 	row, col int
@@ -404,7 +424,7 @@ func (table *Table) NewCell() *TableCell {
 	cell.indent = 5
 
 	cell.borderStyle = CellBorderStyleNone
-	cell.borderColor = model.NewPdfColorDeviceRGB(0, 0, 0)
+	cell.borderColorDefault = model.NewPdfColorDeviceRGB(0, 0, 0)
 
 	// Alignment defaults.
 	cell.horizontalAlignment = CellHorizontalAlignmentLeft
@@ -476,12 +496,44 @@ func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 // SetBorder sets the cell's border style.
 func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
 	cell.borderStyle = style
-	cell.borderWidth = width
+	if style == CellBorderStyleBox {
+		cell.borderWidthLeft = width
+		cell.borderWidthBottom = width
+		cell.borderWidthRight = width
+		cell.borderWidthTop = width
+	} else if style == CellBorderStyleBoxLeft {
+		cell.borderWidthLeft = width
+	} else if style == CellBorderStyleBoxTop {
+		cell.borderWidthBottom = width
+	} else if style == CellBorderStyleBoxRight {
+		cell.borderWidthRight = width
+	} else if style == CellBorderStyleBoxBottom {
+		cell.borderWidthTop = width
+	}
 }
 
 // SetBorderColor sets the cell's border color.
 func (cell *TableCell) SetBorderColor(col Color) {
-	cell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
+}
+
+// SetBorder sets the cell's border style.
+func (cell *TableCell) SetBorderColorByStyle(style CellBorderStyle, col Color) {
+	cell.borderStyle = style
+	if style == CellBorderStyleBox {
+		cell.borderColorDefault = model.NewPdfColorDeviceRGB(col.ToRGB())
+	} else if style == CellBorderStyleBoxLeft {
+		cell.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
+	} else if style == CellBorderStyleBoxTop {
+		cell.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
+	} else if style == CellBorderStyleBoxRight {
+		cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
+	} else if style == CellBorderStyleBoxBottom {
+		cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
+	}
 }
 
 // SetBackgroundColor sets the cell's background color.

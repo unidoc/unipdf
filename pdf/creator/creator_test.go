@@ -37,6 +37,7 @@ const testImageFile1 = "../../testfiles/logo.png"
 const testImageFile2 = "../../testfiles/signature.png"
 const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
+const testPdfWithTable = "../../testfiles/table.pdf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -940,7 +941,8 @@ func TestTable(t *testing.T) {
 	c := New()
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/4_table.pdf")
+	//err := c.WriteToFile("/tmp/4_table.pdf")
+	err := c.WriteToFile(testPdfWithTable)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1008,7 +1010,58 @@ func TestBorderedTable(t *testing.T) {
 	c := New()
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	err := c.WriteToFile(testPdfWithTable)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// Test creating and drawing a table.
+func TestBorderedTable2(t *testing.T) {
+	table := NewTable(4) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
+
+	cell := table.NewCell()
+	p := NewParagraph("Hello World")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBackgroundColor(ColorGreen)
+	cell.SetBorderColor(ColorBlue)
+	cell.SetBorderColorByStyle(CellBorderStyleBoxLeft, ColorBlack)
+	//table.SkipRows(1)
+	cell2 := table.NewCell()
+	p2 := NewParagraph("Thank You")
+	cell2.SetContent(p2)
+	cell2.SetBorder(CellBorderStyleBox, 1)
+	cell2.SetBorder(CellBorderStyleBoxTop, 0)
+	//cell2.SetBackgroundColor(ColorRed)
+	cell2.SetBorderColor(ColorGreen)
+
+	cell3 := table.NewCell()
+	p3 := NewParagraph("Hmm")
+	cell3.SetContent(p3)
+	cell3.SetBorder(CellBorderStyleBox, 1)
+	//cell3.SetBackgroundColor(ColorRed)
+	cell3.SetBorderColor(ColorGreen)
+	cell3.SetBorder(CellBorderStyleBoxBottom, 0)
+	table.SkipCells(1)
+
+	cell4 := table.NewCell()
+	p4 := NewParagraph("Good Bye")
+	cell4.SetContent(p4)
+	cell4.SetBorder(CellBorderStyleBox, 1)
+	cell4.SetBorder(CellBorderStyleBoxTop, 0)
+	cell4.SetBackgroundColor(ColorRed)
+	cell4.SetBorderColor(ColorGreen)
+
+	c := New()
+	c.Draw(table)
+
+	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	err := c.WriteToFile(testPdfWithTable)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
