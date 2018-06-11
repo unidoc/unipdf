@@ -6,6 +6,7 @@ import (
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
+	"fmt"
 )
 
 type Circle struct {
@@ -175,6 +176,10 @@ const (
 	LineEndingStyleButt  LineEndingStyle = 2
 )
 
+type StraightPath interface {
+	Draw(gsName string) ([]byte, *pdf.PdfRectangle, error)
+}
+
 // Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
 // or arrows at either end.  The line also has a specified width, color and opacity.
 type Line struct {
@@ -306,7 +311,7 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 		newpath = newpath.AppendPoint(pa1)
 		newpath = newpath.AppendPoint(pa2)
 		newpath = newpath.AppendPoint(pa3)
-		for _, p := range path.Points[1 : len(path.Points)-1] {
+		for _, p := range path.Points[1: len(path.Points)-1] {
 			newpath = newpath.AppendPoint(p)
 		}
 		newpath = newpath.AppendPoint(pa5)
@@ -333,7 +338,7 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	DrawPathWithCreator(path, creator)
 	creator.Add_f().
-		//creator.Add_S().
+	//creator.Add_S().
 		Add_Q()
 
 	/*
@@ -341,6 +346,176 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 		offX := x1 - VsX
 		offY := y1 - VsY
 	*/
+
+	// Bounding box - global coordinate system.
+	bbox := &pdf.PdfRectangle{}
+	bbox.Llx = pathBbox.X
+	bbox.Lly = pathBbox.Y
+	bbox.Urx = pathBbox.X + pathBbox.Width
+	bbox.Ury = pathBbox.Y + pathBbox.Height
+
+	return creator.Bytes(), bbox, nil
+}
+
+// Defines a dashed line between point 1 (X1,Y1) and point 2 (X2,Y2).  The dashed line ending styles can be none (regular line),
+// or arrows at either end.  The dashed line also has a specified width, color and opacity.
+type DashedLine struct {
+	X1               float64
+	Y1               float64
+	X2               float64
+	Y2               float64
+	LineColor        *pdf.PdfColorDeviceRGB
+	Opacity          float64 // Alpha value (0-1).
+	LineWidth        float64
+	LineEndingStyle1 LineEndingStyle // Line ending style of point 1.
+	LineEndingStyle2 LineEndingStyle // Line ending style of point 2.
+}
+
+// Draw a line in PDF.  Generates the content stream which can be used in page contents or appearance stream of annotation.
+// Returns the stream content, XForm bounding box (local), bounding box and an error if one occurred.
+func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+	x1, x2 := line.X1, line.X2
+	y1, y2 := line.Y1, line.Y2
+
+	dy := y2 - y1
+	dx := x2 - x1
+	theta := math.Atan2(dy, dx)
+
+	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
+	w := line.LineWidth
+	fmt.Println("LineWidth = ", w)
+
+	pi := math.Pi
+
+	mul := 1.0
+	if dx < 0 {
+		mul *= -1.0
+	}
+	if dy < 0 {
+		mul *= -1.0
+	}
+
+	// Vs.
+	VsX := mul * (-w / 2 * math.Cos(theta+pi/2))
+	VsY := mul * (-w/2*math.Sin(theta+pi/2) + w*math.Sin(theta+pi/2))
+
+	// V1.
+	V1X := VsX + w/2*math.Cos(theta+pi/2)
+	V1Y := VsY + w/2*math.Sin(theta+pi/2)
+
+	// P2.
+	V2X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta)
+	V2Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta)
+
+	// P3.
+	V3X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta) + w*math.Cos(theta-pi/2)
+	V3Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta) + w*math.Sin(theta-pi/2)
+
+	// P4.
+	V4X := VsX + w/2*math.Cos(theta-pi/2)
+	V4Y := VsY + w/2*math.Sin(theta-pi/2)
+
+	path := NewPath()
+	path = path.AppendPoint(NewPoint(V1X, V1Y))
+	path = path.AppendPoint(NewPoint(V2X, V2Y))
+	path = path.AppendPoint(NewPoint(V3X, V3Y))
+	path = path.AppendPoint(NewPoint(V4X, V4Y))
+
+	lineEnding1 := line.LineEndingStyle1
+	lineEnding2 := line.LineEndingStyle2
+
+	// TODO: Allow custom height/widths.
+	arrowHeight := 3 * w
+	arrowWidth := 3 * w
+	arrowExtruding := (arrowWidth - w) / 2
+
+	if lineEnding2 == LineEndingStyleArrow {
+		// Convert P2, P3
+		p2 := path.GetPointNumber(2)
+
+		va1 := NewVectorPolar(arrowHeight, theta+pi)
+		pa1 := p2.AddVector(va1)
+
+		bVec := NewVectorPolar(arrowWidth/2, theta+pi/2)
+		aVec := NewVectorPolar(arrowHeight, theta)
+
+		va2 := NewVectorPolar(arrowExtruding, theta+pi/2)
+		pa2 := pa1.AddVector(va2)
+
+		va3 := aVec.Add(bVec.Flip())
+		pa3 := pa2.AddVector(va3)
+
+		va4 := bVec.Scale(2).Flip().Add(va3.Flip())
+		pa4 := pa3.AddVector(va4)
+
+		pa5 := pa1.AddVector(NewVectorPolar(w, theta-pi/2))
+
+		newpath := NewPath()
+		newpath = newpath.AppendPoint(path.GetPointNumber(1))
+		newpath = newpath.AppendPoint(pa1)
+		newpath = newpath.AppendPoint(pa2)
+		newpath = newpath.AppendPoint(pa3)
+		newpath = newpath.AppendPoint(pa4)
+		newpath = newpath.AppendPoint(pa5)
+		newpath = newpath.AppendPoint(path.GetPointNumber(4))
+
+		path = newpath
+	}
+	if lineEnding1 == LineEndingStyleArrow {
+		// Get the first and last points.
+		p1 := path.GetPointNumber(1)
+		pn := path.GetPointNumber(path.Length())
+
+		// First three points on arrow.
+		v1 := NewVectorPolar(w/2, theta+pi+pi/2)
+		pa1 := p1.AddVector(v1)
+
+		v2 := NewVectorPolar(arrowHeight, theta).Add(NewVectorPolar(arrowWidth/2, theta+pi/2))
+		pa2 := pa1.AddVector(v2)
+
+		v3 := NewVectorPolar(arrowExtruding, theta-pi/2)
+		pa3 := pa2.AddVector(v3)
+
+		// Last three points
+		v5 := NewVectorPolar(arrowHeight, theta)
+		pa5 := pn.AddVector(v5)
+
+		v6 := NewVectorPolar(arrowExtruding, theta+pi+pi/2)
+		pa6 := pa5.AddVector(v6)
+
+		pa7 := pa1
+
+		newpath := NewPath()
+		newpath = newpath.AppendPoint(pa1)
+		newpath = newpath.AppendPoint(pa2)
+		newpath = newpath.AppendPoint(pa3)
+		for _, p := range path.Points[1: len(path.Points)-1] {
+			newpath = newpath.AppendPoint(p)
+		}
+		newpath = newpath.AppendPoint(pa5)
+		newpath = newpath.AppendPoint(pa6)
+		newpath = newpath.AppendPoint(pa7)
+
+		path = newpath
+	}
+
+	creator := pdfcontent.NewContentCreator()
+
+	if len(gsName) > 1 {
+		// If a graphics state is provided, use it. (Used for transparency settings here).
+		creator.Add_gs(pdfcore.PdfObjectName(gsName))
+	}
+
+	path = path.Offset(line.X1, line.Y1)
+
+	pathBbox := path.GetBoundingBox()
+
+	creator.
+		Add_d([]int64{int64(path.Length() / 2)}, 0).
+		Add_S()
+	//Add_q()
+
+	DrawDashedPathWithCreator(path, creator)
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}
