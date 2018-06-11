@@ -6,7 +6,6 @@ import (
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
-	"fmt"
 )
 
 type Circle struct {
@@ -357,8 +356,8 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	return creator.Bytes(), bbox, nil
 }
 
-// Defines a dashed line between point 1 (X1,Y1) and point 2 (X2,Y2).  The dashed line ending styles can be none (regular line),
-// or arrows at either end.  The dashed line also has a specified width, color and opacity.
+// Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
+// or arrows at either end.  The line also has a specified width, color and opacity.
 type DashedLine struct {
 	X1               float64
 	Y1               float64
@@ -383,7 +382,6 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
 	w := line.LineWidth
-	fmt.Println("LineWidth = ", w)
 
 	pi := math.Pi
 
@@ -501,6 +499,10 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	creator := pdfcontent.NewContentCreator()
 
+	// Draw line with arrow
+	creator.
+		Add_q().
+		Add_rg(line.LineColor.R(), line.LineColor.G(), line.LineColor.B())
 	if len(gsName) > 1 {
 		// If a graphics state is provided, use it. (Used for transparency settings here).
 		creator.Add_gs(pdfcore.PdfObjectName(gsName))
@@ -510,12 +512,12 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	pathBbox := path.GetBoundingBox()
 
+	DrawPathWithCreator(path, creator)
 	creator.
-		Add_d([]int64{int64(path.Length() / 2)}, 0).
-		Add_S()
-	//Add_q()
-
-	DrawDashedPathWithCreator(path, creator)
+		Add_d([]int64{3}, 0).
+		Add_S().
+		Add_q().
+		Add_f()
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}

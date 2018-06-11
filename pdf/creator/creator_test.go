@@ -1028,19 +1028,19 @@ func TestBorderedTable2(t *testing.T) {
 	p := NewParagraph("Hello")
 	cell.SetContent(p)
 	cell.SetBorderColorAndWidthByStyle(CellBorderStyleBoxTop, ColorBlue, 1)
-	//cell.SetBorderLineStyle(CellBorderLineStyleDashed)
+	cell.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	cell2 := table.NewCell()
 	p2 := NewParagraph("World")
 	cell2.SetContent(p2)
 	cell2.SetBorderColorAndWidthByStyle(CellBorderStyleBoxBottom, ColorRed, 1)
-	//cell2.SetBorderLineStyle(CellBorderLineStyleDashed)
+	cell2.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	cell3 := table.NewCell()
 	p3 := NewParagraph("Welcome to")
 	cell3.SetContent(p3)
 	cell3.SetBorderColorAndWidthByStyle(CellBorderStyleBoxLeft, ColorBlue, 1)
-	//cell3.SetBorderLineStyle(CellBorderLineStyleDashed)
+	cell3.SetBorderLineStyle(CellBorderLineStyleDashed)
 	table.SkipCells(1)
 
 	cell4 := table.NewCell()
@@ -1048,7 +1048,7 @@ func TestBorderedTable2(t *testing.T) {
 	cell4.SetContent(p4)
 	cell4.SetBorderColorAndWidthByStyle(CellBorderStyleBoxRight, ColorGreen, 1)
 	//cell4.SetBorderColorAndWidthByStyle(CellBorderStyleBoxBottom, ColorGreen, 1)
-	//cell4.SetBorderLineStyle(CellBorderLineStyleDashed)
+	cell4.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	c := New()
 	c.Draw(table)
