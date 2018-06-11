@@ -516,8 +516,8 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	creator.
 		Add_d([]int64{3}, 0).
 		Add_S().
-		Add_q().
-		Add_f()
+		Add_q()
+	//Add_f()
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}
