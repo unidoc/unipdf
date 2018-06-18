@@ -44,6 +44,9 @@ type PdfObjectArray []PdfObject
 type PdfObjectDictionary struct {
 	dict map[PdfObjectName]PdfObject
 	keys []PdfObjectName
+
+	// For lazy-loading, need access to the parser (and the cross reference table for object access).
+	parser *PdfParser
 }
 
 // PdfObjectNull represents the primitive PDF null object.
@@ -100,31 +103,31 @@ func MakeArray(objects ...PdfObject) *PdfObjectArray {
 // MakeArrayFromIntegers creates an PdfObjectArray from a slice of ints, where each array element is
 // an PdfObjectInteger.
 func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := MakeArray()
 	for _, val := range vals {
-		array = append(array, MakeInteger(int64(val)))
+		array.Append(MakeInteger(int64(val)))
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromIntegers64 creates an PdfObjectArray from a slice of int64s, where each array element
 // is an PdfObjectInteger.
 func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := MakeArray()
 	for _, val := range vals {
-		array = append(array, MakeInteger(val))
+		array.Append(MakeInteger(val))
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromFloats creates an PdfObjectArray from a slice of float64s, where each array element is an
 // PdfObjectFloat.
 func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := MakeArray()
 	for _, val := range vals {
-		array = append(array, MakeFloat(val))
+		array.Append(MakeFloat(val))
 	}
-	return &array
+	return array
 }
 
 // MakeFloat creates an PdfObjectFloat from a float64.
@@ -173,6 +176,7 @@ func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error
 	return stream, nil
 }
 
+// String returns the state of the bool as "true" or "false".
 func (bool *PdfObjectBool) String() string {
 	if *bool {
 		return "true"
@@ -330,6 +334,15 @@ func (array *PdfObjectArray) Append(obj PdfObject) {
 	*array = append(*array, obj)
 }
 
+// Elements returns a slice of the elements in the array.
+// Preferred over accessing the array directly as type may be changed in future major versions (v3).
+func (array *PdfObjectArray) Elements() []PdfObject {
+	if array == nil {
+		return nil
+	}
+	return *array
+}
+
 // Len returns the number of elements in the array.
 func (array *PdfObjectArray) Len() int {
 	if array == nil {
@@ -438,6 +451,35 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	if !has {
 		return nil
 	}
+	return val
+}
+
+// GetDirect returns the direct PdfObject corresponding to the specified key.
+// The difference from Get() is that if the value is a reference, it will
+// be resolved, and indirect objects are resolved to their direct object.
+// Returns a nil value if the key is not set.
+//
+// TODO (v3): Replace Get() with GetDirect().
+func (d *PdfObjectDictionary) GetDirect(key PdfObjectName) PdfObject {
+	val, has := d.dict[key]
+	if !has {
+		return nil
+	}
+
+	switch t := val.(type) {
+	case *PdfIndirectObject:
+		return t.PdfObject
+	case *PdfObjectReference:
+		if d.parser != nil {
+			direct, err := d.parser.Trace(val)
+			if err != nil {
+				common.Log.Debug("GetDirect trace error (%s): %v", string(key), err)
+				return nil
+			}
+			return direct
+		}
+	}
+
 	return val
 }
 
@@ -583,4 +625,9 @@ func TraceToDirectObject(obj PdfObject) PdfObject {
 		}
 	}
 	return obj
+}
+
+// Direct returns the direct object contained by an indirect object.
+func (ind *PdfIndirectObject) Direct() PdfObject {
+	return TraceToDirectObject(ind.PdfObject)
 }
