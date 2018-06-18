@@ -32,6 +32,7 @@ type PdfReader struct {
 	traversed map[PdfObject]bool
 }
 
+// NewPdfReader returns a new PdfReader for a specified data stream (ReadSeeker interface).
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
@@ -140,7 +141,7 @@ func (this *PdfReader) loadStructure() error {
 	// Catalog.
 	root, ok := trailerDict.Get("Root").(*PdfObjectReference)
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", *trailerDict)
+		return fmt.Errorf("Invalid Root (trailer: %s)", trailerDict)
 	}
 	oc, err := this.parser.LookupByReference(*root)
 	if err != nil {

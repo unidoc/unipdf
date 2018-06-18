@@ -54,7 +54,7 @@ func (this *PdfAnnotation) String() string {
 	return s
 }
 
-// Additional elements for mark-up annotations.
+// PdfAnnotationMarkup represents additional elements for mark-up annotations.
 type PdfAnnotationMarkup struct {
 	T            PdfObject
 	Popup        *PdfAnnotationPopup
@@ -68,7 +68,7 @@ type PdfAnnotationMarkup struct {
 	ExData       PdfObject
 }
 
-// Subtype: Text
+// PdfAnnotationText represents a Text annotation.
 type PdfAnnotationText struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup

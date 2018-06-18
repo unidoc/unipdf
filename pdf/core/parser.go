@@ -43,7 +43,7 @@ type PdfParser struct {
 	xrefs            XrefTable
 	objstms          ObjectStreams
 	trailer          *PdfObjectDictionary
-	ObjCache         ObjectCache // TODO: Unexport (v3).
+	ObjCache         ObjectCache // TODO: Unexport (v3). - May need access from testing.
 	crypter          *PdfCrypt
 	repairsAttempted bool // Avoid multiple attempts for repair.
 
@@ -579,6 +579,7 @@ func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
 	dict := MakeDict()
+	dict.parser = parser
 
 	// Pass the '<<'
 	c, _ := parser.reader.ReadByte()
@@ -1321,7 +1322,9 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	common.Log.Trace("-Read indirect obj")
 	bb, err := parser.reader.Peek(20)
 	if err != nil {
-		common.Log.Debug("ERROR: Fail to read indirect obj")
+		if err != io.EOF {
+			common.Log.Debug("ERROR: Fail to read indirect obj")
+		}
 		return &indirect, err
 	}
 	common.Log.Trace("(indirect obj peek \"%s\"", string(bb))
@@ -1493,6 +1496,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 // TODO: Unexport (v3) or move to test files, if needed by external test cases.
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}
+	parser.ObjCache = ObjectCache{}
 	buf := []byte(txt)
 
 	bufReader := bytes.NewReader(buf)

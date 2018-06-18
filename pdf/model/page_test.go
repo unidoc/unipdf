@@ -6,19 +6,62 @@
 package model
 
 import (
+	"io"
 	"testing"
 
+	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-/*
-func makeReaderForText(txt string) *bufio.Reader {
-	buf := []byte(txt)
-	bufReader := bytes.NewReader(buf)
-	bufferedReader := bufio.NewReader(bufReader)
-	return bufferedReader
+// NewReaderForText makes a new PdfReader for an input PDF content string. For use in testing.
+func NewReaderForText(txt string) *PdfReader {
+	r := &PdfReader{}
+	r.traversed = map[PdfObject]bool{}
+	r.modelManager = NewModelManager()
+
+	// Create the parser, loads the cross reference table and trailer.
+	parser := NewParserFromString(txt)
+	r.parser = parser
+
+	return r
 }
-*/
+
+// ParseIndObjSeries loads a series of indirect objects until it runs into an error.
+// Fully loads the objects and traverses resolving references to *PdfIndirectObjects.
+// For use in testing.
+func (r *PdfReader) ParseIndObjSeries() error {
+	for {
+		obj, err := r.parser.ParseIndirectObject()
+		if err != nil {
+			if err != io.EOF {
+				common.Log.Debug("Error parsing indirect object: %v", err)
+				return err
+			}
+			break
+		}
+
+		switch t := obj.(type) {
+		case *PdfObjectStream:
+			r.parser.ObjCache[int(t.ObjectNumber)] = t
+		case *PdfIndirectObject:
+			r.parser.ObjCache[int(t.ObjectNumber)] = t
+		default:
+			common.Log.Debug("Incorrect type for ind obj: %T", obj)
+			return ErrTypeCheck
+		}
+	}
+
+	// Traverse the objects, resolving references to instances to PdfIndirectObject pointers.
+	for _, obj := range r.parser.ObjCache {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			common.Log.Debug("ERROR: Unable to traverse(%s)", err)
+			return err
+		}
+	}
+
+	return nil
+}
 
 // Test PDF date parsing from string.
 func TestDateParse(t *testing.T) {
@@ -221,8 +264,6 @@ func TestPdfPage1(t *testing.T) {
 >>
 endobj
     `
-	//parser := PdfParser{}
-	//parser.reader = makeReaderForText(rawText)
 	parser := NewParserFromString(rawText)
 
 	obj, err := parser.ParseIndirectObject()

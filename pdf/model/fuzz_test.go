@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
 // Test for an endless recursive loop in
