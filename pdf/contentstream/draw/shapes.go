@@ -512,11 +512,12 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	pathBbox := path.GetBoundingBox()
 
-	DrawPathWithCreator(path, creator)
+	DrawDashedPathWithCreator(path, creator)
+
 	creator.
 		Add_d([]int64{3}, 0).
-		Add_S().
-		Add_q()
+		Add_s()
+	//Add_q()
 	//Add_f()
 
 	// Bounding box - global coordinate system.
