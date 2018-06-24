@@ -3,7 +3,6 @@ package creator
 import (
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/model"
-	"fmt"
 )
 
 type Border struct {
@@ -81,19 +80,8 @@ func (border *Border) SetFillColor(col Color) {
 
 func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
-
-	fmt.Println("WT = ", border.borderWidthTop)
-	fmt.Println("WL = ", border.borderWidthLeft)
-	fmt.Println("WR = ", border.borderWidthRight)
-	fmt.Println("WB = ", border.borderWidthBottom)
-
 	startX := border.x
 	startY := ctx.PageHeight - border.y
-
-	//fmt.Printf("x = %f, y = %f, h = %f, w = %f\n", ctx.X, ctx.Y,
-	//	ctx.Width, ctx.Height)
-	//fmt.Printf("x1 = %f, y1 = %f, x2 = %f, y2 = %f, h = %f, w = %f\n", startX, startY,
-	//	border.x, border.y, border.height, border.width)
 
 	if border.fillColor != nil {
 		drawrect := draw.Rectangle{

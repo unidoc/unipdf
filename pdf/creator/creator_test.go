@@ -950,68 +950,70 @@ func TestTable(t *testing.T) {
 }
 
 // Test creating and drawing a table.
-func TestBorderedTable(t *testing.T) {
+func TestBorderedTable1(t *testing.T) {
 	table := NewTable(4) // Mx4 table
 	// Default, equal column sizes (4x0.25)...
 	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
 
-	cell := table.NewCell()
+	cell1 := table.NewCell()
 	p := NewParagraph("1,1")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell1.SetContent(p)
+	cell1.SetBorder(CellBorderStyleBoxTop, 1)  // Border will be on top
+	cell1.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
 
-	cell = table.NewCell()
+	cell2 := table.NewCell()
 	p = NewParagraph("1,2")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell2.SetContent(p)
+	cell2.SetBorder(CellBorderStyleBox, 1) // Border will be around
 
-	cell = table.NewCell()
+	cell3 := table.NewCell()
 	p = NewParagraph("1,3")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell3.SetContent(p)
+	cell3.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
 
-	cell = table.NewCell()
+	cell4 := table.NewCell()
 	p = NewParagraph("1,4")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell4.SetContent(p)
+	cell4.SetBorder(CellBorderStyleBox, 1) // Border will be around
 
-	cell = table.NewCell()
+	cell5 := table.NewCell()
 	p = NewParagraph("2,1")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell5.SetContent(p)
+	cell5.SetBorder(CellBorderStyleBox, 1) // Border will be around
 
-	cell = table.NewCell()
+	cell6 := table.NewCell()
 	p = NewParagraph("2,2")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell6.SetContent(p)
+	cell6.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
 
 	table.SkipCells(1) // Skip over 2,3.
 
-	cell = table.NewCell()
+	cell7 := table.NewCell()
 	p = NewParagraph("2,4")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell7.SetContent(p)
+	cell7.SetBorder(CellBorderStyleBox, 1) // Border will be around
 
 	// Skip over two rows.
 	table.SkipRows(2)
-	cell = table.NewCell()
+	cell8 := table.NewCell()
 	p = NewParagraph("4,4")
-	cell.SetContent(p)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell8.SetContent(p)
+	cell8.SetBorder(CellBorderStyleBoxRight, 1) // Border will be on right
 
 	// Move down 3 rows, 2 to the left.
 	table.SkipOver(3, -2)
-	cell = table.NewCell()
+	cell9 := table.NewCell()
 	p = NewParagraph("7,2")
-	cell.SetContent(p)
-	cell.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell9.SetContent(p)
+	cell9.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
+	cell9.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
+	cell9.SetBorder(CellBorderStyleBoxTop, 1)    // Border will be on top
 
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
-	err := c.WriteToFile(testPdfWithTable)
+	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	//err := c.WriteToFile(testPdfWithTable)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1024,37 +1026,74 @@ func TestBorderedTable2(t *testing.T) {
 	// Default, equal column sizes (4x0.25)...
 	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
 
-	cell := table.NewCell()
-	p := NewParagraph("Hello")
-	cell.SetContent(p)
-	cell.SetBorderColorAndWidthByStyle(CellBorderStyleBoxTop, ColorBlue, 1)
-	cell.SetBorderLineStyle(CellBorderLineStyleDashed)
+	cell1 := table.NewCell()
+	p := NewParagraph("A")
+	cell1.SetContent(p)
+	cell1.SetBorder(CellBorderStyleBox, 1)     // Border will be on top
+	cell1.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
+	cell1.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	cell2 := table.NewCell()
-	p2 := NewParagraph("World")
-	cell2.SetContent(p2)
-	cell2.SetBorderColorAndWidthByStyle(CellBorderStyleBoxBottom, ColorRed, 1)
+	p = NewParagraph("B")
+	cell2.SetContent(p)
+	cell2.SetBorder(CellBorderStyleBox, 1) // Border will be around
 	cell2.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	cell3 := table.NewCell()
-	p3 := NewParagraph("Welcome to")
-	cell3.SetContent(p3)
-	cell3.SetBorderColorAndWidthByStyle(CellBorderStyleBoxLeft, ColorBlue, 1)
+	p = NewParagraph("C")
+	cell3.SetContent(p)
+	cell3.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
 	cell3.SetBorderLineStyle(CellBorderLineStyleDashed)
-	table.SkipCells(1)
 
 	cell4 := table.NewCell()
-	p4 := NewParagraph("Unidoc")
-	cell4.SetContent(p4)
-	cell4.SetBorderColorAndWidthByStyle(CellBorderStyleBoxRight, ColorGreen, 1)
-	//cell4.SetBorderColorAndWidthByStyle(CellBorderStyleBoxBottom, ColorGreen, 1)
+	p = NewParagraph("D")
+	cell4.SetContent(p)
+	cell4.SetBorder(CellBorderStyleBox, 1) // Border will be around
 	cell4.SetBorderLineStyle(CellBorderLineStyleDashed)
+
+	cell5 := table.NewCell()
+	p = NewParagraph("E")
+	cell5.SetContent(p)
+	cell5.SetBorder(CellBorderStyleBox, 1) // Border will be around
+	cell5.SetBorderLineStyle(CellBorderLineStyleDashed)
+
+	cell6 := table.NewCell()
+	p = NewParagraph("F")
+	cell6.SetContent(p)
+	cell6.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
+	cell6.SetBorderLineStyle(CellBorderLineStyleDashed)
+
+	table.SkipCells(1) // Skip over 2,3.
+
+	cell7 := table.NewCell()
+	p = NewParagraph("G")
+	cell7.SetContent(p)
+	cell7.SetBorder(CellBorderStyleBox, 1) // Border will be around
+	cell7.SetBorderLineStyle(CellBorderLineStyleDashed)
+
+	// Skip over two rows.
+	table.SkipRows(2)
+	cell8 := table.NewCell()
+	p = NewParagraph("H")
+	cell8.SetContent(p)
+	cell8.SetBorder(CellBorderStyleBoxRight, 1) // Border will be on right
+	cell8.SetBorderLineStyle(CellBorderLineStyleDashed)
+
+	// Move down 3 rows, 2 to the left.
+	table.SkipOver(3, -2)
+	cell9 := table.NewCell()
+	p = NewParagraph("I")
+	cell9.SetContent(p)
+	cell9.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
+	cell9.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
+	cell9.SetBorder(CellBorderStyleBoxTop, 1)    // Border will be on top
+	cell9.SetBorderLineStyle(CellBorderLineStyleDashed)
 
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
-	err := c.WriteToFile(testPdfWithTable)
+	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	//err := c.WriteToFile(testPdfWithTable)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

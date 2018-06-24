@@ -381,7 +381,7 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	theta := math.Atan2(dy, dx)
 
 	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
-	w := line.LineWidth
+	w := line.LineWidth - 1
 
 	pi := math.Pi
 
@@ -512,13 +512,17 @@ func (line DashedLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	pathBbox := path.GetBoundingBox()
 
-	DrawDashedPathWithCreator(path, creator)
-
+	DrawPathWithCreator(path, creator)
 	creator.
-		Add_d([]int64{3}, 0).
-		Add_s()
-	//Add_q()
-	//Add_f()
+		Add_d([]int64{3}, -1).
+		Add_S().
+		Add_Q()
+
+	/*
+		// Offsets (needed for placement of annotations bbox).
+		offX := x1 - VsX
+		offY := y1 - VsY
+	*/
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
-	"fmt"
 )
 
 // Table allows organizing content in an rows X columns matrix, which can spawn across multiple pages.
@@ -250,7 +249,6 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				common.Log.Debug("Error: %v\n", err)
 			}
 		} else if cell.borderStyle != CellBorderStyleNone {
-			fmt.Println("NoneFilled")
 			//Draw border (no fill).
 			border := NewBorder(ctx.X, ctx.Y, w, h, cell.borderLineStyle)
 			if cell.borderColorLeft != nil {
