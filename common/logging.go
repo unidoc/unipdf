@@ -114,7 +114,7 @@ func SetLogger(logger Logger) {
 
 // output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
 func (this ConsoleLogger) output(f *os.File, prefix string, format string, args ...interface{}) {
-	_, file, line, ok := runtime.Caller(3)
+	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		file = "???"
 		line = 0
