@@ -86,26 +86,55 @@ func (skel fontSkeleton) String() string {
 }
 
 // CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
+// (page 291)
+// The process of finding glyph descriptions in OpenType fonts by a conforming reader shall be the following:
+// • For Type 1 fonts using “CFF” tables, the process shall be as described in 9.6.6.2, "Encodings
+//   for Type 1 Fonts".
+// • For TrueType fonts using “glyf” tables, the process shall be as described in 9.6.6.4,
+//   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
+//   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
+//   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) string {
 	if font.UCMap != nil {
-		return font.UCMap.CharcodeBytesToUnicode(data)
+		unicode, ok := font.UCMap.CharcodeBytesToUnicode(data)
+		if ok {
+			return unicode
+		}
+	}
+	// Fall back to encoding
+	charcodes := []uint16{}
+	if font.isCIDFont() {
+		if len(data) == 1 {
+			data = []byte{0, data[0]}
+		}
+		if len(data)%2 != 0 {
+			common.Log.Debug("ERROR: Padding data=%+v to even length", data)
+			data = append(data, 0)
+		}
+		for i := 0; i < len(data); i += 2 {
+			b := uint16(data[i])<<8 | uint16(data[i+1])
+			charcodes = append(charcodes, b)
+		}
+	} else {
+		for _, b := range data {
+			charcodes = append(charcodes, uint16(b))
+		}
 	}
 	if encoder := font.Encoder(); encoder != nil {
 		runes := []rune{}
-		for _, b := range data {
-			r, ok := encoder.CharcodeToRune(uint16(b))
+		for _, code := range charcodes {
+			r, ok := encoder.CharcodeToRune(code)
 			if !ok {
-				common.Log.Debug("ERROR: CharcodeBytesToUnicode: No rune. b=0x%04x font=%s encoding=%s",
-					b, font, encoder)
-				common.Log.Debug("ERROR: data = [% 02x]=%#q", data, data)
-				r = '?'
-				// panic("??") //!@#$
+				common.Log.Debug("ERROR: No rune. code=0x%04x font=%s encoding=%s data = [% 02x]=%#q",
+					code, font, encoder, data, data)
+				r = cmap.MissingCodeRune
 			}
 			runes = append(runes, r)
 		}
 		return string(runes)
 	}
-	common.Log.Debug("CharcodeBytesToUnicode. Couldn't convert. Returning input bytes. font=%s", font)
+	common.Log.Debug("ERROR: Couldn't convert to unicode. Using input. data=%#q=[% 02x] font=%s",
+		string(data), data, font)
 	return string(data)
 }
 

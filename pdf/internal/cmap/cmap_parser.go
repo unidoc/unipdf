@@ -421,7 +421,7 @@ func (cmap *CMap) parseBfchar() error {
 			target = hexToString(v)
 		case cmapName:
 			common.Log.Debug("ERROR: Unexpected name. %#v", v)
-			target = missingCodeString
+			target = MissingCodeString
 		default:
 			common.Log.Debug("ERROR: Unexpected type. %#v", o)
 			return ErrBadCMap

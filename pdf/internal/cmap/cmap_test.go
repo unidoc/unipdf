@@ -117,7 +117,7 @@ func TestCMapParser1(t *testing.T) {
 	}
 
 	charcodes := []byte{0x00, 0x03, 0x00, 0x0F}
-	s := cmap.CharcodeBytesToUnicode(charcodes)
+	s, _ := cmap.CharcodeBytesToUnicode(charcodes)
 	if s != " ," {
 		t.Error("Incorrect charcode bytes -> string mapping")
 		return
@@ -205,7 +205,7 @@ func TestCMapParser2(t *testing.T) {
 	}
 
 	for _, exp := range expectedSequenceMappings {
-		str := cmap.CharcodeBytesToUnicode(exp.bytes)
+		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
 			t.Errorf("Incorrect byte sequence mapping % X -> % X (got % X)",
 				exp.bytes, []rune(exp.expected), []rune(str))
@@ -323,7 +323,7 @@ func TestCMapParser3(t *testing.T) {
 	}
 
 	for _, exp := range expectedSequenceMappings {
-		str := cmap.CharcodeBytesToUnicode(exp.bytes)
+		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
 			t.Errorf("Incorrect byte sequence mapping: % 02X -> % 02X (got % 02X)",
 				exp.bytes, []rune(exp.expected), []rune(str))
@@ -431,7 +431,7 @@ func TestCMapParser4(t *testing.T) {
 	}
 
 	for _, exp := range expectedSequenceMappings {
-		str := cmap.CharcodeBytesToUnicode(exp.bytes)
+		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
 			t.Errorf("Incorrect byte sequence mapping % 02X -> %+q (got %+q)",
 				exp.bytes, exp.expected, str)

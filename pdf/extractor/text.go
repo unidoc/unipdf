@@ -434,18 +434,19 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *TextStat
 	}
 }
 
+// renderRawText writes `text` directly to the extracted text
 func (to *TextObject) renderRawText(text string) {
 	to.Texts = append(to.Texts, XYText{text})
 }
 
-// renderText emits byte array `charcodes` to the calling program
-func (to *TextObject) renderText(charcodes []byte) {
+// renderText emits byte array `data` to the calling program
+func (to *TextObject) renderText(data []byte) {
 	text := ""
 	if to.State.Tf == nil {
-		common.Log.Debug("No font defined. charcodes=%#q", string(charcodes))
-		text = string(charcodes)
+		common.Log.Debug("No font defined. data=%#q", string(data))
+		text = string(data)
 	} else {
-		text = to.State.Tf.CharcodeBytesToUnicode(charcodes)
+		text = to.State.Tf.CharcodeBytesToUnicode(data)
 	}
 	to.Texts = append(to.Texts, XYText{text})
 }

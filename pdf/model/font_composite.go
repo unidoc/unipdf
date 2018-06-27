@@ -165,6 +165,11 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 		DescendantFont: df,
 		ToUnicode:      TraceToDirectObject(d.Get("ToUnicode")),
 	}
+
+	encoderName, err := GetName(TraceToDirectObject(d.Get("Encoding")))
+	if err == nil && encoderName == "Identity-H" {
+		font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
+	}
 	return font, nil
 }
 
