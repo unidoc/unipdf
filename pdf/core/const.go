@@ -16,4 +16,5 @@ var (
 	ErrNoJBIG2Decode                 = errors.New("JBIG2Decode encoding is not yet implemented")
 	ErrNoJPXDecode                   = errors.New("JPXDecode encoding is not yet implemented")
 	ErrNoPdfVersion                  = errors.New("Version not found")
+	ErrTypeCheck                     = errors.New("Type check error")
 )

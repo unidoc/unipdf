@@ -330,6 +330,10 @@ func (array *PdfObjectArray) Append(obj PdfObject) {
 	*array = append(*array, obj)
 }
 
+func GetNumberAsFloat(obj PdfObject) (float64, error) {
+	return getNumberAsFloat(obj)
+}
+
 func getNumberAsFloat(obj PdfObject) (float64, error) {
 	if fObj, ok := obj.(*PdfObjectFloat); ok {
 		return float64(*fObj), nil

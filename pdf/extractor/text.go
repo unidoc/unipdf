@@ -155,7 +155,7 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 				if ok, err := checkOp(op, to, 6, true); !ok {
 					return err
 				}
-				floats, err := model.GetNumbersAsFloat(op.Params)
+				floats, err := GetNumbersAsFloat(op.Params)
 				if err != nil {
 					return err
 				}
@@ -233,6 +233,7 @@ func (to *TextObject) moveText(tx, ty float64) {
 //  tx ty Td
 func (to *TextObject) moveTextSetLeading(tx, ty float64) {
 	// Not implemented yet
+	// The following is supposed to be equivalent to the existing Unidoc implementation.
 	if tx > 0 {
 		to.renderRawText(" ")
 	}
@@ -471,38 +472,11 @@ func (tl *TextList) Length() int {
 func (tl *TextList) ToText() string {
 	var buf bytes.Buffer
 	for _, t := range *tl {
-		// fmt.Printf("---- %4d: %4.1f %4.1f %q\n", i, t.X, t.Y, t.Text)
 		buf.WriteString(t.Text)
 	}
 	procBuf(&buf)
 	return buf.String()
 }
-
-// func (to *TextObject) getCodemap(name string) (codemap *cmap.CMap, err error) {
-
-// 	fontObj, err := to.getFontDict(name)
-// 	if err != nil {
-// 		return
-// 	}
-// 	fontDict := fontObj.(*PdfObjectDictionary)
-// 	toUnicode := fontDict.Get("ToUnicode")
-// 	toUnicode = TraceToDirectObject(toUnicode)
-// 	if toUnicode == nil {
-// 		return
-// 	}
-// 	toUnicodeStream, ok := toUnicode.(*PdfObjectStream)
-// 	if !ok {
-// 		err = errors.New("Invalid ToUnicode entry - not a stream")
-// 		return
-// 	}
-// 	var decoded []byte
-// 	decoded, err = DecodeStream(toUnicodeStream)
-// 	if err != nil {
-// 		return
-// 	}
-// 	codemap, err = cmap.LoadCmapFromData(decoded)
-// 	return
-// }
 
 // getFont returns the font named `name` if it exists in the page's resources
 func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
@@ -519,7 +493,7 @@ func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
 
 // getFontDict returns the font object called `name` if it exists in the page's Font resources or
 // an error if it doesn't
-// XXX: TODO: Can we cache font values
+// XXX: TODO: Can we cache font values?
 func (to *TextObject) getFontDict(name string) (fontObj PdfObject, err error) {
 	resources := to.e.resources
 	if resources == nil {
