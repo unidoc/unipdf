@@ -42,26 +42,12 @@ func toFloatXY(objs []PdfObject) (x, y float64, err error) {
 		common.Log.Debug("toFloatXY: err=%v", err)
 		return
 	}
-	floats, err := toFloatList(objs)
+	floats, err := model.GetNumbersAsFloat(objs)
 	if err != nil {
 		return
 	}
 	x, y = floats[0], floats[1]
 	return
-}
-
-// toFloatList returns `objs` as a slice of floats, if that's what it is, or an error if it isn't
-func toFloatList(objs []PdfObject) ([]float64, error) {
-	return model.GetNumbersAsFloat(objs)
-	floats := []float64{}
-	for _, o := range objs {
-		x, err := GetNumberAsFloat(o)
-		if err != nil {
-			return nil, err
-		}
-		floats = append(floats, x)
-	}
-	return floats, nil
 }
 
 // truncate returns the first `n` characters in string `s`

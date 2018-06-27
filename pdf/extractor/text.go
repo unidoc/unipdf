@@ -155,7 +155,7 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 				if ok, err := checkOp(op, to, 6, true); !ok {
 					return err
 				}
-				floats, err := GetNumbersAsFloat(op.Params)
+				floats, err := model.GetNumbersAsFloat(op.Params)
 				if err != nil {
 					return err
 				}

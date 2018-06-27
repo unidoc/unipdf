@@ -36,6 +36,12 @@ func isNullObject(obj PdfObject) bool {
 	}
 }
 
+// GetNumbersAsFloat converts a list of pdf objects representing floats or integers to a slice of
+// float64 values. XXX: We need this exported for extractor
+func GetNumbersAsFloat(objects []PdfObject) ([]float64, error) {
+	return getNumbersAsFloat(objects)
+}
+
 // Convert a list of pdf objects representing floats or integers to a slice of float64 values.
 func getNumbersAsFloat(objects []PdfObject) ([]float64, error) {
 	floats := []float64{}
