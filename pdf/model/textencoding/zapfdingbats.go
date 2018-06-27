@@ -7,7 +7,7 @@ package textencoding
 
 import (
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 // Encoding for ZapfDingbats font.
@@ -15,11 +15,15 @@ type ZapfDingbatsEncoder struct {
 }
 
 func NewZapfDingbatsEncoder() ZapfDingbatsEncoder {
-	encoder := ZapfDingbatsEncoder{}
-	return encoder
+	return ZapfDingbatsEncoder{}
 }
 
-// Convert a raw utf8 string (series of runes) to an encoded string (series of character codes) to be used in PDF.
+// String returns a string that describes `enc`.
+func (enc ZapfDingbatsEncoder) String() string {
+	return "ZapfDingbatsEncoder"
+}
+
+// Encode converts the Go unicode string `raw` to a PDF encoded string.
 func (enc ZapfDingbatsEncoder) Encode(raw string) string {
 	encoded := []byte{}
 	for _, rune := range raw {
@@ -34,7 +38,7 @@ func (enc ZapfDingbatsEncoder) Encode(raw string) string {
 	return string(encoded)
 }
 
-// Conversion between character code and glyph name.
+// CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	glyph, has := zapfDingbatsEncodingCharcodeToGlyphMap[code]
@@ -45,6 +49,7 @@ func (enc ZapfDingbatsEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	return glyph, true
 }
 
+// GlyphToCharcode returns the PDF character code corresponding to glyph name `glyph`.
 // Conversion between glyph name and character code.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
@@ -57,7 +62,7 @@ func (enc ZapfDingbatsEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	return code, found
 }
 
-// Convert rune to character code.
+// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	glyph, found := enc.RuneToGlyph(val)
@@ -75,7 +80,7 @@ func (enc ZapfDingbatsEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	return code, true
 }
 
-// Convert character code to rune.
+// CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	glyph, found := zapfDingbatsEncodingCharcodeToGlyphMap[charcode]
@@ -87,7 +92,7 @@ func (enc ZapfDingbatsEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	return enc.GlyphToRune(glyph)
 }
 
-// Convert rune to glyph name.
+// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) RuneToGlyph(val rune) (string, bool) {
 	// Seek in the zapfdingbats list first.
@@ -104,7 +109,7 @@ func (enc ZapfDingbatsEncoder) RuneToGlyph(val rune) (string, bool) {
 	return glyph, true
 }
 
-// Convert glyph to rune.
+// GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc ZapfDingbatsEncoder) GlyphToRune(glyph string) (rune, bool) {
 	// Seek in the zapfdingbats list first.
@@ -121,14 +126,14 @@ func (enc ZapfDingbatsEncoder) GlyphToRune(glyph string) (rune, bool) {
 	return val, true
 }
 
-// Convert to PDF Object.
-func (enc ZapfDingbatsEncoder) ToPdfObject() core.PdfObject {
-	dict := core.MakeDict()
-	dict.Set("Type", core.MakeName("Encoding"))
+// ToPdfObject returns a PDF Object that represents the encoding.
+func (enc ZapfDingbatsEncoder) ToPdfObject() PdfObject {
+	dict := MakeDict()
+	dict.Set("Type", MakeName("Encoding"))
 
 	// Returning an empty Encoding object with no differences. Indicates that we are using the font's built-in
 	// encoding.
-	return core.MakeIndirectObject(dict)
+	return MakeIndirectObject(dict)
 }
 
 var zapfDingbatsEncodingCharcodeToGlyphMap = map[uint16]string{

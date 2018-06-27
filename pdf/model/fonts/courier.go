@@ -10,35 +10,35 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontCourier represents the Courier font.
+// FontCourier represents the Courier font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontCourier struct {
+type FontCourier struct {
 	encoder textencoding.TextEncoder
 }
 
 // NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourier() fontCourier {
-	font := fontCourier{}
+func NewFontCourier() FontCourier {
+	font := FontCourier{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontCourier) Encoder() textencoding.TextEncoder {
+func (font FontCourier) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontCourier) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontCourier) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,17 +48,14 @@ func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontCourier) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Courier"))
+func (font FontCourier) ToPdfObject() PdfObject {
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Courier"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return &PdfIndirectObject{PdfObject: fontDict}
 }
 
 // Courier font metics loaded from afms/Courier.afm.  See afms/MustRead.html for license information.

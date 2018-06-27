@@ -10,35 +10,35 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontHelveticaOblique represents the Helvetica-Oblique font.
+// FontHelveticaOblique represents the Helvetica-Oblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelveticaOblique struct {
+type FontHelveticaOblique struct {
 	encoder textencoding.TextEncoder
 }
 
 // NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaOblique() fontHelveticaOblique {
-	font := fontHelveticaOblique{}
+func NewFontHelveticaOblique() FontHelveticaOblique {
+	font := FontHelveticaOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontHelveticaOblique) Encoder() textencoding.TextEncoder {
+func (font FontHelveticaOblique) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := helveticaObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,13 +48,13 @@ func (font fontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics,
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontHelveticaOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontHelveticaOblique) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Helvetica-Oblique"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Helvetica-Oblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict

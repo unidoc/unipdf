@@ -10,35 +10,35 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontHelveticaBoldOblique represents the Helvetica-BoldOblique font.
+// FontHelveticaBoldOblique represents the Helvetica-BoldOblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelveticaBoldOblique struct {
+type FontHelveticaBoldOblique struct {
 	encoder textencoding.TextEncoder
 }
 
 // NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaBoldOblique() fontHelveticaBoldOblique {
-	font := fontHelveticaBoldOblique{}
+func NewFontHelveticaBoldOblique() FontHelveticaBoldOblique {
+	font := FontHelveticaBoldOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontHelveticaBoldOblique) Encoder() textencoding.TextEncoder {
+func (font FontHelveticaBoldOblique) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontHelveticaBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontHelveticaBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := helveticaBoldObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,13 +48,13 @@ func (font fontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetr
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontHelveticaBoldOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontHelveticaBoldOblique) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Helvetica-BoldOblique"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Helvetica-BoldOblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict

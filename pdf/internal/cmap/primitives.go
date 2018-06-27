@@ -16,9 +16,18 @@ type cmapOperand struct {
 	Operand string
 }
 
+// cmapHexString represents a PostScript hex string such as <FFFF>
 type cmapHexString struct {
 	numBytes int // original number of bytes in the raw representation
 	b        []byte
+}
+
+type cmapFloat struct {
+	val float64
+}
+
+type cmapInt struct {
+	val int64
 }
 
 type cmapString struct {
@@ -33,16 +42,6 @@ type cmapDict struct {
 	Dict map[string]cmapObject
 }
 
-type cmapFloat struct {
-	val float64
-}
-
-type cmapInt struct {
-	val int64
-}
-
 func makeDict() cmapDict {
-	d := cmapDict{}
-	d.Dict = map[string]cmapObject{}
-	return d
+	return cmapDict{Dict: map[string]cmapObject{}}
 }

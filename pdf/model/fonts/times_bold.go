@@ -10,35 +10,35 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontTimesBold represents the Times-Bold font.
+// FontTimesBold represents the Times-Bold font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontTimesBold struct {
+type FontTimesBold struct {
 	encoder textencoding.TextEncoder
 }
 
 // NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBold() fontTimesBold {
-	font := fontTimesBold{}
+func NewFontTimesBold() FontTimesBold {
+	font := FontTimesBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontTimesBold) Encoder() textencoding.TextEncoder {
+func (font FontTimesBold) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := timesBoldCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,13 +48,13 @@ func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontTimesBold) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontTimesBold) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Times-Bold"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Times-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict

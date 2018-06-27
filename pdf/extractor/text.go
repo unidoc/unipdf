@@ -17,8 +17,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// ExtractText processes and extracts all text data in content streams and returns as a string. Takes into
-// account character encoding via CMaps in the PDF file.
+// ExtractText processes and extracts all text data in content streams and returns as a string.
+// Takes into account character encoding via CMaps in the PDF file.
 // The text is processed linearly e.g. in the order in which it appears. A best effort is done to add
 // spaces and newlines.
 func (e *Extractor) ExtractText() (string, error) {
@@ -87,7 +87,7 @@ func (e *Extractor) ExtractText() (string, error) {
 							return err
 						}
 
-						codemap, err = cmap.LoadCmapFromData(decoded)
+						codemap, err = cmap.LoadCmapFromDataCID(decoded)
 						if err != nil {
 							return err
 						}

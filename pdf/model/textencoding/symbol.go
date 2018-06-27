@@ -7,7 +7,7 @@ package textencoding
 
 import (
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 // Encoding for Symbol font.
@@ -19,7 +19,12 @@ func NewSymbolEncoder() SymbolEncoder {
 	return encoder
 }
 
-// Convert a raw utf8 string (series of runes) to an encoded string (series of character codes) to be used in PDF.
+// String returns a string that describes `se`.
+func (se SymbolEncoder) String() string {
+	return "SymbolEncoder"
+}
+
+// Encode converts the Go unicode string `raw` to a PDF encoded string.
 func (enc SymbolEncoder) Encode(raw string) string {
 	encoded := []byte{}
 	for _, rune := range raw {
@@ -27,14 +32,13 @@ func (enc SymbolEncoder) Encode(raw string) string {
 		if !found {
 			continue
 		}
-
 		encoded = append(encoded, byte(code))
 	}
 
 	return string(encoded)
 }
 
-// Conversion between character code and glyph name.
+// CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	glyph, has := symbolEncodingCharcodeToGlyphMap[code]
@@ -45,7 +49,7 @@ func (enc SymbolEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	return glyph, true
 }
 
-// Conversion between glyph name and character code.
+// GlyphToCharcode returns the PDF character code corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	code, found := symbolEncodingGlyphToCharcodeMap[glyph]
@@ -57,12 +61,12 @@ func (enc SymbolEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	return code, found
 }
 
-// Convert rune to character code.
+// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) RuneToCharcode(val rune) (uint16, bool) {
-	glyph, found := runeToGlyph(val, glyphlistRuneToGlyphMap)
+func (enc SymbolEncoder) RuneToCharcode(r rune) (uint16, bool) {
+	glyph, found := runeToGlyph(r, glyphlistRuneToGlyphMap)
 	if !found {
-		common.Log.Debug("Symbol encoding error: unable to find rune->glyph entry (%v)", val)
+		common.Log.Debug("Symbol encoding error: unable to find rune->glyph entry (%+q)", r)
 		return 0, false
 	}
 
@@ -75,12 +79,12 @@ func (enc SymbolEncoder) RuneToCharcode(val rune) (uint16, bool) {
 	return code, true
 }
 
-// Convert character code to rune.
+// CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc SymbolEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
-	glyph, found := symbolEncodingCharcodeToGlyphMap[charcode]
+func (enc SymbolEncoder) CharcodeToRune(code uint16) (rune, bool) {
+	glyph, found := symbolEncodingCharcodeToGlyphMap[code]
 	if !found {
-		common.Log.Debug("Symbol encoding error: unable to find charcode->glyph entry (%d)", charcode)
+		common.Log.Debug("Symbol encoding error: unable to find charcode->glyph entry (%d)", code)
 		return 0, false
 	}
 
@@ -92,26 +96,26 @@ func (enc SymbolEncoder) CharcodeToRune(charcode uint16) (rune, bool) {
 	return val, true
 }
 
-// Convert rune to glyph name.
+// RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) RuneToGlyph(val rune) (string, bool) {
 	return runeToGlyph(val, glyphlistRuneToGlyphMap)
 }
 
-// Convert glyph to rune.
+// GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc SymbolEncoder) GlyphToRune(glyph string) (rune, bool) {
 	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
 }
 
-// Convert to PDF Object.
-func (enc SymbolEncoder) ToPdfObject() core.PdfObject {
-	dict := core.MakeDict()
-	dict.Set("Type", core.MakeName("Encoding"))
+// ToPdfObject returns a PDF Object that represents `enc`.
+func (enc SymbolEncoder) ToPdfObject() PdfObject {
+	dict := MakeDict()
+	dict.Set("Type", MakeName("Encoding"))
 
-	// Returning an empty Encoding object with no differences. Indicates that we are using the font's built-in
-	// encoding.
-	return core.MakeIndirectObject(dict)
+	// Returning an empty Encoding object with no differences. Indicates that we are using the
+	// font's built-in encoding.
+	return MakeIndirectObject(dict)
 }
 
 // Charcode to Glyph map (Symbol encoding)

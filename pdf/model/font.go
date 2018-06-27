@@ -7,9 +7,11 @@ package model
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/cmap"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
@@ -20,201 +22,426 @@ import (
 // - TrueType
 // etc.
 type PdfFont struct {
-	context interface{} // The underlying font: Type0, Type1, Truetype, etc..
+	fontSkeleton
+	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+	dict    *PdfObjectDictionary
+}
+
+// fontSkeleton represents the fields that are common to all PDF fonts
+type fontSkeleton struct {
+	dict *PdfObjectDictionary
+
+	subtype  string
+	basefont string
+
+	BaseFont  PdfObject
+	Subtype   PdfObject
+	ToUnicode PdfObject
+
+	// ToUnicode cmap
+	UCMap          *cmap.CMap
+	fontDescriptor *PdfFontDescriptor
+}
+
+// toFont returns a PdfObjectDictionary for `font`.
+// It is for use in font ToPdfObject functions.
+// NOTE: The returned dict's SubType is set to `subtype` if font doesn't have a subtype
+func (skel fontSkeleton) toDict(subtype string) *PdfObjectDictionary {
+
+	if subtype != "" && skel.subtype != "" {
+		common.Log.Debug("ERROR: toDict. Overriding subtype to %#q %s", subtype, skel)
+	} else if subtype == "" && skel.subtype == "" {
+		common.Log.Debug("ERROR: toDict no subtype. font=%s", skel)
+	} else if skel.subtype == "" {
+		skel.subtype = subtype
+	}
+
+	d := MakeDict()
+	d.Set("Type", MakeName("Font"))
+	d.Set("Subtype", MakeName(skel.subtype))
+	if skel.BaseFont != nil {
+		d.Set("BaseFont", skel.BaseFont)
+	}
+	if skel.fontDescriptor != nil {
+		d.Set("FontDescriptor", skel.fontDescriptor.ToPdfObject())
+	}
+	if skel.ToUnicode != nil {
+		d.Set("ToUnicode", skel.ToUnicode)
+	}
+	return d
+}
+
+// String returns a string that describes `font`.
+func (font PdfFont) String() string {
+	return fmt.Sprintf("%T %s", font.context, font.fontSkeleton.String())
+}
+
+// String returns a string that describes `skel`.
+func (skel fontSkeleton) String() string {
+	descriptor := ""
+	if skel.fontDescriptor != nil {
+		descriptor = "(has descriptor)"
+	}
+	return fmt.Sprintf("%#q %#q %s", skel.subtype, skel.basefont, descriptor)
+}
+
+// CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
+func (font PdfFont) CharcodeBytesToUnicode(data []byte) string {
+	if font.UCMap != nil {
+		return font.UCMap.CharcodeBytesToUnicode(data)
+	}
+	if encoder := font.Encoder(); encoder != nil {
+		runes := []rune{}
+		for _, b := range data {
+			r, ok := encoder.CharcodeToRune(uint16(b))
+			if !ok {
+				common.Log.Debug("ERROR: CharcodeBytesToUnicode: No rune. b=0x%04x font=%s encoding=%s",
+					b, font, encoder)
+				common.Log.Debug("ERROR: data = [% 02x]=%#q", data, data)
+				r = '?'
+				// panic("??") //!@#$
+			}
+			runes = append(runes, r)
+		}
+		return string(runes)
+	}
+	common.Log.Debug("CharcodeBytesToUnicode. Couldn't convert. Returning input bytes. font=%s", font)
+	return string(data)
+}
+
+// isCIDFont returns true if `skel` is a CID font.
+func (skel fontSkeleton) isCIDFont() bool {
+	if skel.subtype == "" {
+		common.Log.Debug("ERROR: isCIDFont. context is nil. font=%s", skel)
+	}
+	isCID := false
+	switch skel.subtype {
+	case "Type0", "CIDFontType0", "CIDFontType2":
+		isCID = true
+	}
+	common.Log.Trace("isCIDFont: isCID=%t font=%s", isCID, skel)
+	return isCID
+}
+
+// actualFont returns the Font in font.context
+func (font PdfFont) actualFont() fonts.Font {
+	if font.context == nil {
+		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
+	}
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		return t
+	case *pdfFontType0:
+		return t
+	case *pdfCIDFontType0:
+		return t
+	case *pdfCIDFontType2:
+		return t
+	case fonts.FontCourier:
+		return t
+	case fonts.FontCourierBold:
+		return t
+	case fonts.FontCourierBoldOblique:
+		return t
+	case fonts.FontCourierOblique:
+		return t
+	case fonts.FontHelvetica:
+		return t
+	case fonts.FontHelveticaBold:
+		return t
+	case fonts.FontHelveticaBoldOblique:
+		return t
+	case fonts.FontHelveticaOblique:
+		return t
+	case fonts.FontTimesRoman:
+		return t
+	case fonts.FontTimesBold:
+		return t
+	case fonts.FontTimesBoldItalic:
+		return t
+	case fonts.FontTimesItalic:
+		return t
+	case fonts.FontSymbol:
+		return t
+	case fonts.FontZapfDingbats:
+		return t
+	default:
+		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
+		return nil
+	}
 }
 
 // Encoder returns the font's text encoder.
 func (font PdfFont) Encoder() textencoding.TextEncoder {
-	switch t := font.context.(type) {
-	case *pdfFontTrueType:
-		return t.Encoder()
-	case *pdfFontType0:
-		return t.Encoder()
-	case *pdfCIDFontType2:
-		return t.Encoder()
+	t := font.actualFont()
+	if t == nil {
+		common.Log.Debug("ERROR: Encoder not implemented for font type=%#T", font.context)
+		// XXX: Should we return a default encoding?
+		return nil
 	}
-
-	return nil
+	return t.Encoder()
 }
 
 // SetEncoder sets the encoding for the underlying font.
+// !@#$ Is this only possible for simple fonts?
 func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
-	switch t := font.context.(type) {
-	case *pdfFontTrueType:
-		t.SetEncoder(encoder)
+	t := font.actualFont()
+	if t == nil {
+		common.Log.Debug("ERROR: SetEncoder. Not implemented for font type=%#T", font.context)
+		return
 	}
+	t.SetEncoder(encoder)
 }
 
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
 func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
-	switch t := font.context.(type) {
-	case *pdfFontTrueType:
-		return t.GetGlyphCharMetrics(glyph)
-	case *pdfFontType0:
-		return t.GetGlyphCharMetrics(glyph)
-	case *pdfCIDFontType2:
-		return t.GetGlyphCharMetrics(glyph)
+	t := font.actualFont()
+	if t == nil {
+		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
+		return fonts.CharMetrics{}, false
 	}
-	common.Log.Debug("GetGlyphCharMetrics unsupported font type %T", font.context)
+	return t.GetGlyphCharMetrics(glyph)
 
-	return fonts.CharMetrics{}, false
 }
 
-// newPdfFontFromPdfObject loads a PdfFont from a dictionary.  If there is a problem an error is returned.
+// NewPdfFontFromPdfObject loads a PdfFont from a dictionary.  If there is a problem an error is
+// returned.
+func NewPdfFontFromPdfObject(fontObj PdfObject) (*PdfFont, error) {
+	return newPdfFontFromPdfObject(fontObj, true)
+}
+
+// newPdfFontFromPdfObject loads a PdfFont from a dictionary.  If there is a problem an error is
+// returned.
 // The allowType0 indicates whether loading Type0 font should be supported.  Flag used to avoid
 // cyclical loading.
-func newPdfFontFromPdfObject(obj core.PdfObject, allowType0 bool) (*PdfFont, error) {
-	font := &PdfFont{}
-
-	dictObj := obj
-	if ind, is := obj.(*core.PdfIndirectObject); is {
-		dictObj = ind.PdfObject
+func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, error) {
+	skeleton, err := newFontSkeletonFromPdfObject(fontObj)
+	if err != nil {
+		return nil, err
 	}
+	font := &PdfFont{fontSkeleton: *skeleton}
 
-	d, ok := dictObj.(*core.PdfObjectDictionary)
-	if !ok {
-		common.Log.Debug("Font not given by a dictionary (%T)", obj)
-		return nil, errors.New("Type check error")
-	}
-
-	if obj := d.Get("Type"); obj != nil {
-		oname, is := obj.(*core.PdfObjectName)
-		if !is || string(*oname) != "Font" {
-			common.Log.Debug("Incompatibility ERROR: Type (Required) defined but not Font name")
-			return nil, errors.New("Range check error")
-		}
-	} else {
-		common.Log.Debug("Incompatibility ERROR: Type (Required) missing")
-		return nil, errors.New("Required attribute missing")
-	}
-
-	obj = d.Get("Subtype")
-	if obj == nil {
-		common.Log.Debug("Incompatibility ERROR: Subtype (Required) missing")
-		return nil, errors.New("Required attribute missing")
-	}
-
-	subtype, ok := core.TraceToDirectObject(obj).(*core.PdfObjectName)
-	if !ok {
-		common.Log.Debug("Incompatibility ERROR: subtype not a name (%T) ", obj)
-		return nil, errors.New("Type check error")
-	}
-
-	switch subtype.String() {
+	switch skeleton.subtype {
 	case "Type0":
 		if !allowType0 {
-			common.Log.Debug("Loading type0 not allowed")
-			return nil, errors.New("Cyclical type0 loading error")
+			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", font)
+			return nil, errors.New("Cyclical type0 loading")
 		}
-		type0font, err := newPdfFontType0FromPdfObject(obj)
+		type0font, err := newPdfFontType0FromPdfObject(fontObj, skeleton)
 		if err != nil {
-			common.Log.Debug("Error loading Type0 font: %v", err)
+			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", font, err)
 			return nil, err
 		}
 		font.context = type0font
-	case "TrueType":
-		truefont, err := newPdfFontTrueTypeFromPdfObject(obj)
+	case "Type1", "Type3", "MMType1", "TrueType": // !@#$
+		if std, ok := fonts.Standard14Fonts[font.basefont]; ok && font.subtype == "Type1" {
+			font.context = std
+		} else {
+			simplefont, err := newSimpleFontFromPdfObject(fontObj, skeleton)
+			if err != nil {
+				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", font, err)
+				return nil, err
+			}
+			font.context = simplefont
+		}
+	case "CIDFontType0":
+		cidfont, err := newPdfCIDFontType0FromPdfObject(fontObj, skeleton)
 		if err != nil {
-			common.Log.Debug("Error loading truetype font: %v", err)
+			common.Log.Debug("ERROR: While loading cid font type0 font: %v", err)
 			return nil, err
 		}
-
-		font.context = truefont
+		font.context = cidfont
 	case "CIDFontType2":
-		cidfont, err := newPdfCIDFontType2FromPdfObject(obj)
+		cidfont, err := newPdfCIDFontType2FromPdfObject(fontObj, skeleton)
 		if err != nil {
-			common.Log.Debug("Error loading cid font type2 font: %v", err)
+			common.Log.Debug("ERROR: While loading cid font type2 font. font=%s err=%v", font, err)
 			return nil, err
 		}
-
 		font.context = cidfont
 	default:
-		common.Log.Debug("Unsupported font type: %s", subtype.String())
-		return nil, errors.New("Unsupported font type")
+		common.Log.Debug("ERROR: Unsupported font type: font=%s", font)
+		return nil, ErrUnsupportedFont
+	}
+
+	return font, nil
+}
+
+// newFontSkeletonFromPdfObject loads a fontSkeleton from a dictionary.  If there is a problem an error is
+// returned.
+// The allowType0 indicates whether loading Type0 font should be supported.  Flag used to avoid
+// cyclical loading.
+func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
+	font := &fontSkeleton{}
+
+	dictObj := fontObj
+	if ind, is := fontObj.(*PdfIndirectObject); is {
+		dictObj = ind.PdfObject
+	}
+
+	d, ok := dictObj.(*PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
+		return nil, ErrUnsupportedFont
+	}
+	font.dict = d
+
+	basefont, err := GetName(d.Get("BaseFont"))
+	if err == nil {
+		font.basefont = basefont
+		font.BaseFont = d.Get("BaseFont")
+	}
+
+	if obj := d.Get("Type"); obj != nil {
+		oname, is := obj.(*PdfObjectName)
+		if !is || string(*oname) != "Font" {
+			common.Log.Debug("ERROR: Font Incompatibility. Type=%q Should be %q", string(*oname), "Font")
+			return nil, ErrRangeError
+		}
+	} else {
+		common.Log.Debug("ERROR: Font Incompatibility. Type (Required) missing")
+		return nil, ErrRequiredAttributeMissing
+	}
+
+	obj := d.Get("Subtype")
+	if obj == nil {
+		common.Log.Debug("ERROR: Font Incompatibility. Subtype (Required) missing")
+		return nil, ErrRequiredAttributeMissing
+	}
+	subtype, err := GetName(TraceToDirectObject(obj))
+	if err != nil {
+		common.Log.Debug("ERROR: Font Incompatibility. subtype not a name (%T) font=%s", obj, font)
+		return nil, ErrTypeError
+	}
+	font.subtype = subtype
+
+	obj = d.Get("FontDescriptor")
+	if obj != nil {
+		fontDescriptor, err := newPdfFontDescriptorFromPdfObject(obj)
+		if err != nil {
+			common.Log.Debug("ERROR: Bad font descriptor")
+			return nil, ErrRequiredAttributeMissing
+		}
+		if err == nil {
+			font.fontDescriptor = fontDescriptor
+		}
+	}
+
+	font.ToUnicode = TraceToDirectObject(d.Get("ToUnicode"))
+
+	if font.ToUnicode != nil {
+		codemap, err := toUnicodeToCmap(font.ToUnicode, font.isCIDFont())
+		if err != nil {
+			return nil, err
+		}
+		font.UCMap = codemap
 	}
 
 	return font, nil
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
-func (font PdfFont) ToPdfObject() core.PdfObject {
-	switch f := font.context.(type) {
-	case *pdfFontTrueType:
-		return f.ToPdfObject()
-	case *pdfFontType0:
-		return f.ToPdfObject()
-	case *pdfCIDFontType2:
-		return f.ToPdfObject()
+func (font PdfFont) ToPdfObject() PdfObject {
+	if t := font.actualFont(); t != nil {
+		return t.ToPdfObject()
 	}
-
-	// If not supported, return null..
-	common.Log.Debug("Unsupported font (%T) - returning null object", font.context)
-	return core.MakeNull()
+	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%#T. Returning null object",
+		font.context)
+	return MakeNull()
 }
 
-// PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile for embedded fonts.
+// toUnicodeToCmap returns a CMap of `toUnicode` if it exists
+// 9.10.3 ToUnicode CMaps (page 29)
+// The CMap defined in the ToUnicode entry of the font dictionary shall follow the syntax for CMaps
+// This CMap differs from an ordinary one in these ways:
+// • The only pertinent entry in the CMap stream dictionary (see Table 120) is UseCMap, which may be
+//   used if the CMap is based on another ToUnicode CMap.
+// • The CMap file shall contain begincodespacerange and endcodespacerange operators that are
+//   consistent with the encoding that the font uses. In particular, for a simple font, the
+//   codespace shall be one byte long.
+// • It shall use the beginbfchar, endbfchar, beginbfrange, and endbfrange operators to define the
+//   mapping from character codes to Unicode character sequences expressed in UTF-16BE encoding
+func toUnicodeToCmap(toUnicode PdfObject, isCID bool) (*cmap.CMap, error) {
+	toUnicodeStream, ok := toUnicode.(*PdfObjectStream)
+	if !ok {
+		common.Log.Debug("ERROR: toUnicodeToCmap: Not a stream (%T)", toUnicode)
+		return nil, errors.New("Invalid ToUnicode entry - not a stream")
+	}
+	data, err := DecodeStream(toUnicodeStream)
+	if err != nil {
+		return nil, err
+	}
+	return cmap.LoadCmapFromData(data, isCID)
+}
+
+// PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile
+// for embedded fonts.
+// 9.8 Font Descriptors (page 281)
 type PdfFontDescriptor struct {
-	FontName     core.PdfObject
-	FontFamily   core.PdfObject
-	FontStretch  core.PdfObject
-	FontWeight   core.PdfObject
-	Flags        core.PdfObject
-	FontBBox     core.PdfObject
-	ItalicAngle  core.PdfObject
-	Ascent       core.PdfObject
-	Descent      core.PdfObject
-	Leading      core.PdfObject
-	CapHeight    core.PdfObject
-	XHeight      core.PdfObject
-	StemV        core.PdfObject
-	StemH        core.PdfObject
-	AvgWidth     core.PdfObject
-	MaxWidth     core.PdfObject
-	MissingWidth core.PdfObject
-	FontFile     core.PdfObject
-	FontFile2    core.PdfObject
-	FontFile3    core.PdfObject
-	CharSet      core.PdfObject
+	FontName     PdfObject
+	FontFamily   PdfObject
+	FontStretch  PdfObject
+	FontWeight   PdfObject
+	Flags        PdfObject
+	FontBBox     PdfObject
+	ItalicAngle  PdfObject
+	Ascent       PdfObject
+	Descent      PdfObject
+	Leading      PdfObject
+	CapHeight    PdfObject
+	XHeight      PdfObject
+	StemV        PdfObject
+	StemH        PdfObject
+	AvgWidth     PdfObject
+	MaxWidth     PdfObject
+	MissingWidth PdfObject
+	FontFile     PdfObject
+	FontFile2    PdfObject
+	FontFile3    PdfObject
+	CharSet      PdfObject
 
 	// Additional entries for CIDFonts
-	Style  core.PdfObject
-	Lang   core.PdfObject
-	FD     core.PdfObject
-	CIDSet core.PdfObject
+	Style  PdfObject
+	Lang   PdfObject
+	FD     PdfObject
+	CIDSet PdfObject
 
 	// Container.
-	container *core.PdfIndirectObject
+	container *PdfIndirectObject
 }
 
-// newPdfFontDescriptorFromPdfObject loads the font descriptor from a PdfObject.  Can either be a *PdfIndirectObject or
-// a *PdfObjectDictionary.
-func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, error) {
+// newPdfFontDescriptorFromPdfObject loads the font descriptor from a PdfObject.  Can either be a
+// *PdfIndirectObject or a *PdfObjectDictionary.
+func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error) {
 	descriptor := &PdfFontDescriptor{}
 
-	if ind, is := obj.(*core.PdfIndirectObject); is {
+	if ind, is := obj.(*PdfIndirectObject); is {
 		descriptor.container = ind
 		obj = ind.PdfObject
 	}
 
-	d, ok := obj.(*core.PdfObjectDictionary)
+	d, ok := obj.(*PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("FontDescriptor not given by a dictionary (%T)", obj)
-		return nil, errors.New("Type check error")
-	}
-
-	if obj := d.Get("Type"); obj != nil {
-		oname, is := obj.(*core.PdfObjectName)
-		if !is || string(*oname) != "FontDescriptor" {
-			common.Log.Debug("Incompatibility: Font descriptor Type invalid (%T)", obj)
-		}
-	} else {
-		common.Log.Debug("Incompatibility: Type (Required) missing")
+		common.Log.Debug("ERROR: FontDescriptor not given by a dictionary (%T)", obj)
+		return nil, ErrTypeError
 	}
 
 	if obj := d.Get("FontName"); obj != nil {
 		descriptor.FontName = obj
 	} else {
 		common.Log.Debug("Incompatibility: FontName (Required) missing")
+	}
+	fontname, _ := GetName(descriptor.FontName)
+
+	if obj := d.Get("Type"); obj != nil {
+		oname, is := obj.(*PdfObjectName)
+		if !is || string(*oname) != "FontDescriptor" {
+			common.Log.Debug("Incompatibility: Font descriptor Type invalid (%T) font=%q %T",
+				obj, fontname, descriptor.FontName)
+		}
+	} else {
+		common.Log.Trace("Incompatibility: Type (Required) missing. font=%q %T",
+			fontname, descriptor.FontName)
+		// return nil, errors.New("$$$$$")
 	}
 
 	descriptor.FontFamily = d.Get("FontFamily")
@@ -246,14 +473,14 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 }
 
 // ToPdfObject returns the PdfFontDescriptor as a PDF dictionary inside an indirect object.
-func (this *PdfFontDescriptor) ToPdfObject() core.PdfObject {
-	d := core.MakeDict()
+func (this *PdfFontDescriptor) ToPdfObject() PdfObject {
+	d := MakeDict()
 	if this.container == nil {
-		this.container = &core.PdfIndirectObject{}
+		this.container = &PdfIndirectObject{}
 	}
 	this.container.PdfObject = d
 
-	d.Set("Type", core.MakeName("FontDescriptor"))
+	d.Set("Type", MakeName("FontDescriptor"))
 
 	if this.FontName != nil {
 		d.Set("FontName", this.FontName)

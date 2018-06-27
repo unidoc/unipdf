@@ -10,35 +10,35 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontTimesRoman represents the Times-Roman font.
+// FontTimesRoman represents the Times-Roman font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontTimesRoman struct {
+type FontTimesRoman struct {
 	encoder textencoding.TextEncoder
 }
 
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesRoman() fontTimesRoman {
-	font := fontTimesRoman{}
+func NewFontTimesRoman() FontTimesRoman {
+	font := FontTimesRoman{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontTimesRoman) Encoder() textencoding.TextEncoder {
+func (font FontTimesRoman) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontTimesRoman) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontTimesRoman) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := timesRomanCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,13 +48,13 @@ func (font fontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontTimesRoman) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontTimesRoman) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Times-Roman"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Times-Roman"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict

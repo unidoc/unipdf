@@ -10,36 +10,36 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontZapfDingbats represents the ZapfDingbats font.
+// FontZapfDingbats represents the ZapfDingbats font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontZapfDingbats struct {
+type FontZapfDingbats struct {
 	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
 // NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
-func NewFontZapfDingbats() fontZapfDingbats {
-	font := fontZapfDingbats{}
+func NewFontZapfDingbats() FontZapfDingbats {
+	font := FontZapfDingbats{}
 	font.encoder = textencoding.NewZapfDingbatsEncoder()
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontZapfDingbats) Encoder() textencoding.TextEncoder {
+func (font FontZapfDingbats) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontZapfDingbats) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontZapfDingbats) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := zapfDingbatsCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -49,13 +49,13 @@ func (font fontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, boo
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontZapfDingbats) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontZapfDingbats) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("ZapfDingbats"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("ZapfDingbats"))
 	if font.encoder != nil {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}

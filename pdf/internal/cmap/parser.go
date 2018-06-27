@@ -8,15 +8,13 @@ package cmap
 import (
 	"bufio"
 	"bytes"
-	"errors"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 
-	"encoding/hex"
-
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 )
 
 // cMapParser parses CMap character to unicode mapping files.
@@ -34,8 +32,7 @@ func newCMapParser(content []byte) *cMapParser {
 	return &parser
 }
 
-// Detect the signature at the current file position and parse
-// the corresponding object.
+// parseObject detects the signature at the current file position and parses the corresponding object.
 func (p *cMapParser) parseObject() (cmapObject, error) {
 	p.skipSpaces()
 	for {
@@ -63,7 +60,7 @@ func (p *cMapParser) parseObject() (cmapObject, error) {
 		} else if bb[0] == '<' {
 			shex, err := p.parseHexString()
 			return shex, err
-		} else if core.IsDecimalDigit(bb[0]) || (bb[0] == '-' && core.IsDecimalDigit(bb[1])) {
+		} else if IsDecimalDigit(bb[0]) || (bb[0] == '-' && IsDecimalDigit(bb[1])) {
 			number, err := p.parseNumber()
 			if err != nil {
 				return nil, err
@@ -81,8 +78,7 @@ func (p *cMapParser) parseObject() (cmapObject, error) {
 	}
 }
 
-// Skip over any spaces.  Returns the number of spaces skipped and
-// an error if any.
+// skipSpaces skips over any spaces.  Returns the number of spaces skipped and an error if any.
 func (p *cMapParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
@@ -90,7 +86,7 @@ func (p *cMapParser) skipSpaces() (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if core.IsWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			p.reader.ReadByte()
 			cnt++
 		} else {
@@ -114,11 +110,11 @@ func (p *cMapParser) parseComment() (string, error) {
 	for {
 		bb, err := p.reader.Peek(1)
 		if err != nil {
-			common.Log.Debug("Error %s", err.Error())
+			common.Log.Debug("parseComment: err=%v", err)
 			return r.String(), err
 		}
 		if isFirst && bb[0] != '%' {
-			return r.String(), errors.New("Comment should start with %")
+			return r.String(), ErrBadCMapComment
 		}
 		isFirst = false
 		if (bb[0] != '\r') && (bb[0] != '\n') {
@@ -154,7 +150,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 				return cmapName{name}, fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
-			if core.IsWhiteSpace(bb[0]) {
+			if IsWhiteSpace(bb[0]) {
 				break
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
@@ -201,7 +197,7 @@ func (p *cMapParser) parseString() (cmapString, error) {
 			}
 
 			// Octal '\ddd' number (base 8).
-			if core.IsOctalDigit(b) {
+			if IsOctalDigit(b) {
 				bb, err := p.reader.Peek(2)
 				if err != nil {
 					return cmapString{buf.String()}, err
@@ -210,7 +206,7 @@ func (p *cMapParser) parseString() (cmapString, error) {
 				numeric := []byte{}
 				numeric = append(numeric, b)
 				for _, val := range bb {
-					if core.IsOctalDigit(val) {
+					if IsOctalDigit(val) {
 						numeric = append(numeric, val)
 					} else {
 						break
@@ -264,7 +260,8 @@ func (p *cMapParser) parseString() (cmapString, error) {
 	return cmapString{buf.String()}, nil
 }
 
-// Starts with '<' ends with '>'.
+// parseHexString parses a PostScript hex string.
+// Hex strings start with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
 func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	p.reader.ReadByte()
@@ -273,13 +270,12 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 
 	buf := bytes.Buffer{}
 
-	//tmp := []byte{}
 	for {
 		p.skipSpaces()
 
 		bb, err := p.reader.Peek(1)
 		if err != nil {
-			return cmapHexString{numBytes: 0, b: []byte("")}, err
+			return cmapHexString{}, err
 		}
 
 		if bb[0] == '>' {
@@ -294,10 +290,11 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	}
 
 	if buf.Len()%2 == 1 {
+		common.Log.Debug("parseHexString: appending '0' to %#q", buf.String())
 		buf.WriteByte('0')
 	}
-	numBytes := buf.Len() / 2
 
+	numBytes := buf.Len() / 2
 	hexb, _ := hex.DecodeString(buf.String())
 	return cmapHexString{numBytes: numBytes, b: hexb}, nil
 }
@@ -341,11 +338,11 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 	// Pass the '<<'
 	c, _ := p.reader.ReadByte()
 	if c != '<' {
-		return dict, errors.New("Invalid dict")
+		return dict, ErrBadCMapDict
 	}
 	c, _ = p.reader.ReadByte()
 	if c != '<' {
-		return dict, errors.New("Invalid dict")
+		return dict, ErrBadCMapDict
 	}
 
 	for {
@@ -365,7 +362,7 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 		key, err := p.parseName()
 		common.Log.Trace("Key: %s", key.Name)
 		if err != nil {
-			common.Log.Debug("ERROR Returning name err %s", err)
+			common.Log.Debug("ERROR: Returning name. err=%v", err)
 			return dict, err
 		}
 
@@ -410,7 +407,7 @@ func (p *cMapParser) parseNumber() (cmapObject, error) {
 			b, _ := p.reader.ReadByte()
 			numStr.WriteByte(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if core.IsDecimalDigit(bb[0]) {
+		} else if IsDecimalDigit(bb[0]) {
 			b, _ := p.reader.ReadByte()
 			numStr.WriteByte(b)
 		} else if bb[0] == '.' {
@@ -451,10 +448,10 @@ func (p *cMapParser) parseOperand() (cmapOperand, error) {
 			}
 			return op, err
 		}
-		if core.IsDelimiter(bb[0]) {
+		if IsDelimiter(bb[0]) {
 			break
 		}
-		if core.IsWhiteSpace(bb[0]) {
+		if IsWhiteSpace(bb[0]) {
 			break
 		}
 

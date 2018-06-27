@@ -65,6 +65,8 @@ func TtfParse(fileStr string) (TtfRec TtfType, err error) {
 	if err != nil {
 		return
 	}
+	defer t.f.Close()
+
 	version, err := t.ReadStr(4)
 	if err != nil {
 		return
@@ -95,7 +97,7 @@ func TtfParse(fileStr string) (TtfRec TtfType, err error) {
 	if err != nil {
 		return
 	}
-	t.f.Close()
+
 	TtfRec = t.rec
 	return
 }
@@ -243,7 +245,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
 }
 
 // parseCmapSubtable10 parses information from an (1,0) subtable (symbol).
-func (t *ttfParser) parseCmapSubtable10(offset10 int64) (err error) {
+func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 
 	//startCount := make([]uint16, 0, 8)
 	//endCount := make([]uint16, 0, 8)
@@ -259,8 +261,7 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) (err error) {
 	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 6 {
-		err = fmt.Errorf("unexpected subtable format: %d", format)
-		return
+		return fmt.Errorf("unexpected subtable format: %d", format)
 	}
 	length := t.ReadUShort()
 	language := t.ReadUShort()
@@ -278,9 +279,7 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) (err error) {
 
 	fmt.Printf("Length: %d, language: %d\n", length, language)
 	fmt.Printf("First code: %d, entry count: %d\n", firstCode, entryCount)
-
-	err = nil
-	return
+	return nil
 }
 
 func (t *ttfParser) ParseCmap() (err error) {
@@ -330,120 +329,119 @@ func (t *ttfParser) ParseCmap() (err error) {
 }
 
 func (t *ttfParser) ParseName() (err error) {
-	err = t.Seek("name")
-	if err == nil {
-		tableOffset, _ := t.f.Seek(0, os.SEEK_CUR)
-		t.rec.PostScriptName = ""
-		t.Skip(2) // format
-		count := t.ReadUShort()
-		stringOffset := t.ReadUShort()
-		for j := uint16(0); j < count && t.rec.PostScriptName == ""; j++ {
-			t.Skip(3 * 2) // platformID, encodingID, languageID
-			nameID := t.ReadUShort()
-			length := t.ReadUShort()
-			offset := t.ReadUShort()
-			if nameID == 6 {
-				// PostScript name
-				t.f.Seek(int64(tableOffset)+int64(stringOffset)+int64(offset), os.SEEK_SET)
-				var s string
-				s, err = t.ReadStr(int(length))
-				if err != nil {
-					return
-				}
-				s = strings.Replace(s, "\x00", "", -1)
-				var re *regexp.Regexp
-				if re, err = regexp.Compile("[(){}<> /%[\\]]"); err != nil {
-					return
-				}
-				t.rec.PostScriptName = re.ReplaceAllString(s, "")
+	if err = t.Seek("name"); err != nil {
+		return
+	}
+	tableOffset, _ := t.f.Seek(0, os.SEEK_CUR)
+	t.rec.PostScriptName = ""
+	t.Skip(2) // format
+	count := t.ReadUShort()
+	stringOffset := t.ReadUShort()
+	for j := uint16(0); j < count && t.rec.PostScriptName == ""; j++ {
+		t.Skip(3 * 2) // platformID, encodingID, languageID
+		nameID := t.ReadUShort()
+		length := t.ReadUShort()
+		offset := t.ReadUShort()
+		if nameID == 6 {
+			// PostScript name
+			t.f.Seek(int64(tableOffset)+int64(stringOffset)+int64(offset), os.SEEK_SET)
+			var s string
+			s, err = t.ReadStr(int(length))
+			if err != nil {
+				return
 			}
+			s = strings.Replace(s, "\x00", "", -1)
+			var re *regexp.Regexp
+			if re, err = regexp.Compile("[(){}<> /%[\\]]"); err != nil {
+				return
+			}
+			t.rec.PostScriptName = re.ReplaceAllString(s, "")
 		}
-		if t.rec.PostScriptName == "" {
-			err = fmt.Errorf("the name PostScript was not found")
-		}
+	}
+	if t.rec.PostScriptName == "" {
+		err = fmt.Errorf("the name PostScript was not found")
 	}
 	return
 }
 
 func (t *ttfParser) ParseOS2() (err error) {
-	err = t.Seek("OS/2")
-	if err == nil {
-		version := t.ReadUShort()
-		t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
-		fsType := t.ReadUShort()
-		t.rec.Embeddable = (fsType != 2) && (fsType&0x200) == 0
-		t.Skip(11*2 + 10 + 4*4 + 4)
-		fsSelection := t.ReadUShort()
-		t.rec.Bold = (fsSelection & 32) != 0
-		t.Skip(2 * 2) // usFirstCharIndex, usLastCharIndex
-		t.rec.TypoAscender = t.ReadShort()
-		t.rec.TypoDescender = t.ReadShort()
-		if version >= 2 {
-			t.Skip(3*2 + 2*4 + 2)
-			t.rec.CapHeight = t.ReadShort()
-		} else {
-			t.rec.CapHeight = 0
-		}
+	if err = t.Seek("OS/2"); err != nil {
+		return
+	}
+	version := t.ReadUShort()
+	t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
+	fsType := t.ReadUShort()
+	t.rec.Embeddable = (fsType != 2) && (fsType&0x200) == 0
+	t.Skip(11*2 + 10 + 4*4 + 4)
+	fsSelection := t.ReadUShort()
+	t.rec.Bold = (fsSelection & 32) != 0
+	t.Skip(2 * 2) // usFirstCharIndex, usLastCharIndex
+	t.rec.TypoAscender = t.ReadShort()
+	t.rec.TypoDescender = t.ReadShort()
+	if version >= 2 {
+		t.Skip(3*2 + 2*4 + 2)
+		t.rec.CapHeight = t.ReadShort()
+	} else {
+		t.rec.CapHeight = 0
 	}
 	return
 }
 
 func (t *ttfParser) ParsePost() (err error) {
-	err = t.Seek("post")
-	if err == nil {
-		//versionUpper := t.ReadShort()
-		//versionFraction := t.ReadUShort()
+	if err = t.Seek("post"); err != nil {
+		return
+	}
+	//versionUpper := t.ReadShort()
+	//versionFraction := t.ReadUShort()
 
-		t.Skip(4) // version
-		//fmt.Printf("Post version: %d.%d\n", versionUpper, versionFraction)
+	t.Skip(4) // version
+	//fmt.Printf("Post version: %d.%d\n", versionUpper, versionFraction)
 
-		t.rec.ItalicAngle = t.ReadShort()
-		t.Skip(2) // Skip decimal part
-		t.rec.UnderlinePosition = t.ReadShort()
-		t.rec.UnderlineThickness = t.ReadShort()
-		t.rec.IsFixedPitch = t.ReadULong() != 0
+	t.rec.ItalicAngle = t.ReadShort()
+	t.Skip(2) // Skip decimal part
+	t.rec.UnderlinePosition = t.ReadShort()
+	t.rec.UnderlineThickness = t.ReadShort()
+	t.rec.IsFixedPitch = t.ReadULong() != 0
 
-		/*
-			t.Skip(4 * 4) // Skip over memory specs.
+	/*
+		t.Skip(4 * 4) // Skip over memory specs.
 
-			if versionUpper == 2 && versionFraction == 0 {
-				numGlyps := t.ReadUShort()
+		if versionUpper == 2 && versionFraction == 0 {
+			numGlyps := t.ReadUShort()
 
-				glyphNameIndexList := []uint16{}
-				maxIndex := uint16(0)
-				for i := 0; i < int(numGlyps); i++ {
-					index := t.ReadUShort()
-					glyphNameIndexList = append(glyphNameIndexList, index)
-					if index > maxIndex {
-						maxIndex = index
-					}
-				}
-
-				numberNewGlyphs := maxIndex + 1
-				if maxIndex > 257 {
-					numberNewGlyphs -= 258
-				}
-				for i := 0; i < int(numberNewGlyphs); i++ {
-					len := t.ReadByte()
-					glyphName, err := t.ReadStr(int(len))
-					if err != nil {
-						return err
-					}
+			glyphNameIndexList := []uint16{}
+			maxIndex := uint16(0)
+			for i := 0; i < int(numGlyps); i++ {
+				index := t.ReadUShort()
+				glyphNameIndexList = append(glyphNameIndexList, index)
+				if index > maxIndex {
+					maxIndex = index
 				}
 			}
-		*/
-	}
+
+			numberNewGlyphs := maxIndex + 1
+			if maxIndex > 257 {
+				numberNewGlyphs -= 258
+			}
+			for i := 0; i < int(numberNewGlyphs); i++ {
+				len := t.ReadByte()
+				glyphName, err := t.ReadStr(int(len))
+				if err != nil {
+					return err
+				}
+			}
+		}
+	*/
 	return
 }
 
-func (t *ttfParser) Seek(tag string) (err error) {
+func (t *ttfParser) Seek(tag string) error {
 	ofs, ok := t.tables[tag]
-	if ok {
-		t.f.Seek(int64(ofs), os.SEEK_SET)
-	} else {
-		err = fmt.Errorf("table not found: %s", tag)
+	if !ok {
+		return fmt.Errorf("table not found: %s", tag)
 	}
-	return
+	t.f.Seek(int64(ofs), os.SEEK_SET)
+	return nil
 }
 
 func (t *ttfParser) Skip(n int) {
@@ -454,12 +452,13 @@ func (t *ttfParser) ReadStr(length int) (str string, err error) {
 	var n int
 	buf := make([]byte, length)
 	n, err = t.f.Read(buf)
-	if err == nil {
-		if n == length {
-			str = string(buf)
-		} else {
-			err = fmt.Errorf("unable to read %d bytes", length)
-		}
+	if err != nil {
+		return
+	}
+	if n == length {
+		str = string(buf)
+	} else {
+		err = fmt.Errorf("unable to read %d bytes", length)
 	}
 	return
 }

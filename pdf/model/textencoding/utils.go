@@ -5,25 +5,29 @@
 
 package textencoding
 
-import "github.com/unidoc/unidoc/common"
+import (
+	"fmt"
+	"unicode"
+
+	"github.com/unidoc/unidoc/common"
+)
 
 func glyphToRune(glyph string, glyphToRuneMap map[string]rune) (rune, bool) {
-	ucode, found := glyphToRuneMap[glyph]
-	if found {
-		return ucode, true
+	r, ok := glyphToRuneMap[glyph]
+	if ok {
+		return r, true
 	}
 
-	//common.Log.Debug("Glyph->Rune ERROR: Unable to find glyph %s", glyph)
+	common.Log.Debug("ERROR: glyphToRune unable to find glyph %q", glyph)
 	return 0, false
 }
 
-func runeToGlyph(ucode rune, runeToGlyphMap map[rune]string) (string, bool) {
-	glyph, found := runeToGlyphMap[ucode]
-	if found {
+func runeToGlyph(r rune, runeToGlyphMap map[rune]string) (string, bool) {
+	glyph, ok := runeToGlyphMap[r]
+	if ok {
 		return glyph, true
 	}
-
-	//common.Log.Debug("Rune->Glyph ERROR: Unable to find rune %v", ucode)
+	common.Log.Debug("ERROR: runeToGlyph unable to find glyph for rune %s", rs(r))
 	return "", false
 }
 
@@ -33,10 +37,10 @@ func splitWords(raw string, encoder TextEncoder) []string {
 	words := []string{}
 
 	startsAt := 0
-	for idx, code := range runes {
-		glyph, found := encoder.RuneToGlyph(code)
-		if !found {
-			common.Log.Debug("Glyph not found for code: %s\n", string(code))
+	for idx, r := range runes {
+		glyph, ok := encoder.RuneToGlyph(r)
+		if !ok {
+			common.Log.Debug("Glyph not found for rune %s", rs(r))
 			continue
 		}
 
@@ -53,4 +57,13 @@ func splitWords(raw string, encoder TextEncoder) []string {
 	}
 
 	return words
+}
+
+// rs returns a string describing rune `r`.
+func rs(r rune) string {
+	c := "unprintable"
+	if unicode.IsPrint(r) {
+		c = fmt.Sprintf("%#q", r)
+	}
+	return fmt.Sprintf("%+q (%s)", r, c)
 }

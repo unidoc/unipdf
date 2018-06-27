@@ -10,36 +10,36 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontSymbol represents the Symbol font.
+// FontSymbol represents the Symbol font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontSymbol struct {
+type FontSymbol struct {
 	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
-func NewFontSymbol() fontSymbol {
-	font := fontSymbol{}
+func NewFontSymbol() FontSymbol {
+	font := FontSymbol{}
 	font.encoder = textencoding.NewSymbolEncoder()
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontSymbol) Encoder() textencoding.TextEncoder {
+func (font FontSymbol) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := symbolCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -49,13 +49,13 @@ func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontSymbol) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontSymbol) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Symbol"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Symbol"))
 	if font.encoder != nil {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}

@@ -8,6 +8,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
@@ -178,7 +179,158 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 func absInt(x int) int {
 	if x < 0 {
 		return -x
-	} else {
-		return x
 	}
+	return x
+}
+
+// GetString returns the string represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
+func GetString(obj PdfObject) (string, error) {
+	if s, ok := obj.(*PdfObjectString); ok {
+		return string(*s), nil
+	}
+	err := errors.New("Not a string")
+	return "", err
+}
+
+// GetString returns the bytes represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
+func GetStringBytes(obj PdfObject) ([]byte, error) {
+	if s, ok := obj.(*PdfObjectString); ok {
+		return []byte(*s), nil
+	}
+	err := errors.New("Not a string")
+	return []byte{}, err
+}
+
+// GetString returns the string represented by `obj` if `obj` is a PdfObjectName or an error if it isn't.
+func GetName(obj PdfObject) (string, error) {
+	if s, ok := obj.(*PdfObjectName); ok {
+		return string(*s), nil
+	}
+	err := errors.New("Not a name")
+	return "", err
+}
+
+// GetInteger returns the int represented by `obj` if `obj` is a PdfObjectInteger or an error if it isn't.
+func GetInteger(obj PdfObject) (int, error) {
+	if i, ok := obj.(*PdfObjectInteger); ok {
+		return int(*i), nil
+	}
+	err := errors.New("Not an integer")
+	return 0, err
+}
+
+// GetArray returns the slice of PdfObjects represented by `obj` if `obj` is a PdfObjectArray or an
+// error if it isn't.
+func GetArray(obj PdfObject) ([]PdfObject, error) {
+	if s, ok := obj.(*PdfObjectArray); ok {
+		return []PdfObject(*s), nil
+	}
+	err := errors.New("Not an array")
+	return nil, err
+}
+
+// EqualObjects returns true if `obj1` and `obj2` have the same contents.
+// NOTE: It is a good idea to flatten obj1 and obj2 with FlattenObject before calling this function
+//       so that contents, rather than references, can be compared.
+func EqualObjects(obj1, obj2 PdfObject) bool {
+	return equalObjects(obj1, obj2, 0)
+}
+
+// equalObjects returns true if `obj1` and `obj2` have the same contents.
+// It recursively checks the contents of indirect objects, arrays and dicts to a depth of
+// TraceMaxDepth. `depth` is the current recusion depth.
+func equalObjects(obj1, obj2 PdfObject, depth int) bool {
+	if depth > TraceMaxDepth {
+		common.Log.Error("Trace depth level beyond %d - error!", TraceMaxDepth)
+		return false
+	}
+
+	if obj1 == nil && obj2 == nil {
+		return true
+	} else if obj1 == nil || obj2 == nil {
+		return false
+	}
+	if reflect.TypeOf(obj1) != reflect.TypeOf(obj2) {
+		return false
+	}
+
+	// obj1 and obj2 are non-nil and of the same type
+	switch t1 := obj1.(type) {
+	case *PdfObjectNull, *PdfObjectReference:
+		return true
+	case *PdfObjectName:
+		return *t1 == *(obj2.(*PdfObjectName))
+	case *PdfObjectString:
+		return *t1 == *(obj2.(*PdfObjectString))
+	case *PdfObjectInteger:
+		return *t1 == *(obj2.(*PdfObjectInteger))
+	case *PdfObjectBool:
+		return *t1 == *(obj2.(*PdfObjectBool))
+	case *PdfObjectFloat:
+		return *t1 == *(obj2.(*PdfObjectFloat))
+	case *PdfIndirectObject:
+		return equalObjects(TraceToDirectObject(obj1), TraceToDirectObject(obj2), depth+1)
+	case *PdfObjectArray:
+		t2 := obj2.(*PdfObjectArray)
+		if len(*t1) != len(*t2) {
+			return false
+		}
+		for i, o1 := range *t1 {
+			if !equalObjects(o1, (*t2)[i], depth+1) {
+				return false
+			}
+		}
+		return true
+	case *PdfObjectDictionary:
+		t2 := obj2.(*PdfObjectDictionary)
+		d1, d2 := (*t1).dict, (*t2).dict
+		if len(d1) != len(d2) {
+			return false
+		}
+		for k, o1 := range d1 {
+			o2, ok := d2[k]
+			if !ok || !equalObjects(o1, o2, depth+1) {
+				return false
+			}
+		}
+		return true
+	case *PdfObjectStream:
+		t2 := obj2.(*PdfObjectStream)
+		return equalObjects((*t1).PdfObjectDictionary, (*t2).PdfObjectDictionary, depth+1)
+	default:
+		common.Log.Error("ERROR: Unknown type: %T - should never happen!", obj1)
+	}
+
+	return false
+}
+
+// FlattenObject returns the contents of `obj`. In other words, `obj` with indirect objects replaced
+// by their values.
+// The replacements are made recursively to a depth of TraceMaxDepth.
+// NOTE: Dicts are sorted to make objects with same contents have the same PDF object strings.
+func FlattenObject(obj PdfObject) PdfObject {
+	return flattenObject(obj, 0)
+}
+
+// flattenObject returns `obj` with indirect objects recursively replaced by their values.
+// `depth` is the recursion depth.
+func flattenObject(obj PdfObject, depth int) PdfObject {
+	if depth > TraceMaxDepth {
+		common.Log.Error("Trace depth level beyond %d - error!", TraceMaxDepth)
+		return nil
+	}
+	switch t := obj.(type) {
+	case *PdfIndirectObject:
+		obj = flattenObject((*t).PdfObject, depth+1)
+	case *PdfObjectArray:
+		for i, o := range *t {
+			(*t)[i] = flattenObject(o, depth+1)
+		}
+	case *PdfObjectDictionary:
+		for k, o := range (*t).dict {
+			(*t).dict[k] = flattenObject(o, depth+1)
+		}
+		sort.Slice((*t).keys, func(i, j int) bool { return (*t).keys[i] < (*t).keys[j] })
+	}
+	return obj
 }

@@ -10,35 +10,36 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// fontCourierBoldOblique represents the Courier-BoldOblique font.
+// FontCourierBoldOblique represents the Courier-BoldOblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontCourierBoldOblique struct {
+type FontCourierBoldOblique struct {
 	encoder textencoding.TextEncoder
 }
 
-// NewFontCourierBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourierBoldOblique() fontCourierBoldOblique {
-	font := fontCourierBoldOblique{}
+// NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
+// (WinAnsiEncoding).
+func NewFontCourierBoldOblique() FontCourierBoldOblique {
+	font := FontCourierBoldOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
 // Encoder returns the font's text encoder.
-func (font fontCourierBoldOblique) Encoder() textencoding.TextEncoder {
+func (font FontCourierBoldOblique) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // SetEncoder sets the font's text encoder.
-func (font fontCourierBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
+func (font FontCourierBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	metrics, has := courierBoldObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -48,13 +49,13 @@ func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetric
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font fontCourierBoldOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
+func (font FontCourierBoldOblique) ToPdfObject() PdfObject {
+	obj := &PdfIndirectObject{}
 
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Courier-BoldOblique"))
+	fontDict := MakeDict()
+	fontDict.Set("Type", MakeName("Font"))
+	fontDict.Set("Subtype", MakeName("Type1"))
+	fontDict.Set("BaseFont", MakeName("Courier-BoldOblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	obj.PdfObject = fontDict
