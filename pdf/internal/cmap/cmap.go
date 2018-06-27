@@ -103,8 +103,9 @@ func newCMap(isSimple bool) *CMap {
 }
 
 // String returns a human readable description of `info`
+// It looks like "Adobe-Japan2-000".
 func (info *CIDSystemInfo) String() string {
-	return fmt.Sprintf("%s-%s-%d", info.Registry, info.Ordering, info.Supplement)
+	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
 }
 
 // NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`
