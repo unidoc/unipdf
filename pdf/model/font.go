@@ -370,7 +370,7 @@ func toUnicodeToCmap(toUnicode PdfObject, isCID bool) (*cmap.CMap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cmap.LoadCmapFromData(data, isCID)
+	return cmap.LoadCmapFromData(data, !isCID)
 }
 
 // PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile

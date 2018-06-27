@@ -93,7 +93,7 @@ func (cmap *CMap) String() string {
 func newCMap(isSimple bool) *CMap {
 	nbits := 16
 	if isSimple {
-		nbits = 16
+		nbits = 8
 	}
 	cmap := &CMap{
 		nbits:         nbits,
