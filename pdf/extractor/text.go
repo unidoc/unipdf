@@ -8,226 +8,552 @@ package extractor
 import (
 	"bytes"
 	"errors"
-	"fmt"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/cmap"
+	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // Takes into account character encoding via CMaps in the PDF file.
-// The text is processed linearly e.g. in the order in which it appears. A best effort is done to add
-// spaces and newlines.
+// The text is processed linearly e.g. in the order in which it appears. A best effort is done to
+// add spaces and newlines.
 func (e *Extractor) ExtractText() (string, error) {
-	var buf bytes.Buffer
+	textList, err := e.ExtractXYText()
+	if err != nil {
+		return "", err
+	}
+	return textList.ToText(), nil
+}
+
+// ExtractXYText returns the text contents of `e` as a TextList.
+func (e *Extractor) ExtractXYText() (*TextList, error) {
+	textList := &TextList{}
+	state := newTextState()
+	var to *TextObject
 
 	cstreamParser := contentstream.NewContentStreamParser(e.contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
-		return buf.String(), err
+		common.Log.Debug("ExtractXYText: parse failed. err=%v", err)
+		return textList, err
 	}
 
+	// fmt.Println("========================= xxx =========================")
+	// fmt.Printf("%s\n", e.contents)
+	// fmt.Println("========================= ||| =========================")
 	processor := contentstream.NewContentStreamProcessor(*operations)
 
-	var codemap *cmap.CMap
-	inText := false
-	xPos, yPos := float64(-1), float64(-1)
-
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
-		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
+		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
+			resources *model.PdfPageResources) error {
+
 			operand := op.Operand
+			// common.Log.Debug("++Operand: %s", op.String())
+
 			switch operand {
-			case "BT":
-				inText = true
-			case "ET":
-				inText = false
-			case "Tf":
-				if !inText {
-					common.Log.Debug("Tf operand outside text")
-					return nil
+			case "BT": // Begin text
+				// Begin a text object, initializing the text matrix, Tm, and the text line matrix, Tlm,
+				// to the identity matrix. Text objects shall not be nested; a second BT shall not appear
+				// before an ET.
+				if to != nil {
+					common.Log.Debug("BT called while in a text object")
 				}
-
-				if len(op.Params) != 2 {
-					common.Log.Debug("Error Tf should only get 2 input params, got %d", len(op.Params))
-					return errors.New("Incorrect parameter count")
+				to = newTextObject(e, gs, &state)
+			case "ET": // End Text
+				*textList = append(*textList, to.Texts...)
+				to = nil
+			case "T*": // Move to start of next text line
+				to.nextLine()
+			case "Td": // Move text location
+				if ok, err := checkOp(op, to, 2, true); !ok {
+					return err
 				}
-
-				codemap = nil
-
-				fontName, ok := op.Params[0].(*core.PdfObjectName)
-				if !ok {
-					common.Log.Debug("Error Tf font input not a name")
-					return errors.New("Tf range error")
+				to.renderRawText("\n")
+			case "TD": // Move text location and set leading
+				if ok, err := checkOp(op, to, 2, true); !ok {
+					return err
 				}
-
-				if resources == nil {
-					return nil
-				}
-
-				fontObj, found := resources.GetFontByName(*fontName)
-				if !found {
-					common.Log.Debug("Font not found...")
-					return errors.New("Font not in resources")
-				}
-
-				fontObj = core.TraceToDirectObject(fontObj)
-				if fontDict, isDict := fontObj.(*core.PdfObjectDictionary); isDict {
-					toUnicode := fontDict.Get("ToUnicode")
-					if toUnicode != nil {
-						toUnicode = core.TraceToDirectObject(toUnicode)
-						toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
-						if !ok {
-							return errors.New("Invalid ToUnicode entry - not a stream")
-						}
-						decoded, err := core.DecodeStream(toUnicodeStream)
-						if err != nil {
-							return err
-						}
-
-						codemap, err = cmap.LoadCmapFromDataCID(decoded)
-						if err != nil {
-							return err
-						}
-					}
-				}
-			case "T*":
-				if !inText {
-					common.Log.Debug("T* operand outside text")
-					return nil
-				}
-				buf.WriteString("\n")
-			case "Td", "TD":
-				if !inText {
-					common.Log.Debug("Td/TD operand outside text")
-					return nil
-				}
-
-				// Params: [tx ty], corresponeds to Tm=Tlm=[1 0 0;0 1 0;tx ty 1]*Tm
-				if len(op.Params) != 2 {
-					common.Log.Debug("Td/TD invalid arguments")
-					return nil
-				}
-				tx, err := getNumberAsFloat(op.Params[0])
+				x, y, err := toFloatXY(op.Params)
 				if err != nil {
-					common.Log.Debug("Td Float parse error")
-					return nil
+					return err
 				}
-				ty, err := getNumberAsFloat(op.Params[1])
+				to.moveTextSetLeading(x, y)
+			case "Tj": // Show text
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
+				}
+				charcodes, err := GetStringBytes(op.Params[0])
 				if err != nil {
-					common.Log.Debug("Td Float parse error")
-					return nil
+					return err
 				}
-
-				if tx > 0 {
-					buf.WriteString(" ")
+				return to.showText(charcodes)
+			case "TJ": // Show text with adjustable spacing
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
 				}
-				if ty < 0 {
-					// TODO: More flexible space characters?
-					buf.WriteString("\n")
+				args, err := GetArray(op.Params[0])
+				if err != nil {
+					return err
 				}
-			case "Tm":
-				if !inText {
-					common.Log.Debug("Tm operand outside text")
-					return nil
+				return to.showTextAdjusted(args)
+			case "'": // Move to next line and show text
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
 				}
-
-				// Params: a,b,c,d,e,f as in Tm = [a b 0; c d 0; e f 1].
-				// The last two (e,f) represent translation.
-				if len(op.Params) != 6 {
-					return errors.New("Tm: Invalid number of inputs")
+				charcodes, err := GetStringBytes(op.Params[0])
+				if err != nil {
+					return err
 				}
-				xfloat, ok := op.Params[4].(*core.PdfObjectFloat)
-				if !ok {
-					xint, ok := op.Params[4].(*core.PdfObjectInteger)
-					if !ok {
-						return nil
-					}
-					xfloat = core.MakeFloat(float64(*xint))
+				to.nextLine()
+				return to.showText(charcodes)
+			case `"`: // Set word and character spacing, move to next line, and show text
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
 				}
-				yfloat, ok := op.Params[5].(*core.PdfObjectFloat)
-				if !ok {
-					yint, ok := op.Params[5].(*core.PdfObjectInteger)
-					if !ok {
-						return nil
-					}
-					yfloat = core.MakeFloat(float64(*yint))
+				charcodes, err := GetStringBytes(op.Params[0])
+				if err != nil {
+					return err
 				}
-				if yPos == -1 {
-					yPos = float64(*yfloat)
-				} else if yPos > float64(*yfloat) {
-					buf.WriteString("\n")
-					xPos = float64(*xfloat)
-					yPos = float64(*yfloat)
-					return nil
+				to.nextLine()
+				return to.showText(charcodes)
+			case "TL": // Set text leading
+				ok, y, err := checkOpFloat(op, to)
+				if !ok || err != nil {
+					return err
 				}
-				if xPos == -1 {
-					xPos = float64(*xfloat)
-				} else if xPos < float64(*xfloat) {
-					buf.WriteString("\t")
-					xPos = float64(*xfloat)
+				to.setTextLeading(y)
+			case "Tc": // Set character spacing
+				ok, y, err := checkOpFloat(op, to)
+				if !ok || err != nil {
+					return err
 				}
-			case "TJ":
-				if !inText {
-					common.Log.Debug("TJ operand outside text")
-					return nil
+				to.setCharSpacing(y)
+			case "Tf": // Set font
+				if ok, err := checkOp(op, to, 2, true); !ok {
+					return err
 				}
-				if len(op.Params) < 1 {
-					return nil
+				name, err := GetName(op.Params[0])
+				if err != nil {
+					return err
 				}
-				paramList, ok := op.Params[0].(*core.PdfObjectArray)
-				if !ok {
-					return fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
+				size, err := GetNumberAsFloat(op.Params[1])
+				if err != nil {
+					return err
 				}
-				for _, obj := range *paramList {
-					switch v := obj.(type) {
-					case *core.PdfObjectString:
-						if codemap != nil {
-							buf.WriteString(codemap.CharcodeBytesToUnicode([]byte(*v)))
-						} else {
-							buf.WriteString(string(*v))
-						}
-					case *core.PdfObjectFloat:
-						if *v < -100 {
-							buf.WriteString(" ")
-						}
-					case *core.PdfObjectInteger:
-						if *v < -100 {
-							buf.WriteString(" ")
-						}
-					}
+				err = to.setFont(name, size)
+				if err == model.ErrUnsupportedFont {
+					common.Log.Debug("Swallow error. err=%v", err)
+					err = nil
 				}
-			case "Tj":
-				if !inText {
-					common.Log.Debug("Tj operand outside text")
-					return nil
+				if err != nil {
+					return err
 				}
-				if len(op.Params) < 1 {
-					return nil
+			case "Tm": // Set text matrix
+				if ok, err := checkOp(op, to, 6, true); !ok {
+					return err
 				}
-				param, ok := op.Params[0].(*core.PdfObjectString)
-				if !ok {
-					return fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
+				floats, err := model.GetNumbersAsFloat(op.Params)
+				if err != nil {
+					return err
 				}
-				if codemap != nil {
-					buf.WriteString(codemap.CharcodeBytesToUnicode([]byte(*param)))
-				} else {
-					buf.WriteString(string(*param))
+				to.setTextMatrix(floats)
+			case "Tr": // Set text rendering mode
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
 				}
+				mode, err := GetInteger(op.Params[0])
+				if err != nil {
+					return err
+				}
+				to.setTextRenderMode(mode)
+			case "Ts": // Set text rise
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
+				}
+				y, err := GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+				to.setTextRise(y)
+			case "Tw": // Set word spacing
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
+				}
+				y, err := GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+				to.setWordSpacing(y)
+			case "Tz": // Set horizontal scaling
+				if ok, err := checkOp(op, to, 1, true); !ok {
+					return err
+				}
+				y, err := GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+				to.setHorizScaling(y)
 			}
 
 			return nil
 		})
 
 	err = processor.Process(e.resources)
+	if err == model.ErrUnsupportedFont {
+		common.Log.Debug("Swallow error. err=%v", err)
+		err = nil
+	}
 	if err != nil {
-		common.Log.Error("Error processing: %v", err)
-		return buf.String(), err
+		common.Log.Error("ERROR: Processing: err=%v", err)
+		return textList, err
 	}
 
-	procBuf(&buf)
+	return textList, nil
+}
 
-	return buf.String(), nil
+//
+// Text operators
+//
+
+// moveText "Td" Moves start of text by `tx`,`ty`
+// Move to the start of the next line, offset from the start of the current line by (tx, ty).
+// tx and ty are in unscaled text space units.
+func (to *TextObject) moveText(tx, ty float64) {
+	// Not implemented yet
+}
+
+// moveTextSetLeading "TD" Move text location and set leading
+// Move to the start of the next line, offset from the start of the current line by (tx, ty). As a
+// side effect, this operator shall set the leading parameter in the text state. This operator shall
+// have the same effect as this code:
+//  −ty TL
+//  tx ty Td
+func (to *TextObject) moveTextSetLeading(tx, ty float64) {
+	// Not implemented yet
+	if tx > 0 {
+		to.renderRawText(" ")
+	}
+	if ty < 0 {
+		// TODO: More flexible space characters?
+		to.renderRawText("\n")
+	}
+}
+
+// nextLine "T*"" Moves start of text `Line` to next text line
+// Move to the start of the next line. This operator has the same effect as the code
+//    0 -Tl Td
+// where Tl denotes the current leading parameter in the text state. The negative of Tl is used
+// here because Tl is the text leading expressed as a positive number. Going to the next line
+// entails decreasing the y coordinate. (page 250)
+func (to *TextObject) nextLine() {
+	// Not implemented yet
+}
+
+// setTextMatrix "Tm"
+// Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
+// in `f`  (page 250)
+func (to *TextObject) setTextMatrix(f []float64) {
+	// Not implemented yet
+	// The following is supposed to be equivalent to the existing Unidoc implementation.
+	tx, ty := f[4], f[5]
+	if to.yPos == -1 {
+		to.yPos = tx
+	} else if to.yPos > ty {
+		to.renderRawText("\n")
+		to.xPos, to.yPos = tx, ty
+		return
+	}
+	if to.xPos == -1 {
+		to.xPos = tx
+	} else if to.xPos < ty {
+		to.renderRawText("\t")
+		to.xPos = tx
+	}
+}
+
+// showText "Tj" Show a text string
+func (to *TextObject) showText(charcodes []byte) error {
+	to.renderText(charcodes)
+	return nil
+}
+
+// showTextAdjusted "TJ" Show text with adjustable spacing
+func (to *TextObject) showTextAdjusted(args []PdfObject) error {
+	for _, o := range args {
+		switch o.(type) {
+		case *PdfObjectFloat, *PdfObjectInteger:
+			// Not implemented yet
+			// The following is supposed to be equivalent to the existing Unidoc implementation.
+			v, _ := GetNumberAsFloat(o)
+			if v < -100 {
+				to.renderRawText("\n")
+			}
+		case *PdfObjectString:
+			charcodes, err := GetStringBytes(o)
+			if err != nil {
+				common.Log.Debug("showTextAdjusted args=%+v err=%v", args, err)
+				return err
+			}
+			to.renderText(charcodes)
+		default:
+			common.Log.Debug("showTextAdjusted. Unexpected type args=%+v", args)
+			return ErrTypeCheck
+		}
+	}
+	return nil
+}
+
+// setTextLeading "TL" Set text leading
+func (to *TextObject) setTextLeading(y float64) {
+	// Not implemented yet
+}
+
+// setCharSpacing "Tc" Set character spacing
+func (to *TextObject) setCharSpacing(x float64) {
+	// Not implemented yet
+}
+
+// setFont "Tf" Set font
+func (to *TextObject) setFont(name string, size float64) error {
+	font, err := to.getFont(name)
+	if err != nil {
+		return err
+	}
+	to.State.Tf = font
+	// to.State.Tfs = size
+	return nil
+}
+
+// setTextRenderMode "Tr" Set text rendering mode
+func (to *TextObject) setTextRenderMode(mode int) {
+	// Not implemented yet
+}
+
+// setTextRise "Ts" Set text rise
+func (to *TextObject) setTextRise(y float64) {
+	// Not implemented yet
+}
+
+// setWordSpacing "Tw" Set word spacing
+func (to *TextObject) setWordSpacing(y float64) {
+	// Not implemented yet
+}
+
+// setHorizScaling "Tz" Set horizontal scaling
+func (to *TextObject) setHorizScaling(y float64) {
+	// Not implemented yet
+}
+
+// Operator validation
+func checkOpFloat(op *contentstream.ContentStreamOperation, to *TextObject) (ok bool, x float64, err error) {
+	if ok, err = checkOp(op, to, 1, true); !ok {
+		return
+	}
+	x, err = GetNumberAsFloat(op.Params[0])
+	return
+}
+
+// checkOp returns true if we are in a text stream and `op` has `numParams` params
+// If `hard` is true and the number of params don't match then an error is returned
+func checkOp(op *contentstream.ContentStreamOperation, to *TextObject, numParams int, hard bool) (ok bool, err error) {
+	if to == nil {
+		common.Log.Debug("%#q operand outside text", op.Operand)
+		return
+	}
+	if numParams >= 0 {
+		if len(op.Params) != numParams {
+			if hard {
+				err = errors.New("Incorrect parameter count")
+			}
+			common.Log.Debug("Error: %#q should have %d input params, got %d %+v",
+				op.Operand, numParams, len(op.Params), op.Params)
+			return
+		}
+	}
+	ok = true
+	return
+}
+
+// 9.3 Text State Parameters and Operators (page 243)
+// Some of these parameters are expressed in unscaled text space units. This means that they shall
+// be specified in a coordinate system that shall be defined by the text matrix, Tm but shall not be
+// scaled by the font size parameter, Tfs.
+type TextState struct {
+	// Tc    float64        // Character spacing. Unscaled text space units.
+	// Tw    float64        // Word spacing. Unscaled text space units.
+	// Th    float64        // Horizontal scaling
+	// Tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108
+	// Tfs   float64        // Text font size
+	// Tmode RenderMode     // Text rendering mode
+	// Trise float64        // Text rise. Unscaled text space units. Set by Ts
+	Tf *model.PdfFont // Text font
+}
+
+// 9.4.1 General (page 248)
+// A PDF text object consists of operators that may show text strings, move the text position, and
+// set text state and certain other parameters. In addition, two parameters may be specified only
+// within a text object and shall not persist from one text object to the next:
+//   •Tm, the text matrix
+//   •Tlm, the text line matrix
+//
+// Text space is converted to device space by this transform (page 252)
+//        | Tfs x Th   0      0 |
+// Trm  = | 0         Tfs     0 | × Tm × CTM
+//        | 0         Trise   1 |
+//
+type TextObject struct {
+	e     *Extractor
+	gs    contentstream.GraphicsState
+	State *TextState
+	// Tm    contentstream.Matrix // Text matrix. For the character pointer.
+	// Tlm   contentstream.Matrix // Text line matrix. For the start of line pointer.
+	Texts []XYText // Text gets written here.
+
+	// These fields are used to implement existing UniDoc behaviour.
+	xPos, yPos float64
+}
+
+// newTextState returns a default TextState
+func newTextState() TextState {
+	// Not implemented yet
+	return TextState{}
+}
+
+// newTextObject returns a default TextObject
+func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *TextState) *TextObject {
+	return &TextObject{
+		e:     e,
+		gs:    gs,
+		State: state,
+		// Tm:    contentstream.IdentityMatrix(),
+		// Tlm:   contentstream.IdentityMatrix(),
+	}
+}
+
+func (to *TextObject) renderRawText(text string) {
+	to.Texts = append(to.Texts, XYText{text})
+}
+
+// renderText emits byte array `charcodes` to the calling program
+func (to *TextObject) renderText(charcodes []byte) {
+	text := ""
+	if to.State.Tf == nil {
+		common.Log.Debug("No font defined. charcodes=%#q", string(charcodes))
+		text = string(charcodes)
+	} else {
+		text = to.State.Tf.CharcodeBytesToUnicode(charcodes)
+	}
+	to.Texts = append(to.Texts, XYText{text})
+}
+
+// XYText represents text and its position in device coordinates
+type XYText struct {
+	Text string
+	// Position and rendering fields. Not implemented yet
+}
+
+// String returns a string describing `t`
+func (t *XYText) String() string {
+	return truncate(t.Text, 100)
+}
+
+// TextList is a list of texts and their position on a pdf page
+type TextList []XYText
+
+func (tl *TextList) Length() int {
+	return len(*tl)
+}
+
+// ToText returns the contents of `tl` as a single string
+func (tl *TextList) ToText() string {
+	var buf bytes.Buffer
+	for _, t := range *tl {
+		// fmt.Printf("---- %4d: %4.1f %4.1f %q\n", i, t.X, t.Y, t.Text)
+		buf.WriteString(t.Text)
+	}
+	procBuf(&buf)
+	return buf.String()
+}
+
+// func (to *TextObject) getCodemap(name string) (codemap *cmap.CMap, err error) {
+
+// 	fontObj, err := to.getFontDict(name)
+// 	if err != nil {
+// 		return
+// 	}
+// 	fontDict := fontObj.(*PdfObjectDictionary)
+// 	toUnicode := fontDict.Get("ToUnicode")
+// 	toUnicode = TraceToDirectObject(toUnicode)
+// 	if toUnicode == nil {
+// 		return
+// 	}
+// 	toUnicodeStream, ok := toUnicode.(*PdfObjectStream)
+// 	if !ok {
+// 		err = errors.New("Invalid ToUnicode entry - not a stream")
+// 		return
+// 	}
+// 	var decoded []byte
+// 	decoded, err = DecodeStream(toUnicodeStream)
+// 	if err != nil {
+// 		return
+// 	}
+// 	codemap, err = cmap.LoadCmapFromData(decoded)
+// 	return
+// }
+
+// getFont returns the font named `name` if it exists in the page's resources
+func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
+	fontObj, err := to.getFontDict(name)
+	if err != nil {
+		return nil, err
+	}
+	font, err := model.NewPdfFontFromPdfObject(fontObj)
+	if err != nil {
+		common.Log.Debug("getFont: NewPdfFontFromPdfObject failed. name=%#q err=%v", name, err)
+	}
+	return font, err
+}
+
+// getFontDict returns the font object called `name` if it exists in the page's Font resources or
+// an error if it doesn't
+// XXX: TODO: Can we cache font values
+func (to *TextObject) getFontDict(name string) (fontObj PdfObject, err error) {
+	resources := to.e.resources
+	if resources == nil {
+		common.Log.Debug("getFontDict. No resources. name=%#q", name)
+		return
+	}
+
+	fontObj, found := resources.GetFontByName(PdfObjectName(name))
+	if !found {
+		err = errors.New("Font not in resources")
+		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q err=%v", name, err)
+		return
+	}
+	fontObj = TraceToDirectObject(fontObj)
+	return
+}
+
+// getCharMetrics returns the character metrics for the code points in `text1` for font `font`
+func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetrics, err error) {
+	encoder := font.Encoder()
+	if encoder == nil {
+		err = errors.New("No font encoder")
+	}
+	for _, r := range text {
+		glyph, found := encoder.RuneToGlyph(r)
+		if !found {
+			common.Log.Debug("Error! Glyph not found for rune=%s", r)
+			glyph = "space"
+		}
+		m, ok := font.GetGlyphCharMetrics(glyph)
+		if !ok {
+			common.Log.Debug("Error! Metrics not found for rune=%+v glyph=%#q", r, glyph)
+		}
+		metrics = append(metrics, m)
+	}
+	return
 }

@@ -15,4 +15,5 @@ var (
 	ErrNoCCITTFaxDecode              = errors.New("CCITTFaxDecode encoding is not yet implemented")
 	ErrNoJBIG2Decode                 = errors.New("JBIG2Decode encoding is not yet implemented")
 	ErrNoJPXDecode                   = errors.New("JPXDecode encoding is not yet implemented")
+	ErrNoPdfVersion                  = errors.New("Version not found")
 )
