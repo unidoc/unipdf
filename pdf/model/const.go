@@ -14,4 +14,6 @@ var (
 	ErrInvalidAttribute         = errors.New("Invalid attribute")
 	ErrTypeError                = errors.New("Type check error")
 	ErrRangeError               = errors.New("Range check error")
+	ErrEncrypted                = errors.New("File needs to be decrypted first")
+	ErrUnsupportedFont          = errors.New("Unsupported font type")
 )

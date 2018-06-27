@@ -192,7 +192,7 @@ func GetString(obj PdfObject) (string, error) {
 	return "", err
 }
 
-// GetString returns the bytes represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
+// GetStringBytes returns the bytes represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
 func GetStringBytes(obj PdfObject) ([]byte, error) {
 	if s, ok := obj.(*PdfObjectString); ok {
 		return []byte(*s), nil
@@ -201,7 +201,7 @@ func GetStringBytes(obj PdfObject) ([]byte, error) {
 	return []byte{}, err
 }
 
-// GetString returns the string represented by `obj` if `obj` is a PdfObjectName or an error if it isn't.
+// GetName returns the string represented by `obj` if `obj` is a PdfObjectName or an error if it isn't.
 func GetName(obj PdfObject) (string, error) {
 	if s, ok := obj.(*PdfObjectName); ok {
 		return string(*s), nil
