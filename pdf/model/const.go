@@ -14,4 +14,5 @@ var (
 	ErrInvalidAttribute         = errors.New("Invalid attribute")
 	ErrTypeError                = errors.New("Type check error")
 	ErrRangeError               = errors.New("Range check error")
+	ErrUnsupportedFont          = errors.New("Unsupported font type")
 )
