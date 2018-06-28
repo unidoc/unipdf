@@ -3,6 +3,14 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// Implementations of the standard 1-byte encodings
+//     MacExpertEncoding
+//     MacRomanEncoding
+//     PdfDocEncoding
+//     StandardEncoding
+//     WinAnsiEncoding
+//     ZapfDingbatsEncoding
+
 package textencoding
 
 import (
@@ -143,7 +151,7 @@ func FromFontDifferences(diffList []PdfObject) (map[byte]string, error) {
 			differences[n] = s
 			n++
 		default:
-			common.Log.Debug("Bad type. obj=%s", obj)
+			common.Log.Debug("ERROR: Bad type. obj=%s", obj)
 			return nil, ErrTypeError
 		}
 	}
