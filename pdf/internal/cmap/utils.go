@@ -13,12 +13,12 @@ import (
 
 // hexToCharCode returns the integer that is encoded in `shex` as a big-endian hex value
 func hexToCharCode(shex cmapHexString) CharCode {
-	val := CharCode(0)
+	code := CharCode(0)
 	for _, v := range shex.b {
-		val <<= 8
-		val |= CharCode(v)
+		code <<= 8
+		code |= CharCode(v)
 	}
-	return val
+	return code
 }
 
 // hexToString returns the unicode string that is UTF-16BE encoded in `shex`.
@@ -29,7 +29,7 @@ func hexToString(shex cmapHexString) string {
 	return string(utf16ToRunes(shex))
 }
 
-// hexToString decodeds the UTF-16BE encoded string `shex` to unicode runes.
+// hexToString decodes the UTF-16BE encoded string `shex` to unicode runes.
 func utf16ToRunes(shex cmapHexString) []rune {
 	if len(shex.b) == 1 {
 		return []rune{rune(shex.b[0])}
@@ -37,7 +37,7 @@ func utf16ToRunes(shex cmapHexString) []rune {
 	b := shex.b
 	if len(b)%2 != 0 {
 		b = append(b, 0)
-		common.Log.Debug("ERROR: hexToRunes. padding shex=%#v to %+v", shex, b)
+		common.Log.Debug("ERROR: hexToRunes. Padding shex=%#v to %+v", shex, b)
 	}
 	n := len(b) >> 1
 	chars := make([]uint16, n)

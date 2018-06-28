@@ -143,7 +143,9 @@ func (cmap *CMap) Type() int {
 }
 
 const (
-	MissingCodeRune   = '?'
+	// MissingCodeRune replaces runes that can't be decoded.
+	MissingCodeRune = '?'
+	// MissingCodeString replaces strings that can't be decoded.
 	MissingCodeString = "?"
 )
 
