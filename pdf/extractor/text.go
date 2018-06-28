@@ -3,6 +3,10 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// The current version of this file is a halfway step from the old UniDoc text extractor to a
+// full PDF font parser.
+// We will soon implement all the functions marked as `Not implemented yet`.
+
 package extractor
 
 import (
@@ -397,8 +401,8 @@ type TextState struct {
 // A PDF text object consists of operators that may show text strings, move the text position, and
 // set text state and certain other parameters. In addition, two parameters may be specified only
 // within a text object and shall not persist from one text object to the next:
-//   •Tm, the text matrix
-//   •Tlm, the text line matrix
+//   • Tm, the text matrix
+//   • Tlm, the text line matrix
 //
 // Text space is converted to device space by this transform (page 252)
 //        | Tfs x Th   0      0 |
@@ -479,7 +483,8 @@ func (tl *TextList) ToText() string {
 	return buf.String()
 }
 
-// getFont returns the font named `name` if it exists in the page's resources
+// getFont returns the font named `name` if it exists in the page's resources or an error if it
+// doesn't
 func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
 	fontObj, err := to.getFontDict(name)
 	if err != nil {
@@ -526,7 +531,7 @@ func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetri
 		}
 		m, ok := font.GetGlyphCharMetrics(glyph)
 		if !ok {
-			common.Log.Debug("Error! Metrics not found for rune=%+v glyph=%#q", r, glyph)
+			common.Log.Debug("ERROR: Metrics not found for rune=%+v glyph=%#q", r, glyph)
 		}
 		metrics = append(metrics, m)
 	}
