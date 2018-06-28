@@ -266,7 +266,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	truefont.firstChar = 32
 	truefont.lastChar = 255
 
-	truefont.skeleton.BaseFont = MakeName(ttf.PostScriptName)
+	truefont.skeleton.basefont = ttf.PostScriptName
 	truefont.FirstChar = MakeInteger(32)
 	truefont.LastChar = MakeInteger(255)
 

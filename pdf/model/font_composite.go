@@ -92,7 +92,6 @@ type pdfFontType0 struct {
 	encoder        textencoding.TextEncoder
 	Encoding       PdfObject
 	DescendantFont *PdfFont // Can be either CIDFontType0 or CIDFontType2 font.
-	ToUnicode      PdfObject
 }
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
@@ -130,9 +129,6 @@ func (font *pdfFontType0) ToPdfObject() PdfObject {
 		// Shall be 1 element array.
 		d.Set("DescendantFonts", MakeArray(font.DescendantFont.ToPdfObject()))
 	}
-	if font.ToUnicode != nil {
-		d.Set("ToUnicode", font.ToUnicode)
-	}
 
 	return font.container
 }
@@ -144,17 +140,16 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 	d := skeleton.dict
 
 	// DescendantFonts.
-	obj = TraceToDirectObject(d.Get("DescendantFonts"))
-	arr, ok := obj.(*PdfObjectArray)
-	if !ok {
+	arr, err := GetArray(TraceToDirectObject(d.Get("DescendantFonts")))
+	if err != nil {
 		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array (%T) %s", obj, skeleton)
 		return nil, ErrRangeError
 	}
-	if len(*arr) != 1 {
-		common.Log.Debug("ERROR: Array length != 1 (%d)", len(*arr))
+	if len(arr) != 1 {
+		common.Log.Debug("ERROR: Array length != 1 (%d)", len(arr))
 		return nil, ErrRangeError
 	}
-	df, err := newPdfFontFromPdfObject((*arr)[0], false)
+	df, err := newPdfFontFromPdfObject(arr[0], false)
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading descendant font: err=%v %s", err, skeleton)
 		return nil, err
@@ -163,7 +158,6 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 	font := &pdfFontType0{
 		skeleton:       skeleton,
 		DescendantFont: df,
-		ToUnicode:      TraceToDirectObject(d.Get("ToUnicode")),
 	}
 
 	encoderName, err := GetName(TraceToDirectObject(d.Get("Encoding")))
@@ -252,7 +246,7 @@ func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 	// CIDSystemInfo.
 	obj = TraceToDirectObject(d.Get("CIDSystemInfo"))
 	if obj == nil {
-		common.Log.Debug("CIDSystemInfo (Required) missing. font=%s", skeleton)
+		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", skeleton)
 		return nil, ErrRequiredAttributeMissing
 	}
 	font.CIDSystemInfo = obj
@@ -308,7 +302,7 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	// Convert the glyph to character code.
 	rune, found := enc.GlyphToRune(glyph)
 	if !found {
-		common.Log.Debug("Unable to convert glyph %s to charcode (identity)", glyph)
+		common.Log.Debug("Unable to convert glyph %q to charcode (identity)", glyph)
 		return metrics, false
 	}
 
@@ -408,7 +402,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return runes[i] < runes[j]
 	})
 
-	skeleton.BaseFont = MakeName(ttf.PostScriptName)
+	skeleton.basefont = ttf.PostScriptName
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 

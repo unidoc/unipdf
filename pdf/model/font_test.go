@@ -12,7 +12,7 @@ func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
-var fontDicts = []string{
+var simpleFontDicts = []string{
 	`<< /Type /Font
 		/BaseFont /Helvetica
 		/Subtype /Type1
@@ -56,9 +56,9 @@ var fontDicts = []string{
 		>>`,
 }
 
-// TestSimpleFonts tests that
+// TestSimpleFonts checks that we correctly recreate simple fonts that we parse.
 func TestSimpleFonts(t *testing.T) {
-	for _, d := range fontDicts {
+	for _, d := range simpleFontDicts {
 		objFontObj(t, d)
 	}
 }
@@ -83,9 +83,11 @@ func objFontObj(t *testing.T, fontDict string) error {
 	obj1 := FlattenObject(obj)
 	obj2 := FlattenObject(font.ToPdfObject())
 
+	// Check that the reconstituted font is the same as the original.
 	if !EqualObjects(obj1, obj2) {
 		t.Errorf("Different objects.\nobj1=%s\nobj2=%s\nfont=%s", obj1, obj2, font)
 		return errors.New("different objects")
 	}
+
 	return nil
 }
