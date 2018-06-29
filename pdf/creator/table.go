@@ -449,6 +449,17 @@ func (table *Table) NewCell() *TableCell {
 	cell.horizontalAlignment = CellHorizontalAlignmentLeft
 	cell.verticalAlignment = CellVerticalAlignmentTop
 
+	cell.borderWidthLeft = 0
+	cell.borderWidthBottom = 0
+	cell.borderWidthRight = 0
+	cell.borderWidthTop = 0
+
+	col := ColorBlack
+	cell.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
+
 	cell.rowspan = 1
 	cell.colspan = 1
 

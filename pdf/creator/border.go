@@ -125,92 +125,101 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		}
 	}
 
-	// Line Top
-	lineTop := draw.Line{
-		LineWidth:        border.borderWidthTop,
-		Opacity:          1.0,
-		LineColor:        border.borderColorTop,
-		LineEndingStyle1: draw.LineEndingStyleNone,
-		LineEndingStyle2: draw.LineEndingStyleNone,
-		X1:               startX,
-		Y1:               startY,
-		X2:               startX + border.width,
-		Y2:               startY,
-		LineStyle:        border.LineStyle,
-	}
-	contentsTop, _, err := lineTop.Draw("")
-	if err != nil {
-		return nil, ctx, err
-	}
-	err = block.addContentsByString(string(contentsTop))
-	if err != nil {
-		return nil, ctx, err
-	}
-
-	// Line Left
-	lineLeft := draw.Line{
-		LineWidth:        border.borderWidthLeft,
-		Opacity:          1.0,
-		LineColor:        border.borderColorLeft,
-		LineEndingStyle1: draw.LineEndingStyleNone,
-		LineEndingStyle2: draw.LineEndingStyleNone,
-		X1:               startX,
-		Y1:               startY,
-		X2:               startX,
-		Y2:               startY - border.height,
-		LineStyle:        border.LineStyle,
-	}
-	contentsLeft, _, err := lineLeft.Draw("")
-	if err != nil {
-		return nil, ctx, err
-	}
-	err = block.addContentsByString(string(contentsLeft))
-	if err != nil {
-		return nil, ctx, err
+	if border.borderWidthTop != 0 {
+		// Line Top
+		lineTop := draw.Line{
+			LineWidth:        border.borderWidthTop,
+			Opacity:          1.0,
+			LineColor:        border.borderColorTop,
+			LineEndingStyle1: draw.LineEndingStyleNone,
+			LineEndingStyle2: draw.LineEndingStyleNone,
+			X1:               startX,
+			Y1:               startY,
+			X2:               startX + border.width,
+			Y2:               startY,
+			LineStyle:        border.LineStyle,
+		}
+		contentsTop, _, err := lineTop.Draw("")
+		if err != nil {
+			return nil, ctx, err
+		}
+		err = block.addContentsByString(string(contentsTop))
+		if err != nil {
+			return nil, ctx, err
+		}
 	}
 
-	// Line Right
-	lineRight := draw.Line{
-		LineWidth:        border.borderWidthRight,
-		Opacity:          1.0,
-		LineColor:        border.borderColorRight,
-		LineEndingStyle1: draw.LineEndingStyleNone,
-		LineEndingStyle2: draw.LineEndingStyleNone,
-		X1:               startX + border.width,
-		Y1:               startY,
-		X2:               startX + border.width,
-		Y2:               startY - border.height,
-		LineStyle:        border.LineStyle,
-	}
-	contentsRight, _, err := lineRight.Draw("")
-	if err != nil {
-		return nil, ctx, err
-	}
-	err = block.addContentsByString(string(contentsRight))
-	if err != nil {
-		return nil, ctx, err
+	if border.borderWidthLeft != 0 {
+		// Line Left
+		lineLeft := draw.Line{
+			LineWidth:        border.borderWidthLeft,
+			Opacity:          1.0,
+			LineColor:        border.borderColorLeft,
+			LineEndingStyle1: draw.LineEndingStyleNone,
+			LineEndingStyle2: draw.LineEndingStyleNone,
+			X1:               startX,
+			Y1:               startY,
+			X2:               startX,
+			Y2:               startY - border.height,
+			LineStyle:        border.LineStyle,
+		}
+		contentsLeft, _, err := lineLeft.Draw("")
+		if err != nil {
+			return nil, ctx, err
+		}
+		err = block.addContentsByString(string(contentsLeft))
+		if err != nil {
+			return nil, ctx, err
+		}
 	}
 
-	// Line Bottom
-	lineBottom := draw.Line{
-		LineWidth:        border.borderWidthBottom,
-		Opacity:          1.0,
-		LineColor:        border.borderColorBottom,
-		LineEndingStyle1: draw.LineEndingStyleNone,
-		LineEndingStyle2: draw.LineEndingStyleNone,
-		X1:               startX + border.width,
-		Y1:               startY - border.height,
-		X2:               startX,
-		Y2:               startY - border.height,
-		LineStyle:        border.LineStyle,
+	if border.borderWidthRight != 0 {
+		// Line Right
+		lineRight := draw.Line{
+			LineWidth:        border.borderWidthRight,
+			Opacity:          1.0,
+			LineColor:        border.borderColorRight,
+			LineEndingStyle1: draw.LineEndingStyleNone,
+			LineEndingStyle2: draw.LineEndingStyleNone,
+			X1:               startX + border.width,
+			Y1:               startY,
+			X2:               startX + border.width,
+			Y2:               startY - border.height,
+			LineStyle:        border.LineStyle,
+		}
+		contentsRight, _, err := lineRight.Draw("")
+		if err != nil {
+			return nil, ctx, err
+		}
+		err = block.addContentsByString(string(contentsRight))
+		if err != nil {
+			return nil, ctx, err
+		}
 	}
-	contentsBottom, _, err := lineBottom.Draw("")
-	if err != nil {
-		return nil, ctx, err
+
+	if border.borderWidthBottom != 0 {
+		// Line Bottom
+		lineBottom := draw.Line{
+			LineWidth:        border.borderWidthBottom,
+			Opacity:          1.0,
+			LineColor:        border.borderColorBottom,
+			LineEndingStyle1: draw.LineEndingStyleNone,
+			LineEndingStyle2: draw.LineEndingStyleNone,
+			X1:               startX + border.width,
+			Y1:               startY - border.height,
+			X2:               startX,
+			Y2:               startY - border.height,
+			LineStyle:        border.LineStyle,
+		}
+		contentsBottom, _, err := lineBottom.Draw("")
+		if err != nil {
+			return nil, ctx, err
+		}
+		err = block.addContentsByString(string(contentsBottom))
+		if err != nil {
+			return nil, ctx, err
+		}
 	}
-	err = block.addContentsByString(string(contentsBottom))
-	if err != nil {
-		return nil, ctx, err
-	}
+
 	return []*Block{block}, ctx, nil
 }
