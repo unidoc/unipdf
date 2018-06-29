@@ -122,8 +122,8 @@ func (font *pdfFontType0) ToPdfObject() PdfObject {
 	d := font.skeleton.toDict("Type0")
 	font.container.PdfObject = d
 
-	if font.Encoding != nil {
-		d.Set("Encoding", font.Encoding)
+	if font.encoder != nil {
+		d.Set("Encoding", font.encoder.ToPdfObject())
 	}
 	if font.DescendantFont != nil {
 		// Shall be 1 element array.

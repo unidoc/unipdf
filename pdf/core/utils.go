@@ -312,7 +312,7 @@ func FlattenObject(obj PdfObject) PdfObject {
 func flattenObject(obj PdfObject, depth int) PdfObject {
 	if depth > TraceMaxDepth {
 		common.Log.Error("Trace depth level beyond %d - error!", TraceMaxDepth)
-		return nil
+		return MakeNull()
 	}
 	switch t := obj.(type) {
 	case *PdfIndirectObject:

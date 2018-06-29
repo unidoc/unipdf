@@ -284,7 +284,7 @@ type fontSkeleton struct {
 // NOTE: The returned dict's "Subtype" field is set to `subtype` if `skel` doesn't have a subtype.
 func (skel fontSkeleton) toDict(subtype string) *PdfObjectDictionary {
 
-	if subtype != "" && skel.subtype != "" {
+	if subtype != "" && skel.subtype != "" && subtype != skel.subtype {
 		common.Log.Debug("ERROR: toDict. Overriding subtype to %#q %s", subtype, skel)
 	} else if subtype == "" && skel.subtype == "" {
 		common.Log.Debug("ERROR: toDict no subtype. font=%s", skel)
@@ -312,7 +312,7 @@ func (skel fontSkeleton) String() string {
 	if skel.fontDescriptor != nil {
 		descriptor = "(has descriptor)"
 	}
-	return fmt.Sprintf("%#q %#q %s", skel.subtype, skel.basefont, descriptor)
+	return fmt.Sprintf("FONT{%#q %#q %s}", skel.subtype, skel.basefont, descriptor)
 }
 
 // isCIDFont returns true if `skel` is a CID font.

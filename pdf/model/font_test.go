@@ -56,9 +56,48 @@ var simpleFontDicts = []string{
 		>>`,
 }
 
+var compositeFontDicts = []string{
+	`<< /Type /Font
+		/Subtype /Type0
+		/Encoding /Identity-H
+		/DescendantFonts [<<
+			/Type /Font
+			/Subtype /CIDFontType2
+			/BaseFont /FLDOLC+PingFangSC-Regular
+			/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>
+			/W [ ]
+			/DW 1000
+			/FontDescriptor <<
+				/Type /FontDescriptor
+				/FontName /FLDOLC+PingFangSC-Regular
+				/Flags 4
+				/FontBBox [-123 -263 1177 1003]
+				/ItalicAngle 0
+				/Ascent 972
+				/Descent -232
+				/CapHeight 864
+				/StemV 70
+				/XHeight 648
+				/StemH 64
+				/AvgWidth 1000
+				/MaxWidth 1300
+				% /FontFile3 182 0 R
+				>>
+			>>]
+		/BaseFont /FLDOLC+PingFangSC-Regular
+		>>`,
+}
+
 // TestSimpleFonts checks that we correctly recreate simple fonts that we parse.
 func TestSimpleFonts(t *testing.T) {
 	for _, d := range simpleFontDicts {
+		objFontObj(t, d)
+	}
+}
+
+// TestCompositeFonts checks that we correctly recreate composite fonts that we parse.
+func TestCompositeFonts(t *testing.T) {
+	for _, d := range compositeFontDicts {
 		objFontObj(t, d)
 	}
 }

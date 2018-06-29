@@ -114,5 +114,8 @@ func (enc IdentityEncoder) GlyphToRune(glyph string) (rune, bool) {
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
 func (enc IdentityEncoder) ToPdfObject() PdfObject {
-	return nil
+	if enc.baseName != "" {
+		return MakeName(enc.baseName)
+	}
+	return MakeNull()
 }
