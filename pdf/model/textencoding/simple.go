@@ -15,6 +15,7 @@ package textencoding
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
@@ -52,11 +53,14 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleE
 			}
 		}
 	}
-	return makeEncoder(baseName, codeToRune), nil
+	return makeEncoder(baseName, differences, codeToRune), nil
 }
 
 // String returns a string that describes `se`.
 func (se SimpleEncoder) String() string {
+	if len(se.differences) > 0 {
+		return fmt.Sprintf("%s + differences", se.baseName)
+	}
 	return se.baseName
 }
 
@@ -124,7 +128,7 @@ func (se SimpleEncoder) ToPdfObject() PdfObject {
 }
 
 // makeEncoder returns a SimpleEncoder based on `codeToRune`.
-func makeEncoder(baseName string, codeToRune map[uint16]rune) SimpleEncoder {
+func makeEncoder(baseName string, differences map[byte]string, codeToRune map[uint16]rune) SimpleEncoder {
 	codeToGlyph := map[uint16]string{}
 	glyphToCode := map[string]uint16{}
 	for code, r := range codeToRune {
@@ -134,6 +138,7 @@ func makeEncoder(baseName string, codeToRune map[uint16]rune) SimpleEncoder {
 	}
 	return SimpleEncoder{
 		baseName:    baseName,
+		differences: differences,
 		codeToGlyph: codeToGlyph,
 		glyphToCode: glyphToCode,
 	}

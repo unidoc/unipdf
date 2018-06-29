@@ -41,7 +41,19 @@ func (font PdfFont) BaseFont() string {
 
 // Subtype returns the font's "Subtype" field.
 func (font PdfFont) Subtype() string {
-	return font.fontSkeleton.subtype
+	subtype := font.fontSkeleton.subtype
+	if t, ok := font.context.(*pdfFontType0); ok {
+		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
+	}
+	return subtype
+}
+
+// ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
+func (font PdfFont) ToUnicode() string {
+	if font.ucMap == nil {
+		return ""
+	}
+	return font.ucMap.Name()
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an

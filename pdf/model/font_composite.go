@@ -161,7 +161,8 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 	}
 
 	encoderName, err := GetName(TraceToDirectObject(d.Get("Encoding")))
-	if err == nil && encoderName == "Identity-H" {
+	// XXX: FIXME This is not valid if encoder is not Identity-H !@#$
+	if err == nil /*&& encoderName == "Identity-H"*/ {
 		font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
 	}
 	return font, nil
