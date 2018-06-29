@@ -5,6 +5,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
+// Border represents cell border
 type Border struct {
 	x                 float64 // Upper left corner
 	y                 float64
@@ -19,10 +20,11 @@ type Border struct {
 	borderWidthRight  float64
 	borderColorTop    *model.PdfColorDeviceRGB
 	borderWidthTop    float64
-	LineStyle         CellBorderLineStyle
+	LineStyle         draw.LineStyle
 }
 
-func NewBorder(x, y, width, height float64, lineStyle CellBorderLineStyle) *Border {
+// NewBorder returns and instance of border
+func NewBorder(x, y, width, height float64) *Border {
 	border := &Border{}
 
 	border.x = x
@@ -34,50 +36,67 @@ func NewBorder(x, y, width, height float64, lineStyle CellBorderLineStyle) *Bord
 	border.borderColorBottom = model.NewPdfColorDeviceRGB(0, 0, 0)
 	border.borderColorLeft = model.NewPdfColorDeviceRGB(0, 0, 0)
 	border.borderColorRight = model.NewPdfColorDeviceRGB(0, 0, 0)
-	border.LineStyle = lineStyle
+
+	border.borderWidthTop = 1
+	border.borderWidthBottom = 1
+	border.borderWidthLeft = 1
+	border.borderWidthRight = 1
+
+	border.LineStyle = draw.LineStyleDefault
 	return border
 }
 
+// GetCoords returns coordinates of border
 func (border *Border) GetCoords() (float64, float64) {
 	return border.x, border.y
 }
 
-func (border *Border) SetBorderWidthLeft(bw float64) {
+// SetWidthLeft sets border width for left
+func (border *Border) SetWidthLeft(bw float64) {
 	border.borderWidthLeft = bw
 }
 
-func (border *Border) SetBorderColorLeft(col Color) {
+// SetColorLeft sets border color for left
+func (border *Border) SetColorLeft(col Color) {
 	border.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-func (border *Border) SetBorderWidthBottom(bw float64) {
+// SetWidthBottom sets border width for bottom
+func (border *Border) SetWidthBottom(bw float64) {
 	border.borderWidthBottom = bw
 }
 
-func (border *Border) SetBorderColorBottom(col Color) {
+// SetColorBottom sets border color for bottom
+func (border *Border) SetColorBottom(col Color) {
 	border.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-func (border *Border) SetBorderWidthRight(bw float64) {
+// SetWidthRight sets border width for right
+func (border *Border) SetWidthRight(bw float64) {
 	border.borderWidthRight = bw
 }
 
-func (border *Border) SetBorderColorRight(col Color) {
+// SetColorRight sets border color for right
+func (border *Border) SetColorRight(col Color) {
 	border.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-func (border *Border) SetBorderWidthTop(bw float64) {
+// SetWidthTop sets border width for top
+func (border *Border) SetWidthTop(bw float64) {
 	border.borderWidthTop = bw
 }
 
-func (border *Border) SetBorderColorTop(col Color) {
+// SetColorTop sets border color for top
+func (border *Border) SetColorTop(col Color) {
 	border.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
+// SetFillColor sets background color for border
 func (border *Border) SetFillColor(col Color) {
 	border.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
+// GeneratePageBlocks creates drawable
 func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	startX := border.x
@@ -107,31 +126,17 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	// Line Top
-	var lineTop draw.StraightPath
-	if border.LineStyle == CellBorderLineStyleDashed {
-		lineTop = draw.DashedLine{
-			LineWidth:        border.borderWidthTop,
-			Opacity:          1.0,
-			LineColor:        border.borderColorTop,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX,
-			Y1:               startY,
-			X2:               startX + border.width,
-			Y2:               startY,
-		}
-	} else {
-		lineTop = draw.Line{
-			LineWidth:        border.borderWidthTop,
-			Opacity:          1.0,
-			LineColor:        border.borderColorTop,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX,
-			Y1:               startY,
-			X2:               startX + border.width,
-			Y2:               startY,
-		}
+	lineTop := draw.Line{
+		LineWidth:        border.borderWidthTop,
+		Opacity:          1.0,
+		LineColor:        border.borderColorTop,
+		LineEndingStyle1: draw.LineEndingStyleNone,
+		LineEndingStyle2: draw.LineEndingStyleNone,
+		X1:               startX,
+		Y1:               startY,
+		X2:               startX + border.width,
+		Y2:               startY,
+		LineStyle:        border.LineStyle,
 	}
 	contentsTop, _, err := lineTop.Draw("")
 	if err != nil {
@@ -143,31 +148,17 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	// Line Left
-	var lineLeft draw.StraightPath
-	if border.LineStyle == CellBorderLineStyleDashed {
-		lineLeft = draw.DashedLine{
-			LineWidth:        border.borderWidthLeft,
-			Opacity:          1.0,
-			LineColor:        border.borderColorLeft,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX,
-			Y1:               startY,
-			X2:               startX,
-			Y2:               startY - border.height,
-		}
-	} else {
-		lineLeft = draw.Line{
-			LineWidth:        border.borderWidthLeft,
-			Opacity:          1.0,
-			LineColor:        border.borderColorLeft,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX,
-			Y1:               startY,
-			X2:               startX,
-			Y2:               startY - border.height,
-		}
+	lineLeft := draw.Line{
+		LineWidth:        border.borderWidthLeft,
+		Opacity:          1.0,
+		LineColor:        border.borderColorLeft,
+		LineEndingStyle1: draw.LineEndingStyleNone,
+		LineEndingStyle2: draw.LineEndingStyleNone,
+		X1:               startX,
+		Y1:               startY,
+		X2:               startX,
+		Y2:               startY - border.height,
+		LineStyle:        border.LineStyle,
 	}
 	contentsLeft, _, err := lineLeft.Draw("")
 	if err != nil {
@@ -179,31 +170,17 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	// Line Right
-	var lineRight draw.StraightPath
-	if border.LineStyle == CellBorderLineStyleDashed {
-		lineRight = draw.DashedLine{
-			LineWidth:        border.borderWidthRight,
-			Opacity:          1.0,
-			LineColor:        border.borderColorRight,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX + border.width,
-			Y1:               startY,
-			X2:               startX + border.width,
-			Y2:               startY - border.height,
-		}
-	} else {
-		lineRight = draw.Line{
-			LineWidth:        border.borderWidthRight,
-			Opacity:          1.0,
-			LineColor:        border.borderColorRight,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX + border.width,
-			Y1:               startY,
-			X2:               startX + border.width,
-			Y2:               startY - border.height,
-		}
+	lineRight := draw.Line{
+		LineWidth:        border.borderWidthRight,
+		Opacity:          1.0,
+		LineColor:        border.borderColorRight,
+		LineEndingStyle1: draw.LineEndingStyleNone,
+		LineEndingStyle2: draw.LineEndingStyleNone,
+		X1:               startX + border.width,
+		Y1:               startY,
+		X2:               startX + border.width,
+		Y2:               startY - border.height,
+		LineStyle:        border.LineStyle,
 	}
 	contentsRight, _, err := lineRight.Draw("")
 	if err != nil {
@@ -215,31 +192,17 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	// Line Bottom
-	var lineBottom draw.StraightPath
-	if border.LineStyle == CellBorderLineStyleDashed {
-		lineBottom = draw.DashedLine{
-			LineWidth:        border.borderWidthBottom,
-			Opacity:          1.0,
-			LineColor:        border.borderColorBottom,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX + border.width,
-			Y1:               startY - border.height,
-			X2:               startX,
-			Y2:               startY - border.height,
-		}
-	} else {
-		lineBottom = draw.Line{
-			LineWidth:        border.borderWidthBottom,
-			Opacity:          1.0,
-			LineColor:        border.borderColorBottom,
-			LineEndingStyle1: draw.LineEndingStyleNone,
-			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX + border.width,
-			Y1:               startY - border.height,
-			X2:               startX,
-			Y2:               startY - border.height,
-		}
+	lineBottom := draw.Line{
+		LineWidth:        border.borderWidthBottom,
+		Opacity:          1.0,
+		LineColor:        border.borderColorBottom,
+		LineEndingStyle1: draw.LineEndingStyleNone,
+		LineEndingStyle2: draw.LineEndingStyleNone,
+		X1:               startX + border.width,
+		Y1:               startY - border.height,
+		X2:               startX,
+		Y2:               startY - border.height,
+		LineStyle:        border.LineStyle,
 	}
 	contentsBottom, _, err := lineBottom.Draw("")
 	if err != nil {
@@ -249,6 +212,5 @@ func (border *Border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	if err != nil {
 		return nil, ctx, err
 	}
-
 	return []*Block{block}, ctx, nil
 }

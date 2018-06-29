@@ -16,18 +16,6 @@ func DrawPathWithCreator(path Path, creator *pdfcontent.ContentCreator) {
 	}
 }
 
-// Make the path with the content creator.
-// Adds the PDF commands to draw the path to the creator instance.
-func DrawDashedPathWithCreator(path Path, creator *pdfcontent.ContentCreator) {
-	for idx, p := range path.Points {
-		if idx == 0 {
-			creator.Add_m(p.X, p.Y)
-		} else {
-			creator.Add_l(p.X, p.Y)
-		}
-	}
-}
-
 // Make the bezier path with the content creator.
 // Adds the PDF commands to draw the path to the creator instance.
 func DrawBezierPathWithCreator(bpath CubicBezierPath, creator *pdfcontent.ContentCreator) {
