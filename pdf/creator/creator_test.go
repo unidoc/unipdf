@@ -38,7 +38,6 @@ const testImageFile1 = "../../testfiles/logo.png"
 const testImageFile2 = "../../testfiles/signature.png"
 const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
-const testPdfWithTable = "../../testfiles/table.pdf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -942,8 +941,7 @@ func TestTable(t *testing.T) {
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/4_table.pdf")
-	err := c.WriteToFile(testPdfWithTable)
+	err := c.WriteToFile("/tmp/4_table.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -977,8 +975,8 @@ func TestBorderedTable1(t *testing.T) {
 	cell4 := table.NewCell()
 	p = NewParagraph("D")
 	cell4.SetContent(p)
-	cell4.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell4.SetBorderLineStyle(draw.LineStyleDashed)
+	cell4.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be around
+	cell4.SetBorderLineStyle(draw.LineStyleDefault)
 
 	cell5 := table.NewCell()
 	p = NewParagraph("E")
@@ -998,7 +996,7 @@ func TestBorderedTable1(t *testing.T) {
 	p = NewParagraph("G")
 	cell7.SetContent(p)
 	cell7.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell7.SetBorderLineStyle(draw.LineStyleDashed)
+	cell7.SetBorderLineStyle(draw.LineStyleDefault)
 
 	// Skip over two rows.
 	table.SkipRows(2)
@@ -1021,8 +1019,7 @@ func TestBorderedTable1(t *testing.T) {
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
-	err := c.WriteToFile(testPdfWithTable)
+	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1100,8 +1097,7 @@ func TestBorderedTable2(t *testing.T) {
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/4_table_bordered.pdf")
-	err := c.WriteToFile(testPdfWithTable)
+	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
