@@ -50,10 +50,10 @@ func (font PdfFont) Subtype() string {
 
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
-	if font.ucMap == nil {
+	if font.toUnicodeCmap == nil {
 		return ""
 	}
-	return font.ucMap.Name()
+	return font.toUnicodeCmap.Name()
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an
@@ -129,8 +129,8 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) string {
-	if font.ucMap != nil {
-		unicode, ok := font.ucMap.CharcodeBytesToUnicode(data)
+	if font.toUnicodeCmap != nil {
+		unicode, ok := font.toUnicodeCmap.CharcodeBytesToUnicode(data)
 		if ok {
 			return unicode
 		}
@@ -269,10 +269,10 @@ type fontSkeleton struct {
 	subtype  string // The font's "Subtype" field.
 
 	// These are optional fields in the PDF font
-	toUnicode PdfObject // The stream containing ucMap. We keep it around for ToPdfObject.
+	toUnicode PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
 
 	// These objects are computed from optional fields in the PDF font
-	ucMap          *cmap.CMap         // Computed from "ToUnicode"
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
 	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
 
 	// This is an internal implementation detail. It is passed to specific font types so they can parse it.
@@ -384,7 +384,7 @@ func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 		if err != nil {
 			return nil, err
 		}
-		font.ucMap = codemap
+		font.toUnicodeCmap = codemap
 	}
 
 	return font, nil

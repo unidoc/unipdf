@@ -169,6 +169,7 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 }
 
 // pdfCIDFontType0 represents a CIDFont Type0 font dictionary.
+// XXX: This is a stub.
 type pdfCIDFontType0 struct {
 	container *PdfIndirectObject
 	skeleton  *fontSkeleton // Elements common to all font types.
@@ -178,14 +179,7 @@ type pdfCIDFontType0 struct {
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
 	CIDSystemInfo  PdfObject // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
 	FontDescriptor PdfObject // (Required) Describes the CIDFont’s default metrics other than its glyph widths
-	DW             PdfObject // (Optional) Default width for glyphs in the CIDFont Default value: 1000 (defined in user units)
-	W              PdfObject // (Optional) Widths for the glyphs in the CIDFont. Default value: none (the DW value shall be used for all glyphs).
-	// DW2, W2: (Optional; applies only to CIDFonts used for vertical writing)
-	DW2 PdfObject // An array of two numbers specifying the default metrics for vertical writing. Default value: [880 −1000].
-	W2  PdfObject // A description of the metrics for vertical writing for the glyphs in the CIDFont. Default value: none (the DW2 value shall be used for all glyphs).
 
-	// Also mapping from GIDs (glyph index) to widths.
-	gidToWidthMap map[uint16]int
 }
 
 // Encoder returns the font's text encoder.
@@ -200,41 +194,20 @@ func (font pdfCIDFontType0) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
+// XXX: This is a stub.
 func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
-	metrics := fonts.CharMetrics{}
-	// Not implemented yet. !@#$
-	return metrics, true
+	return fonts.CharMetrics{}, true
 }
 
 // ToPdfObject converts the pdfCIDFontType0 to a PDF representation.
+// XXX: This is a stub.
 func (font *pdfCIDFontType0) ToPdfObject() PdfObject {
-	if font.container == nil {
-		font.container = &PdfIndirectObject{}
-	}
-	d := font.skeleton.toDict("CIDFontType0")
-	font.container.PdfObject = d
-
-	if font.CIDSystemInfo != nil {
-		d.Set("CIDSystemInfo", font.CIDSystemInfo)
-	}
-	if font.DW != nil {
-		d.Set("DW", font.DW)
-	}
-	if font.DW2 != nil {
-		d.Set("DW2", font.DW2)
-	}
-	if font.W != nil {
-		d.Set("W", font.W)
-	}
-	if font.W2 != nil {
-		d.Set("W2", font.W2)
-	}
-
-	return font.container
+	return MakeNull()
 }
 
 // newPdfCIDFontType0FromPdfObject creates a pdfCIDFontType0 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading an error is returned.
+// XXX: This is a stub.
 func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfCIDFontType0, error) {
 	if skeleton.subtype != "CIDFontType0" {
 		common.Log.Debug("ERROR: Font SubType != CIDFontType0. font=%s", skeleton)
@@ -251,12 +224,6 @@ func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 		return nil, ErrRequiredAttributeMissing
 	}
 	font.CIDSystemInfo = obj
-
-	// Optional attributes.
-	font.DW = TraceToDirectObject(d.Get("DW"))
-	font.W = TraceToDirectObject(d.Get("W"))
-	font.DW2 = TraceToDirectObject(d.Get("DW2"))
-	font.W2 = TraceToDirectObject(d.Get("W2"))
 
 	return font, nil
 }
