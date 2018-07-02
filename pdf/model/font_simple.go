@@ -27,8 +27,8 @@ import (
 //   containing font-wide metrics and other attributes of the font.
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
-	container *PdfIndirectObject
-	skeleton  *fontSkeleton // Elements common to all font types
+	container     *PdfIndirectObject
+	*fontSkeleton // Elements common to all font types
 
 	firstChar  int
 	lastChar   int
@@ -97,7 +97,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 // !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
 //      Need to get TrueType font's cmap
 func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFontSimple, error) {
-	font := &pdfFontSimple{skeleton: skeleton}
+	font := &pdfFontSimple{fontSkeleton: skeleton}
 
 	d := skeleton.dict
 
@@ -227,7 +227,7 @@ func (font *pdfFontSimple) ToPdfObject() PdfObject {
 	if font.container == nil {
 		font.container = &PdfIndirectObject{}
 	}
-	d := font.skeleton.toDict("")
+	d := font.toDict("")
 	font.container.PdfObject = d
 
 	if font.FirstChar != nil {
@@ -260,7 +260,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	skeleton := fontSkeleton{subtype: "TrueType"}
-	truefont := &pdfFontSimple{skeleton: &skeleton}
+	truefont := &pdfFontSimple{fontSkeleton: &skeleton}
 
 	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
 	// then can derive
@@ -269,7 +269,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	truefont.firstChar = minCode
 	truefont.lastChar = maxCode
 
-	truefont.skeleton.basefont = ttf.PostScriptName
+	truefont.basefont = ttf.PostScriptName
 	truefont.FirstChar = MakeInteger(minCode)
 	truefont.LastChar = MakeInteger(maxCode)
 
