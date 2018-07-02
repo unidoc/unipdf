@@ -32,6 +32,24 @@ type SimpleEncoder struct {
 	differences map[byte]string
 	codeToGlyph map[uint16]string
 	glyphToCode map[string]uint16
+	codeToRune  map[uint16]rune
+}
+
+// NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
+// `differences`.
+func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte]string) (SimpleEncoder, error) {
+	baseName := "custom"
+	baseEncoding := map[uint16]rune{}
+	// common.Log.Debug("encoding=%#v", encoding)
+	for code, glyph := range encoding {
+		r, ok := GlyphToRune(glyph)
+		if !ok {
+			common.Log.Debug("ERROR: Unknown glyph. %q", glyph)
+			return SimpleEncoder{}, ErrTypeError
+		}
+		baseEncoding[code] = r
+	}
+	return newSimpleTextEncoder(baseEncoding, baseName, differences)
 }
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
@@ -42,6 +60,14 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleE
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
 		return SimpleEncoder{}, errors.New("Unsupported font encoding")
 	}
+	return newSimpleTextEncoder(baseEncoding, baseName, differences)
+}
+
+// newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
+// `differences`.
+func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
+	differences map[byte]string) (SimpleEncoder, error) {
+
 	codeToRune := map[uint16]rune{}
 	for code, r := range baseEncoding {
 		codeToRune[code] = r
@@ -54,14 +80,27 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleE
 		}
 	}
 	return makeEncoder(baseName, differences, codeToRune), nil
+
 }
 
 // String returns a string that describes `se`.
 func (se SimpleEncoder) String() string {
+	name := se.baseName
 	if len(se.differences) > 0 {
-		return fmt.Sprintf("%s + differences", se.baseName)
+		name = fmt.Sprintf("%s(diff)", se.baseName)
 	}
-	return se.baseName
+	return name
+
+	// codes := []int{}
+	// for c := range se.codeToGlyph {
+	// 	codes = append(codes, int(c))
+	// }
+	// sort.Ints(codes)
+	// parts := []string{fmt.Sprintf("SimpleEncoder: name=%#q %d entries", name, len(codes))}
+	// for _, c := range codes {
+	// 	parts = append(parts, fmt.Sprintf("%4d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
+	// }
+	// return strings.Join(parts, "\n")
 }
 
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
@@ -98,7 +137,11 @@ func (se SimpleEncoder) RuneToCharcode(val rune) (uint16, bool) {
 // CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (se SimpleEncoder) CharcodeToRune(code uint16) (rune, bool) {
-	return doCharcodeToRune(se, code)
+	r, ok := se.codeToRune[code]
+	if !ok {
+		common.Log.Debug("Charcode -> Rune error: charcode not found: 0x%04x", code)
+	}
+	return r, ok
 }
 
 // RuneToGlyph returns the glyph corresponding to rune `r`.
@@ -132,15 +175,19 @@ func makeEncoder(baseName string, differences map[byte]string, codeToRune map[ui
 	codeToGlyph := map[uint16]string{}
 	glyphToCode := map[string]uint16{}
 	for code, r := range codeToRune {
-		glyph := glyphlistRuneToGlyphMap[r]
+		glyph := glyphlistRuneToGlyphMap[r] // !@#$ Build out this map
 		codeToGlyph[code] = glyph
 		glyphToCode[glyph] = code
+		if glyph == "" {
+			common.Log.Debug("ERROR: Empty glyph code=0x%04x r=%+q=%#q", code, r, r)
+		}
 	}
 	return SimpleEncoder{
 		baseName:    baseName,
 		differences: differences,
 		codeToGlyph: codeToGlyph,
 		glyphToCode: glyphToCode,
+		codeToRune:  codeToRune, // XXX: !@#$ Make this a string
 	}
 }
 

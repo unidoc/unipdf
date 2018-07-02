@@ -11,8 +11,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 func main() {
@@ -22,7 +25,8 @@ func main() {
 	flag.Parse()
 
 	if len(*glyphlistFile) == 0 {
-		fmt.Printf("Need to specify glyph list file via glyphfile, see -h for options\n")
+		fmt.Printf("Need to specify glyph list file via glyphfile\n")
+		flag.Usage()
 		os.Exit(1)
 	}
 
@@ -34,9 +38,13 @@ func main() {
 
 	switch *method {
 	case "glyph-to-rune":
-		printGlyphToRuneList(glyphToUnicodeMap)
+		printGlyphToRuneList(glyphToUnicodeMap, true)
 	case "rune-to-glyph":
-		printRuneToGlyphList(glyphToUnicodeMap)
+		printRuneToGlyphList(glyphToUnicodeMap, true)
+	case "glyph-to-string":
+		printGlyphToRuneList(glyphToUnicodeMap, false)
+	case "string-to-glyph":
+		printRuneToGlyphList(glyphToUnicodeMap, false)
 	default:
 		fmt.Printf("Unsupported method: %s, see -h for options\n", *method)
 	}
@@ -56,22 +64,27 @@ func main() {
 
 }
 
-func printGlyphToRuneList(glyphToUnicodeMap map[string]string) {
+func printGlyphToRuneList(glyphToUnicodeMap map[string]string, asRune bool) {
 	keys := []string{}
 	for key := range glyphToUnicodeMap {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
-	fmt.Printf("var glyphlistGlyphToRuneMap = map[string]rune{\n")
+	fmt.Printf("var glyphlistGlyphToRuneMap = map[string]rune{ // %d entries \n", len(keys))
 	for _, glyph := range keys {
-		ucode := glyphToUnicodeMap[glyph]
-		fmt.Printf("\t\"%s\":\t'\\u%s',\n", glyph, strings.ToLower(ucode))
+		s := glyphToUnicodeMap[glyph]
+		if asRune {
+			r := []rune(s)[0]
+			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, r, rs(r))
+		} else {
+			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, s, ss(s))
+		}
 	}
 	fmt.Printf("}\n")
 }
 
-func printRuneToGlyphList(glyphToUnicodeMap map[string]string) {
+func printRuneToGlyphList(glyphToUnicodeMap map[string]string, asRune bool) {
 	keys := []string{}
 	for key := range glyphToUnicodeMap {
 		keys = append(keys, key)
@@ -80,20 +93,58 @@ func printRuneToGlyphList(glyphToUnicodeMap map[string]string) {
 
 	uniqueList := map[string]bool{}
 
-	fmt.Printf("var glyphlistRuneToGlyphMap = map[rune]string{\n")
+	fmt.Printf("var glyphlistRuneToGlyphMap = map[rune]string{ // %d entries \n", len(keys))
 	for _, glyph := range keys {
-		ucode := glyphToUnicodeMap[glyph]
-		ucode = strings.ToLower(ucode)
-
-		_, duplicate := uniqueList[ucode]
-		if !duplicate {
-			fmt.Printf("\t'\\u%s':\t\"%s\",\n", ucode, glyph)
-			uniqueList[ucode] = true
+		s := glyphToUnicodeMap[glyph]
+		line := ""
+		runes := []rune(s)
+		if len(runes) > 1 {
+			line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, ss(s))
 		} else {
-			fmt.Printf("//\t'\\u%s':\t\"%s\", // duplicate\n", ucode, glyph)
+			if asRune {
+				r := runes[0]
+				line = fmt.Sprintf("%+q:\t%q, %s", r, glyph, rs(r))
+			} else {
+				line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, ss(s))
+			}
+		}
+		_, duplicate := uniqueList[s]
+		if !duplicate {
+			fmt.Printf("\t\t%s\n", line)
+			uniqueList[s] = true
+		} else if len(runes) > 1 {
+			fmt.Printf("\t\t// %s -- ambiguous - multiple characters\n", line)
+		} else {
+			fmt.Printf("\t\t// %s -- duplicate\n", line)
 		}
 	}
 	fmt.Printf("}\n")
+}
+
+// ss shows string u
+func ss(u string) string {
+	s := ""
+	printable := false
+	for _, r := range u {
+		if unicode.IsPrint(r) {
+			printable = true
+		}
+	}
+	if printable {
+		s = fmt.Sprintf("%#q", u)
+		s = fmt.Sprintf("// %s", s[1:len(s)-1])
+	}
+	return s
+}
+
+// ru show rune r
+func rs(r rune) string {
+	s := ""
+	if unicode.IsPrint(r) {
+		s = fmt.Sprintf("%#q", r)
+		s = fmt.Sprintf("// %s", s[1:len(s)-1])
+	}
+	return s
 }
 
 func printEncodingGlyphToRuneMap(glyphs []string, glyphToUnicodeMap map[string]string) {
@@ -119,7 +170,6 @@ func printEncodingRuneToGlyphMap(glyphs []string, glyphToUnicodeMap map[string]s
 		} else {
 			fmt.Printf("'%s' - NOT FOUND\n", glyph)
 		}
-
 	}
 	fmt.Printf("}\n")
 }
@@ -132,8 +182,6 @@ func parseGlyphList(filename string) (map[string]string, error) {
 	defer f.Close()
 
 	reader := bufio.NewReader(f)
-
-	gmap := map[string]bool{}
 	glyphToUnicodeMap := map[string]string{}
 
 	for {
@@ -146,41 +194,15 @@ func parseGlyphList(filename string) (map[string]string, error) {
 		}
 
 		line = strings.Trim(line, " \r\n")
-
 		if line[0] == '#' {
 			continue
 		}
-
-		parts := strings.Split(line, ";")
-		if len(parts) != 2 {
-			return nil, errors.New("Invalid part")
+		glyph, s, err := parseGlyphString(line)
+		if err != nil {
+			return nil, err
 		}
+		glyphToUnicodeMap[glyph] = s
 
-		if len(parts[1]) > 4 {
-			subparts := strings.Split(parts[1], " ")
-			for _, subpart := range subparts {
-				//fmt.Printf("\"%s\": '\\u%s', //%s (non unique)\n", parts[0], parts[1][0:4], parts[1][4:])
-				if _, has := gmap[subpart]; !has {
-					//fmt.Printf("'\\u%s': \"%s\",\n", subpart, parts[0])
-					gmap[subpart] = true
-					glyphToUnicodeMap[parts[0]] = subpart
-				} else {
-					//fmt.Printf("// '\\u%s': \"%s\", (duplicate)\n", subpart, parts[0])
-					glyphToUnicodeMap[parts[0]] = subpart
-				}
-			}
-		} else {
-			//fmt.Printf("\"%s\": '\\u%s',\n", parts[0], parts[1])
-
-			if _, has := gmap[parts[1]]; !has {
-				//fmt.Printf("'\\u%s': \"%s\",\n", parts[1], parts[0])
-				gmap[parts[1]] = true
-				glyphToUnicodeMap[parts[0]] = parts[1]
-			} else {
-				//fmt.Printf("// '\\u%s': \"%s\", (duplicate)\n", parts[1], parts[0])
-				glyphToUnicodeMap[parts[0]] = parts[1]
-			}
-		}
 	}
 
 	return glyphToUnicodeMap, nil
@@ -222,4 +244,50 @@ func loadGlyphlist(filename string) ([]string, error) {
 	}
 
 	return glyphs, nil
+}
+
+// z;007A
+var reGlyphCodes = regexp.MustCompile(`^\s*(\w+)\s*;\s*(.+?)\s*$`)
+
+func parseGlyphString(line string) (string, string, error) {
+	groups := reGlyphCodes.FindStringSubmatch(line)
+	if groups == nil {
+		return "", "", errors.New("No match")
+	}
+	glyph, codesStr := groups[1], groups[2]
+	runes, err := parseRunes(codesStr)
+	if err != nil {
+		return "", "", errors.New("No match")
+	}
+	return glyph, string(runes), nil
+}
+
+func parseGlyphRune(line string) (string, rune, error) {
+	groups := reGlyphCodes.FindStringSubmatch(line)
+	if groups == nil {
+		return "", rune(0), errors.New("No match")
+	}
+	glyph, codesStr := groups[1], groups[2]
+	runes, err := parseRunes(codesStr)
+	if err != nil {
+		return "", rune(0), err
+	}
+	return glyph, runes[0], nil
+}
+
+// FFIsmall;F766 F766 F769,0066 0066 0069
+func parseRunes(s string) ([]rune, error) {
+	codeStrings := strings.Split(s, ",")
+	// We only want the first string
+	s = codeStrings[0]
+	parts := strings.Split(s, " ")
+	runes := []rune{}
+	for _, p := range parts {
+		h, err := strconv.ParseUint(p, 16, 32)
+		if err != nil {
+			return []rune{}, err
+		}
+		runes = append(runes, rune(h))
+	}
+	return runes, nil
 }

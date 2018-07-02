@@ -170,11 +170,22 @@ func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFont
 			skeleton.subtype, font.Encoding, font.Encoding, err)
 		return nil, err
 	}
-	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
-	if err != nil {
-		return nil, err
+	if skeleton.subtype == "Type1" {
+		// XXX: !@#$ Is this the right order? Do the /Differences need to be reapplied?
+		descriptor := skeleton.fontDescriptor
+		if descriptor.fontFile != nil && descriptor.fontFile.encoder != nil {
+			common.Log.Debug("Using fontFile")
+			font.SetEncoder(descriptor.fontFile.encoder)
+		}
 	}
-	font.SetEncoder(encoder)
+	if font.Encoder() == nil {
+		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+		if err != nil {
+			return nil, err
+		}
+		font.SetEncoder(encoder)
+	}
+	common.Log.Debug("encoder=%s", font.Encoder())
 
 	return font, nil
 }

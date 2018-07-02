@@ -128,11 +128,11 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 //   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
-func (font PdfFont) CharcodeBytesToUnicode(data []byte) string {
+func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 	if font.toUnicodeCmap != nil {
 		unicode, ok := font.toUnicodeCmap.CharcodeBytesToUnicode(data)
 		if ok {
-			return unicode
+			return unicode, nil
 		}
 	}
 	// Fall back to encoding
@@ -162,14 +162,15 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) string {
 				common.Log.Debug("ERROR: No rune. code=0x%04x font=%s encoding=%s data = [% 02x]=%#q",
 					code, font, encoder, data, data)
 				r = cmap.MissingCodeRune
+				return string(data), ErrBadText
 			}
 			runes = append(runes, r)
 		}
-		return string(runes)
+		return string(runes), nil
 	}
 	common.Log.Debug("ERROR: Couldn't convert to unicode. Using input. data=%#q=[% 02x] font=%s",
 		string(data), data, font)
-	return string(data)
+	return string(data), ErrBadText
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -372,7 +373,7 @@ func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 	if obj != nil {
 		fontDescriptor, err := newPdfFontDescriptorFromPdfObject(obj)
 		if err != nil {
-			common.Log.Debug("ERROR: Bad font descriptor")
+			common.Log.Debug("ERROR: Bad font descriptor. err=%v", err)
 			return nil, ErrRequiredAttributeMissing
 		}
 		font.fontDescriptor = fontDescriptor
@@ -435,10 +436,12 @@ type PdfFontDescriptor struct {
 	AvgWidth     PdfObject
 	MaxWidth     PdfObject
 	MissingWidth PdfObject
-	FontFile     PdfObject
-	FontFile2    PdfObject
-	FontFile3    PdfObject
+	FontFile     PdfObject // PFB
+	FontFile2    PdfObject // TTF
+	FontFile3    PdfObject // OTF / CFF
 	CharSet      PdfObject
+
+	*fontFile
 
 	// Additional entries for CIDFonts
 	Style  PdfObject
@@ -510,6 +513,14 @@ func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error
 	descriptor.FD = d.Get("FD")
 	descriptor.CIDSet = d.Get("CIDSet")
 
+	if descriptor.FontFile != nil {
+		fontfile, err := newFontFileFromPdfObject(descriptor.FontFile)
+		if err != nil {
+			return descriptor, err
+		}
+		common.Log.Debug("fontfile=%#v", fontfile)
+		descriptor.fontFile = fontfile
+	}
 	return descriptor, nil
 }
 

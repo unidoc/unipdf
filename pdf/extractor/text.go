@@ -281,8 +281,7 @@ func (to *TextObject) setTextMatrix(f []float64) {
 
 // showText "Tj" Show a text string
 func (to *TextObject) showText(charcodes []byte) error {
-	to.renderText(charcodes)
-	return nil
+	return to.renderText(charcodes)
 }
 
 // showTextAdjusted "TJ" Show text with adjustable spacing
@@ -302,7 +301,10 @@ func (to *TextObject) showTextAdjusted(args []PdfObject) error {
 				common.Log.Debug("showTextAdjusted args=%+v err=%v", args, err)
 				return err
 			}
-			to.renderText(charcodes)
+			err = to.renderText(charcodes)
+			if err != nil {
+				return err
+			}
 		default:
 			common.Log.Debug("showTextAdjusted. Unexpected type args=%+v", args)
 			return ErrTypeCheck
@@ -444,15 +446,17 @@ func (to *TextObject) renderRawText(text string) {
 }
 
 // renderText emits byte array `data` to the calling program
-func (to *TextObject) renderText(data []byte) {
+func (to *TextObject) renderText(data []byte) (err error) {
 	text := ""
 	if to.State.Tf == nil {
-		common.Log.Debug("No font defined. data=%#q", string(data))
+		common.Log.Debug("ERROR: No font defined. data=%#q", string(data))
 		text = string(data)
+		err = model.ErrBadText
 	} else {
-		text = to.State.Tf.CharcodeBytesToUnicode(data)
+		text, err = to.State.Tf.CharcodeBytesToUnicode(data)
 	}
 	to.Texts = append(to.Texts, XYText{text})
+	return
 }
 
 // XYText represents text and its position in device coordinates

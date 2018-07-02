@@ -4,13 +4,36 @@
  */
 /*
  * The embedded glyph to unicode mappings specified in this file are distributed under the terms
- * listed in ./glyphlist/glyphlist.txt.
+ * listed in ./glyphlist/glyphlist.txt, ./glyphlist/texglyphlist.txt and ./glyphlist/addtional.txt
  */
 
 package textencoding
 
+func KnownGlyph(glyph string) bool {
+	_, ok := glyphlistGlyphToRuneMap[glyph]
+	if !ok {
+		_, ok = texGlyphlistGlyphToStringMap[glyph]
+	}
+	if !ok {
+		_, ok = additionalGlyphlistGlyphToRuneMap[glyph]
+	}
+	return ok
+}
+
+func GlyphToRune(glyph string) (rune, bool) {
+	if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
+		return r, true
+	}
+	if s, ok := texGlyphlistGlyphToStringMap[glyph]; ok {
+		// XXX: Hack. Use the first rune in the teX mapping
+		return []rune(s)[0], true
+	}
+	r, ok := additionalGlyphlistGlyphToRuneMap[glyph]
+	return r, ok
+}
+
 var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
-	"A":                             '\u0041', // A
+	"A":                             'A',      // A
 	"AE":                            '\u00c6', // Æ
 	"AEacute":                       '\u01fc', // Ǽ
 	"AEmacron":                      '\u01e2', // Ǣ
@@ -61,7 +84,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Atilde":                        '\u00c3', // Ã
 	"Atildesmall":                   '\uf7e3',
 	"Aybarmenian":                   '\u0531', // Ա
-	"B":                             '\u0042', // B
+	"B":                             'B',      // B
 	"Bcircle":                       '\u24b7', // Ⓑ
 	"Bdotaccent":                    '\u1e02', // Ḃ
 	"Bdotbelow":                     '\u1e04', // Ḅ
@@ -74,7 +97,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Brevesmall":                    '\uf6f4',
 	"Bsmall":                        '\uf762',
 	"Btopbar":                       '\u0182', // Ƃ
-	"C":                             '\u0043', // C
+	"C":                             'C',      // C
 	"Caarmenian":                    '\u053e', // Ծ
 	"Cacute":                        '\u0106', // Ć
 	"Caron":                         '\uf6ca',
@@ -103,7 +126,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Cmonospace":           '\uff23', // Ｃ
 	"Coarmenian":           '\u0551', // Ց
 	"Csmall":               '\uf763',
-	"D":                    '\u0044', // D
+	"D":                    'D',      // D
 	"DZ":                   '\u01f1', // Ǳ
 	"DZcaron":              '\u01c4', // Ǆ
 	"Daarmenian":           '\u0534', // Դ
@@ -137,7 +160,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Dzeabkhasiancyrillic": '\u04e0', // Ӡ
 	"Dzecyrillic":          '\u0405', // Ѕ
 	"Dzhecyrillic":         '\u040f', // Џ
-	"E":                    '\u0045', // E
+	"E":                    'E',      // E
 	"Eacute":               '\u00c9', // É
 	"Eacutesmall":          '\uf7e9',
 	"Ebreve":               '\u0114', // Ĕ
@@ -202,7 +225,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Ezh":                     '\u01b7', // Ʒ
 	"Ezhcaron":                '\u01ee', // Ǯ
 	"Ezhreversed":             '\u01b8', // Ƹ
-	"F":                       '\u0046', // F
+	"F":                       'F',      // F
 	"Fcircle":                 '\u24bb', // Ⓕ
 	"Fdotaccent":              '\u1e1e', // Ḟ
 	"Feharmenian":             '\u0556', // Ֆ
@@ -213,7 +236,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Fmonospace":              '\uff26', // Ｆ
 	"Fourroman":               '\u2163', // Ⅳ
 	"Fsmall":                  '\uf766',
-	"G":                       '\u0047', // G
+	"G":                       'G',      // G
 	"GBsquare":                '\u3387', // ㎇
 	"Gacute":                  '\u01f4', // Ǵ
 	"Gamma":                   '\u0393', // Γ
@@ -242,7 +265,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Gsmall":                  '\uf767',
 	"Gsmallhook":              '\u029b', // ʛ
 	"Gstroke":                 '\u01e4', // Ǥ
-	"H":                       '\u0048', // H
+	"H":                       'H',      // H
 	"H18533":                  '\u25cf', // ●
 	"H18543":                  '\u25aa', // ▪
 	"H18551":                  '\u25ab', // ▫
@@ -266,7 +289,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Hungarumlaut":            '\uf6cf',
 	"Hungarumlautsmall":       '\uf6f8',
 	"Hzsquare":                '\u3390', // ㎐
-	"I":                       '\u0049', // I
+	"I":                       'I',      // I
 	"IAcyrillic":              '\u042f', // Я
 	"IJ":                      '\u0132', // Ĳ
 	"IUcyrillic":              '\u042e', // Ю
@@ -311,7 +334,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Itildebelow":             '\u1e2c', // Ḭ
 	"Izhitsacyrillic":         '\u0474', // Ѵ
 	"Izhitsadblgravecyrillic": '\u0476', // Ѷ
-	"J":                        '\u004a', // J
+	"J":                        'J',      // J
 	"Jaarmenian":               '\u0541', // Ձ
 	"Jcircle":                  '\u24bf', // Ⓙ
 	"Jcircumflex":              '\u0134', // Ĵ
@@ -319,7 +342,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Jheharmenian":             '\u054b', // Ջ
 	"Jmonospace":               '\uff2a', // Ｊ
 	"Jsmall":                   '\uf76a',
-	"K":                        '\u004b', // K
+	"K":                        'K',      // K
 	"KBsquare":                 '\u3385', // ㎅
 	"KKsquare":                 '\u33cd', // ㏍
 	"Kabashkircyrillic":        '\u04a0', // Ҡ
@@ -347,7 +370,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Koppagreek":               '\u03de', // Ϟ
 	"Ksicyrillic":              '\u046e', // Ѯ
 	"Ksmall":                   '\uf76b',
-	"L":                        '\u004c', // L
+	"L":                        'L',      // L
 	"LJ":                       '\u01c7', // Ǉ
 	"LL":                       '\uf6bf',
 	"Lacute":                   '\u0139', // Ĺ
@@ -369,7 +392,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Lslash":                   '\u0141', // Ł
 	"Lslashsmall":              '\uf6f9',
 	"Lsmall":                   '\uf76c',
-	"M":                        '\u004d', // M
+	"M":                        'M',      // M
 	"MBsquare":                 '\u3386', // ㎆
 	"Macron":                   '\uf6d0',
 	"Macronsmall":              '\uf7af',
@@ -382,7 +405,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Msmall":                   '\uf76d',
 	"Mturned":                  '\u019c', // Ɯ
 	"Mu":                       '\u039c', // Μ
-	"N":                        '\u004e', // N
+	"N":                        'N',      // N
 	"NJ":                       '\u01ca', // Ǌ
 	"Nacute":                   '\u0143', // Ń
 	"Ncaron":                   '\u0147', // Ň
@@ -403,7 +426,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Ntilde":                   '\u00d1', // Ñ
 	"Ntildesmall":              '\uf7f1',
 	"Nu":                       '\u039d', // Ν
-	"O":                        '\u004f', // O
+	"O":                        'O',      // O
 	"OE":                       '\u0152', // Œ
 	"OEsmall":                  '\uf6fa',
 	"Oacute":                   '\u00d3', // Ó
@@ -469,7 +492,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Otildeacute":              '\u1e4c', // Ṍ
 	"Otildedieresis":           '\u1e4e', // Ṏ
 	"Otildesmall":              '\uf7f5',
-	"P":                        '\u0050', // P
+	"P":                        'P',      // P
 	"Pacute":                   '\u1e54', // Ṕ
 	"Pcircle":                  '\u24c5', // Ⓟ
 	"Pdotaccent":               '\u1e56', // Ṗ
@@ -484,11 +507,11 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Psi":                    '\u03a8', // Ψ
 	"Psicyrillic":            '\u0470', // Ѱ
 	"Psmall":                 '\uf770',
-	"Q":                      '\u0051', // Q
+	"Q":                      'Q',      // Q
 	"Qcircle":                '\u24c6', // Ⓠ
 	"Qmonospace":             '\uff31', // Ｑ
 	"Qsmall":                 '\uf771',
-	"R":                      '\u0052', // R
+	"R":                      'R',      // R
 	"Raarmenian":             '\u054c', // Ռ
 	"Racute":                 '\u0154', // Ŕ
 	"Rcaron":                 '\u0158', // Ř
@@ -509,7 +532,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Rsmall":                 '\uf772',
 	"Rsmallinverted":         '\u0281', // ʁ
 	"Rsmallinvertedsuperior": '\u02b6', // ʶ
-	"S":                              '\u0053', // S
+	"S":                              'S',      // S
 	"SF010000":                       '\u250c', // ┌
 	"SF020000":                       '\u2514', // └
 	"SF030000":                       '\u2510', // ┐
@@ -580,7 +603,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Softsigncyrillic":               '\u042c', // Ь
 	"Ssmall":                         '\uf773',
 	"Stigmagreek":                    '\u03da', // Ϛ
-	"T":                              '\u0054', // T
+	"T":                              'T',      // T
 	"Tau":                            '\u03a4', // Τ
 	"Tbar":                           '\u0166', // Ŧ
 	"Tcaron":                         '\u0164', // Ť
@@ -613,7 +636,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Tsmall":                         '\uf774',
 	"Twelveroman":                    '\u216b', // Ⅻ
 	"Tworoman":                       '\u2161', // Ⅱ
-	"U":                              '\u0055', // U
+	"U":                              'U',      // U
 	"Uacute":                         '\u00da', // Ú
 	"Uacutesmall":                    '\uf7fa',
 	"Ubreve":                         '\u016c', // Ŭ
@@ -668,7 +691,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Utilde":                         '\u0168', // Ũ
 	"Utildeacute":                    '\u1e78', // Ṹ
 	"Utildebelow":                    '\u1e74', // Ṵ
-	"V":                              '\u0056', // V
+	"V":                              'V',      // V
 	"Vcircle":                        '\u24cb', // Ⓥ
 	"Vdotbelow":                      '\u1e7e', // Ṿ
 	"Vecyrillic":                     '\u0412', // В
@@ -678,7 +701,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Voarmenian":                     '\u0548', // Ո
 	"Vsmall":                         '\uf776',
 	"Vtilde":                         '\u1e7c', // Ṽ
-	"W":                              '\u0057', // W
+	"W":                              'W',      // W
 	"Wacute":                         '\u1e82', // Ẃ
 	"Wcircle":                        '\u24cc', // Ⓦ
 	"Wcircumflex":                    '\u0174', // Ŵ
@@ -688,7 +711,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Wgrave":                         '\u1e80', // Ẁ
 	"Wmonospace":                     '\uff37', // Ｗ
 	"Wsmall":                         '\uf777',
-	"X":                              '\u0058', // X
+	"X":                              'X',      // X
 	"Xcircle":                        '\u24cd', // Ⓧ
 	"Xdieresis":                      '\u1e8c', // Ẍ
 	"Xdotaccent":                     '\u1e8a', // Ẋ
@@ -696,7 +719,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Xi":                             '\u039e', // Ξ
 	"Xmonospace":                     '\uff38', // Ｘ
 	"Xsmall":                         '\uf778',
-	"Y":                              '\u0059', // Y
+	"Y":                              'Y',      // Y
 	"Yacute":                         '\u00dd', // Ý
 	"Yacutesmall":                    '\uf7fd',
 	"Yatcyrillic":                    '\u0462', // Ѣ
@@ -721,7 +744,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Yusbigiotifiedcyrillic":         '\u046c', // Ѭ
 	"Yuslittlecyrillic":              '\u0466', // Ѧ
 	"Yuslittleiotifiedcyrillic":      '\u0468', // Ѩ
-	"Z":                         '\u005a', // Z
+	"Z":                         'Z',      // Z
 	"Zaarmenian":                '\u0536', // Զ
 	"Zacute":                    '\u0179', // Ź
 	"Zcaron":                    '\u017d', // Ž
@@ -744,7 +767,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"Zmonospace":                '\uff3a', // Ｚ
 	"Zsmall":                    '\uf77a',
 	"Zstroke":                   '\u01b5', // Ƶ
-	"a":                         '\u0061', // a
+	"a":                         'a',      // a
 	"aabengali":                 '\u0986', // আ
 	"aacute":                    '\u00e1', // á
 	"aadeva":                    '\u0906', // आ
@@ -1087,7 +1110,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"alphatonos":                '\u03ac', // ά
 	"amacron":                   '\u0101', // ā
 	"amonospace":                '\uff41', // ａ
-	"ampersand":                 '\u0026', // &
+	"ampersand":                 '&',      // &
 	"ampersandmonospace":        '\uff06', // ＆
 	"ampersandsmall":            '\uf726',
 	"amsquare":                  '\u33c2', // ㏂
@@ -1164,16 +1187,16 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"arrowupright":              '\u2197', // ↗
 	"arrowupwhite":              '\u21e7', // ⇧
 	"arrowvertex":               '\uf8e6',
-	"asciicircum":               '\u005e', // ^
+	"asciicircum":               '^',      // ^
 	"asciicircummonospace":      '\uff3e', // ＾
-	"asciitilde":                '\u007e', // ~
+	"asciitilde":                '~',      // ~
 	"asciitildemonospace":       '\uff5e', // ～
 	"ascript":                   '\u0251', // ɑ
 	"ascriptturned":             '\u0252', // ɒ
 	"asmallhiragana":            '\u3041', // ぁ
 	"asmallkatakana":            '\u30a1', // ァ
 	"asmallkatakanahalfwidth":   '\uff67', // ｧ
-	"asterisk":                  '\u002a', // *
+	"asterisk":                  '*',      // *
 	"asteriskaltonearabic":      '\u066d', // ٭
 	"asteriskarabic":            '\u066d', // ٭
 	"asteriskmath":              '\u2217', // ∗
@@ -1182,7 +1205,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"asterism":                  '\u2042', // ⁂
 	"asuperior":                 '\uf6e9',
 	"asymptoticallyequal":       '\u2243', // ≃
-	"at":                                  '\u0040', // @
+	"at":                                  '@',      // @
 	"atilde":                              '\u00e3', // ã
 	"atmonospace":                         '\uff20', // ＠
 	"atsmall":                             '\ufe6b', // ﹫
@@ -1202,9 +1225,9 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ayin":                                '\u05e2', // ע
 	"ayinaltonehebrew":                    '\ufb20', // ﬠ
 	"ayinhebrew":                          '\u05e2', // ע
-	"b":                                   '\u0062', // b
+	"b":                                   'b',      // b
 	"babengali":                           '\u09ac', // ব
-	"backslash":                           '\u005c', // \
+	"backslash":                           '\\',     // \\
 	"backslashmonospace":                  '\uff3c', // ＼
 	"badeva":                              '\u092c', // ब
 	"bagujarati":                          '\u0aac', // બ
@@ -1212,7 +1235,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"bahiragana":                          '\u3070', // ば
 	"bahtthai":                            '\u0e3f', // ฿
 	"bakatakana":                          '\u30d0', // バ
-	"bar":                                 '\u007c', // |
+	"bar":                                 '|',      // |
 	"barmonospace":                        '\uff5c', // ｜
 	"bbopomofo":                           '\u3105', // ㄅ
 	"bcircle":                             '\u24d1', // ⓑ
@@ -1280,26 +1303,26 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"bparen":                              '\u249d', // ⒝
 	"bqsquare":                            '\u33c3', // ㏃
 	"braceex":                             '\uf8f4',
-	"braceleft":                           '\u007b', // {
+	"braceleft":                           '{', // {
 	"braceleftbt":                         '\uf8f3',
 	"braceleftmid":                        '\uf8f2',
 	"braceleftmonospace":                  '\uff5b', // ｛
 	"braceleftsmall":                      '\ufe5b', // ﹛
 	"bracelefttp":                         '\uf8f1',
 	"braceleftvertical":                   '\ufe37', // ︷
-	"braceright":                          '\u007d', // }
+	"braceright":                          '}',      // }
 	"bracerightbt":                        '\uf8fe',
 	"bracerightmid":                       '\uf8fd',
 	"bracerightmonospace":                 '\uff5d', // ｝
 	"bracerightsmall":                     '\ufe5c', // ﹜
 	"bracerighttp":                        '\uf8fc',
 	"bracerightvertical":                  '\ufe38', // ︸
-	"bracketleft":                         '\u005b', // [
+	"bracketleft":                         '[',      // [
 	"bracketleftbt":                       '\uf8f0',
 	"bracketleftex":                       '\uf8ef',
 	"bracketleftmonospace":                '\uff3b', // ［
 	"bracketlefttp":                       '\uf8ee',
-	"bracketright":                        '\u005d', // ]
+	"bracketright":                        ']', // ]
 	"bracketrightbt":                      '\uf8fb',
 	"bracketrightex":                      '\uf8fa',
 	"bracketrightmonospace":               '\uff3d', // ］
@@ -1322,7 +1345,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"bulletinverse":                       '\u25d8', // ◘
 	"bulletoperator":                      '\u2219', // ∙
 	"bullseye":                            '\u25ce', // ◎
-	"c":                                   '\u0063', // c
+	"c":                                   'c',      // c
 	"caarmenian":                          '\u056e', // ծ
 	"cabengali":                           '\u099a', // চ
 	"cacute":                              '\u0107', // ć
@@ -1412,14 +1435,14 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"cmonospace":                          '\uff43', // ｃ
 	"cmsquaredsquare":                     '\u33a0', // ㎠
 	"coarmenian":                          '\u0581', // ց
-	"colon":                               '\u003a', // :
+	"colon":                               ':',      // :
 	"colonmonetary":                       '\u20a1', // ₡
 	"colonmonospace":                      '\uff1a', // ：
 	"colonsign":                           '\u20a1', // ₡
 	"colonsmall":                          '\ufe55', // ﹕
 	"colontriangularhalfmod":              '\u02d1', // ˑ
 	"colontriangularmod":                  '\u02d0', // ː
-	"comma":                               '\u002c', // ,
+	"comma":                               ',',      // ,
 	"commaabovecmb":                       '\u0313', // ̓
 	"commaaboverightcmb":                  '\u0315', // ̕
 	"commaaccent":                         '\uf6c3',
@@ -1437,38 +1460,38 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"congruent":                           '\u2245', // ≅
 	"contourintegral":                     '\u222e', // ∮
 	"control":                             '\u2303', // ⌃
-	"controlACK":                          '\u0006',
-	"controlBEL":                          '\u0007',
-	"controlBS":                           '\u0008',
-	"controlCAN":                          '\u0018',
-	"controlCR":                           '\u000d',
-	"controlDC1":                          '\u0011',
-	"controlDC2":                          '\u0012',
-	"controlDC3":                          '\u0013',
-	"controlDC4":                          '\u0014',
+	"controlACK":                          '\x06',
+	"controlBEL":                          '\a',
+	"controlBS":                           '\b',
+	"controlCAN":                          '\x18',
+	"controlCR":                           '\r',
+	"controlDC1":                          '\x11',
+	"controlDC2":                          '\x12',
+	"controlDC3":                          '\x13',
+	"controlDC4":                          '\x14',
 	"controlDEL":                          '\u007f',
-	"controlDLE":                          '\u0010',
-	"controlEM":                           '\u0019',
-	"controlENQ":                          '\u0005',
-	"controlEOT":                          '\u0004',
-	"controlESC":                          '\u001b',
-	"controlETB":                          '\u0017',
-	"controlETX":                          '\u0003',
-	"controlFF":                           '\u000c',
-	"controlFS":                           '\u001c',
-	"controlGS":                           '\u001d',
-	"controlHT":                           '\u0009',
-	"controlLF":                           '\u000a',
-	"controlNAK":                          '\u0015',
-	"controlRS":                           '\u001e',
-	"controlSI":                           '\u000f',
-	"controlSO":                           '\u000e',
-	"controlSOT":                          '\u0002',
-	"controlSTX":                          '\u0001',
-	"controlSUB":                          '\u001a',
-	"controlSYN":                          '\u0016',
-	"controlUS":                           '\u001f',
-	"controlVT":                           '\u000b',
+	"controlDLE":                          '\x10',
+	"controlEM":                           '\x19',
+	"controlENQ":                          '\x05',
+	"controlEOT":                          '\x04',
+	"controlESC":                          '\x1b',
+	"controlETB":                          '\x17',
+	"controlETX":                          '\x03',
+	"controlFF":                           '\f',
+	"controlFS":                           '\x1c',
+	"controlGS":                           '\x1d',
+	"controlHT":                           '\t',
+	"controlLF":                           '\n',
+	"controlNAK":                          '\x15',
+	"controlRS":                           '\x1e',
+	"controlSI":                           '\x0f',
+	"controlSO":                           '\x0e',
+	"controlSOT":                          '\x02',
+	"controlSTX":                          '\x01',
+	"controlSUB":                          '\x1a',
+	"controlSYN":                          '\x16',
+	"controlUS":                           '\x1f',
+	"controlVT":                           '\v',
 	"copyright":                           '\u00a9', // ©
 	"copyrightsans":                       '\uf8e9',
 	"copyrightserif":                      '\uf6d9',
@@ -1491,7 +1514,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"cyrFlex":                             '\uf6d2',
 	"cyrbreve":                            '\uf6d4',
 	"cyrflex":                             '\uf6d5',
-	"d":                                   '\u0064', // d
+	"d":                                   'd',      // d
 	"daarmenian":                          '\u0564', // դ
 	"dabengali":                           '\u09a6', // দ
 	"dadarabic":                           '\u0636', // ض
@@ -1511,27 +1534,27 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"dalet":                               '\u05d3', // ד
 	"daletdagesh":                         '\ufb33', // דּ
 	"daletdageshhebrew":                   '\ufb33', // דּ
-	"dalethatafpatah":                     '\u05b2', // ֲ
-	"dalethatafpatahhebrew":               '\u05b2', // ֲ
-	"dalethatafsegol":                     '\u05b1', // ֱ
-	"dalethatafsegolhebrew":               '\u05b1', // ֱ
+	"dalethatafpatah":                     '\u05d3', // ד
+	"dalethatafpatahhebrew":               '\u05d3', // ד
+	"dalethatafsegol":                     '\u05d3', // ד
+	"dalethatafsegolhebrew":               '\u05d3', // ד
 	"dalethebrew":                         '\u05d3', // ד
-	"dalethiriq":                          '\u05b4', // ִ
-	"dalethiriqhebrew":                    '\u05b4', // ִ
-	"daletholam":                          '\u05b9', // ֹ
-	"daletholamhebrew":                    '\u05b9', // ֹ
-	"daletpatah":                          '\u05b7', // ַ
-	"daletpatahhebrew":                    '\u05b7', // ַ
-	"daletqamats":                         '\u05b8', // ָ
-	"daletqamatshebrew":                   '\u05b8', // ָ
-	"daletqubuts":                         '\u05bb', // ֻ
-	"daletqubutshebrew":                   '\u05bb', // ֻ
-	"daletsegol":                          '\u05b6', // ֶ
-	"daletsegolhebrew":                    '\u05b6', // ֶ
-	"daletsheva":                          '\u05b0', // ְ
-	"daletshevahebrew":                    '\u05b0', // ְ
-	"dalettsere":                          '\u05b5', // ֵ
-	"dalettserehebrew":                    '\u05b5', // ֵ
+	"dalethiriq":                          '\u05d3', // ד
+	"dalethiriqhebrew":                    '\u05d3', // ד
+	"daletholam":                          '\u05d3', // ד
+	"daletholamhebrew":                    '\u05d3', // ד
+	"daletpatah":                          '\u05d3', // ד
+	"daletpatahhebrew":                    '\u05d3', // ד
+	"daletqamats":                         '\u05d3', // ד
+	"daletqamatshebrew":                   '\u05d3', // ד
+	"daletqubuts":                         '\u05d3', // ד
+	"daletqubutshebrew":                   '\u05d3', // ד
+	"daletsegol":                          '\u05d3', // ד
+	"daletsegolhebrew":                    '\u05d3', // ד
+	"daletsheva":                          '\u05d3', // ד
+	"daletshevahebrew":                    '\u05d3', // ד
+	"dalettsere":                          '\u05d3', // ד
+	"dalettserehebrew":                    '\u05d3', // ד
 	"dalfinalarabic":                      '\ufeaa', // ﺪ
 	"dammaarabic":                         '\u064f', // ُ
 	"dammalowarabic":                      '\u064f', // ُ
@@ -1625,7 +1648,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"dodekthai":                   '\u0e14', // ด
 	"dohiragana":                  '\u3069', // ど
 	"dokatakana":                  '\u30c9', // ド
-	"dollar":                      '\u0024', // $
+	"dollar":                      '$',      // $
 	"dollarinferior":              '\uf6e3',
 	"dollarmonospace":             '\uff04', // ＄
 	"dollaroldstyle":              '\uf724',
@@ -1660,7 +1683,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"dzeabkhasiancyrillic":        '\u04e1', // ӡ
 	"dzecyrillic":                 '\u0455', // ѕ
 	"dzhecyrillic":                '\u045f', // џ
-	"e":                           '\u0065', // e
+	"e":                           'e',      // e
 	"eacute":                      '\u00e9', // é
 	"earth":                       '\u2641', // ♁
 	"ebengali":                    '\u098f', // এ
@@ -1699,7 +1722,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ehiragana":                   '\u3048', // え
 	"ehookabove":                  '\u1ebb', // ẻ
 	"eibopomofo":                  '\u311f', // ㄟ
-	"eight":                       '\u0038', // 8
+	"eight":                       '8',      // 8
 	"eightarabic":                 '\u0668', // ٨
 	"eightbengali":                '\u09ee', // ৮
 	"eightcircle":                 '\u2467', // ⑧
@@ -1766,7 +1789,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"eparen":              '\u24a0', // ⒠
 	"epsilon":             '\u03b5', // ε
 	"epsilontonos":        '\u03ad', // έ
-	"equal":               '\u003d', // =
+	"equal":               '=',      // =
 	"equalmonospace":      '\uff1d', // ＝
 	"equalsmall":          '\ufe66', // ﹦
 	"equalsuperior":       '\u207c', // ⁼
@@ -1804,7 +1827,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"evowelsignbengali":           '\u09c7', // ে
 	"evowelsigndeva":              '\u0947', // े
 	"evowelsigngujarati":          '\u0ac7', // ે
-	"exclam":                      '\u0021', // !
+	"exclam":                      '!',      // !
 	"exclamarmenian":              '\u055c', // ՜
 	"exclamdbl":                   '\u203c', // ‼
 	"exclamdown":                  '\u00a1', // ¡
@@ -1817,7 +1840,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ezhcurl":                     '\u0293', // ʓ
 	"ezhreversed":                 '\u01b9', // ƹ
 	"ezhtail":                     '\u01ba', // ƺ
-	"f":                           '\u0066', // f
+	"f":                           'f',      // f
 	"fadeva":                      '\u095e', // फ़
 	"fagurmukhi":                  '\u0a5e', // ਫ਼
 	"fahrenheit":                  '\u2109', // ℉
@@ -1848,10 +1871,10 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"finalkafdagesh":              '\ufb3a', // ךּ
 	"finalkafdageshhebrew":        '\ufb3a', // ךּ
 	"finalkafhebrew":              '\u05da', // ך
-	"finalkafqamats":              '\u05b8', // ָ
-	"finalkafqamatshebrew":        '\u05b8', // ָ
-	"finalkafsheva":               '\u05b0', // ְ
-	"finalkafshevahebrew":         '\u05b0', // ְ
+	"finalkafqamats":              '\u05da', // ך
+	"finalkafqamatshebrew":        '\u05da', // ך
+	"finalkafsheva":               '\u05da', // ך
+	"finalkafshevahebrew":         '\u05da', // ך
 	"finalmem":                    '\u05dd', // ם
 	"finalmemhebrew":              '\u05dd', // ם
 	"finalnun":                    '\u05df', // ן
@@ -1863,7 +1886,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"firsttonechinese":            '\u02c9', // ˉ
 	"fisheye":                     '\u25c9', // ◉
 	"fitacyrillic":                '\u0473', // ѳ
-	"five":                        '\u0035', // 5
+	"five":                        '5',      // 5
 	"fivearabic":                  '\u0665', // ٥
 	"fivebengali":                 '\u09eb', // ৫
 	"fivecircle":                  '\u2464', // ⑤
@@ -1892,7 +1915,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"fofathai":                    '\u0e1d', // ฝ
 	"fongmanthai":                 '\u0e4f', // ๏
 	"forall":                      '\u2200', // ∀
-	"four":                        '\u0034', // 4
+	"four":                        '4',      // 4
 	"fourarabic":                  '\u0664', // ٤
 	"fourbengali":                 '\u09ea', // ৪
 	"fourcircle":                  '\u2463', // ④
@@ -1920,7 +1943,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"fparen":                      '\u24a1', // ⒡
 	"fraction":                    '\u2044', // ⁄
 	"franc":                       '\u20a3', // ₣
-	"g":                           '\u0067', // g
+	"g":                           'g',      // g
 	"gabengali":                   '\u0997', // গ
 	"gacute":                      '\u01f5', // ǵ
 	"gadeva":                      '\u0917', // ग
@@ -1996,7 +2019,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"gparen":                      '\u24a2', // ⒢
 	"gpasquare":                   '\u33ac', // ㎬
 	"gradient":                    '\u2207', // ∇
-	"grave":                       '\u0060', // `
+	"grave":                       '`',      // `
 	"gravebelowcmb":               '\u0316', // ̖
 	"gravecmb":                    '\u0300', // ̀
 	"gravecomb":                   '\u0300', // ̀
@@ -2004,7 +2027,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"gravelowmod":                 '\u02ce', // ˎ
 	"gravemonospace":              '\uff40', // ｀
 	"gravetonecmb":                '\u0340', // ̀
-	"greater":                     '\u003e', // >
+	"greater":                     '>',      // >
 	"greaterequal":                '\u2265', // ≥
 	"greaterequalorless":          '\u22db', // ⋛
 	"greatermonospace":            '\uff1e', // ＞
@@ -2022,7 +2045,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"gukatakana":                  '\u30b0', // グ
 	"guramusquare":                '\u3318', // ㌘
 	"gysquare":                    '\u33c9', // ㏉
-	"h":                           '\u0068', // h
+	"h":                           'h',      // h
 	"haabkhasiancyrillic":            '\u04a9', // ҩ
 	"haaltonearabic":                 '\u06c1', // ہ
 	"habengali":                      '\u09b9', // হ
@@ -2040,14 +2063,14 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"hakatakanahalfwidth":            '\uff8a', // ﾊ
 	"halantgurmukhi":                 '\u0a4d', // ੍
 	"hamzaarabic":                    '\u0621', // ء
-	"hamzadammaarabic":               '\u064f', // ُ
-	"hamzadammatanarabic":            '\u064c', // ٌ
-	"hamzafathaarabic":               '\u064e', // َ
-	"hamzafathatanarabic":            '\u064b', // ً
+	"hamzadammaarabic":               '\u0621', // ء
+	"hamzadammatanarabic":            '\u0621', // ء
+	"hamzafathaarabic":               '\u0621', // ء
+	"hamzafathatanarabic":            '\u0621', // ء
 	"hamzalowarabic":                 '\u0621', // ء
-	"hamzalowkasraarabic":            '\u0650', // ِ
-	"hamzalowkasratanarabic":         '\u064d', // ٍ
-	"hamzasukunarabic":               '\u0652', // ْ
+	"hamzalowkasraarabic":            '\u0621', // ء
+	"hamzalowkasratanarabic":         '\u0621', // ء
+	"hamzasukunarabic":               '\u0621', // ء
 	"hangulfiller":                   '\u3164', // ㅤ
 	"hardsigncyrillic":               '\u044a', // ъ
 	"harpoonleftbarbup":              '\u21bc', // ↼
@@ -2167,13 +2190,13 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"hungarumlaut":                   '\u02dd', // ˝
 	"hungarumlautcmb":                '\u030b', // ̋
 	"hv":                             '\u0195', // ƕ
-	"hyphen":                         '\u002d', // -
+	"hyphen":                         '-',      // -
 	"hypheninferior":                 '\uf6e5',
 	"hyphenmonospace":                '\uff0d', // －
 	"hyphensmall":                    '\ufe63', // ﹣
 	"hyphensuperior":                 '\uf6e6',
 	"hyphentwo":                      '\u2010', // ‐
-	"i":                              '\u0069', // i
+	"i":                              'i',      // i
 	"iacute":                         '\u00ed', // í
 	"iacyrillic":                     '\u044f', // я
 	"ibengali":                       '\u0987', // ই
@@ -2315,7 +2338,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ivowelsigngujarati":        '\u0abf', // િ
 	"izhitsacyrillic":           '\u0475', // ѵ
 	"izhitsadblgravecyrillic":   '\u0477', // ѷ
-	"j":                               '\u006a', // j
+	"j":                               'j',      // j
 	"jaarmenian":                      '\u0571', // ձ
 	"jabengali":                       '\u099c', // জ
 	"jadeva":                          '\u091c', // ज
@@ -2343,7 +2366,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"jmonospace":                      '\uff4a', // ｊ
 	"jparen":                          '\u24a5', // ⒥
 	"jsuperior":                       '\u02b2', // ʲ
-	"k":                               '\u006b', // k
+	"k":                               'k',      // k
 	"kabashkircyrillic":               '\u04a1', // ҡ
 	"kabengali":                       '\u0995', // ক
 	"kacute":                          '\u1e31', // ḱ
@@ -2457,7 +2480,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"kukatakanahalfwidth":             '\uff78', // ｸ
 	"kvsquare":                        '\u33b8', // ㎸
 	"kwsquare":                        '\u33be', // ㎾
-	"l":                               '\u006c', // l
+	"l":                               'l',      // l
 	"labengali":                       '\u09b2', // ল
 	"lacute":                          '\u013a', // ĺ
 	"ladeva":                          '\u0932', // ल
@@ -2479,10 +2502,10 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"lameddagesh":                     '\ufb3c', // לּ
 	"lameddageshhebrew":               '\ufb3c', // לּ
 	"lamedhebrew":                     '\u05dc', // ל
-	"lamedholam":                      '\u05b9', // ֹ
-	"lamedholamdagesh":                '\u05bc', // ּ
-	"lamedholamdageshhebrew":          '\u05bc', // ּ
-	"lamedholamhebrew":                '\u05b9', // ֹ
+	"lamedholam":                      '\u05dc', // ל
+	"lamedholamdagesh":                '\u05dc', // ל
+	"lamedholamdageshhebrew":          '\u05dc', // ל
+	"lamedholamhebrew":                '\u05dc', // ל
 	"lamfinalarabic":                  '\ufede', // ﻞ
 	"lamhahinitialarabic":             '\ufcca', // ﳊ
 	"laminitialarabic":                '\ufedf', // ﻟ
@@ -2492,8 +2515,8 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"lammedialarabic":                 '\ufee0', // ﻠ
 	"lammeemhahinitialarabic":         '\ufd88', // ﶈ
 	"lammeeminitialarabic":            '\ufccc', // ﳌ
-	"lammeemjeeminitialarabic":        '\ufea0', // ﺠ
-	"lammeemkhahinitialarabic":        '\ufea8', // ﺨ
+	"lammeemjeeminitialarabic":        '\ufedf', // ﻟ
+	"lammeemkhahinitialarabic":        '\ufedf', // ﻟ
 	"largecircle":                     '\u25ef', // ◯
 	"lbar":                            '\u019a', // ƚ
 	"lbelt":                           '\u026c', // ɬ
@@ -2509,7 +2532,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ldotbelowmacron":                 '\u1e39', // ḹ
 	"leftangleabovecmb":               '\u031a', // ̚
 	"lefttackbelowcmb":                '\u0318', // ̘
-	"less":                            '\u003c', // <
+	"less":                            '<',      // <
 	"lessequal":                       '\u2264', // ≤
 	"lessequalorgreater":              '\u22da', // ⋚
 	"lessmonospace":                   '\uff1c', // ＜
@@ -2558,7 +2581,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"lvocalicvowelsignbengali":        '\u09e2', // ৢ
 	"lvocalicvowelsigndeva":           '\u0962', // ॢ
 	"lxsquare":                        '\u33d3', // ㏓
-	"m":                               '\u006d', // m
+	"m":                               'm',      // m
 	"mabengali":                       '\u09ae', // ম
 	"macron":                          '\u00af', // ¯
 	"macronbelowcmb":                  '\u0331', // ̱
@@ -2695,7 +2718,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"mvsquare":                   '\u33b7', // ㎷
 	"mwmegasquare":               '\u33bf', // ㎿
 	"mwsquare":                   '\u33bd', // ㎽
-	"n":                          '\u006e', // n
+	"n":                          'n',      // n
 	"nabengali":                  '\u09a8', // ন
 	"nabla":                      '\u2207', // ∇
 	"nacute":                     '\u0144', // ń
@@ -2744,7 +2767,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"nikatakanahalfwidth":        '\uff86', // ﾆ
 	"nikhahitleftthai":           '\uf899',
 	"nikhahitthai":               '\u0e4d', // ํ
-	"nine":                       '\u0039', // 9
+	"nine":                       '9',      // 9
 	"ninearabic":                 '\u0669', // ٩
 	"ninebengali":                '\u09ef', // ৯
 	"ninecircle":                 '\u2468', // ⑨
@@ -2790,7 +2813,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"noonfinalarabic":            '\ufee6', // ﻦ
 	"noonghunnaarabic":           '\u06ba', // ں
 	"noonghunnafinalarabic":      '\ufb9f', // ﮟ
-	"noonhehinitialarabic":       '\ufeec', // ﻬ
+	"noonhehinitialarabic":       '\ufee7', // ﻧ
 	"nooninitialarabic":          '\ufee7', // ﻧ
 	"noonjeeminitialarabic":      '\ufcd2', // ﳒ
 	"noonjeemisolatedarabic":     '\ufc4b', // ﱋ
@@ -2826,7 +2849,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"nuktadeva":                  '\u093c', // ़
 	"nuktagujarati":              '\u0abc', // ઼
 	"nuktagurmukhi":              '\u0a3c', // ਼
-	"numbersign":                 '\u0023', // #
+	"numbersign":                 '#',      // #
 	"numbersignmonospace":        '\uff03', // ＃
 	"numbersignsmall":            '\ufe5f', // ﹟
 	"numeralsigngreek":           '\u0374', // ʹ
@@ -2842,7 +2865,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"nyadeva":                    '\u091e', // ञ
 	"nyagujarati":                '\u0a9e', // ઞ
 	"nyagurmukhi":                '\u0a1e', // ਞ
-	"o":                          '\u006f', // o
+	"o":                          'o',      // o
 	"oacute":                     '\u00f3', // ó
 	"oangthai":                   '\u0e2d', // อ
 	"obarred":                    '\u0275', // ɵ
@@ -2907,7 +2930,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"omicron":                    '\u03bf', // ο
 	"omicrontonos":               '\u03cc', // ό
 	"omonospace":                 '\uff4f', // ｏ
-	"one":                        '\u0031', // 1
+	"one":                        '1',      // 1
 	"onearabic":                  '\u0661', // ١
 	"onebengali":                 '\u09e7', // ১
 	"onecircle":                  '\u2460', // ①
@@ -2969,7 +2992,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"ovowelsignbengali":          '\u09cb', // ো
 	"ovowelsigndeva":             '\u094b', // ो
 	"ovowelsigngujarati":         '\u0acb', // ો
-	"p":                          '\u0070', // p
+	"p":                          'p',      // p
 	"paampssquare":               '\u3380', // ㎀
 	"paasentosquare":             '\u332b', // ㌫
 	"pabengali":                  '\u09aa', // প
@@ -2987,7 +3010,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"pansioskorean":              '\u317f', // ㅿ
 	"paragraph":                  '\u00b6', // ¶
 	"parallel":                   '\u2225', // ∥
-	"parenleft":                  '\u0028', // (
+	"parenleft":                  '(',      // (
 	"parenleftaltonearabic":      '\ufd3e', // ﴾
 	"parenleftbt":                '\uf8ed',
 	"parenleftex":                '\uf8ec',
@@ -2997,7 +3020,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"parenleftsuperior":          '\u207d', // ⁽
 	"parenlefttp":                '\uf8eb',
 	"parenleftvertical":          '\ufe35', // ︵
-	"parenright":                 '\u0029', // )
+	"parenright":                 ')',      // )
 	"parenrightaltonearabic":     '\ufd3f', // ﴿
 	"parenrightbt":               '\uf8f8',
 	"parenrightex":               '\uf8f7',
@@ -3039,11 +3062,11 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"pekatakana":                 '\u30da', // ペ
 	"pemiddlehookcyrillic":       '\u04a7', // ҧ
 	"perafehebrew":               '\ufb4e', // פֿ
-	"percent":                    '\u0025', // %
+	"percent":                    '%',      // %
 	"percentarabic":              '\u066a', // ٪
 	"percentmonospace":           '\uff05', // ％
 	"percentsmall":               '\ufe6a', // ﹪
-	"period":                     '\u002e', // .
+	"period":                     '.',      // .
 	"periodarmenian":             '\u0589', // ։
 	"periodcentered":             '\u00b7', // ·
 	"periodhalfwidth":            '\uff61', // ｡
@@ -3091,7 +3114,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"pikatakana":                 '\u30d4', // ピ
 	"pisymbolgreek":              '\u03d6', // ϖ
 	"piwrarmenian":               '\u0583', // փ
-	"plus":                       '\u002b', // +
+	"plus":                       '+',      // +
 	"plusbelowcmb":               '\u031f', // ̟
 	"pluscircle":                 '\u2295', // ⊕
 	"plusminus":                  '\u00b1', // ±
@@ -3131,7 +3154,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"pukatakana":                 '\u30d7', // プ
 	"pvsquare":                   '\u33b4', // ㎴
 	"pwsquare":                   '\u33ba', // ㎺
-	"q":                          '\u0071', // q
+	"q":                          'q',      // q
 	"qadeva":                     '\u0958', // क़
 	"qadmahebrew":                '\u05a8', // ֨
 	"qafarabic":                  '\u0642', // ق
@@ -3162,27 +3185,27 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"qof":                        '\u05e7', // ק
 	"qofdagesh":                  '\ufb47', // קּ
 	"qofdageshhebrew":            '\ufb47', // קּ
-	"qofhatafpatah":              '\u05b2', // ֲ
-	"qofhatafpatahhebrew":        '\u05b2', // ֲ
-	"qofhatafsegol":              '\u05b1', // ֱ
-	"qofhatafsegolhebrew":        '\u05b1', // ֱ
+	"qofhatafpatah":              '\u05e7', // ק
+	"qofhatafpatahhebrew":        '\u05e7', // ק
+	"qofhatafsegol":              '\u05e7', // ק
+	"qofhatafsegolhebrew":        '\u05e7', // ק
 	"qofhebrew":                  '\u05e7', // ק
-	"qofhiriq":                   '\u05b4', // ִ
-	"qofhiriqhebrew":             '\u05b4', // ִ
-	"qofholam":                   '\u05b9', // ֹ
-	"qofholamhebrew":             '\u05b9', // ֹ
-	"qofpatah":                   '\u05b7', // ַ
-	"qofpatahhebrew":             '\u05b7', // ַ
-	"qofqamats":                  '\u05b8', // ָ
-	"qofqamatshebrew":            '\u05b8', // ָ
-	"qofqubuts":                  '\u05bb', // ֻ
-	"qofqubutshebrew":            '\u05bb', // ֻ
-	"qofsegol":                   '\u05b6', // ֶ
-	"qofsegolhebrew":             '\u05b6', // ֶ
-	"qofsheva":                   '\u05b0', // ְ
-	"qofshevahebrew":             '\u05b0', // ְ
-	"qoftsere":                   '\u05b5', // ֵ
-	"qoftserehebrew":             '\u05b5', // ֵ
+	"qofhiriq":                   '\u05e7', // ק
+	"qofhiriqhebrew":             '\u05e7', // ק
+	"qofholam":                   '\u05e7', // ק
+	"qofholamhebrew":             '\u05e7', // ק
+	"qofpatah":                   '\u05e7', // ק
+	"qofpatahhebrew":             '\u05e7', // ק
+	"qofqamats":                  '\u05e7', // ק
+	"qofqamatshebrew":            '\u05e7', // ק
+	"qofqubuts":                  '\u05e7', // ק
+	"qofqubutshebrew":            '\u05e7', // ק
+	"qofsegol":                   '\u05e7', // ק
+	"qofsegolhebrew":             '\u05e7', // ק
+	"qofsheva":                   '\u05e7', // ק
+	"qofshevahebrew":             '\u05e7', // ק
+	"qoftsere":                   '\u05e7', // ק
+	"qoftserehebrew":             '\u05e7', // ק
 	"qparen":                     '\u24ac', // ⒬
 	"quarternote":                '\u2669', // ♩
 	"qubuts":                     '\u05bb', // ֻ
@@ -3193,7 +3216,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"qubutsnarrowhebrew":         '\u05bb', // ֻ
 	"qubutsquarterhebrew":        '\u05bb', // ֻ
 	"qubutswidehebrew":           '\u05bb', // ֻ
-	"question":                   '\u003f', // ?
+	"question":                   '?',      // ?
 	"questionarabic":             '\u061f', // ؟
 	"questionarmenian":           '\u055e', // ՞
 	"questiondown":               '\u00bf', // ¿
@@ -3201,7 +3224,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"questiongreek":              '\u037e', // ;
 	"questionmonospace":          '\uff1f', // ？
 	"questionsmall":              '\uf73f',
-	"quotedbl":                   '\u0022', // "
+	"quotedbl":                   '"',      // "
 	"quotedblbase":               '\u201e', // „
 	"quotedblleft":               '\u201c', // “
 	"quotedblmonospace":          '\uff02', // ＂
@@ -3214,9 +3237,9 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"quoteright":                 '\u2019', // ’
 	"quoterightn":                '\u0149', // ŉ
 	"quotesinglbase":             '\u201a', // ‚
-	"quotesingle":                '\u0027', // '
+	"quotesingle":                '\'',     // \'
 	"quotesinglemonospace":       '\uff07', // ＇
-	"r":                          '\u0072', // r
+	"r":                          'r',      // r
 	"raarmenian":                 '\u057c', // ռ
 	"rabengali":                  '\u09b0', // র
 	"racute":                     '\u0155', // ŕ
@@ -3256,32 +3279,32 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"reharmenian":                '\u0580', // ր
 	"rehfinalarabic":             '\ufeae', // ﺮ
 	"rehiragana":                 '\u308c', // れ
-	"rehyehaleflamarabic":        '\u0644', // ل
+	"rehyehaleflamarabic":        '\u0631', // ر
 	"rekatakana":                 '\u30ec', // レ
 	"rekatakanahalfwidth":        '\uff9a', // ﾚ
 	"resh":                       '\u05e8', // ר
 	"reshdageshhebrew":           '\ufb48', // רּ
-	"reshhatafpatah":             '\u05b2', // ֲ
-	"reshhatafpatahhebrew":       '\u05b2', // ֲ
-	"reshhatafsegol":             '\u05b1', // ֱ
-	"reshhatafsegolhebrew":       '\u05b1', // ֱ
+	"reshhatafpatah":             '\u05e8', // ר
+	"reshhatafpatahhebrew":       '\u05e8', // ר
+	"reshhatafsegol":             '\u05e8', // ר
+	"reshhatafsegolhebrew":       '\u05e8', // ר
 	"reshhebrew":                 '\u05e8', // ר
-	"reshhiriq":                  '\u05b4', // ִ
-	"reshhiriqhebrew":            '\u05b4', // ִ
-	"reshholam":                  '\u05b9', // ֹ
-	"reshholamhebrew":            '\u05b9', // ֹ
-	"reshpatah":                  '\u05b7', // ַ
-	"reshpatahhebrew":            '\u05b7', // ַ
-	"reshqamats":                 '\u05b8', // ָ
-	"reshqamatshebrew":           '\u05b8', // ָ
-	"reshqubuts":                 '\u05bb', // ֻ
-	"reshqubutshebrew":           '\u05bb', // ֻ
-	"reshsegol":                  '\u05b6', // ֶ
-	"reshsegolhebrew":            '\u05b6', // ֶ
-	"reshsheva":                  '\u05b0', // ְ
-	"reshshevahebrew":            '\u05b0', // ְ
-	"reshtsere":                  '\u05b5', // ֵ
-	"reshtserehebrew":            '\u05b5', // ֵ
+	"reshhiriq":                  '\u05e8', // ר
+	"reshhiriqhebrew":            '\u05e8', // ר
+	"reshholam":                  '\u05e8', // ר
+	"reshholamhebrew":            '\u05e8', // ר
+	"reshpatah":                  '\u05e8', // ר
+	"reshpatahhebrew":            '\u05e8', // ר
+	"reshqamats":                 '\u05e8', // ר
+	"reshqamatshebrew":           '\u05e8', // ר
+	"reshqubuts":                 '\u05e8', // ר
+	"reshqubutshebrew":           '\u05e8', // ר
+	"reshsegol":                  '\u05e8', // ר
+	"reshsegolhebrew":            '\u05e8', // ר
+	"reshsheva":                  '\u05e8', // ר
+	"reshshevahebrew":            '\u05e8', // ר
+	"reshtsere":                  '\u05e8', // ר
+	"reshtserehebrew":            '\u05e8', // ר
 	"reversedtilde":              '\u223d', // ∽
 	"reviahebrew":                '\u0597', // ֗
 	"reviamugrashhebrew":         '\u0597', // ֗
@@ -3368,7 +3391,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"rvocalicvowelsignbengali":   '\u09c3', // ৃ
 	"rvocalicvowelsigndeva":      '\u0943', // ृ
 	"rvocalicvowelsigngujarati":  '\u0ac3', // ૃ
-	"s":                               '\u0073', // s
+	"s":                               's',      // s
 	"sabengali":                       '\u09b8', // স
 	"sacute":                          '\u015b', // ś
 	"sacutedotaccent":                 '\u1e65', // ṥ
@@ -3440,7 +3463,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"sehiragana":                              '\u305b', // せ
 	"sekatakana":                              '\u30bb', // セ
 	"sekatakanahalfwidth":                     '\uff7e', // ｾ
-	"semicolon":                               '\u003b', // ;
+	"semicolon":                               ';',      // ;
 	"semicolonarabic":                         '\u061b', // ؛
 	"semicolonmonospace":                      '\uff1b', // ；
 	"semicolonsmall":                          '\ufe54', // ﹔
@@ -3448,7 +3471,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"semivoicedmarkkanahalfwidth":             '\uff9f', // ﾟ
 	"sentisquare":                             '\u3322', // ㌢
 	"sentosquare":                             '\u3323', // ㌣
-	"seven":                                   '\u0037', // 7
+	"seven":                                   '7',      // 7
 	"sevenarabic":                             '\u0667', // ٧
 	"sevenbengali":                            '\u09ed', // ৭
 	"sevencircle":                             '\u2466', // ⑦
@@ -3480,7 +3503,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"shaddadammaarabic":                       '\ufc61', // ﱡ
 	"shaddadammatanarabic":                    '\ufc5e', // ﱞ
 	"shaddafathaarabic":                       '\ufc60', // ﱠ
-	"shaddafathatanarabic":                    '\u064b', // ً
+	"shaddafathatanarabic":                    '\u0651', // ّ
 	"shaddakasraarabic":                       '\ufc62', // ﱢ
 	"shaddakasratanarabic":                    '\ufc5f', // ﱟ
 	"shade":                                   '\u2592', // ▒
@@ -3546,7 +3569,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"siosparenkorean":                         '\u3206', // ㈆
 	"siospieupkorean":                         '\u317d', // ㅽ
 	"siostikeutkorean":                        '\u317c', // ㅼ
-	"six":                                     '\u0036', // 6
+	"six":                                     '6',      // 6
 	"sixarabic":                               '\u0666', // ٦
 	"sixbengali":                              '\u09ec', // ৬
 	"sixcircle":                               '\u2465', // ⑥
@@ -3570,7 +3593,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"sixteenparen":                            '\u2483', // ⒃
 	"sixteenperiod":                           '\u2497', // ⒗
 	"sixthai":                                 '\u0e56', // ๖
-	"slash":                                   '\u002f', // /
+	"slash":                                   '/',      // /
 	"slashmonospace":                          '\uff0f', // ／
 	"slong":                                   '\u017f', // ſ
 	"slongdotaccent":                          '\u1e9b', // ẛ
@@ -3588,8 +3611,8 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"sosalathai":                              '\u0e28', // ศ
 	"sosothai":                                '\u0e0b', // ซ
 	"sosuathai":                               '\u0e2a', // ส
-	"space":                                   '\u0020', //
-	"spacehackarabic":                         '\u0020', //
+	"space":                                   ' ',      //
+	"spacehackarabic":                         ' ',      //
 	"spade":                                   '\u2660', // ♠
 	"spadesuitblack":                          '\u2660', // ♠
 	"spadesuitwhite":                          '\u2664', // ♤
@@ -3646,7 +3669,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"supersetorequal":                         '\u2287', // ⊇
 	"svsquare":                                '\u33dc', // ㏜
 	"syouwaerasquare":                         '\u337c', // ㍼
-	"t":                                       '\u0074', // t
+	"t":                                       't',      // t
 	"tabengali":                               '\u09a4', // ত
 	"tackdown":                                '\u22a4', // ⊤
 	"tackleft":                                '\u22a3', // ⊣
@@ -3677,7 +3700,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"tchehfinalarabic":                        '\ufb7b', // ﭻ
 	"tchehinitialarabic":                      '\ufb7c', // ﭼ
 	"tchehmedialarabic":                       '\ufb7d', // ﭽ
-	"tchehmeeminitialarabic":                  '\ufee4', // ﻤ
+	"tchehmeeminitialarabic":                  '\ufb7c', // ﭼ
 	"tcircle":                                 '\u24e3', // ⓣ
 	"tcircumflexbelow":                        '\u1e71', // ṱ
 	"tcommaaccent":                            '\u0163', // ţ
@@ -3757,7 +3780,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"thousandcyrillic":                        '\u0482', // ҂
 	"thousandsseparatorarabic":                '\u066c', // ٬
 	"thousandsseparatorpersian":               '\u066c', // ٬
-	"three":                                   '\u0033', // 3
+	"three":                                   '3',      // 3
 	"threearabic":                             '\u0663', // ٣
 	"threebengali":                            '\u09e9', // ৩
 	"threecircle":                             '\u2462', // ③
@@ -3881,7 +3904,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"twentyhangzhou":                          '\u5344', // 卄
 	"twentyparen":                             '\u2487', // ⒇
 	"twentyperiod":                            '\u249b', // ⒛
-	"two":                                     '\u0032', // 2
+	"two":                                     '2',      // 2
 	"twoarabic":                               '\u0662', // ٢
 	"twobengali":                              '\u09e8', // ২
 	"twocircle":                               '\u2461', // ②
@@ -3907,7 +3930,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"twosuperior":                             '\u00b2', // ²
 	"twothai":                                 '\u0e52', // ๒
 	"twothirds":                               '\u2154', // ⅔
-	"u":                                       '\u0075', // u
+	"u":                                       'u',      // u
 	"uacute":                                  '\u00fa', // ú
 	"ubar":                                    '\u0289', // ʉ
 	"ubengali":                                '\u0989', // উ
@@ -3953,7 +3976,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"umacrondieresis":                         '\u1e7b', // ṻ
 	"umatragurmukhi":                          '\u0a41', // ੁ
 	"umonospace":                              '\uff55', // ｕ
-	"underscore":                              '\u005f', // _
+	"underscore":                              '_',      // _
 	"underscoredbl":                           '\u2017', // ‗
 	"underscoremonospace":                     '\uff3f', // ＿
 	"underscorevertical":                      '\ufe33', // ︳
@@ -3993,7 +4016,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"uvowelsignbengali":                       '\u09c1', // ু
 	"uvowelsigndeva":                          '\u0941', // ु
 	"uvowelsigngujarati":                      '\u0ac1', // ુ
-	"v":                                       '\u0076', // v
+	"v":                                       'v',      // v
 	"vadeva":                                  '\u0935', // व
 	"vagujarati":                              '\u0ab5', // વ
 	"vagurmukhi":                              '\u0a35', // ਵ
@@ -4016,7 +4039,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"vehmedialarabic":                         '\ufb6d', // ﭭ
 	"vekatakana":                              '\u30f9', // ヹ
 	"venus":                                   '\u2640', // ♀
-	"verticalbar":                             '\u007c', // |
+	"verticalbar":                             '|',      // |
 	"verticallineabovecmb":                    '\u030d', // ̍
 	"verticallinebelowcmb":                    '\u0329', // ̩
 	"verticallinelowmod":                      '\u02cc', // ˌ
@@ -4042,7 +4065,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"vturned":                                 '\u028c', // ʌ
 	"vuhiragana":                              '\u3094', // ゔ
 	"vukatakana":                              '\u30f4', // ヴ
-	"w":                                       '\u0077', // w
+	"w":                                       'w',      // w
 	"wacute":                                  '\u1e83', // ẃ
 	"waekorean":                               '\u3159', // ㅙ
 	"wahiragana":                              '\u308f', // わ
@@ -4111,7 +4134,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"wsuperior":                  '\u02b7', // ʷ
 	"wturned":                    '\u028d', // ʍ
 	"wynn":                       '\u01bf', // ƿ
-	"x":                          '\u0078', // x
+	"x":                          'x',      // x
 	"xabovecmb":                  '\u033d', // ̽
 	"xbopomofo":                  '\u3112', // ㄒ
 	"xcircle":                    '\u24e7', // ⓧ
@@ -4122,7 +4145,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"xmonospace":                 '\uff58', // ｘ
 	"xparen":                     '\u24b3', // ⒳
 	"xsuperior":                  '\u02e3', // ˣ
-	"y":                          '\u0079', // y
+	"y":                          'y',      // y
 	"yaadosquare":                '\u334e', // ㍎
 	"yabengali":                  '\u09af', // য
 	"yacute":                     '\u00fd', // ý
@@ -4223,7 +4246,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"yuyeokorean":               '\u318a', // ㆊ
 	"yyabengali":                '\u09df', // য়
 	"yyadeva":                   '\u095f', // य़
-	"z":                         '\u007a', // z
+	"z":                         'z',      // z
 	"zaarmenian":                '\u0566', // զ
 	"zacute":                    '\u017a', // ź
 	"zadeva":                    '\u095b', // ज़
@@ -4256,7 +4279,7 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"zedieresiscyrillic":        '\u04df', // ӟ
 	"zehiragana":                '\u305c', // ぜ
 	"zekatakana":                '\u30bc', // ゼ
-	"zero":                      '\u0030', // 0
+	"zero":                      '0',      // 0
 	"zeroarabic":                '\u0660', // ٠
 	"zerobengali":               '\u09e6', // ০
 	"zerodeva":                  '\u0966', // ०
@@ -4293,8 +4316,8 @@ var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"zukatakana":                '\u30ba', // ズ
 }
 
-var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
-	'\u0041': "A",        // A
+var glyphlistRuneToGlyphMap = map[rune]string{ // 4281 entries
+	'A':      "A",        // A
 	'\u00c6': "AE",       // Æ
 	'\u01fc': "AEacute",  // Ǽ
 	'\u01e2': "AEmacron", // Ǣ
@@ -4345,7 +4368,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00c3': "Atilde", // Ã
 	'\uf7e3': "Atildesmall",
 	'\u0531': "Aybarmenian", // Ա
-	'\u0042': "B",           // B
+	'B':      "B",           // B
 	'\u24b7': "Bcircle",     // Ⓑ
 	'\u1e02': "Bdotaccent",  // Ḃ
 	'\u1e04': "Bdotbelow",   // Ḅ
@@ -4358,7 +4381,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf6f4': "Brevesmall",
 	'\uf762': "Bsmall",
 	'\u0182': "Btopbar",    // Ƃ
-	'\u0043': "C",          // C
+	'C':      "C",          // C
 	'\u053e': "Caarmenian", // Ծ
 	'\u0106': "Cacute",     // Ć
 	'\uf6ca': "Caron",
@@ -4370,7 +4393,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24b8': "Ccircle",     // Ⓒ
 	'\u0108': "Ccircumflex", // Ĉ
 	'\u010a': "Cdot",        // Ċ
-	//	'\u010a':	"Cdotaccent", // Ċ // duplicate
+	// '\u010a':    "Cdotaccent", // Ċ -- duplicate
 	'\uf7b8': "Cedillasmall",
 	'\u0549': "Chaarmenian",                   // Չ
 	'\u04bc': "Cheabkhasiancyrillic",          // Ҽ
@@ -4387,7 +4410,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff23': "Cmonospace", // Ｃ
 	'\u0551': "Coarmenian", // Ց
 	'\uf763': "Csmall",
-	'\u0044': "D",                // D
+	'D':      "D",                // D
 	'\u01f1': "DZ",               // Ǳ
 	'\u01c4': "DZcaron",          // Ǆ
 	'\u0534': "Daarmenian",       // Դ
@@ -4413,7 +4436,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e0e': "Dlinebelow",   // Ḏ
 	'\uff24': "Dmonospace",   // Ｄ
 	'\uf6f7': "Dotaccentsmall",
-	//	'\u0110':	"Dslash", // Đ // duplicate
+	// '\u0110':    "Dslash", // Đ -- duplicate
 	'\uf764': "Dsmall",
 	'\u018b': "Dtopbar",              // Ƌ
 	'\u01f2': "Dz",                   // ǲ
@@ -4421,7 +4444,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u04e0': "Dzeabkhasiancyrillic", // Ӡ
 	'\u0405': "Dzecyrillic",          // Ѕ
 	'\u040f': "Dzhecyrillic",         // Џ
-	'\u0045': "E",                    // E
+	'E':      "E",                    // E
 	'\u00c9': "Eacute",               // É
 	'\uf7e9': "Eacutesmall",
 	'\u0114': "Ebreve",               // Ĕ
@@ -4442,7 +4465,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00cb': "Edieresis",        // Ë
 	'\uf7eb': "Edieresissmall",
 	'\u0116': "Edot", // Ė
-	//	'\u0116':	"Edotaccent", // Ė // duplicate
+	// '\u0116':    "Edotaccent", // Ė -- duplicate
 	'\u1eb8': "Edotbelow",  // Ẹ
 	'\u0424': "Efcyrillic", // Ф
 	'\u00c8': "Egrave",     // È
@@ -4486,7 +4509,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01b7': "Ezh",          // Ʒ
 	'\u01ee': "Ezhcaron",     // Ǯ
 	'\u01b8': "Ezhreversed",  // Ƹ
-	'\u0046': "F",            // F
+	'F':      "F",            // F
 	'\u24bb': "Fcircle",      // Ⓕ
 	'\u1e1e': "Fdotaccent",   // Ḟ
 	'\u0556': "Feharmenian",  // Ֆ
@@ -4497,7 +4520,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff26': "Fmonospace",   // Ｆ
 	'\u2163': "Fourroman",    // Ⅳ
 	'\uf766': "Fsmall",
-	'\u0047': "G",            // G
+	'G':      "G",            // G
 	'\u3387': "GBsquare",     // ㎇
 	'\u01f4': "Gacute",       // Ǵ
 	'\u0393': "Gamma",        // Γ
@@ -4508,9 +4531,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0122': "Gcedilla",     // Ģ
 	'\u24bc': "Gcircle",      // Ⓖ
 	'\u011c': "Gcircumflex",  // Ĝ
-	//	'\u0122':	"Gcommaaccent", // Ģ // duplicate
+	// '\u0122':    "Gcommaaccent", // Ģ -- duplicate
 	'\u0120': "Gdot", // Ġ
-	//	'\u0120':	"Gdotaccent", // Ġ // duplicate
+	// '\u0120':    "Gdotaccent", // Ġ -- duplicate
 	'\u0413': "Gecyrillic",            // Г
 	'\u0542': "Ghadarmenian",          // Ղ
 	'\u0494': "Ghemiddlehookcyrillic", // Ҕ
@@ -4526,7 +4549,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf767': "Gsmall",
 	'\u029b': "Gsmallhook",          // ʛ
 	'\u01e4': "Gstroke",             // Ǥ
-	'\u0048': "H",                   // H
+	'H':      "H",                   // H
 	'\u25cf': "H18533",              // ●
 	'\u25aa': "H18543",              // ▪
 	'\u25ab': "H18551",              // ▫
@@ -4550,7 +4573,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf6cf': "Hungarumlaut",
 	'\uf6f8': "Hungarumlautsmall",
 	'\u3390': "Hzsquare",   // ㎐
-	'\u0049': "I",          // I
+	'I':      "I",          // I
 	'\u042f': "IAcyrillic", // Я
 	'\u0132': "IJ",         // Ĳ
 	'\u042e': "IUcyrillic", // Ю
@@ -4568,7 +4591,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u04e4': "Idieresiscyrillic", // Ӥ
 	'\uf7ef': "Idieresissmall",
 	'\u0130': "Idot", // İ
-	//	'\u0130':	"Idotaccent", // İ // duplicate
+	// '\u0130':    "Idotaccent", // İ -- duplicate
 	'\u1eca': "Idotbelow",       // Ị
 	'\u04d6': "Iebrevecyrillic", // Ӗ
 	'\u0415': "Iecyrillic",      // Е
@@ -4595,7 +4618,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e2c': "Itildebelow",             // Ḭ
 	'\u0474': "Izhitsacyrillic",         // Ѵ
 	'\u0476': "Izhitsadblgravecyrillic", // Ѷ
-	'\u004a': "J",                       // J
+	'J':      "J",                       // J
 	'\u0541': "Jaarmenian",              // Ձ
 	'\u24bf': "Jcircle",                 // Ⓙ
 	'\u0134': "Jcircumflex",             // Ĵ
@@ -4603,7 +4626,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u054b': "Jheharmenian",            // Ջ
 	'\uff2a': "Jmonospace",              // Ｊ
 	'\uf76a': "Jsmall",
-	'\u004b': "K",                        // K
+	'K':      "K",                        // K
 	'\u3385': "KBsquare",                 // ㎅
 	'\u33cd': "KKsquare",                 // ㏍
 	'\u04a0': "Kabashkircyrillic",        // Ҡ
@@ -4617,7 +4640,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01e8': "Kcaron",                   // Ǩ
 	'\u0136': "Kcedilla",                 // Ķ
 	'\u24c0': "Kcircle",                  // Ⓚ
-	//	'\u0136':	"Kcommaaccent", // Ķ // duplicate
+	// '\u0136':    "Kcommaaccent", // Ķ -- duplicate
 	'\u1e32': "Kdotbelow",     // Ḳ
 	'\u0554': "Keharmenian",   // Ք
 	'\u053f': "Kenarmenian",   // Կ
@@ -4631,7 +4654,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u03de': "Koppagreek",    // Ϟ
 	'\u046e': "Ksicyrillic",   // Ѯ
 	'\uf76b': "Ksmall",
-	'\u004c': "L",  // L
+	'L':      "L",  // L
 	'\u01c7': "LJ", // Ǉ
 	'\uf6bf': "LL",
 	'\u0139': "Lacute",           // Ĺ
@@ -4640,9 +4663,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u013b': "Lcedilla",         // Ļ
 	'\u24c1': "Lcircle",          // Ⓛ
 	'\u1e3c': "Lcircumflexbelow", // Ḽ
-	//	'\u013b':	"Lcommaaccent", // Ļ // duplicate
+	// '\u013b':    "Lcommaaccent", // Ļ -- duplicate
 	'\u013f': "Ldot", // Ŀ
-	//	'\u013f':	"Ldotaccent", // Ŀ // duplicate
+	// '\u013f':    "Ldotaccent", // Ŀ -- duplicate
 	'\u1e36': "Ldotbelow",       // Ḷ
 	'\u1e38': "Ldotbelowmacron", // Ḹ
 	'\u053c': "Liwnarmenian",    // Լ
@@ -4653,7 +4676,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0141': "Lslash",          // Ł
 	'\uf6f9': "Lslashsmall",
 	'\uf76c': "Lsmall",
-	'\u004d': "M",        // M
+	'M':      "M",        // M
 	'\u3386': "MBsquare", // ㎆
 	'\uf6d0': "Macron",
 	'\uf7af': "Macronsmall",
@@ -4666,14 +4689,14 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf76d': "Msmall",
 	'\u019c': "Mturned",          // Ɯ
 	'\u039c': "Mu",               // Μ
-	'\u004e': "N",                // N
+	'N':      "N",                // N
 	'\u01ca': "NJ",               // Ǌ
 	'\u0143': "Nacute",           // Ń
 	'\u0147': "Ncaron",           // Ň
 	'\u0145': "Ncedilla",         // Ņ
 	'\u24c3': "Ncircle",          // Ⓝ
 	'\u1e4a': "Ncircumflexbelow", // Ṋ
-	//	'\u0145':	"Ncommaaccent", // Ņ // duplicate
+	// '\u0145':    "Ncommaaccent", // Ņ -- duplicate
 	'\u1e44': "Ndotaccent",  // Ṅ
 	'\u1e46': "Ndotbelow",   // Ṇ
 	'\u019d': "Nhookleft",   // Ɲ
@@ -4687,7 +4710,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00d1': "Ntilde", // Ñ
 	'\uf7f1': "Ntildesmall",
 	'\u039d': "Nu", // Ν
-	'\u004f': "O",  // O
+	'O':      "O",  // O
 	'\u0152': "OE", // Œ
 	'\uf6fa': "OEsmall",
 	'\u00d3': "Oacute", // Ó
@@ -4724,13 +4747,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1edc': "Ohorngrave",     // Ờ
 	'\u1ede': "Ohornhookabove", // Ở
 	'\u1ee0': "Ohorntilde",     // Ỡ
-	//	'\u0150':	"Ohungarumlaut", // Ő // duplicate
+	// '\u0150':    "Ohungarumlaut", // Ő -- duplicate
 	'\u01a2': "Oi",             // Ƣ
 	'\u020e': "Oinvertedbreve", // Ȏ
 	'\u014c': "Omacron",        // Ō
 	'\u1e52': "Omacronacute",   // Ṓ
 	'\u1e50': "Omacrongrave",   // Ṑ
-	//	'\u2126':	"Omega", // Ω // duplicate
+	// '\u2126':    "Omega", // Ω -- duplicate
 	'\u0460': "Omegacyrillic",      // Ѡ
 	'\u03a9': "Omegagreek",         // Ω
 	'\u047a': "Omegaroundcyrillic", // Ѻ
@@ -4747,13 +4770,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01fe': "Oslashacute",        // Ǿ
 	'\uf7f8': "Oslashsmall",
 	'\uf76f': "Osmall",
-	//	'\u01fe':	"Ostrokeacute", // Ǿ // duplicate
+	// '\u01fe':    "Ostrokeacute", // Ǿ -- duplicate
 	'\u047e': "Otcyrillic",     // Ѿ
 	'\u00d5': "Otilde",         // Õ
 	'\u1e4c': "Otildeacute",    // Ṍ
 	'\u1e4e': "Otildedieresis", // Ṏ
 	'\uf7f5': "Otildesmall",
-	'\u0050': "P",                    // P
+	'P':      "P",                    // P
 	'\u1e54': "Pacute",               // Ṕ
 	'\u24c5': "Pcircle",              // Ⓟ
 	'\u1e56': "Pdotaccent",           // Ṗ
@@ -4768,17 +4791,17 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u03a8': "Psi",                  // Ψ
 	'\u0470': "Psicyrillic",          // Ѱ
 	'\uf770': "Psmall",
-	'\u0051': "Q",          // Q
+	'Q':      "Q",          // Q
 	'\u24c6': "Qcircle",    // Ⓠ
 	'\uff31': "Qmonospace", // Ｑ
 	'\uf771': "Qsmall",
-	'\u0052': "R",          // R
+	'R':      "R",          // R
 	'\u054c': "Raarmenian", // Ռ
 	'\u0154': "Racute",     // Ŕ
 	'\u0158': "Rcaron",     // Ř
 	'\u0156': "Rcedilla",   // Ŗ
 	'\u24c7': "Rcircle",    // Ⓡ
-	//	'\u0156':	"Rcommaaccent", // Ŗ // duplicate
+	// '\u0156':    "Rcommaaccent", // Ŗ -- duplicate
 	'\u0210': "Rdblgrave",       // Ȑ
 	'\u1e58': "Rdotaccent",      // Ṙ
 	'\u1e5a': "Rdotbelow",       // Ṛ
@@ -4793,7 +4816,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf772': "Rsmall",
 	'\u0281': "Rsmallinverted",         // ʁ
 	'\u02b6': "Rsmallinvertedsuperior", // ʶ
-	'\u0053': "S",                      // S
+	'S':      "S",                      // S
 	'\u250c': "SF010000",               // ┌
 	'\u2514': "SF020000",               // └
 	'\u2510': "SF030000",               // ┐
@@ -4864,14 +4887,14 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u042c': "Softsigncyrillic",      // Ь
 	'\uf773': "Ssmall",
 	'\u03da': "Stigmagreek",      // Ϛ
-	'\u0054': "T",                // T
+	'T':      "T",                // T
 	'\u03a4': "Tau",              // Τ
 	'\u0166': "Tbar",             // Ŧ
 	'\u0164': "Tcaron",           // Ť
 	'\u0162': "Tcedilla",         // Ţ
 	'\u24c9': "Tcircle",          // Ⓣ
 	'\u1e70': "Tcircumflexbelow", // Ṱ
-	//	'\u0162':	"Tcommaaccent", // Ţ // duplicate
+	// '\u0162':    "Tcommaaccent", // Ţ -- duplicate
 	'\u1e6a': "Tdotaccent",          // Ṫ
 	'\u1e6c': "Tdotbelow",           // Ṭ
 	'\u0422': "Tecyrillic",          // Т
@@ -4897,7 +4920,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf774': "Tsmall",
 	'\u216b': "Twelveroman", // Ⅻ
 	'\u2161': "Tworoman",    // Ⅱ
-	'\u0055': "U",           // U
+	'U':      "U",           // U
 	'\u00da': "Uacute",      // Ú
 	'\uf7fa': "Uacutesmall",
 	'\u016c': "Ubreve",           // Ŭ
@@ -4927,7 +4950,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1eea': "Uhorngrave",     // Ừ
 	'\u1eec': "Uhornhookabove", // Ử
 	'\u1eee': "Uhorntilde",     // Ữ
-	//	'\u0170':	"Uhungarumlaut", // Ű // duplicate
+	// '\u0170':    "Uhungarumlaut", // Ű -- duplicate
 	'\u04f2': "Uhungarumlautcyrillic",          // Ӳ
 	'\u0216': "Uinvertedbreve",                 // Ȗ
 	'\u0478': "Ukcyrillic",                     // Ѹ
@@ -4942,7 +4965,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01b1': "Upsilonafrican",                 // Ʊ
 	'\u03ab': "Upsilondieresis",                // Ϋ
 	'\u03d4': "Upsilondieresishooksymbolgreek", // ϔ
-	//	'\u03d2':	"Upsilonhooksymbol", // ϒ // duplicate
+	// '\u03d2':    "Upsilonhooksymbol", // ϒ -- duplicate
 	'\u038e': "Upsilontonos",   // Ύ
 	'\u016e': "Uring",          // Ů
 	'\u040e': "Ushortcyrillic", // Ў
@@ -4952,7 +4975,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0168': "Utilde",                  // Ũ
 	'\u1e78': "Utildeacute",             // Ṹ
 	'\u1e74': "Utildebelow",             // Ṵ
-	'\u0056': "V",                       // V
+	'V':      "V",                       // V
 	'\u24cb': "Vcircle",                 // Ⓥ
 	'\u1e7e': "Vdotbelow",               // Ṿ
 	'\u0412': "Vecyrillic",              // В
@@ -4962,7 +4985,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0548': "Voarmenian",              // Ո
 	'\uf776': "Vsmall",
 	'\u1e7c': "Vtilde",      // Ṽ
-	'\u0057': "W",           // W
+	'W':      "W",           // W
 	'\u1e82': "Wacute",      // Ẃ
 	'\u24cc': "Wcircle",     // Ⓦ
 	'\u0174': "Wcircumflex", // Ŵ
@@ -4972,7 +4995,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e80': "Wgrave",      // Ẁ
 	'\uff37': "Wmonospace",  // Ｗ
 	'\uf777': "Wsmall",
-	'\u0058': "X",           // X
+	'X':      "X",           // X
 	'\u24cd': "Xcircle",     // Ⓧ
 	'\u1e8c': "Xdieresis",   // Ẍ
 	'\u1e8a': "Xdotaccent",  // Ẋ
@@ -4980,7 +5003,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u039e': "Xi",          // Ξ
 	'\uff38': "Xmonospace",  // Ｘ
 	'\uf778': "Xsmall",
-	'\u0059': "Y",      // Y
+	'Y':      "Y",      // Y
 	'\u00dd': "Yacute", // Ý
 	'\uf7fd': "Yacutesmall",
 	'\u0462': "Yatcyrillic", // Ѣ
@@ -5005,7 +5028,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u046c': "Yusbigiotifiedcyrillic",    // Ѭ
 	'\u0466': "Yuslittlecyrillic",         // Ѧ
 	'\u0468': "Yuslittleiotifiedcyrillic", // Ѩ
-	'\u005a': "Z",                         // Z
+	'Z':      "Z",                         // Z
 	'\u0536': "Zaarmenian",                // Զ
 	'\u0179': "Zacute",                    // Ź
 	'\u017d': "Zcaron",                    // Ž
@@ -5013,7 +5036,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24cf': "Zcircle",     // Ⓩ
 	'\u1e90': "Zcircumflex", // Ẑ
 	'\u017b': "Zdot",        // Ż
-	//	'\u017b':	"Zdotaccent", // Ż // duplicate
+	// '\u017b':    "Zdotaccent", // Ż -- duplicate
 	'\u1e92': "Zdotbelow",            // Ẓ
 	'\u0417': "Zecyrillic",           // З
 	'\u0498': "Zedescendercyrillic",  // Ҙ
@@ -5028,7 +5051,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff3a': "Zmonospace",           // Ｚ
 	'\uf77a': "Zsmall",
 	'\u01b5': "Zstroke",                  // Ƶ
-	'\u0061': "a",                        // a
+	'a':      "a",                        // a
 	'\u0986': "aabengali",                // আ
 	'\u00e1': "aacute",                   // á
 	'\u0906': "aadeva",                   // आ
@@ -5061,7 +5084,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00b4': "acute",                    // ´
 	'\u0317': "acutebelowcmb",            // ̗
 	'\u0301': "acutecmb",                 // ́
-	//	'\u0301':	"acutecomb", // ́ // duplicate
+	// '\u0301':    "acutecomb", // ́ -- duplicate
 	'\u0954': "acutedeva",         // ॔
 	'\u02cf': "acutelowmod",       // ˏ
 	'\u0341': "acutetonecmb",      // ́
@@ -5080,55 +5103,55 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01e3': "aemacron",          // ǣ
 	'\u2015': "afii00208",         // ―
 	'\u20a4': "afii08941",         // ₤
-	//	'\u0410':	"afii10017", // А // duplicate
-	//	'\u0411':	"afii10018", // Б // duplicate
-	//	'\u0412':	"afii10019", // В // duplicate
-	//	'\u0413':	"afii10020", // Г // duplicate
-	//	'\u0414':	"afii10021", // Д // duplicate
-	//	'\u0415':	"afii10022", // Е // duplicate
-	//	'\u0401':	"afii10023", // Ё // duplicate
-	//	'\u0416':	"afii10024", // Ж // duplicate
-	//	'\u0417':	"afii10025", // З // duplicate
-	//	'\u0418':	"afii10026", // И // duplicate
-	//	'\u0419':	"afii10027", // Й // duplicate
-	//	'\u041a':	"afii10028", // К // duplicate
-	//	'\u041b':	"afii10029", // Л // duplicate
-	//	'\u041c':	"afii10030", // М // duplicate
-	//	'\u041d':	"afii10031", // Н // duplicate
-	//	'\u041e':	"afii10032", // О // duplicate
-	//	'\u041f':	"afii10033", // П // duplicate
-	//	'\u0420':	"afii10034", // Р // duplicate
-	//	'\u0421':	"afii10035", // С // duplicate
-	//	'\u0422':	"afii10036", // Т // duplicate
-	//	'\u0423':	"afii10037", // У // duplicate
-	//	'\u0424':	"afii10038", // Ф // duplicate
-	//	'\u0425':	"afii10039", // Х // duplicate
-	//	'\u0426':	"afii10040", // Ц // duplicate
-	//	'\u0427':	"afii10041", // Ч // duplicate
-	//	'\u0428':	"afii10042", // Ш // duplicate
-	//	'\u0429':	"afii10043", // Щ // duplicate
-	//	'\u042a':	"afii10044", // Ъ // duplicate
-	//	'\u042b':	"afii10045", // Ы // duplicate
-	//	'\u042c':	"afii10046", // Ь // duplicate
-	//	'\u042d':	"afii10047", // Э // duplicate
-	//	'\u042e':	"afii10048", // Ю // duplicate
-	//	'\u042f':	"afii10049", // Я // duplicate
-	//	'\u0490':	"afii10050", // Ґ // duplicate
-	//	'\u0402':	"afii10051", // Ђ // duplicate
-	//	'\u0403':	"afii10052", // Ѓ // duplicate
-	//	'\u0404':	"afii10053", // Є // duplicate
-	//	'\u0405':	"afii10054", // Ѕ // duplicate
-	//	'\u0406':	"afii10055", // І // duplicate
-	//	'\u0407':	"afii10056", // Ї // duplicate
-	//	'\u0408':	"afii10057", // Ј // duplicate
-	//	'\u0409':	"afii10058", // Љ // duplicate
-	//	'\u040a':	"afii10059", // Њ // duplicate
-	//	'\u040b':	"afii10060", // Ћ // duplicate
-	//	'\u040c':	"afii10061", // Ќ // duplicate
-	//	'\u040e':	"afii10062", // Ў // duplicate
+	// '\u0410':    "afii10017", // А -- duplicate
+	// '\u0411':    "afii10018", // Б -- duplicate
+	// '\u0412':    "afii10019", // В -- duplicate
+	// '\u0413':    "afii10020", // Г -- duplicate
+	// '\u0414':    "afii10021", // Д -- duplicate
+	// '\u0415':    "afii10022", // Е -- duplicate
+	// '\u0401':    "afii10023", // Ё -- duplicate
+	// '\u0416':    "afii10024", // Ж -- duplicate
+	// '\u0417':    "afii10025", // З -- duplicate
+	// '\u0418':    "afii10026", // И -- duplicate
+	// '\u0419':    "afii10027", // Й -- duplicate
+	// '\u041a':    "afii10028", // К -- duplicate
+	// '\u041b':    "afii10029", // Л -- duplicate
+	// '\u041c':    "afii10030", // М -- duplicate
+	// '\u041d':    "afii10031", // Н -- duplicate
+	// '\u041e':    "afii10032", // О -- duplicate
+	// '\u041f':    "afii10033", // П -- duplicate
+	// '\u0420':    "afii10034", // Р -- duplicate
+	// '\u0421':    "afii10035", // С -- duplicate
+	// '\u0422':    "afii10036", // Т -- duplicate
+	// '\u0423':    "afii10037", // У -- duplicate
+	// '\u0424':    "afii10038", // Ф -- duplicate
+	// '\u0425':    "afii10039", // Х -- duplicate
+	// '\u0426':    "afii10040", // Ц -- duplicate
+	// '\u0427':    "afii10041", // Ч -- duplicate
+	// '\u0428':    "afii10042", // Ш -- duplicate
+	// '\u0429':    "afii10043", // Щ -- duplicate
+	// '\u042a':    "afii10044", // Ъ -- duplicate
+	// '\u042b':    "afii10045", // Ы -- duplicate
+	// '\u042c':    "afii10046", // Ь -- duplicate
+	// '\u042d':    "afii10047", // Э -- duplicate
+	// '\u042e':    "afii10048", // Ю -- duplicate
+	// '\u042f':    "afii10049", // Я -- duplicate
+	// '\u0490':    "afii10050", // Ґ -- duplicate
+	// '\u0402':    "afii10051", // Ђ -- duplicate
+	// '\u0403':    "afii10052", // Ѓ -- duplicate
+	// '\u0404':    "afii10053", // Є -- duplicate
+	// '\u0405':    "afii10054", // Ѕ -- duplicate
+	// '\u0406':    "afii10055", // І -- duplicate
+	// '\u0407':    "afii10056", // Ї -- duplicate
+	// '\u0408':    "afii10057", // Ј -- duplicate
+	// '\u0409':    "afii10058", // Љ -- duplicate
+	// '\u040a':    "afii10059", // Њ -- duplicate
+	// '\u040b':    "afii10060", // Ћ -- duplicate
+	// '\u040c':    "afii10061", // Ќ -- duplicate
+	// '\u040e':    "afii10062", // Ў -- duplicate
 	'\uf6c4': "afii10063",
 	'\uf6c5': "afii10064",
-	//	'\u0430':	"afii10065", // а // duplicate
+	// '\u0430':    "afii10065", // а -- duplicate
 	'\u0431': "afii10066", // б
 	'\u0432': "afii10067", // в
 	'\u0433': "afii10068", // г
@@ -5174,10 +5197,10 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u045b': "afii10108", // ћ
 	'\u045c': "afii10109", // ќ
 	'\u045e': "afii10110", // ў
-	//	'\u040f':	"afii10145", // Џ // duplicate
-	//	'\u0462':	"afii10146", // Ѣ // duplicate
-	//	'\u0472':	"afii10147", // Ѳ // duplicate
-	//	'\u0474':	"afii10148", // Ѵ // duplicate
+	// '\u040f':    "afii10145", // Џ -- duplicate
+	// '\u0462':    "afii10146", // Ѣ -- duplicate
+	// '\u0472':    "afii10147", // Ѳ -- duplicate
+	// '\u0474':    "afii10148", // Ѵ -- duplicate
 	'\uf6c6': "afii10192",
 	'\u045f': "afii10193", // џ
 	'\u0463': "afii10194", // ѣ
@@ -5336,7 +5359,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0a90': "aigujarati",      // ઐ
 	'\u0a10': "aigurmukhi",      // ਐ
 	'\u0a48': "aimatragurmukhi", // ੈ
-	//	'\u0639':	"ainarabic", // ع // duplicate
+	// '\u0639':    "ainarabic", // ع -- duplicate
 	'\ufeca': "ainfinalarabic",      // ﻊ
 	'\ufecb': "aininitialarabic",    // ﻋ
 	'\ufecc': "ainmedialarabic",     // ﻌ
@@ -5347,19 +5370,19 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30a2': "akatakana",           // ア
 	'\uff71': "akatakanahalfwidth",  // ｱ
 	'\u314f': "akorean",             // ㅏ
-	//	'\u05d0':	"alef", // א // duplicate
-	//	'\u0627':	"alefarabic", // ا // duplicate
+	// '\u05d0':    "alef", // א -- duplicate
+	// '\u0627':    "alefarabic", // ا -- duplicate
 	'\ufb30': "alefdageshhebrew", // אּ
 	'\ufe8e': "aleffinalarabic",  // ﺎ
-	//	'\u0623':	"alefhamzaabovearabic", // أ // duplicate
+	// '\u0623':    "alefhamzaabovearabic", // أ -- duplicate
 	'\ufe84': "alefhamzaabovefinalarabic", // ﺄ
-	//	'\u0625':	"alefhamzabelowarabic", // إ // duplicate
+	// '\u0625':    "alefhamzabelowarabic", // إ -- duplicate
 	'\ufe88': "alefhamzabelowfinalarabic", // ﺈ
-	//	'\u05d0':	"alefhebrew", // א // duplicate
+	// '\u05d0':    "alefhebrew", // א -- duplicate
 	'\ufb4f': "aleflamedhebrew", // ﭏ
-	//	'\u0622':	"alefmaddaabovearabic", // آ // duplicate
+	// '\u0622':    "alefmaddaabovearabic", // آ -- duplicate
 	'\ufe82': "alefmaddaabovefinalarabic", // ﺂ
-	//	'\u0649':	"alefmaksuraarabic", // ى // duplicate
+	// '\u0649':    "alefmaksuraarabic", // ى -- duplicate
 	'\ufef0': "alefmaksurafinalarabic",   // ﻰ
 	'\ufef3': "alefmaksurainitialarabic", // ﻳ
 	'\ufef4': "alefmaksuramedialarabic",  // ﻴ
@@ -5371,7 +5394,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u03ac': "alphatonos",               // ά
 	'\u0101': "amacron",                  // ā
 	'\uff41': "amonospace",               // ａ
-	'\u0026': "ampersand",                // &
+	'&':      "ampersand",                // &
 	'\uff06': "ampersandmonospace",       // ＆
 	'\uf726': "ampersandsmall",
 	'\u33c2': "amsquare",                  // ㏂
@@ -5395,7 +5418,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3300': "apaatosquare",              // ㌀
 	'\u249c': "aparen",                    // ⒜
 	'\u055a': "apostrophearmenian",        // ՚
-	//	'\u02bc':	"apostrophemod", // ʼ // duplicate
+	// '\u02bc':    "apostrophemod", // ʼ -- duplicate
 	'\uf8ff': "apple",
 	'\u2250': "approaches",         // ≐
 	'\u2248': "approxequal",        // ≈
@@ -5428,7 +5451,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u02c4': "arrowheadupmod",     // ˄
 	'\uf8e7': "arrowhorizex",
 	'\u2190': "arrowleft", // ←
-	//	'\u21d0':	"arrowleftdbl", // ⇐ // duplicate
+	// '\u21d0':    "arrowleftdbl", // ⇐ -- duplicate
 	'\u21cd': "arrowleftdblstroke",  // ⇍
 	'\u21c6': "arrowleftoverright",  // ⇆
 	'\u21e6': "arrowleftwhite",      // ⇦
@@ -5442,31 +5465,31 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2191': "arrowup",             // ↑
 	'\u2195': "arrowupdn",           // ↕
 	'\u21a8': "arrowupdnbse",        // ↨
-	//	'\u21a8':	"arrowupdownbase", // ↨ // duplicate
+	// '\u21a8':    "arrowupdownbase", // ↨ -- duplicate
 	'\u2196': "arrowupleft",       // ↖
 	'\u21c5': "arrowupleftofdown", // ⇅
 	'\u2197': "arrowupright",      // ↗
 	'\u21e7': "arrowupwhite",      // ⇧
 	'\uf8e6': "arrowvertex",
-	'\u005e': "asciicircum",             // ^
+	'^':      "asciicircum",             // ^
 	'\uff3e': "asciicircummonospace",    // ＾
-	'\u007e': "asciitilde",              // ~
+	'~':      "asciitilde",              // ~
 	'\uff5e': "asciitildemonospace",     // ～
 	'\u0251': "ascript",                 // ɑ
 	'\u0252': "ascriptturned",           // ɒ
 	'\u3041': "asmallhiragana",          // ぁ
 	'\u30a1': "asmallkatakana",          // ァ
 	'\uff67': "asmallkatakanahalfwidth", // ｧ
-	'\u002a': "asterisk",                // *
-	//	'\u066d':	"asteriskaltonearabic", // ٭ // duplicate
-	//	'\u066d':	"asteriskarabic", // ٭ // duplicate
+	'*':      "asterisk",                // *
+	// '\u066d':    "asteriskaltonearabic", // ٭ -- duplicate
+	// '\u066d':    "asteriskarabic", // ٭ -- duplicate
 	'\u2217': "asteriskmath",      // ∗
 	'\uff0a': "asteriskmonospace", // ＊
 	'\ufe61': "asterisksmall",     // ﹡
 	'\u2042': "asterism",          // ⁂
 	'\uf6e9': "asuperior",
 	'\u2243': "asymptoticallyequal", // ≃
-	'\u0040': "at",                  // @
+	'@':      "at",                  // @
 	'\u00e3': "atilde",              // ã
 	'\uff20': "atmonospace",         // ＠
 	'\ufe6b': "atsmall",             // ﹫
@@ -5483,12 +5506,12 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0acc': "auvowelsigngujarati", // ૌ
 	'\u093d': "avagrahadeva",        // ऽ
 	'\u0561': "aybarmenian",         // ա
-	//	'\u05e2':	"ayin", // ע // duplicate
+	// '\u05e2':    "ayin", // ע -- duplicate
 	'\ufb20': "ayinaltonehebrew", // ﬠ
-	//	'\u05e2':	"ayinhebrew", // ע // duplicate
-	'\u0062': "b",                    // b
+	// '\u05e2':    "ayinhebrew", // ע -- duplicate
+	'b':      "b",                    // b
 	'\u09ac': "babengali",            // ব
-	'\u005c': "backslash",            // \
+	'\\':     "backslash",            // \\
 	'\uff3c': "backslashmonospace",   // ＼
 	'\u092c': "badeva",               // ब
 	'\u0aac': "bagujarati",           // બ
@@ -5496,7 +5519,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3070': "bahiragana",           // ば
 	'\u0e3f': "bahtthai",             // ฿
 	'\u30d0': "bakatakana",           // バ
-	'\u007c': "bar",                  // |
+	'|':      "bar",                  // |
 	'\uff5c': "barmonospace",         // ｜
 	'\u3105': "bbopomofo",            // ㄅ
 	'\u24d1': "bcircle",              // ⓑ
@@ -5504,8 +5527,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e05': "bdotbelow",            // ḅ
 	'\u266c': "beamedsixteenthnotes", // ♬
 	'\u2235': "because",              // ∵
-	//	'\u0431':	"becyrillic", // б // duplicate
-	//	'\u0628':	"beharabic", // ب // duplicate
+	// '\u0431':    "becyrillic", // б -- duplicate
+	// '\u0628':    "beharabic", // ب -- duplicate
 	'\ufe90': "behfinalarabic",        // ﺐ
 	'\ufe91': "behinitialarabic",      // ﺑ
 	'\u3079': "behiragana",            // べ
@@ -5515,12 +5538,12 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\ufc6d': "behnoonfinalarabic",    // ﱭ
 	'\u30d9': "bekatakana",            // ベ
 	'\u0562': "benarmenian",           // բ
-	//	'\u05d1':	"bet", // ב // duplicate
+	// '\u05d1':    "bet", // ב -- duplicate
 	'\u03b2': "beta",            // β
 	'\u03d0': "betasymbolgreek", // ϐ
 	'\ufb31': "betdagesh",       // בּ
-	//	'\ufb31':	"betdageshhebrew", // בּ // duplicate
-	//	'\u05d1':	"bethebrew", // ב // duplicate
+	// '\ufb31':    "betdageshhebrew", // בּ -- duplicate
+	// '\u05d1':    "bethebrew", // ב -- duplicate
 	'\ufb4c': "betrafehebrew", // בֿ
 	'\u09ad': "bhabengali",    // ভ
 	'\u092d': "bhadeva",       // भ
@@ -5532,7 +5555,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0298': "bilabialclick", // ʘ
 	'\u0a02': "bindigurmukhi", // ਂ
 	'\u3331': "birusquare",    // ㌱
-	//	'\u25cf':	"blackcircle", // ● // duplicate
+	// '\u25cf':    "blackcircle", // ● -- duplicate
 	'\u25c6': "blackdiamond",                        // ◆
 	'\u25bc': "blackdownpointingtriangle",           // ▼
 	'\u25c4': "blackleftpointingpointer",            // ◄
@@ -5546,7 +5569,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u25ac': "blackrectangle",                      // ▬
 	'\u25ba': "blackrightpointingpointer",           // ►
 	'\u25b6': "blackrightpointingtriangle",          // ▶
-	//	'\u25aa':	"blacksmallsquare", // ▪ // duplicate
+	// '\u25aa':    "blacksmallsquare", // ▪ -- duplicate
 	'\u263b': "blacksmilingface",             // ☻
 	'\u25a0': "blacksquare",                  // ■
 	'\u2605': "blackstar",                    // ★
@@ -5564,26 +5587,26 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u249d': "bparen",                       // ⒝
 	'\u33c3': "bqsquare",                     // ㏃
 	'\uf8f4': "braceex",
-	'\u007b': "braceleft", // {
+	'{':      "braceleft", // {
 	'\uf8f3': "braceleftbt",
 	'\uf8f2': "braceleftmid",
 	'\uff5b': "braceleftmonospace", // ｛
 	'\ufe5b': "braceleftsmall",     // ﹛
 	'\uf8f1': "bracelefttp",
 	'\ufe37': "braceleftvertical", // ︷
-	'\u007d': "braceright",        // }
+	'}':      "braceright",        // }
 	'\uf8fe': "bracerightbt",
 	'\uf8fd': "bracerightmid",
 	'\uff5d': "bracerightmonospace", // ｝
 	'\ufe5c': "bracerightsmall",     // ﹜
 	'\uf8fc': "bracerighttp",
 	'\ufe38': "bracerightvertical", // ︸
-	'\u005b': "bracketleft",        // [
+	'[':      "bracketleft",        // [
 	'\uf8f0': "bracketleftbt",
 	'\uf8ef': "bracketleftex",
 	'\uff3b': "bracketleftmonospace", // ［
 	'\uf8ee': "bracketlefttp",
-	'\u005d': "bracketright", // ]
+	']':      "bracketright", // ]
 	'\uf8fb': "bracketrightbt",
 	'\uf8fa': "bracketrightex",
 	'\uff3d': "bracketrightmonospace", // ］
@@ -5606,7 +5629,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u25d8': "bulletinverse",       // ◘
 	'\u2219': "bulletoperator",      // ∙
 	'\u25ce': "bullseye",            // ◎
-	'\u0063': "c",                   // c
+	'c':      "c",                   // c
 	'\u056e': "caarmenian",          // ծ
 	'\u099a': "cabengali",           // চ
 	'\u0107': "cacute",              // ć
@@ -5619,7 +5642,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0901': "candrabindudeva",     // ँ
 	'\u0a81': "candrabindugujarati", // ઁ
 	'\u21ea': "capslock",            // ⇪
-	//	'\u2105':	"careof", // ℅ // duplicate
+	// '\u2105':    "careof", // ℅ -- duplicate
 	'\u02c7': "caron",          // ˇ
 	'\u032c': "caronbelowcmb",  // ̬
 	'\u030c': "caroncmb",       // ̌
@@ -5632,7 +5655,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0109': "ccircumflex",    // ĉ
 	'\u0255': "ccurl",          // ɕ
 	'\u010b': "cdot",           // ċ
-	//	'\u010b':	"cdotaccent", // ċ // duplicate
+	// '\u010b':    "cdotaccent", // ċ -- duplicate
 	'\u33c5': "cdsquare",   // ㏅
 	'\u00b8': "cedilla",    // ¸
 	'\u0327': "cedillacmb", // ̧
@@ -5650,7 +5673,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3114': "chbopomofo",           // ㄔ
 	'\u04bd': "cheabkhasiancyrillic", // ҽ
 	'\u2713': "checkmark",            // ✓
-	//	'\u0447':	"checyrillic", // ч // duplicate
+	// '\u0447':    "checyrillic", // ч -- duplicate
 	'\u04bf': "chedescenderabkhasiancyrillic", // ҿ
 	'\u04b7': "chedescendercyrillic",          // ҷ
 	'\u04f5': "chedieresiscyrillic",           // ӵ
@@ -5690,69 +5713,69 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01c1': "clicklateral",                  // ǁ
 	'\u01c3': "clickretroflex",                // ǃ
 	'\u2663': "club",                          // ♣
-	//	'\u2663':	"clubsuitblack", // ♣ // duplicate
+	// '\u2663':    "clubsuitblack", // ♣ -- duplicate
 	'\u2667': "clubsuitwhite",   // ♧
 	'\u33a4': "cmcubedsquare",   // ㎤
 	'\uff43': "cmonospace",      // ｃ
 	'\u33a0': "cmsquaredsquare", // ㎠
 	'\u0581': "coarmenian",      // ց
-	'\u003a': "colon",           // :
+	':':      "colon",           // :
 	'\u20a1': "colonmonetary",   // ₡
 	'\uff1a': "colonmonospace",  // ：
-	//	'\u20a1':	"colonsign", // ₡ // duplicate
+	// '\u20a1':    "colonsign", // ₡ -- duplicate
 	'\ufe55': "colonsmall",             // ﹕
 	'\u02d1': "colontriangularhalfmod", // ˑ
 	'\u02d0': "colontriangularmod",     // ː
-	'\u002c': "comma",                  // ,
+	',':      "comma",                  // ,
 	'\u0313': "commaabovecmb",          // ̓
 	'\u0315': "commaaboverightcmb",     // ̕
 	'\uf6c3': "commaaccent",
-	//	'\u060c':	"commaarabic", // ، // duplicate
+	// '\u060c':    "commaarabic", // ، -- duplicate
 	'\u055d': "commaarmenian", // ՝
 	'\uf6e1': "commainferior",
 	'\uff0c': "commamonospace",        // ，
 	'\u0314': "commareversedabovecmb", // ̔
-	//	'\u02bd':	"commareversedmod", // ʽ // duplicate
+	// '\u02bd':    "commareversedmod", // ʽ -- duplicate
 	'\ufe50': "commasmall", // ﹐
 	'\uf6e2': "commasuperior",
 	'\u0312': "commaturnedabovecmb", // ̒
 	'\u02bb': "commaturnedmod",      // ʻ
 	'\u263c': "compass",             // ☼
-	//	'\u2245':	"congruent", // ≅ // duplicate
+	// '\u2245':    "congruent", // ≅ -- duplicate
 	'\u222e': "contourintegral", // ∮
 	'\u2303': "control",         // ⌃
-	'\u0006': "controlACK",
-	'\u0007': "controlBEL",
-	'\u0008': "controlBS",
-	'\u0018': "controlCAN",
-	'\u000d': "controlCR",
-	'\u0011': "controlDC1",
-	'\u0012': "controlDC2",
-	'\u0013': "controlDC3",
-	'\u0014': "controlDC4",
+	'\x06':   "controlACK",
+	'\a':     "controlBEL",
+	'\b':     "controlBS",
+	'\x18':   "controlCAN",
+	'\r':     "controlCR",
+	'\x11':   "controlDC1",
+	'\x12':   "controlDC2",
+	'\x13':   "controlDC3",
+	'\x14':   "controlDC4",
 	'\u007f': "controlDEL",
-	'\u0010': "controlDLE",
-	'\u0019': "controlEM",
-	'\u0005': "controlENQ",
-	'\u0004': "controlEOT",
-	'\u001b': "controlESC",
-	'\u0017': "controlETB",
-	'\u0003': "controlETX",
-	'\u000c': "controlFF",
-	'\u001c': "controlFS",
-	'\u001d': "controlGS",
-	'\u0009': "controlHT",
-	'\u000a': "controlLF",
-	'\u0015': "controlNAK",
-	'\u001e': "controlRS",
-	'\u000f': "controlSI",
-	'\u000e': "controlSO",
-	'\u0002': "controlSOT",
-	'\u0001': "controlSTX",
-	'\u001a': "controlSUB",
-	'\u0016': "controlSYN",
-	'\u001f': "controlUS",
-	'\u000b': "controlVT",
+	'\x10':   "controlDLE",
+	'\x19':   "controlEM",
+	'\x05':   "controlENQ",
+	'\x04':   "controlEOT",
+	'\x1b':   "controlESC",
+	'\x17':   "controlETB",
+	'\x03':   "controlETX",
+	'\f':     "controlFF",
+	'\x1c':   "controlFS",
+	'\x1d':   "controlGS",
+	'\t':     "controlHT",
+	'\n':     "controlLF",
+	'\x15':   "controlNAK",
+	'\x1e':   "controlRS",
+	'\x0f':   "controlSI",
+	'\x0e':   "controlSO",
+	'\x02':   "controlSOT",
+	'\x01':   "controlSTX",
+	'\x1a':   "controlSUB",
+	'\x16':   "controlSYN",
+	'\x1f':   "controlUS",
+	'\v':     "controlVT",
 	'\u00a9': "copyright", // ©
 	'\uf8e9': "copyrightsans",
 	'\uf6d9': "copyrightserif",
@@ -5775,55 +5798,55 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf6d2': "cyrFlex",
 	'\uf6d4': "cyrbreve",
 	'\uf6d5': "cyrflex",
-	'\u0064': "d",          // d
+	'd':      "d",          // d
 	'\u0564': "daarmenian", // դ
 	'\u09a6': "dabengali",  // দ
-	//	'\u0636':	"dadarabic", // ض // duplicate
+	// '\u0636':    "dadarabic", // ض -- duplicate
 	'\u0926': "dadeva",           // द
 	'\ufebe': "dadfinalarabic",   // ﺾ
 	'\ufebf': "dadinitialarabic", // ﺿ
 	'\ufec0': "dadmedialarabic",  // ﻀ
-	//	'\u05bc':	"dagesh", // ּ // duplicate
-	//	'\u05bc':	"dageshhebrew", // ּ // duplicate
+	// '\u05bc':    "dagesh", // ּ -- duplicate
+	// '\u05bc':    "dageshhebrew", // ּ -- duplicate
 	'\u2020': "dagger",     // †
 	'\u2021': "daggerdbl",  // ‡
 	'\u0aa6': "dagujarati", // દ
 	'\u0a26': "dagurmukhi", // ਦ
 	'\u3060': "dahiragana", // だ
 	'\u30c0': "dakatakana", // ダ
-	//	'\u062f':	"dalarabic", // د // duplicate
-	//	'\u05d3':	"dalet", // ד // duplicate
+	// '\u062f':    "dalarabic", // د -- duplicate
+	// '\u05d3':    "dalet", // ד -- duplicate
 	'\ufb33': "daletdagesh", // דּ
-	//	'\ufb33':	"daletdageshhebrew", // דּ // duplicate
-	//	'\u05b2':	"dalethatafpatah", // ֲ // duplicate
-	//	'\u05b2':	"dalethatafpatahhebrew", // ֲ // duplicate
-	//	'\u05b1':	"dalethatafsegol", // ֱ // duplicate
-	//	'\u05b1':	"dalethatafsegolhebrew", // ֱ // duplicate
-	//	'\u05d3':	"dalethebrew", // ד // duplicate
-	//	'\u05b4':	"dalethiriq", // ִ // duplicate
-	//	'\u05b4':	"dalethiriqhebrew", // ִ // duplicate
-	//	'\u05b9':	"daletholam", // ֹ // duplicate
-	//	'\u05b9':	"daletholamhebrew", // ֹ // duplicate
-	//	'\u05b7':	"daletpatah", // ַ // duplicate
-	//	'\u05b7':	"daletpatahhebrew", // ַ // duplicate
-	//	'\u05b8':	"daletqamats", // ָ // duplicate
-	//	'\u05b8':	"daletqamatshebrew", // ָ // duplicate
-	//	'\u05bb':	"daletqubuts", // ֻ // duplicate
-	//	'\u05bb':	"daletqubutshebrew", // ֻ // duplicate
-	//	'\u05b6':	"daletsegol", // ֶ // duplicate
-	//	'\u05b6':	"daletsegolhebrew", // ֶ // duplicate
-	//	'\u05b0':	"daletsheva", // ְ // duplicate
-	//	'\u05b0':	"daletshevahebrew", // ְ // duplicate
-	//	'\u05b5':	"dalettsere", // ֵ // duplicate
-	//	'\u05b5':	"dalettserehebrew", // ֵ // duplicate
+	// '\ufb33':    "daletdageshhebrew", // דּ -- duplicate
+	// '\u05d3':    "dalethatafpatah", // ד -- duplicate
+	// '\u05d3':    "dalethatafpatahhebrew", // ד -- duplicate
+	// '\u05d3':    "dalethatafsegol", // ד -- duplicate
+	// '\u05d3':    "dalethatafsegolhebrew", // ד -- duplicate
+	// '\u05d3':    "dalethebrew", // ד -- duplicate
+	// '\u05d3':    "dalethiriq", // ד -- duplicate
+	// '\u05d3':    "dalethiriqhebrew", // ד -- duplicate
+	// '\u05d3':    "daletholam", // ד -- duplicate
+	// '\u05d3':    "daletholamhebrew", // ד -- duplicate
+	// '\u05d3':    "daletpatah", // ד -- duplicate
+	// '\u05d3':    "daletpatahhebrew", // ד -- duplicate
+	// '\u05d3':    "daletqamats", // ד -- duplicate
+	// '\u05d3':    "daletqamatshebrew", // ד -- duplicate
+	// '\u05d3':    "daletqubuts", // ד -- duplicate
+	// '\u05d3':    "daletqubutshebrew", // ד -- duplicate
+	// '\u05d3':    "daletsegol", // ד -- duplicate
+	// '\u05d3':    "daletsegolhebrew", // ד -- duplicate
+	// '\u05d3':    "daletsheva", // ד -- duplicate
+	// '\u05d3':    "daletshevahebrew", // ד -- duplicate
+	// '\u05d3':    "dalettsere", // ד -- duplicate
+	// '\u05d3':    "dalettserehebrew", // ד -- duplicate
 	'\ufeaa': "dalfinalarabic", // ﺪ
-	//	'\u064f':	"dammaarabic", // ُ // duplicate
-	//	'\u064f':	"dammalowarabic", // ُ // duplicate
-	//	'\u064c':	"dammatanaltonearabic", // ٌ // duplicate
-	//	'\u064c':	"dammatanarabic", // ٌ // duplicate
+	// '\u064f':    "dammaarabic", // ُ -- duplicate
+	// '\u064f':    "dammalowarabic", // ُ -- duplicate
+	// '\u064c':    "dammatanaltonearabic", // ٌ -- duplicate
+	// '\u064c':    "dammatanarabic", // ٌ -- duplicate
 	'\u0964': "danda",       // ।
 	'\u05a7': "dargahebrew", // ֧
-	//	'\u05a7':	"dargalefthebrew", // ֧ // duplicate
+	// '\u05a7':    "dargalefthebrew", // ֧ -- duplicate
 	'\u0485': "dasiapneumatacyrilliccmb", // ҅
 	'\uf6d3': "dblGrave",
 	'\u300a': "dblanglebracketleft",          // 《
@@ -5831,8 +5854,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u300b': "dblanglebracketright",         // 》
 	'\ufe3e': "dblanglebracketrightvertical", // ︾
 	'\u032b': "dblarchinvertedbelowcmb",      // ̫
-	//	'\u21d4':	"dblarrowleft", // ⇔ // duplicate
-	//	'\u21d2':	"dblarrowright", // ⇒ // duplicate
+	// '\u21d4':    "dblarrowleft", // ⇔ -- duplicate
+	// '\u21d2':    "dblarrowright", // ⇒ -- duplicate
 	'\u0965': "dbldanda", // ॥
 	'\uf6d6': "dblgrave",
 	'\u030f': "dblgravecmb",             // ̏
@@ -5854,7 +5877,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0921': "ddadeva",                 // ड
 	'\u0aa1': "ddagujarati",             // ડ
 	'\u0a21': "ddagurmukhi",             // ਡ
-	//	'\u0688':	"ddalarabic", // ڈ // duplicate
+	// '\u0688':    "ddalarabic", // ڈ -- duplicate
 	'\ufb89': "ddalfinalarabic",        // ﮉ
 	'\u095c': "dddhadeva",              // ड़
 	'\u09a2': "ddhabengali",            // ঢ
@@ -5864,8 +5887,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e0b': "ddotaccent",             // ḋ
 	'\u1e0d': "ddotbelow",              // ḍ
 	'\u066b': "decimalseparatorarabic", // ٫
-	//	'\u066b':	"decimalseparatorpersian", // ٫ // duplicate
-	//	'\u0434':	"decyrillic", // д // duplicate
+	// '\u066b':    "decimalseparatorpersian", // ٫ -- duplicate
+	// '\u0434':    "decyrillic", // д -- duplicate
 	'\u00b0': "degree",                              // °
 	'\u05ad': "dehihebrew",                          // ֭
 	'\u3067': "dehiragana",                          // で
@@ -5891,25 +5914,25 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0324': "dieresisbelowcmb", // ̤
 	'\u0308': "dieresiscmb",      // ̈
 	'\uf6d8': "dieresisgrave",
-	//	'\u0385':	"dieresistonos", // ΅ // duplicate
+	// '\u0385':    "dieresistonos", // ΅ -- duplicate
 	'\u3062': "dihiragana",    // ぢ
 	'\u30c2': "dikatakana",    // ヂ
 	'\u3003': "dittomark",     // 〃
 	'\u00f7': "divide",        // ÷
 	'\u2223': "divides",       // ∣
 	'\u2215': "divisionslash", // ∕
-	//	'\u0452':	"djecyrillic", // ђ // duplicate
+	// '\u0452':    "djecyrillic", // ђ -- duplicate
 	'\u2593': "dkshade",    // ▓
 	'\u1e0f': "dlinebelow", // ḏ
 	'\u3397': "dlsquare",   // ㎗
-	//	'\u0111':	"dmacron", // đ // duplicate
+	// '\u0111':    "dmacron", // đ -- duplicate
 	'\uff44': "dmonospace",  // ｄ
 	'\u2584': "dnblock",     // ▄
 	'\u0e0e': "dochadathai", // ฎ
 	'\u0e14': "dodekthai",   // ด
 	'\u3069': "dohiragana",  // ど
 	'\u30c9': "dokatakana",  // ド
-	'\u0024': "dollar",      // $
+	'$':      "dollar",      // $
 	'\uf6e3': "dollarinferior",
 	'\uff04': "dollarmonospace", // ＄
 	'\uf724': "dollaroldstyle",
@@ -5920,15 +5943,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u02d9': "dotaccent",    // ˙
 	'\u0307': "dotaccentcmb", // ̇
 	'\u0323': "dotbelowcmb",  // ̣
-	//	'\u0323':	"dotbelowcomb", // ̣ // duplicate
+	// '\u0323':    "dotbelowcomb", // ̣ -- duplicate
 	'\u30fb': "dotkatakana", // ・
 	'\u0131': "dotlessi",    // ı
 	'\uf6be': "dotlessj",
 	'\u0284': "dotlessjstrokehook", // ʄ
 	'\u22c5': "dotmath",            // ⋅
 	'\u25cc': "dottedcircle",       // ◌
-	//	'\ufb1f':	"doubleyodpatah", // ײַ // duplicate
-	//	'\ufb1f':	"doubleyodpatahhebrew", // ײַ // duplicate
+	// '\ufb1f':    "doubleyodpatah", // ײַ -- duplicate
+	// '\ufb1f':    "doubleyodpatahhebrew", // ײַ -- duplicate
 	'\u031e': "downtackbelowcmb", // ̞
 	'\u02d5': "downtackmod",      // ˕
 	'\u249f': "dparen",           // ⒟
@@ -5942,9 +5965,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01c6': "dzcaron",              // ǆ
 	'\u02a5': "dzcurl",               // ʥ
 	'\u04e1': "dzeabkhasiancyrillic", // ӡ
-	//	'\u0455':	"dzecyrillic", // ѕ // duplicate
-	//	'\u045f':	"dzhecyrillic", // џ // duplicate
-	'\u0065': "e",                        // e
+	// '\u0455':    "dzecyrillic", // ѕ -- duplicate
+	// '\u045f':    "dzhecyrillic", // џ -- duplicate
+	'e':      "e",                        // e
 	'\u00e9': "eacute",                   // é
 	'\u2641': "earth",                    // ♁
 	'\u098f': "ebengali",                 // এ
@@ -5966,16 +5989,16 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1ec1': "ecircumflexgrave",         // ề
 	'\u1ec3': "ecircumflexhookabove",     // ể
 	'\u1ec5': "ecircumflextilde",         // ễ
-	//	'\u0454':	"ecyrillic", // є // duplicate
+	// '\u0454':    "ecyrillic", // є -- duplicate
 	'\u0205': "edblgrave", // ȅ
 	'\u090f': "edeva",     // ए
 	'\u00eb': "edieresis", // ë
 	'\u0117': "edot",      // ė
-	//	'\u0117':	"edotaccent", // ė // duplicate
+	// '\u0117':    "edotaccent", // ė -- duplicate
 	'\u1eb9': "edotbelow",       // ẹ
 	'\u0a0f': "eegurmukhi",      // ਏ
 	'\u0a47': "eematragurmukhi", // ੇ
-	//	'\u0444':	"efcyrillic", // ф // duplicate
+	// '\u0444':    "efcyrillic", // ф -- duplicate
 	'\u00e8': "egrave",     // è
 	'\u0a8f': "egujarati",  // એ
 	'\u0567': "eharmenian", // է
@@ -5983,8 +6006,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3048': "ehiragana",  // え
 	'\u1ebb': "ehookabove", // ẻ
 	'\u311f': "eibopomofo", // ㄟ
-	'\u0038': "eight",      // 8
-	//	'\u0668':	"eightarabic", // ٨ // duplicate
+	'8':      "eight",      // 8
+	// '\u0668':    "eightarabic", // ٨ -- duplicate
 	'\u09ee': "eightbengali",                // ৮
 	'\u2467': "eightcircle",                 // ⑧
 	'\u2791': "eightcircleinversesansserif", // ➑
@@ -5994,7 +6017,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2499': "eighteenperiod",              // ⒙
 	'\u0aee': "eightgujarati",               // ૮
 	'\u0a6e': "eightgurmukhi",               // ੮
-	//	'\u0668':	"eighthackarabic", // ٨ // duplicate
+	// '\u0668':    "eighthackarabic", // ٨ -- duplicate
 	'\u3028': "eighthangzhou",         // 〨
 	'\u266b': "eighthnotebeamed",      // ♫
 	'\u3227': "eightideographicparen", // ㈧
@@ -6013,7 +6036,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff74': "ekatakanahalfwidth", // ｴ
 	'\u0a74': "ekonkargurmukhi",    // ੴ
 	'\u3154': "ekorean",            // ㅔ
-	//	'\u043b':	"elcyrillic", // л // duplicate
+	// '\u043b':    "elcyrillic", // л -- duplicate
 	'\u2208': "element",          // ∈
 	'\u246a': "elevencircle",     // ⑪
 	'\u247e': "elevenparen",      // ⑾
@@ -6024,14 +6047,14 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0113': "emacron",          // ē
 	'\u1e17': "emacronacute",     // ḗ
 	'\u1e15': "emacrongrave",     // ḕ
-	//	'\u043c':	"emcyrillic", // м // duplicate
+	// '\u043c':    "emcyrillic", // м -- duplicate
 	'\u2014': "emdash",               // —
 	'\ufe31': "emdashvertical",       // ︱
 	'\uff45': "emonospace",           // ｅ
 	'\u055b': "emphasismarkarmenian", // ՛
 	'\u2205': "emptyset",             // ∅
 	'\u3123': "enbopomofo",           // ㄣ
-	//	'\u043d':	"encyrillic", // н // duplicate
+	// '\u043d':    "encyrillic", // н -- duplicate
 	'\u2013': "endash",              // –
 	'\ufe32': "endashvertical",      // ︲
 	'\u04a3': "endescendercyrillic", // ң
@@ -6050,16 +6073,16 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24a0': "eparen",              // ⒠
 	'\u03b5': "epsilon",             // ε
 	'\u03ad': "epsilontonos",        // έ
-	'\u003d': "equal",               // =
+	'=':      "equal",               // =
 	'\uff1d': "equalmonospace",      // ＝
 	'\ufe66': "equalsmall",          // ﹦
 	'\u207c': "equalsuperior",       // ⁼
 	'\u2261': "equivalence",         // ≡
 	'\u3126': "erbopomofo",          // ㄦ
-	//	'\u0440':	"ercyrillic", // р // duplicate
+	// '\u0440':    "ercyrillic", // р -- duplicate
 	'\u0258': "ereversed", // ɘ
-	//	'\u044d':	"ereversedcyrillic", // э // duplicate
-	//	'\u0441':	"escyrillic", // с // duplicate
+	// '\u044d':    "ereversedcyrillic", // э -- duplicate
+	// '\u0441':    "escyrillic", // с -- duplicate
 	'\u04ab': "esdescendercyrillic",     // ҫ
 	'\u0283': "esh",                     // ʃ
 	'\u0286': "eshcurl",                 // ʆ
@@ -6079,16 +6102,16 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1ebd': "etilde",             // ẽ
 	'\u1e1b': "etildebelow",        // ḛ
 	'\u0591': "etnahtafoukhhebrew", // ֑
-	//	'\u0591':	"etnahtafoukhlefthebrew", // ֑ // duplicate
-	//	'\u0591':	"etnahtahebrew", // ֑ // duplicate
-	//	'\u0591':	"etnahtalefthebrew", // ֑ // duplicate
+	// '\u0591':    "etnahtafoukhlefthebrew", // ֑ -- duplicate
+	// '\u0591':    "etnahtahebrew", // ֑ -- duplicate
+	// '\u0591':    "etnahtalefthebrew", // ֑ -- duplicate
 	'\u01dd': "eturned",  // ǝ
 	'\u3161': "eukorean", // ㅡ
-	//	'\u20ac':	"euro", // € // duplicate
+	// '\u20ac':    "euro", // € -- duplicate
 	'\u09c7': "evowelsignbengali",  // ে
 	'\u0947': "evowelsigndeva",     // े
 	'\u0ac7': "evowelsigngujarati", // ે
-	'\u0021': "exclam",             // !
+	'!':      "exclam",             // !
 	'\u055c': "exclamarmenian",     // ՜
 	'\u203c': "exclamdbl",          // ‼
 	'\u00a1': "exclamdown",         // ¡
@@ -6101,17 +6124,17 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0293': "ezhcurl",     // ʓ
 	'\u01b9': "ezhreversed", // ƹ
 	'\u01ba': "ezhtail",     // ƺ
-	'\u0066': "f",           // f
+	'f':      "f",           // f
 	'\u095e': "fadeva",      // फ़
 	'\u0a5e': "fagurmukhi",  // ਫ਼
 	'\u2109': "fahrenheit",  // ℉
-	//	'\u064e':	"fathaarabic", // َ // duplicate
-	//	'\u064e':	"fathalowarabic", // َ // duplicate
-	//	'\u064b':	"fathatanarabic", // ً // duplicate
+	// '\u064e':    "fathaarabic", // َ -- duplicate
+	// '\u064e':    "fathalowarabic", // َ -- duplicate
+	// '\u064b':    "fathatanarabic", // ً -- duplicate
 	'\u3108': "fbopomofo",  // ㄈ
 	'\u24d5': "fcircle",    // ⓕ
 	'\u1e1f': "fdotaccent", // ḟ
-	//	'\u0641':	"feharabic", // ف // duplicate
+	// '\u0641':    "feharabic", // ف -- duplicate
 	'\u0586': "feharmenian",      // ֆ
 	'\ufed2': "fehfinalarabic",   // ﻒ
 	'\ufed3': "fehinitialarabic", // ﻓ
@@ -6126,29 +6149,29 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2482': "fifteenparen",     // ⒂
 	'\u2496': "fifteenperiod",    // ⒖
 	'\u2012': "figuredash",       // ‒
-	//	'\u25a0':	"filledbox", // ■ // duplicate
-	//	'\u25ac':	"filledrect", // ▬ // duplicate
-	//	'\u05da':	"finalkaf", // ך // duplicate
+	// '\u25a0':    "filledbox", // ■ -- duplicate
+	// '\u25ac':    "filledrect", // ▬ -- duplicate
+	// '\u05da':    "finalkaf", // ך -- duplicate
 	'\ufb3a': "finalkafdagesh", // ךּ
-	//	'\ufb3a':	"finalkafdageshhebrew", // ךּ // duplicate
-	//	'\u05da':	"finalkafhebrew", // ך // duplicate
-	//	'\u05b8':	"finalkafqamats", // ָ // duplicate
-	//	'\u05b8':	"finalkafqamatshebrew", // ָ // duplicate
-	//	'\u05b0':	"finalkafsheva", // ְ // duplicate
-	//	'\u05b0':	"finalkafshevahebrew", // ְ // duplicate
-	//	'\u05dd':	"finalmem", // ם // duplicate
-	//	'\u05dd':	"finalmemhebrew", // ם // duplicate
-	//	'\u05df':	"finalnun", // ן // duplicate
-	//	'\u05df':	"finalnunhebrew", // ן // duplicate
-	//	'\u05e3':	"finalpe", // ף // duplicate
-	//	'\u05e3':	"finalpehebrew", // ף // duplicate
-	//	'\u05e5':	"finaltsadi", // ץ // duplicate
-	//	'\u05e5':	"finaltsadihebrew", // ץ // duplicate
+	// '\ufb3a':    "finalkafdageshhebrew", // ךּ -- duplicate
+	// '\u05da':    "finalkafhebrew", // ך -- duplicate
+	// '\u05da':    "finalkafqamats", // ך -- duplicate
+	// '\u05da':    "finalkafqamatshebrew", // ך -- duplicate
+	// '\u05da':    "finalkafsheva", // ך -- duplicate
+	// '\u05da':    "finalkafshevahebrew", // ך -- duplicate
+	// '\u05dd':    "finalmem", // ם -- duplicate
+	// '\u05dd':    "finalmemhebrew", // ם -- duplicate
+	// '\u05df':    "finalnun", // ן -- duplicate
+	// '\u05df':    "finalnunhebrew", // ן -- duplicate
+	// '\u05e3':    "finalpe", // ף -- duplicate
+	// '\u05e3':    "finalpehebrew", // ף -- duplicate
+	// '\u05e5':    "finaltsadi", // ץ -- duplicate
+	// '\u05e5':    "finaltsadihebrew", // ץ -- duplicate
 	'\u02c9': "firsttonechinese", // ˉ
 	'\u25c9': "fisheye",          // ◉
-	//	'\u0473':	"fitacyrillic", // ѳ // duplicate
-	'\u0035': "five", // 5
-	//	'\u0665':	"fivearabic", // ٥ // duplicate
+	// '\u0473':    "fitacyrillic", // ѳ -- duplicate
+	'5': "five", // 5
+	// '\u0665':    "fivearabic", // ٥ -- duplicate
 	'\u09eb': "fivebengali",                // ৫
 	'\u2464': "fivecircle",                 // ⑤
 	'\u278e': "fivecircleinversesansserif", // ➎
@@ -6156,7 +6179,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u215d': "fiveeighths",                // ⅝
 	'\u0aeb': "fivegujarati",               // ૫
 	'\u0a6b': "fivegurmukhi",               // ੫
-	//	'\u0665':	"fivehackarabic", // ٥ // duplicate
+	// '\u0665':    "fivehackarabic", // ٥ -- duplicate
 	'\u3025': "fivehangzhou",         // 〥
 	'\u3224': "fiveideographicparen", // ㈤
 	'\u2085': "fiveinferior",         // ₅
@@ -6176,15 +6199,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0e1d': "fofathai",     // ฝ
 	'\u0e4f': "fongmanthai",  // ๏
 	'\u2200': "forall",       // ∀
-	'\u0034': "four",         // 4
-	//	'\u0664':	"fourarabic", // ٤ // duplicate
+	'4':      "four",         // 4
+	// '\u0664':    "fourarabic", // ٤ -- duplicate
 	'\u09ea': "fourbengali",                // ৪
 	'\u2463': "fourcircle",                 // ④
 	'\u278d': "fourcircleinversesansserif", // ➍
 	'\u096a': "fourdeva",                   // ४
 	'\u0aea': "fourgujarati",               // ૪
 	'\u0a6a': "fourgurmukhi",               // ੪
-	//	'\u0664':	"fourhackarabic", // ٤ // duplicate
+	// '\u0664':    "fourhackarabic", // ٤ -- duplicate
 	'\u3024': "fourhangzhou",         // 〤
 	'\u3223': "fourideographicparen", // ㈣
 	'\u2084': "fourinferior",         // ₄
@@ -6204,11 +6227,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24a1': "fparen",            // ⒡
 	'\u2044': "fraction",          // ⁄
 	'\u20a3': "franc",             // ₣
-	'\u0067': "g",                 // g
+	'g':      "g",                 // g
 	'\u0997': "gabengali",         // গ
 	'\u01f5': "gacute",            // ǵ
 	'\u0917': "gadeva",            // ग
-	//	'\u06af':	"gafarabic", // گ // duplicate
+	// '\u06af':    "gafarabic", // گ -- duplicate
 	'\ufb93': "gaffinalarabic",   // ﮓ
 	'\ufb94': "gafinitialarabic", // ﮔ
 	'\ufb95': "gafmedialarabic",  // ﮕ
@@ -6226,10 +6249,10 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0123': "gcedilla",         // ģ
 	'\u24d6': "gcircle",          // ⓖ
 	'\u011d': "gcircumflex",      // ĝ
-	//	'\u0123':	"gcommaaccent", // ģ // duplicate
+	// '\u0123':    "gcommaaccent", // ģ -- duplicate
 	'\u0121': "gdot", // ġ
-	//	'\u0121':	"gdotaccent", // ġ // duplicate
-	//	'\u0433':	"gecyrillic", // г // duplicate
+	// '\u0121':    "gdotaccent", // ġ -- duplicate
+	// '\u0433':    "gecyrillic", // г -- duplicate
 	'\u3052': "gehiragana",            // げ
 	'\u30b2': "gekatakana",            // ゲ
 	'\u2251': "geometricallyequal",    // ≑
@@ -6245,13 +6268,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0918': "ghadeva",               // घ
 	'\u0a98': "ghagujarati",           // ઘ
 	'\u0a18': "ghagurmukhi",           // ਘ
-	//	'\u063a':	"ghainarabic", // غ // duplicate
+	// '\u063a':    "ghainarabic", // غ -- duplicate
 	'\ufece': "ghainfinalarabic",      // ﻎ
 	'\ufecf': "ghaininitialarabic",    // ﻏ
 	'\ufed0': "ghainmedialarabic",     // ﻐ
 	'\u0495': "ghemiddlehookcyrillic", // ҕ
 	'\u0493': "ghestrokecyrillic",     // ғ
-	//	'\u0491':	"gheupturncyrillic", // ґ // duplicate
+	// '\u0491':    "gheupturncyrillic", // ґ -- duplicate
 	'\u095a': "ghhadeva",     // ग़
 	'\u0a5a': "ghhagurmukhi", // ਗ਼
 	'\u0260': "ghook",        // ɠ
@@ -6259,11 +6282,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u304e': "gihiragana",   // ぎ
 	'\u30ae': "gikatakana",   // ギ
 	'\u0563': "gimarmenian",  // գ
-	//	'\u05d2':	"gimel", // ג // duplicate
+	// '\u05d2':    "gimel", // ג -- duplicate
 	'\ufb32': "gimeldagesh", // גּ
-	//	'\ufb32':	"gimeldageshhebrew", // גּ // duplicate
-	//	'\u05d2':	"gimelhebrew", // ג // duplicate
-	//	'\u0453':	"gjecyrillic", // ѓ // duplicate
+	// '\ufb32':    "gimeldageshhebrew", // גּ -- duplicate
+	// '\u05d2':    "gimelhebrew", // ג -- duplicate
+	// '\u0453':    "gjecyrillic", // ѓ -- duplicate
 	'\u01be': "glottalinvertedstroke",       // ƾ
 	'\u0294': "glottalstop",                 // ʔ
 	'\u0296': "glottalstopinverted",         // ʖ
@@ -6280,15 +6303,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24a2': "gparen",                      // ⒢
 	'\u33ac': "gpasquare",                   // ㎬
 	'\u2207': "gradient",                    // ∇
-	'\u0060': "grave",                       // `
+	'`':      "grave",                       // `
 	'\u0316': "gravebelowcmb",               // ̖
 	'\u0300': "gravecmb",                    // ̀
-	//	'\u0300':	"gravecomb", // ̀ // duplicate
+	// '\u0300':    "gravecomb", // ̀ -- duplicate
 	'\u0953': "gravedeva",           // ॓
 	'\u02ce': "gravelowmod",         // ˎ
 	'\uff40': "gravemonospace",      // ｀
 	'\u0340': "gravetonecmb",        // ̀
-	'\u003e': "greater",             // >
+	'>':      "greater",             // >
 	'\u2265': "greaterequal",        // ≥
 	'\u22db': "greaterequalorless",  // ⋛
 	'\uff1e': "greatermonospace",    // ＞
@@ -6306,7 +6329,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30b0': "gukatakana",          // グ
 	'\u3318': "guramusquare",        // ㌘
 	'\u33c9': "gysquare",            // ㏉
-	'\u0068': "h",                   // h
+	'h':      "h",                   // h
 	'\u04a9': "haabkhasiancyrillic", // ҩ
 	'\u06c1': "haaltonearabic",      // ہ
 	'\u09b9': "habengali",           // হ
@@ -6314,7 +6337,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0939': "hadeva",              // ह
 	'\u0ab9': "hagujarati",          // હ
 	'\u0a39': "hagurmukhi",          // ਹ
-	//	'\u062d':	"haharabic", // ح // duplicate
+	// '\u062d':    "haharabic", // ح -- duplicate
 	'\ufea2': "hahfinalarabic",      // ﺢ
 	'\ufea3': "hahinitialarabic",    // ﺣ
 	'\u306f': "hahiragana",          // は
@@ -6323,44 +6346,44 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30cf': "hakatakana",          // ハ
 	'\uff8a': "hakatakanahalfwidth", // ﾊ
 	'\u0a4d': "halantgurmukhi",      // ੍
-	//	'\u0621':	"hamzaarabic", // ء // duplicate
-	//	'\u064f':	"hamzadammaarabic", // ُ // duplicate
-	//	'\u064c':	"hamzadammatanarabic", // ٌ // duplicate
-	//	'\u064e':	"hamzafathaarabic", // َ // duplicate
-	//	'\u064b':	"hamzafathatanarabic", // ً // duplicate
-	//	'\u0621':	"hamzalowarabic", // ء // duplicate
-	//	'\u0650':	"hamzalowkasraarabic", // ِ // duplicate
-	//	'\u064d':	"hamzalowkasratanarabic", // ٍ // duplicate
-	//	'\u0652':	"hamzasukunarabic", // ْ // duplicate
+	// '\u0621':    "hamzaarabic", // ء -- duplicate
+	// '\u0621':    "hamzadammaarabic", // ء -- duplicate
+	// '\u0621':    "hamzadammatanarabic", // ء -- duplicate
+	// '\u0621':    "hamzafathaarabic", // ء -- duplicate
+	// '\u0621':    "hamzafathatanarabic", // ء -- duplicate
+	// '\u0621':    "hamzalowarabic", // ء -- duplicate
+	// '\u0621':    "hamzalowkasraarabic", // ء -- duplicate
+	// '\u0621':    "hamzalowkasratanarabic", // ء -- duplicate
+	// '\u0621':    "hamzasukunarabic", // ء -- duplicate
 	'\u3164': "hangulfiller", // ㅤ
-	//	'\u044a':	"hardsigncyrillic", // ъ // duplicate
+	// '\u044a':    "hardsigncyrillic", // ъ -- duplicate
 	'\u21bc': "harpoonleftbarbup",  // ↼
 	'\u21c0': "harpoonrightbarbup", // ⇀
 	'\u33ca': "hasquare",           // ㏊
-	//	'\u05b2':	"hatafpatah", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatah16", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatah23", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatah2f", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatahhebrew", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatahnarrowhebrew", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatahquarterhebrew", // ֲ // duplicate
-	//	'\u05b2':	"hatafpatahwidehebrew", // ֲ // duplicate
-	//	'\u05b3':	"hatafqamats", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamats1b", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamats28", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamats34", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamatshebrew", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamatsnarrowhebrew", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamatsquarterhebrew", // ֳ // duplicate
-	//	'\u05b3':	"hatafqamatswidehebrew", // ֳ // duplicate
-	//	'\u05b1':	"hatafsegol", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegol17", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegol24", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegol30", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegolhebrew", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegolnarrowhebrew", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegolquarterhebrew", // ֱ // duplicate
-	//	'\u05b1':	"hatafsegolwidehebrew", // ֱ // duplicate
+	// '\u05b2':    "hatafpatah", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatah16", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatah23", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatah2f", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatahhebrew", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatahnarrowhebrew", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatahquarterhebrew", // ֲ -- duplicate
+	// '\u05b2':    "hatafpatahwidehebrew", // ֲ -- duplicate
+	// '\u05b3':    "hatafqamats", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamats1b", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamats28", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamats34", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamatshebrew", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamatsnarrowhebrew", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamatsquarterhebrew", // ֳ -- duplicate
+	// '\u05b3':    "hatafqamatswidehebrew", // ֳ -- duplicate
+	// '\u05b1':    "hatafsegol", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegol17", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegol24", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegol30", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegolhebrew", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegolnarrowhebrew", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegolquarterhebrew", // ֱ -- duplicate
+	// '\u05b1':    "hatafsegolwidehebrew", // ֱ -- duplicate
 	'\u0127': "hbar",        // ħ
 	'\u310f': "hbopomofo",   // ㄏ
 	'\u1e2b': "hbrevebelow", // ḫ
@@ -6370,18 +6393,18 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e27': "hdieresis",   // ḧ
 	'\u1e23': "hdotaccent",  // ḣ
 	'\u1e25': "hdotbelow",   // ḥ
-	//	'\u05d4':	"he", // ה // duplicate
+	// '\u05d4':    "he", // ה -- duplicate
 	'\u2665': "heart", // ♥
-	//	'\u2665':	"heartsuitblack", // ♥ // duplicate
+	// '\u2665':    "heartsuitblack", // ♥ -- duplicate
 	'\u2661': "heartsuitwhite", // ♡
 	'\ufb34': "hedagesh",       // הּ
-	//	'\ufb34':	"hedageshhebrew", // הּ // duplicate
-	//	'\u06c1':	"hehaltonearabic", // ہ // duplicate
-	//	'\u0647':	"heharabic", // ه // duplicate
-	//	'\u05d4':	"hehebrew", // ה // duplicate
+	// '\ufb34':    "hedageshhebrew", // הּ -- duplicate
+	// '\u06c1':    "hehaltonearabic", // ہ -- duplicate
+	// '\u0647':    "heharabic", // ه -- duplicate
+	// '\u05d4':    "hehebrew", // ה -- duplicate
 	'\ufba7': "hehfinalaltonearabic", // ﮧ
 	'\ufeea': "hehfinalalttwoarabic", // ﻪ
-	//	'\ufeea':	"hehfinalarabic", // ﻪ // duplicate
+	// '\ufeea':    "hehfinalarabic", // ﻪ -- duplicate
 	'\ufba5': "hehhamzaabovefinalarabic",    // ﮥ
 	'\ufba4': "hehhamzaaboveisolatedarabic", // ﮤ
 	'\ufba8': "hehinitialaltonearabic",      // ﮨ
@@ -6395,8 +6418,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3336': "hekutaarusquare",             // ㌶
 	'\u0267': "henghook",                    // ɧ
 	'\u3339': "herutusquare",                // ㌹
-	//	'\u05d7':	"het", // ח // duplicate
-	//	'\u05d7':	"hethebrew", // ח // duplicate
+	// '\u05d7':    "het", // ח -- duplicate
+	// '\u05d7':    "hethebrew", // ח -- duplicate
 	'\u0266': "hhook",               // ɦ
 	'\u02b1': "hhooksuperior",       // ʱ
 	'\u327b': "hieuhacirclekorean",  // ㉻
@@ -6407,14 +6430,14 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3072': "hihiragana",          // ひ
 	'\u30d2': "hikatakana",          // ヒ
 	'\uff8b': "hikatakanahalfwidth", // ﾋ
-	//	'\u05b4':	"hiriq", // ִ // duplicate
-	//	'\u05b4':	"hiriq14", // ִ // duplicate
-	//	'\u05b4':	"hiriq21", // ִ // duplicate
-	//	'\u05b4':	"hiriq2d", // ִ // duplicate
-	//	'\u05b4':	"hiriqhebrew", // ִ // duplicate
-	//	'\u05b4':	"hiriqnarrowhebrew", // ִ // duplicate
-	//	'\u05b4':	"hiriqquarterhebrew", // ִ // duplicate
-	//	'\u05b4':	"hiriqwidehebrew", // ִ // duplicate
+	// '\u05b4':    "hiriq", // ִ -- duplicate
+	// '\u05b4':    "hiriq14", // ִ -- duplicate
+	// '\u05b4':    "hiriq21", // ִ -- duplicate
+	// '\u05b4':    "hiriq2d", // ִ -- duplicate
+	// '\u05b4':    "hiriqhebrew", // ִ -- duplicate
+	// '\u05b4':    "hiriqnarrowhebrew", // ִ -- duplicate
+	// '\u05b4':    "hiriqquarterhebrew", // ִ -- duplicate
+	// '\u05b4':    "hiriqwidehebrew", // ִ -- duplicate
 	'\u1e96': "hlinebelow",          // ẖ
 	'\uff48': "hmonospace",          // ｈ
 	'\u0570': "hoarmenian",          // հ
@@ -6422,22 +6445,22 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u307b': "hohiragana",          // ほ
 	'\u30db': "hokatakana",          // ホ
 	'\uff8e': "hokatakanahalfwidth", // ﾎ
-	//	'\u05b9':	"holam", // ֹ // duplicate
-	//	'\u05b9':	"holam19", // ֹ // duplicate
-	//	'\u05b9':	"holam26", // ֹ // duplicate
-	//	'\u05b9':	"holam32", // ֹ // duplicate
-	//	'\u05b9':	"holamhebrew", // ֹ // duplicate
-	//	'\u05b9':	"holamnarrowhebrew", // ֹ // duplicate
-	//	'\u05b9':	"holamquarterhebrew", // ֹ // duplicate
-	//	'\u05b9':	"holamwidehebrew", // ֹ // duplicate
+	// '\u05b9':    "holam", // ֹ -- duplicate
+	// '\u05b9':    "holam19", // ֹ -- duplicate
+	// '\u05b9':    "holam26", // ֹ -- duplicate
+	// '\u05b9':    "holam32", // ֹ -- duplicate
+	// '\u05b9':    "holamhebrew", // ֹ -- duplicate
+	// '\u05b9':    "holamnarrowhebrew", // ֹ -- duplicate
+	// '\u05b9':    "holamquarterhebrew", // ֹ -- duplicate
+	// '\u05b9':    "holamwidehebrew", // ֹ -- duplicate
 	'\u0e2e': "honokhukthai",  // ฮ
 	'\u0309': "hookabovecomb", // ̉
-	//	'\u0309':	"hookcmb", // ̉ // duplicate
+	// '\u0309':    "hookcmb", // ̉ -- duplicate
 	'\u0321': "hookpalatalizedbelowcmb", // ̡
 	'\u0322': "hookretroflexbelowcmb",   // ̢
 	'\u3342': "hoonsquare",              // ㍂
 	'\u03e9': "horicoptic",              // ϩ
-	//	'\u2015':	"horizontalbar", // ― // duplicate
+	// '\u2015':    "horizontalbar", // ― -- duplicate
 	'\u031b': "horncmb",             // ̛
 	'\u2668': "hotsprings",          // ♨
 	'\u2302': "house",               // ⌂
@@ -6451,22 +6474,22 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u02dd': "hungarumlaut",        // ˝
 	'\u030b': "hungarumlautcmb",     // ̋
 	'\u0195': "hv",                  // ƕ
-	'\u002d': "hyphen",              // -
+	'-':      "hyphen",              // -
 	'\uf6e5': "hypheninferior",
 	'\uff0d': "hyphenmonospace", // －
 	'\ufe63': "hyphensmall",     // ﹣
 	'\uf6e6': "hyphensuperior",
 	'\u2010': "hyphentwo", // ‐
-	'\u0069': "i",         // i
+	'i':      "i",         // i
 	'\u00ed': "iacute",    // í
-	//	'\u044f':	"iacyrillic", // я // duplicate
+	// '\u044f':    "iacyrillic", // я -- duplicate
 	'\u0987': "ibengali",    // ই
 	'\u3127': "ibopomofo",   // ㄧ
 	'\u012d': "ibreve",      // ĭ
 	'\u01d0': "icaron",      // ǐ
 	'\u24d8': "icircle",     // ⓘ
 	'\u00ee': "icircumflex", // î
-	//	'\u0456':	"icyrillic", // і // duplicate
+	// '\u0456':    "icyrillic", // і -- duplicate
 	'\u0209': "idblgrave",                      // ȉ
 	'\u328f': "ideographearthcircle",           // ㊏
 	'\u328b': "ideographfirecircle",            // ㊋
@@ -6526,7 +6549,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u04e5': "idieresiscyrillic",         // ӥ
 	'\u1ecb': "idotbelow",                 // ị
 	'\u04d7': "iebrevecyrillic",           // ӗ
-	//	'\u0435':	"iecyrillic", // е // duplicate
+	// '\u0435':    "iecyrillic", // е -- duplicate
 	'\u3275': "ieungacirclekorean", // ㉵
 	'\u3215': "ieungaparenkorean",  // ㈕
 	'\u3267': "ieungcirclekorean",  // ㉧
@@ -6538,13 +6561,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3044': "ihiragana",          // い
 	'\u1ec9': "ihookabove",         // ỉ
 	'\u0988': "iibengali",          // ঈ
-	//	'\u0438':	"iicyrillic", // и // duplicate
+	// '\u0438':    "iicyrillic", // и -- duplicate
 	'\u0908': "iideva",          // ई
 	'\u0a88': "iigujarati",      // ઈ
 	'\u0a08': "iigurmukhi",      // ਈ
 	'\u0a40': "iimatragurmukhi", // ੀ
 	'\u020b': "iinvertedbreve",  // ȋ
-	//	'\u0439':	"iishortcyrillic", // й // duplicate
+	// '\u0439':    "iishortcyrillic", // й -- duplicate
 	'\u09c0': "iivowelsignbengali",        // ী
 	'\u0940': "iivowelsigndeva",           // ी
 	'\u0ac0': "iivowelsigngujarati",       // ી
@@ -6559,21 +6582,21 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2253': "imageorapproximatelyequal", // ≓
 	'\u0a3f': "imatragurmukhi",            // ਿ
 	'\uff49': "imonospace",                // ｉ
-	//	'\u2206':	"increment", // ∆ // duplicate
+	// '\u2206':    "increment", // ∆ -- duplicate
 	'\u221e': "infinity",       // ∞
 	'\u056b': "iniarmenian",    // ի
 	'\u222b': "integral",       // ∫
 	'\u2321': "integralbottom", // ⌡
-	//	'\u2321':	"integralbt", // ⌡ // duplicate
+	// '\u2321':    "integralbt", // ⌡ -- duplicate
 	'\uf8f5': "integralex",
 	'\u2320': "integraltop", // ⌠
-	//	'\u2320':	"integraltp", // ⌠ // duplicate
+	// '\u2320':    "integraltp", // ⌠ -- duplicate
 	'\u2229': "intersection", // ∩
 	'\u3305': "intisquare",   // ㌅
-	//	'\u25d8':	"invbullet", // ◘ // duplicate
+	// '\u25d8':    "invbullet", // ◘ -- duplicate
 	'\u25d9': "invcircle", // ◙
-	//	'\u263b':	"invsmileface", // ☻ // duplicate
-	//	'\u0451':	"iocyrillic", // ё // duplicate
+	// '\u263b':    "invsmileface", // ☻ -- duplicate
+	// '\u0451':    "iocyrillic", // ё -- duplicate
 	'\u012f': "iogonek",                 // į
 	'\u03b9': "iota",                    // ι
 	'\u03ca': "iotadieresis",            // ϊ
@@ -6593,13 +6616,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0129': "itilde",            // ĩ
 	'\u1e2d': "itildebelow",       // ḭ
 	'\u3129': "iubopomofo",        // ㄩ
-	//	'\u044e':	"iucyrillic", // ю // duplicate
+	// '\u044e':    "iucyrillic", // ю -- duplicate
 	'\u09bf': "ivowelsignbengali",  // ি
 	'\u093f': "ivowelsigndeva",     // ि
 	'\u0abf': "ivowelsigngujarati", // િ
-	//	'\u0475':	"izhitsacyrillic", // ѵ // duplicate
+	// '\u0475':    "izhitsacyrillic", // ѵ -- duplicate
 	'\u0477': "izhitsadblgravecyrillic", // ѷ
-	'\u006a': "j",                       // j
+	'j':      "j",                       // j
 	'\u0571': "jaarmenian",              // ձ
 	'\u099c': "jabengali",               // জ
 	'\u091c': "jadeva",                  // ज
@@ -6611,12 +6634,12 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0135': "jcircumflex",             // ĵ
 	'\u029d': "jcrossedtail",            // ʝ
 	'\u025f': "jdotlessstroke",          // ɟ
-	//	'\u0458':	"jecyrillic", // ј // duplicate
-	//	'\u062c':	"jeemarabic", // ج // duplicate
+	// '\u0458':    "jecyrillic", // ј -- duplicate
+	// '\u062c':    "jeemarabic", // ج -- duplicate
 	'\ufe9e': "jeemfinalarabic",   // ﺞ
 	'\ufe9f': "jeeminitialarabic", // ﺟ
 	'\ufea0': "jeemmedialarabic",  // ﺠ
-	//	'\u0698':	"jeharabic", // ژ // duplicate
+	// '\u0698':    "jeharabic", // ژ -- duplicate
 	'\ufb8b': "jehfinalarabic",    // ﮋ
 	'\u099d': "jhabengali",        // ঝ
 	'\u091d': "jhadeva",           // झ
@@ -6627,19 +6650,19 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff4a': "jmonospace",        // ｊ
 	'\u24a5': "jparen",            // ⒥
 	'\u02b2': "jsuperior",         // ʲ
-	'\u006b': "k",                 // k
+	'k':      "k",                 // k
 	'\u04a1': "kabashkircyrillic", // ҡ
 	'\u0995': "kabengali",         // ক
 	'\u1e31': "kacute",            // ḱ
-	//	'\u043a':	"kacyrillic", // к // duplicate
+	// '\u043a':    "kacyrillic", // к -- duplicate
 	'\u049b': "kadescendercyrillic", // қ
 	'\u0915': "kadeva",              // क
-	//	'\u05db':	"kaf", // כ // duplicate
-	//	'\u0643':	"kafarabic", // ك // duplicate
+	// '\u05db':    "kaf", // כ -- duplicate
+	// '\u0643':    "kafarabic", // ك -- duplicate
 	'\ufb3b': "kafdagesh", // כּ
-	//	'\ufb3b':	"kafdageshhebrew", // כּ // duplicate
+	// '\ufb3b':    "kafdageshhebrew", // כּ -- duplicate
 	'\ufeda': "kaffinalarabic", // ﻚ
-	//	'\u05db':	"kafhebrew", // כ // duplicate
+	// '\u05db':    "kafhebrew", // כ -- duplicate
 	'\ufedb': "kafinitialarabic",         // ﻛ
 	'\ufedc': "kafmedialarabic",          // ﻜ
 	'\ufb4d': "kafrafehebrew",            // כֿ
@@ -6656,12 +6679,12 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3178': "kapyeounpieupkorean",      // ㅸ
 	'\u3179': "kapyeounssangpieupkorean", // ㅹ
 	'\u330d': "karoriisquare",            // ㌍
-	//	'\u0640':	"kashidaautoarabic", // ـ // duplicate
-	//	'\u0640':	"kashidaautonosidebearingarabic", // ـ // duplicate
+	// '\u0640':    "kashidaautoarabic", // ـ -- duplicate
+	// '\u0640':    "kashidaautonosidebearingarabic", // ـ -- duplicate
 	'\u30f5': "kasmallkatakana", // ヵ
 	'\u3384': "kasquare",        // ㎄
-	//	'\u0650':	"kasraarabic", // ِ // duplicate
-	//	'\u064d':	"kasratanarabic", // ٍ // duplicate
+	// '\u0650':    "kasraarabic", // ِ -- duplicate
+	// '\u064d':    "kasratanarabic", // ٍ -- duplicate
 	'\u049f': "kastrokecyrillic",             // ҟ
 	'\uff70': "katahiraprolongmarkhalfwidth", // ｰ
 	'\u049d': "kaverticalstrokecyrillic",     // ҝ
@@ -6670,7 +6693,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01e9': "kcaron",                       // ǩ
 	'\u0137': "kcedilla",                     // ķ
 	'\u24da': "kcircle",                      // ⓚ
-	//	'\u0137':	"kcommaaccent", // ķ // duplicate
+	// '\u0137':    "kcommaaccent", // ķ -- duplicate
 	'\u1e33': "kdotbelow",           // ḳ
 	'\u0584': "keharmenian",         // ք
 	'\u3051': "kehiragana",          // け
@@ -6680,11 +6703,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30f6': "kesmallkatakana",     // ヶ
 	'\u0138': "kgreenlandic",        // ĸ
 	'\u0996': "khabengali",          // খ
-	//	'\u0445':	"khacyrillic", // х // duplicate
+	// '\u0445':    "khacyrillic", // х -- duplicate
 	'\u0916': "khadeva",     // ख
 	'\u0a96': "khagujarati", // ખ
 	'\u0a16': "khagurmukhi", // ਖ
-	//	'\u062e':	"khaharabic", // خ // duplicate
+	// '\u062e':    "khaharabic", // خ -- duplicate
 	'\ufea6': "khahfinalarabic",      // ﺦ
 	'\ufea7': "khahinitialarabic",    // ﺧ
 	'\ufea8': "khahmedialarabic",     // ﺨ
@@ -6716,7 +6739,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3131': "kiyeokkorean",         // ㄱ
 	'\u3200': "kiyeokparenkorean",    // ㈀
 	'\u3133': "kiyeoksioskorean",     // ㄳ
-	//	'\u045c':	"kjecyrillic", // ќ // duplicate
+	// '\u045c':    "kjecyrillic", // ќ -- duplicate
 	'\u1e35': "klinebelow",                      // ḵ
 	'\u3398': "klsquare",                        // ㎘
 	'\u33a6': "kmcubedsquare",                   // ㎦
@@ -6741,7 +6764,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff78': "kukatakanahalfwidth",             // ｸ
 	'\u33b8': "kvsquare",                        // ㎸
 	'\u33be': "kwsquare",                        // ㎾
-	'\u006c': "l",                               // l
+	'l':      "l",                               // l
 	'\u09b2': "labengali",                       // ল
 	'\u013a': "lacute",                          // ĺ
 	'\u0932': "ladeva",                          // ल
@@ -6756,17 +6779,17 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\ufefb': "lamalefisolatedarabic",           // ﻻ
 	'\ufef6': "lamalefmaddaabovefinalarabic",    // ﻶ
 	'\ufef5': "lamalefmaddaaboveisolatedarabic", // ﻵ
-	//	'\u0644':	"lamarabic", // ل // duplicate
+	// '\u0644':    "lamarabic", // ل -- duplicate
 	'\u03bb': "lambda",       // λ
 	'\u019b': "lambdastroke", // ƛ
-	//	'\u05dc':	"lamed", // ל // duplicate
+	// '\u05dc':    "lamed", // ל -- duplicate
 	'\ufb3c': "lameddagesh", // לּ
-	//	'\ufb3c':	"lameddageshhebrew", // לּ // duplicate
-	//	'\u05dc':	"lamedhebrew", // ל // duplicate
-	//	'\u05b9':	"lamedholam", // ֹ // duplicate
-	//	'\u05bc':	"lamedholamdagesh", // ּ // duplicate
-	//	'\u05bc':	"lamedholamdageshhebrew", // ּ // duplicate
-	//	'\u05b9':	"lamedholamhebrew", // ֹ // duplicate
+	// '\ufb3c':    "lameddageshhebrew", // לּ -- duplicate
+	// '\u05dc':    "lamedhebrew", // ל -- duplicate
+	// '\u05dc':    "lamedholam", // ל -- duplicate
+	// '\u05dc':    "lamedholamdagesh", // ל -- duplicate
+	// '\u05dc':    "lamedholamdageshhebrew", // ל -- duplicate
+	// '\u05dc':    "lamedholamhebrew", // ל -- duplicate
 	'\ufede': "lamfinalarabic",          // ﻞ
 	'\ufcca': "lamhahinitialarabic",     // ﳊ
 	'\ufedf': "laminitialarabic",        // ﻟ
@@ -6776,8 +6799,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\ufee0': "lammedialarabic",         // ﻠ
 	'\ufd88': "lammeemhahinitialarabic", // ﶈ
 	'\ufccc': "lammeeminitialarabic",    // ﳌ
-	//	'\ufea0':	"lammeemjeeminitialarabic", // ﺠ // duplicate
-	//	'\ufea8':	"lammeemkhahinitialarabic", // ﺨ // duplicate
+	// '\ufedf':    "lammeemjeeminitialarabic", // ﻟ -- duplicate
+	// '\ufedf':    "lammeemkhahinitialarabic", // ﻟ -- duplicate
 	'\u25ef': "largecircle",      // ◯
 	'\u019a': "lbar",             // ƚ
 	'\u026c': "lbelt",            // ɬ
@@ -6786,14 +6809,14 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u013c': "lcedilla",         // ļ
 	'\u24db': "lcircle",          // ⓛ
 	'\u1e3d': "lcircumflexbelow", // ḽ
-	//	'\u013c':	"lcommaaccent", // ļ // duplicate
+	// '\u013c':    "lcommaaccent", // ļ -- duplicate
 	'\u0140': "ldot", // ŀ
-	//	'\u0140':	"ldotaccent", // ŀ // duplicate
+	// '\u0140':    "ldotaccent", // ŀ -- duplicate
 	'\u1e37': "ldotbelow",          // ḷ
 	'\u1e39': "ldotbelowmacron",    // ḹ
 	'\u031a': "leftangleabovecmb",  // ̚
 	'\u0318': "lefttackbelowcmb",   // ̘
-	'\u003c': "less",               // <
+	'<':      "less",               // <
 	'\u2264': "lessequal",          // ≤
 	'\u22da': "lessequalorgreater", // ⋚
 	'\uff1c': "lessmonospace",      // ＜
@@ -6804,10 +6827,10 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u026e': "lezh",               // ɮ
 	'\u258c': "lfblock",            // ▌
 	'\u026d': "lhookretroflex",     // ɭ
-	//	'\u20a4':	"lira", // ₤ // duplicate
+	// '\u20a4':    "lira", // ₤ -- duplicate
 	'\u056c': "liwnarmenian", // լ
 	'\u01c9': "lj",           // ǉ
-	//	'\u0459':	"ljecyrillic", // љ // duplicate
+	// '\u0459':    "ljecyrillic", // љ -- duplicate
 	'\uf6c0': "ll",
 	'\u0933': "lladeva",                   // ळ
 	'\u0ab3': "llagujarati",               // ળ
@@ -6833,7 +6856,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u25ca': "lozenge",                   // ◊
 	'\u24a7': "lparen",                    // ⒧
 	'\u0142': "lslash",                    // ł
-	//	'\u2113':	"lsquare", // ℓ // duplicate
+	// '\u2113':    "lsquare", // ℓ -- duplicate
 	'\uf6ee': "lsuperior",
 	'\u2591': "ltshade",                  // ░
 	'\u0e26': "luthai",                   // ฦ
@@ -6842,7 +6865,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u09e2': "lvocalicvowelsignbengali", // ৢ
 	'\u0962': "lvocalicvowelsigndeva",    // ॢ
 	'\u33d3': "lxsquare",                 // ㏓
-	'\u006d': "m",                        // m
+	'm':      "m",                        // m
 	'\u09ae': "mabengali",                // ম
 	'\u00af': "macron",                   // ¯
 	'\u0331': "macronbelowcmb",           // ̱
@@ -6854,7 +6877,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0aae': "magujarati",               // મ
 	'\u0a2e': "magurmukhi",               // ਮ
 	'\u05a4': "mahapakhhebrew",           // ֤
-	//	'\u05a4':	"mahapakhlefthebrew", // ֤ // duplicate
+	// '\u05a4':    "mahapakhlefthebrew", // ֤ -- duplicate
 	'\u307e': "mahiragana", // ま
 	'\uf895': "maichattawalowleftthai",
 	'\uf894': "maichattawalowrightthai",
@@ -6881,8 +6904,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff8f': "makatakanahalfwidth", // ﾏ
 	'\u2642': "male",                // ♂
 	'\u3347': "mansyonsquare",       // ㍇
-	//	'\u05be':	"maqafhebrew", // ־ // duplicate
-	//	'\u2642':	"mars", // ♂ // duplicate
+	// '\u05be':    "maqafhebrew", // ־ -- duplicate
+	// '\u2642':    "mars", // ♂ -- duplicate
 	'\u05af': "masoracirclehebrew", // ֯
 	'\u3383': "masquare",           // ㎃
 	'\u3107': "mbopomofo",          // ㄇ
@@ -6891,7 +6914,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u33a5': "mcubedsquare",       // ㎥
 	'\u1e41': "mdotaccent",         // ṁ
 	'\u1e43': "mdotbelow",          // ṃ
-	//	'\u0645':	"meemarabic", // م // duplicate
+	// '\u0645':    "meemarabic", // م -- duplicate
 	'\ufee2': "meemfinalarabic",        // ﻢ
 	'\ufee3': "meeminitialarabic",      // ﻣ
 	'\ufee4': "meemmedialarabic",       // ﻤ
@@ -6902,15 +6925,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u337e': "meizierasquare",         // ㍾
 	'\u30e1': "mekatakana",             // メ
 	'\uff92': "mekatakanahalfwidth",    // ﾒ
-	//	'\u05de':	"mem", // מ // duplicate
+	// '\u05de':    "mem", // מ -- duplicate
 	'\ufb3e': "memdagesh", // מּ
-	//	'\ufb3e':	"memdageshhebrew", // מּ // duplicate
-	//	'\u05de':	"memhebrew", // מ // duplicate
+	// '\ufb3e':    "memdageshhebrew", // מּ -- duplicate
+	// '\u05de':    "memhebrew", // מ -- duplicate
 	'\u0574': "menarmenian",        // մ
 	'\u05a5': "merkhahebrew",       // ֥
 	'\u05a6': "merkhakefulahebrew", // ֦
-	//	'\u05a6':	"merkhakefulalefthebrew", // ֦ // duplicate
-	//	'\u05a5':	"merkhalefthebrew", // ֥ // duplicate
+	// '\u05a6':    "merkhakefulalefthebrew", // ֦ -- duplicate
+	// '\u05a5':    "merkhalefthebrew", // ֥ -- duplicate
 	'\u0271': "mhook",                      // ɱ
 	'\u3392': "mhzsquare",                  // ㎒
 	'\uff65': "middledotkatakanahalfwidth", // ･
@@ -6953,7 +6976,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf6ef': "msuperior",
 	'\u026f': "mturned", // ɯ
 	'\u00b5': "mu",      // µ
-	//	'\u00b5':	"mu1", // µ // duplicate
+	// '\u00b5':    "mu1", // µ -- duplicate
 	'\u3382': "muasquare",           // ㎂
 	'\u226b': "muchgreater",         // ≫
 	'\u226a': "muchless",            // ≪
@@ -6967,9 +6990,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00d7': "multiply",            // ×
 	'\u339b': "mumsquare",           // ㎛
 	'\u05a3': "munahhebrew",         // ֣
-	//	'\u05a3':	"munahlefthebrew", // ֣ // duplicate
+	// '\u05a3':    "munahlefthebrew", // ֣ -- duplicate
 	'\u266a': "musicalnote", // ♪
-	//	'\u266b':	"musicalnotedbl", // ♫ // duplicate
+	// '\u266b':    "musicalnotedbl", // ♫ -- duplicate
 	'\u266d': "musicflatsign",  // ♭
 	'\u266f': "musicsharpsign", // ♯
 	'\u33b2': "mussquare",      // ㎲
@@ -6979,9 +7002,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u33b7': "mvsquare",       // ㎷
 	'\u33bf': "mwmegasquare",   // ㎿
 	'\u33bd': "mwsquare",       // ㎽
-	'\u006e': "n",              // n
+	'n':      "n",              // n
 	'\u09a8': "nabengali",      // ন
-	//	'\u2207':	"nabla", // ∇ // duplicate
+	// '\u2207':    "nabla", // ∇ -- duplicate
 	'\u0144': "nacute",              // ń
 	'\u0928': "nadeva",              // न
 	'\u0aa8': "nagujarati",          // ન
@@ -6997,13 +7020,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0146': "ncedilla",         // ņ
 	'\u24dd': "ncircle",          // ⓝ
 	'\u1e4b': "ncircumflexbelow", // ṋ
-	//	'\u0146':	"ncommaaccent", // ņ // duplicate
+	// '\u0146':    "ncommaaccent", // ņ -- duplicate
 	'\u1e45': "ndotaccent",          // ṅ
 	'\u1e47': "ndotbelow",           // ṇ
 	'\u306d': "nehiragana",          // ね
 	'\u30cd': "nekatakana",          // ネ
 	'\uff88': "nekatakanahalfwidth", // ﾈ
-	//	'\u20aa':	"newsheqelsign", // ₪ // duplicate
+	// '\u20aa':    "newsheqelsign", // ₪ -- duplicate
 	'\u338b': "nfsquare",            // ㎋
 	'\u0999': "ngabengali",          // ঙ
 	'\u0919': "ngadeva",             // ङ
@@ -7028,15 +7051,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff86': "nikatakanahalfwidth", // ﾆ
 	'\uf899': "nikhahitleftthai",
 	'\u0e4d': "nikhahitthai", // ํ
-	'\u0039': "nine",         // 9
-	//	'\u0669':	"ninearabic", // ٩ // duplicate
+	'9':      "nine",         // 9
+	// '\u0669':    "ninearabic", // ٩ -- duplicate
 	'\u09ef': "ninebengali",                // ৯
 	'\u2468': "ninecircle",                 // ⑨
 	'\u2792': "ninecircleinversesansserif", // ➒
 	'\u096f': "ninedeva",                   // ९
 	'\u0aef': "ninegujarati",               // ૯
 	'\u0a6f': "ninegurmukhi",               // ੯
-	//	'\u0669':	"ninehackarabic", // ٩ // duplicate
+	// '\u0669':    "ninehackarabic", // ٩ -- duplicate
 	'\u3029': "ninehangzhou",         // 〩
 	'\u3228': "nineideographicparen", // ㈨
 	'\u2089': "nineinferior",         // ₉
@@ -7052,7 +7075,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u249a': "nineteenperiod", // ⒚
 	'\u0e59': "ninethai",       // ๙
 	'\u01cc': "nj",             // ǌ
-	//	'\u045a':	"njecyrillic", // њ // duplicate
+	// '\u045a':    "njecyrillic", // њ -- duplicate
 	'\u30f3': "nkatakana",           // ン
 	'\uff9d': "nkatakanahalfwidth",  // ﾝ
 	'\u019e': "nlegrightlong",       // ƞ
@@ -7067,15 +7090,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u306e': "nohiragana",          // の
 	'\u30ce': "nokatakana",          // ノ
 	'\uff89': "nokatakanahalfwidth", // ﾉ
-	//	'\u00a0':	"nonbreakingspace", // duplicate
+	// '\u00a0':    "nonbreakingspace",  -- duplicate
 	'\u0e13': "nonenthai", // ณ
 	'\u0e19': "nonuthai",  // น
-	//	'\u0646':	"noonarabic", // ن // duplicate
+	// '\u0646':    "noonarabic", // ن -- duplicate
 	'\ufee6': "noonfinalarabic", // ﻦ
-	//	'\u06ba':	"noonghunnaarabic", // ں // duplicate
+	// '\u06ba':    "noonghunnaarabic", // ں -- duplicate
 	'\ufb9f': "noonghunnafinalarabic", // ﮟ
-	//	'\ufeec':	"noonhehinitialarabic", // ﻬ // duplicate
-	'\ufee7': "nooninitialarabic",      // ﻧ
+	'\ufee7': "noonhehinitialarabic",  // ﻧ
+	// '\ufee7':    "nooninitialarabic", // ﻧ -- duplicate
 	'\ufcd2': "noonjeeminitialarabic",  // ﳒ
 	'\ufc4b': "noonjeemisolatedarabic", // ﱋ
 	'\ufee8': "noonmedialarabic",       // ﻨ
@@ -7084,7 +7107,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\ufc8d': "noonnoonfinalarabic",    // ﲍ
 	'\u220c': "notcontains",            // ∌
 	'\u2209': "notelement",             // ∉
-	//	'\u2209':	"notelementof", // ∉ // duplicate
+	// '\u2209':    "notelementof", // ∉ -- duplicate
 	'\u2260': "notequal",              // ≠
 	'\u226f': "notgreater",            // ≯
 	'\u2271': "notgreaternorequal",    // ≱
@@ -7110,23 +7133,23 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u093c': "nuktadeva",             // ़
 	'\u0abc': "nuktagujarati",         // ઼
 	'\u0a3c': "nuktagurmukhi",         // ਼
-	'\u0023': "numbersign",            // #
+	'#':      "numbersign",            // #
 	'\uff03': "numbersignmonospace",   // ＃
 	'\ufe5f': "numbersignsmall",       // ﹟
 	'\u0374': "numeralsigngreek",      // ʹ
 	'\u0375': "numeralsignlowergreek", // ͵
-	//	'\u2116':	"numero", // № // duplicate
-	//	'\u05e0':	"nun", // נ // duplicate
+	// '\u2116':    "numero", // № -- duplicate
+	// '\u05e0':    "nun", // נ -- duplicate
 	'\ufb40': "nundagesh", // נּ
-	//	'\ufb40':	"nundageshhebrew", // נּ // duplicate
-	//	'\u05e0':	"nunhebrew", // נ // duplicate
+	// '\ufb40':    "nundageshhebrew", // נּ -- duplicate
+	// '\u05e0':    "nunhebrew", // נ -- duplicate
 	'\u33b5': "nvsquare",                 // ㎵
 	'\u33bb': "nwsquare",                 // ㎻
 	'\u099e': "nyabengali",               // ঞ
 	'\u091e': "nyadeva",                  // ञ
 	'\u0a9e': "nyagujarati",              // ઞ
 	'\u0a1e': "nyagurmukhi",              // ਞ
-	'\u006f': "o",                        // o
+	'o':      "o",                        // o
 	'\u00f3': "oacute",                   // ó
 	'\u0e2d': "oangthai",                 // อ
 	'\u0275': "obarred",                  // ɵ
@@ -7147,7 +7170,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1ed3': "ocircumflexgrave",         // ồ
 	'\u1ed5': "ocircumflexhookabove",     // ổ
 	'\u1ed7': "ocircumflextilde",         // ỗ
-	//	'\u043e':	"ocyrillic", // о // duplicate
+	// '\u043e':    "ocyrillic", // о -- duplicate
 	'\u0151': "odblacute",         // ő
 	'\u020d': "odblgrave",         // ȍ
 	'\u0913': "odeva",             // ओ
@@ -7169,7 +7192,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1edd': "ohorngrave",        // ờ
 	'\u1edf': "ohornhookabove",    // ở
 	'\u1ee1': "ohorntilde",        // ỡ
-	//	'\u0151':	"ohungarumlaut", // ő // duplicate
+	// '\u0151':    "ohungarumlaut", // ő -- duplicate
 	'\u01a3': "oi",                 // ƣ
 	'\u020f': "oinvertedbreve",     // ȏ
 	'\u30aa': "okatakana",          // オ
@@ -7191,8 +7214,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u03bf': "omicron",            // ο
 	'\u03cc': "omicrontonos",       // ό
 	'\uff4f': "omonospace",         // ｏ
-	'\u0031': "one",                // 1
-	//	'\u0661':	"onearabic", // ١ // duplicate
+	'1':      "one",                // 1
+	// '\u0661':    "onearabic", // ١ -- duplicate
 	'\u09e7': "onebengali",                // ১
 	'\u2460': "onecircle",                 // ①
 	'\u278a': "onecircleinversesansserif", // ➊
@@ -7202,7 +7225,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf6dc': "onefitted",
 	'\u0ae7': "onegujarati", // ૧
 	'\u0a67': "onegurmukhi", // ੧
-	//	'\u0661':	"onehackarabic", // ١ // duplicate
+	// '\u0661':    "onehackarabic", // ١ -- duplicate
 	'\u00bd': "onehalf",             // ½
 	'\u3021': "onehangzhou",         // 〡
 	'\u3220': "oneideographicparen", // ㈠
@@ -7236,7 +7259,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3049': "osmallhiragana",          // ぉ
 	'\u30a9': "osmallkatakana",          // ォ
 	'\uff6b': "osmallkatakanahalfwidth", // ｫ
-	//	'\u01ff':	"ostrokeacute", // ǿ // duplicate
+	// '\u01ff':    "ostrokeacute", // ǿ -- duplicate
 	'\uf6f0': "osuperior",
 	'\u047f': "otcyrillic",         // ѿ
 	'\u00f5': "otilde",             // õ
@@ -7249,11 +7272,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\ufe49': "overlinedashed",     // ﹉
 	'\ufe4c': "overlinedblwavy",    // ﹌
 	'\ufe4b': "overlinewavy",       // ﹋
-	//	'\u00af':	"overscore", // ¯ // duplicate
+	// '\u00af':    "overscore", // ¯ -- duplicate
 	'\u09cb': "ovowelsignbengali",         // ো
 	'\u094b': "ovowelsigndeva",            // ो
 	'\u0acb': "ovowelsigngujarati",        // ો
-	'\u0070': "p",                         // p
+	'p':      "p",                         // p
 	'\u3380': "paampssquare",              // ㎀
 	'\u332b': "paasentosquare",            // ㌫
 	'\u09aa': "pabengali",                 // প
@@ -7271,7 +7294,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u317f': "pansioskorean",             // ㅿ
 	'\u00b6': "paragraph",                 // ¶
 	'\u2225': "parallel",                  // ∥
-	'\u0028': "parenleft",                 // (
+	'(':      "parenleft",                 // (
 	'\ufd3e': "parenleftaltonearabic",     // ﴾
 	'\uf8ed': "parenleftbt",
 	'\uf8ec': "parenleftex",
@@ -7281,7 +7304,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u207d': "parenleftsuperior",  // ⁽
 	'\uf8eb': "parenlefttp",
 	'\ufe35': "parenleftvertical",      // ︵
-	'\u0029': "parenright",             // )
+	')':      "parenright",             // )
 	'\ufd3f': "parenrightaltonearabic", // ﴿
 	'\uf8f8': "parenrightbt",
 	'\uf8f7': "parenrightex",
@@ -7292,30 +7315,30 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf8f6': "parenrighttp",
 	'\ufe36': "parenrightvertical", // ︶
 	'\u2202': "partialdiff",        // ∂
-	//	'\u05c0':	"paseqhebrew", // ׀ // duplicate
+	// '\u05c0':    "paseqhebrew", // ׀ -- duplicate
 	'\u0599': "pashtahebrew", // ֙
 	'\u33a9': "pasquare",     // ㎩
-	//	'\u05b7':	"patah", // ַ // duplicate
-	//	'\u05b7':	"patah11", // ַ // duplicate
-	//	'\u05b7':	"patah1d", // ַ // duplicate
-	//	'\u05b7':	"patah2a", // ַ // duplicate
-	//	'\u05b7':	"patahhebrew", // ַ // duplicate
-	//	'\u05b7':	"patahnarrowhebrew", // ַ // duplicate
-	//	'\u05b7':	"patahquarterhebrew", // ַ // duplicate
-	//	'\u05b7':	"patahwidehebrew", // ַ // duplicate
+	// '\u05b7':    "patah", // ַ -- duplicate
+	// '\u05b7':    "patah11", // ַ -- duplicate
+	// '\u05b7':    "patah1d", // ַ -- duplicate
+	// '\u05b7':    "patah2a", // ַ -- duplicate
+	// '\u05b7':    "patahhebrew", // ַ -- duplicate
+	// '\u05b7':    "patahnarrowhebrew", // ַ -- duplicate
+	// '\u05b7':    "patahquarterhebrew", // ַ -- duplicate
+	// '\u05b7':    "patahwidehebrew", // ַ -- duplicate
 	'\u05a1': "pazerhebrew", // ֡
 	'\u3106': "pbopomofo",   // ㄆ
 	'\u24df': "pcircle",     // ⓟ
 	'\u1e57': "pdotaccent",  // ṗ
-	//	'\u05e4':	"pe", // פ // duplicate
-	//	'\u043f':	"pecyrillic", // п // duplicate
+	// '\u05e4':    "pe", // פ -- duplicate
+	// '\u043f':    "pecyrillic", // п -- duplicate
 	'\ufb44': "pedagesh", // פּ
-	//	'\ufb44':	"pedageshhebrew", // פּ // duplicate
+	// '\ufb44':    "pedageshhebrew", // פּ -- duplicate
 	'\u333b': "peezisquare",         // ㌻
 	'\ufb43': "pefinaldageshhebrew", // ףּ
-	//	'\u067e':	"peharabic", // پ // duplicate
+	// '\u067e':    "peharabic", // پ -- duplicate
 	'\u057a': "peharmenian", // պ
-	//	'\u05e4':	"pehebrew", // פ // duplicate
+	// '\u05e4':    "pehebrew", // פ -- duplicate
 	'\ufb57': "pehfinalarabic",       // ﭗ
 	'\ufb58': "pehinitialarabic",     // ﭘ
 	'\u307a': "pehiragana",           // ぺ
@@ -7323,13 +7346,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30da': "pekatakana",           // ペ
 	'\u04a7': "pemiddlehookcyrillic", // ҧ
 	'\ufb4e': "perafehebrew",         // פֿ
-	'\u0025': "percent",              // %
-	//	'\u066a':	"percentarabic", // ٪ // duplicate
+	'%':      "percent",              // %
+	// '\u066a':    "percentarabic", // ٪ -- duplicate
 	'\uff05': "percentmonospace", // ％
 	'\ufe6a': "percentsmall",     // ﹪
-	'\u002e': "period",           // .
+	'.':      "period",           // .
 	'\u0589': "periodarmenian",   // ։
-	//	'\u00b7':	"periodcentered", // · // duplicate
+	// '\u00b7':    "periodcentered", // · -- duplicate
 	'\uff61': "periodhalfwidth", // ｡
 	'\uf6e7': "periodinferior",
 	'\uff0e': "periodmonospace", // ．
@@ -7353,7 +7376,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u320c': "phieuphparenkorean",   // ㈌
 	'\u0278': "philatin",             // ɸ
 	'\u0e3a': "phinthuthai",          // ฺ
-	//	'\u03d5':	"phisymbolgreek", // ϕ // duplicate
+	// '\u03d5':    "phisymbolgreek", // ϕ -- duplicate
 	'\u01a5': "phook",                 // ƥ
 	'\u0e1e': "phophanthai",           // พ
 	'\u0e1c': "phophungthai",          // ผ
@@ -7373,11 +7396,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3173': "pieuptikeutkorean",     // ㅳ
 	'\u3074': "pihiragana",            // ぴ
 	'\u30d4': "pikatakana",            // ピ
-	//	'\u03d6':	"pisymbolgreek", // ϖ // duplicate
+	// '\u03d6':    "pisymbolgreek", // ϖ -- duplicate
 	'\u0583': "piwrarmenian", // փ
-	'\u002b': "plus",         // +
+	'+':      "plus",         // +
 	'\u031f': "plusbelowcmb", // ̟
-	//	'\u2295':	"pluscircle", // ⊕ // duplicate
+	// '\u2295':    "pluscircle", // ⊕ -- duplicate
 	'\u00b1': "plusminus",                // ±
 	'\u02d6': "plusmod",                  // ˖
 	'\uff0b': "plusmonospace",            // ＋
@@ -7415,77 +7438,77 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30d7': "pukatakana",               // プ
 	'\u33b4': "pvsquare",                 // ㎴
 	'\u33ba': "pwsquare",                 // ㎺
-	'\u0071': "q",                        // q
+	'q':      "q",                        // q
 	'\u0958': "qadeva",                   // क़
 	'\u05a8': "qadmahebrew",              // ֨
-	//	'\u0642':	"qafarabic", // ق // duplicate
+	// '\u0642':    "qafarabic", // ق -- duplicate
 	'\ufed6': "qaffinalarabic",   // ﻖ
 	'\ufed7': "qafinitialarabic", // ﻗ
 	'\ufed8': "qafmedialarabic",  // ﻘ
-	//	'\u05b8':	"qamats", // ָ // duplicate
-	//	'\u05b8':	"qamats10", // ָ // duplicate
-	//	'\u05b8':	"qamats1a", // ָ // duplicate
-	//	'\u05b8':	"qamats1c", // ָ // duplicate
-	//	'\u05b8':	"qamats27", // ָ // duplicate
-	//	'\u05b8':	"qamats29", // ָ // duplicate
-	//	'\u05b8':	"qamats33", // ָ // duplicate
-	//	'\u05b8':	"qamatsde", // ָ // duplicate
-	//	'\u05b8':	"qamatshebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsnarrowhebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsqatanhebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsqatannarrowhebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsqatanquarterhebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsqatanwidehebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatsquarterhebrew", // ָ // duplicate
-	//	'\u05b8':	"qamatswidehebrew", // ָ // duplicate
+	// '\u05b8':    "qamats", // ָ -- duplicate
+	// '\u05b8':    "qamats10", // ָ -- duplicate
+	// '\u05b8':    "qamats1a", // ָ -- duplicate
+	// '\u05b8':    "qamats1c", // ָ -- duplicate
+	// '\u05b8':    "qamats27", // ָ -- duplicate
+	// '\u05b8':    "qamats29", // ָ -- duplicate
+	// '\u05b8':    "qamats33", // ָ -- duplicate
+	// '\u05b8':    "qamatsde", // ָ -- duplicate
+	// '\u05b8':    "qamatshebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsnarrowhebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsqatanhebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsqatannarrowhebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsqatanquarterhebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsqatanwidehebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatsquarterhebrew", // ָ -- duplicate
+	// '\u05b8':    "qamatswidehebrew", // ָ -- duplicate
 	'\u059f': "qarneyparahebrew", // ֟
 	'\u3111': "qbopomofo",        // ㄑ
 	'\u24e0': "qcircle",          // ⓠ
 	'\u02a0': "qhook",            // ʠ
 	'\uff51': "qmonospace",       // ｑ
-	//	'\u05e7':	"qof", // ק // duplicate
+	// '\u05e7':    "qof", // ק -- duplicate
 	'\ufb47': "qofdagesh", // קּ
-	//	'\ufb47':	"qofdageshhebrew", // קּ // duplicate
-	//	'\u05b2':	"qofhatafpatah", // ֲ // duplicate
-	//	'\u05b2':	"qofhatafpatahhebrew", // ֲ // duplicate
-	//	'\u05b1':	"qofhatafsegol", // ֱ // duplicate
-	//	'\u05b1':	"qofhatafsegolhebrew", // ֱ // duplicate
-	//	'\u05e7':	"qofhebrew", // ק // duplicate
-	//	'\u05b4':	"qofhiriq", // ִ // duplicate
-	//	'\u05b4':	"qofhiriqhebrew", // ִ // duplicate
-	//	'\u05b9':	"qofholam", // ֹ // duplicate
-	//	'\u05b9':	"qofholamhebrew", // ֹ // duplicate
-	//	'\u05b7':	"qofpatah", // ַ // duplicate
-	//	'\u05b7':	"qofpatahhebrew", // ַ // duplicate
-	//	'\u05b8':	"qofqamats", // ָ // duplicate
-	//	'\u05b8':	"qofqamatshebrew", // ָ // duplicate
-	//	'\u05bb':	"qofqubuts", // ֻ // duplicate
-	//	'\u05bb':	"qofqubutshebrew", // ֻ // duplicate
-	//	'\u05b6':	"qofsegol", // ֶ // duplicate
-	//	'\u05b6':	"qofsegolhebrew", // ֶ // duplicate
-	//	'\u05b0':	"qofsheva", // ְ // duplicate
-	//	'\u05b0':	"qofshevahebrew", // ְ // duplicate
-	//	'\u05b5':	"qoftsere", // ֵ // duplicate
-	//	'\u05b5':	"qoftserehebrew", // ֵ // duplicate
+	// '\ufb47':    "qofdageshhebrew", // קּ -- duplicate
+	// '\u05e7':    "qofhatafpatah", // ק -- duplicate
+	// '\u05e7':    "qofhatafpatahhebrew", // ק -- duplicate
+	// '\u05e7':    "qofhatafsegol", // ק -- duplicate
+	// '\u05e7':    "qofhatafsegolhebrew", // ק -- duplicate
+	// '\u05e7':    "qofhebrew", // ק -- duplicate
+	// '\u05e7':    "qofhiriq", // ק -- duplicate
+	// '\u05e7':    "qofhiriqhebrew", // ק -- duplicate
+	// '\u05e7':    "qofholam", // ק -- duplicate
+	// '\u05e7':    "qofholamhebrew", // ק -- duplicate
+	// '\u05e7':    "qofpatah", // ק -- duplicate
+	// '\u05e7':    "qofpatahhebrew", // ק -- duplicate
+	// '\u05e7':    "qofqamats", // ק -- duplicate
+	// '\u05e7':    "qofqamatshebrew", // ק -- duplicate
+	// '\u05e7':    "qofqubuts", // ק -- duplicate
+	// '\u05e7':    "qofqubutshebrew", // ק -- duplicate
+	// '\u05e7':    "qofsegol", // ק -- duplicate
+	// '\u05e7':    "qofsegolhebrew", // ק -- duplicate
+	// '\u05e7':    "qofsheva", // ק -- duplicate
+	// '\u05e7':    "qofshevahebrew", // ק -- duplicate
+	// '\u05e7':    "qoftsere", // ק -- duplicate
+	// '\u05e7':    "qoftserehebrew", // ק -- duplicate
 	'\u24ac': "qparen",      // ⒬
 	'\u2669': "quarternote", // ♩
-	//	'\u05bb':	"qubuts", // ֻ // duplicate
-	//	'\u05bb':	"qubuts18", // ֻ // duplicate
-	//	'\u05bb':	"qubuts25", // ֻ // duplicate
-	//	'\u05bb':	"qubuts31", // ֻ // duplicate
-	//	'\u05bb':	"qubutshebrew", // ֻ // duplicate
-	//	'\u05bb':	"qubutsnarrowhebrew", // ֻ // duplicate
-	//	'\u05bb':	"qubutsquarterhebrew", // ֻ // duplicate
-	//	'\u05bb':	"qubutswidehebrew", // ֻ // duplicate
-	'\u003f': "question", // ?
-	//	'\u061f':	"questionarabic", // ؟ // duplicate
+	// '\u05bb':    "qubuts", // ֻ -- duplicate
+	// '\u05bb':    "qubuts18", // ֻ -- duplicate
+	// '\u05bb':    "qubuts25", // ֻ -- duplicate
+	// '\u05bb':    "qubuts31", // ֻ -- duplicate
+	// '\u05bb':    "qubutshebrew", // ֻ -- duplicate
+	// '\u05bb':    "qubutsnarrowhebrew", // ֻ -- duplicate
+	// '\u05bb':    "qubutsquarterhebrew", // ֻ -- duplicate
+	// '\u05bb':    "qubutswidehebrew", // ֻ -- duplicate
+	'?': "question", // ?
+	// '\u061f':    "questionarabic", // ؟ -- duplicate
 	'\u055e': "questionarmenian", // ՞
 	'\u00bf': "questiondown",     // ¿
 	'\uf7bf': "questiondownsmall",
 	'\u037e': "questiongreek",     // ;
 	'\uff1f': "questionmonospace", // ？
 	'\uf73f': "questionsmall",
-	'\u0022': "quotedbl",              // "
+	'"':      "quotedbl",              // "
 	'\u201e': "quotedblbase",          // „
 	'\u201c': "quotedblleft",          // “
 	'\uff02': "quotedblmonospace",     // ＂
@@ -7494,13 +7517,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u201d': "quotedblright",         // ”
 	'\u2018': "quoteleft",             // ‘
 	'\u201b': "quoteleftreversed",     // ‛
-	//	'\u201b':	"quotereversed", // ‛ // duplicate
+	// '\u201b':    "quotereversed", // ‛ -- duplicate
 	'\u2019': "quoteright", // ’
-	//	'\u0149':	"quoterightn", // ŉ // duplicate
+	// '\u0149':    "quoterightn", // ŉ -- duplicate
 	'\u201a': "quotesinglbase",       // ‚
-	'\u0027': "quotesingle",          // '
+	'\'':     "quotesingle",          // \'
 	'\uff07': "quotesinglemonospace", // ＇
-	'\u0072': "r",                    // r
+	'r':      "r",                    // r
 	'\u057c': "raarmenian",           // ռ
 	'\u09b0': "rabengali",            // র
 	'\u0155': "racute",               // ŕ
@@ -7510,8 +7533,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u33ae': "radoverssquare",        // ㎮
 	'\u33af': "radoverssquaredsquare", // ㎯
 	'\u33ad': "radsquare",             // ㎭
-	//	'\u05bf':	"rafe", // ֿ // duplicate
-	//	'\u05bf':	"rafehebrew", // ֿ // duplicate
+	// '\u05bf':    "rafe", // ֿ -- duplicate
+	// '\u05bf':    "rafehebrew", // ֿ -- duplicate
 	'\u0ab0': "ragujarati",              // ર
 	'\u0a30': "ragurmukhi",              // ਰ
 	'\u3089': "rahiragana",              // ら
@@ -7525,7 +7548,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0159': "rcaron",                  // ř
 	'\u0157': "rcedilla",                // ŗ
 	'\u24e1': "rcircle",                 // ⓡ
-	//	'\u0157':	"rcommaaccent", // ŗ // duplicate
+	// '\u0157':    "rcommaaccent", // ŗ -- duplicate
 	'\u0211': "rdblgrave",       // ȑ
 	'\u1e59': "rdotaccent",      // ṙ
 	'\u1e5b': "rdotbelow",       // ṛ
@@ -7536,40 +7559,40 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00ae': "registered",      // ®
 	'\uf8e8': "registersans",
 	'\uf6da': "registerserif",
-	//	'\u0631':	"reharabic", // ر // duplicate
+	// '\u0631':    "reharabic", // ر -- duplicate
 	'\u0580': "reharmenian",    // ր
 	'\ufeae': "rehfinalarabic", // ﺮ
 	'\u308c': "rehiragana",     // れ
-	//	'\u0644':	"rehyehaleflamarabic", // ل // duplicate
+	// '\u0631':    "rehyehaleflamarabic", // ر -- duplicate
 	'\u30ec': "rekatakana",          // レ
 	'\uff9a': "rekatakanahalfwidth", // ﾚ
-	//	'\u05e8':	"resh", // ר // duplicate
+	// '\u05e8':    "resh", // ר -- duplicate
 	'\ufb48': "reshdageshhebrew", // רּ
-	//	'\u05b2':	"reshhatafpatah", // ֲ // duplicate
-	//	'\u05b2':	"reshhatafpatahhebrew", // ֲ // duplicate
-	//	'\u05b1':	"reshhatafsegol", // ֱ // duplicate
-	//	'\u05b1':	"reshhatafsegolhebrew", // ֱ // duplicate
-	//	'\u05e8':	"reshhebrew", // ר // duplicate
-	//	'\u05b4':	"reshhiriq", // ִ // duplicate
-	//	'\u05b4':	"reshhiriqhebrew", // ִ // duplicate
-	//	'\u05b9':	"reshholam", // ֹ // duplicate
-	//	'\u05b9':	"reshholamhebrew", // ֹ // duplicate
-	//	'\u05b7':	"reshpatah", // ַ // duplicate
-	//	'\u05b7':	"reshpatahhebrew", // ַ // duplicate
-	//	'\u05b8':	"reshqamats", // ָ // duplicate
-	//	'\u05b8':	"reshqamatshebrew", // ָ // duplicate
-	//	'\u05bb':	"reshqubuts", // ֻ // duplicate
-	//	'\u05bb':	"reshqubutshebrew", // ֻ // duplicate
-	//	'\u05b6':	"reshsegol", // ֶ // duplicate
-	//	'\u05b6':	"reshsegolhebrew", // ֶ // duplicate
-	//	'\u05b0':	"reshsheva", // ְ // duplicate
-	//	'\u05b0':	"reshshevahebrew", // ְ // duplicate
-	//	'\u05b5':	"reshtsere", // ֵ // duplicate
-	//	'\u05b5':	"reshtserehebrew", // ֵ // duplicate
+	// '\u05e8':    "reshhatafpatah", // ר -- duplicate
+	// '\u05e8':    "reshhatafpatahhebrew", // ר -- duplicate
+	// '\u05e8':    "reshhatafsegol", // ר -- duplicate
+	// '\u05e8':    "reshhatafsegolhebrew", // ר -- duplicate
+	// '\u05e8':    "reshhebrew", // ר -- duplicate
+	// '\u05e8':    "reshhiriq", // ר -- duplicate
+	// '\u05e8':    "reshhiriqhebrew", // ר -- duplicate
+	// '\u05e8':    "reshholam", // ר -- duplicate
+	// '\u05e8':    "reshholamhebrew", // ר -- duplicate
+	// '\u05e8':    "reshpatah", // ר -- duplicate
+	// '\u05e8':    "reshpatahhebrew", // ר -- duplicate
+	// '\u05e8':    "reshqamats", // ר -- duplicate
+	// '\u05e8':    "reshqamatshebrew", // ר -- duplicate
+	// '\u05e8':    "reshqubuts", // ר -- duplicate
+	// '\u05e8':    "reshqubutshebrew", // ר -- duplicate
+	// '\u05e8':    "reshsegol", // ר -- duplicate
+	// '\u05e8':    "reshsegolhebrew", // ר -- duplicate
+	// '\u05e8':    "reshsheva", // ר -- duplicate
+	// '\u05e8':    "reshshevahebrew", // ר -- duplicate
+	// '\u05e8':    "reshtsere", // ר -- duplicate
+	// '\u05e8':    "reshtserehebrew", // ר -- duplicate
 	'\u223d': "reversedtilde", // ∽
 	'\u0597': "reviahebrew",   // ֗
-	//	'\u0597':	"reviamugrashhebrew", // ֗ // duplicate
-	//	'\u2310':	"revlogicalnot", // ⌐ // duplicate
+	// '\u0597':    "reviamugrashhebrew", // ֗ -- duplicate
+	// '\u2310':    "revlogicalnot", // ⌐ -- duplicate
 	'\u027e': "rfishhook",              // ɾ
 	'\u027f': "rfishhookreversed",      // ɿ
 	'\u09dd': "rhabengali",             // ঢ়
@@ -7597,7 +7620,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u313e': "rieulthieuthkorean",     // ㄾ
 	'\u316a': "rieultikeutkorean",      // ㅪ
 	'\u316d': "rieulyeorinhieuhkorean", // ㅭ
-	//	'\u221f':	"rightangle", // ∟ // duplicate
+	// '\u221f':    "rightangle", // ∟ -- duplicate
 	'\u0319': "righttackbelowcmb",     // ̙
 	'\u22bf': "righttriangle",         // ⊿
 	'\u308a': "rihiragana",            // り
@@ -7627,7 +7650,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u09dc': "rrabengali",            // ড়
 	'\u0931': "rradeva",               // ऱ
 	'\u0a5c': "rragurmukhi",           // ੜ
-	//	'\u0691':	"rreharabic", // ڑ // duplicate
+	// '\u0691':    "rreharabic", // ڑ -- duplicate
 	'\ufb8d': "rrehfinalarabic",            // ﮍ
 	'\u09e0': "rrvocalicbengali",           // ৠ
 	'\u0960': "rrvocalicdeva",              // ॠ
@@ -7652,11 +7675,11 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u09c3': "rvocalicvowelsignbengali",  // ৃ
 	'\u0943': "rvocalicvowelsigndeva",     // ृ
 	'\u0ac3': "rvocalicvowelsigngujarati", // ૃ
-	'\u0073': "s",                         // s
+	's':      "s",                         // s
 	'\u09b8': "sabengali",                 // স
 	'\u015b': "sacute",                    // ś
 	'\u1e65': "sacutedotaccent",           // ṥ
-	//	'\u0635':	"sadarabic", // ص // duplicate
+	// '\u0635':    "sadarabic", // ص -- duplicate
 	'\u0938': "sadeva",                          // स
 	'\ufeba': "sadfinalarabic",                  // ﺺ
 	'\ufebb': "sadinitialarabic",                // ﺻ
@@ -7667,10 +7690,10 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u30b5': "sakatakana",                      // サ
 	'\uff7b': "sakatakanahalfwidth",             // ｻ
 	'\ufdfa': "sallallahoualayhewasallamarabic", // ﷺ
-	//	'\u05e1':	"samekh", // ס // duplicate
+	// '\u05e1':    "samekh", // ס -- duplicate
 	'\ufb41': "samekhdagesh", // סּ
-	//	'\ufb41':	"samekhdageshhebrew", // סּ // duplicate
-	//	'\u05e1':	"samekhhebrew", // ס // duplicate
+	// '\ufb41':    "samekhdageshhebrew", // סּ -- duplicate
+	// '\u05e1':    "samekhhebrew", // ס -- duplicate
 	'\u0e32': "saraaathai",         // า
 	'\u0e41': "saraaethai",         // แ
 	'\u0e44': "saraaimaimalaithai", // ไ
@@ -7694,7 +7717,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e67': "scarondotaccent", // ṧ
 	'\u015f': "scedilla",        // ş
 	'\u0259': "schwa",           // ə
-	//	'\u04d9':	"schwacyrillic", // ә // duplicate
+	// '\u04d9':    "schwacyrillic", // ә -- duplicate
 	'\u04db': "schwadieresiscyrillic", // ӛ
 	'\u025a': "schwahook",             // ɚ
 	'\u24e2': "scircle",               // ⓢ
@@ -7707,33 +7730,33 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2033': "second",                // ″
 	'\u02ca': "secondtonechinese",     // ˊ
 	'\u00a7': "section",               // §
-	//	'\u0633':	"seenarabic", // س // duplicate
+	// '\u0633':    "seenarabic", // س -- duplicate
 	'\ufeb2': "seenfinalarabic",   // ﺲ
 	'\ufeb3': "seeninitialarabic", // ﺳ
 	'\ufeb4': "seenmedialarabic",  // ﺴ
-	//	'\u05b6':	"segol", // ֶ // duplicate
-	//	'\u05b6':	"segol13", // ֶ // duplicate
-	//	'\u05b6':	"segol1f", // ֶ // duplicate
-	//	'\u05b6':	"segol2c", // ֶ // duplicate
-	//	'\u05b6':	"segolhebrew", // ֶ // duplicate
-	//	'\u05b6':	"segolnarrowhebrew", // ֶ // duplicate
-	//	'\u05b6':	"segolquarterhebrew", // ֶ // duplicate
+	// '\u05b6':    "segol", // ֶ -- duplicate
+	// '\u05b6':    "segol13", // ֶ -- duplicate
+	// '\u05b6':    "segol1f", // ֶ -- duplicate
+	// '\u05b6':    "segol2c", // ֶ -- duplicate
+	// '\u05b6':    "segolhebrew", // ֶ -- duplicate
+	// '\u05b6':    "segolnarrowhebrew", // ֶ -- duplicate
+	// '\u05b6':    "segolquarterhebrew", // ֶ -- duplicate
 	'\u0592': "segoltahebrew", // ֒
-	//	'\u05b6':	"segolwidehebrew", // ֶ // duplicate
+	// '\u05b6':    "segolwidehebrew", // ֶ -- duplicate
 	'\u057d': "seharmenian",         // ս
 	'\u305b': "sehiragana",          // せ
 	'\u30bb': "sekatakana",          // セ
 	'\uff7e': "sekatakanahalfwidth", // ｾ
-	'\u003b': "semicolon",           // ;
-	//	'\u061b':	"semicolonarabic", // ؛ // duplicate
+	';':      "semicolon",           // ;
+	// '\u061b':    "semicolonarabic", // ؛ -- duplicate
 	'\uff1b': "semicolonmonospace",          // ；
 	'\ufe54': "semicolonsmall",              // ﹔
 	'\u309c': "semivoicedmarkkana",          // ゜
 	'\uff9f': "semivoicedmarkkanahalfwidth", // ﾟ
 	'\u3322': "sentisquare",                 // ㌢
 	'\u3323': "sentosquare",                 // ㌣
-	'\u0037': "seven",                       // 7
-	//	'\u0667':	"sevenarabic", // ٧ // duplicate
+	'7':      "seven",                       // 7
+	// '\u0667':    "sevenarabic", // ٧ -- duplicate
 	'\u09ed': "sevenbengali",                // ৭
 	'\u2466': "sevencircle",                 // ⑦
 	'\u2790': "sevencircleinversesansserif", // ➐
@@ -7741,7 +7764,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u215e': "seveneighths",                // ⅞
 	'\u0aed': "sevengujarati",               // ૭
 	'\u0a6d': "sevengurmukhi",               // ੭
-	//	'\u0667':	"sevenhackarabic", // ٧ // duplicate
+	// '\u0667':    "sevenhackarabic", // ٧ -- duplicate
 	'\u3027': "sevenhangzhou",         // 〧
 	'\u3226': "sevenideographicparen", // ㈦
 	'\u2087': "seveninferior",         // ₇
@@ -7759,67 +7782,67 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00ad': "sfthyphen",
 	'\u0577': "shaarmenian", // շ
 	'\u09b6': "shabengali",  // শ
-	//	'\u0448':	"shacyrillic", // ш // duplicate
-	//	'\u0651':	"shaddaarabic", // ّ // duplicate
+	// '\u0448':    "shacyrillic", // ш -- duplicate
+	// '\u0651':    "shaddaarabic", // ّ -- duplicate
 	'\ufc61': "shaddadammaarabic",    // ﱡ
 	'\ufc5e': "shaddadammatanarabic", // ﱞ
 	'\ufc60': "shaddafathaarabic",    // ﱠ
-	//	'\u064b':	"shaddafathatanarabic", // ً // duplicate
+	// '\u0651':    "shaddafathatanarabic", // ّ -- duplicate
 	'\ufc62': "shaddakasraarabic",    // ﱢ
 	'\ufc5f': "shaddakasratanarabic", // ﱟ
 	'\u2592': "shade",                // ▒
-	//	'\u2593':	"shadedark", // ▓ // duplicate
-	//	'\u2591':	"shadelight", // ░ // duplicate
-	//	'\u2592':	"shademedium", // ▒ // duplicate
+	// '\u2593':    "shadedark", // ▓ -- duplicate
+	// '\u2591':    "shadelight", // ░ -- duplicate
+	// '\u2592':    "shademedium", // ▒ -- duplicate
 	'\u0936': "shadeva",          // श
 	'\u0ab6': "shagujarati",      // શ
 	'\u0a36': "shagurmukhi",      // ਸ਼
 	'\u0593': "shalshelethebrew", // ֓
 	'\u3115': "shbopomofo",       // ㄕ
-	//	'\u0449':	"shchacyrillic", // щ // duplicate
-	//	'\u0634':	"sheenarabic", // ش // duplicate
+	// '\u0449':    "shchacyrillic", // щ -- duplicate
+	// '\u0634':    "sheenarabic", // ش -- duplicate
 	'\ufeb6': "sheenfinalarabic",   // ﺶ
 	'\ufeb7': "sheeninitialarabic", // ﺷ
 	'\ufeb8': "sheenmedialarabic",  // ﺸ
 	'\u03e3': "sheicoptic",         // ϣ
-	//	'\u20aa':	"sheqel", // ₪ // duplicate
-	//	'\u20aa':	"sheqelhebrew", // ₪ // duplicate
-	//	'\u05b0':	"sheva", // ְ // duplicate
-	//	'\u05b0':	"sheva115", // ְ // duplicate
-	//	'\u05b0':	"sheva15", // ְ // duplicate
-	//	'\u05b0':	"sheva22", // ְ // duplicate
-	//	'\u05b0':	"sheva2e", // ְ // duplicate
-	//	'\u05b0':	"shevahebrew", // ְ // duplicate
-	//	'\u05b0':	"shevanarrowhebrew", // ְ // duplicate
-	//	'\u05b0':	"shevaquarterhebrew", // ְ // duplicate
-	//	'\u05b0':	"shevawidehebrew", // ְ // duplicate
+	// '\u20aa':    "sheqel", // ₪ -- duplicate
+	// '\u20aa':    "sheqelhebrew", // ₪ -- duplicate
+	// '\u05b0':    "sheva", // ְ -- duplicate
+	// '\u05b0':    "sheva115", // ְ -- duplicate
+	// '\u05b0':    "sheva15", // ְ -- duplicate
+	// '\u05b0':    "sheva22", // ְ -- duplicate
+	// '\u05b0':    "sheva2e", // ְ -- duplicate
+	// '\u05b0':    "shevahebrew", // ְ -- duplicate
+	// '\u05b0':    "shevanarrowhebrew", // ְ -- duplicate
+	// '\u05b0':    "shevaquarterhebrew", // ְ -- duplicate
+	// '\u05b0':    "shevawidehebrew", // ְ -- duplicate
 	'\u04bb': "shhacyrillic", // һ
 	'\u03ed': "shimacoptic",  // ϭ
-	//	'\u05e9':	"shin", // ש // duplicate
+	// '\u05e9':    "shin", // ש -- duplicate
 	'\ufb49': "shindagesh", // שּ
-	//	'\ufb49':	"shindageshhebrew", // שּ // duplicate
+	// '\ufb49':    "shindageshhebrew", // שּ -- duplicate
 	'\ufb2c': "shindageshshindot", // שּׁ
-	//	'\ufb2c':	"shindageshshindothebrew", // שּׁ // duplicate
+	// '\ufb2c':    "shindageshshindothebrew", // שּׁ -- duplicate
 	'\ufb2d': "shindageshsindot", // שּׂ
-	//	'\ufb2d':	"shindageshsindothebrew", // שּׂ // duplicate
-	//	'\u05c1':	"shindothebrew", // ׁ // duplicate
-	//	'\u05e9':	"shinhebrew", // ש // duplicate
-	//	'\ufb2a':	"shinshindot", // שׁ // duplicate
-	//	'\ufb2a':	"shinshindothebrew", // שׁ // duplicate
-	//	'\ufb2b':	"shinsindot", // שׂ // duplicate
-	//	'\ufb2b':	"shinsindothebrew", // שׂ // duplicate
+	// '\ufb2d':    "shindageshsindothebrew", // שּׂ -- duplicate
+	// '\u05c1':    "shindothebrew", // ׁ -- duplicate
+	// '\u05e9':    "shinhebrew", // ש -- duplicate
+	// '\ufb2a':    "shinshindot", // שׁ -- duplicate
+	// '\ufb2a':    "shinshindothebrew", // שׁ -- duplicate
+	// '\ufb2b':    "shinsindot", // שׂ -- duplicate
+	// '\ufb2b':    "shinsindothebrew", // שׂ -- duplicate
 	'\u0282': "shook",  // ʂ
 	'\u03c3': "sigma",  // σ
 	'\u03c2': "sigma1", // ς
-	//	'\u03c2':	"sigmafinal", // ς // duplicate
+	// '\u03c2':    "sigmafinal", // ς -- duplicate
 	'\u03f2': "sigmalunatesymbolgreek", // ϲ
 	'\u3057': "sihiragana",             // し
 	'\u30b7': "sikatakana",             // シ
 	'\uff7c': "sikatakanahalfwidth",    // ｼ
-	//	'\u05bd':	"siluqhebrew", // ֽ // duplicate
-	//	'\u05bd':	"siluqlefthebrew", // ֽ // duplicate
+	// '\u05bd':    "siluqhebrew", // ֽ -- duplicate
+	// '\u05bd':    "siluqlefthebrew", // ֽ -- duplicate
 	'\u223c': "similar", // ∼
-	//	'\u05c2':	"sindothebrew", // ׂ // duplicate
+	// '\u05c2':    "sindothebrew", // ׂ -- duplicate
 	'\u3274': "siosacirclekorean", // ㉴
 	'\u3214': "siosaparenkorean",  // ㈔
 	'\u317e': "sioscieuckorean",   // ㅾ
@@ -7830,15 +7853,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3206': "siosparenkorean",   // ㈆
 	'\u317d': "siospieupkorean",   // ㅽ
 	'\u317c': "siostikeutkorean",  // ㅼ
-	'\u0036': "six",               // 6
-	//	'\u0666':	"sixarabic", // ٦ // duplicate
+	'6':      "six",               // 6
+	// '\u0666':    "sixarabic", // ٦ -- duplicate
 	'\u09ec': "sixbengali",                // ৬
 	'\u2465': "sixcircle",                 // ⑥
 	'\u278f': "sixcircleinversesansserif", // ➏
 	'\u096c': "sixdeva",                   // ६
 	'\u0aec': "sixgujarati",               // ૬
 	'\u0a6c': "sixgurmukhi",               // ੬
-	//	'\u0666':	"sixhackarabic", // ٦ // duplicate
+	// '\u0666':    "sixhackarabic", // ٦ -- duplicate
 	'\u3026': "sixhangzhou",         // 〦
 	'\u3225': "sixideographicparen", // ㈥
 	'\u2086': "sixinferior",         // ₆
@@ -7854,15 +7877,15 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2483': "sixteenparen",                      // ⒃
 	'\u2497': "sixteenperiod",                     // ⒗
 	'\u0e56': "sixthai",                           // ๖
-	'\u002f': "slash",                             // /
+	'/':      "slash",                             // /
 	'\uff0f': "slashmonospace",                    // ／
-	//	'\u017f':	"slong", // ſ // duplicate
+	// '\u017f':    "slong", // ſ -- duplicate
 	'\u1e9b': "slongdotaccent", // ẛ
 	'\u263a': "smileface",      // ☺
 	'\uff53': "smonospace",     // ｓ
-	//	'\u05c3':	"sofpasuqhebrew", // ׃ // duplicate
-	//	'\u00ad':	"softhyphen", // duplicate
-	//	'\u044c':	"softsigncyrillic", // ь // duplicate
+	// '\u05c3':    "sofpasuqhebrew", // ׃ -- duplicate
+	// '\u00ad':    "softhyphen",  -- duplicate
+	// '\u044c':    "softsigncyrillic", // ь -- duplicate
 	'\u305d': "sohiragana",             // そ
 	'\u30bd': "sokatakana",             // ソ
 	'\uff7f': "sokatakanahalfwidth",    // ｿ
@@ -7872,10 +7895,10 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0e28': "sosalathai",             // ศ
 	'\u0e0b': "sosothai",               // ซ
 	'\u0e2a': "sosuathai",              // ส
-	'\u0020': "space",                  //
-	//	'\u0020':	"spacehackarabic", //   // duplicate
+	' ':      "space",                  //
+	// ' ': "spacehackarabic", //   -- duplicate
 	'\u2660': "spade", // ♠
-	//	'\u2660':	"spadesuitblack", // ♠ // duplicate
+	// '\u2660':    "spadesuitblack", // ♠ -- duplicate
 	'\u2664': "spadesuitwhite",                  // ♤
 	'\u24ae': "sparen",                          // ⒮
 	'\u033b': "squarebelowcmb",                  // ̻
@@ -7914,30 +7937,30 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uffe1': "sterlingmonospace",     // ￡
 	'\u0336': "strokelongoverlaycmb",  // ̶
 	'\u0335': "strokeshortoverlaycmb", // ̵
-	//	'\u2282':	"subset", // ⊂ // duplicate
+	// '\u2282':    "subset", // ⊂ -- duplicate
 	'\u228a': "subsetnotequal", // ⊊
-	//	'\u2286':	"subsetorequal", // ⊆ // duplicate
+	// '\u2286':    "subsetorequal", // ⊆ -- duplicate
 	'\u227b': "succeeds",            // ≻
 	'\u220b': "suchthat",            // ∋
 	'\u3059': "suhiragana",          // す
 	'\u30b9': "sukatakana",          // ス
 	'\uff7d': "sukatakanahalfwidth", // ｽ
-	//	'\u0652':	"sukunarabic", // ْ // duplicate
+	// '\u0652':    "sukunarabic", // ْ -- duplicate
 	'\u2211': "summation", // ∑
-	//	'\u263c':	"sun", // ☼ // duplicate
-	//	'\u2283':	"superset", // ⊃ // duplicate
+	// '\u263c':    "sun", // ☼ -- duplicate
+	// '\u2283':    "superset", // ⊃ -- duplicate
 	'\u228b': "supersetnotequal", // ⊋
-	//	'\u2287':	"supersetorequal", // ⊇ // duplicate
+	// '\u2287':    "supersetorequal", // ⊇ -- duplicate
 	'\u33dc': "svsquare",        // ㏜
 	'\u337c': "syouwaerasquare", // ㍼
-	'\u0074': "t",               // t
+	't':      "t",               // t
 	'\u09a4': "tabengali",       // ত
 	'\u22a4': "tackdown",        // ⊤
 	'\u22a3': "tackleft",        // ⊣
 	'\u0924': "tadeva",          // त
 	'\u0aa4': "tagujarati",      // ત
 	'\u0a24': "tagurmukhi",      // ਤ
-	//	'\u0637':	"taharabic", // ط // duplicate
+	// '\u0637':    "taharabic", // ط -- duplicate
 	'\ufec2': "tahfinalarabic",      // ﻂ
 	'\ufec3': "tahinitialarabic",    // ﻃ
 	'\u305f': "tahiragana",          // た
@@ -7945,32 +7968,32 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u337d': "taisyouerasquare",    // ㍽
 	'\u30bf': "takatakana",          // タ
 	'\uff80': "takatakanahalfwidth", // ﾀ
-	//	'\u0640':	"tatweelarabic", // ـ // duplicate
+	// '\u0640':    "tatweelarabic", // ـ -- duplicate
 	'\u03c4': "tau", // τ
-	//	'\u05ea':	"tav", // ת // duplicate
+	// '\u05ea':    "tav", // ת -- duplicate
 	'\ufb4a': "tavdages", // תּ
-	//	'\ufb4a':	"tavdagesh", // תּ // duplicate
-	//	'\ufb4a':	"tavdageshhebrew", // תּ // duplicate
-	//	'\u05ea':	"tavhebrew", // ת // duplicate
+	// '\ufb4a':    "tavdagesh", // תּ -- duplicate
+	// '\ufb4a':    "tavdageshhebrew", // תּ -- duplicate
+	// '\u05ea':    "tavhebrew", // ת -- duplicate
 	'\u0167': "tbar",      // ŧ
 	'\u310a': "tbopomofo", // ㄊ
 	'\u0165': "tcaron",    // ť
 	'\u02a8': "tccurl",    // ʨ
 	'\u0163': "tcedilla",  // ţ
-	//	'\u0686':	"tcheharabic", // چ // duplicate
+	// '\u0686':    "tcheharabic", // چ -- duplicate
 	'\ufb7b': "tchehfinalarabic",   // ﭻ
 	'\ufb7c': "tchehinitialarabic", // ﭼ
 	'\ufb7d': "tchehmedialarabic",  // ﭽ
-	//	'\ufee4':	"tchehmeeminitialarabic", // ﻤ // duplicate
+	// '\ufb7c':    "tchehmeeminitialarabic", // ﭼ -- duplicate
 	'\u24e3': "tcircle",          // ⓣ
 	'\u1e71': "tcircumflexbelow", // ṱ
-	//	'\u0163':	"tcommaaccent", // ţ // duplicate
+	// '\u0163':    "tcommaaccent", // ţ -- duplicate
 	'\u1e97': "tdieresis",  // ẗ
 	'\u1e6b': "tdotaccent", // ṫ
 	'\u1e6d': "tdotbelow",  // ṭ
-	//	'\u0442':	"tecyrillic", // т // duplicate
+	// '\u0442':    "tecyrillic", // т -- duplicate
 	'\u04ad': "tedescendercyrillic", // ҭ
-	//	'\u062a':	"teharabic", // ت // duplicate
+	// '\u062a':    "teharabic", // ت -- duplicate
 	'\ufe96': "tehfinalarabic",        // ﺖ
 	'\ufca2': "tehhahinitialarabic",   // ﲢ
 	'\ufc0c': "tehhahisolatedarabic",  // ﰌ
@@ -7978,7 +8001,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3066': "tehiragana",            // て
 	'\ufca1': "tehjeeminitialarabic",  // ﲡ
 	'\ufc0b': "tehjeemisolatedarabic", // ﰋ
-	//	'\u0629':	"tehmarbutaarabic", // ة // duplicate
+	// '\u0629':    "tehmarbutaarabic", // ة -- duplicate
 	'\ufe94': "tehmarbutafinalarabic", // ﺔ
 	'\ufe98': "tehmedialarabic",       // ﺘ
 	'\ufca4': "tehmeeminitialarabic",  // ﲤ
@@ -7996,32 +8019,32 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2491': "tenperiod",             // ⒑
 	'\u2179': "tenroman",              // ⅹ
 	'\u02a7': "tesh",                  // ʧ
-	//	'\u05d8':	"tet", // ט // duplicate
+	// '\u05d8':    "tet", // ט -- duplicate
 	'\ufb38': "tetdagesh", // טּ
-	//	'\ufb38':	"tetdageshhebrew", // טּ // duplicate
-	//	'\u05d8':	"tethebrew", // ט // duplicate
+	// '\ufb38':    "tetdageshhebrew", // טּ -- duplicate
+	// '\u05d8':    "tethebrew", // ט -- duplicate
 	'\u04b5': "tetsecyrillic", // ҵ
 	'\u059b': "tevirhebrew",   // ֛
-	//	'\u059b':	"tevirlefthebrew", // ֛ // duplicate
+	// '\u059b':    "tevirlefthebrew", // ֛ -- duplicate
 	'\u09a5': "thabengali",  // থ
 	'\u0925': "thadeva",     // थ
 	'\u0aa5': "thagujarati", // થ
 	'\u0a25': "thagurmukhi", // ਥ
-	//	'\u0630':	"thalarabic", // ذ // duplicate
+	// '\u0630':    "thalarabic", // ذ -- duplicate
 	'\ufeac': "thalfinalarabic", // ﺬ
 	'\uf898': "thanthakhatlowleftthai",
 	'\uf897': "thanthakhatlowrightthai",
 	'\u0e4c': "thanthakhatthai", // ์
 	'\uf896': "thanthakhatupperleftthai",
-	//	'\u062b':	"theharabic", // ث // duplicate
+	// '\u062b':    "theharabic", // ث -- duplicate
 	'\ufe9a': "thehfinalarabic",   // ﺚ
 	'\ufe9b': "thehinitialarabic", // ﺛ
 	'\ufe9c': "thehmedialarabic",  // ﺜ
-	//	'\u2203':	"thereexists", // ∃ // duplicate
+	// '\u2203':    "thereexists", // ∃ -- duplicate
 	'\u2234': "therefore", // ∴
 	'\u03b8': "theta",     // θ
 	'\u03d1': "theta1",    // ϑ
-	//	'\u03d1':	"thetasymbolgreek", // ϑ // duplicate
+	// '\u03d1':    "thetasymbolgreek", // ϑ -- duplicate
 	'\u3279': "thieuthacirclekorean",     // ㉹
 	'\u3219': "thieuthaparenkorean",      // ㈙
 	'\u326b': "thieuthcirclekorean",      // ㉫
@@ -8040,9 +8063,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u0e16': "thothungthai",             // ถ
 	'\u0482': "thousandcyrillic",         // ҂
 	'\u066c': "thousandsseparatorarabic", // ٬
-	//	'\u066c':	"thousandsseparatorpersian", // ٬ // duplicate
-	'\u0033': "three", // 3
-	//	'\u0663':	"threearabic", // ٣ // duplicate
+	// '\u066c':    "thousandsseparatorpersian", // ٬ -- duplicate
+	'3': "three", // 3
+	// '\u0663':    "threearabic", // ٣ -- duplicate
 	'\u09e9': "threebengali",                // ৩
 	'\u2462': "threecircle",                 // ③
 	'\u278c': "threecircleinversesansserif", // ➌
@@ -8050,7 +8073,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u215c': "threeeighths",                // ⅜
 	'\u0ae9': "threegujarati",               // ૩
 	'\u0a69': "threegurmukhi",               // ੩
-	//	'\u0663':	"threehackarabic", // ٣ // duplicate
+	// '\u0663':    "threehackarabic", // ٣ -- duplicate
 	'\u3023': "threehangzhou",         // 〣
 	'\u3222': "threeideographicparen", // ㈢
 	'\u2083': "threeinferior",         // ₃
@@ -8074,17 +8097,17 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3262': "tikeutcirclekorean",  // ㉢
 	'\u3137': "tikeutkorean",        // ㄷ
 	'\u3202': "tikeutparenkorean",   // ㈂
-	//	'\u02dc':	"tilde", // ˜ // duplicate
+	// '\u02dc':    "tilde", // ˜ -- duplicate
 	'\u0330': "tildebelowcmb", // ̰
 	'\u0303': "tildecmb",      // ̃
-	//	'\u0303':	"tildecomb", // ̃ // duplicate
+	// '\u0303':    "tildecomb", // ̃ -- duplicate
 	'\u0360': "tildedoublecmb", // ͠
-	//	'\u223c':	"tildeoperator", // ∼ // duplicate
+	// '\u223c':    "tildeoperator", // ∼ -- duplicate
 	'\u0334': "tildeoverlaycmb",  // ̴
 	'\u033e': "tildeverticalcmb", // ̾
-	//	'\u2297':	"timescircle", // ⊗ // duplicate
+	// '\u2297':    "timescircle", // ⊗ -- duplicate
 	'\u0596': "tipehahebrew", // ֖
-	//	'\u0596':	"tipehalefthebrew", // ֖ // duplicate
+	// '\u0596':    "tipehalefthebrew", // ֖ -- duplicate
 	'\u0a70': "tippigurmukhi",                     // ੰ
 	'\u0483': "titlocyrilliccmb",                  // ҃
 	'\u057f': "tiwnarmenian",                      // տ
@@ -8118,31 +8141,31 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uf8ea': "trademarksans",
 	'\uf6db': "trademarkserif",
 	'\u0288': "tretroflexhook", // ʈ
-	//	'\u25bc':	"triagdn", // ▼ // duplicate
-	//	'\u25c4':	"triaglf", // ◄ // duplicate
-	//	'\u25ba':	"triagrt", // ► // duplicate
-	//	'\u25b2':	"triagup", // ▲ // duplicate
+	// '\u25bc':    "triagdn", // ▼ -- duplicate
+	// '\u25c4':    "triaglf", // ◄ -- duplicate
+	// '\u25ba':    "triagrt", // ► -- duplicate
+	// '\u25b2':    "triagup", // ▲ -- duplicate
 	'\u02a6': "ts", // ʦ
-	//	'\u05e6':	"tsadi", // צ // duplicate
+	// '\u05e6':    "tsadi", // צ -- duplicate
 	'\ufb46': "tsadidagesh", // צּ
-	//	'\ufb46':	"tsadidageshhebrew", // צּ // duplicate
-	//	'\u05e6':	"tsadihebrew", // צ // duplicate
-	//	'\u0446':	"tsecyrillic", // ц // duplicate
-	//	'\u05b5':	"tsere", // ֵ // duplicate
-	//	'\u05b5':	"tsere12", // ֵ // duplicate
-	//	'\u05b5':	"tsere1e", // ֵ // duplicate
-	//	'\u05b5':	"tsere2b", // ֵ // duplicate
-	//	'\u05b5':	"tserehebrew", // ֵ // duplicate
-	//	'\u05b5':	"tserenarrowhebrew", // ֵ // duplicate
-	//	'\u05b5':	"tserequarterhebrew", // ֵ // duplicate
-	//	'\u05b5':	"tserewidehebrew", // ֵ // duplicate
-	//	'\u045b':	"tshecyrillic", // ћ // duplicate
+	// '\ufb46':    "tsadidageshhebrew", // צּ -- duplicate
+	// '\u05e6':    "tsadihebrew", // צ -- duplicate
+	// '\u0446':    "tsecyrillic", // ц -- duplicate
+	// '\u05b5':    "tsere", // ֵ -- duplicate
+	// '\u05b5':    "tsere12", // ֵ -- duplicate
+	// '\u05b5':    "tsere1e", // ֵ -- duplicate
+	// '\u05b5':    "tsere2b", // ֵ -- duplicate
+	// '\u05b5':    "tserehebrew", // ֵ -- duplicate
+	// '\u05b5':    "tserenarrowhebrew", // ֵ -- duplicate
+	// '\u05b5':    "tserequarterhebrew", // ֵ -- duplicate
+	// '\u05b5':    "tserewidehebrew", // ֵ -- duplicate
+	// '\u045b':    "tshecyrillic", // ћ -- duplicate
 	'\uf6f3': "tsuperior",
 	'\u099f': "ttabengali",  // ট
 	'\u091f': "ttadeva",     // ट
 	'\u0a9f': "ttagujarati", // ટ
 	'\u0a1f': "ttagurmukhi", // ਟ
-	//	'\u0679':	"tteharabic", // ٹ // duplicate
+	// '\u0679':    "tteharabic", // ٹ -- duplicate
 	'\ufb67': "ttehfinalarabic",          // ﭧ
 	'\ufb68': "ttehinitialarabic",        // ﭨ
 	'\ufb69': "ttehmedialarabic",         // ﭩ
@@ -8165,18 +8188,18 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u5344': "twentyhangzhou",           // 卄
 	'\u2487': "twentyparen",              // ⒇
 	'\u249b': "twentyperiod",             // ⒛
-	'\u0032': "two",                      // 2
-	//	'\u0662':	"twoarabic", // ٢ // duplicate
+	'2':      "two",                      // 2
+	// '\u0662':    "twoarabic", // ٢ -- duplicate
 	'\u09e8': "twobengali",                // ২
 	'\u2461': "twocircle",                 // ②
 	'\u278b': "twocircleinversesansserif", // ➋
 	'\u0968': "twodeva",                   // २
 	'\u2025': "twodotenleader",            // ‥
-	//	'\u2025':	"twodotleader", // ‥ // duplicate
+	// '\u2025':    "twodotleader", // ‥ -- duplicate
 	'\ufe30': "twodotleadervertical", // ︰
 	'\u0ae8': "twogujarati",          // ૨
 	'\u0a68': "twogurmukhi",          // ੨
-	//	'\u0662':	"twohackarabic", // ٢ // duplicate
+	// '\u0662':    "twohackarabic", // ٢ -- duplicate
 	'\u3022': "twohangzhou",         // 〢
 	'\u3221': "twoideographicparen", // ㈡
 	'\u2082': "twoinferior",         // ₂
@@ -8191,7 +8214,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u00b2': "twosuperior",      // ²
 	'\u0e52': "twothai",          // ๒
 	'\u2154': "twothirds",        // ⅔
-	'\u0075': "u",                // u
+	'u':      "u",                // u
 	'\u00fa': "uacute",           // ú
 	'\u0289': "ubar",             // ʉ
 	'\u0989': "ubengali",         // উ
@@ -8201,7 +8224,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u24e4': "ucircle",          // ⓤ
 	'\u00fb': "ucircumflex",      // û
 	'\u1e77': "ucircumflexbelow", // ṷ
-	//	'\u0443':	"ucyrillic", // у // duplicate
+	// '\u0443':    "ucyrillic", // у -- duplicate
 	'\u0951': "udattadeva",        // ॑
 	'\u0171': "udblacute",         // ű
 	'\u0215': "udblgrave",         // ȕ
@@ -8225,7 +8248,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1eeb': "uhorngrave",        // ừ
 	'\u1eed': "uhornhookabove",    // ử
 	'\u1eef': "uhorntilde",        // ữ
-	//	'\u0171':	"uhungarumlaut", // ű // duplicate
+	// '\u0171':    "uhungarumlaut", // ű -- duplicate
 	'\u04f3': "uhungarumlautcyrillic", // ӳ
 	'\u0217': "uinvertedbreve",        // ȗ
 	'\u30a6': "ukatakana",             // ウ
@@ -8237,13 +8260,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u1e7b': "umacrondieresis",       // ṻ
 	'\u0a41': "umatragurmukhi",        // ੁ
 	'\uff55': "umonospace",            // ｕ
-	'\u005f': "underscore",            // _
-	//	'\u2017':	"underscoredbl", // ‗ // duplicate
+	'_':      "underscore",            // _
+	// '\u2017':    "underscoredbl", // ‗ -- duplicate
 	'\uff3f': "underscoremonospace", // ＿
 	'\ufe33': "underscorevertical",  // ︳
 	'\ufe4f': "underscorewavy",      // ﹏
 	'\u222a': "union",               // ∪
-	//	'\u2200':	"universal", // ∀ // duplicate
+	// '\u2200':    "universal", // ∀ -- duplicate
 	'\u0173': "uogonek",              // ų
 	'\u24b0': "uparen",               // ⒰
 	'\u2580': "upblock",              // ▀
@@ -8257,7 +8280,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u02d4': "uptackmod",            // ˔
 	'\u0a73': "uragurmukhi",          // ੳ
 	'\u016f': "uring",                // ů
-	//	'\u045e':	"ushortcyrillic", // ў // duplicate
+	// '\u045e':    "ushortcyrillic", // ў -- duplicate
 	'\u3045': "usmallhiragana",          // ぅ
 	'\u30a5': "usmallkatakana",          // ゥ
 	'\uff69': "usmallkatakanahalfwidth", // ｩ
@@ -8277,30 +8300,30 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u09c1': "uvowelsignbengali",       // ু
 	'\u0941': "uvowelsigndeva",          // ु
 	'\u0ac1': "uvowelsigngujarati",      // ુ
-	'\u0076': "v",                       // v
+	'v':      "v",                       // v
 	'\u0935': "vadeva",                  // व
 	'\u0ab5': "vagujarati",              // વ
 	'\u0a35': "vagurmukhi",              // ਵ
 	'\u30f7': "vakatakana",              // ヷ
-	//	'\u05d5':	"vav", // ו // duplicate
-	//	'\ufb35':	"vavdagesh", // וּ // duplicate
-	//	'\ufb35':	"vavdagesh65", // וּ // duplicate
-	//	'\ufb35':	"vavdageshhebrew", // וּ // duplicate
-	//	'\u05d5':	"vavhebrew", // ו // duplicate
-	//	'\ufb4b':	"vavholam", // וֹ // duplicate
-	//	'\ufb4b':	"vavholamhebrew", // וֹ // duplicate
-	//	'\u05f0':	"vavvavhebrew", // װ // duplicate
-	//	'\u05f1':	"vavyodhebrew", // ױ // duplicate
+	// '\u05d5':    "vav", // ו -- duplicate
+	// '\ufb35':    "vavdagesh", // וּ -- duplicate
+	// '\ufb35':    "vavdagesh65", // וּ -- duplicate
+	// '\ufb35':    "vavdageshhebrew", // וּ -- duplicate
+	// '\u05d5':    "vavhebrew", // ו -- duplicate
+	// '\ufb4b':    "vavholam", // וֹ -- duplicate
+	// '\ufb4b':    "vavholamhebrew", // וֹ -- duplicate
+	// '\u05f0':    "vavvavhebrew", // װ -- duplicate
+	// '\u05f1':    "vavyodhebrew", // ױ -- duplicate
 	'\u24e5': "vcircle",   // ⓥ
 	'\u1e7f': "vdotbelow", // ṿ
-	//	'\u0432':	"vecyrillic", // в // duplicate
-	//	'\u06a4':	"veharabic", // ڤ // duplicate
+	// '\u0432':    "vecyrillic", // в -- duplicate
+	// '\u06a4':    "veharabic", // ڤ -- duplicate
 	'\ufb6b': "vehfinalarabic",   // ﭫ
 	'\ufb6c': "vehinitialarabic", // ﭬ
 	'\ufb6d': "vehmedialarabic",  // ﭭ
 	'\u30f9': "vekatakana",       // ヹ
-	//	'\u2640':	"venus", // ♀ // duplicate
-	//	'\u007c':	"verticalbar", // | // duplicate
+	// '\u2640':    "venus", // ♀ -- duplicate
+	// '|': "verticalbar", // | -- duplicate
 	'\u030d': "verticallineabovecmb",    // ̍
 	'\u0329': "verticallinebelowcmb",    // ̩
 	'\u02cc': "verticallinelowmod",      // ˌ
@@ -8326,7 +8349,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u028c': "vturned",                 // ʌ
 	'\u3094': "vuhiragana",              // ゔ
 	'\u30f4': "vukatakana",              // ヴ
-	'\u0077': "w",                       // w
+	'w':      "w",                       // w
 	'\u1e83': "wacute",                  // ẃ
 	'\u3159': "waekorean",               // ㅙ
 	'\u308f': "wahiragana",              // わ
@@ -8338,9 +8361,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3357': "wattosquare",             // ㍗
 	'\u301c': "wavedash",                // 〜
 	'\ufe34': "wavyunderscorevertical",  // ︴
-	//	'\u0648':	"wawarabic", // و // duplicate
+	// '\u0648':    "wawarabic", // و -- duplicate
 	'\ufeee': "wawfinalarabic", // ﻮ
-	//	'\u0624':	"wawhamzaabovearabic", // ؤ // duplicate
+	// '\u0624':    "wawhamzaabovearabic", // ؤ -- duplicate
 	'\ufe86': "wawhamzaabovefinalarabic", // ﺆ
 	'\u33dd': "wbsquare",                 // ㏝
 	'\u24e6': "wcircle",                  // ⓦ
@@ -8354,9 +8377,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u315e': "wekorean",                 // ㅞ
 	'\u315d': "weokorean",                // ㅝ
 	'\u1e81': "wgrave",                   // ẁ
-	//	'\u25e6':	"whitebullet", // ◦ // duplicate
-	//	'\u25cb':	"whitecircle", // ○ // duplicate
-	//	'\u25d9':	"whitecircleinverse", // ◙ // duplicate
+	// '\u25e6':    "whitebullet", // ◦ -- duplicate
+	// '\u25cb':    "whitecircle", // ○ -- duplicate
+	// '\u25d9':    "whitecircleinverse", // ◙ -- duplicate
 	'\u300e': "whitecornerbracketleft",                  // 『
 	'\ufe43': "whitecornerbracketleftvertical",          // ﹃
 	'\u300f': "whitecornerbracketright",                 // 』
@@ -8371,9 +8394,9 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3017': "whitelenticularbracketright",             // 〗
 	'\u25b9': "whiterightpointingsmalltriangle",         // ▹
 	'\u25b7': "whiterightpointingtriangle",              // ▷
-	//	'\u25ab':	"whitesmallsquare", // ▫ // duplicate
-	//	'\u263a':	"whitesmilingface", // ☺ // duplicate
-	//	'\u25a1':	"whitesquare", // □ // duplicate
+	// '\u25ab':    "whitesmallsquare", // ▫ -- duplicate
+	// '\u263a':    "whitesmilingface", // ☺ -- duplicate
+	// '\u25a1':    "whitesquare", // □ -- duplicate
 	'\u2606': "whitestar",                      // ☆
 	'\u260f': "whitetelephone",                 // ☏
 	'\u3018': "whitetortoiseshellbracketleft",  // 〘
@@ -8395,7 +8418,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u02b7': "wsuperior",                      // ʷ
 	'\u028d': "wturned",                        // ʍ
 	'\u01bf': "wynn",                           // ƿ
-	'\u0078': "x",                              // x
+	'x':      "x",                              // x
 	'\u033d': "xabovecmb",                      // ̽
 	'\u3112': "xbopomofo",                      // ㄒ
 	'\u24e7': "xcircle",                        // ⓧ
@@ -8406,7 +8429,7 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\uff58': "xmonospace",                     // ｘ
 	'\u24b3': "xparen",                         // ⒳
 	'\u02e3': "xsuperior",                      // ˣ
-	'\u0079': "y",                              // y
+	'y':      "y",                              // y
 	'\u334e': "yaadosquare",                    // ㍎
 	'\u09af': "yabengali",                      // য
 	'\u00fd': "yacute",                         // ý
@@ -8422,22 +8445,22 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3083': "yasmallhiragana",                // ゃ
 	'\u30e3': "yasmallkatakana",                // ャ
 	'\uff6c': "yasmallkatakanahalfwidth",       // ｬ
-	//	'\u0463':	"yatcyrillic", // ѣ // duplicate
+	// '\u0463':    "yatcyrillic", // ѣ -- duplicate
 	'\u24e8': "ycircle",     // ⓨ
 	'\u0177': "ycircumflex", // ŷ
 	'\u00ff': "ydieresis",   // ÿ
 	'\u1e8f': "ydotaccent",  // ẏ
 	'\u1ef5': "ydotbelow",   // ỵ
-	//	'\u064a':	"yeharabic", // ي // duplicate
-	//	'\u06d2':	"yehbarreearabic", // ے // duplicate
+	// '\u064a':    "yeharabic", // ي -- duplicate
+	// '\u06d2':    "yehbarreearabic", // ے -- duplicate
 	'\ufbaf': "yehbarreefinalarabic", // ﮯ
 	'\ufef2': "yehfinalarabic",       // ﻲ
-	//	'\u0626':	"yehhamzaabovearabic", // ئ // duplicate
+	// '\u0626':    "yehhamzaabovearabic", // ئ -- duplicate
 	'\ufe8a': "yehhamzaabovefinalarabic",   // ﺊ
 	'\ufe8b': "yehhamzaaboveinitialarabic", // ﺋ
 	'\ufe8c': "yehhamzaabovemedialarabic",  // ﺌ
-	//	'\ufef3':	"yehinitialarabic", // ﻳ // duplicate
-	//	'\ufef4':	"yehmedialarabic", // ﻴ // duplicate
+	// '\ufef3':    "yehinitialarabic", // ﻳ -- duplicate
+	// '\ufef4':    "yehmedialarabic", // ﻴ -- duplicate
 	'\ufcdd': "yehmeeminitialarabic",    // ﳝ
 	'\ufc58': "yehmeemisolatedarabic",   // ﱘ
 	'\ufc94': "yehnoonfinalarabic",      // ﲔ
@@ -8448,8 +8471,8 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u3155': "yeokorean",               // ㅕ
 	'\u3186': "yeorinhieuhkorean",       // ㆆ
 	'\u05aa': "yerahbenyomohebrew",      // ֪
-	//	'\u05aa':	"yerahbenyomolefthebrew", // ֪ // duplicate
-	//	'\u044b':	"yericyrillic", // ы // duplicate
+	// '\u05aa':    "yerahbenyomolefthebrew", // ֪ -- duplicate
+	// '\u044b':    "yericyrillic", // ы -- duplicate
 	'\u04f9': "yerudieresiscyrillic",  // ӹ
 	'\u3181': "yesieungkorean",        // ㆁ
 	'\u3183': "yesieungpansioskorean", // ㆃ
@@ -8459,17 +8482,17 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01b4': "yhook",                 // ƴ
 	'\u1ef7': "yhookabove",            // ỷ
 	'\u0575': "yiarmenian",            // յ
-	//	'\u0457':	"yicyrillic", // ї // duplicate
+	// '\u0457':    "yicyrillic", // ї -- duplicate
 	'\u3162': "yikorean",     // ㅢ
 	'\u262f': "yinyang",      // ☯
 	'\u0582': "yiwnarmenian", // ւ
 	'\uff59': "ymonospace",   // ｙ
-	//	'\u05d9':	"yod", // י // duplicate
+	// '\u05d9':    "yod", // י -- duplicate
 	'\ufb39': "yoddagesh", // יּ
-	//	'\ufb39':	"yoddageshhebrew", // יּ // duplicate
-	//	'\u05d9':	"yodhebrew", // י // duplicate
-	//	'\u05f2':	"yodyodhebrew", // ײ // duplicate
-	//	'\ufb1f':	"yodyodpatahhebrew", // ײַ // duplicate
+	// '\ufb39':    "yoddageshhebrew", // יּ -- duplicate
+	// '\u05d9':    "yodhebrew", // י -- duplicate
+	// '\u05f2':    "yodyodhebrew", // ײ -- duplicate
+	// '\ufb1f':    "yodyodpatahhebrew", // ײַ -- duplicate
 	'\u3088': "yohiragana",                // よ
 	'\u3189': "yoikorean",                 // ㆉ
 	'\u30e8': "yokatakana",                // ヨ
@@ -8507,46 +8530,46 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u318a': "yuyeokorean",               // ㆊ
 	'\u09df': "yyabengali",                // য়
 	'\u095f': "yyadeva",                   // य़
-	'\u007a': "z",                         // z
+	'z':      "z",                         // z
 	'\u0566': "zaarmenian",                // զ
 	'\u017a': "zacute",                    // ź
 	'\u095b': "zadeva",                    // ज़
 	'\u0a5b': "zagurmukhi",                // ਜ਼
-	//	'\u0638':	"zaharabic", // ظ // duplicate
+	// '\u0638':    "zaharabic", // ظ -- duplicate
 	'\ufec6': "zahfinalarabic",   // ﻆ
 	'\ufec7': "zahinitialarabic", // ﻇ
 	'\u3056': "zahiragana",       // ざ
 	'\ufec8': "zahmedialarabic",  // ﻈ
-	//	'\u0632':	"zainarabic", // ز // duplicate
+	// '\u0632':    "zainarabic", // ز -- duplicate
 	'\ufeb0': "zainfinalarabic",  // ﺰ
 	'\u30b6': "zakatakana",       // ザ
 	'\u0595': "zaqefgadolhebrew", // ֕
 	'\u0594': "zaqefqatanhebrew", // ֔
 	'\u0598': "zarqahebrew",      // ֘
-	//	'\u05d6':	"zayin", // ז // duplicate
+	// '\u05d6':    "zayin", // ז -- duplicate
 	'\ufb36': "zayindagesh", // זּ
-	//	'\ufb36':	"zayindageshhebrew", // זּ // duplicate
-	//	'\u05d6':	"zayinhebrew", // ז // duplicate
+	// '\ufb36':    "zayindageshhebrew", // זּ -- duplicate
+	// '\u05d6':    "zayinhebrew", // ז -- duplicate
 	'\u3117': "zbopomofo",   // ㄗ
 	'\u017e': "zcaron",      // ž
 	'\u24e9': "zcircle",     // ⓩ
 	'\u1e91': "zcircumflex", // ẑ
 	'\u0291': "zcurl",       // ʑ
 	'\u017c': "zdot",        // ż
-	//	'\u017c':	"zdotaccent", // ż // duplicate
+	// '\u017c':    "zdotaccent", // ż -- duplicate
 	'\u1e93': "zdotbelow", // ẓ
-	//	'\u0437':	"zecyrillic", // з // duplicate
+	// '\u0437':    "zecyrillic", // з -- duplicate
 	'\u0499': "zedescendercyrillic", // ҙ
 	'\u04df': "zedieresiscyrillic",  // ӟ
 	'\u305c': "zehiragana",          // ぜ
 	'\u30bc': "zekatakana",          // ゼ
-	'\u0030': "zero",                // 0
-	//	'\u0660':	"zeroarabic", // ٠ // duplicate
+	'0':      "zero",                // 0
+	// '\u0660':    "zeroarabic", // ٠ -- duplicate
 	'\u09e6': "zerobengali",  // ০
 	'\u0966': "zerodeva",     // ०
 	'\u0ae6': "zerogujarati", // ૦
 	'\u0a66': "zerogurmukhi", // ੦
-	//	'\u0660':	"zerohackarabic", // ٠ // duplicate
+	// '\u0660':    "zerohackarabic", // ٠ -- duplicate
 	'\u2080': "zeroinferior",  // ₀
 	'\uff10': "zeromonospace", // ０
 	'\uf730': "zerooldstyle",
@@ -8554,13 +8577,13 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u2070': "zerosuperior", // ⁰
 	'\u0e50': "zerothai",     // ๐
 	'\ufeff': "zerowidthjoiner",
-	//	'\u200c':	"zerowidthnonjoiner", // duplicate
+	// '\u200c':    "zerowidthnonjoiner",  -- duplicate
 	'\u200b': "zerowidthspace",
 	'\u03b6': "zeta",             // ζ
 	'\u3113': "zhbopomofo",       // ㄓ
 	'\u056a': "zhearmenian",      // ժ
 	'\u04c2': "zhebrevecyrillic", // ӂ
-	//	'\u0436':	"zhecyrillic", // ж // duplicate
+	// '\u0436':    "zhecyrillic", // ж -- duplicate
 	'\u0497': "zhedescendercyrillic", // җ
 	'\u04dd': "zhedieresiscyrillic",  // ӝ
 	'\u3058': "zihiragana",           // じ
@@ -8575,4 +8598,415 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 3680 entries
 	'\u01b6': "zstroke",              // ƶ
 	'\u305a': "zuhiragana",           // ず
 	'\u30ba': "zukatakana",           // ズ
+}
+
+var texGlyphlistGlyphToStringMap = map[string]string{ // 285 entries
+	"Dbar":                 "\u0110",     // Đ
+	"Delta":                "\u2206",     // ∆
+	"Digamma":              "\U0001d7cb", // 𝟋
+	"FFIsmall":             "\uf766\uf766\uf769",
+	"FFLsmall":             "\uf766\uf766\uf76c",
+	"FFsmall":              "\uf766\uf766",
+	"FIsmall":              "\uf766\uf769",
+	"FLsmall":              "\uf766\uf76c",
+	"Finv":                 "\u2132", // Ⅎ
+	"Germandbls":           "SS",     // SS
+	"Germandblssmall":      "\uf773\uf773",
+	"Gmir":                 "\u2141", // ⅁
+	"Ifractur":             "\u2111", // ℑ
+	"Ng":                   "\u014a", // Ŋ
+	"Omega":                "\u2126", // Ω
+	"Omegainv":             "\u2127", // ℧
+	"Rfractur":             "\u211c", // ℜ
+	"SS":                   "SS",     // SS
+	"SSsmall":              "\uf773\uf773",
+	"Yen":                  "\u00a5", // ¥
+	"altselector":          "\ufffd", // �
+	"angbracketleft":       "\u27e8", // ⟨
+	"angbracketright":      "\u27e9", // ⟩
+	"anticlockwise":        "\u27f2", // ⟲
+	"approxorequal":        "\u224a", // ≊
+	"archleftdown":         "\u21b6", // ↶
+	"archrightdown":        "\u21b7", // ↷
+	"arrowbothv":           "\u2195", // ↕
+	"arrowdblbothv":        "\u21d5", // ⇕
+	"arrowleftbothalf":     "\u21bd", // ↽
+	"arrowlefttophalf":     "\u21bc", // ↼
+	"arrownortheast":       "\u2197", // ↗
+	"arrownorthwest":       "\u2196", // ↖
+	"arrowparrleftright":   "\u21c6", // ⇆
+	"arrowparrrightleft":   "\u21c4", // ⇄
+	"arrowrightbothalf":    "\u21c1", // ⇁
+	"arrowrighttophalf":    "\u21c0", // ⇀
+	"arrowsoutheast":       "\u2198", // ↘
+	"arrowsouthwest":       "\u2199", // ↙
+	"arrowtailleft":        "\u21a2", // ↢
+	"arrowtailright":       "\u21a3", // ↣
+	"arrowtripleleft":      "\u21da", // ⇚
+	"arrowtripleright":     "\u21db", // ⇛
+	"ascendercompwordmark": "\ufffd", // �
+	"asteriskcentered":     "\u2217", // ∗
+	"bardbl":               "\u2225", // ∥
+	"beth":                 "\u2136", // ℶ
+	"between":              "\u226c", // ≬
+	"capitalcompwordmark":  "\ufffd", // �
+	"ceilingleft":          "\u2308", // ⌈
+	"ceilingright":         "\u2309", // ⌉
+	"check":                "\u2713", // ✓
+	"circleR":              "\u00ae", // ®
+	"circleS":              "\u24c8", // Ⓢ
+	"circleasterisk":       "\u229b", // ⊛
+	"circlecopyrt":         "\u20dd", // ⃝
+	"circledivide":         "\u2298", // ⊘
+	"circledot":            "\u2299", // ⊙
+	"circleequal":          "\u229c", // ⊜
+	"circleminus":          "\u2296", // ⊖
+	"circlering":           "\u229a", // ⊚
+	"clockwise":            "\u27f3", // ⟳
+	"complement":           "\u2201", // ∁
+	"compwordmark":         "\u200c",
+	"coproduct":            "\u2a3f", // ⨿
+	"ct":                   "ct",     // ct
+	"curlyleft":            "\u21ab", // ↫
+	"curlyright":           "\u21ac", // ↬
+	"cwm":                  "\u200c",
+	"daleth":               "\u2138",       // ℸ
+	"dbar":                 "\u0111",       // đ
+	"dblarrowdwn":          "\u21ca",       // ⇊
+	"dblarrowheadleft":     "\u219e",       // ↞
+	"dblarrowheadright":    "\u21a0",       // ↠
+	"dblarrowup":           "\u21c8",       // ⇈
+	"dblbracketleft":       "\u27e6",       // ⟦
+	"dblbracketright":      "\u27e7",       // ⟧
+	"defines":              "\u225c",       // ≜
+	"diamond":              "\u2662",       // ♢
+	"diamondmath":          "\u22c4",       // ⋄
+	"diamondsolid":         "\u2666",       // ♦
+	"difference":           "\u224f",       // ≏
+	"dividemultiply":       "\u22c7",       // ⋇
+	"dotlessj":             "\u0237",       // ȷ
+	"dotplus":              "\u2214",       // ∔
+	"downfall":             "\u22ce",       // ⋎
+	"downslope":            "\u29f9",       // ⧹
+	"emptyset":             "\u2205",       // ∅
+	"emptyslot":            "\ufffd",       // �
+	"epsilon1":             "\u03f5",       // ϵ
+	"epsiloninv":           "\u03f6",       // ϶
+	"equaldotleftright":    "\u2252",       // ≒
+	"equaldotrightleft":    "\u2253",       // ≓
+	"equalorfollows":       "\u22df",       // ⋟
+	"equalorgreater":       "\u2a96",       // ⪖
+	"equalorless":          "\u2a95",       // ⪕
+	"equalorprecedes":      "\u22de",       // ⋞
+	"equalorsimilar":       "\u2242",       // ≂
+	"equalsdots":           "\u2251",       // ≑
+	"equivasymptotic":      "\u224d",       // ≍
+	"flat":                 "\u266d",       // ♭
+	"floorleft":            "\u230a",       // ⌊
+	"floorright":           "\u230b",       // ⌋
+	"follownotdbleqv":      "\u2aba",       // ⪺
+	"follownotslnteql":     "\u2ab6",       // ⪶
+	"followornoteqvlnt":    "\u22e9",       // ⋩
+	"follows":              "\u227b",       // ≻
+	"followsequal":         "\u2ab0",       // ⪰
+	"followsorcurly":       "\u227d",       // ≽
+	"followsorequal":       "\u227f",       // ≿
+	"forces":               "\u22a9",       // ⊩
+	"forcesbar":            "\u22aa",       // ⊪
+	"fork":                 "\u22d4",       // ⋔
+	"frown":                "\u2322",       // ⌢
+	"geomequivalent":       "\u224e",       // ≎
+	"greaterdbleqlless":    "\u2a8c",       // ⪌
+	"greaterdblequal":      "\u2267",       // ≧
+	"greaterdot":           "\u22d7",       // ⋗
+	"greaterlessequal":     "\u22db",       // ⋛
+	"greatermuch":          "\u226b",       // ≫
+	"greaternotdblequal":   "\u2a8a",       // ⪊
+	"greaternotequal":      "\u2a88",       // ⪈
+	"greaterorapproxeql":   "\u2a86",       // ⪆
+	"greaterorequalslant":  "\u2a7e",       // ⩾
+	"greaterornotdbleql":   "\u2269",       // ≩
+	"greaterornotequal":    "\u2269",       // ≩
+	"greaterorsimilar":     "\u2273",       // ≳
+	"harpoondownleft":      "\u21c3",       // ⇃
+	"harpoondownright":     "\u21c2",       // ⇂
+	"harpoonleftright":     "\u21cc",       // ⇌
+	"harpoonrightleft":     "\u21cb",       // ⇋
+	"harpoonupleft":        "\u21bf",       // ↿
+	"harpoonupright":       "\u21be",       // ↾
+	"heart":                "\u2661",       // ♡
+	"hyphenchar":           "-",            // -
+	"integerdivide":        "\u2216",       // ∖
+	"intercal":             "\u22ba",       // ⊺
+	"interrobang":          "\u203d",       // ‽
+	"interrobangdown":      "\u2e18",       // ⸘
+	"intersectiondbl":      "\u22d2",       // ⋒
+	"intersectionsq":       "\u2293",       // ⊓
+	"latticetop":           "\u22a4",       // ⊤
+	"lessdbleqlgreater":    "\u2a8b",       // ⪋
+	"lessdblequal":         "\u2266",       // ≦
+	"lessdot":              "\u22d6",       // ⋖
+	"lessequalgreater":     "\u22da",       // ⋚
+	"lessmuch":             "\u226a",       // ≪
+	"lessnotdblequal":      "\u2a89",       // ⪉
+	"lessnotequal":         "\u2a87",       // ⪇
+	"lessorapproxeql":      "\u2a85",       // ⪅
+	"lessorequalslant":     "\u2a7d",       // ⩽
+	"lessornotdbleql":      "\u2268",       // ≨
+	"lessornotequal":       "\u2268",       // ≨
+	"lessorsimilar":        "\u2272",       // ≲
+	"longdbls":             "\u017f\u017f", // ſſ
+	"longsh":               "\u017fh",      // ſh
+	"longsi":               "\u017fi",      // ſi
+	"longsl":               "\u017fl",      // ſl
+	"longst":               "\ufb05",       // ﬅ
+	"lscript":              "\u2113",       // ℓ
+	"maltesecross":         "\u2720",       // ✠
+	"measuredangle":        "\u2221",       // ∡
+	"multicloseleft":       "\u22c9",       // ⋉
+	"multicloseright":      "\u22ca",       // ⋊
+	"multimap":             "\u22b8",       // ⊸
+	"multiopenleft":        "\u22cb",       // ⋋
+	"multiopenright":       "\u22cc",       // ⋌
+	"nand":                 "\u22bc",       // ⊼
+	"natural":              "\u266e",       // ♮
+	"negationslash":        "\u0338",       // ̸
+	"ng":                   "\u014b",       // ŋ
+	"notapproxequal":       "\u2247",       // ≇
+	"notarrowboth":         "\u21ae",       // ↮
+	"notarrowleft":         "\u219a",       // ↚
+	"notarrowright":        "\u219b",       // ↛
+	"notbar":               "\u2224",       // ∤
+	"notdblarrowboth":      "\u21ce",       // ⇎
+	"notdblarrowleft":      "\u21cd",       // ⇍
+	"notdblarrowright":     "\u21cf",       // ⇏
+	"notexistential":       "\u2204",       // ∄
+	"notfollows":           "\u2281",       // ⊁
+	"notfollowsoreql":      "\u2ab0\u0338", // ⪰̸
+	"notforces":            "\u22ae",       // ⊮
+	"notforcesextra":       "\u22af",       // ⊯
+	"notgreaterdblequal":   "\u2267\u0338", // ≧̸
+	"notgreaterequal":      "\u2271",       // ≱
+	"notgreaterorslnteql":  "\u2a7e\u0338", // ⩾̸
+	"notlessdblequal":      "\u2266\u0338", // ≦̸
+	"notlessequal":         "\u2270",       // ≰
+	"notlessorslnteql":     "\u2a7d\u0338", // ⩽̸
+	"notprecedesoreql":     "\u2aaf\u0338", // ⪯̸
+	"notsatisfies":         "\u22ad",       // ⊭
+	"notsimilar":           "\u2241",       // ≁
+	"notsubseteql":         "\u2288",       // ⊈
+	"notsubsetordbleql":    "\u2ac5\u0338", // ⫅̸
+	"notsubsetoreql":       "\u228a",       // ⊊
+	"notsuperseteql":       "\u2289",       // ⊉
+	"notsupersetordbleql":  "\u2ac6\u0338", // ⫆̸
+	"notsupersetoreql":     "\u228b",       // ⊋
+	"nottriangeqlleft":     "\u22ec",       // ⋬
+	"nottriangeqlright":    "\u22ed",       // ⋭
+	"nottriangleleft":      "\u22ea",       // ⋪
+	"nottriangleright":     "\u22eb",       // ⋫
+	"notturnstile":         "\u22ac",       // ⊬
+	"orunderscore":         "\u22bb",       // ⊻
+	"owner":                "\u220b",       // ∋
+	"perpcorrespond":       "\u2a5e",       // ⩞
+	"pertenthousand":       "\u2031",       // ‱
+	"phi":                  "\u03d5",       // ϕ
+	"phi1":                 "\u03c6",       // φ
+	"pi1":                  "\u03d6",       // ϖ
+	"planckover2pi":        "\u210f",       // ℏ
+	"planckover2pi1":       "\u210f",       // ℏ
+	"precedenotdbleqv":     "\u2ab9",       // ⪹
+	"precedenotslnteql":    "\u2ab5",       // ⪵
+	"precedeornoteqvlnt":   "\u22e8",       // ⋨
+	"precedesequal":        "\u2aaf",       // ⪯
+	"precedesorcurly":      "\u227c",       // ≼
+	"precedesorequal":      "\u227e",       // ≾
+	"prime":                "\u2032",       // ′
+	"primereverse":         "\u2035",       // ‵
+	"punctdash":            "\u2014",       // —
+	"rangedash":            "\u2013",       // –
+	"revasymptequal":       "\u22cd",       // ⋍
+	"revsimilar":           "\u223d",       // ∽
+	"rho1":                 "\u03f1",       // ϱ
+	"rightanglene":         "\u231d",       // ⌝
+	"rightanglenw":         "\u231c",       // ⌜
+	"rightanglese":         "\u231f",       // ⌟
+	"rightanglesw":         "\u231e",       // ⌞
+	"ringfitted":           "\ufffd",       // �
+	"ringinequal":          "\u2256",       // ≖
+	"satisfies":            "\u22a8",       // ⊨
+	"sharp":                "\u266f",       // ♯
+	"shiftleft":            "\u21b0",       // ↰
+	"shiftright":           "\u21b1",       // ↱
+	"similarequal":         "\u2243",       // ≃
+	"slurabove":            "\u2322",       // ⌢
+	"slurbelow":            "\u2323",       // ⌣
+	"smile":                "\u2323",       // ⌣
+	"sphericalangle":       "\u2222",       // ∢
+	"square":               "\u25a1",       // □
+	"squaredot":            "\u22a1",       // ⊡
+	"squareimage":          "\u228f",       // ⊏
+	"squareminus":          "\u229f",       // ⊟
+	"squaremultiply":       "\u22a0",       // ⊠
+	"squareoriginal":       "\u2290",       // ⊐
+	"squareplus":           "\u229e",       // ⊞
+	"squaresolid":          "\u25a0",       // ■
+	"squiggleleftright":    "\u21ad",       // ↭
+	"squiggleright":        "\u21dd",       // ⇝
+	"st":                   "\ufb06",       // ﬆ
+	"star":                 "\u22c6",       // ⋆
+	"subsetdbl":            "\u22d0",       // ⋐
+	"subsetdblequal":       "\u2ac5",       // ⫅
+	"subsetnoteql":         "\u228a",       // ⊊
+	"subsetornotdbleql":    "\u2acb",       // ⫋
+	"subsetsqequal":        "\u2291",       // ⊑
+	"supersetdbl":          "\u22d1",       // ⋑
+	"supersetdblequal":     "\u2ac6",       // ⫆
+	"supersetnoteql":       "\u228b",       // ⊋
+	"supersetornotdbleql":  "\u2acc",       // ⫌
+	"supersetsqequal":      "\u2292",       // ⊒
+	"triangle":             "\u25b3",       // △
+	"triangledownsld":      "\u25bc",       // ▼
+	"triangleinv":          "\u25bd",       // ▽
+	"triangleleft":         "\u25c1",       // ◁
+	"triangleleftequal":    "\u22b4",       // ⊴
+	"triangleleftsld":      "\u25c0",       // ◀
+	"triangleright":        "\u25b7",       // ▷
+	"trianglerightequal":   "\u22b5",       // ⊵
+	"trianglerightsld":     "\u25b6",       // ▶
+	"trianglesolid":        "\u25b2",       // ▲
+	"turnstileleft":        "\u22a2",       // ⊢
+	"turnstileright":       "\u22a3",       // ⊣
+	"twelveudash":          "\ufffd",       // �
+	"uniondbl":             "\u22d3",       // ⋓
+	"unionmulti":           "\u228e",       // ⊎
+	"unionsq":              "\u2294",       // ⊔
+	"uprise":               "\u22cf",       // ⋏
+	"upslope":              "\u29f8",       // ⧸
+	"vector":               "\u20d7",       // ⃗
+	"visiblespace":         "\u2423",       // ␣
+	"visualspace":          "\u2423",       // ␣
+	"wreathproduct":        "\u2240",       // ≀
+}
+
+var additionalGlyphlistGlyphToRuneMap = map[string]rune{ // 120 entries
+	"angbracketleft":        '\u3008', // 〈
+	"angbracketleftBig":     '\u2329', // 〈
+	"angbracketleftBigg":    '\u2329', // 〈
+	"angbracketleftbig":     '\u2329', // 〈
+	"angbracketleftbigg":    '\u2329', // 〈
+	"angbracketright":       '\u3009', // 〉
+	"angbracketrightBig":    '\u232a', // 〉
+	"angbracketrightBigg":   '\u232a', // 〉
+	"angbracketrightbig":    '\u232a', // 〉
+	"angbracketrightbigg":   '\u232a', // 〉
+	"arrowhookleft":         '\u21aa', // ↪
+	"arrowhookright":        '\u21a9', // ↩
+	"arrowleftbothalf":      '\u21bd', // ↽
+	"arrowlefttophalf":      '\u21bc', // ↼
+	"arrownortheast":        '\u2197', // ↗
+	"arrownorthwest":        '\u2196', // ↖
+	"arrowrightbothalf":     '\u21c1', // ⇁
+	"arrowrighttophalf":     '\u21c0', // ⇀
+	"arrowsoutheast":        '\u2198', // ↘
+	"arrowsouthwest":        '\u2199', // ↙
+	"backslashBig":          '\u2216', // ∖
+	"backslashBigg":         '\u2216', // ∖
+	"backslashbig":          '\u2216', // ∖
+	"backslashbigg":         '\u2216', // ∖
+	"bardbl":                '\u2016', // ‖
+	"bracehtipdownleft":     '\ufe37', // ︷
+	"bracehtipdownright":    '\ufe37', // ︷
+	"bracehtipupleft":       '\ufe38', // ︸
+	"bracehtipupright":      '\ufe38', // ︸
+	"braceleftBig":          '{',      // {
+	"braceleftBigg":         '{',      // {
+	"braceleftbig":          '{',      // {
+	"braceleftbigg":         '{',      // {
+	"bracerightBig":         '}',      // }
+	"bracerightBigg":        '}',      // }
+	"bracerightbig":         '}',      // }
+	"bracerightbigg":        '}',      // }
+	"bracketleftBig":        '[',      // [
+	"bracketleftBigg":       '[',      // [
+	"bracketleftbig":        '[',      // [
+	"bracketleftbigg":       '[',      // [
+	"bracketrightBig":       ']',      // ]
+	"bracketrightBigg":      ']',      // ]
+	"bracketrightbig":       ']',      // ]
+	"bracketrightbigg":      ']',      // ]
+	"ceilingleftBig":        '\u2308', // ⌈
+	"ceilingleftBigg":       '\u2308', // ⌈
+	"ceilingleftbig":        '\u2308', // ⌈
+	"ceilingleftbigg":       '\u2308', // ⌈
+	"ceilingrightBig":       '\u2309', // ⌉
+	"ceilingrightBigg":      '\u2309', // ⌉
+	"ceilingrightbig":       '\u2309', // ⌉
+	"ceilingrightbigg":      '\u2309', // ⌉
+	"circlecopyrt":          '\u00a9', // ©
+	"circledotdisplay":      '\u2299', // ⊙
+	"circledottext":         '\u2299', // ⊙
+	"circlemultiplydisplay": '\u2297', // ⊗
+	"circlemultiplytext":    '\u2297', // ⊗
+	"circleplusdisplay":     '\u2295', // ⊕
+	"circleplustext":        '\u2295', // ⊕
+	"contintegraldisplay":   '\u222e', // ∮
+	"contintegraltext":      '\u222e', // ∮
+	"controlNULL":           '\x00',
+	"coproductdisplay":      '\u2210', // ∐
+	"coproducttext":         '\u2210', // ∐
+	"floorleftBig":          '\u230a', // ⌊
+	"floorleftBigg":         '\u230a', // ⌊
+	"floorleftbig":          '\u230a', // ⌊
+	"floorleftbigg":         '\u230a', // ⌊
+	"floorrightBig":         '\u230b', // ⌋
+	"floorrightBigg":        '\u230b', // ⌋
+	"floorrightbig":         '\u230b', // ⌋
+	"floorrightbigg":        '\u230b', // ⌋
+	"hatwide":               '\u0302', // ̂
+	"hatwider":              '\u0302', // ̂
+	"hatwidest":             '\u0302', // ̂
+	"integraldisplay":       '\u222b', // ∫
+	"integraltext":          '\u222b', // ∫
+	"intercal":              '\u1d40', // ᵀ
+	"intersectiondisplay":   '\u22c2', // ⋂
+	"intersectiontext":      '\u22c2', // ⋂
+	"logicalanddisplay":     '\u2227', // ∧
+	"logicalandtext":        '\u2227', // ∧
+	"logicalordisplay":      '\u2228', // ∨
+	"logicalortext":         '\u2228', // ∨
+	"parenleftBig":          '(',      // (
+	"parenleftBigg":         '(',      // (
+	"parenleftbig":          '(',      // (
+	"parenleftbigg":         '(',      // (
+	"parenrightBig":         ')',      // )
+	"parenrightBigg":        ')',      // )
+	"parenrightbig":         ')',      // )
+	"parenrightbigg":        ')',      // )
+	"prime":                 '\u2032', // ′
+	"productdisplay":        '\u220f', // ∏
+	"producttext":           '\u220f', // ∏
+	"radicalBig":            '\u221a', // √
+	"radicalBigg":           '\u221a', // √
+	"radicalbig":            '\u221a', // √
+	"radicalbigg":           '\u221a', // √
+	"radicalbt":             '\u221a', // √
+	"radicaltp":             '\u221a', // √
+	"radicalvertex":         '\u221a', // √
+	"slashBig":              '/',      // /
+	"slashBigg":             '/',      // /
+	"slashbig":              '/',      // /
+	"slashbigg":             '/',      // /
+	"summationdisplay":      '\u2211', // ∑
+	"summationtext":         '\u2211', // ∑
+	"tildewide":             '\u02dc', // ˜
+	"tildewider":            '\u02dc', // ˜
+	"tildewidest":           '\u02dc', // ˜
+	"uniondisplay":          '\u22c3', // ⋃
+	"unionmultidisplay":     '\u228e', // ⊎
+	"unionmultitext":        '\u228e', // ⊎
+	"unionsqdisplay":        '\u2294', // ⊔
+	"unionsqtext":           '\u2294', // ⊔
+	"uniontext":             '\u22c3', // ⋃
+	"vextenddouble":         '\u2225', // ∥
+	"vextendsingle":         '\u2223', // ∣
 }
