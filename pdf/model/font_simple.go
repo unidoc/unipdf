@@ -250,6 +250,9 @@ func (font *pdfFontSimple) ToPdfObject() PdfObject {
 // styling functions.
 // Uses a WinAnsiTextEncoder and loads only character codes 32-255.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
+	const minCode = 32
+	const maxCode = 255
+
 	ttf, err := fonts.TtfParse(filePath)
 	if err != nil {
 		common.Log.Debug("ERROR: loading ttf font: %v", err)
@@ -263,12 +266,12 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	// then can derive
 	// TODO: Subsetting fonts.
 	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
-	truefont.firstChar = 32
-	truefont.lastChar = 255
+	truefont.firstChar = minCode
+	truefont.lastChar = maxCode
 
 	truefont.skeleton.basefont = ttf.PostScriptName
-	truefont.FirstChar = MakeInteger(32)
-	truefont.LastChar = MakeInteger(255)
+	truefont.FirstChar = MakeInteger(minCode)
+	truefont.LastChar = MakeInteger(maxCode)
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 	if len(ttf.Widths) <= 0 {
@@ -276,9 +279,9 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	missingWidth := k * float64(ttf.Widths[0])
-	vals := []float64{}
 
-	for code := 32; code <= 255; code++ {
+	vals := make([]float64, 0, maxCode-minCode+1)
+	for code := minCode; code <= maxCode; code++ {
 		r, found := truefont.Encoder().CharcodeToRune(uint16(code))
 		if !found {
 			common.Log.Debug("Rune not found (code: %d)", code)
