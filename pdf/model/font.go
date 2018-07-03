@@ -136,7 +136,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 		}
 	}
 	// Fall back to encoding
-	charcodes := []uint16{}
+	charcodes := make([]uint16, 0, len(data)+len(data)%2)
 	if font.isCIDFont() {
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
@@ -155,7 +155,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 		}
 	}
 	if encoder := font.Encoder(); encoder != nil {
-		runes := []rune{}
+		runes := make([]rune, 0, len(charcodes))
 		for _, code := range charcodes {
 			r, ok := encoder.CharcodeToRune(code)
 			if !ok {
