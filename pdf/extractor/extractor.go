@@ -20,9 +20,10 @@ func New(page *model.PdfPage) (*Extractor, error) {
 		return nil, err
 	}
 
-	e := &Extractor{}
-	e.contents = contents
-	e.resources = page.Resources
+	// fmt.Println("========================= +++ =========================")
+	// fmt.Printf("%s\n", contents)
+	// fmt.Println("========================= ::: =========================")
 
+	e := &Extractor{contents: contents, resources: page.Resources}
 	return e, nil
 }

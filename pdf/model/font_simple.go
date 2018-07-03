@@ -184,8 +184,12 @@ func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFont
 			return nil, err
 		}
 		font.SetEncoder(encoder)
+	} else if differences != nil {
+		if se, ok := font.Encoder().(textencoding.SimpleEncoder); ok {
+			se.ApplyDifferences(differences)
+			font.SetEncoder(se)
+		}
 	}
-	common.Log.Debug("encoder=%s", font.Encoder())
 
 	return font, nil
 }

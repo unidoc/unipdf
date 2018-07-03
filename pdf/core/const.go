@@ -17,4 +17,6 @@ var (
 	ErrNoJPXDecode                   = errors.New("JPXDecode encoding is not yet implemented")
 	ErrNoPdfVersion                  = errors.New("Version not found")
 	ErrTypeCheck                     = errors.New("Type check error")
+	ErrNotSupported                  = errors.New("Feature not currently supported")
+	ErrFontNotSupported              = errors.New("Unsupported font")
 )

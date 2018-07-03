@@ -326,10 +326,14 @@ func (to *TextObject) setCharSpacing(x float64) {
 // setFont "Tf" Set font
 func (to *TextObject) setFont(name string, size float64) error {
 	font, err := to.getFont(name)
-	if err != nil {
+	if err == nil {
+		to.State.Tf = font
+	} else if err == ErrFontNotSupported {
+		// XXX: HACK !@#$ This is not correct. Fix it.
+		to.State.Tf = nil
+	} else {
 		return err
 	}
-	to.State.Tf = font
 	// to.State.Tfs = size
 	return nil
 }

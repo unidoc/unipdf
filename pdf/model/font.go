@@ -355,13 +355,6 @@ func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 		return nil, ErrTypeCheck
 	}
 
-	basefont, err := GetName(TraceToDirectObject(d.Get("BaseFont")))
-	if err != nil {
-		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
-		return nil, ErrRequiredAttributeMissing
-	}
-	font.basefont = basefont
-
 	subtype, err := GetName(TraceToDirectObject(d.Get("Subtype")))
 	if err != nil {
 		common.Log.Debug("ERROR: Font Incompatibility. Subtype (Required) missing")
@@ -369,12 +362,24 @@ func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 	}
 	font.subtype = subtype
 
+	if subtype == "Type3" {
+		common.Log.Debug("Type 3 font not supprted. d=%s", d)
+		return nil, ErrFontNotSupported
+	}
+
+	basefont, err := GetName(TraceToDirectObject(d.Get("BaseFont")))
+	if err != nil {
+		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
+		return nil, ErrRequiredAttributeMissing
+	}
+	font.basefont = basefont
+
 	obj := d.Get("FontDescriptor")
 	if obj != nil {
 		fontDescriptor, err := newPdfFontDescriptorFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("ERROR: Bad font descriptor. err=%v", err)
-			return nil, ErrRequiredAttributeMissing
+			return nil, err
 		}
 		font.fontDescriptor = fontDescriptor
 	}
@@ -518,7 +523,7 @@ func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error
 		if err != nil {
 			return descriptor, err
 		}
-		common.Log.Debug("fontfile=%#v", fontfile)
+		common.Log.Debug("fontfile=%s", fontfile)
 		descriptor.fontFile = fontfile
 	}
 	return descriptor, nil

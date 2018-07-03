@@ -146,7 +146,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 				nameStarted = true
 				p.reader.ReadByte()
 			} else {
-				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
+				common.Log.Debug("ERROR: Name starting with %s (% x)", bb, bb)
 				return cmapName{name}, fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {

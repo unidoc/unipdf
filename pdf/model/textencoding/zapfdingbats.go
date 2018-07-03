@@ -131,8 +131,8 @@ func (enc ZapfDingbatsEncoder) ToPdfObject() PdfObject {
 	dict := MakeDict()
 	dict.Set("Type", MakeName("Encoding"))
 
-	// Returning an empty Encoding object with no differences. Indicates that we are using the font's built-in
-	// encoding.
+	// Returning an empty Encoding object with no differences. Indicates that we are using the
+	// font's built-in encoding.
 	return MakeIndirectObject(dict)
 }
 

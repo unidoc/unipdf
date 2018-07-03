@@ -9,18 +9,24 @@
 
 package textencoding
 
+import (
+	"regexp"
+	"strconv"
+)
+
+// GlyphToRune returns true if `glyph` is in our GlyphToRune mapping.
 func KnownGlyph(glyph string) bool {
-	_, ok := glyphlistGlyphToRuneMap[glyph]
-	if !ok {
-		_, ok = texGlyphlistGlyphToStringMap[glyph]
-	}
-	if !ok {
-		_, ok = additionalGlyphlistGlyphToRuneMap[glyph]
-	}
+	_, ok := GlyphToRune(glyph)
 	return ok
 }
 
+// GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
+// XXX: TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
+// rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to glyphs.
 func GlyphToRune(glyph string) (rune, bool) {
+	if alias, ok := glyphAliases[glyph]; ok {
+		glyph = alias
+	}
 	if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
@@ -28,9 +34,45 @@ func GlyphToRune(glyph string) (rune, bool) {
 		// XXX: Hack. Use the first rune in the teX mapping
 		return []rune(s)[0], true
 	}
-	r, ok := additionalGlyphlistGlyphToRuneMap[glyph]
-	return r, ok
+	if r, ok := additionalGlyphlistGlyphToRuneMap[glyph]; ok {
+		return r, true
+	}
+
+	if glyph == ".notdef" {
+		return '?', true
+	}
+
+	if groups := reUniEncoding.FindStringSubmatch(glyph); groups != nil {
+		n, err := strconv.ParseInt(groups[1], 16, 32)
+		if err == nil {
+			return rune(n), true
+		}
+	}
+
+	if groups := reEncoding.FindStringSubmatch(glyph); groups != nil {
+		n, err := strconv.Atoi(groups[1])
+		if err == nil {
+			return rune(n), true
+		}
+	}
+	return rune(0), false
 }
+
+var (
+	reEncoding    = regexp.MustCompile(`^[A-Z](\d{1,4})$`)  // C211
+	reUniEncoding = regexp.MustCompile(`^uni([\dA-F]{4})$`) //uniFB03
+	glyphAliases  = map[string]string{
+		"ff":      "f_f",
+		"f_f_i":   "ffi",
+		"f_f_l":   "ffl",
+		"f_i":     "fi",
+		"f_l":     "fl",
+		"s_t":     "st",
+		"I_J":     "IJ",
+		"i_j":     "ij",
+		"elipsis": "ellipsis",
+	}
+)
 
 var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"A":                             'A',      // A

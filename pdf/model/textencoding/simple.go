@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -28,11 +29,12 @@ var (
 
 // SimpleEncoder represents a 1 byte encoding
 type SimpleEncoder struct {
-	baseName    string
-	differences map[byte]string
-	codeToGlyph map[uint16]string
-	glyphToCode map[string]uint16
-	codeToRune  map[uint16]rune
+	baseName     string
+	baseEncoding map[uint16]rune
+	differences  map[byte]string
+	codeToGlyph  map[uint16]string
+	glyphToCode  map[string]uint16
+	codeToRune   map[uint16]rune
 }
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
@@ -52,6 +54,13 @@ func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte
 	return newSimpleTextEncoder(baseEncoding, baseName, differences)
 }
 
+// Encode converts a Go unicode string `raw` to a PDF encoded string.
+func (se *SimpleEncoder) ApplyDifferences(differences map[byte]string) {
+	se.differences = differences
+	se.makeEncoder()
+	common.Log.Debug("$$$$ %s", se)
+}
+
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
 // difference map `differences`.
 func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleEncoder, error) {
@@ -68,20 +77,17 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleE
 func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
 	differences map[byte]string) (SimpleEncoder, error) {
 
-	codeToRune := map[uint16]rune{}
-	for code, r := range baseEncoding {
-		codeToRune[code] = r
+	se := SimpleEncoder{
+		baseName:     baseName,
+		baseEncoding: baseEncoding,
+		differences:  differences,
 	}
-	if differences != nil {
-		for code, glyph := range differences {
-			if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
-				codeToRune[uint16(code)] = r
-			}
-		}
-	}
-	return makeEncoder(baseName, differences, codeToRune), nil
-
+	se.makeEncoder()
+	return se, nil
 }
+
+// simpleEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
+const simpleEncoderNumEntries = 0
 
 // String returns a string that describes `se`.
 func (se SimpleEncoder) String() string {
@@ -89,18 +95,26 @@ func (se SimpleEncoder) String() string {
 	if len(se.differences) > 0 {
 		name = fmt.Sprintf("%s(diff)", se.baseName)
 	}
-	return name
+	parts := []string{
+		fmt.Sprintf("%#q %d entries %d differences", name, len(se.codeToGlyph), len(se.differences)),
+		fmt.Sprintf("differences=%+v", se.differences),
+	}
 
-	// codes := []int{}
-	// for c := range se.codeToGlyph {
-	// 	codes = append(codes, int(c))
-	// }
-	// sort.Ints(codes)
-	// parts := []string{fmt.Sprintf("SimpleEncoder: name=%#q %d entries", name, len(codes))}
-	// for _, c := range codes {
-	// 	parts = append(parts, fmt.Sprintf("%4d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
-	// }
-	// return strings.Join(parts, "\n")
+	codes := []int{}
+	for c := range se.codeToGlyph {
+		codes = append(codes, int(c))
+	}
+	sort.Ints(codes)
+	numCodes := len(codes)
+	if numCodes > simpleEncoderNumEntries {
+		numCodes = simpleEncoderNumEntries
+	}
+
+	for i := 0; i < numCodes; i++ {
+		c := codes[i]
+		parts = append(parts, fmt.Sprintf("%4d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
+	}
+	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
@@ -171,7 +185,21 @@ func (se SimpleEncoder) ToPdfObject() PdfObject {
 }
 
 // makeEncoder returns a SimpleEncoder based on `codeToRune`.
-func makeEncoder(baseName string, differences map[byte]string, codeToRune map[uint16]rune) SimpleEncoder {
+func (se *SimpleEncoder) makeEncoder() {
+	codeToRune := map[uint16]rune{}
+	for code, r := range se.baseEncoding {
+		codeToRune[code] = r
+	}
+	if se.differences != nil {
+		for code, glyph := range se.differences {
+			r, ok := GlyphToRune(glyph)
+			if !ok {
+				common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph, se.differences)
+			}
+			codeToRune[uint16(code)] = r
+		}
+	}
+
 	codeToGlyph := map[uint16]string{}
 	glyphToCode := map[string]uint16{}
 	for code, r := range codeToRune {
@@ -182,13 +210,9 @@ func makeEncoder(baseName string, differences map[byte]string, codeToRune map[ui
 			common.Log.Debug("ERROR: Empty glyph code=0x%04x r=%+q=%#q", code, r, r)
 		}
 	}
-	return SimpleEncoder{
-		baseName:    baseName,
-		differences: differences,
-		codeToGlyph: codeToGlyph,
-		glyphToCode: glyphToCode,
-		codeToRune:  codeToRune, // XXX: !@#$ Make this a string
-	}
+	se.codeToGlyph = codeToGlyph
+	se.glyphToCode = glyphToCode
+	se.codeToRune = codeToRune // XXX: !@#$ Make this a string
 }
 
 func FromFontDifferences(diffList []PdfObject) (map[byte]string, error) {
