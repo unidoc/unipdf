@@ -87,7 +87,7 @@ import (
 // associated CIDFont is called its descendant.
 type pdfFontType0 struct {
 	container *PdfIndirectObject
-	skeleton  *fontSkeleton
+	*fontSkeleton
 
 	encoder        textencoding.TextEncoder
 	Encoding       PdfObject
@@ -119,7 +119,7 @@ func (font *pdfFontType0) ToPdfObject() PdfObject {
 	if font.container == nil {
 		font.container = &PdfIndirectObject{}
 	}
-	d := font.skeleton.toDict("Type0")
+	d := font.toDict("Type0")
 	font.container.PdfObject = d
 
 	if font.encoder != nil {
@@ -156,7 +156,7 @@ func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFo
 	}
 
 	font := &pdfFontType0{
-		skeleton:       skeleton,
+		fontSkeleton:   skeleton,
 		DescendantFont: df,
 	}
 
@@ -230,8 +230,8 @@ func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 
 // pdfCIDFontType2 represents a CIDFont Type2 font dictionary.
 type pdfCIDFontType2 struct {
-	container *PdfIndirectObject
-	skeleton  *fontSkeleton // Elements common to all font types
+	container     *PdfIndirectObject
+	*fontSkeleton // Elements common to all font types
 
 	encoder   textencoding.TextEncoder // !@#$ In skeleton?
 	ttfParser *fonts.TtfType
@@ -289,7 +289,7 @@ func (font *pdfCIDFontType2) ToPdfObject() PdfObject {
 	if font.container == nil {
 		font.container = &PdfIndirectObject{}
 	}
-	d := font.skeleton.toDict("CIDFontType2")
+	d := font.toDict("CIDFontType2")
 	font.container.PdfObject = d
 
 	if font.CIDSystemInfo != nil {
@@ -322,7 +322,7 @@ func newPdfCIDFontType2FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 		return nil, ErrRangeError
 	}
 
-	font := &pdfCIDFontType2{skeleton: skeleton}
+	font := &pdfCIDFontType2{fontSkeleton: skeleton}
 	d := skeleton.dict
 
 	// CIDSystemInfo.
@@ -358,11 +358,11 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Prepare the inner descendant font (CIDFontType2).
 	skeleton := fontSkeleton{subtype: "Type0"}
-	cidfont := &pdfCIDFontType2{skeleton: &skeleton}
+	cidfont := &pdfCIDFontType2{fontSkeleton: &skeleton}
 	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes -> runes
-	runes := []uint16{}
+	runes := make([]uint16, 0, len(ttf.Chars))
 	for r := range ttf.Chars {
 		runes = append(runes, r)
 	}
@@ -476,9 +476,12 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Make root Type0 font.
 	type0 := pdfFontType0{
-		skeleton: &skeleton,
-		DescendantFont: &PdfFont{context: cidfont,
-			fontSkeleton: fontSkeleton{subtype: "CIDFontType2"},
+		fontSkeleton: &skeleton,
+		DescendantFont: &PdfFont{
+			context: cidfont,
+			fontSkeleton: fontSkeleton{
+				subtype: "CIDFontType2",
+			},
 		},
 		Encoding: MakeName("Identity-H"),
 		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),

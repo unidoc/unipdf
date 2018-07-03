@@ -27,8 +27,8 @@ import (
 //   containing font-wide metrics and other attributes of the font.
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
-	container *PdfIndirectObject
-	skeleton  *fontSkeleton // Elements common to all font types
+	container     *PdfIndirectObject
+	*fontSkeleton // Elements common to all font types
 
 	firstChar  int
 	lastChar   int
@@ -97,7 +97,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 // !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
 //      Need to get TrueType font's cmap
 func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFontSimple, error) {
-	font := &pdfFontSimple{skeleton: skeleton}
+	font := &pdfFontSimple{fontSkeleton: skeleton}
 
 	d := skeleton.dict
 
@@ -238,7 +238,7 @@ func (font *pdfFontSimple) ToPdfObject() PdfObject {
 	if font.container == nil {
 		font.container = &PdfIndirectObject{}
 	}
-	d := font.skeleton.toDict("")
+	d := font.toDict("")
 	font.container.PdfObject = d
 
 	if font.FirstChar != nil {
@@ -261,6 +261,9 @@ func (font *pdfFontSimple) ToPdfObject() PdfObject {
 // styling functions.
 // Uses a WinAnsiTextEncoder and loads only character codes 32-255.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
+	const minCode = 32
+	const maxCode = 255
+
 	ttf, err := fonts.TtfParse(filePath)
 	if err != nil {
 		common.Log.Debug("ERROR: loading ttf font: %v", err)
@@ -268,18 +271,18 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	skeleton := fontSkeleton{subtype: "TrueType"}
-	truefont := &pdfFontSimple{skeleton: &skeleton}
+	truefont := &pdfFontSimple{fontSkeleton: &skeleton}
 
 	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
 	// then can derive
 	// TODO: Subsetting fonts.
 	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
-	truefont.firstChar = 32
-	truefont.lastChar = 255
+	truefont.firstChar = minCode
+	truefont.lastChar = maxCode
 
-	truefont.skeleton.basefont = ttf.PostScriptName
-	truefont.FirstChar = MakeInteger(32)
-	truefont.LastChar = MakeInteger(255)
+	truefont.basefont = ttf.PostScriptName
+	truefont.FirstChar = MakeInteger(minCode)
+	truefont.LastChar = MakeInteger(maxCode)
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 	if len(ttf.Widths) <= 0 {
@@ -287,9 +290,9 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	missingWidth := k * float64(ttf.Widths[0])
-	vals := []float64{}
 
-	for code := 32; code <= 255; code++ {
+	vals := make([]float64, 0, maxCode-minCode+1)
+	for code := minCode; code <= maxCode; code++ {
 		r, found := truefont.Encoder().CharcodeToRune(uint16(code))
 		if !found {
 			common.Log.Debug("Rune not found (code: %d)", code)
