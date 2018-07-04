@@ -12,8 +12,6 @@ package extractor
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -523,7 +521,7 @@ func (to *TextObject) getFontDict(name string) (fontObj PdfObject, err error) {
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q err=%v", name, err)
 		return
 	}
-	fontObj = TraceToDirectObject(fontObj)
+	// fontObj = TraceToDirectObject(fontObj)
 	return
 }
 

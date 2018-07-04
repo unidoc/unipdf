@@ -279,6 +279,9 @@ type fontSkeleton struct {
 
 	// This is an internal implementation detail. It is passed to specific font types so they can parse it.
 	dict *PdfObjectDictionary
+
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	objectNumber int64
 }
 
 // toFont returns a PdfObjectDictionary for `skel`.
@@ -314,7 +317,7 @@ func (skel fontSkeleton) String() string {
 	if skel.fontDescriptor != nil {
 		descriptor = skel.fontDescriptor.String()
 	}
-	return fmt.Sprintf("FONT{%#q %#q %s}", skel.subtype, skel.basefont, descriptor)
+	return fmt.Sprintf("FONT{%#q %#q obj=%d %s}", skel.subtype, skel.basefont, skel.objectNumber, descriptor)
 }
 
 // isCIDFont returns true if `skel` is a CID font.
@@ -336,6 +339,10 @@ func (skel fontSkeleton) isCIDFont() bool {
 // The fontSkeleton is the group of fields common to all PDF fonts.
 func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 	font := &fontSkeleton{}
+
+	if obj, ok := fontObj.(*PdfIndirectObject); ok {
+		font.objectNumber = obj.ObjectNumber
+	}
 
 	dictObj := TraceToDirectObject(fontObj)
 
