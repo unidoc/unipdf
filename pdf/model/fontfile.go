@@ -21,7 +21,11 @@ type fontFile struct {
 }
 
 func (fontfile *fontFile) String() string {
-	return fmt.Sprintf("FONTFILE{%#q encoder=%s}", fontfile.name, fontfile.encoder)
+	encoding := "[None]"
+	if fontfile.encoder != nil {
+		encoding = fontfile.encoder.String()
+	}
+	return fmt.Sprintf("FONTFILE{%#q encoder=%s}", fontfile.name, encoding)
 }
 
 // newFontFileFromPdfObject loads a FontFile from a PdfObject.  Can either be a
@@ -107,6 +111,9 @@ func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
 // parseAsciiPart parses the ASCII part of the FontFile.
 func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 	common.Log.Debug("parseAsciiPart: %d ", len(data))
+	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~^^^~~~~~~~~~~~~~~~~~~~~~~~")
+	// fmt.Printf("data=%s\n", string(data))
+	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~!!!~~~~~~~~~~~~~~~~~~~~~~~")
 	// The start of a FontFile looks like
 	//     %!PS-AdobeFont-1.0: MyArial 003.002
 	//     %%Title: MyArial

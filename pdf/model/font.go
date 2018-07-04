@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -112,7 +113,7 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 		font.context = cidfont
 	default:
 		common.Log.Debug("ERROR: Unsupported font type: font=%s", font)
-		return nil, ErrUnsupportedFont
+		return nil, fmt.Errorf("Unsupported font type: font=%s", font)
 	}
 
 	return font, nil
@@ -159,8 +160,8 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 		for _, code := range charcodes {
 			r, ok := encoder.CharcodeToRune(code)
 			if !ok {
-				common.Log.Debug("ERROR: No rune. code=0x%04x font=%s encoding=%s data = [% 02x]=%#q",
-					code, font, encoder, data, data)
+				common.Log.Debug("ERROR: No rune. code=0x%04x data = [% 02x]=%#q\nfont=%s\nencoding=%s ",
+					code, data, data, font, encoder)
 				r = cmap.MissingCodeRune
 				return string(data), ErrBadText
 			}
@@ -311,7 +312,7 @@ func (skel fontSkeleton) toDict(subtype string) *PdfObjectDictionary {
 func (skel fontSkeleton) String() string {
 	descriptor := ""
 	if skel.fontDescriptor != nil {
-		descriptor = "(has descriptor)"
+		descriptor = skel.fontDescriptor.String()
 	}
 	return fmt.Sprintf("FONT{%#q %#q %s}", skel.subtype, skel.basefont, descriptor)
 }
@@ -458,6 +459,20 @@ type PdfFontDescriptor struct {
 	container *PdfIndirectObject
 }
 
+func (descriptor *PdfFontDescriptor) String() string {
+	parts := []string{}
+	if descriptor.FontName != nil {
+		parts = append(parts, descriptor.FontName.String())
+	}
+	if descriptor.FontFamily != nil {
+		parts = append(parts, descriptor.FontFamily.String())
+	}
+	parts = append(parts, fmt.Sprintf("FontFile=%t", descriptor.FontFile != nil))
+	parts = append(parts, fmt.Sprintf("FontFile2=%t", descriptor.FontFile2 != nil))
+	parts = append(parts, fmt.Sprintf("FontFile3=%t", descriptor.FontFile3 != nil))
+	return fmt.Sprintf("FONT_DESCRIPTON{%s}", strings.Join(parts, ", "))
+}
+
 // newPdfFontDescriptorFromPdfObject loads the font descriptor from a PdfObject.  Can either be a
 // *PdfIndirectObject or a *PdfObjectDictionary.
 func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error) {
@@ -490,7 +505,6 @@ func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error
 	} else {
 		common.Log.Trace("Incompatibility: Type (Required) missing. font=%q %T",
 			fontname, descriptor.FontName)
-		// return nil, errors.New("$$$$$")
 	}
 
 	descriptor.FontFamily = d.Get("FontFamily")

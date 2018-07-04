@@ -47,7 +47,7 @@ func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte
 		r, ok := GlyphToRune(glyph)
 		if !ok {
 			common.Log.Debug("ERROR: Unknown glyph. %q", glyph)
-			return SimpleEncoder{}, ErrTypeError
+			// return SimpleEncoder{}, ErrTypeError
 		}
 		baseEncoding[code] = r
 	}
@@ -87,7 +87,7 @@ func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
 }
 
 // simpleEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
-const simpleEncoderNumEntries = 0
+const simpleEncoderNumEntries = 1000
 
 // String returns a string that describes `se`.
 func (se SimpleEncoder) String() string {

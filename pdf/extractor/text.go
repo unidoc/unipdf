@@ -12,6 +12,8 @@ package extractor
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -148,10 +150,10 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 					return err
 				}
 				err = to.setFont(name, size)
-				if err == model.ErrUnsupportedFont {
-					common.Log.Debug("Swallow error. err=%v", err)
-					err = nil
-				}
+				// if err == model.ErrUnsupportedFont {
+				// 	common.Log.Debug("Swallow error. err=%v", err)
+				// 	err = nil
+				// }
 				if err != nil {
 					return err
 				}
@@ -206,10 +208,10 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 		})
 
 	err = processor.Process(e.resources)
-	if err == model.ErrUnsupportedFont {
-		common.Log.Debug("Swallow error. err=%v", err)
-		err = nil
-	}
+	// if err == model.ErrUnsupportedFont {
+	// 	common.Log.Debug("Swallow error. err=%v", err)
+	// 	err = nil
+	// }
 	if err != nil {
 		common.Log.Error("ERROR: Processing: err=%v", err)
 		return textList, err
@@ -329,8 +331,8 @@ func (to *TextObject) setFont(name string, size float64) error {
 	if err == nil {
 		to.State.Tf = font
 	} else if err == ErrFontNotSupported {
-		// XXX: HACK !@#$ This is not correct. Fix it.
-		to.State.Tf = nil
+		return err
+		// to.State.Tf = nil
 	} else {
 		return err
 	}
