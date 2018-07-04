@@ -695,7 +695,8 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	return nil
 }
 
-// Get a page by the page number. Indirect object with type /Page.
+// GetPageAsIndirectObject returns the indirect object representing a page fro a given page number.
+// Indirect object with type /Page.
 func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File needs to be decrypted first")
@@ -706,6 +707,7 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	page := this.pageList[pageNumber-1]
 
 	// Look up all references related to page and load everything.
+	// XXX/TODO: Use of traverse object data will be limited when lazy-loading is supported.
 	err := this.traverseObjectData(page)
 	if err != nil {
 		return nil, err
@@ -714,6 +716,20 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	common.Log.Trace("- %T %s", page.PdfObject, page.PdfObject)
 
 	return page, nil
+}
+
+// PageFromIndirectObject returns the PdfPage and page number for a given indirect object.
+func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, int, error) {
+	if len(r.PageList) != len(r.pageList) {
+		return nil, 0, errors.New("page list invalid")
+	}
+
+	for i, pageind := range r.pageList {
+		if pageind == ind {
+			return r.PageList[i], i + 1, nil
+		}
+	}
+	return nil, 0, errors.New("Page not found")
 }
 
 // Get a page by the page number.

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -73,6 +74,74 @@ func (flag FieldFlag) Has(fl FieldFlag) bool {
 	return (flag.Mask() & fl.Mask()) > 0
 }
 
+// String returns a string representation of what flags are set.
+func (flag FieldFlag) String() string {
+	s := ""
+	if flag == FieldFlagClear {
+		s = "Clear"
+		return s
+	}
+	if flag&FieldFlagReadOnly > 0 {
+		s += "|ReadOnly"
+	}
+	if flag&FieldFlagRequired > 0 {
+		s += "|ReadOnly"
+	}
+	if flag&FieldFlagNoExport > 0 {
+		s += "|NoExport"
+	}
+	if flag&FieldFlagNoToggleToOff > 0 {
+		s += "|NoToggleToOff"
+	}
+	if flag&FieldFlagRadio > 0 {
+		s += "|Radio"
+	}
+	if flag&FieldFlagPushbutton > 0 {
+		s += "|Pushbutton"
+	}
+	if flag&FieldFlagRadiosInUnision > 0 {
+		s += "|RadiosInUnision"
+	}
+	if flag&FieldFlagMultiline > 0 {
+		s += "|Multiline"
+	}
+	if flag&FieldFlagPassword > 0 {
+		s += "|Password"
+	}
+	if flag&FieldFlagFileSelect > 0 {
+		s += "|FileSelect"
+	}
+	if flag&FieldFlagDoNotScroll > 0 {
+		s += "|DoNotScroll"
+	}
+	if flag&FieldFlagComb > 0 {
+		s += "|Comb"
+	}
+	if flag&FieldFlagRichText > 0 {
+		s += "|RichText"
+	}
+	if flag&FieldFlagDoNotSpellCheck > 0 {
+		s += "|DoNotSpellCheck"
+	}
+	if flag&FieldFlagCombo > 0 {
+		s += "|Combo"
+	}
+	if flag&FieldFlagEdit > 0 {
+		s += "|Edit"
+	}
+	if flag&FieldFlagSort > 0 {
+		s += "|Sort"
+	}
+	if flag&FieldFlagMultiSelect > 0 {
+		s += "|MultiSelect"
+	}
+	if flag&FieldFlagCommitOnSelChange > 0 {
+		s += "|CommitOnSelChange"
+	}
+
+	return strings.Trim(s, "|")
+}
+
 // PdfField contains the common attributes of a form field. The context object contains the specific field data
 // which can represent a button, text, choice or signature.
 // The PdfField is typically not used directly, but is encapsulated by the more specific field types such as
@@ -83,11 +152,10 @@ type PdfField struct {
 	isTerminal *bool                   // If set: indicates whether is a terminal field (if null, may not be determined yet).
 
 	Parent      *PdfField
-	Annotations []*PdfAnnotation
+	Annotations []*PdfAnnotationWidget
 	Kids        []*PdfField
 
 	FT *core.PdfObjectName
-	//Kids   *core.PdfObjectArray
 	T  *core.PdfObjectString
 	TU *core.PdfObjectString
 	TM *core.PdfObjectString
@@ -382,7 +450,7 @@ type PdfFieldSignature struct {
 }
 
 // ToPdfObject returns an indirect object containing the signature field dictionary.
-func (sig *PdfFieldSignature) ToPdfObject() *core.PdfIndirectObject {
+func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
 	// Set general field attributes
 	sig.PdfField.ToPdfObject()
 	container := sig.container
@@ -463,7 +531,7 @@ func (f *PdfField) Flags() FieldFlag {
 		common.Log.Debug("Error evaluating flags via inheritance: %v", err)
 	}
 	if !found {
-		common.Log.Debug("No field flags found")
+		common.Log.Trace("No field flags found - assume clear")
 	}
 
 	return flags
@@ -549,7 +617,15 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 			}
 			ctx.PdfField = field
 			field.context = ctx
+		case "Sig":
+			ctx, err := newPdfFieldSignatureFromDict(d)
+			if err != nil {
+				return nil, err
+			}
+			ctx.PdfField = field
+			field.context = ctx
 		default:
+			common.Log.Debug("Unsupported field type %s", *field.FT)
 			return nil, errors.New("Unsupported field type")
 		}
 	}
@@ -566,10 +642,10 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 		field.Parent = parent
 	}
 
-	field.Annotations = []*PdfAnnotation{}
+	field.Annotations = []*PdfAnnotationWidget{}
 
 	// Has a merged-in widget annotation?
-	if name := d.GetDirect("Subtype").(*core.PdfObjectName); name != nil {
+	if name, _ := d.GetDirect("Subtype").(*core.PdfObjectName); name != nil {
 		if *name == "Widget" {
 			// Is a merged field / widget dict.
 
@@ -585,7 +661,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 			}
 			widget.Parent = field.GetContainingPdfObject()
 
-			field.Annotations = append(field.Annotations, annot)
+			field.Annotations = append(field.Annotations, widget)
 
 			return field, nil
 		}
@@ -613,12 +689,16 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 
 			// Widget annotations contain key Subtype with value equal to /Widget. Otherwise are assumed to be fields.
 			if name, has := dict.GetDirect("Subtype").(*core.PdfObjectName); has && *name == "Widget" {
-				widg, err := r.newPdfAnnotationFromIndirectObject(container)
+				annot, err := r.newPdfAnnotationFromIndirectObject(container)
 				if err != nil {
 					common.Log.Debug("Error loading widget annotation for field: %v", err)
 					return nil, err
 				}
-				field.Annotations = append(field.Annotations, widg)
+				wa, ok := annot.context.(*PdfAnnotationWidget)
+				if !ok {
+					return nil, ErrTypeCheck
+				}
+				field.Annotations = append(field.Annotations, wa)
 			} else {
 				childf, err := r.newPdfFieldFromIndirectObject(container, field)
 				if err != nil {
@@ -642,7 +722,7 @@ func newPdfFieldTextFromDict(d *core.PdfObjectDictionary) (*PdfFieldText, error)
 	textf.DS, _ = d.GetDirect("DS").(*core.PdfObjectString)
 	textf.RV = d.Get("RV")
 	// TODO: MaxLen should be loaded for other fields too?
-	textf.MaxLen = d.Get("MaxLen").(*core.PdfObjectInteger)
+	textf.MaxLen, _ = d.Get("MaxLen").(*core.PdfObjectInteger)
 	return textf, nil
 }
 
@@ -662,4 +742,14 @@ func newPdfFieldButtonFromDict(d *core.PdfObjectDictionary) (*PdfFieldButton, er
 	buttonf := &PdfFieldButton{}
 	buttonf.Opt, _ = d.GetDirect("Opt").(*core.PdfObjectArray)
 	return buttonf, nil
+}
+
+// newPdfFieldSignatureFromDict returns a new PdfFieldSignature (representing a signature field) loaded from a dictionary.
+// This function loads only the signature-specific fields (called by a more generic field loader).
+func newPdfFieldSignatureFromDict(d *core.PdfObjectDictionary) (*PdfFieldSignature, error) {
+	sigf := &PdfFieldSignature{}
+	sigf.V, _ = d.Get("V").(*core.PdfIndirectObject)
+	sigf.Lock, _ = d.Get("Lock").(*core.PdfIndirectObject)
+	sigf.SV, _ = d.Get("SV").(*core.PdfIndirectObject)
+	return sigf, nil
 }

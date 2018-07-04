@@ -7,6 +7,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
@@ -17,10 +18,9 @@ Btn = button
 Tx = text
 Ch = choice
 Sig = signature
- */
+*/
 
-// PdfAcroForm represents the AcroForm dictionary used for representation of forms
-// in PDF.
+// PdfAcroForm represents the AcroForm dictionary used for representation of form data in PDF.
 type PdfAcroForm struct {
 	Fields          *[]*PdfField
 	NeedAppearances *core.PdfObjectBool
@@ -31,7 +31,7 @@ type PdfAcroForm struct {
 	Q               *core.PdfObjectInteger
 	XFA             core.PdfObject
 
-	primitive *core.PdfIndirectObject
+	container *core.PdfIndirectObject
 }
 
 // NewPdfAcroForm returns a new PdfAcroForm with an intialized container (indirect object).
@@ -40,9 +40,29 @@ func NewPdfAcroForm() *PdfAcroForm {
 
 	container := &core.PdfIndirectObject{}
 	container.PdfObject = core.MakeDict()
+	acroForm.container = container
 
-	acroForm.primitive = container
 	return acroForm
+}
+
+// flattenFields returns a flattened list of field hierarchy.
+func flattenFields(field *PdfField) []*PdfField {
+	list := []*PdfField{field}
+	for _, k := range field.Kids {
+		list = append(list, flattenFields(k)...)
+	}
+	return list
+}
+
+// AllFields returns a flattened list of all fields in the form.
+func (form *PdfAcroForm) AllFields() []*PdfField {
+	fields := []*PdfField{}
+	if form.Fields != nil {
+		for _, field := range *form.Fields {
+			fields = append(fields, flattenFields(field)...)
+		}
+	}
+	return fields
 }
 
 // newPdfAcroFormFromDict is used when loading forms from PDF files.
@@ -154,13 +174,13 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 
 // GetContainingPdfObject returns the container of the PdfAcroForm (indirect object).
 func (this *PdfAcroForm) GetContainingPdfObject() core.PdfObject {
-	return this.primitive
+	return this.container
 }
 
 // ToPdfObject converts PdfAcroForm to a PdfObject, i.e. an indirect object containing the
 // AcroForm dictionary.
 func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
-	container := this.primitive
+	container := this.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
 	if this.Fields != nil {
@@ -176,7 +196,6 @@ func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
 	}
 	if this.SigFlags != nil {
 		dict.Set("SigFlags", this.SigFlags)
-
 	}
 	if this.CO != nil {
 		dict.Set("CO", this.CO)
@@ -196,5 +215,3 @@ func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
 
 	return container
 }
-
-
