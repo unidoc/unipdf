@@ -215,7 +215,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.Y = ulY + yrel
 
 		// Creating border
-		border := NewBorder(ctx.X, ctx.Y, w, h)
+		border := newBorder(ctx.X, ctx.Y, w, h)
 
 		if cell.backgroundColor != nil {
 			r := cell.backgroundColor.R()

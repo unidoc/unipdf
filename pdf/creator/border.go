@@ -31,8 +31,8 @@ type border struct {
 	StyleBottom       CellBorderStyle
 }
 
-// NewBorder returns and instance of border
-func NewBorder(x, y, width, height float64) *border {
+// newBorder returns and instance of border
+func newBorder(x, y, width, height float64) *border {
 	border := &border{}
 
 	border.x = x
