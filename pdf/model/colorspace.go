@@ -248,8 +248,11 @@ func (this *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, 
 
 	val := vals[0]
 
-	if val < 0.0 || val > 1.0 {
-		return nil, errors.New("Range check")
+	// Needed for ~/testdata/acl2017_hllz.pdf
+	if val < 0.0 {
+		val = 0.0
+	} else if val > 1.0 {
+		val = 1.0
 	}
 
 	return NewPdfColorDeviceGray(val), nil
