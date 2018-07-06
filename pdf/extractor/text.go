@@ -73,52 +73,63 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 				to.nextLine()
 			case "Td": // Move text location
 				if ok, err := checkOp(op, to, 2, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.renderRawText("\n")
 			case "TD": // Move text location and set leading
 				if ok, err := checkOp(op, to, 2, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				x, y, err := toFloatXY(op.Params)
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.moveTextSetLeading(x, y)
 			case "Tj": // Show text
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				charcodes, err := GetStringBytes(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				return to.showText(charcodes)
 			case "TJ": // Show text with adjustable spacing
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				args, err := GetArray(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				return to.showTextAdjusted(args)
 			case "'": // Move to next line and show text
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				charcodes, err := GetStringBytes(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.nextLine()
 				return to.showText(charcodes)
 			case `"`: // Set word and character spacing, move to next line, and show text
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				charcodes, err := GetStringBytes(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.nextLine()
@@ -126,25 +137,30 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 			case "TL": // Set text leading
 				ok, y, err := checkOpFloat(op, to)
 				if !ok || err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
 			case "Tc": // Set character spacing
 				ok, y, err := checkOpFloat(op, to)
 				if !ok || err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setCharSpacing(y)
 			case "Tf": // Set font
 				if ok, err := checkOp(op, to, 2, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				name, err := GetName(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: GetName failed. op=%s err=%v", op, err)
 					return err
 				}
 				size, err := GetNumberAsFloat(op.Params[1])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				err = to.setFont(name, size)
@@ -157,46 +173,56 @@ func (e *Extractor) ExtractXYText() (*TextList, error) {
 				}
 			case "Tm": // Set text matrix
 				if ok, err := checkOp(op, to, 6, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				floats, err := model.GetNumbersAsFloat(op.Params)
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextMatrix(floats)
 			case "Tr": // Set text rendering mode
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				mode, err := GetInteger(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextRenderMode(mode)
 			case "Ts": // Set text rise
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				y, err := GetNumberAsFloat(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextRise(y)
 			case "Tw": // Set word spacing
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				y, err := GetNumberAsFloat(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setWordSpacing(y)
 			case "Tz": // Set horizontal scaling
 				if ok, err := checkOp(op, to, 1, true); !ok {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				y, err := GetNumberAsFloat(op.Params[0])
 				if err != nil {
+					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setHorizScaling(y)
@@ -303,6 +329,7 @@ func (to *TextObject) showTextAdjusted(args []PdfObject) error {
 			}
 			err = to.renderText(charcodes)
 			if err != nil {
+				common.Log.Error("## err=%v", err)
 				return err
 			}
 		default:
@@ -494,6 +521,12 @@ func (tl *TextList) ToText() string {
 // getFont returns the font named `name` if it exists in the page's resources or an error if it
 // doesn't
 func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
+
+	// This is a hack for testing.
+	if name == "UniDocTest" {
+		return model.NewStandard14Font("Courier")
+	}
+
 	fontObj, err := to.getFontDict(name)
 	if err != nil {
 		return nil, err

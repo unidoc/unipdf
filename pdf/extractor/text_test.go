@@ -20,13 +20,14 @@ func init() {
 }
 
 const testContents1 = `
-	BT
-	/F1 24 Tf
-	(Hello World!)Tj
-	0 -10 Td
-	(Doink)Tj
-	ET
+    BT
+    /UniDocTest 24 Tf
+    (Hello World!)Tj
+    0 -10 Td
+    (Doink)Tj
+    ET
 `
+
 const testExpected1 = "Hello World!\nDoink"
 
 func TestTextExtraction1(t *testing.T) {
