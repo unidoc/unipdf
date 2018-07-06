@@ -214,66 +214,44 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X = ulX + xrel
 		ctx.Y = ulY + yrel
 
+		// Creating border
+		border := NewBorder(ctx.X, ctx.Y, w, h)
+
 		if cell.backgroundColor != nil {
-			// Draw background (fill)
-			border := NewBorder(ctx.X, ctx.Y, w, h)
-			border.LineStyle = cell.borderLineStyle
 			r := cell.backgroundColor.R()
 			g := cell.backgroundColor.G()
 			b := cell.backgroundColor.B()
 			border.SetFillColor(ColorRGBFromArithmetic(r, g, b))
-			if cell.borderStyle != CellBorderStyleNone {
-				// and border.
-				if cell.borderColorLeft != nil {
-					border.SetColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
-				}
-				if cell.borderColorBottom != nil {
-					border.SetColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
-				}
-				if cell.borderColorRight != nil {
-					border.SetColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
-				}
-				if cell.borderColorTop != nil {
-					border.SetColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
-				}
-				border.SetWidthBottom(cell.borderWidthBottom)
-				border.SetWidthLeft(cell.borderWidthLeft)
-				border.SetWidthRight(cell.borderWidthRight)
-				border.SetWidthTop(cell.borderWidthTop)
-			} else {
-				border.SetWidthBottom(0)
-				border.SetWidthLeft(0)
-				border.SetWidthRight(0)
-				border.SetWidthTop(0)
-			}
-			err := block.Draw(border)
-			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
-			}
-		} else if cell.borderStyle != CellBorderStyleNone {
-			//Draw border (no fill).
-			border := NewBorder(ctx.X, ctx.Y, w, h)
-			border.LineStyle = cell.borderLineStyle
-			if cell.borderColorLeft != nil {
-				border.SetColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
-			}
-			if cell.borderColorBottom != nil {
-				border.SetColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
-			}
-			if cell.borderColorRight != nil {
-				border.SetColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
-			}
-			if cell.borderColorTop != nil {
-				border.SetColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
-			}
-			border.SetWidthBottom(cell.borderWidthBottom)
-			border.SetWidthLeft(cell.borderWidthLeft)
-			border.SetWidthRight(cell.borderWidthRight)
-			border.SetWidthTop(cell.borderWidthTop)
-			err := block.Draw(border)
-			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
-			}
+		}
+
+		border.LineStyle = cell.borderLineStyle
+
+		border.StyleLeft = cell.borderStyleLeft
+		border.StyleRight = cell.borderStyleRight
+		border.StyleTop = cell.borderStyleTop
+		border.StyleBottom = cell.borderStyleBottom
+
+		if cell.borderColorLeft != nil {
+			border.SetColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
+		}
+		if cell.borderColorBottom != nil {
+			border.SetColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
+		}
+		if cell.borderColorRight != nil {
+			border.SetColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
+		}
+		if cell.borderColorTop != nil {
+			border.SetColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
+		}
+
+		border.SetWidthBottom(cell.borderWidthBottom)
+		border.SetWidthLeft(cell.borderWidthLeft)
+		border.SetWidthRight(cell.borderWidthRight)
+		border.SetWidthTop(cell.borderWidthTop)
+
+		err := block.Draw(border)
+		if err != nil {
+			common.Log.Debug("Error: %v\n", err)
 		}
 
 		if cell.content != nil {
@@ -350,10 +328,15 @@ const (
 
 	// Borders along all sides (boxed).
 	CellBorderStyleBox
-	CellBorderStyleBoxLeft
-	CellBorderStyleBoxTop
-	CellBorderStyleBoxRight
-	CellBorderStyleBoxBottom
+	CellBorderStyleLeft
+	CellBorderStyleTop
+	CellBorderStyleRight
+	CellBorderStyleBottom
+	CellBorderStyleDoubleBox
+	CellBorderStyleDoubleLeft
+	CellBorderStyleDoubleTop
+	CellBorderStyleDoubleRight
+	CellBorderStyleDoubleBottom
 )
 
 // CellHorizontalAlignment defines the table cell's horizontal alignment.
@@ -391,15 +374,19 @@ type TableCell struct {
 	// Background
 	backgroundColor *model.PdfColorDeviceRGB
 
-	// Border
-	borderStyle       CellBorderStyle
-	borderLineStyle   draw.LineStyle
+	borderLineStyle draw.LineStyle
+
+	// border
+	borderStyleLeft   CellBorderStyle
 	borderColorLeft   *model.PdfColorDeviceRGB
 	borderWidthLeft   float64
+	borderStyleBottom CellBorderStyle
 	borderColorBottom *model.PdfColorDeviceRGB
 	borderWidthBottom float64
+	borderStyleRight  CellBorderStyle
 	borderColorRight  *model.PdfColorDeviceRGB
 	borderWidthRight  float64
+	borderStyleTop    CellBorderStyle
 	borderColorTop    *model.PdfColorDeviceRGB
 	borderWidthTop    float64
 
@@ -442,8 +429,8 @@ func (table *Table) NewCell() *TableCell {
 	// Default left indent
 	cell.indent = 5
 
-	cell.borderStyle = CellBorderStyleNone
-	cell.borderLineStyle = draw.LineStyleDefault
+	cell.borderStyleLeft = CellBorderStyleNone
+	cell.borderLineStyle = draw.LineStyleSolid
 
 	// Alignment defaults.
 	cell.horizontalAlignment = CellHorizontalAlignmentLeft
@@ -525,19 +512,35 @@ func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 
 // SetBorder sets the cell's border style.
 func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
-	cell.borderStyle = style
 	if style == CellBorderStyleBox {
+		cell.borderStyleLeft = CellBorderStyleLeft
 		cell.borderWidthLeft = width
+		cell.borderStyleBottom = CellBorderStyleBottom
 		cell.borderWidthBottom = width
+		cell.borderStyleRight = CellBorderStyleRight
 		cell.borderWidthRight = width
+		cell.borderStyleTop = CellBorderStyleTop
 		cell.borderWidthTop = width
-	} else if style == CellBorderStyleBoxLeft {
+	} else if style == CellBorderStyleDoubleBox {
+		cell.borderStyleLeft = CellBorderStyleDoubleLeft
 		cell.borderWidthLeft = width
-	} else if style == CellBorderStyleBoxBottom {
+		cell.borderStyleBottom = CellBorderStyleDoubleBottom
 		cell.borderWidthBottom = width
-	} else if style == CellBorderStyleBoxRight {
+		cell.borderStyleRight = CellBorderStyleDoubleRight
 		cell.borderWidthRight = width
-	} else if style == CellBorderStyleBoxTop {
+		cell.borderStyleTop = CellBorderStyleDoubleTop
+		cell.borderWidthTop = width
+	} else if style == CellBorderStyleLeft || style == CellBorderStyleDoubleLeft {
+		cell.borderStyleLeft = style
+		cell.borderWidthLeft = width
+	} else if style == CellBorderStyleBottom || style == CellBorderStyleDoubleBottom {
+		cell.borderStyleBottom = style
+		cell.borderWidthBottom = width
+	} else if style == CellBorderStyleRight || style == CellBorderStyleDoubleRight {
+		cell.borderStyleRight = style
+		cell.borderWidthRight = width
+	} else if style == CellBorderStyleTop || style == CellBorderStyleDoubleTop {
+		cell.borderStyleTop = style
 		cell.borderWidthTop = width
 	}
 }

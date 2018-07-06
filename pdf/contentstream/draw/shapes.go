@@ -179,8 +179,8 @@ const (
 type LineStyle int
 
 const (
-	LineStyleDefault LineStyle = 0
-	LineStyleDashed  LineStyle = 1
+	LineStyleSolid  LineStyle = 0
+	LineStyleDashed LineStyle = 1
 )
 
 // Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
@@ -211,6 +211,8 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
 	w := line.LineWidth
 
+	// Hack to keep the border width correct
+	// Its a mystery like bermuda triangle
 	if line.LineStyle == LineStyleDashed {
 		w = line.LineWidth - 1
 	}

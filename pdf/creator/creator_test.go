@@ -957,64 +957,28 @@ func TestBorderedTable1(t *testing.T) {
 	cell1 := table.NewCell()
 	p := NewParagraph("A")
 	cell1.SetContent(p)
-	cell1.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
+	cell1.SetBorder(CellBorderStyleDoubleBox, 1) // border will be on left
 	cell1.SetBorderLineStyle(draw.LineStyleDashed)
+	cell1.SetBackgroundColor(ColorGreen)
+
+	table.SkipCells(1)
 
 	cell2 := table.NewCell()
 	p = NewParagraph("B")
 	cell2.SetContent(p)
-	cell2.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell2.SetBorderLineStyle(draw.LineStyleDashed)
-
-	cell3 := table.NewCell()
-	p = NewParagraph("C")
-	cell3.SetContent(p)
-	cell3.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
-	cell3.SetBorderLineStyle(draw.LineStyleDashed)
-
-	cell4 := table.NewCell()
-	p = NewParagraph("D")
-	cell4.SetContent(p)
-	cell4.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be around
-	cell4.SetBorderLineStyle(draw.LineStyleDefault)
-
-	cell5 := table.NewCell()
-	p = NewParagraph("E")
-	cell5.SetContent(p)
-	cell5.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell5.SetBorderLineStyle(draw.LineStyleDashed)
-
-	cell6 := table.NewCell()
-	p = NewParagraph("F")
-	cell6.SetContent(p)
-	cell6.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
-	cell6.SetBorderLineStyle(draw.LineStyleDashed)
+	cell2.SetBorder(CellBorderStyleDoubleBox, 1) // border will be around
+	cell2.SetBorderLineStyle(draw.LineStyleSolid)
+	cell2.SetBackgroundColor(ColorRed)
 
 	table.SkipCells(1) // Skip over 2,3.
-
-	cell7 := table.NewCell()
-	p = NewParagraph("G")
-	cell7.SetContent(p)
-	cell7.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell7.SetBorderLineStyle(draw.LineStyleDefault)
 
 	// Skip over two rows.
 	table.SkipRows(2)
 	cell8 := table.NewCell()
 	p = NewParagraph("H")
 	cell8.SetContent(p)
-	cell8.SetBorder(CellBorderStyleBoxRight, 1) // Border will be on right
-	cell8.SetBorderLineStyle(draw.LineStyleDashed)
-
-	// Move down 3 rows, 2 to the left.
-	table.SkipOver(3, -2)
-	cell9 := table.NewCell()
-	p = NewParagraph("I")
-	cell9.SetContent(p)
-	cell9.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
-	cell9.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
-	cell9.SetBorder(CellBorderStyleBoxTop, 1)    // Border will be on top
-	cell9.SetBorderLineStyle(draw.LineStyleDashed)
+	cell8.SetBorder(CellBorderStyleRight, 1) // border will be on right
+	cell8.SetBorderLineStyle(draw.LineStyleSolid)
 
 	c := New()
 	c.Draw(table)
@@ -1035,54 +999,54 @@ func TestBorderedTable2(t *testing.T) {
 	cell1 := table.NewCell()
 	p := NewParagraph("A")
 	cell1.SetContent(p)
-	cell1.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
-	cell1.SetBorderLineStyle(draw.LineStyleDefault)
+	cell1.SetBorder(CellBorderStyleLeft, 1) // border will be on left
+	cell1.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell2 := table.NewCell()
 	p = NewParagraph("B")
 	cell2.SetContent(p)
-	cell2.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell2.SetBorderLineStyle(draw.LineStyleDefault)
+	cell2.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell2.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell3 := table.NewCell()
 	p = NewParagraph("C")
 	cell3.SetContent(p)
-	cell3.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
-	cell3.SetBorderLineStyle(draw.LineStyleDefault)
+	cell3.SetBorder(CellBorderStyleBottom, 1) // border will be on bottom
+	cell3.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell4 := table.NewCell()
 	p = NewParagraph("D")
 	cell4.SetContent(p)
-	cell4.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell4.SetBorderLineStyle(draw.LineStyleDefault)
+	cell4.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell4.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell5 := table.NewCell()
 	p = NewParagraph("E")
 	cell5.SetContent(p)
-	cell5.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell5.SetBorderLineStyle(draw.LineStyleDefault)
+	cell5.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell5.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell6 := table.NewCell()
 	p = NewParagraph("F")
 	cell6.SetContent(p)
-	cell6.SetBorder(CellBorderStyleBoxLeft, 1) // Border will be on left
-	cell6.SetBorderLineStyle(draw.LineStyleDefault)
+	cell6.SetBorder(CellBorderStyleLeft, 1) // border will be on left
+	cell6.SetBorderLineStyle(draw.LineStyleSolid)
 
 	table.SkipCells(1) // Skip over 2,3.
 
 	cell7 := table.NewCell()
 	p = NewParagraph("G")
 	cell7.SetContent(p)
-	cell7.SetBorder(CellBorderStyleBox, 1) // Border will be around
-	cell7.SetBorderLineStyle(draw.LineStyleDefault)
+	cell7.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell7.SetBorderLineStyle(draw.LineStyleSolid)
 
 	// Skip over two rows.
 	table.SkipRows(2)
 	cell8 := table.NewCell()
 	p = NewParagraph("H")
 	cell8.SetContent(p)
-	cell8.SetBorder(CellBorderStyleBoxRight, 1) // Border will be on right
-	cell8.SetBorderLineStyle(draw.LineStyleDefault)
+	cell8.SetBorder(CellBorderStyleRight, 1) // border will be on right
+	cell8.SetBorderLineStyle(draw.LineStyleSolid)
 
 	// Move down 3 rows, 2 to the left.
 	table.SkipOver(3, -2)
@@ -1090,9 +1054,9 @@ func TestBorderedTable2(t *testing.T) {
 	p = NewParagraph("I")
 	cell9.SetContent(p)
 	cell9.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
-	cell9.SetBorder(CellBorderStyleBoxBottom, 1) // Border will be on bottom
-	cell9.SetBorder(CellBorderStyleBoxTop, 1)    // Border will be on top
-	cell9.SetBorderLineStyle(draw.LineStyleDefault)
+	cell9.SetBorder(CellBorderStyleBottom, 1) // border will be on bottom
+	cell9.SetBorder(CellBorderStyleTop, 1)    // border will be on top
+	cell9.SetBorderLineStyle(draw.LineStyleSolid)
 
 	c := New()
 	c.Draw(table)
