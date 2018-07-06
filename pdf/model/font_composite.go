@@ -357,8 +357,8 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	// Prepare the inner descendant font (CIDFontType2).
-	skeleton := fontSkeleton{subtype: "Type0"}
-	cidfont := &pdfCIDFontType2{fontSkeleton: &skeleton}
+	skeletonCID := fontSkeleton{subtype: "CIDFontType2"}
+	cidfont := &pdfCIDFontType2{fontSkeleton: &skeletonCID}
 	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes -> runes
@@ -370,7 +370,10 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return runes[i] < runes[j]
 	})
 
-	skeleton.basefont = ttf.PostScriptName
+	skeleton := fontSkeleton{
+		subtype:  "Type0",
+		basefont: ttf.PostScriptName,
+	}
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 
@@ -473,18 +476,17 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	descriptor.Flags = MakeInteger(int64(flags))
 
 	skeleton.fontDescriptor = descriptor
+	descendantFont := PdfFont{
+		context:      cidfont,
+		fontSkeleton: skeletonCID,
+	}
 
 	// Make root Type0 font.
 	type0 := pdfFontType0{
-		fontSkeleton: &skeleton,
-		DescendantFont: &PdfFont{
-			context: cidfont,
-			fontSkeleton: fontSkeleton{
-				subtype: "CIDFontType2",
-			},
-		},
-		Encoding: MakeName("Identity-H"),
-		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),
+		fontSkeleton:   &skeleton,
+		DescendantFont: &descendantFont,
+		Encoding:       MakeName("Identity-H"),
+		encoder:        textencoding.NewTrueTypeFontEncoder(ttf.Chars),
 	}
 
 	// Build Font.
