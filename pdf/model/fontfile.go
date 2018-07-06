@@ -44,7 +44,6 @@ func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
 	d := streamObj.PdfObjectDictionary
 	data, err := DecodeStream(streamObj)
 	if err != nil {
-		common.Log.Error("err=%v", err)
 		return nil, err
 	}
 
@@ -53,7 +52,7 @@ func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
 			// XXX: TODO Add Type1C support
-			common.Log.Error("Type1C fonts are currently not supported")
+			common.Log.Debug("Type1C fonts are currently not supported")
 			return nil, ErrFontNotSupported
 		}
 	}
@@ -114,6 +113,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~^^^~~~~~~~~~~~~~~~~~~~~~~~")
 	// fmt.Printf("data=%s\n", string(data))
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~!!!~~~~~~~~~~~~~~~~~~~~~~~")
+
 	// The start of a FontFile looks like
 	//     %!PS-AdobeFont-1.0: MyArial 003.002
 	//     %%Title: MyArial
@@ -136,14 +136,15 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		return ErrRequiredAttributeMissing
 	}
 
-	encodingName, ok := keyValues["Encoding"]
-	if ok {
-		encoder, err := textencoding.NewSimpleTextEncoder(encodingName, nil)
-		if err != nil {
-			return err
-		}
-		fontfile.encoder = encoder
-	}
+	// encodingName, ok := keyValues["Encoding"]
+	// !@#$ I am not sure why we don't do this
+	// if ok  {
+	// 	encoder, err := textencoding.NewSimpleTextEncoder(encodingName, nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	fontfile.encoder = encoder
+	// }
 	if encodingSection != "" {
 		encodings, err := getEncodings(encodingSection)
 		if err != nil {
@@ -151,12 +152,11 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		}
 		encoder, err := textencoding.NewCustomSimpleTextEncoder(encodings, nil)
 		if err != nil {
-			// XXX: !@#$ We need to fix all these error
-			common.Log.Error("UNKOWN GLYPH: err=%v", err)
+			// XXX: !@#$ We need to fix all these errors
+			common.Log.Error("UNKNOWN GLYPH: err=%v", err)
 			return nil
 		}
 		fontfile.encoder = encoder
-		common.Log.Debug("encoder=%s", encoder)
 	}
 	return nil
 }
@@ -172,6 +172,9 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 // 		data = decoded
 // 	}
 // 	decoded := decodeEexec(data)
+// 	fmt.Println(":::::::::::::::::::::<<>>:::::::::::::::::::::")
+// 	fmt.Printf("%s\n", string(decoded))
+// 	fmt.Println(":::::::::::::::::::::<><>:::::::::::::::::::::")
 // 	return nil
 // }
 
@@ -216,9 +219,13 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	return
 }
 
+// /Users/pcadmin/testdata/invoice61781040.pdf has \r line endings
+var reEndline = regexp.MustCompile(`[\n\r]+`)
+
 // getKeyValues returns the map encoded in `data`.
 func getKeyValues(data string) map[string]string {
-	lines := strings.Split(data, "\n")
+	// lines := strings.Split(data, "\n")
+	lines := reEndline.Split(data, -1)
 	keyValues := map[string]string{}
 	for _, line := range lines {
 		matches := reKeyVal.FindStringSubmatch(line)

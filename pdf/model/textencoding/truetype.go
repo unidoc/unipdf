@@ -149,5 +149,5 @@ func (enc TrueTypeFontEncoder) GlyphToRune(glyph string) (rune, bool) {
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
 func (enc TrueTypeFontEncoder) ToPdfObject() PdfObject {
-	return nil
+	return MakeNull()
 }

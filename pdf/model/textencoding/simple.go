@@ -29,7 +29,7 @@ var (
 
 // SimpleEncoder represents a 1 byte encoding
 type SimpleEncoder struct {
-	baseName     string
+	baseName string
 	baseEncoding map[uint16]rune
 	differences  map[byte]string
 	codeToGlyph  map[uint16]string
@@ -54,11 +54,10 @@ func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte
 	return newSimpleTextEncoder(baseEncoding, baseName, differences)
 }
 
-// Encode converts a Go unicode string `raw` to a PDF encoded string.
+// ApplyDifferences applies the encoding delta `differences` to `se`.
 func (se *SimpleEncoder) ApplyDifferences(differences map[byte]string) {
 	se.differences = differences
 	se.makeEncoder()
-	common.Log.Debug("$$$$ %s", se)
 }
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
@@ -179,8 +178,6 @@ func (se SimpleEncoder) ToPdfObject() PdfObject {
 	dict.Set("Type", MakeName("Encoding"))
 	dict.Set("BaseEncoding", MakeName(se.baseName))
 	dict.Set("Differences", MakeArray(ToFontDifferences(se.differences)...))
-
-	// Return an empty Encoding object
 	return MakeIndirectObject(dict)
 }
 
