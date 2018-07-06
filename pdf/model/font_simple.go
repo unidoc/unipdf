@@ -96,102 +96,120 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 //
 // !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
 //      Need to get TrueType font's cmap
-func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFontSimple, error) {
+func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton, std14 bool) (*pdfFontSimple, error) {
 	font := &pdfFontSimple{fontSkeleton: skeleton}
 
 	d := skeleton.dict
 
 	// !@#$ Failing on ~/testdata/The-Byzantine-Generals-Problem.pdf
-	obj = d.Get("FirstChar")
-	if obj == nil {
-		if skeleton.subtype == "TrueType" {
-			common.Log.Debug("ERROR: FirstChar attribute missing")
+	if !std14 {
+		obj = d.Get("FirstChar")
+		if obj == nil {
+			// See /Users/pcadmin/testdata/shamirturing.pdf
+			if skeleton.subtype == "TrueType" {
+				common.Log.Debug("ERROR: FirstChar attribute missing")
+				return nil, ErrRequiredAttributeMissing
+			}
+			obj = PdfObject(MakeInteger(0))
+		}
+		font.FirstChar = obj
+
+		intVal, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
+			return nil, ErrTypeError
+		}
+		font.firstChar = int(*intVal)
+
+		obj = d.Get("LastChar")
+		if obj == nil {
+			if skeleton.subtype == "TrueType" {
+				common.Log.Debug("ERROR: LastChar attribute missing")
+				return nil, ErrRequiredAttributeMissing
+			}
+			obj = PdfObject(MakeInteger(0))
+		}
+		font.LastChar = obj
+		intVal, ok = TraceToDirectObject(obj).(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
+			return nil, ErrTypeError
+		}
+		font.lastChar = int(*intVal)
+
+		font.charWidths = []float64{}
+		obj = d.Get("Widths")
+		if obj == nil {
+			common.Log.Debug("ERROR: Widths missing from font")
 			return nil, ErrRequiredAttributeMissing
 		}
-		obj = PdfObject(MakeInteger(0))
-	}
-	font.FirstChar = obj
+		font.Widths = obj
 
-	intVal, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
-	if !ok {
-		common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
-		return nil, ErrTypeError
-	}
-	font.firstChar = int(*intVal)
-
-	obj = d.Get("LastChar")
-	if obj == nil {
-		if skeleton.subtype == "TrueType" {
-			common.Log.Debug("ERROR: LastChar attribute missing")
-			return nil, ErrRequiredAttributeMissing
+		arr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		if !ok {
+			common.Log.Debug("ERROR: Widths attribute != array (%T)", arr)
+			return nil, ErrTypeError
 		}
-		obj = PdfObject(MakeInteger(0))
-	}
-	font.LastChar = obj
-	intVal, ok = TraceToDirectObject(obj).(*PdfObjectInteger)
-	if !ok {
-		common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
-		return nil, ErrTypeError
-	}
-	font.lastChar = int(*intVal)
 
-	font.charWidths = []float64{}
-	obj = d.Get("Widths")
-	if obj == nil {
-		common.Log.Debug("ERROR: Widths missing from font")
-		return nil, ErrRequiredAttributeMissing
-	}
-	font.Widths = obj
+		widths, err := arr.ToFloat64Array()
+		if err != nil {
+			common.Log.Debug("ERROR: converting widths to array")
+			return nil, err
+		}
 
-	arr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
-	if !ok {
-		common.Log.Debug("ERROR: Widths attribute != array (%T)", arr)
-		return nil, ErrTypeError
+		if len(widths) != (font.lastChar - font.firstChar + 1) {
+			common.Log.Debug("ERROR: Invalid widths length != %d (%d)",
+				font.lastChar-font.firstChar+1, len(widths))
+			return nil, ErrRangeError
+		}
+		font.charWidths = widths
 	}
-
-	widths, err := arr.ToFloat64Array()
-	if err != nil {
-		common.Log.Debug("ERROR: converting widths to array")
-		return nil, err
-	}
-
-	if len(widths) != (font.lastChar - font.firstChar + 1) {
-		common.Log.Debug("ERROR: Invalid widths length != %d (%d)",
-			font.lastChar-font.firstChar+1, len(widths))
-		return nil, ErrRangeError
-	}
-	font.charWidths = widths
 
 	font.Encoding = TraceToDirectObject(d.Get("Encoding"))
+	return font, nil
+}
 
-	baseEncoder, differences, err := getFontEncoding(TraceToDirectObject(font.Encoding))
+// addEncoding adds the encoding to the font.
+// The order of precedence is important
+func (font *pdfFontSimple) addEncoding() error {
+	skeleton := font.fontSkeleton
+
+	// !@#$ Stop setting default encoding in getFontEncoding XXX
+	baseEncoder, differences, err := getFontEncoding(font.Encoding)
 	if err != nil {
 		common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", skeleton.basefont,
 			skeleton.subtype, font.Encoding, font.Encoding, err)
-		return nil, err
+		return err
 	}
+
+	if font.Encoder() == nil {
+		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+		if err != nil {
+			return err
+		}
+		font.SetEncoder(encoder)
+	}
+
 	if skeleton.subtype == "Type1" {
 		// XXX: !@#$ Is this the right order? Do the /Differences need to be reapplied?
 		descriptor := skeleton.fontDescriptor
-		if descriptor.fontFile != nil && descriptor.fontFile.encoder != nil {
+		if descriptor != nil &&
+			descriptor.fontFile != nil &&
+			descriptor.fontFile.encoder != nil {
 			common.Log.Debug("Using fontFile")
 			font.SetEncoder(descriptor.fontFile.encoder)
 		}
 	}
-	if font.Encoder() == nil {
-		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
-		if err != nil {
-			return nil, err
-		}
-		font.SetEncoder(encoder)
-	} else if differences != nil {
+
+	// At the end, apply the differences.
+	if differences != nil {
+		common.Log.Debug("differences=%+v font=%s", differences, font)
 		if se, ok := font.Encoder().(textencoding.SimpleEncoder); ok {
 			se.ApplyDifferences(differences)
 			font.SetEncoder(se)
 		}
 	}
-
-	return font, nil
+	return nil
 }
 
 // getFontEncoding returns font encoding of `obj` the "Encoding" entry in a font dict
@@ -225,7 +243,7 @@ func getFontEncoding(obj PdfObject) (string, map[byte]string, error) {
 		}
 		diffList, err := GetArray(TraceToDirectObject(encoding.Get("Differences")))
 		if err != nil {
-			common.Log.Debug("ERROR: Bad font encoding dict %+v. err=%v", encoding, err)
+			common.Log.Debug("ERROR: Bad font encoding dict=%+v err=%v", encoding, err)
 			return "", nil, ErrTypeError
 		}
 

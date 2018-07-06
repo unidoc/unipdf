@@ -87,16 +87,32 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 		}
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType": // !@#$
+		var simplefont *pdfFontSimple
 		if std, ok := fonts.Standard14Fonts[font.basefont]; ok && font.subtype == "Type1" {
 			font.context = std
+			stdObj := TraceToDirectObject(std.ToPdfObject())
+			stdSkeleton, err := newFontSkeletonFromPdfObject(stdObj)
+			if err != nil {
+				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
+				return nil, err
+			}
+			simplefont, err = newSimpleFontFromPdfObject(stdObj, stdSkeleton, true)
+			if err != nil {
+				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
+				return nil, err
+			}
 		} else {
-			simplefont, err := newSimpleFontFromPdfObject(fontObj, skeleton)
+			simplefont, err = newSimpleFontFromPdfObject(fontObj, skeleton, false)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", font, err)
 				return nil, err
 			}
-			font.context = simplefont
 		}
+		err = simplefont.addEncoding()
+		if err != nil {
+			return nil, err
+		}
+		font.context = simplefont
 	case "CIDFontType0":
 		cidfont, err := newPdfCIDFontType0FromPdfObject(fontObj, skeleton)
 		if err != nil {
@@ -160,7 +176,8 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 		for _, code := range charcodes {
 			r, ok := encoder.CharcodeToRune(code)
 			if !ok {
-				common.Log.Debug("ERROR: No rune. code=0x%04x data = [% 02x]=%#q\nfont=%s\nencoding=%s ",
+				common.Log.Debug("ERROR: No rune. code=0x%04x data=[% 02x]=%#q\n"+
+					"\tfont=%s\n\tencoding=%s",
 					code, data, data, font, encoder)
 				r = cmap.MissingCodeRune
 				return string(data), ErrBadText
