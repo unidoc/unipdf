@@ -425,6 +425,54 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	return val
 }
 
+// GetName returns the PdfObjectName object corresponding to the specified key, resolving indirect references as
+// needed. A bool flag is returned to indicate whether the name object was found.
+func (d *PdfObjectDictionary) GetName(key PdfObjectName) (*PdfObjectName, bool) {
+	val, has := d.dict[key]
+	if !has {
+		return nil, false
+	}
+
+	name, found := TraceToDirectObject(val).(*PdfObjectName)
+	return name, found
+}
+
+// GetString returns the PdfObjectString object corresponding to the specified key, resolving indirect references as
+// needed. A bool flag is returned to indicate whether the name object was found.
+func (d *PdfObjectDictionary) GetString(key PdfObjectName) (*PdfObjectString, bool) {
+	val, has := d.dict[key]
+	if !has {
+		return nil, false
+	}
+
+	str, found := TraceToDirectObject(val).(*PdfObjectString)
+	return str, found
+}
+
+// GetName returns the PdfObjectDictionary object corresponding to the specified key, resolving indirect references as
+// needed. A bool flag is returned to indicate whether the name object was found.
+func (d *PdfObjectDictionary) GetDict(key PdfObjectName) (*PdfObjectDictionary, bool) {
+	val, has := d.dict[key]
+	if !has {
+		return nil, false
+	}
+
+	dict, found := TraceToDirectObject(val).(*PdfObjectDictionary)
+	return dict, found
+}
+
+// GetArray returns the PdfObjectArray object corresponding to the specified key, resolving indirect references as
+// needed. A bool flag is returned to indicate whether the name object was found.
+func (d *PdfObjectDictionary) GetArray(key PdfObjectName) (*PdfObjectArray, bool) {
+	val, has := d.dict[key]
+	if !has {
+		return nil, false
+	}
+
+	arr, found := TraceToDirectObject(val).(*PdfObjectArray)
+	return arr, found
+}
+
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys
