@@ -53,20 +53,17 @@ endobj
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
-		t.Errorf("Failed to parse indirect obj (%s)", err)
-		return
+		t.Fatalf("Failed to parse indirect obj (%s)", err)
 	}
 
-	stream, ok := obj.(*PdfObjectStream)
+	_, ok := obj.(*PdfObjectStream)
 	if !ok {
-		t.Errorf("Invalid object type (%q)", obj)
-		return
+		t.Fatalf("Invalid object type (%q)", obj)
 	}
 
 	fun, err := newPdfFunctionFromPdfObject(obj)
 	if err != nil {
-		t.Errorf("Failed: %v", err)
-		return
+		t.Fatalf("Failed: %v", err)
 	}
 
 	// z = sin(360*x)/2 + sin(360*y)/2
@@ -81,23 +78,18 @@ endobj
 	for _, testcase := range testcases {
 		outputs, err := fun.Evaluate(testcase.Inputs)
 		if err != nil {
-			t.Errorf("Failed: %v", err)
-			return
+			t.Fatalf("Failed: %v", err)
 		}
 		fmt.Println(testcase)
 		fmt.Println(outputs)
 
 		if len(outputs) != len(testcase.Expected) {
-			t.Errorf("Failed, output length mismatch")
-			return
+			t.Fatalf("Failed, output length mismatch")
 		}
 		for i := 0; i < len(outputs); i++ {
 			if math.Abs(outputs[i]-testcase.Expected[i]) > 0.000001 {
-				t.Errorf("Failed, output and expected mismatch")
-				return
+				t.Fatalf("Failed, output and expected mismatch")
 			}
 		}
 	}
-
-	fmt.Printf("%s", stream.Stream)
 }

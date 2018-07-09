@@ -1,4 +1,4 @@
-package model
+package model_test
 
 import (
 	"errors"
@@ -6,6 +6,8 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 func init() {
@@ -88,6 +90,40 @@ var compositeFontDicts = []string{
 		>>`,
 }
 
+func TestNewStandard14Font(t *testing.T) {
+	type expect struct {
+		subtype  string
+		basefont string
+		fonts.CharMetrics
+	}
+	tests := map[string]expect{
+		"Courier": expect{
+			subtype:     "Type1",
+			basefont:    "Courier",
+			CharMetrics: fonts.CharMetrics{Wx: 600, Wy: 0}},
+	}
+
+	for in, expect := range tests {
+		font, err := model.NewStandard14Font(in)
+		if err != nil {
+			t.Fatalf("%s: %v", in, err)
+		}
+		if font.Subtype() != expect.subtype || font.BaseFont() != expect.basefont {
+			t.Fatalf("%s: expected BaseFont=%s SubType=%s, but got BaseFont=%s SubType=%s",
+				in, expect.basefont, expect.subtype, font.BaseFont(), font.Subtype())
+		}
+
+		metrics, ok := font.GetGlyphCharMetrics("space")
+		if !ok {
+			t.Fatalf("%s: failed to get glyph metric", in)
+		}
+		if metrics.Wx != expect.Wx || metrics.Wy != expect.Wy {
+			t.Errorf("%s: expected glyph metrics is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
+				in, expect.Wx, expect.Wy, metrics.Wx, metrics.Wy)
+		}
+	}
+}
+
 // TestSimpleFonts checks that we correctly recreate simple fonts that we parse.
 func TestSimpleFonts(t *testing.T) {
 	for _, d := range simpleFontDicts {
@@ -112,7 +148,7 @@ func objFontObj(t *testing.T, fontDict string) error {
 		t.Errorf("objFontObj: Failed to parse dict obj. fontDict=%q err=%v", fontDict, err)
 		return err
 	}
-	font, err := NewPdfFontFromPdfObject(obj)
+	font, err := model.NewPdfFontFromPdfObject(obj)
 	if err != nil {
 		t.Errorf("Failed to parse font object. obj=%s err=%v", obj, err)
 		return err

@@ -37,12 +37,12 @@ func (font PdfFont) String() string {
 
 // BaseFont returns the font's "BaseFont" field.
 func (font PdfFont) BaseFont() string {
-	return font.fontSkeleton.basefont
+	return font.basefont
 }
 
 // Subtype returns the font's "Subtype" field.
 func (font PdfFont) Subtype() string {
-	subtype := font.fontSkeleton.subtype
+	subtype := font.subtype
 	if t, ok := font.context.(*pdfFontType0); ok {
 		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
 	}
