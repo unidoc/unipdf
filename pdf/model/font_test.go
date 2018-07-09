@@ -90,7 +90,7 @@ var compositeFontDicts = []string{
 		>>`,
 }
 
-func TestNewstandard14Font(t *testing.T) {
+func TestNewStandard14Font(t *testing.T) {
 	type expect struct {
 		subtype  string
 		basefont string
@@ -104,21 +104,21 @@ func TestNewstandard14Font(t *testing.T) {
 	}
 
 	for in, expect := range tests {
-		result, err := model.NewStandard14Font(in)
+		font, err := model.NewStandard14Font(in)
 		if err != nil {
-			t.Errorf("%v: %s", err, in)
+			t.Fatalf("%s: %v", in, err)
 		}
-		if result.Subtype() != expect.subtype || result.BaseFont() != expect.basefont {
-			t.Errorf("Expected BaseFont=%s SubType=%s for %s, but got BaseFont=%s SubType=%s",
-				expect.basefont, expect.subtype, in, result.BaseFont(), result.Subtype())
+		if font.Subtype() != expect.subtype || font.BaseFont() != expect.basefont {
+			t.Fatalf("%s: expected BaseFont=%s SubType=%s, but got BaseFont=%s SubType=%s",
+				in, expect.basefont, expect.subtype, font.BaseFont(), font.Subtype())
 		}
 
-		metrics, ok := result.GetGlyphCharMetrics("space")
+		metrics, ok := font.GetGlyphCharMetrics("space")
 		if !ok {
-			t.Errorf(`Failed to get glyph metrics for "space" of %s`, in)
+			t.Fatalf("%s: failed to get glyph metric", in)
 		}
 		if metrics.Wx != expect.Wx || metrics.Wy != expect.Wy {
-			t.Errorf("Expected glyph metrics for %s is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
+			t.Errorf("%s: expected glyph metrics is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
 				in, expect.Wx, expect.Wy, metrics.Wx, metrics.Wy)
 		}
 	}
