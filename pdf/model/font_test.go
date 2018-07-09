@@ -118,7 +118,7 @@ func TestNewStandard14Font(t *testing.T) {
 			t.Fatalf("%s: failed to get glyph metric", in)
 		}
 		if metrics.Wx != expect.Wx || metrics.Wy != expect.Wy {
-			t.Errorf("%s: expected glyph metrics is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
+			t.Fatalf("%s: expected glyph metrics is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
 				in, expect.Wx, expect.Wy, metrics.Wx, metrics.Wy)
 		}
 	}
