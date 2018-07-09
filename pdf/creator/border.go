@@ -124,7 +124,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		drawrect := draw.Rectangle{
 			Opacity: 1.0,
 			X:       border.x + (border.borderWidthLeft * 3) - 0.5,
-			Y:       (ctx.PageHeight - border.y - border.height) + (border.borderWidthLeft * 2) - 0.5,
+			Y:       (ctx.PageHeight - border.y - border.height) + (border.borderWidthLeft * 2),
 			Height:  border.height - (border.borderWidthBottom * 3),
 			Width:   border.width - (border.borderWidthRight * 3),
 		}
@@ -144,10 +144,16 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	if border.borderWidthTop != 0 {
+		offsetX1 := 0.0
+		offsetX2 := 0.0
+
 		y1 := startY
 		y2 := startY
 
 		if border.StyleTop == CellBorderStyleDoubleTop {
+			offsetX1 = 1
+			offsetX2 = 1
+
 			// Line Top
 			lineTop := draw.Line{
 				LineWidth:        border.borderWidthTop,
@@ -155,9 +161,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 				LineColor:        border.borderColorTop,
 				LineEndingStyle1: draw.LineEndingStyleNone,
 				LineEndingStyle2: draw.LineEndingStyleNone,
-				X1:               startX + autoTopAdjustmentOnLeft + 1, // +1 for corner adjustment
+				X1:               startX + autoTopAdjustmentOnLeft + offsetX1,
 				Y1:               y1 - (doubleBorderAdjustment * border.borderWidthTop),
-				X2:               ((startX + border.width) - autoTopAdjustmentOnRight) + 0.5, // +0.5 for corner adjustment
+				X2:               ((startX + border.width) - autoTopAdjustmentOnRight) + offsetX2,
 				Y2:               y2 - (doubleBorderAdjustment * border.borderWidthTop),
 				LineStyle:        border.LineStyle,
 			}
@@ -172,6 +178,11 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 
 			y1 = y1 + (doubleBorderAdjustment * border.borderWidthTop)
 			y2 = y2 + (doubleBorderAdjustment * border.borderWidthTop)
+
+			offsetX1 = (-(border.borderWidthRight / 2)) + 0.5
+		} else {
+			offsetX1 = 1
+			offsetX2 = -1
 		}
 
 		// Line Top
@@ -181,9 +192,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			LineColor:        border.borderColorTop,
 			LineEndingStyle1: draw.LineEndingStyleNone,
 			LineEndingStyle2: draw.LineEndingStyleNone,
-			X1:               startX + 0.5,
+			X1:               startX + offsetX1,
 			Y1:               y1,
-			X2:               startX + border.width + autoTopAdjustmentOnRight + 0.5,
+			X2:               startX + border.width + autoTopAdjustmentOnRight + offsetX2,
 			Y2:               y2,
 			LineStyle:        border.LineStyle,
 		}
@@ -198,8 +209,11 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	if border.borderWidthLeft != 0 {
-		x1 := startX + 1
-		x2 := startX + 1
+		offsetX1 := 1.0
+		offsetX2 := 1.0
+
+		x1 := startX + offsetX1
+		x2 := startX + offsetX2
 
 		if border.StyleLeft == CellBorderStyleDoubleLeft {
 			// Line Left
@@ -252,6 +266,8 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	}
 
 	if border.borderWidthRight != 0 {
+		offsetY2 := 0.0
+
 		x1 := startX + border.width
 		x2 := startX + border.width
 
@@ -280,6 +296,8 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 
 			x1 = x1 + (doubleBorderAdjustment * border.borderWidthRight)
 			x2 = x2 + (doubleBorderAdjustment * border.borderWidthRight)
+		} else {
+			offsetY2 = 1
 		}
 
 		// Line Right
@@ -292,7 +310,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			X1:               x1,
 			Y1:               startY + autoRightAdjustmentOnTop,
 			X2:               x2,
-			Y2:               (startY - border.height) - autoRightAdjustmentOnBottom,
+			Y2:               (startY - border.height) - autoRightAdjustmentOnBottom + offsetY2,
 			LineStyle:        border.LineStyle,
 		}
 		contentsRight, _, err := lineRight.Draw("")
@@ -307,11 +325,14 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 
 	if border.borderWidthBottom != 0 {
 		// Line Bottom
+		offsetFull := 0.0
 
 		y1 := startY - border.height
 		y2 := startY - border.height
 
 		if border.StyleBottom == CellBorderStyleDoubleBottom {
+			offsetFull = 1
+
 			lineBottom := draw.Line{
 				LineWidth:        border.borderWidthBottom,
 				Opacity:          1.0,
@@ -320,7 +341,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 				LineEndingStyle2: draw.LineEndingStyleNone,
 				X1:               (startX + border.width) - autoBottomAdjustmentOnRight,
 				Y1:               y1 + (doubleBorderAdjustment * border.borderWidthBottom),
-				X2:               startX + autoBottomAdjustmentOnLeft + 1, // +1 for corner adjustment
+				X2:               startX + autoBottomAdjustmentOnLeft + offsetFull,
 				Y2:               y2 + (doubleBorderAdjustment * border.borderWidthBottom),
 				LineStyle:        border.LineStyle,
 			}
