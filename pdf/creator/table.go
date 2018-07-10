@@ -224,7 +224,13 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			border.SetFillColor(ColorRGBFromArithmetic(r, g, b))
 		}
 
-		border.LineStyle = cell.borderLineStyle
+		// Force solid when border is double
+		if cell.borderStyleLeft == CellBorderStyleDoubleLeft || cell.borderStyleRight == CellBorderStyleDoubleRight ||
+			cell.borderStyleTop == CellBorderStyleDoubleTop || cell.borderStyleBottom == CellBorderStyleDoubleBottom {
+			border.LineStyle = draw.LineStyleSolid
+		} else {
+			border.LineStyle = cell.borderLineStyle
+		}
 
 		border.StyleLeft = cell.borderStyleLeft
 		border.StyleRight = cell.borderStyleRight
