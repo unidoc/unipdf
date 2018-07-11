@@ -96,14 +96,14 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 //
 // !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
 //      Need to get TrueType font's cmap
-func newSimpleFontFromPdfObject(obj PdfObject, skeleton *fontSkeleton, std14 bool) (*pdfFontSimple, error) {
+func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSimple, error) {
 	font := &pdfFontSimple{fontSkeleton: skeleton}
 
 	d := skeleton.dict
 
 	// !@#$ Failing on ~/testdata/The-Byzantine-Generals-Problem.pdf
 	if !std14 {
-		obj = d.Get("FirstChar")
+		obj := d.Get("FirstChar")
 		if obj == nil {
 			// See /Users/pcadmin/testdata/shamirturing.pdf
 			if skeleton.subtype == "TrueType" {

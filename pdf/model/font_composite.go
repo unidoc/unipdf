@@ -133,16 +133,16 @@ func (font *pdfFontType0) ToPdfObject() PdfObject {
 	return font.container
 }
 
-// newPdfFontType0FromPdfObject makes a pdfFontType0 based on the input PdfObject which should be
-// represented by a dictionary. If a problem is encountered, an error is returned.
-func newPdfFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfFontType0, error) {
+// newPdfFontType0FromPdfObject makes a pdfFontType0 based on the input `d` in skeleton.
+// If a problem is encountered, an error is returned.
+func newPdfFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfFontType0, error) {
 
 	d := skeleton.dict
 
 	// DescendantFonts.
 	arr, err := GetArray(TraceToDirectObject(d.Get("DescendantFonts")))
 	if err != nil {
-		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array (%T) %s", obj, skeleton)
+		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array %s", skeleton)
 		return nil, ErrRangeError
 	}
 	if len(arr) != 1 {
@@ -208,7 +208,7 @@ func (font *pdfCIDFontType0) ToPdfObject() PdfObject {
 // newPdfCIDFontType0FromPdfObject creates a pdfCIDFontType0 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading an error is returned.
 // XXX: This is a stub.
-func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfCIDFontType0, error) {
+func newPdfCIDFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfCIDFontType0, error) {
 	if skeleton.subtype != "CIDFontType0" {
 		common.Log.Debug("ERROR: Font SubType != CIDFontType0. font=%s", skeleton)
 		return nil, ErrRangeError
@@ -218,7 +218,7 @@ func newPdfCIDFontType0FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 	d := skeleton.dict
 
 	// CIDSystemInfo.
-	obj = TraceToDirectObject(d.Get("CIDSystemInfo"))
+	obj := TraceToDirectObject(d.Get("CIDSystemInfo"))
 	if obj == nil {
 		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", skeleton)
 		return nil, ErrRequiredAttributeMissing
@@ -316,7 +316,7 @@ func (font *pdfCIDFontType2) ToPdfObject() PdfObject {
 
 // newPdfCIDFontType2FromPdfObject creates a pdfCIDFontType2 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading an error is returned.
-func newPdfCIDFontType2FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pdfCIDFontType2, error) {
+func newPdfCIDFontType2FromPdfObject(skeleton *fontSkeleton) (*pdfCIDFontType2, error) {
 	if skeleton.subtype != "CIDFontType2" {
 		common.Log.Debug("ERROR: Font SubType != CIDFontType2. font=%s", skeleton)
 		return nil, ErrRangeError
@@ -326,7 +326,7 @@ func newPdfCIDFontType2FromPdfObject(obj PdfObject, skeleton *fontSkeleton) (*pd
 	d := skeleton.dict
 
 	// CIDSystemInfo.
-	obj = d.Get("CIDSystemInfo")
+	obj := d.Get("CIDSystemInfo")
 	if obj == nil {
 		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", skeleton)
 		return nil, ErrRequiredAttributeMissing

@@ -96,7 +96,7 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", font)
 			return nil, errors.New("Cyclical type0 loading")
 		}
-		type0font, err := newPdfFontType0FromPdfObject(fontObj, skeleton)
+		type0font, err := newPdfFontType0FromPdfObject(skeleton)
 		if err != nil {
 			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", font, err)
 			return nil, err
@@ -112,13 +112,13 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
 				return nil, err
 			}
-			simplefont, err = newSimpleFontFromPdfObject(stdObj, stdSkeleton, true)
+			simplefont, err = newSimpleFontFromPdfObject(stdSkeleton, true)
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
 				return nil, err
 			}
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(fontObj, skeleton, false)
+			simplefont, err = newSimpleFontFromPdfObject(skeleton, false)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", font, err)
 				return nil, err
@@ -130,14 +130,14 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 		}
 		font.context = simplefont
 	case "CIDFontType0":
-		cidfont, err := newPdfCIDFontType0FromPdfObject(fontObj, skeleton)
+		cidfont, err := newPdfCIDFontType0FromPdfObject(skeleton)
 		if err != nil {
 			common.Log.Debug("ERROR: While loading cid font type0 font: %v", err)
 			return nil, err
 		}
 		font.context = cidfont
 	case "CIDFontType2":
-		cidfont, err := newPdfCIDFontType2FromPdfObject(fontObj, skeleton)
+		cidfont, err := newPdfCIDFontType2FromPdfObject(skeleton)
 		if err != nil {
 			common.Log.Debug("ERROR: While loading cid font type2 font. font=%s err=%v", font, err)
 			return nil, err
