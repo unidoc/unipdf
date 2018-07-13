@@ -24,12 +24,12 @@ import (
 )
 
 var (
-	ErrTypeError = errors.New("Type check error")
+	ErrTypeError = errors.New("type check error")
 )
 
 // SimpleEncoder represents a 1 byte encoding
 type SimpleEncoder struct {
-	baseName string
+	baseName     string
 	baseEncoding map[uint16]rune
 	differences  map[byte]string
 	codeToGlyph  map[uint16]string
@@ -42,12 +42,14 @@ type SimpleEncoder struct {
 func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte]string) (SimpleEncoder, error) {
 	baseName := "custom"
 	baseEncoding := map[uint16]rune{}
-	// common.Log.Debug("encoding=%#v", encoding)
+	if len(encoding) == 0 {
+		return SimpleEncoder{}, errors.New("Empty custom encoding")
+	}
 	for code, glyph := range encoding {
 		r, ok := GlyphToRune(glyph)
 		if !ok {
 			common.Log.Debug("ERROR: Unknown glyph. %q", glyph)
-			// return SimpleEncoder{}, ErrTypeError
+			continue
 		}
 		baseEncoding[code] = r
 	}
@@ -111,7 +113,7 @@ func (se SimpleEncoder) String() string {
 
 	for i := 0; i < numCodes; i++ {
 		c := codes[i]
-		parts = append(parts, fmt.Sprintf("%4d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
+		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
 	}
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }

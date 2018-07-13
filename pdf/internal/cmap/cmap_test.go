@@ -111,7 +111,7 @@ func TestCMapParser1(t *testing.T) {
 	}
 
 	v := cmap.CharcodeToUnicode(0x99)
-	if v != "?" { //!= "notdef" {
+	if v != MissingCodeString { //!= "notdef" {
 		t.Errorf("Unmapped code, expected to map to undefined")
 		return
 	}

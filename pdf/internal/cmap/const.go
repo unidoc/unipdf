@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrBadCMap        = errors.New("Bad cmap")
-	ErrBadCMapComment = errors.New("Comment should start with %")
-	ErrBadCMapDict    = errors.New("Invalid dict")
+	ErrBadCMap        = errors.New("bad cmap")
+	ErrBadCMapComment = errors.New("comment should start with %")
+	ErrBadCMapDict    = errors.New("invalid dict")
 )
 
 const (

@@ -57,8 +57,8 @@ func (font PdfFont) ToUnicode() string {
 	return font.toUnicodeCmap.Name()
 }
 
-// NewStandard14Font returns the standard 14 font named`basefont` as a PdfFont, or an error if it
-// `basefont` is not one the standard 14 fonts.
+// NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
+// `basefont` is not one the standard 14 font names.
 func NewStandard14Font(basefont string) (*PdfFont, error) {
 	std, ok := fonts.Standard14Fonts[basefont]
 	if !ok {
@@ -161,14 +161,9 @@ func newPdfFontFromPdfObject(fontObj PdfObject, allowType0 bool) (*PdfFont, erro
 //   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
-func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
-	if font.toUnicodeCmap != nil {
-		unicode, ok := font.toUnicodeCmap.CharcodeBytesToUnicode(data)
-		if ok {
-			return unicode, nil
-		}
-	}
-	// Fall back to encoding
+func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
+	common.Log.Debug("showText: data=[% 02x]=%#q", data, data)
+
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
 	if font.isCIDFont() {
 		if len(data) == 1 {
@@ -187,24 +182,41 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, error) {
 			charcodes = append(charcodes, uint16(b))
 		}
 	}
-	if encoder := font.Encoder(); encoder != nil {
-		runes := make([]rune, 0, len(charcodes))
-		for _, code := range charcodes {
-			r, ok := encoder.CharcodeToRune(code)
-			if !ok {
-				common.Log.Debug("ERROR: No rune. code=0x%04x data=[% 02x]=%#q\n"+
-					"\tfont=%s\n\tencoding=%s",
-					code, data, data, font, encoder)
-				r = cmap.MissingCodeRune
-				return string(data), ErrBadText
+
+	charstrings := make([]string, 0, len(charcodes))
+	numMisses := 0
+	for _, code := range charcodes {
+		if font.toUnicodeCmap != nil {
+			r, ok := font.toUnicodeCmap.CharcodeToUnicode2(cmap.CharCode(code))
+			if ok {
+				charstrings = append(charstrings, r)
+				continue
 			}
-			runes = append(runes, r)
 		}
-		return string(runes), nil
+		// Fall back to encoding
+		if encoder := font.Encoder(); encoder != nil {
+			r, ok := encoder.CharcodeToRune(code)
+			if ok {
+				charstrings = append(charstrings, string(r))
+				continue
+			}
+
+			common.Log.Debug("ERROR: No rune. code=0x%04x data=[% 02x]=%#q charcodes=[% 04x] CID=%t\n"+
+				"\tfont=%s\n\tencoding=%s",
+				code, data, data, charcodes, font.isCIDFont(), font, encoder)
+			numMisses++
+			charstrings = append(charstrings, cmap.MissingCodeString)
+		}
 	}
-	common.Log.Debug("ERROR: Couldn't convert to unicode. Using input. data=%#q=[% 02x] font=%s",
-		string(data), data, font)
-	return string(data), ErrBadText
+
+	if numMisses != 0 {
+		common.Log.Debug("ERROR: Couldn't convert to unicode. Using input. data=%#q=[% 02x]\n"+
+			"\tnumChars=%d numMisses=%d\n"+
+			"\tfont=%s",
+			string(data), data, len(charcodes), numMisses, font)
+	}
+
+	return strings.Join(charstrings, ""), len(charcodes), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -382,7 +394,7 @@ func newFontSkeletonFromPdfObject(fontObj PdfObject) (*fontSkeleton, error) {
 	d, ok := dictObj.(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
-		return nil, ErrUnsupportedFont
+		return nil, ErrFontNotSupported
 	}
 	font.dict = d
 
@@ -488,6 +500,7 @@ type PdfFontDescriptor struct {
 	CharSet      PdfObject
 
 	*fontFile
+	fontFile2 *fonts.TtfType
 
 	// Additional entries for CIDFonts
 	Style  PdfObject
@@ -499,6 +512,7 @@ type PdfFontDescriptor struct {
 	container *PdfIndirectObject
 }
 
+// String returns a string describing the font descriptor.
 func (descriptor *PdfFontDescriptor) String() string {
 	parts := []string{}
 	if descriptor.FontName != nil {
@@ -507,9 +521,14 @@ func (descriptor *PdfFontDescriptor) String() string {
 	if descriptor.FontFamily != nil {
 		parts = append(parts, descriptor.FontFamily.String())
 	}
-	parts = append(parts, fmt.Sprintf("FontFile=%t", descriptor.FontFile != nil))
-	parts = append(parts, fmt.Sprintf("FontFile2=%t", descriptor.FontFile2 != nil))
+	if descriptor.fontFile != nil {
+		parts = append(parts, descriptor.fontFile.String())
+	}
+	if descriptor.fontFile2 != nil {
+		parts = append(parts, descriptor.fontFile2.String())
+	}
 	parts = append(parts, fmt.Sprintf("FontFile3=%t", descriptor.FontFile3 != nil))
+
 	return fmt.Sprintf("FONT_DESCRIPTON{%s}", strings.Join(parts, ", "))
 }
 
@@ -579,6 +598,14 @@ func newPdfFontDescriptorFromPdfObject(obj PdfObject) (*PdfFontDescriptor, error
 		}
 		common.Log.Debug("fontfile=%s", fontfile)
 		descriptor.fontFile = fontfile
+	}
+	if descriptor.FontFile2 != nil {
+		fontfile2, err := fonts.NewFontFile2FromPdfObject(descriptor.FontFile2)
+		if err != nil {
+			return descriptor, err
+		}
+		common.Log.Debug("fontfile2=%s", fontfile2.String())
+		descriptor.fontFile2 = &fontfile2
 	}
 	return descriptor, nil
 }

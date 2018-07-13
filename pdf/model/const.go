@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	ErrRequiredAttributeMissing = errors.New("Required attribute missing")
-	ErrInvalidAttribute         = errors.New("Invalid attribute")
-	ErrTypeError                = errors.New("Type check error")
-	ErrRangeError               = errors.New("Range check error")
-	ErrEncrypted                = errors.New("File needs to be decrypted first")
-	ErrUnsupportedFont          = errors.New("Unsupported font type")
-	ErrBadText                  = errors.New("Could not decode text")
+	ErrRequiredAttributeMissing = errors.New("required attribute missing")
+	ErrInvalidAttribute         = errors.New("invalid attribute")
+	ErrTypeError                = errors.New("type check error")
+	ErrRangeError               = errors.New("range check error")
+	ErrEncrypted                = errors.New("file needs to be decrypted first")
+	ErrBadText                  = errors.New("could not decode text")
+	ErrNoFont                   = errors.New("font not defined")
 )

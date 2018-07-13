@@ -53,7 +53,7 @@ func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
 		if subtype == "Type1C" {
 			// XXX: TODO Add Type1C support
 			common.Log.Debug("Type1C fonts are currently not supported")
-			return nil, ErrFontNotSupported
+			return nil, ErrType1CFontNotSupported
 		}
 	}
 
@@ -181,7 +181,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 var (
 	reDictBegin   = regexp.MustCompile(`\d+ dict\s+(dup\s+)?begin`)
 	reKeyVal      = regexp.MustCompile(`^\s*/(\S+?)\s+(.+?)\s+def\s*$`)
-	reEncoding    = regexp.MustCompile(`dup\s+(\d+)\s*/(\w+)\s+put`)
+	reEncoding    = regexp.MustCompile(`^\s*dup\s+(\d+)\s*/(\w+?)(?:\.\d+)?\s+put$`)
 	encodingBegin = "/Encoding 256 array"
 	encodingEnd   = "readonly def"
 	binaryStart   = "currentfile eexec"

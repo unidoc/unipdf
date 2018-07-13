@@ -14,6 +14,9 @@ import (
 	"strconv"
 )
 
+// MissingCodeRune is the rune returned when there is no matching glyph.
+const MissingCodeRune = '\ufffd' // �
+
 // GlyphToRune returns true if `glyph` is in our GlyphToRune mapping.
 func KnownGlyph(glyph string) bool {
 	_, ok := GlyphToRune(glyph)
@@ -39,7 +42,7 @@ func GlyphToRune(glyph string) (rune, bool) {
 	}
 
 	if glyph == ".notdef" {
-		return '?', true
+		return MissingCodeRune, true
 	}
 
 	if groups := reUniEncoding.FindStringSubmatch(glyph); groups != nil {
