@@ -209,10 +209,10 @@ func (font *pdfFontSimple) addEncoding() error {
 				if descriptor.fontFile2 != nil {
 					common.Log.Debug("Using FontFile2")
 					encoder, err := descriptor.fontFile2.MakeEncoder()
-					if err != nil {
-						return err
+					if err == nil {
+						font.SetEncoder(encoder)
 					}
-					font.SetEncoder(encoder)
+
 				}
 			}
 		}

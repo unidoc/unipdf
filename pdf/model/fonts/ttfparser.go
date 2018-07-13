@@ -66,7 +66,7 @@ func (rec *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
 	if len(encoding) == 0 {
 		common.Log.Error("rec=%s", rec)
 		common.Log.Error("Chars=[% 02x]", rec.Chars)
-		return textencoding.SimpleEncoder{}, errors.New("no encoding")
+		// return textencoding.SimpleEncoder{}, errors.New("no encoding")
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }
