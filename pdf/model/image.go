@@ -19,7 +19,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/sampling"
 )
 
-// Basic representation of an image.
+// Image interface is a basic representation of an image used in PDF.
 // The colorspace is not specified, but must be known when handling the image.
 type Image struct {
 	Width            int64  // The width of the image in samples
@@ -36,22 +36,23 @@ type Image struct {
 	decode []float64 // [Dmin Dmax ... values for each color component]
 }
 
-// Threshold alpha channel.  Set all alpha values below threshold to transparent.
+// AlphaMapFunc represents a alpha mapping function: byte -> byte. Can be used for
+// thresholding the alpha channel, i.e. setting all alpha values below threshold to transparent.
 type AlphaMapFunc func(alpha byte) byte
 
-// Allow mapping of alpha data for transformations.  Can allow custom filtering of alpha data etc.
-func (this Image) AlphaMap(mapFunc AlphaMapFunc) {
-	for idx, alpha := range this.alphaData {
-		this.alphaData[idx] = mapFunc(alpha)
+// AlphaMap performs mapping of alpha data for transformations. Allows custom filtering of alpha data etc.
+func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
+	for idx, alpha := range img.alphaData {
+		img.alphaData[idx] = mapFunc(alpha)
 	}
 }
 
-// Convert the raw byte slice into samples which are stored in a uint32 bit array.
+// GetSamples converts the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
-func (this *Image) GetSamples() []uint32 {
-	samples := sampling.ResampleBytes(this.Data, int(this.BitsPerComponent))
+func (img *Image) GetSamples() []uint32 {
+	samples := sampling.ResampleBytes(img.Data, int(img.BitsPerComponent))
 
-	expectedLen := int(this.Width) * int(this.Height) * this.ColorComponents
+	expectedLen := int(img.Width) * int(img.Height) * img.ColorComponents
 	if len(samples) < expectedLen {
 		// Return error, or fill with 0s?
 		common.Log.Debug("Error: Too few samples (got %d, expecting %d)", len(samples), expectedLen)
@@ -62,15 +63,15 @@ func (this *Image) GetSamples() []uint32 {
 	return samples
 }
 
-// Convert samples to byte-data.
-func (this *Image) SetSamples(samples []uint32) {
-	resampled := sampling.ResampleUint32(samples, int(this.BitsPerComponent), 8)
+// SetSamples convert samples to byte-data and sets for the image.
+func (img *Image) SetSamples(samples []uint32) {
+	resampled := sampling.ResampleUint32(samples, int(img.BitsPerComponent), 8)
 	data := []byte{}
 	for _, val := range resampled {
 		data = append(data, byte(val))
 	}
 
-	this.Data = data
+	img.Data = data
 }
 
 // Resample resamples the image data converting from current BitsPerComponent to a target BitsPerComponent
@@ -85,8 +86,8 @@ func (this *Image) SetSamples(samples []uint32) {
 //   }
 //   // Resample as 1 bit.
 //   grayImage.Resample(1)
-func (this *Image) Resample(targetBitsPerComponent int64) {
-	samples := this.GetSamples()
+func (img *Image) Resample(targetBitsPerComponent int64) {
+	samples := img.GetSamples()
 
 	// Image data are stored row by row.  If the number of bits per row is not a multiple of 8, the end of the
 	// row needs to be padded with extra bits to fill out the last byte.
@@ -98,13 +99,13 @@ func (this *Image) Resample(targetBitsPerComponent int64) {
 	// i.e. 10011010 >> targetBitsPerComponent
 	// Current bits: 8, target bits: 1... need to downsample by 8-1 = 7
 
-	if targetBitsPerComponent < this.BitsPerComponent {
-		downsampling := this.BitsPerComponent - targetBitsPerComponent
+	if targetBitsPerComponent < img.BitsPerComponent {
+		downsampling := img.BitsPerComponent - targetBitsPerComponent
 		for i := range samples {
 			samples[i] >>= uint(downsampling)
 		}
-	} else if targetBitsPerComponent > this.BitsPerComponent {
-		upsampling := targetBitsPerComponent - this.BitsPerComponent
+	} else if targetBitsPerComponent > img.BitsPerComponent {
+		upsampling := targetBitsPerComponent - img.BitsPerComponent
 		for i := range samples {
 			samples[i] <<= uint(upsampling)
 		}
@@ -114,9 +115,9 @@ func (this *Image) Resample(targetBitsPerComponent int64) {
 
 	// Write out row by row...
 	data := []byte{}
-	for i := int64(0); i < this.Height; i++ {
-		ind1 := i * this.Width * int64(this.ColorComponents)
-		ind2 := (i+1)*this.Width*int64(this.ColorComponents) - 1
+	for i := int64(0); i < img.Height; i++ {
+		ind1 := i * img.Width * int64(img.ColorComponents)
+		ind2 := (i+1)*img.Width*int64(img.ColorComponents) - 1
 
 		resampled := sampling.ResampleUint32(samples[ind1:ind2], int(targetBitsPerComponent), 8)
 		for _, val := range resampled {
@@ -124,33 +125,33 @@ func (this *Image) Resample(targetBitsPerComponent int64) {
 		}
 	}
 
-	this.Data = data
-	this.BitsPerComponent = int64(targetBitsPerComponent)
+	img.Data = data
+	img.BitsPerComponent = int64(targetBitsPerComponent)
 }
 
-// Converts the unidoc Image to a golang Image structure.
-func (this *Image) ToGoImage() (goimage.Image, error) {
+// ToGoImage converts the unidoc Image to a golang Image structure.
+func (img *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
-	bounds := goimage.Rect(0, 0, int(this.Width), int(this.Height))
-	var img DrawableImage
+	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
+	var imgout DrawableImage
 
-	if this.ColorComponents == 1 {
-		if this.BitsPerComponent == 16 {
-			img = goimage.NewGray16(bounds)
+	if img.ColorComponents == 1 {
+		if img.BitsPerComponent == 16 {
+			imgout = goimage.NewGray16(bounds)
 		} else {
-			img = goimage.NewGray(bounds)
+			imgout = goimage.NewGray(bounds)
 		}
-	} else if this.ColorComponents == 3 {
-		if this.BitsPerComponent == 16 {
-			img = goimage.NewRGBA64(bounds)
+	} else if img.ColorComponents == 3 {
+		if img.BitsPerComponent == 16 {
+			imgout = goimage.NewRGBA64(bounds)
 		} else {
-			img = goimage.NewRGBA(bounds)
+			imgout = goimage.NewRGBA(bounds)
 		}
-	} else if this.ColorComponents == 4 {
-		img = goimage.NewCMYK(bounds)
+	} else if img.ColorComponents == 4 {
+		imgout = goimage.NewCMYK(bounds)
 	} else {
 		// XXX? Force RGB convert?
-		common.Log.Debug("Unsupported number of colors components per sample: %d", this.ColorComponents)
+		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
 		return nil, errors.New("Unsupported colors")
 	}
 
@@ -159,27 +160,27 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	y := 0
 	aidx := 0
 
-	samples := this.GetSamples()
-	//bytesPerColor := colorComponents * int(this.BitsPerComponent) / 8
-	bytesPerColor := this.ColorComponents
+	samples := img.GetSamples()
+	//bytesPerColor := colorComponents * int(img.BitsPerComponent) / 8
+	bytesPerColor := img.ColorComponents
 	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
 		var c gocolor.Color
-		if this.ColorComponents == 1 {
-			if this.BitsPerComponent == 16 {
+		if img.ColorComponents == 1 {
+			if img.BitsPerComponent == 16 {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
 			} else {
 				val := uint8(samples[i] & 0xff)
 				c = gocolor.Gray{val}
 			}
-		} else if this.ColorComponents == 3 {
-			if this.BitsPerComponent == 16 {
+		} else if img.ColorComponents == 3 {
+			if img.BitsPerComponent == 16 {
 				r := uint16(samples[i])<<8 | uint16(samples[i+1])
 				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
 				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
 				a := uint16(0xffff) // Default: solid (0xffff) whereas transparent=0.
-				if this.alphaData != nil && len(this.alphaData) > aidx+1 {
-					a = (uint16(this.alphaData[aidx]) << 8) | uint16(this.alphaData[aidx+1])
+				if img.alphaData != nil && len(img.alphaData) > aidx+1 {
+					a = (uint16(img.alphaData[aidx]) << 8) | uint16(img.alphaData[aidx+1])
 					aidx += 2
 				}
 				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}
@@ -188,13 +189,13 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 				g := uint8(samples[i+1] & 0xff)
 				b := uint8(samples[i+2] & 0xff)
 				a := uint8(0xff) // Default: solid (0xff) whereas transparent=0.
-				if this.alphaData != nil && len(this.alphaData) > aidx {
-					a = uint8(this.alphaData[aidx])
+				if img.alphaData != nil && len(img.alphaData) > aidx {
+					a = uint8(img.alphaData[aidx])
 					aidx++
 				}
 				c = gocolor.RGBA{R: r, G: g, B: b, A: a}
 			}
-		} else if this.ColorComponents == 4 {
+		} else if img.ColorComponents == 4 {
 			c1 := uint8(samples[i] & 0xff)
 			m1 := uint8(samples[i+1] & 0xff)
 			y1 := uint8(samples[i+2] & 0xff)
@@ -202,18 +203,18 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
 		}
 
-		img.Set(x, y, c)
+		imgout.Set(x, y, c)
 		x++
-		if x == int(this.Width) {
+		if x == int(img.Width) {
 			x = 0
 			y++
 		}
 	}
 
-	return img, nil
+	return imgout, nil
 }
 
-// The ImageHandler interface implements common image loading and processing tasks.
+// ImageHandler interface implements common image loading and processing tasks.
 // Implementing as an interface allows for the possibility to use non-standard libraries for faster
 // loading and processing of images.
 type ImageHandler interface {
@@ -227,12 +228,11 @@ type ImageHandler interface {
 	Compress(input *Image, quality int64) (*Image, error)
 }
 
-// Default implementation.
-
+// DefaultImageHandler is the default implementation of the ImageHandler using the standard go library.
 type DefaultImageHandler struct{}
 
 // Create a unidoc Image from a golang Image.
-func (this DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
+func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
 	b := goimg.Bounds()
@@ -269,9 +269,9 @@ func (this DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image
 	return &imag, nil
 }
 
-// Reads an image and loads into a new Image object with an RGB
+// Read reads an image and loads into a new Image object with an RGB
 // colormap and 8 bits per component.
-func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
+func (ih DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 	// Load the image with the native implementation.
 	goimg, _, err := goimage.Decode(reader)
 	if err != nil {
@@ -279,18 +279,20 @@ func (this DefaultImageHandler) Read(reader io.Reader) (*Image, error) {
 		return nil, err
 	}
 
-	return this.NewImageFromGoImage(goimg)
+	return ih.NewImageFromGoImage(goimg)
 }
 
-// To be implemented.
+// Compress is yet to be implemented.
 // Should be able to compress in terms of JPEG quality parameter,
 // and DPI threshold (need to know bounding area dimensions).
-func (this DefaultImageHandler) Compress(input *Image, quality int64) (*Image, error) {
+func (ih DefaultImageHandler) Compress(input *Image, quality int64) (*Image, error) {
 	return input, nil
 }
 
+// ImageHandler is used for handling images.
 var ImageHandling ImageHandler = DefaultImageHandler{}
 
+// SetImageHandler sets the image handler used by the package.
 func SetImageHandler(imgHandling ImageHandler) {
 	ImageHandling = imgHandling
 }
