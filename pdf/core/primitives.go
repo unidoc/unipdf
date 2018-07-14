@@ -425,54 +425,6 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	return val
 }
 
-// GetName returns the PdfObjectName object corresponding to the specified key, resolving indirect references as
-// needed. A bool flag is returned to indicate whether the name object was found.
-func (d *PdfObjectDictionary) GetName(key PdfObjectName) (*PdfObjectName, bool) {
-	val, has := d.dict[key]
-	if !has {
-		return nil, false
-	}
-
-	name, found := TraceToDirectObject(val).(*PdfObjectName)
-	return name, found
-}
-
-// GetString returns the PdfObjectString object corresponding to the specified key, resolving indirect references as
-// needed. A bool flag is returned to indicate whether the name object was found.
-func (d *PdfObjectDictionary) GetString(key PdfObjectName) (*PdfObjectString, bool) {
-	val, has := d.dict[key]
-	if !has {
-		return nil, false
-	}
-
-	str, found := TraceToDirectObject(val).(*PdfObjectString)
-	return str, found
-}
-
-// GetName returns the PdfObjectDictionary object corresponding to the specified key, resolving indirect references as
-// needed. A bool flag is returned to indicate whether the name object was found.
-func (d *PdfObjectDictionary) GetDict(key PdfObjectName) (*PdfObjectDictionary, bool) {
-	val, has := d.dict[key]
-	if !has {
-		return nil, false
-	}
-
-	dict, found := TraceToDirectObject(val).(*PdfObjectDictionary)
-	return dict, found
-}
-
-// GetArray returns the PdfObjectArray object corresponding to the specified key, resolving indirect references as
-// needed. A bool flag is returned to indicate whether the name object was found.
-func (d *PdfObjectDictionary) GetArray(key PdfObjectName) (*PdfObjectArray, bool) {
-	val, has := d.dict[key]
-	if !has {
-		return nil, false
-	}
-
-	arr, found := TraceToDirectObject(val).(*PdfObjectArray)
-	return arr, found
-}
-
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys
@@ -615,4 +567,109 @@ func TraceToDirectObject(obj PdfObject) PdfObject {
 		}
 	}
 	return obj
+}
+
+// Convenience methods for converting PdfObject to underlying types.
+
+// GetBool returns the *PdfObjectBool object that is represented by a PdfObject directly or indirectly
+// within an indirect object. The bool flag indicates whether a match was found.
+func GetBool(obj PdfObject) (bo *PdfObjectBool, found bool) {
+	bo, found = TraceToDirectObject(obj).(*PdfObjectBool)
+	return bo, found
+}
+
+// GetBoolVal returns the bool value within a *PdObjectBool represented by an PdfObject interface directly or indirectly.
+// If the PdfObject does not represent a bool value, a default value of false is returned (found = false also).
+func GetBoolVal(obj PdfObject) (b bool, found bool) {
+	bo, found := TraceToDirectObject(obj).(*PdfObjectBool)
+	if found {
+		return bool(*bo), true
+	}
+	return false, false
+}
+
+// GetInt returns the *PdfObjectBool object that is represented by a PdfObject either directly or indirectly
+// within an indirect object. The bool flag indicates whether a match was found.
+func GetInt(obj PdfObject) (into *PdfObjectInteger, found bool) {
+	into, found = TraceToDirectObject(obj).(*PdfObjectInteger)
+	return into, found
+}
+
+// GetIntVal returns the int value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetIntVal(obj PdfObject) (val int, found bool) {
+	into, found := TraceToDirectObject(obj).(*PdfObjectInteger)
+	if found {
+		return int(*into), true
+	}
+	return 0, false
+}
+
+// GetFloat returns the *PdfObjectFloat represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetFloat(obj PdfObject) (fo *PdfObjectFloat, found bool) {
+	fo, found = TraceToDirectObject(obj).(*PdfObjectFloat)
+	return fo, found
+}
+
+// GetFloatVal returns the float64 value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetFloatVal(obj PdfObject) (val float64, found bool) {
+	fo, found := TraceToDirectObject(obj).(*PdfObjectFloat)
+	if found {
+		return float64(*fo), true
+	}
+	return 0, false
+}
+
+// GetString returns the *PdfObjectString represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetString(obj PdfObject) (so *PdfObjectString, found bool) {
+	so, found = TraceToDirectObject(obj).(*PdfObjectString)
+	return so, found
+}
+
+// GetStringVal returns the string value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetStringVal(obj PdfObject) (val string, found bool) {
+	so, found := TraceToDirectObject(obj).(*PdfObjectString)
+	if found {
+		return so.Str(), true
+	}
+	return
+}
+
+// GetName returns the *PdfObjectName represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetName(obj PdfObject) (name *PdfObjectName, found bool) {
+	name, found = TraceToDirectObject(obj).(*PdfObjectName)
+	return name, found
+}
+
+// GetArray returns the *PdfObjectArray represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetArray(obj PdfObject) (arr *PdfObjectArray, found bool) {
+	arr, found = TraceToDirectObject(obj).(*PdfObjectArray)
+	return arr, found
+}
+
+// GetDict returns the *PdfObjectDictionary represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetDict(obj PdfObject) (dict *PdfObjectDictionary, found bool) {
+	dict, found = TraceToDirectObject(obj).(*PdfObjectDictionary)
+	return dict, found
+}
+
+// GetIndirect returns the *PdfIndirectObject represented by the PdfObject. On type mismatch the found bool flag is
+// false and a nil pointer is returned.
+func GetIndirect(obj PdfObject) (ind *PdfIndirectObject, found bool) {
+	ind, found = obj.(*PdfIndirectObject)
+	return ind, found
+}
+
+// GetStream returns the *PdfObjectStream represented by the PdfObject. On type mismatch the found bool flag is
+// false and a nil pointer is returned.
+func GetStream(obj PdfObject) (stream *PdfObjectStream, found bool) {
+	stream, found = obj.(*PdfObjectStream)
+	return stream, found
 }
