@@ -553,7 +553,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return err
 	}
 
-	kidsObj, err := this.parser.Trace(nodeDict.Get("Kids"))
+	kidsObj, err := this.parser.Resolve(nodeDict.Get("Kids"))
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading Kids object")
 		return err

@@ -40,10 +40,10 @@ type PdfParser struct {
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
 	fileSize         int64
-	xrefs            XrefTable
-	objstms          ObjectStreams
+	xrefs            xrefTable
+	objstms          objectStreams
 	trailer          *PdfObjectDictionary
-	ObjCache         ObjectCache // TODO: Unexport (v3).
+	ObjCache         objectCache // TODO: Unexport (v3).
 	crypter          *PdfCrypt
 	repairsAttempted bool // Avoid multiple attempts for repair.
 
@@ -744,8 +744,8 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 				// would be marked as free.  But can still happen!
 				x, ok := parser.xrefs[curObjNum]
 				if !ok || gen > x.generation {
-					obj := XrefObject{objectNumber: curObjNum,
-						xtype:  XREF_TABLE_ENTRY,
+					obj := xrefObject{objectNumber: curObjNum,
+						xtype:  xrefTypeTableEntry,
 						offset: first, generation: gen}
 					parser.xrefs[curObjNum] = obj
 				}
@@ -1006,16 +1006,16 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 			if xr, ok := parser.xrefs[objNum]; !ok || int(n3) > xr.generation {
 				// Only overload if not already loaded!
 				// or has a newer generation number. (should not happen)
-				obj := XrefObject{objectNumber: objNum,
-					xtype: XREF_TABLE_ENTRY, offset: n2, generation: int(n3)}
+				obj := xrefObject{objectNumber: objNum,
+					xtype: xrefTypeTableEntry, offset: n2, generation: int(n3)}
 				parser.xrefs[objNum] = obj
 			}
 		} else if ftype == 2 {
 			// Object type 2: Compressed object.
 			common.Log.Trace("- In use - compressed object")
 			if _, ok := parser.xrefs[objNum]; !ok {
-				obj := XrefObject{objectNumber: objNum,
-					xtype: XREF_OBJECT_STREAM, osObjNumber: int(n2), osObjIndex: int(n3)}
+				obj := xrefObject{objectNumber: objNum,
+					xtype: xrefTypeObjectStream, osObjNumber: int(n2), osObjIndex: int(n3)}
 				parser.xrefs[objNum] = obj
 				common.Log.Trace("entry: %s", parser.xrefs[objNum])
 			}
@@ -1136,8 +1136,8 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 // loaded will ignore older versions.
 //
 func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 
 	// Get the file size.
 	fSize, err := parser.rs.Seek(0, io.SeekEnd)
@@ -1298,7 +1298,7 @@ func (parser *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, erro
 		parser.streamLengthReferenceLookupInProgress[lengthRef.ObjectNumber] = true
 	}
 
-	slo, err := parser.Trace(lengthObj)
+	slo, err := parser.Resolve(lengthObj)
 	if err != nil {
 		return nil, err
 	}
@@ -1512,7 +1512,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	parser := &PdfParser{}
 
 	parser.rs = rs
-	parser.ObjCache = make(ObjectCache)
+	parser.ObjCache = make(objectCache)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Start by reading the xrefs (from bottom).

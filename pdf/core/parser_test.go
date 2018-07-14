@@ -557,8 +557,8 @@ stream
 endstream
 endobj`
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
 	xrefDict, err := parser.parseXrefStream(nil)
@@ -578,7 +578,7 @@ endobj`
 		return
 	}
 
-	if parser.xrefs[3].xtype != XREF_OBJECT_STREAM {
+	if parser.xrefs[3].xtype != xrefTypeObjectStream {
 		t.Errorf("Invalid type")
 		return
 	}
@@ -719,7 +719,7 @@ func TestMinimalPDFFile(t *testing.T) {
 	if parser.xrefs[1].offset != 18 {
 		t.Errorf("Invalid offset != 18 (%d)", parser.xrefs[0].offset)
 	}
-	if parser.xrefs[1].xtype != XREF_TABLE_ENTRY {
+	if parser.xrefs[1].xtype != xrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
 	if parser.xrefs[3].objectNumber != 3 {
@@ -728,7 +728,7 @@ func TestMinimalPDFFile(t *testing.T) {
 	if parser.xrefs[3].offset != 178 {
 		t.Errorf("Invalid offset != 178")
 	}
-	if parser.xrefs[3].xtype != XREF_TABLE_ENTRY {
+	if parser.xrefs[3].xtype != xrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
 

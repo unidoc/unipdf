@@ -177,8 +177,8 @@ func TestDecryption1(t *testing.T) {
 	rawText := "2 0 obj\n<< /Length 55 >>\nstream\n" + string(streamData) + "\nendstream\n"
 
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.crypter = &crypter
 
