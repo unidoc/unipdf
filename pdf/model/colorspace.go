@@ -14,7 +14,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// PdfColorspace interface defines the common properties of a PDF colorspace.
+// PdfColorspace interface defines the common methods of a PDF colorspace.
 // The colorspace defines the data storage format for each color and color representation.
 //
 // Device based colorspace, specified by name
@@ -36,17 +36,23 @@ import (
 //
 // Work is in progress to support all colorspaces. At the moment ICCBased color spaces fall back to the alternate
 // colorspace which works OK in most cases. For full color support, will need fully featured ICC support.
-//
 type PdfColorspace interface {
+	// String returns the PdfColorspace's name.
 	String() string
+	// ImageToRGB converts an Image in a given PdfColorspace to an RGB image.
 	ImageToRGB(Image) (Image, error)
+	// ColorToRGB converts a single color in a given PdfColorspace to an RGB color.
 	ColorToRGB(color PdfColor) (PdfColor, error)
+	// GetNumComponents returns the number of components in the PdfColorspace.
 	GetNumComponents() int
+	// ToPdfObject returns a PdfObject representation of the PdfColorspace.
 	ToPdfObject() PdfObject
+	// ColorFromPdfObjects returns a PdfColor in the given PdfColorspace from an array of PdfObject's where each
+	// PdfObject represents a numeric value.
 	ColorFromPdfObjects(objects []PdfObject) (PdfColor, error)
+	// ColorFromFloats returns a new PdfColor based on input color components for a given PdfColorspace.
 	ColorFromFloats(vals []float64) (PdfColor, error)
-
-	// Returns the decode array for the CS, i.e. the range of each component.
+	// DecodeArray returns the Decode array for the PdfColorSpace, i.e. the range of each component.
 	DecodeArray() []float64
 }
 
@@ -144,8 +150,8 @@ func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	return nil, errors.New("Type error")
 }
 
-// determine PDF colorspace from a PdfObject.  Returns the colorspace name and an error on failure.
-// If the colorspace was not found, will return an empty string.
+// determineColorspaceNameFromPdfObject determines PDF colorspace from a PdfObject.  Returns the colorspace name and
+// an error on failure. If the colorspace was not found, will return an empty string.
 func determineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) {
 	var csName *PdfObjectName
 	var csArray *PdfObjectArray
@@ -193,18 +199,17 @@ func determineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) 
 	return "", nil
 }
 
-// Gray scale component.
-// No specific parameters
-
-// A grayscale value shall be represented by a single number in the range 0.0 to 1.0 where 0.0 corresponds to black
-// and 1.0 to white.
+// PdfColorDeviceGray represents a grayscale color value that shall be represented by a single number in the
+// range 0.0 to 1.0 where 0.0 corresponds to black and 1.0 to white.
 type PdfColorDeviceGray float64
 
+// NewPdfColorDeviceGray returns a new grayscale color based on an input grayscale float value in range [0-1].
 func NewPdfColorDeviceGray(grayVal float64) *PdfColorDeviceGray {
 	color := PdfColorDeviceGray(grayVal)
 	return &color
 }
 
+// GetNumComponents returns the number of color components (1 for grayscale).
 func (this *PdfColorDeviceGray) GetNumComponents() int {
 	return 1
 }
@@ -304,14 +309,11 @@ func (this *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	return rgbImage, nil
 }
 
-//////////////////////
-// Device RGB
-// R, G, B components.
-// No specific parameters
-
-// Each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
+// PdfColorDeviceRGB represents a color in DeviceRGB colorspace with R, G, B components, where component is
+// defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
 type PdfColorDeviceRGB [3]float64
 
+// NewPdfColorDeviceRGB returns a new PdfColorDeviceRGB based on the r,g,b component values.
 func NewPdfColorDeviceRGB(r, g, b float64) *PdfColorDeviceRGB {
 	color := PdfColorDeviceRGB{r, g, b}
 	return &color
@@ -590,6 +592,7 @@ func (this *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
+// ImageToRGB converts an image in CMYK colorspace to an RGB image.
 func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
@@ -791,7 +794,7 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 	return cs, nil
 }
 
-// Return as PDF object format [name dictionary]
+// ToPdfObject return the CalGray colorspace as a PDF object (name dictionary).
 func (this *PdfColorspaceCalGray) ToPdfObject() PdfObject {
 	// CalGray color space dictionary..
 	cspace := &PdfObjectArray{}
@@ -2480,6 +2483,7 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []PdfObj
 	return this.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a color in Separation colorspace to RGB colorspace.
 func (this *PdfColorspaceSpecialSeparation) ColorToRGB(color PdfColor) (PdfColor, error) {
 	if this.AlternateSpace == nil {
 		return nil, errors.New("Alternate colorspace undefined")
@@ -2537,9 +2541,8 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 	return this.AlternateSpace.ImageToRGB(altImage)
 }
 
-//////////////////////
-// DeviceN color spaces are similar to Separation color spaces, except they can contain an arbitrary
-// number of color components.
+// PdfColorspaceDeviceN represents a DeviceN color space. DeviceN color spaces are similar to Separation color
+// spaces, except they can contain an arbitrary number of color components.
 //
 // Format: [/DeviceN names alternateSpace tintTransform]
 //     or: [/DeviceN names alternateSpace tintTransform attributes]
@@ -2553,11 +2556,13 @@ type PdfColorspaceDeviceN struct {
 	container *PdfIndirectObject
 }
 
+// NewPdfColorspaceDeviceN returns an initialized PdfColorspaceDeviceN.
 func NewPdfColorspaceDeviceN() *PdfColorspaceDeviceN {
 	cs := &PdfColorspaceDeviceN{}
 	return cs
 }
 
+// String returns the name of the colorspace (DeviceN).
 func (this *PdfColorspaceDeviceN) String() string {
 	return "DeviceN"
 }
@@ -2577,6 +2582,8 @@ func (this *PdfColorspaceDeviceN) DecodeArray() []float64 {
 	return decode
 }
 
+// newPdfColorspaceDeviceNFromPdfObject loads a DeviceN colorspace from a PdfObjectArray which can be
+// contained within an indirect object.
 func newPdfColorspaceDeviceNFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceN, error) {
 	cs := NewPdfColorspaceDeviceN()
 
@@ -2644,9 +2651,9 @@ func newPdfColorspaceDeviceNFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceN,
 	return cs, nil
 }
 
+// ToPdfObject returns a *PdfIndirectObject containing a *PdfObjectArray representation of the DeviceN colorspace.
 // Format: [/DeviceN names alternateSpace tintTransform]
 //     or: [/DeviceN names alternateSpace tintTransform attributes]
-
 func (this *PdfColorspaceDeviceN) ToPdfObject() PdfObject {
 	csArray := MakeArray(MakeName("DeviceN"))
 	csArray.Append(this.ColorantNames)
@@ -2664,6 +2671,7 @@ func (this *PdfColorspaceDeviceN) ToPdfObject() PdfObject {
 	return csArray
 }
 
+// ColorFromFloats returns a new PdfColor based on input color components.
 func (this *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != this.GetNumComponents() {
 		return nil, errors.New("Range check")
@@ -2681,6 +2689,8 @@ func (this *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, err
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on input color components. The input PdfObjects should
+// be numeric.
 func (this *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != this.GetNumComponents() {
 		return nil, errors.New("Range check")
@@ -2741,9 +2751,9 @@ func (this *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 	return this.AlternateSpace.ImageToRGB(altImage)
 }
 
-// Additional information about the components of colour space that conforming readers may use.
-// Conforming readers need not use the alternateSpace and tintTransform parameters, and may
-// instead use custom blending algorithms, along with other information provided in the attributes
+// PdfColorspaceDeviceNAttributes contains additional information about the components of colour space that
+// conforming readers may use. Conforming readers need not use the alternateSpace and tintTransform parameters,
+// and may instead use a custom blending algorithms, along with other information provided in the attributes
 // dictionary if present.
 type PdfColorspaceDeviceNAttributes struct {
 	Subtype     *PdfObjectName // DeviceN or NChannel (DeviceN default)
@@ -2755,6 +2765,8 @@ type PdfColorspaceDeviceNAttributes struct {
 	container *PdfIndirectObject
 }
 
+// newPdfColorspaceDeviceNAttributesFromPdfObject loads a PdfColorspaceDeviceNAttributes from an input
+// PdfObjectDictionary (direct/indirect).
 func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceNAttributes, error) {
 	attr := &PdfColorspaceDeviceNAttributes{}
 
@@ -2799,6 +2811,8 @@ func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspa
 	return attr, nil
 }
 
+// ToPdfObject returns a PdfObject representation of PdfColorspaceDeviceNAttributes as a PdfObjectDictionary directly
+// or indirectly within an indirect object container.
 func (this *PdfColorspaceDeviceNAttributes) ToPdfObject() PdfObject {
 	dict := MakeDict()
 
