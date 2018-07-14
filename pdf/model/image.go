@@ -16,7 +16,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/sampling"
+	"github.com/unidoc/unidoc/pdf/internal/sampling"
 )
 
 // Basic representation of an image.
