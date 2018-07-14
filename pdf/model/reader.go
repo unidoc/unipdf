@@ -425,7 +425,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 
 		if item, isItem := node.context.(*PdfOutlineItem); isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + string(*item.Title)
+			title := strings.Repeat(" ", depth*2) + item.Title.Str()
 			*titleList = append(*titleList, title)
 			if item.Next != nil {
 				flattenFunc(item.Next, outlineList, titleList, depth)

@@ -32,7 +32,7 @@ func makeParamsFromNames(vals []core.PdfObjectName) []core.PdfObject {
 func makeParamsFromStrings(vals []core.PdfObjectString) []core.PdfObject {
 	params := []core.PdfObject{}
 	for _, val := range vals {
-		params = append(params, core.MakeString(string(val)))
+		params = append(params, core.MakeString(val.Str()))
 	}
 	return params
 }

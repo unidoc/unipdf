@@ -14,7 +14,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-//
+// PdfColorspace interface defines the common properties of a PDF colorspace.
 // The colorspace defines the data storage format for each color and color representation.
 //
 // Device based colorspace, specified by name
@@ -50,6 +50,7 @@ type PdfColorspace interface {
 	DecodeArray() []float64
 }
 
+// PdfColor interface represents a generic color in PDF.
 type PdfColor interface {
 }
 
@@ -2196,7 +2197,7 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	obj = TraceToDirectObject(obj)
 	var data []byte
 	if str, ok := obj.(*PdfObjectString); ok {
-		data = []byte(*str)
+		data = str.Bytes()
 		common.Log.Trace("Indexed string color data: % d", data)
 	} else if stream, ok := obj.(*PdfObjectStream); ok {
 		common.Log.Trace("Indexed stream: %s", obj.String())

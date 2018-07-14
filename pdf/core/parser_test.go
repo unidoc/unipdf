@@ -132,7 +132,7 @@ func TestStringParsing(t *testing.T) {
 		if err != nil && err != io.EOF {
 			t.Errorf("Unable to parse string, error: %s", err)
 		}
-		if string(o) != expected {
+		if o.Str() != expected {
 			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", raw, o, expected)
 		}
 	}
@@ -164,8 +164,8 @@ func TestBinStringParsing(t *testing.T) {
 	if err != nil && err != io.EOF {
 		t.Errorf("Unable to parse string, error: %s", err)
 	}
-	if len(string(o)) != 32 {
-		t.Errorf("Wrong length, should be 32 (got %d)", len(string(o)))
+	if len(o.Str()) != 32 {
+		t.Errorf("Wrong length, should be 32 (got %d)", len(o.Str()))
 	}
 }
 
@@ -347,7 +347,7 @@ func BenchmarkHexStringParsing(b *testing.B) {
 			b.Errorf("Error parsing hex string: %s", err.Error())
 			return
 		}
-		if string(hs) != ref.String() {
+		if hs.Str() != ref.String() {
 			b.Errorf("Reference and parsed hex strings mismatch")
 		}
 		parser.SetFileOffset(0)
@@ -426,7 +426,7 @@ func TestDictParsing2(t *testing.T) {
 	}
 
 	str, ok := dict.Get("StringItem").(*PdfObjectString)
-	if !ok || *str != "a string" {
+	if !ok || str.Str() != "a string" {
 		t.Errorf("Invalid string item")
 	}
 

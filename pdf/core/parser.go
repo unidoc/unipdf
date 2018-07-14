@@ -297,7 +297,7 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 }
 
 // A string starts with '(' and ends with ')'.
-func (parser *PdfParser) parseString() (PdfObjectString, error) {
+func (parser *PdfParser) parseString() (*PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
@@ -305,21 +305,21 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
-			return PdfObjectString(r.String()), err
+			return MakeString(r.String()), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
 			parser.reader.ReadByte() // Skip the escape \ byte.
 			b, err := parser.reader.ReadByte()
 			if err != nil {
-				return PdfObjectString(r.String()), err
+				return MakeString(r.String()), err
 			}
 
 			// Octal '\ddd' number (base 8).
 			if IsOctalDigit(b) {
 				bb, err := parser.reader.Peek(2)
 				if err != nil {
-					return PdfObjectString(r.String()), err
+					return MakeString(r.String()), err
 				}
 
 				numeric := []byte{}
@@ -336,7 +336,7 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
-					return PdfObjectString(r.String()), err
+					return MakeString(r.String()), err
 				}
 				r.WriteByte(byte(code))
 				continue
@@ -376,19 +376,19 @@ func (parser *PdfParser) parseString() (PdfObjectString, error) {
 		r.WriteByte(b)
 	}
 
-	return PdfObjectString(r.String()), nil
+	return MakeString(r.String()), nil
 }
 
 // Starts with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
-func (parser *PdfParser) parseHexString() (PdfObjectString, error) {
+func (parser *PdfParser) parseHexString() (*PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
-			return PdfObjectString(""), err
+			return MakeString(""), err
 		}
 
 		if bb[0] == '>' {
@@ -407,7 +407,7 @@ func (parser *PdfParser) parseHexString() (PdfObjectString, error) {
 	}
 
 	buf, _ := hex.DecodeString(r.String())
-	return PdfObjectString(buf), nil
+	return MakeHexString(string(buf)), nil
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
@@ -506,7 +506,7 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
 			str, err := parser.parseString()
-			return &str, err
+			return str, err
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
 			arr, err := parser.parseArray()
@@ -518,7 +518,7 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 		} else if bb[0] == '<' {
 			common.Log.Trace("->Hex string!")
 			str, err := parser.parseHexString()
-			return &str, err
+			return str, err
 		} else if bb[0] == '%' {
 			parser.readComment()
 			parser.skipSpaces()

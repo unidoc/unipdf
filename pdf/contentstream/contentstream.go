@@ -171,7 +171,7 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			for _, obj := range *paramList {
 				switch v := obj.(type) {
 				case *PdfObjectString:
-					txt += string(*v)
+					txt += v.Str()
 				case *PdfObjectFloat:
 					if *v < -100 {
 						txt += " "
@@ -190,7 +190,7 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			if !ok {
 				return "", fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
 			}
-			txt += string(*param)
+			txt += param.Str()
 		}
 	}
 

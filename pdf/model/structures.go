@@ -129,6 +129,5 @@ func (date *PdfDate) ToPdfObject() PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
 		date.year, date.month, date.day, date.hour, date.minute, date.second,
 		date.utOffsetSign, date.utOffsetHours, date.utOffsetMins)
-	pdfStr := PdfObjectString(str)
-	return &pdfStr
+	return MakeString(str)
 }

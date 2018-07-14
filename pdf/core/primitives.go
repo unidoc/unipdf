@@ -7,6 +7,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
@@ -31,8 +32,10 @@ type PdfObjectInteger int64
 type PdfObjectFloat float64
 
 // PdfObjectString represents the primitive PDF string object.
-// TODO (v3): Change to a struct and add a flag for hex/plaintext.
-type PdfObjectString string
+type PdfObjectString struct {
+	val   string
+	isHex bool
+}
 
 // PdfObjectName represents the primitive PDF name object.
 type PdfObjectName string
@@ -135,7 +138,13 @@ func MakeFloat(val float64) *PdfObjectFloat {
 
 // MakeString creates an PdfObjectString from a string.
 func MakeString(s string) *PdfObjectString {
-	str := PdfObjectString(s)
+	str := PdfObjectString{val: s}
+	return &str
+}
+
+// MakeHexString creates an PdfObjectString from a string intended for output as a hexadecimal string.
+func MakeHexString(s string) *PdfObjectString {
+	str := PdfObjectString{val: s, isHex: true}
 	return &str
 }
 
@@ -208,13 +217,37 @@ func (float *PdfObjectFloat) DefaultWriteString() string {
 	return fmt.Sprintf("%f", *float)
 }
 
+// String returns a string representation of the *PdfObjectString.
 func (str *PdfObjectString) String() string {
-	return fmt.Sprintf("%s", string(*str))
+	return str.val
+}
+
+// Str returns the string value of the PdfObjectString. Defined in addition to String() function to clarify that
+// this function returns the underlying string directly, whereas the String function technically could include
+// debug info.
+func (str *PdfObjectString) Str() string {
+	return str.val
+}
+
+// Bytes returns the PdfObjectString content as a []byte array.
+func (str *PdfObjectString) Bytes() []byte {
+	return []byte(str.val)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
 func (str *PdfObjectString) DefaultWriteString() string {
 	var output bytes.Buffer
+
+	// Handle hex representation.
+	if str.isHex {
+		shex := hex.EncodeToString(str.Bytes())
+		output.WriteString("<")
+		output.WriteString(shex)
+		output.WriteString(">")
+		return output.String()
+	}
+
+	// Otherwise regular string.
 
 	escapeSequences := map[byte]string{
 		'\n': "\\n",
@@ -228,8 +261,8 @@ func (str *PdfObjectString) DefaultWriteString() string {
 	}
 
 	output.WriteString("(")
-	for i := 0; i < len(*str); i++ {
-		char := (*str)[i]
+	for i := 0; i < len(str.val); i++ {
+		char := str.val[i]
 		if escStr, useEsc := escapeSequences[char]; useEsc {
 			output.WriteString(escStr)
 		} else {
@@ -242,7 +275,7 @@ func (str *PdfObjectString) DefaultWriteString() string {
 }
 
 func (name *PdfObjectName) String() string {
-	return fmt.Sprintf("%s", string(*name))
+	return string(*name)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.

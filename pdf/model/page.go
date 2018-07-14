@@ -21,7 +21,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// PDF page object (7.7.3.3 - Table 30).
+// PdfPage represents a page in a PDF document. (7.7.3.3 - Table 30).
 type PdfPage struct {
 	Parent               PdfObject
 	LastModified         *PdfDate
@@ -115,7 +115,7 @@ func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, e
 		if !ok {
 			return nil, errors.New("Page dictionary LastModified != string")
 		}
-		lastmod, err := NewPdfDate(string(*strObj))
+		lastmod, err := NewPdfDate(strObj.Str())
 		if err != nil {
 			return nil, err
 		}
@@ -801,7 +801,7 @@ func (this *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder)
 
 func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectString); ok {
-		return string(*cstream), nil
+		return cstream.Str(), nil
 	}
 
 	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectStream); ok {
