@@ -6,7 +6,7 @@
 package fonts
 
 import (
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -16,7 +16,7 @@ type Font interface {
 	Encoder() textencoding.TextEncoder
 	SetEncoder(encoder textencoding.TextEncoder)
 	GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
-	ToPdfObject() PdfObject
+	ToPdfObject() core.PdfObject
 }
 
 // CharMetrics represents width and height metrics of a glyph.

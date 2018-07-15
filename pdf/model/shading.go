@@ -417,7 +417,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, ErrTypeCheck
+			return nil, ErrTypeError
 		}
 		if len(*arr) != 2 {
 			common.Log.Debug("Extend length not 2 (got %d)", len(*arr))

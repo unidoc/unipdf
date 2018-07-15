@@ -188,7 +188,7 @@ func GetString(obj PdfObject) (string, error) {
 	if s, ok := obj.(*PdfObjectString); ok {
 		return string(*s), nil
 	}
-	return "", ErrTypeCheck
+	return "", ErrTypeError
 }
 
 // GetStringBytes returns the bytes represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
@@ -196,7 +196,7 @@ func GetStringBytes(obj PdfObject) ([]byte, error) {
 	if s, ok := obj.(*PdfObjectString); ok {
 		return []byte(*s), nil
 	}
-	return []byte{}, ErrTypeCheck
+	return []byte{}, ErrTypeError
 }
 
 // GetName returns the string represented by `obj` if `obj` is a PdfObjectName or an error if it isn't.
@@ -204,7 +204,7 @@ func GetName(obj PdfObject) (string, error) {
 	if s, ok := obj.(*PdfObjectName); ok {
 		return string(*s), nil
 	}
-	return "", ErrTypeCheck
+	return "", ErrTypeError
 }
 
 // GetInteger returns the int represented by `obj` if `obj` is a PdfObjectInteger or an error if it isn't.
@@ -212,7 +212,7 @@ func GetInteger(obj PdfObject) (int, error) {
 	if i, ok := obj.(*PdfObjectInteger); ok {
 		return int(*i), nil
 	}
-	return 0, ErrTypeCheck
+	return 0, ErrTypeError
 }
 
 // GetArray returns the slice of PdfObjects represented by `obj` if `obj` is a PdfObjectArray or an
@@ -221,7 +221,7 @@ func GetArray(obj PdfObject) ([]PdfObject, error) {
 	if s, ok := obj.(*PdfObjectArray); ok {
 		return []PdfObject(*s), nil
 	}
-	return nil, ErrTypeCheck
+	return nil, ErrTypeError
 }
 
 // EqualObjects returns true if `obj1` and `obj2` have the same contents.

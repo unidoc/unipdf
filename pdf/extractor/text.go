@@ -17,13 +17,14 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
-// Takes into account character encoding via CMaps in the PDF file.
+// It takes into account character encoding in the PDF file, which is decoded by
+// CharcodeBytesToUnicode.
 // The text is processed linearly e.g. in the order in which it appears. A best effort is done to
 // add spaces and newlines.
 func (e *Extractor) ExtractText() (string, error) {
@@ -68,30 +69,30 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 			switch operand {
 			case "q":
 				if !fontStack.empty() {
-					common.Log.Debug("Save font state: %s\n%s",
+					common.Log.Trace("Save font state: %s\n%s",
 						fontStack.peek(), fontStack.String())
 					fontStack.push(fontStack.peek())
 				}
 				if state.Tf != nil {
-					common.Log.Debug("Save font state: %s\n->%s\n%s",
+					common.Log.Trace("Save font state: %s\n->%s\n%s",
 						fontStack.peek(), state.Tf, fontStack.String())
 					fontStack.push(state.Tf)
 				}
 			case "Q":
 				if !fontStack.empty() {
-					common.Log.Debug("Restore font state: %s\n->%s\n%s",
+					common.Log.Trace("Restore font state: %s\n->%s\n%s",
 						fontStack.peek(), fontStack.get(-2), fontStack.String())
 					fontStack.pop()
 				}
 				if len(fontStack) >= 2 {
-					common.Log.Debug("Restore font state: %s\n->%s\n%s",
+					common.Log.Trace("Restore font state: %s\n->%s\n%s",
 						state.Tf, fontStack.peek(), fontStack.String())
 					state.Tf = fontStack.pop()
 				}
 			case "BT": // Begin text
-				// Begin a text object, initializing the text matrix, Tm, and the text line matrix, Tlm,
-				// to the identity matrix. Text objects shall not be nested; a second BT shall not appear
-				// before an ET.
+				// Begin a text object, initializing the text matrix, Tm, and the text line matrix,
+				// Tlm, to the identity matrix. Text objects shall not be nested; a second BT shall
+				// not appear before an ET.
 				if to != nil {
 					common.Log.Debug("BT called while in a text object")
 				}
@@ -102,13 +103,13 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 			case "T*": // Move to start of next text line
 				to.nextLine()
 			case "Td": // Move text location
-				if ok, err := checkOp(op, to, 2, true); !ok {
+				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.renderRawText("\n")
 			case "TD": // Move text location and set leading
-				if ok, err := checkOp(op, to, 2, true); !ok {
+				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
@@ -119,33 +120,33 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				}
 				to.moveTextSetLeading(x, y)
 			case "Tj": // Show text
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				charcodes, err := GetStringBytes(op.Params[0])
+				charcodes, err := core.GetStringBytes(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				return to.showText(charcodes)
 			case "TJ": // Show text with adjustable spacing
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				args, err := GetArray(op.Params[0])
+				args, err := core.GetArray(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				return to.showTextAdjusted(args)
 			case "'": // Move to next line and show text
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				charcodes, err := GetStringBytes(op.Params[0])
+				charcodes, err := core.GetStringBytes(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -153,11 +154,11 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.nextLine()
 				return to.showText(charcodes)
 			case `"`: // Set word and character spacing, move to next line, and show text
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				charcodes, err := GetStringBytes(op.Params[0])
+				charcodes, err := core.GetStringBytes(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -165,44 +166,40 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.nextLine()
 				return to.showText(charcodes)
 			case "TL": // Set text leading
-				ok, y, err := checkOpFloat(op, to)
-				if !ok || err != nil {
+				y, err := to.floatParam(op)
+				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
 			case "Tc": // Set character spacing
-				ok, y, err := checkOpFloat(op, to)
-				if !ok || err != nil {
+				y, err := to.floatParam(op)
+				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setCharSpacing(y)
 			case "Tf": // Set font
-				if ok, err := checkOp(op, to, 2, true); !ok {
+				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				name, err := GetName(op.Params[0])
+				name, err := core.GetName(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: GetName failed. op=%s err=%v", op, err)
 					return err
 				}
-				size, err := GetNumberAsFloat(op.Params[1])
+				size, err := core.GetNumberAsFloat(op.Params[1])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				err = to.setFont(name, size)
-				// if err == model.ErrUnsupportedFont {
-				// 	common.Log.Debug("Swallow error. err=%v", err)
-				// 	err = nil
-				// }
 				if err != nil {
 					return err
 				}
 			case "Tm": // Set text matrix
-				if ok, err := checkOp(op, to, 6, true); !ok {
+				if ok, err := to.checkOp(op, 6, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
@@ -213,44 +210,44 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				}
 				to.setTextMatrix(floats)
 			case "Tr": // Set text rendering mode
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				mode, err := GetInteger(op.Params[0])
+				mode, err := core.GetInteger(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextRenderMode(mode)
 			case "Ts": // Set text rise
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				y, err := GetNumberAsFloat(op.Params[0])
+				y, err := core.GetNumberAsFloat(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextRise(y)
 			case "Tw": // Set word spacing
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				y, err := GetNumberAsFloat(op.Params[0])
+				y, err := core.GetNumberAsFloat(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setWordSpacing(y)
 			case "Tz": // Set horizontal scaling
-				if ok, err := checkOp(op, to, 1, true); !ok {
+				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				y, err := GetNumberAsFloat(op.Params[0])
+				y, err := core.GetNumberAsFloat(op.Params[0])
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -262,10 +259,6 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		})
 
 	err = processor.Process(e.resources)
-	// if err == model.ErrUnsupportedFont {
-	// 	common.Log.Debug("Swallow error. err=%v", err)
-	// 	err = nil
-	// }
 	if err != nil {
 		common.Log.Error("ERROR: Processing: err=%v", err)
 	}
@@ -339,18 +332,18 @@ func (to *TextObject) showText(charcodes []byte) error {
 }
 
 // showTextAdjusted "TJ" Show text with adjustable spacing
-func (to *TextObject) showTextAdjusted(args []PdfObject) error {
+func (to *TextObject) showTextAdjusted(args []core.PdfObject) error {
 	for _, o := range args {
 		switch o.(type) {
-		case *PdfObjectFloat, *PdfObjectInteger:
+		case *core.PdfObjectFloat, *core.PdfObjectInteger:
 			// Not implemented yet
 			// The following is supposed to be equivalent to the existing Unidoc implementation.
-			v, _ := GetNumberAsFloat(o)
+			v, _ := core.GetNumberAsFloat(o)
 			if v < -100 {
 				to.renderRawText("\n")
 			}
-		case *PdfObjectString:
-			charcodes, err := GetStringBytes(o)
+		case *core.PdfObjectString:
+			charcodes, err := core.GetStringBytes(o)
 			if err != nil {
 				common.Log.Debug("showTextAdjusted args=%+v err=%v", args, err)
 				return err
@@ -362,7 +355,7 @@ func (to *TextObject) showTextAdjusted(args []PdfObject) error {
 			}
 		default:
 			common.Log.Debug("showTextAdjusted. Unexpected type args=%+v", args)
-			return ErrTypeCheck
+			return core.ErrTypeError
 		}
 	}
 	return nil
@@ -388,9 +381,9 @@ func (to *TextObject) setFont(name string, size float64) error {
 		} else {
 			(*to.fontStack)[len(*to.fontStack)-1] = font
 		}
-	} else if err == ErrFontNotSupported {
+	} else if err == model.ErrFontNotSupported {
+		// XXX: !@#$ Do we need to handle this case in a special way?
 		return err
-		// to.State.Tf = nil
 	} else {
 		return err
 	}
@@ -418,18 +411,21 @@ func (to *TextObject) setHorizScaling(y float64) {
 	// Not implemented yet
 }
 
-// Operator validation
-func checkOpFloat(op *contentstream.ContentStreamOperation, to *TextObject) (ok bool, x float64, err error) {
-	if ok, err = checkOp(op, to, 1, true); !ok {
-		return
+// floatParam returns the single float parameter of operatr `op`, or an error if it doesn't have
+// a single float parameter or we aren't in a text stream.
+func (to *TextObject) floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
+	if ok, err := to.checkOp(op, 1, true); err != nil {
+		return 0.0, err
+	} else if !ok {
+		return 0.0, core.ErrTypeError
 	}
-	x, err = GetNumberAsFloat(op.Params[0])
-	return
+	return core.GetNumberAsFloat(op.Params[0])
 }
 
-// checkOp returns true if we are in a text stream and `op` has `numParams` params
-// If `hard` is true and the number of params don't match then an error is returned
-func checkOp(op *contentstream.ContentStreamOperation, to *TextObject, numParams int, hard bool) (ok bool, err error) {
+// checkOp returns true if we are in a text stream and `op` has `numParams` params.
+// If `hard` is true and the number of params don't match, an error is returned.
+func (to *TextObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
+	hard bool) (ok bool, err error) {
 	if to == nil {
 		common.Log.Debug("%#q operand outside text", op.Operand)
 		return
@@ -439,7 +435,7 @@ func checkOp(op *contentstream.ContentStreamOperation, to *TextObject, numParams
 			if hard {
 				err = errors.New("Incorrect parameter count")
 			}
-			common.Log.Debug("Error: %#q should have %d input params, got %d %+v",
+			common.Log.Debug("ERROR: %#q should have %d input params, got %d %+v",
 				op.Operand, numParams, len(op.Params), op.Params)
 			return
 		}
@@ -448,8 +444,11 @@ func checkOp(op *contentstream.ContentStreamOperation, to *TextObject, numParams
 	return
 }
 
+// fontStacker is the PDF font stack implementation.
+// I think this is correct. It has worked on my tests so far.
 type fontStacker []*model.PdfFont
 
+// String returns a string describing the current state of the font stack.
 func (fontStack *fontStacker) String() string {
 	parts := []string{"---- font stack"}
 	for i, font := range *fontStack {
@@ -461,17 +460,23 @@ func (fontStack *fontStacker) String() string {
 	}
 	return strings.Join(parts, "\n")
 }
+
+// push pushes `font` onto the font stack.
 func (fontStack *fontStacker) push(font *model.PdfFont) {
 	*fontStack = append(*fontStack, font)
 }
-func (fontStack *fontStacker) pop() (font *model.PdfFont) {
+
+// pop pops and returns the element on the top of the font stack if there is one, or nil  if there isn't.
+func (fontStack *fontStacker) pop() *model.PdfFont {
 	if fontStack.empty() {
-		return
+		return nil
 	}
-	font = (*fontStack)[len(*fontStack)-1]
+	font := (*fontStack)[len(*fontStack)-1]
 	*fontStack = (*fontStack)[:len(*fontStack)-1]
-	return
+	return font
 }
+
+// peek returns the element on the top of the font stack if there is one, or nil if there isn't.
 func (fontStack *fontStacker) peek() (font *model.PdfFont) {
 	if fontStack.empty() {
 		return
@@ -479,6 +484,11 @@ func (fontStack *fontStacker) peek() (font *model.PdfFont) {
 	font = (*fontStack)[len(*fontStack)-1]
 	return
 }
+
+// get returns the `idx`'th element of the font stack if there is one, or nil if there isn't.
+//  idx = 0: bottom of font stack
+//  idx = len(fontstack) - 1: top of font stack
+//  idx = -n is same as dx = len(fontstack) - n, so fontstack.get(-1) is same as fontstack.peek()
 func (fontStack *fontStacker) get(idx int) (font *model.PdfFont) {
 	if idx < 0 {
 		idx += fontStack.size()
@@ -489,9 +499,13 @@ func (fontStack *fontStacker) get(idx int) (font *model.PdfFont) {
 	font = (*fontStack)[idx]
 	return
 }
+
+// empty returns true if the font stack is empty.
 func (fontStack *fontStacker) empty() bool {
 	return len(*fontStack) == 0
 }
+
+// size returns the number of elements in the font stack.
 func (fontStack *fontStacker) size() int {
 	return len(*fontStack)
 }
@@ -632,14 +646,14 @@ func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
 // getFontDict returns the font object called `name` if it exists in the page's Font resources or
 // an error if it doesn't
 // XXX: TODO: Can we cache font values?
-func (to *TextObject) getFontDict(name string) (fontObj PdfObject, err error) {
+func (to *TextObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
 	resources := to.e.resources
 	if resources == nil {
 		common.Log.Debug("getFontDict. No resources. name=%#q", name)
 		return
 	}
 
-	fontObj, found := resources.GetFontByName(PdfObjectName(name))
+	fontObj, found := resources.GetFontByName(core.PdfObjectName(name))
 	if !found {
 		err = errors.New("Font not in resources")
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q err=%v", name, err)

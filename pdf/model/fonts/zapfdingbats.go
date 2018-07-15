@@ -10,7 +10,7 @@
 package fonts
 
 import (
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -49,19 +49,15 @@ func (font FontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, boo
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontZapfDingbats) ToPdfObject() PdfObject {
-	obj := &PdfIndirectObject{}
-
-	fontDict := MakeDict()
-	fontDict.Set("Type", MakeName("Font"))
-	fontDict.Set("Subtype", MakeName("Type1"))
-	fontDict.Set("BaseFont", MakeName("ZapfDingbats"))
+func (font FontZapfDingbats) ToPdfObject() core.PdfObject {
+	fontDict := core.MakeDict()
+	fontDict.Set("Type", core.MakeName("Font"))
+	fontDict.Set("Subtype", core.MakeName("Type1"))
+	fontDict.Set("BaseFont", core.MakeName("ZapfDingbats"))
 	if font.encoder != nil {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}
-
-	obj.PdfObject = fontDict
-	return obj
+	return &core.PdfIndirectObject{PdfObject: fontDict}
 }
 
 // ZapfDingbats font metics loaded from afms/ZapfDingbats.afm.  See afms/MustRead.html for license information.

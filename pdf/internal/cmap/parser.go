@@ -14,7 +14,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // cMapParser parses CMap character to unicode mapping files.
@@ -60,7 +60,7 @@ func (p *cMapParser) parseObject() (cmapObject, error) {
 		} else if bb[0] == '<' {
 			shex, err := p.parseHexString()
 			return shex, err
-		} else if IsDecimalDigit(bb[0]) || (bb[0] == '-' && IsDecimalDigit(bb[1])) {
+		} else if core.IsDecimalDigit(bb[0]) || (bb[0] == '-' && core.IsDecimalDigit(bb[1])) {
 			number, err := p.parseNumber()
 			if err != nil {
 				return nil, err
@@ -86,7 +86,7 @@ func (p *cMapParser) skipSpaces() (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if IsWhiteSpace(bb[0]) {
+		if core.IsWhiteSpace(bb[0]) {
 			p.reader.ReadByte()
 			cnt++
 		} else {
@@ -127,7 +127,7 @@ func (p *cMapParser) parseComment() (string, error) {
 	return r.String(), nil
 }
 
-// Parse a name starting with '/'.
+// parseName parses a name starting with '/'.
 func (p *cMapParser) parseName() (cmapName, error) {
 	name := ""
 	nameStarted := false
@@ -150,7 +150,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 				return cmapName{name}, fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
-			if IsWhiteSpace(bb[0]) {
+			if core.IsWhiteSpace(bb[0]) {
 				break
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
@@ -176,7 +176,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 	return cmapName{name}, nil
 }
 
-// A string starts with '(' and ends with ')'.
+// parseString parses a string starts with '(' and ends with ')'.
 func (p *cMapParser) parseString() (cmapString, error) {
 	p.reader.ReadByte()
 
@@ -197,7 +197,7 @@ func (p *cMapParser) parseString() (cmapString, error) {
 			}
 
 			// Octal '\ddd' number (base 8).
-			if IsOctalDigit(b) {
+			if core.IsOctalDigit(b) {
 				bb, err := p.reader.Peek(2)
 				if err != nil {
 					return cmapString{buf.String()}, err
@@ -206,7 +206,7 @@ func (p *cMapParser) parseString() (cmapString, error) {
 				numeric := []byte{}
 				numeric = append(numeric, b)
 				for _, val := range bb {
-					if IsOctalDigit(val) {
+					if core.IsOctalDigit(val) {
 						numeric = append(numeric, val)
 					} else {
 						break
@@ -299,7 +299,8 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	return cmapHexString{numBytes: numBytes, b: hexb}, nil
 }
 
-// Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
+// parseArray parses a PDF array, which starts with '[', ends with ']'and can contain any kinds of
+// direct objects.
 func (p *cMapParser) parseArray() (cmapArray, error) {
 	arr := cmapArray{}
 	arr.Array = []cmapObject{}
@@ -329,7 +330,7 @@ func (p *cMapParser) parseArray() (cmapArray, error) {
 	return arr, nil
 }
 
-// Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
+// parseDict parses a PDF dictionary object, which starts with with '<<' and ends with '>>'.
 func (p *cMapParser) parseDict() (cmapDict, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
@@ -389,6 +390,7 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 	return dict, nil
 }
 
+// parseDict parseNumber a PDF number.
 func (p *cMapParser) parseNumber() (cmapObject, error) {
 	isFloat := false
 	allowSigns := true
@@ -407,7 +409,7 @@ func (p *cMapParser) parseNumber() (cmapObject, error) {
 			b, _ := p.reader.ReadByte()
 			numStr.WriteByte(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if IsDecimalDigit(bb[0]) {
+		} else if core.IsDecimalDigit(bb[0]) {
 			b, _ := p.reader.ReadByte()
 			numStr.WriteByte(b)
 		} else if bb[0] == '.' {
@@ -435,7 +437,7 @@ func (p *cMapParser) parseNumber() (cmapObject, error) {
 	return o, err
 }
 
-// An operand is a text command represented by a word.
+// parseOperand parses an operand, which is a text command represented by a word.
 func (p *cMapParser) parseOperand() (cmapOperand, error) {
 	op := cmapOperand{}
 
@@ -448,10 +450,10 @@ func (p *cMapParser) parseOperand() (cmapOperand, error) {
 			}
 			return op, err
 		}
-		if IsDelimiter(bb[0]) {
+		if core.IsDelimiter(bb[0]) {
 			break
 		}
-		if IsWhiteSpace(bb[0]) {
+		if core.IsWhiteSpace(bb[0]) {
 			break
 		}
 

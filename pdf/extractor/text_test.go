@@ -13,7 +13,6 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	if flag.Lookup("test.v") != nil {
 		isTesting = true
 	}

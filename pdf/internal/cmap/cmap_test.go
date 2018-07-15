@@ -12,7 +12,8 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // cmap1Data represents a basic CMap.
@@ -57,7 +58,7 @@ const cmap1Data = `
 
 // TestCMapParser tests basic loading of a simple CMap.
 func TestCMapParser1(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	cmap, err := LoadCmapFromDataCID([]byte(cmap1Data))
 	if err != nil {
@@ -105,7 +106,7 @@ func TestCMapParser1(t *testing.T) {
 
 	for k, expected := range expectedMappings {
 		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
-			t.Errorf("incorrect mapping, expecting 0x%X -> 0x%X (%#v)", k, expected, v)
+			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (%#v)", k, expected, v)
 			return
 		}
 	}
@@ -119,7 +120,7 @@ func TestCMapParser1(t *testing.T) {
 	charcodes := []byte{0x00, 0x03, 0x00, 0x0F}
 	s, _ := cmap.CharcodeBytesToUnicode(charcodes)
 	if s != " ," {
-		t.Error("Incorrect charcode bytes -> string mapping")
+		t.Error("Incorrect charcode bytes ➞ string mapping")
 		return
 	}
 }
@@ -151,7 +152,7 @@ const cmap2Data = `
 // TestCMapParser2 tests a bug that came up when 2-byte character codes had the higher byte set to 0,
 // e.g. 0x0080, and the character map was not taking the number of bytes of the input codemap into account.
 func TestCMapParser2(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	cmap, err := LoadCmapFromDataCID([]byte(cmap2Data))
 	if err != nil {
@@ -191,7 +192,7 @@ func TestCMapParser2(t *testing.T) {
 
 	for k, expected := range expectedMappings {
 		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
-			t.Errorf("incorrect mapping, expecting 0x%X -> 0x%X (got 0x%X)", k, expected, v)
+			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (got 0x%X)", k, expected, v)
 			return
 		}
 	}
@@ -207,7 +208,7 @@ func TestCMapParser2(t *testing.T) {
 	for _, exp := range expectedSequenceMappings {
 		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
-			t.Errorf("Incorrect byte sequence mapping % X -> % X (got % X)",
+			t.Errorf("Incorrect byte sequence mapping % X ➞ % X (got % X)",
 				exp.bytes, []rune(exp.expected), []rune(str))
 			return
 		}
@@ -244,7 +245,7 @@ const cmapData3 = `
 
 // TestCMapParser3 test case of a CMap with mixed number of 1 and 2 bytes in the codespace range.
 func TestCMapParser3(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	cmap, err := LoadCmapFromDataCID([]byte(cmapData3))
 	if err != nil {
@@ -302,7 +303,7 @@ func TestCMapParser3(t *testing.T) {
 	}
 	for k, expected := range expectedMappings {
 		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
-			t.Errorf("incorrect mapping: expecting 0x%02X -> 0x%02X (got 0x%02X)", k, expected, v)
+			t.Errorf("incorrect mapping: expecting 0x%02X ➞ 0x%02X (got 0x%02X)", k, expected, v)
 			return
 		}
 	}
@@ -325,7 +326,7 @@ func TestCMapParser3(t *testing.T) {
 	for _, exp := range expectedSequenceMappings {
 		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
-			t.Errorf("Incorrect byte sequence mapping: % 02X -> % 02X (got % 02X)",
+			t.Errorf("Incorrect byte sequence mapping: % 02X ➞ % 02X (got % 02X)",
 				exp.bytes, []rune(exp.expected), []rune(str))
 			return
 		}
@@ -414,7 +415,7 @@ func TestCMapParser4(t *testing.T) {
 
 	for k, expected := range expectedMappings {
 		if v := cmap.CharcodeToUnicode(k); v != expected {
-			t.Errorf("incorrect mapping, expecting 0x%04X -> %+q (got %+q)", k, expected, v)
+			t.Errorf("incorrect mapping, expecting 0x%04X ➞ %+q (got %+q)", k, expected, v)
 			return
 		}
 	}
@@ -433,7 +434,7 @@ func TestCMapParser4(t *testing.T) {
 	for _, exp := range expectedSequenceMappings {
 		str, _ := cmap.CharcodeBytesToUnicode(exp.bytes)
 		if str != exp.expected {
-			t.Errorf("Incorrect byte sequence mapping % 02X -> %+q (got %+q)",
+			t.Errorf("Incorrect byte sequence mapping % 02X ➞ %+q (got %+q)",
 				exp.bytes, exp.expected, str)
 			return
 		}

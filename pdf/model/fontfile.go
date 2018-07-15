@@ -9,7 +9,7 @@ import (
 	"unicode"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -30,24 +30,24 @@ func (fontfile *fontFile) String() string {
 
 // newFontFileFromPdfObject loads a FontFile from a PdfObject.  Can either be a
 // *PdfIndirectObject or a *PdfObjectDictionary.
-func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
+func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 	common.Log.Debug("newFontFileFromPdfObject: obj=%s", obj)
 	fontfile := &fontFile{}
 
-	obj = TraceToDirectObject(obj)
+	obj = core.TraceToDirectObject(obj)
 
-	streamObj, ok := obj.(*PdfObjectStream)
+	streamObj, ok := obj.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("ERROR: FontFile must be a stream (%T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	d := streamObj.PdfObjectDictionary
-	data, err := DecodeStream(streamObj)
+	data, err := core.DecodeStream(streamObj)
 	if err != nil {
 		return nil, err
 	}
 
-	subtype, err := GetName(TraceToDirectObject(d.Get("Subtype")))
+	subtype, err := core.GetName(core.TraceToDirectObject(d.Get("Subtype")))
 	if err != nil {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
@@ -57,8 +57,8 @@ func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
 		}
 	}
 
-	length1 := int(*(TraceToDirectObject(d.Get("Length1")).(*PdfObjectInteger)))
-	length2 := int(*(TraceToDirectObject(d.Get("Length2")).(*PdfObjectInteger)))
+	length1 := int(*(core.TraceToDirectObject(d.Get("Length1")).(*core.PdfObjectInteger)))
+	length2 := int(*(core.TraceToDirectObject(d.Get("Length2")).(*core.PdfObjectInteger)))
 	if length1 > len(data) {
 		length1 = len(data)
 	}
@@ -72,7 +72,7 @@ func newFontFileFromPdfObject(obj PdfObject) (*fontFile, error) {
 		segment2 = data[length1 : length1+length2]
 	}
 
-	// empty streams are  ignored
+	// empty streams are ignored
 	if length1 > 0 && length2 > 0 {
 		err := fontfile.loadFromSegments(segment1, segment2)
 		if err != nil {
@@ -194,7 +194,7 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	common.Log.Debug("getAsciiSections: %d ", len(data))
 	loc := reDictBegin.FindIndex(data)
 	if loc == nil {
-		err = ErrTypeError
+		err = core.ErrTypeError
 		common.Log.Debug("getAsciiSections: No dict.")
 		return
 	}
@@ -210,7 +210,7 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	i2 := i1
 	i = strings.Index(string(data[i2:]), encodingEnd)
 	if i < 0 {
-		err = ErrTypeError
+		err = core.ErrTypeError
 		common.Log.Debug("err=%v", err)
 		return
 	}
@@ -251,7 +251,7 @@ func getEncodings(data string) (map[uint16]string, error) {
 		code, err := strconv.Atoi(k)
 		if err != nil {
 			common.Log.Debug("ERROR: Bad encoding line. %q", line)
-			return nil, ErrTypeCheck
+			return nil, core.ErrTypeError
 		}
 		// if !textencoding.KnownGlyph(glyph) {
 		// 	common.Log.Debug("ERROR: Unknown glyph %q. line=%q", glyph, line)
@@ -296,7 +296,7 @@ func isBinary(data []byte) bool {
 	return false
 }
 
-// truncate returns the first `n` characters in string `s`
+// truncate returns the first `n` characters f string `s`.
 func truncate(s string, n int) string {
 	if len(s) < n {
 		return s

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
@@ -27,7 +27,7 @@ import (
 //   containing font-wide metrics and other attributes of the font.
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
-	container     *PdfIndirectObject
+	container     *core.PdfIndirectObject
 	*fontSkeleton // Elements common to all font types
 
 	firstChar  int
@@ -37,10 +37,10 @@ type pdfFontSimple struct {
 
 	// Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 	// BaseFont is derived differently.
-	FirstChar PdfObject
-	LastChar  PdfObject
-	Widths    PdfObject
-	Encoding  PdfObject
+	FirstChar core.PdfObject
+	LastChar  core.PdfObject
+	Widths    core.PdfObject
+	Encoding  core.PdfObject
 }
 
 // Encoder returns the font's text encoder.
@@ -110,14 +110,14 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 			// 	common.Log.Debug("ERROR: FirstChar attribute missing. font=%s d=%s", skeleton, d)
 			// 	return nil, ErrRequiredAttributeMissing
 			// }
-			obj = PdfObject(MakeInteger(0))
+			obj = core.PdfObject(core.MakeInteger(0))
 		}
 		font.FirstChar = obj
 
-		intVal, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
+		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		font.firstChar = int(*intVal)
 
@@ -127,13 +127,13 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 			// 	common.Log.Debug("ERROR: LastChar attribute missing")
 			// 	return nil, ErrRequiredAttributeMissing
 			// }
-			obj = PdfObject(MakeInteger(0))
+			obj = core.PdfObject(core.MakeInteger(0))
 		}
 		font.LastChar = obj
-		intVal, ok = TraceToDirectObject(obj).(*PdfObjectInteger)
+		intVal, ok = core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		font.lastChar = int(*intVal)
 
@@ -145,10 +145,10 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 			// }
 			font.Widths = obj
 
-			arr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+			arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 			if !ok {
 				common.Log.Debug("ERROR: Widths attribute != array (%T)", arr)
-				return nil, ErrTypeError
+				return nil, core.ErrTypeError
 			}
 
 			widths, err := arr.ToFloat64Array()
@@ -160,13 +160,13 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 			if len(widths) != (font.lastChar - font.firstChar + 1) {
 				common.Log.Debug("ERROR: Invalid widths length != %d (%d)",
 					font.lastChar-font.firstChar+1, len(widths))
-				return nil, ErrRangeError
+				return nil, core.ErrRangeError
 			}
 			font.charWidths = widths
 		}
 	}
 
-	font.Encoding = TraceToDirectObject(d.Get("Encoding"))
+	font.Encoding = core.TraceToDirectObject(d.Get("Encoding"))
 	return font, nil
 }
 
@@ -239,7 +239,7 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj PdfObject) (string, map[byte]string, error) {
+func getFontEncoding(obj core.PdfObject) (string, map[byte]string, error) {
 	baseName := "StandardEncoding"
 
 	if obj == nil {
@@ -248,34 +248,34 @@ func getFontEncoding(obj PdfObject) (string, map[byte]string, error) {
 	}
 
 	switch encoding := obj.(type) {
-	case *PdfObjectName:
+	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
-	case *PdfObjectDictionary:
-		typ, err := GetName(TraceToDirectObject(encoding.Get("Type")))
+	case *core.PdfObjectDictionary:
+		typ, err := core.GetName(core.TraceToDirectObject(encoding.Get("Type")))
 		if err == nil && typ == "Encoding" {
-			base, err := GetName(TraceToDirectObject(encoding.Get("BaseEncoding")))
+			base, err := core.GetName(core.TraceToDirectObject(encoding.Get("BaseEncoding")))
 			if err == nil {
 				baseName = base
 			}
 		}
-		diffList, err := GetArray(TraceToDirectObject(encoding.Get("Differences")))
+		diffList, err := core.GetArray(core.TraceToDirectObject(encoding.Get("Differences")))
 		if err != nil {
 			common.Log.Debug("ERROR: Bad font encoding dict=%+v err=%v", encoding, err)
-			return "", nil, ErrTypeError
+			return "", nil, core.ErrTypeError
 		}
 
 		differences, err := textencoding.FromFontDifferences(diffList)
 		return baseName, differences, err
 	default:
 		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", obj, obj.String())
-		return "", nil, ErrTypeError
+		return "", nil, core.ErrTypeError
 	}
 }
 
 // ToPdfObject converts the pdfFontSimple to its PDF representation for outputting.
-func (font *pdfFontSimple) ToPdfObject() PdfObject {
+func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	if font.container == nil {
-		font.container = &PdfIndirectObject{}
+		font.container = &core.PdfIndirectObject{}
 	}
 	d := font.toDict("")
 	font.container.PdfObject = d
@@ -320,8 +320,8 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	truefont.lastChar = maxCode
 
 	truefont.basefont = ttf.PostScriptName
-	truefont.FirstChar = MakeInteger(minCode)
-	truefont.LastChar = MakeInteger(maxCode)
+	truefont.FirstChar = core.MakeInteger(minCode)
+	truefont.LastChar = core.MakeInteger(maxCode)
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 	if len(ttf.Widths) <= 0 {
@@ -351,44 +351,45 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		vals = append(vals, w)
 	}
 
-	truefont.Widths = &PdfIndirectObject{PdfObject: MakeArrayFromFloats(vals)}
+	truefont.Widths = &core.PdfIndirectObject{PdfObject: core.MakeArrayFromFloats(vals)}
 
 	if len(vals) < (255 - 32 + 1) {
 		common.Log.Debug("ERROR: Invalid length of widths, %d < %d", len(vals), 255-32+1)
-		return nil, errors.New("Range check error")
+		return nil, core.ErrRangeError
 	}
 
 	truefont.charWidths = vals[:255-32+1]
 
 	// Use WinAnsiEncoding by default.
-	truefont.Encoding = MakeName("WinAnsiEncoding")
+	truefont.Encoding = core.MakeName("WinAnsiEncoding")
 
 	descriptor := &PdfFontDescriptor{}
-	descriptor.Ascent = MakeFloat(k * float64(ttf.TypoAscender))
-	descriptor.Descent = MakeFloat(k * float64(ttf.TypoDescender))
-	descriptor.CapHeight = MakeFloat(k * float64(ttf.CapHeight))
-	descriptor.FontBBox = MakeArrayFromFloats([]float64{k * float64(ttf.Xmin), k * float64(ttf.Ymin), k * float64(ttf.Xmax), k * float64(ttf.Ymax)})
-	descriptor.ItalicAngle = MakeFloat(float64(ttf.ItalicAngle))
-	descriptor.MissingWidth = MakeFloat(k * float64(ttf.Widths[0]))
+	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
+	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
+	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
+	descriptor.FontBBox = core.MakeArrayFromFloats([]float64{k * float64(ttf.Xmin),
+		k * float64(ttf.Ymin), k * float64(ttf.Xmax), k * float64(ttf.Ymax)})
+	descriptor.ItalicAngle = core.MakeFloat(float64(ttf.ItalicAngle))
+	descriptor.MissingWidth = core.MakeFloat(k * float64(ttf.Widths[0]))
 
 	ttfBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		common.Log.Debug("Unable to read file contents: %v", err)
+		common.Log.Debug("ERROR: Unable to read file contents: %v", err)
 		return nil, err
 	}
 
-	stream, err := MakeStream(ttfBytes, NewFlateEncoder())
+	stream, err := core.MakeStream(ttfBytes, core.NewFlateEncoder())
 	if err != nil {
-		common.Log.Debug("Unable to make stream: %v", err)
+		common.Log.Debug("ERROR: Unable to make stream: %v", err)
 		return nil, err
 	}
-	stream.PdfObjectDictionary.Set("Length1", MakeInteger(int64(len(ttfBytes))))
+	stream.PdfObjectDictionary.Set("Length1", core.MakeInteger(int64(len(ttfBytes))))
 	descriptor.FontFile2 = stream
 
 	if ttf.Bold {
-		descriptor.StemV = MakeInteger(120)
+		descriptor.StemV = core.MakeInteger(120)
 	} else {
-		descriptor.StemV = MakeInteger(70)
+		descriptor.StemV = core.MakeInteger(70)
 	}
 
 	// Flags.
@@ -399,7 +400,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	if ttf.ItalicAngle != 0 {
 		flags |= 1 << 6
 	}
-	descriptor.Flags = MakeInteger(int64(flags))
+	descriptor.Flags = core.MakeInteger(int64(flags))
 
 	// Build Font.
 	skeleton.fontDescriptor = descriptor

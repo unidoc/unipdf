@@ -1,6 +1,6 @@
 package textencoding
 
-import . "github.com/unidoc/unidoc/pdf/core"
+import "github.com/unidoc/unidoc/pdf/core"
 
 // CID represents a character identifier.
 type CID uint16
@@ -18,19 +18,14 @@ type CMapIdentityH struct {
 // 2-byte character codes (from the raw data) from 0-65535 to the same 2-byte CID value.
 func (cmap CMapIdentityH) CharacterCodesToCID(raw []byte) ([]CID, error) {
 	if len(raw)%2 != 0 {
-		return nil, ErrRangeCheck
+		return nil, core.ErrRangeError
 	}
 
-	var charcode uint16
 	cids := []CID{}
-
 	for i := 0; i < len(raw); i += 2 {
-		b1 := uint16(raw[i])
-		b2 := uint16(raw[i+1])
-		charcode = (b1 << 8) | b2
-
-		cids = append(cids, CID(charcode))
+		b1 := CID(raw[i])
+		b2 := CID(raw[i+1])
+		cids = append(cids, (b1<<8)|b2)
 	}
-
 	return cids, nil
 }

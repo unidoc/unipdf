@@ -34,14 +34,13 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// MakeEncoder returns an encoder corresponding to `rec`.
+// MakeEncoder returns an encoder built from the tables in  `rec`.
 func (rec *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
 	encoding := map[uint16]string{}
-	shownZero := false
 	for code := uint16(0); code <= 256; code++ {
 		gid, ok := rec.Chars[code]
 		if !ok {
@@ -50,28 +49,20 @@ func (rec *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
 		glyph := ""
 		if 0 <= gid && int(gid) < len(rec.GlyphNames) {
 			glyph = rec.GlyphNames[gid]
-			// encoding[code] = glyph
 		} else {
-			// common.Log.Debug("No match for code=%d gid=%d", code, gid)
 			glyph = string(rune(gid))
 		}
 		encoding[code] = glyph
-		if gid != 0 || !shownZero {
-			// fmt.Printf(" *>> code=%d gid=0x%04x glyph=%q\n", code, gid, glyph)
-		}
-		if gid == 0 {
-			shownZero = true
-		}
 	}
 	if len(encoding) == 0 {
-		common.Log.Error("rec=%s", rec)
-		common.Log.Error("Chars=[% 02x]", rec.Chars)
-		// return textencoding.SimpleEncoder{}, errors.New("no encoding")
+		common.Log.Debug("WARNING: Zero length TrueType enconding. rec=%s Chars=[% 02x]",
+			rec, rec.Chars)
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }
 
-// TtfType contains metrics of a TrueType font.
+// TtfType describes a TrueType font file.
+// http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
 type TtfType struct {
 	Embeddable             bool
 	UnitsPerEm             uint16
@@ -87,8 +78,10 @@ type TtfType struct {
 	CapHeight              int16
 	Widths                 []uint16
 
-	// Map of rune values (unicode) to glyph index.
-	Chars      map[uint16]uint16
+	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e GlyphNames[Chars[r]] is
+	// the glyph corresponding to rune r.
+	Chars map[uint16]uint16
+	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
 	GlyphNames []string
 }
 
@@ -99,10 +92,7 @@ func (ttf *TtfType) String() string {
 		ttf.CapHeight, len(ttf.Chars), len(ttf.GlyphNames))
 }
 
-// ttfParser describes a TrueType font file.
-// http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
-// Hinting information is contained in three tables within the font—’cvt’, ‘fpgm’, and ‘prep’. These
-// tables cannot be easily edited outside of specialized font hinting software.
+// ttfParser contains some state variables used to parse a TrueType file.
 type ttfParser struct {
 	rec              TtfType
 	f                io.ReadSeeker
@@ -111,18 +101,16 @@ type ttfParser struct {
 	numGlyphs        uint16
 }
 
-// NewFontFile2FromPdfObject returns metrics of the TrueType font file in `obj`.
-func NewFontFile2FromPdfObject(obj PdfObject) (rec TtfType, err error) {
-
-	obj = TraceToDirectObject(obj)
-
-	streamObj, ok := obj.(*PdfObjectStream)
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in PdfObject `obj`.
+func NewFontFile2FromPdfObject(obj core.PdfObject) (rec TtfType, err error) {
+	obj = core.TraceToDirectObject(obj)
+	streamObj, ok := obj.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("ERROR: FontFile must be a stream (%T)", obj)
-		err = ErrTypeCheck
+		err = core.ErrTypeError
 		return
 	}
-	data, err := DecodeStream(streamObj)
+	data, err := core.DecodeStream(streamObj)
 	if err != nil {
 		return
 	}
@@ -131,36 +119,25 @@ func NewFontFile2FromPdfObject(obj PdfObject) (rec TtfType, err error) {
 	// fmt.Printf("%#q", string(data))
 	// fmt.Println("===============####===============")
 
-	f := bytes.NewReader(data)
-	f.Seek(0, os.SEEK_SET)
-
-	t := ttfParser{f: f}
+	t := ttfParser{f: bytes.NewReader(data)}
 	rec, err = t.Parse()
-
 	return
-
-	// err = ioutil.WriteFile("xxxx.ttf", data, 0777)
-	// if err != nil {
-	// 	return
-	// }
-	// return TtfParse("xxxx.ttf")
 }
 
-// TtfParse extracts various metrics from a TrueType font file.
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in disk file `fileStr`.
 func TtfParse(fileStr string) (rec TtfType, err error) {
-	var t ttfParser
 	f, err := os.Open(fileStr)
 	if err != nil {
 		return
 	}
 	defer f.Close()
-	t.f = f
-	rec, err = t.Parse()
 
+	t := ttfParser{f: f}
+	rec, err = t.Parse()
 	return
 }
 
-// TtfParse extracts various metrics from a TrueType font file.
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
 func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 
 	version, err := t.ReadStr(4)
@@ -168,14 +145,12 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 		return
 	}
 	if version == "OTTO" {
-		err = fmt.Errorf("fonts based on PostScript outlines are not supported")
+		err = errors.New("fonts based on PostScript outlines are not supported")
 		return
 	}
 	// XXX: !@#$ Not sure what to do here. Have seen version="true"
 	if version != "\x00\x01\x00\x00" {
-		err = fmt.Errorf("unrecognized file format")
-		common.Log.Debug("ERROR: !@#$ unrecognized file format %q", version)
-		// return
+		common.Log.Debug("ERROR: Unrecognized TrueType file format. version=%q", version)
 	}
 	numTables := int(t.ReadUShort())
 	t.Skip(3 * 2) // searchRange, entrySelector, rangeShift
@@ -192,7 +167,7 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 		t.tables[tag] = offset
 	}
 
-	common.Log.Debug(describeTables(t.tables))
+	common.Log.Trace(describeTables(t.tables))
 
 	err = t.ParseComponents()
 	if err != nil {
@@ -203,6 +178,7 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 	return
 }
 
+// describeTables returns a string describing `tables`, the tables in a TrueType font file.
 func describeTables(tables map[string]uint32) string {
 	tags := []string{}
 	for tag := range tables {
@@ -216,7 +192,8 @@ func describeTables(tables map[string]uint32) string {
 	return strings.Join(parts, "\n")
 }
 
-// Standard TrueType tables
+// ParseComponents parses the tables in a TrueType font file/
+// The standard TrueType tables are
 // "head"
 // "hhea"
 // "loca"
@@ -228,6 +205,8 @@ func describeTables(tables map[string]uint32) string {
 // "fpgm"
 // "gasp"
 func (t *ttfParser) ParseComponents() (err error) {
+
+	// Mandatory tables.
 	err = t.ParseHead()
 	if err != nil {
 		return
@@ -245,6 +224,7 @@ func (t *ttfParser) ParseComponents() (err error) {
 		return
 	}
 
+	// Optional tables.
 	if _, ok := t.tables["name"]; ok {
 		err = t.ParseName()
 		if err != nil {
@@ -392,16 +372,9 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
 // parseCmapSubtable10 parses information from an (1,0) subtable (symbol).
 func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 
-	//startCount := make([]uint16, 0, 8)
-	//endCount := make([]uint16, 0, 8)
-	//idDelta := make([]int16, 0, 8)
-	//idRangeOffset := make([]uint16, 0, 8)
-
 	if t.rec.Chars == nil {
 		t.rec.Chars = make(map[uint16]uint16)
 	}
-
-	//t.rec.Chars = make(map[uint16]uint16)
 
 	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
 	var length, language uint32
@@ -430,7 +403,7 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 	for code, glyphId := range data {
 		t.rec.Chars[uint16(code)] = uint16(glyphId)
 		if glyphId != 0 {
-			fmt.Printf("\t0x%02x -> 0x%02x=%c\n", code, glyphId, rune(glyphId))
+			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, glyphId, rune(glyphId))
 		}
 	}
 	return nil
@@ -480,7 +453,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 }
 
 func (t *ttfParser) parseCmapVersion(offset int64) error {
-	common.Log.Debug("parseCmapVersion: offset=%d", offset)
+	common.Log.Trace("parseCmapVersion: offset=%d", offset)
 
 	if t.rec.Chars == nil {
 		t.rec.Chars = make(map[uint16]uint16)
@@ -507,8 +480,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 		return t.parseCmapFormat6()
 	default:
 		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
-		return nil // Need this for creator_test.go to pass.
-		return ErrFontNotSupported
+		return nil // XXX: Can't return an error here if creator_test.go is to pass.
 	}
 }
 
@@ -518,14 +490,10 @@ func (t *ttfParser) parseCmapFormat0() error {
 		return err
 	}
 	data := []byte(dataStr)
-	common.Log.Debug("parseCmapFormat0: %s", t.rec.String())
-	common.Log.Trace("parseCmapFormat0: dataStr=%+q\ndata=[% 02x]", dataStr, data)
+	common.Log.Trace("parseCmapFormat0: %s\ndataStr=%+q\ndata=[% 02x]", t.rec.String(), dataStr, data)
 
 	for code, glyphId := range data {
 		t.rec.Chars[uint16(code)] = uint16(glyphId)
-		// if glyphId != 0 {
-		// 	fmt.Printf(" 0>> 0x%02x -> 0x%02x=%c\n", code, glyphId, rune(glyphId))
-		// }
 	}
 	return nil
 }
@@ -535,15 +503,12 @@ func (t *ttfParser) parseCmapFormat6() error {
 	firstCode := int(t.ReadUShort())
 	entryCount := int(t.ReadUShort())
 
-	common.Log.Debug("parseCmapFormat6: %s firstCode=%d entryCount=%d",
+	common.Log.Trace("parseCmapFormat6: %s firstCode=%d entryCount=%d",
 		t.rec.String(), firstCode, entryCount)
 
 	for i := 0; i < entryCount; i++ {
 		glyphId := t.ReadUShort()
 		t.rec.Chars[uint16(i+firstCode)] = glyphId
-		// if glyphId != 0 {
-		// 	fmt.Printf(" 6>> 0x%02x -> 0x%02x=%+q\n", i+firstCode, glyphId, rune(glyphId))
-		// }
 	}
 
 	return nil
@@ -608,7 +573,7 @@ func (t *ttfParser) ParseOS2() (err error) {
 	return
 }
 
-// Sets t.rec.GlyphNames
+// ParsePost reads the "post" section in a TrueType font table and sets t.rec.GlyphNames.
 func (t *ttfParser) ParsePost() (err error) {
 	if err = t.Seek("post"); err != nil {
 		return
@@ -626,10 +591,10 @@ func (t *ttfParser) ParsePost() (err error) {
 	/*mimMemType1 := */ t.ReadULong()
 	/*maxMemType1 := */ t.ReadULong()
 
-	common.Log.Debug("ParsePost: formatType=%f", formatType)
+	common.Log.Trace("ParsePost: formatType=%f", formatType)
 
 	switch formatType {
-	case 1.0: // This font file contains exactly the 258 glyphs in the standard Macintosh TrueType.
+	case 1.0: // This font file contains the standard Macintosh TrueTyp 258 glyphs.
 		t.rec.GlyphNames = macGlyphNames
 	case 2.0:
 		numGlyphs := int(t.ReadUShort())
@@ -689,7 +654,7 @@ func (t *ttfParser) ParsePost() (err error) {
 	return
 }
 
-// The 258 standard mac glyph names are used in 'post' format 1 and 2.
+// The 258 standard mac glyph names used in 'post' format 1 and 2.
 var macGlyphNames = []string{
 	".notdef", ".null", "nonmarkingreturn", "space", "exclam", "quotedbl",
 	"numbersign", "dollar", "percent", "ampersand", "quotesingle",

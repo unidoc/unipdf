@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -110,18 +110,18 @@ func (info *CIDSystemInfo) String() string {
 }
 
 // NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`
-func NewCIDSystemInfo(obj PdfObject) (info CIDSystemInfo, err error) {
-	obj = TraceToDirectObject(obj)
-	d := *obj.(*PdfObjectDictionary)
-	registry, err := GetString(d.Get("Registry"))
+func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
+	obj = core.TraceToDirectObject(obj)
+	d := *obj.(*core.PdfObjectDictionary)
+	registry, err := core.GetString(d.Get("Registry"))
 	if err != nil {
 		return
 	}
-	ordering, err := GetString(d.Get("Ordering"))
+	ordering, err := core.GetString(d.Get("Ordering"))
 	if err != nil {
 		return
 	}
-	supplement, err := GetInteger(d.Get("Supplement"))
+	supplement, err := core.GetInteger(d.Get("Supplement"))
 	if err != nil {
 		return
 	}
@@ -138,22 +138,16 @@ func (cmap *CMap) Name() string {
 	return cmap.name
 }
 
-// Type the CMap type.
+// Type returns the CMap type.
 func (cmap *CMap) Type() int {
 	return cmap.ctype
 }
 
-const (
-	// MissingCodeRune replaces runes that can't be decoded.
-	// MissingCodeRune = '?'
-	MissingCodeRune = textencoding.MissingCodeRune // '\ufffd' // �
-	// MissingCodeString replaces strings that can't be decoded.
-	// MissingCodeString = "?"
-)
+// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'
+const MissingCodeRune = textencoding.MissingCodeRune
 
-var (
-	MissingCodeString = string(MissingCodeRune) // �
-)
+// MissingCodeString replaces strings that can't be decoded.
+var MissingCodeString = string(MissingCodeRune)
 
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
 // It also returns a bool flag to tell if the conversion was successful.
@@ -277,7 +271,6 @@ func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 //
 // 9.10.3 ToUnicode CMaps (page 293)
 // The CMap defined in the ToUnicode entry of the font dictionary shall follow the syntax for CMaps
-// • The only pertinent entry in the CMap stream dictionary is UseCMap,
 // • The CMap file shall contain begincodespacerange and endcodespacerange operators that are
 //   consistent with the encoding that the font uses. In particular, for a simple font, the
 //   codespace shall be one byte long.
