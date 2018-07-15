@@ -326,7 +326,7 @@ func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotati
 	}
 
 	annotations := []*PdfAnnotation{}
-	for _, obj := range *annotsArr {
+	for _, obj := range annotsArr.Elements() {
 		obj, err = reader.traceToObject(obj)
 		if err != nil {
 			return nil, err
@@ -493,38 +493,39 @@ func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p.SetIfNotNil("VP", this.VP)
 
 	if this.Annotations != nil {
-		arr := PdfObjectArray{}
+		arr := MakeArray()
 		for _, annot := range this.Annotations {
 			if subannot := annot.GetContext(); subannot != nil {
-				arr = append(arr, subannot.ToPdfObject())
+				arr.Append(subannot.ToPdfObject())
 			} else {
 				// Generic annotation dict (without subtype).
-				arr = append(arr, annot.ToPdfObject())
+				arr.Append(annot.ToPdfObject())
 			}
 		}
-		p.Set("Annots", &arr)
+		p.Set("Annots", arr)
 	}
 
 	return p
 }
 
-// Get the page object as an indirect objects.  Wraps the Page
-// dictionary into an indirect object.
+// GetPageAsIndirectObject returns the page as a dictionary within an PdfIndirectObject.
 func (this *PdfPage) GetPageAsIndirectObject() *PdfIndirectObject {
 	return this.primitive
 }
 
+// GetContainingPdfObject returns the page as a dictionary within an PdfIndirectObject.
 func (this *PdfPage) GetContainingPdfObject() PdfObject {
 	return this.primitive
 }
 
+// ToPdfObject converts the PdfPage to a dictionary within an indirect object container.
 func (this *PdfPage) ToPdfObject() PdfObject {
 	container := this.primitive
 	this.GetPageDict() // update.
 	return container
 }
 
-// Add an image to the XObject resources.
+// AddImageResource adds an image to the XObject resources.
 func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error {
 	var xresDict *PdfObjectDictionary
 	if this.Resources.XObject == nil {
@@ -723,7 +724,7 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 	return nil
 }
 
-// Add content stream by string.  Puts the content string into a stream
+// AddContentStreamByString adds content stream by string.  Puts the content string into a stream
 // object and points the content stream towards it.
 func (this *PdfPage) AddContentStreamByString(contentStr string) {
 	stream := PdfObjectStream{}
@@ -739,17 +740,15 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) {
 		this.Contents = &stream
 	} else if contArray, isArray := TraceToDirectObject(this.Contents).(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
-		*contArray = append(*contArray, &stream)
+		contArray.Append(&stream)
 	} else {
 		// Only 1 element in place. Wrap inside a new array and add the new one.
-		contArray := PdfObjectArray{}
-		contArray = append(contArray, this.Contents)
-		contArray = append(contArray, &stream)
-		this.Contents = &contArray
+		contArray := MakeArray(this.Contents, &stream)
+		this.Contents = contArray
 	}
 }
 
-// Set the content streams based on a string array.  Will make 1 object stream
+// SetContentStreams sets the content streams based on a string array.  Will make 1 object stream
 // for each string and reference from the page Contents.  Each stream will be
 // encoded using the encoding specified by the StreamEncoder, if empty, will
 // use identity encoding (raw data).
@@ -789,11 +788,11 @@ func (this *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder)
 	if len(streamObjs) == 1 {
 		this.Contents = streamObjs[0]
 	} else {
-		contArray := PdfObjectArray{}
+		contArray := MakeArray()
 		for _, streamObj := range streamObjs {
-			contArray = append(contArray, streamObj)
+			contArray.Append(streamObj)
 		}
-		this.Contents = &contArray
+		this.Contents = contArray
 	}
 
 	return nil
@@ -815,7 +814,7 @@ func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 	return "", fmt.Errorf("Invalid content stream object holder (%T)", TraceToDirectObject(cstreamObj))
 }
 
-// Get Content Stream as an array of strings.
+// GetContentStreams returns the content stream as an array of strings.
 func (this *PdfPage) GetContentStreams() ([]string, error) {
 	if this.Contents == nil {
 		return nil, nil
@@ -825,7 +824,7 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 	if contArray, isArray := contents.(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
 		cstreams := []string{}
-		for _, cstreamObj := range *contArray {
+		for _, cstreamObj := range contArray.Elements() {
 			cstreamStr, err := getContentStreamAsString(cstreamObj)
 			if err != nil {
 				return nil, err
@@ -853,6 +852,7 @@ func (this *PdfPage) GetAllContentStreams() (string, error) {
 	return strings.Join(cstreams, " "), nil
 }
 
+// PdfPageResourcesColorspaces contains the colorspace in the PdfPageResources.
 // Needs to have matching name and colorspace map entry. The Names define the order.
 type PdfPageResourcesColorspaces struct {
 	Names       []string
@@ -869,7 +869,7 @@ func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
 	return colorspaces
 }
 
-// Set the colorspace corresponding to key.  Add to Names if not set.
+// Set sets the colorspace corresponding to key.  Add to Names if not set.
 func (this *PdfPageResourcesColorspaces) Set(key PdfObjectName, val PdfColorspace) {
 	if _, has := this.Colorspaces[string(key)]; !has {
 		this.Names = append(this.Names, string(key))

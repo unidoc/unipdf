@@ -369,8 +369,8 @@ func (this *ContentStreamParser) parseHexString() (*PdfObjectString, error) {
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (this *ContentStreamParser) parseArray() (PdfObjectArray, error) {
-	arr := make(PdfObjectArray, 0)
+func (this *ContentStreamParser) parseArray() (*PdfObjectArray, error) {
+	arr := MakeArray()
 
 	this.reader.ReadByte()
 
@@ -391,7 +391,7 @@ func (this *ContentStreamParser) parseArray() (PdfObjectArray, error) {
 		if err != nil {
 			return arr, err
 		}
-		arr = append(arr, obj)
+		arr.Append(obj)
 	}
 
 	return arr, nil
@@ -550,7 +550,7 @@ func (this *ContentStreamParser) parseObject() (obj PdfObject, err error, isop b
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
 			arr, err := this.parseArray()
-			return &arr, err, false
+			return arr, err, false
 		} else if IsFloatDigit(bb[0]) || (bb[0] == '-' && IsFloatDigit(bb[1])) {
 			common.Log.Trace("->Number!")
 			number, err := this.parseNumber()

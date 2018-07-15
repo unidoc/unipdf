@@ -297,8 +297,8 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	// Strictly, if file is encrypted, the ID should always be specified
 	// but clearly not everyone is following the specification.
 	id0 := ""
-	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && len(*idArray) >= 1 {
-		id0obj, ok := (*idArray)[0].(*PdfObjectString)
+	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && idArray.Len() >= 1 {
+		id0obj, ok := GetString(idArray.Get(0))
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
 		}
@@ -655,7 +655,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
-				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
+				if firstFilter, ok := GetName(filters.Get(0)); ok {
 					if *firstFilter == "Crypt" {
 						// Crypt filter overriding the default.
 						// Default option is Identity.
@@ -736,7 +736,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	}
 
 	if a, isArray := obj.(*PdfObjectArray); isArray {
-		for _, o := range *a {
+		for _, o := range a.Elements() {
 			err := crypt.Decrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
@@ -904,7 +904,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
-				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
+				if firstFilter, ok := GetName(filters.Get(0)); ok {
 					if *firstFilter == "Crypt" {
 						// Crypt filter overriding the default.
 						// Default option is Identity.
@@ -984,7 +984,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	}
 
 	if a, isArray := obj.(*PdfObjectArray); isArray {
-		for _, o := range *a {
+		for _, o := range a.Elements() {
 			err := crypt.Encrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err

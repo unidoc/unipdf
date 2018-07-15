@@ -52,13 +52,13 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 		return nil, errors.New("Type check error")
 	}
 
-	if len(*arr) != 4 {
-		common.Log.Debug("Error: Invalid cs array, length != 4 (%d)", len(*arr))
+	if arr.Len() != 4 {
+		common.Log.Debug("Error: Invalid cs array, length != 4 (%d)", arr.Len())
 		return nil, errors.New("Range check error")
 	}
 
 	// Format is [/I base 255 bytes], where base = /G,/RGB,/CMYK
-	name, ok := (*arr)[0].(*core.PdfObjectName)
+	name, ok := arr.Get(0).(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("Error: Invalid cs array first element not a name (array: %#v)", *arr)
 		return nil, errors.New("Type check error")
@@ -69,7 +69,7 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 	}
 
 	// Check base
-	name, ok = (*arr)[1].(*core.PdfObjectName)
+	name, ok = arr.Get(1).(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("Error: Invalid cs array 2nd element not a name (array: %#v)", *arr)
 		return nil, errors.New("Type check error")
@@ -89,7 +89,7 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 	}
 
 	// Prepare to a format that can be loaded by model's newPdfColorspaceFromPdfObject.
-	csArr := core.MakeArray(core.MakeName("Indexed"), core.MakeName(basename), (*arr)[2], (*arr)[3])
+	csArr := core.MakeArray(core.MakeName("Indexed"), core.MakeName(basename), arr.Get(2), arr.Get(3))
 
 	return model.NewPdfColorspaceFromPdfObject(csArr)
 }

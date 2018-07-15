@@ -8,6 +8,7 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
@@ -41,7 +42,9 @@ type PdfObjectString struct {
 type PdfObjectName string
 
 // PdfObjectArray represents the primitive PDF array object.
-type PdfObjectArray []PdfObject
+type PdfObjectArray struct {
+	vec []PdfObject
+}
 
 // PdfObjectDictionary represents the primitive PDF dictionary/map object.
 type PdfObjectDictionary struct {
@@ -93,41 +96,45 @@ func MakeInteger(val int64) *PdfObjectInteger {
 
 // MakeArray creates an PdfObjectArray from a list of PdfObjects.
 func MakeArray(objects ...PdfObject) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := &PdfObjectArray{}
+	array.vec = []PdfObject{}
 	for _, obj := range objects {
-		array = append(array, obj)
+		array.vec = append(array.vec, obj)
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromIntegers creates an PdfObjectArray from a slice of ints, where each array element is
 // an PdfObjectInteger.
 func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := &PdfObjectArray{}
+	array.vec = []PdfObject{}
 	for _, val := range vals {
-		array = append(array, MakeInteger(int64(val)))
+		array.vec = append(array.vec, MakeInteger(int64(val)))
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromIntegers64 creates an PdfObjectArray from a slice of int64s, where each array element
 // is an PdfObjectInteger.
 func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := &PdfObjectArray{}
+	array.vec = []PdfObject{}
 	for _, val := range vals {
-		array = append(array, MakeInteger(val))
+		array.vec = append(array.vec, MakeInteger(val))
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromFloats creates an PdfObjectArray from a slice of float64s, where each array element is an
 // PdfObjectFloat.
 func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := &PdfObjectArray{}
+	array.vec = []PdfObject{}
 	for _, val := range vals {
-		array = append(array, MakeFloat(val))
+		array.vec = append(array.vec, MakeFloat(val))
 	}
-	return &array
+	return array
 }
 
 // MakeFloat creates an PdfObjectFloat from a float64.
@@ -299,12 +306,61 @@ func (name *PdfObjectName) DefaultWriteString() string {
 	return output.String()
 }
 
+// Elements returns a slice of the PdfObject elements in the array.
+// Preferred over accessing the array directly as type may be changed in future major versions (v3).
+func (array *PdfObjectArray) Elements() []PdfObject {
+	if array == nil {
+		return nil
+	}
+	return array.vec
+}
+
+// Len returns the number of elements in the array.
+func (array *PdfObjectArray) Len() int {
+	if array == nil {
+		return 0
+	}
+	return len(array.vec)
+}
+
+// Get returns the i-th element of the array or nil if out of bounds (by index).
+func (array *PdfObjectArray) Get(i int) PdfObject {
+	if array == nil || i >= len(array.vec) || i < 0 {
+		return nil
+	}
+	return array.vec[i]
+}
+
+// Set sets the PdfObject at index i of the array. An error is returned if the index is outside bounds.
+func (array *PdfObjectArray) Set(i int, obj PdfObject) error {
+	if i < 0 || i >= len(array.vec) {
+		return errors.New("Outside bounds")
+	}
+	array.vec[i] = obj
+	return nil
+}
+
+// Append appends PdfObject(s) to the array.
+func (array *PdfObjectArray) Append(objects ...PdfObject) {
+	if array == nil {
+		common.Log.Debug("Warn - Attempt to append to a nil array")
+		return
+	}
+	if array.vec == nil {
+		array.vec = []PdfObject{}
+	}
+
+	for _, obj := range objects {
+		array.vec = append(array.vec, obj)
+	}
+}
+
 // ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is returned if the array
 // contains non-numeric objects (each element can be either PdfObjectInteger or PdfObjectFloat).
 func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 	vals := []float64{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, float64(*number))
 		} else if number, is := obj.(*PdfObjectFloat); is {
@@ -322,7 +378,7 @@ func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	vals := []int{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, int(*number))
 		} else {
@@ -335,9 +391,9 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 
 func (array *PdfObjectArray) String() string {
 	outStr := "["
-	for ind, o := range *array {
+	for ind, o := range array.Elements() {
 		outStr += o.String()
-		if ind < (len(*array) - 1) {
+		if ind < (array.Len() - 1) {
 			outStr += ", "
 		}
 	}
@@ -348,19 +404,14 @@ func (array *PdfObjectArray) String() string {
 // DefaultWriteString outputs the object as it is to be written to file.
 func (array *PdfObjectArray) DefaultWriteString() string {
 	outStr := "["
-	for ind, o := range *array {
+	for ind, o := range array.Elements() {
 		outStr += o.DefaultWriteString()
-		if ind < (len(*array) - 1) {
+		if ind < (array.Len() - 1) {
 			outStr += " "
 		}
 	}
 	outStr += "]"
 	return outStr
-}
-
-// Append adds an PdfObject to the array.
-func (array *PdfObjectArray) Append(obj PdfObject) {
-	*array = append(*array, obj)
 }
 
 func getNumberAsFloat(obj PdfObject) (float64, error) {
@@ -380,7 +431,7 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	slice := []float64{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		obj := TraceToDirectObject(obj)
 		number, err := getNumberAsFloat(obj)
 		if err != nil {

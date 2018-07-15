@@ -181,7 +181,7 @@ func (e *Extractor) ExtractText() (string, error) {
 				if !ok {
 					return fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
 				}
-				for _, obj := range *paramList {
+				for _, obj := range paramList.Elements() {
 					switch v := obj.(type) {
 					case *core.PdfObjectString:
 						if codemap != nil {

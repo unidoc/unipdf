@@ -411,8 +411,8 @@ func (parser *PdfParser) parseHexString() (*PdfObjectString, error) {
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (parser *PdfParser) parseArray() (PdfObjectArray, error) {
-	arr := make(PdfObjectArray, 0)
+func (parser *PdfParser) parseArray() (*PdfObjectArray, error) {
+	arr := MakeArray()
 
 	parser.reader.ReadByte()
 
@@ -433,7 +433,7 @@ func (parser *PdfParser) parseArray() (PdfObjectArray, error) {
 		if err != nil {
 			return arr, err
 		}
-		arr = append(arr, obj)
+		arr.Append(obj)
 	}
 
 	return arr, nil
@@ -510,7 +510,7 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
 			arr, err := parser.parseArray()
-			return &arr, err
+			return arr, err
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Trace("->Dict!")
 			dict, err := parser.ParseDict()
@@ -829,7 +829,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 		return nil, errors.New("Invalid W in xref stream")
 	}
 
-	wLen := len(*wArr)
+	wLen := wArr.Len()
 	if wLen != 3 {
 		common.Log.Debug("ERROR: Unsupported xref stm (len(W) != 3 - %d)", wLen)
 		return nil, errors.New("Unsupported xref stm len(W) != 3")
@@ -837,11 +837,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 
 	var b []int64
 	for i := 0; i < 3; i++ {
-		w, ok := (*wArr)[i].(PdfObject)
-		if !ok {
-			return nil, errors.New("Invalid W")
-		}
-		wVal, ok := w.(*PdfObjectInteger)
+		wVal, ok := GetInt(wArr.Get(i))
 		if !ok {
 			return nil, errors.New("Invalid w object type")
 		}
@@ -895,7 +891,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 		}
 
 		// Expect indLen to be a multiple of 2.
-		if len(*indicesArray)%2 != 0 {
+		if indicesArray.Len()%2 != 0 {
 			common.Log.Debug("WARNING Failure loading xref stm index not multiple of 2.")
 			return nil, errors.New("Range check error")
 		}

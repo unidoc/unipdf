@@ -18,7 +18,7 @@ type PdfOutlineTreeNode struct {
 	Last    *PdfOutlineTreeNode
 }
 
-// PDF outline dictionary (Table 152 - p. 376).
+// PdfOutline represents a PDF outline dictionary (Table 152 - p. 376).
 type PdfOutline struct {
 	PdfOutlineTreeNode
 	Parent *PdfOutlineTreeNode
@@ -27,7 +27,7 @@ type PdfOutline struct {
 	primitive *PdfIndirectObject
 }
 
-// Pdf outline item dictionary (Table 153 - pp. 376 - 377).
+// PdfOutlineItem represents an outline item dictionary (Table 153 - pp. 376 - 377).
 type PdfOutlineItem struct {
 	PdfOutlineTreeNode
 	Title  *PdfObjectString
@@ -44,6 +44,7 @@ type PdfOutlineItem struct {
 	primitive *PdfIndirectObject
 }
 
+// NewPdfOutline returns an initialized PdfOutline.
 func NewPdfOutline() *PdfOutline {
 	outline := &PdfOutline{}
 
@@ -55,12 +56,14 @@ func NewPdfOutline() *PdfOutline {
 	return outline
 }
 
+// NewPdfOutlineTree returns an initialized PdfOutline tree.
 func NewPdfOutlineTree() *PdfOutline {
 	outlineTree := NewPdfOutline()
 	outlineTree.context = &outlineTree
 	return outlineTree
 }
 
+// NewPdfOutlineItem returns an initialized PdfOutlineItem.
 func NewPdfOutlineItem() *PdfOutlineItem {
 	outlineItem := &PdfOutlineItem{}
 
@@ -71,16 +74,17 @@ func NewPdfOutlineItem() *PdfOutlineItem {
 	return outlineItem
 }
 
+// NewOutlineBookmark returns an initialized PdfOutlineItem for a given bookmark title and page.
 func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
 	bookmark := PdfOutlineItem{}
 	bookmark.context = &bookmark
 
 	bookmark.Title = MakeString(title)
 
-	destArray := PdfObjectArray{}
-	destArray = append(destArray, page)
-	destArray = append(destArray, MakeName("Fit"))
-	bookmark.Dest = &destArray
+	destArray := MakeArray()
+	destArray.Append(page)
+	destArray.Append(MakeName("Fit"))
+	bookmark.Dest = destArray
 
 	return &bookmark
 }

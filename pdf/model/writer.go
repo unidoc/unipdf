@@ -41,10 +41,12 @@ func getPdfCreator() string {
 	return "UniDoc - http://unidoc.io"
 }
 
+// SetPdfCreator sets the Creator attribute of the output PDF.
 func SetPdfCreator(creator string) {
 	pdfCreator = creator
 }
 
+// PdfWriter handles outputing PDF content.
 type PdfWriter struct {
 	root        *PdfIndirectObject
 	pages       *PdfIndirectObject
@@ -242,7 +244,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		if arr == nil {
 			return errors.New("Array is nil")
 		}
-		for _, v := range *arr {
+		for _, v := range arr.Elements() {
 			err := this.addObjects(v)
 			if err != nil {
 				return err
@@ -332,7 +334,7 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	if !ok {
 		return errors.New("Invalid Pages Kids obj (not an array)")
 	}
-	*kids = append(*kids, pageObj)
+	kids.Append(pageObj)
 	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		return errors.New("Invalid Pages Count object (not an integer)")

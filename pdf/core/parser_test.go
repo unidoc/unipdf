@@ -180,8 +180,8 @@ func TestStringParsing2(t *testing.T) {
 		t.Errorf("Failed to parse string list (%s)", err)
 		return
 	}
-	if len(list) != 2 {
-		t.Errorf("Length of list should be 2 (%d)", len(list))
+	if list.Len() != 2 {
+		t.Errorf("Length of list should be 2 (%d)", list.Len())
 		return
 	}
 }
@@ -232,8 +232,8 @@ func TestNumericParsing1(t *testing.T) {
 		t.Errorf("Error parsing array")
 		return
 	}
-	if len(list) != 7 {
-		t.Errorf("Len list != 7 (%d)", len(list))
+	if list.Len() != 7 {
+		t.Errorf("Len list != 7 (%d)", list.Len())
 		return
 	}
 
@@ -247,7 +247,7 @@ func TestNumericParsing1(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -257,7 +257,7 @@ func TestNumericParsing1(t *testing.T) {
 		}
 	}
 
-	inum, ok := list[2].(*PdfObjectInteger)
+	inum, ok := list.Get(2).(*PdfObjectInteger)
 	if !ok {
 		t.Errorf("Number 3 not int")
 		return
@@ -278,8 +278,8 @@ func TestNumericParsing2(t *testing.T) {
 		t.Errorf("Error parsing array")
 		return
 	}
-	if len(list) != 2 {
-		t.Errorf("Len list != 2 (%d)", len(list))
+	if list.Len() != 2 {
+		t.Errorf("Len list != 2 (%d)", list.Len())
 		return
 	}
 
@@ -289,7 +289,7 @@ func TestNumericParsing2(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -311,8 +311,8 @@ func TestNumericParsing3(t *testing.T) {
 		t.Errorf("Error parsing array (%s)", err)
 		return
 	}
-	if len(list) != 4 {
-		t.Errorf("Len list != 2 (%d)", len(list))
+	if list.Len() != 4 {
+		t.Errorf("Len list != 2 (%d)", list.Len())
 		return
 	}
 
@@ -324,7 +324,7 @@ func TestNumericParsing3(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -390,12 +390,12 @@ func TestDictParsing1(t *testing.T) {
 	if !ok {
 		t.Errorf("Invalid data")
 	}
-	integer, ok := (*data)[2].(*PdfObjectInteger)
+	integer, ok := data.Get(2).(*PdfObjectInteger)
 	if !ok || *integer != 2 {
 		t.Errorf("Wrong data")
 	}
 
-	float, ok := (*data)[3].(*PdfObjectFloat)
+	float, ok := data.Get(3).(*PdfObjectFloat)
 	if !ok || *float != 3.14 {
 		t.Error("Wrong data")
 	}

@@ -32,6 +32,7 @@ type PdfReader struct {
 	traversed map[PdfObject]bool
 }
 
+// NewPdfReader returns a new PdfReader for reading a PDF document accessed via io.ReadSeeker.
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
@@ -61,11 +62,12 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	return pdfReader, nil
 }
 
+// IsEncrypted returns true if the document is encrypted, false otherwise.
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
 }
 
-// Returns a string containing some information about the encryption method used.
+// GetEncryptionMethod returns a string containing some information about the encryption method used.
 // Subject to changes.  May be better to return a standardized struct with information.
 // But challenging due to the many different types supported.
 func (this *PdfReader) GetEncryptionMethod() string {
@@ -95,7 +97,7 @@ func (this *PdfReader) GetEncryptionMethod() string {
 	return str
 }
 
-// Decrypt the PDF file with a specified password.  Also tries to
+// Decrypt decrypts the PDF file with a specified password.  Also tries to
 // decrypt with an empty password.  Returns true if successful,
 // false otherwise.
 func (this *PdfReader) Decrypt(password []byte) (bool, error) {
@@ -116,8 +118,8 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 	return true, nil
 }
 
-// Check access rights and permissions for a specified password.  If either user/owner password is specified,
-// full rights are granted, otherwise the access rights are specified by the Permissions flag.
+// CheckAccessRights checks access rights and permissions for a specified password.  If either user/owner password
+// is specified, full rights are granted, otherwise the access rights are specified by the Permissions flag.
 //
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
@@ -572,13 +574,13 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		}
 	}
 	common.Log.Trace("Kids: %s", kids)
-	for idx, child := range *kids {
+	for idx, child := range kids.Elements() {
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
 			return errors.New("Page not indirect object")
 		}
-		(*kids)[idx] = child
+		kids.Set(idx, child)
 		err = this.buildPageList(child, node, traversedPageNodes)
 		if err != nil {
 			return err
@@ -664,13 +666,13 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 
 	if arr, isArray := o.(*PdfObjectArray); isArray {
 		common.Log.Trace("- array: %s", arr)
-		for idx, v := range *arr {
+		for idx, v := range arr.Elements() {
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
 				if err != nil {
 					return err
 				}
-				(*arr)[idx] = resolvedObj
+				arr.Set(idx, resolvedObj)
 
 				err = this.traverseObjectData(resolvedObj)
 				if err != nil {
