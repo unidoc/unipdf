@@ -105,7 +105,7 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 	if !std14 {
 		obj := d.Get("FirstChar")
 		if obj == nil {
-			// See /Users/pcadmin/testdata/shamirturing.pdf
+			// See ~/testdata/shamirturing.pdf
 			// if skeleton.subtype == "TrueType" {
 			// 	common.Log.Debug("ERROR: FirstChar attribute missing. font=%s d=%s", skeleton, d)
 			// 	return nil, ErrRequiredAttributeMissing

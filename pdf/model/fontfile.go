@@ -219,7 +219,7 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	return
 }
 
-// /Users/pcadmin/testdata/invoice61781040.pdf has \r line endings
+// ~/testdata/invoice61781040.pdf has \r line endings
 var reEndline = regexp.MustCompile(`[\n\r]+`)
 
 // getKeyValues returns the map encoded in `data`.
