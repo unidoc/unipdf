@@ -54,9 +54,9 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		return textList, state.numChars, state.numMisses, err
 	}
 
-	// fmt.Println("========================= xxx =========================")
-	// fmt.Printf("%s\n", e.contents)
-	// fmt.Println("========================= ||| =========================")
+	fmt.Println("========================= xxx =========================")
+	fmt.Printf("%s\n", e.contents)
+	fmt.Println("========================= ||| =========================")
 	processor := contentstream.NewContentStreamProcessor(*operations)
 
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
@@ -166,14 +166,14 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.nextLine()
 				return to.showText(charcodes)
 			case "TL": // Set text leading
-				y, err := to.floatParam(op)
+				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
 			case "Tc": // Set character spacing
-				y, err := to.floatParam(op)
+				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -413,11 +413,12 @@ func (to *TextObject) setHorizScaling(y float64) {
 
 // floatParam returns the single float parameter of operatr `op`, or an error if it doesn't have
 // a single float parameter or we aren't in a text stream.
-func (to *TextObject) floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
-	if ok, err := to.checkOp(op, 1, true); err != nil {
+func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
+	if len(op.Params) != 1 {
+		err := errors.New("Incorrect parameter count")
+		common.Log.Debug("ERROR: %#q should have %d input params, got %d %+v",
+			op.Operand, 1, len(op.Params), op.Params)
 		return 0.0, err
-	} else if !ok {
-		return 0.0, core.ErrTypeError
 	}
 	return core.GetNumberAsFloat(op.Params[0])
 }
