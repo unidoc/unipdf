@@ -65,7 +65,7 @@ var (
 	reEncoding    = regexp.MustCompile(`^[A-Z](\d{1,4})$`)  // C211
 	reUniEncoding = regexp.MustCompile(`^uni([\dA-F]{4})$`) //uniFB03
 	glyphAliases  = map[string]string{
-		"ff":      "f_f",
+		"f_f":     "ff",
 		"f_f_i":   "ffi",
 		"f_f_l":   "ffl",
 		"f_i":     "fi",
