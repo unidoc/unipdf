@@ -50,7 +50,7 @@ func (parser *PdfParser) repairLocateXref() (int64, error) {
 // Useful when the cross reference is pointing to an object with the wrong number.
 // Update the table.
 func (parser *PdfParser) rebuildXrefTable() error {
-	newXrefs := XrefTable{}
+	newXrefs := xrefTable{}
 	for objNum, xref := range parser.xrefs {
 		obj, _, err := parser.lookupByNumberWrapper(objNum, false)
 		if err != nil {
@@ -96,8 +96,8 @@ func parseObjectNumberFromString(str string) (int, int, error) {
 
 // Parse the entire file from top down.
 // Goes through the file byte-by-byte looking for "<num> <generation> obj" patterns.
-// N.B. This collects the XREF_TABLE_ENTRY data only.
-func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
+// N.B. This collects the xrefTypeTableEntry data only.
+func (parser *PdfParser) repairRebuildXrefsTopDown() (*xrefTable, error) {
 	if parser.repairsAttempted {
 		// Avoid multiple repairs (only try once).
 		return nil, fmt.Errorf("Repair failed")
@@ -112,7 +112,7 @@ func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 	bufLen := 20
 	last := make([]byte, bufLen)
 
-	xrefTable := XrefTable{}
+	xrefTable := xrefTable{}
 	for {
 		b, err := parser.reader.ReadByte()
 		if err != nil {
@@ -169,8 +169,8 @@ func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 			// Create and insert the XREF entry if not existing, or the generation number is higher.
 			if curXref, has := xrefTable[objNum]; !has || curXref.generation < genNum {
 				// Make the entry for the cross ref table.
-				xrefEntry := XrefObject{}
-				xrefEntry.xtype = XREF_TABLE_ENTRY
+				xrefEntry := xrefObject{}
+				xrefEntry.xtype = xrefTypeTableEntry
 				xrefEntry.objectNumber = int(objNum)
 				xrefEntry.generation = int(genNum)
 				xrefEntry.offset = objOffset

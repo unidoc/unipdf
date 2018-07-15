@@ -15,22 +15,23 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-// TODO (v3): Create a new type xrefType which can be an integer and can be used for improved type checking.
-// TODO (v3): Unexport these constants and rename with camelCase.
-const (
-	// XREF_TABLE_ENTRY indicates a normal xref table entry.
-	XREF_TABLE_ENTRY = iota
+// xrefType indicates the type of a cross-references entry which can be either regular table entry or xref object
+// stream.
+type xrefType int
 
-	// XREF_OBJECT_STREAM indicates an xref entry in an xref object stream.
-	XREF_OBJECT_STREAM = iota
+const (
+	// xrefTypeTableEntry indicates a normal xref table entry.
+	xrefTypeTableEntry xrefType = iota
+
+	// xrefTypeObjectStream indicates an xref entry in an xref object stream.
+	xrefTypeObjectStream xrefType = iota
 )
 
-// XrefObject defines a cross reference entry which is a map between object number (with generation number) and the
+// xrefObject defines a cross reference entry which is a map between object number (with generation number) and the
 // location of the actual object, either as a file offset (xref table entry), or as a location within an xref
 // stream object (xref object stream).
-// TODO (v3): Unexport.
-type XrefObject struct {
-	xtype        int
+type xrefObject struct {
+	xtype        xrefType
 	objectNumber int
 	generation   int
 	// For normal xrefs (defined by OFFSET)
@@ -40,33 +41,30 @@ type XrefObject struct {
 	osObjIndex  int
 }
 
-// XrefTable is a map between object number and corresponding XrefObject.
-// TODO (v3): Unexport.
+// xrefTable is a map between object number and corresponding xrefObject.
 // TODO: Consider changing to a slice, so can maintain the object order without sorting when analyzing.
-type XrefTable map[int]XrefObject
+type xrefTable map[int]xrefObject
 
-// ObjectStream represents an object stream's information which can contain multiple indirect objects.
+// objectStream represents an object stream's information which can contain multiple indirect objects.
 // The information specifies the number of objects and has information about offset locations for
 // each object.
-// TODO (v3): Unexport.
-type ObjectStream struct {
-	N       int // TODO (v3): Unexport.
+type objectStream struct {
+	N       int
 	ds      []byte
 	offsets map[int]int64
 }
 
-// ObjectStreams defines a map between object numbers (object streams only) and underlying ObjectStream information.
-type ObjectStreams map[int]ObjectStream
+// objectStreams defines a map between object numbers (object streams only) and underlying objectStream information.
+type objectStreams map[int]objectStream
 
-// ObjectCache defines a map between object numbers and corresponding PdfObject. Serves as a cache for PdfObjects that
+// objectCache defines a map between object numbers and corresponding PdfObject. Serves as a cache for PdfObjects that
 // have already been parsed.
-// TODO (v3): Unexport.
-type ObjectCache map[int]PdfObject
+type objectCache map[int]PdfObject
 
-// Get an object from an object stream.
+// lookupObjectViaOS returns an object from an object stream.
 func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObject, error) {
 	var bufReader *bytes.Reader
-	var objstm ObjectStream
+	var objstm objectStream
 	var cached bool
 
 	objstm, cached = parser.objstms[sobjNumber]
@@ -154,7 +152,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 			offsets[int(*onum)] = int64(*firstOffset + *offset)
 		}
 
-		objstm = ObjectStream{N: int(*N), ds: ds, offsets: offsets}
+		objstm = objectStream{N: int(*N), ds: ds, offsets: offsets}
 		parser.objstms[sobjNumber] = objstm
 	} else {
 		// Temporarily change the reader object to this decoded buffer.
@@ -194,7 +192,6 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 }
 
 // LookupByNumber looks up a PdfObject by object number.  Returns an error on failure.
-// TODO (v3): Unexport.
 func (parser *PdfParser) LookupByNumber(objNumber int) (PdfObject, error) {
 	// Outside interface for lookupByNumberWrapper.  Default attempts repairs of bad xref tables.
 	obj, _, err := parser.lookupByNumberWrapper(objNumber, true)
@@ -220,6 +217,8 @@ func (parser *PdfParser) lookupByNumberWrapper(objNumber int, attemptRepairs boo
 	return obj, inObjStream, nil
 }
 
+// getObjectNumber returns the object and revision number for indirect object and stream objects. An error
+// is returned if type is incorrect.
 func getObjectNumber(obj PdfObject) (int64, int64, error) {
 	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		return io.ObjectNumber, io.GenerationNumber, nil
@@ -230,8 +229,8 @@ func getObjectNumber(obj PdfObject) (int64, int64, error) {
 	return 0, 0, errors.New("Not an indirect/stream object")
 }
 
-// LookupByNumber
-// Repair signals whether to repair if broken.
+// lookupByNumber is used by LookupByNumber.
+// attemptRepairs signals whether to attempt repair if broken.
 func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (PdfObject, bool, error) {
 	obj, ok := parser.ObjCache[objNumber]
 	if ok {
@@ -250,7 +249,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 	}
 
 	common.Log.Trace("Lookup obj number %d", objNumber)
-	if xref.xtype == XREF_TABLE_ENTRY {
+	if xref.xtype == xrefTypeTableEntry {
 		common.Log.Trace("xrefobj obj num %d", xref.objectNumber)
 		common.Log.Trace("xrefobj gen %d", xref.generation)
 		common.Log.Trace("xrefobj offset %d", xref.offset)
@@ -287,7 +286,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 					return nil, false, err
 				}
 				// Empty the cache.
-				parser.ObjCache = ObjectCache{}
+				parser.ObjCache = objectCache{}
 				// Try looking up again and return.
 				return parser.lookupByNumberWrapper(objNumber, false)
 			}
@@ -296,7 +295,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 		common.Log.Trace("Returning obj")
 		parser.ObjCache[objNumber] = obj
 		return obj, false, nil
-	} else if xref.xtype == XREF_OBJECT_STREAM {
+	} else if xref.xtype == xrefTypeObjectStream {
 		common.Log.Trace("xref from object stream!")
 		common.Log.Trace(">Load via OS!")
 		common.Log.Trace("Object stream available in object %d/%d", xref.osObjNumber, xref.osObjIndex)
@@ -334,9 +333,8 @@ func (parser *PdfParser) LookupByReference(ref PdfObjectReference) (PdfObject, e
 	return parser.LookupByNumber(int(ref.ObjectNumber))
 }
 
-// Trace traces a PdfObject to direct object, looking up and resolving references as needed (unlike TraceToDirect).
-// TODO (v3): Unexport.
-func (parser *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
+// Resolve resolves a PdfObject to direct object, looking up and resolving references as needed (unlike TraceToDirect).
+func (parser *PdfParser) Resolve(obj PdfObject) (PdfObject, error) {
 	ref, isRef := obj.(*PdfObjectReference)
 	if !isRef {
 		// Direct object already.
@@ -365,7 +363,7 @@ func (parser *PdfParser) Trace(obj PdfObject) (PdfObject, error) {
 	return o, nil
 }
 
-func printXrefTable(xrefTable XrefTable) {
+func printXrefTable(xrefTable xrefTable) {
 	common.Log.Debug("=X=X=X=")
 	common.Log.Debug("Xref table:")
 	i := 0

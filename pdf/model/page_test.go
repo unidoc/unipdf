@@ -17,7 +17,7 @@ import (
 func NewReaderForText(txt string) *PdfReader {
 	r := &PdfReader{}
 	r.traversed = map[PdfObject]bool{}
-	r.modelManager = NewModelManager()
+	r.modelManager = newModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser := NewParserFromString(txt)
@@ -239,7 +239,7 @@ func TestPdfDateBuild(t *testing.T) {
 		t.Errorf("Date PDF object should be a string")
 		return
 	}
-	if string(*strObj) != dateStr1 {
+	if strObj.Str() != dateStr1 {
 		t.Errorf("Built date string does not match original (%s)", strObj)
 		return
 	}

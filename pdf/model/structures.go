@@ -25,32 +25,32 @@ type PdfRectangle struct {
 	Ury float64
 }
 
-// Create a PDF rectangle object based on an input array of 4 integers.
+// NewPdfRectangle creates a PDF rectangle object based on an input array of 4 integers.
 // Defining the lower left (LL) and upper right (UR) corners with
 // floating point numbers.
 func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	rect := PdfRectangle{}
-	if len(arr) != 4 {
+	if arr.Len() != 4 {
 		return nil, errors.New("Invalid rectangle array, len != 4")
 	}
 
 	var err error
-	rect.Llx, err = getNumberAsFloat(arr[0])
+	rect.Llx, err = getNumberAsFloat(arr.Get(0))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Lly, err = getNumberAsFloat(arr[1])
+	rect.Lly, err = getNumberAsFloat(arr.Get(1))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Urx, err = getNumberAsFloat(arr[2])
+	rect.Urx, err = getNumberAsFloat(arr.Get(2))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Ury, err = getNumberAsFloat(arr[3])
+	rect.Ury, err = getNumberAsFloat(arr.Get(3))
 	if err != nil {
 		return nil, err
 	}
@@ -60,15 +60,11 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 
 // Convert to a PDF object.
 func (rect *PdfRectangle) ToPdfObject() PdfObject {
-	arr := PdfObjectArray{}
-	arr = append(arr, MakeFloat(rect.Llx))
-	arr = append(arr, MakeFloat(rect.Lly))
-	arr = append(arr, MakeFloat(rect.Urx))
-	arr = append(arr, MakeFloat(rect.Ury))
-	return &arr
+	arr := MakeArray(MakeFloat(rect.Llx), MakeFloat(rect.Lly), MakeFloat(rect.Urx), MakeFloat(rect.Ury))
+	return arr
 }
 
-// A date is a PDF string of the form:
+// PdfDate represents a date, which is a PDF string of the form:
 // (D:YYYYMMDDHHmmSSOHH'mm)
 type PdfDate struct {
 	year          int64 // YYYY
@@ -84,7 +80,7 @@ type PdfDate struct {
 
 var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])?(\d{2})?'?(\d{2})?`)
 
-// Make a new PdfDate object from a PDF date string (see 7.9.4 Dates).
+// NewPdfDate returns a new PdfDate object from a PDF date string (see 7.9.4 Dates).
 // format: "D: YYYYMMDDHHmmSSOHH'mm"
 func NewPdfDate(dateStr string) (PdfDate, error) {
 	d := PdfDate{}
@@ -129,6 +125,5 @@ func (date *PdfDate) ToPdfObject() PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
 		date.year, date.month, date.day, date.hour, date.minute, date.second,
 		date.utOffsetSign, date.utOffsetHours, date.utOffsetMins)
-	pdfStr := PdfObjectString(str)
-	return &pdfStr
+	return MakeString(str)
 }

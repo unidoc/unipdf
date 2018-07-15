@@ -181,13 +181,13 @@ func (e *Extractor) ExtractText() (string, error) {
 				if !ok {
 					return fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
 				}
-				for _, obj := range *paramList {
+				for _, obj := range paramList.Elements() {
 					switch v := obj.(type) {
 					case *core.PdfObjectString:
 						if codemap != nil {
-							buf.WriteString(codemap.CharcodeBytesToUnicode([]byte(*v)))
+							buf.WriteString(codemap.CharcodeBytesToUnicode(v.Bytes()))
 						} else {
-							buf.WriteString(string(*v))
+							buf.WriteString(v.Str())
 						}
 					case *core.PdfObjectFloat:
 						if *v < -100 {
@@ -212,9 +212,9 @@ func (e *Extractor) ExtractText() (string, error) {
 					return fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
 				}
 				if codemap != nil {
-					buf.WriteString(codemap.CharcodeBytesToUnicode([]byte(*param)))
+					buf.WriteString(codemap.CharcodeBytesToUnicode(param.Bytes()))
 				} else {
-					buf.WriteString(string(*param))
+					buf.WriteString(param.Str())
 				}
 			}
 

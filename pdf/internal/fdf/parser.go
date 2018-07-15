@@ -14,9 +14,8 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strconv"
-
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -268,7 +267,7 @@ func (parser *FdfParser) parseNumber() (core.PdfObject, error) {
 }
 
 // A string starts with '(' and ends with ')'.
-func (parser *FdfParser) parseString() (core.PdfObjectString, error) {
+func (parser *FdfParser) parseString() (*core.PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
@@ -276,21 +275,21 @@ func (parser *FdfParser) parseString() (core.PdfObjectString, error) {
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
-			return core.PdfObjectString(r.String()), err
+			return core.MakeString(r.String()), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
 			parser.reader.ReadByte() // Skip the escape \ byte.
 			b, err := parser.reader.ReadByte()
 			if err != nil {
-				return core.PdfObjectString(r.String()), err
+				return core.MakeString(r.String()), err
 			}
 
 			// Octal '\ddd' number (base 8).
 			if core.IsOctalDigit(b) {
 				bb, err := parser.reader.Peek(2)
 				if err != nil {
-					return core.PdfObjectString(r.String()), err
+					return core.MakeString(r.String()), err
 				}
 
 				numeric := []byte{}
@@ -307,7 +306,7 @@ func (parser *FdfParser) parseString() (core.PdfObjectString, error) {
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
-					return core.PdfObjectString(r.String()), err
+					return core.MakeString(r.String()), err
 				}
 				r.WriteByte(byte(code))
 				continue
@@ -347,19 +346,19 @@ func (parser *FdfParser) parseString() (core.PdfObjectString, error) {
 		r.WriteByte(b)
 	}
 
-	return core.PdfObjectString(r.String()), nil
+	return core.MakeString(r.String()), nil
 }
 
 // Starts with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
-func (parser *FdfParser) parseHexString() (core.PdfObjectString, error) {
+func (parser *FdfParser) parseHexString() (*core.PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
 	for {
 		bb, err := parser.reader.Peek(1)
 		if err != nil {
-			return core.PdfObjectString(""), err
+			return core.MakeHexString(""), err
 		}
 
 		if bb[0] == '>' {
@@ -378,12 +377,12 @@ func (parser *FdfParser) parseHexString() (core.PdfObjectString, error) {
 	}
 
 	buf, _ := hex.DecodeString(r.String())
-	return core.PdfObjectString(buf), nil
+	return core.MakeHexString(string(buf)), nil
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (parser *FdfParser) parseArray() (core.PdfObjectArray, error) {
-	arr := make(core.PdfObjectArray, 0)
+func (parser *FdfParser) parseArray() (*core.PdfObjectArray, error) {
+	arr := core.MakeArray()
 
 	parser.reader.ReadByte()
 
@@ -404,7 +403,7 @@ func (parser *FdfParser) parseArray() (core.PdfObjectArray, error) {
 		if err != nil {
 			return arr, err
 		}
-		arr = append(arr, obj)
+		arr.Append(obj)
 	}
 
 	return arr, nil
@@ -477,11 +476,11 @@ func (parser *FdfParser) parseObject() (core.PdfObject, error) {
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
 			str, err := parser.parseString()
-			return &str, err
+			return str, err
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
 			arr, err := parser.parseArray()
-			return &arr, err
+			return arr, err
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Trace("->Dict!")
 			dict, err := parser.parseDict()
@@ -489,7 +488,7 @@ func (parser *FdfParser) parseObject() (core.PdfObject, error) {
 		} else if bb[0] == '<' {
 			common.Log.Trace("->Hex string!")
 			str, err := parser.parseHexString()
-			return &str, err
+			return str, err
 		} else if bb[0] == '%' {
 			parser.readComment()
 			parser.skipSpaces()

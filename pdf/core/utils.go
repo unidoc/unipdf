@@ -29,7 +29,8 @@ func checkBounds(sliceLen, a, b int) error {
 	return nil
 }
 
-// Inspect analyzes the document object structure.
+// Inspect analyzes the document object structure. Returns a map of object types (by name) with the instance count
+// as value.
 func (parser *PdfParser) Inspect() (map[string]int, error) {
 	return parser.inspect()
 }

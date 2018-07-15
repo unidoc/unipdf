@@ -57,7 +57,7 @@ func TestFuzzReaderBuildPageLoop(t *testing.T) {
 	// Make a dummy reader to test
 	dummyPdfReader := PdfReader{}
 	dummyPdfReader.traversed = map[core.PdfObject]bool{}
-	dummyPdfReader.modelManager = NewModelManager()
+	dummyPdfReader.modelManager = newModelManager()
 
 	traversedPageNodes := map[core.PdfObject]bool{}
 	err := dummyPdfReader.buildPageList(pages, nil, traversedPageNodes)

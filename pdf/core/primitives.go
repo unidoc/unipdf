@@ -7,6 +7,8 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
@@ -31,14 +33,18 @@ type PdfObjectInteger int64
 type PdfObjectFloat float64
 
 // PdfObjectString represents the primitive PDF string object.
-// TODO (v3): Change to a struct and add a flag for hex/plaintext.
-type PdfObjectString string
+type PdfObjectString struct {
+	val   string
+	isHex bool
+}
 
 // PdfObjectName represents the primitive PDF name object.
 type PdfObjectName string
 
 // PdfObjectArray represents the primitive PDF array object.
-type PdfObjectArray []PdfObject
+type PdfObjectArray struct {
+	vec []PdfObject
+}
 
 // PdfObjectDictionary represents the primitive PDF dictionary/map object.
 type PdfObjectDictionary struct {
@@ -93,11 +99,12 @@ func MakeInteger(val int64) *PdfObjectInteger {
 
 // MakeArray creates an PdfObjectArray from a list of PdfObjects.
 func MakeArray(objects ...PdfObject) *PdfObjectArray {
-	array := PdfObjectArray{}
+	array := &PdfObjectArray{}
+	array.vec = []PdfObject{}
 	for _, obj := range objects {
-		array = append(array, obj)
+		array.vec = append(array.vec, obj)
 	}
-	return &array
+	return array
 }
 
 // MakeArrayFromIntegers creates an PdfObjectArray from a slice of ints, where each array element is
@@ -138,7 +145,13 @@ func MakeFloat(val float64) *PdfObjectFloat {
 
 // MakeString creates an PdfObjectString from a string.
 func MakeString(s string) *PdfObjectString {
-	str := PdfObjectString(s)
+	str := PdfObjectString{val: s}
+	return &str
+}
+
+// MakeHexString creates an PdfObjectString from a string intended for output as a hexadecimal string.
+func MakeHexString(s string) *PdfObjectString {
+	str := PdfObjectString{val: s, isHex: true}
 	return &str
 }
 
@@ -212,13 +225,37 @@ func (float *PdfObjectFloat) DefaultWriteString() string {
 	return fmt.Sprintf("%f", *float)
 }
 
+// String returns a string representation of the *PdfObjectString.
 func (str *PdfObjectString) String() string {
-	return fmt.Sprintf("%s", string(*str))
+	return str.val
+}
+
+// Str returns the string value of the PdfObjectString. Defined in addition to String() function to clarify that
+// this function returns the underlying string directly, whereas the String function technically could include
+// debug info.
+func (str *PdfObjectString) Str() string {
+	return str.val
+}
+
+// Bytes returns the PdfObjectString content as a []byte array.
+func (str *PdfObjectString) Bytes() []byte {
+	return []byte(str.val)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
 func (str *PdfObjectString) DefaultWriteString() string {
 	var output bytes.Buffer
+
+	// Handle hex representation.
+	if str.isHex {
+		shex := hex.EncodeToString(str.Bytes())
+		output.WriteString("<")
+		output.WriteString(shex)
+		output.WriteString(">")
+		return output.String()
+	}
+
+	// Otherwise regular string.
 
 	escapeSequences := map[byte]string{
 		'\n': "\\n",
@@ -232,8 +269,8 @@ func (str *PdfObjectString) DefaultWriteString() string {
 	}
 
 	output.WriteString("(")
-	for i := 0; i < len(*str); i++ {
-		char := (*str)[i]
+	for i := 0; i < len(str.val); i++ {
+		char := str.val[i]
 		if escStr, useEsc := escapeSequences[char]; useEsc {
 			output.WriteString(escStr)
 		} else {
@@ -246,7 +283,7 @@ func (str *PdfObjectString) DefaultWriteString() string {
 }
 
 func (name *PdfObjectName) String() string {
-	return fmt.Sprintf("%s", string(*name))
+	return string(*name)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
@@ -270,12 +307,61 @@ func (name *PdfObjectName) DefaultWriteString() string {
 	return output.String()
 }
 
+// Elements returns a slice of the PdfObject elements in the array.
+// Preferred over accessing the array directly as type may be changed in future major versions (v3).
+func (array *PdfObjectArray) Elements() []PdfObject {
+	if array == nil {
+		return nil
+	}
+	return array.vec
+}
+
+// Len returns the number of elements in the array.
+func (array *PdfObjectArray) Len() int {
+	if array == nil {
+		return 0
+	}
+	return len(array.vec)
+}
+
+// Get returns the i-th element of the array or nil if out of bounds (by index).
+func (array *PdfObjectArray) Get(i int) PdfObject {
+	if array == nil || i >= len(array.vec) || i < 0 {
+		return nil
+	}
+	return array.vec[i]
+}
+
+// Set sets the PdfObject at index i of the array. An error is returned if the index is outside bounds.
+func (array *PdfObjectArray) Set(i int, obj PdfObject) error {
+	if i < 0 || i >= len(array.vec) {
+		return errors.New("Outside bounds")
+	}
+	array.vec[i] = obj
+	return nil
+}
+
+// Append appends PdfObject(s) to the array.
+func (array *PdfObjectArray) Append(objects ...PdfObject) {
+	if array == nil {
+		common.Log.Debug("Warn - Attempt to append to a nil array")
+		return
+	}
+	if array.vec == nil {
+		array.vec = []PdfObject{}
+	}
+
+	for _, obj := range objects {
+		array.vec = append(array.vec, obj)
+	}
+}
+
 // ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is returned if the array
 // contains non-numeric objects (each element can be either PdfObjectInteger or PdfObjectFloat).
 func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 	vals := []float64{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, float64(*number))
 		} else if number, is := obj.(*PdfObjectFloat); is {
@@ -293,7 +379,7 @@ func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	vals := []int{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, int(*number))
 		} else {
@@ -306,9 +392,9 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 
 func (array *PdfObjectArray) String() string {
 	outStr := "["
-	for ind, o := range *array {
+	for ind, o := range array.Elements() {
 		outStr += o.String()
-		if ind < (len(*array) - 1) {
+		if ind < (array.Len() - 1) {
 			outStr += ", "
 		}
 	}
@@ -319,44 +405,14 @@ func (array *PdfObjectArray) String() string {
 // DefaultWriteString outputs the object as it is to be written to file.
 func (array *PdfObjectArray) DefaultWriteString() string {
 	outStr := "["
-	for ind, o := range *array {
+	for ind, o := range array.Elements() {
 		outStr += o.DefaultWriteString()
-		if ind < (len(*array) - 1) {
+		if ind < (array.Len() - 1) {
 			outStr += " "
 		}
 	}
 	outStr += "]"
 	return outStr
-}
-
-// Append adds an PdfObject to the array.
-func (array *PdfObjectArray) Append(obj PdfObject) {
-	*array = append(*array, obj)
-}
-
-// Elements returns a slice of the elements in the array.
-// Preferred over accessing the array directly as type may be changed in future major versions (v3).
-func (array *PdfObjectArray) Elements() []PdfObject {
-	if array == nil {
-		return nil
-	}
-	return *array
-}
-
-// Len returns the number of elements in the array.
-func (array *PdfObjectArray) Len() int {
-	if array == nil {
-		return 0
-	}
-	return len(*array)
-}
-
-// Get returns the i-th element of the array or nil if out of bounds.
-func (array *PdfObjectArray) Get(i int) PdfObject {
-	if array == nil || i >= len(*array) || i < 0 {
-		return nil
-	}
-	return (*array)[i]
 }
 
 func getNumberAsFloat(obj PdfObject) (float64, error) {
@@ -376,7 +432,7 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	slice := []float64{}
 
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		obj := TraceToDirectObject(obj)
 		number, err := getNumberAsFloat(obj)
 		if err != nil {
@@ -451,35 +507,6 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	if !has {
 		return nil
 	}
-	return val
-}
-
-// GetDirect returns the direct PdfObject corresponding to the specified key.
-// The difference from Get() is that if the value is a reference, it will
-// be resolved, and indirect objects are resolved to their direct object.
-// Returns a nil value if the key is not set.
-//
-// TODO (v3): Replace Get() with GetDirect().
-func (d *PdfObjectDictionary) GetDirect(key PdfObjectName) PdfObject {
-	val, has := d.dict[key]
-	if !has {
-		return nil
-	}
-
-	switch t := val.(type) {
-	case *PdfIndirectObject:
-		return t.PdfObject
-	case *PdfObjectReference:
-		if d.parser != nil {
-			direct, err := d.parser.Trace(val)
-			if err != nil {
-				common.Log.Debug("GetDirect trace error (%s): %v", string(key), err)
-				return nil
-			}
-			return direct
-		}
-	}
-
 	return val
 }
 
@@ -627,7 +654,107 @@ func TraceToDirectObject(obj PdfObject) PdfObject {
 	return obj
 }
 
-// Direct returns the direct object contained by an indirect object.
-func (ind *PdfIndirectObject) Direct() PdfObject {
-	return TraceToDirectObject(ind.PdfObject)
+// Convenience methods for converting PdfObject to underlying types.
+
+// GetBool returns the *PdfObjectBool object that is represented by a PdfObject directly or indirectly
+// within an indirect object. The bool flag indicates whether a match was found.
+func GetBool(obj PdfObject) (bo *PdfObjectBool, found bool) {
+	bo, found = TraceToDirectObject(obj).(*PdfObjectBool)
+	return bo, found
+}
+
+// GetBoolVal returns the bool value within a *PdObjectBool represented by an PdfObject interface directly or indirectly.
+// If the PdfObject does not represent a bool value, a default value of false is returned (found = false also).
+func GetBoolVal(obj PdfObject) (b bool, found bool) {
+	bo, found := TraceToDirectObject(obj).(*PdfObjectBool)
+	if found {
+		return bool(*bo), true
+	}
+	return false, false
+}
+
+// GetInt returns the *PdfObjectBool object that is represented by a PdfObject either directly or indirectly
+// within an indirect object. The bool flag indicates whether a match was found.
+func GetInt(obj PdfObject) (into *PdfObjectInteger, found bool) {
+	into, found = TraceToDirectObject(obj).(*PdfObjectInteger)
+	return into, found
+}
+
+// GetIntVal returns the int value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetIntVal(obj PdfObject) (val int, found bool) {
+	into, found := TraceToDirectObject(obj).(*PdfObjectInteger)
+	if found {
+		return int(*into), true
+	}
+	return 0, false
+}
+
+// GetFloat returns the *PdfObjectFloat represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetFloat(obj PdfObject) (fo *PdfObjectFloat, found bool) {
+	fo, found = TraceToDirectObject(obj).(*PdfObjectFloat)
+	return fo, found
+}
+
+// GetFloatVal returns the float64 value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetFloatVal(obj PdfObject) (val float64, found bool) {
+	fo, found := TraceToDirectObject(obj).(*PdfObjectFloat)
+	if found {
+		return float64(*fo), true
+	}
+	return 0, false
+}
+
+// GetString returns the *PdfObjectString represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetString(obj PdfObject) (so *PdfObjectString, found bool) {
+	so, found = TraceToDirectObject(obj).(*PdfObjectString)
+	return so, found
+}
+
+// GetStringVal returns the string value represented by the PdfObject directly or indirectly if contained within an
+// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+func GetStringVal(obj PdfObject) (val string, found bool) {
+	so, found := TraceToDirectObject(obj).(*PdfObjectString)
+	if found {
+		return so.Str(), true
+	}
+	return
+}
+
+// GetName returns the *PdfObjectName represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetName(obj PdfObject) (name *PdfObjectName, found bool) {
+	name, found = TraceToDirectObject(obj).(*PdfObjectName)
+	return name, found
+}
+
+// GetArray returns the *PdfObjectArray represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetArray(obj PdfObject) (arr *PdfObjectArray, found bool) {
+	arr, found = TraceToDirectObject(obj).(*PdfObjectArray)
+	return arr, found
+}
+
+// GetDict returns the *PdfObjectDictionary represented by the PdfObject directly or indirectly within an indirect
+// object. On type mismatch the found bool flag is false and a nil pointer is returned.
+func GetDict(obj PdfObject) (dict *PdfObjectDictionary, found bool) {
+	dict, found = TraceToDirectObject(obj).(*PdfObjectDictionary)
+	return dict, found
+}
+
+// GetIndirect returns the *PdfIndirectObject represented by the PdfObject. On type mismatch the found bool flag is
+// false and a nil pointer is returned.
+func GetIndirect(obj PdfObject) (ind *PdfIndirectObject, found bool) {
+	ind, found = obj.(*PdfIndirectObject)
+	return ind, found
+}
+
+// GetStream returns the *PdfObjectStream represented by the PdfObject. On type mismatch the found bool flag is
+// false and a nil pointer is returned.
+func GetStream(obj PdfObject) (stream *PdfObjectStream, found bool) {
+	stream, found = obj.(*PdfObjectStream)
+	return stream, found
 }

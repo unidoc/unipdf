@@ -11,12 +11,11 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/sampling"
-	"github.com/unidoc/unidoc/pdf/ps"
+	"github.com/unidoc/unidoc/pdf/internal/ps"
+	"github.com/unidoc/unidoc/pdf/internal/sampling"
 )
 
-type PdfValue interface{}
-
+// PdfFunction interface represents the common methods of a function in PDF.
 type PdfFunction interface {
 	Evaluate([]float64) ([]float64, error)
 	ToPdfObject() PdfObject
@@ -134,11 +133,11 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
 	}
-	if len(*array) < 0 || len(*array)%2 != 0 {
+	if array.Len() < 0 || array.Len()%2 != 0 {
 		common.Log.Error("Domain invalid")
 		return nil, errors.New("Invalid domain range")
 	}
-	fun.NumInputs = len(*array) / 2
+	fun.NumInputs = array.Len() / 2
 	domain, err := array.ToFloat64Array()
 	if err != nil {
 		return nil, err
@@ -151,10 +150,10 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 		common.Log.Error("Range not specified")
 		return nil, errors.New("Required attribute missing or invalid")
 	}
-	if len(*array) < 0 || len(*array)%2 != 0 {
+	if array.Len() < 0 || array.Len()%2 != 0 {
 		return nil, errors.New("Invalid range")
 	}
-	fun.NumOutputs = len(*array) / 2
+	fun.NumOutputs = array.Len() / 2
 	rang, err := array.ToFloat64Array()
 	if err != nil {
 		return nil, err
@@ -408,7 +407,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
 	}
-	if len(*array) < 0 || len(*array)%2 != 0 {
+	if array.Len() < 0 || array.Len()%2 != 0 {
 		common.Log.Error("Domain range invalid")
 		return nil, errors.New("Invalid domain range")
 	}
@@ -421,7 +420,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	// Range
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
-		if len(*array) < 0 || len(*array)%2 != 0 {
+		if array.Len() < 0 || array.Len()%2 != 0 {
 			return nil, errors.New("Invalid range")
 		}
 
@@ -596,7 +595,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
 	}
-	if len(*array) != 2 {
+	if array.Len() != 2 {
 		common.Log.Error("Domain invalid")
 		return nil, errors.New("Invalid domain range")
 	}
@@ -609,7 +608,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	// Range
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
-		if len(*array) < 0 || len(*array)%2 != 0 {
+		if array.Len() < 0 || array.Len()%2 != 0 {
 			return nil, errors.New("Invalid range")
 		}
 		rang, err := array.ToFloat64Array()
@@ -626,7 +625,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 		return nil, errors.New("Required attribute missing or invalid")
 	}
 	fun.Functions = []PdfFunction{}
-	for _, obj := range *array {
+	for _, obj := range array.Elements() {
 		subf, err := newPdfFunctionFromPdfObject(obj)
 		if err != nil {
 			return nil, err
@@ -780,7 +779,7 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 		common.Log.Error("Domain not specified")
 		return nil, errors.New("Required attribute missing or invalid")
 	}
-	if len(*array)%2 != 0 {
+	if array.Len()%2 != 0 {
 		common.Log.Error("Domain invalid")
 		return nil, errors.New("Invalid domain range")
 	}
@@ -793,7 +792,7 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	// Range
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
-		if len(*array) < 0 || len(*array)%2 != 0 {
+		if array.Len() < 0 || array.Len()%2 != 0 {
 			return nil, errors.New("Invalid range")
 		}
 		rang, err := array.ToFloat64Array()

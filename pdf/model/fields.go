@@ -171,7 +171,7 @@ func (f *PdfField) FullName() (string, error) {
 
 	parts := []string{}
 	if f.T != nil {
-		parts = append(parts, string(*f.T))
+		parts = append(parts, f.T.Str())
 	} else {
 		return fn.String(), errors.New("Field partial name (T) not specified")
 	}
@@ -187,7 +187,7 @@ func (f *PdfField) FullName() (string, error) {
 		}
 
 		if parent.T != nil {
-			parts = append(parts, string(*f.T))
+			parts = append(parts, f.T.Str())
 		} else {
 			return fn.String(), errors.New("Field partial name (T) not specified")
 		}
@@ -210,7 +210,7 @@ func (f *PdfField) FullName() (string, error) {
 func (f *PdfField) PartialName() string {
 	partial := ""
 	if f.T != nil {
-		partial = string(*f.T)
+		partial = f.T.Str()
 	} else {
 		common.Log.Debug("Field missing T field (incompatible)")
 	}
@@ -285,7 +285,7 @@ func (f *PdfField) ToPdfObject() core.PdfObject {
 		d.Set("DV", f.DV)
 	}
 	if f.AA != nil {
-		d.Set("AA", f.DV)
+		d.Set("AA", f.AA)
 	}
 
 	return container
@@ -549,12 +549,8 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	// Field type (required in terminal fields).
 	// Can be /Btn /Tx /Ch /Sig
 	// Required for a terminal field (inheritable).
-	if obj := d.GetDirect("FT"); obj != nil {
-		name, ok := obj.(*core.PdfObjectName)
-		if !ok {
-			return nil, fmt.Errorf("Invalid type of FT field (%T)", obj)
-		}
 
+	if name, has := core.GetName(d.Get("FT")); has {
 		field.FT = name
 		isTerminal := true
 		field.isTerminal = &isTerminal
@@ -645,7 +641,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	field.Annotations = []*PdfAnnotationWidget{}
 
 	// Has a merged-in widget annotation?
-	if name, _ := d.GetDirect("Subtype").(*core.PdfObjectName); name != nil {
+	if name, has := core.GetName(d.Get("Subtype")); has {
 		if *name == "Widget" {
 			// Is a merged field / widget dict.
 
@@ -668,10 +664,10 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	}
 
 	// Kids can be field and/or widget annotations.
-	if kids, has := d.GetDirect("Kids").(*core.PdfObjectArray); has {
+	if kids, has := core.GetArray(d.Get("Kids")); has {
 		field.Kids = []*PdfField{}
 
-		for _, obj := range *kids {
+		for _, obj := range kids.Elements() {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
 				return nil, err
@@ -682,13 +678,13 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 				return nil, fmt.Errorf("Not an indirect object (form field)")
 			}
 
-			dict, ok := container.Direct().(*core.PdfObjectDictionary)
+			dict, ok := core.GetDict(container)
 			if !ok {
 				return nil, ErrTypeCheck
 			}
 
 			// Widget annotations contain key Subtype with value equal to /Widget. Otherwise are assumed to be fields.
-			if name, has := dict.GetDirect("Subtype").(*core.PdfObjectName); has && *name == "Widget" {
+			if name, has := core.GetName(dict.Get("Subtype")); has && *name == "Widget" {
 				annot, err := r.newPdfAnnotationFromIndirectObject(container)
 				if err != nil {
 					common.Log.Debug("Error loading widget annotation for field: %v", err)
@@ -717,12 +713,12 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 // This function loads only text-field specific fields (called by a more generic field loader).
 func newPdfFieldTextFromDict(d *core.PdfObjectDictionary) (*PdfFieldText, error) {
 	textf := &PdfFieldText{}
-	textf.DA, _ = d.GetDirect("DA").(*core.PdfObjectString)
-	textf.Q, _ = d.GetDirect("Q").(*core.PdfObjectInteger)
-	textf.DS, _ = d.GetDirect("DS").(*core.PdfObjectString)
+	textf.DA, _ = core.GetString(d.Get("DA"))
+	textf.Q, _ = core.GetInt(d.Get("Q"))
+	textf.DS, _ = core.GetString(d.Get("DS"))
 	textf.RV = d.Get("RV")
 	// TODO: MaxLen should be loaded for other fields too?
-	textf.MaxLen, _ = d.Get("MaxLen").(*core.PdfObjectInteger)
+	textf.MaxLen, _ = core.GetInt(d.Get("MaxLen"))
 	return textf, nil
 }
 
@@ -730,9 +726,9 @@ func newPdfFieldTextFromDict(d *core.PdfObjectDictionary) (*PdfFieldText, error)
 // This function loads only choice-field specific fields (called by a more generic field loader).
 func newPdfFieldChoiceFromDict(d *core.PdfObjectDictionary) (*PdfFieldChoice, error) {
 	choicef := &PdfFieldChoice{}
-	choicef.Opt, _ = d.GetDirect("Opt").(*core.PdfObjectArray)
-	choicef.TI, _ = d.GetDirect("TI").(*core.PdfObjectInteger)
-	choicef.I, _ = d.GetDirect("I").(*core.PdfObjectArray)
+	choicef.Opt, _ = core.GetArray(d.Get("Opt"))
+	choicef.TI, _ = core.GetInt(d.Get("TI"))
+	choicef.I, _ = core.GetArray(d.Get("I"))
 	return choicef, nil
 }
 
@@ -740,7 +736,7 @@ func newPdfFieldChoiceFromDict(d *core.PdfObjectDictionary) (*PdfFieldChoice, er
 // This function loads only button-field specific fields (called by a more generic field loader).
 func newPdfFieldButtonFromDict(d *core.PdfObjectDictionary) (*PdfFieldButton, error) {
 	buttonf := &PdfFieldButton{}
-	buttonf.Opt, _ = d.GetDirect("Opt").(*core.PdfObjectArray)
+	buttonf.Opt, _ = core.GetArray(d.Get("Opt"))
 	return buttonf, nil
 }
 
@@ -748,8 +744,8 @@ func newPdfFieldButtonFromDict(d *core.PdfObjectDictionary) (*PdfFieldButton, er
 // This function loads only the signature-specific fields (called by a more generic field loader).
 func newPdfFieldSignatureFromDict(d *core.PdfObjectDictionary) (*PdfFieldSignature, error) {
 	sigf := &PdfFieldSignature{}
-	sigf.V, _ = d.Get("V").(*core.PdfIndirectObject)
-	sigf.Lock, _ = d.Get("Lock").(*core.PdfIndirectObject)
-	sigf.SV, _ = d.Get("SV").(*core.PdfIndirectObject)
+	sigf.V, _ = core.GetIndirect(d.Get("V"))
+	sigf.Lock, _ = core.GetIndirect(d.Get("Lock"))
+	sigf.SV, _ = core.GetIndirect(d.Get("SV"))
 	return sigf, nil
 }

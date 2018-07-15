@@ -80,7 +80,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 		}
 
 		fields := []*PdfField{}
-		for _, obj := range *fieldArray {
+		for _, obj := range fieldArray.Elements() {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
 				return nil, err
@@ -186,7 +186,7 @@ func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
 	if this.Fields != nil {
 		arr := core.PdfObjectArray{}
 		for _, field := range *this.Fields {
-			arr = append(arr, field.ToPdfObject())
+			arr.Append(field.ToPdfObject())
 		}
 		dict.Set("Fields", &arr)
 	}

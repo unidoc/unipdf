@@ -66,7 +66,7 @@ func TestFdfExample1(t *testing.T) {
 			t.Errorf("Type error")
 			return
 		}
-		if string(*ts) != expectedT[i] {
+		if ts.Str() != expectedT[i] {
 			t.Errorf("Incorrect value")
 			return
 		}
@@ -76,13 +76,13 @@ func TestFdfExample1(t *testing.T) {
 			t.Errorf("Type error")
 			return
 		}
-		if string(*vs) != expectedV[i] {
+		if vs.Str() != expectedV[i] {
 			t.Errorf("Incorrect value")
 			return
 		}
 	}
 
-	for i, k := range *fields {
+	for i, k := range fields.Elements() {
 		fmt.Printf("Field %v : %v\n", i, k)
 	}
 
