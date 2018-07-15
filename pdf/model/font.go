@@ -197,7 +197,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 		if encoder := font.Encoder(); encoder != nil {
 			r, ok := encoder.CharcodeToRune(code)
 			if ok {
-				charstrings = append(charstrings, string(r))
+				charstrings = append(charstrings, textencoding.RuneToString(r))
 				continue
 			}
 

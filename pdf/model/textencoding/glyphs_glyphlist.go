@@ -14,7 +14,7 @@ import (
 	"strconv"
 )
 
-// MissingCodeRune is the rune returned when there is no matching glyph.
+// MissingCodeRune is the rune returned when there is no matching glyph. It was previously '?'.
 const MissingCodeRune = '\ufffd' // �
 
 // GlyphToRune returns true if `glyph` is in our GlyphToRune mapping.
@@ -25,8 +25,15 @@ func KnownGlyph(glyph string) bool {
 
 // GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
 // XXX: TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
-// rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to glyphs.
+//            rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to
+//            glyphs.
+//            We are currently applying RuneToString to the output of functions that call
+//            GlyphToRune. While this gives the same result, it makes the calling code complex and
+//            fragile.
+// XXX: TODO: Can we combine all the tables glyphAliases, glyphlistGlyphToRuneMap,
+//            texGlyphlistGlyphToStringMap, additionalGlyphlistGlyphToRuneMap and ".notdef"?
 func GlyphToRune(glyph string) (rune, bool) {
+	// First lookup the glyph in all the tables.
 	if alias, ok := glyphAliases[glyph]; ok {
 		glyph = alias
 	}
@@ -40,42 +47,43 @@ func GlyphToRune(glyph string) (rune, bool) {
 	if r, ok := additionalGlyphlistGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
-
 	if glyph == ".notdef" {
 		return MissingCodeRune, true
 	}
 
+	// Next try all the glyph naming conventions.
 	if groups := reUniEncoding.FindStringSubmatch(glyph); groups != nil {
 		n, err := strconv.ParseInt(groups[1], 16, 32)
 		if err == nil {
 			return rune(n), true
 		}
 	}
-
 	if groups := reEncoding.FindStringSubmatch(glyph); groups != nil {
 		n, err := strconv.Atoi(groups[1])
 		if err == nil {
 			return rune(n), true
 		}
 	}
+
 	return rune(0), false
 }
 
 var (
 	reEncoding    = regexp.MustCompile(`^[A-Z](\d{1,4})$`)  // C211
 	reUniEncoding = regexp.MustCompile(`^uni([\dA-F]{4})$`) //uniFB03
-	glyphAliases  = map[string]string{
-		"f_f":     "ff",
-		"f_f_i":   "ffi",
-		"f_f_l":   "ffl",
-		"f_i":     "fi",
-		"f_l":     "fl",
-		"s_t":     "st",
-		"I_J":     "IJ",
-		"i_j":     "ij",
-		"elipsis": "ellipsis",
-	}
 )
+
+var glyphAliases = map[string]string{
+	"f_f":     "ff",
+	"f_f_i":   "ffi",
+	"f_f_l":   "ffl",
+	"f_i":     "fi",
+	"f_l":     "fl",
+	"s_t":     "st",
+	"I_J":     "IJ",
+	"i_j":     "ij",
+	"elipsis": "ellipsis",
+}
 
 var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
 	"A":                             'A',      // A
@@ -9054,4 +9062,46 @@ var additionalGlyphlistGlyphToRuneMap = map[string]rune{ // 120 entries
 	"uniontext":             '\u22c3', // ⋃
 	"vextenddouble":         '\u2225', // ∥
 	"vextendsingle":         '\u2223', // ∣
+}
+
+// RuneToString converts rune `r` to a string. It unpacks ligatures.
+func RuneToString(r rune) string {
+	if s, ok := ligatureToString[r]; ok {
+		return s
+	}
+	return string(r)
+}
+
+// ligatureToString is a map from ligature runes to their constituent characters.
+// https://en.wikipedia.org/wiki/Typographic_ligature#Ligatures_in_Unicode_(Latin_alphabets)
+var ligatureToString = map[rune]string{
+	'Ꜳ':          "AA",
+	'ꜳ':          "aa",
+	'Æ':          "AE",
+	'æ':          "ae",
+	'Ꜵ':          "aa",
+	'ꜵ':          "ao",
+	'Ꜷ':          "AU",
+	'ꜷ':          "au",
+	'Ꜽ':          "AY",
+	'ꜽ':          "ay",
+	'\U0001f670': "et",
+	'ﬀ':          "ff",
+	'ﬃ':          "ffi",
+	'ﬄ':          "ffl",
+	'ﬁ':          "fi",
+	'ﬂ':          "fl",
+	'Œ':          "OE",
+	'œ':          "oe",
+	'Ꝏ':          "OO",
+	'ꝏ':          "oo",
+	'ẞ':          "fs",
+	'ß':          "fz",
+	'ﬆ':          "st",
+	'ﬅ':          "ſt",
+	'Ꜩ':          "TZ",
+	'ꜩ':          "tz",
+	'ᵫ':          "ue",
+	'Ꝡ':          "VY",
+	'ꝡ':          "vy",
 }
