@@ -11,7 +11,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -36,7 +36,7 @@ func procBuf(buf *bytes.Buffer) {
 }
 
 // toFloatList returns `objs` as 2 floats, if that's what it is, or an error if it isn't
-func toFloatXY(objs []PdfObject) (x, y float64, err error) {
+func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {
 	if len(objs) != 2 {
 		err = fmt.Errorf("Invalid number of params: %d", len(objs))
 		common.Log.Debug("toFloatXY: err=%v", err)

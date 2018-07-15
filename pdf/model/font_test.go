@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
@@ -142,7 +142,7 @@ func TestCompositeFonts(t *testing.T) {
 // the new PDF object is the same as the input object
 func objFontObj(t *testing.T, fontDict string) error {
 
-	parser := NewParserFromString(fontDict)
+	parser := core.NewParserFromString(fontDict)
 	obj, err := parser.ParseDict()
 	if err != nil {
 		t.Errorf("objFontObj: Failed to parse dict obj. fontDict=%q err=%v", fontDict, err)
@@ -155,11 +155,11 @@ func objFontObj(t *testing.T, fontDict string) error {
 	}
 
 	// Resolve all the indirect references in the font objects so we can compare their contents.
-	obj1 := FlattenObject(obj)
-	obj2 := FlattenObject(font.ToPdfObject())
+	obj1 := core.FlattenObject(obj)
+	obj2 := core.FlattenObject(font.ToPdfObject())
 
 	// Check that the reconstituted font is the same as the original.
-	if !EqualObjects(obj1, obj2) {
+	if !core.EqualObjects(obj1, obj2) {
 		t.Errorf("Different objects.\nobj1=%s\nobj2=%s\nfont=%s", obj1, obj2, font)
 		return errors.New("different objects")
 	}

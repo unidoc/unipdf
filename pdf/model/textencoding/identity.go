@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // IdentityEncoder represents an 2-byte identity encoding
@@ -113,9 +113,9 @@ func (enc IdentityEncoder) GlyphToRune(glyph string) (rune, bool) {
 }
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
-func (enc IdentityEncoder) ToPdfObject() PdfObject {
+func (enc IdentityEncoder) ToPdfObject() core.PdfObject {
 	if enc.baseName != "" {
-		return MakeName(enc.baseName)
+		return core.MakeName(enc.baseName)
 	}
-	return MakeNull()
+	return core.MakeNull()
 }
