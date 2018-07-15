@@ -8,8 +8,6 @@ package extractor
 import (
 	"flag"
 	"testing"
-
-	"github.com/unidoc/unidoc/common"
 )
 
 func init() {
@@ -20,7 +18,7 @@ func init() {
 
 const testContents1 = `
     BT
-    /UniDocTest 24 Tf
+    /UniDocCourier 24 Tf
     (Hello World!)Tj
     0 -10 Td
     (Doink)Tj

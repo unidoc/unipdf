@@ -54,9 +54,9 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		return textList, state.numChars, state.numMisses, err
 	}
 
-	fmt.Println("========================= xxx =========================")
-	fmt.Printf("%s\n", e.contents)
-	fmt.Println("========================= ||| =========================")
+	// fmt.Println("========================= xxx =========================")
+	// fmt.Printf("%s\n", e.contents)
+	// fmt.Println("========================= ||| =========================")
 	processor := contentstream.NewContentStreamProcessor(*operations)
 
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
@@ -629,7 +629,7 @@ func (tl *TextList) ToText() string {
 func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
-	if name == "UniDocTest" {
+	if name == "UniDocCourier" {
 		return model.NewStandard14Font("Courier")
 	}
 
@@ -660,11 +660,10 @@ func (to *TextObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q err=%v", name, err)
 		return
 	}
-	// fontObj = TraceToDirectObject(fontObj)
 	return
 }
 
-// getCharMetrics returns the character metrics for the code points in `text1` for font `font`
+// getCharMetrics returns the character metrics for the code points in `text1` for font `font`.
 func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetrics, err error) {
 	encoder := font.Encoder()
 	if encoder == nil {

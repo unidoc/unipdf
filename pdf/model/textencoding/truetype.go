@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
@@ -172,6 +172,6 @@ func (enc TrueTypeFontEncoder) GlyphToRune(glyph string) (rune, bool) {
 }
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
-func (enc TrueTypeFontEncoder) ToPdfObject() PdfObject {
-	return MakeNull()
+func (enc TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
+	return core.MakeNull()
 }

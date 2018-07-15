@@ -137,7 +137,8 @@ func ss(u string) string {
 	return s
 }
 
-// ru show rune r
+// ru returns a string with the Go code for rune `r` and, if the rune is printable, an comment
+// showing how it prints.
 func rs(r rune) string {
 	s := ""
 	if unicode.IsPrint(r) {
@@ -229,8 +230,6 @@ func loadGlyphlist(filename string) ([]string, error) {
 		}
 
 		line = strings.Trim(line, " \r\n")
-
-		//fmt.Printf("%s\n", line)
 
 		parts := strings.Split(line, " ")
 		for _, part := range parts {
