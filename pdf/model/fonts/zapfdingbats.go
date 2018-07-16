@@ -40,7 +40,7 @@ func (font FontZapfDingbats) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := zapfDingbatsCharMetrics[glyph]
+	metrics, has := ZapfDingbatsCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -60,8 +60,8 @@ func (font FontZapfDingbats) ToPdfObject() core.PdfObject {
 	return &core.PdfIndirectObject{PdfObject: fontDict}
 }
 
-// ZapfDingbats font metics loaded from afms/ZapfDingbats.afm.  See afms/MustRead.html for license information.
-var zapfDingbatsCharMetrics = map[string]CharMetrics{
+// ZapfDingbats font metrics loaded from afms/ZapfDingbats.afm.  See afms/MustRead.html for license information.
+var ZapfDingbatsCharMetrics = map[string]CharMetrics{
 	"a1":    {GlyphName: "a1", Wx: 974.000000, Wy: 0.000000},
 	"a10":   {GlyphName: "a10", Wx: 692.000000, Wy: 0.000000},
 	"a100":  {GlyphName: "a100", Wx: 668.000000, Wy: 0.000000},

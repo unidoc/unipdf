@@ -39,7 +39,7 @@ func (font FontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := helveticaObliqueCharMetrics[glyph]
+	metrics, has := HelveticaObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -58,8 +58,8 @@ func (font FontHelveticaOblique) ToPdfObject() core.PdfObject {
 	return &core.PdfIndirectObject{PdfObject: fontDict}
 }
 
-// Helvetica-Oblique font metics loaded from afms/Helvetica-Oblique.afm.  See afms/MustRead.html for license information.
-var helveticaObliqueCharMetrics = map[string]CharMetrics{
+// Helvetica-Oblique font metrics loaded from afms/Helvetica-Oblique.afm.  See afms/MustRead.html for license information.
+var HelveticaObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},

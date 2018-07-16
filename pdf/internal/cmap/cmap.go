@@ -250,7 +250,7 @@ func (cmap *CMap) matchCode(data []byte) (code CharCode, n int, matched bool) {
 	return
 }
 
-// inCodespace returns true if `code` in `numBytes` byte codespace
+// inCodespace returns true if `code` is in the `numBytes` byte codespace.
 func (cmap *CMap) inCodespace(code CharCode, numBytes int) bool {
 	for _, cs := range cmap.codespaces {
 		if cs.Low <= code && code <= cs.High && numBytes == cs.NumBytes {
@@ -260,14 +260,14 @@ func (cmap *CMap) inCodespace(code CharCode, numBytes int) bool {
 	return false
 }
 
-// LoadCmapFromDataCID parses in-memory cmap `data` and returns the resulting CMap
-// Convenience function
+// LoadCmapFromDataCID parses the in-memory cmap `data` and returns the resulting CMap.
+// It is a convenience function,
 func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 	return LoadCmapFromData(data, false)
 }
 
-// LoadCmapFromData parses in-memory cmap `data` and returns the resulting CMap
-// If isCID is true then use 1-byte encodings, otherwise use codespaces in the cmap
+// LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
+// If isCID is true then it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
 //
 // 9.10.3 ToUnicode CMaps (page 293)
 // The CMap defined in the ToUnicode entry of the font dictionary shall follow the syntax for CMaps

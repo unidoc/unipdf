@@ -39,7 +39,7 @@ func (font FontCourierOblique) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontCourierOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := courierObliqueCharMetrics[glyph]
+	metrics, has := CourierObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -58,8 +58,8 @@ func (font FontCourierOblique) ToPdfObject() core.PdfObject {
 	return &core.PdfIndirectObject{PdfObject: fontDict}
 }
 
-// Courier-Oblique font metics loaded from afms/Courier-Oblique.afm.  See afms/MustRead.html for license information.
-var courierObliqueCharMetrics = map[string]CharMetrics{
+// Courier-Oblique font metrics loaded from afms/Courier-Oblique.afm.  See afms/MustRead.html for license information.
+var CourierObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

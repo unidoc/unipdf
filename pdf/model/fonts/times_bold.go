@@ -39,7 +39,7 @@ func (font FontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := timesBoldCharMetrics[glyph]
+	metrics, has := TimesBoldCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -58,8 +58,8 @@ func (font FontTimesBold) ToPdfObject() core.PdfObject {
 	return &core.PdfIndirectObject{PdfObject: fontDict}
 }
 
-// Times-Bold font metics loaded from afms/Times-Bold.afm.  See afms/MustRead.html for license information.
-var timesBoldCharMetrics = map[string]CharMetrics{
+// Times-Bold font metrics loaded from afms/Times-Bold.afm.  See afms/MustRead.html for license information.
+var TimesBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},
