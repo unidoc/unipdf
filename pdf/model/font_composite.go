@@ -7,6 +7,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/cmap"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
@@ -87,11 +88,49 @@ import (
 // associated CIDFont is called its descendant.
 type pdfFontType0 struct {
 	container *core.PdfIndirectObject
-	*fontSkeleton
+
+	// These fields are common to all PDF fonts.
+
+	basefont string // The font's "BaseFont" field.
+	subtype  string // The font's "Subtype" field.
+
+	// These are optional fields in the PDF font
+	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
+
+	// These objects are computed from optional fields in the PDF font
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	objectNumber int64
+
+	// These fields are specific to Type 0 fonts.
 
 	encoder        textencoding.TextEncoder
 	Encoding       core.PdfObject
 	DescendantFont *PdfFont // Can be either CIDFontType0 or CIDFontType2 font.
+}
+
+// pdfFontType0FromSkeleton returns a pdfFontType0 with its common fields initalized.
+func pdfFontType0FromSkeleton(base *fontCommon) *pdfFontType0 {
+	return &pdfFontType0{
+		basefont:       base.basefont,
+		subtype:        base.subtype,
+		toUnicode:      base.toUnicode,
+		fontDescriptor: base.fontDescriptor,
+		objectNumber:   base.objectNumber,
+	}
+}
+
+// baseFields returns the fields of `font` that are common to all PDF fonts.
+func (font *pdfFontType0) baseFields() *fontCommon {
+	return &fontCommon{
+		basefont:       font.basefont,
+		subtype:        font.subtype,
+		toUnicode:      font.toUnicode,
+		fontDescriptor: font.fontDescriptor,
+		objectNumber:   font.objectNumber,
+	}
 }
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
@@ -119,7 +158,8 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
 		font.container = &core.PdfIndirectObject{}
 	}
-	d := font.toDict("Type0")
+	d := font.baseFields().asPdfObjectDictionary("Type0")
+
 	font.container.PdfObject = d
 
 	if font.encoder != nil {
@@ -133,16 +173,14 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	return font.container
 }
 
-// newPdfFontType0FromPdfObject makes a pdfFontType0 based on the input `d` in skeleton.
+// newPdfFontType0FromPdfObject makes a pdfFontType0 based on the input `d` in base.
 // If a problem is encountered, an error is returned.
-func newPdfFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfFontType0, error) {
-
-	d := skeleton.dict
+func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfFontType0, error) {
 
 	// DescendantFonts.
 	arr, err := core.GetArray(core.TraceToDirectObject(d.Get("DescendantFonts")))
 	if err != nil {
-		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array %s", skeleton)
+		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array %s", base)
 		return nil, core.ErrRangeError
 	}
 	if len(arr) != 1 {
@@ -151,14 +189,12 @@ func newPdfFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfFontType0, error)
 	}
 	df, err := newPdfFontFromPdfObject(arr[0], false)
 	if err != nil {
-		common.Log.Debug("ERROR: Failed loading descendant font: err=%v %s", err, skeleton)
+		common.Log.Debug("ERROR: Failed loading descendant font: err=%v %s", err, base)
 		return nil, err
 	}
 
-	font := &pdfFontType0{
-		fontSkeleton:   skeleton,
-		DescendantFont: df,
-	}
+	font := pdfFontType0FromSkeleton(base)
+	font.DescendantFont = df
 
 	encoderName, err := core.GetName(core.TraceToDirectObject(d.Get("Encoding")))
 	// XXX: FIXME This is not valid if encoder is not Identity-H !@#$
@@ -172,14 +208,51 @@ func newPdfFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfFontType0, error)
 // XXX: This is a stub.
 type pdfCIDFontType0 struct {
 	container *core.PdfIndirectObject
-	skeleton  *fontSkeleton // Elements common to all font types.
+
+	// These fields are common to all PDF fonts.
+
+	basefont string // The font's "BaseFont" field.
+	subtype  string // The font's "Subtype" field.
+
+	// These are optional fields in the PDF font
+	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
+
+	// These objects are computed from optional fields in the PDF font
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	objectNumber int64
+
+	// These fields are specific to Type 0 fonts.
 
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
 	CIDSystemInfo  core.PdfObject // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
 	FontDescriptor core.PdfObject // (Required) Describes the CIDFont’s default metrics other than its glyph widths
+}
 
+// pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
+func pdfCIDFontType0FromSkeleton(base *fontCommon) *pdfCIDFontType0 {
+	return &pdfCIDFontType0{
+		basefont:       base.basefont,
+		subtype:        base.subtype,
+		toUnicode:      base.toUnicode,
+		fontDescriptor: base.fontDescriptor,
+		objectNumber:   base.objectNumber,
+	}
+}
+
+// baseFields returns the fields of `font` that are common to all PDF fonts.
+func (font *pdfCIDFontType0) baseFields() *fontCommon {
+	return &fontCommon{
+		basefont:       font.basefont,
+		subtype:        font.subtype,
+		toUnicode:      font.toUnicode,
+		fontDescriptor: font.fontDescriptor,
+		objectNumber:   font.objectNumber,
+	}
 }
 
 // Encoder returns the font's text encoder.
@@ -208,19 +281,18 @@ func (font *pdfCIDFontType0) ToPdfObject() core.PdfObject {
 // newPdfCIDFontType0FromPdfObject creates a pdfCIDFontType0 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading an error is returned.
 // XXX: This is a stub.
-func newPdfCIDFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfCIDFontType0, error) {
-	if skeleton.subtype != "CIDFontType0" {
-		common.Log.Debug("ERROR: Font SubType != CIDFontType0. font=%s", skeleton)
+func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfCIDFontType0, error) {
+	if base.subtype != "CIDFontType0" {
+		common.Log.Debug("ERROR: Font SubType != CIDFontType0. font=%s", base)
 		return nil, core.ErrRangeError
 	}
 
-	font := &pdfCIDFontType0{skeleton: skeleton}
-	d := skeleton.dict
+	font := pdfCIDFontType0FromSkeleton(base)
 
 	// CIDSystemInfo.
 	obj := core.TraceToDirectObject(d.Get("CIDSystemInfo"))
 	if obj == nil {
-		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", skeleton)
+		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", base)
 		return nil, ErrRequiredAttributeMissing
 	}
 	font.CIDSystemInfo = obj
@@ -230,10 +302,26 @@ func newPdfCIDFontType0FromPdfObject(skeleton *fontSkeleton) (*pdfCIDFontType0, 
 
 // pdfCIDFontType2 represents a CIDFont Type2 font dictionary.
 type pdfCIDFontType2 struct {
-	container     *core.PdfIndirectObject
-	*fontSkeleton // Elements common to all font types
+	container *core.PdfIndirectObject
 
-	encoder   textencoding.TextEncoder // !@#$ In skeleton?
+	// These fields are common to all PDF fonts.
+
+	basefont string // The font's "BaseFont" field.
+	subtype  string // The font's "Subtype" field.
+
+	// These are optional fields in the PDF font
+	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
+
+	// These objects are computed from optional fields in the PDF font
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	objectNumber int64
+
+	// These fields are specific to Type 0 fonts.
+
+	encoder   textencoding.TextEncoder // !@#$ In base?
 	ttfParser *fonts.TtfType
 
 	CIDSystemInfo core.PdfObject
@@ -248,6 +336,28 @@ type pdfCIDFontType2 struct {
 
 	// Also mapping between GIDs (glyph index) and width.
 	gidToWidthMap map[uint16]int
+}
+
+// pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
+func pdfCIDFontType2FromSkeleton(base *fontCommon) *pdfCIDFontType2 {
+	return &pdfCIDFontType2{
+		basefont:       base.basefont,
+		subtype:        base.subtype,
+		toUnicode:      base.toUnicode,
+		fontDescriptor: base.fontDescriptor,
+		objectNumber:   base.objectNumber,
+	}
+}
+
+// baseFields returns the fields of `font` that are common to all PDF fonts.
+func (font *pdfCIDFontType2) baseFields() *fontCommon {
+	return &fontCommon{
+		basefont:       font.basefont,
+		subtype:        font.subtype,
+		toUnicode:      font.toUnicode,
+		fontDescriptor: font.fontDescriptor,
+		objectNumber:   font.objectNumber,
+	}
 }
 
 // Encoder returns the font's text encoder.
@@ -289,7 +399,7 @@ func (font *pdfCIDFontType2) ToPdfObject() core.PdfObject {
 	if font.container == nil {
 		font.container = &core.PdfIndirectObject{}
 	}
-	d := font.toDict("CIDFontType2")
+	d := font.baseFields().asPdfObjectDictionary("CIDFontType2")
 	font.container.PdfObject = d
 
 	if font.CIDSystemInfo != nil {
@@ -316,19 +426,18 @@ func (font *pdfCIDFontType2) ToPdfObject() core.PdfObject {
 
 // newPdfCIDFontType2FromPdfObject creates a pdfCIDFontType2 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading, an error is returned.
-func newPdfCIDFontType2FromPdfObject(skeleton *fontSkeleton) (*pdfCIDFontType2, error) {
-	if skeleton.subtype != "CIDFontType2" {
-		common.Log.Debug("ERROR: Font SubType != CIDFontType2. font=%s", skeleton)
+func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfCIDFontType2, error) {
+	if base.subtype != "CIDFontType2" {
+		common.Log.Debug("ERROR: Font SubType != CIDFontType2. font=%s", base)
 		return nil, core.ErrRangeError
 	}
 
-	font := &pdfCIDFontType2{fontSkeleton: skeleton}
-	d := skeleton.dict
+	font := pdfCIDFontType2FromSkeleton(base)
 
 	// CIDSystemInfo.
 	obj := d.Get("CIDSystemInfo")
 	if obj == nil {
-		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", skeleton)
+		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", base)
 		return nil, ErrRequiredAttributeMissing
 	}
 	font.CIDSystemInfo = obj
@@ -357,8 +466,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	// Prepare the inner descendant font (CIDFontType2).
-	skeletonCID := fontSkeleton{subtype: "CIDFontType2"}
-	cidfont := &pdfCIDFontType2{fontSkeleton: &skeletonCID}
+	cidfont := &pdfCIDFontType2{subtype: "CIDFontType2"}
 	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes ➞ runes
@@ -370,7 +478,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return runes[i] < runes[j]
 	})
 
-	skeleton := fontSkeleton{
+	base := fontCommon{
 		subtype:  "Type0",
 		basefont: ttf.PostScriptName,
 	}
@@ -476,15 +584,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	flags |= 1 << 2 // Symbolic.
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
-	skeleton.fontDescriptor = descriptor
+	base.fontDescriptor = descriptor
 	descendantFont := PdfFont{
-		context:      cidfont,
-		fontSkeleton: skeletonCID,
+		context: cidfont,
 	}
 
 	// Make root Type0 font.
 	type0 := pdfFontType0{
-		fontSkeleton:   &skeleton,
+		fontDescriptor: descriptor,
 		DescendantFont: &descendantFont,
 		Encoding:       core.MakeName("Identity-H"),
 		encoder:        textencoding.NewTrueTypeFontEncoder(ttf.Chars),
@@ -492,8 +599,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Build Font.
 	font := PdfFont{
-		fontSkeleton: skeleton,
-		context:      &type0,
+		context: &type0,
 	}
 
 	return &font, nil

@@ -22,27 +22,23 @@ import (
 // - Type1
 // - TrueType
 // etc.
-// It also holds the elements common to all fonts in fontSkeleton.
-// XXX: The idea behind fontSkeleton is to avoid replicating the commmon font field parsing code
-//      in all fonts. Is there a better way of doing this?
 type PdfFont struct {
-	fontSkeleton            // The fields common to all fonts
-	context      fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
 // String returns a string that describes `font`.
 func (font PdfFont) String() string {
-	return fmt.Sprintf("%T %s", font.context, font.fontSkeleton.String())
+	return fmt.Sprintf("FONT{%T %s}", font.context, font.baseFields().String())
 }
 
 // BaseFont returns the font's "BaseFont" field.
 func (font PdfFont) BaseFont() string {
-	return font.basefont
+	return font.baseFields().basefont
 }
 
 // Subtype returns the font's "Subtype" field.
 func (font PdfFont) Subtype() string {
-	subtype := font.subtype
+	subtype := font.baseFields().subtype
 	if t, ok := font.context.(*pdfFontType0); ok {
 		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
 	}
@@ -51,26 +47,20 @@ func (font PdfFont) Subtype() string {
 
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
-	if font.toUnicodeCmap == nil {
+	if font.baseFields().toUnicodeCmap == nil {
 		return ""
 	}
-	return font.toUnicodeCmap.Name()
+	return font.baseFields().toUnicodeCmap.Name()
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one the standard 14 font names.
 func NewStandard14Font(basefont string) (*PdfFont, error) {
-	std, ok := fonts.Standard14Fonts[basefont]
+	std, ok := standard14Fonts[basefont]
 	if !ok {
 		return nil, ErrFontNotSupported
 	}
-	return &PdfFont{
-		fontSkeleton: fontSkeleton{
-			subtype:  "Type1",
-			basefont: basefont,
-		},
-		context: std,
-	}, nil
+	return &PdfFont{context: &std}, nil
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an
@@ -84,43 +74,43 @@ func NewPdfFontFromPdfObject(fontObj core.PdfObject) (*PdfFont, error) {
 // The allowType0 flag indicates whether loading Type0 font should be supported.  This is used to
 // avoid cyclical loading.
 func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont, error) {
-	skeleton, err := newFontSkeletonFromPdfObject(fontObj)
+	d, base, err := newFontBaseFieldsFromPdfObject(fontObj)
 	if err != nil {
 		return nil, err
 	}
-	font := &PdfFont{fontSkeleton: *skeleton}
 
-	switch skeleton.subtype {
+	font := &PdfFont{}
+	switch base.subtype {
 	case "Type0":
 		if !allowType0 {
 			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", font)
 			return nil, errors.New("Cyclical type0 loading")
 		}
-		type0font, err := newPdfFontType0FromPdfObject(skeleton)
+		type0font, err := newPdfFontType0FromPdfObject(d, base)
 		if err != nil {
-			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", font, err)
+			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", base, err)
 			return nil, err
 		}
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType": // !@#$
 		var simplefont *pdfFontSimple
-		if std, ok := fonts.Standard14Fonts[font.basefont]; ok && font.subtype == "Type1" {
-			font.context = std
+		if std, ok := standard14Fonts[base.basefont]; ok && base.subtype == "Type1" {
+			font.context = &std
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
-			stdSkeleton, err := newFontSkeletonFromPdfObject(stdObj)
+			d, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
 			if err != nil {
-				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
+				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
-			simplefont, err = newSimpleFontFromPdfObject(stdSkeleton, true)
+			simplefont, err = newSimpleFontFromPdfObject(d, stdBase, true)
 			if err != nil {
-				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", font, std)
+				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(skeleton, false)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, false)
 			if err != nil {
-				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", font, err)
+				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err)
 				return nil, err
 			}
 		}
@@ -130,22 +120,22 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		}
 		font.context = simplefont
 	case "CIDFontType0":
-		cidfont, err := newPdfCIDFontType0FromPdfObject(skeleton)
+		cidfont, err := newPdfCIDFontType0FromPdfObject(d, base)
 		if err != nil {
 			common.Log.Debug("ERROR: While loading cid font type0 font: %v", err)
 			return nil, err
 		}
 		font.context = cidfont
 	case "CIDFontType2":
-		cidfont, err := newPdfCIDFontType2FromPdfObject(skeleton)
+		cidfont, err := newPdfCIDFontType2FromPdfObject(d, base)
 		if err != nil {
-			common.Log.Debug("ERROR: While loading cid font type2 font. font=%s err=%v", font, err)
+			common.Log.Debug("ERROR: While loading cid font type2 font. font=%s err=%v", base, err)
 			return nil, err
 		}
 		font.context = cidfont
 	default:
-		common.Log.Debug("ERROR: Unsupported font type: font=%s", font)
-		return nil, fmt.Errorf("Unsupported font type: font=%s", font)
+		common.Log.Debug("ERROR: Unsupported font type: font=%s", base)
+		return nil, fmt.Errorf("Unsupported font type: font=%s", base)
 	}
 
 	return font, nil
@@ -165,7 +155,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	common.Log.Debug("showText: data=[% 02x]=%#q", data, data)
 
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
-	if font.isCIDFont() {
+	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
 		}
@@ -186,8 +176,8 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	charstrings := make([]string, 0, len(charcodes))
 	numMisses := 0
 	for _, code := range charcodes {
-		if font.toUnicodeCmap != nil {
-			r, ok := font.toUnicodeCmap.CharcodeToUnicode2(cmap.CharCode(code))
+		if font.baseFields().toUnicodeCmap != nil {
+			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode2(cmap.CharCode(code))
 			if ok {
 				charstrings = append(charstrings, r)
 				continue
@@ -203,7 +193,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 
 			common.Log.Debug("ERROR: No rune. code=0x%04x data=[% 02x]=%#q charcodes=[% 04x] CID=%t\n"+
 				"\tfont=%s\n\tencoding=%s",
-				code, data, data, charcodes, font.isCIDFont(), font, encoder)
+				code, data, data, charcodes, font.baseFields().isCIDFont(), font, encoder)
 			numMisses++
 			charstrings = append(charstrings, cmap.MissingCodeString)
 		}
@@ -277,40 +267,36 @@ func (font PdfFont) actualFont() fonts.Font {
 		return t
 	case fonts.FontCourier:
 		return t
-	case fonts.FontCourierBold:
-		return t
-	case fonts.FontCourierBoldOblique:
-		return t
-	case fonts.FontCourierOblique:
-		return t
-	case fonts.FontHelvetica:
-		return t
-	case fonts.FontHelveticaBold:
-		return t
-	case fonts.FontHelveticaBoldOblique:
-		return t
-	case fonts.FontHelveticaOblique:
-		return t
-	case fonts.FontTimesRoman:
-		return t
-	case fonts.FontTimesBold:
-		return t
-	case fonts.FontTimesBoldItalic:
-		return t
-	case fonts.FontTimesItalic:
-		return t
-	case fonts.FontSymbol:
-		return t
-	case fonts.FontZapfDingbats:
-		return t
 	default:
 		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
 		return nil
 	}
 }
 
-// fontSkeleton represents the fields that are common to all PDF fonts.
-type fontSkeleton struct {
+// baseFields returns the fields of `font`.context that are common to all PDF fonts.
+func (font PdfFont) baseFields() *fontCommon {
+	if font.context == nil {
+		common.Log.Debug("ERROR: baseFields. context is nil.")
+		panic("RRRR")
+	}
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		return t.baseFields()
+	case *pdfFontType0:
+		return t.baseFields()
+	case *pdfCIDFontType0:
+		return t.baseFields()
+	case *pdfCIDFontType2:
+		return t.baseFields()
+	default:
+		//common.Log.Error("ERROR: base. Unknown font type %t. font=%s", t, font.String())
+		panic(fmt.Errorf("ERROR: base. Unknown font type %t. ", t))
+		return nil
+	}
+}
+
+// fontCommon represents the fields that are common to all PDF fonts.
+type fontCommon struct {
 	// All fonts have these fields
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
@@ -322,68 +308,65 @@ type fontSkeleton struct {
 	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
 	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
 
-	// This is an internal implementation detail. It is passed to specific font types so they can parse it.
-	dict *core.PdfObjectDictionary
-
 	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
 	objectNumber int64
 }
 
-// toFont returns a core.PdfObjectDictionary for `skel`.
+// asPdfObjectDictionary returns `base` as a core.PdfObjectDictionary.
 // It is for use in font ToPdfObject functions.
-// NOTE: The returned dict's "Subtype" field is set to `subtype` if `skel` doesn't have a subtype.
-func (skel fontSkeleton) toDict(subtype string) *core.PdfObjectDictionary {
+// NOTE: The returned dict's "Subtype" field is set to `subtype` if `base` doesn't have a subtype.
+func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDictionary {
 
-	if subtype != "" && skel.subtype != "" && subtype != skel.subtype {
-		common.Log.Debug("ERROR: toDict. Overriding subtype to %#q %s", subtype, skel)
-	} else if subtype == "" && skel.subtype == "" {
-		common.Log.Debug("ERROR: toDict no subtype. font=%s", skel)
-	} else if skel.subtype == "" {
-		skel.subtype = subtype
+	if subtype != "" && base.subtype != "" && subtype != base.subtype {
+		common.Log.Debug("ERROR: asPdfObjectDictionary. Overriding subtype to %#q %s", subtype, base)
+	} else if subtype == "" && base.subtype == "" {
+		common.Log.Debug("ERROR: asPdfObjectDictionary no subtype. font=%s", base)
+	} else if base.subtype == "" {
+		base.subtype = subtype
 	}
 
 	d := core.MakeDict()
 	d.Set("Type", core.MakeName("Font"))
-	d.Set("BaseFont", core.MakeName(skel.basefont))
-	d.Set("Subtype", core.MakeName(skel.subtype))
+	d.Set("BaseFont", core.MakeName(base.basefont))
+	d.Set("Subtype", core.MakeName(base.subtype))
 
-	if skel.fontDescriptor != nil {
-		d.Set("FontDescriptor", skel.fontDescriptor.ToPdfObject())
+	if base.fontDescriptor != nil {
+		d.Set("FontDescriptor", base.fontDescriptor.ToPdfObject())
 	}
-	if skel.toUnicode != nil {
-		d.Set("ToUnicode", skel.toUnicode)
+	if base.toUnicode != nil {
+		d.Set("ToUnicode", base.toUnicode)
 	}
 	return d
 }
 
-// String returns a string that describes `skel`.
-func (skel fontSkeleton) String() string {
+// String returns a string that describes `base`.
+func (base fontCommon) String() string {
 	descriptor := ""
-	if skel.fontDescriptor != nil {
-		descriptor = skel.fontDescriptor.String()
+	if base.fontDescriptor != nil {
+		descriptor = base.fontDescriptor.String()
 	}
-	return fmt.Sprintf("FONT{%#q %#q obj=%d %s}", skel.subtype, skel.basefont, skel.objectNumber, descriptor)
+	return fmt.Sprintf("FONT{%#q %#q obj=%d %s}", base.subtype, base.basefont, base.objectNumber, descriptor)
 }
 
-// isCIDFont returns true if `skel` is a CID font.
-func (skel fontSkeleton) isCIDFont() bool {
-	if skel.subtype == "" {
-		common.Log.Debug("ERROR: isCIDFont. context is nil. font=%s", skel)
+// isCIDFont returns true if `base` is a CID font.
+func (base fontCommon) isCIDFont() bool {
+	if base.subtype == "" {
+		common.Log.Debug("ERROR: isCIDFont. context is nil. font=%s", base)
 	}
 	isCID := false
-	switch skel.subtype {
+	switch base.subtype {
 	case "Type0", "CIDFontType0", "CIDFontType2":
 		isCID = true
 	}
-	common.Log.Trace("isCIDFont: isCID=%t font=%s", isCID, skel)
+	common.Log.Trace("isCIDFont: isCID=%t font=%s", isCID, base)
 	return isCID
 }
 
-// newFontSkeletonFromPdfObject loads a fontSkeleton from a dictionary.  If there is a problem an
-// error is returned.
-// The fontSkeleton is the group of fields common to all PDF fonts.
-func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error) {
-	font := &fontSkeleton{}
+// newFontBaseFieldsFromPdfObject returns `fontObj` as a dictionary the common fields from that
+// dictionary in the fontCommon return.  If there is a problem an error is returned.
+// The fontCommon is the group of fields common to all PDF fonts.
+func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon, error) {
+	font := &fontCommon{}
 
 	if obj, ok := fontObj.(*core.PdfIndirectObject); ok {
 		font.objectNumber = obj.ObjectNumber
@@ -394,36 +377,35 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 	d, ok := dictObj.(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
-		return nil, ErrFontNotSupported
+		return nil, nil, ErrFontNotSupported
 	}
-	font.dict = d
 
 	objtype, err := core.GetName(core.TraceToDirectObject(d.Get("Type")))
 	if err != nil {
 		common.Log.Debug("ERROR: Font Incompatibility. Type (Required) missing")
-		return nil, ErrRequiredAttributeMissing
+		return nil, nil, ErrRequiredAttributeMissing
 	}
 	if objtype != "Font" {
 		common.Log.Debug("ERROR: Font Incompatibility. Type=%q. Should be %q.", objtype, "Font")
-		return nil, core.ErrTypeError
+		return nil, nil, core.ErrTypeError
 	}
 
 	subtype, err := core.GetName(core.TraceToDirectObject(d.Get("Subtype")))
 	if err != nil {
 		common.Log.Debug("ERROR: Font Incompatibility. Subtype (Required) missing")
-		return nil, ErrRequiredAttributeMissing
+		return nil, nil, ErrRequiredAttributeMissing
 	}
 	font.subtype = subtype
 
 	if subtype == "Type3" {
 		common.Log.Debug("ERROR: Type 3 font not supprted. d=%s", d)
-		return nil, ErrFontNotSupported
+		return nil, nil, ErrFontNotSupported
 	}
 
 	basefont, err := core.GetName(core.TraceToDirectObject(d.Get("BaseFont")))
 	if err != nil {
 		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
-		return nil, ErrRequiredAttributeMissing
+		return nil, nil, ErrRequiredAttributeMissing
 	}
 	font.basefont = basefont
 
@@ -432,7 +414,7 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 		fontDescriptor, err := newPdfFontDescriptorFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("ERROR: Bad font descriptor. err=%v", err)
-			return nil, err
+			return nil, nil, err
 		}
 		font.fontDescriptor = fontDescriptor
 	}
@@ -441,12 +423,12 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 	if font.toUnicode != nil {
 		codemap, err := toUnicodeToCmap(font.toUnicode, font.isCIDFont())
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		font.toUnicodeCmap = codemap
 	}
 
-	return font, nil
+	return d, font, nil
 }
 
 // toUnicodeToCmap returns a CMap of `toUnicode` if it exists

@@ -6,6 +6,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/cmap"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
@@ -27,9 +28,23 @@ import (
 //   containing font-wide metrics and other attributes of the font.
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
-	container     *core.PdfIndirectObject
-	*fontSkeleton // Elements common to all font types
+	container *core.PdfIndirectObject
 
+	// These fields are common to all PDF fonts.
+	basefont string // The font's "BaseFont" field.
+	subtype  string // The font's "Subtype" field.
+
+	// These are optional fields in the PDF font
+	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
+
+	// These objects are computed from optional fields in the PDF font
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	objectNumber int64
+
+	// These fields are specific to simple PDF fonts.
 	firstChar  int
 	lastChar   int
 	charWidths []float64
@@ -41,6 +56,31 @@ type pdfFontSimple struct {
 	LastChar  core.PdfObject
 	Widths    core.PdfObject
 	Encoding  core.PdfObject
+
+	// Standard 14 fonts metrics
+	fontMetrics map[string]fonts.CharMetrics
+}
+
+// pdfCIDFontType0FromSkeleton returns a pdfFontSimple with its common fields initalized.
+func pdfFontSimpleFromSkeleton(base *fontCommon) *pdfFontSimple {
+	return &pdfFontSimple{
+		basefont:       base.basefont,
+		subtype:        base.subtype,
+		toUnicode:      base.toUnicode,
+		fontDescriptor: base.fontDescriptor,
+		objectNumber:   base.objectNumber,
+	}
+}
+
+// baseFields returns the fields of `font` that are common to all PDF fonts.
+func (font *pdfFontSimple) baseFields() *fontCommon {
+	return &fontCommon{
+		basefont:       font.basefont,
+		subtype:        font.subtype,
+		toUnicode:      font.toUnicode,
+		fontDescriptor: font.fontDescriptor,
+		objectNumber:   font.objectNumber,
+	}
 }
 
 // Encoder returns the font's text encoder.
@@ -56,6 +96,11 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+	if font.fontMetrics != nil {
+		metrics, ok := font.fontMetrics[glyph]
+		return metrics, ok
+	}
+
 	metrics := fonts.CharMetrics{}
 
 	code, found := font.encoder.GlyphToCharcode(glyph)
@@ -87,7 +132,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 }
 
 // newSimpleFontFromPdfObject creates a pdfFontSimple from dictionary `d`. Elements of `d` that
-// are already parsed are contained in `skeleton`.
+// are already parsed are contained in `base`.
 // An error is returned if there is a problem with loading.
 // !@#$ Just return a base 14 font, if obj is a base 14 font
 //
@@ -96,20 +141,14 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 //
 // !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
 //      Need to get TrueType font's cmap
-func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSimple, error) {
-	font := &pdfFontSimple{fontSkeleton: skeleton}
-
-	d := skeleton.dict
+func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool) (*pdfFontSimple, error) {
+	font := pdfFontSimpleFromSkeleton(base)
 
 	// !@#$ Failing on ~/testdata/The-Byzantine-Generals-Problem.pdf
+	// FirstChar is not defined in ~/testdata/shamirturing.pdf
 	if !std14 {
 		obj := d.Get("FirstChar")
 		if obj == nil {
-			// See ~/testdata/shamirturing.pdf
-			// if skeleton.subtype == "TrueType" {
-			// 	common.Log.Debug("ERROR: FirstChar attribute missing. font=%s d=%s", skeleton, d)
-			// 	return nil, ErrRequiredAttributeMissing
-			// }
 			obj = core.PdfObject(core.MakeInteger(0))
 		}
 		font.FirstChar = obj
@@ -123,11 +162,7 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 
 		obj = d.Get("LastChar")
 		if obj == nil {
-			// if skeleton.subtype == "TrueType" {
-			// 	common.Log.Debug("ERROR: LastChar attribute missing")
-			// 	return nil, ErrRequiredAttributeMissing
-			// }
-			obj = core.PdfObject(core.MakeInteger(0))
+			obj = core.PdfObject(core.MakeInteger(255))
 		}
 		font.LastChar = obj
 		intVal, ok = core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
@@ -140,9 +175,6 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 		font.charWidths = []float64{}
 		obj = d.Get("Widths")
 		if obj != nil {
-			// 	common.Log.Debug("ERROR: Widths missing from font")
-			// 	return nil, ErrRequiredAttributeMissing
-			// }
 			font.Widths = obj
 
 			arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
@@ -173,7 +205,6 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 // addEncoding adds the encoding to the font.
 // The order of precedence is important
 func (font *pdfFontSimple) addEncoding() error {
-	skeleton := font.fontSkeleton
 	var baseEncoder string
 	var differences map[byte]string
 	var err error
@@ -181,12 +212,12 @@ func (font *pdfFontSimple) addEncoding() error {
 		// !@#$ Stop setting default encoding in getFontEncoding XXX
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
 		if err != nil {
-			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", skeleton.basefont,
-				skeleton.subtype, font.Encoding, font.Encoding, err)
+			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
+				font.subtype, font.Encoding, font.Encoding, err)
 			return err
 		}
-		common.Log.Debug("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", skeleton.basefont,
-			skeleton.subtype, font.Encoding, font.Encoding)
+		common.Log.Debug("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", font.basefont,
+			font.subtype, font.Encoding, font.Encoding)
 
 		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 		if err != nil {
@@ -196,9 +227,9 @@ func (font *pdfFontSimple) addEncoding() error {
 	}
 
 	if font.Encoder() == nil {
-		descriptor := skeleton.fontDescriptor
+		descriptor := font.fontDescriptor
 		if descriptor != nil {
-			switch skeleton.subtype {
+			switch font.subtype {
 			case "Type1":
 				// XXX: !@#$ Is this the right order? Do the /Differences need to be reapplied?
 				if descriptor.fontFile != nil && descriptor.fontFile.encoder != nil {
@@ -212,7 +243,6 @@ func (font *pdfFontSimple) addEncoding() error {
 					if err == nil {
 						font.SetEncoder(encoder)
 					}
-
 				}
 			}
 		}
@@ -277,7 +307,7 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	if font.container == nil {
 		font.container = &core.PdfIndirectObject{}
 	}
-	d := font.toDict("")
+	d := font.baseFields().asPdfObjectDictionary("")
 	font.container.PdfObject = d
 
 	if font.FirstChar != nil {
@@ -291,6 +321,8 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	}
 	if font.Encoding != nil {
 		d.Set("Encoding", font.Encoding)
+	} else if font.encoder != nil {
+		d.Set("Encoding", font.encoder.ToPdfObject())
 	}
 
 	return font.container
@@ -309,8 +341,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return nil, err
 	}
 
-	skeleton := fontSkeleton{subtype: "TrueType"}
-	truefont := &pdfFontSimple{fontSkeleton: &skeleton}
+	truefont := &pdfFontSimple{subtype: "TrueType"}
 
 	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
 	// then can derive
@@ -403,12 +434,84 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
 	// Build Font.
-	skeleton.fontDescriptor = descriptor
+	truefont.fontDescriptor = descriptor
 
 	font := &PdfFont{
-		fontSkeleton: skeleton,
-		context:      truefont,
+		context: truefont,
 	}
 
 	return font, nil
+}
+
+var standard14Fonts = map[string]pdfFontSimple{
+	"Courier": pdfFontSimple{subtype: "Type1",
+		basefont:    "Courier",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.CourierCharMetrics,
+	},
+	"Courier-Bold": pdfFontSimple{subtype: "Type1",
+		basefont:    "Courier-Bold",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.CourierBoldCharMetrics,
+	},
+	"Courier-BoldOblique": pdfFontSimple{subtype: "Type1",
+		basefont:    "Courier-BoldOblique",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.CourierBoldObliqueCharMetrics,
+	},
+	"Courier-Oblique": pdfFontSimple{subtype: "Type1",
+		basefont:    "Courier-Oblique",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.CourierObliqueCharMetrics,
+	},
+	"Helvetica": pdfFontSimple{subtype: "Type1",
+		basefont:    "Helvetica",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.HelveticaCharMetrics,
+	},
+	"Helvetica-Bold": pdfFontSimple{subtype: "Type1",
+		basefont:    "Helvetica-Bold",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.HelveticaBoldCharMetrics,
+	},
+	"Helvetica-BoldOblique": pdfFontSimple{subtype: "Type1",
+		basefont:    "Helvetica-BoldOblique",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.HelveticaBoldObliqueCharMetrics,
+	},
+	"Helvetica-Oblique": pdfFontSimple{subtype: "Type1",
+		basefont:    "Helvetica-Oblique",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.HelveticaObliqueCharMetrics,
+	},
+	"Times-Roman": pdfFontSimple{subtype: "Type1",
+		basefont:    "Times-Roman",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.TimesRomanCharMetrics,
+	},
+	"Times-Bold": pdfFontSimple{subtype: "Type1",
+		basefont:    "Times-Bold",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.TimesBoldCharMetrics,
+	},
+	"Times-BoldItalic": pdfFontSimple{subtype: "Type1",
+		basefont:    "Times-BoldItalic",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.TimesBoldItalicCharMetrics,
+	},
+	"Times-Italic": pdfFontSimple{subtype: "Type1",
+		basefont:    "Times-Italic",
+		encoder:     textencoding.NewWinAnsiTextEncoder(),
+		fontMetrics: fonts.TimesItalicCharMetrics,
+	},
+	"Symbol": pdfFontSimple{subtype: "Type1",
+		basefont:    "Symbol",
+		encoder:     textencoding.NewSymbolEncoder(),
+		fontMetrics: fonts.SymbolCharMetrics,
+	},
+	"ZapfDingbats": pdfFontSimple{subtype: "Type1",
+		basefont:    "ZapfDingbats",
+		encoder:     textencoding.NewZapfDingbatsEncoder(),
+		fontMetrics: fonts.ZapfDingbatsCharMetrics,
+	},
 }
