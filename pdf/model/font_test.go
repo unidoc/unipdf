@@ -173,10 +173,12 @@ func TestTrueTypeToUnicode(t *testing.T) {
 // ttToUnicode is a TrueType font object and its ToUnicode cmap.
 // The stream data in obj 26 (the ToUnicode cmap) is Sprintf'd to avoid binary data in the `` string.
 var ttToUnicode = fmt.Sprintf(`9 0 obj
-<< /Type /Font /Subtype /TrueType /BaseFont /AHSHJL+.SFUIText /ToUnicode 26 0 R /FirstChar 33 /LastChar 79 /Widths [ 635 381 246
-583 363 282 609 252 571 523 674 560 594 542 543 609 591 637 584 874 614 614
-362 246 268 609 742 870 644 596 604 771 716 653 297 525 657 543 297 774 539
-382 382 726 968 295 538 ] >>
+	<< /Type /Font /Subtype /TrueType /BaseFont /AHSHJL+.SFUIText /ToUnicode 26 0 R
+		/FirstChar 33 /LastChar 79
+		/Widths [ 635 381 246
+		583 363 282 609 252 571 523 674 560 594 542 543 609 591 637 584 874 614 614
+		362 246 268 609 742 870 644 596 604 771 716 653 297 525 657 543 297 774 539
+		382 382 726 968 295 538 ] >>
 endobj
 26 0 obj
 << /Length 497 /Filter /FlateDecode >>
@@ -256,25 +258,3 @@ func parsePdfObjects(text string) (map[int64]core.PdfObject, error) {
 	}
 	return numObj, nil
 }
-
-// func isFontObject(obj core.PdfObject) bool {
-// 	var dict *core.PdfObjectDictionary
-// 	switch t := obj.(type) {
-// 	case *core.PdfIndirectObject:
-// 		dict = t.PdfObject.(*core.PdfObjectDictionary)
-// 	case *core.PdfObjectDictionary:
-// 		dict = t
-// 	default:
-// 		return false
-// 	}
-// 	name, err := core.GetName(dict.Get("Type"))
-// 	return err == nil && name == "Font"
-// }
-
-// func showDict(dict *core.PdfObjectDictionary) string {
-// 	parts := []string{}
-// 	for _, k := range dict.Keys() {
-// 		parts = append(parts, fmt.Sprintf("%s: %T", k, dict.Get(k)))
-// 	}
-// 	return fmt.Sprintf("{%s}", strings.Join(parts, ", "))
-// }
