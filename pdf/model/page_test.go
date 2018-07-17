@@ -26,9 +26,9 @@ func NewReaderForText(txt string) *PdfReader {
 	return r
 }
 
-// ParseIndObjSeries loads a series of indirect objects until it runs into an error.
+// ParseIndObjSeries loads a series of indirect objects until it runs into an error or EOF.
 // Fully loads the objects and traverses resolving references to *PdfIndirectObjects.
-// For use in testing.
+// For use in testing where a series of indirect objects can be defined sequentially.
 func (r *PdfReader) ParseIndObjSeries() error {
 	for {
 		obj, err := r.parser.ParseIndirectObject()
