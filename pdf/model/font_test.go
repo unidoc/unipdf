@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/core"
@@ -267,7 +266,7 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 	}
 
 	// Replace the indirect objects in all dicts with their values, if they are in numObj.
-	for i, obj := range numObj {
+	for _, obj := range numObj {
 		iobj, ok := obj.(*core.PdfIndirectObject)
 		if !ok {
 			continue
@@ -283,16 +282,7 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 				}
 			}
 		}
-		fmt.Printf("%d 0 obj %s\n", i, showDict(dict))
 	}
 
 	return numObj, nil
-}
-
-func showDict(dict *core.PdfObjectDictionary) string {
-	parts := []string{}
-	for _, k := range dict.Keys() {
-		parts = append(parts, fmt.Sprintf("%s: %T", k, dict.Get(k)))
-	}
-	return fmt.Sprintf("{%s}", strings.Join(parts, ", "))
 }
