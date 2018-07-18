@@ -234,6 +234,9 @@ func objFontObj(t *testing.T, fontDict string) error {
 	return nil
 }
 
+// parsePdfFragment parses a file containing fragments of a PDF `filename` (see
+// charcodeBytesToUnicodeTest) and returns a map of {object number: object} with indirect objects
+// replaced by their values if they are in `filename`.
 func parsePdfFragment(filename string) (map[int]core.PdfObject, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -242,8 +245,8 @@ func parsePdfFragment(filename string) (map[int]core.PdfObject, error) {
 	return parsePdfObjects(string(data))
 }
 
-// parsePdfObjects parses a fragment of a PDF `text` (e.g. ttToUnicode above) and returns a map of
-// {object number: object} with indirect objects replaced by their values if they are in `text`.
+// parsePdfObjects parses a fragment of a PDF `text` and returns a map of {object number: object}
+// with indirect objects replaced by their values if they are in `text`.
 func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 	numObj := map[int]core.PdfObject{}
 	parser := core.NewParserFromString(text)
