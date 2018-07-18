@@ -972,9 +972,9 @@ func TestTableCellWrapping(t *testing.T) {
 
 	cell = table.NewCell()
 	p = NewParagraph("C Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	p.SetEnableWrap(true)
 	cell.SetContent(p)
 	cell.SetBorder(CellBorderStyleBox, 1)
-	p.SetEnableWrap(true)
 
 	cell = table.NewCell()
 	p = NewParagraph("1,4")
@@ -1019,12 +1019,21 @@ func TestTableCellWrapping(t *testing.T) {
 	cell.SetContent(p)
 	cell.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
 
-	c.Draw(table)
+	table.SkipRows(1)
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("This is\nnewline\nwrapped")
+	p.SetEnableWrap(true)
+	cell.SetContent(p)
 
-	err := c.WriteToFile("/tmp/tablecell_wrap.pdf")
+	err := c.Draw(table)
 	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	err = c.WriteToFile("/tmp/tablecell_wrap.pdf")
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
 	}
 }
 

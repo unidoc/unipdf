@@ -220,6 +220,11 @@ func (p *Paragraph) getTextWidth() float64 {
 			return -1 // XXX/FIXME: return error.
 		}
 
+		// Ignore newline for this.. Handles as if all in one line.
+		if glyph == "controlLF" {
+			continue
+		}
+
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
 			common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
@@ -252,6 +257,17 @@ func (p *Paragraph) wrapText() error {
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %v\n", val)
 			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
+		}
+
+		// Newline wrapping.
+		if glyph == "controlLF" {
+			// Moves to next line.
+			p.textLines = append(p.textLines, string(line))
+			line = []rune{}
+			lineWidth = 0
+			widths = []float64{}
+			glyphs = []string{}
+			continue
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
@@ -426,6 +442,9 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			}
 			if glyph == "space" {
 				spaces++
+				continue
+			}
+			if glyph == "controlLF" {
 				continue
 			}
 			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
