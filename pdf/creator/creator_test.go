@@ -1022,7 +1022,7 @@ func TestTableCellWrapping(t *testing.T) {
 	table.SkipRows(1)
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderStyleBox, 1)
-	p = NewParagraph("This is\nnewline\nwrapped")
+	p = NewParagraph("This is\nnewline\nwrapped\n\nmulti")
 	p.SetEnableWrap(true)
 	cell.SetContent(p)
 
