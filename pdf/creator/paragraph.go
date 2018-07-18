@@ -45,6 +45,11 @@ type Paragraph struct {
 	enableWrap bool
 	wrapWidth  float64
 
+	// defaultWrap defines whether wrapping has been defined explictly or whether default behavior should
+	// be observed. Default behavior depends on context: normally wrap is expected, except for example in
+	// table cells wrapping is off by default.
+	defaultWrap bool
+
 	// Rotation angle (degrees).
 	angle float64
 
@@ -77,6 +82,7 @@ func NewParagraph(text string) *Paragraph {
 
 	// TODO: Can we wrap intellectually, only if given width is known?
 	p.enableWrap = true
+	p.defaultWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
 	p.angle = 0
@@ -130,6 +136,7 @@ func (p *Paragraph) Text() string {
 // SetEnableWrap sets the line wrapping enabled flag.
 func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
+	p.defaultWrap = false
 }
 
 // SetColor set the color of the Paragraph text.

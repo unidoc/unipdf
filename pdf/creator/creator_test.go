@@ -947,6 +947,87 @@ func TestTable(t *testing.T) {
 	}
 }
 
+func TestTableCellWrapping(t *testing.T) {
+	c := New()
+	c.NewPage()
+
+	table := NewTable(4) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
+
+	cell := table.NewCell()
+	p := NewParagraph("A Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p.SetEnableWrap(true)
+	p.SetWidth(cell.Width(c.Context()))
+	p.SetTextAlignment(TextAlignmentJustify)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("B Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.")
+	p.SetEnableWrap(true)
+	p.SetTextAlignment(TextAlignmentRight)
+	cell.SetContent(p)
+
+	cell = table.NewCell()
+	p = NewParagraph("C Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	p = NewParagraph("1,4")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,1")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	//table.SkipCells(1) // Skip over 2,3.
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	//p = NewParagraph("D Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	p = NewParagraph("X")
+	p.SetEnableWrap(true)
+	cell.SetContent(p)
+
+	// Skip over two rows.
+	table.SkipRows(2)
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("4,4")
+	cell.SetContent(p)
+
+	// Move down 3 rows, 2 to the left.
+	table.SkipOver(3, -2)
+	cell = table.NewCell()
+	p = NewParagraph("7,2")
+	cell.SetContent(p)
+	cell.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
+
+	c.Draw(table)
+
+	err := c.WriteToFile("/tmp/tablecell_wrap.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 // Test creating and drawing a table.
 func TestBorderedTable(t *testing.T) {
 	table := NewTable(4) // Mx4 table
