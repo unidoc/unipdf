@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
@@ -149,14 +150,18 @@ func TestCharcodeBytesToUnicode(t *testing.T) {
 }
 
 var charcodeBytesToUnicodeTest = []fontFragmentTest{
-	fontFragmentTest{
-		"TrueType font with ToUnicode cmap",
+	fontFragmentTest{"TrueType font with ToUnicode cmap",
 		"testdata/print_alerts.txt", 9,
 		[]byte{43, 40, 41, 34, 37, 42, 38, 49, 36, 38, 48, 34, 35, 36, 37, 35, 36, 58},
 		"Alerts on printing",
 	},
-	fontFragmentTest{
-		"Type1 font with FontFile entry",
+	fontFragmentTest{"Type0 font with ToUnicode cmap",
+		"testdata/CollazoBio.txt", 7,
+		[]byte{255, 50, 255, 65, 255, 78, 255, 68, 255, 79, 255, 77, 0, 32, 0, 32, 255, 77, 255, 65,
+			255, 84, 255, 82, 255, 73, 255, 67, 255, 69, 255, 83, 0, 46},
+		"Ｒａｎｄｏｍ  ｍａｔｒｉｃｅｓ.",
+	},
+	fontFragmentTest{"Type1 font with FontFile entry",
 		"testdata/lm.txt", 7,
 		[]byte{102, 65, 106, 66, 103},
 		"{A|B}",
@@ -178,6 +183,7 @@ func (f *fontFragmentTest) String() string {
 // check loads the font in PDF fragment `filename`, object number `objNum`, runs
 // CharcodeBytesToUnicode on `data` and checks that output equals `expected`.
 func (f *fontFragmentTest) check(t *testing.T) {
+	common.Log.Debug("fontFragmentTest: %s", f.description)
 	numObj, err := parsePdfFragment(f.filename)
 	if err != nil {
 		t.Errorf("Failed to parse. %s err=%v", f, err)
@@ -199,7 +205,7 @@ func (f *fontFragmentTest) check(t *testing.T) {
 		t.Errorf("Incorrect decoding. %s\nexpected=%q\n  actual=%q",
 			f, f.expected, actualText)
 	}
-	if numChars != len(actualText) {
+	if numChars != len([]rune(actualText)) {
 		t.Errorf("Incorrect numChars. %s numChars=%d expected=%d",
 			f, numChars, len(actualText))
 	}
@@ -268,24 +274,38 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 		}
 	}
 
+	common.Log.Debug("parsePdfObjects: Parsed %d objects", len(numObj))
+
 	// Replace the indirect objects in all dicts with their values, if they are in numObj.
+	replacements := []int{}
 	for _, obj := range numObj {
 		iobj, ok := obj.(*core.PdfIndirectObject)
 		if !ok {
 			continue
 		}
-		dict, ok := iobj.PdfObject.(*core.PdfObjectDictionary)
-		if !ok {
-			continue
-		}
-		for _, k := range dict.Keys() {
-			if ref, ok := dict.Get(k).(*core.PdfObjectReference); ok {
-				if o, ok := numObj[int(ref.ObjectNumber)]; ok {
-					dict.Set(k, o)
+		switch t := iobj.PdfObject.(type) {
+		case *core.PdfObjectDictionary:
+			for _, k := range t.Keys() {
+				if ref, ok := t.Get(k).(*core.PdfObjectReference); ok {
+					if o, ok := numObj[int(ref.ObjectNumber)]; ok {
+						t.Set(k, o)
+						replacements = append(replacements, int(ref.ObjectNumber))
+					}
+				}
+			}
+		case *core.PdfObjectArray:
+			for i, val := range *t {
+				if ref, ok := val.(*core.PdfObjectReference); ok {
+					if o, ok := numObj[int(ref.ObjectNumber)]; ok {
+						(*t)[i] = o
+						replacements = append(replacements, int(ref.ObjectNumber))
+					}
 				}
 			}
 		}
 	}
+
+	common.Log.Debug("parsePdfObjects: Replaced references %+v", replacements)
 
 	return numObj, nil
 }

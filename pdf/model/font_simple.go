@@ -147,7 +147,7 @@ func newSimpleFontFromPdfObject(skeleton *fontSkeleton, std14 bool) (*pdfFontSim
 
 			arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 			if !ok {
-				common.Log.Debug("ERROR: Widths attribute != array (%T)", arr)
+				common.Log.Debug("ERROR: Widths attribute != array (%T)", obj)
 				return nil, core.ErrTypeError
 			}
 

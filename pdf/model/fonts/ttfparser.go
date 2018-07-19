@@ -106,7 +106,7 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (rec TtfType, err error) {
 	obj = core.TraceToDirectObject(obj)
 	streamObj, ok := obj.(*core.PdfObjectStream)
 	if !ok {
-		common.Log.Debug("ERROR: FontFile must be a stream (%T)", obj)
+		common.Log.Debug("ERROR: FontFile2 must be a stream (%T)", obj)
 		err = core.ErrTypeError
 		return
 	}
