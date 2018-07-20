@@ -185,7 +185,7 @@ func (font *pdfFontSimple) addEncoding() error {
 				skeleton.subtype, font.Encoding, font.Encoding, err)
 			return err
 		}
-		common.Log.Debug("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", skeleton.basefont,
+		common.Log.Trace("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", skeleton.basefont,
 			skeleton.subtype, font.Encoding, font.Encoding)
 
 		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
