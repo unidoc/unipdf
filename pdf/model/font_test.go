@@ -174,6 +174,13 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 		[]byte{102, 65, 106, 66, 103},
 		"{A|B}",
 	},
+	fontFragmentTest{"Type1 font with /Encoding with /Differences",
+		"testdata/noise-invariant.txt", 102,
+		[]byte{96, 247, 39, 32, 147, 231, 148, 32, 232, 32, 193, 111, 180, 32, 105, 116,
+			169, 115, 32, 204, 195, 196, 197, 198, 199, 168, 202, 206, 226, 234, 172, 244, 173, 151,
+			177, 151, 178, 179, 183, 185, 188, 205, 184, 189},
+		"‘ł’ “Ł” Ø `o´ it's ˝ˆ˜¯˘˙¨˚ˇªº‹ı›—–—†‡•„…˛¸‰",
+	},
 }
 
 type fontFragmentTest struct {
