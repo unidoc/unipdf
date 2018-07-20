@@ -32,7 +32,11 @@ type PdfFont struct {
 
 // String returns a string that describes `font`.
 func (font PdfFont) String() string {
-	return fmt.Sprintf("%T %s", font.context, font.fontSkeleton.String())
+	enc := ""
+	if font.context.Encoder() != nil {
+		enc = font.context.Encoder().String()
+	}
+	return fmt.Sprintf("FONT{%T %s %s}", font.context, font.fontSkeleton.coreString(), enc)
 }
 
 // BaseFont returns the font's "BaseFont" field.
@@ -93,12 +97,12 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	switch skeleton.subtype {
 	case "Type0":
 		if !allowType0 {
-			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", font)
+			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", skeleton)
 			return nil, errors.New("Cyclical type0 loading")
 		}
 		type0font, err := newPdfFontType0FromPdfObject(skeleton)
 		if err != nil {
-			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", font, err)
+			common.Log.Debug("ERROR: While loading Type0 font. font=%s err=%v", skeleton, err)
 			return nil, err
 		}
 		font.context = type0font
@@ -216,7 +220,8 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 			string(data), data, len(charcodes), numMisses, font)
 	}
 
-	return strings.Join(charstrings, ""), len(charcodes), numMisses
+	out := strings.Join(charstrings, "")
+	return out, len([]rune(out)), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -358,11 +363,16 @@ func (skel fontSkeleton) toDict(subtype string) *core.PdfObjectDictionary {
 
 // String returns a string that describes `skel`.
 func (skel fontSkeleton) String() string {
+	return fmt.Sprintf("FONT{%s}", skel.coreString())
+}
+
+func (skel fontSkeleton) coreString() string {
 	descriptor := ""
 	if skel.fontDescriptor != nil {
 		descriptor = skel.fontDescriptor.String()
 	}
-	return fmt.Sprintf("FONT{%#q %#q obj=%d %s}", skel.subtype, skel.basefont, skel.objectNumber, descriptor)
+	return fmt.Sprintf("%#q %#q obj=%d ToUnicode=%t %s",
+		skel.subtype, skel.basefont, skel.objectNumber, skel.toUnicode != nil, descriptor)
 }
 
 // isCIDFont returns true if `skel` is a CID font.
@@ -393,7 +403,11 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 
 	d, ok := dictObj.(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
+		if ref, ok := dictObj.(*core.PdfObjectReference); ok {
+			common.Log.Debug("ERROR: Font is reference %s", ref)
+		} else {
+			common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
+		}
 		return nil, ErrFontNotSupported
 	}
 	font.dict = d
@@ -437,9 +451,10 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 		font.fontDescriptor = fontDescriptor
 	}
 
-	font.toUnicode = core.TraceToDirectObject(d.Get("ToUnicode"))
-	if font.toUnicode != nil {
-		codemap, err := toUnicodeToCmap(font.toUnicode, font.isCIDFont())
+	toUnicode := d.Get("ToUnicode")
+	if toUnicode != nil {
+		font.toUnicode = core.TraceToDirectObject(toUnicode)
+		codemap, err := toUnicodeToCmap(font.toUnicode, font)
 		if err != nil {
 			return nil, err
 		}
@@ -450,7 +465,7 @@ func newFontSkeletonFromPdfObject(fontObj core.PdfObject) (*fontSkeleton, error)
 }
 
 // toUnicodeToCmap returns a CMap of `toUnicode` if it exists
-func toUnicodeToCmap(toUnicode core.PdfObject, isCID bool) (*cmap.CMap, error) {
+func toUnicodeToCmap(toUnicode core.PdfObject, font *fontSkeleton) (*cmap.CMap, error) {
 	toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("ERROR: toUnicodeToCmap: Not a stream (%T)", toUnicode)
@@ -460,7 +475,13 @@ func toUnicodeToCmap(toUnicode core.PdfObject, isCID bool) (*cmap.CMap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cmap.LoadCmapFromData(data, !isCID)
+
+	cm, err := cmap.LoadCmapFromData(data, !font.isCIDFont())
+	if err != nil {
+		// Show the object number of the bad cmap to help with debugging.
+		common.Log.Debug("ERROR: ObjectNumber=%d err=%v", toUnicodeStream.ObjectNumber, err)
+	}
+	return cm, err
 }
 
 // PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile
