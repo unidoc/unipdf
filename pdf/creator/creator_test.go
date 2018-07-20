@@ -1049,6 +1049,220 @@ func TestBorderedTable2(t *testing.T) {
 	}
 }
 
+func newContent(text string, alignment TextAlignment, font fonts.Font, fontSize float64) *Paragraph {
+	p := NewParagraph(text)
+	p.SetFontSize(fontSize)
+	p.SetTextAlignment(alignment)
+	p.SetFont(font)
+	return p
+}
+
+func newBillItem(t *Table, no, date, notes, amount, con, retApplied, ret, netBill string) {
+	billNo := t.NewCell()
+	billNo.SetContent(newContent(no, TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billDate := t.NewCell()
+	billDate.SetContent(newContent(date, TextAlignmentCenter, fonts.NewFontTimesBold(), 8))
+	billNotes := t.NewCell()
+	billNotes.SetContent(newContent(notes, TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billAmount := t.NewCell()
+	billAmount.SetContent(newContent(amount, TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+	billCon := t.NewCell()
+	billCon.SetContent(newContent(con, TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billRetApplied := t.NewCell()
+	billRetApplied.SetContent(newContent(retApplied, TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+	billRet := t.NewCell()
+	billRet.SetContent(newContent(ret, TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billNetBill := t.NewCell()
+	billNetBill.SetContent(newContent(netBill, TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+}
+
+// Test creating and drawing a table.
+func TestCreatorHendricksReq1(t *testing.T) {
+	table := NewTable(3) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.35, 0.30, 0.35)
+
+	companyTitle := table.NewCell()
+	companyTitle.SetContent(newContent("Hendricks Consulting LLC", TextAlignmentLeft, fonts.NewFontTimesBold(), 12))
+
+	table.SkipCells(1)
+
+	pageHeader := table.NewCell()
+	pageHeader.SetContent(newContent("Billing Schedule by Project", TextAlignmentCenter, fonts.NewFontTimesBold(), 12))
+	pageHeader.SetBorder(CellBorderStyleDoubleBox, 3)
+	pageHeader.SetBorderLineStyle(draw.LineStyleSolid)
+
+	companyAddress := table.NewCell()
+	companyAddress.SetContent(newContent("2666 Airport Drive, Apt. 309", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table.SkipCells(2)
+
+	companyLocation := table.NewCell()
+	companyLocation.SetContent(newContent("Portland, Oregon, 92019", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table.SkipCells(1)
+
+	printingDate := table.NewCell()
+	printingDate.SetContent(newContent("Printed on: 22/02/2011", TextAlignmentRight, fonts.NewFontTimesRoman(), 8))
+
+	companyTelAndFax := table.NewCell()
+	companyTelAndFax.SetContent(newContent("Tel: (999) 609-4032  Fax: (999) 999-9922", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table.SkipCells(1)
+
+	pageOf := table.NewCell()
+	pageOf.SetContent(newContent("Page 10 of 10", TextAlignmentRight, fonts.NewFontTimesRoman(), 8))
+
+	email := table.NewCell()
+	email.SetContent(newContent("admin@hendricks.com", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table.SkipCells(2)
+
+	website := table.NewCell()
+	website.SetContent(newContent("www.hendricks.com", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table2 := NewTable(5)
+	table2.SetColumnWidths(0.20, 0.20, 0.20, 0.20, 0.20)
+	table2.SkipCells(5)
+
+	projectName := table2.NewCell()
+	projectName.SetContent(newContent("Project Name (ID):", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	projectNameValue := table2.NewCell()
+	projectNameValue.SetContent(newContent("Biggi Group", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	table2.SkipCells(3)
+
+	projectID := table2.NewCell()
+	projectID.SetContent(newContent("Project ID:", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	projectIDValue := table2.NewCell()
+	projectIDValue.SetContent(newContent("BG:01", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	table2.SkipCells(1)
+
+	contractType := table2.NewCell()
+	contractType.SetContent(newContent("Contract Type:", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+
+	contractTypeValue := table2.NewCell()
+	contractTypeValue.SetContent(newContent("Percentage", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	projectManager := table2.NewCell()
+	projectManager.SetContent(newContent("Manager:", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	projectManagerValue := table2.NewCell()
+	projectManagerValue.SetContent(newContent("SHH", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	table2.SkipCells(1)
+
+	contractAmount := table2.NewCell()
+	contractAmount.SetContent(newContent("Contract Amount:", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+
+	contractAmountValue := table2.NewCell()
+	contractAmountValue.SetContent(newContent("$2,975.00", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	clientID := table2.NewCell()
+	clientID.SetContent(newContent("Client ID:", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	clientIDValue := table2.NewCell()
+	clientIDValue.SetContent(newContent("Baggi ehf", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+
+	table2.SkipCells(1)
+
+	retainerAmount := table2.NewCell()
+	retainerAmount.SetContent(newContent("Retainer Amount:", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+
+	retainerAmountValue := table2.NewCell()
+	retainerAmountValue.SetContent(newContent("", TextAlignmentLeft, fonts.NewFontTimesRoman(), 8))
+
+	table3 := NewTable(8)
+	table3.SetColumnWidths(0.05, 0.10, 0.35, 0.10, 0.10, 0.10, 0.10, 0.10)
+	table3.SkipCells(8)
+
+	billNo := table3.NewCell()
+	billNo.SetContent(newContent("Bill #", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billNo.SetBorder(CellBorderStyleTop, 2)
+	billNo.SetBorder(CellBorderStyleBottom, 1)
+
+	billDate := table3.NewCell()
+	billDate.SetContent(newContent("Date", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billDate.SetBorder(CellBorderStyleTop, 2)
+	billDate.SetBorder(CellBorderStyleBottom, 1)
+
+	billNotes := table3.NewCell()
+	billNotes.SetContent(newContent("Notes", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billNotes.SetBorder(CellBorderStyleTop, 2)
+	billNotes.SetBorder(CellBorderStyleBottom, 1)
+
+	billAmount := table3.NewCell()
+	billAmount.SetContent(newContent("Bill Amount", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billAmount.SetBorder(CellBorderStyleTop, 2)
+	billAmount.SetBorder(CellBorderStyleBottom, 1)
+
+	billCon := table3.NewCell()
+	billCon.SetContent(newContent("% Con", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billCon.SetBorder(CellBorderStyleTop, 2)
+	billCon.SetBorder(CellBorderStyleBottom, 1)
+
+	billRetApplied := table3.NewCell()
+	billRetApplied.SetContent(newContent("Ret Applied", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billRetApplied.SetBorder(CellBorderStyleTop, 2)
+	billRetApplied.SetBorder(CellBorderStyleBottom, 1)
+
+	billRet := table3.NewCell()
+	billRet.SetContent(newContent("% Ret", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billRet.SetBorder(CellBorderStyleTop, 2)
+	billRet.SetBorder(CellBorderStyleBottom, 1)
+
+	billNetBill := table3.NewCell()
+	billNetBill.SetContent(newContent("Net Bill Amt", TextAlignmentLeft, fonts.NewFontTimesBold(), 8))
+	billNetBill.SetBorder(CellBorderStyleTop, 2)
+	billNetBill.SetBorder(CellBorderStyleBottom, 1)
+
+	newBillItem(table3, "1", "1/2/2012", "", "$297.50", "", "$0.00", "", "$297.50")
+	newBillItem(table3, "2", "1/2/2012", "", "$595.00", "", "$0.00", "", "$595.00")
+	newBillItem(table3, "3", "1/3/2012", "", "$446.25", "", "$0.00", "", "$446.25")
+	newBillItem(table3, "4", "1/4/2012", "", "$595.00", "", "$0.00", "", "$595.00")
+	newBillItem(table3, "5", "1/5/2012", "", "$446.25", "", "$0.00", "", "$446.25")
+	newBillItem(table3, "6", "1/6/2012", "", "$892.50", "", "$0.00", "", "$892.50")
+
+	table3.SkipCells(2 + 8)
+
+	totalBill := table3.NewCell()
+	totalBill.SetContent(newContent("Total:     ", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+
+	totalBillAmount := table3.NewCell()
+	totalBillAmount.SetContent(newContent("$3,272.50", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+	totalBillAmount.SetBorder(CellBorderStyleDoubleTop, 1)
+	totalBillAmount.SetBorder(CellBorderStyleBottom, 1)
+
+	table3.SkipCells(1)
+
+	totalRetAmount := table3.NewCell()
+	totalRetAmount.SetContent(newContent("$0.00", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+	totalRetAmount.SetBorder(CellBorderStyleDoubleTop, 1)
+	totalRetAmount.SetBorder(CellBorderStyleBottom, 1)
+
+	table3.SkipCells(1)
+
+	totalNetAmount := table3.NewCell()
+	totalNetAmount.SetContent(newContent("$3,272.50", TextAlignmentRight, fonts.NewFontTimesBold(), 8))
+	totalNetAmount.SetBorder(CellBorderStyleDoubleTop, 1)
+	totalNetAmount.SetBorder(CellBorderStyleBottom, 1)
+
+	c := New()
+	c.Draw(table)
+	c.Draw(table2)
+	c.Draw(table3)
+
+	//err := c.WriteToFile("/tmp/hendricks.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
