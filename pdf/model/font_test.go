@@ -150,6 +150,14 @@ func TestCharcodeBytesToUnicode(t *testing.T) {
 }
 
 var charcodeBytesToUnicodeTest = []fontFragmentTest{
+	fontFragmentTest{"Test beginbfchar and beginbfrange cmap entries",
+		"testdata/Yemeni.txt", 470,
+		[]byte{0x1, 0xa8, 0x1, 0xb3, 0x1, 0xc2, 0x1, 0xcc, 0x1, 0xe7, 0x1, 0xef, 0x1, 0xf3, 0x0,
+			0x20, 0x1, 0xa2, 0x1, 0xfc, 0x2, 0x8, 0x1, 0xa6, 0x1, 0xe7, 0x0, 0x20, 0x2, 0xb, 0x0,
+			0x20, 0x2, 0xf, 0x0, 0x20, 0x0, 0x20, 0x1, 0xdd, 0x0, 0x20, 0x0, 0xcd, 0x0, 0xce, 0x0,
+			0xcf, 0x0, 0xd0, 0x0, 0xd1, 0x1, 0xa1, 0x0, 0x20, 0x1, 0xa9, 0x2, 0x1},
+		"ﺔﺟﺮﺸﻓﻛﻟ ﺎﻨﻴﺒﻓ ﻷ ﻻ  ﻉ ٠١٢٣٤ﺍ ﺕﻭ",
+	},
 	fontFragmentTest{"TrueType font with ToUnicode cmap",
 		"testdata/print_alerts.txt", 9,
 		[]byte{43, 40, 41, 34, 37, 42, 38, 49, 36, 38, 48, 34, 35, 36, 37, 35, 36, 58},
@@ -258,6 +266,7 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 	parser := core.NewParserFromString(text)
 
 	// Build the numObj {object number: object} map
+	nums := []int{}
 	for {
 		obj, err := parser.ParseIndirectObject()
 		if err != nil {
@@ -269,43 +278,58 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 		switch t := obj.(type) {
 		case *core.PdfIndirectObject:
 			numObj[int(t.ObjectNumber)] = obj
+			nums = append(nums, int(t.ObjectNumber))
 		case *core.PdfObjectStream:
 			numObj[int(t.ObjectNumber)] = obj
+			nums = append(nums, int(t.ObjectNumber))
 		}
 	}
 
-	common.Log.Debug("parsePdfObjects: Parsed %d objects", len(numObj))
+	common.Log.Debug("parsePdfObjects: Parsed %d objects %+v", len(numObj), nums)
 
-	// Replace the indirect objects in all dicts with their values, if they are in numObj.
-	replacements := []int{}
-	for _, obj := range numObj {
+	// Replace the indirect objects in all dicts and arrays with their values, if they are in numObj.
+	for n, obj := range numObj {
+		common.Log.Debug("-- 0 %d obj %T", n, obj)
 		iobj, ok := obj.(*core.PdfIndirectObject)
 		if !ok {
 			continue
 		}
-		switch t := iobj.PdfObject.(type) {
-		case *core.PdfObjectDictionary:
-			for _, k := range t.Keys() {
-				if ref, ok := t.Get(k).(*core.PdfObjectReference); ok {
-					if o, ok := numObj[int(ref.ObjectNumber)]; ok {
-						t.Set(k, o)
-						replacements = append(replacements, int(ref.ObjectNumber))
-					}
-				}
-			}
-		case *core.PdfObjectArray:
-			for i, val := range *t {
-				if ref, ok := val.(*core.PdfObjectReference); ok {
-					if o, ok := numObj[int(ref.ObjectNumber)]; ok {
-						(*t)[i] = o
-						replacements = append(replacements, int(ref.ObjectNumber))
-					}
-				}
-			}
+		common.Log.Debug("   -- %T", iobj.PdfObject)
+		iobj.PdfObject, ok = replaceReferences(numObj, iobj.PdfObject)
+		if !ok {
+			common.Log.Debug("ERROR: unresolved reference")
 		}
 	}
-
-	common.Log.Debug("parsePdfObjects: Replaced references %+v", replacements)
-
 	return numObj, nil
+}
+
+// replaceReferences replaces the object references in all dicts and arrays with their values, if
+// they are in numObj. The boolean return is true if all object references were successfuly
+// replaced.
+func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.PdfObject, bool) {
+	var ok bool
+	switch t := obj.(type) {
+	case *core.PdfObjectReference:
+		o, ok := numObj[int(t.ObjectNumber)]
+		common.Log.Debug("    %d 0 R  %t ", t.ObjectNumber, ok)
+		return o, ok
+	case *core.PdfObjectDictionary:
+		for _, k := range t.Keys() {
+			o := t.Get(k)
+			o, ok = replaceReferences(numObj, o)
+			if !ok {
+				return o, ok
+			}
+			t.Set(k, o)
+		}
+	case *core.PdfObjectArray:
+		for i, o := range *t {
+			o, ok = replaceReferences(numObj, o)
+			if !ok {
+				return o, ok
+			}
+			(*t)[i] = o
+		}
+	}
+	return obj, true
 }
