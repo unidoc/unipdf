@@ -117,6 +117,7 @@ func pdfFontType0FromSkeleton(base *fontCommon) *pdfFontType0 {
 		basefont:       base.basefont,
 		subtype:        base.subtype,
 		toUnicode:      base.toUnicode,
+		toUnicodeCmap:  base.toUnicodeCmap,
 		fontDescriptor: base.fontDescriptor,
 		objectNumber:   base.objectNumber,
 	}
@@ -128,6 +129,7 @@ func (font *pdfFontType0) baseFields() *fontCommon {
 		basefont:       font.basefont,
 		subtype:        font.subtype,
 		toUnicode:      font.toUnicode,
+		toUnicodeCmap:  font.toUnicodeCmap,
 		fontDescriptor: font.fontDescriptor,
 		objectNumber:   font.objectNumber,
 	}
@@ -239,6 +241,7 @@ func pdfCIDFontType0FromSkeleton(base *fontCommon) *pdfCIDFontType0 {
 		basefont:       base.basefont,
 		subtype:        base.subtype,
 		toUnicode:      base.toUnicode,
+		toUnicodeCmap:  base.toUnicodeCmap,
 		fontDescriptor: base.fontDescriptor,
 		objectNumber:   base.objectNumber,
 	}
@@ -250,6 +253,7 @@ func (font *pdfCIDFontType0) baseFields() *fontCommon {
 		basefont:       font.basefont,
 		subtype:        font.subtype,
 		toUnicode:      font.toUnicode,
+		toUnicodeCmap:  font.toUnicodeCmap,
 		fontDescriptor: font.fontDescriptor,
 		objectNumber:   font.objectNumber,
 	}
@@ -344,6 +348,7 @@ func pdfCIDFontType2FromSkeleton(base *fontCommon) *pdfCIDFontType2 {
 		basefont:       base.basefont,
 		subtype:        base.subtype,
 		toUnicode:      base.toUnicode,
+		toUnicodeCmap:  base.toUnicodeCmap,
 		fontDescriptor: base.fontDescriptor,
 		objectNumber:   base.objectNumber,
 	}
@@ -355,6 +360,7 @@ func (font *pdfCIDFontType2) baseFields() *fontCommon {
 		basefont:       font.basefont,
 		subtype:        font.subtype,
 		toUnicode:      font.toUnicode,
+		toUnicodeCmap:  font.toUnicodeCmap,
 		fontDescriptor: font.fontDescriptor,
 		objectNumber:   font.objectNumber,
 	}

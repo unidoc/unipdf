@@ -28,7 +28,12 @@ type PdfFont struct {
 
 // String returns a string that describes `font`.
 func (font PdfFont) String() string {
-	return fmt.Sprintf("FONT{%T %s}", font.context, font.baseFields().String())
+	enc := ""
+	if font.context.Encoder() != nil {
+		enc = font.context.Encoder().String()
+	}
+	return fmt.Sprintf("FONT{%T %s %s}", font.context, font.baseFields().coreString(), enc)
+
 }
 
 // BaseFont returns the font's "BaseFont" field.
@@ -83,7 +88,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	switch base.subtype {
 	case "Type0":
 		if !allowType0 {
-			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", font)
+			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", base)
 			return nil, errors.New("Cyclical type0 loading")
 		}
 		type0font, err := newPdfFontType0FromPdfObject(d, base)
@@ -152,7 +157,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
-	common.Log.Debug("showText: data=[% 02x]=%#q", data, data)
+	common.Log.Trace("showText: data=[% 02x]=%#q", data, data)
 
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
@@ -206,7 +211,8 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 			string(data), data, len(charcodes), numMisses, font)
 	}
 
-	return strings.Join(charstrings, ""), len(charcodes), numMisses
+	out := strings.Join(charstrings, "")
+	return out, len([]rune(out)), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -341,11 +347,16 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 
 // String returns a string that describes `base`.
 func (base fontCommon) String() string {
+	return fmt.Sprintf("FONT{%s}", base.coreString())
+}
+
+func (base fontCommon) coreString() string {
 	descriptor := ""
 	if base.fontDescriptor != nil {
 		descriptor = base.fontDescriptor.String()
 	}
-	return fmt.Sprintf("FONT{%#q %#q obj=%d %s}", base.subtype, base.basefont, base.objectNumber, descriptor)
+	return fmt.Sprintf("%#q %#q obj=%d ToUnicode=%t %s",
+		base.subtype, base.basefont, base.objectNumber, base.toUnicode != nil, descriptor)
 }
 
 // isCIDFont returns true if `base` is a CID font.
@@ -365,7 +376,8 @@ func (base fontCommon) isCIDFont() bool {
 // newFontBaseFieldsFromPdfObject returns `fontObj` as a dictionary the common fields from that
 // dictionary in the fontCommon return.  If there is a problem an error is returned.
 // The fontCommon is the group of fields common to all PDF fonts.
-func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon, error) {
+func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon,
+	error) {
 	font := &fontCommon{}
 
 	if obj, ok := fontObj.(*core.PdfIndirectObject); ok {
@@ -376,7 +388,11 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 
 	d, ok := dictObj.(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
+		if ref, ok := dictObj.(*core.PdfObjectReference); ok {
+			common.Log.Debug("ERROR: Font is reference %s", ref)
+		} else {
+			common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
+		}
 		return nil, nil, ErrFontNotSupported
 	}
 
@@ -419,9 +435,10 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		font.fontDescriptor = fontDescriptor
 	}
 
-	font.toUnicode = core.TraceToDirectObject(d.Get("ToUnicode"))
-	if font.toUnicode != nil {
-		codemap, err := toUnicodeToCmap(font.toUnicode, font.isCIDFont())
+	toUnicode := d.Get("ToUnicode")
+	if toUnicode != nil {
+		font.toUnicode = core.TraceToDirectObject(toUnicode)
+		codemap, err := toUnicodeToCmap(font.toUnicode, font)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -432,7 +449,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 }
 
 // toUnicodeToCmap returns a CMap of `toUnicode` if it exists
-func toUnicodeToCmap(toUnicode core.PdfObject, isCID bool) (*cmap.CMap, error) {
+func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, error) {
 	toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("ERROR: toUnicodeToCmap: Not a stream (%T)", toUnicode)
@@ -442,7 +459,13 @@ func toUnicodeToCmap(toUnicode core.PdfObject, isCID bool) (*cmap.CMap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cmap.LoadCmapFromData(data, !isCID)
+
+	cm, err := cmap.LoadCmapFromData(data, !font.isCIDFont())
+	if err != nil {
+		// Show the object number of the bad cmap to help with debugging.
+		common.Log.Debug("ERROR: ObjectNumber=%d err=%v", toUnicodeStream.ObjectNumber, err)
+	}
+	return cm, err
 }
 
 // PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile
@@ -568,7 +591,7 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 		if err != nil {
 			return descriptor, err
 		}
-		common.Log.Debug("fontFile=%s", fontFile)
+		common.Log.Trace("fontFile=%s", fontFile)
 		descriptor.fontFile = fontFile
 	}
 	if descriptor.FontFile2 != nil {
@@ -576,7 +599,7 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 		if err != nil {
 			return descriptor, err
 		}
-		common.Log.Debug("fontFile2=%s", fontFile2.String())
+		common.Log.Trace("fontFile2=%s", fontFile2.String())
 		descriptor.fontFile2 = &fontFile2
 	}
 	return descriptor, nil

@@ -1507,6 +1507,7 @@ func NewParserFromString(txt string) *PdfParser {
 	parser.reader = bufferedReader
 
 	parser.fileSize = int64(len(txt))
+	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	return &parser
 }

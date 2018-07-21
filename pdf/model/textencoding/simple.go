@@ -84,7 +84,7 @@ func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
 }
 
 // simpleEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
-const simpleEncoderNumEntries = 1000
+const simpleEncoderNumEntries = 0
 
 // String returns a string that describes `se`.
 func (se SimpleEncoder) String() string {

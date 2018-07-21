@@ -31,7 +31,7 @@ func (fontfile *fontFile) String() string {
 // newFontFileFromPdfObject loads a FontFile from a PdfObject.  Can either be a
 // *PdfIndirectObject or a *PdfObjectDictionary.
 func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
-	common.Log.Debug("newFontFileFromPdfObject: obj=%s", obj)
+	common.Log.Trace("newFontFileFromPdfObject: obj=%s", obj)
 	fontfile := &fontFile{}
 
 	obj = core.TraceToDirectObject(obj)
@@ -80,20 +80,18 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 		}
 	}
 
-	common.Log.Debug("fontfile=%s", fontfile)
 	return fontfile, nil
 }
 
 // loadFromSegments loads a Type1Font object from two header-less .pfb segments.
 // Based on pdfbox
 func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
-	common.Log.Debug("loadFromSegments: %d %d", len(segment1), len(segment2))
+	common.Log.Trace("loadFromSegments: %d %d", len(segment1), len(segment2))
 	err := fontfile.parseAsciiPart(segment1)
 	if err != nil {
-		common.Log.Debug("err=%v", err)
 		return err
 	}
-	common.Log.Debug("fontfile=%s", fontfile)
+	common.Log.Trace("fontfile=%s", fontfile)
 	if len(segment2) == 0 {
 		return nil
 	}
@@ -103,13 +101,13 @@ func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
 	// 	return err
 	// }
 
-	common.Log.Debug("fontfile=%s", fontfile)
+	common.Log.Trace("fontfile=%s", fontfile)
 	return nil
 }
 
 // parseAsciiPart parses the ASCII part of the FontFile.
 func (fontfile *fontFile) parseAsciiPart(data []byte) error {
-	common.Log.Debug("parseAsciiPart: %d ", len(data))
+	common.Log.Trace("parseAsciiPart: %d ", len(data))
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~^^^~~~~~~~~~~~~~~~~~~~~~~~")
 	// fmt.Printf("data=%s\n", string(data))
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~!!!~~~~~~~~~~~~~~~~~~~~~~~")
@@ -125,7 +123,6 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 
 	keySection, encodingSection, err := getAsciiSections(data)
 	if err != nil {
-		common.Log.Debug("err=%v", err)
 		return err
 	}
 	keyValues := getKeyValues(keySection)
@@ -191,11 +188,11 @@ var (
 //   - the general key values in `keySection`
 //   - the encoding in `encodingSection`
 func getAsciiSections(data []byte) (keySection, encodingSection string, err error) {
-	common.Log.Debug("getAsciiSections: %d ", len(data))
+	common.Log.Trace("getAsciiSections: %d ", len(data))
 	loc := reDictBegin.FindIndex(data)
 	if loc == nil {
 		err = core.ErrTypeError
-		common.Log.Debug("getAsciiSections: No dict.")
+		common.Log.Debug("ERROR: getAsciiSections. No dict.")
 		return
 	}
 	i0 := loc[1]
@@ -211,7 +208,7 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	i = strings.Index(string(data[i2:]), encodingEnd)
 	if i < 0 {
 		err = core.ErrTypeError
-		common.Log.Debug("err=%v", err)
+		common.Log.Debug("ERROR: getAsciiSections. err=%v", err)
 		return
 	}
 	i3 := i2 + i
@@ -259,7 +256,7 @@ func getEncodings(data string) (map[uint16]string, error) {
 		// }
 		keyValues[uint16(code)] = glyph
 	}
-	common.Log.Debug("getEncodings: keyValues=%#v", keyValues)
+	common.Log.Trace("getEncodings: keyValues=%#v", keyValues)
 	return keyValues, nil
 }
 

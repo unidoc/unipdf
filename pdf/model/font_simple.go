@@ -67,6 +67,7 @@ func pdfFontSimpleFromSkeleton(base *fontCommon) *pdfFontSimple {
 		basefont:       base.basefont,
 		subtype:        base.subtype,
 		toUnicode:      base.toUnicode,
+		toUnicodeCmap:  base.toUnicodeCmap,
 		fontDescriptor: base.fontDescriptor,
 		objectNumber:   base.objectNumber,
 	}
@@ -78,6 +79,7 @@ func (font *pdfFontSimple) baseFields() *fontCommon {
 		basefont:       font.basefont,
 		subtype:        font.subtype,
 		toUnicode:      font.toUnicode,
+		toUnicodeCmap:  font.toUnicodeCmap,
 		fontDescriptor: font.fontDescriptor,
 		objectNumber:   font.objectNumber,
 	}
@@ -179,7 +181,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 
 			arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 			if !ok {
-				common.Log.Debug("ERROR: Widths attribute != array (%T)", arr)
+				common.Log.Debug("ERROR: Widths attribute != array (%T)", obj)
 				return nil, core.ErrTypeError
 			}
 
@@ -216,8 +218,9 @@ func (font *pdfFontSimple) addEncoding() error {
 				font.subtype, font.Encoding, font.Encoding, err)
 			return err
 		}
-		common.Log.Debug("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", font.basefont,
-			font.subtype, font.Encoding, font.Encoding)
+		base := font.baseFields()
+		common.Log.Trace("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", base.basefont,
+			base.subtype, font.Encoding, font.Encoding)
 
 		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 		if err != nil {
