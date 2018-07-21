@@ -16,13 +16,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"strings"
 )
 
 var pdfCreator = ""
@@ -41,10 +41,12 @@ func getPdfCreator() string {
 	return "UniDoc - http://unidoc.io"
 }
 
+// SetPdfCreator sets the Creator attribute of the output PDF.
 func SetPdfCreator(creator string) {
 	pdfCreator = creator
 }
 
+// PdfWriter handles outputing PDF content.
 type PdfWriter struct {
 	root        *PdfIndirectObject
 	pages       *PdfIndirectObject
@@ -242,7 +244,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		if arr == nil {
 			return errors.New("Array is nil")
 		}
-		for _, v := range *arr {
+		for _, v := range arr.Elements() {
 			err := this.addObjects(v)
 			if err != nil {
 				return err
@@ -332,7 +334,7 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	if !ok {
 		return errors.New("Invalid Pages Kids obj (not an array)")
 	}
-	*kids = append(*kids, pageObj)
+	kids.Append(pageObj)
 	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		return errors.New("Invalid Pages Count object (not an integer)")
@@ -341,8 +343,6 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	*pageCount = *pageCount + 1
 
 	this.addObject(pageObj)
-
-
 
 	// Traverse the page and record all object references.
 	err := this.addObjects(pDict)
@@ -500,14 +500,14 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 
 	// Prepare the ID object for the trailer.
 	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
-	id0 := PdfObjectString(hashcode[:])
+	id0 := string(hashcode[:])
 	b := make([]byte, 100)
 	rand.Read(b)
 	hashcode = md5.Sum(b)
-	id1 := PdfObjectString(hashcode[:])
+	id1 := string(hashcode[:])
 	common.Log.Trace("Random b: % x", b)
 
-	this.ids = &PdfObjectArray{&id0, &id1}
+	this.ids = MakeArray(MakeHexString(id0), MakeHexString(id1))
 	common.Log.Trace("Gen Id 0: % x", id0)
 
 	crypter.Id0 = string(id0)
@@ -536,8 +536,8 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	encDict.Set("V", MakeInteger(int64(crypter.V)))
 	encDict.Set("R", MakeInteger(int64(crypter.R)))
 	encDict.Set("Length", MakeInteger(int64(crypter.Length)))
-	encDict.Set("O", &O)
-	encDict.Set("U", &U)
+	encDict.Set("O", MakeHexString(O))
+	encDict.Set("U", MakeHexString(U))
 	this.encryptDict = encDict
 
 	// Make an object to contain it.

@@ -180,8 +180,8 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfFontType0, error) {
 
 	// DescendantFonts.
-	arr, err := core.GetArray(core.TraceToDirectObject(d.Get("DescendantFonts")))
-	if err != nil {
+	arr, ok := core.GetArrayVal(core.TraceToDirectObject(d.Get("DescendantFonts")))
+	if !ok {
 		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array %s", base)
 		return nil, core.ErrRangeError
 	}
@@ -198,9 +198,9 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 	font := pdfFontType0FromSkeleton(base)
 	font.DescendantFont = df
 
-	encoderName, err := core.GetName(core.TraceToDirectObject(d.Get("Encoding")))
+	encoderName, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Encoding")))
 	// XXX: FIXME This is not valid if encoder is not Identity-H !@#$
-	if err == nil /*&& encoderName == "Identity-H"*/ {
+	if ok /*&& encoderName == "Identity-H"*/ {
 		font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
 	}
 	return font, nil

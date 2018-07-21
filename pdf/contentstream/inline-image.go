@@ -358,11 +358,11 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				return nil, fmt.Errorf("Failed to read inline image - invalid operand")
 			}
 
-			if *operand == "EI" {
+			if operand.Str() == "EI" {
 				// Image fully defined
 				common.Log.Trace("Inline image finished...")
 				return &im, nil
-			} else if *operand == "ID" {
+			} else if operand.Str() == "ID" {
 				// Inline image data.
 				// Should get a single space (0x20) followed by the data and then EI.
 				common.Log.Trace("ID start")

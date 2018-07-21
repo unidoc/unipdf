@@ -121,77 +121,77 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.moveTextSetLeading(x, y)
 			case "Tj": // Show text
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Tj op=%s err=%v", op, err)
 					return err
 				}
-				charcodes, err := core.GetStringBytes(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
-					return err
+				charcodes, ok := core.GetStringBytes(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: Tj op=%s GetStringBytes failed", op)
+					return core.ErrTypeError
 				}
 				return to.showText(charcodes)
 			case "TJ": // Show text with adjustable spacing
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: TJ err=%v", err)
 					return err
 				}
-				args, err := core.GetArray(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
+				args, ok := core.GetArrayVal(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: Tj op=%s GetArrayVal failed", op)
 					return err
 				}
 				return to.showTextAdjusted(args)
 			case "'": // Move to next line and show text
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: ' err=%v", err)
 					return err
 				}
-				charcodes, err := core.GetStringBytes(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
-					return err
+				charcodes, ok := core.GetStringBytes(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: ' op=%s GetStringBytes failed", op)
+					return core.ErrTypeError
 				}
 				to.nextLine()
 				return to.showText(charcodes)
 			case `"`: // Set word and character spacing, move to next line, and show text
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
 				}
-				charcodes, err := core.GetStringBytes(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
-					return err
+				charcodes, ok := core.GetStringBytes(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: \" op=%s GetStringBytes failed", op)
+					return core.ErrTypeError
 				}
 				to.nextLine()
 				return to.showText(charcodes)
 			case "TL": // Set text leading
 				y, err := floatParam(op)
 				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: TL err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
 			case "Tc": // Set character spacing
 				y, err := floatParam(op)
 				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Tc err=%v", err)
 					return err
 				}
 				to.setCharSpacing(y)
 			case "Tf": // Set font
 				if ok, err := to.checkOp(op, 2, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Tf err=%v", err)
 					return err
 				}
-				name, err := core.GetName(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: GetName failed. op=%s err=%v", op, err)
-					return err
+				name, ok := core.GetNameVal(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: Tf op=%s GetNameVal failed", op)
+					return core.ErrTypeError
 				}
 				size, err := core.GetNumberAsFloat(op.Params[1])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
+				if !ok {
+					common.Log.Debug("ERROR: Tf op=%s GetFloatVal failed. err=%v", op, err)
 					return err
 				}
 				err = to.setFont(name, size)
@@ -200,7 +200,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				}
 			case "Tm": // Set text matrix
 				if ok, err := to.checkOp(op, 6, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Tm err=%v", err)
 					return err
 				}
 				floats, err := model.GetNumbersAsFloat(op.Params)
@@ -211,18 +211,18 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.setTextMatrix(floats)
 			case "Tr": // Set text rendering mode
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Tr err=%v", err)
 					return err
 				}
-				mode, err := core.GetInteger(op.Params[0])
-				if err != nil {
-					common.Log.Debug("ERROR: err=%v", err)
-					return err
+				mode, ok := core.GetIntVal(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: Tr op=%s GetIntVal failed", op)
+					return core.ErrTypeError
 				}
 				to.setTextRenderMode(mode)
 			case "Ts": // Set text rise
 				if ok, err := to.checkOp(op, 1, true); !ok {
-					common.Log.Debug("ERROR: err=%v", err)
+					common.Log.Debug("ERROR: Ts err=%v", err)
 					return err
 				}
 				y, err := core.GetNumberAsFloat(op.Params[0])
@@ -240,6 +240,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
+
 				}
 				to.setWordSpacing(y)
 			case "Tz": // Set horizontal scaling
@@ -343,14 +344,14 @@ func (to *TextObject) showTextAdjusted(args []core.PdfObject) error {
 				to.renderRawText("\n")
 			}
 		case *core.PdfObjectString:
-			charcodes, err := core.GetStringBytes(o)
-			if err != nil {
-				common.Log.Debug("showTextAdjusted args=%+v err=%v", args, err)
-				return err
+			charcodes, ok := core.GetStringBytes(o)
+			if !ok {
+				common.Log.Debug("ERROR: showTextAdjusted: GetStringBytes failed. args=%+v", args)
+				return core.ErrTypeError
 			}
-			err = to.renderText(charcodes)
+			err := to.renderText(charcodes)
 			if err != nil {
-				common.Log.Error("## err=%v", err)
+				common.Log.Debug("showTextAdjusted: renderText failed. args=%+v err=%v", args, err)
 				return err
 			}
 		default:

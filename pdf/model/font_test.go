@@ -404,12 +404,12 @@ func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.
 			t.Set(k, o)
 		}
 	case *core.PdfObjectArray:
-		for i, o := range *t {
+		for i, o := range t.Elements() {
 			o, ok = replaceReferences(numObj, o)
 			if !ok {
 				return o, ok
 			}
-			(*t)[i] = o
+			t.Set(i, o)
 		}
 	}
 	return obj, true

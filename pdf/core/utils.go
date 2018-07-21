@@ -30,7 +30,8 @@ func checkBounds(sliceLen, a, b int) error {
 	return nil
 }
 
-// Inspect analyzes the document object structure.
+// Inspect analyzes the document object structure. Returns a map of object types (by name) with the instance count
+// as value.
 func (parser *PdfParser) Inspect() (map[string]int, error) {
 	return parser.inspect()
 }
@@ -183,47 +184,6 @@ func absInt(x int) int {
 	return x
 }
 
-// GetString returns the string represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
-func GetString(obj PdfObject) (string, error) {
-	if s, ok := obj.(*PdfObjectString); ok {
-		return string(*s), nil
-	}
-	return "", ErrTypeError
-}
-
-// GetStringBytes returns the bytes represented by `obj` if `obj` is a PdfObjectString or an error if it isn't.
-func GetStringBytes(obj PdfObject) ([]byte, error) {
-	if s, ok := obj.(*PdfObjectString); ok {
-		return []byte(*s), nil
-	}
-	return []byte{}, ErrTypeError
-}
-
-// GetName returns the string represented by `obj` if `obj` is a PdfObjectName or an error if it isn't.
-func GetName(obj PdfObject) (string, error) {
-	if s, ok := obj.(*PdfObjectName); ok {
-		return string(*s), nil
-	}
-	return "", ErrTypeError
-}
-
-// GetInteger returns the int represented by `obj` if `obj` is a PdfObjectInteger or an error if it isn't.
-func GetInteger(obj PdfObject) (int, error) {
-	if i, ok := obj.(*PdfObjectInteger); ok {
-		return int(*i), nil
-	}
-	return 0, ErrTypeError
-}
-
-// GetArray returns the slice of PdfObjects represented by `obj` if `obj` is a PdfObjectArray or an
-// error if it isn't.
-func GetArray(obj PdfObject) ([]PdfObject, error) {
-	if s, ok := obj.(*PdfObjectArray); ok {
-		return []PdfObject(*s), nil
-	}
-	return nil, ErrTypeError
-}
-
 // EqualObjects returns true if `obj1` and `obj2` have the same contents.
 // NOTE: It is a good idea to flatten obj1 and obj2 with FlattenObject before calling this function
 //       so that contents, rather than references, can be compared.
@@ -267,11 +227,11 @@ func equalObjects(obj1, obj2 PdfObject, depth int) bool {
 		return equalObjects(TraceToDirectObject(obj1), TraceToDirectObject(obj2), depth+1)
 	case *PdfObjectArray:
 		t2 := obj2.(*PdfObjectArray)
-		if len(*t1) != len(*t2) {
+		if len((*t1).vec) != len((*t2).vec) {
 			return false
 		}
-		for i, o1 := range *t1 {
-			if !equalObjects(o1, (*t2)[i], depth+1) {
+		for i, o1 := range (*t1).vec {
+			if !equalObjects(o1, (*t2).vec[i], depth+1) {
 				return false
 			}
 		}
@@ -318,8 +278,8 @@ func flattenObject(obj PdfObject, depth int) PdfObject {
 	case *PdfIndirectObject:
 		obj = flattenObject((*t).PdfObject, depth+1)
 	case *PdfObjectArray:
-		for i, o := range *t {
-			(*t)[i] = flattenObject(o, depth+1)
+		for i, o := range (*t).vec {
+			(*t).vec[i] = flattenObject(o, depth+1)
 		}
 	case *PdfObjectDictionary:
 		for k, o := range (*t).dict {

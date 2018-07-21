@@ -132,7 +132,7 @@ func TestStringParsing(t *testing.T) {
 		if err != nil && err != io.EOF {
 			t.Errorf("Unable to parse string, error: %s", err)
 		}
-		if string(o) != expected {
+		if o.Str() != expected {
 			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", raw, o, expected)
 		}
 	}
@@ -164,8 +164,8 @@ func TestBinStringParsing(t *testing.T) {
 	if err != nil && err != io.EOF {
 		t.Errorf("Unable to parse string, error: %s", err)
 	}
-	if len(string(o)) != 32 {
-		t.Errorf("Wrong length, should be 32 (got %d)", len(string(o)))
+	if len(o.Str()) != 32 {
+		t.Errorf("Wrong length, should be 32 (got %d)", len(o.Str()))
 	}
 }
 
@@ -180,8 +180,8 @@ func TestStringParsing2(t *testing.T) {
 		t.Errorf("Failed to parse string list (%s)", err)
 		return
 	}
-	if len(list) != 2 {
-		t.Errorf("Length of list should be 2 (%d)", len(list))
+	if list.Len() != 2 {
+		t.Errorf("Length of list should be 2 (%d)", list.Len())
 		return
 	}
 }
@@ -232,8 +232,8 @@ func TestNumericParsing1(t *testing.T) {
 		t.Errorf("Error parsing array")
 		return
 	}
-	if len(list) != 7 {
-		t.Errorf("Len list != 7 (%d)", len(list))
+	if list.Len() != 7 {
+		t.Errorf("Len list != 7 (%d)", list.Len())
 		return
 	}
 
@@ -247,7 +247,7 @@ func TestNumericParsing1(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -257,7 +257,7 @@ func TestNumericParsing1(t *testing.T) {
 		}
 	}
 
-	inum, ok := list[2].(*PdfObjectInteger)
+	inum, ok := list.Get(2).(*PdfObjectInteger)
 	if !ok {
 		t.Errorf("Number 3 not int")
 		return
@@ -278,8 +278,8 @@ func TestNumericParsing2(t *testing.T) {
 		t.Errorf("Error parsing array")
 		return
 	}
-	if len(list) != 2 {
-		t.Errorf("Len list != 2 (%d)", len(list))
+	if list.Len() != 2 {
+		t.Errorf("Len list != 2 (%d)", list.Len())
 		return
 	}
 
@@ -289,7 +289,7 @@ func TestNumericParsing2(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -311,8 +311,8 @@ func TestNumericParsing3(t *testing.T) {
 		t.Errorf("Error parsing array (%s)", err)
 		return
 	}
-	if len(list) != 4 {
-		t.Errorf("Len list != 2 (%d)", len(list))
+	if list.Len() != 4 {
+		t.Errorf("Len list != 2 (%d)", list.Len())
 		return
 	}
 
@@ -324,7 +324,7 @@ func TestNumericParsing3(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -347,7 +347,7 @@ func BenchmarkHexStringParsing(b *testing.B) {
 			b.Errorf("Error parsing hex string: %s", err.Error())
 			return
 		}
-		if string(hs) != ref.String() {
+		if hs.Str() != ref.String() {
 			b.Errorf("Reference and parsed hex strings mismatch")
 		}
 		parser.SetFileOffset(0)
@@ -390,12 +390,12 @@ func TestDictParsing1(t *testing.T) {
 	if !ok {
 		t.Errorf("Invalid data")
 	}
-	integer, ok := (*data)[2].(*PdfObjectInteger)
+	integer, ok := data.Get(2).(*PdfObjectInteger)
 	if !ok || *integer != 2 {
 		t.Errorf("Wrong data")
 	}
 
-	float, ok := (*data)[3].(*PdfObjectFloat)
+	float, ok := data.Get(3).(*PdfObjectFloat)
 	if !ok || *float != 3.14 {
 		t.Error("Wrong data")
 	}
@@ -426,7 +426,7 @@ func TestDictParsing2(t *testing.T) {
 	}
 
 	str, ok := dict.Get("StringItem").(*PdfObjectString)
-	if !ok || *str != "a string" {
+	if !ok || str.Str() != "a string" {
 		t.Errorf("Invalid string item")
 	}
 
@@ -557,8 +557,8 @@ stream
 endstream
 endobj`
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
 	xrefDict, err := parser.parseXrefStream(nil)
@@ -578,7 +578,7 @@ endobj`
 		return
 	}
 
-	if parser.xrefs[3].xtype != XREF_OBJECT_STREAM {
+	if parser.xrefs[3].xtype != xrefTypeObjectStream {
 		t.Errorf("Invalid type")
 		return
 	}
@@ -719,7 +719,7 @@ func TestMinimalPDFFile(t *testing.T) {
 	if parser.xrefs[1].offset != 18 {
 		t.Errorf("Invalid offset != 18 (%d)", parser.xrefs[0].offset)
 	}
-	if parser.xrefs[1].xtype != XREF_TABLE_ENTRY {
+	if parser.xrefs[1].xtype != xrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
 	if parser.xrefs[3].objectNumber != 3 {
@@ -728,7 +728,7 @@ func TestMinimalPDFFile(t *testing.T) {
 	if parser.xrefs[3].offset != 178 {
 		t.Errorf("Invalid offset != 178")
 	}
-	if parser.xrefs[3].xtype != XREF_TABLE_ENTRY {
+	if parser.xrefs[3].xtype != xrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
 

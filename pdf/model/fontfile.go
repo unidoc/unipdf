@@ -47,8 +47,8 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 		return nil, err
 	}
 
-	subtype, err := core.GetName(core.TraceToDirectObject(d.Get("Subtype")))
-	if err != nil {
+	subtype, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Subtype")))
+	if !ok {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
 			// XXX: TODO Add Type1C support

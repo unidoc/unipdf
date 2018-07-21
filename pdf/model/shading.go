@@ -12,7 +12,8 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// There are 7 types of shading, indicated by the shading type variable:
+// PdfShading represents a shading dictionary. There are 7 types of shading,
+// indicatedby the shading type variable:
 // 1: Function-based shading.
 // 2: Axial shading.
 // 3: Radial shading.
@@ -334,7 +335,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Function = []PdfFunction{}
 	if array, is := obj.(*PdfObjectArray); is {
-		for _, obj := range *array {
+		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
 				common.Log.Debug("Error parsing function: %v", err)
@@ -369,8 +370,8 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Coords not an array (got %T)", obj)
 		return nil, errors.New("Type check error")
 	}
-	if len(*arr) != 4 {
-		common.Log.Debug("Coords length not 4 (got %d)", len(*arr))
+	if arr.Len() != 4 {
+		common.Log.Debug("Coords length not 4 (got %d)", arr.Len())
 		return nil, errors.New("Invalid attribute")
 	}
 	shading.Coords = arr
@@ -394,7 +395,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Function = []PdfFunction{}
 	if array, is := obj.(*PdfObjectArray); is {
-		for _, obj := range *array {
+		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
 				common.Log.Debug("Error parsing function: %v", err)
@@ -419,8 +420,8 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 			common.Log.Debug("Matrix not an array (got %T)", obj)
 			return nil, ErrTypeError
 		}
-		if len(*arr) != 2 {
-			common.Log.Debug("Extend length not 2 (got %d)", len(*arr))
+		if arr.Len() != 2 {
+			common.Log.Debug("Extend length not 2 (got %d)", arr.Len())
 			return nil, ErrInvalidAttribute
 		}
 		shading.Extend = arr
@@ -444,8 +445,8 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Coords not an array (got %T)", obj)
 		return nil, ErrTypeError
 	}
-	if len(*arr) != 6 {
-		common.Log.Debug("Coords length not 6 (got %d)", len(*arr))
+	if arr.Len() != 6 {
+		common.Log.Debug("Coords length not 6 (got %d)", arr.Len())
 		return nil, ErrInvalidAttribute
 	}
 	shading.Coords = arr
@@ -469,7 +470,7 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Function = []PdfFunction{}
 	if array, is := obj.(*PdfObjectArray); is {
-		for _, obj := range *array {
+		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
 				common.Log.Debug("Error parsing function: %v", err)
@@ -494,8 +495,8 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 			common.Log.Debug("Matrix not an array (got %T)", obj)
 			return nil, ErrTypeError
 		}
-		if len(*arr) != 2 {
-			common.Log.Debug("Extend length not 2 (got %d)", len(*arr))
+		if arr.Len() != 2 {
+			common.Log.Debug("Extend length not 2 (got %d)", arr.Len())
 			return nil, ErrInvalidAttribute
 		}
 		shading.Extend = arr
@@ -568,7 +569,7 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	}
 	shading.Function = []PdfFunction{}
 	if array, is := obj.(*PdfObjectArray); is {
-		for _, obj := range *array {
+		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
 				common.Log.Debug("Error parsing function: %v", err)
@@ -649,7 +650,7 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		// Function (required).
 		shading.Function = []PdfFunction{}
 		if array, is := obj.(*PdfObjectArray); is {
-			for _, obj := range *array {
+			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
 					common.Log.Debug("Error parsing function: %v", err)
@@ -730,7 +731,7 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	if obj := dict.Get("Function"); obj != nil {
 		shading.Function = []PdfFunction{}
 		if array, is := obj.(*PdfObjectArray); is {
-			for _, obj := range *array {
+			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
 					common.Log.Debug("Error parsing function: %v", err)
@@ -811,7 +812,7 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	if obj := dict.Get("Function"); obj != nil {
 		shading.Function = []PdfFunction{}
 		if array, is := obj.(*PdfObjectArray); is {
-			for _, obj := range *array {
+			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
 					common.Log.Debug("Error parsing function: %v", err)
@@ -831,8 +832,6 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	return &shading, nil
 }
-
-/* Conversion to pdf objects. */
 
 func (this *PdfShading) ToPdfObject() PdfObject {
 	container := this.container

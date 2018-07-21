@@ -113,16 +113,19 @@ func (info *CIDSystemInfo) String() string {
 func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
 	obj = core.TraceToDirectObject(obj)
 	d := *obj.(*core.PdfObjectDictionary)
-	registry, err := core.GetString(d.Get("Registry"))
-	if err != nil {
+	registry, ok := core.GetStringVal(d.Get("Registry"))
+	if !ok {
+		err = core.ErrTypeError
 		return
 	}
-	ordering, err := core.GetString(d.Get("Ordering"))
-	if err != nil {
+	ordering, ok := core.GetStringVal(d.Get("Ordering"))
+	if !ok {
+		err = core.ErrTypeError
 		return
 	}
-	supplement, err := core.GetInteger(d.Get("Supplement"))
-	if err != nil {
+	supplement, ok := core.GetIntVal(d.Get("Supplement"))
+	if !ok {
+		err = core.ErrTypeError
 		return
 	}
 	info = CIDSystemInfo{

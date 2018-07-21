@@ -396,8 +396,8 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, ErrFontNotSupported
 	}
 
-	objtype, err := core.GetName(core.TraceToDirectObject(d.Get("Type")))
-	if err != nil {
+	objtype, ok := core.GetNameVal(d.Get("Type"))
+	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. Type (Required) missing")
 		return nil, nil, ErrRequiredAttributeMissing
 	}
@@ -406,8 +406,8 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, core.ErrTypeError
 	}
 
-	subtype, err := core.GetName(core.TraceToDirectObject(d.Get("Subtype")))
-	if err != nil {
+	subtype, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Subtype")))
+	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. Subtype (Required) missing")
 		return nil, nil, ErrRequiredAttributeMissing
 	}
@@ -418,8 +418,8 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, ErrFontNotSupported
 	}
 
-	basefont, err := core.GetName(core.TraceToDirectObject(d.Get("BaseFont")))
-	if err != nil {
+	basefont, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("BaseFont")))
+	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
 		return nil, nil, ErrRequiredAttributeMissing
 	}

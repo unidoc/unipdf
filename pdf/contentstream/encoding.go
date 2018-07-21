@@ -30,12 +30,12 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 		if !ok {
 			return nil, fmt.Errorf("Filter not a Name or Array object")
 		}
-		if len(*array) == 0 {
+		if array.Len() == 0 {
 			// Empty array -> indicates raw filter (no filter).
 			return core.NewRawEncoder(), nil
 		}
 
-		if len(*array) != 1 {
+		if array.Len() != 1 {
 			menc, err := newMultiEncoderFromInlineImage(inlineImage)
 			if err != nil {
 				common.Log.Error("Failed creating multi encoder: %v", err)
@@ -47,7 +47,7 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 		}
 
 		// Single element.
-		filterObj := (*array)[0]
+		filterObj := array.Get(0)
 		filterName, ok = filterObj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Filter array member not a Name object")
@@ -312,7 +312,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 		// If it is an array, assume there is one for each
 		arr, isArray := obj.(*core.PdfObjectArray)
 		if isArray {
-			for _, dictObj := range *arr {
+			for _, dictObj := range arr.Elements() {
 				if dict, is := dictObj.(*core.PdfObjectDictionary); is {
 					decodeParamsArray = append(decodeParamsArray, dict)
 				} else {
@@ -332,7 +332,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 		return nil, fmt.Errorf("Multi filter can only be made from array")
 	}
 
-	for idx, obj := range *array {
+	for idx, obj := range array.Elements() {
 		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Multi filter array element not a name")

@@ -253,7 +253,7 @@ func (font *pdfFontSimple) addEncoding() error {
 
 	// At the end, apply the differences.
 	if differences != nil {
-		common.Log.Debug("differences=%+v font=%s", differences, font)
+		common.Log.Trace("differences=%+v font=%s", differences, font.baseFields())
 		if se, ok := font.Encoder().(textencoding.SimpleEncoder); ok {
 			se.ApplyDifferences(differences)
 			font.SetEncoder(se)
@@ -284,16 +284,16 @@ func getFontEncoding(obj core.PdfObject) (string, map[byte]string, error) {
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
-		typ, err := core.GetName(core.TraceToDirectObject(encoding.Get("Type")))
-		if err == nil && typ == "Encoding" {
-			base, err := core.GetName(core.TraceToDirectObject(encoding.Get("BaseEncoding")))
-			if err == nil {
+		typ, ok := core.GetNameVal(core.TraceToDirectObject(encoding.Get("Type")))
+		if ok && typ == "Encoding" {
+			base, ok := core.GetNameVal(core.TraceToDirectObject(encoding.Get("BaseEncoding")))
+			if ok {
 				baseName = base
 			}
 		}
-		diffList, err := core.GetArray(core.TraceToDirectObject(encoding.Get("Differences")))
-		if err != nil {
-			common.Log.Debug("ERROR: Bad font encoding dict=%+v err=%v", encoding, err)
+		diffList, ok := core.GetArrayVal(encoding.Get("Differences"))
+		if !ok {
+			common.Log.Debug("ERROR: Bad font encoding dict=%+v", encoding)
 			return "", nil, core.ErrTypeError
 		}
 

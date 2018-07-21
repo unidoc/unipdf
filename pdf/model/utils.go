@@ -29,11 +29,9 @@ func getNumberAsFloat(obj PdfObject) (float64, error) {
 }
 
 func isNullObject(obj PdfObject) bool {
-	if _, isNull := obj.(*PdfObjectNull); isNull {
-		return true
-	} else {
-		return false
-	}
+	_, isNull := obj.(*PdfObjectNull)
+	return isNull
+
 }
 
 // GetNumbersAsFloat converts a list of pdf objects representing floats or integers to a slice of
