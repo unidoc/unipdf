@@ -211,12 +211,6 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
 	w := line.LineWidth
 
-	// Hack to keep the border width correct
-	// Its a mystery like bermuda triangle
-	if line.LineStyle == LineStyleDashed {
-		w = line.LineWidth - 1
-	}
-
 	pi := math.Pi
 
 	mul := 1.0
@@ -348,13 +342,16 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	DrawPathWithCreator(path, creator)
 
+	segments := len(path.Points)
+
 	if line.LineStyle == LineStyleDashed {
 		creator.
-			Add_d([]int64{3}, -1).
+			Add_d([]int64{int64(segments / 2), int64(segments / 2)}, 0).
 			Add_S().
 			Add_Q()
 	} else {
-		creator.Add_f().
+		creator.
+			Add_f().
 			Add_Q()
 	}
 

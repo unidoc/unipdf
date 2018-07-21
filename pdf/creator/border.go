@@ -109,16 +109,6 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	startX := border.x
 	startY := ctx.PageHeight - border.y
-	//
-	//// Width height adjustment for double border
-	//autoTopAdjustmentOnLeft := border.borderWidthLeft * doubleBorderAdjustment
-	//autoTopAdjustmentOnRight := border.borderWidthRight * doubleBorderAdjustment
-	//autoRightAdjustmentOnTop := border.borderWidthTop * doubleBorderAdjustment
-	//autoRightAdjustmentOnBottom := border.borderWidthBottom * doubleBorderAdjustment
-	//autoLeftAdjustmentOnTop := border.borderWidthTop * doubleBorderAdjustment
-	//autoLeftAdjustmentOnBottom := border.borderWidthBottom * doubleBorderAdjustment
-	//autoBottomAdjustmentOnLeft := border.borderWidthLeft * doubleBorderAdjustment
-	//autoBottomAdjustmentOnRight := border.borderWidthRight * doubleBorderAdjustment
 
 	if border.fillColor != nil {
 		drawrect := draw.Rectangle{

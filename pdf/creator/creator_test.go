@@ -1267,8 +1267,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 	c.Draw(table2)
 	c.Draw(table3)
 
-	//err := c.WriteToFile("/tmp/hendricks.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/hendricks.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
