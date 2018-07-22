@@ -768,7 +768,7 @@ func GetArray(obj PdfObject) (arr *PdfObjectArray, found bool) {
 // GetArray returns the slice of PdfObject's represented by the PdfObject directly or indirectly
 // within an indirect object. On type mismatch the found bool flag is false and an empty slice is
 // returned.
-func GetArrayVal(obj PdfObject) ([]PdfObject, bool) {
+func GetArrayVal(obj PdfObject) (val []PdfObject, found bool) {
 	arr, found := TraceToDirectObject(obj).(*PdfObjectArray)
 	if found {
 		return arr.vec, true
