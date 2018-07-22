@@ -414,6 +414,8 @@ func (array *PdfObjectArray) DefaultWriteString() string {
 	return outStr
 }
 
+// GetNumberAsFloat returns the contents of `obj` as a float if it is an integer or float, or an
+// error if it isn't.
 func GetNumberAsFloat(obj PdfObject) (float64, error) {
 	return getNumberAsFloat(obj)
 }
@@ -717,8 +719,9 @@ func GetString(obj PdfObject) (so *PdfObjectString, found bool) {
 	return so, found
 }
 
-// GetStringVal returns the string value represented by the PdfObject directly or indirectly if contained within an
-// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+// GetStringVal returns the string value represented by the PdfObject directly or indirectly if
+// contained within an indirect object. On type mismatch the found bool flag returned is false and
+// an empty string is returned.
 func GetStringVal(obj PdfObject) (val string, found bool) {
 	so, found := TraceToDirectObject(obj).(*PdfObjectString)
 	if found {
@@ -727,6 +730,8 @@ func GetStringVal(obj PdfObject) (val string, found bool) {
 	return
 }
 
+// GetStringVal is like GetStringVal except that it returns the string as a []byte.
+// It is for convenience.
 func GetStringBytes(obj PdfObject) (val []byte, found bool) {
 	so, found := TraceToDirectObject(obj).(*PdfObjectString)
 	if found {
@@ -742,8 +747,9 @@ func GetName(obj PdfObject) (name *PdfObjectName, found bool) {
 	return name, found
 }
 
-// GetNameVal returns the string value represented by the PdfObject directly or indirectly if contained within an
-// indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
+// GetNameVal returns the string value represented by the PdfObject directly or indirectly if
+// contained within an indirect object. On type mismatch the found bool flag returned is false and
+// an empty string is returned.
 func GetNameVal(obj PdfObject) (val string, found bool) {
 	name, found := TraceToDirectObject(obj).(*PdfObjectName)
 	if found {
@@ -759,14 +765,15 @@ func GetArray(obj PdfObject) (arr *PdfObjectArray, found bool) {
 	return arr, found
 }
 
+// GetArray returns the slice of PdfObject's represented by the PdfObject directly or indirectly
+// within an indirect object. On type mismatch the found bool flag is false and an empty slice is
+// returned.
 func GetArrayVal(obj PdfObject) ([]PdfObject, bool) {
 	arr, found := TraceToDirectObject(obj).(*PdfObjectArray)
-	if !found {
-		// common.Log.Debug("GetArrayVal: Not found. obj=%s", obj)
-		return nil, false
+	if found {
+		return arr.vec, true
 	}
-	// common.Log.Debug("GetArrayVal: Found. obj=%s", obj)
-	return arr.vec, true
+	return
 }
 
 // GetDict returns the *PdfObjectDictionary represented by the PdfObject directly or indirectly within an indirect
