@@ -426,13 +426,12 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		descriptor.StemV = core.MakeInteger(70)
 	}
 
-	// Flags.
-	flags := 1 << 5
+	flags := fontFlagNonsymbolic
 	if ttf.IsFixedPitch {
-		flags |= 1
+		flags |= fontFlagFixedPitch
 	}
 	if ttf.ItalicAngle != 0 {
-		flags |= 1 << 6
+		flags |= fontFlagItalic
 	}
 	descriptor.Flags = core.MakeInteger(int64(flags))
 

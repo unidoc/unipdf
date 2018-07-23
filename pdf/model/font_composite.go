@@ -578,16 +578,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		descriptor.StemV = core.MakeInteger(70)
 	}
 
-	// Flags.
-	//flags := 1 << 5 // Non-Symbolic.
-	flags := uint32(0)
+	// Flags
+	flags := fontFlagSymbolic // Symbolic.
 	if ttf.IsFixedPitch {
-		flags |= 1
+		flags |= fontFlagFixedPitch
 	}
 	if ttf.ItalicAngle != 0 {
-		flags |= 1 << 6
+		flags |= fontFlagItalic
 	}
-	flags |= 1 << 2 // Symbolic.
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
 	base.fontDescriptor = descriptor
