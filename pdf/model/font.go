@@ -468,6 +468,20 @@ func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, er
 	return cm, err
 }
 
+const (
+	fontFlagFixedPitch = 1 << iota
+	fontFlagSerif
+	fontFlagSymbolic
+	fontFlagScript
+	// Bit position 5 is not defined
+	fontFlagNonsymbolic = 1 << (iota + 1)
+	fontFlagItalic
+	// Bit position 8 - 16 are not defined
+	fontFlagAllCap = 1 << (iota + 10)
+	fontFlagSmallCap
+	fontFlagForceBold
+)
+
 // PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile
 // for embedded fonts.
 // 9.8 Font Descriptors (page 281)

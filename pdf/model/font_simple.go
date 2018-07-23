@@ -6,7 +6,6 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/cmap"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
@@ -29,20 +28,7 @@ import (
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
 	container *core.PdfIndirectObject
-
-	// These fields are common to all PDF fonts.
-	basefont string // The font's "BaseFont" field.
-	subtype  string // The font's "Subtype" field.
-
-	// These are optional fields in the PDF font
-	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
-
-	// These objects are computed from optional fields in the PDF font
-	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
-	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
-
-	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
-	objectNumber int64
+	fontCommon
 
 	// These fields are specific to simple PDF fonts.
 	firstChar  int
@@ -64,25 +50,13 @@ type pdfFontSimple struct {
 // pdfCIDFontType0FromSkeleton returns a pdfFontSimple with its common fields initalized.
 func pdfFontSimpleFromSkeleton(base *fontCommon) *pdfFontSimple {
 	return &pdfFontSimple{
-		basefont:       base.basefont,
-		subtype:        base.subtype,
-		toUnicode:      base.toUnicode,
-		toUnicodeCmap:  base.toUnicodeCmap,
-		fontDescriptor: base.fontDescriptor,
-		objectNumber:   base.objectNumber,
+		fontCommon: *base,
 	}
 }
 
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfFontSimple) baseFields() *fontCommon {
-	return &fontCommon{
-		basefont:       font.basefont,
-		subtype:        font.subtype,
-		toUnicode:      font.toUnicode,
-		toUnicodeCmap:  font.toUnicodeCmap,
-		fontDescriptor: font.fontDescriptor,
-		objectNumber:   font.objectNumber,
-	}
+	return &font.fontCommon
 }
 
 // Encoder returns the font's text encoder.
@@ -210,6 +184,7 @@ func (font *pdfFontSimple) addEncoding() error {
 	var baseEncoder string
 	var differences map[byte]string
 	var err error
+
 	if font.Encoding != nil {
 		// !@#$ Stop setting default encoding in getFontEncoding XXX
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
@@ -344,7 +319,11 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return nil, err
 	}
 
-	truefont := &pdfFontSimple{subtype: "TrueType"}
+	truefont := &pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype: "TrueType",
+		},
+	}
 
 	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
 	// then can derive
@@ -426,13 +405,12 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		descriptor.StemV = core.MakeInteger(70)
 	}
 
-	// Flags.
-	flags := 1 << 5
+	flags := fontFlagNonsymbolic
 	if ttf.IsFixedPitch {
-		flags |= 1
+		flags |= fontFlagFixedPitch
 	}
 	if ttf.ItalicAngle != 0 {
-		flags |= 1 << 6
+		flags |= fontFlagItalic
 	}
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
@@ -447,73 +425,115 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 }
 
 var standard14Fonts = map[string]pdfFontSimple{
-	"Courier": pdfFontSimple{subtype: "Type1",
-		basefont:    "Courier",
+	"Courier": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Courier",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierCharMetrics,
 	},
-	"Courier-Bold": pdfFontSimple{subtype: "Type1",
-		basefont:    "Courier-Bold",
+	"Courier-Bold": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Courier-Bold",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierBoldCharMetrics,
 	},
-	"Courier-BoldOblique": pdfFontSimple{subtype: "Type1",
-		basefont:    "Courier-BoldOblique",
+	"Courier-BoldOblique": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Courier-BoldOblique",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierBoldObliqueCharMetrics,
 	},
-	"Courier-Oblique": pdfFontSimple{subtype: "Type1",
-		basefont:    "Courier-Oblique",
+	"Courier-Oblique": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Courier-Oblique",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierObliqueCharMetrics,
 	},
-	"Helvetica": pdfFontSimple{subtype: "Type1",
-		basefont:    "Helvetica",
+	"Helvetica": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Helvetica",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaCharMetrics,
 	},
-	"Helvetica-Bold": pdfFontSimple{subtype: "Type1",
-		basefont:    "Helvetica-Bold",
+	"Helvetica-Bold": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Helvetica-Bold",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaBoldCharMetrics,
 	},
-	"Helvetica-BoldOblique": pdfFontSimple{subtype: "Type1",
-		basefont:    "Helvetica-BoldOblique",
+	"Helvetica-BoldOblique": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Helvetica-BoldOblique",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaBoldObliqueCharMetrics,
 	},
-	"Helvetica-Oblique": pdfFontSimple{subtype: "Type1",
-		basefont:    "Helvetica-Oblique",
+	"Helvetica-Oblique": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Helvetica-Oblique",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaObliqueCharMetrics,
 	},
-	"Times-Roman": pdfFontSimple{subtype: "Type1",
-		basefont:    "Times-Roman",
+	"Times-Roman": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Times-Roman",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesRomanCharMetrics,
 	},
-	"Times-Bold": pdfFontSimple{subtype: "Type1",
-		basefont:    "Times-Bold",
+	"Times-Bold": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Times-Bold",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesBoldCharMetrics,
 	},
-	"Times-BoldItalic": pdfFontSimple{subtype: "Type1",
-		basefont:    "Times-BoldItalic",
+	"Times-BoldItalic": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Times-BoldItalic",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesBoldItalicCharMetrics,
 	},
-	"Times-Italic": pdfFontSimple{subtype: "Type1",
-		basefont:    "Times-Italic",
+	"Times-Italic": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Times-Italic",
+		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesItalicCharMetrics,
 	},
-	"Symbol": pdfFontSimple{subtype: "Type1",
-		basefont:    "Symbol",
+	"Symbol": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "Symbol",
+		},
 		encoder:     textencoding.NewSymbolEncoder(),
 		fontMetrics: fonts.SymbolCharMetrics,
 	},
-	"ZapfDingbats": pdfFontSimple{subtype: "Type1",
-		basefont:    "ZapfDingbats",
+	"ZapfDingbats": pdfFontSimple{
+		fontCommon: fontCommon{
+			subtype:  "Type1",
+			basefont: "ZapfDingbats",
+		},
 		encoder:     textencoding.NewZapfDingbatsEncoder(),
 		fontMetrics: fonts.ZapfDingbatsCharMetrics,
 	},
