@@ -45,6 +45,11 @@ type Paragraph struct {
 	enableWrap bool
 	wrapWidth  float64
 
+	// defaultWrap defines whether wrapping has been defined explictly or whether default behavior should
+	// be observed. Default behavior depends on context: normally wrap is expected, except for example in
+	// table cells wrapping is off by default.
+	defaultWrap bool
+
 	// Rotation angle (degrees).
 	angle float64
 
@@ -77,6 +82,7 @@ func NewParagraph(text string) *Paragraph {
 
 	// TODO: Can we wrap intellectually, only if given width is known?
 	p.enableWrap = true
+	p.defaultWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
 	p.angle = 0
@@ -130,6 +136,7 @@ func (p *Paragraph) Text() string {
 // SetEnableWrap sets the line wrapping enabled flag.
 func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
+	p.defaultWrap = false
 }
 
 // SetColor set the color of the Paragraph text.
@@ -213,6 +220,11 @@ func (p *Paragraph) getTextWidth() float64 {
 			return -1 // XXX/FIXME: return error.
 		}
 
+		// Ignore newline for this.. Handles as if all in one line.
+		if glyph == "controlLF" {
+			continue
+		}
+
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
 			common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
@@ -245,6 +257,17 @@ func (p *Paragraph) wrapText() error {
 		if !found {
 			common.Log.Debug("Error! Glyph not found for rune: %v\n", val)
 			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
+		}
+
+		// Newline wrapping.
+		if glyph == "controlLF" {
+			// Moves to next line.
+			p.textLines = append(p.textLines, string(line))
+			line = []rune{}
+			lineWidth = 0
+			widths = []float64{}
+			glyphs = []string{}
+			continue
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
@@ -419,6 +442,9 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			}
 			if glyph == "space" {
 				spaces++
+				continue
+			}
+			if glyph == "controlLF" {
 				continue
 			}
 			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)

@@ -168,6 +168,50 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	// Start row keeps track of starting row (wraps to 0 on new page).
 	startrow := 0
 
+	// Prepare for drawing: Calculate cell dimensions, row, cell heights.
+	for _, cell := range table.cells {
+		// Get total width fraction
+		wf := float64(0.0)
+		for i := 0; i < cell.colspan; i++ {
+			wf += table.colWidths[cell.col+i-1]
+		}
+		// Get x pos relative to table upper left corner.
+		xrel := float64(0.0)
+		for i := 0; i < cell.col-1; i++ {
+			xrel += table.colWidths[i] * tableWidth
+		}
+		// Get y pos relative to table upper left corner.
+		yrel := float64(0.0)
+		for i := startrow; i < cell.row-1; i++ {
+			yrel += table.rowHeights[i]
+		}
+
+		// Calculate the width out of available width.
+		w := wf * tableWidth
+
+		// Get total height.
+		h := float64(0.0)
+		for i := 0; i < cell.rowspan; i++ {
+			h += table.rowHeights[cell.row+i-1]
+		}
+
+		// For text: Calculate width, height, wrapping within available space if specified.
+		if p, isp := cell.content.(*Paragraph); isp {
+			if p.enableWrap {
+				p.SetWidth(w - cell.indent)
+			}
+
+			newh := p.Height() + p.margins.bottom + p.margins.bottom
+			newh += 0.5 * p.fontSize * p.lineHeight // TODO: Make the top margin configurable?
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		}
+	}
+
+	// Draw cells.
 	// row height, cell height
 	for _, cell := range table.cells {
 		// Get total width fraction
@@ -505,14 +549,11 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
-		// Default paragraph settings in table:
-		t.SetEnableWrap(false) // No wrapping.
-		h := cell.table.rowHeights[cell.row-1]
-		nh := t.Height() * 1.5 // Default multiplier 1.5.
-		// Increase height if needed.
-		if nh > h {
-			cell.table.SetRowHeight(cell.row, nh)
+		if t.defaultWrap {
+			// Default paragraph settings in table: no wrapping.
+			t.enableWrap = false // No wrapping.
 		}
+
 		cell.content = vd
 	default:
 		common.Log.Debug("Error: unsupported cell content type %T\n", vd)
