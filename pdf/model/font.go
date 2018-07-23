@@ -283,7 +283,7 @@ func (font PdfFont) actualFont() fonts.Font {
 func (font PdfFont) baseFields() *fontCommon {
 	if font.context == nil {
 		common.Log.Debug("ERROR: baseFields. context is nil.")
-		panic("RRRR")
+		return nil
 	}
 	switch t := font.context.(type) {
 	case *pdfFontSimple:
@@ -295,8 +295,7 @@ func (font PdfFont) baseFields() *fontCommon {
 	case *pdfCIDFontType2:
 		return t.baseFields()
 	default:
-		//common.Log.Error("ERROR: base. Unknown font type %t. font=%s", t, font.String())
-		panic(fmt.Errorf("ERROR: base. Unknown font type %t. ", t))
+		common.Log.Debug("ERROR: base. Unknown font type %t. font=%s", t, font.String())
 		return nil
 	}
 }
