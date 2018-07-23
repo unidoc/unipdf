@@ -1261,6 +1261,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 	totalNetAmount.SetContent(newContent("$3,272.50", TextAlignmentRight, fonts.NewFontTimesBold(), 8, projectColorTwo))
 	totalNetAmount.SetBorder(CellBorderStyleDoubleTop, 1)
 	totalNetAmount.SetBorder(CellBorderStyleBottom, 1)
+	totalNetAmount.SetBorderLineStyle(draw.LineStyleDashed)
 
 	c := New()
 	c.Draw(table)

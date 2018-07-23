@@ -342,12 +342,11 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	DrawPathWithCreator(path, creator)
 
-	segments := len(path.Points)
-
 	if line.LineStyle == LineStyleDashed {
 		creator.
-			Add_d([]int64{int64(segments / 2), int64(segments / 2)}, 0).
+			Add_d([]int64{1, 1}, 0).
 			Add_S().
+			Add_f().
 			Add_Q()
 	} else {
 		creator.
