@@ -105,13 +105,13 @@ func TestCMapParser1(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (%#v)", k, expected, v)
 			return
 		}
 	}
 
-	v := cmap.CharcodeToUnicode(0x99)
+	v, _ := cmap.CharcodeToUnicode(0x99)
 	if v != MissingCodeString { //!= "notdef" {
 		t.Errorf("Unmapped code, expected to map to undefined")
 		return
@@ -191,7 +191,7 @@ func TestCMapParser2(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (got 0x%X)", k, expected, v)
 			return
 		}
@@ -302,7 +302,7 @@ func TestCMapParser3(t *testing.T) {
 		0xd140: 0xa000,
 	}
 	for k, expected := range expectedMappings {
-		if v := cmap.CharcodeToUnicode(k); v != string(expected) {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping: expecting 0x%02X ➞ 0x%02X (got 0x%02X)", k, expected, v)
 			return
 		}
@@ -414,7 +414,7 @@ func TestCMapParser4(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v := cmap.CharcodeToUnicode(k); v != expected {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != expected {
 			t.Errorf("incorrect mapping, expecting 0x%04X ➞ %+q (got %+q)", k, expected, v)
 			return
 		}

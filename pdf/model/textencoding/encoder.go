@@ -7,7 +7,7 @@ package textencoding
 
 import (
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 type TextEncoder interface {
@@ -44,7 +44,7 @@ type TextEncoder interface {
 	GlyphToRune(glyph string) (rune, bool)
 
 	// ToPdfObject returns a PDF Object that represents the encoding.
-	ToPdfObject() PdfObject
+	ToPdfObject() core.PdfObject
 }
 
 // Convenience functions

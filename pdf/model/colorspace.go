@@ -255,6 +255,10 @@ func (this *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, 
 
 	val := vals[0]
 
+	if val < 0.0 || val > 1.0 {
+		common.Log.Debug("Incompatibility: Range outside [0,1]")
+	}
+
 	// Needed for ~/testdata/acl2017_hllz.pdf
 	if val < 0.0 {
 		val = 0.0

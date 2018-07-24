@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -110,17 +115,13 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 // newSimpleFontFromPdfObject creates a pdfFontSimple from dictionary `d`. Elements of `d` that
 // are already parsed are contained in `base`.
 // An error is returned if there is a problem with loading.
-// !@#$ Just return a base 14 font, if obj is a base 14 font
 //
 // The value of Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 // • The value of BaseFont is derived differently.
 //
-// !@#$ 9.6.6.4 Encodings for TrueType Fonts (page 265)
-//      Need to get TrueType font's cmap
 func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool) (*pdfFontSimple, error) {
 	font := pdfFontSimpleFromSkeleton(base)
 
-	// !@#$ Failing on ~/testdata/The-Byzantine-Generals-Problem.pdf
 	// FirstChar is not defined in ~/testdata/shamirturing.pdf
 	if !std14 {
 		obj := d.Get("FirstChar")
@@ -129,31 +130,31 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 		}
 		font.FirstChar = obj
 
-		intVal, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
+		intVal, ok := core.GetIntVal(obj)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.firstChar = int(*intVal)
+		font.firstChar = int(intVal)
 
 		obj = d.Get("LastChar")
 		if obj == nil {
-			obj = core.PdfObject(core.MakeInteger(255))
+			obj = core.MakeInteger(255)
 		}
 		font.LastChar = obj
-		intVal, ok = core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
+		intVal, ok = core.GetIntVal(obj)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.lastChar = int(*intVal)
+		font.lastChar = int(intVal)
 
 		font.charWidths = []float64{}
 		obj = d.Get("Widths")
 		if obj != nil {
 			font.Widths = obj
 
-			arr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+			arr, ok := core.GetArray(obj)
 			if !ok {
 				common.Log.Debug("ERROR: Widths attribute != array (%T)", obj)
 				return nil, core.ErrTypeError
@@ -186,7 +187,7 @@ func (font *pdfFontSimple) addEncoding() error {
 	var err error
 
 	if font.Encoding != nil {
-		// !@#$ Stop setting default encoding in getFontEncoding XXX
+		// XXX: TODO Stop setting default encoding in getFontEncoding
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
 		if err != nil {
 			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
@@ -209,7 +210,6 @@ func (font *pdfFontSimple) addEncoding() error {
 		if descriptor != nil {
 			switch font.subtype {
 			case "Type1":
-				// XXX: !@#$ Is this the right order? Do the /Differences need to be reapplied?
 				if descriptor.fontFile != nil && descriptor.fontFile.encoder != nil {
 					common.Log.Debug("Using fontFile")
 					font.SetEncoder(descriptor.fontFile.encoder)
@@ -247,8 +247,8 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj core.PdfObject) (string, map[byte]string, error) {
-	baseName := "StandardEncoding"
+func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]string, err error) {
+	baseName = "StandardEncoding"
 
 	if obj == nil {
 		// Fall back to StandardEncoding
@@ -259,9 +259,9 @@ func getFontEncoding(obj core.PdfObject) (string, map[byte]string, error) {
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
-		typ, ok := core.GetNameVal(core.TraceToDirectObject(encoding.Get("Type")))
+		typ, ok := core.GetNameVal(encoding.Get("Type"))
 		if ok && typ == "Encoding" {
-			base, ok := core.GetNameVal(core.TraceToDirectObject(encoding.Get("BaseEncoding")))
+			base, ok := core.GetNameVal(encoding.Get("BaseEncoding"))
 			if ok {
 				baseName = base
 			}
@@ -272,7 +272,7 @@ func getFontEncoding(obj core.PdfObject) (string, map[byte]string, error) {
 			return "", nil, core.ErrTypeError
 		}
 
-		differences, err := textencoding.FromFontDifferences(diffList)
+		differences, err = textencoding.FromFontDifferences(diffList)
 		return baseName, differences, err
 	default:
 		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", obj, obj.String())

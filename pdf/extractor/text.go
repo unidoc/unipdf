@@ -54,9 +54,6 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		return textList, state.numChars, state.numMisses, err
 	}
 
-	// fmt.Println("========================= xxx =========================")
-	// fmt.Printf("%s\n", e.contents)
-	// fmt.Println("========================= ||| =========================")
 	processor := contentstream.NewContentStreamProcessor(*operations)
 
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
@@ -64,7 +61,6 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 			resources *model.PdfPageResources) error {
 
 			operand := op.Operand
-			// common.Log.Debug("++Operand: %s", op.String())
 
 			switch operand {
 			case "q":
@@ -383,7 +379,7 @@ func (to *TextObject) setFont(name string, size float64) error {
 			(*to.fontStack)[len(*to.fontStack)-1] = font
 		}
 	} else if err == model.ErrFontNotSupported {
-		// XXX: !@#$ Do we need to handle this case in a special way?
+		// XXX: Do we need to handle this case in a special way?
 		return err
 	} else {
 		return err

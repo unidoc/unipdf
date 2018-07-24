@@ -198,7 +198,7 @@ func (se *SimpleEncoder) makeEncoder() {
 	codeToGlyph := map[uint16]string{}
 	glyphToCode := map[string]uint16{}
 	for code, r := range codeToRune {
-		glyph := glyphlistRuneToGlyphMap[r] // !@#$ Build out this map
+		glyph := glyphlistRuneToGlyphMap[r]
 		codeToGlyph[code] = glyph
 		glyphToCode[glyph] = code
 		if glyph == "" {
@@ -207,9 +207,11 @@ func (se *SimpleEncoder) makeEncoder() {
 	}
 	se.codeToGlyph = codeToGlyph
 	se.glyphToCode = glyphToCode
-	se.codeToRune = codeToRune // XXX: !@#$ Make this a string
+	se.codeToRune = codeToRune
 }
 
+// FromFontDifferences converts `diffList`, a /Differences array from an /Encoding object to a map
+// representing character code to glyph mappings.
 func FromFontDifferences(diffList []core.PdfObject) (map[byte]string, error) {
 	differences := map[byte]string{}
 	var n byte
@@ -229,6 +231,8 @@ func FromFontDifferences(diffList []core.PdfObject) (map[byte]string, error) {
 	return differences, nil
 }
 
+// ToFontDifferences converts `differences`, a map representing character code to glyph mappings,
+// to a /Differences array for an /Encoding object.
 func ToFontDifferences(differences map[byte]string) []core.PdfObject {
 	if len(differences) == 0 {
 		return []core.PdfObject{}
@@ -255,6 +259,7 @@ func ToFontDifferences(differences map[byte]string) []core.PdfObject {
 	return diffList
 }
 
+// simpleEncodings is a map of the standard 8 bit character encodings.
 var simpleEncodings = map[string]map[uint16]rune{
 	"MacExpertEncoding": map[uint16]rune{
 		0x20: '\u0020', //     "space"

@@ -63,8 +63,6 @@ func charcodeToGlyphListPath(filename string) error {
 
 		line = strings.Trim(line, " \r\n")
 
-		//fmt.Printf("%s\n", line)
-
 		parts := strings.Split(line, " ")
 		for _, part := range parts {
 			index++
@@ -98,8 +96,6 @@ func glyphToCharcodeListPath(filename string) error {
 		}
 
 		line = strings.Trim(line, " \r\n")
-
-		//fmt.Printf("%s\n", line)
 
 		parts := strings.Split(line, " ")
 		for _, part := range parts {

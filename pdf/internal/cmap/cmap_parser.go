@@ -15,7 +15,6 @@ import (
 
 // parse parses the CMap file and loads into the CMap structure.
 func (cmap *CMap) parse() error {
-	inCmap := false
 	var prev cmapObject
 	for {
 		o, err := cmap.parseObject()
@@ -26,17 +25,11 @@ func (cmap *CMap) parse() error {
 			common.Log.Debug("ERROR: parsing CMap: %v", err)
 			return err
 		}
-		// fmt.Printf("-- %#v\n", o)
-
 		switch t := o.(type) {
 		case cmapOperand:
 			op := t
 
 			switch op.Operand {
-			case begincmap:
-				inCmap = true
-			case endcmap:
-				inCmap = false
 			case begincodespacerange:
 				err := cmap.parseCodespaceRange()
 				if err != nil {
@@ -95,13 +88,7 @@ func (cmap *CMap) parse() error {
 					return err
 				}
 			}
-		case cmapInt:
 
-		default:
-			if inCmap {
-				// Don't log this noise for now
-				// common.Log.Trace("Unhandled object: %#v", o)
-			}
 		}
 		prev = o
 	}
@@ -119,7 +106,6 @@ func (cmap *CMap) parseName() error {
 		if err != nil {
 			return err
 		}
-		// fmt.Printf("^^ %d %#v\n", i, o)
 		switch t := o.(type) {
 		case cmapOperand:
 			switch t.Operand {
@@ -159,7 +145,6 @@ func (cmap *CMap) parseType() error {
 		if err != nil {
 			return err
 		}
-		// fmt.Printf("^^ %d %#v\n", i, o)
 		switch t := o.(type) {
 		case cmapOperand:
 			switch t.Operand {
@@ -190,7 +175,6 @@ func (cmap *CMap) parseVersion() error {
 		if err != nil {
 			return err
 		}
-		// fmt.Printf("^^ %d %#v\n", i, o)
 		switch t := o.(type) {
 		case cmapOperand:
 			switch t.Operand {
@@ -228,9 +212,9 @@ func (cmap *CMap) parseSystemInfo() error {
 	done := false
 	systemInfo := CIDSystemInfo{}
 
+	// 50 is a generous but arbitrary limit to prevent an endless loop on badly formed cmap files.
 	for i := 0; i < 50 && !done; i++ {
 		o, err := cmap.parseObject()
-		// fmt.Printf("%2d: %#v\n", i, o)
 		if err != nil {
 			return err
 		}
@@ -385,7 +369,6 @@ func (cmap *CMap) parseBfchar() error {
 			}
 			return err
 		}
-		// fmt.Printf("--- %#v\n", o)
 		var code CharCode
 
 		switch v := o.(type) {
@@ -449,7 +432,6 @@ func (cmap *CMap) parseBfrange() error {
 			}
 			return err
 		}
-		// fmt.Printf("-== %#v\n", o)
 		switch v := o.(type) {
 		case cmapOperand:
 			if v.Operand == endbfrange {

@@ -20,6 +20,7 @@ func New(page *model.PdfPage) (*Extractor, error) {
 		return nil, err
 	}
 
+	// Uncomment these lines to see the contents of the page. For debugging.
 	// fmt.Println("========================= +++ =========================")
 	// fmt.Printf("%s\n", contents)
 	// fmt.Println("========================= ::: =========================")

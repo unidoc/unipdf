@@ -237,7 +237,6 @@ func loadGlyphlist(filename string) ([]string, error) {
 			if part == "notdef" {
 				continue
 			}
-			//fmt.Printf("%d: \"%s\",\n", index, part)
 			glyphs = append(glyphs, part)
 		}
 	}

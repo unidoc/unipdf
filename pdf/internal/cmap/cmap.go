@@ -38,14 +38,8 @@ type CIDSystemInfo struct {
 
 // CMap represents a character code to unicode mapping used in PDF files.
 //
-// 9.7.5 CMaps (Page 272)
-//
-// Page 278
-// c) The beginbfchar and endbfchar shall not appear in a CMap that is used as the Encoding entry of
-// a Type 0 font; however, they may appear in the definition of a ToUnicode CMap
-//
 // https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
-// https://github.com/adobe-type-tools/cmap-resources/releases ***
+// https://github.com/adobe-type-tools/cmap-resources/releases
 type CMap struct {
 	*cMapParser
 
@@ -59,15 +53,12 @@ type CMap struct {
 	// For regular cmaps
 	codespaces []Codespace
 
-	// Text encoder to look up runes from input glyph names. !@#$ Not used
-	// encoder textencoding.TextEncoder
-
 	// For ToUnicode (ctype 2) cmaps
 	codeToUnicode     map[CharCode]string
 	toUnicodeIdentity bool
 }
 
-// String retuns a human readable description of `cmap`
+// String retuns a human readable description of `cmap`.
 func (cmap *CMap) String() string {
 	si := cmap.systemInfo
 	parts := []string{
@@ -103,7 +94,7 @@ func newCMap(isSimple bool) *CMap {
 	return cmap
 }
 
-// String returns a human readable description of `info`
+// String returns a human readable description of `info`.
 // It looks like "Adobe-Japan2-000".
 func (info *CIDSystemInfo) String() string {
 	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
@@ -111,8 +102,11 @@ func (info *CIDSystemInfo) String() string {
 
 // NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`
 func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
-	obj = core.TraceToDirectObject(obj)
-	d := *obj.(*core.PdfObjectDictionary)
+	d, ok := core.GetDict(obj)
+	if !ok {
+		err = core.ErrTypeError
+		return
+	}
 	registry, ok := core.GetStringVal(d.Get("Registry"))
 	if !ok {
 		err = core.ErrTypeError
@@ -154,7 +148,7 @@ var MissingCodeString = string(MissingCodeRune)
 
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
 // It also returns a bool flag to tell if the conversion was successful.
-// NOTE: This only works for ToUnicode cmaps
+// NOTE: This only works for ToUnicode cmaps.
 func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
 	charcodes, matched := cmap.bytesToCharcodes(data)
 	if !matched {
@@ -186,17 +180,10 @@ func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
 	return unicode, len(missing)
 }
 
-// CharcodeToUnicode converts a single character code `code ` to a unicode string.
-// If `code` is not in the unicode map, "?" is returned
-// Note that CharcodeBytesToUnicode is typically more efficient.
-func (cmap *CMap) CharcodeToUnicode(code CharCode) string {
-	s, _ := cmap.CharcodeToUnicode2(code)
-	return s
-}
-
-// CharcodeToUnicode2 converts a single character code `code` to a unicode string.
-// The bool value is set to true if `code` is in the unicode map,
-func (cmap *CMap) CharcodeToUnicode2(code CharCode) (string, bool) {
+// CharcodeToUnicode converts a single character code `code` to a unicode string.
+// If `code` is not in the unicode map, "�" is returned.
+// NOTE: CharcodeBytesToUnicode is typically more efficient.
+func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
 	if s, ok := cmap.codeToUnicode[code]; ok {
 		return s, true
 	}
@@ -264,7 +251,7 @@ func (cmap *CMap) inCodespace(code CharCode, numBytes int) bool {
 }
 
 // LoadCmapFromDataCID parses the in-memory cmap `data` and returns the resulting CMap.
-// It is a convenience function,
+// It is a convenience function.
 func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 	return LoadCmapFromData(data, false)
 }
@@ -273,12 +260,6 @@ func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 // If isCID is true then it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
 //
 // 9.10.3 ToUnicode CMaps (page 293)
-// The CMap defined in the ToUnicode entry of the font dictionary shall follow the syntax for CMaps
-// • The CMap file shall contain begincodespacerange and endcodespacerange operators that are
-//   consistent with the encoding that the font uses. In particular, for a simple font, the
-//   codespace shall be one byte long.
-// • It shall use the beginbfchar, endbfchar, beginbfrange, and endbfrange operators to define the
-//    mapping from character codes to Unicode character sequences expressed in UTF-16BE encoding
 func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
 

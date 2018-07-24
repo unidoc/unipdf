@@ -17,12 +17,6 @@ import (
 // MissingCodeRune is the rune returned when there is no matching glyph. It was previously '?'.
 const MissingCodeRune = '\ufffd' // �
 
-// GlyphToRune returns true if `glyph` is in our GlyphToRune mapping.
-func KnownGlyph(glyph string) bool {
-	_, ok := GlyphToRune(glyph)
-	return ok
-}
-
 // GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
 // XXX: TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
 //            rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to

@@ -115,6 +115,7 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (rec TtfType, err error) {
 		return
 	}
 
+	// Uncomment these lines to see the contents of the font file. For debugging.
 	// fmt.Println("===============&&&&===============")
 	// fmt.Printf("%#q", string(data))
 	// fmt.Println("===============####===============")
@@ -148,7 +149,6 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 		err = errors.New("fonts based on PostScript outlines are not supported")
 		return
 	}
-	// XXX: !@#$ Not sure what to do here. Have seen version="true"
 	if version != "\x00\x01\x00\x00" {
 		common.Log.Debug("ERROR: Unrecognized TrueType file format. version=%q", version)
 	}
@@ -416,7 +416,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 		return
 	}
 	common.Log.Debug("ParseCmap")
-	/* version := */ t.ReadUShort()
+	t.ReadUShort() // version is ignored.
 	numTables := int(t.ReadUShort())
 	offset10 := int64(0)
 	offset31 := int64(0)
@@ -428,7 +428,6 @@ func (t *ttfParser) ParseCmap() (err error) {
 			// (3,1) subtable. Windows Unicode.
 			offset31 = offset
 		}
-		//fmt.Printf("(%d,%d) subtable @ %d\n", platformID, encodingID, offset)
 	}
 
 	// Latin font support based on (3,1) table encoding.
@@ -440,9 +439,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 	}
 
 	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
-
 	if offset10 != 0 {
-		// fmt.Printf("Offset10: %d\n", offset10)
 		err = t.parseCmapVersion(offset10)
 		if err != nil {
 			return
@@ -578,18 +575,16 @@ func (t *ttfParser) ParsePost() (err error) {
 	if err = t.Seek("post"); err != nil {
 		return
 	}
-	//versionUpper := t.ReadShort()
-	//versionFraction := t.ReadUShort()
 
 	formatType := t.Read32Fixed()
 	t.rec.ItalicAngle = t.Read32Fixed()
 	t.rec.UnderlinePosition = t.ReadShort()
 	t.rec.UnderlineThickness = t.ReadShort()
 	t.rec.IsFixedPitch = t.ReadULong() != 0
-	/*minMemType42 := */ t.ReadULong()
-	/*maxMemType42 := */ t.ReadULong()
-	/*mimMemType1 := */ t.ReadULong()
-	/*maxMemType1 := */ t.ReadULong()
+	t.ReadULong() // minMemType42 ignored.
+	t.ReadULong() // maxMemType42 ignored.
+	t.ReadULong() // mimMemType1 ignored.
+	t.ReadULong() // maxMemType1 ignored.
 
 	common.Log.Trace("ParsePost: formatType=%f", formatType)
 
@@ -628,13 +623,11 @@ func (t *ttfParser) ParsePost() (err error) {
 			} else if index >= len(macGlyphNames) && index <= 32767 {
 				t.rec.GlyphNames[i] = nameArray[index-len(macGlyphNames)]
 			} else {
-				// PDFBOX-808: Index numbers between 32768 and 65535 are
-				// reserved for future use, so we should just ignore them
 				t.rec.GlyphNames[i] = ".undefined"
 			}
 		}
 	case 2.5:
-		glyphNameIndex := make([]int, t.numGlyphs) // !@#$ Check that this is parsed first
+		glyphNameIndex := make([]int, t.numGlyphs)
 		for i := 0; i < len(glyphNameIndex); i++ {
 			offset := int(t.ReadSByte())
 			glyphNameIndex[i] = i + 1 + offset
@@ -645,7 +638,7 @@ func (t *ttfParser) ParsePost() (err error) {
 			t.rec.GlyphNames[i] = name
 		}
 	case 3.0:
-		// no postscript information is provided.
+		// no PostScript information is provided.
 		common.Log.Debug("No PostScript name information is provided for the font.")
 	default:
 		common.Log.Debug("ERROR: Unknown formatType=%f", formatType)
@@ -710,10 +703,13 @@ func (t *ttfParser) Seek(tag string) error {
 	return nil
 }
 
+// Skip moves the file point n bytes forward.
 func (t *ttfParser) Skip(n int) {
 	t.f.Seek(int64(n), os.SEEK_CUR)
 }
 
+// ReadStr reads `length` bytes from the file and returns them as a string, or an error if there was
+// a problem.
 func (t *ttfParser) ReadStr(length int) (str string, err error) {
 	var n int
 	buf := make([]byte, length)
@@ -729,31 +725,38 @@ func (t *ttfParser) ReadStr(length int) (str string, err error) {
 	return
 }
 
+// ReadByte reads a byte and returns it as unsigned.
 func (t *ttfParser) ReadByte() (val uint8) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 
+// ReadSByte reads a byte and returns it as signed.
 func (t *ttfParser) ReadSByte() (val int8) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 
+// ReadUShort reads 2 bytes and returns them as a big endian unsigned 16 bit integer.
 func (t *ttfParser) ReadUShort() (val uint16) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 
+// ReadShort reads 2 bytes and returns them as a big endian signed 16 bit integer.
 func (t *ttfParser) ReadShort() (val int16) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 
+// ReadULong reads 4 bytes and returns them as a big endian unsigned 32 bit integer.
 func (t *ttfParser) ReadULong() (val uint32) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return
 }
 
+// ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
+// the second 2 bytes for the fraction.
 func (t *ttfParser) Read32Fixed() float64 {
 	whole := float64(t.ReadUShort())
 	frac := float64(t.ReadUShort()) / 65536.0

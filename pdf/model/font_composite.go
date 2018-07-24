@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -170,16 +175,18 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 	font := pdfFontType0FromSkeleton(base)
 	font.DescendantFont = df
 
-	encoderName, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Encoding")))
-	// XXX: FIXME This is not valid if encoder is not Identity-H !@#$
-	if ok /*&& encoderName == "Identity-H"*/ {
-		font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
+	encoderName, ok := core.GetNameVal(d.Get("Encoding"))
+	if ok {
+		if encoderName == "Identity-H" || encoderName == "Identity-V" {
+			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
+		} else {
+			common.Log.Debug("Unhandled cmap %q", encoderName)
+		}
 	}
 	return font, nil
 }
 
 // pdfCIDFontType0 represents a CIDFont Type0 font dictionary.
-// XXX: This is a stub.
 type pdfCIDFontType0 struct {
 	container *core.PdfIndirectObject
 	fontCommon
@@ -216,20 +223,17 @@ func (font pdfCIDFontType0) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-// XXX: This is a stub.
 func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	return fonts.CharMetrics{}, true
 }
 
 // ToPdfObject converts the pdfCIDFontType0 to a PDF representation.
-// XXX: This is a stub.
 func (font *pdfCIDFontType0) ToPdfObject() core.PdfObject {
 	return core.MakeNull()
 }
 
 // newPdfCIDFontType0FromPdfObject creates a pdfCIDFontType0 object from a dictionary (either direct
 // or via indirect object). If a problem occurs with loading an error is returned.
-// XXX: This is a stub.
 func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfCIDFontType0, error) {
 	if base.subtype != "CIDFontType0" {
 		common.Log.Debug("ERROR: Font SubType != CIDFontType0. font=%s", base)
@@ -255,7 +259,7 @@ type pdfCIDFontType2 struct {
 	fontCommon
 
 	// These fields are specific to Type 0 fonts.
-	encoder   textencoding.TextEncoder // !@#$ In base?
+	encoder   textencoding.TextEncoder
 	ttfParser *fonts.TtfType
 
 	CIDSystemInfo core.PdfObject

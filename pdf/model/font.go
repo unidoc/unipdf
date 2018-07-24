@@ -97,7 +97,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 			return nil, err
 		}
 		font.context = type0font
-	case "Type1", "Type3", "MMType1", "TrueType": // !@#$
+	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
 		if std, ok := standard14Fonts[base.basefont]; ok && base.subtype == "Type1" {
 			font.context = &std
@@ -182,7 +182,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	numMisses := 0
 	for _, code := range charcodes {
 		if font.baseFields().toUnicodeCmap != nil {
-			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode2(cmap.CharCode(code))
+			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
 			if ok {
 				charstrings = append(charstrings, r)
 				continue
@@ -237,7 +237,6 @@ func (font PdfFont) Encoder() textencoding.TextEncoder {
 }
 
 // SetEncoder sets the encoding for the underlying font.
-// !@#$ Is this only possible for simple fonts?
 func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 	t := font.actualFont()
 	if t == nil {
@@ -383,15 +382,9 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		font.objectNumber = obj.ObjectNumber
 	}
 
-	dictObj := core.TraceToDirectObject(fontObj)
-
-	d, ok := dictObj.(*core.PdfObjectDictionary)
+	d, ok := core.GetDict(fontObj)
 	if !ok {
-		if ref, ok := dictObj.(*core.PdfObjectReference); ok {
-			common.Log.Debug("ERROR: Font is reference %s", ref)
-		} else {
-			common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
-		}
+		common.Log.Debug("ERROR: Font not given by a dictionary (%T)", fontObj)
 		return nil, nil, ErrFontNotSupported
 	}
 
@@ -405,7 +398,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, core.ErrTypeError
 	}
 
-	subtype, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Subtype")))
+	subtype, ok := core.GetNameVal(d.Get("Subtype"))
 	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. Subtype (Required) missing")
 		return nil, nil, ErrRequiredAttributeMissing
@@ -417,7 +410,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, ErrFontNotSupported
 	}
 
-	basefont, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("BaseFont")))
+	basefont, ok := core.GetNameVal(d.Get("BaseFont"))
 	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
 		return nil, nil, ErrRequiredAttributeMissing
@@ -467,18 +460,17 @@ func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, er
 	return cm, err
 }
 
+// 9.8.2 Font Descriptor Flags (page 283)
 const (
-	fontFlagFixedPitch = 1 << iota
-	fontFlagSerif
-	fontFlagSymbolic
-	fontFlagScript
-	// Bit position 5 is not defined
-	fontFlagNonsymbolic = 1 << (iota + 1)
-	fontFlagItalic
-	// Bit position 8 - 16 are not defined
-	fontFlagAllCap = 1 << (iota + 10)
-	fontFlagSmallCap
-	fontFlagForceBold
+	fontFlagFixedPitch  = 0x00001
+	fontFlagSerif       = 0x00002
+	fontFlagSymbolic    = 0x00004
+	fontFlagScript      = 0x00008
+	fontFlagNonsymbolic = 0x00020
+	fontFlagItalic      = 0x00040
+	fontFlagAllCap      = 0x10000
+	fontFlagSmallCap    = 0x20000
+	fontFlagForceBold   = 0x40000
 )
 
 // PdfFontDescriptor specifies metrics and other attributes of a font and can refer to a FontFile

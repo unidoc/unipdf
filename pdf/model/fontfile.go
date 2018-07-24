@@ -1,3 +1,17 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ *
+
+ /*
+  * A font file is a stream containing a Type 1 font program. It appears in PDF files as a
+  * /FontFile entry in a /FontDescriptor dictionary.
+  *
+  * 9.9 Embedded Font Programs (page 289)
+  *
+  * TODO: Add Type1C support
+*/
+
 package model
 
 import (
@@ -13,13 +27,16 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
+// fontFile represents a font file.
+// Currently this is just the identifying information and the text encoder created from the font
+// file's encoding section.
 type fontFile struct {
 	name    string
 	subtype string
 	encoder textencoding.TextEncoder
-	// binary  []byte
 }
 
+// String retuns a human readable description of `fontfile`.
 func (fontfile *fontFile) String() string {
 	encoding := "[None]"
 	if fontfile.encoder != nil {
@@ -47,7 +64,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 		return nil, err
 	}
 
-	subtype, ok := core.GetNameVal(core.TraceToDirectObject(d.Get("Subtype")))
+	subtype, ok := core.GetNameVal(d.Get("Subtype"))
 	if !ok {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
@@ -57,8 +74,9 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 		}
 	}
 
-	length1 := int(*(core.TraceToDirectObject(d.Get("Length1")).(*core.PdfObjectInteger)))
-	length2 := int(*(core.TraceToDirectObject(d.Get("Length2")).(*core.PdfObjectInteger)))
+	length1, _ := core.GetIntVal(d.Get("Length1"))
+	length2, _ := core.GetIntVal(d.Get("Length2"))
+
 	if length1 > len(data) {
 		length1 = len(data)
 	}
@@ -95,19 +113,14 @@ func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
 	if len(segment2) == 0 {
 		return nil
 	}
-	// err = fontfile.parseEexecPart(segment2)
-	// if err != nil {
-	// 	common.Log.Debug("err=%v", err)
-	// 	return err
-	// }
-
 	common.Log.Trace("fontfile=%s", fontfile)
 	return nil
 }
 
 // parseAsciiPart parses the ASCII part of the FontFile.
 func (fontfile *fontFile) parseAsciiPart(data []byte) error {
-	common.Log.Trace("parseAsciiPart: %d ", len(data))
+
+	// Uncomment these lines to see the contents of the font file. For debugging.
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~^^^~~~~~~~~~~~~~~~~~~~~~~~")
 	// fmt.Printf("data=%s\n", string(data))
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~!!!~~~~~~~~~~~~~~~~~~~~~~~")
@@ -133,15 +146,6 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		return ErrRequiredAttributeMissing
 	}
 
-	// encodingName, ok := keyValues["Encoding"]
-	// !@#$ I am not sure why we don't do this
-	// if ok  {
-	// 	encoder, err := textencoding.NewSimpleTextEncoder(encodingName, nil)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fontfile.encoder = encoder
-	// }
 	if encodingSection != "" {
 		encodings, err := getEncodings(encodingSection)
 		if err != nil {
@@ -149,7 +153,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		}
 		encoder, err := textencoding.NewCustomSimpleTextEncoder(encodings, nil)
 		if err != nil {
-			// XXX: !@#$ We need to fix all these errors
+			// XXX: Logging an error because we need to fix all these misses.
 			common.Log.Error("UNKNOWN GLYPH: err=%v", err)
 			return nil
 		}
@@ -157,23 +161,6 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 	}
 	return nil
 }
-
-// // parseEexecPart parses the binary encrypted part of the FontFile.
-// func (fontfile *fontFile) parseEexecPart(data []byte) error {
-// 	// Sometimes, fonts use  hex format
-// 	if !isBinary(data) {
-// 		decoded, err := hex.DecodeString(string(data))
-// 		if err != nil {
-// 			return err
-// 		}
-// 		data = decoded
-// 	}
-// 	decoded := decodeEexec(data)
-// 	fmt.Println(":::::::::::::::::::::<<>>:::::::::::::::::::::")
-// 	fmt.Printf("%s\n", string(decoded))
-// 	fmt.Println(":::::::::::::::::::::<><>:::::::::::::::::::::")
-// 	return nil
-// }
 
 var (
 	reDictBegin   = regexp.MustCompile(`\d+ dict\s+(dup\s+)?begin`)
@@ -216,12 +203,11 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	return
 }
 
-// ~/testdata/invoice61781040.pdf has \r line endings
+// ~/testdata/private/invoice61781040.pdf has \r line endings
 var reEndline = regexp.MustCompile(`[\n\r]+`)
 
 // getKeyValues returns the map encoded in `data`.
 func getKeyValues(data string) map[string]string {
-	// lines := strings.Split(data, "\n")
 	lines := reEndline.Split(data, -1)
 	keyValues := map[string]string{}
 	for _, line := range lines {
@@ -250,10 +236,6 @@ func getEncodings(data string) (map[uint16]string, error) {
 			common.Log.Debug("ERROR: Bad encoding line. %q", line)
 			return nil, core.ErrTypeError
 		}
-		// if !textencoding.KnownGlyph(glyph) {
-		// 	common.Log.Debug("ERROR: Unknown glyph %q. line=%q", glyph, line)
-		// 	return nil, ErrTypeCheck
-		// }
 		keyValues[uint16(code)] = glyph
 	}
 	common.Log.Trace("getEncodings: keyValues=%#v", keyValues)
