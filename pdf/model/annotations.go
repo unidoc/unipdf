@@ -1890,7 +1890,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 
 	// Border width.
 	if obj := d.Get("W"); obj != nil {
-		val, err := getNumberAsFloat(obj)
+		val, err := GetNumberAsFloat(obj)
 		if err != nil {
 			common.Log.Debug("Error retrieving W: %v", err)
 			return nil, err

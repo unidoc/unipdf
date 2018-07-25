@@ -62,6 +62,11 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	return pdfReader, nil
 }
 
+// PdfVersion returns version of the PDF file.
+func (this *PdfReader) PdfVersion() string {
+	return this.parser.PdfVersion()
+}
+
 // IsEncrypted returns true if the document is encrypted, false otherwise.
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
@@ -590,7 +595,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	return nil
 }
 
-// Get the number of pages in the document.
+// GetNumPages returns the number of pages in the document.
 func (this *PdfReader) GetNumPages() (int, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return 0, fmt.Errorf("File need to be decrypted first")

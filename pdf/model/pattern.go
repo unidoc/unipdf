@@ -269,7 +269,7 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("XStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	xStep, err := getNumberAsFloat(obj)
+	xStep, err := GetNumberAsFloat(obj)
 	if err != nil {
 		common.Log.Debug("Error getting XStep as float: %v", xStep)
 		return nil, err
@@ -282,7 +282,7 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("YStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	yStep, err := getNumberAsFloat(obj)
+	yStep, err := GetNumberAsFloat(obj)
 	if err != nil {
 		common.Log.Debug("Error getting YStep as float: %v", yStep)
 		return nil, err

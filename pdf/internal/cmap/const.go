@@ -5,19 +5,34 @@
 
 package cmap
 
-import "regexp"
+import (
+	"errors"
+	"regexp"
+)
+
+var (
+	ErrBadCMap        = errors.New("bad cmap")
+	ErrBadCMapComment = errors.New("comment should start with %")
+	ErrBadCMapDict    = errors.New("invalid dict")
+)
 
 const (
-	cisSystemInfo       = "/CIDSystemInfo"
+	cidSystemInfo       = "CIDSystemInfo"
+	begincmap           = "begincmap"
+	endcmap             = "endcmap"
 	begincodespacerange = "begincodespacerange"
 	endcodespacerange   = "endcodespacerange"
 	beginbfchar         = "beginbfchar"
 	endbfchar           = "endbfchar"
 	beginbfrange        = "beginbfrange"
 	endbfrange          = "endbfrange"
+	begincidrange       = "begincidrange"
+	endcidrange         = "endcidrange"
+	usecmap             = "usecmap"
 
-	cmapname = "CMapName"
-	cmaptype = "CMapType"
+	cmapname    = "CMapName"
+	cmaptype    = "CMapType"
+	cmapversion = "CMapVersion"
 )
 
 var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
