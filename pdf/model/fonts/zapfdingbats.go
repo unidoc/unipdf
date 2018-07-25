@@ -57,10 +57,11 @@ func (font FontZapfDingbats) ToPdfObject() core.PdfObject {
 	if font.encoder != nil {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// ZapfDingbats font metrics loaded from afms/ZapfDingbats.afm.  See afms/MustRead.html for license information.
+// ZapfDingbatsCharMetrics are the font metrics loaded from afms/ZapfDingbats.afm.
+// See afms/MustRead.html for license information.
 var ZapfDingbatsCharMetrics = map[string]CharMetrics{
 	"a1":    {GlyphName: "a1", Wx: 974.000000, Wy: 0.000000},
 	"a10":   {GlyphName: "a10", Wx: 692.000000, Wy: 0.000000},

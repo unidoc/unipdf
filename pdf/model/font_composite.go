@@ -8,7 +8,6 @@ package model
 import (
 	"errors"
 	"io/ioutil"
-	"sort"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -91,8 +90,8 @@ import (
 // bytes for complex symbols (e.g. used in Asian languages). Represents the root font whereas the
 // associated CIDFont is called its descendant.
 type pdfFontType0 struct {
-	container *core.PdfIndirectObject
 	fontCommon
+	container *core.PdfIndirectObject
 
 	// These fields are specific to Type 0 fonts.
 	encoder        textencoding.TextEncoder
@@ -188,8 +187,8 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 
 // pdfCIDFontType0 represents a CIDFont Type0 font dictionary.
 type pdfCIDFontType0 struct {
-	container *core.PdfIndirectObject
 	fontCommon
+	container *core.PdfIndirectObject
 
 	// These fields are specific to Type 0 fonts.
 	encoder textencoding.TextEncoder
@@ -255,8 +254,8 @@ func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 
 // pdfCIDFontType2 represents a CIDFont Type2 font dictionary.
 type pdfCIDFontType2 struct {
-	container *core.PdfIndirectObject
 	fontCommon
+	container *core.PdfIndirectObject
 
 	// These fields are specific to Type 0 fonts.
 	encoder   textencoding.TextEncoder
@@ -403,12 +402,9 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// 2-byte character codes ➞ runes
 	runes := make([]uint16, 0, len(ttf.Chars))
-	for r := range ttf.Chars {
+	for _, r := range ttf.Chars {
 		runes = append(runes, r)
 	}
-	sort.Slice(runes, func(i, j int) bool {
-		return runes[i] < runes[j]
-	})
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 
@@ -481,7 +477,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	// Embed the TrueType font program.
 	ttfBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		common.Log.Debug("ERROR: :Unable to read file contents: %v", err)
+		common.Log.Debug("ERROR: Unable to read file contents: %v", err)
 		return nil, err
 	}
 

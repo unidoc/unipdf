@@ -3,14 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Implementations of the standard 1-byte encodings
-//     MacExpertEncoding
-//     MacRomanEncoding
-//     PdfDocEncoding
-//     StandardEncoding
-//     WinAnsiEncoding
-//     ZapfDingbatsEncoding
-
 package textencoding
 
 import (
@@ -22,6 +14,14 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
+
+// Implementations of the standard 1-byte encodings
+//     MacExpertEncoding
+//     MacRomanEncoding
+//     PdfDocEncoding
+//     StandardEncoding
+//     WinAnsiEncoding
+//     ZapfDingbatsEncoding
 
 // SimpleEncoder represents a 1 byte encoding
 type SimpleEncoder struct {
@@ -55,7 +55,7 @@ func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte
 // ApplyDifferences applies the encoding delta `differences` to `se`.
 func (se *SimpleEncoder) ApplyDifferences(differences map[byte]string) {
 	se.differences = differences
-	se.makeEncoder()
+	se.computeTables()
 }
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
@@ -79,7 +79,7 @@ func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
 		baseEncoding: baseEncoding,
 		differences:  differences,
 	}
-	se.makeEncoder()
+	se.computeTables()
 	return se, nil
 }
 
@@ -179,8 +179,9 @@ func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 	return core.MakeIndirectObject(dict)
 }
 
-// makeEncoder returns a SimpleEncoder based on `codeToRune`.
-func (se *SimpleEncoder) makeEncoder() {
+// computeTables computes the tables needed for a working SimpleEncoder from the member
+// fields `baseEncoding` and `differences`.
+func (se *SimpleEncoder) computeTables() {
 	codeToRune := map[uint16]rune{}
 	for code, r := range se.baseEncoding {
 		codeToRune[code] = r

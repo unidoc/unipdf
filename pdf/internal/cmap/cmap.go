@@ -37,9 +37,9 @@ type CIDSystemInfo struct {
 }
 
 // CMap represents a character code to unicode mapping used in PDF files.
-//
-// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
-// https://github.com/adobe-type-tools/cmap-resources/releases
+// References:
+//  https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
+//  https://github.com/adobe-type-tools/cmap-resources/releases
 type CMap struct {
 	*cMapParser
 

@@ -32,8 +32,8 @@ import (
 //   containing font-wide metrics and other attributes of the font.
 //   Among those attributes is an optional font filestream containing the font program.
 type pdfFontSimple struct {
-	container *core.PdfIndirectObject
 	fontCommon
+	container *core.PdfIndirectObject
 
 	// These fields are specific to simple PDF fonts.
 	firstChar  int
@@ -126,7 +126,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 	if !std14 {
 		obj := d.Get("FirstChar")
 		if obj == nil {
-			obj = core.PdfObject(core.MakeInteger(0))
+			obj = core.MakeInteger(0)
 		}
 		font.FirstChar = obj
 
@@ -187,7 +187,7 @@ func (font *pdfFontSimple) addEncoding() error {
 	var err error
 
 	if font.Encoding != nil {
-		// XXX: TODO Stop setting default encoding in getFontEncoding
+		// XXX: TODO Stop setting default encoding in getFontEncoding.
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
 		if err != nil {
 			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
@@ -237,7 +237,7 @@ func (font *pdfFontSimple) addEncoding() error {
 	return nil
 }
 
-// getFontEncoding returns font encoding of `obj` the "Encoding" entry in a font dict
+// getFontEncoding returns font encoding of `obj` the "Encoding" entry in a font dict.
 // Table 114 – Entries in an encoding dictionary (page 263)
 // 9.6.6.1 General (page 262)
 // A font’s encoding is the association between character codes (obtained from text strings that
@@ -259,10 +259,8 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
-		typ, ok := core.GetNameVal(encoding.Get("Type"))
-		if ok && typ == "Encoding" {
-			base, ok := core.GetNameVal(encoding.Get("BaseEncoding"))
-			if ok {
+		if typ, ok := core.GetNameVal(encoding.Get("Type")); ok && typ == "Encoding" {
+			if base, ok := core.GetNameVal(encoding.Get("BaseEncoding")); ok {
 				baseName = base
 			}
 		}
@@ -364,7 +362,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		vals = append(vals, w)
 	}
 
-	truefont.Widths = &core.PdfIndirectObject{PdfObject: core.MakeArrayFromFloats(vals)}
+	truefont.Widths = core.MakeIndirectObject(core.MakeArrayFromFloats(vals))
 
 	if len(vals) < (255 - 32 + 1) {
 		common.Log.Debug("ERROR: Invalid length of widths, %d < %d", len(vals), 255-32+1)

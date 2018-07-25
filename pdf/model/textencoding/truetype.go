@@ -93,7 +93,7 @@ func (enc TrueTypeFontEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	return glyph, true
 }
 
-// Conversion between glyph name and character code.
+// GlyphToCharcode returns character code matching the glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.

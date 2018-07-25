@@ -55,7 +55,7 @@ func (font FontCourierBold) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Courier-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
 // Courier-Bold font metrics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.

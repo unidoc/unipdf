@@ -55,10 +55,11 @@ func (font FontTimesBold) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Times-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Bold font metrics loaded from afms/Times-Bold.afm.  See afms/MustRead.html for license information.
+// TimesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.
+// See afms/MustRead.html for license information.
 var TimesBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},

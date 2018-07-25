@@ -55,10 +55,11 @@ func (font FontTimesItalic) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Times-Italic"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Italic font metrics loaded from afms/Times-Italic.afm.  See afms/MustRead.html for license information.
+// TimesItalicCharMetrics font metrics loaded from afms/Times-Italic.afm.
+// See afms/MustRead.html for license information.
 var TimesItalicCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 611.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},

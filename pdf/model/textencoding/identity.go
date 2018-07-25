@@ -60,7 +60,7 @@ func (enc IdentityEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 	return glyph, true
 }
 
-// Conversion between glyph name and character code.
+// GlyphToCharcode returns the character code matching glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc IdentityEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.

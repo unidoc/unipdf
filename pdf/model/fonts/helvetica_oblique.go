@@ -55,10 +55,11 @@ func (font FontHelveticaOblique) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Helvetica-Oblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica-Oblique font metrics loaded from afms/Helvetica-Oblique.afm.  See afms/MustRead.html for license information.
+// HelveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.
+// See afms/MustRead.html for license information.
 var HelveticaObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},

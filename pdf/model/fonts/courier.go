@@ -55,10 +55,11 @@ func (font FontCourier) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Courier"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Courier font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for license information.
+// CourierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
+// license information.
 var CourierCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},

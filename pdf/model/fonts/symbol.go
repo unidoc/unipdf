@@ -58,10 +58,11 @@ func (font FontSymbol) ToPdfObject() core.PdfObject {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Symbol font metrics loaded from afms/Symbol.afm.  See afms/MustRead.html for license information.
+// SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
+// See afms/MustRead.html for license information.
 var SymbolCharMetrics = map[string]CharMetrics{
 	"Alpha":          {GlyphName: "Alpha", Wx: 722.000000, Wy: 0.000000},
 	"Beta":           {GlyphName: "Beta", Wx: 667.000000, Wy: 0.000000},

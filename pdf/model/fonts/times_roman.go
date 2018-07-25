@@ -55,10 +55,11 @@ func (font FontTimesRoman) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Times-Roman"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Roman font metrics loaded from afms/Times-Roman.afm.  See afms/MustRead.html for license information.
+// TimesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
+// See afms/MustRead.html for license information.
 var TimesRomanCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},

@@ -55,10 +55,11 @@ func (font FontCourierOblique) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Courier-Oblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Courier-Oblique font metrics loaded from afms/Courier-Oblique.afm.  See afms/MustRead.html for license information.
+// CourierObliqueCharMetrics are the font metrics loaded from afms/Courier-Oblique.afm.
+// See afms/MustRead.html for license information.
 var CourierObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},

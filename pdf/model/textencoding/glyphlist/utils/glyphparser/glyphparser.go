@@ -76,9 +76,9 @@ func printGlyphToRuneList(glyphToUnicodeMap map[string]string, asRune bool) {
 		s := glyphToUnicodeMap[glyph]
 		if asRune {
 			r := []rune(s)[0]
-			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, r, rs(r))
+			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, r, showRune(r))
 		} else {
-			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, s, ss(s))
+			fmt.Printf("\t\t%q:\t%+q, %s\n", glyph, s, showString(s))
 		}
 	}
 	fmt.Printf("}\n")
@@ -99,13 +99,13 @@ func printRuneToGlyphList(glyphToUnicodeMap map[string]string, asRune bool) {
 		line := ""
 		runes := []rune(s)
 		if len(runes) > 1 {
-			line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, ss(s))
+			line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, showString(s))
 		} else {
 			if asRune {
 				r := runes[0]
-				line = fmt.Sprintf("%+q:\t%q, %s", r, glyph, rs(r))
+				line = fmt.Sprintf("%+q:\t%q, %s", r, glyph, showRune(r))
 			} else {
-				line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, ss(s))
+				line = fmt.Sprintf("%+q:\t%q, %s", s, glyph, showString(s))
 			}
 		}
 		_, duplicate := uniqueList[s]
@@ -121,8 +121,9 @@ func printRuneToGlyphList(glyphToUnicodeMap map[string]string, asRune bool) {
 	fmt.Printf("}\n")
 }
 
-// ss shows string u
-func ss(u string) string {
+// showString returns a string with the Go code for string `u` and a comment showing how it prints
+// if it is printable.
+func showString(u string) string {
 	s := ""
 	printable := false
 	for _, r := range u {
@@ -137,9 +138,9 @@ func ss(u string) string {
 	return s
 }
 
-// ru returns a string with the Go code for rune `r` and, if the rune is printable, an comment
-// showing how it prints.
-func rs(r rune) string {
+// showRune returns a string with the Go code for rune `r` and a comment showing how it prints if
+// it is printable.
+func showRune(r rune) string {
 	s := ""
 	if unicode.IsPrint(r) {
 		s = fmt.Sprintf("%#q", r)
@@ -244,7 +245,7 @@ func loadGlyphlist(filename string) ([]string, error) {
 	return glyphs, nil
 }
 
-// z;007A
+// reGlyphCodes extracts codes from string like "z;007A" which would give "z", "007A"
 var reGlyphCodes = regexp.MustCompile(`^\s*(\w+)\s*;\s*(.+?)\s*$`)
 
 func parseGlyphString(line string) (string, string, error) {
@@ -273,7 +274,8 @@ func parseGlyphRune(line string) (string, rune, error) {
 	return glyph, runes[0], nil
 }
 
-// FFIsmall;F766 F766 F769,0066 0066 0069
+// parseRunes parses the string `s` for rune codes.
+// An example of `s` is "FFIsmall;F766 F766 F769,0066 0066 0069"
 func parseRunes(s string) ([]rune, error) {
 	codeStrings := strings.Split(s, ",")
 	// We only want the first string

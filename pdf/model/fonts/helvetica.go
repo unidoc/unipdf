@@ -55,10 +55,11 @@ func (font FontHelvetica) ToPdfObject() core.PdfObject {
 	fontDict.Set("BaseFont", core.MakeName("Helvetica"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	return &core.PdfIndirectObject{PdfObject: fontDict}
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica font metrics loaded from afms/Helvetica.afm.  See afms/MustRead.html for license information.
+// HelveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
+// See afms/MustRead.html for license information.
 var HelveticaCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
