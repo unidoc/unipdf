@@ -1275,6 +1275,365 @@ func TestCreatorHendricksReq1(t *testing.T) {
 	}
 }
 
+func TestCreatorTableBorderReq1(t *testing.T) {
+	table := NewTable(1) // Mx4 table
+	table.SetColumnWidths(1)
+
+	fullLengthCell := table.NewCell()
+	fullLengthCell.SetContent(newContent("boxed, solid, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	fullLengthCell.SetBorder(CellBorderStyleBox, 1)
+
+	table2 := NewTable(4) // Mx4 table
+	table2.SetColumnWidths(.25, .25, .25, .25)
+
+	table2.SkipCells(4)
+
+	a := table2.NewCell()
+	a.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	a.SetBorder(CellBorderStyleBox, 1)
+
+	b := table2.NewCell()
+	b.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	b.SetBorder(CellBorderStyleBox, 1)
+
+	cc := table2.NewCell()
+	cc.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	cc.SetBorder(CellBorderStyleBox, 1)
+
+	d := table2.NewCell()
+	d.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	d.SetBorder(CellBorderStyleBox, 1)
+
+	e := table2.NewCell()
+	e.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	e.SetBorder(CellBorderStyleBox, 1)
+
+	f := table2.NewCell()
+	f.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	f.SetBorder(CellBorderStyleBox, 1)
+
+	g := table2.NewCell()
+	g.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	g.SetBorder(CellBorderStyleBox, 1)
+
+	h := table2.NewCell()
+	h.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	h.SetBorder(CellBorderStyleBox, 1)
+
+	i := table2.NewCell()
+	i.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	i.SetBorder(CellBorderStyleBox, 1)
+
+	j := table2.NewCell()
+	j.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	j.SetBorder(CellBorderStyleBox, 1)
+
+	table3 := NewTable(1) // Mx4 table
+	table3.SetColumnWidths(1)
+
+	table3.SkipCells(1)
+
+	dash := table3.NewCell()
+	dash.SetContent(newContent("boxed, dashed, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	dash.SetBorder(CellBorderStyleBox, 1)
+	dash.SetBorderLineStyle(draw.LineStyleDashed)
+
+	table4 := NewTable(4) // Mx4 table
+	table4.SetColumnWidths(.25, .25, .25, .25)
+
+	table4.SkipCells(4)
+
+	ad := table4.NewCell()
+	ad.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ad.SetBorder(CellBorderStyleBox, 1)
+	ad.SetBorderLineStyle(draw.LineStyleDashed)
+
+	bd := table4.NewCell()
+	bd.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	bd.SetBorder(CellBorderStyleBox, 1)
+	bd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	table4.SkipCells(2)
+
+	ccd := table4.NewCell()
+	ccd.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ccd.SetBorder(CellBorderStyleBox, 1)
+	ccd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	dd := table4.NewCell()
+	dd.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	dd.SetBorder(CellBorderStyleBox, 1)
+	dd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	table4.SkipCells(2)
+
+	ed := table4.NewCell()
+	ed.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ed.SetBorder(CellBorderStyleBox, 1)
+	ed.SetBorderLineStyle(draw.LineStyleDashed)
+
+	fd := table4.NewCell()
+	fd.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	fd.SetBorder(CellBorderStyleBox, 1)
+	fd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	gd := table4.NewCell()
+	gd.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	gd.SetBorder(CellBorderStyleBox, 1)
+	gd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	hd := table4.NewCell()
+	hd.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	hd.SetBorder(CellBorderStyleBox, 1)
+	hd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	id := table4.NewCell()
+	id.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	id.SetBorder(CellBorderStyleBox, 1)
+	id.SetBorderLineStyle(draw.LineStyleDashed)
+
+	jd := table4.NewCell()
+	jd.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	jd.SetBorder(CellBorderStyleBox, 1)
+	jd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	kd := table4.NewCell()
+	kd.SetContent(newContent("K", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	kd.SetBorder(CellBorderStyleBox, 1)
+	kd.SetBorderLineStyle(draw.LineStyleDashed)
+
+	ld := table4.NewCell()
+	ld.SetContent(newContent("L", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ld.SetBorder(CellBorderStyleBox, 1)
+	ld.SetBorderLineStyle(draw.LineStyleDashed)
+
+	md := table4.NewCell()
+	md.SetContent(newContent("M", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	md.SetBorder(CellBorderStyleBox, 1)
+	md.SetBorderLineStyle(draw.LineStyleDashed)
+
+	table5 := NewTable(1) // Mx4 table
+	table5.SetColumnWidths(1)
+
+	table5.SkipCells(1)
+
+	doubled := table5.NewCell()
+	doubled.SetContent(newContent("boxed, double, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	doubled.SetBorder(CellBorderStyleDoubleBox, 1)
+
+	table6 := NewTable(4) // Mx4 table
+	table6.SetColumnWidths(.25, .25, .25, .25)
+
+	table6.SkipCells(4)
+
+	add := table6.NewCell()
+	add.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	add.SetBorder(CellBorderStyleDoubleTop, 1)
+	add.SetBorder(CellBorderStyleRight, 1)
+	add.SetBorder(CellBorderStyleDoubleLeft, 1)
+	add.SetBorder(CellBorderStyleBottom, 1)
+
+	bdd := table6.NewCell()
+	bdd.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	bdd.SetBorder(CellBorderStyleDoubleBox, 1)
+	bdd.SetBorder(CellBorderStyleRight, 1)
+	bdd.SetBorder(CellBorderStyleLeft, 1)
+	bdd.SetBorder(CellBorderStyleBottom, 1)
+
+	ccdd := table6.NewCell()
+	ccdd.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ccdd.SetBorder(CellBorderStyleDoubleTop, 1)
+	ccdd.SetBorder(CellBorderStyleRight, 1)
+	ccdd.SetBorder(CellBorderStyleLeft, 1)
+	ccdd.SetBorder(CellBorderStyleBottom, 1)
+
+	ddd := table6.NewCell()
+	ddd.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	ddd.SetBorder(CellBorderStyleDoubleTop, 1)
+	ddd.SetBorder(CellBorderStyleDoubleRight, 1)
+	ddd.SetBorder(CellBorderStyleLeft, 1)
+	ddd.SetBorder(CellBorderStyleBottom, 1)
+
+	edd := table6.NewCell()
+	edd.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	edd.SetBorder(CellBorderStyleTop, 1)
+	edd.SetBorder(CellBorderStyleRight, 1)
+	edd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	edd.SetBorder(CellBorderStyleBottom, 1)
+
+	fdd := table6.NewCell()
+	fdd.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	fdd.SetBorder(CellBorderStyleTop, 1)
+	fdd.SetBorder(CellBorderStyleRight, 1)
+	fdd.SetBorder(CellBorderStyleLeft, 1)
+	fdd.SetBorder(CellBorderStyleBottom, 1)
+
+	gdd := table6.NewCell()
+	gdd.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	gdd.SetBorder(CellBorderStyleTop, 1)
+	gdd.SetBorder(CellBorderStyleRight, 1)
+	gdd.SetBorder(CellBorderStyleLeft, 1)
+	gdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+
+	hdd := table6.NewCell()
+	hdd.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	hdd.SetBorder(CellBorderStyleTop, 1)
+	hdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	hdd.SetBorder(CellBorderStyleLeft, 1)
+	hdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+
+	idd := table6.NewCell()
+	idd.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	idd.SetBorder(CellBorderStyleTop, 1)
+	idd.SetBorder(CellBorderStyleRight, 1)
+	idd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	idd.SetBorder(CellBorderStyleDoubleBottom, 1)
+
+	jdd := table6.NewCell()
+	jdd.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	jdd.SetBorder(CellBorderStyleTop, 1)
+	jdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	jdd.SetBorder(CellBorderStyleLeft, 1)
+	jdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+
+	table7 := NewTable(1) // Mx4 table
+	table7.SetColumnWidths(1)
+
+	table7.SkipCells(1)
+
+	fullLengthCell7 := table7.NewCell()
+	fullLengthCell7.SetContent(newContent("boxed, solid, thick", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	fullLengthCell7.SetBorder(CellBorderStyleBox, 2)
+
+	table8 := NewTable(4) // Mx4 table
+	table8.SetColumnWidths(.25, .25, .25, .25)
+
+	table8.SkipCells(4)
+
+	a8 := table8.NewCell()
+	a8.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	a8.SetBorder(CellBorderStyleBox, 2)
+
+	b8 := table8.NewCell()
+	b8.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	b8.SetBorder(CellBorderStyleBox, 2)
+
+	cc8 := table8.NewCell()
+	cc8.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	cc8.SetBorder(CellBorderStyleBox, 2)
+
+	d8 := table8.NewCell()
+	d8.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	d8.SetBorder(CellBorderStyleBox, 2)
+
+	e8 := table8.NewCell()
+	e8.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	e8.SetBorder(CellBorderStyleBox, 2)
+
+	f8 := table8.NewCell()
+	f8.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	f8.SetBorder(CellBorderStyleBox, 2)
+
+	g8 := table8.NewCell()
+	g8.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	g8.SetBorder(CellBorderStyleBox, 2)
+
+	h8 := table8.NewCell()
+	h8.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	h8.SetBorder(CellBorderStyleBox, 2)
+
+	i8 := table8.NewCell()
+	i8.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	i8.SetBorder(CellBorderStyleBox, 2)
+
+	j8 := table8.NewCell()
+	j8.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	j8.SetBorder(CellBorderStyleBox, 2)
+
+	table9 := NewTable(1) // Mx4 table
+	table9.SetColumnWidths(1)
+
+	table9.SkipCells(1)
+
+	fullLengthCell9 := table9.NewCell()
+	fullLengthCell9.SetContent(newContent("boxed, dashed, thick", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	fullLengthCell9.SetBorder(CellBorderStyleBox, 2)
+	fullLengthCell9.SetBorderLineStyle(draw.LineStyleDashed)
+
+	table10 := NewTable(4) // Mx4 table
+	table10.SetColumnWidths(.25, .25, .25, .25)
+
+	table10.SkipCells(4)
+
+	a10 := table10.NewCell()
+	a10.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	a10.SetBorder(CellBorderStyleBox, 2)
+	a10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	b10 := table10.NewCell()
+	b10.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	b10.SetBorder(CellBorderStyleBox, 2)
+	b10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	cc10 := table10.NewCell()
+	cc10.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	cc10.SetBorder(CellBorderStyleBox, 2)
+	cc10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	d10 := table10.NewCell()
+	d10.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	d10.SetBorder(CellBorderStyleBox, 2)
+	d10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	e10 := table10.NewCell()
+	e10.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	e10.SetBorder(CellBorderStyleBox, 2)
+	e10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	f10 := table10.NewCell()
+	f10.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	f10.SetBorder(CellBorderStyleBox, 2)
+	f10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	g10 := table10.NewCell()
+	g10.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	g10.SetBorder(CellBorderStyleBox, 2)
+	g10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	h10 := table10.NewCell()
+	h10.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	h10.SetBorder(CellBorderStyleBox, 2)
+	h10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	i10 := table10.NewCell()
+	i10.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	i10.SetBorder(CellBorderStyleBox, 2)
+	i10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	j10 := table10.NewCell()
+	j10.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
+	j10.SetBorder(CellBorderStyleBox, 2)
+	j10.SetBorderLineStyle(draw.LineStyleDashed)
+
+	c := New()
+	c.Draw(table)
+	c.Draw(table2)
+	c.Draw(table3)
+	c.Draw(table4)
+	c.Draw(table5)
+	c.Draw(table6)
+	c.Draw(table7)
+	c.Draw(table8)
+	c.Draw(table9)
+	c.Draw(table10)
+
+	err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
