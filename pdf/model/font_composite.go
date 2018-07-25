@@ -127,12 +127,12 @@ func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the truetype font.
+// SetEncoder sets the encoder for the font.
 func (font pdfFontType0) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-// ToPdfObject converts the pdfFontType0 to a PDF representation.
+// ToPdfObject converts the font to a PDF representation.
 func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
 		font.container = &core.PdfIndirectObject{}
@@ -195,8 +195,8 @@ type pdfCIDFontType0 struct {
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
-	CIDSystemInfo  core.PdfObject // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
-	FontDescriptor core.PdfObject // (Required) Describes the CIDFont’s default metrics other than its glyph widths
+	CIDSystemInfo  *core.PdfObjectDictionary // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
+	FontDescriptor core.PdfObject            // (Required) Describes the CIDFont’s default metrics other than its glyph widths
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
@@ -243,8 +243,8 @@ func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	font := pdfCIDFontType0FromSkeleton(base)
 
 	// CIDSystemInfo.
-	obj := core.TraceToDirectObject(d.Get("CIDSystemInfo"))
-	if obj == nil {
+	obj, ok := core.GetDict(d.Get("CIDSystemInfo"))
+	if !ok {
 		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", base)
 		return nil, ErrRequiredAttributeMissing
 	}
@@ -262,7 +262,7 @@ type pdfCIDFontType2 struct {
 	encoder   textencoding.TextEncoder
 	ttfParser *fonts.TtfType
 
-	CIDSystemInfo core.PdfObject
+	CIDSystemInfo *core.PdfObjectDictionary
 	DW            core.PdfObject
 	W             core.PdfObject
 	DW2           core.PdfObject
@@ -363,8 +363,8 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	font := pdfCIDFontType2FromSkeleton(base)
 
 	// CIDSystemInfo.
-	obj := d.Get("CIDSystemInfo")
-	if obj == nil {
+	obj, ok := core.GetDict(d.Get("CIDSystemInfo"))
+	if !ok {
 		common.Log.Debug("ERROR: CIDSystemInfo (Required) missing. font=%s", base)
 		return nil, ErrRequiredAttributeMissing
 	}
