@@ -36,7 +36,7 @@ type fontFile struct {
 	encoder textencoding.TextEncoder
 }
 
-// String retuns a human readable description of `fontfile`.
+// String returns a human readable description of `fontfile`.
 func (fontfile *fontFile) String() string {
 	encoding := "[None]"
 	if fontfile.encoder != nil {
@@ -178,15 +178,14 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	common.Log.Trace("getAsciiSections: %d ", len(data))
 	loc := reDictBegin.FindIndex(data)
 	if loc == nil {
-		err = core.ErrTypeError
 		common.Log.Debug("ERROR: getAsciiSections. No dict.")
-		return
+		return "", "", core.ErrTypeError
 	}
 	i0 := loc[1]
 	i := strings.Index(string(data[i0:]), encodingBegin)
 	if i < 0 {
 		keySection = string(data[i0:])
-		return
+		return keySection, "", nil
 	}
 	i1 := i0 + i
 	keySection = string(data[i0:i1])
@@ -194,13 +193,12 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	i2 := i1
 	i = strings.Index(string(data[i2:]), encodingEnd)
 	if i < 0 {
-		err = core.ErrTypeError
 		common.Log.Debug("ERROR: getAsciiSections. err=%v", err)
-		return
+		return "", "", core.ErrTypeError
 	}
 	i3 := i2 + i
 	encodingSection = string(data[i2:i3])
-	return
+	return keySection, encodingSection, nil
 }
 
 // ~/testdata/private/invoice61781040.pdf has \r line endings

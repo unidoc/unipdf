@@ -45,7 +45,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 	textList := &TextList{}
 	state := newTextState()
 	fontStack := fontStacker{}
-	var to *TextObject
+	var to *textObject
 
 	cstreamParser := contentstream.NewContentStreamParser(e.contents)
 	operations, err := cstreamParser.Parse()
@@ -199,7 +199,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					common.Log.Debug("ERROR: Tm err=%v", err)
 					return err
 				}
-				floats, err := model.GetNumbersAsFloat(op.Params)
+				floats, err := core.GetNumbersAsFloat(op.Params)
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -269,7 +269,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 // moveText "Td" Moves start of text by `tx`,`ty`
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // tx and ty are in unscaled text space units.
-func (to *TextObject) moveText(tx, ty float64) {
+func (to *textObject) moveText(tx, ty float64) {
 	// Not implemented yet
 }
 
@@ -279,7 +279,7 @@ func (to *TextObject) moveText(tx, ty float64) {
 // have the same effect as this code:
 //  −ty TL
 //  tx ty Td
-func (to *TextObject) moveTextSetLeading(tx, ty float64) {
+func (to *textObject) moveTextSetLeading(tx, ty float64) {
 	// Not implemented yet
 	// The following is supposed to be equivalent to the existing Unidoc implementation.
 	if tx > 0 {
@@ -297,14 +297,14 @@ func (to *TextObject) moveTextSetLeading(tx, ty float64) {
 // where Tl denotes the current leading parameter in the text state. The negative of Tl is used
 // here because Tl is the text leading expressed as a positive number. Going to the next line
 // entails decreasing the y coordinate. (page 250)
-func (to *TextObject) nextLine() {
+func (to *textObject) nextLine() {
 	// Not implemented yet
 }
 
 // setTextMatrix "Tm"
 // Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
 // in `f`  (page 250)
-func (to *TextObject) setTextMatrix(f []float64) {
+func (to *textObject) setTextMatrix(f []float64) {
 	// Not implemented yet
 	// The following is supposed to be equivalent to the existing Unidoc implementation.
 	tx, ty := f[4], f[5]
@@ -324,12 +324,12 @@ func (to *TextObject) setTextMatrix(f []float64) {
 }
 
 // showText "Tj" Show a text string
-func (to *TextObject) showText(charcodes []byte) error {
+func (to *textObject) showText(charcodes []byte) error {
 	return to.renderText(charcodes)
 }
 
 // showTextAdjusted "TJ" Show text with adjustable spacing
-func (to *TextObject) showTextAdjusted(args []core.PdfObject) error {
+func (to *textObject) showTextAdjusted(args []core.PdfObject) error {
 	for _, o := range args {
 		switch o.(type) {
 		case *core.PdfObjectFloat, *core.PdfObjectInteger:
@@ -359,17 +359,17 @@ func (to *TextObject) showTextAdjusted(args []core.PdfObject) error {
 }
 
 // setTextLeading "TL" Set text leading
-func (to *TextObject) setTextLeading(y float64) {
+func (to *textObject) setTextLeading(y float64) {
 	// Not implemented yet
 }
 
 // setCharSpacing "Tc" Set character spacing
-func (to *TextObject) setCharSpacing(x float64) {
+func (to *textObject) setCharSpacing(x float64) {
 	// Not implemented yet
 }
 
 // setFont "Tf" Set font
-func (to *TextObject) setFont(name string, size float64) error {
+func (to *textObject) setFont(name string, size float64) error {
 	font, err := to.getFont(name)
 	if err == nil {
 		to.State.Tf = font
@@ -389,22 +389,22 @@ func (to *TextObject) setFont(name string, size float64) error {
 }
 
 // setTextRenderMode "Tr" Set text rendering mode
-func (to *TextObject) setTextRenderMode(mode int) {
+func (to *textObject) setTextRenderMode(mode int) {
 	// Not implemented yet
 }
 
 // setTextRise "Ts" Set text rise
-func (to *TextObject) setTextRise(y float64) {
+func (to *textObject) setTextRise(y float64) {
 	// Not implemented yet
 }
 
 // setWordSpacing "Tw" Set word spacing
-func (to *TextObject) setWordSpacing(y float64) {
+func (to *textObject) setWordSpacing(y float64) {
 	// Not implemented yet
 }
 
 // setHorizScaling "Tz" Set horizontal scaling
-func (to *TextObject) setHorizScaling(y float64) {
+func (to *textObject) setHorizScaling(y float64) {
 	// Not implemented yet
 }
 
@@ -422,11 +422,11 @@ func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 
 // checkOp returns true if we are in a text stream and `op` has `numParams` params.
 // If `hard` is true and the number of params don't match, an error is returned.
-func (to *TextObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
+func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
 	hard bool) (ok bool, err error) {
 	if to == nil {
 		common.Log.Debug("%#q operand outside text", op.Operand)
-		return
+		return false, nil
 	}
 	if numParams >= 0 {
 		if len(op.Params) != numParams {
@@ -435,15 +435,13 @@ func (to *TextObject) checkOp(op *contentstream.ContentStreamOperation, numParam
 			}
 			common.Log.Debug("ERROR: %#q should have %d input params, got %d %+v",
 				op.Operand, numParams, len(op.Params), op.Params)
-			return
+			return false, err
 		}
 	}
-	ok = true
-	return
+	return true, nil
 }
 
 // fontStacker is the PDF font stack implementation.
-// I think this is correct. It has worked on my tests so far.
 type fontStacker []*model.PdfFont
 
 // String returns a string describing the current state of the font stack.
@@ -475,27 +473,25 @@ func (fontStack *fontStacker) pop() *model.PdfFont {
 }
 
 // peek returns the element on the top of the font stack if there is one, or nil if there isn't.
-func (fontStack *fontStacker) peek() (font *model.PdfFont) {
+func (fontStack *fontStacker) peek() *model.PdfFont {
 	if fontStack.empty() {
-		return
+		return nil
 	}
-	font = (*fontStack)[len(*fontStack)-1]
-	return
+	return (*fontStack)[len(*fontStack)-1]
 }
 
 // get returns the `idx`'th element of the font stack if there is one, or nil if there isn't.
 //  idx = 0: bottom of font stack
 //  idx = len(fontstack) - 1: top of font stack
 //  idx = -n is same as dx = len(fontstack) - n, so fontstack.get(-1) is same as fontstack.peek()
-func (fontStack *fontStacker) get(idx int) (font *model.PdfFont) {
+func (fontStack *fontStacker) get(idx int) *model.PdfFont {
 	if idx < 0 {
 		idx += fontStack.size()
 	}
 	if idx < 0 || idx > fontStack.size()-1 {
-		return
+		return nil
 	}
-	font = (*fontStack)[idx]
-	return
+	return (*fontStack)[idx]
 }
 
 // empty returns true if the font stack is empty.
@@ -512,7 +508,9 @@ func (fontStack *fontStacker) size() int {
 // Some of these parameters are expressed in unscaled text space units. This means that they shall
 // be specified in a coordinate system that shall be defined by the text matrix, Tm but shall not be
 // scaled by the font size parameter, Tfs.
-type TextState struct {
+
+// textState represents the text state.
+type textState struct {
 	// Tc    float64        // Character spacing. Unscaled text space units.
 	// Tw    float64        // Word spacing. Unscaled text space units.
 	// Th    float64        // Horizontal scaling
@@ -537,12 +535,13 @@ type TextState struct {
 //        | Tfs x Th   0      0 |
 // Trm  = | 0         Tfs     0 | × Tm × CTM
 //        | 0         Trise   1 |
-//
-type TextObject struct {
+
+// textObject represents a PDF text object.
+type textObject struct {
 	e         *Extractor
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
-	State     *TextState
+	State     *textState
 	// Tm    contentstream.Matrix // Text matrix. For the character pointer.
 	// Tlm   contentstream.Matrix // Text line matrix. For the start of line pointer.
 	Texts []XYText // Text gets written here.
@@ -551,16 +550,16 @@ type TextObject struct {
 	xPos, yPos float64
 }
 
-// newTextState returns a default TextState
-func newTextState() TextState {
+// newTextState returns a default textState
+func newTextState() textState {
 	// Not implemented yet
-	return TextState{}
+	return textState{}
 }
 
-// newTextObject returns a default TextObject
-func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *TextState,
-	fontStack *fontStacker) *TextObject {
-	return &TextObject{
+// newTextObject returns a default textObject
+func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textState,
+	fontStack *fontStacker) *textObject {
+	return &textObject{
 		e:         e,
 		gs:        gs,
 		fontStack: fontStack,
@@ -571,26 +570,26 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *TextStat
 }
 
 // renderRawText writes `text` directly to the extracted text
-func (to *TextObject) renderRawText(text string) {
+func (to *textObject) renderRawText(text string) {
 	to.Texts = append(to.Texts, XYText{text})
 }
 
 // renderText emits byte array `data` to the calling program
-func (to *TextObject) renderText(data []byte) (err error) {
+func (to *textObject) renderText(data []byte) error {
 	text := ""
 	if len(*to.fontStack) == 0 {
 		common.Log.Debug("ERROR: No font defined. data=%#q", string(data))
 		text = string(data)
-		err = model.ErrNoFont
-	} else {
-		font := to.fontStack.peek()
-		var numChars, numMisses int
-		text, numChars, numMisses = font.CharcodeBytesToUnicode(data)
-		to.State.numChars += numChars
-		to.State.numMisses += numMisses
+		return model.ErrNoFont
 	}
+	font := to.fontStack.peek()
+	var numChars, numMisses int
+	text, numChars, numMisses = font.CharcodeBytesToUnicode(data)
+	to.State.numChars += numChars
+	to.State.numMisses += numMisses
+
 	to.Texts = append(to.Texts, XYText{text})
-	return
+	return nil
 }
 
 // XYText represents text and its position in device coordinates
@@ -622,8 +621,8 @@ func (tl *TextList) ToText() string {
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it
-// doesn't
-func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
+// doesn't.
+func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
 	if name == "UniDocCourier" {
@@ -642,29 +641,27 @@ func (to *TextObject) getFont(name string) (*model.PdfFont, error) {
 }
 
 // getFontDict returns the font object called `name` if it exists in the page's Font resources or
-// an error if it doesn't
+// an error if it doesn't.
 // XXX: TODO: Can we cache font values?
-func (to *TextObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
+func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
 	resources := to.e.resources
 	if resources == nil {
 		common.Log.Debug("getFontDict. No resources. name=%#q", name)
-		return
+		return nil, nil
 	}
-
 	fontObj, found := resources.GetFontByName(core.PdfObjectName(name))
 	if !found {
-		err = errors.New("Font not in resources")
-		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q err=%v", name, err)
-		return
+		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q", name)
+		return nil, errors.New("Font not in resources")
 	}
-	return
+	return fontObj, nil
 }
 
 // getCharMetrics returns the character metrics for the code points in `text1` for font `font`.
 func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetrics, err error) {
 	encoder := font.Encoder()
 	if encoder == nil {
-		err = errors.New("No font encoder")
+		return nil, errors.New("No font encoder")
 	}
 	for _, r := range text {
 		glyph, found := encoder.RuneToGlyph(r)
@@ -678,5 +675,5 @@ func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetri
 		}
 		metrics = append(metrics, m)
 	}
-	return
+	return metrics, nil
 }

@@ -9,10 +9,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func procBuf(buf *bytes.Buffer) {
@@ -38,19 +36,16 @@ func procBuf(buf *bytes.Buffer) {
 // toFloatList returns `objs` as 2 floats, if that's what it is, or an error if it isn't
 func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {
 	if len(objs) != 2 {
-		err = fmt.Errorf("Invalid number of params: %d", len(objs))
-		common.Log.Debug("toFloatXY: err=%v", err)
-		return
+		return 0, 0, fmt.Errorf("Invalid number of params: %d", len(objs))
 	}
-	floats, err := model.GetNumbersAsFloat(objs)
+	floats, err := core.GetNumbersAsFloat(objs)
 	if err != nil {
-		return
+		return 0, 0, err
 	}
-	x, y = floats[0], floats[1]
-	return
+	return floats[0], floats[1], nil
 }
 
-// truncate returns the first `n` characters in string `s`
+// truncate returns the first `n` characters in string `s`.
 func truncate(s string, n int) string {
 	if len(s) < n {
 		return s

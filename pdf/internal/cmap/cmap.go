@@ -58,7 +58,7 @@ type CMap struct {
 	toUnicodeIdentity bool
 }
 
-// String retuns a human readable description of `cmap`.
+// String returns a human readable description of `cmap`.
 func (cmap *CMap) String() string {
 	si := cmap.systemInfo
 	parts := []string{
@@ -104,30 +104,25 @@ func (info *CIDSystemInfo) String() string {
 func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
 	d, ok := core.GetDict(obj)
 	if !ok {
-		err = core.ErrTypeError
-		return
+		return CIDSystemInfo{}, core.ErrTypeError
 	}
 	registry, ok := core.GetStringVal(d.Get("Registry"))
 	if !ok {
-		err = core.ErrTypeError
-		return
+		return CIDSystemInfo{}, core.ErrTypeError
 	}
 	ordering, ok := core.GetStringVal(d.Get("Ordering"))
 	if !ok {
-		err = core.ErrTypeError
-		return
+		return CIDSystemInfo{}, core.ErrTypeError
 	}
 	supplement, ok := core.GetIntVal(d.Get("Supplement"))
 	if !ok {
-		err = core.ErrTypeError
-		return
+		return CIDSystemInfo{}, core.ErrTypeError
 	}
-	info = CIDSystemInfo{
+	return CIDSystemInfo{
 		Registry:   registry,
 		Ordering:   ordering,
 		Supplement: supplement,
-	}
-	return
+	}, nil
 }
 
 // Name returns the name of the CMap.
@@ -231,13 +226,13 @@ func (cmap *CMap) matchCode(data []byte) (code CharCode, n int, matched bool) {
 		}
 		matched = cmap.inCodespace(code, j+1)
 		if matched {
-			return
+			return code, n, true
 		}
 	}
 	// No codespace matched data. This is a serious problem.
 	common.Log.Debug("ERROR: No codespace matches bytes=[% 02x]=%#q cmap=%s",
 		data, string(data), cmap)
-	return
+	return 0, 0, false
 }
 
 // inCodespace returns true if `code` is in the `numBytes` byte codespace.

@@ -355,26 +355,28 @@ func (array *PdfObjectArray) Append(objects ...PdfObject) {
 	}
 }
 
-// ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is returned if the array
-// contains non-numeric objects (each element can be either PdfObjectInteger or PdfObjectFloat).
+// ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is
+// returned if the array contains non-numeric objects (each element can be either PdfObjectInteger
+// or PdfObjectFloat).
 func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 	vals := []float64{}
 
 	for _, obj := range array.Elements() {
-		if number, is := obj.(*PdfObjectInteger); is {
-			vals = append(vals, float64(*number))
-		} else if number, is := obj.(*PdfObjectFloat); is {
-			vals = append(vals, float64(*number))
-		} else {
-			return nil, fmt.Errorf("Type error")
+		switch t := obj.(type) {
+		case *PdfObjectInteger:
+			vals = append(vals, float64(*t))
+		case *PdfObjectFloat:
+			vals = append(vals, float64(*t))
+		default:
+			return nil, ErrTypeError
 		}
 	}
 
 	return vals, nil
 }
 
-// ToIntegerArray returns a slice of all array elements as an int slice. An error is returned if the array contains
-// non-integer objects. Each element can only be PdfObjectInteger.
+// ToIntegerArray returns a slice of all array elements as an int slice. An error is returned if the
+// array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	vals := []int{}
 
@@ -389,6 +391,7 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 	return vals, nil
 }
 
+// String returns a string describing `array`.
 func (array *PdfObjectArray) String() string {
 	outStr := "["
 	for ind, o := range array.Elements() {
@@ -417,19 +420,62 @@ func (array *PdfObjectArray) DefaultWriteString() string {
 // GetNumberAsFloat returns the contents of `obj` as a float if it is an integer or float, or an
 // error if it isn't.
 func GetNumberAsFloat(obj PdfObject) (float64, error) {
-	return getNumberAsFloat(obj)
+	switch t := obj.(type) {
+	case *PdfObjectFloat:
+		return float64(*t), nil
+	case *PdfObjectInteger:
+		return float64(*t), nil
+	}
+	return 0, ErrNotANumber
 }
 
-func getNumberAsFloat(obj PdfObject) (float64, error) {
-	if fObj, ok := obj.(*PdfObjectFloat); ok {
-		return float64(*fObj), nil
-	}
+// IsNullObject returns true if `obj` is a PdfObjectNull.
+func IsNullObject(obj PdfObject) bool {
+	_, isNull := obj.(*PdfObjectNull)
+	return isNull
+}
 
-	if iObj, ok := obj.(*PdfObjectInteger); ok {
-		return float64(*iObj), nil
+// GetNumbersAsFloat converts a list of pdf objects representing floats or integers to a slice of
+// float64 values.
+func GetNumbersAsFloat(objects []PdfObject) (floats []float64, err error) {
+	for _, obj := range objects {
+		val, err := GetNumberAsFloat(obj)
+		if err != nil {
+			return nil, err
+		}
+		floats = append(floats, val)
 	}
+	return floats, nil
+}
 
-	return 0, fmt.Errorf("Not a number")
+// GetNumberAsInt64 returns the contents of `obj` as an int64 if it is an integer or float, or an
+// error if it isn't. This is for cases where expecting an integer, but some implementations
+// actually store the number in a floating point format.
+func GetNumberAsInt64(obj PdfObject) (int64, error) {
+	switch t := obj.(type) {
+	case *PdfObjectFloat:
+		common.Log.Debug("Number expected as integer was stored as float (type casting used)")
+		return int64(*t), nil
+	case *PdfObjectInteger:
+		return int64(*t), nil
+	}
+	return 0, ErrNotANumber
+}
+
+// getNumberAsFloatOrNull returns the contents of `obj` as a *float if it is an integer or float,
+// or nil if it `obj` is nil. In other cases an error is returned.
+func getNumberAsFloatOrNull(obj PdfObject) (*float64, error) {
+	switch t := obj.(type) {
+	case *PdfObjectFloat:
+		val := float64(*t)
+		return &val, nil
+	case *PdfObjectInteger:
+		val := float64(*t)
+		return &val, nil
+	case *PdfObjectNull:
+		return nil, nil
+	}
+	return nil, ErrNotANumber
 }
 
 // GetAsFloat64Slice returns the array as []float64 slice.
@@ -438,8 +484,7 @@ func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	slice := []float64{}
 
 	for _, obj := range array.Elements() {
-		obj := TraceToDirectObject(obj)
-		number, err := getNumberAsFloat(obj)
+		number, err := GetNumberAsFloat(TraceToDirectObject(obj))
 		if err != nil {
 			return nil, fmt.Errorf("Array element not a number")
 		}
@@ -459,6 +504,7 @@ func (d *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
 	}
 }
 
+// String returns a string describing `d`.
 func (d *PdfObjectDictionary) String() string {
 	outStr := "Dict("
 	for _, k := range d.keys {
@@ -541,7 +587,6 @@ func (d *PdfObjectDictionary) Remove(key PdfObjectName) {
 // Note that we take care to perform a type switch.  Otherwise if we would supply a nil value
 // of another type, e.g. (PdfObjectArray*)(nil), then it would not be a PdfObject(nil) and thus
 // would get set.
-//
 func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
 	if val != nil {
 		switch t := val.(type) {
@@ -595,6 +640,7 @@ func (d *PdfObjectDictionary) SetIfNotNil(key PdfObjectName, val PdfObject) {
 	}
 }
 
+// String returns a string describing `ref`.
 func (ref *PdfObjectReference) String() string {
 	return fmt.Sprintf("Ref(%d %d)", ref.ObjectNumber, ref.GenerationNumber)
 }
@@ -604,6 +650,7 @@ func (ref *PdfObjectReference) DefaultWriteString() string {
 	return fmt.Sprintf("%d %d R", ref.ObjectNumber, ref.GenerationNumber)
 }
 
+// String returns a string describing `ind`.
 func (ind *PdfIndirectObject) String() string {
 	// Avoid printing out the object, can cause problems with circular
 	// references.
@@ -616,6 +663,7 @@ func (ind *PdfIndirectObject) DefaultWriteString() string {
 	return outStr
 }
 
+// String returns a string describing `stream`.
 func (stream *PdfObjectStream) String() string {
 	return fmt.Sprintf("Object stream %d: %s", stream.ObjectNumber, stream.PdfObjectDictionary)
 }
@@ -626,6 +674,7 @@ func (stream *PdfObjectStream) DefaultWriteString() string {
 	return outStr
 }
 
+// String returns a string describing `null`.
 func (null *PdfObjectNull) String() string {
 	return "null"
 }

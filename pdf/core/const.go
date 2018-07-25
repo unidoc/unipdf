@@ -19,4 +19,5 @@ var (
 	ErrTypeError                     = errors.New("type check error")
 	ErrRangeError                    = errors.New("range range error")
 	ErrNotSupported                  = errors.New("feature not currently supported")
+	ErrNotANumber                    = errors.New("not a number")
 )

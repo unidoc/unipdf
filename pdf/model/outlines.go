@@ -114,7 +114,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 
 	if obj := dict.Get("Count"); obj != nil {
 		// This should always be an integer, but in a few cases has been a float.
-		count, err := getNumberAsInt64(obj)
+		count, err := GetNumberAsInt64(obj)
 		if err != nil {
 			return nil, err
 		}

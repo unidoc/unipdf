@@ -102,17 +102,16 @@ type ttfParser struct {
 }
 
 // NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in PdfObject `obj`.
-func NewFontFile2FromPdfObject(obj core.PdfObject) (rec TtfType, err error) {
+func NewFontFile2FromPdfObject(obj core.PdfObject) (TtfType, error) {
 	obj = core.TraceToDirectObject(obj)
 	streamObj, ok := obj.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("ERROR: FontFile2 must be a stream (%T)", obj)
-		err = core.ErrTypeError
-		return
+		return TtfType{}, core.ErrTypeError
 	}
 	data, err := core.DecodeStream(streamObj)
 	if err != nil {
-		return
+		return TtfType{}, err
 	}
 
 	// Uncomment these lines to see the contents of the font file. For debugging.
@@ -121,33 +120,30 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (rec TtfType, err error) {
 	// fmt.Println("===============####===============")
 
 	t := ttfParser{f: bytes.NewReader(data)}
-	rec, err = t.Parse()
-	return
+	return t.Parse()
 }
 
 // NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in disk file `fileStr`.
-func TtfParse(fileStr string) (rec TtfType, err error) {
+func TtfParse(fileStr string) (TtfType, error) {
 	f, err := os.Open(fileStr)
 	if err != nil {
-		return
+		return TtfType{}, err
 	}
 	defer f.Close()
 
 	t := ttfParser{f: f}
-	rec, err = t.Parse()
-	return
+	return t.Parse()
 }
 
 // NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
-func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
+func (t *ttfParser) Parse() (TtfType, error) {
 
 	version, err := t.ReadStr(4)
 	if err != nil {
-		return
+		return TtfType{}, err
 	}
 	if version == "OTTO" {
-		err = errors.New("fonts based on PostScript outlines are not supported")
-		return
+		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
 	if version != "\x00\x01\x00\x00" {
 		common.Log.Debug("ERROR: Unrecognized TrueType file format. version=%q", version)
@@ -159,7 +155,7 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 	for j := 0; j < numTables; j++ {
 		tag, err = t.ReadStr(4)
 		if err != nil {
-			return
+			return TtfType{}, err
 		}
 		t.Skip(4) // checkSum
 		offset := t.ReadULong()
@@ -169,13 +165,10 @@ func (t *ttfParser) Parse() (TtfRec TtfType, err error) {
 
 	common.Log.Trace(describeTables(t.tables))
 
-	err = t.ParseComponents()
-	if err != nil {
-		return
+	if err = t.ParseComponents(); err != nil {
+		return TtfType{}, err
 	}
-
-	TtfRec = t.rec
-	return
+	return t.rec, nil
 }
 
 // describeTables returns a string describing `tables`, the tables in a TrueType font file.
@@ -204,62 +197,55 @@ func describeTables(tables map[string]uint32) string {
 // "hmtx"
 // "fpgm"
 // "gasp"
-func (t *ttfParser) ParseComponents() (err error) {
+func (t *ttfParser) ParseComponents() error {
 
 	// Mandatory tables.
-	err = t.ParseHead()
-	if err != nil {
-		return
+	if err := t.ParseHead(); err != nil {
+		return err
 	}
-	err = t.ParseHhea()
-	if err != nil {
-		return
+	if err := t.ParseHhea(); err != nil {
+		return err
 	}
-	err = t.ParseMaxp()
-	if err != nil {
-		return
+	if err := t.ParseMaxp(); err != nil {
+		return err
 	}
-	err = t.ParseHmtx()
-	if err != nil {
-		return
+	if err := t.ParseHmtx(); err != nil {
+		return err
 	}
 
 	// Optional tables.
 	if _, ok := t.tables["name"]; ok {
-		err = t.ParseName()
-		if err != nil {
-			return
+		if err := t.ParseName(); err != nil {
+			return err
 		}
 	}
 	if _, ok := t.tables["OS/2"]; ok {
-		err = t.ParseOS2()
-		if err != nil {
-			return
+		if err := t.ParseOS2(); err != nil {
+			return err
 		}
 	}
 	if _, ok := t.tables["post"]; ok {
-		err = t.ParsePost()
-		if err != nil {
-			return
+		if err := t.ParsePost(); err != nil {
+			return err
 		}
 	}
 	if _, ok := t.tables["cmap"]; ok {
-		err = t.ParseCmap()
-		if err != nil {
-			return
+		if err := t.ParseCmap(); err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
-func (t *ttfParser) ParseHead() (err error) {
-	err = t.Seek("head")
+func (t *ttfParser) ParseHead() error {
+	if err := t.Seek("head"); err != nil {
+		return err
+	}
 	t.Skip(3 * 4) // version, fontRevision, checkSumAdjustment
 	magicNumber := t.ReadULong()
 	if magicNumber != 0x5F0F3CF5 {
-		err = fmt.Errorf("incorrect magic number")
-		return
+		return fmt.Errorf("incorrect magic number")
 	}
 	t.Skip(2) // flags
 	t.rec.UnitsPerEm = t.ReadUShort()
@@ -268,47 +254,49 @@ func (t *ttfParser) ParseHead() (err error) {
 	t.rec.Ymin = t.ReadShort()
 	t.rec.Xmax = t.ReadShort()
 	t.rec.Ymax = t.ReadShort()
-	return
+	return nil
 }
 
-func (t *ttfParser) ParseHhea() (err error) {
-	err = t.Seek("hhea")
-	if err == nil {
-		t.Skip(4 + 15*2)
-		t.numberOfHMetrics = t.ReadUShort()
+func (t *ttfParser) ParseHhea() error {
+	if err := t.Seek("hhea"); err != nil {
+		return err
 	}
-	return
+	t.Skip(4 + 15*2)
+	t.numberOfHMetrics = t.ReadUShort()
+	return nil
 }
 
-func (t *ttfParser) ParseMaxp() (err error) {
-	err = t.Seek("maxp")
-	if err == nil {
-		t.Skip(4)
-		t.numGlyphs = t.ReadUShort()
+func (t *ttfParser) ParseMaxp() error {
+	if err := t.Seek("maxp"); err != nil {
+		return err
 	}
-	return
+	t.Skip(4)
+	t.numGlyphs = t.ReadUShort()
+	return nil
 }
 
-func (t *ttfParser) ParseHmtx() (err error) {
-	err = t.Seek("hmtx")
-	if err == nil {
-		t.rec.Widths = make([]uint16, 0, 8)
-		for j := uint16(0); j < t.numberOfHMetrics; j++ {
-			t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
-			t.Skip(2) // lsb
+func (t *ttfParser) ParseHmtx() error {
+	if err := t.Seek("hmtx"); err != nil {
+		return err
+	}
+
+	t.rec.Widths = make([]uint16, 0, 8)
+	for j := uint16(0); j < t.numberOfHMetrics; j++ {
+		t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
+		t.Skip(2) // lsb
+	}
+	if t.numberOfHMetrics < t.numGlyphs {
+		lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
+		for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
+			t.rec.Widths = append(t.rec.Widths, lastWidth)
 		}
-		if t.numberOfHMetrics < t.numGlyphs {
-			lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
-			for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
-				t.rec.Widths = append(t.rec.Widths, lastWidth)
-			}
-		}
 	}
-	return
+
+	return nil
 }
 
 // parseCmapSubtable31 parses information from an (3,1) subtable (Windows Unicode).
-func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
+func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 	startCount := make([]uint16, 0, 8)
 	endCount := make([]uint16, 0, 8)
 	idDelta := make([]int16, 0, 8)
@@ -317,8 +305,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
 	t.f.Seek(int64(t.tables["cmap"])+offset31, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 4 {
-		err = fmt.Errorf("unexpected subtable format: %d", format)
-		return
+		return fmt.Errorf("unexpected subtable format: %d", format)
 	}
 	t.Skip(2 * 2) // length, language
 	segCount := int(t.ReadUShort() / 2)
@@ -366,7 +353,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) (err error) {
 			}
 		}
 	}
-	return
+	return nil
 }
 
 // parseCmapSubtable10 parses information from an (1,0) subtable (symbol).
@@ -410,10 +397,10 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 }
 
 // ParseCmap parses the cmap table in a TrueType font.
-func (t *ttfParser) ParseCmap() (err error) {
+func (t *ttfParser) ParseCmap() error {
 	var offset int64
-	if err = t.Seek("cmap"); err != nil {
-		return
+	if err := t.Seek("cmap"); err != nil {
+		return err
 	}
 	common.Log.Debug("ParseCmap")
 	t.ReadUShort() // version is ignored.
@@ -432,21 +419,19 @@ func (t *ttfParser) ParseCmap() (err error) {
 
 	// Latin font support based on (3,1) table encoding.
 	if offset31 != 0 {
-		err = t.parseCmapSubtable31(offset31)
-		if err != nil {
-			return
+		if err := t.parseCmapSubtable31(offset31); err != nil {
+			return err
 		}
 	}
 
 	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
 	if offset10 != 0 {
-		err = t.parseCmapVersion(offset10)
-		if err != nil {
-			return
+		if err := t.parseCmapVersion(offset10); err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 func (t *ttfParser) parseCmapVersion(offset int64) error {
@@ -511,9 +496,9 @@ func (t *ttfParser) parseCmapFormat6() error {
 	return nil
 }
 
-func (t *ttfParser) ParseName() (err error) {
-	if err = t.Seek("name"); err != nil {
-		return
+func (t *ttfParser) ParseName() error {
+	if err := t.Seek("name"); err != nil {
+		return err
 	}
 	tableOffset, _ := t.f.Seek(0, os.SEEK_CUR)
 	t.rec.PostScriptName = ""
@@ -528,28 +513,27 @@ func (t *ttfParser) ParseName() (err error) {
 		if nameID == 6 {
 			// PostScript name
 			t.f.Seek(int64(tableOffset)+int64(stringOffset)+int64(offset), os.SEEK_SET)
-			var s string
-			s, err = t.ReadStr(int(length))
+			s, err := t.ReadStr(int(length))
 			if err != nil {
-				return
+				return err
 			}
 			s = strings.Replace(s, "\x00", "", -1)
-			var re *regexp.Regexp
-			if re, err = regexp.Compile("[(){}<> /%[\\]]"); err != nil {
-				return
+			re, err := regexp.Compile("[(){}<> /%[\\]]")
+			if err != nil {
+				return err
 			}
 			t.rec.PostScriptName = re.ReplaceAllString(s, "")
 		}
 	}
 	if t.rec.PostScriptName == "" {
-		err = fmt.Errorf("the name PostScript was not found")
+		return fmt.Errorf("the name PostScript was not found")
 	}
-	return
+	return nil
 }
 
-func (t *ttfParser) ParseOS2() (err error) {
-	if err = t.Seek("OS/2"); err != nil {
-		return
+func (t *ttfParser) ParseOS2() error {
+	if err := t.Seek("OS/2"); err != nil {
+		return err
 	}
 	version := t.ReadUShort()
 	t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
@@ -567,13 +551,13 @@ func (t *ttfParser) ParseOS2() (err error) {
 	} else {
 		t.rec.CapHeight = 0
 	}
-	return
+	return nil
 }
 
 // ParsePost reads the "post" section in a TrueType font table and sets t.rec.GlyphNames.
-func (t *ttfParser) ParsePost() (err error) {
-	if err = t.Seek("post"); err != nil {
-		return
+func (t *ttfParser) ParsePost() error {
+	if err := t.Seek("post"); err != nil {
+		return err
 	}
 
 	formatType := t.Read32Fixed()
@@ -644,7 +628,7 @@ func (t *ttfParser) ParsePost() (err error) {
 		common.Log.Debug("ERROR: Unknown formatType=%f", formatType)
 	}
 
-	return
+	return nil
 }
 
 // The 258 standard mac glyph names used in 'post' format 1 and 2.
@@ -710,49 +694,45 @@ func (t *ttfParser) Skip(n int) {
 
 // ReadStr reads `length` bytes from the file and returns them as a string, or an error if there was
 // a problem.
-func (t *ttfParser) ReadStr(length int) (str string, err error) {
-	var n int
+func (t *ttfParser) ReadStr(length int) (string, error) {
 	buf := make([]byte, length)
-	n, err = t.f.Read(buf)
+	n, err := t.f.Read(buf)
 	if err != nil {
-		return
+		return "", err
+	} else if n != length {
+		return "", fmt.Errorf("unable to read %d bytes", length)
 	}
-	if n == length {
-		str = string(buf)
-	} else {
-		err = fmt.Errorf("unable to read %d bytes", length)
-	}
-	return
+	return string(buf), nil
 }
 
 // ReadByte reads a byte and returns it as unsigned.
 func (t *ttfParser) ReadByte() (val uint8) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
 // ReadSByte reads a byte and returns it as signed.
 func (t *ttfParser) ReadSByte() (val int8) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
 // ReadUShort reads 2 bytes and returns them as a big endian unsigned 16 bit integer.
 func (t *ttfParser) ReadUShort() (val uint16) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
 // ReadShort reads 2 bytes and returns them as a big endian signed 16 bit integer.
 func (t *ttfParser) ReadShort() (val int16) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
 // ReadULong reads 4 bytes and returns them as a big endian unsigned 32 bit integer.
 func (t *ttfParser) ReadULong() (val uint32) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
 // ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
