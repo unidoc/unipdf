@@ -157,16 +157,16 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfFontType0, error) {
 
 	// DescendantFonts.
-	arr, ok := core.GetArrayVal(core.TraceToDirectObject(d.Get("DescendantFonts")))
+	arr, ok := core.GetArray(d.Get("DescendantFonts"))
 	if !ok {
 		common.Log.Debug("ERROR: Invalid DescendantFonts - not an array %s", base)
 		return nil, core.ErrRangeError
 	}
-	if len(arr) != 1 {
-		common.Log.Debug("ERROR: Array length != 1 (%d)", len(arr))
+	if arr.Len() != 1 {
+		common.Log.Debug("ERROR: Array length != 1 (%d)", arr.Len())
 		return nil, core.ErrRangeError
 	}
-	df, err := newPdfFontFromPdfObject(arr[0], false)
+	df, err := newPdfFontFromPdfObject(arr.Get(0), false)
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading descendant font: err=%v %s", err, base)
 		return nil, err

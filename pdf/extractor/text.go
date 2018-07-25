@@ -131,7 +131,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					common.Log.Debug("ERROR: TJ err=%v", err)
 					return err
 				}
-				args, ok := core.GetArrayVal(op.Params[0])
+				args, ok := core.GetArray(op.Params[0])
 				if !ok {
 					common.Log.Debug("ERROR: Tj op=%s GetArrayVal failed", op)
 					return err
@@ -329,8 +329,8 @@ func (to *textObject) showText(charcodes []byte) error {
 }
 
 // showTextAdjusted "TJ" Show text with adjustable spacing
-func (to *textObject) showTextAdjusted(args []core.PdfObject) error {
-	for _, o := range args {
+func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
+	for _, o := range args.Elements() {
 		switch o.(type) {
 		case *core.PdfObjectFloat, *core.PdfObjectInteger:
 			// Not implemented yet

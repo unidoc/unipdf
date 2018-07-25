@@ -175,7 +175,7 @@ func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 	dict.Set("Type", core.MakeName("Encoding"))
 	dict.Set("BaseEncoding", core.MakeName(se.baseName))
-	dict.Set("Differences", core.MakeArray(ToFontDifferences(se.differences)...))
+	dict.Set("Differences", ToFontDifferences(se.differences))
 	return core.MakeIndirectObject(dict)
 }
 
@@ -212,10 +212,10 @@ func (se *SimpleEncoder) makeEncoder() {
 
 // FromFontDifferences converts `diffList`, a /Differences array from an /Encoding object to a map
 // representing character code to glyph mappings.
-func FromFontDifferences(diffList []core.PdfObject) (map[byte]string, error) {
+func FromFontDifferences(diffList *core.PdfObjectArray) (map[byte]string, error) {
 	differences := map[byte]string{}
 	var n byte
-	for _, obj := range diffList {
+	for _, obj := range diffList.Elements() {
 		switch v := obj.(type) {
 		case *core.PdfObjectInteger:
 			n = byte(*v)
@@ -233,9 +233,9 @@ func FromFontDifferences(diffList []core.PdfObject) (map[byte]string, error) {
 
 // ToFontDifferences converts `differences`, a map representing character code to glyph mappings,
 // to a /Differences array for an /Encoding object.
-func ToFontDifferences(differences map[byte]string) []core.PdfObject {
+func ToFontDifferences(differences map[byte]string) *core.PdfObjectArray {
 	if len(differences) == 0 {
-		return []core.PdfObject{}
+		return nil
 	}
 
 	codes := []byte{}
@@ -256,7 +256,7 @@ func ToFontDifferences(differences map[byte]string) []core.PdfObject {
 		}
 		n = c
 	}
-	return diffList
+	return core.MakeArray(diffList...)
 }
 
 // simpleEncodings is a map of the standard 8 bit character encodings.

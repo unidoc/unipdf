@@ -266,7 +266,7 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]
 				baseName = base
 			}
 		}
-		diffList, ok := core.GetArrayVal(encoding.Get("Differences"))
+		diffList, ok := core.GetArray(encoding.Get("Differences"))
 		if !ok {
 			common.Log.Debug("ERROR: Bad font encoding dict=%+v", encoding)
 			return "", nil, core.ErrTypeError
