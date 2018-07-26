@@ -130,6 +130,7 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			cc.Translate(0, -blk.Height())
 		}
 		contents := append(*cc.Operations(), *dup.contents...)
+		contents.WrapIfNeeded()
 		dup.contents = &contents
 
 		blocks = append(blocks, dup)
