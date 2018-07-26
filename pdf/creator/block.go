@@ -96,7 +96,7 @@ func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
 }
 
-// Duplicate the block with a new copy of the operations list.
+// duplicate duplicates the block with a new copy of the operations list.
 func (blk *Block) duplicate() *Block {
 	dup := &Block{}
 
@@ -167,7 +167,7 @@ func (blk *Block) Width() float64 {
 	return blk.width
 }
 
-// Add contents to a block.  Wrap both existing and new contents to ensure
+// addContents adds contents to a block.  Wrap both existing and new contents to ensure
 // independence of content operations.
 func (blk *Block) addContents(operations *contentstream.ContentStreamOperations) {
 	blk.contents.WrapIfNeeded()
@@ -175,7 +175,7 @@ func (blk *Block) addContents(operations *contentstream.ContentStreamOperations)
 	*blk.contents = append(*blk.contents, *operations...)
 }
 
-// Add contents to a block by contents string.
+// addContentsByString adds contents to a block by contents string.
 func (blk *Block) addContentsByString(contents string) error {
 	cc := contentstream.NewContentStreamParser(contents)
 	operations, err := cc.Parse()
@@ -235,7 +235,7 @@ func (blk *Block) ScaleToHeight(h float64) {
 	blk.Scale(ratio, ratio)
 }
 
-// Internal function to apply translation to the block, moving block contents on the PDF.
+// translate translates the block, moving block contents on the PDF. For internal use.
 func (blk *Block) translate(tx, ty float64) {
 	ops := contentstream.NewContentCreator().
 		Translate(tx, -ty).
@@ -245,7 +245,8 @@ func (blk *Block) translate(tx, ty float64) {
 	blk.contents.WrapIfNeeded()
 }
 
-// Draw the block on a Page.
+// drawToPage draws the block on a PdfPage. Generates the content streams and appends to the PdfPage's content
+// stream and links needed resources.
 func (blk *Block) drawToPage(page *model.PdfPage) error {
 	// Check if Page contents are wrapped - if not wrap it.
 	content, err := page.GetAllContentStreams()
@@ -279,7 +280,7 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 	return nil
 }
 
-// Draw the drawable d on the block.
+// Draw draws the drawable d on the block.
 // Note that the drawable must not wrap, i.e. only return one block. Otherwise an error is returned.
 func (blk *Block) Draw(d Drawable) error {
 	ctx := DrawContext{}
@@ -330,13 +331,13 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	return nil
 }
 
-// Append another block onto the block.
+// mergeBlocks appends another block onto the block.
 func (blk *Block) mergeBlocks(toAdd *Block) error {
 	err := mergeContents(blk.contents, blk.resources, toAdd.contents, toAdd.resources)
 	return err
 }
 
-// Merge contents and content streams.
+// mergeContents merges contents and content streams.
 // Active in the sense that it modified the input contents and resources.
 func mergeContents(contents *contentstream.ContentStreamOperations, resources *model.PdfPageResources,
 	contentsToAdd *contentstream.ContentStreamOperations, resourcesToAdd *model.PdfPageResources) error {
