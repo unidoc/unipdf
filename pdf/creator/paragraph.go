@@ -209,7 +209,7 @@ func (p *Paragraph) Height() float64 {
 	return h
 }
 
-// Calculate the text width (if not wrapped).
+// getTextWidth calculates the text width as if all in one line (not taking wrapping into account).
 func (p *Paragraph) getTextWidth() float64 {
 	w := float64(0.0)
 
