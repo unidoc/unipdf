@@ -187,7 +187,6 @@ func (font *pdfFontSimple) addEncoding() error {
 	var err error
 
 	if font.Encoding != nil {
-		// XXX: TODO Stop setting default encoding in getFontEncoding.
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
 		if err != nil {
 			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
@@ -252,6 +251,8 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]
 
 	if obj == nil {
 		// Fall back to StandardEncoding
+		// This works because the only way BaseEncoding can get overridden is by FontFile entries
+		// and the only encoding names we have seen in FontFile's are StandardEncoding or no entry.
 		return baseName, nil, nil
 	}
 
