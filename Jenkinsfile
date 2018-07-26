@@ -10,7 +10,7 @@ node {
         sh 'go version'
 
         stage('Checkout') {
-            git url: 'https://github.com/unidoc/unidoc.git'
+            checkout scm
         }
 
         stage('Prepare') {
