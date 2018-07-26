@@ -193,9 +193,8 @@ func (p *Paragraph) SetWidth(width float64) {
 func (p *Paragraph) Width() float64 {
 	if p.enableWrap {
 		return p.wrapWidth
-	} else {
-		return p.getTextWidth() / 1000.0
 	}
+	return p.getTextWidth() / 1000.0
 }
 
 // Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
@@ -382,10 +381,9 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X -= p.margins.left // Move back.
 		ctx.Width = origContext.Width
 		return blocks, ctx, nil
-	} else {
-		// Absolute: not changing the context.
-		return blocks, origContext, nil
 	}
+	// Absolute: not changing the context.
+	return blocks, origContext, nil
 }
 
 // Draw block on specified location on Page, adding to the content stream.

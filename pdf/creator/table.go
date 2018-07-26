@@ -390,14 +390,14 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	if table.positioning.isAbsolute() {
 		return blocks, origCtx, nil
-	} else {
-		// Move back X after.
-		ctx.X = origCtx.X
-		// Return original width
-		ctx.Width = origCtx.Width
-		// Add the bottom margin
-		ctx.Y += table.margins.bottom
 	}
+	// Relative mode.
+	// Move back X after.
+	ctx.X = origCtx.X
+	// Return original width
+	ctx.Width = origCtx.Width
+	// Add the bottom margin
+	ctx.Y += table.margins.bottom
 
 	return blocks, ctx, nil
 }
