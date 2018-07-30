@@ -10,8 +10,10 @@
 package textencoding
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // MissingCodeRune is the rune returned when there is no matching glyph. It was previously '?'.
@@ -27,6 +29,15 @@ const MissingCodeRune = '\ufffd' // �
 // XXX: TODO: Can we combine all the tables glyphAliases, glyphlistGlyphToRuneMap,
 //            texGlyphlistGlyphToStringMap, additionalGlyphlistGlyphToRuneMap and ".notdef"?
 func GlyphToRune(glyph string) (rune, bool) {
+	// We treat glyph "eight.lf" the same as glyph "eight".
+	// See contrib/testdata/font/Ingmar.txt
+	if strings.Contains(glyph, ".") {
+		groups := rePrefix.FindStringSubmatch(glyph)
+		if groups != nil {
+			fmt.Printf("GlyphToRune: glyph=%q=>%q\n", glyph, groups[1])
+			glyph = groups[1]
+		}
+	}
 	// First lookup the glyph in all the tables.
 	if alias, ok := glyphAliases[glyph]; ok {
 		glyph = alias
@@ -34,15 +45,20 @@ func GlyphToRune(glyph string) (rune, bool) {
 	if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
-	if s, ok := texGlyphlistGlyphToStringMap[glyph]; ok {
-		// XXX: Hack. Use the first rune in the teX mapping
-		return []rune(s)[0], true
+	if r, ok := texGlyphToRuneMap[glyph]; ok {
+		return r, true
 	}
 	if r, ok := additionalGlyphlistGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
+	if r, ok := ligatureMap[glyph]; ok {
+		return r, true
+	}
 	if glyph == ".notdef" {
 		return MissingCodeRune, true
+	}
+	if r, ok := empericalGlyphToRuneMap[glyph]; ok {
+		return r, true
 	}
 
 	// Next try all the glyph naming conventions.
@@ -62,21 +78,1678 @@ func GlyphToRune(glyph string) (rune, bool) {
 	return rune(0), false
 }
 
+// RuneToString converts rune `r` to a string. It unpacks `ligatures`.
+func RuneToString(r rune) string {
+	if s, ok := ligatureToString[r]; ok {
+		return s
+	}
+	return string(r)
+}
+
 var (
 	reEncoding    = regexp.MustCompile(`^[A-Z](\d{1,4})$`)  // C211
-	reUniEncoding = regexp.MustCompile(`^uni([\dA-F]{4})$`) //uniFB03
+	reUniEncoding = regexp.MustCompile(`^uni([\dA-F]{4})$`) // uniFB03
+	rePrefix      = regexp.MustCompile(`^(\w+)\.\w+$`)      // eight.pnum => eight
 )
 
 var glyphAliases = map[string]string{
-	"f_f":     "ff",
-	"f_f_i":   "ffi",
-	"f_f_l":   "ffl",
-	"f_i":     "fi",
-	"f_l":     "fl",
-	"s_t":     "st",
-	"I_J":     "IJ",
-	"i_j":     "ij",
-	"elipsis": "ellipsis",
+	"f_f":                   "ff",
+	"f_f_i":                 "ffi",
+	"f_f_l":                 "ffl",
+	"f_i":                   "fi",
+	"f_l":                   "fl",
+	"s_t":                   "st",
+	"I_J":                   "IJ",
+	"i_j":                   "ij",
+	"elipsis":               "ellipsis",
+	"AElig":                 "AE",
+	"Acirc":                 "Acircumflex",
+	"Auml":                  "Adieresis",
+	"Agr":                   "Alpha",
+	"Aacgr":                 "Alphatonos",
+	"Amacr":                 "Amacron",
+	"Aogon":                 "Aogonek",
+	"Bgr":                   "Beta",
+	"Ccedil":                "Ccedilla",
+	"Ccirc":                 "Ccircumflex",
+	"Cdotaccent":            "Cdot",
+	"CHcy":                  "Checyrillic",
+	"afii10041":             "Checyrillic",
+	"KHgr":                  "Chi",
+	"increment":             "Delta",
+	"Dgr":                   "Deltagreek",
+	"DJcy":                  "Djecyrillic",
+	"afii10051":             "Djecyrillic",
+	"Dbar":                  "Dslash",
+	"Dcroat":                "Dslash",
+	"Dstrok":                "Dslash",
+	"DScy":                  "Dzecyrillic",
+	"afii10054":             "Dzecyrillic",
+	"Ecirc":                 "Ecircumflex",
+	"Euml":                  "Edieresis",
+	"Edot":                  "Edotaccent",
+	"Fcy":                   "Efcyrillic",
+	"afii10038":             "Efcyrillic",
+	"Lcy":                   "Elcyrillic",
+	"afii10029":             "Elcyrillic",
+	"Emacr":                 "Emacron",
+	"Mcy":                   "Emcyrillic",
+	"afii10030":             "Emcyrillic",
+	"En":                    "Encyrillic",
+	"Ncy":                   "Encyrillic",
+	"afii10031":             "Encyrillic",
+	"ENG":                   "Eng",
+	"Ng":                    "Eng",
+	"Eogon":                 "Eogonek",
+	"Egr":                   "Epsilon",
+	"Eacgr":                 "Epsilontonos",
+	"Scy":                   "Escyrillic",
+	"afii10035":             "Escyrillic",
+	"EEgr":                  "Eta",
+	"EEacgr":                "Etatonos",
+	"ETH":                   "Eth",
+	"euro":                  "Euro",
+	"FFIsmall":              "Fsmall",
+	"FFLsmall":              "Fsmall",
+	"FFsmall":               "Fsmall",
+	"FIsmall":               "Fsmall",
+	"FLsmall":               "Fsmall",
+	"Ggr":                   "Gamma",
+	"Gcedil":                "Gcedilla",
+	"Gcommaaccent":          "Gcedilla",
+	"Gcirc":                 "Gcircumflex",
+	"Gdot":                  "Gdotaccent",
+	"GJcy":                  "Gjecyrillic",
+	"afii10052":             "Gjecyrillic",
+	"blackcircle":           "H18533",
+	"box":                   "H22073",
+	"square":                "H22073",
+	"whitesquare":           "H22073",
+	"HARDcy":                "Hardsigncyrillic",
+	"afii10044":             "Hardsigncyrillic",
+	"Hstrok":                "Hbar",
+	"Hcirc":                 "Hcircumflex",
+	"YAcy":                  "IAcyrillic",
+	"afii10049":             "IAcyrillic",
+	"IJlig":                 "IJ",
+	"Icirc":                 "Icircumflex",
+	"Iuml":                  "Idieresis",
+	"Idotaccent":            "Idot",
+	"Ifractur":              "Ifraktur",
+	"image":                 "Ifraktur",
+	"Imacr":                 "Imacron",
+	"Iogon":                 "Iogonek",
+	"Igr":                   "Iota",
+	"Idigr":                 "Iotadieresis",
+	"Iacgr":                 "Iotatonos",
+	"Jcirc":                 "Jcircumflex",
+	"Jsercy":                "Jecyrillic",
+	"afii10057":             "Jecyrillic",
+	"Kgr":                   "Kappa",
+	"Kcedil":                "Kcedilla",
+	"Kcommaaccent":          "Kcedilla",
+	"KJcy":                  "Kjecyrillic",
+	"afii10061":             "Kjecyrillic",
+	"Lgr":                   "Lambda",
+	"Lcedil":                "Lcedilla",
+	"Lcommaaccent":          "Lcedilla",
+	"Ldotaccent":            "Ldot",
+	"Lmidot":                "Ldot",
+	"Lstrok":                "Lslash",
+	"Mgr":                   "Mu",
+	"Ncedil":                "Ncommaaccent",
+	"Ncedilla":              "Ncommaaccent",
+	"NJcy":                  "Njecyrillic",
+	"afii10059":             "Njecyrillic",
+	"Ngr":                   "Nu",
+	"OElig":                 "OE",
+	"Ocirc":                 "Ocircumflex",
+	"Ouml":                  "Odieresis",
+	"Odblac":                "Ohungarumlaut",
+	"Odblacute":             "Ohungarumlaut",
+	"Omacr":                 "Omacron",
+	"Ohm":                   "Omega",
+	"ohm":                   "Omega",
+	"OHgr":                  "Omegagreek",
+	"OHacgr":                "Omegatonos",
+	"Ogr":                   "Omicron",
+	"Oacgr":                 "Omicrontonos",
+	"Oslashacute":           "Ostrokeacute",
+	"PHgr":                  "Phi",
+	"Pgr":                   "Pi",
+	"PSgr":                  "Psi",
+	"Rcedil":                "Rcedilla",
+	"Rcommaaccent":          "Rcedilla",
+	"Rfractur":              "Rfraktur",
+	"real":                  "Rfraktur",
+	"Rgr":                   "Rho",
+	"Germandbls":            "S",
+	"SS":                    "S",
+	"boxdr":                 "SF010000",
+	"boxur":                 "SF020000",
+	"boxdl":                 "SF030000",
+	"boxul":                 "SF040000",
+	"boxvh":                 "SF050000",
+	"boxhd":                 "SF060000",
+	"boxhu":                 "SF070000",
+	"boxvr":                 "SF080000",
+	"boxvl":                 "SF090000",
+	"boxh":                  "SF100000",
+	"boxv":                  "SF110000",
+	"boxvL":                 "SF190000",
+	"boxVl":                 "SF200000",
+	"boxDl":                 "SF210000",
+	"boxdL":                 "SF220000",
+	"boxVL":                 "SF230000",
+	"boxV":                  "SF240000",
+	"boxDL":                 "SF250000",
+	"boxUL":                 "SF260000",
+	"boxUl":                 "SF270000",
+	"boxuL":                 "SF280000",
+	"boxvR":                 "SF360000",
+	"boxVr":                 "SF370000",
+	"boxUR":                 "SF380000",
+	"boxDR":                 "SF390000",
+	"boxHU":                 "SF400000",
+	"boxHD":                 "SF410000",
+	"boxVR":                 "SF420000",
+	"boxH":                  "SF430000",
+	"boxVH":                 "SF440000",
+	"boxHu":                 "SF450000",
+	"boxhU":                 "SF460000",
+	"boxHd":                 "SF470000",
+	"boxhD":                 "SF480000",
+	"boxUr":                 "SF490000",
+	"boxuR":                 "SF500000",
+	"boxdR":                 "SF510000",
+	"boxDr":                 "SF520000",
+	"boxVh":                 "SF530000",
+	"boxvH":                 "SF540000",
+	"Scedil":                "Scedilla",
+	"circleS":               "Scircle",
+	"oS":                    "Scircle",
+	"Scirc":                 "Scircumflex",
+	"SHcy":                  "Shacyrillic",
+	"afii10042":             "Shacyrillic",
+	"SHCHcy":                "Shchacyrillic",
+	"afii10043":             "Shchacyrillic",
+	"Sgr":                   "Sigma",
+	"SOFTcy":                "Softsigncyrillic",
+	"afii10046":             "Softsigncyrillic",
+	"Germandblssmall":       "Ssmall",
+	"SSsmall":               "Ssmall",
+	"Tgr":                   "Tau",
+	"Tstrok":                "Tbar",
+	"Tcedil":                "Tcommaaccent",
+	"Tcedilla":              "Tcommaaccent",
+	"THgr":                  "Theta",
+	"THORN":                 "Thorn",
+	"TSHcy":                 "Tshecyrillic",
+	"afii10060":             "Tshecyrillic",
+	"Ucirc":                 "Ucircumflex",
+	"Ucy":                   "Ucyrillic",
+	"afii10037":             "Ucyrillic",
+	"Udblac":                "Udblacute",
+	"Uhungarumlaut":         "Udblacute",
+	"Uuml":                  "Udieresis",
+	"Umacr":                 "Umacron",
+	"Uogon":                 "Uogonek",
+	"Upsi":                  "Upsilon",
+	"Udigr":                 "Upsilondieresis",
+	"Upsilon1":              "Upsilonhooksymbol",
+	"upsih":                 "Upsilonhooksymbol",
+	"Uacgr":                 "Upsilontonos",
+	"Wcirc":                 "Wcircumflex",
+	"Xgr":                   "Xi",
+	"afii10146":             "Yatcyrillic",
+	"Ycirc":                 "Ycircumflex",
+	"Yuml":                  "Ydieresis",
+	"Zdot":                  "Zdotaccent",
+	"Zgr":                   "Zeta",
+	"ZHcy":                  "Zhecyrillic",
+	"afii10024":             "Zhecyrillic",
+	"cross":                 "a23",
+	"sextile":               "a49",
+	"acirc":                 "acircumflex",
+	"acutecmb":              "acutecomb",
+	"auml":                  "adieresis",
+	"aelig":                 "ae",
+	"Acy":                   "afii10017",
+	"Acyrillic":             "afii10017",
+	"Bcy":                   "afii10018",
+	"Becyrillic":            "afii10018",
+	"Vcy":                   "afii10019",
+	"Vecyrillic":            "afii10019",
+	"Gcy":                   "afii10020",
+	"Gecyrillic":            "afii10020",
+	"De":                    "afii10021",
+	"Decyrillic":            "afii10021",
+	"dcy":                   "afii10021",
+	"IEcy":                  "afii10022",
+	"Iecyrillic":            "afii10022",
+	"IOcy":                  "afii10023",
+	"Iocyrillic":            "afii10023",
+	"Zcy":                   "afii10025",
+	"Zecyrillic":            "afii10025",
+	"Icy":                   "afii10026",
+	"Iicyrillic":            "afii10026",
+	"Iishortcyrillic":       "afii10027",
+	"Jcy":                   "afii10027",
+	"Kacyrillic":            "afii10028",
+	"Kcy":                   "afii10028",
+	"Ocy":                   "afii10032",
+	"Ocyrillic":             "afii10032",
+	"Pcy":                   "afii10033",
+	"Pecyrillic":            "afii10033",
+	"Ercyrillic":            "afii10034",
+	"Rcy":                   "afii10034",
+	"Tcy":                   "afii10036",
+	"Te":                    "afii10036",
+	"Tecyrillic":            "afii10036",
+	"KHcy":                  "afii10039",
+	"Khacyrillic":           "afii10039",
+	"TScy":                  "afii10040",
+	"Tsecyrillic":           "afii10040",
+	"Ycy":                   "afii10045",
+	"Yericyrillic":          "afii10045",
+	"Ecy":                   "afii10047",
+	"Ereversedcyrillic":     "afii10047",
+	"IUcyrillic":            "afii10048",
+	"YUcy":                  "afii10048",
+	"Gheupturncyrillic":     "afii10050",
+	"Ecyrillic":             "afii10053",
+	"Jukcy":                 "afii10053",
+	"Icyrillic":             "afii10055",
+	"Iukcy":                 "afii10055",
+	"YIcy":                  "afii10056",
+	"Yicyrillic":            "afii10056",
+	"LJcy":                  "afii10058",
+	"Ljecyrillic":           "afii10058",
+	"Ubrcy":                 "afii10062",
+	"Ushortcyrillic":        "afii10062",
+	"acy":                   "afii10065",
+	"acyrillic":             "afii10065",
+	"de":                    "afii10069",
+	"decyrillic":            "afii10069",
+	"ie":                    "afii10070",
+	"iecy":                  "afii10070",
+	"iecyrillic":            "afii10070",
+	"zhcy":                  "afii10072",
+	"zhe":                   "afii10072",
+	"zhecyrillic":           "afii10072",
+	"zcy":                   "afii10073",
+	"ze":                    "afii10073",
+	"zecyrillic":            "afii10073",
+	"icy":                   "afii10074",
+	"ii":                    "afii10074",
+	"iicyrillic":            "afii10074",
+	"em":                    "afii10078",
+	"emcyrillic":            "afii10078",
+	"mcy":                   "afii10078",
+	"ocy":                   "afii10080",
+	"ocyrillic":             "afii10080",
+	"pcy":                   "afii10081",
+	"pecyrillic":            "afii10081",
+	"er":                    "afii10082",
+	"ercyrillic":            "afii10082",
+	"rcy":                   "afii10082",
+	"kha":                   "afii10087",
+	"khacyrillic":           "afii10087",
+	"khcy":                  "afii10087",
+	"tscy":                  "afii10088",
+	"tse":                   "afii10088",
+	"tsecyrillic":           "afii10088",
+	"shchacyrillic":         "afii10091",
+	"shchcy":                "afii10091",
+	"ycy":                   "afii10093",
+	"yericyrillic":          "afii10093",
+	"gheupturncyrillic":     "afii10098",
+	"djcy":                  "afii10099",
+	"djecyrillic":           "afii10099",
+	"gjcy":                  "afii10100",
+	"gjecyrillic":           "afii10100",
+	"dscy":                  "afii10102",
+	"dze":                   "afii10102",
+	"dzecyrillic":           "afii10102",
+	"icyrillic":             "afii10103",
+	"iukcy":                 "afii10103",
+	"yicy":                  "afii10104",
+	"yicyrillic":            "afii10104",
+	"ljcy":                  "afii10106",
+	"ljecyrillic":           "afii10106",
+	"njcy":                  "afii10107",
+	"njecyrillic":           "afii10107",
+	"tshcy":                 "afii10108",
+	"tshecyrillic":          "afii10108",
+	"kjcy":                  "afii10109",
+	"kjecyrillic":           "afii10109",
+	"DZcy":                  "afii10145",
+	"Dzhecyrillic":          "afii10145",
+	"Fitacyrillic":          "afii10147",
+	"Izhitsacyrillic":       "afii10148",
+	"yatcyrillic":           "afii10194",
+	"fitacyrillic":          "afii10195",
+	"schwacyrillic":         "afii10846",
+	"percentarabic":         "afii57381",
+	"arabiccomma":           "afii57388",
+	"commaarabic":           "afii57388",
+	"arabicindicdigitzero":  "afii57392",
+	"zeroarabic":            "afii57392",
+	"zerohackarabic":        "afii57392",
+	"arabicindicdigitsix":   "afii57398",
+	"sixarabic":             "afii57398",
+	"sixhackarabic":         "afii57398",
+	"arabicindicdigitseven": "afii57399",
+	"sevenarabic":           "afii57399",
+	"sevenhackarabic":       "afii57399",
+	"arabicindicdigiteight": "afii57400",
+	"eightarabic":           "afii57400",
+	"eighthackarabic":       "afii57400",
+	"questionarabic":        "afii57407",
+	"wawhamzaabovearabic":   "afii57412",
+	"alefhamzabelowarabic":  "afii57413",
+	"alefwithhamzabelow":    "afii57413",
+	"yehhamzaabovearabic":   "afii57414",
+	"yehwithhamzaabove":     "afii57414",
+	"alefarabic":            "afii57415",
+	"beh":                   "afii57416",
+	"beharabic":             "afii57416",
+	"tehmarbuta":            "afii57417",
+	"tehmarbutaarabic":      "afii57417",
+	"jeem":                  "afii57420",
+	"jeemarabic":            "afii57420",
+	"khah":                  "afii57422",
+	"khaharabic":            "afii57422",
+	"dal":                   "afii57423",
+	"dalarabic":             "afii57423",
+	"seen":                  "afii57427",
+	"seenarabic":            "afii57427",
+	"sheen":                 "afii57428",
+	"sheenarabic":           "afii57428",
+	"sad":                   "afii57429",
+	"sadarabic":             "afii57429",
+	"dad":                   "afii57430",
+	"dadarabic":             "afii57430",
+	"tah":                   "afii57431",
+	"taharabic":             "afii57431",
+	"zah":                   "afii57432",
+	"zaharabic":             "afii57432",
+	"qaf":                   "afii57442",
+	"qafarabic":             "afii57442",
+	"kafarabic":             "afii57443",
+	"noon":                  "afii57446",
+	"noonarabic":            "afii57446",
+	"alefmaksura":           "afii57449",
+	"alefmaksuraarabic":     "afii57449",
+	"yeh":                   "afii57450",
+	"yeharabic":             "afii57450",
+	"fathaarabic":           "afii57454",
+	"fathalowarabic":        "afii57454",
+	"veharabic":             "afii57505",
+	"peharabic":             "afii57506",
+	"gafarabic":             "afii57509",
+	"rreharabic":            "afii57513",
+	"sofpasuqhebrew":        "afii57658",
+	"he":                    "afii57668",
+	"hehebrew":              "afii57668",
+	"vav":                   "afii57669",
+	"vavhebrew":             "afii57669",
+	"zayin":                 "afii57670",
+	"zayinhebrew":           "afii57670",
+	"yod":                   "afii57673",
+	"yodhebrew":             "afii57673",
+	"finalmem":              "afii57677",
+	"finalmemhebrew":        "afii57677",
+	"tsadi":                 "afii57686",
+	"tsadihebrew":           "afii57686",
+	"shin":                  "afii57689",
+	"shinhebrew":            "afii57689",
+	"vavholam":              "afii57700",
+	"vavholamhebrew":        "afii57700",
+	"sindothebrew":          "afii57803",
+	"rafe":                  "afii57841",
+	"rafehebrew":            "afii57841",
+	"paseqhebrew":           "afii57842",
+	"apostrophemod":         "afii57929",
+	"numero":                "afii61352",
+	"pdf":                   "afii61573",
+	"asteriskaltonearabic":    "afii63167",
+	"asteriskarabic":          "afii63167",
+	"commareversedmod":        "afii64937",
+	"afii57433":               "ainarabic",
+	"ain":                     "ainarabic",
+	"ainfinal":                "ainfinalarabic",
+	"aininitial":              "aininitialarabic",
+	"ainmedial":               "ainmedialarabic",
+	"afii57664":               "alef",
+	"alefhebrew":              "alef",
+	"aleffinal":               "aleffinalarabic",
+	"afii57411":               "alefhamzaabovearabic",
+	"alefwithhamzaabove":      "alefhamzaabovearabic",
+	"alefwithhamzaabovefinal": "alefhamzaabovefinalarabic",
+	"afii57410":               "alefmaddaabovearabic",
+	"alefmaksurafinal":        "alefmaksurafinalarabic",
+	"alefsym":                 "aleph",
+	"bcong":                   "allequal",
+	"agr":                     "alpha",
+	"aacgr":                   "alphatonos",
+	"amacr":                   "amacron",
+	"amp":                     "ampersand",
+	"ang":                     "angle",
+	"angbracketleftBig":       "angleleft",
+	"angbracketleftBigg":      "angleleft",
+	"angbracketleftbig":       "angleleft",
+	"angbracketleftbigg":      "angleleft",
+	"lang":                    "angleleft",
+	"angbracketrightBig":      "angleright",
+	"angbracketrightBigg":     "angleright",
+	"angbracketrightbig":      "angleright",
+	"angbracketrightbigg":     "angleright",
+	"rang":                    "angleright",
+	"angst":                   "angstrom",
+	"aogon":                   "aogonek",
+	"esdot":                   "approaches",
+	"asymp":                   "approxequal",
+	"thkap":                   "approxequal",
+	"efDot":                   "approxequalorimage",
+	"equaldotleftright":       "approxequalorimage",
+	"ape":                     "approxorequal",
+	"cularr":                  "archleftdown",
+	"curarr":                  "archrightdown",
+	"harr":                    "arrowboth",
+	"vArr":                    "arrowdblbothv",
+	"dArr":                    "arrowdbldown",
+	"dblarrowright":           "arrowdblright",
+	"rArr":                    "arrowdblright",
+	"uArr":                    "arrowdblup",
+	"darr":                    "arrowdown",
+	"arrowsouthwest":          "arrowdownleft",
+	"dlarr":                   "arrowdownleft",
+	"arrowsoutheast":          "arrowdownright",
+	"drarr":                   "arrowdownright",
+	"rarrhk":                  "arrowhookleft",
+	"larrhk":                  "arrowhookright",
+	"larr":                    "arrowleft",
+	"lhard":                   "arrowleftbothalf",
+	"arrowdblleft":            "arrowleftdbl",
+	"lArr":                    "arrowleftdbl",
+	"nlArr":                   "arrowleftdblstroke",
+	"notdblarrowleft":         "arrowleftdblstroke",
+	"arrowparrleftright":      "arrowleftoverright",
+	"lrarr2":                  "arrowleftoverright",
+	"rarr":                    "arrowright",
+	"rhard":                   "arrowrightbothalf",
+	"notdblarrowright":        "arrowrightdblstroke",
+	"nrArr":                   "arrowrightdblstroke",
+	"a169":                    "arrowrightheavy",
+	"arrowparrrightleft":      "arrowrightoverleft",
+	"rlarr2":                  "arrowrightoverleft",
+	"larrtl":                  "arrowtailleft",
+	"rarrtl":                  "arrowtailright",
+	"lAarr":                   "arrowtripleleft",
+	"rAarr":                   "arrowtripleright",
+	"uarr":                    "arrowup",
+	"arrowbothv":              "arrowupdn",
+	"varr":                    "arrowupdn",
+	"arrowupdnbse":            "arrowupdownbase",
+	"arrownorthwest":          "arrowupleft",
+	"nwarr":                   "arrowupleft",
+	"arrownortheast":          "arrowupright",
+	"nearr":                   "arrowupright",
+	"ast":                     "asterisk",
+	"asteriskcentered":        "asteriskmath",
+	"lowast":                  "asteriskmath",
+	"sime":                    "asymptoticallyequal",
+	"similarequal":            "asymptoticallyequal",
+	"commat":                  "at",
+	"afii57682":               "ayinhebrew",
+	"ayin":                    "ayinhebrew",
+	"bsol":                    "backslash",
+	"becaus":                  "because",
+	"afii10066":               "becyrillic",
+	"bcy":                     "becyrillic",
+	"be":                      "becyrillic",
+	"behmedial":               "behmedialarabic",
+	"afii57665":               "bet",
+	"bethebrew":               "bet",
+	"bgr":                     "beta",
+	"betdagesh":               "betdageshhebrew",
+	"twixt":                   "between",
+	"a78":                     "blackdiamond",
+	"triangleleftsld":         "blackleftpointingtriangle",
+	"filledrect":              "blackrectangle",
+	"trianglerightsld":        "blackrightpointingtriangle",
+	"H18543":                  "blacksmallsquare",
+	"squf":                    "blacksmallsquare",
+	"invsmileface":            "blacksmilingface",
+	"a35":                     "blackstar",
+	"starf":                   "blackstar",
+	"utrif":                   "blackuppointingsmalltriangle",
+	"visiblespace":            "blank",
+	"visualspace":             "blank",
+	"braceleftBig":            "braceleft",
+	"braceleftBigg":           "braceleft",
+	"braceleftbig":            "braceleft",
+	"braceleftbigg":           "braceleft",
+	"lcub":                    "braceleft",
+	"bracehtipdownleft":       "braceleftvertical",
+	"bracehtipdownright":      "braceleftvertical",
+	"bracerightBig":           "braceright",
+	"bracerightBigg":          "braceright",
+	"bracerightbig":           "braceright",
+	"bracerightbigg":          "braceright",
+	"rcub":                    "braceright",
+	"bracehtipupleft":         "bracerightvertical",
+	"bracehtipupright":        "bracerightvertical",
+	"bracketleftBig":          "bracketleft",
+	"bracketleftBigg":         "bracketleft",
+	"bracketleftbig":          "bracketleft",
+	"bracketleftbigg":         "bracketleft",
+	"lsqb":                    "bracketleft",
+	"bracketrightBig":         "bracketright",
+	"bracketrightBigg":        "bracketright",
+	"bracketrightbig":         "bracketright",
+	"bracketrightbigg":        "bracketright",
+	"rsqb":                    "bracketright",
+	"brvbar":                  "brokenbar",
+	"bull":                    "bullet",
+	"ct":                      "c",
+	"afii61248":               "careof",
+	"incare":                  "careof",
+	"crarr":                   "carriagereturn",
+	"ccedil":                  "ccedilla",
+	"ccirc":                   "ccircumflex",
+	"cdot":                    "cdotaccent",
+	"cedil":                   "cedilla",
+	"ceilingleftBig":          "ceilingleft",
+	"ceilingleftBigg":         "ceilingleft",
+	"ceilingleftbig":          "ceilingleft",
+	"ceilingleftbigg":         "ceilingleft",
+	"lceil":                   "ceilingleft",
+	"ceilingrightBig":         "ceilingright",
+	"ceilingrightBigg":        "ceilingright",
+	"ceilingrightbig":         "ceilingright",
+	"ceilingrightbigg":        "ceilingright",
+	"rceil":                   "ceilingright",
+	"a19":                     "checkmark",
+	"check":                   "checkmark",
+	"afii10089":               "checyrillic",
+	"chcy":                    "checyrillic",
+	"khgr":                    "chi",
+	"whitecircle":             "circle",
+	"xcirc":                   "circle",
+	"oast":                    "circleasterisk",
+	"osol":                    "circledivide",
+	"circlemultiplydisplay":   "circlemultiply",
+	"circlemultiplytext":      "circlemultiply",
+	"otimes":                  "circlemultiply",
+	"timescircle":             "circlemultiply",
+	"circledot":               "circleot",
+	"circledotdisplay":        "circleot",
+	"circledottext":           "circleot",
+	"odot":                    "circleot",
+	"ocir":                    "circlering",
+	"circ":                    "circumflex",
+	"hatwide":                 "circumflexcmb",
+	"hatwider":                "circumflexcmb",
+	"hatwidest":               "circumflexcmb",
+	"club":                    "clubsuitblack",
+	"clubs":                   "clubsuitblack",
+	"colonmonetary":           "colonsign",
+	"sun":                     "compass",
+	"comp":                    "complement",
+	"approximatelyequal":      "congruent",
+	"cong":                    "congruent",
+	"conint":                  "contourintegral",
+	"contintegraldisplay":     "contourintegral",
+	"contintegraltext":        "contourintegral",
+	"CAN":                     "controlCAN",
+	"CR":                      "controlCR",
+	"nonmarkingreturn":        "controlCR",
+	"DC1":                     "controlDC1",
+	"DC2":                     "controlDC2",
+	"DC3":                     "controlDC3",
+	"DC4":                     "controlDC4",
+	"DLE":                     "controlDLE",
+	"EM":                      "controlEM",
+	"EOT":                     "controlEOT",
+	"ESC":                     "controlESC",
+	"ETB":                     "controlETB",
+	"ETX":                     "controlETX",
+	"FS":                      "controlFS",
+	"HT":                      "controlHT",
+	"NAK":                     "controlNAK",
+	"NUL":                     "controlNULL",
+	"RS":                      "controlRS",
+	"SI":                      "controlSI",
+	"SO":                      "controlSO",
+	"STX":                     "controlSOT",
+	"SOH":                     "controlSTX",
+	"SUB":                     "controlSUB",
+	"SYN":                     "controlSYN",
+	"US":                      "controlUS",
+	"coproductdisplay":        "coproducttext",
+	"samalg":                  "coproducttext",
+	"copy":                    "copyright",
+	"cuwed":                   "curlyand",
+	"uprise":                  "curlyand",
+	"larrlp":                  "curlyleft",
+	"cuvee":                   "curlyor",
+	"downfall":                "curlyor",
+	"rarrlp":                  "curlyright",
+	"curren":                  "currency",
+	"dadmedial":               "dadmedialarabic",
+	"afii57807":               "dagesh",
+	"dageshhebrew":            "dagesh",
+	"Dagger":                  "daggerdbl",
+	"daletdagesh":             "daletdageshhebrew",
+	"afii57667":               "dalethebrew",
+	"dalet":                   "dalethebrew",
+	"dalethatafpatah":         "dalethebrew",
+	"dalethatafpatahhebrew":   "dalethebrew",
+	"dalethatafsegol":         "dalethebrew",
+	"dalethatafsegolhebrew":   "dalethebrew",
+	"dalethiriq":              "dalethebrew",
+	"dalethiriqhebrew":        "dalethebrew",
+	"daletholam":              "dalethebrew",
+	"daletholamhebrew":        "dalethebrew",
+	"daletpatah":              "dalethebrew",
+	"daletpatahhebrew":        "dalethebrew",
+	"daletqamats":             "dalethebrew",
+	"daletqamatshebrew":       "dalethebrew",
+	"daletqubuts":             "dalethebrew",
+	"daletqubutshebrew":       "dalethebrew",
+	"daletsegol":              "dalethebrew",
+	"daletsegolhebrew":        "dalethebrew",
+	"daletsheva":              "dalethebrew",
+	"daletshevahebrew":        "dalethebrew",
+	"dalettsere":              "dalethebrew",
+	"dalettserehebrew":        "dalethebrew",
+	"afii57455":               "dammaarabic",
+	"dammalowarabic":          "dammaarabic",
+	"afii57452":               "dammatanarabic",
+	"dammatanaltonearabic":    "dammatanarabic",
+	"dargalefthebrew":         "dargahebrew",
+	"darr2":                   "dblarrowdwn",
+	"Larr":                    "dblarrowheadleft",
+	"Rarr":                    "dblarrowheadright",
+	"arrowdblboth":            "dblarrowleft",
+	"hArr":                    "dblarrowleft",
+	"iff":                     "dblarrowleft",
+	"uarr2":                   "dblarrowup",
+	"underscoredbl":           "dbllowline",
+	"Verbar":                  "dblverticalbar",
+	"bardbl":                  "dblverticalbar",
+	"dbar":                    "dcroat",
+	"dmacron":                 "dcroat",
+	"dstrok":                  "dcroat",
+	"afii57512":               "ddalarabic",
+	"decimalseparatorarabic":  "decimalseparatorpersian",
+	"trie":                           "defines",
+	"deg":                            "degree",
+	"dgr":                            "delta",
+	"diamondsolid":                   "diamond",
+	"diams":                          "diamond",
+	"diam":                           "diamondmath",
+	"die":                            "dieresis",
+	"uml":                            "dieresis",
+	"dialytikatonos":                 "dieresistonos",
+	"bumpe":                          "difference",
+	"divonx":                         "dividemultiply",
+	"mid":                            "divides",
+	"vextendsingle":                  "divides",
+	"lhblk":                          "dnblock",
+	"dot":                            "dotaccent",
+	"dotbelowcomb":                   "dotbelowcmb",
+	"inodot":                         "dotlessi",
+	"sdot":                           "dotmath",
+	"plusdo":                         "dotplus",
+	"afii57705":                      "doubleyodpatah",
+	"doubleyodpatahhebrew":           "doubleyodpatah",
+	"yodyodpatahhebrew":              "doubleyodpatah",
+	"afii10193":                      "dzhecyrillic",
+	"dzcy":                           "dzhecyrillic",
+	"ecirc":                          "ecircumflex",
+	"afii10101":                      "ecyrillic",
+	"jukcy":                          "ecyrillic",
+	"euml":                           "edieresis",
+	"edot":                           "edotaccent",
+	"afii10086":                      "efcyrillic",
+	"ef":                             "efcyrillic",
+	"fcy":                            "efcyrillic",
+	"a127":                           "eightcircle",
+	"a157":                           "eightcircleinversesansserif",
+	"musicalnotedbl":                 "eighthnotebeamed",
+	"afii10077":                      "elcyrillic",
+	"el":                             "elcyrillic",
+	"lcy":                            "elcyrillic",
+	"isin":                           "element",
+	"hellip":                         "ellipsis",
+	"mldr":                           "ellipsis",
+	"vellip":                         "ellipsisvertical",
+	"emacr":                          "emacron",
+	"mdash":                          "emdash",
+	"punctdash":                      "emdash",
+	"empty":                          "emptyset",
+	"threeperemspace":                "emsp13",
+	"fourperemspace":                 "emsp14",
+	"emsp":                           "emspace",
+	"afii10079":                      "encyrillic",
+	"en":                             "encyrillic",
+	"ncy":                            "encyrillic",
+	"ndash":                          "endash",
+	"rangedash":                      "endash",
+	"ng":                             "eng",
+	"ensp":                           "enspace",
+	"eogon":                          "eogonek",
+	"epsi":                           "epsilon",
+	"eacgr":                          "epsilontonos",
+	"equals":                         "equal",
+	"cuesc":                          "equalorfollows",
+	"cuepr":                          "equalorprecedes",
+	"equiv":                          "equivalence",
+	"afii10095":                      "ereversedcyrillic",
+	"ecy":                            "ereversedcyrillic",
+	"afii10083":                      "escyrillic",
+	"es":                             "escyrillic",
+	"scy":                            "escyrillic",
+	"eegr":                           "eta",
+	"eeacgr":                         "etatonos",
+	"etnahtafoukhhebrew":             "etnahtalefthebrew",
+	"etnahtafoukhlefthebrew":         "etnahtalefthebrew",
+	"etnahtahebrew":                  "etnahtalefthebrew",
+	"excl":                           "exclam",
+	"iexcl":                          "exclamdown",
+	"exist":                          "existential",
+	"thereexists":                    "existential",
+	"afii57451":                      "fathatanarabic",
+	"afii57441":                      "feharabic",
+	"feh":                            "feharabic",
+	"fehinitial":                     "fehinitialarabic",
+	"fehmedial":                      "fehmedialarabic",
+	"blacksquare":                    "filledbox",
+	"squaresolid":                    "filledbox",
+	"finalkafdagesh":                 "finalkafdageshhebrew",
+	"afii57674":                      "finalkafsheva",
+	"finalkaf":                       "finalkafsheva",
+	"finalkafhebrew":                 "finalkafsheva",
+	"finalkafqamats":                 "finalkafsheva",
+	"finalkafqamatshebrew":           "finalkafsheva",
+	"finalkafshevahebrew":            "finalkafsheva",
+	"afii57679":                      "finalnunhebrew",
+	"finalnun":                       "finalnunhebrew",
+	"afii57683":                      "finalpe",
+	"finalpehebrew":                  "finalpe",
+	"afii57685":                      "finaltsadi",
+	"finaltsadihebrew":               "finaltsadi",
+	"afii57397":                      "fivearabic",
+	"arabicindicdigitfive":           "fivearabic",
+	"fivehackarabic":                 "fivearabic",
+	"a124":                           "fivecircle",
+	"a154":                           "fivecircleinversesansserif",
+	"frac58":                         "fiveeighths",
+	"floorleftBig":                   "floorleft",
+	"floorleftBigg":                  "floorleft",
+	"floorleftbig":                   "floorleft",
+	"floorleftbigg":                  "floorleft",
+	"lfloor":                         "floorleft",
+	"floorrightBig":                  "floorright",
+	"floorrightBigg":                 "floorright",
+	"floorrightbig":                  "floorright",
+	"floorrightbigg":                 "floorright",
+	"rfloor":                         "floorright",
+	"fnof":                           "florin",
+	"scnsim":                         "followornoteqvlnt",
+	"notfollowsoreql":                "followsequal",
+	"sccue":                          "followsorcurly",
+	"scsim":                          "followsorequal",
+	"Vdash":                          "forces",
+	"Vvdash":                         "forcesbar",
+	"a123":                           "fourcircle",
+	"a153":                           "fourcircleinversesansserif",
+	"afii57396":                      "fourhackarabic",
+	"arabicindicdigitfour":           "fourhackarabic",
+	"fourarabic":                     "fourhackarabic",
+	"frasl":                          "fraction",
+	"slurabove":                      "frown",
+	"ggr":                            "gamma",
+	"gcedil":                         "gcedilla",
+	"gcommaaccent":                   "gcedilla",
+	"gcirc":                          "gcircumflex",
+	"gdotaccent":                     "gdot",
+	"afii10068":                      "gecyrillic",
+	"gcy":                            "gecyrillic",
+	"bump":                           "geomequivalent",
+	"eDot":                           "geometricallyequal",
+	"equalsdots":                     "geometricallyequal",
+	"szlig":                          "germandbls",
+	"afii57434":                      "ghainarabic",
+	"ghain":                          "ghainarabic",
+	"ghainmedial":                    "ghainmedialarabic",
+	"gimeldageshhebrew":              "gimeldagesh",
+	"afii57666":                      "gimelhebrew",
+	"gimel":                          "gimelhebrew",
+	"gravecmb":                       "gravecomb",
+	"gt":                             "greater",
+	"gsdot":                          "greaterdot",
+	"ge":                             "greaterequal",
+	"ges":                            "greaterequal",
+	"gel":                            "greaterequalorless",
+	"greaterlessequal":               "greaterequalorless",
+	"notgreaterorslnteql":            "greaterorequalslant",
+	"greaterorsimilar":               "greaterorequivalent",
+	"gsim":                           "greaterorequivalent",
+	"gl":                             "greaterorless",
+	"greaterornotdbleql":             "greaterornotequal",
+	"gvnE":                           "greaterornotequal",
+	"gE":                             "greateroverequal",
+	"greaterdblequal":                "greateroverequal",
+	"notgreaterdblequal":             "greateroverequal",
+	"laquo":                          "guillemotleft",
+	"raquo":                          "guillemotright",
+	"lsaquo":                         "guilsinglleft",
+	"rsaquo":                         "guilsinglright",
+	"afii57421":                      "haharabic",
+	"hah":                            "haharabic",
+	"hahmedial":                      "hahmedialarabic",
+	"hairsp":                         "hairspace",
+	"afii57409":                      "hamzafathaarabic",
+	"hamza":                          "hamzafathaarabic",
+	"hamzaarabic":                    "hamzafathaarabic",
+	"hamzadammaarabic":               "hamzafathaarabic",
+	"hamzadammatanarabic":            "hamzafathaarabic",
+	"hamzafathatanarabic":            "hamzafathaarabic",
+	"hamzalowarabic":                 "hamzafathaarabic",
+	"hamzalowkasraarabic":            "hamzafathaarabic",
+	"hamzalowkasratanarabic":         "hamzafathaarabic",
+	"hamzasukunarabic":               "hamzafathaarabic",
+	"afii10092":                      "hardsigncyrillic",
+	"hardcy":                         "hardsigncyrillic",
+	"dharl":                          "harpoondownleft",
+	"dharr":                          "harpoondownright",
+	"arrowlefttophalf":               "harpoonleftbarbup",
+	"lharu":                          "harpoonleftbarbup",
+	"rlhar2":                         "harpoonleftright",
+	"arrowrighttophalf":              "harpoonrightbarbup",
+	"rharu":                          "harpoonrightbarbup",
+	"lrhar2":                         "harpoonrightleft",
+	"uharl":                          "harpoonupleft",
+	"uharr":                          "harpoonupright",
+	"afii57800":                      "hatafpatah2f",
+	"hatafpatah":                     "hatafpatah2f",
+	"hatafpatah16":                   "hatafpatah2f",
+	"hatafpatah23":                   "hatafpatah2f",
+	"hatafpatahhebrew":               "hatafpatah2f",
+	"hatafpatahnarrowhebrew":         "hatafpatah2f",
+	"hatafpatahquarterhebrew":        "hatafpatah2f",
+	"hatafpatahwidehebrew":           "hatafpatah2f",
+	"afii57802":                      "hatafqamatshebrew",
+	"hatafqamats":                    "hatafqamatshebrew",
+	"hatafqamats1b":                  "hatafqamatshebrew",
+	"hatafqamats28":                  "hatafqamatshebrew",
+	"hatafqamats34":                  "hatafqamatshebrew",
+	"hatafqamatsnarrowhebrew":        "hatafqamatshebrew",
+	"hatafqamatsquarterhebrew":       "hatafqamatshebrew",
+	"hatafqamatswidehebrew":          "hatafqamatshebrew",
+	"afii57801":                      "hatafsegolhebrew",
+	"hatafsegol":                     "hatafsegolhebrew",
+	"hatafsegol17":                   "hatafsegolhebrew",
+	"hatafsegol24":                   "hatafsegolhebrew",
+	"hatafsegol30":                   "hatafsegolhebrew",
+	"hatafsegolnarrowhebrew":         "hatafsegolhebrew",
+	"hatafsegolquarterhebrew":        "hatafsegolhebrew",
+	"hatafsegolwidehebrew":           "hatafsegolhebrew",
+	"hstrok":                         "hbar",
+	"hcirc":                          "hcircumflex",
+	"hearts":                         "heart",
+	"heartsuitblack":                 "heart",
+	"hedagesh":                       "hedageshhebrew",
+	"haaltonearabic":                 "hehaltonearabic",
+	"afii57470":                      "heharabic",
+	"heh":                            "heharabic",
+	"hehfinalarabic":                 "hehfinalalttwoarabic",
+	"hehinitial":                     "hehinitialarabic",
+	"hehmedial":                      "hehmedialarabic",
+	"afii57671":                      "het",
+	"hethebrew":                      "het",
+	"afii57793":                      "hiriqquarterhebrew",
+	"hiriq":                          "hiriqquarterhebrew",
+	"hiriq14":                        "hiriqquarterhebrew",
+	"hiriq21":                        "hiriqquarterhebrew",
+	"hiriq2d":                        "hiriqquarterhebrew",
+	"hiriqhebrew":                    "hiriqquarterhebrew",
+	"hiriqnarrowhebrew":              "hiriqquarterhebrew",
+	"hiriqwidehebrew":                "hiriqquarterhebrew",
+	"afii57806":                      "holamnarrowhebrew",
+	"holam":                          "holamnarrowhebrew",
+	"holam19":                        "holamnarrowhebrew",
+	"holam26":                        "holamnarrowhebrew",
+	"holam32":                        "holamnarrowhebrew",
+	"holamhebrew":                    "holamnarrowhebrew",
+	"holamquarterhebrew":             "holamnarrowhebrew",
+	"holamwidehebrew":                "holamnarrowhebrew",
+	"hookabovecomb":                  "hookcmb",
+	"afii00208":                      "horizontalbar",
+	"horbar":                         "horizontalbar",
+	"dblac":                          "hungarumlaut",
+	"hyphenchar":                     "hyphen",
+	"dash":                           "hyphentwo",
+	"afii10097":                      "iacyrillic",
+	"ia":                             "iacyrillic",
+	"yacy":                           "iacyrillic",
+	"icirc":                          "icircumflex",
+	"iuml":                           "idieresis",
+	"afii10075":                      "iishortcyrillic",
+	"jcy":                            "iishortcyrillic",
+	"ijlig":                          "ij",
+	"imacr":                          "imacron",
+	"equaldotrightleft":              "imageorapproximatelyequal",
+	"erDot":                          "imageorapproximatelyequal",
+	"infin":                          "infinity",
+	"backslashBig":                   "integerdivide",
+	"backslashBigg":                  "integerdivide",
+	"backslashbig":                   "integerdivide",
+	"backslashbigg":                  "integerdivide",
+	"setmn":                          "integerdivide",
+	"int":                            "integral",
+	"integraldisplay":                "integral",
+	"integraltext":                   "integral",
+	"integralbottom":                 "integralbt",
+	"integraltp":                     "integraltop",
+	"intcal":                         "intercal",
+	"cap":                            "intersection",
+	"Cap":                            "intersectiondbl",
+	"sqcap":                          "intersectionsq",
+	"intersectiondisplay":            "intersectiontext",
+	"bulletinverse":                  "invbullet",
+	"whitecircleinverse":             "invcircle",
+	"afii10071":                      "iocyrillic",
+	"io":                             "iocyrillic",
+	"iocy":                           "iocyrillic",
+	"iogon":                          "iogonek",
+	"igr":                            "iota",
+	"idigr":                          "iotadieresis",
+	"idiagr":                         "iotadieresistonos",
+	"iacgr":                          "iotatonos",
+	"afii10096":                      "iucyrillic",
+	"yucy":                           "iucyrillic",
+	"afii10196":                      "izhitsacyrillic",
+	"jcirc":                          "jcircumflex",
+	"afii10105":                      "jecyrillic",
+	"je":                             "jecyrillic",
+	"jsercy":                         "jecyrillic",
+	"jeemmedial":                     "jeemmedialarabic",
+	"afii57508":                      "jeharabic",
+	"afii10076":                      "kacyrillic",
+	"ka":                             "kacyrillic",
+	"kcy":                            "kacyrillic",
+	"kafdageshhebrew":                "kafdagesh",
+	"afii57675":                      "kafhebrew",
+	"kaf":                            "kafhebrew",
+	"kafmedial":                      "kafmedialarabic",
+	"kgr":                            "kappa",
+	"kappav":                         "kappasymbolgreek",
+	"afii57440":                      "kashidaautoarabic",
+	"kashidaautonosidebearingarabic": "kashidaautoarabic",
+	"tatweel":                        "kashidaautoarabic",
+	"tatweelarabic":                  "kashidaautoarabic",
+	"afii57456":                      "kasraarabic",
+	"afii57453":                      "kasratanarabic",
+	"kcedil":                         "kcedilla",
+	"kcommaaccent":                   "kcedilla",
+	"kgreen":                         "kgreenlandic",
+	"khahmedial":                     "khahmedialarabic",
+	"lamwithaleffinal":               "lamaleffinalarabic",
+	"lamwithalefhamzaabovefinal":     "lamalefhamzaabovefinalarabic",
+	"lamwithalefhamzaaboveisolatedd": "lamalefhamzaaboveisolatedarabic",
+	"afii57444":                      "lamarabic",
+	"lam":                            "lamarabic",
+	"lgr":                            "lambda",
+	"lameddageshhebrew":              "lameddagesh",
+	"afii57676":                      "lamedholam",
+	"lamed":                          "lamedholam",
+	"lamedhebrew":                    "lamedholam",
+	"lamedholamdagesh":               "lamedholam",
+	"lamedholamdageshhebrew":         "lamedholam",
+	"lamedholamhebrew":               "lamedholam",
+	"lammedial":                      "lammedialarabic",
+	"laminitialarabic":               "lammeemkhahinitialarabic",
+	"lammeemjeeminitialarabic":       "lammeemkhahinitialarabic",
+	"lcedil":                         "lcommaaccent",
+	"lcedilla":                       "lcommaaccent",
+	"ldot":                           "ldotaccent",
+	"lmidot":                         "ldotaccent",
+	"lt":                             "less",
+	"le":                             "lessequal",
+	"les":                            "lessequal",
+	"leg":                            "lessequalorgreater",
+	"lessequalgreater":               "lessequalorgreater",
+	"notlessorslnteql":               "lessorequalslant",
+	"lessorsimilar":                  "lessorequivalent",
+	"lsim":                           "lessorequivalent",
+	"lg":                             "lessorgreater",
+	"lessornotdbleql":                "lessornotequal",
+	"lvnE":                           "lessornotequal",
+	"lE":                             "lessoverequal",
+	"lessdblequal":                   "lessoverequal",
+	"notlessdblequal":                "lessoverequal",
+	"afii08941":                      "lira",
+	"and":                            "logicaland",
+	"logicalanddisplay":              "logicaland",
+	"logicalandtext":                 "logicaland",
+	"not":                            "logicalnot",
+	"logicalordisplay":               "logicalor",
+	"logicalortext":                  "logicalor",
+	"or":                             "logicalor",
+	"longdbls":                       "longs",
+	"longsh":                         "longs",
+	"longsi":                         "longs",
+	"longsl":                         "longs",
+	"slong":                          "longs",
+	"loz":                            "lozenge",
+	"a33":                            "lozf",
+	"lstrok":                         "lslash",
+	"afii61289":                      "lsquare",
+	"ell":                            "lsquare",
+	"lscript":                        "lsquare",
+	"mahapakhlefthebrew":             "mahapakhhebrew",
+	"mars":                           "male",
+	"a9":                             "maltesecross",
+	"malt":                           "maltesecross",
+	"afii57645":                      "maqafhebrew",
+	"angmsd":                         "measuredangle",
+	"afii57445":                      "meemarabic",
+	"meem":                           "meemarabic",
+	"meemmedial":                     "meemmedialarabic",
+	"afii57678":                      "mem",
+	"memhebrew":                      "mem",
+	"memdagesh":                      "memdageshhebrew",
+	"merkhalefthebrew":               "merkhahebrew",
+	"merkhakefulahebrew":             "merkhakefulalefthebrew",
+	"circleminus":                    "minuscircle",
+	"ominus":                         "minuscircle",
+	"mnplus":                         "minusplus",
+	"prime":                          "minute",
+	"vprime":                         "minute",
+	"micro":                          "mu",
+	"mu1":                            "mu",
+	"Gt":                             "muchgreater",
+	"greatermuch":                    "muchgreater",
+	"Lt":                             "muchless",
+	"lessmuch":                       "muchless",
+	"mgr":                            "mugreek",
+	"ltimes":                         "multicloseleft",
+	"rtimes":                         "multicloseright",
+	"mumap":                          "multimap",
+	"lthree":                         "multiopenleft",
+	"rthree":                         "multiopenright",
+	"times":                          "multiply",
+	"munahhebrew":                    "munahlefthebrew",
+	"sung":                           "musicalnote",
+	"flat":                           "musicflatsign",
+	"sharp":                          "musicsharpsign",
+	"gradient":                       "nabla",
+	"barwed":                         "nand",
+	"natur":                          "natural",
+	"nbsp":                           "nbspace",
+	"nonbreakingspace":               "nbspace",
+	"ncedil":                         "ncedilla",
+	"ncommaaccent":                   "ncedilla",
+	"a128":                           "ninecircle",
+	"a158":                           "ninecircleinversesansserif",
+	"afii57401":                      "ninehackarabic",
+	"arabicindicdigitnine":           "ninehackarabic",
+	"ninearabic":                     "ninehackarabic",
+	"afii57514":                      "noonghunnaarabic",
+	"noonhehinitialarabic":           "nooninitialarabic",
+	"noonmedial":                     "noonmedialarabic",
+	"ncong":                          "notapproxequal",
+	"nharr":                          "notarrowboth",
+	"nlarr":                          "notarrowleft",
+	"nrarr":                          "notarrowright",
+	"nmid":                           "notbar",
+	"nhArr":                          "notdblarrowboth",
+	"notelement":                     "notelementof",
+	"notin":                          "notelementof",
+	"ne":                             "notequal",
+	"nexist":                         "notexistential",
+	"nVdash":                         "notforces",
+	"nVDash":                         "notforcesextra",
+	"ngt":                            "notgreater",
+	"nges":                           "notgreaternorequal",
+	"notgreaterequal":                "notgreaternorequal",
+	"nequiv":                         "notidentical",
+	"nlt":                            "notless",
+	"nles":                           "notlessnorequal",
+	"notlessequal":                   "notlessnorequal",
+	"npar":                           "notparallel",
+	"npr":                            "notprecedes",
+	"nvDash":                         "notsatisfies",
+	"nsim":                           "notsimilar",
+	"nsub":                           "notsubset",
+	"nsube":                          "notsubseteql",
+	"notfollows":                     "notsucceeds",
+	"nsc":                            "notsucceeds",
+	"nsup":                           "notsuperset",
+	"nsupe":                          "notsuperseteql",
+	"supersetdblequal":               "notsupersetordbleql",
+	"nltrie":                         "nottriangeqlleft",
+	"nrtrie":                         "nottriangeqlright",
+	"nltri":                          "nottriangleleft",
+	"nrtri":                          "nottriangleright",
+	"nvdash":                         "notturnstile",
+	"ngr":                            "nu",
+	"num":                            "numbersign",
+	"nundageshhebrew":                "nundagesh",
+	"afii57680":                      "nunhebrew",
+	"nun":                            "nunhebrew",
+	"ocirc":                          "ocircumflex",
+	"ouml":                           "odieresis",
+	"oelig":                          "oe",
+	"ogon":                           "ogonek",
+	"odblac":                         "ohungarumlaut",
+	"odblacute":                      "ohungarumlaut",
+	"omacr":                          "omacron",
+	"ohgr":                           "omega",
+	"ohacgr":                         "omegatonos",
+	"ogr":                            "omicron",
+	"oacgr":                          "omicrontonos",
+	"afii57393":                      "onearabic",
+	"arabicindicdigitone":            "onearabic",
+	"onehackarabic":                  "onearabic",
+	"a120":                           "onecircle",
+	"a150":                           "onecircleinversesansserif",
+	"frac18":                         "oneeighth",
+	"frac12":                         "onehalf",
+	"frac14":                         "onequarter",
+	"sup1":                           "onesuperior",
+	"frac13":                         "onethird",
+	"whitebullet":                    "openbullet",
+	"ordf":                           "ordfeminine",
+	"ordm":                           "ordmasculine",
+	"ang90":                          "orthogonal",
+	"rightangle":                     "orthogonal",
+	"veebar":                         "orunderscore",
+	"oslashacute":                    "ostrokeacute",
+	"oline":                          "overline",
+	"macr":                           "overscore",
+	"macron":                         "overscore",
+	"para":                           "paragraph",
+	"par":                            "parallel",
+	"vextenddouble":                  "parallel",
+	"lpar":                           "parenleft",
+	"parenleftBig":                   "parenleft",
+	"parenleftBigg":                  "parenleft",
+	"parenleftbig":                   "parenleft",
+	"parenleftbigg":                  "parenleft",
+	"parenrightBig":                  "parenright",
+	"parenrightBigg":                 "parenright",
+	"parenrightbig":                  "parenright",
+	"parenrightbigg":                 "parenright",
+	"rpar":                           "parenright",
+	"part":                           "partialdiff",
+	"null":                           "pashtahebrew",
+	"afii57798":                      "patah2a",
+	"patah":                          "patah2a",
+	"patah11":                        "patah2a",
+	"patah1d":                        "patah2a",
+	"patahhebrew":                    "patah2a",
+	"patahnarrowhebrew":              "patah2a",
+	"patahquarterhebrew":             "patah2a",
+	"patahwidehebrew":                "patah2a",
+	"afii57684":                      "pe",
+	"pehebrew":                       "pe",
+	"pedagesh":                       "pedageshhebrew",
+	"percnt":                         "percent",
+	"middot":                         "periodcentered",
+	"bottom":                         "perpendicular",
+	"perp":                           "perpendicular",
+	"permil":                         "perthousand",
+	"phis":                           "phi",
+	"phisymbolgreek":                 "phi1",
+	"phiv":                           "phi1",
+	"pgr":                            "pi",
+	"omega1":                         "pisymbolgreek",
+	"pi1":                            "pisymbolgreek",
+	"piv":                            "pisymbolgreek",
+	"planck":                         "planckover2pi",
+	"planckover2pi1":                 "planckover2pi",
+	"circleplus":                     "pluscircle",
+	"circleplusdisplay":              "pluscircle",
+	"circleplustext":                 "pluscircle",
+	"oplus":                          "pluscircle",
+	"plusmn":                         "plusminus",
+	"a12":                            "pointingindexrightwhite",
+	"prnsim":                         "precedeornoteqvlnt",
+	"pr":                             "precedes",
+	"notprecedesoreql":               "precedesequal",
+	"cupre":                          "precedesorcurly",
+	"prsim":                          "precedesorequal",
+	"rx":                             "prescription",
+	"bprime":                         "primereversed",
+	"primereverse":                   "primereversed",
+	"prod":                           "product",
+	"productdisplay":                 "product",
+	"producttext":                    "product",
+	"sup":                            "propersuperset",
+	"superset":                       "propersuperset",
+	"prop":                           "proportional",
+	"vprop":                          "proportional",
+	"psgr":                           "psi",
+	"qafinitial":                     "qafinitialarabic",
+	"qafmedial":                      "qafmedialarabic",
+	"afii57797":                      "qamatsqatanhebrew",
+	"qamats":                         "qamatsqatanhebrew",
+	"qamats10":                       "qamatsqatanhebrew",
+	"qamats1a":                       "qamatsqatanhebrew",
+	"qamats1c":                       "qamatsqatanhebrew",
+	"qamats27":                       "qamatsqatanhebrew",
+	"qamats29":                       "qamatsqatanhebrew",
+	"qamats33":                       "qamatsqatanhebrew",
+	"qamatsde":                       "qamatsqatanhebrew",
+	"qamatshebrew":                   "qamatsqatanhebrew",
+	"qamatsnarrowhebrew":             "qamatsqatanhebrew",
+	"qamatsqatannarrowhebrew":        "qamatsqatanhebrew",
+	"qamatsqatanquarterhebrew":       "qamatsqatanhebrew",
+	"qamatsqatanwidehebrew":          "qamatsqatanhebrew",
+	"qamatsquarterhebrew":            "qamatsqatanhebrew",
+	"qamatswidehebrew":               "qamatsqatanhebrew",
+	"qofdagesh":                      "qofdageshhebrew",
+	"afii57687":                      "qofsheva",
+	"qof":                            "qofsheva",
+	"qofhatafpatah":                  "qofsheva",
+	"qofhatafpatahhebrew":            "qofsheva",
+	"qofhatafsegol":                  "qofsheva",
+	"qofhatafsegolhebrew":            "qofsheva",
+	"qofhebrew":                      "qofsheva",
+	"qofhiriq":                       "qofsheva",
+	"qofhiriqhebrew":                 "qofsheva",
+	"qofholam":                       "qofsheva",
+	"qofholamhebrew":                 "qofsheva",
+	"qofpatah":                       "qofsheva",
+	"qofpatahhebrew":                 "qofsheva",
+	"qofqamats":                      "qofsheva",
+	"qofqamatshebrew":                "qofsheva",
+	"qofqubuts":                      "qofsheva",
+	"qofqubutshebrew":                "qofsheva",
+	"qofsegol":                       "qofsheva",
+	"qofsegolhebrew":                 "qofsheva",
+	"qofshevahebrew":                 "qofsheva",
+	"qoftsere":                       "qofsheva",
+	"qoftserehebrew":                 "qofsheva",
+	"afii57796":                      "qubutsnarrowhebrew",
+	"qubuts":                         "qubutsnarrowhebrew",
+	"qubuts18":                       "qubutsnarrowhebrew",
+	"qubuts25":                       "qubutsnarrowhebrew",
+	"qubuts31":                       "qubutsnarrowhebrew",
+	"qubutshebrew":                   "qubutsnarrowhebrew",
+	"qubutsquarterhebrew":            "qubutsnarrowhebrew",
+	"qubutswidehebrew":               "qubutsnarrowhebrew",
+	"quest":                          "question",
+	"iquest":                         "questiondown",
+	"quot":                           "quotedbl",
+	"bdquo":                          "quotedblbase",
+	"ldquor":                         "quotedblbase",
+	"ldquo":                          "quotedblleft",
+	"rdquor":                         "quotedblleft",
+	"rdquo":                          "quotedblright",
+	"lsquo":                          "quoteleft",
+	"rsquor":                         "quoteleft",
+	"quotereversed":                  "quoteleftreversed",
+	"rsquo":                          "quoteright",
+	"napos":                          "quoterightn",
+	"napostrophe":                    "quoterightn",
+	"lsquor":                         "quotesinglbase",
+	"sbquo":                          "quotesinglbase",
+	"apos":                           "quotesingle",
+	"radic":                          "radical",
+	"radicalBig":                     "radical",
+	"radicalBigg":                    "radical",
+	"radicalbig":                     "radical",
+	"radicalbigg":                    "radical",
+	"radicalbt":                      "radical",
+	"radicaltp":                      "radical",
+	"radicalvertex":                  "radical",
+	"rcedil":                         "rcedilla",
+	"rcommaaccent":                   "rcedilla",
+	"circleR":                        "registered",
+	"reg":                            "registered",
+	"afii57425":                      "rehyehaleflamarabic",
+	"reh":                            "rehyehaleflamarabic",
+	"reharabic":                      "rehyehaleflamarabic",
+	"afii57688":                      "reshqamatshebrew",
+	"resh":                           "reshqamatshebrew",
+	"reshhatafpatah":                 "reshqamatshebrew",
+	"reshhatafpatahhebrew":           "reshqamatshebrew",
+	"reshhatafsegol":                 "reshqamatshebrew",
+	"reshhatafsegolhebrew":           "reshqamatshebrew",
+	"reshhebrew":                     "reshqamatshebrew",
+	"reshhiriq":                      "reshqamatshebrew",
+	"reshhiriqhebrew":                "reshqamatshebrew",
+	"reshholam":                      "reshqamatshebrew",
+	"reshholamhebrew":                "reshqamatshebrew",
+	"reshpatah":                      "reshqamatshebrew",
+	"reshpatahhebrew":                "reshqamatshebrew",
+	"reshqamats":                     "reshqamatshebrew",
+	"reshqubuts":                     "reshqamatshebrew",
+	"reshqubutshebrew":               "reshqamatshebrew",
+	"reshsegol":                      "reshqamatshebrew",
+	"reshsegolhebrew":                "reshqamatshebrew",
+	"reshsheva":                      "reshqamatshebrew",
+	"reshshevahebrew":                "reshqamatshebrew",
+	"reshtsere":                      "reshqamatshebrew",
+	"reshtserehebrew":                "reshqamatshebrew",
+	"bsime":                          "revasymptequal",
+	"bsim":                           "reversedtilde",
+	"revsimilar":                     "reversedtilde",
+	"reviahebrew":                    "reviamugrashhebrew",
+	"logicalnotreversed":             "revlogicalnot",
+	"rgr":                            "rho",
+	"rho1":                           "rhosymbolgreek",
+	"rhov":                           "rhosymbolgreek",
+	"urcorn":                         "rightanglene",
+	"ulcorn":                         "rightanglenw",
+	"drcorn":                         "rightanglese",
+	"dlcorn":                         "rightanglesw",
+	"ecir":                           "ringinequal",
+	"sadmedial":                      "sadmedialarabic",
+	"samekhdageshhebrew":             "samekhdagesh",
+	"afii57681":                      "samekhhebrew",
+	"samekh":                         "samekhhebrew",
+	"vDash":                          "satisfies",
+	"scedil":                         "scedilla",
+	"scirc":                          "scircumflex",
+	"Prime":                          "second",
+	"sect":                           "section",
+	"seenmedial":                     "seenmedialarabic",
+	"afii57795":                      "segolhebrew",
+	"segol":                          "segolhebrew",
+	"segol13":                        "segolhebrew",
+	"segol1f":                        "segolhebrew",
+	"segol2c":                        "segolhebrew",
+	"segolnarrowhebrew":              "segolhebrew",
+	"segolquarterhebrew":             "segolhebrew",
+	"segolwidehebrew":                "segolhebrew",
+	"semi":                           "semicolon",
+	"afii57403":                      "semicolonarabic",
+	"a126":                           "sevencircle",
+	"a156":                           "sevencircleinversesansserif",
+	"frac78":                         "seveneighths",
+	"afii10090":                      "shacyrillic",
+	"sha":                            "shacyrillic",
+	"shcy":                           "shacyrillic",
+	"afii57457":                      "shaddaarabic",
+	"shaddafathatanarabic":           "shaddaarabic",
+	"blk12":                          "shade",
+	"shademedium":                    "shade",
+	"blk34":                          "shadedark",
+	"dkshade":                        "shadedark",
+	"blk14":                          "shadelight",
+	"ltshade":                        "shadelight",
+	"sheenmedial":                    "sheenmedialarabic",
+	"afii57636":                      "sheqelhebrew",
+	"newsheqelsign":                  "sheqelhebrew",
+	"sheqel":                         "sheqelhebrew",
+	"afii57799":                      "sheva",
+	"sheva115":                       "sheva",
+	"sheva15":                        "sheva",
+	"sheva22":                        "sheva",
+	"sheva2e":                        "sheva",
+	"shevahebrew":                    "sheva",
+	"shevanarrowhebrew":              "sheva",
+	"shevaquarterhebrew":             "sheva",
+	"shevawidehebrew":                "sheva",
+	"lsh":                            "shiftleft",
+	"rsh":                            "shiftright",
+	"shindageshhebrew":               "shindagesh",
+	"shindageshshindothebrew":        "shindageshshindot",
+	"shindageshsindothebrew":         "shindageshsindot",
+	"afii57804":                      "shindothebrew",
+	"afii57694":                      "shinshindot",
+	"shinshindothebrew":              "shinshindot",
+	"afii57695":                      "shinsindot",
+	"shinsindothebrew":               "shinsindot",
+	"sgr":                            "sigma",
+	"sigma1":                         "sigmafinal",
+	"sigmav":                         "sigmafinal",
+	"afii57839":                      "siluqhebrew",
+	"siluqlefthebrew":                "siluqhebrew",
+	"a125":                           "sixcircle",
+	"a155":                           "sixcircleinversesansserif",
+	"slashBig":                       "slash",
+	"slashBigg":                      "slash",
+	"slashbig":                       "slash",
+	"slashbigg":                      "slash",
+	"sol":                            "slash",
+	"slurbelow":                      "smile",
+	"sfthyphen":                      "softhyphen",
+	"shy":                            "softhyphen",
+	"afii10094":                      "softsigncyrillic",
+	"softcy":                         "softsigncyrillic",
+	"negationslash":                  "soliduslongoverlaycmb",
+	"spacehackarabic":                "space",
+	"spades":                         "spade",
+	"spadesuitblack":                 "spade",
+	"angsph":                         "sphericalangle",
+	"sdotb":                          "squaredot",
+	"sqsub":                          "squareimage",
+	"minusb":                         "squareminus",
+	"timesb":                         "squaremultiply",
+	"sqsup":                          "squareoriginal",
+	"plusb":                          "squareplus",
+	"harrw":                          "squiggleleftright",
+	"sstarf":                         "star",
+	"pound":                          "sterling",
+	"propersubset":                   "subset",
+	"sub":                            "subset",
+	"Sub":                            "subsetdbl",
+	"notsubsetordbleql":              "subsetdblequal",
+	"notsubsetoreql":                 "subsetnotequal",
+	"subnE":                          "subsetnotequal",
+	"subsetnoteql":                   "subsetnotequal",
+	"reflexsubset":                   "subsetorequal",
+	"sube":                           "subsetorequal",
+	"sqsube":                         "subsetsqequal",
+	"follows":                        "succeeds",
+	"sc":                             "succeeds",
+	"ni":                             "suchthat",
+	"owner":                          "suchthat",
+	"afii57458":                      "sukunarabic",
+	"sum":                            "summation",
+	"summationdisplay":               "summation",
+	"summationtext":                  "summation",
+	"Sup":                            "supersetdbl",
+	"notsupersetoreql":               "supersetnotequal",
+	"supersetnoteql":                 "supersetnotequal",
+	"supnE":                          "supersetnotequal",
+	"reflexsuperset":                 "supersetorequal",
+	"supe":                           "supersetorequal",
+	"sqsupe":                         "supersetsqequal",
+	"latticetop":                     "tackdown",
+	"top":                            "tackdown",
+	"dashv":                          "tackleft",
+	"turnstileright":                 "tackleft",
+	"tgr":                            "tau",
+	"tavdagesh":                      "tavdages",
+	"tavdageshhebrew":                "tavdages",
+	"afii57690":                      "tavhebrew",
+	"tav":                            "tavhebrew",
+	"tstrok":                         "tbar",
+	"afii57507":                      "tcheharabic",
+	"tchehinitialarabic":             "tchehmeeminitialarabic",
+	"tcedil":                         "tcommaaccent",
+	"tcedilla":                       "tcommaaccent",
+	"afii10084":                      "tecyrillic",
+	"tcy":                            "tecyrillic",
+	"te":                             "tecyrillic",
+	"afii57418":                      "teharabic",
+	"teh":                            "teharabic",
+	"tehmarbutafinal":                "tehmarbutafinalarabic",
+	"tehmedial":                      "tehmedialarabic",
+	"tel":                            "telephone",
+	"a4":                             "telephoneblack",
+	"phone":                          "telephoneblack",
+	"a129":                           "tencircle",
+	"afii57672":                      "tet",
+	"tethebrew":                      "tet",
+	"tetdageshhebrew":                "tetdagesh",
+	"tevirlefthebrew":                "tevirhebrew",
+	"afii57424":                      "thalarabic",
+	"thal":                           "thalarabic",
+	"afii57419":                      "theharabic",
+	"there4":                         "therefore",
+	"thgr":                           "theta",
+	"thetasym":                       "theta1",
+	"thetasymbolgreek":               "theta1",
+	"thetav":                         "theta1",
+	"thousandsseparatorarabic":       "thousandsseparatorpersian",
+	"a122":                      "threecircle",
+	"a152":                      "threecircleinversesansserif",
+	"frac38":                    "threeeighths",
+	"afii57395":                 "threehackarabic",
+	"arabicindicdigitthree":     "threehackarabic",
+	"threearabic":               "threehackarabic",
+	"frac34":                    "threequarters",
+	"sup3":                      "threesuperior",
+	"ilde":                      "tilde",
+	"tildewide":                 "tilde",
+	"tildewider":                "tilde",
+	"tildewidest":               "tilde",
+	"tildecomb":                 "tildecmb",
+	"sim":                       "tildeoperator",
+	"similar":                   "tildeoperator",
+	"thksim":                    "tildeoperator",
+	"tipehahebrew":              "tipehalefthebrew",
+	"eturn":                     "tonefive",
+	"trade":                     "trademark",
+	"blackdownpointingtriangle": "triagdn",
+	"triangledownsld":           "triagdn",
+	"blackleftpointingpointer":  "triaglf",
+	"blackrightpointingpointer": "triagrt",
+	"blackuppointingtriangle":   "triagup",
+	"trianglesolid":             "triagup",
+	"ltrie":                     "triangleleftequal",
+	"rtrie":                     "trianglerightequal",
+	"tsadidagesh":               "tsadidageshhebrew",
+	"afii57794":                 "tsere",
+	"tsere12":                   "tsere",
+	"tsere1e":                   "tsere",
+	"tsere2b":                   "tsere",
+	"tserehebrew":               "tsere",
+	"tserenarrowhebrew":         "tsere",
+	"tserequarterhebrew":        "tsere",
+	"tserewidehebrew":           "tsere",
+	"afii57511":                 "tteharabic",
+	"vdash":                     "turnstileleft",
+	".notdef":                   "twelveudash",
+	"altselector":               "twelveudash",
+	"ascendercompwordmark":      "twelveudash",
+	"capitalcompwordmark":       "twelveudash",
+	"emptyslot":                 "twelveudash",
+	"ringfitted":                "twelveudash",
+	"a121":                      "twocircle",
+	"a151":                      "twocircleinversesansserif",
+	"nldr":                      "twodotenleader",
+	"twodotleader":              "twodotenleader",
+	"afii57394":                 "twohackarabic",
+	"arabicindicdigittwo":       "twohackarabic",
+	"twoarabic":                 "twohackarabic",
+	"sup2":                      "twosuperior",
+	"frac23":                    "twothirds",
+	"ucirc":                     "ucircumflex",
+	"afii10085":                 "ucyrillic",
+	"ucy":                       "ucyrillic",
+	"uuml":                      "udieresis",
+	"udblac":                    "uhungarumlaut",
+	"udblacute":                 "uhungarumlaut",
+	"umacr":                     "umacron",
+	"lowbar":                    "underscore",
+	"cup":                       "union",
+	"Cup":                       "uniondbl",
+	"unionmultidisplay":         "unionmulti",
+	"unionmultitext":            "unionmulti",
+	"uplus":                     "unionmulti",
+	"sqcup":                     "unionsq",
+	"unionsqdisplay":            "unionsq",
+	"unionsqtext":               "unionsq",
+	"uniondisplay":              "uniontext",
+	"forall":                    "universal",
+	"uogon":                     "uogonek",
+	"uhblk":                     "upblock",
+	"upsi":                      "upsilon",
+	"udigr":                     "upsilondieresis",
+	"udiagr":                    "upsilondieresistonos",
+	"uacgr":                     "upsilontonos",
+	"afii10110":                 "ushortcyrillic",
+	"ubrcy":                     "ushortcyrillic",
+	"afii57723":                 "vavdageshhebrew",
+	"vavdagesh":                 "vavdageshhebrew",
+	"vavdagesh65":               "vavdageshhebrew",
+	"afii57716":                 "vavvavhebrew",
+	"afii57717":                 "vavyodhebrew",
+	"afii10067":                 "vecyrillic",
+	"vcy":                       "vecyrillic",
+	"ve":                        "vecyrillic",
+	"female":                    "venus",
+	"bar":                       "verticalbar",
+	"verbar":                    "verticalbar",
+	"afii57448":                 "wawarabic",
+	"waw":                       "wawarabic",
+	"wcirc":                     "wcircumflex",
+	"weierp":                    "weierstrass",
+	"dtri":                      "whitedownpointingsmalltriangle",
+	"triangleinv":               "whitedownpointingtriangle",
+	"xdtri":                     "whitedownpointingtriangle",
+	"ltri":                      "whiteleftpointingsmalltriangle",
+	"triangleleft":              "whiteleftpointingtriangle",
+	"rtri":                      "whiterightpointingsmalltriangle",
+	"triangleright":             "whiterightpointingtriangle",
+	"H18551":                    "whitesmallsquare",
+	"smileface":                 "whitesmilingface",
+	"utri":                      "whiteuppointingsmalltriangle",
+	"triangle":                  "whiteuppointingtriangle",
+	"xutri":                     "whiteuppointingtriangle",
+	"wreath":                    "wreathproduct",
+	"xgr":                       "xi",
+	"ycirc":                     "ycircumflex",
+	"yuml":                      "ydieresis",
+	"afii57519":                 "yehbarreearabic",
+	"yehfinal":                  "yehfinalarabic",
+	"yehwithhamzaabovemedial":   "yehhamzaabovemedialarabic",
+	"alefmaksurainitialarabic":  "yehinitialarabic",
+	"alefmaksuramedialarabic":   "yehmedialarabic",
+	"yehmedial":                 "yehmedialarabic",
+	"Yen":                       "yen",
+	"yerahbenyomohebrew":        "yerahbenyomolefthebrew",
+	"yoddageshhebrew":           "yoddagesh",
+	"afii57718":                 "yodyodhebrew",
+	"afii57426":                 "zainarabic",
+	"zain":                      "zainarabic",
+	"zayindagesh":               "zayindageshhebrew",
+	"zdotaccent":                "zdot",
+	"afii61664":                 "zerowidthnonjoiner",
+	"compwordmark":              "zerowidthnonjoiner",
+	"cwm":                       "zerowidthnonjoiner",
+	"zwnj":                      "zerowidthnonjoiner",
+	"zgr":                       "zeta",
+}
+
+// ligatureMap are ligatures without corresponding unicode code points. We use the Unicode private
+// use area (https://en.wikipedia.org/wiki/Private_Use_Areas) to store them.
+// These runes are mapped to strings in RuneToString which uses the reverse mappings in
+// ligatureToString.
+var ligatureMap = map[string]rune{
+	"f_t":   0xe000,
+	"f_j":   0xe001,
+	"f_b":   0xe002,
+	"f_h":   0xe003,
+	"f_k":   0xe004,
+	"t_t":   0xe005,
+	"t_f":   0xe006,
+	"f_f_j": 0xe007,
+	"f_f_b": 0xe008,
+	"f_f_h": 0xe009,
+	"f_f_k": 0xe00a,
 }
 
 var glyphlistGlyphToRuneMap = map[string]rune{ // 4281 entries
@@ -8935,6 +10608,19 @@ var texGlyphlistGlyphToStringMap = map[string]string{ // 285 entries
 	"wreathproduct":        "\u2240",       // ≀
 }
 
+var texGlyphToRuneMap = texGlyphToRune()
+
+// texGlyphToRune returns the string->rune map of the first runes in the
+// texGlyphlistGlyphToStringMap strings.
+// XXX: Hack.
+func texGlyphToRune() map[string]rune {
+	glyphToRune := map[string]rune{}
+	for g, s := range texGlyphlistGlyphToStringMap {
+		glyphToRune[g] = []rune(s)[0]
+	}
+	return glyphToRune
+}
+
 var additionalGlyphlistGlyphToRuneMap = map[string]rune{ // 120 entries
 	"angbracketleft":        '\u3008', // 〈
 	"angbracketleftBig":     '\u2329', // 〈
@@ -9058,12 +10744,1776 @@ var additionalGlyphlistGlyphToRuneMap = map[string]rune{ // 120 entries
 	"vextendsingle":         '\u2223', // ∣
 }
 
-// RuneToString converts rune `r` to a string. It unpacks ligatures.
-func RuneToString(r rune) string {
-	if s, ok := ligatureToString[r]; ok {
-		return s
-	}
-	return string(r)
+var empericalGlyphToRuneMap = map[string]rune{ // 473 entries
+	"Barwed":                     '\u2306', // ⌆
+	"CL":                         '\u2104', // ℄
+	"DotDot":                     '\u20dc', // ⃜
+	"Gg":                         '\u22d9', // ⋙
+	"Ll":                         '\u22d8', // ⋘
+	"a1":                         '\u2701', // ✁
+	"a10":                        '\u2721', // ✡
+	"a100":                       '\u275e', // ❞
+	"a101":                       '\u2761', // ❡
+	"a102":                       '\u2762', // ❢
+	"a103":                       '\u2763', // ❣
+	"a104":                       '\u2764', // ❤
+	"a105":                       '\u2710', // ✐
+	"a106":                       '\u2765', // ❥
+	"a107":                       '\u2766', // ❦
+	"a108":                       '\u2767', // ❧
+	"a11":                        '\u261b', // ☛
+	"a117":                       '\u2709', // ✉
+	"a118":                       '\u2708', // ✈
+	"a119":                       '\u2707', // ✇
+	"a13":                        '\u270c', // ✌
+	"a130":                       '\u2776', // ❶
+	"a131":                       '\u2777', // ❷
+	"a132":                       '\u2778', // ❸
+	"a133":                       '\u2779', // ❹
+	"a134":                       '\u277a', // ❺
+	"a135":                       '\u277b', // ❻
+	"a136":                       '\u277c', // ❼
+	"a137":                       '\u277d', // ❽
+	"a138":                       '\u277e', // ❾
+	"a139":                       '\u277f', // ❿
+	"a14":                        '\u270d', // ✍
+	"a140":                       '\u2780', // ➀
+	"a141":                       '\u2781', // ➁
+	"a142":                       '\u2782', // ➂
+	"a143":                       '\u2783', // ➃
+	"a144":                       '\u2784', // ➄
+	"a145":                       '\u2785', // ➅
+	"a146":                       '\u2786', // ➆
+	"a147":                       '\u2787', // ➇
+	"a148":                       '\u2788', // ➈
+	"a149":                       '\u2789', // ➉
+	"a15":                        '\u270e', // ✎
+	"a159":                       '\u2793', // ➓
+	"a16":                        '\u270f', // ✏
+	"a160":                       '\u2794', // ➔
+	"a162":                       '\u27a3', // ➣
+	"a165":                       '\u2799', // ➙
+	"a166":                       '\u279b', // ➛
+	"a167":                       '\u279c', // ➜
+	"a168":                       '\u279d', // ➝
+	"a17":                        '\u2711', // ✑
+	"a170":                       '\u279f', // ➟
+	"a171":                       '\u27a0', // ➠
+	"a172":                       '\u27a1', // ➡
+	"a173":                       '\u27a2', // ➢
+	"a174":                       '\u27a4', // ➤
+	"a175":                       '\u27a5', // ➥
+	"a176":                       '\u27a6', // ➦
+	"a177":                       '\u27a7', // ➧
+	"a178":                       '\u27a8', // ➨
+	"a179":                       '\u27a9', // ➩
+	"a18":                        '\u2712', // ✒
+	"a180":                       '\u27ab', // ➫
+	"a181":                       '\u27ad', // ➭
+	"a182":                       '\u27af', // ➯
+	"a183":                       '\u27b2', // ➲
+	"a184":                       '\u27b3', // ➳
+	"a185":                       '\u27b5', // ➵
+	"a186":                       '\u27b8', // ➸
+	"a187":                       '\u27ba', // ➺
+	"a188":                       '\u27bb', // ➻
+	"a189":                       '\u27bc', // ➼
+	"a190":                       '\u27bd', // ➽
+	"a191":                       '\u27be', // ➾
+	"a192":                       '\u279a', // ➚
+	"a193":                       '\u27aa', // ➪
+	"a194":                       '\u27b6', // ➶
+	"a195":                       '\u27b9', // ➹
+	"a196":                       '\u2798', // ➘
+	"a197":                       '\u27b4', // ➴
+	"a198":                       '\u27b7', // ➷
+	"a199":                       '\u27ac', // ➬
+	"a2":                         '\u2702', // ✂
+	"a20":                        '\u2714', // ✔
+	"a200":                       '\u27ae', // ➮
+	"a201":                       '\u27b1', // ➱
+	"a202":                       '\u2703', // ✃
+	"a203":                       '\u2750', // ❐
+	"a204":                       '\u2752', // ❒
+	"a205":                       '\uf8dd',
+	"a206":                       '\uf8df',
+	"a21":                        '\u2715', // ✕
+	"a22":                        '\u2716', // ✖
+	"a23":                        '\u2717', // ✗
+	"a24":                        '\u2718', // ✘
+	"a25":                        '\u2719', // ✙
+	"a26":                        '\u271a', // ✚
+	"a27":                        '\u271b', // ✛
+	"a28":                        '\u271c', // ✜
+	"a29":                        '\u2722', // ✢
+	"a3":                         '\u2704', // ✄
+	"a30":                        '\u2723', // ✣
+	"a31":                        '\u2724', // ✤
+	"a32":                        '\u2725', // ✥
+	"a34":                        '\u2727', // ✧
+	"a36":                        '\u2729', // ✩
+	"a37":                        '\u272a', // ✪
+	"a38":                        '\u272b', // ✫
+	"a39":                        '\u272c', // ✬
+	"a40":                        '\u272d', // ✭
+	"a41":                        '\u272e', // ✮
+	"a42":                        '\u272f', // ✯
+	"a43":                        '\u2730', // ✰
+	"a44":                        '\u2731', // ✱
+	"a45":                        '\u2732', // ✲
+	"a46":                        '\u2733', // ✳
+	"a47":                        '\u2734', // ✴
+	"a48":                        '\u2735', // ✵
+	"a49":                        '\u2736', // ✶
+	"a5":                         '\u2706', // ✆
+	"a50":                        '\u2737', // ✷
+	"a51":                        '\u2738', // ✸
+	"a52":                        '\u2739', // ✹
+	"a53":                        '\u273a', // ✺
+	"a54":                        '\u273b', // ✻
+	"a55":                        '\u273c', // ✼
+	"a56":                        '\u273d', // ✽
+	"a57":                        '\u273e', // ✾
+	"a58":                        '\u273f', // ✿
+	"a59":                        '\u2740', // ❀
+	"a6":                         '\u271d', // ✝
+	"a60":                        '\u2741', // ❁
+	"a61":                        '\u2742', // ❂
+	"a62":                        '\u2743', // ❃
+	"a63":                        '\u2744', // ❄
+	"a64":                        '\u2745', // ❅
+	"a65":                        '\u2746', // ❆
+	"a66":                        '\u2747', // ❇
+	"a67":                        '\u2748', // ❈
+	"a68":                        '\u2749', // ❉
+	"a69":                        '\u274a', // ❊
+	"a7":                         '\u271e', // ✞
+	"a70":                        '\u274b', // ❋
+	"a72":                        '\u274d', // ❍
+	"a74":                        '\u274f', // ❏
+	"a75":                        '\u2751', // ❑
+	"a79":                        '\u2756', // ❖
+	"a8":                         '\u271f', // ✟
+	"a81":                        '\u25d7', // ◗
+	"a82":                        '\u2758', // ❘
+	"a83":                        '\u2759', // ❙
+	"a84":                        '\u275a', // ❚
+	"a85":                        '\uf8de',
+	"a86":                        '\uf8e0',
+	"a87":                        '\uf8e1',
+	"a88":                        '\uf8e2',
+	"a89":                        '\uf8d7',
+	"a90":                        '\uf8d8',
+	"a91":                        '\uf8db',
+	"a92":                        '\uf8dc',
+	"a93":                        '\uf8d9',
+	"a94":                        '\uf8da',
+	"a95":                        '\uf8e3',
+	"a96":                        '\uf8e4',
+	"a97":                        '\u275b', // ❛
+	"a98":                        '\u275c', // ❜
+	"a99":                        '\u275d', // ❝
+	"ainisolated":                '\ufec9', // ﻉ
+	"airplane":                   '\uf051',
+	"alefisolated":               '\ufe8d', // ﺍ
+	"alefmaksuraisolated":        '\ufeef', // ﻯ
+	"alefwithhamzaaboveisolated": '\ufe83', // ﺃ
+	"alefwithhamzabelowisolated": '\ufe87', // ﺇ
+	"ampersandit":                '\uf06b',
+	"ampersanditlc":              '\uf06a',
+	"aquarius":                   '\uf068',
+	"aries":                      '\uf05e',
+	"arrowdwnleft1":              '\uf0c3',
+	"arrowdwnrt1":                '\uf0c4',
+	"arrowleftdwn1":              '\uf0c9',
+	"arrowleftup1":               '\uf0c7',
+	"arrowrtdwn1":                '\uf0ca',
+	"arrowrtup1":                 '\uf0c8',
+	"arrowupleft1":               '\uf0c5',
+	"arrowuprt1":                 '\uf0c6',
+	"ballpoint":                  '\uf039',
+	"barb2down":                  '\uf0e2',
+	"barb2left":                  '\uf0df',
+	"barb2ne":                    '\uf0e4',
+	"barb2nw":                    '\uf0e3',
+	"barb2right":                 '\uf0e0',
+	"barb2se":                    '\uf0e6',
+	"barb2sw":                    '\uf0e5',
+	"barb2up":                    '\uf0e1',
+	"barb4down":                  '\uf0ea',
+	"barb4left":                  '\uf0e7',
+	"barb4ne":                    '\uf0ec',
+	"barb4nw":                    '\uf0eb',
+	"barb4right":                 '\uf0e8',
+	"barb4se":                    '\uf0ee',
+	"barb4sw":                    '\uf0ed',
+	"barb4up":                    '\uf0e9',
+	"bdash1":                     '\uf0f9',
+	"bdash2":                     '\uf0fa',
+	"bdown":                      '\uf0f2',
+	"behisolated":                '\ufe8f', // ﺏ
+	"bell":                       '\uf025',
+	"bepsi":                      '\u220d', // ∍
+	"bernou":                     '\u212c', // ℬ
+	"bleft":                      '\uf0ef',
+	"bleftright":                 '\uf0f3',
+	"bne":                        '\uf0f6',
+	"bnw":                        '\uf0f5',
+	"bomb":                       '\uf04d',
+	"book":                       '\uf026',
+	"bowtie":                     '\u22c8', // ⋈
+	"box2":                       '\uf0a8',
+	"box3":                       '\uf06f',
+	"box4":                       '\uf070',
+	"boxcheckbld":                '\uf0fe',
+	"boxshadowdwn":               '\uf071',
+	"boxshadowup":                '\uf072',
+	"boxxmarkbld":                '\uf0fd',
+	"bright":                     '\uf0f0',
+	"bse":                        '\uf0f8',
+	"bsw":                        '\uf0f7',
+	"budleafne":                  '\uf096',
+	"budleafnw":                  '\uf097',
+	"budleafse":                  '\uf099',
+	"budleafsw":                  '\uf098',
+	"bup":                        '\uf0f1',
+	"bupdown":                    '\uf0f4',
+	"cancer":                     '\uf061',
+	"candle":                     '\uf027',
+	"capricorn":                  '\uf067',
+	"caret":                      '\u2041', // ⁁
+	"checkbld":                   '\uf0fc',
+	"circle2":                    '\uf09e',
+	"circle4":                    '\uf09f',
+	"circle6":                    '\uf06c',
+	"circledown":                 '\uf0de',
+	"circleleft":                 '\uf0db',
+	"circleright":                '\uf0dc',
+	"circleshadowdwn":            '\uf06d',
+	"circleshadowup":             '\uf0a6',
+	"circlestar":                 '\uf0b5',
+	"circleup":                   '\uf0dd',
+	"cire":                       '\u2257', // ≗
+	"colone":                     '\u2254', // ≔
+	"command":                    '\uf07a',
+	"compfn":                     '\u2218', // ∘
+	"copysr":                     '\u2117', // ℗
+	"crescentstar":               '\uf05a',
+	"crossceltic":                '\uf057',
+	"crossmaltese":               '\uf058',
+	"crossoutline":               '\uf055',
+	"crossshadow":                '\uf056',
+	"crosstar2":                  '\uf0aa',
+	"cuspopen":                   '\uf0b2',
+	"cuspopen1":                  '\uf0b3',
+	"dadisolated":                '\ufebd', // ﺽ
+	"dalisolated":                '\ufea9', // ﺩ
+	"dlcrop":                     '\u230d', // ⌍
+	"dodecastar3":                '\uf0ae',
+	"drcrop":                     '\u230c', // ⌌
+	"droplet":                    '\uf053',
+	"dtrif":                      '\u25be', // ▾
+	"ecolon":                     '\u2255', // ≕
+	"egs":                        '\u22dd', // ⋝
+	"eightoclock":                '\uf0be',
+	"eightsans":                  '\uf088',
+	"eightsansinv":               '\uf093',
+	"elevenoclock":               '\uf0c1',
+	"els":                        '\u22dc', // ⋜
+	"emsp13":                     '\u2004',
+	"emsp14":                     '\u2005',
+	"emspace":                    '\u2003',
+	"envelopeback":               '\uf02a',
+	"envelopefront":              '\uf02b',
+	"epsis":                      '\u220a', // ∊
+	"escape":                     '\uf079',
+	"fehisolated":                '\ufed1', // ﻑ
+	"filecabinet":                '\uf035',
+	"filetalltext":               '\uf033',
+	"filetalltext1":              '\uf032',
+	"filetalltext3":              '\uf034',
+	"fiveoclock":                 '\uf0bb',
+	"fivesans":                   '\uf085',
+	"fivesansinv":                '\uf090',
+	"flag":                       '\uf04f',
+	"floppy3":                    '\uf03c',
+	"floppy5":                    '\uf03d',
+	"folder":                     '\uf030',
+	"folderopen":                 '\uf031',
+	"fouroclock":                 '\uf0ba',
+	"foursans":                   '\uf084',
+	"foursansinv":                '\uf08f',
+	"frac15":                     '\u2155', // ⅕
+	"frac16":                     '\u2159', // ⅙
+	"frac25":                     '\u2156', // ⅖
+	"frac35":                     '\u2157', // ⅗
+	"frac45":                     '\u2158', // ⅘
+	"frac56":                     '\u215a', // ⅚
+	"frownface":                  '\uf04c',
+	"gammad":                     '\u03dd', // ϝ
+	"gemini":                     '\uf060',
+	"gnsim":                      '\u22e7', // ⋧
+	"hahisolated":                '\ufea1', // ﺡ
+	"hairspace":                  '\u200a',
+	"hamilt":                     '\u210b', // ℋ
+	"hamzaisolated":              '\ufe80', // ﺀ
+	"handhalt":                   '\uf049',
+	"handok":                     '\uf042',
+	"handptdwn":                  '\uf048',
+	"handptleft":                 '\uf045',
+	"handptright":                '\uf046',
+	"handptup":                   '\uf047',
+	"handv":                      '\uf041',
+	"handwrite":                  '\uf03f',
+	"handwriteleft":              '\uf040',
+	"harddisk":                   '\uf03b',
+	"head2down":                  '\uf0da',
+	"head2left":                  '\uf0d7',
+	"head2right":                 '\uf0d8',
+	"head2up":                    '\uf0d9',
+	"hexstar2":                   '\uf0ac',
+	"hourglass":                  '\uf036',
+	"hybull":                     '\u2043', // ⁃
+	"kafisolated":                '\ufed9', // ﻙ
+	"keyboard":                   '\uf037',
+	"lagran":                     '\u2112', // ℒ
+	"lamisolated":                '\ufedd', // ﻝ
+	"larr2":                      '\u21c7', // ⇇
+	"leafccwne":                  '\uf0d0',
+	"leafccwnw":                  '\uf0ce',
+	"leafccwse":                  '\uf0cf',
+	"leafccwsw":                  '\uf0cd',
+	"leafne":                     '\uf0d3',
+	"leafnw":                     '\uf0d1',
+	"leafse":                     '\uf0d4',
+	"leafsw":                     '\uf0d2',
+	"leo":                        '\uf062',
+	"libra":                      '\uf064',
+	"lnsim":                      '\u22e6', // ⋦
+	"lozenge4":                   '\uf073',
+	"lozenge6":                   '\uf074',
+	"lozf":                       '\u2726', // ✦
+	"ltrif":                      '\u25c2', // ◂
+	"mailboxflagdwn":             '\uf02c',
+	"mailboxflagup":              '\uf02d',
+	"mailbxopnflgdwn":            '\uf02f',
+	"mailbxopnflgup":             '\uf02e',
+	"map":                        '\u21a6', // ↦
+	"marker":                     '\u25ae', // ▮
+	"meemisolated":               '\ufee1', // ﻡ
+	"models":                     '\u22a7', // ⊧
+	"mouse2button":               '\uf038',
+	"nap":                        '\u2249', // ≉
+	"neutralface":                '\uf04b',
+	"nineoclock":                 '\uf0bf',
+	"ninesans":                   '\uf089',
+	"ninesansinv":                '\uf094',
+	"noonisolated":               '\ufee5', // ﻥ
+	"npre":                       '\u22e0', // ⋠
+	"nsce":                       '\u22e1', // ⋡
+	"nsime":                      '\u2244', // ≄
+	"numsp":                      '\u2007',
+	"octastar2":                  '\uf0ad',
+	"octastar4":                  '\uf0af',
+	"odash":                      '\u229d', // ⊝
+	"olarr":                      '\u21ba', // ↺
+	"om":                         '\uf05c',
+	"oneoclock":                  '\uf0b7',
+	"onesans":                    '\uf081',
+	"onesansinv":                 '\uf08c',
+	"orarr":                      '\u21bb', // ↻
+	"order":                      '\u2134', // ℴ
+	"pc":                         '\uf03a',
+	"pencil":                     '\uf021',
+	"pennant":                    '\uf050',
+	"pentastar2":                 '\uf0ab',
+	"phmmat":                     '\u2133', // ℳ
+	"pisces":                     '\uf069',
+	"puncsp":                     '\u2008',
+	"qafisolated":                '\ufed5', // ﻕ
+	"query":                      '\uf0b4',
+	"quiltsquare2":               '\uf0cb',
+	"quiltsquare2inv":            '\uf0cc',
+	"quotedbllftbld":             '\uf07d',
+	"quotedblrtbld":              '\uf07e',
+	"rarr2":                      '\u21c9', // ⇉
+	"rarrw":                      '\u219d', // ↝
+	"readingglasses":             '\uf024',
+	"rect":                       '\u25ad', // ▭
+	"registercircle":             '\uf0b1',
+	"registersquare":             '\uf0b0',
+	"rehisolated":                '\ufead', // ﺭ
+	"rhombus4":                   '\uf077',
+	"rhombus6":                   '\uf075',
+	"ring2":                      '\uf0a1',
+	"ring4":                      '\uf0a2',
+	"ring6":                      '\uf0a3',
+	"ringbutton2":                '\uf0a4',
+	"rosette":                    '\uf07b',
+	"rosettesolid":               '\uf07c',
+	"rtrif":                      '\u25b8', // ▸
+	"saggitarius":                '\uf066',
+	"scissors":                   '\uf022',
+	"scissorscutting":            '\uf023',
+	"scorpio":                    '\uf065',
+	"seenisolated":               '\ufeb1', // ﺱ
+	"sevenoclock":                '\uf0bd',
+	"sevensans":                  '\uf087',
+	"sevensansinv":               '\uf092',
+	"sixoclock":                  '\uf0bc',
+	"sixsans":                    '\uf086',
+	"sixsansinv":                 '\uf091',
+	"skullcrossbones":            '\uf04e',
+	"snowflake":                  '\uf054',
+	"square2":                    '\uf0a0',
+	"square4":                    '\uf0a7',
+	"square6":                    '\uf06e',
+	"starofdavid":                '\uf059',
+	"starshadow":                 '\uf0b6',
+	"sunshine":                   '\uf052',
+	"tahisolated":                '\ufec1', // ﻁ
+	"tapereel":                   '\uf03e',
+	"target":                     '\uf0a5',
+	"taurus":                     '\uf05f',
+	"tdot":                       '\u20db', // ⃛
+	"tehisolated":                '\ufe95', // ﺕ
+	"tehmarbutaisolated":         '\ufe93', // ﺓ
+	"telephonesolid":             '\uf028',
+	"telhandsetcirc":             '\uf029',
+	"telrec":                     '\u2315', // ⌕
+	"tenoclock":                  '\uf0c0',
+	"tensans":                    '\uf08a',
+	"tensansinv":                 '\uf095',
+	"thalisolated":               '\ufeab', // ﺫ
+	"thinsp":                     '\u2009',
+	"threeoclock":                '\uf0b9',
+	"threesans":                  '\uf083',
+	"threesansinv":               '\uf08e',
+	"thumbdown":                  '\uf044',
+	"thumbup":                    '\uf043',
+	"tie":                        '\u2040', // ⁀
+	"tprime":                     '\u2034', // ‴
+	"tristar2":                   '\uf0a9',
+	"twelveoclock":               '\uf0c2',
+	"twooclock":                  '\uf0b8',
+	"twosans":                    '\uf082',
+	"twosansinv":                 '\uf08d',
+	"ulcrop":                     '\u230f', // ⌏
+	"urcrop":                     '\u230e', // ⌎
+	"vineleafboldne":             '\uf09a',
+	"vineleafboldnw":             '\uf09b',
+	"vineleafboldse":             '\uf09d',
+	"vineleafboldsw":             '\uf09c',
+	"virgo":                      '\uf063',
+	"vltri":                      '\u22b2', // ⊲
+	"vrtri":                      '\u22b3', // ⊳
+	"wawisolated":                '\ufeed', // ﻭ
+	"wedgeq":                     '\u2259', // ≙
+	"wheel":                      '\uf05d',
+	"windowslogo":                '\uf0ff',
+	"xmarkbld":                   '\uf0fb',
+	"xrhombus":                   '\uf076',
+	"yehisolated":                '\ufef1', // ﻱ
+	"zahisolated":                '\ufec5', // ﻅ
+	"zainisolated":               '\ufeaf', // ﺯ
+	"zerosans":                   '\uf080',
+	"zerosansinv":                '\uf08b',
+}
+
+// empericalRuneToGlyphMap are the mappings we found by trial and error.
+var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
+	'\u00c6': "AElig",  // Æ
+	'\u0386': "Aacgr",  // Ά
+	'\u00c2': "Acirc",  // Â
+	'\u0410': "Acy",    // А
+	'\u0391': "Agr",    // Α
+	'\u0100': "Amacr",  // Ā
+	'\u0104': "Aogon",  // Ą
+	'\u00c4': "Auml",   // Ä
+	'\u2306': "Barwed", // ⌆
+	'\u0411': "Bcy",    // Б
+	'\u0392': "Bgr",    // Β
+	'\x18':   "CAN",
+	'\u0427': "CHcy", // Ч
+	'\u2104': "CL",   // ℄
+	'\r':     "CR",
+	'\u22d2': "Cap",    // ⋒
+	'\u00c7': "Ccedil", // Ç
+	'\u0108': "Ccirc",  // Ĉ
+	'\u22d3': "Cup",    // ⋓
+	'\x11':   "DC1",
+	'\x12':   "DC2",
+	'\x13':   "DC3",
+	'\x14':   "DC4",
+	'\u0402': "DJcy", // Ђ
+	'\x10':   "DLE",
+	'\u0405': "DScy",   // Ѕ
+	'\u040f': "DZcy",   // Џ
+	'\u2021': "Dagger", // ‡
+	'\u0414': "De",     // Д
+	'\u0394': "Dgr",    // Δ
+	'\u20dc': "DotDot", // ⃜
+	'\u0110': "Dstrok", // Đ
+	'\u0389': "EEacgr", // Ή
+	'\u0397': "EEgr",   // Η
+	'\x19':   "EM",
+	'\u014a': "ENG", // Ŋ
+	'\x04':   "EOT",
+	'\x1b':   "ESC",
+	'\x17':   "ETB",
+	'\u00d0': "ETH", // Ð
+	'\x03':   "ETX",
+	'\u0388': "Eacgr", // Έ
+	'\u00ca': "Ecirc", // Ê
+	'\u042d': "Ecy",   // Э
+	'\u0395': "Egr",   // Ε
+	'\u0112': "Emacr", // Ē
+	'\u041d': "En",    // Н
+	'\u0118': "Eogon", // Ę
+	'\u00cb': "Euml",  // Ë
+	'\x1c':   "FS",
+	'\u0424': "Fcy",    // Ф
+	'\u0403': "GJcy",   // Ѓ
+	'\u0122': "Gcedil", // Ģ
+	'\u011c': "Gcirc",  // Ĝ
+	'\u0413': "Gcy",    // Г
+	'\u22d9': "Gg",     // ⋙
+	'\u0393': "Ggr",    // Γ
+	'\u226b': "Gt",     // ≫
+	'\u042a': "HARDcy", // Ъ
+	'\t':     "HT",
+	'\u0124': "Hcirc",  // Ĥ
+	'\u0126': "Hstrok", // Ħ
+	'\u0415': "IEcy",   // Е
+	'\u0132': "IJlig",  // Ĳ
+	'\u0401': "IOcy",   // Ё
+	'\u038a': "Iacgr",  // Ί
+	'\u00ce': "Icirc",  // Î
+	'\u0418': "Icy",    // И
+	'\u03aa': "Idigr",  // Ϊ
+	'\u0399': "Igr",    // Ι
+	'\u012a': "Imacr",  // Ī
+	'\u012e': "Iogon",  // Į
+	'\u0406': "Iukcy",  // І
+	'\u00cf': "Iuml",   // Ï
+	'\u0134': "Jcirc",  // Ĵ
+	'\u0419': "Jcy",    // Й
+	'\u0408': "Jsercy", // Ј
+	'\u0404': "Jukcy",  // Є
+	'\u0425': "KHcy",   // Х
+	'\u03a7': "KHgr",   // Χ
+	'\u040c': "KJcy",   // Ќ
+	'\u0136': "Kcedil", // Ķ
+	'\u041a': "Kcy",    // К
+	'\u039a': "Kgr",    // Κ
+	'\u0409': "LJcy",   // Љ
+	'\u219e': "Larr",   // ↞
+	'\u013b': "Lcedil", // Ļ
+	'\u041b': "Lcy",    // Л
+	'\u039b': "Lgr",    // Λ
+	'\u22d8': "Ll",     // ⋘
+	'\u013f': "Lmidot", // Ŀ
+	'\u0141': "Lstrok", // Ł
+	'\u226a': "Lt",     // ≪
+	'\u041c': "Mcy",    // М
+	'\u039c': "Mgr",    // Μ
+	'\x15':   "NAK",
+	'\u040a': "NJcy", // Њ
+	'\x00':   "NUL",
+	'\u0145': "Ncedil", // Ņ
+	// '\u041d':    "Ncy", // Н -- duplicate
+	'\u039d': "Ngr",    // Ν
+	'\u0152': "OElig",  // Œ
+	'\u038f': "OHacgr", // Ώ
+	'\u03a9': "OHgr",   // Ω
+	'\u038c': "Oacgr",  // Ό
+	'\u00d4': "Ocirc",  // Ô
+	'\u041e': "Ocy",    // О
+	'\u0150': "Odblac", // Ő
+	'\u039f': "Ogr",    // Ο
+	'\u014c': "Omacr",  // Ō
+	'\u00d6': "Ouml",   // Ö
+	'\u03a6': "PHgr",   // Φ
+	'\u03a8': "PSgr",   // Ψ
+	'\u041f': "Pcy",    // П
+	'\u03a0': "Pgr",    // Π
+	'\u2033': "Prime",  // ″
+	'\x1e':   "RS",
+	'\u21a0': "Rarr",   // ↠
+	'\u0156': "Rcedil", // Ŗ
+	'\u0420': "Rcy",    // Р
+	'\u03a1': "Rgr",    // Ρ
+	'\u0429': "SHCHcy", // Щ
+	'\u0428': "SHcy",   // Ш
+	'\x0f':   "SI",
+	'\x0e':   "SO",
+	'\u042c': "SOFTcy", // Ь
+	'\x01':   "SOH",
+	'\x02':   "STX",
+	'\x1a':   "SUB",
+	'\x16':   "SYN",
+	'\u015e': "Scedil", // Ş
+	'\u015c': "Scirc",  // Ŝ
+	'\u0421': "Scy",    // С
+	'\u03a3': "Sgr",    // Σ
+	'\u22d0': "Sub",    // ⋐
+	'\u22d1': "Sup",    // ⋑
+	'\u00de': "THORN",  // Þ
+	'\u0398': "THgr",   // Θ
+	'\u040b': "TSHcy",  // Ћ
+	'\u0426': "TScy",   // Ц
+	'\u0162': "Tcedil", // Ţ
+	'\u0422': "Tcy",    // Т
+	// '\u0422':    "Te", // Т -- duplicate
+	'\u03a4': "Tgr",    // Τ
+	'\u0166': "Tstrok", // Ŧ
+	'\x1f':   "US",
+	'\u038e': "Uacgr",  // Ύ
+	'\u040e': "Ubrcy",  // Ў
+	'\u00db': "Ucirc",  // Û
+	'\u0423': "Ucy",    // У
+	'\u0170': "Udblac", // Ű
+	'\u03ab': "Udigr",  // Ϋ
+	'\u016a': "Umacr",  // Ū
+	'\u0172': "Uogon",  // Ų
+	'\u03a5': "Upsi",   // Υ
+	'\u00dc': "Uuml",   // Ü
+	'\u0412': "Vcy",    // В
+	'\u22a9': "Vdash",  // ⊩
+	'\u2016': "Verbar", // ‖
+	'\u22aa': "Vvdash", // ⊪
+	'\u0174': "Wcirc",  // Ŵ
+	'\u039e': "Xgr",    // Ξ
+	'\u042f': "YAcy",   // Я
+	'\u0407': "YIcy",   // Ї
+	'\u042e': "YUcy",   // Ю
+	'\u0176': "Ycirc",  // Ŷ
+	'\u042b': "Ycy",    // Ы
+	'\u0178': "Yuml",   // Ÿ
+	'\u0416': "ZHcy",   // Ж
+	'\u0417': "Zcy",    // З
+	'\u0396': "Zgr",    // Ζ
+	'\u2701': "a1",     // ✁
+	'\u2721': "a10",    // ✡
+	'\u275e': "a100",   // ❞
+	'\u2761': "a101",   // ❡
+	'\u2762': "a102",   // ❢
+	'\u2763': "a103",   // ❣
+	'\u2764': "a104",   // ❤
+	'\u2710': "a105",   // ✐
+	'\u2765': "a106",   // ❥
+	'\u2766': "a107",   // ❦
+	'\u2767': "a108",   // ❧
+	'\u261b': "a11",    // ☛
+	'\u2709': "a117",   // ✉
+	'\u2708': "a118",   // ✈
+	'\u2707': "a119",   // ✇
+	'\u261e': "a12",    // ☞
+	'\u2460': "a120",   // ①
+	'\u2461': "a121",   // ②
+	'\u2462': "a122",   // ③
+	'\u2463': "a123",   // ④
+	'\u2464': "a124",   // ⑤
+	'\u2465': "a125",   // ⑥
+	'\u2466': "a126",   // ⑦
+	'\u2467': "a127",   // ⑧
+	'\u2468': "a128",   // ⑨
+	'\u2469': "a129",   // ⑩
+	'\u270c': "a13",    // ✌
+	'\u2776': "a130",   // ❶
+	'\u2777': "a131",   // ❷
+	'\u2778': "a132",   // ❸
+	'\u2779': "a133",   // ❹
+	'\u277a': "a134",   // ❺
+	'\u277b': "a135",   // ❻
+	'\u277c': "a136",   // ❼
+	'\u277d': "a137",   // ❽
+	'\u277e': "a138",   // ❾
+	'\u277f': "a139",   // ❿
+	'\u270d': "a14",    // ✍
+	'\u2780': "a140",   // ➀
+	'\u2781': "a141",   // ➁
+	'\u2782': "a142",   // ➂
+	'\u2783': "a143",   // ➃
+	'\u2784': "a144",   // ➄
+	'\u2785': "a145",   // ➅
+	'\u2786': "a146",   // ➆
+	'\u2787': "a147",   // ➇
+	'\u2788': "a148",   // ➈
+	'\u2789': "a149",   // ➉
+	'\u270e': "a15",    // ✎
+	'\u278a': "a150",   // ➊
+	'\u278b': "a151",   // ➋
+	'\u278c': "a152",   // ➌
+	'\u278d': "a153",   // ➍
+	'\u278e': "a154",   // ➎
+	'\u278f': "a155",   // ➏
+	'\u2790': "a156",   // ➐
+	'\u2791': "a157",   // ➑
+	'\u2792': "a158",   // ➒
+	'\u2793': "a159",   // ➓
+	'\u270f': "a16",    // ✏
+	'\u2794': "a160",   // ➔
+	'\u27a3': "a162",   // ➣
+	'\u2799': "a165",   // ➙
+	'\u279b': "a166",   // ➛
+	'\u279c': "a167",   // ➜
+	'\u279d': "a168",   // ➝
+	'\u279e': "a169",   // ➞
+	'\u2711': "a17",    // ✑
+	'\u279f': "a170",   // ➟
+	'\u27a0': "a171",   // ➠
+	'\u27a1': "a172",   // ➡
+	'\u27a2': "a173",   // ➢
+	'\u27a4': "a174",   // ➤
+	'\u27a5': "a175",   // ➥
+	'\u27a6': "a176",   // ➦
+	'\u27a7': "a177",   // ➧
+	'\u27a8': "a178",   // ➨
+	'\u27a9': "a179",   // ➩
+	'\u2712': "a18",    // ✒
+	'\u27ab': "a180",   // ➫
+	'\u27ad': "a181",   // ➭
+	'\u27af': "a182",   // ➯
+	'\u27b2': "a183",   // ➲
+	'\u27b3': "a184",   // ➳
+	'\u27b5': "a185",   // ➵
+	'\u27b8': "a186",   // ➸
+	'\u27ba': "a187",   // ➺
+	'\u27bb': "a188",   // ➻
+	'\u27bc': "a189",   // ➼
+	'\u2713': "a19",    // ✓
+	'\u27bd': "a190",   // ➽
+	'\u27be': "a191",   // ➾
+	'\u279a': "a192",   // ➚
+	'\u27aa': "a193",   // ➪
+	'\u27b6': "a194",   // ➶
+	'\u27b9': "a195",   // ➹
+	'\u2798': "a196",   // ➘
+	'\u27b4': "a197",   // ➴
+	'\u27b7': "a198",   // ➷
+	'\u27ac': "a199",   // ➬
+	'\u2702': "a2",     // ✂
+	'\u2714': "a20",    // ✔
+	'\u27ae': "a200",   // ➮
+	'\u27b1': "a201",   // ➱
+	'\u2703': "a202",   // ✃
+	'\u2750': "a203",   // ❐
+	'\u2752': "a204",   // ❒
+	'\uf8dd': "a205",
+	'\uf8df': "a206",
+	'\u2715': "a21", // ✕
+	'\u2716': "a22", // ✖
+	'\u2717': "a23", // ✗
+	'\u2718': "a24", // ✘
+	'\u2719': "a25", // ✙
+	'\u271a': "a26", // ✚
+	'\u271b': "a27", // ✛
+	'\u271c': "a28", // ✜
+	'\u2722': "a29", // ✢
+	'\u2704': "a3",  // ✄
+	'\u2723': "a30", // ✣
+	'\u2724': "a31", // ✤
+	'\u2725': "a32", // ✥
+	'\u2726': "a33", // ✦
+	'\u2727': "a34", // ✧
+	'\u2605': "a35", // ★
+	'\u2729': "a36", // ✩
+	'\u272a': "a37", // ✪
+	'\u272b': "a38", // ✫
+	'\u272c': "a39", // ✬
+	'\u260e': "a4",  // ☎
+	'\u272d': "a40", // ✭
+	'\u272e': "a41", // ✮
+	'\u272f': "a42", // ✯
+	'\u2730': "a43", // ✰
+	'\u2731': "a44", // ✱
+	'\u2732': "a45", // ✲
+	'\u2733': "a46", // ✳
+	'\u2734': "a47", // ✴
+	'\u2735': "a48", // ✵
+	'\u2736': "a49", // ✶
+	'\u2706': "a5",  // ✆
+	'\u2737': "a50", // ✷
+	'\u2738': "a51", // ✸
+	'\u2739': "a52", // ✹
+	'\u273a': "a53", // ✺
+	'\u273b': "a54", // ✻
+	'\u273c': "a55", // ✼
+	'\u273d': "a56", // ✽
+	'\u273e': "a57", // ✾
+	'\u273f': "a58", // ✿
+	'\u2740': "a59", // ❀
+	'\u271d': "a6",  // ✝
+	'\u2741': "a60", // ❁
+	'\u2742': "a61", // ❂
+	'\u2743': "a62", // ❃
+	'\u2744': "a63", // ❄
+	'\u2745': "a64", // ❅
+	'\u2746': "a65", // ❆
+	'\u2747': "a66", // ❇
+	'\u2748': "a67", // ❈
+	'\u2749': "a68", // ❉
+	'\u274a': "a69", // ❊
+	'\u271e': "a7",  // ✞
+	'\u274b': "a70", // ❋
+	'\u274d': "a72", // ❍
+	'\u274f': "a74", // ❏
+	'\u2751': "a75", // ❑
+	'\u25c6': "a78", // ◆
+	'\u2756': "a79", // ❖
+	'\u271f': "a8",  // ✟
+	'\u25d7': "a81", // ◗
+	'\u2758': "a82", // ❘
+	'\u2759': "a83", // ❙
+	'\u275a': "a84", // ❚
+	'\uf8de': "a85",
+	'\uf8e0': "a86",
+	'\uf8e1': "a87",
+	'\uf8e2': "a88",
+	'\uf8d7': "a89",
+	'\u2720': "a9", // ✠
+	'\uf8d8': "a90",
+	'\uf8db': "a91",
+	'\uf8dc': "a92",
+	'\uf8d9': "a93",
+	'\uf8da': "a94",
+	'\uf8e3': "a95",
+	'\uf8e4': "a96",
+	'\u275b': "a97",         // ❛
+	'\u275c': "a98",         // ❜
+	'\u275d': "a99",         // ❝
+	'\u03ac': "aacgr",       // ά
+	'\u00e2': "acirc",       // â
+	'\u0430': "acy",         // а
+	'\u00e6': "aelig",       // æ
+	'\u03b1': "agr",         // α
+	'\u0639': "ain",         // ع
+	'\ufeca': "ainfinal",    // ﻊ
+	'\ufecb': "aininitial",  // ﻋ
+	'\ufec9': "ainisolated", // ﻉ
+	'\ufecc': "ainmedial",   // ﻌ
+	'\uf051': "airplane",
+	'\ufe8e': "aleffinal",                  // ﺎ
+	'\ufe8d': "alefisolated",               // ﺍ
+	'\u0649': "alefmaksura",                // ى
+	'\ufef0': "alefmaksurafinal",           // ﻰ
+	'\ufeef': "alefmaksuraisolated",        // ﻯ
+	'\u2135': "alefsym",                    // ℵ
+	'\u0623': "alefwithhamzaabove",         // أ
+	'\ufe84': "alefwithhamzaabovefinal",    // ﺄ
+	'\ufe83': "alefwithhamzaaboveisolated", // ﺃ
+	'\u0625': "alefwithhamzabelow",         // إ
+	'\ufe87': "alefwithhamzabelowisolated", // ﺇ
+	'\u0101': "amacr",                      // ā
+	'&':      "amp",                        // &
+	'\uf06b': "ampersandit",
+	'\uf06a': "ampersanditlc",
+	'\u2227': "and",    // ∧
+	'\u2220': "ang",    // ∠
+	'\u221f': "ang90",  // ∟
+	'\u2221': "angmsd", // ∡
+	'\u2222': "angsph", // ∢
+	'\u212b': "angst",  // Å
+	'\u0105': "aogon",  // ą
+	'\u224a': "ape",    // ≊
+	'\'':     "apos",   // \'
+	'\uf068': "aquarius",
+	'\u060c': "arabiccomma",           // ،
+	'\u0668': "arabicindicdigiteight", // ٨
+	'\u0665': "arabicindicdigitfive",  // ٥
+	'\u0664': "arabicindicdigitfour",  // ٤
+	'\u0669': "arabicindicdigitnine",  // ٩
+	'\u0661': "arabicindicdigitone",   // ١
+	'\u0667': "arabicindicdigitseven", // ٧
+	'\u0666': "arabicindicdigitsix",   // ٦
+	'\u0663': "arabicindicdigitthree", // ٣
+	'\u0662': "arabicindicdigittwo",   // ٢
+	'\u0660': "arabicindicdigitzero",  // ٠
+	'\uf05e': "aries",
+	'\uf0c3': "arrowdwnleft1",
+	'\uf0c4': "arrowdwnrt1",
+	'\uf0c9': "arrowleftdwn1",
+	'\uf0c7': "arrowleftup1",
+	'\uf0ca': "arrowrtdwn1",
+	'\uf0c8': "arrowrtup1",
+	'\uf0c5': "arrowupleft1",
+	'\uf0c6': "arrowuprt1",
+	'*':      "ast",   // *
+	'\u2248': "asymp", // ≈
+	'\u00e4': "auml",  // ä
+	'\uf039': "ballpoint",
+	'\uf0e2': "barb2down",
+	'\uf0df': "barb2left",
+	'\uf0e4': "barb2ne",
+	'\uf0e3': "barb2nw",
+	'\uf0e0': "barb2right",
+	'\uf0e6': "barb2se",
+	'\uf0e5': "barb2sw",
+	'\uf0e1': "barb2up",
+	'\uf0ea': "barb4down",
+	'\uf0e7': "barb4left",
+	'\uf0ec': "barb4ne",
+	'\uf0eb': "barb4nw",
+	'\uf0e8': "barb4right",
+	'\uf0ee': "barb4se",
+	'\uf0ed': "barb4sw",
+	'\uf0e9': "barb4up",
+	'\u22bc': "barwed", // ⊼
+	'\u224c': "bcong",  // ≌
+	'\u0431': "bcy",    // б
+	'\uf0f9': "bdash1",
+	'\uf0fa': "bdash2",
+	'\uf0f2': "bdown",
+	'\u201e': "bdquo", // „
+	// '\u0431':    "be", // б -- duplicate
+	'\u2235': "becaus",      // ∵
+	'\u0628': "beh",         // ب
+	'\ufe8f': "behisolated", // ﺏ
+	'\ufe92': "behmedial",   // ﺒ
+	'\uf025': "bell",
+	'\u220d': "bepsi",  // ∍
+	'\u212c': "bernou", // ℬ
+	'\u03b2': "bgr",    // β
+	'\uf0ef': "bleft",
+	'\uf0f3': "bleftright",
+	'\u2592': "blk12", // ▒
+	'\u2591': "blk14", // ░
+	'\u2593': "blk34", // ▓
+	'\uf0f6': "bne",
+	'\uf0f5': "bnw",
+	'\uf04d': "bomb",
+	'\uf026': "book",
+	'\u22a5': "bottom", // ⊥
+	'\u22c8': "bowtie", // ⋈
+	'\u25a1': "box",    // □
+	'\uf0a8': "box2",
+	'\uf06f': "box3",
+	'\uf070': "box4",
+	'\u2557': "boxDL", // ╗
+	'\u2554': "boxDR", // ╔
+	'\u2556': "boxDl", // ╖
+	'\u2553': "boxDr", // ╓
+	'\u2550': "boxH",  // ═
+	'\u2566': "boxHD", // ╦
+	'\u2569': "boxHU", // ╩
+	'\u2564': "boxHd", // ╤
+	'\u2567': "boxHu", // ╧
+	'\u255d': "boxUL", // ╝
+	'\u255a': "boxUR", // ╚
+	'\u255c': "boxUl", // ╜
+	'\u2559': "boxUr", // ╙
+	'\u2551': "boxV",  // ║
+	'\u256c': "boxVH", // ╬
+	'\u2563': "boxVL", // ╣
+	'\u2560': "boxVR", // ╠
+	'\u256b': "boxVh", // ╫
+	'\u2562': "boxVl", // ╢
+	'\u255f': "boxVr", // ╟
+	'\uf0fe': "boxcheckbld",
+	'\u2555': "boxdL", // ╕
+	'\u2552': "boxdR", // ╒
+	'\u2510': "boxdl", // ┐
+	'\u250c': "boxdr", // ┌
+	'\u2500': "boxh",  // ─
+	'\u2565': "boxhD", // ╥
+	'\u2568': "boxhU", // ╨
+	'\u252c': "boxhd", // ┬
+	'\u2534': "boxhu", // ┴
+	'\uf071': "boxshadowdwn",
+	'\uf072': "boxshadowup",
+	'\u255b': "boxuL", // ╛
+	'\u2558': "boxuR", // ╘
+	'\u2518': "boxul", // ┘
+	'\u2514': "boxur", // └
+	'\u2502': "boxv",  // │
+	'\u256a': "boxvH", // ╪
+	'\u2561': "boxvL", // ╡
+	'\u255e': "boxvR", // ╞
+	'\u253c': "boxvh", // ┼
+	'\u2524': "boxvl", // ┤
+	'\u251c': "boxvr", // ├
+	'\uf0fd': "boxxmarkbld",
+	'\u2035': "bprime", // ‵
+	'\uf0f0': "bright",
+	'\u00a6': "brvbar", // ¦
+	'\uf0f8': "bse",
+	'\u223d': "bsim",  // ∽
+	'\u22cd': "bsime", // ⋍
+	'\\':     "bsol",  // \\
+	'\uf0f7': "bsw",
+	'\uf096': "budleafne",
+	'\uf097': "budleafnw",
+	'\uf099': "budleafse",
+	'\uf098': "budleafsw",
+	'\u2022': "bull",  // •
+	'\u224e': "bump",  // ≎
+	'\u224f': "bumpe", // ≏
+	'\uf0f1': "bup",
+	'\uf0f4': "bupdown",
+	'\uf061': "cancer",
+	'\uf027': "candle",
+	'\u2229': "cap", // ∩
+	'\uf067': "capricorn",
+	'\u2041': "caret",  // ⁁
+	'\u00e7': "ccedil", // ç
+	'\u0109': "ccirc",  // ĉ
+	'\u00b8': "cedil",  // ¸
+	'\u0447': "chcy",   // ч
+	'\uf0fc': "checkbld",
+	'\u02c6': "circ", // ˆ
+	'\uf09e': "circle2",
+	'\uf09f': "circle4",
+	'\uf06c': "circle6",
+	'\uf0de': "circledown",
+	'\uf0db': "circleleft",
+	'\uf0dc': "circleright",
+	'\uf06d': "circleshadowdwn",
+	'\uf0a6': "circleshadowup",
+	'\uf0b5': "circlestar",
+	'\uf0dd': "circleup",
+	'\u2257': "cire",   // ≗
+	'\u2663': "clubs",  // ♣
+	'\u2254': "colone", // ≔
+	'\uf07a': "command",
+	'@':      "commat", // @
+	'\u2201': "comp",   // ∁
+	'\u2218': "compfn", // ∘
+	'\u2245': "cong",   // ≅
+	'\u222e': "conint", // ∮
+	'\u00a9': "copy",   // ©
+	'\u2117': "copysr", // ℗
+	'\u21b5': "crarr",  // ↵
+	'\uf05a': "crescentstar",
+	// '\u2717':    "cross", // ✗ -- duplicate
+	'\uf057': "crossceltic",
+	'\uf058': "crossmaltese",
+	'\uf055': "crossoutline",
+	'\uf056': "crossshadow",
+	'\uf0aa': "crosstar2",
+	'\u22de': "cuepr",  // ⋞
+	'\u22df': "cuesc",  // ⋟
+	'\u21b6': "cularr", // ↶
+	'\u222a': "cup",    // ∪
+	'\u227c': "cupre",  // ≼
+	'\u21b7': "curarr", // ↷
+	'\u00a4': "curren", // ¤
+	'\uf0b2': "cuspopen",
+	'\uf0b3': "cuspopen1",
+	'\u22ce': "cuvee",       // ⋎
+	'\u22cf': "cuwed",       // ⋏
+	'\u21d3': "dArr",        // ⇓
+	'\u0636': "dad",         // ض
+	'\ufebd': "dadisolated", // ﺽ
+	'\ufec0': "dadmedial",   // ﻀ
+	'\u062f': "dal",         // د
+	'\ufea9': "dalisolated", // ﺩ
+	'\u2193': "darr",        // ↓
+	'\u21ca': "darr2",       // ⇊
+	'\u2010': "dash",        // ‐
+	'\u22a3': "dashv",       // ⊣
+	'\u02dd': "dblac",       // ˝
+	// '\u0414':    "dcy", // Д -- duplicate
+	'\u0434': "de",     // д
+	'\u00b0': "deg",    // °
+	'\u03b4': "dgr",    // δ
+	'\u21c3': "dharl",  // ⇃
+	'\u21c2': "dharr",  // ⇂
+	'\u22c4': "diam",   // ⋄
+	'\u2666': "diams",  // ♦
+	'\u00a8': "die",    // ¨
+	'\u22c7': "divonx", // ⋇
+	'\u0452': "djcy",   // ђ
+	'\u2199': "dlarr",  // ↙
+	'\u231e': "dlcorn", // ⌞
+	'\u230d': "dlcrop", // ⌍
+	'\uf0ae': "dodecastar3",
+	'\u02d9': "dot",    // ˙
+	'\u2198': "drarr",  // ↘
+	'\u231f': "drcorn", // ⌟
+	'\u230c': "drcrop", // ⌌
+	'\uf053': "droplet",
+	'\u0455': "dscy",   // ѕ
+	'\u0111': "dstrok", // đ
+	'\u25bf': "dtri",   // ▿
+	'\u25be': "dtrif",  // ▾
+	'\u045f': "dzcy",   // џ
+	// '\u0455':    "dze", // ѕ -- duplicate
+	'\u2251': "eDot",   // ≑
+	'\u03ad': "eacgr",  // έ
+	'\u2256': "ecir",   // ≖
+	'\u00ea': "ecirc",  // ê
+	'\u2255': "ecolon", // ≕
+	'\u044d': "ecy",    // э
+	'\u03ae': "eeacgr", // ή
+	'\u03b7': "eegr",   // η
+	'\u0444': "ef",     // ф
+	'\u2252': "efDot",  // ≒
+	'\u22dd': "egs",    // ⋝
+	'\uf0be': "eightoclock",
+	'\uf088': "eightsans",
+	'\uf093': "eightsansinv",
+	'\u043b': "el", // л
+	'\uf0c1': "elevenoclock",
+	'\u2113': "ell",   // ℓ
+	'\u22dc': "els",   // ⋜
+	'\u043c': "em",    // м
+	'\u0113': "emacr", // ē
+	'\u2205': "empty", // ∅
+	'\u2003': "emsp",
+	'\u2004': "emsp13",
+	'\u2005': "emsp14",
+	// '\u2003':    "emspace",  -- duplicate
+	'\u043d': "en", // н
+	'\u2002': "ensp",
+	'\uf02a': "envelopeback",
+	'\uf02b': "envelopefront",
+	'\u0119': "eogon",  // ę
+	'\u03b5': "epsi",   // ε
+	'\u220a': "epsis",  // ∊
+	'=':      "equals", // =
+	'\u2261': "equiv",  // ≡
+	'\u0440': "er",     // р
+	'\u2253': "erDot",  // ≓
+	'\u0441': "es",     // с
+	'\uf079': "escape",
+	'\u2250': "esdot", // ≐
+	'\u01bd': "eturn", // ƽ
+	'\u00eb': "euml",  // ë
+	'!':      "excl",  // !
+	'\u2203': "exist", // ∃
+	// '\u0444':    "fcy", // ф -- duplicate
+	'\u0641': "feh",         // ف
+	'\ufed3': "fehinitial",  // ﻓ
+	'\ufed1': "fehisolated", // ﻑ
+	'\ufed4': "fehmedial",   // ﻔ
+	'\uf035': "filecabinet",
+	'\uf033': "filetalltext",
+	'\uf032': "filetalltext1",
+	'\uf034': "filetalltext3",
+	'\uf0bb': "fiveoclock",
+	'\uf085': "fivesans",
+	'\uf090': "fivesansinv",
+	'\uf04f': "flag",
+	'\uf03c': "floppy3",
+	'\uf03d': "floppy5",
+	'\u0192': "fnof", // ƒ
+	'\uf030': "folder",
+	'\uf031': "folderopen",
+	'\uf0ba': "fouroclock",
+	// '\u2005':    "fourperemspace",  -- duplicate
+	'\uf084': "foursans",
+	'\uf08f': "foursansinv",
+	'\u00bd': "frac12", // ½
+	'\u2153': "frac13", // ⅓
+	'\u00bc': "frac14", // ¼
+	'\u2155': "frac15", // ⅕
+	'\u2159': "frac16", // ⅙
+	'\u215b': "frac18", // ⅛
+	'\u2154': "frac23", // ⅔
+	'\u2156': "frac25", // ⅖
+	'\u00be': "frac34", // ¾
+	'\u2157': "frac35", // ⅗
+	'\u215c': "frac38", // ⅜
+	'\u2158': "frac45", // ⅘
+	'\u215a': "frac56", // ⅚
+	'\u215d': "frac58", // ⅝
+	'\u215e': "frac78", // ⅞
+	'\u2044': "frasl",  // ⁄
+	'\uf04c': "frownface",
+	'\u2267': "gE",     // ≧
+	'\u03dd': "gammad", // ϝ
+	'\u0123': "gcedil", // ģ
+	'\u011d': "gcirc",  // ĝ
+	'\u0433': "gcy",    // г
+	'\u2265': "ge",     // ≥
+	'\u22db': "gel",    // ⋛
+	'\uf060': "gemini",
+	// '\u2265':    "ges", // ≥ -- duplicate
+	'\u03b3': "ggr",         // γ
+	'\u063a': "ghain",       // غ
+	'\ufed0': "ghainmedial", // ﻐ
+	'\u0453': "gjcy",        // ѓ
+	'\u2277': "gl",          // ≷
+	'\u22e7': "gnsim",       // ⋧
+	'\u22d7': "gsdot",       // ⋗
+	'\u2273': "gsim",        // ≳
+	'>':      "gt",          // >
+	'\u2269': "gvnE",        // ≩
+	'\u21d4': "hArr",        // ⇔
+	'\u062d': "hah",         // ح
+	'\ufea1': "hahisolated", // ﺡ
+	'\ufea4': "hahmedial",   // ﺤ
+	'\u200a': "hairsp",
+	// '\u200a':    "hairspace",  -- duplicate
+	'\u210b': "hamilt",        // ℋ
+	'\u0621': "hamza",         // ء
+	'\ufe80': "hamzaisolated", // ﺀ
+	'\uf049': "handhalt",
+	'\uf042': "handok",
+	'\uf048': "handptdwn",
+	'\uf045': "handptleft",
+	'\uf046': "handptright",
+	'\uf047': "handptup",
+	'\uf041': "handv",
+	'\uf03f': "handwrite",
+	'\uf040': "handwriteleft",
+	'\u044a': "hardcy", // ъ
+	'\uf03b': "harddisk",
+	'\u2194': "harr",  // ↔
+	'\u21ad': "harrw", // ↭
+	'\u0125': "hcirc", // ĥ
+	'\uf0da': "head2down",
+	'\uf0d7': "head2left",
+	'\uf0d8': "head2right",
+	'\uf0d9': "head2up",
+	'\u2665': "hearts",     // ♥
+	'\u0647': "heh",        // ه
+	'\ufeeb': "hehinitial", // ﻫ
+	'\ufeec': "hehmedial",  // ﻬ
+	'\u2026': "hellip",     // …
+	'\uf0ac': "hexstar2",
+	'\u2015': "horbar", // ―
+	'\uf036': "hourglass",
+	'\u0127': "hstrok", // ħ
+	'\u2043': "hybull", // ⁃
+	'\u044f': "ia",     // я
+	'\u03af': "iacgr",  // ί
+	'\u00ee': "icirc",  // î
+	'\u0438': "icy",    // и
+	'\u0390': "idiagr", // ΐ
+	'\u03ca': "idigr",  // ϊ
+	'\u0435': "ie",     // е
+	// '\u0435':    "iecy", // е -- duplicate
+	'\u00a1': "iexcl", // ¡
+	// '\u21d4':    "iff", // ⇔ -- duplicate
+	'\u03b9': "igr", // ι
+	// '\u0438':    "ii", // и -- duplicate
+	'\u0133': "ijlig",  // ĳ
+	'\u012b': "imacr",  // ī
+	'\u2111': "image",  // ℑ
+	'\u2105': "incare", // ℅
+	'\u221e': "infin",  // ∞
+	'\u0131': "inodot", // ı
+	'\u222b': "int",    // ∫
+	'\u22ba': "intcal", // ⊺
+	'\u0451': "io",     // ё
+	// '\u0451':    "iocy", // ё -- duplicate
+	'\u012f': "iogon",      // į
+	'\u00bf': "iquest",     // ¿
+	'\u2208': "isin",       // ∈
+	'\u0456': "iukcy",      // і
+	'\u00ef': "iuml",       // ï
+	'\u0135': "jcirc",      // ĵ
+	'\u0439': "jcy",        // й
+	'\u0458': "je",         // ј
+	'\u062c': "jeem",       // ج
+	'\ufea0': "jeemmedial", // ﺠ
+	// '\u0458':    "jsercy", // ј -- duplicate
+	'\u0454': "jukcy",       // є
+	'\u043a': "ka",          // к
+	'\ufed9': "kafisolated", // ﻙ
+	'\ufedc': "kafmedial",   // ﻜ
+	'\u03f0': "kappav",      // ϰ
+	'\u0137': "kcedil",      // ķ
+	// '\u043a':    "kcy", // к -- duplicate
+	'\uf037': "keyboard",
+	'\u03ba': "kgr",        // κ
+	'\u0138': "kgreen",     // ĸ
+	'\u0445': "kha",        // х
+	'\u062e': "khah",       // خ
+	'\ufea8': "khahmedial", // ﺨ
+	// '\u0445':    "khcy", // х -- duplicate
+	'\u03c7': "khgr",                           // χ
+	'\u045c': "kjcy",                           // ќ
+	'\u21da': "lAarr",                          // ⇚
+	'\u21d0': "lArr",                           // ⇐
+	'\u2266': "lE",                             // ≦
+	'\u2112': "lagran",                         // ℒ
+	'\u0644': "lam",                            // ل
+	'\ufedd': "lamisolated",                    // ﻝ
+	'\ufee0': "lammedial",                      // ﻠ
+	'\ufefc': "lamwithaleffinal",               // ﻼ
+	'\ufef8': "lamwithalefhamzaabovefinal",     // ﻸ
+	'\ufef7': "lamwithalefhamzaaboveisolatedd", // ﻷ
+	'\u2329': "lang",                           // 〈
+	'\u00ab': "laquo",                          // «
+	'\u2190': "larr",                           // ←
+	'\u21c7': "larr2",                          // ⇇
+	'\u21a9': "larrhk",                         // ↩
+	'\u21ab': "larrlp",                         // ↫
+	'\u21a2': "larrtl",                         // ↢
+	'\u013c': "lcedil",                         // ļ
+	'\u2308': "lceil",                          // ⌈
+	'{':      "lcub",                           // {
+	// '\u043b':    "lcy", // л -- duplicate
+	'\u201c': "ldquo", // “
+	// '\u201e':    "ldquor", // „ -- duplicate
+	'\u2264': "le", // ≤
+	'\uf0d0': "leafccwne",
+	'\uf0ce': "leafccwnw",
+	'\uf0cf': "leafccwse",
+	'\uf0cd': "leafccwsw",
+	'\uf0d3': "leafne",
+	'\uf0d1': "leafnw",
+	'\uf0d4': "leafse",
+	'\uf0d2': "leafsw",
+	'\u22da': "leg", // ⋚
+	'\uf062': "leo",
+	// '\u2264':    "les", // ≤ -- duplicate
+	'\u230a': "lfloor", // ⌊
+	'\u2276': "lg",     // ≶
+	'\u03bb': "lgr",    // λ
+	'\u21bd': "lhard",  // ↽
+	'\u21bc': "lharu",  // ↼
+	'\u2584': "lhblk",  // ▄
+	'\uf064': "libra",
+	'\u0459': "ljcy",   // љ
+	'\u0140': "lmidot", // ŀ
+	'\u22e6': "lnsim",  // ⋦
+	'\u2217': "lowast", // ∗
+	'_':      "lowbar", // _
+	'\u25ca': "loz",    // ◊
+	'\uf073': "lozenge4",
+	'\uf074': "lozenge6",
+	// '\u2726':    "lozf", // ✦ -- duplicate
+	'(':      "lpar",   // (
+	'\u21c6': "lrarr2", // ⇆
+	'\u21cb': "lrhar2", // ⇋
+	'\u2039': "lsaquo", // ‹
+	'\u21b0': "lsh",    // ↰
+	'\u2272': "lsim",   // ≲
+	'[':      "lsqb",   // [
+	'\u2018': "lsquo",  // ‘
+	'\u201a': "lsquor", // ‚
+	'\u0142': "lstrok", // ł
+	'<':      "lt",     // <
+	'\u22cb': "lthree", // ⋋
+	'\u22c9': "ltimes", // ⋉
+	'\u25c3': "ltri",   // ◃
+	'\u22b4': "ltrie",  // ⊴
+	'\u25c2': "ltrif",  // ◂
+	'\u2268': "lvnE",   // ≨
+	'\u00af': "macr",   // ¯
+	'\uf02c': "mailboxflagdwn",
+	'\uf02d': "mailboxflagup",
+	'\uf02f': "mailbxopnflgdwn",
+	'\uf02e': "mailbxopnflgup",
+	// '\u2720':    "malt", // ✠ -- duplicate
+	'\u21a6': "map",    // ↦
+	'\u25ae': "marker", // ▮
+	// '\u043c':    "mcy", // м -- duplicate
+	'\u2014': "mdash",        // —
+	'\u0645': "meem",         // م
+	'\ufee1': "meemisolated", // ﻡ
+	'\ufee4': "meemmedial",   // ﻤ
+	'\u03bc': "mgr",          // μ
+	'\u00b5': "micro",        // µ
+	'\u2223': "mid",          // ∣
+	'\u229f': "minusb",       // ⊟
+	// '\u2026':    "mldr", // … -- duplicate
+	'\u2213': "mnplus", // ∓
+	'\u22a7': "models", // ⊧
+	'\uf038': "mouse2button",
+	'\u22b8': "mumap",  // ⊸
+	'\u22af': "nVDash", // ⊯
+	'\u22ae': "nVdash", // ⊮
+	'\u2249': "nap",    // ≉
+	'\u0149': "napos",  // ŉ
+	'\u266e': "natur",  // ♮
+	'\u00a0': "nbsp",
+	'\u0146': "ncedil", // ņ
+	'\u2247': "ncong",  // ≇
+	// '\u043d':    "ncy", // н -- duplicate
+	'\u2013': "ndash",  // –
+	'\u2260': "ne",     // ≠
+	'\u2197': "nearr",  // ↗
+	'\u2262': "nequiv", // ≢
+	'\uf04b': "neutralface",
+	'\u2204': "nexist", // ∄
+	'\u2271': "nges",   // ≱
+	'\u03bd': "ngr",    // ν
+	'\u226f': "ngt",    // ≯
+	'\u21ce': "nhArr",  // ⇎
+	'\u21ae': "nharr",  // ↮
+	'\u220b': "ni",     // ∋
+	'\uf0bf': "nineoclock",
+	'\uf089': "ninesans",
+	'\uf094': "ninesansinv",
+	'\u045a': "njcy",   // њ
+	'\u21cd': "nlArr",  // ⇍
+	'\u219a': "nlarr",  // ↚
+	'\u2025': "nldr",   // ‥
+	'\u2270': "nles",   // ≰
+	'\u226e': "nlt",    // ≮
+	'\u22ea': "nltri",  // ⋪
+	'\u22ec': "nltrie", // ⋬
+	'\u2224': "nmid",   // ∤
+	// '\r':    "nonmarkingreturn",  -- duplicate
+	'\u0646': "noon",         // ن
+	'\ufee5': "noonisolated", // ﻥ
+	'\ufee8': "noonmedial",   // ﻨ
+	'\u00ac': "not",          // ¬
+	'\u2209': "notin",        // ∉
+	'\u2226': "npar",         // ∦
+	'\u2280': "npr",          // ⊀
+	'\u22e0': "npre",         // ⋠
+	'\u21cf': "nrArr",        // ⇏
+	'\u219b': "nrarr",        // ↛
+	'\u22eb': "nrtri",        // ⋫
+	'\u22ed': "nrtrie",       // ⋭
+	'\u2281': "nsc",          // ⊁
+	'\u22e1': "nsce",         // ⋡
+	'\u2241': "nsim",         // ≁
+	'\u2244': "nsime",        // ≄
+	'\u2284': "nsub",         // ⊄
+	'\u2288': "nsube",        // ⊈
+	'\u2285': "nsup",         // ⊅
+	'\u2289': "nsupe",        // ⊉
+	'\u0599': "null",         // ֙
+	'#':      "num",          // #
+	'\u2007': "numsp",
+	'\u22ad': "nvDash", // ⊭
+	'\u22ac': "nvdash", // ⊬
+	'\u2196': "nwarr",  // ↖
+	'\u24c8': "oS",     // Ⓢ
+	'\u03cc': "oacgr",  // ό
+	'\u229b': "oast",   // ⊛
+	'\u229a': "ocir",   // ⊚
+	'\u00f4': "ocirc",  // ô
+	'\uf0ad': "octastar2",
+	'\uf0af': "octastar4",
+	'\u043e': "ocy",    // о
+	'\u229d': "odash",  // ⊝
+	'\u0151': "odblac", // ő
+	'\u2299': "odot",   // ⊙
+	'\u0153': "oelig",  // œ
+	'\u02db': "ogon",   // ˛
+	'\u03bf': "ogr",    // ο
+	'\u03ce': "ohacgr", // ώ
+	'\u03c9': "ohgr",   // ω
+	'\u2126': "ohm",    // Ω
+	'\u21ba': "olarr",  // ↺
+	'\u203e': "oline",  // ‾
+	'\uf05c': "om",
+	'\u014d': "omacr",  // ō
+	'\u2296': "ominus", // ⊖
+	'\uf0b7': "oneoclock",
+	'\uf081': "onesans",
+	'\uf08c': "onesansinv",
+	'\u2295': "oplus",  // ⊕
+	'\u2228': "or",     // ∨
+	'\u21bb': "orarr",  // ↻
+	'\u2134': "order",  // ℴ
+	'\u00aa': "ordf",   // ª
+	'\u00ba': "ordm",   // º
+	'\u2298': "osol",   // ⊘
+	'\u2297': "otimes", // ⊗
+	'\u00f6': "ouml",   // ö
+	'\u2225': "par",    // ∥
+	'\u00b6': "para",   // ¶
+	'\u2202': "part",   // ∂
+	'\uf03a': "pc",
+	'\u043f': "pcy", // п
+	'\u202c': "pdf",
+	'\uf021': "pencil",
+	'\uf050': "pennant",
+	'\uf0ab': "pentastar2",
+	'%':      "percnt", // %
+	'\u2030': "permil", // ‰
+	// '\u22a5':    "perp", // ⊥ -- duplicate
+	'\u03c0': "pgr",    // π
+	'\u03c6': "phis",   // φ
+	'\u03d5': "phiv",   // ϕ
+	'\u2133': "phmmat", // ℳ
+	// '\u260e':    "phone", // ☎ -- duplicate
+	'\uf069': "pisces",
+	'\u03d6': "piv",    // ϖ
+	'\u210f': "planck", // ℏ
+	'\u229e': "plusb",  // ⊞
+	'\u2214': "plusdo", // ∔
+	'\u00b1': "plusmn", // ±
+	'\u00a3': "pound",  // £
+	'\u227a': "pr",     // ≺
+	'\u22e8': "prnsim", // ⋨
+	'\u220f': "prod",   // ∏
+	'\u221d': "prop",   // ∝
+	'\u227e': "prsim",  // ≾
+	'\u03c8': "psgr",   // ψ
+	'\u2008': "puncsp",
+	'\u0642': "qaf",         // ق
+	'\ufed7': "qafinitial",  // ﻗ
+	'\ufed5': "qafisolated", // ﻕ
+	'\ufed8': "qafmedial",   // ﻘ
+	'\uf0b4': "query",
+	'?':      "quest", // ?
+	'\uf0cb': "quiltsquare2",
+	'\uf0cc': "quiltsquare2inv",
+	'"':      "quot", // "
+	'\uf07d': "quotedbllftbld",
+	'\uf07e': "quotedblrtbld",
+	'\u21db': "rAarr",  // ⇛
+	'\u21d2': "rArr",   // ⇒
+	'\u221a': "radic",  // √
+	'\u232a': "rang",   // 〉
+	'\u00bb': "raquo",  // »
+	'\u2192': "rarr",   // →
+	'\u21c9': "rarr2",  // ⇉
+	'\u21aa': "rarrhk", // ↪
+	'\u21ac': "rarrlp", // ↬
+	'\u21a3': "rarrtl", // ↣
+	'\u219d': "rarrw",  // ↝
+	'\u0157': "rcedil", // ŗ
+	'\u2309': "rceil",  // ⌉
+	'}':      "rcub",   // }
+	// '\u0440':    "rcy", // р -- duplicate
+	'\u201d': "rdquo", // ”
+	// '\u201c':    "rdquor", // “ -- duplicate
+	'\uf024': "readingglasses",
+	'\u211c': "real", // ℜ
+	'\u25ad': "rect", // ▭
+	'\u00ae': "reg",  // ®
+	'\uf0b1': "registercircle",
+	'\uf0b0': "registersquare",
+	'\u0631': "reh",         // ر
+	'\ufead': "rehisolated", // ﺭ
+	'\u230b': "rfloor",      // ⌋
+	'\u03c1': "rgr",         // ρ
+	'\u21c1': "rhard",       // ⇁
+	'\u21c0': "rharu",       // ⇀
+	'\uf077': "rhombus4",
+	'\uf075': "rhombus6",
+	'\u03f1': "rhov", // ϱ
+	'\uf0a1': "ring2",
+	'\uf0a2': "ring4",
+	'\uf0a3': "ring6",
+	'\uf0a4': "ringbutton2",
+	'\u21c4': "rlarr2", // ⇄
+	'\u21cc': "rlhar2", // ⇌
+	'\uf07b': "rosette",
+	'\uf07c': "rosettesolid",
+	')':      "rpar",   // )
+	'\u203a': "rsaquo", // ›
+	'\u21b1': "rsh",    // ↱
+	']':      "rsqb",   // ]
+	'\u2019': "rsquo",  // ’
+	// '\u2018':    "rsquor", // ‘ -- duplicate
+	'\u22cc': "rthree",    // ⋌
+	'\u22ca': "rtimes",    // ⋊
+	'\u25b9': "rtri",      // ▹
+	'\u22b5': "rtrie",     // ⊵
+	'\u25b8': "rtrif",     // ▸
+	'\u211e': "rx",        // ℞
+	'\u0635': "sad",       // ص
+	'\ufebc': "sadmedial", // ﺼ
+	'\uf066': "saggitarius",
+	'\u2210': "samalg", // ∐
+	// '\u201a':    "sbquo", // ‚ -- duplicate
+	'\u227b': "sc",     // ≻
+	'\u227d': "sccue",  // ≽
+	'\u015f': "scedil", // ş
+	'\u015d': "scirc",  // ŝ
+	'\uf022': "scissors",
+	'\uf023': "scissorscutting",
+	'\u22e9': "scnsim", // ⋩
+	'\uf065': "scorpio",
+	'\u227f': "scsim", // ≿
+	// '\u0441':    "scy", // с -- duplicate
+	'\u22c5': "sdot",         // ⋅
+	'\u22a1': "sdotb",        // ⊡
+	'\u00a7': "sect",         // §
+	'\u0633': "seen",         // س
+	'\ufeb1': "seenisolated", // ﺱ
+	'\ufeb4': "seenmedial",   // ﺴ
+	';':      "semi",         // ;
+	'\u2216': "setmn",        // ∖
+	'\uf0bd': "sevenoclock",
+	'\uf087': "sevensans",
+	'\uf092': "sevensansinv",
+	// '\u2736':    "sextile", // ✶ -- duplicate
+	'\u03c3': "sgr",    // σ
+	'\u0448': "sha",    // ш
+	'\u0449': "shchcy", // щ
+	// '\u0448':    "shcy", // ш -- duplicate
+	'\u0634': "sheen",       // ش
+	'\ufeb8': "sheenmedial", // ﺸ
+	'\u00ad': "shy",
+	'\u03c2': "sigmav", // ς
+	'\u223c': "sim",    // ∼
+	'\u2243': "sime",   // ≃
+	'\uf0bc': "sixoclock",
+	'\uf086': "sixsans",
+	'\uf091': "sixsansinv",
+	'\uf04e': "skullcrossbones",
+	'\uf054': "snowflake",
+	'\u044c': "softcy", // ь
+	'/':      "sol",    // /
+	'\u2660': "spades", // ♠
+	'\u2293': "sqcap",  // ⊓
+	'\u2294': "sqcup",  // ⊔
+	'\u228f': "sqsub",  // ⊏
+	'\u2291': "sqsube", // ⊑
+	'\u2290': "sqsup",  // ⊐
+	'\u2292': "sqsupe", // ⊒
+	'\uf0a0': "square2",
+	'\uf0a7': "square4",
+	'\uf06e': "square6",
+	'\u25aa': "squf",   // ▪
+	'\u22c6': "sstarf", // ⋆
+	// '\u2605':    "starf", // ★ -- duplicate
+	'\uf059': "starofdavid",
+	'\uf0b6': "starshadow",
+	'\u2282': "sub",   // ⊂
+	'\u2286': "sube",  // ⊆
+	'\u228a': "subnE", // ⊊
+	'\u2211': "sum",   // ∑
+	'\u266a': "sung",  // ♪
+	'\uf052': "sunshine",
+	'\u2283': "sup",         // ⊃
+	'\u00b9': "sup1",        // ¹
+	'\u00b2': "sup2",        // ²
+	'\u00b3': "sup3",        // ³
+	'\u2287': "supe",        // ⊇
+	'\u228b': "supnE",       // ⊋
+	'\u00df': "szlig",       // ß
+	'\u0637': "tah",         // ط
+	'\ufec1': "tahisolated", // ﻁ
+	'\uf03e': "tapereel",
+	'\uf0a5': "target",
+	'\u0640': "tatweel", // ـ
+	'\uf05f': "taurus",
+	'\u0163': "tcedil", // ţ
+	'\u0442': "tcy",    // т
+	'\u20db': "tdot",   // ⃛
+	// '\u0442':    "te", // т -- duplicate
+	'\u062a': "teh",                // ت
+	'\ufe95': "tehisolated",        // ﺕ
+	'\u0629': "tehmarbuta",         // ة
+	'\ufe94': "tehmarbutafinal",    // ﺔ
+	'\ufe93': "tehmarbutaisolated", // ﺓ
+	'\ufe98': "tehmedial",          // ﺘ
+	'\u2121': "tel",                // ℡
+	'\uf028': "telephonesolid",
+	'\uf029': "telhandsetcirc",
+	'\u2315': "telrec", // ⌕
+	'\uf0c0': "tenoclock",
+	'\uf08a': "tensans",
+	'\uf095': "tensansinv",
+	'\u03c4': "tgr",          // τ
+	'\u0630': "thal",         // ذ
+	'\ufeab': "thalisolated", // ﺫ
+	'\u2234': "there4",       // ∴
+	'\u03d1': "thetasym",     // ϑ
+	// '\u03d1':    "thetav", // ϑ -- duplicate
+	'\u03b8': "thgr", // θ
+	'\u2009': "thinsp",
+	// '\u2248':    "thkap", // ≈ -- duplicate
+	// '\u223c':    "thksim", // ∼ -- duplicate
+	'\uf0b9': "threeoclock",
+	// '\u2004':    "threeperemspace",  -- duplicate
+	'\uf083': "threesans",
+	'\uf08e': "threesansinv",
+	'\uf044': "thumbdown",
+	'\uf043': "thumbup",
+	'\u2040': "tie",    // ⁀
+	'\u00d7': "times",  // ×
+	'\u22a0': "timesb", // ⊠
+	'\u22a4': "top",    // ⊤
+	'\u2034': "tprime", // ‴
+	'\u2122': "trade",  // ™
+	'\u225c': "trie",   // ≜
+	'\uf0a9': "tristar2",
+	'\u0446': "tscy", // ц
+	// '\u0446':    "tse", // ц -- duplicate
+	'\u045b': "tshcy",  // ћ
+	'\u0167': "tstrok", // ŧ
+	'\uf0c2': "twelveoclock",
+	'\u226c': "twixt", // ≬
+	'\uf0b8': "twooclock",
+	'\uf082': "twosans",
+	'\uf08d': "twosansinv",
+	'\u21d1': "uArr",   // ⇑
+	'\u03cd': "uacgr",  // ύ
+	'\u2191': "uarr",   // ↑
+	'\u21c8': "uarr2",  // ⇈
+	'\u045e': "ubrcy",  // ў
+	'\u00fb': "ucirc",  // û
+	'\u0443': "ucy",    // у
+	'\u0171': "udblac", // ű
+	'\u03b0': "udiagr", // ΰ
+	'\u03cb': "udigr",  // ϋ
+	'\u21bf': "uharl",  // ↿
+	'\u21be': "uharr",  // ↾
+	'\u2580': "uhblk",  // ▀
+	'\u231c': "ulcorn", // ⌜
+	'\u230f': "ulcrop", // ⌏
+	'\u016b': "umacr",  // ū
+	// '\u00a8':    "uml", // ¨ -- duplicate
+	'\u0173': "uogon",  // ų
+	'\u228e': "uplus",  // ⊎
+	'\u03c5': "upsi",   // υ
+	'\u03d2': "upsih",  // ϒ
+	'\u231d': "urcorn", // ⌝
+	'\u230e': "urcrop", // ⌎
+	'\u25b5': "utri",   // ▵
+	'\u25b4': "utrif",  // ▴
+	'\u00fc': "uuml",   // ü
+	'\u21d5': "vArr",   // ⇕
+	'\u22a8': "vDash",  // ⊨
+	'\u2195': "varr",   // ↕
+	'\u0432': "vcy",    // в
+	'\u22a2': "vdash",  // ⊢
+	// '\u0432':    "ve", // в -- duplicate
+	'\u22bb': "veebar", // ⊻
+	'\u22ee': "vellip", // ⋮
+	'|':      "verbar", // |
+	'\uf09a': "vineleafboldne",
+	'\uf09b': "vineleafboldnw",
+	'\uf09d': "vineleafboldse",
+	'\uf09c': "vineleafboldsw",
+	'\uf063': "virgo",
+	'\u22b2': "vltri",  // ⊲
+	'\u2032': "vprime", // ′
+	// '\u221d':    "vprop", // ∝ -- duplicate
+	'\u22b3': "vrtri",       // ⊳
+	'\u0648': "waw",         // و
+	'\ufeed': "wawisolated", // ﻭ
+	'\u0175': "wcirc",       // ŵ
+	'\u2259': "wedgeq",      // ≙
+	'\u2118': "weierp",      // ℘
+	'\uf05d': "wheel",
+	'\uf0ff': "windowslogo",
+	'\u2240': "wreath", // ≀
+	'\u25cb': "xcirc",  // ○
+	'\u25bd': "xdtri",  // ▽
+	'\u03be': "xgr",    // ξ
+	'\uf0fb': "xmarkbld",
+	'\uf076': "xrhombus",
+	'\u25b3': "xutri", // △
+	// '\u044f':    "yacy", // я -- duplicate
+	'\u0177': "ycirc",                   // ŷ
+	'\u044b': "ycy",                     // ы
+	'\u064a': "yeh",                     // ي
+	'\ufef2': "yehfinal",                // ﻲ
+	'\ufef1': "yehisolated",             // ﻱ
+	'\ufef4': "yehmedial",               // ﻴ
+	'\u0626': "yehwithhamzaabove",       // ئ
+	'\ufe8c': "yehwithhamzaabovemedial", // ﺌ
+	'\u0457': "yicy",                    // ї
+	'\u044e': "yucy",                    // ю
+	'\u00ff': "yuml",                    // ÿ
+	'\u0638': "zah",                     // ظ
+	'\ufec5': "zahisolated",             // ﻅ
+	'\u0632': "zain",                    // ز
+	'\ufeaf': "zainisolated",            // ﺯ
+	'\u0437': "zcy",                     // з
+	// '\u0437':    "ze", // з -- duplicate
+	'\uf080': "zerosans",
+	'\uf08b': "zerosansinv",
+	'\u03b6': "zgr",  // ζ
+	'\u0436': "zhcy", // ж
+	// '\u0436':    "zhe", // ж -- duplicate
+	'\u200c': "zwnj",
 }
 
 // ligatureToString is a map from ligature runes to their constituent characters.
@@ -9098,4 +12548,16 @@ var ligatureToString = map[rune]string{
 	'ᵫ':          "ue",
 	'Ꝡ':          "VY",
 	'ꝡ':          "vy",
+	// Reverse of ligatureMap
+	0xe000: "ft",
+	0xe001: "fj",
+	0xe002: "fb",
+	0xe003: "fh",
+	0xe004: "fk",
+	0xe005: "tt",
+	0xe006: "tf",
+	0xe007: "ffj",
+	0xe008: "ffb",
+	0xe009: "ffh",
+	0xe00a: "ffk",
 }
