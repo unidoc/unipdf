@@ -10,7 +10,6 @@
 package textencoding
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,7 +33,6 @@ func GlyphToRune(glyph string) (rune, bool) {
 	if strings.Contains(glyph, ".") {
 		groups := rePrefix.FindStringSubmatch(glyph)
 		if groups != nil {
-			fmt.Printf("GlyphToRune: glyph=%q=>%q\n", glyph, groups[1])
 			glyph = groups[1]
 		}
 	}
@@ -48,7 +46,7 @@ func GlyphToRune(glyph string) (rune, bool) {
 	if r, ok := texGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
-	if r, ok := additionalGlyphlistGlyphToRuneMap[glyph]; ok {
+	if r, ok := additionalGlyphToRuneMap[glyph]; ok {
 		return r, true
 	}
 	if r, ok := ligatureMap[glyph]; ok {
@@ -76,6 +74,27 @@ func GlyphToRune(glyph string) (rune, bool) {
 	}
 
 	return rune(0), false
+}
+
+// RuneToGlyph is the reverse of the table lookups in GlyphToRune.
+func RuneToGlyph(r rune) (string, bool) {
+	if glyph, ok := glyphlistRuneToGlyphMap[r]; ok {
+		return glyph, true
+	}
+	if glyph, ok := texRuneToGlyphMap[r]; ok {
+		return glyph, true
+	}
+	if glyph, ok := additionalRuneToGlyphMap[r]; ok {
+		return glyph, true
+	}
+	if r == MissingCodeRune {
+		return ".notdef", true
+	}
+	if glyph, ok := empericalRuneToGlyphMap[r]; ok {
+		return glyph, true
+	}
+
+	return "", false
 }
 
 // RuneToString converts rune `r` to a string. It unpacks `ligatures`.
@@ -10320,430 +10339,363 @@ var glyphlistRuneToGlyphMap = map[rune]string{ // 4281 entries
 	'\u30ba': "zukatakana",           // ズ
 }
 
-var texGlyphlistGlyphToStringMap = map[string]string{ // 285 entries
-	"Dbar":                 "\u0110",     // Đ
-	"Delta":                "\u2206",     // ∆
-	"Digamma":              "\U0001d7cb", // 𝟋
-	"FFIsmall":             "\uf766\uf766\uf769",
-	"FFLsmall":             "\uf766\uf766\uf76c",
-	"FFsmall":              "\uf766\uf766",
-	"FIsmall":              "\uf766\uf769",
-	"FLsmall":              "\uf766\uf76c",
-	"Finv":                 "\u2132", // Ⅎ
-	"Germandbls":           "SS",     // SS
-	"Germandblssmall":      "\uf773\uf773",
-	"Gmir":                 "\u2141", // ⅁
-	"Ifractur":             "\u2111", // ℑ
-	"Ng":                   "\u014a", // Ŋ
-	"Omega":                "\u2126", // Ω
-	"Omegainv":             "\u2127", // ℧
-	"Rfractur":             "\u211c", // ℜ
-	"SS":                   "SS",     // SS
-	"SSsmall":              "\uf773\uf773",
-	"Yen":                  "\u00a5", // ¥
-	"altselector":          "\ufffd", // �
-	"angbracketleft":       "\u27e8", // ⟨
-	"angbracketright":      "\u27e9", // ⟩
-	"anticlockwise":        "\u27f2", // ⟲
-	"approxorequal":        "\u224a", // ≊
-	"archleftdown":         "\u21b6", // ↶
-	"archrightdown":        "\u21b7", // ↷
-	"arrowbothv":           "\u2195", // ↕
-	"arrowdblbothv":        "\u21d5", // ⇕
-	"arrowleftbothalf":     "\u21bd", // ↽
-	"arrowlefttophalf":     "\u21bc", // ↼
-	"arrownortheast":       "\u2197", // ↗
-	"arrownorthwest":       "\u2196", // ↖
-	"arrowparrleftright":   "\u21c6", // ⇆
-	"arrowparrrightleft":   "\u21c4", // ⇄
-	"arrowrightbothalf":    "\u21c1", // ⇁
-	"arrowrighttophalf":    "\u21c0", // ⇀
-	"arrowsoutheast":       "\u2198", // ↘
-	"arrowsouthwest":       "\u2199", // ↙
-	"arrowtailleft":        "\u21a2", // ↢
-	"arrowtailright":       "\u21a3", // ↣
-	"arrowtripleleft":      "\u21da", // ⇚
-	"arrowtripleright":     "\u21db", // ⇛
-	"ascendercompwordmark": "\ufffd", // �
-	"asteriskcentered":     "\u2217", // ∗
-	"bardbl":               "\u2225", // ∥
-	"beth":                 "\u2136", // ℶ
-	"between":              "\u226c", // ≬
-	"capitalcompwordmark":  "\ufffd", // �
-	"ceilingleft":          "\u2308", // ⌈
-	"ceilingright":         "\u2309", // ⌉
-	"check":                "\u2713", // ✓
-	"circleR":              "\u00ae", // ®
-	"circleS":              "\u24c8", // Ⓢ
-	"circleasterisk":       "\u229b", // ⊛
-	"circlecopyrt":         "\u20dd", // ⃝
-	"circledivide":         "\u2298", // ⊘
-	"circledot":            "\u2299", // ⊙
-	"circleequal":          "\u229c", // ⊜
-	"circleminus":          "\u2296", // ⊖
-	"circlering":           "\u229a", // ⊚
-	"clockwise":            "\u27f3", // ⟳
-	"complement":           "\u2201", // ∁
-	"compwordmark":         "\u200c",
-	"coproduct":            "\u2a3f", // ⨿
-	"ct":                   "ct",     // ct
-	"curlyleft":            "\u21ab", // ↫
-	"curlyright":           "\u21ac", // ↬
-	"cwm":                  "\u200c",
-	"daleth":               "\u2138",       // ℸ
-	"dbar":                 "\u0111",       // đ
-	"dblarrowdwn":          "\u21ca",       // ⇊
-	"dblarrowheadleft":     "\u219e",       // ↞
-	"dblarrowheadright":    "\u21a0",       // ↠
-	"dblarrowup":           "\u21c8",       // ⇈
-	"dblbracketleft":       "\u27e6",       // ⟦
-	"dblbracketright":      "\u27e7",       // ⟧
-	"defines":              "\u225c",       // ≜
-	"diamond":              "\u2662",       // ♢
-	"diamondmath":          "\u22c4",       // ⋄
-	"diamondsolid":         "\u2666",       // ♦
-	"difference":           "\u224f",       // ≏
-	"dividemultiply":       "\u22c7",       // ⋇
-	"dotlessj":             "\u0237",       // ȷ
-	"dotplus":              "\u2214",       // ∔
-	"downfall":             "\u22ce",       // ⋎
-	"downslope":            "\u29f9",       // ⧹
-	"emptyset":             "\u2205",       // ∅
-	"emptyslot":            "\ufffd",       // �
-	"epsilon1":             "\u03f5",       // ϵ
-	"epsiloninv":           "\u03f6",       // ϶
-	"equaldotleftright":    "\u2252",       // ≒
-	"equaldotrightleft":    "\u2253",       // ≓
-	"equalorfollows":       "\u22df",       // ⋟
-	"equalorgreater":       "\u2a96",       // ⪖
-	"equalorless":          "\u2a95",       // ⪕
-	"equalorprecedes":      "\u22de",       // ⋞
-	"equalorsimilar":       "\u2242",       // ≂
-	"equalsdots":           "\u2251",       // ≑
-	"equivasymptotic":      "\u224d",       // ≍
-	"flat":                 "\u266d",       // ♭
-	"floorleft":            "\u230a",       // ⌊
-	"floorright":           "\u230b",       // ⌋
-	"follownotdbleqv":      "\u2aba",       // ⪺
-	"follownotslnteql":     "\u2ab6",       // ⪶
-	"followornoteqvlnt":    "\u22e9",       // ⋩
-	"follows":              "\u227b",       // ≻
-	"followsequal":         "\u2ab0",       // ⪰
-	"followsorcurly":       "\u227d",       // ≽
-	"followsorequal":       "\u227f",       // ≿
-	"forces":               "\u22a9",       // ⊩
-	"forcesbar":            "\u22aa",       // ⊪
-	"fork":                 "\u22d4",       // ⋔
-	"frown":                "\u2322",       // ⌢
-	"geomequivalent":       "\u224e",       // ≎
-	"greaterdbleqlless":    "\u2a8c",       // ⪌
-	"greaterdblequal":      "\u2267",       // ≧
-	"greaterdot":           "\u22d7",       // ⋗
-	"greaterlessequal":     "\u22db",       // ⋛
-	"greatermuch":          "\u226b",       // ≫
-	"greaternotdblequal":   "\u2a8a",       // ⪊
-	"greaternotequal":      "\u2a88",       // ⪈
-	"greaterorapproxeql":   "\u2a86",       // ⪆
-	"greaterorequalslant":  "\u2a7e",       // ⩾
-	"greaterornotdbleql":   "\u2269",       // ≩
-	"greaterornotequal":    "\u2269",       // ≩
-	"greaterorsimilar":     "\u2273",       // ≳
-	"harpoondownleft":      "\u21c3",       // ⇃
-	"harpoondownright":     "\u21c2",       // ⇂
-	"harpoonleftright":     "\u21cc",       // ⇌
-	"harpoonrightleft":     "\u21cb",       // ⇋
-	"harpoonupleft":        "\u21bf",       // ↿
-	"harpoonupright":       "\u21be",       // ↾
-	"heart":                "\u2661",       // ♡
-	"hyphenchar":           "-",            // -
-	"integerdivide":        "\u2216",       // ∖
-	"intercal":             "\u22ba",       // ⊺
-	"interrobang":          "\u203d",       // ‽
-	"interrobangdown":      "\u2e18",       // ⸘
-	"intersectiondbl":      "\u22d2",       // ⋒
-	"intersectionsq":       "\u2293",       // ⊓
-	"latticetop":           "\u22a4",       // ⊤
-	"lessdbleqlgreater":    "\u2a8b",       // ⪋
-	"lessdblequal":         "\u2266",       // ≦
-	"lessdot":              "\u22d6",       // ⋖
-	"lessequalgreater":     "\u22da",       // ⋚
-	"lessmuch":             "\u226a",       // ≪
-	"lessnotdblequal":      "\u2a89",       // ⪉
-	"lessnotequal":         "\u2a87",       // ⪇
-	"lessorapproxeql":      "\u2a85",       // ⪅
-	"lessorequalslant":     "\u2a7d",       // ⩽
-	"lessornotdbleql":      "\u2268",       // ≨
-	"lessornotequal":       "\u2268",       // ≨
-	"lessorsimilar":        "\u2272",       // ≲
-	"longdbls":             "\u017f\u017f", // ſſ
-	"longsh":               "\u017fh",      // ſh
-	"longsi":               "\u017fi",      // ſi
-	"longsl":               "\u017fl",      // ſl
-	"longst":               "\ufb05",       // ﬅ
-	"lscript":              "\u2113",       // ℓ
-	"maltesecross":         "\u2720",       // ✠
-	"measuredangle":        "\u2221",       // ∡
-	"multicloseleft":       "\u22c9",       // ⋉
-	"multicloseright":      "\u22ca",       // ⋊
-	"multimap":             "\u22b8",       // ⊸
-	"multiopenleft":        "\u22cb",       // ⋋
-	"multiopenright":       "\u22cc",       // ⋌
-	"nand":                 "\u22bc",       // ⊼
-	"natural":              "\u266e",       // ♮
-	"negationslash":        "\u0338",       // ̸
-	"ng":                   "\u014b",       // ŋ
-	"notapproxequal":       "\u2247",       // ≇
-	"notarrowboth":         "\u21ae",       // ↮
-	"notarrowleft":         "\u219a",       // ↚
-	"notarrowright":        "\u219b",       // ↛
-	"notbar":               "\u2224",       // ∤
-	"notdblarrowboth":      "\u21ce",       // ⇎
-	"notdblarrowleft":      "\u21cd",       // ⇍
-	"notdblarrowright":     "\u21cf",       // ⇏
-	"notexistential":       "\u2204",       // ∄
-	"notfollows":           "\u2281",       // ⊁
-	"notfollowsoreql":      "\u2ab0\u0338", // ⪰̸
-	"notforces":            "\u22ae",       // ⊮
-	"notforcesextra":       "\u22af",       // ⊯
-	"notgreaterdblequal":   "\u2267\u0338", // ≧̸
-	"notgreaterequal":      "\u2271",       // ≱
-	"notgreaterorslnteql":  "\u2a7e\u0338", // ⩾̸
-	"notlessdblequal":      "\u2266\u0338", // ≦̸
-	"notlessequal":         "\u2270",       // ≰
-	"notlessorslnteql":     "\u2a7d\u0338", // ⩽̸
-	"notprecedesoreql":     "\u2aaf\u0338", // ⪯̸
-	"notsatisfies":         "\u22ad",       // ⊭
-	"notsimilar":           "\u2241",       // ≁
-	"notsubseteql":         "\u2288",       // ⊈
-	"notsubsetordbleql":    "\u2ac5\u0338", // ⫅̸
-	"notsubsetoreql":       "\u228a",       // ⊊
-	"notsuperseteql":       "\u2289",       // ⊉
-	"notsupersetordbleql":  "\u2ac6\u0338", // ⫆̸
-	"notsupersetoreql":     "\u228b",       // ⊋
-	"nottriangeqlleft":     "\u22ec",       // ⋬
-	"nottriangeqlright":    "\u22ed",       // ⋭
-	"nottriangleleft":      "\u22ea",       // ⋪
-	"nottriangleright":     "\u22eb",       // ⋫
-	"notturnstile":         "\u22ac",       // ⊬
-	"orunderscore":         "\u22bb",       // ⊻
-	"owner":                "\u220b",       // ∋
-	"perpcorrespond":       "\u2a5e",       // ⩞
-	"pertenthousand":       "\u2031",       // ‱
-	"phi":                  "\u03d5",       // ϕ
-	"phi1":                 "\u03c6",       // φ
-	"pi1":                  "\u03d6",       // ϖ
-	"planckover2pi":        "\u210f",       // ℏ
-	"planckover2pi1":       "\u210f",       // ℏ
-	"precedenotdbleqv":     "\u2ab9",       // ⪹
-	"precedenotslnteql":    "\u2ab5",       // ⪵
-	"precedeornoteqvlnt":   "\u22e8",       // ⋨
-	"precedesequal":        "\u2aaf",       // ⪯
-	"precedesorcurly":      "\u227c",       // ≼
-	"precedesorequal":      "\u227e",       // ≾
-	"prime":                "\u2032",       // ′
-	"primereverse":         "\u2035",       // ‵
-	"punctdash":            "\u2014",       // —
-	"rangedash":            "\u2013",       // –
-	"revasymptequal":       "\u22cd",       // ⋍
-	"revsimilar":           "\u223d",       // ∽
-	"rho1":                 "\u03f1",       // ϱ
-	"rightanglene":         "\u231d",       // ⌝
-	"rightanglenw":         "\u231c",       // ⌜
-	"rightanglese":         "\u231f",       // ⌟
-	"rightanglesw":         "\u231e",       // ⌞
-	"ringfitted":           "\ufffd",       // �
-	"ringinequal":          "\u2256",       // ≖
-	"satisfies":            "\u22a8",       // ⊨
-	"sharp":                "\u266f",       // ♯
-	"shiftleft":            "\u21b0",       // ↰
-	"shiftright":           "\u21b1",       // ↱
-	"similarequal":         "\u2243",       // ≃
-	"slurabove":            "\u2322",       // ⌢
-	"slurbelow":            "\u2323",       // ⌣
-	"smile":                "\u2323",       // ⌣
-	"sphericalangle":       "\u2222",       // ∢
-	"square":               "\u25a1",       // □
-	"squaredot":            "\u22a1",       // ⊡
-	"squareimage":          "\u228f",       // ⊏
-	"squareminus":          "\u229f",       // ⊟
-	"squaremultiply":       "\u22a0",       // ⊠
-	"squareoriginal":       "\u2290",       // ⊐
-	"squareplus":           "\u229e",       // ⊞
-	"squaresolid":          "\u25a0",       // ■
-	"squiggleleftright":    "\u21ad",       // ↭
-	"squiggleright":        "\u21dd",       // ⇝
-	"st":                   "\ufb06",       // ﬆ
-	"star":                 "\u22c6",       // ⋆
-	"subsetdbl":            "\u22d0",       // ⋐
-	"subsetdblequal":       "\u2ac5",       // ⫅
-	"subsetnoteql":         "\u228a",       // ⊊
-	"subsetornotdbleql":    "\u2acb",       // ⫋
-	"subsetsqequal":        "\u2291",       // ⊑
-	"supersetdbl":          "\u22d1",       // ⋑
-	"supersetdblequal":     "\u2ac6",       // ⫆
-	"supersetnoteql":       "\u228b",       // ⊋
-	"supersetornotdbleql":  "\u2acc",       // ⫌
-	"supersetsqequal":      "\u2292",       // ⊒
-	"triangle":             "\u25b3",       // △
-	"triangledownsld":      "\u25bc",       // ▼
-	"triangleinv":          "\u25bd",       // ▽
-	"triangleleft":         "\u25c1",       // ◁
-	"triangleleftequal":    "\u22b4",       // ⊴
-	"triangleleftsld":      "\u25c0",       // ◀
-	"triangleright":        "\u25b7",       // ▷
-	"trianglerightequal":   "\u22b5",       // ⊵
-	"trianglerightsld":     "\u25b6",       // ▶
-	"trianglesolid":        "\u25b2",       // ▲
-	"turnstileleft":        "\u22a2",       // ⊢
-	"turnstileright":       "\u22a3",       // ⊣
-	"twelveudash":          "\ufffd",       // �
-	"uniondbl":             "\u22d3",       // ⋓
-	"unionmulti":           "\u228e",       // ⊎
-	"unionsq":              "\u2294",       // ⊔
-	"uprise":               "\u22cf",       // ⋏
-	"upslope":              "\u29f8",       // ⧸
-	"vector":               "\u20d7",       // ⃗
-	"visiblespace":         "\u2423",       // ␣
-	"visualspace":          "\u2423",       // ␣
-	"wreathproduct":        "\u2240",       // ≀
+var texGlyphToRuneMap = map[string]rune{ // 168 entries
+	"Digamma":             '\U0001d7cb', // 𝟋
+	"Finv":                '\u2132',     // Ⅎ
+	"Gmir":                '\u2141',     // ⅁
+	"Omegainv":            '\u2127',     // ℧
+	"angbracketleft":      '\u27e8',     // ⟨
+	"angbracketright":     '\u27e9',     // ⟩
+	"anticlockwise":       '\u27f2',     // ⟲
+	"approxorequal":       '\u224a',     // ≊
+	"archleftdown":        '\u21b6',     // ↶
+	"archrightdown":       '\u21b7',     // ↷
+	"arrowdblbothv":       '\u21d5',     // ⇕
+	"arrowleftbothalf":    '\u21bd',     // ↽
+	"arrowrightbothalf":   '\u21c1',     // ⇁
+	"arrowtailleft":       '\u21a2',     // ↢
+	"arrowtailright":      '\u21a3',     // ↣
+	"arrowtripleleft":     '\u21da',     // ⇚
+	"arrowtripleright":    '\u21db',     // ⇛
+	"beth":                '\u2136',     // ℶ
+	"between":             '\u226c',     // ≬
+	"ceilingleft":         '\u2308',     // ⌈
+	"ceilingright":        '\u2309',     // ⌉
+	"circleasterisk":      '\u229b',     // ⊛
+	"circlecopyrt":        '\u20dd',     // ⃝
+	"circledivide":        '\u2298',     // ⊘
+	"circleequal":         '\u229c',     // ⊜
+	"circlering":          '\u229a',     // ⊚
+	"clockwise":           '\u27f3',     // ⟳
+	"complement":          '\u2201',     // ∁
+	"coproduct":           '\u2a3f',     // ⨿
+	"curlyleft":           '\u21ab',     // ↫
+	"curlyright":          '\u21ac',     // ↬
+	"daleth":              '\u2138',     // ℸ
+	"dblarrowdwn":         '\u21ca',     // ⇊
+	"dblarrowheadleft":    '\u219e',     // ↞
+	"dblarrowheadright":   '\u21a0',     // ↠
+	"dblarrowup":          '\u21c8',     // ⇈
+	"dblbracketleft":      '\u27e6',     // ⟦
+	"dblbracketright":     '\u27e7',     // ⟧
+	"defines":             '\u225c',     // ≜
+	"diamondmath":         '\u22c4',     // ⋄
+	"difference":          '\u224f',     // ≏
+	"dividemultiply":      '\u22c7',     // ⋇
+	"dotplus":             '\u2214',     // ∔
+	"downslope":           '\u29f9',     // ⧹
+	"epsilon1":            '\u03f5',     // ϵ
+	"epsiloninv":          '\u03f6',     // ϶
+	"equalorfollows":      '\u22df',     // ⋟
+	"equalorgreater":      '\u2a96',     // ⪖
+	"equalorless":         '\u2a95',     // ⪕
+	"equalorprecedes":     '\u22de',     // ⋞
+	"equalorsimilar":      '\u2242',     // ≂
+	"equivasymptotic":     '\u224d',     // ≍
+	"floorleft":           '\u230a',     // ⌊
+	"floorright":          '\u230b',     // ⌋
+	"follownotdbleqv":     '\u2aba',     // ⪺
+	"follownotslnteql":    '\u2ab6',     // ⪶
+	"followornoteqvlnt":   '\u22e9',     // ⋩
+	"followsequal":        '\u2ab0',     // ⪰
+	"followsorcurly":      '\u227d',     // ≽
+	"followsorequal":      '\u227f',     // ≿
+	"forces":              '\u22a9',     // ⊩
+	"forcesbar":           '\u22aa',     // ⊪
+	"fork":                '\u22d4',     // ⋔
+	"frown":               '\u2322',     // ⌢
+	"geomequivalent":      '\u224e',     // ≎
+	"greaterdbleqlless":   '\u2a8c',     // ⪌
+	"greaterdot":          '\u22d7',     // ⋗
+	"greaternotdblequal":  '\u2a8a',     // ⪊
+	"greaternotequal":     '\u2a88',     // ⪈
+	"greaterorapproxeql":  '\u2a86',     // ⪆
+	"greaterorequalslant": '\u2a7e',     // ⩾
+	"greaterornotequal":   '\u2269',     // ≩
+	"harpoondownleft":     '\u21c3',     // ⇃
+	"harpoondownright":    '\u21c2',     // ⇂
+	"harpoonleftright":    '\u21cc',     // ⇌
+	"harpoonrightleft":    '\u21cb',     // ⇋
+	"harpoonupleft":       '\u21bf',     // ↿
+	"harpoonupright":      '\u21be',     // ↾
+	"integerdivide":       '\u2216',     // ∖
+	"intercal":            '\u22ba',     // ⊺
+	"interrobang":         '\u203d',     // ‽
+	"interrobangdown":     '\u2e18',     // ⸘
+	"intersectiondbl":     '\u22d2',     // ⋒
+	"intersectionsq":      '\u2293',     // ⊓
+	"lessdbleqlgreater":   '\u2a8b',     // ⪋
+	"lessdot":             '\u22d6',     // ⋖
+	"lessnotdblequal":     '\u2a89',     // ⪉
+	"lessnotequal":        '\u2a87',     // ⪇
+	"lessorapproxeql":     '\u2a85',     // ⪅
+	"lessorequalslant":    '\u2a7d',     // ⩽
+	"lessornotequal":      '\u2268',     // ≨
+	"longst":              '\ufb05',     // ﬅ
+	"maltesecross":        '\u2720',     // ✠
+	"measuredangle":       '\u2221',     // ∡
+	"multicloseleft":      '\u22c9',     // ⋉
+	"multicloseright":     '\u22ca',     // ⋊
+	"multimap":            '\u22b8',     // ⊸
+	"multiopenleft":       '\u22cb',     // ⋋
+	"multiopenright":      '\u22cc',     // ⋌
+	"nand":                '\u22bc',     // ⊼
+	"natural":             '\u266e',     // ♮
+	"notapproxequal":      '\u2247',     // ≇
+	"notarrowboth":        '\u21ae',     // ↮
+	"notarrowleft":        '\u219a',     // ↚
+	"notarrowright":       '\u219b',     // ↛
+	"notbar":              '\u2224',     // ∤
+	"notdblarrowboth":     '\u21ce',     // ⇎
+	"notexistential":      '\u2204',     // ∄
+	"notforces":           '\u22ae',     // ⊮
+	"notforcesextra":      '\u22af',     // ⊯
+	"notsatisfies":        '\u22ad',     // ⊭
+	"notsimilar":          '\u2241',     // ≁
+	"notsubseteql":        '\u2288',     // ⊈
+	"notsuperseteql":      '\u2289',     // ⊉
+	"notsupersetordbleql": '\u2ac6',     // ⫆
+	"nottriangeqlleft":    '\u22ec',     // ⋬
+	"nottriangeqlright":   '\u22ed',     // ⋭
+	"nottriangleleft":     '\u22ea',     // ⋪
+	"nottriangleright":    '\u22eb',     // ⋫
+	"notturnstile":        '\u22ac',     // ⊬
+	"orunderscore":        '\u22bb',     // ⊻
+	"perpcorrespond":      '\u2a5e',     // ⩞
+	"pertenthousand":      '\u2031',     // ‱
+	"planckover2pi":       '\u210f',     // ℏ
+	"precedenotdbleqv":    '\u2ab9',     // ⪹
+	"precedenotslnteql":   '\u2ab5',     // ⪵
+	"precedeornoteqvlnt":  '\u22e8',     // ⋨
+	"precedesequal":       '\u2aaf',     // ⪯
+	"precedesorcurly":     '\u227c',     // ≼
+	"precedesorequal":     '\u227e',     // ≾
+	"revasymptequal":      '\u22cd',     // ⋍
+	"rightanglene":        '\u231d',     // ⌝
+	"rightanglenw":        '\u231c',     // ⌜
+	"rightanglese":        '\u231f',     // ⌟
+	"rightanglesw":        '\u231e',     // ⌞
+	"ringinequal":         '\u2256',     // ≖
+	"satisfies":           '\u22a8',     // ⊨
+	"shiftleft":           '\u21b0',     // ↰
+	"shiftright":          '\u21b1',     // ↱
+	"smile":               '\u2323',     // ⌣
+	"sphericalangle":      '\u2222',     // ∢
+	"squaredot":           '\u22a1',     // ⊡
+	"squareimage":         '\u228f',     // ⊏
+	"squareminus":         '\u229f',     // ⊟
+	"squaremultiply":      '\u22a0',     // ⊠
+	"squareoriginal":      '\u2290',     // ⊐
+	"squareplus":          '\u229e',     // ⊞
+	"squiggleleftright":   '\u21ad',     // ↭
+	"squiggleright":       '\u21dd',     // ⇝
+	"st":                  '\ufb06',     // ﬆ
+	"star":                '\u22c6',     // ⋆
+	"subsetdbl":           '\u22d0',     // ⋐
+	"subsetdblequal":      '\u2ac5',     // ⫅
+	"subsetornotdbleql":   '\u2acb',     // ⫋
+	"subsetsqequal":       '\u2291',     // ⊑
+	"supersetdbl":         '\u22d1',     // ⋑
+	"supersetornotdbleql": '\u2acc',     // ⫌
+	"supersetsqequal":     '\u2292',     // ⊒
+	"triangleleftequal":   '\u22b4',     // ⊴
+	"trianglerightequal":  '\u22b5',     // ⊵
+	"turnstileleft":       '\u22a2',     // ⊢
+	"twelveudash":         '\ufffd',     // �
+	"uniondbl":            '\u22d3',     // ⋓
+	"unionmulti":          '\u228e',     // ⊎
+	"unionsq":             '\u2294',     // ⊔
+	"upslope":             '\u29f8',     // ⧸
+	"vector":              '\u20d7',     // ⃗
+	"wreathproduct":       '\u2240',     // ≀
+}
+var texRuneToGlyphMap = map[rune]string{ // 168 entries
+	'\U0001d7cb': "Digamma",             // 𝟋
+	'\u2132':     "Finv",                // Ⅎ
+	'\u2141':     "Gmir",                // ⅁
+	'\u2127':     "Omegainv",            // ℧
+	'\u27e8':     "angbracketleft",      // ⟨
+	'\u27e9':     "angbracketright",     // ⟩
+	'\u27f2':     "anticlockwise",       // ⟲
+	'\u224a':     "approxorequal",       // ≊
+	'\u21b6':     "archleftdown",        // ↶
+	'\u21b7':     "archrightdown",       // ↷
+	'\u21d5':     "arrowdblbothv",       // ⇕
+	'\u21bd':     "arrowleftbothalf",    // ↽
+	'\u21c1':     "arrowrightbothalf",   // ⇁
+	'\u21a2':     "arrowtailleft",       // ↢
+	'\u21a3':     "arrowtailright",      // ↣
+	'\u21da':     "arrowtripleleft",     // ⇚
+	'\u21db':     "arrowtripleright",    // ⇛
+	'\u2136':     "beth",                // ℶ
+	'\u226c':     "between",             // ≬
+	'\u2308':     "ceilingleft",         // ⌈
+	'\u2309':     "ceilingright",        // ⌉
+	'\u229b':     "circleasterisk",      // ⊛
+	'\u20dd':     "circlecopyrt",        // ⃝
+	'\u2298':     "circledivide",        // ⊘
+	'\u229c':     "circleequal",         // ⊜
+	'\u229a':     "circlering",          // ⊚
+	'\u27f3':     "clockwise",           // ⟳
+	'\u2201':     "complement",          // ∁
+	'\u2a3f':     "coproduct",           // ⨿
+	'\u21ab':     "curlyleft",           // ↫
+	'\u21ac':     "curlyright",          // ↬
+	'\u2138':     "daleth",              // ℸ
+	'\u21ca':     "dblarrowdwn",         // ⇊
+	'\u219e':     "dblarrowheadleft",    // ↞
+	'\u21a0':     "dblarrowheadright",   // ↠
+	'\u21c8':     "dblarrowup",          // ⇈
+	'\u27e6':     "dblbracketleft",      // ⟦
+	'\u27e7':     "dblbracketright",     // ⟧
+	'\u225c':     "defines",             // ≜
+	'\u22c4':     "diamondmath",         // ⋄
+	'\u224f':     "difference",          // ≏
+	'\u22c7':     "dividemultiply",      // ⋇
+	'\u2214':     "dotplus",             // ∔
+	'\u29f9':     "downslope",           // ⧹
+	'\u03f5':     "epsilon1",            // ϵ
+	'\u03f6':     "epsiloninv",          // ϶
+	'\u22df':     "equalorfollows",      // ⋟
+	'\u2a96':     "equalorgreater",      // ⪖
+	'\u2a95':     "equalorless",         // ⪕
+	'\u22de':     "equalorprecedes",     // ⋞
+	'\u2242':     "equalorsimilar",      // ≂
+	'\u224d':     "equivasymptotic",     // ≍
+	'\u230a':     "floorleft",           // ⌊
+	'\u230b':     "floorright",          // ⌋
+	'\u2aba':     "follownotdbleqv",     // ⪺
+	'\u2ab6':     "follownotslnteql",    // ⪶
+	'\u22e9':     "followornoteqvlnt",   // ⋩
+	'\u2ab0':     "followsequal",        // ⪰
+	'\u227d':     "followsorcurly",      // ≽
+	'\u227f':     "followsorequal",      // ≿
+	'\u22a9':     "forces",              // ⊩
+	'\u22aa':     "forcesbar",           // ⊪
+	'\u22d4':     "fork",                // ⋔
+	'\u2322':     "frown",               // ⌢
+	'\u224e':     "geomequivalent",      // ≎
+	'\u2a8c':     "greaterdbleqlless",   // ⪌
+	'\u22d7':     "greaterdot",          // ⋗
+	'\u2a8a':     "greaternotdblequal",  // ⪊
+	'\u2a88':     "greaternotequal",     // ⪈
+	'\u2a86':     "greaterorapproxeql",  // ⪆
+	'\u2a7e':     "greaterorequalslant", // ⩾
+	'\u2269':     "greaterornotequal",   // ≩
+	'\u21c3':     "harpoondownleft",     // ⇃
+	'\u21c2':     "harpoondownright",    // ⇂
+	'\u21cc':     "harpoonleftright",    // ⇌
+	'\u21cb':     "harpoonrightleft",    // ⇋
+	'\u21bf':     "harpoonupleft",       // ↿
+	'\u21be':     "harpoonupright",      // ↾
+	'\u2216':     "integerdivide",       // ∖
+	'\u22ba':     "intercal",            // ⊺
+	'\u203d':     "interrobang",         // ‽
+	'\u2e18':     "interrobangdown",     // ⸘
+	'\u22d2':     "intersectiondbl",     // ⋒
+	'\u2293':     "intersectionsq",      // ⊓
+	'\u2a8b':     "lessdbleqlgreater",   // ⪋
+	'\u22d6':     "lessdot",             // ⋖
+	'\u2a89':     "lessnotdblequal",     // ⪉
+	'\u2a87':     "lessnotequal",        // ⪇
+	'\u2a85':     "lessorapproxeql",     // ⪅
+	'\u2a7d':     "lessorequalslant",    // ⩽
+	'\u2268':     "lessornotequal",      // ≨
+	'\ufb05':     "longst",              // ﬅ
+	'\u2720':     "maltesecross",        // ✠
+	'\u2221':     "measuredangle",       // ∡
+	'\u22c9':     "multicloseleft",      // ⋉
+	'\u22ca':     "multicloseright",     // ⋊
+	'\u22b8':     "multimap",            // ⊸
+	'\u22cb':     "multiopenleft",       // ⋋
+	'\u22cc':     "multiopenright",      // ⋌
+	'\u22bc':     "nand",                // ⊼
+	'\u266e':     "natural",             // ♮
+	'\u2247':     "notapproxequal",      // ≇
+	'\u21ae':     "notarrowboth",        // ↮
+	'\u219a':     "notarrowleft",        // ↚
+	'\u219b':     "notarrowright",       // ↛
+	'\u2224':     "notbar",              // ∤
+	'\u21ce':     "notdblarrowboth",     // ⇎
+	'\u2204':     "notexistential",      // ∄
+	'\u22ae':     "notforces",           // ⊮
+	'\u22af':     "notforcesextra",      // ⊯
+	'\u22ad':     "notsatisfies",        // ⊭
+	'\u2241':     "notsimilar",          // ≁
+	'\u2288':     "notsubseteql",        // ⊈
+	'\u2289':     "notsuperseteql",      // ⊉
+	'\u2ac6':     "notsupersetordbleql", // ⫆
+	'\u22ec':     "nottriangeqlleft",    // ⋬
+	'\u22ed':     "nottriangeqlright",   // ⋭
+	'\u22ea':     "nottriangleleft",     // ⋪
+	'\u22eb':     "nottriangleright",    // ⋫
+	'\u22ac':     "notturnstile",        // ⊬
+	'\u22bb':     "orunderscore",        // ⊻
+	'\u2a5e':     "perpcorrespond",      // ⩞
+	'\u2031':     "pertenthousand",      // ‱
+	'\u210f':     "planckover2pi",       // ℏ
+	'\u2ab9':     "precedenotdbleqv",    // ⪹
+	'\u2ab5':     "precedenotslnteql",   // ⪵
+	'\u22e8':     "precedeornoteqvlnt",  // ⋨
+	'\u2aaf':     "precedesequal",       // ⪯
+	'\u227c':     "precedesorcurly",     // ≼
+	'\u227e':     "precedesorequal",     // ≾
+	'\u22cd':     "revasymptequal",      // ⋍
+	'\u231d':     "rightanglene",        // ⌝
+	'\u231c':     "rightanglenw",        // ⌜
+	'\u231f':     "rightanglese",        // ⌟
+	'\u231e':     "rightanglesw",        // ⌞
+	'\u2256':     "ringinequal",         // ≖
+	'\u22a8':     "satisfies",           // ⊨
+	'\u21b0':     "shiftleft",           // ↰
+	'\u21b1':     "shiftright",          // ↱
+	'\u2323':     "smile",               // ⌣
+	'\u2222':     "sphericalangle",      // ∢
+	'\u22a1':     "squaredot",           // ⊡
+	'\u228f':     "squareimage",         // ⊏
+	'\u229f':     "squareminus",         // ⊟
+	'\u22a0':     "squaremultiply",      // ⊠
+	'\u2290':     "squareoriginal",      // ⊐
+	'\u229e':     "squareplus",          // ⊞
+	'\u21ad':     "squiggleleftright",   // ↭
+	'\u21dd':     "squiggleright",       // ⇝
+	'\ufb06':     "st",                  // ﬆ
+	'\u22c6':     "star",                // ⋆
+	'\u22d0':     "subsetdbl",           // ⋐
+	'\u2ac5':     "subsetdblequal",      // ⫅
+	'\u2acb':     "subsetornotdbleql",   // ⫋
+	'\u2291':     "subsetsqequal",       // ⊑
+	'\u22d1':     "supersetdbl",         // ⋑
+	'\u2acc':     "supersetornotdbleql", // ⫌
+	'\u2292':     "supersetsqequal",     // ⊒
+	'\u22b4':     "triangleleftequal",   // ⊴
+	'\u22b5':     "trianglerightequal",  // ⊵
+	'\u22a2':     "turnstileleft",       // ⊢
+	'\ufffd':     "twelveudash",         // �
+	'\u22d3':     "uniondbl",            // ⋓
+	'\u228e':     "unionmulti",          // ⊎
+	'\u2294':     "unionsq",             // ⊔
+	'\u29f8':     "upslope",             // ⧸
+	'\u20d7':     "vector",              // ⃗
+	'\u2240':     "wreathproduct",       // ≀
 }
 
-var texGlyphToRuneMap = texGlyphToRune()
-
-// texGlyphToRune returns the string->rune map of the first runes in the
-// texGlyphlistGlyphToStringMap strings.
-// XXX: Hack.
-func texGlyphToRune() map[string]rune {
-	glyphToRune := map[string]rune{}
-	for g, s := range texGlyphlistGlyphToStringMap {
-		glyphToRune[g] = []rune(s)[0]
-	}
-	return glyphToRune
+var additionalGlyphToRuneMap = map[string]rune{ // 6 entries
+	"arrowhookleft":    '\u21aa', // ↪
+	"arrowhookright":   '\u21a9', // ↩
+	"controlNULL":      '\x00',
+	"coproducttext":    '\u2210', // ∐
+	"intersectiontext": '\u22c2', // ⋂
+	"uniontext":        '\u22c3', // ⋃
 }
-
-var additionalGlyphlistGlyphToRuneMap = map[string]rune{ // 120 entries
-	"angbracketleft":        '\u3008', // 〈
-	"angbracketleftBig":     '\u2329', // 〈
-	"angbracketleftBigg":    '\u2329', // 〈
-	"angbracketleftbig":     '\u2329', // 〈
-	"angbracketleftbigg":    '\u2329', // 〈
-	"angbracketright":       '\u3009', // 〉
-	"angbracketrightBig":    '\u232a', // 〉
-	"angbracketrightBigg":   '\u232a', // 〉
-	"angbracketrightbig":    '\u232a', // 〉
-	"angbracketrightbigg":   '\u232a', // 〉
-	"arrowhookleft":         '\u21aa', // ↪
-	"arrowhookright":        '\u21a9', // ↩
-	"arrowleftbothalf":      '\u21bd', // ↽
-	"arrowlefttophalf":      '\u21bc', // ↼
-	"arrownortheast":        '\u2197', // ↗
-	"arrownorthwest":        '\u2196', // ↖
-	"arrowrightbothalf":     '\u21c1', // ⇁
-	"arrowrighttophalf":     '\u21c0', // ⇀
-	"arrowsoutheast":        '\u2198', // ↘
-	"arrowsouthwest":        '\u2199', // ↙
-	"backslashBig":          '\u2216', // ∖
-	"backslashBigg":         '\u2216', // ∖
-	"backslashbig":          '\u2216', // ∖
-	"backslashbigg":         '\u2216', // ∖
-	"bardbl":                '\u2016', // ‖
-	"bracehtipdownleft":     '\ufe37', // ︷
-	"bracehtipdownright":    '\ufe37', // ︷
-	"bracehtipupleft":       '\ufe38', // ︸
-	"bracehtipupright":      '\ufe38', // ︸
-	"braceleftBig":          '{',      // {
-	"braceleftBigg":         '{',      // {
-	"braceleftbig":          '{',      // {
-	"braceleftbigg":         '{',      // {
-	"bracerightBig":         '}',      // }
-	"bracerightBigg":        '}',      // }
-	"bracerightbig":         '}',      // }
-	"bracerightbigg":        '}',      // }
-	"bracketleftBig":        '[',      // [
-	"bracketleftBigg":       '[',      // [
-	"bracketleftbig":        '[',      // [
-	"bracketleftbigg":       '[',      // [
-	"bracketrightBig":       ']',      // ]
-	"bracketrightBigg":      ']',      // ]
-	"bracketrightbig":       ']',      // ]
-	"bracketrightbigg":      ']',      // ]
-	"ceilingleftBig":        '\u2308', // ⌈
-	"ceilingleftBigg":       '\u2308', // ⌈
-	"ceilingleftbig":        '\u2308', // ⌈
-	"ceilingleftbigg":       '\u2308', // ⌈
-	"ceilingrightBig":       '\u2309', // ⌉
-	"ceilingrightBigg":      '\u2309', // ⌉
-	"ceilingrightbig":       '\u2309', // ⌉
-	"ceilingrightbigg":      '\u2309', // ⌉
-	"circlecopyrt":          '\u00a9', // ©
-	"circledotdisplay":      '\u2299', // ⊙
-	"circledottext":         '\u2299', // ⊙
-	"circlemultiplydisplay": '\u2297', // ⊗
-	"circlemultiplytext":    '\u2297', // ⊗
-	"circleplusdisplay":     '\u2295', // ⊕
-	"circleplustext":        '\u2295', // ⊕
-	"contintegraldisplay":   '\u222e', // ∮
-	"contintegraltext":      '\u222e', // ∮
-	"controlNULL":           '\x00',
-	"coproductdisplay":      '\u2210', // ∐
-	"coproducttext":         '\u2210', // ∐
-	"floorleftBig":          '\u230a', // ⌊
-	"floorleftBigg":         '\u230a', // ⌊
-	"floorleftbig":          '\u230a', // ⌊
-	"floorleftbigg":         '\u230a', // ⌊
-	"floorrightBig":         '\u230b', // ⌋
-	"floorrightBigg":        '\u230b', // ⌋
-	"floorrightbig":         '\u230b', // ⌋
-	"floorrightbigg":        '\u230b', // ⌋
-	"hatwide":               '\u0302', // ̂
-	"hatwider":              '\u0302', // ̂
-	"hatwidest":             '\u0302', // ̂
-	"integraldisplay":       '\u222b', // ∫
-	"integraltext":          '\u222b', // ∫
-	"intercal":              '\u1d40', // ᵀ
-	"intersectiondisplay":   '\u22c2', // ⋂
-	"intersectiontext":      '\u22c2', // ⋂
-	"logicalanddisplay":     '\u2227', // ∧
-	"logicalandtext":        '\u2227', // ∧
-	"logicalordisplay":      '\u2228', // ∨
-	"logicalortext":         '\u2228', // ∨
-	"parenleftBig":          '(',      // (
-	"parenleftBigg":         '(',      // (
-	"parenleftbig":          '(',      // (
-	"parenleftbigg":         '(',      // (
-	"parenrightBig":         ')',      // )
-	"parenrightBigg":        ')',      // )
-	"parenrightbig":         ')',      // )
-	"parenrightbigg":        ')',      // )
-	"prime":                 '\u2032', // ′
-	"productdisplay":        '\u220f', // ∏
-	"producttext":           '\u220f', // ∏
-	"radicalBig":            '\u221a', // √
-	"radicalBigg":           '\u221a', // √
-	"radicalbig":            '\u221a', // √
-	"radicalbigg":           '\u221a', // √
-	"radicalbt":             '\u221a', // √
-	"radicaltp":             '\u221a', // √
-	"radicalvertex":         '\u221a', // √
-	"slashBig":              '/',      // /
-	"slashBigg":             '/',      // /
-	"slashbig":              '/',      // /
-	"slashbigg":             '/',      // /
-	"summationdisplay":      '\u2211', // ∑
-	"summationtext":         '\u2211', // ∑
-	"tildewide":             '\u02dc', // ˜
-	"tildewider":            '\u02dc', // ˜
-	"tildewidest":           '\u02dc', // ˜
-	"uniondisplay":          '\u22c3', // ⋃
-	"unionmultidisplay":     '\u228e', // ⊎
-	"unionmultitext":        '\u228e', // ⊎
-	"unionsqdisplay":        '\u2294', // ⊔
-	"unionsqtext":           '\u2294', // ⊔
-	"uniontext":             '\u22c3', // ⋃
-	"vextenddouble":         '\u2225', // ∥
-	"vextendsingle":         '\u2223', // ∣
+var additionalRuneToGlyphMap = map[rune]string{ // 6 entries
+	'\u21aa': "arrowhookleft",  // ↪
+	'\u21a9': "arrowhookright", // ↩
+	'\x00':   "controlNULL",
+	'\u2210': "coproducttext",    // ∐
+	'\u22c2': "intersectiontext", // ⋂
+	'\u22c3': "uniontext",        // ⋃
 }
-
 var empericalGlyphToRuneMap = map[string]rune{ // 473 entries
 	"Barwed":                     '\u2306', // ⌆
 	"CL":                         '\u2104', // ℄
@@ -11219,180 +11171,12 @@ var empericalGlyphToRuneMap = map[string]rune{ // 473 entries
 	"zerosans":                   '\uf080',
 	"zerosansinv":                '\uf08b',
 }
-
-// empericalRuneToGlyphMap are the mappings we found by trial and error.
-var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
-	'\u00c6': "AElig",  // Æ
-	'\u0386': "Aacgr",  // Ά
-	'\u00c2': "Acirc",  // Â
-	'\u0410': "Acy",    // А
-	'\u0391': "Agr",    // Α
-	'\u0100': "Amacr",  // Ā
-	'\u0104': "Aogon",  // Ą
-	'\u00c4': "Auml",   // Ä
+var empericalRuneToGlyphMap = map[rune]string{ // 473 entries
 	'\u2306': "Barwed", // ⌆
-	'\u0411': "Bcy",    // Б
-	'\u0392': "Bgr",    // Β
-	'\x18':   "CAN",
-	'\u0427': "CHcy", // Ч
-	'\u2104': "CL",   // ℄
-	'\r':     "CR",
-	'\u22d2': "Cap",    // ⋒
-	'\u00c7': "Ccedil", // Ç
-	'\u0108': "Ccirc",  // Ĉ
-	'\u22d3': "Cup",    // ⋓
-	'\x11':   "DC1",
-	'\x12':   "DC2",
-	'\x13':   "DC3",
-	'\x14':   "DC4",
-	'\u0402': "DJcy", // Ђ
-	'\x10':   "DLE",
-	'\u0405': "DScy",   // Ѕ
-	'\u040f': "DZcy",   // Џ
-	'\u2021': "Dagger", // ‡
-	'\u0414': "De",     // Д
-	'\u0394': "Dgr",    // Δ
+	'\u2104': "CL",     // ℄
 	'\u20dc': "DotDot", // ⃜
-	'\u0110': "Dstrok", // Đ
-	'\u0389': "EEacgr", // Ή
-	'\u0397': "EEgr",   // Η
-	'\x19':   "EM",
-	'\u014a': "ENG", // Ŋ
-	'\x04':   "EOT",
-	'\x1b':   "ESC",
-	'\x17':   "ETB",
-	'\u00d0': "ETH", // Ð
-	'\x03':   "ETX",
-	'\u0388': "Eacgr", // Έ
-	'\u00ca': "Ecirc", // Ê
-	'\u042d': "Ecy",   // Э
-	'\u0395': "Egr",   // Ε
-	'\u0112': "Emacr", // Ē
-	'\u041d': "En",    // Н
-	'\u0118': "Eogon", // Ę
-	'\u00cb': "Euml",  // Ë
-	'\x1c':   "FS",
-	'\u0424': "Fcy",    // Ф
-	'\u0403': "GJcy",   // Ѓ
-	'\u0122': "Gcedil", // Ģ
-	'\u011c': "Gcirc",  // Ĝ
-	'\u0413': "Gcy",    // Г
 	'\u22d9': "Gg",     // ⋙
-	'\u0393': "Ggr",    // Γ
-	'\u226b': "Gt",     // ≫
-	'\u042a': "HARDcy", // Ъ
-	'\t':     "HT",
-	'\u0124': "Hcirc",  // Ĥ
-	'\u0126': "Hstrok", // Ħ
-	'\u0415': "IEcy",   // Е
-	'\u0132': "IJlig",  // Ĳ
-	'\u0401': "IOcy",   // Ё
-	'\u038a': "Iacgr",  // Ί
-	'\u00ce': "Icirc",  // Î
-	'\u0418': "Icy",    // И
-	'\u03aa': "Idigr",  // Ϊ
-	'\u0399': "Igr",    // Ι
-	'\u012a': "Imacr",  // Ī
-	'\u012e': "Iogon",  // Į
-	'\u0406': "Iukcy",  // І
-	'\u00cf': "Iuml",   // Ï
-	'\u0134': "Jcirc",  // Ĵ
-	'\u0419': "Jcy",    // Й
-	'\u0408': "Jsercy", // Ј
-	'\u0404': "Jukcy",  // Є
-	'\u0425': "KHcy",   // Х
-	'\u03a7': "KHgr",   // Χ
-	'\u040c': "KJcy",   // Ќ
-	'\u0136': "Kcedil", // Ķ
-	'\u041a': "Kcy",    // К
-	'\u039a': "Kgr",    // Κ
-	'\u0409': "LJcy",   // Љ
-	'\u219e': "Larr",   // ↞
-	'\u013b': "Lcedil", // Ļ
-	'\u041b': "Lcy",    // Л
-	'\u039b': "Lgr",    // Λ
 	'\u22d8': "Ll",     // ⋘
-	'\u013f': "Lmidot", // Ŀ
-	'\u0141': "Lstrok", // Ł
-	'\u226a': "Lt",     // ≪
-	'\u041c': "Mcy",    // М
-	'\u039c': "Mgr",    // Μ
-	'\x15':   "NAK",
-	'\u040a': "NJcy", // Њ
-	'\x00':   "NUL",
-	'\u0145': "Ncedil", // Ņ
-	// '\u041d':    "Ncy", // Н -- duplicate
-	'\u039d': "Ngr",    // Ν
-	'\u0152': "OElig",  // Œ
-	'\u038f': "OHacgr", // Ώ
-	'\u03a9': "OHgr",   // Ω
-	'\u038c': "Oacgr",  // Ό
-	'\u00d4': "Ocirc",  // Ô
-	'\u041e': "Ocy",    // О
-	'\u0150': "Odblac", // Ő
-	'\u039f': "Ogr",    // Ο
-	'\u014c': "Omacr",  // Ō
-	'\u00d6': "Ouml",   // Ö
-	'\u03a6': "PHgr",   // Φ
-	'\u03a8': "PSgr",   // Ψ
-	'\u041f': "Pcy",    // П
-	'\u03a0': "Pgr",    // Π
-	'\u2033': "Prime",  // ″
-	'\x1e':   "RS",
-	'\u21a0': "Rarr",   // ↠
-	'\u0156': "Rcedil", // Ŗ
-	'\u0420': "Rcy",    // Р
-	'\u03a1': "Rgr",    // Ρ
-	'\u0429': "SHCHcy", // Щ
-	'\u0428': "SHcy",   // Ш
-	'\x0f':   "SI",
-	'\x0e':   "SO",
-	'\u042c': "SOFTcy", // Ь
-	'\x01':   "SOH",
-	'\x02':   "STX",
-	'\x1a':   "SUB",
-	'\x16':   "SYN",
-	'\u015e': "Scedil", // Ş
-	'\u015c': "Scirc",  // Ŝ
-	'\u0421': "Scy",    // С
-	'\u03a3': "Sgr",    // Σ
-	'\u22d0': "Sub",    // ⋐
-	'\u22d1': "Sup",    // ⋑
-	'\u00de': "THORN",  // Þ
-	'\u0398': "THgr",   // Θ
-	'\u040b': "TSHcy",  // Ћ
-	'\u0426': "TScy",   // Ц
-	'\u0162': "Tcedil", // Ţ
-	'\u0422': "Tcy",    // Т
-	// '\u0422':    "Te", // Т -- duplicate
-	'\u03a4': "Tgr",    // Τ
-	'\u0166': "Tstrok", // Ŧ
-	'\x1f':   "US",
-	'\u038e': "Uacgr",  // Ύ
-	'\u040e': "Ubrcy",  // Ў
-	'\u00db': "Ucirc",  // Û
-	'\u0423': "Ucy",    // У
-	'\u0170': "Udblac", // Ű
-	'\u03ab': "Udigr",  // Ϋ
-	'\u016a': "Umacr",  // Ū
-	'\u0172': "Uogon",  // Ų
-	'\u03a5': "Upsi",   // Υ
-	'\u00dc': "Uuml",   // Ü
-	'\u0412': "Vcy",    // В
-	'\u22a9': "Vdash",  // ⊩
-	'\u2016': "Verbar", // ‖
-	'\u22aa': "Vvdash", // ⊪
-	'\u0174': "Wcirc",  // Ŵ
-	'\u039e': "Xgr",    // Ξ
-	'\u042f': "YAcy",   // Я
-	'\u0407': "YIcy",   // Ї
-	'\u042e': "YUcy",   // Ю
-	'\u0176': "Ycirc",  // Ŷ
-	'\u042b': "Ycy",    // Ы
-	'\u0178': "Yuml",   // Ÿ
-	'\u0416': "ZHcy",   // Ж
-	'\u0417': "Zcy",    // З
-	'\u0396': "Zgr",    // Ζ
 	'\u2701': "a1",     // ✁
 	'\u2721': "a10",    // ✡
 	'\u275e': "a100",   // ❞
@@ -11408,17 +11192,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u2709': "a117",   // ✉
 	'\u2708': "a118",   // ✈
 	'\u2707': "a119",   // ✇
-	'\u261e': "a12",    // ☞
-	'\u2460': "a120",   // ①
-	'\u2461': "a121",   // ②
-	'\u2462': "a122",   // ③
-	'\u2463': "a123",   // ④
-	'\u2464': "a124",   // ⑤
-	'\u2465': "a125",   // ⑥
-	'\u2466': "a126",   // ⑦
-	'\u2467': "a127",   // ⑧
-	'\u2468': "a128",   // ⑨
-	'\u2469': "a129",   // ⑩
 	'\u270c': "a13",    // ✌
 	'\u2776': "a130",   // ❶
 	'\u2777': "a131",   // ❷
@@ -11442,15 +11215,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u2788': "a148",   // ➈
 	'\u2789': "a149",   // ➉
 	'\u270e': "a15",    // ✎
-	'\u278a': "a150",   // ➊
-	'\u278b': "a151",   // ➋
-	'\u278c': "a152",   // ➌
-	'\u278d': "a153",   // ➍
-	'\u278e': "a154",   // ➎
-	'\u278f': "a155",   // ➏
-	'\u2790': "a156",   // ➐
-	'\u2791': "a157",   // ➑
-	'\u2792': "a158",   // ➒
 	'\u2793': "a159",   // ➓
 	'\u270f': "a16",    // ✏
 	'\u2794': "a160",   // ➔
@@ -11459,7 +11223,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u279b': "a166",   // ➛
 	'\u279c': "a167",   // ➜
 	'\u279d': "a168",   // ➝
-	'\u279e': "a169",   // ➞
 	'\u2711': "a17",    // ✑
 	'\u279f': "a170",   // ➟
 	'\u27a0': "a171",   // ➠
@@ -11482,7 +11245,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u27ba': "a187",   // ➺
 	'\u27bb': "a188",   // ➻
 	'\u27bc': "a189",   // ➼
-	'\u2713': "a19",    // ✓
 	'\u27bd': "a190",   // ➽
 	'\u27be': "a191",   // ➾
 	'\u279a': "a192",   // ➚
@@ -11515,14 +11277,11 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u2723': "a30", // ✣
 	'\u2724': "a31", // ✤
 	'\u2725': "a32", // ✥
-	'\u2726': "a33", // ✦
 	'\u2727': "a34", // ✧
-	'\u2605': "a35", // ★
 	'\u2729': "a36", // ✩
 	'\u272a': "a37", // ✪
 	'\u272b': "a38", // ✫
 	'\u272c': "a39", // ✬
-	'\u260e': "a4",  // ☎
 	'\u272d': "a40", // ✭
 	'\u272e': "a41", // ✮
 	'\u272f': "a42", // ✯
@@ -11560,7 +11319,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u274d': "a72", // ❍
 	'\u274f': "a74", // ❏
 	'\u2751': "a75", // ❑
-	'\u25c6': "a78", // ◆
 	'\u2756': "a79", // ❖
 	'\u271f': "a8",  // ✟
 	'\u25d7': "a81", // ◗
@@ -11572,7 +11330,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf8e1': "a87",
 	'\uf8e2': "a88",
 	'\uf8d7': "a89",
-	'\u2720': "a9", // ✠
 	'\uf8d8': "a90",
 	'\uf8db': "a91",
 	'\uf8dc': "a92",
@@ -11583,53 +11340,15 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\u275b': "a97",         // ❛
 	'\u275c': "a98",         // ❜
 	'\u275d': "a99",         // ❝
-	'\u03ac': "aacgr",       // ά
-	'\u00e2': "acirc",       // â
-	'\u0430': "acy",         // а
-	'\u00e6': "aelig",       // æ
-	'\u03b1': "agr",         // α
-	'\u0639': "ain",         // ع
-	'\ufeca': "ainfinal",    // ﻊ
-	'\ufecb': "aininitial",  // ﻋ
 	'\ufec9': "ainisolated", // ﻉ
-	'\ufecc': "ainmedial",   // ﻌ
 	'\uf051': "airplane",
-	'\ufe8e': "aleffinal",                  // ﺎ
 	'\ufe8d': "alefisolated",               // ﺍ
-	'\u0649': "alefmaksura",                // ى
-	'\ufef0': "alefmaksurafinal",           // ﻰ
 	'\ufeef': "alefmaksuraisolated",        // ﻯ
-	'\u2135': "alefsym",                    // ℵ
-	'\u0623': "alefwithhamzaabove",         // أ
-	'\ufe84': "alefwithhamzaabovefinal",    // ﺄ
 	'\ufe83': "alefwithhamzaaboveisolated", // ﺃ
-	'\u0625': "alefwithhamzabelow",         // إ
 	'\ufe87': "alefwithhamzabelowisolated", // ﺇ
-	'\u0101': "amacr",                      // ā
-	'&':      "amp",                        // &
 	'\uf06b': "ampersandit",
 	'\uf06a': "ampersanditlc",
-	'\u2227': "and",    // ∧
-	'\u2220': "ang",    // ∠
-	'\u221f': "ang90",  // ∟
-	'\u2221': "angmsd", // ∡
-	'\u2222': "angsph", // ∢
-	'\u212b': "angst",  // Å
-	'\u0105': "aogon",  // ą
-	'\u224a': "ape",    // ≊
-	'\'':     "apos",   // \'
 	'\uf068': "aquarius",
-	'\u060c': "arabiccomma",           // ،
-	'\u0668': "arabicindicdigiteight", // ٨
-	'\u0665': "arabicindicdigitfive",  // ٥
-	'\u0664': "arabicindicdigitfour",  // ٤
-	'\u0669': "arabicindicdigitnine",  // ٩
-	'\u0661': "arabicindicdigitone",   // ١
-	'\u0667': "arabicindicdigitseven", // ٧
-	'\u0666': "arabicindicdigitsix",   // ٦
-	'\u0663': "arabicindicdigitthree", // ٣
-	'\u0662': "arabicindicdigittwo",   // ٢
-	'\u0660': "arabicindicdigitzero",  // ٠
 	'\uf05e': "aries",
 	'\uf0c3': "arrowdwnleft1",
 	'\uf0c4': "arrowdwnrt1",
@@ -11639,9 +11358,6 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf0c8': "arrowrtup1",
 	'\uf0c5': "arrowupleft1",
 	'\uf0c6': "arrowuprt1",
-	'*':      "ast",   // *
-	'\u2248': "asymp", // ≈
-	'\u00e4': "auml",  // ä
 	'\uf039': "ballpoint",
 	'\uf0e2': "barb2down",
 	'\uf0df': "barb2left",
@@ -11659,109 +11375,41 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf0ee': "barb4se",
 	'\uf0ed': "barb4sw",
 	'\uf0e9': "barb4up",
-	'\u22bc': "barwed", // ⊼
-	'\u224c': "bcong",  // ≌
-	'\u0431': "bcy",    // б
 	'\uf0f9': "bdash1",
 	'\uf0fa': "bdash2",
 	'\uf0f2': "bdown",
-	'\u201e': "bdquo", // „
-	// '\u0431':    "be", // б -- duplicate
-	'\u2235': "becaus",      // ∵
-	'\u0628': "beh",         // ب
 	'\ufe8f': "behisolated", // ﺏ
-	'\ufe92': "behmedial",   // ﺒ
 	'\uf025': "bell",
 	'\u220d': "bepsi",  // ∍
 	'\u212c': "bernou", // ℬ
-	'\u03b2': "bgr",    // β
 	'\uf0ef': "bleft",
 	'\uf0f3': "bleftright",
-	'\u2592': "blk12", // ▒
-	'\u2591': "blk14", // ░
-	'\u2593': "blk34", // ▓
 	'\uf0f6': "bne",
 	'\uf0f5': "bnw",
 	'\uf04d': "bomb",
 	'\uf026': "book",
-	'\u22a5': "bottom", // ⊥
 	'\u22c8': "bowtie", // ⋈
-	'\u25a1': "box",    // □
 	'\uf0a8': "box2",
 	'\uf06f': "box3",
 	'\uf070': "box4",
-	'\u2557': "boxDL", // ╗
-	'\u2554': "boxDR", // ╔
-	'\u2556': "boxDl", // ╖
-	'\u2553': "boxDr", // ╓
-	'\u2550': "boxH",  // ═
-	'\u2566': "boxHD", // ╦
-	'\u2569': "boxHU", // ╩
-	'\u2564': "boxHd", // ╤
-	'\u2567': "boxHu", // ╧
-	'\u255d': "boxUL", // ╝
-	'\u255a': "boxUR", // ╚
-	'\u255c': "boxUl", // ╜
-	'\u2559': "boxUr", // ╙
-	'\u2551': "boxV",  // ║
-	'\u256c': "boxVH", // ╬
-	'\u2563': "boxVL", // ╣
-	'\u2560': "boxVR", // ╠
-	'\u256b': "boxVh", // ╫
-	'\u2562': "boxVl", // ╢
-	'\u255f': "boxVr", // ╟
 	'\uf0fe': "boxcheckbld",
-	'\u2555': "boxdL", // ╕
-	'\u2552': "boxdR", // ╒
-	'\u2510': "boxdl", // ┐
-	'\u250c': "boxdr", // ┌
-	'\u2500': "boxh",  // ─
-	'\u2565': "boxhD", // ╥
-	'\u2568': "boxhU", // ╨
-	'\u252c': "boxhd", // ┬
-	'\u2534': "boxhu", // ┴
 	'\uf071': "boxshadowdwn",
 	'\uf072': "boxshadowup",
-	'\u255b': "boxuL", // ╛
-	'\u2558': "boxuR", // ╘
-	'\u2518': "boxul", // ┘
-	'\u2514': "boxur", // └
-	'\u2502': "boxv",  // │
-	'\u256a': "boxvH", // ╪
-	'\u2561': "boxvL", // ╡
-	'\u255e': "boxvR", // ╞
-	'\u253c': "boxvh", // ┼
-	'\u2524': "boxvl", // ┤
-	'\u251c': "boxvr", // ├
 	'\uf0fd': "boxxmarkbld",
-	'\u2035': "bprime", // ‵
 	'\uf0f0': "bright",
-	'\u00a6': "brvbar", // ¦
 	'\uf0f8': "bse",
-	'\u223d': "bsim",  // ∽
-	'\u22cd': "bsime", // ⋍
-	'\\':     "bsol",  // \\
 	'\uf0f7': "bsw",
 	'\uf096': "budleafne",
 	'\uf097': "budleafnw",
 	'\uf099': "budleafse",
 	'\uf098': "budleafsw",
-	'\u2022': "bull",  // •
-	'\u224e': "bump",  // ≎
-	'\u224f': "bumpe", // ≏
 	'\uf0f1': "bup",
 	'\uf0f4': "bupdown",
 	'\uf061': "cancer",
 	'\uf027': "candle",
-	'\u2229': "cap", // ∩
 	'\uf067': "capricorn",
-	'\u2041': "caret",  // ⁁
-	'\u00e7': "ccedil", // ç
-	'\u0109': "ccirc",  // ĉ
-	'\u00b8': "cedil",  // ¸
-	'\u0447': "chcy",   // ч
+	'\u2041': "caret", // ⁁
 	'\uf0fc': "checkbld",
-	'\u02c6': "circ", // ˆ
 	'\uf09e': "circle2",
 	'\uf09f': "circle4",
 	'\uf06c': "circle6",
@@ -11773,120 +11421,40 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf0b5': "circlestar",
 	'\uf0dd': "circleup",
 	'\u2257': "cire",   // ≗
-	'\u2663': "clubs",  // ♣
 	'\u2254': "colone", // ≔
 	'\uf07a': "command",
-	'@':      "commat", // @
-	'\u2201': "comp",   // ∁
 	'\u2218': "compfn", // ∘
-	'\u2245': "cong",   // ≅
-	'\u222e': "conint", // ∮
-	'\u00a9': "copy",   // ©
 	'\u2117': "copysr", // ℗
-	'\u21b5': "crarr",  // ↵
 	'\uf05a': "crescentstar",
-	// '\u2717':    "cross", // ✗ -- duplicate
 	'\uf057': "crossceltic",
 	'\uf058': "crossmaltese",
 	'\uf055': "crossoutline",
 	'\uf056': "crossshadow",
 	'\uf0aa': "crosstar2",
-	'\u22de': "cuepr",  // ⋞
-	'\u22df': "cuesc",  // ⋟
-	'\u21b6': "cularr", // ↶
-	'\u222a': "cup",    // ∪
-	'\u227c': "cupre",  // ≼
-	'\u21b7': "curarr", // ↷
-	'\u00a4': "curren", // ¤
 	'\uf0b2': "cuspopen",
 	'\uf0b3': "cuspopen1",
-	'\u22ce': "cuvee",       // ⋎
-	'\u22cf': "cuwed",       // ⋏
-	'\u21d3': "dArr",        // ⇓
-	'\u0636': "dad",         // ض
 	'\ufebd': "dadisolated", // ﺽ
-	'\ufec0': "dadmedial",   // ﻀ
-	'\u062f': "dal",         // د
 	'\ufea9': "dalisolated", // ﺩ
-	'\u2193': "darr",        // ↓
-	'\u21ca': "darr2",       // ⇊
-	'\u2010': "dash",        // ‐
-	'\u22a3': "dashv",       // ⊣
-	'\u02dd': "dblac",       // ˝
-	// '\u0414':    "dcy", // Д -- duplicate
-	'\u0434': "de",     // д
-	'\u00b0': "deg",    // °
-	'\u03b4': "dgr",    // δ
-	'\u21c3': "dharl",  // ⇃
-	'\u21c2': "dharr",  // ⇂
-	'\u22c4': "diam",   // ⋄
-	'\u2666': "diams",  // ♦
-	'\u00a8': "die",    // ¨
-	'\u22c7': "divonx", // ⋇
-	'\u0452': "djcy",   // ђ
-	'\u2199': "dlarr",  // ↙
-	'\u231e': "dlcorn", // ⌞
-	'\u230d': "dlcrop", // ⌍
+	'\u230d': "dlcrop",      // ⌍
 	'\uf0ae': "dodecastar3",
-	'\u02d9': "dot",    // ˙
-	'\u2198': "drarr",  // ↘
-	'\u231f': "drcorn", // ⌟
 	'\u230c': "drcrop", // ⌌
 	'\uf053': "droplet",
-	'\u0455': "dscy",   // ѕ
-	'\u0111': "dstrok", // đ
-	'\u25bf': "dtri",   // ▿
 	'\u25be': "dtrif",  // ▾
-	'\u045f': "dzcy",   // џ
-	// '\u0455':    "dze", // ѕ -- duplicate
-	'\u2251': "eDot",   // ≑
-	'\u03ad': "eacgr",  // έ
-	'\u2256': "ecir",   // ≖
-	'\u00ea': "ecirc",  // ê
 	'\u2255': "ecolon", // ≕
-	'\u044d': "ecy",    // э
-	'\u03ae': "eeacgr", // ή
-	'\u03b7': "eegr",   // η
-	'\u0444': "ef",     // ф
-	'\u2252': "efDot",  // ≒
 	'\u22dd': "egs",    // ⋝
 	'\uf0be': "eightoclock",
 	'\uf088': "eightsans",
 	'\uf093': "eightsansinv",
-	'\u043b': "el", // л
 	'\uf0c1': "elevenoclock",
-	'\u2113': "ell",   // ℓ
-	'\u22dc': "els",   // ⋜
-	'\u043c': "em",    // м
-	'\u0113': "emacr", // ē
-	'\u2205': "empty", // ∅
-	'\u2003': "emsp",
+	'\u22dc': "els", // ⋜
 	'\u2004': "emsp13",
 	'\u2005': "emsp14",
-	// '\u2003':    "emspace",  -- duplicate
-	'\u043d': "en", // н
-	'\u2002': "ensp",
+	'\u2003': "emspace",
 	'\uf02a': "envelopeback",
 	'\uf02b': "envelopefront",
-	'\u0119': "eogon",  // ę
-	'\u03b5': "epsi",   // ε
-	'\u220a': "epsis",  // ∊
-	'=':      "equals", // =
-	'\u2261': "equiv",  // ≡
-	'\u0440': "er",     // р
-	'\u2253': "erDot",  // ≓
-	'\u0441': "es",     // с
+	'\u220a': "epsis", // ∊
 	'\uf079': "escape",
-	'\u2250': "esdot", // ≐
-	'\u01bd': "eturn", // ƽ
-	'\u00eb': "euml",  // ë
-	'!':      "excl",  // !
-	'\u2203': "exist", // ∃
-	// '\u0444':    "fcy", // ф -- duplicate
-	'\u0641': "feh",         // ف
-	'\ufed3': "fehinitial",  // ﻓ
 	'\ufed1': "fehisolated", // ﻑ
-	'\ufed4': "fehmedial",   // ﻔ
 	'\uf035': "filecabinet",
 	'\uf033': "filetalltext",
 	'\uf032': "filetalltext1",
@@ -11897,57 +11465,24 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf04f': "flag",
 	'\uf03c': "floppy3",
 	'\uf03d': "floppy5",
-	'\u0192': "fnof", // ƒ
 	'\uf030': "folder",
 	'\uf031': "folderopen",
 	'\uf0ba': "fouroclock",
-	// '\u2005':    "fourperemspace",  -- duplicate
 	'\uf084': "foursans",
 	'\uf08f': "foursansinv",
-	'\u00bd': "frac12", // ½
-	'\u2153': "frac13", // ⅓
-	'\u00bc': "frac14", // ¼
 	'\u2155': "frac15", // ⅕
 	'\u2159': "frac16", // ⅙
-	'\u215b': "frac18", // ⅛
-	'\u2154': "frac23", // ⅔
 	'\u2156': "frac25", // ⅖
-	'\u00be': "frac34", // ¾
 	'\u2157': "frac35", // ⅗
-	'\u215c': "frac38", // ⅜
 	'\u2158': "frac45", // ⅘
 	'\u215a': "frac56", // ⅚
-	'\u215d': "frac58", // ⅝
-	'\u215e': "frac78", // ⅞
-	'\u2044': "frasl",  // ⁄
 	'\uf04c': "frownface",
-	'\u2267': "gE",     // ≧
 	'\u03dd': "gammad", // ϝ
-	'\u0123': "gcedil", // ģ
-	'\u011d': "gcirc",  // ĝ
-	'\u0433': "gcy",    // г
-	'\u2265': "ge",     // ≥
-	'\u22db': "gel",    // ⋛
 	'\uf060': "gemini",
-	// '\u2265':    "ges", // ≥ -- duplicate
-	'\u03b3': "ggr",         // γ
-	'\u063a': "ghain",       // غ
-	'\ufed0': "ghainmedial", // ﻐ
-	'\u0453': "gjcy",        // ѓ
-	'\u2277': "gl",          // ≷
 	'\u22e7': "gnsim",       // ⋧
-	'\u22d7': "gsdot",       // ⋗
-	'\u2273': "gsim",        // ≳
-	'>':      "gt",          // >
-	'\u2269': "gvnE",        // ≩
-	'\u21d4': "hArr",        // ⇔
-	'\u062d': "hah",         // ح
 	'\ufea1': "hahisolated", // ﺡ
-	'\ufea4': "hahmedial",   // ﺤ
-	'\u200a': "hairsp",
-	// '\u200a':    "hairspace",  -- duplicate
+	'\u200a': "hairspace",
 	'\u210b': "hamilt",        // ℋ
-	'\u0621': "hamza",         // ء
 	'\ufe80': "hamzaisolated", // ﺀ
 	'\uf049': "handhalt",
 	'\uf042': "handok",
@@ -11958,98 +11493,19 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf041': "handv",
 	'\uf03f': "handwrite",
 	'\uf040': "handwriteleft",
-	'\u044a': "hardcy", // ъ
 	'\uf03b': "harddisk",
-	'\u2194': "harr",  // ↔
-	'\u21ad': "harrw", // ↭
-	'\u0125': "hcirc", // ĥ
 	'\uf0da': "head2down",
 	'\uf0d7': "head2left",
 	'\uf0d8': "head2right",
 	'\uf0d9': "head2up",
-	'\u2665': "hearts",     // ♥
-	'\u0647': "heh",        // ه
-	'\ufeeb': "hehinitial", // ﻫ
-	'\ufeec': "hehmedial",  // ﻬ
-	'\u2026': "hellip",     // …
 	'\uf0ac': "hexstar2",
-	'\u2015': "horbar", // ―
 	'\uf036': "hourglass",
-	'\u0127': "hstrok", // ħ
-	'\u2043': "hybull", // ⁃
-	'\u044f': "ia",     // я
-	'\u03af': "iacgr",  // ί
-	'\u00ee': "icirc",  // î
-	'\u0438': "icy",    // и
-	'\u0390': "idiagr", // ΐ
-	'\u03ca': "idigr",  // ϊ
-	'\u0435': "ie",     // е
-	// '\u0435':    "iecy", // е -- duplicate
-	'\u00a1': "iexcl", // ¡
-	// '\u21d4':    "iff", // ⇔ -- duplicate
-	'\u03b9': "igr", // ι
-	// '\u0438':    "ii", // и -- duplicate
-	'\u0133': "ijlig",  // ĳ
-	'\u012b': "imacr",  // ī
-	'\u2111': "image",  // ℑ
-	'\u2105': "incare", // ℅
-	'\u221e': "infin",  // ∞
-	'\u0131': "inodot", // ı
-	'\u222b': "int",    // ∫
-	'\u22ba': "intcal", // ⊺
-	'\u0451': "io",     // ё
-	// '\u0451':    "iocy", // ё -- duplicate
-	'\u012f': "iogon",      // į
-	'\u00bf': "iquest",     // ¿
-	'\u2208': "isin",       // ∈
-	'\u0456': "iukcy",      // і
-	'\u00ef': "iuml",       // ï
-	'\u0135': "jcirc",      // ĵ
-	'\u0439': "jcy",        // й
-	'\u0458': "je",         // ј
-	'\u062c': "jeem",       // ج
-	'\ufea0': "jeemmedial", // ﺠ
-	// '\u0458':    "jsercy", // ј -- duplicate
-	'\u0454': "jukcy",       // є
-	'\u043a': "ka",          // к
+	'\u2043': "hybull",      // ⁃
 	'\ufed9': "kafisolated", // ﻙ
-	'\ufedc': "kafmedial",   // ﻜ
-	'\u03f0': "kappav",      // ϰ
-	'\u0137': "kcedil",      // ķ
-	// '\u043a':    "kcy", // к -- duplicate
 	'\uf037': "keyboard",
-	'\u03ba': "kgr",        // κ
-	'\u0138': "kgreen",     // ĸ
-	'\u0445': "kha",        // х
-	'\u062e': "khah",       // خ
-	'\ufea8': "khahmedial", // ﺨ
-	// '\u0445':    "khcy", // х -- duplicate
-	'\u03c7': "khgr",                           // χ
-	'\u045c': "kjcy",                           // ќ
-	'\u21da': "lAarr",                          // ⇚
-	'\u21d0': "lArr",                           // ⇐
-	'\u2266': "lE",                             // ≦
-	'\u2112': "lagran",                         // ℒ
-	'\u0644': "lam",                            // ل
-	'\ufedd': "lamisolated",                    // ﻝ
-	'\ufee0': "lammedial",                      // ﻠ
-	'\ufefc': "lamwithaleffinal",               // ﻼ
-	'\ufef8': "lamwithalefhamzaabovefinal",     // ﻸ
-	'\ufef7': "lamwithalefhamzaaboveisolatedd", // ﻷ
-	'\u2329': "lang",                           // 〈
-	'\u00ab': "laquo",                          // «
-	'\u2190': "larr",                           // ←
-	'\u21c7': "larr2",                          // ⇇
-	'\u21a9': "larrhk",                         // ↩
-	'\u21ab': "larrlp",                         // ↫
-	'\u21a2': "larrtl",                         // ↢
-	'\u013c': "lcedil",                         // ļ
-	'\u2308': "lceil",                          // ⌈
-	'{':      "lcub",                           // {
-	// '\u043b':    "lcy", // л -- duplicate
-	'\u201c': "ldquo", // “
-	// '\u201e':    "ldquor", // „ -- duplicate
-	'\u2264': "le", // ≤
+	'\u2112': "lagran",      // ℒ
+	'\ufedd': "lamisolated", // ﻝ
+	'\u21c7': "larr2",       // ⇇
 	'\uf0d0': "leafccwne",
 	'\uf0ce': "leafccwnw",
 	'\uf0cf': "leafccwse",
@@ -12058,462 +11514,137 @@ var empericalRuneToGlyphMap = map[rune]string{ // 1292 entries
 	'\uf0d1': "leafnw",
 	'\uf0d4': "leafse",
 	'\uf0d2': "leafsw",
-	'\u22da': "leg", // ⋚
 	'\uf062': "leo",
-	// '\u2264':    "les", // ≤ -- duplicate
-	'\u230a': "lfloor", // ⌊
-	'\u2276': "lg",     // ≶
-	'\u03bb': "lgr",    // λ
-	'\u21bd': "lhard",  // ↽
-	'\u21bc': "lharu",  // ↼
-	'\u2584': "lhblk",  // ▄
 	'\uf064': "libra",
-	'\u0459': "ljcy",   // љ
-	'\u0140': "lmidot", // ŀ
-	'\u22e6': "lnsim",  // ⋦
-	'\u2217': "lowast", // ∗
-	'_':      "lowbar", // _
-	'\u25ca': "loz",    // ◊
+	'\u22e6': "lnsim", // ⋦
 	'\uf073': "lozenge4",
 	'\uf074': "lozenge6",
-	// '\u2726':    "lozf", // ✦ -- duplicate
-	'(':      "lpar",   // (
-	'\u21c6': "lrarr2", // ⇆
-	'\u21cb': "lrhar2", // ⇋
-	'\u2039': "lsaquo", // ‹
-	'\u21b0': "lsh",    // ↰
-	'\u2272': "lsim",   // ≲
-	'[':      "lsqb",   // [
-	'\u2018': "lsquo",  // ‘
-	'\u201a': "lsquor", // ‚
-	'\u0142': "lstrok", // ł
-	'<':      "lt",     // <
-	'\u22cb': "lthree", // ⋋
-	'\u22c9': "ltimes", // ⋉
-	'\u25c3': "ltri",   // ◃
-	'\u22b4': "ltrie",  // ⊴
-	'\u25c2': "ltrif",  // ◂
-	'\u2268': "lvnE",   // ≨
-	'\u00af': "macr",   // ¯
+	'\u2726': "lozf",  // ✦
+	'\u25c2': "ltrif", // ◂
 	'\uf02c': "mailboxflagdwn",
 	'\uf02d': "mailboxflagup",
 	'\uf02f': "mailbxopnflgdwn",
 	'\uf02e': "mailbxopnflgup",
-	// '\u2720':    "malt", // ✠ -- duplicate
-	'\u21a6': "map",    // ↦
-	'\u25ae': "marker", // ▮
-	// '\u043c':    "mcy", // м -- duplicate
-	'\u2014': "mdash",        // —
-	'\u0645': "meem",         // م
+	'\u21a6': "map",          // ↦
+	'\u25ae': "marker",       // ▮
 	'\ufee1': "meemisolated", // ﻡ
-	'\ufee4': "meemmedial",   // ﻤ
-	'\u03bc': "mgr",          // μ
-	'\u00b5': "micro",        // µ
-	'\u2223': "mid",          // ∣
-	'\u229f': "minusb",       // ⊟
-	// '\u2026':    "mldr", // … -- duplicate
-	'\u2213': "mnplus", // ∓
-	'\u22a7': "models", // ⊧
+	'\u22a7': "models",       // ⊧
 	'\uf038': "mouse2button",
-	'\u22b8': "mumap",  // ⊸
-	'\u22af': "nVDash", // ⊯
-	'\u22ae': "nVdash", // ⊮
-	'\u2249': "nap",    // ≉
-	'\u0149': "napos",  // ŉ
-	'\u266e': "natur",  // ♮
-	'\u00a0': "nbsp",
-	'\u0146': "ncedil", // ņ
-	'\u2247': "ncong",  // ≇
-	// '\u043d':    "ncy", // н -- duplicate
-	'\u2013': "ndash",  // –
-	'\u2260': "ne",     // ≠
-	'\u2197': "nearr",  // ↗
-	'\u2262': "nequiv", // ≢
+	'\u2249': "nap", // ≉
 	'\uf04b': "neutralface",
-	'\u2204': "nexist", // ∄
-	'\u2271': "nges",   // ≱
-	'\u03bd': "ngr",    // ν
-	'\u226f': "ngt",    // ≯
-	'\u21ce': "nhArr",  // ⇎
-	'\u21ae': "nharr",  // ↮
-	'\u220b': "ni",     // ∋
 	'\uf0bf': "nineoclock",
 	'\uf089': "ninesans",
 	'\uf094': "ninesansinv",
-	'\u045a': "njcy",   // њ
-	'\u21cd': "nlArr",  // ⇍
-	'\u219a': "nlarr",  // ↚
-	'\u2025': "nldr",   // ‥
-	'\u2270': "nles",   // ≰
-	'\u226e': "nlt",    // ≮
-	'\u22ea': "nltri",  // ⋪
-	'\u22ec': "nltrie", // ⋬
-	'\u2224': "nmid",   // ∤
-	// '\r':    "nonmarkingreturn",  -- duplicate
-	'\u0646': "noon",         // ن
 	'\ufee5': "noonisolated", // ﻥ
-	'\ufee8': "noonmedial",   // ﻨ
-	'\u00ac': "not",          // ¬
-	'\u2209': "notin",        // ∉
-	'\u2226': "npar",         // ∦
-	'\u2280': "npr",          // ⊀
 	'\u22e0': "npre",         // ⋠
-	'\u21cf': "nrArr",        // ⇏
-	'\u219b': "nrarr",        // ↛
-	'\u22eb': "nrtri",        // ⋫
-	'\u22ed': "nrtrie",       // ⋭
-	'\u2281': "nsc",          // ⊁
 	'\u22e1': "nsce",         // ⋡
-	'\u2241': "nsim",         // ≁
 	'\u2244': "nsime",        // ≄
-	'\u2284': "nsub",         // ⊄
-	'\u2288': "nsube",        // ⊈
-	'\u2285': "nsup",         // ⊅
-	'\u2289': "nsupe",        // ⊉
-	'\u0599': "null",         // ֙
-	'#':      "num",          // #
 	'\u2007': "numsp",
-	'\u22ad': "nvDash", // ⊭
-	'\u22ac': "nvdash", // ⊬
-	'\u2196': "nwarr",  // ↖
-	'\u24c8': "oS",     // Ⓢ
-	'\u03cc': "oacgr",  // ό
-	'\u229b': "oast",   // ⊛
-	'\u229a': "ocir",   // ⊚
-	'\u00f4': "ocirc",  // ô
 	'\uf0ad': "octastar2",
 	'\uf0af': "octastar4",
-	'\u043e': "ocy",    // о
-	'\u229d': "odash",  // ⊝
-	'\u0151': "odblac", // ő
-	'\u2299': "odot",   // ⊙
-	'\u0153': "oelig",  // œ
-	'\u02db': "ogon",   // ˛
-	'\u03bf': "ogr",    // ο
-	'\u03ce': "ohacgr", // ώ
-	'\u03c9': "ohgr",   // ω
-	'\u2126': "ohm",    // Ω
-	'\u21ba': "olarr",  // ↺
-	'\u203e': "oline",  // ‾
+	'\u229d': "odash", // ⊝
+	'\u21ba': "olarr", // ↺
 	'\uf05c': "om",
-	'\u014d': "omacr",  // ō
-	'\u2296': "ominus", // ⊖
 	'\uf0b7': "oneoclock",
 	'\uf081': "onesans",
 	'\uf08c': "onesansinv",
-	'\u2295': "oplus",  // ⊕
-	'\u2228': "or",     // ∨
-	'\u21bb': "orarr",  // ↻
-	'\u2134': "order",  // ℴ
-	'\u00aa': "ordf",   // ª
-	'\u00ba': "ordm",   // º
-	'\u2298': "osol",   // ⊘
-	'\u2297': "otimes", // ⊗
-	'\u00f6': "ouml",   // ö
-	'\u2225': "par",    // ∥
-	'\u00b6': "para",   // ¶
-	'\u2202': "part",   // ∂
+	'\u21bb': "orarr", // ↻
+	'\u2134': "order", // ℴ
 	'\uf03a': "pc",
-	'\u043f': "pcy", // п
-	'\u202c': "pdf",
 	'\uf021': "pencil",
 	'\uf050': "pennant",
 	'\uf0ab': "pentastar2",
-	'%':      "percnt", // %
-	'\u2030': "permil", // ‰
-	// '\u22a5':    "perp", // ⊥ -- duplicate
-	'\u03c0': "pgr",    // π
-	'\u03c6': "phis",   // φ
-	'\u03d5': "phiv",   // ϕ
 	'\u2133': "phmmat", // ℳ
-	// '\u260e':    "phone", // ☎ -- duplicate
 	'\uf069': "pisces",
-	'\u03d6': "piv",    // ϖ
-	'\u210f': "planck", // ℏ
-	'\u229e': "plusb",  // ⊞
-	'\u2214': "plusdo", // ∔
-	'\u00b1': "plusmn", // ±
-	'\u00a3': "pound",  // £
-	'\u227a': "pr",     // ≺
-	'\u22e8': "prnsim", // ⋨
-	'\u220f': "prod",   // ∏
-	'\u221d': "prop",   // ∝
-	'\u227e': "prsim",  // ≾
-	'\u03c8': "psgr",   // ψ
 	'\u2008': "puncsp",
-	'\u0642': "qaf",         // ق
-	'\ufed7': "qafinitial",  // ﻗ
 	'\ufed5': "qafisolated", // ﻕ
-	'\ufed8': "qafmedial",   // ﻘ
 	'\uf0b4': "query",
-	'?':      "quest", // ?
 	'\uf0cb': "quiltsquare2",
 	'\uf0cc': "quiltsquare2inv",
-	'"':      "quot", // "
 	'\uf07d': "quotedbllftbld",
 	'\uf07e': "quotedblrtbld",
-	'\u21db': "rAarr",  // ⇛
-	'\u21d2': "rArr",   // ⇒
-	'\u221a': "radic",  // √
-	'\u232a': "rang",   // 〉
-	'\u00bb': "raquo",  // »
-	'\u2192': "rarr",   // →
-	'\u21c9': "rarr2",  // ⇉
-	'\u21aa': "rarrhk", // ↪
-	'\u21ac': "rarrlp", // ↬
-	'\u21a3': "rarrtl", // ↣
-	'\u219d': "rarrw",  // ↝
-	'\u0157': "rcedil", // ŗ
-	'\u2309': "rceil",  // ⌉
-	'}':      "rcub",   // }
-	// '\u0440':    "rcy", // р -- duplicate
-	'\u201d': "rdquo", // ”
-	// '\u201c':    "rdquor", // “ -- duplicate
+	'\u21c9': "rarr2", // ⇉
+	'\u219d': "rarrw", // ↝
 	'\uf024': "readingglasses",
-	'\u211c': "real", // ℜ
 	'\u25ad': "rect", // ▭
-	'\u00ae': "reg",  // ®
 	'\uf0b1': "registercircle",
 	'\uf0b0': "registersquare",
-	'\u0631': "reh",         // ر
 	'\ufead': "rehisolated", // ﺭ
-	'\u230b': "rfloor",      // ⌋
-	'\u03c1': "rgr",         // ρ
-	'\u21c1': "rhard",       // ⇁
-	'\u21c0': "rharu",       // ⇀
 	'\uf077': "rhombus4",
 	'\uf075': "rhombus6",
-	'\u03f1': "rhov", // ϱ
 	'\uf0a1': "ring2",
 	'\uf0a2': "ring4",
 	'\uf0a3': "ring6",
 	'\uf0a4': "ringbutton2",
-	'\u21c4': "rlarr2", // ⇄
-	'\u21cc': "rlhar2", // ⇌
 	'\uf07b': "rosette",
 	'\uf07c': "rosettesolid",
-	')':      "rpar",   // )
-	'\u203a': "rsaquo", // ›
-	'\u21b1': "rsh",    // ↱
-	']':      "rsqb",   // ]
-	'\u2019': "rsquo",  // ’
-	// '\u2018':    "rsquor", // ‘ -- duplicate
-	'\u22cc': "rthree",    // ⋌
-	'\u22ca': "rtimes",    // ⋊
-	'\u25b9': "rtri",      // ▹
-	'\u22b5': "rtrie",     // ⊵
-	'\u25b8': "rtrif",     // ▸
-	'\u211e': "rx",        // ℞
-	'\u0635': "sad",       // ص
-	'\ufebc': "sadmedial", // ﺼ
+	'\u25b8': "rtrif", // ▸
 	'\uf066': "saggitarius",
-	'\u2210': "samalg", // ∐
-	// '\u201a':    "sbquo", // ‚ -- duplicate
-	'\u227b': "sc",     // ≻
-	'\u227d': "sccue",  // ≽
-	'\u015f': "scedil", // ş
-	'\u015d': "scirc",  // ŝ
 	'\uf022': "scissors",
 	'\uf023': "scissorscutting",
-	'\u22e9': "scnsim", // ⋩
 	'\uf065': "scorpio",
-	'\u227f': "scsim", // ≿
-	// '\u0441':    "scy", // с -- duplicate
-	'\u22c5': "sdot",         // ⋅
-	'\u22a1': "sdotb",        // ⊡
-	'\u00a7': "sect",         // §
-	'\u0633': "seen",         // س
 	'\ufeb1': "seenisolated", // ﺱ
-	'\ufeb4': "seenmedial",   // ﺴ
-	';':      "semi",         // ;
-	'\u2216': "setmn",        // ∖
 	'\uf0bd': "sevenoclock",
 	'\uf087': "sevensans",
 	'\uf092': "sevensansinv",
-	// '\u2736':    "sextile", // ✶ -- duplicate
-	'\u03c3': "sgr",    // σ
-	'\u0448': "sha",    // ш
-	'\u0449': "shchcy", // щ
-	// '\u0448':    "shcy", // ш -- duplicate
-	'\u0634': "sheen",       // ش
-	'\ufeb8': "sheenmedial", // ﺸ
-	'\u00ad': "shy",
-	'\u03c2': "sigmav", // ς
-	'\u223c': "sim",    // ∼
-	'\u2243': "sime",   // ≃
 	'\uf0bc': "sixoclock",
 	'\uf086': "sixsans",
 	'\uf091': "sixsansinv",
 	'\uf04e': "skullcrossbones",
 	'\uf054': "snowflake",
-	'\u044c': "softcy", // ь
-	'/':      "sol",    // /
-	'\u2660': "spades", // ♠
-	'\u2293': "sqcap",  // ⊓
-	'\u2294': "sqcup",  // ⊔
-	'\u228f': "sqsub",  // ⊏
-	'\u2291': "sqsube", // ⊑
-	'\u2290': "sqsup",  // ⊐
-	'\u2292': "sqsupe", // ⊒
 	'\uf0a0': "square2",
 	'\uf0a7': "square4",
 	'\uf06e': "square6",
-	'\u25aa': "squf",   // ▪
-	'\u22c6': "sstarf", // ⋆
-	// '\u2605':    "starf", // ★ -- duplicate
 	'\uf059': "starofdavid",
 	'\uf0b6': "starshadow",
-	'\u2282': "sub",   // ⊂
-	'\u2286': "sube",  // ⊆
-	'\u228a': "subnE", // ⊊
-	'\u2211': "sum",   // ∑
-	'\u266a': "sung",  // ♪
 	'\uf052': "sunshine",
-	'\u2283': "sup",         // ⊃
-	'\u00b9': "sup1",        // ¹
-	'\u00b2': "sup2",        // ²
-	'\u00b3': "sup3",        // ³
-	'\u2287': "supe",        // ⊇
-	'\u228b': "supnE",       // ⊋
-	'\u00df': "szlig",       // ß
-	'\u0637': "tah",         // ط
 	'\ufec1': "tahisolated", // ﻁ
 	'\uf03e': "tapereel",
 	'\uf0a5': "target",
-	'\u0640': "tatweel", // ـ
 	'\uf05f': "taurus",
-	'\u0163': "tcedil", // ţ
-	'\u0442': "tcy",    // т
-	'\u20db': "tdot",   // ⃛
-	// '\u0442':    "te", // т -- duplicate
-	'\u062a': "teh",                // ت
+	'\u20db': "tdot",               // ⃛
 	'\ufe95': "tehisolated",        // ﺕ
-	'\u0629': "tehmarbuta",         // ة
-	'\ufe94': "tehmarbutafinal",    // ﺔ
 	'\ufe93': "tehmarbutaisolated", // ﺓ
-	'\ufe98': "tehmedial",          // ﺘ
-	'\u2121': "tel",                // ℡
 	'\uf028': "telephonesolid",
 	'\uf029': "telhandsetcirc",
 	'\u2315': "telrec", // ⌕
 	'\uf0c0': "tenoclock",
 	'\uf08a': "tensans",
 	'\uf095': "tensansinv",
-	'\u03c4': "tgr",          // τ
-	'\u0630': "thal",         // ذ
 	'\ufeab': "thalisolated", // ﺫ
-	'\u2234': "there4",       // ∴
-	'\u03d1': "thetasym",     // ϑ
-	// '\u03d1':    "thetav", // ϑ -- duplicate
-	'\u03b8': "thgr", // θ
 	'\u2009': "thinsp",
-	// '\u2248':    "thkap", // ≈ -- duplicate
-	// '\u223c':    "thksim", // ∼ -- duplicate
 	'\uf0b9': "threeoclock",
-	// '\u2004':    "threeperemspace",  -- duplicate
 	'\uf083': "threesans",
 	'\uf08e': "threesansinv",
 	'\uf044': "thumbdown",
 	'\uf043': "thumbup",
 	'\u2040': "tie",    // ⁀
-	'\u00d7': "times",  // ×
-	'\u22a0': "timesb", // ⊠
-	'\u22a4': "top",    // ⊤
 	'\u2034': "tprime", // ‴
-	'\u2122': "trade",  // ™
-	'\u225c': "trie",   // ≜
 	'\uf0a9': "tristar2",
-	'\u0446': "tscy", // ц
-	// '\u0446':    "tse", // ц -- duplicate
-	'\u045b': "tshcy",  // ћ
-	'\u0167': "tstrok", // ŧ
 	'\uf0c2': "twelveoclock",
-	'\u226c': "twixt", // ≬
 	'\uf0b8': "twooclock",
 	'\uf082': "twosans",
 	'\uf08d': "twosansinv",
-	'\u21d1': "uArr",   // ⇑
-	'\u03cd': "uacgr",  // ύ
-	'\u2191': "uarr",   // ↑
-	'\u21c8': "uarr2",  // ⇈
-	'\u045e': "ubrcy",  // ў
-	'\u00fb': "ucirc",  // û
-	'\u0443': "ucy",    // у
-	'\u0171': "udblac", // ű
-	'\u03b0': "udiagr", // ΰ
-	'\u03cb': "udigr",  // ϋ
-	'\u21bf': "uharl",  // ↿
-	'\u21be': "uharr",  // ↾
-	'\u2580': "uhblk",  // ▀
-	'\u231c': "ulcorn", // ⌜
 	'\u230f': "ulcrop", // ⌏
-	'\u016b': "umacr",  // ū
-	// '\u00a8':    "uml", // ¨ -- duplicate
-	'\u0173': "uogon",  // ų
-	'\u228e': "uplus",  // ⊎
-	'\u03c5': "upsi",   // υ
-	'\u03d2': "upsih",  // ϒ
-	'\u231d': "urcorn", // ⌝
 	'\u230e': "urcrop", // ⌎
-	'\u25b5': "utri",   // ▵
-	'\u25b4': "utrif",  // ▴
-	'\u00fc': "uuml",   // ü
-	'\u21d5': "vArr",   // ⇕
-	'\u22a8': "vDash",  // ⊨
-	'\u2195': "varr",   // ↕
-	'\u0432': "vcy",    // в
-	'\u22a2': "vdash",  // ⊢
-	// '\u0432':    "ve", // в -- duplicate
-	'\u22bb': "veebar", // ⊻
-	'\u22ee': "vellip", // ⋮
-	'|':      "verbar", // |
 	'\uf09a': "vineleafboldne",
 	'\uf09b': "vineleafboldnw",
 	'\uf09d': "vineleafboldse",
 	'\uf09c': "vineleafboldsw",
 	'\uf063': "virgo",
-	'\u22b2': "vltri",  // ⊲
-	'\u2032': "vprime", // ′
-	// '\u221d':    "vprop", // ∝ -- duplicate
+	'\u22b2': "vltri",       // ⊲
 	'\u22b3': "vrtri",       // ⊳
-	'\u0648': "waw",         // و
 	'\ufeed': "wawisolated", // ﻭ
-	'\u0175': "wcirc",       // ŵ
 	'\u2259': "wedgeq",      // ≙
-	'\u2118': "weierp",      // ℘
 	'\uf05d': "wheel",
 	'\uf0ff': "windowslogo",
-	'\u2240': "wreath", // ≀
-	'\u25cb': "xcirc",  // ○
-	'\u25bd': "xdtri",  // ▽
-	'\u03be': "xgr",    // ξ
 	'\uf0fb': "xmarkbld",
 	'\uf076': "xrhombus",
-	'\u25b3': "xutri", // △
-	// '\u044f':    "yacy", // я -- duplicate
-	'\u0177': "ycirc",                   // ŷ
-	'\u044b': "ycy",                     // ы
-	'\u064a': "yeh",                     // ي
-	'\ufef2': "yehfinal",                // ﻲ
-	'\ufef1': "yehisolated",             // ﻱ
-	'\ufef4': "yehmedial",               // ﻴ
-	'\u0626': "yehwithhamzaabove",       // ئ
-	'\ufe8c': "yehwithhamzaabovemedial", // ﺌ
-	'\u0457': "yicy",                    // ї
-	'\u044e': "yucy",                    // ю
-	'\u00ff': "yuml",                    // ÿ
-	'\u0638': "zah",                     // ظ
-	'\ufec5': "zahisolated",             // ﻅ
-	'\u0632': "zain",                    // ز
-	'\ufeaf': "zainisolated",            // ﺯ
-	'\u0437': "zcy",                     // з
-	// '\u0437':    "ze", // з -- duplicate
+	'\ufef1': "yehisolated",  // ﻱ
+	'\ufec5': "zahisolated",  // ﻅ
+	'\ufeaf': "zainisolated", // ﺯ
 	'\uf080': "zerosans",
 	'\uf08b': "zerosansinv",
-	'\u03b6': "zgr",  // ζ
-	'\u0436': "zhcy", // ж
-	// '\u0436':    "zhe", // ж -- duplicate
-	'\u200c': "zwnj",
 }
 
 // ligatureToString is a map from ligature runes to their constituent characters.

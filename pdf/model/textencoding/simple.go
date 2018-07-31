@@ -35,11 +35,12 @@ type SimpleEncoder struct {
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
-func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte]string) (SimpleEncoder, error) {
+func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte]string) (
+	*SimpleEncoder, error) {
 	baseName := "custom"
 	baseEncoding := map[uint16]rune{}
 	if len(encoding) == 0 {
-		return SimpleEncoder{}, errors.New("Empty custom encoding")
+		return &SimpleEncoder{}, errors.New("Empty custom encoding")
 	}
 	for code, glyph := range encoding {
 		r, ok := GlyphToRune(glyph)
@@ -60,11 +61,11 @@ func (se *SimpleEncoder) ApplyDifferences(differences map[byte]string) {
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
 // difference map `differences`.
-func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleEncoder, error) {
+func NewSimpleTextEncoder(baseName string, differences map[byte]string) (*SimpleEncoder, error) {
 	baseEncoding, ok := simpleEncodings[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
-		return SimpleEncoder{}, errors.New("Unsupported font encoding")
+		return &SimpleEncoder{}, errors.New("Unsupported font encoding")
 	}
 	return newSimpleTextEncoder(baseEncoding, baseName, differences)
 }
@@ -72,7 +73,7 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (SimpleE
 // newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
 func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
-	differences map[byte]string) (SimpleEncoder, error) {
+	differences map[byte]string) (*SimpleEncoder, error) {
 
 	se := SimpleEncoder{
 		baseName:     baseName,
@@ -80,7 +81,7 @@ func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
 		differences:  differences,
 	}
 	se.computeTables()
-	return se, nil
+	return &se, nil
 }
 
 // simpleEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
@@ -199,11 +200,9 @@ func (se *SimpleEncoder) computeTables() {
 	codeToGlyph := map[uint16]string{}
 	glyphToCode := map[string]uint16{}
 	for code, r := range codeToRune {
-		glyph := glyphlistRuneToGlyphMap[r]
-		codeToGlyph[code] = glyph
-		glyphToCode[glyph] = code
-		if glyph == "" {
-			common.Log.Debug("ERROR: Empty glyph code=0x%04x r=%+q=%#q", code, r, r)
+		if glyph, ok := RuneToGlyph(r); ok {
+			codeToGlyph[code] = glyph
+			glyphToCode[glyph] = code
 		}
 	}
 	se.codeToGlyph = codeToGlyph

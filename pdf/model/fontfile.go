@@ -33,7 +33,7 @@ import (
 type fontFile struct {
 	name    string
 	subtype string
-	encoder textencoding.TextEncoder
+	encoder *textencoding.SimpleEncoder
 }
 
 // String returns a human readable description of `fontfile`.

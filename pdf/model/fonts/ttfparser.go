@@ -39,7 +39,7 @@ import (
 )
 
 // MakeEncoder returns an encoder built from the tables in  `rec`.
-func (rec *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
+func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := map[uint16]string{}
 	for code := uint16(0); code <= 256; code++ {
 		gid, ok := rec.Chars[code]
