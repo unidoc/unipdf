@@ -3,12 +3,12 @@ package model
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	// Uncomment when debugging to get trace logging output - to follow flow.
+	// common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // Test for an endless recursive loop in
