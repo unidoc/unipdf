@@ -10,6 +10,7 @@ node {
         sh 'go version'
 
         stage('Checkout') {
+            echo "Pulling unidoc on branch ${env.BRANCH_NAME}"
             checkout scm
         }
 
@@ -56,6 +57,29 @@ node {
             sh 'go2xunit -fail -input gotest.txt -output gotest.xml'
             junit "gotest.xml"
         }
+    }
 
+    dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
+        stage('Build examples') {
+            // Pull unidoc-examples from connected branch, or master otherwise.
+            def examplesBranch = "master"
+            switch("${env.BRANCH_NAME}") {
+                case "v3":
+                    examplesBranch = "v3"
+                    break
+            }
+            echo "Pulling unidoc-examples on branch ${examplesBranch}"
+            git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
+            
+            // Dependencies for examples.
+            sh 'go get github.com/wcharczuk/go-chart'
+
+            // Build all examples.
+            sh 'find . -name "*.go" -print0 | xargs -0 -n1 go build'
+        }
+
+        stage('Passthrough benchmark pdfdb_small') {
+            sh './pdf_passthrough_bench /home/jenkins/corpus/pdfdb_small/* | grep -v "Testing " | grep -v "copy of" | grep -v "To get " | grep -v " - pass"'
+        }
     }
 }
