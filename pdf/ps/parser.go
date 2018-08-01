@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 
@@ -17,11 +16,12 @@ import (
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 )
 
+// PSParser is a basic Postscript parser.
 type PSParser struct {
 	reader *bufio.Reader
 }
 
-// Create a new instance of the PDF Postscript parser from input data.
+// NewPSParser returns a new instance of the PDF Postscript parser from input data.
 func NewPSParser(content []byte) *PSParser {
 	parser := PSParser{}
 
@@ -31,18 +31,18 @@ func NewPSParser(content []byte) *PSParser {
 	return &parser
 }
 
-// Parse the postscript and store as a program that can be executed.
-func (this *PSParser) Parse() (*PSProgram, error) {
-	this.skipSpaces()
-	bb, err := this.reader.Peek(2)
+// Parse parses the postscript and store as a program that can be executed.
+func (p *PSParser) Parse() (*PSProgram, error) {
+	p.skipSpaces()
+	bb, err := p.reader.Peek(2)
 	if err != nil {
 		return nil, err
 	}
 	if bb[0] != '{' {
-		return nil, fmt.Errorf("Invalid PS Program not starting with {")
+		return nil, errors.New("invalid PS Program not starting with {")
 	}
 
-	program, err := this.parseFunction()
+	program, err := p.parseFunction()
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
@@ -52,17 +52,17 @@ func (this *PSParser) Parse() (*PSProgram, error) {
 
 // Detect the signature at the current parse position and parse
 // the corresponding object.
-func (this *PSParser) parseFunction() (*PSProgram, error) {
-	c, _ := this.reader.ReadByte()
+func (p *PSParser) parseFunction() (*PSProgram, error) {
+	c, _ := p.reader.ReadByte()
 	if c != '{' {
-		return nil, errors.New("Invalid function")
+		return nil, errors.New("invalid function")
 	}
 
 	function := NewPSProgram()
 
 	for {
-		this.skipSpaces()
-		bb, err := this.reader.Peek(2)
+		p.skipSpaces()
+		bb, err := p.reader.Peek(2)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -74,18 +74,18 @@ func (this *PSParser) parseFunction() (*PSProgram, error) {
 		// Determine type.
 		if bb[0] == '}' {
 			common.Log.Trace("EOF function")
-			this.reader.ReadByte()
+			p.reader.ReadByte()
 			break
 		} else if bb[0] == '{' {
 			common.Log.Trace("Function!")
-			inlineF, err := this.parseFunction()
+			inlineF, err := p.parseFunction()
 			if err != nil {
 				return nil, err
 			}
 			function.Append(inlineF)
 		} else if pdfcore.IsDecimalDigit(bb[0]) || (bb[0] == '-' && pdfcore.IsDecimalDigit(bb[1])) {
 			common.Log.Trace("->Number!")
-			number, err := this.parseNumber()
+			number, err := p.parseNumber()
 			if err != nil {
 				return nil, err
 			}
@@ -93,24 +93,24 @@ func (this *PSParser) parseFunction() (*PSProgram, error) {
 		} else {
 			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
-			bb, _ = this.reader.Peek(5)
+			bb, _ = p.reader.Peek(5)
 			peekStr := string(bb)
 			common.Log.Trace("Peek str: %s", peekStr)
 
 			if (len(peekStr) > 4) && (peekStr[:5] == "false") {
-				b, err := this.parseBool()
+				b, err := p.parseBool()
 				if err != nil {
 					return nil, err
 				}
 				function.Append(b)
 			} else if (len(peekStr) > 3) && (peekStr[:4] == "true") {
-				b, err := this.parseBool()
+				b, err := p.parseBool()
 				if err != nil {
 					return nil, err
 				}
 				function.Append(b)
 			} else {
-				operand, err := this.parseOperand()
+				operand, err := p.parseOperand()
 				if err != nil {
 					return nil, err
 				}
@@ -124,15 +124,15 @@ func (this *PSParser) parseFunction() (*PSProgram, error) {
 
 // Skip over any spaces.  Returns the number of spaces skipped and
 // an error if any.
-func (this *PSParser) skipSpaces() (int, error) {
+func (p *PSParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := p.reader.Peek(1)
 		if err != nil {
 			return 0, err
 		}
 		if pdfcore.IsWhiteSpace(bb[0]) {
-			this.reader.ReadByte()
+			p.reader.ReadByte()
 			cnt++
 		} else {
 			break
@@ -144,13 +144,13 @@ func (this *PSParser) skipSpaces() (int, error) {
 
 // Numeric objects.
 // Integer or Real numbers.
-func (this *PSParser) parseNumber() (PSObject, error) {
+func (p *PSParser) parseNumber() (PSObject, error) {
 	isFloat := false
 	allowSigns := true
 	numStr := ""
 	for {
 		common.Log.Trace("Parsing number \"%s\"", numStr)
-		bb, err := this.reader.Peek(1)
+		bb, err := p.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
 			// encoded object streams that the object is at the end.
@@ -158,25 +158,25 @@ func (this *PSParser) parseNumber() (PSObject, error) {
 			break // Handle like EOF
 		}
 		if err != nil {
-			common.Log.Error("ERROR %s", err)
+			common.Log.Debug("PS ERROR: %s", err)
 			return nil, err
 		}
 		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
 			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := this.reader.ReadByte()
+			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
 		} else if pdfcore.IsDecimalDigit(bb[0]) {
-			b, _ := this.reader.ReadByte()
+			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
-			b, _ := this.reader.ReadByte()
+			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
 			// XXX Is this supported in PS?
-			b, _ := this.reader.ReadByte()
+			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 			allowSigns = true
@@ -189,41 +189,40 @@ func (this *PSParser) parseNumber() (PSObject, error) {
 		fVal, err := strconv.ParseFloat(numStr, 64)
 		o := MakeReal(fVal)
 		return o, err
-	} else {
-		intVal, err := strconv.ParseInt(numStr, 10, 64)
-		o := MakeInteger(int(intVal))
-		return o, err
 	}
+	intVal, err := strconv.ParseInt(numStr, 10, 64)
+	o := MakeInteger(int(intVal))
+	return o, err
 }
 
 // Parse bool object.
-func (this *PSParser) parseBool() (*PSBoolean, error) {
-	bb, err := this.reader.Peek(4)
+func (p *PSParser) parseBool() (*PSBoolean, error) {
+	bb, err := p.reader.Peek(4)
 	if err != nil {
 		return MakeBool(false), err
 	}
 	if (len(bb) >= 4) && (string(bb[:4]) == "true") {
-		this.reader.Discard(4)
+		p.reader.Discard(4)
 		return MakeBool(true), nil
 	}
 
-	bb, err = this.reader.Peek(5)
+	bb, err = p.reader.Peek(5)
 	if err != nil {
 		return MakeBool(false), err
 	}
 	if (len(bb) >= 5) && (string(bb[:5]) == "false") {
-		this.reader.Discard(5)
+		p.reader.Discard(5)
 		return MakeBool(false), nil
 	}
 
-	return MakeBool(false), errors.New("Unexpected boolean string")
+	return MakeBool(false), errors.New("unexpected boolean string")
 }
 
 // An operand is a text command represented by a word.
-func (this *PSParser) parseOperand() (*PSOperand, error) {
+func (p *PSParser) parseOperand() (*PSOperand, error) {
 	bytes := []byte{}
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := p.reader.Peek(1)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -237,12 +236,12 @@ func (this *PSParser) parseOperand() (*PSOperand, error) {
 			break
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := p.reader.ReadByte()
 		bytes = append(bytes, b)
 	}
 
 	if len(bytes) == 0 {
-		return nil, fmt.Errorf("Invalid operand (empty)")
+		return nil, errors.New("invalid operand (empty)")
 	}
 
 	return MakeOperand(string(bytes)), nil

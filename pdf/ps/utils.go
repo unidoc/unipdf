@@ -5,24 +5,28 @@
 
 package ps
 
-func MakeReal(val float64) PSObject {
+// MakeReal returns a new PSReal object initialized with `val`.
+func MakeReal(val float64) *PSReal {
 	obj := PSReal{}
 	obj.Val = val
 	return &obj
 }
 
-func MakeInteger(val int) PSObject {
+// MakeInteger returns a new PSInteger object initialized with `val`.
+func MakeInteger(val int) *PSInteger {
 	obj := PSInteger{}
 	obj.Val = val
 	return &obj
 }
 
+// MakeBool returns a new PSBoolean object initialized with `val`.
 func MakeBool(val bool) *PSBoolean {
 	obj := PSBoolean{}
 	obj.Val = val
 	return &obj
 }
 
+// MakeOperand returns a new PSOperand object based on string `val`.
 func MakeOperand(val string) *PSOperand {
 	obj := PSOperand(val)
 	return &obj
