@@ -1420,10 +1420,12 @@ func (r *PdfReader) newPdfAnnotationRedactFromDict(d *core.PdfObjectDictionary) 
 	return &annot, nil
 }
 
+// GetContainingPdfObject implements interface PdfModel.
 func (a *PdfAnnotation) GetContainingPdfObject() core.PdfObject {
 	return a.container
 }
 
+// ToPdfObject implements interface PdfModel.
 // Note: Call the sub-annotation's ToPdfObject to set both the generic and non-generic information.
 func (a *PdfAnnotation) ToPdfObject() core.PdfObject {
 	container := a.container
@@ -1462,6 +1464,7 @@ func (markup *PdfAnnotationMarkup) appendToPdfDictionary(d *core.PdfObjectDictio
 	d.SetIfNotNil("ExData", markup.ExData)
 }
 
+// ToPdfObject implements interface PdfModel.
 func (text *PdfAnnotationText) ToPdfObject() core.PdfObject {
 	text.PdfAnnotation.ToPdfObject()
 	container := text.container
@@ -1478,6 +1481,7 @@ func (text *PdfAnnotationText) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (link *PdfAnnotationLink) ToPdfObject() core.PdfObject {
 	link.PdfAnnotation.ToPdfObject()
 	container := link.container
@@ -1493,6 +1497,7 @@ func (link *PdfAnnotationLink) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (ft *PdfAnnotationFreeText) ToPdfObject() core.PdfObject {
 	ft.PdfAnnotation.ToPdfObject()
 	container := ft.container
@@ -1514,6 +1519,7 @@ func (ft *PdfAnnotationFreeText) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (line *PdfAnnotationLine) ToPdfObject() core.PdfObject {
 	line.PdfAnnotation.ToPdfObject()
 	container := line.container
@@ -1537,6 +1543,7 @@ func (line *PdfAnnotationLine) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (sq *PdfAnnotationSquare) ToPdfObject() core.PdfObject {
 	sq.PdfAnnotation.ToPdfObject()
 	container := sq.container
@@ -1554,6 +1561,7 @@ func (sq *PdfAnnotationSquare) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (circle *PdfAnnotationCircle) ToPdfObject() core.PdfObject {
 	circle.PdfAnnotation.ToPdfObject()
 	container := circle.container
@@ -1569,6 +1577,7 @@ func (circle *PdfAnnotationCircle) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (poly *PdfAnnotationPolygon) ToPdfObject() core.PdfObject {
 	poly.PdfAnnotation.ToPdfObject()
 	container := poly.container
@@ -1587,6 +1596,7 @@ func (poly *PdfAnnotationPolygon) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (polyl *PdfAnnotationPolyLine) ToPdfObject() core.PdfObject {
 	polyl.PdfAnnotation.ToPdfObject()
 	container := polyl.container
@@ -1605,6 +1615,7 @@ func (polyl *PdfAnnotationPolyLine) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (hl *PdfAnnotationHighlight) ToPdfObject() core.PdfObject {
 	hl.PdfAnnotation.ToPdfObject()
 	container := hl.container
@@ -1616,6 +1627,7 @@ func (hl *PdfAnnotationHighlight) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (underline *PdfAnnotationUnderline) ToPdfObject() core.PdfObject {
 	underline.PdfAnnotation.ToPdfObject()
 	container := underline.container
@@ -1627,6 +1639,7 @@ func (underline *PdfAnnotationUnderline) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (squiggly *PdfAnnotationSquiggly) ToPdfObject() core.PdfObject {
 	squiggly.PdfAnnotation.ToPdfObject()
 	container := squiggly.container
@@ -1638,6 +1651,7 @@ func (squiggly *PdfAnnotationSquiggly) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (strikeo *PdfAnnotationStrikeOut) ToPdfObject() core.PdfObject {
 	strikeo.PdfAnnotation.ToPdfObject()
 	container := strikeo.container
@@ -1649,6 +1663,7 @@ func (strikeo *PdfAnnotationStrikeOut) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (caret *PdfAnnotationCaret) ToPdfObject() core.PdfObject {
 	caret.PdfAnnotation.ToPdfObject()
 	container := caret.container
@@ -1661,6 +1676,7 @@ func (caret *PdfAnnotationCaret) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (stamp *PdfAnnotationStamp) ToPdfObject() core.PdfObject {
 	stamp.PdfAnnotation.ToPdfObject()
 	container := stamp.container
@@ -1672,6 +1688,7 @@ func (stamp *PdfAnnotationStamp) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (ink *PdfAnnotationInk) ToPdfObject() core.PdfObject {
 	ink.PdfAnnotation.ToPdfObject()
 	container := ink.container
@@ -1684,6 +1701,7 @@ func (ink *PdfAnnotationInk) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (popup *PdfAnnotationPopup) ToPdfObject() core.PdfObject {
 	popup.PdfAnnotation.ToPdfObject()
 	container := popup.container
@@ -1695,6 +1713,7 @@ func (popup *PdfAnnotationPopup) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (file *PdfAnnotationFileAttachment) ToPdfObject() core.PdfObject {
 	file.PdfAnnotation.ToPdfObject()
 	container := file.container
@@ -1707,6 +1726,7 @@ func (file *PdfAnnotationFileAttachment) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (rm *PdfAnnotationRichMedia) ToPdfObject() core.PdfObject {
 	rm.PdfAnnotation.ToPdfObject()
 	container := rm.container
@@ -1718,6 +1738,7 @@ func (rm *PdfAnnotationRichMedia) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (snd *PdfAnnotationSound) ToPdfObject() core.PdfObject {
 	snd.PdfAnnotation.ToPdfObject()
 	container := snd.container
@@ -1730,6 +1751,7 @@ func (snd *PdfAnnotationSound) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (mov *PdfAnnotationMovie) ToPdfObject() core.PdfObject {
 	mov.PdfAnnotation.ToPdfObject()
 	container := mov.container
@@ -1742,6 +1764,7 @@ func (mov *PdfAnnotationMovie) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (scr *PdfAnnotationScreen) ToPdfObject() core.PdfObject {
 	scr.PdfAnnotation.ToPdfObject()
 	container := scr.container
@@ -1755,6 +1778,7 @@ func (scr *PdfAnnotationScreen) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
 	widget.PdfAnnotation.ToPdfObject()
 	container := widget.container
@@ -1771,6 +1795,7 @@ func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (pm *PdfAnnotationPrinterMark) ToPdfObject() core.PdfObject {
 	pm.PdfAnnotation.ToPdfObject()
 	container := pm.container
@@ -1781,6 +1806,7 @@ func (pm *PdfAnnotationPrinterMark) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (trapn *PdfAnnotationTrapNet) ToPdfObject() core.PdfObject {
 	trapn.PdfAnnotation.ToPdfObject()
 	container := trapn.container
@@ -1790,6 +1816,7 @@ func (trapn *PdfAnnotationTrapNet) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (wm *PdfAnnotationWatermark) ToPdfObject() core.PdfObject {
 	wm.PdfAnnotation.ToPdfObject()
 	container := wm.container
@@ -1801,6 +1828,7 @@ func (wm *PdfAnnotationWatermark) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (a3d *PdfAnnotation3D) ToPdfObject() core.PdfObject {
 	a3d.PdfAnnotation.ToPdfObject()
 	container := a3d.container
@@ -1814,6 +1842,7 @@ func (a3d *PdfAnnotation3D) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (proj *PdfAnnotationProjection) ToPdfObject() core.PdfObject {
 	proj.PdfAnnotation.ToPdfObject()
 	container := proj.container
@@ -1822,6 +1851,7 @@ func (proj *PdfAnnotationProjection) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject implements interface PdfModel.
 func (redact *PdfAnnotationRedact) ToPdfObject() core.PdfObject {
 	redact.PdfAnnotation.ToPdfObject()
 	container := redact.container
@@ -1989,6 +2019,7 @@ func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error)
 	return bs, nil
 }
 
+// ToPdfObject implements interface PdfModel.
 func (bs *PdfBorderStyle) ToPdfObject() core.PdfObject {
 	d := core.MakeDict()
 	if bs.container != nil {
