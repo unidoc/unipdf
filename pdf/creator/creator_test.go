@@ -1627,7 +1627,8 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	c.Draw(table9)
 	c.Draw(table10)
 
-	err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
