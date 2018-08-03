@@ -151,7 +151,7 @@ type PdfField struct {
 	container  *core.PdfIndirectObject // Dictionary information stored inside an indirect object.
 	isTerminal *bool                   // If set: indicates whether is a terminal field (if null, may not be determined yet).
 
-	parent      *PdfField
+	Parent      *PdfField
 	Annotations []*PdfAnnotationWidget
 	Kids        []*PdfField
 
@@ -180,7 +180,7 @@ func (f *PdfField) FullName() (string, error) {
 	noscanMap := map[*PdfField]bool{}
 	noscanMap[f] = true
 
-	parent := f.parent
+	parent := f.Parent
 	for parent != nil {
 		if _, has := noscanMap[parent]; has {
 			return fn.String(), errors.New("Recursive traversal")
@@ -193,7 +193,7 @@ func (f *PdfField) FullName() (string, error) {
 		}
 
 		noscanMap[parent] = true
-		parent = parent.parent
+		parent = parent.Parent
 	}
 
 	for i := len(parts) - 1; i >= 0; i-- {
@@ -249,8 +249,8 @@ func (f *PdfField) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("FT", f.FT)
-	if f.parent != nil {
-		d.Set("Parent", f.parent.GetContainingPdfObject())
+	if f.Parent != nil {
+		d.Set("Parent", f.Parent.GetContainingPdfObject())
 	}
 
 	if f.Kids != nil {
@@ -502,7 +502,7 @@ func (f *PdfField) inherit(eval func(*PdfField) bool) (bool, error) {
 		}
 
 		nodeMap[node] = true
-		node = node.parent
+		node = node.Parent
 	}
 
 	return found, nil
@@ -635,7 +635,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 
 	// Set ourself?
 	if parent != nil {
-		field.parent = parent
+		field.Parent = parent
 	}
 
 	field.Annotations = []*PdfAnnotationWidget{}
