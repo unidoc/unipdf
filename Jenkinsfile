@@ -67,6 +67,9 @@ node {
                 case "v3":
                     examplesBranch = "v3"
                     break
+                case "v3-enhance-forms":
+                    examplesBranch = "v3-enhance-forms"
+                    break
             }
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
