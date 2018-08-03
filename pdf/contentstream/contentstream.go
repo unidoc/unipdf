@@ -9,24 +9,27 @@ import (
 	"bytes"
 	"fmt"
 
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// ContentStreamOperation represents an operation in PDF contentstream which consists of
+// an operand and parameters.
 type ContentStreamOperation struct {
-	Params  []PdfObject
+	Params  []core.PdfObject
 	Operand string
 }
 
+// ContentStreamOperations is a slice of ContentStreamOperations.
 type ContentStreamOperations []*ContentStreamOperation
 
 // Check if the content stream operations are fully wrapped (within q ... Q)
-func (this *ContentStreamOperations) isWrapped() bool {
-	if len(*this) < 2 {
+func (ops *ContentStreamOperations) isWrapped() bool {
+	if len(*ops) < 2 {
 		return false
 	}
 
 	depth := 0
-	for _, op := range *this {
+	for _, op := range *ops {
 		if op.Operand == "q" {
 			depth++
 		} else if op.Operand == "Q" {
@@ -42,22 +45,22 @@ func (this *ContentStreamOperations) isWrapped() bool {
 	return depth == 0
 }
 
-// Wrap entire contents within q ... Q.  If unbalanced, then adds extra Qs at the end.
+// WrapIfNeeded wraps the entire contents within q ... Q.  If unbalanced, then adds extra Qs at the end.
 // Only does if needed. Ensures that when adding new content, one start with all states
 // in the default condition.
-func (this *ContentStreamOperations) WrapIfNeeded() *ContentStreamOperations {
-	if len(*this) == 0 {
+func (ops *ContentStreamOperations) WrapIfNeeded() *ContentStreamOperations {
+	if len(*ops) == 0 {
 		// No need to wrap if empty.
-		return this
+		return ops
 	}
-	if this.isWrapped() {
-		return this
+	if ops.isWrapped() {
+		return ops
 	}
 
-	*this = append([]*ContentStreamOperation{{Operand: "q"}}, *this...)
+	*ops = append([]*ContentStreamOperation{{Operand: "q"}}, *ops...)
 
 	depth := 0
-	for _, op := range *this {
+	for _, op := range *ops {
 		if op.Operand == "q" {
 			depth++
 		} else if op.Operand == "Q" {
@@ -66,19 +69,19 @@ func (this *ContentStreamOperations) WrapIfNeeded() *ContentStreamOperations {
 	}
 
 	for depth > 0 {
-		*this = append(*this, &ContentStreamOperation{Operand: "Q"})
+		*ops = append(*ops, &ContentStreamOperation{Operand: "Q"})
 		depth--
 	}
 
-	return this
+	return ops
 }
 
-// Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
-// stored as a PDF stream or string format.
-func (this *ContentStreamOperations) Bytes() []byte {
+// Bytes converts a set of content stream operations to a content stream byte presentation,
+// i.e. the kind that can be stored as a PDF stream or string format.
+func (ops *ContentStreamOperations) Bytes() []byte {
 	var buf bytes.Buffer
 
-	for _, op := range *this {
+	for _, op := range *ops {
 		if op == nil {
 			continue
 		}
@@ -129,21 +132,21 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			if len(op.Params) != 6 {
 				continue
 			}
-			xfloat, ok := op.Params[4].(*PdfObjectFloat)
+			xfloat, ok := op.Params[4].(*core.PdfObjectFloat)
 			if !ok {
-				xint, ok := op.Params[4].(*PdfObjectInteger)
+				xint, ok := op.Params[4].(*core.PdfObjectInteger)
 				if !ok {
 					continue
 				}
-				xfloat = MakeFloat(float64(*xint))
+				xfloat = core.MakeFloat(float64(*xint))
 			}
-			yfloat, ok := op.Params[5].(*PdfObjectFloat)
+			yfloat, ok := op.Params[5].(*core.PdfObjectFloat)
 			if !ok {
-				yint, ok := op.Params[5].(*PdfObjectInteger)
+				yint, ok := op.Params[5].(*core.PdfObjectInteger)
 				if !ok {
 					continue
 				}
-				yfloat = MakeFloat(float64(*yint))
+				yfloat = core.MakeFloat(float64(*yint))
 			}
 			if yPos == -1 {
 				yPos = float64(*yfloat)
@@ -164,19 +167,19 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			if len(op.Params) < 1 {
 				continue
 			}
-			paramList, ok := op.Params[0].(*PdfObjectArray)
+			paramList, ok := op.Params[0].(*core.PdfObjectArray)
 			if !ok {
 				return "", fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
 			}
 			for _, obj := range paramList.Elements() {
 				switch v := obj.(type) {
-				case *PdfObjectString:
+				case *core.PdfObjectString:
 					txt += v.Str()
-				case *PdfObjectFloat:
+				case *core.PdfObjectFloat:
 					if *v < -100 {
 						txt += " "
 					}
-				case *PdfObjectInteger:
+				case *core.PdfObjectInteger:
 					if *v < -100 {
 						txt += " "
 					}
@@ -186,7 +189,7 @@ func (this *ContentStreamParser) ExtractText() (string, error) {
 			if len(op.Params) < 1 {
 				continue
 			}
-			param, ok := op.Params[0].(*PdfObjectString)
+			param, ok := op.Params[0].(*core.PdfObjectString)
 			if !ok {
 				return "", fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
 			}

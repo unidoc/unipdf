@@ -351,3 +351,49 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	return creator.Bytes(), bbox, nil
 }
+
+// BasicLine represents a basic stroked line between points (X1,Y1) and (X2,Y2) with minimal properties.
+type BasicLine struct {
+	X1        float64
+	Y1        float64
+	X2        float64
+	Y2        float64
+	LineColor *pdf.PdfColorDeviceRGB
+	LineWidth float64
+}
+
+// Draw draws the line to PDF contentstream. Generates the content stream which can be used in page contents or
+// appearance stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error
+// if one occurred.
+func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+	path := NewPath()
+	path = path.AppendPoint(NewPoint(line.X1, line.Y1))
+	path = path.AppendPoint(NewPoint(line.X2, line.Y2))
+
+	creator := pdfcontent.NewContentCreator()
+
+	creator.
+		Add_q().
+		Add_rg(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
+		Add_w(line.LineWidth)
+
+	if len(gsName) > 1 {
+		// If a graphics state is provided, use it. (Used for transparency settings here).
+		creator.Add_gs(pdfcore.PdfObjectName(gsName))
+	}
+
+	pathBbox := path.GetBoundingBox()
+	DrawPathWithCreator(path, creator)
+
+	creator.Add_S().
+		Add_Q()
+
+	// Bounding box - global coordinate system.
+	bbox := &pdf.PdfRectangle{}
+	bbox.Llx = pathBbox.X
+	bbox.Lly = pathBbox.Y
+	bbox.Urx = pathBbox.X + pathBbox.Width
+	bbox.Ury = pathBbox.Y + pathBbox.Height
+
+	return creator.Bytes(), bbox, nil
+}
