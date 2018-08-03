@@ -10,6 +10,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// TextEncoder defines the common methods that a text encoder implementation must have in UniDoc.
 type TextEncoder interface {
 	// String returns a string that describes the TextEncoder instance.
 	String() string

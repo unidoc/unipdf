@@ -38,14 +38,14 @@ func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[uint16]uint16) TrueTypeFontE
 // ttEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
 const ttEncoderNumEntries = 1000
 
-// String returns a string that describes `se`.
-func (se TrueTypeFontEncoder) String() string {
+// String returns a string that describes `enc`.
+func (enc TrueTypeFontEncoder) String() string {
 	parts := []string{
-		fmt.Sprintf("%d entries", len(se.runeToGlyphIndexMap)),
+		fmt.Sprintf("%d entries", len(enc.runeToGlyphIndexMap)),
 	}
 
 	codes := []int{}
-	for c := range se.runeToGlyphIndexMap {
+	for c := range enc.runeToGlyphIndexMap {
 		codes = append(codes, int(c))
 	}
 	sort.Ints(codes)
@@ -57,7 +57,7 @@ func (se TrueTypeFontEncoder) String() string {
 	for i := 0; i < numCodes; i++ {
 		c := codes[i]
 		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q",
-			c, c, se.runeToGlyphIndexMap[uint16(c)]))
+			c, c, enc.runeToGlyphIndexMap[uint16(c)]))
 	}
 	return fmt.Sprintf("TRUETYPE_ENCODER{%s}", strings.Join(parts, ", "))
 }

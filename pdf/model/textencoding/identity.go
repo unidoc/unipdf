@@ -18,8 +18,8 @@ type IdentityEncoder struct {
 	baseName string
 }
 
-// NewSimpleTextEncoder returns a IdentityEncoder based on predefined encoding `baseName` and
-// difference map `differences`.
+// NewIdentityTextEncoder returns a new IdentityEncoder based on predefined
+// encoding `baseName` and difference map `differences`.
 func NewIdentityTextEncoder(baseName string) IdentityEncoder {
 	return IdentityEncoder{baseName}
 }
