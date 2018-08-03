@@ -394,11 +394,13 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	if line.LineStyle == LineStyleDashed {
 		creator.
 			Add_d([]int64{1, 1}, 0).
+			Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
 			Add_w(w).
 			Add_S().
 			Add_Q()
 	} else {
 		creator.
+			Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
 			Add_w(w).
 			Add_S().
 			Add_Q()
