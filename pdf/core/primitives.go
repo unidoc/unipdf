@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/internal/strutils"
 )
 
 // PdfObject is an interface which all primitive PDF objects must implement.
@@ -235,6 +236,19 @@ func (str *PdfObjectString) String() string {
 // debug info.
 func (str *PdfObjectString) Str() string {
 	return str.val
+}
+
+// Decoded returns the PDFDocEncoding or UTF-16BE decoded string contents.
+// UTF-16BE is applied when the first two bytes are 0xFE, 0XFF, otherwise decoding of
+// PDFDocEncoding is performed.
+func (str *PdfObjectString) Decoded() string {
+	b := []byte(str.val)
+	if len(b) >= 2 && b[0] == 0xFE && b[1] == 0xFF {
+		// UTF16BE.
+		return strutils.UTF16ToString(b[2:])
+	}
+
+	return strutils.PDFDocEncodingToString(b)
 }
 
 // Bytes returns the PdfObjectString content as a []byte array.
