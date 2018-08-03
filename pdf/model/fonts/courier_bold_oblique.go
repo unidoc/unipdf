@@ -11,27 +11,36 @@ package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Courier-BoldOblique.  Implements Font interface.
+// FontCourierBoldOblique represents the Courier-BoldOblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontCourierBoldOblique struct {
+type FontCourierBoldOblique struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontCourierBoldOblique() fontCourierBoldOblique {
-	font := fontCourierBoldOblique{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
+// NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
+// (WinAnsiEncoding).
+func NewFontCourierBoldOblique() FontCourierBoldOblique {
+	font := FontCourierBoldOblique{}
+	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
-func (font fontCourierBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontCourierBoldOblique) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontCourierBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := courierBoldObliqueCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := CourierBoldObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +48,20 @@ func (font fontCourierBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetric
 	return metrics, true
 }
 
-func (font fontCourierBoldOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontCourierBoldOblique) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Courier-BoldOblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Courier-BoldOblique font metics loaded from afms/Courier-BoldOblique.afm.  See afms/MustRead.html for license information.
-var courierBoldObliqueCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// CourierBoldObliqueCharMetrics are the font metrics loaded from afms/Courier-BoldOblique.afm.
+// See afms/MustRead.html for license information.
+var CourierBoldObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

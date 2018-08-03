@@ -6,34 +6,123 @@
 package cmap
 
 import (
-	"bytes"
-	"errors"
-	"io"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
+// CharCode is a character code or Unicode
+// rune is int32 https://golang.org/doc/go1#rune
+type CharCode uint32
+
+// Maximum number of possible bytes per code.
+const maxCodeLen = 4
+
+// Codespace represents a single codespace range used in the CMap.
+type Codespace struct {
+	NumBytes int
+	Low      CharCode
+	High     CharCode
+}
+
+// CIDSystemInfo=Dict("Registry": Adobe, "Ordering": Korea1, "Supplement": 0, )
+type CIDSystemInfo struct {
+	Registry   string
+	Ordering   string
+	Supplement int
+}
+
 // CMap represents a character code to unicode mapping used in PDF files.
+// References:
+//  https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
+//  https://github.com/adobe-type-tools/cmap-resources/releases
 type CMap struct {
 	*cMapParser
 
-	// Text encoder to look up runes from input glyph names.
-	encoder textencoding.TextEncoder
-
-	// map of character code to string (sequence of runes) for 1-4 byte codes separately.
-	codeMap [4]map[uint64]string
-
 	name       string
+	nbits      int // 8 bits for simple fonts, 16 bits for CID fonts.
 	ctype      int
-	codespaces []codespace
+	version    string
+	usecmap    string // Base this cmap on `usecmap` if `usecmap` is not empty
+	systemInfo CIDSystemInfo
+
+	// For regular cmaps
+	codespaces []Codespace
+
+	// For ToUnicode (ctype 2) cmaps
+	codeToUnicode     map[CharCode]string
+	toUnicodeIdentity bool
 }
 
-// codespace represents a single codespace range used in the CMap.
-type codespace struct {
-	numBytes int
-	low      uint64
-	high     uint64
+// String returns a human readable description of `cmap`.
+func (cmap *CMap) String() string {
+	si := cmap.systemInfo
+	parts := []string{
+		fmt.Sprintf("nbits:%d", cmap.nbits),
+		fmt.Sprintf("type:%d", cmap.ctype),
+	}
+	if cmap.version != "" {
+		parts = append(parts, fmt.Sprintf("version:%s", cmap.version))
+	}
+	if cmap.usecmap != "" {
+		parts = append(parts, fmt.Sprintf("usecmap:%#q", cmap.usecmap))
+	}
+	parts = append(parts, fmt.Sprintf("systemInfo:%s", si.String()))
+	if len(cmap.codespaces) > 0 {
+		parts = append(parts, fmt.Sprintf("codespaces:%d", len(cmap.codespaces)))
+	}
+	if len(cmap.codeToUnicode) > 0 {
+		parts = append(parts, fmt.Sprintf("codeToUnicode:%d", len(cmap.codeToUnicode)))
+	}
+	return fmt.Sprintf("CMAP{%#q %s}", cmap.name, strings.Join(parts, " "))
+}
+
+// newCMap returns an initialized CMap.
+func newCMap(isSimple bool) *CMap {
+	nbits := 16
+	if isSimple {
+		nbits = 8
+	}
+	cmap := &CMap{
+		nbits:         nbits,
+		codeToUnicode: map[CharCode]string{},
+	}
+	return cmap
+}
+
+// String returns a human readable description of `info`.
+// It looks like "Adobe-Japan2-000".
+func (info *CIDSystemInfo) String() string {
+	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
+}
+
+// NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`
+func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
+	d, ok := core.GetDict(obj)
+	if !ok {
+		return CIDSystemInfo{}, core.ErrTypeError
+	}
+	registry, ok := core.GetStringVal(d.Get("Registry"))
+	if !ok {
+		return CIDSystemInfo{}, core.ErrTypeError
+	}
+	ordering, ok := core.GetStringVal(d.Get("Ordering"))
+	if !ok {
+		return CIDSystemInfo{}, core.ErrTypeError
+	}
+	supplement, ok := core.GetIntVal(d.Get("Supplement"))
+	if !ok {
+		return CIDSystemInfo{}, core.ErrTypeError
+	}
+	return CIDSystemInfo{
+		Registry:   registry,
+		Ordering:   ordering,
+		Supplement: supplement,
+	}, nil
 }
 
 // Name returns the name of the CMap.
@@ -41,365 +130,153 @@ func (cmap *CMap) Name() string {
 	return cmap.name
 }
 
-// Type returns the type of the CMap.
+// Type returns the CMap type.
 func (cmap *CMap) Type() int {
 	return cmap.ctype
 }
 
+// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'
+const MissingCodeRune = textencoding.MissingCodeRune
+
+// MissingCodeString replaces strings that can't be decoded.
+var MissingCodeString = string(MissingCodeRune)
+
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
-func (cmap *CMap) CharcodeBytesToUnicode(src []byte) string {
-	var buf bytes.Buffer
-
-	// Maximum number of possible bytes per code.
-	maxLen := 4
-
-	i := 0
-	for i < len(src) {
-		var code uint64
-		var j int
-		for j = 0; j < maxLen && i+j < len(src); j++ {
-			b := src[i+j]
-
-			code <<= 8
-			code |= uint64(b)
-
-			tgt, has := cmap.codeMap[j][code]
-			if has {
-				buf.WriteString(tgt)
-				break
-			} else if j == maxLen-1 || i+j == len(src)-1 {
-				break
-			}
-		}
-		i += j + 1
+// It also returns a bool flag to tell if the conversion was successful.
+// NOTE: This only works for ToUnicode cmaps.
+func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
+	charcodes, matched := cmap.bytesToCharcodes(data)
+	if !matched {
+		common.Log.Debug("ERROR: CharcodeBytesToUnicode. Not in codespaces. data=[% 02x] cmap=%s",
+			data, cmap)
+		return "", 0
 	}
 
-	return buf.String()
+	parts := []string{}
+	missing := []CharCode{}
+	for _, code := range charcodes {
+		s, ok := cmap.codeToUnicode[code]
+		if !ok {
+			missing = append(missing, code)
+			s = MissingCodeString
+		}
+		parts = append(parts, s)
+	}
+	unicode := strings.Join(parts, "")
+	if len(missing) > 0 {
+		common.Log.Debug("ERROR: CharcodeBytesToUnicode. Not in map.\n"+
+			"\tdata=[% 02x]=%#q\n"+
+			"\tcharcodes=%02x\n"+
+			"\tmissing=%d %02x\n"+
+			"\tunicode=`%s`\n"+
+			"\tcmap=%s",
+			data, string(data), charcodes, len(missing), missing, unicode, cmap)
+	}
+	return unicode, len(missing)
 }
 
-// CharcodeToUnicode converts a single character code to unicode string.
-// Note that CharcodeBytesToUnicode is typically more efficient.
-func (cmap *CMap) CharcodeToUnicode(srcCode uint64) string {
-	// Search through different code lengths.
-	for numBytes := 1; numBytes <= 4; numBytes++ {
-		if c, has := cmap.codeMap[numBytes-1][srcCode]; has {
-			return c
+// CharcodeToUnicode converts a single character code `code` to a unicode string.
+// If `code` is not in the unicode map, "�" is returned.
+// NOTE: CharcodeBytesToUnicode is typically more efficient.
+func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
+	if s, ok := cmap.codeToUnicode[code]; ok {
+		return s, true
+	}
+	common.Log.Debug("ERROR: CharcodeToUnicode could not convert code=0x%04x. cmap=%s. Returning %q",
+		code, cmap, MissingCodeString)
+	return MissingCodeString, false
+}
+
+// bytesToCharcodes attempts to convert the entire byte array `data` to a list of character codes
+// from the ranges specified by `cmap`'s codespaces.
+// Returns:
+//      character code sequence (if there is a match complete match)
+//      matched?
+// NOTE: A partial list of character codes will be returned if a complete match is not possible.
+func (cmap *CMap) bytesToCharcodes(data []byte) ([]CharCode, bool) {
+	charcodes := []CharCode{}
+	if cmap.nbits == 8 {
+		for _, b := range data {
+			charcodes = append(charcodes, CharCode(b))
+		}
+		return charcodes, true
+	}
+	for i := 0; i < len(data); {
+		code, n, matched := cmap.matchCode(data[i:])
+		if !matched {
+			common.Log.Debug("ERROR: No code match at i=%d bytes=[% 02x]=%#q", i, data, string(data))
+			return charcodes, false
+		}
+		charcodes = append(charcodes, code)
+		i += n
+	}
+	return charcodes, true
+}
+
+// matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces
+// Returns:
+//      character code (if there is a match) of
+//      number of bytes read (if there is a match)
+//      matched?
+func (cmap *CMap) matchCode(data []byte) (code CharCode, n int, matched bool) {
+	for j := 0; j < maxCodeLen; j++ {
+		if j < len(data) {
+			code = code<<8 | CharCode(data[j])
+			n++
+		}
+		matched = cmap.inCodespace(code, j+1)
+		if matched {
+			return code, n, true
 		}
 	}
-
-	// Not found.
-	return "?"
+	// No codespace matched data. This is a serious problem.
+	common.Log.Debug("ERROR: No codespace matches bytes=[% 02x]=%#q cmap=%s",
+		data, string(data), cmap)
+	return 0, 0, false
 }
 
-// newCMap returns an initialized CMap.
-func newCMap() *CMap {
-	cmap := &CMap{}
-	cmap.codespaces = []codespace{}
-	cmap.codeMap = [4]map[uint64]string{}
-	// Maps for 1-4 bytes are initialized. Minimal overhead if not used (most commonly used are 1-2 bytes).
-	cmap.codeMap[0] = map[uint64]string{}
-	cmap.codeMap[1] = map[uint64]string{}
-	cmap.codeMap[2] = map[uint64]string{}
-	cmap.codeMap[3] = map[uint64]string{}
-	return cmap
+// inCodespace returns true if `code` is in the `numBytes` byte codespace.
+func (cmap *CMap) inCodespace(code CharCode, numBytes int) bool {
+	for _, cs := range cmap.codespaces {
+		if cs.Low <= code && code <= cs.High && numBytes == cs.NumBytes {
+			return true
+		}
+	}
+	return false
 }
 
-// LoadCmapFromData parses CMap data in memory through a byte vector and returns a CMap which
-// can be used for character code to unicode conversion.
-func LoadCmapFromData(data []byte) (*CMap, error) {
-	cmap := newCMap()
+// LoadCmapFromDataCID parses the in-memory cmap `data` and returns the resulting CMap.
+// It is a convenience function.
+func LoadCmapFromDataCID(data []byte) (*CMap, error) {
+	return LoadCmapFromData(data, false)
+}
+
+// LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
+// If isCID is true then it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
+//
+// 9.10.3 ToUnicode CMaps (page 293)
+func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
+	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
+
+	cmap := newCMap(isSimple)
 	cmap.cMapParser = newCMapParser(data)
+
+	// In debugging it may help to see the data being parsed.
+	// fmt.Println("===============*******===========")
+	// fmt.Printf("%s\n", string(data))
+	// fmt.Println("===============&&&&&&&===========")
 
 	err := cmap.parse()
 	if err != nil {
-		return cmap, err
+		return nil, err
 	}
-
+	if len(cmap.codespaces) == 0 {
+		common.Log.Debug("ERROR: No codespaces. cmap=%s", cmap)
+		return nil, ErrBadCMap
+	}
+	// We need to sort codespaces so that we check shorter codes first
+	sort.Slice(cmap.codespaces, func(i, j int) bool {
+		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
+	})
 	return cmap, nil
-}
-
-// parse parses the CMap file and loads into the CMap structure.
-func (cmap *CMap) parse() error {
-	for {
-		o, err := cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-
-			common.Log.Debug("Error parsing CMap: %v", err)
-			return err
-		}
-
-		if op, isOp := o.(cmapOperand); isOp {
-			common.Log.Trace("Operand: %s", op.Operand)
-
-			if op.Operand == begincodespacerange {
-				err := cmap.parseCodespaceRange()
-				if err != nil {
-					return err
-				}
-			} else if op.Operand == beginbfchar {
-				err := cmap.parseBfchar()
-				if err != nil {
-					return err
-				}
-			} else if op.Operand == beginbfrange {
-				err := cmap.parseBfrange()
-				if err != nil {
-					return err
-				}
-			}
-		} else if n, isName := o.(cmapName); isName {
-			if n.Name == cmapname {
-				o, err := cmap.parseObject()
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
-					return err
-				}
-				name, ok := o.(cmapName)
-				if !ok {
-					return errors.New("CMap name not a name")
-				}
-				cmap.name = name.Name
-			} else if n.Name == cmaptype {
-				o, err := cmap.parseObject()
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
-					return err
-				}
-				typeInt, ok := o.(cmapInt)
-				if !ok {
-					return errors.New("CMap type not an integer")
-				}
-				cmap.ctype = int(typeInt.val)
-			}
-		} else {
-			common.Log.Trace("Unhandled object: %T %#v", o, o)
-		}
-	}
-
-	return nil
-}
-
-// parseCodespaceRange parses the codespace range section of a CMap.
-func (cmap *CMap) parseCodespaceRange() error {
-	for {
-		o, err := cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-
-		hexLow, isHex := o.(cmapHexString)
-		if !isHex {
-			if op, isOperand := o.(cmapOperand); isOperand {
-				if op.Operand == endcodespacerange {
-					return nil
-				}
-				return errors.New("Unexpected operand")
-			}
-		}
-
-		o, err = cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		hexHigh, ok := o.(cmapHexString)
-		if !ok {
-			return errors.New("Non-hex high")
-		}
-
-		if hexLow.numBytes != hexHigh.numBytes {
-			return errors.New("Unequal number of bytes in range")
-		}
-
-		low := hexToUint64(hexLow)
-		high := hexToUint64(hexHigh)
-		numBytes := hexLow.numBytes
-
-		cspace := codespace{numBytes: numBytes, low: low, high: high}
-		cmap.codespaces = append(cmap.codespaces, cspace)
-
-		common.Log.Trace("Codespace low: 0x%X, high: 0x%X", low, high)
-	}
-
-	return nil
-}
-
-// parseBfchar parses a bfchar section of a CMap file.
-func (cmap *CMap) parseBfchar() error {
-	for {
-		// Src code.
-		o, err := cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		var srcCode uint64
-		var numBytes int
-
-		switch v := o.(type) {
-		case cmapOperand:
-			if v.Operand == endbfchar {
-				return nil
-			}
-			return errors.New("Unexpected operand")
-		case cmapHexString:
-			srcCode = hexToUint64(v)
-			numBytes = v.numBytes
-		default:
-			return errors.New("Unexpected type")
-		}
-
-		// Target code.
-		o, err = cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		var toCode string
-
-		switch v := o.(type) {
-		case cmapOperand:
-			if v.Operand == endbfchar {
-				return nil
-			}
-			return errors.New("Unexpected operand")
-		case cmapHexString:
-			toCode = hexToString(v)
-		case cmapName:
-			toCode = "?"
-			if cmap.encoder != nil {
-				if r, found := cmap.encoder.GlyphToRune(v.Name); found {
-					toCode = string(r)
-				}
-			}
-		default:
-			return errors.New("Unexpected type")
-		}
-
-		if numBytes <= 0 || numBytes > 4 {
-			return errors.New("Invalid code length")
-		}
-
-		cmap.codeMap[numBytes-1][srcCode] = toCode
-	}
-
-	return nil
-}
-
-// parseBfrange parses a bfrange section of a CMap file.
-func (cmap *CMap) parseBfrange() error {
-	for {
-		// The specifications are in pairs of 3.
-		// <srcCodeFrom> <srcCodeTo> <target>
-		// where target can be either <destFrom> as a hex code, or a list.
-
-		// Src code from.
-		var srcCodeFrom uint64
-		var numBytes int
-		{
-			o, err := cmap.parseObject()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				return err
-			}
-
-			switch v := o.(type) {
-			case cmapOperand:
-				if v.Operand == endbfrange {
-					return nil
-				}
-				return errors.New("Unexpected operand")
-			case cmapHexString:
-				srcCodeFrom = hexToUint64(v)
-				numBytes = v.numBytes
-			default:
-				return errors.New("Unexpected type")
-			}
-		}
-
-		// Src code to.
-		var srcCodeTo uint64
-		{
-			o, err := cmap.parseObject()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				return err
-			}
-
-			switch v := o.(type) {
-			case cmapOperand:
-				if v.Operand == endbfrange {
-					return nil
-				}
-				return errors.New("Unexpected operand")
-			case cmapHexString:
-				srcCodeTo = hexToUint64(v)
-			default:
-				return errors.New("Unexpected type")
-			}
-		}
-
-		// target(s).
-		o, err := cmap.parseObject()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-
-		if numBytes <= 0 || numBytes > 4 {
-			return errors.New("Invalid code length")
-		}
-
-		switch v := o.(type) {
-		case cmapArray:
-			sc := srcCodeFrom
-			for _, o := range v.Array {
-				hexs, ok := o.(cmapHexString)
-				if !ok {
-					return errors.New("Non-hex string in array")
-				}
-				cmap.codeMap[numBytes-1][sc] = hexToString(hexs)
-				sc++
-			}
-			if sc != srcCodeTo+1 {
-				return errors.New("Invalid number of items in array")
-			}
-		case cmapHexString:
-			// <srcCodeFrom> <srcCodeTo> <dstCode>, maps [from,to] to [dstCode,dstCode+to-from].
-			// in hex format.
-			target := hexToUint64(v)
-			i := uint64(0)
-			for sc := srcCodeFrom; sc <= srcCodeTo; sc++ {
-				r := target + i
-				cmap.codeMap[numBytes-1][sc] = string(r)
-				i++
-			}
-		default:
-			return errors.New("Unexpected type")
-		}
-	}
-
-	return nil
 }

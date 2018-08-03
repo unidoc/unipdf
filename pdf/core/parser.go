@@ -54,6 +54,11 @@ type PdfParser struct {
 	streamLengthReferenceLookupInProgress map[int64]bool
 }
 
+// PdfVersion returns version of the PDF file.
+func (parser *PdfParser) PdfVersion() string {
+	return fmt.Sprintf("%0d.%0d", parser.majorVersion, parser.minorVersion)
+}
+
 // GetCrypter returns the PdfCrypt instance which has information about the PDFs encryption.
 func (parser *PdfParser) GetCrypter() *PdfCrypt {
 	return parser.crypter
@@ -1502,6 +1507,7 @@ func NewParserFromString(txt string) *PdfParser {
 	parser.reader = bufferedReader
 
 	parser.fileSize = int64(len(txt))
+	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	return &parser
 }

@@ -256,7 +256,14 @@ func (this *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, 
 	val := vals[0]
 
 	if val < 0.0 || val > 1.0 {
-		return nil, errors.New("Range check")
+		common.Log.Debug("Incompatibility: Range outside [0,1]")
+	}
+
+	// Needed for ~/testdata/acl2017_hllz.pdf
+	if val < 0.0 {
+		val = 0.0
+	} else if val > 1.0 {
+		val = 1.0
 	}
 
 	return NewPdfColorDeviceGray(val), nil
@@ -267,7 +274,7 @@ func (this *PdfColorspaceDeviceGray) ColorFromPdfObjects(objects []PdfObject) (P
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +418,7 @@ func (this *PdfColorspaceDeviceRGB) ColorFromPdfObjects(objects []PdfObject) (Pd
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -562,7 +569,7 @@ func (this *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []PdfObject) (P
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -785,7 +792,7 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 	obj = dict.Get("Gamma")
 	if obj != nil {
 		obj = TraceToDirectObject(obj)
-		gamma, err := getNumberAsFloat(obj)
+		gamma, err := GetNumberAsFloat(obj)
 		if err != nil {
 			return nil, fmt.Errorf("CalGray: gamma not a number")
 		}
@@ -843,7 +850,7 @@ func (this *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfC
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -1170,7 +1177,7 @@ func (this *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []PdfObject) (PdfCo
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -1503,7 +1510,7 @@ func (this *PdfColorspaceLab) ColorFromPdfObjects(objects []PdfObject) (PdfColor
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -2186,7 +2193,7 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 
 	// Get hi val.
 	obj = array.Get(2)
-	val, err := getNumberAsInt64(obj)
+	val, err := GetNumberAsInt64(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -2261,7 +2268,7 @@ func (this *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []PdfObject
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -2476,7 +2483,7 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []PdfObj
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -2697,7 +2704,7 @@ func (this *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []PdfObject) (PdfC
 		return nil, errors.New("Range check")
 	}
 
-	floats, err := getNumbersAsFloat(objects)
+	floats, err := GetNumbersAsFloat(objects)
 	if err != nil {
 		return nil, err
 	}

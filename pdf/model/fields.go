@@ -171,7 +171,7 @@ func (f *PdfField) FullName() (string, error) {
 
 	parts := []string{}
 	if f.T != nil {
-		parts = append(parts, f.T.Str())
+		parts = append(parts, f.T.Decoded())
 	} else {
 		return fn.String(), errors.New("Field partial name (T) not specified")
 	}
@@ -187,7 +187,7 @@ func (f *PdfField) FullName() (string, error) {
 		}
 
 		if parent.T != nil {
-			parts = append(parts, f.T.Str())
+			parts = append(parts, parent.T.Decoded())
 		} else {
 			return fn.String(), errors.New("Field partial name (T) not specified")
 		}

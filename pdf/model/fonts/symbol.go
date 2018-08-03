@@ -4,34 +4,43 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Symbol.  Implements Font interface.
+// FontSymbol represents the Symbol font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontSymbol struct {
+type FontSymbol struct {
 	// By default encoder is not set, which means that we use the font's built in encoding.
 	encoder textencoding.TextEncoder
 }
 
-func NewFontSymbol() fontSymbol {
-	font := fontSymbol{}
+// NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
+func NewFontSymbol() FontSymbol {
+	font := FontSymbol{}
+	font.encoder = textencoding.NewSymbolEncoder()
 	return font
 }
 
-func (font fontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontSymbol) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := symbolCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := SymbolCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,9 +48,8 @@ func (font fontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	return metrics, true
 }
 
-func (font fontSymbol) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontSymbol) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
@@ -50,12 +58,12 @@ func (font fontSymbol) ToPdfObject() core.PdfObject {
 		fontDict.Set("Encoding", font.encoder.ToPdfObject())
 	}
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Symbol font metics loaded from afms/Symbol.afm.  See afms/MustRead.html for license information.
-var symbolCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
+// See afms/MustRead.html for license information.
+var SymbolCharMetrics = map[string]CharMetrics{
 	"Alpha":          {GlyphName: "Alpha", Wx: 722.000000, Wy: 0.000000},
 	"Beta":           {GlyphName: "Beta", Wx: 667.000000, Wy: 0.000000},
 	"Chi":            {GlyphName: "Chi", Wx: 722.000000, Wy: 0.000000},

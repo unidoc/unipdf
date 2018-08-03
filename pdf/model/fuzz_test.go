@@ -1,14 +1,19 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	// Uncomment when debugging to get trace logging output - to follow flow.
+	// common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // Test for an endless recursive loop in

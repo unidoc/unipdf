@@ -4,34 +4,42 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Helvetica-Oblique.  Implements Font interface.
+// FontHelveticaOblique represents the Helvetica-Oblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelveticaOblique struct {
+type FontHelveticaOblique struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontHelveticaOblique() fontHelveticaOblique {
-	font := fontHelveticaOblique{}
+// NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontHelveticaOblique() FontHelveticaOblique {
+	font := FontHelveticaOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontHelveticaOblique) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := helveticaObliqueCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := HelveticaObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics,
 	return metrics, true
 }
 
-func (font fontHelveticaOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontHelveticaOblique) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Helvetica-Oblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica-Oblique font metics loaded from afms/Helvetica-Oblique.afm.  See afms/MustRead.html for license information.
-var helveticaObliqueCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// HelveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.
+// See afms/MustRead.html for license information.
+var HelveticaObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},

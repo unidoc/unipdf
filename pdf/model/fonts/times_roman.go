@@ -4,34 +4,42 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Times-Roman.  Implements Font interface.
+// FontTimesRoman represents the Times-Roman font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontTimesRoman struct {
+type FontTimesRoman struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontTimesRoman() fontTimesRoman {
-	font := fontTimesRoman{}
+// NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontTimesRoman() FontTimesRoman {
+	font := FontTimesRoman{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontTimesRoman) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontTimesRoman) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontTimesRoman) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := timesRomanCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := TimesRomanCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
 	return metrics, true
 }
 
-func (font fontTimesRoman) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontTimesRoman) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Times-Roman"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Roman font metics loaded from afms/Times-Roman.afm.  See afms/MustRead.html for license information.
-var timesRomanCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// TimesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
+// See afms/MustRead.html for license information.
+var TimesRomanCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

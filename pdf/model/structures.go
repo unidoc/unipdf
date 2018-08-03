@@ -35,22 +35,22 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	}
 
 	var err error
-	rect.Llx, err = getNumberAsFloat(arr.Get(0))
+	rect.Llx, err = GetNumberAsFloat(arr.Get(0))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Lly, err = getNumberAsFloat(arr.Get(1))
+	rect.Lly, err = GetNumberAsFloat(arr.Get(1))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Urx, err = getNumberAsFloat(arr.Get(2))
+	rect.Urx, err = GetNumberAsFloat(arr.Get(2))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Ury, err = getNumberAsFloat(arr.Get(3))
+	rect.Ury, err = GetNumberAsFloat(arr.Get(3))
 	if err != nil {
 		return nil, err
 	}

@@ -17,13 +17,14 @@ func init() {
 }
 
 const testContents1 = `
-BT
-/F1 24 Tf
-(Hello World!)Tj
-0 -10 Td
-(Doink)Tj
-ET
+    BT
+    /UniDocCourier 24 Tf
+    (Hello World!)Tj
+    0 -10 Td
+    (Doink)Tj
+    ET
 `
+
 const testExpected1 = "Hello World!\nDoink"
 
 func TestTextExtraction1(t *testing.T) {
@@ -36,7 +37,7 @@ func TestTextExtraction1(t *testing.T) {
 		return
 	}
 	if s != testExpected1 {
-		t.Errorf("Text mismatch (%s)", s)
+		t.Errorf("Text mismatch. Got %q. Expected %q", s, testExpected1)
 		t.Errorf("Text mismatch (% X vs % X)", s, testExpected1)
 		return
 	}

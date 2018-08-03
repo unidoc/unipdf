@@ -132,7 +132,7 @@ endobj
 	// Field -> PDF object.  Regenerate the field dictionary and see if matches expectations.
 	// Reset the dictionaries for both field and annotation to avoid re-use during re-generation of PDF object.
 	field.container = core.MakeIndirectObject(core.MakeDict())
-	field.Annotations[0].primitive = core.MakeIndirectObject(core.MakeDict())
+	field.Annotations[0].container = core.MakeIndirectObject(core.MakeDict())
 	fieldPdfObj := field.ToPdfObject()
 	fieldDict, ok := fieldPdfObj.(*core.PdfIndirectObject).PdfObject.(*core.PdfObjectDictionary)
 	if !ok {

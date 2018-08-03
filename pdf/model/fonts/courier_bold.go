@@ -11,27 +11,35 @@ package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Courier-Bold.  Implements Font interface.
+// FontCourierBold represents the Courier-Bold PDF font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontCourierBold struct {
+type FontCourierBold struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontCourierBold() fontCourierBold {
-	font := fontCourierBold{}
+// NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontCourierBold() FontCourierBold {
+	font := FontCourierBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontCourierBold) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontCourierBold) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontCourierBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontCourierBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := courierBoldCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontCourierBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := CourierBoldCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,19 @@ func (font fontCourierBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool
 	return metrics, true
 }
 
-func (font fontCourierBold) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontCourierBold) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Courier-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Courier-Bold font metics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.
-var courierBoldCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// Courier-Bold font metrics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.
+var CourierBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

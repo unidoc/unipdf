@@ -4,34 +4,43 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// Font Helvetica-Bold.  Implements Font interface.
+// FontHelveticaBold represents the Helvetica-Bold font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelveticaBold struct {
+type FontHelveticaBold struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontHelveticaBold() fontHelveticaBold {
-	font := fontHelveticaBold{}
+// NewFontHelveticaBold returns a new instance of the font with a default encoder set
+// (WinAnsiEncoding).
+func NewFontHelveticaBold() FontHelveticaBold {
+	font := FontHelveticaBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontHelveticaBold) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontHelveticaBold) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontHelveticaBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontHelveticaBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := helveticaBoldCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontHelveticaBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := HelveticaBoldCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +48,20 @@ func (font fontHelveticaBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bo
 	return metrics, true
 }
 
-func (font fontHelveticaBold) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontHelveticaBold) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Helvetica-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica-Bold font metics loaded from afms/Helvetica-Bold.afm.  See afms/MustRead.html for license information.
-var helveticaBoldCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// HelveticaBoldCharMetrics are the font metrics loaded from afms/Helvetica-Bold.afm.
+// See afms/MustRead.html for license information.
+var HelveticaBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

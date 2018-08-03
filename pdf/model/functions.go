@@ -11,8 +11,8 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/ps"
 	"github.com/unidoc/unidoc/pdf/internal/sampling"
+	"github.com/unidoc/unidoc/pdf/ps"
 )
 
 // PdfFunction interface represents the common methods of a function in PDF.
@@ -453,11 +453,11 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 
 	if len(fun.C0) != len(fun.C1) {
 		common.Log.Error("C0 and C1 not matching")
-		return nil, errors.New("Range check")
+		return nil, ErrRangeError
 	}
 
 	// Exponent.
-	N, err := getNumberAsFloat(TraceToDirectObject(dict.Get("N")))
+	N, err := GetNumberAsFloat(TraceToDirectObject(dict.Get("N")))
 	if err != nil {
 		common.Log.Error("N missing or invalid, dict: %s", dict.String())
 		return nil, err
