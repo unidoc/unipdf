@@ -383,11 +383,9 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	path := NewPath()
 	path = path.AppendPoint(NewPoint(line.X1, line.Y1))
-	path = path.AppendPoint(NewPoint(line.X2, line.X2))
+	path = path.AppendPoint(NewPoint(line.X2, line.Y2))
 
 	creator := pdfcontent.NewContentCreator()
-
-	path = path.Offset(line.X1, line.Y1)
 
 	pathBbox := path.GetBoundingBox()
 
