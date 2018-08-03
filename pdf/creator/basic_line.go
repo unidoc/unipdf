@@ -17,11 +17,12 @@ type BasicLine struct {
 	y2        float64
 	lineColor *model.PdfColorDeviceRGB
 	lineWidth float64
+	LineStyle draw.LineStyle
 }
 
 // NewBasicLine creates a new Line with default parameters between (x1,y1) to (x2,y2).
-func NewBasicLine(x1, y1, x2, y2 float64) *Line {
-	l := &Line{}
+func NewBasicLine(x1, y1, x2, y2 float64) *BasicLine {
+	l := &BasicLine{}
 
 	l.x1 = x1
 	l.y1 = y1
@@ -50,6 +51,10 @@ func (l *BasicLine) SetColor(col Color) {
 	l.lineColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
+func (l *BasicLine) SetLineStyle(style draw.LineStyle) {
+	l.LineStyle = style
+}
+
 // Length calculates and returns the line length.
 func (l *BasicLine) Length() float64 {
 	return math.Sqrt(math.Pow(l.x2-l.x1, 2.0) + math.Pow(l.y2-l.y1, 2.0))
@@ -67,6 +72,7 @@ func (l *BasicLine) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		Y1:        ctx.PageHeight - l.y1,
 		X2:        l.x2,
 		Y2:        ctx.PageHeight - l.y2,
+		LineStyle: l.LineStyle,
 	}
 
 	contents, _, err := drawline.Draw("")

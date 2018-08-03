@@ -1637,7 +1637,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 func TestBasicLine(t *testing.T) {
 	line := NewBasicLine(100, 100, 200, 100)
-	line.SetLineWidth(2)
+	line.SetLineWidth(20)
 	line.SetColor(ColorRed)
 
 	c := New()

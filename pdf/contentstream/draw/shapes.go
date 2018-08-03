@@ -379,61 +379,13 @@ type BasicLine struct {
 // Draw a basic line in PDF.  Generates the content stream which can be used in page contents or appearance stream of annotation.
 // Returns the stream content, XForm bounding box (local), bounding box and an error if one occurred.
 func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
-	x1, x2 := line.X1, line.X2
-	y1, y2 := line.Y1, line.Y2
-
-	dy := y2 - y1
-	dx := x2 - x1
-	theta := math.Atan2(dy, dx)
-
-	//L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
 	w := line.LineWidth
 
-	pi := math.Pi
-
-	mul := 1.0
-	if dx < 0 {
-		mul *= -1.0
-	}
-	if dy < 0 {
-		mul *= -1.0
-	}
-
-	// Vs.
-	VsX := mul * (-w / 2 * math.Cos(theta+pi/2))
-	VsY := mul * (-w/2*math.Sin(theta+pi/2) + w*math.Sin(theta+pi/2))
-
-	// V1.
-	V1X := VsX + w/2*math.Cos(theta+pi/2)
-	V1Y := VsY + w/2*math.Sin(theta+pi/2)
-	//
-	//// P2.
-	//V2X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta)
-	//V2Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta)
-	//
-	//// P3.
-	//V3X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta) + w*math.Cos(theta-pi/2)
-	//V3Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta) + w*math.Sin(theta-pi/2)
-
-	// P4.
-	V4X := VsX + w/2*math.Cos(theta-pi/2)
-	V4Y := VsY + w/2*math.Sin(theta-pi/2)
-
 	path := NewPath()
-	path = path.AppendPoint(NewPoint(V1X, V1Y))
-	//path = path.AppendPoint(NewPoint(V2X, V2Y))
-	//path = path.AppendPoint(NewPoint(V3X, V3Y))
-	path = path.AppendPoint(NewPoint(V4X, V4Y))
+	path = path.AppendPoint(NewPoint(line.X1, line.Y1))
+	path = path.AppendPoint(NewPoint(line.X2, line.X2))
 
 	creator := pdfcontent.NewContentCreator()
-	//// Draw line with arrow
-	//creator.
-	//	Add_q().
-	//	Add_rg(line.LineColor.R(), line.LineColor.G(), line.LineColor.B())
-	//if len(gsName) > 1 {
-	//	// If a graphics state is provided, use it. (Used for transparency settings here).
-	//	creator.Add_gs(pdfcore.PdfObjectName(gsName))
-	//}
 
 	path = path.Offset(line.X1, line.Y1)
 
