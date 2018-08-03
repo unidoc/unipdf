@@ -30,15 +30,15 @@ func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
-const testPdfFile1 = "../../testfiles/minimal.pdf"
-const testPdfLoremIpsumFile = "../../testfiles/lorem.pdf"
-const testPdfTemplatesFile1 = "../../testfiles/templates1.pdf"
-const testImageFile1 = "../../testfiles/logo.png"
-const testImageFile2 = "../../testfiles/signature.png"
-const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
-const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
-const testWts11TTFFile = "../../testfiles/wts11.ttf"
-const testFreeSansTTFFile = "../../testfiles/FreeSans.ttf"
+const testPdfFile1 = "./testdata/minimal.pdf"
+const testPdfLoremIpsumFile = "./testdata/lorem.pdf"
+const testPdfTemplatesFile1 = "./testdata/templates1.pdf"
+const testImageFile1 = "./testdata/logo.png"
+const testImageFile2 = "./testdata/signature.png"
+const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
+const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
+const testWts11TTFFile = "./testdata/wts11.ttf"
+const testFreeSansTTFFile = "./testdata/FreeSans.ttf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
