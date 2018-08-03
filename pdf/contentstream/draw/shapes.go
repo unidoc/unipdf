@@ -386,7 +386,7 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	dx := x2 - x1
 	theta := math.Atan2(dy, dx)
 
-	L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
+	//L := math.Sqrt(math.Pow(dx, 2.0) + math.Pow(dy, 2.0))
 	w := line.LineWidth
 
 	pi := math.Pi
@@ -408,12 +408,12 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	V1Y := VsY + w/2*math.Sin(theta+pi/2)
 	//
 	//// P2.
-	V2X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta)
-	V2Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta)
+	//V2X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta)
+	//V2Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta)
 	//
 	//// P3.
-	V3X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta) + w*math.Cos(theta-pi/2)
-	V3Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta) + w*math.Sin(theta-pi/2)
+	//V3X := VsX + w/2*math.Cos(theta+pi/2) + L*math.Cos(theta) + w*math.Cos(theta-pi/2)
+	//V3Y := VsY + w/2*math.Sin(theta+pi/2) + L*math.Sin(theta) + w*math.Sin(theta-pi/2)
 
 	// P4.
 	V4X := VsX + w/2*math.Cos(theta-pi/2)
@@ -421,20 +421,19 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	path := NewPath()
 	path = path.AppendPoint(NewPoint(V1X, V1Y))
-	path = path.AppendPoint(NewPoint(V2X, V2Y))
-	path = path.AppendPoint(NewPoint(V3X, V3Y))
+	//path = path.AppendPoint(NewPoint(V2X, V2Y))
+	//path = path.AppendPoint(NewPoint(V3X, V3Y))
 	path = path.AppendPoint(NewPoint(V4X, V4Y))
 
 	creator := pdfcontent.NewContentCreator()
-
-	// Draw line with arrow
-	creator.
-		Add_q().
-		Add_rg(line.LineColor.R(), line.LineColor.G(), line.LineColor.B())
-	if len(gsName) > 1 {
-		// If a graphics state is provided, use it. (Used for transparency settings here).
-		creator.Add_gs(pdfcore.PdfObjectName(gsName))
-	}
+	//// Draw line with arrow
+	//creator.
+	//	Add_q().
+	//	Add_rg(line.LineColor.R(), line.LineColor.G(), line.LineColor.B())
+	//if len(gsName) > 1 {
+	//	// If a graphics state is provided, use it. (Used for transparency settings here).
+	//	creator.Add_gs(pdfcore.PdfObjectName(gsName))
+	//}
 
 	path = path.Offset(line.X1, line.Y1)
 
@@ -445,12 +444,13 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	if line.LineStyle == LineStyleDashed {
 		creator.
 			Add_d([]int64{1, 1}, 0).
+			Add_w(w).
 			Add_S().
-			Add_f().
 			Add_Q()
 	} else {
 		creator.
-			Add_f().
+			Add_w(w).
+			Add_S().
 			Add_Q()
 	}
 

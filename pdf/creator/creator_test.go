@@ -1635,6 +1635,22 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	}
 }
 
+func TestBasicLine(t *testing.T) {
+	line := NewBasicLine(100, 100, 200, 100)
+	line.SetLineWidth(2)
+	line.SetColor(ColorRed)
+
+	c := New()
+	c.Draw(line)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
