@@ -1651,6 +1651,51 @@ func TestBasicLine(t *testing.T) {
 	}
 }
 
+func TestBasicLineWithDash(t *testing.T) {
+	line := NewBasicLine(100, 100, 100, 150)
+	line.SetLineWidth(2)
+	line.SetColor(ColorRed)
+	line.SetLineStyle(draw.LineStyleDashed)
+
+	c := New()
+	c.Draw(line)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func newBasicLine(x1, y1, x2, y2 float64, w float64, style draw.LineStyle) *BasicLine {
+	line := NewBasicLine(x1, y1, x2, y2)
+	line.SetLineWidth(w)
+	line.SetColor(ColorRed)
+	line.SetLineStyle(style)
+	return line
+}
+
+func TestRectangle(t *testing.T) {
+	line1 := newBasicLine(100, 100, 200, 100, 2, draw.LineStyleSolid)
+	line2 := newBasicLine(100, 100, 100, 200, 2, draw.LineStyleSolid)
+	line3 := newBasicLine(100, 200, 200, 200, 2, draw.LineStyleSolid)
+	line4 := newBasicLine(200, 200, 200, 100, 2, draw.LineStyleSolid)
+
+	c := New()
+	c.Draw(line1)
+	c.Draw(line2)
+	c.Draw(line3)
+	c.Draw(line4)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
