@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -294,6 +295,20 @@ func (r *PdfPageResources) HasXObjectByName(keyName PdfObjectName) bool {
 	} else {
 		return false
 	}
+}
+
+// GenerateXObjectName generates an unused XObject name that can be used for adding new XObjects.
+// Uses format XObj1, XObj2, ...
+func (r *PdfPageResources) GenerateXObjectName() PdfObjectName {
+	num := 1
+	for {
+		name := MakeName(fmt.Sprintf("XObj%d", num))
+		if !r.HasXObjectByName(*name) {
+			return *name
+		}
+		num++
+	}
+	// Not reached.
 }
 
 type XObjectType int
