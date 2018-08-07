@@ -296,6 +296,7 @@ func (str *PdfObjectString) DefaultWriteString() string {
 	return output.String()
 }
 
+// String returns a string representation of `name`.
 func (name *PdfObjectName) String() string {
 	return string(*name)
 }
@@ -579,6 +580,12 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys
+}
+
+// Clear resets the dictionary to an empty state.
+func (d *PdfObjectDictionary) Clear() {
+	d.keys = []PdfObjectName{}
+	d.dict = map[PdfObjectName]PdfObject{}
 }
 
 // Remove removes an element specified by key.

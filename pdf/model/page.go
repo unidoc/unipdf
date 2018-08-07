@@ -443,6 +443,7 @@ func (this *PdfPage) getResources() (*PdfPageResources, error) {
 // Convert the Page to a PDF object dictionary.
 func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p := this.pageDict
+	p.Clear()
 	p.Set("Type", MakeName("Page"))
 	p.Set("Parent", this.Parent)
 
