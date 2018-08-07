@@ -39,6 +39,11 @@ func (cc *ContentCreator) String() string {
 	return string(cc.operands.Bytes())
 }
 
+// Wrap ensures that the contentstream is wrapped within a balanced q ... Q expression.
+func (cc *ContentCreator) Wrap() {
+	cc.operands.WrapIfNeeded()
+}
+
 // Graphics state operators.
 
 // Add_q adds 'q' operand to the content stream.
