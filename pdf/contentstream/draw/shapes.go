@@ -6,6 +6,7 @@ import (
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
+	"fmt"
 )
 
 type Circle struct {
@@ -315,7 +316,7 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 		newpath = newpath.AppendPoint(pa1)
 		newpath = newpath.AppendPoint(pa2)
 		newpath = newpath.AppendPoint(pa3)
-		for _, p := range path.Points[1: len(path.Points)-1] {
+		for _, p := range path.Points[1 : len(path.Points)-1] {
 			newpath = newpath.AppendPoint(p)
 		}
 		newpath = newpath.AppendPoint(pa5)
@@ -380,6 +381,15 @@ type BasicLine struct {
 // Returns the stream content, XForm bounding box (local), bounding box and an error if one occurred.
 func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	w := line.LineWidth
+
+	line.X1 = line.X1 - (line.LineWidth / 2)
+	line.Y1 = line.Y1 - (line.LineWidth / 2)
+
+	fmt.Println("---------------")
+	fmt.Println("X1 : ", line.X1)
+	fmt.Println("Y1 : ", line.Y1)
+	fmt.Println("X2 : ", line.X2)
+	fmt.Println("Y2 : ", line.Y2)
 
 	path := NewPath()
 	path = path.AppendPoint(NewPoint(line.X1, line.Y1))

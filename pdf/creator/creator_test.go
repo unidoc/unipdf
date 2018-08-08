@@ -1677,16 +1677,59 @@ func newBasicLine(x1, y1, x2, y2 float64, w float64, style draw.LineStyle) *Basi
 }
 
 func TestRectangle(t *testing.T) {
-	line1 := newBasicLine(100, 100, 200, 100, 2, draw.LineStyleSolid)
-	line2 := newBasicLine(100, 100, 100, 200, 2, draw.LineStyleSolid)
-	line3 := newBasicLine(100, 200, 200, 200, 2, draw.LineStyleSolid)
-	line4 := newBasicLine(200, 200, 200, 100, 2, draw.LineStyleSolid)
+	bottom := newBasicLine(200, 200, 300, 200, 1, draw.LineStyleDashed)
+	left := newBasicLine(200, 200, 200, 100, 1, draw.LineStyleDashed)
+	top := newBasicLine(200, 100, 300, 100, 1, draw.LineStyleDashed)
+	right := newBasicLine(300, 200, 300, 100, 1, draw.LineStyleDashed)
 
 	c := New()
-	c.Draw(line1)
-	c.Draw(line2)
-	c.Draw(line3)
-	c.Draw(line4)
+	c.Draw(bottom)
+	c.Draw(left)
+	c.Draw(top)
+	c.Draw(right)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func TestSingleBorder(t *testing.T) {
+	border := newBorder(100, 100, 100, 100)
+	//border.SetFillColor(ColorRed)
+	border.SetColorBottom(ColorRed)
+	border.SetColorTop(ColorRed)
+	border.SetColorLeft(ColorRed)
+	border.SetColorRight(ColorRed)
+
+	border.SetWidthBottom(1)
+	border.SetWidthTop(1)
+	border.SetWidthLeft(1)
+	border.SetWidthRight(1)
+
+	c := New()
+	c.Draw(border)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile("../../testfiles/table.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func TestCellBorder(t *testing.T) {
+	table := NewTable(2)
+	table.SetColumnWidths(0.50, 0.50)
+
+	cell1 := table.NewCell()
+	cell1.SetContent(newContent("Cell 1", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, ColorRed))
+	cell1.SetBorder(CellBorderStyleBox, 3)
+
+	c := New()
+	c.Draw(table)
 
 	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
 	err := c.WriteToFile("../../testfiles/table.pdf")

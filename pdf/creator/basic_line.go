@@ -1,10 +1,9 @@
 package creator
 
 import (
-	"math"
-
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/model"
+	"math"
 )
 
 // BasicLine defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
@@ -57,7 +56,7 @@ func (l *BasicLine) SetLineStyle(style draw.LineStyle) {
 
 // Length calculates and returns the line length.
 func (l *BasicLine) Length() float64 {
-	return math.Sqrt(math.Pow(l.x2-l.x1, 2.0) + math.Pow(l.y2-l.y1, 2.0))
+	return math.Sqrt(math.Pow(l.x1-l.x2, 2.0) + math.Pow(l.y1-l.y2, 2.0))
 }
 
 // GeneratePageBlocks draws the line on a new block representing the page. Implements the Drawable interface.
