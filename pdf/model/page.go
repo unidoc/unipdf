@@ -727,26 +727,25 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 
 // AddContentStreamByString adds content stream by string.  Puts the content string into a stream
 // object and points the content stream towards it.
-func (this *PdfPage) AddContentStreamByString(contentStr string) {
-	stream := PdfObjectStream{}
-
-	sDict := MakeDict()
-	stream.PdfObjectDictionary = sDict
-
-	sDict.Set("Length", MakeInteger(int64(len(contentStr))))
-	stream.Stream = []byte(contentStr)
+func (this *PdfPage) AddContentStreamByString(contentStr string) error {
+	stream, err := MakeStream([]byte(contentStr), NewFlateEncoder())
+	if err != nil {
+		return err
+	}
 
 	if this.Contents == nil {
 		// If not set, place it directly.
-		this.Contents = &stream
+		this.Contents = stream
 	} else if contArray, isArray := TraceToDirectObject(this.Contents).(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
-		contArray.Append(&stream)
+		contArray.Append(stream)
 	} else {
 		// Only 1 element in place. Wrap inside a new array and add the new one.
-		contArray := MakeArray(this.Contents, &stream)
+		contArray := MakeArray(this.Contents, stream)
 		this.Contents = contArray
 	}
+
+	return nil
 }
 
 // SetContentStreams sets the content streams based on a string array.  Will make 1 object stream
