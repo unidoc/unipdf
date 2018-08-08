@@ -107,6 +107,7 @@ func (border *border) SetFillColor(col Color) {
 // GeneratePageBlocks creates drawable
 func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
+	// Start points is in upper left corner.
 	startX := border.x
 	startY := ctx.PageHeight - border.y
 
@@ -161,9 +162,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			LineWidth: border.borderWidthTop,
 			Opacity:   1.0,
 			LineColor: border.borderColorTop,
-			X1:        startX,
+			X1:        startX - border.borderWidthTop/2,
 			Y1:        startY,
-			X2:        startX + border.width,
+			X2:        startX + border.width + border.borderWidthTop/2,
 			Y2:        startY,
 			LineStyle: border.LineStyle,
 		}
@@ -209,9 +210,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			LineWidth: border.borderWidthBottom,
 			Opacity:   1.0,
 			LineColor: border.borderColorBottom,
-			X1:        x,
+			X1:        x - border.borderWidthBottom/2,
 			Y1:        y,
-			X2:        x + border.width,
+			X2:        x + border.width + border.borderWidthBottom/2,
 			Y2:        y,
 			LineStyle: border.LineStyle,
 		}
@@ -257,9 +258,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			Opacity:   1.0,
 			LineColor: border.borderColorLeft,
 			X1:        x,
-			Y1:        y,
+			Y1:        y + border.borderWidthLeft/2,
 			X2:        x,
-			Y2:        y - border.height,
+			Y2:        y - border.height - border.borderWidthLeft/2,
 			LineStyle: border.LineStyle,
 		}
 		contentsLeft, _, err := lineLeft.Draw("")
@@ -304,9 +305,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			Opacity:   1.0,
 			LineColor: border.borderColorRight,
 			X1:        x,
-			Y1:        y,
+			Y1:        y + border.borderWidthRight/2,
 			X2:        x,
-			Y2:        y - border.height,
+			Y2:        y - border.height - border.borderWidthRight/2,
 			LineStyle: border.LineStyle,
 		}
 		contentsRight, _, err := lineRight.Draw("")

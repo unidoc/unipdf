@@ -20,11 +20,11 @@ import (
 	"github.com/boombuler/barcode/qr"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
-	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 )
 
 func init() {
@@ -1699,8 +1699,8 @@ func TestRectangle(t *testing.T) {
 func TestSingleBorder(t *testing.T) {
 	border := newBorder(100, 100, 100, 100)
 	//border.SetFillColor(ColorRed)
-	border.SetColorBottom(ColorRed)
-	border.SetColorTop(ColorRed)
+	border.SetColorBottom(ColorGreen)
+	border.SetColorTop(ColorGreen)
 	border.SetColorLeft(ColorRed)
 	border.SetColorRight(ColorRed)
 
@@ -1713,7 +1713,8 @@ func TestSingleBorder(t *testing.T) {
 	c.Draw(border)
 
 	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	//err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/border_single.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

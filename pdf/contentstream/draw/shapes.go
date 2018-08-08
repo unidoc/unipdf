@@ -6,7 +6,6 @@ import (
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
-	"fmt"
 )
 
 type Circle struct {
@@ -377,44 +376,29 @@ type BasicLine struct {
 	LineStyle LineStyle
 }
 
-// Draw a basic line in PDF.  Generates the content stream which can be used in page contents or appearance stream of annotation.
-// Returns the stream content, XForm bounding box (local), bounding box and an error if one occurred.
+// Draw draws the basic line to PDF. Generates the content stream which can be used in page contents or appearance
+// stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error if
+// one occurred.
 func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	w := line.LineWidth
-
-	line.X1 = line.X1 - (line.LineWidth / 2)
-	line.Y1 = line.Y1 - (line.LineWidth / 2)
-
-	fmt.Println("---------------")
-	fmt.Println("X1 : ", line.X1)
-	fmt.Println("Y1 : ", line.Y1)
-	fmt.Println("X2 : ", line.X2)
-	fmt.Println("Y2 : ", line.Y2)
 
 	path := NewPath()
 	path = path.AppendPoint(NewPoint(line.X1, line.Y1))
 	path = path.AppendPoint(NewPoint(line.X2, line.Y2))
 
-	creator := pdfcontent.NewContentCreator()
+	cc := pdfcontent.NewContentCreator()
 
 	pathBbox := path.GetBoundingBox()
 
-	DrawPathWithCreator(path, creator)
+	DrawPathWithCreator(path, cc)
 
 	if line.LineStyle == LineStyleDashed {
-		creator.
-			Add_d([]int64{1, 1}, 0).
-			Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
-			Add_w(w).
-			Add_S().
-			Add_Q()
-	} else {
-		creator.
-			Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
-			Add_w(w).
-			Add_S().
-			Add_Q()
+		cc.Add_d([]int64{1, 1}, 0)
 	}
+	cc.Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
+		Add_w(w).
+		Add_S().
+		Add_Q()
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}
@@ -423,5 +407,5 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	bbox.Urx = pathBbox.X + pathBbox.Width
 	bbox.Ury = pathBbox.Y + pathBbox.Height
 
-	return creator.Bytes(), bbox, nil
+	return cc.Bytes(), bbox, nil
 }
