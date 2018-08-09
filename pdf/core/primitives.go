@@ -209,7 +209,7 @@ func (float *PdfObjectFloat) DefaultWriteString() string {
 }
 
 func (str *PdfObjectString) String() string {
-	return fmt.Sprintf("%s", string(*str))
+	return string(*str)
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
