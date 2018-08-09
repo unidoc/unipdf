@@ -1627,8 +1627,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	c.Draw(table9)
 	c.Draw(table10)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1643,8 +1642,7 @@ func TestBasicLine(t *testing.T) {
 	c := New()
 	c.Draw(line)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/basic_line.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1660,8 +1658,7 @@ func TestBasicLineWithDash(t *testing.T) {
 	c := New()
 	c.Draw(line)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/basic_line_with_dash.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1688,8 +1685,7 @@ func TestRectangle(t *testing.T) {
 	c.Draw(top)
 	c.Draw(right)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/rectangle.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1700,20 +1696,24 @@ func TestSingleBorder(t *testing.T) {
 	border := newBorder(100, 100, 100, 100)
 	//border.SetFillColor(ColorRed)
 	border.SetColorBottom(ColorRed)
-	border.SetColorTop(ColorRed)
-	border.SetColorLeft(ColorRed)
-	border.SetColorRight(ColorRed)
+	border.SetColorTop(ColorGreen)
+	border.SetColorLeft(ColorBlack)
+	border.SetColorRight(ColorBlue)
 
-	border.SetWidthBottom(1)
-	border.SetWidthTop(1)
-	border.SetWidthLeft(1)
-	border.SetWidthRight(1)
+	border.SetWidthBottom(3)
+	border.SetWidthTop(3)
+	border.SetWidthLeft(3)
+	border.SetWidthRight(3)
+
+	border.StyleTop = CellBorderStyleDoubleTop
+	border.StyleBottom = CellBorderStyleDoubleBottom
+	border.StyleLeft = CellBorderStyleDoubleLeft
+	border.StyleRight = CellBorderStyleDoubleRight
 
 	c := New()
 	c.Draw(border)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/single_border.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1726,13 +1726,15 @@ func TestCellBorder(t *testing.T) {
 
 	cell1 := table.NewCell()
 	cell1.SetContent(newContent("Cell 1", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, ColorRed))
-	cell1.SetBorder(CellBorderStyleBox, 3)
+	cell1.SetBorder(CellBorderStyleDoubleTop, 1)
+	cell1.SetBorder(CellBorderStyleDoubleBottom, 1)
+	cell1.SetBorder(CellBorderStyleDoubleLeft, 1)
+	cell1.SetBorder(CellBorderStyleDoubleRight, 1)
 
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/cell.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
