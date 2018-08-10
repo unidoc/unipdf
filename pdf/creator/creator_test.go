@@ -1429,71 +1429,71 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	add := table6.NewCell()
 	add.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
 	add.SetBorder(CellBorderStyleDoubleTop, 1)
-	add.SetBorder(CellBorderStyleRight, 1)
+	add.SetBorder(CellBorderStyleDoubleRight, 1)
 	add.SetBorder(CellBorderStyleDoubleLeft, 1)
-	add.SetBorder(CellBorderStyleBottom, 1)
+	add.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	bdd := table6.NewCell()
 	bdd.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
 	bdd.SetBorder(CellBorderStyleDoubleBox, 1)
-	bdd.SetBorder(CellBorderStyleRight, 1)
-	bdd.SetBorder(CellBorderStyleLeft, 1)
-	bdd.SetBorder(CellBorderStyleBottom, 1)
+	bdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	bdd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	bdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	ccdd := table6.NewCell()
 	ccdd.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
 	ccdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	ccdd.SetBorder(CellBorderStyleRight, 1)
-	ccdd.SetBorder(CellBorderStyleLeft, 1)
-	ccdd.SetBorder(CellBorderStyleBottom, 1)
+	ccdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	ccdd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	ccdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	ddd := table6.NewCell()
 	ddd.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
 	ddd.SetBorder(CellBorderStyleDoubleTop, 1)
 	ddd.SetBorder(CellBorderStyleDoubleRight, 1)
-	ddd.SetBorder(CellBorderStyleLeft, 1)
-	ddd.SetBorder(CellBorderStyleBottom, 1)
+	ddd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	ddd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	edd := table6.NewCell()
 	edd.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	edd.SetBorder(CellBorderStyleTop, 1)
-	edd.SetBorder(CellBorderStyleRight, 1)
+	edd.SetBorder(CellBorderStyleDoubleTop, 1)
+	edd.SetBorder(CellBorderStyleDoubleRight, 1)
 	edd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	edd.SetBorder(CellBorderStyleBottom, 1)
+	edd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	fdd := table6.NewCell()
 	fdd.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fdd.SetBorder(CellBorderStyleTop, 1)
-	fdd.SetBorder(CellBorderStyleRight, 1)
-	fdd.SetBorder(CellBorderStyleLeft, 1)
-	fdd.SetBorder(CellBorderStyleBottom, 1)
+	fdd.SetBorder(CellBorderStyleDoubleTop, 1)
+	fdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	fdd.SetBorder(CellBorderStyleDoubleLeft, 1)
+	fdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	gdd := table6.NewCell()
 	gdd.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	gdd.SetBorder(CellBorderStyleTop, 1)
-	gdd.SetBorder(CellBorderStyleRight, 1)
-	gdd.SetBorder(CellBorderStyleLeft, 1)
+	gdd.SetBorder(CellBorderStyleDoubleTop, 1)
+	gdd.SetBorder(CellBorderStyleDoubleRight, 1)
+	gdd.SetBorder(CellBorderStyleDoubleLeft, 1)
 	gdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	hdd := table6.NewCell()
 	hdd.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	hdd.SetBorder(CellBorderStyleTop, 1)
+	hdd.SetBorder(CellBorderStyleDoubleTop, 1)
 	hdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	hdd.SetBorder(CellBorderStyleLeft, 1)
+	hdd.SetBorder(CellBorderStyleDoubleLeft, 1)
 	hdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	idd := table6.NewCell()
 	idd.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	idd.SetBorder(CellBorderStyleTop, 1)
-	idd.SetBorder(CellBorderStyleRight, 1)
+	idd.SetBorder(CellBorderStyleDoubleTop, 1)
+	idd.SetBorder(CellBorderStyleDoubleRight, 1)
 	idd.SetBorder(CellBorderStyleDoubleLeft, 1)
 	idd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	jdd := table6.NewCell()
 	jdd.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	jdd.SetBorder(CellBorderStyleTop, 1)
+	jdd.SetBorder(CellBorderStyleDoubleTop, 1)
 	jdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	jdd.SetBorder(CellBorderStyleLeft, 1)
+	jdd.SetBorder(CellBorderStyleDoubleLeft, 1)
 	jdd.SetBorder(CellBorderStyleDoubleBottom, 1)
 
 	table7 := NewTable(1) // Mx4 table
@@ -1627,8 +1627,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	c.Draw(table9)
 	c.Draw(table10)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1643,8 +1642,7 @@ func TestBasicLine(t *testing.T) {
 	c := New()
 	c.Draw(line)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/basic_line.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1660,8 +1658,7 @@ func TestBasicLineWithDash(t *testing.T) {
 	c := New()
 	c.Draw(line)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/basic_line_with_dash.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1688,8 +1685,7 @@ func TestRectangle(t *testing.T) {
 	c.Draw(top)
 	c.Draw(right)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/rectangle.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1704,10 +1700,15 @@ func TestSingleBorder(t *testing.T) {
 	border.SetColorLeft(ColorRed)
 	border.SetColorRight(ColorRed)
 
-	border.SetWidthBottom(1)
-	border.SetWidthTop(1)
-	border.SetWidthLeft(1)
-	border.SetWidthRight(1)
+	border.SetWidthBottom(3)
+	border.SetWidthTop(3)
+	border.SetWidthLeft(3)
+	border.SetWidthRight(3)
+
+	border.StyleTop = CellBorderStyleDoubleTop
+	border.StyleBottom = CellBorderStyleDoubleBottom
+	border.StyleLeft = CellBorderStyleDoubleLeft
+	border.StyleRight = CellBorderStyleDoubleRight
 
 	c := New()
 	c.Draw(border)
@@ -1721,19 +1722,111 @@ func TestSingleBorder(t *testing.T) {
 	}
 }
 
+func TestSingleBorder2(t *testing.T) {
+	border := newBorder(100, 100, 100, 100)
+	//border.SetFillColor(ColorRed)
+	border.SetColorBottom(ColorGreen)
+	border.SetColorTop(ColorGreen)
+	//border.SetColorLeft(ColorRed)
+	//border.SetColorRight(ColorRed)
+
+	border.SetWidthBottom(3)
+	border.SetWidthTop(3)
+	//border.SetWidthLeft(3)
+	//border.SetWidthRight(3)
+
+	border.StyleTop = CellBorderStyleDoubleTop
+	border.StyleBottom = CellBorderStyleDoubleBottom
+	//border.StyleLeft = CellBorderStyleDoubleLeft
+	//border.StyleRight = CellBorderStyleDoubleRight
+
+	c := New()
+	c.Draw(border)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	//err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/border_single2.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func TestSingleBorder3(t *testing.T) {
+	border := newBorder(100, 100, 100, 100)
+	//border.SetFillColor(ColorRed)
+	//border.SetColorBottom(ColorGreen)
+	//border.SetColorTop(ColorGreen)
+	border.SetColorLeft(ColorRed)
+	border.SetColorRight(ColorRed)
+
+	//border.SetWidthBottom(3)
+	//border.SetWidthTop(3)
+	border.SetWidthLeft(3)
+	border.SetWidthRight(3)
+
+	//border.StyleTop = CellBorderStyleDoubleTop
+	//border.StyleBottom = CellBorderStyleDoubleBottom
+	border.StyleLeft = CellBorderStyleDoubleLeft
+	border.StyleRight = CellBorderStyleDoubleRight
+
+	c := New()
+	c.Draw(border)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	//err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/border_single3.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+func TestSingleBorder4(t *testing.T) {
+	border := newBorder(100, 100, 100, 100)
+	//border.SetFillColor(ColorRed)
+	border.SetColorBottom(ColorGreen)
+	border.SetColorTop(ColorGreen)
+	border.SetColorLeft(ColorRed)
+	border.SetColorRight(ColorRed)
+
+	border.SetWidthBottom(3)
+	border.SetWidthTop(3)
+	border.SetWidthLeft(3)
+	border.SetWidthRight(3)
+
+	border.StyleTop = CellBorderStyleTop
+	border.StyleBottom = CellBorderStyleDoubleBottom
+	border.StyleLeft = CellBorderStyleLeft
+	border.StyleRight = CellBorderStyleDoubleRight
+
+	c := New()
+	c.Draw(border)
+
+	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	//err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/border_single4.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 func TestCellBorder(t *testing.T) {
 	table := NewTable(2)
 	table.SetColumnWidths(0.50, 0.50)
 
 	cell1 := table.NewCell()
 	cell1.SetContent(newContent("Cell 1", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, ColorRed))
-	cell1.SetBorder(CellBorderStyleBox, 3)
+	cell1.SetBorder(CellBorderStyleDoubleTop, 1)
+	cell1.SetBorder(CellBorderStyleDoubleBottom, 1)
+	cell1.SetBorder(CellBorderStyleDoubleLeft, 1)
+	cell1.SetBorder(CellBorderStyleDoubleRight, 1)
 
 	c := New()
 	c.Draw(table)
 
-	//err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
-	err := c.WriteToFile("../../testfiles/table.pdf")
+	err := c.WriteToFile("/tmp/cell.pdf")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

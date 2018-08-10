@@ -134,16 +134,44 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		}
 	}
 
-	if border.borderWidthTop != 0 {
-		if border.StyleTop == CellBorderStyleDoubleTop {
-			x := startX
-			y := startY
+	// a is the spacing between inner and outer line centers (double border only).
+	aTop := border.borderWidthTop
+	aBottom := border.borderWidthBottom
+	aLeft := border.borderWidthLeft
+	aRight := border.borderWidthRight
 
+	// wb represents the effective width of border (including gap and double lines in double border).
+	wbTop := border.borderWidthTop
+	if border.StyleTop == CellBorderStyleDoubleTop {
+		wbTop += 2 * aTop
+	}
+	wbBottom := border.borderWidthBottom
+	if border.StyleBottom == CellBorderStyleDoubleBottom {
+		wbBottom += 2 * aBottom
+	}
+	wbLeft := border.borderWidthLeft
+	if border.StyleLeft == CellBorderStyleDoubleLeft {
+		wbLeft += 2 * aLeft
+	}
+	wbRight := border.borderWidthRight
+	if border.StyleRight == CellBorderStyleDoubleRight {
+		wbRight += 2 * aRight
+	}
+
+	// Left border.
+	if border.borderWidthTop != 0 {
+		x := startX
+		y := startY
+
+		if border.StyleTop == CellBorderStyleDoubleTop {
+			y -= aTop
+
+			// Double - Outer line.
 			lineTop := draw.BasicLine{}
-			lineTop.X1 = x
-			lineTop.Y1 = y
-			lineTop.X2 = x + border.width
-			lineTop.Y2 = y
+			lineTop.X1 = x - wbTop/2
+			lineTop.Y1 = y + 2*aTop
+			lineTop.X2 = x + border.width + wbTop/2
+			lineTop.Y2 = y + 2*aTop
 			lineTop.LineColor = border.borderColorTop
 			lineTop.LineWidth = border.borderWidthTop
 			lineTop.LineStyle = border.LineStyle
@@ -157,15 +185,14 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			}
 		}
 
-		// Line Top
 		lineTop := draw.BasicLine{
 			LineWidth: border.borderWidthTop,
 			Opacity:   1.0,
 			LineColor: border.borderColorTop,
-			X1:        startX - border.borderWidthTop/2,
-			Y1:        startY,
-			X2:        startX + border.width + border.borderWidthTop/2,
-			Y2:        startY,
+			X1:        x - wbTop/2 + (wbLeft - border.borderWidthLeft),
+			Y1:        y,
+			X2:        x + border.width + wbTop/2 - (wbRight - border.borderWidthRight),
+			Y2:        y,
 			LineStyle: border.LineStyle,
 		}
 		contentsTop, _, err := lineTop.Draw("")
@@ -178,22 +205,22 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		}
 	}
 
+	// Bottom border.
 	if border.borderWidthBottom != 0 {
 		x := startX
 		y := startY - border.height
 
 		if border.StyleBottom == CellBorderStyleDoubleBottom {
-			dx := x
-			dy := y
-
+			y += aBottom
+			// Double border - Outer line.
 			lineBottom := draw.BasicLine{
 				LineWidth: border.borderWidthBottom,
 				Opacity:   1.0,
 				LineColor: border.borderColorBottom,
-				X1:        dx,
-				Y1:        dy,
-				X2:        dx,
-				Y2:        dy,
+				X1:        x - wbBottom/2,
+				Y1:        y - 2*aBottom,
+				X2:        x + border.width + wbBottom/2,
+				Y2:        y - 2*aBottom,
 				LineStyle: border.LineStyle,
 			}
 			contentsBottom, _, err := lineBottom.Draw("")
@@ -210,9 +237,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			LineWidth: border.borderWidthBottom,
 			Opacity:   1.0,
 			LineColor: border.borderColorBottom,
-			X1:        x - border.borderWidthBottom/2,
+			X1:        x - wbBottom/2 + (wbLeft - border.borderWidthLeft),
 			Y1:        y,
-			X2:        x + border.width + border.borderWidthBottom/2,
+			X2:        x + border.width + wbBottom/2 - (wbRight - border.borderWidthRight),
 			Y2:        y,
 			LineStyle: border.LineStyle,
 		}
@@ -226,20 +253,23 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		}
 	}
 
+	// Left border.
 	if border.borderWidthLeft != 0 {
 		x := startX
 		y := startY
 
 		if border.StyleLeft == CellBorderStyleDoubleLeft {
-			// Line Left
+			x += aLeft
+
+			// Double border - outer line.
 			lineLeft := draw.BasicLine{
 				LineWidth: border.borderWidthLeft,
 				Opacity:   1.0,
 				LineColor: border.borderColorLeft,
-				X1:        x,
-				Y1:        y,
-				X2:        x,
-				Y2:        y - border.height,
+				X1:        x - 2*aLeft,
+				Y1:        y + wbLeft/2,
+				X2:        x - 2*aLeft,
+				Y2:        y - border.height - wbLeft/2,
 				LineStyle: border.LineStyle,
 			}
 			contentsLeft, _, err := lineLeft.Draw("")
@@ -258,9 +288,9 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			Opacity:   1.0,
 			LineColor: border.borderColorLeft,
 			X1:        x,
-			Y1:        y + border.borderWidthLeft/2,
+			Y1:        y + wbLeft/2 - (wbTop - border.borderWidthTop),
 			X2:        x,
-			Y2:        y - border.height - border.borderWidthLeft/2,
+			Y2:        y - border.height - wbLeft/2 + (wbBottom - border.borderWidthBottom),
 			LineStyle: border.LineStyle,
 		}
 		contentsLeft, _, err := lineLeft.Draw("")
@@ -273,20 +303,23 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		}
 	}
 
+	// Right border.
 	if border.borderWidthRight != 0 {
 		x := startX + border.width
 		y := startY
 
 		if border.StyleRight == CellBorderStyleDoubleRight {
-			// Line Right
+			x -= aRight
+
+			// Double border - Outer line.
 			lineRight := draw.BasicLine{
 				LineWidth: border.borderWidthRight,
 				Opacity:   1.0,
 				LineColor: border.borderColorRight,
-				X1:        x,
-				Y1:        y,
-				X2:        x,
-				Y2:        y - border.height,
+				X1:        x + 2*aRight,
+				Y1:        y + wbRight/2,
+				X2:        x + 2*aRight,
+				Y2:        y - border.height - wbRight/2,
 				LineStyle: border.LineStyle,
 			}
 			contentsRight, _, err := lineRight.Draw("")
@@ -299,15 +332,14 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			}
 		}
 
-		// Line Right
 		lineRight := draw.BasicLine{
 			LineWidth: border.borderWidthRight,
 			Opacity:   1.0,
 			LineColor: border.borderColorRight,
 			X1:        x,
-			Y1:        y + border.borderWidthRight/2,
+			Y1:        y + wbRight/2 - (wbTop - border.borderWidthTop),
 			X2:        x,
-			Y2:        y - border.height - border.borderWidthRight/2,
+			Y2:        y - border.height - wbRight/2 + (wbBottom - border.borderWidthBottom),
 			LineStyle: border.LineStyle,
 		}
 		contentsRight, _, err := lineRight.Draw("")
