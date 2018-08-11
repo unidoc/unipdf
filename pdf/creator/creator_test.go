@@ -957,7 +957,7 @@ func TestBorderedTable1(t *testing.T) {
 	cell1 := table.NewCell()
 	p := NewParagraph("A")
 	cell1.SetContent(p)
-	cell1.SetBorder(CellBorderStyleDoubleBox, 1) // border will be on left
+	cell1.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox) // border will be on left
 	cell1.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table.SkipCells(1)
@@ -965,7 +965,7 @@ func TestBorderedTable1(t *testing.T) {
 	cell2 := table.NewCell()
 	p = NewParagraph("B")
 	cell2.SetContent(p)
-	cell2.SetBorder(CellBorderStyleDoubleBox, 1) // border will be around
+	cell2.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox) // border will be around
 	cell2.SetBorderLineStyle(draw.LineStyleSolid)
 	cell2.SetBackgroundColor(ColorRed)
 
@@ -976,7 +976,7 @@ func TestBorderedTable1(t *testing.T) {
 	cell8 := table.NewCell()
 	p = NewParagraph("H")
 	cell8.SetContent(p)
-	cell8.SetBorder(CellBorderStyleRight, 1) // border will be on right
+	cell8.SetBorder(CellBorderStyleSingle, 1, CellBorderSideRight) // border will be on right
 	cell8.SetBorderLineStyle(draw.LineStyleSolid)
 
 	c := New()
@@ -998,13 +998,13 @@ func TestBorderedTable2(t *testing.T) {
 	cell1 := table.NewCell()
 	p := NewParagraph("A")
 	cell1.SetContent(p)
-	cell1.SetBorder(CellBorderStyleLeft, 1) // border will be on left
+	cell1.SetBorder(CellBorderStyleSingle, 1, CellBorderSideLeft) // border will be on left
 	cell1.SetBorderLineStyle(draw.LineStyleSolid)
 
 	cell2 := table.NewCell()
 	p = NewParagraph("B")
 	cell2.SetContent(p)
-	cell2.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell2.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox) // border will be around
 	cell2.SetBorderLineStyle(draw.LineStyleSolid)
 
 	table.SkipCells(1)
@@ -1012,7 +1012,7 @@ func TestBorderedTable2(t *testing.T) {
 	cell4 := table.NewCell()
 	p = NewParagraph("D")
 	cell4.SetContent(p)
-	cell4.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell4.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox) // border will be around
 	cell4.SetBorderLineStyle(draw.LineStyleSolid)
 
 	table.SkipCells(1)
@@ -1020,7 +1020,7 @@ func TestBorderedTable2(t *testing.T) {
 	cell6 := table.NewCell()
 	p = NewParagraph("F")
 	cell6.SetContent(p)
-	cell6.SetBorder(CellBorderStyleLeft, 1) // border will be on left
+	cell6.SetBorder(CellBorderStyleSingle, 1, CellBorderSideLeft) // border will be on left
 	cell6.SetBorderLineStyle(draw.LineStyleSolid)
 
 	table.SkipCells(1) // Skip over 2,3.
@@ -1028,7 +1028,7 @@ func TestBorderedTable2(t *testing.T) {
 	cell7 := table.NewCell()
 	p = NewParagraph("G")
 	cell7.SetContent(p)
-	cell7.SetBorder(CellBorderStyleBox, 1) // border will be around
+	cell7.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox) // border will be around
 	cell7.SetBorderLineStyle(draw.LineStyleSolid)
 
 	// Skip over two rows.
@@ -1036,7 +1036,7 @@ func TestBorderedTable2(t *testing.T) {
 	cell8 := table.NewCell()
 	p = NewParagraph("H")
 	cell8.SetContent(p)
-	cell8.SetBorder(CellBorderStyleRight, 1) // border will be on right
+	cell8.SetBorder(CellBorderStyleSingle, 1, CellBorderSideRight) // border will be on right
 	cell8.SetBorderLineStyle(draw.LineStyleSolid)
 
 	c := New()
@@ -1093,7 +1093,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 
 	pageHeader := table.NewCell()
 	pageHeader.SetContent(newContent("Billing Schedule by Project", TextAlignmentCenter, fonts.NewFontTimesBold(), 12, ColorBlack))
-	pageHeader.SetBorder(CellBorderStyleBox, 3)
+	pageHeader.SetBorder(CellBorderStyleSingle, 3, CellBorderSideBox)
 	pageHeader.SetBorderLineStyle(draw.LineStyleSolid)
 
 	companyAddress := table.NewCell()
@@ -1185,50 +1185,50 @@ func TestCreatorHendricksReq1(t *testing.T) {
 
 	billNo := table3.NewCell()
 	billNo.SetContent(newContent("Bill #", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billNo.SetBorder(CellBorderStyleTop, 2)
-	billNo.SetBorder(CellBorderStyleBottom, 1)
+	billNo.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billNo.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billNo.SetBorderColor(projectColorOne)
 
 	billDate := table3.NewCell()
 	billDate.SetContent(newContent("Date", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billDate.SetBorder(CellBorderStyleTop, 2)
-	billDate.SetBorder(CellBorderStyleBottom, 1)
+	billDate.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billDate.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billDate.SetBorderColor(projectColorOne)
 
 	billNotes := table3.NewCell()
 	billNotes.SetContent(newContent("Notes", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billNotes.SetBorder(CellBorderStyleTop, 2)
-	billNotes.SetBorder(CellBorderStyleBottom, 1)
+	billNotes.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billNotes.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billNotes.SetBorderColor(projectColorOne)
 
 	billAmount := table3.NewCell()
 	billAmount.SetContent(newContent("Bill Amount", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billAmount.SetBorder(CellBorderStyleTop, 2)
-	billAmount.SetBorder(CellBorderStyleBottom, 1)
+	billAmount.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billAmount.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billAmount.SetBorderColor(projectColorOne)
 
 	billCon := table3.NewCell()
 	billCon.SetContent(newContent("% Con", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billCon.SetBorder(CellBorderStyleTop, 2)
-	billCon.SetBorder(CellBorderStyleBottom, 1)
+	billCon.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billCon.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billCon.SetBorderColor(projectColorOne)
 
 	billRetApplied := table3.NewCell()
 	billRetApplied.SetContent(newContent("Ret Applied", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billRetApplied.SetBorder(CellBorderStyleTop, 2)
-	billRetApplied.SetBorder(CellBorderStyleBottom, 1)
+	billRetApplied.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billRetApplied.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billRetApplied.SetBorderColor(projectColorOne)
 
 	billRet := table3.NewCell()
 	billRet.SetContent(newContent("% Ret", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billRet.SetBorder(CellBorderStyleTop, 2)
-	billRet.SetBorder(CellBorderStyleBottom, 1)
+	billRet.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billRet.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billRet.SetBorderColor(projectColorOne)
 
 	billNetBill := table3.NewCell()
 	billNetBill.SetContent(newContent("Net Bill Amt", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, projectColorOne))
-	billNetBill.SetBorder(CellBorderStyleTop, 2)
-	billNetBill.SetBorder(CellBorderStyleBottom, 1)
+	billNetBill.SetBorder(CellBorderStyleSingle, 2, CellBorderSideTop)
+	billNetBill.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 	billNetBill.SetBorderColor(projectColorOne)
 
 	newBillItem(table3, "1", "1/2/2012", "", "$297.50", "", "$0.00", "", "$297.50")
@@ -1245,23 +1245,23 @@ func TestCreatorHendricksReq1(t *testing.T) {
 
 	totalBillAmount := table3.NewCell()
 	totalBillAmount.SetContent(newContent("$3,272.50", TextAlignmentRight, fonts.NewFontTimesBold(), 8, projectColorTwo))
-	totalBillAmount.SetBorder(CellBorderStyleDoubleTop, 1)
-	totalBillAmount.SetBorder(CellBorderStyleBottom, 1)
+	totalBillAmount.SetBorder(CellBorderStyleDouble, 1, CellBorderSideTop)
+	totalBillAmount.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 
 	table3.SkipCells(1)
 
 	totalRetAmount := table3.NewCell()
 	totalRetAmount.SetContent(newContent("$0.00", TextAlignmentRight, fonts.NewFontTimesBold(), 8, projectColorTwo))
-	totalRetAmount.SetBorder(CellBorderStyleDoubleTop, 1)
-	totalRetAmount.SetBorder(CellBorderStyleBottom, 1)
+	totalRetAmount.SetBorder(CellBorderStyleDouble, 1, CellBorderSideTop)
+	totalRetAmount.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
 
 	table3.SkipCells(1)
 
 	totalNetAmount := table3.NewCell()
 	totalNetAmount.SetContent(newContent("$3,272.50", TextAlignmentRight, fonts.NewFontTimesBold(), 8, projectColorTwo))
-	totalNetAmount.SetBorder(CellBorderStyleDoubleTop, 1)
-	totalNetAmount.SetBorder(CellBorderStyleBottom, 1)
-	totalNetAmount.SetBorderLineStyle(draw.LineStyleDashed)
+	totalNetAmount.SetBorder(CellBorderStyleDouble, 1, CellBorderSideTop)
+	totalNetAmount.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBottom)
+	totalNetAmount.SetBorderLineStyle(draw.LineStyleSolid)
 
 	c := New()
 	c.Draw(table)
@@ -1281,7 +1281,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	fullLengthCell := table.NewCell()
 	fullLengthCell.SetContent(newContent("boxed, solid, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fullLengthCell.SetBorder(CellBorderStyleBox, 1)
+	fullLengthCell.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	table2 := NewTable(4) // Mx4 table
 	table2.SetColumnWidths(.25, .25, .25, .25)
@@ -1290,43 +1290,43 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	a := table2.NewCell()
 	a.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	a.SetBorder(CellBorderStyleBox, 1)
+	a.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	b := table2.NewCell()
 	b.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	b.SetBorder(CellBorderStyleBox, 1)
+	b.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	cc := table2.NewCell()
 	cc.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	cc.SetBorder(CellBorderStyleBox, 1)
+	cc.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	d := table2.NewCell()
 	d.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	d.SetBorder(CellBorderStyleBox, 1)
+	d.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	e := table2.NewCell()
 	e.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	e.SetBorder(CellBorderStyleBox, 1)
+	e.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	f := table2.NewCell()
 	f.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	f.SetBorder(CellBorderStyleBox, 1)
+	f.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	g := table2.NewCell()
 	g.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	g.SetBorder(CellBorderStyleBox, 1)
+	g.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	h := table2.NewCell()
 	h.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	h.SetBorder(CellBorderStyleBox, 1)
+	h.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	i := table2.NewCell()
 	i.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	i.SetBorder(CellBorderStyleBox, 1)
+	i.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	j := table2.NewCell()
 	j.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	j.SetBorder(CellBorderStyleBox, 1)
+	j.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 
 	table3 := NewTable(1) // Mx4 table
 	table3.SetColumnWidths(1)
@@ -1335,7 +1335,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	dash := table3.NewCell()
 	dash.SetContent(newContent("boxed, dashed, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	dash.SetBorder(CellBorderStyleBox, 1)
+	dash.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	dash.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table4 := NewTable(4) // Mx4 table
@@ -1345,71 +1345,71 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	ad := table4.NewCell()
 	ad.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ad.SetBorder(CellBorderStyleBox, 1)
+	ad.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	ad.SetBorderLineStyle(draw.LineStyleDashed)
 
 	bd := table4.NewCell()
 	bd.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	bd.SetBorder(CellBorderStyleBox, 1)
+	bd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	bd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table4.SkipCells(2)
 
 	ccd := table4.NewCell()
 	ccd.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ccd.SetBorder(CellBorderStyleBox, 1)
+	ccd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	ccd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	dd := table4.NewCell()
 	dd.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	dd.SetBorder(CellBorderStyleBox, 1)
+	dd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	dd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table4.SkipCells(2)
 
 	ed := table4.NewCell()
 	ed.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ed.SetBorder(CellBorderStyleBox, 1)
+	ed.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	ed.SetBorderLineStyle(draw.LineStyleDashed)
 
 	fd := table4.NewCell()
 	fd.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fd.SetBorder(CellBorderStyleBox, 1)
+	fd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	fd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	gd := table4.NewCell()
 	gd.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	gd.SetBorder(CellBorderStyleBox, 1)
+	gd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	gd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	hd := table4.NewCell()
 	hd.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	hd.SetBorder(CellBorderStyleBox, 1)
+	hd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	hd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	id := table4.NewCell()
 	id.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	id.SetBorder(CellBorderStyleBox, 1)
+	id.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	id.SetBorderLineStyle(draw.LineStyleDashed)
 
 	jd := table4.NewCell()
 	jd.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	jd.SetBorder(CellBorderStyleBox, 1)
+	jd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	jd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	kd := table4.NewCell()
 	kd.SetContent(newContent("K", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	kd.SetBorder(CellBorderStyleBox, 1)
+	kd.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	kd.SetBorderLineStyle(draw.LineStyleDashed)
 
 	ld := table4.NewCell()
 	ld.SetContent(newContent("L", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ld.SetBorder(CellBorderStyleBox, 1)
+	ld.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	ld.SetBorderLineStyle(draw.LineStyleDashed)
 
 	md := table4.NewCell()
 	md.SetContent(newContent("M", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	md.SetBorder(CellBorderStyleBox, 1)
+	md.SetBorder(CellBorderStyleSingle, 1, CellBorderSideBox)
 	md.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table5 := NewTable(1) // Mx4 table
@@ -1419,7 +1419,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	doubled := table5.NewCell()
 	doubled.SetContent(newContent("boxed, double, default width", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	doubled.SetBorder(CellBorderStyleDoubleBox, 1)
+	doubled.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	table6 := NewTable(4) // Mx4 table
 	table6.SetColumnWidths(.25, .25, .25, .25)
@@ -1428,73 +1428,43 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	add := table6.NewCell()
 	add.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	add.SetBorder(CellBorderStyleDoubleTop, 1)
-	add.SetBorder(CellBorderStyleDoubleRight, 1)
-	add.SetBorder(CellBorderStyleDoubleLeft, 1)
-	add.SetBorder(CellBorderStyleDoubleBottom, 1)
+	add.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	bdd := table6.NewCell()
 	bdd.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	bdd.SetBorder(CellBorderStyleDoubleBox, 1)
-	bdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	bdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	bdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	bdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	ccdd := table6.NewCell()
 	ccdd.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ccdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	ccdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	ccdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	ccdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	ccdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	ddd := table6.NewCell()
 	ddd.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	ddd.SetBorder(CellBorderStyleDoubleTop, 1)
-	ddd.SetBorder(CellBorderStyleDoubleRight, 1)
-	ddd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	ddd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	ddd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	edd := table6.NewCell()
 	edd.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	edd.SetBorder(CellBorderStyleDoubleTop, 1)
-	edd.SetBorder(CellBorderStyleDoubleRight, 1)
-	edd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	edd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	edd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	fdd := table6.NewCell()
 	fdd.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	fdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	fdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	fdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	fdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	gdd := table6.NewCell()
 	gdd.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	gdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	gdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	gdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	gdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	gdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	hdd := table6.NewCell()
 	hdd.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	hdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	hdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	hdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	hdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	hdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	idd := table6.NewCell()
 	idd.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	idd.SetBorder(CellBorderStyleDoubleTop, 1)
-	idd.SetBorder(CellBorderStyleDoubleRight, 1)
-	idd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	idd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	idd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	jdd := table6.NewCell()
 	jdd.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	jdd.SetBorder(CellBorderStyleDoubleTop, 1)
-	jdd.SetBorder(CellBorderStyleDoubleRight, 1)
-	jdd.SetBorder(CellBorderStyleDoubleLeft, 1)
-	jdd.SetBorder(CellBorderStyleDoubleBottom, 1)
+	jdd.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	table7 := NewTable(1) // Mx4 table
 	table7.SetColumnWidths(1)
@@ -1503,7 +1473,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	fullLengthCell7 := table7.NewCell()
 	fullLengthCell7.SetContent(newContent("boxed, solid, thick", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fullLengthCell7.SetBorder(CellBorderStyleBox, 2)
+	fullLengthCell7.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	table8 := NewTable(4) // Mx4 table
 	table8.SetColumnWidths(.25, .25, .25, .25)
@@ -1512,43 +1482,43 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	a8 := table8.NewCell()
 	a8.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	a8.SetBorder(CellBorderStyleBox, 2)
+	a8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	b8 := table8.NewCell()
 	b8.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	b8.SetBorder(CellBorderStyleBox, 2)
+	b8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	cc8 := table8.NewCell()
 	cc8.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	cc8.SetBorder(CellBorderStyleBox, 2)
+	cc8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	d8 := table8.NewCell()
 	d8.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	d8.SetBorder(CellBorderStyleBox, 2)
+	d8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	e8 := table8.NewCell()
 	e8.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	e8.SetBorder(CellBorderStyleBox, 2)
+	e8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	f8 := table8.NewCell()
 	f8.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	f8.SetBorder(CellBorderStyleBox, 2)
+	f8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	g8 := table8.NewCell()
 	g8.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	g8.SetBorder(CellBorderStyleBox, 2)
+	g8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	h8 := table8.NewCell()
 	h8.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	h8.SetBorder(CellBorderStyleBox, 2)
+	h8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	i8 := table8.NewCell()
 	i8.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	i8.SetBorder(CellBorderStyleBox, 2)
+	i8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	j8 := table8.NewCell()
 	j8.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	j8.SetBorder(CellBorderStyleBox, 2)
+	j8.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 
 	table9 := NewTable(1) // Mx4 table
 	table9.SetColumnWidths(1)
@@ -1557,7 +1527,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	fullLengthCell9 := table9.NewCell()
 	fullLengthCell9.SetContent(newContent("boxed, dashed, thick", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	fullLengthCell9.SetBorder(CellBorderStyleBox, 2)
+	fullLengthCell9.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	fullLengthCell9.SetBorderLineStyle(draw.LineStyleDashed)
 
 	table10 := NewTable(4) // Mx4 table
@@ -1567,52 +1537,52 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 
 	a10 := table10.NewCell()
 	a10.SetContent(newContent("A", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	a10.SetBorder(CellBorderStyleBox, 2)
+	a10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	a10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	b10 := table10.NewCell()
 	b10.SetContent(newContent("B", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	b10.SetBorder(CellBorderStyleBox, 2)
+	b10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	b10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	cc10 := table10.NewCell()
 	cc10.SetContent(newContent("C", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	cc10.SetBorder(CellBorderStyleBox, 2)
+	cc10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	cc10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	d10 := table10.NewCell()
 	d10.SetContent(newContent("D", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	d10.SetBorder(CellBorderStyleBox, 2)
+	d10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	d10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	e10 := table10.NewCell()
 	e10.SetContent(newContent("E", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	e10.SetBorder(CellBorderStyleBox, 2)
+	e10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	e10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	f10 := table10.NewCell()
 	f10.SetContent(newContent("F", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	f10.SetBorder(CellBorderStyleBox, 2)
+	f10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	f10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	g10 := table10.NewCell()
 	g10.SetContent(newContent("G", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	g10.SetBorder(CellBorderStyleBox, 2)
+	g10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	g10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	h10 := table10.NewCell()
 	h10.SetContent(newContent("H", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	h10.SetBorder(CellBorderStyleBox, 2)
+	h10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	h10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	i10 := table10.NewCell()
 	i10.SetContent(newContent("I", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	i10.SetBorder(CellBorderStyleBox, 2)
+	i10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	i10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	j10 := table10.NewCell()
 	j10.SetContent(newContent("J", TextAlignmentLeft, fonts.NewFontTimesRoman(), 10, ColorBlack))
-	j10.SetBorder(CellBorderStyleBox, 2)
+	j10.SetBorder(CellBorderStyleSingle, 2, CellBorderSideBox)
 	j10.SetBorderLineStyle(draw.LineStyleDashed)
 
 	c := New()
@@ -1698,10 +1668,7 @@ func TestCellBorder(t *testing.T) {
 
 	cell1 := table.NewCell()
 	cell1.SetContent(newContent("Cell 1", TextAlignmentLeft, fonts.NewFontTimesBold(), 8, ColorRed))
-	cell1.SetBorder(CellBorderStyleDoubleTop, 1)
-	cell1.SetBorder(CellBorderStyleDoubleBottom, 1)
-	cell1.SetBorder(CellBorderStyleDoubleLeft, 1)
-	cell1.SetBorder(CellBorderStyleDoubleRight, 1)
+	cell1.SetBorder(CellBorderStyleDouble, 1, CellBorderSideBox)
 
 	c := New()
 	c.Draw(table)
@@ -1740,7 +1707,7 @@ func TestTableInSubchapter(t *testing.T) {
 	cell := issuerTable.NewCell()
 	cell.SetContent(p)
 	cell.SetBackgroundColor(ColorBlack)
-	cell.SetBorder(CellBorderStyleBox, 1.0)
+	cell.SetBorder(CellBorderStyleSingle, 1.0, CellBorderSideBox)
 	cell.SetIndent(5)
 
 	p = NewParagraph("Company Inc.")
@@ -1750,7 +1717,7 @@ func TestTableInSubchapter(t *testing.T) {
 	cell = issuerTable.NewCell()
 	cell.SetContent(p)
 	cell.SetBackgroundColor(ColorRed)
-	cell.SetBorder(CellBorderStyleBox, 1.0)
+	cell.SetBorder(CellBorderStyleSingle, 1.0, CellBorderSideBox)
 	cell.SetIndent(5)
 
 	p = NewParagraph("Belongs to")
@@ -1760,7 +1727,7 @@ func TestTableInSubchapter(t *testing.T) {
 	cell = issuerTable.NewCell()
 	cell.SetContent(p)
 	cell.SetBackgroundColor(ColorBlack)
-	cell.SetBorder(CellBorderStyleBox, 1.0)
+	cell.SetBorder(CellBorderStyleSingle, 1.0, CellBorderSideBox)
 	cell.SetIndent(5)
 
 	p = NewParagraph("Bezt business bureu")
@@ -1770,7 +1737,7 @@ func TestTableInSubchapter(t *testing.T) {
 	cell = issuerTable.NewCell()
 	cell.SetContent(p)
 	cell.SetBackgroundColor(ColorRed)
-	cell.SetBorder(CellBorderStyleBox, 1.0)
+	cell.SetBorder(CellBorderStyleSingle, 1.0, CellBorderSideBox)
 	cell.SetIndent(5)
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
 	//cell.SetVerticalAlignment(CellVerticalAlignmentMiddle)

@@ -224,18 +224,12 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			border.SetFillColor(ColorRGBFromArithmetic(r, g, b))
 		}
 
-		// Force solid when border is double
-		if cell.borderStyleLeft == CellBorderStyleDoubleLeft || cell.borderStyleRight == CellBorderStyleDoubleRight ||
-			cell.borderStyleTop == CellBorderStyleDoubleTop || cell.borderStyleBottom == CellBorderStyleDoubleBottom {
-			border.LineStyle = draw.LineStyleSolid
-		} else {
-			border.LineStyle = cell.borderLineStyle
-		}
+		border.LineStyle = cell.borderLineStyle
 
-		border.StyleLeft = cell.borderStyleLeft
-		border.StyleRight = cell.borderStyleRight
-		border.StyleTop = cell.borderStyleTop
-		border.StyleBottom = cell.borderStyleBottom
+		border.styleLeft = cell.borderStyleLeft
+		border.styleRight = cell.borderStyleRight
+		border.styleTop = cell.borderStyleTop
+		border.styleBottom = cell.borderStyleBottom
 
 		if cell.borderColorLeft != nil {
 			border.SetColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
@@ -333,16 +327,18 @@ const (
 	CellBorderStyleNone CellBorderStyle = iota
 
 	// Borders along all sides (boxed).
-	CellBorderStyleBox
-	CellBorderStyleLeft
-	CellBorderStyleTop
-	CellBorderStyleRight
-	CellBorderStyleBottom
-	CellBorderStyleDoubleBox
-	CellBorderStyleDoubleLeft
-	CellBorderStyleDoubleTop
-	CellBorderStyleDoubleRight
-	CellBorderStyleDoubleBottom
+	CellBorderStyleSingle
+	CellBorderStyleDouble
+)
+
+type CellBorderSide int
+
+const (
+	CellBorderSideLeft   CellBorderSide = iota
+	CellBorderSideRight
+	CellBorderSideTop
+	CellBorderSideBottom
+	CellBorderSideBox
 )
 
 // CellHorizontalAlignment defines the table cell's horizontal alignment.
@@ -517,35 +513,35 @@ func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 }
 
 // SetBorder sets the cell's border style.
-func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
-	if style == CellBorderStyleBox {
-		cell.borderStyleLeft = CellBorderStyleLeft
+func (cell *TableCell) SetBorder(style CellBorderStyle, width float64, side CellBorderSide) {
+	if style == CellBorderStyleSingle && side == CellBorderSideBox {
+		cell.borderStyleLeft = CellBorderStyleSingle
 		cell.borderWidthLeft = width
-		cell.borderStyleBottom = CellBorderStyleBottom
+		cell.borderStyleBottom = CellBorderStyleSingle
 		cell.borderWidthBottom = width
-		cell.borderStyleRight = CellBorderStyleRight
+		cell.borderStyleRight = CellBorderStyleSingle
 		cell.borderWidthRight = width
-		cell.borderStyleTop = CellBorderStyleTop
+		cell.borderStyleTop = CellBorderStyleSingle
 		cell.borderWidthTop = width
-	} else if style == CellBorderStyleDoubleBox {
-		cell.borderStyleLeft = CellBorderStyleDoubleLeft
+	} else if style == CellBorderStyleDouble && side == CellBorderSideBox {
+		cell.borderStyleLeft = CellBorderStyleDouble
 		cell.borderWidthLeft = width
-		cell.borderStyleBottom = CellBorderStyleDoubleBottom
+		cell.borderStyleBottom = CellBorderStyleDouble
 		cell.borderWidthBottom = width
-		cell.borderStyleRight = CellBorderStyleDoubleRight
+		cell.borderStyleRight = CellBorderStyleDouble
 		cell.borderWidthRight = width
-		cell.borderStyleTop = CellBorderStyleDoubleTop
+		cell.borderStyleTop = CellBorderStyleDouble
 		cell.borderWidthTop = width
-	} else if style == CellBorderStyleLeft || style == CellBorderStyleDoubleLeft {
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideLeft {
 		cell.borderStyleLeft = style
 		cell.borderWidthLeft = width
-	} else if style == CellBorderStyleBottom || style == CellBorderStyleDoubleBottom {
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideBottom {
 		cell.borderStyleBottom = style
 		cell.borderWidthBottom = width
-	} else if style == CellBorderStyleRight || style == CellBorderStyleDoubleRight {
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideRight {
 		cell.borderStyleRight = style
 		cell.borderWidthRight = width
-	} else if style == CellBorderStyleTop || style == CellBorderStyleDoubleTop {
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideTop {
 		cell.borderStyleTop = style
 		cell.borderWidthTop = width
 	}

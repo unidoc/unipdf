@@ -24,10 +24,10 @@ func TestSingleBorder(t *testing.T) {
 	border.SetWidthLeft(3)
 	border.SetWidthRight(3)
 
-	border.StyleTop = CellBorderStyleDoubleTop
-	border.StyleBottom = CellBorderStyleDoubleBottom
-	border.StyleLeft = CellBorderStyleDoubleLeft
-	border.StyleRight = CellBorderStyleDoubleRight
+	border.SetStyleBottom(CellBorderStyleDouble)
+	border.SetStyleTop(CellBorderStyleDouble)
+	border.SetStyleLeft(CellBorderStyleDouble)
+	border.SetStyleRight(CellBorderStyleDouble)
 
 	c := New()
 	c.Draw(border)
@@ -48,8 +48,8 @@ func TestSingleBorder2(t *testing.T) {
 	border.SetWidthBottom(3)
 	border.SetWidthTop(3)
 
-	border.StyleTop = CellBorderStyleDoubleTop
-	border.StyleBottom = CellBorderStyleDoubleBottom
+	border.SetStyleBottom(CellBorderStyleDouble)
+	border.SetStyleTop(CellBorderStyleDouble)
 
 	c := New()
 	c.Draw(border)
@@ -70,8 +70,8 @@ func TestSingleBorder3(t *testing.T) {
 	border.SetWidthLeft(3)
 	border.SetWidthRight(3)
 
-	border.StyleLeft = CellBorderStyleDoubleLeft
-	border.StyleRight = CellBorderStyleDoubleRight
+	border.SetStyleLeft(CellBorderStyleDouble)
+	border.SetStyleRight(CellBorderStyleDouble)
 
 	c := New()
 	c.Draw(border)
@@ -97,10 +97,10 @@ func TestSingleBorder4(t *testing.T) {
 	border.SetWidthLeft(3)
 	border.SetWidthRight(3)
 
-	border.StyleTop = CellBorderStyleTop
-	border.StyleBottom = CellBorderStyleDoubleBottom
-	border.StyleLeft = CellBorderStyleLeft
-	border.StyleRight = CellBorderStyleDoubleRight
+	border.SetStyleTop(CellBorderStyleSingle)
+	border.SetStyleBottom(CellBorderStyleDouble)
+	border.SetStyleLeft(CellBorderStyleSingle)
+	border.SetStyleRight(CellBorderStyleDouble)
 
 	c := New()
 	c.Draw(border)

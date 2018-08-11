@@ -5,10 +5,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-const (
-	gapBetweenDoubleBorder = 1
-)
-
 // border represents cell border
 type border struct {
 	x                 float64 // Upper left corner
@@ -25,10 +21,10 @@ type border struct {
 	borderColorTop    *model.PdfColorDeviceRGB
 	borderWidthTop    float64
 	LineStyle         draw.LineStyle
-	StyleLeft         CellBorderStyle
-	StyleRight        CellBorderStyle
-	StyleTop          CellBorderStyle
-	StyleBottom       CellBorderStyle
+	styleLeft         CellBorderStyle
+	styleRight        CellBorderStyle
+	styleTop          CellBorderStyle
+	styleBottom       CellBorderStyle
 }
 
 // newBorder returns and instance of border
@@ -104,6 +100,26 @@ func (border *border) SetFillColor(col Color) {
 	border.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
+// SetStyleLeft sets border style for left side
+func (border *border) SetStyleLeft(style CellBorderStyle) {
+	border.styleLeft = style
+}
+
+// SetStyleRight sets border style for right side
+func (border *border) SetStyleRight(style CellBorderStyle) {
+	border.styleRight = style
+}
+
+// SetStyleTop sets border style for top side
+func (border *border) SetStyleTop(style CellBorderStyle) {
+	border.styleTop = style
+}
+
+// SetStyleBottom sets border style for bottom side
+func (border *border) SetStyleBottom(style CellBorderStyle) {
+	border.styleBottom = style
+}
+
 // GeneratePageBlocks creates drawable
 func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
@@ -142,19 +158,19 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 
 	// wb represents the effective width of border (including gap and double lines in double border).
 	wbTop := border.borderWidthTop
-	if border.StyleTop == CellBorderStyleDoubleTop {
+	if border.styleTop == CellBorderStyleDouble {
 		wbTop += 2 * aTop
 	}
 	wbBottom := border.borderWidthBottom
-	if border.StyleBottom == CellBorderStyleDoubleBottom {
+	if border.styleBottom == CellBorderStyleDouble {
 		wbBottom += 2 * aBottom
 	}
 	wbLeft := border.borderWidthLeft
-	if border.StyleLeft == CellBorderStyleDoubleLeft {
+	if border.styleLeft == CellBorderStyleDouble {
 		wbLeft += 2 * aLeft
 	}
 	wbRight := border.borderWidthRight
-	if border.StyleRight == CellBorderStyleDoubleRight {
+	if border.styleRight == CellBorderStyleDouble {
 		wbRight += 2 * aRight
 	}
 
@@ -163,7 +179,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		x := startX
 		y := startY
 
-		if border.StyleTop == CellBorderStyleDoubleTop {
+		if border.styleTop == CellBorderStyleDouble {
 			y -= aTop
 
 			// Double - Outer line.
@@ -210,7 +226,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		x := startX
 		y := startY - border.height
 
-		if border.StyleBottom == CellBorderStyleDoubleBottom {
+		if border.styleBottom == CellBorderStyleDouble {
 			y += aBottom
 			// Double border - Outer line.
 			lineBottom := draw.BasicLine{
@@ -258,7 +274,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		x := startX
 		y := startY
 
-		if border.StyleLeft == CellBorderStyleDoubleLeft {
+		if border.styleLeft == CellBorderStyleDouble {
 			x += aLeft
 
 			// Double border - outer line.
@@ -308,7 +324,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 		x := startX + border.width
 		y := startY
 
-		if border.StyleRight == CellBorderStyleDoubleRight {
+		if border.styleRight == CellBorderStyleDouble {
 			x -= aRight
 
 			// Double border - Outer line.
