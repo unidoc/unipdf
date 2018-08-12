@@ -175,7 +175,7 @@ const (
 	LineEndingStyleButt  LineEndingStyle = 2
 )
 
-// LineStyle refers to how the line will be created
+// LineStyle refers to how the line will be created.
 type LineStyle int
 
 const (

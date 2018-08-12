@@ -331,14 +331,17 @@ const (
 	CellBorderStyleDouble
 )
 
+// CellBorderSide defines the table cell's border side.
 type CellBorderSide int
 
 const (
+	// Left side border.
 	CellBorderSideLeft   CellBorderSide = iota
 	CellBorderSideRight
 	CellBorderSideTop
 	CellBorderSideBottom
-	CellBorderSideBox
+	// Border on all sides.
+	CellBorderSideAll
 )
 
 // CellHorizontalAlignment defines the table cell's horizontal alignment.
@@ -513,8 +516,8 @@ func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 }
 
 // SetBorder sets the cell's border style.
-func (cell *TableCell) SetBorder(style CellBorderStyle, width float64, side CellBorderSide) {
-	if style == CellBorderStyleSingle && side == CellBorderSideBox {
+func (cell *TableCell) SetBorder(side CellBorderSide, style CellBorderStyle, width float64) {
+	if style == CellBorderStyleSingle && side == CellBorderSideAll {
 		cell.borderStyleLeft = CellBorderStyleSingle
 		cell.borderWidthLeft = width
 		cell.borderStyleBottom = CellBorderStyleSingle
@@ -523,7 +526,7 @@ func (cell *TableCell) SetBorder(style CellBorderStyle, width float64, side Cell
 		cell.borderWidthRight = width
 		cell.borderStyleTop = CellBorderStyleSingle
 		cell.borderWidthTop = width
-	} else if style == CellBorderStyleDouble && side == CellBorderSideBox {
+	} else if style == CellBorderStyleDouble && side == CellBorderSideAll {
 		cell.borderStyleLeft = CellBorderStyleDouble
 		cell.borderWidthLeft = width
 		cell.borderStyleBottom = CellBorderStyleDouble

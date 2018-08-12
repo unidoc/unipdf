@@ -5,9 +5,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// border represents cell border
+// border represents cell border.
 type border struct {
-	x                 float64 // Upper left corner
+	x                 float64 // Upper left corner.
 	y                 float64
 	width             float64
 	height            float64
@@ -27,7 +27,7 @@ type border struct {
 	styleBottom       CellBorderStyle
 }
 
-// newBorder returns and instance of border
+// newBorder returns and instance of border.
 func newBorder(x, y, width, height float64) *border {
 	border := &border{}
 
@@ -50,77 +50,77 @@ func newBorder(x, y, width, height float64) *border {
 	return border
 }
 
-// GetCoords returns coordinates of border
+// GetCoords returns coordinates of border.
 func (border *border) GetCoords() (float64, float64) {
 	return border.x, border.y
 }
 
-// SetWidthLeft sets border width for left
+// SetWidthLeft sets border width for left.
 func (border *border) SetWidthLeft(bw float64) {
 	border.borderWidthLeft = bw
 }
 
-// SetColorLeft sets border color for left
+// SetColorLeft sets border color for left.
 func (border *border) SetColorLeft(col Color) {
 	border.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetWidthBottom sets border width for bottom
+// SetWidthBottom sets border width for bottom.
 func (border *border) SetWidthBottom(bw float64) {
 	border.borderWidthBottom = bw
 }
 
-// SetColorBottom sets border color for bottom
+// SetColorBottom sets border color for bottom.
 func (border *border) SetColorBottom(col Color) {
 	border.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetWidthRight sets border width for right
+// SetWidthRight sets border width for right.
 func (border *border) SetWidthRight(bw float64) {
 	border.borderWidthRight = bw
 }
 
-// SetColorRight sets border color for right
+// SetColorRight sets border color for right.
 func (border *border) SetColorRight(col Color) {
 	border.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetWidthTop sets border width for top
+// SetWidthTop sets border width for top.
 func (border *border) SetWidthTop(bw float64) {
 	border.borderWidthTop = bw
 }
 
-// SetColorTop sets border color for top
+// SetColorTop sets border color for top.
 func (border *border) SetColorTop(col Color) {
 	border.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetFillColor sets background color for border
+// SetFillColor sets background color for border.
 func (border *border) SetFillColor(col Color) {
 	border.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetStyleLeft sets border style for left side
+// SetStyleLeft sets border style for left side.
 func (border *border) SetStyleLeft(style CellBorderStyle) {
 	border.styleLeft = style
 }
 
-// SetStyleRight sets border style for right side
+// SetStyleRight sets border style for right side.
 func (border *border) SetStyleRight(style CellBorderStyle) {
 	border.styleRight = style
 }
 
-// SetStyleTop sets border style for top side
+// SetStyleTop sets border style for top side.
 func (border *border) SetStyleTop(style CellBorderStyle) {
 	border.styleTop = style
 }
 
-// SetStyleBottom sets border style for bottom side
+// SetStyleBottom sets border style for bottom side.
 func (border *border) SetStyleBottom(style CellBorderStyle) {
 	border.styleBottom = style
 }
 
-// GeneratePageBlocks creates drawable
+// GeneratePageBlocks creates drawable.
 func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	// Start points is in upper left corner.
@@ -298,7 +298,7 @@ func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext
 			}
 		}
 
-		// Line Left
+		// Line Left.
 		lineLeft := draw.BasicLine{
 			LineWidth: border.borderWidthLeft,
 			Opacity:   1.0,
