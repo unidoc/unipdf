@@ -15,14 +15,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"strings"
 )
 
 var pdfCreator = ""
@@ -41,16 +40,19 @@ func getPdfCreator() string {
 	return "UniDoc - http://unidoc.io"
 }
 
+// SetPdfCreator sets the Creator attribute of the output PDF.
 func SetPdfCreator(creator string) {
 	pdfCreator = creator
 }
 
+// PdfWriter handles outputing PDF content.
 type PdfWriter struct {
 	root        *PdfIndirectObject
 	pages       *PdfIndirectObject
 	objects     []PdfObject
 	objectsMap  map[PdfObject]bool // Quick lookup table.
 	writer      *bufio.Writer
+	writePos    int64 // Represents the current position within output file.
 	outlines    []*PdfIndirectObject
 	outlineTree *PdfOutlineTreeNode
 	catalog     *PdfObjectDictionary
@@ -78,6 +80,7 @@ type PdfWriter struct {
 	acroForm *PdfAcroForm
 }
 
+// NewPdfWriter initializes a new PdfWriter.
 func NewPdfWriter() PdfWriter {
 	w := PdfWriter{}
 
@@ -134,7 +137,7 @@ func (this *PdfWriter) SetVersion(majorVersion, minorVersion int) {
 	this.minorVersion = minorVersion
 }
 
-// Set the optional content properties.
+// SetOCProperties sets the optional content properties.
 func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
 	dict := this.catalog
 
@@ -242,7 +245,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		if arr == nil {
 			return errors.New("Array is nil")
 		}
-		for _, v := range *arr {
+		for _, v := range arr.Elements() {
 			err := this.addObjects(v)
 			if err != nil {
 				return err
@@ -260,8 +263,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	return nil
 }
 
-// Add a page to the PDF file. The new page should be an indirect
-// object.
+// AddPage adds a page to the PDF file. The new page should be an indirect object.
 func (this *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
 	common.Log.Trace("==========")
@@ -332,7 +334,7 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	if !ok {
 		return errors.New("Invalid Pages Kids obj (not an array)")
 	}
-	*kids = append(*kids, pageObj)
+	kids.Append(pageObj)
 	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		return errors.New("Invalid Pages Count object (not an integer)")
@@ -341,8 +343,6 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	*pageCount = *pageCount + 1
 
 	this.addObject(pageObj)
-
-
 
 	// Traverse the page and record all object references.
 	err := this.addObjects(pDict)
@@ -381,7 +381,7 @@ func procPage(p *PdfPage) {
 	p.ToPdfObject()
 }
 
-// Add outlines to a PDF file.
+// AddOutlineTree adds outlines to a PDF file.
 func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
 	this.outlineTree = outlineTree
 }
@@ -426,13 +426,13 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 	return list, nil
 }
 
-// Add Acroforms to a PDF file.  Sets the specified form for writing.
+// SetForms sets the Acroform for a PDF file.
 func (this *PdfWriter) SetForms(form *PdfAcroForm) error {
 	this.acroForm = form
 	return nil
 }
 
-// Write out an indirect / stream object.
+// writeObject writes out an indirect / stream object.
 func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 	common.Log.Trace("Write obj #%d\n", num)
 
@@ -440,7 +440,7 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObject.DefaultWriteString()
 		outStr += "\nendobj\n"
-		this.writer.WriteString(outStr)
+		this.writeString(outStr)
 		return
 	}
 
@@ -450,9 +450,9 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
 		outStr += "\nstream\n"
-		this.writer.WriteString(outStr)
-		this.writer.Write(pobj.Stream)
-		this.writer.WriteString("\nendstream\nendobj\n")
+		this.writeString(outStr)
+		this.writeBytes(pobj.Stream)
+		this.writeString("\nendstream\nendobj\n")
 		return
 	}
 
@@ -474,11 +474,12 @@ func (this *PdfWriter) updateObjectNumbers() {
 	}
 }
 
+// EncryptOptions represents encryption options for an output PDF.
 type EncryptOptions struct {
 	Permissions AccessPermissions
 }
 
-// Encrypt the output file with a specified user/owner password.
+// Encrypt encrypts the output file with a specified user/owner password.
 func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
 	crypter := PdfCrypt{}
 	this.crypter = &crypter
@@ -500,14 +501,14 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 
 	// Prepare the ID object for the trailer.
 	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
-	id0 := PdfObjectString(hashcode[:])
+	id0 := string(hashcode[:])
 	b := make([]byte, 100)
 	rand.Read(b)
 	hashcode = md5.Sum(b)
-	id1 := PdfObjectString(hashcode[:])
+	id1 := string(hashcode[:])
 	common.Log.Trace("Random b: % x", b)
 
-	this.ids = &PdfObjectArray{&id0, &id1}
+	this.ids = MakeArray(MakeHexString(id0), MakeHexString(id1))
 	common.Log.Trace("Gen Id 0: % x", id0)
 
 	crypter.Id0 = string(id0)
@@ -536,8 +537,8 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	encDict.Set("V", MakeInteger(int64(crypter.V)))
 	encDict.Set("R", MakeInteger(int64(crypter.R)))
 	encDict.Set("Length", MakeInteger(int64(crypter.Length)))
-	encDict.Set("O", &O)
-	encDict.Set("U", &U)
+	encDict.Set("O", MakeHexString(O))
+	encDict.Set("U", MakeHexString(U))
 	this.encryptDict = encDict
 
 	// Make an object to contain it.
@@ -548,8 +549,28 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	return nil
 }
 
-// Write the pdf out.
-func (this *PdfWriter) Write(ws io.WriteSeeker) error {
+// Wrapper function to handle writing out string.
+func (this *PdfWriter) writeString(s string) error {
+	n, err := this.writer.WriteString(s)
+	if err != nil {
+		return err
+	}
+	this.writePos += int64(n)
+	return nil
+}
+
+// Wrapper function to handle writing out bytes.
+func (this *PdfWriter) writeBytes(bb []byte) error {
+	n, err := this.writer.Write(bb)
+	if err != nil {
+		return err
+	}
+	this.writePos += int64(n)
+	return nil
+}
+
+// Write writes out the PDF.
+func (this *PdfWriter) Write(writer io.Writer) error {
 	common.Log.Trace("Write()")
 
 	lk := license.GetLicenseKey()
@@ -599,12 +620,12 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	// Set version in the catalog.
 	this.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion)))
 
-	w := bufio.NewWriter(ws)
+	w := bufio.NewWriter(writer)
 	this.writer = w
+	this.writePos = 0
 
-	w.WriteString(fmt.Sprintf("%%PDF-%d.%d\n", this.majorVersion, this.minorVersion))
-	w.WriteString("%âãÏÓ\n")
-	w.Flush()
+	this.writeString(fmt.Sprintf("%%PDF-%d.%d\n", this.majorVersion, this.minorVersion))
+	this.writeString("%âãÏÓ\n")
 
 	this.updateObjectNumbers()
 
@@ -614,8 +635,7 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	common.Log.Trace("Writing %d obj", len(this.objects))
 	for idx, obj := range this.objects {
 		common.Log.Trace("Writing %d", idx)
-		this.writer.Flush()
-		offset, _ := ws.Seek(0, os.SEEK_CUR)
+		offset := this.writePos
 		offsets = append(offsets, offset)
 
 		// Encrypt prior to writing.
@@ -630,18 +650,18 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		}
 		this.writeObject(idx+1, obj)
 	}
-	w.Flush()
 
-	xrefOffset, _ := ws.Seek(0, os.SEEK_CUR)
+	xrefOffset := this.writePos
+
 	// Write xref table.
-	this.writer.WriteString("xref\r\n")
+	this.writeString("xref\r\n")
 	outStr := fmt.Sprintf("%d %d\r\n", 0, len(this.objects)+1)
-	this.writer.WriteString(outStr)
+	this.writeString(outStr)
 	outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
-	this.writer.WriteString(outStr)
+	this.writeString(outStr)
 	for _, offset := range offsets {
 		outStr = fmt.Sprintf("%.10d %.5d n\r\n", offset, 0)
-		this.writer.WriteString(outStr)
+		this.writeString(outStr)
 	}
 
 	// Generate & write trailer
@@ -655,15 +675,16 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 		trailer.Set("ID", this.ids)
 		common.Log.Trace("Ids: %s", this.ids)
 	}
-	this.writer.WriteString("trailer\n")
-	this.writer.WriteString(trailer.DefaultWriteString())
-	this.writer.WriteString("\n")
+	this.writeString("trailer\n")
+	this.writeString(trailer.DefaultWriteString())
+	this.writeString("\n")
 
 	// Make offset reference.
 	outStr = fmt.Sprintf("startxref\n%d\n", xrefOffset)
-	this.writer.WriteString(outStr)
-	this.writer.WriteString("%%EOF\n")
-	w.Flush()
+	this.writeString(outStr)
+	this.writeString("%%EOF\n")
+
+	this.writer.Flush()
 
 	return nil
 }

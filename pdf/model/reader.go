@@ -26,17 +26,18 @@ type PdfReader struct {
 	outlineTree *PdfOutlineTreeNode
 	AcroForm    *PdfAcroForm
 
-	modelManager *ModelManager
+	modelManager *modelManager
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
 }
 
+// NewPdfReader returns a new PdfReader for reading a PDF document accessed via io.ReadSeeker.
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
 
-	pdfReader.modelManager = NewModelManager()
+	pdfReader.modelManager = newModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
@@ -61,11 +62,17 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	return pdfReader, nil
 }
 
+// PdfVersion returns version of the PDF file.
+func (this *PdfReader) PdfVersion() string {
+	return this.parser.PdfVersion()
+}
+
+// IsEncrypted returns true if the document is encrypted, false otherwise.
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
 }
 
-// Returns a string containing some information about the encryption method used.
+// GetEncryptionMethod returns a string containing some information about the encryption method used.
 // Subject to changes.  May be better to return a standardized struct with information.
 // But challenging due to the many different types supported.
 func (this *PdfReader) GetEncryptionMethod() string {
@@ -95,7 +102,7 @@ func (this *PdfReader) GetEncryptionMethod() string {
 	return str
 }
 
-// Decrypt the PDF file with a specified password.  Also tries to
+// Decrypt decrypts the PDF file with a specified password.  Also tries to
 // decrypt with an empty password.  Returns true if successful,
 // false otherwise.
 func (this *PdfReader) Decrypt(password []byte) (bool, error) {
@@ -116,8 +123,8 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 	return true, nil
 }
 
-// Check access rights and permissions for a specified password.  If either user/owner password is specified,
-// full rights are granted, otherwise the access rights are specified by the Permissions flag.
+// CheckAccessRights checks access rights and permissions for a specified password.  If either user/owner password
+// is specified, full rights are granted, otherwise the access rights are specified by the Permissions flag.
 //
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
@@ -425,7 +432,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 
 		if item, isItem := node.context.(*PdfOutlineItem); isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + string(*item.Title)
+			title := strings.Repeat(" ", depth*2) + item.Title.Str()
 			*titleList = append(*titleList, title)
 			if item.Next != nil {
 				flattenFunc(item.Next, outlineList, titleList, depth)
@@ -553,7 +560,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return err
 	}
 
-	kidsObj, err := this.parser.Trace(nodeDict.Get("Kids"))
+	kidsObj, err := this.parser.Resolve(nodeDict.Get("Kids"))
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading Kids object")
 		return err
@@ -572,13 +579,13 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		}
 	}
 	common.Log.Trace("Kids: %s", kids)
-	for idx, child := range *kids {
+	for idx, child := range kids.Elements() {
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
 			return errors.New("Page not indirect object")
 		}
-		(*kids)[idx] = child
+		kids.Set(idx, child)
 		err = this.buildPageList(child, node, traversedPageNodes)
 		if err != nil {
 			return err
@@ -588,7 +595,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	return nil
 }
 
-// Get the number of pages in the document.
+// GetNumPages returns the number of pages in the document.
 func (this *PdfReader) GetNumPages() (int, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return 0, fmt.Errorf("File need to be decrypted first")
@@ -664,13 +671,13 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 
 	if arr, isArray := o.(*PdfObjectArray); isArray {
 		common.Log.Trace("- array: %s", arr)
-		for idx, v := range *arr {
+		for idx, v := range arr.Elements() {
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
 				if err != nil {
 					return err
 				}
-				(*arr)[idx] = resolvedObj
+				arr.Set(idx, resolvedObj)
 
 				err = this.traverseObjectData(resolvedObj)
 				if err != nil {

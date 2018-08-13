@@ -6,54 +6,58 @@
 package model
 
 import (
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// A PDFModel is a higher level PDF construct which can be collapsed into a PDF primitive.
-// Each PDFModel has an underlying Primitive and vice versa.
+// PdfModel is a higher level PDF construct which can be collapsed into a PdfObject.
+// Each PdfModel has an underlying PdfObject and vice versa (one-to-one).
+// Under normal circumstances there should only be one copy of each.
 // Copies can be made, but care must be taken to do it properly.
 type PdfModel interface {
-	ToPdfObject() PdfObject
-	GetContainingPdfObject() PdfObject
+	ToPdfObject() core.PdfObject
+	GetContainingPdfObject() core.PdfObject
 }
 
-// The model manager is used to cache Primitive <-> Model mappings where needed.
-// In many cases only Model -> Primitive mapping is needed and only a reference to the Primitive
-// is stored in the Model.  In some cases, the Model needs to be found from the Primitive,
-// and that is where the ModelManager can be used (in both directions).
+// modelManager is used to cache primitive PdfObject <-> Model mappings where needed (one-to-one).
+// In many cases only Model -> PdfObject mapping is needed and only a reference to the PdfObject
+// is stored in the Model.  In some cases, the Model needs to be found from the PdfObject,
+// and that is where the modelManager can be used (in both directions).
 //
-// Note that it is not always used, the Primitive <-> Model mapping needs to be registered
+// Note that it is not always used, the PdfObject <-> Model mapping needs to be registered
 // for each time it is used.  Thus, it is only used for special cases, commonly where the same
 // object is used by two higher level objects. (Example PDF Widgets owned by both Page Annotations,
 // and the interactive form - AcroForm).
-type ModelManager struct {
-	primitiveCache map[PdfModel]PdfObject
-	modelCache     map[PdfObject]PdfModel
+type modelManager struct {
+	primitiveCache map[PdfModel]core.PdfObject
+	modelCache     map[core.PdfObject]PdfModel
 }
 
-func NewModelManager() *ModelManager {
-	mm := ModelManager{}
-	mm.primitiveCache = map[PdfModel]PdfObject{}
-	mm.modelCache = map[PdfObject]PdfModel{}
+// newModelManager returns a new initialized modelManager.
+func newModelManager() *modelManager {
+	mm := modelManager{}
+	mm.primitiveCache = map[PdfModel]core.PdfObject{}
+	mm.modelCache = map[core.PdfObject]PdfModel{}
 	return &mm
 }
 
-// Register (cache) a model to primitive relationship.
-func (this *ModelManager) Register(primitive PdfObject, model PdfModel) {
-	this.primitiveCache[model] = primitive
-	this.modelCache[primitive] = model
+// Register registers (caches) a model to primitive object relationship.
+func (mm *modelManager) Register(primitive core.PdfObject, model PdfModel) {
+	mm.primitiveCache[model] = primitive
+	mm.modelCache[primitive] = model
 }
 
-func (this *ModelManager) GetPrimitiveFromModel(model PdfModel) PdfObject {
-	primitive, has := this.primitiveCache[model]
+// GetPrimitiveFromModel returns the primitive object corresponding to the input `model`.
+func (mm *modelManager) GetPrimitiveFromModel(model PdfModel) core.PdfObject {
+	primitive, has := mm.primitiveCache[model]
 	if !has {
 		return nil
 	}
 	return primitive
 }
 
-func (this *ModelManager) GetModelFromPrimitive(primitive PdfObject) PdfModel {
-	model, has := this.modelCache[primitive]
+// GetModelFromPrimitive returns the model corresponding to the `primitive` PdfObject.
+func (mm *modelManager) GetModelFromPrimitive(primitive core.PdfObject) PdfModel {
+	model, has := mm.modelCache[primitive]
 	if !has {
 		return nil
 	}

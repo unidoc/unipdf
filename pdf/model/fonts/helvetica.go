@@ -4,7 +4,7 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
@@ -14,24 +14,32 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Helvetica.  Implements Font interface.
+// FontHelvetica represents the Helvetica font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelvetica struct {
+type FontHelvetica struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontHelvetica() fontHelvetica {
-	font := fontHelvetica{}
+// NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontHelvetica() FontHelvetica {
+	font := FontHelvetica{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontHelvetica) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontHelvetica) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontHelvetica) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontHelvetica) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := helveticaCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontHelvetica) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := HelveticaCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontHelvetica) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 	return metrics, true
 }
 
-func (font fontHelvetica) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontHelvetica) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Helvetica"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica font metics loaded from afms/Helvetica.afm.  See afms/MustRead.html for license information.
-var helveticaCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// HelveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
+// See afms/MustRead.html for license information.
+var HelveticaCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},

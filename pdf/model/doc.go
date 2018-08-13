@@ -3,10 +3,13 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The model package provides a convenient interface for reading, writing and working with PDF files.
-// The package includes many high level PDF data models which can be used to access information or modifications.
-// It is based on the core package which handles core functionality such as file i/o, parsing and handling of primitive
-// PDF objects.
+// Package model provides an interface for working with high-level objects (models) in PDF files, including
+// reading and writing documents.
+//
+// The document structure of a PDF is constructed of a hierarchy of data models, representing a tree
+// of information starting from the Document catalog (Figure 5 p. 80).
+// It is based on the core package which handles core functionality such as file i/o, parsing and
+// handling of primitive PDF objects (core.PdfObject).
 //
 // As an example of the interface, the following snippet can read the PDF and output the number of pages:
 //

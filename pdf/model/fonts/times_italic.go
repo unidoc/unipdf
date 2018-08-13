@@ -4,7 +4,7 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
@@ -14,24 +14,32 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Times-Italic.  Implements Font interface.
+// FontTimesItalic represents the Times-Italic font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontTimesItalic struct {
+type FontTimesItalic struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontTimesItalic() fontTimesItalic {
-	font := fontTimesItalic{}
+// NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontTimesItalic() FontTimesItalic {
+	font := FontTimesItalic{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontTimesItalic) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontTimesItalic) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontTimesItalic) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontTimesItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := timesItalicCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontTimesItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := TimesItalicCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontTimesItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool
 	return metrics, true
 }
 
-func (font fontTimesItalic) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontTimesItalic) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Times-Italic"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Italic font metics loaded from afms/Times-Italic.afm.  See afms/MustRead.html for license information.
-var timesItalicCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// TimesItalicCharMetrics font metrics loaded from afms/Times-Italic.afm.
+// See afms/MustRead.html for license information.
+var TimesItalicCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 611.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 611.000000, Wy: 0.000000},

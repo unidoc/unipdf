@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The license package helps manage commercial licenses and check if they are valid for the version of unidoc used.
+// Package license helps manage commercial licenses and check if they are valid for the version of unidoc used.
 package license
 
 // Defaults to the open source license.

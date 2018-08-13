@@ -2,25 +2,24 @@ package core
 
 import (
 	"testing"
-
-	"github.com/unidoc/unidoc/common"
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	// Uncomment when debugging to get trace logging output - to follow flow.
+	// common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // Fuzz tests based on findings with go-fuzz.
 
 // Test for a crash in
-// func (this *PdfParser) Trace(obj PdfObject) (PdfObject, error)
+// func (this *PdfParser) Resolve(obj PdfObject) (PdfObject, error)
 // when passing a reference to a non-existing object.
 func TestFuzzParserTrace1(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(" /Name")
 
 	ref := &PdfObjectReference{ObjectNumber: -1}
-	obj, err := parser.Trace(ref)
+	obj, err := parser.Resolve(ref)
 
 	// Should return non-err, and a nil object.
 	if err != nil {
@@ -51,14 +50,14 @@ endstream
 `
 
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
-	parser.xrefs[13] = XrefObject{
-		XREF_TABLE_ENTRY,
+	parser.xrefs[13] = xrefObject{
+		xrefTypeTableEntry,
 		13,
 		0,
 		0,
@@ -74,7 +73,7 @@ endstream
 
 // Slightly more complex case where the reference number is incorrect, but still points to the same object.
 func TestFuzzSelfReference2(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	// common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	rawText := `13 0 obj
 << /Length 12 0 R >>
@@ -84,15 +83,15 @@ endstream
 `
 
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
 	// NOTE: using incorrect object number here:
-	parser.xrefs[12] = XrefObject{
-		XREF_TABLE_ENTRY,
+	parser.xrefs[12] = xrefObject{
+		xrefTypeTableEntry,
 		12,
 		0,
 		0,

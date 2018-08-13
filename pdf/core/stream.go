@@ -31,12 +31,12 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		if !ok {
 			return nil, fmt.Errorf("Filter not a Name or Array object")
 		}
-		if len(*array) == 0 {
+		if array.Len() == 0 {
 			// Empty array -> indicates raw filter (no filter).
 			return NewRawEncoder(), nil
 		}
 
-		if len(*array) != 1 {
+		if array.Len() != 1 {
 			menc, err := newMultiEncoderFromStream(streamObj)
 			if err != nil {
 				common.Log.Error("Failed creating multi encoder: %v", err)
@@ -48,7 +48,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		}
 
 		// Single element.
-		filterObj = (*array)[0]
+		filterObj = array.Get(0)
 		method, ok = filterObj.(*PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Filter array member not a Name object")
@@ -86,14 +86,14 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 
 	encoder, err := NewEncoderFromStream(streamObj)
 	if err != nil {
-		common.Log.Debug("Stream decoding failed: %v", err)
+		common.Log.Debug("ERROR: Stream decoding failed: %v", err)
 		return nil, err
 	}
 	common.Log.Trace("Encoder: %#v\n", encoder)
 
 	decoded, err := encoder.DecodeStream(streamObj)
 	if err != nil {
-		common.Log.Debug("Stream decoding failed: %v", err)
+		common.Log.Debug("ERROR: Stream decoding failed: %v", err)
 		return nil, err
 	}
 

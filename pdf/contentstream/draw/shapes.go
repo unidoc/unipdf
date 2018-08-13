@@ -8,6 +8,7 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
+// Circle represents a circle shape with fill and border properties that can be drawn to a PDF content stream.
 type Circle struct {
 	X             float64
 	Y             float64
@@ -21,7 +22,7 @@ type Circle struct {
 	Opacity       float64 // Alpha value (0-1).
 }
 
-// Draw a circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
+// Draw draws the circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
 // Returns the content stream as a byte array, the bounding box and an error on failure.
 func (c Circle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	xRad := c.Width / 2
@@ -96,8 +97,8 @@ func (c Circle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	return creator.Bytes(), bbox, nil
 }
 
-// A rectangle defined with a specified Width and Height and a lower left corner at (X,Y).  The rectangle can
-// optionally have a border and a filling color.
+// Rectangle is a shape with a specified Width and Height and a lower left corner at (X,Y) that can be
+// drawn to a PDF content stream.  The rectangle can optionally have a border and a filling color.
 // The Width/Height includes the border (if any specified), i.e. is positioned inside.
 type Rectangle struct {
 	X             float64
@@ -112,8 +113,8 @@ type Rectangle struct {
 	Opacity       float64 // Alpha value (0-1).
 }
 
-// Draw the circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
-// Returns the content stream as a byte array, bounding box and an error on failure.
+// Draw draws the rectangle. Can specify a graphics state (gsName) for setting opacity etc.
+// Otherwise leave empty (""). Returns the content stream as a byte array, bounding box and an error on failure.
 func (rect Rectangle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	path := NewPath()
 
@@ -166,6 +167,7 @@ func (rect Rectangle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	return creator.Bytes(), bbox, nil
 }
 
+// LineEndingStyle defines the line ending style for lines.
 // The currently supported line ending styles are None, Arrow (ClosedArrow) and Butt.
 type LineEndingStyle int
 
@@ -183,7 +185,7 @@ const (
 	LineStyleDashed LineStyle = 1
 )
 
-// Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
+// Line defines a line shape between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
 // or arrows at either end.  The line also has a specified width, color and opacity.
 type Line struct {
 	X1               float64
@@ -198,8 +200,9 @@ type Line struct {
 	LineStyle        LineStyle
 }
 
-// Draw a line in PDF.  Generates the content stream which can be used in page contents or appearance stream of annotation.
-// Returns the stream content, XForm bounding box (local), bounding box and an error if one occurred.
+// Draw draws the line to PDF contentstream. Generates the content stream which can be used in page contents or
+// appearance stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error
+// if one occurred.
 func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	x1, x2 := line.X1, line.X2
 	y1, y2 := line.Y1, line.Y2

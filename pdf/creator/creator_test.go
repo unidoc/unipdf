@@ -31,13 +31,15 @@ func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
-const testPdfFile1 = "../../testfiles/minimal.pdf"
-const testPdfLoremIpsumFile = "../../testfiles/lorem.pdf"
-const testPdfTemplatesFile1 = "../../testfiles/templates1.pdf"
-const testImageFile1 = "../../testfiles/logo.png"
-const testImageFile2 = "../../testfiles/signature.png"
-const testRobotoRegularTTFFile = "../../testfiles/roboto/Roboto-Regular.ttf"
-const testRobotoBoldTTFFile = "../../testfiles/roboto/Roboto-Bold.ttf"
+const testPdfFile1 = "./testdata/minimal.pdf"
+const testPdfLoremIpsumFile = "./testdata/lorem.pdf"
+const testPdfTemplatesFile1 = "./testdata/templates1.pdf"
+const testImageFile1 = "./testdata/logo.png"
+const testImageFile2 = "./testdata/signature.png"
+const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
+const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
+const testWts11TTFFile = "./testdata/wts11.ttf"
+const testFreeSansTTFFile = "./testdata/FreeSans.ttf"
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -609,6 +611,100 @@ func TestParagraphStandardFonts(t *testing.T) {
 	}
 }
 
+// Test paragraph with Chinese characters.
+func TestParagraphChinese(t *testing.T) {
+	creator := New()
+
+	lines := []string{
+		"你好",
+		"你好你好你好你好",
+		"河上白云",
+	}
+
+	for _, line := range lines {
+		p := NewParagraph(line)
+
+		font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+
+		p.SetFont(font)
+
+		err = creator.Draw(p)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+	}
+
+	err := creator.WriteToFile("/tmp/2_p_nihao.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
+// Test paragraph with composite font and various unicode characters.
+func TestParagraphUnicode(t *testing.T) {
+	creator := New()
+
+	font, err := model.NewCompositePdfFontFromTTFFile(testFreeSansTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	texts := []string{
+		"Testing of letters \u010c,\u0106,\u0160,\u017d,\u0110",
+		"Vous \u00eates d'o\u00f9?",
+		"\u00c0 tout \u00e0 l'heure. \u00c0 bient\u00f4t.",
+		"Je me pr\u00e9sente.",
+		"C'est un \u00e9tudiant.",
+		"\u00c7a va?",
+		"Il est ing\u00e9nieur. Elle est m\u00e9decin.",
+		"C'est une fen\u00eatre.",
+		"R\u00e9p\u00e9tez, s'il vous pla\u00eet.",
+		"Odkud jste?",
+		"Uvid\u00edme se za chvilku. M\u011bj se.",
+		"Dovolte, abych se p\u0159edstavil.",
+		"To je studentka.",
+		"V\u0161echno v po\u0159\u00e1dku?",
+		"On je in\u017een\u00fdr. Ona je l\u00e9ka\u0159.",
+		"Toto je okno.",
+		"Zopakujte to pros\u00edm.",
+		"\u041e\u0442\u043a\u0443\u0434\u0430 \u0442\u044b?",
+		"\u0423\u0432\u0438\u0434\u0438\u043c\u0441\u044f \u0432 \u043d\u0435\u043c\u043d\u043e\u0433\u043e. \u0423\u0432\u0438\u0434\u0438\u043c\u0441\u044f.",
+		"\u041f\u043e\u0437\u0432\u043e\u043b\u044c\u0442\u0435 \u043c\u043d\u0435 \u043f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u0438\u0442\u044c\u0441\u044f.",
+		"\u042d\u0442\u043e \u0441\u0442\u0443\u0434\u0435\u043d\u0442.",
+		"\u0425\u043e\u0440\u043e\u0448\u043e?",
+		"\u041e\u043d \u0438\u043d\u0436\u0435\u043d\u0435\u0440. \u041e\u043d\u0430 \u0434\u043e\u043a\u0442\u043e\u0440.",
+		"\u042d\u0442\u043e \u043e\u043a\u043d\u043e.",
+		"\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430.",
+		`Lorem Ipsum - это текст-"рыба", часто используемый в печати и вэб-дизайне. Lorem Ipsum является стандартной "рыбой" для текстов на латинице с начала XVI века. В то время некий безымянный печатник создал большую коллекцию размеров и форм шрифтов, используя Lorem Ipsum для распечатки образцов. Lorem Ipsum не только успешно пережил без заметных изменений пять веков, но и перешагнул в электронный дизайн. Его популяризации в новое время послужили публикация листов Letraset с образцами Lorem Ipsum в 60-х годах и, в более недавнее время, программы электронной вёрстки типа Aldus PageMaker, в шаблонах которых используется Lorem Ipsum.`,
+	}
+
+	for _, text := range texts {
+		fmt.Printf("Text: %s\n", text)
+
+		p := NewParagraph(text)
+		p.SetFont(font)
+
+		err = creator.Draw(p)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+	}
+
+	err = creator.WriteToFile("/tmp/2_p_multi.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+}
+
 // Tests creating a chapter with paragraphs.
 func TestChapter(t *testing.T) {
 	c := New()
@@ -945,6 +1041,96 @@ func TestTable(t *testing.T) {
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
+	}
+}
+
+func TestTableCellWrapping(t *testing.T) {
+	c := New()
+	c.NewPage()
+
+	table := NewTable(4) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.5, 0.2, 0.2, 0.1)
+
+	cell := table.NewCell()
+	p := NewParagraph("A Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p.SetEnableWrap(true)
+	p.SetWidth(cell.Width(c.Context()))
+	p.SetTextAlignment(TextAlignmentJustify)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("B Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.")
+	p.SetEnableWrap(true)
+	p.SetTextAlignment(TextAlignmentRight)
+	cell.SetContent(p)
+
+	cell = table.NewCell()
+	p = NewParagraph("C Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	p.SetEnableWrap(true)
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("1,4")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,1")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	cell = table.NewCell()
+	p = NewParagraph("2,2")
+	cell.SetContent(p)
+	cell.SetBorder(CellBorderStyleBox, 1)
+
+	//table.SkipCells(1) // Skip over 2,3.
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	//p = NewParagraph("D Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	p = NewParagraph("X")
+	p.SetEnableWrap(true)
+	cell.SetContent(p)
+
+	// Skip over two rows.
+	table.SkipRows(2)
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("4,4")
+	cell.SetContent(p)
+
+	// Move down 3 rows, 2 to the left.
+	table.SkipOver(3, -2)
+	cell = table.NewCell()
+	p = NewParagraph("7,2")
+	cell.SetContent(p)
+	cell.SetBackgroundColor(ColorRGBFrom8bit(255, 0, 0))
+
+	table.SkipRows(1)
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderStyleBox, 1)
+	p = NewParagraph("This is\nnewline\nwrapped\n\nmulti")
+	p.SetEnableWrap(true)
+	cell.SetContent(p)
+
+	err := c.Draw(table)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	err = c.WriteToFile("/tmp/tablecell_wrap.pdf")
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
 	}
 }
 

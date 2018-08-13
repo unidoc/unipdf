@@ -14,24 +14,32 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Courier.  Implements Font interface.
+// FontCourier represents the Courier font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontCourier struct {
+type FontCourier struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontCourier() fontCourier {
-	font := fontCourier{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
+// NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontCourier() FontCourier {
+	font := FontCourier{}
+	font.encoder = textencoding.NewWinAnsiTextEncoder()
 	return font
 }
 
-func (font fontCourier) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontCourier) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontCourier) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := courierCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := CourierCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
 	return metrics, true
 }
 
-func (font fontCourier) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontCourier) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Courier"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Courier font metics loaded from afms/Courier.afm.  See afms/MustRead.html for license information.
-var courierCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// CourierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
+// license information.
+var CourierCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},
