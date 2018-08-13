@@ -63,10 +63,9 @@ node {
         stage('Build examples') {
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
-            switch("${env.BRANCH_NAME}") {
-                case "v3":
-                    examplesBranch = "v3"
-                    break
+
+            if (env.BRANCH_NAME.take(3) == "v3-") {
+                examplesBranch = "v3"
             }
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
