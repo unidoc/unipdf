@@ -63,10 +63,11 @@ node {
         stage('Build examples') {
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
+            if (env.BRANCH_NAME.take(2) == "v3") {
+                examplesBranch = "v3"
+            }
+            // Special cases.
             switch("${env.BRANCH_NAME}") {
-                case "v3":
-                    examplesBranch = "v3"
-                    break
                 case "v3-enhance-forms":
                     examplesBranch = "v3-enhance-forms"
                     break
