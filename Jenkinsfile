@@ -64,7 +64,7 @@ node {
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
 
-            if (env.BRANCH_NAME.take(3) == "v3-") {
+            if (env.BRANCH_NAME.take(2) == "v3") {
                 examplesBranch = "v3"
             }
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
