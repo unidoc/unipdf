@@ -120,7 +120,7 @@ func (border *border) SetStyleBottom(style CellBorderStyle) {
 	border.styleBottom = style
 }
 
-// GeneratePageBlocks creates drawable.
+// GeneratePageBlocks implements drawable interface.
 func (border *border) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	// Start points is in upper left corner.

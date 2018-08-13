@@ -558,7 +558,7 @@ func (cell *TableCell) SetBorderColor(col Color) {
 	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
-// SetBorderLineStyle sets border style (currently dashed or plain)
+// SetBorderLineStyle sets border style (currently dashed or plain).
 func (cell *TableCell) SetBorderLineStyle(style draw.LineStyle) {
 	cell.borderLineStyle = style
 }

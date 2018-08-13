@@ -364,7 +364,7 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	return creator.Bytes(), bbox, nil
 }
 
-// Defines a basic line between point 1 (X1,Y1) and point 2 (X2,Y2). The line has a specified width, color and opacity.
+// BasicLine defines a line between point 1 (X1,Y1) and point 2 (X2,Y2). The line has a specified width, color and opacity.
 type BasicLine struct {
 	X1        float64
 	Y1        float64
