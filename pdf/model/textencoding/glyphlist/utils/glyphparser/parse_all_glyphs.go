@@ -36,7 +36,10 @@ import (
 )
 
 func main() {
-	buildAll()
+	err := buildAll()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed. err=%v\n")
+	}
 }
 
 // buildAll builds rune->glyph for glyph->rune maps for the sources as well as a glyph alias map
@@ -51,7 +54,9 @@ func buildAll() error {
 	// Start with the base encodings
 	for _, name := range baseNames {
 		gr := getBaseGlyphRune(name)
-		gs.update(name, gr)
+		if err := gs.update(name, gr); err != nil {
+			return err
+		}
 	}
 
 	// Next do these mapping files
@@ -67,7 +72,9 @@ func buildAll() error {
 			fmt.Printf("Failed to parse %q: %v\n", path, err)
 			return err
 		}
-		gs.update(filename, gr)
+		if err := gs.update(filename, gr); err != nil {
+			return err
+		}
 	}
 
 	// Finally do these other types of mapping files
@@ -77,7 +84,9 @@ func buildAll() error {
 		fmt.Printf("Failed to parse %q: %v\n", path, err)
 		return err
 	}
-	gs.update(path, gr)
+	if err := gs.update(path, gr); err != nil {
+		return err
+	}
 
 	path = filepath.Join("..", "..", "Unicode.txt")
 	gr, err = parseUnknown(path)
@@ -85,7 +94,9 @@ func buildAll() error {
 		fmt.Printf("Failed to parse %q: %v\n", path, err)
 		return err
 	}
-	gs.update(path, gr)
+	if err := gs.update(path, gr); err != nil {
+		return err
+	}
 
 	printAliases(gs.aliases)
 	printGlyphToRuneList(gs.glyphRune)
@@ -108,7 +119,7 @@ func newGlyphState() glyphState {
 }
 
 // update updates the glyph map state with a new glyph->rune map `gr`.
-func (gs *glyphState) update(name string, gr map[string]rune) {
+func (gs *glyphState) update(name string, gr map[string]rune) error {
 	for g, r := range gr {
 		if _, ok := gs.glyphRune[g]; ok {
 			// Duplicate glyph. 1st definition has precedence
@@ -138,13 +149,13 @@ func (gs *glyphState) update(name string, gr map[string]rune) {
 	for g, r := range gs.glyphRune {
 		if _, ok := gs.runeGlyph[r]; !ok {
 			fmt.Fprintf(os.Stderr, "duplicate glyphRune[%q]=0x%04x\n", g, r)
-			panic("2")
+			return errors.New("duplicate glyph")
 		}
 	}
 	for r, g := range gs.runeGlyph {
 		if _, ok := gs.glyphRune[g]; !ok {
 			fmt.Fprintf(os.Stderr, "duplicate runeGlyph[0x%04x]=%q\n", r, g)
-			panic("3")
+			return errors.New("duplicate rune")
 		}
 	}
 
@@ -153,16 +164,10 @@ func (gs *glyphState) update(name string, gr map[string]rune) {
 		runeGlyph[r] = g
 	}
 	if len(gs.glyphRune) != len(runeGlyph) {
-		panic("4")
+		return errors.New("inconsistent glyphRune runeGlyph")
 	}
-	glyphRune := map[string]rune{}
-	for r, g := range gs.runeGlyph {
-		glyphRune[g] = r
-	}
-	if len(glyphRune) != len(gs.runeGlyph) {
-		panic("5")
-	}
-	fmt.Printf("glyphRune=%d + %d (%d) %s\n", len(gs.glyphRune), len(gs.aliases), len(gr), name)
+	fmt.Printf("// glyphRune=%d + %d (%d) %s\n", len(gs.glyphRune), len(gs.aliases), len(gr), name)
+	return nil
 }
 
 // printGlyphToRuneList writes `glyphRune` as Go code to stdout so that it can be copied and pasted
