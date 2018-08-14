@@ -152,6 +152,7 @@ func (se SimpleEncoder) CharcodeToRune(code uint16) (rune, bool) {
 	r, ok := se.codeToRune[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Rune error: charcode not found: 0x%04x", code)
+		panic("##1")
 	}
 	return r, ok
 }
