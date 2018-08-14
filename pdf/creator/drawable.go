@@ -16,7 +16,11 @@ type Drawable interface {
 // VectorDrawable is a Drawable with a specified width and height.
 type VectorDrawable interface {
 	Drawable
+
+	// Width returns the width of the Drawable.
 	Width() float64
+
+	// Height returns the height of the Drawable.
 	Height() float64
 }
 
@@ -30,7 +34,7 @@ type DrawContext struct {
 	// Current position.  In a relative positioning mode, a drawable will be placed at these coordinates.
 	X, Y float64
 
-	// Context dimensions.  Available width and height.
+	// Context dimensions.  Available width and height (on current page).
 	Width, Height float64
 
 	// Page Margins.

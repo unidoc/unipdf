@@ -196,7 +196,9 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		// For text: Calculate width, height, wrapping within available space if specified.
-		if p, isp := cell.content.(*Paragraph); isp {
+		switch t := cell.content.(type) {
+		case *Paragraph:
+			p := t
 			if p.enableWrap {
 				p.SetWidth(w - cell.indent)
 			}
@@ -205,10 +207,53 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			newh += 0.5 * p.fontSize * p.lineHeight // TODO: Make the top margin configurable?
 			if newh > h {
 				diffh := newh - h
-				// Add diff to last row
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *Image:
+			img := t
+			newh := img.Height() + img.margins.top + img.margins.bottom
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *Division:
+			div := t
+
+			ctx := DrawContext{
+				X:     xrel,
+				Y:     yrel,
+				Width: w,
+			}
+
+			// Mock call to generate page blocks.
+			divBlocks, updCtx, err := div.GeneratePageBlocks(ctx)
+			if err != nil {
+				return nil, ctx, err
+			}
+
+			if len(divBlocks) > 1 {
+				// Wraps across page, make cell reach all the way to bottom of current page.
+				newh := ctx.Height - h
+				if newh > h {
+					diffh := newh - h
+					// Add diff to last row.
+					table.rowHeights[cell.row+cell.rowspan-2] += diffh
+				}
+			}
+
+			newh := div.Height() + div.margins.top + div.margins.bottom
+			_ = updCtx
+
+			// Get available width and height.
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		}
+
 	}
 
 	// Draw cells.
@@ -240,6 +285,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		ctx.Height = origHeight - yrel
+
 		if h > ctx.Height {
 			// Go to next page.
 			blocks = append(blocks, block)
@@ -344,14 +390,14 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	if table.positioning.isAbsolute() {
 		return blocks, origCtx, nil
-	} else {
-		// Move back X after.
-		ctx.X = origCtx.X
-		// Return original width
-		ctx.Width = origCtx.Width
-		// Add the bottom margin
-		ctx.Y += table.margins.bottom
 	}
+	// Relative mode.
+	// Move back X after.
+	ctx.X = origCtx.X
+	// Return original width.
+	ctx.Width = origCtx.Width
+	// Add the bottom margin.
+	ctx.Y += table.margins.bottom
 
 	return blocks, ctx, nil
 }
@@ -545,7 +591,6 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 
 // SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
 // The currently supported VectorDrawable is: *Paragraph.
-// TODO: Add support for *Image, *Block.
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
@@ -554,6 +599,10 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 			t.enableWrap = false // No wrapping.
 		}
 
+		cell.content = vd
+	case *Image:
+		cell.content = vd
+	case *Division:
 		cell.content = vd
 	default:
 		common.Log.Debug("Error: unsupported cell content type %T\n", vd)
