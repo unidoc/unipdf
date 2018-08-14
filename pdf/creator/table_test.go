@@ -83,7 +83,7 @@ func TestTableWithImage(t *testing.T) {
 
 	pageHistoryTable.SkipCells(1)
 
-	// Add image
+	// Add image.
 	imgData, err := ioutil.ReadFile(testImageFile1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -195,7 +195,7 @@ func TestTableWithDiv(t *testing.T) {
 
 	pageHistoryTable.SkipCells(1)
 
-	// Add image
+	// Add image.
 	imgData, err := ioutil.ReadFile(testImageFile1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)

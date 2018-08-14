@@ -207,7 +207,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			newh += 0.5 * p.fontSize * p.lineHeight // TODO: Make the top margin configurable?
 			if newh > h {
 				diffh := newh - h
-				// Add diff to last row
+				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		case *Image:
@@ -215,7 +215,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			newh := img.Height() + img.margins.top + img.margins.bottom
 			if newh > h {
 				diffh := newh - h
-				// Add diff to last row
+				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		case *Division:
@@ -238,7 +238,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				newh := ctx.Height - h
 				if newh > h {
 					diffh := newh - h
-					// Add diff to last row
+					// Add diff to last row.
 					table.rowHeights[cell.row+cell.rowspan-2] += diffh
 				}
 			}
@@ -249,7 +249,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			// Get available width and height.
 			if newh > h {
 				diffh := newh - h
-				// Add diff to last row
+				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		}
@@ -394,9 +394,9 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	// Relative mode.
 	// Move back X after.
 	ctx.X = origCtx.X
-	// Return original width
+	// Return original width.
 	ctx.Width = origCtx.Width
-	// Add the bottom margin
+	// Add the bottom margin.
 	ctx.Y += table.margins.bottom
 
 	return blocks, ctx, nil
