@@ -13,7 +13,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -24,7 +23,7 @@ type Paragraph struct {
 	text string
 
 	// The font to be used to draw the text.
-	textFont fonts.Font
+	textFont *model.PdfFont
 
 	// The font size (points).
 	fontSize float64
@@ -62,12 +61,12 @@ type Paragraph struct {
 	textLines []string
 }
 
-// NewParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
-// with a wrap width of 100 points.
+// NewParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and
+// wrap enabled with a wrap width of 100 points.
 func NewParagraph(text string) *Paragraph {
 	p := &Paragraph{}
 	p.text = text
-	p.textFont = fonts.NewFontHelvetica()
+	p.textFont, _ = model.NewStandard14Font("Helvetica")
 	p.SetEncoder(textencoding.NewWinAnsiTextEncoder())
 	p.fontSize = 10
 	p.lineHeight = 1.0
@@ -87,7 +86,7 @@ func NewParagraph(text string) *Paragraph {
 }
 
 // SetFont sets the Paragraph's font.
-func (p *Paragraph) SetFont(font fonts.Font) {
+func (p *Paragraph) SetFont(font *model.PdfFont) {
 	p.textFont = font
 }
 
@@ -169,8 +168,8 @@ func (p *Paragraph) GetMargins() (float64, float64, float64, float64) {
 	return p.margins.left, p.margins.right, p.margins.top, p.margins.bottom
 }
 
-// SetWidth sets the the Paragraph width. This is essentially the wrapping width, i.e. the width the text can extend to
-// prior to wrapping over to next line.
+// SetWidth sets the the Paragraph width. This is essentially the wrapping width, i.e. the width the
+// text can extend to prior to wrapping over to next line.
 func (p *Paragraph) SetWidth(width float64) {
 	p.wrapWidth = width
 	p.wrapText()
@@ -185,8 +184,8 @@ func (p *Paragraph) Width() float64 {
 	}
 }
 
-// Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
-// within the container. Does not include Margins.
+// Height returns the height of the Paragraph. The height is calculated based on the input text and
+// how it is wrapped within the container. Does not include Margins.
 func (p *Paragraph) Height() float64 {
 	if p.textLines == nil || len(p.textLines) == 0 {
 		p.wrapText()
@@ -198,18 +197,18 @@ func (p *Paragraph) Height() float64 {
 
 // Calculate the text width (if not wrapped).
 func (p *Paragraph) getTextWidth() float64 {
-	w := float64(0.0)
+	w := 0.0
 
-	for _, rune := range p.text {
-		glyph, found := p.textFont.Encoder().RuneToGlyph(rune)
+	for _, r := range p.text {
+		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 		if !found {
-			common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
+			common.Log.Debug("Error! Glyph not found for rune: %s", r)
 			return -1 // XXX/FIXME: return error.
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+			common.Log.Debug("Glyph char metrics not found! %s", glyph)
 			return -1 // XXX/FIXME: return error.
 		}
 		w += p.fontSize * metrics.Wx
@@ -237,13 +236,13 @@ func (p *Paragraph) wrapText() error {
 	for _, val := range runes {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
 		if !found {
-			common.Log.Debug("Error! Glyph not found for rune: %v\n", val)
+			common.Log.Debug("ERROR: Glyph not found for rune: %v", val)
 			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("Glyph char metrics not found! %s (%s)\n", glyph, string(val))
+			common.Log.Debug("ERROR: Glyph char metrics not found! %s (%s)", glyph, string(val))
 			common.Log.Trace("Font: %#v", p.textFont)
 			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
 			return errors.New("Glyph char metrics missing") // XXX/FIXME: return error.
@@ -298,8 +297,8 @@ func (p *Paragraph) wrapText() error {
 	return nil
 }
 
-// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages. Implements the Drawable interface.
+// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages. Implements the Drawable interface.
 func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
 	blocks := []*Block{}
@@ -316,8 +315,8 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		p.SetWidth(ctx.Width)
 
 		if p.Height() > ctx.Height {
-			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
-			// left corner.
+			// Goes out of the bounds.  Write on a new template instead and create a new context at
+			// upper left corner.
 			// XXX/TODO: Handle case when Paragraph is larger than the Page...
 			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
 
@@ -405,7 +404,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		runes := []rune(line)
 
 		// Get width of the line (excluding spaces).
-		w := float64(0)
+		w := 0.0
 		spaces := 0
 		for _, runeVal := range runes {
 			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
@@ -459,7 +458,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 
 			if glyph == "space" {
 				if !found {
-					common.Log.Debug("Unsupported glyph %s in font\n", glyph)
+					common.Log.Debug("Unsupported glyph %s in font", glyph)
 					return ctx, errors.New("Unsupported text glyph")
 				}
 

@@ -22,7 +22,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -420,9 +419,10 @@ func TestParagraph1(t *testing.T) {
 }
 
 // Test paragraph and page and text wrapping with left, justify, center and right modes.
-// TODO: In the future we would like the paragraph to split up between pages.  Split up on line, never allowing
-// less than 2 lines to go over (common practice).
-// TODO: In the future we would like to implement Donald Knuth's line wrapping algorithm or something similar.
+// TODO: In the future we would like the paragraph to split up between pages.  Split up on line,
+// never allowing less than 2 lines to go over (common practice).
+// TODO: In the future we would like to implement Donald Knuth's line wrapping algorithm or
+// something similar.
 func TestParagraphWrapping(t *testing.T) {
 	creator := New()
 
@@ -434,7 +434,8 @@ func TestParagraphWrapping(t *testing.T) {
 
 	p.SetMargins(0, 0, 5, 0)
 
-	alignments := []TextAlignment{TextAlignmentLeft, TextAlignmentJustify, TextAlignmentCenter, TextAlignmentRight}
+	alignments := []TextAlignment{TextAlignmentLeft, TextAlignmentJustify, TextAlignmentCenter,
+		TextAlignmentRight}
 	for j := 0; j < 25; j++ {
 		//p.SetAlignment(alignments[j%4])
 		p.SetTextAlignment(alignments[1])
@@ -462,7 +463,8 @@ func TestParagraphWrapping2(t *testing.T) {
 		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
 		"mollit anim id est laborum.")
 
-	alignments := []TextAlignment{TextAlignmentLeft, TextAlignmentJustify, TextAlignmentCenter, TextAlignmentRight}
+	alignments := []TextAlignment{TextAlignmentLeft, TextAlignmentJustify, TextAlignmentCenter,
+		TextAlignmentRight}
 	for j := 0; j < 25; j++ {
 		//p.SetAlignment(alignments[j%4])
 		p.SetMargins(50, 50, 50, 50)
@@ -498,7 +500,13 @@ func TestParagraphFonts(t *testing.T) {
 		return
 	}
 
-	fonts := []fonts.Font{roboto, robotoBold, fonts.NewFontHelvetica(), roboto, robotoBold, fonts.NewFontHelvetica()}
+	helvetica, err := model.NewStandard14Font("Helvetica")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+
+	fonts := []*model.PdfFont{roboto, robotoBold, helvetica, roboto, robotoBold, helvetica}
 	for _, font := range fonts {
 		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
 			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
@@ -546,22 +554,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 		"Symbol",
 		"ZapfDingbats",
 	}
-	fonts := []fonts.Font{
-		fonts.NewFontCourier(),
-		fonts.NewFontCourierBold(),
-		fonts.NewFontCourierBoldOblique(),
-		fonts.NewFontCourierOblique(),
-		fonts.NewFontHelvetica(),
-		fonts.NewFontHelveticaBold(),
-		fonts.NewFontHelveticaBoldOblique(),
-		fonts.NewFontHelveticaOblique(),
-		fonts.NewFontTimesRoman(),
-		fonts.NewFontTimesBold(),
-		fonts.NewFontTimesBoldItalic(),
-		fonts.NewFontTimesItalic(),
-		fonts.NewFontSymbol(),
-		fonts.NewFontZapfDingbats(),
-	}
+
 	texts := []string{
 		"Courier: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
 		"Courier-Bold: Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
@@ -581,8 +574,13 @@ func TestParagraphStandardFonts(t *testing.T) {
 		"\u2702\u0020\u2709\u261e\u2711\u2714", // a2 (scissors) space a117 (mail) a12 (finger) a17 (pen) a20 (checkmark)
 	}
 
-	for idx, font := range fonts {
+	for idx, name := range names {
 		p := NewParagraph(texts[idx])
+		font, err := model.NewStandard14Font(name)
+		if err != nil {
+			t.Errorf("Fail: %v", err)
+			return
+		}
 		p.SetFont(font)
 		p.SetFontSize(12)
 		p.SetLineHeight(1.2)
@@ -596,7 +594,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 			p.SetEncoder(textencoding.NewZapfDingbatsEncoder())
 		}
 
-		err := creator.Draw(p)
+		err = creator.Draw(p)
 		if err != nil {
 			t.Errorf("Fail: %v\n", err)
 			return
@@ -1114,8 +1112,16 @@ func TestBorderedTable(t *testing.T) {
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
-	fontRegular := fonts.NewFontHelvetica()
-	fontBold := fonts.NewFontHelveticaBold()
+	fontRegular, err := model.NewStandard14Font("Helvetica")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	fontBold, err := model.NewStandard14Font("Helvetica-Bold")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
 
 	ch := c.NewChapter("Document control")
 	ch.SetMargins(0, 0, 40, 0)
@@ -1197,7 +1203,7 @@ func TestTableInSubchapter(t *testing.T) {
 	myPara.SetLineHeight(1.5)
 	sc.Add(myPara)
 
-	err := c.Draw(ch)
+	err = c.Draw(ch)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
