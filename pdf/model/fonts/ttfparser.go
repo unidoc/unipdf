@@ -374,7 +374,7 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 		length = t.ReadULong()
 		language = t.ReadULong()
 	}
-	common.Log.Debug("parseCmapSubtable10: format=%d length=%d language=%d",
+	common.Log.Trace("parseCmapSubtable10: format=%d length=%d language=%d",
 		format, length, language)
 
 	if format != 0 {
@@ -402,7 +402,7 @@ func (t *ttfParser) ParseCmap() error {
 	if err := t.Seek("cmap"); err != nil {
 		return err
 	}
-	common.Log.Debug("ParseCmap")
+	common.Log.Trace("ParseCmap")
 	t.ReadUShort() // version is ignored.
 	numTables := int(t.ReadUShort())
 	offset10 := int64(0)

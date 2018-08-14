@@ -98,6 +98,8 @@ func buildAll() error {
 		return err
 	}
 
+	gs.update("elipsis", map[string]rune{"elipsis": 0x2026}) // …
+
 	printAliases(gs.aliases)
 	printGlyphToRuneList(gs.glyphRune)
 	printRuneToGlyphList(gs.glyphRune)
@@ -176,14 +178,9 @@ func printGlyphToRuneList(glyphRune map[string]rune) {
 	keys := sorted(glyphRune)
 
 	fmt.Printf("var glyphlistGlyphToRuneMap = map[string]rune{ // %d entries \n", len(keys))
-	runes := map[rune]bool{}
 	for _, glyph := range keys {
 		r := glyphRune[glyph]
 		fmt.Printf("\t\t%q:\t0x%04x, %s\n", glyph, r, showRune(r))
-		if _, ok := runes[r]; ok {
-			panic("duplicate runes")
-		}
-		runes[r] = true
 	}
 	fmt.Printf("}\n")
 }
@@ -194,16 +191,9 @@ func printRuneToGlyphList(glyphRune map[string]rune) {
 	keys := sorted(glyphRune)
 
 	fmt.Printf("var glyphlistRuneToGlyphMap = map[rune]string{ // %d entries \n", len(keys))
-	runes := map[rune]bool{}
 	for _, glyph := range keys {
 		r := glyphRune[glyph]
 		fmt.Printf("\t\t0x%04x:\t%q, %s\n", r, glyph, showRune(r))
-		if _, ok := runes[r]; ok {
-			panic("duplicate runes")
-		}
-		if r == 0xfffd {
-			fmt.Fprintf(os.Stderr, "$$ %c->%q\n", r, glyph)
-		}
 	}
 	fmt.Printf("}\n")
 }
@@ -250,17 +240,6 @@ func sorted(glyphRune map[string]rune) []string {
 		}
 		return si < sj
 	})
-	if len(keys) != len(glyphRune) {
-		panic("gggk")
-	}
-
-	runes := map[rune]bool{}
-	for _, g := range keys {
-		runes[glyphRune[g]] = true
-	}
-	if len(keys) != len(runes) {
-		panic("h24")
-	}
 	return keys
 }
 
@@ -475,10 +454,6 @@ func parseUnknown(filename string) (map[string]rune, error) {
 			fmt.Fprintf(os.Stderr, "parseUnknown: No match line %d: %q\n", i, ln)
 			return nil, errors.New("bad line")
 		}
-		if strings.Contains(ln, "kafmedial") {
-			fmt.Fprintf(os.Stderr, "##@ %q %q\n", ln, g[1:])
-			// panic("rrr")
-		}
 		groups = append(groups, g[1:])
 	}
 	fmt.Printf("// groups=%d\n", len(groups))
@@ -493,26 +468,13 @@ func parseUnknown(filename string) (map[string]rune, error) {
 		r := rune(n)
 		parts := reSpace.Split(row[1], -1)
 		for _, g := range parts {
-			if g == "" {
+			if g == "" || strings.Contains(g, "000") || strings.Contains(g, "0.0") {
 				continue
-			}
-			if strings.Contains(g, "f_i") {
-				fmt.Fprintf(os.Stderr, "### %q\n", row)
-				// panic("rrr")
-			}
-			if strings.Contains(g, "000") {
-				continue
-			}
-			if strings.Contains(g, " ") {
-				panic("space")
 			}
 			glyph2rune[g] = r
 		}
 	}
 	fmt.Printf("// entries=%d\n", len(glyph2rune))
-	if _, ok := glyph2rune["kafmedial"]; !ok {
-		panic("kafmedial")
-	}
 	return glyph2rune, nil
 }
 
@@ -538,6 +500,7 @@ type glyphRune struct {
 }
 
 var baseNames = []string{"SymbolEncoding", "WinAnsiEncoding", "ZapfDingbatsEncoding"}
+
 var basicEncodings = map[string]map[uint16]glyphRune{
 	"SymbolEncoding": map[uint16]glyphRune{ // 189 entries
 		0x20: {"space", '\u0020'},         //
