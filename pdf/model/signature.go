@@ -8,7 +8,7 @@ package model
 import "github.com/unidoc/unidoc/pdf/core"
 
 // PdfSignature represents a PDF signature dictionary and is used for signing via form signature fields.
-// (Section 12.8, Table 252 - Entries in a signature dictionary p. 475).
+// (Section 12.8, Table 252 - Entries in a signature dictionary p. 475 in PDF32000_2008).
 type PdfSignature struct {
 	container *core.PdfIndirectObject
 	// Type: Sig

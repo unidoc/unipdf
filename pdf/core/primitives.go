@@ -400,7 +400,23 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, int(*number))
 		} else {
-			return nil, fmt.Errorf("Type error")
+			return nil, ErrTypeError
+		}
+	}
+
+	return vals, nil
+}
+
+// ToInt64Slice returns a slice of all array elements as an int64 slice. An error is returned if the
+// array non-integer objects. Each element can only be PdfObjectInteger.
+func (array *PdfObjectArray) ToInt64Slice() ([]int64, error) {
+	vals := []int{}
+
+	for _, obj := range array.Elements() {
+		if number, is := obj.(*PdfObjectInteger); is {
+			vals = append(vals, int64(*number))
+		} else {
+			return nil, ErrTypeError
 		}
 	}
 
@@ -564,11 +580,6 @@ func (d *PdfObjectDictionary) Set(key PdfObjectName, val PdfObject) {
 
 // Get returns the PdfObject corresponding to the specified key.
 // Returns a nil value if the key is not set.
-//
-// The design is such that we only return 1 value.
-// The reason is that, it will be easy to do type casts such as
-// name, ok := dict.Get("mykey").(*PdfObjectName)
-// if !ok ....
 func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	val, has := d.dict[key]
 	if !has {
