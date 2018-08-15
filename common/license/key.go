@@ -22,6 +22,10 @@ const (
 // Make sure all time is at least after this for sanity check.
 var testTime = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 
+// Old licenses had expiry that were not meant to expire. Only checking expiry
+// on licenses issued later than this date.
+var startCheckingExpiry = time.Date(2018, 8, 1, 0, 0, 0, 0, time.UTC)
+
 type LicenseKey struct {
 	LicenseId    string     `json:"license_id"`
 	CustomerId   string     `json:"customer_id"`
@@ -36,9 +40,20 @@ type LicenseKey struct {
 	CreatorEmail string     `json:"creator_email"`
 }
 
-func (this *LicenseKey) Validate() error {
-	utcNow := time.Now().UTC()
+func (this *LicenseKey) isExpired() bool {
+	if this.ExpiresAt == nil {
+		return false
+	}
 
+	if this.CreatedAt.Before(startCheckingExpiry) {
+		return false
+	}
+
+	utcNow := time.Now().UTC()
+	return utcNow.After(*this.ExpiresAt)
+}
+
+func (this *LicenseKey) Validate() error {
 	if len(this.LicenseId) < 10 {
 		return fmt.Errorf("Invalid license: License Id")
 	}
@@ -59,10 +74,10 @@ func (this *LicenseKey) Validate() error {
 		if this.CreatedAt.After(*this.ExpiresAt) {
 			return fmt.Errorf("Invalid license: Created At cannot be Greater than Expires At")
 		}
+	}
 
-		if utcNow.After(*this.ExpiresAt) {
-			return fmt.Errorf("Invalid license: The license has already expired")
-		}
+	if this.isExpired() {
+		return fmt.Errorf("Invalid license: The license has already expired")
 	}
 
 	if len(this.CreatorName) < 1 {
