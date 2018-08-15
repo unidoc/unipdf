@@ -17,7 +17,7 @@ import (
 )
 
 // Paragraph represents text drawn with a specified font and can wrap across lines and pages.
-// By default occupies the available width in the drawing context.
+// By default it occupies the available width in the drawing context.
 type Paragraph struct {
 	// The input utf-8 text as a string (series of runes).
 	text string
@@ -179,9 +179,8 @@ func (p *Paragraph) SetWidth(width float64) {
 func (p *Paragraph) Width() float64 {
 	if p.enableWrap {
 		return p.wrapWidth
-	} else {
-		return p.getTextWidth() / 1000.0
 	}
+	return p.getTextWidth() / 1000.0
 }
 
 // Height returns the height of the Paragraph. The height is calculated based on the input text and
@@ -191,8 +190,7 @@ func (p *Paragraph) Height() float64 {
 		p.wrapText()
 	}
 
-	h := float64(len(p.textLines)) * p.lineHeight * p.fontSize
-	return h
+	return float64(len(p.textLines)) * p.lineHeight * p.fontSize
 }
 
 // Calculate the text width (if not wrapped).
@@ -202,13 +200,13 @@ func (p *Paragraph) getTextWidth() float64 {
 	for _, r := range p.text {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 		if !found {
-			common.Log.Debug("Error! Glyph not found for rune: %s", r)
+			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
 			return -1 // XXX/FIXME: return error.
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("Glyph char metrics not found! %s", glyph)
+			common.Log.Debug("Glyph char metrics not found! %q (rune 0x04x=%c)", glyph, r, r)
 			return -1 // XXX/FIXME: return error.
 		}
 		w += p.fontSize * metrics.Wx
@@ -226,7 +224,7 @@ func (p *Paragraph) wrapText() error {
 	}
 
 	line := []rune{}
-	lineWidth := float64(0.0)
+	lineWidth := 0.0
 	p.textLines = []string{}
 
 	runes := []rune(p.text)
@@ -236,52 +234,46 @@ func (p *Paragraph) wrapText() error {
 	for _, val := range runes {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
 		if !found {
-			common.Log.Debug("ERROR: Glyph not found for rune: %v", val)
-			return errors.New("Glyph not found for rune") // XXX/FIXME: return error.
+			common.Log.Debug("ERROR: Glyph not found for rune: %c", val)
+			return errors.New("Glyph not found for rune")
 		}
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("ERROR: Glyph char metrics not found! %s (%s)", glyph, string(val))
+			common.Log.Debug("ERROR: Glyph char metrics not found! %q rune=0x%04x=%c font=%s",
+				glyph, val, val, p.textFont.BaseFont())
 			common.Log.Trace("Font: %#v", p.textFont)
 			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
-			return errors.New("Glyph char metrics missing") // XXX/FIXME: return error.
+			return errors.New("Glyph char metrics missing")
 		}
 
 		w := p.fontSize * metrics.Wx
 		if lineWidth+w > p.wrapWidth*1000.0 {
 			// Goes out of bounds: Wrap.
 			// Breaks on the character.
-			// XXX/TODO: when goes outside: back up to next space, otherwise break on the character.
 			idx := -1
 			for i := len(glyphs) - 1; i >= 0; i-- {
-				if glyphs[i] == "space" {
+				if glyphs[i] == "space" { // XXX: What about other space glyphs like controlHT?
 					idx = i
 					break
 				}
 			}
 			if idx > 0 {
+				// Back up to last space.
 				p.textLines = append(p.textLines, string(line[0:idx+1]))
 
-				line = line[idx+1:]
-				line = append(line, val)
-
-				glyphs = glyphs[idx+1:]
-				glyphs = append(glyphs, glyph)
-				widths = widths[idx+1:]
-				widths = append(widths, w)
-
-				lineWidth = 0
-				for _, width := range widths {
-					lineWidth += width
-				}
+				// Remainder of line.
+				line = append(line[idx+1:], val)
+				glyphs = append(glyphs[idx+1:], glyph)
+				widths = append(widths[idx+1:], w)
+				lineWidth = sum(widths)
 
 			} else {
 				p.textLines = append(p.textLines, string(line))
 				line = []rune{val}
-				lineWidth = w
-				widths = []float64{w}
 				glyphs = []string{glyph}
+				widths = []float64{w}
+				lineWidth = w
 			}
 		} else {
 			line = append(line, val)
@@ -295,6 +287,15 @@ func (p *Paragraph) wrapText() error {
 	}
 
 	return nil
+}
+
+// sum returns the sums of the elements in `widths`.
+func sum(widths []float64) float64 {
+	total := 0.0
+	for _, w := range widths {
+		total += w
+	}
+	return total
 }
 
 // GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
@@ -360,7 +361,8 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	}
 }
 
-// Draw block on specified location on Page, adding to the content stream.
+// drawParagraphOnBlock draws Paragraph `p` on Block `blk` at the specified location on the page,
+// adding it to the content stream.
 func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContext, error) {
 	// Find a free name for the font.
 	num := 1
@@ -418,7 +420,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			}
 			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 			if !found {
-				common.Log.Debug("Unsupported glyph %s in font\n", glyph)
+				common.Log.Debug("Unsupported glyph %s in font", glyph)
 				return ctx, errors.New("Unsupported text glyph")
 			}
 

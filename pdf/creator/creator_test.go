@@ -18,7 +18,6 @@ import (
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -232,7 +231,8 @@ func TestShapes1(t *testing.T) {
 	}
 }
 
-// Example drawing image and line shape on a block and applying to pages, also demonstrating block rotation.
+// Example drawing image and line shape on a block and applying to pages, also demonstrating block
+// rotation.
 func TestShapesOnBlock(t *testing.T) {
 	creator := New()
 

@@ -51,8 +51,8 @@ func NewBlock(width float64, height float64) *Block {
 	return b
 }
 
-// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks from a PDF document
-// and additional content with the creator.
+// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks
+// from a PDF document and additional content with the creator.
 func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	b := &Block{}
 
