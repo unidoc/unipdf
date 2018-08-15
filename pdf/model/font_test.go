@@ -185,7 +185,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			185, 186, 187, 188, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204,
 			205, 206, 207, 208, 209, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225,
 			229, 241, 242, 243, 245},
-		" !∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_αβχδεφγηιϕκλμνοπθρστυϖω" +
+		" !∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧ∆ΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_αβχδεφγηιϕκλµνοπθρστυϖω" +
 			"ξψζ{|}∼€ϒ′≤⁄∞ƒ♣♦♥♠↔←↑→↓°±″≥×∝∂•÷≠≡≈…↵ℵℑℜ℘⊗⊕∅∩∪⊃⊇⊄⊂⊆∈∉∠∇∏√⋅¬∧∨⇔⇐⇑⇒⇓◊〈∑〉∫⌠⌡",
 	},
 	fontFragmentTest{"ZapfDingbats built-in",
@@ -359,6 +359,18 @@ func (f *fontFragmentTest) check(t *testing.T) {
 	if actualText != f.expected {
 		t.Errorf("Incorrect decoding. %s\nexpected=%q\n  actual=%q",
 			f, f.expected, actualText)
+		act, exp := []rune(actualText), []rune(f.expected)
+		if len(act) != len(exp) {
+			t.Errorf("\texpected=%d actual=%d", len(exp), len(act))
+		} else {
+			for i, a := range act {
+				e := exp[i]
+				if a != e {
+					t.Errorf("\ti=%d expected=0x%04x=%c actual=0x%04x=%c", i, e, e, a, a)
+				}
+			}
+		}
+
 	}
 	if numChars != len([]rune(actualText)) {
 		t.Errorf("Incorrect numChars. %s numChars=%d expected=%d\n%+v\n%c",
