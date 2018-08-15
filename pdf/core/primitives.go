@@ -410,7 +410,7 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 // ToInt64Slice returns a slice of all array elements as an int64 slice. An error is returned if the
 // array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToInt64Slice() ([]int64, error) {
-	vals := []int{}
+	vals := []int64{}
 
 	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {

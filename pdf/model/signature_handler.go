@@ -5,17 +5,19 @@
 package model
 
 import (
+	"bytes"
 	"crypto/sha1"
-	"crypto/x509"
-	"encoding/asn1"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+
+	"github.com/unidoc/unidoc/pdf/internal/crypto/asn1"
+	"github.com/unidoc/unidoc/pdf/internal/crypto/pkcs7"
+	"github.com/unidoc/unidoc/pdf/internal/crypto/x509"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
-	"bytes"
-	"os"
-	"io"
 )
 
 // SignatureHandler interface defines the common functionality for PDF signature handlers, which
@@ -60,7 +62,7 @@ type DefaultSignatureHandler struct{}
 // sigfield.SetImage(fromFile("x.jpg"))
 // X. set position?
 // page.AddFormField(sigfield)
-func (sh DefaultSignatureHandler) Sign(privateKey []byte, writer *pdf.PdfWriter) error {
+func (sh DefaultSignatureHandler) Sign(privateKey []byte, writer *PdfWriter) error {
 	// Form creation...
 	// annotation?  usually apply to a read document.
 	// writer.AddSignature
@@ -101,7 +103,7 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 		}
 
 		// ByteRange
-		byteRangeArr, ok := core.GetArray(dict.Get("ByteRange")
+		byteRangeArr, ok := core.GetArray(dict.Get("ByteRange"))
 		if !ok {
 			common.Log.Debug("ERROR: ByteRange not specified")
 			return nil, ErrRequiredAttributeMissing
@@ -303,7 +305,7 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 		// Signature date
 		signerDateStr, has := core.GetStringVal(dict.Get("M"))
 		if has {
-			signDate, err := pdf.NewPdfDate(signerDateStr)
+			signDate, err := NewPdfDate(signerDateStr)
 			if err != nil {
 				return results, err
 			}
@@ -333,7 +335,6 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 
 	return results, nil
 }
-
 
 // getContentForByteRange returna the content in the specified byte range of input file specified by `inputPath`
 // as a slice of bytes.
