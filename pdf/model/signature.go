@@ -5,13 +5,17 @@
 
 package model
 
-import "github.com/unidoc/unidoc/pdf/core"
+import (
+	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core"
+)
 
 // PdfSignature represents a PDF signature dictionary and is used for signing via form signature fields.
 // (Section 12.8, Table 252 - Entries in a signature dictionary p. 475 in PDF32000_2008).
 type PdfSignature struct {
 	container *core.PdfIndirectObject
-	// Type: Sig
+	// Type: Sig/DocTimeStamp
+	Type          *core.PdfObjectName
 	Filter        *core.PdfObjectName
 	SubFilter     *core.PdfObjectName
 	Contents      *core.PdfObjectString
@@ -46,12 +50,17 @@ type PdfSignatureReference struct {
 func NewPdfSignature() *PdfSignature {
 	sig := &PdfSignature{}
 	sig.container = core.MakeIndirectObject(core.MakeDict())
+	sig.Type = core.MakeName("Sig")
 
 	// FIXME/TODO: Replace with generic signature handler (provide default).
 	sig.Filter = core.MakeName("Adobe.PPKLite")
-	//sig.Type = core.MakeName("Sig")
 
 	return sig
+}
+
+// GetContainingPdfObject implements interface PdfModel.
+func (sig *PdfSignature) GetContainingPdfObject() core.PdfObject {
+	return sig.container
 }
 
 // ToPdfObject implements interface PdfModel.
@@ -59,7 +68,7 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	container := sig.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
-	dict.Set("Type", core.MakeName("Sig"))
+	dict.Set("Type", sig.Type)
 
 	if sig.Filter != nil {
 		dict.Set("Filter", sig.Filter)
@@ -99,8 +108,62 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// newPdfSignatureFromIndirect loads a PdfSignature from an indirect object containing the signature dictionary.
+func (r *PdfReader) newPdfSignatureFromIndirect(container *core.PdfIndirectObject) (*PdfSignature, error) {
+	dict, ok := container.PdfObject.(*core.PdfObjectDictionary)
+	if !ok {
+		common.Log.Debug("ERROR: Signature container not containing a dictionary")
+		return nil, ErrTypeCheck
+	}
+
+	// If PdfSignature already processed and cached, return the cached entry.
+	if sig, cached := r.modelManager.GetModelFromPrimitive(container).(*PdfSignature); cached {
+		return sig, nil
+	}
+
+	sig := &PdfSignature{}
+	sig.container = container
+
+	sig.Type, ok = core.GetName(dict.Get("Type"))
+	if !ok {
+		common.Log.Error("ERROR: Signature Type attribute invalid or missing")
+		return nil, ErrInvalidAttribute
+	}
+
+	sig.Filter, ok = core.GetName(dict.Get("Filter"))
+	if !ok {
+		common.Log.Error("ERROR: Signature Filter attribute invalid or missing")
+		return nil, ErrInvalidAttribute
+	}
+
+	sig.SubFilter, _ = core.GetName(dict.Get("SubFilter"))
+
+	sig.Contents, ok = core.GetString(dict.Get("Contents"))
+	if !ok {
+		common.Log.Error("ERROR: Signature contents missing")
+		return nil, ErrInvalidAttribute
+	}
+
+	sig.Cert = dict.Get("Cert")
+	sig.ByteRange, _ = core.GetArray(dict.Get("ByteRange"))
+	sig.Reference, _ = core.GetArray(dict.Get("Reference"))
+	sig.Changes, _ = core.GetArray(dict.Get("Changes"))
+	sig.Name, _ = core.GetString(dict.Get("Name"))
+	sig.M, _ = core.GetString(dict.Get("M"))
+	sig.Location, _ = core.GetString(dict.Get("Location"))
+	sig.Reason, _ = core.GetString(dict.Get("Reason"))
+	sig.ContactInfo, _ = core.GetString(dict.Get("ContactInfo"))
+	sig.R, _ = core.GetInt(dict.Get("R"))
+	sig.V, _ = core.GetInt(dict.Get("V"))
+	sig.Prop_Build, _ = core.GetDict(dict.Get("Prop_Build"))
+	sig.Prop_AuthTime, _ = core.GetInt(dict.Get("Prop_AuthTime"))
+	sig.Prop_AuthType, _ = core.GetName(dict.Get("Prop_AuthType"))
+
+	return sig, nil
+}
+
 // PdfSignatureField represents a form field that contains a digital signature.
-// (12.7.4.5 - Signature Fields p. 454 in PDF32000_2008.PDF).
+// (12.7.4.5 - Signature Fields p. 454 in PDF32000_2008).
 //
 // The signature form field serves two primary purposes. 1. Define the form field that will provide the
 // visual signing properties for display but may also hold information needed when the actual signing
@@ -203,36 +266,4 @@ type PdfCertificateSeed struct {
 	OID                           *core.PdfObjectArray
 	URL                           *core.PdfObjectString
 	URLType                       *core.PdfObjectName
-}
-
-// TODO: Add signature model.  PdfSignature...
-// getSignatureDictionaries returns a slice of signature dictionaries from form fields.
-func (form *PdfAcroForm) getSignatureDictionaries() []*core.PdfObjectDictionary {
-	sigdicts := []*core.PdfObjectDictionary{}
-
-	sigfields := form.getSignatureFields()
-	for _, f := range sigfields {
-		dict, has := core.GetDict(f.V)
-		if has {
-			sigdicts = append(sigdicts, dict)
-		}
-
-	}
-
-	return sigdicts
-}
-
-// getSignatureFields returns a slice of signature fields.
-func (form *PdfAcroForm) getSignatureFields() []*PdfField {
-	sigfields := []*PdfField{}
-
-	if form.Fields != nil {
-		for _, f := range *form.Fields {
-			if f.FT != nil && f.FT.String() == "Sig" {
-				sigfields = append(sigfields, f)
-			}
-		}
-	}
-
-	return sigfields
 }

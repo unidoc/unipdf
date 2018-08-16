@@ -8,9 +8,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
-	"fmt"
-	"io"
-	"os"
 
 	"github.com/unidoc/unidoc/pdf/internal/crypto/asn1"
 	"github.com/unidoc/unidoc/pdf/internal/crypto/pkcs7"
@@ -23,7 +20,7 @@ import (
 // SignatureHandler interface defines the common functionality for PDF signature handlers, which
 // need to be capable of validating digital signatures and signing PDF documents.
 type SignatureHandler interface {
-	Validate(reader *PdfReader, inputPath string) ([]SignatureValidationResult, error)
+	Validate(reader *PdfReader) ([]SignatureValidationResult, error)
 	Sign(privateKey []byte, writer *PdfWriter) error
 }
 
@@ -32,22 +29,12 @@ type SignatureValidationResult struct {
 	IsSigned    bool
 	IsVerified  bool
 	IsTrusted   bool
-	Fields      []PdfField
+	Fields      []*PdfField
 	Name        string
 	Date        PdfDate
 	Reason      string
 	Location    string
 	ContactInfo string
-}
-
-var (
-	currentSignatureHandler SignatureHandler = DefaultSignatureHandler{}
-)
-
-// SetSignatureHandler sets the current signature handler.
-// Allows changing the default handler to a custom one.
-func SetSignatureHandler(sighandler SignatureHandler) {
-	currentSignatureHandler = sighandler
 }
 
 // DefaultSignatureHandler implements the default signature handling in UniDoc.
@@ -69,46 +56,51 @@ func (sh DefaultSignatureHandler) Sign(privateKey []byte, writer *PdfWriter) err
 	return errors.New("not implemented")
 }
 
-func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) ([]SignatureValidationResult, error) {
+// Validate validates the PDF signatures in a PDF document loaded in `reader`.
+func (sh DefaultSignatureHandler) Validate(reader *PdfReader) ([]SignatureValidationResult, error) {
 	results := []SignatureValidationResult{}
 
 	acroForm := reader.AcroForm
 	if acroForm == nil {
-		fmt.Printf("No formdata present\n")
 		return results, nil
 	}
 
-	sigdicts := acroForm.getSignatureDictionaries()
-	for _, dict := range sigdicts {
-		// Filter.
-		filter, ok := core.GetName(dict.Get("Filter"))
-		if !ok {
-			return results, ErrTypeCheck
+	sigfields := acroForm.signatureFields()
+
+	sigToFieldMap := map[*PdfSignature][]*PdfField{}
+	for _, sigfield := range sigfields {
+		sig := sigfield.V
+		if sig == nil {
+			continue
 		}
-		if *filter != "Adobe.PPKLite" && *filter != "Adobe.PPKMS" {
-			common.Log.Debug("ERROR: Unsupported filter: %v\n", filter)
-			//continue
+
+		fields, has := sigToFieldMap[sig]
+		if has {
+			fields = append(fields, sigfield.PdfField)
+		} else {
+			fields = []*PdfField{sigfield.PdfField}
+		}
+		sigToFieldMap[sig] = fields
+	}
+
+	for sig, fields := range sigToFieldMap {
+		if sig.Filter.String() != "Adobe.PPKLite" && sig.Filter.String() != "Adobe.PPKMS" {
+			common.Log.Debug("ERROR: Unsupported filter: %v\n", sig.Filter)
 			return nil, errors.New("unsupported filter")
 		}
 
 		// Type.
-		ftype, ok := core.GetName(dict.Get("Type"))
-		if !ok {
-			fmt.Printf("Filter type not set\n")
-			continue
-		}
-		if ftype.String() != "Sig" && ftype.String() != "DocTimeStamp" {
-			fmt.Printf("Unsupported signature field type\n")
+		if sig.Type.String() != "Sig" && sig.Type.String() != "DocTimeStamp" {
+			common.Log.Debug("WARN: Unsupported signature field type - skipping over\n")
 			continue
 		}
 
 		// ByteRange
-		byteRangeArr, ok := core.GetArray(dict.Get("ByteRange"))
-		if !ok {
+		if sig.ByteRange == nil {
 			common.Log.Debug("ERROR: ByteRange not specified")
 			return nil, ErrRequiredAttributeMissing
 		}
-		byteRange, err := byteRangeArr.ToInt64Slice()
+		byteRange, err := sig.ByteRange.ToInt64Slice()
 		if err != nil {
 			common.Log.Debug("ERROR: %v", err)
 			return nil, err
@@ -120,16 +112,14 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 			return results, errors.New("Byte range not a multiple of 2")
 		}
 
-		// Contents.
-		contents, ok := core.GetString(dict.Get("Contents"))
-		if !ok {
+		// Contents required.
+		if sig.Contents == nil {
 			common.Log.Debug("ERROR: Contents invalid or missing")
 			return nil, ErrInvalidAttribute
 		}
 
 		// SubFilter.
-		subfilter, ok := core.GetName(dict.Get("SubFilter"))
-		if !ok {
+		if sig.SubFilter == nil {
 			common.Log.Debug("ERROR: SubFilter missing or invalid")
 			return results, ErrInvalidAttribute
 		}
@@ -138,18 +128,17 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 		verified := false
 		trusted := false
 
-		fmt.Println(*subfilter)
-		switch *subfilter {
+		switch sig.SubFilter.String() {
 		case "adbe.pkcs7.detached":
 			fallthrough
 		case "ETSI.CAdES.detached":
-			signPackage, err := pkcs7.Parse([]byte(contents.Str()))
+			signPackage, err := pkcs7.Parse([]byte(sig.Contents.Str()))
 			if err != nil {
 				return results, err
 			}
 
 			// TODO: Add hash calculation into unidoc. (cannot access file descriptor from outside).
-			fileContent, err := getContentForByteRange(inputPath, byteRange)
+			fileContent, err := getContentForByteRange(reader, byteRange)
 			if err != nil {
 				return results, err
 			}
@@ -176,7 +165,7 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 			}
 
 		case "adbe.pkcs7.sha1":
-			signPackage, err := pkcs7.Parse([]byte(contents.Str()))
+			signPackage, err := pkcs7.Parse([]byte(sig.Contents.Str()))
 			if err != nil {
 				return results, err
 			}
@@ -189,7 +178,7 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 			}
 
 			// TODO: Not to require input path.
-			fileContent, err := getContentForByteRange(inputPath, byteRange)
+			fileContent, err := getContentForByteRange(reader, byteRange)
 			if err != nil {
 				return results, err
 			}
@@ -218,10 +207,9 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 					break
 				}
 			}
-			fmt.Printf("Trusted? %v\n", trusted)
 
 		case "adbe.x509.rsa_sha1":
-			certString, ok := dict.Get("Cert").(*core.PdfObjectString)
+			certString, ok := sig.Cert.(*core.PdfObjectString)
 			if !ok {
 				return results, errors.New("Cert missing")
 			}
@@ -236,13 +224,13 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 			cert := certs[0]
 
 			// TODO: Add hash calculation into unidoc. (cannot access file descriptor from outside).
-			fileContent, err := getContentForByteRange(inputPath, byteRange)
+			fileContent, err := getContentForByteRange(reader, byteRange)
 			if err != nil {
 				return results, err
 			}
 
 			// ASN1 decode the signature contents.
-			signature := []byte(contents.Str())
+			signature := []byte(sig.Contents.Str())
 			var asn1Sig asn1.RawContent
 			_, err = asn1.Unmarshal(signature, &asn1Sig)
 			if err != nil {
@@ -257,16 +245,16 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 			}
 
 			// Check trust of certificate.
-			fmt.Printf("verifying...\n")
+			common.Log.Trace("verifying...")
 			verifyOptions := x509.VerifyOptions{}
 			_, err = cert.Verify(verifyOptions)
 			if err == nil {
 				trusted = true
 			}
-			fmt.Printf("trusted: %v\n", trusted)
+			common.Log.Trace("trusted: %v", trusted)
 
 		case "ETSI.RFC3161":
-			signPackage, err := pkcs7.Parse([]byte(contents.Str()))
+			signPackage, err := pkcs7.Parse([]byte(sig.Contents.Str()))
 			if err != nil {
 				return results, err
 			}
@@ -290,62 +278,52 @@ func (sh DefaultSignatureHandler) Validate(reader *PdfReader, inputPath string) 
 				}
 			}
 		default:
-			return results, errors.New("Unknown subfilter")
+			return results, errors.New("unknown subfilter")
 		}
 
 		result.IsVerified = verified
 		result.IsTrusted = trusted
+		result.Fields = fields
 
 		// Name
-		signerName, has := core.GetName(dict.Get("Name"))
-		if has {
-			result.Name = signerName.String()
+		if sig.Name != nil {
+			result.Name = sig.Name.String()
 		}
 
 		// Signature date
-		signerDateStr, has := core.GetStringVal(dict.Get("M"))
-		if has {
-			signDate, err := NewPdfDate(signerDateStr)
-			if err != nil {
-				return results, err
+		if sig.M != nil {
+			signerDateStr, has := core.GetStringVal(sig.M)
+			if has {
+				signDate, err := NewPdfDate(signerDateStr)
+				if err != nil {
+					return results, err
+				}
+				result.Date = signDate
 			}
-			result.Date = signDate
 		}
 
-		// Reason
-		if reason, has := dict.Get("Reason").(*core.PdfObjectString); has {
-			result.Reason = reason.Str()
+		if sig.Reason != nil {
+			result.Reason = sig.Reason.String()
 		}
 
-		// Location.
-		if location, has := dict.Get("Location").(*core.PdfObjectString); has {
-			result.Location = location.Str()
+		if sig.Location != nil {
+			result.Location = sig.Location.String()
 		}
 
-		// ContactInfo.
-		if contactInfo, has := dict.Get("ContactInfo").(*core.PdfObjectString); has {
-			result.ContactInfo = contactInfo.Str()
+		if sig.ContactInfo != nil {
+			result.ContactInfo = sig.ContactInfo.String()
 		}
 
 		results = append(results, result)
 	}
 
-	//fmt.Printf("%d Signature fields\n", numSigFields)
-	fmt.Printf("Done\n")
-
 	return results, nil
 }
 
-// getContentForByteRange returna the content in the specified byte range of input file specified by `inputPath`
-// as a slice of bytes.
-func getContentForByteRange(inputPath string, byteRange []int64) ([]byte, error) {
+// getContentForByteRange returns the content in the specified byte ranges of input PDF loaded in `reader`.
+// Used for signature verification purposes.
+func getContentForByteRange(reader *PdfReader, byteRange []int64) ([]byte, error) {
 	buf := bytes.Buffer{}
-
-	f, err := os.Open(inputPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
 
 	for i := 0; i < len(byteRange); i += 2 {
 		fromOffset := byteRange[i]
@@ -354,16 +332,11 @@ func getContentForByteRange(inputPath string, byteRange []int64) ([]byte, error)
 			return nil, errors.New("byte length cannot be negative")
 		}
 
-		_, err := f.Seek(fromOffset, io.SeekStart)
+		bb, err := reader.parser.ReadBytesAt(fromOffset, byteLen)
 		if err != nil {
 			return nil, err
 		}
 
-		bb := make([]byte, byteLen)
-		_, err = io.ReadAtLeast(f, bb, int(byteLen))
-		if err != nil {
-			return nil, err
-		}
 		buf.Write(bb)
 	}
 

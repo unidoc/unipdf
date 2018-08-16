@@ -65,6 +65,21 @@ func (form *PdfAcroForm) AllFields() []*PdfField {
 	return fields
 }
 
+// signatureFields returns a slice of all signature fields in the form.
+func (form *PdfAcroForm) signatureFields() []*PdfFieldSignature {
+	sigfields := []*PdfFieldSignature{}
+
+	for _, f := range form.AllFields() {
+		switch t := f.GetContext().(type) {
+		case *PdfFieldSignature:
+			sigf := t
+			sigfields = append(sigfields, sigf)
+		}
+	}
+
+	return sigfields
+}
+
 // newPdfAcroFormFromDict is used when loading forms from PDF files.
 func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcroForm, error) {
 	acroForm := NewPdfAcroForm()

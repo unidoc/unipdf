@@ -444,7 +444,7 @@ func (ch *PdfFieldChoice) ToPdfObject() core.PdfObject {
 // the name of the signer and verifying document contents.
 type PdfFieldSignature struct {
 	*PdfField
-	V    *core.PdfIndirectObject
+	V    *PdfSignature
 	Lock *core.PdfIndirectObject
 	SV   *core.PdfIndirectObject
 }
@@ -459,7 +459,7 @@ func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 	d.Set("FT", core.MakeName("Sig"))
 	if sig.V != nil {
-		d.Set("V", sig.V)
+		d.Set("V", sig.V.ToPdfObject())
 	}
 	if sig.Lock != nil {
 		d.Set("Lock", sig.Lock)
@@ -544,6 +544,11 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 		return nil, fmt.Errorf("PdfField indirect object not containing a dictionary")
 	}
 
+	// If already processed and cached - return processed model.
+	if field, cached := r.modelManager.GetModelFromPrimitive(container).(*PdfField); cached {
+		return field, nil
+	}
+
 	field := NewPdfField()
 
 	// Field type (required in terminal fields).
@@ -614,15 +619,15 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 			ctx.PdfField = field
 			field.context = ctx
 		case "Sig":
-			ctx, err := newPdfFieldSignatureFromDict(d)
+			ctx, err := r.newPdfFieldSignatureFromDict(d)
 			if err != nil {
 				return nil, err
 			}
 			ctx.PdfField = field
 			field.context = ctx
 		default:
-			common.Log.Debug("Unsupported field type %s", *field.FT)
-			return nil, errors.New("Unsupported field type")
+			common.Log.Debug("ERROR: Unsupported field type %s", *field.FT)
+			return nil, errors.New("unsupported field type")
 		}
 	}
 
@@ -653,7 +658,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 			}
 			widget, ok := annot.GetContext().(*PdfAnnotationWidget)
 			if !ok {
-				return nil, fmt.Errorf("Invalid widget annotation")
+				return nil, errors.New("invalid widget annotation")
 			}
 			widget.Parent = field.GetContainingPdfObject()
 
@@ -675,7 +680,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 
 			container, isIndirect := obj.(*core.PdfIndirectObject)
 			if !isIndirect {
-				return nil, fmt.Errorf("Not an indirect object (form field)")
+				return nil, errors.New("not an indirect object (form field)")
 			}
 
 			dict, ok := core.GetDict(container)
@@ -742,9 +747,18 @@ func newPdfFieldButtonFromDict(d *core.PdfObjectDictionary) (*PdfFieldButton, er
 
 // newPdfFieldSignatureFromDict returns a new PdfFieldSignature (representing a signature field) loaded from a dictionary.
 // This function loads only the signature-specific fields (called by a more generic field loader).
-func newPdfFieldSignatureFromDict(d *core.PdfObjectDictionary) (*PdfFieldSignature, error) {
+func (r *PdfReader) newPdfFieldSignatureFromDict(d *core.PdfObjectDictionary) (*PdfFieldSignature, error) {
 	sigf := &PdfFieldSignature{}
-	sigf.V, _ = core.GetIndirect(d.Get("V"))
+
+	indobj, has := core.GetIndirect(d.Get("V"))
+	if has {
+		var err error
+		sigf.V, err = r.newPdfSignatureFromIndirect(indobj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	sigf.Lock, _ = core.GetIndirect(d.Get("Lock"))
 	sigf.SV, _ = core.GetIndirect(d.Get("SV"))
 	return sigf, nil

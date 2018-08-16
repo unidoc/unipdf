@@ -799,7 +799,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictionary, error) {
 	if xstm != nil {
 		common.Log.Trace("XRefStm xref table object at %d", xstm)
-		parser.rs.Seek(int64(*xstm), os.SEEK_SET)
+		parser.rs.Seek(int64(*xstm), io.SeekStart)
 		parser.reader = bufio.NewReader(parser.rs)
 	}
 
