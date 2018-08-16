@@ -55,7 +55,7 @@ func doEncode(enc TextEncoder, raw string) string {
 	for _, r := range raw {
 		code, found := enc.RuneToCharcode(r)
 		if !found {
-			common.Log.Debug("Failed to map rune to charcode for rune 0x%X", r)
+			common.Log.Debug("Failed to map rune to charcode for rune 0x%04x", r)
 			continue
 		}
 		encoded = append(encoded, byte(code))

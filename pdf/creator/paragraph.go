@@ -125,7 +125,7 @@ func (p *Paragraph) SetEnableWrap(enableWrap bool) {
 	p.enableWrap = enableWrap
 }
 
-// SetColor set the color of the Paragraph text.
+// SetColor sets the color of the Paragraph text.
 //
 // Example:
 // 1.   p := NewParagraph("Red paragraph")
@@ -219,7 +219,7 @@ func (p *Paragraph) getTextWidth() float64 {
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *Paragraph) wrapText() error {
 	if !p.enableWrap {
-		p.textLines = []string{p.textFont.Encoder().Encode(p.text)}
+		p.textLines = []string{p.text}
 		return nil
 	}
 
@@ -240,8 +240,8 @@ func (p *Paragraph) wrapText() error {
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("ERROR: Glyph char metrics not found! %q rune=0x%04x=%c font=%s",
-				glyph, val, val, p.textFont.BaseFont())
+			common.Log.Debug("ERROR: Glyph char metrics not found! %q rune=0x%04x=%c font=%s %#q",
+				glyph, val, val, p.textFont.BaseFont(), p.textFont.Subtype())
 			common.Log.Trace("Font: %#v", p.textFont)
 			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
 			return errors.New("Glyph char metrics missing")
@@ -306,7 +306,7 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if p.positioning.isRelative() {
-		// Account for Paragraph Margins.
+		// Account for Paragraph margins.
 		ctx.X += p.margins.left
 		ctx.Y += p.margins.top
 		ctx.Width -= p.margins.left + p.margins.right
@@ -408,7 +408,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		// Get width of the line (excluding spaces).
 		w := 0.0
 		spaces := 0
-		for _, runeVal := range runes {
+		for i, runeVal := range runes {
 			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
@@ -420,7 +420,9 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			}
 			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 			if !found {
-				common.Log.Debug("Unsupported glyph %s in font", glyph)
+				common.Log.Debug("Unsupported glyph %q i=%d rune=0x%04x=%c in font %s %s",
+					glyph, i, runeVal, runeVal,
+					p.textFont.BaseFont(), p.textFont.Subtype())
 				return ctx, errors.New("Unsupported text glyph")
 			}
 
@@ -451,19 +453,13 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 
 		encStr := ""
 		for _, runeVal := range runes {
-			//creator.Add_Tj(core.PdfObjectString(tb.Encoder.Encode(line)))
 			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
 				return ctx, errors.New("Unsupported rune in text encoding")
 			}
 
-			if glyph == "space" {
-				if !found {
-					common.Log.Debug("Unsupported glyph %s in font", glyph)
-					return ctx, errors.New("Unsupported text glyph")
-				}
-
+			if glyph == "space" { // XXX: What about \t and other spaces.
 				if len(encStr) > 0 {
 					objs = append(objs, core.MakeString(encStr))
 					encStr = ""

@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -130,7 +131,8 @@ func (table *Table) CurCol() int {
 	return curCol
 }
 
-// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner coordinates as (x,y).
+// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner
+// coordinates as (x,y).
 // Note that this is only sensible to use when the table does not wrap over multiple pages.
 // TODO: Should be able to set width too (not just based on context/relative positioning mode).
 func (table *Table) SetPos(x, y float64) {
@@ -139,7 +141,8 @@ func (table *Table) SetPos(x, y float64) {
 	table.yPos = y
 }
 
-// GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap over multiple pages.
+// GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages.
 // Implements the Drawable interface.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	blocks := []*Block{}
@@ -232,7 +235,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			}
 			err := block.Draw(rect)
 			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
+				common.Log.Debug("ERROR: %v\n", err)
 			}
 		} else if cell.borderStyle != CellBorderStyleNone {
 			// Draw border (no fill).
@@ -244,7 +247,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
 			err := block.Draw(rect)
 			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
+				common.Log.Debug("ERROR: %v", err)
 			}
 		}
 
@@ -290,7 +293,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 			err := block.DrawWithContext(cell.content, ctx)
 			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
+				common.Log.Debug("ERROR: %v", err)
 			}
 		}
 
@@ -515,8 +518,8 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 		}
 		cell.content = vd
 	default:
-		common.Log.Debug("Error: unsupported cell content type %T\n", vd)
-		return errors.New("Type check error")
+		common.Log.Debug("ERROR: unsupported cell content type %T", vd)
+		return core.ErrTypeError
 	}
 
 	return nil

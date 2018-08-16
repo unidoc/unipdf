@@ -191,7 +191,8 @@ func (se *SimpleEncoder) computeTables() {
 		for code, glyph := range se.differences {
 			r, ok := GlyphToRune(glyph)
 			if !ok {
-				common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph, se.differences)
+				common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph,
+					se.differences)
 			}
 			codeToRune[uint16(code)] = r
 		}
@@ -208,28 +209,6 @@ func (se *SimpleEncoder) computeTables() {
 	se.codeToGlyph = codeToGlyph
 	se.glyphToCode = glyphToCode
 	se.codeToRune = codeToRune
-
-	if se.baseName == "SymbolEncoding" {
-		fmt.Printf("differences=%+v\n", se.differences)
-		r, ok := se.baseEncoding[0xc6]
-		if !ok {
-			panic("`0")
-		}
-		fmt.Printf("r=0x%04x=%c\n", r, r)
-		r, ok = codeToRune[0xc6]
-		if !ok {
-			panic("`2")
-		}
-		fmt.Printf("r=0x%04x=%c\n", r, r)
-		g, ok := codeToGlyph[0xc6]
-		if !ok {
-			panic("`3")
-		}
-		fmt.Printf("g=%q\n", g)
-		if _, ok := glyphToCode["Delta"]; !ok {
-			panic("`1")
-		}
-	}
 }
 
 // FromFontDifferences converts `diffList`, a /Differences array from an /Encoding object to a map
