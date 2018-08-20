@@ -28,7 +28,7 @@ type SimpleEncoder struct {
 	baseName     string
 	baseEncoding map[uint16]rune
 	differences  map[byte]string
-	codeToGlyph  map[uint16]string
+	CodeToGlyph  map[uint16]string
 	glyphToCode  map[string]uint16
 	codeToRune   map[uint16]rune
 }
@@ -94,12 +94,12 @@ func (se SimpleEncoder) String() string {
 		name = fmt.Sprintf("%s(diff)", se.baseName)
 	}
 	parts := []string{
-		fmt.Sprintf("%#q %d entries %d differences", name, len(se.codeToGlyph), len(se.differences)),
+		fmt.Sprintf("%#q %d entries %d differences", name, len(se.CodeToGlyph), len(se.differences)),
 		fmt.Sprintf("differences=%+v", se.differences),
 	}
 
 	codes := []int{}
-	for c := range se.codeToGlyph {
+	for c := range se.CodeToGlyph {
 		codes = append(codes, int(c))
 	}
 	sort.Ints(codes)
@@ -110,7 +110,7 @@ func (se SimpleEncoder) String() string {
 
 	for i := 0; i < numCodes; i++ {
 		c := codes[i]
-		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.codeToGlyph[uint16(c)]))
+		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.CodeToGlyph[uint16(c)]))
 	}
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
@@ -123,7 +123,7 @@ func (se SimpleEncoder) Encode(raw string) string {
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (se SimpleEncoder) CharcodeToGlyph(code uint16) (string, bool) {
-	glyph, ok := se.codeToGlyph[code]
+	glyph, ok := se.CodeToGlyph[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: 0x%04x", code)
 	}
@@ -206,12 +206,12 @@ func (se *SimpleEncoder) computeTables() {
 			glyphToCode[glyph] = code
 		}
 	}
-	se.codeToGlyph = codeToGlyph
+	se.CodeToGlyph = codeToGlyph
 	se.glyphToCode = glyphToCode
 	se.codeToRune = codeToRune
 }
 
-// FromFontDifferences converts `diffList`, a /Differences array from an /Encoding object to a map
+// FromFontDifferences converts `diffList` (a /Differences array from an /Encoding object) to a map
 // representing character code to glyph mappings.
 func FromFontDifferences(diffList *core.PdfObjectArray) (map[byte]string, error) {
 	differences := map[byte]string{}
@@ -232,7 +232,7 @@ func FromFontDifferences(diffList *core.PdfObjectArray) (map[byte]string, error)
 	return differences, nil
 }
 
-// ToFontDifferences converts `differences`, a map representing character code to glyph mappings,
+// ToFontDifferences converts `differences` (a map representing character code to glyph mappings)
 // to a /Differences array for an /Encoding object.
 func ToFontDifferences(differences map[byte]string) *core.PdfObjectArray {
 	if len(differences) == 0 {
