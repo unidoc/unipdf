@@ -72,7 +72,6 @@ func NewParagraph(text string) *Paragraph {
 	p.lineHeight = 1.0
 
 	// TODO: Can we wrap intellectually, only if given width is known?
-	p.enableWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
 	p.angle = 0
@@ -172,6 +171,7 @@ func (p *Paragraph) GetMargins() (float64, float64, float64, float64) {
 // text can extend to prior to wrapping over to next line.
 func (p *Paragraph) SetWidth(width float64) {
 	p.wrapWidth = width
+	p.enableWrap = true
 	p.wrapText()
 }
 
