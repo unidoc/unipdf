@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -66,6 +67,99 @@ func NewStandard14Font(basefont string) (*PdfFont, error) {
 		return nil, ErrFontNotSupported
 	}
 	return &PdfFont{context: &std}, nil
+}
+
+// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
+// a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
+// An error can occur if`basefont` is not one the standard 14 font names.
+func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+	baseEncoder := "MacRomanEncoding"
+	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
+		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
+
+	std, ok := standard14Fonts[basefont]
+	if !ok {
+		return nil, nil, ErrFontNotSupported
+	}
+	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
+	glyphCode := map[string]byte{}
+
+	// slots are the indexes in the encoding where the new character codes area added
+	slots := []byte{}
+	slots1 := []byte{}
+	for code := uint16(1); code <= 0xff; code++ {
+		if glyph, ok := encoder.CodeToGlyph[code]; ok {
+			glyphCode[glyph] = byte(code)
+			slots1 = append(slots1, byte(code))
+		} else {
+			slots = append(slots, byte(code))
+		}
+	}
+	slots = append(slots, slots1...)
+
+	// glyphs are the font glyphs that we need to encode
+	glyphs := []string{}
+	for _, r := range sortedAlphabet(alphabet) {
+		glyph, ok := textencoding.RuneToGlyph(r)
+		if !ok {
+			common.Log.Debug("No glyph for rune 0x%02x=%c", r, r)
+			continue
+		}
+		if _, ok = std.fontMetrics[glyph]; !ok {
+			common.Log.Debug("Glyph %q not in font", glyph)
+			continue
+		}
+		if len(glyphs) >= 255 {
+			common.Log.Debug("Too many characters for encoding")
+			break
+		}
+		glyphs = append(glyphs, glyph)
+
+	}
+
+	// Fill the slots, starting with the empty ones.
+	slotIdx := 0
+	differences := map[byte]string{}
+	for _, glyph := range glyphs {
+		if _, ok := glyphCode[glyph]; !ok {
+			differences[slots[slotIdx]] = glyph
+			slotIdx++
+		}
+	}
+	encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+
+	return &PdfFont{context: &std}, encoder, err
+}
+
+// GetAlphabet returns a map of the runes in `text`.
+func GetAlphabet(text string) map[rune]int {
+	alphabet := map[rune]int{}
+	for _, r := range text {
+		alphabet[r]++
+	}
+	return alphabet
+}
+
+// sortedAlphabet the runes in `alphabet` sorted by frequency.
+func sortedAlphabet(alphabet map[rune]int) []rune {
+	runes := []rune{}
+	for r := range alphabet {
+		runes = append(runes, r)
+	}
+	sort.Slice(runes, func(i, j int) bool {
+		ri, rj := runes[i], runes[j]
+		ni, nj := alphabet[ri], alphabet[rj]
+		if ni != nj {
+			return ni < nj
+		}
+		return ri < rj
+	})
+	return runes
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an
