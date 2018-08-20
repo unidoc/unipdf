@@ -15,7 +15,7 @@ type TextEncoder interface {
 	String() string
 
 	// Encode converts the Go unicode string `raw` to a PDF encoded string.
-	Encode(raw string) string
+	Encode(raw string) []byte
 
 	// CharcodeToGlyph returns the glyph name for character code `code`.
 	// The bool return flag is true if there was a match, and false otherwise.
@@ -50,7 +50,7 @@ type TextEncoder interface {
 // Convenience functions
 
 // doEncode converts a Go unicode string `raw` to a PDF encoded string using the encoder `enc`.
-func doEncode(enc TextEncoder, raw string) string {
+func doEncode(enc TextEncoder, raw string) []byte {
 	encoded := []byte{}
 	for _, r := range raw {
 		code, found := enc.RuneToCharcode(r)
@@ -60,7 +60,7 @@ func doEncode(enc TextEncoder, raw string) string {
 		}
 		encoded = append(encoded, byte(code))
 	}
-	return string(encoded)
+	return encoded
 }
 
 // doRuneToCharcode converts rune `r` to a PDF character code.

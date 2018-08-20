@@ -116,7 +116,7 @@ func (se SimpleEncoder) String() string {
 }
 
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
-func (se SimpleEncoder) Encode(raw string) string {
+func (se SimpleEncoder) Encode(raw string) []byte {
 	return doEncode(se, raw)
 }
 
