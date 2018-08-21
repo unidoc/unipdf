@@ -371,7 +371,7 @@ func (c *Creator) finalize() error {
 			headerBlock.SetPos(0, 0)
 			err := c.Draw(headerBlock)
 			if err != nil {
-				common.Log.Debug("Error drawing header: %v", err)
+				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
 
@@ -468,10 +468,10 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	pdfWriter := model.NewPdfWriter()
 	// Form fields.
 	if c.acroForm != nil {
-		errF := pdfWriter.SetForms(c.acroForm)
-		if errF != nil {
-			common.Log.Debug("Failure: %v", errF)
-			return errF
+		err := pdfWriter.SetForms(c.acroForm)
+		if err != nil {
+			common.Log.Debug("Failure: %v", err)
+			return err
 		}
 	}
 
@@ -487,7 +487,7 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	for _, page := range c.pages {
 		err := pdfWriter.AddPage(page)
 		if err != nil {
-			common.Log.Error("Failed to add Page: %s", err)
+			common.Log.Error("Failed to add Page: %v", err)
 			return err
 		}
 	}

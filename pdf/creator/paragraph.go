@@ -408,10 +408,10 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		// Get width of the line (excluding spaces).
 		w := 0.0
 		spaces := 0
-		for i, runeVal := range runes {
-			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
+		for i, r := range runes {
+			glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 			if !found {
-				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
+				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
 				return ctx, errors.New("Unsupported rune in text encoding")
 			}
 			if glyph == "space" {
@@ -421,7 +421,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 			if !found {
 				common.Log.Debug("Unsupported glyph %q i=%d rune=0x%04x=%c in font %s %s",
-					glyph, i, runeVal, runeVal,
+					glyph, i, r, r,
 					p.textFont.BaseFont(), p.textFont.Subtype())
 				return ctx, errors.New("Unsupported text glyph")
 			}
@@ -436,41 +436,45 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			return ctx, errors.New("The font does not have a space glyph")
 		}
 		spaceWidth := spaceMetrics.Wx
-		if p.alignment == TextAlignmentJustify {
+		switch p.alignment {
+		case TextAlignmentJustify:
 			if spaces > 0 && idx < len(p.textLines)-1 { // Not to justify last line.
 				spaceWidth = (p.wrapWidth*1000.0 - w) / float64(spaces) / p.fontSize
 			}
-		} else if p.alignment == TextAlignmentCenter {
+		case TextAlignmentCenter:
 			// Start with a shift.
 			textWidth := w + float64(spaces)*spaceWidth*p.fontSize
 			shift := (p.wrapWidth*1000.0 - textWidth) / 2 / p.fontSize
 			objs = append(objs, core.MakeFloat(-shift))
-		} else if p.alignment == TextAlignmentRight {
+		case TextAlignmentRight:
 			textWidth := w + float64(spaces)*spaceWidth*p.fontSize
 			shift := (p.wrapWidth*1000.0 - textWidth) / p.fontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
-		encStr := ""
-		for _, runeVal := range runes {
-			glyph, found := p.textFont.Encoder().RuneToGlyph(runeVal)
-			if !found {
-				common.Log.Debug("Rune 0x%x not supported by text encoder", runeVal)
+		encoded := []byte{}
+		for _, r := range runes {
+			glyph, ok := p.textFont.Encoder().RuneToGlyph(r)
+			if !ok {
+				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
 				return ctx, errors.New("Unsupported rune in text encoding")
 			}
 
 			if glyph == "space" { // XXX: What about \t and other spaces.
-				if len(encStr) > 0 {
-					objs = append(objs, core.MakeString(encStr))
-					encStr = ""
+				if len(encoded) > 0 {
+					objs = append(objs, core.MakeStringFromBytes(encoded))
+					encoded = []byte{}
 				}
 				objs = append(objs, core.MakeFloat(-spaceWidth))
 			} else {
-				encStr += string(p.textFont.Encoder().Encode(string(runeVal)))
+				code, ok := p.textFont.Encoder().RuneToCharcode(r)
+				if ok {
+					encoded = append(encoded, byte(code))
+				}
 			}
 		}
-		if len(encStr) > 0 {
-			objs = append(objs, core.MakeString(encStr))
+		if len(encoded) > 0 {
+			objs = append(objs, core.MakeStringFromBytes(encoded))
 		}
 
 		cc.Add_TJ(objs...)

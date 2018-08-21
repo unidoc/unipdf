@@ -89,13 +89,18 @@ func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*Pdf
 	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
 	glyphCode := map[string]byte{}
 
-	// slots are the indexes in the encoding where the new character codes area added
+	// slots are the indexes in the encoding where the new character codes are added.
+	// slots are unused indexes, which are filled first. slots1 are the used indexes.
 	slots := []byte{}
 	slots1 := []byte{}
 	for code := uint16(1); code <= 0xff; code++ {
 		if glyph, ok := encoder.CodeToGlyph[code]; ok {
 			glyphCode[glyph] = byte(code)
-			slots1 = append(slots1, byte(code))
+			// Don't overwrite space
+			if glyph != "space" {
+
+				slots1 = append(slots1, byte(code))
+			}
 		} else {
 			slots = append(slots, byte(code))
 		}
