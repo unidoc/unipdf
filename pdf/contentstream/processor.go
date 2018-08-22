@@ -7,6 +7,7 @@ package contentstream
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -20,7 +21,15 @@ type GraphicsState struct {
 	ColorspaceNonStroking PdfColorspace
 	ColorStroking         PdfColor
 	ColorNonStroking      PdfColor
+	CTM                   Matrix
 }
+
+type Orientation int
+
+const (
+	OrientationPortrait Orientation = iota
+	OrientationLandscape
+)
 
 type GraphicStateStack []GraphicsState
 
@@ -32,6 +41,18 @@ func (gsStack *GraphicStateStack) Pop() GraphicsState {
 	gs := (*gsStack)[len(*gsStack)-1]
 	*gsStack = (*gsStack)[:len(*gsStack)-1]
 	return gs
+}
+
+// Transform returns coordinates x, y transformed by the CTM
+func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
+	// xp, yp := gs.CTM.Transform(x, y)
+	// fmt.Printf("Transform. %5.1f,%5.1f->%5.1f,%5.1f %+v\n", x, y, xp, yp, gs.CTM)
+	return gs.CTM.Transform(x, y)
+}
+
+// Returns the likely page orientation given the CTM
+func (gs *GraphicsState) PageOrientation() Orientation {
+	return gs.CTM.pageOrientation()
 }
 
 // ContentStreamProcessor defines a data structure and methods for processing a content stream, keeping track of the
@@ -56,12 +77,12 @@ type HandlerEntry struct {
 
 type HandlerConditionEnum int
 
-func (this HandlerConditionEnum) All() bool {
-	return this == HandlerConditionEnumAllOperands
+func (csp HandlerConditionEnum) All() bool {
+	return csp == HandlerConditionEnumAllOperands
 }
 
-func (this HandlerConditionEnum) Operand() bool {
-	return this == HandlerConditionEnumOperand
+func (csp HandlerConditionEnum) Operand() bool {
+	return csp == HandlerConditionEnumOperand
 }
 
 const (
@@ -194,48 +215,49 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 }
 
 // Process the entire operations.
-func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 	// Initialize graphics state
-	this.graphicsState.ColorspaceStroking = NewPdfColorspaceDeviceGray()
-	this.graphicsState.ColorspaceNonStroking = NewPdfColorspaceDeviceGray()
-	this.graphicsState.ColorStroking = NewPdfColorDeviceGray(0)
-	this.graphicsState.ColorNonStroking = NewPdfColorDeviceGray(0)
+	csp.graphicsState.ColorspaceStroking = NewPdfColorspaceDeviceGray()
+	csp.graphicsState.ColorspaceNonStroking = NewPdfColorspaceDeviceGray()
+	csp.graphicsState.ColorStroking = NewPdfColorDeviceGray(0)
+	csp.graphicsState.ColorNonStroking = NewPdfColorDeviceGray(0)
+	csp.graphicsState.CTM = IdentityMatrix()
 
-	for _, op := range this.operations {
+	for _, op := range csp.operations {
 		var err error
 
 		// Internal handling.
 		switch op.Operand {
 		case "q":
-			this.graphicsStack.Push(this.graphicsState)
+			csp.graphicsStack.Push(csp.graphicsState)
 		case "Q":
-			this.graphicsState = this.graphicsStack.Pop()
+			csp.graphicsState = csp.graphicsStack.Pop()
 
 		// Color operations (Table 74 p. 179)
 		case "CS":
-			err = this.handleCommand_CS(op, resources)
+			err = csp.handleCommand_CS(op, resources)
 		case "cs":
-			err = this.handleCommand_cs(op, resources)
+			err = csp.handleCommand_cs(op, resources)
 		case "SC":
-			err = this.handleCommand_SC(op, resources)
+			err = csp.handleCommand_SC(op, resources)
 		case "SCN":
-			err = this.handleCommand_SCN(op, resources)
+			err = csp.handleCommand_SCN(op, resources)
 		case "sc":
-			err = this.handleCommand_sc(op, resources)
+			err = csp.handleCommand_sc(op, resources)
 		case "scn":
-			err = this.handleCommand_scn(op, resources)
+			err = csp.handleCommand_scn(op, resources)
 		case "G":
-			err = this.handleCommand_G(op, resources)
+			err = csp.handleCommand_G(op, resources)
 		case "g":
-			err = this.handleCommand_g(op, resources)
+			err = csp.handleCommand_g(op, resources)
 		case "RG":
-			err = this.handleCommand_RG(op, resources)
+			err = csp.handleCommand_RG(op, resources)
 		case "rg":
-			err = this.handleCommand_rg(op, resources)
+			err = csp.handleCommand_rg(op, resources)
 		case "K":
-			err = this.handleCommand_K(op, resources)
+			err = csp.handleCommand_K(op, resources)
 		case "k":
-			err = this.handleCommand_k(op, resources)
+			err = csp.handleCommand_k(op, resources)
 		}
 		if err != nil {
 			common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
@@ -244,12 +266,12 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 		}
 
 		// Check if have external handler also, and process if so.
-		for _, entry := range this.handlers {
+		for _, entry := range csp.handlers {
 			var err error
 			if entry.Condition.All() {
-				err = entry.Handler(op, this.graphicsState, resources)
+				err = entry.Handler(op, csp.graphicsState, resources)
 			} else if entry.Condition.Operand() && op.Operand == entry.Operand {
-				err = entry.Handler(op, this.graphicsState, resources)
+				err = entry.Handler(op, csp.graphicsState, resources)
 			}
 			if err != nil {
 				common.Log.Debug("Processor handler error: %v", err)
@@ -328,11 +350,11 @@ func (csp *ContentStreamProcessor) handleCommand_cs(op *ContentStreamOperation, 
 }
 
 // SC: Set the color to use for stroking operations in a device, CIE-based or Indexed colorspace. (not ICC based)
-func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation, resources *PdfPageResources) error {
 	// For DeviceGray, CalGray, Indexed: one operand is required
 	// For DeviceRGB, CalRGB, Lab: 3 operands required
 
-	cs := this.graphicsState.ColorspaceStroking
+	cs := csp.graphicsState.ColorspaceStroking
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -344,7 +366,7 @@ func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation,
 		return err
 	}
 
-	this.graphicsState.ColorStroking = color
+	csp.graphicsState.ColorStroking = color
 	return nil
 }
 
@@ -354,8 +376,8 @@ func isPatternCS(cs PdfColorspace) bool {
 }
 
 // SCN: Same as SC but also supports Pattern, Separation, DeviceN and ICCBased color spaces.
-func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := this.graphicsState.ColorspaceStroking
+func (csp *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation, resources *PdfPageResources) error {
+	cs := csp.graphicsState.ColorspaceStroking
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
@@ -370,14 +392,14 @@ func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation
 		return err
 	}
 
-	this.graphicsState.ColorStroking = color
+	csp.graphicsState.ColorStroking = color
 
 	return nil
 }
 
 // sc: Same as SC except used for non-stroking operations.
-func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := this.graphicsState.ColorspaceNonStroking
+func (csp *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation, resources *PdfPageResources) error {
+	cs := csp.graphicsState.ColorspaceNonStroking
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
@@ -392,14 +414,14 @@ func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation,
 		return err
 	}
 
-	this.graphicsState.ColorNonStroking = color
+	csp.graphicsState.ColorNonStroking = color
 
 	return nil
 }
 
 // scn: Same as SCN except used for non-stroking operations.
-func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := this.graphicsState.ColorspaceNonStroking
+func (csp *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation, resources *PdfPageResources) error {
+	cs := csp.graphicsState.ColorspaceNonStroking
 
 	if !isPatternCS(cs) {
 		if len(op.Params) != cs.GetNumComponents() {
@@ -415,14 +437,14 @@ func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 		return err
 	}
 
-	this.graphicsState.ColorNonStroking = color
+	csp.graphicsState.ColorNonStroking = color
 
 	return nil
 }
 
 // G: Set the stroking colorspace to DeviceGray, and the color to the specified graylevel (range [0-1]).
 // gray G
-func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
@@ -435,39 +457,40 @@ func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, 
 		return err
 	}
 
-	this.graphicsState.ColorspaceStroking = cs
-	this.graphicsState.ColorStroking = color
+	csp.graphicsState.ColorspaceStroking = cs
+	csp.graphicsState.ColorStroking = color
 
 	return nil
 }
 
 // g: Same as G, but for non-stroking colorspace and color (range [0-1]).
 // gray g
-func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Invalid number of parameters for g")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
 	if err != nil {
+		common.Log.Debug("ERROR: handleCommand_g Invalid params. cs=%T op=%s err=%v", cs, op, err)
 		return err
 	}
 
-	this.graphicsState.ColorspaceNonStroking = cs
-	this.graphicsState.ColorNonStroking = color
+	csp.graphicsState.ColorspaceNonStroking = cs
+	csp.graphicsState.ColorNonStroking = color
 
 	return nil
 }
 
 // RG: Sets the stroking colorspace to DeviceRGB and the stroking color to r,g,b. [0-1] ranges.
 // r g b RG
-func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Invalid number of parameters for RG")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("Invalid number of parameters")
 	}
@@ -477,14 +500,14 @@ func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation,
 		return err
 	}
 
-	this.graphicsState.ColorspaceStroking = cs
-	this.graphicsState.ColorStroking = color
+	csp.graphicsState.ColorspaceStroking = cs
+	csp.graphicsState.ColorStroking = color
 
 	return nil
 }
 
 // rg: Same as RG but for non-stroking colorspace, color.
-func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
@@ -497,15 +520,15 @@ func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation,
 		return err
 	}
 
-	this.graphicsState.ColorspaceNonStroking = cs
-	this.graphicsState.ColorNonStroking = color
+	csp.graphicsState.ColorspaceNonStroking = cs
+	csp.graphicsState.ColorNonStroking = color
 
 	return nil
 }
 
 // K: Sets the stroking colorspace to DeviceCMYK and the stroking color to c,m,y,k. [0-1] ranges.
 // c m y k K
-func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
@@ -518,14 +541,14 @@ func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, 
 		return err
 	}
 
-	this.graphicsState.ColorspaceStroking = cs
-	this.graphicsState.ColorStroking = color
+	csp.graphicsState.ColorspaceStroking = cs
+	csp.graphicsState.ColorStroking = color
 
 	return nil
 }
 
 // k: Same as K but for non-stroking colorspace, color.
-func (this *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *PdfPageResources) error {
 	cs := NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
@@ -538,8 +561,116 @@ func (this *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, 
 		return err
 	}
 
-	this.graphicsState.ColorspaceNonStroking = cs
-	this.graphicsState.ColorNonStroking = color
+	csp.graphicsState.ColorspaceNonStroking = cs
+	csp.graphicsState.ColorNonStroking = color
 
 	return nil
 }
+
+// cm: concatenates an affine transform to the CTM
+func (csp *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
+	resources *PdfPageResources) error {
+	if len(op.Params) != 6 {
+		common.Log.Debug("Invalid number of parameters for cm: %d", len(op.Params))
+		return errors.New("Invalid number of parameters")
+	}
+
+	f, err := GetNumbersAsFloat(op.Params)
+	if err != nil {
+		return err
+	}
+	m := NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
+	csp.graphicsState.CTM.Concat(m)
+
+	return nil
+}
+
+// Matrix is a linear transform matrix in homogenous coordinates
+// PDF coordinate transforms are always affine so we only need 6 of these. See newMatrix
+type Matrix [9]float64
+
+// IdentityMatrix returns the identity transform
+func IdentityMatrix() Matrix {
+	return NewMatrix(1, 0, 0, 1, 0, 0)
+}
+
+// NewMatrix returns an affine transform matrix laid out in homogenous coordinates as
+//      a  b  0
+//      c  d  0
+//      tx ty 1
+func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
+	m := Matrix{
+		a, b, 0,
+		c, d, 0,
+		tx, ty, 1,
+	}
+	m.fixup()
+	return m
+}
+
+// String returns a string describing `m`
+func (m Matrix) String() string {
+	a, b, c, d, tx, ty := m[0], m[1], m[3], m[4], m[6], m[7]
+	return fmt.Sprintf("%5.1f,%5.1f,%5.1f,%5.1f: %5.1f,%5.1f", a, b, c, d, tx, ty)
+}
+
+// Set sets `m` to affine transform  a,b,c,d,tx,ty
+func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
+	m[0], m[1] = a, b
+	m[3], m[4] = c, d
+	m[6], m[7] = tx, ty
+	m.fixup()
+}
+
+// Concat sets `m` to `m` × `b`
+// `b` needs to be created by newMatrix. i.e. It must be an affine transform
+func (m *Matrix) Concat(b Matrix) {
+	*m = Matrix{
+		m[0]*b[0] + m[1]*b[3], m[0]*b[1] + m[1]*b[4], 0,
+		m[3]*b[0] + m[4]*b[3], m[3]*b[1] + m[4]*b[4], 0,
+		m[6]*b[0] + m[7]*b[3] + b[6], m[6]*b[1] + m[7]*b[4] + b[7], 1,
+	}
+	m.fixup()
+}
+
+// Translate appends a translation of `dx`,`dy` to `m`
+// m.Translate(dx, dy) is equivalent to m.Concat(NewMatrix(1, 0, 0, 1, dx, dy))
+func (m *Matrix) Translate(dx, dy float64) {
+	m[6] += dx
+	m[7] += dy
+	m.fixup()
+}
+
+// Transform returns coordinates `x`,`y` transformed by `m`
+func (m *Matrix) Transform(x, y float64) (float64, float64) {
+	xp := x*m[0] + y*m[1] + m[6]
+	yp := x*m[3] + y*m[4] + m[7]
+	return xp, yp
+}
+
+// pageOrientation returns a guess at the pdf page orientation when text is printed with CTM `m`
+// XXX: Use pageRotate flag instead !@#$
+func (m *Matrix) pageOrientation() Orientation {
+	switch {
+	case m[1]*m[1]+m[3]*m[3] > m[0]*m[0]+m[4]*m[4]:
+		return OrientationLandscape
+	default:
+		return OrientationPortrait
+	}
+}
+
+// fixup forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF
+// files
+// Currently it clamps elements to [-maxAbsNumber, -maxAbsNumber] to avoid floating point exceptions
+func (m *Matrix) fixup() {
+	for i, x := range m {
+		if x > maxAbsNumber {
+			m[i] = maxAbsNumber
+		} else if x < -maxAbsNumber {
+			m[i] = -maxAbsNumber
+		}
+	}
+}
+
+// largest numbers needed in PDF transforms. Is this correct?
+const maxAbsNumber = 1e9

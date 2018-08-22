@@ -3,16 +3,12 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The current version of this file is a halfway step from the old UniDoc text extractor to a
-// full PDF font parser.
-// We will soon implement all the functions marked as `Not implemented yet`.
-
 package extractor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -23,15 +19,16 @@ import (
 )
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
-// It takes into account character encoding in the PDF file, which is decoded by
+// It takes into account character encodings in the PDF file, which are decoded by
 // CharcodeBytesToUnicode.
-// The text is processed linearly e.g. in the order in which it appears. A best effort is done to
-// add spaces and newlines.
+// Characters that can't be decoded are replaced with MissingCodeRune ('\ufffd' = �).
 func (e *Extractor) ExtractText() (string, error) {
 	text, _, _, err := e.ExtractText2()
 	return text, err
 }
 
+// ExtractText2 works like ExtractText but returns the number of characters in the output and the
+// the number of characters that were not decoded.
 func (e *Extractor) ExtractText2() (string, int, int, error) {
 	textList, numChars, numMisses, err := e.ExtractXYText()
 	if err != nil {
@@ -103,7 +100,11 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
 				}
-				to.renderRawText("\n")
+				x, y, err := toFloatXY(op.Params)
+				if err != nil {
+					return err
+				}
+				to.moveText(x, y)
 			case "TD": // Move text location and set leading
 				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
@@ -154,11 +155,17 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
 				}
-				charcodes, ok := core.GetStringBytes(op.Params[0])
+				x, y, err := toFloatXY(op.Params[:2])
+				if err != nil {
+					return err
+				}
+				charcodes, ok := core.GetStringBytes(op.Params[2])
 				if !ok {
 					common.Log.Debug("ERROR: \" op=%s GetStringBytes failed", op)
 					return core.ErrTypeError
 				}
+				to.setCharSpacing(x)
+				to.setWordSpacing(y)
 				to.nextLine()
 				return to.showText(charcodes)
 			case "TL": // Set text leading
@@ -266,29 +273,22 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 // Text operators
 //
 
-// moveText "Td" Moves start of text by `tx`,`ty`
+// moveText "Td" Moves start of text by `tx`,`ty`.
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // tx and ty are in unscaled text space units.
 func (to *textObject) moveText(tx, ty float64) {
-	// Not implemented yet
+	to.moveTo(tx, ty)
 }
 
-// moveTextSetLeading "TD" Move text location and set leading
+// moveTextSetLeading "TD" Move text location and set leading.
 // Move to the start of the next line, offset from the start of the current line by (tx, ty). As a
 // side effect, this operator shall set the leading parameter in the text state. This operator shall
 // have the same effect as this code:
 //  −ty TL
 //  tx ty Td
 func (to *textObject) moveTextSetLeading(tx, ty float64) {
-	// Not implemented yet
-	// The following is supposed to be equivalent to the existing Unidoc implementation.
-	if tx > 0 {
-		to.renderRawText(" ")
-	}
-	if ty < 0 {
-		// TODO: More flexible space characters?
-		to.renderRawText("\n")
-	}
+	to.State.Tl = -ty
+	to.moveTo(tx, ty)
 }
 
 // nextLine "T*"" Moves start of text `Line` to next text line
@@ -298,29 +298,16 @@ func (to *textObject) moveTextSetLeading(tx, ty float64) {
 // here because Tl is the text leading expressed as a positive number. Going to the next line
 // entails decreasing the y coordinate. (page 250)
 func (to *textObject) nextLine() {
-	// Not implemented yet
+	to.moveTo(0, -to.State.Tl)
 }
 
 // setTextMatrix "Tm"
 // Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
 // in `f`  (page 250)
 func (to *textObject) setTextMatrix(f []float64) {
-	// Not implemented yet
-	// The following is supposed to be equivalent to the existing Unidoc implementation.
-	tx, ty := f[4], f[5]
-	if to.yPos == -1 {
-		to.yPos = tx
-	} else if to.yPos > ty {
-		to.renderRawText("\n")
-		to.xPos, to.yPos = tx, ty
-		return
-	}
-	if to.xPos == -1 {
-		to.xPos = tx
-	} else if to.xPos < ty {
-		to.renderRawText("\t")
-		to.xPos = tx
-	}
+	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
+	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
+	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 }
 
 // showText "Tj" Show a text string
@@ -330,46 +317,57 @@ func (to *textObject) showText(charcodes []byte) error {
 
 // showTextAdjusted "TJ" Show text with adjustable spacing
 func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
+	vertical := false
 	for _, o := range args.Elements() {
 		switch o.(type) {
 		case *core.PdfObjectFloat, *core.PdfObjectInteger:
-			// Not implemented yet
 			// The following is supposed to be equivalent to the existing Unidoc implementation.
-			v, _ := core.GetNumberAsFloat(o)
-			if v < -100 {
-				to.renderRawText("\n")
+			x, err := core.GetNumberAsFloat(o)
+			if err != nil {
+				common.Log.Debug("showTextAdjusted: Bad numerical arg. o=%s args=%+v", o, args)
+				return err
 			}
+			dx, dy := -x*0.001*to.State.Tfs, 0.0
+			if vertical {
+				dy, dx = dx, dy
+			}
+			to.Tm.Translate(dx, dy)
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
 			if !ok {
-				common.Log.Debug("ERROR: showTextAdjusted: GetStringBytes failed. args=%+v", args)
+				common.Log.Debug("showTextAdjusted: Bad string arg. o=%s args=%+v", o, args)
 				return core.ErrTypeError
 			}
-			err := to.renderText(charcodes)
-			if err != nil {
-				common.Log.Debug("showTextAdjusted: renderText failed. args=%+v err=%v", args, err)
-				return err
-			}
+			to.renderText(charcodes)
 		default:
-			common.Log.Debug("showTextAdjusted. Unexpected type args=%+v", args)
+			common.Log.Debug("showTextAdjusted. Unexpected type (%T) args=%+v", o, args)
 			return core.ErrTypeError
 		}
 	}
 	return nil
 }
 
-// setTextLeading "TL" Set text leading
+// setTextLeading "TL" Set text leading.
 func (to *textObject) setTextLeading(y float64) {
-	// Not implemented yet
+	if to == nil {
+		return
+	}
+	to.State.Tl = y
 }
 
-// setCharSpacing "Tc" Set character spacing
+// setCharSpacing "Tc" Set character spacing.
 func (to *textObject) setCharSpacing(x float64) {
-	// Not implemented yet
+	if to == nil {
+		return
+	}
+	to.State.Tc = x
 }
 
-// setFont "Tf" Set font
+// setFont "Tf" Set font.
 func (to *textObject) setFont(name string, size float64) error {
+	if to == nil {
+		return nil
+	}
 	font, err := to.getFont(name)
 	if err == nil {
 		to.State.Tf = font
@@ -384,28 +382,37 @@ func (to *textObject) setFont(name string, size float64) error {
 	} else {
 		return err
 	}
-	// to.State.Tfs = size
+	to.State.Tfs = size
 	return nil
 }
 
-// setTextRenderMode "Tr" Set text rendering mode
+// setTextRenderMode "Tr" Set text rendering mode.
 func (to *textObject) setTextRenderMode(mode int) {
-	// Not implemented yet
+	if to == nil {
+		return
+	}
+	to.State.Tmode = RenderMode(mode)
 }
 
-// setTextRise "Ts" Set text rise
+// setTextRise "Ts" Set text rise.
 func (to *textObject) setTextRise(y float64) {
-	// Not implemented yet
+	if to == nil {
+		return
+	}
+	to.State.Trise = y
 }
 
-// setWordSpacing "Tw" Set word spacing
+// setWordSpacing "Tw" Set word spacing.
 func (to *textObject) setWordSpacing(y float64) {
 	// Not implemented yet
 }
 
-// setHorizScaling "Tz" Set horizontal scaling
+// setHorizScaling "Tz" Set horizontal scaling.
 func (to *textObject) setHorizScaling(y float64) {
-	// Not implemented yet
+	if to == nil {
+		return
+	}
+	to.State.Th = y
 }
 
 // floatParam returns the single float parameter of operatr `op`, or an error if it doesn't have
@@ -462,7 +469,7 @@ func (fontStack *fontStacker) push(font *model.PdfFont) {
 	*fontStack = append(*fontStack, font)
 }
 
-// pop pops and returns the element on the top of the font stack if there is one, or nil  if there isn't.
+// pop pops and returns the element on the top of the font stack if there is one or nil if there isn't.
 func (fontStack *fontStacker) pop() *model.PdfFont {
 	if fontStack.empty() {
 		return nil
@@ -472,7 +479,7 @@ func (fontStack *fontStacker) pop() *model.PdfFont {
 	return font
 }
 
-// peek returns the element on the top of the font stack if there is one, or nil if there isn't.
+// peek returns the element on the top of the font stack if there is one or nil if there isn't.
 func (fontStack *fontStacker) peek() *model.PdfFont {
 	if fontStack.empty() {
 		return nil
@@ -480,7 +487,7 @@ func (fontStack *fontStacker) peek() *model.PdfFont {
 	return (*fontStack)[len(*fontStack)-1]
 }
 
-// get returns the `idx`'th element of the font stack if there is one, or nil if there isn't.
+// get returns the `idx`'th element of the font stack if there is one or nil if there isn't.
 //  idx = 0: bottom of font stack
 //  idx = len(fontstack) - 1: top of font stack
 //  idx = -n is same as dx = len(fontstack) - n, so fontstack.get(-1) is same as fontstack.peek()
@@ -511,14 +518,14 @@ func (fontStack *fontStacker) size() int {
 
 // textState represents the text state.
 type textState struct {
-	// Tc    float64        // Character spacing. Unscaled text space units.
-	// Tw    float64        // Word spacing. Unscaled text space units.
-	// Th    float64        // Horizontal scaling
-	// Tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108
-	// Tfs   float64        // Text font size
-	// Tmode RenderMode     // Text rendering mode
-	// Trise float64        // Text rise. Unscaled text space units. Set by Ts
-	Tf *model.PdfFont // Text font
+	Tc    float64        // Character spacing. Unscaled text space units.
+	Tw    float64        // Word spacing. Unscaled text space units.
+	Th    float64        // Horizontal scaling
+	Tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108
+	Tfs   float64        // Text font size
+	Tmode RenderMode     // Text rendering mode
+	Trise float64        // Text rise. Unscaled text space units. Set by Ts
+	Tf    *model.PdfFont // Text font
 	// For debugging
 	numChars  int
 	numMisses int
@@ -542,21 +549,23 @@ type textObject struct {
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
 	State     *textState
-	// Tm    contentstream.Matrix // Text matrix. For the character pointer.
-	// Tlm   contentstream.Matrix // Text line matrix. For the start of line pointer.
-	Texts []XYText // Text gets written here.
+	Tm        contentstream.Matrix // Text matrix. For the character pointer.
+	Tlm       contentstream.Matrix // Text line matrix. For the start of line pointer.
+	Texts     []XYText             // Text gets written here.
 
 	// These fields are used to implement existing UniDoc behaviour.
 	xPos, yPos float64
 }
 
-// newTextState returns a default textState
+// newTextState returns a default textState.
 func newTextState() textState {
-	// Not implemented yet
-	return textState{}
+	return textState{
+		Th:    100,
+		Tmode: RenderModeFill,
+	}
 }
 
-// newTextObject returns a default textObject
+// newTextObject returns a default textObject.
 func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textState,
 	fontStack *fontStacker) *textObject {
 	return &textObject{
@@ -564,64 +573,183 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 		gs:        gs,
 		fontStack: fontStack,
 		State:     state,
-		// Tm:    contentstream.IdentityMatrix(),
-		// Tlm:   contentstream.IdentityMatrix(),
+		Tm:        contentstream.IdentityMatrix(),
+		Tlm:       contentstream.IdentityMatrix(),
 	}
 }
 
-// renderRawText writes `text` directly to the extracted text
-func (to *textObject) renderRawText(text string) {
-	to.Texts = append(to.Texts, XYText{text})
-}
-
-// renderText emits byte array `data` to the calling program
+// renderText emits byte array `data` to the calling program.
 func (to *textObject) renderText(data []byte) error {
 	text := ""
-	if len(*to.fontStack) == 0 {
-		common.Log.Debug("ERROR: No font defined. data=%#q", string(data))
+	var font *model.PdfFont
+	if to.fontStack.empty() {
+		common.Log.Debug("ERROR: No font defined. Using default.")
 		text = string(data)
-		return model.ErrNoFont
+		font = model.DefaultFont()
+	} else {
+		font = to.fontStack.peek()
 	}
-	font := to.fontStack.peek()
 	var numChars, numMisses int
 	text, numChars, numMisses = font.CharcodeBytesToUnicode(data)
 	to.State.numChars += numChars
 	to.State.numMisses += numMisses
+	cp := to.getCp()
 
-	to.Texts = append(to.Texts, XYText{text})
+	to.Texts = append(to.Texts, XYText{Text: text, Point: cp})
 	return nil
 }
 
-// XYText represents text and its position in device coordinates
+// getCp returns the current text position in device coordinates.
+//        | Tfs x Th   0      0 |
+// Trm  = | 0         Tfs     0 | × Tm × CTM
+//        | 0         Trise   1 |
+func (to *textObject) getCp() Point {
+	s := to.State
+	m := contentstream.NewMatrix(s.Tfs*s.Th, 0, 0, s.Tfs, 0, s.Trise)
+	m.Concat(to.Tm)
+	m.Concat(to.gs.CTM)
+	cp := Point{}
+	x, y := m.Transform(cp.X, cp.Y)
+	return Point{x, y}
+}
+
+// moveTo moves the start of line pointer by `tx`,`ty` and sets the text pointer to the
+// start of line pointer.
+// Move to the start of the next line, offset from the start of the current line by (tx, ty).
+// `tx` and `ty` are in unscaled text space units.
+func (to *textObject) moveTo(tx, ty float64) {
+	to.Tlm.Concat(contentstream.NewMatrix(1, 0, 0, 1, tx, ty))
+	to.Tm = to.Tlm
+}
+
+// XYText represents text and its position in device coordinates.
 type XYText struct {
-	Text string
-	// Position and rendering fields. Not implemented yet
+	Point
+	ColorStroking    model.PdfColor // Colour that text is stroked with, if any.
+	ColorNonStroking model.PdfColor // Colour that text is filled with, if any.
+	Orient           contentstream.Orientation
+	Text             string
 }
 
-// String returns a string describing `t`
+// String returns a string describing `t`.
 func (t *XYText) String() string {
-	return truncate(t.Text, 100)
+	return fmt.Sprintf("(%.1f,%.1f) stroke:%+v fill:%+v orient:%+v %q",
+		t.X, t.Y, t.ColorStroking, t.ColorNonStroking, t.Orient, truncate(t.Text, 100))
 }
 
-// TextList is a list of texts and their position on a pdf page
+// TextList is a list of texts and their position on a PDF page.
 type TextList []XYText
 
 func (tl *TextList) Length() int {
 	return len(*tl)
 }
 
-// ToText returns the contents of `tl` as a single string
-func (tl *TextList) ToText() string {
-	var buf bytes.Buffer
-	for _, t := range *tl {
-		buf.WriteString(t.Text)
-	}
-	procBuf(&buf)
-	return buf.String()
+// AppendText appends the location and contents of `text` to a text list.
+func (tl *TextList) AppendText(gs contentstream.GraphicsState, p Point, text string) {
+	t := XYText{p, gs.ColorStroking, gs.ColorNonStroking, gs.PageOrientation(), text}
+	common.Log.Debug("AppendText: %s", t.String())
+	*tl = append(*tl, t)
 }
 
-// getFont returns the font named `name` if it exists in the page's resources or an error if it
-// doesn't.
+// ToText returns the contents of `tl` as a single string.
+func (tl *TextList) ToText() string {
+	tl.SortPosition()
+
+	lines := tl.toLines()
+	texts := []string{}
+	for _, l := range lines {
+		texts = append(texts, l.Text)
+	}
+	return strings.Join(texts, "\n")
+}
+
+var (
+	suppressDuplicateOverlappingText = false
+	characterListMapping             = map[string]map[float64]map[float64]bool{}
+)
+
+// SortPosition sorts a text list by its elements' position on a page. Top to bottom, left to right.
+func (tl *TextList) SortPosition() {
+	sort.SliceStable(*tl, func(i, j int) bool {
+		ti, tj := (*tl)[i], (*tl)[j]
+		if ti.Y != tj.Y {
+			return ti.Y > tj.Y
+		}
+		return ti.X < tj.X
+	})
+}
+
+// Line represents a line of text on a page.
+type Line struct {
+	Y    float64   // y position of line
+	Dx   []float64 // x distance between successive words in line.
+	Text string    // text in the line
+}
+
+// toLines return the text and positions in `tl` as a slice of Line.
+// NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
+func (tl *TextList) toLines() []Line {
+	if len(*tl) == 0 {
+		return []Line{}
+	}
+	lines := []Line{}
+	words := []string{(*tl)[0].Text}
+	y := (*tl)[0].Y
+	x := []float64{(*tl)[0].X}
+	for _, t := range (*tl)[1:] {
+		if t.Y < y {
+			if len(words) > 0 {
+				lines = append(lines, newLine(y, x, words))
+			}
+			y = t.Y
+			words = []string{}
+			x = []float64{}
+		}
+		words = append(words, t.Text)
+		x = append(x, t.X)
+
+	}
+	if len(words) > 0 {
+		lines = append(lines, newLine(y, x, words))
+	}
+	return lines
+}
+
+// newLine returns the Line reprentation of strings `words` with y coordinate `y` and x coordinates
+// `x`.
+func newLine(y float64, x []float64, words []string) Line {
+	dx := []float64{}
+	for i := 1; i < len(x); i++ {
+		dx = append(dx, x[i]-x[i-1])
+	}
+	return Line{Y: y, Dx: dx, Text: strings.Join(words, "⇆")}
+}
+
+// PageOrientation is a heuristic for the orientation of a page
+// XXX TODO: Use Page's Rotate flag instead.
+func (tl *TextList) PageOrientation() contentstream.Orientation {
+	landscapeCount := 0
+	for _, t := range *tl {
+		if t.Orient == contentstream.OrientationLandscape {
+			landscapeCount++
+		}
+	}
+	portraitCount := len(*tl) - landscapeCount
+	if landscapeCount > portraitCount {
+		return contentstream.OrientationLandscape
+	}
+	return contentstream.OrientationPortrait
+}
+
+// Transform transforms all points in `tl` by the affine transformation a, b, c, d, tx, ty
+func (tl *TextList) Transform(a, b, c, d, tx, ty float64) {
+	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
+	for _, t := range *tl {
+		t.X, t.Y = m.Transform(t.X, t.Y)
+	}
+}
+
+// getFont returns the PdfFont for PDF name `name` or an error if it doesn't exist.
 func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
