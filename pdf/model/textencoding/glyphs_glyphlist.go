@@ -67,13 +67,13 @@ func GlyphToRune(glyph string) (rune, bool) {
 }
 
 // RuneToGlyph is the reverse of the table lookups in GlyphToRune.
-// XXX:TODO Remove bool return as function always returns a value.
 func RuneToGlyph(r rune) (string, bool) {
 	glyph, ok := glyphlistRuneToGlyphMap[r]
-	if !ok {
+	if !ok && r > 0 {
 		glyph = fmt.Sprintf("uni%04x", r)
+		ok = true
 	}
-	return glyph, true
+	return glyph, ok
 }
 
 // RuneToString converts rune `r` to a string. It unpacks `ligatures`.
