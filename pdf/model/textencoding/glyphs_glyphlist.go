@@ -10,6 +10,7 @@
 package textencoding
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,9 +67,13 @@ func GlyphToRune(glyph string) (rune, bool) {
 }
 
 // RuneToGlyph is the reverse of the table lookups in GlyphToRune.
+// XXX:TODO Remove bool return as function always returns a value.
 func RuneToGlyph(r rune) (string, bool) {
 	glyph, ok := glyphlistRuneToGlyphMap[r]
-	return glyph, ok
+	if !ok {
+		glyph = fmt.Sprintf("uni%04x", r)
+	}
+	return glyph, true
 }
 
 // RuneToString converts rune `r` to a string. It unpacks `ligatures`.

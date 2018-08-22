@@ -113,7 +113,7 @@ func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*Pdf
 	}
 	slots = append(slots, slots1...)
 
-	// glyphs are the font glyphs that we need to encode
+	// `glyphs` are the font glyphs that we need to encode.
 	glyphs := []string{}
 	for _, r := range sortedAlphabet(alphabet) {
 		glyph, ok := textencoding.RuneToGlyph(r)
@@ -122,7 +122,7 @@ func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*Pdf
 			continue
 		}
 		if _, ok = std.fontMetrics[glyph]; !ok {
-			common.Log.Debug("Glyph %q not in font", glyph)
+			common.Log.Trace("Glyph %q (0x%04x=%c)not in font", glyph, r, r)
 			continue
 		}
 		if len(glyphs) >= 255 {
