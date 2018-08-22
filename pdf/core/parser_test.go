@@ -9,9 +9,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	//"fmt"
 	"io"
-	//"os"
+	"os"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -681,34 +680,21 @@ func TestObjectParse(t *testing.T) {
 	}
 }
 
-/*
-var file1 = "../testfiles/minimal.pdf"
-
+// TestMinimalPDFFile test basic parsing of a minimal pdf file.
 func TestMinimalPDFFile(t *testing.T) {
-	file, err := os.Open(file1)
+	file, err := os.Open("./testdata/minimal.pdf")
 	if err != nil {
 		t.Errorf("Unable to open minimal test file (%s)", err)
 		return
 	}
 	defer file.Close()
 
-	reader, err := NewPdfReader(file)
+	parser, err := NewParser(file)
 	if err != nil {
-		t.Errorf("Unable to read test file (%s)", err)
+		t.Errorf("Unable to parse test file: %v", err)
 		return
 	}
 
-	numPages, err := reader.GetNumPages()
-	if err != nil {
-		t.Error("Unable to get number of pages")
-	}
-
-	fmt.Printf("Num pages: %d\n", numPages)
-	if numPages != 1 {
-		t.Error("Wrong number of pages")
-	}
-
-	parser := reader.parser
 	if len(parser.xrefs) != 4 {
 		t.Errorf("Wrong number of xrefs %d != 4", len(parser.xrefs))
 	}
@@ -745,54 +731,53 @@ func TestMinimalPDFFile(t *testing.T) {
 	if !ok {
 		t.Error("Unable to find dictionary")
 	}
-	typename, ok := (*catalogDict)["Type"].(*PdfObjectName)
+	typename, ok := catalogDict.Get("Type").(*PdfObjectName)
 	if !ok {
 		t.Error("Unable to check type")
 	}
 	if *typename != "Catalog" {
-		t.Error("Wrong type name (%s != Catalog)", *typename)
+		t.Errorf("Wrong type name (%s != Catalog)", *typename)
 	}
 
 	// Check Page object.
 	pageObj, err := parser.LookupByNumber(3)
 	if err != nil {
-		t.Error("Unable to look up Page")
+		t.Fatalf("Unable to look up Page")
 	}
 	page, ok := pageObj.(*PdfIndirectObject)
 	if !ok {
-		t.Error("Unable to look up Page")
+		t.Fatalf("Unable to look up Page")
 	}
 	pageDict, ok := page.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		t.Error("Unable to load Page dictionary")
+		t.Fatalf("Unable to load Page dictionary")
 	}
-	if len(*pageDict) != 4 {
-		t.Error("Page dict should have 4 objects (%d)", len(*pageDict))
+	if len(pageDict.Keys()) != 4 {
+		t.Fatalf("Page dict should have 4 objects (%d)", len(pageDict.Keys()))
 	}
-	resourcesDict, ok := (*pageDict)["Resources"].(*PdfObjectDictionary)
+	resourcesDict, ok := pageDict.Get("Resources").(*PdfObjectDictionary)
 	if !ok {
-		t.Error("Unable to load Resources dictionary")
+		t.Fatalf("Unable to load Resources dictionary")
 	}
-	if len(*resourcesDict) != 1 {
-		t.Error("Page Resources dict should have 1 member (%d)", len(*resourcesDict))
+	if len(resourcesDict.Keys()) != 1 {
+		t.Fatalf("Page Resources dict should have 1 member (%d)", len(resourcesDict.Keys()))
 	}
-	fontDict, ok := (*resourcesDict)["Font"].(*PdfObjectDictionary)
+	fontDict, ok := resourcesDict.Get("Font").(*PdfObjectDictionary)
 	if !ok {
 		t.Error("Unable to load font")
 	}
-	f1Dict, ok := (*fontDict)["F1"].(*PdfObjectDictionary)
+	f1Dict, ok := fontDict.Get("F1").(*PdfObjectDictionary)
 	if !ok {
 		t.Error("Unable to load F1 dict")
 	}
-	if len(*f1Dict) != 3 {
-		t.Error("Invalid F1 dict length 3 != %d", len(*f1Dict))
+	if len(f1Dict.Keys()) != 3 {
+		t.Errorf("Invalid F1 dict length 3 != %d", len(f1Dict.Keys()))
 	}
-	baseFont, ok := (*f1Dict)["BaseFont"].(*PdfObjectName)
+	baseFont, ok := f1Dict.Get("BaseFont").(*PdfObjectName)
 	if !ok {
 		t.Error("Unable to load base font")
 	}
 	if *baseFont != "Times-Roman" {
-		t.Error("Invalid base font (should be Times-Roman not %s)", *baseFont)
+		t.Errorf("Invalid base font (should be Times-Roman not %s)", *baseFont)
 	}
 }
-*/

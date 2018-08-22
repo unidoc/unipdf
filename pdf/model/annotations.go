@@ -10,332 +10,360 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// PDFAnnotation contains common attributes of an annotation.  The context object contains the subannotation,
-// which can be a markup annotation or other types.
+// PdfAnnotation represents an annotation in PDF (section 12.5 p. 389).
 type PdfAnnotation struct {
-	context      PdfModel // Sub-annotation.
-	Rect         PdfObject
-	Contents     PdfObject
-	P            PdfObject // Reference to page object.
-	NM           PdfObject
-	M            PdfObject
-	F            PdfObject
-	AP           PdfObject
-	AS           PdfObject
-	Border       PdfObject
-	C            PdfObject
-	StructParent PdfObject
-	OC           PdfObject
+	// context contains the specific annotation fields.
+	context PdfModel
 
-	primitive *PdfIndirectObject
+	// Entries common to all annotation dictionaries (Table 164 p. 391).
+
+	Rect         core.PdfObject
+	Contents     core.PdfObject
+	P            core.PdfObject // Reference to page object.
+	NM           core.PdfObject
+	M            core.PdfObject
+	F            core.PdfObject
+	AP           core.PdfObject
+	AS           core.PdfObject
+	Border       core.PdfObject
+	C            core.PdfObject
+	StructParent core.PdfObject
+	OC           core.PdfObject
+
+	container *core.PdfIndirectObject
 }
 
-// Context in this case is a reference to the subannotation.
-func (this *PdfAnnotation) GetContext() PdfModel {
-	return this.context
+// GetContext returns the annotation context which contains the specific type-dependent context.
+// The context represents the subannotation.
+func (a *PdfAnnotation) GetContext() PdfModel {
+	return a.context
 }
 
-// Set the sub annotation (context).
-func (this *PdfAnnotation) SetContext(ctx PdfModel) {
-	this.context = ctx
+// SetContext sets the sub annotation (context).
+func (a *PdfAnnotation) SetContext(ctx PdfModel) {
+	a.context = ctx
 }
 
-func (this *PdfAnnotation) String() string {
+func (a *PdfAnnotation) String() string {
 	s := ""
 
-	obj, ok := this.ToPdfObject().(*PdfIndirectObject)
+	obj, ok := a.ToPdfObject().(*core.PdfIndirectObject)
 	if ok {
-		s = fmt.Sprintf("%T: %s", this.context, obj.PdfObject.String())
+		s = fmt.Sprintf("%T: %s", a.context, obj.PdfObject.String())
 	}
 
 	return s
 }
 
-// Additional elements for mark-up annotations.
+// PdfAnnotationMarkup represents additional fields for mark-up annotations.
+// (Section 12.5.6.2 p. 399).
 type PdfAnnotationMarkup struct {
-	T            PdfObject
+	T            core.PdfObject
 	Popup        *PdfAnnotationPopup
-	CA           PdfObject
-	RC           PdfObject
-	CreationDate PdfObject
-	IRT          PdfObject
-	Subj         PdfObject
-	RT           PdfObject
-	IT           PdfObject
-	ExData       PdfObject
+	CA           core.PdfObject
+	RC           core.PdfObject
+	CreationDate core.PdfObject
+	IRT          core.PdfObject
+	Subj         core.PdfObject
+	RT           core.PdfObject
+	IT           core.PdfObject
+	ExData       core.PdfObject
 }
 
-// Subtype: Text
+// PdfAnnotationText represents Text annotations.
+// (Section 12.5.6.4 p. 402).
 type PdfAnnotationText struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	Open       PdfObject
-	Name       PdfObject
-	State      PdfObject
-	StateModel PdfObject
+	Open       core.PdfObject
+	Name       core.PdfObject
+	State      core.PdfObject
+	StateModel core.PdfObject
 }
 
-// Subtype: Link
+// PdfAnnotationLink represents Link annotations.
+// (Section 12.5.6.5 p. 403).
 type PdfAnnotationLink struct {
 	*PdfAnnotation
-	A          PdfObject
-	Dest       PdfObject
-	H          PdfObject
-	PA         PdfObject
-	QuadPoints PdfObject
-	BS         PdfObject
+	A          core.PdfObject
+	Dest       core.PdfObject
+	H          core.PdfObject
+	PA         core.PdfObject
+	QuadPoints core.PdfObject
+	BS         core.PdfObject
 }
 
-// Subtype: FreeText
+// PdfAnnotationFreeText represents FreeText annotations.
+// (Section 12.5.6.6).
 type PdfAnnotationFreeText struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	DA PdfObject
-	Q  PdfObject
-	RC PdfObject
-	DS PdfObject
-	CL PdfObject
-	IT PdfObject
-	BE PdfObject
-	RD PdfObject
-	BS PdfObject
-	LE PdfObject
+	DA core.PdfObject
+	Q  core.PdfObject
+	RC core.PdfObject
+	DS core.PdfObject
+	CL core.PdfObject
+	IT core.PdfObject
+	BE core.PdfObject
+	RD core.PdfObject
+	BS core.PdfObject
+	LE core.PdfObject
 }
 
-// Subtype: Line
+// PdfAnnotationLine represents Line annotations.
+// (Section 12.5.6.7).
 type PdfAnnotationLine struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	L       PdfObject
-	BS      PdfObject
-	LE      PdfObject
-	IC      PdfObject
-	LL      PdfObject
-	LLE     PdfObject
-	Cap     PdfObject
-	IT      PdfObject
-	LLO     PdfObject
-	CP      PdfObject
-	Measure PdfObject
-	CO      PdfObject
+	L       core.PdfObject
+	BS      core.PdfObject
+	LE      core.PdfObject
+	IC      core.PdfObject
+	LL      core.PdfObject
+	LLE     core.PdfObject
+	Cap     core.PdfObject
+	IT      core.PdfObject
+	LLO     core.PdfObject
+	CP      core.PdfObject
+	Measure core.PdfObject
+	CO      core.PdfObject
 }
 
-// Subtype: Square
+// PdfAnnotationSquare represents Square annotations.
+// (Section 12.5.6.8).
 type PdfAnnotationSquare struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	BS PdfObject
-	IC PdfObject
-	BE PdfObject
-	RD PdfObject
+	BS core.PdfObject
+	IC core.PdfObject
+	BE core.PdfObject
+	RD core.PdfObject
 }
 
-// Subtype: Circle
+// PdfAnnotationCircle represents Circle annotations.
+// (Section 12.5.6.8).
 type PdfAnnotationCircle struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	BS PdfObject
-	IC PdfObject
-	BE PdfObject
-	RD PdfObject
+	BS core.PdfObject
+	IC core.PdfObject
+	BE core.PdfObject
+	RD core.PdfObject
 }
 
-// Subtype: Polygon
+// PdfAnnotationPolygon represents Polygon annotations.
+// (Section 12.5.6.9).
 type PdfAnnotationPolygon struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	Vertices PdfObject
-	LE       PdfObject
-	BS       PdfObject
-	IC       PdfObject
-	BE       PdfObject
-	IT       PdfObject
-	Measure  PdfObject
+	Vertices core.PdfObject
+	LE       core.PdfObject
+	BS       core.PdfObject
+	IC       core.PdfObject
+	BE       core.PdfObject
+	IT       core.PdfObject
+	Measure  core.PdfObject
 }
 
-// Subtype: PolyLine
+// PdfAnnotationPolyLine represents PolyLine annotations.
+// (Section 12.5.6.9).
 type PdfAnnotationPolyLine struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	Vertices PdfObject
-	LE       PdfObject
-	BS       PdfObject
-	IC       PdfObject
-	BE       PdfObject
-	IT       PdfObject
-	Measure  PdfObject
+	Vertices core.PdfObject
+	LE       core.PdfObject
+	BS       core.PdfObject
+	IC       core.PdfObject
+	BE       core.PdfObject
+	IT       core.PdfObject
+	Measure  core.PdfObject
 }
 
-// Subtype: Highlight
+// PdfAnnotationHighlight represents Highlight annotations.
+// (Section 12.5.6.10).
 type PdfAnnotationHighlight struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	QuadPoints PdfObject
+	QuadPoints core.PdfObject
 }
 
-// Subtype: Underline
+// PdfAnnotationUnderline represents Underline annotations.
+// (Section 12.5.6.10).
 type PdfAnnotationUnderline struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	QuadPoints PdfObject
+	QuadPoints core.PdfObject
 }
 
-// Subtype: Squiggly
+// PdfAnnotationSquiggly represents Squiggly annotations.
+// (Section 12.5.6.10).
 type PdfAnnotationSquiggly struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	QuadPoints PdfObject
+	QuadPoints core.PdfObject
 }
 
-// Subtype: StrikeOut
+// PdfAnnotationStrikeOut represents StrikeOut annotations.
+// (Section 12.5.6.10).
 type PdfAnnotationStrikeOut struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	QuadPoints PdfObject
+	QuadPoints core.PdfObject
 }
 
-// Subtype: Caret
+// PdfAnnotationCaret represents Caret annotations.
+// (Section 12.5.6.11).
 type PdfAnnotationCaret struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	RD PdfObject
-	Sy PdfObject
+	RD core.PdfObject
+	Sy core.PdfObject
 }
 
-// Subtype: Stamp
+// PdfAnnotationStamp represents Stamp annotations.
+// (Section 12.5.6.12).
 type PdfAnnotationStamp struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	Name PdfObject
+	Name core.PdfObject
 }
 
-// Subtype: Ink
+// PdfAnnotationInk represents Ink annotations.
+// (Section 12.5.6.13).
 type PdfAnnotationInk struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	InkList PdfObject
-	BS      PdfObject
+	InkList core.PdfObject
+	BS      core.PdfObject
 }
 
-// Subtype: Popup
+// PdfAnnotationPopup represents Popup annotations.
+// (Section 12.5.6.14).
 type PdfAnnotationPopup struct {
 	*PdfAnnotation
-	Parent PdfObject
-	Open   PdfObject
+	Parent core.PdfObject
+	Open   core.PdfObject
 }
 
-// Subtype: FileAttachment
+// PdfAnnotationFileAttachment represents FileAttachment annotations.
+// (Section 12.5.6.15).
 type PdfAnnotationFileAttachment struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	FS   PdfObject
-	Name PdfObject
+	FS   core.PdfObject
+	Name core.PdfObject
 }
 
-// Subtype: Sound
+// PdfAnnotationSound represents Sound annotations.
+// (Section 12.5.6.16).
 type PdfAnnotationSound struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	Sound PdfObject
-	Name  PdfObject
+	Sound core.PdfObject
+	Name  core.PdfObject
 }
 
-// Subtype: Rich Media
+// PdfAnnotationRichMedia represents Rich Media annotations.
 type PdfAnnotationRichMedia struct {
 	*PdfAnnotation
-	RichMediaSettings PdfObject
-	RichMediaContent  PdfObject
+	RichMediaSettings core.PdfObject
+	RichMediaContent  core.PdfObject
 }
 
-// Subtype: Movie
+// PdfAnnotationMovie represents Movie annotations.
+// (Section 12.5.6.17).
 type PdfAnnotationMovie struct {
 	*PdfAnnotation
-	T     PdfObject
-	Movie PdfObject
-	A     PdfObject
+	T     core.PdfObject
+	Movie core.PdfObject
+	A     core.PdfObject
 }
 
-// Subtype: Screen
+// PdfAnnotationScreen represents Screen annotations.
+// (Section 12.5.6.18).
 type PdfAnnotationScreen struct {
 	*PdfAnnotation
-	T  PdfObject
-	MK PdfObject
-	A  PdfObject
-	AA PdfObject
+	T  core.PdfObject
+	MK core.PdfObject
+	A  core.PdfObject
+	AA core.PdfObject
 }
 
-// Subtype: Widget
+// PdfAnnotationWidget represents Widget annotations.
+// Note: Widget annotations are used to display form fields.
+// (Section 12.5.6.19).
 type PdfAnnotationWidget struct {
 	*PdfAnnotation
-	H      PdfObject
-	MK     PdfObject
-	A      PdfObject
-	AA     PdfObject
-	BS     PdfObject
-	Parent PdfObject
+	H      core.PdfObject
+	MK     core.PdfObject
+	A      core.PdfObject
+	AA     core.PdfObject
+	BS     core.PdfObject
+	Parent core.PdfObject
 }
 
-// Subtype: Watermark
+// PdfAnnotationWatermark represents Watermark annotations.
+// (Section 12.5.6.22).
 type PdfAnnotationWatermark struct {
 	*PdfAnnotation
-	FixedPrint PdfObject
+	FixedPrint core.PdfObject
 }
 
-// Subtype: PrinterMark
+// PdfAnnotationPrinterMark represents PrinterMark annotations.
+// (Section 12.5.6.20).
 type PdfAnnotationPrinterMark struct {
 	*PdfAnnotation
-	MN PdfObject
+	MN core.PdfObject
 }
 
-// Subtype: TrapNet
+// PdfAnnotationTrapNet represents TrapNet annotations.
+// (Section 12.5.6.21).
 type PdfAnnotationTrapNet struct {
 	*PdfAnnotation
 }
 
-// Subtype: 3D
+// PdfAnnotation3D represents 3D annotations.
+// (Section 13.6.2).
 type PdfAnnotation3D struct {
 	*PdfAnnotation
-	T3DD PdfObject
-	T3DV PdfObject
-	T3DA PdfObject
-	T3DI PdfObject
-	T3DB PdfObject
+	T3DD core.PdfObject
+	T3DV core.PdfObject
+	T3DA core.PdfObject
+	T3DI core.PdfObject
+	T3DB core.PdfObject
 }
 
-// Subtype: Projection
+// PdfAnnotationProjection represents Projection annotations.
 type PdfAnnotationProjection struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
 }
 
-// Subtype: Redact
+// PdfAnnotationRedact represents Redact annotations.
+// (Section 12.5.6.23).
 type PdfAnnotationRedact struct {
 	*PdfAnnotation
 	*PdfAnnotationMarkup
-	QuadPoints  PdfObject
-	IC          PdfObject
-	RO          PdfObject
-	OverlayText PdfObject
-	Repeat      PdfObject
-	DA          PdfObject
-	Q           PdfObject
+	QuadPoints  core.PdfObject
+	IC          core.PdfObject
+	RO          core.PdfObject
+	OverlayText core.PdfObject
+	Repeat      core.PdfObject
+	DA          core.PdfObject
+	Q           core.PdfObject
 }
 
-// Construct a new PDF annotation model and initializes the underlying PDF primitive.
+// NewPdfAnnotation returns an initialized generic PDF annotation model.
 func NewPdfAnnotation() *PdfAnnotation {
 	annot := &PdfAnnotation{}
-
-	container := &PdfIndirectObject{}
-	container.PdfObject = MakeDict()
-
-	annot.primitive = container
+	annot.container = core.MakeIndirectObject(core.MakeDict())
 	return annot
 }
 
-// Create a new text annotation.
+// NewPdfAnnotationText returns a new text annotation.
 func NewPdfAnnotationText() *PdfAnnotationText {
 	annotation := NewPdfAnnotation()
 	textAnnotation := &PdfAnnotationText{}
@@ -345,7 +373,7 @@ func NewPdfAnnotationText() *PdfAnnotationText {
 	return textAnnotation
 }
 
-// Create a new link annotation.
+// NewPdfAnnotationLink returns a new link annotation.
 func NewPdfAnnotationLink() *PdfAnnotationLink {
 	annotation := NewPdfAnnotation()
 	linkAnnotation := &PdfAnnotationLink{}
@@ -354,7 +382,7 @@ func NewPdfAnnotationLink() *PdfAnnotationLink {
 	return linkAnnotation
 }
 
-// Create a new free text annotation.
+// NewPdfAnnotationFreeText returns a new free text annotation.
 func NewPdfAnnotationFreeText() *PdfAnnotationFreeText {
 	annotation := NewPdfAnnotation()
 	freetextAnnotation := &PdfAnnotationFreeText{}
@@ -364,7 +392,7 @@ func NewPdfAnnotationFreeText() *PdfAnnotationFreeText {
 	return freetextAnnotation
 }
 
-// Create a new line annotation.
+// NewPdfAnnotationLine returns a new line annotation.
 func NewPdfAnnotationLine() *PdfAnnotationLine {
 	annotation := NewPdfAnnotation()
 	lineAnnotation := &PdfAnnotationLine{}
@@ -374,7 +402,7 @@ func NewPdfAnnotationLine() *PdfAnnotationLine {
 	return lineAnnotation
 }
 
-// Create a new square annotation.
+// NewPdfAnnotationSquare returns a new square annotation.
 func NewPdfAnnotationSquare() *PdfAnnotationSquare {
 	annotation := NewPdfAnnotation()
 	rectAnnotation := &PdfAnnotationSquare{}
@@ -384,7 +412,7 @@ func NewPdfAnnotationSquare() *PdfAnnotationSquare {
 	return rectAnnotation
 }
 
-// Create a new circle annotation.
+// NewPdfAnnotationCircle returns a new circle annotation.
 func NewPdfAnnotationCircle() *PdfAnnotationCircle {
 	annotation := NewPdfAnnotation()
 	circAnnotation := &PdfAnnotationCircle{}
@@ -394,7 +422,7 @@ func NewPdfAnnotationCircle() *PdfAnnotationCircle {
 	return circAnnotation
 }
 
-// Create a new polygon annotation.
+// NewPdfAnnotationPolygon returns a new polygon annotation.
 func NewPdfAnnotationPolygon() *PdfAnnotationPolygon {
 	annotation := NewPdfAnnotation()
 	polygonAnnotation := &PdfAnnotationPolygon{}
@@ -404,7 +432,7 @@ func NewPdfAnnotationPolygon() *PdfAnnotationPolygon {
 	return polygonAnnotation
 }
 
-// Create a new polyline annotation.
+// NewPdfAnnotationPolyLine returns a new polyline annotation.
 func NewPdfAnnotationPolyLine() *PdfAnnotationPolyLine {
 	annotation := NewPdfAnnotation()
 	polylineAnnotation := &PdfAnnotationPolyLine{}
@@ -414,7 +442,7 @@ func NewPdfAnnotationPolyLine() *PdfAnnotationPolyLine {
 	return polylineAnnotation
 }
 
-// Create a new text highlight annotation.
+// NewPdfAnnotationHighlight returns a new text highlight annotation.
 func NewPdfAnnotationHighlight() *PdfAnnotationHighlight {
 	annotation := NewPdfAnnotation()
 	highlightAnnotation := &PdfAnnotationHighlight{}
@@ -424,7 +452,7 @@ func NewPdfAnnotationHighlight() *PdfAnnotationHighlight {
 	return highlightAnnotation
 }
 
-// Create a new text underline annotation.
+// NewPdfAnnotationUnderline returns a new text underline annotation.
 func NewPdfAnnotationUnderline() *PdfAnnotationUnderline {
 	annotation := NewPdfAnnotation()
 	underlineAnnotation := &PdfAnnotationUnderline{}
@@ -434,7 +462,7 @@ func NewPdfAnnotationUnderline() *PdfAnnotationUnderline {
 	return underlineAnnotation
 }
 
-// Create a new text squiggly annotation.
+// NewPdfAnnotationSquiggly returns a new text squiggly annotation.
 func NewPdfAnnotationSquiggly() *PdfAnnotationSquiggly {
 	annotation := NewPdfAnnotation()
 	squigglyAnnotation := &PdfAnnotationSquiggly{}
@@ -444,7 +472,7 @@ func NewPdfAnnotationSquiggly() *PdfAnnotationSquiggly {
 	return squigglyAnnotation
 }
 
-// Create a new text strikeout annotation.
+// NewPdfAnnotationStrikeOut returns a new text strikeout annotation.
 func NewPdfAnnotationStrikeOut() *PdfAnnotationStrikeOut {
 	annotation := NewPdfAnnotation()
 	strikeoutAnnotation := &PdfAnnotationStrikeOut{}
@@ -454,7 +482,7 @@ func NewPdfAnnotationStrikeOut() *PdfAnnotationStrikeOut {
 	return strikeoutAnnotation
 }
 
-// Create a new caret annotation.
+// NewPdfAnnotationCaret returns a new caret annotation.
 func NewPdfAnnotationCaret() *PdfAnnotationCaret {
 	annotation := NewPdfAnnotation()
 	caretAnnotation := &PdfAnnotationCaret{}
@@ -464,7 +492,7 @@ func NewPdfAnnotationCaret() *PdfAnnotationCaret {
 	return caretAnnotation
 }
 
-// Create a new stamp annotation.
+// NewPdfAnnotationStamp returns a new stamp annotation.
 func NewPdfAnnotationStamp() *PdfAnnotationStamp {
 	annotation := NewPdfAnnotation()
 	stampAnnotation := &PdfAnnotationStamp{}
@@ -474,7 +502,7 @@ func NewPdfAnnotationStamp() *PdfAnnotationStamp {
 	return stampAnnotation
 }
 
-// Create a new ink annotation.
+// NewPdfAnnotationInk returns a new ink annotation.
 func NewPdfAnnotationInk() *PdfAnnotationInk {
 	annotation := NewPdfAnnotation()
 	inkAnnotation := &PdfAnnotationInk{}
@@ -484,7 +512,7 @@ func NewPdfAnnotationInk() *PdfAnnotationInk {
 	return inkAnnotation
 }
 
-// Create a new popup annotation.
+// NewPdfAnnotationPopup returns a new popup annotation.
 func NewPdfAnnotationPopup() *PdfAnnotationPopup {
 	annotation := NewPdfAnnotation()
 	popupAnnotation := &PdfAnnotationPopup{}
@@ -493,7 +521,7 @@ func NewPdfAnnotationPopup() *PdfAnnotationPopup {
 	return popupAnnotation
 }
 
-// Create a new file attachment annotation.
+// NewPdfAnnotationFileAttachment returns a new file attachment annotation.
 func NewPdfAnnotationFileAttachment() *PdfAnnotationFileAttachment {
 	annotation := NewPdfAnnotation()
 	fileAnnotation := &PdfAnnotationFileAttachment{}
@@ -503,7 +531,7 @@ func NewPdfAnnotationFileAttachment() *PdfAnnotationFileAttachment {
 	return fileAnnotation
 }
 
-// Create a new sound annotation.
+// NewPdfAnnotationSound returns a new sound annotation.
 func NewPdfAnnotationSound() *PdfAnnotationSound {
 	annotation := NewPdfAnnotation()
 	soundAnnotation := &PdfAnnotationSound{}
@@ -513,7 +541,7 @@ func NewPdfAnnotationSound() *PdfAnnotationSound {
 	return soundAnnotation
 }
 
-// Create a new rich media annotation.
+// NewPdfAnnotationRichMedia returns a new rich media annotation.
 func NewPdfAnnotationRichMedia() *PdfAnnotationRichMedia {
 	annotation := NewPdfAnnotation()
 	richmediaAnnotation := &PdfAnnotationRichMedia{}
@@ -522,7 +550,7 @@ func NewPdfAnnotationRichMedia() *PdfAnnotationRichMedia {
 	return richmediaAnnotation
 }
 
-// Create a new movie annotation.
+// NewPdfAnnotationMovie returns a new movie annotation.
 func NewPdfAnnotationMovie() *PdfAnnotationMovie {
 	annotation := NewPdfAnnotation()
 	movieAnnotation := &PdfAnnotationMovie{}
@@ -531,7 +559,7 @@ func NewPdfAnnotationMovie() *PdfAnnotationMovie {
 	return movieAnnotation
 }
 
-// Create a new screen annotation.
+// NewPdfAnnotationScreen returns a new screen annotation.
 func NewPdfAnnotationScreen() *PdfAnnotationScreen {
 	annotation := NewPdfAnnotation()
 	screenAnnotation := &PdfAnnotationScreen{}
@@ -540,7 +568,7 @@ func NewPdfAnnotationScreen() *PdfAnnotationScreen {
 	return screenAnnotation
 }
 
-// Create a new watermark annotation.
+// NewPdfAnnotationWatermark returns a new watermark annotation.
 func NewPdfAnnotationWatermark() *PdfAnnotationWatermark {
 	annotation := NewPdfAnnotation()
 	watermarkAnnotation := &PdfAnnotationWatermark{}
@@ -549,7 +577,7 @@ func NewPdfAnnotationWatermark() *PdfAnnotationWatermark {
 	return watermarkAnnotation
 }
 
-// Create a new printermark annotation.
+// NewPdfAnnotationPrinterMark returns a new printermark annotation.
 func NewPdfAnnotationPrinterMark() *PdfAnnotationPrinterMark {
 	annotation := NewPdfAnnotation()
 	printermarkAnnotation := &PdfAnnotationPrinterMark{}
@@ -558,7 +586,7 @@ func NewPdfAnnotationPrinterMark() *PdfAnnotationPrinterMark {
 	return printermarkAnnotation
 }
 
-// Create a new trapnet annotation.
+// NewPdfAnnotationTrapNet returns a new trapnet annotation.
 func NewPdfAnnotationTrapNet() *PdfAnnotationTrapNet {
 	annotation := NewPdfAnnotation()
 	trapnetAnnotation := &PdfAnnotationTrapNet{}
@@ -567,7 +595,7 @@ func NewPdfAnnotationTrapNet() *PdfAnnotationTrapNet {
 	return trapnetAnnotation
 }
 
-// Create a new 3d annotation.
+// NewPdfAnnotation3D returns a new 3d annotation.
 func NewPdfAnnotation3D() *PdfAnnotation3D {
 	annotation := NewPdfAnnotation()
 	x3dAnnotation := &PdfAnnotation3D{}
@@ -576,7 +604,7 @@ func NewPdfAnnotation3D() *PdfAnnotation3D {
 	return x3dAnnotation
 }
 
-// Create a new projection annotation.
+// NewPdfAnnotationProjection returns a new projection annotation.
 func NewPdfAnnotationProjection() *PdfAnnotationProjection {
 	annotation := NewPdfAnnotation()
 	projectionAnnotation := &PdfAnnotationProjection{}
@@ -586,7 +614,7 @@ func NewPdfAnnotationProjection() *PdfAnnotationProjection {
 	return projectionAnnotation
 }
 
-// Create a new redact annotation.
+// NewPdfAnnotationRedact returns a new redact annotation.
 func NewPdfAnnotationRedact() *PdfAnnotationRedact {
 	annotation := NewPdfAnnotation()
 	redactAnnotation := &PdfAnnotationRedact{}
@@ -596,7 +624,7 @@ func NewPdfAnnotationRedact() *PdfAnnotationRedact {
 	return redactAnnotation
 }
 
-// Create a new annotation widget and initializes the underlying primitive.
+// NewPdfAnnotationWidget returns an initialized annotation widget.
 func NewPdfAnnotationWidget() *PdfAnnotationWidget {
 	annotation := NewPdfAnnotation()
 	annotationWidget := &PdfAnnotationWidget{}
@@ -605,10 +633,10 @@ func NewPdfAnnotationWidget() *PdfAnnotationWidget {
 	return annotationWidget
 }
 
-// Used for PDF parsing.  Loads a PDF annotation model from a PDF primitive dictionary object.
+// Used for PDF parsing.  Loads a PDF annotation model from a PDF dictionary.
 // Loads the common PDF annotation dictionary, and anything needed for the annotation subtype.
-func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObject) (*PdfAnnotation, error) {
-	d, isDict := container.PdfObject.(*PdfObjectDictionary)
+func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndirectObject) (*PdfAnnotation, error) {
+	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
 	if !isDict {
 		return nil, fmt.Errorf("Annotation indirect object not containing a dictionary")
 	}
@@ -623,11 +651,11 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 	}
 
 	annot := &PdfAnnotation{}
-	annot.primitive = container
+	annot.container = container
 	r.modelManager.Register(d, annot)
 
 	if obj := d.Get("Type"); obj != nil {
-		str, ok := obj.(*PdfObjectName)
+		str, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			common.Log.Trace("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
 		} else {
@@ -693,7 +721,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 		annot.context = nil
 		return annot, nil
 	}
-	subtype, ok := subtypeObj.(*PdfObjectName)
+	subtype, ok := subtypeObj.(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Subtype object type != name (%T)", subtypeObj)
 		return nil, fmt.Errorf("Invalid Subtype object type != name (%T)", subtypeObj)
@@ -934,7 +962,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *PdfIndirectObj
 }
 
 // Load data for markup annotation subtypes.
-func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*PdfAnnotationMarkup, error) {
+func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationMarkup, error) {
 	annot := &PdfAnnotationMarkup{}
 
 	if obj := d.Get("T"); obj != nil {
@@ -942,10 +970,10 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*Pdf
 	}
 
 	if obj := d.Get("Popup"); obj != nil {
-		indObj, isIndirect := obj.(*PdfIndirectObject)
+		indObj, isIndirect := obj.(*core.PdfIndirectObject)
 		if !isIndirect {
-			if _, isNull := obj.(*PdfObjectNull); !isNull {
-				return nil, fmt.Errorf("Popup should point to an indirect object")
+			if _, isNull := obj.(*core.PdfObjectNull); !isNull {
+				return nil, errors.New("popup should point to an indirect object")
 			}
 		} else {
 			popupAnnotObj, err := r.newPdfAnnotationFromIndirectObject(indObj)
@@ -954,7 +982,7 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*Pdf
 			}
 			popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
 			if !isPopupAnnot {
-				return nil, fmt.Errorf("Popup not referring to a popup annotation!")
+				return nil, errors.New("object not referring to a popup annotation")
 			}
 
 			annot.Popup = popupAnnot
@@ -989,7 +1017,7 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *PdfObjectDictionary) (*Pdf
 	return annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationText, error) {
+func (r *PdfReader) newPdfAnnotationTextFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationText, error) {
 	annot := PdfAnnotationText{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1006,7 +1034,7 @@ func (r *PdfReader) newPdfAnnotationTextFromDict(d *PdfObjectDictionary) (*PdfAn
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAnnotationLink, error) {
+func (r *PdfReader) newPdfAnnotationLinkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationLink, error) {
 	annot := PdfAnnotationLink{}
 
 	annot.A = d.Get("A")
@@ -1019,7 +1047,7 @@ func (r *PdfReader) newPdfAnnotationLinkFromDict(d *PdfObjectDictionary) (*PdfAn
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*PdfAnnotationFreeText, error) {
+func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationFreeText, error) {
 	annot := PdfAnnotationFreeText{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1042,7 +1070,7 @@ func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *PdfObjectDictionary) (*P
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationLine, error) {
+func (r *PdfReader) newPdfAnnotationLineFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationLine, error) {
 	annot := PdfAnnotationLine{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1067,7 +1095,7 @@ func (r *PdfReader) newPdfAnnotationLineFromDict(d *PdfObjectDictionary) (*PdfAn
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquare, error) {
+func (r *PdfReader) newPdfAnnotationSquareFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationSquare, error) {
 	annot := PdfAnnotationSquare{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1084,7 +1112,7 @@ func (r *PdfReader) newPdfAnnotationSquareFromDict(d *PdfObjectDictionary) (*Pdf
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*PdfAnnotationCircle, error) {
+func (r *PdfReader) newPdfAnnotationCircleFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationCircle, error) {
 	annot := PdfAnnotationCircle{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1101,7 +1129,7 @@ func (r *PdfReader) newPdfAnnotationCircleFromDict(d *PdfObjectDictionary) (*Pdf
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolygon, error) {
+func (r *PdfReader) newPdfAnnotationPolygonFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationPolygon, error) {
 	annot := PdfAnnotationPolygon{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1121,7 +1149,7 @@ func (r *PdfReader) newPdfAnnotationPolygonFromDict(d *PdfObjectDictionary) (*Pd
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*PdfAnnotationPolyLine, error) {
+func (r *PdfReader) newPdfAnnotationPolyLineFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationPolyLine, error) {
 	annot := PdfAnnotationPolyLine{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1141,7 +1169,7 @@ func (r *PdfReader) newPdfAnnotationPolyLineFromDict(d *PdfObjectDictionary) (*P
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*PdfAnnotationHighlight, error) {
+func (r *PdfReader) newPdfAnnotationHighlightFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationHighlight, error) {
 	annot := PdfAnnotationHighlight{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1155,7 +1183,7 @@ func (r *PdfReader) newPdfAnnotationHighlightFromDict(d *PdfObjectDictionary) (*
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*PdfAnnotationUnderline, error) {
+func (r *PdfReader) newPdfAnnotationUnderlineFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationUnderline, error) {
 	annot := PdfAnnotationUnderline{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1169,7 +1197,7 @@ func (r *PdfReader) newPdfAnnotationUnderlineFromDict(d *PdfObjectDictionary) (*
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*PdfAnnotationSquiggly, error) {
+func (r *PdfReader) newPdfAnnotationSquigglyFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationSquiggly, error) {
 	annot := PdfAnnotationSquiggly{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1183,7 +1211,7 @@ func (r *PdfReader) newPdfAnnotationSquigglyFromDict(d *PdfObjectDictionary) (*P
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnotationStrikeOut, error) {
+func (r *PdfReader) newPdfAnnotationStrikeOut(d *core.PdfObjectDictionary) (*PdfAnnotationStrikeOut, error) {
 	annot := PdfAnnotationStrikeOut{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1197,7 +1225,7 @@ func (r *PdfReader) newPdfAnnotationStrikeOut(d *PdfObjectDictionary) (*PdfAnnot
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfAnnotationCaret, error) {
+func (r *PdfReader) newPdfAnnotationCaretFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationCaret, error) {
 	annot := PdfAnnotationCaret{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1211,7 +1239,7 @@ func (r *PdfReader) newPdfAnnotationCaretFromDict(d *PdfObjectDictionary) (*PdfA
 
 	return &annot, nil
 }
-func (r *PdfReader) newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfAnnotationStamp, error) {
+func (r *PdfReader) newPdfAnnotationStampFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationStamp, error) {
 	annot := PdfAnnotationStamp{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1225,7 +1253,7 @@ func (r *PdfReader) newPdfAnnotationStampFromDict(d *PdfObjectDictionary) (*PdfA
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnnotationInk, error) {
+func (r *PdfReader) newPdfAnnotationInkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationInk, error) {
 	annot := PdfAnnotationInk{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1240,7 +1268,7 @@ func (r *PdfReader) newPdfAnnotationInkFromDict(d *PdfObjectDictionary) (*PdfAnn
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfAnnotationPopup, error) {
+func (r *PdfReader) newPdfAnnotationPopupFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationPopup, error) {
 	annot := PdfAnnotationPopup{}
 
 	annot.Parent = d.Get("Parent")
@@ -1249,7 +1277,7 @@ func (r *PdfReader) newPdfAnnotationPopupFromDict(d *PdfObjectDictionary) (*PdfA
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionary) (*PdfAnnotationFileAttachment, error) {
+func (r *PdfReader) newPdfAnnotationFileAttachmentFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationFileAttachment, error) {
 	annot := PdfAnnotationFileAttachment{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1264,7 +1292,7 @@ func (r *PdfReader) newPdfAnnotationFileAttachmentFromDict(d *PdfObjectDictionar
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfAnnotationSound, error) {
+func (r *PdfReader) newPdfAnnotationSoundFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationSound, error) {
 	annot := PdfAnnotationSound{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1279,7 +1307,7 @@ func (r *PdfReader) newPdfAnnotationSoundFromDict(d *PdfObjectDictionary) (*PdfA
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*PdfAnnotationRichMedia, error) {
+func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationRichMedia, error) {
 	annot := &PdfAnnotationRichMedia{}
 
 	annot.RichMediaSettings = d.Get("RichMediaSettings")
@@ -1288,7 +1316,7 @@ func (r *PdfReader) newPdfAnnotationRichMediaFromDict(d *PdfObjectDictionary) (*
 	return annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfAnnotationMovie, error) {
+func (r *PdfReader) newPdfAnnotationMovieFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationMovie, error) {
 	annot := PdfAnnotationMovie{}
 
 	annot.T = d.Get("T")
@@ -1298,7 +1326,7 @@ func (r *PdfReader) newPdfAnnotationMovieFromDict(d *PdfObjectDictionary) (*PdfA
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*PdfAnnotationScreen, error) {
+func (r *PdfReader) newPdfAnnotationScreenFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationScreen, error) {
 	annot := PdfAnnotationScreen{}
 
 	annot.T = d.Get("T")
@@ -1309,7 +1337,7 @@ func (r *PdfReader) newPdfAnnotationScreenFromDict(d *PdfObjectDictionary) (*Pdf
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*PdfAnnotationWidget, error) {
+func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationWidget, error) {
 	annot := PdfAnnotationWidget{}
 
 	annot.H = d.Get("H")
@@ -1326,7 +1354,7 @@ func (r *PdfReader) newPdfAnnotationWidgetFromDict(d *PdfObjectDictionary) (*Pdf
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationPrinterMark, error) {
+func (r *PdfReader) newPdfAnnotationPrinterMarkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationPrinterMark, error) {
 	annot := PdfAnnotationPrinterMark{}
 
 	annot.MN = d.Get("MN")
@@ -1334,13 +1362,13 @@ func (r *PdfReader) newPdfAnnotationPrinterMarkFromDict(d *PdfObjectDictionary) 
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationTrapNetFromDict(d *PdfObjectDictionary) (*PdfAnnotationTrapNet, error) {
+func (r *PdfReader) newPdfAnnotationTrapNetFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationTrapNet, error) {
 	annot := PdfAnnotationTrapNet{}
 	// empty?e
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*PdfAnnotationWatermark, error) {
+func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationWatermark, error) {
 	annot := PdfAnnotationWatermark{}
 
 	annot.FixedPrint = d.Get("FixedPrint")
@@ -1348,7 +1376,7 @@ func (r *PdfReader) newPdfAnnotationWatermarkFromDict(d *PdfObjectDictionary) (*
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnnotation3D, error) {
+func (r *PdfReader) newPdfAnnotation3DFromDict(d *core.PdfObjectDictionary) (*PdfAnnotation3D, error) {
 	annot := PdfAnnotation3D{}
 
 	annot.T3DD = d.Get("3DD")
@@ -1360,7 +1388,7 @@ func (r *PdfReader) newPdfAnnotation3DFromDict(d *PdfObjectDictionary) (*PdfAnno
 	return &annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationProjectionFromDict(d *PdfObjectDictionary) (*PdfAnnotationProjection, error) {
+func (r *PdfReader) newPdfAnnotationProjectionFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationProjection, error) {
 	annot := &PdfAnnotationProjection{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1372,7 +1400,7 @@ func (r *PdfReader) newPdfAnnotationProjectionFromDict(d *PdfObjectDictionary) (
 	return annot, nil
 }
 
-func (r *PdfReader) newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*PdfAnnotationRedact, error) {
+func (r *PdfReader) newPdfAnnotationRedactFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationRedact, error) {
 	annot := PdfAnnotationRedact{}
 
 	markup, err := r.newPdfAnnotationMarkupFromDict(d)
@@ -1392,439 +1420,481 @@ func (r *PdfReader) newPdfAnnotationRedactFromDict(d *PdfObjectDictionary) (*Pdf
 	return &annot, nil
 }
 
-func (this *PdfAnnotation) GetContainingPdfObject() PdfObject {
-	return this.primitive
+// GetContainingPdfObject implements interface PdfModel.
+func (a *PdfAnnotation) GetContainingPdfObject() core.PdfObject {
+	return a.container
 }
 
+// ToPdfObject implements interface PdfModel.
 // Note: Call the sub-annotation's ToPdfObject to set both the generic and non-generic information.
-// TODO/FIXME: Consider doing it here instead.
-func (this *PdfAnnotation) ToPdfObject() PdfObject {
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
+func (a *PdfAnnotation) ToPdfObject() core.PdfObject {
+	container := a.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
 
-	d.Set("Type", MakeName("Annot"))
-	d.SetIfNotNil("Rect", this.Rect)
-	d.SetIfNotNil("Contents", this.Contents)
-	d.SetIfNotNil("P", this.P)
-	d.SetIfNotNil("NM", this.NM)
-	d.SetIfNotNil("M", this.M)
-	d.SetIfNotNil("F", this.F)
-	d.SetIfNotNil("AP", this.AP)
-	d.SetIfNotNil("AS", this.AS)
-	d.SetIfNotNil("Border", this.Border)
-	d.SetIfNotNil("C", this.C)
-	d.SetIfNotNil("StructParent", this.StructParent)
-	d.SetIfNotNil("OC", this.OC)
+	d.Set("Type", core.MakeName("Annot"))
+	d.SetIfNotNil("Rect", a.Rect)
+	d.SetIfNotNil("Contents", a.Contents)
+	d.SetIfNotNil("P", a.P)
+	d.SetIfNotNil("NM", a.NM)
+	d.SetIfNotNil("M", a.M)
+	d.SetIfNotNil("F", a.F)
+	d.SetIfNotNil("AP", a.AP)
+	d.SetIfNotNil("AS", a.AS)
+	d.SetIfNotNil("Border", a.Border)
+	d.SetIfNotNil("C", a.C)
+	d.SetIfNotNil("StructParent", a.StructParent)
+	d.SetIfNotNil("OC", a.OC)
 
 	return container
 }
 
-// Markup portion of the annotation.
-func (this *PdfAnnotationMarkup) appendToPdfDictionary(d *PdfObjectDictionary) {
-	d.SetIfNotNil("T", this.T)
-	if this.Popup != nil {
-		d.Set("Popup", this.Popup.ToPdfObject())
+// appendToPdfDictionary appends the markup portion of the annotation to the dictionary `d`.
+func (markup *PdfAnnotationMarkup) appendToPdfDictionary(d *core.PdfObjectDictionary) {
+	d.SetIfNotNil("T", markup.T)
+	if markup.Popup != nil {
+		d.Set("Popup", markup.Popup.ToPdfObject())
 	}
-	d.SetIfNotNil("CA", this.CA)
-	d.SetIfNotNil("RC", this.RC)
-	d.SetIfNotNil("CreationDate", this.CreationDate)
-	d.SetIfNotNil("IRT", this.IRT)
-	d.SetIfNotNil("Subj", this.Subj)
-	d.SetIfNotNil("RT", this.RT)
-	d.SetIfNotNil("IT", this.IT)
-	d.SetIfNotNil("ExData", this.ExData)
+	d.SetIfNotNil("CA", markup.CA)
+	d.SetIfNotNil("RC", markup.RC)
+	d.SetIfNotNil("CreationDate", markup.CreationDate)
+	d.SetIfNotNil("IRT", markup.IRT)
+	d.SetIfNotNil("Subj", markup.Subj)
+	d.SetIfNotNil("RT", markup.RT)
+	d.SetIfNotNil("IT", markup.IT)
+	d.SetIfNotNil("ExData", markup.ExData)
 }
 
-func (this *PdfAnnotationText) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	if this.PdfAnnotationMarkup != nil {
-		this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-	}
-
-	d.SetIfNotNil("Subtype", MakeName("Text"))
-	d.SetIfNotNil("Open", this.Open)
-	d.SetIfNotNil("Name", this.Name)
-	d.SetIfNotNil("State", this.State)
-	d.SetIfNotNil("StateModel", this.StateModel)
-	return container
-}
-
-func (this *PdfAnnotationLink) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Link"))
-	d.SetIfNotNil("A", this.A)
-	d.SetIfNotNil("Dest", this.Dest)
-	d.SetIfNotNil("H", this.H)
-	d.SetIfNotNil("PA", this.PA)
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	d.SetIfNotNil("BS", this.BS)
-	return container
-}
-
-func (this *PdfAnnotationFreeText) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("FreeText"))
-	d.SetIfNotNil("DA", this.DA)
-	d.SetIfNotNil("Q", this.Q)
-	d.SetIfNotNil("RC", this.RC)
-	d.SetIfNotNil("DS", this.DS)
-	d.SetIfNotNil("CL", this.CL)
-	d.SetIfNotNil("IT", this.IT)
-	d.SetIfNotNil("BE", this.BE)
-	d.SetIfNotNil("RD", this.RD)
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("LE", this.LE)
-
-	return container
-}
-func (this *PdfAnnotationLine) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Line"))
-	d.SetIfNotNil("L", this.L)
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("LE", this.LE)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("LL", this.LL)
-	d.SetIfNotNil("LLE", this.LLE)
-	d.SetIfNotNil("Cap", this.Cap)
-	d.SetIfNotNil("IT", this.IT)
-	d.SetIfNotNil("LLO", this.LLO)
-	d.SetIfNotNil("CP", this.CP)
-	d.SetIfNotNil("Measure", this.Measure)
-	d.SetIfNotNil("CO", this.CO)
-
-	return container
-}
-
-func (this *PdfAnnotationSquare) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	if this.PdfAnnotationMarkup != nil {
-		this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+// ToPdfObject implements interface PdfModel.
+func (text *PdfAnnotationText) ToPdfObject() core.PdfObject {
+	text.PdfAnnotation.ToPdfObject()
+	container := text.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	if text.PdfAnnotationMarkup != nil {
+		text.PdfAnnotationMarkup.appendToPdfDictionary(d)
 	}
 
-	d.SetIfNotNil("Subtype", MakeName("Square"))
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("BE", this.BE)
-	d.SetIfNotNil("RD", this.RD)
+	d.SetIfNotNil("Subtype", core.MakeName("Text"))
+	d.SetIfNotNil("Open", text.Open)
+	d.SetIfNotNil("Name", text.Name)
+	d.SetIfNotNil("State", text.State)
+	d.SetIfNotNil("StateModel", text.StateModel)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (link *PdfAnnotationLink) ToPdfObject() core.PdfObject {
+	link.PdfAnnotation.ToPdfObject()
+	container := link.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Link"))
+	d.SetIfNotNil("A", link.A)
+	d.SetIfNotNil("Dest", link.Dest)
+	d.SetIfNotNil("H", link.H)
+	d.SetIfNotNil("PA", link.PA)
+	d.SetIfNotNil("QuadPoints", link.QuadPoints)
+	d.SetIfNotNil("BS", link.BS)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (ft *PdfAnnotationFreeText) ToPdfObject() core.PdfObject {
+	ft.PdfAnnotation.ToPdfObject()
+	container := ft.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	ft.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("FreeText"))
+	d.SetIfNotNil("DA", ft.DA)
+	d.SetIfNotNil("Q", ft.Q)
+	d.SetIfNotNil("RC", ft.RC)
+	d.SetIfNotNil("DS", ft.DS)
+	d.SetIfNotNil("CL", ft.CL)
+	d.SetIfNotNil("IT", ft.IT)
+	d.SetIfNotNil("BE", ft.BE)
+	d.SetIfNotNil("RD", ft.RD)
+	d.SetIfNotNil("BS", ft.BS)
+	d.SetIfNotNil("LE", ft.LE)
 
 	return container
 }
 
-func (this *PdfAnnotationCircle) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+// ToPdfObject implements interface PdfModel.
+func (line *PdfAnnotationLine) ToPdfObject() core.PdfObject {
+	line.PdfAnnotation.ToPdfObject()
+	container := line.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	line.PdfAnnotationMarkup.appendToPdfDictionary(d)
 
-	d.SetIfNotNil("Subtype", MakeName("Circle"))
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("BE", this.BE)
-	d.SetIfNotNil("RD", this.RD)
-
-	return container
-}
-
-func (this *PdfAnnotationPolygon) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Polygon"))
-	d.SetIfNotNil("Vertices", this.Vertices)
-	d.SetIfNotNil("LE", this.LE)
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("BE", this.BE)
-	d.SetIfNotNil("IT", this.IT)
-	d.SetIfNotNil("Measure", this.Measure)
+	d.SetIfNotNil("Subtype", core.MakeName("Line"))
+	d.SetIfNotNil("L", line.L)
+	d.SetIfNotNil("BS", line.BS)
+	d.SetIfNotNil("LE", line.LE)
+	d.SetIfNotNil("IC", line.IC)
+	d.SetIfNotNil("LL", line.LL)
+	d.SetIfNotNil("LLE", line.LLE)
+	d.SetIfNotNil("Cap", line.Cap)
+	d.SetIfNotNil("IT", line.IT)
+	d.SetIfNotNil("LLO", line.LLO)
+	d.SetIfNotNil("CP", line.CP)
+	d.SetIfNotNil("Measure", line.Measure)
+	d.SetIfNotNil("CO", line.CO)
 
 	return container
 }
 
-func (this *PdfAnnotationPolyLine) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+// ToPdfObject implements interface PdfModel.
+func (sq *PdfAnnotationSquare) ToPdfObject() core.PdfObject {
+	sq.PdfAnnotation.ToPdfObject()
+	container := sq.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	if sq.PdfAnnotationMarkup != nil {
+		sq.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	}
 
-	d.SetIfNotNil("Subtype", MakeName("PolyLine"))
-	d.SetIfNotNil("Vertices", this.Vertices)
-	d.SetIfNotNil("LE", this.LE)
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("BE", this.BE)
-	d.SetIfNotNil("IT", this.IT)
-	d.SetIfNotNil("Measure", this.Measure)
-
-	return container
-}
-
-func (this *PdfAnnotationHighlight) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Highlight"))
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	return container
-}
-
-func (this *PdfAnnotationUnderline) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Underline"))
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	return container
-}
-
-func (this *PdfAnnotationSquiggly) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Squiggly"))
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	return container
-}
-
-func (this *PdfAnnotationStrikeOut) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("StrikeOut"))
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	return container
-}
-
-func (this *PdfAnnotationCaret) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Caret"))
-	d.SetIfNotNil("RD", this.RD)
-	d.SetIfNotNil("Sy", this.Sy)
-	return container
-}
-
-func (this *PdfAnnotationStamp) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Stamp"))
-	d.SetIfNotNil("Name", this.Name)
-	return container
-}
-
-func (this *PdfAnnotationInk) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Ink"))
-	d.SetIfNotNil("InkList", this.InkList)
-	d.SetIfNotNil("BS", this.BS)
-	return container
-}
-
-func (this *PdfAnnotationPopup) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Popup"))
-	d.SetIfNotNil("Parent", this.Parent)
-	d.SetIfNotNil("Open", this.Open)
-	return container
-}
-
-func (this *PdfAnnotationFileAttachment) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("FileAttachment"))
-	d.SetIfNotNil("FS", this.FS)
-	d.SetIfNotNil("Name", this.Name)
-	return container
-}
-
-func (this *PdfAnnotationRichMedia) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("RichMedia"))
-	d.SetIfNotNil("RichMediaSettings", this.RichMediaSettings)
-	d.SetIfNotNil("RichMediaContent", this.RichMediaContent)
-	return container
-}
-
-func (this *PdfAnnotationSound) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
-
-	d.SetIfNotNil("Subtype", MakeName("Sound"))
-	d.SetIfNotNil("Sound", this.Sound)
-	d.SetIfNotNil("Name", this.Name)
-	return container
-}
-
-func (this *PdfAnnotationMovie) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Movie"))
-	d.SetIfNotNil("T", this.T)
-	d.SetIfNotNil("Movie", this.Movie)
-	d.SetIfNotNil("A", this.A)
-	return container
-}
-
-func (this *PdfAnnotationScreen) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Screen"))
-	d.SetIfNotNil("T", this.T)
-	d.SetIfNotNil("MK", this.MK)
-	d.SetIfNotNil("A", this.A)
-	d.SetIfNotNil("AA", this.AA)
-	return container
-}
-
-func (this *PdfAnnotationWidget) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Widget"))
-	d.SetIfNotNil("H", this.H)
-	d.SetIfNotNil("MK", this.MK)
-	d.SetIfNotNil("A", this.A)
-	d.SetIfNotNil("AA", this.AA)
-	d.SetIfNotNil("BS", this.BS)
-	d.SetIfNotNil("Parent", this.Parent)
+	d.SetIfNotNil("Subtype", core.MakeName("Square"))
+	d.SetIfNotNil("BS", sq.BS)
+	d.SetIfNotNil("IC", sq.IC)
+	d.SetIfNotNil("BE", sq.BE)
+	d.SetIfNotNil("RD", sq.RD)
 
 	return container
 }
 
-func (this *PdfAnnotationPrinterMark) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
+// ToPdfObject implements interface PdfModel.
+func (circle *PdfAnnotationCircle) ToPdfObject() core.PdfObject {
+	circle.PdfAnnotation.ToPdfObject()
+	container := circle.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	circle.PdfAnnotationMarkup.appendToPdfDictionary(d)
 
-	d.SetIfNotNil("Subtype", MakeName("PrinterMark"))
-	d.SetIfNotNil("MN", this.MN)
-	return container
-}
-
-func (this *PdfAnnotationTrapNet) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("TrapNet"))
-	return container
-}
-
-func (this *PdfAnnotationWatermark) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-
-	d.SetIfNotNil("Subtype", MakeName("Watermark"))
-	d.SetIfNotNil("FixedPrint", this.FixedPrint)
+	d.SetIfNotNil("Subtype", core.MakeName("Circle"))
+	d.SetIfNotNil("BS", circle.BS)
+	d.SetIfNotNil("IC", circle.IC)
+	d.SetIfNotNil("BE", circle.BE)
+	d.SetIfNotNil("RD", circle.RD)
 
 	return container
 }
 
-func (this *PdfAnnotation3D) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	d.SetIfNotNil("Subtype", MakeName("3D"))
-	d.SetIfNotNil("3DD", this.T3DD)
-	d.SetIfNotNil("3DV", this.T3DV)
-	d.SetIfNotNil("3DA", this.T3DA)
-	d.SetIfNotNil("3DI", this.T3DI)
-	d.SetIfNotNil("3DB", this.T3DB)
+// ToPdfObject implements interface PdfModel.
+func (poly *PdfAnnotationPolygon) ToPdfObject() core.PdfObject {
+	poly.PdfAnnotation.ToPdfObject()
+	container := poly.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	poly.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Polygon"))
+	d.SetIfNotNil("Vertices", poly.Vertices)
+	d.SetIfNotNil("LE", poly.LE)
+	d.SetIfNotNil("BS", poly.BS)
+	d.SetIfNotNil("IC", poly.IC)
+	d.SetIfNotNil("BE", poly.BE)
+	d.SetIfNotNil("IT", poly.IT)
+	d.SetIfNotNil("Measure", poly.Measure)
+
 	return container
 }
 
-func (this *PdfAnnotationProjection) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+// ToPdfObject implements interface PdfModel.
+func (polyl *PdfAnnotationPolyLine) ToPdfObject() core.PdfObject {
+	polyl.PdfAnnotation.ToPdfObject()
+	container := polyl.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	polyl.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("PolyLine"))
+	d.SetIfNotNil("Vertices", polyl.Vertices)
+	d.SetIfNotNil("LE", polyl.LE)
+	d.SetIfNotNil("BS", polyl.BS)
+	d.SetIfNotNil("IC", polyl.IC)
+	d.SetIfNotNil("BE", polyl.BE)
+	d.SetIfNotNil("IT", polyl.IT)
+	d.SetIfNotNil("Measure", polyl.Measure)
+
 	return container
 }
 
-func (this *PdfAnnotationRedact) ToPdfObject() PdfObject {
-	this.PdfAnnotation.ToPdfObject()
-	container := this.primitive
-	d := container.PdfObject.(*PdfObjectDictionary)
-	this.PdfAnnotationMarkup.appendToPdfDictionary(d)
+// ToPdfObject implements interface PdfModel.
+func (hl *PdfAnnotationHighlight) ToPdfObject() core.PdfObject {
+	hl.PdfAnnotation.ToPdfObject()
+	container := hl.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	hl.PdfAnnotationMarkup.appendToPdfDictionary(d)
 
-	d.SetIfNotNil("Subtype", MakeName("Redact"))
-	d.SetIfNotNil("QuadPoints", this.QuadPoints)
-	d.SetIfNotNil("IC", this.IC)
-	d.SetIfNotNil("RO", this.RO)
-	d.SetIfNotNil("OverlayText", this.OverlayText)
-	d.SetIfNotNil("Repeat", this.Repeat)
-	d.SetIfNotNil("DA", this.DA)
-	d.SetIfNotNil("Q", this.Q)
+	d.SetIfNotNil("Subtype", core.MakeName("Highlight"))
+	d.SetIfNotNil("QuadPoints", hl.QuadPoints)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (underline *PdfAnnotationUnderline) ToPdfObject() core.PdfObject {
+	underline.PdfAnnotation.ToPdfObject()
+	container := underline.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	underline.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Underline"))
+	d.SetIfNotNil("QuadPoints", underline.QuadPoints)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (squiggly *PdfAnnotationSquiggly) ToPdfObject() core.PdfObject {
+	squiggly.PdfAnnotation.ToPdfObject()
+	container := squiggly.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	squiggly.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Squiggly"))
+	d.SetIfNotNil("QuadPoints", squiggly.QuadPoints)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (strikeo *PdfAnnotationStrikeOut) ToPdfObject() core.PdfObject {
+	strikeo.PdfAnnotation.ToPdfObject()
+	container := strikeo.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	strikeo.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("StrikeOut"))
+	d.SetIfNotNil("QuadPoints", strikeo.QuadPoints)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (caret *PdfAnnotationCaret) ToPdfObject() core.PdfObject {
+	caret.PdfAnnotation.ToPdfObject()
+	container := caret.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	caret.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Caret"))
+	d.SetIfNotNil("RD", caret.RD)
+	d.SetIfNotNil("Sy", caret.Sy)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (stamp *PdfAnnotationStamp) ToPdfObject() core.PdfObject {
+	stamp.PdfAnnotation.ToPdfObject()
+	container := stamp.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	stamp.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Stamp"))
+	d.SetIfNotNil("Name", stamp.Name)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (ink *PdfAnnotationInk) ToPdfObject() core.PdfObject {
+	ink.PdfAnnotation.ToPdfObject()
+	container := ink.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	ink.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Ink"))
+	d.SetIfNotNil("InkList", ink.InkList)
+	d.SetIfNotNil("BS", ink.BS)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (popup *PdfAnnotationPopup) ToPdfObject() core.PdfObject {
+	popup.PdfAnnotation.ToPdfObject()
+	container := popup.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Popup"))
+	d.SetIfNotNil("Parent", popup.Parent)
+	d.SetIfNotNil("Open", popup.Open)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (file *PdfAnnotationFileAttachment) ToPdfObject() core.PdfObject {
+	file.PdfAnnotation.ToPdfObject()
+	container := file.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	file.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("FileAttachment"))
+	d.SetIfNotNil("FS", file.FS)
+	d.SetIfNotNil("Name", file.Name)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (rm *PdfAnnotationRichMedia) ToPdfObject() core.PdfObject {
+	rm.PdfAnnotation.ToPdfObject()
+	container := rm.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("RichMedia"))
+	d.SetIfNotNil("RichMediaSettings", rm.RichMediaSettings)
+	d.SetIfNotNil("RichMediaContent", rm.RichMediaContent)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (snd *PdfAnnotationSound) ToPdfObject() core.PdfObject {
+	snd.PdfAnnotation.ToPdfObject()
+	container := snd.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	snd.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Sound"))
+	d.SetIfNotNil("Sound", snd.Sound)
+	d.SetIfNotNil("Name", snd.Name)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (mov *PdfAnnotationMovie) ToPdfObject() core.PdfObject {
+	mov.PdfAnnotation.ToPdfObject()
+	container := mov.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Movie"))
+	d.SetIfNotNil("T", mov.T)
+	d.SetIfNotNil("Movie", mov.Movie)
+	d.SetIfNotNil("A", mov.A)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (scr *PdfAnnotationScreen) ToPdfObject() core.PdfObject {
+	scr.PdfAnnotation.ToPdfObject()
+	container := scr.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Screen"))
+	d.SetIfNotNil("T", scr.T)
+	d.SetIfNotNil("MK", scr.MK)
+	d.SetIfNotNil("A", scr.A)
+	d.SetIfNotNil("AA", scr.AA)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
+	widget.PdfAnnotation.ToPdfObject()
+	container := widget.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Widget"))
+	d.SetIfNotNil("H", widget.H)
+	d.SetIfNotNil("MK", widget.MK)
+	d.SetIfNotNil("A", widget.A)
+	d.SetIfNotNil("AA", widget.AA)
+	d.SetIfNotNil("BS", widget.BS)
+	d.SetIfNotNil("Parent", widget.Parent)
+
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (pm *PdfAnnotationPrinterMark) ToPdfObject() core.PdfObject {
+	pm.PdfAnnotation.ToPdfObject()
+	container := pm.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("PrinterMark"))
+	d.SetIfNotNil("MN", pm.MN)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (trapn *PdfAnnotationTrapNet) ToPdfObject() core.PdfObject {
+	trapn.PdfAnnotation.ToPdfObject()
+	container := trapn.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("TrapNet"))
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (wm *PdfAnnotationWatermark) ToPdfObject() core.PdfObject {
+	wm.PdfAnnotation.ToPdfObject()
+	container := wm.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Watermark"))
+	d.SetIfNotNil("FixedPrint", wm.FixedPrint)
+
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (a3d *PdfAnnotation3D) ToPdfObject() core.PdfObject {
+	a3d.PdfAnnotation.ToPdfObject()
+	container := a3d.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	d.SetIfNotNil("Subtype", core.MakeName("3D"))
+	d.SetIfNotNil("3DD", a3d.T3DD)
+	d.SetIfNotNil("3DV", a3d.T3DV)
+	d.SetIfNotNil("3DA", a3d.T3DA)
+	d.SetIfNotNil("3DI", a3d.T3DI)
+	d.SetIfNotNil("3DB", a3d.T3DB)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (proj *PdfAnnotationProjection) ToPdfObject() core.PdfObject {
+	proj.PdfAnnotation.ToPdfObject()
+	container := proj.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	proj.PdfAnnotationMarkup.appendToPdfDictionary(d)
+	return container
+}
+
+// ToPdfObject implements interface PdfModel.
+func (redact *PdfAnnotationRedact) ToPdfObject() core.PdfObject {
+	redact.PdfAnnotation.ToPdfObject()
+	container := redact.container
+	d := container.PdfObject.(*core.PdfObjectDictionary)
+	redact.PdfAnnotationMarkup.appendToPdfDictionary(d)
+
+	d.SetIfNotNil("Subtype", core.MakeName("Redact"))
+	d.SetIfNotNil("QuadPoints", redact.QuadPoints)
+	d.SetIfNotNil("IC", redact.IC)
+	d.SetIfNotNil("RO", redact.RO)
+	d.SetIfNotNil("OverlayText", redact.OverlayText)
+	d.SetIfNotNil("Repeat", redact.Repeat)
+	d.SetIfNotNil("DA", redact.DA)
+	d.SetIfNotNil("Q", redact.Q)
 	return container
 }
 
 // Border definitions.
 
+// BorderStyle defines border type, typically used for annotations.
 type BorderStyle int
 
 const (
-	BorderStyleSolid     BorderStyle = iota
-	BorderStyleDashed    BorderStyle = iota
-	BorderStyleBeveled   BorderStyle = iota
-	BorderStyleInset     BorderStyle = iota
+	// BorderStyleSolid represents a solid border.
+	BorderStyleSolid BorderStyle = iota
+
+	// BorderStyleDashed represents a dashed border.
+	BorderStyleDashed BorderStyle = iota
+
+	// BorderStyleBeveled represents a beveled border.
+	BorderStyleBeveled BorderStyle = iota
+
+	// BorderStyleInset represents an inset border.
+	BorderStyleInset BorderStyle = iota
+
+	// BorderStyleUnderline represents an underline border.
 	BorderStyleUnderline BorderStyle = iota
 )
 
-func (this *BorderStyle) GetPdfName() string {
-	switch *this {
+// GetPdfName returns the PDF name used to indicate the border style.
+// (Table 166 p. 395).
+func (bs *BorderStyle) GetPdfName() string {
+	switch *bs {
 	case BorderStyleSolid:
 		return "S"
 	case BorderStyleDashed:
@@ -1840,45 +1910,49 @@ func (this *BorderStyle) GetPdfName() string {
 	return "" // Should not happen.
 }
 
-// Border style
+// PdfBorderStyle represents a border style dictionary (12.5.4 Border Styles p. 394).
 type PdfBorderStyle struct {
 	W *float64     // Border width
 	S *BorderStyle // Border style
 	D *[]int       // Dash array.
 
-	container PdfObject
+	container core.PdfObject
 }
 
+// NewBorderStyle returns an initialized PdfBorderStyle.
 func NewBorderStyle() *PdfBorderStyle {
 	bs := &PdfBorderStyle{}
 	return bs
 }
 
-func (this *PdfBorderStyle) SetBorderWidth(width float64) {
-	this.W = &width
+// SetBorderWidth sets the style's border width.
+func (bs *PdfBorderStyle) SetBorderWidth(width float64) {
+	bs.W = &width
 }
 
-func (this *PdfBorderStyle) GetBorderWidth() float64 {
-	if this.W == nil {
+// GetBorderWidth returns the border style's width.
+func (bs *PdfBorderStyle) GetBorderWidth() float64 {
+	if bs.W == nil {
 		return 1 // Default.
 	}
-	return *this.W
+	return *bs.W
 }
 
-func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
+// newPdfBorderStyleFromPdfObject is used to load a PdfBorderStyle from a dictionary.
+func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error) {
 	bs := &PdfBorderStyle{}
 	bs.container = obj
 
-	var d *PdfObjectDictionary
-	obj = TraceToDirectObject(obj)
-	d, ok := obj.(*PdfObjectDictionary)
+	var d *core.PdfObjectDictionary
+	obj = core.TraceToDirectObject(obj)
+	d, ok := obj.(*core.PdfObjectDictionary)
 	if !ok {
 		return nil, errors.New("Type check")
 	}
 
 	// Type.
 	if obj := d.Get("Type"); obj != nil {
-		name, ok := obj.(*PdfObjectName)
+		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			common.Log.Debug("Incompatibility with Type not a name object: %T", obj)
 		} else {
@@ -1890,7 +1964,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 
 	// Border width.
 	if obj := d.Get("W"); obj != nil {
-		val, err := GetNumberAsFloat(obj)
+		val, err := core.GetNumberAsFloat(obj)
 		if err != nil {
 			common.Log.Debug("Error retrieving W: %v", err)
 			return nil, err
@@ -1900,7 +1974,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 
 	// Border style.
 	if obj := d.Get("S"); obj != nil {
-		name, ok := obj.(*PdfObjectName)
+		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			return nil, errors.New("Border S not a name object")
 		}
@@ -1927,7 +2001,7 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 
 	// Dash array.
 	if obj := d.Get("D"); obj != nil {
-		vec, ok := obj.(*PdfObjectArray)
+		vec, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Border D dash not an array: %T", obj)
 			return nil, errors.New("Border D type check error")
@@ -1945,40 +2019,44 @@ func newPdfBorderStyleFromPdfObject(obj PdfObject) (*PdfBorderStyle, error) {
 	return bs, nil
 }
 
-func (this *PdfBorderStyle) ToPdfObject() PdfObject {
-	d := MakeDict()
-	if this.container != nil {
-		if indObj, is := this.container.(*PdfIndirectObject); is {
+// ToPdfObject implements interface PdfModel.
+func (bs *PdfBorderStyle) ToPdfObject() core.PdfObject {
+	d := core.MakeDict()
+	if bs.container != nil {
+		if indObj, is := bs.container.(*core.PdfIndirectObject); is {
 			indObj.PdfObject = d
 		}
 	}
 
-	d.Set("Subtype", MakeName("Border"))
-	if this.W != nil {
-		d.Set("W", MakeFloat(*this.W))
+	d.Set("Subtype", core.MakeName("Border"))
+	if bs.W != nil {
+		d.Set("W", core.MakeFloat(*bs.W))
 	}
-	if this.S != nil {
-		d.Set("S", MakeName(this.S.GetPdfName()))
+	if bs.S != nil {
+		d.Set("S", core.MakeName(bs.S.GetPdfName()))
 	}
-	if this.D != nil {
-		d.Set("D", MakeArrayFromIntegers(*this.D))
+	if bs.D != nil {
+		d.Set("D", core.MakeArrayFromIntegers(*bs.D))
 	}
 
-	if this.container != nil {
-		return this.container
-	} else {
-		return d
+	if bs.container != nil {
+		return bs.container
 	}
+	return d
 }
 
-// Border effect
+// BorderEffect represents a border effect (Table 167 p. 395).
 type BorderEffect int
 
 const (
+	// BorderEffectNoEffect represents no border effect.
 	BorderEffectNoEffect BorderEffect = iota
-	BorderEffectCloudy   BorderEffect = iota
+
+	// BorderEffectCloudy represents a cloudy border effect.
+	BorderEffectCloudy BorderEffect = iota
 )
 
+// PdfBorderEffect represents a PDF border effect.
 type PdfBorderEffect struct {
 	S *BorderEffect // Border effect type
 	I *float64      // Intensity of the effect

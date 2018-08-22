@@ -3,17 +3,26 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The license package helps manage commercial licenses and check if they are valid for the version of unidoc used.
+// Package license helps manage commercial licenses and check if they are valid for the version of unidoc used.
 package license
+
+import (
+	"fmt"
+	"strings"
+)
 
 // Defaults to the open source license.
 var licenseKey *LicenseKey = MakeUnlicensedKey()
 
 // Sets and validates the license key.
-func SetLicenseKey(content string) error {
+func SetLicenseKey(content string, customerName string) error {
 	lk, err := licenseKeyDecode(content)
 	if err != nil {
 		return err
+	}
+
+	if strings.ToLower(lk.CustomerName) != strings.ToLower(customerName) {
+		return fmt.Errorf("Customer name mismatch, expected '%s', but got '%s'", customerName, lk.CustomerName)
 	}
 
 	err = lk.Validate()

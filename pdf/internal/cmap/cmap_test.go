@@ -12,8 +12,9 @@ import (
 )
 
 func init() {
+	// Uncomment when debugging to get debug or trace logging output.
 	//common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 // cmap1Data represents a basic CMap.
@@ -58,8 +59,6 @@ const cmap1Data = `
 
 // TestCMapParser tests basic loading of a simple CMap.
 func TestCMapParser1(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-
 	cmap, err := LoadCmapFromDataCID([]byte(cmap1Data))
 	if err != nil {
 		t.Error("Failed: ", err)
@@ -152,7 +151,7 @@ const cmap2Data = `
 // TestCMapParser2 tests a bug that came up when 2-byte character codes had the higher byte set to 0,
 // e.g. 0x0080, and the character map was not taking the number of bytes of the input codemap into account.
 func TestCMapParser2(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	cmap, err := LoadCmapFromDataCID([]byte(cmap2Data))
 	if err != nil {
@@ -245,7 +244,7 @@ const cmapData3 = `
 
 // TestCMapParser3 test case of a CMap with mixed number of 1 and 2 bytes in the codespace range.
 func TestCMapParser3(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 
 	cmap, err := LoadCmapFromDataCID([]byte(cmapData3))
 	if err != nil {

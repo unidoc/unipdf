@@ -185,8 +185,9 @@ func absInt(x int) int {
 }
 
 // EqualObjects returns true if `obj1` and `obj2` have the same contents.
+//
 // NOTE: It is a good idea to flatten obj1 and obj2 with FlattenObject before calling this function
-//       so that contents, rather than references, can be compared.
+// so that contents, rather than references, can be compared.
 func EqualObjects(obj1, obj2 PdfObject) bool {
 	return equalObjects(obj1, obj2, 0)
 }
