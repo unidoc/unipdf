@@ -4,7 +4,8 @@
  */
 /*
  * The embedded glyph to unicode mappings specified in this file are distributed under the terms
- * listed in ./glyphlist/glyphlist.txt, ./glyphlist/texglyphlist.txt and ./glyphlist/addtional.txt
+ * listed in ./testdata/glyphlist/glyphlist.txt, ./testdata/glyphlist/texglyphlist.txt
+ * and ./tesdtdata/glyphlist/addtional.txt
  */
 
 package textencoding

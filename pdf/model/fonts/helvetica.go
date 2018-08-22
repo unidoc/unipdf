@@ -4,7 +4,7 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
