@@ -85,7 +85,7 @@ func NewParagraph(text string) *Paragraph {
 
 	// TODO: Can we wrap intellectually, only if given width is known?
 
-	p.enableWrap = true
+	p.enableWrap = false
 	p.defaultWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
 	p.alignment = TextAlignmentLeft
