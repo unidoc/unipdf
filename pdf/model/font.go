@@ -59,6 +59,12 @@ func (font PdfFont) ToUnicode() string {
 	return font.baseFields().toUnicodeCmap.Name()
 }
 
+// DefaultFont returns the default font, which is currently the built in Helvetica.
+func DefaultFont() *PdfFont {
+	std := standard14Fonts["Helvetica"]
+	return &PdfFont{context: &std}
+}
+
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one the standard 14 font names.
 func NewStandard14Font(basefont string) (*PdfFont, error) {
