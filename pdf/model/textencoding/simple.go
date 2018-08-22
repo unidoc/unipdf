@@ -170,7 +170,7 @@ func (se SimpleEncoder) GlyphToRune(glyph string) (rune, bool) {
 
 // ToPdfObject returns `se` as a PdfObject
 func (se SimpleEncoder) ToPdfObject() core.PdfObject {
-	if se.differences == nil {
+	if se.differences == nil || len(se.differences) == 0 {
 		return core.MakeName(se.baseName)
 	}
 	dict := core.MakeDict()

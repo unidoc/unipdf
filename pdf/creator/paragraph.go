@@ -66,8 +66,15 @@ type Paragraph struct {
 func NewParagraph(text string) *Paragraph {
 	p := &Paragraph{}
 	p.text = text
-	p.textFont, _ = model.NewStandard14Font("Helvetica")
-	p.SetEncoder(textencoding.NewWinAnsiTextEncoder())
+
+	font, encoder, err := model.NewStandard14FontWithEncoding("Helvetica", model.GetAlphabet(text))
+	if err != nil {
+		common.Log.Debug("ERROR: NewStandard14FontWithEncoding failed err=%v. Falling back.", err)
+		p.textFont = model.DefaultFont()
+	}
+	p.textFont = font
+	p.SetEncoder(encoder)
+
 	p.fontSize = 10
 	p.lineHeight = 1.0
 
@@ -206,7 +213,7 @@ func (p *Paragraph) getTextWidth() float64 {
 
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
-			common.Log.Debug("Glyph char metrics not found! %q (rune 0x04x=%c)", glyph, r, r)
+			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
 			return -1 // XXX/FIXME: return error.
 		}
 		w += p.fontSize * metrics.Wx
