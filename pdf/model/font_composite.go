@@ -194,8 +194,7 @@ type pdfCIDFontType0 struct {
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
-	CIDSystemInfo  *core.PdfObjectDictionary // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
-	FontDescriptor core.PdfObject            // (Required) Describes the CIDFont’s default metrics other than its glyph widths
+	CIDSystemInfo *core.PdfObjectDictionary // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
@@ -505,12 +504,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
+	cidfont.basefont = ttf.PostScriptName
+	cidfont.fontDescriptor = descriptor
+
 	// Make root Type0 font.
 	type0 := pdfFontType0{
 		fontCommon: fontCommon{
-			subtype:        "Type0",
-			basefont:       ttf.PostScriptName,
-			fontDescriptor: descriptor,
+			subtype:  "Type0",
+			basefont: ttf.PostScriptName,
 		},
 		DescendantFont: &PdfFont{
 			context: cidfont,
