@@ -488,6 +488,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		}
 
 		encoded := []byte{}
+		isCID := p.textFont.IsCID()
 		for _, r := range runes {
 			glyph, ok := p.textFont.Encoder().RuneToGlyph(r)
 			if !ok {
@@ -504,7 +505,12 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			} else {
 				code, ok := p.textFont.Encoder().RuneToCharcode(r)
 				if ok {
-					encoded = append(encoded, byte(code))
+					if isCID {
+						hi, lo := code>>8, code&0xff
+						encoded = append(encoded, byte(hi), byte(lo))
+					} else {
+						encoded = append(encoded, byte(code))
+					}
 				}
 			}
 		}

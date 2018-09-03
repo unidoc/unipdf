@@ -51,6 +51,11 @@ func (font PdfFont) Subtype() string {
 	return subtype
 }
 
+// IsCID returns true if the underlying font is CID.
+func (font PdfFont) IsCID() bool {
+	return font.baseFields().isCIDFont()
+}
+
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
 	if font.baseFields().toUnicodeCmap == nil {
@@ -406,18 +411,18 @@ func (font PdfFont) baseFields() *fontCommon {
 
 // fontCommon represents the fields that are common to all PDF fonts.
 type fontCommon struct {
-	// All fonts have these fields
+	// All fonts have these fields.
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
 
 	// These are optional fields in the PDF font
 	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
 
-	// These objects are computed from optional fields in the PDF font
+	// These objects are computed from optional fields in the PDF font.
 	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
 	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
 
-	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging.
 	objectNumber int64
 }
 
@@ -453,6 +458,7 @@ func (base fontCommon) String() string {
 	return fmt.Sprintf("FONT{%s}", base.coreString())
 }
 
+// coreString returns the contents of fontCommon.String() without the FONT{} wrapper.
 func (base fontCommon) coreString() string {
 	descriptor := ""
 	if base.fontDescriptor != nil {
