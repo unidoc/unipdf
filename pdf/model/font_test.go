@@ -16,6 +16,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 func init() {
@@ -184,7 +185,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			185, 186, 187, 188, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204,
 			205, 206, 207, 208, 209, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225,
 			229, 241, 242, 243, 245},
-		" !∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_αβχδεφγηιϕκλμνοπθρστυϖω" +
+		" !∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧ∆ΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_αβχδεφγηιϕκλµνοπθρστυϖω" +
 			"ξψζ{|}∼€ϒ′≤⁄∞ƒ♣♦♥♠↔←↑→↓°±″≥×∝∂•÷≠≡≈…↵ℵℑℜ℘⊗⊕∅∩∪⊃⊇⊄⊂⊆∈∉∠∇∏√⋅¬∧∨⇔⇐⇑⇒⇓◊〈∑〉∫⌠⌡",
 	},
 	fontFragmentTest{"ZapfDingbats built-in",
@@ -252,6 +253,70 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			177, 151, 178, 179, 183, 185, 188, 205, 184, 189},
 		"‘ł’ “Ł” Ø `o´ it's ˝ˆ˜¯˘˙¨˚ˇªº‹ı›—–—†‡•„…˛¸‰",
 	},
+	fontFragmentTest{"base glyphs′",
+		"./testdata/font/cover.txt", 11,
+		[]byte{44, 45, 46, 48, 49, 50, 51, 53, 54, 55, 56, 58, 59,
+			65, 66, 67, 68, 69, 70, 71, 72,
+			84, 85,
+			97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 108, 109, 110, 111,
+			114, 115, 116, 117},
+		",-.01235678:;ABCDEFGHTUabcdefghijlmnorstu",
+	},
+	fontFragmentTest{"tex glyphs 48->′",
+		"./testdata/font/noise-contrast.txt", 36,
+		[]byte{33, 48, 65, 104, 149, 253},
+		"!′Ah•ý",
+	},
+	fontFragmentTest{"tex2 glyphs ",
+		"./testdata/font/Weil.txt", 30,
+		[]byte{55, 0, 1, 2, 20, 24, 33, 50, 102, 103, 104, 105},
+		"↦−·×≤∼→∈{}⟨⟩",
+	},
+	fontFragmentTest{"additional glyphs",
+		"./testdata/font/noise-contrast.txt", 34,
+		[]byte{32, 40, 48, 64, 80, 88, 65, 104, 149, 253},
+		"({∑∑h•ý",
+	},
+	fontFragmentTest{".notdef glyphs",
+		"./testdata/font/lec10.txt", 6,
+		[]byte{59, 66},
+		string([]rune{textencoding.MissingCodeRune, textencoding.MissingCodeRune}),
+	},
+	fontFragmentTest{"Numbered glyphs pattern 1",
+		"./testdata/font/v14.txt", 14,
+		[]byte{24, 25, 26, 27, 29},
+		" ffifflfffi",
+	},
+	fontFragmentTest{"Glyph aliases",
+		"./testdata/font/townes.txt", 10,
+		[]byte{2, 3, 4, 5, 6, 7, 1, 8, 9, 5, 1, 10, 9, 5, 48},
+		"Townes van Zan…",
+	},
+	fontFragmentTest{"Glyph `.` extensions. e.g. `integral.disp`",
+		"./testdata/font/preview.txt", 156,
+		[]byte{83, 0, 4, 67, 62, 64, 100, 65},
+		"∫=≈≥∈<d>",
+	},
+	fontFragmentTest{"A potpourri of glyph naming conventions",
+		"./testdata/font/Ingmar.txt", 144,
+		[]byte{18, 20, 10, 11, 13, 14, 15, 16, 21, 22, 23, 25, 26, 27, 28, 29, 30,
+			31, 33, 12, 17, 19, 24},
+		"ʼ8ČŽĆřćĐĭűőftffiflfffičž!fbfkffl\u00a0",
+	},
+	fontFragmentTest{"Zapf Dingbats",
+		"./testdata/font/estimation.txt", 122,
+		[]byte{2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14},
+		"✏✮✁☛❄❍❥❇◆✟✙",
+	},
+	fontFragmentTest{"Found these by trial and error",
+		"./testdata/font/helminths.txt", 19,
+		[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+			20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+			32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+			53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+			75, 76, 77},
+		" *ﺏﻁﻝﺍﺔﻴﻠﻜ،ﺕﺭﺘﻌﻤﺎﺠﻲﻨﻘﺩﻬ/ﻙﻭﻕﺃﻡﻋﻓﺴ٢٠٣ﻯﻥﺒﺸﺌﺱﻷ,ﺯﺤﺄﻀـﺓﺫ.)٤(٩ل٥٧٨ﻸﻰ%١ﺇ٦ﺡﻫﻱﻅﻐﺼﻑﺨﺀﻊLM",
+	},
 }
 
 type fontFragmentTest struct {
@@ -294,6 +359,18 @@ func (f *fontFragmentTest) check(t *testing.T) {
 	if actualText != f.expected {
 		t.Errorf("Incorrect decoding. %s\nexpected=%q\n  actual=%q",
 			f, f.expected, actualText)
+		act, exp := []rune(actualText), []rune(f.expected)
+		if len(act) != len(exp) {
+			t.Errorf("\texpected=%d actual=%d", len(exp), len(act))
+		} else {
+			for i, a := range act {
+				e := exp[i]
+				if a != e {
+					t.Errorf("\ti=%d expected=0x%04x=%c actual=0x%04x=%c", i, e, e, a, a)
+				}
+			}
+		}
+
 	}
 	if numChars != len([]rune(actualText)) {
 		t.Errorf("Incorrect numChars. %s numChars=%d expected=%d\n%+v\n%c",

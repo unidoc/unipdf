@@ -8,5 +8,5 @@ package textencoding
 // NewZapfDingbatsEncoder returns a SimpleEncoder that implements ZapfDingbatsEncoding.
 func NewZapfDingbatsEncoder() SimpleEncoder {
 	enc, _ := NewSimpleTextEncoder("ZapfDingbatsEncoding", nil)
-	return enc
+	return *enc
 }

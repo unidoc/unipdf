@@ -44,7 +44,7 @@ import (
 )
 
 // MakeEncoder returns an encoder built from the tables in  `rec`.
-func (rec *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
+func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := map[uint16]string{}
 	for code := uint16(0); code <= 256; code++ {
 		gid, ok := rec.Chars[code]
@@ -151,7 +151,8 @@ func (t *ttfParser) Parse() (TtfType, error) {
 		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
 	if version != "\x00\x01\x00\x00" {
-		common.Log.Debug("ERROR: Unrecognized TrueType file format. version=%q", version)
+		// This is not an error. In the font_test.go example axes.txt we see version "true".
+		common.Log.Debug("Unrecognized TrueType file format. version=%q", version)
 	}
 	numTables := int(t.ReadUShort())
 	t.Skip(3 * 2) // searchRange, entrySelector, rangeShift
@@ -379,7 +380,7 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 		length = t.ReadULong()
 		language = t.ReadULong()
 	}
-	common.Log.Debug("parseCmapSubtable10: format=%d length=%d language=%d",
+	common.Log.Trace("parseCmapSubtable10: format=%d length=%d language=%d",
 		format, length, language)
 
 	if format != 0 {
@@ -407,7 +408,7 @@ func (t *ttfParser) ParseCmap() error {
 	if err := t.Seek("cmap"); err != nil {
 		return err
 	}
-	common.Log.Debug("ParseCmap")
+	common.Log.Trace("ParseCmap")
 	t.ReadUShort() // version is ignored.
 	numTables := int(t.ReadUShort())
 	offset10 := int64(0)
@@ -465,6 +466,8 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 		return t.parseCmapFormat0()
 	case 6:
 		return t.parseCmapFormat6()
+	case 12:
+		return t.parseCmapFormat12()
 	default:
 		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
 		return nil // XXX: Can't return an error here if creator_test.go is to pass.
@@ -496,6 +499,43 @@ func (t *ttfParser) parseCmapFormat6() error {
 	for i := 0; i < entryCount; i++ {
 		glyphId := t.ReadUShort()
 		t.rec.Chars[uint16(i+firstCode)] = glyphId
+	}
+
+	return nil
+}
+
+func (t *ttfParser) parseCmapFormat12() error {
+
+	numGroups := t.ReadULong()
+
+	common.Log.Trace("parseCmapFormat12: %s numGroups=%d", t.rec.String(), numGroups)
+
+	for i := uint32(0); i < numGroups; i++ {
+		firstCode := t.ReadULong()
+		endCode := t.ReadULong()
+		startGlyph := t.ReadULong()
+
+		if firstCode > 0x0010FFFF || (0xD800 <= firstCode && firstCode <= 0xDFFF) {
+			return errors.New("Invalid characters codes")
+		}
+
+		if endCode < firstCode || endCode > 0x0010FFFF || (0xD800 <= endCode && endCode <= 0xDFFF) {
+			return errors.New("Invalid characters codes")
+		}
+
+		for j := uint32(0); j <= endCode-firstCode; j++ {
+			glyphId := startGlyph + j
+			// if glyphId >= numGlyphs {
+			// 	common.Log.Debug("ERROR: Format 12 cmap contains an invalid glyph index")
+			// 	break
+			// }
+			if firstCode+j > 0x10FFFF {
+				common.Log.Debug("Format 12 cmap contains character beyond UCS-4")
+			}
+
+			t.rec.Chars[uint16(i+firstCode)] = uint16(glyphId)
+		}
+
 	}
 
 	return nil

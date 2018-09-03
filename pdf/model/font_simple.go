@@ -180,11 +180,12 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 }
 
 // addEncoding adds the encoding to the font.
-// The order of precedence is important
+// The order of precedence is important.
 func (font *pdfFontSimple) addEncoding() error {
 	var baseEncoder string
 	var differences map[byte]string
 	var err error
+	var encoder *textencoding.SimpleEncoder
 
 	if font.Encoding != nil {
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
@@ -197,42 +198,42 @@ func (font *pdfFontSimple) addEncoding() error {
 		common.Log.Trace("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", base.basefont,
 			base.subtype, font.Encoding, font.Encoding)
 
-		encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+		encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 		if err != nil {
 			return err
 		}
-		font.SetEncoder(encoder)
 	}
 
-	if font.Encoder() == nil {
+	if encoder == nil {
 		descriptor := font.fontDescriptor
 		if descriptor != nil {
 			switch font.subtype {
 			case "Type1":
 				if descriptor.fontFile != nil && descriptor.fontFile.encoder != nil {
 					common.Log.Debug("Using fontFile")
-					font.SetEncoder(descriptor.fontFile.encoder)
+					encoder = descriptor.fontFile.encoder
 				}
 			case "TrueType":
 				if descriptor.fontFile2 != nil {
 					common.Log.Debug("Using FontFile2")
-					encoder, err := descriptor.fontFile2.MakeEncoder()
+					enc, err := descriptor.fontFile2.MakeEncoder()
 					if err == nil {
-						font.SetEncoder(encoder)
+						encoder = enc
 					}
 				}
 			}
 		}
 	}
 
-	// At the end, apply the differences.
-	if differences != nil {
-		common.Log.Trace("differences=%+v font=%s", differences, font.baseFields())
-		if se, ok := font.Encoder().(textencoding.SimpleEncoder); ok {
-			se.ApplyDifferences(differences)
-			font.SetEncoder(se)
+	if encoder != nil {
+		// At the end, apply the differences.
+		if differences != nil {
+			common.Log.Trace("differences=%+v font=%s", differences, font.baseFields())
+			encoder.ApplyDifferences(differences)
 		}
+		font.SetEncoder(encoder)
 	}
+
 	return nil
 }
 

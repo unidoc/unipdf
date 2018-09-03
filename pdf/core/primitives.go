@@ -144,9 +144,17 @@ func MakeFloat(val float64) *PdfObjectFloat {
 }
 
 // MakeString creates an PdfObjectString from a string.
+// NOTE: PDF does not use utf-8 string encoding like Go so `s` will often not be a utf-8 encoded
+// string.
 func MakeString(s string) *PdfObjectString {
 	str := PdfObjectString{val: s}
 	return &str
+}
+
+// MakeStringFromBytes creates an PdfObjectString from a byte array.
+// This is more natural than MakeString as `data` is usually not utf-8 encoded.
+func MakeStringFromBytes(data []byte) *PdfObjectString {
+	return MakeString(string(data))
 }
 
 // MakeHexString creates an PdfObjectString from a string intended for output as a hexadecimal string.

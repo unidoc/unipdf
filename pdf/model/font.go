@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -50,12 +51,23 @@ func (font PdfFont) Subtype() string {
 	return subtype
 }
 
+// IsCID returns true if the underlying font is CID.
+func (font PdfFont) IsCID() bool {
+	return font.baseFields().isCIDFont()
+}
+
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
 	if font.baseFields().toUnicodeCmap == nil {
 		return ""
 	}
 	return font.baseFields().toUnicodeCmap.Name()
+}
+
+// DefaultFont returns the default font, which is currently the built in Helvetica.
+func DefaultFont() *PdfFont {
+	std := standard14Fonts["Helvetica"]
+	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
@@ -66,6 +78,104 @@ func NewStandard14Font(basefont string) (*PdfFont, error) {
 		return nil, ErrFontNotSupported
 	}
 	return &PdfFont{context: &std}, nil
+}
+
+// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
+// a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
+// An error can occur if`basefont` is not one the standard 14 font names.
+func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+	baseEncoder := "MacRomanEncoding"
+	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
+		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
+
+	std, ok := standard14Fonts[basefont]
+	if !ok {
+		return nil, nil, ErrFontNotSupported
+	}
+	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
+	glyphCode := map[string]byte{}
+
+	// slots are the indexes in the encoding where the new character codes are added.
+	// slots are unused indexes, which are filled first. slots1 are the used indexes.
+	slots := []byte{}
+	slots1 := []byte{}
+	for code := uint16(1); code <= 0xff; code++ {
+		if glyph, ok := encoder.CodeToGlyph[code]; ok {
+			glyphCode[glyph] = byte(code)
+			// Don't overwrite space
+			if glyph != "space" {
+
+				slots1 = append(slots1, byte(code))
+			}
+		} else {
+			slots = append(slots, byte(code))
+		}
+	}
+	slots = append(slots, slots1...)
+
+	// `glyphs` are the font glyphs that we need to encode.
+	glyphs := []string{}
+	for _, r := range sortedAlphabet(alphabet) {
+		glyph, ok := textencoding.RuneToGlyph(r)
+		if !ok {
+			common.Log.Debug("No glyph for rune 0x%02x=%c", r, r)
+			continue
+		}
+		if _, ok = std.fontMetrics[glyph]; !ok {
+			common.Log.Trace("Glyph %q (0x%04x=%c)not in font", glyph, r, r)
+			continue
+		}
+		if len(glyphs) >= 255 {
+			common.Log.Debug("Too many characters for encoding")
+			break
+		}
+		glyphs = append(glyphs, glyph)
+
+	}
+
+	// Fill the slots, starting with the empty ones.
+	slotIdx := 0
+	differences := map[byte]string{}
+	for _, glyph := range glyphs {
+		if _, ok := glyphCode[glyph]; !ok {
+			differences[slots[slotIdx]] = glyph
+			slotIdx++
+		}
+	}
+	encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+
+	return &PdfFont{context: &std}, encoder, err
+}
+
+// GetAlphabet returns a map of the runes in `text`.
+func GetAlphabet(text string) map[rune]int {
+	alphabet := map[rune]int{}
+	for _, r := range text {
+		alphabet[r]++
+	}
+	return alphabet
+}
+
+// sortedAlphabet the runes in `alphabet` sorted by frequency.
+func sortedAlphabet(alphabet map[rune]int) []rune {
+	runes := []rune{}
+	for r := range alphabet {
+		runes = append(runes, r)
+	}
+	sort.Slice(runes, func(i, j int) bool {
+		ri, rj := runes[i], runes[j]
+		ni, nj := alphabet[ri], alphabet[rj]
+		if ni != nj {
+			return ni < nj
+		}
+		return ri < rj
+	})
+	return runes
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an
@@ -301,18 +411,18 @@ func (font PdfFont) baseFields() *fontCommon {
 
 // fontCommon represents the fields that are common to all PDF fonts.
 type fontCommon struct {
-	// All fonts have these fields
+	// All fonts have these fields.
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
 
 	// These are optional fields in the PDF font
 	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
 
-	// These objects are computed from optional fields in the PDF font
+	// These objects are computed from optional fields in the PDF font.
 	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
 	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
 
-	// objectNumber helps us find the font in the PDF being processed. This helps with debugging
+	// objectNumber helps us find the font in the PDF being processed. This helps with debugging.
 	objectNumber int64
 }
 
@@ -348,6 +458,7 @@ func (base fontCommon) String() string {
 	return fmt.Sprintf("FONT{%s}", base.coreString())
 }
 
+// coreString returns the contents of fontCommon.String() without the FONT{} wrapper.
 func (base fontCommon) coreString() string {
 	descriptor := ""
 	if base.fontDescriptor != nil {
