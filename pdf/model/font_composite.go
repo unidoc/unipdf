@@ -140,9 +140,12 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 
 	font.container.PdfObject = d
 
-	if font.encoder != nil {
+	if font.Encoding != nil {
+		d.Set("Encoding", font.Encoding)
+	} else if font.encoder != nil {
 		d.Set("Encoding", font.encoder.ToPdfObject())
 	}
+
 	if font.DescendantFont != nil {
 		// Shall be 1 element array.
 		d.Set("DescendantFonts", core.MakeArray(font.DescendantFont.ToPdfObject()))
@@ -304,15 +307,19 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	enc := textencoding.NewTrueTypeFontEncoder(font.ttfParser.Chars)
 
 	// Convert the glyph to character code.
-	rune, found := enc.GlyphToRune(glyph)
+	r, found := enc.GlyphToRune(glyph)
 	if !found {
 		common.Log.Debug("Unable to convert glyph %q to charcode (identity)", glyph)
 		return metrics, false
 	}
 
-	w, found := font.runeToWidthMap[uint16(rune)]
+	w, found := font.runeToWidthMap[uint16(r)]
 	if !found {
-		return metrics, false
+		dw, ok := core.GetInt(font.DW)
+		if !ok {
+			return metrics, false
+		}
+		w = int(*dw)
 	}
 	metrics.GlyphName = glyph
 	metrics.Wx = float64(w)
@@ -431,8 +438,8 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Construct W array.  Stores character code to width mappings.
 	wArr := &core.PdfObjectArray{}
-	i := uint16(0)
-	for int(i) < len(runes) {
+
+	for i := uint16(0); int(i) < len(runes); {
 
 		j := i + 1
 		for int(j) < len(runes) {
