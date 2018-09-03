@@ -622,7 +622,7 @@ func (to *textObject) moveTo(tx, ty float64) {
 	to.Tm = to.Tlm
 }
 
-// XYText represents text and its position in device coordinates.
+// XYText represents text drawn on a page and its position in device coordinates.
 type XYText struct {
 	Point
 	ColorStroking    model.PdfColor // Colour that text is stroked with, if any.
@@ -637,9 +637,10 @@ func (t *XYText) String() string {
 		t.X, t.Y, t.ColorStroking, t.ColorNonStroking, t.Orient, truncate(t.Text, 100))
 }
 
-// TextList is a list of texts and their position on a PDF page.
+// TextList is a list of texts and their positions on a PDF page.
 type TextList []XYText
 
+// Length returns the number of elements in `tl`.
 func (tl *TextList) Length() int {
 	return len(*tl)
 }
@@ -681,9 +682,9 @@ func (tl *TextList) SortPosition() {
 
 // Line represents a line of text on a page.
 type Line struct {
-	Y    float64   // y position of line
+	Y    float64   // y position of line.
 	Dx   []float64 // x distance between successive words in line.
-	Text string    // text in the line
+	Text string    // text in the line.
 }
 
 // toLines return the text and positions in `tl` as a slice of Line.
@@ -715,17 +716,17 @@ func (tl *TextList) toLines() []Line {
 	return lines
 }
 
-// newLine returns the Line reprentation of strings `words` with y coordinate `y` and x coordinates
-// `x`.
+// newLine returns the Line representation of strings `words` with y coordinate `y` and x
+// coordinates `x`.
 func newLine(y float64, x []float64, words []string) Line {
 	dx := []float64{}
 	for i := 1; i < len(x); i++ {
 		dx = append(dx, x[i]-x[i-1])
 	}
-	return Line{Y: y, Dx: dx, Text: strings.Join(words, "⇆")}
+	return Line{Y: y, Dx: dx, Text: strings.Join(words, "")}
 }
 
-// PageOrientation is a heuristic for the orientation of a page
+// PageOrientation is a heuristic for the orientation of a page.
 // XXX TODO: Use Page's Rotate flag instead.
 func (tl *TextList) PageOrientation() contentstream.Orientation {
 	landscapeCount := 0
@@ -741,7 +742,7 @@ func (tl *TextList) PageOrientation() contentstream.Orientation {
 	return contentstream.OrientationPortrait
 }
 
-// Transform transforms all points in `tl` by the affine transformation a, b, c, d, tx, ty
+// Transform transforms all points in `tl` by the affine transformation a, b, c, d, tx, ty.
 func (tl *TextList) Transform(a, b, c, d, tx, ty float64) {
 	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
 	for _, t := range *tl {
