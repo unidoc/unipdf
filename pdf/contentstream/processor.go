@@ -567,7 +567,7 @@ func (csp *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, r
 	return nil
 }
 
-// cm: concatenates an affine transform to the CTM
+// cm: concatenates an affine transform to the CTM.
 func (csp *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	resources *PdfPageResources) error {
 	if len(op.Params) != 6 {
@@ -585,11 +585,11 @@ func (csp *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	return nil
 }
 
-// Matrix is a linear transform matrix in homogenous coordinates
-// PDF coordinate transforms are always affine so we only need 6 of these. See newMatrix
+// Matrix is a linear transform matrix in homogenous coordinates.
+// PDF coordinate transforms are always affine so we only need 6 of these. See newMatrix.
 type Matrix [9]float64
 
-// IdentityMatrix returns the identity transform
+// IdentityMatrix returns the identity transform.
 func IdentityMatrix() Matrix {
 	return NewMatrix(1, 0, 0, 1, 0, 0)
 }
@@ -608,13 +608,13 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 	return m
 }
 
-// String returns a string describing `m`
+// String returns a string describing `m`.
 func (m Matrix) String() string {
 	a, b, c, d, tx, ty := m[0], m[1], m[3], m[4], m[6], m[7]
 	return fmt.Sprintf("%5.1f,%5.1f,%5.1f,%5.1f: %5.1f,%5.1f", a, b, c, d, tx, ty)
 }
 
-// Set sets `m` to affine transform  a,b,c,d,tx,ty
+// Set sets `m` to affine transform a,b,c,d,tx,ty.
 func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 	m[0], m[1] = a, b
 	m[3], m[4] = c, d
@@ -622,7 +622,7 @@ func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 	m.fixup()
 }
 
-// Concat sets `m` to `m` × `b`
+// Concat sets `m` to `m` × `b`.
 // `b` needs to be created by newMatrix. i.e. It must be an affine transform
 func (m *Matrix) Concat(b Matrix) {
 	*m = Matrix{
@@ -633,7 +633,7 @@ func (m *Matrix) Concat(b Matrix) {
 	m.fixup()
 }
 
-// Translate appends a translation of `dx`,`dy` to `m`
+// Translate appends a translation of `dx`,`dy` to `m`.
 // m.Translate(dx, dy) is equivalent to m.Concat(NewMatrix(1, 0, 0, 1, dx, dy))
 func (m *Matrix) Translate(dx, dy float64) {
 	m[6] += dx
@@ -641,14 +641,14 @@ func (m *Matrix) Translate(dx, dy float64) {
 	m.fixup()
 }
 
-// Transform returns coordinates `x`,`y` transformed by `m`
+// Transform returns coordinates `x`,`y` transformed by `m`.
 func (m *Matrix) Transform(x, y float64) (float64, float64) {
 	xp := x*m[0] + y*m[1] + m[6]
 	yp := x*m[3] + y*m[4] + m[7]
 	return xp, yp
 }
 
-// pageOrientation returns a guess at the pdf page orientation when text is printed with CTM `m`
+// pageOrientation returns a guess at the pdf page orientation when text is printed with CTM `m`.
 // XXX: Use pageRotate flag instead !@#$
 func (m *Matrix) pageOrientation() Orientation {
 	switch {
@@ -660,8 +660,8 @@ func (m *Matrix) pageOrientation() Orientation {
 }
 
 // fixup forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF
-// files
-// Currently it clamps elements to [-maxAbsNumber, -maxAbsNumber] to avoid floating point exceptions
+// files.
+// Currently it clamps elements to [-maxAbsNumber, -maxAbsNumber] to avoid floating point exceptions.
 func (m *Matrix) fixup() {
 	for i, x := range m {
 		if x > maxAbsNumber {
