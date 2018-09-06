@@ -332,8 +332,7 @@ func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, err
 		ctx.Y += img.Height()
 		ctx.Height -= img.Height()
 		return ctx, nil
-	} else {
-		// Absolute positioning - return original context.
-		return origCtx, nil
 	}
+	// Absolute positioning - return original context.
+	return origCtx, nil
 }
