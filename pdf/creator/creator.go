@@ -193,7 +193,7 @@ func (c *Creator) newPage() *model.PdfPage {
 	width := c.pagesize[0]
 	height := c.pagesize[1]
 
-	bbox := model.PdfRectangle{0, 0, width, height}
+	bbox := model.PdfRectangle{Llx: 0, Lly: 0, Urx: width, Ury: height}
 	page.MediaBox = &bbox
 
 	c.pageWidth = width

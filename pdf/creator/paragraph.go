@@ -209,7 +209,7 @@ func (p *Paragraph) Height() float64 {
 	return float64(len(p.textLines)) * p.lineHeight * p.fontSize
 }
 
-// Calculate the text width (if not wrapped).
+// getTextWidth calculates the text width as if all in one line (not taking wrapping into account).
 func (p *Paragraph) getTextWidth() float64 {
 	w := 0.0
 
@@ -387,10 +387,9 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X -= p.margins.left // Move back.
 		ctx.Width = origContext.Width
 		return blocks, ctx, nil
-	} else {
-		// Absolute: not changing the context.
-		return blocks, origContext, nil
 	}
+	// Absolute: not changing the context.
+	return blocks, origContext, nil
 }
 
 // drawParagraphOnBlock draws Paragraph `p` on Block `blk` at the specified location on the page,
