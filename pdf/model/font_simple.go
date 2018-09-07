@@ -377,6 +377,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	truefont.Encoding = core.MakeName("WinAnsiEncoding")
 
 	descriptor := &PdfFontDescriptor{}
+	descriptor.FontName = core.MakeName(ttf.PostScriptName)
 	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
 	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
 	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
