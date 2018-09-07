@@ -57,7 +57,7 @@ func (c *Creator) NewChapter(title string) *Chapter {
 	heading := fmt.Sprintf("%d. %s", c.chapters, title)
 	p := NewParagraph(heading)
 	p.SetFontSize(16)
-	helvetica, _ := model.NewStandard14Font("Helvetica")
+	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
 	p.SetFont(helvetica) // bold?
 
 	chap.heading = p

@@ -71,13 +71,46 @@ func DefaultFont() *PdfFont {
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
-// `basefont` is not one the standard 14 font names.
+// `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont string) (*PdfFont, error) {
 	std, ok := standard14Fonts[basefont]
 	if !ok {
+		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
 	}
 	return &PdfFont{context: &std}, nil
+}
+
+// Standard14Font is to be used only to define the standard 14 font names that follow.
+// This guarantees that calls to NewStandard14FontMustCompile will succeed.
+type Standard14Font string
+
+const (
+	Courier              Standard14Font = "Courier"
+	CourierBold          Standard14Font = "Courier-Bold"
+	CourierBoldOblique   Standard14Font = "Courier-BoldOblique"
+	CourierOblique       Standard14Font = "Courier-Oblique"
+	Helvetica            Standard14Font = "Helvetica"
+	HelveticaBold        Standard14Font = "Helvetica-Bold"
+	HelveticaBoldOblique Standard14Font = "Helvetica-BoldOblique"
+	HelveticaOblique     Standard14Font = "Helvetica-Oblique"
+	TimesRoman           Standard14Font = "Times-Roman"
+	TimesBold            Standard14Font = "Times-Bold"
+	TimesBoldItalic      Standard14Font = "Times-BoldItalic"
+	TimesItalic          Standard14Font = "Times-Italic"
+	Symbol               Standard14Font = "Symbol"
+	ZapfDingbats         Standard14Font = "ZapfDingbats"
+)
+
+// NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
+// If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
+// is guaranteed to succeed.
+func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
+	font, err := NewStandard14Font(string(basefont))
+	if err != nil {
+		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
+	}
+	return font
 }
 
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
