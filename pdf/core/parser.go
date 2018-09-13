@@ -1548,42 +1548,42 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 func (parser *PdfParser) IsEncrypted() (bool, error) {
 	if parser.crypter != nil {
 		return true, nil
+	} else if parser.trailer == nil {
+		return false, nil
 	}
 
-	if parser.trailer != nil {
-		common.Log.Trace("Checking encryption dictionary!")
-		encDictRef, isEncrypted := parser.trailer.Get("Encrypt").(*PdfObjectReference)
-		if isEncrypted {
-			common.Log.Trace("Is encrypted!")
-			common.Log.Trace("0: Look up ref %q", encDictRef)
-			encObj, err := parser.LookupByReference(*encDictRef)
-			common.Log.Trace("1: %q", encObj)
-			if err != nil {
-				return false, err
-			}
-
-			encIndObj, ok := encObj.(*PdfIndirectObject)
-			if !ok {
-				common.Log.Debug("Encryption object not an indirect object")
-				return false, errors.New("Type check error")
-			}
-			encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
-
-			common.Log.Trace("2: %q", encDict)
-			if !ok {
-				return false, errors.New("Trailer Encrypt object non dictionary")
-			}
-			crypter, err := PdfCryptMakeNew(parser, encDict, parser.trailer)
-			if err != nil {
-				return false, err
-			}
-
-			parser.crypter = &crypter
-			common.Log.Trace("Crypter object %b", crypter)
-			return true, nil
-		}
+	common.Log.Trace("Checking encryption dictionary!")
+	encDictRef, isEncrypted := parser.trailer.Get("Encrypt").(*PdfObjectReference)
+	if !isEncrypted {
+		return false, nil
 	}
-	return false, nil
+	common.Log.Trace("Is encrypted!")
+	common.Log.Trace("0: Look up ref %q", encDictRef)
+	encObj, err := parser.LookupByReference(*encDictRef)
+	common.Log.Trace("1: %q", encObj)
+	if err != nil {
+		return false, err
+	}
+
+	encIndObj, ok := encObj.(*PdfIndirectObject)
+	if !ok {
+		common.Log.Debug("Encryption object not an indirect object")
+		return false, errors.New("Type check error")
+	}
+	encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
+
+	common.Log.Trace("2: %q", encDict)
+	if !ok {
+		return false, errors.New("Trailer Encrypt object non dictionary")
+	}
+	crypter, err := PdfCryptMakeNew(parser, encDict, parser.trailer)
+	if err != nil {
+		return false, err
+	}
+
+	parser.crypter = &crypter
+	common.Log.Trace("Crypter object %b", crypter)
+	return true, nil
 }
 
 // Decrypt attempts to decrypt the PDF file with a specified password.  Also tries to
