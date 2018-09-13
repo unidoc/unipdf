@@ -24,13 +24,24 @@ type Division struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Controls whether the components are stacked horizontally
+	inline bool
 }
 
 // NewDivision returns a new Division container component.
 func NewDivision() *Division {
-	div := &Division{}
-	div.components = []VectorDrawable{}
-	return div
+	return &Division{
+		components: []VectorDrawable{},
+	}
+}
+
+func (div *Division) IsInline() bool {
+	return div.inline
+}
+
+func (div *Division) SetInline(inline bool) {
+	div.inline = inline
 }
 
 // Add adds a VectorDrawable to the Division container.
