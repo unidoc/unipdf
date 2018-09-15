@@ -230,6 +230,7 @@ func TestDecryptAES3(t *testing.T) {
 		// See https://github.com/sumatrapdfreader/sumatrapdf/issues/294
 		{file: "testcase_encry.pdf", pass: "123", R: 5}, // owner pass
 		{file: "testcase_encry.pdf", pass: "456", R: 5}, // user pass
+		// TODO(dennwc): test case for password > 127 bytes
 	}
 	for _, c := range cases {
 		c := c

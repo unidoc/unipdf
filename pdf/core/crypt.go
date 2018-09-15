@@ -14,6 +14,7 @@ import (
 	"crypto/rc4"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash"
@@ -431,18 +432,18 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// Also build the encryption/decryption key.
 
 	crypt.Authenticated = false
+	if crypt.R >= 5 {
+		authenticated, err := crypt.alg2a(password)
+		if err != nil {
+			return false, err
+		}
+		crypt.Authenticated = authenticated
+		return authenticated, err
+	}
 
 	// Try user password.
 	common.Log.Trace("Debugging authentication - user pass")
-	var (
-		authenticated bool
-		err           error
-	)
-	if crypt.R >= 5 {
-		authenticated, err = crypt.alg11(password)
-	} else {
-		authenticated, err = crypt.Alg6(password)
-	}
+	authenticated, err := crypt.Alg6(password)
 	if err != nil {
 		return false, err
 	}
@@ -456,11 +457,7 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
 	common.Log.Trace("Debugging authentication - owner pass")
-	if crypt.R >= 5 {
-		authenticated, err = crypt.alg12(password)
-	} else {
-		authenticated, err = crypt.Alg7(password)
-	}
+	authenticated, err = crypt.Alg7(password)
 	if err != nil {
 		return false, err
 	}
@@ -1089,7 +1086,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // It returns false if the password was wrong.
-func (crypt *PdfCrypt) alg2a(pass []byte) ([]byte, bool) {
+func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
 
 	// step a: Unicode normalization
@@ -1101,32 +1098,72 @@ func (crypt *PdfCrypt) alg2a(pass []byte) ([]byte, bool) {
 	}
 
 	// step c: test pass against the owner key
-	str := make([]byte, len(pass)+8+48)
-	i := copy(str, pass)
-	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
-	i += copy(str[i:], crypt.U[0:48])
+	h, err := crypt.alg12(pass)
+	if err != nil {
+		return false, err
+	}
+	var (
+		data []byte // data to hash
+		ekey []byte // encrypted file key
+		ukey []byte // user key; set only when using owner's password
+	)
+	if len(h) != 0 {
+		// owner password valid
 
-	h := alg2b(str, pass, crypt.U[0:48]) // TODO(dennwc): pass?
-	if !bytes.Equal(h[:32], crypt.O[:32]) {
-		return nil, false
+		// step d: compute an intermediate owner key
+		str := make([]byte, len(pass)+8+48)
+		i := copy(str, pass)
+		i += copy(str[i:], crypt.O[40:48]) // owner Key Salt
+		i += copy(str[i:], crypt.U[0:48])
+
+		data = str
+		ekey = crypt.OE
+		ukey = crypt.U[0:48]
+	} else {
+		// check user password
+		h, err = crypt.alg11(pass)
+		if err == nil && len(h) == 0 {
+			// try default password
+			h, err = crypt.alg11([]byte(""))
+		}
+		if err != nil {
+			return false, err
+		} else if len(h) == 0 {
+			// wrong password
+			return false, nil
+		}
+		// step e: compute an intermediate user key
+		str := make([]byte, len(pass)+8)
+		i := copy(str, pass)
+		i += copy(str[i:], crypt.U[40:48]) // user Key Salt
+
+		data = str
+		ekey = crypt.UE
+		ukey = nil
 	}
 
-	// step d: compute an intermediate owner key
-	i = copy(str, pass)
-	i += copy(str[i:], crypt.O[40:48]) // owner Key Salt
-	i += copy(str[i:], crypt.U[0:48])
+	if crypt.R == 5 {
+		fkey := alg2b_R5(data)
+		crypt.EncryptionKey = fkey
+		return true, nil
+	}
+	ekey = ekey[:32]
 
-	key := alg2b(str, pass, crypt.U[0:48]) // TODO(dennwc): pass?
-	ac, err := aes.NewCipher(key[:32])
+	// intermediate key
+	ikey := alg2b(data, pass, ukey)
+
+	ac, err := aes.NewCipher(ikey[:32])
 	if err != nil {
 		panic(err)
 	}
-	cbc := cipher.NewCBCEncrypter(ac, make([]byte, ac.BlockSize()))
-
+	iv := make([]byte, ac.BlockSize()) // TODO(dennwc): allocate statically
+	cbc := cipher.NewCBCDecrypter(ac, iv)
 	fkey := make([]byte, 32)
-	cbc.CryptBlocks(fkey, crypt.OE[:32])
+	cbc.CryptBlocks(fkey, ekey)
 
-	panic("not implemented")
+	crypt.EncryptionKey = fkey
+
+	return crypt.alg13(fkey)
 }
 
 func alg2b_R5(data []byte) []byte {
@@ -1469,8 +1506,8 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	return auth, nil
 }
 
-// alg11 authenticates the user password (R >= 5).
-func (crypt *PdfCrypt) alg11(upass []byte) (bool, error) {
+// alg11 authenticates the user password (R >= 5) and returns the hash.
+func (crypt *PdfCrypt) alg11(upass []byte) ([]byte, error) {
 	str := make([]byte, len(upass)+8)
 	i := copy(str, upass)
 	i += copy(str[i:], crypt.U[32:40]) // user Validation Salt
@@ -1481,19 +1518,19 @@ func (crypt *PdfCrypt) alg11(upass []byte) (bool, error) {
 	} else {
 		h = alg2b(str, upass, nil)
 	}
-	if !bytes.Equal(h[:32], crypt.U[:32]) {
-		return false, nil
+	h = h[:32]
+	if !bytes.Equal(h, crypt.U[:32]) {
+		return nil, nil
 	}
-	// TODO(dennwc): decode and set encryption key? or move it to another place?
-	return true, nil
+	return h, nil
 }
 
-// alg12 authenticates the owner password (R >= 5).
-func (crypt *PdfCrypt) alg12(opass []byte) (bool, error) {
+// alg12 authenticates the owner password (R >= 5) and returns the hash.
+func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 	str := make([]byte, len(opass)+8+48)
 	i := copy(str, opass)
 	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
-	i += copy(str[i:], crypt.U[0:48])  // owner Validation Salt
+	i += copy(str[i:], crypt.U[0:48])
 
 	var h []byte
 	if crypt.R == 5 {
@@ -1501,9 +1538,31 @@ func (crypt *PdfCrypt) alg12(opass []byte) (bool, error) {
 	} else {
 		h = alg2b(str, opass, crypt.U[0:48])
 	}
-	if !bytes.Equal(h[:32], crypt.O[:32]) {
-		return false, nil
+	h = h[:32]
+	if !bytes.Equal(h, crypt.O[:32]) {
+		return nil, nil
 	}
-	// TODO(dennwc): decode and set encryption key? or move it to another place?
+	return h, nil
+}
+
+// alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
+func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
+	perms := crypt.Perms[:16]
+
+	ac, err := aes.NewCipher(fkey[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	ecb := newECBDecrypter(ac)
+	ecb.CryptBlocks(perms, perms)
+
+	if !bytes.Equal(perms[9:12], []byte("adb")) {
+		return false, errors.New("decoded permissions are invalid")
+	}
+	p := int(int32(binary.LittleEndian.Uint32(perms[0:4])))
+	if p != crypt.P {
+		return false, errors.New("permissions validation failed")
+	}
 	return true, nil
 }
