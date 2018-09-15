@@ -8,6 +8,8 @@
 package core
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -208,5 +210,56 @@ func TestDecryption1(t *testing.T) {
 	if string(so.Stream) != string(exp) {
 		t.Errorf("Stream content wrong")
 		return
+	}
+}
+
+const aes3Dir = `../../testfiles/AESv3`
+
+func TestDecryptAES3(t *testing.T) {
+	cases := []struct {
+		file string
+		pass string
+		R    int
+	}{
+		// See https://github.com/mozilla/pdf.js/issues/6010
+		{file: "issue6010_1.pdf", pass: "abc", R: 6},
+		{file: "issue6010_2.pdf", pass: "æøå", R: 6},
+		// See https://github.com/mozilla/pdf.js/pull/6531
+		{file: "pr6531_1.pdf", pass: "asdfasdf", R: 6},
+		{file: "pr6531_2.pdf", pass: "asdfasdf", R: 6},
+		// See https://github.com/sumatrapdfreader/sumatrapdf/issues/294
+		{file: "testcase_encry.pdf", pass: "123", R: 5}, // owner pass
+		{file: "testcase_encry.pdf", pass: "456", R: 5}, // user pass
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.file, func(t *testing.T) {
+			f, err := os.Open(filepath.Join(aes3Dir, c.file))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+
+			p, err := NewParser(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ok, err := p.IsEncrypted(); err != nil {
+				t.Fatal(err)
+			} else if !ok {
+				t.Fatal("document is not encrypted")
+			}
+			ok, err := p.Decrypt([]byte(c.pass))
+			if err != nil {
+				t.Fatal(err)
+			} else if !ok {
+				t.Fatal("wrong password")
+			}
+			cr := p.GetCrypter()
+			if cr.R != c.R {
+				t.Errorf("unexpected R: %v", cr.R)
+			}
+			t.Logf("%#v", cr)
+		})
 	}
 }

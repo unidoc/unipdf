@@ -1553,30 +1553,40 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 	}
 
 	common.Log.Trace("Checking encryption dictionary!")
-	encDictRef, isEncrypted := parser.trailer.Get("Encrypt").(*PdfObjectReference)
-	if !isEncrypted {
+	e := parser.trailer.Get("Encrypt")
+	if e == nil {
 		return false, nil
 	}
 	common.Log.Trace("Is encrypted!")
-	common.Log.Trace("0: Look up ref %q", encDictRef)
-	encObj, err := parser.LookupByReference(*encDictRef)
-	common.Log.Trace("1: %q", encObj)
-	if err != nil {
-		return false, err
+	var dict *PdfObjectDictionary
+	switch e := e.(type) {
+	case *PdfObjectDictionary:
+		dict = e
+	case *PdfObjectReference:
+		common.Log.Trace("0: Look up ref %q", e)
+		encObj, err := parser.LookupByReference(*e)
+		common.Log.Trace("1: %q", encObj)
+		if err != nil {
+			return false, err
+		}
+
+		encIndObj, ok := encObj.(*PdfIndirectObject)
+		if !ok {
+			common.Log.Debug("Encryption object not an indirect object")
+			return false, errors.New("Type check error")
+		}
+		encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
+
+		common.Log.Trace("2: %q", encDict)
+		if !ok {
+			return false, errors.New("Trailer Encrypt object non dictionary")
+		}
+		dict = encDict
+	default:
+		return false, fmt.Errorf("unsupported type: %T", e)
 	}
 
-	encIndObj, ok := encObj.(*PdfIndirectObject)
-	if !ok {
-		common.Log.Debug("Encryption object not an indirect object")
-		return false, errors.New("Type check error")
-	}
-	encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
-
-	common.Log.Trace("2: %q", encDict)
-	if !ok {
-		return false, errors.New("Trailer Encrypt object non dictionary")
-	}
-	crypter, err := PdfCryptMakeNew(parser, encDict, parser.trailer)
+	crypter, err := PdfCryptMakeNew(parser, dict, parser.trailer)
 	if err != nil {
 		return false, err
 	}

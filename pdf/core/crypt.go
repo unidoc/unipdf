@@ -6,13 +6,17 @@
 package core
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"crypto/sha256"
+	"crypto/sha512"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 
 	"github.com/unidoc/unidoc/common"
@@ -29,7 +33,10 @@ type PdfCrypt struct {
 	R                int
 	O                []byte
 	U                []byte
+	OE               []byte // R=6
+	UE               []byte // R=6
 	P                int
+	Perms            []byte // R=6
 	EncryptMetadata  bool
 	Id0              string
 	EncryptionKey    []byte
@@ -69,9 +76,16 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 // CryptFilter represents information from a CryptFilter dictionary.
 // TODO (v3): Unexport.
 type CryptFilter struct {
-	Cfm    string
+	Cfm    string // TODO (v3): CryptFilterMethod
 	Length int
 }
+
+const (
+	CryptFilterNone  = "None"
+	CryptFilterV2    = "V2"
+	CryptFilterAESV2 = "AESV2"
+	CryptFilterAESV3 = "AESV3"
+)
 
 // CryptFilters is a map of crypt filter name and underlying CryptFilter info.
 // TODO (v3): Unexport.
@@ -131,19 +145,18 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		cf := CryptFilter{}
 
 		// Method.
-		cfMethod := "None" // Default.
+		cfMethod := ""
 		cfm, ok := dict.Get("CFM").(*PdfObjectName)
-		if ok {
-			if *cfm == "V2" {
-				cfMethod = "V2"
-			} else if *cfm == "AESV2" {
-				cfMethod = "AESV2"
-			} else {
-				return fmt.Errorf("Unsupported crypt filter (%s)", *cfm)
-			}
+		if !ok {
+			return fmt.Errorf("Unsupported crypt filter (None)")
 		}
-		if cfMethod != "V2" && cfMethod != "AESV2" {
-			return fmt.Errorf("Unsupported crypt filter (%s)", cfMethod)
+		switch f := string(*cfm); f {
+		case CryptFilterV2,
+			CryptFilterAESV2,
+			CryptFilterAESV3:
+			cfMethod = f
+		default:
+			return fmt.Errorf("Unsupported crypt filter (%s)", f)
 		}
 		cf.Cfm = cfMethod
 
@@ -161,7 +174,7 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 				if *length == 64 || *length == 128 {
 					common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", *length)
 					*length /= 8
-				} else {
+				} else if !(*length == 32 && cf.Cfm == CryptFilterAESV3) { // TODO(dennwc): verify conditions
 					return fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", *length)
 				}
 			}
@@ -237,7 +250,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
 			crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
-		} else if *V == 4 {
+		} else if *V >= 4 && *V <= 5 {
 			crypter.V = int(*V)
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
@@ -254,8 +267,8 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing R")
 	}
-	if *R < 2 || *R > 4 {
-		return crypter, errors.New("Invalid R")
+	if *R < 2 || *R > 6 {
+		return crypter, fmt.Errorf("Invalid R (%d)", *R)
 	}
 	crypter.R = int(*R)
 
@@ -263,7 +276,11 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing O")
 	}
-	if len(*O) != 32 {
+	if crypter.R == 5 || crypter.R == 6 {
+		if len(*O) != 48 {
+			return crypter, fmt.Errorf("Length(O) != 48 (%d)", len(*O))
+		}
+	} else if len(*O) != 32 {
 		return crypter, fmt.Errorf("Length(O) != 32 (%d)", len(*O))
 	}
 	crypter.O = []byte(*O)
@@ -272,7 +289,11 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
-	if len(*U) != 32 {
+	if crypter.R == 5 || crypter.R == 6 {
+		if len(*U) != 48 {
+			return crypter, fmt.Errorf("Length(U) != 48 (%d)", len(*U))
+		}
+	} else if len(*U) != 32 {
 		// Strictly this does not cause an error.
 		// If O is OK and others then can still read the file.
 		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(*U))
@@ -280,11 +301,42 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.U = []byte(*U)
 
+	if crypter.R == 6 {
+		OE, ok := ed.Get("OE").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing OE")
+		}
+		if len(*OE) != 32 {
+			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(*OE))
+		}
+		crypter.OE = []byte(*OE)
+
+		UE, ok := ed.Get("UE").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing UE")
+		}
+		if len(*UE) != 32 {
+			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(*UE))
+		}
+		crypter.UE = []byte(*UE)
+	}
+
 	P, ok := ed.Get("P").(*PdfObjectInteger)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing permissions attr")
 	}
 	crypter.P = int(*P)
+
+	if crypter.R == 6 {
+		Perms, ok := ed.Get("Perms").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing Perms")
+		}
+		if len(*Perms) != 16 {
+			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(*Perms))
+		}
+		crypter.Perms = []byte(*Perms)
+	}
 
 	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)
 	if ok {
@@ -382,7 +434,15 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 
 	// Try user password.
 	common.Log.Trace("Debugging authentication - user pass")
-	authenticated, err := crypt.Alg6(password)
+	var (
+		authenticated bool
+		err           error
+	)
+	if crypt.R >= 5 {
+		authenticated, err = crypt.alg11(password)
+	} else {
+		authenticated, err = crypt.Alg6(password)
+	}
 	if err != nil {
 		return false, err
 	}
@@ -396,7 +456,11 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
 	common.Log.Trace("Debugging authentication - owner pass")
-	authenticated, err = crypt.Alg7(password)
+	if crypt.R >= 5 {
+		authenticated, err = crypt.alg12(password)
+	} else {
+		authenticated, err = crypt.Alg7(password)
+	}
 	if err != nil {
 		return false, err
 	}
@@ -437,6 +501,7 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 	}
 
 	// Try user password.
+	// TODO(dennwc): alg11
 	isUser, err := crypt.Alg6(password)
 	if err != nil {
 		return false, perms, err
@@ -1022,6 +1087,117 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	return nil
 }
 
+// alg2a retrieves the encryption key from an encrypted document (R >= 5).
+// It returns false if the password was wrong.
+func (crypt *PdfCrypt) alg2a(pass []byte) ([]byte, bool) {
+	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
+
+	// step a: Unicode normalization
+	// TODO(dennwc): make sure that UTF-8 strings are normalized
+
+	// step b: truncate to 127 bytes
+	if len(pass) > 127 {
+		pass = pass[:127]
+	}
+
+	// step c: test pass against the owner key
+	str := make([]byte, len(pass)+8+48)
+	i := copy(str, pass)
+	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
+	i += copy(str[i:], crypt.U[0:48])
+
+	h := alg2b(str, pass, crypt.U[0:48]) // TODO(dennwc): pass?
+	if !bytes.Equal(h[:32], crypt.O[:32]) {
+		return nil, false
+	}
+
+	// step d: compute an intermediate owner key
+	i = copy(str, pass)
+	i += copy(str[i:], crypt.O[40:48]) // owner Key Salt
+	i += copy(str[i:], crypt.U[0:48])
+
+	key := alg2b(str, pass, crypt.U[0:48]) // TODO(dennwc): pass?
+	ac, err := aes.NewCipher(key[:32])
+	if err != nil {
+		panic(err)
+	}
+	cbc := cipher.NewCBCEncrypter(ac, make([]byte, ac.BlockSize()))
+
+	fkey := make([]byte, 32)
+	cbc.CryptBlocks(fkey, crypt.OE[:32])
+
+	panic("not implemented")
+}
+
+func alg2b_R5(data []byte) []byte {
+	h := sha256.New()
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// alg2b computes a hash for R>=5.
+func alg2b(data, pwd, userKey []byte) []byte {
+	K := alg2b_R5(data)
+
+	round := func(rnd int) (E []byte) {
+		// TODO(dennwc): optimize allocations (64*(127+64+48)
+
+		// step a: repeat pass+K 64 times
+		n := len(pwd) + len(K) + len(userKey)
+		part := make([]byte, n)
+		i := copy(part, pwd)
+		i += copy(part[i:], K[:])
+		i += copy(part[i:], userKey)
+		if i != n {
+			panic("wrong size")
+		}
+		K1 := bytes.Repeat(part, 64)
+
+		// step b: encrypt K1 with AES-128 CBC
+		ac, err := aes.NewCipher(K[0:16])
+		if err != nil {
+			panic(err)
+		}
+		cbc := cipher.NewCBCEncrypter(ac, K[16:32])
+		cbc.CryptBlocks(K1, K1)
+		E = K1
+
+		// step c: use 16 bytes of E as big-endian int, select the next hash
+		b := 0
+		for i := 0; i < 16; i++ {
+			b += int(E[i] % 3)
+		}
+		var h hash.Hash
+		switch b % 3 {
+		case 0:
+			h = sha256.New()
+		case 1:
+			h = sha512.New384()
+		case 2:
+			h = sha512.New()
+		}
+
+		// step d: take the hash of E, use as a new K
+		h.Reset()
+		h.Write(E)
+		K = h.Sum(nil)
+
+		return E
+	}
+
+	for i := 0; ; {
+		E := round(i)
+		b := uint8(E[len(E)-1])
+		// from the spec, it appears that i should be incremented after
+		// the test, but that doesn't match what Adobe does
+		i++
+		if i >= 64 && b <= uint8(i-32) {
+			break
+		}
+	}
+	return K[:32]
+}
+
 // Alg2 computes an encryption key.
 // TODO (v3): Unexport.
 func (crypt *PdfCrypt) Alg2(pass []byte) []byte {
@@ -1291,4 +1467,43 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	}
 
 	return auth, nil
+}
+
+// alg11 authenticates the user password (R >= 5).
+func (crypt *PdfCrypt) alg11(upass []byte) (bool, error) {
+	str := make([]byte, len(upass)+8)
+	i := copy(str, upass)
+	i += copy(str[i:], crypt.U[32:40]) // user Validation Salt
+
+	var h []byte
+	if crypt.R == 5 {
+		h = alg2b_R5(str)
+	} else {
+		h = alg2b(str, upass, nil)
+	}
+	if !bytes.Equal(h[:32], crypt.U[:32]) {
+		return false, nil
+	}
+	// TODO(dennwc): decode and set encryption key? or move it to another place?
+	return true, nil
+}
+
+// alg12 authenticates the owner password (R >= 5).
+func (crypt *PdfCrypt) alg12(opass []byte) (bool, error) {
+	str := make([]byte, len(opass)+8+48)
+	i := copy(str, opass)
+	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
+	i += copy(str[i:], crypt.U[0:48])  // owner Validation Salt
+
+	var h []byte
+	if crypt.R == 5 {
+		h = alg2b_R5(str)
+	} else {
+		h = alg2b(str, opass, crypt.U[0:48])
+	}
+	if !bytes.Equal(h[:32], crypt.O[:32]) {
+		return false, nil
+	}
+	// TODO(dennwc): decode and set encryption key? or move it to another place?
+	return true, nil
 }
