@@ -1113,6 +1113,8 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	return nil
 }
 
+var ivAESZero = make([]byte, aes.BlockSize)
+
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // It returns false if the password was wrong.
 func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
@@ -1179,7 +1181,7 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	if err != nil {
 		panic(err)
 	}
-	iv := make([]byte, ac.BlockSize()) // TODO(dennwc): allocate statically
+	iv := ivAESZero
 	cbc := cipher.NewCBCDecrypter(ac, iv)
 	fkey := make([]byte, 32)
 	cbc.CryptBlocks(fkey, ekey)
@@ -1208,23 +1210,40 @@ func alg2b_R5(data []byte) []byte {
 	return h.Sum(nil)
 }
 
+func repeat(buf []byte, sz int) {
+	bp := sz
+	for bp < len(buf) {
+		copy(buf[bp:], buf[:bp])
+		bp *= 2
+	}
+}
+
 // alg2b computes a hash for R=6.
 func alg2b(data, pwd, userKey []byte) []byte {
-	K := alg2b_R5(data)
+	var (
+		s256, s384, s512 hash.Hash
+	)
+	s256 = sha256.New()
+	hbuf := make([]byte, 64)
+
+	h := s256
+	h.Write(data)
+	K := h.Sum(hbuf[:0])
+
+	buf := make([]byte, 64*(127+64+48))
 
 	round := func(rnd int) (E []byte) {
-		// TODO(dennwc): optimize allocations (64*(127+64+48)
-
 		// step a: repeat pass+K 64 times
 		n := len(pwd) + len(K) + len(userKey)
-		part := make([]byte, n)
+		part := buf[:n]
 		i := copy(part, pwd)
 		i += copy(part[i:], K[:])
 		i += copy(part[i:], userKey)
 		if i != n {
 			panic("wrong size")
 		}
-		K1 := bytes.Repeat(part, 64)
+		K1 := buf[:n*64]
+		repeat(K1, n)
 
 		// step b: encrypt K1 with AES-128 CBC
 		ac, err := aes.NewCipher(K[0:16])
@@ -1243,17 +1262,23 @@ func alg2b(data, pwd, userKey []byte) []byte {
 		var h hash.Hash
 		switch b % 3 {
 		case 0:
-			h = sha256.New()
+			h = s256
 		case 1:
-			h = sha512.New384()
+			if s384 == nil {
+				s384 = sha512.New384()
+			}
+			h = s384
 		case 2:
-			h = sha512.New()
+			if s512 == nil {
+				s512 = sha512.New()
+			}
+			h = s512
 		}
 
 		// step d: take the hash of E, use as a new K
 		h.Reset()
 		h.Write(E)
-		K = h.Sum(nil)
+		K = h.Sum(hbuf[:0])
 
 		return E
 	}
