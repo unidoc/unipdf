@@ -51,7 +51,11 @@ func TestDecryptAES3(t *testing.T) {
 			file: "testcase_encry.pdf", pass: "456", R: 5, pages: 1, // user pass
 			page1: "\n\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05\x00\x06\x00\a\x00\b\n\x00\x01\n\x00\t\x00\n\x00\v",
 		},
-		// TODO(dennwc): test case for password > 127 bytes
+		{
+			file: "x300.pdf", R: 5, pages: 1,
+			pass:  "rnofajrcudiaplhafbqrkrafphehjlvctmwftvpzvachsulmfkjltliftbfpgabustkjfybeqvwgdfawyghoijxgwuxkkrywybpapsswxcnigwwnpttgvfxtrlnbqzberhrnelvcqjaasothqhtzjoxqttlqrmxfqawyhizoslazxhdqffiweruqjrmpdsxutvevceaormydxhregsadphblbaziucrnsbntzptdzfkzfzlwmxhslywusuajwspvabqwopbxdttwbjappgiaxrkgmsuodkzhbqvqiwummcdu",
+			page1: " \nTemplate form for pdf_form_add.go\t \nThis PDF is explicitly created as a template\t \tfor adding\t \ta PDF interactive form to.\t \n \nFull \tName: _________________________________________\t \nAddress\t \tLine 1\t: \t__________________\t________________\t____\t \nAddress\t \tLine \t2\t: ________________\t_______\t___________\t____\t \nAge: ______\t \nGender: \t  \t[ ] Male    [ ] Female\t \nCity: ______________\t \nCountry: ______________\t \nFavorite Color:\t \t \t___________________\t \n \n \n ",
+		},
 	}
 	for _, c := range cases {
 		c := c
