@@ -175,7 +175,7 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 				if *length == 64 || *length == 128 {
 					common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", *length)
 					*length /= 8
-				} else if !(*length == 32 && cf.Cfm == CryptFilterAESV3) { // TODO(dennwc): verify conditions
+				} else if !(*length == 32 && cf.Cfm == CryptFilterAESV3) {
 					return fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", *length)
 				}
 			}
@@ -278,8 +278,9 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		return crypter, errors.New("Encrypt dictionary missing O")
 	}
 	if crypter.R == 5 || crypter.R == 6 {
-		if len(*O) != 48 {
-			return crypter, fmt.Errorf("Length(O) != 48 (%d)", len(*O))
+		// the spec says =48 bytes, but Acrobat pads them out longer
+		if len(*O) < 48 {
+			return crypter, fmt.Errorf("Length(O) < 48 (%d)", len(*O))
 		}
 	} else if len(*O) != 32 {
 		return crypter, fmt.Errorf("Length(O) != 32 (%d)", len(*O))
@@ -291,8 +292,9 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
 	if crypter.R == 5 || crypter.R == 6 {
-		if len(*U) != 48 {
-			return crypter, fmt.Errorf("Length(U) != 48 (%d)", len(*U))
+		// the spec says =48 bytes, but Acrobat pads them out longer
+		if len(*U) < 48 {
+			return crypter, fmt.Errorf("Length(U) < 48 (%d)", len(*U))
 		}
 	} else if len(*U) != 32 {
 		// Strictly this does not cause an error.
@@ -302,7 +304,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.U = []byte(*U)
 
-	if crypter.R == 6 {
+	if crypter.R >= 5 {
 		OE, ok := ed.Get("OE").(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing OE")
@@ -480,7 +482,20 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 	perms := AccessPermissions{}
 
 	// Try owner password -> full rights.
-	isOwner, err := crypt.Alg7(password)
+	var (
+		isOwner bool
+		err     error
+	)
+	if crypt.R >= 5 {
+		var h []byte
+		h, err = crypt.alg12(password)
+		if err != nil {
+			return false, perms, err
+		}
+		isOwner = len(h) != 0
+	} else {
+		isOwner, err = crypt.Alg7(password)
+	}
 	if err != nil {
 		return false, perms, err
 	}
@@ -498,8 +513,17 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 	}
 
 	// Try user password.
-	// TODO(dennwc): alg11
-	isUser, err := crypt.Alg6(password)
+	var isUser bool
+	if crypt.R >= 5 {
+		var h []byte
+		h, err = crypt.alg11(password)
+		if err != nil {
+			return false, perms, err
+		}
+		isUser = len(h) != 0
+	} else {
+		isUser, err = crypt.Alg6(password)
+	}
 	if err != nil {
 		return false, perms, err
 	}
@@ -537,10 +561,10 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
-	isAES := false
-	if cf.Cfm == "AESV2" {
-		isAES = true
+	if cf.Cfm == CryptFilterAESV3 {
+		return ekey, nil
 	}
+	isAES2 := cf.Cfm == CryptFilterAESV2
 
 	key := make([]byte, len(ekey)+5)
 	for i := 0; i < len(ekey); i++ {
@@ -554,7 +578,7 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 		b := byte((genNum >> uint32(8*i)) & 0xff)
 		key[i+len(ekey)+3] = b
 	}
-	if isAES {
+	if isAES2 {
 		// If using the AES algorithm, extend the encryption key an
 		// additional 4 bytes by adding the value “sAlT”, which
 		// corresponds to the hexadecimal values 0x73, 0x41, 0x6C, 0x54.
@@ -598,7 +622,7 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 	}
 
 	cfMethod := cf.Cfm
-	if cfMethod == "V2" {
+	if cfMethod == CryptFilterV2 {
 		// Standard RC4 algorithm.
 		ciph, err := rc4.NewCipher(okey)
 		if err != nil {
@@ -608,7 +632,7 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		ciph.XORKeyStream(buf, buf)
 		common.Log.Trace("to: % x", buf)
 		return buf, nil
-	} else if cfMethod == "AESV2" {
+	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
 		// Strings and streams encrypted with AES shall use a padding
 		// scheme that is described in Internet RFC 2898, PKCS #5:
 		// Password-Based Cryptography Specification Version 2.0; see
@@ -659,12 +683,14 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		}
 
 		// The padded length is indicated by the last values.  Remove those.
-		padLen := int(buf[len(buf)-1])
-		if padLen >= len(buf) {
-			common.Log.Debug("Illegal pad length")
-			return buf, fmt.Errorf("Invalid pad length")
+		if cfMethod == CryptFilterAESV2 {
+			padLen := int(buf[len(buf)-1])
+			if padLen >= len(buf) {
+				common.Log.Debug("Illegal pad length")
+				return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
+			}
+			buf = buf[:len(buf)-padLen]
 		}
-		buf = buf[:len(buf)-padLen]
 
 		return buf, nil
 	}
@@ -869,7 +895,7 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		ciph.XORKeyStream(buf, buf)
 		common.Log.Trace("to: % x", buf)
 		return buf, nil
-	} else if cfMethod == "AESV2" {
+	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
 		// Strings and streams encrypted with AES shall use a padding
 		// scheme that is described in Internet RFC 2898, PKCS #5:
 		// Password-Based Cryptography Specification Version 2.0; see
@@ -895,11 +921,14 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		// block size parameter is set to 16 bytes, and the initialization
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
-		pad := 16 - len(buf)%16
-		for i := 0; i < pad; i++ {
-			buf = append(buf, byte(pad))
+
+		if cfMethod == CryptFilterAESV2 {
+			pad := 16 - len(buf)%16
+			for i := 0; i < pad; i++ {
+				buf = append(buf, byte(pad))
+			}
+			common.Log.Trace("Padded to %d bytes", len(buf))
 		}
-		common.Log.Trace("Padded to %d bytes", len(buf))
 
 		// Generate random 16 bytes, place in beginning of buffer.
 		ciphertext := make([]byte, 16+len(buf))
@@ -1141,16 +1170,10 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 		ekey = crypt.UE
 		ukey = nil
 	}
-
-	if crypt.R == 5 {
-		fkey := alg2b_R5(data)
-		crypt.EncryptionKey = fkey
-		return true, nil
-	}
 	ekey = ekey[:32]
 
 	// intermediate key
-	ikey := alg2b(data, pass, ukey)
+	ikey := crypt.alg2b(data, pass, ukey)
 
 	ac, err := aes.NewCipher(ikey[:32])
 	if err != nil {
@@ -1163,16 +1186,29 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 
 	crypt.EncryptionKey = fkey
 
+	if crypt.R == 5 {
+		return true, nil
+	}
+
 	return crypt.alg13(fkey)
 }
 
+// alg2b computes a hash for R=5 and R=6.
+func (crypt *PdfCrypt) alg2b(data, pwd, userKey []byte) []byte {
+	if crypt.R == 5 {
+		return alg2b_R5(data)
+	}
+	return alg2b(data, pwd, userKey)
+}
+
+// alg2b_R5 computes a hash for R=5.
 func alg2b_R5(data []byte) []byte {
 	h := sha256.New()
 	h.Write(data)
 	return h.Sum(nil)
 }
 
-// alg2b computes a hash for R>=5.
+// alg2b computes a hash for R=6.
 func alg2b(data, pwd, userKey []byte) []byte {
 	K := alg2b_R5(data)
 
@@ -1512,12 +1548,7 @@ func (crypt *PdfCrypt) alg11(upass []byte) ([]byte, error) {
 	i := copy(str, upass)
 	i += copy(str[i:], crypt.U[32:40]) // user Validation Salt
 
-	var h []byte
-	if crypt.R == 5 {
-		h = alg2b_R5(str)
-	} else {
-		h = alg2b(str, upass, nil)
-	}
+	h := crypt.alg2b(str, upass, nil)
 	h = h[:32]
 	if !bytes.Equal(h, crypt.U[:32]) {
 		return nil, nil
@@ -1532,12 +1563,7 @@ func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
 	i += copy(str[i:], crypt.U[0:48])
 
-	var h []byte
-	if crypt.R == 5 {
-		h = alg2b_R5(str)
-	} else {
-		h = alg2b(str, opass, crypt.U[0:48])
-	}
+	h := crypt.alg2b(str, opass, crypt.U[0:48])
 	h = h[:32]
 	if !bytes.Equal(h, crypt.O[:32]) {
 		return nil, nil
