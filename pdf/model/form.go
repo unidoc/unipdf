@@ -42,6 +42,8 @@ func NewPdfAcroForm() *PdfAcroForm {
 	container.PdfObject = core.MakeDict()
 	acroForm.container = container
 
+	acroForm.Fields = &[]*PdfField{}
+
 	return acroForm
 }
 
@@ -201,7 +203,13 @@ func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
 	if this.Fields != nil {
 		arr := core.PdfObjectArray{}
 		for _, field := range *this.Fields {
-			arr.Append(field.ToPdfObject())
+			ctx := field.GetContext()
+			if ctx != nil {
+				// Call subtype's ToPdfObject directly to get the entire field data.
+				arr.Append(ctx.ToPdfObject())
+			} else {
+				arr.Append(field.ToPdfObject())
+			}
 		}
 		dict.Set("Fields", &arr)
 	}

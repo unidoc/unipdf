@@ -98,6 +98,12 @@ func MakeInteger(val int64) *PdfObjectInteger {
 	return &num
 }
 
+// MakeBool creates a PdfObjectBool from a bool value.
+func MakeBool(val bool) *PdfObjectBool {
+	bval := PdfObjectBool(val)
+	return &bval
+}
+
 // MakeArray creates an PdfObjectArray from a list of PdfObjects.
 func MakeArray(objects ...PdfObject) *PdfObjectArray {
 	array := &PdfObjectArray{}
