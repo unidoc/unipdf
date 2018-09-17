@@ -86,7 +86,7 @@ func (this *PdfReader) GetEncryptionMethod() string {
 		str += fmt.Sprintf("RC4: %d bits", crypter.Length)
 	} else if crypter.V == 3 {
 		str += "Unpublished algorithm"
-	} else if crypter.V == 4 {
+	} else if crypter.V >= 4 {
 		// Look at CF, StmF, StrF
 		str += fmt.Sprintf("Stream filter: %s - String filter: %s", crypter.StreamFilter, crypter.StringFilter)
 		str += "; Crypt filters:"
