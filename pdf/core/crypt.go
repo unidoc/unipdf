@@ -50,6 +50,8 @@ type PdfCrypt struct {
 	StringFilter string
 
 	parser *PdfParser
+
+	ivAESZero []byte // a zero buffer used as an initialization vector for AES
 }
 
 // AccessPermissions is a list of access permissions for a PDF file.
@@ -81,11 +83,13 @@ type CryptFilter struct {
 	Length int
 }
 
+// Encryption filters names.
+// Table 25, CFM (page 92)
 const (
-	CryptFilterNone  = "None"
-	CryptFilterV2    = "V2"
-	CryptFilterAESV2 = "AESV2"
-	CryptFilterAESV3 = "AESV3"
+	CryptFilterNone  = "None"  // do not decrypt data
+	CryptFilterV2    = "V2"    // RC4-based filter
+	CryptFilterAESV2 = "AESV2" // AES-based filter (128 bit key, PDF 1.6)
+	CryptFilterAESV3 = "AESV3" // AES-based filter (256 bit key, PDF 2.0)
 )
 
 // CryptFilters is a map of crypt filter name and underlying CryptFilter info.
@@ -1113,10 +1117,9 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	return nil
 }
 
-var ivAESZero = make([]byte, aes.BlockSize)
-
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // It returns false if the password was wrong.
+// 7.6.4.3.2 Algorithm 2.A (page 83)
 func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
 
@@ -1181,7 +1184,10 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	if err != nil {
 		panic(err)
 	}
-	iv := ivAESZero
+	if crypt.ivAESZero == nil {
+		crypt.ivAESZero = make([]byte, aes.BlockSize)
+	}
+	iv := crypt.ivAESZero
 	cbc := cipher.NewCBCDecrypter(ac, iv)
 	fkey := make([]byte, 32)
 	cbc.CryptBlocks(fkey, ekey)
@@ -1203,15 +1209,19 @@ func (crypt *PdfCrypt) alg2b(data, pwd, userKey []byte) []byte {
 	return alg2b(data, pwd, userKey)
 }
 
-// alg2b_R5 computes a hash for R=5.
+// alg2b_R5 computes a hash for R=5, used in a deprecated extension.
+// It's used the same way as a hash described in Algorithm 2.B, but it doesn't use the original password
+// and the user key to calculate the hash.
 func alg2b_R5(data []byte) []byte {
 	h := sha256.New()
 	h.Write(data)
 	return h.Sum(nil)
 }
 
-func repeat(buf []byte, sz int) {
-	bp := sz
+// repeat repeats first n bytes of buf until the end of the buffer.
+// It assumes that the length of buf is a multiple of n.
+func repeat(buf []byte, n int) {
+	bp := n
 	for bp < len(buf) {
 		copy(buf[bp:], buf[:bp])
 		bp *= 2
@@ -1219,6 +1229,7 @@ func repeat(buf []byte, sz int) {
 }
 
 // alg2b computes a hash for R=6.
+// 7.6.4.3.3 Algorithm 2.B (page 83)
 func alg2b(data, pwd, userKey []byte) []byte {
 	var (
 		s256, s384, s512 hash.Hash
@@ -1582,6 +1593,7 @@ func (crypt *PdfCrypt) alg11(upass []byte) ([]byte, error) {
 }
 
 // alg12 authenticates the owner password (R >= 5) and returns the hash.
+// 7.6.4.4.10 Algorithm 12 (page 87)
 func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 	str := make([]byte, len(opass)+8+48)
 	i := copy(str, opass)
@@ -1597,6 +1609,7 @@ func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 }
 
 // alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
+// 7.6.4.4.11 Algorithm 13 (page 87)
 func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
 	perms := crypt.Perms[:16]
 

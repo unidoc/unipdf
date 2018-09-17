@@ -16,7 +16,7 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
-const aes3Dir = `../../testfiles/AESv3`
+const aes3Dir = `./testdata`
 
 func TestDecryptAES3(t *testing.T) {
 	cases := []struct {

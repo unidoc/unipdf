@@ -1,7 +1,14 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package core
 
 import "crypto/cipher"
 
+// ecb implements an Electronic Codebook encryption mode.
+// This mode is used to compute or validate document permissions for R=6.
 type ecb struct {
 	b         cipher.Block
 	blockSize int
