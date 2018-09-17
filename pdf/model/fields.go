@@ -537,6 +537,11 @@ func (f *PdfField) Flags() FieldFlag {
 	return flags
 }
 
+// SetFlag sets the flag for the field.
+func (f *PdfField) SetFlag(flag FieldFlag) {
+	f.Ff = core.MakeInteger(int64(flag))
+}
+
 // newPdfFieldFromIndirectObject load a field from an indirect object containing the field dictionary.
 func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObject, parent *PdfField) (*PdfField, error) {
 	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
