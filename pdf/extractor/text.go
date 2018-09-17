@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -323,12 +324,12 @@ func (to *textObject) setTextMatrix(f []float64) {
 	}
 }
 
-// showText "Tj" Show a text string
+// showText "Tj" Show a text string.
 func (to *textObject) showText(charcodes []byte) error {
 	return to.renderText(charcodes)
 }
 
-// showTextAdjusted "TJ" Show text with adjustable spacing
+// showTextAdjusted "TJ" Show text with adjustable spacing.
 func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 	for _, o := range args.Elements() {
 		switch o.(type) {
@@ -358,17 +359,17 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 	return nil
 }
 
-// setTextLeading "TL" Set text leading
+// setTextLeading "TL" Set text leading.
 func (to *textObject) setTextLeading(y float64) {
 	// Not implemented yet
 }
 
-// setCharSpacing "Tc" Set character spacing
+// setCharSpacing "Tc" Set character spacing.
 func (to *textObject) setCharSpacing(x float64) {
 	// Not implemented yet
 }
 
-// setFont "Tf" Set font
+// setFont "Tf" Set font.
 func (to *textObject) setFont(name string, size float64) error {
 	font, err := to.getFont(name)
 	if err == nil {
@@ -388,22 +389,22 @@ func (to *textObject) setFont(name string, size float64) error {
 	return nil
 }
 
-// setTextRenderMode "Tr" Set text rendering mode
+// setTextRenderMode "Tr" Set text rendering mode.
 func (to *textObject) setTextRenderMode(mode int) {
 	// Not implemented yet
 }
 
-// setTextRise "Ts" Set text rise
+// setTextRise "Ts" Set text rise.
 func (to *textObject) setTextRise(y float64) {
 	// Not implemented yet
 }
 
-// setWordSpacing "Tw" Set word spacing
+// setWordSpacing "Tw" Set word spacing.
 func (to *textObject) setWordSpacing(y float64) {
 	// Not implemented yet
 }
 
-// setHorizScaling "Tz" Set horizontal scaling
+// setHorizScaling "Tz" Set horizontal scaling.
 func (to *textObject) setHorizScaling(y float64) {
 	// Not implemented yet
 }
@@ -621,8 +622,57 @@ func (tl *TextList) ToText() string {
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it
-// doesn't.
+// doesn't. It caches the returned fonts.
 func (to *textObject) getFont(name string) (*model.PdfFont, error) {
+	accessCount++
+	entry, ok := fontCache[name]
+	if ok {
+		entry.access = accessCount
+		return entry.font, nil
+	}
+
+	// Font not in cache. Load it.
+	font, err := to.getFontDirect(name)
+	if err != nil {
+		return nil, err
+	}
+	entry = fontEntry{font, accessCount}
+
+	// Eject a victim if the cache is full.
+	if len(fontCache) >= maxFontCache {
+		names := []string{}
+		for name := range fontCache {
+			names = append(names, name)
+		}
+		sort.Slice(names, func(i, j int) bool {
+			return fontCache[names[i]].access < fontCache[names[j]].access
+		})
+		delete(fontCache, names[0])
+	}
+	fontCache[name] = entry
+
+	return font, nil
+}
+
+type fontEntry struct {
+	font   *model.PdfFont // The font being cached.
+	access int64          // Last access. Used to determine LRU cache victims.
+}
+
+// fontCache is a simple LRU cache that is used to prevent redudant constructions of PdfFont's from
+// PDF objects.
+var fontCache = map[string]fontEntry{}
+
+// maxFontCache is the maximum number of PdfFont's in fontCache.
+const maxFontCache = 10
+
+// accessCount is used to set fontEntry.access to an incrementing number
+var accessCount int64
+
+// getFontDirect returns the font named `name` if it exists in the page's resources or an error if
+// is doesn't.
+// This is a direct (uncached access)
+func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
 	if name == "UniDocCourier" {
@@ -635,14 +685,13 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 	}
 	font, err := model.NewPdfFontFromPdfObject(fontObj)
 	if err != nil {
-		common.Log.Debug("getFont: NewPdfFontFromPdfObject failed. name=%#q err=%v", name, err)
+		common.Log.Debug("getFontDirect: NewPdfFontFromPdfObject failed. name=%#q err=%v", name, err)
 	}
 	return font, err
 }
 
-// getFontDict returns the font object called `name` if it exists in the page's Font resources or
+// getFontDict returns the font dict with key `name` if it exists in the page's Font resources or
 // an error if it doesn't.
-// XXX: TODO: Can we cache font values?
 func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
 	resources := to.e.resources
 	if resources == nil {
