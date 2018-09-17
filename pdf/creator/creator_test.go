@@ -37,6 +37,10 @@ const testImageFile2 = "./testdata/signature.png"
 const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
 const testWts11TTFFile = "./testdata/wts11.ttf"
+
+// XXX: /tmp/2_p_multi.pdf which is created in this test gives an error message when opened in
+//      Adobe Reader: The font FreeSans contains bad Widths.
+//      This problem did not occur when I replaced FreeSans.ttf with LiberationSans-Regular.ttf
 const testFreeSansTTFFile = "./testdata/FreeSans.ttf"
 
 func TestTemplate1(t *testing.T) {
