@@ -107,13 +107,16 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= div.margins.top
 	}
 
+	// Set the inline mode of the division to the context
+	ctx.Inline = div.inline
+
+	// Draw.
 	divCtx := ctx
 	tmpCtx := ctx
 	var lineHeight float64
 
-	// Draw.
 	for _, component := range div.components {
-		if div.inline {
+		if ctx.Inline {
 			if (ctx.X-divCtx.X)+component.Width() <= ctx.Width {
 				ctx.Y = tmpCtx.Y
 				ctx.Height = tmpCtx.Height
@@ -147,9 +150,7 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		}
 
 		// Apply padding/margins.
-		if !div.inline {
-			updCtx.X = ctx.X
-		} else {
+		if ctx.Inline {
 			if dl := ctx.Height - updCtx.Height; dl > lineHeight {
 				lineHeight = dl
 			}
@@ -159,10 +160,15 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 				tmpCtx.Height = divCtx.Height
 				lineHeight = 0
 			}
+		} else {
+			updCtx.X = ctx.X
 		}
 
 		ctx = updCtx
 	}
+
+	// Restore the original inline mode of the context
+	ctx.Inline = origCtx.Inline
 
 	if div.positioning.isRelative() {
 		// Move back X to same start of line.
