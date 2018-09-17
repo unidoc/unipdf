@@ -36,7 +36,7 @@ func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[uint16]uint16) TrueTypeFontE
 }
 
 // ttEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
-const ttEncoderNumEntries = 1000
+const ttEncoderNumEntries = 10
 
 // String returns a string that describes `enc`.
 func (enc TrueTypeFontEncoder) String() string {
