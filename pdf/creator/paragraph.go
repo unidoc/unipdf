@@ -515,8 +515,11 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 	blk.addContents(ops)
 
 	if p.positioning.isRelative() {
-		ctx.Y += p.Height() + p.margins.bottom
-		ctx.Height -= p.Height() + p.margins.bottom
+		pHeight := p.Height() + p.margins.bottom
+
+		ctx.X += p.Width() + p.margins.right
+		ctx.Y += pHeight
+		ctx.Height -= pHeight
 	}
 
 	return ctx, nil

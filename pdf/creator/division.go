@@ -107,8 +107,26 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= div.margins.top
 	}
 
+	divCtx := ctx
+	tmpCtx := ctx
+	var lineHeight float64
+
 	// Draw.
 	for _, component := range div.components {
+		if div.inline {
+			if (ctx.X-divCtx.X)+component.Width() <= ctx.Width {
+				ctx.Y = tmpCtx.Y
+				ctx.Height = tmpCtx.Height
+			} else {
+				ctx.X = divCtx.X
+				ctx.Width = divCtx.Width
+
+				tmpCtx.Y += lineHeight
+				tmpCtx.Height -= lineHeight
+				lineHeight = 0
+			}
+		}
+
 		newblocks, updCtx, err := component.GeneratePageBlocks(ctx)
 		if err != nil {
 			common.Log.Debug("Error generating page blocks: %v", err)
@@ -129,7 +147,20 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		}
 
 		// Apply padding/margins.
-		updCtx.X = ctx.X
+		if !div.inline {
+			updCtx.X = ctx.X
+		} else {
+			if dl := ctx.Height - updCtx.Height; dl > lineHeight {
+				lineHeight = dl
+			}
+
+			if ctx.Page != updCtx.Page {
+				tmpCtx.Y = divCtx.Y
+				tmpCtx.Height = divCtx.Height
+				lineHeight = 0
+			}
+		}
+
 		ctx = updCtx
 	}
 
