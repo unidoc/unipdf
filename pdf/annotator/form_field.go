@@ -1,8 +1,10 @@
-package model
+package annotator
 
-/*
 import (
+	"bytes"
 	"errors"
+
+	"github.com/unidoc/unidoc/pdf/model"
 
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -17,7 +19,7 @@ type TextFieldOptions struct {
 
 // NewTextField generates a new text field with partial name `name` at location
 // specified by `rect` on given `page` and with field specific options `opt`.
-func NewTextField(page *PdfPage, name string, rect []float64, opt TextFieldOptions) (*PdfFieldText, error) {
+func NewTextField(page *model.PdfPage, name string, rect []float64, opt TextFieldOptions) (*model.PdfFieldText, error) {
 	if page == nil {
 		return nil, errors.New("Page not specified")
 	}
@@ -28,8 +30,8 @@ func NewTextField(page *PdfPage, name string, rect []float64, opt TextFieldOptio
 		return nil, errors.New("Invalid range")
 	}
 
-	field := NewPdfField()
-	textfield := &PdfFieldText{}
+	field := model.NewPdfField()
+	textfield := &model.PdfFieldText{}
 	field.SetContext(textfield)
 	textfield.PdfField = field
 
@@ -42,7 +44,7 @@ func NewTextField(page *PdfPage, name string, rect []float64, opt TextFieldOptio
 		textfield.V = core.MakeString(opt.Value)
 	}
 
-	widget := NewPdfAnnotationWidget()
+	widget := model.NewPdfAnnotationWidget()
 	widget.Rect = core.MakeArrayFromFloats(rect) //[]float64{144.0, 595.89, 294.0, 617.9})
 	widget.P = page.ToPdfObject()
 	widget.F = core.MakeInteger(4) // 4 (100 -> Print/show annotations).
@@ -63,7 +65,7 @@ type CheckboxFieldOptions struct {
 
 // NewCheckboxField generates a new checkbox field with partial name `name` at location `rect`
 // on specified `page` and with field specific options `opt`.
-func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFieldOptions) (*PdfFieldButton, error) {
+func NewCheckboxField(page *model.PdfPage, name string, rect []float64, opt CheckboxFieldOptions) (*model.PdfFieldButton, error) {
 	if page == nil {
 		return nil, errors.New("Page not specified")
 	}
@@ -76,13 +78,13 @@ func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFi
 
 	zapfdb := fonts.NewFontZapfDingbats()
 
-	field := NewPdfField()
-	buttonfield := &PdfFieldButton{}
+	field := model.NewPdfField()
+	buttonfield := &model.PdfFieldButton{}
 	field.SetContext(buttonfield)
 	buttonfield.PdfField = field
 
 	buttonfield.T = core.MakeString(name)
-	buttonfield.SetType(ButtonTypeCheckbox)
+	buttonfield.SetType(model.ButtonTypeCheckbox)
 
 	state := "Off"
 	if opt.Checked {
@@ -91,7 +93,7 @@ func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFi
 
 	buttonfield.V = core.MakeName(state)
 
-	widget := NewPdfAnnotationWidget()
+	widget := model.NewPdfAnnotationWidget()
 	widget.Rect = core.MakeArrayFromFloats(rect)
 	widget.P = page.ToPdfObject()
 	widget.F = core.MakeInteger(4)
@@ -109,7 +111,6 @@ func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFi
 	cs.WriteString("ET\n")
 	cs.WriteString("Q\n")
 
-
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 	cc.Add_rg(0, 0, 1)
@@ -119,10 +120,10 @@ func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFi
 	cc.Add_ET()
 	cc.Add_Q()
 
-	xformOff := NewXObjectForm()
+	xformOff := model.NewXObjectForm()
 	xformOff.SetContentStream(cc.Bytes(), core.NewRawEncoder())
 	xformOff.BBox = core.MakeArrayFromFloats([]float64{0, 0, w, h})
-	xformOff.Resources = NewPdfPageResources()
+	xformOff.Resources = model.NewPdfPageResources()
 	xformOff.Resources.SetFontByName("ZaDb", zapfdb.ToPdfObject())
 
 	// On state (Yes).
@@ -139,10 +140,10 @@ func NewCheckboxField(page *PdfPage, name string, rect []float64, opt CheckboxFi
 	cc.Add_ET()
 	cc.Add_Q()
 
-	xformOn := NewXObjectForm()
+	xformOn := model.NewXObjectForm()
 	xformOn.SetContentStream(cc.Bytes(), core.NewRawEncoder())
 	xformOn.BBox = core.MakeArrayFromFloats([]float64{0, 0, w, h})
-	xformOn.Resources = NewPdfPageResources()
+	xformOn.Resources = model.NewPdfPageResources()
 	xformOn.Resources.SetFontByName("ZaDb", zapfdb.ToPdfObject())
 
 	dchoiceapp := core.MakeDict()
@@ -168,7 +169,7 @@ type ComboboxFieldOptions struct {
 
 // NewComboboxField generates a new combobox form field with partial name `name` at location `rect`
 // on specified `page` and with field specific options `opt`.
-func NewComboboxField(page *PdfPage, name string, rect []float64, opt ComboboxFieldOptions) (*PdfFieldChoice, error) {
+func NewComboboxField(page *model.PdfPage, name string, rect []float64, opt ComboboxFieldOptions) (*model.PdfFieldChoice, error) {
 	if page == nil {
 		return nil, errors.New("Page not specified")
 	}
@@ -179,8 +180,8 @@ func NewComboboxField(page *PdfPage, name string, rect []float64, opt ComboboxFi
 		return nil, errors.New("Invalid range")
 	}
 
-	field := NewPdfField()
-	chfield := &PdfFieldChoice{}
+	field := model.NewPdfField()
+	chfield := &model.PdfFieldChoice{}
 	field.SetContext(chfield)
 	chfield.PdfField = field
 
@@ -189,9 +190,9 @@ func NewComboboxField(page *PdfPage, name string, rect []float64, opt ComboboxFi
 	for _, choicestr := range opt.Choices {
 		chfield.Opt.Append(core.MakeString(choicestr))
 	}
-	chfield.SetFlag(FieldFlagCombo)
+	chfield.SetFlag(model.FieldFlagCombo)
 
-	widget := NewPdfAnnotationWidget()
+	widget := model.NewPdfAnnotationWidget()
 	widget.Rect = core.MakeArrayFromFloats(rect)
 	widget.P = page.ToPdfObject()
 	widget.F = core.MakeInteger(4) // TODO: Make flags for these values and a way to set.
@@ -201,4 +202,3 @@ func NewComboboxField(page *PdfPage, name string, rect []float64, opt ComboboxFi
 
 	return chfield, nil
 }
-*/
