@@ -33,7 +33,7 @@ func TestDivVertical(t *testing.T) {
 	c := New()
 	c.NewPage()
 
-	// Draw section title
+	// Draw section title.
 	p := NewParagraph("Regular division component")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
@@ -43,7 +43,7 @@ func TestDivVertical(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Draw division
+	// Draw division.
 	div := NewDivision()
 
 	if div.Inline() {
@@ -63,7 +63,7 @@ func TestDivVertical(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Write output file
+	// Write output file.
 	err = c.WriteToFile("/tmp/division_vertical.pdf")
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
@@ -77,7 +77,7 @@ func TestDivInline(t *testing.T) {
 	c := New()
 	c.NewPage()
 
-	// Draw section title
+	// Draw section title.
 	p := NewParagraph("Inline division component")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
@@ -87,7 +87,7 @@ func TestDivInline(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Draw division
+	// Draw division.
 	div := NewDivision()
 	div.SetInline(true)
 
@@ -120,7 +120,7 @@ func TestDivInline(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Write output file
+	// Write output file.
 	err = c.WriteToFile("/tmp/division_inline.pdf")
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
@@ -134,7 +134,7 @@ func TestDivNumberMatrix(t *testing.T) {
 	c := New()
 	c.NewPage()
 
-	// Draw section title
+	// Draw section title.
 	p := NewParagraph("A list of numbers in an inline division")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
@@ -144,7 +144,7 @@ func TestDivNumberMatrix(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Draw division
+	// Draw division.
 	div := NewDivision()
 	div.SetInline(true)
 
@@ -171,7 +171,7 @@ func TestDivNumberMatrix(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Write output file
+	// Write output file.
 	err = c.WriteToFile("/tmp/division_number_matrix.pdf")
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
@@ -185,7 +185,7 @@ func TestDivRandomSequences(t *testing.T) {
 	c := New()
 	c.NewPage()
 
-	// Draw section title
+	// Draw section title.
 	p := NewParagraph("Inline division of random sequences on multiple pages")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
@@ -195,7 +195,7 @@ func TestDivRandomSequences(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Draw division
+	// Draw division.
 	div := NewDivision()
 	div.SetInline(true)
 
@@ -226,7 +226,7 @@ func TestDivRandomSequences(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Write output file
+	// Write output file.
 	err = c.WriteToFile("/tmp/division_random_sequences.pdf")
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
@@ -240,7 +240,7 @@ func TestTableDivisions(t *testing.T) {
 	c := New()
 	c.NewPage()
 
-	// Draw section title
+	// Draw section title.
 	p := NewParagraph("Table containing division components")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
@@ -253,7 +253,7 @@ func TestTableDivisions(t *testing.T) {
 	table := NewTable(2)
 	table.SetColumnWidths(0.35, 0.65)
 
-	// Add regular division to table
+	// Add regular division to table.
 	divRegular := NewDivision()
 
 	p = NewParagraph("Components are stacked vertically ")
@@ -268,7 +268,7 @@ func TestTableDivisions(t *testing.T) {
 	cell.SetBorder(CellBorderStyleBox, 1)
 	cell.SetContent(divRegular)
 
-	// Add inline division to table
+	// Add inline division to table.
 	divInline := NewDivision()
 	divInline.SetInline(true)
 
@@ -296,13 +296,13 @@ func TestTableDivisions(t *testing.T) {
 	cell.SetBorder(CellBorderStyleBox, 1)
 	cell.SetContent(divInline)
 
-	// Draw table
+	// Draw table.
 	err = c.Draw(table)
 	if err != nil {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	// Write output file
+	// Write output file.
 	err = c.WriteToFile("/tmp/division_table.pdf")
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
