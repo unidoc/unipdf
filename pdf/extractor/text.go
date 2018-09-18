@@ -580,17 +580,15 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 
 // renderText emits byte array `data` to the calling program.
 func (to *textObject) renderText(data []byte) error {
-	text := ""
 	var font *model.PdfFont
 	if to.fontStack.empty() {
 		common.Log.Debug("ERROR: No font defined. Using default.")
-		text = string(data)
 		font = model.DefaultFont()
 	} else {
 		font = to.fontStack.peek()
 	}
-	var numChars, numMisses int
-	text, numChars, numMisses = font.CharcodeBytesToUnicode(data)
+
+	text, numChars, numMisses := font.CharcodeBytesToUnicode(data)
 	to.State.numChars += numChars
 	to.State.numMisses += numMisses
 	cp := to.getCp()
