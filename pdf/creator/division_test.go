@@ -14,7 +14,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
-var seed *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var seed = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

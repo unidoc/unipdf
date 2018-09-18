@@ -36,10 +36,12 @@ func NewDivision() *Division {
 	}
 }
 
-func (div *Division) IsInline() bool {
+// Inline returns whether the inline mode of the division is active.
+func (div *Division) Inline() bool {
 	return div.inline
 }
 
+// SetInline sets the inline mode of the division.
 func (div *Division) SetInline(inline bool) {
 	div.inline = inline
 }
@@ -117,6 +119,7 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 
 	for _, component := range div.components {
 		if ctx.Inline {
+			// Check whether the component fits on the current line.
 			if (ctx.X-divCtx.X)+component.Width() <= ctx.Width {
 				ctx.Y = tmpCtx.Y
 				ctx.Height = tmpCtx.Height
@@ -151,6 +154,7 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 
 		// Apply padding/margins.
 		if ctx.Inline {
+			// Recalculate positions on page change.
 			if ctx.Page != updCtx.Page {
 				divCtx.Y = ctx.Margins.top
 				divCtx.Height = ctx.PageHeight - ctx.Margins.top
@@ -159,6 +163,7 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 				tmpCtx.Height = divCtx.Height
 				lineHeight = updCtx.Height - divCtx.Height
 			} else {
+				// Calculate current line max height.
 				if dl := ctx.Height - updCtx.Height; dl > lineHeight {
 					lineHeight = dl
 				}
