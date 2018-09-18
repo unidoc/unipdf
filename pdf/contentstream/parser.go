@@ -15,7 +15,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // ContentStreamParser represents a content stream parser for parsing content streams in PDFs.
@@ -52,7 +52,7 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 				return &operations, err
 			}
 			if isOperand {
-				operation.Operand, _ = GetStringVal(obj)
+				operation.Operand, _ = core.GetStringVal(obj)
 				operations = append(operations, &operation)
 				break
 			} else {
@@ -81,7 +81,7 @@ func (this *ContentStreamParser) skipSpaces() (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if IsWhiteSpace(bb[0]) {
+		if core.IsWhiteSpace(bb[0]) {
 			this.reader.ReadByte()
 			cnt++
 		} else {
@@ -123,7 +123,7 @@ func (this *ContentStreamParser) skipComments() error {
 }
 
 // Parse a name starting with '/'.
-func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
+func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 	name := ""
 	nameStarted := false
 	for {
@@ -132,7 +132,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 			break // Can happen when loading from object stream.
 		}
 		if err != nil {
-			return PdfObjectName(name), err
+			return core.PdfObjectName(name), err
 		}
 
 		if !nameStarted {
@@ -142,23 +142,23 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 				this.reader.ReadByte()
 			} else {
 				common.Log.Error("Name starting with %s (% x)", bb, bb)
-				return PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
+				return core.PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
-			if IsWhiteSpace(bb[0]) {
+			if core.IsWhiteSpace(bb[0]) {
 				break
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
 			} else if bb[0] == '#' {
 				hexcode, err := this.reader.Peek(3)
 				if err != nil {
-					return PdfObjectName(name), err
+					return core.PdfObjectName(name), err
 				}
 				this.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
-					return PdfObjectName(name), err
+					return core.PdfObjectName(name), err
 				}
 				name += string(code)
 			} else {
@@ -167,7 +167,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 			}
 		}
 	}
-	return PdfObjectName(name), nil
+	return core.PdfObjectName(name), nil
 }
 
 // Numeric objects.
@@ -190,7 +190,7 @@ func (this *ContentStreamParser) parseName() (PdfObjectName, error) {
 // Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
-func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
+func (this *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 	isFloat := false
 	allowSigns := true
 	numStr := ""
@@ -212,7 +212,7 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if IsDecimalDigit(bb[0]) {
+		} else if core.IsDecimalDigit(bb[0]) {
 			b, _ := this.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
@@ -237,7 +237,7 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 			fVal = 0.0
 			err = nil
 		}
-		o := PdfObjectFloat(fVal)
+		o := core.PdfObjectFloat(fVal)
 		return &o, err
 	} else {
 		intVal, err := strconv.ParseInt(numStr, 10, 64)
@@ -246,13 +246,13 @@ func (this *ContentStreamParser) parseNumber() (PdfObject, error) {
 			intVal = 0
 			err = nil
 		}
-		o := PdfObjectInteger(intVal)
+		o := core.PdfObjectInteger(intVal)
 		return &o, err
 	}
 }
 
 // A string starts with '(' and ends with ')'.
-func (this *ContentStreamParser) parseString() (*PdfObjectString, error) {
+func (this *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 	this.reader.ReadByte()
 
 	bytes := []byte{}
@@ -260,27 +260,27 @@ func (this *ContentStreamParser) parseString() (*PdfObjectString, error) {
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			return MakeString(string(bytes)), err
+			return core.MakeString(string(bytes)), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
 			this.reader.ReadByte() // Skip the escape \ byte.
 			b, err := this.reader.ReadByte()
 			if err != nil {
-				return MakeString(string(bytes)), err
+				return core.MakeString(string(bytes)), err
 			}
 
 			// Octal '\ddd' number (base 8).
-			if IsOctalDigit(b) {
+			if core.IsOctalDigit(b) {
 				bb, err := this.reader.Peek(2)
 				if err != nil {
-					return MakeString(string(bytes)), err
+					return core.MakeString(string(bytes)), err
 				}
 
 				numeric := []byte{}
 				numeric = append(numeric, b)
 				for _, val := range bb {
-					if IsOctalDigit(val) {
+					if core.IsOctalDigit(val) {
 						numeric = append(numeric, val)
 					} else {
 						break
@@ -291,7 +291,7 @@ func (this *ContentStreamParser) parseString() (*PdfObjectString, error) {
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
-					return MakeString(string(bytes)), err
+					return core.MakeString(string(bytes)), err
 				}
 				bytes = append(bytes, byte(code))
 				continue
@@ -331,11 +331,11 @@ func (this *ContentStreamParser) parseString() (*PdfObjectString, error) {
 		bytes = append(bytes, b)
 	}
 
-	return MakeString(string(bytes)), nil
+	return core.MakeString(string(bytes)), nil
 }
 
 // Starts with '<' ends with '>'.
-func (this *ContentStreamParser) parseHexString() (*PdfObjectString, error) {
+func (this *ContentStreamParser) parseHexString() (*core.PdfObjectString, error) {
 	this.reader.ReadByte()
 
 	hextable := []byte("0123456789abcdefABCDEF")
@@ -346,7 +346,7 @@ func (this *ContentStreamParser) parseHexString() (*PdfObjectString, error) {
 
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			return MakeString(""), err
+			return core.MakeString(""), err
 		}
 
 		if bb[0] == '>' {
@@ -365,12 +365,12 @@ func (this *ContentStreamParser) parseHexString() (*PdfObjectString, error) {
 	}
 
 	buf, _ := hex.DecodeString(string(tmp))
-	return MakeHexString(string(buf)), nil
+	return core.MakeHexString(string(buf)), nil
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (this *ContentStreamParser) parseArray() (*PdfObjectArray, error) {
-	arr := MakeArray()
+func (this *ContentStreamParser) parseArray() (*core.PdfObjectArray, error) {
+	arr := core.MakeArray()
 
 	this.reader.ReadByte()
 
@@ -398,38 +398,38 @@ func (this *ContentStreamParser) parseArray() (*PdfObjectArray, error) {
 }
 
 // Parse bool object.
-func (this *ContentStreamParser) parseBool() (PdfObjectBool, error) {
+func (this *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
 	bb, err := this.reader.Peek(4)
 	if err != nil {
-		return PdfObjectBool(false), err
+		return core.PdfObjectBool(false), err
 	}
 	if (len(bb) >= 4) && (string(bb[:4]) == "true") {
 		this.reader.Discard(4)
-		return PdfObjectBool(true), nil
+		return core.PdfObjectBool(true), nil
 	}
 
 	bb, err = this.reader.Peek(5)
 	if err != nil {
-		return PdfObjectBool(false), err
+		return core.PdfObjectBool(false), err
 	}
 	if (len(bb) >= 5) && (string(bb[:5]) == "false") {
 		this.reader.Discard(5)
-		return PdfObjectBool(false), nil
+		return core.PdfObjectBool(false), nil
 	}
 
-	return PdfObjectBool(false), errors.New("Unexpected boolean string")
+	return core.PdfObjectBool(false), errors.New("Unexpected boolean string")
 }
 
 // Parse null object.
-func (this *ContentStreamParser) parseNull() (PdfObjectNull, error) {
+func (this *ContentStreamParser) parseNull() (core.PdfObjectNull, error) {
 	_, err := this.reader.Discard(4)
-	return PdfObjectNull{}, err
+	return core.PdfObjectNull{}, err
 }
 
-func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
+func (this *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 	common.Log.Trace("Reading content stream dict!")
 
-	dict := MakeDict()
+	dict := core.MakeDict()
 
 	// Pass the '<<'
 	c, _ := this.reader.ReadByte()
@@ -474,7 +474,7 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 			this.skipSpaces()
 			bb, _ := this.reader.Peek(1)
 			if bb[0] == '/' {
-				dict.Set(newKey, MakeNull())
+				dict.Set(newKey, core.MakeNull())
 				continue
 			}
 		}
@@ -494,17 +494,17 @@ func (this *ContentStreamParser) parseDict() (*PdfObjectDictionary, error) {
 }
 
 // An operand is a text command represented by a word.
-func (this *ContentStreamParser) parseOperand() (*PdfObjectString, error) {
+func (this *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
 	bytes := []byte{}
 	for {
 		bb, err := this.reader.Peek(1)
 		if err != nil {
-			return MakeString(string(bytes)), err
+			return core.MakeString(string(bytes)), err
 		}
-		if IsDelimiter(bb[0]) {
+		if core.IsDelimiter(bb[0]) {
 			break
 		}
-		if IsWhiteSpace(bb[0]) {
+		if core.IsWhiteSpace(bb[0]) {
 			break
 		}
 
@@ -512,13 +512,13 @@ func (this *ContentStreamParser) parseOperand() (*PdfObjectString, error) {
 		bytes = append(bytes, b)
 	}
 
-	return MakeString(string(bytes)), nil
+	return core.MakeString(string(bytes)), nil
 }
 
 // Parse a generic object.  Returns the object, an error code, and a bool
 // value indicating whether the object is an operand.  An operand
 // is contained in a pdf string object.
-func (this *ContentStreamParser) parseObject() (obj PdfObject, err error, isop bool) {
+func (this *ContentStreamParser) parseObject() (obj core.PdfObject, err error, isop bool) {
 	// Determine the kind of object.
 	// parse it!
 	// make a list of operands, then once operand arrives put into a package.
@@ -551,7 +551,7 @@ func (this *ContentStreamParser) parseObject() (obj PdfObject, err error, isop b
 			common.Log.Trace("->Array!")
 			arr, err := this.parseArray()
 			return arr, err, false
-		} else if IsFloatDigit(bb[0]) || (bb[0] == '-' && IsFloatDigit(bb[1])) {
+		} else if core.IsFloatDigit(bb[0]) || (bb[0] == '-' && core.IsFloatDigit(bb[1])) {
 			common.Log.Trace("->Number!")
 			number, err := this.parseNumber()
 			return number, err, false

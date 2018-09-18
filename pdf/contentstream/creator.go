@@ -8,7 +8,7 @@ package contentstream
 import (
 	"math"
 
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // ContentCreator is used to create a PDF content stream.
@@ -66,10 +66,10 @@ func (cc *ContentCreator) Add_Q() *ContentCreator {
 
 // Add_Do adds 'Do' operation to the content stream, which displays an XObject
 // (image or form) specified by `name`.
-func (this *ContentCreator) Add_Do(name PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_Do(name core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "Do"
-	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{name})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -116,7 +116,7 @@ func (this *ContentCreator) Add_w(lineWidth float64) *ContentCreator {
 func (this *ContentCreator) Add_J(lineCapStyle string) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "J"
-	op.Params = makeParamsFromNames([]PdfObjectName{PdfObjectName(lineCapStyle)})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{core.PdfObjectName(lineCapStyle)})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -125,7 +125,7 @@ func (this *ContentCreator) Add_J(lineCapStyle string) *ContentCreator {
 func (this *ContentCreator) Add_j(lineJoinStyle string) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "j"
-	op.Params = makeParamsFromNames([]PdfObjectName{PdfObjectName(lineJoinStyle)})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{core.PdfObjectName(lineJoinStyle)})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -144,18 +144,18 @@ func (this *ContentCreator) Add_d(dashArray []int64, dashPhase int64) *ContentCr
 	op := ContentStreamOperation{}
 	op.Operand = "d"
 
-	op.Params = []PdfObject{}
-	op.Params = append(op.Params, MakeArrayFromIntegers64(dashArray))
-	op.Params = append(op.Params, MakeInteger(dashPhase))
+	op.Params = []core.PdfObject{}
+	op.Params = append(op.Params, core.MakeArrayFromIntegers64(dashArray))
+	op.Params = append(op.Params, core.MakeInteger(dashPhase))
 	this.operands = append(this.operands, &op)
 	return this
 }
 
 // Set the color rendering intent.
-func (this *ContentCreator) Add_ri(intent PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_ri(intent core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "ri"
-	op.Params = makeParamsFromNames([]PdfObjectName{intent})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{intent})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -170,10 +170,10 @@ func (this *ContentCreator) Add_i(flatness float64) *ContentCreator {
 }
 
 // Set the graphics state.
-func (this *ContentCreator) Add_gs(dictName PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_gs(dictName core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "gs"
-	op.Params = makeParamsFromNames([]PdfObjectName{dictName})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{dictName})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -340,19 +340,19 @@ func (this *ContentCreator) Add_W_starred() *ContentCreator {
 /* Color operators. */
 
 // CS: Set the current colorspace for stroking operations.
-func (this *ContentCreator) Add_CS(name PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_CS(name core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "CS"
-	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{name})
 	this.operands = append(this.operands, &op)
 	return this
 }
 
 // cs: Same as CS but for non-stroking operations.
-func (this *ContentCreator) Add_cs(name PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_cs(name core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "cs"
-	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{name})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -376,11 +376,11 @@ func (this *ContentCreator) Add_SCN(c ...float64) *ContentCreator {
 }
 
 // SCN with name attribute (for pattern). Syntax: c1 ... cn name SCN.
-func (this *ContentCreator) Add_SCN_pattern(name PdfObjectName, c ...float64) *ContentCreator {
+func (this *ContentCreator) Add_SCN_pattern(name core.PdfObjectName, c ...float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "SCN"
 	op.Params = makeParamsFromFloats(c)
-	op.Params = append(op.Params, MakeName(string(name)))
+	op.Params = append(op.Params, core.MakeName(string(name)))
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -395,11 +395,11 @@ func (this *ContentCreator) Add_scn(c ...float64) *ContentCreator {
 }
 
 // scn with name attribute (for pattern). Syntax: c1 ... cn name scn.
-func (this *ContentCreator) Add_scn_pattern(name PdfObjectName, c ...float64) *ContentCreator {
+func (this *ContentCreator) Add_scn_pattern(name core.PdfObjectName, c ...float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "scn"
 	op.Params = makeParamsFromFloats(c)
-	op.Params = append(op.Params, MakeName(string(name)))
+	op.Params = append(op.Params, core.MakeName(string(name)))
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -460,10 +460,10 @@ func (this *ContentCreator) Add_k(c, m, y, k float64) *ContentCreator {
 
 /* Shading operators. */
 
-func (this *ContentCreator) Add_sh(name PdfObjectName) *ContentCreator {
+func (this *ContentCreator) Add_sh(name core.PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "sh"
-	op.Params = makeParamsFromNames([]PdfObjectName{name})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{name})
 	this.operands = append(this.operands, &op)
 	return this
 }
@@ -525,10 +525,10 @@ func (this *ContentCreator) Add_TL(leading float64) *ContentCreator {
 }
 
 // Tf: Set font and font size.
-func (this *ContentCreator) Add_Tf(fontName PdfObjectName, fontSize float64) *ContentCreator {
+func (this *ContentCreator) Add_Tf(fontName core.PdfObjectName, fontSize float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "Tf"
-	op.Params = makeParamsFromNames([]PdfObjectName{fontName})
+	op.Params = makeParamsFromNames([]core.PdfObjectName{fontName})
 	op.Params = append(op.Params, makeParamsFromFloats([]float64{fontSize})...)
 	this.operands = append(this.operands, &op)
 	return this
@@ -592,38 +592,38 @@ func (this *ContentCreator) Add_Tstar() *ContentCreator {
 /* Text showing operators */
 
 // Tj: Show a text string.
-func (this *ContentCreator) Add_Tj(textstr PdfObjectString) *ContentCreator {
+func (this *ContentCreator) Add_Tj(textstr core.PdfObjectString) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "Tj"
-	op.Params = makeParamsFromStrings([]PdfObjectString{textstr})
+	op.Params = makeParamsFromStrings([]core.PdfObjectString{textstr})
 	this.operands = append(this.operands, &op)
 	return this
 }
 
 // ': Move to next line and show a string.
-func (this *ContentCreator) Add_quote(textstr PdfObjectString) *ContentCreator {
+func (this *ContentCreator) Add_quote(textstr core.PdfObjectString) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "'"
-	op.Params = makeParamsFromStrings([]PdfObjectString{textstr})
+	op.Params = makeParamsFromStrings([]core.PdfObjectString{textstr})
 	this.operands = append(this.operands, &op)
 	return this
 }
 
 // '': Move to next line and show a string, using aw and ac as word and character spacing respectively.
-func (this *ContentCreator) Add_quotes(textstr PdfObjectString, aw, ac float64) *ContentCreator {
+func (this *ContentCreator) Add_quotes(textstr core.PdfObjectString, aw, ac float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "''"
 	op.Params = makeParamsFromFloats([]float64{aw, ac})
-	op.Params = append(op.Params, makeParamsFromStrings([]PdfObjectString{textstr})...)
+	op.Params = append(op.Params, makeParamsFromStrings([]core.PdfObjectString{textstr})...)
 	this.operands = append(this.operands, &op)
 	return this
 }
 
 // TJ. Show one or more text string.  Array of numbers (displacement) and strings.
-func (this *ContentCreator) Add_TJ(vals ...PdfObject) *ContentCreator {
+func (this *ContentCreator) Add_TJ(vals ...core.PdfObject) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "TJ"
-	op.Params = []PdfObject{MakeArray(vals...)}
+	op.Params = []core.PdfObject{core.MakeArray(vals...)}
 	this.operands = append(this.operands, &op)
 	return this
 }

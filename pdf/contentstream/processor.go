@@ -9,17 +9,17 @@ import (
 	"errors"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
-	. "github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Basic graphics state implementation.
 // Initially only implementing and tracking a portion of the information specified.  Easy to add more.
 type GraphicsState struct {
-	ColorspaceStroking    PdfColorspace
-	ColorspaceNonStroking PdfColorspace
-	ColorStroking         PdfColor
-	ColorNonStroking      PdfColor
+	ColorspaceStroking    model.PdfColorspace
+	ColorspaceNonStroking model.PdfColorspace
+	ColorStroking         model.PdfColor
+	ColorNonStroking      model.PdfColor
 }
 
 type GraphicStateStack []GraphicsState
@@ -46,7 +46,7 @@ type ContentStreamProcessor struct {
 	currentIndex int
 }
 
-type HandlerFunc func(op *ContentStreamOperation, gs GraphicsState, resources *PdfPageResources) error
+type HandlerFunc func(op *ContentStreamOperation, gs GraphicsState, resources *model.PdfPageResources) error
 
 type HandlerEntry struct {
 	Condition HandlerConditionEnum
@@ -93,16 +93,16 @@ func (csp *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, op
 	csp.handlers = append(csp.handlers, entry)
 }
 
-func (csp *ContentStreamProcessor) getColorspace(name string, resources *PdfPageResources) (PdfColorspace, error) {
+func (csp *ContentStreamProcessor) getColorspace(name string, resources *model.PdfPageResources) (model.PdfColorspace, error) {
 	switch name {
 	case "DeviceGray":
-		return NewPdfColorspaceDeviceGray(), nil
+		return model.NewPdfColorspaceDeviceGray(), nil
 	case "DeviceRGB":
-		return NewPdfColorspaceDeviceRGB(), nil
+		return model.NewPdfColorspaceDeviceRGB(), nil
 	case "DeviceCMYK":
-		return NewPdfColorspaceDeviceCMYK(), nil
+		return model.NewPdfColorspaceDeviceCMYK(), nil
 	case "Pattern":
-		return NewPdfColorspaceSpecialPattern(), nil
+		return model.NewPdfColorspaceSpecialPattern(), nil
 	}
 
 	// Next check the colorspace dictionary.
@@ -114,11 +114,11 @@ func (csp *ContentStreamProcessor) getColorspace(name string, resources *PdfPage
 	// Lastly check other potential colormaps.
 	switch name {
 	case "CalGray":
-		return NewPdfColorspaceCalGray(), nil
+		return model.NewPdfColorspaceCalGray(), nil
 	case "CalRGB":
-		return NewPdfColorspaceCalRGB(), nil
+		return model.NewPdfColorspaceCalRGB(), nil
 	case "Lab":
-		return NewPdfColorspaceLab(), nil
+		return model.NewPdfColorspaceLab(), nil
 	}
 
 	// Otherwise unsupported.
@@ -127,19 +127,19 @@ func (csp *ContentStreamProcessor) getColorspace(name string, resources *PdfPage
 }
 
 // Get initial color for a given colorspace.
-func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, error) {
+func (csp *ContentStreamProcessor) getInitialColor(cs model.PdfColorspace) (model.PdfColor, error) {
 	switch cs := cs.(type) {
-	case *PdfColorspaceDeviceGray:
-		return NewPdfColorDeviceGray(0.0), nil
-	case *PdfColorspaceDeviceRGB:
-		return NewPdfColorDeviceRGB(0.0, 0.0, 0.0), nil
-	case *PdfColorspaceDeviceCMYK:
-		return NewPdfColorDeviceCMYK(0.0, 0.0, 0.0, 1.0), nil
-	case *PdfColorspaceCalGray:
-		return NewPdfColorCalGray(0.0), nil
-	case *PdfColorspaceCalRGB:
-		return NewPdfColorCalRGB(0.0, 0.0, 0.0), nil
-	case *PdfColorspaceLab:
+	case *model.PdfColorspaceDeviceGray:
+		return model.NewPdfColorDeviceGray(0.0), nil
+	case *model.PdfColorspaceDeviceRGB:
+		return model.NewPdfColorDeviceRGB(0.0, 0.0, 0.0), nil
+	case *model.PdfColorspaceDeviceCMYK:
+		return model.NewPdfColorDeviceCMYK(0.0, 0.0, 0.0, 1.0), nil
+	case *model.PdfColorspaceCalGray:
+		return model.NewPdfColorCalGray(0.0), nil
+	case *model.PdfColorspaceCalRGB:
+		return model.NewPdfColorCalRGB(0.0, 0.0, 0.0), nil
+	case *model.PdfColorspaceLab:
 		l := 0.0
 		a := 0.0
 		b := 0.0
@@ -149,42 +149,42 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 		if cs.Range[2] > 0 {
 			a = cs.Range[2]
 		}
-		return NewPdfColorLab(l, a, b), nil
-	case *PdfColorspaceICCBased:
+		return model.NewPdfColorLab(l, a, b), nil
+	case *model.PdfColorspaceICCBased:
 		if cs.Alternate == nil {
 			// Alternate not defined.
 			// Try to fall back to DeviceGray, DeviceRGB or DeviceCMYK.
 			common.Log.Trace("ICC Based not defined - attempting fall back (N = %d)", cs.N)
 			if cs.N == 1 {
 				common.Log.Trace("Falling back to DeviceGray")
-				return csp.getInitialColor(NewPdfColorspaceDeviceGray())
+				return csp.getInitialColor(model.NewPdfColorspaceDeviceGray())
 			} else if cs.N == 3 {
 				common.Log.Trace("Falling back to DeviceRGB")
-				return csp.getInitialColor(NewPdfColorspaceDeviceRGB())
+				return csp.getInitialColor(model.NewPdfColorspaceDeviceRGB())
 			} else if cs.N == 4 {
 				common.Log.Trace("Falling back to DeviceCMYK")
-				return csp.getInitialColor(NewPdfColorspaceDeviceCMYK())
+				return csp.getInitialColor(model.NewPdfColorspaceDeviceCMYK())
 			} else {
 				return nil, errors.New("Alternate space not defined for ICC")
 			}
 		}
 		return csp.getInitialColor(cs.Alternate)
-	case *PdfColorspaceSpecialIndexed:
+	case *model.PdfColorspaceSpecialIndexed:
 		if cs.Base == nil {
 			return nil, errors.New("Indexed base not specified")
 		}
 		return csp.getInitialColor(cs.Base)
-	case *PdfColorspaceSpecialSeparation:
+	case *model.PdfColorspaceSpecialSeparation:
 		if cs.AlternateSpace == nil {
 			return nil, errors.New("Alternate space not specified")
 		}
 		return csp.getInitialColor(cs.AlternateSpace)
-	case *PdfColorspaceDeviceN:
+	case *model.PdfColorspaceDeviceN:
 		if cs.AlternateSpace == nil {
 			return nil, errors.New("Alternate space not specified")
 		}
 		return csp.getInitialColor(cs.AlternateSpace)
-	case *PdfColorspaceSpecialPattern:
+	case *model.PdfColorspaceSpecialPattern:
 		// FIXME/check: A pattern does not have an initial color...
 		return nil, nil
 	}
@@ -194,12 +194,12 @@ func (csp *ContentStreamProcessor) getInitialColor(cs PdfColorspace) (PdfColor, 
 }
 
 // Process the entire operations.
-func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
+func (this *ContentStreamProcessor) Process(resources *model.PdfPageResources) error {
 	// Initialize graphics state
-	this.graphicsState.ColorspaceStroking = NewPdfColorspaceDeviceGray()
-	this.graphicsState.ColorspaceNonStroking = NewPdfColorspaceDeviceGray()
-	this.graphicsState.ColorStroking = NewPdfColorDeviceGray(0)
-	this.graphicsState.ColorNonStroking = NewPdfColorDeviceGray(0)
+	this.graphicsState.ColorspaceStroking = model.NewPdfColorspaceDeviceGray()
+	this.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
+	this.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
+	this.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
 
 	for _, op := range this.operations {
 		var err error
@@ -262,7 +262,7 @@ func (this *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 }
 
 // CS: Set the current color space for stroking operations.
-func (csp *ContentStreamProcessor) handleCommand_CS(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_CS(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	if len(op.Params) < 1 {
 		common.Log.Debug("Invalid cs command, skipping over")
 		return errors.New("Too few parameters")
@@ -271,7 +271,7 @@ func (csp *ContentStreamProcessor) handleCommand_CS(op *ContentStreamOperation, 
 		common.Log.Debug("cs command with too many parameters - continuing")
 		return errors.New("Too many parameters")
 	}
-	name, ok := op.Params[0].(*PdfObjectName)
+	name, ok := op.Params[0].(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR: cs command with invalid parameter, skipping over")
 		return errors.New("Type check error")
@@ -295,7 +295,7 @@ func (csp *ContentStreamProcessor) handleCommand_CS(op *ContentStreamOperation, 
 }
 
 // cs: Set the current color space for non-stroking operations.
-func (csp *ContentStreamProcessor) handleCommand_cs(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (csp *ContentStreamProcessor) handleCommand_cs(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	if len(op.Params) < 1 {
 		common.Log.Debug("Invalid CS command, skipping over")
 		return errors.New("Too few parameters")
@@ -304,7 +304,7 @@ func (csp *ContentStreamProcessor) handleCommand_cs(op *ContentStreamOperation, 
 		common.Log.Debug("CS command with too many parameters - continuing")
 		return errors.New("Too many parameters")
 	}
-	name, ok := op.Params[0].(*PdfObjectName)
+	name, ok := op.Params[0].(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR: CS command with invalid parameter, skipping over")
 		return errors.New("Type check error")
@@ -328,7 +328,7 @@ func (csp *ContentStreamProcessor) handleCommand_cs(op *ContentStreamOperation, 
 }
 
 // SC: Set the color to use for stroking operations in a device, CIE-based or Indexed colorspace. (not ICC based)
-func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	// For DeviceGray, CalGray, Indexed: one operand is required
 	// For DeviceRGB, CalRGB, Lab: 3 operands required
 
@@ -348,13 +348,13 @@ func (this *ContentStreamProcessor) handleCommand_SC(op *ContentStreamOperation,
 	return nil
 }
 
-func isPatternCS(cs PdfColorspace) bool {
-	_, isPattern := cs.(*PdfColorspaceSpecialPattern)
+func isPatternCS(cs model.PdfColorspace) bool {
+	_, isPattern := cs.(*model.PdfColorspaceSpecialPattern)
 	return isPattern
 }
 
 // SCN: Same as SC but also supports Pattern, Separation, DeviceN and ICCBased color spaces.
-func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceStroking
 
 	if !isPatternCS(cs) {
@@ -376,7 +376,7 @@ func (this *ContentStreamProcessor) handleCommand_SCN(op *ContentStreamOperation
 }
 
 // sc: Same as SC except used for non-stroking operations.
-func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceNonStroking
 
 	if !isPatternCS(cs) {
@@ -398,7 +398,7 @@ func (this *ContentStreamProcessor) handleCommand_sc(op *ContentStreamOperation,
 }
 
 // scn: Same as SCN except used for non-stroking operations.
-func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation, resources *PdfPageResources) error {
+func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := this.graphicsState.ColorspaceNonStroking
 
 	if !isPatternCS(cs) {
@@ -422,8 +422,8 @@ func (this *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 
 // G: Set the stroking colorspace to DeviceGray, and the color to the specified graylevel (range [0-1]).
 // gray G
-func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceGray()
+func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -443,8 +443,8 @@ func (this *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, 
 
 // g: Same as G, but for non-stroking colorspace and color (range [0-1]).
 // gray g
-func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceGray()
+func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -464,8 +464,8 @@ func (this *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, 
 
 // RG: Sets the stroking colorspace to DeviceRGB and the stroking color to r,g,b. [0-1] ranges.
 // r g b RG
-func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceRGB()
+func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -484,8 +484,8 @@ func (this *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation,
 }
 
 // rg: Same as RG but for non-stroking colorspace, color.
-func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceRGB()
+func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -505,8 +505,8 @@ func (this *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation,
 
 // K: Sets the stroking colorspace to DeviceCMYK and the stroking color to c,m,y,k. [0-1] ranges.
 // c m y k K
-func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceCMYK()
+func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
@@ -525,8 +525,8 @@ func (this *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, 
 }
 
 // k: Same as K but for non-stroking colorspace, color.
-func (this *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *PdfPageResources) error {
-	cs := NewPdfColorspaceDeviceCMYK()
+func (this *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *model.PdfPageResources) error {
+	cs := model.NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
 		common.Log.Debug("Invalid number of parameters for SC")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
