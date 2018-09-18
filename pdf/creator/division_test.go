@@ -46,6 +46,10 @@ func TestDivVertical(t *testing.T) {
 	// Draw division
 	div := NewDivision()
 
+	if div.Inline() {
+		t.Fatal("Fail: Incorrect inline mode value")
+	}
+
 	p = NewParagraph("Components are stacked vertically ")
 	p.SetFont(fontRegular)
 	div.Add(p)
@@ -86,6 +90,10 @@ func TestDivInline(t *testing.T) {
 	// Draw division
 	div := NewDivision()
 	div.SetInline(true)
+
+	if !div.Inline() {
+		t.Fatal("Fail: Incorrect inline mode value")
+	}
 
 	p = NewParagraph("Components are stacked both vertically ")
 	p.SetEnableWrap(false)

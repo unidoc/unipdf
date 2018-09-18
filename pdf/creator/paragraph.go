@@ -519,6 +519,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		ctx.Y += pHeight
 		ctx.Height -= pHeight
 
+		// Calculate new X coordinate if the division is inline.
 		if ctx.Inline {
 			ctx.X += p.Width() + p.margins.right
 		}
