@@ -1117,6 +1117,14 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	return nil
 }
 
+// aesZeroIV allocates a zero-filled buffer that serves as an initialization vector for AESv3.
+func (crypt *PdfCrypt) aesZeroIV() []byte {
+	if crypt.ivAESZero == nil {
+		crypt.ivAESZero = make([]byte, aes.BlockSize)
+	}
+	return crypt.ivAESZero
+}
+
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // It returns false if the password was wrong.
 // 7.6.4.3.2 Algorithm 2.A (page 83)
@@ -1184,10 +1192,8 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	if err != nil {
 		panic(err)
 	}
-	if crypt.ivAESZero == nil {
-		crypt.ivAESZero = make([]byte, aes.BlockSize)
-	}
-	iv := crypt.ivAESZero
+
+	iv := crypt.aesZeroIV()
 	cbc := cipher.NewCBCDecrypter(ac, iv)
 	fkey := make([]byte, 32)
 	cbc.CryptBlocks(fkey, ekey)
