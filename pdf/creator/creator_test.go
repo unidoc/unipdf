@@ -37,6 +37,10 @@ const testImageFile2 = "./testdata/signature.png"
 const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
 const testWts11TTFFile = "./testdata/wts11.ttf"
+
+// XXX: /tmp/2_p_multi.pdf which is created in this test gives an error message when opened in
+//      Adobe Reader: The font FreeSans contains bad Widths.
+//      This problem did not occur when I replaced FreeSans.ttf with LiberationSans-Regular.ttf
 const testFreeSansTTFFile = "./testdata/FreeSans.ttf"
 
 func TestTemplate1(t *testing.T) {
@@ -501,11 +505,7 @@ func TestParagraphFonts(t *testing.T) {
 		return
 	}
 
-	helvetica, err := model.NewStandard14Font("Helvetica")
-	if err != nil {
-		t.Errorf("Fail: %v", err)
-		return
-	}
+	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
 
 	fonts := []*model.PdfFont{roboto, robotoBold, helvetica, roboto, robotoBold, helvetica}
 	for _, font := range fonts {
@@ -539,21 +539,21 @@ func TestParagraphFonts(t *testing.T) {
 func TestParagraphStandardFonts(t *testing.T) {
 	creator := New()
 
-	names := []string{
-		"Courier",
-		"Courier-Bold",
-		"Courier-BoldOblique",
-		"Courier-Oblique",
-		"Helvetica",
-		"Helvetica-Bold",
-		"Helvetica-BoldOblique",
-		"Helvetica-Oblique",
-		"Times-Roman",
-		"Times-Bold",
-		"Times-BoldItalic",
-		"Times-Italic",
-		"Symbol",
-		"ZapfDingbats",
+	names := []model.Standard14Font{
+		model.Courier,
+		model.CourierBold,
+		model.CourierBoldOblique,
+		model.CourierOblique,
+		model.Helvetica,
+		model.HelveticaBold,
+		model.HelveticaBoldOblique,
+		model.HelveticaOblique,
+		model.TimesRoman,
+		model.TimesBold,
+		model.TimesBoldItalic,
+		model.TimesItalic,
+		model.Symbol,
+		model.ZapfDingbats,
 	}
 
 	texts := []string{
@@ -577,11 +577,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 
 	for idx, name := range names {
 		p := NewParagraph(texts[idx])
-		font, err := model.NewStandard14Font(name)
-		if err != nil {
-			t.Errorf("Fail: %v", err)
-			return
-		}
+		font := model.NewStandard14FontMustCompile(name)
 		p.SetFont(font)
 		p.SetFontSize(12)
 		p.SetLineHeight(1.2)
@@ -595,7 +591,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 			p.SetEncoder(textencoding.NewZapfDingbatsEncoder())
 		}
 
-		err = creator.Draw(p)
+		err := creator.Draw(p)
 		if err != nil {
 			t.Errorf("Fail: %v\n", err)
 			return
@@ -1243,7 +1239,7 @@ func newContent(text string, alignment TextAlignment, font *model.PdfFont, fontS
 }
 
 func newBillItem(t *Table, no, date, notes, amount, con, retApplied, ret, netBill string) {
-	timesBold, _ := model.NewStandard14Font("Times-Bold")
+	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
 
 	billNo := t.NewCell()
 	billNo.SetContent(newContent(no, TextAlignmentLeft, timesBold, 8, ColorBlack))
@@ -1265,8 +1261,8 @@ func newBillItem(t *Table, no, date, notes, amount, con, retApplied, ret, netBil
 
 // Test creating and drawing a table.
 func TestCreatorHendricksReq1(t *testing.T) {
-	timesRoman, _ := model.NewStandard14Font("Times-Roman")
-	timesBold, _ := model.NewStandard14Font("Times-Bold")
+	timesRoman := model.NewStandard14FontMustCompile(model.TimesRoman)
+	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
 	table := NewTable(3) // Mx4 table
 	// Default, equal column sizes (4x0.25)...
 	table.SetColumnWidths(0.35, 0.30, 0.35)
@@ -1464,7 +1460,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 }
 
 func TestCreatorTableBorderReq1(t *testing.T) {
-	timesRoman, _ := model.NewStandard14Font("Times-Roman")
+	timesRoman := model.NewStandard14FontMustCompile(model.TimesRoman)
 	table := NewTable(1) // Mx4 table
 	table.SetColumnWidths(1)
 
@@ -1794,7 +1790,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 }
 
 func TestCellBorder(t *testing.T) {
-	timesBold, _ := model.NewStandard14Font("Times-Bold")
+	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
 
 	table := NewTable(2)
 	table.SetColumnWidths(0.50, 0.50)
@@ -1816,16 +1812,8 @@ func TestCellBorder(t *testing.T) {
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
-	fontRegular, err := model.NewStandard14Font("Helvetica")
-	if err != nil {
-		t.Errorf("Fail: %v", err)
-		return
-	}
-	fontBold, err := model.NewStandard14Font("Helvetica-Bold")
-	if err != nil {
-		t.Errorf("Fail: %v", err)
-		return
-	}
+	fontRegular := model.NewStandard14FontMustCompile(model.Helvetica)
+	fontBold := model.NewStandard14FontMustCompile(model.HelveticaBold)
 
 	ch := c.NewChapter("Document control")
 	ch.SetMargins(0, 0, 40, 0)
@@ -1907,7 +1895,7 @@ func TestTableInSubchapter(t *testing.T) {
 	myPara.SetLineHeight(1.5)
 	sc.Add(myPara)
 
-	err = c.Draw(ch)
+	err := c.Draw(ch)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

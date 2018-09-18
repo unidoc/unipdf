@@ -416,7 +416,7 @@ func (cmap *CMap) parseBfchar() error {
 	return nil
 }
 
-// parseBfrange parses a c section of a CMap file.
+// parseBfrange parses a bfrange section of a CMap file.
 func (cmap *CMap) parseBfrange() error {
 	for {
 		// The specifications are in triplets.

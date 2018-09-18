@@ -310,12 +310,12 @@ func (to *textObject) setTextMatrix(f []float64) {
 	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 }
 
-// showText "Tj" Show a text string
+// showText "Tj" Show a text string.
 func (to *textObject) showText(charcodes []byte) error {
 	return to.renderText(charcodes)
 }
 
-// showTextAdjusted "TJ" Show text with adjustable spacing
+// showTextAdjusted "TJ" Show text with adjustable spacing.
 func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 	vertical := false
 	for _, o := range args.Elements() {
@@ -750,12 +750,62 @@ func (tl *TextList) Transform(a, b, c, d, tx, ty float64) {
 	}
 }
 
-// getFont returns the PdfFont for PDF name `name` or an error if it doesn't exist.
+// getFont returns the font named `name` if it exists in the page's resources or an error if it
+// doesn't. It caches the returned fonts.
 func (to *textObject) getFont(name string) (*model.PdfFont, error) {
+	accessCount++
+	entry, ok := fontCache[name]
+	if ok {
+		entry.access = accessCount
+		return entry.font, nil
+	}
+
+	// Font not in cache. Load it.
+	font, err := to.getFontDirect(name)
+	if err != nil {
+		return nil, err
+	}
+	entry = fontEntry{font, accessCount}
+
+	// Eject a victim if the cache is full.
+	if len(fontCache) >= maxFontCache {
+		names := []string{}
+		for name := range fontCache {
+			names = append(names, name)
+		}
+		sort.Slice(names, func(i, j int) bool {
+			return fontCache[names[i]].access < fontCache[names[j]].access
+		})
+		delete(fontCache, names[0])
+	}
+	fontCache[name] = entry
+
+	return font, nil
+}
+
+type fontEntry struct {
+	font   *model.PdfFont // The font being cached.
+	access int64          // Last access. Used to determine LRU cache victims.
+}
+
+// fontCache is a simple LRU cache that is used to prevent redudant constructions of PdfFont's from
+// PDF objects.
+var fontCache = map[string]fontEntry{}
+
+// maxFontCache is the maximum number of PdfFont's in fontCache.
+const maxFontCache = 10
+
+// accessCount is used to set fontEntry.access to an incrementing number
+var accessCount int64
+
+// getFontDirect returns the font named `name` if it exists in the page's resources or an error if
+// is doesn't.
+// This is a direct (uncached access)
+func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
 	if name == "UniDocCourier" {
-		return model.NewStandard14Font("Courier")
+		return model.NewStandard14FontMustCompile(model.Courier), nil
 	}
 
 	fontObj, err := to.getFontDict(name)
@@ -764,14 +814,13 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 	}
 	font, err := model.NewPdfFontFromPdfObject(fontObj)
 	if err != nil {
-		common.Log.Debug("getFont: NewPdfFontFromPdfObject failed. name=%#q err=%v", name, err)
+		common.Log.Debug("getFontDirect: NewPdfFontFromPdfObject failed. name=%#q err=%v", name, err)
 	}
 	return font, err
 }
 
-// getFontDict returns the font object called `name` if it exists in the page's Font resources or
+// getFontDict returns the font dict with key `name` if it exists in the page's Font resources or
 // an error if it doesn't.
-// XXX: TODO: Can we cache font values?
 func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
 	resources := to.e.resources
 	if resources == nil {

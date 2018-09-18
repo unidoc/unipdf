@@ -71,13 +71,46 @@ func DefaultFont() *PdfFont {
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
-// `basefont` is not one the standard 14 font names.
+// `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont string) (*PdfFont, error) {
 	std, ok := standard14Fonts[basefont]
 	if !ok {
+		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
 	}
 	return &PdfFont{context: &std}, nil
+}
+
+// Standard14Font is to be used only to define the standard 14 font names that follow.
+// This guarantees that calls to NewStandard14FontMustCompile will succeed.
+type Standard14Font string
+
+const (
+	Courier              Standard14Font = "Courier"
+	CourierBold          Standard14Font = "Courier-Bold"
+	CourierBoldOblique   Standard14Font = "Courier-BoldOblique"
+	CourierOblique       Standard14Font = "Courier-Oblique"
+	Helvetica            Standard14Font = "Helvetica"
+	HelveticaBold        Standard14Font = "Helvetica-Bold"
+	HelveticaBoldOblique Standard14Font = "Helvetica-BoldOblique"
+	HelveticaOblique     Standard14Font = "Helvetica-Oblique"
+	TimesRoman           Standard14Font = "Times-Roman"
+	TimesBold            Standard14Font = "Times-Bold"
+	TimesBoldItalic      Standard14Font = "Times-BoldItalic"
+	TimesItalic          Standard14Font = "Times-Italic"
+	Symbol               Standard14Font = "Symbol"
+	ZapfDingbats         Standard14Font = "ZapfDingbats"
+)
+
+// NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
+// If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
+// is guaranteed to succeed.
+func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
+	font, err := NewStandard14Font(string(basefont))
+	if err != nil {
+		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
+	}
+	return font
 }
 
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
@@ -415,12 +448,12 @@ type fontCommon struct {
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
 
-	// These are optional fields in the PDF font
+	// These are optional fields in the PDF font.
 	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
 
 	// These objects are computed from optional fields in the PDF font.
-	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
-	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode".
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor".
 
 	// objectNumber helps us find the font in the PDF being processed. This helps with debugging.
 	objectNumber int64
@@ -449,6 +482,14 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 	}
 	if base.toUnicode != nil {
 		d.Set("ToUnicode", base.toUnicode)
+	} else if base.toUnicodeCmap != nil {
+		data := base.toUnicodeCmap.Bytes()
+		o, err := core.MakeStream(data, nil)
+		if err != nil {
+			common.Log.Debug("MakeStream failed. err=%v", err)
+		} else {
+			d.Set("ToUnicode", o)
+		}
 	}
 	return d
 }
@@ -551,7 +592,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 	return d, font, nil
 }
 
-// toUnicodeToCmap returns a CMap of `toUnicode` if it exists
+// toUnicodeToCmap returns a CMap of `toUnicode` if it exists.
 func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, error) {
 	toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
 	if !ok {
@@ -640,7 +681,7 @@ func (descriptor *PdfFontDescriptor) String() string {
 	}
 	parts = append(parts, fmt.Sprintf("FontFile3=%t", descriptor.FontFile3 != nil))
 
-	return fmt.Sprintf("FONT_DESCRIPTON{%s}", strings.Join(parts, ", "))
+	return fmt.Sprintf("FONT_DESCRIPTOR{%s}", strings.Join(parts, ", "))
 }
 
 // newPdfFontDescriptorFromPdfObject loads the font descriptor from a core.PdfObject.  Can either be a

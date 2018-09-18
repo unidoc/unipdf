@@ -56,7 +56,7 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
 	p := NewParagraph(heading)
 
 	p.SetFontSize(14)
-	helvetica, _ := model.NewStandard14Font("Helvetica")
+	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
 	p.SetFont(helvetica) // bold?
 
 	subchap.showNumbering = true
