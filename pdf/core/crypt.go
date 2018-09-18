@@ -1628,5 +1628,16 @@ func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
 	if p != crypt.P {
 		return false, errors.New("permissions validation failed")
 	}
+	encMeta := true
+	if perms[8] == 'T' {
+		encMeta = true
+	} else if perms[8] == 'F' {
+		encMeta = false
+	} else {
+		return false, errors.New("decoded metadata encryption flag is invalid")
+	}
+	if encMeta != crypt.EncryptMetadata {
+		return false, errors.New("metadata encryption validation failed")
+	}
 	return true, nil
 }
