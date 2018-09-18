@@ -8,6 +8,7 @@
 package core
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
@@ -208,5 +209,24 @@ func TestDecryption1(t *testing.T) {
 	if string(so.Stream) != string(exp) {
 		t.Errorf("Stream content wrong")
 		return
+	}
+}
+
+func BenchmarkAlg2b(b *testing.B) {
+	// hash runs a variable number of rounds, so we need to have a
+	// deterministic random source to make benchmark results comparable
+	r := rand.New(rand.NewSource(1234567))
+	const n = 20
+	pass := make([]byte, n)
+	r.Read(pass)
+	data := make([]byte, n+8+48)
+	r.Read(data)
+	user := make([]byte, 48)
+	r.Read(user)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = alg2b(data, pass, user)
 	}
 }

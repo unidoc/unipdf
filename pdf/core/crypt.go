@@ -6,13 +6,18 @@
 package core
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 
 	"github.com/unidoc/unidoc/common"
@@ -29,7 +34,10 @@ type PdfCrypt struct {
 	R                int
 	O                []byte
 	U                []byte
+	OE               []byte // R=6
+	UE               []byte // R=6
 	P                int
+	Perms            []byte // R=6
 	EncryptMetadata  bool
 	Id0              string
 	EncryptionKey    []byte
@@ -42,6 +50,8 @@ type PdfCrypt struct {
 	StringFilter string
 
 	parser *PdfParser
+
+	ivAESZero []byte // a zero buffer used as an initialization vector for AES
 }
 
 // AccessPermissions is a list of access permissions for a PDF file.
@@ -69,9 +79,18 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 // CryptFilter represents information from a CryptFilter dictionary.
 // TODO (v3): Unexport.
 type CryptFilter struct {
-	Cfm    string
+	Cfm    string // TODO (v3): CryptFilterMethod
 	Length int
 }
+
+// Encryption filters names.
+// Table 25, CFM (page 92)
+const (
+	CryptFilterNone  = "None"  // do not decrypt data
+	CryptFilterV2    = "V2"    // RC4-based filter
+	CryptFilterAESV2 = "AESV2" // AES-based filter (128 bit key, PDF 1.6)
+	CryptFilterAESV3 = "AESV3" // AES-based filter (256 bit key, PDF 2.0)
+)
 
 // CryptFilters is a map of crypt filter name and underlying CryptFilter info.
 // TODO (v3): Unexport.
@@ -131,19 +150,18 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		cf := CryptFilter{}
 
 		// Method.
-		cfMethod := "None" // Default.
+		cfMethod := ""
 		cfm, ok := dict.Get("CFM").(*PdfObjectName)
-		if ok {
-			if *cfm == "V2" {
-				cfMethod = "V2"
-			} else if *cfm == "AESV2" {
-				cfMethod = "AESV2"
-			} else {
-				return fmt.Errorf("Unsupported crypt filter (%s)", *cfm)
-			}
+		if !ok {
+			return fmt.Errorf("Unsupported crypt filter (None)")
 		}
-		if cfMethod != "V2" && cfMethod != "AESV2" {
-			return fmt.Errorf("Unsupported crypt filter (%s)", cfMethod)
+		switch f := string(*cfm); f {
+		case CryptFilterV2,
+			CryptFilterAESV2,
+			CryptFilterAESV3:
+			cfMethod = f
+		default:
+			return fmt.Errorf("Unsupported crypt filter (%s)", f)
 		}
 		cf.Cfm = cfMethod
 
@@ -161,7 +179,7 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 				if *length == 64 || *length == 128 {
 					common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", *length)
 					*length /= 8
-				} else {
+				} else if !(*length == 32 && cf.Cfm == CryptFilterAESV3) {
 					return fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", *length)
 				}
 			}
@@ -237,7 +255,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
 			crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
-		} else if *V == 4 {
+		} else if *V >= 4 && *V <= 5 {
 			crypter.V = int(*V)
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
@@ -254,8 +272,8 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing R")
 	}
-	if *R < 2 || *R > 4 {
-		return crypter, errors.New("Invalid R")
+	if *R < 2 || *R > 6 {
+		return crypter, fmt.Errorf("Invalid R (%d)", *R)
 	}
 	crypter.R = int(*R)
 
@@ -263,7 +281,12 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing O")
 	}
-	if len(*O) != 32 {
+	if crypter.R == 5 || crypter.R == 6 {
+		// the spec says =48 bytes, but Acrobat pads them out longer
+		if len(*O) < 48 {
+			return crypter, fmt.Errorf("Length(O) < 48 (%d)", len(*O))
+		}
+	} else if len(*O) != 32 {
 		return crypter, fmt.Errorf("Length(O) != 32 (%d)", len(*O))
 	}
 	crypter.O = []byte(*O)
@@ -272,7 +295,12 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing U")
 	}
-	if len(*U) != 32 {
+	if crypter.R == 5 || crypter.R == 6 {
+		// the spec says =48 bytes, but Acrobat pads them out longer
+		if len(*U) < 48 {
+			return crypter, fmt.Errorf("Length(U) < 48 (%d)", len(*U))
+		}
+	} else if len(*U) != 32 {
 		// Strictly this does not cause an error.
 		// If O is OK and others then can still read the file.
 		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(*U))
@@ -280,11 +308,42 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	crypter.U = []byte(*U)
 
+	if crypter.R >= 5 {
+		OE, ok := ed.Get("OE").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing OE")
+		}
+		if len(*OE) != 32 {
+			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(*OE))
+		}
+		crypter.OE = []byte(*OE)
+
+		UE, ok := ed.Get("UE").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing UE")
+		}
+		if len(*UE) != 32 {
+			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(*UE))
+		}
+		crypter.UE = []byte(*UE)
+	}
+
 	P, ok := ed.Get("P").(*PdfObjectInteger)
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing permissions attr")
 	}
 	crypter.P = int(*P)
+
+	if crypter.R == 6 {
+		Perms, ok := ed.Get("Perms").(*PdfObjectString)
+		if !ok {
+			return crypter, errors.New("Encrypt dictionary missing Perms")
+		}
+		if len(*Perms) != 16 {
+			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(*Perms))
+		}
+		crypter.Perms = []byte(*Perms)
+	}
 
 	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)
 	if ok {
@@ -379,6 +438,14 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// Also build the encryption/decryption key.
 
 	crypt.Authenticated = false
+	if crypt.R >= 5 {
+		authenticated, err := crypt.alg2a(password)
+		if err != nil {
+			return false, err
+		}
+		crypt.Authenticated = authenticated
+		return authenticated, err
+	}
 
 	// Try user password.
 	common.Log.Trace("Debugging authentication - user pass")
@@ -419,7 +486,20 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 	perms := AccessPermissions{}
 
 	// Try owner password -> full rights.
-	isOwner, err := crypt.Alg7(password)
+	var (
+		isOwner bool
+		err     error
+	)
+	if crypt.R >= 5 {
+		var h []byte
+		h, err = crypt.alg12(password)
+		if err != nil {
+			return false, perms, err
+		}
+		isOwner = len(h) != 0
+	} else {
+		isOwner, err = crypt.Alg7(password)
+	}
 	if err != nil {
 		return false, perms, err
 	}
@@ -437,7 +517,17 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 	}
 
 	// Try user password.
-	isUser, err := crypt.Alg6(password)
+	var isUser bool
+	if crypt.R >= 5 {
+		var h []byte
+		h, err = crypt.alg11(password)
+		if err != nil {
+			return false, perms, err
+		}
+		isUser = len(h) != 0
+	} else {
+		isUser, err = crypt.Alg6(password)
+	}
 	if err != nil {
 		return false, perms, err
 	}
@@ -475,10 +565,10 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
 		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
 	}
-	isAES := false
-	if cf.Cfm == "AESV2" {
-		isAES = true
+	if cf.Cfm == CryptFilterAESV3 {
+		return ekey, nil
 	}
+	isAES2 := cf.Cfm == CryptFilterAESV2
 
 	key := make([]byte, len(ekey)+5)
 	for i := 0; i < len(ekey); i++ {
@@ -492,7 +582,7 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 		b := byte((genNum >> uint32(8*i)) & 0xff)
 		key[i+len(ekey)+3] = b
 	}
-	if isAES {
+	if isAES2 {
 		// If using the AES algorithm, extend the encryption key an
 		// additional 4 bytes by adding the value “sAlT”, which
 		// corresponds to the hexadecimal values 0x73, 0x41, 0x6C, 0x54.
@@ -536,7 +626,7 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 	}
 
 	cfMethod := cf.Cfm
-	if cfMethod == "V2" {
+	if cfMethod == CryptFilterV2 {
 		// Standard RC4 algorithm.
 		ciph, err := rc4.NewCipher(okey)
 		if err != nil {
@@ -546,7 +636,7 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		ciph.XORKeyStream(buf, buf)
 		common.Log.Trace("to: % x", buf)
 		return buf, nil
-	} else if cfMethod == "AESV2" {
+	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
 		// Strings and streams encrypted with AES shall use a padding
 		// scheme that is described in Internet RFC 2898, PKCS #5:
 		// Password-Based Cryptography Specification Version 2.0; see
@@ -597,12 +687,14 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		}
 
 		// The padded length is indicated by the last values.  Remove those.
-		padLen := int(buf[len(buf)-1])
-		if padLen >= len(buf) {
-			common.Log.Debug("Illegal pad length")
-			return buf, fmt.Errorf("Invalid pad length")
+		if cfMethod == CryptFilterAESV2 {
+			padLen := int(buf[len(buf)-1])
+			if padLen >= len(buf) {
+				common.Log.Debug("Illegal pad length")
+				return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
+			}
+			buf = buf[:len(buf)-padLen]
 		}
-		buf = buf[:len(buf)-padLen]
 
 		return buf, nil
 	}
@@ -807,7 +899,7 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		ciph.XORKeyStream(buf, buf)
 		common.Log.Trace("to: % x", buf)
 		return buf, nil
-	} else if cfMethod == "AESV2" {
+	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
 		// Strings and streams encrypted with AES shall use a padding
 		// scheme that is described in Internet RFC 2898, PKCS #5:
 		// Password-Based Cryptography Specification Version 2.0; see
@@ -833,11 +925,14 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		// block size parameter is set to 16 bytes, and the initialization
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
-		pad := 16 - len(buf)%16
-		for i := 0; i < pad; i++ {
-			buf = append(buf, byte(pad))
+
+		if cfMethod == CryptFilterAESV2 {
+			pad := 16 - len(buf)%16
+			for i := 0; i < pad; i++ {
+				buf = append(buf, byte(pad))
+			}
+			common.Log.Trace("Padded to %d bytes", len(buf))
 		}
-		common.Log.Trace("Padded to %d bytes", len(buf))
 
 		// Generate random 16 bytes, place in beginning of buffer.
 		ciphertext := make([]byte, 16+len(buf))
@@ -1020,6 +1115,196 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	}
 
 	return nil
+}
+
+// alg2a retrieves the encryption key from an encrypted document (R >= 5).
+// It returns false if the password was wrong.
+// 7.6.4.3.2 Algorithm 2.A (page 83)
+func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
+	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
+
+	// step a: Unicode normalization
+	// TODO(dennwc): make sure that UTF-8 strings are normalized
+
+	// step b: truncate to 127 bytes
+	if len(pass) > 127 {
+		pass = pass[:127]
+	}
+
+	// step c: test pass against the owner key
+	h, err := crypt.alg12(pass)
+	if err != nil {
+		return false, err
+	}
+	var (
+		data []byte // data to hash
+		ekey []byte // encrypted file key
+		ukey []byte // user key; set only when using owner's password
+	)
+	if len(h) != 0 {
+		// owner password valid
+
+		// step d: compute an intermediate owner key
+		str := make([]byte, len(pass)+8+48)
+		i := copy(str, pass)
+		i += copy(str[i:], crypt.O[40:48]) // owner Key Salt
+		i += copy(str[i:], crypt.U[0:48])
+
+		data = str
+		ekey = crypt.OE
+		ukey = crypt.U[0:48]
+	} else {
+		// check user password
+		h, err = crypt.alg11(pass)
+		if err == nil && len(h) == 0 {
+			// try default password
+			h, err = crypt.alg11([]byte(""))
+		}
+		if err != nil {
+			return false, err
+		} else if len(h) == 0 {
+			// wrong password
+			return false, nil
+		}
+		// step e: compute an intermediate user key
+		str := make([]byte, len(pass)+8)
+		i := copy(str, pass)
+		i += copy(str[i:], crypt.U[40:48]) // user Key Salt
+
+		data = str
+		ekey = crypt.UE
+		ukey = nil
+	}
+	ekey = ekey[:32]
+
+	// intermediate key
+	ikey := crypt.alg2b(data, pass, ukey)
+
+	ac, err := aes.NewCipher(ikey[:32])
+	if err != nil {
+		panic(err)
+	}
+	if crypt.ivAESZero == nil {
+		crypt.ivAESZero = make([]byte, aes.BlockSize)
+	}
+	iv := crypt.ivAESZero
+	cbc := cipher.NewCBCDecrypter(ac, iv)
+	fkey := make([]byte, 32)
+	cbc.CryptBlocks(fkey, ekey)
+
+	crypt.EncryptionKey = fkey
+
+	if crypt.R == 5 {
+		return true, nil
+	}
+
+	return crypt.alg13(fkey)
+}
+
+// alg2b computes a hash for R=5 and R=6.
+func (crypt *PdfCrypt) alg2b(data, pwd, userKey []byte) []byte {
+	if crypt.R == 5 {
+		return alg2b_R5(data)
+	}
+	return alg2b(data, pwd, userKey)
+}
+
+// alg2b_R5 computes a hash for R=5, used in a deprecated extension.
+// It's used the same way as a hash described in Algorithm 2.B, but it doesn't use the original password
+// and the user key to calculate the hash.
+func alg2b_R5(data []byte) []byte {
+	h := sha256.New()
+	h.Write(data)
+	return h.Sum(nil)
+}
+
+// repeat repeats first n bytes of buf until the end of the buffer.
+// It assumes that the length of buf is a multiple of n.
+func repeat(buf []byte, n int) {
+	bp := n
+	for bp < len(buf) {
+		copy(buf[bp:], buf[:bp])
+		bp *= 2
+	}
+}
+
+// alg2b computes a hash for R=6.
+// 7.6.4.3.3 Algorithm 2.B (page 83)
+func alg2b(data, pwd, userKey []byte) []byte {
+	var (
+		s256, s384, s512 hash.Hash
+	)
+	s256 = sha256.New()
+	hbuf := make([]byte, 64)
+
+	h := s256
+	h.Write(data)
+	K := h.Sum(hbuf[:0])
+
+	buf := make([]byte, 64*(127+64+48))
+
+	round := func(rnd int) (E []byte) {
+		// step a: repeat pass+K 64 times
+		n := len(pwd) + len(K) + len(userKey)
+		part := buf[:n]
+		i := copy(part, pwd)
+		i += copy(part[i:], K[:])
+		i += copy(part[i:], userKey)
+		if i != n {
+			panic("wrong size")
+		}
+		K1 := buf[:n*64]
+		repeat(K1, n)
+
+		// step b: encrypt K1 with AES-128 CBC
+		ac, err := aes.NewCipher(K[0:16])
+		if err != nil {
+			panic(err)
+		}
+		cbc := cipher.NewCBCEncrypter(ac, K[16:32])
+		cbc.CryptBlocks(K1, K1)
+		E = K1
+
+		// step c: use 16 bytes of E as big-endian int, select the next hash
+		b := 0
+		for i := 0; i < 16; i++ {
+			b += int(E[i] % 3)
+		}
+		var h hash.Hash
+		switch b % 3 {
+		case 0:
+			h = s256
+		case 1:
+			if s384 == nil {
+				s384 = sha512.New384()
+			}
+			h = s384
+		case 2:
+			if s512 == nil {
+				s512 = sha512.New()
+			}
+			h = s512
+		}
+
+		// step d: take the hash of E, use as a new K
+		h.Reset()
+		h.Write(E)
+		K = h.Sum(hbuf[:0])
+
+		return E
+	}
+
+	for i := 0; ; {
+		E := round(i)
+		b := uint8(E[len(E)-1])
+		// from the spec, it appears that i should be incremented after
+		// the test, but that doesn't match what Adobe does
+		i++
+		if i >= 64 && b <= uint8(i-32) {
+			break
+		}
+	}
+	return K[:32]
 }
 
 // Alg2 computes an encryption key.
@@ -1291,4 +1576,57 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	}
 
 	return auth, nil
+}
+
+// alg11 authenticates the user password (R >= 5) and returns the hash.
+func (crypt *PdfCrypt) alg11(upass []byte) ([]byte, error) {
+	str := make([]byte, len(upass)+8)
+	i := copy(str, upass)
+	i += copy(str[i:], crypt.U[32:40]) // user Validation Salt
+
+	h := crypt.alg2b(str, upass, nil)
+	h = h[:32]
+	if !bytes.Equal(h, crypt.U[:32]) {
+		return nil, nil
+	}
+	return h, nil
+}
+
+// alg12 authenticates the owner password (R >= 5) and returns the hash.
+// 7.6.4.4.10 Algorithm 12 (page 87)
+func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
+	str := make([]byte, len(opass)+8+48)
+	i := copy(str, opass)
+	i += copy(str[i:], crypt.O[32:40]) // owner Validation Salt
+	i += copy(str[i:], crypt.U[0:48])
+
+	h := crypt.alg2b(str, opass, crypt.U[0:48])
+	h = h[:32]
+	if !bytes.Equal(h, crypt.O[:32]) {
+		return nil, nil
+	}
+	return h, nil
+}
+
+// alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
+// 7.6.4.4.11 Algorithm 13 (page 87)
+func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
+	perms := crypt.Perms[:16]
+
+	ac, err := aes.NewCipher(fkey[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	ecb := newECBDecrypter(ac)
+	ecb.CryptBlocks(perms, perms)
+
+	if !bytes.Equal(perms[9:12], []byte("adb")) {
+		return false, errors.New("decoded permissions are invalid")
+	}
+	p := int(int32(binary.LittleEndian.Uint32(perms[0:4])))
+	if p != crypt.P {
+		return false, errors.New("permissions validation failed")
+	}
+	return true, nil
 }
