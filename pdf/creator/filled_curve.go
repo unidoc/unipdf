@@ -30,38 +30,38 @@ func NewFilledCurve() *FilledCurve {
 }
 
 // AppendCurve appends a Bezier curve to the filled curve.
-func (this *FilledCurve) AppendCurve(curve draw.CubicBezierCurve) *FilledCurve {
-	this.curves = append(this.curves, curve)
-	return this
+func (fc *FilledCurve) AppendCurve(curve draw.CubicBezierCurve) *FilledCurve {
+	fc.curves = append(fc.curves, curve)
+	return fc
 }
 
 // SetFillColor sets the fill color for the path.
-func (this *FilledCurve) SetFillColor(color Color) {
-	this.fillColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
+func (fc *FilledCurve) SetFillColor(color Color) {
+	fc.fillColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
 }
 
 // SetBorderColor sets the border color for the path.
-func (this *FilledCurve) SetBorderColor(color Color) {
-	this.borderColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
+func (fc *FilledCurve) SetBorderColor(color Color) {
+	fc.borderColor = pdf.NewPdfColorDeviceRGB(color.ToRGB())
 }
 
 // draw draws the filled curve. Can specify a graphics state (gsName) for setting opacity etc. Otherwise leave empty ("").
 // Returns the content stream as a byte array, the bounding box and an error on failure.
-func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+func (fc *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	bpath := draw.NewCubicBezierPath()
-	for _, c := range this.curves {
+	for _, c := range fc.curves {
 		bpath = bpath.AppendCurve(c)
 	}
 
 	creator := pdfcontent.NewContentCreator()
 	creator.Add_q()
 
-	if this.FillEnabled {
-		creator.Add_rg(this.fillColor.R(), this.fillColor.G(), this.fillColor.B())
+	if fc.FillEnabled {
+		creator.Add_rg(fc.fillColor.R(), fc.fillColor.G(), fc.fillColor.B())
 	}
-	if this.BorderEnabled {
-		creator.Add_RG(this.borderColor.R(), this.borderColor.G(), this.borderColor.B())
-		creator.Add_w(this.BorderWidth)
+	if fc.BorderEnabled {
+		creator.Add_RG(fc.borderColor.R(), fc.borderColor.G(), fc.borderColor.B())
+		creator.Add_w(fc.BorderWidth)
 	}
 	if len(gsName) > 1 {
 		// If a graphics state is provided, use it. (can support transparency).
@@ -71,23 +71,23 @@ func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) 
 	draw.DrawBezierPathWithCreator(bpath, creator)
 	creator.Add_h() // Close the path.
 
-	if this.FillEnabled && this.BorderEnabled {
+	if fc.FillEnabled && fc.BorderEnabled {
 		creator.Add_B() // fill and stroke.
-	} else if this.FillEnabled {
+	} else if fc.FillEnabled {
 		creator.Add_f() // Fill.
-	} else if this.BorderEnabled {
+	} else if fc.BorderEnabled {
 		creator.Add_S() // Stroke.
 	}
 	creator.Add_Q()
 
 	// Get bounding box.
 	pathBbox := bpath.GetBoundingBox()
-	if this.BorderEnabled {
+	if fc.BorderEnabled {
 		// Account for stroke width.
-		pathBbox.Height += this.BorderWidth
-		pathBbox.Width += this.BorderWidth
-		pathBbox.X -= this.BorderWidth / 2
-		pathBbox.Y -= this.BorderWidth / 2
+		pathBbox.Height += fc.BorderWidth
+		pathBbox.Width += fc.BorderWidth
+		pathBbox.X -= fc.BorderWidth / 2
+		pathBbox.Y -= fc.BorderWidth / 2
 	}
 
 	// Bounding box - global coordinate system.
@@ -100,10 +100,10 @@ func (this *FilledCurve) draw(gsName string) ([]byte, *pdf.PdfRectangle, error) 
 }
 
 // GeneratePageBlocks draws the filled curve on page blocks.
-func (this *FilledCurve) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+func (fc *FilledCurve) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
-	contents, _, err := this.draw("")
+	contents, _, err := fc.draw("")
 	err = block.addContentsByString(string(contents))
 	if err != nil {
 		return nil, ctx, err

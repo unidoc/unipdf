@@ -559,11 +559,12 @@ func (this *ContentStreamParser) parseObject() (obj PdfObject, err error, isop b
 			dict, err := this.parseDict()
 			return dict, err, false
 		} else {
+			// Otherwise, can be: keyword such as "null", "false", "true" or an operand...
 			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
 			bb, _ = this.reader.Peek(5)
 			peekStr := string(bb)
-			common.Log.Trace("Peek str: %s", peekStr)
+			common.Log.Trace("cont Peek str: %s", peekStr)
 
 			if (len(peekStr) > 3) && (peekStr[:4] == "null") {
 				null, err := this.parseNull()
@@ -577,7 +578,13 @@ func (this *ContentStreamParser) parseObject() (obj PdfObject, err error, isop b
 			}
 
 			operand, err := this.parseOperand()
-			return operand, err, true
+			if err != nil {
+				return operand, err, false
+			}
+			if len(operand.String()) < 1 {
+				return operand, ErrInvalidOperand, false
+			}
+			return operand, nil, true
 		}
 	}
 }
