@@ -159,5 +159,10 @@ func licenseKeyDecode(content string) (LicenseKey, error) {
 
 	ret.CreatedAt = time.Unix(ret.CreatedAtInt, 0)
 
+	if ret.ExpiresAtInt > 0 {
+		expiresAt := time.Unix(ret.ExpiresAtInt, 0)
+		ret.ExpiresAt = &expiresAt
+	}
+
 	return ret, nil
 }

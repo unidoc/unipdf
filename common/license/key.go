@@ -22,16 +22,35 @@ const (
 // Make sure all time is at least after this for sanity check.
 var testTime = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 
+// Old licenses had expiry that were not meant to expire. Only checking expiry
+// on licenses issued later than this date.
+var startCheckingExpiry = time.Date(2018, 8, 1, 0, 0, 0, 0, time.UTC)
+
 type LicenseKey struct {
-	LicenseId    string    `json:"license_id"`
-	CustomerId   string    `json:"customer_id"`
-	CustomerName string    `json:"customer_name"`
-	Tier         string    `json:"tier"`
-	CreatedAt    time.Time `json:"-"`
-	CreatedAtInt int64     `json:"created_at"`
-	CreatedBy    string    `json:"created_by"`
-	CreatorName  string    `json:"creator_name"`
-	CreatorEmail string    `json:"creator_email"`
+	LicenseId    string     `json:"license_id"`
+	CustomerId   string     `json:"customer_id"`
+	CustomerName string     `json:"customer_name"`
+	Tier         string     `json:"tier"`
+	CreatedAt    time.Time  `json:"-"`
+	CreatedAtInt int64      `json:"created_at"`
+	ExpiresAt    *time.Time `json:"-"`
+	ExpiresAtInt int64      `json:"expires_at"`
+	CreatedBy    string     `json:"created_by"`
+	CreatorName  string     `json:"creator_name"`
+	CreatorEmail string     `json:"creator_email"`
+}
+
+func (this *LicenseKey) isExpired() bool {
+	if this.ExpiresAt == nil {
+		return false
+	}
+
+	if this.CreatedAt.Before(startCheckingExpiry) {
+		return false
+	}
+
+	utcNow := time.Now().UTC()
+	return utcNow.After(*this.ExpiresAt)
 }
 
 func (this *LicenseKey) Validate() error {
@@ -49,6 +68,16 @@ func (this *LicenseKey) Validate() error {
 
 	if testTime.After(this.CreatedAt) {
 		return fmt.Errorf("Invalid license: Created At is invalid")
+	}
+
+	if this.ExpiresAt != nil {
+		if this.CreatedAt.After(*this.ExpiresAt) {
+			return fmt.Errorf("Invalid license: Created At cannot be Greater than Expires At")
+		}
+	}
+
+	if this.isExpired() {
+		return fmt.Errorf("Invalid license: The license has already expired")
 	}
 
 	if len(this.CreatorName) < 1 {
@@ -84,6 +113,13 @@ func (this *LicenseKey) ToString() string {
 	str += fmt.Sprintf("Customer Name: %s\n", this.CustomerName)
 	str += fmt.Sprintf("Tier: %s\n", this.Tier)
 	str += fmt.Sprintf("Created At: %s\n", common.UtcTimeFormat(this.CreatedAt))
+
+	if this.ExpiresAt == nil {
+		str += fmt.Sprintf("Expires At: Never\n")
+	} else {
+		str += fmt.Sprintf("Expires At: %s\n", common.UtcTimeFormat(*this.ExpiresAt))
+	}
+
 	str += fmt.Sprintf("Creator: %s <%s>\n", this.CreatorName, this.CreatorEmail)
 	return str
 }

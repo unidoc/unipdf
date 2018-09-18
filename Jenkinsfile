@@ -5,6 +5,7 @@ node {
     env.GOROOT="${root}"
     env.GOPATH="${WORKSPACE}/gopath"
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
+    env.GOCACHE="off"
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc") {
         sh 'go version'
@@ -36,8 +37,13 @@ node {
 
         stage('Testing') {
             // Go test - No tolerance.
-            //sh 'go test -v ./... >gotest.txt 2>&1'
+            sh 'rm -f /tmp/*.pdf'
             sh '2>&1 go test -v ./... | tee gotest.txt'
+        }
+
+        stage('Check generated PDFs') {
+            // Check the created output pdf files.
+            sh 'find /tmp -maxdepth 1 -name "*.pdf" -print0 | xargs -t -n 1 -0 gs -dNOPAUSE -dBATCH -sDEVICE=nullpage -sPDFPassword=password -dPDFSTOPONERROR -dPDFSTOPONWARNING'
         }
 
         stage('Test coverage') {
