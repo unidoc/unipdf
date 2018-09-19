@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"math"
 
 	"github.com/unidoc/unidoc/common"
 )
@@ -1582,6 +1583,174 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	}
 
 	return auth, nil
+}
+
+// encryptR6 is the algorithm opposite to alg2a (R>=5).
+// It generates U,O,UE,OE,Perms fields using AESv3 encryption.
+// There is no algorithm number assigned to this function in the spec.
+func (crypt *PdfCrypt) encryptR6(upass, opass []byte) error {
+	// all these field will be populated by functions below
+	crypt.U = nil
+	crypt.O = nil
+	crypt.UE = nil
+	crypt.OE = nil
+	crypt.Perms = nil // populated only for R=6
+
+	if len(upass) > 127 {
+		upass = upass[:127]
+	}
+	if len(opass) > 127 {
+		opass = opass[:127]
+	}
+	// generate U and UE
+	if err := crypt.alg8(upass); err != nil {
+		return err
+	}
+	// generate O and OE
+	if err := crypt.alg9(opass); err != nil {
+		return err
+	}
+	if crypt.R == 5 {
+		return nil
+	}
+	// generate Perms
+	return crypt.alg10()
+}
+
+// alg8 computes the encryption dictionary's U (user password) and UE (user encryption) values (R>=5).
+// 7.6.4.4.6 Algorithm 8 (page 86)
+func (crypt *PdfCrypt) alg8(upass []byte) error {
+	// step a: compute U (user password)
+	var rbuf [16]byte
+	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
+		return err
+	}
+	valSalt := rbuf[0:8]
+	keySalt := rbuf[8:16]
+
+	str := make([]byte, len(upass)+len(valSalt))
+	i := copy(str, upass)
+	i += copy(str[i:], valSalt)
+
+	h := crypt.alg2b(str, upass, nil)
+
+	U := make([]byte, len(h)+len(valSalt)+len(keySalt))
+	i = copy(U, h[:32])
+	i += copy(U[i:], valSalt)
+	i += copy(U[i:], keySalt)
+
+	crypt.U = U
+
+	// step b: compute UE (user encryption)
+
+	// str still contains a password, reuse it
+	i = len(upass)
+	i += copy(str[i:], keySalt)
+
+	h = crypt.alg2b(str, upass, nil)
+
+	ac, err := aes.NewCipher(h[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	iv := crypt.aesZeroIV()
+	cbc := cipher.NewCBCEncrypter(ac, iv)
+	UE := make([]byte, 32)
+	cbc.CryptBlocks(UE, crypt.EncryptionKey[:32])
+	crypt.UE = UE
+
+	return nil
+}
+
+// alg9 computes the encryption dictionary's O (owner password) and OE (owner encryption) values (R>=5).
+// 7.6.4.4.7 Algorithm 9 (page 86)
+func (crypt *PdfCrypt) alg9(opass []byte) error {
+	// step a: compute O (owner password)
+	var rbuf [16]byte
+	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
+		return err
+	}
+	valSalt := rbuf[0:8]
+	keySalt := rbuf[8:16]
+	userKey := crypt.U[:48]
+
+	str := make([]byte, len(opass)+len(valSalt)+len(userKey))
+	i := copy(str, opass)
+	i += copy(str[i:], valSalt)
+	i += copy(str[i:], userKey)
+
+	h := crypt.alg2b(str, opass, userKey)
+
+	O := make([]byte, len(h)+len(valSalt)+len(keySalt))
+	i = copy(O, h[:32])
+	i += copy(O[i:], valSalt)
+	i += copy(O[i:], keySalt)
+
+	crypt.O = O
+
+	// step b: compute OE (owner encryption)
+
+	// str still contains a password and a user key - reuse both, but overwrite the salt
+	i = len(opass)
+	i += copy(str[i:], keySalt)
+	// i += len(userKey)
+
+	h = crypt.alg2b(str, opass, userKey)
+
+	ac, err := aes.NewCipher(h[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	iv := crypt.aesZeroIV()
+	cbc := cipher.NewCBCEncrypter(ac, iv)
+	OE := make([]byte, 32)
+	cbc.CryptBlocks(OE, crypt.EncryptionKey[:32])
+	crypt.OE = OE
+
+	return nil
+}
+
+// alg10 computes the encryption dictionary's Perms (permissions) value (R=6).
+// 7.6.4.4.8 Algorithm 10 (page 87)
+func (crypt *PdfCrypt) alg10() error {
+	// step a: extend permissions to 64 bits
+	perms := uint64(uint32(crypt.P)) | (math.MaxUint32 << 32)
+
+	// step b: record permissions
+	Perms := make([]byte, 16)
+	binary.LittleEndian.PutUint64(Perms[:8], perms)
+
+	// step c: record EncryptMetadata
+	if crypt.EncryptMetadata {
+		Perms[8] = 'T'
+	} else {
+		Perms[8] = 'F'
+	}
+
+	// step d: write "adb" magic
+	copy(Perms[9:12], "adb")
+
+	// step e: write 4 bytes of random data
+
+	// spec doesn't specify them as generated "from a strong random source",
+	// but we will use the cryptographic random generator anyway
+	if _, err := io.ReadFull(rand.Reader, Perms[12:16]); err != nil {
+		return err
+	}
+
+	// step f: encrypt permissions
+	ac, err := aes.NewCipher(crypt.EncryptionKey[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	ecb := newECBEncrypter(ac)
+	ecb.CryptBlocks(Perms, Perms)
+
+	crypt.Perms = Perms[:16]
+	return nil
 }
 
 // alg11 authenticates the user password (R >= 5) and returns the hash.
