@@ -284,7 +284,7 @@ func TestAESv3(t *testing.T) {
 					}
 
 					// generate encryption parameters
-					err := crypt.encryptR6([]byte(c.UserPass), []byte(c.OwnerPass))
+					err := crypt.generateR6([]byte(c.UserPass), []byte(c.OwnerPass))
 					if err != nil {
 						t.Fatal("Failed to encrypt:", err)
 					}

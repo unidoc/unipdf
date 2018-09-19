@@ -37,7 +37,7 @@ type PdfCrypt struct {
 	U                []byte
 	OE               []byte // R=6
 	UE               []byte // R=6
-	P                int
+	P                int    // TODO (v3): uint32
 	Perms            []byte // R=6
 	EncryptMetadata  bool
 	Id0              string
@@ -97,7 +97,7 @@ const (
 // TODO (v3): Unexport.
 type CryptFilters map[string]CryptFilter
 
-// LoadCryptFilters loads crypt filter information from the encryption dictionary (V4 only).
+// LoadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
 // TODO (v3): Unexport.
 func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.CryptFilters = CryptFilters{}
@@ -213,6 +213,31 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	return nil
 }
 
+// SaveCryptFilters saves crypt filter information to the encryption dictionary (V>=4).
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) SaveCryptFilters(ed *PdfObjectDictionary) error {
+	if crypt.V < 4 {
+		return errors.New("can only be used with V>=4")
+	}
+	cf := MakeDict()
+	ed.Set("CF", cf)
+
+	for name, filter := range crypt.CryptFilters {
+		if name == "Identity" {
+			continue
+		}
+		v := MakeDict()
+		cf.Set(PdfObjectName(name), v)
+
+		v.Set("Type", MakeName("CryptFilter"))
+		v.Set("CFM", MakeName(string(filter.Cfm)))
+		v.Set("Length", MakeInteger(int64(filter.Length)))
+	}
+	ed.Set("StrF", MakeName(crypt.StringFilter))
+	ed.Set("StmF", MakeName(crypt.StreamFilter))
+	return nil
+}
+
 // PdfCryptMakeNew makes the document crypt handler based on the encryption dictionary
 // and trailer dictionary. Returns an error on failure to process.
 func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
@@ -273,6 +298,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing R")
 	}
+	// TODO(dennwc): according to spec, R should be validated according to V value
 	if *R < 2 || *R > 6 {
 		return crypter, fmt.Errorf("Invalid R (%d)", *R)
 	}
@@ -1584,10 +1610,24 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	return auth, nil
 }
 
-// encryptR6 is the algorithm opposite to alg2a (R>=5).
+// GenerateParams generates encryption parameters for specified passwords.
+// Can be called only for R>=5.
+func (crypt *PdfCrypt) GenerateParams(upass, opass []byte) error {
+	if crypt.R < 5 {
+		// TODO(dennwc): move code for R<5 from PdfWriter.Encrypt
+		return errors.New("can be used only for R>=5")
+	}
+	crypt.EncryptionKey = make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, crypt.EncryptionKey); err != nil {
+		return err
+	}
+	return crypt.generateR6(upass, opass)
+}
+
+// generateR6 is the algorithm opposite to alg2a (R>=5).
 // It generates U,O,UE,OE,Perms fields using AESv3 encryption.
 // There is no algorithm number assigned to this function in the spec.
-func (crypt *PdfCrypt) encryptR6(upass, opass []byte) error {
+func (crypt *PdfCrypt) generateR6(upass, opass []byte) error {
 	// all these field will be populated by functions below
 	crypt.U = nil
 	crypt.O = nil
