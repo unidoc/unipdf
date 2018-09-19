@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"math"
 
 	"github.com/unidoc/unidoc/common"
 )
@@ -36,7 +37,7 @@ type PdfCrypt struct {
 	U                []byte
 	OE               []byte // R=6
 	UE               []byte // R=6
-	P                int
+	P                int    // TODO (v3): uint32
 	Perms            []byte // R=6
 	EncryptMetadata  bool
 	Id0              string
@@ -76,6 +77,9 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 	"\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C" +
 	"\xA9\xFE\x64\x53\x69\x7A"
 
+// StandardCryptFilter is a default name for a standard crypt filter.
+const StandardCryptFilter = "StdCF"
+
 // CryptFilter represents information from a CryptFilter dictionary.
 // TODO (v3): Unexport.
 type CryptFilter struct {
@@ -96,7 +100,7 @@ const (
 // TODO (v3): Unexport.
 type CryptFilters map[string]CryptFilter
 
-// LoadCryptFilters loads crypt filter information from the encryption dictionary (V4 only).
+// LoadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
 // TODO (v3): Unexport.
 func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.CryptFilters = CryptFilters{}
@@ -212,6 +216,32 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 	return nil
 }
 
+// SaveCryptFilters saves crypt filter information to the encryption dictionary (V>=4).
+// TODO (v3): Unexport.
+func (crypt *PdfCrypt) SaveCryptFilters(ed *PdfObjectDictionary) error {
+	if crypt.V < 4 {
+		return errors.New("can only be used with V>=4")
+	}
+	cf := MakeDict()
+	ed.Set("CF", cf)
+
+	for name, filter := range crypt.CryptFilters {
+		if name == "Identity" {
+			continue
+		}
+		v := MakeDict()
+		cf.Set(PdfObjectName(name), v)
+
+		v.Set("Type", MakeName("CryptFilter"))
+		v.Set("AuthEvent", MakeName("DocOpen"))
+		v.Set("CFM", MakeName(string(filter.Cfm)))
+		v.Set("Length", MakeInteger(int64(filter.Length)))
+	}
+	ed.Set("StrF", MakeName(crypt.StringFilter))
+	ed.Set("StmF", MakeName(crypt.StreamFilter))
+	return nil
+}
+
 // PdfCryptMakeNew makes the document crypt handler based on the encryption dictionary
 // and trailer dictionary. Returns an error on failure to process.
 func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
@@ -254,7 +284,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 			crypter.V = int(*V)
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
-			crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
 		} else if *V >= 4 && *V <= 5 {
 			crypter.V = int(*V)
 			if err := crypter.LoadCryptFilters(ed); err != nil {
@@ -272,6 +302,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing R")
 	}
+	// TODO(dennwc): according to spec, R should be validated according to V value
 	if *R < 2 || *R > 6 {
 		return crypter, fmt.Errorf("Invalid R (%d)", *R)
 	}
@@ -687,14 +718,13 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		}
 
 		// The padded length is indicated by the last values.  Remove those.
-		if cfMethod == CryptFilterAESV2 {
-			padLen := int(buf[len(buf)-1])
-			if padLen >= len(buf) {
-				common.Log.Debug("Illegal pad length")
-				return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
-			}
-			buf = buf[:len(buf)-padLen]
+
+		padLen := int(buf[len(buf)-1])
+		if padLen >= len(buf) {
+			common.Log.Debug("Illegal pad length")
+			return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
 		}
+		buf = buf[:len(buf)-padLen]
 
 		return buf, nil
 	}
@@ -740,7 +770,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		dict := so.PdfObjectDictionary
 
-		streamFilter := "Default" // Default RC4.
+		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
 			streamFilter = crypt.StreamFilter
 			common.Log.Trace("this.StreamFilter = %s", crypt.StreamFilter)
@@ -795,7 +825,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	if s, isString := obj.(*PdfObjectString); isString {
 		common.Log.Trace("Decrypting string!")
 
-		stringFilter := "Default"
+		stringFilter := StandardCryptFilter
 		if crypt.V >= 4 {
 			// Currently only support Identity / RC4.
 			common.Log.Trace("with %s filter", crypt.StringFilter)
@@ -889,7 +919,7 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 	}
 
 	cfMethod := cf.Cfm
-	if cfMethod == "V2" {
+	if cfMethod == CryptFilterV2 {
 		// Standard RC4 algorithm.
 		ciph, err := rc4.NewCipher(okey)
 		if err != nil {
@@ -926,23 +956,23 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
 
-		if cfMethod == CryptFilterAESV2 {
-			pad := 16 - len(buf)%16
-			for i := 0; i < pad; i++ {
-				buf = append(buf, byte(pad))
-			}
-			common.Log.Trace("Padded to %d bytes", len(buf))
+		const block = aes.BlockSize // 16
+
+		pad := block - len(buf)%block
+		for i := 0; i < pad; i++ {
+			buf = append(buf, byte(pad))
 		}
+		common.Log.Trace("Padded to %d bytes", len(buf))
 
 		// Generate random 16 bytes, place in beginning of buffer.
-		ciphertext := make([]byte, 16+len(buf))
-		iv := ciphertext[:16]
+		ciphertext := make([]byte, block+len(buf))
+		iv := ciphertext[:block]
 		if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 			return nil, err
 		}
 
 		mode := cipher.NewCBCEncrypter(ciph, iv)
-		mode.CryptBlocks(ciphertext[aes.BlockSize:], buf)
+		mode.CryptBlocks(ciphertext[block:], buf)
 
 		buf = ciphertext
 		common.Log.Trace("to (%d): % x", len(buf), buf)
@@ -990,7 +1020,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		dict := so.PdfObjectDictionary
 
-		streamFilter := "Default" // Default RC4.
+		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
 			// For now.  Need to change when we add support for more than
 			// Identity / RC4.
@@ -1047,7 +1077,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	if s, isString := obj.(*PdfObjectString); isString {
 		common.Log.Trace("Encrypting string!")
 
-		stringFilter := "Default"
+		stringFilter := StandardCryptFilter
 		if crypt.V >= 4 {
 			common.Log.Trace("with %s filter", crypt.StringFilter)
 			if crypt.StringFilter == "Identity" {
@@ -1117,6 +1147,14 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	return nil
 }
 
+// aesZeroIV allocates a zero-filled buffer that serves as an initialization vector for AESv3.
+func (crypt *PdfCrypt) aesZeroIV() []byte {
+	if crypt.ivAESZero == nil {
+		crypt.ivAESZero = make([]byte, aes.BlockSize)
+	}
+	return crypt.ivAESZero
+}
+
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // It returns false if the password was wrong.
 // 7.6.4.3.2 Algorithm 2.A (page 83)
@@ -1184,10 +1222,8 @@ func (crypt *PdfCrypt) alg2a(pass []byte) (bool, error) {
 	if err != nil {
 		panic(err)
 	}
-	if crypt.ivAESZero == nil {
-		crypt.ivAESZero = make([]byte, aes.BlockSize)
-	}
-	iv := crypt.ivAESZero
+
+	iv := crypt.aesZeroIV()
 	cbc := cipher.NewCBCDecrypter(ac, iv)
 	fkey := make([]byte, 32)
 	cbc.CryptBlocks(fkey, ekey)
@@ -1578,6 +1614,188 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 	return auth, nil
 }
 
+// GenerateParams generates encryption parameters for specified passwords.
+// Can be called only for R>=5.
+func (crypt *PdfCrypt) GenerateParams(upass, opass []byte) error {
+	if crypt.R < 5 {
+		// TODO(dennwc): move code for R<5 from PdfWriter.Encrypt
+		return errors.New("can be used only for R>=5")
+	}
+	crypt.EncryptionKey = make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, crypt.EncryptionKey); err != nil {
+		return err
+	}
+	return crypt.generateR6(upass, opass)
+}
+
+// generateR6 is the algorithm opposite to alg2a (R>=5).
+// It generates U,O,UE,OE,Perms fields using AESv3 encryption.
+// There is no algorithm number assigned to this function in the spec.
+func (crypt *PdfCrypt) generateR6(upass, opass []byte) error {
+	// all these field will be populated by functions below
+	crypt.U = nil
+	crypt.O = nil
+	crypt.UE = nil
+	crypt.OE = nil
+	crypt.Perms = nil // populated only for R=6
+
+	if len(upass) > 127 {
+		upass = upass[:127]
+	}
+	if len(opass) > 127 {
+		opass = opass[:127]
+	}
+	// generate U and UE
+	if err := crypt.alg8(upass); err != nil {
+		return err
+	}
+	// generate O and OE
+	if err := crypt.alg9(opass); err != nil {
+		return err
+	}
+	if crypt.R == 5 {
+		return nil
+	}
+	// generate Perms
+	return crypt.alg10()
+}
+
+// alg8 computes the encryption dictionary's U (user password) and UE (user encryption) values (R>=5).
+// 7.6.4.4.6 Algorithm 8 (page 86)
+func (crypt *PdfCrypt) alg8(upass []byte) error {
+	// step a: compute U (user password)
+	var rbuf [16]byte
+	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
+		return err
+	}
+	valSalt := rbuf[0:8]
+	keySalt := rbuf[8:16]
+
+	str := make([]byte, len(upass)+len(valSalt))
+	i := copy(str, upass)
+	i += copy(str[i:], valSalt)
+
+	h := crypt.alg2b(str, upass, nil)
+
+	U := make([]byte, len(h)+len(valSalt)+len(keySalt))
+	i = copy(U, h[:32])
+	i += copy(U[i:], valSalt)
+	i += copy(U[i:], keySalt)
+
+	crypt.U = U
+
+	// step b: compute UE (user encryption)
+
+	// str still contains a password, reuse it
+	i = len(upass)
+	i += copy(str[i:], keySalt)
+
+	h = crypt.alg2b(str, upass, nil)
+
+	ac, err := aes.NewCipher(h[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	iv := crypt.aesZeroIV()
+	cbc := cipher.NewCBCEncrypter(ac, iv)
+	UE := make([]byte, 32)
+	cbc.CryptBlocks(UE, crypt.EncryptionKey[:32])
+	crypt.UE = UE
+
+	return nil
+}
+
+// alg9 computes the encryption dictionary's O (owner password) and OE (owner encryption) values (R>=5).
+// 7.6.4.4.7 Algorithm 9 (page 86)
+func (crypt *PdfCrypt) alg9(opass []byte) error {
+	// step a: compute O (owner password)
+	var rbuf [16]byte
+	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
+		return err
+	}
+	valSalt := rbuf[0:8]
+	keySalt := rbuf[8:16]
+	userKey := crypt.U[:48]
+
+	str := make([]byte, len(opass)+len(valSalt)+len(userKey))
+	i := copy(str, opass)
+	i += copy(str[i:], valSalt)
+	i += copy(str[i:], userKey)
+
+	h := crypt.alg2b(str, opass, userKey)
+
+	O := make([]byte, len(h)+len(valSalt)+len(keySalt))
+	i = copy(O, h[:32])
+	i += copy(O[i:], valSalt)
+	i += copy(O[i:], keySalt)
+
+	crypt.O = O
+
+	// step b: compute OE (owner encryption)
+
+	// str still contains a password and a user key - reuse both, but overwrite the salt
+	i = len(opass)
+	i += copy(str[i:], keySalt)
+	// i += len(userKey)
+
+	h = crypt.alg2b(str, opass, userKey)
+
+	ac, err := aes.NewCipher(h[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	iv := crypt.aesZeroIV()
+	cbc := cipher.NewCBCEncrypter(ac, iv)
+	OE := make([]byte, 32)
+	cbc.CryptBlocks(OE, crypt.EncryptionKey[:32])
+	crypt.OE = OE
+
+	return nil
+}
+
+// alg10 computes the encryption dictionary's Perms (permissions) value (R=6).
+// 7.6.4.4.8 Algorithm 10 (page 87)
+func (crypt *PdfCrypt) alg10() error {
+	// step a: extend permissions to 64 bits
+	perms := uint64(uint32(crypt.P)) | (math.MaxUint32 << 32)
+
+	// step b: record permissions
+	Perms := make([]byte, 16)
+	binary.LittleEndian.PutUint64(Perms[:8], perms)
+
+	// step c: record EncryptMetadata
+	if crypt.EncryptMetadata {
+		Perms[8] = 'T'
+	} else {
+		Perms[8] = 'F'
+	}
+
+	// step d: write "adb" magic
+	copy(Perms[9:12], "adb")
+
+	// step e: write 4 bytes of random data
+
+	// spec doesn't specify them as generated "from a strong random source",
+	// but we will use the cryptographic random generator anyway
+	if _, err := io.ReadFull(rand.Reader, Perms[12:16]); err != nil {
+		return err
+	}
+
+	// step f: encrypt permissions
+	ac, err := aes.NewCipher(crypt.EncryptionKey[:32])
+	if err != nil {
+		panic(err)
+	}
+
+	ecb := newECBEncrypter(ac)
+	ecb.CryptBlocks(Perms, Perms)
+
+	crypt.Perms = Perms[:16]
+	return nil
+}
+
 // alg11 authenticates the user password (R >= 5) and returns the hash.
 func (crypt *PdfCrypt) alg11(upass []byte) ([]byte, error) {
 	str := make([]byte, len(upass)+8)
@@ -1611,7 +1829,8 @@ func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 // alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
 // 7.6.4.4.11 Algorithm 13 (page 87)
 func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
-	perms := crypt.Perms[:16]
+	perms := make([]byte, 16)
+	copy(perms, crypt.Perms[:16])
 
 	ac, err := aes.NewCipher(fkey[:32])
 	if err != nil {
@@ -1627,6 +1846,17 @@ func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
 	p := int(int32(binary.LittleEndian.Uint32(perms[0:4])))
 	if p != crypt.P {
 		return false, errors.New("permissions validation failed")
+	}
+	encMeta := true
+	if perms[8] == 'T' {
+		encMeta = true
+	} else if perms[8] == 'F' {
+		encMeta = false
+	} else {
+		return false, errors.New("decoded metadata encryption flag is invalid")
+	}
+	if encMeta != crypt.EncryptMetadata {
+		return false, errors.New("metadata encryption validation failed")
 	}
 	return true, nil
 }
