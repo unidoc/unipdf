@@ -1617,7 +1617,8 @@ func (crypt *PdfCrypt) alg12(opass []byte) ([]byte, error) {
 // alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
 // 7.6.4.4.11 Algorithm 13 (page 87)
 func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
-	perms := crypt.Perms[:16]
+	perms := make([]byte, 16)
+	copy(perms, crypt.Perms[:16])
 
 	ac, err := aes.NewCipher(fkey[:32])
 	if err != nil {
