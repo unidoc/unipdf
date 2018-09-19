@@ -77,6 +77,9 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 	"\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C" +
 	"\xA9\xFE\x64\x53\x69\x7A"
 
+// StandardCryptFilter is a default name for a standard crypt filter.
+const StandardCryptFilter = "StdCF"
+
 // CryptFilter represents information from a CryptFilter dictionary.
 // TODO (v3): Unexport.
 type CryptFilter struct {
@@ -230,6 +233,7 @@ func (crypt *PdfCrypt) SaveCryptFilters(ed *PdfObjectDictionary) error {
 		cf.Set(PdfObjectName(name), v)
 
 		v.Set("Type", MakeName("CryptFilter"))
+		v.Set("AuthEvent", MakeName("DocOpen"))
 		v.Set("CFM", MakeName(string(filter.Cfm)))
 		v.Set("Length", MakeInteger(int64(filter.Length)))
 	}
@@ -280,7 +284,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 			crypter.V = int(*V)
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
-			crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
 		} else if *V >= 4 && *V <= 5 {
 			crypter.V = int(*V)
 			if err := crypter.LoadCryptFilters(ed); err != nil {
@@ -766,7 +770,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		dict := so.PdfObjectDictionary
 
-		streamFilter := "Default" // Default RC4.
+		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
 			streamFilter = crypt.StreamFilter
 			common.Log.Trace("this.StreamFilter = %s", crypt.StreamFilter)
@@ -821,7 +825,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	if s, isString := obj.(*PdfObjectString); isString {
 		common.Log.Trace("Decrypting string!")
 
-		stringFilter := "Default"
+		stringFilter := StandardCryptFilter
 		if crypt.V >= 4 {
 			// Currently only support Identity / RC4.
 			common.Log.Trace("with %s filter", crypt.StringFilter)
@@ -1016,7 +1020,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		dict := so.PdfObjectDictionary
 
-		streamFilter := "Default" // Default RC4.
+		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
 			// For now.  Need to change when we add support for more than
 			// Identity / RC4.
@@ -1073,7 +1077,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	if s, isString := obj.(*PdfObjectString); isString {
 		common.Log.Trace("Encrypting string!")
 
-		stringFilter := "Default"
+		stringFilter := StandardCryptFilter
 		if crypt.V >= 4 {
 			common.Log.Trace("with %s filter", crypt.StringFilter)
 			if crypt.StringFilter == "Identity" {

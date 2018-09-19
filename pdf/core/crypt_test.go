@@ -149,7 +149,7 @@ func TestDecryption1(t *testing.T) {
 	crypter.DecryptedObjects = map[PdfObject]bool{}
 	// Default algorithm is V2 (RC4).
 	crypter.CryptFilters = CryptFilters{}
-	crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+	crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
 	crypter.V = 2
 	crypter.R = 3
 	crypter.P = -3904

@@ -527,7 +527,7 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
 	}
 	const (
-		defaultFilter = "Default"
+		defaultFilter = StandardCryptFilter
 	)
 	crypter.CryptFilters[defaultFilter] = cf
 	if crypter.V >= 4 {
