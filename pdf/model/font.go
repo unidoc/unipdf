@@ -250,13 +250,13 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
-			simplefont, err = newSimpleFontFromPdfObject(d, stdBase, true)
+			simplefont, err = newSimpleFontFromPdfObject(d, stdBase, true, std.fontMetrics)
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(d, base, false)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, false, nil)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err)
 				return nil, err
@@ -300,6 +300,11 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
+	_, out, numChars, numMisses := font.CharcodeBytesToUnicode2(data)
+	return out, numChars, numMisses
+}
+
+func (font PdfFont) CharcodeBytesToUnicode2(data []byte) ([]uint16, string, int, int) {
 	common.Log.Trace("showText: data=[% 02x]=%#q", data, data)
 
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
@@ -355,7 +360,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	}
 
 	out := strings.Join(charstrings, "")
-	return out, len([]rune(out)), numMisses
+	return charcodes, out, len([]rune(out)), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -397,6 +402,16 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 		return fonts.CharMetrics{}, false
 	}
 	return t.GetGlyphCharMetrics(glyph)
+}
+
+// GetAverageCharWidth returns the average width of all the characters in `font`.
+func (font PdfFont) GetAverageCharWidth() float64 {
+	t := font.actualFont()
+	if t == nil {
+		common.Log.Debug("ERROR: GetAverageCharWidth Not implemented for font type=%#T", font.context)
+		return 0.0
+	}
+	return t.GetAverageCharWidth()
 }
 
 // actualFont returns the Font in font.context

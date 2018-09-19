@@ -8,6 +8,7 @@ package contentstream
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -594,6 +595,11 @@ func IdentityMatrix() Matrix {
 	return NewMatrix(1, 0, 0, 1, 0, 0)
 }
 
+// TranslationMatrix returns a matrix that translates by `tx`, `ty`.
+func TranslationMatrix(tx, ty float64) Matrix {
+	return NewMatrix(1, 0, 0, 1, tx, ty)
+}
+
 // NewMatrix returns an affine transform matrix laid out in homogenous coordinates as
 //      a  b  0
 //      c  d  0
@@ -633,6 +639,12 @@ func (m *Matrix) Concat(b Matrix) {
 	m.fixup()
 }
 
+// Mult returns `m` × `b`.
+func (m Matrix) Mult(b Matrix) Matrix {
+	m.Concat(b)
+	return m
+}
+
 // Translate appends a translation of `dx`,`dy` to `m`.
 // m.Translate(dx, dy) is equivalent to m.Concat(NewMatrix(1, 0, 0, 1, dx, dy))
 func (m *Matrix) Translate(dx, dy float64) {
@@ -641,11 +653,32 @@ func (m *Matrix) Translate(dx, dy float64) {
 	m.fixup()
 }
 
+// Translation returns the translation part of `m`.
+func (m *Matrix) Translation() (float64, float64) {
+	return m[6], m[7]
+}
+
 // Transform returns coordinates `x`,`y` transformed by `m`.
 func (m *Matrix) Transform(x, y float64) (float64, float64) {
 	xp := x*m[0] + y*m[1] + m[6]
 	yp := x*m[3] + y*m[4] + m[7]
 	return xp, yp
+}
+
+func (m *Matrix) ScalingFactorX() float64 {
+	scale := m[0]
+	if !(m[1] == 0.0 && m[3] == 0.0) {
+		scale = math.Sqrt(m[0]*m[0] + m[1]*m[1])
+	}
+	return scale
+}
+
+func (m *Matrix) ScalingFactorY() float64 {
+	scale := m[4]
+	if !(m[1] == 0.0 && m[3] == 0.0) {
+		scale = math.Sqrt(m[3]*m[3] + m[4]*m[4])
+	}
+	return scale
 }
 
 // pageOrientation returns a guess at the pdf page orientation when text is printed with CTM `m`.

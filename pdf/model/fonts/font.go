@@ -16,6 +16,7 @@ type Font interface {
 	Encoder() textencoding.TextEncoder
 	SetEncoder(encoder textencoding.TextEncoder)
 	GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
+	GetAverageCharWidth() float64
 	ToPdfObject() core.PdfObject
 }
 
@@ -24,4 +25,12 @@ type CharMetrics struct {
 	GlyphName string
 	Wx        float64
 	Wy        float64
+}
+
+func AverageCharWidth(metrics map[string]CharMetrics) float64 {
+	total := 0.0
+	for _, m := range metrics {
+		total += m.Wx
+	}
+	return total / float64(len(metrics))
 }

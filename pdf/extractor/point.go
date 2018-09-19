@@ -19,12 +19,12 @@ type Point struct {
 	Y float64
 }
 
-// NewPoint returns a Point at x,y.
+// NewPoint returns a Point at 'x', 'y'.
 func NewPoint(x, y float64) Point {
 	return Point{X: x, Y: y}
 }
 
-// Set sets `p` to `x`,`y`.
+// Set sets `p` to `x`, `y`.
 func (p *Point) Set(x, y float64) {
 	p.X, p.Y = x, y
 }

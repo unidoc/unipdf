@@ -47,6 +47,11 @@ func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph string) (CharMetrics,
 	return metrics, true
 }
 
+// GetAverageCharWidth returns the average width of all glyphs in the font.
+func (font FontHelveticaOblique) GetAverageCharWidth() float64 {
+	return AverageCharWidth(HelveticaObliqueCharMetrics)
+}
+
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font FontHelveticaOblique) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()

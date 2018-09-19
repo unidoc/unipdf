@@ -47,6 +47,11 @@ func (font FontCourierOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, b
 	return metrics, true
 }
 
+// GetAverageCharWidth returns the average width of all glyphs in the font.
+func (font FontCourierOblique) GetAverageCharWidth() float64 {
+	return AverageCharWidth(CourierObliqueCharMetrics)
+}
+
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font FontCourierOblique) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()

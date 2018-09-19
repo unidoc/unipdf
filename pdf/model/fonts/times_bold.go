@@ -47,6 +47,11 @@ func (font FontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 	return metrics, true
 }
 
+// GetAverageCharWidth returns the average width of all glyphs in the font.
+func (font FontTimesBold) GetAverageCharWidth() float64 {
+	return AverageCharWidth(TimesBoldCharMetrics)
+}
+
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font FontTimesBold) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()

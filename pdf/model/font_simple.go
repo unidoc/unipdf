@@ -96,13 +96,13 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 	}
 
 	if int(code) > font.lastChar {
-		common.Log.Debug("Code higher than lastchar (%d < %d)", code, font.lastChar)
+		common.Log.Debug("Code higher than lastchar (%d > %d)", code, font.lastChar)
 		return metrics, false
 	}
 
 	index := int(code) - font.firstChar
 	if index >= len(font.charWidths) {
-		common.Log.Debug("Code outside of widths range")
+		common.Log.Debug("Code outside of widths range (%d > %d)", index, len(font.charWidths))
 		return metrics, false
 	}
 
@@ -112,6 +112,18 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 	return metrics, true
 }
 
+// GetAverageCharWidth returns the average width of all the characters in `font`.
+func (font pdfFontSimple) GetAverageCharWidth() float64 {
+	if font.fontMetrics != nil {
+		return fonts.AverageCharWidth(font.fontMetrics)
+	}
+	total := 0.0
+	for _, w := range font.charWidths {
+		total += w
+	}
+	return total / float64(len(font.charWidths))
+}
+
 // newSimpleFontFromPdfObject creates a pdfFontSimple from dictionary `d`. Elements of `d` that
 // are already parsed are contained in `base`.
 // An error is returned if there is a problem with loading.
@@ -119,8 +131,13 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 // The value of Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 // • The value of BaseFont is derived differently.
 //
-func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool) (*pdfFontSimple, error) {
+func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool,
+	fontMetrics map[string]fonts.CharMetrics) (*pdfFontSimple, error) {
 	font := pdfFontSimpleFromSkeleton(base)
+
+	if fontMetrics != nil {
+		font.fontMetrics = fontMetrics
+	}
 
 	// FirstChar is not defined in ~/testdata/shamirturing.pdf
 	if !std14 {

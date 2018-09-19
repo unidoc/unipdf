@@ -121,6 +121,15 @@ func (font pdfFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, b
 	return font.DescendantFont.GetGlyphCharMetrics(glyph)
 }
 
+// GetAverageCharWidth returns the average width of all the characters in `font`.
+func (font pdfFontType0) GetAverageCharWidth() float64 {
+	if font.DescendantFont == nil {
+		common.Log.Debug("ERROR: No descendant. font=%s", font)
+		return 0.0
+	}
+	return font.DescendantFont.GetAverageCharWidth()
+}
+
 // Encoder returns the font's text encoder.
 func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
@@ -229,6 +238,11 @@ func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	return fonts.CharMetrics{}, true
 }
 
+// GetAverageCharWidth returns the average width of all the characters in `font`.
+func (font pdfCIDFontType0) GetAverageCharWidth() float64 {
+	return 0.0
+}
+
 // ToPdfObject converts the pdfCIDFontType0 to a PDF representation.
 func (font *pdfCIDFontType0) ToPdfObject() core.PdfObject {
 	return core.MakeNull()
@@ -326,6 +340,18 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	metrics.Wx = float64(w)
 
 	return metrics, true
+}
+
+// GetAverageCharWidth returns the average width of all the characters in `font`.
+func (font pdfCIDFontType2) GetAverageCharWidth() float64 {
+	if len(font.runeToWidthMap) == 0 {
+		return 0.0
+	}
+	total := 0
+	for _, w := range font.runeToWidthMap {
+		total += w
+	}
+	return float64(total) / float64(len(font.runeToWidthMap))
 }
 
 // ToPdfObject converts the pdfCIDFontType2 to a PDF representation.
