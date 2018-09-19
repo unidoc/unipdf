@@ -688,14 +688,13 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 		}
 
 		// The padded length is indicated by the last values.  Remove those.
-		if cfMethod == CryptFilterAESV2 {
-			padLen := int(buf[len(buf)-1])
-			if padLen >= len(buf) {
-				common.Log.Debug("Illegal pad length")
-				return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
-			}
-			buf = buf[:len(buf)-padLen]
+
+		padLen := int(buf[len(buf)-1])
+		if padLen >= len(buf) {
+			common.Log.Debug("Illegal pad length")
+			return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
 		}
+		buf = buf[:len(buf)-padLen]
 
 		return buf, nil
 	}
@@ -890,7 +889,7 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 	}
 
 	cfMethod := cf.Cfm
-	if cfMethod == "V2" {
+	if cfMethod == CryptFilterV2 {
 		// Standard RC4 algorithm.
 		ciph, err := rc4.NewCipher(okey)
 		if err != nil {
@@ -927,23 +926,23 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 		// vector is a 16-byte random number that is stored as the first
 		// 16 bytes of the encrypted stream or string.
 
-		if cfMethod == CryptFilterAESV2 {
-			pad := 16 - len(buf)%16
-			for i := 0; i < pad; i++ {
-				buf = append(buf, byte(pad))
-			}
-			common.Log.Trace("Padded to %d bytes", len(buf))
+		const block = aes.BlockSize // 16
+
+		pad := block - len(buf)%block
+		for i := 0; i < pad; i++ {
+			buf = append(buf, byte(pad))
 		}
+		common.Log.Trace("Padded to %d bytes", len(buf))
 
 		// Generate random 16 bytes, place in beginning of buffer.
-		ciphertext := make([]byte, 16+len(buf))
-		iv := ciphertext[:16]
+		ciphertext := make([]byte, block+len(buf))
+		iv := ciphertext[:block]
 		if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 			return nil, err
 		}
 
 		mode := cipher.NewCBCEncrypter(ciph, iv)
-		mode.CryptBlocks(ciphertext[aes.BlockSize:], buf)
+		mode.CryptBlocks(ciphertext[block:], buf)
 
 		buf = ciphertext
 		common.Log.Trace("to (%d): % x", len(buf), buf)
