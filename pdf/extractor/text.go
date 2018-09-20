@@ -15,7 +15,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
@@ -520,12 +519,12 @@ func (fontStack *fontStacker) size() int {
 type textState struct {
 	Tc    float64        // Character spacing. Unscaled text space units.
 	Tw    float64        // Word spacing. Unscaled text space units.
-	Th    float64        // Horizontal scaling
-	Tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108
-	Tfs   float64        // Text font size
-	Tmode RenderMode     // Text rendering mode
-	Trise float64        // Text rise. Unscaled text space units. Set by Ts
-	Tf    *model.PdfFont // Text font
+	Th    float64        // Horizontal scaling.
+	Tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108.
+	Tfs   float64        // Text font size.
+	Tmode RenderMode     // Text rendering mode.
+	Trise float64        // Text rise. Unscaled text space units. Set by Ts.
+	Tf    *model.PdfFont // Text font.
 	// For debugging
 	numChars  int
 	numMisses int
@@ -539,9 +538,12 @@ type textState struct {
 //   • Tlm, the text line matrix
 //
 // Text space is converted to device space by this transform (page 252)
+// Trm is the text rendering matrix
 //        | Tfs x Th   0      0 |
 // Trm  = | 0         Tfs     0 | × Tm × CTM
 //        | 0         Trise   1 |
+// This corresponds to the following code in renderText()
+//  trm := stateMatrix.Mult(to.Tm).Mult(to.gs.CTM))
 
 // textObject represents a PDF text object.
 type textObject struct {
@@ -580,35 +582,66 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 
 // renderText emits byte array `data` to the calling program.
 func (to *textObject) renderText(data []byte) error {
-	var font *model.PdfFont
-	if to.fontStack.empty() {
-		common.Log.Debug("ERROR: No font defined. Using default.")
-		font = model.DefaultFont()
-	} else {
-		font = to.fontStack.peek()
-	}
+	font := to.getCurrentFont()
 
 	text, numChars, numMisses := font.CharcodeBytesToUnicode(data)
+	runes := []rune(text)
 	to.State.numChars += numChars
 	to.State.numMisses += numMisses
-	cp := to.getCp()
 
-	to.Texts = append(to.Texts, XYText{Text: text, Point: cp})
+	state := to.State
+	tfs := state.Tfs
+	th := state.Th / 100.0
+
+	stateMatrix := contentstream.NewMatrix(
+		tfs*th, 0,
+		0, tfs,
+		0, state.Trise)
+
+	for _, r := range runes {
+		// The location of the text on the page in device coordinates is given by trm, the text
+		// rendering matrix.
+		trm := stateMatrix.Mult(to.Tm).Mult(to.gs.CTM)
+		xyt := XYText{Text: string(r), Point: translation(trm)}
+		to.Texts = append(to.Texts, xyt)
+
+		// calculate the text location displacement due to writing `r`. We will use this to update
+		// to.Tm
+
+		// w is the unscaled movement at the end of a word.
+		w := 0.0
+		if r == ' ' {
+			w = state.Tw
+		}
+		// c is the character size in unscaled text units.
+		m, err := font.GetRuneCharMetrics(r)
+		if err != nil {
+			common.Log.Debug("ERROR: No metric for 0x%04x=%c %s", r, r, font)
+			return err
+		}
+		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
+		// t is the total displacement
+		t := Point{X: (c.X*tfs + state.Tc + w) * th}
+
+		// update the text matrix by the movement of the text location
+		to.Tm.Concat(translationMatrix(t))
+	}
+
 	return nil
 }
 
-// getCp returns the current text position in device coordinates.
-//        | Tfs x Th   0      0 |
-// Trm  = | 0         Tfs     0 | × Tm × CTM
-//        | 0         Trise   1 |
-func (to *textObject) getCp() Point {
-	s := to.State
-	m := contentstream.NewMatrix(s.Tfs*s.Th, 0, 0, s.Tfs, 0, s.Trise)
-	m.Concat(to.Tm)
-	m.Concat(to.gs.CTM)
-	cp := Point{}
-	x, y := m.Transform(cp.X, cp.Y)
-	return Point{x, y}
+// glyphTextRatio converts Glyph metrics units to unscaled text space units.
+const glyphTextRatio = 1.0 / 1000.0
+
+// translation returns the translation part of `m`.
+func translation(m contentstream.Matrix) Point {
+	tx, ty := m.Translation()
+	return Point{tx, ty}
+}
+
+// translationMatrix returns a matrix that translates by `p`.
+func translationMatrix(p Point) contentstream.Matrix {
+	return contentstream.TranslationMatrix(p.X, p.Y)
 }
 
 // moveTo moves the start of line pointer by `tx`,`ty` and sets the text pointer to the
@@ -630,9 +663,8 @@ type XYText struct {
 }
 
 // String returns a string describing `t`.
-func (t *XYText) String() string {
-	return fmt.Sprintf("(%.1f,%.1f) stroke:%+v fill:%+v orient:%+v %q",
-		t.X, t.Y, t.ColorStroking, t.ColorNonStroking, t.Orient, truncate(t.Text, 100))
+func (t XYText) String() string {
+	return fmt.Sprintf("(%.1f,%.1f) %q", t.X, t.Y, truncate(t.Text, 100))
 }
 
 // TextList is a list of texts and their positions on a PDF page.
@@ -688,6 +720,7 @@ type Line struct {
 // toLines return the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
 func (tl *TextList) toLines() []Line {
+	tl.printTexts()
 	if len(*tl) == 0 {
 		return []Line{}
 	}
@@ -712,6 +745,16 @@ func (tl *TextList) toLines() []Line {
 		lines = append(lines, newLine(y, x, words))
 	}
 	return lines
+}
+
+// printTexts is a debugging function. XXX Remove this.
+func (tl *TextList) printTexts() {
+	return
+	common.Log.Error("=====================================")
+	common.Log.Error("%d texts", len(*tl))
+	for i, t := range (*tl)[1:] {
+		fmt.Printf("%5d: %s\n", i, t.String())
+	}
 }
 
 // newLine returns the Line representation of strings `words` with y coordinate `y` and x
@@ -746,6 +789,16 @@ func (tl *TextList) Transform(a, b, c, d, tx, ty float64) {
 	for _, t := range *tl {
 		t.X, t.Y = m.Transform(t.X, t.Y)
 	}
+}
+
+// getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
+// empty.
+func (to *textObject) getCurrentFont() *model.PdfFont {
+	if to.fontStack.empty() {
+		common.Log.Debug("ERROR: No font defined. Using default.")
+		return model.DefaultFont()
+	}
+	return to.fontStack.peek()
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it
@@ -786,7 +839,7 @@ type fontEntry struct {
 	access int64          // Last access. Used to determine LRU cache victims.
 }
 
-// fontCache is a simple LRU cache that is used to prevent redudant constructions of PdfFont's from
+// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
 // PDF objects.
 var fontCache = map[string]fontEntry{}
 
@@ -831,25 +884,4 @@ func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 		return nil, errors.New("Font not in resources")
 	}
 	return fontObj, nil
-}
-
-// getCharMetrics returns the character metrics for the code points in `text1` for font `font`.
-func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetrics, err error) {
-	encoder := font.Encoder()
-	if encoder == nil {
-		return nil, errors.New("No font encoder")
-	}
-	for _, r := range text {
-		glyph, found := encoder.RuneToGlyph(r)
-		if !found {
-			common.Log.Debug("Error! Glyph not found for rune=%s", r)
-			glyph = "space"
-		}
-		m, ok := font.GetGlyphCharMetrics(glyph)
-		if !ok {
-			common.Log.Debug("ERROR: Metrics not found for rune=%+v glyph=%#q", r, glyph)
-		}
-		metrics = append(metrics, m)
-	}
-	return metrics, nil
 }

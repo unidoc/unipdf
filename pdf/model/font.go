@@ -394,7 +394,7 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 	t.SetEncoder(encoder)
 }
 
-// GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
+// GetGlyphCharMetrics returns the char metrics for glyph name `glyph`.
 func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
@@ -402,6 +402,26 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 		return fonts.CharMetrics{}, false
 	}
 	return t.GetGlyphCharMetrics(glyph)
+}
+
+// GetRuneCharMetrics returns the char metrics for rune `r`.
+func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, error) {
+	encoder := font.Encoder()
+	if encoder == nil {
+		common.Log.Debug("ERROR: Eetrics not found for %s", font)
+		return fonts.CharMetrics{}, errors.New("no font encoder")
+	}
+
+	glyph, found := encoder.RuneToGlyph(r)
+	if !found {
+		common.Log.Debug("Error! Glyph not found for rune=%s %s", r, font.String())
+		glyph = "space"
+	}
+	m, ok := font.GetGlyphCharMetrics(glyph)
+	if !ok {
+		common.Log.Debug("ERROR: Metrics not found for rune=%+v glyph=%#q %s", r, glyph, font)
+	}
+	return m, nil
 }
 
 // GetAverageCharWidth returns the average width of all the characters in `font`.
