@@ -624,11 +624,13 @@ func (tl *TextList) ToText() string {
 // getFont returns the font named `name` if it exists in the page's resources or an error if it
 // doesn't. It caches the returned fonts.
 func (to *textObject) getFont(name string) (*model.PdfFont, error) {
-	accessCount++
-	entry, ok := fontCache[name]
-	if ok {
-		entry.access = accessCount
-		return entry.font, nil
+	if to.e.fontCache != nil {
+		to.e.accessCount++
+		entry, ok := to.e.fontCache[name]
+		if ok {
+			entry.access = to.e.accessCount
+			return entry.font, nil
+		}
 	}
 
 	// Font not in cache. Load it.
@@ -636,20 +638,23 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 	if err != nil {
 		return nil, err
 	}
-	entry = fontEntry{font, accessCount}
 
-	// Eject a victim if the cache is full.
-	if len(fontCache) >= maxFontCache {
-		names := []string{}
-		for name := range fontCache {
-			names = append(names, name)
+	if to.e.fontCache != nil {
+		entry := fontEntry{font, to.e.accessCount}
+
+		// Eject a victim if the cache is full.
+		if len(to.e.fontCache) >= maxFontCache {
+			names := []string{}
+			for name := range to.e.fontCache {
+				names = append(names, name)
+			}
+			sort.Slice(names, func(i, j int) bool {
+				return to.e.fontCache[names[i]].access < to.e.fontCache[names[j]].access
+			})
+			delete(to.e.fontCache, names[0])
 		}
-		sort.Slice(names, func(i, j int) bool {
-			return fontCache[names[i]].access < fontCache[names[j]].access
-		})
-		delete(fontCache, names[0])
+		to.e.fontCache[name] = entry
 	}
-	fontCache[name] = entry
 
 	return font, nil
 }
@@ -660,19 +665,12 @@ type fontEntry struct {
 	access int64          // Last access. Used to determine LRU cache victims.
 }
 
-// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
-// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
-var fontCache = map[string]fontEntry{}
-
 // maxFontCache is the maximum number of PdfFont's in fontCache.
 const maxFontCache = 10
 
-// accessCount is used to set fontEntry.access to an incrementing number.
-var accessCount int64
-
 // getFontDirect returns the font named `name` if it exists in the page's resources or an error if
 // is doesn't.
-// This is a direct (uncached access)
+// This is a direct (uncached access).
 func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.

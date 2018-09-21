@@ -573,7 +573,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 
 // toUnicodeToCmap returns a CMap of `toUnicode` if it exists.
 func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, error) {
-	toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
+	toUnicodeStream, ok := core.GetStream(toUnicode)
 	if !ok {
 		common.Log.Debug("ERROR: toUnicodeToCmap: Not a stream (%T)", toUnicode)
 		return nil, core.ErrTypeError
