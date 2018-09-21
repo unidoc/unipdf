@@ -66,13 +66,13 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts["Helvetica"]
+	std := standard14Fonts[Helvetica]
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
-func NewStandard14Font(basefont string) (*PdfFont, error) {
+func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
 	std, ok := standard14Fonts[basefont]
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
@@ -81,32 +81,11 @@ func NewStandard14Font(basefont string) (*PdfFont, error) {
 	return &PdfFont{context: &std}, nil
 }
 
-// Standard14Font is to be used only to define the standard 14 font names that follow.
-// This guarantees that calls to NewStandard14FontMustCompile will succeed.
-type Standard14Font string
-
-const (
-	Courier              Standard14Font = "Courier"
-	CourierBold          Standard14Font = "Courier-Bold"
-	CourierBoldOblique   Standard14Font = "Courier-BoldOblique"
-	CourierOblique       Standard14Font = "Courier-Oblique"
-	Helvetica            Standard14Font = "Helvetica"
-	HelveticaBold        Standard14Font = "Helvetica-Bold"
-	HelveticaBoldOblique Standard14Font = "Helvetica-BoldOblique"
-	HelveticaOblique     Standard14Font = "Helvetica-Oblique"
-	TimesRoman           Standard14Font = "Times-Roman"
-	TimesBold            Standard14Font = "Times-Bold"
-	TimesBoldItalic      Standard14Font = "Times-BoldItalic"
-	TimesItalic          Standard14Font = "Times-Italic"
-	Symbol               Standard14Font = "Symbol"
-	ZapfDingbats         Standard14Font = "ZapfDingbats"
-)
-
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
 // If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
 // is guaranteed to succeed.
 func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
-	font, err := NewStandard14Font(string(basefont))
+	font, err := NewStandard14Font(basefont)
 	if err != nil {
 		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
 	}
@@ -116,7 +95,7 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
@@ -242,7 +221,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[base.basefont]; ok && base.subtype == "Type1" {
+		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
 			font.context = &std
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
 			d, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
