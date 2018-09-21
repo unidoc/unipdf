@@ -197,8 +197,6 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
 	if s, ok := cmap.codeToUnicode[code]; ok {
 		return s, true
 	}
-	// common.Log.Debug("ERROR: CharcodeToUnicode could not convert code=0x%04x. cmap=%s. Returning %q",
-	// 	code, cmap, MissingCodeString)
 	return MissingCodeString, false
 }
 
@@ -304,17 +302,15 @@ func (cmap *CMap) Bytes() []byte {
 	return []byte(whole)
 }
 
-type (
-	charRange struct {
-		code0 CharCode
-		code1 CharCode
-	}
-	fbRange struct {
-		code0 CharCode
-		code1 CharCode
-		r0    rune
-	}
-)
+type charRange struct {
+	code0 CharCode
+	code1 CharCode
+}
+type fbRange struct {
+	code0 CharCode
+	code1 CharCode
+	r0    rune
+}
 
 // toBfData returns the bfchar and bfrange sections of a CMap text file.
 // Both sections are computed from cmap.codeToUnicode.
@@ -330,7 +326,7 @@ func (cmap *CMap) toBfData() string {
 	}
 	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
 
-	// charRanges is a list of the contiguous character code ranges in codes.
+	// charRanges is a list of the contiguous character code ranges in `codes`.
 	charRanges := []charRange{}
 	c0, c1 := codes[0], codes[0]+1
 	for _, c := range codes[1:] {
@@ -340,7 +336,7 @@ func (cmap *CMap) toBfData() string {
 		}
 		c1 = c + 1
 	}
-	if c1 != c0+1 {
+	if c1 > c0 {
 		charRanges = append(charRanges, charRange{c0, c1})
 	}
 
