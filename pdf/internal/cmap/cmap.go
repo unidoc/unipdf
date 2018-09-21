@@ -267,7 +267,7 @@ func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 // LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
 // If `isSimple` is true, it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
 //
-// 9.10.3 ToUnicode CMaps (page 293)
+// 9.10.3 ToUnicode CMaps (page 293).
 func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
 

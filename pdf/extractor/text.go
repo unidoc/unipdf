@@ -654,19 +654,20 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 	return font, nil
 }
 
+// fontEntry is a entry in the font cache.
 type fontEntry struct {
 	font   *model.PdfFont // The font being cached.
 	access int64          // Last access. Used to determine LRU cache victims.
 }
 
-// fontCache is a simple LRU cache that is used to prevent redudant constructions of PdfFont's from
-// PDF objects.
+// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
+// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
 var fontCache = map[string]fontEntry{}
 
 // maxFontCache is the maximum number of PdfFont's in fontCache.
 const maxFontCache = 10
 
-// accessCount is used to set fontEntry.access to an incrementing number
+// accessCount is used to set fontEntry.access to an incrementing number.
 var accessCount int64
 
 // getFontDirect returns the font named `name` if it exists in the page's resources or an error if
