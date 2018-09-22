@@ -40,6 +40,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/cmap"
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
@@ -83,13 +84,32 @@ type TtfType struct {
 	CapHeight              int16
 	Widths                 []uint16
 
-	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e GlyphNames[Chars[r]] is
+	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e. GlyphNames[Chars[r]] is
 	// the glyph corresponding to rune r.
 	Chars map[uint16]uint16
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
 	GlyphNames []string
 }
 
+// MakeToUnicode returns a ToUnicode CMap based on the encoding of `ttf`.
+// XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
+// otherwise valid PDF file that Adobe Reader displays without error.
+func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
+	codeToUnicode := map[cmap.CharCode]string{}
+	for code, idx := range ttf.Chars {
+		glyph := ttf.GlyphNames[idx]
+
+		r, ok := textencoding.GlyphToRune(glyph)
+		if !ok {
+			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
+			r = textencoding.MissingCodeRune
+		}
+		codeToUnicode[cmap.CharCode(code)] = string(r)
+	}
+	return cmap.NewToUnicodeCMap(codeToUnicode)
+}
+
+// String returns a human readable representation of `ttf`.
 func (ttf *TtfType) String() string {
 	return fmt.Sprintf("FONT_FILE2{%#q Embeddable=%t UnitsPerEm=%d Bold=%t ItalicAngle=%f "+
 		"CapHeight=%d Chars=%d GlyphNames=%d}",
@@ -420,6 +440,8 @@ func (t *ttfParser) ParseCmap() error {
 		if platformID == 3 && encodingID == 1 {
 			// (3,1) subtable. Windows Unicode.
 			offset31 = offset
+		} else if platformID == 1 && encodingID == 0 {
+			offset10 = offset
 		}
 	}
 
@@ -435,6 +457,9 @@ func (t *ttfParser) ParseCmap() error {
 		if err := t.parseCmapVersion(offset10); err != nil {
 			return err
 		}
+	}
+	if offset31 == 0 && offset10 == 0 {
+		common.Log.Debug("ttfParser.ParseCmap. No 31 or 10 table.")
 	}
 
 	return nil
@@ -470,7 +495,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 		return t.parseCmapFormat12()
 	default:
 		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
-		return nil // XXX: Can't return an error here if creator_test.go is to pass.
+		return nil // XXX(peterwilliams97): Can't return an error here if creator_test.go is to pass.
 	}
 }
 
@@ -516,11 +541,11 @@ func (t *ttfParser) parseCmapFormat12() error {
 		startGlyph := t.ReadULong()
 
 		if firstCode > 0x0010FFFF || (0xD800 <= firstCode && firstCode <= 0xDFFF) {
-			return errors.New("Invalid characters codes")
+			return errors.New("invalid characters codes")
 		}
 
 		if endCode < firstCode || endCode > 0x0010FFFF || (0xD800 <= endCode && endCode <= 0xDFFF) {
-			return errors.New("Invalid characters codes")
+			return errors.New("invalid characters codes")
 		}
 
 		for j := uint32(0); j <= endCode-firstCode; j++ {

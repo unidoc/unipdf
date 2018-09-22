@@ -66,24 +66,36 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts["Helvetica"]
+	std := standard14Fonts[Helvetica]
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
-// `basefont` is not one the standard 14 font names.
-func NewStandard14Font(basefont string) (*PdfFont, error) {
+// `basefont` is not one of the standard 14 font names.
+func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
 	std, ok := standard14Fonts[basefont]
 	if !ok {
+		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
 	}
 	return &PdfFont{context: &std}, nil
 }
 
+// NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
+// If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
+// is guaranteed to succeed.
+func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
+	font, err := NewStandard14Font(basefont)
+	if err != nil {
+		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
+	}
+	return font
+}
+
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
@@ -209,7 +221,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[base.basefont]; ok && base.subtype == "Type1" {
+		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
 			font.context = &std
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
 			d, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
@@ -415,12 +427,12 @@ type fontCommon struct {
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
 
-	// These are optional fields in the PDF font
+	// These are optional fields in the PDF font.
 	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
 
 	// These objects are computed from optional fields in the PDF font.
-	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode"
-	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor"
+	toUnicodeCmap  *cmap.CMap         // Computed from "ToUnicode".
+	fontDescriptor *PdfFontDescriptor // Computed from "FontDescriptor".
 
 	// objectNumber helps us find the font in the PDF being processed. This helps with debugging.
 	objectNumber int64
@@ -449,6 +461,14 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 	}
 	if base.toUnicode != nil {
 		d.Set("ToUnicode", base.toUnicode)
+	} else if base.toUnicodeCmap != nil {
+		data := base.toUnicodeCmap.Bytes()
+		o, err := core.MakeStream(data, nil)
+		if err != nil {
+			common.Log.Debug("MakeStream failed. err=%v", err)
+		} else {
+			d.Set("ToUnicode", o)
+		}
 	}
 	return d
 }
@@ -551,9 +571,9 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 	return d, font, nil
 }
 
-// toUnicodeToCmap returns a CMap of `toUnicode` if it exists
+// toUnicodeToCmap returns a CMap of `toUnicode` if it exists.
 func toUnicodeToCmap(toUnicode core.PdfObject, font *fontCommon) (*cmap.CMap, error) {
-	toUnicodeStream, ok := toUnicode.(*core.PdfObjectStream)
+	toUnicodeStream, ok := core.GetStream(toUnicode)
 	if !ok {
 		common.Log.Debug("ERROR: toUnicodeToCmap: Not a stream (%T)", toUnicode)
 		return nil, core.ErrTypeError
@@ -640,7 +660,7 @@ func (descriptor *PdfFontDescriptor) String() string {
 	}
 	parts = append(parts, fmt.Sprintf("FontFile3=%t", descriptor.FontFile3 != nil))
 
-	return fmt.Sprintf("FONT_DESCRIPTON{%s}", strings.Join(parts, ", "))
+	return fmt.Sprintf("FONT_DESCRIPTOR{%s}", strings.Join(parts, ", "))
 }
 
 // newPdfFontDescriptorFromPdfObject loads the font descriptor from a core.PdfObject.  Can either be a

@@ -197,7 +197,8 @@ type pdfCIDFontType0 struct {
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
-	CIDSystemInfo *core.PdfObjectDictionary // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
+	CIDSystemInfo *core.PdfObjectDictionary // (Required) Dictionary that defines the character
+	// collection of the CIDFont. See Table 116.
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
@@ -472,6 +473,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Make the font descriptor.
 	descriptor := &PdfFontDescriptor{}
+	descriptor.FontName = core.MakeName(ttf.PostScriptName)
 	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
 	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
 	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
@@ -526,6 +528,8 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		Encoding: core.MakeName("Identity-H"),
 		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),
 	}
+
+	type0.toUnicodeCmap = ttf.MakeToUnicode()
 
 	// Build Font.
 	font := PdfFont{

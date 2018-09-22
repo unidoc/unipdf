@@ -47,15 +47,30 @@ type CMap struct {
 	nbits      int // 8 bits for simple fonts, 16 bits for CID fonts.
 	ctype      int
 	version    string
-	usecmap    string // Base this cmap on `usecmap` if `usecmap` is not empty
+	usecmap    string // Base this cmap on `usecmap` if `usecmap` is not empty.
 	systemInfo CIDSystemInfo
 
-	// For regular cmaps
+	// For regular cmaps.
 	codespaces []Codespace
 
-	// For ToUnicode (ctype 2) cmaps
-	codeToUnicode     map[CharCode]string
-	toUnicodeIdentity bool
+	// For ToUnicode (ctype 2) cmaps.
+	codeToUnicode map[CharCode]string
+}
+
+// NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
+func NewToUnicodeCMap(codeToUnicode map[CharCode]string) *CMap {
+	return &CMap{
+		name:  "Adobe-Identity-UCS",
+		ctype: 2,
+		nbits: 16,
+		systemInfo: CIDSystemInfo{
+			Registry:   "Adobe",
+			Ordering:   "UCS",
+			Supplement: 0,
+		},
+		codespaces:    []Codespace{Codespace{Low: 0, High: 0xffff}},
+		codeToUnicode: codeToUnicode,
+	}
 }
 
 // String returns a human readable description of `cmap`.
@@ -100,7 +115,7 @@ func (info *CIDSystemInfo) String() string {
 	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
 }
 
-// NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`
+// NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`.
 func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
 	d, ok := core.GetDict(obj)
 	if !ok {
@@ -135,7 +150,7 @@ func (cmap *CMap) Type() int {
 	return cmap.ctype
 }
 
-// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'
+// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
 const MissingCodeRune = textencoding.MissingCodeRune
 
 // MissingCodeString replaces strings that can't be decoded.
@@ -182,8 +197,6 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
 	if s, ok := cmap.codeToUnicode[code]; ok {
 		return s, true
 	}
-	common.Log.Debug("ERROR: CharcodeToUnicode could not convert code=0x%04x. cmap=%s. Returning %q",
-		code, cmap, MissingCodeString)
 	return MissingCodeString, false
 }
 
@@ -213,7 +226,7 @@ func (cmap *CMap) bytesToCharcodes(data []byte) ([]CharCode, bool) {
 	return charcodes, true
 }
 
-// matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces
+// matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces.
 // Returns:
 //      character code (if there is a match) of
 //      number of bytes read (if there is a match)
@@ -252,9 +265,9 @@ func LoadCmapFromDataCID(data []byte) (*CMap, error) {
 }
 
 // LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
-// If isCID is true then it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
+// If `isSimple` is true, it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
 //
-// 9.10.3 ToUnicode CMaps (page 293)
+// 9.10.3 ToUnicode CMaps (page 293).
 func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
 
@@ -274,9 +287,130 @@ func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 		common.Log.Debug("ERROR: No codespaces. cmap=%s", cmap)
 		return nil, ErrBadCMap
 	}
-	// We need to sort codespaces so that we check shorter codes first
+	// We need to sort codespaces so that we check shorter codes first.
 	sort.Slice(cmap.codespaces, func(i, j int) bool {
 		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
 	})
 	return cmap, nil
+}
+
+// Bytes returns the raw bytes of a PDF CMap corresponding to `cmap`.
+func (cmap *CMap) Bytes() []byte {
+	common.Log.Trace("cmap.Bytes: cmap=%s", cmap.String())
+	body := cmap.toBfData()
+	whole := strings.Join([]string{cmapHeader, body, cmapTrailer}, "\n")
+	return []byte(whole)
+}
+
+type charRange struct {
+	code0 CharCode
+	code1 CharCode
+}
+type fbRange struct {
+	code0 CharCode
+	code1 CharCode
+	r0    rune
+}
+
+// toBfData returns the bfchar and bfrange sections of a CMap text file.
+// Both sections are computed from cmap.codeToUnicode.
+func (cmap *CMap) toBfData() string {
+	if len(cmap.codeToUnicode) == 0 {
+		return ""
+	}
+
+	// codes is a sorted list of the codeToUnicode keys.
+	codes := []CharCode{}
+	for code := range cmap.codeToUnicode {
+		codes = append(codes, code)
+	}
+	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
+
+	// charRanges is a list of the contiguous character code ranges in `codes`.
+	charRanges := []charRange{}
+	c0, c1 := codes[0], codes[0]+1
+	for _, c := range codes[1:] {
+		if c != c1 {
+			charRanges = append(charRanges, charRange{c0, c1})
+			c0 = c
+		}
+		c1 = c + 1
+	}
+	if c1 > c0 {
+		charRanges = append(charRanges, charRange{c0, c1})
+	}
+
+	// fbChars is a list of single character ranges. fbRanges is a list of multiple character ranges.
+	fbChars := []CharCode{}
+	fbRanges := []fbRange{}
+	for _, cr := range charRanges {
+		if cr.code0+1 == cr.code1 {
+			fbChars = append(fbChars, cr.code0)
+		} else {
+			fbRanges = append(fbRanges, fbRange{
+				code0: cr.code0,
+				code1: cr.code1,
+				r0:    []rune(cmap.codeToUnicode[cr.code0])[0],
+			})
+		}
+	}
+	common.Log.Trace("charRanges=%d fbChars=%d fbRanges=%d", len(charRanges), len(fbChars),
+		len(fbRanges))
+
+	lines := []string{}
+	if len(fbChars) > 0 {
+		numRanges := (len(fbChars) + maxBfEntries - 1) / maxBfEntries
+		for i := 0; i < numRanges; i++ {
+			n := min(len(fbChars)-i*maxBfEntries, maxBfEntries)
+			lines = append(lines, fmt.Sprintf("%d beginbfchar", n))
+			for j := 0; j < n; j++ {
+				code := fbChars[i*maxBfEntries+j]
+				s := cmap.codeToUnicode[code]
+				r := []rune(s)[0]
+				lines = append(lines, fmt.Sprintf("<%04x> <%04x>", code, r))
+			}
+			lines = append(lines, "endbfchar")
+		}
+	}
+	if len(fbRanges) > 0 {
+		numRanges := (len(fbRanges) + maxBfEntries - 1) / maxBfEntries
+		for i := 0; i < numRanges; i++ {
+			n := min(len(fbRanges)-i*maxBfEntries, maxBfEntries)
+			lines = append(lines, fmt.Sprintf("%d beginbfrange", n))
+			for j := 0; j < n; j++ {
+				rng := fbRanges[i*maxBfEntries+j]
+				r := rng.r0
+				lines = append(lines, fmt.Sprintf("<%04x><%04x> <%04x>", rng.code0, rng.code1-1, r))
+			}
+			lines = append(lines, "endbfrange")
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+const (
+	maxBfEntries = 100 // Maximum number of entries in a bfchar or bfrange section.
+	cmapHeader   = `
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+`
+	cmapTrailer = `endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+`
+)
+
+func min(i, j int) int {
+	if i < j {
+		return i
+	}
+	return j
 }

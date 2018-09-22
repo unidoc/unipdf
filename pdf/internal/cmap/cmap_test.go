@@ -6,9 +6,9 @@
 package cmap
 
 import (
+	"sort"
+	"strings"
 	"testing"
-
-	"github.com/unidoc/unidoc/common"
 )
 
 func init() {
@@ -151,8 +151,6 @@ const cmap2Data = `
 // TestCMapParser2 tests a bug that came up when 2-byte character codes had the higher byte set to 0,
 // e.g. 0x0080, and the character map was not taking the number of bytes of the input codemap into account.
 func TestCMapParser2(t *testing.T) {
-	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-
 	cmap, err := LoadCmapFromDataCID([]byte(cmap2Data))
 	if err != nil {
 		t.Error("Failed: ", err)
@@ -244,8 +242,6 @@ const cmapData3 = `
 
 // TestCMapParser3 test case of a CMap with mixed number of 1 and 2 bytes in the codespace range.
 func TestCMapParser3(t *testing.T) {
-	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-
 	cmap, err := LoadCmapFromDataCID([]byte(cmapData3))
 	if err != nil {
 		t.Error("Failed: ", err)
@@ -332,7 +328,7 @@ func TestCMapParser3(t *testing.T) {
 	}
 }
 
-// cmapData4 is a CMap with some utf16 encoded unicode strings that contain surrogates
+// cmapData4 is a CMap with some utf16 encoded unicode strings that contain surrogates.
 const cmap4Data = `
     /CIDInit /ProcSet findresource begin
     11 dict begin
@@ -370,10 +366,8 @@ const cmap4Data = `
     endcmap
 `
 
-// TestCMapParser4 checks that ut16 encoded unicode strings are interpreted correctly
+// TestCMapParser4 checks that ut16 encoded unicode strings are interpreted correctly.
 func TestCMapParser4(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
-
 	cmap, err := LoadCmapFromDataCID([]byte(cmap4Data))
 	if err != nil {
 		t.Error("Failed to load CMap: ", err)
@@ -435,6 +429,274 @@ func TestCMapParser4(t *testing.T) {
 		if str != exp.expected {
 			t.Errorf("Incorrect byte sequence mapping % 02X ➞ %+q (got %+q)",
 				exp.bytes, exp.expected, str)
+			return
+		}
+	}
+}
+
+var (
+	codeToUnicode1 = map[CharCode]string{ // 40 entries
+		0x02ca: "ˊ",
+		0x02cb: "ˋ",
+		0x02cd: "ˍ",
+		0x039c: "Μ",
+		0x039d: "Ν",
+		0x039e: "Ξ",
+		0x039f: "Ο",
+		0x03a0: "Π",
+		0x03a1: "Ρ",
+		0x03a6: "Φ",
+		0x03b1: "α",
+		0x03b2: "β",
+		0x03b3: "γ",
+		0x03b4: "δ",
+		0x03b5: "ε",
+		0x03b6: "ζ",
+		0x03b7: "η",
+		0x03c6: "φ",
+		0x03c7: "χ",
+		0x03c9: "ω",
+		0x2013: "–",
+		0x2014: "—",
+		0x2018: "‘",
+		0x2019: "’",
+		0x203e: "‾",
+		0x20ac: "€",
+		0x2163: "Ⅳ",
+		0x2164: "Ⅴ",
+		0x2165: "Ⅵ",
+		0x2166: "Ⅶ",
+		0x2167: "Ⅷ",
+		0x2168: "Ⅸ",
+		0x2169: "Ⅹ",
+		0x2190: "←",
+		0x2191: "↑",
+		0x2192: "→",
+		0x2193: "↓",
+		0x2220: "∠",
+		0x2223: "∣",
+		0x222a: "∪",
+	}
+
+	codeToUnicode2 = map[CharCode]string{ // 40 entries
+		0x0100: "Ā",
+		0x0101: "ā",
+		0x0102: "Ă",
+		0x0111: "đ",
+		0x0112: "Ē",
+		0x0113: "ē",
+		0x0114: "Ĕ",
+		0x0115: "ĕ",
+		0x0116: "Ė",
+		0x011b: "ě",
+		0x0126: "Ħ",
+		0x0127: "ħ",
+		0x0128: "Ĩ",
+		0x0129: "ĩ",
+		0x012a: "Ī",
+		0x012b: "ī",
+		0x012c: "Ĭ",
+		0x013b: "Ļ",
+		0x013c: "ļ",
+		0x013e: "ľ",
+		0x013f: "Ŀ",
+		0x0140: "ŀ",
+		0x0141: "Ł",
+		0x0150: "Ő",
+		0x0151: "ő",
+		0x0152: "Œ",
+		0x0153: "œ",
+		0x0154: "Ŕ",
+		0x0155: "ŕ",
+		0x015a: "Ś",
+		0x0165: "ť",
+		0x0166: "Ŧ",
+		0x0167: "ŧ",
+		0x0168: "Ũ",
+		0x0169: "ũ",
+		0x016a: "Ū",
+		0x016b: "ū",
+		0x017a: "ź",
+		0x017b: "Ż",
+		0x017d: "Ž",
+	}
+	codeToUnicode3 = map[CharCode]string{ // 93 entries
+		0x0124: "Ĥ",
+		0x0125: "ĥ",
+		0x0126: "Ħ",
+		0x0127: "ħ",
+		0x0134: "Ĵ",
+		0x0135: "ĵ",
+		0x0136: "Ķ",
+		0x0137: "ķ",
+		0x0138: "ĸ",
+		0x0144: "ń",
+		0x0145: "Ņ",
+		0x0146: "ņ",
+		0x0147: "Ň",
+		0x0154: "Ŕ",
+		0x0155: "ŕ",
+		0x0156: "Ŗ",
+		0x0157: "ŗ",
+		0x0164: "Ť",
+		0x0169: "ũ",
+		0x0174: "Ŵ",
+		0x0175: "ŵ",
+		0x0176: "Ŷ",
+		0x0177: "ŷ",
+		0x0184: "Ƅ",
+		0x0185: "ƅ",
+		0x0186: "Ɔ",
+		0x0187: "Ƈ",
+		0x0194: "Ɣ",
+		0x019a: "ƚ",
+		0x01a4: "Ƥ",
+		0x01a5: "ƥ",
+		0x01a6: "Ʀ",
+		0x01a7: "Ƨ",
+		0x01b4: "ƴ",
+		0x01b5: "Ƶ",
+		0x01b6: "ƶ",
+		0x01b7: "Ʒ",
+		0x01c4: "Ǆ",
+		0x01cb: "ǋ",
+		0x01d4: "ǔ",
+		0x01d5: "Ǖ",
+		0x01d6: "ǖ",
+		0x01d7: "Ǘ",
+		0x01e4: "Ǥ",
+		0x01e5: "ǥ",
+		0x01e6: "Ǧ",
+		0x01e7: "ǧ",
+		0x01f4: "Ǵ",
+		0x01f5: "ǵ",
+		0x0204: "Ȅ",
+		0x0205: "ȅ",
+		0x0206: "Ȇ",
+		0x0207: "ȇ",
+		0x0214: "Ȕ",
+		0x0215: "ȕ",
+		0x0216: "Ȗ",
+		0x0217: "ȗ",
+		0x0224: "Ȥ",
+		0x0226: "Ȧ",
+		0x0227: "ȧ",
+		0x0254: "ɔ",
+		0x0255: "ɕ",
+		0x0256: "ɖ",
+		0x0257: "ɗ",
+		0x0264: "ɤ",
+		0x0265: "ɥ",
+		0x0266: "ɦ",
+		0x0267: "ɧ",
+		0x0273: "ɳ",
+		0x0274: "ɴ",
+		0x0275: "ɵ",
+		0x0276: "ɶ",
+		0x0277: "ɷ",
+		0x0284: "ʄ",
+		0x0285: "ʅ",
+		0x0286: "ʆ",
+		0x0287: "ʇ",
+		0x0294: "ʔ",
+		0x0296: "ʖ",
+		0x0297: "ʗ",
+		0x02a4: "ʤ",
+		0x02a5: "ʥ",
+		0x02c6: "ˆ",
+		0x02c7: "ˇ",
+		0x0304: "̄",
+		0x0305: "̅",
+		0x0306: "̆",
+		0x0307: "̇",
+		0x030d: "̍",
+		0x0314: "̔",
+		0x0315: "̕",
+		0x0316: "̖",
+		0x0317: "̗",
+	}
+)
+
+const bfData1 = `
+8 beginbfchar
+<02cd> <02cd>
+<03a6> <03a6>
+<03c9> <03c9>
+<203e> <203e>
+<20ac> <20ac>
+<2220> <2220>
+<2223> <2223>
+<222a> <222a>
+endbfchar
+8 beginbfrange
+<02ca><02cb> <02ca>
+<039c><03a1> <039c>
+<03b1><03b7> <03b1>
+<03c6><03c7> <03c6>
+<2013><2014> <2013>
+<2018><2019> <2018>
+<2163><2169> <2163>
+<2190><2193> <2190>
+endbfrange
+`
+
+// TestBfData checks that cmap.toBfData produces the expected output.
+func TestBfData(t *testing.T) {
+	cmap := NewToUnicodeCMap(codeToUnicode1)
+
+	bfDataExpected := strings.Trim(bfData1, "\n")
+	bfDataTest := cmap.toBfData()
+
+	if bfDataTest != bfDataExpected {
+		t.Errorf("Incorrect bfData")
+		return
+	}
+}
+
+// TestBfData checks that cmap.toBfData produces the expected output.
+func TestCMapCreation(t *testing.T) {
+	checkCmapWriteRead(t, codeToUnicode1)
+	checkCmapWriteRead(t, codeToUnicode2)
+	checkCmapWriteRead(t, codeToUnicode3)
+}
+
+// checkCmapWriteRead creates CMap data from `codeToUnicode` then parses it and checks that the
+// same codeToUnicode is returned.
+func checkCmapWriteRead(t *testing.T, codeToUnicode map[CharCode]string) {
+	cmap0 := NewToUnicodeCMap(codeToUnicode)
+
+	data := cmap0.Bytes()
+	cmap, err := LoadCmapFromDataCID(data)
+	if err != nil {
+		t.Error("Failed to load CMap: ", err)
+		return
+	}
+
+	codes0 := []CharCode{}
+	for code := range codeToUnicode {
+		codes0 = append(codes0, code)
+	}
+	sort.Slice(codes0, func(i, j int) bool { return codes0[i] < codes0[j] })
+	codes := []CharCode{}
+	for code := range cmap.codeToUnicode {
+		codes = append(codes, code)
+	}
+	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
+
+	if len(cmap.codeToUnicode) != len(codeToUnicode) {
+		t.Errorf("Incorrect length. expected=%d test=%d", len(codeToUnicode1), len(cmap.codeToUnicode))
+		return
+	}
+
+	for i, code := range codes0 {
+		if code != codes[i] {
+			t.Errorf("Code mismatch: i=%d expected=0x%04x test=0x%04x", i, code, codes[i])
+			return
+		}
+		u0 := codeToUnicode[code]
+		u := cmap.codeToUnicode[code]
+		if u != u0 {
+			t.Errorf("Unicode mismatch: i=%d code0=0x%04x expected=%q test=%q", i, code, u0, u)
 			return
 		}
 	}
