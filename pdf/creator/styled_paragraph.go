@@ -449,8 +449,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				return ctx, err
 			}
 
-			num++
 			fontLine = append(fontLine, fontName)
+			num++
 		}
 
 		fonts = append(fonts, fontLine)
@@ -535,28 +535,34 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
-		cc.Add_Tf(defaultFontName, defaultFontSize).
-			Add_TL(defaultFontSize * p.lineHeight).
-			Add_TJ(objs...)
+		if len(objs) > 0 {
+			cc.Add_Tf(defaultFontName, defaultFontSize).
+				Add_TL(defaultFontSize * p.lineHeight).
+				Add_TJ(objs...)
+		}
 
 		// Render line text chunks
 		for k, chunk := range line {
 			style := &chunk.Style
 
 			r, g, b := style.Color.ToRGB()
-			encStr := ""
-			objs = []core.PdfObject{}
+			fontName := defaultFontName
+			fontSize := defaultFontSize
 
 			if p.alignment != TextAlignmentJustify || isLastLine {
 				spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
 				if !found {
 					return ctx, errors.New("The font does not have a space glyph")
 				}
+
+				fontName = fonts[idx][k]
+				fontSize = style.FontSize
 				spaceWidth = spaceMetrics.Wx
 			}
 
-			for _, r := range chunk.Text {
-				glyph, found := p.encoder.RuneToGlyph(r)
+			encStr := ""
+			for _, rn := range chunk.Text {
+				glyph, found := p.encoder.RuneToGlyph(rn)
 				if !found {
 					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
 					return ctx, errors.New("Unsupported rune in text encoding")
@@ -569,22 +575,28 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					}
 
 					if len(encStr) > 0 {
-						objs = append(objs, core.MakeString(encStr))
+						cc.Add_rg(r, g, b).
+							Add_Tf(fonts[idx][k], style.FontSize).
+							Add_TL(style.FontSize * p.lineHeight).
+							Add_TJ([]core.PdfObject{core.MakeString(encStr)}...)
+
 						encStr = ""
 					}
-					objs = append(objs, core.MakeFloat(-spaceWidth))
+
+					cc.Add_Tf(fontName, fontSize).
+						Add_TL(fontSize * p.lineHeight).
+						Add_TJ([]core.PdfObject{core.MakeFloat(-spaceWidth)}...)
 				} else {
-					encStr += string(p.encoder.Encode(string(r)))
+					encStr += p.encoder.Encode(string(rn))
 				}
 			}
-			if len(encStr) > 0 {
-				objs = append(objs, core.MakeString(encStr))
-			}
 
-			cc.Add_rg(r, g, b).
-				Add_Tf(fonts[idx][k], style.FontSize).
-				Add_TL(style.FontSize * p.lineHeight).
-				Add_TJ(objs...)
+			if len(encStr) > 0 {
+				cc.Add_rg(r, g, b).
+					Add_Tf(fonts[idx][k], style.FontSize).
+					Add_TL(style.FontSize * p.lineHeight).
+					Add_TJ([]core.PdfObject{core.MakeString(encStr)}...)
+			}
 		}
 	}
 	cc.Add_ET()
