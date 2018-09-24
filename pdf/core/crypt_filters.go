@@ -41,14 +41,7 @@ type cryptFilterMethod interface {
 	DecryptBytes(p []byte, okey []byte) ([]byte, error)
 }
 
-// cryptFilterV2 is a RC4-based filter
-type cryptFilterV2 struct{}
-
-func (cryptFilterV2) CFM() string {
-	return CryptFilterV2
-}
-
-func (f cryptFilterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
+func makeKeyV2(objNum, genNum uint32, ekey []byte, isAES bool) ([]byte, error) {
 	key := make([]byte, len(ekey)+5)
 	for i := 0; i < len(ekey); i++ {
 		key[i] = ekey[i]
@@ -61,6 +54,15 @@ func (f cryptFilterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, erro
 		b := byte((genNum >> uint32(8*i)) & 0xff)
 		key[i+len(ekey)+3] = b
 	}
+	if isAES {
+		// If using the AES algorithm, extend the encryption key an
+		// additional 4 bytes by adding the value “sAlT”, which
+		// corresponds to the hexadecimal values 0x73, 0x41, 0x6C, 0x54.
+		key = append(key, 0x73)
+		key = append(key, 0x41)
+		key = append(key, 0x6C)
+		key = append(key, 0x54)
+	}
 
 	// Take the MD5.
 	h := md5.New()
@@ -72,6 +74,17 @@ func (f cryptFilterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, erro
 	}
 
 	return hashb, nil
+}
+
+// cryptFilterV2 is a RC4-based filter
+type cryptFilterV2 struct{}
+
+func (cryptFilterV2) CFM() string {
+	return CryptFilterV2
+}
+
+func (f cryptFilterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
+	return makeKeyV2(objNum, genNum, ekey, false)
 }
 
 func (cryptFilterV2) EncryptBytes(buf []byte, okey []byte) ([]byte, error) {
@@ -224,36 +237,7 @@ func (cryptFilterAESV2) CFM() string {
 }
 
 func (cryptFilterAESV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
-	key := make([]byte, len(ekey)+5)
-	for i := 0; i < len(ekey); i++ {
-		key[i] = ekey[i]
-	}
-	for i := 0; i < 3; i++ {
-		b := byte((objNum >> uint32(8*i)) & 0xff)
-		key[i+len(ekey)] = b
-	}
-	for i := 0; i < 2; i++ {
-		b := byte((genNum >> uint32(8*i)) & 0xff)
-		key[i+len(ekey)+3] = b
-	}
-	// If using the AES algorithm, extend the encryption key an
-	// additional 4 bytes by adding the value “sAlT”, which
-	// corresponds to the hexadecimal values 0x73, 0x41, 0x6C, 0x54.
-	key = append(key, 0x73)
-	key = append(key, 0x41)
-	key = append(key, 0x6C)
-	key = append(key, 0x54)
-
-	// Take the MD5.
-	h := md5.New()
-	h.Write(key)
-	hashb := h.Sum(nil)
-
-	if len(ekey)+5 < 16 {
-		return hashb[0 : len(ekey)+5], nil
-	}
-
-	return hashb, nil
+	return makeKeyV2(objNum, genNum, ekey, true)
 }
 
 // cryptFilterAESV3 is an AES-based filter (256 bit key, PDF 2.0)
