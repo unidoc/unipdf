@@ -590,12 +590,19 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 }
 
 // SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
-// The currently supported VectorDrawable is: *Paragraph.
+// The currently supported VectorDrawable is: *Paragraph, *StyledParagraph.
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
 		if t.defaultWrap {
 			// Default paragraph settings in table: no wrapping.
+			t.enableWrap = false // No wrapping.
+		}
+
+		cell.content = vd
+	case *StyledParagraph:
+		if t.defaultWrap {
+			// Default styled paragraph settings in table: no wrapping.
 			t.enableWrap = false // No wrapping.
 		}
 
