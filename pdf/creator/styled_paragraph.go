@@ -104,6 +104,11 @@ func (p *StyledParagraph) Append(text string, style TextStyle) {
 	p.wrapText()
 }
 
+func (p *StyledParagraph) Reset(text string, style TextStyle) {
+	p.chunks = []TextChunk{}
+	p.Append(text, style)
+}
+
 // SetTextAlignment sets the horizontal alignment of the text within the space provided.
 func (p *StyledParagraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
