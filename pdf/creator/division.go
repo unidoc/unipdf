@@ -15,7 +15,7 @@ import (
 // It can contain multiple Drawable components (currently supporting Paragraph and Image).
 //
 // The component stacking behavior is vertical, where the Drawables are drawn on top of each other.
-// TODO: Add inline mode (horizontal stacking).
+// Also supports horizontal stacking by activating the inline mode.
 type Division struct {
 	components []VectorDrawable
 
