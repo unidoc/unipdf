@@ -58,6 +58,17 @@ func TestDivVertical(t *testing.T) {
 	p.SetFont(fontBold)
 	div.Add(p)
 
+	// Add styled paragraph
+	style := NewTextStyle()
+	style.Color = ColorRGBFrom8bit(0, 0, 255)
+
+	s := NewStyledParagraph("Not even with a styled ", style)
+
+	style.Color = ColorRGBFrom8bit(255, 0, 0)
+	s.Append("paragraph", style)
+
+	div.Add(s)
+
 	err = c.Draw(div)
 	if err != nil {
 		t.Fatalf("Error drawing: %v", err)
@@ -110,10 +121,25 @@ func TestDivInline(t *testing.T) {
 	p.SetFont(fontRegular)
 	div.Add(p)
 
-	p = NewParagraph("This one did not fit in the available line space")
+	p = NewParagraph("This one did not fit in the available line space. ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontBold)
 	div.Add(p)
+
+	// Add styled paragraph
+	style := NewTextStyle()
+	style.Color = ColorRGBFrom8bit(0, 0, 255)
+
+	s := NewStyledParagraph("This styled paragraph should ", style)
+
+	style.Color = ColorRGBFrom8bit(255, 0, 0)
+	s.Append("fit", style)
+
+	style.Color = ColorRGBFrom8bit(0, 255, 0)
+	style.Font = fontBold
+	s.Append(" right in.", style)
+
+	div.Add(s)
 
 	err = c.Draw(div)
 	if err != nil {
@@ -199,26 +225,43 @@ func TestDivRandomSequences(t *testing.T) {
 	div := NewDivision()
 	div.SetInline(true)
 
-	for i := 0; i < 250; i++ {
+	style := NewTextStyle()
+
+	for i := 0; i < 350; i++ {
 		r := byte(seed.Intn(200))
 		g := byte(seed.Intn(200))
 		b := byte(seed.Intn(200))
 
 		word := RandString(seed.Intn(10)+5) + " "
-		fontSize := float64(14 + seed.Intn(3))
-
-		p := NewParagraph(word)
-		p.SetEnableWrap(false)
-		p.SetColor(ColorRGBFrom8bit(r, g, b))
-		p.SetFontSize(fontSize)
+		fontSize := float64(11 + seed.Intn(3))
 
 		if seed.Intn(2)%2 == 0 {
-			p.SetFont(fontBold)
-		} else {
-			p.SetFont(fontRegular)
-		}
+			p := NewParagraph(word)
+			p.SetEnableWrap(false)
+			p.SetColor(ColorRGBFrom8bit(r, g, b))
+			p.SetFontSize(fontSize)
 
-		div.Add(p)
+			if seed.Intn(2)%2 == 0 {
+				p.SetFont(fontBold)
+			} else {
+				p.SetFont(fontRegular)
+			}
+
+			div.Add(p)
+		} else {
+			style.Color = ColorRGBFrom8bit(r, g, b)
+			style.FontSize = fontSize
+
+			if seed.Intn(2)%2 == 0 {
+				style.Font = fontBold
+			} else {
+				style.Font = fontRegular
+			}
+
+			s := NewStyledParagraph(word, style)
+			s.SetEnableWrap(false)
+			div.Add(s)
+		}
 	}
 
 	err = c.Draw(div)
