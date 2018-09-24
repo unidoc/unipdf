@@ -278,24 +278,22 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.Length = 40
 	}
 
-	V, ok := ed.Get("V").(*PdfObjectInteger)
-	if ok {
-		if *V >= 1 && *V <= 2 {
-			crypter.V = int(*V)
+	crypter.V = 0
+	if v, ok := ed.Get("V").(*PdfObjectInteger); ok {
+		V := int(*v)
+		crypter.V = V
+		if V >= 1 && V <= 2 {
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
 			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
-		} else if *V >= 4 && *V <= 5 {
-			crypter.V = int(*V)
+		} else if V >= 4 && V <= 5 {
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
 			}
 		} else {
-			common.Log.Debug("ERROR Unsupported encryption algo V = %d", *V)
+			common.Log.Debug("ERROR Unsupported encryption algo V = %d", V)
 			return crypter, errors.New("Unsupported algorithm")
 		}
-	} else {
-		crypter.V = 0
 	}
 
 	R, ok := ed.Get("R").(*PdfObjectInteger)
@@ -748,8 +746,8 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		common.Log.Trace("Decrypting indirect %d %d obj!", obj.ObjectNumber, obj.GenerationNumber)
 
-		objNum := (*obj).ObjectNumber
-		genNum := (*obj).GenerationNumber
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 
 		err := crypt.Decrypt(obj.PdfObject, objNum, genNum)
 		if err != nil {
@@ -759,14 +757,18 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	case *PdfObjectStream:
 		// Mark as decrypted first to avoid recursive issues.
 		crypt.DecryptedObjects[obj] = true
-		objNum := (*obj).ObjectNumber
-		genNum := (*obj).GenerationNumber
+		dict := obj.PdfObjectDictionary
+
+		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+			return nil // Cross-reference streams should not be encrypted
+		}
+
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 		common.Log.Trace("Decrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
-
-		dict := obj.PdfObjectDictionary
 
 		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
@@ -801,7 +803,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			}
 		}
 
-		err := crypt.Decrypt(obj.PdfObjectDictionary, objNum, genNum)
+		err := crypt.Decrypt(dict, objNum, genNum)
 		if err != nil {
 			return err
 		}
@@ -990,8 +992,8 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 		common.Log.Trace("Encrypting indirect %d %d obj!", obj.ObjectNumber, obj.GenerationNumber)
 
-		objNum := (*obj).ObjectNumber
-		genNum := (*obj).GenerationNumber
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 
 		err := crypt.Encrypt(obj.PdfObject, objNum, genNum)
 		if err != nil {
@@ -1000,14 +1002,18 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		return nil
 	case *PdfObjectStream:
 		crypt.EncryptedObjects[obj] = true
-		objNum := (*obj).ObjectNumber
-		genNum := (*obj).GenerationNumber
+		dict := obj.PdfObjectDictionary
+
+		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+			return nil // Cross-reference streams should not be encrypted
+		}
+
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 		common.Log.Trace("Encrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
-
-		dict := obj.PdfObjectDictionary
 
 		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
