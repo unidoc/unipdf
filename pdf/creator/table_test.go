@@ -13,19 +13,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// makeStandardFontMustCompile makes the standard font specified by `fontName` and returns the created font.
-// Panics on error.
-func makeStandardFontMustCompile(fontName string) *model.PdfFont {
-	font, err := model.NewStandard14Font(fontName)
-	if err != nil {
-		panic(err)
-	}
-	return font
-}
-
 var (
-	fontHelvetica     = makeStandardFontMustCompile(`Helvetica`)
-	fontHelveticaBold = makeStandardFontMustCompile(`Helvetica-Bold`)
+	fontHelvetica     = model.NewStandard14FontMustCompile(model.Helvetica)
+	fontHelveticaBold = model.NewStandard14FontMustCompile(model.HelveticaBold)
 )
 
 func TestTableMultiParagraphWrapped(t *testing.T) {

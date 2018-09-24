@@ -105,7 +105,7 @@ func TestNewStandard14Font(t *testing.T) {
 		basefont string
 		fonts.CharMetrics
 	}
-	tests := map[string]expect{
+	tests := map[model.Standard14Font]expect{
 		"Courier": expect{
 			subtype:     "Type1",
 			basefont:    "Courier",

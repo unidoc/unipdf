@@ -11,6 +11,13 @@ import "github.com/unidoc/unidoc/pdf/model"
 type Extractor struct {
 	contents  string
 	resources *model.PdfPageResources
+
+	// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
+	// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
+	fontCache map[string]fontEntry
+
+	// accessCount is used to set fontEntry.access to an incrementing number.
+	accessCount int64
 }
 
 // New returns an Extractor instance for extracting content from the input PDF page.
@@ -25,6 +32,10 @@ func New(page *model.PdfPage) (*Extractor, error) {
 	// fmt.Printf("%s\n", contents)
 	// fmt.Println("========================= ::: =========================")
 
-	e := &Extractor{contents: contents, resources: page.Resources}
+	e := &Extractor{
+		contents:  contents,
+		resources: page.Resources,
+		fontCache: map[string]fontEntry{},
+	}
 	return e, nil
 }
