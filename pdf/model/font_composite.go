@@ -316,8 +316,13 @@ func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
+// XXX:TODO(peterwilliams97): Cache enc creation and cache glyph:metrics in a map.
 func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	metrics := fonts.CharMetrics{}
+
+	if font.ttfParser == nil {
+		return metrics, false
+	}
 
 	enc := textencoding.NewTrueTypeFontEncoder(font.ttfParser.Chars)
 

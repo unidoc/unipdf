@@ -317,6 +317,16 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			75, 76, 77},
 		" *ﺏﻁﻝﺍﺔﻴﻠﻜ،ﺕﺭﺘﻌﻤﺎﺠﻲﻨﻘﺩﻬ/ﻙﻭﻕﺃﻡﻋﻓﺴ٢٠٣ﻯﻥﺒﺸﺌﺱﻷ,ﺯﺤﺄﻀـﺓﺫ.)٤(٩ل٥٧٨ﻸﻰ%١ﺇ٦ﺡﻫﻱﻅﻐﺼﻑﺨﺀﻊLM",
 	},
+	fontFragmentTest{"Tesseract",
+		"./testdata/font/tesseract.txt", 3,
+		[]byte{0, 65, 0, 97,
+			1, 2, 1, 65, 1, 97,
+			12, 2, 12, 65, 12, 97,
+			20, 65, 20, 97, 20, 255,
+			42, 2, 42, 65, 42, 97,
+			65, 66, 67, 255},
+		"AaĂŁšంుౡᑁᑡᓿ⨂⩁⩡䅂䏿",
+	},
 }
 
 type fontFragmentTest struct {

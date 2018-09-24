@@ -566,6 +566,7 @@ func (t *ttfParser) parseCmapFormat12() error {
 	return nil
 }
 
+// ParseName parses the "name" table.
 func (t *ttfParser) ParseName() error {
 	if err := t.Seek("name"); err != nil {
 		return err
@@ -596,7 +597,7 @@ func (t *ttfParser) ParseName() error {
 		}
 	}
 	if t.rec.PostScriptName == "" {
-		return fmt.Errorf("the name PostScript was not found")
+		common.Log.Debug("ParseName: The name PostScript was not found.")
 	}
 	return nil
 }

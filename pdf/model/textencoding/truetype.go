@@ -24,8 +24,8 @@ type TrueTypeFontEncoder struct {
 	cmap                CMap
 }
 
-// NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a pre-loaded
-// runeToGlyphIndexMap, that has been pre-loaded from the font file.
+// NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a runeToGlyphIndexMap that
+// has been preloaded from the font file.
 // The new instance is preloaded with a CMapIdentityH (Identity-H) CMap which maps 2-byte charcodes
 // to CIDs (glyph index).
 func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[uint16]uint16) TrueTypeFontEncoder {
