@@ -36,6 +36,8 @@ func (pdf *PdfReader) FlattenFields(allannots bool) error {
 		fields := acroForm.AllFields()
 		for _, field := range fields {
 			for _, wa := range field.Annotations {
+				// TODO(gunnsth): Check if wa.Flags() has Print flag then include, otherwise exclude.
+
 				// XXX/FIXME: May be better to check field.V only if no appearance stream available.
 				if field.V != nil {
 					ftargets[wa.PdfAnnotation] = true
@@ -56,8 +58,8 @@ func (pdf *PdfReader) FlattenFields(allannots bool) error {
 	}
 
 	// Go through all pages and flatten specified annotations.
-	annots := []*PdfAnnotation{}
 	for _, page := range pdf.PageList {
+		annots := []*PdfAnnotation{}
 		for _, annot := range page.Annotations {
 			hasV, toflatten := ftargets[annot]
 			if !toflatten {
@@ -96,7 +98,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool) error {
 			page.Resources.SetXObjectFormByName(name, xform)
 
 			// XXX/TODO: Take Matrix and potential scaling of annotation Rect and appearance BBox into account.
-			// Have yet to find a case where that actually happens.
+			// Have yet to find a case where that actually is required.
 
 			// Placement for XForm.
 			xRect := math.Min(rect.Llx, rect.Urx)
