@@ -47,12 +47,14 @@ func (div *Division) SetInline(inline bool) {
 }
 
 // Add adds a VectorDrawable to the Division container.
-// Currently supported VectorDrawables: *Paragraph, *Image.
+// Currently supported VectorDrawables: *Paragraph, *StyledParagraph, *Image.
 func (div *Division) Add(d VectorDrawable) error {
 	supported := false
 
 	switch d.(type) {
 	case *Paragraph:
+		supported = true
+	case *StyledParagraph:
 		supported = true
 	case *Image:
 		supported = true
