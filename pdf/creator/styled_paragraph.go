@@ -104,6 +104,8 @@ func (p *StyledParagraph) Append(text string, style TextStyle) {
 	p.wrapText()
 }
 
+// Reset sets the entire text and also the style of the paragraph
+// to those specified. It behaves as if the paragraph was a new one.
 func (p *StyledParagraph) Reset(text string, style TextStyle) {
 	p.chunks = []TextChunk{}
 	p.Append(text, style)
