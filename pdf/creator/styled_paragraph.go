@@ -8,6 +8,8 @@ package creator
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -261,7 +263,10 @@ func (p *StyledParagraph) wrapText() error {
 			// newline wrapping.
 			if glyph == "controllf" {
 				// moves to next line.
-				line = append(line, TextChunk{Text: string(part), Style: style})
+				line = append(line, TextChunk{
+					Text:  strings.TrimRightFunc(string(part), unicode.IsSpace),
+					Style: style,
+				})
 				p.lines = append(p.lines, line)
 				line = []TextChunk{}
 
@@ -295,7 +300,7 @@ func (p *StyledParagraph) wrapText() error {
 				}
 
 				text := string(part)
-				if idx > 0 {
+				if idx >= 0 {
 					text = string(part[0 : idx+1])
 
 					part = part[idx+1:]
@@ -316,7 +321,10 @@ func (p *StyledParagraph) wrapText() error {
 					widths = []float64{w}
 				}
 
-				line = append(line, TextChunk{Text: string(text), Style: style})
+				line = append(line, TextChunk{
+					Text:  strings.TrimRightFunc(string(text), unicode.IsSpace),
+					Style: style,
+				})
 				p.lines = append(p.lines, line)
 				line = []TextChunk{}
 			} else {
@@ -328,7 +336,10 @@ func (p *StyledParagraph) wrapText() error {
 		}
 
 		if len(part) > 0 {
-			line = append(line, TextChunk{Text: string(part), Style: style})
+			line = append(line, TextChunk{
+				Text:  string(part),
+				Style: style,
+			})
 		}
 	}
 
@@ -517,12 +528,10 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			}
 		} else if p.alignment == TextAlignmentCenter {
 			// Start with a shift.
-			textWidth := width + spaceWidth
-			shift := (p.wrapWidth*1000.0 - textWidth) / 2 / defaultFontSize
+			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / 2 / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		} else if p.alignment == TextAlignmentRight {
-			textWidth := width + spaceWidth
-			shift := (p.wrapWidth*1000.0 - textWidth) / defaultFontSize
+			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
