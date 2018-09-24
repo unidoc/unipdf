@@ -81,10 +81,22 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 const StandardCryptFilter = "StdCF"
 
 // CryptFilter represents information from a CryptFilter dictionary.
-// TODO (v3): Unexport.
+// TODO (v3): Replace with cryptFilterMethod interface.
 type CryptFilter struct {
-	Cfm    string // TODO (v3): CryptFilterMethod
+	Cfm    string
 	Length int
+	cfm    cryptFilterMethod
+}
+
+func (cf CryptFilter) getCFM() (cryptFilterMethod, error) {
+	// TODO (v3): remove this method and access cf.cfm directly
+	if cf.cfm != nil {
+		return cf.cfm, nil
+	}
+	// There is a non-zero chance that someone relies on the ability to
+	// add crypt filters manually using the library.
+	// So if we hit such case - be nice and find a filter by name.
+	return getCryptFilterMethod(cf.Cfm)
 }
 
 // Encryption filters names.
@@ -96,9 +108,57 @@ const (
 	CryptFilterAESV3 = "AESV3" // AES-based filter (256 bit key, PDF 2.0)
 )
 
+func newCryptFiltersV2(length int) CryptFilters {
+	return CryptFilters{
+		StandardCryptFilter: NewCryptFilterV2(length),
+	}
+}
+
+func NewCryptFilterV2(length int) CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterV2,
+		Length: length,
+		cfm:    cryptFilterV2{},
+	}
+}
+
+func NewCryptFilterAESV2() CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterAESV2,
+		Length: 16,
+		cfm:    cryptFilterAESV2{},
+	}
+}
+
+func NewCryptFilterAESV3() CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterAESV3,
+		Length: 32,
+		cfm:    cryptFilterAESV3{},
+	}
+}
+
 // CryptFilters is a map of crypt filter name and underlying CryptFilter info.
 // TODO (v3): Unexport.
 type CryptFilters map[string]CryptFilter
+
+func (m CryptFilters) byName(cfm string) (cryptFilterMethod, error) {
+	cf, ok := m[cfm]
+	if !ok {
+		err := fmt.Errorf("Unsupported crypt filter (%s)", cfm)
+		common.Log.Debug("%s", err)
+		return nil, err
+	}
+	f, err := cf.getCFM()
+	if err != nil {
+		common.Log.Debug("%s", err)
+		return nil, err
+	}
+	return f, nil
+}
 
 // LoadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
 // TODO (v3): Unexport.
@@ -154,25 +214,23 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		cf := CryptFilter{}
 
 		// Method.
-		cfMethod := ""
-		cfm, ok := dict.Get("CFM").(*PdfObjectName)
+		cfmName, ok := dict.Get("CFM").(*PdfObjectName)
 		if !ok {
 			return fmt.Errorf("Unsupported crypt filter (None)")
 		}
-		switch f := string(*cfm); f {
-		case CryptFilterV2,
-			CryptFilterAESV2,
-			CryptFilterAESV3:
-			cfMethod = f
-		default:
-			return fmt.Errorf("Unsupported crypt filter (%s)", f)
+		cf.Cfm = string(*cfmName)
+
+		cfm, err := getCryptFilterMethod(cf.Cfm)
+		if err != nil {
+			return err
 		}
-		cf.Cfm = cfMethod
+		cf.cfm = cfm
 
 		// Length.
 		cf.Length = 0
 		length, ok := dict.Get("Length").(*PdfObjectInteger)
 		if ok {
+			// TODO(dennwc): pass length to getCryptFilterMethod and allow filter to validate it
 			if *length%8 != 0 {
 				return fmt.Errorf("Crypt filter length not multiple of 8 (%d)", *length)
 			}
@@ -284,8 +342,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.V = V
 		if V >= 1 && V <= 2 {
 			// Default algorithm is V2.
-			crypter.CryptFilters = CryptFilters{}
-			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+			crypter.CryptFilters = newCryptFiltersV2(crypter.Length)
 		} else if V >= 4 && V <= 5 {
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
@@ -589,15 +646,8 @@ func (crypt *PdfCrypt) paddedPass(pass []byte) []byte {
 // Generates a key for encrypting a specific object based on the
 // object and generation number, as well as the document encryption key.
 func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		err := fmt.Errorf("Unsupported crypt filter (%s)", filter)
-		common.Log.Debug("%s", err)
-		return nil, err
-	}
-	f, err := getCryptFilterMethod(cf.Cfm)
+	f, err := crypt.CryptFilters.byName(filter)
 	if err != nil {
-		common.Log.Debug("%s", err)
 		return nil, err
 	}
 	return f.MakeKey(objNum, genNum, ekey)
@@ -618,14 +668,8 @@ func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 // Decrypt a buffer with a selected crypt filter.
 func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Decrypt bytes")
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
-		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
-	}
-	f, err := getCryptFilterMethod(cf.Cfm)
+	f, err := crypt.CryptFilters.byName(filter)
 	if err != nil {
-		common.Log.Debug("%s", err)
 		return nil, err
 	}
 	return f.DecryptBytes(buf, okey)
@@ -808,14 +852,8 @@ func (crypt *PdfCrypt) isEncrypted(obj PdfObject) bool {
 // Encrypt a buffer with the specified crypt filter and key.
 func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Encrypt bytes")
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
-		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
-	}
-	f, err := getCryptFilterMethod(cf.Cfm)
+	f, err := crypt.CryptFilters.byName(filter)
 	if err != nil {
-		common.Log.Debug("%s", err)
 		return nil, err
 	}
 	return f.EncryptBytes(buf, okey)
