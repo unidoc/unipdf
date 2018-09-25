@@ -65,7 +65,7 @@ type StyledParagraph struct {
 	lines [][]TextChunk
 }
 
-// NewStyledParagraph create a new styled paragraph.
+// NewStyledParagraph creates a new styled paragraph.
 // Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
 // with a wrap width of 100 points.
 func NewStyledParagraph(text string, style TextStyle) *StyledParagraph {

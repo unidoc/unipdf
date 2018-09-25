@@ -22,7 +22,7 @@ type TextStyle struct {
 	FontSize float64
 }
 
-// NewTextStyle create a new text style object which can be used with chunks
+// NewTextStyle creates a new text style object which can be used with chunks
 // of text. Uses default parameters: Helvetica, WinAnsiEncoding and wrap
 // enabled with a wrap width of 100 points.
 func NewTextStyle() TextStyle {
@@ -36,7 +36,7 @@ func NewTextStyle() TextStyle {
 	}
 }
 
-// TextChunk represents a chunk a text along with a particular style.
+// TextChunk represents a chunk of text along with a particular style.
 type TextChunk struct {
 	Text  string
 	Style TextStyle
