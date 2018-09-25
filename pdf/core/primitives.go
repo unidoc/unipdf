@@ -137,6 +137,12 @@ func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
 	return array
 }
 
+// MakeBool creates an PdfObjectBool from a bool.
+func MakeBool(val bool) *PdfObjectBool {
+	v := PdfObjectBool(val)
+	return &v
+}
+
 // MakeFloat creates an PdfObjectFloat from a float64.
 func MakeFloat(val float64) *PdfObjectFloat {
 	num := PdfObjectFloat(val)

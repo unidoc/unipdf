@@ -43,4 +43,7 @@ type DrawContext struct {
 	// Absolute Page size, widths and height.
 	PageWidth  float64
 	PageHeight float64
+
+	// Controls whether the components are stacked horizontally
+	Inline bool
 }

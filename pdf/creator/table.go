@@ -214,6 +214,19 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
+		case *StyledParagraph:
+			sp := t
+			if sp.enableWrap {
+				sp.SetWidth(w - cell.indent)
+			}
+
+			newh := sp.Height() + sp.margins.top + sp.margins.bottom
+			newh += 0.5 * sp.getTextHeight() // TODO: Make the top margin configurable?
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
 		case *Image:
 			img := t
 			newh := img.Height() + img.margins.top + img.margins.bottom
@@ -673,12 +686,19 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 }
 
 // SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
-// The currently supported VectorDrawable is: *Paragraph.
+// The currently supported VectorDrawable is: *Paragraph, *StyledParagraph.
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
 		if t.defaultWrap {
 			// Default paragraph settings in table: no wrapping.
+			t.enableWrap = false // No wrapping.
+		}
+
+		cell.content = vd
+	case *StyledParagraph:
+		if t.defaultWrap {
+			// Default styled paragraph settings in table: no wrapping.
 			t.enableWrap = false // No wrapping.
 		}
 
