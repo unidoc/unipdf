@@ -238,6 +238,19 @@ func (p *StyledParagraph) getTextWidth() float64 {
 	return width
 }
 
+// getTextHeight calculates the text height as if all in one line (not taking wrapping into account).
+func (p *StyledParagraph) getTextHeight() float64 {
+	var height float64
+	for _, chunk := range p.chunks {
+		h := chunk.Style.FontSize * p.lineHeight
+		if h > height {
+			height = h
+		}
+	}
+
+	return height
+}
+
 // wrapText splits text into lines. It uses a simple greedy algorithm to wrap
 // fill the lines.
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
