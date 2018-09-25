@@ -15,7 +15,7 @@ import (
 // It can contain multiple Drawable components (currently supporting Paragraph and Image).
 //
 // The component stacking behavior is vertical, where the Drawables are drawn on top of each other.
-// TODO: Add inline mode (horizontal stacking).
+// Also supports horizontal stacking by activating the inline mode.
 type Division struct {
 	components []VectorDrawable
 
@@ -47,12 +47,14 @@ func (div *Division) SetInline(inline bool) {
 }
 
 // Add adds a VectorDrawable to the Division container.
-// Currently supported VectorDrawables: *Paragraph, *Image.
+// Currently supported VectorDrawables: *Paragraph, *StyledParagraph, *Image.
 func (div *Division) Add(d VectorDrawable) error {
 	supported := false
 
 	switch d.(type) {
 	case *Paragraph:
+		supported = true
+	case *StyledParagraph:
 		supported = true
 	case *Image:
 		supported = true
