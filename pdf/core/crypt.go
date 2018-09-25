@@ -399,19 +399,19 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing OE")
 		}
-		if len(*OE) != 32 {
-			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(*OE))
+		if len(OE.Str()) != 32 {
+			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(OE.Str()))
 		}
-		crypter.OE = []byte(*OE)
+		crypter.OE = OE.Bytes()
 
 		UE, ok := ed.Get("UE").(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing UE")
 		}
-		if len(*UE) != 32 {
-			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(*UE))
+		if len(UE.Str()) != 32 {
+			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(UE.Str()))
 		}
-		crypter.UE = []byte(*UE)
+		crypter.UE = UE.Bytes()
 	}
 
 	P, ok := ed.Get("P").(*PdfObjectInteger)
@@ -425,10 +425,10 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing Perms")
 		}
-		if len(*Perms) != 16 {
-			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(*Perms))
+		if len(Perms.Str()) != 16 {
+			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(Perms.Str()))
 		}
-		crypter.Perms = []byte(*Perms)
+		crypter.Perms = Perms.Bytes()
 	}
 
 	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)

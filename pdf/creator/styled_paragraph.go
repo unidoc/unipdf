@@ -580,7 +580,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				spaceWidth = spaceMetrics.Wx
 			}
 
-			encStr := ""
+			var encStr []byte
 			for _, rn := range chunk.Text {
 				glyph, found := p.encoder.RuneToGlyph(rn)
 				if !found {
@@ -598,16 +598,16 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 						cc.Add_rg(r, g, b).
 							Add_Tf(fonts[idx][k], style.FontSize).
 							Add_TL(style.FontSize * p.lineHeight).
-							Add_TJ([]core.PdfObject{core.MakeString(encStr)}...)
+							Add_TJ([]core.PdfObject{core.MakeStringFromBytes(encStr)}...)
 
-						encStr = ""
+						encStr = nil
 					}
 
 					cc.Add_Tf(fontName, fontSize).
 						Add_TL(fontSize * p.lineHeight).
 						Add_TJ([]core.PdfObject{core.MakeFloat(-spaceWidth)}...)
 				} else {
-					encStr += p.encoder.Encode(string(rn))
+					encStr = append(encStr, p.encoder.Encode(string(rn))...)
 				}
 			}
 
@@ -615,7 +615,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				cc.Add_rg(r, g, b).
 					Add_Tf(fonts[idx][k], style.FontSize).
 					Add_TL(style.FontSize * p.lineHeight).
-					Add_TJ([]core.PdfObject{core.MakeString(encStr)}...)
+					Add_TJ([]core.PdfObject{core.MakeStringFromBytes(encStr)}...)
 			}
 		}
 	}
