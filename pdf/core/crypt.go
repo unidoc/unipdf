@@ -81,10 +81,22 @@ const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
 const StandardCryptFilter = "StdCF"
 
 // CryptFilter represents information from a CryptFilter dictionary.
-// TODO (v3): Unexport.
+// TODO (v3): Replace with cryptFilterMethod interface.
 type CryptFilter struct {
-	Cfm    string // TODO (v3): CryptFilterMethod
+	Cfm    string
 	Length int
+	cfm    cryptFilterMethod
+}
+
+func (cf CryptFilter) getCFM() (cryptFilterMethod, error) {
+	// TODO (v3): remove this method and access cf.cfm directly
+	if cf.cfm != nil {
+		return cf.cfm, nil
+	}
+	// There is a non-zero chance that someone relies on the ability to
+	// add crypt filters manually using the library.
+	// So if we hit such case - be nice and find a filter by name.
+	return getCryptFilterMethod(cf.Cfm)
 }
 
 // Encryption filters names.
@@ -96,9 +108,60 @@ const (
 	CryptFilterAESV3 = "AESV3" // AES-based filter (256 bit key, PDF 2.0)
 )
 
+func newCryptFiltersV2(length int) CryptFilters {
+	return CryptFilters{
+		StandardCryptFilter: NewCryptFilterV2(length),
+	}
+}
+
+// NewCryptFilterV2 creates a RC4-based filter with a specified key length (in bytes).
+func NewCryptFilterV2(length int) CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterV2,
+		Length: length,
+		cfm:    cryptFilterV2{},
+	}
+}
+
+// NewCryptFilterAESV2 creates an AES-based filter with a 128 bit key (AESV2).
+func NewCryptFilterAESV2() CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterAESV2,
+		Length: 16,
+		cfm:    cryptFilterAESV2{},
+	}
+}
+
+// NewCryptFilterAESV3 creates an AES-based filter with a 256 bit key (AESV3).
+func NewCryptFilterAESV3() CryptFilter {
+	// TODO (v3): Unexport.
+	return CryptFilter{
+		Cfm:    CryptFilterAESV3,
+		Length: 32,
+		cfm:    cryptFilterAESV3{},
+	}
+}
+
 // CryptFilters is a map of crypt filter name and underlying CryptFilter info.
 // TODO (v3): Unexport.
 type CryptFilters map[string]CryptFilter
+
+func (m CryptFilters) byName(cfm string) (cryptFilterMethod, error) {
+	cf, ok := m[cfm]
+	if !ok {
+		err := fmt.Errorf("Unsupported crypt filter (%s)", cfm)
+		common.Log.Debug("%s", err)
+		return nil, err
+	}
+	f, err := cf.getCFM()
+	if err != nil {
+		common.Log.Debug("%s", err)
+		return nil, err
+	}
+	return f, nil
+}
 
 // LoadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
 // TODO (v3): Unexport.
@@ -154,25 +217,23 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 		cf := CryptFilter{}
 
 		// Method.
-		cfMethod := ""
-		cfm, ok := dict.Get("CFM").(*PdfObjectName)
+		cfmName, ok := dict.Get("CFM").(*PdfObjectName)
 		if !ok {
 			return fmt.Errorf("Unsupported crypt filter (None)")
 		}
-		switch f := string(*cfm); f {
-		case CryptFilterV2,
-			CryptFilterAESV2,
-			CryptFilterAESV3:
-			cfMethod = f
-		default:
-			return fmt.Errorf("Unsupported crypt filter (%s)", f)
+		cf.Cfm = string(*cfmName)
+
+		cfm, err := getCryptFilterMethod(cf.Cfm)
+		if err != nil {
+			return err
 		}
-		cf.Cfm = cfMethod
+		cf.cfm = cfm
 
 		// Length.
 		cf.Length = 0
 		length, ok := dict.Get("Length").(*PdfObjectInteger)
 		if ok {
+			// TODO(dennwc): pass length to getCryptFilterMethod and allow filter to validate it
 			if *length%8 != 0 {
 				return fmt.Errorf("Crypt filter length not multiple of 8 (%d)", *length)
 			}
@@ -284,8 +345,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.V = V
 		if V >= 1 && V <= 2 {
 			// Default algorithm is V2.
-			crypter.CryptFilters = CryptFilters{}
-			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+			crypter.CryptFilters = newCryptFiltersV2(crypter.Length)
 		} else if V >= 4 && V <= 5 {
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
@@ -589,48 +649,11 @@ func (crypt *PdfCrypt) paddedPass(pass []byte) []byte {
 // Generates a key for encrypting a specific object based on the
 // object and generation number, as well as the document encryption key.
 func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
-		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
+	f, err := crypt.CryptFilters.byName(filter)
+	if err != nil {
+		return nil, err
 	}
-	if cf.Cfm == CryptFilterAESV3 {
-		return ekey, nil
-	}
-	isAES2 := cf.Cfm == CryptFilterAESV2
-
-	key := make([]byte, len(ekey)+5)
-	for i := 0; i < len(ekey); i++ {
-		key[i] = ekey[i]
-	}
-	for i := 0; i < 3; i++ {
-		b := byte((objNum >> uint32(8*i)) & 0xff)
-		key[i+len(ekey)] = b
-	}
-	for i := 0; i < 2; i++ {
-		b := byte((genNum >> uint32(8*i)) & 0xff)
-		key[i+len(ekey)+3] = b
-	}
-	if isAES2 {
-		// If using the AES algorithm, extend the encryption key an
-		// additional 4 bytes by adding the value “sAlT”, which
-		// corresponds to the hexadecimal values 0x73, 0x41, 0x6C, 0x54.
-		key = append(key, 0x73)
-		key = append(key, 0x41)
-		key = append(key, 0x6C)
-		key = append(key, 0x54)
-	}
-
-	// Take the MD5.
-	h := md5.New()
-	h.Write(key)
-	hashb := h.Sum(nil)
-
-	if len(ekey)+5 < 16 {
-		return hashb[0 : len(ekey)+5], nil
-	}
-
-	return hashb, nil
+	return f.MakeKey(objNum, genNum, ekey)
 }
 
 // Check if object has already been processed.
@@ -648,85 +671,11 @@ func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 // Decrypt a buffer with a selected crypt filter.
 func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Decrypt bytes")
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
-		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
+	f, err := crypt.CryptFilters.byName(filter)
+	if err != nil {
+		return nil, err
 	}
-
-	cfMethod := cf.Cfm
-	if cfMethod == CryptFilterV2 {
-		// Standard RC4 algorithm.
-		ciph, err := rc4.NewCipher(okey)
-		if err != nil {
-			return nil, err
-		}
-		common.Log.Trace("RC4 Decrypt: % x", buf)
-		ciph.XORKeyStream(buf, buf)
-		common.Log.Trace("to: % x", buf)
-		return buf, nil
-	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
-		// Strings and streams encrypted with AES shall use a padding
-		// scheme that is described in Internet RFC 2898, PKCS #5:
-		// Password-Based Cryptography Specification Version 2.0; see
-		// the Bibliography. For an original message length of M,
-		// the pad shall consist of 16 - (M mod 16) bytes whose value
-		// shall also be 16 - (M mod 16).
-		//
-		// A 9-byte message has a pad of 7 bytes, each with the value
-		// 0x07. The pad can be unambiguously removed to determine the
-		// original message length when decrypting. Note that the pad is
-		// present when M is evenly divisible by 16; it contains 16 bytes
-		// of 0x10.
-
-		ciph, err := aes.NewCipher(okey)
-		if err != nil {
-			return nil, err
-		}
-
-		// If using the AES algorithm, the Cipher Block Chaining (CBC)
-		// mode, which requires an initialization vector, is used. The
-		// block size parameter is set to 16 bytes, and the initialization
-		// vector is a 16-byte random number that is stored as the first
-		// 16 bytes of the encrypted stream or string.
-		if len(buf) < 16 {
-			common.Log.Debug("ERROR AES invalid buf %s", buf)
-			return buf, fmt.Errorf("AES: Buf len < 16 (%d)", len(buf))
-		}
-
-		iv := buf[:16]
-		buf = buf[16:]
-
-		if len(buf)%16 != 0 {
-			common.Log.Debug(" iv (%d): % x", len(iv), iv)
-			common.Log.Debug("buf (%d): % x", len(buf), buf)
-			return buf, fmt.Errorf("AES buf length not multiple of 16 (%d)", len(buf))
-		}
-
-		mode := cipher.NewCBCDecrypter(ciph, iv)
-
-		common.Log.Trace("AES Decrypt (%d): % x", len(buf), buf)
-		common.Log.Trace("chop AES Decrypt (%d): % x", len(buf), buf)
-		mode.CryptBlocks(buf, buf)
-		common.Log.Trace("to (%d): % x", len(buf), buf)
-
-		if len(buf) == 0 {
-			common.Log.Trace("Empty buf, returning empty string")
-			return buf, nil
-		}
-
-		// The padded length is indicated by the last values.  Remove those.
-
-		padLen := int(buf[len(buf)-1])
-		if padLen >= len(buf) {
-			common.Log.Debug("Illegal pad length")
-			return buf, fmt.Errorf("Invalid pad length for %s", cfMethod)
-		}
-		buf = buf[:len(buf)-padLen]
-
-		return buf, nil
-	}
-	return nil, fmt.Errorf("Unsupported crypt filter method (%s)", cfMethod)
+	return f.DecryptBytes(buf, okey)
 }
 
 // Decrypt an object with specified key. For numbered objects,
@@ -906,74 +855,11 @@ func (crypt *PdfCrypt) isEncrypted(obj PdfObject) bool {
 // Encrypt a buffer with the specified crypt filter and key.
 func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]byte, error) {
 	common.Log.Trace("Encrypt bytes")
-	cf, ok := crypt.CryptFilters[filter]
-	if !ok {
-		common.Log.Debug("ERROR Unsupported crypt filter (%s)", filter)
-		return nil, fmt.Errorf("Unsupported crypt filter (%s)", filter)
+	f, err := crypt.CryptFilters.byName(filter)
+	if err != nil {
+		return nil, err
 	}
-
-	cfMethod := cf.Cfm
-	if cfMethod == CryptFilterV2 {
-		// Standard RC4 algorithm.
-		ciph, err := rc4.NewCipher(okey)
-		if err != nil {
-			return nil, err
-		}
-		common.Log.Trace("RC4 Encrypt: % x", buf)
-		ciph.XORKeyStream(buf, buf)
-		common.Log.Trace("to: % x", buf)
-		return buf, nil
-	} else if cfMethod == CryptFilterAESV2 || cfMethod == CryptFilterAESV3 {
-		// Strings and streams encrypted with AES shall use a padding
-		// scheme that is described in Internet RFC 2898, PKCS #5:
-		// Password-Based Cryptography Specification Version 2.0; see
-		// the Bibliography. For an original message length of M,
-		// the pad shall consist of 16 - (M mod 16) bytes whose value
-		// shall also be 16 - (M mod 16).
-		//
-		// A 9-byte message has a pad of 7 bytes, each with the value
-		// 0x07. The pad can be unambiguously removed to determine the
-		// original message length when decrypting. Note that the pad is
-		// present when M is evenly divisible by 16; it contains 16 bytes
-		// of 0x10.
-
-		ciph, err := aes.NewCipher(okey)
-		if err != nil {
-			return nil, err
-		}
-
-		common.Log.Trace("AES Encrypt (%d): % x", len(buf), buf)
-
-		// If using the AES algorithm, the Cipher Block Chaining (CBC)
-		// mode, which requires an initialization vector, is used. The
-		// block size parameter is set to 16 bytes, and the initialization
-		// vector is a 16-byte random number that is stored as the first
-		// 16 bytes of the encrypted stream or string.
-
-		const block = aes.BlockSize // 16
-
-		pad := block - len(buf)%block
-		for i := 0; i < pad; i++ {
-			buf = append(buf, byte(pad))
-		}
-		common.Log.Trace("Padded to %d bytes", len(buf))
-
-		// Generate random 16 bytes, place in beginning of buffer.
-		ciphertext := make([]byte, block+len(buf))
-		iv := ciphertext[:block]
-		if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-			return nil, err
-		}
-
-		mode := cipher.NewCBCEncrypter(ciph, iv)
-		mode.CryptBlocks(ciphertext[block:], buf)
-
-		buf = ciphertext
-		common.Log.Trace("to (%d): % x", len(buf), buf)
-
-		return buf, nil
-	}
-	return nil, fmt.Errorf("Unsupported crypt filter method (%s)", cfMethod)
+	return f.EncryptBytes(buf, okey)
 }
 
 // Encrypt an object with specified key. For numbered objects,

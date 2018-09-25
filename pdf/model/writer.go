@@ -509,23 +509,22 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	case RC4_128bit:
 		crypter.V = 2
 		crypter.R = 3
-		crypter.Length = 128
-		cf = CryptFilter{Cfm: CryptFilterV2, Length: 16}
+		cf = NewCryptFilterV2(16)
 	case AES_128bit:
 		this.SetVersion(1, 5)
 		crypter.V = 4
 		crypter.R = 4
-		crypter.Length = 128
-		cf = CryptFilter{Cfm: CryptFilterAESV2, Length: 16}
+		cf = NewCryptFilterAESV2()
 	case AES_256bit:
 		this.SetVersion(2, 0)
 		crypter.V = 5
 		crypter.R = 6 // TODO(dennwc): a way to set R=5?
-		crypter.Length = 256
-		cf = CryptFilter{Cfm: CryptFilterAESV3, Length: 32}
+		cf = NewCryptFilterAESV3()
 	default:
 		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
 	}
+	crypter.Length = cf.Length * 8
+
 	const (
 		defaultFilter = StandardCryptFilter
 	)
