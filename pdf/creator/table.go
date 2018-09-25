@@ -216,7 +216,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				sp.SetWidth(w - cell.indent)
 			}
 
-			newh := sp.Height() + sp.margins.bottom + sp.margins.bottom
+			newh := sp.Height() + sp.margins.top + sp.margins.bottom
 			newh += 0.5 * sp.getTextHeight() // TODO: Make the top margin configurable?
 			if newh > h {
 				diffh := newh - h
