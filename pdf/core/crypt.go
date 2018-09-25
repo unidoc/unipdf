@@ -278,24 +278,22 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		crypter.Length = 40
 	}
 
-	V, ok := ed.Get("V").(*PdfObjectInteger)
-	if ok {
-		if *V >= 1 && *V <= 2 {
-			crypter.V = int(*V)
+	crypter.V = 0
+	if v, ok := ed.Get("V").(*PdfObjectInteger); ok {
+		V := int(*v)
+		crypter.V = V
+		if V >= 1 && V <= 2 {
 			// Default algorithm is V2.
 			crypter.CryptFilters = CryptFilters{}
 			crypter.CryptFilters[StandardCryptFilter] = CryptFilter{Cfm: "V2", Length: crypter.Length}
-		} else if *V >= 4 && *V <= 5 {
-			crypter.V = int(*V)
+		} else if V >= 4 && V <= 5 {
 			if err := crypter.LoadCryptFilters(ed); err != nil {
 				return crypter, err
 			}
 		} else {
-			common.Log.Debug("ERROR Unsupported encryption algo V = %d", *V)
+			common.Log.Debug("ERROR Unsupported encryption algo V = %d", V)
 			return crypter, errors.New("Unsupported algorithm")
 		}
-	} else {
-		crypter.V = 0
 	}
 
 	R, ok := ed.Get("R").(*PdfObjectInteger)
@@ -742,33 +740,35 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		return nil
 	}
 
-	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-		crypt.DecryptedObjects[io] = true
+	switch obj := obj.(type) {
+	case *PdfIndirectObject:
+		crypt.DecryptedObjects[obj] = true
 
-		common.Log.Trace("Decrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
+		common.Log.Trace("Decrypting indirect %d %d obj!", obj.ObjectNumber, obj.GenerationNumber)
 
-		objNum := (*io).ObjectNumber
-		genNum := (*io).GenerationNumber
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 
-		err := crypt.Decrypt(io.PdfObject, objNum, genNum)
+		err := crypt.Decrypt(obj.PdfObject, objNum, genNum)
 		if err != nil {
 			return err
 		}
-
 		return nil
-	}
-
-	if so, isStream := obj.(*PdfObjectStream); isStream {
+	case *PdfObjectStream:
 		// Mark as decrypted first to avoid recursive issues.
-		crypt.DecryptedObjects[so] = true
-		objNum := (*so).ObjectNumber
-		genNum := (*so).GenerationNumber
+		crypt.DecryptedObjects[obj] = true
+		dict := obj.PdfObjectDictionary
+
+		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+			return nil // Cross-reference streams should not be encrypted
+		}
+
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 		common.Log.Trace("Decrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
-
-		dict := so.PdfObjectDictionary
 
 		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
@@ -803,7 +803,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			}
 		}
 
-		err := crypt.Decrypt(so.PdfObjectDictionary, objNum, genNum)
+		err := crypt.Decrypt(dict, objNum, genNum)
 		if err != nil {
 			return err
 		}
@@ -813,16 +813,15 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			return err
 		}
 
-		so.Stream, err = crypt.decryptBytes(so.Stream, streamFilter, okey)
+		obj.Stream, err = crypt.decryptBytes(obj.Stream, streamFilter, okey)
 		if err != nil {
 			return err
 		}
 		// Update the length based on the decrypted stream.
-		dict.Set("Length", MakeInteger(int64(len(so.Stream))))
+		dict.Set("Length", MakeInteger(int64(len(obj.Stream))))
 
 		return nil
-	}
-	if s, isString := obj.(*PdfObjectString); isString {
+	case *PdfObjectString:
 		common.Log.Trace("Decrypting string!")
 
 		stringFilter := StandardCryptFilter
@@ -832,9 +831,8 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			if crypt.StringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
-			} else {
-				stringFilter = crypt.StringFilter
 			}
+			stringFilter = crypt.StringFilter
 		}
 
 		key, err := crypt.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), crypt.EncryptionKey)
@@ -843,40 +841,36 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		}
 
 		// Overwrite the encrypted with decrypted string.
-		decrypted := make([]byte, len(*s))
-		for i := 0; i < len(*s); i++ {
-			decrypted[i] = (*s)[i]
+		decrypted := make([]byte, len(*obj))
+		for i := 0; i < len(*obj); i++ {
+			decrypted[i] = (*obj)[i]
 		}
 		common.Log.Trace("Decrypt string: %s : % x", decrypted, decrypted)
 		decrypted, err = crypt.decryptBytes(decrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
-		*s = PdfObjectString(decrypted)
+		*obj = PdfObjectString(decrypted)
 
 		return nil
-	}
-
-	if a, isArray := obj.(*PdfObjectArray); isArray {
-		for _, o := range *a {
+	case *PdfObjectArray:
+		for _, o := range *obj {
 			err := crypt.Decrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	}
-
-	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+	case *PdfObjectDictionary:
 		isSig := false
-		if t := d.Get("Type"); t != nil {
+		if t := obj.Get("Type"); t != nil {
 			typeStr, ok := t.(*PdfObjectName)
 			if ok && *typeStr == "Sig" {
 				isSig = true
 			}
 		}
-		for _, keyidx := range d.Keys() {
-			o := d.Get(keyidx)
+		for _, keyidx := range obj.Keys() {
+			o := obj.Get(keyidx)
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
 			if isSig && string(keyidx) == "Contents" {
@@ -992,33 +986,34 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	if crypt.isEncrypted(obj) {
 		return nil
 	}
+	switch obj := obj.(type) {
+	case *PdfIndirectObject:
+		crypt.EncryptedObjects[obj] = true
 
-	if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-		crypt.EncryptedObjects[io] = true
+		common.Log.Trace("Encrypting indirect %d %d obj!", obj.ObjectNumber, obj.GenerationNumber)
 
-		common.Log.Trace("Encrypting indirect %d %d obj!", io.ObjectNumber, io.GenerationNumber)
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 
-		objNum := (*io).ObjectNumber
-		genNum := (*io).GenerationNumber
-
-		err := crypt.Encrypt(io.PdfObject, objNum, genNum)
+		err := crypt.Encrypt(obj.PdfObject, objNum, genNum)
 		if err != nil {
 			return err
 		}
-
 		return nil
-	}
+	case *PdfObjectStream:
+		crypt.EncryptedObjects[obj] = true
+		dict := obj.PdfObjectDictionary
 
-	if so, isStream := obj.(*PdfObjectStream); isStream {
-		crypt.EncryptedObjects[so] = true
-		objNum := (*so).ObjectNumber
-		genNum := (*so).GenerationNumber
+		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+			return nil // Cross-reference streams should not be encrypted
+		}
+
+		objNum := obj.ObjectNumber
+		genNum := obj.GenerationNumber
 		common.Log.Trace("Encrypting stream %d %d !", objNum, genNum)
 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
-
-		dict := so.PdfObjectDictionary
 
 		streamFilter := StandardCryptFilter // Default RC4.
 		if crypt.V >= 4 {
@@ -1055,7 +1050,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			}
 		}
 
-		err := crypt.Encrypt(so.PdfObjectDictionary, objNum, genNum)
+		err := crypt.Encrypt(obj.PdfObjectDictionary, objNum, genNum)
 		if err != nil {
 			return err
 		}
@@ -1065,16 +1060,15 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			return err
 		}
 
-		so.Stream, err = crypt.encryptBytes(so.Stream, streamFilter, okey)
+		obj.Stream, err = crypt.encryptBytes(obj.Stream, streamFilter, okey)
 		if err != nil {
 			return err
 		}
 		// Update the length based on the encrypted stream.
-		dict.Set("Length", MakeInteger(int64(len(so.Stream))))
+		dict.Set("Length", MakeInteger(int64(len(obj.Stream))))
 
 		return nil
-	}
-	if s, isString := obj.(*PdfObjectString); isString {
+	case *PdfObjectString:
 		common.Log.Trace("Encrypting string!")
 
 		stringFilter := StandardCryptFilter
@@ -1083,9 +1077,8 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			if crypt.StringFilter == "Identity" {
 				// Identity: pass unchanged: No action.
 				return nil
-			} else {
-				stringFilter = crypt.StringFilter
 			}
+			stringFilter = crypt.StringFilter
 		}
 
 		key, err := crypt.makeKey(stringFilter, uint32(parentObjNum), uint32(parentGenNum), crypt.EncryptionKey)
@@ -1093,41 +1086,37 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			return err
 		}
 
-		encrypted := make([]byte, len(*s))
-		for i := 0; i < len(*s); i++ {
-			encrypted[i] = (*s)[i]
+		encrypted := make([]byte, len(*obj))
+		for i := 0; i < len(*obj); i++ {
+			encrypted[i] = (*obj)[i]
 		}
 		common.Log.Trace("Encrypt string: %s : % x", encrypted, encrypted)
 		encrypted, err = crypt.encryptBytes(encrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
-		*s = PdfObjectString(encrypted)
+		*obj = PdfObjectString(encrypted)
 
 		return nil
-	}
-
-	if a, isArray := obj.(*PdfObjectArray); isArray {
-		for _, o := range *a {
+	case *PdfObjectArray:
+		for _, o := range *obj {
 			err := crypt.Encrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	}
-
-	if d, isDict := obj.(*PdfObjectDictionary); isDict {
+	case *PdfObjectDictionary:
 		isSig := false
-		if t := d.Get("Type"); t != nil {
+		if t := obj.Get("Type"); t != nil {
 			typeStr, ok := t.(*PdfObjectName)
 			if ok && *typeStr == "Sig" {
 				isSig = true
 			}
 		}
 
-		for _, keyidx := range d.Keys() {
-			o := d.Get(keyidx)
+		for _, keyidx := range obj.Keys() {
+			o := obj.Get(keyidx)
 			// How can we avoid this check, i.e. implement a more smart
 			// traversal system?
 			if isSig && string(keyidx) == "Contents" {
