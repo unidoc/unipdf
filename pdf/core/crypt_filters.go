@@ -16,10 +16,12 @@ var (
 	cryptMethods = make(map[string]cryptFilterMethod)
 )
 
+// registerCryptFilterMethod registers a CFM.
 func registerCryptFilterMethod(m cryptFilterMethod) {
 	cryptMethods[m.CFM()] = m
 }
 
+// getCryptFilterMethod check if a CFM with a specified name is supported an returns its implementation.
 func getCryptFilterMethod(name string) (cryptFilterMethod, error) {
 	f := cryptMethods[name]
 	if f == nil {
@@ -29,18 +31,28 @@ func getCryptFilterMethod(name string) (cryptFilterMethod, error) {
 }
 
 func init() {
+	// register supported crypt filter methods
 	registerCryptFilterMethod(cryptFilterV2{})
 	registerCryptFilterMethod(cryptFilterAESV2{})
 	registerCryptFilterMethod(cryptFilterAESV3{})
 }
 
+// cryptFilterMethod is a common interface for crypt filter methods.
 type cryptFilterMethod interface {
+	// CFM returns a name of the filter that should be used in CFM field of Encrypt dictionary.
 	CFM() string
+	// MakeKey generates a object encryption key based on file encryption key and object numbers.
+	// Used only for legacy filters - AESV3 doesn't change the key for each object.
 	MakeKey(objNum, genNum uint32, fkey []byte) ([]byte, error)
+	// EncryptBytes encrypts a buffer using object encryption key, as returned by MakeKey.
+	// Implementation may reuse a buffer and encrypt data in-place.
 	EncryptBytes(p []byte, okey []byte) ([]byte, error)
+	// DecryptBytes decrypts a buffer using object encryption key, as returned by MakeKey.
+	// Implementation may reuse a buffer and decrypt data in-place.
 	DecryptBytes(p []byte, okey []byte) ([]byte, error)
 }
 
+// makeKeyV2 is a common object key generation shared by V2 and AESV2 crypt filters.
 func makeKeyV2(objNum, genNum uint32, ekey []byte, isAES bool) ([]byte, error) {
 	key := make([]byte, len(ekey)+5)
 	for i := 0; i < len(ekey); i++ {

@@ -114,6 +114,7 @@ func newCryptFiltersV2(length int) CryptFilters {
 	}
 }
 
+// NewCryptFilterV2 creates a RC4-based filter with a specified key length (in bytes).
 func NewCryptFilterV2(length int) CryptFilter {
 	// TODO (v3): Unexport.
 	return CryptFilter{
@@ -123,6 +124,7 @@ func NewCryptFilterV2(length int) CryptFilter {
 	}
 }
 
+// NewCryptFilterAESV2 creates an AES-based filter with a 128 bit key (AESV2).
 func NewCryptFilterAESV2() CryptFilter {
 	// TODO (v3): Unexport.
 	return CryptFilter{
@@ -132,6 +134,7 @@ func NewCryptFilterAESV2() CryptFilter {
 	}
 }
 
+// NewCryptFilterAESV3 creates an AES-based filter with a 256 bit key (AESV3).
 func NewCryptFilterAESV3() CryptFilter {
 	// TODO (v3): Unexport.
 	return CryptFilter{
