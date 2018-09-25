@@ -8,7 +8,13 @@
 package core
 
 import (
+	"bytes"
+	"fmt"
+	"math"
+	"math/rand"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/unidoc/unidoc/common"
 )
@@ -142,8 +148,7 @@ func TestDecryption1(t *testing.T) {
 	crypter := PdfCrypt{}
 	crypter.DecryptedObjects = map[PdfObject]bool{}
 	// Default algorithm is V2 (RC4).
-	crypter.CryptFilters = CryptFilters{}
-	crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: crypter.Length}
+	crypter.CryptFilters = newCryptFiltersV2(crypter.Length)
 	crypter.V = 2
 	crypter.R = 3
 	crypter.P = -3904
@@ -208,5 +213,119 @@ func TestDecryption1(t *testing.T) {
 	if string(so.Stream) != string(exp) {
 		t.Errorf("Stream content wrong")
 		return
+	}
+}
+
+func BenchmarkAlg2b(b *testing.B) {
+	// hash runs a variable number of rounds, so we need to have a
+	// deterministic random source to make benchmark results comparable
+	r := rand.New(rand.NewSource(1234567))
+	const n = 20
+	pass := make([]byte, n)
+	r.Read(pass)
+	data := make([]byte, n+8+48)
+	r.Read(data)
+	user := make([]byte, 48)
+	r.Read(user)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = alg2b(data, pass, user)
+	}
+}
+
+func TestAESv3(t *testing.T) {
+	const keySize = 32
+
+	seed := time.Now().UnixNano()
+	rand := rand.New(rand.NewSource(seed))
+
+	var cases = []struct {
+		Name      string
+		EncMeta   bool
+		UserPass  string
+		OwnerPass string
+	}{
+		{
+			Name: "simple", EncMeta: true,
+			UserPass: "user", OwnerPass: "owner",
+		},
+		{
+			Name: "utf8", EncMeta: false,
+			UserPass: "æøå-u", OwnerPass: "æøå-o",
+		},
+		{
+			Name: "long", EncMeta: true,
+			UserPass:  strings.Repeat("user", 80),
+			OwnerPass: strings.Repeat("owner", 80),
+		},
+	}
+
+	const (
+		perms = 0x12345678
+	)
+
+	for _, R := range []int{5, 6} {
+		R := R
+		t.Run(fmt.Sprintf("R=%d", R), func(t *testing.T) {
+			for _, c := range cases {
+				c := c
+				t.Run(c.Name, func(t *testing.T) {
+					fkey := make([]byte, keySize)
+					rand.Read(fkey)
+
+					crypt := &PdfCrypt{
+						V: 5, R: R,
+						P:               perms,
+						EncryptionKey:   append([]byte{}, fkey...),
+						EncryptMetadata: c.EncMeta,
+					}
+
+					// generate encryption parameters
+					err := crypt.generateR6([]byte(c.UserPass), []byte(c.OwnerPass))
+					if err != nil {
+						t.Fatal("Failed to encrypt:", err)
+					}
+
+					// Perms and EncryptMetadata are checked as a part of alg2a
+
+					// decrypt using user password
+					crypt.EncryptionKey = nil
+					ok, err := crypt.alg2a([]byte(c.UserPass))
+					if err != nil || !ok {
+						t.Error("Failed to authenticate user pass:", err)
+					} else if !bytes.Equal(crypt.EncryptionKey, fkey) {
+						t.Error("wrong encryption key")
+					}
+
+					// decrypt using owner password
+					crypt.EncryptionKey = nil
+					ok, err = crypt.alg2a([]byte(c.OwnerPass))
+					if err != nil || !ok {
+						t.Error("Failed to authenticate owner pass:", err)
+					} else if !bytes.Equal(crypt.EncryptionKey, fkey) {
+						t.Error("wrong encryption key")
+					}
+
+					// try to elevate user permissions
+					crypt.P = math.MaxUint32
+
+					crypt.EncryptionKey = nil
+					ok, err = crypt.alg2a([]byte(c.UserPass))
+					if R == 5 {
+						// it's actually possible with R=5, since Perms is not generated
+						if err != nil || !ok {
+							t.Error("Failed to authenticate user pass:", err)
+						}
+					} else {
+						// not possible in R=6, should return an error
+						if err == nil || ok {
+							t.Error("was able to elevate permissions with R=6")
+						}
+					}
+				})
+			}
+		})
 	}
 }

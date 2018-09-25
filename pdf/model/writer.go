@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"time"
 
@@ -477,7 +478,20 @@ func (this *PdfWriter) updateObjectNumbers() {
 // EncryptOptions represents encryption options for an output PDF.
 type EncryptOptions struct {
 	Permissions AccessPermissions
+	Algorithm   EncryptionAlgorithm
 }
+
+// EncryptionAlgorithm is used in EncryptOptions to change the default algorithm used to encrypt the document.
+type EncryptionAlgorithm int
+
+const (
+	// RC4_128bit uses RC4 encryption (128 bit)
+	RC4_128bit = EncryptionAlgorithm(iota)
+	// AES_128bit uses AES encryption (128 bit, PDF 1.6)
+	AES_128bit
+	// AES_256bit uses AES encryption (256 bit, PDF 2.0)
+	AES_256bit
+)
 
 // Encrypt encrypts the output file with a specified user/owner password.
 func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
@@ -487,17 +501,57 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	crypter.EncryptedObjects = map[PdfObject]bool{}
 
 	crypter.CryptFilters = CryptFilters{}
-	crypter.CryptFilters["Default"] = CryptFilter{Cfm: "V2", Length: 128}
+
+	algo := RC4_128bit
+	if options != nil {
+		algo = options.Algorithm
+	}
+
+	var cf CryptFilter
+	switch algo {
+	case RC4_128bit:
+		crypter.V = 2
+		crypter.R = 3
+		cf = NewCryptFilterV2(16)
+	case AES_128bit:
+		this.SetVersion(1, 5)
+		crypter.V = 4
+		crypter.R = 4
+		cf = NewCryptFilterAESV2()
+	case AES_256bit:
+		this.SetVersion(2, 0)
+		crypter.V = 5
+		crypter.R = 6 // TODO(dennwc): a way to set R=5?
+		cf = NewCryptFilterAESV3()
+	default:
+		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
+	}
+	crypter.Length = cf.Length * 8
+
+	const (
+		defaultFilter = StandardCryptFilter
+	)
+	crypter.CryptFilters[defaultFilter] = cf
+	if crypter.V >= 4 {
+		crypter.StreamFilter = defaultFilter
+		crypter.StringFilter = defaultFilter
+	}
 
 	// Set
-	crypter.P = -1
-	crypter.V = 2
-	crypter.R = 3
-	crypter.Length = 128
+	crypter.P = math.MaxUint32
 	crypter.EncryptMetadata = true
 	if options != nil {
 		crypter.P = int(options.Permissions.GetP())
 	}
+
+	// Generate the encryption dictionary.
+	ed := MakeDict()
+	ed.Set("Filter", MakeName("Standard"))
+	ed.Set("P", MakeInteger(int64(crypter.P)))
+	ed.Set("V", MakeInteger(int64(crypter.V)))
+	ed.Set("R", MakeInteger(int64(crypter.R)))
+	ed.Set("Length", MakeInteger(int64(crypter.Length)))
+	this.encryptDict = ed
 
 	// Prepare the ID object for the trailer.
 	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
@@ -511,38 +565,51 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	this.ids = MakeArray(MakeHexString(id0), MakeHexString(id1))
 	common.Log.Trace("Gen Id 0: % x", id0)
 
-	crypter.Id0 = string(id0)
+	// Generate encryption parameters
+	if crypter.R < 5 {
+		crypter.Id0 = string(id0)
 
-	// Make the O and U objects.
-	O, err := crypter.Alg3(userPass, ownerPass)
-	if err != nil {
-		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-		return err
+		// Make the O and U objects.
+		O, err := crypter.Alg3(userPass, ownerPass)
+		if err != nil {
+			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
+			return err
+		}
+		crypter.O = []byte(O)
+		common.Log.Trace("gen O: % x", O)
+		U, key, err := crypter.Alg5(userPass)
+		if err != nil {
+			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
+			return err
+		}
+		common.Log.Trace("gen U: % x", U)
+		crypter.U = []byte(U)
+		crypter.EncryptionKey = key
+
+		ed.Set("O", MakeHexString(O))
+		ed.Set("U", MakeHexString(U))
+	} else { // R >= 5
+		err := crypter.GenerateParams(userPass, ownerPass)
+		if err != nil {
+			return err
+		}
+		ed.Set("O", MakeString(string(crypter.O)))
+		ed.Set("U", MakeString(string(crypter.U)))
+		ed.Set("OE", MakeString(string(crypter.OE)))
+		ed.Set("UE", MakeString(string(crypter.UE)))
+		ed.Set("EncryptMetadata", MakeBool(crypter.EncryptMetadata))
+		if crypter.R > 5 {
+			ed.Set("Perms", MakeString(string(crypter.Perms)))
+		}
 	}
-	crypter.O = []byte(O)
-	common.Log.Trace("gen O: % x", O)
-	U, key, err := crypter.Alg5(userPass)
-	if err != nil {
-		common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-		return err
+	if crypter.V >= 4 {
+		if err := crypter.SaveCryptFilters(ed); err != nil {
+			return err
+		}
 	}
-	common.Log.Trace("gen U: % x", U)
-	crypter.U = []byte(U)
-	crypter.EncryptionKey = key
 
-	// Generate the encryption dictionary.
-	encDict := MakeDict()
-	encDict.Set("Filter", MakeName("Standard"))
-	encDict.Set("P", MakeInteger(int64(crypter.P)))
-	encDict.Set("V", MakeInteger(int64(crypter.V)))
-	encDict.Set("R", MakeInteger(int64(crypter.R)))
-	encDict.Set("Length", MakeInteger(int64(crypter.Length)))
-	encDict.Set("O", MakeHexString(O))
-	encDict.Set("U", MakeHexString(U))
-	this.encryptDict = encDict
-
-	// Make an object to contain it.
-	io := MakeIndirectObject(encDict)
+	// Make an object to contain the encryption dictionary.
+	io := MakeIndirectObject(ed)
 	this.encryptObj = io
 	this.addObject(io)
 

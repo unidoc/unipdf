@@ -15,7 +15,7 @@ import (
 // It can contain multiple Drawable components (currently supporting Paragraph and Image).
 //
 // The component stacking behavior is vertical, where the Drawables are drawn on top of each other.
-// TODO: Add inline mode (horizontal stacking).
+// Also supports horizontal stacking by activating the inline mode.
 type Division struct {
 	components []VectorDrawable
 
@@ -24,22 +24,37 @@ type Division struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Controls whether the components are stacked horizontally
+	inline bool
 }
 
 // NewDivision returns a new Division container component.
 func NewDivision() *Division {
-	div := &Division{}
-	div.components = []VectorDrawable{}
-	return div
+	return &Division{
+		components: []VectorDrawable{},
+	}
+}
+
+// Inline returns whether the inline mode of the division is active.
+func (div *Division) Inline() bool {
+	return div.inline
+}
+
+// SetInline sets the inline mode of the division.
+func (div *Division) SetInline(inline bool) {
+	div.inline = inline
 }
 
 // Add adds a VectorDrawable to the Division container.
-// Currently supported VectorDrawables: *Paragraph, *Image.
+// Currently supported VectorDrawables: *Paragraph, *StyledParagraph, *Image.
 func (div *Division) Add(d VectorDrawable) error {
 	supported := false
 
 	switch d.(type) {
 	case *Paragraph:
+		supported = true
+	case *StyledParagraph:
 		supported = true
 	case *Image:
 		supported = true
@@ -96,8 +111,30 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= div.margins.top
 	}
 
+	// Set the inline mode of the division to the context.
+	ctx.Inline = div.inline
+
 	// Draw.
+	divCtx := ctx
+	tmpCtx := ctx
+	var lineHeight float64
+
 	for _, component := range div.components {
+		if ctx.Inline {
+			// Check whether the component fits on the current line.
+			if (ctx.X-divCtx.X)+component.Width() <= ctx.Width {
+				ctx.Y = tmpCtx.Y
+				ctx.Height = tmpCtx.Height
+			} else {
+				ctx.X = divCtx.X
+				ctx.Width = divCtx.Width
+
+				tmpCtx.Y += lineHeight
+				tmpCtx.Height -= lineHeight
+				lineHeight = 0
+			}
+		}
+
 		newblocks, updCtx, err := component.GeneratePageBlocks(ctx)
 		if err != nil {
 			common.Log.Debug("Error generating page blocks: %v", err)
@@ -118,9 +155,30 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		}
 
 		// Apply padding/margins.
-		updCtx.X = ctx.X
+		if ctx.Inline {
+			// Recalculate positions on page change.
+			if ctx.Page != updCtx.Page {
+				divCtx.Y = ctx.Margins.top
+				divCtx.Height = ctx.PageHeight - ctx.Margins.top
+
+				tmpCtx.Y = divCtx.Y
+				tmpCtx.Height = divCtx.Height
+				lineHeight = updCtx.Height - divCtx.Height
+			} else {
+				// Calculate current line max height.
+				if dl := ctx.Height - updCtx.Height; dl > lineHeight {
+					lineHeight = dl
+				}
+			}
+		} else {
+			updCtx.X = ctx.X
+		}
+
 		ctx = updCtx
 	}
+
+	// Restore the original inline mode of the context.
+	ctx.Inline = origCtx.Inline
 
 	if div.positioning.isRelative() {
 		// Move back X to same start of line.
