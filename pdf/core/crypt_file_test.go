@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
+	"github.com/unidoc/unidoc/pdf/core"
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -109,7 +110,22 @@ func TestDecryptAES3(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			} else if txt != c.page1 {
-				t.Fatalf("wrong text: %q", txt)
+				t.Errorf("wrong text: %q", txt)
+			}
+
+			for _, objNum := range p.GetObjectNums() {
+				obj, err := p.GetIndirectObjectByNumber(objNum)
+				if err != nil {
+					t.Fatal(objNum, err)
+				}
+				if stream, is := obj.(*core.PdfObjectStream); is {
+					_, err := core.DecodeStream(stream)
+					if err != nil {
+						t.Fatal(err)
+					}
+				} else if indObj, is := obj.(*core.PdfIndirectObject); is {
+					_ = indObj.PdfObject.String()
+				}
 			}
 		})
 	}

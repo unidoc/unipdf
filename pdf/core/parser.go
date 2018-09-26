@@ -1561,8 +1561,7 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 	}
 	common.Log.Trace("Is encrypted!")
 	var (
-		dict         *PdfObjectDictionary
-		dictIndirect *PdfIndirectObject
+		dict *PdfObjectDictionary
 	)
 	switch e := e.(type) {
 	case *PdfObjectDictionary:
@@ -1580,7 +1579,6 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 			common.Log.Debug("Encryption object not an indirect object")
 			return false, errors.New("Type check error")
 		}
-		dictIndirect = encIndObj
 		encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
 
 		common.Log.Trace("2: %q", encDict)
@@ -1596,11 +1594,20 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if dictIndirect != nil {
-		// "Encrypt" dictionary should never be encrypted
-		crypter.DecryptedObjects[dictIndirect] = true
+	// list objects that should never be decrypted
+	for _, key := range []string{"Info", "Encrypt"} {
+		f := parser.trailer.Get(PdfObjectName(key))
+		if f == nil {
+			continue
+		}
+		switch f := f.(type) {
+		case *PdfObjectReference:
+			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
+		case *PdfIndirectObject:
+			crypter.DecryptedObjects[f] = true
+			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
+		}
 	}
-
 	parser.crypter = &crypter
 	common.Log.Trace("Crypter object %b", crypter)
 	return true, nil
