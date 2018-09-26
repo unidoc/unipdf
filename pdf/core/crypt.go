@@ -52,7 +52,8 @@ type PdfCrypt struct {
 
 	parser *PdfParser
 
-	ivAESZero []byte // a zero buffer used as an initialization vector for AES
+	decryptedObjNum map[int]struct{}
+	ivAESZero       []byte // a zero buffer used as an initialization vector for AES
 }
 
 // AccessPermissions is a list of access permissions for a PDF file.
@@ -306,11 +307,13 @@ func (crypt *PdfCrypt) SaveCryptFilters(ed *PdfObjectDictionary) error {
 // PdfCryptMakeNew makes the document crypt handler based on the encryption dictionary
 // and trailer dictionary. Returns an error on failure to process.
 func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
-	crypter := PdfCrypt{}
-	crypter.DecryptedObjects = map[PdfObject]bool{}
-	crypter.EncryptedObjects = map[PdfObject]bool{}
-	crypter.Authenticated = false
-	crypter.parser = parser
+	crypter := PdfCrypt{
+		Authenticated:    false,
+		DecryptedObjects: make(map[PdfObject]bool),
+		EncryptedObjects: make(map[PdfObject]bool),
+		decryptedObjNum:  make(map[int]struct{}),
+		parser:           parser,
+	}
 
 	filter, ok := ed.Get("Filter").(*PdfObjectName)
 	if !ok {
@@ -663,6 +666,18 @@ func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 		common.Log.Trace("Already decrypted")
 		return true
 	}
+	switch obj := obj.(type) {
+	case *PdfObjectStream:
+		if crypt.R != 5 {
+			if name, ok := obj.Get("Type").(*PdfObjectName); ok && *name == "XRef" {
+				return true // Cross-reference streams should not be encrypted
+			}
+		}
+	case *PdfIndirectObject:
+		if _, ok = crypt.decryptedObjNum[int(obj.ObjectNumber)]; ok {
+			return true
+		}
+	}
 
 	common.Log.Trace("Not decrypted yet")
 	return false
@@ -708,8 +723,10 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		crypt.DecryptedObjects[obj] = true
 		dict := obj.PdfObjectDictionary
 
-		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
-			return nil // Cross-reference streams should not be encrypted
+		if crypt.R != 5 {
+			if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+				return nil // Cross-reference streams should not be encrypted
+			}
 		}
 
 		objNum := obj.ObjectNumber
