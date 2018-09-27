@@ -63,6 +63,9 @@ type StyledParagraph struct {
 
 	// Text chunk lines after wrapping to available width.
 	lines [][]TextChunk
+
+	// Before render callback
+	beforeRender func(p *StyledParagraph, ctx DrawContext)
 }
 
 // NewStyledParagraph creates a new styled paragraph.
@@ -101,6 +104,23 @@ func (p *StyledParagraph) Append(text string, style TextStyle) {
 	chunk.Style.Font.SetEncoder(p.encoder)
 
 	p.chunks = append(p.chunks, chunk)
+	p.wrapText()
+}
+
+// Insert adds a new text chunk at the specified position in the paragraph.
+func (p *StyledParagraph) Insert(index uint, text string, style TextStyle) {
+	l := uint(len(p.chunks))
+	if index > l {
+		index = l
+	}
+
+	chunk := TextChunk{
+		Text:  text,
+		Style: style,
+	}
+	chunk.Style.Font.SetEncoder(p.encoder)
+
+	p.chunks = append(p.chunks[:index], append([]TextChunk{chunk}, p.chunks[index:]...)...)
 	p.wrapText()
 }
 
@@ -207,6 +227,41 @@ func (p *StyledParagraph) Height() float64 {
 func (p *StyledParagraph) getTextWidth() float64 {
 	var width float64
 	for _, chunk := range p.chunks {
+		style := &chunk.Style
+
+		for _, rune := range chunk.Text {
+			glyph, found := p.encoder.RuneToGlyph(rune)
+			if !found {
+				common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
+
+				// XXX/FIXME: return error.
+				return -1
+			}
+
+			// Ignore newline for this.. Handles as if all in one line.
+			if glyph == "controlLF" {
+				continue
+			}
+
+			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+			if !found {
+				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+
+				// XXX/FIXME: return error.
+				return -1
+			}
+
+			width += style.FontSize * metrics.Wx
+		}
+	}
+
+	return width
+}
+
+// getTextLineWidth calculates the text width of a provided collection of text chunks
+func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
+	var width float64
+	for _, chunk := range line {
 		style := &chunk.Style
 
 		for _, rune := range chunk.Text {
@@ -413,6 +468,10 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 		}
 		ctx.X = p.xPos
 		ctx.Y = p.yPos
+	}
+
+	if p.beforeRender != nil {
+		p.beforeRender(p, ctx)
 	}
 
 	// Place the Paragraph on the template at position (x,y) based on the ctx.
