@@ -659,6 +659,12 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 	return f.MakeKey(objNum, genNum, ekey)
 }
 
+// encryptDictKeys list all required field for "Encrypt" dictionary.
+// It is used as a fingerprint to detect old copies of this dictionary.
+var encryptDictKeys = []PdfObjectName{
+	"V", "R", "O", "U", "P",
+}
+
 // Check if object has already been processed.
 func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 	_, ok := crypt.DecryptedObjects[obj]
@@ -676,6 +682,21 @@ func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 	case *PdfIndirectObject:
 		if _, ok = crypt.decryptedObjNum[int(obj.ObjectNumber)]; ok {
 			return true
+		}
+		switch obj := obj.PdfObject.(type) {
+		case *PdfObjectDictionary:
+			// detect old copies of "Encrypt" dictionary
+			// TODO: find a better way to do it
+			ok := true
+			for _, key := range encryptDictKeys {
+				if obj.Get(key) == nil {
+					ok = false
+					break
+				}
+			}
+			if ok {
+				return true
+			}
 		}
 	}
 
