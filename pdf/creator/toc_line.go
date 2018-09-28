@@ -17,8 +17,9 @@ type TOCLine struct {
 	Page      TextChunk
 	Separator TextChunk
 
-	Level       uint
-	LevelOffset float64
+	level       uint
+	offset      float64
+	levelOffset float64
 }
 
 func NewTOCLine(number, title, page string, level uint) *TOCLine {
@@ -57,13 +58,49 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 			Text:  ".",
 			Style: style,
 		},
-		Level:       level,
-		LevelOffset: 10,
+		offset:      0,
+		level:       level,
+		levelOffset: 10,
 	}
 
-	sp.margins.left = float64(tl.Level-1) * tl.LevelOffset
+	sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
 	sp.beforeRender = tl.prepareParagraph
 	return tl
+}
+
+func (tl *TOCLine) Level() uint {
+	return tl.level
+}
+
+func (tl *TOCLine) SetLevel(level uint) {
+	tl.level = level
+	tl.sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
+}
+
+func (tl *TOCLine) LevelOffset() float64 {
+	return tl.levelOffset
+}
+
+func (tl *TOCLine) SetLevelOffset(levelOffset float64) {
+	tl.levelOffset = levelOffset
+	tl.sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
+}
+
+// GetMargins returns the margins of the TOC line: left, right, top, bottom.
+func (tl *TOCLine) GetMargins() (float64, float64, float64, float64) {
+	m := &tl.sp.margins
+	return tl.offset, m.right, m.top, m.bottom
+}
+
+// SetMargins sets the margins TOC line.
+func (tl *TOCLine) SetMargins(left, right, top, bottom float64) {
+	tl.offset = left
+
+	m := &tl.sp.margins
+	m.left = tl.offset + float64(tl.level-1)*tl.levelOffset
+	m.right = right
+	m.top = top
+	m.bottom = bottom
 }
 
 func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
@@ -90,6 +127,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 			Style: tl.Page.Style,
 		},
 	}
+
 	sp.SetEncoder(sp.encoder)
 	sp.wrapText()
 
