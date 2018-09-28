@@ -12,22 +12,31 @@ import (
 type TOCLine struct {
 	sp *StyledParagraph
 
-	number    TextChunk
-	title     TextChunk
-	page      TextChunk
-	separator TextChunk
+	Number    TextChunk
+	Title     TextChunk
+	Page      TextChunk
+	Separator TextChunk
 
-	level       uint
-	levelOffset float64
+	Level       uint
+	LevelOffset float64
 }
 
 func NewTOCLine(number, title, page string, level uint) *TOCLine {
 	style := NewTextStyle()
 
 	return NewStyledTOCLine(
-		TextChunk{Text: number, Style: style},
-		TextChunk{Text: title, Style: style},
-		TextChunk{Text: page, Style: style},
+		TextChunk{
+			Text:  number,
+			Style: style,
+		},
+		TextChunk{
+			Text:  title,
+			Style: style,
+		},
+		TextChunk{
+			Text:  page,
+			Style: style,
+		},
 		level,
 	)
 }
@@ -41,61 +50,71 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 
 	tl := &TOCLine{
 		sp:     sp,
-		number: number,
-		title:  title,
-		page:   page,
-		separator: TextChunk{
+		Number: number,
+		Title:  title,
+		Page:   page,
+		Separator: TextChunk{
 			Text:  ".",
 			Style: style,
 		},
-		level:       level,
-		levelOffset: 10,
+		Level:       level,
+		LevelOffset: 10,
 	}
 
-	sp.margins.left = float64(level) * tl.levelOffset
+	sp.margins.left = float64(tl.Level-1) * tl.LevelOffset
 	sp.beforeRender = tl.prepareParagraph
 	return tl
 }
 
 func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
-	if tl.number.Text != "" {
-		tl.title.Text = " " + tl.title.Text
+	// Add text chunks to the paragraph
+	title := tl.Title.Text
+	if tl.Number.Text != "" {
+		title = " " + title
 	}
-	tl.title.Text += " "
+	title += " "
 
-	if tl.page.Text != "" {
-		tl.page.Text = " " + tl.page.Text
+	page := tl.Page.Text
+	if page != "" {
+		page = " " + page
 	}
 
 	sp.chunks = []TextChunk{
-		tl.number,
-		tl.title,
-		tl.page,
+		tl.Number,
+		TextChunk{
+			Text:  title,
+			Style: tl.Title.Style,
+		},
+		TextChunk{
+			Text:  page,
+			Style: tl.Page.Style,
+		},
 	}
 	sp.SetEncoder(sp.encoder)
 	sp.wrapText()
 
+	// Insert separator
 	l := len(sp.lines)
 	if l == 0 {
 		return
 	}
 
-	// Insert separator
 	availWidth := ctx.Width*1000 - sp.getTextLineWidth(sp.lines[l-1])
-	sepWidth := sp.getTextLineWidth([]TextChunk{tl.separator})
+	sepWidth := sp.getTextLineWidth([]TextChunk{tl.Separator})
 	sepCount := int(availWidth / sepWidth)
-	sepText := strings.Repeat(tl.separator.Text, sepCount)
+	sepText := strings.Repeat(tl.Separator.Text, sepCount)
+	sepStyle := tl.Separator.Style
 
-	sp.Insert(2, sepText, tl.separator.Style)
+	sp.Insert(2, sepText, sepStyle)
 
 	// Push page numbers to the end of the line
 	availWidth = availWidth - float64(sepCount)*sepWidth
 	if availWidth > 500 {
-		spaceMetrics, found := tl.separator.Style.Font.GetGlyphCharMetrics("space")
+		spaceMetrics, found := sepStyle.Font.GetGlyphCharMetrics("space")
 		if found && availWidth > spaceMetrics.Wx {
 			spaces := int(availWidth / spaceMetrics.Wx)
 			if spaces > 0 {
-				style := tl.separator.Style
+				style := sepStyle
 				style.FontSize = 1
 				sp.Insert(2, strings.Repeat(" ", spaces), style)
 			}
