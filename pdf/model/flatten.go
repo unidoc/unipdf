@@ -15,6 +15,11 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// FieldAppearanceGenerator generates appearance stream for a given field.
+type FieldAppearanceGenerator interface {
+	GenerateAppearanceDict(form *PdfAcroForm, field *PdfField, wa *PdfAnnotationWidget) (*core.PdfObjectDictionary, error)
+}
+
 // FlattenFields flattens the form fields and annotations for the PDF loaded in `pdf` and makes
 // non-editable.
 // Looks up all widget annotations corresponding to form fields and flattens them by drawing the content
@@ -23,7 +28,8 @@ import (
 // will be emptied.
 // When `allannots` is true, all annotations will be flattened. Keep false if want to keep non-form related
 // annotations intact.
-func (pdf *PdfReader) FlattenFields(allannots bool) error {
+// When `appgen` is not nil, it will be used to generate appearance streams for the field annotations.
+func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerator) error {
 	// Load all target widget annotations to be flattened into a map.
 	// The bool value indicates whether the annotation has value content.
 	ftargets := map[*PdfAnnotation]bool{}
@@ -43,6 +49,16 @@ func (pdf *PdfReader) FlattenFields(allannots bool) error {
 					ftargets[wa.PdfAnnotation] = true
 				} else {
 					ftargets[wa.PdfAnnotation] = false
+				}
+
+				if appgen != nil {
+					// appgen generates the appearance based on the form/field/annotation and other settings
+					// based on the implementation (for example may only generate appearance if none set).
+					apDict, err := appgen.GenerateAppearanceDict(acroForm, field, wa)
+					if err != nil {
+						return err
+					}
+					wa.AP = apDict
 				}
 			}
 		}
@@ -82,7 +98,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool) error {
 			xform, rect, err := getAnnotationActiveAppearance(annot)
 			if err != nil {
 				if !hasV {
-					common.Log.Trace("Field without V -> annoation without appearance stream - skipping over")
+					common.Log.Trace("Field without V -> annotation without appearance stream - skipping over")
 					continue
 				}
 				common.Log.Debug("ERROR Annotation without appearance stream, err : %v - skipping over", err)
@@ -162,6 +178,9 @@ func getAnnotationActiveAppearance(annot *PdfAnnotation) (*XObjectForm, *PdfRect
 	apDict, has := core.GetDict(annot.AP)
 	if !has {
 		return nil, nil, errors.New("field missing AP dictionary")
+	}
+	if apDict == nil {
+		return nil, nil, nil
 	}
 
 	// Get the Rect specifying the display rectangle.
