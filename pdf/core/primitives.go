@@ -777,7 +777,7 @@ func GetInt(obj PdfObject) (into *PdfObjectInteger, found bool) {
 // indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
 func GetIntVal(obj PdfObject) (val int, found bool) {
 	into, found := TraceToDirectObject(obj).(*PdfObjectInteger)
-	if found {
+	if found && into != nil {
 		return int(*into), true
 	}
 	return 0, false
