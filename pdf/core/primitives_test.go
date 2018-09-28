@@ -78,3 +78,19 @@ func TestHexStringMulti(t *testing.T) {
 		}
 	}
 }
+
+func TestPdfDocEncodingDecode(t *testing.T) {
+	testcases := []struct {
+		Encoded  PdfObjectString
+		Expected string
+	}{
+		{PdfObjectString{val: "Ger\xfer\xfa\xf0ur", isHex: false}, "Gerþrúður"},
+	}
+
+	for _, testcase := range testcases {
+		dec := testcase.Encoded.Decoded()
+		if dec != testcase.Expected {
+			t.Fatalf("%s != %s", dec, testcase.Expected)
+		}
+	}
+}
