@@ -37,7 +37,7 @@ type PdfCrypt struct {
 	U                []byte
 	OE               []byte // R=6
 	UE               []byte // R=6
-	P                uint32
+	P                AccessPermissions
 	Perms            []byte // R=6
 	EncryptMetadata  bool
 	Id0              string
@@ -56,22 +56,29 @@ type PdfCrypt struct {
 	ivAESZero       []byte // a zero buffer used as an initialization vector for AES
 }
 
-// AccessPermissions is a list of access permissions for a PDF file.
-type AccessPermissions struct {
-	Printing        bool
-	Modify          bool
-	ExtractGraphics bool
-	Annotate        bool
+// AccessPermissions is a bitmask of access permissions for a PDF file.
+type AccessPermissions uint32
 
-	// Allow form filling, if annotation is disabled?  If annotation enabled, is not looked at.
-	FillForms         bool
-	DisabilityExtract bool // not clear what this means!
+const (
+	// PermOwner grants all permissions.
+	PermOwner = AccessPermissions(math.MaxUint32)
 
-	// Allow rotating, editing page order.
-	RotateInsert bool
+	PermPrinting        = AccessPermissions(1 << 2) // bit 3
+	PermModify          = AccessPermissions(1 << 3) // bit 4
+	PermExtractGraphics = AccessPermissions(1 << 4) // bit 5
+	PermAnnotate        = AccessPermissions(1 << 5) // bit 6
+	// PermFillForms allow form filling, if annotation is disabled?  If annotation enabled, is not looked at.
+	PermFillForms         = AccessPermissions(1 << 8) // bit 9
+	PermDisabilityExtract = AccessPermissions(1 << 9) // bit 10 // TODO: not clear what this means!
+	// PermRotateInsert allows rotating, editing page order.
+	PermRotateInsert = AccessPermissions(1 << 10) // bit 11
+	// PermFullPrintQuality limits print quality (lowres), assuming Printing bit is set.
+	PermFullPrintQuality = AccessPermissions(1 << 11) // bit 12
+)
 
-	// Limit print quality (lowres), assuming Printing is true.
-	FullPrintQuality bool
+// Allowed checks if a set of permissions can be granted.
+func (p AccessPermissions) Allowed(p2 AccessPermissions) bool {
+	return p&p2 == p2
 }
 
 const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
@@ -424,7 +431,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	if !ok {
 		return crypter, errors.New("Encrypt dictionary missing permissions attr")
 	}
-	crypter.P = uint32(*P)
+	crypter.P = AccessPermissions(*P)
 
 	if crypter.R == 6 {
 		Perms, ok := ed.Get("Perms").(*PdfObjectString)
@@ -464,65 +471,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 
 // GetAccessPermissions returns the PDF access permissions as an AccessPermissions object.
 func (crypt *PdfCrypt) GetAccessPermissions() AccessPermissions {
-	perms := AccessPermissions{}
-
-	P := crypt.P
-	if P&(1<<2) > 0 {
-		perms.Printing = true
-	}
-	if P&(1<<3) > 0 {
-		perms.Modify = true
-	}
-	if P&(1<<4) > 0 {
-		perms.ExtractGraphics = true
-	}
-	if P&(1<<5) > 0 {
-		perms.Annotate = true
-	}
-	if P&(1<<8) > 0 {
-		perms.FillForms = true
-	}
-	if P&(1<<9) > 0 {
-		perms.DisabilityExtract = true
-	}
-	if P&(1<<10) > 0 {
-		perms.RotateInsert = true
-	}
-	if P&(1<<11) > 0 {
-		perms.FullPrintQuality = true
-	}
-	return perms
-}
-
-// GetP returns the P entry to be used in Encrypt dictionary based on AccessPermissions settings.
-func (perms AccessPermissions) GetP() uint32 {
-	var P uint32
-
-	if perms.Printing { // bit 3
-		P |= (1 << 2)
-	}
-	if perms.Modify { // bit 4
-		P |= (1 << 3)
-	}
-	if perms.ExtractGraphics { // bit 5
-		P |= (1 << 4)
-	}
-	if perms.Annotate { // bit 6
-		P |= (1 << 5)
-	}
-	if perms.FillForms {
-		P |= (1 << 8) // bit 9
-	}
-	if perms.DisabilityExtract {
-		P |= (1 << 9) // bit 10
-	}
-	if perms.RotateInsert {
-		P |= (1 << 10) // bit 11
-	}
-	if perms.FullPrintQuality {
-		P |= (1 << 11) // bit 12
-	}
-	return P
+	return crypt.P
 }
 
 // Check whether the specified password can be used to decrypt the document.
@@ -575,8 +524,6 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
 func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissions, error) {
-	perms := AccessPermissions{}
-
 	// Try owner password -> full rights.
 	var (
 		isOwner bool
@@ -586,26 +533,18 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 		var h []byte
 		h, err = crypt.alg12(password)
 		if err != nil {
-			return false, perms, err
+			return false, 0, err
 		}
 		isOwner = len(h) != 0
 	} else {
 		isOwner, err = crypt.alg7(password)
 	}
 	if err != nil {
-		return false, perms, err
+		return false, 0, err
 	}
 	if isOwner {
 		// owner -> full rights.
-		perms.Annotate = true
-		perms.DisabilityExtract = true
-		perms.ExtractGraphics = true
-		perms.FillForms = true
-		perms.FullPrintQuality = true
-		perms.Modify = true
-		perms.Printing = true
-		perms.RotateInsert = true
-		return true, perms, nil
+		return true, PermOwner, nil
 	}
 
 	// Try user password.
@@ -614,22 +553,22 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 		var h []byte
 		h, err = crypt.alg11(password)
 		if err != nil {
-			return false, perms, err
+			return false, 0, err
 		}
 		isUser = len(h) != 0
 	} else {
 		isUser, err = crypt.alg6(password)
 	}
 	if err != nil {
-		return false, perms, err
+		return false, 0, err
 	}
 	if isUser {
 		// User password specified correctly -> access granted with specified permissions.
-		return true, crypt.GetAccessPermissions(), nil
+		return true, crypt.P, nil
 	}
 
 	// Cannot even view the file.
-	return false, perms, nil
+	return false, 0, nil
 }
 
 func (crypt *PdfCrypt) paddedPass(pass []byte) []byte {
@@ -1752,7 +1691,7 @@ func (crypt *PdfCrypt) alg13(fkey []byte) (bool, error) {
 	if !bytes.Equal(perms[9:12], []byte("adb")) {
 		return false, errors.New("decoded permissions are invalid")
 	}
-	p := binary.LittleEndian.Uint32(perms[0:4])
+	p := AccessPermissions(binary.LittleEndian.Uint32(perms[0:4]))
 	if p != crypt.P {
 		return false, errors.New("permissions validation failed")
 	}

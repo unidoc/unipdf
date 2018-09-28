@@ -1644,17 +1644,7 @@ func (parser *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermiss
 	// Also build the encryption/decryption key.
 	if parser.crypter == nil {
 		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
-		perms := AccessPermissions{}
-		perms.Printing = true
-		perms.Modify = true
-		perms.FillForms = true
-		perms.RotateInsert = true
-		perms.ExtractGraphics = true
-		perms.DisabilityExtract = true
-		perms.Annotate = true
-		perms.FullPrintQuality = true
-		return true, perms, nil
+		return true, PermOwner, nil
 	}
-
 	return parser.crypter.checkAccessRights(password)
 }
