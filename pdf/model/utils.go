@@ -14,6 +14,19 @@ func getUniDocVersion() string {
 	return common.Version
 }
 
+// NewReaderForText makes a new PdfReader for an input PDF content string. For use in testing.
+func NewReaderForText(txt string) *PdfReader {
+	r := &PdfReader{}
+	r.traversed = map[core.PdfObject]bool{}
+	r.modelManager = newModelManager()
+
+	// Create the parser, loads the cross reference table and trailer.
+	parser := core.NewParserFromString(txt)
+	r.parser = parser
+
+	return r
+}
+
 // Handy function for debugging in development.
 func debugObject(obj core.PdfObject) {
 	common.Log.Debug("obj: %T %s", obj, obj.String())

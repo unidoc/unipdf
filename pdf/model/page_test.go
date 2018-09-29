@@ -13,19 +13,6 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// NewReaderForText makes a new PdfReader for an input PDF content string. For use in testing.
-func NewReaderForText(txt string) *PdfReader {
-	r := &PdfReader{}
-	r.traversed = map[PdfObject]bool{}
-	r.modelManager = newModelManager()
-
-	// Create the parser, loads the cross reference table and trailer.
-	parser := NewParserFromString(txt)
-	r.parser = parser
-
-	return r
-}
-
 // ParseIndObjSeries loads a series of indirect objects until it runs into an error or EOF.
 // Fully loads the objects and traverses resolving references to *PdfIndirectObjects.
 // For use in testing where a series of indirect objects can be defined sequentially.
