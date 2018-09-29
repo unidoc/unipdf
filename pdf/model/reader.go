@@ -15,6 +15,8 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
+// PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
+// a higher level access to work with PDF structure and information, such as the page structure etc.
 type PdfReader struct {
 	parser      *PdfParser
 	root        PdfObject
@@ -32,7 +34,9 @@ type PdfReader struct {
 	traversed map[PdfObject]bool
 }
 
-// NewPdfReader returns a new PdfReader for reading a PDF file accessed via io.ReadSeeker.
+// NewPdfReader returns a new PdfReader for an input io.ReadSeeker interface. Can be used to read PDF from
+// memory or file. Immediately loads and traverses the PDF structure including pages and page contents (if
+// not encrypted).
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
@@ -67,14 +71,12 @@ func (this *PdfReader) PdfVersion() string {
 	return this.parser.PdfVersion()
 }
 
-// IsEncrypted returns true if the document is encrypted, false otherwise.
+// IsEncrypted returns true if the PDF file is encrypted.
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
 }
 
-// GetEncryptionMethod returns a string containing some information about the encryption method used.
-// Subject to changes.  May be better to return a standardized struct with information.
-// But challenging due to the many different types supported.
+// GetEncryptionMethod returns a descriptive information string about the encryption method used.
 func (this *PdfReader) GetEncryptionMethod() string {
 	crypter := this.parser.GetCrypter()
 	str := crypter.Filter + " - "
@@ -88,7 +90,7 @@ func (this *PdfReader) GetEncryptionMethod() string {
 		str += fmt.Sprintf("RC4: %d bits", crypter.Length)
 	} else if crypter.V == 3 {
 		str += "Unpublished algorithm"
-	} else if crypter.V == 4 {
+	} else if crypter.V >= 4 {
 		// Look at CF, StmF, StrF
 		str += fmt.Sprintf("Stream filter: %s - String filter: %s", crypter.StreamFilter, crypter.StringFilter)
 		str += "; Crypt filters:"
@@ -123,8 +125,9 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 	return true, nil
 }
 
-// CheckAccessRights checks access rights and permissions for a specified password.  If either user/owner password
-// is specified, full rights are granted, otherwise the access rights are specified by the Permissions flag.
+// CheckAccessRights checks access rights and permissions for a specified password.  If either user/owner
+// password is specified,  full rights are granted, otherwise the access rights are specified by the
+// Permissions flag.
 //
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
@@ -225,7 +228,6 @@ func (this *PdfReader) loadStructure() error {
 	return nil
 }
 
-//
 // Trace to object.  Keeps a list of already visited references to avoid circular references.
 //
 // Example circular reference.
@@ -409,12 +411,12 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 	}
 }
 
-// Get the outline tree.
+// GetOutlineTree returns the outline tree.
 func (this *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
 	return this.outlineTree
 }
 
-// Return a flattened list of tree nodes and titles.
+// GetOutlinesFlattened returns a flattened list of tree nodes and titles.
 func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
 	outlineNodeList := []*PdfOutlineTreeNode{}
 	flattenedTitleList := []string{}
@@ -449,6 +451,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 	return outlineNodeList, flattenedTitleList, nil
 }
 
+// loadForms loads the AcroForm.
 func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File need to be decrypted first")
@@ -724,6 +727,7 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	return page, nil
 }
 
+/*
 // PageFromIndirectObject returns the PdfPage and page number for a given indirect object.
 func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, int, error) {
 	if len(r.PageList) != len(r.pageList) {
@@ -737,9 +741,9 @@ func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, in
 	}
 	return nil, 0, errors.New("Page not found")
 }
+*/
 
-// Get a page by the page number.
-// Returns the PdfPage entry.
+// GetPage returns the PdfPage model for the specified page number.
 func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File needs to be decrypted first")
@@ -756,7 +760,7 @@ func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	return page, nil
 }
 
-// Get optional content properties
+// GetOCProperties returns the optional content properties PdfObject.
 func (this *PdfReader) GetOCProperties() (PdfObject, error) {
 	dict := this.catalog
 	obj := dict.Get("OCProperties")
@@ -778,7 +782,8 @@ func (this *PdfReader) GetOCProperties() (PdfObject, error) {
 	return obj, nil
 }
 
-// Inspect the object types, subtypes and content in the PDF file.
+// Inspect inspects the object types, subtypes and content in the PDF file returning a map of
+// object type to number of instances of each.
 func (this *PdfReader) Inspect() (map[string]int, error) {
 	return this.parser.Inspect()
 }
@@ -792,12 +797,13 @@ func (r *PdfReader) GetObjectNums() []int {
 	return r.parser.GetObjectNums()
 }
 
-// Get specific object number.
+// GetIndirectObjectByNumber retrieves and returns a specific PdfObject by object number.
 func (this *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
 	obj, err := this.parser.LookupByNumber(number)
 	return obj, err
 }
 
+// GetTrailer returns the PDF's trailer dictionary.
 func (this *PdfReader) GetTrailer() (*PdfObjectDictionary, error) {
 	trailerDict := this.parser.GetTrailer()
 	if trailerDict == nil {

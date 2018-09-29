@@ -9,6 +9,8 @@ import (
 	"errors"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/contentstream/draw"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -130,7 +132,8 @@ func (table *Table) CurCol() int {
 	return curCol
 }
 
-// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner coordinates as (x,y).
+// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner
+// coordinates as (x,y).
 // Note that this is only sensible to use when the table does not wrap over multiple pages.
 // TODO: Should be able to set width too (not just based on context/relative positioning mode).
 func (table *Table) SetPos(x, y float64) {
@@ -139,7 +142,8 @@ func (table *Table) SetPos(x, y float64) {
 	table.yPos = y
 }
 
-// GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap over multiple pages.
+// GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages.
 // Implements the Drawable interface.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	blocks := []*Block{}
@@ -196,7 +200,9 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		// For text: Calculate width, height, wrapping within available space if specified.
-		if p, isp := cell.content.(*Paragraph); isp {
+		switch t := cell.content.(type) {
+		case *Paragraph:
+			p := t
 			if p.enableWrap {
 				p.SetWidth(w - cell.indent)
 			}
@@ -205,10 +211,66 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			newh += 0.5 * p.fontSize * p.lineHeight // TODO: Make the top margin configurable?
 			if newh > h {
 				diffh := newh - h
-				// Add diff to last row
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *StyledParagraph:
+			sp := t
+			if sp.enableWrap {
+				sp.SetWidth(w - cell.indent)
+			}
+
+			newh := sp.Height() + sp.margins.top + sp.margins.bottom
+			newh += 0.5 * sp.getTextHeight() // TODO: Make the top margin configurable?
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *Image:
+			img := t
+			newh := img.Height() + img.margins.top + img.margins.bottom
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *Division:
+			div := t
+
+			ctx := DrawContext{
+				X:     xrel,
+				Y:     yrel,
+				Width: w,
+			}
+
+			// Mock call to generate page blocks.
+			divBlocks, updCtx, err := div.GeneratePageBlocks(ctx)
+			if err != nil {
+				return nil, ctx, err
+			}
+
+			if len(divBlocks) > 1 {
+				// Wraps across page, make cell reach all the way to bottom of current page.
+				newh := ctx.Height - h
+				if newh > h {
+					diffh := newh - h
+					// Add diff to last row.
+					table.rowHeights[cell.row+cell.rowspan-2] += diffh
+				}
+			}
+
+			newh := div.Height() + div.margins.top + div.margins.bottom
+			_ = updCtx
+
+			// Get available width and height.
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		}
+
 	}
 
 	// Draw cells.
@@ -240,6 +302,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		ctx.Height = origHeight - yrel
+
 		if h > ctx.Height {
 			// Go to next page.
 			blocks = append(blocks, block)
@@ -257,39 +320,45 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		ctx.X = ulX + xrel
 		ctx.Y = ulY + yrel
 
+		// Creating border
+		border := newBorder(ctx.X, ctx.Y, w, h)
+
 		if cell.backgroundColor != nil {
-			// Draw background (fill)
-			rect := NewRectangle(ctx.X, ctx.Y, w, h)
 			r := cell.backgroundColor.R()
 			g := cell.backgroundColor.G()
 			b := cell.backgroundColor.B()
-			rect.SetFillColor(ColorRGBFromArithmetic(r, g, b))
-			if cell.borderStyle != CellBorderStyleNone {
-				// and border.
-				rect.SetBorderWidth(cell.borderWidth)
-				r := cell.borderColor.R()
-				g := cell.borderColor.G()
-				b := cell.borderColor.B()
-				rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
-			} else {
-				rect.SetBorderWidth(0)
-			}
-			err := block.Draw(rect)
-			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
-			}
-		} else if cell.borderStyle != CellBorderStyleNone {
-			// Draw border (no fill).
-			rect := NewRectangle(ctx.X, ctx.Y, w, h)
-			rect.SetBorderWidth(cell.borderWidth)
-			r := cell.borderColor.R()
-			g := cell.borderColor.G()
-			b := cell.borderColor.B()
-			rect.SetBorderColor(ColorRGBFromArithmetic(r, g, b))
-			err := block.Draw(rect)
-			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
-			}
+
+			border.SetFillColor(ColorRGBFromArithmetic(r, g, b))
+		}
+
+		border.LineStyle = cell.borderLineStyle
+
+		border.styleLeft = cell.borderStyleLeft
+		border.styleRight = cell.borderStyleRight
+		border.styleTop = cell.borderStyleTop
+		border.styleBottom = cell.borderStyleBottom
+
+		if cell.borderColorLeft != nil {
+			border.SetColorLeft(ColorRGBFromArithmetic(cell.borderColorLeft.R(), cell.borderColorLeft.G(), cell.borderColorLeft.B()))
+		}
+		if cell.borderColorBottom != nil {
+			border.SetColorBottom(ColorRGBFromArithmetic(cell.borderColorBottom.R(), cell.borderColorBottom.G(), cell.borderColorBottom.B()))
+		}
+		if cell.borderColorRight != nil {
+			border.SetColorRight(ColorRGBFromArithmetic(cell.borderColorRight.R(), cell.borderColorRight.G(), cell.borderColorRight.B()))
+		}
+		if cell.borderColorTop != nil {
+			border.SetColorTop(ColorRGBFromArithmetic(cell.borderColorTop.R(), cell.borderColorTop.G(), cell.borderColorTop.B()))
+		}
+
+		border.SetWidthBottom(cell.borderWidthBottom)
+		border.SetWidthLeft(cell.borderWidthLeft)
+		border.SetWidthRight(cell.borderWidthRight)
+		border.SetWidthTop(cell.borderWidthTop)
+
+		err := block.Draw(border)
+		if err != nil {
+			common.Log.Debug("ERROR: %v", err)
 		}
 
 		if cell.content != nil {
@@ -334,7 +403,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 			err := block.DrawWithContext(cell.content, ctx)
 			if err != nil {
-				common.Log.Debug("Error: %v\n", err)
+				common.Log.Debug("ERROR: %v", err)
 			}
 		}
 
@@ -344,14 +413,14 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 	if table.positioning.isAbsolute() {
 		return blocks, origCtx, nil
-	} else {
-		// Move back X after.
-		ctx.X = origCtx.X
-		// Return original width
-		ctx.Width = origCtx.Width
-		// Add the bottom margin
-		ctx.Y += table.margins.bottom
 	}
+	// Relative mode.
+	// Move back X after.
+	ctx.X = origCtx.X
+	// Return original width.
+	ctx.Width = origCtx.Width
+	// Add the bottom margin.
+	ctx.Y += table.margins.bottom
 
 	return blocks, ctx, nil
 }
@@ -365,7 +434,21 @@ const (
 	CellBorderStyleNone CellBorderStyle = iota
 
 	// Borders along all sides (boxed).
-	CellBorderStyleBox
+	CellBorderStyleSingle
+	CellBorderStyleDouble
+)
+
+// CellBorderSide defines the table cell's border side.
+type CellBorderSide int
+
+const (
+	// Left side border.
+	CellBorderSideLeft CellBorderSide = iota
+	CellBorderSideRight
+	CellBorderSideTop
+	CellBorderSideBottom
+	// Border on all sides.
+	CellBorderSideAll
 )
 
 // CellHorizontalAlignment defines the table cell's horizontal alignment.
@@ -403,10 +486,21 @@ type TableCell struct {
 	// Background
 	backgroundColor *model.PdfColorDeviceRGB
 
-	// Border
-	borderStyle CellBorderStyle
-	borderColor *model.PdfColorDeviceRGB
-	borderWidth float64
+	borderLineStyle draw.LineStyle
+
+	// border
+	borderStyleLeft   CellBorderStyle
+	borderColorLeft   *model.PdfColorDeviceRGB
+	borderWidthLeft   float64
+	borderStyleBottom CellBorderStyle
+	borderColorBottom *model.PdfColorDeviceRGB
+	borderWidthBottom float64
+	borderStyleRight  CellBorderStyle
+	borderColorRight  *model.PdfColorDeviceRGB
+	borderWidthRight  float64
+	borderStyleTop    CellBorderStyle
+	borderColorTop    *model.PdfColorDeviceRGB
+	borderWidthTop    float64
 
 	// The row and column which the cell starts from.
 	row, col int
@@ -447,12 +541,23 @@ func (table *Table) NewCell() *TableCell {
 	// Default left indent
 	cell.indent = 5
 
-	cell.borderStyle = CellBorderStyleNone
-	cell.borderColor = model.NewPdfColorDeviceRGB(0, 0, 0)
+	cell.borderStyleLeft = CellBorderStyleNone
+	cell.borderLineStyle = draw.LineStyleSolid
 
 	// Alignment defaults.
 	cell.horizontalAlignment = CellHorizontalAlignmentLeft
 	cell.verticalAlignment = CellVerticalAlignmentTop
+
+	cell.borderWidthLeft = 0
+	cell.borderWidthBottom = 0
+	cell.borderWidthRight = 0
+	cell.borderWidthTop = 0
+
+	col := ColorBlack
+	cell.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 
 	cell.rowspan = 1
 	cell.colspan = 1
@@ -518,14 +623,51 @@ func (cell *TableCell) SetVerticalAlignment(valign CellVerticalAlignment) {
 }
 
 // SetBorder sets the cell's border style.
-func (cell *TableCell) SetBorder(style CellBorderStyle, width float64) {
-	cell.borderStyle = style
-	cell.borderWidth = width
+func (cell *TableCell) SetBorder(side CellBorderSide, style CellBorderStyle, width float64) {
+	if style == CellBorderStyleSingle && side == CellBorderSideAll {
+		cell.borderStyleLeft = CellBorderStyleSingle
+		cell.borderWidthLeft = width
+		cell.borderStyleBottom = CellBorderStyleSingle
+		cell.borderWidthBottom = width
+		cell.borderStyleRight = CellBorderStyleSingle
+		cell.borderWidthRight = width
+		cell.borderStyleTop = CellBorderStyleSingle
+		cell.borderWidthTop = width
+	} else if style == CellBorderStyleDouble && side == CellBorderSideAll {
+		cell.borderStyleLeft = CellBorderStyleDouble
+		cell.borderWidthLeft = width
+		cell.borderStyleBottom = CellBorderStyleDouble
+		cell.borderWidthBottom = width
+		cell.borderStyleRight = CellBorderStyleDouble
+		cell.borderWidthRight = width
+		cell.borderStyleTop = CellBorderStyleDouble
+		cell.borderWidthTop = width
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideLeft {
+		cell.borderStyleLeft = style
+		cell.borderWidthLeft = width
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideBottom {
+		cell.borderStyleBottom = style
+		cell.borderWidthBottom = width
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideRight {
+		cell.borderStyleRight = style
+		cell.borderWidthRight = width
+	} else if (style == CellBorderStyleSingle || style == CellBorderStyleDouble) && side == CellBorderSideTop {
+		cell.borderStyleTop = style
+		cell.borderWidthTop = width
+	}
 }
 
 // SetBorderColor sets the cell's border color.
 func (cell *TableCell) SetBorderColor(col Color) {
-	cell.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorLeft = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorBottom = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
+	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
+}
+
+// SetBorderLineStyle sets border style (currently dashed or plain).
+func (cell *TableCell) SetBorderLineStyle(style draw.LineStyle) {
+	cell.borderLineStyle = style
 }
 
 // SetBackgroundColor sets the cell's background color.
@@ -544,8 +686,7 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 }
 
 // SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
-// The currently supported VectorDrawable is: *Paragraph.
-// TODO: Add support for *Image, *Block.
+// The currently supported VectorDrawable is: *Paragraph, *StyledParagraph.
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
@@ -555,9 +696,20 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 		}
 
 		cell.content = vd
+	case *StyledParagraph:
+		if t.defaultWrap {
+			// Default styled paragraph settings in table: no wrapping.
+			t.enableWrap = false // No wrapping.
+		}
+
+		cell.content = vd
+	case *Image:
+		cell.content = vd
+	case *Division:
+		cell.content = vd
 	default:
-		common.Log.Debug("Error: unsupported cell content type %T\n", vd)
-		return errors.New("Type check error")
+		common.Log.Debug("ERROR: unsupported cell content type %T", vd)
+		return core.ErrTypeError
 	}
 
 	return nil

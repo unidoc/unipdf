@@ -30,7 +30,7 @@ func (enc IdentityEncoder) String() string {
 }
 
 // Encode converts the Go unicode string `raw` to a PDF encoded string.
-func (enc IdentityEncoder) Encode(raw string) string {
+func (enc IdentityEncoder) Encode(raw string) []byte {
 	// runes -> character codes -> bytes
 	var encoded bytes.Buffer
 	for _, r := range raw {
@@ -44,7 +44,7 @@ func (enc IdentityEncoder) Encode(raw string) string {
 		encoded.WriteByte(byte((code & 0xff00) >> 8))
 		encoded.WriteByte(byte(code & 0xff))
 	}
-	return encoded.String()
+	return encoded.Bytes()
 }
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.

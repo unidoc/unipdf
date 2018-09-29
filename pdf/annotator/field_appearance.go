@@ -191,7 +191,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	if encoder != nil {
 		for i := range lines {
-			lines[i] = encoder.Encode(lines[i])
+			lines[i] = string(encoder.Encode(lines[i]))
 		}
 	}
 
@@ -352,7 +352,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 				continue
 			}
 
-			encoded = encoder.Encode(encoded)
+			encoded = string(encoder.Encode(encoded))
 
 			// Calculate indent such that the glyph is positioned in the center.
 			glyphwidth := fontsize * metrics.Wx / 1000.0

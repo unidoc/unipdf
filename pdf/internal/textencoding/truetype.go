@@ -35,8 +35,8 @@ func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[uint16]uint16) TrueTypeFontE
 	}
 }
 
-// ttEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
-const ttEncoderNumEntries = 1000
+// ttEncoderMaxNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String().
+const ttEncoderMaxNumEntries = 10
 
 // String returns a string that describes `enc`.
 func (enc TrueTypeFontEncoder) String() string {
@@ -50,8 +50,8 @@ func (enc TrueTypeFontEncoder) String() string {
 	}
 	sort.Ints(codes)
 	numCodes := len(codes)
-	if numCodes > ttEncoderNumEntries {
-		numCodes = ttEncoderNumEntries
+	if numCodes > ttEncoderMaxNumEntries {
+		numCodes = ttEncoderMaxNumEntries
 	}
 
 	for i := 0; i < numCodes; i++ {
@@ -63,7 +63,7 @@ func (enc TrueTypeFontEncoder) String() string {
 }
 
 // Encode converts the Go unicode string `raw` to a PDF encoded string.
-func (enc TrueTypeFontEncoder) Encode(raw string) string {
+func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
 	// runes -> character codes -> bytes
 	var encoded bytes.Buffer
 	for _, r := range raw {
@@ -77,7 +77,7 @@ func (enc TrueTypeFontEncoder) Encode(raw string) string {
 		encoded.WriteByte(byte((code & 0xff00) >> 8))
 		encoded.WriteByte(byte(code & 0xff))
 	}
-	return encoded.String()
+	return encoded.Bytes()
 }
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.

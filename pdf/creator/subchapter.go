@@ -9,11 +9,11 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Subchapter simply represents a sub chapter pertaining to a specific Chapter.  It can contain multiple
-// Drawables, just like a chapter.
+// Subchapter simply represents a sub chapter pertaining to a specific Chapter.  It can contain
+// multiple Drawables, just like a chapter.
 type Subchapter struct {
 	chapterNum    int
 	subchapterNum int
@@ -56,7 +56,8 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
 	p := NewParagraph(heading)
 
 	p.SetFontSize(14)
-	p.SetFont(fonts.NewFontHelvetica()) // bold?
+	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
+	p.SetFont(helvetica) // bold?
 
 	subchap.showNumbering = true
 	subchap.includeInTOC = true
@@ -131,8 +132,8 @@ func (subchap *Subchapter) Add(d Drawable) {
 	}
 }
 
-// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages. Implements the Drawable interface.
+// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages. Implements the Drawable interface.
 func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
@@ -180,7 +181,6 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 	if subchap.positioning.isAbsolute() {
 		// If absolute: return original context.
 		return blocks, origCtx, nil
-
 	}
 
 	return blocks, ctx, nil

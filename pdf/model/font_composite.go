@@ -140,9 +140,12 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 
 	font.container.PdfObject = d
 
-	if font.encoder != nil {
+	if font.Encoding != nil {
+		d.Set("Encoding", font.Encoding)
+	} else if font.encoder != nil {
 		d.Set("Encoding", font.encoder.ToPdfObject())
 	}
+
 	if font.DescendantFont != nil {
 		// Shall be 1 element array.
 		d.Set("DescendantFonts", core.MakeArray(font.DescendantFont.ToPdfObject()))
@@ -194,8 +197,8 @@ type pdfCIDFontType0 struct {
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
-	CIDSystemInfo  *core.PdfObjectDictionary // (Required) Dictionary that defines the character collection of the CIDFont. See Table 116.
-	FontDescriptor core.PdfObject            // (Required) Describes the CIDFont’s default metrics other than its glyph widths
+	CIDSystemInfo *core.PdfObjectDictionary // (Required) Dictionary that defines the character
+	// collection of the CIDFont. See Table 116.
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
@@ -305,15 +308,19 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	enc := textencoding.NewTrueTypeFontEncoder(font.ttfParser.Chars)
 
 	// Convert the glyph to character code.
-	rune, found := enc.GlyphToRune(glyph)
+	r, found := enc.GlyphToRune(glyph)
 	if !found {
 		common.Log.Debug("Unable to convert glyph %q to charcode (identity)", glyph)
 		return metrics, false
 	}
 
-	w, found := font.runeToWidthMap[uint16(rune)]
+	w, found := font.runeToWidthMap[uint16(r)]
 	if !found {
-		return metrics, false
+		dw, ok := core.GetInt(font.DW)
+		if !ok {
+			return metrics, false
+		}
+		w = int(*dw)
 	}
 	metrics.GlyphName = glyph
 	metrics.Wx = float64(w)
@@ -432,8 +439,8 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Construct W array.  Stores character code to width mappings.
 	wArr := &core.PdfObjectArray{}
-	i := uint16(0)
-	for int(i) < len(runes) {
+
+	for i := uint16(0); int(i) < len(runes); {
 
 		j := i + 1
 		for int(j) < len(runes) {
@@ -466,6 +473,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Make the font descriptor.
 	descriptor := &PdfFontDescriptor{}
+	descriptor.FontName = core.MakeName(ttf.PostScriptName)
 	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
 	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
 	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
@@ -505,12 +513,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 	descriptor.Flags = core.MakeInteger(int64(flags))
 
+	cidfont.basefont = ttf.PostScriptName
+	cidfont.fontDescriptor = descriptor
+
 	// Make root Type0 font.
 	type0 := pdfFontType0{
 		fontCommon: fontCommon{
-			subtype:        "Type0",
-			basefont:       ttf.PostScriptName,
-			fontDescriptor: descriptor,
+			subtype:  "Type0",
+			basefont: ttf.PostScriptName,
 		},
 		DescendantFont: &PdfFont{
 			context: cidfont,
@@ -518,6 +528,8 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		Encoding: core.MakeName("Identity-H"),
 		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),
 	}
+
+	type0.toUnicodeCmap = ttf.MakeToUnicode()
 
 	// Build Font.
 	font := PdfFont{

@@ -10,11 +10,11 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section. The concept is
-// the same as a book or a report chapter.
+// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
+// The concept is the same as a book or a report chapter.
 type Chapter struct {
 	number  int
 	title   string
@@ -57,7 +57,8 @@ func (c *Creator) NewChapter(title string) *Chapter {
 	heading := fmt.Sprintf("%d. %s", c.chapters, title)
 	p := NewParagraph(heading)
 	p.SetFontSize(16)
-	p.SetFont(fonts.NewFontHelvetica()) // bold?
+	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
+	p.SetFont(helvetica) // bold?
 
 	chap.heading = p
 	chap.contents = []Drawable{}
@@ -113,7 +114,7 @@ func (chap *Chapter) Add(d Drawable) error {
 
 	switch d.(type) {
 	case *Chapter:
-		common.Log.Debug("Error: Cannot add chapter to a chapter")
+		common.Log.Debug("ERROR: Cannot add chapter to a chapter")
 		return errors.New("Type check error")
 	case *Paragraph, *Image, *Block, *Subchapter, *Table, *PageBreak:
 		chap.contents = append(chap.contents, d)
@@ -125,8 +126,8 @@ func (chap *Chapter) Add(d Drawable) error {
 	return nil
 }
 
-// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
+// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages.
 func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
@@ -175,7 +176,6 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 	if chap.positioning.isAbsolute() {
 		// If absolute: return original context.
 		return blocks, origCtx, nil
-
 	}
 
 	return blocks, ctx, nil

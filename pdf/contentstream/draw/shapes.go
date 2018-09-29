@@ -177,6 +177,14 @@ const (
 	LineEndingStyleButt  LineEndingStyle = 2
 )
 
+// LineStyle refers to how the line will be created.
+type LineStyle int
+
+const (
+	LineStyleSolid  LineStyle = 0
+	LineStyleDashed LineStyle = 1
+)
+
 // Line defines a line shape between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
 // or arrows at either end.  The line also has a specified width, color and opacity.
 type Line struct {
@@ -189,6 +197,7 @@ type Line struct {
 	LineWidth        float64
 	LineEndingStyle1 LineEndingStyle // Line ending style of point 1.
 	LineEndingStyle2 LineEndingStyle // Line ending style of point 2.
+	LineStyle        LineStyle
 }
 
 // Draw draws the line to PDF contentstream. Generates the content stream which can be used in page contents or
@@ -335,15 +344,18 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	pathBbox := path.GetBoundingBox()
 
 	DrawPathWithCreator(path, creator)
-	creator.Add_f().
-		//creator.Add_S().
-		Add_Q()
 
-	/*
-		// Offsets (needed for placement of annotations bbox).
-		offX := x1 - VsX
-		offY := y1 - VsY
-	*/
+	if line.LineStyle == LineStyleDashed {
+		creator.
+			Add_d([]int64{1, 1}, 0).
+			Add_S().
+			Add_f().
+			Add_Q()
+	} else {
+		creator.
+			Add_f().
+			Add_Q()
+	}
 
 	// Bounding box - global coordinate system.
 	bbox := &pdf.PdfRectangle{}
@@ -353,4 +365,50 @@ func (line Line) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	bbox.Ury = pathBbox.Y + pathBbox.Height
 
 	return creator.Bytes(), bbox, nil
+}
+
+// BasicLine defines a line between point 1 (X1,Y1) and point 2 (X2,Y2). The line has a specified width, color and opacity.
+type BasicLine struct {
+	X1        float64
+	Y1        float64
+	X2        float64
+	Y2        float64
+	LineColor *pdf.PdfColorDeviceRGB
+	Opacity   float64 // Alpha value (0-1).
+	LineWidth float64
+	LineStyle LineStyle
+}
+
+// Draw draws the basic line to PDF. Generates the content stream which can be used in page contents or appearance
+// stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error if
+// one occurred.
+func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+	w := line.LineWidth
+
+	path := NewPath()
+	path = path.AppendPoint(NewPoint(line.X1, line.Y1))
+	path = path.AppendPoint(NewPoint(line.X2, line.Y2))
+
+	cc := pdfcontent.NewContentCreator()
+
+	pathBbox := path.GetBoundingBox()
+
+	DrawPathWithCreator(path, cc)
+
+	if line.LineStyle == LineStyleDashed {
+		cc.Add_d([]int64{1, 1}, 0)
+	}
+	cc.Add_RG(line.LineColor.R(), line.LineColor.G(), line.LineColor.B()).
+		Add_w(w).
+		Add_S().
+		Add_Q()
+
+	// Bounding box - global coordinate system.
+	bbox := &pdf.PdfRectangle{}
+	bbox.Llx = pathBbox.X
+	bbox.Lly = pathBbox.Y
+	bbox.Urx = pathBbox.X + pathBbox.Width
+	bbox.Ury = pathBbox.Y + pathBbox.Height
+
+	return cc.Bytes(), bbox, nil
 }
