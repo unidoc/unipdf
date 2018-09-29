@@ -29,6 +29,10 @@ var simpleFontDicts = []string{
 		/Encoding /WinAnsiEncoding
 		>>`,
 	`<< /Type /Font
+		/BaseFont /Courier
+		/Subtype /Type1
+		>>`,
+	`<< /Type /Font
 		/BaseFont /Helvetica-Oblique
 		/Subtype /Type1
 		/Encoding /WinAnsiEncoding
@@ -136,6 +140,49 @@ func TestNewStandard14Font(t *testing.T) {
 func TestSimpleFonts(t *testing.T) {
 	for _, d := range simpleFontDicts {
 		objFontObj(t, d)
+	}
+}
+
+// Test loading a standard font from object and check the encoding and glyph metrics.
+func TestStandardFontEncodings(t *testing.T) {
+	raw := `
+	1 0 obj
+	<< /Type /Font
+		/BaseFont /Courier
+		/Subtype /Type1
+	>>
+	endobj
+	`
+
+	r := model.NewReaderForText(raw)
+
+	err := r.ParseIndObjSeries()
+	if err != nil {
+		t.Fatalf("Failed loading indirect object series: %v", err)
+	}
+
+	// Load the field from object number 1.
+	obj, err := r.GetIndirectObjectByNumber(1)
+	if err != nil {
+		t.Fatalf("Failed to parse indirect obj (%s)", err)
+	}
+
+	font, err := model.NewPdfFontFromPdfObject(obj)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	str := "Aabcdefg0123456790*"
+	for _, r := range str {
+		glyph, has := font.Encoder().RuneToGlyph(r)
+		if !has {
+			t.Fatalf("Encoder does not have '%c'", r)
+		}
+
+		_, has = font.GetGlyphCharMetrics(glyph)
+		if !has {
+			t.Fatalf("Loaded simple font not having glyph char metrics for %s", glyph)
+		}
 	}
 }
 
@@ -304,7 +351,6 @@ func (f *fontFragmentTest) check(t *testing.T) {
 // objFontObj parses `fontDict` to a make a Font, creates a PDF object from the Font and checks that
 // the new PDF object is the same as the input object
 func objFontObj(t *testing.T, fontDict string) error {
-
 	parser := core.NewParserFromString(fontDict)
 	obj, err := parser.ParseDict()
 	if err != nil {
