@@ -79,29 +79,7 @@ func (this *PdfReader) IsEncrypted() (bool, error) {
 // GetEncryptionMethod returns a descriptive information string about the encryption method used.
 func (this *PdfReader) GetEncryptionMethod() string {
 	crypter := this.parser.GetCrypter()
-	str := crypter.Filter + " - "
-
-	if crypter.V == 0 {
-		str += "Undocumented algorithm"
-	} else if crypter.V == 1 {
-		// RC4 or AES (bits: 40)
-		str += "RC4: 40 bits"
-	} else if crypter.V == 2 {
-		str += fmt.Sprintf("RC4: %d bits", crypter.Length)
-	} else if crypter.V == 3 {
-		str += "Unpublished algorithm"
-	} else if crypter.V >= 4 {
-		// Look at CF, StmF, StrF
-		str += fmt.Sprintf("Stream filter: %s - String filter: %s", crypter.StreamFilter, crypter.StringFilter)
-		str += "; Crypt filters:"
-		for name, cf := range crypter.CryptFilters {
-			str += fmt.Sprintf(" - %s: %s (%d)", name, cf.Cfm, cf.Length)
-		}
-	}
-	perms := crypter.GetAccessPermissions()
-	str += fmt.Sprintf(" - %#v", perms)
-
-	return str
+	return crypter.String()
 }
 
 // Decrypt decrypts the PDF file with a specified password.  Also tries to

@@ -13,17 +13,58 @@ import (
 )
 
 var (
-	cryptMethods = make(map[string]cryptFilterMethod)
+	cryptMethods = make(map[string]cryptFilterFunc)
 )
 
+// cryptFilterDict represents information from a CryptFilter dictionary.
+type cryptFilterDict struct {
+	CFM       string // The method used, if any, by the PDF reader to decrypt data.
+	AuthEvent authEvent
+	Length    int // in bytes
+}
+
+func (cf *cryptFilterDict) ReadFrom(d *PdfObjectDictionary) error {
+	// If Type present, should be CryptFilter.
+	if typename, ok := d.Get("Type").(*PdfObjectName); ok {
+		if string(*typename) != "CryptFilter" {
+			return fmt.Errorf("CF dict type != CryptFilter (%s)", typename)
+		}
+	}
+
+	// Method.
+	name, ok := d.Get("CFM").(*PdfObjectName)
+	if !ok {
+		return fmt.Errorf("Unsupported crypt filter (None)")
+	}
+	cf.CFM = string(*name)
+
+	// Auth event
+	if event, ok := d.Get("AuthEvent").(*PdfObjectName); ok {
+		cf.AuthEvent = authEvent(*event)
+	} else {
+		cf.AuthEvent = authEventDocOpen
+	}
+
+	if length, ok := d.Get("Length").(*PdfObjectInteger); ok {
+		cf.Length = int(*length)
+	}
+	return nil
+}
+
+// cryptFilterFunc is used to construct crypt filters from CryptFilter dictionary
+type cryptFilterFunc func(d cryptFilterDict) (CryptFilter, error)
+
 // registerCryptFilterMethod registers a CFM.
-func registerCryptFilterMethod(m cryptFilterMethod) {
-	cryptMethods[m.CFM()] = m
+func registerCryptFilterMethod(name string, fnc cryptFilterFunc) {
+	if _, ok := cryptMethods[name]; ok {
+		panic("already registered")
+	}
+	cryptMethods[name] = fnc
 }
 
 // getCryptFilterMethod check if a CFM with a specified name is supported an returns its implementation.
-func getCryptFilterMethod(name string) (cryptFilterMethod, error) {
-	f := cryptMethods[name]
+func getCryptFilterMethod(name string) (cryptFilterFunc, error) {
+	f := cryptMethods[string(name)]
 	if f == nil {
 		return nil, fmt.Errorf("unsupported crypt filter: %q", name)
 	}
@@ -31,16 +72,19 @@ func getCryptFilterMethod(name string) (cryptFilterMethod, error) {
 }
 
 func init() {
-	// register supported crypt filter methods
-	registerCryptFilterMethod(cryptFilterV2{})
-	registerCryptFilterMethod(cryptFilterAESV2{})
-	registerCryptFilterMethod(cryptFilterAESV3{})
+	// Register supported crypt filter methods.
+	// Table 25, CFM (page 92)
+	registerCryptFilterMethod("V2", newCryptFilterV2)
+	registerCryptFilterMethod("AESV2", newCryptFilterAESV2)
+	registerCryptFilterMethod("AESV3", newCryptFilterAESV3)
 }
 
-// cryptFilterMethod is a common interface for crypt filter methods.
-type cryptFilterMethod interface {
-	// CFM returns a name of the filter that should be used in CFM field of Encrypt dictionary.
-	CFM() string
+// CryptFilter is a common interface for crypt filter methods.
+type CryptFilter interface {
+	// Name returns a name of the filter that should be used in CFM field of Encrypt dictionary.
+	Name() string
+	// KeyLength returns a length of the encryption key in bytes.
+	KeyLength() int
 	// MakeKey generates a object encryption key based on file encryption key and object numbers.
 	// Used only for legacy filters - AESV3 doesn't change the key for each object.
 	MakeKey(objNum, genNum uint32, fkey []byte) ([]byte, error)
@@ -50,6 +94,40 @@ type cryptFilterMethod interface {
 	// DecryptBytes decrypts a buffer using object encryption key, as returned by MakeKey.
 	// Implementation may reuse a buffer and decrypt data in-place.
 	DecryptBytes(p []byte, okey []byte) ([]byte, error)
+}
+
+func cryptFilterToDict(cf CryptFilter, event authEvent) *PdfObjectDictionary {
+	if event == "" {
+		event = authEventDocOpen
+	}
+	v := MakeDict()
+	v.Set("Type", MakeName("CryptFilter")) // optional
+	v.Set("AuthEvent", MakeName(string(event)))
+	v.Set("CFM", MakeName(cf.Name()))
+	v.Set("Length", MakeInteger(int64(cf.KeyLength())))
+	return v
+}
+
+type cryptFilteridentity struct{}
+
+func (cryptFilteridentity) Name() string {
+	return "Identity"
+}
+
+func (cryptFilteridentity) KeyLength() int {
+	return 0
+}
+
+func (cryptFilteridentity) MakeKey(objNum, genNum uint32, fkey []byte) ([]byte, error) {
+	return fkey, nil
+}
+
+func (cryptFilteridentity) EncryptBytes(p []byte, okey []byte) ([]byte, error) {
+	return p, nil
+}
+
+func (cryptFilteridentity) DecryptBytes(p []byte, okey []byte) ([]byte, error) {
+	return p, nil
 }
 
 // makeKeyV2 is a common object key generation shared by V2 and AESV2 crypt filters.
@@ -88,11 +166,34 @@ func makeKeyV2(objNum, genNum uint32, ekey []byte, isAES bool) ([]byte, error) {
 	return hashb, nil
 }
 
-// cryptFilterV2 is a RC4-based filter
-type cryptFilterV2 struct{}
+func newCryptFilterV2(d cryptFilterDict) (CryptFilter, error) {
+	if d.Length%8 != 0 {
+		return nil, fmt.Errorf("Crypt filter length not multiple of 8 (%d)", d.Length)
+	}
+	// Standard security handler expresses the length in multiples of 8 (16 means 128)
+	// We only deal with standard so far. (Public key not supported yet).
+	if d.Length < 5 || d.Length > 16 {
+		if d.Length == 64 || d.Length == 128 {
+			common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", d.Length)
+			d.Length /= 8
+		} else {
+			return nil, fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", d.Length)
+		}
+	}
+	return cryptFilterV2{length: d.Length}, nil
+}
 
-func (cryptFilterV2) CFM() string {
-	return CryptFilterV2
+// cryptFilterV2 is a RC4-based filter
+type cryptFilterV2 struct {
+	length int
+}
+
+func (cryptFilterV2) Name() string {
+	return "V2"
+}
+
+func (f cryptFilterV2) KeyLength() int {
+	return f.length
 }
 
 func (f cryptFilterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
@@ -239,17 +340,35 @@ func (cryptFilterAES) DecryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	return buf, nil
 }
 
+func newCryptFilterAESV2(d cryptFilterDict) (CryptFilter, error) {
+	if d.Length != 0 && d.Length != 16 {
+		return nil, fmt.Errorf("Invalid AESV2 crypt filter length (%d)", d.Length)
+	}
+	return cryptFilterAESV2{}, nil
+}
+
 // cryptFilterAESV2 is an AES-based filter (128 bit key, PDF 1.6)
 type cryptFilterAESV2 struct {
 	cryptFilterAES
 }
 
-func (cryptFilterAESV2) CFM() string {
-	return CryptFilterAESV2
+func (cryptFilterAESV2) Name() string {
+	return "AESV2"
+}
+
+func (cryptFilterAESV2) KeyLength() int {
+	return 128 / 8
 }
 
 func (cryptFilterAESV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
 	return makeKeyV2(objNum, genNum, ekey, true)
+}
+
+func newCryptFilterAESV3(d cryptFilterDict) (CryptFilter, error) {
+	if d.Length != 0 && d.Length != 32 {
+		return nil, fmt.Errorf("Invalid AESV3 crypt filter length (%d)", d.Length)
+	}
+	return cryptFilterAESV3{}, nil
 }
 
 // cryptFilterAESV3 is an AES-based filter (256 bit key, PDF 2.0)
@@ -257,8 +376,12 @@ type cryptFilterAESV3 struct {
 	cryptFilterAES
 }
 
-func (cryptFilterAESV3) CFM() string {
-	return CryptFilterAESV3
+func (cryptFilterAESV3) Name() string {
+	return "AESV3"
+}
+
+func (cryptFilterAESV3) KeyLength() int {
+	return 256 / 8
 }
 
 func (cryptFilterAESV3) MakeKey(_, _ uint32, ekey []byte) ([]byte, error) {

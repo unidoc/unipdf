@@ -1590,7 +1590,7 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 		return false, fmt.Errorf("unsupported type: %T", e)
 	}
 
-	crypter, err := PdfCryptMakeNew(parser, dict, parser.trailer)
+	crypter, err := PdfCryptNewDecrypt(parser, dict, parser.trailer)
 	if err != nil {
 		return false, err
 	}
@@ -1608,7 +1608,7 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		}
 	}
-	parser.crypter = &crypter
+	parser.crypter = crypter
 	common.Log.Trace("Crypter object %b", crypter)
 	return true, nil
 }
