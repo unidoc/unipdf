@@ -162,6 +162,17 @@ func MakeHexString(s string) *PdfObjectString {
 	return &str
 }
 
+// MakeEncodedString encodes `s` and creates a PDFObjectString.
+// Uses UTF-16BE encoding.
+func MakeEncodedString(s string) *PdfObjectString {
+	var buf bytes.Buffer
+	buf.Write([]byte{0xFE, 0xFF})
+	buf.WriteString(strutils.StringToUTF16(s))
+
+	str := PdfObjectString{val: buf.String(), isHex: true}
+	return &str
+}
+
 // MakeNull creates an PdfObjectNull.
 func MakeNull() *PdfObjectNull {
 	null := PdfObjectNull{}

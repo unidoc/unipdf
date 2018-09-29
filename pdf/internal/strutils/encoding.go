@@ -7,6 +7,7 @@
 package strutils
 
 import (
+	"bytes"
 	"unicode/utf16"
 
 	"github.com/unidoc/unidoc/common"
@@ -33,6 +34,19 @@ func UTF16ToRunes(b []byte) []rune {
 // UTF16ToString decodes the UTF-16BE encoded byte slice `b` to a unicode go string.
 func UTF16ToString(b []byte) string {
 	return string(UTF16ToRunes(b))
+}
+
+// StringToUTF16 encoded `s` to UTF16 and returns a string containing UTF16 runes.
+func StringToUTF16(s string) string {
+	encoded := utf16.Encode([]rune(s))
+
+	var buf bytes.Buffer
+	for _, code := range encoded {
+		buf.WriteByte(byte((code >> 8) & 0xff))
+		buf.WriteByte(byte(code & 0xff))
+	}
+
+	return buf.String()
 }
 
 // PDFDocEncodingToRunes decodes PDFDocEncoded byte slice `b` to unicode runes.

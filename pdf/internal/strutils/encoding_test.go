@@ -24,3 +24,15 @@ func TestUTF16Encoding(t *testing.T) {
 		t.Errorf("'%s' != '%s'\n", v, exp)
 	}
 }
+
+func TestUTF16EncodeDecode(t *testing.T) {
+	testcases := []string{"þráður321", "áþðurfyrr \n", "⌘⌘⌘⺃⺓$", "€€$£"}
+
+	for _, tcase := range testcases {
+		encoded := StringToUTF16(tcase)
+		decoded := UTF16ToString([]byte(encoded))
+		if decoded != tcase {
+			t.Fatalf("'% X' != '% X'\n", decoded, tcase)
+		}
+	}
+}
