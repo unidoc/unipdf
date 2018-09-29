@@ -44,6 +44,8 @@ type Creator struct {
 
 	// Forms.
 	acroForm *model.PdfAcroForm
+
+	optimizer model.Optimizer
 }
 
 // SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
@@ -99,6 +101,16 @@ func New() *Creator {
 	c.toc = newTableOfContents()
 
 	return c
+}
+
+// SetOptimizer sets the optimizer to optimize PDF before writing.
+func (c *Creator) SetOptimizer(optimizer model.Optimizer) {
+	c.optimizer = optimizer
+}
+
+// GetOptimizer returns current PDF optimizer.
+func (c *Creator) GetOptimizer() model.Optimizer {
+	return c.optimizer
 }
 
 // SetPageMargins sets the page margins: left, right, top, bottom.
@@ -459,13 +471,15 @@ func (c *Creator) Draw(d Drawable) error {
 	return nil
 }
 
-// Write output of creator to io.WriteSeeker interface.
-func (c *Creator) Write(ws io.WriteSeeker) error {
+// Write output of creator to io.Writer interface.
+func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
 		c.finalize()
 	}
 
 	pdfWriter := model.NewPdfWriter()
+	pdfWriter.SetOptimizer(c.optimizer)
+
 	// Form fields.
 	if c.acroForm != nil {
 		err := pdfWriter.SetForms(c.acroForm)
