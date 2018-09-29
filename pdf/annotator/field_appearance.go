@@ -286,6 +286,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 				// Use default if zero.
 				fontsize = fontsizeDef
 			}
+			op.Params[1] = core.MakeFloat(fontsize)
 		}
 		cc.AddOperand(*op)
 	}
