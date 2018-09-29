@@ -727,7 +727,6 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	return page, nil
 }
 
-/*
 // PageFromIndirectObject returns the PdfPage and page number for a given indirect object.
 func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, int, error) {
 	if len(r.PageList) != len(r.pageList) {
@@ -741,7 +740,6 @@ func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, in
 	}
 	return nil, 0, errors.New("Page not found")
 }
-*/
 
 // GetPage returns the PdfPage model for the specified page number.
 func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
