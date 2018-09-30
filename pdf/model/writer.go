@@ -247,7 +247,9 @@ func (this *PdfWriter) copyObjects() {
 	this.objectsMap = objectsMap
 	this.infoObj = copyObject(this.infoObj, objectToObjectCopyMap).(*PdfIndirectObject)
 	this.root = copyObject(this.root, objectToObjectCopyMap).(*PdfIndirectObject)
-	this.encryptObj = copyObject(this.encryptObj, objectToObjectCopyMap).(*PdfIndirectObject)
+	if this.encryptObj != nil {
+		this.encryptObj = copyObject(this.encryptObj, objectToObjectCopyMap).(*PdfIndirectObject)
+	}
 }
 
 // Set the PDF version of the output file.
