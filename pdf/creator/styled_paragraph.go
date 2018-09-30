@@ -20,10 +20,10 @@ import (
 // StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
 // By default occupies the available width in the drawing context.
 type StyledParagraph struct {
-	// Text chunks with styles that compose the paragraph
+	// Text chunks with styles that compose the paragraph.
 	chunks []TextChunk
 
-	// Style used for the paragraph for spacing and offsets
+	// Style used for the paragraph for spacing and offsets.
 	defaultStyle TextStyle
 
 	// The text encoder which can convert the text (as runes) into a series of glyphs and get character metrics.
@@ -64,7 +64,7 @@ type StyledParagraph struct {
 	// Text chunk lines after wrapping to available width.
 	lines [][]TextChunk
 
-	// Before render callback
+	// Before render callback.
 	beforeRender func(p *StyledParagraph, ctx DrawContext)
 }
 
@@ -258,7 +258,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 	return width
 }
 
-// getTextLineWidth calculates the text width of a provided collection of text chunks
+// getTextLineWidth calculates the text width of a provided collection of text chunks.
 func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
 	var width float64
 	for _, chunk := range line {
@@ -493,7 +493,7 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 
 // Draw block on specified location on Page, adding to the content stream.
 func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext) (DrawContext, error) {
-	// Find first free index for the font resources of the paragraph
+	// Find first free index for the font resources of the paragraph.
 	num := 1
 	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))
 	for blk.resources.HasFontByName(fontName) {
@@ -501,7 +501,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 		fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 	}
 
-	// Add default font to the page resources
+	// Add default font to the page resources.
 	err := blk.resources.SetFontByName(fontName, p.defaultStyle.Font.ToPdfObject())
 	if err != nil {
 		return ctx, err
@@ -514,7 +514,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Wrap the text into lines.
 	p.wrapText()
 
-	// Add the fonts of all chunks to the page resources
+	// Add the fonts of all chunks to the page resources.
 	fonts := [][]core.PdfObjectName{}
 
 	for _, line := range p.lines {
