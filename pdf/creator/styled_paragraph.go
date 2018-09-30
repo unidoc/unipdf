@@ -598,7 +598,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			spaces += chunkSpaces
 		}
 
-		// Add line shifts
+		// Add line shifts.
 		objs := []core.PdfObject{}
 		if p.alignment == TextAlignmentJustify {
 			// Not to justify last line.
@@ -620,7 +620,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				Add_TJ(objs...)
 		}
 
-		// Render line text chunks
+		// Render line text chunks.
 		for k, chunk := range line {
 			style := &chunk.Style
 

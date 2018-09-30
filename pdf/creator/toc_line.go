@@ -9,22 +9,42 @@ import (
 	"strings"
 )
 
+// TOCLine represents a line in a table of contents.
+// The component can be used both in the context of a
+// table of contents component and as a standalone component
+// The representation of a table of contents line is as follows:
+//       [number] [title]      [separator] [page]
+// e.g.: Chapter1 Introduction ........... 1
 type TOCLine struct {
+	// The underlyng styled paragraph used to render the TOC line.
 	sp *StyledParagraph
 
-	Number    TextChunk
-	Title     TextChunk
-	Page      TextChunk
+	// Holds the text and style of the number part of the TOC line.
+	Number TextChunk
+
+	// Holds the text and style of the title part of the TOC line.
+	Title TextChunk
+
+	// Holds the text and style of the separator part of the TOC line.
 	Separator TextChunk
 
-	level       uint
-	offset      float64
+	// Holds the text and style of the page part of the TOC line.
+	Page TextChunk
+
+	// The left margin of the TOC line.
+	offset float64
+
+	// The indentation level of the TOC line.
+	level uint
+
+	// The amount of space an indentation level occupies.
 	levelOffset float64
 
 	// Positioning: relative/absolute.
 	positioning positioning
 }
 
+// NewTOCLine creates a new table of contents line with the default style.
 func NewTOCLine(number, title, page string, level uint) *TOCLine {
 	style := NewTextStyle()
 
@@ -45,6 +65,7 @@ func NewTOCLine(number, title, page string, level uint) *TOCLine {
 	)
 }
 
+// NewStyledTOCLine creates a new table of contents line with the provided style.
 func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 	style := NewTextStyle()
 
@@ -65,6 +86,7 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 		offset:      0,
 		level:       level,
 		levelOffset: 10,
+		positioning: positionRelative,
 	}
 
 	sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
@@ -72,19 +94,23 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 	return tl
 }
 
+// Level returns the indentation level of the TOC line.
 func (tl *TOCLine) Level() uint {
 	return tl.level
 }
 
+// SetLevel sets the indentation level of the TOC line.
 func (tl *TOCLine) SetLevel(level uint) {
 	tl.level = level
 	tl.sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
 }
 
+// LevelOffset returns the amount of space an indentation level occupies.
 func (tl *TOCLine) LevelOffset() float64 {
 	return tl.levelOffset
 }
 
+// SetLevelOffset sets the amount of space an indentation level occupies.
 func (tl *TOCLine) SetLevelOffset(levelOffset float64) {
 	tl.levelOffset = levelOffset
 	tl.sp.margins.left = tl.offset + float64(tl.level-1)*tl.levelOffset
@@ -107,6 +133,8 @@ func (tl *TOCLine) SetMargins(left, right, top, bottom float64) {
 	m.bottom = bottom
 }
 
+// prepareParagraph generates and adds all the components of the TOC line
+// to the underlying paragraph.
 func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	// Add text chunks to the paragraph
 	title := tl.Title.Text
@@ -164,6 +192,8 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	}
 }
 
+// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
+// multiple pages.
 func (tl *TOCLine) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 

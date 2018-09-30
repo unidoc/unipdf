@@ -16,9 +16,6 @@ type TOC struct {
 	// The lines of the table of contents.
 	lines []*TOCLine
 
-	// Positioning: relative/absolute.
-	positioning positioning
-
 	// The style of the number part of new lines.
 	lineNumberStyle TextStyle
 
@@ -30,6 +27,9 @@ type TOC struct {
 
 	// The style of the page part of new lines.
 	linePageStyle TextStyle
+
+	// Positioning: relative/absolute.
+	positioning positioning
 }
 
 // NewTOC creates a new table of contents.
@@ -52,6 +52,7 @@ func NewTOC(title string) *TOC {
 		lineTitleStyle:     lineStyle,
 		lineSeparatorStyle: lineStyle,
 		linePageStyle:      lineStyle,
+		positioning:        positionRelative,
 	}
 }
 
