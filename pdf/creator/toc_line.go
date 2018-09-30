@@ -20,6 +20,9 @@ type TOCLine struct {
 	level       uint
 	offset      float64
 	levelOffset float64
+
+	// Positioning: relative/absolute.
+	positioning positioning
 }
 
 func NewTOCLine(number, title, page string, level uint) *TOCLine {
@@ -48,6 +51,7 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 	sp := NewStyledParagraph("", style)
 	sp.SetEnableWrap(true)
 	sp.SetTextAlignment(TextAlignmentLeft)
+	sp.SetMargins(0, 0, 2, 2)
 
 	tl := &TOCLine{
 		sp:     sp,
@@ -167,17 +171,13 @@ func (tl *TOCLine) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, e
 	if err != nil {
 		return blocks, ctx, err
 	}
-	if len(blocks) > 1 {
-		// Did not fit, moved to new Page block.
-		ctx.Page++
-	}
 
-	if tl.sp.positioning.isRelative() {
+	if tl.positioning.isRelative() {
 		// Move back X to same start of line.
 		ctx.X = origCtx.X
 	}
 
-	if tl.sp.positioning.isAbsolute() {
+	if tl.positioning.isAbsolute() {
 		// If absolute: return original context.
 		return blocks, origCtx, nil
 	}
