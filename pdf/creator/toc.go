@@ -16,17 +16,26 @@ type TOC struct {
 	// The lines of the table of contents.
 	lines []*TOCLine
 
-	// The style of the number part of new lines.
+	// The style of the number part of new TOC lines.
 	lineNumberStyle TextStyle
 
-	// The style of the title part of new lines.
+	// The style of the title part of new TOC lines.
 	lineTitleStyle TextStyle
 
-	// The style of the separator part of new lines.
+	// The style of the separator part of new TOC lines.
 	lineSeparatorStyle TextStyle
 
-	// The style of the page part of new lines.
+	// The style of the page part of new TOC lines.
 	linePageStyle TextStyle
+
+	// The separator for new TOC lines.
+	lineSeparator string
+
+	// The amount of space an indentation level occupies in a TOC line.
+	lineLevelOffset float64
+
+	// The margins of new TOC lines.
+	lineMargins margins
 
 	// Positioning: relative/absolute.
 	positioning positioning
@@ -52,6 +61,9 @@ func NewTOC(title string) *TOC {
 		lineTitleStyle:     lineStyle,
 		lineSeparatorStyle: lineStyle,
 		linePageStyle:      lineStyle,
+		lineSeparator:      ".",
+		lineLevelOffset:    10,
+		lineMargins:        margins{0, 0, 2, 2},
 		positioning:        positionRelative,
 	}
 }
@@ -85,7 +97,21 @@ func (t *TOC) Add(number, title, page string, level uint) *TOCLine {
 		level,
 	))
 
+	if tl == nil {
+		return nil
+	}
+
+	// Set line margins.
+	m := &t.lineMargins
+	tl.SetMargins(m.left, m.right, m.top, m.bottom)
+
+	// Set line level offset
+	tl.SetLevelOffset(t.lineLevelOffset)
+
+	// Set line separator text and style
+	tl.Separator.Text = t.lineSeparator
 	tl.Separator.Style = t.lineSeparatorStyle
+
 	return tl
 }
 
@@ -101,6 +127,7 @@ func (t *TOC) AddLine(line *TOCLine) *TOCLine {
 
 // SetSeparator sets the separator for all the lines of the table of contents.
 func (t *TOC) SetLineSeparator(separator string) {
+	t.lineSeparator = separator
 	for _, line := range t.lines {
 		line.Separator.Text = separator
 	}
@@ -108,6 +135,13 @@ func (t *TOC) SetLineSeparator(separator string) {
 
 // SetMargins sets the margins for all the lines of the table of contents.
 func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
+	t.lineMargins = margins{
+		left:   left,
+		right:  right,
+		top:    top,
+		bottom: bottom,
+	}
+
 	for _, line := range t.lines {
 		line.SetMargins(left, right, top, bottom)
 	}
@@ -152,6 +186,7 @@ func (t *TOC) SetLinePageStyle(style TextStyle) {
 // SetLineLevelOffset sets the amount of space an indentation level occupies
 // for all the lines the table of contents has.
 func (t *TOC) SetLineLevelOffset(levelOffset float64) {
+	t.lineLevelOffset = levelOffset
 	for _, line := range t.lines {
 		line.SetLevelOffset(levelOffset)
 	}
@@ -162,13 +197,13 @@ func (t *TOC) SetLineLevelOffset(levelOffset float64) {
 func (t *TOC) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
-	// Generate heading blocks
+	// Generate heading blocks.
 	blocks, ctx, err := t.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
 	}
 
-	// Generate blocks for the table of contents lines
+	// Generate blocks for the table of contents lines.
 	for _, line := range t.lines {
 		newBlocks, c, err := line.GeneratePageBlocks(ctx)
 		if err != nil {
@@ -178,7 +213,7 @@ func (t *TOC) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error)
 			continue
 		}
 
-		// The first block is always appended to the last..
+		// The first block is always appended to the last.
 		blocks[len(blocks)-1].mergeBlocks(newBlocks[0])
 		blocks = append(blocks, newBlocks[1:]...)
 
