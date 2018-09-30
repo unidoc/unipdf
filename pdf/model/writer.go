@@ -247,6 +247,7 @@ func (this *PdfWriter) copyObjects() {
 	this.objectsMap = objectsMap
 	this.infoObj = copyObject(this.infoObj, objectToObjectCopyMap).(*PdfIndirectObject)
 	this.root = copyObject(this.root, objectToObjectCopyMap).(*PdfIndirectObject)
+	this.encryptObj = copyObject(this.encryptObj, objectToObjectCopyMap).(*PdfIndirectObject)
 }
 
 // Set the PDF version of the output file.
@@ -859,6 +860,8 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 	}
 	// Set version in the catalog.
 	this.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion)))
+
+	// Make a copy of objects prior to optimizing as this can alter the objects.
 	this.copyObjects()
 
 	if this.optimizer != nil {
