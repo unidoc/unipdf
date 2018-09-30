@@ -10,6 +10,7 @@ package creator
 // if every detail is correct.
 
 import (
+	"bytes"
 	"fmt"
 	goimage "image"
 	"io/ioutil"
@@ -2134,6 +2135,39 @@ func TestEncrypting1(t *testing.T) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
+
+	// Try reading generated PDF and ensure encryption is OK.
+	// Try writing out to memory and opening with password.
+	var buf bytes.Buffer
+	err = c.Write(&buf)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	r, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	isEnc, err := r.IsEncrypted()
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if !isEnc {
+		t.Fatalf("Error: Should be encrypted")
+	}
+	ok, err := r.Decrypt([]byte("password"))
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("Failed to decrypt")
+	}
+	numpages, err := r.GetNumPages()
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if numpages <= 0 {
+		t.Fatalf("Pages should be 1+")
+	}
 }
 
 // TestOptimizeCombineDuplicateStreams tests optimizing PDFs to reduce output file size.
@@ -2737,7 +2771,6 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 
 // TestCompressStreams tests optimizing PDFs to reduce output file size.
 func TestCompressStreams(t *testing.T) {
-
 	createDoc := func() *Creator {
 		c := New()
 		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
@@ -2751,11 +2784,14 @@ func TestCompressStreams(t *testing.T) {
 		//c.NewPage()
 
 		page := c.pages[0]
+		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
+		times := model.NewStandard14FontMustCompile(model.TimesRoman)
+		page.Resources.SetFontByName("Times", times.ToPdfObject())
 		page.AddContentStreamByString(`BT
-/Arial 56 Tf
+/Times 56 Tf
 20 600 Td
 (The multiline example text)Tj
-/Arial 30 Tf
+/Times 30 Tf
 0 30 Td
 60 TL
 (example text)'
