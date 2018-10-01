@@ -73,7 +73,7 @@ func (t *TOC) Heading() *StyledParagraph {
 	return t.heading
 }
 
-// SetHeadings sets the text and the style of the heading
+// SetHeading sets the text and the style of the heading
 // of the table of contents.
 func (t *TOC) SetHeading(text string, style TextStyle) {
 	t.heading.Reset(text, style)
@@ -115,7 +115,7 @@ func (t *TOC) Add(number, title, page string, level uint) *TOCLine {
 	return tl
 }
 
-// Add adds a new line with the provided style to the table of contents.
+// AddLine adds a new line with the provided style to the table of contents.
 func (t *TOC) AddLine(line *TOCLine) *TOCLine {
 	if line == nil {
 		return nil
@@ -125,7 +125,7 @@ func (t *TOC) AddLine(line *TOCLine) *TOCLine {
 	return line
 }
 
-// SetSeparator sets the separator for all the lines of the table of contents.
+// SetLineSeparator sets the separator for all the lines of the table of contents.
 func (t *TOC) SetLineSeparator(separator string) {
 	t.lineSeparator = separator
 	for _, line := range t.lines {
@@ -133,7 +133,7 @@ func (t *TOC) SetLineSeparator(separator string) {
 	}
 }
 
-// SetMargins sets the margins for all the lines of the table of contents.
+// SetLineMargins sets the margins for all the lines of the table of contents.
 func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
 	t.lineMargins = margins{
 		left:   left,
