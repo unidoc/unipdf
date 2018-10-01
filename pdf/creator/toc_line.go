@@ -11,7 +11,7 @@ import (
 
 // TOCLine represents a line in a table of contents.
 // The component can be used both in the context of a
-// table of contents component and as a standalone component
+// table of contents component and as a standalone component.
 // The representation of a table of contents line is as follows:
 //       [number] [title]      [separator] [page]
 // e.g.: Chapter1 Introduction ........... 1
@@ -136,7 +136,7 @@ func (tl *TOCLine) SetMargins(left, right, top, bottom float64) {
 // prepareParagraph generates and adds all the components of the TOC line
 // to the underlying paragraph.
 func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
-	// Add text chunks to the paragraph
+	// Add text chunks to the paragraph.
 	title := tl.Title.Text
 	if tl.Number.Text != "" {
 		title = " " + title
@@ -163,7 +163,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	sp.SetEncoder(sp.encoder)
 	sp.wrapText()
 
-	// Insert separator
+	// Insert separator.
 	l := len(sp.lines)
 	if l == 0 {
 		return
@@ -177,7 +177,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 	sp.Insert(2, sepText, sepStyle)
 
-	// Push page numbers to the end of the line
+	// Push page numbers to the end of the line.
 	availWidth = availWidth - float64(sepCount)*sepWidth
 	if availWidth > 500 {
 		spaceMetrics, found := sepStyle.Font.GetGlyphCharMetrics("space")

@@ -7,8 +7,9 @@ package creator
 
 import "github.com/unidoc/unidoc/pdf/model/fonts"
 
-// TOC represents a table of contents component. It consists of a paragraph
-// heading and a collection of table of contents lines.
+// TOC represents a table of contents component.
+// It consists of a paragraph heading and a collection of
+// table of contents lines.
 type TOC struct {
 	// The heading of the table of contents.
 	heading *StyledParagraph
@@ -124,15 +125,12 @@ func (t *TOC) AddLine(line *TOCLine) *TOCLine {
 	return line
 }
 
-// SetLineSeparator sets the separator for all the lines of the table of contents.
+// SetLineSeparator sets the separator for all new lines of the table of contents.
 func (t *TOC) SetLineSeparator(separator string) {
 	t.lineSeparator = separator
-	for _, line := range t.lines {
-		line.Separator.Text = separator
-	}
 }
 
-// SetLineMargins sets the margins for all the lines of the table of contents.
+// SetLineMargins sets the margins for all new lines of the table of contents.
 func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
 	m := &t.lineMargins
 
@@ -142,32 +140,32 @@ func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
 	m.bottom = bottom
 }
 
-// SetLineNumberStyle sets the style for numbers part of  all the lines
-// the table of contents has.
+// SetLineNumberStyle sets the style for the numbers part of all new lines
+// of the table of contents.
 func (t *TOC) SetLineNumberStyle(style TextStyle) {
 	t.lineNumberStyle = style
 }
 
-// SetLineTitleStyle sets the style for page part of  all the lines
-// the table of contents has.
+// SetLineTitleStyle sets the style for the title part of all new lines
+// of the table of contents.
 func (t *TOC) SetLineTitleStyle(style TextStyle) {
 	t.lineTitleStyle = style
 }
 
-// SetLineSeparatorStyle sets the style for separator part of  all the lines
-// the table of contents has.
+// SetLineSeparatorStyle sets the style for the separator part of all new
+// lines of the table of contents.
 func (t *TOC) SetLineSeparatorStyle(style TextStyle) {
 	t.lineSeparatorStyle = style
 }
 
-// SetLinePageStyle sets the style for the page for all the lines
-// the table of contents has.
+// SetLinePageStyle sets the style for the page part of all new lines
+// of the table of contents.
 func (t *TOC) SetLinePageStyle(style TextStyle) {
 	t.linePageStyle = style
 }
 
 // SetLineLevelOffset sets the amount of space an indentation level occupies
-// for all the lines the table of contents has.
+// for all new lines of the table of contents.
 func (t *TOC) SetLineLevelOffset(levelOffset float64) {
 	t.lineLevelOffset = levelOffset
 }
