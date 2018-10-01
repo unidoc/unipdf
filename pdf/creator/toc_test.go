@@ -25,18 +25,19 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.SetLineLevelOffset(12)
 
 	// Set style for all line numbers.
-	grey := ColorRGBFrom8bit(100, 100, 100)
-	red := ColorRGBFrom8bit(255, 0, 0)
-
 	style := NewTextStyle()
 	style.Font = fontHelveticaBold
-	style.Color = grey
+	style.Color = ColorRGBFrom8bit(100, 100, 100)
 	toc.SetLineNumberStyle(style)
 
 	// Set style for all line pages.
 	style.Font = fontHelveticaBold
 	style.Color = ColorRGBFrom8bit(0, 0, 0)
 	toc.SetLinePageStyle(style)
+
+	// Set style for all line titles.
+	style.Font = fontHelveticaBold
+	toc.SetLineTitleStyle(style)
 
 	// Set style for all line separators.
 	style.Font = fontHelvetica
@@ -49,19 +50,26 @@ func TestTOCAdvanced(t *testing.T) {
 	tl.SetMargins(0, 0, 5, 5)
 
 	toc.Add("", "Aknowledgements", "ii", 1)
+	toc.Add("", "Table of Contents", "iii", 1)
 
 	// Customize line style.
-	tl = toc.Add("", "Table of Contents", "iii", 1)
-	tl.Title.Style.Font = fontHelveticaBold
-	tl.Title.Style.Color = grey
+	red := ColorRGBFrom8bit(255, 0, 0)
 
-	// Customize line style.
 	tl = toc.Add("Chapter 1:", "Introduction", "1", 1)
 	tl.Title.Style.Font = fontHelveticaBold
 	tl.Title.Style.Color = red
 	tl.Number.Style.Color = red
 	tl.Page.Style.Color = red
 	tl.Separator.Style.Color = red
+
+	// Set style for all line titles.
+	style.Font = fontHelvetica
+	style.FontSize = 10
+	toc.SetLineTitleStyle(style)
+
+	// Set another style for the line page part.
+	style.Font = fontHelvetica
+	toc.SetLinePageStyle(style)
 
 	toc.Add("1.1", "Second Harmonic Generation (SHG)", "1", 2)
 	toc.Add("1.1.1", "Nonlinear induced polarization", "1", 3)
@@ -78,8 +86,12 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.Add("1.4", "Combining SGH creation and emission directionality", "26", 2)
 	toc.Add("1.5", "Utilizing light to characterize tissue structure", "26", 2)
 
+	// Make line page part bold again.
+	style.Font = fontHelveticaBold
+	toc.SetLinePageStyle(style)
+
 	// Customize line style.
-	tl = toc.Add("", "References", "28", 2)
+	tl = toc.Add("", "References", "28", 1)
 	tl.Title.Style.Font = fontHelveticaBold
 	tl.Separator.Style.Font = fontHelveticaBold
 	tl.SetMargins(0, 0, 5, 0)
