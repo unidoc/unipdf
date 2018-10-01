@@ -44,11 +44,14 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.SetLineSeparatorStyle(style)
 
 	// Add TOC lines.
-	toc.Add("", "Abstract", "i", 1)
+	tl := toc.Add("", "Abstract", "i", 1)
+	tl.Title.Style.Font = fontHelveticaBold
+	tl.SetMargins(0, 0, 5, 5)
+
 	toc.Add("", "Aknowledgements", "ii", 1)
 
 	// Customize line style.
-	tl := toc.Add("", "Table of Contents", "iii", 1)
+	tl = toc.Add("", "Table of Contents", "iii", 1)
 	tl.Title.Style.Font = fontHelveticaBold
 	tl.Title.Style.Color = grey
 
@@ -74,7 +77,12 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.Add("1.3", "SHG creation and emission directionality", "24", 2)
 	toc.Add("1.4", "Combining SGH creation and emission directionality", "26", 2)
 	toc.Add("1.5", "Utilizing light to characterize tissue structure", "26", 2)
-	toc.Add("", "References", "28", 2)
+
+	// Customize line style.
+	tl = toc.Add("", "References", "28", 2)
+	tl.Title.Style.Font = fontHelveticaBold
+	tl.Separator.Style.Font = fontHelveticaBold
+	tl.SetMargins(0, 0, 5, 0)
 
 	err := c.Draw(toc)
 	if err != nil {
