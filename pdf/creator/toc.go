@@ -73,8 +73,7 @@ func (t *TOC) Heading() *StyledParagraph {
 	return t.heading
 }
 
-// SetHeading sets the text and the style of the heading
-// of the table of contents.
+// SetHeading sets the text and the style of the heading of the TOC component.
 func (t *TOC) SetHeading(text string, style TextStyle) {
 	t.heading.Reset(text, style)
 }
@@ -105,10 +104,10 @@ func (t *TOC) Add(number, title, page string, level uint) *TOCLine {
 	m := &t.lineMargins
 	tl.SetMargins(m.left, m.right, m.top, m.bottom)
 
-	// Set line level offset
+	// Set line level offset.
 	tl.SetLevelOffset(t.lineLevelOffset)
 
-	// Set line separator text and style
+	// Set line separator text and style.
 	tl.Separator.Text = t.lineSeparator
 	tl.Separator.Style = t.lineSeparatorStyle
 
@@ -135,61 +134,42 @@ func (t *TOC) SetLineSeparator(separator string) {
 
 // SetLineMargins sets the margins for all the lines of the table of contents.
 func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
-	t.lineMargins = margins{
-		left:   left,
-		right:  right,
-		top:    top,
-		bottom: bottom,
-	}
+	m := &t.lineMargins
 
-	for _, line := range t.lines {
-		line.SetMargins(left, right, top, bottom)
-	}
+	m.left = left
+	m.right = right
+	m.top = top
+	m.bottom = bottom
 }
 
 // SetLineNumberStyle sets the style for numbers part of  all the lines
 // the table of contents has.
 func (t *TOC) SetLineNumberStyle(style TextStyle) {
 	t.lineNumberStyle = style
-	for _, line := range t.lines {
-		line.Number.Style = style
-	}
 }
 
 // SetLineTitleStyle sets the style for page part of  all the lines
 // the table of contents has.
 func (t *TOC) SetLineTitleStyle(style TextStyle) {
 	t.lineTitleStyle = style
-	for _, line := range t.lines {
-		line.Title.Style = style
-	}
 }
 
 // SetLineSeparatorStyle sets the style for separator part of  all the lines
 // the table of contents has.
 func (t *TOC) SetLineSeparatorStyle(style TextStyle) {
 	t.lineSeparatorStyle = style
-	for _, line := range t.lines {
-		line.Separator.Style = style
-	}
 }
 
 // SetLinePageStyle sets the style for the page for all the lines
 // the table of contents has.
 func (t *TOC) SetLinePageStyle(style TextStyle) {
 	t.linePageStyle = style
-	for _, line := range t.lines {
-		line.Page.Style = style
-	}
 }
 
 // SetLineLevelOffset sets the amount of space an indentation level occupies
 // for all the lines the table of contents has.
 func (t *TOC) SetLineLevelOffset(levelOffset float64) {
 	t.lineLevelOffset = levelOffset
-	for _, line := range t.lines {
-		line.SetLevelOffset(levelOffset)
-	}
 }
 
 // GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
