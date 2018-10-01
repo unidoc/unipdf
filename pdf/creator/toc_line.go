@@ -192,8 +192,8 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	}
 }
 
-// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
 func (tl *TOCLine) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 

@@ -10,6 +10,9 @@ import "github.com/unidoc/unidoc/pdf/model/fonts"
 // TOC represents a table of contents component.
 // It consists of a paragraph heading and a collection of
 // table of contents lines.
+// The representation of a table of contents line is as follows:
+//       [number] [title]      [separator] [page]
+// e.g.: Chapter1 Introduction ........... 1
 type TOC struct {
 	// The heading of the table of contents.
 	heading *StyledParagraph
@@ -170,8 +173,8 @@ func (t *TOC) SetLineLevelOffset(levelOffset float64) {
 	t.lineLevelOffset = levelOffset
 }
 
-// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
 func (t *TOC) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
