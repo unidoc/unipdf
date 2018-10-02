@@ -223,19 +223,27 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		var simplefont *pdfFontSimple
 		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
 			font.context = &std
-			stdObj := core.TraceToDirectObject(std.ToPdfObject())
-			d, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, true)
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
-			simplefont, err = newSimpleFontFromPdfObject(d, stdBase, true, std.fontMetrics)
-			if err != nil {
-				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
-				return nil, err
+
+			encdict, has := core.GetDict(simplefont.Encoding)
+			if has {
+				// Set the default encoding for the standard 14 font if not specified in Encoding.
+				if encdict.Get("BaseEncoding") == nil {
+					encdict.Set("BaseEncoding", std.encoder.ToPdfObject())
+				}
+			} else {
+				simplefont.encoder = std.encoder
 			}
+
+			simplefont.firstChar = 0
+			simplefont.lastChar = 255
+			simplefont.fontMetrics = std.fontMetrics
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(d, base, false, nil)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, false)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err)
 				return nil, err

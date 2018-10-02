@@ -131,13 +131,8 @@ func (font pdfFontSimple) GetAverageCharWidth() float64 {
 // The value of Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 // • The value of BaseFont is derived differently.
 //
-func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool,
-	fontMetrics map[string]fonts.CharMetrics) (*pdfFontSimple, error) {
+func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool) (*pdfFontSimple, error) {
 	font := pdfFontSimpleFromSkeleton(base)
-
-	if fontMetrics != nil {
-		font.fontMetrics = fontMetrics
-	}
 
 	// FirstChar is not defined in ~/testdata/shamirturing.pdf
 	if !std14 {
