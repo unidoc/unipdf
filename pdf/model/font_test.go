@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/testutils"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
@@ -552,4 +554,190 @@ func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.
 		}
 	}
 	return obj, true
+}
+
+// Test loading a simple font with a Differences encoding.
+// Checks if the loaded font encoding fulfills expected characteristics.
+func TestLoadedSimpleFontEncoding(t *testing.T) {
+	rawpdf := `
+59 0 obj
+<</BaseFont /Helvetica/Encoding 60 0 R/Name /Helv/Subtype /Type1/Type /Font>>
+endobj
+60 0 obj
+<</Differences [24 /breve /caron /circumflex /dotaccent /hungarumlaut /ogonek /ring /tilde 39 /quotesingle 96 /grave 128 /bullet /dagger /daggerdbl /ellipsis /emdash /endash /florin /fraction /guilsinglleft /guilsinglright /minus /perthousand /quotedblbase /quotedblleft /quotedblright /quoteleft /quoteright /quotesinglbase /trademark /fi /fl /Lslash /OE /Scaron /Ydieresis /Zcaron /dotlessi /lslash /oe /scaron /zcaron 160 /Euro 164 /currency 166 /brokenbar 168 /dieresis /copyright /ordfeminine 172 /logicalnot /.notdef /registered /macron /degree /plusminus /twosuperior /threesuperior /acute /mu 183 /periodcentered /cedilla /onesuperior /ordmasculine 188 /onequarter /onehalf /threequarters 192 /Agrave /Aacute /Acircumflex /Atilde /Adieresis /Aring /AE /Ccedilla /Egrave /Eacute /Ecircumflex /Edieresis /Igrave /Iacute /Icircumflex /Idieresis /Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde /Odieresis /multiply /Oslash /Ugrave /Uacute /Ucircumflex /Udieresis /Yacute /Thorn /germandbls /agrave /aacute /acircumflex /atilde /adieresis /aring /ae /ccedilla /egrave /eacute /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis /eth /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide /oslash /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis]/Type /Encoding>>
+endobj
+`
+
+	objects, err := testutils.ParseIndirectObjects(rawpdf)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	font, err := model.NewPdfFontFromPdfObject(objects[59])
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	// Expected is WinAnsiEncoding with the applied differences.
+	winansi := textencoding.NewWinAnsiTextEncoder()
+	differencesMap := map[int]string{
+		24:  `/breve`,
+		25:  `/caron`,
+		26:  `/circumflex`,
+		27:  `/dotaccent`,
+		28:  `/hungarumlaut`,
+		29:  `/ogonek`,
+		30:  `/ring`,
+		31:  `/tilde`,
+		39:  `/quotesingle`,
+		96:  `/grave`,
+		128: `/bullet`,
+		129: `/dagger`,
+		130: `/daggerdbl`,
+		131: `/ellipsis`,
+		132: `/emdash`,
+		133: `/endash`,
+		134: `/florin`,
+		135: `/fraction`,
+		136: `/guilsinglleft`,
+		137: `/guilsinglright`,
+		138: `/minus`,
+		139: `/perthousand`,
+		140: `/quotedblbase`,
+		141: `/quotedblleft`,
+		142: `/quotedblright`,
+		143: `/quoteleft`,
+		144: `/quoteright`,
+		145: `/quotesinglbase`,
+		146: `/trademark`,
+		147: `/fi`,
+		148: `/fl`,
+		149: `/Lslash`,
+		150: `/OE`,
+		151: `/Scaron`,
+		152: `/Ydieresis`,
+		153: `/Zcaron`,
+		154: `/dotlessi`,
+		155: `/lslash`,
+		156: `/oe`,
+		157: `/scaron`,
+		158: `/zcaron`,
+		160: `/Euro`,
+		164: `/currency`,
+		166: `/brokenbar`,
+		168: `/dieresis`,
+		169: `/copyright`,
+		170: `/ordfeminine`,
+		172: `/logicalnot`,
+		173: `/.notdef`,
+		174: `/registered`,
+		175: `/macron`,
+		176: `/degree`,
+		177: `/plusminus`,
+		178: `/twosuperior`,
+		179: `/threesuperior`,
+		180: `/acute`,
+		181: `/mu`,
+		183: `/periodcentered`,
+		184: `/cedilla`,
+		185: `/onesuperior`,
+		186: `/ordmasculine`,
+		188: `/onequarter`,
+		189: `/onehalf`,
+		190: `/threequarters`,
+		192: `/Agrave`,
+		193: `/Aacute`,
+		194: `/Acircumflex`,
+		195: `/Atilde`,
+		196: `/Adieresis`,
+		197: `/Aring`,
+		198: `/AE`,
+		199: `/Ccedilla`,
+		200: `/Egrave`,
+		201: `/Eacute`,
+		202: `/Ecircumflex`,
+		203: `/Edieresis`,
+		204: `/Igrave`,
+		205: `/Iacute`,
+		206: `/Icircumflex`,
+		207: `/Idieresis`,
+		208: `/Eth`,
+		209: `/Ntilde`,
+		210: `/Ograve`,
+		211: `/Oacute`,
+		212: `/Ocircumflex`,
+		213: `/Otilde`,
+		214: `/Odieresis`,
+		215: `/multiply`,
+		216: `/Oslash`,
+		217: `/Ugrave`,
+		218: `/Uacute`,
+		219: `/Ucircumflex`,
+		220: `/Udieresis`,
+		221: `/Yacute`,
+		222: `/Thorn`,
+		223: `/germandbls`,
+		224: `/agrave`,
+		225: `/aacute`,
+		226: `/acircumflex`,
+		227: `/atilde`,
+		228: `/adieresis`,
+		229: `/aring`,
+		230: `/ae`,
+		231: `/ccedilla`,
+		232: `/egrave`,
+		233: `/eacute`,
+		234: `/ecircumflex`,
+		235: `/edieresis`,
+		236: `/igrave`,
+		237: `/iacute`,
+		238: `/icircumflex`,
+		239: `/idieresis`,
+		240: `/eth`,
+		241: `/ntilde`,
+		242: `/ograve`,
+		243: `/oacute`,
+		244: `/ocircumflex`,
+		245: `/otilde`,
+		246: `/odieresis`,
+		247: `/divide`,
+		248: `/oslash`,
+		249: `/ugrave`,
+		250: `/uacute`,
+		251: `/ucircumflex`,
+		252: `/udieresis`,
+		253: `/yacute`,
+		254: `/thorn`,
+		255: `/ydieresis`,
+	}
+
+	for ccode := 32; ccode < 255; ccode++ {
+		fontglyph, has := font.Encoder().CharcodeToGlyph(uint16(ccode))
+		if !has {
+			baseglyph, bad := winansi.CharcodeToGlyph(uint16(ccode))
+			if bad {
+				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", ccode, baseglyph)
+			}
+		}
+
+		// Check if in differencesmap first.
+		glyph, has := differencesMap[ccode]
+		if has {
+			glyph = strings.Trim(glyph, `/`)
+			if glyph != fontglyph {
+				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", ccode, fontglyph, glyph)
+			}
+			continue
+		}
+
+		// If not in differences, should be according to WinAnsiEncoding (base).
+		glyph, has = winansi.CharcodeToGlyph(uint16(ccode))
+		if !has {
+			t.Fatalf("WinAnsi not having glyph for char code %d", ccode)
+		}
+		if glyph != fontglyph {
+			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (WinAnsiEncoding)", ccode, ccode, fontglyph, glyph)
+		}
+	}
+
 }
