@@ -31,8 +31,8 @@ var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
 var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
 var reTrailer = regexp.MustCompile(`trailer`)
 
-// FdfParser parses a FDF file and provides access to the object structure of the FDF.
-type FdfParser struct {
+// fdfParser parses a FDF file and provides access to the object structure of the FDF.
+type fdfParser struct {
 	majorVersion int
 	minorVersion int
 
@@ -46,7 +46,7 @@ type FdfParser struct {
 }
 
 // Skip over any spaces.
-func (parser *FdfParser) skipSpaces() (int, error) {
+func (parser *fdfParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
 		b, err := parser.reader.ReadByte()
@@ -65,7 +65,7 @@ func (parser *FdfParser) skipSpaces() (int, error) {
 }
 
 // Skip over comments and spaces. Can handle multi-line comments.
-func (parser *FdfParser) skipComments() error {
+func (parser *fdfParser) skipComments() error {
 	if _, err := parser.skipSpaces(); err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (parser *FdfParser) skipComments() error {
 }
 
 // Read a comment starting with '%'.
-func (parser *FdfParser) readComment() (string, error) {
+func (parser *fdfParser) readComment() (string, error) {
 	var r bytes.Buffer
 
 	_, err := parser.skipSpaces()
@@ -126,7 +126,7 @@ func (parser *FdfParser) readComment() (string, error) {
 }
 
 // Read a single line of text from current position.
-func (parser *FdfParser) readTextLine() (string, error) {
+func (parser *fdfParser) readTextLine() (string, error) {
 	var r bytes.Buffer
 	for {
 		bb, err := parser.reader.Peek(1)
@@ -145,7 +145,7 @@ func (parser *FdfParser) readTextLine() (string, error) {
 }
 
 // Parse a name starting with '/'.
-func (parser *FdfParser) parseName() (core.PdfObjectName, error) {
+func (parser *fdfParser) parseName() (core.PdfObjectName, error) {
 	var r bytes.Buffer
 	nameStarted := false
 	for {
@@ -215,7 +215,7 @@ func (parser *FdfParser) parseName() (core.PdfObjectName, error) {
 // Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
-func (parser *FdfParser) parseNumber() (core.PdfObject, error) {
+func (parser *fdfParser) parseNumber() (core.PdfObject, error) {
 	isFloat := false
 	allowSigns := true
 	var r bytes.Buffer
@@ -267,7 +267,7 @@ func (parser *FdfParser) parseNumber() (core.PdfObject, error) {
 }
 
 // A string starts with '(' and ends with ')'.
-func (parser *FdfParser) parseString() (*core.PdfObjectString, error) {
+func (parser *fdfParser) parseString() (*core.PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
@@ -351,7 +351,7 @@ func (parser *FdfParser) parseString() (*core.PdfObjectString, error) {
 
 // Starts with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
-func (parser *FdfParser) parseHexString() (*core.PdfObjectString, error) {
+func (parser *fdfParser) parseHexString() (*core.PdfObjectString, error) {
 	parser.reader.ReadByte()
 
 	var r bytes.Buffer
@@ -381,7 +381,7 @@ func (parser *FdfParser) parseHexString() (*core.PdfObjectString, error) {
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (parser *FdfParser) parseArray() (*core.PdfObjectArray, error) {
+func (parser *fdfParser) parseArray() (*core.PdfObjectArray, error) {
 	arr := core.MakeArray()
 
 	parser.reader.ReadByte()
@@ -410,7 +410,7 @@ func (parser *FdfParser) parseArray() (*core.PdfObjectArray, error) {
 }
 
 // Parse bool object.
-func (parser *FdfParser) parseBool() (core.PdfObjectBool, error) {
+func (parser *fdfParser) parseBool() (core.PdfObjectBool, error) {
 	bb, err := parser.reader.Peek(4)
 	if err != nil {
 		return core.PdfObjectBool(false), err
@@ -451,14 +451,14 @@ func parseReference(refStr string) (core.PdfObjectReference, error) {
 }
 
 // Parse null object.
-func (parser *FdfParser) parseNull() (core.PdfObjectNull, error) {
+func (parser *fdfParser) parseNull() (core.PdfObjectNull, error) {
 	_, err := parser.reader.Discard(4)
 	return core.PdfObjectNull{}, err
 }
 
 // Detect the signature at the current file position and parse
 // the corresponding object.
-func (parser *FdfParser) parseObject() (core.PdfObject, error) {
+func (parser *fdfParser) parseObject() (core.PdfObject, error) {
 	common.Log.Trace("Read direct object")
 	parser.skipSpaces()
 	for {
@@ -544,7 +544,7 @@ func (parser *FdfParser) parseObject() (core.PdfObject, error) {
 }
 
 // Reads and parses a FDF dictionary object enclosed with '<<' and '>>'
-func (parser *FdfParser) parseDict() (*core.PdfObjectDictionary, error) {
+func (parser *fdfParser) parseDict() (*core.PdfObjectDictionary, error) {
 	common.Log.Trace("Reading FDF Dict!")
 
 	dict := core.MakeDict()
@@ -616,7 +616,7 @@ func (parser *FdfParser) parseDict() (*core.PdfObjectDictionary, error) {
 // Parse the FDF version from the beginning of the file.
 // Returns the major and minor parts of the version.
 // E.g. for "FDF-1.4" would return 1 and 4.
-func (parser *FdfParser) parseFdfVersion() (int, int, error) {
+func (parser *fdfParser) parseFdfVersion() (int, int, error) {
 	parser.rs.Seek(0, os.SEEK_SET)
 	var offset int64 = 20
 	b := make([]byte, offset)
@@ -651,7 +651,7 @@ func (parser *FdfParser) parseFdfVersion() (int, int, error) {
 
 // Look for EOF marker and seek to its beginning.
 // Define an offset position from the end of the file.
-func (parser *FdfParser) seekToEOFMarker(fSize int64) error {
+func (parser *fdfParser) seekToEOFMarker(fSize int64) error {
 	// Define the starting point (from the end of the file) to search from.
 	var offset int64 = 0
 
@@ -693,7 +693,7 @@ func (parser *FdfParser) seekToEOFMarker(fSize int64) error {
 
 // Parse an indirect object from the input stream. Can also be an object stream.
 // Returns the indirect object (*PdfIndirectObject) or the stream object (*PdfObjectStream).
-func (parser *FdfParser) parseIndirectObject() (core.PdfObject, error) {
+func (parser *fdfParser) parseIndirectObject() (core.PdfObject, error) {
 	indirect := core.PdfIndirectObject{}
 
 	common.Log.Trace("-Read indirect obj")
@@ -840,10 +840,10 @@ func (parser *FdfParser) parseIndirectObject() (core.PdfObject, error) {
 	return &indirect, nil
 }
 
-// NewParserFromString parses an FDF from a string.
+// newParserFromString parses an FDF from a string.
 // Useful for testing purposes.
-func NewParserFromString(txt string) (*FdfParser, error) {
-	parser := FdfParser{}
+func newParserFromString(txt string) (*fdfParser, error) {
+	parser := fdfParser{}
 	buf := []byte(txt)
 
 	bufReader := bytes.NewReader(buf)
@@ -859,7 +859,7 @@ func NewParserFromString(txt string) (*FdfParser, error) {
 }
 
 // Root returns the Root of the FDF document.
-func (parser *FdfParser) Root() (*core.PdfObjectDictionary, error) {
+func (parser *fdfParser) Root() (*core.PdfObjectDictionary, error) {
 	if parser.trailerDict != nil {
 		if rootDict, ok := parser.trace(parser.trailerDict.Get("Root")).(*core.PdfObjectDictionary); ok {
 			if fdfDict, ok := parser.trace(rootDict.Get("FDF")).(*core.PdfObjectDictionary); ok {
@@ -886,10 +886,10 @@ func (parser *FdfParser) Root() (*core.PdfObjectDictionary, error) {
 	return nil, errors.New("FDF not found")
 }
 
-// NewParser creates a new parser for a FDF file via ReadSeeker. Loads the cross reference stream and trailer.
+// newParser creates a new parser for a FDF file via ReadSeeker. Loads the cross reference stream and trailer.
 // An error is returned on failure.
-func NewParser(rs io.ReadSeeker) (*FdfParser, error) {
-	parser := &FdfParser{}
+func newParser(rs io.ReadSeeker) (*fdfParser, error) {
+	parser := &fdfParser{}
 
 	parser.rs = rs
 	parser.objCache = map[int64]core.PdfObject{}
@@ -911,7 +911,7 @@ func NewParser(rs io.ReadSeeker) (*FdfParser, error) {
 }
 
 // trace resolves a PdfObject to direct object, looking up and resolving references as needed.
-func (parser *FdfParser) trace(obj core.PdfObject) core.PdfObject {
+func (parser *fdfParser) trace(obj core.PdfObject) core.PdfObject {
 	switch t := obj.(type) {
 	case *core.PdfObjectReference:
 		indObj, ok := parser.objCache[t.ObjectNumber].(*core.PdfIndirectObject)
@@ -929,7 +929,7 @@ func (parser *FdfParser) trace(obj core.PdfObject) core.PdfObject {
 }
 
 // parse runs through the file and parses indirect objects and loads into cache.
-func (parser *FdfParser) parse() error {
+func (parser *fdfParser) parse() error {
 	// Go to beginning, reset reader.
 	parser.rs.Seek(0, io.SeekStart)
 	parser.reader = bufio.NewReader(parser.rs)
@@ -981,7 +981,7 @@ func (parser *FdfParser) parse() error {
 
 // Called when Fdf version not found normally.  Looks for the PDF version by scanning top-down.
 // %FDF-1.4
-func (parser *FdfParser) seekFdfVersionTopDown() (int, int, error) {
+func (parser *fdfParser) seekFdfVersionTopDown() (int, int, error) {
 	// Go to beginning, reset reader.
 	parser.rs.Seek(0, os.SEEK_SET)
 	parser.reader = bufio.NewReader(parser.rs)

@@ -1,10 +1,14 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package fdf
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -19,12 +23,8 @@ trailer
 %%EOF
 `
 
-func init() {
-	common.SetLogger(common.ConsoleLogger{LogLevel: common.LogLevelTrace})
-}
-
 func TestFdfExample1(t *testing.T) {
-	fdfDoc, err := NewParserFromString(fdfExample1)
+	fdfDoc, err := newParserFromString(fdfExample1)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
