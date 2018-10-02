@@ -7,9 +7,80 @@
 package testutils
 
 import (
+	"errors"
+	"io"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
+
+// ParseIndirectObjects parses a sequence of indirect/stream objects sequentially from a `rawpdf` text.
+// Great for testing.
+func ParseIndirectObjects(rawpdf string) (map[int64]core.PdfObject, error) {
+	p := core.NewParserFromString(rawpdf)
+
+	objmap := map[int64]core.PdfObject{}
+	for {
+		obj, err := p.ParseIndirectObject()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		switch t := obj.(type) {
+		case *core.PdfIndirectObject:
+			objmap[t.ObjectNumber] = obj
+		case *core.PdfObjectStream:
+			objmap[t.ObjectNumber] = obj
+		}
+	}
+
+	for _, obj := range objmap {
+		resolveReferences(obj, objmap)
+	}
+
+	return objmap, nil
+}
+
+// resolveReferences traverses `obj` structure and replaces references with corresponding PdfObject from `objmap`.
+func resolveReferences(obj core.PdfObject, objmap map[int64]core.PdfObject) error {
+	switch t := obj.(type) {
+	case *core.PdfIndirectObject:
+		indobj := t
+		resolveReferences(indobj.PdfObject, objmap)
+	case *core.PdfObjectDictionary:
+		dict := t
+		for _, key := range dict.Keys() {
+			val := dict.Get(key)
+			if ref, isref := val.(*core.PdfObjectReference); isref {
+				replace, ok := objmap[ref.ObjectNumber]
+				if !ok {
+					return errors.New("Reference to outside object")
+				}
+				dict.Set(key, replace)
+			} else {
+				resolveReferences(val, objmap)
+			}
+		}
+	case *core.PdfObjectArray:
+		array := t
+		for index, val := range array.Elements() {
+			if ref, isref := val.(*core.PdfObjectReference); isref {
+				replace, ok := objmap[ref.ObjectNumber]
+				if !ok {
+					return errors.New("Reference to outside object")
+				}
+				array.Set(index, replace)
+			} else {
+				resolveReferences(val, objmap)
+			}
+		}
+	}
+
+	return nil
+}
 
 func CompareDictionariesDeep(d1, d2 *core.PdfObjectDictionary) bool {
 	if len(d1.Keys()) != len(d2.Keys()) {
