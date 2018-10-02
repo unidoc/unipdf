@@ -24,7 +24,7 @@ type PdfPageResources struct {
 	Font       PdfObject
 	ProcSet    PdfObject
 	Properties PdfObject
-	// Primitive reource container.
+	// Primitive resource container.
 	primitive *PdfObjectDictionary
 }
 

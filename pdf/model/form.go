@@ -190,19 +190,19 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 }
 
 // GetContainingPdfObject returns the container of the PdfAcroForm (indirect object).
-func (this *PdfAcroForm) GetContainingPdfObject() core.PdfObject {
-	return this.container
+func (form *PdfAcroForm) GetContainingPdfObject() core.PdfObject {
+	return form.container
 }
 
 // ToPdfObject converts PdfAcroForm to a PdfObject, i.e. an indirect object containing the
 // AcroForm dictionary.
-func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
-	container := this.container
+func (form *PdfAcroForm) ToPdfObject() core.PdfObject {
+	container := form.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
-	if this.Fields != nil {
+	if form.Fields != nil {
 		arr := core.PdfObjectArray{}
-		for _, field := range *this.Fields {
+		for _, field := range *form.Fields {
 			ctx := field.GetContext()
 			if ctx != nil {
 				// Call subtype's ToPdfObject directly to get the entire field data.
@@ -214,27 +214,88 @@ func (this *PdfAcroForm) ToPdfObject() core.PdfObject {
 		dict.Set("Fields", &arr)
 	}
 
-	if this.NeedAppearances != nil {
-		dict.Set("NeedAppearances", this.NeedAppearances)
+	if form.NeedAppearances != nil {
+		dict.Set("NeedAppearances", form.NeedAppearances)
 	}
-	if this.SigFlags != nil {
-		dict.Set("SigFlags", this.SigFlags)
+	if form.SigFlags != nil {
+		dict.Set("SigFlags", form.SigFlags)
 	}
-	if this.CO != nil {
-		dict.Set("CO", this.CO)
+	if form.CO != nil {
+		dict.Set("CO", form.CO)
 	}
-	if this.DR != nil {
-		dict.Set("DR", this.DR.ToPdfObject())
+	if form.DR != nil {
+		dict.Set("DR", form.DR.ToPdfObject())
 	}
-	if this.DA != nil {
-		dict.Set("DA", this.DA)
+	if form.DA != nil {
+		dict.Set("DA", form.DA)
 	}
-	if this.Q != nil {
-		dict.Set("Q", this.Q)
+	if form.Q != nil {
+		dict.Set("Q", form.Q)
 	}
-	if this.XFA != nil {
-		dict.Set("XFA", this.XFA)
+	if form.XFA != nil {
+		dict.Set("XFA", form.XFA)
 	}
 
 	return container
+}
+
+// FieldValueProvider provides field values from a data source such as FDF, JSON or any other.
+type FieldValueProvider interface {
+	FieldValues() (map[string]core.PdfObject, error)
+}
+
+// Fill populates `form` with values provided by `provider`.
+func (form *PdfAcroForm) Fill(provider FieldValueProvider) error {
+	objMap, err := provider.FieldValues()
+	if err != nil {
+		return err
+	}
+
+	for _, field := range form.AllFields() {
+		fname := field.PartialName()
+		if len(fname) == 0 {
+			continue
+		}
+
+		if valObj, has := objMap[fname]; has {
+			err := fillFieldValue(field, valObj)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// fillFieldValue populates form field `f` with value represented by `v`.
+func fillFieldValue(f *PdfField, val core.PdfObject) error {
+	switch f.GetContext().(type) {
+	case *PdfFieldText:
+		switch t := val.(type) {
+		case *core.PdfObjectName:
+			name := t
+			common.Log.Debug("Unexpected: Got V as name -> converting to string '%s'", name.String())
+			f.V = core.MakeString(name.String())
+		case *core.PdfObjectString:
+			f.V = core.MakeEncodedString(t.String())
+		default:
+			common.Log.Debug("ERROR: Unsupported text field V type: %T (%#v)", t, t)
+		}
+	case *PdfFieldButton, *PdfFieldChoice:
+		switch val.(type) {
+		case *core.PdfObjectName:
+			for _, wa := range f.Annotations {
+				wa.AS = val
+			}
+			f.V = val
+		default:
+			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
+			f.V = val
+		}
+	case *PdfFieldSignature:
+		common.Log.Debug("TODO: Signature appearance not supported yet: %s/%v", f.PartialName(), val)
+	}
+
+	return nil
 }
