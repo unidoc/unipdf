@@ -18,17 +18,16 @@ type CombineDuplicateDirectObjects struct {
 
 // Optimize optimizes PDF objects to decrease PDF size.
 func (dup *CombineDuplicateDirectObjects) Optimize(objects []core.PdfObject) (optimizedObjects []core.PdfObject, err error) {
-
+	updateObjectNumbers(objects)
 	dictsByHash := make(map[string][]*core.PdfObjectDictionary)
 	var processDict func(pDict *core.PdfObjectDictionary)
-	processDict = func(pDict *core.PdfObjectDictionary) {
 
+	processDict = func(pDict *core.PdfObjectDictionary) {
 		for _, key := range pDict.Keys() {
 			obj := pDict.Get(key)
 			if dict, isDictObj := obj.(*core.PdfObjectDictionary); isDictObj {
 				hasher := md5.New()
 				hasher.Write([]byte(dict.DefaultWriteString()))
-
 				hash := string(hasher.Sum(nil))
 				dictsByHash[hash] = append(dictsByHash[hash], dict)
 				processDict(dict)
