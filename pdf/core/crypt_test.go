@@ -70,7 +70,7 @@ func TestAlg2(t *testing.T) {
 				0x76, 0x79, 0xAA, 0x02, 0x18, 0xBE, 0xCE, 0xEA, 0x8B, 0x79, 0x86,
 				0x72, 0x6A, 0x8C, 0xDB},
 		},
-		Id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
+		id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
 			0xff, 0xd5, 0x82, 0xe4, 0xec, 0x0e, 0xa3, 0xb4}),
 	}
 
@@ -99,7 +99,7 @@ func TestAlg3(t *testing.T) {
 			P:               0xfffff0c0,
 			EncryptMetadata: true,
 		},
-		Id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
+		id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
 			0xff, 0xd5, 0x82, 0xe4, 0xec, 0x0e, 0xa3, 0xb4}),
 	}
 
@@ -137,7 +137,7 @@ func TestAlg5(t *testing.T) {
 				0x76, 0x79, 0xAA, 0x02, 0x18, 0xBE, 0xCE, 0xEA, 0x8B, 0x79, 0x86,
 				0x72, 0x6A, 0x8C, 0xDB},
 		},
-		Id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
+		id0: string([]byte{0x4e, 0x00, 0x99, 0xe5, 0x36, 0x78, 0x93, 0x24,
 			0xff, 0xd5, 0x82, 0xe4, 0xec, 0x0e, 0xa3, 0xb4}),
 	}
 
@@ -178,11 +178,11 @@ func TestDecryption1(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00},
 		},
-		Id0: string([]byte{0x5f, 0x91, 0xff, 0xf2, 0x00, 0x88, 0x13,
+		id0: string([]byte{0x5f, 0x91, 0xff, 0xf2, 0x00, 0x88, 0x13,
 			0x5f, 0x30, 0x24, 0xd1, 0x0f, 0x28, 0x31, 0xc6, 0xfa}),
 		// Default algorithm is V2 (RC4).
-		CryptFilters:     newCryptFiltersV2(128),
-		DecryptedObjects: make(map[PdfObject]bool),
+		cryptFilters:     newCryptFiltersV2(128),
+		decryptedObjects: make(map[PdfObject]bool),
 	}
 
 	streamData := []byte{0xBC, 0x89, 0x86, 0x8B, 0x3E, 0xCF, 0x24, 0x1C,
@@ -303,7 +303,7 @@ func TestAESv3(t *testing.T) {
 							R: R, P: perms,
 							EncryptMetadata: c.EncMeta,
 						},
-						EncryptionKey: append([]byte{}, fkey...),
+						encryptionKey: append([]byte{}, fkey...),
 					}
 
 					// generate encryption parameters
@@ -315,27 +315,27 @@ func TestAESv3(t *testing.T) {
 					// Perms and EncryptMetadata are checked as a part of alg2a
 
 					// decrypt using user password
-					crypt.EncryptionKey = nil
+					crypt.encryptionKey = nil
 					ok, err := crypt.alg2a([]byte(c.UserPass))
 					if err != nil || !ok {
 						t.Error("Failed to authenticate user pass:", err)
-					} else if !bytes.Equal(crypt.EncryptionKey, fkey) {
+					} else if !bytes.Equal(crypt.encryptionKey, fkey) {
 						t.Error("wrong encryption key")
 					}
 
 					// decrypt using owner password
-					crypt.EncryptionKey = nil
+					crypt.encryptionKey = nil
 					ok, err = crypt.alg2a([]byte(c.OwnerPass))
 					if err != nil || !ok {
 						t.Error("Failed to authenticate owner pass:", err)
-					} else if !bytes.Equal(crypt.EncryptionKey, fkey) {
+					} else if !bytes.Equal(crypt.encryptionKey, fkey) {
 						t.Error("wrong encryption key")
 					}
 
 					// try to elevate user permissions
 					crypt.encryptStd.P = math.MaxUint32
 
-					crypt.EncryptionKey = nil
+					crypt.encryptionKey = nil
 					ok, err = crypt.alg2a([]byte(c.UserPass))
 					if R == 5 {
 						// it's actually possible with R=5, since Perms is not generated

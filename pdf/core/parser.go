@@ -66,7 +66,7 @@ func (parser *PdfParser) GetCrypter() *PdfCrypt {
 
 // IsAuthenticated returns true if the PDF has already been authenticated for accessing.
 func (parser *PdfParser) IsAuthenticated() bool {
-	return parser.crypter.Authenticated
+	return parser.crypter.authenticated
 }
 
 // GetTrailer returns the PDFs trailer dictionary. The trailer dictionary is typically the starting point for a PDF,
@@ -1604,7 +1604,7 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 		case *PdfObjectReference:
 			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		case *PdfIndirectObject:
-			crypter.DecryptedObjects[f] = true
+			crypter.decryptedObjects[f] = true
 			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		}
 	}
