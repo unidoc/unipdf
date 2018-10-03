@@ -530,7 +530,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	if !ok {
 		return errors.New("Node missing Type (Required)")
 	}
-	common.Log.Trace("buildPageList node type: %s", *objType)
+	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
 		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
