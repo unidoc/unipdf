@@ -85,34 +85,17 @@ func PdfCryptNewEncrypt(cf CryptFilter, userPass, ownerPass []byte, perm AccessP
 
 	common.Log.Trace("Gen Id 0: % x", id0)
 
+	crypter.id0 = string(id0)
+
+	err := crypter.generateParams(userPass, ownerPass)
+	if err != nil {
+		return nil, nil, err
+	}
 	// Generate encryption parameters
 	if crypter.encryptStd.R < 5 {
-		crypter.id0 = string(id0)
-
-		// Make the O and U objects.
-		O, err := crypter.Alg3(userPass, ownerPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return nil, nil, err
-		}
-		crypter.encryptStd.O = []byte(O)
-		common.Log.Trace("gen O: % x", O)
-		U, key, err := crypter.Alg5(userPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return nil, nil, err
-		}
-		common.Log.Trace("gen U: % x", U)
-		crypter.encryptStd.U = []byte(U)
-		crypter.encryptionKey = key
-
-		ed.Set("O", MakeHexString(O))
-		ed.Set("U", MakeHexString(U))
+		ed.Set("O", MakeString(string(crypter.encryptStd.O)))
+		ed.Set("U", MakeString(string(crypter.encryptStd.U)))
 	} else { // R >= 5
-		err := crypter.GenerateParams(userPass, ownerPass)
-		if err != nil {
-			return nil, nil, err
-		}
 		ed.Set("O", MakeString(string(crypter.encryptStd.O)))
 		ed.Set("U", MakeString(string(crypter.encryptStd.U)))
 		ed.Set("OE", MakeString(string(crypter.encryptStd.OE)))
@@ -300,9 +283,8 @@ func NewCryptFilterAESV3() CryptFilter {
 // cryptFilters is a map of crypt filter name and underlying CryptFilter info.
 type cryptFilters map[string]CryptFilter
 
-// LoadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
+// loadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
+func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.cryptFilters = cryptFilters{}
 
 	obj := ed.Get("CF")
@@ -383,7 +365,6 @@ func (crypt *PdfCrypt) LoadCryptFilters(ed *PdfObjectDictionary) error {
 }
 
 // saveCryptFilters saves crypt filter information to the encryption dictionary (V>=4).
-// TODO (v3): Unexport.
 func (crypt *PdfCrypt) saveCryptFilters(ed *PdfObjectDictionary) error {
 	if crypt.encrypt.V < 4 {
 		return errors.New("can only be used with V>=4")
@@ -448,7 +429,7 @@ func PdfCryptNewDecrypt(parser *PdfParser, ed, trailer *PdfObjectDictionary) (*P
 			// Default algorithm is V2.
 			crypter.cryptFilters = newCryptFiltersV2(crypter.encrypt.Length)
 		} else if V >= 4 && V <= 5 {
-			if err := crypter.LoadCryptFilters(ed); err != nil {
+			if err := crypter.loadCryptFilters(ed); err != nil {
 				return crypter, err
 			}
 		} else {
@@ -1355,8 +1336,8 @@ func (crypt *PdfCrypt) alg3Key(pass []byte) []byte {
 	return encKey
 }
 
-// Alg3 computes the encryption dictionary’s O (owner password) value.
-func (crypt *PdfCrypt) Alg3(upass, opass []byte) (string, error) {
+// alg3 computes the encryption dictionary’s O (owner password) value.
+func (crypt *PdfCrypt) alg3(upass, opass []byte) (string, error) {
 	// Return O string val.
 	O := ""
 
@@ -1412,8 +1393,8 @@ func (crypt *PdfCrypt) alg4(upass []byte) (string, []byte, error) {
 	return U, ekey, nil
 }
 
-// Alg5 computes the encryption dictionary’s U (user password) value (Security handlers of revision 3 or greater).
-func (crypt *PdfCrypt) Alg5(upass []byte) (string, []byte, error) {
+// alg5 computes the encryption dictionary’s U (user password) value (Security handlers of revision 3 or greater).
+func (crypt *PdfCrypt) alg5(upass []byte) (string, []byte, error) {
 	U := ""
 
 	ekey := crypt.alg2(upass)
@@ -1423,7 +1404,7 @@ func (crypt *PdfCrypt) Alg5(upass []byte) (string, []byte, error) {
 	h.Write([]byte(crypt.id0))
 	hash := h.Sum(nil)
 
-	common.Log.Trace("Alg5")
+	common.Log.Trace("alg5")
 	common.Log.Trace("ekey: % x", ekey)
 	common.Log.Trace("ID: % x", crypt.id0)
 
@@ -1483,7 +1464,7 @@ func (crypt *PdfCrypt) alg6(upass []byte) (bool, error) {
 	if crypt.encryptStd.R == 2 {
 		uo, key, err = crypt.alg4(upass)
 	} else if crypt.encryptStd.R >= 3 {
-		uo, key, err = crypt.Alg5(upass)
+		uo, key, err = crypt.alg5(upass)
 	} else {
 		return false, errors.New("invalid R")
 	}
@@ -1553,12 +1534,26 @@ func (crypt *PdfCrypt) alg7(opass []byte) (bool, error) {
 	return auth, nil
 }
 
-// GenerateParams generates encryption parameters for specified passwords.
-// Can be called only for R>=5.
-func (crypt *PdfCrypt) GenerateParams(upass, opass []byte) error {
+// generateParams generates encryption parameters for specified passwords.
+func (crypt *PdfCrypt) generateParams(upass, opass []byte) error {
 	if crypt.encryptStd.R < 5 {
-		// TODO(dennwc): move code for R<5 from PdfWriter.Encrypt
-		return errors.New("can be used only for R>=5")
+		// Make the O and U objects.
+		O, err := crypt.alg3(upass, opass)
+		if err != nil {
+			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
+			return err
+		}
+		crypt.encryptStd.O = []byte(O)
+		common.Log.Trace("gen O: % x", O)
+		U, key, err := crypt.alg5(upass)
+		if err != nil {
+			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
+			return err
+		}
+		common.Log.Trace("gen U: % x", U)
+		crypt.encryptStd.U = []byte(U)
+		crypt.encryptionKey = key
+		return nil
 	}
 	crypt.encryptionKey = make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, crypt.encryptionKey); err != nil {
