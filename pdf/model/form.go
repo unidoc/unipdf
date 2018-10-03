@@ -279,7 +279,7 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 		case *core.PdfObjectName:
 			name := t
 			common.Log.Debug("Unexpected: Got V as name -> converting to string '%s'", name.String())
-			f.V = core.MakeString(name.String())
+			f.V = core.MakeEncodedString(t.String())
 		case *core.PdfObjectString:
 			f.V = core.MakeEncodedString(t.String())
 		default:
