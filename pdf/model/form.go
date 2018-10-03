@@ -246,6 +246,9 @@ type FieldValueProvider interface {
 
 // Fill populates `form` with values provided by `provider`.
 func (form *PdfAcroForm) Fill(provider FieldValueProvider) error {
+	if form == nil {
+		return nil
+	}
 	objMap, err := provider.FieldValues()
 	if err != nil {
 		return err

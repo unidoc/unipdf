@@ -155,3 +155,8 @@ endobj
 		t.Fatalf("Mismatch in expected and actual field dictionaries (deep)")
 	}
 }
+
+func TestFormNil(t *testing.T) {
+	var form *PdfAcroForm
+	form.Fill(nil)
+}
