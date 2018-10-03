@@ -1628,6 +1628,7 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 	}
 
 	if !authenticated {
+		// TODO(dennwc): R6 handler will try it automatically, make R4 do the same
 		authenticated, err = parser.crypter.authenticate([]byte(""))
 	}
 
