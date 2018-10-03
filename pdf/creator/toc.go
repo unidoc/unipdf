@@ -77,6 +77,11 @@ func (t *TOC) Heading() *StyledParagraph {
 	return t.heading
 }
 
+// Lines returns all the lines the table of contents has.
+func (t *TOC) Lines() []*TOCLine {
+	return t.lines
+}
+
 // SetHeading sets the text and the style of the heading of the TOC component.
 func (t *TOC) SetHeading(text string, style TextStyle) {
 	t.heading.Reset(text, style)

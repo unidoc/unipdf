@@ -8,6 +8,7 @@ package creator
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -40,7 +41,7 @@ type Chapter struct {
 	margins margins
 
 	// Reference to the creator's TOC.
-	toc *TableOfContents
+	toc *TOC
 }
 
 // NewChapter creates a new chapter with the specified title as the heading.
@@ -149,7 +150,12 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 
 	if chap.includeInTOC {
 		// Add to TOC.
-		chap.toc.add(chap.title, chap.number, 0, ctx.Page)
+		chapNumber := ""
+		if chap.number != 0 {
+			chapNumber = strconv.Itoa(chap.number) + "."
+		}
+
+		chap.toc.Add(chapNumber, chap.title, strconv.Itoa(ctx.Page), 1)
 	}
 
 	for _, d := range chap.contents {

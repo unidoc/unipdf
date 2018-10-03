@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -33,14 +34,14 @@ type Creator struct {
 
 	// Hooks.
 	genFrontPageFunc      func(args FrontpageFunctionArgs)
-	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
+	genTableOfContentFunc func(toc *TOC) error
 	drawHeaderFunc        func(header *Block, args HeaderFunctionArgs)
 	drawFooterFunc        func(footer *Block, args FooterFunctionArgs)
 	pdfWriterAccessFunc   func(writer *model.PdfWriter) error
 
 	finalized bool
 
-	toc *TableOfContents
+	toc *TOC
 
 	// Forms.
 	acroForm *model.PdfAcroForm
@@ -98,7 +99,7 @@ func New() *Creator {
 	c.pageMargins.top = m
 	c.pageMargins.bottom = m
 
-	c.toc = newTableOfContents()
+	c.toc = NewTOC("Table of Contents")
 
 	return c
 }
@@ -194,7 +195,7 @@ func (c *Creator) CreateFrontPage(genFrontPageFunc func(args FrontpageFunctionAr
 }
 
 // CreateTableOfContents sets a function to generate table of contents.
-func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) (*Chapter, error)) {
+func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TOC) error) {
 	c.genTableOfContentFunc = genTOCFunc
 }
 
@@ -296,13 +297,13 @@ func (c *Creator) finalize() error {
 	if c.genTableOfContentFunc != nil {
 		c.initContext()
 		c.context.Page = genpages + 1
-		ch, err := c.genTableOfContentFunc(c.toc)
+		err := c.genTableOfContentFunc(c.toc)
 		if err != nil {
 			return err
 		}
 
 		// Make an estimate of the number of pages.
-		blocks, _, err := ch.GeneratePageBlocks(c.context)
+		blocks, _, err := c.toc.GeneratePageBlocks(c.context)
 		if err != nil {
 			common.Log.Debug("Failed to generate blocks: %v", err)
 			return err
@@ -310,12 +311,16 @@ func (c *Creator) finalize() error {
 		genpages += len(blocks)
 
 		// Update the table of content Page numbers, accounting for front Page and TOC.
-		for idx := range c.toc.entries {
-			c.toc.entries[idx].PageNumber += genpages
-		}
+		lines := c.toc.Lines()
+		for _, line := range lines {
+			pageNum, err := strconv.Atoi(line.Page.Text)
+			if err != nil {
+				continue
+			}
 
-		// Remove the TOC chapter entry.
-		c.toc.entries = c.toc.entries[:len(c.toc.entries)-1]
+			pageNum += genpages
+			line.Page.Text = strconv.Itoa(pageNum)
+		}
 	}
 
 	hasFrontPage := false
@@ -337,15 +342,13 @@ func (c *Creator) finalize() error {
 
 	if c.genTableOfContentFunc != nil {
 		c.initContext()
-		ch, err := c.genTableOfContentFunc(c.toc)
+		err := c.genTableOfContentFunc(c.toc)
 		if err != nil {
 			common.Log.Debug("Error generating TOC: %v", err)
 			return err
 		}
-		ch.SetShowNumbering(false)
-		ch.SetIncludeInTOC(false)
 
-		blocks, _, _ := ch.GeneratePageBlocks(c.context)
+		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
 		tocpages := []*model.PdfPage{}
 		for _, block := range blocks {
 			block.SetPos(0, 0)
