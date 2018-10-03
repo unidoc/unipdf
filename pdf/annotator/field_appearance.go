@@ -21,15 +21,39 @@ import (
 //
 // If `OnlyIfMissing` is true, the field appearance is generated only for fields that do not have an
 // appearance stream specified.
-//
-// TODO(gunnsth): Add style options parameter to make appearance configurable (e.g. AppearanceStyle).
 type FieldAppearance struct {
 	OnlyIfMissing bool
+	style         *AppearanceStyle
+}
+
+// AppearanceStyle defines style parameters for appearance stream generation.
+type AppearanceStyle struct {
+	// How much of Rect height to fill when autosizing text.
+	AutoFontSizeFraction float64
+	// Glyph used for check mark in checkboxes (for ZapfDingbats font).
+	CheckmarkGlyph string
 }
 
 const (
 	defaultAutoFontSizeFraction = 0.818
+	defaultCheckmarkGlyph       = "a20"
 )
+
+// SetStyle applies appearance `style` to `fa`.
+func (fa *FieldAppearance) SetStyle(style AppearanceStyle) {
+	fa.style = &style
+}
+
+// Style returns the appearance style of `fa`. If not specified, returns default style.
+func (fa FieldAppearance) Style() AppearanceStyle {
+	if fa.style != nil {
+		return *fa.style
+	}
+	return AppearanceStyle{
+		AutoFontSizeFraction: defaultAutoFontSizeFraction,
+		CheckmarkGlyph:       defaultCheckmarkGlyph,
+	}
+}
 
 // GenerateAppearanceDict generates an appearance dictionary for widget annotation `wa` for the `field` in `form`.
 func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field *model.PdfField, wa *model.PdfAnnotationWidget) (*core.PdfObjectDictionary, error) {
@@ -56,7 +80,7 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 		case ftxt.Flags().Has(model.FieldFlagComb):
 			// Special handling for comb. Only if max len is set.
 			if ftxt.MaxLen != nil {
-				appDict, err := genFieldTextCombAppearance(wa, ftxt, form.DR)
+				appDict, err := genFieldTextCombAppearance(wa, ftxt, form.DR, fa.Style())
 				if err != nil {
 					return nil, err
 				}
@@ -64,7 +88,7 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 			}
 		}
 
-		appDict, err := genFieldTextAppearance(wa, ftxt, form.DR)
+		appDict, err := genFieldTextAppearance(wa, ftxt, form.DR, fa.Style())
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +97,7 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 	case *model.PdfFieldButton:
 		fbtn := t
 		if fbtn.IsCheckbox() {
-			appDict, err := genFieldCheckboxAppearance(wa, fbtn, form.DR)
+			appDict, err := genFieldCheckboxAppearance(wa, fbtn, form.DR, fa.Style())
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +113,7 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 
 // genTextAppearance generates the appearance stream for widget annotation `wa` with text field `ftxt`.
 // It requires access to the form resources DR entry via `dr`.
-func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldText, dr *model.PdfPageResources) (*core.PdfObjectDictionary, error) {
+func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldText, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
 	resources := model.NewPdfPageResources()
 
 	// Get bounding Rect.
@@ -126,8 +150,9 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	var fontsize float64
 	var fontname *core.PdfObjectName
 	var font *model.PdfFont
-	var autosize bool
-	fontsizeDef := height * defaultAutoFontSizeFraction
+	autosize := true
+
+	fontsizeDef := height * style.AutoFontSizeFraction
 	for _, op := range *daOps {
 		// When Tf specified with font size is 0, it means we should set on our own based on the Rect (autosize).
 		if op.Operand == "Tf" && len(op.Params) == 2 {
@@ -143,9 +168,12 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 			if fontsize == 0 {
 				// Use default if zero.
 				fontsize = fontsizeDef
-				autosize = true
+			} else {
+				// Disable autosize when font size (>0) explicitly specified.
+				autosize = false
 			}
 			// Skip over (set fontsize in code below).
+			continue
 		}
 		cc.AddOperand(*op)
 	}
@@ -191,7 +219,9 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	tx = 2.0 // Default left margin. // TODO(gunnsth): Add to style options.
 
 	// Handle multi line fields.
+	isMultiline := false
 	if ftxt.Flags().Has(model.FieldFlagMultiline) {
+		isMultiline = true
 		text = strings.Replace(text, "\r\n", "\n", -1)
 		text = strings.Replace(text, "\r", "\n", -1)
 		lines = strings.Split(text, "\n")
@@ -200,13 +230,21 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	maxLinewidth := 0.0
 	textlines := 0
 	if encoder != nil {
-		for i := range lines {
+		l := len(lines)
+		i := 0
+		for i < l {
 			linewidth := 0.0
-			for _, r := range lines[i] {
+			lastbreakindex := -1
+			lastwidth := 0.0
+			for index, r := range lines[i] {
 				glyph, has := encoder.RuneToGlyph(r)
 				if !has {
 					common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
 					continue
+				}
+				if glyph == "space" {
+					lastbreakindex = index
+					lastwidth = linewidth
 				}
 				metrics, has := font.GetGlyphCharMetrics(glyph)
 				if !has {
@@ -214,6 +252,20 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 					continue
 				}
 				linewidth += metrics.Wx
+
+				if isMultiline && !autosize && fontsize*linewidth/1000.0 > width && lastbreakindex > 0 {
+					part2 := lines[i][lastbreakindex+1:]
+
+					if i < len(lines)-1 {
+						lines[i+1] += part2
+					} else {
+						lines = append(lines, part2)
+						l++
+					}
+					lines[i] = lines[i][0:lastbreakindex]
+					linewidth = lastwidth
+					break
+				}
 			}
 			if linewidth > maxLinewidth {
 				maxLinewidth = linewidth
@@ -223,11 +275,12 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 			if len(lines[i]) > 0 {
 				textlines++
 			}
+			i++
 		}
 	}
 
 	// Check if text goes out of bounds, if goes out of bounds, then adjust font size until just within bounds.
-	if autosize && maxLinewidth > 0 && maxLinewidth*fontsize/1000.0 > width {
+	if fontsize == 0 || autosize && maxLinewidth > 0 && maxLinewidth*fontsize/1000.0 > width {
 		// TODO(gunnsth): Add to style options.
 		fontsize = 0.95 * 1000.0 * width / maxLinewidth
 	}
@@ -259,10 +312,21 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	ty := 2.0
 	{
 		textheight := float64(textlines) * lineheight
-		if height > textheight {
-			ty = (height - textheight) / 2.0
-			ty += 1.50 // TODO(gunnsth): Make configurable/part of style parameter.
+		if autosize && ty+textheight > height {
+			fontsize = 0.95 * (height - ty) / float64(textlines)
+			lineheight = 1.0 * fontsize
+			textheight = float64(textlines) * lineheight
+		}
 
+		if height > textheight {
+			if len(lines) > 1 {
+				a := (height - textheight) / 2.0
+				b := a + textheight - lineheight
+				ty = b
+			} else {
+				ty = (height - textheight) / 2.0
+				ty += 1.50 // TODO(gunnsth): Make configurable/part of style parameter.
+			}
 		}
 	}
 
@@ -283,7 +347,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
 	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
-	xform.SetContentStream(cc.Bytes(), core.NewRawEncoder())
+	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	apDict := core.MakeDict()
 	apDict.Set("N", xform.ToPdfObject())
@@ -293,7 +357,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 // genFieldTextCombAppearance generates an appearance dictionary for a comb text field where the width is split
 // into equal size boxes.
-func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldText, dr *model.PdfPageResources) (*core.PdfObjectDictionary, error) {
+func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldText, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
 	resources := model.NewPdfPageResources()
 
 	// Get bounding Rect.
@@ -340,7 +404,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	var fontsize float64
 	var fontname *core.PdfObjectName
 	var font *model.PdfFont
-	fontsizeDef := height * defaultAutoFontSizeFraction
+	fontsizeDef := height * style.AutoFontSizeFraction
 	for _, op := range *daOps {
 		// TODO: If TF specified and font size is 0, it means we should set on our own based on the Rect.
 		if op.Operand == "Tf" && len(op.Params) == 2 {
@@ -445,7 +509,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
 	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
-	xform.SetContentStream(cc.Bytes(), core.NewRawEncoder())
+	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	apDict := core.MakeDict()
 	apDict.Set("N", xform.ToPdfObject())
@@ -455,9 +519,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 
 // genFieldCheckboxAppearance generates an appearance dictionary for a widget annotation `wa` referenced by
 // a button field `fbtn` with form resources `dr` (DR).
-func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFieldButton, dr *model.PdfPageResources) (*core.PdfObjectDictionary, error) {
-	dataEncoder := core.NewRawEncoder() // For debugging.
-
+func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFieldButton, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
 	// Get bounding Rect.
 	array, ok := core.GetArray(wa.Rect)
 	if !ok {
@@ -484,11 +546,15 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			return nil, err
 		}
 
-		fontsize := defaultAutoFontSizeFraction * height
+		fontsize := style.AutoFontSizeFraction * height
 
-		checkmetrics, ok := zapfdb.GetGlyphCharMetrics("a20")
+		checkmetrics, ok := zapfdb.GetGlyphCharMetrics(style.CheckmarkGlyph)
 		if !ok {
 			return nil, errors.New("glyph not found")
+		}
+		checkcode, ok := zapfdb.Encoder().GlyphToCharcode(style.CheckmarkGlyph)
+		if !ok {
+			return nil, errors.New("checkmark glyph - charcode mapping not found")
 		}
 		checkwidth := checkmetrics.Wx * fontsize / 1000.0
 		checkheight := checkwidth
@@ -511,14 +577,14 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			Add_BT().
 			Add_Tf("ZaDb", fontsize).
 			Add_Td(tx, ty).
-			Add_Tj(*core.MakeString("\064")).
+			Add_Tj(*core.MakeString(string(checkcode))).
 			Add_ET().
 			Add_Q()
 
 		xformOn.Resources = model.NewPdfPageResources()
 		xformOn.Resources.SetFontByName("ZaDb", zapfdb.ToPdfObject())
 		xformOn.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
-		xformOn.SetContentStream(cc.Bytes(), dataEncoder)
+		xformOn.SetContentStream(cc.Bytes(), defStreamEncoder())
 	}
 
 	xformOff := model.NewXObjectForm()
@@ -527,7 +593,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		cc.Add_re(0, 0, width, height)
 		cc.Add_re(0, 0, width-1, height-1)
 		xformOff.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
-		xformOff.SetContentStream(cc.Bytes(), dataEncoder)
+		xformOff.SetContentStream(cc.Bytes(), defStreamEncoder())
 	}
 
 	dchoiceapp := core.MakeDict()
@@ -558,4 +624,10 @@ func getDA(field *model.PdfField) string {
 	}
 
 	return getDA(ftxt.Parent)
+}
+
+// defStreamEncoder returns the default stream encoder. Typically FlateEncoder, although RawEncoder
+// can be useful for debugging.
+func defStreamEncoder() core.StreamEncoder {
+	return core.NewFlateEncoder()
 }
