@@ -57,84 +57,80 @@ func (d *stdEncryptDict) DecodeFrom(ed *PdfObjectDictionary) error {
 	// TODO(dennwc): this code is too verbose; maybe use reflection to populate fields and validate afterwards?
 	R, ok := ed.Get("R").(*PdfObjectInteger)
 	if !ok {
-		return errors.New("Encrypt dictionary missing R")
+		return errors.New("encrypt dictionary missing R")
 	}
 	// TODO(dennwc): according to spec, R should be validated according to V value
 	if *R < 2 || *R > 6 {
-		return fmt.Errorf("Invalid R (%d)", *R)
+		return fmt.Errorf("invalid R (%d)", *R)
 	}
 	d.R = int(*R)
 
-	O, ok := ed.Get("O").(*PdfObjectString)
+	O, ok := ed.GetString("O")
 	if !ok {
-		return errors.New("Encrypt dictionary missing O")
+		return errors.New("encrypt dictionary missing O")
 	}
 	if d.R == 5 || d.R == 6 {
 		// the spec says =48 bytes, but Acrobat pads them out longer
-		if len(O.Str()) < 48 {
-			return fmt.Errorf("Length(O) < 48 (%d)", len(O.Str()))
+		if len(O) < 48 {
+			return fmt.Errorf("Length(O) < 48 (%d)", len(O))
 		}
-	} else if len(O.Str()) != 32 {
-		return fmt.Errorf("Length(O) != 32 (%d)", len(O.Str()))
+	} else if len(O) != 32 {
+		return fmt.Errorf("Length(O) != 32 (%d)", len(O))
 	}
-	d.O = O.Bytes()
+	d.O = []byte(O)
 
-	U, ok := ed.Get("U").(*PdfObjectString)
+	U, ok := ed.GetString("U")
 	if !ok {
-		return errors.New("Encrypt dictionary missing U")
+		return errors.New("encrypt dictionary missing U")
 	}
 	if d.R == 5 || d.R == 6 {
 		// the spec says =48 bytes, but Acrobat pads them out longer
-		if len(U.Str()) < 48 {
-			return fmt.Errorf("Length(U) < 48 (%d)", len(U.Str()))
+		if len(U) < 48 {
+			return fmt.Errorf("Length(U) < 48 (%d)", len(U))
 		}
-	} else if len(U.Str()) != 32 {
+	} else if len(U) != 32 {
 		// Strictly this does not cause an error.
 		// If O is OK and others then can still read the file.
-		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(U.Str()))
+		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(U))
 		//return crypter, errors.New("Length(U) != 32")
 	}
-	d.U = U.Bytes()
+	d.U = []byte(U)
 
 	if d.R >= 5 {
-		OE, ok := ed.Get("OE").(*PdfObjectString)
+		OE, ok := ed.GetString("OE")
 		if !ok {
-			return errors.New("Encrypt dictionary missing OE")
+			return errors.New("encrypt dictionary missing OE")
+		} else if len(OE) != 32 {
+			return fmt.Errorf("Length(OE) != 32 (%d)", len(OE))
 		}
-		if len(OE.Str()) != 32 {
-			return fmt.Errorf("Length(OE) != 32 (%d)", len(OE.Str()))
-		}
-		d.OE = OE.Bytes()
+		d.OE = []byte(OE)
 
-		UE, ok := ed.Get("UE").(*PdfObjectString)
+		UE, ok := ed.GetString("UE")
 		if !ok {
-			return errors.New("Encrypt dictionary missing UE")
+			return errors.New("encrypt dictionary missing UE")
+		} else if len(UE) != 32 {
+			return fmt.Errorf("Length(UE) != 32 (%d)", len(UE))
 		}
-		if len(UE.Str()) != 32 {
-			return fmt.Errorf("Length(UE) != 32 (%d)", len(UE.Str()))
-		}
-		d.UE = UE.Bytes()
+		d.UE = []byte(UE)
 	}
 
 	P, ok := ed.Get("P").(*PdfObjectInteger)
 	if !ok {
-		return errors.New("Encrypt dictionary missing permissions attr")
+		return errors.New("encrypt dictionary missing permissions attr")
 	}
 	d.P = AccessPermissions(*P)
 
 	if d.R == 6 {
-		Perms, ok := ed.Get("Perms").(*PdfObjectString)
+		Perms, ok := ed.GetString("Perms")
 		if !ok {
-			return errors.New("Encrypt dictionary missing Perms")
+			return errors.New("encrypt dictionary missing Perms")
+		} else if len(Perms) != 16 {
+			return fmt.Errorf("Length(Perms) != 16 (%d)", len(Perms))
 		}
-		if len(Perms.Str()) != 16 {
-			return fmt.Errorf("Length(Perms) != 16 (%d)", len(Perms.Str()))
-		}
-		d.Perms = Perms.Bytes()
+		d.Perms = []byte(Perms)
 	}
 
-	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)
-	if ok {
+	if em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool); ok {
 		d.EncryptMetadata = bool(*em)
 	} else {
 		d.EncryptMetadata = true // True by default.
