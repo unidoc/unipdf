@@ -817,47 +817,15 @@ func TestSubchaptersSimple(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// Set a function to create the table of contents.
-	// Should be able to wrap..
-	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-		ch.GetHeading().SetFontSize(28)
-		ch.GetHeading().SetMargins(0, 0, 0, 30)
+	// The table of contents is created automatically.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
 
-		table := NewTable(2) // 2 column table.
-		// Default, equal column sizes (4x0.25)...
-		table.SetColumnWidths(0.9, 0.1)
-
-		for _, entry := range toc.entries {
-			// Col 1. Chapter number, title.
-			var str string
-			if entry.Subchapter == 0 {
-				str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-			} else {
-				str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-			}
-			p := NewParagraph(str)
-			p.SetFontSize(14)
-			cell := table.NewCell()
-			cell.SetContent(p)
-			// Set the paragraph width to the cell width.
-			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
-
-			// Col 1. Page number.
-			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-			p.SetFontSize(14)
-			cell = table.NewCell()
-			cell.SetContent(p)
-		}
-		err := ch.Add(table)
-		if err != nil {
-			fmt.Printf("Error adding table: %v\n", err)
-			return nil, err
-		}
-
-		return ch, nil
+		toc.SetHeading("Table of Contents", style)
+		return nil
 	})
 
 	err := c.WriteToFile("/tmp/3_subchapters_simple.pdf")
@@ -931,46 +899,15 @@ func TestSubchapters(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// Set a function to create the table of contents.
-	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-		ch.GetHeading().SetFontSize(28)
-		ch.GetHeading().SetMargins(0, 0, 0, 30)
+	// The table of contents is created automatically.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
 
-		table := NewTable(2)
-		// Default, equal column sizes (4x0.25)...
-		table.SetColumnWidths(0.9, 0.1)
-
-		for _, entry := range toc.entries {
-			// Col 1. Chapter number, title.
-			var str string
-			if entry.Subchapter == 0 {
-				str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-			} else {
-				str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-			}
-			p := NewParagraph(str)
-			p.SetFontSize(14)
-			cell := table.NewCell()
-			cell.SetContent(p)
-			// Set the paragraph width to the cell width.
-			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
-
-			// Col 1. Page number.
-			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-			p.SetFontSize(14)
-			cell = table.NewCell()
-			cell.SetContent(p)
-		}
-		err := ch.Add(table)
-		if err != nil {
-			fmt.Printf("Error adding table: %v\n", err)
-			return nil, err
-		}
-
-		return ch, nil
+		toc.SetHeading("Table of Contents", style)
+		return nil
 	})
 
 	addHeadersAndFooters(c)
@@ -2466,46 +2403,15 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 			c.Draw(p)
 		})
 
-		// Set a function to create the table of contents.
-		c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-			ch := c.NewChapter("Table of contents")
-			ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-			ch.GetHeading().SetFontSize(28)
-			ch.GetHeading().SetMargins(0, 0, 0, 30)
+		// The table of contents is created automatically.
+		// This function is used just to customize the style of the TOC.
+		c.CreateTableOfContents(func(toc *TOC) error {
+			style := NewTextStyle()
+			style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+			style.FontSize = 20
 
-			table := NewTable(2)
-			// Default, equal column sizes (4x0.25)...
-			table.SetColumnWidths(0.9, 0.1)
-
-			for _, entry := range toc.entries {
-				// Col 1. Chapter number, title.
-				var str string
-				if entry.Subchapter == 0 {
-					str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-				} else {
-					str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-				}
-				p := NewParagraph(str)
-				p.SetFontSize(14)
-				cell := table.NewCell()
-				cell.SetContent(p)
-				// Set the paragraph width to the cell width.
-				p.SetWidth(cell.Width(c.Context()))
-				table.SetRowHeight(table.CurRow(), p.Height()*1.2)
-
-				// Col 1. Page number.
-				p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-				p.SetFontSize(14)
-				cell = table.NewCell()
-				cell.SetContent(p)
-			}
-			err := ch.Add(table)
-			if err != nil {
-				fmt.Printf("Error adding table: %v\n", err)
-				return nil, err
-			}
-
-			return ch, nil
+			toc.SetHeading("Table of Contents", style)
+			return nil
 		})
 
 		addHeadersAndFooters(c)
@@ -2699,46 +2605,15 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// Set a function to create the table of contents.
-	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-		ch.GetHeading().SetFontSize(28)
-		ch.GetHeading().SetMargins(0, 0, 0, 30)
+	// The table of contents is created automatically.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
 
-		table := NewTable(2)
-		// Default, equal column sizes (4x0.25)...
-		table.SetColumnWidths(0.9, 0.1)
-
-		for _, entry := range toc.entries {
-			// Col 1. Chapter number, title.
-			var str string
-			if entry.Subchapter == 0 {
-				str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-			} else {
-				str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-			}
-			p := NewParagraph(str)
-			p.SetFontSize(14)
-			cell := table.NewCell()
-			cell.SetContent(p)
-			// Set the paragraph width to the cell width.
-			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
-
-			// Col 1. Page number.
-			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-			p.SetFontSize(14)
-			cell = table.NewCell()
-			cell.SetContent(p)
-		}
-		err := ch.Add(table)
-		if err != nil {
-			fmt.Printf("Error adding table: %v\n", err)
-			return nil, err
-		}
-
-		return ch, nil
+		toc.SetHeading("Table of Contents", style)
+		return nil
 	})
 
 	addHeadersAndFooters(c)
@@ -2908,46 +2783,16 @@ func TestAllOptimizations(t *testing.T) {
 			c.Draw(p)
 		})
 
-		// Set a function to create the table of contents.
-		c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-			ch := c.NewChapter("Table of contents")
-			ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-			ch.GetHeading().SetFontSize(28)
-			ch.GetHeading().SetMargins(0, 0, 0, 30)
+		// The table of contents is created automatically.
+		// This function is used just to customize the style of the TOC.
+		c.CreateTableOfContents(func(toc *TOC) error {
+			style := NewTextStyle()
+			style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+			style.FontSize = 20
 
-			table := NewTable(2)
-			// Default, equal column sizes (4x0.25)...
-			table.SetColumnWidths(0.9, 0.1)
+			toc.SetHeading("Table of Contents", style)
 
-			for _, entry := range toc.entries {
-				// Col 1. Chapter number, title.
-				var str string
-				if entry.Subchapter == 0 {
-					str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-				} else {
-					str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-				}
-				p := NewParagraph(str)
-				p.SetFontSize(14)
-				cell := table.NewCell()
-				cell.SetContent(p)
-				// Set the paragraph width to the cell width.
-				p.SetWidth(cell.Width(c.Context()))
-				table.SetRowHeight(table.CurRow(), p.Height()*1.2)
-
-				// Col 1. Page number.
-				p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-				p.SetFontSize(14)
-				cell = table.NewCell()
-				cell.SetContent(p)
-			}
-			err := ch.Add(table)
-			if err != nil {
-				fmt.Printf("Error adding table: %v\n", err)
-				return nil, err
-			}
-
-			return ch, nil
+			return nil
 		})
 
 		addHeadersAndFooters(c)
