@@ -145,6 +145,7 @@ func (xform *XObjectForm) SetContentStream(content []byte, encoder StreamEncoder
 	encoded = enc
 
 	xform.Stream = encoded
+	xform.Filter = encoder
 
 	return nil
 }
