@@ -28,7 +28,7 @@ type PdfReader struct {
 	outlineTree *PdfOutlineTreeNode
 	AcroForm    *PdfAcroForm
 
-	modelManager *ModelManager
+	modelManager *modelManager
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
@@ -41,7 +41,7 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
 	pdfReader.traversed = map[PdfObject]bool{}
 
-	pdfReader.modelManager = NewModelManager()
+	pdfReader.modelManager = newModelManager()
 
 	// Create the parser, loads the cross reference table and trailer.
 	parser, err := NewParser(rs)
@@ -66,13 +66,17 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	return pdfReader, nil
 }
 
+// PdfVersion returns version of the PDF file.
+func (this *PdfReader) PdfVersion() string {
+	return this.parser.PdfVersion()
+}
+
 // IsEncrypted returns true if the PDF file is encrypted.
 func (this *PdfReader) IsEncrypted() (bool, error) {
 	return this.parser.IsEncrypted()
 }
 
-// GetEncryptionMethod returns a string containing some information about the encryption method used.
-// XXX/TODO: May be better to return a standardized struct with information.
+// GetEncryptionMethod returns a descriptive information string about the encryption method used.
 func (this *PdfReader) GetEncryptionMethod() string {
 	crypter := this.parser.GetCrypter()
 	str := crypter.Filter + " - "
@@ -430,7 +434,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 
 		if item, isItem := node.context.(*PdfOutlineItem); isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + string(*item.Title)
+			title := strings.Repeat(" ", depth*2) + item.Title.Str()
 			*titleList = append(*titleList, title)
 			if item.Next != nil {
 				flattenFunc(item.Next, outlineList, titleList, depth)
@@ -559,7 +563,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		return err
 	}
 
-	kidsObj, err := this.parser.Trace(nodeDict.Get("Kids"))
+	kidsObj, err := this.parser.Resolve(nodeDict.Get("Kids"))
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading Kids object")
 		return err
@@ -578,13 +582,13 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		}
 	}
 	common.Log.Trace("Kids: %s", kids)
-	for idx, child := range *kids {
+	for idx, child := range kids.Elements() {
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
 			return errors.New("Page not indirect object")
 		}
-		(*kids)[idx] = child
+		kids.Set(idx, child)
 		err = this.buildPageList(child, node, traversedPageNodes)
 		if err != nil {
 			return err
@@ -670,13 +674,13 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 
 	if arr, isArray := o.(*PdfObjectArray); isArray {
 		common.Log.Trace("- array: %s", arr)
-		for idx, v := range *arr {
+		for idx, v := range arr.Elements() {
 			if ref, isRef := v.(*PdfObjectReference); isRef {
 				resolvedObj, _, err := this.resolveReference(ref)
 				if err != nil {
 					return err
 				}
-				(*arr)[idx] = resolvedObj
+				arr.Set(idx, resolvedObj)
 
 				err = this.traverseObjectData(resolvedObj)
 				if err != nil {

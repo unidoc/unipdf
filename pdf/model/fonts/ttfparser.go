@@ -13,6 +13,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+/*
+ * Copyright (c) 2018 FoxyUtils ehf. to modifications of the original.
+ * Modifications of the original file are subject to the terms and conditions
+ * defined in file 'LICENSE.md', which is part of this source code package.
+ */
 
 package fonts
 
@@ -23,20 +28,53 @@ package fonts
 // Port to Go: Kurt Jung, 2013-07-15
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
+
+	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/cmap"
+	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// TtfType contains metrics of a TrueType font.
+// MakeEncoder returns an encoder built from the tables in  `rec`.
+func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
+	encoding := map[uint16]string{}
+	for code := uint16(0); code <= 256; code++ {
+		gid, ok := rec.Chars[code]
+		if !ok {
+			continue
+		}
+		glyph := ""
+		if 0 <= gid && int(gid) < len(rec.GlyphNames) {
+			glyph = rec.GlyphNames[gid]
+		} else {
+			glyph = string(rune(gid))
+		}
+		encoding[code] = glyph
+	}
+	if len(encoding) == 0 {
+		common.Log.Debug("WARNING: Zero length TrueType enconding. rec=%s Chars=[% 02x]",
+			rec, rec.Chars)
+	}
+	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
+}
+
+// TtfType describes a TrueType font file.
+// http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
 type TtfType struct {
 	Embeddable             bool
 	UnitsPerEm             uint16
 	PostScriptName         string
 	Bold                   bool
-	ItalicAngle            int16
+	ItalicAngle            float64
 	IsFixedPitch           bool
 	TypoAscender           int16
 	TypoDescender          int16
@@ -45,35 +83,96 @@ type TtfType struct {
 	Xmin, Ymin, Xmax, Ymax int16
 	CapHeight              int16
 	Widths                 []uint16
-	Chars                  map[uint16]uint16
+
+	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e. GlyphNames[Chars[r]] is
+	// the glyph corresponding to rune r.
+	Chars map[uint16]uint16
+	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
+	GlyphNames []string
 }
 
+// MakeToUnicode returns a ToUnicode CMap based on the encoding of `ttf`.
+// XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
+// otherwise valid PDF file that Adobe Reader displays without error.
+func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
+	codeToUnicode := map[cmap.CharCode]string{}
+	for code, idx := range ttf.Chars {
+		glyph := ttf.GlyphNames[idx]
+
+		r, ok := textencoding.GlyphToRune(glyph)
+		if !ok {
+			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
+			r = textencoding.MissingCodeRune
+		}
+		codeToUnicode[cmap.CharCode(code)] = string(r)
+	}
+	return cmap.NewToUnicodeCMap(codeToUnicode)
+}
+
+// String returns a human readable representation of `ttf`.
+func (ttf *TtfType) String() string {
+	return fmt.Sprintf("FONT_FILE2{%#q Embeddable=%t UnitsPerEm=%d Bold=%t ItalicAngle=%f "+
+		"CapHeight=%d Chars=%d GlyphNames=%d}",
+		ttf.PostScriptName, ttf.Embeddable, ttf.UnitsPerEm, ttf.Bold, ttf.ItalicAngle,
+		ttf.CapHeight, len(ttf.Chars), len(ttf.GlyphNames))
+}
+
+// ttfParser contains some state variables used to parse a TrueType file.
 type ttfParser struct {
 	rec              TtfType
-	f                *os.File
+	f                io.ReadSeeker
 	tables           map[string]uint32
 	numberOfHMetrics uint16
 	numGlyphs        uint16
 }
 
-// TtfParse extracts various metrics from a TrueType font file.
-func TtfParse(fileStr string) (TtfRec TtfType, err error) {
-	var t ttfParser
-	t.f, err = os.Open(fileStr)
-	if err != nil {
-		return
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in PdfObject `obj`.
+func NewFontFile2FromPdfObject(obj core.PdfObject) (TtfType, error) {
+	obj = core.TraceToDirectObject(obj)
+	streamObj, ok := obj.(*core.PdfObjectStream)
+	if !ok {
+		common.Log.Debug("ERROR: FontFile2 must be a stream (%T)", obj)
+		return TtfType{}, core.ErrTypeError
 	}
+	data, err := core.DecodeStream(streamObj)
+	if err != nil {
+		return TtfType{}, err
+	}
+
+	// Uncomment these lines to see the contents of the font file. For debugging.
+	// fmt.Println("===============&&&&===============")
+	// fmt.Printf("%#q", string(data))
+	// fmt.Println("===============####===============")
+
+	t := ttfParser{f: bytes.NewReader(data)}
+	return t.Parse()
+}
+
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in disk file `fileStr`.
+func TtfParse(fileStr string) (TtfType, error) {
+	f, err := os.Open(fileStr)
+	if err != nil {
+		return TtfType{}, err
+	}
+	defer f.Close()
+
+	t := ttfParser{f: f}
+	return t.Parse()
+}
+
+// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
+func (t *ttfParser) Parse() (TtfType, error) {
+
 	version, err := t.ReadStr(4)
 	if err != nil {
-		return
+		return TtfType{}, err
 	}
 	if version == "OTTO" {
-		err = fmt.Errorf("fonts based on PostScript outlines are not supported")
-		return
+		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
 	if version != "\x00\x01\x00\x00" {
-		err = fmt.Errorf("unrecognized file format")
-		return
+		// This is not an error. In the font_test.go example axes.txt we see version "true".
+		common.Log.Debug("Unrecognized TrueType file format. version=%q", version)
 	}
 	numTables := int(t.ReadUShort())
 	t.Skip(3 * 2) // searchRange, entrySelector, rangeShift
@@ -82,55 +181,97 @@ func TtfParse(fileStr string) (TtfRec TtfType, err error) {
 	for j := 0; j < numTables; j++ {
 		tag, err = t.ReadStr(4)
 		if err != nil {
-			return
+			return TtfType{}, err
 		}
 		t.Skip(4) // checkSum
 		offset := t.ReadULong()
 		t.Skip(4) // length
 		t.tables[tag] = offset
 	}
-	err = t.ParseComponents()
-	if err != nil {
-		return
+
+	common.Log.Trace(describeTables(t.tables))
+
+	if err = t.ParseComponents(); err != nil {
+		return TtfType{}, err
 	}
-	t.f.Close()
-	TtfRec = t.rec
-	return
+	return t.rec, nil
 }
 
-func (t *ttfParser) ParseComponents() (err error) {
-	err = t.ParseHead()
-	if err == nil {
-		err = t.ParseHhea()
-		if err == nil {
-			err = t.ParseMaxp()
-			if err == nil {
-				err = t.ParseHmtx()
-				if err == nil {
-					err = t.ParseCmap()
-					if err == nil {
-						err = t.ParseName()
-						if err == nil {
-							err = t.ParseOS2()
-							if err == nil {
-								err = t.ParsePost()
-							}
-						}
-					}
-				}
-			}
+// describeTables returns a string describing `tables`, the tables in a TrueType font file.
+func describeTables(tables map[string]uint32) string {
+	tags := []string{}
+	for tag := range tables {
+		tags = append(tags, tag)
+	}
+	sort.Slice(tags, func(i, j int) bool { return tables[tags[i]] < tables[tags[j]] })
+	parts := []string{fmt.Sprintf("TrueType tables: %d", len(tables))}
+	for _, tag := range tags {
+		parts = append(parts, fmt.Sprintf("\t%q %5d", tag, tables[tag]))
+	}
+	return strings.Join(parts, "\n")
+}
+
+// ParseComponents parses the tables in a TrueType font file/
+// The standard TrueType tables are
+// "head"
+// "hhea"
+// "loca"
+// "maxp"
+// "cvt "
+// "prep"
+// "glyf"
+// "hmtx"
+// "fpgm"
+// "gasp"
+func (t *ttfParser) ParseComponents() error {
+
+	// Mandatory tables.
+	if err := t.ParseHead(); err != nil {
+		return err
+	}
+	if err := t.ParseHhea(); err != nil {
+		return err
+	}
+	if err := t.ParseMaxp(); err != nil {
+		return err
+	}
+	if err := t.ParseHmtx(); err != nil {
+		return err
+	}
+
+	// Optional tables.
+	if _, ok := t.tables["name"]; ok {
+		if err := t.ParseName(); err != nil {
+			return err
 		}
 	}
-	return
+	if _, ok := t.tables["OS/2"]; ok {
+		if err := t.ParseOS2(); err != nil {
+			return err
+		}
+	}
+	if _, ok := t.tables["post"]; ok {
+		if err := t.ParsePost(); err != nil {
+			return err
+		}
+	}
+	if _, ok := t.tables["cmap"]; ok {
+		if err := t.ParseCmap(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (t *ttfParser) ParseHead() (err error) {
-	err = t.Seek("head")
+func (t *ttfParser) ParseHead() error {
+	if err := t.Seek("head"); err != nil {
+		return err
+	}
 	t.Skip(3 * 4) // version, fontRevision, checkSumAdjustment
 	magicNumber := t.ReadULong()
 	if magicNumber != 0x5F0F3CF5 {
-		err = fmt.Errorf("incorrect magic number")
-		return
+		return fmt.Errorf("incorrect magic number")
 	}
 	t.Skip(2) // flags
 	t.rec.UnitsPerEm = t.ReadUShort()
@@ -139,65 +280,49 @@ func (t *ttfParser) ParseHead() (err error) {
 	t.rec.Ymin = t.ReadShort()
 	t.rec.Xmax = t.ReadShort()
 	t.rec.Ymax = t.ReadShort()
-	return
+	return nil
 }
 
-func (t *ttfParser) ParseHhea() (err error) {
-	err = t.Seek("hhea")
-	if err == nil {
-		t.Skip(4 + 15*2)
-		t.numberOfHMetrics = t.ReadUShort()
+func (t *ttfParser) ParseHhea() error {
+	if err := t.Seek("hhea"); err != nil {
+		return err
 	}
-	return
+	t.Skip(4 + 15*2)
+	t.numberOfHMetrics = t.ReadUShort()
+	return nil
 }
 
-func (t *ttfParser) ParseMaxp() (err error) {
-	err = t.Seek("maxp")
-	if err == nil {
-		t.Skip(4)
-		t.numGlyphs = t.ReadUShort()
+func (t *ttfParser) ParseMaxp() error {
+	if err := t.Seek("maxp"); err != nil {
+		return err
 	}
-	return
+	t.Skip(4)
+	t.numGlyphs = t.ReadUShort()
+	return nil
 }
 
-func (t *ttfParser) ParseHmtx() (err error) {
-	err = t.Seek("hmtx")
-	if err == nil {
-		t.rec.Widths = make([]uint16, 0, 8)
-		for j := uint16(0); j < t.numberOfHMetrics; j++ {
-			t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
-			t.Skip(2) // lsb
-		}
-		if t.numberOfHMetrics < t.numGlyphs {
-			lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
-			for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
-				t.rec.Widths = append(t.rec.Widths, lastWidth)
-			}
-		}
+func (t *ttfParser) ParseHmtx() error {
+	if err := t.Seek("hmtx"); err != nil {
+		return err
 	}
-	return
-}
 
-func (t *ttfParser) ParseCmap() (err error) {
-	var offset int64
-	if err = t.Seek("cmap"); err != nil {
-		return
+	t.rec.Widths = make([]uint16, 0, 8)
+	for j := uint16(0); j < t.numberOfHMetrics; j++ {
+		t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
+		t.Skip(2) // lsb
 	}
-	t.Skip(2) // version
-	numTables := int(t.ReadUShort())
-	offset31 := int64(0)
-	for j := 0; j < numTables; j++ {
-		platformID := t.ReadUShort()
-		encodingID := t.ReadUShort()
-		offset = int64(t.ReadULong())
-		if platformID == 3 && encodingID == 1 {
-			offset31 = offset
+	if t.numberOfHMetrics < t.numGlyphs {
+		lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
+		for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
+			t.rec.Widths = append(t.rec.Widths, lastWidth)
 		}
 	}
-	if offset31 == 0 {
-		err = fmt.Errorf("no Unicode encoding found")
-		return
-	}
+
+	return nil
+}
+
+// parseCmapSubtable31 parses information from an (3,1) subtable (Windows Unicode).
+func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 	startCount := make([]uint16, 0, 8)
 	endCount := make([]uint16, 0, 8)
 	idDelta := make([]int16, 0, 8)
@@ -206,8 +331,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 	t.f.Seek(int64(t.tables["cmap"])+offset31, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 4 {
-		err = fmt.Errorf("unexpected subtable format: %d", format)
-		return
+		return fmt.Errorf("unexpected subtable format: %d", format)
 	}
 	t.Skip(2 * 2) // length, language
 	segCount := int(t.ReadUShort() / 2)
@@ -222,7 +346,7 @@ func (t *ttfParser) ParseCmap() (err error) {
 	for j := 0; j < segCount; j++ {
 		idDelta = append(idDelta, t.ReadShort())
 	}
-	offset, _ = t.f.Seek(int64(0), os.SEEK_CUR)
+	offset, _ := t.f.Seek(int64(0), os.SEEK_CUR)
 	for j := 0; j < segCount; j++ {
 		idRangeOffset = append(idRangeOffset, t.ReadUShort())
 	}
@@ -255,120 +379,437 @@ func (t *ttfParser) ParseCmap() (err error) {
 			}
 		}
 	}
-	return
+	return nil
 }
 
-func (t *ttfParser) ParseName() (err error) {
-	err = t.Seek("name")
-	if err == nil {
-		tableOffset, _ := t.f.Seek(0, os.SEEK_CUR)
-		t.rec.PostScriptName = ""
-		t.Skip(2) // format
-		count := t.ReadUShort()
-		stringOffset := t.ReadUShort()
-		for j := uint16(0); j < count && t.rec.PostScriptName == ""; j++ {
-			t.Skip(3 * 2) // platformID, encodingID, languageID
-			nameID := t.ReadUShort()
-			length := t.ReadUShort()
-			offset := t.ReadUShort()
-			if nameID == 6 {
-				// PostScript name
-				t.f.Seek(int64(tableOffset)+int64(stringOffset)+int64(offset), os.SEEK_SET)
-				var s string
-				s, err = t.ReadStr(int(length))
-				if err != nil {
-					return
-				}
-				s = strings.Replace(s, "\x00", "", -1)
-				var re *regexp.Regexp
-				if re, err = regexp.Compile("[(){}<> /%[\\]]"); err != nil {
-					return
-				}
-				t.rec.PostScriptName = re.ReplaceAllString(s, "")
+// parseCmapSubtable10 parses information from an (1,0) subtable (symbol).
+func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
+
+	if t.rec.Chars == nil {
+		t.rec.Chars = make(map[uint16]uint16)
+	}
+
+	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
+	var length, language uint32
+	format := t.ReadUShort()
+	if format < 8 {
+		length = uint32(t.ReadUShort())
+		language = uint32(t.ReadUShort())
+	} else {
+		t.ReadUShort()
+		length = t.ReadULong()
+		language = t.ReadULong()
+	}
+	common.Log.Trace("parseCmapSubtable10: format=%d length=%d language=%d",
+		format, length, language)
+
+	if format != 0 {
+		return errors.New("unsupported cmap subtable format")
+	}
+
+	dataStr, err := t.ReadStr(256)
+	if err != nil {
+		return err
+	}
+	data := []byte(dataStr)
+
+	for code, glyphId := range data {
+		t.rec.Chars[uint16(code)] = uint16(glyphId)
+		if glyphId != 0 {
+			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, glyphId, rune(glyphId))
+		}
+	}
+	return nil
+}
+
+// ParseCmap parses the cmap table in a TrueType font.
+func (t *ttfParser) ParseCmap() error {
+	var offset int64
+	if err := t.Seek("cmap"); err != nil {
+		return err
+	}
+	common.Log.Trace("ParseCmap")
+	t.ReadUShort() // version is ignored.
+	numTables := int(t.ReadUShort())
+	offset10 := int64(0)
+	offset31 := int64(0)
+	for j := 0; j < numTables; j++ {
+		platformID := t.ReadUShort()
+		encodingID := t.ReadUShort()
+		offset = int64(t.ReadULong())
+		if platformID == 3 && encodingID == 1 {
+			// (3,1) subtable. Windows Unicode.
+			offset31 = offset
+		} else if platformID == 1 && encodingID == 0 {
+			offset10 = offset
+		}
+	}
+
+	// Latin font support based on (3,1) table encoding.
+	if offset31 != 0 {
+		if err := t.parseCmapSubtable31(offset31); err != nil {
+			return err
+		}
+	}
+
+	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
+	if offset10 != 0 {
+		if err := t.parseCmapVersion(offset10); err != nil {
+			return err
+		}
+	}
+	if offset31 == 0 && offset10 == 0 {
+		common.Log.Debug("ttfParser.ParseCmap. No 31 or 10 table.")
+	}
+
+	return nil
+}
+
+func (t *ttfParser) parseCmapVersion(offset int64) error {
+	common.Log.Trace("parseCmapVersion: offset=%d", offset)
+
+	if t.rec.Chars == nil {
+		t.rec.Chars = make(map[uint16]uint16)
+	}
+
+	t.f.Seek(int64(t.tables["cmap"])+offset, os.SEEK_SET)
+	var length, language uint32
+	format := t.ReadUShort()
+	if format < 8 {
+		length = uint32(t.ReadUShort())
+		language = uint32(t.ReadUShort())
+	} else {
+		t.ReadUShort()
+		length = t.ReadULong()
+		language = t.ReadULong()
+	}
+	common.Log.Debug("parseCmapVersion: format=%d length=%d language=%d",
+		format, length, language)
+
+	switch format {
+	case 0:
+		return t.parseCmapFormat0()
+	case 6:
+		return t.parseCmapFormat6()
+	case 12:
+		return t.parseCmapFormat12()
+	default:
+		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
+		return nil // XXX(peterwilliams97): Can't return an error here if creator_test.go is to pass.
+	}
+}
+
+func (t *ttfParser) parseCmapFormat0() error {
+	dataStr, err := t.ReadStr(256)
+	if err != nil {
+		return err
+	}
+	data := []byte(dataStr)
+	common.Log.Trace("parseCmapFormat0: %s\ndataStr=%+q\ndata=[% 02x]", t.rec.String(), dataStr, data)
+
+	for code, glyphId := range data {
+		t.rec.Chars[uint16(code)] = uint16(glyphId)
+	}
+	return nil
+}
+
+func (t *ttfParser) parseCmapFormat6() error {
+
+	firstCode := int(t.ReadUShort())
+	entryCount := int(t.ReadUShort())
+
+	common.Log.Trace("parseCmapFormat6: %s firstCode=%d entryCount=%d",
+		t.rec.String(), firstCode, entryCount)
+
+	for i := 0; i < entryCount; i++ {
+		glyphId := t.ReadUShort()
+		t.rec.Chars[uint16(i+firstCode)] = glyphId
+	}
+
+	return nil
+}
+
+func (t *ttfParser) parseCmapFormat12() error {
+
+	numGroups := t.ReadULong()
+
+	common.Log.Trace("parseCmapFormat12: %s numGroups=%d", t.rec.String(), numGroups)
+
+	for i := uint32(0); i < numGroups; i++ {
+		firstCode := t.ReadULong()
+		endCode := t.ReadULong()
+		startGlyph := t.ReadULong()
+
+		if firstCode > 0x0010FFFF || (0xD800 <= firstCode && firstCode <= 0xDFFF) {
+			return errors.New("invalid characters codes")
+		}
+
+		if endCode < firstCode || endCode > 0x0010FFFF || (0xD800 <= endCode && endCode <= 0xDFFF) {
+			return errors.New("invalid characters codes")
+		}
+
+		for j := uint32(0); j <= endCode-firstCode; j++ {
+			glyphId := startGlyph + j
+			// if glyphId >= numGlyphs {
+			// 	common.Log.Debug("ERROR: Format 12 cmap contains an invalid glyph index")
+			// 	break
+			// }
+			if firstCode+j > 0x10FFFF {
+				common.Log.Debug("Format 12 cmap contains character beyond UCS-4")
+			}
+
+			t.rec.Chars[uint16(i+firstCode)] = uint16(glyphId)
+		}
+
+	}
+
+	return nil
+}
+
+// ParseName parses the "name" table.
+func (t *ttfParser) ParseName() error {
+	if err := t.Seek("name"); err != nil {
+		return err
+	}
+	tableOffset, _ := t.f.Seek(0, os.SEEK_CUR)
+	t.rec.PostScriptName = ""
+	t.Skip(2) // format
+	count := t.ReadUShort()
+	stringOffset := t.ReadUShort()
+	for j := uint16(0); j < count && t.rec.PostScriptName == ""; j++ {
+		t.Skip(3 * 2) // platformID, encodingID, languageID
+		nameID := t.ReadUShort()
+		length := t.ReadUShort()
+		offset := t.ReadUShort()
+		if nameID == 6 {
+			// PostScript name
+			t.f.Seek(int64(tableOffset)+int64(stringOffset)+int64(offset), os.SEEK_SET)
+			s, err := t.ReadStr(int(length))
+			if err != nil {
+				return err
+			}
+			s = strings.Replace(s, "\x00", "", -1)
+			re, err := regexp.Compile("[(){}<> /%[\\]]")
+			if err != nil {
+				return err
+			}
+			t.rec.PostScriptName = re.ReplaceAllString(s, "")
+		}
+	}
+	if t.rec.PostScriptName == "" {
+		common.Log.Debug("ParseName: The name PostScript was not found.")
+	}
+	return nil
+}
+
+func (t *ttfParser) ParseOS2() error {
+	if err := t.Seek("OS/2"); err != nil {
+		return err
+	}
+	version := t.ReadUShort()
+	t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
+	fsType := t.ReadUShort()
+	t.rec.Embeddable = (fsType != 2) && (fsType&0x200) == 0
+	t.Skip(11*2 + 10 + 4*4 + 4)
+	fsSelection := t.ReadUShort()
+	t.rec.Bold = (fsSelection & 32) != 0
+	t.Skip(2 * 2) // usFirstCharIndex, usLastCharIndex
+	t.rec.TypoAscender = t.ReadShort()
+	t.rec.TypoDescender = t.ReadShort()
+	if version >= 2 {
+		t.Skip(3*2 + 2*4 + 2)
+		t.rec.CapHeight = t.ReadShort()
+	} else {
+		t.rec.CapHeight = 0
+	}
+	return nil
+}
+
+// ParsePost reads the "post" section in a TrueType font table and sets t.rec.GlyphNames.
+func (t *ttfParser) ParsePost() error {
+	if err := t.Seek("post"); err != nil {
+		return err
+	}
+
+	formatType := t.Read32Fixed()
+	t.rec.ItalicAngle = t.Read32Fixed()
+	t.rec.UnderlinePosition = t.ReadShort()
+	t.rec.UnderlineThickness = t.ReadShort()
+	t.rec.IsFixedPitch = t.ReadULong() != 0
+	t.ReadULong() // minMemType42 ignored.
+	t.ReadULong() // maxMemType42 ignored.
+	t.ReadULong() // mimMemType1 ignored.
+	t.ReadULong() // maxMemType1 ignored.
+
+	common.Log.Trace("ParsePost: formatType=%f", formatType)
+
+	switch formatType {
+	case 1.0: // This font file contains the standard Macintosh TrueTyp 258 glyphs.
+		t.rec.GlyphNames = macGlyphNames
+	case 2.0:
+		numGlyphs := int(t.ReadUShort())
+		glyphNameIndex := make([]int, numGlyphs)
+		t.rec.GlyphNames = make([]string, numGlyphs)
+		maxIndex := -1
+		for i := 0; i < numGlyphs; i++ {
+			index := int(t.ReadUShort())
+			glyphNameIndex[i] = index
+			// Index numbers between 0x7fff and 0xffff are reserved for future use
+			if index <= 0x7fff && index > maxIndex {
+				maxIndex = index
 			}
 		}
-		if t.rec.PostScriptName == "" {
-			err = fmt.Errorf("the name PostScript was not found")
+		var nameArray []string
+		if maxIndex >= len(macGlyphNames) {
+			nameArray = make([]string, maxIndex-len(macGlyphNames)+1)
+			for i := 0; i < maxIndex-len(macGlyphNames)+1; i++ {
+				numberOfChars := int(t.ReadByte())
+				names, err := t.ReadStr(numberOfChars)
+				if err != nil {
+					return err
+				}
+				nameArray[i] = names
+			}
 		}
-	}
-	return
-}
-
-func (t *ttfParser) ParseOS2() (err error) {
-	err = t.Seek("OS/2")
-	if err == nil {
-		version := t.ReadUShort()
-		t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
-		fsType := t.ReadUShort()
-		t.rec.Embeddable = (fsType != 2) && (fsType&0x200) == 0
-		t.Skip(11*2 + 10 + 4*4 + 4)
-		fsSelection := t.ReadUShort()
-		t.rec.Bold = (fsSelection & 32) != 0
-		t.Skip(2 * 2) // usFirstCharIndex, usLastCharIndex
-		t.rec.TypoAscender = t.ReadShort()
-		t.rec.TypoDescender = t.ReadShort()
-		if version >= 2 {
-			t.Skip(3*2 + 2*4 + 2)
-			t.rec.CapHeight = t.ReadShort()
-		} else {
-			t.rec.CapHeight = 0
+		for i := 0; i < numGlyphs; i++ {
+			index := glyphNameIndex[i]
+			if index < len(macGlyphNames) {
+				t.rec.GlyphNames[i] = macGlyphNames[index]
+			} else if index >= len(macGlyphNames) && index <= 32767 {
+				t.rec.GlyphNames[i] = nameArray[index-len(macGlyphNames)]
+			} else {
+				t.rec.GlyphNames[i] = ".undefined"
+			}
 		}
+	case 2.5:
+		glyphNameIndex := make([]int, t.numGlyphs)
+		for i := 0; i < len(glyphNameIndex); i++ {
+			offset := int(t.ReadSByte())
+			glyphNameIndex[i] = i + 1 + offset
+		}
+		t.rec.GlyphNames = make([]string, len(glyphNameIndex))
+		for i := 0; i < len(t.rec.GlyphNames); i++ {
+			name := macGlyphNames[glyphNameIndex[i]]
+			t.rec.GlyphNames[i] = name
+		}
+	case 3.0:
+		// no PostScript information is provided.
+		common.Log.Debug("No PostScript name information is provided for the font.")
+	default:
+		common.Log.Debug("ERROR: Unknown formatType=%f", formatType)
 	}
-	return
+
+	return nil
 }
 
-func (t *ttfParser) ParsePost() (err error) {
-	err = t.Seek("post")
-	if err == nil {
-		t.Skip(4) // version
-		t.rec.ItalicAngle = t.ReadShort()
-		t.Skip(2) // Skip decimal part
-		t.rec.UnderlinePosition = t.ReadShort()
-		t.rec.UnderlineThickness = t.ReadShort()
-		t.rec.IsFixedPitch = t.ReadULong() != 0
-	}
-	return
+// The 258 standard mac glyph names used in 'post' format 1 and 2.
+var macGlyphNames = []string{
+	".notdef", ".null", "nonmarkingreturn", "space", "exclam", "quotedbl",
+	"numbersign", "dollar", "percent", "ampersand", "quotesingle",
+	"parenleft", "parenright", "asterisk", "plus", "comma", "hyphen",
+	"period", "slash", "zero", "one", "two", "three", "four", "five",
+	"six", "seven", "eight", "nine", "colon", "semicolon", "less",
+	"equal", "greater", "question", "at", "A", "B", "C", "D", "E", "F",
+	"G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
+	"T", "U", "V", "W", "X", "Y", "Z", "bracketleft", "backslash",
+	"bracketright", "asciicircum", "underscore", "grave", "a", "b",
+	"c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+	"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "braceleft",
+	"bar", "braceright", "asciitilde", "Adieresis", "Aring",
+	"Ccedilla", "Eacute", "Ntilde", "Odieresis", "Udieresis", "aacute",
+	"agrave", "acircumflex", "adieresis", "atilde", "aring",
+	"ccedilla", "eacute", "egrave", "ecircumflex", "edieresis",
+	"iacute", "igrave", "icircumflex", "idieresis", "ntilde", "oacute",
+	"ograve", "ocircumflex", "odieresis", "otilde", "uacute", "ugrave",
+	"ucircumflex", "udieresis", "dagger", "degree", "cent", "sterling",
+	"section", "bullet", "paragraph", "germandbls", "registered",
+	"copyright", "trademark", "acute", "dieresis", "notequal", "AE",
+	"Oslash", "infinity", "plusminus", "lessequal", "greaterequal",
+	"yen", "mu", "partialdiff", "summation", "product", "pi",
+	"integral", "ordfeminine", "ordmasculine", "Omega", "ae", "oslash",
+	"questiondown", "exclamdown", "logicalnot", "radical", "florin",
+	"approxequal", "Delta", "guillemotleft", "guillemotright",
+	"ellipsis", "nonbreakingspace", "Agrave", "Atilde", "Otilde", "OE",
+	"oe", "endash", "emdash", "quotedblleft", "quotedblright",
+	"quoteleft", "quoteright", "divide", "lozenge", "ydieresis",
+	"Ydieresis", "fraction", "currency", "guilsinglleft",
+	"guilsinglright", "fi", "fl", "daggerdbl", "periodcentered",
+	"quotesinglbase", "quotedblbase", "perthousand", "Acircumflex",
+	"Ecircumflex", "Aacute", "Edieresis", "Egrave", "Iacute",
+	"Icircumflex", "Idieresis", "Igrave", "Oacute", "Ocircumflex",
+	"apple", "Ograve", "Uacute", "Ucircumflex", "Ugrave", "dotlessi",
+	"circumflex", "tilde", "macron", "breve", "dotaccent", "ring",
+	"cedilla", "hungarumlaut", "ogonek", "caron", "Lslash", "lslash",
+	"Scaron", "scaron", "Zcaron", "zcaron", "brokenbar", "Eth", "eth",
+	"Yacute", "yacute", "Thorn", "thorn", "minus", "multiply",
+	"onesuperior", "twosuperior", "threesuperior", "onehalf",
+	"onequarter", "threequarters", "franc", "Gbreve", "gbreve",
+	"Idotaccent", "Scedilla", "scedilla", "Cacute", "cacute", "Ccaron",
+	"ccaron", "dcroat",
 }
 
-func (t *ttfParser) Seek(tag string) (err error) {
+// Seek moves the file pointer to the table named `tag`.
+func (t *ttfParser) Seek(tag string) error {
 	ofs, ok := t.tables[tag]
-	if ok {
-		t.f.Seek(int64(ofs), os.SEEK_SET)
-	} else {
-		err = fmt.Errorf("table not found: %s", tag)
+	if !ok {
+		return fmt.Errorf("table not found: %s", tag)
 	}
-	return
+	t.f.Seek(int64(ofs), os.SEEK_SET)
+	return nil
 }
 
+// Skip moves the file point n bytes forward.
 func (t *ttfParser) Skip(n int) {
 	t.f.Seek(int64(n), os.SEEK_CUR)
 }
 
-func (t *ttfParser) ReadStr(length int) (str string, err error) {
-	var n int
+// ReadStr reads `length` bytes from the file and returns them as a string, or an error if there was
+// a problem.
+func (t *ttfParser) ReadStr(length int) (string, error) {
 	buf := make([]byte, length)
-	n, err = t.f.Read(buf)
-	if err == nil {
-		if n == length {
-			str = string(buf)
-		} else {
-			err = fmt.Errorf("unable to read %d bytes", length)
-		}
+	n, err := t.f.Read(buf)
+	if err != nil {
+		return "", err
+	} else if n != length {
+		return "", fmt.Errorf("unable to read %d bytes", length)
 	}
-	return
+	return string(buf), nil
 }
 
+// ReadByte reads a byte and returns it as unsigned.
+func (t *ttfParser) ReadByte() (val uint8) {
+	binary.Read(t.f, binary.BigEndian, &val)
+	return val
+}
+
+// ReadSByte reads a byte and returns it as signed.
+func (t *ttfParser) ReadSByte() (val int8) {
+	binary.Read(t.f, binary.BigEndian, &val)
+	return val
+}
+
+// ReadUShort reads 2 bytes and returns them as a big endian unsigned 16 bit integer.
 func (t *ttfParser) ReadUShort() (val uint16) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
+// ReadShort reads 2 bytes and returns them as a big endian signed 16 bit integer.
 func (t *ttfParser) ReadShort() (val int16) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
 }
 
+// ReadULong reads 4 bytes and returns them as a big endian unsigned 32 bit integer.
 func (t *ttfParser) ReadULong() (val uint32) {
 	binary.Read(t.f, binary.BigEndian, &val)
-	return
+	return val
+}
+
+// ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
+// the second 2 bytes for the fraction.
+func (t *ttfParser) Read32Fixed() float64 {
+	whole := float64(t.ReadUShort())
+	frac := float64(t.ReadUShort()) / 65536.0
+	return whole + frac
 }

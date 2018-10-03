@@ -53,7 +53,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *PdfObjectDictionary) (*PdfAcroForm
 		}
 
 		fields := []*PdfField{}
-		for _, obj := range *fieldArray {
+		for _, obj := range fieldArray.Elements() {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
 				return nil, err
@@ -154,11 +154,11 @@ func (this *PdfAcroForm) ToPdfObject() PdfObject {
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	if this.Fields != nil {
-		arr := PdfObjectArray{}
+		arr := MakeArray()
 		for _, field := range *this.Fields {
-			arr = append(arr, field.ToPdfObject())
+			arr.Append(field.ToPdfObject())
 		}
-		dict.Set("Fields", &arr)
+		dict.Set("Fields", arr)
 	}
 
 	if this.NeedAppearances != nil {
@@ -325,7 +325,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *PdfIndirectObject, 
 		}
 
 		field.KidsF = []PdfModel{}
-		for _, obj := range *fieldArray {
+		for _, obj := range fieldArray.Elements() {
 			obj, err := r.traceToObject(obj)
 			if err != nil {
 				return nil, err
@@ -365,11 +365,11 @@ func (this *PdfField) ToPdfObject() PdfObject {
 	if this.KidsF != nil {
 		// Create an array of the kids (fields or widgets).
 		common.Log.Trace("KidsF: %+v", this.KidsF)
-		arr := PdfObjectArray{}
+		arr := MakeArray()
 		for _, child := range this.KidsF {
-			arr = append(arr, child.ToPdfObject())
+			arr.Append(child.ToPdfObject())
 		}
-		dict.Set("Kids", &arr)
+		dict.Set("Kids", arr)
 	}
 	if this.KidsA != nil {
 		common.Log.Trace("KidsA: %+v", this.KidsA)
@@ -379,7 +379,7 @@ func (this *PdfField) ToPdfObject() PdfObject {
 		}
 		arr := dict.Get("Kids").(*PdfObjectArray)
 		for _, child := range this.KidsA {
-			*arr = append(*arr, child.GetContext().ToPdfObject())
+			arr.Append(child.GetContext().ToPdfObject())
 		}
 	}
 

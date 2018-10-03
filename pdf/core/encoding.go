@@ -152,11 +152,11 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			if arr, isArr := obj.(*PdfObjectArray); isArr {
-				if len(*arr) != 1 {
-					common.Log.Debug("Error: DecodeParms array length != 1 (%d)", len(*arr))
+				if arr.Len() != 1 {
+					common.Log.Debug("Error: DecodeParms array length != 1 (%d)", arr.Len())
 					return nil, errors.New("Range check error")
 				}
-				obj = TraceToDirectObject((*arr)[0])
+				obj = TraceToDirectObject(arr.Get(0))
 			}
 
 			dp, isDict := obj.(*PdfObjectDictionary)
@@ -533,8 +533,8 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
 				decodeParams = dp
 			} else if a, isArr := obj.(*PdfObjectArray); isArr {
-				if len(*a) == 1 {
-					if dp, isDict := (*a)[0].(*PdfObjectDictionary); isDict {
+				if a.Len() == 1 {
+					if dp, isDict := GetDict(a.Get(0)); isDict {
 						decodeParams = dp
 					}
 				}
@@ -1015,6 +1015,7 @@ func (this *DCTEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 	return this.DecodeBytes(streamObj.Stream)
 }
 
+// DrawableImage is same as golang image/draw's Image interface that allow drawing images.
 type DrawableImage interface {
 	ColorModel() gocolor.Model
 	Bounds() goimage.Rectangle
@@ -1674,7 +1675,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		// If it is an array, assume there is one for each
 		arr, isArray := obj.(*PdfObjectArray)
 		if isArray {
-			for _, dictObj := range *arr {
+			for _, dictObj := range arr.Elements() {
 				dictObj = TraceToDirectObject(dictObj)
 				if dict, is := dictObj.(*PdfObjectDictionary); is {
 					decodeParamsArray = append(decodeParamsArray, dict)
@@ -1695,7 +1696,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		return nil, fmt.Errorf("Multi filter can only be made from array")
 	}
 
-	for idx, obj := range *array {
+	for idx, obj := range array.Elements() {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
 			return nil, fmt.Errorf("Multi filter array element not a name")
@@ -1779,17 +1780,17 @@ func (this *MultiEncoder) MakeDecodeParams() PdfObject {
 		return this.encoders[0].MakeDecodeParams()
 	}
 
-	array := PdfObjectArray{}
+	array := MakeArray()
 	for _, encoder := range this.encoders {
 		decodeParams := encoder.MakeDecodeParams()
 		if decodeParams == nil {
-			array = append(array, MakeNull())
+			array.Append(MakeNull())
 		} else {
-			array = append(array, decodeParams)
+			array.Append(decodeParams)
 		}
 	}
 
-	return &array
+	return array
 }
 
 func (this *MultiEncoder) AddEncoder(encoder StreamEncoder) {

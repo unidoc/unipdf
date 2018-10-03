@@ -8,6 +8,7 @@ package ps
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -46,7 +47,7 @@ func quickEval(progText string) (PSObject, error) {
 	}
 
 	if len(outputs) != 1 {
-		return nil, fmt.Errorf("Stack result has too many values (>1)")
+		return nil, errors.New("stack result has too many values (>1)")
 	}
 
 	stack := PSStack(outputs)
@@ -111,7 +112,7 @@ func TestAdd2(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-9.1) > TOLERANCE {
+	if math.Abs(val.Val-9.1) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}
@@ -134,7 +135,7 @@ func TestSub1(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-1.7) > TOLERANCE {
+	if math.Abs(val.Val-1.7) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}
@@ -154,7 +155,7 @@ func TestSub2(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-1.7) > TOLERANCE {
+	if math.Abs(val.Val-1.7) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}

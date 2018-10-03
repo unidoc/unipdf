@@ -5,16 +5,20 @@
 
 package ps
 
+// PSStack defines a stack of PSObjects. PSObjects can be pushed on or pull from the stack.
 type PSStack []PSObject
 
+// NewPSStack returns an initialized PSStack.
 func NewPSStack() *PSStack {
 	return &PSStack{}
 }
 
+// Empty empties the stack.
 func (stack *PSStack) Empty() {
 	*stack = []PSObject{}
 }
 
+// Push pushes an object on top of the stack.
 func (stack *PSStack) Push(obj PSObject) error {
 	if len(*stack) > 100 {
 		return ErrStackOverflow
@@ -24,6 +28,7 @@ func (stack *PSStack) Push(obj PSObject) error {
 	return nil
 }
 
+// Pop pops an object from the top of the stack.
 func (stack *PSStack) Pop() (PSObject, error) {
 	if len(*stack) < 1 {
 		return nil, ErrStackUnderflow
@@ -35,6 +40,7 @@ func (stack *PSStack) Pop() (PSObject, error) {
 	return obj, nil
 }
 
+// PopInteger specificially pops an integer from the top of the stack, returning the value as an int.
 func (stack *PSStack) PopInteger() (int, error) {
 	obj, err := stack.Pop()
 	if err != nil {
@@ -43,12 +49,11 @@ func (stack *PSStack) PopInteger() (int, error) {
 
 	if number, is := obj.(*PSInteger); is {
 		return number.Val, nil
-	} else {
-		return 0, ErrTypeCheck
 	}
+	return 0, ErrTypeCheck
 }
 
-// Pop and return the numeric value of the top of the stack as a float64.
+// PopNumberAsFloat64 pops and return the numeric value of the top of the stack as a float64.
 // Real or integer only.
 func (stack *PSStack) PopNumberAsFloat64() (float64, error) {
 	obj, err := stack.Pop()
@@ -65,9 +70,10 @@ func (stack *PSStack) PopNumberAsFloat64() (float64, error) {
 	}
 }
 
-func (this *PSStack) String() string {
+// String returns a string representation of the stack.
+func (stack *PSStack) String() string {
 	s := "[ "
-	for _, obj := range *this {
+	for _, obj := range *stack {
 		s += obj.String()
 		s += " "
 	}
@@ -76,9 +82,10 @@ func (this *PSStack) String() string {
 	return s
 }
 
-func (this *PSStack) DebugString() string {
+// DebugString returns a descriptive string representation of the stack - intended for debugging.
+func (stack *PSStack) DebugString() string {
 	s := "[ "
-	for _, obj := range *this {
+	for _, obj := range *stack {
 		s += obj.DebugString()
 		s += " "
 	}

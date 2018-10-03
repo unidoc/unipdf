@@ -11,51 +11,56 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
+// ContentCreator is used to create a PDF content stream.
 type ContentCreator struct {
 	operands ContentStreamOperations
 }
 
+// NewContentCreator returns a new initialized ContentCreator.
 func NewContentCreator() *ContentCreator {
 	creator := &ContentCreator{}
 	creator.operands = ContentStreamOperations{}
 	return creator
 }
 
-// Get the list of operations.
-func (this *ContentCreator) Operations() *ContentStreamOperations {
-	return &this.operands
+// Operations returns the list of operations.
+func (cc *ContentCreator) Operations() *ContentStreamOperations {
+	return &cc.operands
 }
 
-// Convert a set of content stream operations to a content stream byte presentation, i.e. the kind that can be
+// Bytes converts the content stream operations to a content stream byte presentation, i.e. the kind that can be
 // stored as a PDF stream or string format.
-func (this *ContentCreator) Bytes() []byte {
-	return this.operands.Bytes()
+func (cc *ContentCreator) Bytes() []byte {
+	return cc.operands.Bytes()
 }
 
-// Same as Bytes() except returns as a string for convenience.
-func (this *ContentCreator) String() string {
-	return string(this.operands.Bytes())
+// String is same as Bytes() except returns as a string for convenience.
+func (cc *ContentCreator) String() string {
+	return string(cc.operands.Bytes())
 }
 
-/* Graphics state operators. */
+// Graphics state operators.
 
-// Save the current graphics state on the stack - push.
-func (this *ContentCreator) Add_q() *ContentCreator {
+// Add_q adds 'q' operand to the content stream.
+// 'q' pushes the current graphics state on the stack.
+func (cc *ContentCreator) Add_q() *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "q"
-	this.operands = append(this.operands, &op)
-	return this
+	cc.operands = append(cc.operands, &op)
+	return cc
 }
 
-// Restore the most recently stored state from the stack - pop.
-func (this *ContentCreator) Add_Q() *ContentCreator {
+// Add_Q adds 'Q' operand to the content stream.
+// 'Q' pops the most recently stored state from the stack.
+func (cc *ContentCreator) Add_Q() *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "Q"
-	this.operands = append(this.operands, &op)
-	return this
+	cc.operands = append(cc.operands, &op)
+	return cc
 }
 
-// Display XObject - image or form.
+// Add_Do adds 'Do' operation to the content stream, which displays an XObject
+// (image or form) specified by `name`.
 func (this *ContentCreator) Add_Do(name PdfObjectName) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "Do"
@@ -64,7 +69,8 @@ func (this *ContentCreator) Add_Do(name PdfObjectName) *ContentCreator {
 	return this
 }
 
-// Modify the current transformation matrix (ctm).
+// Add_cm adds 'cm' operation to the content stream, which
+// modifies the current transformation matrix (ctm).
 func (this *ContentCreator) Add_cm(a, b, c, d, e, f float64) *ContentCreator {
 	op := ContentStreamOperation{}
 	op.Operand = "cm"
@@ -73,17 +79,17 @@ func (this *ContentCreator) Add_cm(a, b, c, d, e, f float64) *ContentCreator {
 	return this
 }
 
-// Convenience function for generating a cm operation to translate the transformation matrix.
+// Translate applies a simple x-y translation to the transformation matrix.
 func (this *ContentCreator) Translate(tx, ty float64) *ContentCreator {
 	return this.Add_cm(1, 0, 0, 1, tx, ty)
 }
 
-// Convenience function for generating a cm command to scale the transformation matrix.
+// Scale applies x-y scaling to the transformation matrix.
 func (this *ContentCreator) Scale(sx, sy float64) *ContentCreator {
 	return this.Add_cm(sx, 0, 0, sy, 0, 0)
 }
 
-// Convenience function for generating a cm command to rotate transformation matrix.
+// RotateDeg applies a rotation to the transformation matrix.
 func (this *ContentCreator) RotateDeg(angle float64) *ContentCreator {
 	u1 := math.Cos(angle * math.Pi / 180.0)
 	u2 := math.Sin(angle * math.Pi / 180.0)

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -57,7 +62,7 @@ func TestFuzzReaderBuildPageLoop(t *testing.T) {
 	// Make a dummy reader to test
 	dummyPdfReader := PdfReader{}
 	dummyPdfReader.traversed = map[core.PdfObject]bool{}
-	dummyPdfReader.modelManager = NewModelManager()
+	dummyPdfReader.modelManager = newModelManager()
 
 	traversedPageNodes := map[core.PdfObject]bool{}
 	err := dummyPdfReader.buildPageList(pages, nil, traversedPageNodes)

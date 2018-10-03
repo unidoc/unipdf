@@ -7,25 +7,11 @@ package extractor
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
 	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/core"
 )
-
-// getNumberAsFloat can retrieve numeric values from PdfObject (both integer/float).
-func getNumberAsFloat(obj core.PdfObject) (float64, error) {
-	if fObj, ok := obj.(*core.PdfObjectFloat); ok {
-		return float64(*fObj), nil
-	}
-
-	if iObj, ok := obj.(*core.PdfObjectInteger); ok {
-		return float64(*iObj), nil
-	}
-
-	return 0, errors.New("Not a number")
-}
 
 func procBuf(buf *bytes.Buffer) {
 	if isTesting {
@@ -45,4 +31,24 @@ func procBuf(buf *bytes.Buffer) {
 		buf.Truncate(buf.Len() - 100)
 	}
 	buf.WriteString(s)
+}
+
+// toFloatList returns `objs` as 2 floats, if that's what it is, or an error if it isn't
+func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {
+	if len(objs) != 2 {
+		return 0, 0, fmt.Errorf("Invalid number of params: %d", len(objs))
+	}
+	floats, err := core.GetNumbersAsFloat(objs)
+	if err != nil {
+		return 0, 0, err
+	}
+	return floats[0], floats[1], nil
+}
+
+// truncate returns the first `n` characters in string `s`.
+func truncate(s string, n int) string {
+	if len(s) < n {
+		return s
+	}
+	return s[:n]
 }

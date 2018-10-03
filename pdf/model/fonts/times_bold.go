@@ -4,7 +4,7 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
@@ -14,24 +14,32 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Times-Bold.  Implements Font interface.
+// FontTimesBold represents the Times-Bold font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontTimesBold struct {
+type FontTimesBold struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontTimesBold() fontTimesBold {
-	font := fontTimesBold{}
+// NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontTimesBold() FontTimesBold {
+	font := FontTimesBold{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontTimesBold) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontTimesBold) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := timesBoldCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := TimesBoldCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontTimesBold) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) 
 	return metrics, true
 }
 
-func (font fontTimesBold) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontTimesBold) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Times-Bold"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Times-Bold font metics loaded from afms/Times-Bold.afm.  See afms/MustRead.html for license information.
-var timesBoldCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// TimesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.
+// See afms/MustRead.html for license information.
+var TimesBoldCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

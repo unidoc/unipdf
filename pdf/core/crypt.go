@@ -52,7 +52,8 @@ type PdfCrypt struct {
 
 	parser *PdfParser
 
-	ivAESZero []byte // a zero buffer used as an initialization vector for AES
+	decryptedObjNum map[int]struct{}
+	ivAESZero       []byte // a zero buffer used as an initialization vector for AES
 }
 
 // AccessPermissions is a list of access permissions for a PDF file.
@@ -306,11 +307,13 @@ func (crypt *PdfCrypt) SaveCryptFilters(ed *PdfObjectDictionary) error {
 // PdfCryptMakeNew makes the document crypt handler based on the encryption dictionary
 // and trailer dictionary. Returns an error on failure to process.
 func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCrypt, error) {
-	crypter := PdfCrypt{}
-	crypter.DecryptedObjects = map[PdfObject]bool{}
-	crypter.EncryptedObjects = map[PdfObject]bool{}
-	crypter.Authenticated = false
-	crypter.parser = parser
+	crypter := PdfCrypt{
+		Authenticated:    false,
+		DecryptedObjects: make(map[PdfObject]bool),
+		EncryptedObjects: make(map[PdfObject]bool),
+		decryptedObjNum:  make(map[int]struct{}),
+		parser:           parser,
+	}
 
 	filter, ok := ed.Get("Filter").(*PdfObjectName)
 	if !ok {
@@ -325,7 +328,7 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 
 	subfilter, ok := ed.Get("SubFilter").(*PdfObjectString)
 	if ok {
-		crypter.Subfilter = string(*subfilter)
+		crypter.Subfilter = subfilter.Str()
 		common.Log.Debug("Using subfilter %s", subfilter)
 	}
 
@@ -372,13 +375,13 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	if crypter.R == 5 || crypter.R == 6 {
 		// the spec says =48 bytes, but Acrobat pads them out longer
-		if len(*O) < 48 {
-			return crypter, fmt.Errorf("Length(O) < 48 (%d)", len(*O))
+		if len(O.Str()) < 48 {
+			return crypter, fmt.Errorf("Length(O) < 48 (%d)", len(O.Str()))
 		}
-	} else if len(*O) != 32 {
-		return crypter, fmt.Errorf("Length(O) != 32 (%d)", len(*O))
+	} else if len(O.Str()) != 32 {
+		return crypter, fmt.Errorf("Length(O) != 32 (%d)", len(O.Str()))
 	}
-	crypter.O = []byte(*O)
+	crypter.O = O.Bytes()
 
 	U, ok := ed.Get("U").(*PdfObjectString)
 	if !ok {
@@ -386,35 +389,35 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	}
 	if crypter.R == 5 || crypter.R == 6 {
 		// the spec says =48 bytes, but Acrobat pads them out longer
-		if len(*U) < 48 {
-			return crypter, fmt.Errorf("Length(U) < 48 (%d)", len(*U))
+		if len(U.Str()) < 48 {
+			return crypter, fmt.Errorf("Length(U) < 48 (%d)", len(U.Str()))
 		}
-	} else if len(*U) != 32 {
+	} else if len(U.Str()) != 32 {
 		// Strictly this does not cause an error.
 		// If O is OK and others then can still read the file.
-		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(*U))
+		common.Log.Debug("Warning: Length(U) != 32 (%d)", len(U.Str()))
 		//return crypter, errors.New("Length(U) != 32")
 	}
-	crypter.U = []byte(*U)
+	crypter.U = U.Bytes()
 
 	if crypter.R >= 5 {
 		OE, ok := ed.Get("OE").(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing OE")
 		}
-		if len(*OE) != 32 {
-			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(*OE))
+		if len(OE.Str()) != 32 {
+			return crypter, fmt.Errorf("Length(OE) != 32 (%d)", len(OE.Str()))
 		}
-		crypter.OE = []byte(*OE)
+		crypter.OE = OE.Bytes()
 
 		UE, ok := ed.Get("UE").(*PdfObjectString)
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing UE")
 		}
-		if len(*UE) != 32 {
-			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(*UE))
+		if len(UE.Str()) != 32 {
+			return crypter, fmt.Errorf("Length(UE) != 32 (%d)", len(UE.Str()))
 		}
-		crypter.UE = []byte(*UE)
+		crypter.UE = UE.Bytes()
 	}
 
 	P, ok := ed.Get("P").(*PdfObjectInteger)
@@ -428,10 +431,10 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 		if !ok {
 			return crypter, errors.New("Encrypt dictionary missing Perms")
 		}
-		if len(*Perms) != 16 {
-			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(*Perms))
+		if len(Perms.Str()) != 16 {
+			return crypter, fmt.Errorf("Length(Perms) != 16 (%d)", len(Perms.Str()))
 		}
-		crypter.Perms = []byte(*Perms)
+		crypter.Perms = Perms.Bytes()
 	}
 
 	em, ok := ed.Get("EncryptMetadata").(*PdfObjectBool)
@@ -444,17 +447,17 @@ func PdfCryptMakeNew(parser *PdfParser, ed, trailer *PdfObjectDictionary) (PdfCr
 	// Default: empty ID.
 	// Strictly, if file is encrypted, the ID should always be specified
 	// but clearly not everyone is following the specification.
-	id0 := PdfObjectString("")
-	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && len(*idArray) >= 1 {
-		id0obj, ok := (*idArray)[0].(*PdfObjectString)
+	id0 := ""
+	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && idArray.Len() >= 1 {
+		id0obj, ok := GetString(idArray.Get(0))
 		if !ok {
 			return crypter, errors.New("Invalid trailer ID")
 		}
-		id0 = *id0obj
+		id0 = id0obj.Str()
 	} else {
 		common.Log.Debug("Trailer ID array missing or invalid!")
 	}
-	crypter.Id0 = string(id0)
+	crypter.Id0 = id0
 
 	return crypter, nil
 }
@@ -538,7 +541,7 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 
 	// Try user password.
 	common.Log.Trace("Debugging authentication - user pass")
-	authenticated, err := crypt.Alg6(password)
+	authenticated, err := crypt.alg6(password)
 	if err != nil {
 		return false, err
 	}
@@ -552,7 +555,7 @@ func (crypt *PdfCrypt) authenticate(password []byte) (bool, error) {
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).
 	common.Log.Trace("Debugging authentication - owner pass")
-	authenticated, err = crypt.Alg7(password)
+	authenticated, err = crypt.alg7(password)
 	if err != nil {
 		return false, err
 	}
@@ -587,7 +590,7 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 		}
 		isOwner = len(h) != 0
 	} else {
-		isOwner, err = crypt.Alg7(password)
+		isOwner, err = crypt.alg7(password)
 	}
 	if err != nil {
 		return false, perms, err
@@ -615,7 +618,7 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, AccessPermissio
 		}
 		isUser = len(h) != 0
 	} else {
-		isUser, err = crypt.Alg6(password)
+		isUser, err = crypt.alg6(password)
 	}
 	if err != nil {
 		return false, perms, err
@@ -656,12 +659,45 @@ func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte
 	return f.MakeKey(objNum, genNum, ekey)
 }
 
+// encryptDictKeys list all required field for "Encrypt" dictionary.
+// It is used as a fingerprint to detect old copies of this dictionary.
+var encryptDictKeys = []PdfObjectName{
+	"V", "R", "O", "U", "P",
+}
+
 // Check if object has already been processed.
 func (crypt *PdfCrypt) isDecrypted(obj PdfObject) bool {
 	_, ok := crypt.DecryptedObjects[obj]
 	if ok {
 		common.Log.Trace("Already decrypted")
 		return true
+	}
+	switch obj := obj.(type) {
+	case *PdfObjectStream:
+		if crypt.R != 5 {
+			if name, ok := obj.Get("Type").(*PdfObjectName); ok && *name == "XRef" {
+				return true // Cross-reference streams should not be encrypted
+			}
+		}
+	case *PdfIndirectObject:
+		if _, ok = crypt.decryptedObjNum[int(obj.ObjectNumber)]; ok {
+			return true
+		}
+		switch obj := obj.PdfObject.(type) {
+		case *PdfObjectDictionary:
+			// detect old copies of "Encrypt" dictionary
+			// TODO: find a better way to do it
+			ok := true
+			for _, key := range encryptDictKeys {
+				if obj.Get(key) == nil {
+					ok = false
+					break
+				}
+			}
+			if ok {
+				return true
+			}
+		}
 	}
 
 	common.Log.Trace("Not decrypted yet")
@@ -708,8 +744,10 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		crypt.DecryptedObjects[obj] = true
 		dict := obj.PdfObjectDictionary
 
-		if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
-			return nil // Cross-reference streams should not be encrypted
+		if crypt.R != 5 {
+			if s, ok := dict.Get("Type").(*PdfObjectName); ok && *s == "XRef" {
+				return nil // Cross-reference streams should not be encrypted
+			}
 		}
 
 		objNum := obj.ObjectNumber
@@ -726,7 +764,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
-				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
+				if firstFilter, ok := GetName(filters.Get(0)); ok {
 					if *firstFilter == "Crypt" {
 						// Crypt filter overriding the default.
 						// Default option is Identity.
@@ -790,20 +828,21 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		}
 
 		// Overwrite the encrypted with decrypted string.
-		decrypted := make([]byte, len(*obj))
-		for i := 0; i < len(*obj); i++ {
-			decrypted[i] = (*obj)[i]
+		str := obj.Str()
+		decrypted := make([]byte, len(str))
+		for i := 0; i < len(str); i++ {
+			decrypted[i] = str[i]
 		}
 		common.Log.Trace("Decrypt string: %s : % x", decrypted, decrypted)
 		decrypted, err = crypt.decryptBytes(decrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
-		*obj = PdfObjectString(decrypted)
+		obj.val = string(decrypted)
 
 		return nil
 	case *PdfObjectArray:
-		for _, o := range *obj {
+		for _, o := range obj.Elements() {
 			err := crypt.Decrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
@@ -910,7 +949,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 
 			if filters, ok := dict.Get("Filter").(*PdfObjectArray); ok {
 				// Crypt filter can only be the first entry.
-				if firstFilter, ok := (*filters)[0].(*PdfObjectName); ok {
+				if firstFilter, ok := GetName(filters.Get(0)); ok {
 					if *firstFilter == "Crypt" {
 						// Crypt filter overriding the default.
 						// Default option is Identity.
@@ -972,20 +1011,21 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 			return err
 		}
 
-		encrypted := make([]byte, len(*obj))
-		for i := 0; i < len(*obj); i++ {
-			encrypted[i] = (*obj)[i]
+		str := obj.Str()
+		encrypted := make([]byte, len(str))
+		for i := 0; i < len(str); i++ {
+			encrypted[i] = str[i]
 		}
 		common.Log.Trace("Encrypt string: %s : % x", encrypted, encrypted)
 		encrypted, err = crypt.encryptBytes(encrypted, stringFilter, key)
 		if err != nil {
 			return err
 		}
-		*obj = PdfObjectString(encrypted)
+		obj.val = string(encrypted)
 
 		return nil
 	case *PdfObjectArray:
-		for _, o := range *obj {
+		for _, o := range obj.Elements() {
 			err := crypt.Encrypt(o, parentObjNum, parentGenNum)
 			if err != nil {
 				return err
@@ -1218,10 +1258,9 @@ func alg2b(data, pwd, userKey []byte) []byte {
 	return K[:32]
 }
 
-// Alg2 computes an encryption key.
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg2(pass []byte) []byte {
-	common.Log.Trace("Alg2")
+// alg2 computes an encryption key.
+func (crypt *PdfCrypt) alg2(pass []byte) []byte {
+	common.Log.Trace("alg2")
 	key := crypt.paddedPass(pass)
 
 	h := md5.New()
@@ -1287,10 +1326,9 @@ func (crypt *PdfCrypt) alg3Key(pass []byte) []byte {
 }
 
 // Alg3 computes the encryption dictionary’s O (owner password) value.
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
+func (crypt *PdfCrypt) Alg3(upass, opass []byte) (string, error) {
 	// Return O string val.
-	O := PdfObjectString("")
+	O := ""
 
 	var encKey []byte
 	if len(opass) > 0 {
@@ -1322,16 +1360,15 @@ func (crypt *PdfCrypt) Alg3(upass, opass []byte) (PdfObjectString, error) {
 		}
 	}
 
-	O = PdfObjectString(encrypted)
+	O = string(encrypted)
 	return O, nil
 }
 
-// Alg4 computes the encryption dictionary’s U (user password) value (Security handlers of revision 2).
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg4(upass []byte) (PdfObjectString, []byte, error) {
-	U := PdfObjectString("")
+// alg4 computes the encryption dictionary’s U (user password) value (Security handlers of revision 2).
+func (crypt *PdfCrypt) alg4(upass []byte) (string, []byte, error) {
+	U := ""
 
-	ekey := crypt.Alg2(upass)
+	ekey := crypt.alg2(upass)
 	ciph, err := rc4.NewCipher(ekey)
 	if err != nil {
 		return U, ekey, errors.New("Failed rc4 ciph")
@@ -1341,16 +1378,15 @@ func (crypt *PdfCrypt) Alg4(upass []byte) (PdfObjectString, []byte, error) {
 	encrypted := make([]byte, len(s))
 	ciph.XORKeyStream(encrypted, s)
 
-	U = PdfObjectString(encrypted)
+	U = string(encrypted)
 	return U, ekey, nil
 }
 
 // Alg5 computes the encryption dictionary’s U (user password) value (Security handlers of revision 3 or greater).
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg5(upass []byte) (PdfObjectString, []byte, error) {
-	U := PdfObjectString("")
+func (crypt *PdfCrypt) Alg5(upass []byte) (string, []byte, error) {
+	U := ""
 
-	ekey := crypt.Alg2(upass)
+	ekey := crypt.alg2(upass)
 
 	h := md5.New()
 	h.Write([]byte(padding))
@@ -1405,18 +1441,17 @@ func (crypt *PdfCrypt) Alg5(upass []byte) (PdfObjectString, []byte, error) {
 		return U, ekey, errors.New("Failed to gen rand number")
 	}
 
-	U = PdfObjectString(bb)
+	U = string(bb)
 	return U, ekey, nil
 }
 
-// Alg6 authenticates the user password.
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg6(upass []byte) (bool, error) {
-	var uo PdfObjectString
+// alg6 authenticates the user password.
+func (crypt *PdfCrypt) alg6(upass []byte) (bool, error) {
+	var uo string
 	var err error
 	var key []byte
 	if crypt.R == 2 {
-		uo, key, err = crypt.Alg4(upass)
+		uo, key, err = crypt.alg4(upass)
 	} else if crypt.R >= 3 {
 		uo, key, err = crypt.Alg5(upass)
 	} else {
@@ -1450,9 +1485,8 @@ func (crypt *PdfCrypt) Alg6(upass []byte) (bool, error) {
 	return false, nil
 }
 
-// Alg7 authenticates the owner password.
-// TODO (v3): Unexport.
-func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
+// alg7 authenticates the owner password.
+func (crypt *PdfCrypt) alg7(opass []byte) (bool, error) {
 	encKey := crypt.alg3Key(opass)
 
 	decrypted := make([]byte, len(crypt.O))
@@ -1481,7 +1515,7 @@ func (crypt *PdfCrypt) Alg7(opass []byte) (bool, error) {
 		return false, errors.New("invalid R")
 	}
 
-	auth, err := crypt.Alg6(decrypted)
+	auth, err := crypt.alg6(decrypted)
 	if err != nil {
 		return false, nil
 	}

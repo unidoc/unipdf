@@ -8,12 +8,10 @@ package cmap
 import (
 	"bufio"
 	"bytes"
-	"errors"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
-
-	"encoding/hex"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -34,8 +32,7 @@ func newCMapParser(content []byte) *cMapParser {
 	return &parser
 }
 
-// Detect the signature at the current file position and parse
-// the corresponding object.
+// parseObject detects the signature at the current file position and parses the corresponding object.
 func (p *cMapParser) parseObject() (cmapObject, error) {
 	p.skipSpaces()
 	for {
@@ -81,8 +78,7 @@ func (p *cMapParser) parseObject() (cmapObject, error) {
 	}
 }
 
-// Skip over any spaces.  Returns the number of spaces skipped and
-// an error if any.
+// skipSpaces skips over any spaces.  Returns the number of spaces skipped and an error if any.
 func (p *cMapParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
@@ -114,11 +110,11 @@ func (p *cMapParser) parseComment() (string, error) {
 	for {
 		bb, err := p.reader.Peek(1)
 		if err != nil {
-			common.Log.Debug("Error %s", err.Error())
+			common.Log.Debug("parseComment: err=%v", err)
 			return r.String(), err
 		}
 		if isFirst && bb[0] != '%' {
-			return r.String(), errors.New("Comment should start with %")
+			return r.String(), ErrBadCMapComment
 		}
 		isFirst = false
 		if (bb[0] != '\r') && (bb[0] != '\n') {
@@ -131,7 +127,7 @@ func (p *cMapParser) parseComment() (string, error) {
 	return r.String(), nil
 }
 
-// Parse a name starting with '/'.
+// parseName parses a name starting with '/'.
 func (p *cMapParser) parseName() (cmapName, error) {
 	name := ""
 	nameStarted := false
@@ -150,7 +146,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 				nameStarted = true
 				p.reader.ReadByte()
 			} else {
-				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
+				common.Log.Debug("ERROR: Name starting with %s (% x)", bb, bb)
 				return cmapName{name}, fmt.Errorf("Invalid name: (%c)", bb[0])
 			}
 		} else {
@@ -180,7 +176,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 	return cmapName{name}, nil
 }
 
-// A string starts with '(' and ends with ')'.
+// parseString parses a string starts with '(' and ends with ')'.
 func (p *cMapParser) parseString() (cmapString, error) {
 	p.reader.ReadByte()
 
@@ -264,7 +260,8 @@ func (p *cMapParser) parseString() (cmapString, error) {
 	return cmapString{buf.String()}, nil
 }
 
-// Starts with '<' ends with '>'.
+// parseHexString parses a PostScript hex string.
+// Hex strings start with '<' ends with '>'.
 // Currently not converting the hex codes to characters.
 func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	p.reader.ReadByte()
@@ -273,13 +270,12 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 
 	buf := bytes.Buffer{}
 
-	//tmp := []byte{}
 	for {
 		p.skipSpaces()
 
 		bb, err := p.reader.Peek(1)
 		if err != nil {
-			return cmapHexString{numBytes: 0, b: []byte("")}, err
+			return cmapHexString{}, err
 		}
 
 		if bb[0] == '>' {
@@ -294,15 +290,17 @@ func (p *cMapParser) parseHexString() (cmapHexString, error) {
 	}
 
 	if buf.Len()%2 == 1 {
+		common.Log.Debug("parseHexString: appending '0' to %#q", buf.String())
 		buf.WriteByte('0')
 	}
-	numBytes := buf.Len() / 2
 
+	numBytes := buf.Len() / 2
 	hexb, _ := hex.DecodeString(buf.String())
 	return cmapHexString{numBytes: numBytes, b: hexb}, nil
 }
 
-// Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
+// parseArray parses a PDF array, which starts with '[', ends with ']'and can contain any kinds of
+// direct objects.
 func (p *cMapParser) parseArray() (cmapArray, error) {
 	arr := cmapArray{}
 	arr.Array = []cmapObject{}
@@ -332,7 +330,7 @@ func (p *cMapParser) parseArray() (cmapArray, error) {
 	return arr, nil
 }
 
-// Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
+// parseDict parses a PDF dictionary object, which starts with with '<<' and ends with '>>'.
 func (p *cMapParser) parseDict() (cmapDict, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
@@ -341,11 +339,11 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 	// Pass the '<<'
 	c, _ := p.reader.ReadByte()
 	if c != '<' {
-		return dict, errors.New("Invalid dict")
+		return dict, ErrBadCMapDict
 	}
 	c, _ = p.reader.ReadByte()
 	if c != '<' {
-		return dict, errors.New("Invalid dict")
+		return dict, ErrBadCMapDict
 	}
 
 	for {
@@ -365,7 +363,7 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 		key, err := p.parseName()
 		common.Log.Trace("Key: %s", key.Name)
 		if err != nil {
-			common.Log.Debug("ERROR Returning name err %s", err)
+			common.Log.Debug("ERROR: Returning name. err=%v", err)
 			return dict, err
 		}
 
@@ -392,6 +390,7 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 	return dict, nil
 }
 
+// parseDict parseNumber a PDF number.
 func (p *cMapParser) parseNumber() (cmapObject, error) {
 	isFloat := false
 	allowSigns := true
@@ -438,7 +437,7 @@ func (p *cMapParser) parseNumber() (cmapObject, error) {
 	return o, err
 }
 
-// An operand is a text command represented by a word.
+// parseOperand parses an operand, which is a text command represented by a word.
 func (p *cMapParser) parseOperand() (cmapOperand, error) {
 	op := cmapOperand{}
 

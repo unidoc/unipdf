@@ -10,7 +10,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
+)
+
+var (
+	fontHelvetica     = model.NewStandard14FontMustCompile(model.Helvetica)
+	fontHelveticaBold = model.NewStandard14FontMustCompile(model.HelveticaBold)
 )
 
 func TestTableMultiParagraphWrapped(t *testing.T) {
@@ -25,7 +30,7 @@ func TestTableMultiParagraphWrapped(t *testing.T) {
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 	}
-	fontHelvetica := fonts.NewFontHelvetica()
+
 	for _, rows := range content {
 		for _, txt := range rows {
 			p := NewParagraph(txt)
@@ -35,7 +40,7 @@ func TestTableMultiParagraphWrapped(t *testing.T) {
 			p.SetEnableWrap(true)
 
 			cell := pageHistoryTable.NewCell()
-			cell.SetBorder(CellBorderStyleBox, 1)
+			cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 			cell.SetContent(p)
 		}
 	}
@@ -63,7 +68,6 @@ func TestTableWithImage(t *testing.T) {
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 	}
-	fontHelvetica := fonts.NewFontHelvetica()
 	for _, rows := range content {
 		for _, txt := range rows {
 			p := NewParagraph(txt)
@@ -73,7 +77,7 @@ func TestTableWithImage(t *testing.T) {
 			p.SetEnableWrap(true)
 
 			cell := pageHistoryTable.NewCell()
-			cell.SetBorder(CellBorderStyleBox, 1)
+			cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 			err := cell.SetContent(p)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
@@ -104,7 +108,7 @@ func TestTableWithImage(t *testing.T) {
 
 	cell := pageHistoryTable.NewCell()
 	cell.SetContent(img)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 
 	err = c.Draw(pageHistoryTable)
 	if err != nil {
@@ -149,8 +153,6 @@ func TestTableWithDiv(t *testing.T) {
 		{"19", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 		{"20", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
 	}
-	fontHelvetica := fonts.NewFontHelvetica()
-	fontHelveticaBold := fonts.NewFontHelveticaBold()
 	for _, rows := range content {
 		for colIdx, txt := range rows {
 			p := NewParagraph(txt)
@@ -185,7 +187,7 @@ func TestTableWithDiv(t *testing.T) {
 			}
 
 			cell := pageHistoryTable.NewCell()
-			cell.SetBorder(CellBorderStyleBox, 1)
+			cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 			err = cell.SetContent(div)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
@@ -216,7 +218,7 @@ func TestTableWithDiv(t *testing.T) {
 
 	cell := pageHistoryTable.NewCell()
 	cell.SetContent(img)
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 
 	err = c.Draw(pageHistoryTable)
 	if err != nil {

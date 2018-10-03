@@ -39,7 +39,7 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 	if obj := dict.Get("ExtGState"); obj != nil {
 		r.ExtGState = obj
 	}
-	if obj := dict.Get("ColorSpace"); obj != nil && !isNullObject(obj) {
+	if obj := dict.Get("ColorSpace"); obj != nil && !IsNullObject(obj) {
 		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
 		if err != nil {
 			return nil, err

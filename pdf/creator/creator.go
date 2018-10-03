@@ -44,30 +44,35 @@ type Creator struct {
 
 	// Forms.
 	acroForm *model.PdfAcroForm
+
+	optimizer model.Optimizer
 }
 
-// SetForms Add Acroforms to a PDF file.  Sets the specified form for writing.
+// SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
 func (c *Creator) SetForms(form *model.PdfAcroForm) error {
 	c.acroForm = form
 	return nil
 }
 
 // FrontpageFunctionArgs holds the input arguments to a front page drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
 type FrontpageFunctionArgs struct {
 	PageNum    int
 	TotalPages int
 }
 
 // HeaderFunctionArgs holds the input arguments to a header drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
 type HeaderFunctionArgs struct {
 	PageNum    int
 	TotalPages int
 }
 
 // FooterFunctionArgs holds the input arguments to a footer drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards compatibility.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
 type FooterFunctionArgs struct {
 	PageNum    int
 	TotalPages int
@@ -96,6 +101,16 @@ func New() *Creator {
 	c.toc = newTableOfContents()
 
 	return c
+}
+
+// SetOptimizer sets the optimizer to optimize PDF before writing.
+func (c *Creator) SetOptimizer(optimizer model.Optimizer) {
+	c.optimizer = optimizer
+}
+
+// GetOptimizer returns current PDF optimizer.
+func (c *Creator) GetOptimizer() model.Optimizer {
+	return c.optimizer
 }
 
 // SetPageMargins sets the page margins: left, right, top, bottom.
@@ -131,7 +146,8 @@ func (c *Creator) getActivePage() *model.PdfPage {
 	return c.activePage
 }
 
-// SetPageSize sets the Creator's page size.  Pages that are added after this will be created with this Page size.
+// SetPageSize sets the Creator's page size.  Pages that are added after this will be created with
+// this Page size.
 // Does not affect pages already created.
 //
 // Common page sizes are defined as constants.
@@ -238,8 +254,8 @@ func (c *Creator) AddPage(page *model.PdfPage) error {
 	return nil
 }
 
-// RotateDeg rotates the current active page by angle degrees.  An error is returned on failure, which can be
-// if there is no currently active page, or the angleDeg is not a multiple of 90 degrees.
+// RotateDeg rotates the current active page by angle degrees.  An error is returned on failure,
+// which can be if there is no currently active page, or the angleDeg is not a multiple of 90 degrees.
 func (c *Creator) RotateDeg(angleDeg int64) error {
 	page := c.getActivePage()
 	if page == nil {
@@ -247,7 +263,7 @@ func (c *Creator) RotateDeg(angleDeg int64) error {
 		return errors.New("No page active")
 	}
 	if angleDeg%90 != 0 {
-		common.Log.Debug("Error: Page rotation angle not a multiple of 90")
+		common.Log.Debug("ERROR: Page rotation angle not a multiple of 90")
 		return errors.New("Range check error")
 	}
 
@@ -267,8 +283,8 @@ func (c *Creator) Context() DrawContext {
 	return c.context
 }
 
-// Call before writing out.  Takes care of adding headers and footers, as well as generating front Page and
-// table of contents.
+// Call before writing out.  Takes care of adding headers and footers, as well as generating front
+// Page and table of contents.
 func (c *Creator) finalize() error {
 	totPages := len(c.pages)
 
@@ -356,8 +372,8 @@ func (c *Creator) finalize() error {
 		c.setActivePage(page)
 		if c.drawHeaderFunc != nil {
 			// Prepare a block to draw on.
-			// Header is drawn on the top of the page. Has width of the page, but height limited to the page
-			// margin top height.
+			// Header is drawn on the top of the page. Has width of the page, but height limited to
+			// the page margin top height.
 			headerBlock := NewBlock(c.pageWidth, c.pageMargins.top)
 			args := HeaderFunctionArgs{
 				PageNum:    idx + 1,
@@ -367,15 +383,15 @@ func (c *Creator) finalize() error {
 			headerBlock.SetPos(0, 0)
 			err := c.Draw(headerBlock)
 			if err != nil {
-				common.Log.Debug("Error drawing header: %v", err)
+				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
 
 		}
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.
-			// Footer is drawn on the bottom of the page. Has width of the page, but height limited to the page
-			// margin bottom height.
+			// Footer is drawn on the bottom of the page. Has width of the page, but height limited
+			// to the page margin bottom height.
 			footerBlock := NewBlock(c.pageWidth, c.pageMargins.bottom)
 			args := FooterFunctionArgs{
 				PageNum:    idx + 1,
@@ -385,7 +401,7 @@ func (c *Creator) finalize() error {
 			footerBlock.SetPos(0, c.pageHeight-footerBlock.height)
 			err := c.Draw(footerBlock)
 			if err != nil {
-				common.Log.Debug("Error drawing footer: %v", err)
+				common.Log.Debug("ERROR: drawing footer: %v", err)
 				return err
 			}
 		}
@@ -422,8 +438,8 @@ func (c *Creator) MoveDown(dy float64) {
 	c.context.Y += dy
 }
 
-// Draw draws the Drawable widget to the document.  This can span over 1 or more pages. Additional pages are added if
-// the contents go over the current Page.
+// Draw draws the Drawable widget to the document.  This can span over 1 or more pages. Additional
+// pages are added if the contents go over the current Page.
 func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
 		// Add a new Page if none added already.
@@ -455,19 +471,21 @@ func (c *Creator) Draw(d Drawable) error {
 	return nil
 }
 
-// Write output of creator to io.WriteSeeker interface.
-func (c *Creator) Write(ws io.WriteSeeker) error {
+// Write output of creator to io.Writer interface.
+func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
 		c.finalize()
 	}
 
 	pdfWriter := model.NewPdfWriter()
+	pdfWriter.SetOptimizer(c.optimizer)
+
 	// Form fields.
 	if c.acroForm != nil {
-		errF := pdfWriter.SetForms(c.acroForm)
-		if errF != nil {
-			common.Log.Debug("Failure: %v", errF)
-			return errF
+		err := pdfWriter.SetForms(c.acroForm)
+		if err != nil {
+			common.Log.Debug("Failure: %v", err)
+			return err
 		}
 	}
 
@@ -483,7 +501,7 @@ func (c *Creator) Write(ws io.WriteSeeker) error {
 	for _, page := range c.pages {
 		err := pdfWriter.AddPage(page)
 		if err != nil {
-			common.Log.Error("Failed to add Page: %s", err)
+			common.Log.Error("Failed to add Page: %v", err)
 			return err
 		}
 	}
@@ -519,13 +537,7 @@ func (c *Creator) WriteToFile(outputPath string) error {
 	if err != nil {
 		return err
 	}
-
 	defer fWrite.Close()
 
-	err = c.Write(fWrite)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.Write(fWrite)
 }

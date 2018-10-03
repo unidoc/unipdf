@@ -69,7 +69,7 @@ func TestAlg2(t *testing.T) {
 	crypter.Length = 128
 	crypter.EncryptMetadata = true
 
-	key := crypter.Alg2([]byte(""))
+	key := crypter.alg2([]byte(""))
 
 	keyExp := []byte{0xf8, 0x94, 0x9c, 0x5a, 0xf5, 0xa0, 0xc0, 0xca,
 		0x30, 0xb8, 0x91, 0xc1, 0xbb, 0x2c, 0x4f, 0xf5}
@@ -182,8 +182,8 @@ func TestDecryption1(t *testing.T) {
 	rawText := "2 0 obj\n<< /Length 55 >>\nstream\n" + string(streamData) + "\nendstream\n"
 
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs = make(xrefTable)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.crypter = &crypter
 

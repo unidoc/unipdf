@@ -8,12 +8,12 @@ package creator
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func TestParagraphRegularVsStyled(t *testing.T) {
-	fontRegular := fonts.NewFontHelvetica()
-	fontBold := fonts.NewFontHelveticaBold()
+	fontRegular := newStandard14Font(t, model.Helvetica)
+	fontBold := newStandard14Font(t, model.HelveticaBold)
 
 	c := New()
 	c.NewPage()
@@ -39,7 +39,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	p.SetTextAlignment(TextAlignmentLeft)
 
 	cell := table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
 	// Add styled paragraph to table.
@@ -52,7 +52,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	s.SetTextAlignment(TextAlignmentLeft)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
@@ -64,7 +64,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	p.SetColor(ColorRGBFrom8bit(0, 0, 255))
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
 	// Add styled paragraph to table.
@@ -77,7 +77,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	s.SetTextAlignment(TextAlignmentJustify)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
@@ -88,7 +88,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	p.SetTextAlignment(TextAlignmentRight)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
 	// Add styled paragraph to table.
@@ -101,7 +101,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	s.SetTextAlignment(TextAlignmentRight)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
@@ -112,7 +112,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	p.SetTextAlignment(TextAlignmentCenter)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
 	// Add styled paragraph to table.
@@ -125,7 +125,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	s.SetTextAlignment(TextAlignmentCenter)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Draw table.
@@ -142,9 +142,9 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 }
 
 func TestStyledParagraph(t *testing.T) {
-	fontRegular := fonts.NewFontCourier()
-	fontBold := fonts.NewFontCourierBold()
-	fontHelvetica := fonts.NewFontHelvetica()
+	fontRegular := newStandard14Font(t, model.Courier)
+	fontBold := newStandard14Font(t, model.CourierBold)
+	fontHelvetica := newStandard14Font(t, model.Helvetica)
 
 	c := New()
 	c.NewPage()

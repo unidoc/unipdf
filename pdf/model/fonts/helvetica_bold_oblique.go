@@ -4,7 +4,7 @@
  */
 /*
  * The embedded character metrics specified in this file are distributed under the terms listed in
- * ./afms/MustRead.html.
+ * ./testdata/afms/MustRead.html.
  */
 
 package fonts
@@ -14,24 +14,32 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// Font Helvetica-BoldOblique.  Implements Font interface.
+// FontHelveticaBoldOblique represents the Helvetica-BoldOblique font.
 // This is a built-in font and it is assumed that every reader has access to it.
-type fontHelveticaBoldOblique struct {
+type FontHelveticaBoldOblique struct {
 	encoder textencoding.TextEncoder
 }
 
-func NewFontHelveticaBoldOblique() fontHelveticaBoldOblique {
-	font := fontHelveticaBoldOblique{}
+// NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewFontHelveticaBoldOblique() FontHelveticaBoldOblique {
+	font := FontHelveticaBoldOblique{}
 	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
 	return font
 }
 
-func (font fontHelveticaBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
+// Encoder returns the font's text encoder.
+func (font FontHelveticaBoldOblique) Encoder() textencoding.TextEncoder {
+	return font.encoder
+}
+
+// SetEncoder sets the font's text encoder.
+func (font FontHelveticaBoldOblique) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = encoder
 }
 
-func (font fontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
-	metrics, has := helveticaBoldObliqueCharMetrics[glyph]
+// GetGlyphCharMetrics returns character metrics for a given glyph.
+func (font FontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+	metrics, has := HelveticaBoldObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
 	}
@@ -39,21 +47,20 @@ func (font fontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetr
 	return metrics, true
 }
 
-func (font fontHelveticaBoldOblique) ToPdfObject() core.PdfObject {
-	obj := &core.PdfIndirectObject{}
-
+// ToPdfObject returns a primitive PDF object representation of the font.
+func (font FontHelveticaBoldOblique) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
 	fontDict.Set("BaseFont", core.MakeName("Helvetica-BoldOblique"))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
-	obj.PdfObject = fontDict
-	return obj
+	return core.MakeIndirectObject(fontDict)
 }
 
-// Helvetica-BoldOblique font metics loaded from afms/Helvetica-BoldOblique.afm.  See afms/MustRead.html for license information.
-var helveticaBoldObliqueCharMetrics map[string]CharMetrics = map[string]CharMetrics{
+// HelveticaBoldObliqueCharMetrics are the font metrics loaded from afms/Helvetica-BoldOblique.afm.
+// See afms/MustRead.html for license information.
+var HelveticaBoldObliqueCharMetrics = map[string]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

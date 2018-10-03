@@ -24,9 +24,9 @@ type VectorDrawable interface {
 	Height() float64
 }
 
-// DrawContext defines the drawing context. The DrawContext is continuously used and updated when drawing the page
-// contents in relative mode.  Keeps track of current X, Y position, available height as well as other page parameters
-// such as margins and dimensions.
+// DrawContext defines the drawing context. The DrawContext is continuously used and updated when
+// drawing the page contents in relative mode.  Keeps track of current X, Y position, available
+// height as well as other page parameters such as margins and dimensions.
 type DrawContext struct {
 	// Current page number.
 	Page int

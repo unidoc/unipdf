@@ -4,7 +4,7 @@
  */
 /*
  * The embedded glyph to unicode mappings specified in this file are distributed under the terms listed in
- * ./glyphlist/zapfdingbats.txt.
+ * ./testdata/glyphlist/zapfdingbats.txt.
  */
 
 package textencoding
