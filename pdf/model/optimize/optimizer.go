@@ -82,3 +82,21 @@ func replaceObjectsInPlace(objects []core.PdfObject, objTo map[core.PdfObject]co
 		}
 	}
 }
+
+// Update all the object numbers prior to get hash of objects.
+func updateObjectNumbers(objects []core.PdfObject) {
+	// Update numbers
+	for idx, obj := range objects {
+		switch o := obj.(type) {
+		case *core.PdfIndirectObject:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
+		case *core.PdfObjectStream:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
+		case *core.PdfObjectStreams:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
+		}
+	}
+}

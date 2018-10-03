@@ -18,6 +18,7 @@ type CombineIdenticalIndirectObjects struct {
 
 // Optimize optimizes PDF objects to decrease PDF size.
 func (c *CombineIdenticalIndirectObjects) Optimize(objects []core.PdfObject) (optimizedObjects []core.PdfObject, err error) {
+	updateObjectNumbers(objects)
 	replaceTable := make(map[core.PdfObject]core.PdfObject)
 	toDelete := make(map[core.PdfObject]struct{})
 

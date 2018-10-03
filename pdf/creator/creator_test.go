@@ -2415,37 +2415,40 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 			"mollit anim id est laborum.")
 		p.SetTextAlignment(TextAlignmentJustify)
 		p.SetMargins(0, 0, 5, 0)
-		for j := 0; j < 7; j++ {
+
+		for j := 0; j < 2; j++ {
 			subchap1.Add(p)
 		}
 
 		subchap2 := c.NewSubchapter(ch1, "Mechanism")
 		subchap2.SetMargins(0, 0, 5, 0)
-		for j := 0; j < 15; j++ {
+		for j := 0; j < 3; j++ {
 			subchap2.Add(p)
 		}
 
 		subchap3 := c.NewSubchapter(ch1, "Discussion")
 		subchap3.SetMargins(0, 0, 5, 0)
-		for j := 0; j < 19; j++ {
+		for j := 0; j < 4; j++ {
 			subchap3.Add(p)
 		}
 
 		subchap4 := c.NewSubchapter(ch1, "Conclusion")
 		subchap4.SetMargins(0, 0, 5, 0)
-		for j := 0; j < 23; j++ {
+		for j := 0; j < 3; j++ {
 			subchap4.Add(p)
 		}
-
 		c.Draw(ch1)
 
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 5; i++ {
 			ch2 := c.NewChapter("References")
+			ch2.SetMargins(1, 1, 1, 1)
 			for j := 0; j < 13; j++ {
 				ch2.Add(p)
 			}
-
+			metadata := core.MakeDict()
+			metadata.Set(core.PdfObjectName("TEST"), core.MakeString("---------------- ## ----------------"))
 			c.Draw(ch2)
+			c.getActivePage().Metadata = metadata
 		}
 
 		// Set a function to create the front Page.

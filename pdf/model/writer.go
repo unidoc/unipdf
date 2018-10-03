@@ -636,17 +636,16 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 func (this *PdfWriter) updateObjectNumbers() {
 	// Update numbers
 	for idx, obj := range this.objects {
-		if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-			io.ObjectNumber = int64(idx + 1)
-			io.GenerationNumber = 0
-		}
-		if so, isStream := obj.(*PdfObjectStream); isStream {
-			so.ObjectNumber = int64(idx + 1)
-			so.GenerationNumber = 0
-		}
-		if so, isObjectStreams := obj.(*PdfObjectStreams); isObjectStreams {
-			so.ObjectNumber = int64(idx + 1)
-			so.GenerationNumber = 0
+		switch o := obj.(type) {
+		case *PdfIndirectObject:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
+		case *PdfObjectStream:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
+		case *PdfObjectStreams:
+			o.ObjectNumber = int64(idx + 1)
+			o.GenerationNumber = 0
 		}
 	}
 }
