@@ -759,6 +759,7 @@ func TestChapterMargins(t *testing.T) {
 // Also generates a front page, and a table of contents.
 func TestSubchaptersSimple(t *testing.T) {
 	c := New()
+	c.AddTOC = true
 
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
@@ -817,7 +818,8 @@ func TestSubchaptersSimple(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// The table of contents is created automatically.
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
 	// This function is used just to customize the style of the TOC.
 	c.CreateTableOfContents(func(toc *TOC) error {
 		style := NewTextStyle()
@@ -837,6 +839,7 @@ func TestSubchaptersSimple(t *testing.T) {
 
 func TestSubchapters(t *testing.T) {
 	c := New()
+	c.AddTOC = true
 
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
@@ -899,7 +902,8 @@ func TestSubchapters(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// The table of contents is created automatically.
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
 	// This function is used just to customize the style of the TOC.
 	c.CreateTableOfContents(func(toc *TOC) error {
 		style := NewTextStyle()
@@ -2338,6 +2342,7 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 
 	createDoc := func() *Creator {
 		c := New()
+		c.AddTOC = true
 
 		ch1 := c.NewChapter("Introduction")
 		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
@@ -2403,7 +2408,8 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 			c.Draw(p)
 		})
 
-		// The table of contents is created automatically.
+		// The table of contents is created automatically if the
+		// AddTOC property of the creator is set to true.
 		// This function is used just to customize the style of the TOC.
 		c.CreateTableOfContents(func(toc *TOC) error {
 			style := NewTextStyle()
@@ -2543,6 +2549,7 @@ func TestOptimizeImagePPI(t *testing.T) {
 // TestCombineIdenticalIndirectObjects tests optimizing PDFs to reduce output file size.
 func TestCombineIdenticalIndirectObjects(t *testing.T) {
 	c := New()
+	c.AddTOC = true
 
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
@@ -2605,7 +2612,8 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// The table of contents is created automatically.
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
 	// This function is used just to customize the style of the TOC.
 	c.CreateTableOfContents(func(toc *TOC) error {
 		style := NewTextStyle()
@@ -2783,7 +2791,8 @@ func TestAllOptimizations(t *testing.T) {
 			c.Draw(p)
 		})
 
-		// The table of contents is created automatically.
+		// The table of contents is created automatically if the
+		// AddTOC property of the creator is set to true.
 		// This function is used just to customize the style of the TOC.
 		c.CreateTableOfContents(func(toc *TOC) error {
 			style := NewTextStyle()
