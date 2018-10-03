@@ -137,6 +137,11 @@ func (c *Creator) Height() float64 {
 	return c.pageHeight
 }
 
+// TOC returns the table of contents component of the creator.
+func (c *Creator) TOC() *TOC {
+	return c.toc
+}
+
 func (c *Creator) setActivePage(p *model.PdfPage) {
 	c.activePage = p
 }
