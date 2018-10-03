@@ -41,7 +41,11 @@ type Creator struct {
 
 	finalized bool
 
+	// The table of contents.
 	toc *TOC
+
+	// Controls whether a table of contents will be added.
+	AddTOC bool
 
 	// Forms.
 	acroForm *model.PdfAcroForm
@@ -294,12 +298,14 @@ func (c *Creator) finalize() error {
 	if c.genFrontPageFunc != nil {
 		genpages++
 	}
-	if c.genTableOfContentFunc != nil {
+	if c.AddTOC {
 		c.initContext()
 		c.context.Page = genpages + 1
-		err := c.genTableOfContentFunc(c.toc)
-		if err != nil {
-			return err
+
+		if c.genTableOfContentFunc != nil {
+			if err := c.genTableOfContentFunc(c.toc); err != nil {
+				return err
+			}
 		}
 
 		// Make an estimate of the number of pages.
@@ -318,8 +324,7 @@ func (c *Creator) finalize() error {
 				continue
 			}
 
-			pageNum += genpages
-			line.Page.Text = strconv.Itoa(pageNum)
+			line.Page.Text = strconv.Itoa(pageNum + genpages)
 		}
 	}
 
@@ -340,12 +345,14 @@ func (c *Creator) finalize() error {
 		hasFrontPage = true
 	}
 
-	if c.genTableOfContentFunc != nil {
+	if c.AddTOC {
 		c.initContext()
-		err := c.genTableOfContentFunc(c.toc)
-		if err != nil {
-			common.Log.Debug("Error generating TOC: %v", err)
-			return err
+
+		if c.genTableOfContentFunc != nil {
+			if err := c.genTableOfContentFunc(c.toc); err != nil {
+				common.Log.Debug("Error generating TOC: %v", err)
+				return err
+			}
 		}
 
 		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
