@@ -2729,6 +2729,7 @@ func TestAllOptimizations(t *testing.T) {
 
 	createDoc := func() *Creator {
 		c := New()
+		c.AddTOC = true
 
 		ch1 := c.NewChapter("Introduction")
 		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
