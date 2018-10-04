@@ -142,6 +142,16 @@ func (c *Creator) TOC() *TOC {
 	return c.toc
 }
 
+// SetTOC sets the table of content component of the creator.
+// This method should be used when building a custom table of contents.
+func (c *Creator) SetTOC(toc *TOC) {
+	if toc == nil {
+		return
+	}
+
+	c.toc = toc
+}
+
 func (c *Creator) setActivePage(p *model.PdfPage) {
 	c.activePage = p
 }
@@ -293,8 +303,8 @@ func (c *Creator) Context() DrawContext {
 	return c.context
 }
 
-// Call before writing out.  Takes care of adding headers and footers, as well as generating front
-// Page and table of contents.
+// Call before writing out. Takes care of adding headers and footers, as well
+// as generating front Page and table of contents.
 func (c *Creator) finalize() error {
 	totPages := len(c.pages)
 
