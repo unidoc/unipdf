@@ -13,6 +13,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
@@ -110,7 +111,7 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (this *PdfReader) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (this *PdfReader) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
 	return this.parser.CheckAccessRights(password)
 }
 

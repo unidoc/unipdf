@@ -20,6 +20,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
@@ -648,7 +649,7 @@ func (this *PdfWriter) updateObjectNumbers() {
 
 // EncryptOptions represents encryption options for an output PDF.
 type EncryptOptions struct {
-	Permissions AccessPermissions
+	Permissions security.Permissions
 	Algorithm   EncryptionAlgorithm
 }
 
@@ -670,7 +671,7 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	if options != nil {
 		algo = options.Algorithm
 	}
-	perm := PermOwner
+	perm := security.PermOwner
 	if options != nil {
 		perm = options.Permissions
 	}

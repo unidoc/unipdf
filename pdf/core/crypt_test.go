@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 func init() {
@@ -24,7 +25,7 @@ func TestDecryption1(t *testing.T) {
 			V:      2,
 			Length: 128,
 		},
-		encryptStd: stdEncryptDict{
+		encryptStd: security.StdEncryptDict{
 			R:               3,
 			P:               0xfffff0c0,
 			EncryptMetadata: true,

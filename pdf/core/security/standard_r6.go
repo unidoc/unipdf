@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package core
+package security
 
 import (
 	"bytes"
@@ -19,13 +19,19 @@ import (
 	"math"
 )
 
-var _ stdSecurityHandler = stdHandlerR6{}
+var _ StdHandler = stdHandlerR6{}
 
+// NewHandlerR6 creates a new standard security handler for R=5 and R=6.
+func NewHandlerR6() StdHandler {
+	return stdHandlerR6{}
+}
+
+// stdHandlerR6 is an implementation of standard security handler with R=5 and R=6.
 type stdHandlerR6 struct{}
 
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
 // 7.6.4.3.2 Algorithm 2.A (page 83)
-func (sh stdHandlerR6) alg2a(d *stdEncryptDict, pass []byte) ([]byte, AccessPermissions, error) {
+func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
 
 	// step a: Unicode normalization
@@ -46,7 +52,7 @@ func (sh stdHandlerR6) alg2a(d *stdEncryptDict, pass []byte) ([]byte, AccessPerm
 		ekey []byte // encrypted file key
 		ukey []byte // user key; set only when using owner's password
 	)
-	var perm AccessPermissions
+	var perm Permissions
 	if len(h) != 0 {
 		// owner password valid
 		perm = PermOwner
@@ -217,7 +223,7 @@ func (sh stdHandlerR6) alg2b(R int, data, pwd, userKey []byte) []byte {
 
 // alg8 computes the encryption dictionary's U (user password) and UE (user encryption) values (R>=5).
 // 7.6.4.4.6 Algorithm 8 (page 86)
-func (sh stdHandlerR6) alg8(d *stdEncryptDict, ekey []byte, upass []byte) error {
+func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error {
 	// step a: compute U (user password)
 	var rbuf [16]byte
 	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
@@ -263,7 +269,7 @@ func (sh stdHandlerR6) alg8(d *stdEncryptDict, ekey []byte, upass []byte) error 
 
 // alg9 computes the encryption dictionary's O (owner password) and OE (owner encryption) values (R>=5).
 // 7.6.4.4.7 Algorithm 9 (page 86)
-func (sh stdHandlerR6) alg9(d *stdEncryptDict, ekey []byte, opass []byte) error {
+func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error {
 	// step a: compute O (owner password)
 	var rbuf [16]byte
 	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
@@ -312,7 +318,7 @@ func (sh stdHandlerR6) alg9(d *stdEncryptDict, ekey []byte, opass []byte) error 
 
 // alg10 computes the encryption dictionary's Perms (permissions) value (R=6).
 // 7.6.4.4.8 Algorithm 10 (page 87)
-func (sh stdHandlerR6) alg10(d *stdEncryptDict, ekey []byte) error {
+func (sh stdHandlerR6) alg10(d *StdEncryptDict, ekey []byte) error {
 	// step a: extend permissions to 64 bits
 	perms := uint64(uint32(d.P)) | (math.MaxUint32 << 32)
 
@@ -352,7 +358,7 @@ func (sh stdHandlerR6) alg10(d *stdEncryptDict, ekey []byte) error {
 }
 
 // alg11 authenticates the user password (R >= 5) and returns the hash.
-func (sh stdHandlerR6) alg11(d *stdEncryptDict, upass []byte) ([]byte, error) {
+func (sh stdHandlerR6) alg11(d *StdEncryptDict, upass []byte) ([]byte, error) {
 	str := make([]byte, len(upass)+8)
 	i := copy(str, upass)
 	i += copy(str[i:], d.U[32:40]) // user Validation Salt
@@ -367,7 +373,7 @@ func (sh stdHandlerR6) alg11(d *stdEncryptDict, upass []byte) ([]byte, error) {
 
 // alg12 authenticates the owner password (R >= 5) and returns the hash.
 // 7.6.4.4.10 Algorithm 12 (page 87)
-func (sh stdHandlerR6) alg12(d *stdEncryptDict, opass []byte) ([]byte, error) {
+func (sh stdHandlerR6) alg12(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	str := make([]byte, len(opass)+8+48)
 	i := copy(str, opass)
 	i += copy(str[i:], d.O[32:40]) // owner Validation Salt
@@ -383,7 +389,7 @@ func (sh stdHandlerR6) alg12(d *stdEncryptDict, opass []byte) ([]byte, error) {
 
 // alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
 // 7.6.4.4.11 Algorithm 13 (page 87)
-func (sh stdHandlerR6) alg13(d *stdEncryptDict, fkey []byte) error {
+func (sh stdHandlerR6) alg13(d *StdEncryptDict, fkey []byte) error {
 	perms := make([]byte, 16)
 	copy(perms, d.Perms[:16])
 
@@ -398,7 +404,7 @@ func (sh stdHandlerR6) alg13(d *stdEncryptDict, fkey []byte) error {
 	if !bytes.Equal(perms[9:12], []byte("adb")) {
 		return errors.New("decoded permissions are invalid")
 	}
-	p := AccessPermissions(binary.LittleEndian.Uint32(perms[0:4]))
+	p := Permissions(binary.LittleEndian.Uint32(perms[0:4]))
 	if p != d.P {
 		return errors.New("permissions validation failed")
 	}
@@ -419,7 +425,7 @@ func (sh stdHandlerR6) alg13(d *stdEncryptDict, fkey []byte) error {
 // generateR6 is the algorithm opposite to alg2a (R>=5).
 // It generates U,O,UE,OE,Perms fields using AESv3 encryption.
 // There is no algorithm number assigned to this function in the spec.
-func (sh stdHandlerR6) GenerateParams(d *stdEncryptDict, opass, upass []byte) ([]byte, error) {
+func (sh stdHandlerR6) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([]byte, error) {
 	ekey := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, ekey); err != nil {
 		return nil, err
@@ -455,6 +461,6 @@ func (sh stdHandlerR6) GenerateParams(d *stdEncryptDict, opass, upass []byte) ([
 	return ekey, nil
 }
 
-func (sh stdHandlerR6) Authenticate(d *stdEncryptDict, pass []byte) ([]byte, AccessPermissions, error) {
+func (sh stdHandlerR6) Authenticate(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	return sh.alg2a(d, pass)
 }

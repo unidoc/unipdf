@@ -1,4 +1,4 @@
-package core
+package security
 
 import (
 	"bytes"
@@ -60,7 +60,7 @@ func TestStdHandlerR6(t *testing.T) {
 				c := c
 				t.Run(c.Name, func(t *testing.T) {
 					sh := stdHandlerR6{} // V=5
-					d := &stdEncryptDict{
+					d := &StdEncryptDict{
 						R: R, P: perms,
 						EncryptMetadata: c.EncMeta,
 					}

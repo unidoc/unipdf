@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package core
+package security
 
 import (
 	"bytes"
@@ -15,7 +15,16 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-var _ stdSecurityHandler = stdHandlerR4{}
+var _ StdHandler = stdHandlerR4{}
+
+const padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF" +
+	"\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C" +
+	"\xA9\xFE\x64\x53\x69\x7A"
+
+// NewHandlerR4 creates a new standard security handler for R<=4.
+func NewHandlerR4(id0 string, length int) StdHandler {
+	return stdHandlerR4{ID0: id0, Length: length}
+}
 
 type stdHandlerR4 struct {
 	Length int
@@ -40,7 +49,7 @@ func (sh stdHandlerR4) paddedPass(pass []byte) []byte {
 }
 
 // alg2 computes an encryption key.
-func (sh stdHandlerR4) alg2(d *stdEncryptDict, pass []byte) []byte {
+func (sh stdHandlerR4) alg2(d *StdEncryptDict, pass []byte) []byte {
 	common.Log.Trace("alg2")
 	key := sh.paddedPass(pass)
 
@@ -212,7 +221,7 @@ func (sh stdHandlerR4) alg5(ekey []byte, upass []byte) ([]byte, error) {
 
 // alg6 authenticates the user password and returns the document encryption key.
 // It returns an nil key in case authentication failed.
-func (sh stdHandlerR4) alg6(d *stdEncryptDict, upass []byte) ([]byte, error) {
+func (sh stdHandlerR4) alg6(d *StdEncryptDict, upass []byte) ([]byte, error) {
 	var (
 		uo  []byte
 		err error
@@ -252,7 +261,7 @@ func (sh stdHandlerR4) alg6(d *stdEncryptDict, upass []byte) ([]byte, error) {
 
 // alg7 authenticates the owner password and returns the document encryption key.
 //// It returns an nil key in case authentication failed.
-func (sh stdHandlerR4) alg7(d *stdEncryptDict, opass []byte) ([]byte, error) {
+func (sh stdHandlerR4) alg7(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	encKey := sh.alg3Key(d.R, opass)
 
 	decrypted := make([]byte, len(d.O))
@@ -289,7 +298,7 @@ func (sh stdHandlerR4) alg7(d *stdEncryptDict, opass []byte) ([]byte, error) {
 	return ekey, nil
 }
 
-func (sh stdHandlerR4) GenerateParams(d *stdEncryptDict, opass, upass []byte) ([]byte, error) {
+func (sh stdHandlerR4) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([]byte, error) {
 	// Make the O and U objects.
 	O, err := sh.alg3(d.R, upass, opass)
 	if err != nil {
@@ -311,7 +320,7 @@ func (sh stdHandlerR4) GenerateParams(d *stdEncryptDict, opass, upass []byte) ([
 	return ekey, nil
 }
 
-func (sh stdHandlerR4) Authenticate(d *stdEncryptDict, pass []byte) ([]byte, AccessPermissions, error) {
+func (sh stdHandlerR4) Authenticate(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	// Try owner password.
 	// May not be necessary if only want to get all contents.
 	// (user pass needs to be known or empty).

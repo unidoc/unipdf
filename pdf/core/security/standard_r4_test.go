@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package core
+package security
 
 import (
 	"github.com/unidoc/unidoc/common"
@@ -53,7 +53,7 @@ func TestAlg2(t *testing.T) {
 			0xff, 0xd5, 0x82, 0xe4, 0xec, 0x0e, 0xa3, 0xb4}),
 		Length: 128,
 	}
-	d := &stdEncryptDict{
+	d := &StdEncryptDict{
 		R:               3,
 		P:               0xfffff0c0,
 		EncryptMetadata: true,
@@ -110,7 +110,7 @@ func TestAlg5(t *testing.T) {
 			0xff, 0xd5, 0x82, 0xe4, 0xec, 0x0e, 0xa3, 0xb4}),
 		Length: 128,
 	}
-	d := &stdEncryptDict{
+	d := &StdEncryptDict{
 		R:               3,
 		P:               0xfffff0c0,
 		EncryptMetadata: true,

@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // Regular Expressions for parsing and identifying object signatures.
@@ -1641,11 +1642,11 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (parser *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (parser *PdfParser) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
 	// Also build the encryption/decryption key.
 	if parser.crypter == nil {
 		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
-		return true, PermOwner, nil
+		return true, security.PermOwner, nil
 	}
 	return parser.crypter.checkAccessRights(password)
 }
