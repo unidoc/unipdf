@@ -78,7 +78,7 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.Add("1.1.4", "Second harmonic imaging microscopy", "6", 3)
 	toc.Add("1.2", "Light propagation in tissues", "8", 2)
 	toc.Add("1.2.1", "Radiative transfer equation for modeling light propagation in tissue", "8", 3)
-	toc.Add("1.2.2", "Monte Carlo method as a convenient and flexible solution to the RTE for modeling light transport in multi layered tissues", "10", 3)
+	toc.Add("1.2.2", "Monte Carlo method as a convenient and flexible solution to the RTE for modeling light transport\nin multi layered tissues", "10", 3)
 	toc.Add("1.2.3", "Measurement of optical properties", "15", 3)
 	toc.Add("1.2.4", "Analytical solution of light scattering: The Born aproximation", "19", 3)
 	toc.Add("1.2.5", "Refractive index corellation functions to describe light scattering in tissue", "21", 3)
