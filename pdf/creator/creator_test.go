@@ -759,8 +759,18 @@ func TestChapterMargins(t *testing.T) {
 // Also generates a front page, and a table of contents.
 func TestSubchaptersSimple(t *testing.T) {
 	c := New()
+
+	// Enable table of contents and set the style of the lines.
 	c.AddTOC = true
 
+	lineStyle := NewTextStyle()
+	lineStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+
+	toc := c.TOC()
+	toc.SetLineStyle(lineStyle)
+	toc.SetLineMargins(0, 0, 3, 3)
+
+	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
 	subchap1.SetMargins(0, 0, 5, 0)
@@ -822,11 +832,28 @@ func TestSubchaptersSimple(t *testing.T) {
 	// AddTOC property of the creator is set to true.
 	// This function is used just to customize the style of the TOC.
 	c.CreateTableOfContents(func(toc *TOC) error {
+		// Set style of TOC heading just before render.
 		style := NewTextStyle()
 		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
 		style.FontSize = 20
 
 		toc.SetHeading("Table of Contents", style)
+
+		// Set style of TOC lines just before render.
+		lineStyle := NewTextStyle()
+		lineStyle.FontSize = 14
+
+		pageStyle := lineStyle
+		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+
+		lines := toc.Lines()
+		for _, line := range lines {
+			line.SetStyle(lineStyle)
+
+			// Make page part bold.
+			line.Page.Style = pageStyle
+		}
+
 		return nil
 	})
 
@@ -839,8 +866,20 @@ func TestSubchaptersSimple(t *testing.T) {
 
 func TestSubchapters(t *testing.T) {
 	c := New()
+
+	// Enable table of contents and set the style of the lines.
 	c.AddTOC = true
 
+	lineStyle := NewTextStyle()
+	lineStyle.Font = model.NewStandard14FontMustCompile(model.Helvetica)
+	lineStyle.FontSize = 14
+	lineStyle.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+
+	toc := c.TOC()
+	toc.SetLineStyle(lineStyle)
+	toc.SetLineMargins(0, 0, 3, 3)
+
+	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
 	subchap1.SetMargins(0, 0, 5, 0)
@@ -906,11 +945,23 @@ func TestSubchapters(t *testing.T) {
 	// AddTOC property of the creator is set to true.
 	// This function is used just to customize the style of the TOC.
 	c.CreateTableOfContents(func(toc *TOC) error {
+		// Set style of TOC heading just before render.
 		style := NewTextStyle()
 		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
 		style.FontSize = 20
 
 		toc.SetHeading("Table of Contents", style)
+
+		// Set style of TOC lines just before render.
+		pageStyle := NewTextStyle()
+		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+		pageStyle.FontSize = 10
+
+		lines := toc.Lines()
+		for _, line := range lines {
+			line.Page.Style = pageStyle
+		}
+
 		return nil
 	})
 
