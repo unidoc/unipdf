@@ -14,6 +14,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core/security"
+	crypto "github.com/unidoc/unidoc/pdf/core/security/crypt"
 )
 
 type Version struct {
@@ -28,7 +29,7 @@ type EncryptInfo struct {
 }
 
 // PdfCryptNewEncrypt makes the document crypt handler based on a specified crypt filter.
-func PdfCryptNewEncrypt(cf CryptFilter, userPass, ownerPass []byte, perm security.Permissions) (*PdfCrypt, *EncryptInfo, error) {
+func PdfCryptNewEncrypt(cf crypto.Filter, userPass, ownerPass []byte, perm security.Permissions) (*PdfCrypt, *EncryptInfo, error) {
 	crypter := &PdfCrypt{
 		encryptedObjects: make(map[PdfObject]bool),
 		cryptFilters:     make(cryptFilters),
@@ -37,26 +38,19 @@ func PdfCryptNewEncrypt(cf CryptFilter, userPass, ownerPass []byte, perm securit
 			EncryptMetadata: true,
 		},
 	}
-	// TODO(dennwc): define it in the CF interface
 	var vers Version
-	switch cf.(type) {
-	case cryptFilterV2:
-		crypter.encrypt.V = 2
-		crypter.encryptStd.R = 3
-	case cryptFilterAESV2:
-		vers.Major, vers.Minor = 1, 5
-		crypter.encrypt.V = 4
-		crypter.encryptStd.R = 4
-	case cryptFilterAESV3:
-		vers.Major, vers.Minor = 2, 0
-		crypter.encrypt.V = 5
-		crypter.encryptStd.R = 6
-	}
 	if cf != nil {
+		v := cf.PDFVersion()
+		vers.Major, vers.Minor = v[0], v[1]
+
+		V, R := cf.HandlerVersion()
+		crypter.encrypt.V = V
+		crypter.encryptStd.R = R
+
 		crypter.encrypt.Length = cf.KeyLength() * 8
 	}
 	const (
-		defaultFilter = StandardCryptFilter
+		defaultFilter = stdCryptFilter
 	)
 	crypter.cryptFilters[defaultFilter] = cf
 	if crypter.encrypt.V >= 4 {
@@ -95,6 +89,28 @@ func PdfCryptNewEncrypt(cf CryptFilter, userPass, ownerPass []byte, perm securit
 		Encrypt: ed,
 		ID0:     id0, ID1: id1,
 	}, nil
+}
+
+// PdfCrypt provides PDF encryption/decryption support.
+// The PDF standard supports encryption of strings and streams (Section 7.6).
+// TODO (v3): Consider unexporting.
+type PdfCrypt struct {
+	encrypt    encryptDict
+	encryptStd security.StdEncryptDict
+
+	id0              string
+	encryptionKey    []byte
+	decryptedObjects map[PdfObject]bool
+	encryptedObjects map[PdfObject]bool
+	authenticated    bool
+	// Crypt filters (V4).
+	cryptFilters cryptFilters
+	streamFilter string
+	stringFilter string
+
+	parser *PdfParser
+
+	decryptedObjNum map[int]struct{}
 }
 
 // encodeEncryptStd encodes fields of standard security handler to an Encrypt dictionary.
@@ -200,26 +216,32 @@ func decodeEncryptStd(d *security.StdEncryptDict, ed *PdfObjectDictionary) error
 	return nil
 }
 
-// PdfCrypt provides PDF encryption/decryption support.
-// The PDF standard supports encryption of strings and streams (Section 7.6).
-// TODO (v3): Consider unexporting.
-type PdfCrypt struct {
-	encrypt    encryptDict
-	encryptStd security.StdEncryptDict
+func decodeCryptFilter(cf *crypto.FilterDict, d *PdfObjectDictionary) error {
+	// If Type present, should be CryptFilter.
+	if typename, ok := d.Get("Type").(*PdfObjectName); ok {
+		if string(*typename) != "CryptFilter" {
+			return fmt.Errorf("CF dict type != CryptFilter (%s)", typename)
+		}
+	}
 
-	id0              string
-	encryptionKey    []byte
-	decryptedObjects map[PdfObject]bool
-	encryptedObjects map[PdfObject]bool
-	authenticated    bool
-	// Crypt filters (V4).
-	cryptFilters cryptFilters
-	streamFilter string
-	stringFilter string
+	// Method.
+	name, ok := d.Get("CFM").(*PdfObjectName)
+	if !ok {
+		return fmt.Errorf("Unsupported crypt filter (None)")
+	}
+	cf.CFM = string(*name)
 
-	parser *PdfParser
+	// Auth event
+	if event, ok := d.Get("AuthEvent").(*PdfObjectName); ok {
+		cf.AuthEvent = security.AuthEvent(*event)
+	} else {
+		cf.AuthEvent = security.EventDocOpen
+	}
 
-	decryptedObjNum map[int]struct{}
+	if length, ok := d.Get("Length").(*PdfObjectInteger); ok {
+		cf.Length = int(*length)
+	}
+	return nil
 }
 
 func (crypt *PdfCrypt) newEncyptDict() *PdfObjectDictionary {
@@ -262,65 +284,31 @@ func (crypt *PdfCrypt) String() string {
 	return str
 }
 
-type authEvent string
-
-const (
-	authEventDocOpen = authEvent("DocOpen")
-	authEventEFOpen  = authEvent("EFOpen")
-)
-
-type cryptFiltersDict map[string]cryptFilterDict
-
 // encryptDict is a set of field common to all encryption dictionaries.
 type encryptDict struct {
-	Filter    string           // (Required) The name of the preferred security handler for this document.
-	V         int              // (Required) A code specifying the algorithm to be used in encrypting and decrypting the document.
-	SubFilter string           // Completely specifies the format and interpretation of the encryption dictionary.
-	Length    int              // The length of the encryption key, in bits.
-	CF        cryptFiltersDict // Crypt filters dictionary.
-	StmF      string           // The filter that shall be used by default when decrypting streams.
-	StrF      string           // The filter that shall be used when decrypting all strings in the document.
-	EFF       string           // The filter that shall be used when decrypting embedded file streams.
+	Filter    string // (Required) The name of the preferred security handler for this document.
+	V         int    // (Required) A code specifying the algorithm to be used in encrypting and decrypting the document.
+	SubFilter string // Completely specifies the format and interpretation of the encryption dictionary.
+	Length    int    // The length of the encryption key, in bits.
+
+	StmF string // The filter that shall be used by default when decrypting streams.
+	StrF string // The filter that shall be used when decrypting all strings in the document.
+	EFF  string // The filter that shall be used when decrypting embedded file streams.
+
+	CF map[string]crypto.FilterDict // Crypt filters dictionary.
 }
 
-// StandardCryptFilter is a default name for a standard crypt filter.
-const StandardCryptFilter = "StdCF"
+// stdCryptFilter is a default name for a standard crypt filter.
+const stdCryptFilter = "StdCF"
 
 func newCryptFiltersV2(length int) cryptFilters {
 	return cryptFilters{
-		StandardCryptFilter: NewCryptFilterV2(length),
+		stdCryptFilter: crypto.NewFilterV2(length),
 	}
-}
-
-// NewCryptFilterV2 creates a RC4-based filter with a specified key length (in bytes).
-func NewCryptFilterV2(length int) CryptFilter {
-	f, err := newCryptFilterV2(cryptFilterDict{Length: length})
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
-
-// NewCryptFilterAESV2 creates an AES-based filter with a 128 bit key (AESV2).
-func NewCryptFilterAESV2() CryptFilter {
-	f, err := newCryptFilterAESV2(cryptFilterDict{})
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
-
-// NewCryptFilterAESV3 creates an AES-based filter with a 256 bit key (AESV3).
-func NewCryptFilterAESV3() CryptFilter {
-	f, err := newCryptFilterAESV3(cryptFilterDict{})
-	if err != nil {
-		panic(err)
-	}
-	return f
 }
 
 // cryptFilters is a map of crypt filter name and underlying CryptFilter info.
-type cryptFilters map[string]CryptFilter
+type cryptFilters map[string]crypto.Filter
 
 // loadCryptFilters loads crypt filter information from the encryption dictionary (V>=4).
 func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
@@ -365,22 +353,18 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 			continue
 		}
 
-		var cfd cryptFilterDict
-		if err := cfd.ReadFrom(dict); err != nil {
+		var cfd crypto.FilterDict
+		if err := decodeCryptFilter(&cfd, dict); err != nil {
 			return err
 		}
-		fnc, err := getCryptFilterMethod(cfd.CFM)
-		if err != nil {
-			return err
-		}
-		cf, err := fnc(cfd)
+		cf, err := crypto.NewFilter(cfd)
 		if err != nil {
 			return err
 		}
 		crypt.cryptFilters[string(name)] = cf
 	}
 	// Cannot be overwritten.
-	crypt.cryptFilters["Identity"] = cryptFilteridentity{}
+	crypt.cryptFilters["Identity"] = crypto.NewIdentity()
 
 	// StrF strings filter.
 	crypt.stringFilter = "Identity"
@@ -403,6 +387,18 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	return nil
 }
 
+func encodeCryptFilter(cf crypto.Filter, event security.AuthEvent) *PdfObjectDictionary {
+	if event == "" {
+		event = security.EventDocOpen
+	}
+	v := MakeDict()
+	v.Set("Type", MakeName("CryptFilter")) // optional
+	v.Set("AuthEvent", MakeName(string(event)))
+	v.Set("CFM", MakeName(cf.Name()))
+	v.Set("Length", MakeInteger(int64(cf.KeyLength())))
+	return v
+}
+
 // saveCryptFilters saves crypt filter information to the encryption dictionary (V>=4).
 func (crypt *PdfCrypt) saveCryptFilters(ed *PdfObjectDictionary) error {
 	if crypt.encrypt.V < 4 {
@@ -415,7 +411,7 @@ func (crypt *PdfCrypt) saveCryptFilters(ed *PdfObjectDictionary) error {
 		if name == "Identity" {
 			continue
 		}
-		v := cryptFilterToDict(filter, "")
+		v := encodeCryptFilter(filter, "")
 		cf.Set(PdfObjectName(name), v)
 	}
 	ed.Set("StrF", MakeName(crypt.stringFilter))
@@ -654,7 +650,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
 
-		streamFilter := StandardCryptFilter // Default RC4.
+		streamFilter := stdCryptFilter // Default RC4.
 		if crypt.encrypt.V >= 4 {
 			streamFilter = crypt.streamFilter
 			common.Log.Trace("this.streamFilter = %s", crypt.streamFilter)
@@ -708,7 +704,7 @@ func (crypt *PdfCrypt) Decrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	case *PdfObjectString:
 		common.Log.Trace("Decrypting string!")
 
-		stringFilter := StandardCryptFilter
+		stringFilter := stdCryptFilter
 		if crypt.encrypt.V >= 4 {
 			// Currently only support Identity / RC4.
 			common.Log.Trace("with %s filter", crypt.stringFilter)
@@ -837,7 +833,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 		// TODO: Check for crypt filter (V4).
 		// The Crypt filter shall be the first filter in the Filter array entry.
 
-		streamFilter := StandardCryptFilter // Default RC4.
+		streamFilter := stdCryptFilter // Default RC4.
 		if crypt.encrypt.V >= 4 {
 			// For now.  Need to change when we add support for more than
 			// Identity / RC4.
@@ -893,7 +889,7 @@ func (crypt *PdfCrypt) Encrypt(obj PdfObject, parentObjNum, parentGenNum int64) 
 	case *PdfObjectString:
 		common.Log.Trace("Encrypting string!")
 
-		stringFilter := StandardCryptFilter
+		stringFilter := stdCryptFilter
 		if crypt.encrypt.V >= 4 {
 			common.Log.Trace("with %s filter", crypt.stringFilter)
 			if crypt.stringFilter == "Identity" {

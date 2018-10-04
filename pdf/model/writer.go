@@ -17,6 +17,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/unidoc/unidoc/pdf/core/security/crypt"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -676,16 +678,14 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 		perm = options.Permissions
 	}
 
-	var cf CryptFilter
+	var cf crypt.Filter
 	switch algo {
 	case RC4_128bit:
-		cf = NewCryptFilterV2(16)
+		cf = crypt.NewFilterV2(16)
 	case AES_128bit:
-		this.SetVersion(1, 5)
-		cf = NewCryptFilterAESV2()
+		cf = crypt.NewFilterAESV2()
 	case AES_256bit:
-		this.SetVersion(2, 0)
-		cf = NewCryptFilterAESV3()
+		cf = crypt.NewFilterAESV3()
 	default:
 		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
 	}
