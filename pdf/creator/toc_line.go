@@ -94,6 +94,15 @@ func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
 	return tl
 }
 
+// SetStyle sets the style for all the line components: number, title,
+// separator, page.
+func (tl *TOCLine) SetStyle(style TextStyle) {
+	tl.Number.Style = style
+	tl.Title.Style = style
+	tl.Separator.Style = style
+	tl.Page.Style = style
+}
+
 // Level returns the indentation level of the TOC line.
 func (tl *TOCLine) Level() uint {
 	return tl.level
