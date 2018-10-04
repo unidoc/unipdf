@@ -148,6 +148,16 @@ func (t *TOC) SetLineMargins(left, right, top, bottom float64) {
 	m.bottom = bottom
 }
 
+// SetLineStyle sets the style for all the line components: number, title,
+// separator, page. The style is applied only for new lines added to the
+// TOC component.
+func (t *TOC) SetLineStyle(style TextStyle) {
+	t.SetLineNumberStyle(style)
+	t.SetLineTitleStyle(style)
+	t.SetLineSeparatorStyle(style)
+	t.SetLinePageStyle(style)
+}
+
 // SetLineNumberStyle sets the style for the numbers part of all new lines
 // of the table of contents.
 func (t *TOC) SetLineNumberStyle(style TextStyle) {
