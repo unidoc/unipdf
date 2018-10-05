@@ -748,6 +748,27 @@ func (this *PdfPage) AddContentStreamByString(contentStr string) error {
 	return nil
 }
 
+// AppendContentStream adds content stream by string.  Appends to the last
+// contentstream instance if many.
+func (this *PdfPage) AppendContentStream(contentStr string) error {
+	cstreams, err := this.GetContentStreams()
+	if err != nil {
+		return err
+	}
+	if len(cstreams) == 0 {
+		cstreams = []string{contentStr}
+		return this.SetContentStreams(cstreams, NewFlateEncoder())
+	}
+
+	var b strings.Builder
+	b.WriteString(cstreams[len(cstreams)-1])
+	b.WriteString("\n")
+	b.WriteString(contentStr)
+	cstreams[len(cstreams)-1] = b.String()
+
+	return this.SetContentStreams(cstreams, NewFlateEncoder())
+}
+
 // SetContentStreams sets the content streams based on a string array.  Will make 1 object stream
 // for each string and reference from the page Contents.  Each stream will be
 // encoded using the encoding specified by the StreamEncoder, if empty, will

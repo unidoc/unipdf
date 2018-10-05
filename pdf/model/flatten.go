@@ -143,7 +143,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 			ops = append(ops, "Q")
 			contentstr := strings.Join(ops, "\n")
 
-			err = page.AddContentStreamByString(contentstr)
+			err = page.AppendContentStream(contentstr)
 			if err != nil {
 				return err
 			}
