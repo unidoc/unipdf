@@ -147,6 +147,13 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	width := rect[2] - rect[0]
 	height := rect[3] - rect[1]
 
+	if mkDict, has := core.GetDict(wa.MK); has {
+		err := style.applyAppearanceCharacteristics(mkDict, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Get and process the default appearance string (DA) operands.
 	da := getDA(ftxt.PdfField)
 	csp := contentstream.NewContentStreamParser(da)
@@ -156,6 +163,9 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 
 	cc := contentstream.NewContentCreator()
+	if style.BorderSize > 0 {
+		drawRect(cc, style, width, height)
+	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
 	// Graphic state changes.
@@ -391,6 +401,13 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	width := rect[2] - rect[0]
 	height := rect[3] - rect[1]
 
+	if mkDict, has := core.GetDict(wa.MK); has {
+		err := style.applyAppearanceCharacteristics(mkDict, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	maxLen, has := core.GetIntVal(ftxt.MaxLen)
 	if !has {
 		return nil, errors.New("maxlen not set")
@@ -410,6 +427,9 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	}
 
 	cc := contentstream.NewContentCreator()
+	if style.BorderSize > 0 {
+		drawRect(cc, style, width, height)
+	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
 	// Graphic state changes.
@@ -568,6 +588,9 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	xformOn := model.NewXObjectForm()
 	{
 		cc := contentstream.NewContentCreator()
+		if style.BorderSize > 0 {
+			drawRect(cc, style, width, height)
+		}
 
 		fontsize := style.AutoFontSizeFraction * height
 
@@ -594,10 +617,6 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			ty = (height - checkheight) / 2.0
 		}
 		ty += 1.0
-
-		if style.BorderSize > 0 {
-			drawRect(cc, style, width, height)
-		}
 
 		cc.Add_q().
 			Add_g(0).
