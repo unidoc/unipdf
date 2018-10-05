@@ -13,6 +13,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -760,11 +761,11 @@ func (this *PdfPage) AppendContentStream(contentStr string) error {
 		return this.SetContentStreams(cstreams, NewFlateEncoder())
 	}
 
-	var b strings.Builder
-	b.WriteString(cstreams[len(cstreams)-1])
-	b.WriteString("\n")
-	b.WriteString(contentStr)
-	cstreams[len(cstreams)-1] = b.String()
+	var buf bytes.Buffer
+	buf.WriteString(cstreams[len(cstreams)-1])
+	buf.WriteString("\n")
+	buf.WriteString(contentStr)
+	cstreams[len(cstreams)-1] = buf.String()
 
 	return this.SetContentStreams(cstreams, NewFlateEncoder())
 }
