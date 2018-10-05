@@ -281,7 +281,7 @@ func (p *StyledParagraph) wrapText() error {
 			}
 
 			// newline wrapping.
-			if glyph == "controllf" {
+			if glyph == "controlLF" {
 				// moves to next line.
 				line = append(line, TextChunk{
 					Text:  strings.TrimRightFunc(string(part), unicode.IsSpace),
