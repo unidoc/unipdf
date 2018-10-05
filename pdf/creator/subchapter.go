@@ -7,6 +7,7 @@ package creator
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -38,7 +39,7 @@ type Subchapter struct {
 	margins margins
 
 	// Reference to the creator's TOC.
-	toc *TableOfContents
+	toc *TOC
 }
 
 // NewSubchapter creates a new Subchapter under Chapter ch with specified title.
@@ -154,7 +155,19 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 	}
 	if subchap.includeInTOC {
 		// Add to TOC.
-		subchap.toc.add(subchap.title, subchap.chapterNum, subchap.subchapterNum, ctx.Page)
+		subchapNumber := ""
+		if subchap.chapterNum != 0 {
+			subchapNumber = strconv.Itoa(subchap.chapterNum)
+		}
+		if subchap.subchapterNum != 0 {
+			if subchapNumber != "" {
+				subchapNumber += "."
+			}
+
+			subchapNumber += strconv.Itoa(subchap.subchapterNum) + "."
+		}
+
+		subchap.toc.Add(subchapNumber, subchap.title, strconv.Itoa(ctx.Page), 2)
 	}
 
 	for _, d := range subchap.contents {
