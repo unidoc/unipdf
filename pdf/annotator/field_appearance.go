@@ -21,9 +21,11 @@ import (
 //
 // If `OnlyIfMissing` is true, the field appearance is generated only for fields that do not have an
 // appearance stream specified.
+// If `RegenerateTextFields` is true, all text fields are regenerated (even if OnlyIfMissing is true).
 type FieldAppearance struct {
-	OnlyIfMissing bool
-	style         *AppearanceStyle
+	OnlyIfMissing        bool
+	RegenerateTextFields bool
+	style                *AppearanceStyle
 }
 
 // AppearanceStyle defines style parameters for appearance stream generation.
@@ -44,7 +46,7 @@ type AppearanceStyle struct {
 var (
 	defaultAutoFontSizeFraction = 0.818
 	defaultCheckmarkGlyph       = "a20"
-	defaultBorderSize           = 1.0
+	defaultBorderSize           = 0.0
 	defaultBorderColor          = model.NewPdfColorDeviceGray(0)
 	defaultFillColor            = model.NewPdfColorDeviceGray(1)
 )
@@ -73,8 +75,10 @@ func (fa FieldAppearance) Style() AppearanceStyle {
 // Implements interface model.FieldAppearanceGenerator.
 func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field *model.PdfField, wa *model.PdfAnnotationWidget) (*core.PdfObjectDictionary, error) {
 	common.Log.Trace("GenerateAppearanceDict for %v  V: %+v", field.PartialName(), field.V)
+	_, isText := field.GetContext().(*model.PdfFieldText)
+
 	appDict, has := core.GetDict(wa.AP)
-	if has && fa.OnlyIfMissing {
+	if has && fa.OnlyIfMissing && (!isText || !fa.RegenerateTextFields) {
 		common.Log.Trace("Already populated - ignoring")
 		return appDict, nil
 	}
@@ -148,7 +152,8 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	height := rect[3] - rect[1]
 
 	if mkDict, has := core.GetDict(wa.MK); has {
-		err := style.applyAppearanceCharacteristics(mkDict, nil)
+		bsDict, _ := core.GetDict(wa.BS)
+		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -402,7 +407,8 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	height := rect[3] - rect[1]
 
 	if mkDict, has := core.GetDict(wa.MK); has {
-		err := style.applyAppearanceCharacteristics(mkDict, nil)
+		bsDict, _ := core.GetDict(wa.BS)
+		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -579,7 +585,8 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	}
 
 	if mkDict, has := core.GetDict(wa.MK); has {
-		err := style.applyAppearanceCharacteristics(mkDict, zapfdb)
+		bsDict, _ := core.GetDict(wa.BS)
+		err := style.applyAppearanceCharacteristics(mkDict, bsDict, zapfdb)
 		if err != nil {
 			return nil, err
 		}
@@ -687,9 +694,15 @@ func drawRect(cc *contentstream.ContentCreator, style AppearanceStyle, width, he
 
 // Apply appearance characteristics from an MK dictionary `mkDict` to appearance `style`.
 // `font` is necessary when the "normal caption" (CA) field is specified (checkboxes).
-func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObjectDictionary, font *model.PdfFont) error {
+func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObjectDictionary, bsDict *core.PdfObjectDictionary, font *model.PdfFont) error {
 	if !style.AllowMK {
 		return nil
+	}
+
+	if bsDict != nil {
+		if w, err := core.GetNumberAsFloat(bsDict.Get("W")); err == nil {
+			style.BorderSize = w
+		}
 	}
 
 	// Normal caption.
