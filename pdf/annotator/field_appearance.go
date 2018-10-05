@@ -32,11 +32,21 @@ type AppearanceStyle struct {
 	AutoFontSizeFraction float64
 	// Glyph used for check mark in checkboxes (for ZapfDingbats font).
 	CheckmarkGlyph string
+
+	BorderSize  float64
+	BorderColor model.PdfColor
+	FillColor   model.PdfColor
+
+	// Allow field MK appearance characteristics to override style settings.
+	AllowMK bool
 }
 
-const (
+var (
 	defaultAutoFontSizeFraction = 0.818
 	defaultCheckmarkGlyph       = "a20"
+	defaultBorderSize           = 1.0
+	defaultBorderColor          = model.NewPdfColorDeviceGray(0)
+	defaultFillColor            = model.NewPdfColorDeviceGray(1)
 )
 
 // SetStyle applies appearance `style` to `fa`.
@@ -52,10 +62,15 @@ func (fa FieldAppearance) Style() AppearanceStyle {
 	return AppearanceStyle{
 		AutoFontSizeFraction: defaultAutoFontSizeFraction,
 		CheckmarkGlyph:       defaultCheckmarkGlyph,
+		BorderSize:           defaultBorderSize,
+		BorderColor:          defaultBorderColor,
+		FillColor:            defaultFillColor,
+		AllowMK:              true,
 	}
 }
 
 // GenerateAppearanceDict generates an appearance dictionary for widget annotation `wa` for the `field` in `form`.
+// Implements interface model.FieldAppearanceGenerator.
 func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field *model.PdfField, wa *model.PdfAnnotationWidget) (*core.PdfObjectDictionary, error) {
 	common.Log.Trace("GenerateAppearanceDict for %v  V: %+v", field.PartialName(), field.V)
 	appDict, has := core.GetDict(wa.AP)
@@ -538,13 +553,21 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	width := rect[2] - rect[0]
 	height := rect[3] - rect[1]
 
-	xformOn := model.NewXObjectForm()
-	{
-		cc := contentstream.NewContentCreator()
-		zapfdb, err := model.NewStandard14Font("ZapfDingbats")
+	zapfdb, err := model.NewStandard14Font("ZapfDingbats")
+	if err != nil {
+		return nil, err
+	}
+
+	if mkDict, has := core.GetDict(wa.MK); has {
+		err := style.applyAppearanceCharacteristics(mkDict, zapfdb)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	xformOn := model.NewXObjectForm()
+	{
+		cc := contentstream.NewContentCreator()
 
 		fontsize := style.AutoFontSizeFraction * height
 
@@ -572,6 +595,10 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		}
 		ty += 1.0
 
+		if style.BorderSize > 0 {
+			drawRect(cc, style, width, height)
+		}
+
 		cc.Add_q().
 			Add_g(0).
 			Add_BT().
@@ -590,8 +617,9 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	xformOff := model.NewXObjectForm()
 	{
 		cc := contentstream.NewContentCreator()
-		cc.Add_re(0, 0, width, height)
-		cc.Add_re(0, 0, width-1, height-1)
+		if style.BorderSize > 0 {
+			drawRect(cc, style, width, height)
+		}
 		xformOff.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
 		xformOff.SetContentStream(cc.Bytes(), defStreamEncoder())
 	}
@@ -624,6 +652,95 @@ func getDA(field *model.PdfField) string {
 	}
 
 	return getDA(ftxt.Parent)
+}
+
+// drawRect draws the annotation Rectangle.
+// TODO(gunnsth): Apply clipping so annotation contents cannot go outside Rect.
+func drawRect(cc *contentstream.ContentCreator, style AppearanceStyle, width, height float64) {
+	cc.Add_q().
+		Add_re(0, 0, width, height).
+		Add_w(style.BorderSize).
+		SetStrokingColor(style.BorderColor).
+		SetNonStrokingColor(style.FillColor).
+		Add_B().
+		Add_Q()
+}
+
+// Apply appearance characteristics from an MK dictionary `mkDict` to appearance `style`.
+// `font` is necessary when the "normal caption" (CA) field is specified (checkboxes).
+func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObjectDictionary, font *model.PdfFont) error {
+	if !style.AllowMK {
+		return nil
+	}
+
+	// Normal caption.
+	if CA, has := core.GetString(mkDict.Get("CA")); has && font != nil {
+		encoded := CA.Bytes()
+		if len(encoded) == 1 {
+			if checkglyph, has := font.Encoder().CharcodeToGlyph(uint16(encoded[0])); has {
+				style.CheckmarkGlyph = checkglyph
+			}
+		}
+	}
+
+	// Border color.
+	if BC, has := core.GetArray(mkDict.Get("BC")); has {
+		bc, err := BC.ToFloat64Array()
+		if err != nil {
+			return err
+		}
+
+		switch len(bc) {
+		case 1:
+			style.BorderColor = model.NewPdfColorDeviceGray(bc[0])
+		case 3:
+			style.BorderColor = model.NewPdfColorDeviceRGB(bc[0], bc[1], bc[2])
+		case 4:
+			style.BorderColor = model.NewPdfColorDeviceCMYK(bc[0], bc[1], bc[2], bc[3])
+		default:
+			common.Log.Debug("ERROR: BC - Invalid number of color components (%d)", len(bc))
+		}
+	}
+
+	// Border background (fill).
+	if BG, has := core.GetArray(mkDict.Get("BG")); has {
+		bg, err := BG.ToFloat64Array()
+		if err != nil {
+			return err
+		}
+
+		switch len(bg) {
+		case 1:
+			style.FillColor = model.NewPdfColorDeviceGray(bg[0])
+		case 3:
+			style.FillColor = model.NewPdfColorDeviceRGB(bg[0], bg[1], bg[2])
+		case 4:
+			style.FillColor = model.NewPdfColorDeviceCMYK(bg[0], bg[1], bg[2], bg[3])
+		default:
+			common.Log.Debug("ERROR: BG - Invalid number of color components (%d)", len(bg))
+		}
+	}
+
+	return nil
+}
+
+// WrapContentStream ensures that the entire content stream for a `page` is wrapped within q ... Q operands.
+// Ensures that following operands that are added are not affected by additional operands that are added.
+// Implements interface model.ContentStreamWrapper.
+func (fa FieldAppearance) WrapContentStream(page *model.PdfPage) error {
+	cstream, err := page.GetAllContentStreams()
+	if err != nil {
+		return err
+	}
+	csp := contentstream.NewContentStreamParser(cstream)
+	operands, err := csp.Parse()
+	if err != nil {
+		return err
+	}
+	operands.WrapIfNeeded()
+
+	cstreams := []string{operands.String()}
+	return page.SetContentStreams(cstreams, defStreamEncoder())
 }
 
 // defStreamEncoder returns the default stream encoder. Typically FlateEncoder, although RawEncoder

@@ -112,10 +112,12 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 	return form, nil
 }
 
+// GetContainingPdfObject returns the XObject Form's containing object (indirect object).
 func (xform *XObjectForm) GetContainingPdfObject() PdfObject {
 	return xform.primitive
 }
 
+// GetContentStream returns the XObject Form's content stream.
 func (xform *XObjectForm) GetContentStream() ([]byte, error) {
 	decoded, err := DecodeStream(xform.primitive)
 	if err != nil {

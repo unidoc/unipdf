@@ -279,9 +279,9 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 		case *core.PdfObjectName:
 			name := t
 			common.Log.Debug("Unexpected: Got V as name -> converting to string '%s'", name.String())
-			f.V = core.MakeEncodedString(t.String())
+			f.V = core.MakeEncodedString(t.String(), true)
 		case *core.PdfObjectString:
-			f.V = core.MakeEncodedString(t.String())
+			f.V = core.MakeEncodedString(t.String(), true)
 		default:
 			common.Log.Debug("ERROR: Unsupported text field V type: %T (%#v)", t, t)
 		}

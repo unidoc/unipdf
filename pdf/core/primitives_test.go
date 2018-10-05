@@ -92,6 +92,11 @@ func TestPdfDocEncodingDecode(t *testing.T) {
 		if dec != testcase.Expected {
 			t.Fatalf("%s != %s", dec, testcase.Expected)
 		}
+
+		str := MakeEncodedString(dec, false)
+		if str.Decoded() != dec {
+			t.Fatalf("%s (%X) != %s (%X)", str.Decoded(), str.Decoded(), dec, dec)
+		}
 	}
 }
 
@@ -99,9 +104,11 @@ func TestUTF16StringEncodeDecode(t *testing.T) {
 	testcases := []string{"漢字", `Testing «ταБЬℓσ»: 1<2 & 4+1>3, now 20% off!`}
 
 	for _, tc := range testcases {
-		str := MakeEncodedString(tc)
+		// UTF16-BE.
+		str := MakeEncodedString(tc, true)
 		if str.Decoded() != tc {
 			t.Fatalf("% X != % X (%s)", str.Decoded(), tc, tc)
 		}
+
 	}
 }

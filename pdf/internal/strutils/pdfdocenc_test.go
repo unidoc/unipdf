@@ -1,6 +1,7 @@
 package strutils
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -17,6 +18,11 @@ func TestPDFDocEncodingDecode(t *testing.T) {
 		str := PDFDocEncodingToString(testcase.Encoded)
 		if str != testcase.Expected {
 			t.Fatalf("Mismatch %s != %s", str, testcase.Expected)
+		}
+
+		enc := StringToPDFDocEncoding(str)
+		if !bytes.Equal(enc, testcase.Encoded) {
+			t.Fatalf("Encode mismatch %s (%X) != %s (%X)", enc, enc, testcase.Encoded, testcase.Encoded)
 		}
 	}
 

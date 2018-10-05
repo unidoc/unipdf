@@ -13,6 +13,15 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+var pdfdocEncodingRuneMap map[rune]byte
+
+func init() {
+	pdfdocEncodingRuneMap = map[rune]byte{}
+	for b, r := range pdfDocEncoding {
+		pdfdocEncodingRuneMap[r] = b
+	}
+}
+
 // UTF16ToRunes decodes the UTF-16BE encoded byte slice `b` to unicode runes.
 func UTF16ToRunes(b []byte) []rune {
 	if len(b) == 1 {
@@ -68,4 +77,19 @@ func PDFDocEncodingToRunes(b []byte) []rune {
 // PDFDocEncodingToString decodes PDFDocEncoded byte slice `b` to unicode go string.
 func PDFDocEncodingToString(b []byte) string {
 	return string(PDFDocEncodingToRunes(b))
+}
+
+// StringToPDFDocEncoding encoded go string `s` to PdfDocEncoding.
+func StringToPDFDocEncoding(s string) []byte {
+	var buf bytes.Buffer
+	for _, r := range s {
+		b, has := pdfdocEncodingRuneMap[r]
+		if !has {
+			common.Log.Debug("ERROR: PDFDocEncoding rune mapping missing %c/%X - skipping", r, r)
+			continue
+		}
+		buf.WriteByte(b)
+	}
+
+	return buf.Bytes()
 }

@@ -8,7 +8,9 @@ package contentstream
 import (
 	"math"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // ContentCreator is a builder for PDF content streams.
@@ -572,6 +574,38 @@ func (cc *ContentCreator) Add_k(c, m, y, k float64) *ContentCreator {
 	op.Operand = "k"
 	op.Params = makeParamsFromFloats([]float64{c, m, y, k})
 	cc.operands = append(cc.operands, &op)
+	return cc
+}
+
+// SetStrokingColor sets the stroking `color` where color can be one of
+// PdfColorDeviceGray, PdfColorDeviceRGB, or PdfColorDeviceCMYK.
+func (cc *ContentCreator) SetStrokingColor(color model.PdfColor) *ContentCreator {
+	switch t := color.(type) {
+	case *model.PdfColorDeviceGray:
+		cc.Add_G(t.Val())
+	case *model.PdfColorDeviceRGB:
+		cc.Add_RG(t.R(), t.G(), t.B())
+	case *model.PdfColorDeviceCMYK:
+		cc.Add_K(t.C(), t.M(), t.Y(), t.K())
+	default:
+		common.Log.Debug("SetStrokingColor: unsupported color: %T", t)
+	}
+	return cc
+}
+
+// SetNonStrokingColor sets the non-stroking `color` where color can be one of
+// PdfColorDeviceGray, PdfColorDeviceRGB, or PdfColorDeviceCMYK.
+func (cc *ContentCreator) SetNonStrokingColor(color model.PdfColor) *ContentCreator {
+	switch t := color.(type) {
+	case *model.PdfColorDeviceGray:
+		cc.Add_g(t.Val())
+	case *model.PdfColorDeviceRGB:
+		cc.Add_rg(t.R(), t.G(), t.B())
+	case *model.PdfColorDeviceCMYK:
+		cc.Add_k(t.C(), t.M(), t.Y(), t.K())
+	default:
+		common.Log.Debug("SetNonStrokingColor: unsupported color: %T", t)
+	}
 	return cc
 }
 

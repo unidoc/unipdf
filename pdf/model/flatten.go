@@ -15,8 +15,14 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// ContentStreamWrapper wraps the Page's contentstream into q ... Q blocks.
+type ContentStreamWrapper interface {
+	WrapContentStream(page *PdfPage) error
+}
+
 // FieldAppearanceGenerator generates appearance stream for a given field.
 type FieldAppearanceGenerator interface {
+	ContentStreamWrapper
 	GenerateAppearanceDict(form *PdfAcroForm, field *PdfField, wa *PdfAnnotationWidget) (*core.PdfObjectDictionary, error)
 }
 
@@ -76,6 +82,13 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 	// Go through all pages and flatten specified annotations.
 	for _, page := range pdf.PageList {
 		annots := []*PdfAnnotation{}
+
+		// Wrap the content streams.
+		err := appgen.WrapContentStream(page)
+		if err != nil {
+			return err
+		}
+
 		for _, annot := range page.Annotations {
 			hasV, toflatten := ftargets[annot]
 			if !toflatten {
