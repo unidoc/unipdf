@@ -27,6 +27,7 @@ func NewHandlerR6() StdHandler {
 }
 
 // stdHandlerR6 is an implementation of standard security handler with R=5 and R=6.
+// Both revisions are expected to be used with AES encryption filters.
 type stdHandlerR6 struct{}
 
 // alg2a retrieves the encryption key from an encrypted document (R >= 5).
@@ -115,10 +116,10 @@ func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permission
 	return fkey, perm, nil
 }
 
-// alg2b_R5 computes a hash for R=5, used in a deprecated extension.
+// alg2bR5 computes a hash for R=5, used in a deprecated extension.
 // It's used the same way as a hash described in Algorithm 2.B, but it doesn't use the original password
 // and the user key to calculate the hash.
-func alg2b_R5(data []byte) []byte {
+func alg2bR5(data []byte) []byte {
 	h := sha256.New()
 	h.Write(data)
 	return h.Sum(nil)
@@ -216,7 +217,7 @@ func alg2b(data, pwd, userKey []byte) []byte {
 // alg2b computes a hash for R=5 and R=6.
 func (sh stdHandlerR6) alg2b(R int, data, pwd, userKey []byte) []byte {
 	if R == 5 {
-		return alg2b_R5(data)
+		return alg2bR5(data)
 	}
 	return alg2b(data, pwd, userKey)
 }
@@ -422,9 +423,10 @@ func (sh stdHandlerR6) alg13(d *StdEncryptDict, fkey []byte) error {
 	return nil
 }
 
-// generateR6 is the algorithm opposite to alg2a (R>=5).
+// GenerateParams is the algorithm opposite to alg2a (R>=5).
 // It generates U,O,UE,OE,Perms fields using AESv3 encryption.
 // There is no algorithm number assigned to this function in the spec.
+// It expects R, P and EncryptMetadata fields to be set.
 func (sh stdHandlerR6) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([]byte, error) {
 	ekey := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, ekey); err != nil {
@@ -461,6 +463,7 @@ func (sh stdHandlerR6) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([
 	return ekey, nil
 }
 
+// Authenticate implements StdHandler interface.
 func (sh stdHandlerR6) Authenticate(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	return sh.alg2a(d, pass)
 }

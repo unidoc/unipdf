@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package crypt
 
 import (
@@ -21,6 +26,7 @@ func NewFilterV2(length int) Filter {
 	return f
 }
 
+// newFilterV2 creates a RC4-based filter from a Filter dictionary.
 func newFilterV2(d FilterDict) (Filter, error) {
 	if d.Length%8 != 0 {
 		return nil, fmt.Errorf("Crypt filter length not multiple of 8 (%d)", d.Length)
@@ -74,32 +80,40 @@ func makeKeyV2(objNum, genNum uint32, ekey []byte, isAES bool) ([]byte, error) {
 	return hashb, nil
 }
 
+var _ Filter = filterV2{}
+
 // filterV2 is a RC4-based filter
 type filterV2 struct {
 	length int
 }
 
+// PDFVersion implements Filter interface.
 func (f filterV2) PDFVersion() [2]int {
 	return [2]int{} // TODO(dennwc): unspecified; check what it should be
 }
 
+// HandlerVersion implements Filter interface.
 func (f filterV2) HandlerVersion() (V, R int) {
 	V, R = 2, 3
 	return
 }
 
+// Name implements Filter interface.
 func (filterV2) Name() string {
 	return "V2"
 }
 
+// KeyLength implements Filter interface.
 func (f filterV2) KeyLength() int {
 	return f.length
 }
 
+// MakeKey implements Filter interface.
 func (f filterV2) MakeKey(objNum, genNum uint32, ekey []byte) ([]byte, error) {
 	return makeKeyV2(objNum, genNum, ekey, false)
 }
 
+// EncryptBytes implements Filter interface.
 func (filterV2) EncryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	// Standard RC4 algorithm.
 	ciph, err := rc4.NewCipher(okey)
@@ -112,6 +126,7 @@ func (filterV2) EncryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	return buf, nil
 }
 
+// DecryptBytes implements Filter interface.
 func (filterV2) DecryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	// Standard RC4 algorithm.
 	ciph, err := rc4.NewCipher(okey)

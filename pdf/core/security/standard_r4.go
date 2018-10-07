@@ -26,6 +26,10 @@ func NewHandlerR4(id0 string, length int) StdHandler {
 	return stdHandlerR4{ID0: id0, Length: length}
 }
 
+// stdHandlerR4 is a standard security handler for R<=4.
+// It uses RC4 and MD5 to generate encryption parameters.
+// This legacy handler also requires Length parameter from
+// Encrypt dictionary and ID0 from the trailer.
 type stdHandlerR4 struct {
 	Length int
 	ID0    string
@@ -260,7 +264,7 @@ func (sh stdHandlerR4) alg6(d *StdEncryptDict, upass []byte) ([]byte, error) {
 }
 
 // alg7 authenticates the owner password and returns the document encryption key.
-//// It returns an nil key in case authentication failed.
+// It returns an nil key in case authentication failed.
 func (sh stdHandlerR4) alg7(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	encKey := sh.alg3Key(d.R, opass)
 
@@ -298,6 +302,8 @@ func (sh stdHandlerR4) alg7(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	return ekey, nil
 }
 
+// GenerateParams generates and sets O and U parameters for the encryption dictionary.
+// It expects R, P and EncryptMetadata fields to be set.
 func (sh stdHandlerR4) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([]byte, error) {
 	// Make the O and U objects.
 	O, err := sh.alg3(d.R, upass, opass)
@@ -320,6 +326,7 @@ func (sh stdHandlerR4) GenerateParams(d *StdEncryptDict, opass, upass []byte) ([
 	return ekey, nil
 }
 
+// Authenticate implements StdHandler interface.
 func (sh stdHandlerR4) Authenticate(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	// Try owner password.
 	// May not be necessary if only want to get all contents.

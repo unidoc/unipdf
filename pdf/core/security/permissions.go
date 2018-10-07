@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package security
 
 import "math"
@@ -9,17 +14,22 @@ const (
 	// PermOwner grants all permissions.
 	PermOwner = Permissions(math.MaxUint32)
 
-	PermPrinting        = Permissions(1 << 2) // bit 3
-	PermModify          = Permissions(1 << 3) // bit 4
-	PermExtractGraphics = Permissions(1 << 4) // bit 5
-	PermAnnotate        = Permissions(1 << 5) // bit 6
+	// PermPrinting allows printing the document with a low quality.
+	PermPrinting = Permissions(1 << 2)
+	// PermModify allows to modify the document.
+	PermModify = Permissions(1 << 3)
+	// PermExtractGraphics allows to extract graphics from the document.
+	PermExtractGraphics = Permissions(1 << 4)
+	// PermAnnotate allows annotating the document.
+	PermAnnotate = Permissions(1 << 5)
 	// PermFillForms allow form filling, if annotation is disabled?  If annotation enabled, is not looked at.
-	PermFillForms         = Permissions(1 << 8) // bit 9
-	PermDisabilityExtract = Permissions(1 << 9) // bit 10 // TODO: not clear what this means!
+	PermFillForms = Permissions(1 << 8)
+	// PermDisabilityExtract allows to extract graphics in accessibility mode.
+	PermDisabilityExtract = Permissions(1 << 9)
 	// PermRotateInsert allows rotating, editing page order.
-	PermRotateInsert = Permissions(1 << 10) // bit 11
+	PermRotateInsert = Permissions(1 << 10)
 	// PermFullPrintQuality limits print quality (lowres), assuming Printing bit is set.
-	PermFullPrintQuality = Permissions(1 << 11) // bit 12
+	PermFullPrintQuality = Permissions(1 << 11)
 )
 
 // Allowed checks if a set of permissions can be granted.

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package crypt
 
 import (
@@ -146,28 +151,35 @@ func (filterAES) DecryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	return buf, nil
 }
 
+var _ Filter = filterAESV3{}
+
 // filterAESV3 is an AES-based filter (256 bit key, PDF 2.0)
 type filterAESV3 struct {
 	filterAES
 }
 
+// PDFVersion implements Filter interface.
 func (filterAESV3) PDFVersion() [2]int {
 	return [2]int{2, 0}
 }
 
+// HandlerVersion implements Filter interface.
 func (filterAESV3) HandlerVersion() (V, R int) {
 	V, R = 5, 6
 	return
 }
 
+// Name implements Filter interface.
 func (filterAESV3) Name() string {
 	return "AESV3"
 }
 
+// KeyLength implements Filter interface.
 func (filterAESV3) KeyLength() int {
 	return 256 / 8
 }
 
+// MakeKey implements Filter interface.
 func (filterAESV3) MakeKey(_, _ uint32, ekey []byte) ([]byte, error) {
-	return ekey, nil
+	return ekey, nil // document encryption key == object encryption key
 }

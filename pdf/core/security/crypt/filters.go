@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package crypt
 
 import (
@@ -12,6 +17,27 @@ var (
 
 // filterFunc is used to construct crypt filters from CryptFilter dictionary
 type filterFunc func(d FilterDict) (Filter, error)
+
+// Filter is a common interface for crypt filter methods.
+type Filter interface {
+	// Name returns a name of the filter that should be used in CFM field of Encrypt dictionary.
+	Name() string
+	// KeyLength returns a length of the encryption key in bytes.
+	KeyLength() int
+	// PDFVersion reports the minimal version of PDF document that introduced this filter.
+	PDFVersion() [2]int
+	// HandlerVersion reports V and R parameters that should be used for this filter.
+	HandlerVersion() (V, R int)
+	// MakeKey generates a object encryption key based on file encryption key and object numbers.
+	// Used only for legacy filters - AESV3 doesn't change the key for each object.
+	MakeKey(objNum, genNum uint32, fkey []byte) ([]byte, error)
+	// EncryptBytes encrypts a buffer using object encryption key, as returned by MakeKey.
+	// Implementation may reuse a buffer and encrypt data in-place.
+	EncryptBytes(p []byte, okey []byte) ([]byte, error)
+	// DecryptBytes decrypts a buffer using object encryption key, as returned by MakeKey.
+	// Implementation may reuse a buffer and decrypt data in-place.
+	DecryptBytes(p []byte, okey []byte) ([]byte, error)
+}
 
 // NewFilter creates CryptFilter from a corresponding dictionary.
 func NewFilter(d FilterDict) (Filter, error) {
@@ -54,27 +80,6 @@ func getFilter(name string) (filterFunc, error) {
 		return nil, fmt.Errorf("unsupported crypt filter: %q", name)
 	}
 	return f, nil
-}
-
-// Filter is a common interface for crypt filter methods.
-type Filter interface {
-	// Name returns a name of the filter that should be used in CFM field of Encrypt dictionary.
-	Name() string
-	// KeyLength returns a length of the encryption key in bytes.
-	KeyLength() int
-	// PDFVersion reports the minimal version of PDF document that introduced this filter.
-	PDFVersion() [2]int
-	// HandlerVersion reports V and R parameters that should be used for this filter.
-	HandlerVersion() (V, R int)
-	// MakeKey generates a object encryption key based on file encryption key and object numbers.
-	// Used only for legacy filters - AESV3 doesn't change the key for each object.
-	MakeKey(objNum, genNum uint32, fkey []byte) ([]byte, error)
-	// EncryptBytes encrypts a buffer using object encryption key, as returned by MakeKey.
-	// Implementation may reuse a buffer and encrypt data in-place.
-	EncryptBytes(p []byte, okey []byte) ([]byte, error)
-	// DecryptBytes decrypts a buffer using object encryption key, as returned by MakeKey.
-	// Implementation may reuse a buffer and decrypt data in-place.
-	DecryptBytes(p []byte, okey []byte) ([]byte, error)
 }
 
 type filterIdentity struct{}
