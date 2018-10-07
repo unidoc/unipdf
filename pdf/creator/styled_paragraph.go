@@ -193,7 +193,7 @@ func (p *StyledParagraph) SetWidth(width float64) {
 
 // Width returns the width of the Paragraph.
 func (p *StyledParagraph) Width() float64 {
-	if p.enableWrap {
+	if p.enableWrap && int(p.wrapWidth) > 0 {
 		return p.wrapWidth
 	}
 
@@ -310,7 +310,7 @@ func (p *StyledParagraph) getTextHeight() float64 {
 // fill the lines.
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *StyledParagraph) wrapText() error {
-	if !p.enableWrap {
+	if !p.enableWrap || int(p.wrapWidth) <= 0 {
 		p.lines = [][]TextChunk{p.chunks}
 		return nil
 	}
@@ -462,7 +462,7 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 		}
 	} else {
 		// Absolute.
-		if p.wrapWidth == 0 {
+		if int(p.wrapWidth) <= 0 {
 			// Use necessary space.
 			p.SetWidth(p.getTextWidth())
 		}
@@ -600,17 +600,20 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 		// Add line shifts.
 		objs := []core.PdfObject{}
+
+		wrapWidth := p.wrapWidth * 1000.0
 		if p.alignment == TextAlignmentJustify {
-			// Not to justify last line.
+			// Do not justify last line.
 			if spaces > 0 && !isLastLine {
-				spaceWidth = (p.wrapWidth*1000.0 - width) / float64(spaces) / defaultFontSize
+				spaceWidth = (wrapWidth - width) / float64(spaces) / defaultFontSize
 			}
 		} else if p.alignment == TextAlignmentCenter {
-			// Start with a shift.
-			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / 2 / defaultFontSize
+			// Start with an offset of half of the remaining line space.
+			shift := (wrapWidth - width - spaceWidth) / 2 / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		} else if p.alignment == TextAlignmentRight {
-			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / defaultFontSize
+			// Push the text at the end of the line.
+			shift := (wrapWidth - width - spaceWidth) / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
