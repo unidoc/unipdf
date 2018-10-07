@@ -623,14 +623,14 @@ func TestParagraphChinese(t *testing.T) {
 		"河上白云",
 	}
 
+	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
 	for _, line := range lines {
 		p := creator.NewParagraph(line)
-
-		font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
-		if err != nil {
-			t.Errorf("Fail: %v\n", err)
-			return
-		}
 
 		p.SetFont(font)
 
@@ -641,11 +641,19 @@ func TestParagraphChinese(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile(tempFile("2_p_nihao.pdf"))
+	fname := tempFile("2_p_nihao.pdf")
+	err = creator.WriteToFile(fname)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
+
+	st, err := os.Stat(fname)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	t.Logf("output size: %d (%d MB)", st.Size(), st.Size()/1024/1024)
 }
 
 // Test paragraph with composite font and various unicode characters.
