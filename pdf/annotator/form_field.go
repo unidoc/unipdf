@@ -1,13 +1,17 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package annotator
 
 import (
 	"bytes"
 	"errors"
 
-	"github.com/unidoc/unidoc/pdf/model"
-
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
@@ -50,10 +54,7 @@ func NewTextField(page *model.PdfPage, name string, rect []float64, opt TextFiel
 	widget.F = core.MakeInteger(4) // 4 (100 -> Print/show annotations).
 	widget.Parent = textfield.ToPdfObject()
 
-	//*form.Fields = append(*form.Fields, field)
-
 	textfield.Annotations = append(textfield.Annotations, widget)
-	//page.Annotations = append(page.Annotations, widget.PdfAnnotation)
 
 	return textfield, nil
 }
