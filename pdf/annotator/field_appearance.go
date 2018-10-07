@@ -122,7 +122,21 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 			}
 			return appDict, nil
 		}
+
 		common.Log.Debug("TODO: UNHANDLED button type: %+v", fbtn.GetType())
+	case *model.PdfFieldChoice:
+		fch := t
+		switch {
+		case fch.Flags().Has(model.FieldFlagCombo):
+			appDict, err := genFieldComboboxAppearance(form, wa, fch, fa.Style())
+			if err != nil {
+				return nil, err
+			}
+			return appDict, nil
+		default:
+			common.Log.Debug("TODO: UNHANDLED choice field with flags: %s", fch.Flags().String())
+		}
+
 	default:
 		common.Log.Debug("TODO: UNHANDLED field type: %T", t)
 	}
@@ -658,6 +672,215 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	appDict.Set("N", dchoiceapp)
 
 	return appDict, nil
+}
+
+// genFieldComboboxAppearance generates an appearance dictionary for a widget annotation `wa` referenced by a
+// combobox choice field `fch` with form resources (DR) `dr`.
+func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotationWidget, fch *model.PdfFieldChoice, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
+	// Get bounding Rect.
+	array, ok := core.GetArray(wa.Rect)
+	if !ok {
+		return nil, errors.New("invalid Rect")
+	}
+	rect, err := array.ToFloat64Array()
+	if err != nil {
+		return nil, err
+	}
+	if len(rect) != 4 {
+		return nil, errors.New("len(Rect) != 4")
+	}
+
+	common.Log.Debug("Choice, wa BS: %v", wa.BS)
+
+	width := rect[2] - rect[0]
+	height := rect[3] - rect[1]
+
+	// Get and process the default appearance string (DA) operands.
+	da := core.MakeString("")
+	if form.DA != nil {
+		da, _ = core.GetString(form.DA)
+	}
+	csp := contentstream.NewContentStreamParser(da.String())
+	daOps, err := csp.Parse()
+	if err != nil {
+		return nil, err
+	}
+
+	if mkDict, has := core.GetDict(wa.MK); has {
+		bsDict, _ := core.GetDict(wa.BS)
+		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	dchoiceapp := core.MakeDict()
+	for _, optObj := range fch.Opt.Elements() {
+		optstr := ""
+
+		if opt, ok := core.GetString(optObj); ok {
+			optstr = opt.String()
+		} else {
+			if opt, ok := core.GetName(optObj); ok {
+				optstr = opt.String()
+			} else {
+				common.Log.Debug("ERROR: Opt not a name/string - %T", optObj)
+				return nil, errors.New("not a name/string")
+			}
+		}
+
+		if len(optstr) > 0 {
+			xform, err := makeComboboxTextXObjForm(width, height, optstr, style, daOps, form.DR)
+			if err != nil {
+				return nil, err
+			}
+
+			dchoiceapp.Set(*core.MakeName(optstr), xform.ToPdfObject())
+		}
+	}
+
+	appDict := core.MakeDict()
+	appDict.Set("N", dchoiceapp)
+
+	return appDict, nil
+}
+
+// Make a text-based XObj Form.
+func makeComboboxTextXObjForm(width, height float64, text string, style AppearanceStyle, daOps *contentstream.ContentStreamOperations, dr *model.PdfPageResources) (*model.XObjectForm, error) {
+	resources := model.NewPdfPageResources()
+
+	cc := contentstream.NewContentCreator()
+	if style.BorderSize > 0 {
+		drawRect(cc, style, width, height)
+	}
+	cc.Add_BMC("Tx")
+	cc.Add_q()
+	// Graphic state changes.
+	cc.Add_BT()
+
+	// Add DA operands.
+	var fontsize float64
+	var fontname *core.PdfObjectName
+	var font *model.PdfFont
+	var err error
+	autosize := true
+
+	fontsizeDef := height * style.AutoFontSizeFraction
+	for _, op := range *daOps {
+		// When Tf specified with font size is 0, it means we should set on our own based on the Rect (autosize).
+		if op.Operand == "Tf" && len(op.Params) == 2 {
+			if name, ok := core.GetName(op.Params[0]); ok {
+				fontname = name
+			}
+			num, err := core.GetNumberAsFloat(op.Params[1])
+			if err == nil {
+				fontsize = num
+			} else {
+				common.Log.Debug("ERROR invalid font size: %v", op.Params[1])
+			}
+			if fontsize == 0 {
+				// Use default if zero.
+				fontsize = fontsizeDef
+			} else {
+				// Disable autosize when font size (>0) explicitly specified.
+				autosize = false
+			}
+			// Skip over (set fontsize in code below).
+			continue
+		}
+		cc.AddOperand(*op)
+	}
+
+	// If fontname not set need to make a new font or use one defined in the resources.
+	// e.g. Helv commonly used for Helvetica.
+	if fontname == nil {
+		// Font not set, revert to Helvetica with name "Helv".
+		fontname = core.MakeName("Helv")
+		helv, err := model.NewStandard14Font("Helvetica")
+		if err != nil {
+			return nil, err
+		}
+		font = helv
+		resources.SetFontByName(*fontname, helv.ToPdfObject())
+	} else {
+		fontobj, has := dr.GetFontByName(*fontname)
+		if !has {
+			return nil, errors.New("font not in DR")
+		}
+		font, err = model.NewPdfFontFromPdfObject(fontobj)
+		if err != nil {
+			common.Log.Debug("ERROR loading default appearance font: %v", err)
+			return nil, err
+		}
+		resources.SetFontByName(*fontname, fontobj)
+	}
+	encoder := font.Encoder()
+
+	// If no text, no appearance needed.
+	if len(text) < 1 {
+		return nil, nil
+	}
+
+	var tx float64
+	tx = 2.0 // Default left margin. // TODO(gunnsth): Add to style options.
+
+	linewidth := 0.0
+	if encoder != nil {
+		for _, r := range text {
+			glyph, has := encoder.RuneToGlyph(r)
+			if !has {
+				common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
+				continue
+			}
+			metrics, has := font.GetGlyphCharMetrics(glyph)
+			if !has {
+				common.Log.Debug("Font does not have glyph metrics for %s - skipping", glyph)
+				continue
+			}
+			linewidth += metrics.Wx
+		}
+
+		text = string(encoder.Encode(text))
+	}
+
+	// Check if text goes out of bounds, if goes out of bounds, then adjust font size until just within bounds.
+	if fontsize == 0 || autosize && linewidth > 0 && tx+linewidth*fontsize/1000.0 > width {
+		// TODO(gunnsth): Add to style options.
+		fontsize = 0.95 * 1000.0 * (width - tx) / linewidth
+	}
+
+	lineheight := 1.0 * fontsize
+
+	// Vertical alignment.
+	ty := 2.0
+	{
+		textheight := lineheight
+		if autosize && ty+textheight > height {
+			fontsize = 0.95 * (height - ty)
+			lineheight = 1.0 * fontsize
+			textheight = lineheight
+		}
+
+		if height > textheight {
+			ty = (height - textheight) / 2.0
+			ty += 1.50 // TODO(gunnsth): Make configurable/part of style parameter.
+		}
+	}
+
+	cc.Add_Tf(*fontname, fontsize)
+	cc.Add_Td(tx, ty)
+	cc.Add_Tj(*core.MakeString(text))
+
+	cc.Add_ET()
+	cc.Add_Q()
+	cc.Add_EMC()
+
+	xform := model.NewXObjectForm()
+	xform.Resources = resources
+	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
+
+	return xform, nil
 }
 
 // getDA returns the default appearance text (DA) for a given field `ftxt`.
