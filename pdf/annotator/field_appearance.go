@@ -310,9 +310,9 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 
 	// Check if text goes out of bounds, if goes out of bounds, then adjust font size until just within bounds.
-	if fontsize == 0 || autosize && maxLinewidth > 0 && maxLinewidth*fontsize/1000.0 > width {
+	if fontsize == 0 || autosize && maxLinewidth > 0 && tx+maxLinewidth*fontsize/1000.0 > width {
 		// TODO(gunnsth): Add to style options.
-		fontsize = 0.95 * 1000.0 * width / maxLinewidth
+		fontsize = 0.95 * 1000.0 * (width - tx) / maxLinewidth
 	}
 
 	// Account for horizontal alignment (quadding).
