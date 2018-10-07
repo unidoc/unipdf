@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/boombuler/barcode"
@@ -45,6 +46,10 @@ const testWts11TTFFile = "./testdata/wts11.ttf"
 //      when opened in Adobe Reader: The font FreeSans contains bad Widths.
 //      This problem did not occur when I replaced FreeSans.ttf with LiberationSans-Regular.ttf
 const testFreeSansTTFFile = "./testdata/FreeSans.ttf"
+
+func tempFile(name string) string {
+	return filepath.Join(os.TempDir(), name)
+}
 
 func TestTemplate1(t *testing.T) {
 	creator := New()
@@ -77,7 +82,7 @@ func TestTemplate1(t *testing.T) {
 	template.SetPos(100, 200)
 	creator.Draw(template)
 
-	creator.WriteToFile("/tmp/template_1.pdf")
+	creator.WriteToFile(tempFile("template_1.pdf"))
 
 	return
 }
@@ -107,7 +112,7 @@ func TestImage1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile("/tmp/1.pdf")
+	err = creator.WriteToFile(tempFile("1.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -146,7 +151,7 @@ func TestImageWithEncoder(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile("/tmp/1_dct.pdf")
+	err = creator.WriteToFile(tempFile("1_dct.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -232,7 +237,7 @@ func TestShapes1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile("/tmp/1_shapes.pdf")
+	err = creator.WriteToFile(tempFile("1_shapes.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -281,7 +286,7 @@ func TestShapesOnBlock(t *testing.T) {
 	block.SetAngle(90)
 	creator.Draw(block)
 
-	err = creator.WriteToFile("/tmp/1_shapes_on_block.pdf")
+	err = creator.WriteToFile(tempFile("1_shapes_on_block.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -314,7 +319,7 @@ func TestImageWrapping(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile("/tmp/1_wrap.pdf")
+	err = creator.WriteToFile(tempFile("1_wrap.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -354,7 +359,7 @@ func TestImageRotation(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile("/tmp/1_rotate.pdf")
+	err = creator.WriteToFile(tempFile("1_rotate.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -396,7 +401,7 @@ func TestImageRotationAndWrap(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile("/tmp/rotate_2.pdf")
+	err = creator.WriteToFile(tempFile("rotate_2.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -419,7 +424,7 @@ func TestParagraph1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile("/tmp/2_p1.pdf")
+	err = creator.WriteToFile(tempFile("2_p1.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -455,7 +460,7 @@ func TestParagraphWrapping(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile("/tmp/2_pwrap.pdf")
+	err := creator.WriteToFile(tempFile("2_pwrap.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -485,7 +490,7 @@ func TestParagraphWrapping2(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile("/tmp/2_pwrap2.pdf")
+	err := creator.WriteToFile(tempFile("2_pwrap2.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -531,7 +536,7 @@ func TestParagraphFonts(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile("/tmp/2_pArial.pdf")
+	err = creator.WriteToFile(tempFile("2_pArial.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -601,7 +606,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile("/tmp/2_standard14fonts.pdf")
+	err := creator.WriteToFile(tempFile("2_standard14fonts.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -636,7 +641,7 @@ func TestParagraphChinese(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile("/tmp/2_p_nihao.pdf")
+	err := creator.WriteToFile(tempFile("2_p_nihao.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -695,7 +700,7 @@ func TestParagraphUnicode(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile("/tmp/2_p_multi.pdf")
+	err = creator.WriteToFile(tempFile("2_p_multi.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -721,7 +726,7 @@ func TestChapter(t *testing.T) {
 
 	c.Draw(ch1)
 
-	err := c.WriteToFile("/tmp/3_chapters.pdf")
+	err := c.WriteToFile(tempFile("3_chapters.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -748,7 +753,7 @@ func TestChapterMargins(t *testing.T) {
 		c.Draw(ch)
 	}
 
-	err := c.WriteToFile("/tmp/3_chapters_margins.pdf")
+	err := c.WriteToFile(tempFile("3_chapters_margins.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -857,7 +862,7 @@ func TestSubchaptersSimple(t *testing.T) {
 		return nil
 	})
 
-	err := c.WriteToFile("/tmp/3_subchapters_simple.pdf")
+	err := c.WriteToFile(tempFile("3_subchapters_simple.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -967,7 +972,7 @@ func TestSubchapters(t *testing.T) {
 
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile("/tmp/3_subchapters.pdf")
+	err := c.WriteToFile(tempFile("3_subchapters.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1027,7 +1032,7 @@ func TestTable(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/4_table.pdf")
+	err := c.WriteToFile(tempFile("4_table.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1118,7 +1123,7 @@ func TestTableCellWrapping(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	err = c.WriteToFile("/tmp/tablecell_wrap.pdf")
+	err = c.WriteToFile(tempFile("tablecell_wrap.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -1159,7 +1164,7 @@ func TestBorderedTable1(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	err := c.WriteToFile(tempFile("4_table_bordered.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1220,7 +1225,7 @@ func TestBorderedTable2(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/4_table_bordered.pdf")
+	err := c.WriteToFile(tempFile("4_table_bordered.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1451,7 +1456,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 	c.Draw(table2)
 	c.Draw(table3)
 
-	err := c.WriteToFile("/tmp/hendricks.pdf")
+	err := c.WriteToFile(tempFile("hendricks.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1782,7 +1787,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	c.Draw(table9)
 	c.Draw(table10)
 
-	err := c.WriteToFile("/tmp/table_border_req1_test.pdf")
+	err := c.WriteToFile(tempFile("table_border_req1_test.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1803,7 +1808,7 @@ func TestCellBorder(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile("/tmp/cell.pdf")
+	err := c.WriteToFile(tempFile("cell.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1902,7 +1907,7 @@ func TestTableInSubchapter(t *testing.T) {
 		return
 	}
 
-	err = c.WriteToFile("/tmp/4_tables_in_subchap.pdf")
+	err = c.WriteToFile(tempFile("4_tables_in_subchap.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1977,7 +1982,7 @@ func TestHeadersAndFooters(t *testing.T) {
 	// Make unidoc headers and footers.
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile("/tmp/4_headers.pdf")
+	err := c.WriteToFile(tempFile("4_headers.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2022,7 +2027,7 @@ func TestQRCodeOnNewPage(t *testing.T) {
 		creator.Draw(img)
 	}
 
-	creator.WriteToFile("/tmp/3_barcode_qr_newpage.pdf")
+	creator.WriteToFile(tempFile("3_barcode_qr_newpage.pdf"))
 }
 
 // Example of using a template Page, generating and applying QR
@@ -2100,7 +2105,7 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	creator.Draw(loremTpl)
 
 	// Write the example to file.
-	creator.WriteToFile("/tmp/4_barcode_on_tpl.pdf")
+	creator.WriteToFile(tempFile("4_barcode_on_tpl.pdf"))
 }
 
 // Test adding encryption to output.
@@ -2129,7 +2134,7 @@ func TestEncrypting1(t *testing.T) {
 		return err
 	})
 
-	err := c.WriteToFile("/tmp/6_chapters_encrypted_password.pdf")
+	err := c.WriteToFile(tempFile("6_chapters_encrypted_password.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2173,7 +2178,7 @@ func TestEncrypting1(t *testing.T) {
 func TestOptimizeCombineDuplicateStreams(t *testing.T) {
 	c := createPdf4Optimization(t)
 
-	err := c.WriteToFile("/tmp/7_combine_duplicate_streams_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("7_combine_duplicate_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2183,18 +2188,18 @@ func TestOptimizeCombineDuplicateStreams(t *testing.T) {
 
 	c.SetOptimizer(optimize.New(optimize.Options{CombineDuplicateStreams: true}))
 
-	err = c.WriteToFile("/tmp/7_combine_duplicate_streams_optimized.pdf")
+	err = c.WriteToFile(tempFile("7_combine_duplicate_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/7_combine_duplicate_streams_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("7_combine_duplicate_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/7_combine_duplicate_streams_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("7_combine_duplicate_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2236,7 +2241,7 @@ func TestOptimizeImageQuality(t *testing.T) {
 		return
 	}
 
-	err = c.WriteToFile("/tmp/8_image_quality_not_optimized.pdf")
+	err = c.WriteToFile(tempFile("8_image_quality_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2244,18 +2249,18 @@ func TestOptimizeImageQuality(t *testing.T) {
 
 	c.SetOptimizer(optimize.New(optimize.Options{ImageQuality: 20}))
 
-	err = c.WriteToFile("/tmp/8_image_quality_optimized.pdf")
+	err = c.WriteToFile(tempFile("8_image_quality_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/8_image_quality_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("8_image_quality_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/8_image_quality_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("8_image_quality_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2365,7 +2370,7 @@ func createPdf4Optimization(t *testing.T) *Creator {
 func TestOptimizeUseObjectStreams(t *testing.T) {
 	c := createPdf4Optimization(t)
 
-	err := c.WriteToFile("/tmp/9_use_object_streams_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("9_use_object_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2374,18 +2379,18 @@ func TestOptimizeUseObjectStreams(t *testing.T) {
 	c = createPdf4Optimization(t)
 	c.SetOptimizer(optimize.New(optimize.Options{UseObjectStreams: true}))
 
-	err = c.WriteToFile("/tmp/9_use_object_streams_optimized.pdf")
+	err = c.WriteToFile(tempFile("9_use_object_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/9_use_object_streams_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("9_use_object_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/9_use_object_streams_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("9_use_object_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2484,7 +2489,7 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 
 	c := createDoc()
 
-	err := c.WriteToFile("/tmp/10_combine_duplicate_direct_objects_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("10_combine_duplicate_direct_objects_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2493,18 +2498,18 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 	c = createDoc()
 	c.SetOptimizer(optimize.New(optimize.Options{CombineDuplicateDirectObjects: true}))
 
-	err = c.WriteToFile("/tmp/10_combine_duplicate_direct_objects_optimized.pdf")
+	err = c.WriteToFile(tempFile("10_combine_duplicate_direct_objects_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/10_combine_duplicate_direct_objects_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("10_combine_duplicate_direct_objects_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/10_combine_duplicate_direct_objects_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("10_combine_duplicate_direct_objects_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2575,7 +2580,7 @@ func TestOptimizeImagePPI(t *testing.T) {
 		return
 	}
 
-	err = c.WriteToFile("/tmp/11_image_ppi_not_optimized.pdf")
+	err = c.WriteToFile(tempFile("11_image_ppi_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2583,18 +2588,18 @@ func TestOptimizeImagePPI(t *testing.T) {
 
 	c.SetOptimizer(optimize.New(optimize.Options{ImageUpperPPI: 144}))
 
-	err = c.WriteToFile("/tmp/11_image_ppi_optimized.pdf")
+	err = c.WriteToFile(tempFile("11_image_ppi_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/11_image_ppi_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("11_image_ppi_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/11_image_ppi_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("11_image_ppi_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2684,7 +2689,7 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile("/tmp/12_identical_indirect_objects_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("12_identical_indirect_objects_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2692,18 +2697,18 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 
 	c.SetOptimizer(optimize.New(optimize.Options{CombineIdenticalIndirectObjects: true}))
 
-	err = c.WriteToFile("/tmp/12_identical_indirect_objects_optimized.pdf")
+	err = c.WriteToFile(tempFile("12_identical_indirect_objects_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/12_identical_indirect_objects_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("12_identical_indirect_objects_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/12_identical_indirect_objects_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("12_identical_indirect_objects_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2753,7 +2758,7 @@ ET`)
 
 	c := createDoc()
 
-	err := c.WriteToFile("/tmp/13_compress_streams_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("13_compress_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2762,18 +2767,18 @@ ET`)
 	c = createDoc()
 	c.SetOptimizer(optimize.New(optimize.Options{CompressStreams: true}))
 
-	err = c.WriteToFile("/tmp/13_compress_streams_optimized.pdf")
+	err = c.WriteToFile(tempFile("13_compress_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/13_compress_streams_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("13_compress_streams_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/13_compress_streams_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("13_compress_streams_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2870,7 +2875,7 @@ func TestAllOptimizations(t *testing.T) {
 
 	c := createDoc()
 
-	err := c.WriteToFile("/tmp/14_not_optimized.pdf")
+	err := c.WriteToFile(tempFile("14_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2887,18 +2892,18 @@ func TestAllOptimizations(t *testing.T) {
 		CompressStreams:                 true,
 	}))
 
-	err = c.WriteToFile("/tmp/14_optimized.pdf")
+	err = c.WriteToFile(tempFile("14_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	fileInfo, err := os.Stat("/tmp/14_not_optimized.pdf")
+	fileInfo, err := os.Stat(tempFile("14_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	fileInfoOptimized, err := os.Stat("/tmp/14_optimized.pdf")
+	fileInfoOptimized, err := os.Stat(tempFile("14_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
