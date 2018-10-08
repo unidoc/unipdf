@@ -34,7 +34,7 @@ func newFilterV2(d FilterDict) (Filter, error) {
 	// Standard security handler expresses the length in multiples of 8 (16 means 128)
 	// We only deal with standard so far. (Public key not supported yet).
 	if d.Length < 5 || d.Length > 16 {
-		if d.Length == 64 || d.Length == 128 {
+		if d.Length == 40 || d.Length == 64 || d.Length == 128 {
 			common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", d.Length)
 			d.Length /= 8
 		} else {
