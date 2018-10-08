@@ -34,8 +34,7 @@ var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
 
 // PdfParser parses a PDF file and provides access to the object structure of the PDF.
 type PdfParser struct {
-	majorVersion int
-	minorVersion int
+	version Version
 
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
@@ -54,9 +53,18 @@ type PdfParser struct {
 	streamLengthReferenceLookupInProgress map[int64]bool
 }
 
+type Version struct {
+	Major int
+	Minor int
+}
+
+func (v Version) String() string {
+	return fmt.Sprintf("%0d.%0d", v.Major, v.Minor)
+}
+
 // PdfVersion returns version of the PDF file.
-func (parser *PdfParser) PdfVersion() string {
-	return fmt.Sprintf("%0d.%0d", parser.majorVersion, parser.minorVersion)
+func (parser *PdfParser) PdfVersion() Version {
+	return parser.version
 }
 
 // GetCrypter returns the PdfCrypt instance which has information about the PDFs encryption.
@@ -1539,8 +1547,8 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 		common.Log.Error("Unable to parse version: %v", err)
 		return nil, err
 	}
-	parser.majorVersion = majorVersion
-	parser.minorVersion = minorVersion
+	parser.version.Major = majorVersion
+	parser.version.Minor = minorVersion
 
 	parser.trailer = trailer
 
