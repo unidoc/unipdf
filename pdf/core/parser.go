@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // Regular Expressions for parsing and identifying object signatures.
@@ -66,7 +67,7 @@ func (parser *PdfParser) GetCrypter() *PdfCrypt {
 
 // IsAuthenticated returns true if the PDF has already been authenticated for accessing.
 func (parser *PdfParser) IsAuthenticated() bool {
-	return parser.crypter.Authenticated
+	return parser.crypter.authenticated
 }
 
 // GetTrailer returns the PDFs trailer dictionary. The trailer dictionary is typically the starting point for a PDF,
@@ -1590,7 +1591,7 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 		return false, fmt.Errorf("unsupported type: %T", e)
 	}
 
-	crypter, err := PdfCryptMakeNew(parser, dict, parser.trailer)
+	crypter, err := PdfCryptNewDecrypt(parser, dict, parser.trailer)
 	if err != nil {
 		return false, err
 	}
@@ -1604,11 +1605,11 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 		case *PdfObjectReference:
 			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		case *PdfIndirectObject:
-			crypter.DecryptedObjects[f] = true
+			crypter.decryptedObjects[f] = true
 			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		}
 	}
-	parser.crypter = &crypter
+	parser.crypter = crypter
 	common.Log.Trace("Crypter object %b", crypter)
 	return true, nil
 }
@@ -1628,6 +1629,7 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 	}
 
 	if !authenticated {
+		// TODO(dennwc): R6 handler will try it automatically, make R4 do the same
 		authenticated, err = parser.crypter.authenticate([]byte(""))
 	}
 
@@ -1640,21 +1642,11 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (parser *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (parser *PdfParser) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
 	// Also build the encryption/decryption key.
 	if parser.crypter == nil {
 		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
-		perms := AccessPermissions{}
-		perms.Printing = true
-		perms.Modify = true
-		perms.FillForms = true
-		perms.RotateInsert = true
-		perms.ExtractGraphics = true
-		perms.DisabilityExtract = true
-		perms.Annotate = true
-		perms.FullPrintQuality = true
-		return true, perms, nil
+		return true, security.PermOwner, nil
 	}
-
 	return parser.crypter.checkAccessRights(password)
 }

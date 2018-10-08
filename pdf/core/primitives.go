@@ -592,6 +592,16 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	return val
 }
 
+// GetString is a helper for Get that returns a string value.
+// Returns false if the key is missing or a value is not a string.
+func (d *PdfObjectDictionary) GetString(key PdfObjectName) (string, bool) {
+	val, ok := d.dict[key].(*PdfObjectString)
+	if !ok {
+		return "", false
+	}
+	return val.Str(), true
+}
+
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys

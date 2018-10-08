@@ -316,7 +316,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			if parser.crypter != nil {
 				// Mark as decrypted (inside object stream) for caching.
 				// and avoid decrypting decrypted object.
-				parser.crypter.DecryptedObjects[optr] = true
+				parser.crypter.decryptedObjects[optr] = true
 			}
 			return optr, true, nil
 		} else {
