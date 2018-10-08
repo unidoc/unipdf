@@ -235,6 +235,50 @@ func (p *Paragraph) getTextWidth() float64 {
 	return w
 }
 
+// getTextLineWidth calculates the text width of a provided line of text.
+func (p *Paragraph) getTextLineWidth(line string) float64 {
+	var width float64
+	for _, r := range line {
+		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
+		if !found {
+			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
+			return -1 // XXX/FIXME: return error.
+		}
+
+		// Ignore newline for this.. Handles as if all in one line.
+		if glyph == "controlLF" {
+			continue
+		}
+
+		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
+		if !found {
+			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
+			return -1 // XXX/FIXME: return error.
+		}
+
+		width += p.fontSize * metrics.Wx
+	}
+
+	return width
+}
+
+// getMaxLineWidth returns the width of the longest line of text in the paragraph.
+func (p *Paragraph) getMaxLineWidth() float64 {
+	if p.textLines == nil || len(p.textLines) == 0 {
+		p.wrapText()
+	}
+
+	var width float64
+	for _, line := range p.textLines {
+		w := p.getTextLineWidth(line)
+		if w > width {
+			width = w
+		}
+	}
+
+	return width
+}
+
 // Simple algorithm to wrap the text into lines (greedy algorithm - fill the lines).
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *Paragraph) wrapText() error {
