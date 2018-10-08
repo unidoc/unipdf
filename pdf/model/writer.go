@@ -11,19 +11,17 @@ package model
 import (
 	"bufio"
 	"bytes"
-	"crypto/md5"
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strings"
-	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
+	"github.com/unidoc/unidoc/pdf/core/security/crypt"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
@@ -652,7 +650,7 @@ func (this *PdfWriter) updateObjectNumbers() {
 
 // EncryptOptions represents encryption options for an output PDF.
 type EncryptOptions struct {
-	Permissions AccessPermissions
+	Permissions security.Permissions
 	Algorithm   EncryptionAlgorithm
 }
 
@@ -670,121 +668,40 @@ const (
 
 // Encrypt encrypts the output file with a specified user/owner password.
 func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
-	crypter := PdfCrypt{}
-	this.crypter = &crypter
-
-	crypter.EncryptedObjects = map[PdfObject]bool{}
-
-	crypter.CryptFilters = CryptFilters{}
-
 	algo := RC4_128bit
 	if options != nil {
 		algo = options.Algorithm
 	}
+	perm := security.PermOwner
+	if options != nil {
+		perm = options.Permissions
+	}
 
-	var cf CryptFilter
+	var cf crypt.Filter
 	switch algo {
 	case RC4_128bit:
-		crypter.V = 2
-		crypter.R = 3
-		cf = NewCryptFilterV2(16)
+		cf = crypt.NewFilterV2(16)
 	case AES_128bit:
-		this.SetVersion(1, 5)
-		crypter.V = 4
-		crypter.R = 4
-		cf = NewCryptFilterAESV2()
+		cf = crypt.NewFilterAESV2()
 	case AES_256bit:
-		this.SetVersion(2, 0)
-		crypter.V = 5
-		crypter.R = 6 // TODO(dennwc): a way to set R=5?
-		cf = NewCryptFilterAESV3()
+		cf = crypt.NewFilterAESV3()
 	default:
 		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
 	}
-	crypter.Length = cf.Length * 8
-
-	const (
-		defaultFilter = StandardCryptFilter
-	)
-	crypter.CryptFilters[defaultFilter] = cf
-	if crypter.V >= 4 {
-		crypter.StreamFilter = defaultFilter
-		crypter.StringFilter = defaultFilter
+	crypter, info, err := PdfCryptNewEncrypt(cf, userPass, ownerPass, perm)
+	if err != nil {
+		return err
 	}
-
-	// Set
-	crypter.P = math.MaxUint32
-	crypter.EncryptMetadata = true
-	if options != nil {
-		crypter.P = int(options.Permissions.GetP())
+	this.crypter = crypter
+	if info.Major != 0 {
+		this.SetVersion(info.Major, info.Minor)
 	}
+	this.encryptDict = info.Encrypt
 
-	// Generate the encryption dictionary.
-	ed := MakeDict()
-	ed.Set("Filter", MakeName("Standard"))
-	ed.Set("P", MakeInteger(int64(crypter.P)))
-	ed.Set("V", MakeInteger(int64(crypter.V)))
-	ed.Set("R", MakeInteger(int64(crypter.R)))
-	ed.Set("Length", MakeInteger(int64(crypter.Length)))
-	this.encryptDict = ed
-
-	// Prepare the ID object for the trailer.
-	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
-	id0 := string(hashcode[:])
-	b := make([]byte, 100)
-	rand.Read(b)
-	hashcode = md5.Sum(b)
-	id1 := string(hashcode[:])
-	common.Log.Trace("Random b: % x", b)
-
-	this.ids = MakeArray(MakeHexString(id0), MakeHexString(id1))
-	common.Log.Trace("Gen Id 0: % x", id0)
-
-	// Generate encryption parameters
-	if crypter.R < 5 {
-		crypter.Id0 = string(id0)
-
-		// Make the O and U objects.
-		O, err := crypter.Alg3(userPass, ownerPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return err
-		}
-		crypter.O = []byte(O)
-		common.Log.Trace("gen O: % x", O)
-		U, key, err := crypter.Alg5(userPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return err
-		}
-		common.Log.Trace("gen U: % x", U)
-		crypter.U = []byte(U)
-		crypter.EncryptionKey = key
-
-		ed.Set("O", MakeHexString(O))
-		ed.Set("U", MakeHexString(U))
-	} else { // R >= 5
-		err := crypter.GenerateParams(userPass, ownerPass)
-		if err != nil {
-			return err
-		}
-		ed.Set("O", MakeString(string(crypter.O)))
-		ed.Set("U", MakeString(string(crypter.U)))
-		ed.Set("OE", MakeString(string(crypter.OE)))
-		ed.Set("UE", MakeString(string(crypter.UE)))
-		ed.Set("EncryptMetadata", MakeBool(crypter.EncryptMetadata))
-		if crypter.R > 5 {
-			ed.Set("Perms", MakeString(string(crypter.Perms)))
-		}
-	}
-	if crypter.V >= 4 {
-		if err := crypter.SaveCryptFilters(ed); err != nil {
-			return err
-		}
-	}
+	this.ids = MakeArray(MakeHexString(info.ID0), MakeHexString(info.ID1))
 
 	// Make an object to contain the encryption dictionary.
-	io := MakeIndirectObject(ed)
+	io := MakeIndirectObject(info.Encrypt)
 	this.encryptObj = io
 	this.addObject(io)
 
