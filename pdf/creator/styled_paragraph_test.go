@@ -128,6 +128,111 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
+	// Test table cell alignment.
+	style = NewTextStyle()
+
+	// Test left alignment with paragraph wrapping enabled.
+	p = NewParagraph("Wrap enabled. This text should be left aligned.")
+	p.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap enabled. This text should be left aligned.", style)
+	s.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
+	cell.SetContent(s)
+
+	// Test left alignment with paragraph wrapping disabled.
+	p = NewParagraph("Wrap disabled. This text should be left aligned.")
+	p.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap disabled. This text should be left aligned.", style)
+	s.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
+	cell.SetContent(s)
+
+	// Test center alignment with paragraph wrapping enabled.
+	p = NewParagraph("Wrap enabled. This text should be center aligned.")
+	p.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap enabled. This text should be center aligned.", style)
+	s.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+	cell.SetContent(s)
+
+	// Test center alignment with paragraph wrapping disabled.
+	p = NewParagraph("Wrap disabled. This text should be center aligned.")
+	p.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap disabled. This text should be center aligned.", style)
+	s.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+	cell.SetContent(s)
+
+	// Test right alignment with paragraph wrapping enabled.
+	p = NewParagraph("Wrap enabled. This text should be right aligned.")
+	p.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap enabled. This text should be right aligned.", style)
+	s.SetEnableWrap(true)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
+	cell.SetContent(s)
+
+	// Test right alignment with paragraph wrapping disabled.
+	p = NewParagraph("Wrap disabled. This text should be right aligned.")
+	p.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
+	cell.SetContent(p)
+
+	s = NewStyledParagraph("Wrap disabled. This text should be right aligned.", style)
+	s.SetEnableWrap(false)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
+	cell.SetContent(s)
+
 	// Draw table.
 	err = c.Draw(table)
 	if err != nil {
