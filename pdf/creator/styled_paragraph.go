@@ -264,10 +264,10 @@ func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
 	for _, chunk := range line {
 		style := &chunk.Style
 
-		for _, rune := range chunk.Text {
-			glyph, found := p.encoder.RuneToGlyph(rune)
+		for _, r := range chunk.Text {
+			glyph, found := p.encoder.RuneToGlyph(r)
 			if !found {
-				common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
+				common.Log.Debug("Error! Glyph not found for rune: %s\n", r)
 
 				// XXX/FIXME: return error.
 				return -1
@@ -287,6 +287,23 @@ func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
 			}
 
 			width += style.FontSize * metrics.Wx
+		}
+	}
+
+	return width
+}
+
+// getMaxLineWidth returns the width of the longest line of text in the paragraph.
+func (p *StyledParagraph) getMaxLineWidth() float64 {
+	if p.lines == nil || len(p.lines) == 0 {
+		p.wrapText()
+	}
+
+	var width float64
+	for _, line := range p.lines {
+		w := p.getTextLineWidth(line)
+		if w > width {
+			width = w
 		}
 	}
 
