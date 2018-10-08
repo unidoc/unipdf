@@ -1855,7 +1855,6 @@ func TestTableInSubchapter(t *testing.T) {
 	cell.SetIndent(5)
 
 	p = NewParagraph("Bezt business bureu")
-	p.SetEnableWrap(false)
 	p.SetFont(fontRegular)
 	p.SetFontSize(10)
 	p.SetColor(ColorGreen)
