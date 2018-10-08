@@ -691,15 +691,15 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
 		if t.defaultWrap {
-			// Default paragraph settings in table: no wrapping.
-			t.enableWrap = false // No wrapping.
+			// Enable wrapping by default.
+			t.enableWrap = true
 		}
 
 		cell.content = vd
 	case *StyledParagraph:
 		if t.defaultWrap {
-			// Default styled paragraph settings in table: no wrapping.
-			t.enableWrap = false // No wrapping.
+			// Enable wrapping by default.
+			t.enableWrap = true
 		}
 
 		cell.content = vd
