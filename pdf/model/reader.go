@@ -67,7 +67,7 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 }
 
 // PdfVersion returns version of the PDF file.
-func (this *PdfReader) PdfVersion() string {
+func (this *PdfReader) PdfVersion() Version {
 	return this.parser.PdfVersion()
 }
 
