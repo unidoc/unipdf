@@ -687,7 +687,7 @@ func (m *Matrix) ScalingFactorY() float64 {
 }
 
 // pageOrientation returns a guess at the pdf page orientation when text is printed with CTM `m`.
-// XXX: Use pageRotate flag instead !@#$
+// XXX(peterwilliams97) Use pageRotate flag instead
 func (m *Matrix) pageOrientation() Orientation {
 	switch {
 	case m[1]*m[1]+m[3]*m[3] > m[0]*m[0]+m[4]*m[4]:

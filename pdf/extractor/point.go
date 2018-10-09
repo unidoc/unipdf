@@ -5,7 +5,8 @@
  * Based on pdf/contentstream/draw/point.go
  */
 
-// !@#$ Functional, not updating
+// XXX(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
+
 package extractor
 
 import (

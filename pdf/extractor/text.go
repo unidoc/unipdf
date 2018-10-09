@@ -581,15 +581,8 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 	}
 }
 
-// !@#$ hack
-var numRenders = 0
-
 // renderText emits byte array `data` to the calling program.
 func (to *textObject) renderText(data []byte) error {
-	numRenders++
-	if numRenders > 2000 {
-		return nil
-	}
 	font := to.getCurrentFont()
 
 	text, numChars, numMisses := font.CharcodeBytesToUnicode(data)
@@ -777,7 +770,6 @@ type Line struct {
 // toLines return the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
 func (tl *TextList) toLines() []Line {
-	const wordCharCount = 1 // !@#$ needs to include diactritics
 	tl.printTexts()
 	if len(*tl) == 0 {
 		return []Line{}
@@ -821,15 +813,8 @@ func (tl *TextList) toLines() []Line {
 			wordSpacing.update(t.SpaceWidth)
 			deltaSpace = wordSpacing.ave * 0.5
 		}
-		averageCharWidth.update(t.Width() / wordCharCount)
+		averageCharWidth.update(t.Width())
 		deltaCharWidth := averageCharWidth.ave * 0.3
-
-		common.Log.Debug("  averageCharWidth=%.1f deltaCharWidth=%1.f"+
-			" [SpaceWidth=%.1f wordSpacing=%.1f deltaSpace=%.2f]"+
-			" positionWidth=%.1f wordCharCount=%d",
-			averageCharWidth.ave, deltaCharWidth,
-			t.SpaceWidth, wordSpacing.ave, deltaSpace,
-			t.Width(), wordCharCount)
 
 		isSpace := false
 		if scanning && t.Text != " " {
@@ -839,25 +824,14 @@ func (tl *TextList) toLines() []Line {
 				t.Y, t.X, lastEndX, nextWordX)
 		}
 		if isSpace {
-			common.Log.Debug("SPACE")
 			words = append(words, " ")
 			x = append(x, (lastEndX+t.X)*0.5)
-			if len(words) != len(x) {
-				fmt.Printf("words=%d %+v\n", len(words), words)
-				fmt.Printf("    x=%d %+v\n", len(x), x)
-				panic("AAAAA 111")
-			}
 		}
 
 		// Add the text to the line.
 		lastEndX = t.End.X
 		words = append(words, t.Text)
 		x = append(x, t.X)
-		if len(words) != len(x) {
-			fmt.Printf("words=%d %+v\n", len(words), words)
-			fmt.Printf("    x=%d %+v\n", len(x), x)
-			panic("AAAAA")
-		}
 		scanning = true
 	}
 	if len(words) > 0 {
@@ -882,8 +856,6 @@ func min(a, b float64) float64 {
 type ExponAve struct {
 	ave     float64 // Current average value.
 	running bool    // Has `ave` been set?
-	vals    []float64
-	aves    []float64
 }
 
 // update updates the exponential average `exp.ave` and returns it
@@ -893,14 +865,6 @@ func (exp *ExponAve) update(x float64) float64 {
 		exp.running = true
 	} else {
 		exp.ave = (exp.ave + x) * 0.5
-	}
-	exp.vals = append(exp.vals, x)
-	exp.aves = append(exp.aves, exp.ave)
-	if len(exp.vals) > 20 && 0.0 < exp.ave && exp.ave < 0.001 {
-		for i, v := range exp.vals[len(exp.vals)-20:] {
-			fmt.Printf("%4d: %.2f %.2f\n", i, v, exp.aves[i])
-		}
-		panic("you")
 	}
 	return exp.ave
 }
@@ -922,18 +886,6 @@ func newLine(y float64, x []float64, words []string) Line {
 	for i := 1; i < len(x); i++ {
 		dx = append(dx, x[i]-x[i-1])
 	}
-	// text := strings.Join(words, "")
-	if len(x) != len(words) {
-		panic("aaa")
-	}
-	if len(dx)+1 != len(words) {
-		panic("eee")
-	}
-	// if len(text) != len(words) {
-	// 	fmt.Printf("words=%d %q\n", len(words), words)
-	// 	fmt.Printf(" text=%d %q\n", len(text), text)
-	// 	panic("fff")
-	// }
 	return Line{Y: y, Dx: dx, Text: strings.Join(words, ""), Words: words}
 }
 
@@ -949,10 +901,7 @@ func removeDuplicates(line Line, charWidth float64) Line {
 	tol := charWidth * 0.3
 	words := []string{line.Words[0]}
 	dxList := []float64{}
-	text := strings.Replace(line.Text, " ", "~", -1)
-	if len(text) != len(line.Text) {
-		panic("FFFF")
-	}
+
 	// fmt.Printf("%d %d %q\n", len(line.Words), len(line.Text), text)
 	// fmt.Printf("tol=%.2f Dx=%d[%.2f]\n", tol, len(line.Dx), line.Dx)
 	w0 := line.Words[0]
