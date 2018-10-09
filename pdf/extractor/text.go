@@ -768,9 +768,10 @@ func (tl *TextList) SortPosition() {
 
 // Line represents a line of text on a page.
 type Line struct {
-	Y    float64   // y position of line.
-	Dx   []float64 // x distance between successive words in line.
-	Text string    // text in the line.
+	Y     float64   // y position of line.
+	Dx    []float64 // x distance between successive words in line.
+	Text  string    // text in the line.
+	Words []string  // words in the line
 }
 
 // toLines return the text and positions in `tl` as a slice of Line.
@@ -796,9 +797,13 @@ func (tl *TextList) toLines() []Line {
 		common.Log.Debug("%d --------------------------", i)
 		if t.Y < y {
 			if len(words) > 0 {
-				lines = append(lines, newLine(y, x, words))
+				line := newLine(y, x, words)
+				if averageCharWidth.running {
+					line = removeDuplicates(line, averageCharWidth.ave)
+				}
+				lines = append(lines, line)
 			}
-			words = []string{t.Text}
+			words = []string{}
 			x = []float64{}
 			y = t.Y
 			scanning = false
@@ -826,7 +831,6 @@ func (tl *TextList) toLines() []Line {
 			t.SpaceWidth, wordSpacing.ave, deltaSpace,
 			t.Width(), wordCharCount)
 
-		//
 		isSpace := false
 		if scanning && t.Text != " " {
 			nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
@@ -837,17 +841,31 @@ func (tl *TextList) toLines() []Line {
 		if isSpace {
 			common.Log.Debug("SPACE")
 			words = append(words, " ")
-			x = append(x, t.X+1e-6)
+			x = append(x, (lastEndX+t.X)*0.5)
+			if len(words) != len(x) {
+				fmt.Printf("words=%d %+v\n", len(words), words)
+				fmt.Printf("    x=%d %+v\n", len(x), x)
+				panic("AAAAA 111")
+			}
 		}
 
 		// Add the text to the line.
 		lastEndX = t.End.X
 		words = append(words, t.Text)
 		x = append(x, t.X)
+		if len(words) != len(x) {
+			fmt.Printf("words=%d %+v\n", len(words), words)
+			fmt.Printf("    x=%d %+v\n", len(x), x)
+			panic("AAAAA")
+		}
 		scanning = true
 	}
 	if len(words) > 0 {
-		lines = append(lines, newLine(y, x, words))
+		line := newLine(y, x, words)
+		if averageCharWidth.running {
+			line = removeDuplicates(line, averageCharWidth.ave)
+		}
+		lines = append(lines, line)
 	}
 	return lines
 }
@@ -864,19 +882,28 @@ func min(a, b float64) float64 {
 type ExponAve struct {
 	ave     float64 // Current average value.
 	running bool    // Has `ave` been set?
+	vals    []float64
+	aves    []float64
 }
 
 // update updates the exponential average `exp.ave` and returns it
 func (exp *ExponAve) update(x float64) float64 {
 	if !exp.running {
 		exp.ave = x
+		exp.running = true
 	} else {
 		exp.ave = (exp.ave + x) * 0.5
 	}
+	exp.vals = append(exp.vals, x)
+	exp.aves = append(exp.aves, exp.ave)
+	if len(exp.vals) > 20 && 0.0 < exp.ave && exp.ave < 0.001 {
+		for i, v := range exp.vals[len(exp.vals)-20:] {
+			fmt.Printf("%4d: %.2f %.2f\n", i, v, exp.aves[i])
+		}
+		panic("you")
+	}
 	return exp.ave
 }
-
-const spaceTolerance = 0.5
 
 // printTexts is a debugging function. XXX Remove this.
 func (tl *TextList) printTexts() {
@@ -895,7 +922,52 @@ func newLine(y float64, x []float64, words []string) Line {
 	for i := 1; i < len(x); i++ {
 		dx = append(dx, x[i]-x[i-1])
 	}
-	return Line{Y: y, Dx: dx, Text: strings.Join(words, "")}
+	// text := strings.Join(words, "")
+	if len(x) != len(words) {
+		panic("aaa")
+	}
+	if len(dx)+1 != len(words) {
+		panic("eee")
+	}
+	// if len(text) != len(words) {
+	// 	fmt.Printf("words=%d %q\n", len(words), words)
+	// 	fmt.Printf(" text=%d %q\n", len(text), text)
+	// 	panic("fff")
+	// }
+	return Line{Y: y, Dx: dx, Text: strings.Join(words, ""), Words: words}
+}
+
+func removeDuplicates(line Line, charWidth float64) Line {
+	if len(line.Dx) == 0 {
+		return line
+	}
+	// width := 0.0
+	// for _, dx := range line.Dx {
+	// 	width += dx
+	// }
+	// tol := 0.3 * width / float64(len(line.Dx))
+	tol := charWidth * 0.3
+	words := []string{line.Words[0]}
+	dxList := []float64{}
+	text := strings.Replace(line.Text, " ", "~", -1)
+	if len(text) != len(line.Text) {
+		panic("FFFF")
+	}
+	// fmt.Printf("%d %d %q\n", len(line.Words), len(line.Text), text)
+	// fmt.Printf("tol=%.2f Dx=%d[%.2f]\n", tol, len(line.Dx), line.Dx)
+	w0 := line.Words[0]
+	for i, dx := range line.Dx {
+		w := line.Words[i+1]
+		if w != w0 || dx > tol {
+			words = append(words, w)
+			dxList = append(dxList, dx)
+		} else {
+			fmt.Printf("OUT[%d:%s:%.2f<%.2f]", i, line.Words[i+1], dx, tol)
+		}
+		w0 = w
+	}
+	// fmt.Printf("    dxList=%d[%.2f]\n", len(dxList), dxList)
+	return Line{Y: line.Y, Dx: dxList, Text: strings.Join(words, ""), Words: words}
 }
 
 // PageOrientation is a heuristic for the orientation of a page.
