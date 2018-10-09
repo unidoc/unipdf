@@ -53,11 +53,13 @@ type PdfParser struct {
 	streamLengthReferenceLookupInProgress map[int64]bool
 }
 
+// Version holds the PDF version information for a file parsed by PdfParser
 type Version struct {
 	Major int
 	Minor int
 }
 
+// String returns the PDF version as a string. Implements interface fmt.Stringer.
 func (v Version) String() string {
 	return fmt.Sprintf("%0d.%0d", v.Major, v.Minor)
 }
