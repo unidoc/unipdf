@@ -8,6 +8,7 @@ package extractor
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -580,8 +581,15 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 	}
 }
 
+// !@#$ hack
+var numRenders = 0
+
 // renderText emits byte array `data` to the calling program.
 func (to *textObject) renderText(data []byte) error {
+	numRenders++
+	if numRenders > 2000 {
+		return nil
+	}
 	font := to.getCurrentFont()
 
 	text, numChars, numMisses := font.CharcodeBytesToUnicode(data)
@@ -592,6 +600,13 @@ func (to *textObject) renderText(data []byte) error {
 	state := to.State
 	tfs := state.Tfs
 	th := state.Th / 100.0
+	spaceMetrics, err := font.GetRuneCharMetrics(' ')
+	if err != nil {
+		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
+	}
+	spaceWidth := spaceMetrics.Wx * glyphTextRatio
+	common.Log.Debug("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, text,
+		font, tfs)
 
 	stateMatrix := contentstream.NewMatrix(
 		tfs*th, 0,
@@ -602,8 +617,6 @@ func (to *textObject) renderText(data []byte) error {
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
 		trm := stateMatrix.Mult(to.Tm).Mult(to.gs.CTM)
-		xyt := XYText{Text: string(r), Point: translation(trm)}
-		to.Texts = append(to.Texts, xyt)
 
 		// calculate the text location displacement due to writing `r`. We will use this to update
 		// to.Tm
@@ -613,18 +626,40 @@ func (to *textObject) renderText(data []byte) error {
 		if r == ' ' {
 			w = state.Tw
 		}
-		// c is the character size in unscaled text units.
+
 		m, err := font.GetRuneCharMetrics(r)
 		if err != nil {
 			common.Log.Debug("ERROR: No metric for 0x%04x=%c %s", r, r, font)
 			return err
 		}
+		// c is the character size in unscaled text units.
 		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
-		// t is the total displacement
+		// cScaled is the character size
+		cScaled := Point{X: c.X * tfs * th}
+		// t is the displacement of the text cursor when the character is rendered.
 		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
-		// update the text matrix by the movement of the text location
-		to.Tm.Concat(translationMatrix(t))
+		common.Log.Debug("t=%s cScaled=%s c=%s tfs=%.2f state.Tc=%.2f w=%.2f th=%.2f",
+			t.String(), cScaled.String(), c.String(), tfs, state.Tc, w, th)
+
+		// td is t in matrix  from
+		td := translationMatrix(t)
+		common.Log.Debug("displacement=%s t=%s td=%s m=%s",
+			c.String(), t.String(), td.String(), m.String())
+
+		nextTm := to.Tm.Mult(td)
+		common.Log.Debug("  next: td=%s %s->%s", td, to.Tm, nextTm)
+
+		xyt := XYText{Text: string(r),
+			Point:      translation(trm),
+			End:        translation(trm).Displace(cScaled),
+			SpaceWidth: spaceWidth * trm.ScalingFactorX(),
+		}
+		to.Texts = append(to.Texts, xyt)
+		common.Log.Debug("  xyt=%s", xyt.String())
+
+		// update the text matrix by the displacement of the text location.
+		to.Tm = nextTm
 	}
 
 	return nil
@@ -655,16 +690,34 @@ func (to *textObject) moveTo(tx, ty float64) {
 
 // XYText represents text drawn on a page and its position in device coordinates.
 type XYText struct {
-	Point
+	Point                           // Position of text. Left-bottom?
+	End              Point          // End of text. Right-top?
 	ColorStroking    model.PdfColor // Colour that text is stroked with, if any.
 	ColorNonStroking model.PdfColor // Colour that text is filled with, if any.
 	Orient           contentstream.Orientation
 	Text             string
+	SpaceWidth       float64
+	Font             string
+	FontSize         float64
 }
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("(%.1f,%.1f) %q", t.X, t.Y, truncate(t.Text, 100))
+	return fmt.Sprintf("%s,%s %.1f %q",
+		t.Point.String(), t.End.String(), t.End.X-t.X, truncate(t.Text, 100))
+}
+
+// Width returns the width of `t`.Text in its orientation.
+func (t XYText) Width() float64 {
+	var w float64
+	switch t.Orient {
+	case contentstream.OrientationLandscape:
+		w = math.Abs(t.End.Y - t.Y)
+	default:
+		w = math.Abs(t.End.X - t.X)
+	}
+	common.Log.Debug("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
+	return w
 }
 
 // TextList is a list of texts and their positions on a PDF page.
@@ -676,8 +729,16 @@ func (tl *TextList) Length() int {
 }
 
 // AppendText appends the location and contents of `text` to a text list.
-func (tl *TextList) AppendText(gs contentstream.GraphicsState, p Point, text string) {
-	t := XYText{p, gs.ColorStroking, gs.ColorNonStroking, gs.PageOrientation(), text}
+func (tl *TextList) AppendText(gs contentstream.GraphicsState, p, e Point, text string, spaceWidth float64) {
+	t := XYText{
+		Point:            p,
+		End:              e,
+		ColorStroking:    gs.ColorStroking,
+		ColorNonStroking: gs.ColorNonStroking,
+		Orient:           gs.PageOrientation(),
+		Text:             text,
+		SpaceWidth:       spaceWidth,
+	}
 	common.Log.Debug("AppendText: %s", t.String())
 	*tl = append(*tl, t)
 }
@@ -693,11 +754,6 @@ func (tl *TextList) ToText() string {
 	}
 	return strings.Join(texts, "\n")
 }
-
-var (
-	suppressDuplicateOverlappingText = false
-	characterListMapping             = map[string]map[float64]map[float64]bool{}
-)
 
 // SortPosition sorts a text list by its elements' position on a page. Top to bottom, left to right.
 func (tl *TextList) SortPosition() {
@@ -720,32 +776,107 @@ type Line struct {
 // toLines return the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
 func (tl *TextList) toLines() []Line {
+	const wordCharCount = 1 // !@#$ needs to include diactritics
 	tl.printTexts()
 	if len(*tl) == 0 {
 		return []Line{}
 	}
 	lines := []Line{}
-	words := []string{(*tl)[0].Text}
+	words := []string{}
+	x := []float64{}
 	y := (*tl)[0].Y
-	x := []float64{(*tl)[0].X}
-	for _, t := range (*tl)[1:] {
+
+	scanning := false
+
+	averageCharWidth := ExponAve{}
+	wordSpacing := ExponAve{}
+	lastEndX := 0.0 // (*tl)[i-1).End.X
+
+	for i, t := range *tl {
+		common.Log.Debug("%d --------------------------", i)
 		if t.Y < y {
 			if len(words) > 0 {
 				lines = append(lines, newLine(y, x, words))
 			}
-			y = t.Y
-			words = []string{}
+			words = []string{t.Text}
 			x = []float64{}
+			y = t.Y
+			scanning = false
 		}
+
+		// Detect text movements that represent spaces on the printed page.
+		// We use a heuristic from PdfBox: If the next character starts to the right of where a
+		// character after a space at "normal spacing" would start, then there is a space before it.
+		// The tricky thing to guess here is the width of a space at normal spacing.
+		// We follow PdfBox and use min(deltaSpace, deltaCharWidth).
+		deltaSpace := 0.0
+		if t.SpaceWidth == 0 {
+			deltaSpace = math.MaxFloat64
+		} else {
+			wordSpacing.update(t.SpaceWidth)
+			deltaSpace = wordSpacing.ave * 0.5
+		}
+		averageCharWidth.update(t.Width() / wordCharCount)
+		deltaCharWidth := averageCharWidth.ave * 0.3
+
+		common.Log.Debug("  averageCharWidth=%.1f deltaCharWidth=%1.f"+
+			" [SpaceWidth=%.1f wordSpacing=%.1f deltaSpace=%.2f]"+
+			" positionWidth=%.1f wordCharCount=%d",
+			averageCharWidth.ave, deltaCharWidth,
+			t.SpaceWidth, wordSpacing.ave, deltaSpace,
+			t.Width(), wordCharCount)
+
+		//
+		isSpace := false
+		if scanning && t.Text != " " {
+			nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
+			isSpace = nextWordX < t.X
+			common.Log.Debug("[%.1f, %.1f] lastEndX=%.1f nextWordX=%.1f",
+				t.Y, t.X, lastEndX, nextWordX)
+		}
+		if isSpace {
+			common.Log.Debug("SPACE")
+			words = append(words, " ")
+			x = append(x, t.X+1e-6)
+		}
+
+		// Add the text to the line.
+		lastEndX = t.End.X
 		words = append(words, t.Text)
 		x = append(x, t.X)
-
+		scanning = true
 	}
 	if len(words) > 0 {
 		lines = append(lines, newLine(y, x, words))
 	}
 	return lines
 }
+
+// min returns the less of `a` and `b`.
+func min(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// ExponAve implements an exponential average.
+type ExponAve struct {
+	ave     float64 // Current average value.
+	running bool    // Has `ave` been set?
+}
+
+// update updates the exponential average `exp.ave` and returns it
+func (exp *ExponAve) update(x float64) float64 {
+	if !exp.running {
+		exp.ave = x
+	} else {
+		exp.ave = (exp.ave + x) * 0.5
+	}
+	return exp.ave
+}
+
+const spaceTolerance = 0.5
 
 // printTexts is a debugging function. XXX Remove this.
 func (tl *TextList) printTexts() {

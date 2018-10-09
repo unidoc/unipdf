@@ -5,6 +5,7 @@
  * Based on pdf/contentstream/draw/point.go
  */
 
+// !@#$ Functional, not updating
 package extractor
 
 import (
@@ -35,6 +36,11 @@ func (p *Point) Transform(a, b, c, d, tx, ty float64) {
 	p.transformByMatrix(m)
 }
 
+// Displace returns `p` displaced by `delta`.
+func (p Point) Displace(delta Point) Point {
+	return Point{p.X + delta.X, p.Y + delta.Y}
+}
+
 // transformByMatrix transforms `p` by the affine transformation `m`.
 func (p *Point) transformByMatrix(m contentstream.Matrix) {
 	p.X, p.Y = m.Transform(p.X, p.Y)
@@ -42,5 +48,5 @@ func (p *Point) transformByMatrix(m contentstream.Matrix) {
 
 // String returns a string describing `p`.
 func (p *Point) String() string {
-	return fmt.Sprintf("(%5.1f,%5.1f)", p.X, p.Y)
+	return fmt.Sprintf("(%.1f,%.1f)", p.X, p.Y)
 }
