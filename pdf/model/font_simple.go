@@ -300,7 +300,10 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	if font.Encoding != nil {
 		d.Set("Encoding", font.Encoding)
 	} else if font.encoder != nil {
-		d.Set("Encoding", font.encoder.ToPdfObject())
+		encObj := font.encoder.ToPdfObject()
+		if encObj != nil {
+			d.Set("Encoding", encObj)
+		}
 	}
 
 	return font.container

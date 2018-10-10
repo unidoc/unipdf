@@ -171,7 +171,11 @@ func (se SimpleEncoder) GlyphToRune(glyph string) (rune, bool) {
 // ToPdfObject returns `se` as a PdfObject
 func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 	if se.differences == nil || len(se.differences) == 0 {
-		return core.MakeName(se.baseName)
+		switch se.baseName {
+		case "MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding":
+			return core.MakeName(se.baseName)
+		}
+		return nil // Use font's built-in encoding.
 	}
 	dict := core.MakeDict()
 	dict.Set("Type", core.MakeName("Encoding"))

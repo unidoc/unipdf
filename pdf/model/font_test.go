@@ -147,8 +147,51 @@ func TestSimpleFonts(t *testing.T) {
 	}
 }
 
+// TestStandardFontDict tests PDF object output of standard font.
+// Importantly, this test makes sure that the output dictionary does not have an `Encoding`
+// key and uses the encoding of the standard font (ZapfEncoding in this case).
+func TestStandardFontOutputDict(t *testing.T) {
+	zapfdb, err := model.NewStandard14Font(model.ZapfDingbats)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	dict, ok := core.GetDict(zapfdb.ToPdfObject())
+	if !ok {
+		t.Fatalf("not a dict")
+	}
+
+	if len(dict.Keys()) != 3 {
+		t.Fatalf("Incorrect number of keys (%d)", len(dict.Keys()))
+	}
+
+	ntype, ok := core.GetName(dict.Get("Type"))
+	if !ok {
+		t.Fatalf("invalid Type")
+	}
+	if ntype.String() != "Font" {
+		t.Fatalf("Type != Font (%s)", ntype.String())
+	}
+
+	basef, ok := core.GetName(dict.Get("BaseFont"))
+	if !ok {
+		t.Fatalf("Invalid BaseFont")
+	}
+	if basef.String() != "ZapfDingbats" {
+		t.Fatalf("BaseFont != ZapfDingbats (%s)", basef.String())
+	}
+
+	subtype, ok := core.GetName(dict.Get("Subtype"))
+	if !ok {
+		t.Fatalf("Invalid Subtype")
+	}
+	if subtype.String() != "Type1" {
+		t.Fatalf("Subtype != Type1 (%s)", subtype.String())
+	}
+}
+
 // Test loading a standard font from object and check the encoding and glyph metrics.
-func TestStandardFontEncodings(t *testing.T) {
+func TestLoadStandardFontEncodings(t *testing.T) {
 	raw := `
 	1 0 obj
 	<< /Type /Font
