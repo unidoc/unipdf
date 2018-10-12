@@ -66,9 +66,9 @@ type Paragraph struct {
 	textLines []string
 }
 
-// NewParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and
+// newParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and
 // wrap enabled with a wrap width of 100 points.
-func NewParagraph(text string) *Paragraph {
+func newParagraph(text string, style TextStyle) *Paragraph {
 	p := &Paragraph{}
 	p.text = text
 
@@ -84,7 +84,6 @@ func NewParagraph(text string) *Paragraph {
 	p.lineHeight = 1.0
 
 	// TODO: Can we wrap intellectually, only if given width is known?
-
 	p.enableWrap = true
 	p.defaultWrap = true
 	p.SetColor(ColorRGBFrom8bit(0, 0, 0))

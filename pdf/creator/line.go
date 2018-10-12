@@ -24,8 +24,8 @@ type Line struct {
 	lineWidth float64
 }
 
-// NewLine creates a new Line with default parameters between (x1,y1) to (x2,y2).
-func NewLine(x1, y1, x2, y2 float64) *Line {
+// newLine creates a new Line with default parameters between (x1,y1) to (x2,y2).
+func newLine(x1, y1, x2, y2 float64) *Line {
 	l := &Line{}
 
 	l.x1 = x1

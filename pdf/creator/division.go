@@ -29,8 +29,8 @@ type Division struct {
 	inline bool
 }
 
-// NewDivision returns a new Division container component.
-func NewDivision() *Division {
+// newDivision returns a new Division container component.
+func newDivision() *Division {
 	return &Division{
 		components: []VectorDrawable{},
 	}

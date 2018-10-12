@@ -7,12 +7,14 @@ package creator
 
 import (
 	"errors"
+	goimage "image"
 	"io"
 	"os"
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // Creator is a wrapper around functionality for creating PDF reports and/or adding new
@@ -51,6 +53,13 @@ type Creator struct {
 	acroForm *model.PdfAcroForm
 
 	optimizer model.Optimizer
+
+	// Default fonts used by all components instantiated through the creator.
+	defaultFontRegular *model.PdfFont
+	defaultFontBold    *model.PdfFont
+
+	// Default encoder used by all components instantiated through the creator.
+	defaultTextEncoder textencoding.TextEncoder
 }
 
 // SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
@@ -103,7 +112,26 @@ func New() *Creator {
 	c.pageMargins.top = m
 	c.pageMargins.bottom = m
 
-	c.toc = NewTOC("Table of Contents")
+	// Initialize default text encoder.
+	c.defaultTextEncoder = textencoding.NewWinAnsiTextEncoder()
+
+	// Initialize default fonts.
+	var err error
+
+	c.defaultFontRegular, err = model.NewStandard14Font(model.Helvetica)
+	if err != nil {
+		c.defaultFontRegular = model.DefaultFont()
+	}
+	c.defaultFontRegular.SetEncoder(c.defaultTextEncoder)
+
+	c.defaultFontBold, err = model.NewStandard14Font(model.HelveticaBold)
+	if err != nil {
+		c.defaultFontRegular = model.DefaultFont()
+	}
+	c.defaultFontBold.SetEncoder(c.defaultTextEncoder)
+
+	// Initialize creator table of contents.
+	c.toc = c.NewTOC("Table of Contents")
 
 	return c
 }
@@ -288,7 +316,7 @@ func (c *Creator) RotateDeg(angleDeg int64) error {
 	}
 
 	// Do the rotation.
-	var rotation int64 = 0
+	var rotation int64
 	if page.Rotate != nil {
 		rotation = *(page.Rotate)
 	}
@@ -565,4 +593,132 @@ func (c *Creator) WriteToFile(outputPath string) error {
 	defer fWrite.Close()
 
 	return c.Write(fWrite)
+}
+
+/*
+Component creation methods.
+*/
+
+// NewTextStyle creates a new text style object which can be used to style
+// chunks of text.
+// Default attributes:
+// Font: Helvetica
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Text color: black
+func (c *Creator) NewTextStyle() TextStyle {
+	return newTextStyle(c.defaultFontRegular)
+}
+
+// NewParagraph creates a new text paragraph.
+// Default attributes:
+// Font: Helvetica,
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Wrap: enabled
+// Text color: black
+func (c *Creator) NewParagraph(text string) *Paragraph {
+	return newParagraph(text, c.NewTextStyle())
+}
+
+// NewStyledParagraph creates a new styled paragraph.
+// Default attributes:
+// Font: Helvetica,
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Wrap: enabled
+// Text color: black
+func (c *Creator) NewStyledParagraph() *StyledParagraph {
+	return newStyledParagraph(c.NewTextStyle())
+}
+
+// NewTable create a new Table with a specified number of columns.
+func (c *Creator) NewTable(cols int) *Table {
+	return newTable(cols)
+}
+
+// NewDivision returns a new Division container component.
+func (c *Creator) NewDivision() *Division {
+	return newDivision()
+}
+
+// NewTOC creates a new table of contents.
+func (c *Creator) NewTOC(title string) *TOC {
+	headingStyle := c.NewTextStyle()
+	headingStyle.Font = c.defaultFontBold
+
+	return newTOC(title, c.NewTextStyle(), headingStyle)
+}
+
+// NewTOCLine creates a new table of contents line with the default style.
+func (c *Creator) NewTOCLine(number, title, page string, level uint) *TOCLine {
+	return newTOCLine(number, title, page, level, c.NewTextStyle())
+}
+
+// NewStyledTOCLine creates a new table of contents line with the provided style.
+func (c *Creator) NewStyledTOCLine(number, title, page TextChunk, level uint, style TextStyle) *TOCLine {
+	return newStyledTOCLine(number, title, page, level, style)
+}
+
+// NewChapter creates a new chapter with the specified title as the heading.
+func (c *Creator) NewChapter(title string) *Chapter {
+	c.chapters++
+	return newChapter(c.toc, title, c.chapters, c.NewTextStyle())
+}
+
+// NewSubchapter creates a new Subchapter under Chapter ch with specified title.
+// All other parameters are set to their defaults.
+func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
+	return newSubchapter(ch, title, c.NewTextStyle())
+}
+
+// NewRectangle creates a new Rectangle with default parameters
+// with left corner at (x,y) and width, height as specified.
+func (c *Creator) NewRectangle(x, y, width, height float64) *Rectangle {
+	return newRectangle(x, y, width, height)
+}
+
+// NewPageBreak create a new page break.
+func (c *Creator) NewPageBreak() *PageBreak {
+	return newPageBreak()
+}
+
+// NewLine creates a new Line with default parameters between (x1,y1) to (x2,y2).
+func (c *Creator) NewLine(x1, y1, x2, y2 float64) *Line {
+	return newLine(x1, y1, x2, y2)
+}
+
+// NewFilledCurve returns a instance of filled curve.
+func (c *Creator) NewFilledCurve() *FilledCurve {
+	return newFilledCurve()
+}
+
+// NewEllipse creates a new ellipse centered at (xc,yc) with a width and height specified.
+func (c *Creator) NewEllipse(xc, yc, width, height float64) *Ellipse {
+	return newEllipse(xc, yc, width, height)
+}
+
+// NewCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
+func (c *Creator) NewCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
+	return newCurve(x1, y1, cx, cy, x2, y2)
+}
+
+// NewImage create a new image from a unidoc image (model.Image).
+func (c *Creator) NewImage(img *model.Image) (*Image, error) {
+	return newImage(img)
+}
+
+// NewImageFromData creates an Image from image data.
+func (c *Creator) NewImageFromData(data []byte) (*Image, error) {
+	return newImageFromData(data)
+}
+
+// NewImageFromFile creates an Image from a file.
+func (c *Creator) NewImageFromFile(path string) (*Image, error) {
+	return newImageFromFile(path)
+}
+
+// NewImageFromGoImage creates an Image from a go image.Image data structure.
+func NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
+	return newImageFromGoImage(goimg)
 }

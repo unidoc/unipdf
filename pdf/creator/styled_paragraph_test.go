@@ -19,7 +19,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Regular paragraph vs styled paragraph (should be identical)")
+	p := c.NewParagraph("Regular paragraph vs styled paragraph (should be identical)")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -28,11 +28,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	table := NewTable(2)
+	table := c.NewTable(2)
 	table.SetColumnWidths(0.5, 0.5)
 
 	// Add regular paragraph to table.
-	p = NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p = c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
 	p.SetMargins(10, 10, 5, 10)
 	p.SetFont(fontBold)
 	p.SetEnableWrap(true)
@@ -43,20 +43,23 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(p)
 
 	// Add styled paragraph to table.
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 	style.Font = fontBold
 
-	s := NewStyledParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.", style)
+	s := c.NewStyledParagraph()
 	s.SetMargins(10, 10, 5, 10)
 	s.SetEnableWrap(true)
 	s.SetTextAlignment(TextAlignmentLeft)
+
+	chunk := s.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
-	p = NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p = c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
 	p.SetMargins(10, 10, 5, 10)
 	p.SetFont(fontRegular)
 	p.SetEnableWrap(true)
@@ -71,17 +74,20 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	style.Font = fontRegular
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 
-	s = NewStyledParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.", style)
+	s = c.NewStyledParagraph()
 	s.SetMargins(10, 10, 5, 10)
 	s.SetEnableWrap(true)
 	s.SetTextAlignment(TextAlignmentJustify)
+
+	chunk = s.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
-	p = NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p = c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
 	p.SetMargins(10, 10, 5, 10)
 	p.SetFont(fontRegular)
 	p.SetEnableWrap(true)
@@ -95,17 +101,20 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	style.Font = fontRegular
 	style.Color = ColorRGBFrom8bit(0, 0, 0)
 
-	s = NewStyledParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.", style)
+	s = c.NewStyledParagraph()
 	s.SetMargins(10, 10, 5, 10)
 	s.SetEnableWrap(true)
 	s.SetTextAlignment(TextAlignmentRight)
+
+	chunk = s.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Add regular paragraph to table.
-	p = NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p = c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
 	p.SetMargins(10, 10, 5, 10)
 	p.SetFont(fontBold)
 	p.SetEnableWrap(true)
@@ -119,20 +128,23 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	style.Font = fontBold
 	style.Color = ColorRGBFrom8bit(0, 0, 0)
 
-	s = NewStyledParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.", style)
+	s = c.NewStyledParagraph()
 	s.SetMargins(10, 10, 5, 10)
 	s.SetEnableWrap(true)
 	s.SetTextAlignment(TextAlignmentCenter)
+
+	chunk = s.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(s)
 
 	// Test table cell alignment.
-	style = NewTextStyle()
+	style = c.NewTextStyle()
 
 	// Test left alignment with paragraph wrapping enabled.
-	p = NewParagraph("Wrap enabled. This text should be left aligned.")
+	p = c.NewParagraph("Wrap enabled. This text should be left aligned.")
 	p.SetEnableWrap(true)
 
 	cell = table.NewCell()
@@ -140,8 +152,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap enabled. This text should be left aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(true)
+
+	chunk = s.Append("Wrap enabled. This text should be left aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -149,7 +164,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(s)
 
 	// Test left alignment with paragraph wrapping disabled.
-	p = NewParagraph("Wrap disabled. This text should be left aligned.")
+	p = c.NewParagraph("Wrap disabled. This text should be left aligned.")
 	p.SetEnableWrap(false)
 
 	cell = table.NewCell()
@@ -157,8 +172,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap disabled. This text should be left aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(false)
+
+	chunk = s.Append("Wrap disabled. This text should be left aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -166,7 +184,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(s)
 
 	// Test center alignment with paragraph wrapping enabled.
-	p = NewParagraph("Wrap enabled. This text should be center aligned.")
+	p = c.NewParagraph("Wrap enabled. This text should be center aligned.")
 	p.SetEnableWrap(true)
 
 	cell = table.NewCell()
@@ -174,8 +192,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap enabled. This text should be center aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(true)
+
+	chunk = s.Append("Wrap enabled. This text should be center aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -183,7 +204,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(s)
 
 	// Test center alignment with paragraph wrapping disabled.
-	p = NewParagraph("Wrap disabled. This text should be center aligned.")
+	p = c.NewParagraph("Wrap disabled. This text should be center aligned.")
 	p.SetEnableWrap(false)
 
 	cell = table.NewCell()
@@ -191,8 +212,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap disabled. This text should be center aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(false)
+
+	chunk = s.Append("Wrap disabled. This text should be center aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -200,7 +224,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(s)
 
 	// Test right alignment with paragraph wrapping enabled.
-	p = NewParagraph("Wrap enabled. This text should be right aligned.")
+	p = c.NewParagraph("Wrap enabled. This text should be right aligned.")
 	p.SetEnableWrap(true)
 
 	cell = table.NewCell()
@@ -208,8 +232,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap enabled. This text should be right aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(true)
+
+	chunk = s.Append("Wrap enabled. This text should be right aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -217,7 +244,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetContent(s)
 
 	// Test right alignment with paragraph wrapping disabled.
-	p = NewParagraph("Wrap disabled. This text should be right aligned.")
+	p = c.NewParagraph("Wrap disabled. This text should be right aligned.")
 	p.SetEnableWrap(false)
 
 	cell = table.NewCell()
@@ -225,8 +252,11 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	cell.SetHorizontalAlignment(CellHorizontalAlignmentRight)
 	cell.SetContent(p)
 
-	s = NewStyledParagraph("Wrap disabled. This text should be right aligned.", style)
+	s = c.NewStyledParagraph()
 	s.SetEnableWrap(false)
+
+	chunk = s.Append("Wrap disabled. This text should be right aligned.")
+	chunk.Style = style
 
 	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
@@ -255,7 +285,7 @@ func TestStyledParagraph(t *testing.T) {
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Styled paragraph")
+	p := c.NewParagraph("Styled paragraph")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -264,38 +294,47 @@ func TestStyledParagraph(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 	style.Font = fontRegular
 
-	s := NewStyledParagraph("This is a paragraph ", style)
+	s := c.NewStyledParagraph()
 	s.SetEnableWrap(true)
 	s.SetTextAlignment(TextAlignmentJustify)
 	s.SetMargins(0, 0, 10, 0)
 
+	chunk := s.Append("This is a paragraph ")
+	chunk.Style = style
+
 	style.Color = ColorRGBFrom8bit(255, 0, 0)
-	s.Append("with different colors ", style)
+	chunk = s.Append("with different colors ")
+	chunk.Style = style
 
 	style.Color = ColorRGBFrom8bit(0, 0, 0)
 	style.FontSize = 14
-	s.Append("and with different font sizes ", style)
+	chunk = s.Append("and with different font sizes ")
+	chunk.Style = style
 
 	style.FontSize = 10
 	style.Font = fontBold
-	s.Append("and with different font styles ", style)
+	chunk = s.Append("and with different font styles ")
+	chunk.Style = style
 
 	style.Font = fontHelvetica
 	style.FontSize = 13
-	s.Append("and with different fonts ", style)
+	chunk = s.Append("and with different fonts ")
+	chunk.Style = style
 
 	style.Font = fontBold
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 	style.FontSize = 15
-	s.Append("and with the changed properties all at once. ", style)
+	chunk = s.Append("and with the changed properties all at once. ")
+	chunk.Style = style
 
 	style.Color = ColorRGBFrom8bit(127, 255, 0)
 	style.FontSize = 12
 	style.Font = fontHelvetica
-	s.Append("And maybe try a different color again.", style)
+	chunk = s.Append("And maybe try a different color again.")
+	chunk.Style = style
 
 	err = c.Draw(s)
 	if err != nil {
@@ -312,7 +351,8 @@ func TestStyledParagraph(t *testing.T) {
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 	style.FontSize = 15
 	style.Font = fontHelvetica
-	s.Append("And maybe try a different color again.", style)
+	chunk = s.Append("And maybe try a different color again.")
+	chunk.Style = style
 
 	err = c.Draw(s)
 	if err != nil {

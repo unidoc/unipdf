@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
@@ -44,30 +43,21 @@ type Chapter struct {
 	toc *TOC
 }
 
-// NewChapter creates a new chapter with the specified title as the heading.
-func (c *Creator) NewChapter(title string) *Chapter {
-	chap := &Chapter{}
-
-	c.chapters++
-	chap.number = c.chapters
-	chap.title = title
-
-	chap.showNumbering = true
-	chap.includeInTOC = true
-
-	heading := fmt.Sprintf("%d. %s", c.chapters, title)
-	p := NewParagraph(heading)
+// newChapter creates a new chapter with the specified title as the heading.
+func newChapter(toc *TOC, title string, number int, style TextStyle) *Chapter {
+	p := newParagraph(fmt.Sprintf("%d. %s", number, title), style)
+	p.SetFont(style.Font)
 	p.SetFontSize(16)
-	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
-	p.SetFont(helvetica) // bold?
 
-	chap.heading = p
-	chap.contents = []Drawable{}
-
-	// Keep a reference for toc.
-	chap.toc = c.toc
-
-	return chap
+	return &Chapter{
+		number:        number,
+		title:         title,
+		showNumbering: true,
+		includeInTOC:  true,
+		toc:           toc,
+		heading:       p,
+		contents:      []Drawable{},
+	}
 }
 
 // SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.

@@ -5,8 +5,6 @@
 
 package creator
 
-import "github.com/unidoc/unidoc/pdf/model/fonts"
-
 // TOC represents a table of contents component.
 // It consists of a paragraph heading and a collection of
 // table of contents lines.
@@ -43,32 +41,36 @@ type TOC struct {
 
 	// Positioning: relative/absolute.
 	positioning positioning
+
+	// Default style used for internal operations.
+	defaultStyle TextStyle
 }
 
-// NewTOC creates a new table of contents.
-func NewTOC(title string) *TOC {
-	headingStyle := NewTextStyle()
-	headingStyle.Font = fonts.NewFontHelveticaBold()
+// newTOC creates a new table of contents.
+func newTOC(title string, style, styleHeading TextStyle) *TOC {
+	headingStyle := styleHeading
 	headingStyle.FontSize = 14
 
-	heading := NewStyledParagraph(title, headingStyle)
+	heading := newStyledParagraph(headingStyle)
 	heading.SetEnableWrap(true)
 	heading.SetTextAlignment(TextAlignmentLeft)
 	heading.SetMargins(0, 0, 0, 5)
 
-	lineStyle := NewTextStyle()
+	chunk := heading.Append(title)
+	chunk.Style = headingStyle
 
 	return &TOC{
 		heading:            heading,
 		lines:              []*TOCLine{},
-		lineNumberStyle:    lineStyle,
-		lineTitleStyle:     lineStyle,
-		lineSeparatorStyle: lineStyle,
-		linePageStyle:      lineStyle,
+		lineNumberStyle:    style,
+		lineTitleStyle:     style,
+		lineSeparatorStyle: style,
+		linePageStyle:      style,
 		lineSeparator:      ".",
 		lineLevelOffset:    10,
 		lineMargins:        margins{0, 0, 2, 2},
 		positioning:        positionRelative,
+		defaultStyle:       style,
 	}
 }
 
@@ -89,7 +91,7 @@ func (t *TOC) SetHeading(text string, style TextStyle) {
 
 // Add adds a new line with the default style to the table of contents.
 func (t *TOC) Add(number, title, page string, level uint) *TOCLine {
-	tl := t.AddLine(NewStyledTOCLine(
+	tl := t.AddLine(newStyledTOCLine(
 		TextChunk{
 			Text:  number,
 			Style: t.lineNumberStyle,
@@ -103,6 +105,7 @@ func (t *TOC) Add(number, title, page string, level uint) *TOCLine {
 			Style: t.linePageStyle,
 		},
 		level,
+		t.defaultStyle,
 	))
 
 	if tl == nil {
