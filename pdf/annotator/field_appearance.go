@@ -39,16 +39,23 @@ type AppearanceStyle struct {
 	BorderColor model.PdfColor
 	FillColor   model.PdfColor
 
+	// Multiplier for lineheight for multi line text.
+	MultilineLineHeight   float64
+	MultilineVAlignMiddle bool // Defaults to top.
+
+	// Visual guide checking alignment of field contents (debugging).
+	DrawAlignmentReticle bool
+
 	// Allow field MK appearance characteristics to override style settings.
 	AllowMK bool
 }
 
-var (
-	defaultAutoFontSizeFraction = 0.818
-	defaultCheckmarkGlyph       = "a20"
-	defaultBorderSize           = 0.0
-	defaultBorderColor          = model.NewPdfColorDeviceGray(0)
-	defaultFillColor            = model.NewPdfColorDeviceGray(1)
+type quadding int
+
+const (
+	quaddingLeft   quadding = 0
+	quaddingCenter quadding = 1
+	quaddingRight  quadding = 2
 )
 
 // SetStyle applies appearance `style` to `fa`.
@@ -61,13 +68,17 @@ func (fa FieldAppearance) Style() AppearanceStyle {
 	if fa.style != nil {
 		return *fa.style
 	}
+	// Default values returned if style not set.
 	return AppearanceStyle{
-		AutoFontSizeFraction: defaultAutoFontSizeFraction,
-		CheckmarkGlyph:       defaultCheckmarkGlyph,
-		BorderSize:           defaultBorderSize,
-		BorderColor:          defaultBorderColor,
-		FillColor:            defaultFillColor,
-		AllowMK:              true,
+		AutoFontSizeFraction:  0.65,
+		CheckmarkGlyph:        "a20",
+		BorderSize:            0.0,
+		BorderColor:           model.NewPdfColorDeviceGray(0),
+		FillColor:             model.NewPdfColorDeviceGray(1),
+		MultilineLineHeight:   1.2,
+		MultilineVAlignMiddle: false,
+		DrawAlignmentReticle:  false,
+		AllowMK:               true,
 	}
 }
 
@@ -185,6 +196,14 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	if style.BorderSize > 0 {
 		drawRect(cc, style, width, height)
 	}
+
+	if style.DrawAlignmentReticle {
+		// Alignment reticle.
+		style2 := style
+		style2.BorderSize = 0.2
+		drawAlignmentReticle(cc, style2, width, height)
+	}
+
 	cc.Add_BMC("Tx")
 	cc.Add_q()
 	// Graphic state changes.
@@ -246,6 +265,10 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		resources.SetFontByName(*fontname, fontobj)
 	}
 	encoder := font.Encoder()
+	fdescriptor, err := font.GetFontDescriptor()
+	if err != nil {
+		common.Log.Debug("Error: Unable to get font descriptor")
+	}
 
 	text := ""
 	if str, ok := core.GetString(ftxt.V); ok {
@@ -258,9 +281,6 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 
 	lines := []string{text}
-
-	var tx float64
-	tx = 2.0 // Default left margin. // TODO(gunnsth): Add to style options.
 
 	// Handle multi line fields.
 	isMultiline := false
@@ -323,64 +343,123 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		}
 	}
 
+	var tx float64
+	tx = 2.0
+
 	// Check if text goes out of bounds, if goes out of bounds, then adjust font size until just within bounds.
 	if fontsize == 0 || autosize && maxLinewidth > 0 && tx+maxLinewidth*fontsize/1000.0 > width {
 		// TODO(gunnsth): Add to style options.
 		fontsize = 0.95 * 1000.0 * (width - tx) / maxLinewidth
 	}
 
+	var alignment quadding = quaddingLeft
 	// Account for horizontal alignment (quadding).
 	{
-		quadding := 0 // Default (left aligned).
 		if val, has := core.GetIntVal(ftxt.Q); has {
-			quadding = val
-		}
-		switch quadding {
-		case 0: // Left aligned.
-		case 1: // Centered.
-			remaining := width - maxLinewidth*fontsize/1000.0
-			if remaining > 0 {
-				tx = remaining / 2
+			switch val {
+			case 0: // Left aligned.
+				alignment = quaddingLeft
+			case 1: // Centered.
+				alignment = quaddingCenter
+			case 2: // Right justified.
+				alignment = quaddingRight
+			default:
+				common.Log.Debug("ERROR: Unsupported quadding: %d - using left alignment", val)
 			}
-		case 2: // Right justified.
-			remaining := width - maxLinewidth*fontsize/1000.0
-			tx = remaining
-		default:
-			common.Log.Debug("ERROR: Unsupported quadding: %d", quadding)
 		}
 	}
 
-	lineheight := 1.0 * fontsize
+	lh := style.MultilineLineHeight
+
+	lineheight := fontsize
+	if isMultiline && textlines > 1 {
+		lineheight = lh * fontsize
+	}
+
+	var fcapheight float64
+	if fdescriptor != nil {
+		fcapheight, err = fdescriptor.GetCapHeight()
+		if err != nil {
+			common.Log.Debug("ERROR: Unable to get font CapHeight: %v", err)
+		}
+	}
+	if int(fcapheight) <= 0 {
+		common.Log.Debug("WARN: CapHeight not available - setting to 1000")
+		fcapheight = 1000
+	}
+	capheight := fcapheight / 1000.0 * fontsize
 
 	// Vertical alignment.
-	ty := 2.0
+	ty := 0.0
 	{
 		textheight := float64(textlines) * lineheight
 		if autosize && ty+textheight > height {
 			fontsize = 0.95 * (height - ty) / float64(textlines)
-			lineheight = 1.0 * fontsize
+			lineheight = fontsize
+			if isMultiline && textlines > 1 {
+				lineheight = lh * fontsize
+			}
+			capheight = fcapheight / 1000.0 * fontsize
 			textheight = float64(textlines) * lineheight
 		}
 
 		if height > textheight {
-			if len(lines) > 1 {
-				a := (height - textheight) / 2.0
-				b := a + textheight - lineheight
-				ty = b
+			if isMultiline {
+				if style.MultilineVAlignMiddle {
+					a := (height - textheight) / 2.0
+					b := a + textheight - lineheight
+					ty = b
+				} else {
+					// Top.
+					ty = height - lineheight
+					ty -= fontsize * 0.5
+				}
 			} else {
-				ty = (height - textheight) / 2.0
-				ty += 1.50 // TODO(gunnsth): Make configurable/part of style parameter.
+				ty = (height - capheight) / 2.0
 			}
 		}
 	}
 
 	cc.Add_Tf(*fontname, fontsize)
 	cc.Add_Td(tx, ty)
+	tx0 := tx
+	x := tx
 	for i, line := range lines {
+		wLine := 0.0
+		for _, r := range line {
+			glyph, has := encoder.RuneToGlyph(r)
+			if !has {
+				common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
+				continue
+			}
+			metrics, has := font.GetGlyphCharMetrics(glyph)
+			if !has {
+				continue
+			}
+			wLine += metrics.Wx
+		}
+		linewidth := wLine / 1000.0 * fontsize
+		remaining := width - linewidth
+
+		var xnew float64
+		switch alignment {
+		case quaddingLeft:
+			xnew = tx0
+		case quaddingCenter:
+			xnew = remaining / 2
+		case quaddingRight:
+			xnew = remaining
+		}
+		tx = xnew - x
+		if tx > 0.0 {
+			cc.Add_Td(tx, 0)
+		}
+		x = xnew
+
 		cc.Add_Tj(*core.MakeString(line))
 
 		if i < len(lines)-1 {
-			cc.Add_Td(0, -lineheight)
+			cc.Add_Td(0, -lineheight*lh)
 		}
 	}
 
@@ -450,6 +529,12 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	if style.BorderSize > 0 {
 		drawRect(cc, style, width, height)
 	}
+	if style.DrawAlignmentReticle {
+		// Alignment reticle.
+		style2 := style
+		style2.BorderSize = 0.2
+		drawAlignmentReticle(cc, style2, width, height)
+	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
 	// Graphic state changes.
@@ -459,9 +544,11 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	var fontsize float64
 	var fontname *core.PdfObjectName
 	var font *model.PdfFont
+	autosize := true
+
 	fontsizeDef := height * style.AutoFontSizeFraction
 	for _, op := range *daOps {
-		// TODO: If TF specified and font size is 0, it means we should set on our own based on the Rect.
+		// If TF specified and font size is 0, it means we should set on our own based on the Rect.
 		if op.Operand == "Tf" && len(op.Params) == 2 {
 			if name, ok := core.GetName(op.Params[0]); ok {
 				fontname = name
@@ -475,8 +562,12 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 			if fontsize == 0 {
 				// Use default if zero.
 				fontsize = fontsizeDef
+			} else {
+				// Disable autosize when font size (>0) explicitly specified.
+				autosize = false
 			}
-			op.Params[1] = core.MakeFloat(fontsize)
+			// Skip over (set fontsize in code below).
+			continue
 		}
 		cc.AddOperand(*op)
 	}
@@ -506,14 +597,79 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 		resources.SetFontByName(*fontname, fontobj)
 	}
 	encoder := font.Encoder()
+	if encoder == nil {
+		common.Log.Debug("ERROR - Encoder is nil - can expect bad results")
+	}
 
 	text := ""
 	if str, ok := core.GetString(ftxt.V); ok {
 		text = str.Decoded()
 	}
 
-	// TODO(gunnsth): Add to style options.
-	ty := 0.26 * height
+	cc.Add_Tf(*fontname, fontsize)
+
+	// Get max glyph height.
+	maxGlyphWy := 0.0
+	for _, r := range text {
+		if encoder != nil {
+			glyph, has := encoder.RuneToGlyph(r)
+			if !has {
+				common.Log.Debug("ERROR: Rune not found %#v - skipping over", r)
+				continue
+			}
+			metrics, found := font.GetGlyphCharMetrics(glyph)
+			if !found {
+				common.Log.Debug("ERROR: Glyph not found in font: %v - skipping over", glyph)
+				continue
+			}
+			wy := metrics.Wy
+			if wy <= 0 {
+				wy = metrics.Wx
+			}
+			if wy > maxGlyphWy {
+				maxGlyphWy = wy
+			}
+		}
+	}
+	if int(maxGlyphWy) == 0 {
+		common.Log.Debug("ERROR: Unable to determine max glyph size - using 1000")
+		maxGlyphWy = 1000
+	}
+
+	fdescriptor, err := font.GetFontDescriptor()
+	if err != nil {
+		common.Log.Debug("Error: Unable to get font descriptor")
+	}
+	var fcapheight float64
+	if fdescriptor != nil {
+		fcapheight, err = fdescriptor.GetCapHeight()
+		if err != nil {
+			common.Log.Debug("ERROR: Unable to get font CapHeight: %v", err)
+		}
+	}
+	if int(fcapheight) <= 0 {
+		common.Log.Debug("WARN: CapHeight not available - setting to 1000")
+		fcapheight = 1000.0
+	}
+	capheight := fcapheight / 1000.0 * fontsize
+
+	// Vertical alignment.
+	ty := 0.0
+	lineheight := 1.0 * fontsize * (maxGlyphWy / 1000.0)
+	{
+		textheight := lineheight
+		// If autosize and going out of bounds, reduce to fit.
+		if autosize && ty+textheight > height {
+			fontsize = 0.95 * (height - ty)
+			lineheight = 1.0 * fontsize
+			textheight = lineheight
+			capheight = fcapheight / 1000.0 * fontsize
+		}
+
+		if height > capheight {
+			ty = (height - capheight) / 2.0
+		}
+	}
 	cc.Add_Td(0, ty)
 
 	if quadding, has := core.GetIntVal(ftxt.Q); has {
@@ -613,6 +769,13 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			drawRect(cc, style, width, height)
 		}
 
+		if style.DrawAlignmentReticle {
+			// Alignment reticle.
+			style2 := style
+			style2.BorderSize = 0.2
+			drawAlignmentReticle(cc, style2, width, height)
+		}
+
 		fontsize := style.AutoFontSizeFraction * height
 
 		checkmetrics, ok := zapfdb.GetGlyphCharMetrics(style.CheckmarkGlyph)
@@ -624,10 +787,10 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			return nil, errors.New("checkmark glyph - charcode mapping not found")
 		}
 		checkwidth := checkmetrics.Wx * fontsize / 1000.0
-		checkheight := checkwidth
-		if checkmetrics.Wy > 0 {
-			checkheight = checkmetrics.Wy * fontsize / 1000.0
-		}
+		// TODO: Get bbox of specific glyph that is chosen.  Choice of specific value will cause slight
+		// deviations for other glyphs, but should be fairly close.
+		fcheckheight := 705.0 // From AFM for code 52.
+		checkheight := fcheckheight / 1000.0 * fontsize
 
 		tx := 2.0
 		ty := 1.0
@@ -637,7 +800,6 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		if checkheight < height {
 			ty = (height - checkheight) / 2.0
 		}
-		ty += 1.0
 
 		cc.Add_q().
 			Add_g(0).
@@ -752,6 +914,12 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 	cc := contentstream.NewContentCreator()
 	if style.BorderSize > 0 {
 		drawRect(cc, style, width, height)
+	}
+	if style.DrawAlignmentReticle {
+		// Alignment reticle.
+		style2 := style
+		style2.BorderSize = 0.2
+		drawAlignmentReticle(cc, style2, width, height)
 	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
@@ -908,6 +1076,20 @@ func getDA(field *model.PdfField) string {
 func drawRect(cc *contentstream.ContentCreator, style AppearanceStyle, width, height float64) {
 	cc.Add_q().
 		Add_re(0, 0, width, height).
+		Add_w(style.BorderSize).
+		SetStrokingColor(style.BorderColor).
+		SetNonStrokingColor(style.FillColor).
+		Add_B().
+		Add_Q()
+}
+
+// drawAlignmentReticle draws the Rect box with a reticle on top for alignment guidance.
+func drawAlignmentReticle(cc *contentstream.ContentCreator, style AppearanceStyle, width, height float64) {
+	cc.Add_q().
+		Add_re(0, 0, width, height).
+		Add_re(0, height/2, width, height/2).
+		Add_re(0, 0, width, height).
+		Add_re(width/2, 0, width/2, height).
 		Add_w(style.BorderSize).
 		SetStrokingColor(style.BorderColor).
 		SetNonStrokingColor(style.FillColor).

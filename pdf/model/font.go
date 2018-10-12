@@ -27,6 +27,22 @@ type PdfFont struct {
 	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
+// GetFontDescriptor returns the font descriptor for `font`.
+func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		return t.fontDescriptor, nil
+	case *pdfFontType0:
+		return t.fontDescriptor, nil
+	case *pdfCIDFontType0:
+		return t.fontDescriptor, nil
+	case *pdfCIDFontType2:
+		return t.fontDescriptor, nil
+	}
+	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
+	return nil, errors.New("fontdescriptor not found")
+}
+
 // String returns a string that describes `font`.
 func (font PdfFont) String() string {
 	enc := ""
@@ -648,6 +664,21 @@ type PdfFontDescriptor struct {
 
 	// Container.
 	container *core.PdfIndirectObject
+}
+
+// GetDescent returns the Descent of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetDescent() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.Descent)
+}
+
+// GetAscent returns the Ascent of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetAscent() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.Ascent)
+}
+
+// GetCapHeight returns the CapHeight of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetCapHeight() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.CapHeight)
 }
 
 // String returns a string describing the font descriptor.
