@@ -115,7 +115,7 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 }
 
 // Reset removes all the text chunks the paragraph contains.
-func (p *StyledParagraph) Reset(text string, style TextStyle) {
+func (p *StyledParagraph) Reset() {
 	p.chunks = []*TextChunk{}
 }
 

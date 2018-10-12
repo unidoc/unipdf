@@ -86,7 +86,11 @@ func (t *TOC) Lines() []*TOCLine {
 
 // SetHeading sets the text and the style of the heading of the TOC component.
 func (t *TOC) SetHeading(text string, style TextStyle) {
-	t.heading.Reset(text, style)
+	h := t.Heading()
+
+	h.Reset()
+	chunk := h.Append(text)
+	chunk.Style = style
 }
 
 // Add adds a new line with the default style to the table of contents.
