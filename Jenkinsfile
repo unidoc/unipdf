@@ -17,7 +17,7 @@ node {
 
         stage('Prepare') {
             // Get linter and other build tools.
-            sh 'go get github.com/golang/lint/golint'
+            sh 'go get -u golang.org/x/lint/golint'
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
 
