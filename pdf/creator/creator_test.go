@@ -10,10 +10,12 @@ package creator
 // if every detail is correct.
 
 import (
+	"bytes"
 	"fmt"
 	goimage "image"
 	"io/ioutil"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/boombuler/barcode"
@@ -23,6 +25,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/optimize"
 )
 
 func init() {
@@ -757,6 +760,17 @@ func TestChapterMargins(t *testing.T) {
 func TestSubchaptersSimple(t *testing.T) {
 	c := New()
 
+	// Enable table of contents and set the style of the lines.
+	c.AddTOC = true
+
+	lineStyle := NewTextStyle()
+	lineStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+
+	toc := c.TOC()
+	toc.SetLineStyle(lineStyle)
+	toc.SetLineMargins(0, 0, 3, 3)
+
+	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
 	subchap1.SetMargins(0, 0, 5, 0)
@@ -814,47 +828,33 @@ func TestSubchaptersSimple(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// Set a function to create the table of contents.
-	// Should be able to wrap..
-	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-		ch.GetHeading().SetFontSize(28)
-		ch.GetHeading().SetMargins(0, 0, 0, 30)
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		// Set style of TOC heading just before render.
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
 
-		table := NewTable(2) // 2 column table.
-		// Default, equal column sizes (4x0.25)...
-		table.SetColumnWidths(0.9, 0.1)
+		toc.SetHeading("Table of Contents", style)
 
-		for _, entry := range toc.entries {
-			// Col 1. Chapter number, title.
-			var str string
-			if entry.Subchapter == 0 {
-				str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-			} else {
-				str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-			}
-			p := NewParagraph(str)
-			p.SetFontSize(14)
-			cell := table.NewCell()
-			cell.SetContent(p)
-			// Set the paragraph width to the cell width.
-			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
+		// Set style of TOC lines just before render.
+		lineStyle := NewTextStyle()
+		lineStyle.FontSize = 14
 
-			// Col 1. Page number.
-			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-			p.SetFontSize(14)
-			cell = table.NewCell()
-			cell.SetContent(p)
-		}
-		err := ch.Add(table)
-		if err != nil {
-			fmt.Printf("Error adding table: %v\n", err)
-			return nil, err
+		pageStyle := lineStyle
+		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+
+		lines := toc.Lines()
+		for _, line := range lines {
+			line.SetStyle(lineStyle)
+
+			// Make page part bold.
+			line.Page.Style = pageStyle
 		}
 
-		return ch, nil
+		return nil
 	})
 
 	err := c.WriteToFile("/tmp/3_subchapters_simple.pdf")
@@ -867,6 +867,19 @@ func TestSubchaptersSimple(t *testing.T) {
 func TestSubchapters(t *testing.T) {
 	c := New()
 
+	// Enable table of contents and set the style of the lines.
+	c.AddTOC = true
+
+	lineStyle := NewTextStyle()
+	lineStyle.Font = model.NewStandard14FontMustCompile(model.Helvetica)
+	lineStyle.FontSize = 14
+	lineStyle.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+
+	toc := c.TOC()
+	toc.SetLineStyle(lineStyle)
+	toc.SetLineMargins(0, 0, 3, 3)
+
+	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
 	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
 	subchap1.SetMargins(0, 0, 5, 0)
@@ -928,46 +941,28 @@ func TestSubchapters(t *testing.T) {
 		c.Draw(p)
 	})
 
-	// Set a function to create the table of contents.
-	c.CreateTableOfContents(func(toc *TableOfContents) (*Chapter, error) {
-		ch := c.NewChapter("Table of contents")
-		ch.GetHeading().SetColor(ColorRGBFromArithmetic(0.5, 0.5, 0.5))
-		ch.GetHeading().SetFontSize(28)
-		ch.GetHeading().SetMargins(0, 0, 0, 30)
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		// Set style of TOC heading just before render.
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
 
-		table := NewTable(2)
-		// Default, equal column sizes (4x0.25)...
-		table.SetColumnWidths(0.9, 0.1)
+		toc.SetHeading("Table of Contents", style)
 
-		for _, entry := range toc.entries {
-			// Col 1. Chapter number, title.
-			var str string
-			if entry.Subchapter == 0 {
-				str = fmt.Sprintf("%d. %s", entry.Chapter, entry.Title)
-			} else {
-				str = fmt.Sprintf("        %d.%d. %s", entry.Chapter, entry.Subchapter, entry.Title)
-			}
-			p := NewParagraph(str)
-			p.SetFontSize(14)
-			cell := table.NewCell()
-			cell.SetContent(p)
-			// Set the paragraph width to the cell width.
-			p.SetWidth(cell.Width(c.Context()))
-			table.SetRowHeight(table.CurRow(), p.Height()*1.2)
+		// Set style of TOC lines just before render.
+		pageStyle := NewTextStyle()
+		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+		pageStyle.FontSize = 10
 
-			// Col 1. Page number.
-			p = NewParagraph(fmt.Sprintf("%d", entry.PageNumber))
-			p.SetFontSize(14)
-			cell = table.NewCell()
-			cell.SetContent(p)
-		}
-		err := ch.Add(table)
-		if err != nil {
-			fmt.Printf("Error adding table: %v\n", err)
-			return nil, err
+		lines := toc.Lines()
+		for _, line := range lines {
+			line.Page.Style = pageStyle
 		}
 
-		return ch, nil
+		return nil
 	})
 
 	addHeadersAndFooters(c)
@@ -2131,5 +2126,776 @@ func TestEncrypting1(t *testing.T) {
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
+	}
+
+	// Try reading generated PDF and ensure encryption is OK.
+	// Try writing out to memory and opening with password.
+	var buf bytes.Buffer
+	err = c.Write(&buf)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	r, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	isEnc, err := r.IsEncrypted()
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if !isEnc {
+		t.Fatalf("Error: Should be encrypted")
+	}
+	ok, err := r.Decrypt([]byte("password"))
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("Failed to decrypt")
+	}
+	numpages, err := r.GetNumPages()
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	if numpages <= 0 {
+		t.Fatalf("Pages should be 1+")
+	}
+}
+
+// TestOptimizeCombineDuplicateStreams tests optimizing PDFs to reduce output file size.
+func TestOptimizeCombineDuplicateStreams(t *testing.T) {
+	c := createPdf4Optimization(t)
+
+	err := c.WriteToFile("/tmp/7_combine_duplicate_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c = createPdf4Optimization(t)
+
+	c.SetOptimizer(optimize.New(optimize.Options{CombineDuplicateStreams: true}))
+
+	err = c.WriteToFile("/tmp/7_combine_duplicate_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/7_combine_duplicate_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/7_combine_duplicate_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestOptimizeImageQuality tests optimizing PDFs to reduce output file size.
+func TestOptimizeImageQuality(t *testing.T) {
+	c := New()
+
+	imgDataJpeg, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	imgJpeg, err := NewImageFromData(imgDataJpeg)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// JPEG encoder (DCT) with quality factor 70.
+	encoder := core.NewDCTEncoder()
+	encoder.Quality = 100
+	encoder.Width = int(imgJpeg.Width())
+	encoder.Height = int(imgJpeg.Height())
+	imgJpeg.SetEncoder(encoder)
+
+	imgJpeg.SetPos(250, 350)
+	imgJpeg.Scale(0.25, 0.25)
+
+	err = c.Draw(imgJpeg)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = c.WriteToFile("/tmp/8_image_quality_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.SetOptimizer(optimize.New(optimize.Options{ImageQuality: 20}))
+
+	err = c.WriteToFile("/tmp/8_image_quality_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/8_image_quality_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/8_image_quality_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+func createPdf4Optimization(t *testing.T) *Creator {
+	c := New()
+
+	p := NewParagraph("Test text1")
+	// Change to times bold font (default is helvetica).
+	font, err := model.NewStandard14Font(model.CourierBold)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+	p.SetFont(font)
+	p.SetPos(15, 15)
+	_ = c.Draw(p)
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img, err := NewImageFromData(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img.SetPos(0, 100)
+	img.ScaleToWidth(1.0 * c.Width())
+
+	err = c.Draw(img)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img1, err := NewImageFromData(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img1.SetPos(0, 200)
+	img1.ScaleToWidth(1.0 * c.Width())
+
+	err = c.Draw(img1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	imgData2, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img2, err := NewImageFromData(imgData2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	img2.SetPos(0, 500)
+	img2.ScaleToWidth(1.0 * c.Width())
+
+	c.NewPage()
+	p = NewParagraph("Test text2")
+	// Change to times bold font (default is helvetica).
+	font, err = model.NewStandard14Font(model.Helvetica)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+	p.SetFont(font)
+	p.SetPos(15, 15)
+	_ = c.Draw(p)
+
+	err = c.Draw(img2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+		return nil
+	}
+
+	return c
+}
+
+// TestOptimizeUseObjectStreams tests optimizing PDFs to reduce output file size.
+func TestOptimizeUseObjectStreams(t *testing.T) {
+	c := createPdf4Optimization(t)
+
+	err := c.WriteToFile("/tmp/9_use_object_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c = createPdf4Optimization(t)
+	c.SetOptimizer(optimize.New(optimize.Options{UseObjectStreams: true}))
+
+	err = c.WriteToFile("/tmp/9_use_object_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/9_use_object_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/9_use_object_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestCombineDuplicateDirectObjects tests optimizing PDFs to reduce output file size.
+func TestCombineDuplicateDirectObjects(t *testing.T) {
+
+	createDoc := func() *Creator {
+		c := New()
+		c.AddTOC = true
+
+		ch1 := c.NewChapter("Introduction")
+		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+		subchap1.SetMargins(0, 0, 5, 0)
+
+		//subCh1 := NewSubchapter(ch1, "Workflow")
+
+		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+			"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+			"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+			"mollit anim id est laborum.")
+		p.SetTextAlignment(TextAlignmentJustify)
+		p.SetMargins(0, 0, 5, 0)
+
+		for j := 0; j < 2; j++ {
+			subchap1.Add(p)
+		}
+
+		subchap2 := c.NewSubchapter(ch1, "Mechanism")
+		subchap2.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 3; j++ {
+			subchap2.Add(p)
+		}
+
+		subchap3 := c.NewSubchapter(ch1, "Discussion")
+		subchap3.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 4; j++ {
+			subchap3.Add(p)
+		}
+
+		subchap4 := c.NewSubchapter(ch1, "Conclusion")
+		subchap4.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 3; j++ {
+			subchap4.Add(p)
+		}
+		c.Draw(ch1)
+
+		for i := 0; i < 5; i++ {
+			ch2 := c.NewChapter("References")
+			ch2.SetMargins(1, 1, 1, 1)
+			for j := 0; j < 13; j++ {
+				ch2.Add(p)
+			}
+			metadata := core.MakeDict()
+			metadata.Set(core.PdfObjectName("TEST"), core.MakeString("---------------- ## ----------------"))
+			c.Draw(ch2)
+			c.getActivePage().Metadata = metadata
+		}
+
+		// Set a function to create the front Page.
+		c.CreateFrontPage(func(args FrontpageFunctionArgs) {
+			p := NewParagraph("Example Report")
+			p.SetWidth(c.Width())
+			p.SetTextAlignment(TextAlignmentCenter)
+			p.SetFontSize(32)
+			p.SetPos(0, 300)
+			c.Draw(p)
+
+			p.SetFontSize(22)
+			p.SetText("Example Report Data Results")
+			p.SetPos(0, 340)
+			c.Draw(p)
+		})
+
+		// The table of contents is created automatically if the
+		// AddTOC property of the creator is set to true.
+		// This function is used just to customize the style of the TOC.
+		c.CreateTableOfContents(func(toc *TOC) error {
+			style := NewTextStyle()
+			style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+			style.FontSize = 20
+
+			toc.SetHeading("Table of Contents", style)
+			return nil
+		})
+
+		addHeadersAndFooters(c)
+		return c
+	}
+
+	c := createDoc()
+
+	err := c.WriteToFile("/tmp/10_combine_duplicate_direct_objects_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c = createDoc()
+	c.SetOptimizer(optimize.New(optimize.Options{CombineDuplicateDirectObjects: true}))
+
+	err = c.WriteToFile("/tmp/10_combine_duplicate_direct_objects_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/10_combine_duplicate_direct_objects_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/10_combine_duplicate_direct_objects_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestOptimizeImagePPI tests optimizing PDFs to reduce output file size.
+func TestOptimizeImagePPI(t *testing.T) {
+	c := New()
+
+	imgDataJpeg, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	imgJpeg, err := NewImageFromData(imgDataJpeg)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// JPEG encoder (DCT) with quality factor 100.
+	encoder := core.NewDCTEncoder()
+	encoder.Quality = 100
+	encoder.Width = int(imgJpeg.Width())
+	encoder.Height = int(imgJpeg.Height())
+	imgJpeg.SetEncoder(encoder)
+
+	imgJpeg.SetPos(250, 350)
+	imgJpeg.Scale(0.25, 0.25)
+
+	err = c.Draw(imgJpeg)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.NewPage()
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+	}
+
+	img, err := NewImageFromData(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+	}
+
+	img.SetPos(0, 100)
+	img.ScaleToWidth(0.1 * c.Width())
+
+	err = c.Draw(img)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		t.FailNow()
+	}
+
+	err = c.Draw(imgJpeg)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = c.WriteToFile("/tmp/11_image_ppi_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.SetOptimizer(optimize.New(optimize.Options{ImageUpperPPI: 144}))
+
+	err = c.WriteToFile("/tmp/11_image_ppi_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/11_image_ppi_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/11_image_ppi_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestCombineIdenticalIndirectObjects tests optimizing PDFs to reduce output file size.
+func TestCombineIdenticalIndirectObjects(t *testing.T) {
+	c := New()
+	c.AddTOC = true
+
+	ch1 := c.NewChapter("Introduction")
+	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+	subchap1.SetMargins(0, 0, 5, 0)
+
+	//subCh1 := NewSubchapter(ch1, "Workflow")
+
+	p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+	p.SetTextAlignment(TextAlignmentJustify)
+	p.SetMargins(0, 0, 5, 0)
+	for j := 0; j < 5; j++ {
+		subchap1.Add(p)
+	}
+
+	subchap2 := c.NewSubchapter(ch1, "Mechanism")
+	subchap2.SetMargins(0, 0, 5, 0)
+	for j := 0; j < 15; j++ {
+		subchap2.Add(p)
+	}
+
+	subchap3 := c.NewSubchapter(ch1, "Discussion")
+	subchap3.SetMargins(0, 0, 5, 0)
+	for j := 0; j < 19; j++ {
+		subchap3.Add(p)
+	}
+
+	subchap4 := c.NewSubchapter(ch1, "Conclusion")
+	subchap4.SetMargins(0, 0, 5, 0)
+	for j := 0; j < 23; j++ {
+		subchap4.Add(p)
+	}
+
+	c.Draw(ch1)
+
+	for i := 0; i < 50; i++ {
+		ch2 := c.NewChapter("References")
+		for j := 0; j < 13; j++ {
+			ch2.Add(p)
+		}
+
+		c.Draw(ch2)
+	}
+
+	// Set a function to create the front Page.
+	c.CreateFrontPage(func(args FrontpageFunctionArgs) {
+		p := NewParagraph("Example Report")
+		p.SetWidth(c.Width())
+		p.SetTextAlignment(TextAlignmentCenter)
+		p.SetFontSize(32)
+		p.SetPos(0, 300)
+		c.Draw(p)
+
+		p.SetFontSize(22)
+		p.SetText("Example Report Data Results")
+		p.SetPos(0, 340)
+		c.Draw(p)
+	})
+
+	// The table of contents is created automatically if the
+	// AddTOC property of the creator is set to true.
+	// This function is used just to customize the style of the TOC.
+	c.CreateTableOfContents(func(toc *TOC) error {
+		style := NewTextStyle()
+		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+		style.FontSize = 20
+
+		toc.SetHeading("Table of Contents", style)
+		return nil
+	})
+
+	addHeadersAndFooters(c)
+
+	err := c.WriteToFile("/tmp/12_identical_indirect_objects_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.SetOptimizer(optimize.New(optimize.Options{CombineIdenticalIndirectObjects: true}))
+
+	err = c.WriteToFile("/tmp/12_identical_indirect_objects_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/12_identical_indirect_objects_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/12_identical_indirect_objects_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestCompressStreams tests optimizing PDFs to reduce output file size.
+func TestCompressStreams(t *testing.T) {
+	createDoc := func() *Creator {
+		c := New()
+		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
+			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+			"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore" +
+			"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+			"mollit anim id est laborum.")
+
+		p.SetMargins(0, 0, 5, 0)
+		c.Draw(p)
+		//c.NewPage()
+
+		page := c.pages[0]
+		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
+		times := model.NewStandard14FontMustCompile(model.TimesRoman)
+		page.Resources.SetFontByName("Times", times.ToPdfObject())
+		page.AddContentStreamByString(`BT
+/Times 56 Tf
+20 600 Td
+(The multiline example text)Tj
+/Times 30 Tf
+0 30 Td
+60 TL
+(example text)'
+(example text)'
+(example text)'
+(example text)'
+(example text)'
+(example text)'
+(example text)'
+(example text)'
+ET`)
+		return c
+	}
+
+	c := createDoc()
+
+	err := c.WriteToFile("/tmp/13_compress_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c = createDoc()
+	c.SetOptimizer(optimize.New(optimize.Options{CompressStreams: true}))
+
+	err = c.WriteToFile("/tmp/13_compress_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/13_compress_streams_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/13_compress_streams_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// TestAllOptimizations tests optimizing PDFs to reduce output file size.
+func TestAllOptimizations(t *testing.T) {
+
+	createDoc := func() *Creator {
+		c := New()
+		c.AddTOC = true
+
+		ch1 := c.NewChapter("Introduction")
+		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+		subchap1.SetMargins(0, 0, 5, 0)
+
+		//subCh1 := NewSubchapter(ch1, "Workflow")
+
+		p := NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+			"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+			"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+			"mollit anim id est laborum.")
+		p.SetTextAlignment(TextAlignmentJustify)
+		p.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 7; j++ {
+			subchap1.Add(p)
+		}
+
+		subchap2 := c.NewSubchapter(ch1, "Mechanism")
+		subchap2.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 15; j++ {
+			subchap2.Add(p)
+		}
+
+		subchap3 := c.NewSubchapter(ch1, "Discussion")
+		subchap3.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 19; j++ {
+			subchap3.Add(p)
+		}
+
+		subchap4 := c.NewSubchapter(ch1, "Conclusion")
+		subchap4.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 23; j++ {
+			subchap4.Add(p)
+		}
+
+		c.Draw(ch1)
+
+		for i := 0; i < 50; i++ {
+			ch2 := c.NewChapter("References")
+			for j := 0; j < 13; j++ {
+				ch2.Add(p)
+			}
+
+			c.Draw(ch2)
+		}
+
+		// Set a function to create the front Page.
+		c.CreateFrontPage(func(args FrontpageFunctionArgs) {
+			p := NewParagraph("Example Report")
+			p.SetWidth(c.Width())
+			p.SetTextAlignment(TextAlignmentCenter)
+			p.SetFontSize(32)
+			p.SetPos(0, 300)
+			c.Draw(p)
+
+			p.SetFontSize(22)
+			p.SetText("Example Report Data Results")
+			p.SetPos(0, 340)
+			c.Draw(p)
+		})
+
+		// The table of contents is created automatically if the
+		// AddTOC property of the creator is set to true.
+		// This function is used just to customize the style of the TOC.
+		c.CreateTableOfContents(func(toc *TOC) error {
+			style := NewTextStyle()
+			style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+			style.FontSize = 20
+
+			toc.SetHeading("Table of Contents", style)
+
+			return nil
+		})
+
+		addHeadersAndFooters(c)
+		return c
+	}
+
+	c := createDoc()
+
+	err := c.WriteToFile("/tmp/14_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c = createDoc()
+	c.SetOptimizer(optimize.New(optimize.Options{
+		CombineDuplicateDirectObjects:   true,
+		CombineIdenticalIndirectObjects: true,
+		ImageUpperPPI:                   50.0,
+		UseObjectStreams:                true,
+		ImageQuality:                    50,
+		CombineDuplicateStreams:         true,
+		CompressStreams:                 true,
+	}))
+
+	err = c.WriteToFile("/tmp/14_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	fileInfo, err := os.Stat("/tmp/14_not_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	fileInfoOptimized, err := os.Stat("/tmp/14_optimized.pdf")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if fileInfoOptimized.Size() >= fileInfo.Size() {
+		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
 	}
 }

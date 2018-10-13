@@ -362,8 +362,20 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		if cell.content != nil {
+			// content width.
+			cw := cell.content.Width()
+			switch t := cell.content.(type) {
+			case *Paragraph:
+				if t.enableWrap {
+					cw = t.getMaxLineWidth() / 1000.0
+				}
+			case *StyledParagraph:
+				if t.enableWrap {
+					cw = t.getMaxLineWidth() / 1000.0
+				}
+			}
+
 			// Account for horizontal alignment:
-			cw := cell.content.Width() // content width.
 			switch cell.horizontalAlignment {
 			case CellHorizontalAlignmentLeft:
 				// Account for indent.
@@ -691,15 +703,15 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
 		if t.defaultWrap {
-			// Default paragraph settings in table: no wrapping.
-			t.enableWrap = false // No wrapping.
+			// Enable wrapping by default.
+			t.enableWrap = true
 		}
 
 		cell.content = vd
 	case *StyledParagraph:
 		if t.defaultWrap {
-			// Default styled paragraph settings in table: no wrapping.
-			t.enableWrap = false // No wrapping.
+			// Enable wrapping by default.
+			t.enableWrap = true
 		}
 
 		cell.content = vd

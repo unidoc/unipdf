@@ -20,10 +20,10 @@ import (
 // StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
 // By default occupies the available width in the drawing context.
 type StyledParagraph struct {
-	// Text chunks with styles that compose the paragraph
+	// Text chunks with styles that compose the paragraph.
 	chunks []TextChunk
 
-	// Style used for the paragraph for spacing and offsets
+	// Style used for the paragraph for spacing and offsets.
 	defaultStyle TextStyle
 
 	// The text encoder which can convert the text (as runes) into a series of glyphs and get character metrics.
@@ -63,6 +63,9 @@ type StyledParagraph struct {
 
 	// Text chunk lines after wrapping to available width.
 	lines [][]TextChunk
+
+	// Before render callback.
+	beforeRender func(p *StyledParagraph, ctx DrawContext)
 }
 
 // NewStyledParagraph creates a new styled paragraph.
@@ -101,6 +104,23 @@ func (p *StyledParagraph) Append(text string, style TextStyle) {
 	chunk.Style.Font.SetEncoder(p.encoder)
 
 	p.chunks = append(p.chunks, chunk)
+	p.wrapText()
+}
+
+// Insert adds a new text chunk at the specified position in the paragraph.
+func (p *StyledParagraph) Insert(index uint, text string, style TextStyle) {
+	l := uint(len(p.chunks))
+	if index > l {
+		index = l
+	}
+
+	chunk := TextChunk{
+		Text:  text,
+		Style: style,
+	}
+	chunk.Style.Font.SetEncoder(p.encoder)
+
+	p.chunks = append(p.chunks[:index], append([]TextChunk{chunk}, p.chunks[index:]...)...)
 	p.wrapText()
 }
 
@@ -173,7 +193,7 @@ func (p *StyledParagraph) SetWidth(width float64) {
 
 // Width returns the width of the Paragraph.
 func (p *StyledParagraph) Width() float64 {
-	if p.enableWrap {
+	if p.enableWrap && int(p.wrapWidth) > 0 {
 		return p.wrapWidth
 	}
 
@@ -238,6 +258,58 @@ func (p *StyledParagraph) getTextWidth() float64 {
 	return width
 }
 
+// getTextLineWidth calculates the text width of a provided collection of text chunks.
+func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
+	var width float64
+	for _, chunk := range line {
+		style := &chunk.Style
+
+		for _, r := range chunk.Text {
+			glyph, found := p.encoder.RuneToGlyph(r)
+			if !found {
+				common.Log.Debug("Error! Glyph not found for rune: %s\n", r)
+
+				// XXX/FIXME: return error.
+				return -1
+			}
+
+			// Ignore newline for this.. Handles as if all in one line.
+			if glyph == "controlLF" {
+				continue
+			}
+
+			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+			if !found {
+				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+
+				// XXX/FIXME: return error.
+				return -1
+			}
+
+			width += style.FontSize * metrics.Wx
+		}
+	}
+
+	return width
+}
+
+// getMaxLineWidth returns the width of the longest line of text in the paragraph.
+func (p *StyledParagraph) getMaxLineWidth() float64 {
+	if p.lines == nil || len(p.lines) == 0 {
+		p.wrapText()
+	}
+
+	var width float64
+	for _, line := range p.lines {
+		w := p.getTextLineWidth(line)
+		if w > width {
+			width = w
+		}
+	}
+
+	return width
+}
+
 // getTextHeight calculates the text height as if all in one line (not taking wrapping into account).
 func (p *StyledParagraph) getTextHeight() float64 {
 	var height float64
@@ -255,7 +327,7 @@ func (p *StyledParagraph) getTextHeight() float64 {
 // fill the lines.
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *StyledParagraph) wrapText() error {
-	if !p.enableWrap {
+	if !p.enableWrap || int(p.wrapWidth) <= 0 {
 		p.lines = [][]TextChunk{p.chunks}
 		return nil
 	}
@@ -281,7 +353,7 @@ func (p *StyledParagraph) wrapText() error {
 			}
 
 			// newline wrapping.
-			if glyph == "controllf" {
+			if glyph == "controlLF" {
 				// moves to next line.
 				line = append(line, TextChunk{
 					Text:  strings.TrimRightFunc(string(part), unicode.IsSpace),
@@ -407,12 +479,16 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 		}
 	} else {
 		// Absolute.
-		if p.wrapWidth == 0 {
+		if int(p.wrapWidth) <= 0 {
 			// Use necessary space.
 			p.SetWidth(p.getTextWidth())
 		}
 		ctx.X = p.xPos
 		ctx.Y = p.yPos
+	}
+
+	if p.beforeRender != nil {
+		p.beforeRender(p, ctx)
 	}
 
 	// Place the Paragraph on the template at position (x,y) based on the ctx.
@@ -434,7 +510,7 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 
 // Draw block on specified location on Page, adding to the content stream.
 func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext) (DrawContext, error) {
-	// Find first free index for the font resources of the paragraph
+	// Find first free index for the font resources of the paragraph.
 	num := 1
 	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))
 	for blk.resources.HasFontByName(fontName) {
@@ -442,7 +518,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 		fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 	}
 
-	// Add default font to the page resources
+	// Add default font to the page resources.
 	err := blk.resources.SetFontByName(fontName, p.defaultStyle.Font.ToPdfObject())
 	if err != nil {
 		return ctx, err
@@ -455,7 +531,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Wrap the text into lines.
 	p.wrapText()
 
-	// Add the fonts of all chunks to the page resources
+	// Add the fonts of all chunks to the page resources.
 	fonts := [][]core.PdfObjectName{}
 
 	for _, line := range p.lines {
@@ -539,19 +615,22 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			spaces += chunkSpaces
 		}
 
-		// Add line shifts
+		// Add line shifts.
 		objs := []core.PdfObject{}
+
+		wrapWidth := p.wrapWidth * 1000.0
 		if p.alignment == TextAlignmentJustify {
-			// Not to justify last line.
+			// Do not justify last line.
 			if spaces > 0 && !isLastLine {
-				spaceWidth = (p.wrapWidth*1000.0 - width) / float64(spaces) / defaultFontSize
+				spaceWidth = (wrapWidth - width) / float64(spaces) / defaultFontSize
 			}
 		} else if p.alignment == TextAlignmentCenter {
-			// Start with a shift.
-			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / 2 / defaultFontSize
+			// Start with an offset of half of the remaining line space.
+			shift := (wrapWidth - width - spaceWidth) / 2 / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		} else if p.alignment == TextAlignmentRight {
-			shift := (p.wrapWidth*1000.0 - width - spaceWidth) / defaultFontSize
+			// Push the text at the end of the line.
+			shift := (wrapWidth - width - spaceWidth) / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
@@ -561,7 +640,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				Add_TJ(objs...)
 		}
 
-		// Render line text chunks
+		// Render line text chunks.
 		for k, chunk := range line {
 			style := &chunk.Style
 

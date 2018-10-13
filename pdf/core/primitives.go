@@ -78,6 +78,13 @@ type PdfObjectStream struct {
 	Stream []byte
 }
 
+// PdfObjectStreams represents the primitive PDF object streams.
+// 7.5.7 Object Streams (page 45).
+type PdfObjectStreams struct {
+	PdfObjectReference
+	vec []PdfObject
+}
+
 // MakeDict creates and returns an empty PdfObjectDictionary.
 func MakeDict() *PdfObjectDictionary {
 	d := &PdfObjectDictionary{}
@@ -217,6 +224,16 @@ func MakeStream(contents []byte, encoder StreamEncoder) (*PdfObjectStream, error
 
 	stream.Stream = encoded
 	return stream, nil
+}
+
+// MakeObjectStreams creates an PdfObjectStreams from a list of PdfObjects.
+func MakeObjectStreams(objects ...PdfObject) *PdfObjectStreams {
+	streams := &PdfObjectStreams{}
+	streams.vec = []PdfObject{}
+	for _, obj := range objects {
+		streams.vec = append(streams.vec, obj)
+	}
+	return streams
 }
 
 // String returns the state of the bool as "true" or "false".
@@ -617,6 +634,16 @@ func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	return val
 }
 
+// GetString is a helper for Get that returns a string value.
+// Returns false if the key is missing or a value is not a string.
+func (d *PdfObjectDictionary) GetString(key PdfObjectName) (string, bool) {
+	val, ok := d.dict[key].(*PdfObjectString)
+	if !ok {
+		return "", false
+	}
+	return val.Str(), true
+}
+
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys
@@ -895,4 +922,54 @@ func GetIndirect(obj PdfObject) (ind *PdfIndirectObject, found bool) {
 func GetStream(obj PdfObject) (stream *PdfObjectStream, found bool) {
 	stream, found = obj.(*PdfObjectStream)
 	return stream, found
+}
+
+// GetObjectStreams returns the *PdfObjectStreams represented by the PdfObject. On type mismatch the found bool flag is
+// false and a nil pointer is returned.
+func GetObjectStreams(obj PdfObject) (objStream *PdfObjectStreams, found bool) {
+	objStream, found = obj.(*PdfObjectStreams)
+	return objStream, found
+}
+
+// Append appends PdfObject(s) to the streams.
+func (streams *PdfObjectStreams) Append(objects ...PdfObject) {
+	if streams == nil {
+		common.Log.Debug("Warn - Attempt to append to a nil streams")
+		return
+	}
+	if streams.vec == nil {
+		streams.vec = []PdfObject{}
+	}
+
+	for _, obj := range objects {
+		streams.vec = append(streams.vec, obj)
+	}
+}
+
+// Elements returns a slice of the PdfObject elements in the array.
+// Preferred over accessing the array directly as type may be changed in future major versions (v3).
+func (streams *PdfObjectStreams) Elements() []PdfObject {
+	if streams == nil {
+		return nil
+	}
+	return streams.vec
+}
+
+// String returns a string describing `streams`.
+func (streams *PdfObjectStreams) String() string {
+	return fmt.Sprintf("Object stream %d", streams.ObjectNumber)
+}
+
+// Len returns the number of elements in the streams.
+func (streams *PdfObjectStreams) Len() int {
+	if streams == nil {
+		return 0
+	}
+	return len(streams.vec)
+}
+
+// DefaultWriteString outputs the object as it is to be written to file.
+func (streams *PdfObjectStreams) DefaultWriteString() string {
+	outStr := fmt.Sprintf("%d 0 R", (*streams).ObjectNumber)
+	return outStr
 }

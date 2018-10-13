@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -33,17 +34,23 @@ type Creator struct {
 
 	// Hooks.
 	genFrontPageFunc      func(args FrontpageFunctionArgs)
-	genTableOfContentFunc func(toc *TableOfContents) (*Chapter, error)
+	genTableOfContentFunc func(toc *TOC) error
 	drawHeaderFunc        func(header *Block, args HeaderFunctionArgs)
 	drawFooterFunc        func(footer *Block, args FooterFunctionArgs)
 	pdfWriterAccessFunc   func(writer *model.PdfWriter) error
 
 	finalized bool
 
-	toc *TableOfContents
+	// The table of contents.
+	toc *TOC
+
+	// Controls whether a table of contents will be added.
+	AddTOC bool
 
 	// Forms.
 	acroForm *model.PdfAcroForm
+
+	optimizer model.Optimizer
 }
 
 // SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
@@ -96,9 +103,19 @@ func New() *Creator {
 	c.pageMargins.top = m
 	c.pageMargins.bottom = m
 
-	c.toc = newTableOfContents()
+	c.toc = NewTOC("Table of Contents")
 
 	return c
+}
+
+// SetOptimizer sets the optimizer to optimize PDF before writing.
+func (c *Creator) SetOptimizer(optimizer model.Optimizer) {
+	c.optimizer = optimizer
+}
+
+// GetOptimizer returns current PDF optimizer.
+func (c *Creator) GetOptimizer() model.Optimizer {
+	return c.optimizer
 }
 
 // SetPageMargins sets the page margins: left, right, top, bottom.
@@ -118,6 +135,21 @@ func (c *Creator) Width() float64 {
 // Height returns the current page height.
 func (c *Creator) Height() float64 {
 	return c.pageHeight
+}
+
+// TOC returns the table of contents component of the creator.
+func (c *Creator) TOC() *TOC {
+	return c.toc
+}
+
+// SetTOC sets the table of content component of the creator.
+// This method should be used when building a custom table of contents.
+func (c *Creator) SetTOC(toc *TOC) {
+	if toc == nil {
+		return
+	}
+
+	c.toc = toc
 }
 
 func (c *Creator) setActivePage(p *model.PdfPage) {
@@ -182,7 +214,7 @@ func (c *Creator) CreateFrontPage(genFrontPageFunc func(args FrontpageFunctionAr
 }
 
 // CreateTableOfContents sets a function to generate table of contents.
-func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TableOfContents) (*Chapter, error)) {
+func (c *Creator) CreateTableOfContents(genTOCFunc func(toc *TOC) error) {
 	c.genTableOfContentFunc = genTOCFunc
 }
 
@@ -271,8 +303,8 @@ func (c *Creator) Context() DrawContext {
 	return c.context
 }
 
-// Call before writing out.  Takes care of adding headers and footers, as well as generating front
-// Page and table of contents.
+// Call before writing out. Takes care of adding headers and footers, as well
+// as generating front Page and table of contents.
 func (c *Creator) finalize() error {
 	totPages := len(c.pages)
 
@@ -281,16 +313,18 @@ func (c *Creator) finalize() error {
 	if c.genFrontPageFunc != nil {
 		genpages++
 	}
-	if c.genTableOfContentFunc != nil {
+	if c.AddTOC {
 		c.initContext()
 		c.context.Page = genpages + 1
-		ch, err := c.genTableOfContentFunc(c.toc)
-		if err != nil {
-			return err
+
+		if c.genTableOfContentFunc != nil {
+			if err := c.genTableOfContentFunc(c.toc); err != nil {
+				return err
+			}
 		}
 
 		// Make an estimate of the number of pages.
-		blocks, _, err := ch.GeneratePageBlocks(c.context)
+		blocks, _, err := c.toc.GeneratePageBlocks(c.context)
 		if err != nil {
 			common.Log.Debug("Failed to generate blocks: %v", err)
 			return err
@@ -298,12 +332,15 @@ func (c *Creator) finalize() error {
 		genpages += len(blocks)
 
 		// Update the table of content Page numbers, accounting for front Page and TOC.
-		for idx := range c.toc.entries {
-			c.toc.entries[idx].PageNumber += genpages
-		}
+		lines := c.toc.Lines()
+		for _, line := range lines {
+			pageNum, err := strconv.Atoi(line.Page.Text)
+			if err != nil {
+				continue
+			}
 
-		// Remove the TOC chapter entry.
-		c.toc.entries = c.toc.entries[:len(c.toc.entries)-1]
+			line.Page.Text = strconv.Itoa(pageNum + genpages)
+		}
 	}
 
 	hasFrontPage := false
@@ -323,17 +360,17 @@ func (c *Creator) finalize() error {
 		hasFrontPage = true
 	}
 
-	if c.genTableOfContentFunc != nil {
+	if c.AddTOC {
 		c.initContext()
-		ch, err := c.genTableOfContentFunc(c.toc)
-		if err != nil {
-			common.Log.Debug("Error generating TOC: %v", err)
-			return err
-		}
-		ch.SetShowNumbering(false)
-		ch.SetIncludeInTOC(false)
 
-		blocks, _, _ := ch.GeneratePageBlocks(c.context)
+		if c.genTableOfContentFunc != nil {
+			if err := c.genTableOfContentFunc(c.toc); err != nil {
+				common.Log.Debug("Error generating TOC: %v", err)
+				return err
+			}
+		}
+
+		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
 		tocpages := []*model.PdfPage{}
 		for _, block := range blocks {
 			block.SetPos(0, 0)
@@ -459,13 +496,15 @@ func (c *Creator) Draw(d Drawable) error {
 	return nil
 }
 
-// Write output of creator to io.WriteSeeker interface.
-func (c *Creator) Write(ws io.WriteSeeker) error {
+// Write output of creator to io.Writer interface.
+func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
 		c.finalize()
 	}
 
 	pdfWriter := model.NewPdfWriter()
+	pdfWriter.SetOptimizer(c.optimizer)
+
 	// Form fields.
 	if c.acroForm != nil {
 		err := pdfWriter.SetForms(c.acroForm)

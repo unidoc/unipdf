@@ -35,9 +35,3 @@ func NewTextStyle() TextStyle {
 		FontSize: 10,
 	}
 }
-
-// TextChunk represents a chunk of text along with a particular style.
-type TextChunk struct {
-	Text  string
-	Style TextStyle
-}

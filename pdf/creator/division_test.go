@@ -139,13 +139,14 @@ func TestDivInline(t *testing.T) {
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 
 	s := NewStyledParagraph("This styled paragraph should ", style)
+	s.SetEnableWrap(false)
 
 	style.Color = ColorRGBFrom8bit(255, 0, 0)
 	s.Append("fit", style)
 
 	style.Color = ColorRGBFrom8bit(0, 255, 0)
 	style.Font = fontBold
-	s.Append(" right in.", style)
+	s.Append(" in.", style)
 
 	div.Add(s)
 
