@@ -82,6 +82,7 @@ func resolveReferences(obj core.PdfObject, objmap map[int64]core.PdfObject) erro
 	return nil
 }
 
+// CompareDictionariesDeep does a deep comparison of `d1` and `d2` and returns true if equal.
 func CompareDictionariesDeep(d1, d2 *core.PdfObjectDictionary) bool {
 	if len(d1.Keys()) != len(d2.Keys()) {
 		common.Log.Debug("Dict entries mismatch (%d != %d)", len(d1.Keys()), len(d2.Keys()))
