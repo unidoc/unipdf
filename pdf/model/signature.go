@@ -45,19 +45,6 @@ type PdfSignatureReference struct {
 	DigestMethod    *core.PdfObjectName
 }
 
-// NewPdfSignature returns an initialized PdfSignature.
-// TODO: Make more flexible?
-func NewPdfSignature() *PdfSignature {
-	sig := &PdfSignature{}
-	sig.container = core.MakeIndirectObject(core.MakeDict())
-	sig.Type = core.MakeName("Sig")
-
-	// FIXME/TODO: Replace with generic signature handler (provide default).
-	sig.Filter = core.MakeName("Adobe.PPKLite")
-
-	return sig
-}
-
 // GetContainingPdfObject implements interface PdfModel.
 func (sig *PdfSignature) GetContainingPdfObject() core.PdfObject {
 	return sig.container
