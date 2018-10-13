@@ -2724,7 +2724,8 @@ func TestCompressStreams(t *testing.T) {
 		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
 		times := model.NewStandard14FontMustCompile(model.TimesRoman)
 		page.Resources.SetFontByName("Times", times.ToPdfObject())
-		rawContent := `BT
+		rawContent := `
+BT
 /Times 56 Tf
 20 600 Td
 (The multiline example text)Tj
@@ -2739,7 +2740,8 @@ func TestCompressStreams(t *testing.T) {
 (example text)'
 (example text)'
 (example text)'
-ET`
+ET
+`
 		{
 			cstreams, err := page.GetContentStreams()
 			if err != nil {
