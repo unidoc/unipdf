@@ -409,7 +409,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// 2-byte character codes ➞ runes
 	runes := make([]uint16, 0, len(ttf.Chars))
-	for _, r := range ttf.Chars {
+	for r := range ttf.Chars {
 		runes = append(runes, r)
 	}
 
