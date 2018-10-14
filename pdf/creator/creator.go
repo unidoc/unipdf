@@ -719,6 +719,6 @@ func (c *Creator) NewImageFromFile(path string) (*Image, error) {
 }
 
 // NewImageFromGoImage creates an Image from a go image.Image data structure.
-func NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
+func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	return newImageFromGoImage(goimg)
 }

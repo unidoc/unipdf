@@ -2008,7 +2008,7 @@ func TestQRCodeOnNewPage(t *testing.T) {
 		return
 	}
 
-	img, err := NewImageFromGoImage(qrCode)
+	img, err := creator.NewImageFromGoImage(qrCode)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2027,6 +2027,8 @@ func TestQRCodeOnNewPage(t *testing.T) {
 
 // Example of using a template Page, generating and applying QR
 func TestQRCodeOnTemplate(t *testing.T) {
+	creator := New()
+
 	pages, err := loadPagesFromFile(testPdfTemplatesFile1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -2053,7 +2055,7 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	}
 
 	// Prepare content image.
-	image, err := NewImageFromGoImage(qrCode)
+	image, err := creator.NewImageFromGoImage(qrCode)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -2064,7 +2066,6 @@ func TestQRCodeOnTemplate(t *testing.T) {
 
 	tpl.Draw(image)
 
-	creator := New()
 	creator.NewPage()
 	creator.Draw(tpl)
 
