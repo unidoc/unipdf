@@ -47,8 +47,8 @@ type Table struct {
 	margins margins
 }
 
-// NewTable create a new Table with a specified number of columns.
-func NewTable(cols int) *Table {
+// newTable create a new Table with a specified number of columns.
+func newTable(cols int) *Table {
 	t := &Table{}
 	t.rows = 0
 	t.cols = cols
@@ -454,12 +454,19 @@ const (
 type CellBorderSide int
 
 const (
-	// Left side border.
+	// CellBorderSideLeft adds border on the left side of the table.
 	CellBorderSideLeft CellBorderSide = iota
+
+	// CellBorderSideRight adds a border on the right side of the table.
 	CellBorderSideRight
+
+	// CellBorderSideTop adds a border on the top side of the table.
 	CellBorderSideTop
+
+	// CellBorderSideBottom adds a border on the bottom side of the table.
 	CellBorderSideBottom
-	// Border on all sides.
+
+	// CellBorderSideAll adds borders on all sides of the table.
 	CellBorderSideAll
 )
 

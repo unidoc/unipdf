@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Subchapter simply represents a sub chapter pertaining to a specific Chapter.  It can contain
@@ -42,37 +41,30 @@ type Subchapter struct {
 	toc *TOC
 }
 
-// NewSubchapter creates a new Subchapter under Chapter ch with specified title.
+// newSubchapter creates a new Subchapter under Chapter ch with specified title.
 // All other parameters are set to their defaults.
-func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
-	subchap := &Subchapter{}
-
+func newSubchapter(ch *Chapter, title string, style TextStyle) *Subchapter {
 	ch.subchapters++
-	subchap.subchapterNum = ch.subchapters
 
-	subchap.chapterNum = ch.number
-	subchap.title = title
-
-	heading := fmt.Sprintf("%d.%d %s", subchap.chapterNum, subchap.subchapterNum, title)
-	p := NewParagraph(heading)
-
+	p := newParagraph(fmt.Sprintf("%d.%d %s", ch.number, ch.subchapters, title), style)
+	p.SetFont(style.Font) // bold?
 	p.SetFontSize(14)
-	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
-	p.SetFont(helvetica) // bold?
 
-	subchap.showNumbering = true
-	subchap.includeInTOC = true
+	subchapter := &Subchapter{
+		subchapterNum: ch.subchapters,
+		chapterNum:    ch.number,
+		title:         title,
+		showNumbering: true,
+		includeInTOC:  true,
+		heading:       p,
+		contents:      []Drawable{},
+		toc:           ch.toc,
+	}
 
-	subchap.heading = p
-	subchap.contents = []Drawable{}
+	// Add subchapter to chapter.
+	ch.Add(subchapter)
 
-	// Add subchapter to ch.
-	ch.Add(subchap)
-
-	// Keep a reference for toc.
-	subchap.toc = c.toc
-
-	return subchap
+	return subchapter
 }
 
 // SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.

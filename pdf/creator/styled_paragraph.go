@@ -14,20 +14,16 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
 // By default occupies the available width in the drawing context.
 type StyledParagraph struct {
 	// Text chunks with styles that compose the paragraph.
-	chunks []TextChunk
+	chunks []*TextChunk
 
 	// Style used for the paragraph for spacing and offsets.
 	defaultStyle TextStyle
-
-	// The text encoder which can convert the text (as runes) into a series of glyphs and get character metrics.
-	encoder textencoding.TextEncoder
 
 	// Text alignment: Align left/right/center/justify.
 	alignment TextAlignment
@@ -62,25 +58,18 @@ type StyledParagraph struct {
 	scaleY float64
 
 	// Text chunk lines after wrapping to available width.
-	lines [][]TextChunk
+	lines [][]*TextChunk
 
 	// Before render callback.
 	beforeRender func(p *StyledParagraph, ctx DrawContext)
 }
 
-// NewStyledParagraph creates a new styled paragraph.
-// Uses default parameters: Helvetica, WinAnsiEncoding and wrap enabled
-// with a wrap width of 100 points.
-func NewStyledParagraph(text string, style TextStyle) *StyledParagraph {
+// newStyledParagraph creates a new styled paragraph.
+func newStyledParagraph(style TextStyle) *StyledParagraph {
 	// TODO: Can we wrap intellectually, only if given width is known?
 	p := &StyledParagraph{
-		chunks: []TextChunk{
-			TextChunk{
-				Text:  text,
-				Style: style,
-			},
-		},
-		defaultStyle: NewTextStyle(),
+		chunks:       []*TextChunk{},
+		defaultStyle: style,
 		lineHeight:   1.0,
 		alignment:    TextAlignmentLeft,
 		enableWrap:   true,
@@ -91,61 +80,48 @@ func NewStyledParagraph(text string, style TextStyle) *StyledParagraph {
 		positioning:  positionRelative,
 	}
 
-	p.SetEncoder(textencoding.NewWinAnsiTextEncoder())
 	return p
 }
 
-// Append adds a new text chunk with a specified style to the paragraph.
-func (p *StyledParagraph) Append(text string, style TextStyle) {
-	chunk := TextChunk{
+// Append adds a new text chunk to the paragraph.
+func (p *StyledParagraph) Append(text string) *TextChunk {
+	chunk := &TextChunk{
 		Text:  text,
-		Style: style,
+		Style: p.defaultStyle,
 	}
-	chunk.Style.Font.SetEncoder(p.encoder)
 
 	p.chunks = append(p.chunks, chunk)
 	p.wrapText()
+
+	return chunk
 }
 
 // Insert adds a new text chunk at the specified position in the paragraph.
-func (p *StyledParagraph) Insert(index uint, text string, style TextStyle) {
+func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 	l := uint(len(p.chunks))
 	if index > l {
 		index = l
 	}
 
-	chunk := TextChunk{
+	chunk := &TextChunk{
 		Text:  text,
-		Style: style,
+		Style: p.defaultStyle,
 	}
-	chunk.Style.Font.SetEncoder(p.encoder)
 
-	p.chunks = append(p.chunks[:index], append([]TextChunk{chunk}, p.chunks[index:]...)...)
+	p.chunks = append(p.chunks[:index], append([]*TextChunk{chunk}, p.chunks[index:]...)...)
 	p.wrapText()
+
+	return chunk
 }
 
-// Reset sets the entire text and also the style of the paragraph
-// to those specified. It behaves as if the paragraph was a new one.
-func (p *StyledParagraph) Reset(text string, style TextStyle) {
-	p.chunks = []TextChunk{}
-	p.Append(text, style)
+// Reset removes all the text chunks the paragraph contains.
+func (p *StyledParagraph) Reset() {
+	p.chunks = []*TextChunk{}
 }
 
 // SetTextAlignment sets the horizontal alignment of the text within the space provided.
 func (p *StyledParagraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
-}
-
-// SetEncoder sets the text encoding.
-func (p *StyledParagraph) SetEncoder(encoder textencoding.TextEncoder) {
-	p.encoder = encoder
-	p.defaultStyle.Font.SetEncoder(encoder)
-
-	// Sync with the text font too.
-	// XXX/FIXME: Keep in 1 place only.
-	for _, chunk := range p.chunks {
-		chunk.Style.Font.SetEncoder(encoder)
-	}
 }
 
 // SetLineHeight sets the line height (1.0 default).
@@ -230,7 +206,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 		style := &chunk.Style
 
 		for _, rune := range chunk.Text {
-			glyph, found := p.encoder.RuneToGlyph(rune)
+			glyph, found := style.Font.Encoder().RuneToGlyph(rune)
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
 
@@ -259,13 +235,13 @@ func (p *StyledParagraph) getTextWidth() float64 {
 }
 
 // getTextLineWidth calculates the text width of a provided collection of text chunks.
-func (p *StyledParagraph) getTextLineWidth(line []TextChunk) float64 {
+func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 	var width float64
 	for _, chunk := range line {
 		style := &chunk.Style
 
 		for _, r := range chunk.Text {
-			glyph, found := p.encoder.RuneToGlyph(r)
+			glyph, found := style.Font.Encoder().RuneToGlyph(r)
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %s\n", r)
 
@@ -328,12 +304,12 @@ func (p *StyledParagraph) getTextHeight() float64 {
 // XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *StyledParagraph) wrapText() error {
 	if !p.enableWrap || int(p.wrapWidth) <= 0 {
-		p.lines = [][]TextChunk{p.chunks}
+		p.lines = [][]*TextChunk{p.chunks}
 		return nil
 	}
 
-	p.lines = [][]TextChunk{}
-	var line []TextChunk
+	p.lines = [][]*TextChunk{}
+	var line []*TextChunk
 	var lineWidth float64
 
 	for _, chunk := range p.chunks {
@@ -344,7 +320,7 @@ func (p *StyledParagraph) wrapText() error {
 		var widths []float64
 
 		for _, r := range chunk.Text {
-			glyph, found := p.encoder.RuneToGlyph(r)
+			glyph, found := style.Font.Encoder().RuneToGlyph(r)
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %v\n", r)
 
@@ -355,12 +331,12 @@ func (p *StyledParagraph) wrapText() error {
 			// newline wrapping.
 			if glyph == "controlLF" {
 				// moves to next line.
-				line = append(line, TextChunk{
+				line = append(line, &TextChunk{
 					Text:  strings.TrimRightFunc(string(part), unicode.IsSpace),
 					Style: style,
 				})
 				p.lines = append(p.lines, line)
-				line = []TextChunk{}
+				line = []*TextChunk{}
 
 				lineWidth = 0
 				part = []rune{}
@@ -413,12 +389,12 @@ func (p *StyledParagraph) wrapText() error {
 					widths = []float64{w}
 				}
 
-				line = append(line, TextChunk{
+				line = append(line, &TextChunk{
 					Text:  strings.TrimRightFunc(string(text), unicode.IsSpace),
 					Style: style,
 				})
 				p.lines = append(p.lines, line)
-				line = []TextChunk{}
+				line = []*TextChunk{}
 			} else {
 				lineWidth += w
 				part = append(part, r)
@@ -428,7 +404,7 @@ func (p *StyledParagraph) wrapText() error {
 		}
 
 		if len(part) > 0 {
-			line = append(line, TextChunk{
+			line = append(line, &TextChunk{
 				Text:  string(part),
 				Style: style,
 			})
@@ -588,7 +564,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			var chunkSpaces uint
 			for _, r := range chunk.Text {
-				glyph, found := p.encoder.RuneToGlyph(r)
+				glyph, found := style.Font.Encoder().RuneToGlyph(r)
 				if !found {
 					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
 					return ctx, errors.New("Unsupported rune in text encoding")
@@ -661,7 +637,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			var encStr []byte
 			for _, rn := range chunk.Text {
-				glyph, found := p.encoder.RuneToGlyph(rn)
+				glyph, found := style.Font.Encoder().RuneToGlyph(rn)
 				if !found {
 					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
 					return ctx, errors.New("Unsupported rune in text encoding")
@@ -686,7 +662,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 						Add_TL(fontSize * p.lineHeight).
 						Add_TJ([]core.PdfObject{core.MakeFloat(-spaceWidth)}...)
 				} else {
-					encStr = append(encStr, p.encoder.Encode(string(rn))...)
+					encStr = append(encStr, style.Font.Encoder().Encode(string(rn))...)
 				}
 			}
 
