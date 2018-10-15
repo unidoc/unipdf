@@ -23,8 +23,8 @@ type Rectangle struct {
 	borderWidth float64
 }
 
-// NewRectangle creates a new Rectangle with default parameters with left corner at (x,y) and width, height as specified.
-func NewRectangle(x, y, width, height float64) *Rectangle {
+// newRectangle creates a new Rectangle with default parameters with left corner at (x,y) and width, height as specified.
+func newRectangle(x, y, width, height float64) *Rectangle {
 	rect := &Rectangle{}
 
 	rect.x = x

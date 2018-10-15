@@ -22,8 +22,8 @@ type FilledCurve struct {
 	borderColor   *pdf.PdfColorDeviceRGB
 }
 
-// NewFilledCurve returns a instance of filled curve.
-func NewFilledCurve() *FilledCurve {
+// newFilledCurve returns a instance of filled curve.
+func newFilledCurve() *FilledCurve {
 	curve := FilledCurve{}
 	curve.curves = []draw.CubicBezierCurve{}
 	return &curve

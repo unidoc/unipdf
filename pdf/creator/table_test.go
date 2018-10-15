@@ -21,7 +21,7 @@ var (
 func TestTableMultiParagraphWrapped(t *testing.T) {
 	c := New()
 
-	pageHistoryTable := NewTable(4)
+	pageHistoryTable := c.NewTable(4)
 	pageHistoryTable.SetColumnWidths(0.1, 0.6, 0.15, 0.15)
 	content := [][]string{
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
@@ -33,7 +33,7 @@ func TestTableMultiParagraphWrapped(t *testing.T) {
 
 	for _, rows := range content {
 		for _, txt := range rows {
-			p := NewParagraph(txt)
+			p := c.NewParagraph(txt)
 			p.SetFontSize(12)
 			p.SetFont(fontHelvetica)
 			p.SetColor(ColorBlack)
@@ -59,7 +59,7 @@ func TestTableMultiParagraphWrapped(t *testing.T) {
 func TestTableWithImage(t *testing.T) {
 	c := New()
 
-	pageHistoryTable := NewTable(4)
+	pageHistoryTable := c.NewTable(4)
 	pageHistoryTable.SetColumnWidths(0.1, 0.6, 0.15, 0.15)
 	content := [][]string{
 		{"1", "FullText Search Highlight the Term in Results \n\nissues 60", "120", "130"},
@@ -70,7 +70,7 @@ func TestTableWithImage(t *testing.T) {
 	}
 	for _, rows := range content {
 		for _, txt := range rows {
-			p := NewParagraph(txt)
+			p := c.NewParagraph(txt)
 			p.SetFontSize(12)
 			p.SetFont(fontHelvetica)
 			p.SetColor(ColorBlack)
@@ -93,7 +93,7 @@ func TestTableWithImage(t *testing.T) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	img, err := NewImageFromData(imgData)
+	img, err := c.NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -124,7 +124,7 @@ func TestTableWithImage(t *testing.T) {
 func TestTableWithDiv(t *testing.T) {
 	c := New()
 
-	pageHistoryTable := NewTable(4)
+	pageHistoryTable := c.NewTable(4)
 	pageHistoryTable.SetColumnWidths(0.1, 0.6, 0.15, 0.15)
 
 	headings := []string{
@@ -155,7 +155,7 @@ func TestTableWithDiv(t *testing.T) {
 	}
 	for _, rows := range content {
 		for colIdx, txt := range rows {
-			p := NewParagraph(txt)
+			p := c.NewParagraph(txt)
 			p.SetFontSize(12)
 			p.SetFont(fontHelvetica)
 			p.SetColor(ColorBlack)
@@ -167,10 +167,10 @@ func TestTableWithDiv(t *testing.T) {
 			}
 
 			// Place cell contents (header and text) inside a div.
-			div := NewDivision()
+			div := c.NewDivision()
 
 			if len(headings[colIdx]) > 0 {
-				heading := NewParagraph(headings[colIdx])
+				heading := c.NewParagraph(headings[colIdx])
 				heading.SetFontSize(14)
 				heading.SetFont(fontHelveticaBold)
 				heading.SetColor(ColorRed)
@@ -203,7 +203,7 @@ func TestTableWithDiv(t *testing.T) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	img, err := NewImageFromData(imgData)
+	img, err := c.NewImageFromData(imgData)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return

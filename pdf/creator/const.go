@@ -12,7 +12,8 @@ type PageSize [2]float64
 var PPI float64 = 72 // Points per inch. (Default resolution).
 
 // PPMM specifies the default PDF resolution in points/mm.
-var PPMM float64 = 72 * 1.0 / 25.4 // Points per mm. (Default resolution).
+// Points per mm. (Default resolution).
+var PPMM = float64(72 * 1.0 / 25.4)
 
 //
 // Commonly used page sizes

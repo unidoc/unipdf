@@ -7,17 +7,17 @@ package creator
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func TestTOCAdvanced(t *testing.T) {
-	fontHelvetica := fonts.NewFontHelvetica()
-	fontHelveticaBold := fonts.NewFontHelveticaBold()
+	fontHelvetica := model.NewStandard14FontMustCompile(model.Helvetica)
+	fontHelveticaBold := model.NewStandard14FontMustCompile(model.HelveticaBold)
 
 	c := New()
 	c.NewPage()
 
-	toc := NewTOC("Table of Contents")
+	toc := c.NewTOC("Table of Contents")
 
 	// Set separator and margins for all the lines.
 	toc.SetLineSeparator(".")
@@ -25,7 +25,7 @@ func TestTOCAdvanced(t *testing.T) {
 	toc.SetLineLevelOffset(12)
 
 	// Set style for all line numbers.
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 	style.Font = fontHelveticaBold
 	style.Color = ColorRGBFrom8bit(100, 100, 100)
 	toc.SetLineNumberStyle(style)

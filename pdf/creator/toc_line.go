@@ -44,11 +44,9 @@ type TOCLine struct {
 	positioning positioning
 }
 
-// NewTOCLine creates a new table of contents line with the default style.
-func NewTOCLine(number, title, page string, level uint) *TOCLine {
-	style := NewTextStyle()
-
-	return NewStyledTOCLine(
+// newTOCLine creates a new table of contents line with the default style.
+func newTOCLine(number, title, page string, level uint, style TextStyle) *TOCLine {
+	return newStyledTOCLine(
 		TextChunk{
 			Text:  number,
 			Style: style,
@@ -62,14 +60,13 @@ func NewTOCLine(number, title, page string, level uint) *TOCLine {
 			Style: style,
 		},
 		level,
+		style,
 	)
 }
 
-// NewStyledTOCLine creates a new table of contents line with the provided style.
-func NewStyledTOCLine(number, title, page TextChunk, level uint) *TOCLine {
-	style := NewTextStyle()
-
-	sp := NewStyledParagraph("", style)
+// newStyledTOCLine creates a new table of contents line with the provided style.
+func newStyledTOCLine(number, title, page TextChunk, level uint, style TextStyle) *TOCLine {
+	sp := newStyledParagraph(style)
 	sp.SetEnableWrap(true)
 	sp.SetTextAlignment(TextAlignmentLeft)
 	sp.SetMargins(0, 0, 2, 2)
@@ -157,19 +154,18 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 		page = " " + page
 	}
 
-	sp.chunks = []TextChunk{
-		tl.Number,
-		TextChunk{
+	sp.chunks = []*TextChunk{
+		&tl.Number,
+		&TextChunk{
 			Text:  title,
 			Style: tl.Title.Style,
 		},
-		TextChunk{
+		&TextChunk{
 			Text:  page,
 			Style: tl.Page.Style,
 		},
 	}
 
-	sp.SetEncoder(sp.encoder)
 	sp.wrapText()
 
 	// Insert separator.
@@ -179,12 +175,13 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	}
 
 	availWidth := ctx.Width*1000 - sp.getTextLineWidth(sp.lines[l-1])
-	sepWidth := sp.getTextLineWidth([]TextChunk{tl.Separator})
+	sepWidth := sp.getTextLineWidth([]*TextChunk{&tl.Separator})
 	sepCount := int(availWidth / sepWidth)
 	sepText := strings.Repeat(tl.Separator.Text, sepCount)
 	sepStyle := tl.Separator.Style
 
-	sp.Insert(2, sepText, sepStyle)
+	chunk := sp.Insert(2, sepText)
+	chunk.Style = sepStyle
 
 	// Push page numbers to the end of the line.
 	availWidth = availWidth - float64(sepCount)*sepWidth
@@ -195,7 +192,9 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 			if spaces > 0 {
 				style := sepStyle
 				style.FontSize = 1
-				sp.Insert(2, strings.Repeat(" ", spaces), style)
+
+				chunk = sp.Insert(2, strings.Repeat(" ", spaces))
+				chunk.Style = style
 			}
 		}
 	}

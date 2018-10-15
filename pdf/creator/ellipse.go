@@ -23,8 +23,8 @@ type Ellipse struct {
 	borderWidth float64
 }
 
-// NewEllipse creates a new ellipse centered at (xc,yc) with a width and height specified.
-func NewEllipse(xc, yc, width, height float64) *Ellipse {
+// newEllipse creates a new ellipse centered at (xc,yc) with a width and height specified.
+func newEllipse(xc, yc, width, height float64) *Ellipse {
 	ell := &Ellipse{}
 
 	ell.xc = xc
