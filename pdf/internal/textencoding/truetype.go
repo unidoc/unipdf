@@ -6,7 +6,6 @@
 package textencoding
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -64,20 +63,7 @@ func (enc TrueTypeFontEncoder) String() string {
 
 // Encode converts the Go unicode string `raw` to a PDF encoded string.
 func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
-	// runes -> character codes -> bytes
-	var encoded bytes.Buffer
-	for _, r := range raw {
-		code, ok := enc.RuneToCharcode(r)
-		if !ok {
-			common.Log.Debug("Failed to map rune to charcode. rune=%+q", r)
-			continue
-		}
-
-		// Each entry represented by 2 bytes.
-		encoded.WriteByte(byte((code & 0xff00) >> 8))
-		encoded.WriteByte(byte(code & 0xff))
-	}
-	return encoded.Bytes()
+	return encodeString16bit(enc, raw)
 }
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.

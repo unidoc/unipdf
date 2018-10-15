@@ -6,7 +6,6 @@
 package textencoding
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
@@ -31,20 +30,7 @@ func (enc IdentityEncoder) String() string {
 
 // Encode converts the Go unicode string `raw` to a PDF encoded string.
 func (enc IdentityEncoder) Encode(raw string) []byte {
-	// runes -> character codes -> bytes
-	var encoded bytes.Buffer
-	for _, r := range raw {
-		code, ok := enc.RuneToCharcode(r)
-		if !ok {
-			common.Log.Debug("Failed to map rune to charcode. rune=%+q", r)
-			continue
-		}
-
-		// Each entry represented by 2 bytes.
-		encoded.WriteByte(byte((code & 0xff00) >> 8))
-		encoded.WriteByte(byte(code & 0xff))
-	}
-	return encoded.Bytes()
+	return encodeString16bit(enc, raw)
 }
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
