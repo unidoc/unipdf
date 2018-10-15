@@ -36,14 +36,14 @@ func NewContentStreamParser(contentStr string) *ContentStreamParser {
 }
 
 // Parse parses all commands in content stream, returning a list of operation data.
-func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
+func (csp *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 	operations := ContentStreamOperations{}
 
 	for {
 		operation := ContentStreamOperation{}
 
 		for {
-			obj, err, isOperand := this.parseObject()
+			obj, err, isOperand := csp.parseObject()
 			if err != nil {
 				if err == io.EOF {
 					// End of data. Successful exit point.
@@ -63,7 +63,7 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 		if operation.Operand == "BI" {
 			// Parse an inline image, reads everything between the "BI" and "EI".
 			// The image is stored as the parameter.
-			im, err := this.ParseInlineImage()
+			im, err := csp.ParseInlineImage()
 			if err != nil {
 				return &operations, err
 			}
@@ -74,15 +74,15 @@ func (this *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 
 // Skip over any spaces.  Returns the number of spaces skipped and
 // an error if any.
-func (this *ContentStreamParser) skipSpaces() (int, error) {
+func (csp *ContentStreamParser) skipSpaces() (int, error) {
 	cnt := 0
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			return 0, err
 		}
 		if core.IsWhiteSpace(bb[0]) {
-			this.reader.ReadByte()
+			csp.reader.ReadByte()
 			cnt++
 		} else {
 			break
@@ -93,14 +93,14 @@ func (this *ContentStreamParser) skipSpaces() (int, error) {
 }
 
 // Skip over comments and spaces. Can handle multi-line comments.
-func (this *ContentStreamParser) skipComments() error {
-	if _, err := this.skipSpaces(); err != nil {
+func (csp *ContentStreamParser) skipComments() error {
+	if _, err := csp.skipSpaces(); err != nil {
 		return err
 	}
 
 	isFirst := true
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			common.Log.Debug("Error %s", err.Error())
 			return err
@@ -112,22 +112,22 @@ func (this *ContentStreamParser) skipComments() error {
 			isFirst = false
 		}
 		if (bb[0] != '\r') && (bb[0] != '\n') {
-			this.reader.ReadByte()
+			csp.reader.ReadByte()
 		} else {
 			break
 		}
 	}
 
 	// Call recursively to handle multiline comments.
-	return this.skipComments()
+	return csp.skipComments()
 }
 
 // Parse a name starting with '/'.
-func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
+func (csp *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 	name := ""
 	nameStarted := false
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err == io.EOF {
 			break // Can happen when loading from object stream.
 		}
@@ -139,7 +139,7 @@ func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 			// Should always start with '/', otherwise not valid.
 			if bb[0] == '/' {
 				nameStarted = true
-				this.reader.ReadByte()
+				csp.reader.ReadByte()
 			} else {
 				common.Log.Error("Name starting with %s (% x)", bb, bb)
 				return core.PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
@@ -150,11 +150,11 @@ func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 			} else if (bb[0] == '/') || (bb[0] == '[') || (bb[0] == '(') || (bb[0] == ']') || (bb[0] == '<') || (bb[0] == '>') {
 				break // Looks like start of next statement.
 			} else if bb[0] == '#' {
-				hexcode, err := this.reader.Peek(3)
+				hexcode, err := csp.reader.Peek(3)
 				if err != nil {
 					return core.PdfObjectName(name), err
 				}
-				this.reader.Discard(3)
+				csp.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
@@ -162,7 +162,7 @@ func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 				}
 				name += string(code)
 			} else {
-				b, _ := this.reader.ReadByte()
+				b, _ := csp.reader.ReadByte()
 				name += string(b)
 			}
 		}
@@ -190,13 +190,13 @@ func (this *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 // Nonetheless, we sometimes get numbers with exponential format, so
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
-func (this *ContentStreamParser) parseNumber() (core.PdfObject, error) {
+func (csp *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 	isFloat := false
 	allowSigns := true
 	numStr := ""
 	for {
 		common.Log.Trace("Parsing number \"%s\"", numStr)
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
 			// encoded object streams that the object is at the end.
@@ -209,19 +209,19 @@ func (this *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 		}
 		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
 			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := this.reader.ReadByte()
+			b, _ := csp.reader.ReadByte()
 			numStr += string(b)
 			allowSigns = false // Only allowed in beginning, and after e (exponential).
 		} else if core.IsDecimalDigit(bb[0]) {
-			b, _ := this.reader.ReadByte()
+			b, _ := csp.reader.ReadByte()
 			numStr += string(b)
 		} else if bb[0] == '.' {
-			b, _ := this.reader.ReadByte()
+			b, _ := csp.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
-			b, _ := this.reader.ReadByte()
+			b, _ := csp.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
 			allowSigns = true
@@ -252,27 +252,27 @@ func (this *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 }
 
 // A string starts with '(' and ends with ')'.
-func (this *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
-	this.reader.ReadByte()
+func (csp *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
+	csp.reader.ReadByte()
 
 	bytes := []byte{}
 	count := 1
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			return core.MakeString(string(bytes)), err
 		}
 
 		if bb[0] == '\\' { // Escape sequence.
-			this.reader.ReadByte() // Skip the escape \ byte.
-			b, err := this.reader.ReadByte()
+			csp.reader.ReadByte() // Skip the escape \ byte.
+			b, err := csp.reader.ReadByte()
 			if err != nil {
 				return core.MakeString(string(bytes)), err
 			}
 
 			// Octal '\ddd' number (base 8).
 			if core.IsOctalDigit(b) {
-				bb, err := this.reader.Peek(2)
+				bb, err := csp.reader.Peek(2)
 				if err != nil {
 					return core.MakeString(string(bytes)), err
 				}
@@ -286,7 +286,7 @@ func (this *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 						break
 					}
 				}
-				this.reader.Discard(len(numeric) - 1)
+				csp.reader.Discard(len(numeric) - 1)
 
 				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
@@ -322,12 +322,12 @@ func (this *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 		} else if bb[0] == ')' {
 			count--
 			if count == 0 {
-				this.reader.ReadByte()
+				csp.reader.ReadByte()
 				break
 			}
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := csp.reader.ReadByte()
 		bytes = append(bytes, b)
 	}
 
@@ -335,26 +335,26 @@ func (this *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 }
 
 // Starts with '<' ends with '>'.
-func (this *ContentStreamParser) parseHexString() (*core.PdfObjectString, error) {
-	this.reader.ReadByte()
+func (csp *ContentStreamParser) parseHexString() (*core.PdfObjectString, error) {
+	csp.reader.ReadByte()
 
 	hextable := []byte("0123456789abcdefABCDEF")
 
 	tmp := []byte{}
 	for {
-		this.skipSpaces()
+		csp.skipSpaces()
 
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			return core.MakeString(""), err
 		}
 
 		if bb[0] == '>' {
-			this.reader.ReadByte()
+			csp.reader.ReadByte()
 			break
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := csp.reader.ReadByte()
 		if bytes.IndexByte(hextable, b) >= 0 {
 			tmp = append(tmp, b)
 		}
@@ -369,25 +369,25 @@ func (this *ContentStreamParser) parseHexString() (*core.PdfObjectString, error)
 }
 
 // Starts with '[' ends with ']'.  Can contain any kinds of direct objects.
-func (this *ContentStreamParser) parseArray() (*core.PdfObjectArray, error) {
+func (csp *ContentStreamParser) parseArray() (*core.PdfObjectArray, error) {
 	arr := core.MakeArray()
 
-	this.reader.ReadByte()
+	csp.reader.ReadByte()
 
 	for {
-		this.skipSpaces()
+		csp.skipSpaces()
 
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			return arr, err
 		}
 
 		if bb[0] == ']' {
-			this.reader.ReadByte()
+			csp.reader.ReadByte()
 			break
 		}
 
-		obj, err, _ := this.parseObject()
+		obj, err, _ := csp.parseObject()
 		if err != nil {
 			return arr, err
 		}
@@ -398,22 +398,22 @@ func (this *ContentStreamParser) parseArray() (*core.PdfObjectArray, error) {
 }
 
 // Parse bool object.
-func (this *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
-	bb, err := this.reader.Peek(4)
+func (csp *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
+	bb, err := csp.reader.Peek(4)
 	if err != nil {
 		return core.PdfObjectBool(false), err
 	}
 	if (len(bb) >= 4) && (string(bb[:4]) == "true") {
-		this.reader.Discard(4)
+		csp.reader.Discard(4)
 		return core.PdfObjectBool(true), nil
 	}
 
-	bb, err = this.reader.Peek(5)
+	bb, err = csp.reader.Peek(5)
 	if err != nil {
 		return core.PdfObjectBool(false), err
 	}
 	if (len(bb) >= 5) && (string(bb[:5]) == "false") {
-		this.reader.Discard(5)
+		csp.reader.Discard(5)
 		return core.PdfObjectBool(false), nil
 	}
 
@@ -421,30 +421,30 @@ func (this *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
 }
 
 // Parse null object.
-func (this *ContentStreamParser) parseNull() (core.PdfObjectNull, error) {
-	_, err := this.reader.Discard(4)
+func (csp *ContentStreamParser) parseNull() (core.PdfObjectNull, error) {
+	_, err := csp.reader.Discard(4)
 	return core.PdfObjectNull{}, err
 }
 
-func (this *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
+func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 	common.Log.Trace("Reading content stream dict!")
 
 	dict := core.MakeDict()
 
 	// Pass the '<<'
-	c, _ := this.reader.ReadByte()
+	c, _ := csp.reader.ReadByte()
 	if c != '<' {
 		return nil, errors.New("Invalid dict")
 	}
-	c, _ = this.reader.ReadByte()
+	c, _ = csp.reader.ReadByte()
 	if c != '<' {
 		return nil, errors.New("Invalid dict")
 	}
 
 	for {
-		this.skipSpaces()
+		csp.skipSpaces()
 
-		bb, err := this.reader.Peek(2)
+		bb, err := csp.reader.Peek(2)
 		if err != nil {
 			return nil, err
 		}
@@ -452,13 +452,13 @@ func (this *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) 
 		common.Log.Trace("Dict peek: %s (% x)!", string(bb), string(bb))
 		if (bb[0] == '>') && (bb[1] == '>') {
 			common.Log.Trace("EOF dictionary")
-			this.reader.ReadByte()
-			this.reader.ReadByte()
+			csp.reader.ReadByte()
+			csp.reader.ReadByte()
 			break
 		}
 		common.Log.Trace("Parse the name!")
 
-		keyName, err := this.parseName()
+		keyName, err := csp.parseName()
 		common.Log.Trace("Key: %s", keyName)
 		if err != nil {
 			common.Log.Debug("ERROR Returning name err %s", err)
@@ -471,17 +471,17 @@ func (this *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) 
 			newKey := keyName[0 : len(keyName)-4]
 			common.Log.Trace("Taking care of null bug (%s)", keyName)
 			common.Log.Trace("New key \"%s\" = null", newKey)
-			this.skipSpaces()
-			bb, _ := this.reader.Peek(1)
+			csp.skipSpaces()
+			bb, _ := csp.reader.Peek(1)
 			if bb[0] == '/' {
 				dict.Set(newKey, core.MakeNull())
 				continue
 			}
 		}
 
-		this.skipSpaces()
+		csp.skipSpaces()
 
-		val, err, _ := this.parseObject()
+		val, err, _ := csp.parseObject()
 		if err != nil {
 			return nil, err
 		}
@@ -494,10 +494,10 @@ func (this *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) 
 }
 
 // An operand is a text command represented by a word.
-func (this *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
+func (csp *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
 	bytes := []byte{}
 	for {
-		bb, err := this.reader.Peek(1)
+		bb, err := csp.reader.Peek(1)
 		if err != nil {
 			return core.MakeString(string(bytes)), err
 		}
@@ -508,7 +508,7 @@ func (this *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
 			break
 		}
 
-		b, _ := this.reader.ReadByte()
+		b, _ := csp.reader.ReadByte()
 		bytes = append(bytes, b)
 	}
 
@@ -518,14 +518,14 @@ func (this *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
 // Parse a generic object.  Returns the object, an error code, and a bool
 // value indicating whether the object is an operand.  An operand
 // is contained in a pdf string object.
-func (this *ContentStreamParser) parseObject() (obj core.PdfObject, err error, isop bool) {
+func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, err error, isop bool) {
 	// Determine the kind of object.
 	// parse it!
 	// make a list of operands, then once operand arrives put into a package.
 
-	this.skipSpaces()
+	csp.skipSpaces()
 	for {
-		bb, err := this.reader.Peek(2)
+		bb, err := csp.reader.Peek(2)
 		if err != nil {
 			return nil, err, false
 		}
@@ -533,51 +533,51 @@ func (this *ContentStreamParser) parseObject() (obj core.PdfObject, err error, i
 		common.Log.Trace("Peek string: %s", string(bb))
 		// Determine type.
 		if bb[0] == '%' {
-			this.skipComments()
+			csp.skipComments()
 			continue
 		} else if bb[0] == '/' {
-			name, err := this.parseName()
+			name, err := csp.parseName()
 			common.Log.Trace("->Name: '%s'", name)
 			return &name, err, false
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
-			str, err := this.parseString()
+			str, err := csp.parseString()
 			return str, err, false
 		} else if bb[0] == '<' && bb[1] != '<' {
 			common.Log.Trace("->Hex String!")
-			str, err := this.parseHexString()
+			str, err := csp.parseHexString()
 			return str, err, false
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
-			arr, err := this.parseArray()
+			arr, err := csp.parseArray()
 			return arr, err, false
 		} else if core.IsFloatDigit(bb[0]) || (bb[0] == '-' && core.IsFloatDigit(bb[1])) {
 			common.Log.Trace("->Number!")
-			number, err := this.parseNumber()
+			number, err := csp.parseNumber()
 			return number, err, false
 		} else if bb[0] == '<' && bb[1] == '<' {
-			dict, err := this.parseDict()
+			dict, err := csp.parseDict()
 			return dict, err, false
 		} else {
 			// Otherwise, can be: keyword such as "null", "false", "true" or an operand...
 			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
-			bb, _ = this.reader.Peek(5)
+			bb, _ = csp.reader.Peek(5)
 			peekStr := string(bb)
 			common.Log.Trace("cont Peek str: %s", peekStr)
 
 			if (len(peekStr) > 3) && (peekStr[:4] == "null") {
-				null, err := this.parseNull()
+				null, err := csp.parseNull()
 				return &null, err, false
 			} else if (len(peekStr) > 4) && (peekStr[:5] == "false") {
-				b, err := this.parseBool()
+				b, err := csp.parseBool()
 				return &b, err, false
 			} else if (len(peekStr) > 3) && (peekStr[:4] == "true") {
-				b, err := this.parseBool()
+				b, err := csp.parseBool()
 				return &b, err, false
 			}
 
-			operand, err := this.parseOperand()
+			operand, err := csp.parseOperand()
 			if err != nil {
 				return operand, err, false
 			}
