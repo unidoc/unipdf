@@ -126,15 +126,15 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 			name := page.Resources.GenerateXObjectName()
 			page.Resources.SetXObjectFormByName(name, xform)
 
-			// XXX/TODO: Take Matrix and potential scaling of annotation Rect and appearance BBox into account.
-			// Have yet to find a case where that actually is required.
+			// TODO(gunnsth): Take Matrix and potential scaling of annotation Rect and appearance
+			// BBox into account. Have yet to find a case where that actually is required.
 
 			// Placement for XForm.
 			xRect := math.Min(rect.Llx, rect.Urx)
 			yRect := math.Min(rect.Lly, rect.Ury) // Needed for rect in: govdocs 019693.pdf.
 
 			// Generate the content stream to display the XForm.
-			// XXX/TODO: Creating the contentstream directly here as cannot import contentstream package into
+			// TODO(gunnsth): Creating the contentstream directly here as cannot import contentstream package into
 			// model (as contentstream depends on model). Consider if we can change the dependency pattern.
 			ops := []string{}
 			ops = append(ops, "q")
