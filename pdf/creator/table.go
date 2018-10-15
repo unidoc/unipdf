@@ -47,8 +47,8 @@ type Table struct {
 	margins margins
 }
 
-// NewTable create a new Table with a specified number of columns.
-func NewTable(cols int) *Table {
+// newTable create a new Table with a specified number of columns.
+func newTable(cols int) *Table {
 	t := &Table{}
 	t.rows = 0
 	t.cols = cols
@@ -214,6 +214,19 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
+		case *StyledParagraph:
+			sp := t
+			if sp.enableWrap {
+				sp.SetWidth(w - cell.indent)
+			}
+
+			newh := sp.Height() + sp.margins.top + sp.margins.bottom
+			newh += 0.5 * sp.getTextHeight() // TODO: Make the top margin configurable?
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
 		case *Image:
 			img := t
 			newh := img.Height() + img.margins.top + img.margins.bottom
@@ -349,8 +362,20 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		if cell.content != nil {
+			// content width.
+			cw := cell.content.Width()
+			switch t := cell.content.(type) {
+			case *Paragraph:
+				if t.enableWrap {
+					cw = t.getMaxLineWidth() / 1000.0
+				}
+			case *StyledParagraph:
+				if t.enableWrap {
+					cw = t.getMaxLineWidth() / 1000.0
+				}
+			}
+
 			// Account for horizontal alignment:
-			cw := cell.content.Width() // content width.
 			switch cell.horizontalAlignment {
 			case CellHorizontalAlignmentLeft:
 				// Account for indent.
@@ -429,12 +454,19 @@ const (
 type CellBorderSide int
 
 const (
-	// Left side border.
+	// CellBorderSideLeft adds border on the left side of the table.
 	CellBorderSideLeft CellBorderSide = iota
+
+	// CellBorderSideRight adds a border on the right side of the table.
 	CellBorderSideRight
+
+	// CellBorderSideTop adds a border on the top side of the table.
 	CellBorderSideTop
+
+	// CellBorderSideBottom adds a border on the bottom side of the table.
 	CellBorderSideBottom
-	// Border on all sides.
+
+	// CellBorderSideAll adds borders on all sides of the table.
 	CellBorderSideAll
 )
 
@@ -673,13 +705,20 @@ func (cell *TableCell) Width(ctx DrawContext) float64 {
 }
 
 // SetContent sets the cell's content.  The content is a VectorDrawable, i.e. a Drawable with a known height and width.
-// The currently supported VectorDrawable is: *Paragraph.
+// The currently supported VectorDrawable is: *Paragraph, *StyledParagraph.
 func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	switch t := vd.(type) {
 	case *Paragraph:
 		if t.defaultWrap {
-			// Default paragraph settings in table: no wrapping.
-			t.enableWrap = false // No wrapping.
+			// Enable wrapping by default.
+			t.enableWrap = true
+		}
+
+		cell.content = vd
+	case *StyledParagraph:
+		if t.defaultWrap {
+			// Enable wrapping by default.
+			t.enableWrap = true
 		}
 
 		cell.content = vd

@@ -8,6 +8,8 @@ package creator
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -391,18 +393,12 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 			if len(op.Params) == 2 {
 				if name, ok := op.Params[0].(*core.PdfObjectName); ok {
 					if _, processed := fontMap[*name]; !processed {
-						var useName core.PdfObjectName
 						// Process if not already processed.
 						obj, found := resourcesToAdd.GetFontByName(*name)
-						if found {
-							useName = *name
-							for {
-								obj2, found := resources.GetFontByName(useName)
-								if !found || obj2 == obj {
-									break
-								}
-								useName = useName + "0"
-							}
+
+						useName := *name
+						if found && obj != nil {
+							useName = resourcesNextUnusedFontName(name.String(), obj, resources)
 						}
 
 						resources.SetFontByName(useName, obj)
@@ -547,4 +543,28 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 	}
 
 	return nil
+}
+
+func resourcesNextUnusedFontName(name string, font core.PdfObject, resources *model.PdfPageResources) core.PdfObjectName {
+	prefix := strings.TrimRightFunc(strings.TrimSpace(name), func(r rune) bool {
+		return unicode.IsNumber(r)
+	})
+	if prefix == "" {
+		prefix = "Font"
+	}
+
+	num := 0
+	fontName := core.PdfObjectName(name)
+
+	for {
+		f, found := resources.GetFontByName(fontName)
+		if !found || f == font {
+			break
+		}
+
+		num++
+		fontName = core.PdfObjectName(fmt.Sprintf("%s%d", prefix, num))
+	}
+
+	return fontName
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// NewCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
-func NewCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
+// newCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
+func newCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
 	c := &Curve{}
 
 	c.x1 = x1

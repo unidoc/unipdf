@@ -16,7 +16,9 @@ func CreateFillCurve(x0, y0, x1, y1, x2, y2, x3, y3 float64) draw.CubicBezierCur
 }
 
 func TestNewFilledCurve(t *testing.T) {
-	filledCurve := NewFilledCurve()
+	creator := New()
+
+	filledCurve := creator.NewFilledCurve()
 	filledCurve.FillEnabled = true
 	filledCurve.BorderEnabled = true
 	filledCurve.BorderWidth = 2
@@ -34,7 +36,6 @@ func TestNewFilledCurve(t *testing.T) {
 	// Leaf
 	filledCurve.AppendCurve(CreateFillCurve(300, 300, 290, 350, 295, 370, 300, 390))
 
-	creator := New()
 	creator.NewPage()
 	creator.Draw(filledCurve)
 
