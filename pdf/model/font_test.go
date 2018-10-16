@@ -25,6 +25,10 @@ func init() {
 
 var simpleFontDicts = []string{
 	`<< /Type /Font
+		/BaseFont /Courier-BoldOblique
+		/Subtype /Type1
+		>>`,
+	`<< /Type /Font
 		/BaseFont /Helvetica
 		/Subtype /Type1
 		/Encoding /WinAnsiEncoding

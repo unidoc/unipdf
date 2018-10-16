@@ -92,7 +92,7 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 	return font
 }
 
-// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
+// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
@@ -224,18 +224,21 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
 			font.context = &std
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
-			d, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
+			d14, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
-			simplefont, err = newSimpleFontFromPdfObject(d, stdBase, true)
+			for _, k := range d.Keys() {
+				d14.Set(k, d.Get(k))
+			}
+			simplefont, err = newSimpleFontFromPdfObject(d14, stdBase, std.std14Encoder)
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(d, base, false)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, nil)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err)
 				return nil, err
@@ -391,8 +394,6 @@ func (font PdfFont) actualFont() fonts.Font {
 	case *pdfCIDFontType0:
 		return t
 	case *pdfCIDFontType2:
-		return t
-	case fonts.FontCourier:
 		return t
 	default:
 		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
