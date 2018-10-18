@@ -53,9 +53,6 @@ type PdfParser struct {
 	// the length reference (if not object) prior to reading the actual stream.  This has risks of endless looping.
 	// Tracking is necessary to avoid recursive loops.
 	streamLengthReferenceLookupInProgress map[int64]bool
-
-	// Hack to allow parsing of PDF fragments without reporting an EOF error.
-	suppressEOF bool
 }
 
 // PdfVersion returns version of the PDF file.
@@ -1326,9 +1323,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	common.Log.Trace("-Read indirect obj")
 	bb, err := parser.reader.Peek(20)
 	if err != nil {
-		if !(parser.suppressEOF && err == io.EOF) {
-			common.Log.Debug("ERROR: Fail to read indirect obj. err=%v", err)
-		}
+		common.Log.Debug("ERROR: Fail to read indirect obj. err=%v", err)
 		return &indirect, err
 	}
 	common.Log.Trace("(indirect obj peek \"%s\"", string(bb))
@@ -1499,7 +1494,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 // For testing purposes.
 // TODO: Unexport (v3) or move to test files, if needed by external test cases.
 func NewParserFromString(txt string) *PdfParser {
-	parser := PdfParser{suppressEOF: true}
+	parser := PdfParser{}
 	buf := []byte(txt)
 
 	bufReader := bytes.NewReader(buf)
