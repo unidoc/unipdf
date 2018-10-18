@@ -65,7 +65,7 @@ func (font PdfFont) FontDescriptor() *PdfFontDescriptor {
 	if t, ok := font.context.(*pdfFontSimple); ok {
 		return t.std14Descriptor
 	}
-	common.Log.Error("All fonts have a Descriptor font=%s", font)
+	common.Log.Error("All fonts have a Descriptor. font=%s", font)
 	return nil
 }
 

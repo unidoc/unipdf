@@ -728,7 +728,7 @@ var (
 			MaxWidth:     0,
 			MissingWidth: 501,
 		},
-		"Times-talic": DescriptorLiteral{
+		"Times-Italic": DescriptorLiteral{
 			FontName:     "Times-Italic",
 			FontFamily:   "Times",
 			Flags:        0x0060,
