@@ -262,7 +262,7 @@ func ToFontDifferences(differences map[byte]string) *core.PdfObjectArray {
 
 // simpleEncodings is a map of the standard 8 bit character encodings.
 var simpleEncodings = map[string]map[uint16]rune{
-	"MacExpertEncoding": map[uint16]rune{ // 165 entries
+	"MacExpertEncoding": { // 165 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0xf721, //  "exclamsmall"
 		0x22: 0xf6f8, //  "Hungarumlautsmall"
@@ -429,7 +429,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xfa: 0xf6f7, //  "Dotaccentsmall"
 		0xfb: 0xf6fc, //  "Ringsmall"
 	},
-	"MacRomanEncoding": map[uint16]rune{ // 255 entries
+	"MacRomanEncoding": { // 255 entries
 		0x01: 0x0001, //  "controlSTX"
 		0x02: 0x0002, //  "controlSOT"
 		0x03: 0x0003, //  "controlETX"
@@ -686,7 +686,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xfe: 0x02db, //  ˛ "ogonek"
 		0xff: 0x02c7, //  ˇ "caron"
 	},
-	"PdfDocEncoding": map[uint16]rune{ // 252 entries
+	"PdfDocEncoding": { // 252 entries
 		0x01: 0x0001, //  "controlSTX"
 		0x02: 0x0002, //  "controlSOT"
 		0x03: 0x0003, //  "controlETX"
@@ -940,7 +940,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xfe: 0x00fe, //  þ "thorn"
 		0xff: 0x00ff, //  ÿ "ydieresis"
 	},
-	"StandardEncoding": map[uint16]rune{ // 149 entries
+	"StandardEncoding": { // 149 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0x0021, //  ! "exclam"
 		0x22: 0x0022, //  " "quotedbl"
@@ -1091,7 +1091,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xf9: 0x0153, //  œ "oe"
 		0xfa: 0x00df, //  ß "germandbls"
 	},
-	"SymbolEncoding": map[uint16]rune{ // 189 entries
+	"SymbolEncoding": { // 189 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0x0021, //  ! "exclam"
 		0x22: 0x2200, //  ∀ "universal"
@@ -1282,7 +1282,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xfd: 0xf8fd, //  "bracerightmid"
 		0xfe: 0xf8fe, //  "bracerightbt"
 	},
-	"WinAnsiEncoding": map[uint16]rune{ // 224 entries
+	"WinAnsiEncoding": { // 224 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0x0021, //  ! "exclam"
 		0x22: 0x0022, //  " "quotedbl"
@@ -1508,7 +1508,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xfe: 0x00fe, //  þ "thorn"
 		0xff: 0x00ff, //  ÿ "ydieresis"
 	},
-	"ZapfDingbatsEncoding": map[uint16]rune{ // 202 entries
+	"ZapfDingbatsEncoding": { // 202 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0x2701, //  ✁ "a1"
 		0x22: 0x2702, //  ✂ "a2"
