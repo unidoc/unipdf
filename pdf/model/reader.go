@@ -13,6 +13,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
@@ -79,29 +80,7 @@ func (this *PdfReader) IsEncrypted() (bool, error) {
 // GetEncryptionMethod returns a descriptive information string about the encryption method used.
 func (this *PdfReader) GetEncryptionMethod() string {
 	crypter := this.parser.GetCrypter()
-	str := crypter.Filter + " - "
-
-	if crypter.V == 0 {
-		str += "Undocumented algorithm"
-	} else if crypter.V == 1 {
-		// RC4 or AES (bits: 40)
-		str += "RC4: 40 bits"
-	} else if crypter.V == 2 {
-		str += fmt.Sprintf("RC4: %d bits", crypter.Length)
-	} else if crypter.V == 3 {
-		str += "Unpublished algorithm"
-	} else if crypter.V == 4 {
-		// Look at CF, StmF, StrF
-		str += fmt.Sprintf("Stream filter: %s - String filter: %s", crypter.StreamFilter, crypter.StringFilter)
-		str += "; Crypt filters:"
-		for name, cf := range crypter.CryptFilters {
-			str += fmt.Sprintf(" - %s: %s (%d)", name, cf.Cfm, cf.Length)
-		}
-	}
-	perms := crypter.GetAccessPermissions()
-	str += fmt.Sprintf(" - %#v", perms)
-
-	return str
+	return crypter.String()
 }
 
 // Decrypt decrypts the PDF file with a specified password.  Also tries to
@@ -132,7 +111,7 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (this *PdfReader) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (this *PdfReader) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
 	return this.parser.CheckAccessRights(password)
 }
 

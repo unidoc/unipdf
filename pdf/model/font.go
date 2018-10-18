@@ -56,6 +56,19 @@ func (font PdfFont) IsCID() bool {
 	return font.baseFields().isCIDFont()
 }
 
+// FontDescriptor returns font's PdfFontDescriptor. This may be a builtin descriptor for standard 14
+// fonts but must be an explicit descriptor for other fonts.
+func (font PdfFont) FontDescriptor() *PdfFontDescriptor {
+	if font.baseFields().fontDescriptor != nil {
+		return font.baseFields().fontDescriptor
+	}
+	if t, ok := font.context.(*pdfFontSimple); ok {
+		return t.std14Descriptor
+	}
+	common.Log.Error("All fonts have a Descriptor. font=%s", font)
+	return nil
+}
+
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
 	if font.baseFields().toUnicodeCmap == nil {
@@ -66,14 +79,14 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts[Helvetica]
+	std, _ := loadStandard14Font(Helvetica)
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
-	std, ok := standard14Fonts[basefont]
+	std, ok := loadStandard14Font(basefont)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
@@ -92,7 +105,7 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 	return font
 }
 
-// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
+// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
@@ -100,7 +113,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
-	std, ok := standard14Fonts[basefont]
+	std, ok := loadStandard14Font(basefont)
 	if !ok {
 		return nil, nil, ErrFontNotSupported
 	}
@@ -221,29 +234,32 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
+		if std, ok := loadStandard14Font(Standard14Font(base.basefont)); ok && base.subtype == "Type1" {
 			font.context = &std
-			simplefont, err = newSimpleFontFromPdfObject(d, base, true)
+
+			stdObj := core.TraceToDirectObject(std.ToPdfObject())
+			d14, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)
+
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
 
-			encdict, has := core.GetDict(simplefont.Encoding)
-			if has {
-				// Set the default encoding for the standard 14 font if not specified in Encoding.
-				if encdict.Get("BaseEncoding") == nil {
-					encdict.Set("BaseEncoding", std.encoder.ToPdfObject())
-				}
-			} else {
-				simplefont.encoder = std.encoder
+			for _, k := range d.Keys() {
+				d14.Set(k, d.Get(k))
+			}
+			simplefont, err = newSimpleFontFromPdfObject(d14, stdBase, std.std14Encoder)
+			if err != nil {
+				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
+				return nil, err
+
 			}
 
 			simplefont.firstChar = 0
 			simplefont.lastChar = 255
 			simplefont.fontMetrics = std.fontMetrics
 		} else {
-			simplefont, err = newSimpleFontFromPdfObject(d, base, false)
+			simplefont, err = newSimpleFontFromPdfObject(d, base, nil)
 			if err != nil {
 				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err)
 				return nil, err
@@ -434,8 +450,6 @@ func (font PdfFont) actualFont() fonts.Font {
 	case *pdfCIDFontType0:
 		return t
 	case *pdfCIDFontType2:
-		return t
-	case fonts.FontCourier:
 		return t
 	default:
 		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)

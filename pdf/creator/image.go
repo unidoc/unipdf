@@ -52,8 +52,8 @@ type Image struct {
 	encoder core.StreamEncoder
 }
 
-// NewImage create a new image from a unidoc image (model.Image).
-func NewImage(img *model.Image) (*Image, error) {
+// newImage create a new image from a unidoc image (model.Image).
+func newImage(img *model.Image) (*Image, error) {
 	image := &Image{}
 	image.img = img
 
@@ -70,8 +70,8 @@ func NewImage(img *model.Image) (*Image, error) {
 	return image, nil
 }
 
-// NewImageFromData creates an Image from image data.
-func NewImageFromData(data []byte) (*Image, error) {
+// newImageFromData creates an Image from image data.
+func newImageFromData(data []byte) (*Image, error) {
 	imgReader := bytes.NewReader(data)
 
 	// Load the image with default handler.
@@ -81,17 +81,17 @@ func NewImageFromData(data []byte) (*Image, error) {
 		return nil, err
 	}
 
-	return NewImage(img)
+	return newImage(img)
 }
 
-// NewImageFromFile creates an Image from a file.
-func NewImageFromFile(path string) (*Image, error) {
+// newImageFromFile creates an Image from a file.
+func newImageFromFile(path string) (*Image, error) {
 	imgData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := NewImageFromData(imgData)
+	img, err := newImageFromData(imgData)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +99,14 @@ func NewImageFromFile(path string) (*Image, error) {
 	return img, nil
 }
 
-// NewImageFromGoImage creates an Image from a go image.Image datastructure.
-func NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
+// newImageFromGoImage creates an Image from a go image.Image data structure.
+func newImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	img, err := model.ImageHandling.NewImageFromGoImage(goimg)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewImage(img)
+	return newImage(img)
 }
 
 // SetEncoder sets the encoding/compression mechanism for the image.

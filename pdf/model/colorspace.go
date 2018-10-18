@@ -151,9 +151,9 @@ func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	return nil, errors.New("Type error")
 }
 
-// determineColorspaceNameFromPdfObject determines PDF colorspace from a PdfObject.  Returns the colorspace name and
+// DetermineColorspaceNameFromPdfObject determines PDF colorspace from a PdfObject.  Returns the colorspace name and
 // an error on failure. If the colorspace was not found, will return an empty string.
-func determineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) {
+func DetermineColorspaceNameFromPdfObject(obj PdfObject) (PdfObjectName, error) {
 	var csName *PdfObjectName
 	var csArray *PdfObjectArray
 
@@ -2179,7 +2179,7 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	obj = array.Get(1)
 
 	// Base cs cannot be another /Indexed or /Pattern space.
-	baseName, err := determineColorspaceNameFromPdfObject(obj)
+	baseName, err := DetermineColorspaceNameFromPdfObject(obj)
 	if baseName == "Indexed" || baseName == "Pattern" {
 		common.Log.Debug("Error: Indexed colorspace cannot have Indexed/Pattern CS as base (%v)", baseName)
 		return nil, ErrRangeError

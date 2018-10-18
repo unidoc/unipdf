@@ -440,7 +440,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// 2-byte character codes ➞ runes
 	runes := make([]uint16, 0, len(ttf.Chars))
-	for _, r := range ttf.Chars {
+	for r := range ttf.Chars {
 		runes = append(runes, r)
 	}
 
@@ -503,15 +503,20 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	cidfont.CIDSystemInfo = d
 
 	// Make the font descriptor.
-	descriptor := &PdfFontDescriptor{}
-	descriptor.FontName = core.MakeName(ttf.PostScriptName)
-	descriptor.Ascent = core.MakeFloat(k * float64(ttf.TypoAscender))
-	descriptor.Descent = core.MakeFloat(k * float64(ttf.TypoDescender))
-	descriptor.CapHeight = core.MakeFloat(k * float64(ttf.CapHeight))
-	descriptor.FontBBox = core.MakeArrayFromFloats([]float64{k * float64(ttf.Xmin),
-		k * float64(ttf.Ymin), k * float64(ttf.Xmax), k * float64(ttf.Ymax)})
-	descriptor.ItalicAngle = core.MakeFloat(float64(ttf.ItalicAngle))
-	descriptor.MissingWidth = core.MakeFloat(k * float64(ttf.Widths[0]))
+	descriptor := &PdfFontDescriptor{
+		FontName:  core.MakeName(ttf.PostScriptName),
+		Ascent:    core.MakeFloat(k * float64(ttf.TypoAscender)),
+		Descent:   core.MakeFloat(k * float64(ttf.TypoDescender)),
+		CapHeight: core.MakeFloat(k * float64(ttf.CapHeight)),
+		FontBBox: core.MakeArrayFromFloats([]float64{
+			k * float64(ttf.Xmin),
+			k * float64(ttf.Ymin),
+			k * float64(ttf.Xmax),
+			k * float64(ttf.Ymax),
+		}),
+		ItalicAngle:  core.MakeFloat(float64(ttf.ItalicAngle)),
+		MissingWidth: core.MakeFloat(k * float64(ttf.Widths[0])),
+	}
 
 	// Embed the TrueType font program.
 	ttfBytes, err := ioutil.ReadFile(filePath)

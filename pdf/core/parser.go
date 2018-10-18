@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // Regular Expressions for parsing and identifying object signatures.
@@ -69,7 +70,7 @@ func (parser *PdfParser) GetCrypter() *PdfCrypt {
 
 // IsAuthenticated returns true if the PDF has already been authenticated for accessing.
 func (parser *PdfParser) IsAuthenticated() bool {
-	return parser.crypter.Authenticated
+	return parser.crypter.authenticated
 }
 
 // GetTrailer returns the PDFs trailer dictionary. The trailer dictionary is typically the starting point for a PDF,
@@ -1325,9 +1326,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	common.Log.Trace("-Read indirect obj")
 	bb, err := parser.reader.Peek(20)
 	if err != nil {
-		if !(parser.suppressEOF && err == io.EOF) {
-			common.Log.Debug("ERROR: Fail to read indirect obj. err=%v", err)
-		}
+		common.Log.Debug("ERROR: Fail to read indirect obj. err=%v", err)
 		return &indirect, err
 	}
 	common.Log.Trace("(indirect obj peek \"%s\"", string(bb))
@@ -1555,42 +1554,67 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 func (parser *PdfParser) IsEncrypted() (bool, error) {
 	if parser.crypter != nil {
 		return true, nil
+	} else if parser.trailer == nil {
+		return false, nil
 	}
 
-	if parser.trailer != nil {
-		common.Log.Trace("Checking encryption dictionary!")
-		encDictRef, isEncrypted := parser.trailer.Get("Encrypt").(*PdfObjectReference)
-		if isEncrypted {
-			common.Log.Trace("Is encrypted!")
-			common.Log.Trace("0: Look up ref %q", encDictRef)
-			encObj, err := parser.LookupByReference(*encDictRef)
-			common.Log.Trace("1: %q", encObj)
-			if err != nil {
-				return false, err
-			}
+	common.Log.Trace("Checking encryption dictionary!")
+	e := parser.trailer.Get("Encrypt")
+	if e == nil {
+		return false, nil
+	}
+	common.Log.Trace("Is encrypted!")
+	var (
+		dict *PdfObjectDictionary
+	)
+	switch e := e.(type) {
+	case *PdfObjectDictionary:
+		dict = e
+	case *PdfObjectReference:
+		common.Log.Trace("0: Look up ref %q", e)
+		encObj, err := parser.LookupByReference(*e)
+		common.Log.Trace("1: %q", encObj)
+		if err != nil {
+			return false, err
+		}
 
-			encIndObj, ok := encObj.(*PdfIndirectObject)
-			if !ok {
-				common.Log.Debug("Encryption object not an indirect object")
-				return false, errors.New("Type check error")
-			}
-			encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
+		encIndObj, ok := encObj.(*PdfIndirectObject)
+		if !ok {
+			common.Log.Debug("Encryption object not an indirect object")
+			return false, errors.New("Type check error")
+		}
+		encDict, ok := encIndObj.PdfObject.(*PdfObjectDictionary)
 
-			common.Log.Trace("2: %q", encDict)
-			if !ok {
-				return false, errors.New("Trailer Encrypt object non dictionary")
-			}
-			crypter, err := PdfCryptMakeNew(parser, encDict, parser.trailer)
-			if err != nil {
-				return false, err
-			}
+		common.Log.Trace("2: %q", encDict)
+		if !ok {
+			return false, errors.New("Trailer Encrypt object non dictionary")
+		}
+		dict = encDict
+	default:
+		return false, fmt.Errorf("unsupported type: %T", e)
+	}
 
-			parser.crypter = &crypter
-			common.Log.Trace("Crypter object %b", crypter)
-			return true, nil
+	crypter, err := PdfCryptNewDecrypt(parser, dict, parser.trailer)
+	if err != nil {
+		return false, err
+	}
+	// list objects that should never be decrypted
+	for _, key := range []string{"Info", "Encrypt"} {
+		f := parser.trailer.Get(PdfObjectName(key))
+		if f == nil {
+			continue
+		}
+		switch f := f.(type) {
+		case *PdfObjectReference:
+			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
+		case *PdfIndirectObject:
+			crypter.decryptedObjects[f] = true
+			crypter.decryptedObjNum[int(f.ObjectNumber)] = struct{}{}
 		}
 	}
-	return false, nil
+	parser.crypter = crypter
+	common.Log.Trace("Crypter object %b", crypter)
+	return true, nil
 }
 
 // Decrypt attempts to decrypt the PDF file with a specified password.  Also tries to
@@ -1608,6 +1632,7 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 	}
 
 	if !authenticated {
+		// TODO(dennwc): R6 handler will try it automatically, make R4 do the same
 		authenticated, err = parser.crypter.authenticate([]byte(""))
 	}
 
@@ -1620,21 +1645,11 @@ func (parser *PdfParser) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (parser *PdfParser) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
+func (parser *PdfParser) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
 	// Also build the encryption/decryption key.
 	if parser.crypter == nil {
 		// If the crypter is not set, the file is not encrypted and we can assume full access permissions.
-		perms := AccessPermissions{}
-		perms.Printing = true
-		perms.Modify = true
-		perms.FillForms = true
-		perms.RotateInsert = true
-		perms.ExtractGraphics = true
-		perms.DisabilityExtract = true
-		perms.Annotate = true
-		perms.FullPrintQuality = true
-		return true, perms, nil
+		return true, security.PermOwner, nil
 	}
-
 	return parser.crypter.checkAccessRights(password)
 }
