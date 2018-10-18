@@ -56,6 +56,19 @@ func (font PdfFont) IsCID() bool {
 	return font.baseFields().isCIDFont()
 }
 
+// FontDescriptor returns font's PdfFontDescriptor. This may be a builtin descriptor for standard 14
+// fonts but must be an explicit descriptor for other fonts.
+func (font PdfFont) FontDescriptor() *PdfFontDescriptor {
+	if font.baseFields().fontDescriptor != nil {
+		return font.baseFields().fontDescriptor
+	}
+	if t, ok := font.context.(*pdfFontSimple); ok {
+		return t.std14Descriptor
+	}
+	common.Log.Error("All fonts have a Descriptor font=%s", font)
+	return nil
+}
+
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
 func (font PdfFont) ToUnicode() string {
 	if font.baseFields().toUnicodeCmap == nil {
@@ -66,14 +79,14 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts[Helvetica]
+	std, _ := loadStandard14Font(Helvetica)
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
-	std, ok := standard14Fonts[basefont]
+	std, ok := loadStandard14Font(basefont)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
@@ -100,7 +113,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
-	std, ok := standard14Fonts[basefont]
+	std, ok := loadStandard14Font(basefont)
 	if !ok {
 		return nil, nil, ErrFontNotSupported
 	}
@@ -221,7 +234,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
+		if std, ok := loadStandard14Font(Standard14Font(base.basefont)); ok && base.subtype == "Type1" {
 			font.context = &std
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
 			d14, stdBase, err := newFontBaseFieldsFromPdfObject(stdObj)

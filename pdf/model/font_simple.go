@@ -44,6 +44,9 @@ type pdfFontSimple struct {
 	// std14Encoder is used for Standard 14 fonts where no /Encoding is specified in the font dict.
 	std14Encoder textencoding.TextEncoder
 
+	// std14Descriptor is used for Standard 14 fonts where no /FontDescriptor is specified in the font dict.
+	std14Descriptor *PdfFontDescriptor
+
 	// Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 	// BaseFont is derived differently.
 	FirstChar core.PdfObject
@@ -457,6 +460,21 @@ const (
 	ZapfDingbats         Standard14Font = "ZapfDingbats"
 )
 
+// loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates wheter
+// the builtin font exists.
+func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
+	std, ok := standard14Fonts[baseFont]
+	if !ok {
+		return pdfFontSimple{}, false
+	}
+	descriptor := builtinDescriptor(string(baseFont))
+	if descriptor == nil {
+		return pdfFontSimple{}, false
+	}
+	std.std14Descriptor = descriptor
+	return std, true
+}
+
 var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	Courier: pdfFontSimple{
 		fontCommon: fontCommon{
@@ -570,4 +588,33 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 		std14Encoder: textencoding.NewZapfDingbatsEncoder(),
 		fontMetrics:  fonts.ZapfDingbatsCharMetrics,
 	},
+}
+
+// builtinDescriptor returns the PdfFontDescriptor for the builtin font named `baseFont`, or nil if
+// there is none.
+func builtinDescriptor(baseFont string) *PdfFontDescriptor {
+	l, ok := fonts.Standard14Descriptors[baseFont]
+	if !ok {
+		return nil
+	}
+
+	return &PdfFontDescriptor{
+		FontName:   core.MakeName(l.FontName),
+		FontFamily: core.MakeName(l.FontFamily),
+		// FontStretch: core.MakeFloat()
+		// FontWeight:  core.MakeFloat(m.FontWeight),
+		Flags:        core.MakeInteger(int64(l.Flags)),
+		FontBBox:     core.MakeArrayFromFloats(l.FontBBox[:]),
+		ItalicAngle:  core.MakeFloat(l.ItalicAngle),
+		Ascent:       core.MakeFloat(l.Ascent),
+		Descent:      core.MakeFloat(l.Descent),
+		Leading:      core.MakeInteger(int64(l.Leading)),
+		CapHeight:    core.MakeFloat(l.CapHeight),
+		XHeight:      core.MakeFloat(l.XHeight),
+		StemV:        core.MakeFloat(l.StemV),
+		StemH:        core.MakeFloat(l.StemH),
+		AvgWidth:     core.MakeFloat(l.AvgWidth),
+		MaxWidth:     core.MakeFloat(l.MaxWidth),
+		MissingWidth: core.MakeFloat(l.MissingWidth),
+	}
 }
