@@ -119,7 +119,7 @@ func (p *StyledParagraph) Reset() {
 	p.chunks = []*TextChunk{}
 }
 
-// SetText replaces all the of the paragraph with the specified one.
+// SetText replaces all the text of the paragraph with the specified one.
 func (p *StyledParagraph) SetText(text string) *TextChunk {
 	p.Reset()
 	return p.Append(text)

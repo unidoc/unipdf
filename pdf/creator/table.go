@@ -45,9 +45,6 @@ type Table struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
-
-	// Table width.
-	width float64
 }
 
 // newTable create a new Table with a specified number of columns.
