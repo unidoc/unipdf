@@ -119,6 +119,12 @@ func (p *StyledParagraph) Reset() {
 	p.chunks = []*TextChunk{}
 }
 
+// SetText replaces all the of the paragraph with the specified one.
+func (p *StyledParagraph) SetText(text string) *TextChunk {
+	p.Reset()
+	return p.Append(text)
+}
+
 // SetTextAlignment sets the horizontal alignment of the text within the space provided.
 func (p *StyledParagraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
