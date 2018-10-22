@@ -601,7 +601,7 @@ func builtinDescriptor(baseFont string) *PdfFontDescriptor {
 	return &PdfFontDescriptor{
 		FontName:    core.MakeName(l.FontName),
 		FontFamily:  core.MakeName(l.FontFamily),
-		FontWeight:  core.MakeFloat(l.FontWeight),
+		FontWeight:  core.MakeFloat(float64(l.FontWeight)),
 		Flags:       core.MakeInteger(int64(l.Flags)),
 		FontBBox:    core.MakeArrayFromFloats(l.FontBBox[:]),
 		ItalicAngle: core.MakeFloat(l.ItalicAngle),
