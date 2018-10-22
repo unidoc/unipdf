@@ -168,9 +168,6 @@ func TestFontDescriptor(t *testing.T) {
 		FontBBox   [4]float64
 		CapHeight  float64
 		XHeight    float64
-		StemV      float64
-		StemH      float64
-		AvgWidth   float64
 	}
 
 	tests := map[model.Standard14Font]params{
@@ -181,20 +178,14 @@ func TestFontDescriptor(t *testing.T) {
 			FontBBox:   [4]float64{-23, -250, 715, 805},
 			CapHeight:  562,
 			XHeight:    426,
-			StemV:      51,
-			StemH:      51,
-			AvgWidth:   600,
 		},
 		"ZapfDingbats": params{
 			FontName:   "ZapfDingbats",
 			FontFamily: "ZapfDingbats",
 			Flags:      0x0004,
 			FontBBox:   [4]float64{-1, -143, 981, 820},
-			CapHeight:  820,
+			CapHeight:  0,
 			XHeight:    0,
-			StemV:      90,
-			StemH:      28,
-			AvgWidth:   746,
 		},
 	}
 
@@ -238,10 +229,6 @@ func TestFontDescriptor(t *testing.T) {
 		if !ok {
 			t.Fatalf("%#q: No XHeight. descriptor=%+v", fontName, descriptor)
 		}
-		stemH, ok := core.GetFloatVal(descriptor.StemH)
-		if !ok {
-			t.Fatalf("%#q: No StemH. descriptor=%+v", fontName, descriptor)
-		}
 
 		actual := params{
 			FontName:   actualFontName,
@@ -250,16 +237,13 @@ func TestFontDescriptor(t *testing.T) {
 			FontBBox:   fontBBox,
 			CapHeight:  capHeight,
 			XHeight:    xHeight,
-			StemH:      stemH,
 		}
 
 		if actual.FontName != expect.FontName ||
 			actual.FontFamily != expect.FontFamily ||
 			actual.Flags != expect.Flags ||
 			actual.FontBBox != expect.FontBBox ||
-			actual.CapHeight != expect.CapHeight ||
-			actual.XHeight != expect.XHeight ||
-			actual.StemH != expect.StemH {
+			actual.CapHeight != expect.CapHeight {
 			t.Fatalf("%s:\n\texpect=%+v\n\tactual=%+v", fontName, expect, actual)
 		}
 	}
