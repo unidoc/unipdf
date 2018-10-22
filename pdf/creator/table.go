@@ -45,6 +45,9 @@ type Table struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Table width.
+	width float64
 }
 
 // newTable create a new Table with a specified number of columns.
@@ -95,6 +98,12 @@ func (table *Table) Height() float64 {
 	}
 
 	return sum
+}
+
+// Width is not used. Not used as a Table element is designed to fill into
+// available width depending on the context. Returns 0.
+func (table *Table) Width() float64 {
+	return 0
 }
 
 // SetMargins sets the Table's left, right, top, bottom margins.
@@ -230,6 +239,14 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		case *Image:
 			img := t
 			newh := img.Height() + img.margins.top + img.margins.bottom
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
+		case *Table:
+			tbl := t
+			newh := tbl.Height() + tbl.margins.top + tbl.margins.bottom
 			if newh > h {
 				diffh := newh - h
 				// Add diff to last row.
@@ -373,6 +390,8 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				if t.enableWrap {
 					cw = t.getMaxLineWidth() / 1000.0
 				}
+			case *Table:
+				cw = w
 			}
 
 			// Account for horizontal alignment:
@@ -723,6 +742,8 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 
 		cell.content = vd
 	case *Image:
+		cell.content = vd
+	case *Table:
 		cell.content = vd
 	case *Division:
 		cell.content = vd
