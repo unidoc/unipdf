@@ -806,7 +806,7 @@ func (t *ttfParser) ReadULong() (val uint32) {
 // ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
 // the second 2 bytes for the fraction.
 func (t *ttfParser) Read32Fixed() float64 {
-	whole := float64(t.ReadUShort())
+	whole := float64(t.ReadShort())
 	frac := float64(t.ReadUShort()) / 65536.0
 	return whole + frac
 }
