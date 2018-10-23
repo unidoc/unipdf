@@ -16,15 +16,12 @@ func getUniDocVersion() string {
 
 // NewReaderForText makes a new PdfReader for an input PDF content string. For use in testing.
 func NewReaderForText(txt string) *PdfReader {
-	r := &PdfReader{}
-	r.traversed = map[core.PdfObject]bool{}
-	r.modelManager = newModelManager()
-
 	// Create the parser, loads the cross reference table and trailer.
-	parser := core.NewParserFromString(txt)
-	r.parser = parser
-
-	return r
+	return &PdfReader{
+		traversed:    map[core.PdfObject]bool{},
+		modelManager: newModelManager(),
+		parser:       core.NewParserFromString(txt),
+	}
 }
 
 // Handy function for debugging in development.

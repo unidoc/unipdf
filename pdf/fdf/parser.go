@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -80,9 +79,8 @@ func (parser *fdfParser) skipComments() error {
 		if isFirst && bb[0] != '%' {
 			// Not a comment clearly.
 			return nil
-		} else {
-			isFirst = false
 		}
+		isFirst = false
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			parser.reader.ReadByte()
 		} else {
@@ -111,10 +109,9 @@ func (parser *fdfParser) readComment() (string, error) {
 			return r.String(), err
 		}
 		if isFirst && bb[0] != '%' {
-			return r.String(), errors.New("Comment should start with %")
-		} else {
-			isFirst = false
+			return r.String(), errors.New("comment should start with %")
 		}
+		isFirst = false
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := parser.reader.ReadByte()
 			r.WriteByte(b)
@@ -167,7 +164,7 @@ func (parser *fdfParser) parseName() (core.PdfObjectName, error) {
 				parser.skipSpaces()
 			} else {
 				common.Log.Debug("ERROR Name starting with %s (% x)", bb, bb)
-				return core.PdfObjectName(r.String()), fmt.Errorf("Invalid name: (%c)", bb[0])
+				return core.PdfObjectName(r.String()), fmt.Errorf("invalid name: (%c)", bb[0])
 			}
 		} else {
 			if core.IsWhiteSpace(bb[0]) {
@@ -292,7 +289,7 @@ func (parser *fdfParser) parseString() (*core.PdfObjectString, error) {
 					return core.MakeString(r.String()), err
 				}
 
-				numeric := []byte{}
+				var numeric []byte
 				numeric = append(numeric, b)
 				for _, val := range bb {
 					if core.IsOctalDigit(val) {
@@ -376,7 +373,11 @@ func (parser *fdfParser) parseHexString() (*core.PdfObjectString, error) {
 		r.WriteRune('0')
 	}
 
-	buf, _ := hex.DecodeString(r.String())
+	buf, err := hex.DecodeString(r.String())
+	if err != nil {
+		common.Log.Debug("ERROR Parsing hex string: '%s' - returning an empty string", r.String())
+		return core.MakeHexString(""), nil
+	}
 	return core.MakeHexString(string(buf)), nil
 }
 
@@ -429,7 +430,7 @@ func (parser *fdfParser) parseBool() (core.PdfObjectBool, error) {
 		return core.PdfObjectBool(false), nil
 	}
 
-	return core.PdfObjectBool(false), errors.New("Unexpected boolean string")
+	return core.PdfObjectBool(false), errors.New("unexpected boolean string")
 }
 
 // Parse reference to an indirect object.
@@ -439,12 +440,21 @@ func parseReference(refStr string) (core.PdfObjectReference, error) {
 	result := reReference.FindStringSubmatch(string(refStr))
 	if len(result) < 3 {
 		common.Log.Debug("Error parsing reference")
-		return objref, errors.New("Unable to parse reference")
+		return objref, errors.New("unable to parse reference")
 	}
 
-	objNum, _ := strconv.Atoi(result[1])
-	genNum, _ := strconv.Atoi(result[2])
+	objNum, err := strconv.Atoi(result[1])
+	if err != nil {
+		common.Log.Debug("Error parsing object number '%s' - Using object num = 0", result[1])
+		return objref, nil
+	}
 	objref.ObjectNumber = int64(objNum)
+
+	genNum, err := strconv.Atoi(result[2])
+	if err != nil {
+		common.Log.Debug("Error parsing generation number '%s' - Using gen = 0", result[2])
+		return objref, nil
+	}
 	objref.GenerationNumber = int64(genNum)
 
 	return objref, nil
@@ -475,20 +485,16 @@ func (parser *fdfParser) parseObject() (core.PdfObject, error) {
 			return &name, err
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
-			str, err := parser.parseString()
-			return str, err
+			return parser.parseString()
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
-			arr, err := parser.parseArray()
-			return arr, err
+			return parser.parseArray()
 		} else if (bb[0] == '<') && (bb[1] == '<') {
 			common.Log.Trace("->Dict!")
-			dict, err := parser.parseDict()
-			return dict, err
+			return parser.parseDict()
 		} else if bb[0] == '<' {
 			common.Log.Trace("->Hex string!")
-			str, err := parser.parseHexString()
-			return str, err
+			return parser.parseHexString()
 		} else if bb[0] == '%' {
 			parser.readComment()
 			parser.skipSpaces()
@@ -524,8 +530,7 @@ func (parser *fdfParser) parseObject() (core.PdfObject, error) {
 			if len(result2) > 1 {
 				// Number object.
 				common.Log.Trace("-> Number!")
-				num, err := parser.parseNumber()
-				return num, err
+				return parser.parseNumber()
 			}
 
 			result2 = reExponential.FindStringSubmatch(string(peekStr))
@@ -533,12 +538,11 @@ func (parser *fdfParser) parseObject() (core.PdfObject, error) {
 				// Number object (exponential)
 				common.Log.Trace("-> Exponential Number!")
 				common.Log.Trace("% s", result2)
-				num, err := parser.parseNumber()
-				return num, err
+				return parser.parseNumber()
 			}
 
 			common.Log.Debug("ERROR Unknown (peek \"%s\")", peekStr)
-			return nil, errors.New("Object parsing error - unexpected pattern")
+			return nil, errors.New("object parsing error - unexpected pattern")
 		}
 	}
 }
@@ -552,11 +556,11 @@ func (parser *fdfParser) parseDict() (*core.PdfObjectDictionary, error) {
 	// Pass the '<<'
 	c, _ := parser.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 	c, _ = parser.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 
 	for {
@@ -617,8 +621,8 @@ func (parser *fdfParser) parseDict() (*core.PdfObjectDictionary, error) {
 // Returns the major and minor parts of the version.
 // E.g. for "FDF-1.4" would return 1 and 4.
 func (parser *fdfParser) parseFdfVersion() (int, int, error) {
-	parser.rs.Seek(0, os.SEEK_SET)
-	var offset int64 = 20
+	parser.rs.Seek(0, io.SeekStart)
+	offset := 20
 	b := make([]byte, offset)
 	parser.rs.Read(b)
 
@@ -633,17 +637,16 @@ func (parser *fdfParser) parseFdfVersion() (int, int, error) {
 		return major, minor, nil
 	}
 
-	majorVersion, err := strconv.ParseInt(result1[1], 10, 64)
+	majorVersion, err := strconv.Atoi(result1[1])
 	if err != nil {
 		return 0, 0, err
 	}
 
-	minorVersion, err := strconv.ParseInt(result1[2], 10, 64)
+	minorVersion, err := strconv.Atoi(result1[2])
 	if err != nil {
 		return 0, 0, err
 	}
 
-	//version, _ := strconv.Atoi(result1[1])
 	common.Log.Debug("Fdf version %d.%d", majorVersion, minorVersion)
 
 	return int(majorVersion), int(minorVersion), nil
@@ -653,10 +656,10 @@ func (parser *fdfParser) parseFdfVersion() (int, int, error) {
 // Define an offset position from the end of the file.
 func (parser *fdfParser) seekToEOFMarker(fSize int64) error {
 	// Define the starting point (from the end of the file) to search from.
-	var offset int64 = 0
+	offset := int64(0)
 
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
-	var buflen int64 = 1000
+	buflen := int64(1000)
 
 	for offset < fSize {
 		if fSize <= (buflen + offset) {
@@ -680,10 +683,8 @@ func (parser *fdfParser) seekToEOFMarker(fSize int64) error {
 			common.Log.Trace("Ind: % d", ind)
 			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
-		} else {
-			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		}
-
+		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		offset += buflen
 	}
 
@@ -707,7 +708,7 @@ func (parser *fdfParser) parseIndirectObject() (core.PdfObject, error) {
 	indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
 	if len(indices) < 6 {
 		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
-		return &indirect, errors.New("Unable to detect indirect object signature")
+		return &indirect, errors.New("unable to detect indirect object signature")
 	}
 	parser.reader.Discard(indices[0]) // Take care of any small offset.
 	common.Log.Trace("Offsets % d", indices)
@@ -725,7 +726,7 @@ func (parser *fdfParser) parseIndirectObject() (core.PdfObject, error) {
 	result := reIndirectObject.FindStringSubmatch(string(hb))
 	if len(result) < 3 {
 		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(hb))
-		return &indirect, errors.New("Unable to detect indirect object signature")
+		return &indirect, errors.New("unable to detect indirect object signature")
 	}
 
 	on, _ := strconv.Atoi(result[1])
@@ -792,23 +793,23 @@ func (parser *fdfParser) parseIndirectObject() (core.PdfObject, error) {
 
 					dict, isDict := indirect.PdfObject.(*core.PdfObjectDictionary)
 					if !isDict {
-						return nil, errors.New("Stream object missing dictionary")
+						return nil, errors.New("stream object missing dictionary")
 					}
 					common.Log.Trace("Stream dict %s", dict)
 
 					pstreamLength, ok := dict.Get("Length").(*core.PdfObjectInteger)
 					if !ok {
-						return nil, errors.New("Stream length needs to be an integer")
+						return nil, errors.New("stream length needs to be an integer")
 					}
 					streamLength := *pstreamLength
 					if streamLength < 0 {
-						return nil, errors.New("Stream needs to be longer than 0")
+						return nil, errors.New("stream needs to be longer than 0")
 					}
 
 					// Make sure is less than actual file size.
 					if int64(streamLength) > parser.fileSize {
 						common.Log.Debug("ERROR: Stream length cannot be larger than file size")
-						return nil, errors.New("Invalid stream length, larger than file size")
+						return nil, errors.New("invalid stream length, larger than file size")
 					}
 
 					stream := make([]byte, streamLength)
@@ -868,8 +869,8 @@ func (parser *fdfParser) Root() (*core.PdfObjectDictionary, error) {
 		}
 	}
 
-	keys := []int64{}
-	for objNum, _ := range parser.objCache {
+	var keys []int64
+	for objNum := range parser.objCache {
 		keys = append(keys, objNum)
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
@@ -917,10 +918,9 @@ func (parser *fdfParser) trace(obj core.PdfObject) core.PdfObject {
 		indObj, ok := parser.objCache[t.ObjectNumber].(*core.PdfIndirectObject)
 		if ok {
 			return indObj.PdfObject
-		} else {
-			common.Log.Debug("Type error")
-			return nil
 		}
+		common.Log.Debug("Type error")
+		return nil
 	case *core.PdfIndirectObject:
 		return t.PdfObject
 	}
@@ -957,7 +957,7 @@ func (parser *fdfParser) parse() error {
 		indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
 		if len(indices) < 6 {
 			common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
-			return errors.New("Unable to detect indirect object signature")
+			return errors.New("unable to detect indirect object signature")
 		}
 
 		indObj, err := parser.parseIndirectObject()
@@ -971,7 +971,7 @@ func (parser *fdfParser) parse() error {
 		case *core.PdfObjectStream:
 			parser.objCache[o.ObjectNumber] = o
 		default:
-			return errors.New("Type error")
+			return errors.New("type error")
 		}
 
 	}
@@ -983,7 +983,7 @@ func (parser *fdfParser) parse() error {
 // %FDF-1.4
 func (parser *fdfParser) seekFdfVersionTopDown() (int, int, error) {
 	// Go to beginning, reset reader.
-	parser.rs.Seek(0, os.SEEK_SET)
+	parser.rs.Seek(0, io.SeekStart)
 	parser.reader = bufio.NewReader(parser.rs)
 
 	// Keep a running buffer of last bytes.
@@ -1013,5 +1013,5 @@ func (parser *fdfParser) seekFdfVersionTopDown() (int, int, error) {
 		last = append(last[1:bufLen], b)
 	}
 
-	return 0, 0, errors.New("Version not found")
+	return 0, 0, errors.New("version not found")
 }

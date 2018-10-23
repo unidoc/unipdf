@@ -184,9 +184,7 @@ func MakeEncodedString(s string, utf16BE bool) *PdfObjectString {
 		var buf bytes.Buffer
 		buf.Write([]byte{0xFE, 0xFF})
 		buf.WriteString(strutils.StringToUTF16(s))
-
-		str := PdfObjectString{val: buf.String(), isHex: true}
-		return &str
+		return &PdfObjectString{val: buf.String(), isHex: true}
 	}
 
 	return &PdfObjectString{val: string(strutils.StringToPDFDocEncoding(s)), isHex: false}
@@ -240,18 +238,16 @@ func MakeObjectStreams(objects ...PdfObject) *PdfObjectStreams {
 func (bool *PdfObjectBool) String() string {
 	if *bool {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
 func (bool *PdfObjectBool) DefaultWriteString() string {
 	if *bool {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
 }
 
 func (int *PdfObjectInteger) String() string {

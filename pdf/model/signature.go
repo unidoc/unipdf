@@ -179,13 +179,10 @@ type PdfSignatureField struct {
 
 // NewPdfSignatureField prepares a PdfSignatureField from a PdfSignature.
 func NewPdfSignatureField(signature *PdfSignature) *PdfSignatureField {
-	sf := &PdfSignatureField{}
-	sf.container = &core.PdfIndirectObject{}
-	sf.container.PdfObject = core.MakeDict()
-
-	sf.V = signature
-
-	return sf
+	return &PdfSignatureField{
+		V:         signature,
+		container: core.MakeIndirectObject(core.MakeDict()),
+	}
 }
 
 // ToPdfObject implements interface PdfModel.

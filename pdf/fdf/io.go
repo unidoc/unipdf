@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"os"
 
 	"github.com/unidoc/unidoc/common"
 )
@@ -35,7 +34,7 @@ func (parser *fdfParser) readAtLeast(p []byte, n int) (int, error) {
 
 // getFileOffset returns the current file offset, accounting for buffered position.
 func (parser *fdfParser) getFileOffset() int64 {
-	offset, _ := parser.rs.Seek(0, os.SEEK_CUR)
+	offset, _ := parser.rs.Seek(0, io.SeekCurrent)
 	offset -= int64(parser.reader.Buffered())
 	return offset
 }

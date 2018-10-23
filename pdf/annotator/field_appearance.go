@@ -270,13 +270,13 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		common.Log.Debug("Error: Unable to get font descriptor")
 	}
 
-	text := ""
+	var text string
 	if str, ok := core.GetString(ftxt.V); ok {
 		text = str.Decoded()
 	}
 
 	// If no text, no appearance needed.
-	if len(text) < 1 {
+	if len(text) == 0 {
 		return nil, nil
 	}
 
@@ -297,9 +297,9 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		l := len(lines)
 		i := 0
 		for i < l {
-			linewidth := 0.0
+			var lastwidth float64
 			lastbreakindex := -1
-			lastwidth := 0.0
+			linewidth := 0.0
 			for index, r := range lines[i] {
 				glyph, has := encoder.RuneToGlyph(r)
 				if !has {
@@ -343,8 +343,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		}
 	}
 
-	var tx float64
-	tx = 2.0
+	tx := 2.0
 
 	// Check if text goes out of bounds, if goes out of bounds, then adjust font size until just within bounds.
 	if fontsize == 0 || autosize && maxLinewidth > 0 && tx+maxLinewidth*fontsize/1000.0 > width {
@@ -352,7 +351,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		fontsize = 0.95 * 1000.0 * (width - tx) / maxLinewidth
 	}
 
-	var alignment quadding = quaddingLeft
+	alignment := quaddingLeft
 	// Account for horizontal alignment (quadding).
 	{
 		if val, has := core.GetIntVal(ftxt.Q); has {
@@ -601,7 +600,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 		common.Log.Debug("ERROR - Encoder is nil - can expect bad results")
 	}
 
-	text := ""
+	var text string
 	if str, ok := core.GetString(ftxt.V); ok {
 		text = str.Decoded()
 	}
@@ -609,7 +608,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	cc.Add_Tf(*fontname, fontsize)
 
 	// Get max glyph height.
-	maxGlyphWy := 0.0
+	var maxGlyphWy float64
 	for _, r := range text {
 		if encoder != nil {
 			glyph, has := encoder.RuneToGlyph(r)
@@ -623,7 +622,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 				continue
 			}
 			wy := metrics.Wy
-			if wy <= 0 {
+			if int(wy) <= 0 {
 				wy = metrics.Wx
 			}
 			if wy > maxGlyphWy {
@@ -878,8 +877,7 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 
 	dchoiceapp := core.MakeDict()
 	for _, optObj := range fch.Opt.Elements() {
-		optstr := ""
-
+		var optstr string
 		if opt, ok := core.GetString(optObj); ok {
 			optstr = opt.String()
 		} else {
@@ -985,12 +983,11 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 	encoder := font.Encoder()
 
 	// If no text, no appearance needed.
-	if len(text) < 1 {
+	if len(text) == 0 {
 		return nil, nil
 	}
 
-	var tx float64
-	tx = 2.0 // Default left margin. // TODO(gunnsth): Add to style options.
+	tx := 2.0 // Default left margin. // TODO(gunnsth): Add to style options.
 
 	linewidth := 0.0
 	if encoder != nil {

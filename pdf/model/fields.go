@@ -169,12 +169,10 @@ type PdfField struct {
 func (f *PdfField) FullName() (string, error) {
 	var fn bytes.Buffer
 
-	parts := []string{}
-	if f.T != nil {
-		parts = append(parts, f.T.Decoded())
-	} else {
+	if f.T == nil {
 		return fn.String(), errors.New("Field partial name (T) not specified")
 	}
+	parts := []string{f.T.Decoded()}
 
 	// Avoid recursive loops by having a list of already traversed nodes.
 	noscanMap := map[*PdfField]bool{}
@@ -186,11 +184,10 @@ func (f *PdfField) FullName() (string, error) {
 			return fn.String(), errors.New("Recursive traversal")
 		}
 
-		if parent.T != nil {
-			parts = append(parts, parent.T.Decoded())
-		} else {
+		if parent.T == nil {
 			return fn.String(), errors.New("Field partial name (T) not specified")
 		}
+		parts = append(parts, parent.T.Decoded())
 
 		noscanMap[parent] = true
 		parent = parent.Parent
@@ -473,10 +470,9 @@ func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
 
 // NewPdfField returns an initialized PdfField.
 func NewPdfField() *PdfField {
-	field := &PdfField{}
-	container := core.MakeIndirectObject(core.MakeDict())
-	field.container = container
-	return field
+	return &PdfField{
+		container: core.MakeIndirectObject(core.MakeDict()),
+	}
 }
 
 // inherit traverses through a field and its ancestry for calculation of inherited attributes. The process is
@@ -511,10 +507,7 @@ func (f *PdfField) inherit(eval func(*PdfField) bool) (bool, error) {
 // IsTerminal returns true for terminal fields, false otherwise.
 // Terminal fields are fields whose descendants are only widget annotations.
 func (f *PdfField) IsTerminal() bool {
-	if len(f.Kids) == 0 {
-		return true
-	}
-	return false
+	return len(f.Kids) == 0
 }
 
 // Flags returns the field flags for the field accounting for any inherited flags.
@@ -560,14 +553,12 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	// Can be /Btn /Tx /Ch /Sig
 	// Required for a terminal field (inheritable).
 
+	isTerminal := false
 	if name, has := core.GetName(d.Get("FT")); has {
 		field.FT = name
-		isTerminal := true
-		field.isTerminal = &isTerminal
-	} else {
-		isTerminal := false
-		field.isTerminal = &isTerminal
+		isTerminal = true
 	}
+	field.isTerminal = &isTerminal
 
 	// Non-terminal field: One whose descendants are fields.  Not an actual field, just a container for inheritable
 	// attributes for descendant terminal fields. Does not logically have a type of its own.

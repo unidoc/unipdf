@@ -36,15 +36,10 @@ type PdfAcroForm struct {
 
 // NewPdfAcroForm returns a new PdfAcroForm with an intialized container (indirect object).
 func NewPdfAcroForm() *PdfAcroForm {
-	acroForm := &PdfAcroForm{}
-
-	container := &core.PdfIndirectObject{}
-	container.PdfObject = core.MakeDict()
-	acroForm.container = container
-
-	acroForm.Fields = &[]*PdfField{}
-
-	return acroForm
+	return &PdfAcroForm{
+		Fields:    &[]*PdfField{},
+		container: core.MakeIndirectObject(core.MakeDict()),
+	}
 }
 
 // flattenFields returns a flattened list of field hierarchy.

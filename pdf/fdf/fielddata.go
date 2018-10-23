@@ -14,38 +14,37 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// FDFData represents forms data format (FDF) file data.
-type FDFData struct {
+// Data represents forms data format (FDF) file data.
+type Data struct {
 	root   *core.PdfObjectDictionary
 	fields *core.PdfObjectArray
 }
 
 // Load loads FDF form data from `r`.
-func Load(r io.ReadSeeker) (*FDFData, error) {
+func Load(r io.ReadSeeker) (*Data, error) {
 	p, err := newParser(r)
 	if err != nil {
 		return nil, err
 	}
 
-	fdf := &FDFData{}
-
 	fdfDict, err := p.Root()
 	if err != nil {
 		return nil, err
 	}
-	fdf.root = fdfDict
 
 	fields, found := core.GetArray(fdfDict.Get("Fields"))
 	if !found {
 		return nil, errors.New("Fields missing")
 	}
-	fdf.fields = fields
 
-	return fdf, nil
+	return &Data{
+		fields: fields,
+		root:   fdfDict,
+	}, nil
 }
 
 // LoadFromPath loads FDF form data from file path `fdfPath`.
-func LoadFromPath(fdfPath string) (*FDFData, error) {
+func LoadFromPath(fdfPath string) (*Data, error) {
 	f, err := os.Open(fdfPath)
 	if err != nil {
 		return nil, err
@@ -56,7 +55,7 @@ func LoadFromPath(fdfPath string) (*FDFData, error) {
 }
 
 // FieldDictionaries returns a map of field names to field dictionaries.
-func (fdf *FDFData) FieldDictionaries() (map[string]*core.PdfObjectDictionary, error) {
+func (fdf *Data) FieldDictionaries() (map[string]*core.PdfObjectDictionary, error) {
 	fieldDataMap := map[string]*core.PdfObjectDictionary{}
 
 	for i := 0; i < fdf.fields.Len(); i++ {
@@ -75,7 +74,7 @@ func (fdf *FDFData) FieldDictionaries() (map[string]*core.PdfObjectDictionary, e
 
 // FieldValues implements interface model.FieldValueProvider.
 // Returns a map of field names to values (PdfObjects).
-func (fdf *FDFData) FieldValues() (map[string]core.PdfObject, error) {
+func (fdf *Data) FieldValues() (map[string]core.PdfObject, error) {
 	fieldDictMap, err := fdf.FieldDictionaries()
 	if err != nil {
 		return nil, err
@@ -92,7 +91,6 @@ func (fdf *FDFData) FieldValues() (map[string]core.PdfObject, error) {
 		fieldDict := fieldDictMap[fieldName]
 		val := core.TraceToDirectObject(fieldDict.Get("V"))
 		fieldValMap[fieldName] = val
-
 	}
 
 	return fieldValMap, nil
