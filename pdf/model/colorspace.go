@@ -64,15 +64,13 @@ func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 		container = indObj
 	}
 
-	/*
-		8.6.3 p. 149 (PDF32000_2008):
-		A colour space shall be defined by an array object whose first element is a name object identifying the
-		colour space family. The remaining array elements, if any, are parameters that further characterize the
-		colour space; their number and types vary according to the particular family.
-
-		For families that do not require parameters, the colour space may be specified simply by the family name
-		itself instead of an array.
-	*/
+	// 8.6.3 p. 149 (PDF32000_2008):
+	// A colour space shall be defined by an array object whose first element is a name object identifying the
+	// colour space family. The remaining array elements, if any, are parameters that further characterize the
+	// colour space; their number and types vary according to the particular family.
+	//
+	// For families that do not require parameters, the colour space may be specified simply by the family name
+	// itself instead of an array.
 
 	obj = TraceToDirectObject(obj)
 	switch t := obj.(type) {
