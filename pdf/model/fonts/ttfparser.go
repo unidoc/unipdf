@@ -53,7 +53,7 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 			continue
 		}
 		glyph := ""
-		if 0 <= gid && int(gid) < len(rec.GlyphNames) {
+		if int(gid) >= 0 && int(gid) < len(rec.GlyphNames) {
 			glyph = rec.GlyphNames[gid]
 		} else {
 			glyph = string(rune(gid))
