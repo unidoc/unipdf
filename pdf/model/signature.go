@@ -15,24 +15,24 @@ import (
 type PdfSignature struct {
 	container *core.PdfIndirectObject
 	// Type: Sig/DocTimeStamp
-	Type          *core.PdfObjectName
-	Filter        *core.PdfObjectName
-	SubFilter     *core.PdfObjectName
-	Contents      *core.PdfObjectString
-	Cert          core.PdfObject
-	ByteRange     *core.PdfObjectArray
-	Reference     *core.PdfObjectArray
-	Changes       *core.PdfObjectArray
-	Name          *core.PdfObjectString
-	M             *core.PdfObjectString
-	Location      *core.PdfObjectString
-	Reason        *core.PdfObjectString
-	ContactInfo   *core.PdfObjectString
-	R             *core.PdfObjectInteger
-	V             *core.PdfObjectInteger
-	Prop_Build    *core.PdfObjectDictionary
-	Prop_AuthTime *core.PdfObjectInteger
-	Prop_AuthType *core.PdfObjectName
+	Type         *core.PdfObjectName
+	Filter       *core.PdfObjectName
+	SubFilter    *core.PdfObjectName
+	Contents     *core.PdfObjectString
+	Cert         core.PdfObject
+	ByteRange    *core.PdfObjectArray
+	Reference    *core.PdfObjectArray
+	Changes      *core.PdfObjectArray
+	Name         *core.PdfObjectString
+	M            *core.PdfObjectString
+	Location     *core.PdfObjectString
+	Reason       *core.PdfObjectString
+	ContactInfo  *core.PdfObjectString
+	R            *core.PdfObjectInteger
+	V            *core.PdfObjectInteger
+	PropBuild    *core.PdfObjectDictionary
+	PropAuthTime *core.PdfObjectInteger
+	PropAuthType *core.PdfObjectName
 }
 
 // PdfSignatureReference represents a signature reference dictionary.
@@ -142,9 +142,9 @@ func (r *PdfReader) newPdfSignatureFromIndirect(container *core.PdfIndirectObjec
 	sig.ContactInfo, _ = core.GetString(dict.Get("ContactInfo"))
 	sig.R, _ = core.GetInt(dict.Get("R"))
 	sig.V, _ = core.GetInt(dict.Get("V"))
-	sig.Prop_Build, _ = core.GetDict(dict.Get("Prop_Build"))
-	sig.Prop_AuthTime, _ = core.GetInt(dict.Get("Prop_AuthTime"))
-	sig.Prop_AuthType, _ = core.GetName(dict.Get("Prop_AuthType"))
+	sig.PropBuild, _ = core.GetDict(dict.Get("Prop_Build"))
+	sig.PropAuthTime, _ = core.GetInt(dict.Get("Prop_AuthTime"))
+	sig.PropAuthType, _ = core.GetName(dict.Get("Prop_AuthType"))
 
 	return sig, nil
 }

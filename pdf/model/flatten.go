@@ -50,12 +50,8 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 			for _, wa := range field.Annotations {
 				// TODO(gunnsth): Check if wa.Flags() has Print flag then include, otherwise exclude.
 
-				// XXX/FIXME: May be better to check field.V only if no appearance stream available.
-				if field.V != nil {
-					ftargets[wa.PdfAnnotation] = true
-				} else {
-					ftargets[wa.PdfAnnotation] = false
-				}
+				// NOTE(gunnsth): May be better to check field.V only if no appearance stream available.
+				ftargets[wa.PdfAnnotation] = field.V != nil
 
 				if appgen != nil {
 					// appgen generates the appearance based on the form/field/annotation and other settings
