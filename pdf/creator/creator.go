@@ -672,6 +672,14 @@ func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
 	return newSubchapter(ch, title, c.NewTextStyle())
 }
 
+// NewInvoice returns an instance of an empty invoice.
+func (c *Creator) NewInvoice() *Invoice {
+	headingStyle := c.NewTextStyle()
+	headingStyle.Font = c.defaultFontBold
+
+	return newInvoice(c.NewTextStyle(), headingStyle)
+}
+
 // NewRectangle creates a new Rectangle with default parameters
 // with left corner at (x,y) and width, height as specified.
 func (c *Creator) NewRectangle(x, y, width, height float64) *Rectangle {
