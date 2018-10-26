@@ -229,8 +229,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 }
 
 func (this *PdfFunctionType0) ToPdfObject() PdfObject {
-	container := this.container
-	if container != nil {
+	if this.container == nil {
 		this.container = &PdfObjectStream{}
 	}
 
@@ -267,10 +266,10 @@ func (this *PdfFunctionType0) ToPdfObject() PdfObject {
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.
 	dict.Set("Length", MakeInteger(int64(len(this.rawData))))
-	container.Stream = this.rawData
+	this.container.Stream = this.rawData
 
-	container.PdfObjectDictionary = dict
-	return container
+	this.container.PdfObjectDictionary = dict
+	return this.container
 }
 
 func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {

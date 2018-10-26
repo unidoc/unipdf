@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	ErrTypeCheck                = errors.New("type check")
 	ErrRequiredAttributeMissing = errors.New("required attribute missing")
 	ErrInvalidAttribute         = errors.New("invalid attribute")
 	ErrEncrypted                = errors.New("file needs to be decrypted first")

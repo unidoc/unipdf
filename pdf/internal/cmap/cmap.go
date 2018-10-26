@@ -12,7 +12,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
 // CharCode is a character code or Unicode

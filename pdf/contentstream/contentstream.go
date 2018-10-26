@@ -106,12 +106,17 @@ func (ops *ContentStreamOperations) Bytes() []byte {
 	return buf.Bytes()
 }
 
+// String returns `ops.Bytes()` as a string.
+func (ops *ContentStreamOperations) String() string {
+	return string(ops.Bytes())
+}
+
 // ExtractText parses and extracts all text data in content streams and returns as a string.
 // Does not take into account Encoding table, the output is simply the character codes.
 //
 // Deprecated: More advanced text extraction is offered in package extractor with character encoding support.
-func (this *ContentStreamParser) ExtractText() (string, error) {
-	operations, err := this.Parse()
+func (csp *ContentStreamParser) ExtractText() (string, error) {
+	operations, err := csp.Parse()
 	if err != nil {
 		return "", err
 	}
