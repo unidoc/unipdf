@@ -13,5 +13,7 @@ var (
 	ErrRequiredAttributeMissing = errors.New("Required attribute missing")
 	ErrInvalidAttribute         = errors.New("Invalid attribute")
 	ErrTypeError                = errors.New("Type check error")
-	ErrRangeError               = errors.New("Range check error")
+
+	// ErrRangeError typically occurs when an input parameter is out of range or has invalid value.
+	ErrRangeError = errors.New("Range check error")
 )

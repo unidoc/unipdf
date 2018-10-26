@@ -568,7 +568,7 @@ func TraceToDirectObject(obj PdfObject) PdfObject {
 		iobj, isIndirectObj = obj.(*PdfIndirectObject)
 		depth++
 		if depth > TraceMaxDepth {
-			common.Log.Error("Trace depth level beyond 20 - error!")
+			common.Log.Error("ERROR: Trace depth level beyond %d - not going deeper!", TraceMaxDepth)
 			return nil
 		}
 	}
