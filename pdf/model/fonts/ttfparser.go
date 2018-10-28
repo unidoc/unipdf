@@ -41,10 +41,11 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/cmap"
+
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
-// MakeEncoder returns an encoder built from the tables in  `rec`.
+// MakeEncoder returns an encoder built from the tables in `rec`.
 func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := map[uint16]string{}
 	for code := uint16(0); code <= 256; code++ {
@@ -56,12 +57,17 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 		if 0 <= gid && int(gid) < len(rec.GlyphNames) {
 			glyph = rec.GlyphNames[gid]
 		} else {
-			glyph = string(rune(gid))
+			r := rune(gid)
+			if g, ok := textencoding.RuneToGlyph(r); ok {
+				glyph = g
+			}
 		}
-		encoding[code] = glyph
+		if glyph != "" {
+			encoding[code] = glyph
+		}
 	}
 	if len(encoding) == 0 {
-		common.Log.Debug("WARNING: Zero length TrueType enconding. rec=%s Chars=[% 02x]",
+		common.Log.Debug("WARNING: Zero length TrueType encoding. rec=%s Chars=[% 02x]",
 			rec, rec.Chars)
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
@@ -301,6 +307,7 @@ func (t *ttfParser) ParseMaxp() error {
 	return nil
 }
 
+// ParseHmtx parses the Horizontal Metrics table in a TrueType.
 func (t *ttfParser) ParseHmtx() error {
 	if err := t.Seek("hmtx"); err != nil {
 		return err
