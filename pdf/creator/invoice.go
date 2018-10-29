@@ -51,6 +51,7 @@ type Invoice struct {
 	infoValProps  InvoiceCellProps
 	colProps      InvoiceCellProps
 	itemProps     InvoiceCellProps
+	totalProps    InvoiceCellProps
 
 	// The title of the invoice.
 	title string
@@ -79,7 +80,13 @@ type Invoice struct {
 	lines [][]*InvoiceCell
 
 	// Invoice totals.
-	totals [][2]*InvoiceCell
+	subtotal *InvoiceCell
+	total    *InvoiceCell
+	totals   [][2]*InvoiceCell
+
+	// Invoice notes.
+	notes string
+	terms string
 
 	// Positioning: relative/absolute.
 	positioning positioning
@@ -121,9 +128,23 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 
 	i.colProps = i.newCellProps()
 	i.colProps.BackgroundColor = lightBlue
+	i.colProps.BorderColor = lightBlue
 	i.colProps.Style = headingStyle
 
 	i.itemProps = i.newCellProps()
+	i.itemProps.Alignment = CellHorizontalAlignmentRight
+
+	i.totalProps = i.newCellProps()
+	i.totalProps.Alignment = CellHorizontalAlignmentRight
+
+	i.subtotal = i.NewCell("")
+	i.subtotal.Alignment = CellHorizontalAlignmentRight
+
+	i.total = i.NewCell("")
+	i.total.BackgroundColor = lightBlue
+	i.total.Style = headingStyle
+	i.total.Alignment = CellHorizontalAlignmentRight
+	i.total.BorderColor = lightBlue
 
 	// Default item columns.
 	quantityCol := i.NewColumn("Quantity")
@@ -244,16 +265,56 @@ func (i *Invoice) AddLine(values ...string) {
 	i.lines = append(i.lines, line)
 }
 
-func (i *Invoice) AddSubtotal(value string) *InvoiceCell {
-	return nil
+func (i *Invoice) Subtotal() *InvoiceCell {
+	return i.subtotal
 }
 
-func (i *Invoice) AddTotal(value string) *InvoiceCell {
-	return nil
+func (i *Invoice) SetSubtotal(value string) *InvoiceCell {
+	i.subtotal.Value = value
+	return i.subtotal
 }
 
-func (i *Invoice) AddTotalsLine(desc, value string) *InvoiceCell {
-	return nil
+func (i *Invoice) Total() *InvoiceCell {
+	return i.total
+}
+
+func (i *Invoice) SetTotal(value string) *InvoiceCell {
+	i.total.Value = value
+	return i.total
+}
+
+func (i *Invoice) TotalLines() [][2]*InvoiceCell {
+	return i.totals
+}
+
+func (i *Invoice) AddTotalLine(desc, value string) (*InvoiceCell, *InvoiceCell) {
+	descCell := &InvoiceCell{
+		i.totalProps,
+		desc,
+	}
+	valueCell := &InvoiceCell{
+		i.totalProps,
+		value,
+	}
+
+	i.totals = append(i.totals, [2]*InvoiceCell{descCell, valueCell})
+	return descCell, valueCell
+}
+
+func (i *Invoice) Notes() string {
+	return i.notes
+}
+
+func (i *Invoice) SetNotes(notes string) {
+	i.notes = notes
+}
+
+func (i *Invoice) Terms() string {
+	return i.terms
+}
+
+func (i *Invoice) SetTerms(terms string) {
+	i.terms = terms
 }
 
 func (i *Invoice) NewCell(value string) *InvoiceCell {
@@ -324,6 +385,29 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 	return paragraphs
 }
 
+func (i *Invoice) drawSection(title, content string) []*StyledParagraph {
+	var paragraphs []*StyledParagraph
+
+	// Title paragraph.
+	if title != "" {
+		titleParagraph := newStyledParagraph(i.headingStyle)
+		titleParagraph.SetMargins(0, 0, 0, 5)
+		titleParagraph.Append(title)
+
+		paragraphs = append(paragraphs, titleParagraph)
+	}
+
+	// Content paragraph.
+	if content != "" {
+		contentParagraph := newStyledParagraph(i.defaultStyle)
+		contentParagraph.Append(content)
+
+		paragraphs = append(paragraphs, contentParagraph)
+	}
+
+	return paragraphs
+}
+
 func (i *Invoice) drawInformation() *Table {
 	table := newTable(2)
 
@@ -361,6 +445,57 @@ func (i *Invoice) drawInformation() *Table {
 		p = newStyledParagraph(i.infoValProps.Style)
 		p.Append(value)
 		p.SetMargins(0, 0, 2, 0)
+		cell.SetContent(p)
+	}
+
+	return table
+}
+
+func (i *Invoice) drawTotals() *Table {
+	table := newTable(2)
+
+	totals := [][2]*InvoiceCell{}
+	if i.subtotal.Value != "" {
+		subtotalDesc := *i.subtotal
+		subtotalDesc.Value = "Subtotal"
+
+		totals = append(totals, [2]*InvoiceCell{&subtotalDesc, i.subtotal})
+	}
+
+	totals = append(totals, i.totals...)
+
+	if i.total.Value != "" {
+		totalDesc := *i.total
+		totalDesc.Value = "Total"
+
+		totals = append(totals, [2]*InvoiceCell{&totalDesc, i.total})
+	}
+
+	for _, total := range totals {
+		description, value := total[0], total[1]
+
+		// Add description.
+		cell := table.NewCell()
+		cell.SetBackgroundColor(description.BackgroundColor)
+		cell.SetHorizontalAlignment(value.Alignment)
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+		cell.SetBorderColor(value.BorderColor)
+
+		p := newStyledParagraph(description.Style)
+		p.SetMargins(0, 0, 1, 1)
+		p.Append(description.Value)
+		cell.SetContent(p)
+
+		// Add value.
+		cell = table.NewCell()
+		cell.SetBackgroundColor(value.BackgroundColor)
+		cell.SetHorizontalAlignment(value.Alignment)
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+		cell.SetBorderColor(value.BorderColor)
+
+		p = newStyledParagraph(value.Style)
+		p.SetMargins(0, 0, 1, 1)
+		p.Append(value.Value)
 		cell.SetContent(p)
 	}
 
@@ -435,6 +570,7 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	// Draw item columns
 	for _, col := range i.columns {
 		paragraph := newStyledParagraph(col.Style)
+		paragraph.SetMargins(0, 0, 1, 0)
 		paragraph.Append(col.Description)
 
 		cell := table.NewCell()
@@ -449,6 +585,7 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	for _, line := range i.lines {
 		for _, itemCell := range line {
 			paragraph := newStyledParagraph(itemCell.Style)
+			paragraph.SetMargins(0, 0, 1, 0)
 			paragraph.Append(itemCell.Value)
 
 			cell := table.NewCell()
@@ -463,36 +600,82 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	return table.GeneratePageBlocks(ctx)
 }
 
+func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	table := newTable(2)
+	table.SetMargins(0, 0, 5, 35)
+
+	mediumGrey := ColorRGBFrom8bit(195, 195, 195)
+
+	cell := table.NewCell()
+	cell.SetBorder(CellBorderSideTop, CellBorderStyleSingle, 1)
+	cell.SetBorderColor(mediumGrey)
+
+	if i.notes != "" {
+		noteParagraphs := i.drawSection("Notes", i.notes)
+
+		noteDivision := newDivision()
+		for _, noteParagraph := range noteParagraphs {
+			noteParagraph.SetMargins(0, 0, 5, 0)
+			noteDivision.Add(noteParagraph)
+		}
+
+		cell.SetContent(noteDivision)
+	}
+
+	totalsTable := i.drawTotals()
+	totalsTable.SetMargins(0, 0, 5, 0)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideTop, CellBorderStyleSingle, 1)
+	cell.SetBorderColor(mediumGrey)
+	cell.SetContent(totalsTable)
+
+	return table.GeneratePageBlocks(ctx)
+}
+
+func (i *Invoice) generateNoteBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	division := newDivision()
+
+	if i.terms != "" {
+		termParagraphs := i.drawSection("Terms and conditions", i.terms)
+		for _, termParagraph := range termParagraphs {
+			termParagraph.SetMargins(0, 0, 5, 0)
+			division.Add(termParagraph)
+		}
+	}
+
+	return division.GeneratePageBlocks(ctx)
+}
+
 // GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
 // if the contents wrap over multiple pages.
 func (i *Invoice) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
-	// Generate title blocks.
-	blocks, ctx, err := i.generateHeaderBlocks(ctx)
-	if err != nil {
-		return blocks, ctx, err
+	blockFuncs := []func(ctx DrawContext) ([]*Block, DrawContext, error){
+		i.generateHeaderBlocks,
+		i.generateInformationBlocks,
+		i.generateLineBlocks,
+		i.generateTotalBlocks,
+		i.generateNoteBlocks,
 	}
 
-	// Generate address and information blocks.
-	newBlocks, c, err := i.generateInformationBlocks(ctx)
-	if err != nil {
-		return blocks, ctx, err
+	var blocks []*Block
+	for _, blockFunc := range blockFuncs {
+		newBlocks, c, err := blockFunc(ctx)
+		if err != nil {
+			return blocks, ctx, err
+		}
+
+		if len(blocks) == 0 {
+			blocks = newBlocks
+		} else if len(newBlocks) > 0 {
+			blocks[len(blocks)-1].mergeBlocks(newBlocks[0])
+			blocks = append(blocks, newBlocks[1:]...)
+		}
+
+		ctx = c
 	}
-
-	blocks[len(blocks)-1].mergeBlocks(newBlocks[0])
-	blocks = append(blocks, newBlocks[1:]...)
-	ctx = c
-
-	// Generate line items blocks.
-	newBlocks, c, err = i.generateLineBlocks(ctx)
-	if err != nil {
-		return blocks, ctx, err
-	}
-
-	blocks[len(blocks)-1].mergeBlocks(newBlocks[0])
-	blocks = append(blocks, newBlocks[1:]...)
-	ctx = c
 
 	if i.positioning.isRelative() {
 		// Move back X to same start of line.
@@ -502,7 +685,6 @@ func (i *Invoice) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	if i.positioning.isAbsolute() {
 		// If absolute: return original context.
 		return blocks, origCtx, nil
-
 	}
 
 	return blocks, ctx, nil
