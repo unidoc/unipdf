@@ -259,6 +259,8 @@ func (csp *ContentStreamProcessor) Process(resources *PdfPageResources) error {
 			err = csp.handleCommand_K(op, resources)
 		case "k":
 			err = csp.handleCommand_k(op, resources)
+		case "cm":
+			err = csp.handleCommand_cm(op, resources)
 		}
 		if err != nil {
 			common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
