@@ -25,8 +25,8 @@ type InvoiceCellProps struct {
 	BackgroundColor Color
 
 	BorderColor Color
-	BorderWidth int
-	BorderStyle int
+	BorderWidth float64
+	BorderSides []CellBorderSide
 }
 
 // InvoiceCell.
@@ -118,6 +118,8 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	i.colProps.BorderColor = lightGrey
 
 	i.itemProps = i.NewCellProps()
+	i.itemProps.BorderColor = lightGrey
+	i.itemProps.BorderSides = []CellBorderSide{CellBorderSideBottom}
 	i.itemProps.Alignment = CellHorizontalAlignmentRight
 
 	// Invoice totals default properties.
@@ -341,7 +343,7 @@ func (i *Invoice) NewCellProps() InvoiceCellProps {
 		BackgroundColor: white,
 		BorderColor:     white,
 		BorderWidth:     1,
-		BorderStyle:     int(CellBorderSideAll),
+		BorderSides:     []CellBorderSide{CellBorderSideAll},
 	}
 }
 
@@ -365,6 +367,14 @@ func (i *Invoice) newColumn(description string, alignment CellHorizontalAlignmen
 	col.Alignment = alignment
 
 	return col
+}
+
+func (i *Invoice) setCellBorder(cell *TableCell, invoiceCell *InvoiceCell) {
+	for _, side := range invoiceCell.BorderSides {
+		cell.SetBorder(side, CellBorderStyleSingle, invoiceCell.BorderWidth)
+	}
+
+	cell.SetBorderColor(invoiceCell.BorderColor)
 }
 
 func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*StyledParagraph {
@@ -462,23 +472,21 @@ func (i *Invoice) drawInformation() *Table {
 		// Add description.
 		cell := table.NewCell()
 		cell.SetBackgroundColor(description.BackgroundColor)
-		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(description.BorderColor)
+		i.setCellBorder(cell, description)
 
 		p := newStyledParagraph(description.TextStyle)
 		p.Append(description.Value)
-		p.SetMargins(0, 0, 2, 0)
+		p.SetMargins(0, 0, 2, 1)
 		cell.SetContent(p)
 
 		// Add value.
 		cell = table.NewCell()
 		cell.SetBackgroundColor(value.BackgroundColor)
-		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(value.BorderColor)
+		i.setCellBorder(cell, value)
 
 		p = newStyledParagraph(value.TextStyle)
 		p.Append(value.Value)
-		p.SetMargins(0, 0, 2, 0)
+		p.SetMargins(0, 0, 2, 1)
 		cell.SetContent(p)
 	}
 
@@ -502,11 +510,10 @@ func (i *Invoice) drawTotals() *Table {
 		cell := table.NewCell()
 		cell.SetBackgroundColor(description.BackgroundColor)
 		cell.SetHorizontalAlignment(value.Alignment)
-		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(value.BorderColor)
+		i.setCellBorder(cell, description)
 
 		p := newStyledParagraph(description.TextStyle)
-		p.SetMargins(0, 0, 1, 1)
+		p.SetMargins(0, 0, 2, 1)
 		p.Append(description.Value)
 		cell.SetContent(p)
 
@@ -514,11 +521,10 @@ func (i *Invoice) drawTotals() *Table {
 		cell = table.NewCell()
 		cell.SetBackgroundColor(value.BackgroundColor)
 		cell.SetHorizontalAlignment(value.Alignment)
-		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(value.BorderColor)
+		i.setCellBorder(cell, description)
 
 		p = newStyledParagraph(value.TextStyle)
-		p.SetMargins(0, 0, 1, 1)
+		p.SetMargins(0, 0, 2, 1)
 		p.Append(value.Value)
 		cell.SetContent(p)
 	}
@@ -600,8 +606,7 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cell := table.NewCell()
 		cell.SetHorizontalAlignment(col.Alignment)
 		cell.SetBackgroundColor(col.BackgroundColor)
-		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(col.BorderColor)
+		i.setCellBorder(cell, col)
 		cell.SetContent(paragraph)
 	}
 
@@ -609,14 +614,13 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	for _, line := range i.lines {
 		for _, itemCell := range line {
 			paragraph := newStyledParagraph(itemCell.TextStyle)
-			paragraph.SetMargins(0, 0, 1, 0)
+			paragraph.SetMargins(0, 0, 3, 2)
 			paragraph.Append(itemCell.Value)
 
 			cell := table.NewCell()
 			cell.SetHorizontalAlignment(itemCell.Alignment)
 			cell.SetBackgroundColor(itemCell.BackgroundColor)
-			cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-			cell.SetBorderColor(itemCell.BorderColor)
+			i.setCellBorder(cell, itemCell)
 			cell.SetContent(paragraph)
 		}
 	}
@@ -626,7 +630,7 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 
 func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	table := newTable(2)
-	table.SetMargins(0, 0, 5, 35)
+	table.SetMargins(0, 0, 5, 40)
 	table.SkipCells(1)
 
 	totalsTable := i.drawTotals()
