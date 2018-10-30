@@ -7,7 +7,7 @@ package creator
 
 import "fmt"
 
-// InvoiceAddress
+// InvoiceAddress.
 type InvoiceAddress struct {
 	Name    string
 	Street  string
@@ -18,75 +18,65 @@ type InvoiceAddress struct {
 	Email   string
 }
 
-// InvoiceCellProps
+// InvoiceCellProps.
 type InvoiceCellProps struct {
+	TextStyle       TextStyle
 	Alignment       CellHorizontalAlignment
 	BackgroundColor Color
-	BorderColor     Color
-	Style           TextStyle
+
+	BorderColor Color
+	BorderWidth int
+	BorderStyle int
 }
 
-// InvoiceColumn
-type InvoiceColumn struct {
-	InvoiceCellProps
-
-	Description string
-}
-
-// InvoiceCell
+// InvoiceCell.
 type InvoiceCell struct {
 	InvoiceCellProps
 
 	Value string
 }
 
-// Invoice represents a configurable template for an invoice.
+// Invoice represents a configurable invoice template.
 type Invoice struct {
+	// Invoice title.
+	title string
+
+	// Invoice logo.
+	logo *Image
+
+	// Invoice addresses.
+	buyerAddress  *InvoiceAddress
+	sellerAddress *InvoiceAddress
+
+	// Invoice information.
+	number  [2]*InvoiceCell
+	date    [2]*InvoiceCell
+	dueDate [2]*InvoiceCell
+	info    [][2]*InvoiceCell
+
+	// Invoice lines.
+	columns []*InvoiceCell
+	lines   [][]*InvoiceCell
+
+	// Invoice totals.
+	subtotal [2]*InvoiceCell
+	total    [2]*InvoiceCell
+	totals   [][2]*InvoiceCell
+
+	// Invoice note sections.
+	notes    [2]string
+	terms    [2]string
+	sections [][2]string
+
 	// Invoice styles.
 	defaultStyle TextStyle
 	headingStyle TextStyle
 	titleStyle   TextStyle
 
-	infoDescProps InvoiceCellProps
-	infoValProps  InvoiceCellProps
-	colProps      InvoiceCellProps
-	itemProps     InvoiceCellProps
-	totalProps    InvoiceCellProps
-
-	// The title of the invoice.
-	title string
-
-	// The logo of the invoice.
-	logo *Image
-
-	// Buyer address.
-	buyerAddress InvoiceAddress
-
-	// Seller address.
-	sellerAddress InvoiceAddress
-
-	// Invoice information.
-	number       string
-	date         string
-	paymentTerms string
-	dueDate      string
-
-	additionalInfo [][2]string
-
-	// Invoice columns.
-	columns []*InvoiceColumn
-
-	// Invoice lines.
-	lines [][]*InvoiceCell
-
-	// Invoice totals.
-	subtotal *InvoiceCell
-	total    *InvoiceCell
-	totals   [][2]*InvoiceCell
-
-	// Invoice notes.
-	notes string
-	terms string
+	infoProps  InvoiceCellProps
+	colProps   InvoiceCellProps
+	itemProps  InvoiceCellProps
+	totalProps InvoiceCellProps
 
 	// Positioning: relative/absolute.
 	positioning positioning
@@ -95,86 +85,90 @@ type Invoice struct {
 // newInvoice returns an instance of an empty invoice.
 func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	i := &Invoice{
-		// Styles.
-		defaultStyle: defaultStyle,
-		headingStyle: headingStyle,
-
 		// Title.
 		title: "INVOICE",
 
-		// Information.
-		additionalInfo: [][2]string{},
-
 		// Addresses.
-		sellerAddress: InvoiceAddress{},
-		buyerAddress:  InvoiceAddress{},
+		sellerAddress: &InvoiceAddress{},
+		buyerAddress:  &InvoiceAddress{},
+
+		// Styles.
+		defaultStyle: defaultStyle,
+		headingStyle: headingStyle,
 	}
 
-	// Default style properties.
-	lightBlue := ColorRGBFrom8bit(217, 240, 250)
+	// Default colors.
 	lightGrey := ColorRGBFrom8bit(245, 245, 245)
 	mediumGrey := ColorRGBFrom8bit(155, 155, 155)
 
+	// Default title style.
 	i.titleStyle = headingStyle
 	i.titleStyle.Color = mediumGrey
 	i.titleStyle.FontSize = 20
 
-	i.infoDescProps = i.newCellProps()
-	i.infoDescProps.BackgroundColor = lightBlue
-	i.infoDescProps.Style = headingStyle
+	// Invoice information default properties.
+	i.infoProps = i.NewCellProps()
+	i.infoProps.BackgroundColor = lightGrey
+	i.infoProps.TextStyle = headingStyle
 
-	i.infoValProps = i.newCellProps()
-	i.infoValProps.BackgroundColor = lightGrey
+	// Invoice line items default properties.
+	i.colProps = i.NewCellProps()
+	i.colProps.TextStyle = headingStyle
+	i.colProps.BackgroundColor = lightGrey
+	i.colProps.BorderColor = lightGrey
 
-	i.colProps = i.newCellProps()
-	i.colProps.BackgroundColor = lightBlue
-	i.colProps.BorderColor = lightBlue
-	i.colProps.Style = headingStyle
-
-	i.itemProps = i.newCellProps()
+	i.itemProps = i.NewCellProps()
 	i.itemProps.Alignment = CellHorizontalAlignmentRight
 
-	i.totalProps = i.newCellProps()
+	// Invoice totals default properties.
+	i.totalProps = i.NewCellProps()
 	i.totalProps.Alignment = CellHorizontalAlignmentRight
 
-	i.subtotal = i.NewCell("")
-	i.subtotal.Alignment = CellHorizontalAlignmentRight
+	// Invoice information fields.
+	i.number = [2]*InvoiceCell{
+		i.newCell("Invoice number", i.infoProps),
+		i.newCell("", i.infoProps),
+	}
 
-	i.total = i.NewCell("")
-	i.total.BackgroundColor = lightBlue
-	i.total.Style = headingStyle
-	i.total.Alignment = CellHorizontalAlignmentRight
-	i.total.BorderColor = lightBlue
+	i.date = [2]*InvoiceCell{
+		i.newCell("Date", i.infoProps),
+		i.newCell("", i.infoProps),
+	}
+
+	i.dueDate = [2]*InvoiceCell{
+		i.newCell("Date", i.infoProps),
+		i.newCell("", i.infoProps),
+	}
+
+	// Invoice totals fields.
+	i.subtotal = [2]*InvoiceCell{
+		i.newCell("Subtotal", i.totalProps),
+		i.newCell("", i.totalProps),
+	}
+
+	totalProps := i.totalProps
+	totalProps.TextStyle = headingStyle
+	totalProps.BackgroundColor = lightGrey
+	totalProps.BorderColor = lightGrey
+
+	i.total = [2]*InvoiceCell{
+		i.newCell("Total", totalProps),
+		i.newCell("", totalProps),
+	}
+
+	// Invoice notes fields.
+	i.notes = [2]string{"Notes", ""}
+	i.terms = [2]string{"Terms and conditions", ""}
 
 	// Default item columns.
-	quantityCol := i.NewColumn("Quantity")
-	quantityCol.Alignment = CellHorizontalAlignmentRight
-
-	unitPriceCol := i.NewColumn("Unit price")
-	unitPriceCol.Alignment = CellHorizontalAlignmentRight
-
-	amountCol := i.NewColumn("Amount")
-	amountCol.Alignment = CellHorizontalAlignmentRight
-
-	i.columns = []*InvoiceColumn{
-		i.NewColumn("Description"),
-		quantityCol,
-		unitPriceCol,
-		amountCol,
+	i.columns = []*InvoiceCell{
+		i.newColumn("Description", CellHorizontalAlignmentLeft),
+		i.newColumn("Quantity", CellHorizontalAlignmentRight),
+		i.newColumn("Unit price", CellHorizontalAlignmentRight),
+		i.newColumn("Amount", CellHorizontalAlignmentRight),
 	}
 
 	return i
-}
-
-func (i *Invoice) newCellProps() InvoiceCellProps {
-	white := ColorRGBFrom8bit(255, 255, 255)
-
-	return InvoiceCellProps{
-		Alignment:       CellHorizontalAlignmentLeft,
-		BackgroundColor: white,
-		BorderColor:     white,
-		Style:           i.defaultStyle,
-	}
 }
 
 func (i *Invoice) Title() string {
@@ -193,55 +187,61 @@ func (i *Invoice) SetLogo(logo *Image) {
 	i.logo = logo
 }
 
-func (i *Invoice) SetSellerAddress(address InvoiceAddress) {
+func (i *Invoice) SellerAddress() *InvoiceAddress {
+	return i.sellerAddress
+}
+
+func (i *Invoice) SetSellerAddress(address *InvoiceAddress) {
 	i.sellerAddress = address
 }
 
-func (i *Invoice) SetBuyerAddress(address InvoiceAddress) {
+func (i *Invoice) BuyerAddress() *InvoiceAddress {
+	return i.buyerAddress
+}
+
+func (i *Invoice) SetBuyerAddress(address *InvoiceAddress) {
 	i.buyerAddress = address
 }
 
-func (i *Invoice) Number() string {
-	return i.number
+func (i *Invoice) Number() (*InvoiceCell, *InvoiceCell) {
+	return i.number[0], i.number[1]
 }
 
 func (i *Invoice) SetNumber(number string) {
-	i.number = number
+	i.number[1].Value = number
 }
 
-func (i *Invoice) Date() string {
-	return i.date
+func (i *Invoice) Date() (*InvoiceCell, *InvoiceCell) {
+	return i.date[0], i.date[1]
 }
 
 func (i *Invoice) SetDate(date string) {
-	i.date = date
+	i.date[1].Value = date
 }
 
-func (i *Invoice) PaymentTerms() string {
-	return i.paymentTerms
-}
-
-func (i *Invoice) SetPaymentTerms(paymentTerms string) {
-	i.paymentTerms = paymentTerms
-}
-
-func (i *Invoice) DueDate() string {
-	return i.dueDate
+func (i *Invoice) DueDate() (*InvoiceCell, *InvoiceCell) {
+	return i.dueDate[0], i.dueDate[1]
 }
 
 func (i *Invoice) SetDueDate(dueDate string) {
-	i.dueDate = dueDate
+	i.dueDate[1].Value = dueDate
 }
 
-func (i *Invoice) AddInvoiceInfo(description, value string) {
-	i.additionalInfo = append(i.additionalInfo, [2]string{description, value})
+func (i *Invoice) AddInvoiceInfo(description, value string) (*InvoiceCell, *InvoiceCell) {
+	info := [2]*InvoiceCell{
+		i.newCell(description, i.infoProps),
+		i.newCell(value, i.infoProps),
+	}
+
+	i.info = append(i.info, info)
+	return info[0], info[1]
 }
 
-func (i *Invoice) AppendColumn(description string) *InvoiceColumn {
+func (i *Invoice) AppendColumn(description string) *InvoiceCell {
 	return nil
 }
 
-func (i *Invoice) InsertColumn(description string) *InvoiceColumn {
+func (i *Invoice) InsertColumn(description string) *InvoiceCell {
 	return nil
 }
 
@@ -254,7 +254,7 @@ func (i *Invoice) AddLine(values ...string) {
 
 	var line []*InvoiceCell
 	for j, value := range values {
-		itemCell := i.NewCell(value)
+		itemCell := i.newCell(value, i.itemProps)
 		if j < lenCols {
 			itemCell.Alignment = i.columns[j].Alignment
 		}
@@ -265,22 +265,20 @@ func (i *Invoice) AddLine(values ...string) {
 	i.lines = append(i.lines, line)
 }
 
-func (i *Invoice) Subtotal() *InvoiceCell {
-	return i.subtotal
+func (i *Invoice) Subtotal() (*InvoiceCell, *InvoiceCell) {
+	return i.subtotal[0], i.subtotal[1]
 }
 
-func (i *Invoice) SetSubtotal(value string) *InvoiceCell {
-	i.subtotal.Value = value
-	return i.subtotal
+func (i *Invoice) SetSubtotal(value string) {
+	i.subtotal[1].Value = value
 }
 
-func (i *Invoice) Total() *InvoiceCell {
-	return i.total
+func (i *Invoice) Total() (*InvoiceCell, *InvoiceCell) {
+	return i.total[0], i.total[1]
 }
 
-func (i *Invoice) SetTotal(value string) *InvoiceCell {
-	i.total.Value = value
-	return i.total
+func (i *Invoice) SetTotal(value string) {
+	i.total[1].Value = value
 }
 
 func (i *Invoice) TotalLines() [][2]*InvoiceCell {
@@ -301,34 +299,72 @@ func (i *Invoice) AddTotalLine(desc, value string) (*InvoiceCell, *InvoiceCell) 
 	return descCell, valueCell
 }
 
-func (i *Invoice) Notes() string {
-	return i.notes
+func (i *Invoice) Notes() (string, string) {
+	return i.notes[0], i.notes[1]
 }
 
-func (i *Invoice) SetNotes(notes string) {
-	i.notes = notes
+func (i *Invoice) SetNotes(title, content string) {
+	i.notes = [2]string{
+		title,
+		content,
+	}
 }
 
-func (i *Invoice) Terms() string {
-	return i.terms
+func (i *Invoice) Terms() (string, string) {
+	return i.terms[0], i.terms[1]
 }
 
-func (i *Invoice) SetTerms(terms string) {
-	i.terms = terms
+func (i *Invoice) SetTerms(title, content string) {
+	i.terms = [2]string{
+		title,
+		content,
+	}
+}
+
+func (i *Invoice) Sections() [][2]string {
+	return i.sections
+}
+
+func (i *Invoice) AddSection(title, content string) {
+	i.sections = append(i.sections, [2]string{
+		title,
+		content,
+	})
+}
+
+func (i *Invoice) NewCellProps() InvoiceCellProps {
+	white := ColorRGBFrom8bit(255, 255, 255)
+
+	return InvoiceCellProps{
+		TextStyle:       i.defaultStyle,
+		Alignment:       CellHorizontalAlignmentLeft,
+		BackgroundColor: white,
+		BorderColor:     white,
+		BorderWidth:     1,
+		BorderStyle:     int(CellBorderSideAll),
+	}
 }
 
 func (i *Invoice) NewCell(value string) *InvoiceCell {
+	return i.newCell(value, i.NewCellProps())
+}
+
+func (i *Invoice) newCell(value string, props InvoiceCellProps) *InvoiceCell {
 	return &InvoiceCell{
-		i.itemProps,
+		props,
 		value,
 	}
 }
 
-func (i *Invoice) NewColumn(description string) *InvoiceColumn {
-	return &InvoiceColumn{
-		i.colProps,
-		description,
-	}
+func (i *Invoice) NewColumn(description string) *InvoiceCell {
+	return i.newColumn(description, CellHorizontalAlignmentLeft)
+}
+
+func (i *Invoice) newColumn(description string, alignment CellHorizontalAlignment) *InvoiceCell {
+	col := &InvoiceCell{i.colProps, description}
+	col.Alignment = alignment
+
+	return col
 }
 
 func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*StyledParagraph {
@@ -369,7 +405,7 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 		addressParagraph.Append(addr.Country + "\n")
 	}
 
-	// Contact information
+	// Contact information.
 	contactParagraph := newStyledParagraph(i.defaultStyle)
 	contactParagraph.SetLineHeight(1.2)
 	contactParagraph.SetMargins(0, 0, 7, 0)
@@ -411,39 +447,37 @@ func (i *Invoice) drawSection(title, content string) []*StyledParagraph {
 func (i *Invoice) drawInformation() *Table {
 	table := newTable(2)
 
-	info := [][2]string{
-		[2]string{"Invoice number", i.number},
-		[2]string{"Invoice date", i.date},
-		[2]string{"Payment terms", i.paymentTerms},
-		[2]string{"Due date", i.dueDate},
-	}
-	info = append(info, i.additionalInfo...)
+	info := append([][2]*InvoiceCell{
+		i.number,
+		i.date,
+		i.dueDate,
+	}, i.info...)
 
 	for _, v := range info {
 		description, value := v[0], v[1]
-		if len(value) == 0 {
+		if value.Value == "" {
 			continue
 		}
 
 		// Add description.
 		cell := table.NewCell()
-		cell.SetBackgroundColor(i.infoDescProps.BackgroundColor)
+		cell.SetBackgroundColor(description.BackgroundColor)
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(i.infoDescProps.BorderColor)
+		cell.SetBorderColor(description.BorderColor)
 
-		p := newStyledParagraph(i.infoDescProps.Style)
-		p.Append(description)
+		p := newStyledParagraph(description.TextStyle)
+		p.Append(description.Value)
 		p.SetMargins(0, 0, 2, 0)
 		cell.SetContent(p)
 
 		// Add value.
 		cell = table.NewCell()
-		cell.SetBackgroundColor(i.infoValProps.BackgroundColor)
+		cell.SetBackgroundColor(value.BackgroundColor)
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
-		cell.SetBorderColor(i.infoValProps.BorderColor)
+		cell.SetBorderColor(value.BorderColor)
 
-		p = newStyledParagraph(i.infoValProps.Style)
-		p.Append(value)
+		p = newStyledParagraph(value.TextStyle)
+		p.Append(value.Value)
 		p.SetMargins(0, 0, 2, 0)
 		cell.SetContent(p)
 	}
@@ -454,25 +488,15 @@ func (i *Invoice) drawInformation() *Table {
 func (i *Invoice) drawTotals() *Table {
 	table := newTable(2)
 
-	totals := [][2]*InvoiceCell{}
-	if i.subtotal.Value != "" {
-		subtotalDesc := *i.subtotal
-		subtotalDesc.Value = "Subtotal"
-
-		totals = append(totals, [2]*InvoiceCell{&subtotalDesc, i.subtotal})
-	}
-
+	totals := [][2]*InvoiceCell{i.subtotal}
 	totals = append(totals, i.totals...)
-
-	if i.total.Value != "" {
-		totalDesc := *i.total
-		totalDesc.Value = "Total"
-
-		totals = append(totals, [2]*InvoiceCell{&totalDesc, i.total})
-	}
+	totals = append(totals, i.total)
 
 	for _, total := range totals {
 		description, value := total[0], total[1]
+		if value.Value == "" {
+			continue
+		}
 
 		// Add description.
 		cell := table.NewCell()
@@ -481,7 +505,7 @@ func (i *Invoice) drawTotals() *Table {
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 		cell.SetBorderColor(value.BorderColor)
 
-		p := newStyledParagraph(description.Style)
+		p := newStyledParagraph(description.TextStyle)
 		p.SetMargins(0, 0, 1, 1)
 		p.Append(description.Value)
 		cell.SetContent(p)
@@ -493,7 +517,7 @@ func (i *Invoice) drawTotals() *Table {
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 		cell.SetBorderColor(value.BorderColor)
 
-		p = newStyledParagraph(value.Style)
+		p = newStyledParagraph(value.TextStyle)
 		p.SetMargins(0, 0, 1, 1)
 		p.Append(value.Value)
 		cell.SetContent(p)
@@ -537,10 +561,10 @@ func (i *Invoice) generateInformationBlocks(ctx DrawContext) ([]*Block, DrawCont
 	separatorParagraph := newStyledParagraph(i.defaultStyle)
 	separatorParagraph.SetMargins(0, 0, 0, 20)
 
-	addrParagraphs := i.drawAddress(i.sellerAddress.Name, "", &i.sellerAddress)
+	addrParagraphs := i.drawAddress(i.sellerAddress.Name, "", i.sellerAddress)
 	addrParagraphs = append(addrParagraphs, separatorParagraph)
 	addrParagraphs = append(addrParagraphs,
-		i.drawAddress("Bill to", i.buyerAddress.Name, &i.buyerAddress)...)
+		i.drawAddress("Bill to", i.buyerAddress.Name, i.buyerAddress)...)
 
 	addrDivision := newDivision()
 	for _, addrParagraph := range addrParagraphs {
@@ -567,11 +591,11 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 	table := newTable(4)
 	table.SetMargins(0, 0, 25, 0)
 
-	// Draw item columns
+	// Draw item columns.
 	for _, col := range i.columns {
-		paragraph := newStyledParagraph(col.Style)
+		paragraph := newStyledParagraph(col.TextStyle)
 		paragraph.SetMargins(0, 0, 1, 0)
-		paragraph.Append(col.Description)
+		paragraph.Append(col.Value)
 
 		cell := table.NewCell()
 		cell.SetHorizontalAlignment(col.Alignment)
@@ -581,10 +605,10 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cell.SetContent(paragraph)
 	}
 
-	// Draw item lines
+	// Draw item lines.
 	for _, line := range i.lines {
 		for _, itemCell := range line {
-			paragraph := newStyledParagraph(itemCell.Style)
+			paragraph := newStyledParagraph(itemCell.TextStyle)
 			paragraph.SetMargins(0, 0, 1, 0)
 			paragraph.Append(itemCell.Value)
 
@@ -603,31 +627,12 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	table := newTable(2)
 	table.SetMargins(0, 0, 5, 35)
-
-	mediumGrey := ColorRGBFrom8bit(195, 195, 195)
-
-	cell := table.NewCell()
-	cell.SetBorder(CellBorderSideTop, CellBorderStyleSingle, 1)
-	cell.SetBorderColor(mediumGrey)
-
-	if i.notes != "" {
-		noteParagraphs := i.drawSection("Notes", i.notes)
-
-		noteDivision := newDivision()
-		for _, noteParagraph := range noteParagraphs {
-			noteParagraph.SetMargins(0, 0, 5, 0)
-			noteDivision.Add(noteParagraph)
-		}
-
-		cell.SetContent(noteDivision)
-	}
+	table.SkipCells(1)
 
 	totalsTable := i.drawTotals()
 	totalsTable.SetMargins(0, 0, 5, 0)
 
-	cell = table.NewCell()
-	cell.SetBorder(CellBorderSideTop, CellBorderStyleSingle, 1)
-	cell.SetBorderColor(mediumGrey)
+	cell := table.NewCell()
 	cell.SetContent(totalsTable)
 
 	return table.GeneratePageBlocks(ctx)
@@ -636,11 +641,22 @@ func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, e
 func (i *Invoice) generateNoteBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	division := newDivision()
 
-	if i.terms != "" {
-		termParagraphs := i.drawSection("Terms and conditions", i.terms)
-		for _, termParagraph := range termParagraphs {
-			termParagraph.SetMargins(0, 0, 5, 0)
-			division.Add(termParagraph)
+	sections := [][2]string{
+		i.notes,
+		i.terms,
+	}
+	sections = append(sections, i.sections...)
+
+	for _, section := range sections {
+		if section[1] != "" {
+			paragraphs := i.drawSection(section[0], section[1])
+			for _, paragraph := range paragraphs {
+				division.Add(paragraph)
+			}
+
+			sepParagraph := newStyledParagraph(i.defaultStyle)
+			sepParagraph.SetMargins(0, 0, 20, 0)
+			division.Add(sepParagraph)
 		}
 	}
 
