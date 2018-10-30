@@ -209,24 +209,27 @@ func (i *Invoice) Number() (*InvoiceCell, *InvoiceCell) {
 	return i.number[0], i.number[1]
 }
 
-func (i *Invoice) SetNumber(number string) {
+func (i *Invoice) SetNumber(number string) (*InvoiceCell, *InvoiceCell) {
 	i.number[1].Value = number
+	return i.number[0], i.number[1]
 }
 
 func (i *Invoice) Date() (*InvoiceCell, *InvoiceCell) {
 	return i.date[0], i.date[1]
 }
 
-func (i *Invoice) SetDate(date string) {
+func (i *Invoice) SetDate(date string) (*InvoiceCell, *InvoiceCell) {
 	i.date[1].Value = date
+	return i.date[0], i.date[1]
 }
 
 func (i *Invoice) DueDate() (*InvoiceCell, *InvoiceCell) {
 	return i.dueDate[0], i.dueDate[1]
 }
 
-func (i *Invoice) SetDueDate(dueDate string) {
+func (i *Invoice) SetDueDate(dueDate string) (*InvoiceCell, *InvoiceCell) {
 	i.dueDate[1].Value = dueDate
+	return i.dueDate[0], i.dueDate[1]
 }
 
 func (i *Invoice) AddInvoiceInfo(description, value string) (*InvoiceCell, *InvoiceCell) {
@@ -239,19 +242,32 @@ func (i *Invoice) AddInvoiceInfo(description, value string) (*InvoiceCell, *Invo
 	return info[0], info[1]
 }
 
-func (i *Invoice) AppendColumn(description string) *InvoiceCell {
-	return nil
+func (i *Invoice) Columns() []*InvoiceCell {
+	return i.columns
 }
 
-func (i *Invoice) InsertColumn(description string) *InvoiceCell {
-	return nil
+func (i *Invoice) AppendColumn(description string) *InvoiceCell {
+	col := i.NewColumn(description)
+	i.columns = append(i.columns, col)
+	return col
+}
+
+func (i *Invoice) InsertColumn(index uint, description string) *InvoiceCell {
+	l := uint(len(i.columns))
+	if index > l {
+		index = l
+	}
+
+	col := i.NewColumn(description)
+	i.columns = append(i.columns[:index], append([]*InvoiceCell{col}, i.columns[index:]...)...)
+	return col
 }
 
 func (i *Invoice) Lines() [][]*InvoiceCell {
 	return i.lines
 }
 
-func (i *Invoice) AddLine(values ...string) {
+func (i *Invoice) AddLine(values ...string) []*InvoiceCell {
 	lenCols := len(i.columns)
 
 	var line []*InvoiceCell
@@ -265,6 +281,7 @@ func (i *Invoice) AddLine(values ...string) {
 	}
 
 	i.lines = append(i.lines, line)
+	return line
 }
 
 func (i *Invoice) Subtotal() (*InvoiceCell, *InvoiceCell) {
@@ -594,7 +611,7 @@ func (i *Invoice) generateInformationBlocks(ctx DrawContext) ([]*Block, DrawCont
 }
 
 func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	table := newTable(4)
+	table := newTable(len(i.columns))
 	table.SetMargins(0, 0, 25, 0)
 
 	// Draw item columns.
@@ -659,7 +676,7 @@ func (i *Invoice) generateNoteBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			}
 
 			sepParagraph := newStyledParagraph(i.defaultStyle)
-			sepParagraph.SetMargins(0, 0, 20, 0)
+			sepParagraph.SetMargins(0, 0, 10, 0)
 			division.Add(sepParagraph)
 		}
 	}
