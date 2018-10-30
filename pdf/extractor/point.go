@@ -49,5 +49,5 @@ func (p *Point) transformByMatrix(m contentstream.Matrix) {
 
 // String returns a string describing `p`.
 func (p *Point) String() string {
-	return fmt.Sprintf("(%.1f,%.1f)", p.X, p.Y)
+	return fmt.Sprintf("(%.2f,%.2f)", p.X, p.Y)
 }

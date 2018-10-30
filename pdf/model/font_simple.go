@@ -93,13 +93,20 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 		return metrics, ok
 	}
 
-	metrics := fonts.CharMetrics{}
-
 	code, found := font.encoder.GlyphToCharcode(glyph)
 	if !found {
-		return metrics, false
+		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
+	// !@#$ Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
+	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
+	return metrics, ok
+}
+
+// GetCharMetrics returns the character metrics for the specified character code.  A bool flag is
+// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
+func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+	metrics := fonts.CharMetrics{}
 
 	if int(code) < font.firstChar {
 		common.Log.Debug("Code lower than firstchar (%d < %d)", code, font.firstChar)

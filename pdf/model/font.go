@@ -18,13 +18,26 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
+// Font represents a font which is a series of glyphs. Character codes from PDF strings can be
+// mapped to and from glyphs. Each glyph has metrics.
+// XXX: FIXME (peterwilliams97) HACK to add GetCharMetrics() for fonts other than standard 14
+//      Remove this hack.
+type Font interface {
+	Encoder() textencoding.TextEncoder
+	SetEncoder(encoder textencoding.TextEncoder)
+	GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool)
+	GetCharMetrics(code uint16) (fonts.CharMetrics, bool)
+	GetAverageCharWidth() float64
+	ToPdfObject() core.PdfObject
+}
+
 // PdfFont represents an underlying font structure which can be of type:
 // - Type0
 // - Type1
 // - TrueType
 // etc.
 type PdfFont struct {
-	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+	context Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
 // String returns a string that describes `font`.
@@ -303,12 +316,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
-	_, out, numChars, numMisses := font.CharcodeBytesToUnicode2(data)
-	return out, numChars, numMisses
-}
-
-func (font PdfFont) CharcodeBytesToUnicode2(data []byte) ([]uint16, string, int, int) {
-	common.Log.Trace("showText: data=[% 02x]=%#q", data, data)
+	common.Log.Trace("CharcodeBytesToUnicode: data=[% 02x]=%#q", data, data)
 
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
@@ -363,7 +371,74 @@ func (font PdfFont) CharcodeBytesToUnicode2(data []byte) ([]uint16, string, int,
 	}
 
 	out := strings.Join(charstrings, "")
-	return charcodes, out, len([]rune(out)), numMisses
+	return out, len([]rune(out)), numMisses
+}
+
+// BytesToCharcodes converts the bytes in a PDF string to character codes.
+func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
+	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
+	charcodes := make([]uint16, 0, len(data)+len(data)%2)
+	if font.baseFields().isCIDFont() {
+		if len(data) == 1 {
+			data = []byte{0, data[0]}
+		}
+		if len(data)%2 != 0 {
+			common.Log.Debug("ERROR: Padding data=%+v to even length", data)
+			data = append(data, 0)
+		}
+		for i := 0; i < len(data); i += 2 {
+			b := uint16(data[i])<<8 | uint16(data[i+1])
+			charcodes = append(charcodes, b)
+		}
+	} else {
+		for _, b := range data {
+			charcodes = append(charcodes, uint16(b))
+		}
+	}
+	return charcodes
+}
+
+// CharcodesToUnicode converts the character codes `charcodes` to a slice of unicode strings.
+func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) {
+	charstrings := make([]string, 0, len(charcodes))
+	numMisses := 0
+	for _, code := range charcodes {
+		if font.baseFields().toUnicodeCmap != nil {
+			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
+			if ok {
+				charstrings = append(charstrings, r)
+				continue
+			}
+		}
+		// Fall back to encoding
+		encoder := font.Encoder()
+		if encoder != nil {
+			r, ok := encoder.CharcodeToRune(code)
+			if ok {
+				charstrings = append(charstrings, textencoding.RuneToString(r))
+				continue
+			}
+		}
+		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
+			"\tfont=%s\n\tencoding=%s",
+			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
+		numMisses++
+		charstrings = append(charstrings, cmap.MissingCodeString)
+
+	}
+
+	if numMisses != 0 {
+		common.Log.Debug("ERROR: Couldn't convert to unicode. Using input.\n"+
+			"\tnumChars=%d numMisses=%d\n"+
+			"\tfont=%s",
+			len(charcodes), numMisses, font)
+	}
+
+	if len(charcodes) != len(charstrings) {
+		panic(fmt.Errorf("charcodes=%d charstrings=%d", len(charcodes), len(charstrings)))
+	}
+
+	return charstrings, len(charstrings), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -402,9 +477,21 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
+		return fonts.CharMetrics{GlyphName: glyph}, false
+	}
+	metrics, ok := t.GetGlyphCharMetrics(glyph)
+	return metrics, ok
+}
+
+// GetCharMetrics returns the char metrics for character code `code`.
+func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+	t := font.actualFont()
+	if t == nil {
+		common.Log.Debug("ERROR: GetCharMetrics Not implemented for font type=%#T", font.context)
 		return fonts.CharMetrics{}, false
 	}
-	return t.GetGlyphCharMetrics(glyph)
+	m, ok := t.GetCharMetrics(code)
+	return m, ok
 }
 
 // GetRuneCharMetrics returns the char metrics for rune `r`.
@@ -438,7 +525,7 @@ func (font PdfFont) GetAverageCharWidth() float64 {
 }
 
 // actualFont returns the Font in font.context
-func (font PdfFont) actualFont() fonts.Font {
+func (font PdfFont) actualFont() Font {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
 	}

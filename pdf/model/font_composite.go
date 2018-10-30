@@ -121,6 +121,15 @@ func (font pdfFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, b
 	return font.DescendantFont.GetGlyphCharMetrics(glyph)
 }
 
+// !@#$ stub
+func (font pdfFontType0) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+	if font.DescendantFont == nil {
+		common.Log.Debug("ERROR: No descendant. font=%s", font)
+		return fonts.CharMetrics{}, false
+	}
+	return font.DescendantFont.GetCharMetrics(code)
+}
+
 // GetAverageCharWidth returns the average width of all the characters in `font`.
 func (font pdfFontType0) GetAverageCharWidth() float64 {
 	if font.DescendantFont == nil {
@@ -238,6 +247,11 @@ func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	return fonts.CharMetrics{}, true
 }
 
+// !@#$ stub
+func (font pdfCIDFontType0) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+	return fonts.CharMetrics{}, true
+}
+
 // GetAverageCharWidth returns the average width of all the characters in `font`.
 func (font pdfCIDFontType0) GetAverageCharWidth() float64 {
 	return 0.0
@@ -344,6 +358,12 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	metrics.GlyphName = glyph
 	metrics.Wx = float64(w)
 
+	return metrics, true
+}
+
+// !@#$ stub
+func (font pdfCIDFontType2) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+	metrics := fonts.CharMetrics{}
 	return metrics, true
 }
 

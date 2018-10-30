@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -585,8 +587,10 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
 
-	text, numChars, numMisses := font.CharcodeBytesToUnicode(data)
-	runes := []rune(text)
+	charcodes := font.BytesToCharcodes(data)
+
+	runes, numChars, numMisses := font.CharcodesToUnicode(charcodes)
+
 	to.State.numChars += numChars
 	to.State.numMisses += numMisses
 
@@ -598,7 +602,7 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Debug("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, text,
+	common.Log.Debug("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes,
 		font, tfs)
 
 	stateMatrix := contentstream.NewMatrix(
@@ -606,7 +610,8 @@ func (to *textObject) renderText(data []byte) error {
 		0, tfs,
 		0, state.Trise)
 
-	for _, r := range runes {
+	for i, r := range runes {
+		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
 		trm := stateMatrix.Mult(to.Tm).Mult(to.gs.CTM)
@@ -616,40 +621,33 @@ func (to *textObject) renderText(data []byte) error {
 
 		// w is the unscaled movement at the end of a word.
 		w := 0.0
-		if r == ' ' {
+		if r == " " {
 			w = state.Tw
 		}
 
-		m, err := font.GetRuneCharMetrics(r)
-		if err != nil {
-			common.Log.Debug("ERROR: No metric for 0x%04x=%c %s", r, r, font)
-			return err
+		m, ok := font.GetCharMetrics(code)
+		if !ok {
+			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%c %s", code, r, r, font)
+			return errors.New("no char metrics")
 		}
+
 		// c is the character size in unscaled text units.
 		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
-		// cScaled is the character size
-		cScaled := Point{X: c.X * tfs * th}
+
 		// t is the displacement of the text cursor when the character is rendered.
 		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
-		common.Log.Debug("t=%s cScaled=%s c=%s tfs=%.2f state.Tc=%.2f w=%.2f th=%.2f",
-			t.String(), cScaled.String(), c.String(), tfs, state.Tc, w, th)
-
-		// td is t in matrix  from
+		// td is t in matrix form.
 		td := translationMatrix(t)
-		common.Log.Debug("displacement=%s t=%s td=%s m=%s",
-			c.String(), t.String(), td.String(), m.String())
 
 		nextTm := to.Tm.Mult(td)
-		common.Log.Debug("  next: td=%s %s->%s", td, to.Tm, nextTm)
 
 		xyt := XYText{Text: string(r),
 			Point:      translation(trm),
-			End:        translation(trm).Displace(cScaled),
+			End:        translation(to.Tm.Mult(td).Mult(to.gs.CTM)),
 			SpaceWidth: spaceWidth * trm.ScalingFactorX(),
 		}
 		to.Texts = append(to.Texts, xyt)
-		common.Log.Debug("  xyt=%s", xyt.String())
 
 		// update the text matrix by the displacement of the text location.
 		to.Tm = nextTm
@@ -738,6 +736,7 @@ func (tl *TextList) AppendText(gs contentstream.GraphicsState, p, e Point, text 
 
 // ToText returns the contents of `tl` as a single string.
 func (tl *TextList) ToText() string {
+	tl.printTexts("ToText: before sorting")
 	tl.SortPosition()
 
 	lines := tl.toLines()
@@ -770,7 +769,7 @@ type Line struct {
 // toLines return the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
 func (tl *TextList) toLines() []Line {
-	tl.printTexts()
+	tl.printTexts("toLines: before")
 	if len(*tl) == 0 {
 		return []Line{}
 	}
@@ -870,13 +869,28 @@ func (exp *ExponAve) update(x float64) float64 {
 }
 
 // printTexts is a debugging function. XXX Remove this.
-func (tl *TextList) printTexts() {
+func (tl *TextList) printTexts(message string) {
 	return
-	common.Log.Error("=====================================")
-	common.Log.Error("%d texts", len(*tl))
-	for i, t := range (*tl)[1:] {
-		fmt.Printf("%5d: %s\n", i, t.String())
+	_, file, line, ok := runtime.Caller(1)
+	if !ok {
+		file = "???"
+		line = 0
+	} else {
+		file = filepath.Base(file)
 	}
+	prefix := fmt.Sprintf("[%s:%d]", file, line)
+
+	common.Log.Error("=====================================")
+	common.Log.Error("printTexts %s %s", prefix, message)
+	common.Log.Error("%d texts", len(*tl))
+	parts := []string{}
+	for i, t := range *tl {
+		fmt.Printf("%5d: %s\n", i, t.String())
+		parts = append(parts, t.Text)
+	}
+	common.Log.Error("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+	fmt.Printf("%s\n", strings.Join(parts, ""))
+	common.Log.Error("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
 // newLine returns the Line representation of strings `words` with y coordinate `y` and x
