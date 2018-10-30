@@ -22,8 +22,8 @@ func TestInvoiceSimple(t *testing.T) {
 	invoice.SetNumber("0001")
 	invoice.SetDate("28/07/2016")
 	invoice.SetDueDate("28/07/2016")
-	invoice.AddInvoiceInfo("Payment terms", "Due on receipt")
-	invoice.AddInvoiceInfo("Paid", "No")
+	invoice.AddInfo("Payment terms", "Due on receipt")
+	invoice.AddInfo("Paid", "No")
 
 	invoice.SetSellerAddress(&InvoiceAddress{
 		Name:    "John Doe",
@@ -90,26 +90,18 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 	invoice.SetLogo(logo)
 
+	invoice.SetNumber("0001")
+	invoice.SetDate("28/07/2016")
+	invoice.SetDueDate("28/07/2016")
+	invoice.AddInfo("Payment terms", "Due on receipt")
+	invoice.AddInfo("Paid", "No")
+
 	// Customize invoice info
-	descCell, contentCell := invoice.SetNumber("0001")
-	descCell.BackgroundColor = lightBlue
-	contentCell.TextStyle.Font = fontHelvetica
-
-	descCell, contentCell = invoice.SetDate("28/07/2016")
-	descCell.BackgroundColor = lightBlue
-	contentCell.TextStyle.Font = fontHelvetica
-
-	descCell, contentCell = invoice.SetDueDate("28/07/2016")
-	descCell.BackgroundColor = lightBlue
-	contentCell.TextStyle.Font = fontHelvetica
-
-	descCell, contentCell = invoice.AddInvoiceInfo("Payment terms", "Due on receipt")
-	descCell.BackgroundColor = lightBlue
-	contentCell.TextStyle.Font = fontHelvetica
-
-	descCell, contentCell = invoice.AddInvoiceInfo("Paid", "No")
-	descCell.BackgroundColor = lightBlue
-	contentCell.TextStyle.Font = fontHelvetica
+	for _, info := range invoice.InfoLines() {
+		descCell, contentCell := info[0], info[1]
+		descCell.BackgroundColor = lightBlue
+		contentCell.TextStyle.Font = fontHelvetica
+	}
 
 	invoice.SetSellerAddress(&InvoiceAddress{
 		Name:    "John Doe",
@@ -139,6 +131,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 	for _, column := range invoice.Columns() {
 		column.BackgroundColor = lightBlue
 		column.BorderColor = lightBlue
+		column.TextStyle.FontSize = 9
 	}
 
 	for i := 0; i < 7; i++ {
@@ -152,6 +145,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 		for _, cell := range cells {
 			cell.BorderColor = white
+			cell.TextStyle.FontSize = 9
 		}
 	}
 

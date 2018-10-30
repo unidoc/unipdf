@@ -232,7 +232,17 @@ func (i *Invoice) SetDueDate(dueDate string) (*InvoiceCell, *InvoiceCell) {
 	return i.dueDate[0], i.dueDate[1]
 }
 
-func (i *Invoice) AddInvoiceInfo(description, value string) (*InvoiceCell, *InvoiceCell) {
+func (i *Invoice) InfoLines() [][2]*InvoiceCell {
+	info := [][2]*InvoiceCell{
+		i.number,
+		i.date,
+		i.dueDate,
+	}
+
+	return append(info, i.info...)
+}
+
+func (i *Invoice) AddInfo(description, value string) (*InvoiceCell, *InvoiceCell) {
 	info := [2]*InvoiceCell{
 		i.newCell(description, i.infoProps),
 		i.newCell(value, i.infoProps),
@@ -301,7 +311,9 @@ func (i *Invoice) SetTotal(value string) {
 }
 
 func (i *Invoice) TotalLines() [][2]*InvoiceCell {
-	return i.totals
+	totals := [][2]*InvoiceCell{i.subtotal}
+	totals = append(totals, i.totals...)
+	return append(totals, i.total)
 }
 
 func (i *Invoice) AddTotalLine(desc, value string) (*InvoiceCell, *InvoiceCell) {
@@ -384,6 +396,10 @@ func (i *Invoice) newColumn(description string, alignment CellHorizontalAlignmen
 	col.Alignment = alignment
 
 	return col
+}
+
+func (i *Invoice) setTitleStyle(style TextStyle) {
+	i.titleStyle = style
 }
 
 func (i *Invoice) setCellBorder(cell *TableCell, invoiceCell *InvoiceCell) {
