@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/internal/strutils"
 )
 
 // PdfObject is an interface which all primitive PDF objects must implement.
@@ -50,6 +51,9 @@ type PdfObjectArray struct {
 type PdfObjectDictionary struct {
 	dict map[PdfObjectName]PdfObject
 	keys []PdfObjectName
+
+	// For lazy-loading, need access to the parser (and the cross reference table for object access).
+	parser *PdfParser
 }
 
 // PdfObjectNull represents the primitive PDF null object.
@@ -101,6 +105,12 @@ func MakeInteger(val int64) *PdfObjectInteger {
 	return &num
 }
 
+// MakeBool creates a PdfObjectBool from a bool value.
+func MakeBool(val bool) *PdfObjectBool {
+	bval := PdfObjectBool(val)
+	return &bval
+}
+
 // MakeArray creates an PdfObjectArray from a list of PdfObjects.
 func MakeArray(objects ...PdfObject) *PdfObjectArray {
 	array := &PdfObjectArray{}
@@ -114,10 +124,9 @@ func MakeArray(objects ...PdfObject) *PdfObjectArray {
 // MakeArrayFromIntegers creates an PdfObjectArray from a slice of ints, where each array element is
 // an PdfObjectInteger.
 func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
-	array := &PdfObjectArray{}
-	array.vec = []PdfObject{}
+	array := MakeArray()
 	for _, val := range vals {
-		array.vec = append(array.vec, MakeInteger(int64(val)))
+		array.Append(MakeInteger(int64(val)))
 	}
 	return array
 }
@@ -125,10 +134,9 @@ func MakeArrayFromIntegers(vals []int) *PdfObjectArray {
 // MakeArrayFromIntegers64 creates an PdfObjectArray from a slice of int64s, where each array element
 // is an PdfObjectInteger.
 func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
-	array := &PdfObjectArray{}
-	array.vec = []PdfObject{}
+	array := MakeArray()
 	for _, val := range vals {
-		array.vec = append(array.vec, MakeInteger(val))
+		array.Append(MakeInteger(val))
 	}
 	return array
 }
@@ -136,18 +144,11 @@ func MakeArrayFromIntegers64(vals []int64) *PdfObjectArray {
 // MakeArrayFromFloats creates an PdfObjectArray from a slice of float64s, where each array element is an
 // PdfObjectFloat.
 func MakeArrayFromFloats(vals []float64) *PdfObjectArray {
-	array := &PdfObjectArray{}
-	array.vec = []PdfObject{}
+	array := MakeArray()
 	for _, val := range vals {
-		array.vec = append(array.vec, MakeFloat(val))
+		array.Append(MakeFloat(val))
 	}
 	return array
-}
-
-// MakeBool creates an PdfObjectBool from a bool.
-func MakeBool(val bool) *PdfObjectBool {
-	v := PdfObjectBool(val)
-	return &v
 }
 
 // MakeFloat creates an PdfObjectFloat from a float64.
@@ -174,6 +175,19 @@ func MakeStringFromBytes(data []byte) *PdfObjectString {
 func MakeHexString(s string) *PdfObjectString {
 	str := PdfObjectString{val: s, isHex: true}
 	return &str
+}
+
+// MakeEncodedString creates a PdfObjectString with encoded content, which can be either
+// UTF-16BE or PDFDocEncoding depending on whether `utf16BE` is true or false respectively.
+func MakeEncodedString(s string, utf16BE bool) *PdfObjectString {
+	if utf16BE {
+		var buf bytes.Buffer
+		buf.Write([]byte{0xFE, 0xFF})
+		buf.WriteString(strutils.StringToUTF16(s))
+		return &PdfObjectString{val: buf.String(), isHex: true}
+	}
+
+	return &PdfObjectString{val: string(strutils.StringToPDFDocEncoding(s)), isHex: false}
 }
 
 // MakeNull creates an PdfObjectNull.
@@ -220,21 +234,20 @@ func MakeObjectStreams(objects ...PdfObject) *PdfObjectStreams {
 	return streams
 }
 
+// String returns the state of the bool as "true" or "false".
 func (bool *PdfObjectBool) String() string {
 	if *bool {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
 }
 
 // DefaultWriteString outputs the object as it is to be written to file.
 func (bool *PdfObjectBool) DefaultWriteString() string {
 	if *bool {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
 }
 
 func (int *PdfObjectInteger) String() string {
@@ -265,6 +278,19 @@ func (str *PdfObjectString) String() string {
 // debug info.
 func (str *PdfObjectString) Str() string {
 	return str.val
+}
+
+// Decoded returns the PDFDocEncoding or UTF-16BE decoded string contents.
+// UTF-16BE is applied when the first two bytes are 0xFE, 0XFF, otherwise decoding of
+// PDFDocEncoding is performed.
+func (str *PdfObjectString) Decoded() string {
+	b := []byte(str.val)
+	if len(b) >= 2 && b[0] == 0xFE && b[1] == 0xFF {
+		// UTF16BE.
+		return strutils.UTF16ToString(b[2:])
+	}
+
+	return strutils.PDFDocEncodingToString(b)
 }
 
 // Bytes returns the PdfObjectString content as a []byte array.
@@ -312,6 +338,7 @@ func (str *PdfObjectString) DefaultWriteString() string {
 	return output.String()
 }
 
+// String returns a string representation of `name`.
 func (name *PdfObjectName) String() string {
 	return string(*name)
 }
@@ -415,7 +442,23 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 		if number, is := obj.(*PdfObjectInteger); is {
 			vals = append(vals, int(*number))
 		} else {
-			return nil, fmt.Errorf("Type error")
+			return nil, ErrTypeError
+		}
+	}
+
+	return vals, nil
+}
+
+// ToInt64Slice returns a slice of all array elements as an int64 slice. An error is returned if the
+// array non-integer objects. Each element can only be PdfObjectInteger.
+func (array *PdfObjectArray) ToInt64Slice() ([]int64, error) {
+	vals := []int64{}
+
+	for _, obj := range array.Elements() {
+		if number, is := obj.(*PdfObjectInteger); is {
+			vals = append(vals, int64(*number))
+		} else {
+			return nil, ErrTypeError
 		}
 	}
 
@@ -579,11 +622,6 @@ func (d *PdfObjectDictionary) Set(key PdfObjectName, val PdfObject) {
 
 // Get returns the PdfObject corresponding to the specified key.
 // Returns a nil value if the key is not set.
-//
-// The design is such that we only return 1 value.
-// The reason is that, it will be easy to do type casts such as
-// name, ok := dict.Get("mykey").(*PdfObjectName)
-// if !ok ....
 func (d *PdfObjectDictionary) Get(key PdfObjectName) PdfObject {
 	val, has := d.dict[key]
 	if !has {
@@ -605,6 +643,12 @@ func (d *PdfObjectDictionary) GetString(key PdfObjectName) (string, bool) {
 // Keys returns the list of keys in the dictionary.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
 	return d.keys
+}
+
+// Clear resets the dictionary to an empty state.
+func (d *PdfObjectDictionary) Clear() {
+	d.keys = []PdfObjectName{}
+	d.dict = map[PdfObjectName]PdfObject{}
 }
 
 // Remove removes an element specified by key.
@@ -779,7 +823,7 @@ func GetInt(obj PdfObject) (into *PdfObjectInteger, found bool) {
 // indirect object. On type mismatch the found bool flag returned is false and a nil pointer is returned.
 func GetIntVal(obj PdfObject) (val int, found bool) {
 	into, found := TraceToDirectObject(obj).(*PdfObjectInteger)
-	if found {
+	if found && into != nil {
 		return int(*into), true
 	}
 	return 0, false

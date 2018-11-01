@@ -17,7 +17,7 @@ node {
 
         stage('Prepare') {
             // Get linter and other build tools.
-            sh 'go get github.com/golang/lint/golint'
+            sh 'go get -u golang.org/x/lint/golint'
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
 
@@ -69,9 +69,14 @@ node {
         stage('Build examples') {
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
-
             if (env.BRANCH_NAME.take(2) == "v3") {
                 examplesBranch = "v3"
+            }
+            // Special cases.
+            switch("${env.BRANCH_NAME}") {
+                case "v3-enhance-forms":
+                    examplesBranch = "v3-enhance-forms"
+                    break
             }
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch

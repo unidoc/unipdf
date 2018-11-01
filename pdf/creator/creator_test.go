@@ -24,9 +24,9 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/optimize"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 func init() {
@@ -2745,7 +2745,8 @@ func TestCompressStreams(t *testing.T) {
 		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
 		times := model.NewStandard14FontMustCompile(model.TimesRoman)
 		page.Resources.SetFontByName("Times", times.ToPdfObject())
-		page.AddContentStreamByString(`BT
+		rawContent := `
+BT
 /Times 56 Tf
 20 600 Td
 (The multiline example text)Tj
@@ -2760,7 +2761,18 @@ func TestCompressStreams(t *testing.T) {
 (example text)'
 (example text)'
 (example text)'
-ET`)
+ET
+`
+		{
+			cstreams, err := page.GetContentStreams()
+			if err != nil {
+				panic(err)
+			}
+			cstreams = append(cstreams, rawContent)
+			// Set streams with raw encoder (not encoded).
+			page.SetContentStreams(cstreams, core.NewRawEncoder())
+		}
+
 		return c
 	}
 

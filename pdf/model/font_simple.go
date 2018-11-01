@@ -11,8 +11,8 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // pdfFontSimple describes a Simple Font
@@ -300,7 +300,10 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	if font.Encoding != nil {
 		d.Set("Encoding", font.Encoding)
 	} else if font.encoder != nil {
-		d.Set("Encoding", font.encoder.ToPdfObject())
+		encObj := font.encoder.ToPdfObject()
+		if encObj != nil {
+			d.Set("Encoding", encObj)
+		}
 	}
 
 	return font.container

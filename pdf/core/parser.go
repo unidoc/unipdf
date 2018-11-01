@@ -35,8 +35,7 @@ var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
 
 // PdfParser parses a PDF file and provides access to the object structure of the PDF.
 type PdfParser struct {
-	majorVersion int
-	minorVersion int
+	version Version
 
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
@@ -55,9 +54,20 @@ type PdfParser struct {
 	streamLengthReferenceLookupInProgress map[int64]bool
 }
 
+// Version represents a version of a PDF standard.
+type Version struct {
+	Major int
+	Minor int
+}
+
+// String returns the PDF version as a string. Implements interface fmt.Stringer.
+func (v Version) String() string {
+	return fmt.Sprintf("%0d.%0d", v.Major, v.Minor)
+}
+
 // PdfVersion returns version of the PDF file.
-func (parser *PdfParser) PdfVersion() string {
-	return fmt.Sprintf("%0d.%0d", parser.majorVersion, parser.minorVersion)
+func (parser *PdfParser) PdfVersion() Version {
+	return parser.version
 }
 
 // GetCrypter returns the PdfCrypt instance which has information about the PDFs encryption.
@@ -585,6 +595,7 @@ func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
 	dict := MakeDict()
+	dict.parser = parser
 
 	// Pass the '<<'
 	c, _ := parser.reader.ReadByte()
@@ -799,7 +810,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDictionary, error) {
 	if xstm != nil {
 		common.Log.Trace("XRefStm xref table object at %d", xstm)
-		parser.rs.Seek(int64(*xstm), os.SEEK_SET)
+		parser.rs.Seek(int64(*xstm), io.SeekStart)
 		parser.reader = bufio.NewReader(parser.rs)
 	}
 
@@ -1323,7 +1334,9 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	common.Log.Trace("-Read indirect obj")
 	bb, err := parser.reader.Peek(20)
 	if err != nil {
-		common.Log.Debug("ERROR: Fail to read indirect obj")
+		if err != io.EOF {
+			common.Log.Debug("ERROR: Fail to read indirect obj")
+		}
 		return &indirect, err
 	}
 	common.Log.Trace("(indirect obj peek \"%s\"", string(bb))
@@ -1495,6 +1508,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 // TODO: Unexport (v3) or move to test files, if needed by external test cases.
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}
+	parser.ObjCache = objectCache{}
 	buf := []byte(txt)
 
 	bufReader := bytes.NewReader(buf)
@@ -1536,8 +1550,8 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 		common.Log.Error("Unable to parse version: %v", err)
 		return nil, err
 	}
-	parser.majorVersion = majorVersion
-	parser.minorVersion = minorVersion
+	parser.version.Major = majorVersion
+	parser.version.Minor = minorVersion
 
 	parser.trailer = trailer
 

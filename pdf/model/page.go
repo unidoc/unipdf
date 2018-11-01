@@ -13,6 +13,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -443,6 +444,7 @@ func (this *PdfPage) getResources() (*PdfPageResources, error) {
 // Convert the Page to a PDF object dictionary.
 func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p := this.pageDict
+	p.Clear()
 	p.Set("Type", MakeName("Page"))
 	p.Set("Parent", this.Parent)
 
@@ -726,26 +728,46 @@ func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOpt
 
 // AddContentStreamByString adds content stream by string.  Puts the content string into a stream
 // object and points the content stream towards it.
-func (this *PdfPage) AddContentStreamByString(contentStr string) {
-	stream := PdfObjectStream{}
-
-	sDict := MakeDict()
-	stream.PdfObjectDictionary = sDict
-
-	sDict.Set("Length", MakeInteger(int64(len(contentStr))))
-	stream.Stream = []byte(contentStr)
+func (this *PdfPage) AddContentStreamByString(contentStr string) error {
+	stream, err := MakeStream([]byte(contentStr), NewFlateEncoder())
+	if err != nil {
+		return err
+	}
 
 	if this.Contents == nil {
 		// If not set, place it directly.
-		this.Contents = &stream
+		this.Contents = stream
 	} else if contArray, isArray := TraceToDirectObject(this.Contents).(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
-		contArray.Append(&stream)
+		contArray.Append(stream)
 	} else {
 		// Only 1 element in place. Wrap inside a new array and add the new one.
-		contArray := MakeArray(this.Contents, &stream)
+		contArray := MakeArray(this.Contents, stream)
 		this.Contents = contArray
 	}
+
+	return nil
+}
+
+// AppendContentStream adds content stream by string.  Appends to the last
+// contentstream instance if many.
+func (this *PdfPage) AppendContentStream(contentStr string) error {
+	cstreams, err := this.GetContentStreams()
+	if err != nil {
+		return err
+	}
+	if len(cstreams) == 0 {
+		cstreams = []string{contentStr}
+		return this.SetContentStreams(cstreams, NewFlateEncoder())
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString(cstreams[len(cstreams)-1])
+	buf.WriteString("\n")
+	buf.WriteString(contentStr)
+	cstreams[len(cstreams)-1] = buf.String()
+
+	return this.SetContentStreams(cstreams, NewFlateEncoder())
 }
 
 // SetContentStreams sets the content streams based on a string array.  Will make 1 object stream

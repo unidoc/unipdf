@@ -26,8 +26,7 @@ func (c *CompressStreams) Optimize(objects []core.PdfObject) (optimizedObjects [
 		if _, found := core.GetName(stream.PdfObjectDictionary.Get("Filter")); found {
 			continue
 		}
-		encoder := core.NewLZWEncoder()
-		encoder.EarlyChange = 0
+		encoder := core.NewFlateEncoder() // Most mainstream compressor and probably most robust.
 		var data []byte
 		data, err = encoder.EncodeBytes(stream.Stream)
 		if err != nil {
