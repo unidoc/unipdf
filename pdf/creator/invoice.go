@@ -460,27 +460,27 @@ func (i *Invoice) SetAddressHeadingStyle(style TextStyle) {
 	i.addressHeadingStyle = style
 }
 
-// NotesStyle returns the style properties used to render the content of the
+// NoteStyle returns the style properties used to render the content of the
 // invoice note sections.
-func (i *Invoice) NotesStyle() TextStyle {
+func (i *Invoice) NoteStyle() TextStyle {
 	return i.noteStyle
 }
 
-// SetNotesStyle sets the style properties used to render the content of the
+// SetNoteStyle sets the style properties used to render the content of the
 // invoice note sections.
-func (i *Invoice) SetNotesStyle(style TextStyle) {
+func (i *Invoice) SetNoteStyle(style TextStyle) {
 	i.noteStyle = style
 }
 
-// NotesHeadingStyle returns the style properties used to render the heading of
+// NoteHeadingStyle returns the style properties used to render the heading of
 // the invoice note sections.
-func (i *Invoice) NotesHeadingStyle() TextStyle {
+func (i *Invoice) NoteHeadingStyle() TextStyle {
 	return i.noteHeadingStyle
 }
 
-// SetNotesHeadingStyle sets the style properties used to render the heading
+// SetNoteHeadingStyle sets the style properties used to render the heading
 // of the invoice note sections.
-func (i *Invoice) SetNotesHeadingStyle(style TextStyle) {
+func (i *Invoice) SetNoteHeadingStyle(style TextStyle) {
 	i.noteHeadingStyle = style
 }
 

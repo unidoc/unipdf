@@ -18,13 +18,17 @@ func TestInvoiceSimple(t *testing.T) {
 
 	invoice := c.NewInvoice()
 
+	// Set invoice logo.
 	invoice.SetLogo(logo)
+
+	// Set invoice information.
 	invoice.SetNumber("0001")
 	invoice.SetDate("28/07/2016")
 	invoice.SetDueDate("28/07/2016")
 	invoice.AddInfo("Payment terms", "Due on receipt")
 	invoice.AddInfo("Paid", "No")
 
+	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
 		Name:    "John Doe",
 		Street:  "8 Elm Street",
@@ -45,6 +49,7 @@ func TestInvoiceSimple(t *testing.T) {
 		Email:   "janedoe@email.com",
 	})
 
+	// Add invoice line items.
 	for i := 0; i < 10; i++ {
 		invoice.AddLine(
 			fmt.Sprintf("Test product #%d", i+1),
@@ -54,10 +59,13 @@ func TestInvoiceSimple(t *testing.T) {
 		)
 	}
 
+	// Set invoice totals.
 	invoice.SetSubtotal("$100.00")
 	invoice.AddTotalLine("Tax (10%)", "$10.00")
 	invoice.AddTotalLine("Shipping", "$5.00")
 	invoice.SetTotal("$115.00")
+
+	// Set invoice content sections.
 	invoice.SetNotes("Notes", "Thank you for your business.")
 	invoice.SetTerms("Terms and conditions", "Full refund for 60 days after purchase.")
 
@@ -85,24 +93,39 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 	white := ColorRGBFrom8bit(255, 255, 255)
 	lightBlue := ColorRGBFrom8bit(217, 240, 250)
+	blue := ColorRGBFrom8bit(2, 136, 209)
 
 	invoice := c.NewInvoice()
 
+	// Set invoice title.
+	invoice.SetTitle("Unidoc Invoice")
+
+	// Customize invoice title style.
+	titleStyle := invoice.TitleStyle()
+	titleStyle.Color = blue
+	titleStyle.Font = fontHelvetica
+	titleStyle.FontSize = 30
+
+	invoice.SetTitleStyle(titleStyle)
+
+	// Set invoice logo.
 	invoice.SetLogo(logo)
 
+	// Set invoice information.
 	invoice.SetNumber("0001")
 	invoice.SetDate("28/07/2016")
 	invoice.SetDueDate("28/07/2016")
 	invoice.AddInfo("Payment terms", "Due on receipt")
 	invoice.AddInfo("Paid", "No")
 
-	// Customize invoice info
+	// Customize invoice information styles.
 	for _, info := range invoice.InfoLines() {
 		descCell, contentCell := info[0], info[1]
 		descCell.BackgroundColor = lightBlue
 		contentCell.TextStyle.Font = fontHelvetica
 	}
 
+	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
 		Name:    "John Doe",
 		Street:  "8 Elm Street",
@@ -123,7 +146,20 @@ func TestInvoiceAdvanced(t *testing.T) {
 		Email:   "janedoe@email.com",
 	})
 
-	// Insert new column
+	// Customize address styles.
+	addressStyle := invoice.AddressStyle()
+	addressStyle.Font = fontHelvetica
+	addressStyle.FontSize = 9
+
+	addressHeadingStyle := invoice.AddressHeadingStyle()
+	addressHeadingStyle.Color = blue
+	addressHeadingStyle.Font = fontHelvetica
+	addressHeadingStyle.FontSize = 16
+
+	invoice.SetAddressStyle(addressStyle)
+	invoice.SetAddressHeadingStyle(addressHeadingStyle)
+
+	// Insert new column.
 	col := invoice.InsertColumn(2, "Discount")
 	col.Alignment = CellHorizontalAlignmentRight
 
@@ -149,7 +185,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 		}
 	}
 
-	// Customize total line style.
+	// Customize total line styles.
 	titleCell, contentCell := invoice.Total()
 	titleCell.BackgroundColor = lightBlue
 	titleCell.BorderColor = lightBlue
@@ -161,9 +197,23 @@ func TestInvoiceAdvanced(t *testing.T) {
 	invoice.AddTotalLine("Shipping", "$5.00")
 	invoice.SetTotal("$85.00")
 
+	// Set invoice content sections.
 	invoice.SetNotes("Notes", "Thank you for your business.")
 	invoice.SetTerms("Terms and conditions", "Full refund for 60 days after purchase.")
 	invoice.AddSection("Custom section", "This is a custom section.")
+
+	// Customize note styles.
+	noteStyle := invoice.AddressStyle()
+	noteStyle.Font = fontHelvetica
+	noteStyle.FontSize = 12
+
+	noteHeadingStyle := invoice.AddressHeadingStyle()
+	noteHeadingStyle.Color = blue
+	noteHeadingStyle.Font = fontHelvetica
+	noteHeadingStyle.FontSize = 14
+
+	invoice.SetNoteStyle(noteStyle)
+	invoice.SetNoteHeadingStyle(noteHeadingStyle)
 
 	if err = c.Draw(invoice); err != nil {
 		t.Fatalf("Error drawing: %v", err)
