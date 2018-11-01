@@ -7,7 +7,9 @@ package creator
 
 import "fmt"
 
-// InvoiceAddress.
+// InvoiceAddress contains contact information that can be displayed
+// in an invoice. It is used for the seller and buyer information in the
+// invoice template.
 type InvoiceAddress struct {
 	Name    string
 	Street  string
@@ -18,7 +20,7 @@ type InvoiceAddress struct {
 	Email   string
 }
 
-// InvoiceCellProps.
+// InvoiceCellProps holds all style properties for an invoice cell.
 type InvoiceCellProps struct {
 	TextStyle       TextStyle
 	Alignment       CellHorizontalAlignment
@@ -29,7 +31,10 @@ type InvoiceCellProps struct {
 	BorderSides []CellBorderSide
 }
 
-// InvoiceCell.
+// InvoiceCell represents any cell belonging to a table from the invoice
+// template. The main tables are the invoice information table, the line
+// items table and totals table. Contains the text value of the cell and
+// the style properties of the cell.
 type InvoiceCell struct {
 	InvoiceCellProps
 
@@ -73,6 +78,13 @@ type Invoice struct {
 	headingStyle TextStyle
 	titleStyle   TextStyle
 
+	addressStyle        TextStyle
+	addressHeadingStyle TextStyle
+
+	noteStyle        TextStyle
+	noteHeadingStyle TextStyle
+
+	// Invoice style properties.
 	infoProps  InvoiceCellProps
 	colProps   InvoiceCellProps
 	itemProps  InvoiceCellProps
@@ -105,6 +117,14 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	i.titleStyle = headingStyle
 	i.titleStyle.Color = mediumGrey
 	i.titleStyle.FontSize = 20
+
+	// Default address styles.
+	i.addressStyle = defaultStyle
+	i.addressHeadingStyle = headingStyle
+
+	// Default note styles.
+	i.noteStyle = defaultStyle
+	i.noteHeadingStyle = headingStyle
 
 	// Invoice information default properties.
 	i.infoProps = i.NewCellProps()
@@ -173,65 +193,84 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	return i
 }
 
+// Title returns the title of the invoice.
 func (i *Invoice) Title() string {
 	return i.title
 }
 
+// SetTitle sets the title of the invoice.
 func (i *Invoice) SetTitle(title string) {
 	i.title = title
 }
 
+// Logo returns the logo of the invoice.
 func (i *Invoice) Logo() *Image {
 	return i.logo
 }
 
+// SetLogo sets the logo of the invoice.
 func (i *Invoice) SetLogo(logo *Image) {
 	i.logo = logo
 }
 
+// SellerAddress returns the seller address used in the invoice template.
 func (i *Invoice) SellerAddress() *InvoiceAddress {
 	return i.sellerAddress
 }
 
+// SetSellerAddress sets the seller address of the invoice.
 func (i *Invoice) SetSellerAddress(address *InvoiceAddress) {
 	i.sellerAddress = address
 }
 
+// BuyerAddress returns the buyer address used in the invoice template.
 func (i *Invoice) BuyerAddress() *InvoiceAddress {
 	return i.buyerAddress
 }
 
+// SetBuyerAddress sets the buyer address of the invoice.
 func (i *Invoice) SetBuyerAddress(address *InvoiceAddress) {
 	i.buyerAddress = address
 }
 
+// Number returns the invoice number description and value cells.
+// The returned values can be used to customize the styles of the cells.
 func (i *Invoice) Number() (*InvoiceCell, *InvoiceCell) {
 	return i.number[0], i.number[1]
 }
 
+// SetNumber sets the number of the invoice.
 func (i *Invoice) SetNumber(number string) (*InvoiceCell, *InvoiceCell) {
 	i.number[1].Value = number
 	return i.number[0], i.number[1]
 }
 
+// Date returns the invoice date description and value cells.
+// The returned values can be used to customize the styles of the cells.
 func (i *Invoice) Date() (*InvoiceCell, *InvoiceCell) {
 	return i.date[0], i.date[1]
 }
 
+// SetDate sets the date of the invoice.
 func (i *Invoice) SetDate(date string) (*InvoiceCell, *InvoiceCell) {
 	i.date[1].Value = date
 	return i.date[0], i.date[1]
 }
 
+// DueDate returns the invoice due date description and value cells.
+// The returned values can be used to customize the styles of the cells.
 func (i *Invoice) DueDate() (*InvoiceCell, *InvoiceCell) {
 	return i.dueDate[0], i.dueDate[1]
 }
 
+// SetDueDate sets the due date of the invoice.
 func (i *Invoice) SetDueDate(dueDate string) (*InvoiceCell, *InvoiceCell) {
 	i.dueDate[1].Value = dueDate
 	return i.dueDate[0], i.dueDate[1]
 }
 
+// InfoLines returns all the rows in the invoice information table as
+// description-value cell pairs.
 func (i *Invoice) InfoLines() [][2]*InvoiceCell {
 	info := [][2]*InvoiceCell{
 		i.number,
@@ -242,6 +281,8 @@ func (i *Invoice) InfoLines() [][2]*InvoiceCell {
 	return append(info, i.info...)
 }
 
+// AddInfo is used to append a piece of invoice information in the template
+// information table.
 func (i *Invoice) AddInfo(description, value string) (*InvoiceCell, *InvoiceCell) {
 	info := [2]*InvoiceCell{
 		i.newCell(description, i.infoProps),
@@ -252,16 +293,19 @@ func (i *Invoice) AddInfo(description, value string) (*InvoiceCell, *InvoiceCell
 	return info[0], info[1]
 }
 
+// Columns returns all the columns in the invoice line items table.
 func (i *Invoice) Columns() []*InvoiceCell {
 	return i.columns
 }
 
+// AppendColumn appends a column to the line items table.
 func (i *Invoice) AppendColumn(description string) *InvoiceCell {
 	col := i.NewColumn(description)
 	i.columns = append(i.columns, col)
 	return col
 }
 
+// InsertColumn inserts a column in the line items table at the specified index.
 func (i *Invoice) InsertColumn(index uint, description string) *InvoiceCell {
 	l := uint(len(i.columns))
 	if index > l {
@@ -273,10 +317,12 @@ func (i *Invoice) InsertColumn(index uint, description string) *InvoiceCell {
 	return col
 }
 
+// Lines returns all the rows of the invoice line items table.
 func (i *Invoice) Lines() [][]*InvoiceCell {
 	return i.lines
 }
 
+// AddLine appends a new line to the invoice line items table.
 func (i *Invoice) AddLine(values ...string) []*InvoiceCell {
 	lenCols := len(i.columns)
 
@@ -294,28 +340,37 @@ func (i *Invoice) AddLine(values ...string) []*InvoiceCell {
 	return line
 }
 
+// Subtotal returns the invoice subtotal description and value cells.
+// The returned values can be used to customize the styles of the cells.
 func (i *Invoice) Subtotal() (*InvoiceCell, *InvoiceCell) {
 	return i.subtotal[0], i.subtotal[1]
 }
 
+// SetSubtotal sets the subtotal of the invoice.
 func (i *Invoice) SetSubtotal(value string) {
 	i.subtotal[1].Value = value
 }
 
+// Total returns the invoice total description and value cells.
+// The returned values can be used to customize the styles of the cells.
 func (i *Invoice) Total() (*InvoiceCell, *InvoiceCell) {
 	return i.total[0], i.total[1]
 }
 
+// SetTotal sets the total of the invoice.
 func (i *Invoice) SetTotal(value string) {
 	i.total[1].Value = value
 }
 
+// TotalLines returns all the rows in the invoice totals table as
+// description-value cell pairs.
 func (i *Invoice) TotalLines() [][2]*InvoiceCell {
 	totals := [][2]*InvoiceCell{i.subtotal}
 	totals = append(totals, i.totals...)
 	return append(totals, i.total)
 }
 
+// AddTotalLine adds a new line in the invoice totals table.
 func (i *Invoice) AddTotalLine(desc, value string) (*InvoiceCell, *InvoiceCell) {
 	descCell := &InvoiceCell{
 		i.totalProps,
@@ -330,10 +385,12 @@ func (i *Invoice) AddTotalLine(desc, value string) (*InvoiceCell, *InvoiceCell) 
 	return descCell, valueCell
 }
 
+// Notes returns the notes section of the invoice as a title-content pair.
 func (i *Invoice) Notes() (string, string) {
 	return i.notes[0], i.notes[1]
 }
 
+// SetNotes sets the notes section of the invoice.
 func (i *Invoice) SetNotes(title, content string) {
 	i.notes = [2]string{
 		title,
@@ -341,10 +398,13 @@ func (i *Invoice) SetNotes(title, content string) {
 	}
 }
 
+// Terms returns the terms and conditions section of the invoice as a
+// title-content pair.
 func (i *Invoice) Terms() (string, string) {
 	return i.terms[0], i.terms[1]
 }
 
+// SetTerms sets the terms and conditions section of the invoice.
 func (i *Invoice) SetTerms(title, content string) {
 	i.terms = [2]string{
 		title,
@@ -352,10 +412,13 @@ func (i *Invoice) SetTerms(title, content string) {
 	}
 }
 
+// Sections returns the custom content sections of the invoice as
+// title-content pairs.
 func (i *Invoice) Sections() [][2]string {
 	return i.sections
 }
 
+// AddSection adds a new content section at the end of the invoice.
 func (i *Invoice) AddSection(title, content string) {
 	i.sections = append(i.sections, [2]string{
 		title,
@@ -363,6 +426,65 @@ func (i *Invoice) AddSection(title, content string) {
 	})
 }
 
+// TitleStyle returns the style properties used to render the invoice title.
+func (i *Invoice) TitleStyle() TextStyle {
+	return i.titleStyle
+}
+
+// SetTitleStyle sets the style properties of the invoice title.
+func (i *Invoice) SetTitleStyle(style TextStyle) {
+	i.titleStyle = style
+}
+
+// AddressStyle returns the style properties used to render the content of
+// the invoice address sections.
+func (i *Invoice) AddressStyle() TextStyle {
+	return i.addressStyle
+}
+
+// SetAddressStyle sets the style properties used to render the content of
+// the invoice address sections.
+func (i *Invoice) SetAddressStyle(style TextStyle) {
+	i.addressStyle = style
+}
+
+// AddressHeadingStyle returns the style properties used to render the
+// heading of the invoice address sections.
+func (i *Invoice) AddressHeadingStyle() TextStyle {
+	return i.headingStyle
+}
+
+// SetAddressHeadingStyle sets the style properties used to render the
+// heading of the invoice address sections.
+func (i *Invoice) SetAddressHeadingStyle(style TextStyle) {
+	i.addressHeadingStyle = style
+}
+
+// NotesStyle returns the style properties used to render the content of the
+// invoice note sections.
+func (i *Invoice) NotesStyle() TextStyle {
+	return i.noteStyle
+}
+
+// SetNotesStyle sets the style properties used to render the content of the
+// invoice note sections.
+func (i *Invoice) SetNotesStyle(style TextStyle) {
+	i.noteStyle = style
+}
+
+// NotesHeadingStyle returns the style properties used to render the heading of
+// the invoice note sections.
+func (i *Invoice) NotesHeadingStyle() TextStyle {
+	return i.noteHeadingStyle
+}
+
+// SetNotesHeadingStyle sets the style properties used to render the heading
+// of the invoice note sections.
+func (i *Invoice) SetNotesHeadingStyle(style TextStyle) {
+	i.noteHeadingStyle = style
+}
+
+// NewCellProps returns the default properties of an invoice cell.
 func (i *Invoice) NewCellProps() InvoiceCellProps {
 	white := ColorRGBFrom8bit(255, 255, 255)
 
@@ -376,6 +498,7 @@ func (i *Invoice) NewCellProps() InvoiceCellProps {
 	}
 }
 
+// NewCell returns a new invoice table cell.
 func (i *Invoice) NewCell(value string) *InvoiceCell {
 	return i.newCell(value, i.NewCellProps())
 }
@@ -387,6 +510,7 @@ func (i *Invoice) newCell(value string, props InvoiceCellProps) *InvoiceCell {
 	}
 }
 
+// NewColumn returns a new column for the line items invoice table.
 func (i *Invoice) NewColumn(description string) *InvoiceCell {
 	return i.newColumn(description, CellHorizontalAlignmentLeft)
 }
@@ -396,10 +520,6 @@ func (i *Invoice) newColumn(description string, alignment CellHorizontalAlignmen
 	col.Alignment = alignment
 
 	return col
-}
-
-func (i *Invoice) setTitleStyle(style TextStyle) {
-	i.titleStyle = style
 }
 
 func (i *Invoice) setCellBorder(cell *TableCell, invoiceCell *InvoiceCell) {
@@ -415,7 +535,7 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 
 	// Address title.
 	if title != "" {
-		titleParagraph := newStyledParagraph(i.headingStyle)
+		titleParagraph := newStyledParagraph(i.addressHeadingStyle)
 		titleParagraph.SetMargins(0, 0, 0, 7)
 		titleParagraph.Append(title)
 
@@ -423,7 +543,7 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 	}
 
 	// Address information.
-	addressParagraph := newStyledParagraph(i.defaultStyle)
+	addressParagraph := newStyledParagraph(i.addressStyle)
 	addressParagraph.SetLineHeight(1.2)
 
 	city := addr.City
@@ -449,7 +569,7 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 	}
 
 	// Contact information.
-	contactParagraph := newStyledParagraph(i.defaultStyle)
+	contactParagraph := newStyledParagraph(i.addressStyle)
 	contactParagraph.SetLineHeight(1.2)
 	contactParagraph.SetMargins(0, 0, 7, 0)
 
@@ -469,7 +589,7 @@ func (i *Invoice) drawSection(title, content string) []*StyledParagraph {
 
 	// Title paragraph.
 	if title != "" {
-		titleParagraph := newStyledParagraph(i.headingStyle)
+		titleParagraph := newStyledParagraph(i.noteHeadingStyle)
 		titleParagraph.SetMargins(0, 0, 0, 5)
 		titleParagraph.Append(title)
 
@@ -478,7 +598,7 @@ func (i *Invoice) drawSection(title, content string) []*StyledParagraph {
 
 	// Content paragraph.
 	if content != "" {
-		contentParagraph := newStyledParagraph(i.defaultStyle)
+		contentParagraph := newStyledParagraph(i.noteStyle)
 		contentParagraph.Append(content)
 
 		paragraphs = append(paragraphs, contentParagraph)
@@ -678,11 +798,10 @@ func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, e
 func (i *Invoice) generateNoteBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	division := newDivision()
 
-	sections := [][2]string{
+	sections := append([][2]string{
 		i.notes,
 		i.terms,
-	}
-	sections = append(sections, i.sections...)
+	}, i.sections...)
 
 	for _, section := range sections {
 		if section[1] != "" {
