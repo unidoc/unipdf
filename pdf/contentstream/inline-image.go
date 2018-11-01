@@ -68,102 +68,102 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 	return &inlineImage, nil
 }
 
-func (this *ContentStreamInlineImage) String() string {
-	s := fmt.Sprintf("InlineImage(len=%d)\n", len(this.stream))
-	if this.BitsPerComponent != nil {
-		s += "- BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
+func (img *ContentStreamInlineImage) String() string {
+	s := fmt.Sprintf("InlineImage(len=%d)\n", len(img.stream))
+	if img.BitsPerComponent != nil {
+		s += "- BPC " + img.BitsPerComponent.DefaultWriteString() + "\n"
 	}
-	if this.ColorSpace != nil {
-		s += "- CS " + this.ColorSpace.DefaultWriteString() + "\n"
+	if img.ColorSpace != nil {
+		s += "- CS " + img.ColorSpace.DefaultWriteString() + "\n"
 	}
-	if this.Decode != nil {
-		s += "- D " + this.Decode.DefaultWriteString() + "\n"
+	if img.Decode != nil {
+		s += "- D " + img.Decode.DefaultWriteString() + "\n"
 	}
-	if this.DecodeParms != nil {
-		s += "- DP " + this.DecodeParms.DefaultWriteString() + "\n"
+	if img.DecodeParms != nil {
+		s += "- DP " + img.DecodeParms.DefaultWriteString() + "\n"
 	}
-	if this.Filter != nil {
-		s += "- F " + this.Filter.DefaultWriteString() + "\n"
+	if img.Filter != nil {
+		s += "- F " + img.Filter.DefaultWriteString() + "\n"
 	}
-	if this.Height != nil {
-		s += "- H " + this.Height.DefaultWriteString() + "\n"
+	if img.Height != nil {
+		s += "- H " + img.Height.DefaultWriteString() + "\n"
 	}
-	if this.ImageMask != nil {
-		s += "- IM " + this.ImageMask.DefaultWriteString() + "\n"
+	if img.ImageMask != nil {
+		s += "- IM " + img.ImageMask.DefaultWriteString() + "\n"
 	}
-	if this.Intent != nil {
-		s += "- Intent " + this.Intent.DefaultWriteString() + "\n"
+	if img.Intent != nil {
+		s += "- Intent " + img.Intent.DefaultWriteString() + "\n"
 	}
-	if this.Interpolate != nil {
-		s += "- I " + this.Interpolate.DefaultWriteString() + "\n"
+	if img.Interpolate != nil {
+		s += "- I " + img.Interpolate.DefaultWriteString() + "\n"
 	}
-	if this.Width != nil {
-		s += "- W " + this.Width.DefaultWriteString() + "\n"
+	if img.Width != nil {
+		s += "- W " + img.Width.DefaultWriteString() + "\n"
 	}
 	return s
 }
 
-func (this *ContentStreamInlineImage) DefaultWriteString() string {
+func (img *ContentStreamInlineImage) DefaultWriteString() string {
 	var output bytes.Buffer
 
 	// We do not start with "BI" as that is the operand and is written out separately.
 	// Write out the parameters
 	s := ""
 
-	if this.BitsPerComponent != nil {
-		s += "/BPC " + this.BitsPerComponent.DefaultWriteString() + "\n"
+	if img.BitsPerComponent != nil {
+		s += "/BPC " + img.BitsPerComponent.DefaultWriteString() + "\n"
 	}
-	if this.ColorSpace != nil {
-		s += "/CS " + this.ColorSpace.DefaultWriteString() + "\n"
+	if img.ColorSpace != nil {
+		s += "/CS " + img.ColorSpace.DefaultWriteString() + "\n"
 	}
-	if this.Decode != nil {
-		s += "/D " + this.Decode.DefaultWriteString() + "\n"
+	if img.Decode != nil {
+		s += "/D " + img.Decode.DefaultWriteString() + "\n"
 	}
-	if this.DecodeParms != nil {
-		s += "/DP " + this.DecodeParms.DefaultWriteString() + "\n"
+	if img.DecodeParms != nil {
+		s += "/DP " + img.DecodeParms.DefaultWriteString() + "\n"
 	}
-	if this.Filter != nil {
-		s += "/F " + this.Filter.DefaultWriteString() + "\n"
+	if img.Filter != nil {
+		s += "/F " + img.Filter.DefaultWriteString() + "\n"
 	}
-	if this.Height != nil {
-		s += "/H " + this.Height.DefaultWriteString() + "\n"
+	if img.Height != nil {
+		s += "/H " + img.Height.DefaultWriteString() + "\n"
 	}
-	if this.ImageMask != nil {
-		s += "/IM " + this.ImageMask.DefaultWriteString() + "\n"
+	if img.ImageMask != nil {
+		s += "/IM " + img.ImageMask.DefaultWriteString() + "\n"
 	}
-	if this.Intent != nil {
-		s += "/Intent " + this.Intent.DefaultWriteString() + "\n"
+	if img.Intent != nil {
+		s += "/Intent " + img.Intent.DefaultWriteString() + "\n"
 	}
-	if this.Interpolate != nil {
-		s += "/I " + this.Interpolate.DefaultWriteString() + "\n"
+	if img.Interpolate != nil {
+		s += "/I " + img.Interpolate.DefaultWriteString() + "\n"
 	}
-	if this.Width != nil {
-		s += "/W " + this.Width.DefaultWriteString() + "\n"
+	if img.Width != nil {
+		s += "/W " + img.Width.DefaultWriteString() + "\n"
 	}
 	output.WriteString(s)
 
 	output.WriteString("ID ")
-	output.Write(this.stream)
+	output.Write(img.stream)
 	output.WriteString("\nEI\n")
 
 	return output.String()
 }
 
-func (this *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResources) (model.PdfColorspace, error) {
-	if this.ColorSpace == nil {
+func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResources) (model.PdfColorspace, error) {
+	if img.ColorSpace == nil {
 		// Default.
 		common.Log.Debug("Inline image not having specified colorspace, assuming Gray")
 		return model.NewPdfColorspaceDeviceGray(), nil
 	}
 
 	// If is an array, then could be an indexed colorspace.
-	if arr, isArr := this.ColorSpace.(*core.PdfObjectArray); isArr {
+	if arr, isArr := img.ColorSpace.(*core.PdfObjectArray); isArr {
 		return newIndexedColorspaceFromPdfObject(arr)
 	}
 
-	name, ok := this.ColorSpace.(*core.PdfObjectName)
+	name, ok := img.ColorSpace.(*core.PdfObjectName)
 	if !ok {
-		common.Log.Debug("Error: Invalid object type (%T;%+v)", this.ColorSpace, this.ColorSpace)
+		common.Log.Debug("Error: Invalid object type (%T;%+v)", img.ColorSpace, img.ColorSpace)
 		return nil, errors.New("Type check error")
 	}
 
@@ -194,16 +194,16 @@ func (this *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageReso
 
 }
 
-func (this *ContentStreamInlineImage) GetEncoder() (core.StreamEncoder, error) {
-	return newEncoderFromInlineImage(this)
+func (img *ContentStreamInlineImage) GetEncoder() (core.StreamEncoder, error) {
+	return newEncoderFromInlineImage(img)
 }
 
 // Is a mask ?
 // The image mask entry in the image dictionary specifies that the image data shall be used as a stencil
 // mask for painting in the current color. The mask data is 1bpc, grayscale.
-func (this *ContentStreamInlineImage) IsMask() (bool, error) {
-	if this.ImageMask != nil {
-		imMask, ok := this.ImageMask.(*core.PdfObjectBool)
+func (img *ContentStreamInlineImage) IsMask() (bool, error) {
+	if img.ImageMask != nil {
+		imMask, ok := img.ImageMask.(*core.PdfObjectBool)
 		if !ok {
 			common.Log.Debug("Image mask not a boolean")
 			return false, errors.New("Invalid object type")
@@ -218,16 +218,16 @@ func (this *ContentStreamInlineImage) IsMask() (bool, error) {
 
 // Export the inline image to Image which can be transformed or exported easily.
 // Page resources are needed to look up colorspace information.
-func (this *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) (*model.Image, error) {
+func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) (*model.Image, error) {
 	// Decode the imaging data if encoded.
-	encoder, err := newEncoderFromInlineImage(this)
+	encoder, err := newEncoderFromInlineImage(img)
 	if err != nil {
 		return nil, err
 	}
 	common.Log.Trace("encoder: %+v %T", encoder, encoder)
-	common.Log.Trace("inline image: %+v", this)
+	common.Log.Trace("inline image: %+v", img)
 
-	decoded, err := encoder.DecodeBytes(this.stream)
+	decoded, err := encoder.DecodeBytes(img.stream)
 	if err != nil {
 		return nil, err
 	}
@@ -235,27 +235,27 @@ func (this *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources)
 	image := &model.Image{}
 
 	// Height.
-	if this.Height == nil {
+	if img.Height == nil {
 		return nil, errors.New("Height attribute missing")
 	}
-	height, ok := this.Height.(*core.PdfObjectInteger)
+	height, ok := img.Height.(*core.PdfObjectInteger)
 	if !ok {
 		return nil, errors.New("Invalid height")
 	}
 	image.Height = int64(*height)
 
 	// Width.
-	if this.Width == nil {
+	if img.Width == nil {
 		return nil, errors.New("Width attribute missing")
 	}
-	width, ok := this.Width.(*core.PdfObjectInteger)
+	width, ok := img.Width.(*core.PdfObjectInteger)
 	if !ok {
 		return nil, errors.New("Invalid width")
 	}
 	image.Width = int64(*width)
 
 	// Image mask?
-	isMask, err := this.IsMask()
+	isMask, err := img.IsMask()
 	if err != nil {
 		return nil, err
 	}
@@ -266,21 +266,21 @@ func (this *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources)
 		image.ColorComponents = 1
 	} else {
 		// BPC.
-		if this.BitsPerComponent == nil {
+		if img.BitsPerComponent == nil {
 			common.Log.Debug("Inline Bits per component missing - assuming 8")
 			image.BitsPerComponent = 8
 		} else {
-			bpc, ok := this.BitsPerComponent.(*core.PdfObjectInteger)
+			bpc, ok := img.BitsPerComponent.(*core.PdfObjectInteger)
 			if !ok {
-				common.Log.Debug("Error invalid bits per component value, type %T", this.BitsPerComponent)
+				common.Log.Debug("Error invalid bits per component value, type %T", img.BitsPerComponent)
 				return nil, errors.New("BPC Type error")
 			}
 			image.BitsPerComponent = int64(*bpc)
 		}
 
 		// Color components.
-		if this.ColorSpace != nil {
-			cs, err := this.GetColorSpace(resources)
+		if img.ColorSpace != nil {
+			cs, err := img.GetColorSpace(resources)
 			if err != nil {
 				return nil, err
 			}
@@ -300,13 +300,13 @@ func (this *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources)
 // Parse an inline image from a content stream, both read its properties and binary data.
 // When called, "BI" has already been read from the stream.  This function
 // finishes reading through "EI" and then returns the ContentStreamInlineImage.
-func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {
+func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {
 	// Reading parameters.
 	im := ContentStreamInlineImage{}
 
 	for {
-		this.skipSpaces()
-		obj, err, isOperand := this.parseObject()
+		csp.skipSpaces()
+		obj, err, isOperand := csp.parseObject()
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +319,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				return nil, fmt.Errorf("Invalid inline image property (expecting name) - %T", obj)
 			}
 
-			valueObj, err, isOperand := this.parseObject()
+			valueObj, err, isOperand := csp.parseObject()
 			if err != nil {
 				return nil, err
 			}
@@ -368,12 +368,12 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				common.Log.Trace("ID start")
 
 				// Skip the space if its there.
-				b, err := this.reader.Peek(1)
+				b, err := csp.reader.Peek(1)
 				if err != nil {
 					return nil, err
 				}
 				if core.IsWhiteSpace(b[0]) {
-					this.reader.Discard(1)
+					csp.reader.Discard(1)
 				}
 
 				// Unfortunately there is no good way to know how many bytes to read since it
@@ -384,7 +384,7 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				state := 0
 				var skipBytes []byte
 				for {
-					c, err := this.reader.ReadByte()
+					c, err := csp.reader.ReadByte()
 					if err != nil {
 						common.Log.Debug("Unable to find end of image EI in inline image data")
 						return nil, err

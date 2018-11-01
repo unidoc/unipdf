@@ -1431,6 +1431,8 @@ func (a *PdfAnnotation) ToPdfObject() core.PdfObject {
 	container := a.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
+	d.Clear()
+
 	d.Set("Type", core.MakeName("Annot"))
 	d.SetIfNotNil("Rect", a.Rect)
 	d.SetIfNotNil("Contents", a.Contents)

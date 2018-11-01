@@ -14,8 +14,8 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/cmap"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // PdfFont represents an underlying font structure which can be of type:
@@ -25,6 +25,22 @@ import (
 // etc.
 type PdfFont struct {
 	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+}
+
+// GetFontDescriptor returns the font descriptor for `font`.
+func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		return t.fontDescriptor, nil
+	case *pdfFontType0:
+		return t.fontDescriptor, nil
+	case *pdfCIDFontType0:
+		return t.fontDescriptor, nil
+	case *pdfCIDFontType2:
+		return t.fontDescriptor, nil
+	}
+	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
+	return nil, errors.New("fontdescriptor not found")
 }
 
 // String returns a string that describes `font`.
@@ -250,6 +266,9 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
 			}
+			simplefont.firstChar = 0
+			simplefont.lastChar = 255
+			simplefont.fontMetrics = std.fontMetrics
 		} else {
 			simplefont, err = newSimpleFontFromPdfObject(d, base, nil)
 			if err != nil {
@@ -655,6 +674,21 @@ type PdfFontDescriptor struct {
 
 	// Container.
 	container *core.PdfIndirectObject
+}
+
+// GetDescent returns the Descent of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetDescent() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.Descent)
+}
+
+// GetAscent returns the Ascent of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetAscent() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.Ascent)
+}
+
+// GetCapHeight returns the CapHeight of the font `descriptor`.
+func (descriptor *PdfFontDescriptor) GetCapHeight() (float64, error) {
+	return core.GetNumberAsFloat(descriptor.CapHeight)
 }
 
 // String returns a string describing the font descriptor.
