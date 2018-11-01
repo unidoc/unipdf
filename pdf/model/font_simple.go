@@ -11,8 +11,8 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // pdfFontSimple describes a Simple Font
@@ -93,10 +93,20 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 		return metrics, ok
 	}
 
-	code, found := font.encoder.GlyphToCharcode(glyph)
+	metrics := fonts.CharMetrics{GlyphName: glyph}
+
+	encoder := font.Encoder()
+
+	if encoder == nil {
+		common.Log.Debug("No encoder for fonts=%s", font)
+		return metrics, false
+	}
+	code, found := encoder.GlyphToCharcode(glyph)
+
 	if !found {
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
+
 	// !@#$ Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
 	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
@@ -333,7 +343,10 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	if font.Encoding != nil {
 		d.Set("Encoding", font.Encoding)
 	} else if font.encoder != nil {
-		d.Set("Encoding", font.encoder.ToPdfObject())
+		encObj := font.encoder.ToPdfObject()
+		if encObj != nil {
+			d.Set("Encoding", encObj)
+		}
 	}
 
 	return font.container

@@ -13,8 +13,8 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
 )
 
 // Creator is a wrapper around functionality for creating PDF reports and/or adding new

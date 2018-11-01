@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
 // Font represents a font which is a series of glyphs. Character codes from PDF strings can be

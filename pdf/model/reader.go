@@ -68,7 +68,7 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 }
 
 // PdfVersion returns version of the PDF file.
-func (this *PdfReader) PdfVersion() string {
+func (this *PdfReader) PdfVersion() Version {
 	return this.parser.PdfVersion()
 }
 
@@ -129,7 +129,7 @@ func (this *PdfReader) loadStructure() error {
 	// Catalog.
 	root, ok := trailerDict.Get("Root").(*PdfObjectReference)
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", *trailerDict)
+		return fmt.Errorf("Invalid Root (trailer: %s)", trailerDict)
 	}
 	oc, err := this.parser.LookupByReference(*root)
 	if err != nil {
@@ -509,7 +509,7 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	if !ok {
 		return errors.New("Node missing Type (Required)")
 	}
-	common.Log.Trace("buildPageList node type: %s", *objType)
+	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
 		p, err := this.newPdfPageFromDict(nodeDict)
 		if err != nil {
@@ -683,7 +683,8 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 	return nil
 }
 
-// GetPageAsIndirectObject returns an indirect object containing the page dictionary for a specified page number.
+// GetPageAsIndirectObject returns the indirect object representing a page fro a given page number.
+// Indirect object with type /Page.
 func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
 	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
 		return nil, fmt.Errorf("File needs to be decrypted first")
@@ -694,6 +695,7 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	page := this.pageList[pageNumber-1]
 
 	// Look up all references related to page and load everything.
+	// XXX/TODO: Use of traverse object data will be limited when lazy-loading is supported.
 	err := this.traverseObjectData(page)
 	if err != nil {
 		return nil, err
@@ -702,6 +704,20 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	common.Log.Trace("- %T %s", page.PdfObject, page.PdfObject)
 
 	return page, nil
+}
+
+// PageFromIndirectObject returns the PdfPage and page number for a given indirect object.
+func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, int, error) {
+	if len(r.PageList) != len(r.pageList) {
+		return nil, 0, errors.New("page list invalid")
+	}
+
+	for i, pageind := range r.pageList {
+		if pageind == ind {
+			return r.PageList[i], i + 1, nil
+		}
+	}
+	return nil, 0, errors.New("Page not found")
 }
 
 // GetPage returns the PdfPage model for the specified page number.

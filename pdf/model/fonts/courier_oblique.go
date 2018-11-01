@@ -11,7 +11,7 @@ package fonts
 
 import (
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
 // FontCourierOblique represents the Courier-Oblique font.
