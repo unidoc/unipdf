@@ -8,9 +8,12 @@ package extractor
 import (
 	"flag"
 	"testing"
+
+	"github.com/unidoc/unidoc/common"
 )
 
 func init() {
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	if flag.Lookup("test.v") != nil {
 		isTesting = true
 	}

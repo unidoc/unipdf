@@ -216,7 +216,6 @@ func (proc *ContentStreamProcessor) getInitialColor(cs model.PdfColorspace) (mod
 }
 
 // Process the entire operations.
-
 func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) error {
 	// Initialize graphics state
 	proc.graphicsState.ColorspaceStroking = model.NewPdfColorspaceDeviceGray()
@@ -270,7 +269,6 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 		}
 
 		// Check if have external handler also, and process if so.
-
 		for _, entry := range proc.handlers {
 			var err error
 			if entry.Condition.All() {
@@ -449,7 +447,6 @@ func (proc *ContentStreamProcessor) handleCommand_scn(op *ContentStreamOperation
 
 // G: Set the stroking colorspace to DeviceGray, and the color to the specified graylevel (range [0-1]).
 // gray G
-
 func (proc *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
@@ -471,7 +468,6 @@ func (proc *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, 
 
 // g: Same as G, but for non-stroking colorspace and color (range [0-1]).
 // gray g
-
 func (proc *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
@@ -494,7 +490,6 @@ func (proc *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, 
 
 // RG: Sets the stroking colorspace to DeviceRGB and the stroking color to r,g,b. [0-1] ranges.
 // r g b RG
-
 func (proc *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
@@ -515,7 +510,6 @@ func (proc *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation,
 }
 
 // rg: Same as RG but for non-stroking colorspace, color.
-
 func (proc *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
@@ -537,7 +531,6 @@ func (proc *ContentStreamProcessor) handleCommand_rg(op *ContentStreamOperation,
 
 // K: Sets the stroking colorspace to DeviceCMYK and the stroking color to c,m,y,k. [0-1] ranges.
 // c m y k K
-
 func (proc *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {
@@ -558,7 +551,6 @@ func (proc *ContentStreamProcessor) handleCommand_K(op *ContentStreamOperation, 
 }
 
 // k: Same as K but for non-stroking colorspace, color.
-
 func (proc *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceCMYK()
 	if len(op.Params) != cs.GetNumComponents() {

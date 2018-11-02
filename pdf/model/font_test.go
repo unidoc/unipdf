@@ -22,7 +22,7 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 }
 
 var simpleFontDicts = []string{
