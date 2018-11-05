@@ -35,19 +35,11 @@ type stdHandlerR4 struct {
 	ID0    string
 }
 
-func (sh stdHandlerR4) paddedPass(pass []byte) []byte {
+func (stdHandlerR4) paddedPass(pass []byte) []byte {
 	key := make([]byte, 32)
-	if len(pass) >= 32 {
-		for i := 0; i < 32; i++ {
-			key[i] = pass[i]
-		}
-	} else {
-		for i := 0; i < len(pass); i++ {
-			key[i] = pass[i]
-		}
-		for i := len(pass); i < 32; i++ {
-			key[i] = padding[i-len(pass)]
-		}
+	i := copy(key, pass)
+	for ; i < 32; i++ {
+		key[i] = padding[i-len(pass)]
 	}
 	return key
 }
