@@ -39,7 +39,7 @@ func TestNewFilledCurve(t *testing.T) {
 	creator.NewPage()
 	creator.Draw(filledCurve)
 
-	err := creator.WriteToFile("/tmp/filledCurve.pdf")
+	err := creator.WriteToFile(tempFile("filledCurve.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return

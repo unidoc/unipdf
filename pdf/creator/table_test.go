@@ -50,7 +50,7 @@ func TestTableMultiParagraphWrapped(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	err = c.WriteToFile("/tmp/table_pagehist.pdf")
+	err = c.WriteToFile(tempFile("table_pagehist.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -115,7 +115,7 @@ func TestTableWithImage(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	err = c.WriteToFile("/tmp/table_pagehist_with_img.pdf")
+	err = c.WriteToFile(tempFile("table_pagehist_with_img.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -225,7 +225,7 @@ func TestTableWithDiv(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	err = c.WriteToFile("/tmp/table_pagehist_with_div.pdf")
+	err = c.WriteToFile(tempFile("table_pagehist_with_div.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
