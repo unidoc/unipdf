@@ -102,7 +102,7 @@ func TestTOCAdvanced(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/toc_advanced.pdf")
+	err = c.WriteToFile(tempFile("toc_advanced.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}

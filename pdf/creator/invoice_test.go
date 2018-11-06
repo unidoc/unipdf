@@ -74,7 +74,7 @@ func TestInvoiceSimple(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/invoice_simple.pdf")
+	err = c.WriteToFile(tempFile("invoice_simple.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -220,7 +220,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/invoice_advanced.pdf")
+	err = c.WriteToFile(tempFile("invoice_advanced.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
