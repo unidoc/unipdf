@@ -67,19 +67,26 @@ node {
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
         stage('Build examples') {
-            // Debug.
+            // Output environment variables (useful for debugging).
             sh("printenv")
 
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
-            if (env.BRANCH_NAME.take(2) == "v3") {
-                examplesBranch = "v3"
-            }
-            // Special cases.
-            switch("${env.BRANCH_NAME}") {
-                case "v3-enhance-forms":
-                    examplesBranch = "v3-enhance-forms"
-                    break
+            if (env.BRANCH_NAME.take(3) == "PR-") {
+                // Pull requests (PR) require separate handling.
+                if (env.CHANGE_TARGET.take(2) == "v3") {
+                    examplesBranch = "v3"
+                }
+            } else {
+                if (env.BRANCH_NAME.take(2) == "v3") {
+                    examplesBranch = "v3"
+                }
+                // Special cases.
+                switch("${env.BRANCH_NAME}") {
+                    case "v3-enhance-forms":
+                        examplesBranch = "v3-enhance-forms"
+                        break
+                }
             }
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
