@@ -67,6 +67,9 @@ node {
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
         stage('Build examples') {
+            // Debug.
+            sh("printenv")
+
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
             if (env.BRANCH_NAME.take(2) == "v3") {
