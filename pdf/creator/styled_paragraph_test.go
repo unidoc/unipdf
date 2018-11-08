@@ -270,7 +270,7 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/paragraphs_regular_vs_styled.pdf")
+	err = c.WriteToFile(tempFile("paragraphs_regular_vs_styled.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -363,7 +363,7 @@ func TestStyledParagraph(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/styled_paragraph.pdf")
+	err = c.WriteToFile(tempFile("styled_paragraph.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}

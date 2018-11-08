@@ -86,7 +86,7 @@ func TestDivVertical(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_vertical.pdf")
+	err = c.WriteToFile(tempFile("division_vertical.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -164,7 +164,7 @@ func TestDivInline(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_inline.pdf")
+	err = c.WriteToFile(tempFile("division_inline.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -215,7 +215,7 @@ func TestDivNumberMatrix(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_number_matrix.pdf")
+	err = c.WriteToFile(tempFile("division_number_matrix.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -291,7 +291,7 @@ func TestDivRandomSequences(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_random_sequences.pdf")
+	err = c.WriteToFile(tempFile("division_random_sequences.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
@@ -367,7 +367,7 @@ func TestTableDivisions(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_table.pdf")
+	err = c.WriteToFile(tempFile("division_table.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
