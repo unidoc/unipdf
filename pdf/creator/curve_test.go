@@ -19,7 +19,7 @@ func TestNewCurve(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile("/tmp/curve.pdf")
+	err = creator.WriteToFile(tempFile("curve.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return
@@ -63,7 +63,7 @@ func TestNewCurveWithGlass(t *testing.T) {
 	creator.Draw(CreateCurve(creator, 51, 399, 75, 445, 150, 450, ColorRed))
 	creator.Draw(CreateCurve(creator, 150, 450, 225, 445, 251, 399, ColorGreen))
 
-	err := creator.WriteToFile("/tmp/curve_glass.pdf")
+	err := creator.WriteToFile(tempFile("curve_glass.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v", err)
 		return

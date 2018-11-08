@@ -80,6 +80,10 @@ func (div *Division) Height() float64 {
 			p := t
 			compWidth += p.margins.left + p.margins.right
 			compHeight += p.margins.top + p.margins.bottom
+		case *StyledParagraph:
+			p := t
+			compWidth += p.margins.left + p.margins.right
+			compHeight += p.margins.top + p.margins.bottom
 		}
 
 		// Vertical stacking.

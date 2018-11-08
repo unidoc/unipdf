@@ -32,7 +32,7 @@ func TestSingleBorder(t *testing.T) {
 	c := New()
 	c.Draw(border)
 
-	err := c.WriteToFile("/tmp/border_single.pdf")
+	err := c.WriteToFile(tempFile("border_single.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -54,7 +54,7 @@ func TestSingleBorder2(t *testing.T) {
 	c := New()
 	c.Draw(border)
 
-	err := c.WriteToFile("/tmp/border_single2.pdf")
+	err := c.WriteToFile(tempFile("border_single2.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -76,7 +76,7 @@ func TestSingleBorder3(t *testing.T) {
 	c := New()
 	c.Draw(border)
 
-	err := c.WriteToFile("/tmp/border_single3.pdf")
+	err := c.WriteToFile(tempFile("border_single3.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -105,7 +105,7 @@ func TestSingleBorder4(t *testing.T) {
 	c := New()
 	c.Draw(border)
 
-	err := c.WriteToFile("/tmp/border_single4.pdf")
+	err := c.WriteToFile(tempFile("border_single4.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
