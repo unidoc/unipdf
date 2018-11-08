@@ -113,10 +113,10 @@ var ligatureMap = map[string]rune{
 // ligatureToString is a map from ligature runes to their constituent characters.
 // https://en.wikipedia.org/wiki/Typographic_ligature#Ligatures_in_Unicode_(Latin_alphabets)
 var ligatureToString = map[rune]string{
-	'Ꜳ':          "AA",
-	'ꜳ':          "aa",
-	'Æ':          "AE",
-	'æ':          "ae",
+	'Ꜳ': "AA",
+	'ꜳ': "aa",
+	// 'Æ':          "AE",
+	// 'æ':          "ae",
 	'Ꜵ':          "aa",
 	'ꜵ':          "ao",
 	'Ꜷ':          "AU",
