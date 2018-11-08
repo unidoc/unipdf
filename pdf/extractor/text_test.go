@@ -41,7 +41,6 @@ func TestTextExtraction1(t *testing.T) {
 	}
 	if s != testExpected1 {
 		t.Errorf("Text mismatch. Got %q. Expected %q", s, testExpected1)
-		t.Errorf("Text mismatch (% X vs % X)", s, testExpected1)
 		return
 	}
 }

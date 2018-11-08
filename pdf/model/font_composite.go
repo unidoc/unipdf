@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/unidoc/unidoc/common"
@@ -121,7 +122,7 @@ func (font pdfFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, b
 	return font.DescendantFont.GetGlyphCharMetrics(glyph)
 }
 
-// !@#$ stub
+// GetCharMetrics returns the char metrics for character code `code`.
 func (font pdfFontType0) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	if font.DescendantFont == nil {
 		common.Log.Debug("ERROR: No descendant. font=%s", font)
@@ -247,7 +248,7 @@ func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	return fonts.CharMetrics{}, true
 }
 
-// !@#$ stub
+// GetCharMetrics returns the char metrics for character code `code`.
 func (font pdfCIDFontType0) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	return fonts.CharMetrics{}, true
 }
@@ -298,6 +299,9 @@ type pdfCIDFontType2 struct {
 	DW2           core.PdfObject
 	W2            core.PdfObject
 	CIDToGIDMap   core.PdfObject
+
+	widths       map[int]float64
+	defaultWidth float64
 
 	// Mapping between unicode runes to widths.
 	runeToWidthMap map[uint16]int
@@ -361,10 +365,20 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	return metrics, true
 }
 
-// !@#$ stub
+// GetCharMetrics returns the char metrics for character code `code`.
 func (font pdfCIDFontType2) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
-	metrics := fonts.CharMetrics{}
-	return metrics, true
+	if w, ok := font.widths[int(code)]; ok {
+		return fonts.CharMetrics{Wx: float64(w)}, true
+	}
+	w, found := font.runeToWidthMap[code] // !@#$ How can this work?
+	if !found {
+		dw, ok := core.GetInt(font.DW)
+		if !ok {
+			return fonts.CharMetrics{}, false
+		}
+		w = int(*dw)
+	}
+	return fonts.CharMetrics{Wx: float64(w)}, found
 }
 
 // GetAverageCharWidth returns the average width of all the characters in `font`.
@@ -433,6 +447,55 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	font.DW2 = d.Get("DW2")
 	font.W2 = d.Get("W2")
 	font.CIDToGIDMap = d.Get("CIDToGIDMap")
+
+	if arr2, ok := core.GetArray(font.W); ok {
+		font.widths = map[int]float64{}
+		for i := 0; i < arr2.Len()-1; i++ {
+			obj0 := (*arr2).Get(i)
+			n, ok0 := core.GetIntVal(obj0)
+			if !ok0 {
+				return nil, fmt.Errorf("Bad font W obj0: i=%d %#v", i, obj0)
+			}
+			i++
+			if i > arr2.Len()-1 {
+				return nil, fmt.Errorf("Bad font W array: arr2=%+v", arr2)
+			}
+			obj1 := (*arr2).Get(i)
+			switch obj1.(type) {
+			case *core.PdfObjectArray:
+				arr, _ := core.GetArray(obj1)
+				if widths, err := arr.ToFloat64Array(); err == nil {
+					for j := 0; j < len(widths); j++ {
+						font.widths[n+j] = widths[j]
+					}
+				} else {
+					return nil, fmt.Errorf("Bad font W array obj1: i=%d %#v", i, obj1)
+				}
+			case *core.PdfObjectInteger:
+				n1, ok1 := core.GetIntVal(obj1)
+				if !ok1 {
+					return nil, fmt.Errorf("Bad font W int obj1: i=%d %#v", i, obj1)
+				}
+				i++
+				if i > arr2.Len()-1 {
+					return nil, fmt.Errorf("Bad font W array: arr2=%+v", arr2)
+				}
+				obj2 := (*arr2).Get(i)
+				v, err := core.GetNumberAsFloat(obj2)
+				if err != nil {
+					return nil, fmt.Errorf("Bad font W int obj2: i=%d %#v", i, obj2)
+				}
+				for j := n; j <= n1; j++ {
+					font.widths[j] = v
+				}
+			default:
+				return nil, fmt.Errorf("Bad font W obj1 type: i=%d %#v", i, obj1)
+			}
+		}
+	}
+	if defaultWidth, err := core.GetNumberAsFloat(font.DW); err == nil {
+		font.defaultWidth = defaultWidth
+	}
 
 	return font, nil
 }

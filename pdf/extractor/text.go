@@ -627,7 +627,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		m, ok := font.GetCharMetrics(code)
 		if !ok {
-			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%c %s", code, r, r, font)
+			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%+q %s", code, r, r, font)
 			return errors.New("no char metrics")
 		}
 

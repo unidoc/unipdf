@@ -284,8 +284,9 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 
 			}
 
-			simplefont.firstChar = 0
-			simplefont.lastChar = 255
+			simplefont.firstChar = std.firstChar
+			simplefont.lastChar = std.lastChar
+			simplefont.charWidths = std.charWidths
 			simplefont.fontMetrics = std.fontMetrics
 		} else {
 			simplefont, err = newSimpleFontFromPdfObject(d, base, nil)
@@ -514,7 +515,7 @@ func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, error) {
 	encoder := font.Encoder()
 	if encoder == nil {
-		common.Log.Debug("ERROR: Eetrics not found for %s", font)
+		common.Log.Debug("ERROR: Metrics not found for %s", font)
 		return fonts.CharMetrics{}, errors.New("no font encoder")
 	}
 

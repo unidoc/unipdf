@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"io/ioutil"
+	"sort"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -104,10 +105,16 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 	code, found := encoder.GlyphToCharcode(glyph)
 
 	if !found {
+		if glyph != "space" {
+			common.Log.Debug("No charcode for glyph=%q", glyph)
+		}
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
 
 	// !@#$ Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
+	if glyph == "space" {
+		return metrics, false
+	}
 	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
 	return metrics, ok
@@ -124,13 +131,15 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 	}
 
 	if int(code) > font.lastChar {
-		common.Log.Debug("Code higher than lastchar (%d > %d)", code, font.lastChar)
+		common.Log.Debug("ERROR: Code higher than lastchar (%d > %d) %s",
+			code, font.lastChar, font)
 		return metrics, false
 	}
 
 	index := int(code) - font.firstChar
 	if index >= len(font.charWidths) {
-		common.Log.Debug("Code outside of widths range (%d > %d)", index, len(font.charWidths))
+		common.Log.Debug("ERROR: Code outside of widths range (%d > %d) code=%d [%d %d] font=%s",
+			index, len(font.charWidths), code, font.firstChar, font.lastChar, font.String())
 		return metrics, false
 	}
 
@@ -216,6 +225,9 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
 			}
 			font.charWidths = widths
 		}
+	}
+	if font.lastChar > 0 && len(font.charWidths) == 0 {
+		common.Log.Debug("ERROR: No widths. font=%s", font)
 	}
 
 	font.Encoding = core.TraceToDirectObject(d.Get("Encoding"))
@@ -492,7 +504,7 @@ const (
 	ZapfDingbats         Standard14Font = "ZapfDingbats"
 )
 
-// loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates wheter
+// loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates whether
 // the builtin font exists.
 func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
 	std, ok := standard14Fonts[baseFont]
@@ -503,7 +515,24 @@ func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
 	if descriptor == nil {
 		return pdfFontSimple{}, false
 	}
+	// !@#$ Fix for ~/testdata/How to Accuse the Other Guy of Lying with Statistics.pdf
 	std.std14Descriptor = descriptor
+	se, ok := std.std14Encoder.(textencoding.SimpleEncoder)
+	if !ok {
+		common.Log.Debug("ERROR: Wrong encoder type: %T", std.std14Encoder)
+	}
+	codes := []int{}
+	for c := range se.CodeToGlyph {
+		codes = append(codes, int(c))
+	}
+	sort.Ints(codes)
+	std.firstChar = codes[0]
+	std.lastChar = codes[len(codes)-1]
+	std.charWidths = make([]float64, len(codes))
+	for i, code := range codes {
+		glyph := se.CodeToGlyph[uint16(code)]
+		std.charWidths[i] = std.fontMetrics[glyph].Wx
+	}
 	return std, true
 }
 
