@@ -360,7 +360,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255},
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
 			"abcdefghijklmnopqrstuvwxyz{|}~€‚ƒ„…†‡ˆ‰Š‹OEŽ‘’“”•–—˜™š›oežŸ¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·" +
-			"¸¹º»¼½¾¿ÀÁÂÃÄÅAEÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞfzàáâãäåaeçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
+			"¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞfzàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
 	},
 	fontFragmentTest{"Symbol built-in",
 		"./testdata/font/simple.txt", 3,
@@ -407,8 +407,8 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243,
 			244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255},
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
-			"abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶fz®©™´¨≠AEØ∞" +
-			"±≤≥¥µ∂∑∏π∫ªºΩaeø¿¡¬√ƒ≈∆«»…ÀÃÕOEoe–—“”‘’÷◊ÿŸ⁄€‹›fifl‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ",
+			"abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶fz®©™´¨≠ÆØ∞" +
+			"±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…ÀÃÕOEoe–—“”‘’÷◊ÿŸ⁄€‹›fifl‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ",
 	},
 	fontFragmentTest{"Test beginbfchar and beginbfrange cmap entries",
 		"./testdata/font/Yemeni.txt", 470,
