@@ -2,10 +2,23 @@ Missing font --> ?
 
 Problem Files
 =============
-~/testdata/spool/000002.pdf text in one line split over many lines
+~/testdata/459474_809.pdf              completely messed up
+~/testdata/big/chaum1985bigbrother.pdf spacing mistakes, line order
+~/testdata/spool/000002.pdf            text in one line split over many lines
+~/testdata/tax-havens.pdf              text in one line split a few lines
+~/testdata/g-suite/Strategic human resource management_ what does it mean in practic.pdf  one character per line
+~/testdata/ergodicity/sc505notes.pdf   can't decode font?
 
 Second Order Problems
 ---------------------
+~/testdata/spool/000026.pdf            one character per line (mostly fixed)
+~/testdata/spool/000020.pdf                "                  "
+~/testdata/digital_signatures/Docusign-Envelope History.pdf       line splits
+~/testdata/Frenne_et_al-2018-Methods_in_Ecology_and_Evolution.pdf spaces and line order
+~/testdata/Secure-and-scalable-statistical-computation-of-questionnaire-data-in-r.pdf spaces
+~/testdata/david-graeber-bullshit-jobs.pdf  spaces
+~/testdata/gingras-einstein-poincare.pdf    spaces
+
 ~/testdata/pdl.pdf                      text reordered
 ~/testdata/Chemistry_test_revision.pdf  extra spaces
 ~/testdata/t078-notice-of-approval-and-exemption-operation-of-b-double-up-to-25m-in-length.pdf  extra spaces
@@ -14,6 +27,7 @@ Second Order Problems
 ~/testdata/hansard_frag.pdf             line order
 ~/testdata/vitae.pdf                    some spaces, line order
 ~/testdata/K-10.pdf                     some spaces, line order
+~/testdata/xarc/Chollet_DLwPython_MEAP_V03_ch1.pdf some spaces
 
 Third Order Problems
 ---------------------

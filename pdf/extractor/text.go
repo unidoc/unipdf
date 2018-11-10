@@ -303,7 +303,7 @@ func (to *textObject) nextLine() {
 	to.moveTo(0, -to.State.Tl)
 }
 
-// setTextMatrix "Tm"
+// setTextMatrix "Tm".
 // Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
 // in `f`  (page 250)
 func (to *textObject) setTextMatrix(f []float64) {
@@ -644,6 +644,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		xyt := XYText{Text: string(r),
 			Point:      translation(trm),
+			Orient:     trm.Orientation(),
 			End:        translation(to.Tm.Mult(td).Mult(to.gs.CTM)),
 			SpaceWidth: spaceWidth * trm.ScalingFactorX(),
 		}
@@ -747,14 +748,27 @@ func (tl *TextList) ToText() string {
 	return strings.Join(texts, "\n")
 }
 
-// SortPosition sorts a text list by its elements' position on a page. Top to bottom, left to right.
+// SortPosition sorts a text list by its elements' position on a page.
+// Sorting is by orientation then top to bottom, left to right when page is orientated so that text
+// is horizontal.
 func (tl *TextList) SortPosition() {
 	sort.SliceStable(*tl, func(i, j int) bool {
 		ti, tj := (*tl)[i], (*tl)[j]
-		if ti.Y != tj.Y {
-			return ti.Y > tj.Y
+		if ti.Orient != tj.Orient {
+			return ti.Orient > tj.Orient
 		}
-		return ti.X < tj.X
+		// x, y is orientated so text is horizontal.
+		xi, xj := ti.X, tj.X
+		yi, yj := ti.Y, tj.Y
+		if ti.Orient == contentstream.OrientationLandscape {
+			xi, yi = yi, xi
+			xj, yj = yj, xj
+		}
+
+		if yi != yj {
+			return yi > yj
+		}
+		return xi < xj
 	})
 }
 
@@ -767,8 +781,26 @@ type Line struct {
 }
 
 // toLines return the text and positions in `tl` as a slice of Line.
-// NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
+// NOTE: Caller must sort the text list by top-to-bottom, left-to-write (for orientation adjusted so
+// that text is horizontal) before calling this function.
 func (tl *TextList) toLines() []Line {
+	portText, landText := TextList{}, TextList{}
+	for _, t := range *tl {
+		if t.Orient == contentstream.OrientationPortrait {
+			portText = append(portText, t)
+		} else {
+			t.X, t.Y = t.Y, t.X
+			landText = append(landText, t)
+		}
+	}
+	portLines := portText.toLinesOrient()
+	landLines := landText.toLinesOrient()
+	return append(portLines, landLines...)
+}
+
+// toLinesOrient return the text and positions in `tl` as a slice of Line.
+// NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
+func (tl *TextList) toLinesOrient() []Line {
 	tl.printTexts("toLines: before")
 	if len(*tl) == 0 {
 		return []Line{}
@@ -784,8 +816,7 @@ func (tl *TextList) toLines() []Line {
 	wordSpacing := ExponAve{}
 	lastEndX := 0.0 // (*tl)[i-1).End.X
 
-	for i, t := range *tl {
-		common.Log.Debug("%d --------------------------", i)
+	for _, t := range *tl {
 		if t.Y < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
@@ -903,33 +934,26 @@ func newLine(y float64, x []float64, words []string) Line {
 	return Line{Y: y, Dx: dx, Text: strings.Join(words, ""), Words: words}
 }
 
+// removeDuplicates returns `line` with duplicate characters removed. `charWidth` is the average
+// character width for the line.
 func removeDuplicates(line Line, charWidth float64) Line {
 	if len(line.Dx) == 0 {
 		return line
 	}
-	// width := 0.0
-	// for _, dx := range line.Dx {
-	// 	width += dx
-	// }
-	// tol := 0.3 * width / float64(len(line.Dx))
+
 	tol := charWidth * 0.3
 	words := []string{line.Words[0]}
 	dxList := []float64{}
 
-	// fmt.Printf("%d %d %q\n", len(line.Words), len(line.Text), text)
-	// fmt.Printf("tol=%.2f Dx=%d[%.2f]\n", tol, len(line.Dx), line.Dx)
 	w0 := line.Words[0]
 	for i, dx := range line.Dx {
 		w := line.Words[i+1]
 		if w != w0 || dx > tol {
 			words = append(words, w)
 			dxList = append(dxList, dx)
-		} else {
-			fmt.Printf("OUT[%d:%s:%.2f<%.2f]", i, line.Words[i+1], dx, tol)
 		}
 		w0 = w
 	}
-	// fmt.Printf("    dxList=%d[%.2f]\n", len(dxList), dxList)
 	return Line{Y: line.Y, Dx: dxList, Text: strings.Join(words, ""), Words: words}
 }
 

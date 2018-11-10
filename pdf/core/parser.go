@@ -53,8 +53,6 @@ type PdfParser struct {
 	// Tracking is necessary to avoid recursive loops.
 	streamLengthReferenceLookupInProgress map[int64]bool
 
-	// Hack to allow parsing of PDF fragments without reporting an EOF error.
-	suppressEOF bool
 }
 
 // Version represents a version of a PDF standard.
