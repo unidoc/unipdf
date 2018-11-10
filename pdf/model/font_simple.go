@@ -111,7 +111,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
 
-	// !@#$ Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
+	//  XXX(peterwilliams97)/FIXME: Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
 	if glyph == "space" {
 		return metrics, false
 	}
@@ -515,7 +515,7 @@ func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
 	if descriptor == nil {
 		return pdfFontSimple{}, false
 	}
-	// !@#$ Fix for ~/testdata/How to Accuse the Other Guy of Lying with Statistics.pdf
+
 	std.std14Descriptor = descriptor
 	se, ok := std.std14Encoder.(textencoding.SimpleEncoder)
 	if !ok {

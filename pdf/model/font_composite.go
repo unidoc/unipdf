@@ -370,7 +370,8 @@ func (font pdfCIDFontType2) GetCharMetrics(code uint16) (fonts.CharMetrics, bool
 	if w, ok := font.widths[int(code)]; ok {
 		return fonts.CharMetrics{Wx: float64(w)}, true
 	}
-	w, found := font.runeToWidthMap[code] // !@#$ How can this work?
+	// XXX(peterwilliams97)/FIXME: The remainder of this function is pure guesswork. Explain it.
+	w, found := font.runeToWidthMap[code]
 	if !found {
 		dw, ok := core.GetInt(font.DW)
 		if !ok {

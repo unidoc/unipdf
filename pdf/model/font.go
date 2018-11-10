@@ -281,7 +281,6 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 			if err != nil {
 				common.Log.Debug("ERROR: Bad Standard14\n\tfont=%s\n\tstd=%+v", base, std)
 				return nil, err
-
 			}
 
 			simplefont.firstChar = std.firstChar
