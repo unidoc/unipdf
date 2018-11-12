@@ -7,9 +7,13 @@ package extractor
 
 import (
 	"flag"
+	"os"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func init() {
@@ -43,4 +47,102 @@ func TestTextExtraction1(t *testing.T) {
 		t.Errorf("Text mismatch. Got %q. Expected %q", s, testExpected1)
 		return
 	}
+}
+
+func TestTextExtraction2(t *testing.T) {
+	for _, test := range extract2Tests {
+		testExtract2(t, test.filename, test.expectedPageText)
+	}
+}
+
+var extract2Tests = []struct {
+	filename         string
+	expectedPageText map[int][]string
+}{
+	{
+		filename: "testdata/reader.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"A Research UNIX Reader:",
+				"Annotated Excerpts from the Programmer's Manual,",
+				"To keep the size of this report",
+			},
+		},
+	},
+}
+
+func testExtract2(t *testing.T, filename string, expectedPageText map[int][]string) {
+	_, actualPageText := extractPageTexts(t, filename)
+	for _, pageNum := range sortedKeys(expectedPageText) {
+		expectedSentences, ok := expectedPageText[pageNum]
+		actualText, ok := actualPageText[pageNum]
+		if !ok {
+			t.Fatalf("%q doesn't have page %d", filename, pageNum)
+		}
+		if !containsSentences(t, expectedSentences, actualText) {
+			t.Fatalf("Text mismatch filename=%q page=%d", filename, pageNum)
+		}
+	}
+}
+
+func containsSentences(t *testing.T, expectedSentences []string, actualText string) bool {
+	actualSentences := asSet(strings.Split(actualText, "\n"))
+	for _, e := range expectedSentences {
+		if _, ok := actualSentences[e]; !ok {
+			t.Errorf("No match for %q", e)
+			return false
+		}
+	}
+	return true
+}
+
+func sortedKeys(m map[int][]string) []int {
+	keys := []int{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	return keys
+}
+
+func asSet(keys []string) map[string]bool {
+	set := map[string]bool{}
+	for _, k := range keys {
+		set[k] = true
+	}
+	return set
+}
+
+func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Fatalf("Couldn't open filename=%q err=%v", filename, err)
+	}
+	defer f.Close()
+
+	pdfReader, err := model.NewPdfReader(f)
+	if err != nil {
+		t.Fatalf("NewPdfReader failed. filename=%q err=%v", filename, err)
+	}
+	numPages, err := pdfReader.GetNumPages()
+	if err != nil {
+		t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
+	}
+	pageText := map[int]string{}
+	for pageNum := 1; pageNum <= numPages; pageNum++ {
+
+		page, err := pdfReader.GetPage(pageNum)
+		if err != nil {
+			t.Fatalf("GetPage failed. filename=%q page=%d err=%v", filename, pageNum, err)
+		}
+		ex, err := New(page)
+		if err != nil {
+			t.Fatalf("extractor.New failed. filename=%q page=%d err=%v", filename, pageNum, err)
+		}
+		text, _, _, err := ex.ExtractText2()
+		if err != nil {
+			t.Fatalf("ExtractText2 failed. filename=%q page=%d err=%v", filename, pageNum, err)
+		}
+		pageText[pageNum] = text
+	}
+	return numPages, pageText
 }

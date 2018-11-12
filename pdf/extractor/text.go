@@ -602,8 +602,7 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Debug("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes,
-		font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
 
 	stateMatrix := contentstream.NewMatrix(
 		tfs*th, 0,
@@ -708,7 +707,7 @@ func (t XYText) Width() float64 {
 	default:
 		w = math.Abs(t.End.X - t.X)
 	}
-	common.Log.Debug("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
+	common.Log.Trace("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
 	return w
 }
 
@@ -850,7 +849,7 @@ func (tl *TextList) toLinesOrient() []Line {
 		if scanning && t.Text != " " {
 			nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
 			isSpace = nextWordX < t.X
-			common.Log.Debug("[%.1f, %.1f] lastEndX=%.1f nextWordX=%.1f",
+			common.Log.Trace("[%.1f, %.1f] lastEndX=%.1f nextWordX=%.1f",
 				t.Y, t.X, lastEndX, nextWordX)
 		}
 		if isSpace {

@@ -52,7 +52,6 @@ type PdfParser struct {
 	// the length reference (if not object) prior to reading the actual stream.  This has risks of endless looping.
 	// Tracking is necessary to avoid recursive loops.
 	streamLengthReferenceLookupInProgress map[int64]bool
-
 }
 
 // Version represents a version of a PDF standard.
@@ -1510,7 +1509,6 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}
 	parser.ObjCache = objectCache{}
-
 	buf := []byte(txt)
 
 	bufReader := bytes.NewReader(buf)

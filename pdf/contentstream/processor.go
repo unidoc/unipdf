@@ -46,8 +46,6 @@ func (gsStack *GraphicStateStack) Pop() GraphicsState {
 
 // Transform returns coordinates x, y transformed by the CTM.
 func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
-	// xp, yp := gs.CTM.Transform(x, y)
-	// fmt.Printf("Transform. %5.1f,%5.1f->%5.1f,%5.1f %+v\n", x, y, xp, yp, gs.CTM)
 	return gs.CTM.Transform(x, y)
 }
 
