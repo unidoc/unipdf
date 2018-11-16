@@ -123,6 +123,25 @@ func TestListAdvanced(t *testing.T) {
 	// Add a long item to the list.
 	list.AddTextItem("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.")
 
+	// Add nested lists
+	nestedList := c.NewList()
+
+	currentList := nestedList
+	for i := 0; i < 5; i++ {
+		l := c.NewList()
+		l.Marker().Text = "- "
+		l.SetIndent(10)
+
+		l.AddTextItem(fmt.Sprintf("Nesting level %d", i+1))
+		l.AddTextItem(fmt.Sprintf("Nesting level %d", i+1))
+		l.AddTextItem(fmt.Sprintf("Nesting level %d", i+1))
+
+		currentList.Add(l)
+		currentList = l
+	}
+
+	list.Add(nestedList)
+
 	err := c.Draw(list)
 	if err != nil {
 		t.Fatalf("Error drawing: %v", err)
