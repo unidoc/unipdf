@@ -9,12 +9,20 @@ import (
 	"errors"
 )
 
+// listItem represents a list item used in the list component.
 type listItem struct {
 	drawable VectorDrawable
 	marker   TextChunk
 }
 
 // List represents a list of items.
+// The representation of a list item is as follows:
+//       [marker] [content]
+// e.g.:        • This is the content of the item.
+// The supported components to add content to list items are:
+// - Paragraph
+// - StyledParagraph
+// - List
 type List struct {
 	// The items of the list.
 	items []*listItem
@@ -26,7 +34,9 @@ type List struct {
 	marker TextChunk
 
 	// The left offset of the list when nested into another list.
-	indent        float64
+	indent float64
+
+	// Specifies if the user has changed the default indent value of the list.
 	defaultIndent bool
 
 	// Positioning: relative/absolute.
@@ -36,6 +46,7 @@ type List struct {
 	defaultStyle TextStyle
 }
 
+// newList returns a new instance of List.
 func newList(style TextStyle) *List {
 	return &List{
 		marker: TextChunk{
@@ -122,6 +133,7 @@ func (l *List) Height() float64 {
 	return height
 }
 
+// tableHeight returns the height of the list when used inside a table.
 func (l *List) tableHeight(width float64) float64 {
 	var height float64
 	for _, item := range l.items {
@@ -153,6 +165,7 @@ func (l *List) tableHeight(width float64) float64 {
 // GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
 // if the contents wrap over multiple pages.
 func (l *List) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	// Create item markers.
 	var markerWidth float64
 	var markers []*StyledParagraph
 
@@ -170,6 +183,7 @@ func (l *List) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error
 		markers = append(markers, marker)
 	}
 
+	// Draw items.
 	table := newTable(2)
 	table.SetColumnWidths(markerWidth, 1-markerWidth)
 	table.SetMargins(l.indent, 0, 0, 0)
