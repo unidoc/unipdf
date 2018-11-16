@@ -86,6 +86,20 @@ func (l *List) Add(item VectorDrawable) (*TextChunk, error) {
 	return &listItem.marker, nil
 }
 
+// AddTextItem appends a new item with the specified text to the list.
+// The method creates a styled paragraph with the specified text and returns
+// it so that the item style can be customized.
+// The method also returns the marker used for the newly added item.
+// The marker object can be used to change the text and style of the marker
+// for the current item.
+func (l *List) AddTextItem(text string) (*StyledParagraph, *TextChunk, error) {
+	item := newStyledParagraph(l.defaultStyle)
+	item.Append(text)
+
+	marker, err := l.Add(item)
+	return item, marker, err
+}
+
 // Marker returns the marker used for the list items.
 // The marker instance can be used the change the text and the style
 // of newly added list items.
