@@ -173,7 +173,7 @@ func (this *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageReso
 		return model.NewPdfColorspaceDeviceRGB(), nil
 	} else if *name == "CMYK" || *name == "DeviceCMYK" {
 		return model.NewPdfColorspaceDeviceCMYK(), nil
-	} else if *name == "I" {
+	} else if *name == "I" || *name == "Indexed" {
 		return nil, errors.New("Unsupported Index colorspace")
 	} else {
 		if resources.ColorSpace == nil {
@@ -327,27 +327,38 @@ func (this *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, 
 				return nil, fmt.Errorf("Not expecting an operand")
 			}
 
-			if *param == "BPC" || *param == "BitsPerComponent" {
+			// From 8.9.7 "Inline Images" p. 223 (PDF32000_2008):
+			// The key-value pairs appearing between the BI and ID operators are analogous to those in the dictionary
+			// portion of an image XObject (though the syntax is different).
+			// Table 93 shows the entries that are valid for an inline image, all of which shall have the same meanings
+			// as in a stream dictionary (see Table 5) or an image dictionary (see Table 89).
+			// Entries other than those listed shall be ignored; in particular, the Type, Subtype, and Length
+			// entries normally found in a stream or image dictionary are unnecessary.
+			// For convenience, the abbreviations shown in the table may be used in place of the fully spelled-out keys.
+			// Table 94 shows additional abbreviations that can be used for the names of colour spaces and filters.
+
+			switch *param {
+			case "BPC", "BitsPerComponent":
 				im.BitsPerComponent = valueObj
-			} else if *param == "CS" || *param == "ColorSpace" {
+			case "CS", "ColorSpace":
 				im.ColorSpace = valueObj
-			} else if *param == "D" || *param == "Decode" {
+			case "D", "Decode":
 				im.Decode = valueObj
-			} else if *param == "DP" || *param == "DecodeParms" {
+			case "DP", "DecodeParms":
 				im.DecodeParms = valueObj
-			} else if *param == "F" || *param == "Filter" {
+			case "F", "Filter":
 				im.Filter = valueObj
-			} else if *param == "H" || *param == "Height" {
+			case "H", "Height":
 				im.Height = valueObj
-			} else if *param == "IM" {
+			case "IM", "ImageMask":
 				im.ImageMask = valueObj
-			} else if *param == "Intent" {
+			case "Intent":
 				im.Intent = valueObj
-			} else if *param == "I" {
+			case "I", "Interpolate":
 				im.Interpolate = valueObj
-			} else if *param == "W" || *param == "Width" {
+			case "W", "Width":
 				im.Width = valueObj
-			} else {
+			default:
 				return nil, fmt.Errorf("Unknown inline image parameter %s", *param)
 			}
 		}
