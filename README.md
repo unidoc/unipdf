@@ -12,11 +12,7 @@ go get github.com/unidoc/unidoc/...
 
 ## Getting Rid of the Watermark - Get a License
 Out of the box - unidoc is unlicensed and outputs a watermark on all pages, perfect for prototyping.
-To use unidoc in your projects, you need to get a license. We have 3 license types:
-
-* Community: For open source AGPLv3 projects
-* Business Individual
-* Business Unlimited
+To use unidoc in your projects, you need to get a license.
 
 Get your license on [https://unidoc.io](https://unidoc.io).
 
