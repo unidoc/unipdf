@@ -6,10 +6,10 @@
 package textencoding
 
 import (
-	"bytes"
 	"fmt"
+	"strconv"
+	"strings"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -31,20 +31,7 @@ func (enc IdentityEncoder) String() string {
 
 // Encode converts the Go unicode string `raw` to a PDF encoded string.
 func (enc IdentityEncoder) Encode(raw string) []byte {
-	// runes -> character codes -> bytes
-	var encoded bytes.Buffer
-	for _, r := range raw {
-		code, ok := enc.RuneToCharcode(r)
-		if !ok {
-			common.Log.Debug("Failed to map rune to charcode. rune=%+q", r)
-			continue
-		}
-
-		// Each entry represented by 2 bytes.
-		encoded.WriteByte(byte((code & 0xff00) >> 8))
-		encoded.WriteByte(byte(code & 0xff))
-	}
-	return encoded.Bytes()
+	return encodeString16bit(enc, raw)
 }
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
@@ -63,17 +50,11 @@ func (enc IdentityEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 // GlyphToCharcode returns the character code matching glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc IdentityEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
-	// String with "uniXXXX" format where XXXX is the hexcode.
-	if len(glyph) == 7 && glyph[0:3] == "uni" {
-		var unicode uint16
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
-		if n == 1 && err == nil {
-			return enc.RuneToCharcode(rune(unicode))
-		}
+	r, ok := enc.GlyphToRune(glyph)
+	if !ok {
+		return 0, false
 	}
-
-	common.Log.Debug("Symbol encoding error: unable to find glyph->charcode entry (%s)", glyph)
-	return 0, false
+	return enc.RuneToCharcode(r)
 }
 
 // RuneToCharcode converts rune `r` to a PDF character code.
@@ -91,7 +72,7 @@ func (enc IdentityEncoder) CharcodeToRune(code uint16) (rune, bool) {
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc IdentityEncoder) RuneToGlyph(r rune) (string, bool) {
-	if r == 0x20 {
+	if r == ' ' {
 		return "space", true
 	}
 	glyph := fmt.Sprintf("uni%.4X", r)
@@ -102,14 +83,16 @@ func (enc IdentityEncoder) RuneToGlyph(r rune) (string, bool) {
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc IdentityEncoder) GlyphToRune(glyph string) (rune, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
-	if len(glyph) == 7 && glyph[0:3] == "uni" {
-		unicode := uint16(0)
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
-		if n == 1 && err == nil {
-			return rune(unicode), true
-		}
+	if glyph == "space" {
+		return ' ', true
+	} else if !strings.HasPrefix(glyph, "uni") || len(glyph) != 7 {
+		return 0, false
 	}
-	return 0, false
+	r, err := strconv.ParseUint(glyph[3:], 16, 16)
+	if err != nil {
+		return 0, false
+	}
+	return rune(r), true
 }
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
