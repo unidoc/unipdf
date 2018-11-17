@@ -21,6 +21,16 @@ import (
 
 var _ StdHandler = stdHandlerR6{}
 
+// newAESCipher creates a new AES block cipher.
+// The size of a buffer should be exactly 16, 24 or 32 bytes, in other cases the function will panic.
+func newAESCipher(b []byte) cipher.Block {
+	c, err := aes.NewCipher(b)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // NewHandlerR6 creates a new standard security handler for R=5 and R=6.
 func NewHandlerR6() StdHandler {
 	return stdHandlerR6{}
@@ -34,6 +44,12 @@ type stdHandlerR6 struct{}
 // 7.6.4.3.2 Algorithm 2.A (page 83)
 func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permissions, error) {
 	// O & U: 32 byte hash + 8 byte Validation Salt + 8 byte Key Salt
+	if err := checkAtLeast("alg2a", "O", 48, d.O); err != nil {
+		return nil, 0, err
+	}
+	if err := checkAtLeast("alg2a", "U", 48, d.U); err != nil {
+		return nil, 0, err
+	}
 
 	// step a: Unicode normalization
 	// TODO(dennwc): make sure that UTF-8 strings are normalized
@@ -89,6 +105,9 @@ func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permission
 		data = str
 		ekey = d.UE
 		ukey = nil
+	}
+	if err := checkAtLeast("alg2a", "Key", 32, ekey); err != nil {
+		return nil, 0, err
 	}
 	ekey = ekey[:32]
 
@@ -164,10 +183,7 @@ func alg2b(data, pwd, userKey []byte) []byte {
 		repeat(K1, n)
 
 		// step b: encrypt K1 with AES-128 CBC
-		ac, err := aes.NewCipher(K[0:16])
-		if err != nil {
-			panic(err)
-		}
+		ac := newAESCipher(K[0:16])
 		cbc := cipher.NewCBCEncrypter(ac, K[16:32])
 		cbc.CryptBlocks(K1, K1)
 		E = K1
@@ -225,6 +241,9 @@ func (sh stdHandlerR6) alg2b(R int, data, pwd, userKey []byte) []byte {
 // alg8 computes the encryption dictionary's U (user password) and UE (user encryption) values (R>=5).
 // 7.6.4.4.6 Algorithm 8 (page 86)
 func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error {
+	if err := checkAtLeast("alg8", "Key", 32, ekey); err != nil {
+		return err
+	}
 	// step a: compute U (user password)
 	var rbuf [16]byte
 	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
@@ -254,10 +273,7 @@ func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error 
 
 	h = sh.alg2b(d.R, str, upass, nil)
 
-	ac, err := aes.NewCipher(h[:32])
-	if err != nil {
-		panic(err)
-	}
+	ac := newAESCipher(h[:32])
 
 	iv := make([]byte, aes.BlockSize)
 	cbc := cipher.NewCBCEncrypter(ac, iv)
@@ -271,6 +287,12 @@ func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error 
 // alg9 computes the encryption dictionary's O (owner password) and OE (owner encryption) values (R>=5).
 // 7.6.4.4.7 Algorithm 9 (page 86)
 func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error {
+	if err := checkAtLeast("alg9", "Key", 32, ekey); err != nil {
+		return err
+	}
+	if err := checkAtLeast("alg9", "U", 48, d.U); err != nil {
+		return err
+	}
 	// step a: compute O (owner password)
 	var rbuf [16]byte
 	if _, err := io.ReadFull(rand.Reader, rbuf[:]); err != nil {
@@ -303,10 +325,7 @@ func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error 
 
 	h = sh.alg2b(d.R, str, opass, userKey)
 
-	ac, err := aes.NewCipher(h[:32])
-	if err != nil {
-		panic(err)
-	}
+	ac := newAESCipher(h[:32])
 
 	iv := make([]byte, aes.BlockSize)
 	cbc := cipher.NewCBCEncrypter(ac, iv)
@@ -320,6 +339,9 @@ func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error 
 // alg10 computes the encryption dictionary's Perms (permissions) value (R=6).
 // 7.6.4.4.8 Algorithm 10 (page 87)
 func (sh stdHandlerR6) alg10(d *StdEncryptDict, ekey []byte) error {
+	if err := checkAtLeast("alg10", "Key", 32, ekey); err != nil {
+		return err
+	}
 	// step a: extend permissions to 64 bits
 	perms := uint64(uint32(d.P)) | (math.MaxUint32 << 32)
 
@@ -346,10 +368,7 @@ func (sh stdHandlerR6) alg10(d *StdEncryptDict, ekey []byte) error {
 	}
 
 	// step f: encrypt permissions
-	ac, err := aes.NewCipher(ekey[:32])
-	if err != nil {
-		panic(err)
-	}
+	ac := newAESCipher(ekey[:32])
 
 	ecb := newECBEncrypter(ac)
 	ecb.CryptBlocks(Perms, Perms)
@@ -360,6 +379,9 @@ func (sh stdHandlerR6) alg10(d *StdEncryptDict, ekey []byte) error {
 
 // alg11 authenticates the user password (R >= 5) and returns the hash.
 func (sh stdHandlerR6) alg11(d *StdEncryptDict, upass []byte) ([]byte, error) {
+	if err := checkAtLeast("alg11", "U", 48, d.U); err != nil {
+		return nil, err
+	}
 	str := make([]byte, len(upass)+8)
 	i := copy(str, upass)
 	i += copy(str[i:], d.U[32:40]) // user Validation Salt
@@ -375,6 +397,12 @@ func (sh stdHandlerR6) alg11(d *StdEncryptDict, upass []byte) ([]byte, error) {
 // alg12 authenticates the owner password (R >= 5) and returns the hash.
 // 7.6.4.4.10 Algorithm 12 (page 87)
 func (sh stdHandlerR6) alg12(d *StdEncryptDict, opass []byte) ([]byte, error) {
+	if err := checkAtLeast("alg12", "U", 48, d.U); err != nil {
+		return nil, err
+	}
+	if err := checkAtLeast("alg12", "O", 48, d.O); err != nil {
+		return nil, err
+	}
 	str := make([]byte, len(opass)+8+48)
 	i := copy(str, opass)
 	i += copy(str[i:], d.O[32:40]) // owner Validation Salt
@@ -391,12 +419,18 @@ func (sh stdHandlerR6) alg12(d *StdEncryptDict, opass []byte) ([]byte, error) {
 // alg13 validates user permissions (P+EncryptMetadata vs Perms) for R=6.
 // 7.6.4.4.11 Algorithm 13 (page 87)
 func (sh stdHandlerR6) alg13(d *StdEncryptDict, fkey []byte) error {
+	if err := checkAtLeast("alg13", "Key", 32, fkey); err != nil {
+		return err
+	}
+	if err := checkAtLeast("alg13", "Perms", 16, d.Perms); err != nil {
+		return err
+	}
 	perms := make([]byte, 16)
 	copy(perms, d.Perms[:16])
 
 	ac, err := aes.NewCipher(fkey[:32])
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	ecb := newECBDecrypter(ac)
