@@ -10,6 +10,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rc4"
+	"encoding/binary"
 	"errors"
 
 	"github.com/unidoc/unidoc/common"
@@ -35,19 +36,11 @@ type stdHandlerR4 struct {
 	ID0    string
 }
 
-func (sh stdHandlerR4) paddedPass(pass []byte) []byte {
+func (stdHandlerR4) paddedPass(pass []byte) []byte {
 	key := make([]byte, 32)
-	if len(pass) >= 32 {
-		for i := 0; i < 32; i++ {
-			key[i] = pass[i]
-		}
-	} else {
-		for i := 0; i < len(pass); i++ {
-			key[i] = pass[i]
-		}
-		for i := len(pass); i < 32; i++ {
-			key[i] = padding[i-len(pass)]
-		}
+	i := copy(key, pass)
+	for ; i < 32; i++ {
+		key[i] = padding[i-len(pass)]
 	}
 	return key
 }
@@ -64,12 +57,9 @@ func (sh stdHandlerR4) alg2(d *StdEncryptDict, pass []byte) []byte {
 	h.Write(d.O)
 
 	// Pass P (Lower order byte first).
-	var p = uint32(d.P)
-	var pb []byte
-	for i := 0; i < 4; i++ {
-		pb = append(pb, byte(((p >> uint(8*i)) & 0xff)))
-	}
-	h.Write(pb)
+	var pb [4]byte
+	binary.LittleEndian.PutUint32(pb[:], uint32(d.P))
+	h.Write(pb[:])
 	common.Log.Trace("go P: % x", pb)
 
 	// Pass ID[0] from the trailer
@@ -82,8 +72,9 @@ func (sh stdHandlerR4) alg2(d *StdEncryptDict, pass []byte) []byte {
 	hashb := h.Sum(nil)
 
 	if d.R >= 3 {
+		h = md5.New()
 		for i := 0; i < 50; i++ {
-			h = md5.New()
+			h.Reset()
 			h.Write(hashb[0 : sh.Length/8])
 			hashb = h.Sum(nil)
 		}
