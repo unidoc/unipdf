@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelError))
 	if flag.Lookup("test.v") != nil {
 		isTesting = true
 	}
@@ -59,12 +59,20 @@ var extract2Tests = []struct {
 	filename         string
 	expectedPageText map[int][]string
 }{
-	{
-		filename: "testdata/reader.pdf",
+	{filename: "testdata/reader.pdf",
 		expectedPageText: map[int][]string{
 			1: []string{"A Research UNIX Reader:",
-				"Annotated Excerpts from the Programmer's Manual,",
+				"Annotated Excerpts from the Programmer’s Manual,",
+				"1. Introduction",
 				"To keep the size of this report",
+				"last common ancestor of a radiative explosion",
+			},
+		},
+	},
+	{filename: "testdata/000026.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"Fresh Flower",
+				"Care & Handling ",
 			},
 		},
 	},
@@ -85,10 +93,9 @@ func testExtract2(t *testing.T, filename string, expectedPageText map[int][]stri
 }
 
 func containsSentences(t *testing.T, expectedSentences []string, actualText string) bool {
-	actualSentences := asSet(strings.Split(actualText, "\n"))
 	for _, e := range expectedSentences {
-		if _, ok := actualSentences[e]; !ok {
-			t.Errorf("No match for %q", e)
+		if !strings.Contains(actualText, e) {
+			t.Errorf("No match for %+q", e)
 			return false
 		}
 	}
@@ -102,14 +109,6 @@ func sortedKeys(m map[int][]string) []int {
 	}
 	sort.Ints(keys)
 	return keys
-}
-
-func asSet(keys []string) map[string]bool {
-	set := map[string]bool{}
-	for _, k := range keys {
-		set[k] = true
-	}
-	return set
 }
 
 func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {

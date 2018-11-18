@@ -266,7 +266,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 
 	err = processor.Process(e.resources)
 	if err != nil {
-		common.Log.Error("ERROR: Processing: err=%v", err)
+		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
 	return textList, state.numChars, state.numMisses, err
 }
@@ -406,7 +406,7 @@ func (to *textObject) setTextRise(y float64) {
 
 // setWordSpacing "Tw" Set word spacing.
 func (to *textObject) setWordSpacing(y float64) {
-	// Not implemented yet
+	to.State.Tw = y
 }
 
 // setHorizScaling "Tz" Set horizontal scaling.
@@ -609,7 +609,10 @@ func (to *textObject) renderText(data []byte) error {
 		0, tfs,
 		0, state.Trise)
 
+	common.Log.Debug("%d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+
 	for i, r := range runes {
+
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
@@ -634,19 +637,38 @@ func (to *textObject) renderText(data []byte) error {
 		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
 
 		// t is the displacement of the text cursor when the character is rendered.
+		// float tx = displacementX * fontSize * horizontalScaling;
+		// w = 0
+		t0 := Point{X: (c.X*tfs + w) * th}
 		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
 		// td is t in matrix form.
+		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
+
+		common.Log.Debug("%q stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.Tm)
+		common.Log.Debug("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.Tc, w, state.Tw)
+		common.Log.Debug("m=%s c=%+v t0=%+v td0=%s trm0=%s",
+			m, c, t0, td0, td0.Mult(to.Tm).Mult(to.gs.CTM))
+		common.Log.Debug("m=%s c=%+v  t=%+v  td=%s  trm=%s",
+			m, c, t, td, td.Mult(to.Tm).Mult(to.gs.CTM))
 
 		nextTm := to.Tm.Mult(td)
 
-		xyt := XYText{Text: string(r),
-			Point:      translation(trm),
-			Orient:     trm.Orientation(),
-			End:        translation(to.Tm.Mult(td).Mult(to.gs.CTM)),
-			SpaceWidth: spaceWidth * trm.ScalingFactorX(),
-		}
+		// xyt := XYText{Text: string(r),
+		// 	Point:  translation(trm),
+		// 	Orient: trm.Orientation(),
+		// 	// Matrix nextTextRenderingMatrix = td.multiply(textMatrix).multiply(ctm); // text space -> device space
+		// 	End:        translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
+		// 	SpaceWidth: spaceWidth * trm.ScalingFactorX(),
+		// }
+		xyt := newXYText(
+			string(r),
+			translation(trm),
+			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
+			trm.Orientation(),
+			spaceWidth*trm.ScalingFactorX())
+		common.Log.Debug("i=%d code=%d, xyt=%s", i, code, xyt)
 		to.Texts = append(to.Texts, xyt)
 
 		// update the text matrix by the displacement of the text location.
@@ -690,11 +712,26 @@ type XYText struct {
 	SpaceWidth       float64
 	Font             string
 	FontSize         float64
+	counter          int
+}
+
+var counter int
+
+func newXYText(text string, point, end Point, orient contentstream.Orientation, spaceWidth float64) XYText {
+	counter++
+	return XYText{
+		Text:       text,
+		Point:      point,
+		End:        end,
+		Orient:     orient,
+		SpaceWidth: spaceWidth,
+		counter:    counter,
+	}
 }
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("%s,%s %.1f %q",
+	return fmt.Sprintf("@@%d %s,%s %.1f %q", t.counter,
 		t.Point.String(), t.End.String(), t.End.X-t.X, truncate(t.Text, 100))
 }
 
@@ -707,7 +744,7 @@ func (t XYText) Width() float64 {
 	default:
 		w = math.Abs(t.End.X - t.X)
 	}
-	common.Log.Trace("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
+	common.Log.Debug("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
 	return w
 }
 
@@ -719,20 +756,20 @@ func (tl *TextList) Length() int {
 	return len(*tl)
 }
 
-// AppendText appends the location and contents of `text` to a text list.
-func (tl *TextList) AppendText(gs contentstream.GraphicsState, p, e Point, text string, spaceWidth float64) {
-	t := XYText{
-		Point:            p,
-		End:              e,
-		ColorStroking:    gs.ColorStroking,
-		ColorNonStroking: gs.ColorNonStroking,
-		Orient:           gs.PageOrientation(),
-		Text:             text,
-		SpaceWidth:       spaceWidth,
-	}
-	common.Log.Debug("AppendText: %s", t.String())
-	*tl = append(*tl, t)
-}
+// // AppendText appends the location and contents of `text` to a text list.
+// func (tl *TextList) AppendText(gs contentstream.GraphicsState, p, e Point, text string, spaceWidth float64) {
+// 	t := XYText{
+// 		Point:            p,
+// 		End:              e,
+// 		ColorStroking:    gs.ColorStroking,
+// 		ColorNonStroking: gs.ColorNonStroking,
+// 		Orient:           gs.PageOrientation(),
+// 		Text:             text,
+// 		SpaceWidth:       spaceWidth,
+// 	}
+// 	common.Log.Debug("AppendText: %s", t.String())
+// 	*tl = append(*tl, t)
+// }
 
 // ToText returns the contents of `tl` as a single string.
 func (tl *TextList) ToText() string {
@@ -794,6 +831,7 @@ func (tl *TextList) toLines() []Line {
 	}
 	portLines := portText.toLinesOrient()
 	landLines := landText.toLinesOrient()
+	common.Log.Debug("portText=%d landText=%d", len(portText), len(landText))
 	return append(portLines, landLines...)
 }
 
@@ -816,6 +854,7 @@ func (tl *TextList) toLinesOrient() []Line {
 	lastEndX := 0.0 // (*tl)[i-1).End.X
 
 	for _, t := range *tl {
+		// common.Log.Debug("%d --------------------------", i)
 		if t.Y < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
@@ -846,12 +885,16 @@ func (tl *TextList) toLinesOrient() []Line {
 		deltaCharWidth := averageCharWidth.ave * 0.3
 
 		isSpace := false
+		nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
 		if scanning && t.Text != " " {
-			nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
 			isSpace = nextWordX < t.X
-			common.Log.Trace("[%.1f, %.1f] lastEndX=%.1f nextWordX=%.1f",
-				t.Y, t.X, lastEndX, nextWordX)
 		}
+		common.Log.Debug("t=%s", t)
+		common.Log.Debug("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
+			t.Width(), min(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
+
+		common.Log.Debug("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
+			t.Text, t.X, t.Y, lastEndX, nextWordX, nextWordX-t.X, isSpace)
 		if isSpace {
 			words = append(words, " ")
 			x = append(x, (lastEndX+t.X)*0.5)
@@ -862,6 +905,7 @@ func (tl *TextList) toLinesOrient() []Line {
 		words = append(words, t.Text)
 		x = append(x, t.X)
 		scanning = true
+		common.Log.Debug("lastEndX=%.2f", lastEndX)
 	}
 	if len(words) > 0 {
 		line := newLine(y, x, words)
@@ -898,7 +942,7 @@ func (exp *ExponAve) update(x float64) float64 {
 	return exp.ave
 }
 
-// printTexts is a debugging function. XXX Remove this.
+// printTexts is a debugging function. XXX(peterwilliams97) Remove this.
 func (tl *TextList) printTexts(message string) {
 	return
 	_, file, line, ok := runtime.Caller(1)
@@ -910,17 +954,17 @@ func (tl *TextList) printTexts(message string) {
 	}
 	prefix := fmt.Sprintf("[%s:%d]", file, line)
 
-	common.Log.Error("=====================================")
-	common.Log.Error("printTexts %s %s", prefix, message)
-	common.Log.Error("%d texts", len(*tl))
+	common.Log.Debug("=====================================")
+	common.Log.Debug("printTexts %s %s", prefix, message)
+	common.Log.Debug("%d texts", len(*tl))
 	parts := []string{}
 	for i, t := range *tl {
 		fmt.Printf("%5d: %s\n", i, t.String())
 		parts = append(parts, t.Text)
 	}
-	common.Log.Error("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+	common.Log.Debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 	fmt.Printf("%s\n", strings.Join(parts, ""))
-	common.Log.Error("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+	common.Log.Debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
 // newLine returns the Line representation of strings `words` with y coordinate `y` and x

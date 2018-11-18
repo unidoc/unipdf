@@ -6,7 +6,7 @@
 package textencoding
 
 // NewWinAnsiTextEncoder returns a SimpleEncoder that implements WinAnsiEncoding.
-func NewWinAnsiTextEncoder() SimpleEncoder {
+func NewWinAnsiTextEncoder() *SimpleEncoder {
 	enc, _ := NewSimpleTextEncoder("WinAnsiEncoding", nil)
-	return *enc
+	return enc
 }

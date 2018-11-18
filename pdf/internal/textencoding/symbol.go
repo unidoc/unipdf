@@ -6,7 +6,7 @@
 package textencoding
 
 // NewSymbolEncoder returns a SimpleEncoder that implements SymbolEncoding.
-func NewSymbolEncoder() SimpleEncoder {
+func NewSymbolEncoder() *SimpleEncoder {
 	enc, _ := NewSimpleTextEncoder("SymbolEncoding", nil)
-	return *enc
+	return enc
 }

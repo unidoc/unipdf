@@ -263,7 +263,9 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := loadStandard14Font(Standard14Font(base.basefont)); ok && base.subtype == "Type1" {
+		std, ok := loadStandard14Font(Standard14Font(base.basefont))
+		builtin := ok && base.subtype == "Type1"
+		if builtin {
 			font.context = &std
 
 			stdObj := core.TraceToDirectObject(std.ToPdfObject())
@@ -283,8 +285,6 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 				return nil, err
 			}
 
-			simplefont.firstChar = std.firstChar
-			simplefont.lastChar = std.lastChar
 			simplefont.charWidths = std.charWidths
 			simplefont.fontMetrics = std.fontMetrics
 		} else {
@@ -297,6 +297,19 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		err = simplefont.addEncoding()
 		if err != nil {
 			return nil, err
+		}
+		if builtin {
+			simplefont.updateStandard14Font()
+		}
+		if builtin && simplefont.encoder == nil && simplefont.std14Encoder == nil {
+			common.Log.Error("simplefont=%s", simplefont)
+			common.Log.Error("std=%s", std)
+			panic("Not possible")
+		}
+		if len(simplefont.charWidths) == 0 {
+			common.Log.Error("simplefont=%s", simplefont)
+			common.Log.Error("std=%s", std)
+			common.Log.Debug("ERROR: No widths. font=%s", simplefont)
 		}
 		font.context = simplefont
 	case "CIDFontType0":
@@ -415,6 +428,7 @@ func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of unicode strings.
+// XXX(peterwilliams97): Remove int returns.
 func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) {
 	charstrings := make([]string, 0, len(charcodes))
 	numMisses := 0
@@ -426,7 +440,7 @@ func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) 
 				continue
 			}
 		}
-		// Fall back to encoding
+		// Fall back to encoding.
 		encoder := font.Encoder()
 		if encoder != nil {
 			r, ok := encoder.CharcodeToRune(code)
