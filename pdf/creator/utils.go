@@ -6,7 +6,6 @@
 package creator
 
 import (
-	"math"
 	"os"
 
 	"github.com/unidoc/unidoc/pdf/model"
@@ -43,22 +42,4 @@ func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
 	}
 
 	return pages, nil
-}
-
-func round(val float64, roundOn float64, places int) float64 {
-	var round float64
-
-	pow := math.Pow(10, float64(places))
-	digit := pow * val
-	_, div := math.Modf(digit)
-	div = math.Copysign(div, val)
-
-	roundOn = math.Copysign(roundOn, val)
-	if div >= roundOn {
-		round = math.Ceil(digit)
-	} else {
-		round = math.Floor(digit)
-	}
-
-	return round / pow
 }

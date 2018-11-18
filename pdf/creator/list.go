@@ -189,7 +189,7 @@ func (l *List) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error
 		marker.SetTextAlignment(TextAlignmentRight)
 		marker.Append(item.marker.Text).Style = item.marker.Style
 
-		width := round((marker.getTextWidth()/1000.0)/ctx.Width, 0.001, 3)
+		width := marker.getTextWidth() / 1000.0 / ctx.Width
 		if markerWidth < width {
 			markerWidth = width
 		}
