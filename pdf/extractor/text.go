@@ -805,8 +805,8 @@ func (tl *TextList) SortPosition() {
 		xi, xj := ti.X, tj.X
 		yi, yj := ti.Y, tj.Y
 		if ti.Orient == contentstream.OrientationLandscape {
-			xi, yi = yi, xi
-			xj, yj = yj, xj
+			xi, yi = yi, -xi
+			xj, yj = yj, -xj
 		}
 
 		if yi != yj {
@@ -833,17 +833,21 @@ func (tl *TextList) toLines() []Line {
 		if t.Orient == contentstream.OrientationPortrait {
 			portText = append(portText, t)
 		} else {
-			t.X, t.Y = t.Y, t.X
+			t.X, t.Y = t.Y, -t.X
+			t.End.X, t.End.Y = t.End.Y, -t.End.X
+			t.Orient = contentstream.OrientationPortrait
 			landText = append(landText, t)
 		}
 	}
+	common.Log.Debug("toLines: portrait  ^^^^^^^")
 	portLines := portText.toLinesOrient()
+	common.Log.Debug("toLines: landscape &&&&&&&")
 	landLines := landText.toLinesOrient()
 	common.Log.Debug("portText=%d landText=%d", len(portText), len(landText))
 	return append(portLines, landLines...)
 }
 
-// toLinesOrient return the text and positions in `tl` as a slice of Line.
+// toLinesOrient returns the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
 func (tl *TextList) toLinesOrient() []Line {
 	tl.printTexts("toLines: before")

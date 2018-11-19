@@ -115,12 +115,8 @@ func DefaultFont() *PdfFont {
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
-	std, ok := loadStandard14Font(basefont)
-	if !ok {
-		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
-		return nil, ErrFontNotSupported
-	}
-	return &PdfFont{context: &std}, nil
+	font, _, err := NewStandard14FontWithEncoding(basefont, nil)
+	return font, err
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
@@ -137,7 +133,8 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont,
+	*textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
@@ -201,9 +198,15 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 			slotIdx++
 		}
 	}
-	encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 
-	return &PdfFont{context: &std}, encoder, err
+	encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
+	if err != nil {
+		return nil, nil, err
+	}
+	std.std14Encoder = encoder
+	std.updateStandard14Font()
+
+	return &PdfFont{context: &std}, encoder, nil
 }
 
 // GetAlphabet returns a map of the runes in `text`.
