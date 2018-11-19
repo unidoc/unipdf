@@ -310,6 +310,7 @@ func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
+	common.Log.Debug("setTextMatrix:Tm=%s", to.Tm)
 }
 
 // showText "Tj" Show a text string.
@@ -333,7 +334,9 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			if vertical {
 				dy, dx = dx, dy
 			}
-			to.Tm.Translate(dx, dy)
+			td := translationMatrix(Point{X: dx, Y: dy})
+			to.Tm = td.Mult(to.Tm)
+			common.Log.Debug("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
 			if !ok {
@@ -609,6 +612,7 @@ func (to *textObject) renderText(data []byte) error {
 		0, tfs,
 		0, state.Trise)
 
+	common.Log.Debug("==========================================")
 	common.Log.Debug("%d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
@@ -642,7 +646,8 @@ func (to *textObject) renderText(data []byte) error {
 		t0 := Point{X: (c.X*tfs + w) * th}
 		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
-		// td is t in matrix form.
+		// td, td0 are t, t0 in matrix form.
+		// td0 is where this char ends. td is where the next char stats.
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
 
@@ -653,7 +658,8 @@ func (to *textObject) renderText(data []byte) error {
 		common.Log.Debug("m=%s c=%+v  t=%+v  td=%s  trm=%s",
 			m, c, t, td, td.Mult(to.Tm).Mult(to.gs.CTM))
 
-		nextTm := to.Tm.Mult(td)
+		nextTm := td.Mult(to.Tm)
+		common.Log.Debug("nextTm=%s", nextTm)
 
 		// xyt := XYText{Text: string(r),
 		// 	Point:  translation(trm),
@@ -673,6 +679,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		// update the text matrix by the displacement of the text location.
 		to.Tm = nextTm
+		common.Log.Debug("to.Tm=%s", to.Tm)
 	}
 
 	return nil
@@ -699,6 +706,7 @@ func translationMatrix(p Point) contentstream.Matrix {
 func (to *textObject) moveTo(tx, ty float64) {
 	to.Tlm.Concat(contentstream.NewMatrix(1, 0, 0, 1, tx, ty))
 	to.Tm = to.Tlm
+	common.Log.Debug("moveTo: tx,ty=%.3f,%.3f Tm=%s", tx, ty, to.Tm)
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.

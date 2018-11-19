@@ -617,7 +617,7 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 // String returns a string describing `m`.
 func (m Matrix) String() string {
 	a, b, c, d, tx, ty := m[0], m[1], m[3], m[4], m[6], m[7]
-	return fmt.Sprintf("[%.1f,%.1f,%.1f,%.1f:%.1f,%.1f]", a, b, c, d, tx, ty)
+	return fmt.Sprintf("[%.2f,%.2f,%.2f,%.2f:%.4f,%.4f]", a, b, c, d, tx, ty)
 }
 
 // Set sets `m` to affine transform a,b,c,d,tx,ty.
@@ -629,7 +629,10 @@ func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 }
 
 // Concat sets `m` to `m` × `b`.
-// `b` needs to be created by newMatrix. i.e. It must be an affine transform
+// `b` needs to be created by newMatrix. i.e. It must be an affine transform.
+//    m00 m01 0     b00 b01 0     m00*b00 + m01*b01        m00*b10 + m01*b11        0
+//    m10 m11 0  ×  b10 b11 0  =  m10*b00 + m11*b01        m10*b10 + m11*b11        0
+//    m20 m21 1     b20 b21 1     m20*b00 + m21*b10 + b20  m20*b01 + m21*b11 + b21  1
 func (m *Matrix) Concat(b Matrix) {
 	*m = Matrix{
 		m[0]*b[0] + m[1]*b[3], m[0]*b[1] + m[1]*b[4], 0,
