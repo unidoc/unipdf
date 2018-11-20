@@ -147,7 +147,7 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 			}
 		}
 	}
-	common.Log.Debug("GetCharMetrics 3: code=%d", code)
+	common.Log.Debug("GetCharMetrics 3: code=%d font=%s", code, font)
 	return fonts.CharMetrics{}, false
 }
 

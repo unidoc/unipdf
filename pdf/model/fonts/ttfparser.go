@@ -173,6 +173,7 @@ func (t *ttfParser) Parse() (TtfType, error) {
 		return TtfType{}, err
 	}
 	if version == "OTTO" {
+		// See https://docs.microsoft.com/en-us/typography/opentype/spec/otff
 		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
 	if version != "\x00\x01\x00\x00" {
@@ -216,7 +217,7 @@ func describeTables(tables map[string]uint32) string {
 	return strings.Join(parts, "\n")
 }
 
-// ParseComponents parses the tables in a TrueType font file/
+// ParseComponents parses the tables in a TrueType font file.
 // The standard TrueType tables are
 // "head"
 // "hhea"
@@ -699,7 +700,7 @@ func (t *ttfParser) ParsePost() error {
 			t.rec.GlyphNames[i] = name
 		}
 	case 3.0:
-		// no PostScript information is provided.
+		// No PostScript information is provided.
 		common.Log.Debug("No PostScript name information is provided for the font.")
 	default:
 		common.Log.Debug("ERROR: Unknown formatType=%f", formatType)

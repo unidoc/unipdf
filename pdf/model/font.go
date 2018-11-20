@@ -53,7 +53,7 @@ func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 		return t.fontDescriptor, nil
 	}
 	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
-	return nil, errors.New("fontdescriptor not found")
+	return nil, errors.New("font descriptor not found")
 }
 
 // String returns a string that describes `font`.
@@ -512,8 +512,13 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
-	metrics, ok := t.GetGlyphCharMetrics(glyph)
-	return metrics, ok
+	if m, ok := t.GetGlyphCharMetrics(glyph); ok {
+		return m, true
+	}
+	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
+		return fonts.CharMetrics{GlyphName: glyph, Wx: descriptor.missingWidth}, true
+	}
+	return fonts.CharMetrics{GlyphName: glyph}, false
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
@@ -523,8 +528,13 @@ func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 		common.Log.Debug("ERROR: GetCharMetrics Not implemented for font type=%#T", font.context)
 		return fonts.CharMetrics{}, false
 	}
-	m, ok := t.GetCharMetrics(code)
-	return m, ok
+	if m, ok := t.GetCharMetrics(code); ok {
+		return m, ok
+	}
+	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
+		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
+	}
+	return fonts.CharMetrics{}, false
 }
 
 // GetRuneCharMetrics returns the char metrics for rune `r`.
@@ -807,6 +817,7 @@ type PdfFontDescriptor struct {
 	FontFile3    core.PdfObject // OTF / CFF
 	CharSet      core.PdfObject
 
+	missingWidth float64
 	*fontFile
 	fontFile2 *fonts.TtfType
 
@@ -913,6 +924,12 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 	descriptor.Lang = d.Get("Lang")
 	descriptor.FD = d.Get("FD")
 	descriptor.CIDSet = d.Get("CIDSet")
+
+	if descriptor.MissingWidth != nil {
+		if missingWidth, err := core.GetNumberAsFloat(descriptor.MissingWidth); err == nil {
+			descriptor.missingWidth = missingWidth
+		}
+	}
 
 	if descriptor.FontFile != nil {
 		fontFile, err := newFontFileFromPdfObject(descriptor.FontFile)

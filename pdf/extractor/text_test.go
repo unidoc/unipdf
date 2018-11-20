@@ -8,6 +8,7 @@ package extractor
 import (
 	"flag"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -76,6 +77,19 @@ var extract2Tests = []struct {
 			},
 		},
 	},
+	{filename: "testdata/search_sim_key.pdf",
+		expectedPageText: map[int][]string{
+			2: []string{"A cryptographic scheme which enables searching",
+				"Untrusted server should not be able to search for a word without authorization",
+			},
+		},
+	},
+	{filename: "testdata/Theil_inequality.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"London School of Economics and Political Science"},
+			4: []string{"The purpose of this paper is to set Theil’s approach"},
+		},
+	},
 }
 
 func testExtract2(t *testing.T, filename string, expectedPageText map[int][]string) {
@@ -141,7 +155,16 @@ func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 		if err != nil {
 			t.Fatalf("ExtractText2 failed. filename=%q page=%d err=%v", filename, pageNum, err)
 		}
-		pageText[pageNum] = text
+		pageText[pageNum] = reduceSpaces(text)
 	}
 	return numPages, pageText
 }
+
+// reduceSpaces returns `text` with runs of spaces of any kind (spaces, tabs, line breaks, etc)
+// reduced to a single space.
+func reduceSpaces(text string) string {
+	text = reSpace.ReplaceAllString(text, " ")
+	return strings.Trim(text, " \t\n\r\v")
+}
+
+var reSpace = regexp.MustCompile(`(?m)\s+`)

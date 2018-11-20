@@ -371,15 +371,11 @@ func (font pdfCIDFontType2) GetCharMetrics(code uint16) (fonts.CharMetrics, bool
 		return fonts.CharMetrics{Wx: float64(w)}, true
 	}
 	// XXX(peterwilliams97)/FIXME: The remainder of this function is pure guesswork. Explain it.
-	w, found := font.runeToWidthMap[code]
-	if !found {
-		dw, ok := core.GetInt(font.DW)
-		if !ok {
-			return fonts.CharMetrics{}, false
-		}
-		w = int(*dw)
+	w, ok := font.runeToWidthMap[code]
+	if !ok {
+		w = int(font.defaultWidth)
 	}
-	return fonts.CharMetrics{Wx: float64(w)}, found
+	return fonts.CharMetrics{Wx: float64(w)}, true
 }
 
 // GetAverageCharWidth returns the average width of all the characters in `font`.
@@ -496,6 +492,8 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	}
 	if defaultWidth, err := core.GetNumberAsFloat(font.DW); err == nil {
 		font.defaultWidth = defaultWidth
+	} else {
+		font.defaultWidth = 1000.0
 	}
 
 	return font, nil
