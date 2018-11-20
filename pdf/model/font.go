@@ -267,7 +267,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
 		std, ok := loadStandard14Font(Standard14Font(base.basefont))
-		builtin := ok && base.subtype == "Type1"
+		builtin := ok /*&& base.subtype == "Type1"*/
 		if builtin {
 			font.context = &std
 
@@ -305,13 +305,11 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 			simplefont.updateStandard14Font()
 		}
 		if builtin && simplefont.encoder == nil && simplefont.std14Encoder == nil {
+			// This is not possible.
 			common.Log.Error("simplefont=%s", simplefont)
 			common.Log.Error("std=%s", std)
-			panic("Not possible")
 		}
 		if len(simplefont.charWidths) == 0 {
-			common.Log.Error("simplefont=%s", simplefont)
-			common.Log.Error("std=%s", std)
 			common.Log.Debug("ERROR: No widths. font=%s", simplefont)
 		}
 		font.context = simplefont

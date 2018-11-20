@@ -90,6 +90,13 @@ var extract2Tests = []struct {
 			4: []string{"The purpose of this paper is to set Theil’s approach"},
 		},
 	},
+	{filename: "testdata/8207.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"In building graphic systems for use with raster devices,"},
+			2: []string{"The imaging model specifies how geometric shapes and colors are"},
+			3: []string{"The transformation matrix T that maps application defined"},
+		},
+	},
 }
 
 func testExtract2(t *testing.T, filename string, expectedPageText map[int][]string) {

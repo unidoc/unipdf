@@ -126,6 +126,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 	if glyph == "space" {
 		return metrics, false
 	}
+	panic("######")
 	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
 	return metrics, ok
@@ -509,6 +510,9 @@ const (
 // loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates whether
 // the builtin font exists.
 func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
+	if alias, ok := standard14Aliases[baseFont]; ok {
+		baseFont = alias
+	}
 	std, ok := standard14Fonts[baseFont]
 	if !ok {
 		return pdfFontSimple{}, false
@@ -543,6 +547,30 @@ func (font *pdfFontSimple) updateStandard14Font() {
 		glyph := se.CodeToGlyph[uint16(code)]
 		font.charWidths[code] = font.fontMetrics[glyph].Wx
 	}
+}
+
+// The aliases seen for the standard 14 font names.
+var standard14Aliases = map[Standard14Font]Standard14Font{
+	"CourierCourierNew":        "Courier",
+	"CourierNew":               "Courier",
+	"CourierNew,Italic":        "Courier-Oblique",
+	"CourierNew,Bold":          "Courier-Bold",
+	"CourierNew,BoldItalic":    "Courier-BoldOblique",
+	"Arial":                    "Helvetica",
+	"Arial,Italic":             "Helvetica-Oblique",
+	"Arial,Bold":               "Helvetica-Bold",
+	"Arial,BoldItalic":         "Helvetica-BoldOblique",
+	"TimesNewRoman":            "Times-Roman",
+	"TimesNewRoman,Italic":     "Times-Italic",
+	"TimesNewRoman,Bold":       "Times-Bold",
+	"TimesNewRoman,BoldItalic": "Times-BoldItalic",
+	"Times":                    "Times-Roman",
+	"Times,Italic":             "Times-Italic",
+	"Times,Bold":               "Times-Bold",
+	"Times,BoldItalic":         "Times-BoldItalic",
+	"Symbol,Italic":            "Symbol",
+	"Symbol,Bold":              "Symbol",
+	"Symbol,BoldItalic":        "Symbol",
 }
 
 var standard14Fonts = map[Standard14Font]pdfFontSimple{
