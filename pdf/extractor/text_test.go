@@ -97,6 +97,18 @@ var extract2Tests = []struct {
 			3: []string{"The transformation matrix T that maps application defined"},
 		},
 	},
+	{filename: "testdata/ling-2013-0040ad.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"Although the linguistic variation among texts is continuous"},
+			2: []string{"distinctions. For example, much of the research on spoken/written"},
+		},
+	},
+	{filename: "testdata/26-Hazard-Thermal-environment.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"OHS Body of Knowledge"},
+			2: []string{"Copyright notice and licence terms"},
+		},
+	},
 }
 
 func testExtract2(t *testing.T, filename string, expectedPageText map[int][]string) {

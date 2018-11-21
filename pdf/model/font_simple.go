@@ -122,11 +122,6 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
 
-	//  XXX(peterwilliams97)/FIXME: Shouldn't we fall back from GetCharMetrics to GetGlyphCharMetrics?
-	if glyph == "space" {
-		return metrics, false
-	}
-	panic("######")
 	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
 	return metrics, ok
@@ -322,13 +317,15 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]
 				baseName = base
 			}
 		}
-		diffList, ok := core.GetArray(encoding.Get("Differences"))
-		if !ok {
-			common.Log.Debug("ERROR: Bad font encoding dict=%+v", encoding)
-			return "", nil, core.ErrTypeError
+		if diffObj := encoding.Get("Differences"); diffObj != nil {
+			diffList, ok := core.GetArray(diffObj)
+			if !ok {
+				common.Log.Debug("ERROR: Bad font encoding dict=%+v Differences=%T",
+					encoding, encoding.Get("Differences"))
+				return "", nil, core.ErrTypeError
+			}
+			differences, err = textencoding.FromFontDifferences(diffList)
 		}
-
-		differences, err = textencoding.FromFontDifferences(diffList)
 		return baseName, differences, err
 	default:
 		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", obj, obj.String())
@@ -550,6 +547,8 @@ func (font *pdfFontSimple) updateStandard14Font() {
 }
 
 // The aliases seen for the standard 14 font names.
+// Most of these are from table 5.5.1 in
+// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
 var standard14Aliases = map[Standard14Font]Standard14Font{
 	"CourierCourierNew":        "Courier",
 	"CourierNew":               "Courier",

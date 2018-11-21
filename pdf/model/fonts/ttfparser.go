@@ -277,7 +277,9 @@ func (t *ttfParser) ParseHead() error {
 	t.Skip(3 * 4) // version, fontRevision, checkSumAdjustment
 	magicNumber := t.ReadULong()
 	if magicNumber != 0x5F0F3CF5 {
-		return fmt.Errorf("incorrect magic number")
+		// ~/testdata/pdf_text/outputmanager.pdf displays in Adobe Reader but has a bad magic
+		// number so we don't return an error here.
+		common.Log.Debug("ERROR: Incorrect magic number. Font may not display correctly. %s", t)
 	}
 	t.Skip(2) // flags
 	t.rec.UnitsPerEm = t.ReadUShort()
