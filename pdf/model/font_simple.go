@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"sort"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -236,19 +237,26 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
 func (font *pdfFontSimple) addEncoding() error {
 	var baseEncoder string
 	var differences map[byte]string
-	var err error
 	var encoder *textencoding.SimpleEncoder
 
+	if font.Encoder() != nil {
+		encoder, ok := font.Encoder().(*textencoding.SimpleEncoder)
+		if ok && encoder != nil {
+			baseEncoder = encoder.BaseName()
+		}
+	}
+
 	if font.Encoding != nil {
-		baseEncoder, differences, err = getFontEncoding(font.Encoding)
+		baseEncoderName, differences, err := font.getFontEncoding()
 		if err != nil {
 			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
 				font.subtype, font.Encoding, font.Encoding, err)
 			return err
 		}
-		base := font.baseFields()
-		common.Log.Trace("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T) differences=%d %+v",
-			base.basefont, base.subtype, font.Encoding, font.Encoding, len(differences), differences)
+		if baseEncoderName != "" {
+			baseEncoder = baseEncoderName
+		}
+
 		encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 		if err != nil {
 			return err
@@ -298,17 +306,27 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]string, err error) {
+func (font *pdfFontSimple) getFontEncoding() (baseName string, differences map[byte]string, err error) {
 	baseName = "StandardEncoding"
+	if name, ok := builtinEncodings[font.basefont]; ok {
+		baseName = name
+	} else if font.fontFlags()&fontFlagSymbolic != 0 {
+		for base, name := range builtinEncodings {
+			if strings.Contains(font.basefont, base) {
+				baseName = name
+				break
+			}
+		}
+	}
 
-	if obj == nil {
+	if font.Encoding == nil {
 		// Fall back to StandardEncoding
 		// This works because the only way BaseEncoding can get overridden is by FontFile entries
 		// and the only encoding names we have seen in FontFile's are StandardEncoding or no entry.
 		return baseName, nil, nil
 	}
 
-	switch encoding := obj.(type) {
+	switch encoding := font.Encoding.(type) {
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
@@ -328,7 +346,7 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]
 		}
 		return baseName, differences, err
 	default:
-		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", obj, obj.String())
+		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", font.Encoding, font.Encoding)
 		return "", nil, core.ErrTypeError
 	}
 }
@@ -685,6 +703,11 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 		std14Encoder: textencoding.NewZapfDingbatsEncoder(),
 		fontMetrics:  fonts.ZapfDingbatsCharMetrics,
 	},
+}
+
+var builtinEncodings = map[string]string{
+	"Symbol":       "SymbolEncoding",
+	"ZapfDingbats": "ZapfDingbatsEncoding",
 }
 
 // builtinDescriptor returns the PdfFontDescriptor for the builtin font named `baseFont`, or nil if

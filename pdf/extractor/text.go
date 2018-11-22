@@ -413,6 +413,9 @@ func (to *textObject) setTextRise(y float64) {
 
 // setWordSpacing "Tw" Set word spacing.
 func (to *textObject) setWordSpacing(y float64) {
+	if to == nil {
+		return
+	}
 	to.State.Tw = y
 }
 

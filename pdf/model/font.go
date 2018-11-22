@@ -267,7 +267,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
 		std, ok := loadStandard14Font(Standard14Font(base.basefont))
-		builtin := ok /*&& base.subtype == "Type1"*/
+		builtin := ok
 		if builtin {
 			font.context = &std
 
@@ -611,6 +611,7 @@ type fontCommon struct {
 	// All fonts have these fields.
 	basefont string // The font's "BaseFont" field.
 	subtype  string // The font's "Subtype" field.
+	name     string
 
 	// These are optional fields in the PDF font.
 	toUnicode core.PdfObject // The stream containing toUnicodeCmap. We keep it around for ToPdfObject.
@@ -669,8 +670,16 @@ func (base fontCommon) coreString() string {
 	if base.fontDescriptor != nil {
 		descriptor = base.fontDescriptor.String()
 	}
-	return fmt.Sprintf("%#q %#q obj=%d ToUnicode=%t %s",
-		base.subtype, base.basefont, base.objectNumber, base.toUnicode != nil, descriptor)
+	return fmt.Sprintf("%#q %#q %q obj=%d ToUnicode=%t flags=0x%0x %s",
+		base.subtype, base.basefont, base.name, base.objectNumber, base.toUnicode != nil,
+		base.fontFlags(), descriptor)
+}
+
+func (base fontCommon) fontFlags() int {
+	if base.fontDescriptor == nil {
+		return 0
+	}
+	return base.fontDescriptor.flags
 }
 
 // isCIDFont returns true if `base` is a CID font.
@@ -720,6 +729,11 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		return nil, nil, ErrRequiredAttributeMissing
 	}
 	font.subtype = subtype
+
+	name, ok := core.GetNameVal(d.Get("Name"))
+	if ok {
+		font.name = name
+	}
 
 	if subtype == "Type3" {
 		common.Log.Debug("ERROR: Type 3 font not supprted. d=%s", d)
@@ -815,6 +829,7 @@ type PdfFontDescriptor struct {
 	FontFile3    core.PdfObject // OTF / CFF
 	CharSet      core.PdfObject
 
+	flags        int
 	missingWidth float64
 	*fontFile
 	fontFile2 *fonts.TtfType
@@ -923,6 +938,11 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 	descriptor.FD = d.Get("FD")
 	descriptor.CIDSet = d.Get("CIDSet")
 
+	if descriptor.Flags != nil {
+		if flags, ok := core.GetIntVal(descriptor.Flags); ok {
+			descriptor.flags = flags
+		}
+	}
 	if descriptor.MissingWidth != nil {
 		if missingWidth, err := core.GetNumberAsFloat(descriptor.MissingWidth); err == nil {
 			descriptor.missingWidth = missingWidth

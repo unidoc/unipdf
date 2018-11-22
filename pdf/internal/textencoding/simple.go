@@ -115,6 +115,11 @@ func (se SimpleEncoder) String() string {
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
+// BaseName returns `se`'s base name.
+func (se SimpleEncoder) BaseName() string {
+	return se.baseName
+}
+
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
 func (se SimpleEncoder) Encode(raw string) []byte {
 	return doEncode(se, raw)
@@ -1089,7 +1094,7 @@ var simpleEncodings = map[string]map[uint16]rune{
 		0xe9: 0x0152, //  Œ "OE"
 		0xea: 0x00ba, //  º "ordmasculine"
 		0xf0: 0x00e6, //  æ "ae"
-		0xf4: 0x0131, //  ı "dotlessi"
+		0xf5: 0x0131, //  ı "dotlessi"
 		0xf7: 0x0142, //  ł "lslash"
 		0xf8: 0x00f8, //  ø "oslash"
 		0xf9: 0x0153, //  œ "oe"

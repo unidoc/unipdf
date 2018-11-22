@@ -437,7 +437,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 	fontFragmentTest{"Type1 font with /Encoding with /Differences",
 		"./testdata/font/noise-invariant.txt", 102,
 		[]byte{96, 247, 39, 32, 147, 231, 148, 32, 232, 32, 193, 111, 180, 32, 105, 116,
-			169, 115, 32, 204, 195, 196, 197, 198, 199, 168, 202, 206, 226, 234, 172, 244, 173, 151,
+			169, 115, 32, 204, 195, 196, 197, 198, 199, 168, 202, 206, 226, 234, 172, 245, 173, 151,
 			177, 151, 178, 179, 183, 185, 188, 205, 184, 189},
 		"‘ł’ “Ł” Ø `o´ it's ˝ˆ˜¯˘˙¨˚ˇªº‹ı›—–—†‡•„…˛¸‰",
 	},
@@ -533,6 +533,8 @@ func (f *fontFragmentTest) String() string {
 // CharcodeBytesToUnicode on `data` and checks that output equals `expected`.
 func (f *fontFragmentTest) check(t *testing.T) {
 	common.Log.Debug("fontFragmentTest: %s", f)
+
+
 	numObj, err := parsePdfFragment(f.filename)
 	if err != nil {
 		t.Errorf("Failed to parse. %s err=%v", f, err)
@@ -551,12 +553,12 @@ func (f *fontFragmentTest) check(t *testing.T) {
 
 	actualText, numChars, numMisses := font.CharcodeBytesToUnicode(f.data)
 	if numMisses != 0 {
-		t.Errorf("Some codes not decoded. numMisses=%d", numMisses)
+		t.Errorf("Some codes not decoded %s. font=%s numMisses=%d", f, font, numMisses)
 		return
 	}
 	if actualText != f.expected {
-		t.Errorf("Incorrect decoding. %s\nexpected=%q\n  actual=%q",
-			f, f.expected, actualText)
+		t.Errorf("Incorrect decoding. %s encoding=%s\nexpected=%q\n  actual=%q",
+			f, font.Encoder(), f.expected, actualText)
 		act, exp := []rune(actualText), []rune(f.expected)
 		if len(act) != len(exp) {
 			t.Errorf("\texpected=%d actual=%d", len(exp), len(act))
@@ -568,7 +570,6 @@ func (f *fontFragmentTest) check(t *testing.T) {
 				}
 			}
 		}
-
 	}
 	if numChars != len([]rune(actualText)) {
 		t.Errorf("Incorrect numChars. %s numChars=%d expected=%d\n%+v\n%c",
@@ -620,21 +621,21 @@ func parsePdfFragment(filename string) (map[int]core.PdfObject, error) {
 func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 	numObj := map[int]core.PdfObject{}
 	parser := core.NewParserFromString(text)
-	common.Log.Debug("parsePdfObjects")
+	common.Log.Trace("parsePdfObjects")
 
 	// Build the numObj {object number: object} map
 	nums := []int{}
 	for {
 		obj, err := parser.ParseIndirectObject()
-		common.Log.Debug("parsePdfObjects:  %T %v", obj, err)
+		common.Log.Trace("parsePdfObjects:  %T %v", obj, err)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			common.Log.Debug("parsePdfObjects:  err=%v", err)
+			common.Log.Trace("parsePdfObjects:  err=%v", err)
 			return numObj, err
 		}
-		common.Log.Debug("parsePdfObjects: %d %T", len(numObj), obj)
+		common.Log.Trace("parsePdfObjects: %d %T", len(numObj), obj)
 		switch t := obj.(type) {
 		case *core.PdfIndirectObject:
 			numObj[int(t.ObjectNumber)] = obj
@@ -645,16 +646,16 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 		}
 	}
 
-	common.Log.Debug("parsePdfObjects: Parsed %d objects %+v", len(numObj), nums)
+	common.Log.Trace("parsePdfObjects: Parsed %d objects %+v", len(numObj), nums)
 
 	// Replace the indirect objects in all dicts and arrays with their values, if they are in numObj.
 	for n, obj := range numObj {
-		common.Log.Debug("-- 0 %d obj %T", n, obj)
+		common.Log.Trace("-- 0 %d obj %T", n, obj)
 		iobj, ok := obj.(*core.PdfIndirectObject)
 		if !ok {
 			continue
 		}
-		common.Log.Debug("   -- %T", iobj.PdfObject)
+		common.Log.Trace("   -- %T", iobj.PdfObject)
 		iobj.PdfObject, ok = replaceReferences(numObj, iobj.PdfObject)
 		if !ok {
 			common.Log.Debug("ERROR: unresolved reference")
@@ -671,7 +672,7 @@ func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.
 	switch t := obj.(type) {
 	case *core.PdfObjectReference:
 		o, ok := numObj[int(t.ObjectNumber)]
-		common.Log.Debug("    %d 0 R  %t ", t.ObjectNumber, ok)
+		common.Log.Trace("    %d 0 R  %t ", t.ObjectNumber, ok)
 		return o, ok
 	case *core.PdfObjectDictionary:
 		for _, k := range t.Keys() {
