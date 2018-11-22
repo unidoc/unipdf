@@ -122,7 +122,7 @@ func (se SimpleEncoder) BaseName() string {
 
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
 func (se SimpleEncoder) Encode(raw string) []byte {
-	return doEncode(se, raw)
+	return encodeString8bit(se, raw)
 }
 
 // CharcodeToGlyph returns the glyph name for character code `code`.

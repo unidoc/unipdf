@@ -53,7 +53,7 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 			continue
 		}
 		glyph := ""
-		if 0 <= gid && int(gid) < len(rec.GlyphNames) {
+		if int(gid) >= 0 && int(gid) < len(rec.GlyphNames) {
 			glyph = rec.GlyphNames[gid]
 		} else {
 			r := rune(gid)
@@ -75,7 +75,6 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 // TtfType describes a TrueType font file.
 // http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
 type TtfType struct {
-	Embeddable             bool
 	UnitsPerEm             uint16
 	PostScriptName         string
 	Bold                   bool
@@ -116,9 +115,9 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 
 // String returns a human readable representation of `ttf`.
 func (ttf *TtfType) String() string {
-	return fmt.Sprintf("FONT_FILE2{%#q Embeddable=%t UnitsPerEm=%d Bold=%t ItalicAngle=%f "+
+	return fmt.Sprintf("FONT_FILE2{%#q UnitsPerEm=%d Bold=%t ItalicAngle=%f "+
 		"CapHeight=%d Chars=%d GlyphNames=%d}",
-		ttf.PostScriptName, ttf.Embeddable, ttf.UnitsPerEm, ttf.Bold, ttf.ItalicAngle,
+		ttf.PostScriptName, ttf.UnitsPerEm, ttf.Bold, ttf.ItalicAngle,
 		ttf.CapHeight, len(ttf.Chars), len(ttf.GlyphNames))
 }
 
@@ -616,9 +615,7 @@ func (t *ttfParser) ParseOS2() error {
 		return err
 	}
 	version := t.ReadUShort()
-	t.Skip(3 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
-	fsType := t.ReadUShort()
-	t.rec.Embeddable = (fsType != 2) && (fsType&0x200) == 0
+	t.Skip(4 * 2) // xAvgCharWidth, usWeightClass, usWidthClass
 	t.Skip(11*2 + 10 + 4*4 + 4)
 	fsSelection := t.ReadUShort()
 	t.rec.Bold = (fsSelection & 32) != 0
@@ -818,7 +815,7 @@ func (t *ttfParser) ReadULong() (val uint32) {
 // ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
 // the second 2 bytes for the fraction.
 func (t *ttfParser) Read32Fixed() float64 {
-	whole := float64(t.ReadUShort())
+	whole := float64(t.ReadShort())
 	frac := float64(t.ReadUShort()) / 65536.0
 	return whole + frac
 }

@@ -680,6 +680,11 @@ func (c *Creator) NewInvoice() *Invoice {
 	return newInvoice(c.NewTextStyle(), headingStyle)
 }
 
+// NewList creates a new list.
+func (c *Creator) NewList() *List {
+	return newList(c.NewTextStyle())
+}
+
 // NewRectangle creates a new Rectangle with default parameters
 // with left corner at (x,y) and width, height as specified.
 func (c *Creator) NewRectangle(x, y, width, height float64) *Rectangle {

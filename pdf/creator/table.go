@@ -249,6 +249,14 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
+		case *List:
+			lst := t
+			newh := lst.tableHeight(w-cell.indent) + lst.margins.top + lst.margins.bottom
+			if newh > h {
+				diffh := newh - h
+				// Add diff to last row.
+				table.rowHeights[cell.row+cell.rowspan-2] += diffh
+			}
 		case *Division:
 			div := t
 
@@ -388,6 +396,8 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 					cw = t.getMaxLineWidth() / 1000.0
 				}
 			case *Table:
+				cw = w
+			case *List:
 				cw = w
 			}
 
@@ -741,6 +751,8 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 	case *Image:
 		cell.content = vd
 	case *Table:
+		cell.content = vd
+	case *List:
 		cell.content = vd
 	case *Division:
 		cell.content = vd
