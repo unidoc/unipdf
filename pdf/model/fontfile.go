@@ -142,8 +142,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 
 	fontfile.name = keyValues["FontName"]
 	if fontfile.name == "" {
-		common.Log.Debug("ERROR: FontFile has no /FontName")
-		return ErrRequiredAttributeMissing
+		common.Log.Debug(" FontFile has no /FontName")
 	}
 
 	if encodingSection != "" {

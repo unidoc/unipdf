@@ -8,7 +8,6 @@ package model
 import (
 	"errors"
 	"io/ioutil"
-	"sort"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -134,6 +133,10 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 	if width, ok := font.charWidths[code]; ok {
 		common.Log.Debug("GetCharMetrics 1: code=%d width=%.1f font=%s", code, width, font)
 		return fonts.CharMetrics{Wx: width}, true
+	}
+	if isBuiltin(Standard14Font(font.basefont)) {
+		// PdfBox says this is what Acrobat does. Their reference is PDFBOX-2334.
+		return fonts.CharMetrics{Wx: 250}, true
 	}
 	if font.encoder != nil {
 		if glyph, ok := font.encoder.CharcodeToGlyph(code); ok {
@@ -320,7 +323,7 @@ func (font *pdfFontSimple) getFontEncoding() (baseName string, differences map[b
 	}
 
 	if font.Encoding == nil {
-		// Fall back to StandardEncoding
+		// Fall back to StandardEncoding | SymbolEncoding | ZapfDingbatsEncoding
 		// This works because the only way BaseEncoding can get overridden is by FontFile entries
 		// and the only encoding names we have seen in FontFile's are StandardEncoding or no entry.
 		return baseName, nil, nil
@@ -349,6 +352,11 @@ func (font *pdfFontSimple) getFontEncoding() (baseName string, differences map[b
 		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", font.Encoding, font.Encoding)
 		return "", nil, core.ErrTypeError
 	}
+}
+
+var builtinEncodings = map[string]string{
+	"Symbol":       "SymbolEncoding",
+	"ZapfDingbats": "ZapfDingbatsEncoding",
 }
 
 // ToPdfObject converts the pdfFontSimple to its PDF representation for outputting.
@@ -444,7 +452,6 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		return nil, core.ErrRangeError
 	}
 
-	// truefont.charWidths = vals[:maxCode-minCode+1]
 	for i := uint16(minCode); i <= maxCode; i++ {
 		truefont.charWidths[i] = vals[i-minCode]
 	}
@@ -522,6 +529,14 @@ const (
 	ZapfDingbats         Standard14Font = "ZapfDingbats"
 )
 
+func isBuiltin(basefont Standard14Font) bool {
+	if alias, ok := standard14Aliases[basefont]; ok {
+		basefont = alias
+	}
+	_, ok := standard14Fonts[basefont]
+	return ok
+}
+
 // loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates whether
 // the builtin font exists.
 func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
@@ -543,6 +558,8 @@ func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
 	return std, true
 }
 
+// updateStandard14Font fills the font.charWidths for standard 14 fonts.
+// Don't call this function with a font that is not in the standard 14.
 func (font *pdfFontSimple) updateStandard14Font() {
 	se, ok := font.Encoder().(*textencoding.SimpleEncoder)
 	if !ok {
@@ -551,15 +568,8 @@ func (font *pdfFontSimple) updateStandard14Font() {
 		return
 	}
 
-	codes := []uint16{}
-	for c := range se.CodeToGlyph {
-		codes = append(codes, c)
-	}
-	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
-
 	font.charWidths = map[uint16]float64{}
-	for _, code := range codes {
-		glyph := se.CodeToGlyph[uint16(code)]
+	for code, glyph := range se.CodeToGlyph {
 		font.charWidths[code] = font.fontMetrics[glyph].Wx
 	}
 }
@@ -703,11 +713,6 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 		std14Encoder: textencoding.NewZapfDingbatsEncoder(),
 		fontMetrics:  fonts.ZapfDingbatsCharMetrics,
 	},
-}
-
-var builtinEncodings = map[string]string{
-	"Symbol":       "SymbolEncoding",
-	"ZapfDingbats": "ZapfDingbatsEncoding",
 }
 
 // builtinDescriptor returns the PdfFontDescriptor for the builtin font named `baseFont`, or nil if
