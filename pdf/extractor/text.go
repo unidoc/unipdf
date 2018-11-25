@@ -59,6 +59,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
 			resources *model.PdfPageResources) error {
 
+
 			operand := op.Operand
 
 			switch operand {
@@ -107,7 +108,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				to.moveText(x, y)
-			case "TD": // Move text location and set leading
+			case "TD": // Move text location and set leading.
 				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -664,23 +665,8 @@ func (to *textObject) renderText(data []byte) error {
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
 
-		common.Log.Debug("%q stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.Tm)
-		common.Log.Debug("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.Tc, w, state.Tw)
-		common.Log.Debug("m=%s c=%+v t0=%+v td0=%s trm0=%s",
-			m, c, t0, td0, td0.Mult(to.Tm).Mult(to.gs.CTM))
-		common.Log.Debug("m=%s c=%+v  t=%+v  td=%s  trm=%s",
-			m, c, t, td, td.Mult(to.Tm).Mult(to.gs.CTM))
-
 		nextTm := td.Mult(to.Tm)
-		common.Log.Debug("nextTm=%s", nextTm)
 
-		// xyt := XYText{Text: string(r),
-		// 	Point:  translation(trm),
-		// 	Orient: trm.Orientation(),
-		// 	// Matrix nextTextRenderingMatrix = td.multiply(textMatrix).multiply(ctm); // text space -> device space
-		// 	End:        translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
-		// 	SpaceWidth: spaceWidth * trm.ScalingFactorX(),
-		// }
 		xyt := newXYText(
 			string(r),
 			translation(trm),
@@ -692,7 +678,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		// update the text matrix by the displacement of the text location.
 		to.Tm = nextTm
-		common.Log.Debug("to.Tm=%s", to.Tm)
+		common.Log.Trace("to.Tm=%s", to.Tm)
 	}
 
 	return nil
@@ -717,9 +703,10 @@ func translationMatrix(p Point) contentstream.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	to.Tlm.Concat(contentstream.NewMatrix(1, 0, 0, 1, tx, ty))
+	common.Log.Debug("moveTo: tx,ty=%.3f,%.3f Tm=%s Tlm=%s", tx, ty, to.Tm, to.Tlm)
+	to.Tlm = contentstream.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
 	to.Tm = to.Tlm
-	common.Log.Debug("moveTo: tx,ty=%.3f,%.3f Tm=%s", tx, ty, to.Tm)
+	common.Log.Debug("          ===> Tm=%s", to.Tm)
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.
@@ -850,8 +837,8 @@ func (tl *TextList) toLines() []Line {
 			t.End.X, t.End.Y = t.End.Y, -t.End.X
 			t.Orient = contentstream.OrientationPortrait
 			landText = append(landText, t)
-		}
 	}
+}
 	common.Log.Debug("toLines: portrait  ^^^^^^^")
 	portLines := portText.toLinesOrient()
 	common.Log.Debug("toLines: landscape &&&&&&&")
@@ -942,7 +929,7 @@ func (tl *TextList) toLinesOrient() []Line {
 	return lines
 }
 
-// min returns the less of `a` and `b`.
+// min returns the lesser of `a` and `b`.
 func min(a, b float64) float64 {
 	if a < b {
 		return a

@@ -49,10 +49,10 @@ func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
 	return gs.CTM.Transform(x, y)
 }
 
-// PageOrientation returns the likely page orientation given the CTM.
-func (gs *GraphicsState) PageOrientation() Orientation {
-	return gs.CTM.Orientation()
-}
+// // PageOrientation returns the likely page orientation given the CTM.
+// func (gs *GraphicsState) PageOrientation() Orientation {
+// 	return gs.CTM.Orientation()
+// }
 
 // ContentStreamProcessor defines a data structure and methods for processing a content stream, keeping track of the
 // current graphics state, and allowing external handlers to define their own functions as a part of the processing,
@@ -617,7 +617,7 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 // String returns a string describing `m`.
 func (m Matrix) String() string {
 	a, b, c, d, tx, ty := m[0], m[1], m[3], m[4], m[6], m[7]
-	return fmt.Sprintf("[%.2f,%.2f,%.2f,%.2f:%.4f,%.4f]", a, b, c, d, tx, ty)
+	return fmt.Sprintf("[%.4f,%.4f,%.4f,%.4f:%.4f,%.4f]", a, b, c, d, tx, ty)
 }
 
 // Set sets `m` to affine transform a,b,c,d,tx,ty.
