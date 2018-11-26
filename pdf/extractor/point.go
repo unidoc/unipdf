@@ -12,6 +12,7 @@ package extractor
 import (
 	"fmt"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 )
 
@@ -40,6 +41,23 @@ func (p *Point) Transform(a, b, c, d, tx, ty float64) {
 // Displace returns `p` displaced by `delta`.
 func (p Point) Displace(delta Point) Point {
 	return Point{p.X + delta.X, p.Y + delta.Y}
+}
+
+// Rotate returns `p` rotated by `theta` degrees.
+func (p Point) Rotate(theta int) Point {
+	switch theta {
+	case 0:
+		p.X, p.Y = p.X, p.Y
+	case 90:
+		p.X, p.Y = -p.Y, p.X
+	case 180:
+		p.X, p.Y = -p.X, -p.Y
+	case 270:
+		p.X, p.Y = p.Y, -p.X
+	default:
+		common.Log.Debug("ERROR: Unsupported rotation %d", theta)
+	}
+	return p
 }
 
 // transformByMatrix transforms `p` by the affine transformation `m`.
