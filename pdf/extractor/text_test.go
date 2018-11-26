@@ -39,29 +39,80 @@ func init() {
 	}
 }
 
-const testContents1 = `
-    BT
-    /UniDocCourier 24 Tf
-    (Hello World!)Tj
-    0 -10 Td
-    (Doink)Tj
-    ET
-`
-
-const testExpected1 = "Hello World!\nDoink"
-
-// TestTextExtraction1 tests text extraction on a PDF fragment.
+// TestTextExtraction1 tests text extraction on the PDF fragments in `fragmentTests`.
 func TestTextExtraction1(t *testing.T) {
-	e := Extractor{}
-	e.contents = testContents1
+	for _, f := range fragmentTests {
+		f.testExtraction(t)
+	}
+}
 
-	s, err := e.ExtractText()
+type fragment struct {
+	name     string
+	contents string
+	text     string
+}
+
+var fragmentTests = []fragment{
+
+	{name: "portrait",
+		contents: `
+        BT
+        /UniDocCourier 24 Tf
+        (Hello World!)Tj
+        0 -10 Td
+        (Doink)Tj
+        ET
+        `,
+		text: "Hello World!\nDoink",
+	},
+	{name: "landscape",
+		contents: `
+        BT
+        /UniDocCourier 24 Tf
+        0 1 -1 0 0 0 Tm
+        (Hello World!)Tj
+        0 -10 Td
+        (Doink)Tj
+        ET
+        `,
+		text: "Hello World!\nDoink",
+	},
+	{name: "180 degree rotation",
+		contents: `
+        BT
+        /UniDocCourier 24 Tf
+        -1 0 0 -1 0 0 Tm
+        (Hello World!)Tj
+        0 -10 Td
+        (Doink)Tj
+        ET
+        `,
+		text: "Hello World!\nDoink",
+	},
+	{name: "Helvetica",
+		contents: `
+        BT
+        /UniDocHelvetica 24 Tf
+        0 -1 1 0 0 0 Tm
+        (Hello World!)Tj
+        0 -10 Td
+        (Doink)Tj
+        ET
+        `,
+		text: "Hello World!\nDoink",
+	},
+}
+
+// testExtraction checks that ExtractText() works on fragment `f`.
+func (f fragment) testExtraction(t *testing.T) {
+	e := Extractor{contents: f.contents}
+	text, err := e.ExtractText()
 	if err != nil {
-		t.Errorf("Error extracting text: %v", err)
+		t.Fatalf("Error extracting text: %q err=%v", f.name, err)
 		return
 	}
-	if s != testExpected1 {
-		t.Errorf("Text mismatch. Got %q. Expected %q", s, testExpected1)
+	if text != f.text {
+		t.Fatalf("Text mismatch: %q Got %q. Expected %q", f.name, text, f.text)
 		return
 	}
 }
@@ -134,11 +185,12 @@ var extract2Tests = []struct {
 			1: []string{"clustering, entropy, object attributes, spatial correlation, and local"},
 		},
 	},
-	// {filename:"Ito_Formula.pdf",
-	// 	expectedPageText: map[int][]string{
-	// 		1: []string{"In the Itô stochastic calculus"},
-	// 	},
-	// },
+	{filename: "Ito_Formula.pdf",
+		expectedPageText: map[int][]string{
+			// 1: []string{"In the Itô stochastic calculus"},
+			1: []string{"In standard, non-stochastic calculus, one computes a derivative"},
+		},
+	},
 	{filename: "circ2.pdf",
 		expectedPageText: map[int][]string{
 			1: []string{"Understanding and complying with copyright law can be a challenge"},
@@ -149,11 +201,11 @@ var extract2Tests = []struct {
 			6: []string{"words in the test set, we increase the BLEU score"},
 		},
 	},
-	// {filename: "Planck_Wien.pdf",
-	// 	expectedPageText: map[int][]string{
-	// 		1: []string{"entropy of a system of n identical resonators in a stationary radiation field"},
-	// 	},
-	// },
+	{filename: "Planck_Wien.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"entropy of a system of n identical resonators in a stationary radiation field"},
+		},
+	},
 }
 
 // testExtract2 tests the ExtractText2 text extractor on `filename` and compares the extracted

@@ -135,7 +135,8 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // An error can occur if`basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont,
 	*textencoding.SimpleEncoder, error) {
-	baseEncoder := "MacRomanEncoding"
+    // XXX(peterwilliams97) This is wrong. Use correct implementation in newPdfFontFromPdfObject()
+	baseEncoder := "MacRomanEncoding" 
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
@@ -266,8 +267,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		std, ok := loadStandard14Font(Standard14Font(base.basefont))
-		builtin := ok
+		std, builtin := loadStandard14Font(Standard14Font(base.basefont))
 		if builtin {
 			font.context = &std
 

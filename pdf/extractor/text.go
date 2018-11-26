@@ -59,7 +59,6 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
 			resources *model.PdfPageResources) error {
 
-
 			operand := op.Operand
 
 			switch operand {
@@ -315,7 +314,7 @@ func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
-	common.Log.Debug("setTextMatrix:Tm=%s", to.Tm)
+	common.Log.Debug("setTextMatrix: Tm=%s", to.Tm)
 }
 
 // showText "Tj" Show a text string.
@@ -665,15 +664,19 @@ func (to *textObject) renderText(data []byte) error {
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
 
+		common.Log.Trace("\"%s\" stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.Tm)
+		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.Tc, w, state.Tw)
+		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.Tm).Mult(to.gs.CTM))
+
 		nextTm := td.Mult(to.Tm)
+		common.Log.Trace("nextTm=%s", nextTm)
 
 		xyt := newXYText(
 			string(r),
-			translation(trm),
+			trm,
 			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
-			trm.Orientation(),
 			spaceWidth*trm.ScalingFactorX())
-		common.Log.Debug("i=%d code=%d, xyt=%s", i, code, xyt)
+		common.Log.Trace("i=%d code=%d, xyt=%s", i, code, xyt)
 		to.Texts = append(to.Texts, xyt)
 
 		// update the text matrix by the displacement of the text location.
@@ -703,57 +706,46 @@ func translationMatrix(p Point) contentstream.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	common.Log.Debug("moveTo: tx,ty=%.3f,%.3f Tm=%s Tlm=%s", tx, ty, to.Tm, to.Tlm)
 	to.Tlm = contentstream.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
 	to.Tm = to.Tlm
-	common.Log.Debug("          ===> Tm=%s", to.Tm)
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.
 type XYText struct {
-	Point                           // Position of text. Left-bottom?
-	End              Point          // End of text. Right-top?
+	Trm              contentstream.Matrix
+	OrientedStart    Point          // Left of text in orientation where text is horizontal.
+	OrientedEnd      Point          // Right of text in orientation where text is horizontal.
 	ColorStroking    model.PdfColor // Colour that text is stroked with, if any.
 	ColorNonStroking model.PdfColor // Colour that text is filled with, if any.
-	Orient           contentstream.Orientation
+	Orient           int
 	Text             string
 	SpaceWidth       float64
 	Font             string
 	FontSize         float64
-	counter          int
 }
 
-var counter int
-
-func newXYText(text string, point, end Point, orient contentstream.Orientation, spaceWidth float64) XYText {
-	counter++
+func newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
+	theta := trm.Angle()
 	return XYText{
-		Text:       text,
-		Point:      point,
-		End:        end,
-		Orient:     orient,
-		SpaceWidth: spaceWidth,
-		counter:    counter,
+		Text:          text,
+		Trm:           trm,
+		OrientedStart: translation(trm).Rotate(theta),
+		OrientedEnd:   end.Rotate(theta),
+		Orient:        theta,
+		SpaceWidth:    spaceWidth,
 	}
 }
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("@@%d %s,%s %.1f %q", t.counter,
-		t.Point.String(), t.End.String(), t.End.X-t.X, truncate(t.Text, 100))
+	return fmt.Sprintf("XYText{%s  %.1f |%d| [%.3f,%.3f] %q}", 
+		t.Trm.String(), t.Width(), t.Orient, t.OrientedStart.X, t.OrientedStart.Y,
+		truncate(t.Text, 100))
 }
 
-// Width returns the width of `t`.Text in its orientation.
+// Width returns the width of `t`.Text in the text direction.
 func (t XYText) Width() float64 {
-	var w float64
-	switch t.Orient {
-	case contentstream.OrientationLandscape:
-		w = math.Abs(t.End.Y - t.Y)
-	default:
-		w = math.Abs(t.End.X - t.X)
-	}
-	common.Log.Debug("      Width %q (%s %s) -> %.1f", t.Text, t.Point.String(), t.End.String(), w)
-	return w
+	return math.Abs(t.OrientedStart.X - t.OrientedEnd.X)
 }
 
 // TextList is a list of texts and their positions on a PDF page.
@@ -763,21 +755,6 @@ type TextList []XYText
 func (tl *TextList) Length() int {
 	return len(*tl)
 }
-
-// // AppendText appends the location and contents of `text` to a text list.
-// func (tl *TextList) AppendText(gs contentstream.GraphicsState, p, e Point, text string, spaceWidth float64) {
-// 	t := XYText{
-// 		Point:            p,
-// 		End:              e,
-// 		ColorStroking:    gs.ColorStroking,
-// 		ColorNonStroking: gs.ColorNonStroking,
-// 		Orient:           gs.PageOrientation(),
-// 		Text:             text,
-// 		SpaceWidth:       spaceWidth,
-// 	}
-// 	common.Log.Debug("AppendText: %s", t.String())
-// 	*tl = append(*tl, t)
-// }
 
 // ToText returns the contents of `tl` as a single string.
 func (tl *TextList) ToText() string {
@@ -799,20 +776,12 @@ func (tl *TextList) SortPosition() {
 	sort.SliceStable(*tl, func(i, j int) bool {
 		ti, tj := (*tl)[i], (*tl)[j]
 		if ti.Orient != tj.Orient {
-			return ti.Orient > tj.Orient
+			return ti.Orient < tj.Orient
 		}
-		// x, y is orientated so text is horizontal.
-		xi, xj := ti.X, tj.X
-		yi, yj := ti.Y, tj.Y
-		if ti.Orient == contentstream.OrientationLandscape {
-			xi, yi = yi, -xi
-			xj, yj = yj, -xj
+		if ti.OrientedStart.Y != tj.OrientedStart.Y {
+			return ti.OrientedStart.Y > tj.OrientedStart.Y
 		}
-
-		if yi != yj {
-			return yi > yj
-		}
-		return xi < xj
+		return ti.OrientedStart.X < tj.OrientedStart.X
 	})
 }
 
@@ -824,50 +793,41 @@ type Line struct {
 	Words []string  // words in the line
 }
 
-// toLines return the text and positions in `tl` as a slice of Line.
+// toLines returns the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list by top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl *TextList) toLines() []Line {
-	portText, landText := TextList{}, TextList{}
-	for _, t := range *tl {
-		if t.Orient == contentstream.OrientationPortrait {
-			portText = append(portText, t)
-		} else {
-			t.X, t.Y = t.Y, -t.X
-			t.End.X, t.End.Y = t.End.Y, -t.End.X
-			t.Orient = contentstream.OrientationPortrait
-			landText = append(landText, t)
+func (tl TextList) toLines() []Line {
+	tlOrient := map[int]TextList{}
+	for _, t := range tl {
+		tlOrient[t.Orient] = append(tlOrient[t.Orient], t)
 	}
-}
-	common.Log.Debug("toLines: portrait  ^^^^^^^")
-	portLines := portText.toLinesOrient()
-	common.Log.Debug("toLines: landscape &&&&&&&")
-	landLines := landText.toLinesOrient()
-	common.Log.Debug("portText=%d landText=%d", len(portText), len(landText))
-	return append(portLines, landLines...)
+	lines := []Line{}
+	for _, o := range []int{0, 90, 180, 270} {
+		lines = append(lines, tlOrient[o].toLinesOrient()...)
+	}
+	return lines
 }
 
 // toLinesOrient returns the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
-func (tl *TextList) toLinesOrient() []Line {
+func (tl TextList) toLinesOrient() []Line {
 	tl.printTexts("toLines: before")
-	if len(*tl) == 0 {
+	if len(tl) == 0 {
 		return []Line{}
 	}
 	lines := []Line{}
 	words := []string{}
 	x := []float64{}
-	y := (*tl)[0].Y
+	y := tl[0].OrientedStart.Y
 
 	scanning := false
 
 	averageCharWidth := ExponAve{}
 	wordSpacing := ExponAve{}
-	lastEndX := 0.0 // (*tl)[i-1).End.X
+	lastEndX := 0.0 // tl[i-1].End.X
 
-	for _, t := range *tl {
-		// common.Log.Debug("%d --------------------------", i)
-		if t.Y < y {
+	for _, t := range tl {
+		if t.OrientedStart.Y < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
 				if averageCharWidth.running {
@@ -877,7 +837,7 @@ func (tl *TextList) toLinesOrient() []Line {
 			}
 			words = []string{}
 			x = []float64{}
-			y = t.Y
+			y = t.OrientedStart.Y
 			scanning = false
 		}
 
@@ -899,25 +859,26 @@ func (tl *TextList) toLinesOrient() []Line {
 		isSpace := false
 		nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
 		if scanning && t.Text != " " {
-			isSpace = nextWordX < t.X
+			isSpace = nextWordX < t.OrientedStart.X
 		}
-		common.Log.Debug("t=%s", t)
-		common.Log.Debug("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
+		common.Log.Trace("t=%s", t)
+		common.Log.Trace("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
 			t.Width(), min(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
+		common.Log.Trace("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
+			t.Text, t.OrientedStart.X, t.OrientedStart.Y, lastEndX, nextWordX, 
+			nextWordX-t.OrientedStart.X, isSpace)
 
-		common.Log.Debug("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
-			t.Text, t.X, t.Y, lastEndX, nextWordX, nextWordX-t.X, isSpace)
 		if isSpace {
 			words = append(words, " ")
-			x = append(x, (lastEndX+t.X)*0.5)
+			x = append(x, (lastEndX+t.OrientedStart.X)*0.5)
 		}
 
 		// Add the text to the line.
-		lastEndX = t.End.X
+		lastEndX = t.OrientedEnd.X
 		words = append(words, t.Text)
-		x = append(x, t.X)
+		x = append(x, t.OrientedStart.X)
 		scanning = true
-		common.Log.Debug("lastEndX=%.2f", lastEndX)
+		common.Log.Trace("lastEndX=%.2f", lastEndX)
 	}
 	if len(words) > 0 {
 		line := newLine(y, x, words)
@@ -1012,30 +973,6 @@ func removeDuplicates(line Line, charWidth float64) Line {
 	return Line{Y: line.Y, Dx: dxList, Text: strings.Join(words, ""), Words: words}
 }
 
-// PageOrientation is a heuristic for the orientation of a page.
-// XXX TODO: Use Page's Rotate flag instead.
-func (tl *TextList) PageOrientation() contentstream.Orientation {
-	landscapeCount := 0
-	for _, t := range *tl {
-		if t.Orient == contentstream.OrientationLandscape {
-			landscapeCount++
-		}
-	}
-	portraitCount := len(*tl) - landscapeCount
-	if landscapeCount > portraitCount {
-		return contentstream.OrientationLandscape
-	}
-	return contentstream.OrientationPortrait
-}
-
-// Transform transforms all points in `tl` by the affine transformation a, b, c, d, tx, ty.
-func (tl *TextList) Transform(a, b, c, d, tx, ty float64) {
-	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
-	for _, t := range *tl {
-		t.X, t.Y = m.Transform(t.X, t.Y)
-	}
-}
-
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
 // empty.
 func (to *textObject) getCurrentFont() *model.PdfFont {
@@ -1099,8 +1036,11 @@ const maxFontCache = 10
 func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
-	if name == "UniDocCourier" {
+	switch name {
+	case "UniDocCourier":
 		return model.NewStandard14FontMustCompile(model.Courier), nil
+	case "UniDocHelvetica":
+		return model.NewStandard14FontMustCompile(model.Helvetica), nil
 	}
 
 	fontObj, err := to.getFontDict(name)

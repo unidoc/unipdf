@@ -25,13 +25,6 @@ type GraphicsState struct {
 	CTM                   Matrix
 }
 
-type Orientation int
-
-const (
-	OrientationPortrait Orientation = iota
-	OrientationLandscape
-)
-
 type GraphicStateStack []GraphicsState
 
 func (gsStack *GraphicStateStack) Push(gs GraphicsState) {
@@ -48,11 +41,6 @@ func (gsStack *GraphicStateStack) Pop() GraphicsState {
 func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
 	return gs.CTM.Transform(x, y)
 }
-
-// // PageOrientation returns the likely page orientation given the CTM.
-// func (gs *GraphicsState) PageOrientation() Orientation {
-// 	return gs.CTM.Orientation()
-// }
 
 // ContentStreamProcessor defines a data structure and methods for processing a content stream, keeping track of the
 // current graphics state, and allowing external handlers to define their own functions as a part of the processing,
@@ -673,31 +661,42 @@ func (m *Matrix) Transform(x, y float64) (float64, float64) {
 	return xp, yp
 }
 
+// ScalingFactorX returns X scaling of  the affine transform.
 func (m *Matrix) ScalingFactorX() float64 {
-	scale := m[0]
-	if !(m[1] == 0.0 && m[3] == 0.0) {
-		scale = math.Sqrt(m[0]*m[0] + m[1]*m[1])
-	}
-	return scale
+	return math.Sqrt(m[0]*m[0] + m[1]*m[1])
 }
 
+// ScalingFactorY returns X scaling of  the affine transform.
 func (m *Matrix) ScalingFactorY() float64 {
-	scale := m[4]
-	if !(m[1] == 0.0 && m[3] == 0.0) {
-		scale = math.Sqrt(m[3]*m[3] + m[4]*m[4])
-	}
-	return scale
+	return math.Sqrt(m[3]*m[3] + m[4]*m[4])
 }
 
-// Orientation returns a guess at the pdf page orientation when text is printed with CTM `m`.
-// XXX(peterwilliams97) Use pageRotate flag instead.
-func (m *Matrix) Orientation() Orientation {
-	switch {
-	case m[1]*m[1]+m[3]*m[3] > m[0]*m[0]+m[4]*m[4]:
-		return OrientationLandscape
-	default:
-		return OrientationPortrait
+// Angle returns the angle of the affine transform.
+// For simplicity, we assume the transform is a multiple of 90 degrees.
+func (m *Matrix) Angle() int {
+	a, b, c, d := m[0], m[1], m[3], m[4]
+	// We are returning θ for
+	// a b    cos θ  -sin θ
+	// c d =  sin θ   cos θ
+	if a > 0 && d > 0 {
+		//  1  0
+		//  0  1
+		return 0
+	} else if b < 0 && c > 0 {
+		//  0  1
+		// -1  0
+		return 90
+	} else if a < 0 && d < 0 {
+		// -1  0
+		//  0 -1
+		return 180
+	} else if b > 0 && c < 0 {
+		// 0 -1
+		// 1  0
+		return 270
 	}
+	common.Log.Debug("ERROR: Angle not a mulitple of 90°. m=%s", m)
+	return 0
 }
 
 // fixup forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF
