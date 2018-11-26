@@ -152,8 +152,8 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		}
 		encoder, err := textencoding.NewCustomSimpleTextEncoder(encodings, nil)
 		if err != nil {
-			// XXX: Logging an error because we need to fix all these misses.
-			common.Log.Error("UNKNOWN GLYPH: err=%v", err)
+			// XXX(peterwilliams97): Logging an error because we need to fix all these misses.
+			common.Log.Debug("ERROR :UNKNOWN GLYPH: err=%v", err)
 			return nil
 		}
 		fontfile.encoder = encoder
