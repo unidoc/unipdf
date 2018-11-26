@@ -135,8 +135,8 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // An error can occur if`basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont,
 	*textencoding.SimpleEncoder, error) {
-    // XXX(peterwilliams97) This is wrong. Use correct implementation in newPdfFontFromPdfObject()
-	baseEncoder := "MacRomanEncoding" 
+	// XXX(peterwilliams97) This is wrong. Use correct implementation in newPdfFontFromPdfObject()
+	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
@@ -463,10 +463,6 @@ func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) 
 			"\tnumChars=%d numMisses=%d\n"+
 			"\tfont=%s",
 			len(charcodes), numMisses, font)
-	}
-
-	if len(charcodes) != len(charstrings) {
-		panic(fmt.Errorf("charcodes=%d charstrings=%d", len(charcodes), len(charstrings)))
 	}
 
 	return charstrings, len(charstrings), numMisses
