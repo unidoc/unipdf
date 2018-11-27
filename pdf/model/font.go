@@ -27,7 +27,7 @@ type Font interface {
 	SetEncoder(encoder textencoding.TextEncoder)
 	GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool)
 	GetCharMetrics(code uint16) (fonts.CharMetrics, bool)
-	GetAverageCharWidth() float64
+	GetAverageCharWidth() float64 // XXX(peterwilliams97) Not used. Remove.
 	ToPdfObject() core.PdfObject
 }
 
@@ -52,7 +52,7 @@ func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 	case *pdfCIDFontType2:
 		return t.fontDescriptor, nil
 	}
-	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
+	common.Log.Debug("ERROR: Cannot get font descriptor for font type %T (%s)", font, font)
 	return nil, errors.New("font descriptor not found")
 }
 
@@ -63,7 +63,6 @@ func (font PdfFont) String() string {
 		enc = font.context.Encoder().String()
 	}
 	return fmt.Sprintf("FONT{%T %s %s}", font.context, font.baseFields().coreString(), enc)
-
 }
 
 // BaseFont returns the font's "BaseFont" field.
@@ -210,7 +209,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	return &PdfFont{context: &std}, encoder, nil
 }
 
-// GetAlphabet returns a map of the runes in `text`.
+// GetAlphabet returns a map of the runes in `text` and their frequencies.
 func GetAlphabet(text string) map[rune]int {
 	alphabet := map[rune]int{}
 	for _, r := range text {
@@ -473,7 +472,7 @@ func (font PdfFont) ToPdfObject() core.PdfObject {
 	if t := font.actualFont(); t != nil {
 		return t.ToPdfObject()
 	}
-	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%#T. Returning null object",
+	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%#T. Returning null object.",
 		font.context)
 	return core.MakeNull()
 }
@@ -576,7 +575,7 @@ func (font PdfFont) actualFont() Font {
 	case *pdfCIDFontType2:
 		return t
 	default:
-		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
+		common.Log.Debug("ERROR: actualFont. Unknown font type %T. font=%s", t, font)
 		return nil
 	}
 }
@@ -597,7 +596,7 @@ func (font PdfFont) baseFields() *fontCommon {
 	case *pdfCIDFontType2:
 		return t.baseFields()
 	default:
-		common.Log.Debug("ERROR: base. Unknown font type %t. font=%s", t, font.String())
+		common.Log.Debug("ERROR: base. Unknown font type %T. font=%s", t, font.String())
 		return nil
 	}
 }

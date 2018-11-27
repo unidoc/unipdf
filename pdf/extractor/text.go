@@ -49,7 +49,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 	cstreamParser := contentstream.NewContentStreamParser(e.contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
-		common.Log.Debug("ExtractXYText: parse failed. err=%v", err)
+		common.Log.Debug("ERROR: ExtractXYText parse failed. err=%v", err)
 		return textList, state.numChars, state.numMisses, err
 	}
 
@@ -309,29 +309,27 @@ func (to *textObject) nextLine() {
 
 // setTextMatrix "Tm".
 // Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
-// in `f`  (page 250)
+// in `f` (page 250).
 func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
-	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
-	common.Log.Debug("setTextMatrix: Tm=%s", to.Tm)
+	to.Tlm = to.Tm
 }
 
-// showText "Tj" Show a text string.
+// showText "Tj". Show a text string.
 func (to *textObject) showText(charcodes []byte) error {
 	return to.renderText(charcodes)
 }
 
-// showTextAdjusted "TJ" Show text with adjustable spacing.
+// showTextAdjusted "TJ". Show text with adjustable spacing.
 func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 	vertical := false
 	for _, o := range args.Elements() {
 		switch o.(type) {
 		case *core.PdfObjectFloat, *core.PdfObjectInteger:
-			// The following is supposed to be equivalent to the existing Unidoc implementation.
 			x, err := core.GetNumberAsFloat(o)
 			if err != nil {
-				common.Log.Debug("showTextAdjusted: Bad numerical arg. o=%s args=%+v", o, args)
+				common.Log.Debug("ERROR: showTextAdjusted. Bad numerical arg. o=%s args=%+v", o, args)
 				return err
 			}
 			dx, dy := -x*0.001*to.State.Tfs, 0.0
@@ -340,23 +338,23 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			}
 			td := translationMatrix(Point{X: dx, Y: dy})
 			to.Tm = td.Mult(to.Tm)
-			common.Log.Debug("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
+			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
 			if !ok {
-				common.Log.Debug("showTextAdjusted: Bad string arg. o=%s args=%+v", o, args)
+				common.Log.Trace("showTextAdjusted: Bad string arg. o=%s args=%+v", o, args)
 				return core.ErrTypeError
 			}
 			to.renderText(charcodes)
 		default:
-			common.Log.Debug("showTextAdjusted. Unexpected type (%T) args=%+v", o, args)
+			common.Log.Debug("ERROR: showTextAdjusted. Unexpected type (%T) args=%+v", o, args)
 			return core.ErrTypeError
 		}
 	}
 	return nil
 }
 
-// setTextLeading "TL" Set text leading.
+// setTextLeading "TL". Set text leading.
 func (to *textObject) setTextLeading(y float64) {
 	if to == nil {
 		return
@@ -364,7 +362,7 @@ func (to *textObject) setTextLeading(y float64) {
 	to.State.Tl = y
 }
 
-// setCharSpacing "Tc" Set character spacing.
+// setCharSpacing "Tc". Set character spacing.
 func (to *textObject) setCharSpacing(x float64) {
 	if to == nil {
 		return
@@ -372,7 +370,7 @@ func (to *textObject) setCharSpacing(x float64) {
 	to.State.Tc = x
 }
 
-// setFont "Tf" Set font.
+// setFont "Tf". Set font.
 func (to *textObject) setFont(name string, size float64) error {
 	if to == nil {
 		return nil
@@ -395,7 +393,7 @@ func (to *textObject) setFont(name string, size float64) error {
 	return nil
 }
 
-// setTextRenderMode "Tr" Set text rendering mode.
+// setTextRenderMode "Tr". Set text rendering mode.
 func (to *textObject) setTextRenderMode(mode int) {
 	if to == nil {
 		return
@@ -403,7 +401,7 @@ func (to *textObject) setTextRenderMode(mode int) {
 	to.State.Tmode = RenderMode(mode)
 }
 
-// setTextRise "Ts" Set text rise.
+// setTextRise "Ts". Set text rise.
 func (to *textObject) setTextRise(y float64) {
 	if to == nil {
 		return
@@ -411,7 +409,7 @@ func (to *textObject) setTextRise(y float64) {
 	to.State.Trise = y
 }
 
-// setWordSpacing "Tw" Set word spacing.
+// setWordSpacing "Tw". Set word spacing.
 func (to *textObject) setWordSpacing(y float64) {
 	if to == nil {
 		return
@@ -419,7 +417,7 @@ func (to *textObject) setWordSpacing(y float64) {
 	to.State.Tw = y
 }
 
-// setHorizScaling "Tz" Set horizontal scaling.
+// setHorizScaling "Tz". Set horizontal scaling.
 func (to *textObject) setHorizScaling(y float64) {
 	if to == nil {
 		return
@@ -573,9 +571,6 @@ type textObject struct {
 	Tm        contentstream.Matrix // Text matrix. For the character pointer.
 	Tlm       contentstream.Matrix // Text line matrix. For the start of line pointer.
 	Texts     []XYText             // Text gets written here.
-
-	// These fields are used to implement existing UniDoc behaviour.
-	xPos, yPos float64
 }
 
 // newTextState returns a default textState.
@@ -625,8 +620,7 @@ func (to *textObject) renderText(data []byte) error {
 		0, tfs,
 		0, state.Trise)
 
-	common.Log.Debug("==========================================")
-	common.Log.Debug("%d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
 
@@ -653,14 +647,13 @@ func (to *textObject) renderText(data []byte) error {
 		// c is the character size in unscaled text units.
 		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
 
+		// t0 is the end of this character.
 		// t is the displacement of the text cursor when the character is rendered.
-		// float tx = displacementX * fontSize * horizontalScaling;
-		// w = 0
 		t0 := Point{X: (c.X*tfs + w) * th}
 		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
 		// td, td0 are t, t0 in matrix form.
-		// td0 is where this char ends. td is where the next char stats.
+		// td0 is where this character ends. td is where the next character starts.
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
 
@@ -668,19 +661,16 @@ func (to *textObject) renderText(data []byte) error {
 		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.Tc, w, state.Tw)
 		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.Tm).Mult(to.gs.CTM))
 
-		nextTm := td.Mult(to.Tm)
-		common.Log.Trace("nextTm=%s", nextTm)
-
-		xyt := newXYText(
+		xyt := to.newXYText(
 			string(r),
 			trm,
 			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
 			spaceWidth*trm.ScalingFactorX())
-		common.Log.Trace("i=%d code=%d, xyt=%s", i, code, xyt)
+		common.Log.Trace("i=%d code=%d xyt=%s trm=%s", i, code, xyt, trm)
 		to.Texts = append(to.Texts, xyt)
 
 		// update the text matrix by the displacement of the text location.
-		to.Tm = nextTm
+		to.Tm = td.Mult(to.Tm)
 		common.Log.Trace("to.Tm=%s", to.Tm)
 	}
 
@@ -711,36 +701,36 @@ func (to *textObject) moveTo(tx, ty float64) {
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.
+// All dimensions are in device coordinates.
 type XYText struct {
-	Trm              contentstream.Matrix
-	OrientedStart    Point          // Left of text in orientation where text is horizontal.
-	OrientedEnd      Point          // Right of text in orientation where text is horizontal.
-	ColorStroking    model.PdfColor // Colour that text is stroked with, if any.
-	ColorNonStroking model.PdfColor // Colour that text is filled with, if any.
-	Orient           int
-	Text             string
-	SpaceWidth       float64
-	Font             string
-	FontSize         float64
+	Text          string  // The text.
+	Orient        int     // The text orientation.
+	OrientedStart Point   // Left of text in orientation where text is horizontal.
+	OrientedEnd   Point   // Right of text in orientation where text is horizontal.
+	SpaceWidth    float64 // Best guess at the width of a space in the font the text was rendered with.
+	count         int64   // To help with reading debug logs.
 }
 
-func newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
+// newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
+// of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
+// the font the text is rendered in device coordinates.
+func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
+	to.e.textCount++
 	theta := trm.Angle()
 	return XYText{
 		Text:          text,
-		Trm:           trm,
+		Orient:        theta,
 		OrientedStart: translation(trm).Rotate(theta),
 		OrientedEnd:   end.Rotate(theta),
-		Orient:        theta,
 		SpaceWidth:    spaceWidth,
+		count:         to.e.textCount,
 	}
 }
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("XYText{%s  %.1f |%d| [%.3f,%.3f] %q}", 
-		t.Trm.String(), t.Width(), t.Orient, t.OrientedStart.X, t.OrientedStart.Y,
-		truncate(t.Text, 100))
+	return fmt.Sprintf("XYText{@%03d [%.3f,%.3f] %.1f |%d| %q}",
+		t.count, t.OrientedStart.X, t.OrientedStart.Y, t.Width(), t.Orient, truncate(t.Text, 100))
 }
 
 // Width returns the width of `t`.Text in the text direction.
@@ -752,12 +742,12 @@ func (t XYText) Width() float64 {
 type TextList []XYText
 
 // Length returns the number of elements in `tl`.
-func (tl *TextList) Length() int {
-	return len(*tl)
+func (tl TextList) Length() int {
+	return len(tl)
 }
 
 // ToText returns the contents of `tl` as a single string.
-func (tl *TextList) ToText() string {
+func (tl TextList) ToText() string {
 	tl.printTexts("ToText: before sorting")
 	tl.SortPosition()
 
@@ -790,26 +780,31 @@ type Line struct {
 	Y     float64   // y position of line.
 	Dx    []float64 // x distance between successive words in line.
 	Text  string    // text in the line.
-	Words []string  // words in the line
+	Words []string  // words in the line.
 }
 
 // toLines returns the text and positions in `tl` as a slice of Line.
-// NOTE: Caller must sort the text list by top-to-bottom, left-to-write (for orientation adjusted so
+// NOTE: Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLines() []Line {
+	// We divide `tl` into slices which contain texts with the same orientation, extract the lines
+	// for each orientation then return the concatention of these lines sorted by orientation.
 	tlOrient := map[int]TextList{}
 	for _, t := range tl {
 		tlOrient[t.Orient] = append(tlOrient[t.Orient], t)
 	}
 	lines := []Line{}
-	for _, o := range []int{0, 90, 180, 270} {
+	for _, o := range orientKeys(tlOrient) {
 		lines = append(lines, tlOrient[o].toLinesOrient()...)
 	}
 	return lines
 }
 
 // toLinesOrient returns the text and positions in `tl` as a slice of Line.
-// NOTE: Caller must sort the text list top-to-bottom, left-to-write before calling this function.
+// NOTE: This function only works on text lists where all text is the same orientation so it should
+// only be called from toLines.
+// Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
+// that text is horizontal) before calling this function.
 func (tl TextList) toLinesOrient() []Line {
 	tl.printTexts("toLines: before")
 	if len(tl) == 0 {
@@ -824,7 +819,7 @@ func (tl TextList) toLinesOrient() []Line {
 
 	averageCharWidth := ExponAve{}
 	wordSpacing := ExponAve{}
-	lastEndX := 0.0 // tl[i-1].End.X
+	lastEndX := 0.0 // lastEndX is tl[i-1].OrientedEnd.X
 
 	for _, t := range tl {
 		if t.OrientedStart.Y < y {
@@ -865,7 +860,7 @@ func (tl TextList) toLinesOrient() []Line {
 		common.Log.Trace("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
 			t.Width(), min(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
 		common.Log.Trace("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
-			t.Text, t.OrientedStart.X, t.OrientedStart.Y, lastEndX, nextWordX, 
+			t.Text, t.OrientedStart.X, t.OrientedStart.Y, lastEndX, nextWordX,
 			nextWordX-t.OrientedStart.X, isSpace)
 
 		if isSpace {
@@ -888,6 +883,16 @@ func (tl TextList) toLinesOrient() []Line {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// orientKeys returns the keys of `tlOrient` as a sorted slice.
+func orientKeys(tlOrient map[int]TextList) []int {
+	keys := []int{}
+	for k := range tlOrient {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	return keys
 }
 
 // min returns the lesser of `a` and `b`.
