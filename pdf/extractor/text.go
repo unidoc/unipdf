@@ -781,9 +781,14 @@ func (tl TextList) height() float64 {
 func (tl TextList) ToText() string {
 	tl.printTexts("ToText: before sorting")
 
-	tl.SortPosition()
+	fontHeight := tl.height()
+	// We sort with a y tolerance to allow for subscripts, diacritics etc.
+	tol := min(fontHeight*0.2, 5.0)
+	common.Log.Trace("ToText: fontHeight=%.1f tol=%.1f", fontHeight, tol)
 
-	lines := tl.toLines()
+	tl.SortPosition(tol)
+
+	lines := tl.toLines(tol)
 	texts := []string{}
 	for _, l := range lines {
 		texts = append(texts, l.Text)
@@ -794,11 +799,7 @@ func (tl TextList) ToText() string {
 // SortPosition sorts a text list by its elements' position on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
-func (tl *TextList) SortPosition() {
-	fontHeight := tl.height()
-	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := min(fontHeight*0.2, 5.0)
-	common.Log.Trace("SortPosition: fontHeight=%.1f tol=%.1f", fontHeight, tol)
+func (tl *TextList) SortPosition(tol float64) {
 	sort.SliceStable(*tl, func(i, j int) bool {
 		ti, tj := (*tl)[i], (*tl)[j]
 		if ti.Orient != tj.Orient {
@@ -822,7 +823,7 @@ type Line struct {
 // toLines returns the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLines() []Line {
+func (tl TextList) toLines(tol float64) []Line {
 	// We divide `tl` into slices which contain texts with the same orientation, extract the lines
 	// for each orientation then return the concatention of these lines sorted by orientation.
 	tlOrient := map[int]TextList{}
@@ -831,7 +832,7 @@ func (tl TextList) toLines() []Line {
 	}
 	lines := []Line{}
 	for _, o := range orientKeys(tlOrient) {
-		lines = append(lines, tlOrient[o].toLinesOrient()...)
+		lines = append(lines, tlOrient[o].toLinesOrient(tol)...)
 	}
 	return lines
 }
@@ -841,7 +842,7 @@ func (tl TextList) toLines() []Line {
 // only be called from toLines.
 // Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLinesOrient() []Line {
+func (tl TextList) toLinesOrient(tol float64) []Line {
 	tl.printTexts("toLines: before")
 	if len(tl) == 0 {
 		return []Line{}
@@ -858,7 +859,7 @@ func (tl TextList) toLinesOrient() []Line {
 	lastEndX := 0.0 // lastEndX is tl[i-1].OrientedEnd.X
 
 	for _, t := range tl {
-		if t.OrientedStart.Y < y {
+		if t.OrientedStart.Y+tol < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
 				if averageCharWidth.running {
