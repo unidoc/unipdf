@@ -11,6 +11,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 
@@ -56,6 +57,16 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	}
 
 	return &rect, nil
+}
+
+// Height returns the height of `rect`.
+func (rect *PdfRectangle) Height() float64 {
+	return math.Abs(rect.Ury - rect.Lly)
+}
+
+// Width returns the width of `rect`.
+func (rect *PdfRectangle) Width() float64 {
+	return math.Abs(rect.Urx - rect.Llx)
 }
 
 // Convert to a PDF object.
