@@ -1106,9 +1106,6 @@ func countDiacritic(w string) (string, int) {
 		return w, 1
 	}
 	r := runes[0]
-	if w2, ok := diacritics[r]; ok {
-		w = w2
-	}
 	c := 1
 	if unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r) {
 		c = 0
