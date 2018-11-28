@@ -16,6 +16,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
+	"golang.org/x/text/unicode/norm"
 )
 
 // NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo so you
@@ -196,8 +197,10 @@ var fileExtractionTests = []struct {
 	},
 	{filename: "Ito_Formula.pdf",
 		expectedPageText: map[int][]string{
-			// 1: []string{"In the Itô stochastic calculus"},
-			1: []string{"In standard, non-stochastic calculus, one computes a derivative"},
+			1: []string{
+				"In the Itô stochastic calculus",
+				"In standard, non-stochastic calculus, one computes a derivative"},
+			2: []string{"Financial Economics Itô’s Formula"},
 		},
 	},
 	{filename: "circ2.pdf",
@@ -213,6 +216,11 @@ var fileExtractionTests = []struct {
 	{filename: "Planck_Wien.pdf",
 		expectedPageText: map[int][]string{
 			1: []string{"entropy of a system of n identical resonators in a stationary radiation field"},
+		},
+	},
+	{filename: "thanh.pdf",
+		expectedPageText: map[int][]string{
+			1: []string{"Hàn Thé̂ Thành"},
 		},
 	},
 }
@@ -244,6 +252,7 @@ func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]s
 		if !ok {
 			t.Fatalf("%q doesn't have page %d", filename, pageNum)
 		}
+		actualText = norm.NFKC.String(actualText)
 		if !containsSentences(t, expectedSentences, actualText) {
 			t.Fatalf("Text mismatch filepath=%q page=%d", filepath, pageNum)
 		}
@@ -291,8 +300,9 @@ func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 // containsSentences returns true if all strings `expectedSentences` are contained in `actualText`.
 func containsSentences(t *testing.T, expectedSentences []string, actualText string) bool {
 	for _, e := range expectedSentences {
+		e = norm.NFKC.String(e)
 		if !strings.Contains(actualText, e) {
-			t.Errorf("No match for %#q", e)
+			t.Errorf("No match for %q", e)
 			return false
 		}
 	}
