@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/contentstream"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Point defines a point in Cartesian coordinates
@@ -34,7 +34,7 @@ func (p *Point) Set(x, y float64) {
 
 // Transform transforms `p` by the affine transformation a, b, c, d, tx, ty.
 func (p *Point) Transform(a, b, c, d, tx, ty float64) {
-	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
+	m := model.NewMatrix(a, b, c, d, tx, ty)
 	p.transformByMatrix(m)
 }
 
@@ -61,7 +61,7 @@ func (p Point) Rotate(theta int) Point {
 }
 
 // transformByMatrix transforms `p` by the affine transformation `m`.
-func (p *Point) transformByMatrix(m contentstream.Matrix) {
+func (p *Point) transformByMatrix(m model.Matrix) {
 	p.X, p.Y = m.Transform(p.X, p.Y)
 }
 

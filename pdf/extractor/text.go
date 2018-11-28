@@ -314,7 +314,7 @@ func (to *textObject) nextLine() {
 // in `f` (page 250).
 func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
-	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
+	to.Tm = model.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = to.Tm
 }
 
@@ -570,9 +570,9 @@ type textObject struct {
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
 	State     *textState
-	Tm        contentstream.Matrix // Text matrix. For the character pointer.
-	Tlm       contentstream.Matrix // Text line matrix. For the start of line pointer.
-	Texts     []XYText             // Text gets written here.
+	Tm        model.Matrix // Text matrix. For the character pointer.
+	Tlm       model.Matrix // Text line matrix. For the start of line pointer.
+	Texts     []XYText     // Text gets written here.
 }
 
 // newTextState returns a default textState.
@@ -591,8 +591,8 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 		gs:        gs,
 		fontStack: fontStack,
 		State:     state,
-		Tm:        contentstream.IdentityMatrix(),
-		Tlm:       contentstream.IdentityMatrix(),
+		Tm:        model.IdentityMatrix(),
+		Tlm:       model.IdentityMatrix(),
 	}
 }
 
@@ -620,7 +620,7 @@ func (to *textObject) renderText(data []byte) error {
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
 	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
 
-	stateMatrix := contentstream.NewMatrix(
+	stateMatrix := model.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.Trise)
@@ -692,14 +692,14 @@ func (to *textObject) renderText(data []byte) error {
 const glyphTextRatio = 1.0 / 1000.0
 
 // translation returns the translation part of `m`.
-func translation(m contentstream.Matrix) Point {
+func translation(m model.Matrix) Point {
 	tx, ty := m.Translation()
 	return Point{tx, ty}
 }
 
 // translationMatrix returns a matrix that translates by `p`.
-func translationMatrix(p Point) contentstream.Matrix {
-	return contentstream.TranslationMatrix(p.X, p.Y)
+func translationMatrix(p Point) model.Matrix {
+	return model.TranslationMatrix(p.X, p.Y)
 }
 
 // moveTo moves the start of line pointer by `tx`,`ty` and sets the text pointer to the
@@ -707,7 +707,7 @@ func translationMatrix(p Point) contentstream.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	to.Tlm = contentstream.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
+	to.Tlm = model.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
 	to.Tm = to.Tlm
 }
 
@@ -726,7 +726,7 @@ type XYText struct {
 // newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point,
+func (to *textObject) newXYText(text string, trm model.Matrix, end Point,
 	height, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
