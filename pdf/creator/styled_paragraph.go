@@ -14,6 +14,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
@@ -85,14 +86,10 @@ func newStyledParagraph(style TextStyle) *StyledParagraph {
 
 // Append adds a new text chunk to the paragraph.
 func (p *StyledParagraph) Append(text string) *TextChunk {
-	chunk := &TextChunk{
-		Text:  text,
-		Style: p.defaultStyle,
-	}
+	chunk := newTextChunk(text, p.defaultStyle)
 
 	p.chunks = append(p.chunks, chunk)
 	p.wrapText()
-
 	return chunk
 }
 
@@ -103,14 +100,19 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 		index = l
 	}
 
-	chunk := &TextChunk{
-		Text:  text,
-		Style: p.defaultStyle,
-	}
-
+	chunk := newTextChunk(text, p.defaultStyle)
 	p.chunks = append(p.chunks[:index], append([]*TextChunk{chunk}, p.chunks[index:]...)...)
 	p.wrapText()
 
+	return chunk
+}
+
+func (p *StyledParagraph) AddExternalLink(text, location string) *TextChunk {
+	chunk := newTextChunk(text, p.defaultStyle)
+	chunk.annotation = newExternalLinkAnnotation(location)
+
+	p.chunks = append(p.chunks, chunk)
+	p.wrapText()
 	return chunk
 }
 
@@ -318,8 +320,19 @@ func (p *StyledParagraph) wrapText() error {
 	var line []*TextChunk
 	var lineWidth float64
 
+	copyAnnotation := func(src *model.PdfAnnotation) *model.PdfAnnotation {
+		if src == nil {
+			return nil
+		}
+
+		annotation := model.NewPdfAnnotation()
+		*annotation = *src
+		return annotation
+	}
+
 	for _, chunk := range p.chunks {
 		style := chunk.Style
+		annotation := chunk.annotation
 
 		var part []rune
 		var glyphs []string
@@ -338,8 +351,9 @@ func (p *StyledParagraph) wrapText() error {
 			if glyph == "controlLF" {
 				// moves to next line.
 				line = append(line, &TextChunk{
-					Text:  strings.TrimRightFunc(string(part), unicode.IsSpace),
-					Style: style,
+					Text:       strings.TrimRightFunc(string(part), unicode.IsSpace),
+					Style:      style,
+					annotation: copyAnnotation(annotation),
 				})
 				p.lines = append(p.lines, line)
 				line = []*TextChunk{}
@@ -396,8 +410,9 @@ func (p *StyledParagraph) wrapText() error {
 				}
 
 				line = append(line, &TextChunk{
-					Text:  strings.TrimRightFunc(string(text), unicode.IsSpace),
-					Style: style,
+					Text:       strings.TrimRightFunc(string(text), unicode.IsSpace),
+					Style:      style,
+					annotation: copyAnnotation(annotation),
 				})
 				p.lines = append(p.lines, line)
 				line = []*TextChunk{}
@@ -411,8 +426,9 @@ func (p *StyledParagraph) wrapText() error {
 
 		if len(part) > 0 {
 			line = append(line, &TextChunk{
-				Text:  string(part),
-				Style: style,
+				Text:       string(part),
+				Style:      style,
+				annotation: copyAnnotation(annotation),
 			})
 		}
 	}
@@ -547,7 +563,10 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 	cc.Add_BT()
 
+	currY := yPos
 	for idx, line := range p.lines {
+		currX := ctx.X
+
 		if idx != 0 {
 			// Move to next line if not first.
 			cc.Add_Tstar()
@@ -557,11 +576,17 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 		// Get width of the line (excluding spaces).
 		var width float64
+		var height float64
 		var spaceWidth float64
 		var spaces uint
 
+		var chunkWidths []float64
 		for _, chunk := range line {
 			style := &chunk.Style
+
+			if style.FontSize > height {
+				height = style.FontSize
+			}
 
 			spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
 			if !found {
@@ -569,6 +594,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			}
 
 			var chunkSpaces uint
+			var chunkWidth float64
 			for _, r := range chunk.Text {
 				glyph, found := style.Font.Encoder().RuneToGlyph(r)
 				if !found {
@@ -590,12 +616,16 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					return ctx, errors.New("Unsupported text glyph")
 				}
 
-				width += style.FontSize * metrics.Wx
+				chunkWidth += style.FontSize * metrics.Wx
 			}
+
+			chunkWidths = append(chunkWidths, chunkWidth)
+			width += chunkWidth
 
 			spaceWidth += float64(chunkSpaces) * spaceMetrics.Wx * style.FontSize
 			spaces += chunkSpaces
 		}
+		height *= p.lineHeight
 
 		// Add line shifts.
 		objs := []core.PdfObject{}
@@ -650,11 +680,6 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				}
 
 				if glyph == "space" {
-					if !found {
-						common.Log.Debug("Unsupported glyph %s in font\n", glyph)
-						return ctx, errors.New("Unsupported text glyph")
-					}
-
 					if len(encStr) > 0 {
 						cc.Add_rg(r, g, b).
 							Add_Tf(fonts[idx][k], style.FontSize).
@@ -667,6 +692,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					cc.Add_Tf(fontName, fontSize).
 						Add_TL(fontSize * p.lineHeight).
 						Add_TJ([]core.PdfObject{core.MakeFloat(-spaceWidth)}...)
+
+					chunkWidths[k] += spaceWidth * fontSize
 				} else {
 					encStr = append(encStr, style.Font.Encoder().Encode(string(rn))...)
 				}
@@ -678,7 +705,25 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					Add_TL(style.FontSize * p.lineHeight).
 					Add_TJ([]core.PdfObject{core.MakeStringFromBytes(encStr)}...)
 			}
+
+			chunkWidth := chunkWidths[k] / 1000.0
+			if chunk.annotation != nil {
+				annotRect, ok := chunk.annotation.Rect.(*core.PdfObjectArray)
+				if ok {
+					annotRect.Clear()
+					annotRect.Append(core.MakeFloat(currX))
+					annotRect.Append(core.MakeFloat(currY))
+					annotRect.Append(core.MakeFloat(currX + chunkWidth))
+					annotRect.Append(core.MakeFloat(currY + height))
+				}
+
+				blk.AddAnnotation(chunk.annotation)
+			}
+
+			currX += chunkWidth
 		}
+
+		currY -= height
 	}
 	cc.Add_ET()
 	cc.Add_Q()

@@ -5,6 +5,11 @@
 
 package creator
 
+import (
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
+)
+
 // TextChunk represents a chunk of text along with a particular style.
 type TextChunk struct {
 	// The text that is being rendered in the PDF.
@@ -12,4 +17,34 @@ type TextChunk struct {
 
 	// The style of the text being rendered.
 	Style TextStyle
+
+	annotation *model.PdfAnnotation
+}
+
+func newTextChunk(text string, style TextStyle) *TextChunk {
+	return &TextChunk{
+		Text:  text,
+		Style: style,
+	}
+}
+
+func newExternalLinkAnnotation(location string) *model.PdfAnnotation {
+	annotation := model.NewPdfAnnotationLink()
+
+	// Set border style.
+	bs := model.NewBorderStyle()
+	bs.SetBorderWidth(0)
+	annotation.BS = bs.ToPdfObject()
+
+	// Set link destination.
+	action := core.MakeDict()
+	action.Set(core.PdfObjectName("S"), core.MakeName("URI"))
+	action.Set(core.PdfObjectName("URI"), core.MakeString(location))
+	annotation.A = action
+
+	// Create default annotation rectangle.
+	annotation.Rect = core.MakeArray()
+	annotation.PdfAnnotation.Rect = annotation.Rect
+
+	return annotation.PdfAnnotation
 }

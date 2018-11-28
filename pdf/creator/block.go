@@ -41,6 +41,9 @@ type Block struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Block annotations.
+	annotations []*model.PdfAnnotation
 }
 
 // NewBlock creates a new Block with specified width and height.
@@ -96,6 +99,10 @@ func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 // SetAngle sets the rotation angle in degrees.
 func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
+}
+
+func (blk *Block) AddAnnotation(annotation *model.PdfAnnotation) {
+	blk.annotations = append(blk.annotations, annotation)
 }
 
 // duplicate duplicates the block with a new copy of the operations list.
@@ -278,6 +285,10 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 	err = page.SetContentStreams([]string{string(ops.Bytes())}, core.NewFlateEncoder())
 	if err != nil {
 		return err
+	}
+
+	for _, annotation := range blk.annotations {
+		page.Annotations = append(page.Annotations, annotation)
 	}
 
 	return nil
