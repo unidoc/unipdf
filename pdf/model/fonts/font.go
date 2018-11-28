@@ -18,7 +18,6 @@ type Font interface {
 	Encoder() textencoding.TextEncoder
 	SetEncoder(encoder textencoding.TextEncoder)
 	GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
-	GetAverageCharWidth() float64
 	ToPdfObject() core.PdfObject
 }
 

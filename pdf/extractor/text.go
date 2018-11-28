@@ -25,13 +25,13 @@ import (
 // CharcodeBytesToUnicode.
 // Characters that can't be decoded are replaced with MissingCodeRune ('\ufffd' = �).
 func (e *Extractor) ExtractText() (string, error) {
-	text, _, _, err := e.ExtractText2()
+	text, _, _, err := e.ExtractTextWithStats()
 	return text, err
 }
 
-// ExtractText2 works like ExtractText but returns the number of characters in the output and the
+// ExtractTextWithStats works like ExtractText but returns the number of characters in the output and the
 // the number of characters that were not decoded.
-func (e *Extractor) ExtractText2() (string, int, int, error) {
+func (e *Extractor) ExtractTextWithStats() (string, int, int, error) {
 	textList, numChars, numMisses, err := e.ExtractXYText()
 	if err != nil {
 		return "", numChars, numMisses, err
@@ -311,6 +311,10 @@ func (to *textObject) nextLine() {
 // Set the text matrix, Tm, and the text line matrix, Tlm to the Matrix specified by the 6 numbers
 // in `f`  (page 250)
 func (to *textObject) setTextMatrix(f []float64) {
+	if len(f) != 6 {
+		common.Log.Debug("ERROR: len(f) != 6 (%d)", len(f))
+		return
+	}
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = contentstream.NewMatrix(a, b, c, d, tx, ty)
@@ -358,7 +362,7 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 
 // setTextLeading "TL" Set text leading.
 func (to *textObject) setTextLeading(y float64) {
-	if to == nil {
+	if to == nil || to.State == nil {
 		return
 	}
 	to.State.Tl = y
@@ -427,7 +431,7 @@ func (to *textObject) setHorizScaling(y float64) {
 	to.State.Th = y
 }
 
-// floatParam returns the single float parameter of operatr `op`, or an error if it doesn't have
+// floatParam returns the single float parameter of operator `op`, or an error if it doesn't have
 // a single float parameter or we aren't in a text stream.
 func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 	if len(op.Params) != 1 {
@@ -444,7 +448,7 @@ func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
 	hard bool) (ok bool, err error) {
 	if to == nil {
-		params := []core.PdfObject{}
+		var params []core.PdfObject
 		if numParams > 0 {
 			params = op.Params
 			if len(params) > numParams {
@@ -599,7 +603,7 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 	}
 }
 
-// renderText emits byte array `data` to the calling program.
+// renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
 
@@ -629,7 +633,6 @@ func (to *textObject) renderText(data []byte) error {
 	common.Log.Debug("%d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
-
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
@@ -738,7 +741,7 @@ func newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth floa
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("XYText{%s  %.1f |%d| [%.3f,%.3f] %q}", 
+	return fmt.Sprintf("XYText{%s  %.1f |%d| [%.3f,%.3f] %q}",
 		t.Trm.String(), t.Width(), t.Orient, t.OrientedStart.X, t.OrientedStart.Y,
 		truncate(t.Text, 100))
 }
@@ -762,7 +765,7 @@ func (tl *TextList) ToText() string {
 	tl.SortPosition()
 
 	lines := tl.toLines()
-	texts := []string{}
+	texts := make([]string, 0, len(lines))
 	for _, l := range lines {
 		texts = append(texts, l.Text)
 	}
@@ -797,11 +800,11 @@ type Line struct {
 // NOTE: Caller must sort the text list by top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLines() []Line {
-	tlOrient := map[int]TextList{}
+	tlOrient := make(map[int]TextList, len(tl))
 	for _, t := range tl {
 		tlOrient[t.Orient] = append(tlOrient[t.Orient], t)
 	}
-	lines := []Line{}
+	lines := make([]Line, 0, 4)
 	for _, o := range []int{0, 90, 180, 270} {
 		lines = append(lines, tlOrient[o].toLinesOrient()...)
 	}
@@ -815,15 +818,15 @@ func (tl TextList) toLinesOrient() []Line {
 	if len(tl) == 0 {
 		return []Line{}
 	}
-	lines := []Line{}
-	words := []string{}
-	x := []float64{}
+	var lines []Line
+	var words []string
+	var x []float64
 	y := tl[0].OrientedStart.Y
 
 	scanning := false
 
-	averageCharWidth := ExponAve{}
-	wordSpacing := ExponAve{}
+	averageCharWidth := exponAve{}
+	wordSpacing := exponAve{}
 	lastEndX := 0.0 // tl[i-1].End.X
 
 	for _, t := range tl {
@@ -857,15 +860,15 @@ func (tl TextList) toLinesOrient() []Line {
 		deltaCharWidth := averageCharWidth.ave * 0.3
 
 		isSpace := false
-		nextWordX := lastEndX + min(deltaSpace, deltaCharWidth)
+		nextWordX := lastEndX + minFloat(deltaSpace, deltaCharWidth)
 		if scanning && t.Text != " " {
 			isSpace = nextWordX < t.OrientedStart.X
 		}
 		common.Log.Trace("t=%s", t)
 		common.Log.Trace("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
-			t.Width(), min(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
+			t.Width(), minFloat(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
 		common.Log.Trace("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
-			t.Text, t.OrientedStart.X, t.OrientedStart.Y, lastEndX, nextWordX, 
+			t.Text, t.OrientedStart.X, t.OrientedStart.Y, lastEndX, nextWordX,
 			nextWordX-t.OrientedStart.X, isSpace)
 
 		if isSpace {
@@ -890,22 +893,14 @@ func (tl TextList) toLinesOrient() []Line {
 	return lines
 }
 
-// min returns the lesser of `a` and `b`.
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// ExponAve implements an exponential average.
-type ExponAve struct {
+// exponAve implements an exponential average.
+type exponAve struct {
 	ave     float64 // Current average value.
 	running bool    // Has `ave` been set?
 }
 
 // update updates the exponential average `exp.ave` and returns it
-func (exp *ExponAve) update(x float64) float64 {
+func (exp *exponAve) update(x float64) float64 {
 	if !exp.running {
 		exp.ave = x
 		exp.running = true
@@ -915,9 +910,15 @@ func (exp *ExponAve) update(x float64) float64 {
 	return exp.ave
 }
 
-// printTexts is a debugging function. XXX(peterwilliams97) Remove this.
+const isDebug = false
+
+// printTexts is a debugging function.
+// TODO(peterwilliams97) Remove this.
 func (tl *TextList) printTexts(message string) {
-	return
+	if !isDebug {
+		return
+	}
+
 	_, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "???"
@@ -943,7 +944,7 @@ func (tl *TextList) printTexts(message string) {
 // newLine returns the Line representation of strings `words` with y coordinate `y` and x
 // coordinates `x`.
 func newLine(y float64, x []float64, words []string) Line {
-	dx := []float64{}
+	dx := make([]float64, 0, len(x))
 	for i := 1; i < len(x); i++ {
 		dx = append(dx, x[i]-x[i-1])
 	}
@@ -1031,18 +1032,8 @@ type fontEntry struct {
 const maxFontCache = 10
 
 // getFontDirect returns the font named `name` if it exists in the page's resources or an error if
-// is doesn't.
-// This is a direct (uncached access).
+// it doesn't. Accesses page resources directly (not cached).
 func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
-
-	// This is a hack for testing.
-	switch name {
-	case "UniDocCourier":
-		return model.NewStandard14FontMustCompile(model.Courier), nil
-	case "UniDocHelvetica":
-		return model.NewStandard14FontMustCompile(model.Helvetica), nil
-	}
-
 	fontObj, err := to.getFontDict(name)
 	if err != nil {
 		return nil, err

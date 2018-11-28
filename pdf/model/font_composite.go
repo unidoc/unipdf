@@ -131,15 +131,6 @@ func (font pdfFontType0) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	return font.DescendantFont.GetCharMetrics(code)
 }
 
-// GetAverageCharWidth returns the average width of all the characters in `font`.
-func (font pdfFontType0) GetAverageCharWidth() float64 {
-	if font.DescendantFont == nil {
-		common.Log.Debug("ERROR: No descendant. font=%s", font)
-		return 0.0
-	}
-	return font.DescendantFont.GetAverageCharWidth()
-}
-
 // Encoder returns the font's text encoder.
 func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder

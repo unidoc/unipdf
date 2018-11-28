@@ -5,7 +5,7 @@
  * Based on pdf/contentstream/draw/point.go
  */
 
-// XXX(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
+// FIXME(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
 
 package extractor
 
@@ -16,18 +16,18 @@ import (
 	"github.com/unidoc/unidoc/pdf/contentstream"
 )
 
-// Point defines a point in Cartesian coordinates
+// Point defines a point (X,Y) in Cartesian coordinates.
 type Point struct {
 	X float64
 	Y float64
 }
 
-// NewPoint returns a Point at 'x', 'y'.
+// NewPoint returns a Point at `x`, `y`.
 func NewPoint(x, y float64) Point {
 	return Point{X: x, Y: y}
 }
 
-// Set sets `p` to `x`, `y`.
+// Set sets `p` to coordinates `(x, y)`.
 func (p *Point) Set(x, y float64) {
 	p.X, p.Y = x, y
 }
@@ -38,12 +38,12 @@ func (p *Point) Transform(a, b, c, d, tx, ty float64) {
 	p.transformByMatrix(m)
 }
 
-// Displace returns `p` displaced by `delta`.
+// Displace returns a new Point at location `p` + `delta`.
 func (p Point) Displace(delta Point) Point {
 	return Point{p.X + delta.X, p.Y + delta.Y}
 }
 
-// Rotate returns `p` rotated by `theta` degrees.
+// Rotate rotates `p` by `theta` degrees and returns back.
 func (p Point) Rotate(theta int) Point {
 	switch theta {
 	case 0:
