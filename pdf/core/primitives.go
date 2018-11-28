@@ -413,6 +413,11 @@ func (array *PdfObjectArray) Append(objects ...PdfObject) {
 	}
 }
 
+// Clear resets the array to an empty state.
+func (array *PdfObjectArray) Clear() {
+	array.vec = []PdfObject{}
+}
+
 // ToFloat64Array returns a slice of all elements in the array as a float64 slice.  An error is
 // returned if the array contains non-numeric objects (each element can be either PdfObjectInteger
 // or PdfObjectFloat).
