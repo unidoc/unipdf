@@ -48,3 +48,31 @@ func newExternalLinkAnnotation(location string) *model.PdfAnnotation {
 
 	return annotation.PdfAnnotation
 }
+
+func newInternalLinkAnnotation(page int64, x, y, zoom float64) *model.PdfAnnotation {
+	annotation := model.NewPdfAnnotationLink()
+
+	// Set border style.
+	bs := model.NewBorderStyle()
+	bs.SetBorderWidth(0)
+	annotation.BS = bs.ToPdfObject()
+
+	// Set link destination.
+	if page < 0 {
+		page = 0
+	}
+
+	annotation.Dest = core.MakeArray(
+		core.MakeInteger(page),
+		core.MakeName("XYZ"),
+		core.MakeFloat(x),
+		core.MakeFloat(y),
+		core.MakeFloat(zoom),
+	)
+
+	// Create default annotation rectangle.
+	annotation.Rect = core.MakeArray()
+	annotation.PdfAnnotation.Rect = annotation.Rect
+
+	return annotation.PdfAnnotation
+}

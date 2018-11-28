@@ -87,7 +87,10 @@ func newStyledParagraph(style TextStyle) *StyledParagraph {
 // Append adds a new text chunk to the paragraph.
 func (p *StyledParagraph) Append(text string) *TextChunk {
 	chunk := newTextChunk(text, p.defaultStyle)
+	return p.appendChunk(chunk)
+}
 
+func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
 	p.chunks = append(p.chunks, chunk)
 	p.wrapText()
 	return chunk
@@ -110,10 +113,13 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 func (p *StyledParagraph) AddExternalLink(text, location string) *TextChunk {
 	chunk := newTextChunk(text, p.defaultStyle)
 	chunk.annotation = newExternalLinkAnnotation(location)
+	return p.appendChunk(chunk)
+}
 
-	p.chunks = append(p.chunks, chunk)
-	p.wrapText()
-	return chunk
+func (p *StyledParagraph) AddInternalLink(text string, page int64, x, y, zoom float64) *TextChunk {
+	chunk := newTextChunk(text, p.defaultStyle)
+	chunk.annotation = newInternalLinkAnnotation(page-1, x, y, zoom)
+	return p.appendChunk(chunk)
 }
 
 // Reset removes all the text chunks the paragraph contains.
