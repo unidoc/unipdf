@@ -131,7 +131,6 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	if width, ok := font.charWidths[code]; ok {
-		common.Log.Debug("GetCharMetrics 1: code=%d width=%.1f font=%s", code, width, font)
 		return fonts.CharMetrics{Wx: width}, true
 	}
 	if isBuiltin(Standard14Font(font.basefont)) {
@@ -142,12 +141,11 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 		if glyph, ok := font.encoder.CharcodeToGlyph(code); ok {
 			if metrics, ok := font.fontMetrics[glyph]; ok {
 				font.charWidths[code] = metrics.Wx
-				common.Log.Debug("GetCharMetrics 2: code=%d glyph=%q width=%.1f", code, glyph, metrics.Wx)
 				return metrics, true
 			}
 		}
 	}
-	common.Log.Debug("GetCharMetrics 3: code=%d font=%s", code, font)
+	common.Log.Debug("GetCharMetrics: No match for code=%d font=%s", code, font)
 	return fonts.CharMetrics{}, false
 }
 

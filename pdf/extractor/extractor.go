@@ -18,6 +18,9 @@ type Extractor struct {
 
 	// accessCount is used to set fontEntry.access to an incrementing number.
 	accessCount int64
+
+	// textCount is an incrementing number used to identify XYTest objects.
+	textCount int64
 }
 
 // New returns an Extractor instance for extracting content from the input PDF page.

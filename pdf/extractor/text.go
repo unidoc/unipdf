@@ -13,11 +13,13 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
+	"golang.org/x/text/unicode/norm"
 )
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
@@ -601,6 +603,9 @@ func (to *textObject) renderText(data []byte) error {
 	charcodes := font.BytesToCharcodes(data)
 
 	runes, numChars, numMisses := font.CharcodesToUnicode(charcodes)
+	if numMisses > 0 {
+		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
+	}
 
 	to.State.numChars += numChars
 	to.State.numMisses += numMisses
@@ -623,6 +628,11 @@ func (to *textObject) renderText(data []byte) error {
 	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
+
+		// XXX(peterwilliams97) Need to find and fix cases where this happens.
+		if r == "\x00" {
+			continue
+		}
 
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
@@ -665,6 +675,7 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
+			1.0*trm.ScalingFactorY(),
 			spaceWidth*trm.ScalingFactorX())
 		common.Log.Trace("i=%d code=%d xyt=%s trm=%s", i, code, xyt, trm)
 		to.Texts = append(to.Texts, xyt)
@@ -707,6 +718,7 @@ type XYText struct {
 	Orient        int     // The text orientation.
 	OrientedStart Point   // Left of text in orientation where text is horizontal.
 	OrientedEnd   Point   // Right of text in orientation where text is horizontal.
+	Height        float64 // Text height.
 	SpaceWidth    float64 // Best guess at the width of a space in the font the text was rendered with.
 	count         int64   // To help with reading debug logs.
 }
@@ -714,14 +726,22 @@ type XYText struct {
 // newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
+func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point,
+	height, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
+	if theta%180 == 0 {
+		height = trm.ScalingFactorY()
+	} else {
+		height = trm.ScalingFactorX()
+	}
+
 	return XYText{
 		Text:          text,
 		Orient:        theta,
 		OrientedStart: translation(trm).Rotate(theta),
 		OrientedEnd:   end.Rotate(theta),
+		Height:        height,
 		SpaceWidth:    spaceWidth,
 		count:         to.e.textCount,
 	}
@@ -729,7 +749,7 @@ func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
-	return fmt.Sprintf("XYText{@%03d [%.3f,%.3f] %.1f |%d| %q}",
+	return fmt.Sprintf("XYText{@%03d [%.3f,%.3f] %.1f %d° %q}",
 		t.count, t.OrientedStart.X, t.OrientedStart.Y, t.Width(), t.Orient, truncate(t.Text, 100))
 }
 
@@ -746,9 +766,21 @@ func (tl TextList) Length() int {
 	return len(tl)
 }
 
+// height returns the max height of the elements in `tl`.
+func (tl TextList) height() float64 {
+	fontHeight := 0.0
+	for _, t := range tl {
+		if t.Height > fontHeight {
+			fontHeight = t.Height
+		}
+	}
+	return fontHeight
+}
+
 // ToText returns the contents of `tl` as a single string.
 func (tl TextList) ToText() string {
 	tl.printTexts("ToText: before sorting")
+
 	tl.SortPosition()
 
 	lines := tl.toLines()
@@ -763,12 +795,16 @@ func (tl TextList) ToText() string {
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (tl *TextList) SortPosition() {
+	fontHeight := tl.height()
+	// We sort with a y tolerance to allow for subscripts, diacritics etc.
+	tol := min(fontHeight*0.2, 5.0)
+	common.Log.Trace("SortPosition: fontHeight=%.1f tol=%.1f", fontHeight, tol)
 	sort.SliceStable(*tl, func(i, j int) bool {
 		ti, tj := (*tl)[i], (*tl)[j]
 		if ti.Orient != tj.Orient {
 			return ti.Orient < tj.Orient
 		}
-		if ti.OrientedStart.Y != tj.OrientedStart.Y {
+		if math.Abs(ti.OrientedStart.Y-tj.OrientedStart.Y) > tol {
 			return ti.OrientedStart.Y > tj.OrientedStart.Y
 		}
 		return ti.OrientedStart.X < tj.OrientedStart.X
@@ -826,6 +862,7 @@ func (tl TextList) toLinesOrient() []Line {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
 				if averageCharWidth.running {
+					line = combineDiacritics(line, averageCharWidth.ave)
 					line = removeDuplicates(line, averageCharWidth.ave)
 				}
 				lines = append(lines, line)
@@ -976,6 +1013,147 @@ func removeDuplicates(line Line, charWidth float64) Line {
 		w0 = w
 	}
 	return Line{Y: line.Y, Dx: dxList, Text: strings.Join(words, ""), Words: words}
+}
+
+// combineDiacritics returns `line` with diacritics close to characters combined with the characters.
+// `charWidth` is the average character width for the line.
+// We have to do this because PDF can render diacritics separately to the characters they attach to
+// in extracted text.
+func combineDiacritics(line Line, charWidth float64) Line {
+	if len(line.Dx) == 0 {
+		return line
+	}
+
+	tol := charWidth * 0.2
+	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
+
+	words := []string{}
+	dxList := []float64{}
+	w := line.Words[0]
+	w, c := countDiacritic(w)
+	delta := 0.0
+	dx0 := 0.0
+	parts := []string{w}
+	numChars := c
+
+	for i := 0; i < len(line.Dx); i++ {
+		w = line.Words[i+1]
+		w, c := countDiacritic(w)
+		dx := line.Dx[i]
+		if numChars+c <= 1 && delta+dx <= tol {
+			if len(parts) == 0 {
+				dx0 = dx
+			} else {
+				delta += dx
+			}
+			parts = append(parts, w)
+			numChars += c
+		} else {
+			if len(parts) > 0 {
+				if len(words) > 0 {
+					dxList = append(dxList, dx0)
+				}
+				words = append(words, combine(parts))
+			}
+			parts = []string{w}
+			numChars = c
+			dx0 = dx
+			delta = 0.0
+		}
+	}
+	if len(parts) > 0 {
+		if len(words) > 0 {
+			dxList = append(dxList, dx0)
+		}
+		words = append(words, combine(parts))
+	}
+
+	if len(words) != len(dxList)+1 {
+		common.Log.Error("Inconsistent: \nwords=%d %q\ndxList=%d %.2f",
+			len(words), words, len(dxList), dxList)
+		return line
+	}
+	return Line{Y: line.Y, Dx: dxList, Text: strings.Join(words, ""), Words: words}
+}
+
+// combine combines any diacritics in `parts` with the single non-diacritic character in `parts`.
+func combine(parts []string) string {
+	if len(parts) == 1 {
+		// Must be a non-diacritic.
+		return parts[0]
+	}
+
+	// We need to put the diacritics before the non-diacritic for NFKC normalization to work.
+	diacritic := map[string]bool{}
+	for _, w := range parts {
+		r := []rune(w)[0]
+		diacritic[w] = unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r)
+	}
+	sort.SliceStable(parts, func(i, j int) bool { return !diacritic[parts[i]] && diacritic[parts[j]] })
+
+	// Construct the NFKC-normalized concatenation of the diacritics and the non-diacritic.
+	for i, w := range parts {
+		parts[i] = strings.TrimSpace(norm.NFKC.String(w))
+	}
+	return strings.Join(parts, "")
+}
+
+// countDiacritic returns the combining diacritic version of `w` (usually itself) and the number of
+// non-diacritics in `w` (0 or 1)
+func countDiacritic(w string) (string, int) {
+	runes := []rune(w)
+	if len(runes) != 1 {
+		return w, 1
+	}
+	r := runes[0]
+	if w2, ok := diacritics[r]; ok {
+		w = w2
+	}
+	c := 1
+	if unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r) {
+		c = 0
+	}
+	if w2, ok := diacritics[r]; ok {
+		c = 0
+		w = w2
+	}
+	return w, c
+}
+
+// diacritics is a map of diacritic characters that are not classified as unicode.Mn or unicode.Sk
+// and the corresponding unicode.Mn or unicode.Sk characters. This map was copied from PdfBox.
+var diacritics = map[rune]string{
+	0x0060: "\u0300",
+	0x02CB: "\u0300",
+	0x0027: "\u0301",
+	0x02B9: "\u0301",
+	0x02CA: "\u0301",
+	0x005e: "\u0302",
+	0x02C6: "\u0302",
+	0x007E: "\u0303",
+	0x02C9: "\u0304",
+	0x00B0: "\u030A",
+	0x02BA: "\u030B",
+	0x02C7: "\u030C",
+	0x02C8: "\u030D",
+	0x0022: "\u030E",
+	0x02BB: "\u0312",
+	0x02BC: "\u0313",
+	0x0486: "\u0313",
+	0x055A: "\u0313",
+	0x02BD: "\u0314",
+	0x0485: "\u0314",
+	0x0559: "\u0314",
+	0x02D4: "\u031D",
+	0x02D5: "\u031E",
+	0x02D6: "\u031F",
+	0x02D7: "\u0320",
+	0x02B2: "\u0321",
+	0x02CC: "\u0329",
+	0x02B7: "\u032B",
+	0x02CD: "\u0331",
+	0x005F: "\u0332",
+	0x204E: "\u0359",
 }
 
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
