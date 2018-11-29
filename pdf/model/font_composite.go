@@ -402,8 +402,12 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		fontCommon: fontCommon{
 			subtype: "CIDFontType2",
 		},
+		ttfParser: &ttf,
+
+		// Use identity character id (CID) to glyph id (GID) mapping.
+		// Code below relies on the fact that identity mapping is used.
+		CIDToGIDMap: core.MakeName("Identity"),
 	}
-	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes ➞ runes
 	runes := make([]rune, 0, len(ttf.Chars))
@@ -472,9 +476,6 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		i = li + 1
 	}
 	cidfont.W = core.MakeIndirectObject(wArr)
-
-	// Use identity character id (CID) to glyph id (GID) mapping.
-	cidfont.CIDToGIDMap = core.MakeName("Identity")
 
 	d := core.MakeDict()
 	d.Set("Ordering", core.MakeString("Identity"))

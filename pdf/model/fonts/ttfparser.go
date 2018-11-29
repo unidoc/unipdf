@@ -104,6 +104,10 @@ type TtfType struct {
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := make(map[cmap.CharCode]rune)
 	for code, gid := range ttf.Chars {
+		// TODO(dennwc): this function is used only in one place and relies on
+		//  			 the fact that the code uses identity CID<->GID mapping
+		charcode := cmap.CharCode(code)
+
 		glyph := ttf.GlyphNames[gid]
 
 		// TODO(dennwc): 'code' is already a rune; do we need this extra lookup?
@@ -112,8 +116,7 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
 			r = textencoding.MissingCodeRune
 		}
-		// TODO(dennwc): implies rune <-> charcode identity?
-		codeToUnicode[cmap.CharCode(code)] = r
+		codeToUnicode[charcode] = r
 	}
 	return cmap.NewToUnicodeCMap(codeToUnicode)
 }
