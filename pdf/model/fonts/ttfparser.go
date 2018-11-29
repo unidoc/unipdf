@@ -118,6 +118,10 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	return cmap.NewToUnicodeCMap(codeToUnicode)
 }
 
+func (ttf *TtfType) NewEncoder() textencoding.TextEncoder {
+	return textencoding.NewTrueTypeFontEncoder(ttf.Chars)
+}
+
 // String returns a human readable representation of `ttf`.
 func (ttf *TtfType) String() string {
 	return fmt.Sprintf("FONT_FILE2{%#q UnitsPerEm=%d Bold=%t ItalicAngle=%f "+

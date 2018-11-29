@@ -306,7 +306,7 @@ func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
 func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	metrics := fonts.CharMetrics{}
 
-	enc := textencoding.NewTrueTypeFontEncoder(font.ttfParser.Chars)
+	enc := font.ttfParser.NewEncoder()
 
 	// Convert the glyph to character code.
 	r, found := enc.GlyphToRune(glyph)
@@ -536,7 +536,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 			context: cidfont,
 		},
 		Encoding: core.MakeName("Identity-H"),
-		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),
+		encoder:  ttf.NewEncoder(),
 	}
 
 	type0.toUnicodeCmap = ttf.MakeToUnicode()
