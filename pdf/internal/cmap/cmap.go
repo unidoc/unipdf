@@ -152,9 +152,6 @@ func (cmap *CMap) Type() int {
 // MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
 const MissingCodeRune = textencoding.MissingCodeRune
 
-// MissingCodeString replaces strings that can't be decoded.
-var MissingCodeString = string(MissingCodeRune)
-
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
 // It also returns a bool flag to tell if the conversion was successful.
 // NOTE: This only works for ToUnicode cmaps.

@@ -344,7 +344,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 				"\tfont=%s\n\tencoding=%s",
 				code, data, data, charcodes, font.baseFields().isCIDFont(), font, encoder)
 			numMisses++
-			charstrings = append(charstrings, cmap.MissingCodeString)
+			charstrings = append(charstrings, string(cmap.MissingCodeRune))
 		}
 	}
 
