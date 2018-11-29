@@ -38,7 +38,7 @@ func (font FontTimesRoman) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontTimesRoman) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := TimesRomanCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -60,7 +60,7 @@ func (font FontTimesRoman) ToPdfObject() core.PdfObject {
 
 // TimesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
 // See afms/MustRead.html for license information.
-var TimesRomanCharMetrics = map[string]CharMetrics{
+var TimesRomanCharMetrics = map[GlyphName]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 889.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

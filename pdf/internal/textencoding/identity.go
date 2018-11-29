@@ -36,20 +36,20 @@ func (enc IdentityEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
+func (enc IdentityEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	r, found := enc.CharcodeToRune(code)
 	if found && r == 0x20 {
 		return "space", true
 	}
 
 	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := fmt.Sprintf("uni%.4X", code)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
 	return glyph, true
 }
 
 // GlyphToCharcode returns the character code matching glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
+func (enc IdentityEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	r, ok := enc.GlyphToRune(glyph)
 	if !ok {
 		return 0, false
@@ -71,24 +71,24 @@ func (enc IdentityEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) RuneToGlyph(r rune) (string, bool) {
+func (enc IdentityEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	if r == ' ' {
 		return "space", true
 	}
-	glyph := fmt.Sprintf("uni%.4X", r)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
 	return glyph, true
 }
 
 // GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) GlyphToRune(glyph string) (rune, bool) {
+func (enc IdentityEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if glyph == "space" {
 		return ' ', true
-	} else if !strings.HasPrefix(glyph, "uni") || len(glyph) != 7 {
+	} else if !strings.HasPrefix(string(glyph), "uni") || len(glyph) != 7 {
 		return 0, false
 	}
-	r, err := strconv.ParseUint(glyph[3:], 16, 16)
+	r, err := strconv.ParseUint(string(glyph[3:]), 16, 16)
 	if err != nil {
 		return 0, false
 	}

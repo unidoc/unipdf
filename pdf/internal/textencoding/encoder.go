@@ -12,7 +12,11 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// CharCode is a character code used in the specific encoding.
 type CharCode uint16
+
+// GlyphName is a name of a glyph.
+type GlyphName string
 
 // TextEncoder defines the common methods that a text encoder implementation must have in UniDoc.
 type TextEncoder interface {
@@ -24,11 +28,11 @@ type TextEncoder interface {
 
 	// CharcodeToGlyph returns the glyph name for character code `code`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	CharcodeToGlyph(code CharCode) (string, bool)
+	CharcodeToGlyph(code CharCode) (GlyphName, bool)
 
 	// GlyphToCharcode returns the PDF character code corresponding to glyph name `glyph`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToCharcode(glyph string) (CharCode, bool)
+	GlyphToCharcode(glyph GlyphName) (CharCode, bool)
 
 	// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 	// The bool return flag is true if there was a match, and false otherwise.
@@ -42,11 +46,11 @@ type TextEncoder interface {
 
 	// RuneToGlyph returns the glyph name for rune `r`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	RuneToGlyph(r rune) (string, bool)
+	RuneToGlyph(r rune) (GlyphName, bool)
 
 	// GlyphToRune returns the rune corresponding to glyph name `glyph`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToRune(glyph string) (rune, bool)
+	GlyphToRune(glyph GlyphName) (rune, bool)
 
 	// ToPdfObject returns a PDF Object that represents the encoding.
 	ToPdfObject() core.PdfObject

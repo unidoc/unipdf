@@ -286,13 +286,15 @@ func (p *Paragraph) wrapText() error {
 		return nil
 	}
 
-	line := []rune{}
+	var line []rune
 	lineWidth := 0.0
-	p.textLines = []string{}
+	p.textLines = nil
 
 	runes := []rune(p.text)
-	glyphs := []string{}
-	widths := []float64{}
+	var (
+		glyphs []textencoding.GlyphName
+		widths []float64
+	)
 
 	for _, val := range runes {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
@@ -305,10 +307,10 @@ func (p *Paragraph) wrapText() error {
 		if glyph == "controlLF" {
 			// Moves to next line.
 			p.textLines = append(p.textLines, string(line))
-			line = []rune{}
+			line = nil
 			lineWidth = 0
-			widths = []float64{}
-			glyphs = []string{}
+			widths = nil
+			glyphs = nil
 			continue
 		}
 
@@ -345,7 +347,7 @@ func (p *Paragraph) wrapText() error {
 			} else {
 				p.textLines = append(p.textLines, string(line))
 				line = []rune{val}
-				glyphs = []string{glyph}
+				glyphs = []textencoding.GlyphName{glyph}
 				widths = []float64{w}
 				lineWidth = w
 			}

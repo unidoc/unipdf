@@ -38,7 +38,7 @@ func (font FontCourier) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontCourier) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontCourier) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := CourierCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -60,7 +60,7 @@ func (font FontCourier) ToPdfObject() core.PdfObject {
 
 // CourierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
 // license information.
-var CourierCharMetrics = map[string]CharMetrics{
+var CourierCharMetrics = map[GlyphName]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 600.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 600.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 600.000000, Wy: 0.000000},

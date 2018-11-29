@@ -126,7 +126,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	}
 
 	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
-	glyphCode := make(map[string]textencoding.CharCode)
+	glyphCode := make(map[textencoding.GlyphName]textencoding.CharCode)
 
 	// slots are the indexes in the encoding where the new character codes are added.
 	// slots are unused indexes, which are filled first. slots1 are the used indexes.
@@ -146,7 +146,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	slots = append(slots, slots1...)
 
 	// `glyphs` are the font glyphs that we need to encode.
-	var glyphs []string
+	var glyphs []textencoding.GlyphName
 	for _, r := range sortedAlphabet(alphabet) {
 		glyph, ok := textencoding.RuneToGlyph(r)
 		if !ok {
@@ -167,7 +167,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 
 	// Fill the slots, starting with the empty ones.
 	slotIdx := 0
-	differences := make(map[textencoding.CharCode]string)
+	differences := make(map[textencoding.CharCode]textencoding.GlyphName)
 	for _, glyph := range glyphs {
 		if _, ok := glyphCode[glyph]; !ok {
 			differences[slots[slotIdx]] = glyph
@@ -391,7 +391,7 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
-func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)

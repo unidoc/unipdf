@@ -28,16 +28,16 @@ type SimpleEncoder struct {
 	baseName string
 
 	baseEncoding map[CharCode]rune
-	differences  map[CharCode]string
+	differences  map[CharCode]GlyphName
 
-	codeToGlyph map[CharCode]string
-	glyphToCode map[string]CharCode
+	codeToGlyph map[CharCode]GlyphName
+	glyphToCode map[GlyphName]CharCode
 	codeToRune  map[CharCode]rune
 }
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
-func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[CharCode]string) (
+func NewCustomSimpleTextEncoder(encoding, differences map[CharCode]GlyphName) (
 	*SimpleEncoder, error) {
 	baseName := "custom"
 	baseEncoding := make(map[CharCode]rune)
@@ -56,14 +56,14 @@ func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[Ch
 }
 
 // ApplyDifferences applies the encoding delta `differences` to `se`.
-func (se *SimpleEncoder) ApplyDifferences(differences map[CharCode]string) {
+func (se *SimpleEncoder) ApplyDifferences(differences map[CharCode]GlyphName) {
 	se.differences = differences
 	se.computeTables()
 }
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
 // difference map `differences`.
-func NewSimpleTextEncoder(baseName string, differences map[CharCode]string) (*SimpleEncoder, error) {
+func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (*SimpleEncoder, error) {
 	baseEncoding, ok := simpleEncodings[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
@@ -75,7 +75,7 @@ func NewSimpleTextEncoder(baseName string, differences map[CharCode]string) (*Si
 // newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
 func newSimpleTextEncoder(baseEncoding map[CharCode]rune, baseName string,
-	differences map[CharCode]string) (*SimpleEncoder, error) {
+	differences map[CharCode]GlyphName) (*SimpleEncoder, error) {
 
 	se := SimpleEncoder{
 		baseName:     baseName,
@@ -126,7 +126,7 @@ func (se SimpleEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
+func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	glyph, ok := se.codeToGlyph[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: 0x%04x", code)
@@ -136,7 +136,7 @@ func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
 
 // GlyphToCharcode returns character code for glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
+func (se SimpleEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	code, ok := se.glyphToCode[glyph]
 	if !ok {
 		common.Log.Debug("Glyph -> Charcode error: glyph not found: %q %s", glyph, se)
@@ -162,13 +162,13 @@ func (se SimpleEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 
 // RuneToGlyph returns the glyph corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) RuneToGlyph(r rune) (string, bool) {
+func (se SimpleEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	return runeToGlyph(r, glyphlistRuneToGlyphMap)
 }
 
 // GlyphToRune returns the rune corresponding to glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) GlyphToRune(glyph string) (rune, bool) {
+func (se SimpleEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
 }
 
@@ -204,8 +204,8 @@ func (se *SimpleEncoder) computeTables() {
 		codeToRune[code] = r
 	}
 
-	codeToGlyph := make(map[CharCode]string)
-	glyphToCode := make(map[string]CharCode)
+	codeToGlyph := make(map[CharCode]GlyphName)
+	glyphToCode := make(map[GlyphName]CharCode)
 	for code, r := range codeToRune {
 		if glyph, ok := RuneToGlyph(r); ok {
 			codeToGlyph[code] = glyph
@@ -219,8 +219,8 @@ func (se *SimpleEncoder) computeTables() {
 
 // FromFontDifferences converts `diffList` (a /Differences array from an /Encoding object) to a map
 // representing character code to glyph mappings.
-func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]string, error) {
-	differences := make(map[CharCode]string)
+func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]GlyphName, error) {
+	differences := make(map[CharCode]GlyphName)
 	var n CharCode
 	for _, obj := range diffList.Elements() {
 		switch v := obj.(type) {
@@ -228,7 +228,7 @@ func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]string, er
 			n = CharCode(*v)
 		case *core.PdfObjectName:
 			s := string(*v)
-			differences[n] = s
+			differences[n] = GlyphName(s)
 			n++
 		default:
 			common.Log.Debug("ERROR: Bad type. obj=%s", obj)
@@ -240,7 +240,7 @@ func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]string, er
 
 // ToFontDifferences converts `differences` (a map representing character code to glyph mappings)
 // to a /Differences array for an /Encoding object.
-func ToFontDifferences(differences map[CharCode]string) *core.PdfObjectArray {
+func ToFontDifferences(differences map[CharCode]GlyphName) *core.PdfObjectArray {
 	if len(differences) == 0 {
 		return nil
 	}
@@ -254,10 +254,10 @@ func ToFontDifferences(differences map[CharCode]string) *core.PdfObjectArray {
 	})
 
 	n := codes[0]
-	diffList := []core.PdfObject{core.MakeInteger(int64(n)), core.MakeName(differences[n])}
+	diffList := []core.PdfObject{core.MakeInteger(int64(n)), core.MakeName(string(differences[n]))}
 	for _, c := range codes[1:] {
 		if c == n+1 {
-			diffList = append(diffList, core.MakeName(differences[c]))
+			diffList = append(diffList, core.MakeName(string(differences[c])))
 		} else {
 			diffList = append(diffList, core.MakeInteger(int64(c)))
 		}

@@ -38,7 +38,7 @@ func (font FontTimesBoldItalic) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontTimesBoldItalic) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontTimesBoldItalic) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := TimesBoldItalicCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -60,7 +60,7 @@ func (font FontTimesBoldItalic) ToPdfObject() core.PdfObject {
 
 // TimesBoldItalicCharMetrics are the font metrics loaded from afms/Times-BoldItalic.afm.
 // See afms/MustRead.html for license information.
-var TimesBoldItalicCharMetrics = map[string]CharMetrics{
+var TimesBoldItalicCharMetrics = map[GlyphName]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 944.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},

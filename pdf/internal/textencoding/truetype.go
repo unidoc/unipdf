@@ -72,24 +72,24 @@ func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
+func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	r, found := enc.CharcodeToRune(code)
 	if found && r == 0x20 {
 		return "space", true
 	}
 
 	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := fmt.Sprintf("uni%.4X", code)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
 	return glyph, true
 }
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
+func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		var unicode uint16
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
+		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
 		if n == 1 && err == nil {
 			return enc.RuneToCharcode(rune(unicode))
 		}
@@ -135,21 +135,21 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (string, bool) {
+func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	if r == 0x20 {
 		return "space", true
 	}
-	glyph := fmt.Sprintf("uni%.4X", r)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
 	return glyph, true
 }
 
 // GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToRune(glyph string) (rune, bool) {
+func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		unicode := uint16(0)
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
+		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
 		if n == 1 && err == nil {
 			return rune(unicode), true
 		}

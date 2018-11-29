@@ -623,7 +623,7 @@ endobj
 
 	// Expected is WinAnsiEncoding with the applied differences.
 	winansi := textencoding.NewWinAnsiTextEncoder()
-	differencesMap := map[textencoding.CharCode]string{
+	differencesMap := map[textencoding.CharCode]textencoding.GlyphName{
 		24:  `/breve`,
 		25:  `/caron`,
 		26:  `/circumflex`,
@@ -766,7 +766,7 @@ endobj
 		// Check if in differencesmap first.
 		glyph, has := differencesMap[ccode]
 		if has {
-			glyph = strings.Trim(glyph, `/`)
+			glyph = textencoding.GlyphName(strings.Trim(string(glyph), `/`))
 			if glyph != fontglyph {
 				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", ccode, fontglyph, glyph)
 			}

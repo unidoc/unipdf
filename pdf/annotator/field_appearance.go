@@ -34,7 +34,7 @@ type AppearanceStyle struct {
 	// How much of Rect height to fill when autosizing text.
 	AutoFontSizeFraction float64
 	// Glyph used for check mark in checkboxes (for ZapfDingbats font).
-	CheckmarkGlyph string
+	CheckmarkGlyph textencoding.GlyphName
 
 	BorderSize  float64
 	BorderColor model.PdfColor

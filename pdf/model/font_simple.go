@@ -49,7 +49,7 @@ type pdfFontSimple struct {
 	Encoding  core.PdfObject
 
 	// Standard 14 fonts metrics
-	fontMetrics map[string]fonts.CharMetrics
+	fontMetrics map[textencoding.GlyphName]fonts.CharMetrics
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfFontSimple with its common fields initalized.
@@ -76,7 +76,7 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font pdfFontSimple) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	if font.fontMetrics != nil {
 		metrics, ok := font.fontMetrics[glyph]
 		return metrics, ok
@@ -184,7 +184,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 func (font *pdfFontSimple) addEncoding() error {
 	var (
 		baseEncoder string
-		differences map[textencoding.CharCode]string
+		differences map[textencoding.CharCode]textencoding.GlyphName
 		err         error
 		encoder     *textencoding.SimpleEncoder
 	)
@@ -249,7 +249,7 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj core.PdfObject) (baseName string, differences map[textencoding.CharCode]string, err error) {
+func getFontEncoding(obj core.PdfObject) (baseName string, differences map[textencoding.CharCode]textencoding.GlyphName, err error) {
 	baseName = "StandardEncoding"
 
 	if obj == nil {
