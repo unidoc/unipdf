@@ -262,8 +262,7 @@ type pdfCIDFontType2 struct {
 	container *core.PdfIndirectObject
 
 	// These fields are specific to Type 0 fonts.
-	encoder   textencoding.TextEncoder
-	ttfParser *fonts.TtfType
+	encoder textencoding.TextEncoder
 
 	CIDSystemInfo *core.PdfObjectDictionary
 	DW            core.PdfObject
@@ -273,7 +272,10 @@ type pdfCIDFontType2 struct {
 	CIDToGIDMap   core.PdfObject
 
 	// Mapping between unicode runes to widths.
+	// TODO(dennwc): both are used only in GetGlyphCharMetrics
+	//  			 we can precompute metrics and drop both
 	runeToWidthMap map[rune]int
+	ttfParser      *fonts.TtfType
 }
 
 // pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
@@ -303,6 +305,7 @@ func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
 func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	metrics := fonts.CharMetrics{}
 
+	// TODO(dennwc): why not use font.encoder? however it's not set in the constructor
 	enc := font.ttfParser.NewEncoder()
 
 	// Convert the glyph to character code.
