@@ -8,7 +8,6 @@ package extractor
 import (
 	"flag"
 	"os"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -20,18 +19,14 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// XXX(peterwilliams97) NOTE: We do a best effort at finding the PDF file because we don't keep PDF
-// test files in this repo so you will need to setup `corpusFolders` to point at the corpus directory.
+// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo so you
+// will need to setup UNIDOC_EXTRACT_TESTDATA to point at the corpus directory.
 
 // forceTest should be set to true to force running all tests.
-const forceTest = false
+// NOTE: Setting environment variable UNIDOC_EXTRACT_FORCETEST = 1 sets this to true.
+var forceTest = os.Getenv("UNIDOC_EXTRACT_FORCETEST") == "1"
 
-// corpusFolders is where we search for test files.
-var corpusFolders = []string{
-	"./testdata",
-	"~/testdata",
-	".",
-}
+var corpusFolder = os.Getenv("UNIDOC_EXTRACT_TESTDATA")
 
 func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelError))
@@ -40,23 +35,16 @@ func init() {
 	}
 }
 
-// TestTextExtraction1 tests text extraction on the PDF fragments in `fragmentTests`.
-func TestTextExtraction1(t *testing.T) {
-	for _, f := range fragmentTests {
-		f.testExtraction(t)
-	}
-}
-
-type fragment struct {
-	name     string
-	contents string
-	text     string
-}
-
-var fragmentTests = []fragment{
-
-	{name: "portrait",
-		contents: `
+// TestTextExtractionFragments tests text extraction on the PDF fragments in `fragmentTests`.
+func TestTextExtractionFragments(t *testing.T) {
+	fragmentTests := []struct {
+		name     string
+		contents string
+		text     string
+	}{
+		{
+			name: "portrait",
+			contents: `
         BT
         /UniDocCourier 24 Tf
         (Hello World!)Tj
@@ -64,10 +52,11 @@ var fragmentTests = []fragment{
         (Doink)Tj
         ET
         `,
-		text: "Hello World!\nDoink",
-	},
-	{name: "landscape",
-		contents: `
+			text: "Hello World!\nDoink",
+		},
+		{
+			name: "landscape",
+			contents: `
         BT
         /UniDocCourier 24 Tf
         0 1 -1 0 0 0 Tm
@@ -76,10 +65,11 @@ var fragmentTests = []fragment{
         (Doink)Tj
         ET
         `,
-		text: "Hello World!\nDoink",
-	},
-	{name: "180 degree rotation",
-		contents: `
+			text: "Hello World!\nDoink",
+		},
+		{
+			name: "180 degree rotation",
+			contents: `
         BT
         /UniDocCourier 24 Tf
         -1 0 0 -1 0 0 Tm
@@ -88,10 +78,11 @@ var fragmentTests = []fragment{
         (Doink)Tj
         ET
         `,
-		text: "Hello World!\nDoink",
-	},
-	{name: "Helvetica",
-		contents: `
+			text: "Hello World!\nDoink",
+		},
+		{
+			name: "Helvetica",
+			contents: `
         BT
         /UniDocHelvetica 24 Tf
         0 -1 1 0 0 0 Tm
@@ -100,35 +91,53 @@ var fragmentTests = []fragment{
         (Doink)Tj
         ET
         `,
-		text: "Hello World!\nDoink",
-	},
+			text: "Hello World!\nDoink",
+		},
+	}
+
+	// Setup mock resources.
+	resources := model.NewPdfPageResources()
+	{
+		courier := model.NewStandard14FontMustCompile(model.Courier)
+		helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
+		resources.SetFontByName("UniDocHelvetica", helvetica.ToPdfObject())
+		resources.SetFontByName("UniDocCourier", courier.ToPdfObject())
+	}
+
+	for _, f := range fragmentTests {
+		t.Run(f.name, func(t *testing.T) {
+			e := Extractor{resources: resources, contents: f.contents}
+			text, err := e.ExtractText()
+			if err != nil {
+				t.Fatalf("Error extracting text: %q err=%v", f.name, err)
+				return
+			}
+			if text != f.text {
+				t.Fatalf("Text mismatch: %q Got %q. Expected %q", f.name, text, f.text)
+				return
+			}
+		})
+	}
 }
 
-// testExtraction checks that ExtractText() works on fragment `f`.
-func (f fragment) testExtraction(t *testing.T) {
-	e := Extractor{contents: f.contents}
-	text, err := e.ExtractText()
-	if err != nil {
-		t.Fatalf("Error extracting text: %q err=%v", f.name, err)
-		return
-	}
-	if text != f.text {
-		t.Fatalf("Text mismatch: %q Got %q. Expected %q", f.name, text, f.text)
-		return
-	}
-}
-
-// TestTextExtraction2 tests text extraction on set of PDF files.
+// TestTextExtractionFiles tests text extraction on a set of PDF files.
 // It checks for the existence of specified strings of words on specified pages.
 // We currently only check within lines as our line order is still improving.
-func TestTextExtraction2(t *testing.T) {
-	for _, test := range extract2Tests {
-		testExtract2(t, test.filename, test.expectedPageText)
+func TestTextExtractionFiles(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+
+	for _, test := range fileExtractionTests {
+		t.Run(test.filename, func(t *testing.T) {
+			testExtractFile(t, test.filename, test.expectedPageText)
+		})
 	}
 }
 
-// extract2Tests are the PDFs and texts we are looking for on specified pages.
-var extract2Tests = []struct {
+// fileExtractionTests are the PDFs and texts we are looking for on specified pages.
+var fileExtractionTests = []struct {
 	filename         string
 	expectedPageText map[int][]string
 }{
@@ -216,21 +225,27 @@ var extract2Tests = []struct {
 	},
 }
 
-// testExtract2 tests the ExtractText2 text extractor on `filename` and compares the extracted
+// testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the extracted
 // text to `expectedPageText`.
-// XXX(peterwilliams97) NOTE: We do a best effort at finding the PDF file because we don't keep PDF
-// test files in this repo so you will need to setup `corpusFolders` to point at the corpus directory.
-// If `filename` cannot be found in `corpusFolders` then the test is skipped.
-func testExtract2(t *testing.T, filename string, expectedPageText map[int][]string) {
-	homeDir, hasHome := getHomeDir()
-	path, ok := searchDirectories(homeDir, hasHome, corpusFolders, filename)
-	if !ok {
+//
+// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo
+// so you will need to set the environment variable UNIDOC_EXTRACT_TESTDATA to point at
+// the corpus directory.
+//
+// If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest` global
+// variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
+func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]string) {
+	filepath := filepath.Join(corpusFolder, filename)
+	exists := checkFileExists(filepath)
+	if !exists {
 		if forceTest {
 			t.Fatalf("filename=%q does not exist", filename)
 		}
+		t.Logf("%s not found", filename)
 		return
 	}
-	_, actualPageText := extractPageTexts(t, path)
+
+	_, actualPageText := extractPageTexts(t, filepath)
 	for _, pageNum := range sortedKeys(expectedPageText) {
 		expectedSentences, ok := expectedPageText[pageNum]
 		actualText, ok := actualPageText[pageNum]
@@ -239,12 +254,12 @@ func testExtract2(t *testing.T, filename string, expectedPageText map[int][]stri
 		}
 		actualText = norm.NFKC.String(actualText)
 		if !containsSentences(t, expectedSentences, actualText) {
-			t.Fatalf("Text mismatch filename=%q page=%d", path, pageNum)
+			t.Fatalf("Text mismatch filepath=%q page=%d", filepath, pageNum)
 		}
 	}
 }
 
-// extractPageTexts runs ExtractText2 on all pages in PDF `filename` and returns the result as a map
+// extractPageTexts runs ExtractTextWithStats on all pages in PDF `filename` and returns the result as a map
 // {page number: page text}
 func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 	f, err := os.Open(filename)
@@ -272,11 +287,11 @@ func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 		if err != nil {
 			t.Fatalf("extractor.New failed. filename=%q page=%d err=%v", filename, pageNum, err)
 		}
-		text, _, _, err := ex.ExtractText2()
+		text, _, _, err := ex.ExtractTextWithStats()
 		if err != nil {
-			t.Fatalf("ExtractText2 failed. filename=%q page=%d err=%v", filename, pageNum, err)
+			t.Fatalf("ExtractTextWithStats failed. filename=%q page=%d err=%v", filename, pageNum, err)
 		}
-		// XXX(peterwilliams97)TODO: Improve text extraction space insertion so we don't need reduceSpaces.
+		// TODO(peterwilliams97): Improve text extraction space insertion so we don't need reduceSpaces.
 		pageText[pageNum] = reduceSpaces(text)
 	}
 	return numPages, pageText
@@ -303,30 +318,10 @@ func reduceSpaces(text string) string {
 
 var reSpace = regexp.MustCompile(`(?m)\s+`)
 
-// searchDirectories searches `directories` for `filename` and returns the full file path if it is
-// found. `homeDir` and `hasHome` are used for home directory substitution.
-func searchDirectories(homeDir string, hasHome bool, directories []string, filename string) (string, bool) {
-	for _, direct := range directories {
-		if hasHome {
-			direct = strings.Replace(direct, "~", homeDir, 1)
-		}
-		path := filepath.Join(direct, filename)
-		if _, err := os.Stat(path); err == nil {
-			return path, true
-		}
-	}
-	return "", false
-}
-
-// getHomeDir returns the current user's home directory if it is defined and a bool to tell if it
-// is defined.
-func getHomeDir() (string, bool) {
-	usr, err := user.Current()
-	if err != nil {
-		common.Log.Error("No current user. err=%v", err)
-		return "", false
-	}
-	return usr.HomeDir, true
+// checkFileExists returns true if `filepath` exists.
+func checkFileExists(filepath string) bool {
+	_, err := os.Stat(filepath)
+	return err == nil
 }
 
 // sortedKeys returns the keys of `m` as a sorted slice.

@@ -18,26 +18,30 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
-// Font represents a font which is a series of glyphs. Character codes from PDF strings can be
-// mapped to and from glyphs. Each glyph has metrics.
-// XXX: FIXME (peterwilliams97) HACK to add GetCharMetrics() for fonts other than standard 14
-//      Remove this hack.
-type Font interface {
-	Encoder() textencoding.TextEncoder
-	SetEncoder(encoder textencoding.TextEncoder)
-	GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool)
-	GetCharMetrics(code uint16) (fonts.CharMetrics, bool)
-	GetAverageCharWidth() float64 // XXX(peterwilliams97) Not used. Remove.
-	ToPdfObject() core.PdfObject
-}
-
 // PdfFont represents an underlying font structure which can be of type:
 // - Type0
 // - Type1
 // - TrueType
 // etc.
 type PdfFont struct {
-	context Font // The underlying font: Type0, Type1, Truetype, etc..
+	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+}
+
+// getCharCodeMetrics is a handy function for getting character metrics given a charcode.
+func (font PdfFont) getCharCodeMetrics(code uint16) (fonts.CharMetrics, bool) {
+	var nometrics fonts.CharMetrics
+
+	enc := font.Encoder()
+	if enc == nil {
+		return nometrics, false
+	}
+
+	glyph, found := enc.CharcodeToGlyph(code)
+	if !found {
+		return nometrics, false
+	}
+
+	return font.GetGlyphCharMetrics(glyph)
 }
 
 // GetFontDescriptor returns the font descriptor for `font`.
@@ -516,18 +520,7 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 
 // GetCharMetrics returns the char metrics for character code `code`.
 func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
-	t := font.actualFont()
-	if t == nil {
-		common.Log.Debug("ERROR: GetCharMetrics Not implemented for font type=%#T", font.context)
-		return fonts.CharMetrics{}, false
-	}
-	if m, ok := t.GetCharMetrics(code); ok {
-		return m, ok
-	}
-	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
-		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
-	}
-	return fonts.CharMetrics{}, false
+	return font.getCharCodeMetrics(code)
 }
 
 // GetRuneCharMetrics returns the char metrics for rune `r`.
@@ -550,18 +543,9 @@ func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, error) {
 	return m, nil
 }
 
-// GetAverageCharWidth returns the average width of all the characters in `font`.
-func (font PdfFont) GetAverageCharWidth() float64 {
-	t := font.actualFont()
-	if t == nil {
-		common.Log.Debug("ERROR: GetAverageCharWidth Not implemented for font type=%#T", font.context)
-		return 0.0
-	}
-	return t.GetAverageCharWidth()
-}
-
 // actualFont returns the Font in font.context
-func (font PdfFont) actualFont() Font {
+// NOTE(gunnsth): Actually this only sanity checks the font.context as the returned font will be wrapped in an interface.
+func (font PdfFont) actualFont() fonts.Font {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
 	}
