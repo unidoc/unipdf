@@ -338,7 +338,7 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			if vertical {
 				dy, dx = dx, dy
 			}
-			td := translationMatrix(Point{X: dx, Y: dy})
+			td := translationMatrix(model.Point{X: dx, Y: dy})
 			to.Tm = td.Mult(to.Tm)
 			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
 		case *core.PdfObjectString:
@@ -655,12 +655,12 @@ func (to *textObject) renderText(data []byte) error {
 		}
 
 		// c is the character size in unscaled text units.
-		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
+		c := model.Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
 
 		// t0 is the end of this character.
 		// t is the displacement of the text cursor when the character is rendered.
-		t0 := Point{X: (c.X*tfs + w) * th}
-		t := Point{X: (c.X*tfs + state.Tc + w) * th}
+		t0 := model.Point{X: (c.X*tfs + w) * th}
+		t := model.Point{X: (c.X*tfs + state.Tc + w) * th}
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
@@ -675,7 +675,6 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
-			1.0*trm.ScalingFactorY(),
 			spaceWidth*trm.ScalingFactorX())
 		common.Log.Trace("i=%d code=%d xyt=%s trm=%s", i, code, xyt, trm)
 		to.Texts = append(to.Texts, xyt)
@@ -692,13 +691,13 @@ func (to *textObject) renderText(data []byte) error {
 const glyphTextRatio = 1.0 / 1000.0
 
 // translation returns the translation part of `m`.
-func translation(m model.Matrix) Point {
+func translation(m model.Matrix) model.Point {
 	tx, ty := m.Translation()
-	return Point{tx, ty}
+	return model.Point{tx, ty}
 }
 
 // translationMatrix returns a matrix that translates by `p`.
-func translationMatrix(p Point) model.Matrix {
+func translationMatrix(p model.Point) model.Matrix {
 	return model.TranslationMatrix(p.X, p.Y)
 }
 
@@ -714,23 +713,24 @@ func (to *textObject) moveTo(tx, ty float64) {
 // XYText represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type XYText struct {
-	Text          string  // The text.
-	Orient        int     // The text orientation.
-	OrientedStart Point   // Left of text in orientation where text is horizontal.
-	OrientedEnd   Point   // Right of text in orientation where text is horizontal.
-	Height        float64 // Text height.
-	SpaceWidth    float64 // Best guess at the width of a space in the font the text was rendered with.
-	count         int64   // To help with reading debug logs.
+	Text          string      // The text.
+	Orient        int         // The text orientation in degrees. This is the current trm rounded to 10°.
+	OrientedStart model.Point // Left of text in orientation where text is horizontal.
+	OrientedEnd   model.Point // Right of text in orientation where text is horizontal.
+	Height        float64     // Text height.
+	SpaceWidth    float64     // Best guess at the width of a space in the font the text was rendered with.
+	count         int64       // To help with reading debug logs.
 }
 
 // newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm model.Matrix, end Point,
-	height, spaceWidth float64) XYText {
+func (to *textObject) newXYText(text string, trm model.Matrix, end model.Point, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
-	if theta%180 == 0 {
+	orient := nearestMultiple(theta, 10)
+	var height float64
+	if orient%180 != 90 {
 		height = trm.ScalingFactorY()
 	} else {
 		height = trm.ScalingFactorX()
@@ -738,13 +738,22 @@ func (to *textObject) newXYText(text string, trm model.Matrix, end Point,
 
 	return XYText{
 		Text:          text,
-		Orient:        theta,
+		Orient:        orient,
 		OrientedStart: translation(trm).Rotate(theta),
 		OrientedEnd:   end.Rotate(theta),
 		Height:        height,
 		SpaceWidth:    spaceWidth,
 		count:         to.e.textCount,
 	}
+}
+
+// nearestMultiple return the multiple of `m` that is closest to `x`.
+func nearestMultiple(x float64, m int) int {
+	if m == 0 {
+		m = 1
+	}
+	fac := float64(m)
+	return int(math.Round(x/fac) * fac)
 }
 
 // String returns a string describing `t`.

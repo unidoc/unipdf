@@ -7,13 +7,11 @@
 
 // XXX(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
 
-package extractor
+package model
 
 import (
 	"fmt"
-
-	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model"
+	"math"
 )
 
 // Point defines a point in Cartesian coordinates
@@ -34,7 +32,7 @@ func (p *Point) Set(x, y float64) {
 
 // Transform transforms `p` by the affine transformation a, b, c, d, tx, ty.
 func (p *Point) Transform(a, b, c, d, tx, ty float64) {
-	m := model.NewMatrix(a, b, c, d, tx, ty)
+	m := NewMatrix(a, b, c, d, tx, ty)
 	p.transformByMatrix(m)
 }
 
@@ -44,28 +42,19 @@ func (p Point) Displace(delta Point) Point {
 }
 
 // Rotate returns `p` rotated by `theta` degrees.
-func (p Point) Rotate(theta int) Point {
-	switch theta {
-	case 0:
-		p.X, p.Y = p.X, p.Y
-	case 90:
-		p.X, p.Y = -p.Y, p.X
-	case 180:
-		p.X, p.Y = -p.X, -p.Y
-	case 270:
-		p.X, p.Y = p.Y, -p.X
-	default:
-		common.Log.Debug("ERROR: Unsupported rotation %d", theta)
-	}
-	return p
+func (p Point) Rotate(theta float64) Point {
+	radians := theta / 180.0 * math.Pi
+	r := math.Hypot(p.X, p.Y)
+	t := math.Atan2(p.Y, p.X)
+	return Point{r * math.Cos(t+radians), r * math.Sin(t+radians)}
 }
 
 // transformByMatrix transforms `p` by the affine transformation `m`.
-func (p *Point) transformByMatrix(m model.Matrix) {
+func (p *Point) transformByMatrix(m Matrix) {
 	p.X, p.Y = m.Transform(p.X, p.Y)
 }
 
 // String returns a string describing `p`.
-func (p *Point) String() string {
+func (p Point) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)", p.X, p.Y)
 }
