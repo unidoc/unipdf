@@ -27,9 +27,9 @@ import (
 type SimpleEncoder struct {
 	baseName string
 
-	// TODO(dennwc): both maps use CharCode as a key
-	baseEncoding map[uint16]rune
-	differences  map[byte]string
+	baseEncoding map[CharCode]rune
+	// TODO(dennwc): map uses CharCode as a key
+	differences map[byte]string
 
 	CodeToGlyph map[CharCode]string
 	glyphToCode map[string]CharCode
@@ -38,10 +38,10 @@ type SimpleEncoder struct {
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
-func NewCustomSimpleTextEncoder(encoding map[uint16]string, differences map[byte]string) (
+func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[byte]string) (
 	*SimpleEncoder, error) {
 	baseName := "custom"
-	baseEncoding := map[uint16]rune{}
+	baseEncoding := make(map[CharCode]rune)
 	if len(encoding) == 0 {
 		return &SimpleEncoder{}, errors.New("Empty custom encoding")
 	}
@@ -75,7 +75,7 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (*Simple
 
 // newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
-func newSimpleTextEncoder(baseEncoding map[uint16]rune, baseName string,
+func newSimpleTextEncoder(baseEncoding map[CharCode]rune, baseName string,
 	differences map[byte]string) (*SimpleEncoder, error) {
 
 	se := SimpleEncoder{
@@ -270,7 +270,7 @@ func ToFontDifferences(differences map[byte]string) *core.PdfObjectArray {
 }
 
 // simpleEncodings is a map of the standard 8 bit character encodings.
-var simpleEncodings = map[string]map[uint16]rune{
+var simpleEncodings = map[string]map[CharCode]rune{
 	"MacExpertEncoding": { // 165 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0xf721, //  "exclamsmall"

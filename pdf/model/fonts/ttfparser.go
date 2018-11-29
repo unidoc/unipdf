@@ -46,9 +46,10 @@ import (
 
 // MakeEncoder returns an encoder built from the tables in  `rec`.
 func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
-	encoding := map[uint16]string{}
-	for code := uint16(0); code <= 256; code++ {
-		gid, ok := rec.Chars[rune(code)] // TODO(dennwc): make sure it's valid
+	encoding := make(map[textencoding.CharCode]string)
+	for code := textencoding.CharCode(0); code <= 256; code++ {
+		r := rune(code) // TODO(dennwc): make sure this conversion is valid
+		gid, ok := rec.Chars[r]
 		if !ok {
 			continue
 		}
@@ -98,14 +99,16 @@ type TtfType struct {
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := make(map[cmap.CharCode]rune)
-	for code, idx := range ttf.Chars {
-		glyph := ttf.GlyphNames[idx]
+	for code, gid := range ttf.Chars {
+		glyph := ttf.GlyphNames[gid]
 
+		// TODO(dennwc): 'code' is already a rune; do we need this extra lookup?
 		r, ok := textencoding.GlyphToRune(glyph)
 		if !ok {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
 			r = textencoding.MissingCodeRune
 		}
+		// TODO(dennwc): implies rune <-> charcode identity?
 		codeToUnicode[cmap.CharCode(code)] = r
 	}
 	return cmap.NewToUnicodeCMap(codeToUnicode)
