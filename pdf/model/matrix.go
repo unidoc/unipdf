@@ -104,7 +104,6 @@ func (m *Matrix) ScalingFactorY() float64 {
 
 // Angle returns the angle of the affine transform in `m` in degrees.
 func (m *Matrix) Angle() float64 {
-	// a, b := m[0], m[1]
 	theta := math.Atan2(-m[1], m[0])
 	if theta < 0.0 {
 		theta += 2 * math.Pi
