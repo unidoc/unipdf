@@ -11,6 +11,8 @@ package creator
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	goimage "image"
 	"io/ioutil"
@@ -2930,5 +2932,38 @@ func TestAllOptimizations(t *testing.T) {
 	}
 	if fileInfoOptimized.Size() >= fileInfo.Size() {
 		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
+	}
+}
+
+// Tests that creator's output is predictable and returns exactly the same file given the same input.
+func TestCreatorStable(t *testing.T) {
+	writePDF := func() string {
+		creator := New()
+
+		font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
+		if err != nil {
+			t.Fatalf("Fail: %v\n", err)
+		}
+
+		p := creator.NewParagraph("你好")
+		p.SetFont(font)
+
+		err = creator.Draw(p)
+		if err != nil {
+			t.Fatalf("Fail: %v\n", err)
+		}
+
+		h := md5.New()
+		err = creator.Write(h)
+		if err != nil {
+			t.Fatalf("Fail: %v\n", err)
+		}
+		return hex.EncodeToString(h.Sum(nil))
+	}
+
+	h1 := writePDF()
+	h2 := writePDF()
+	if h1 != h2 {
+		t.Fatal("output is not stable")
 	}
 }
