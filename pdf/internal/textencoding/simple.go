@@ -28,8 +28,7 @@ type SimpleEncoder struct {
 	baseName string
 
 	baseEncoding map[CharCode]rune
-	// TODO(dennwc): map uses CharCode as a key
-	differences map[byte]string
+	differences  map[CharCode]string
 
 	CodeToGlyph map[CharCode]string
 	glyphToCode map[string]CharCode
@@ -38,7 +37,7 @@ type SimpleEncoder struct {
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
-func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[byte]string) (
+func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[CharCode]string) (
 	*SimpleEncoder, error) {
 	baseName := "custom"
 	baseEncoding := make(map[CharCode]rune)
@@ -57,14 +56,14 @@ func NewCustomSimpleTextEncoder(encoding map[CharCode]string, differences map[by
 }
 
 // ApplyDifferences applies the encoding delta `differences` to `se`.
-func (se *SimpleEncoder) ApplyDifferences(differences map[byte]string) {
+func (se *SimpleEncoder) ApplyDifferences(differences map[CharCode]string) {
 	se.differences = differences
 	se.computeTables()
 }
 
 // NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
 // difference map `differences`.
-func NewSimpleTextEncoder(baseName string, differences map[byte]string) (*SimpleEncoder, error) {
+func NewSimpleTextEncoder(baseName string, differences map[CharCode]string) (*SimpleEncoder, error) {
 	baseEncoding, ok := simpleEncodings[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
@@ -76,7 +75,7 @@ func NewSimpleTextEncoder(baseName string, differences map[byte]string) (*Simple
 // newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
 // `differences`.
 func newSimpleTextEncoder(baseEncoding map[CharCode]rune, baseName string,
-	differences map[byte]string) (*SimpleEncoder, error) {
+	differences map[CharCode]string) (*SimpleEncoder, error) {
 
 	se := SimpleEncoder{
 		baseName:     baseName,
@@ -222,13 +221,13 @@ func (se *SimpleEncoder) computeTables() {
 
 // FromFontDifferences converts `diffList` (a /Differences array from an /Encoding object) to a map
 // representing character code to glyph mappings.
-func FromFontDifferences(diffList *core.PdfObjectArray) (map[byte]string, error) {
-	differences := map[byte]string{}
-	var n byte
+func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]string, error) {
+	differences := make(map[CharCode]string)
+	var n CharCode
 	for _, obj := range diffList.Elements() {
 		switch v := obj.(type) {
 		case *core.PdfObjectInteger:
-			n = byte(*v)
+			n = CharCode(*v)
 		case *core.PdfObjectName:
 			s := string(*v)
 			differences[n] = s
@@ -243,12 +242,12 @@ func FromFontDifferences(diffList *core.PdfObjectArray) (map[byte]string, error)
 
 // ToFontDifferences converts `differences` (a map representing character code to glyph mappings)
 // to a /Differences array for an /Encoding object.
-func ToFontDifferences(differences map[byte]string) *core.PdfObjectArray {
+func ToFontDifferences(differences map[CharCode]string) *core.PdfObjectArray {
 	if len(differences) == 0 {
 		return nil
 	}
 
-	codes := []byte{}
+	codes := make([]CharCode, 0, len(differences))
 	for c := range differences {
 		codes = append(codes, c)
 	}

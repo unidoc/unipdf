@@ -126,28 +126,27 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	}
 
 	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
-	glyphCode := map[string]byte{}
+	glyphCode := make(map[string]textencoding.CharCode)
 
 	// slots are the indexes in the encoding where the new character codes are added.
 	// slots are unused indexes, which are filled first. slots1 are the used indexes.
-	slots := []byte{}
-	slots1 := []byte{}
+	var slots, slots1 []textencoding.CharCode
 	for code := textencoding.CharCode(1); code <= 0xff; code++ {
 		if glyph, ok := encoder.CodeToGlyph[code]; ok {
-			glyphCode[glyph] = byte(code)
+			glyphCode[glyph] = code
 			// Don't overwrite space
 			if glyph != "space" {
 
-				slots1 = append(slots1, byte(code))
+				slots1 = append(slots1, code)
 			}
 		} else {
-			slots = append(slots, byte(code))
+			slots = append(slots, code)
 		}
 	}
 	slots = append(slots, slots1...)
 
 	// `glyphs` are the font glyphs that we need to encode.
-	glyphs := []string{}
+	var glyphs []string
 	for _, r := range sortedAlphabet(alphabet) {
 		glyph, ok := textencoding.RuneToGlyph(r)
 		if !ok {
@@ -168,7 +167,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 
 	// Fill the slots, starting with the empty ones.
 	slotIdx := 0
-	differences := map[byte]string{}
+	differences := make(map[textencoding.CharCode]string)
 	for _, glyph := range glyphs {
 		if _, ok := glyphCode[glyph]; !ok {
 			differences[slots[slotIdx]] = glyph

@@ -182,10 +182,12 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 // addEncoding adds the encoding to the font.
 // The order of precedence is important.
 func (font *pdfFontSimple) addEncoding() error {
-	var baseEncoder string
-	var differences map[byte]string
-	var err error
-	var encoder *textencoding.SimpleEncoder
+	var (
+		baseEncoder string
+		differences map[textencoding.CharCode]string
+		err         error
+		encoder     *textencoding.SimpleEncoder
+	)
 
 	if font.Encoding != nil {
 		baseEncoder, differences, err = getFontEncoding(font.Encoding)
@@ -247,7 +249,7 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj core.PdfObject) (baseName string, differences map[byte]string, err error) {
+func getFontEncoding(obj core.PdfObject) (baseName string, differences map[textencoding.CharCode]string, err error) {
 	baseName = "StandardEncoding"
 
 	if obj == nil {
