@@ -191,23 +191,21 @@ func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 // computeTables computes the tables needed for a working SimpleEncoder from the member
 // fields `baseEncoding` and `differences`.
 func (se *SimpleEncoder) computeTables() {
-	codeToRune := map[CharCode]rune{}
+	codeToRune := make(map[CharCode]rune)
 	for code, r := range se.baseEncoding {
-		codeToRune[CharCode(code)] = r
+		codeToRune[code] = r
 	}
-	if se.differences != nil {
-		for code, glyph := range se.differences {
-			r, ok := GlyphToRune(glyph)
-			if !ok {
-				common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph,
-					se.differences)
-			}
-			codeToRune[CharCode(code)] = r
+	for code, glyph := range se.differences {
+		r, ok := GlyphToRune(glyph)
+		if !ok {
+			common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph,
+				se.differences)
 		}
+		codeToRune[code] = r
 	}
 
-	codeToGlyph := map[CharCode]string{}
-	glyphToCode := map[string]CharCode{}
+	codeToGlyph := make(map[CharCode]string)
+	glyphToCode := make(map[string]CharCode)
 	for code, r := range codeToRune {
 		if glyph, ok := RuneToGlyph(r); ok {
 			codeToGlyph[code] = glyph
