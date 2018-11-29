@@ -47,11 +47,6 @@ func (font FontTimesRoman) GetGlyphCharMetrics(glyph string) (CharMetrics, bool)
 	return metrics, true
 }
 
-// GetAverageCharWidth returns the average width of all glyphs in the font.
-func (font FontTimesRoman) GetAverageCharWidth() float64 {
-	return AverageCharWidth(TimesRomanCharMetrics)
-}
-
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font FontTimesRoman) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()

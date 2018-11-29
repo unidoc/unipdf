@@ -31,11 +31,3 @@ type CharMetrics struct {
 func (m CharMetrics) String() string {
 	return fmt.Sprintf("<%q,%.1f,%.1f>", m.GlyphName, m.Wx, m.Wy)
 }
-
-func AverageCharWidth(metrics map[string]CharMetrics) float64 {
-	total := 0.0
-	for _, m := range metrics {
-		total += m.Wx
-	}
-	return total / float64(len(metrics))
-}
