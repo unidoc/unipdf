@@ -132,7 +132,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	// slots are unused indexes, which are filled first. slots1 are the used indexes.
 	var slots, slots1 []textencoding.CharCode
 	for code := textencoding.CharCode(1); code <= 0xff; code++ {
-		if glyph, ok := encoder.CodeToGlyph[code]; ok {
+		if glyph, ok := encoder.CharcodeToGlyph(code); ok {
 			glyphCode[glyph] = code
 			// Don't overwrite space
 			if glyph != "space" {

@@ -30,7 +30,7 @@ type SimpleEncoder struct {
 	baseEncoding map[CharCode]rune
 	differences  map[CharCode]string
 
-	CodeToGlyph map[CharCode]string
+	codeToGlyph map[CharCode]string
 	glyphToCode map[string]CharCode
 	codeToRune  map[CharCode]rune
 }
@@ -96,12 +96,12 @@ func (se SimpleEncoder) String() string {
 		name = fmt.Sprintf("%s(diff)", se.baseName)
 	}
 	parts := []string{
-		fmt.Sprintf("%#q %d entries %d differences", name, len(se.CodeToGlyph), len(se.differences)),
+		fmt.Sprintf("%#q %d entries %d differences", name, len(se.codeToGlyph), len(se.differences)),
 		fmt.Sprintf("differences=%+v", se.differences),
 	}
 
-	codes := make([]CharCode, 0, len(se.CodeToGlyph))
-	for c := range se.CodeToGlyph {
+	codes := make([]CharCode, 0, len(se.codeToGlyph))
+	for c := range se.codeToGlyph {
 		codes = append(codes, c)
 	}
 	sort.Slice(codes, func(i, j int) bool {
@@ -114,7 +114,7 @@ func (se SimpleEncoder) String() string {
 
 	for i := 0; i < numCodes; i++ {
 		c := codes[i]
-		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.CodeToGlyph[c]))
+		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.codeToGlyph[c]))
 	}
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
@@ -127,7 +127,7 @@ func (se SimpleEncoder) Encode(raw string) []byte {
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
-	glyph, ok := se.CodeToGlyph[code]
+	glyph, ok := se.codeToGlyph[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: 0x%04x", code)
 	}
@@ -214,7 +214,7 @@ func (se *SimpleEncoder) computeTables() {
 			glyphToCode[glyph] = code
 		}
 	}
-	se.CodeToGlyph = codeToGlyph
+	se.codeToGlyph = codeToGlyph
 	se.glyphToCode = glyphToCode
 	se.codeToRune = codeToRune
 }
