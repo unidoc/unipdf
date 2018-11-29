@@ -94,7 +94,7 @@ type TtfType struct {
 // XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
-	codeToUnicode := map[cmap.CharCode]string{}
+	codeToUnicode := make(map[cmap.CharCode]rune)
 	for code, idx := range ttf.Chars {
 		glyph := ttf.GlyphNames[idx]
 
@@ -103,7 +103,7 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
 			r = textencoding.MissingCodeRune
 		}
-		codeToUnicode[cmap.CharCode(code)] = string(r)
+		codeToUnicode[cmap.CharCode(code)] = r
 	}
 	return cmap.NewToUnicodeCMap(codeToUnicode)
 }

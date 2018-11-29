@@ -329,7 +329,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 		if font.baseFields().toUnicodeCmap != nil {
 			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
 			if ok {
-				charstrings = append(charstrings, r)
+				charstrings = append(charstrings, string(r))
 				continue
 			}
 		}
