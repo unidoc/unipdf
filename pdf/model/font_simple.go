@@ -149,18 +149,6 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 	return fonts.CharMetrics{}, false
 }
 
-// GetAverageCharWidth returns the average width of all the characters in `font`.
-func (font pdfFontSimple) GetAverageCharWidth() float64 {
-	if font.fontMetrics != nil {
-		return fonts.AverageCharWidth(font.fontMetrics)
-	}
-	total := 0.0
-	for _, w := range font.charWidths {
-		total += w
-	}
-	return total / float64(len(font.charWidths))
-}
-
 // newSimpleFontFromPdfObject creates a pdfFontSimple from dictionary `d`. Elements of `d` that
 // are already parsed are contained in `base`.
 // Standard 14 fonts need to to specify their builtin encoders in the `std14Encoder` parameter.

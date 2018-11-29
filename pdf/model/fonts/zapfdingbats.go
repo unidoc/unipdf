@@ -48,11 +48,6 @@ func (font FontZapfDingbats) GetGlyphCharMetrics(glyph string) (CharMetrics, boo
 	return metrics, true
 }
 
-// GetAverageCharWidth returns the average width of all glyphs in the font.
-func (font FontZapfDingbats) GetAverageCharWidth() float64 {
-	return AverageCharWidth(ZapfDingbatsCharMetrics)
-}
-
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font FontZapfDingbats) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()

@@ -60,20 +60,25 @@ type HandlerEntry struct {
 	Handler   HandlerFunc
 }
 
+// HandlerConditionEnum represents the type of operand content stream processor.
+// HandlerConditionEnumOperand handler handles a single operand, whereas
+// HandlerConditionEnumAllOperands processes all operands.
 type HandlerConditionEnum int
-
-func (csp HandlerConditionEnum) All() bool {
-	return csp == HandlerConditionEnumAllOperands
-}
-
-func (csp HandlerConditionEnum) Operand() bool {
-	return csp == HandlerConditionEnumOperand
-}
 
 const (
 	HandlerConditionEnumOperand     HandlerConditionEnum = iota
 	HandlerConditionEnumAllOperands HandlerConditionEnum = iota
 )
+
+// All returns true if `hce` is equivalent to HandlerConditionEnumAllOperands.
+func (hce HandlerConditionEnum) All() bool {
+	return hce == HandlerConditionEnumAllOperands
+}
+
+// Operand returns true if `hce` is equivalent to HandlerConditionEnumOperand.
+func (hce HandlerConditionEnum) Operand() bool {
+	return hce == HandlerConditionEnumOperand
+}
 
 func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProcessor {
 	csp := ContentStreamProcessor{}
