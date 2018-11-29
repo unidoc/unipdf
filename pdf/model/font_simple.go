@@ -355,7 +355,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 			continue
 		}
 
-		pos, ok := ttf.Chars[uint16(r)]
+		pos, ok := ttf.Chars[r]
 		if !ok {
 			common.Log.Debug("Rune not in TTF Chars")
 			vals = append(vals, missingWidth)

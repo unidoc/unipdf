@@ -113,7 +113,7 @@ func TestTTFParse(t *testing.T) {
 					} else if ind != c.runes[r] {
 						t.Fatalf("%x != %x", ind, c.runes[r])
 					}
-					w := ft.Widths[ft.Chars[uint16(r)]]
+					w := ft.Widths[ft.Chars[r]]
 					if int(w) != c.widths[r] {
 						t.Errorf("%d != %d", int(w), c.widths[r])
 					}

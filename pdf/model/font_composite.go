@@ -273,7 +273,7 @@ type pdfCIDFontType2 struct {
 	CIDToGIDMap   core.PdfObject
 
 	// Mapping between unicode runes to widths.
-	runeToWidthMap map[uint16]int
+	runeToWidthMap map[rune]int
 
 	// Also mapping between GIDs (glyph index) and width.
 	gidToWidthMap map[uint16]int
@@ -315,7 +315,7 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 		return metrics, false
 	}
 
-	w, found := font.runeToWidthMap[uint16(r)]
+	w, found := font.runeToWidthMap[r]
 	if !found {
 		dw, ok := core.GetInt(font.DW)
 		if !ok {
@@ -409,9 +409,9 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes ➞ runes
-	runes := make([]uint16, 0, len(ttf.Chars))
+	runes := make([]rune, 0, len(ttf.Chars))
 	for r := range ttf.Chars {
-		runes = append(runes, r)
+		runes = append(runes, rune(r))
 	}
 	// make sure runes are sorted so PDF output is stable
 	sort.Slice(runes, func(i, j int) bool {
@@ -427,7 +427,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	missingWidth := k * float64(ttf.Widths[0])
 
 	// Construct a rune ➞ width map.
-	runeToWidthMap := map[uint16]int{}
+	runeToWidthMap := make(map[rune]int)
 	gidToWidthMap := map[uint16]int{}
 	for _, r := range runes {
 		glyphIndex := ttf.Chars[r]
