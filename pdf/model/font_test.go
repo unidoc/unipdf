@@ -623,7 +623,7 @@ endobj
 
 	// Expected is WinAnsiEncoding with the applied differences.
 	winansi := textencoding.NewWinAnsiTextEncoder()
-	differencesMap := map[int]string{
+	differencesMap := map[textencoding.CharCode]string{
 		24:  `/breve`,
 		25:  `/caron`,
 		26:  `/circumflex`,
@@ -754,10 +754,10 @@ endobj
 		255: `/ydieresis`,
 	}
 
-	for ccode := 32; ccode < 255; ccode++ {
-		fontglyph, has := font.Encoder().CharcodeToGlyph(uint16(ccode))
+	for ccode := textencoding.CharCode(32); ccode < 255; ccode++ {
+		fontglyph, has := font.Encoder().CharcodeToGlyph(ccode)
 		if !has {
-			baseglyph, bad := winansi.CharcodeToGlyph(uint16(ccode))
+			baseglyph, bad := winansi.CharcodeToGlyph(ccode)
 			if bad {
 				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", ccode, baseglyph)
 			}
@@ -774,7 +774,7 @@ endobj
 		}
 
 		// If not in differences, should be according to WinAnsiEncoding (base).
-		glyph, has = winansi.CharcodeToGlyph(uint16(ccode))
+		glyph, has = winansi.CharcodeToGlyph(ccode)
 		if !has {
 			t.Fatalf("WinAnsi not having glyph for char code %d", ccode)
 		}

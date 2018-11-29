@@ -67,6 +67,9 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }
 
+// GID is a glyph index.
+type GID = textencoding.GID
+
 // TtfType describes a TrueType font file.
 // http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
 type TtfType struct {
@@ -85,7 +88,7 @@ type TtfType struct {
 
 	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e. GlyphNames[Chars[r]] is
 	// the glyph corresponding to rune r.
-	Chars map[rune]uint16
+	Chars map[rune]GID
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
 	GlyphNames []string
 }
@@ -326,7 +329,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 	endCount := make([]rune, 0, 8)
 	idDelta := make([]int16, 0, 8)
 	idRangeOffset := make([]uint16, 0, 8)
-	t.rec.Chars = make(map[rune]uint16)
+	t.rec.Chars = make(map[rune]GID)
 	t.f.Seek(int64(t.tables["cmap"])+offset31, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 4 {
@@ -374,7 +377,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 				gid -= 65536
 			}
 			if gid > 0 {
-				t.rec.Chars[c] = uint16(gid)
+				t.rec.Chars[c] = GID(gid)
 			}
 		}
 	}
@@ -385,7 +388,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 
 	if t.rec.Chars == nil {
-		t.rec.Chars = make(map[rune]uint16)
+		t.rec.Chars = make(map[rune]GID)
 	}
 
 	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
@@ -412,10 +415,10 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 	}
 	data := []byte(dataStr)
 
-	for code, glyphId := range data {
-		t.rec.Chars[rune(code)] = uint16(glyphId)
-		if glyphId != 0 {
-			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, glyphId, rune(glyphId))
+	for code, gid := range data {
+		t.rec.Chars[rune(code)] = GID(gid)
+		if gid != 0 {
+			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, gid, rune(gid))
 		}
 	}
 	return nil
@@ -468,7 +471,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 	common.Log.Trace("parseCmapVersion: offset=%d", offset)
 
 	if t.rec.Chars == nil {
-		t.rec.Chars = make(map[rune]uint16)
+		t.rec.Chars = make(map[rune]GID)
 	}
 
 	t.f.Seek(int64(t.tables["cmap"])+offset, os.SEEK_SET)
@@ -507,7 +510,7 @@ func (t *ttfParser) parseCmapFormat0() error {
 	common.Log.Trace("parseCmapFormat0: %s\ndataStr=%+q\ndata=[% 02x]", t.rec.String(), dataStr, data)
 
 	for code, glyphId := range data {
-		t.rec.Chars[rune(code)] = uint16(glyphId)
+		t.rec.Chars[rune(code)] = GID(glyphId)
 	}
 	return nil
 }
@@ -521,7 +524,7 @@ func (t *ttfParser) parseCmapFormat6() error {
 		t.rec.String(), firstCode, entryCount)
 
 	for i := 0; i < entryCount; i++ {
-		glyphId := t.ReadUShort()
+		glyphId := GID(t.ReadUShort())
 		t.rec.Chars[rune(i+firstCode)] = glyphId
 	}
 
@@ -557,7 +560,7 @@ func (t *ttfParser) parseCmapFormat12() error {
 				common.Log.Debug("Format 12 cmap contains character beyond UCS-4")
 			}
 
-			t.rec.Chars[rune(i+firstCode)] = uint16(glyphId)
+			t.rec.Chars[rune(i+firstCode)] = GID(glyphId)
 		}
 
 	}

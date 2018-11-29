@@ -25,12 +25,15 @@ import (
 
 // SimpleEncoder represents a 1 byte encoding
 type SimpleEncoder struct {
-	baseName     string
+	baseName string
+
+	// TODO(dennwc): both maps use CharCode as a key
 	baseEncoding map[uint16]rune
 	differences  map[byte]string
-	CodeToGlyph  map[uint16]string
-	glyphToCode  map[string]uint16
-	codeToRune   map[uint16]rune
+
+	CodeToGlyph map[CharCode]string
+	glyphToCode map[string]CharCode
+	codeToRune  map[CharCode]rune
 }
 
 // NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
@@ -98,11 +101,13 @@ func (se SimpleEncoder) String() string {
 		fmt.Sprintf("differences=%+v", se.differences),
 	}
 
-	codes := []int{}
+	codes := make([]CharCode, 0, len(se.CodeToGlyph))
 	for c := range se.CodeToGlyph {
-		codes = append(codes, int(c))
+		codes = append(codes, c)
 	}
-	sort.Ints(codes)
+	sort.Slice(codes, func(i, j int) bool {
+		return codes[i] < codes[j]
+	})
 	numCodes := len(codes)
 	if numCodes > simpleEncoderNumEntries {
 		numCodes = simpleEncoderNumEntries
@@ -110,7 +115,7 @@ func (se SimpleEncoder) String() string {
 
 	for i := 0; i < numCodes; i++ {
 		c := codes[i]
-		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.CodeToGlyph[uint16(c)]))
+		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.CodeToGlyph[c]))
 	}
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
@@ -122,7 +127,7 @@ func (se SimpleEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) CharcodeToGlyph(code uint16) (string, bool) {
+func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
 	glyph, ok := se.CodeToGlyph[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: 0x%04x", code)
@@ -132,7 +137,7 @@ func (se SimpleEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 
 // GlyphToCharcode returns character code for glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
+func (se SimpleEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
 	code, ok := se.glyphToCode[glyph]
 	if !ok {
 		common.Log.Debug("Glyph -> Charcode error: glyph not found: %q %s", glyph, se)
@@ -142,13 +147,13 @@ func (se SimpleEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 
 // RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) RuneToCharcode(val rune) (uint16, bool) {
+func (se SimpleEncoder) RuneToCharcode(val rune) (CharCode, bool) {
 	return doRuneToCharcode(se, val)
 }
 
 // CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) CharcodeToRune(code uint16) (rune, bool) {
+func (se SimpleEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	r, ok := se.codeToRune[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Rune error: charcode not found: 0x%04x", code)
@@ -187,9 +192,9 @@ func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 // computeTables computes the tables needed for a working SimpleEncoder from the member
 // fields `baseEncoding` and `differences`.
 func (se *SimpleEncoder) computeTables() {
-	codeToRune := map[uint16]rune{}
+	codeToRune := map[CharCode]rune{}
 	for code, r := range se.baseEncoding {
-		codeToRune[code] = r
+		codeToRune[CharCode(code)] = r
 	}
 	if se.differences != nil {
 		for code, glyph := range se.differences {
@@ -198,12 +203,12 @@ func (se *SimpleEncoder) computeTables() {
 				common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph,
 					se.differences)
 			}
-			codeToRune[uint16(code)] = r
+			codeToRune[CharCode(code)] = r
 		}
 	}
 
-	codeToGlyph := map[uint16]string{}
-	glyphToCode := map[string]uint16{}
+	codeToGlyph := map[CharCode]string{}
+	glyphToCode := map[string]CharCode{}
 	for code, r := range codeToRune {
 		if glyph, ok := RuneToGlyph(r); ok {
 			codeToGlyph[code] = glyph

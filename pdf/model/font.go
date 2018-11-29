@@ -132,7 +132,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	// slots are unused indexes, which are filled first. slots1 are the used indexes.
 	slots := []byte{}
 	slots1 := []byte{}
-	for code := uint16(1); code <= 0xff; code++ {
+	for code := textencoding.CharCode(1); code <= 0xff; code++ {
 		if glyph, ok := encoder.CodeToGlyph[code]; ok {
 			glyphCode[glyph] = byte(code)
 			// Don't overwrite space
@@ -304,7 +304,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	common.Log.Trace("showText: data=[% 02x]=%#q", data, data)
 
-	charcodes := make([]uint16, 0, len(data)+len(data)%2)
+	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
@@ -315,11 +315,11 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 		}
 		for i := 0; i < len(data); i += 2 {
 			b := uint16(data[i])<<8 | uint16(data[i+1])
-			charcodes = append(charcodes, b)
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	} else {
 		for _, b := range data {
-			charcodes = append(charcodes, uint16(b))
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	}
 

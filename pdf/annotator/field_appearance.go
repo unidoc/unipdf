@@ -12,6 +12,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -1111,7 +1112,8 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	if CA, has := core.GetString(mkDict.Get("CA")); has && font != nil {
 		encoded := CA.Bytes()
 		if len(encoded) == 1 {
-			if checkglyph, has := font.Encoder().CharcodeToGlyph(uint16(encoded[0])); has {
+			charcode := textencoding.CharCode(encoded[0])
+			if checkglyph, has := font.Encoder().CharcodeToGlyph(charcode); has {
 				style.CheckmarkGlyph = checkglyph
 			}
 		}

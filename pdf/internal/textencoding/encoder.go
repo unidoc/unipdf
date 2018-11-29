@@ -12,6 +12,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+type CharCode uint16
+
 // TextEncoder defines the common methods that a text encoder implementation must have in UniDoc.
 type TextEncoder interface {
 	// String returns a string that describes the TextEncoder instance.
@@ -22,21 +24,21 @@ type TextEncoder interface {
 
 	// CharcodeToGlyph returns the glyph name for character code `code`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	CharcodeToGlyph(code uint16) (string, bool)
+	CharcodeToGlyph(code CharCode) (string, bool)
 
 	// GlyphToCharcode returns the PDF character code corresponding to glyph name `glyph`.
 	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToCharcode(glyph string) (uint16, bool)
+	GlyphToCharcode(glyph string) (CharCode, bool)
 
 	// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 	// The bool return flag is true if there was a match, and false otherwise.
 	// This is usually implemented as RuneToGlyph->GlyphToCharcode
-	RuneToCharcode(r rune) (uint16, bool)
+	RuneToCharcode(r rune) (CharCode, bool)
 
 	// CharcodeToRune returns the rune corresponding to character code `code`.
 	// The bool return flag is true if there was a match, and false otherwise.
 	// This is usually implemented as CharcodeToGlyph->GlyphToRune
-	CharcodeToRune(code uint16) (rune, bool)
+	CharcodeToRune(code CharCode) (rune, bool)
 
 	// RuneToGlyph returns the glyph name for rune `r`.
 	// The bool return flag is true if there was a match, and false otherwise.
@@ -82,7 +84,7 @@ func encodeString16bit(enc TextEncoder, raw string) []byte {
 
 		// Each entry represented by 2 bytes.
 		var v [2]byte
-		binary.BigEndian.PutUint16(v[:], code)
+		binary.BigEndian.PutUint16(v[:], uint16(code))
 		encoded = append(encoded, v[:]...)
 	}
 	return encoded
@@ -90,7 +92,7 @@ func encodeString16bit(enc TextEncoder, raw string) []byte {
 
 // doRuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func doRuneToCharcode(enc TextEncoder, r rune) (uint16, bool) {
+func doRuneToCharcode(enc TextEncoder, r rune) (CharCode, bool) {
 	g, ok := enc.RuneToGlyph(r)
 	if !ok {
 		return 0, false
@@ -100,7 +102,7 @@ func doRuneToCharcode(enc TextEncoder, r rune) (uint16, bool) {
 
 // doCharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func doCharcodeToRune(enc TextEncoder, code uint16) (rune, bool) {
+func doCharcodeToRune(enc TextEncoder, code CharCode) (rune, bool) {
 	g, ok := enc.CharcodeToGlyph(code)
 	if !ok {
 		return 0, false

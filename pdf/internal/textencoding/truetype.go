@@ -14,12 +14,14 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+type GID uint16
+
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
 // It performs mapping between character ids and glyph ids.
 // It has a preloaded rune (unicode code point) to glyph index map that has been loaded from a font.
 // Corresponds to Identity-H.
 type TrueTypeFontEncoder struct {
-	runeToGlyphIndexMap map[rune]uint16
+	runeToGlyphIndexMap map[rune]GID
 	cmap                CMap
 }
 
@@ -27,7 +29,7 @@ type TrueTypeFontEncoder struct {
 // runeToGlyphIndexMap, that has been pre-loaded from the font file.
 // The new instance is preloaded with a CMapIdentityH (Identity-H) CMap which maps 2-byte charcodes
 // to CIDs (glyph index).
-func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[rune]uint16) TrueTypeFontEncoder {
+func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[rune]GID) TrueTypeFontEncoder {
 	return TrueTypeFontEncoder{
 		runeToGlyphIndexMap: runeToGlyphIndexMap,
 		cmap:                CMapIdentityH{},
@@ -70,7 +72,7 @@ func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToGlyph(code uint16) (string, bool) {
+func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
 	r, found := enc.CharcodeToRune(code)
 	if found && r == 0x20 {
 		return "space", true
@@ -83,7 +85,7 @@ func (enc TrueTypeFontEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
+func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		var unicode uint16
@@ -104,28 +106,30 @@ func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (uint16, bool) {
+func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 	glyphIndex, ok := enc.runeToGlyphIndexMap[r]
 	if !ok {
 		common.Log.Debug("Missing rune %d (%+q) from encoding", r, r)
 		return 0, false
 	}
 	// Identity : charcode <-> glyphIndex
-	charcode := glyphIndex
+	charcode := CharCode(glyphIndex)
 
-	return uint16(charcode), true
+	return charcode, true
 }
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToRune(glyph uint16) (rune, bool) {
+func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	// TODO: Make a reverse map stored.
 	for r, glyphIndex := range enc.runeToGlyphIndexMap {
-		if glyphIndex == glyph {
+		// Identity : glyphIndex <-> charcode
+		charcode := CharCode(glyphIndex)
+		if charcode == code {
 			return r, true
 		}
 	}
-	common.Log.Debug("CharcodeToRune: No match. code=0x%04x enc=%s", glyph, enc)
+	common.Log.Debug("CharcodeToRune: No match. code=0x%04x enc=%s", code, enc)
 	return 0, false
 }
 

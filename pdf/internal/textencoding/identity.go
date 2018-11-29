@@ -36,7 +36,7 @@ func (enc IdentityEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) CharcodeToGlyph(code uint16) (string, bool) {
+func (enc IdentityEncoder) CharcodeToGlyph(code CharCode) (string, bool) {
 	r, found := enc.CharcodeToRune(code)
 	if found && r == 0x20 {
 		return "space", true
@@ -49,7 +49,7 @@ func (enc IdentityEncoder) CharcodeToGlyph(code uint16) (string, bool) {
 
 // GlyphToCharcode returns the character code matching glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
+func (enc IdentityEncoder) GlyphToCharcode(glyph string) (CharCode, bool) {
 	r, ok := enc.GlyphToRune(glyph)
 	if !ok {
 		return 0, false
@@ -59,13 +59,13 @@ func (enc IdentityEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) RuneToCharcode(r rune) (uint16, bool) {
-	return uint16(r), true
+func (enc IdentityEncoder) RuneToCharcode(r rune) (CharCode, bool) {
+	return CharCode(r), true
 }
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) CharcodeToRune(code uint16) (rune, bool) {
+func (enc IdentityEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	return rune(code), true
 }
 

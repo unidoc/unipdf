@@ -9,6 +9,8 @@ import (
 
 const fontDir = `../../creator/testdata`
 
+type charCode = textencoding.CharCode
+
 var casesTTFParse = []struct {
 	path         string
 	name         string
@@ -18,7 +20,7 @@ var casesTTFParse = []struct {
 	underlineTh  int16
 	isFixed      bool
 	bbox         [4]int
-	runes        map[rune]uint16
+	runes        map[rune]charCode
 	widths       map[rune]int
 }{
 	{
@@ -27,7 +29,7 @@ var casesTTFParse = []struct {
 		underlinePos: -151,
 		underlineTh:  50,
 		bbox:         [4]int{-631, 1632, -462, 1230},
-		runes: map[rune]uint16{
+		runes: map[rune]charCode{
 			'x': 0x5d,
 			'ё': 0x32a,
 		},
@@ -43,7 +45,7 @@ var casesTTFParse = []struct {
 		underlinePos: -150,
 		underlineTh:  100,
 		bbox:         [4]int{-1488, 2439, -555, 2163},
-		runes: map[rune]uint16{
+		runes: map[rune]charCode{
 			'x': 0x5c,
 			'ё': 0x3cb,
 		},
@@ -60,7 +62,7 @@ var casesTTFParse = []struct {
 		underlinePos: -150,
 		underlineTh:  100,
 		bbox:         [4]int{-1459, 2467, -555, 2163},
-		runes: map[rune]uint16{
+		runes: map[rune]charCode{
 			'x': 0x5c,
 			'ё': 0x3cb,
 		},
@@ -103,6 +105,7 @@ func TestTTFParse(t *testing.T) {
 			if ft.PostScriptName != c.name {
 				t.Errorf("%q %q", ft.PostScriptName, c.name)
 			}
+
 			enc := textencoding.NewTrueTypeFontEncoder(ft.Chars)
 
 			for _, r := range testRunes {

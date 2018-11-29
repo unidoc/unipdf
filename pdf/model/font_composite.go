@@ -276,7 +276,7 @@ type pdfCIDFontType2 struct {
 	runeToWidthMap map[rune]int
 
 	// Also mapping between GIDs (glyph index) and width.
-	gidToWidthMap map[uint16]int
+	gidToWidthMap map[fonts.GID]int
 }
 
 // pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
@@ -428,13 +428,13 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Construct a rune ➞ width map.
 	runeToWidthMap := make(map[rune]int)
-	gidToWidthMap := map[uint16]int{}
+	gidToWidthMap := map[fonts.GID]int{}
 	for _, r := range runes {
-		glyphIndex := ttf.Chars[r]
+		gid := ttf.Chars[r]
 
-		w := k * float64(ttf.Widths[glyphIndex])
+		w := k * float64(ttf.Widths[gid])
 		runeToWidthMap[r] = int(w)
-		gidToWidthMap[glyphIndex] = int(w)
+		gidToWidthMap[gid] = int(w)
 	}
 	cidfont.runeToWidthMap = runeToWidthMap
 	cidfont.gidToWidthMap = gidToWidthMap

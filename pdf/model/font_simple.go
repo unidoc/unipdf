@@ -36,8 +36,8 @@ type pdfFontSimple struct {
 	container *core.PdfIndirectObject
 
 	// These fields are specific to simple PDF fonts.
-	firstChar  int
-	lastChar   int
+	firstChar  textencoding.CharCode
+	lastChar   textencoding.CharCode
 	charWidths []float64
 	encoder    textencoding.TextEncoder
 
@@ -90,17 +90,17 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 	}
 	metrics.GlyphName = glyph
 
-	if int(code) < font.firstChar {
+	if code < font.firstChar {
 		common.Log.Debug("Code lower than firstchar (%d < %d)", code, font.firstChar)
 		return metrics, false
 	}
 
-	if int(code) > font.lastChar {
+	if code > font.lastChar {
 		common.Log.Debug("Code higher than lastchar (%d < %d)", code, font.lastChar)
 		return metrics, false
 	}
 
-	index := int(code) - font.firstChar
+	index := int(code - font.firstChar)
 	if index >= len(font.charWidths) {
 		common.Log.Debug("Code outside of widths range")
 		return metrics, false
@@ -135,7 +135,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 			common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.firstChar = int(intVal)
+		font.firstChar = textencoding.CharCode(intVal)
 
 		obj = d.Get("LastChar")
 		if obj == nil {
@@ -147,7 +147,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 			common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.lastChar = int(intVal)
+		font.lastChar = textencoding.CharCode(intVal)
 
 		font.charWidths = []float64{}
 		obj = d.Get("Widths")
@@ -166,7 +166,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 				return nil, err
 			}
 
-			if len(widths) != (font.lastChar - font.firstChar + 1) {
+			if len(widths) != int(font.lastChar-font.firstChar+1) {
 				common.Log.Debug("ERROR: Invalid widths length != %d (%d)",
 					font.lastChar-font.firstChar+1, len(widths))
 				return nil, core.ErrRangeError
@@ -313,8 +313,8 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 // styling functions.
 // Uses a WinAnsiTextEncoder and loads only character codes 32-255.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
-	const minCode = 32
-	const maxCode = 255
+	const minCode = textencoding.CharCode(32)
+	const maxCode = textencoding.CharCode(255)
 
 	ttf, err := fonts.TtfParse(filePath)
 	if err != nil {
@@ -336,8 +336,8 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	truefont.lastChar = maxCode
 
 	truefont.basefont = ttf.PostScriptName
-	truefont.FirstChar = core.MakeInteger(minCode)
-	truefont.LastChar = core.MakeInteger(maxCode)
+	truefont.FirstChar = core.MakeInteger(int64(minCode))
+	truefont.LastChar = core.MakeInteger(int64(maxCode))
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 	if len(ttf.Widths) <= 0 {
@@ -348,7 +348,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	vals := make([]float64, 0, maxCode-minCode+1)
 	for code := minCode; code <= maxCode; code++ {
-		r, found := truefont.Encoder().CharcodeToRune(uint16(code))
+		r, found := truefont.Encoder().CharcodeToRune(code)
 		if !found {
 			common.Log.Debug("Rune not found (code: %d)", code)
 			vals = append(vals, missingWidth)
