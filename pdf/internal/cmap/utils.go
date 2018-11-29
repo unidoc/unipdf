@@ -21,16 +21,11 @@ func hexToCharCode(shex cmapHexString) CharCode {
 	return code
 }
 
-// hexToString returns the unicode string that is UTF-16BE encoded in `shex`.
+// hexToString decodes the UTF-16BE encoded string `shex` to unicode runes.
 // 9.10.3 ToUnicode CMaps (page 293)
 // • It shall use the beginbfchar, endbfchar, beginbfrange, and endbfrange operators to define the
 // mapping from character codes to Unicode character sequences expressed in UTF-16BE encoding.
-func hexToString(shex cmapHexString) string {
-	return string(utf16ToRunes(shex))
-}
-
-// hexToString decodes the UTF-16BE encoded string `shex` to unicode runes.
-func utf16ToRunes(shex cmapHexString) []rune {
+func hexToRunes(shex cmapHexString) []rune {
 	if len(shex.b) == 1 {
 		return []rune{rune(shex.b[0])}
 	}
@@ -46,4 +41,17 @@ func utf16ToRunes(shex cmapHexString) []rune {
 	}
 	runes := utf16.Decode(chars)
 	return runes
+}
+
+// hexToRune is the same as hexToRunes but expects only a single rune to be decoded.
+func hexToRune(shex cmapHexString) rune {
+	runes := hexToRunes(shex)
+	if n := len(runes); n == 0 {
+		common.Log.Debug("ERROR: hexToRune. Expected at least one rune shex=%#v", shex)
+		return MissingCodeRune
+	}
+	if len(runes) > 1 {
+		common.Log.Debug("ERROR: hexToRune. Expected exactly one rune shex=%#v -> %#v", shex, runes)
+	}
+	return runes[0]
 }

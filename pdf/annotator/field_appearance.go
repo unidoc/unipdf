@@ -1112,6 +1112,7 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	if CA, has := core.GetString(mkDict.Get("CA")); has && font != nil {
 		encoded := CA.Bytes()
 		if len(encoded) == 1 {
+			// TODO: this may be a multi-byte encoding
 			charcode := textencoding.CharCode(encoded[0])
 			if checkglyph, has := font.Encoder().CharcodeToGlyph(charcode); has {
 				style.CheckmarkGlyph = checkglyph

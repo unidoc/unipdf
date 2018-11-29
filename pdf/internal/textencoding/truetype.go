@@ -14,6 +14,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// GID is a glyph index.
 type GID uint16
 
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
