@@ -27,23 +27,6 @@ type PdfFont struct {
 	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
-// getCharCodeMetrics is a handy function for getting character metrics given a charcode.
-func (font PdfFont) getCharCodeMetrics(code uint16) (fonts.CharMetrics, bool) {
-	var nometrics fonts.CharMetrics
-
-	enc := font.Encoder()
-	if enc == nil {
-		return nometrics, false
-	}
-
-	glyph, found := enc.CharcodeToGlyph(code)
-	if !found {
-		return nometrics, false
-	}
-
-	return font.GetGlyphCharMetrics(glyph)
-}
-
 // GetFontDescriptor returns the font descriptor for `font`.
 func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 	switch t := font.context.(type) {
@@ -519,8 +502,35 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
+// TODO(gunnsth): Reconsider whether needed or if can map via GlyphName.
 func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
-	return font.getCharCodeMetrics(code)
+	var nometrics fonts.CharMetrics
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfFontType0:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfCIDFontType0:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfCIDFontType2:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	default:
+		common.Log.Debug("ERROR: GetCharMetrics Not implemented for font type=%T", font.context)
+		return nometrics, false
+	}
+
+	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
+		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
+	}
+	return nometrics, false
 }
 
 // GetRuneCharMetrics returns the char metrics for rune `r`.

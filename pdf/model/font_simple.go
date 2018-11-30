@@ -101,8 +101,10 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	if font.fontMetrics != nil {
-		metrics, ok := font.fontMetrics[glyph]
-		return metrics, ok
+		metrics, has := font.fontMetrics[glyph]
+		if has {
+			return metrics, true
+		}
 	}
 
 	metrics := fonts.CharMetrics{GlyphName: glyph}

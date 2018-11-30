@@ -10,6 +10,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/transform"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -20,7 +21,7 @@ type GraphicsState struct {
 	ColorspaceNonStroking model.PdfColorspace
 	ColorStroking         model.PdfColor
 	ColorNonStroking      model.PdfColor
-	CTM                   Matrix
+	CTM                   transform.Matrix
 }
 
 type GraphicStateStack []GraphicsState
@@ -211,7 +212,7 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 	proc.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
 	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
-	proc.graphicsState.CTM = IdentityMatrix()
+	proc.graphicsState.CTM = transform.IdentityMatrix()
 
 	for _, op := range proc.operations {
 		var err error
@@ -571,7 +572,7 @@ func (proc *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	if err != nil {
 		return err
 	}
-	m := NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
+	m := transform.NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
 	proc.graphicsState.CTM.Concat(m)
 
 	return nil

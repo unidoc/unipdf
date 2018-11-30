@@ -164,7 +164,7 @@ func TtfParse(fileStr string) (TtfType, error) {
 	return t.Parse()
 }
 
-// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
+// Parse returns a TtfType describing the TrueType font file in io.Reader `t`.f.
 func (t *ttfParser) Parse() (TtfType, error) {
 
 	version, err := t.ReadStr(4)

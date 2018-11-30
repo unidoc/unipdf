@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package contentstream
+package transform
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 		c, d, 0,
 		tx, ty, 1,
 	}
-	m.fixup()
+	m.clampRange()
 	return m
 }
 
@@ -51,7 +51,7 @@ func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 	m[0], m[1] = a, b
 	m[3], m[4] = c, d
 	m[6], m[7] = tx, ty
-	m.fixup()
+	m.clampRange()
 }
 
 // Concat sets `m` to `m` × `b`.
@@ -65,7 +65,7 @@ func (m *Matrix) Concat(b Matrix) {
 		m[3]*b[0] + m[4]*b[3], m[3]*b[1] + m[4]*b[4], 0,
 		m[6]*b[0] + m[7]*b[3] + b[6], m[6]*b[1] + m[7]*b[4] + b[7], 1,
 	}
-	m.fixup()
+	m.clampRange()
 }
 
 // Mult returns `m` × `b`.
@@ -79,7 +79,7 @@ func (m Matrix) Mult(b Matrix) Matrix {
 func (m *Matrix) Translate(dx, dy float64) {
 	m[6] += dx
 	m[7] += dy
-	m.fixup()
+	m.clampRange()
 }
 
 // Translation returns the translation part of `m`.
@@ -137,21 +137,21 @@ func (m *Matrix) Angle() int {
 	return 0
 }
 
-// fixup forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF
-// files.
+// clampRange forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF files.
 // Currently it clamps elements to [-maxAbsNumber, -maxAbsNumber] to avoid floating point exceptions.
-func (m *Matrix) fixup() {
+func (m *Matrix) clampRange() {
 	for i, x := range m {
 		if x > maxAbsNumber {
-			common.Log.Debug("FIXUP: %d -> %d", x, maxAbsNumber)
+			common.Log.Debug("CLAMP: %d -> %d", x, maxAbsNumber)
 			m[i] = maxAbsNumber
 		} else if x < -maxAbsNumber {
-			common.Log.Debug("FIXUP: %d -> %d", x, -maxAbsNumber)
+			common.Log.Debug("CLAMP: %d -> %d", x, -maxAbsNumber)
 			m[i] = -maxAbsNumber
 		}
 	}
 }
 
-// largest numbers needed in PDF transforms. Is this correct?
-// TODO(gunnsth): Practical value? Need some reasoning.
+// maxAbsNumber defines the maximum absolute value of allowed practical matrix element values as needed
+// to avoid floating point exceptions.
+// TODO(gunnsth): Add reference or point to a specific example PDF that validates this.
 const maxAbsNumber = 1e9
