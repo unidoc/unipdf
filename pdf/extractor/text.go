@@ -189,7 +189,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.setCharSpacing(y)
 			case "Tf": // Set font
 				if to == nil {
-					// This is needed for ~/testdata/26-Hazard-Thermal-environment.pdf
+					// This is needed for 26-Hazard-Thermal-environment.pdf
 					to = newTextObject(e, gs, &state, &fontStack)
 				}
 				if ok, err := to.checkOp(op, 2, true); !ok {
@@ -633,7 +633,7 @@ func (to *textObject) renderText(data []byte) error {
 	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
-		// XXX(peterwilliams97) Need to find and fix cases where this happens.
+		// TODO(peterwilliams97): Need to find and fix cases where this happens.
 		if r == "\x00" {
 			continue
 		}
@@ -796,7 +796,7 @@ func (tl TextList) ToText() string {
 
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := min(fontHeight*0.2, 5.0)
+	tol := minFloat(fontHeight*0.2, 5.0)
 	common.Log.Trace("ToText: fontHeight=%.1f tol=%.1f", fontHeight, tol)
 
 	tl.SortPosition(tol)
@@ -891,7 +891,7 @@ func (tl TextList) toLinesOrient(tol float64) []Line {
 		// We use a heuristic from PdfBox: If the next character starts to the right of where a
 		// character after a space at "normal spacing" would start, then there is a space before it.
 		// The tricky thing to guess here is the width of a space at normal spacing.
-		// We follow PdfBox and use min(deltaSpace, deltaCharWidth).
+		// We follow PdfBox and use minFloat(deltaSpace, deltaCharWidth).
 		deltaSpace := 0.0
 		if t.SpaceWidth == 0 {
 			deltaSpace = math.MaxFloat64
@@ -944,14 +944,6 @@ func orientKeys(tlOrient map[int]TextList) []int {
 	}
 	sort.Ints(keys)
 	return keys
-}
-
-// min returns the lesser of `a` and `b`.
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // exponAve implements an exponential average.
@@ -1047,8 +1039,8 @@ func combineDiacritics(line Line, charWidth float64) Line {
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
 
-	words := []string{}
-	dxList := []float64{}
+	var words []string
+	var dxList []float64
 	w := line.Words[0]
 	w, c := countDiacritic(w)
 	delta := 0.0

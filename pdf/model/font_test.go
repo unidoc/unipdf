@@ -8,7 +8,6 @@ package model_test
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -520,7 +519,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 type fontFragmentTest struct {
 	description string
 	filename    string
-	objNum      int
+	objNum      int64
 	data        []byte
 	expected    string
 }
@@ -533,7 +532,6 @@ func (f *fontFragmentTest) String() string {
 // CharcodeBytesToUnicode on `data` and checks that output equals `expected`.
 func (f *fontFragmentTest) check(t *testing.T) {
 	common.Log.Debug("fontFragmentTest: %s", f)
-
 
 	numObj, err := parsePdfFragment(f.filename)
 	if err != nil {
@@ -608,95 +606,17 @@ func objFontObj(t *testing.T, fontDict string) error {
 // parsePdfFragment parses a file containing fragments of a PDF `filename` (see
 // charcodeBytesToUnicodeTest) and returns a map of {object number: object} with indirect objects
 // replaced by their values if they are in `filename`.
-func parsePdfFragment(filename string) (map[int]core.PdfObject, error) {
+func parsePdfFragment(filename string) (map[int64]core.PdfObject, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return parsePdfObjects(string(data))
-}
 
-// parsePdfObjects parses a fragment of a PDF `text` and returns a map of {object number: object}
-// with indirect objects replaced by their values if they are in `text`.
-func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
-	numObj := map[int]core.PdfObject{}
-	parser := core.NewParserFromString(text)
-	common.Log.Trace("parsePdfObjects")
-
-	// Build the numObj {object number: object} map
-	nums := []int{}
-	for {
-		obj, err := parser.ParseIndirectObject()
-		common.Log.Trace("parsePdfObjects:  %T %v", obj, err)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			common.Log.Trace("parsePdfObjects:  err=%v", err)
-			return numObj, err
-		}
-		common.Log.Trace("parsePdfObjects: %d %T", len(numObj), obj)
-		switch t := obj.(type) {
-		case *core.PdfIndirectObject:
-			numObj[int(t.ObjectNumber)] = obj
-			nums = append(nums, int(t.ObjectNumber))
-		case *core.PdfObjectStream:
-			numObj[int(t.ObjectNumber)] = obj
-			nums = append(nums, int(t.ObjectNumber))
-		}
-	}
-
-	common.Log.Trace("parsePdfObjects: Parsed %d objects %+v", len(numObj), nums)
-
-	// Replace the indirect objects in all dicts and arrays with their values, if they are in numObj.
-	for n, obj := range numObj {
-		common.Log.Trace("-- 0 %d obj %T", n, obj)
-		iobj, ok := obj.(*core.PdfIndirectObject)
-		if !ok {
-			continue
-		}
-		common.Log.Trace("   -- %T", iobj.PdfObject)
-		iobj.PdfObject, ok = replaceReferences(numObj, iobj.PdfObject)
-		if !ok {
-			common.Log.Debug("ERROR: unresolved reference")
-		}
-	}
-	return numObj, nil
-}
-
-// replaceReferences replaces the object references in all dicts and arrays with their values, if
-// they are in numObj. The boolean return is true if all object references were successfuly
-// replaced.
-func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.PdfObject, bool) {
-	var ok bool
-	switch t := obj.(type) {
-	case *core.PdfObjectReference:
-		o, ok := numObj[int(t.ObjectNumber)]
-		common.Log.Trace("    %d 0 R  %t ", t.ObjectNumber, ok)
-		return o, ok
-	case *core.PdfObjectDictionary:
-		for _, k := range t.Keys() {
-			o := t.Get(k)
-			o, ok = replaceReferences(numObj, o)
-			if !ok {
-				return o, ok
-			}
-			t.Set(k, o)
-		}
-	case *core.PdfObjectArray:
-		for i, o := range t.Elements() {
-			o, ok = replaceReferences(numObj, o)
-			if !ok {
-				return o, ok
-			}
-			t.Set(i, o)
-		}
-	}
-	return obj, true
+	return testutils.ParseIndirectObjects(string(data))
 }
 
 // TestLoadedSimpleFontEncoding tests loading a simple font with a Differences encoding.
-// If checks if the loaded font encoding has the expected characteristics.
+// It checks if the loaded font encoding has the expected characteristics.
 func TestLoadedSimpleFontEncoding(t *testing.T) {
 	rawpdf := `
 59 0 obj

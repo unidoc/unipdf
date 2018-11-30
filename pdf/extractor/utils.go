@@ -16,16 +16,17 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/transform"
 )
 
-// The text rendering mode, Tmode, determines whether showing text shall cause glyph outlines to be
-// stroked, filled, used as a clipping boundary, or some combination of the three. Stroking,
-// filling, and clipping shall have the same effects for a text object as they do for a path object
-// (see 8.5.3, "Path-Painting Operators" and 8.5.4, "Clipping Path Operators"),
+// RenderMode specifies the text rendering mode (Tmode), which determines whether showing text shall cause
+// glyph outlines to be  stroked, filled, used as a clipping boundary, or some combination of the three.
+// Stroking, filling, and clipping shall have the same effects for a text object as they do for a path object
+// (see 8.5.3, "Path-Painting Operators" and 8.5.4, "Clipping Path Operators").
 type RenderMode int
 
+// Render mode type.
 const (
-	RenderModeStroke RenderMode = 1 << iota
-	RenderModeFill
-	RenderModeClip
+	RenderModeStroke RenderMode = 1 << iota // Stroke
+	RenderModeFill                          // Fill
+	RenderModeClip                          // Clip
 )
 
 func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (transform.Point, error) {

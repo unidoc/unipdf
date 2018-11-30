@@ -415,7 +415,7 @@ func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of unicode strings.
-// XXX(peterwilliams97): Remove int returns.
+// TODO(peterwilliams97): Remove int returns.
 func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) {
 	charstrings := make([]string, 0, len(charcodes))
 	numMisses := 0

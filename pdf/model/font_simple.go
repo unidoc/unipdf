@@ -396,9 +396,6 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		},
 	}
 
-	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
-	// then can derive
-	// TODO: Subsetting fonts.
 	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
 
 	truefont.basefont = ttf.PostScriptName
