@@ -459,7 +459,7 @@ func (font PdfFont) ToPdfObject() core.PdfObject {
 	if t := font.actualFont(); t != nil {
 		return t.ToPdfObject()
 	}
-	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%#T. Returning null object.",
+	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%T. Returning null object.",
 		font.context)
 	return core.MakeNull()
 }
@@ -468,7 +468,7 @@ func (font PdfFont) ToPdfObject() core.PdfObject {
 func (font PdfFont) Encoder() textencoding.TextEncoder {
 	t := font.actualFont()
 	if t == nil {
-		common.Log.Debug("ERROR: Encoder not implemented for font type=%#T", font.context)
+		common.Log.Debug("ERROR: Encoder not implemented for font type=%T", font.context)
 		// XXX: Should we return a default encoding?
 		return nil
 	}

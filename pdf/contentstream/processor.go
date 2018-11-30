@@ -564,8 +564,8 @@ func (proc *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, 
 func (proc *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	resources *model.PdfPageResources) error {
 	if len(op.Params) != 6 {
-		common.Log.Debug("Invalid number of parameters for cm: %d", len(op.Params))
-		return errors.New("Invalid number of parameters")
+		common.Log.Debug("ERROR: Invalid number of parameters for cm: %d", len(op.Params))
+		return errors.New("invalid number of parameters")
 	}
 
 	f, err := core.GetNumbersAsFloat(op.Params)

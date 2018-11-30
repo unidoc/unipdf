@@ -679,7 +679,6 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(td0.Mult(to.Tm).Mult(to.gs.CTM)),
-			1.0*trm.ScalingFactorY(),
 			spaceWidth*trm.ScalingFactorX())
 		common.Log.Trace("i=%d code=%d xyt=%s trm=%s", i, code, xyt, trm)
 		to.Texts = append(to.Texts, xyt)
@@ -719,7 +718,7 @@ func (to *textObject) moveTo(tx, ty float64) {
 // All dimensions are in device coordinates.
 type XYText struct {
 	Text          string          // The text.
-	Orient        int             // The text orientation.
+	Orient        int             // The text orientation in degrees. This is the current TRM rounded to 10°.
 	OrientedStart transform.Point // Left of text in orientation where text is horizontal.
 	OrientedEnd   transform.Point // Right of text in orientation where text is horizontal.
 	Height        float64         // Text height.
@@ -727,14 +726,15 @@ type XYText struct {
 	count         int64           // To help with reading debug logs.
 }
 
-// newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
+// newXYText returns an XYText for text `text` rendered with text rendering matrix (TRM) `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm transform.Matrix, end transform.Point,
-	height, spaceWidth float64) XYText {
+func (to *textObject) newXYText(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
-	if theta%180 == 0 {
+	orient := nearestMultiple(theta, 10)
+	var height float64
+	if orient%180 != 90 {
 		height = trm.ScalingFactorY()
 	} else {
 		height = trm.ScalingFactorX()
@@ -742,13 +742,22 @@ func (to *textObject) newXYText(text string, trm transform.Matrix, end transform
 
 	return XYText{
 		Text:          text,
-		Orient:        theta,
+		Orient:        orient,
 		OrientedStart: translation(trm).Rotate(theta),
 		OrientedEnd:   end.Rotate(theta),
 		Height:        height,
 		SpaceWidth:    spaceWidth,
 		count:         to.e.textCount,
 	}
+}
+
+// nearestMultiple return the multiple of `m` that is closest to `x`.
+func nearestMultiple(x float64, m int) int {
+	if m == 0 {
+		m = 1
+	}
+	fac := float64(m)
+	return int(math.Round(x/fac) * fac)
 }
 
 // String returns a string describing `t`.
@@ -785,9 +794,14 @@ func (tl TextList) height() float64 {
 func (tl TextList) ToText() string {
 	tl.printTexts("ToText: before sorting")
 
-	tl.SortPosition()
+	fontHeight := tl.height()
+	// We sort with a y tolerance to allow for subscripts, diacritics etc.
+	tol := min(fontHeight*0.2, 5.0)
+	common.Log.Trace("ToText: fontHeight=%.1f tol=%.1f", fontHeight, tol)
 
-	lines := tl.toLines()
+	tl.SortPosition(tol)
+
+	lines := tl.toLines(tol)
 	texts := make([]string, 0, len(lines))
 	for _, l := range lines {
 		texts = append(texts, l.Text)
@@ -798,11 +812,7 @@ func (tl TextList) ToText() string {
 // SortPosition sorts a text list by its elements' position on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
-func (tl *TextList) SortPosition() {
-	fontHeight := tl.height()
-	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := min(fontHeight*0.2, 5.0)
-	common.Log.Trace("SortPosition: fontHeight=%.1f tol=%.1f", fontHeight, tol)
+func (tl *TextList) SortPosition(tol float64) {
 	sort.SliceStable(*tl, func(i, j int) bool {
 		ti, tj := (*tl)[i], (*tl)[j]
 		if ti.Orient != tj.Orient {
@@ -826,7 +836,7 @@ type Line struct {
 // toLines returns the text and positions in `tl` as a slice of Line.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLines() []Line {
+func (tl TextList) toLines(tol float64) []Line {
 	// We divide `tl` into slices which contain texts with the same orientation, extract the lines
 	// for each orientation then return the concatention of these lines sorted by orientation.
 	tlOrient := make(map[int]TextList, len(tl))
@@ -835,7 +845,7 @@ func (tl TextList) toLines() []Line {
 	}
 	var lines []Line
 	for _, o := range orientKeys(tlOrient) {
-		lines = append(lines, tlOrient[o].toLinesOrient()...)
+		lines = append(lines, tlOrient[o].toLinesOrient(tol)...)
 	}
 	return lines
 }
@@ -845,7 +855,7 @@ func (tl TextList) toLines() []Line {
 // only be called from toLines.
 // Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLinesOrient() []Line {
+func (tl TextList) toLinesOrient(tol float64) []Line {
 	tl.printTexts("toLines: before")
 	if len(tl) == 0 {
 		return []Line{}
@@ -862,7 +872,7 @@ func (tl TextList) toLinesOrient() []Line {
 	lastEndX := 0.0 // lastEndX is tl[i-1].OrientedEnd.X
 
 	for _, t := range tl {
-		if t.OrientedStart.Y < y {
+		if t.OrientedStart.Y+tol < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
 				if averageCharWidth.running {

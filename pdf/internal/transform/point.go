@@ -9,8 +9,7 @@ package transform
 
 import (
 	"fmt"
-
-	"github.com/unidoc/unidoc/common"
+	"math"
 )
 
 // Point defines a point (X,Y) in Cartesian coordinates.
@@ -40,21 +39,12 @@ func (p Point) Displace(delta Point) Point {
 	return Point{p.X + delta.X, p.Y + delta.Y}
 }
 
-// Rotate mutates and rotates `p` by `theta` degrees and returns back.
-func (p Point) Rotate(theta int) Point {
-	switch theta {
-	case 0:
-		p.X, p.Y = p.X, p.Y
-	case 90:
-		p.X, p.Y = -p.Y, p.X
-	case 180:
-		p.X, p.Y = -p.X, -p.Y
-	case 270:
-		p.X, p.Y = p.Y, -p.X
-	default:
-		common.Log.Debug("ERROR: Unsupported rotation %d", theta)
-	}
-	return p
+// Rotate returns a new Point at `p` rotated by `theta` degrees.
+func (p Point) Rotate(theta float64) Point {
+	radians := theta / 180.0 * math.Pi
+	r := math.Hypot(p.X, p.Y)
+	t := math.Atan2(p.Y, p.X)
+	return Point{r * math.Cos(t+radians), r * math.Sin(t+radians)}
 }
 
 // transformByMatrix mutates and transforms `p` by the affine transformation `m`.
@@ -63,6 +53,6 @@ func (p *Point) transformByMatrix(m Matrix) {
 }
 
 // String returns a string describing `p`.
-func (p *Point) String() string {
+func (p Point) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)", p.X, p.Y)
 }

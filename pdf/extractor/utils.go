@@ -55,9 +55,7 @@ func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (poi
 
 func toPagePoint(gs contentstream.GraphicsState, x, y float64) transform.Point {
 	xp, yp := gs.Transform(x, y)
-	p := transform.Point{xp, yp}
-	// fmt.Printf("      toPagePoint(%5.1f,%5.1f) -> %s (%s)\n", x, y, p.String(), gs.CTM.String())
-	return p
+	return transform.Point{xp, yp}
 }
 
 // toFloatXY returns `objs` as 2 floats, if that's what `objs` is, or an error if it isn't.
