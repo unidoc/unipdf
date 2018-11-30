@@ -7,11 +7,13 @@
 
 // FIXME(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
 
-package model
+package extractor
 
 import (
 	"fmt"
 	"math"
+
+	"github.com/unidoc/unidoc/pdf/contentstream"
 )
 
 // Point defines a point (X,Y) in Cartesian coordinates.
@@ -32,7 +34,7 @@ func (p *Point) Set(x, y float64) {
 
 // Transform transforms `p` by the affine transformation a, b, c, d, tx, ty.
 func (p *Point) Transform(a, b, c, d, tx, ty float64) {
-	m := NewMatrix(a, b, c, d, tx, ty)
+	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
 	p.transformByMatrix(m)
 }
 
@@ -50,7 +52,7 @@ func (p Point) Rotate(theta float64) Point {
 }
 
 // transformByMatrix transforms `p` by the affine transformation `m`.
-func (p *Point) transformByMatrix(m Matrix) {
+func (p *Point) transformByMatrix(m contentstream.Matrix) {
 	p.X, p.Y = m.Transform(p.X, p.Y)
 }
 

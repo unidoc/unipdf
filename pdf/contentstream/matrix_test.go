@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package model
+package contentstream
 
 import (
 	"math"

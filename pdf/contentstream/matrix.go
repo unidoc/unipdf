@@ -87,11 +87,6 @@ func (m *Matrix) Translation() (float64, float64) {
 	return m[6], m[7]
 }
 
-// Translation returns the translation part of `m`.
-func (m *Matrix) ScalingX() float64 {
-	return math.Hypot(m[0], m[1])
-}
-
 // Transform returns coordinates `x`,`y` transformed by `m`.
 func (m *Matrix) Transform(x, y float64) (float64, float64) {
 	xp := x*m[0] + y*m[1] + m[6]
@@ -99,42 +94,24 @@ func (m *Matrix) Transform(x, y float64) (float64, float64) {
 	return xp, yp
 }
 
-// ScalingFactorX returns X scaling of  the affine transform.
+// ScalingFactorX returns the X scaling of the affine transform.
 func (m *Matrix) ScalingFactorX() float64 {
-	return math.Sqrt(m[0]*m[0] + m[1]*m[1])
+	return math.Hypot(m[0], m[1])
 }
 
-// ScalingFactorY returns X scaling of  the affine transform.
+// ScalingFactorY returns the Y scaling of the affine transform.
 func (m *Matrix) ScalingFactorY() float64 {
-	return math.Sqrt(m[3]*m[3] + m[4]*m[4])
+	return math.Hypot(m[3], m[4])
 }
 
-// Angle returns the angle of the affine transform.
-// For simplicity, we assume the transform is a multiple of 90 degrees.
-func (m *Matrix) Angle() int {
-	a, b, c, d := m[0], m[1], m[3], m[4]
-	// We are returning θ for
-	// a b    cos θ  -sin θ
-	// c d =  sin θ   cos θ
-	if a > 0 && d > 0 {
-		//  1  0
-		//  0  1
-		return 0
-	} else if b < 0 && c > 0 {
-		//  0  1
-		// -1  0
-		return 90
-	} else if a < 0 && d < 0 {
-		// -1  0
-		//  0 -1
-		return 180
-	} else if b > 0 && c < 0 {
-		// 0 -1
-		// 1  0
-		return 270
+// Angle returns the angle of the affine transform in `m` in degrees.
+func (m *Matrix) Angle() float64 {
+	theta := math.Atan2(-m[1], m[0])
+	if theta < 0.0 {
+		theta += 2 * math.Pi
 	}
-	common.Log.Debug("ERROR: Angle not a multiple of 90°. m=%s", m)
-	return 0
+	return theta / math.Pi * 180.0
+
 }
 
 // fixup forces `m` to have reasonable values. It is a guard against crazy values in corrupt PDF

@@ -20,7 +20,7 @@ type GraphicsState struct {
 	ColorspaceNonStroking model.PdfColorspace
 	ColorStroking         model.PdfColor
 	ColorNonStroking      model.PdfColor
-	CTM                   model.Matrix
+	CTM                   Matrix
 }
 
 type GraphicStateStack []GraphicsState
@@ -211,7 +211,7 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 	proc.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
 	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
-	proc.graphicsState.CTM = model.IdentityMatrix()
+	proc.graphicsState.CTM = IdentityMatrix()
 
 	for _, op := range proc.operations {
 		var err error
@@ -563,15 +563,15 @@ func (proc *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, 
 func (proc *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	resources *model.PdfPageResources) error {
 	if len(op.Params) != 6 {
-		common.Log.Debug("Invalid number of parameters for cm: %d", len(op.Params))
-		return errors.New("Invalid number of parameters")
+		common.Log.Debug("ERROR: Invalid number of parameters for cm: %d", len(op.Params))
+		return errors.New("invalid number of parameters")
 	}
 
 	f, err := core.GetNumbersAsFloat(op.Params)
 	if err != nil {
 		return err
 	}
-	m := model.NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
+	m := NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
 	proc.graphicsState.CTM.Concat(m)
 
 	return nil

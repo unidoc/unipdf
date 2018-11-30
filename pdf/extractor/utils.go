@@ -13,7 +13,6 @@ import (
 	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // The text rendering mode, Tmode, determines whether showing text shall cause glyph outlines to be
@@ -28,15 +27,15 @@ const (
 	RenderModeClip
 )
 
-func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (model.Point, error) {
+func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (Point, error) {
 	x, y, err := toFloatXY(objs)
 	if err != nil {
-		return model.Point{}, err
+		return Point{}, err
 	}
 	return toPagePoint(gs, x, y), nil
 }
 
-func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (points []model.Point, err error) {
+func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (points []Point, err error) {
 	if len(objs)%2 != 0 {
 		err = fmt.Errorf("Invalid number of params: %d", len(objs))
 		common.Log.Debug("toPagePointList: err=%v", err)
@@ -53,9 +52,9 @@ func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (poi
 	return
 }
 
-func toPagePoint(gs contentstream.GraphicsState, x, y float64) model.Point {
+func toPagePoint(gs contentstream.GraphicsState, x, y float64) Point {
 	xp, yp := gs.Transform(x, y)
-	return model.Point{xp, yp}
+	return Point{xp, yp}
 }
 
 // toFloatXY returns `objs` as 2 floats, if that's what `objs` is, or an error if it isn't.

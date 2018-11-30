@@ -318,7 +318,7 @@ func (to *textObject) setTextMatrix(f []float64) {
 		return
 	}
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
-	to.Tm = model.NewMatrix(a, b, c, d, tx, ty)
+	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = to.Tm
 }
 
@@ -342,7 +342,7 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			if vertical {
 				dy, dx = dx, dy
 			}
-			td := translationMatrix(model.Point{X: dx, Y: dy})
+			td := translationMatrix(Point{X: dx, Y: dy})
 			to.Tm = td.Mult(to.Tm)
 			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
 		case *core.PdfObjectString:
@@ -574,9 +574,9 @@ type textObject struct {
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
 	State     *textState
-	Tm        model.Matrix // Text matrix. For the character pointer.
-	Tlm       model.Matrix // Text line matrix. For the start of line pointer.
-	Texts     []XYText     // Text gets written here.
+	Tm        contentstream.Matrix // Text matrix. For the character pointer.
+	Tlm       contentstream.Matrix // Text line matrix. For the start of line pointer.
+	Texts     []XYText             // Text gets written here.
 }
 
 // newTextState returns a default textState.
@@ -595,8 +595,8 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 		gs:        gs,
 		fontStack: fontStack,
 		State:     state,
-		Tm:        model.IdentityMatrix(),
-		Tlm:       model.IdentityMatrix(),
+		Tm:        contentstream.IdentityMatrix(),
+		Tlm:       contentstream.IdentityMatrix(),
 	}
 }
 
@@ -624,7 +624,7 @@ func (to *textObject) renderText(data []byte) error {
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
 	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
 
-	stateMatrix := model.NewMatrix(
+	stateMatrix := contentstream.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.Trise)
@@ -658,12 +658,12 @@ func (to *textObject) renderText(data []byte) error {
 		}
 
 		// c is the character size in unscaled text units.
-		c := model.Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
+		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
 
 		// t0 is the end of this character.
 		// t is the displacement of the text cursor when the character is rendered.
-		t0 := model.Point{X: (c.X*tfs + w) * th}
-		t := model.Point{X: (c.X*tfs + state.Tc + w) * th}
+		t0 := Point{X: (c.X*tfs + w) * th}
+		t := Point{X: (c.X*tfs + state.Tc + w) * th}
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
@@ -694,14 +694,14 @@ func (to *textObject) renderText(data []byte) error {
 const glyphTextRatio = 1.0 / 1000.0
 
 // translation returns the translation part of `m`.
-func translation(m model.Matrix) model.Point {
+func translation(m contentstream.Matrix) Point {
 	tx, ty := m.Translation()
-	return model.Point{tx, ty}
+	return Point{tx, ty}
 }
 
 // translationMatrix returns a matrix that translates by `p`.
-func translationMatrix(p model.Point) model.Matrix {
-	return model.TranslationMatrix(p.X, p.Y)
+func translationMatrix(p Point) contentstream.Matrix {
+	return contentstream.TranslationMatrix(p.X, p.Y)
 }
 
 // moveTo moves the start of line pointer by `tx`,`ty` and sets the text pointer to the
@@ -709,26 +709,26 @@ func translationMatrix(p model.Point) model.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	to.Tlm = model.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
+	to.Tlm = contentstream.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
 	to.Tm = to.Tlm
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type XYText struct {
-	Text          string      // The text.
-	Orient        int         // The text orientation in degrees. This is the current trm rounded to 10°.
-	OrientedStart model.Point // Left of text in orientation where text is horizontal.
-	OrientedEnd   model.Point // Right of text in orientation where text is horizontal.
-	Height        float64     // Text height.
-	SpaceWidth    float64     // Best guess at the width of a space in the font the text was rendered with.
-	count         int64       // To help with reading debug logs.
+	Text          string  // The text.
+	Orient        int     // The text orientation in degrees. This is the current trm rounded to 10°.
+	OrientedStart Point   // Left of text in orientation where text is horizontal.
+	OrientedEnd   Point   // Right of text in orientation where text is horizontal.
+	Height        float64 // Text height.
+	SpaceWidth    float64 // Best guess at the width of a space in the font the text was rendered with.
+	count         int64   // To help with reading debug logs.
 }
 
 // newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm model.Matrix, end model.Point, spaceWidth float64) XYText {
+func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
