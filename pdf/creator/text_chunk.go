@@ -18,9 +18,15 @@ type TextChunk struct {
 	// The style of the text being rendered.
 	Style TextStyle
 
+	// Text chunk annotation.
 	annotation *model.PdfAnnotation
+
+	// Internally used in order to skip processing the annotation
+	// if it has already been processed by the parent component.
+	annotationProcessed bool
 }
 
+// newTextChunk returns a new text chunk instance.
 func newTextChunk(text string, style TextStyle) *TextChunk {
 	return &TextChunk{
 		Text:  text,
@@ -28,7 +34,8 @@ func newTextChunk(text string, style TextStyle) *TextChunk {
 	}
 }
 
-func newExternalLinkAnnotation(location string) *model.PdfAnnotation {
+// newExternalLinkAnnotation returns a new external link annotation.
+func newExternalLinkAnnotation(url string) *model.PdfAnnotation {
 	annotation := model.NewPdfAnnotationLink()
 
 	// Set border style.
@@ -39,7 +46,7 @@ func newExternalLinkAnnotation(location string) *model.PdfAnnotation {
 	// Set link destination.
 	action := core.MakeDict()
 	action.Set(core.PdfObjectName("S"), core.MakeName("URI"))
-	action.Set(core.PdfObjectName("URI"), core.MakeString(location))
+	action.Set(core.PdfObjectName("URI"), core.MakeString(url))
 	annotation.A = action
 
 	// Create default annotation rectangle.
@@ -49,6 +56,7 @@ func newExternalLinkAnnotation(location string) *model.PdfAnnotation {
 	return annotation.PdfAnnotation
 }
 
+// newExternalLinkAnnotation returns a new internal link annotation.
 func newInternalLinkAnnotation(page int64, x, y, zoom float64) *model.PdfAnnotation {
 	annotation := model.NewPdfAnnotationLink()
 

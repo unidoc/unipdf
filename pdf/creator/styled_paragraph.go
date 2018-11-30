@@ -90,12 +90,6 @@ func (p *StyledParagraph) Append(text string) *TextChunk {
 	return p.appendChunk(chunk)
 }
 
-func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
-	p.chunks = append(p.chunks, chunk)
-	p.wrapText()
-	return chunk
-}
-
 // Insert adds a new text chunk at the specified position in the paragraph.
 func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 	l := uint(len(p.chunks))
@@ -110,16 +104,32 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 	return chunk
 }
 
-func (p *StyledParagraph) AddExternalLink(text, location string) *TextChunk {
+// AddExternalLink adds a new external link to the paragraph.
+// The text parameter represents the text that is displayed and the url
+// parameter sets the destionation of the link.
+func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
 	chunk := newTextChunk(text, p.defaultStyle)
-	chunk.annotation = newExternalLinkAnnotation(location)
+	chunk.annotation = newExternalLinkAnnotation(url)
 	return p.appendChunk(chunk)
 }
 
+// AddInternalLink adds a new internal link tot the paragraph.
+// The text param represents the text that is displayed.
+// The user is taken to the specified page, at the specified x and y
+// coordinates. Position 0, 0 is at the top left of the page.
+// The zoom of the destination page is controlled with the zoom
+// parameter. Pass in 0 to keep the current zoom value.
 func (p *StyledParagraph) AddInternalLink(text string, page int64, x, y, zoom float64) *TextChunk {
 	chunk := newTextChunk(text, p.defaultStyle)
 	chunk.annotation = newInternalLinkAnnotation(page-1, x, y, zoom)
 	return p.appendChunk(chunk)
+}
+
+// appendChunk adds the provided text chunk to the paragraph.
+func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
+	p.chunks = append(p.chunks, chunk)
+	p.wrapText()
+	return chunk
 }
 
 // Reset removes all the text chunks the paragraph contains.
@@ -713,6 +723,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			}
 
 			chunkWidth := chunkWidths[k] / 1000.0
+
+			// Add annotations.
 			if chunk.annotation != nil {
 				annotRect, ok := chunk.annotation.Rect.(*core.PdfObjectArray)
 				if ok {
@@ -721,6 +733,25 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					annotRect.Append(core.MakeFloat(currY))
 					annotRect.Append(core.MakeFloat(currX + chunkWidth))
 					annotRect.Append(core.MakeFloat(currY + height))
+				}
+
+				if !chunk.annotationProcessed {
+					annotCtx := chunk.annotation.GetContext()
+					switch t := annotCtx.(type) {
+					case *model.PdfAnnotationLink:
+						annotDest, ok := t.Dest.(*core.PdfObjectArray)
+						if ok && annotDest.Len() == 5 {
+							t, ok := annotDest.Get(1).(*core.PdfObjectName)
+							if ok && t.String() == "XYZ" {
+								y, err := core.GetNumberAsFloat(annotDest.Get(3))
+								if err == nil {
+									annotDest.Set(3, core.MakeFloat(ctx.PageHeight-y))
+								}
+							}
+						}
+					}
+
+					chunk.annotationProcessed = true
 				}
 
 				blk.AddAnnotation(chunk.annotation)
