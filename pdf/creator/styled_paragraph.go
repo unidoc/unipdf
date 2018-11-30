@@ -654,12 +654,18 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			}
 		} else if p.alignment == TextAlignmentCenter {
 			// Start with an offset of half of the remaining line space.
-			shift := (wrapWidth - width - spaceWidth) / 2 / defaultFontSize
+			offset := (wrapWidth - width - spaceWidth) / 2
+			shift := offset / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
+
+			currX += offset / 1000.0
 		} else if p.alignment == TextAlignmentRight {
 			// Push the text at the end of the line.
-			shift := (wrapWidth - width - spaceWidth) / defaultFontSize
+			offset := (wrapWidth - width - spaceWidth)
+			shift := offset / defaultFontSize
 			objs = append(objs, core.MakeFloat(-shift))
+
+			currX += offset / 1000.0
 		}
 
 		if len(objs) > 0 {
