@@ -26,6 +26,9 @@ type StyledParagraph struct {
 	// Style used for the paragraph for spacing and offsets.
 	defaultStyle TextStyle
 
+	// Style used for the paragraph link annotations.
+	defaultLinkStyle TextStyle
+
 	// Text alignment: Align left/right/center/justify.
 	alignment TextAlignment
 
@@ -68,20 +71,19 @@ type StyledParagraph struct {
 // newStyledParagraph creates a new styled paragraph.
 func newStyledParagraph(style TextStyle) *StyledParagraph {
 	// TODO: Can we wrap intellectually, only if given width is known?
-	p := &StyledParagraph{
-		chunks:       []*TextChunk{},
-		defaultStyle: style,
-		lineHeight:   1.0,
-		alignment:    TextAlignmentLeft,
-		enableWrap:   true,
-		defaultWrap:  true,
-		angle:        0,
-		scaleX:       1,
-		scaleY:       1,
-		positioning:  positionRelative,
+	return &StyledParagraph{
+		chunks:           []*TextChunk{},
+		defaultStyle:     style,
+		defaultLinkStyle: newLinkStyle(style.Font),
+		lineHeight:       1.0,
+		alignment:        TextAlignmentLeft,
+		enableWrap:       true,
+		defaultWrap:      true,
+		angle:            0,
+		scaleX:           1,
+		scaleY:           1,
+		positioning:      positionRelative,
 	}
-
-	return p
 }
 
 // Append adds a new text chunk to the paragraph.
@@ -108,7 +110,7 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 // The text parameter represents the text that is displayed and the url
 // parameter sets the destionation of the link.
 func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
-	chunk := newTextChunk(text, p.defaultStyle)
+	chunk := newTextChunk(text, p.defaultLinkStyle)
 	chunk.annotation = newExternalLinkAnnotation(url)
 	return p.appendChunk(chunk)
 }
@@ -120,7 +122,7 @@ func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
 // The zoom of the destination page is controlled with the zoom
 // parameter. Pass in 0 to keep the current zoom value.
 func (p *StyledParagraph) AddInternalLink(text string, page int64, x, y, zoom float64) *TextChunk {
-	chunk := newTextChunk(text, p.defaultStyle)
+	chunk := newTextChunk(text, p.defaultLinkStyle)
 	chunk.annotation = newInternalLinkAnnotation(page-1, x, y, zoom)
 	return p.appendChunk(chunk)
 }
