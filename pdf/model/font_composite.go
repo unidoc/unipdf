@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"io/ioutil"
+	"sort"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -412,6 +413,10 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	for r := range ttf.Chars {
 		runes = append(runes, r)
 	}
+	// make sure runes are sorted so PDF output is stable
+	sort.Slice(runes, func(i, j int) bool {
+		return runes[i] < runes[j]
+	})
 
 	k := 1000.0 / float64(ttf.UnitsPerEm)
 
