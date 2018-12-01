@@ -734,6 +734,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			// Add annotations.
 			if chunk.annotation != nil {
+				// Set the coordinates of the annotation.
 				annotRect, ok := chunk.annotation.Rect.(*core.PdfObjectArray)
 				if ok {
 					annotRect.Clear()
@@ -743,10 +744,16 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					annotRect.Append(core.MakeFloat(currY + height))
 				}
 
+				// Process annotation.
 				if !chunk.annotationProcessed {
 					annotCtx := chunk.annotation.GetContext()
 					switch t := annotCtx.(type) {
 					case *model.PdfAnnotationLink:
+						// Reverse the Y axis of the destination coordinates.
+						// The user passes in the annotation coordinates as if
+						// position 0, 0 is at the top left of the page.
+						// However, position 0, 0 in the PDF is at the bottom
+						// left of the page.
 						annotDest, ok := t.Dest.(*core.PdfObjectArray)
 						if ok && annotDest.Len() == 5 {
 							t, ok := annotDest.Get(1).(*core.PdfObjectName)

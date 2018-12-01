@@ -101,7 +101,7 @@ func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
 }
 
-// AddAnnotation adds an anotation to the current block.
+// AddAnnotation adds an annotation to the current block.
 // The annotation will be added to the page the block will be rendered on.
 func (blk *Block) AddAnnotation(annotation *model.PdfAnnotation) {
 	blk.annotations = append(blk.annotations, annotation)
