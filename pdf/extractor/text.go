@@ -617,8 +617,8 @@ func (to *textObject) renderText(data []byte) error {
 	state := to.State
 	tfs := state.Tfs
 	th := state.Th / 100.0
-	spaceMetrics, err := font.GetRuneCharMetrics(' ')
-	if err != nil {
+	spaceMetrics, ok := font.GetRuneCharMetrics(' ')
+	if !ok {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio

@@ -27,37 +27,6 @@ type PdfFont struct {
 	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
-// getCharCodeMetrics is a handy function for getting character metrics given a charcode.
-func (font PdfFont) getCharCodeMetrics(code uint16) (fonts.CharMetrics, bool) {
-	var nometrics fonts.CharMetrics
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		if m, ok := t.GetCharMetrics(code); ok {
-			return m, ok
-		}
-	case *pdfFontType0:
-		if m, ok := t.GetCharMetrics(code); ok {
-			return m, ok
-		}
-	case *pdfCIDFontType0:
-		if m, ok := t.GetCharMetrics(code); ok {
-			return m, ok
-		}
-	case *pdfCIDFontType2:
-		if m, ok := t.GetCharMetrics(code); ok {
-			return m, ok
-		}
-	default:
-		common.Log.Debug("ERROR: GetCharMetrics Not implemented for font type=%T", font.context)
-		return nometrics, false
-	}
-
-	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
-		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
-	}
-	return nometrics, false
-}
-
 // GetFontDescriptor returns the font descriptor for `font`.
 func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 	switch t := font.context.(type) {
@@ -446,7 +415,10 @@ func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of unicode strings.
-// XXX(peterwilliams97): Remove int returns.
+// How it works:
+//  1) Use the ToUnicode CMap if there is one.
+//  2) Use the underlying font's encoding.
+// TODO(peterwilliams97): Remove int returns.
 func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) {
 	charstrings := make([]string, 0, len(charcodes))
 	numMisses := 0
@@ -472,7 +444,6 @@ func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) 
 			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
 		numMisses++
 		charstrings = append(charstrings, cmap.MissingCodeString)
-
 	}
 
 	if numMisses != 0 {
@@ -517,6 +488,8 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns the char metrics for glyph name `glyph`.
+// TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
+//                       well give them 0 width. There is no need for the bool return.
 func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
@@ -529,36 +502,88 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
 		return fonts.CharMetrics{GlyphName: glyph, Wx: descriptor.missingWidth}, true
 	}
+
+	common.Log.Debug("GetGlyphCharMetrics: No metrics for font=%s", font)
 	return fonts.CharMetrics{GlyphName: glyph}, false
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
+// How it works:
+//  1) It calls the GetCharMetrics function for the underlying font, either a simple font or
+//     a Type0 font. The underlying font GetCharMetrics() functions do direct charcode ➞  metrics
+//     mappings.
+//  2) If the underlying font's GetCharMetrics() doesn't have a CharMetrics for `code` then a
+//     a CharMetrics with the FontDescriptor's /MissingWidth is returned.
+//  3) If there is no /MissingWidth then a failure is returned.
+// TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
+//                       well give them 0 width. There is no need for the bool return.
 func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
-	return font.getCharCodeMetrics(code)
+	var nometrics fonts.CharMetrics
+
+	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
+	// through this function. Would it be more straightforward for pdfFontType0.GetCharMetrics() to
+	// call pdfCIDFontType0.GetCharMetrics() and pdfCIDFontType2.GetCharMetrics() directly?
+	switch t := font.context.(type) {
+	case *pdfFontSimple:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfFontType0:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfCIDFontType0:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	case *pdfCIDFontType2:
+		if m, ok := t.GetCharMetrics(code); ok {
+			return m, ok
+		}
+	default:
+		common.Log.Debug("ERROR: GetCharMetrics not implemented for font type=%T.", font.context)
+		return nometrics, false
+	}
+
+	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
+		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
+	}
+
+	common.Log.Debug("GetCharMetrics: No metrics for font=%s", font)
+	return nometrics, false
 }
 
 // GetRuneCharMetrics returns the char metrics for rune `r`.
-func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, error) {
-	encoder := font.Encoder()
-	if encoder == nil {
-		common.Log.Debug("ERROR: Metrics not found for %s", font)
-		return fonts.CharMetrics{}, errors.New("no font encoder")
-	}
+// TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
+//                       well give them 0 width. There is no need for the bool return.
+func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
+	var nometrics fonts.CharMetrics
 
-	glyph, found := encoder.RuneToGlyph(r)
-	if !found {
-		common.Log.Debug("Error! Glyph not found for rune=%s %s", r, font.String())
-		glyph = "space"
-	}
-	m, ok := font.GetGlyphCharMetrics(glyph)
-	if !ok {
+	encoder := font.Encoder()
+	if encoder != nil {
+
+		glyph, found := encoder.RuneToGlyph(r)
+		if !found {
+			common.Log.Debug("Error! Glyph not found for rune=%s %s", r, font.String())
+		} else {
+			m, ok := font.GetGlyphCharMetrics(glyph)
+			if ok {
+				return m, true
+			}
+		}
 		common.Log.Debug("ERROR: Metrics not found for rune=%+v glyph=%#q %s", r, glyph, font)
 	}
-	return m, nil
+	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
+		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
+	}
+
+	common.Log.Debug("GetRuneCharMetrics: No metrics for font=%s", font)
+	return nometrics, false
 }
 
 // actualFont returns the Font in font.context
-// NOTE(gunnsth): Actually this only sanity checks the font.context as the returned font will be wrapped in an interface.
+// NOTE(gunnsth): Actually this only sanity checks the font.context as the returned font will be
+// wrapped in an interface.
 func (font PdfFont) actualFont() fonts.Font {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)

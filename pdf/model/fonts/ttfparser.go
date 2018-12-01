@@ -88,8 +88,8 @@ type TtfType struct {
 	CapHeight              int16
 	Widths                 []uint16
 
-	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e. GlyphNames[Chars[r]] is
-	// the glyph corresponding to rune r.
+	// Chars maps char codes to GIDs (the indexes in GlyphNames). i.e. GlyphNames[Chars[code]] is
+	// the glyph corresponding to `code`.
 	Chars map[uint16]uint16
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
 	GlyphNames []string
@@ -100,8 +100,8 @@ type TtfType struct {
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := map[cmap.CharCode]string{}
-	for code, idx := range ttf.Chars {
-		glyph := ttf.GlyphNames[idx]
+	for code, gid := range ttf.Chars {
+		glyph := ttf.GlyphNames[gid]
 
 		r, ok := textencoding.GlyphToRune(glyph)
 		if !ok {
@@ -175,7 +175,7 @@ func (t *ttfParser) Parse() (TtfType, error) {
 		// See https://docs.microsoft.com/en-us/typography/opentype/spec/otff
 		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
-	if version != "\x00\x01\x00\x00" {
+	if version != "\x00\x01\x00\x00" && version != "true" {
 		// This is not an error. In the font_test.go example axes.txt we see version "true".
 		common.Log.Debug("Unrecognized TrueType file format. version=%q", version)
 	}

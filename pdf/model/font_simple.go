@@ -72,26 +72,30 @@ func (font *pdfFontSimple) baseFields() *fontCommon {
 
 // Encoder returns the font's text encoder.
 func (font *pdfFontSimple) Encoder() textencoding.TextEncoder {
+	// TODO(peterwilliams97)Need to make font.Encoder()==nil test work for
+	// font.std14=Encoder=font.encoder=nil See https://golang.org/doc/faq#nil_error
+	if font.encoder != nil {
+		return font.encoder
+	}
+
 	// Standard 14 fonts have builtin encoders that we fall back to when no /Encoding is specified
 	// in the font dict.
-	if font.encoder == nil {
-		// Need to make font.Encoder()==nil test work for font.std14=Encoder=font.encoder=nil
-		// See https://golang.org/doc/faq#nil_error
-		if font.std14Encoder == nil {
-			return nil
-		}
+	if font.std14Encoder != nil {
 		return font.std14Encoder
 	}
-	return font.encoder
+
+	// Default to StandardEncoding
+	enc, _ := textencoding.NewSimpleTextEncoder("StandardEncoding", nil)
+	return enc
 }
 
 // SetEncoder sets the encoding for the underlying font.
-// XXX(peterwilliams97) Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
+// TODO(peterwilliams97) Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
 func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 	simple, ok := encoder.(*textencoding.SimpleEncoder)
 	if !ok {
 		// This can't happen.
-		common.Log.Error("pdfFontSimple.SetEncoder passedbad encoder type %T", encoder)
+		common.Log.Error("pdfFontSimple.SetEncoder passed bad encoder type %T", encoder)
 		simple = nil
 	}
 	font.encoder = simple
@@ -129,6 +133,10 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 
 // GetCharMetrics returns the character metrics for the specified character code.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
+// How it works:
+//  1) Return a value the /Widths array (charWidths) if there is one.
+//  2) If the font has the same name as a standard 14 font then return width=250.
+//  3) Otherwise return no match and let the caller substitute a default.
 func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	if width, ok := font.charWidths[code]; ok {
 		return fonts.CharMetrics{Wx: width}, true
@@ -137,15 +145,6 @@ func (font pdfFontSimple) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) 
 		// PdfBox says this is what Acrobat does. Their reference is PDFBOX-2334.
 		return fonts.CharMetrics{Wx: 250}, true
 	}
-	if font.encoder != nil {
-		if glyph, ok := font.encoder.CharcodeToGlyph(code); ok {
-			if metrics, ok := font.fontMetrics[glyph]; ok {
-				font.charWidths[code] = metrics.Wx
-				return metrics, true
-			}
-		}
-	}
-	common.Log.Debug("GetCharMetrics: No match for code=%d font=%s", code, font)
 	return fonts.CharMetrics{}, false
 }
 
