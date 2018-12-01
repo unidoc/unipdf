@@ -289,6 +289,7 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 		return err
 	}
 
+	// Add block annotations to the page.
 	for _, annotation := range blk.annotations {
 		page.Annotations = append(page.Annotations, annotation)
 	}

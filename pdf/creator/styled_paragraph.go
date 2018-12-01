@@ -86,6 +86,13 @@ func newStyledParagraph(style TextStyle) *StyledParagraph {
 	}
 }
 
+// appendChunk adds the provided text chunk to the paragraph.
+func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
+	p.chunks = append(p.chunks, chunk)
+	p.wrapText()
+	return chunk
+}
+
 // Append adds a new text chunk to the paragraph.
 func (p *StyledParagraph) Append(text string) *TextChunk {
 	chunk := newTextChunk(text, p.defaultStyle)
@@ -116,7 +123,7 @@ func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
 }
 
 // AddInternalLink adds a new internal link tot the paragraph.
-// The text param represents the text that is displayed.
+// The text parameter represents the text that is displayed.
 // The user is taken to the specified page, at the specified x and y
 // coordinates. Position 0, 0 is at the top left of the page.
 // The zoom of the destination page is controlled with the zoom
@@ -125,13 +132,6 @@ func (p *StyledParagraph) AddInternalLink(text string, page int64, x, y, zoom fl
 	chunk := newTextChunk(text, p.defaultLinkStyle)
 	chunk.annotation = newInternalLinkAnnotation(page-1, x, y, zoom)
 	return p.appendChunk(chunk)
-}
-
-// appendChunk adds the provided text chunk to the paragraph.
-func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
-	p.chunks = append(p.chunks, chunk)
-	p.wrapText()
-	return chunk
 }
 
 // Reset removes all the text chunks the paragraph contains.
