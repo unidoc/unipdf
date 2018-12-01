@@ -5,15 +5,11 @@
  * Based on pdf/contentstream/draw/point.go
  */
 
-// FIXME(peterwilliams97) Change to functional style. i.e. Return new value, don't mutate.
-
-package extractor
+package transform
 
 import (
 	"fmt"
 	"math"
-
-	"github.com/unidoc/unidoc/pdf/contentstream"
 )
 
 // Point defines a point (X,Y) in Cartesian coordinates.
@@ -22,19 +18,19 @@ type Point struct {
 	Y float64
 }
 
-// NewPoint returns a Point at `x`, `y`.
+// NewPoint returns a Point at `(x,y)`.
 func NewPoint(x, y float64) Point {
 	return Point{X: x, Y: y}
 }
 
-// Set sets `p` to coordinates `(x, y)`.
+// Set mutates `p` and sets to coordinates `(x, y)`.
 func (p *Point) Set(x, y float64) {
 	p.X, p.Y = x, y
 }
 
-// Transform transforms `p` by the affine transformation a, b, c, d, tx, ty.
+// Transform mutates and transforms `p` by the affine transformation a, b, c, d, tx, ty.
 func (p *Point) Transform(a, b, c, d, tx, ty float64) {
-	m := contentstream.NewMatrix(a, b, c, d, tx, ty)
+	m := NewMatrix(a, b, c, d, tx, ty)
 	p.transformByMatrix(m)
 }
 
@@ -51,8 +47,8 @@ func (p Point) Rotate(theta float64) Point {
 	return Point{r * math.Cos(t+radians), r * math.Sin(t+radians)}
 }
 
-// transformByMatrix transforms `p` by the affine transformation `m`.
-func (p *Point) transformByMatrix(m contentstream.Matrix) {
+// transformByMatrix mutates and transforms `p` by the affine transformation `m`.
+func (p *Point) transformByMatrix(m Matrix) {
 	p.X, p.Y = m.Transform(p.X, p.Y)
 }
 

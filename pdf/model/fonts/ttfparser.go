@@ -164,7 +164,7 @@ func TtfParse(fileStr string) (TtfType, error) {
 	return t.Parse()
 }
 
-// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
+// Parse returns a TtfType describing the TrueType font file in io.Reader `t`.f.
 func (t *ttfParser) Parse() (TtfType, error) {
 
 	version, err := t.ReadStr(4)
@@ -276,7 +276,7 @@ func (t *ttfParser) ParseHead() error {
 	t.Skip(3 * 4) // version, fontRevision, checkSumAdjustment
 	magicNumber := t.ReadULong()
 	if magicNumber != 0x5F0F3CF5 {
-		// ~/testdata/pdf_text/outputmanager.pdf displays in Adobe Reader but has a bad magic
+		// outputmanager.pdf displays in Adobe Reader but has a bad magic
 		// number so we don't return an error here.
 		common.Log.Debug("ERROR: Incorrect magic number. Font may not display correctly. %s", t)
 	}

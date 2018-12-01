@@ -9,14 +9,17 @@
 
 package fonts
 
+// FontWeight specified font weight.
 type FontWeight int
 
+// Font weights
 const (
-	FontWeightMedium FontWeight = iota
-	FontWeightBold
-	FontWeightRoman
+	FontWeightMedium FontWeight = iota // Medium
+	FontWeightBold                     // Bold
+	FontWeightRoman                    // Roman
 )
 
+// DescriptorLiteral describes geometric properties of a font.
 type DescriptorLiteral struct {
 	FontName   string
 	FontFamily string

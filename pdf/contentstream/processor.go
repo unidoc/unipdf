@@ -10,25 +10,29 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/transform"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Basic graphics state implementation.
-// Initially only implementing and tracking a portion of the information specified.  Easy to add more.
+// GraphicsState is a basic graphics state implementation for PDF processing.
+// Initially only implementing and tracking a portion of the information specified. Easy to add more.
 type GraphicsState struct {
 	ColorspaceStroking    model.PdfColorspace
 	ColorspaceNonStroking model.PdfColorspace
 	ColorStroking         model.PdfColor
 	ColorNonStroking      model.PdfColor
-	CTM                   Matrix
+	CTM                   transform.Matrix
 }
 
+// GraphicsStateStack represents a stack of GraphicsState.
 type GraphicStateStack []GraphicsState
 
+// Push pushes `gs` on the `gsStack`.
 func (gsStack *GraphicStateStack) Push(gs GraphicsState) {
 	*gsStack = append(*gsStack, gs)
 }
 
+// Pop pops and returns the topmost GraphicsState off the `gsStack`.
 func (gsStack *GraphicStateStack) Pop() GraphicsState {
 	gs := (*gsStack)[len(*gsStack)-1]
 	*gsStack = (*gsStack)[:len(*gsStack)-1]
@@ -48,26 +52,27 @@ type ContentStreamProcessor struct {
 	operations    []*ContentStreamOperation
 	graphicsState GraphicsState
 
-	handlers     []HandlerEntry
+	handlers     []handlerEntry
 	currentIndex int
 }
 
+// HandlerFunc is the function syntax that the ContentStreamProcessor handler must implement.
 type HandlerFunc func(op *ContentStreamOperation, gs GraphicsState, resources *model.PdfPageResources) error
 
-type HandlerEntry struct {
+type handlerEntry struct {
 	Condition HandlerConditionEnum
 	Operand   string
 	Handler   HandlerFunc
 }
 
-// HandlerConditionEnum represents the type of operand content stream processor.
-// HandlerConditionEnumOperand handler handles a single operand, whereas
-// HandlerConditionEnumAllOperands processes all operands.
+// HandlerConditionEnum represents the type of operand content stream processor (handler).
+// The handler may process a single specific named operand or all operands.
 type HandlerConditionEnum int
 
+// Handler types.
 const (
-	HandlerConditionEnumOperand     HandlerConditionEnum = iota
-	HandlerConditionEnumAllOperands HandlerConditionEnum = iota
+	HandlerConditionEnumOperand     HandlerConditionEnum = iota // Single (specific) operand.
+	HandlerConditionEnumAllOperands                             // All operands.
 )
 
 // All returns true if `hce` is equivalent to HandlerConditionEnumAllOperands.
@@ -80,6 +85,7 @@ func (hce HandlerConditionEnum) Operand() bool {
 	return hce == HandlerConditionEnumOperand
 }
 
+// NewContentStreamProcessor returns a new ContentStreamProcessor for operations `ops`.
 func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProcessor {
 	csp := ContentStreamProcessor{}
 	csp.graphicsStack = GraphicStateStack{}
@@ -89,15 +95,16 @@ func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProc
 
 	csp.graphicsState = gs
 
-	csp.handlers = []HandlerEntry{}
+	csp.handlers = []handlerEntry{}
 	csp.currentIndex = 0
 	csp.operations = ops
 
 	return &csp
 }
 
+// AddHandler adds a new ContentStreamProcessor `handler` of type `condition` for `operand`.
 func (proc *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, operand string, handler HandlerFunc) {
-	entry := HandlerEntry{}
+	entry := handlerEntry{}
 	entry.Condition = condition
 	entry.Operand = operand
 	entry.Handler = handler
@@ -204,14 +211,15 @@ func (proc *ContentStreamProcessor) getInitialColor(cs model.PdfColorspace) (mod
 	return nil, errors.New("Unsupported colorspace")
 }
 
-// Process the entire operations.
+// Process processes the entire list of operations. Maintains the graphics state that is passed to any
+// handlers that are triggered during processing (either on specific operators or all).
 func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) error {
 	// Initialize graphics state
 	proc.graphicsState.ColorspaceStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
 	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
-	proc.graphicsState.CTM = IdentityMatrix()
+	proc.graphicsState.CTM = transform.IdentityMatrix()
 
 	for _, op := range proc.operations {
 		var err error
@@ -571,7 +579,7 @@ func (proc *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
 	if err != nil {
 		return err
 	}
-	m := NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
+	m := transform.NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
 	proc.graphicsState.CTM.Concat(m)
 
 	return nil

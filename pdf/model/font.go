@@ -517,12 +517,14 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 //  3) If there is no /MissingWidth then a failure is returned.
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
+// TODO(gunnsth): Reconsider whether needed or if can map via GlyphName.
 func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
 	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
 	// through this function. Would it be more straightforward for pdfFontType0.GetCharMetrics() to
 	// call pdfCIDFontType0.GetCharMetrics() and pdfCIDFontType2.GetCharMetrics() directly?
+
 	switch t := font.context.(type) {
 	case *pdfFontSimple:
 		if m, ok := t.GetCharMetrics(code); ok {

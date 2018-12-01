@@ -18,6 +18,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/transform"
 	"github.com/unidoc/unidoc/pdf/model"
 	"golang.org/x/text/unicode/norm"
 )
@@ -31,9 +32,9 @@ func (e *Extractor) ExtractText() (string, error) {
 	return text, err
 }
 
-// ExtractTextWithStats works like ExtractText but returns the number of characters in the output and the
-// the number of characters that were not decoded.
-func (e *Extractor) ExtractTextWithStats() (string, int, int, error) {
+// ExtractTextWithStats works like ExtractText but returns the number of characters in the output (`numChars`) and the
+// the number of characters that were not decoded (`numMisses`).
+func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numMisses int, err error) {
 	textList, numChars, numMisses, err := e.ExtractXYText()
 	if err != nil {
 		return "", numChars, numMisses, err
@@ -188,7 +189,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.setCharSpacing(y)
 			case "Tf": // Set font
 				if to == nil {
-					// This is needed for ~/testdata/26-Hazard-Thermal-environment.pdf
+					// This is needed for 26-Hazard-Thermal-environment.pdf
 					to = newTextObject(e, gs, &state, &fontStack)
 				}
 				if ok, err := to.checkOp(op, 2, true); !ok {
@@ -318,7 +319,7 @@ func (to *textObject) setTextMatrix(f []float64) {
 		return
 	}
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
-	to.Tm = contentstream.NewMatrix(a, b, c, d, tx, ty)
+	to.Tm = transform.NewMatrix(a, b, c, d, tx, ty)
 	to.Tlm = to.Tm
 }
 
@@ -342,7 +343,7 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			if vertical {
 				dy, dx = dx, dy
 			}
-			td := translationMatrix(Point{X: dx, Y: dy})
+			td := translationMatrix(transform.Point{X: dx, Y: dy})
 			to.Tm = td.Mult(to.Tm)
 			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.Tm)
 		case *core.PdfObjectString:
@@ -574,9 +575,9 @@ type textObject struct {
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
 	State     *textState
-	Tm        contentstream.Matrix // Text matrix. For the character pointer.
-	Tlm       contentstream.Matrix // Text line matrix. For the start of line pointer.
-	Texts     []XYText             // Text gets written here.
+	Tm        transform.Matrix // Text matrix. For the character pointer.
+	Tlm       transform.Matrix // Text line matrix. For the start of line pointer.
+	Texts     []XYText         // Text gets written here.
 }
 
 // newTextState returns a default textState.
@@ -595,8 +596,8 @@ func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textStat
 		gs:        gs,
 		fontStack: fontStack,
 		State:     state,
-		Tm:        contentstream.IdentityMatrix(),
-		Tlm:       contentstream.IdentityMatrix(),
+		Tm:        transform.IdentityMatrix(),
+		Tlm:       transform.IdentityMatrix(),
 	}
 }
 
@@ -624,7 +625,7 @@ func (to *textObject) renderText(data []byte) error {
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
 	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
 
-	stateMatrix := contentstream.NewMatrix(
+	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.Trise)
@@ -632,7 +633,7 @@ func (to *textObject) renderText(data []byte) error {
 	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
 	for i, r := range runes {
-		// XXX(peterwilliams97) Need to find and fix cases where this happens.
+		// TODO(peterwilliams97): Need to find and fix cases where this happens.
 		if r == "\x00" {
 			continue
 		}
@@ -658,12 +659,12 @@ func (to *textObject) renderText(data []byte) error {
 		}
 
 		// c is the character size in unscaled text units.
-		c := Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
+		c := transform.Point{X: m.Wx * glyphTextRatio, Y: m.Wy * glyphTextRatio}
 
 		// t0 is the end of this character.
 		// t is the displacement of the text cursor when the character is rendered.
-		t0 := Point{X: (c.X*tfs + w) * th}
-		t := Point{X: (c.X*tfs + state.Tc + w) * th}
+		t0 := transform.Point{X: (c.X*tfs + w) * th}
+		t := transform.Point{X: (c.X*tfs + state.Tc + w) * th}
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
@@ -694,14 +695,14 @@ func (to *textObject) renderText(data []byte) error {
 const glyphTextRatio = 1.0 / 1000.0
 
 // translation returns the translation part of `m`.
-func translation(m contentstream.Matrix) Point {
+func translation(m transform.Matrix) transform.Point {
 	tx, ty := m.Translation()
-	return Point{tx, ty}
+	return transform.Point{tx, ty}
 }
 
 // translationMatrix returns a matrix that translates by `p`.
-func translationMatrix(p Point) contentstream.Matrix {
-	return contentstream.TranslationMatrix(p.X, p.Y)
+func translationMatrix(p transform.Point) transform.Matrix {
+	return transform.TranslationMatrix(p.X, p.Y)
 }
 
 // moveTo moves the start of line pointer by `tx`,`ty` and sets the text pointer to the
@@ -709,26 +710,26 @@ func translationMatrix(p Point) contentstream.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	to.Tlm = contentstream.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
+	to.Tlm = transform.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.Tlm)
 	to.Tm = to.Tlm
 }
 
 // XYText represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type XYText struct {
-	Text          string  // The text.
-	Orient        int     // The text orientation in degrees. This is the current trm rounded to 10°.
-	OrientedStart Point   // Left of text in orientation where text is horizontal.
-	OrientedEnd   Point   // Right of text in orientation where text is horizontal.
-	Height        float64 // Text height.
-	SpaceWidth    float64 // Best guess at the width of a space in the font the text was rendered with.
-	count         int64   // To help with reading debug logs.
+	Text          string          // The text.
+	Orient        int             // The text orientation in degrees. This is the current TRM rounded to 10°.
+	OrientedStart transform.Point // Left of text in orientation where text is horizontal.
+	OrientedEnd   transform.Point // Right of text in orientation where text is horizontal.
+	Height        float64         // Text height.
+	SpaceWidth    float64         // Best guess at the width of a space in the font the text was rendered with.
+	count         int64           // To help with reading debug logs.
 }
 
-// newXYText returns an XYText for text `text` rendered with text rendering matrix `trm` and end
+// newXYText returns an XYText for text `text` rendered with text rendering matrix (TRM) `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newXYText(text string, trm contentstream.Matrix, end Point, spaceWidth float64) XYText {
+func (to *textObject) newXYText(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) XYText {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -795,7 +796,7 @@ func (tl TextList) ToText() string {
 
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := min(fontHeight*0.2, 5.0)
+	tol := minFloat(fontHeight*0.2, 5.0)
 	common.Log.Trace("ToText: fontHeight=%.1f tol=%.1f", fontHeight, tol)
 
 	tl.SortPosition(tol)
@@ -890,7 +891,7 @@ func (tl TextList) toLinesOrient(tol float64) []Line {
 		// We use a heuristic from PdfBox: If the next character starts to the right of where a
 		// character after a space at "normal spacing" would start, then there is a space before it.
 		// The tricky thing to guess here is the width of a space at normal spacing.
-		// We follow PdfBox and use min(deltaSpace, deltaCharWidth).
+		// We follow PdfBox and use minFloat(deltaSpace, deltaCharWidth).
 		deltaSpace := 0.0
 		if t.SpaceWidth == 0 {
 			deltaSpace = math.MaxFloat64
@@ -943,14 +944,6 @@ func orientKeys(tlOrient map[int]TextList) []int {
 	}
 	sort.Ints(keys)
 	return keys
-}
-
-// min returns the lesser of `a` and `b`.
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // exponAve implements an exponential average.
@@ -1046,8 +1039,8 @@ func combineDiacritics(line Line, charWidth float64) Line {
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
 
-	words := []string{}
-	dxList := []float64{}
+	var words []string
+	var dxList []float64
 	w := line.Words[0]
 	w, c := countDiacritic(w)
 	delta := 0.0

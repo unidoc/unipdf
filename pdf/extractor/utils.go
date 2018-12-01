@@ -13,29 +13,31 @@ import (
 	"github.com/unidoc/unidoc/common/license"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/transform"
 )
 
-// The text rendering mode, Tmode, determines whether showing text shall cause glyph outlines to be
-// stroked, filled, used as a clipping boundary, or some combination of the three. Stroking,
-// filling, and clipping shall have the same effects for a text object as they do for a path object
-// (see 8.5.3, "Path-Painting Operators" and 8.5.4, "Clipping Path Operators"),
+// RenderMode specifies the text rendering mode (Tmode), which determines whether showing text shall cause
+// glyph outlines to be  stroked, filled, used as a clipping boundary, or some combination of the three.
+// Stroking, filling, and clipping shall have the same effects for a text object as they do for a path object
+// (see 8.5.3, "Path-Painting Operators" and 8.5.4, "Clipping Path Operators").
 type RenderMode int
 
+// Render mode type.
 const (
-	RenderModeStroke RenderMode = 1 << iota
-	RenderModeFill
-	RenderModeClip
+	RenderModeStroke RenderMode = 1 << iota // Stroke
+	RenderModeFill                          // Fill
+	RenderModeClip                          // Clip
 )
 
-func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (Point, error) {
+func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (transform.Point, error) {
 	x, y, err := toFloatXY(objs)
 	if err != nil {
-		return Point{}, err
+		return transform.Point{}, err
 	}
 	return toPagePoint(gs, x, y), nil
 }
 
-func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (points []Point, err error) {
+func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (points []transform.Point, err error) {
 	if len(objs)%2 != 0 {
 		err = fmt.Errorf("Invalid number of params: %d", len(objs))
 		common.Log.Debug("toPagePointList: err=%v", err)
@@ -52,9 +54,9 @@ func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (poi
 	return
 }
 
-func toPagePoint(gs contentstream.GraphicsState, x, y float64) Point {
+func toPagePoint(gs contentstream.GraphicsState, x, y float64) transform.Point {
 	xp, yp := gs.Transform(x, y)
-	return Point{xp, yp}
+	return transform.Point{xp, yp}
 }
 
 // toFloatXY returns `objs` as 2 floats, if that's what `objs` is, or an error if it isn't.

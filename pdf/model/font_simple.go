@@ -105,8 +105,10 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	if font.fontMetrics != nil {
-		metrics, ok := font.fontMetrics[glyph]
-		return metrics, ok
+		metrics, has := font.fontMetrics[glyph]
+		if has {
+			return metrics, true
+		}
 	}
 
 	metrics := fonts.CharMetrics{GlyphName: glyph}
@@ -393,9 +395,6 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		},
 	}
 
-	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
-	// then can derive
-	// TODO: Subsetting fonts.
 	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
 
 	truefont.basefont = ttf.PostScriptName
