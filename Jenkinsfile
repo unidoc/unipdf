@@ -23,6 +23,7 @@ node {
 
             // Get dependencies
             sh 'go get golang.org/x/image/tiff/lzw'
+            sh 'go get golang.org/x/text/unicode/norm'
             sh 'go get github.com/boombuler/barcode'
         }
 
