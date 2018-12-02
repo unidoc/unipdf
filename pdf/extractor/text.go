@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"unicode"
@@ -795,7 +793,6 @@ func (tl TextList) height() float64 {
 
 // ToText returns the contents of `tl` as a single string.
 func (tl TextList) ToText() string {
-	tl.printTexts("ToText: before sorting")
 
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
@@ -859,7 +856,6 @@ func (tl TextList) toLines(tol float64) []Line {
 // Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLinesOrient(tol float64) []Line {
-	tl.printTexts("toLines: before")
 	if len(tl) == 0 {
 		return []Line{}
 	}
@@ -955,46 +951,18 @@ type exponAve struct {
 	running bool    // Has `ave` been set?
 }
 
-// update updates the exponential average `exp.ave` and returns it
+// update updates the exponential average `exp.ave` and returns it.
 func (exp *exponAve) update(x float64) float64 {
 	if !exp.running {
 		exp.ave = x
 		exp.running = true
 	} else {
+		// NOTE(peterwilliams97) 0.5 is a guess. It may be possible to improve average character
+		// and space width estimation by tuning this value. It may be that different exponents
+		// would work better for character and space estimation.
 		exp.ave = (exp.ave + x) * 0.5
 	}
 	return exp.ave
-}
-
-const isDebug = false
-
-// printTexts is a debugging function.
-// TODO(peterwilliams97) Remove this.
-func (tl *TextList) printTexts(message string) {
-	if !isDebug {
-		return
-	}
-
-	_, file, line, ok := runtime.Caller(1)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		file = filepath.Base(file)
-	}
-	prefix := fmt.Sprintf("[%s:%d]", file, line)
-
-	common.Log.Debug("=====================================")
-	common.Log.Debug("printTexts %s %s", prefix, message)
-	common.Log.Debug("%d texts", len(*tl))
-	parts := []string{}
-	for i, t := range *tl {
-		fmt.Printf("%5d: %s\n", i, t.String())
-		parts = append(parts, t.Text)
-	}
-	common.Log.Debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-	fmt.Printf("%s\n", strings.Join(parts, ""))
-	common.Log.Debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
 // newLine returns the Line representation of strings `words` with y coordinate `y` and x
@@ -1014,9 +982,10 @@ func removeDuplicates(line Line, charWidth float64) Line {
 		return line
 	}
 
+	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.3
 	words := []string{line.Words[0]}
-	dxList := []float64{}
+	var dxList []float64
 
 	w0 := line.Words[0]
 	for i, dx := range line.Dx {
@@ -1039,6 +1008,7 @@ func combineDiacritics(line Line, charWidth float64) Line {
 		return line
 	}
 
+	// NOTE(peterwilliams97) 0.2 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
 
@@ -1134,6 +1104,7 @@ func countDiacritic(w string) (string, int) {
 
 // diacritics is a map of diacritic characters that are not classified as unicode.Mn or unicode.Sk
 // and the corresponding unicode.Mn or unicode.Sk characters. This map was copied from PdfBox.
+// (https://svn.apache.org/repos/asf/pdfbox/trunk/pdfbox/src/main/java/org/apache/pdfbox/text/TextPosition.java)
 var diacritics = map[rune]string{
 	0x0060: "\u0300",
 	0x02CB: "\u0300",
