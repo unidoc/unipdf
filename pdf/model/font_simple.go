@@ -123,7 +123,7 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, 
 
 	if !found {
 		if glyph != "space" {
-			common.Log.Debug("No charcode for glyph=%q", glyph)
+			common.Log.Trace("No charcode for glyph=%q font=%s", glyph, font)
 		}
 		return fonts.CharMetrics{GlyphName: glyph}, false
 	}

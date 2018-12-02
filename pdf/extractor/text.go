@@ -620,6 +620,9 @@ func (to *textObject) renderText(data []byte) error {
 	th := state.Th / 100.0
 	spaceMetrics, ok := font.GetRuneCharMetrics(' ')
 	if !ok {
+		spaceMetrics, ok = font.GetCharMetrics(32)
+	}
+	if !ok {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
