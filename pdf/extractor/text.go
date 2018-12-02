@@ -834,7 +834,7 @@ type Line struct {
 }
 
 // toLines returns the text and positions in `tl` as a slice of Line.
-// NOTE: Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
+// NOTE: Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLines(tol float64) []Line {
 	// We divide `tl` into slices which contain texts with the same orientation, extract the lines
@@ -853,7 +853,7 @@ func (tl TextList) toLines(tol float64) []Line {
 // toLinesOrient returns the text and positions in `tl` as a slice of Line.
 // NOTE: This function only works on text lists where all text is the same orientation so it should
 // only be called from toLines.
-// Caller must sort the text list top-to-bottom, left-to-write (for orientation adjusted so
+// Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLinesOrient(tol float64) []Line {
 	if len(tl) == 0 {
