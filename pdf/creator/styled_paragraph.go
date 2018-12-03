@@ -343,9 +343,8 @@ func (p *StyledParagraph) wrapText() error {
 			return nil
 		}
 
-		annotation := model.NewPdfAnnotation()
-		*annotation = *src
-		return annotation
+		annotation := *src
+		return &annotation
 	}
 
 	for _, chunk := range p.chunks {
@@ -734,21 +733,17 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			// Add annotations.
 			if chunk.annotation != nil {
-				// Set the coordinates of the annotation.
-				annotRect, ok := chunk.annotation.Rect.(*core.PdfObjectArray)
-				if ok {
-					annotRect.Clear()
-					annotRect.Append(core.MakeFloat(currX))
-					annotRect.Append(core.MakeFloat(currY))
-					annotRect.Append(core.MakeFloat(currX + chunkWidth))
-					annotRect.Append(core.MakeFloat(currY + height))
-				}
+				var annotRect *core.PdfObjectArray
 
 				// Process annotation.
 				if !chunk.annotationProcessed {
 					annotCtx := chunk.annotation.GetContext()
 					switch t := annotCtx.(type) {
 					case *model.PdfAnnotationLink:
+						// Initialize annotation rectangle.
+						annotRect = core.MakeArray()
+						t.Rect = annotRect
+
 						// Reverse the Y axis of the destination coordinates.
 						// The user passes in the annotation coordinates as if
 						// position 0, 0 is at the top left of the page.
@@ -767,6 +762,15 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 					}
 
 					chunk.annotationProcessed = true
+				}
+
+				// Set the coordinates of the annotation.
+				if annotRect != nil {
+					annotRect.Clear()
+					annotRect.Append(core.MakeFloat(currX))
+					annotRect.Append(core.MakeFloat(currY))
+					annotRect.Append(core.MakeFloat(currX + chunkWidth))
+					annotRect.Append(core.MakeFloat(currY + height))
 				}
 
 				blk.AddAnnotation(chunk.annotation)

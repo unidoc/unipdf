@@ -49,10 +49,6 @@ func newExternalLinkAnnotation(url string) *model.PdfAnnotation {
 	action.Set(core.PdfObjectName("URI"), core.MakeString(url))
 	annotation.A = action
 
-	// Create default annotation rectangle.
-	annotation.Rect = core.MakeArray()
-	annotation.PdfAnnotation.Rect = annotation.Rect
-
 	return annotation.PdfAnnotation
 }
 
@@ -77,10 +73,6 @@ func newInternalLinkAnnotation(page int64, x, y, zoom float64) *model.PdfAnnotat
 		core.MakeFloat(y),
 		core.MakeFloat(zoom),
 	)
-
-	// Create default annotation rectangle.
-	annotation.Rect = core.MakeArray()
-	annotation.PdfAnnotation.Rect = annotation.Rect
 
 	return annotation.PdfAnnotation
 }
