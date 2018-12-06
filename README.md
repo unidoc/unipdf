@@ -65,7 +65,7 @@ In unidoc, we work hard to provide production quality builds taking every detail
 
 Security.  We take security very seriously and we restrict access to github.com/unidoc/unidoc repository with protected branches and only 2 of the founders have access and every commit is reviewed prior to being accepted.
 
-The money goes back into making unidoc better. We want to make the best possible product and in order to do that we need the best people to contribute. A large fraction of the profits made goes back into developing unidoc.  That way we have been able to get many excellent people to work and contribute to unidoc that would not be able to contribute their work for free.
+The profits are invested back into making unidoc better. We want to make the best possible product and in order to do that we need the best people to contribute. A large fraction of the profits made goes back into developing unidoc.  That way we have been able to get many excellent people to work and contribute to unidoc that would not be able to contribute their work for free.
 
 
 ## Examples
