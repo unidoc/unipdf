@@ -22,18 +22,18 @@ type GID uint16
 // It has a preloaded rune (unicode code point) to glyph index map that has been loaded from a font.
 // Corresponds to Identity-H.
 type TrueTypeFontEncoder struct {
-	runeToGlyphIndexMap map[rune]GID
-	cmap                CMap
+	runeToGIDMap map[rune]GID
+	cmap         CMap
 }
 
 // NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a pre-loaded
-// runeToGlyphIndexMap, that has been pre-loaded from the font file.
+// runeToGIDMap, that has been pre-loaded from the font file.
 // The new instance is preloaded with a CMapIdentityH (Identity-H) CMap which maps 2-byte charcodes
 // to CIDs (glyph index).
-func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[rune]GID) TrueTypeFontEncoder {
+func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 	return TrueTypeFontEncoder{
-		runeToGlyphIndexMap: runeToGlyphIndexMap,
-		cmap:                CMapIdentityH{},
+		runeToGIDMap: runeToGIDMap,
+		cmap:         CMapIdentityH{},
 	}
 }
 
@@ -43,11 +43,11 @@ const ttEncoderMaxNumEntries = 10
 // String returns a string that describes `enc`.
 func (enc TrueTypeFontEncoder) String() string {
 	parts := []string{
-		fmt.Sprintf("%d entries", len(enc.runeToGlyphIndexMap)),
+		fmt.Sprintf("%d entries", len(enc.runeToGIDMap)),
 	}
 
-	runes := make([]rune, 0, len(enc.runeToGlyphIndexMap))
-	for r := range enc.runeToGlyphIndexMap {
+	runes := make([]rune, 0, len(enc.runeToGIDMap))
+	for r := range enc.runeToGIDMap {
 		runes = append(runes, r)
 	}
 	sort.Slice(runes, func(i, j int) bool {
@@ -61,7 +61,7 @@ func (enc TrueTypeFontEncoder) String() string {
 	for i := 0; i < n; i++ {
 		r := runes[i]
 		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q",
-			r, r, enc.runeToGlyphIndexMap[r]))
+			r, r, enc.runeToGIDMap[r]))
 	}
 	return fmt.Sprintf("TRUETYPE_ENCODER{%s}", strings.Join(parts, ", "))
 }
@@ -108,12 +108,14 @@ func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool)
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
-	glyphIndex, ok := enc.runeToGlyphIndexMap[r]
+	glyphIndex, ok := enc.runeToGIDMap[r]
 	if !ok {
 		common.Log.Debug("Missing rune %d (%+q) from encoding", r, r)
 		return 0, false
 	}
 	// Identity : charcode <-> glyphIndex
+	// TODO(dennwc): Here charcode is probably the same as CID.
+	// TODO(dennwc): Find out what are the alternative mappings (enc.cmap?).
 	charcode := CharCode(glyphIndex)
 
 	return charcode, true
@@ -123,9 +125,9 @@ func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	// TODO: Make a reverse map stored.
-	for r, glyphIndex := range enc.runeToGlyphIndexMap {
+	for r, gid := range enc.runeToGIDMap {
 		// Identity : glyphIndex <-> charcode
-		charcode := CharCode(glyphIndex)
+		charcode := CharCode(gid)
 		if charcode == code {
 			return r, true
 		}
