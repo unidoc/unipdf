@@ -32,11 +32,6 @@ func (font FontCourier) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the font's text encoder.
-func (font FontCourier) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontCourier) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := CourierCharMetrics[glyph]

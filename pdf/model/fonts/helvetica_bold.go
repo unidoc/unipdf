@@ -33,11 +33,6 @@ func (font FontHelveticaBold) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the font's text encoder.
-func (font FontHelveticaBold) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontHelveticaBold) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := HelveticaBoldCharMetrics[glyph]

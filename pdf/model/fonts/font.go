@@ -14,12 +14,6 @@ import (
 // mapped to and from glyphs.  Each glyph has metrics.
 type Font interface {
 	Encoder() textencoding.TextEncoder
-	// FIXME(dennwc): there is a bug with pointer receivers for this method
-	//			      literally in every single font except pdfFontSimple
-	//				  so this method does NOTHING for other fonts
-	//				  if things still work, this means that only that font
-	//				  needs the method and it shouldn't be in this interface
-	SetEncoder(encoder textencoding.TextEncoder)
 	GetGlyphCharMetrics(glyph textencoding.GlyphName) (CharMetrics, bool)
 	ToPdfObject() core.PdfObject
 }

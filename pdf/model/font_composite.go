@@ -127,11 +127,6 @@ func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the font.
-func (font pdfFontType0) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // ToPdfObject converts the font to a PDF representation.
 func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
@@ -219,11 +214,6 @@ func (font pdfCIDFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the truetype font.
-func (font pdfCIDFontType0) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
@@ -293,11 +283,6 @@ func (font *pdfCIDFontType2) baseFields() *fontCommon {
 // Encoder returns the font's text encoder.
 func (font pdfCIDFontType2) Encoder() textencoding.TextEncoder {
 	return font.encoder
-}
-
-// SetEncoder sets the encoder for the truetype font.
-func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
 }
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is

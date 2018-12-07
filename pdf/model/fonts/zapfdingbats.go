@@ -33,11 +33,6 @@ func (font FontZapfDingbats) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the font's text encoder.
-func (font FontZapfDingbats) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontZapfDingbats) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := ZapfDingbatsCharMetrics[glyph]

@@ -32,11 +32,6 @@ func (font FontHelveticaOblique) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the font's text encoder.
-func (font FontHelveticaOblique) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns character metrics for a given glyph.
 func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := HelveticaObliqueCharMetrics[glyph]

@@ -387,7 +387,11 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 		common.Log.Debug("ERROR: SetEncoder. Not implemented for font type=%#T", font.context)
 		return
 	}
-	t.SetEncoder(encoder)
+	if t, ok := t.(interface {
+		SetEncoder(encoder textencoding.TextEncoder)
+	}); ok {
+		t.SetEncoder(encoder)
+	}
 }
 
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
