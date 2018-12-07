@@ -29,3 +29,13 @@ func newTextStyle(font *model.PdfFont) TextStyle {
 		FontSize: 10,
 	}
 }
+
+// newLinkStyle creates a new text style object which can be
+// used for link annotations.
+func newLinkStyle(font *model.PdfFont) TextStyle {
+	return TextStyle{
+		Color:    ColorRGBFrom8bit(0, 0, 238),
+		Font:     font,
+		FontSize: 10,
+	}
+}
