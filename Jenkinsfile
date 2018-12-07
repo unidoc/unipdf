@@ -21,8 +21,8 @@ node {
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
 
-            // Get all dependencies.
-            sh 'go get ./...'
+            // Get all dependencies (for tests also).
+            sh 'go get -t ./...'
         }
 
         stage('Linting') {
