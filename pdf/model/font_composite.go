@@ -295,6 +295,9 @@ type pdfCIDFontType2 struct {
 
 	// Also mapping between GIDs (glyph index) and width.
 	gidToWidthMap map[uint16]int
+
+	// Cache for glyph to metrics.
+	glyphToMetricsCache map[string]fonts.CharMetrics
 }
 
 // pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
@@ -321,8 +324,15 @@ func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-// XXX:TODO(peterwilliams97): Cache enc creation and cache glyph:metrics in a map.
 func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+	// Return cached value if cached.
+	if font.glyphToMetricsCache == nil {
+		font.glyphToMetricsCache = make(map[string]fonts.CharMetrics)
+	}
+	if metrics, cached := font.glyphToMetricsCache[glyph]; cached {
+		return metrics, true
+	}
+
 	metrics := fonts.CharMetrics{}
 
 	if font.ttfParser == nil {
@@ -349,6 +359,8 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	metrics.GlyphName = glyph
 	metrics.Wx = float64(w)
 
+	font.glyphToMetricsCache[glyph] = metrics
+
 	return metrics, true
 }
 
@@ -357,7 +369,8 @@ func (font pdfCIDFontType2) GetCharMetrics(code uint16) (fonts.CharMetrics, bool
 	if w, ok := font.widths[int(code)]; ok {
 		return fonts.CharMetrics{Wx: float64(w)}, true
 	}
-	// XXX(peterwilliams97)/FIXME: The remainder of this function is pure guesswork. Explain it.
+	// TODO(peterwilliams97): The remainder of this function is pure guesswork. Explain it.
+	// FIXME(gunnsth): Appears that we are assuming a code <-> rune identity mapping. Related PR #259 should solve this.
 	w, ok := font.runeToWidthMap[code]
 	if !ok {
 		w = int(font.defaultWidth)

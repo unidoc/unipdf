@@ -72,7 +72,7 @@ func (font *pdfFontSimple) baseFields() *fontCommon {
 
 // Encoder returns the font's text encoder.
 func (font *pdfFontSimple) Encoder() textencoding.TextEncoder {
-	// TODO(peterwilliams97)Need to make font.Encoder()==nil test work for
+	// TODO(peterwilliams97): Need to make font.Encoder()==nil test work for
 	// font.std14=Encoder=font.encoder=nil See https://golang.org/doc/faq#nil_error
 	if font.encoder != nil {
 		return font.encoder
@@ -90,7 +90,8 @@ func (font *pdfFontSimple) Encoder() textencoding.TextEncoder {
 }
 
 // SetEncoder sets the encoding for the underlying font.
-// TODO(peterwilliams97) Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
+// TODO(peterwilliams97): Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
+// TODO(gunnsth): Makes sense if SetEncoder is removed from the interface fonts.Font as proposed in PR #260.
 func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 	simple, ok := encoder.(*textencoding.SimpleEncoder)
 	if !ok {
@@ -222,8 +223,12 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
 	return font, nil
 }
 
-// addEncoding adds the encoding to the font.
-// The order of precedence is important.
+// addEncoding adds the encoding to the font and sets the `font.encoder` field.
+// The order of precedence is important:
+// 1. If encoder already set, load it initially (with subsequent steps potentially overwriting).
+// 2. Attempts to construct the encoder from the Encoding dictionary.
+// 3. If no encoder loaded, attempt to load from the font file.
+// 4. Apply differences map and set as the `font`'s encoder.
 func (font *pdfFontSimple) addEncoding() error {
 	var baseEncoder string
 	var differences map[byte]string
@@ -496,6 +501,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 // This guarantees that calls to NewStandard14FontMustCompile will succeed.
 type Standard14Font string
 
+// Standard 14 fonts constant definitions.
 const (
 	Courier              Standard14Font = "Courier"
 	CourierBold          Standard14Font = "Courier-Bold"

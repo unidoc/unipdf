@@ -9,11 +9,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
-	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/transform"
 )
 
 // RenderMode specifies the text rendering mode (Tmode), which determines whether showing text shall cause
@@ -28,36 +25,6 @@ const (
 	RenderModeFill                          // Fill
 	RenderModeClip                          // Clip
 )
-
-func toPageCoords(gs contentstream.GraphicsState, objs []core.PdfObject) (transform.Point, error) {
-	x, y, err := toFloatXY(objs)
-	if err != nil {
-		return transform.Point{}, err
-	}
-	return toPagePoint(gs, x, y), nil
-}
-
-func toPagePointList(gs contentstream.GraphicsState, objs []core.PdfObject) (points []transform.Point, err error) {
-	if len(objs)%2 != 0 {
-		err = fmt.Errorf("Invalid number of params: %d", len(objs))
-		common.Log.Debug("toPagePointList: err=%v", err)
-		return
-	}
-	floats, err := core.GetNumbersAsFloat(objs)
-	if err != nil {
-		return
-	}
-	for i := 0; i <= len(floats)-1; i += 2 {
-		x, y := floats[i], floats[i+1]
-		points = append(points, toPagePoint(gs, x, y))
-	}
-	return
-}
-
-func toPagePoint(gs contentstream.GraphicsState, x, y float64) transform.Point {
-	xp, yp := gs.Transform(x, y)
-	return transform.Point{xp, yp}
-}
 
 // toFloatXY returns `objs` as 2 floats, if that's what `objs` is, or an error if it isn't.
 func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {

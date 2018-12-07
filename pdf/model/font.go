@@ -28,7 +28,7 @@ type PdfFont struct {
 }
 
 // GetFontDescriptor returns the font descriptor for `font`.
-func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
+func (font *PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 	switch t := font.context.(type) {
 	case *pdfFontSimple:
 		return t.fontDescriptor, nil
@@ -44,7 +44,7 @@ func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 }
 
 // String returns a string that describes `font`.
-func (font PdfFont) String() string {
+func (font *PdfFont) String() string {
 	enc := ""
 	if font.context.Encoder() != nil {
 		enc = font.context.Encoder().String()
@@ -53,12 +53,12 @@ func (font PdfFont) String() string {
 }
 
 // BaseFont returns the font's "BaseFont" field.
-func (font PdfFont) BaseFont() string {
+func (font *PdfFont) BaseFont() string {
 	return font.baseFields().basefont
 }
 
 // Subtype returns the font's "Subtype" field.
-func (font PdfFont) Subtype() string {
+func (font *PdfFont) Subtype() string {
 	subtype := font.baseFields().subtype
 	if t, ok := font.context.(*pdfFontType0); ok {
 		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
@@ -67,13 +67,13 @@ func (font PdfFont) Subtype() string {
 }
 
 // IsCID returns true if the underlying font is CID.
-func (font PdfFont) IsCID() bool {
+func (font *PdfFont) IsCID() bool {
 	return font.baseFields().isCIDFont()
 }
 
 // FontDescriptor returns font's PdfFontDescriptor. This may be a builtin descriptor for standard 14
 // fonts but must be an explicit descriptor for other fonts.
-func (font PdfFont) FontDescriptor() *PdfFontDescriptor {
+func (font *PdfFont) FontDescriptor() *PdfFontDescriptor {
 	if font.baseFields().fontDescriptor != nil {
 		return font.baseFields().fontDescriptor
 	}
@@ -85,7 +85,7 @@ func (font PdfFont) FontDescriptor() *PdfFontDescriptor {
 }
 
 // ToUnicode returns the name of the font's "ToUnicode" field if there is one, or "" if there isn't.
-func (font PdfFont) ToUnicode() string {
+func (font *PdfFont) ToUnicode() string {
 	if font.baseFields().toUnicodeCmap == nil {
 		return ""
 	}
@@ -118,10 +118,10 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
-// An error can occur if`basefont` is not one the standard 14 font names.
+// An error can occur if `basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont,
 	*textencoding.SimpleEncoder, error) {
-	// XXX(peterwilliams97) This is wrong. Use correct implementation in newPdfFontFromPdfObject()
+	// FIXME(peterwilliams97): This is wrong. Use correct implementation in newPdfFontFromPdfObject().
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
@@ -331,7 +331,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 //   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
-func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
+func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	common.Log.Trace("CharcodeBytesToUnicode: data=[% 02x]=%#q", data, data)
 
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
@@ -391,7 +391,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 }
 
 // BytesToCharcodes converts the bytes in a PDF string to character codes.
-func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
+func (font *PdfFont) BytesToCharcodes(data []byte) []uint16 {
 	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
 	charcodes := make([]uint16, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
@@ -418,10 +418,16 @@ func (font PdfFont) BytesToCharcodes(data []byte) []uint16 {
 // How it works:
 //  1) Use the ToUnicode CMap if there is one.
 //  2) Use the underlying font's encoding.
-// TODO(peterwilliams97): Remove int returns.
-func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) {
+func (font *PdfFont) CharcodesToUnicode(charcodes []uint16) []string {
+	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
+	return strlist
+}
+
+// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical information
+// about hits and misses from the reverse mapping process.
+func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []uint16) (strlist []string, numHits, numMisses int) {
 	charstrings := make([]string, 0, len(charcodes))
-	numMisses := 0
+	numMisses = 0
 	for _, code := range charcodes {
 		if font.baseFields().toUnicodeCmap != nil {
 			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
@@ -457,7 +463,7 @@ func (font PdfFont) CharcodesToUnicode(charcodes []uint16) ([]string, int, int) 
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
-func (font PdfFont) ToPdfObject() core.PdfObject {
+func (font *PdfFont) ToPdfObject() core.PdfObject {
 	if t := font.actualFont(); t != nil {
 		return t.ToPdfObject()
 	}
@@ -467,7 +473,7 @@ func (font PdfFont) ToPdfObject() core.PdfObject {
 }
 
 // Encoder returns the font's text encoder.
-func (font PdfFont) Encoder() textencoding.TextEncoder {
+func (font *PdfFont) Encoder() textencoding.TextEncoder {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: Encoder not implemented for font type=%T", font.context)
@@ -478,7 +484,7 @@ func (font PdfFont) Encoder() textencoding.TextEncoder {
 }
 
 // SetEncoder sets the encoding for the underlying font.
-func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
+func (font *PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: SetEncoder. Not implemented for font type=%#T", font.context)
@@ -490,7 +496,7 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 // GetGlyphCharMetrics returns the char metrics for glyph name `glyph`.
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
-func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font *PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
@@ -518,7 +524,7 @@ func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) 
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
 // TODO(gunnsth): Reconsider whether needed or if can map via GlyphName.
-func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+func (font *PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
 	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
@@ -558,7 +564,7 @@ func (font PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
 // GetRuneCharMetrics returns the char metrics for rune `r`.
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
-func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
+func (font *PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
 	encoder := font.Encoder()
@@ -586,7 +592,7 @@ func (font PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
 // actualFont returns the Font in font.context
 // NOTE(gunnsth): Actually this only sanity checks the font.context as the returned font will be
 // wrapped in an interface.
-func (font PdfFont) actualFont() fonts.Font {
+func (font *PdfFont) actualFont() fonts.Font {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
 	}
@@ -606,7 +612,7 @@ func (font PdfFont) actualFont() fonts.Font {
 }
 
 // baseFields returns the fields of `font`.context that are common to all PDF fonts.
-func (font PdfFont) baseFields() *fontCommon {
+func (font *PdfFont) baseFields() *fontCommon {
 	if font.context == nil {
 		common.Log.Debug("ERROR: baseFields. context is nil.")
 		return nil
@@ -989,114 +995,114 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 }
 
 // ToPdfObject returns the PdfFontDescriptor as a PDF dictionary inside an indirect object.
-func (this *PdfFontDescriptor) ToPdfObject() core.PdfObject {
+func (descriptor *PdfFontDescriptor) ToPdfObject() core.PdfObject {
 	d := core.MakeDict()
-	if this.container == nil {
-		this.container = &core.PdfIndirectObject{}
+	if descriptor.container == nil {
+		descriptor.container = &core.PdfIndirectObject{}
 	}
-	this.container.PdfObject = d
+	descriptor.container.PdfObject = d
 
 	d.Set("Type", core.MakeName("FontDescriptor"))
 
-	if this.FontName != nil {
-		d.Set("FontName", this.FontName)
+	if descriptor.FontName != nil {
+		d.Set("FontName", descriptor.FontName)
 	}
 
-	if this.FontFamily != nil {
-		d.Set("FontFamily", this.FontFamily)
+	if descriptor.FontFamily != nil {
+		d.Set("FontFamily", descriptor.FontFamily)
 	}
 
-	if this.FontStretch != nil {
-		d.Set("FontStretch", this.FontStretch)
+	if descriptor.FontStretch != nil {
+		d.Set("FontStretch", descriptor.FontStretch)
 	}
 
-	if this.FontWeight != nil {
-		d.Set("FontWeight", this.FontWeight)
+	if descriptor.FontWeight != nil {
+		d.Set("FontWeight", descriptor.FontWeight)
 	}
 
-	if this.Flags != nil {
-		d.Set("Flags", this.Flags)
+	if descriptor.Flags != nil {
+		d.Set("Flags", descriptor.Flags)
 	}
 
-	if this.FontBBox != nil {
-		d.Set("FontBBox", this.FontBBox)
+	if descriptor.FontBBox != nil {
+		d.Set("FontBBox", descriptor.FontBBox)
 	}
 
-	if this.ItalicAngle != nil {
-		d.Set("ItalicAngle", this.ItalicAngle)
+	if descriptor.ItalicAngle != nil {
+		d.Set("ItalicAngle", descriptor.ItalicAngle)
 	}
 
-	if this.Ascent != nil {
-		d.Set("Ascent", this.Ascent)
+	if descriptor.Ascent != nil {
+		d.Set("Ascent", descriptor.Ascent)
 	}
 
-	if this.Descent != nil {
-		d.Set("Descent", this.Descent)
+	if descriptor.Descent != nil {
+		d.Set("Descent", descriptor.Descent)
 	}
 
-	if this.Leading != nil {
-		d.Set("Leading", this.Leading)
+	if descriptor.Leading != nil {
+		d.Set("Leading", descriptor.Leading)
 	}
 
-	if this.CapHeight != nil {
-		d.Set("CapHeight", this.CapHeight)
+	if descriptor.CapHeight != nil {
+		d.Set("CapHeight", descriptor.CapHeight)
 	}
 
-	if this.XHeight != nil {
-		d.Set("XHeight", this.XHeight)
+	if descriptor.XHeight != nil {
+		d.Set("XHeight", descriptor.XHeight)
 	}
 
-	if this.StemV != nil {
-		d.Set("StemV", this.StemV)
+	if descriptor.StemV != nil {
+		d.Set("StemV", descriptor.StemV)
 	}
 
-	if this.StemH != nil {
-		d.Set("StemH", this.StemH)
+	if descriptor.StemH != nil {
+		d.Set("StemH", descriptor.StemH)
 	}
 
-	if this.AvgWidth != nil {
-		d.Set("AvgWidth", this.AvgWidth)
+	if descriptor.AvgWidth != nil {
+		d.Set("AvgWidth", descriptor.AvgWidth)
 	}
 
-	if this.MaxWidth != nil {
-		d.Set("MaxWidth", this.MaxWidth)
+	if descriptor.MaxWidth != nil {
+		d.Set("MaxWidth", descriptor.MaxWidth)
 	}
 
-	if this.MissingWidth != nil {
-		d.Set("MissingWidth", this.MissingWidth)
+	if descriptor.MissingWidth != nil {
+		d.Set("MissingWidth", descriptor.MissingWidth)
 	}
 
-	if this.FontFile != nil {
-		d.Set("FontFile", this.FontFile)
+	if descriptor.FontFile != nil {
+		d.Set("FontFile", descriptor.FontFile)
 	}
 
-	if this.FontFile2 != nil {
-		d.Set("FontFile2", this.FontFile2)
+	if descriptor.FontFile2 != nil {
+		d.Set("FontFile2", descriptor.FontFile2)
 	}
 
-	if this.FontFile3 != nil {
-		d.Set("FontFile3", this.FontFile3)
+	if descriptor.FontFile3 != nil {
+		d.Set("FontFile3", descriptor.FontFile3)
 	}
 
-	if this.CharSet != nil {
-		d.Set("CharSet", this.CharSet)
+	if descriptor.CharSet != nil {
+		d.Set("CharSet", descriptor.CharSet)
 	}
 
-	if this.Style != nil {
-		d.Set("FontName", this.FontName)
+	if descriptor.Style != nil {
+		d.Set("FontName", descriptor.FontName)
 	}
 
-	if this.Lang != nil {
-		d.Set("Lang", this.Lang)
+	if descriptor.Lang != nil {
+		d.Set("Lang", descriptor.Lang)
 	}
 
-	if this.FD != nil {
-		d.Set("FD", this.FD)
+	if descriptor.FD != nil {
+		d.Set("FD", descriptor.FD)
 	}
 
-	if this.CIDSet != nil {
-		d.Set("CIDSet", this.CIDSet)
+	if descriptor.CIDSet != nil {
+		d.Set("CIDSet", descriptor.CIDSet)
 	}
 
-	return this.container
+	return descriptor.container
 }

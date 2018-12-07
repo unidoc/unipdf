@@ -605,7 +605,7 @@ func (to *textObject) renderText(data []byte) error {
 
 	charcodes := font.BytesToCharcodes(data)
 
-	runes, numChars, numMisses := font.CharcodesToUnicode(charcodes)
+	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}

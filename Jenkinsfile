@@ -21,10 +21,8 @@ node {
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
 
-            // Get dependencies
-            sh 'go get golang.org/x/image/tiff/lzw'
-            sh 'go get golang.org/x/text/unicode/norm'
-            sh 'go get github.com/boombuler/barcode'
+            // Get all dependencies.
+            sh 'go get ./...'
         }
 
         stage('Linting') {
