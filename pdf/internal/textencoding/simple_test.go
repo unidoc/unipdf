@@ -26,19 +26,19 @@ func TestBasicEncodings(t *testing.T) {
 }
 
 var testCases = []encodingTest{
-	encodingTest{"MacExpertEncoding", "₂₃₄₅", []string{"twoinferior", "threeinferior", "fourinferior", "fiveinferior"}},
-	encodingTest{"MacRomanEncoding", "◊ﬂ˝ˇ", []string{"lozenge", "fl", "hungarumlaut", "caron"}},
-	encodingTest{"PdfDocEncoding", "¾Ðí©", []string{"threequarters", "Eth", "iacute", "copyright"}},
-	encodingTest{"StandardEncoding", "ºªı„", []string{"ordmasculine", "ordfeminine", "dotlessi", "quotedblbase"}},
-	encodingTest{"SymbolEncoding", "δ∂ℵ⌡", []string{"delta", "partialdiff", "aleph", "integralbt"}},
-	encodingTest{"WinAnsiEncoding", "×÷®Ï", []string{"multiply", "divide", "registered", "Idieresis"}},
-	encodingTest{"ZapfDingbatsEncoding", "☎①➔➨", []string{"a4", "a120", "a160", "a178"}},
+	{"MacExpertEncoding", "₂₃₄₅", []GlyphName{"twoinferior", "threeinferior", "fourinferior", "fiveinferior"}},
+	{"MacRomanEncoding", "◊ﬂ˝ˇ", []GlyphName{"lozenge", "fl", "hungarumlaut", "caron"}},
+	{"PdfDocEncoding", "¾Ðí©", []GlyphName{"threequarters", "Eth", "iacute", "copyright"}},
+	{"StandardEncoding", "ºªı„", []GlyphName{"ordmasculine", "ordfeminine", "dotlessi", "quotedblbase"}},
+	{"SymbolEncoding", "δ∂ℵ⌡", []GlyphName{"delta", "partialdiff", "aleph", "integralbt"}},
+	{"WinAnsiEncoding", "×÷®Ï", []GlyphName{"multiply", "divide", "registered", "Idieresis"}},
+	{"ZapfDingbatsEncoding", "☎①➔➨", []GlyphName{"a4", "a120", "a160", "a178"}},
 }
 
 type encodingTest struct {
 	encoding string
 	runes    string
-	glyphs   []string
+	glyphs   []GlyphName
 }
 
 func (f *encodingTest) String() string {

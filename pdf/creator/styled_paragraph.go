@@ -11,6 +11,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/unidoc/unidoc/pdf/internal/textencoding"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -352,7 +354,7 @@ func (p *StyledParagraph) wrapText() error {
 		annotation := chunk.annotation
 
 		var part []rune
-		var glyphs []string
+		var glyphs []textencoding.GlyphName
 		var widths []float64
 
 		for _, r := range chunk.Text {
@@ -373,12 +375,12 @@ func (p *StyledParagraph) wrapText() error {
 					annotation: copyAnnotation(annotation),
 				})
 				p.lines = append(p.lines, line)
-				line = []*TextChunk{}
+				line = nil
 
 				lineWidth = 0
-				part = []rune{}
-				widths = []float64{}
-				glyphs = []string{}
+				part = nil
+				widths = nil
+				glyphs = nil
 				continue
 			}
 
@@ -422,7 +424,7 @@ func (p *StyledParagraph) wrapText() error {
 				} else {
 					lineWidth = w
 					part = []rune{r}
-					glyphs = []string{glyph}
+					glyphs = []textencoding.GlyphName{glyph}
 					widths = []float64{w}
 				}
 

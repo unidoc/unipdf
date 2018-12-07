@@ -8,7 +8,7 @@ node {
     env.GOCACHE="off"
 
     env.TMPDIR="${WORKSPACE}/temp"
-    sh "mkdir ${env.TMPDIR}"
+    sh "mkdir -p ${env.TMPDIR}"
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc") {
         sh 'go version'

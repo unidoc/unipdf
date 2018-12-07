@@ -640,7 +640,7 @@ endobj
 	// The expected encoding is StandardEncoding with the applied differences.
 	baseEncoding := newStandandTextEncoder(t)
 
-	differencesMap := map[int]string{
+	differencesMap := map[textencoding.CharCode]textencoding.GlyphName{
 		24:  `/breve`,
 		25:  `/caron`,
 		26:  `/circumflex`,
@@ -771,10 +771,10 @@ endobj
 		255: `/ydieresis`,
 	}
 
-	for ccode := 32; ccode < 255; ccode++ {
-		fontglyph, has := font.Encoder().CharcodeToGlyph(uint16(ccode))
+	for ccode := textencoding.CharCode(32); ccode < 255; ccode++ {
+		fontglyph, has := font.Encoder().CharcodeToGlyph(ccode)
 		if !has {
-			baseglyph, bad := baseEncoding.CharcodeToGlyph(uint16(ccode))
+			baseglyph, bad := baseEncoding.CharcodeToGlyph(ccode)
 			if bad {
 				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", ccode, baseglyph)
 			}
@@ -783,7 +783,7 @@ endobj
 		// Check if in differencesmap first.
 		glyph, has := differencesMap[ccode]
 		if has {
-			glyph = strings.Trim(glyph, `/`)
+			glyph = textencoding.GlyphName(strings.Trim(string(glyph), `/`))
 			if glyph != fontglyph {
 				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", ccode, fontglyph, glyph)
 			}
@@ -792,7 +792,7 @@ endobj
 		}
 
 		// If not in differences, should be according to StandardEncoding (base).
-		glyph, has = baseEncoding.CharcodeToGlyph(uint16(ccode))
+		glyph, has = baseEncoding.CharcodeToGlyph(ccode)
 		if has && glyph != fontglyph {
 			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (StandardEncoding)", ccode, ccode, fontglyph, glyph)
 		}

@@ -12,7 +12,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
-func glyphToRune(glyph string, glyphToRuneMap map[string]rune) (rune, bool) {
+func glyphToRune(glyph GlyphName, glyphToRuneMap map[GlyphName]rune) (rune, bool) {
 	r, ok := glyphToRuneMap[glyph]
 	if ok {
 		return r, true
@@ -22,7 +22,7 @@ func glyphToRune(glyph string, glyphToRuneMap map[string]rune) (rune, bool) {
 	return 0, false
 }
 
-func runeToGlyph(r rune, runeToGlyphMap map[rune]string) (string, bool) {
+func runeToGlyph(r rune, runeToGlyphMap map[rune]GlyphName) (GlyphName, bool) {
 	glyph, ok := runeToGlyphMap[r]
 	if ok {
 		return glyph, true

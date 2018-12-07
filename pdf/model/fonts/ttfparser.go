@@ -46,13 +46,14 @@ import (
 
 // MakeEncoder returns an encoder built from the tables in `rec`.
 func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
-	encoding := map[uint16]string{}
-	for code := uint16(0); code <= 256; code++ {
-		gid, ok := rec.Chars[code]
+	encoding := make(map[textencoding.CharCode]GlyphName)
+	for code := textencoding.CharCode(0); code <= 256; code++ {
+		r := rune(code) // TODO(dennwc): make sure this conversion is valid
+		gid, ok := rec.Chars[r]
 		if !ok {
 			continue
 		}
-		glyph := ""
+		var glyph GlyphName
 		if int(gid) >= 0 && int(gid) < len(rec.GlyphNames) {
 			glyph = rec.GlyphNames[gid]
 		} else {
@@ -72,6 +73,12 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }
 
+// GID is a glyph index.
+type GID = textencoding.GID
+
+// GlyphName is a name of a glyph.
+type GlyphName = textencoding.GlyphName
+
 // TtfType describes a TrueType font file.
 // http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-chapter08
 type TtfType struct {
@@ -88,27 +95,31 @@ type TtfType struct {
 	CapHeight              int16
 	Widths                 []uint16
 
-	// Chars maps char codes to GIDs (the indexes in GlyphNames). i.e. GlyphNames[Chars[code]] is
-	// the glyph corresponding to `code`.
-	Chars map[uint16]uint16
+	// Chars maps rune values (unicode) to GIDs (the indexes in GlyphNames). i.e. GlyphNames[Chars[r]] is
+	// the glyph corresponding to rune r.
+	//
+	// TODO(dennwc,peterwilliams97): it should map char codes to GIDs
+	Chars map[rune]GID
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
-	GlyphNames []string
+	GlyphNames []GlyphName
 }
 
 // MakeToUnicode returns a ToUnicode CMap based on the encoding of `ttf`.
 // XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
-	codeToUnicode := map[cmap.CharCode]string{}
+	codeToUnicode := make(map[cmap.CharCode]rune)
 	for code, gid := range ttf.Chars {
 		glyph := ttf.GlyphNames[gid]
 
+		// TODO(dennwc): 'code' is already a rune; do we need this extra lookup?
 		r, ok := textencoding.GlyphToRune(glyph)
 		if !ok {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
 			r = textencoding.MissingCodeRune
 		}
-		codeToUnicode[cmap.CharCode(code)] = string(r)
+		// TODO(dennwc): implies rune <-> charcode identity?
+		codeToUnicode[cmap.CharCode(code)] = r
 	}
 	return cmap.NewToUnicodeCMap(codeToUnicode)
 }
@@ -331,11 +342,11 @@ func (t *ttfParser) ParseHmtx() error {
 
 // parseCmapSubtable31 parses information from an (3,1) subtable (Windows Unicode).
 func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
-	startCount := make([]uint16, 0, 8)
-	endCount := make([]uint16, 0, 8)
+	startCount := make([]rune, 0, 8)
+	endCount := make([]rune, 0, 8)
 	idDelta := make([]int16, 0, 8)
 	idRangeOffset := make([]uint16, 0, 8)
-	t.rec.Chars = make(map[uint16]uint16)
+	t.rec.Chars = make(map[rune]GID)
 	t.f.Seek(int64(t.tables["cmap"])+offset31, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 4 {
@@ -345,11 +356,11 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 	segCount := int(t.ReadUShort() / 2)
 	t.Skip(3 * 2) // searchRange, entrySelector, rangeShift
 	for j := 0; j < segCount; j++ {
-		endCount = append(endCount, t.ReadUShort())
+		endCount = append(endCount, rune(t.ReadUShort()))
 	}
 	t.Skip(2) // reservedPad
 	for j := 0; j < segCount; j++ {
-		startCount = append(startCount, t.ReadUShort())
+		startCount = append(startCount, rune(t.ReadUShort()))
 	}
 	for j := 0; j < segCount; j++ {
 		idDelta = append(idDelta, t.ReadShort())
@@ -383,7 +394,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 				gid -= 65536
 			}
 			if gid > 0 {
-				t.rec.Chars[c] = uint16(gid)
+				t.rec.Chars[c] = GID(gid)
 			}
 		}
 	}
@@ -394,7 +405,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 
 	if t.rec.Chars == nil {
-		t.rec.Chars = make(map[uint16]uint16)
+		t.rec.Chars = make(map[rune]GID)
 	}
 
 	t.f.Seek(int64(t.tables["cmap"])+offset10, os.SEEK_SET)
@@ -421,10 +432,10 @@ func (t *ttfParser) parseCmapSubtable10(offset10 int64) error {
 	}
 	data := []byte(dataStr)
 
-	for code, glyphId := range data {
-		t.rec.Chars[uint16(code)] = uint16(glyphId)
-		if glyphId != 0 {
-			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, glyphId, rune(glyphId))
+	for code, gid := range data {
+		t.rec.Chars[rune(code)] = GID(gid)
+		if gid != 0 {
+			fmt.Printf("\t0x%02x ➞ 0x%02x=%c\n", code, gid, rune(gid))
 		}
 	}
 	return nil
@@ -477,7 +488,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 	common.Log.Trace("parseCmapVersion: offset=%d", offset)
 
 	if t.rec.Chars == nil {
-		t.rec.Chars = make(map[uint16]uint16)
+		t.rec.Chars = make(map[rune]GID)
 	}
 
 	t.f.Seek(int64(t.tables["cmap"])+offset, os.SEEK_SET)
@@ -516,7 +527,7 @@ func (t *ttfParser) parseCmapFormat0() error {
 	common.Log.Trace("parseCmapFormat0: %s\ndataStr=%+q\ndata=[% 02x]", t.rec.String(), dataStr, data)
 
 	for code, glyphId := range data {
-		t.rec.Chars[uint16(code)] = uint16(glyphId)
+		t.rec.Chars[rune(code)] = GID(glyphId)
 	}
 	return nil
 }
@@ -530,8 +541,8 @@ func (t *ttfParser) parseCmapFormat6() error {
 		t.rec.String(), firstCode, entryCount)
 
 	for i := 0; i < entryCount; i++ {
-		glyphId := t.ReadUShort()
-		t.rec.Chars[uint16(i+firstCode)] = glyphId
+		glyphId := GID(t.ReadUShort())
+		t.rec.Chars[rune(i+firstCode)] = glyphId
 	}
 
 	return nil
@@ -566,7 +577,7 @@ func (t *ttfParser) parseCmapFormat12() error {
 				common.Log.Debug("Format 12 cmap contains character beyond UCS-4")
 			}
 
-			t.rec.Chars[uint16(i+firstCode)] = uint16(glyphId)
+			t.rec.Chars[rune(i+firstCode)] = GID(glyphId)
 		}
 
 	}
@@ -655,7 +666,7 @@ func (t *ttfParser) ParsePost() error {
 	case 2.0:
 		numGlyphs := int(t.ReadUShort())
 		glyphNameIndex := make([]int, numGlyphs)
-		t.rec.GlyphNames = make([]string, numGlyphs)
+		t.rec.GlyphNames = make([]GlyphName, numGlyphs)
 		maxIndex := -1
 		for i := 0; i < numGlyphs; i++ {
 			index := int(t.ReadUShort())
@@ -665,16 +676,16 @@ func (t *ttfParser) ParsePost() error {
 				maxIndex = index
 			}
 		}
-		var nameArray []string
+		var nameArray []GlyphName
 		if maxIndex >= len(macGlyphNames) {
-			nameArray = make([]string, maxIndex-len(macGlyphNames)+1)
+			nameArray = make([]GlyphName, maxIndex-len(macGlyphNames)+1)
 			for i := 0; i < maxIndex-len(macGlyphNames)+1; i++ {
 				numberOfChars := int(t.ReadByte())
 				names, err := t.ReadStr(numberOfChars)
 				if err != nil {
 					return err
 				}
-				nameArray[i] = names
+				nameArray[i] = GlyphName(names)
 			}
 		}
 		for i := 0; i < numGlyphs; i++ {
@@ -693,7 +704,7 @@ func (t *ttfParser) ParsePost() error {
 			offset := int(t.ReadSByte())
 			glyphNameIndex[i] = i + 1 + offset
 		}
-		t.rec.GlyphNames = make([]string, len(glyphNameIndex))
+		t.rec.GlyphNames = make([]GlyphName, len(glyphNameIndex))
 		for i := 0; i < len(t.rec.GlyphNames); i++ {
 			name := macGlyphNames[glyphNameIndex[i]]
 			t.rec.GlyphNames[i] = name
@@ -709,7 +720,7 @@ func (t *ttfParser) ParsePost() error {
 }
 
 // The 258 standard mac glyph names used in 'post' format 1 and 2.
-var macGlyphNames = []string{
+var macGlyphNames = []GlyphName{
 	".notdef", ".null", "nonmarkingreturn", "space", "exclam", "quotedbl",
 	"numbersign", "dollar", "percent", "ampersand", "quotesingle",
 	"parenleft", "parenright", "asterisk", "plus", "comma", "hyphen",

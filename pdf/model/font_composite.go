@@ -115,7 +115,7 @@ func (font *pdfFontType0) baseFields() *fontCommon {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font pdfFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	if font.DescendantFont == nil {
 		common.Log.Debug("ERROR: No descendant. font=%s", font)
 		return fonts.CharMetrics{}, false
@@ -236,7 +236,7 @@ func (font pdfCIDFontType0) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	return fonts.CharMetrics{}, true
 }
 
@@ -291,10 +291,10 @@ type pdfCIDFontType2 struct {
 	defaultWidth float64
 
 	// Mapping between unicode runes to widths.
-	runeToWidthMap map[uint16]int
+	runeToWidthMap map[rune]int
 
 	// Also mapping between GIDs (glyph index) and width.
-	gidToWidthMap map[uint16]int
+	gidToWidthMap map[fonts.GID]int
 
 	// Cache for glyph to metrics.
 	glyphToMetricsCache map[string]fonts.CharMetrics
@@ -324,7 +324,7 @@ func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	// Return cached value if cached.
 	if font.glyphToMetricsCache == nil {
 		font.glyphToMetricsCache = make(map[string]fonts.CharMetrics)
@@ -332,7 +332,6 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 	if metrics, cached := font.glyphToMetricsCache[glyph]; cached {
 		return metrics, true
 	}
-
 	metrics := fonts.CharMetrics{}
 
 	if font.ttfParser == nil {
@@ -348,7 +347,7 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics
 		return metrics, false
 	}
 
-	w, found := font.runeToWidthMap[uint16(r)]
+	w, found := font.runeToWidthMap[r]
 	if !found {
 		dw, ok := core.GetInt(font.DW)
 		if !ok {
@@ -509,9 +508,9 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes ➞ runes
-	runes := make([]uint16, 0, len(ttf.Chars))
+	runes := make([]rune, 0, len(ttf.Chars))
 	for r := range ttf.Chars {
-		runes = append(runes, r)
+		runes = append(runes, rune(r))
 	}
 	// make sure runes are sorted so PDF output is stable
 	sort.Slice(runes, func(i, j int) bool {
@@ -527,14 +526,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	missingWidth := k * float64(ttf.Widths[0])
 
 	// Construct a rune ➞ width map.
-	runeToWidthMap := map[uint16]int{}
-	gidToWidthMap := map[uint16]int{}
+	runeToWidthMap := make(map[rune]int)
+	gidToWidthMap := map[fonts.GID]int{}
 	for _, r := range runes {
-		glyphIndex := ttf.Chars[r]
+		gid := ttf.Chars[r]
 
-		w := k * float64(ttf.Widths[glyphIndex])
+		w := k * float64(ttf.Widths[gid])
 		runeToWidthMap[r] = int(w)
-		gidToWidthMap[glyphIndex] = int(w)
+		gidToWidthMap[gid] = int(w)
 	}
 	cidfont.runeToWidthMap = runeToWidthMap
 	cidfont.gidToWidthMap = gidToWidthMap

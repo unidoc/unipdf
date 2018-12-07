@@ -38,7 +38,7 @@ func (font FontHelvetica) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontHelvetica) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontHelvetica) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := HelveticaCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -60,7 +60,7 @@ func (font FontHelvetica) ToPdfObject() core.PdfObject {
 
 // HelveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
 // See afms/MustRead.html for license information.
-var HelveticaCharMetrics = map[string]CharMetrics{
+var HelveticaCharMetrics = map[GlyphName]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 667.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 667.000000, Wy: 0.000000},
