@@ -435,27 +435,28 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 type Standard14Font string
 
 const (
-	Courier              Standard14Font = "Courier"
-	CourierBold          Standard14Font = "Courier-Bold"
-	CourierBoldOblique   Standard14Font = "Courier-BoldOblique"
-	CourierOblique       Standard14Font = "Courier-Oblique"
-	Helvetica            Standard14Font = "Helvetica"
-	HelveticaBold        Standard14Font = "Helvetica-Bold"
-	HelveticaBoldOblique Standard14Font = "Helvetica-BoldOblique"
-	HelveticaOblique     Standard14Font = "Helvetica-Oblique"
-	TimesRoman           Standard14Font = "Times-Roman"
-	TimesBold            Standard14Font = "Times-Bold"
-	TimesBoldItalic      Standard14Font = "Times-BoldItalic"
-	TimesItalic          Standard14Font = "Times-Italic"
-	Symbol               Standard14Font = "Symbol"
-	ZapfDingbats         Standard14Font = "ZapfDingbats"
+	Courier              = Standard14Font(fonts.CourierName)
+	CourierBold          = Standard14Font(fonts.CourierBoldName)
+	CourierBoldOblique   = Standard14Font(fonts.CourierBoldObliqueName)
+	CourierOblique       = Standard14Font(fonts.CourierObliqueName)
+	Helvetica            = Standard14Font(fonts.HelveticaName)
+	HelveticaBold        = Standard14Font(fonts.HelveticaBoldName)
+	HelveticaBoldOblique = Standard14Font(fonts.HelveticaBoldObliqueName)
+	HelveticaOblique     = Standard14Font(fonts.HelveticaObliqueName)
+	TimesRoman           = Standard14Font(fonts.TimesRomanName)
+	TimesBold            = Standard14Font(fonts.TimesBoldName)
+	TimesBoldItalic      = Standard14Font(fonts.TimesBoldItalicName)
+	TimesItalic          = Standard14Font(fonts.TimesItalicName)
+	Symbol               = Standard14Font(fonts.SymbolName)
+	ZapfDingbats         = Standard14Font(fonts.ZapfDingbatsName)
 )
 
+// TODO(dennwc): merge with font.Type1Font
 var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	Courier: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Courier",
+			basefont: fonts.CourierName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierCharMetrics,
@@ -463,7 +464,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	CourierBold: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Courier-Bold",
+			basefont: fonts.CourierBoldName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierBoldCharMetrics,
@@ -471,7 +472,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	CourierBoldOblique: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Courier-BoldOblique",
+			basefont: fonts.CourierBoldObliqueName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierBoldObliqueCharMetrics,
@@ -479,7 +480,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	CourierOblique: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Courier-Oblique",
+			basefont: fonts.CourierObliqueName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.CourierObliqueCharMetrics,
@@ -487,7 +488,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	Helvetica: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Helvetica",
+			basefont: fonts.HelveticaName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaCharMetrics,
@@ -495,7 +496,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	HelveticaBold: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Helvetica-Bold",
+			basefont: fonts.HelveticaBoldName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaBoldCharMetrics,
@@ -503,7 +504,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	HelveticaBoldOblique: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Helvetica-BoldOblique",
+			basefont: fonts.HelveticaBoldObliqueName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaBoldObliqueCharMetrics,
@@ -511,7 +512,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	HelveticaOblique: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Helvetica-Oblique",
+			basefont: fonts.HelveticaObliqueName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.HelveticaObliqueCharMetrics,
@@ -519,7 +520,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	TimesRoman: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Times-Roman",
+			basefont: fonts.TimesRomanName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesRomanCharMetrics,
@@ -527,7 +528,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	TimesBold: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Times-Bold",
+			basefont: fonts.TimesBoldName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesBoldCharMetrics,
@@ -535,7 +536,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	TimesBoldItalic: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Times-BoldItalic",
+			basefont: fonts.TimesBoldItalicName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesBoldItalicCharMetrics,
@@ -543,7 +544,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	TimesItalic: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Times-Italic",
+			basefont: fonts.TimesItalicName,
 		},
 		encoder:     textencoding.NewWinAnsiTextEncoder(),
 		fontMetrics: fonts.TimesItalicCharMetrics,
@@ -551,7 +552,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	Symbol: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Symbol",
+			basefont: fonts.SymbolName,
 		},
 		encoder:     textencoding.NewSymbolEncoder(),
 		fontMetrics: fonts.SymbolCharMetrics,
@@ -559,7 +560,7 @@ var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	ZapfDingbats: {
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "ZapfDingbats",
+			basefont: fonts.ZapfDingbatsName,
 		},
 		encoder:     textencoding.NewZapfDingbatsEncoder(),
 		fontMetrics: fonts.ZapfDingbatsCharMetrics,
