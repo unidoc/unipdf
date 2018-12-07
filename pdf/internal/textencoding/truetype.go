@@ -14,23 +14,26 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// GID is a glyph index.
+type GID uint16
+
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
 // It performs mapping between character ids and glyph ids.
 // It has a preloaded rune (unicode code point) to glyph index map that has been loaded from a font.
 // Corresponds to Identity-H.
 type TrueTypeFontEncoder struct {
-	runeToGlyphIndexMap map[uint16]uint16
-	cmap                CMap
+	runeToGIDMap map[rune]GID
+	cmap         CMap
 }
 
 // NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a pre-loaded
-// runeToGlyphIndexMap, that has been pre-loaded from the font file.
+// runeToGIDMap, that has been pre-loaded from the font file.
 // The new instance is preloaded with a CMapIdentityH (Identity-H) CMap which maps 2-byte charcodes
 // to CIDs (glyph index).
-func NewTrueTypeFontEncoder(runeToGlyphIndexMap map[uint16]uint16) TrueTypeFontEncoder {
+func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 	return TrueTypeFontEncoder{
-		runeToGlyphIndexMap: runeToGlyphIndexMap,
-		cmap:                CMapIdentityH{},
+		runeToGIDMap: runeToGIDMap,
+		cmap:         CMapIdentityH{},
 	}
 }
 
@@ -40,23 +43,25 @@ const ttEncoderMaxNumEntries = 10
 // String returns a string that describes `enc`.
 func (enc TrueTypeFontEncoder) String() string {
 	parts := []string{
-		fmt.Sprintf("%d entries", len(enc.runeToGlyphIndexMap)),
+		fmt.Sprintf("%d entries", len(enc.runeToGIDMap)),
 	}
 
-	codes := []int{}
-	for c := range enc.runeToGlyphIndexMap {
-		codes = append(codes, int(c))
+	runes := make([]rune, 0, len(enc.runeToGIDMap))
+	for r := range enc.runeToGIDMap {
+		runes = append(runes, r)
 	}
-	sort.Ints(codes)
-	numCodes := len(codes)
-	if numCodes > ttEncoderMaxNumEntries {
-		numCodes = ttEncoderMaxNumEntries
+	sort.Slice(runes, func(i, j int) bool {
+		return runes[i] < runes[j]
+	})
+	n := len(runes)
+	if n > ttEncoderMaxNumEntries {
+		n = ttEncoderMaxNumEntries
 	}
 
-	for i := 0; i < numCodes; i++ {
-		c := codes[i]
+	for i := 0; i < n; i++ {
+		r := runes[i]
 		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q",
-			c, c, enc.runeToGlyphIndexMap[uint16(c)]))
+			r, r, enc.runeToGIDMap[r]))
 	}
 	return fmt.Sprintf("TRUETYPE_ENCODER{%s}", strings.Join(parts, ", "))
 }
@@ -68,24 +73,24 @@ func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
 
 // CharcodeToGlyph returns the glyph name matching character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToGlyph(code uint16) (string, bool) {
+func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	r, found := enc.CharcodeToRune(code)
 	if found && r == 0x20 {
 		return "space", true
 	}
 
 	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := fmt.Sprintf("uni%.4X", code)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
 	return glyph, true
 }
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
+func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		var unicode uint16
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
+		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
 		if n == 1 && err == nil {
 			return enc.RuneToCharcode(rune(unicode))
 		}
@@ -102,25 +107,29 @@ func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph string) (uint16, bool) {
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (uint16, bool) {
-	glyphIndex, ok := enc.runeToGlyphIndexMap[uint16(r)]
+func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
+	glyphIndex, ok := enc.runeToGIDMap[r]
 	if !ok {
 		common.Log.Debug("Missing rune %d (%+q) from encoding", r, r)
 		return 0, false
 	}
 	// Identity : charcode <-> glyphIndex
-	charcode := glyphIndex
+	// TODO(dennwc): Here charcode is probably the same as CID.
+	// TODO(dennwc): Find out what are the alternative mappings (enc.cmap?).
+	charcode := CharCode(glyphIndex)
 
-	return uint16(charcode), true
+	return charcode, true
 }
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToRune(code uint16) (rune, bool) {
+func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	// TODO: Make a reverse map stored.
-	for code, glyphIndex := range enc.runeToGlyphIndexMap {
-		if glyphIndex == code {
-			return rune(code), true
+	for r, gid := range enc.runeToGIDMap {
+		// Identity : glyphIndex <-> charcode
+		charcode := CharCode(gid)
+		if charcode == code {
+			return r, true
 		}
 	}
 	common.Log.Debug("CharcodeToRune: No match. code=0x%04x enc=%s", code, enc)
@@ -129,21 +138,21 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code uint16) (rune, bool) {
 
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (string, bool) {
+func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	if r == 0x20 {
 		return "space", true
 	}
-	glyph := fmt.Sprintf("uni%.4X", r)
+	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
 	return glyph, true
 }
 
 // GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToRune(glyph string) (rune, bool) {
+func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		unicode := uint16(0)
-		n, err := fmt.Sscanf(glyph, "uni%X", &unicode)
+		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
 		if n == 1 && err == nil {
 			return rune(unicode), true
 		}

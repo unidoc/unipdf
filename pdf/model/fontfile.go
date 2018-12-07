@@ -220,9 +220,9 @@ func getKeyValues(data string) map[string]string {
 }
 
 // getEncodings returns the encodings encoded in `data`.
-func getEncodings(data string) (map[uint16]string, error) {
+func getEncodings(data string) (map[textencoding.CharCode]textencoding.GlyphName, error) {
 	lines := strings.Split(data, "\n")
-	keyValues := map[uint16]string{}
+	keyValues := make(map[textencoding.CharCode]textencoding.GlyphName)
 	for _, line := range lines {
 		matches := reEncoding.FindStringSubmatch(line)
 		if matches == nil {
@@ -234,7 +234,7 @@ func getEncodings(data string) (map[uint16]string, error) {
 			common.Log.Debug("ERROR: Bad encoding line. %q", line)
 			return nil, core.ErrTypeError
 		}
-		keyValues[uint16(code)] = glyph
+		keyValues[textencoding.CharCode(code)] = textencoding.GlyphName(glyph)
 	}
 	common.Log.Trace("getEncodings: keyValues=%#v", keyValues)
 	return keyValues, nil

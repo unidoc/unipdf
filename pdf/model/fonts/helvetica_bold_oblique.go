@@ -38,7 +38,7 @@ func (font FontHelveticaBoldOblique) SetEncoder(encoder textencoding.TextEncoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontHelveticaBoldOblique) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontHelveticaBoldOblique) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := HelveticaBoldObliqueCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -60,7 +60,7 @@ func (font FontHelveticaBoldOblique) ToPdfObject() core.PdfObject {
 
 // HelveticaBoldObliqueCharMetrics are the font metrics loaded from afms/Helvetica-BoldOblique.afm.
 // See afms/MustRead.html for license information.
-var HelveticaBoldObliqueCharMetrics = map[string]CharMetrics{
+var HelveticaBoldObliqueCharMetrics = map[GlyphName]CharMetrics{
 	"A":              {GlyphName: "A", Wx: 722.000000, Wy: 0.000000},
 	"AE":             {GlyphName: "AE", Wx: 1000.000000, Wy: 0.000000},
 	"Aacute":         {GlyphName: "Aacute", Wx: 722.000000, Wy: 0.000000},

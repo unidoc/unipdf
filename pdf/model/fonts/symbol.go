@@ -39,7 +39,7 @@ func (font FontSymbol) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontSymbol) GetGlyphCharMetrics(glyph string) (CharMetrics, bool) {
+func (font FontSymbol) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := SymbolCharMetrics[glyph]
 	if !has {
 		return metrics, false
@@ -63,7 +63,7 @@ func (font FontSymbol) ToPdfObject() core.PdfObject {
 
 // SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
 // See afms/MustRead.html for license information.
-var SymbolCharMetrics = map[string]CharMetrics{
+var SymbolCharMetrics = map[GlyphName]CharMetrics{
 	"Alpha":          {GlyphName: "Alpha", Wx: 722.000000, Wy: 0.000000},
 	"Beta":           {GlyphName: "Beta", Wx: 667.000000, Wy: 0.000000},
 	"Chi":            {GlyphName: "Chi", Wx: 722.000000, Wy: 0.000000},

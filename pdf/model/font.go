@@ -126,28 +126,27 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 	}
 
 	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
-	glyphCode := map[string]byte{}
+	glyphCode := make(map[textencoding.GlyphName]textencoding.CharCode)
 
 	// slots are the indexes in the encoding where the new character codes are added.
 	// slots are unused indexes, which are filled first. slots1 are the used indexes.
-	slots := []byte{}
-	slots1 := []byte{}
-	for code := uint16(1); code <= 0xff; code++ {
-		if glyph, ok := encoder.CodeToGlyph[code]; ok {
-			glyphCode[glyph] = byte(code)
+	var slots, slots1 []textencoding.CharCode
+	for code := textencoding.CharCode(1); code <= 0xff; code++ {
+		if glyph, ok := encoder.CharcodeToGlyph(code); ok {
+			glyphCode[glyph] = code
 			// Don't overwrite space
 			if glyph != "space" {
 
-				slots1 = append(slots1, byte(code))
+				slots1 = append(slots1, code)
 			}
 		} else {
-			slots = append(slots, byte(code))
+			slots = append(slots, code)
 		}
 	}
 	slots = append(slots, slots1...)
 
 	// `glyphs` are the font glyphs that we need to encode.
-	glyphs := []string{}
+	var glyphs []textencoding.GlyphName
 	for _, r := range sortedAlphabet(alphabet) {
 		glyph, ok := textencoding.RuneToGlyph(r)
 		if !ok {
@@ -168,7 +167,7 @@ func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]in
 
 	// Fill the slots, starting with the empty ones.
 	slotIdx := 0
-	differences := map[byte]string{}
+	differences := make(map[textencoding.CharCode]textencoding.GlyphName)
 	for _, glyph := range glyphs {
 		if _, ok := glyphCode[glyph]; !ok {
 			differences[slots[slotIdx]] = glyph
@@ -304,7 +303,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	common.Log.Trace("showText: data=[% 02x]=%#q", data, data)
 
-	charcodes := make([]uint16, 0, len(data)+len(data)%2)
+	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
@@ -315,11 +314,11 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 		}
 		for i := 0; i < len(data); i += 2 {
 			b := uint16(data[i])<<8 | uint16(data[i+1])
-			charcodes = append(charcodes, b)
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	} else {
 		for _, b := range data {
-			charcodes = append(charcodes, uint16(b))
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	}
 
@@ -329,7 +328,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 		if font.baseFields().toUnicodeCmap != nil {
 			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
 			if ok {
-				charstrings = append(charstrings, r)
+				charstrings = append(charstrings, string(r))
 				continue
 			}
 		}
@@ -345,7 +344,7 @@ func (font PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 				"\tfont=%s\n\tencoding=%s",
 				code, data, data, charcodes, font.baseFields().isCIDFont(), font, encoder)
 			numMisses++
-			charstrings = append(charstrings, cmap.MissingCodeString)
+			charstrings = append(charstrings, string(cmap.MissingCodeRune))
 		}
 	}
 
@@ -392,7 +391,7 @@ func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
 }
 
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
-func (font PdfFont) GetGlyphCharMetrics(glyph string) (fonts.CharMetrics, bool) {
+func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
