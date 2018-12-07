@@ -9,48 +9,12 @@
 
 package fonts
 
-import (
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-)
-
-// FontTimesRoman represents the Times-Roman font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontTimesRoman struct {
-	encoder textencoding.TextEncoder
-}
+// TimesRomanName is a PDF name of the Times font.
+const TimesRomanName = "Times-Roman"
 
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesRoman() FontTimesRoman {
-	font := FontTimesRoman{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontTimesRoman) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontTimesRoman) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := TimesRomanCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontTimesRoman) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Times-Roman"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontTimesRoman() Type1Font {
+	return NewType1Font(TimesRomanName, TimesRomanCharMetrics)
 }
 
 // TimesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.

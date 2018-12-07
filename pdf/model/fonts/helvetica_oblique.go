@@ -9,48 +9,12 @@
 
 package fonts
 
-import (
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-)
-
-// FontHelveticaOblique represents the Helvetica-Oblique font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontHelveticaOblique struct {
-	encoder textencoding.TextEncoder
-}
+// HelveticaObliqueName is a PDF name of the Helvetica (oblique) font.
+const HelveticaObliqueName = "Helvetica-Oblique"
 
 // NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaOblique() FontHelveticaOblique {
-	font := FontHelveticaOblique{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontHelveticaOblique) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontHelveticaOblique) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := HelveticaObliqueCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontHelveticaOblique) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Helvetica-Oblique"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontHelveticaOblique() Type1Font {
+	return NewType1Font(HelveticaObliqueName, HelveticaObliqueCharMetrics)
 }
 
 // HelveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.

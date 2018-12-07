@@ -10,50 +10,16 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// FontSymbol represents the Symbol font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontSymbol struct {
-	// By default encoder is not set, which means that we use the font's built in encoding.
-	encoder textencoding.TextEncoder
-}
+// SymbolName is a PDF name of the Symbol font.
+const SymbolName = "Symbol"
 
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
-func NewFontSymbol() FontSymbol {
-	font := FontSymbol{}
-	font.encoder = textencoding.NewSymbolEncoder()
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontSymbol) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontSymbol) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := SymbolCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontSymbol) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Symbol"))
-	if font.encoder != nil {
-		fontDict.Set("Encoding", font.encoder.ToPdfObject())
-	}
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontSymbol() Type1Font {
+	enc := textencoding.NewSymbolEncoder()
+	return NewType1FontWithEncoding(SymbolName, SymbolCharMetrics, enc)
 }
 
 // SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.

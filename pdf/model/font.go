@@ -418,7 +418,7 @@ func (font PdfFont) actualFont() fonts.Font {
 		return t
 	case *pdfCIDFontType2:
 		return t
-	case fonts.FontCourier:
+	case fonts.Type1Font:
 		return t
 	default:
 		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)

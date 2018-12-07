@@ -9,49 +9,13 @@
 
 package fonts
 
-import (
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-)
-
-// FontCourierBoldOblique represents the Courier-BoldOblique font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontCourierBoldOblique struct {
-	encoder textencoding.TextEncoder
-}
+// CourierBoldObliqueName is a PDF name of the Courier (bold, oblique) font.
+const CourierBoldObliqueName = "Courier-BoldOblique"
 
 // NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontCourierBoldOblique() FontCourierBoldOblique {
-	font := FontCourierBoldOblique{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder()
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontCourierBoldOblique) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontCourierBoldOblique) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := CourierBoldObliqueCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontCourierBoldOblique) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Courier-BoldOblique"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontCourierBoldOblique() Type1Font {
+	return NewType1Font(CourierBoldObliqueName, CourierBoldObliqueCharMetrics)
 }
 
 // CourierBoldObliqueCharMetrics are the font metrics loaded from afms/Courier-BoldOblique.afm.

@@ -10,49 +10,16 @@
 package fonts
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// FontZapfDingbats represents the ZapfDingbats font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontZapfDingbats struct {
-	// By default encoder is not set, which means that we use the font's built in encoding.
-	encoder textencoding.TextEncoder
-}
+// ZapfDingbatsName is a PDF name of the ZapfDingbats font.
+const ZapfDingbatsName = "ZapfDingbats"
 
 // NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
-func NewFontZapfDingbats() FontZapfDingbats {
-	font := FontZapfDingbats{}
-	font.encoder = textencoding.NewZapfDingbatsEncoder()
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontZapfDingbats) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontZapfDingbats) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := ZapfDingbatsCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontZapfDingbats) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("ZapfDingbats"))
-	if font.encoder != nil {
-		fontDict.Set("Encoding", font.encoder.ToPdfObject())
-	}
-	return core.MakeIndirectObject(fontDict)
+func NewFontZapfDingbats() Type1Font {
+	enc := textencoding.NewZapfDingbatsEncoder()
+	return NewType1FontWithEncoding(ZapfDingbatsName, ZapfDingbatsCharMetrics, enc)
 }
 
 // ZapfDingbatsCharMetrics are the font metrics loaded from afms/ZapfDingbats.afm.

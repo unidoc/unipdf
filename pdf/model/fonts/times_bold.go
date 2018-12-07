@@ -9,48 +9,12 @@
 
 package fonts
 
-import (
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-)
-
-// FontTimesBold represents the Times-Bold font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontTimesBold struct {
-	encoder textencoding.TextEncoder
-}
+// TimesBoldName is a PDF name of the Times (bold) font.
+const TimesBoldName = "Times-Bold"
 
 // NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBold() FontTimesBold {
-	font := FontTimesBold{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontTimesBold) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontTimesBold) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := TimesBoldCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontTimesBold) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Times-Bold"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontTimesBold() Type1Font {
+	return NewType1Font(TimesBoldName, TimesBoldCharMetrics)
 }
 
 // TimesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.

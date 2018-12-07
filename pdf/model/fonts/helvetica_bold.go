@@ -9,49 +9,13 @@
 
 package fonts
 
-import (
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-)
-
-// FontHelveticaBold represents the Helvetica-Bold font.
-// This is a built-in font and it is assumed that every reader has access to it.
-type FontHelveticaBold struct {
-	encoder textencoding.TextEncoder
-}
+// HelveticaBoldName is a PDF name of the Helvetica (bold) font.
+const HelveticaBoldName = "Helvetica-Bold"
 
 // NewFontHelveticaBold returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontHelveticaBold() FontHelveticaBold {
-	font := FontHelveticaBold{}
-	font.encoder = textencoding.NewWinAnsiTextEncoder() // Default
-	return font
-}
-
-// Encoder returns the font's text encoder.
-func (font FontHelveticaBold) Encoder() textencoding.TextEncoder {
-	return font.encoder
-}
-
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font FontHelveticaBold) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := HelveticaBoldCharMetrics[glyph]
-	if !has {
-		return metrics, false
-	}
-
-	return metrics, true
-}
-
-// ToPdfObject returns a primitive PDF object representation of the font.
-func (font FontHelveticaBold) ToPdfObject() core.PdfObject {
-	fontDict := core.MakeDict()
-	fontDict.Set("Type", core.MakeName("Font"))
-	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName("Helvetica-Bold"))
-	fontDict.Set("Encoding", font.encoder.ToPdfObject())
-
-	return core.MakeIndirectObject(fontDict)
+func NewFontHelveticaBold() Type1Font {
+	return NewType1Font(HelveticaBoldName, HelveticaBoldCharMetrics)
 }
 
 // HelveticaBoldCharMetrics are the font metrics loaded from afms/Helvetica-Bold.afm.
