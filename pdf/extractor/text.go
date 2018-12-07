@@ -635,7 +635,7 @@ func (to *textObject) renderText(data []byte) error {
 
 	for i, r := range runes {
 		// TODO(peterwilliams97): Need to find and fix cases where this happens.
-		if r == "\x00" {
+		if r == '\x00' {
 			continue
 		}
 
@@ -649,7 +649,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		// w is the unscaled movement at the end of a word.
 		w := 0.0
-		if r == " " {
+		if r == ' ' {
 			w = state.Tw
 		}
 

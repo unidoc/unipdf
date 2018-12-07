@@ -214,7 +214,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
 				return nil, core.ErrRangeError
 			}
 			for i, w := range widths {
-				font.charWidths[uint16(firstChar+i)] = w
+				font.charWidths[firstChar+textencoding.CharCode(i)] = w
 			}
 		}
 	}
@@ -396,7 +396,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	truefont := &pdfFontSimple{
-		charWidths: map[uint16]float64{},
+		charWidths: make(map[textencoding.CharCode]float64),
 		fontCommon: fontCommon{
 			subtype: "TrueType",
 		},
@@ -438,12 +438,12 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	truefont.Widths = core.MakeIndirectObject(core.MakeArrayFromFloats(vals))
 
-	if len(vals) < maxCode-minCode+1 {
+	if len(vals) < int(maxCode-minCode+1) {
 		common.Log.Debug("ERROR: Invalid length of widths, %d < %d", len(vals), 255-32+1)
 		return nil, core.ErrRangeError
 	}
 
-	for i := uint16(minCode); i <= maxCode; i++ {
+	for i := textencoding.CharCode(minCode); i <= maxCode; i++ {
 		truefont.charWidths[i] = vals[i-minCode]
 	}
 
@@ -560,8 +560,11 @@ func (font *pdfFontSimple) updateStandard14Font() {
 		return
 	}
 
-	font.charWidths = map[uint16]float64{}
-	for code, glyph := range se.CodeToGlyph {
+	codes := se.Charcodes()
+	font.charWidths = make(map[textencoding.CharCode]float64, len(codes))
+	for _, code := range codes {
+		// codes was built from CharcodeToGlyph mapping, so each should have a glyph
+		glyph, _ := se.CharcodeToGlyph(code)
 		font.charWidths[code] = font.fontMetrics[glyph].Wx
 	}
 }

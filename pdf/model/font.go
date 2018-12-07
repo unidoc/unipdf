@@ -390,9 +390,9 @@ func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 }
 
 // BytesToCharcodes converts the bytes in a PDF string to character codes.
-func (font *PdfFont) BytesToCharcodes(data []byte) []uint16 {
+func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
-	charcodes := make([]uint16, 0, len(data)+len(data)%2)
+	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
@@ -403,11 +403,11 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []uint16 {
 		}
 		for i := 0; i < len(data); i += 2 {
 			b := uint16(data[i])<<8 | uint16(data[i+1])
-			charcodes = append(charcodes, b)
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	} else {
 		for _, b := range data {
-			charcodes = append(charcodes, uint16(b))
+			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	}
 	return charcodes
@@ -417,21 +417,21 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []uint16 {
 // How it works:
 //  1) Use the ToUnicode CMap if there is one.
 //  2) Use the underlying font's encoding.
-func (font *PdfFont) CharcodesToUnicode(charcodes []uint16) []string {
+func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
 	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
 	return strlist
 }
 
 // CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical information
 // about hits and misses from the reverse mapping process.
-func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []uint16) (strlist []string, numHits, numMisses int) {
-	charstrings := make([]string, 0, len(charcodes))
+func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (strlist []rune, numHits, numMisses int) {
+	runes := make([]rune, 0, len(charcodes))
 	numMisses = 0
 	for _, code := range charcodes {
 		if font.baseFields().toUnicodeCmap != nil {
 			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
 			if ok {
-				charstrings = append(charstrings, r)
+				runes = append(runes, r)
 				continue
 			}
 		}
@@ -440,7 +440,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []uint16) (strlist []
 		if encoder != nil {
 			r, ok := encoder.CharcodeToRune(code)
 			if ok {
-				charstrings = append(charstrings, textencoding.RuneToString(r))
+				runes = append(runes, r)
 				continue
 			}
 		}
@@ -448,7 +448,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []uint16) (strlist []
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
 		numMisses++
-		charstrings = append(charstrings, cmap.MissingCodeString)
+		runes = append(runes, cmap.MissingCodeRune)
 	}
 
 	if numMisses != 0 {
@@ -458,7 +458,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []uint16) (strlist []
 			len(charcodes), numMisses, font)
 	}
 
-	return charstrings, len(charstrings), numMisses
+	return runes, len(runes), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -523,7 +523,7 @@ func (font *PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.Ch
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
 // TODO(gunnsth): Reconsider whether needed or if can map via GlyphName.
-func (font *PdfFont) GetCharMetrics(code uint16) (fonts.CharMetrics, bool) {
+func (font *PdfFont) GetCharMetrics(code textencoding.CharCode) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
 	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()

@@ -129,6 +129,18 @@ func (se SimpleEncoder) Encode(raw string) []byte {
 	return encodeString8bit(se, raw)
 }
 
+// Charcodes returns a slice of all charcodes in this encoding.
+func (se SimpleEncoder) Charcodes() []CharCode {
+	codes := make([]CharCode, 0, len(se.codeToGlyph))
+	for code := range se.codeToGlyph {
+		codes = append(codes, code)
+	}
+	sort.Slice(codes, func(i, j int) bool {
+		return codes[i] < codes[j]
+	})
+	return codes
+}
+
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
