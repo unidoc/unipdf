@@ -429,40 +429,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	cidfont.DW = core.MakeInteger(int64(missingWidth))
 
 	// Construct W array.  Stores character code to width mappings.
-	wArr := &core.PdfObjectArray{}
-
-	// 9.7.4.3 Glyph metrics in CIDFonts
-
-	// In the first format, c shall be an integer specifying a starting CID value; it shall be followed by an array of
-	// n numbers that shall specify the widths for n consecutive CIDs, starting with c.
-	// The second format shall define the same width, w, as a number, for all CIDs in the range c_first to c_last.
-
-	// We always use the second format.
-
-	// TODO(dennwc): this can be done on GIDs instead of runes
-	for i := 0; i < len(runes); {
-		w := runeToWidthMap[runes[i]]
-
-		li := i
-		for j := i + 1; j < len(runes); j++ {
-			w2 := runeToWidthMap[runes[j]]
-			if w == w2 {
-				li = j
-			} else {
-				break
-			}
-		}
-
-		// The W maps from CID to width, here CID = GID.
-		gid1 := ttf.Chars[runes[i]]
-		gid2 := ttf.Chars[runes[li]]
-
-		wArr.Append(core.MakeInteger(int64(gid1)))
-		wArr.Append(core.MakeInteger(int64(gid2)))
-		wArr.Append(core.MakeInteger(int64(w)))
-
-		i = li + 1
-	}
+	wArr := makeCIDWidthArr(runes, runeToWidthMap, ttf.Chars)
 	cidfont.W = core.MakeIndirectObject(wArr)
 
 	d := core.MakeDict()
@@ -542,4 +509,43 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	return &font, nil
+}
+
+func makeCIDWidthArr(runes []rune, widths map[rune]int, gids map[rune]fonts.GID) *core.PdfObjectArray {
+	// Construct W array. Stores character code to width mappings.
+	arr := &core.PdfObjectArray{}
+
+	// 9.7.4.3 Glyph metrics in CIDFonts
+
+	// In the first format, c shall be an integer specifying a starting CID value; it shall be followed by an array of
+	// n numbers that shall specify the widths for n consecutive CIDs, starting with c.
+	// The second format shall define the same width, w, as a number, for all CIDs in the range c_first to c_last.
+
+	// We always use the second format.
+
+	// TODO(dennwc): this can be done on GIDs instead of runes
+	for i := 0; i < len(runes); {
+		w := widths[runes[i]]
+
+		li := i
+		for j := i + 1; j < len(runes); j++ {
+			w2 := widths[runes[j]]
+			if w == w2 {
+				li = j
+			} else {
+				break
+			}
+		}
+
+		// The W maps from CID to width, here CID = GID.
+		gid1 := gids[runes[i]]
+		gid2 := gids[runes[li]]
+
+		arr.Append(core.MakeInteger(int64(gid1)))
+		arr.Append(core.MakeInteger(int64(gid2)))
+		arr.Append(core.MakeInteger(int64(w)))
+
+		i = li + 1
+	}
+	return arr
 }
