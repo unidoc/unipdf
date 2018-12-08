@@ -303,7 +303,7 @@ func (p *Paragraph) wrapText() error {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
 		if !found {
 			common.Log.Debug("ERROR: Glyph not found for rune: %c", val)
-			return errors.New("Glyph not found for rune")
+			return errors.New("glyph not found for rune")
 		}
 
 		// Newline wrapping.
@@ -323,7 +323,7 @@ func (p *Paragraph) wrapText() error {
 				glyph, val, val, p.textFont.BaseFont(), p.textFont.Subtype())
 			common.Log.Trace("Font: %#v", p.textFont)
 			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
-			return errors.New("Glyph char metrics missing")
+			return errors.New("glyph char metrics missing")
 		}
 
 		w := p.fontSize * metrics.Wx
@@ -490,7 +490,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 			if !found {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-				return ctx, errors.New("Unsupported rune in text encoding")
+				return ctx, errors.New("unsupported rune in text encoding")
 			}
 			if glyph == "space" {
 				spaces++
@@ -504,7 +504,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 				common.Log.Debug("Unsupported glyph %q i=%d rune=0x%04x=%c in font %s %s",
 					glyph, i, r, r,
 					p.textFont.BaseFont(), p.textFont.Subtype())
-				return ctx, errors.New("Unsupported text glyph")
+				return ctx, errors.New("unsupported text glyph")
 			}
 
 			w += p.fontSize * metrics.Wx
@@ -514,7 +514,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 
 		spaceMetrics, found := p.textFont.GetGlyphCharMetrics("space")
 		if !found {
-			return ctx, errors.New("The font does not have a space glyph")
+			return ctx, errors.New("the font does not have a space glyph")
 		}
 		spaceWidth := spaceMetrics.Wx
 		switch p.alignment {
@@ -539,7 +539,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			glyph, ok := p.textFont.Encoder().RuneToGlyph(r)
 			if !ok {
 				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-				return ctx, errors.New("Unsupported rune in text encoding")
+				return ctx, errors.New("unsupported rune in text encoding")
 			}
 
 			if glyph == "space" { // TODO: What about \t and other spaces.

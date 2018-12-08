@@ -154,7 +154,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			if arr, isArr := obj.(*PdfObjectArray); isArr {
 				if arr.Len() != 1 {
 					common.Log.Debug("Error: DecodeParms array length != 1 (%d)", arr.Len())
-					return nil, errors.New("Range check error")
+					return nil, errors.New("range check error")
 				}
 				obj = TraceToDirectObject(arr.Get(0))
 			}
@@ -162,7 +162,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			dp, isDict := obj.(*PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
-				return nil, fmt.Errorf("Invalid DecodeParms")
+				return nil, fmt.Errorf("invalid DecodeParms")
 			}
 			decodeParams = dp
 		}
@@ -180,7 +180,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		predictor, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid Predictor")
+			return nil, fmt.Errorf("invalid Predictor")
 		}
 		encoder.Predictor = int(*predictor)
 	}
@@ -191,7 +191,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
-			return nil, fmt.Errorf("Invalid BitsPerComponent")
+			return nil, fmt.Errorf("invalid BitsPerComponent")
 		}
 		encoder.BitsPerComponent = int(*bpc)
 	}
@@ -203,7 +203,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor column invalid")
+				return nil, fmt.Errorf("predictor column invalid")
 			}
 
 			encoder.Columns = int(*columns)
@@ -216,7 +216,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor colors not an integer")
+				return nil, fmt.Errorf("predictor colors not an integer")
 			}
 			encoder.Colors = int(*colors)
 		}
@@ -253,7 +253,7 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 	common.Log.Trace("FlateDecode stream")
 	common.Log.Trace("Predictor: %d", enc.Predictor)
 	if enc.BitsPerComponent != 8 {
-		return nil, fmt.Errorf("Invalid BitsPerComponent=%d (only 8 supported)", enc.BitsPerComponent)
+		return nil, fmt.Errorf("invalid BitsPerComponent=%d (only 8 supported)", enc.BitsPerComponent)
 	}
 
 	outData, err := enc.DecodeBytes(streamObj.Stream)
@@ -276,14 +276,14 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
-				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+				return nil, fmt.Errorf("invalid row length (%d/%d)", len(outData), rowLength)
 			}
 			if rowLength%enc.Colors != 0 {
-				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, enc.Colors)
+				return nil, fmt.Errorf("invalid row length (%d) for colors %d", rowLength, enc.Colors)
 			}
 			if rowLength > len(outData) {
 				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
-				return nil, errors.New("Range check error")
+				return nil, errors.New("range check error")
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -309,11 +309,11 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 			rowLength := int(enc.Columns*enc.Colors + 1) // 1 byte to specify predictor algorithms per row.
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+				return nil, fmt.Errorf("invalid row length (%d/%d)", len(outData), rowLength)
 			}
 			if rowLength > len(outData) {
 				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
-				return nil, errors.New("Range check error")
+				return nil, errors.New("range check error")
 			}
 
 			pOutBuffer := bytes.NewBuffer(nil)
@@ -379,7 +379,7 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 
 				default:
 					common.Log.Debug("ERROR: Invalid filter byte (%d) @row %d", fb, i)
-					return nil, fmt.Errorf("Invalid filter byte (%d)", fb)
+					return nil, fmt.Errorf("invalid filter byte (%d)", fb)
 				}
 
 				for i := 0; i < rowLength; i++ {
@@ -391,7 +391,7 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 			return pOutData, nil
 		} else {
 			common.Log.Debug("ERROR: Unsupported predictor (%d)", enc.Predictor)
-			return nil, fmt.Errorf("Unsupported predictor (%d)", enc.Predictor)
+			return nil, fmt.Errorf("unsupported predictor (%d)", enc.Predictor)
 		}
 	}
 
@@ -413,7 +413,7 @@ func (enc *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		rows := len(data) / rowLength
 		if len(data)%rowLength != 0 {
 			common.Log.Error("Invalid column length")
-			return nil, errors.New("Invalid row length")
+			return nil, errors.New("invalid row length")
 		}
 
 		pOutBuffer := bytes.NewBuffer(nil)
@@ -541,7 +541,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 			}
 			if decodeParams == nil {
 				common.Log.Error("DecodeParms not a dictionary %#v", obj)
-				return nil, fmt.Errorf("Invalid DecodeParms")
+				return nil, fmt.Errorf("invalid DecodeParms")
 			}
 		}
 	}
@@ -555,10 +555,10 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		earlyChange, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid EarlyChange")
+			return nil, fmt.Errorf("invalid EarlyChange")
 		}
 		if *earlyChange != 0 && *earlyChange != 1 {
-			return nil, fmt.Errorf("Invalid EarlyChange value (not 0 or 1)")
+			return nil, fmt.Errorf("invalid EarlyChange value (not 0 or 1)")
 		}
 
 		encoder.EarlyChange = int(*earlyChange)
@@ -577,7 +577,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		predictor, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid Predictor")
+			return nil, fmt.Errorf("invalid Predictor")
 		}
 		encoder.Predictor = int(*predictor)
 	}
@@ -588,7 +588,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		bpc, ok := obj.(*PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
-			return nil, fmt.Errorf("Invalid BitsPerComponent")
+			return nil, fmt.Errorf("invalid BitsPerComponent")
 		}
 		encoder.BitsPerComponent = int(*bpc)
 	}
@@ -600,7 +600,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		if obj != nil {
 			columns, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor column invalid")
+				return nil, fmt.Errorf("predictor column invalid")
 			}
 
 			encoder.Columns = int(*columns)
@@ -613,7 +613,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		if obj != nil {
 			colors, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor colors not an integer")
+				return nil, fmt.Errorf("predictor colors not an integer")
 			}
 			encoder.Colors = int(*colors)
 		}
@@ -675,16 +675,16 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
 				common.Log.Debug("ERROR: TIFF encoding: Invalid row length...")
-				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+				return nil, fmt.Errorf("invalid row length (%d/%d)", len(outData), rowLength)
 			}
 
 			if rowLength%enc.Colors != 0 {
-				return nil, fmt.Errorf("Invalid row length (%d) for colors %d", rowLength, enc.Colors)
+				return nil, fmt.Errorf("invalid row length (%d) for colors %d", rowLength, enc.Colors)
 			}
 
 			if rowLength > len(outData) {
 				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
-				return nil, errors.New("Range check error")
+				return nil, errors.New("range check error")
 			}
 			common.Log.Trace("inp outData (%d): % x", len(outData), outData)
 
@@ -716,11 +716,11 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 			}
 			rows := len(outData) / rowLength
 			if len(outData)%rowLength != 0 {
-				return nil, fmt.Errorf("Invalid row length (%d/%d)", len(outData), rowLength)
+				return nil, fmt.Errorf("invalid row length (%d/%d)", len(outData), rowLength)
 			}
 			if rowLength > len(outData) {
 				common.Log.Debug("Row length cannot be longer than data length (%d/%d)", rowLength, len(outData))
-				return nil, errors.New("Range check error")
+				return nil, errors.New("range check error")
 			}
 
 			pOutBuffer := bytes.NewBuffer(nil)
@@ -751,7 +751,7 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 					}
 				default:
 					common.Log.Debug("ERROR: Invalid filter byte (%d)", fb)
-					return nil, fmt.Errorf("Invalid filter byte (%d)", fb)
+					return nil, fmt.Errorf("invalid filter byte (%d)", fb)
 				}
 
 				for i := 0; i < rowLength; i++ {
@@ -763,7 +763,7 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 			return pOutData, nil
 		} else {
 			common.Log.Debug("ERROR: Unsupported predictor (%d)", enc.Predictor)
-			return nil, fmt.Errorf("Unsupported predictor (%d)", enc.Predictor)
+			return nil, fmt.Errorf("unsupported predictor (%d)", enc.Predictor)
 		}
 	}
 
@@ -887,7 +887,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 		encoder.BitsPerComponent = 8
 		encoder.ColorComponents = 3
 	default:
-		return nil, errors.New("Unsupported color model")
+		return nil, errors.New("unsupported color model")
 	}
 	encoder.Width = cfg.Width
 	encoder.Height = cfg.Height
@@ -920,7 +920,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 					// Gray - 16 bit.
 					val, ok := color.(gocolor.Gray16)
 					if !ok {
-						return nil, errors.New("Color type error")
+						return nil, errors.New("color type error")
 					}
 					decoded[index] = byte((val.Y >> 8) & 0xff)
 					index++
@@ -930,7 +930,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 					// Gray - 8 bit.
 					val, ok := color.(gocolor.Gray)
 					if !ok {
-						return nil, errors.New("Color type error")
+						return nil, errors.New("color type error")
 					}
 					decoded[index] = byte(val.Y & 0xff)
 					index++
@@ -939,7 +939,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 				if enc.BitsPerComponent == 16 {
 					val, ok := color.(gocolor.RGBA64)
 					if !ok {
-						return nil, errors.New("Color type error")
+						return nil, errors.New("color type error")
 					}
 					decoded[index] = byte((val.R >> 8) & 0xff)
 					index++
@@ -967,7 +967,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 						// Hack around YCbCr from go jpeg package.
 						val, ok := color.(gocolor.YCbCr)
 						if !ok {
-							return nil, errors.New("Color type error")
+							return nil, errors.New("color type error")
 						}
 						r, g, b, _ := val.RGBA()
 						// The fact that we cannot use the Y, Cb, Cr values directly,
@@ -991,7 +991,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 				// CMYK - 8 bit.
 				val, ok := color.(gocolor.CMYK)
 				if !ok {
-					return nil, errors.New("Color type error")
+					return nil, errors.New("color type error")
 				}
 				// TODO: Is the inversion not handled right in the JPEG package for APP14?
 				// Should not need to invert here...
@@ -1040,7 +1040,7 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	} else if enc.ColorComponents == 4 {
 		img = goimage.NewCMYK(bounds)
 	} else {
-		return nil, errors.New("Unsupported")
+		return nil, errors.New("unsupported")
 	}
 
 	// Draw the data on the image..
@@ -1288,7 +1288,7 @@ func (enc *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 			inb = append(inb, b)
 		} else {
 			common.Log.Debug("ERROR: Invalid ascii hex character (%c)", b)
-			return nil, fmt.Errorf("Invalid ascii hex character (%c)", b)
+			return nil, fmt.Errorf("invalid ascii hex character (%c)", b)
 		}
 	}
 	if len(inb)%2 == 1 {
@@ -1387,7 +1387,7 @@ func (enc *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 				break
 			} else {
 				common.Log.Error("Failed decoding, invalid code")
-				return nil, errors.New("Invalid code encountered")
+				return nil, errors.New("invalid code encountered")
 			}
 
 			codes[j-spaces] = code
@@ -1679,18 +1679,18 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 
 	obj = encDict.Get("Filter")
 	if obj == nil {
-		return nil, fmt.Errorf("Filter missing")
+		return nil, fmt.Errorf("filter missing")
 	}
 
 	array, ok := obj.(*PdfObjectArray)
 	if !ok {
-		return nil, fmt.Errorf("Multi filter can only be made from array")
+		return nil, fmt.Errorf("multi filter can only be made from array")
 	}
 
 	for idx, obj := range array.Elements() {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Multi filter array element not a name")
+			return nil, fmt.Errorf("multi filter array element not a name")
 		}
 
 		var dp PdfObject
@@ -1703,7 +1703,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			// provided.
 			if len(decodeParamsArray) > 0 {
 				if idx >= len(decodeParamsArray) {
-					return nil, fmt.Errorf("Missing elements in decode params array")
+					return nil, fmt.Errorf("missing elements in decode params array")
 				}
 				dp = decodeParamsArray[idx]
 			}
@@ -1744,7 +1744,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			common.Log.Trace("Multi encoder: %#v", mencoder)
 		} else {
 			common.Log.Error("Unsupported filter %s", *name)
-			return nil, fmt.Errorf("Invalid filter in multi filter array")
+			return nil, fmt.Errorf("invalid filter in multi filter array")
 		}
 	}
 

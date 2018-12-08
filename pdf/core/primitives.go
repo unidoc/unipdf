@@ -400,7 +400,7 @@ func (array *PdfObjectArray) Get(i int) PdfObject {
 // Set sets the PdfObject at index i of the array. An error is returned if the index is outside bounds.
 func (array *PdfObjectArray) Set(i int, obj PdfObject) error {
 	if i < 0 || i >= len(array.vec) {
-		return errors.New("Outside bounds")
+		return errors.New("outside bounds")
 	}
 	array.vec[i] = obj
 	return nil
@@ -573,7 +573,7 @@ func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 	for _, obj := range array.Elements() {
 		number, err := GetNumberAsFloat(TraceToDirectObject(obj))
 		if err != nil {
-			return nil, fmt.Errorf("Array element not a number")
+			return nil, fmt.Errorf("array element not a number")
 		}
 		slice = append(slice, number)
 	}

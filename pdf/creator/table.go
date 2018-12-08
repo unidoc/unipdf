@@ -79,7 +79,7 @@ func newTable(cols int) *Table {
 func (table *Table) SetColumnWidths(widths ...float64) error {
 	if len(widths) != table.cols {
 		common.Log.Debug("Mismatching number of widths and columns")
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	table.colWidths = widths
@@ -119,7 +119,7 @@ func (table *Table) GetMargins() (float64, float64, float64, float64) {
 // SetRowHeight sets the height for a specified row.
 func (table *Table) SetRowHeight(row int, h float64) error {
 	if row < 1 || row > len(table.rowHeights) {
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	table.rowHeights[row-1] = h

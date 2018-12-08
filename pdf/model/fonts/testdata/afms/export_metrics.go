@@ -164,13 +164,13 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 			case "N":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("Failed C line: ", line)
-					return nil, errors.New("Invalid C line")
+					return nil, errors.New("invalid C line")
 				}
 				metrics.GlyphName = strings.TrimSpace(args[1])
 			case "WX":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("WX: Invalid number of args != 1 (%s)\n", line)
-					return nil, errors.New("Invalid range")
+					return nil, errors.New("invalid range")
 				}
 				wx, err := strconv.ParseFloat(args[1], 64)
 				if err != nil {
@@ -180,7 +180,7 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 			case "WY":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("WY: Invalid number of args != 1 (%s)\n", line)
-					return nil, errors.New("Invalid range")
+					return nil, errors.New("invalid range")
 				}
 				wy, err := strconv.ParseFloat(args[1], 64)
 				if err != nil {
@@ -190,7 +190,7 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 			case "W":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("W: Invalid number of args != 1 (%s)\n", line)
-					return nil, errors.New("Invalid range")
+					return nil, errors.New("invalid range")
 				}
 				w, err := strconv.ParseFloat(args[1], 64)
 				if err != nil {
@@ -264,7 +264,7 @@ func GetCharcodeToGlyphEncodingFromAfmFile(filename string) (map[byte]string, er
 			case "C":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("Failed C line: %s", line)
-					return nil, errors.New("Invalid C line")
+					return nil, errors.New("invalid C line")
 				}
 				charcode, err = strconv.ParseInt(strings.TrimSpace(args[1]), 10, 64)
 				if err != nil {
@@ -273,7 +273,7 @@ func GetCharcodeToGlyphEncodingFromAfmFile(filename string) (map[byte]string, er
 			case "N":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("Failed C line: %s", line)
-					return nil, errors.New("Invalid C line")
+					return nil, errors.New("invalid C line")
 				}
 
 				glyph = strings.TrimSpace(args[1])

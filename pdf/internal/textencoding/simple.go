@@ -42,7 +42,7 @@ func NewCustomSimpleTextEncoder(encoding, differences map[CharCode]GlyphName) (
 	baseName := "custom"
 	baseEncoding := make(map[CharCode]rune)
 	if len(encoding) == 0 {
-		return &SimpleEncoder{}, errors.New("Empty custom encoding")
+		return &SimpleEncoder{}, errors.New("empty custom encoding")
 	}
 	for code, glyph := range encoding {
 		r, ok := GlyphToRune(glyph)
@@ -67,7 +67,7 @@ func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (
 	baseEncoding, ok := simpleEncodings[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
-		return &SimpleEncoder{}, errors.New("Unsupported font encoding")
+		return &SimpleEncoder{}, errors.New("unsupported font encoding")
 	}
 	return newSimpleTextEncoder(baseEncoding, baseName, differences), nil
 }

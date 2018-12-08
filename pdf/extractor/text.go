@@ -413,7 +413,7 @@ func (to *textObject) setHorizScaling(y float64) {
 // a single float parameter or we aren't in a text stream.
 func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 	if len(op.Params) != 1 {
-		err := errors.New("Incorrect parameter count")
+		err := errors.New("incorrect parameter count")
 		common.Log.Debug("ERROR: %#q should have %d input params, got %d %+v",
 			op.Operand, 1, len(op.Params), op.Params)
 		return 0.0, err
@@ -432,7 +432,7 @@ func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParam
 	if numParams >= 0 {
 		if len(op.Params) != numParams {
 			if hard {
-				err = errors.New("Incorrect parameter count")
+				err = errors.New("incorrect parameter count")
 			}
 			common.Log.Debug("ERROR: %#q should have %d input params, got %d %+v",
 				op.Operand, numParams, len(op.Params), op.Params)
@@ -700,7 +700,7 @@ func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 	fontObj, found := resources.GetFontByName(core.PdfObjectName(name))
 	if !found {
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q", name)
-		return nil, errors.New("Font not in resources")
+		return nil, errors.New("font not in resources")
 	}
 	return fontObj, nil
 }
@@ -709,7 +709,7 @@ func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 func getCharMetrics(font *model.PdfFont, text string) (metrics []fonts.CharMetrics, err error) {
 	encoder := font.Encoder()
 	if encoder == nil {
-		return nil, errors.New("No font encoder")
+		return nil, errors.New("no font encoder")
 	}
 	for _, r := range text {
 		glyph, found := encoder.RuneToGlyph(r)

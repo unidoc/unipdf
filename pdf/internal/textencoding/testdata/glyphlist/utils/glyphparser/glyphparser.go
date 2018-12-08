@@ -251,12 +251,12 @@ var reGlyphCodes = regexp.MustCompile(`^\s*(\w+)\s*;\s*(.+?)\s*$`)
 func parseGlyphString(line string) (string, string, error) {
 	groups := reGlyphCodes.FindStringSubmatch(line)
 	if groups == nil {
-		return "", "", errors.New("No match")
+		return "", "", errors.New("no match")
 	}
 	glyph, codesStr := groups[1], groups[2]
 	runes, err := parseRunes(codesStr)
 	if err != nil {
-		return "", "", errors.New("No match")
+		return "", "", errors.New("no match")
 	}
 	return glyph, string(runes), nil
 }
@@ -264,7 +264,7 @@ func parseGlyphString(line string) (string, string, error) {
 func parseGlyphRune(line string) (string, rune, error) {
 	groups := reGlyphCodes.FindStringSubmatch(line)
 	if groups == nil {
-		return "", rune(0), errors.New("No match")
+		return "", rune(0), errors.New("no match")
 	}
 	glyph, codesStr := groups[1], groups[2]
 	runes, err := parseRunes(codesStr)

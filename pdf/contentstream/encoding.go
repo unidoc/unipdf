@@ -28,7 +28,7 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 	if !ok {
 		array, ok := inlineImage.Filter.(*core.PdfObjectArray)
 		if !ok {
-			return nil, fmt.Errorf("Filter not a Name or Array object")
+			return nil, fmt.Errorf("filter not a Name or Array object")
 		}
 		if array.Len() == 0 {
 			// Empty array -> indicates raw filter (no filter).
@@ -50,7 +50,7 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 		filterObj := array.Get(0)
 		filterName, ok = filterObj.(*core.PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Filter array member not a Name object")
+			return nil, fmt.Errorf("filter array member not a Name object")
 		}
 	}
 
@@ -68,7 +68,7 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 		return core.NewCCITTFaxEncoder(), nil
 	} else {
 		common.Log.Debug("Unsupported inline image encoding filter name : %s", *filterName)
-		return nil, errors.New("Unsupported inline encoding method")
+		return nil, errors.New("unsupported inline encoding method")
 	}
 }
 
@@ -85,7 +85,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 			dp, isDict := obj.(*core.PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", obj)
-				return nil, fmt.Errorf("Invalid DecodeParms")
+				return nil, fmt.Errorf("invalid DecodeParms")
 			}
 			decodeParams = dp
 		}
@@ -103,7 +103,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		predictor, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid Predictor")
+			return nil, fmt.Errorf("invalid Predictor")
 		}
 		encoder.Predictor = int(*predictor)
 	}
@@ -114,7 +114,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		bpc, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
-			return nil, fmt.Errorf("Invalid BitsPerComponent")
+			return nil, fmt.Errorf("invalid BitsPerComponent")
 		}
 		encoder.BitsPerComponent = int(*bpc)
 	}
@@ -126,7 +126,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		if obj != nil {
 			columns, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor column invalid")
+				return nil, fmt.Errorf("predictor column invalid")
 			}
 
 			encoder.Columns = int(*columns)
@@ -139,7 +139,7 @@ func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decod
 		if obj != nil {
 			colors, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor colors not an integer")
+				return nil, fmt.Errorf("predictor colors not an integer")
 			}
 			encoder.Colors = int(*colors)
 		}
@@ -160,7 +160,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 			dp, isDict := inlineImage.DecodeParms.(*core.PdfObjectDictionary)
 			if !isDict {
 				common.Log.Debug("Error: DecodeParms not a dictionary (%T)", inlineImage.DecodeParms)
-				return nil, fmt.Errorf("Invalid DecodeParms")
+				return nil, fmt.Errorf("invalid DecodeParms")
 			}
 			decodeParams = dp
 		}
@@ -185,10 +185,10 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		earlyChange, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid EarlyChange")
+			return nil, fmt.Errorf("invalid EarlyChange")
 		}
 		if *earlyChange != 0 && *earlyChange != 1 {
-			return nil, fmt.Errorf("Invalid EarlyChange value (not 0 or 1)")
+			return nil, fmt.Errorf("invalid EarlyChange value (not 0 or 1)")
 		}
 
 		encoder.EarlyChange = int(*earlyChange)
@@ -201,7 +201,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		predictor, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("Error: Predictor specified but not numeric (%T)", obj)
-			return nil, fmt.Errorf("Invalid Predictor")
+			return nil, fmt.Errorf("invalid Predictor")
 		}
 		encoder.Predictor = int(*predictor)
 	}
@@ -212,7 +212,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		bpc, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			common.Log.Debug("ERROR: Invalid BitsPerComponent")
-			return nil, fmt.Errorf("Invalid BitsPerComponent")
+			return nil, fmt.Errorf("invalid BitsPerComponent")
 		}
 		encoder.BitsPerComponent = int(*bpc)
 	}
@@ -224,7 +224,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		if obj != nil {
 			columns, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor column invalid")
+				return nil, fmt.Errorf("predictor column invalid")
 			}
 
 			encoder.Columns = int(*columns)
@@ -237,7 +237,7 @@ func newLZWEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeP
 		if obj != nil {
 			colors, ok := obj.(*core.PdfObjectInteger)
 			if !ok {
-				return nil, fmt.Errorf("Predictor colors not an integer")
+				return nil, fmt.Errorf("predictor colors not an integer")
 			}
 			encoder.Colors = int(*colors)
 		}
@@ -284,7 +284,7 @@ func newDCTEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*core.
 		encoder.BitsPerComponent = 8
 		encoder.ColorComponents = 3
 	default:
-		return nil, errors.New("Unsupported color model")
+		return nil, errors.New("unsupported color model")
 	}
 	encoder.Width = cfg.Width
 	encoder.Height = cfg.Height
@@ -324,18 +324,18 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 
 	obj := inlineImage.Filter
 	if obj == nil {
-		return nil, fmt.Errorf("Filter missing")
+		return nil, fmt.Errorf("filter missing")
 	}
 
 	array, ok := obj.(*core.PdfObjectArray)
 	if !ok {
-		return nil, fmt.Errorf("Multi filter can only be made from array")
+		return nil, fmt.Errorf("multi filter can only be made from array")
 	}
 
 	for idx, obj := range array.Elements() {
 		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Multi filter array element not a name")
+			return nil, fmt.Errorf("multi filter array element not a name")
 		}
 
 		var dp core.PdfObject
@@ -348,7 +348,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 			// provided.
 			if len(decodeParamsArray) > 0 {
 				if idx >= len(decodeParamsArray) {
-					return nil, fmt.Errorf("Missing elements in decode params array")
+					return nil, fmt.Errorf("missing elements in decode params array")
 				}
 				dp = decodeParamsArray[idx]
 			}
@@ -380,7 +380,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 			mencoder.AddEncoder(encoder)
 		} else {
 			common.Log.Error("Unsupported filter %s", *name)
-			return nil, fmt.Errorf("Invalid filter in multi filter array")
+			return nil, fmt.Errorf("invalid filter in multi filter array")
 		}
 	}
 

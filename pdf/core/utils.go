@@ -18,13 +18,13 @@ import (
 //    slice[a:b] where sliceLen=len(slice).
 func checkBounds(sliceLen, a, b int) error {
 	if a < 0 || a > sliceLen {
-		return errors.New("Slice index a out of bounds")
+		return errors.New("slice index a out of bounds")
 	}
 	if b < a {
-		return errors.New("Invalid slice index b < a")
+		return errors.New("invalid slice index b < a")
 	}
 	if b > sliceLen {
-		return errors.New("Slice index b out of bounds")
+		return errors.New("slice index b out of bounds")
 	}
 
 	return nil
@@ -164,7 +164,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 
 	if len(parser.xrefs) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
-		return nil, fmt.Errorf("Invalid document (xref table missing)")
+		return nil, fmt.Errorf("invalid document (xref table missing)")
 	}
 
 	fontObjs, ok := objTypes["Font"]

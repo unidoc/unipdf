@@ -57,7 +57,7 @@ func resolveReferences(obj core.PdfObject, objmap map[int64]core.PdfObject) erro
 			if ref, isref := val.(*core.PdfObjectReference); isref {
 				replace, ok := objmap[ref.ObjectNumber]
 				if !ok {
-					return errors.New("Reference to outside object")
+					return errors.New("reference to outside object")
 				}
 				dict.Set(key, replace)
 			} else {
@@ -70,7 +70,7 @@ func resolveReferences(obj core.PdfObject, objmap map[int64]core.PdfObject) erro
 			if ref, isref := val.(*core.PdfObjectReference); isref {
 				replace, ok := objmap[ref.ObjectNumber]
 				if !ok {
-					return errors.New("Reference to outside object")
+					return errors.New("reference to outside object")
 				}
 				array.Set(index, replace)
 			} else {

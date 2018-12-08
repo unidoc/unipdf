@@ -22,7 +22,7 @@ func SetLicenseKey(content string, customerName string) error {
 	}
 
 	if strings.ToLower(lk.CustomerName) != strings.ToLower(customerName) {
-		return fmt.Errorf("Customer name mismatch, expected '%s', but got '%s'", customerName, lk.CustomerName)
+		return fmt.Errorf("customer name mismatch, expected '%s', but got '%s'", customerName, lk.CustomerName)
 	}
 
 	err = lk.Validate()

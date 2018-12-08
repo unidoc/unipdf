@@ -25,13 +25,13 @@ type TextFieldOptions struct {
 // specified by `rect` on given `page` and with field specific options `opt`.
 func NewTextField(page *model.PdfPage, name string, rect []float64, opt TextFieldOptions) (*model.PdfFieldText, error) {
 	if page == nil {
-		return nil, errors.New("Page not specified")
+		return nil, errors.New("page not specified")
 	}
 	if len(name) <= 0 {
-		return nil, errors.New("Required attribute not specified")
+		return nil, errors.New("required attribute not specified")
 	}
 	if len(rect) != 4 {
-		return nil, errors.New("Invalid range")
+		return nil, errors.New("invalid range")
 	}
 
 	field := model.NewPdfField()
@@ -68,13 +68,13 @@ type CheckboxFieldOptions struct {
 // on specified `page` and with field specific options `opt`.
 func NewCheckboxField(page *model.PdfPage, name string, rect []float64, opt CheckboxFieldOptions) (*model.PdfFieldButton, error) {
 	if page == nil {
-		return nil, errors.New("Page not specified")
+		return nil, errors.New("page not specified")
 	}
 	if len(name) <= 0 {
-		return nil, errors.New("Required attribute not specified")
+		return nil, errors.New("required attribute not specified")
 	}
 	if len(rect) != 4 {
-		return nil, errors.New("Invalid range")
+		return nil, errors.New("invalid range")
 	}
 
 	zapfdb := fonts.NewFontZapfDingbats()
@@ -172,13 +172,13 @@ type ComboboxFieldOptions struct {
 // on specified `page` and with field specific options `opt`.
 func NewComboboxField(page *model.PdfPage, name string, rect []float64, opt ComboboxFieldOptions) (*model.PdfFieldChoice, error) {
 	if page == nil {
-		return nil, errors.New("Page not specified")
+		return nil, errors.New("page not specified")
 	}
 	if len(name) <= 0 {
-		return nil, errors.New("Required attribute not specified")
+		return nil, errors.New("required attribute not specified")
 	}
 	if len(rect) != 4 {
-		return nil, errors.New("Invalid range")
+		return nil, errors.New("invalid range")
 	}
 
 	field := model.NewPdfField()

@@ -308,11 +308,11 @@ func (c *Creator) RotateDeg(angleDeg int64) error {
 	page := c.getActivePage()
 	if page == nil {
 		common.Log.Debug("Fail to rotate: no page currently active")
-		return errors.New("No page active")
+		return errors.New("no page active")
 	}
 	if angleDeg%90 != 0 {
 		common.Log.Debug("ERROR: Page rotation angle not a multiple of 90")
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	// Do the rotation.

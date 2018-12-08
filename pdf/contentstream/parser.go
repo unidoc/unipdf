@@ -142,7 +142,7 @@ func (csp *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 				csp.reader.ReadByte()
 			} else {
 				common.Log.Error("Name starting with %s (% x)", bb, bb)
-				return core.PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
+				return core.PdfObjectName(name), fmt.Errorf("invalid name: (%c)", bb[0])
 			}
 		} else {
 			if core.IsWhiteSpace(bb[0]) {
@@ -417,7 +417,7 @@ func (csp *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
 		return core.PdfObjectBool(false), nil
 	}
 
-	return core.PdfObjectBool(false), errors.New("Unexpected boolean string")
+	return core.PdfObjectBool(false), errors.New("unexpected boolean string")
 }
 
 // Parse null object.
@@ -434,11 +434,11 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 	// Pass the '<<'
 	c, _ := csp.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 	c, _ = csp.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 
 	for {

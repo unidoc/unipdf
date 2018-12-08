@@ -174,7 +174,7 @@ func (csp *ContentStreamParser) ExtractText() (string, error) {
 			}
 			paramList, ok := op.Params[0].(*core.PdfObjectArray)
 			if !ok {
-				return "", fmt.Errorf("Invalid parameter type, no array (%T)", op.Params[0])
+				return "", fmt.Errorf("invalid parameter type, no array (%T)", op.Params[0])
 			}
 			for _, obj := range paramList.Elements() {
 				switch v := obj.(type) {
@@ -196,7 +196,7 @@ func (csp *ContentStreamParser) ExtractText() (string, error) {
 			}
 			param, ok := op.Params[0].(*core.PdfObjectString)
 			if !ok {
-				return "", fmt.Errorf("Invalid parameter type, not string (%T)", op.Params[0])
+				return "", fmt.Errorf("invalid parameter type, not string (%T)", op.Params[0])
 			}
 			txt += param.Str()
 		}

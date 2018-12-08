@@ -363,7 +363,7 @@ func (p *StyledParagraph) wrapText() error {
 				common.Log.Debug("Error! Glyph not found for rune: %v\n", r)
 
 				// FIXME: return error.
-				return errors.New("Glyph not found for rune")
+				return errors.New("glyph not found for rune")
 			}
 
 			// newline wrapping.
@@ -387,7 +387,7 @@ func (p *StyledParagraph) wrapText() error {
 			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
 			if !found {
 				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
-				return errors.New("Glyph char metrics missing")
+				return errors.New("glyph char metrics missing")
 			}
 
 			w := style.FontSize * metrics.Wx
@@ -607,7 +607,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
 			if !found {
-				return ctx, errors.New("The font does not have a space glyph")
+				return ctx, errors.New("the font does not have a space glyph")
 			}
 
 			var chunkSpaces uint
@@ -616,7 +616,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				glyph, found := style.Font.Encoder().RuneToGlyph(r)
 				if !found {
 					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-					return ctx, errors.New("Unsupported rune in text encoding")
+					return ctx, errors.New("unsupported rune in text encoding")
 				}
 
 				if glyph == "space" {
@@ -630,7 +630,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				metrics, found := style.Font.GetGlyphCharMetrics(glyph)
 				if !found {
 					common.Log.Debug("Unsupported glyph %s in font\n", glyph)
-					return ctx, errors.New("Unsupported text glyph")
+					return ctx, errors.New("unsupported text glyph")
 				}
 
 				chunkWidth += style.FontSize * metrics.Wx
@@ -686,7 +686,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			if p.alignment != TextAlignmentJustify || isLastLine {
 				spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
 				if !found {
-					return ctx, errors.New("The font does not have a space glyph")
+					return ctx, errors.New("the font does not have a space glyph")
 				}
 
 				fontName = fonts[idx][k]
@@ -699,7 +699,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				glyph, found := style.Font.Encoder().RuneToGlyph(rn)
 				if !found {
 					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-					return ctx, errors.New("Unsupported rune in text encoding")
+					return ctx, errors.New("unsupported rune in text encoding")
 				}
 
 				if glyph == "space" {

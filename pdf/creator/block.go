@@ -314,7 +314,7 @@ func (blk *Block) Draw(d Drawable) error {
 	}
 
 	if len(blocks) != 1 {
-		return errors.New("Too many output blocks")
+		return errors.New("too many output blocks")
 	}
 
 	for _, newBlock := range blocks {
@@ -335,7 +335,7 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	}
 
 	if len(blocks) != 1 {
-		return errors.New("Too many output blocks")
+		return errors.New("too many output blocks")
 	}
 
 	for _, newBlock := range blocks {

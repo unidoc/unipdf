@@ -49,34 +49,34 @@ func newIndexedColorspaceFromPdfObject(obj core.PdfObject) (model.PdfColorspace,
 	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Error: Invalid indexed cs not in array (%#v)", obj)
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 
 	if arr.Len() != 4 {
 		common.Log.Debug("Error: Invalid cs array, length != 4 (%d)", arr.Len())
-		return nil, errors.New("Range check error")
+		return nil, errors.New("range check error")
 	}
 
 	// Format is [/I base 255 bytes], where base = /G,/RGB,/CMYK
 	name, ok := arr.Get(0).(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("Error: Invalid cs array first element not a name (array: %#v)", *arr)
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 	if *name != "I" && *name != "Indexed" {
 		common.Log.Debug("Error: Invalid cs array first element != I (got: %v)", *name)
-		return nil, errors.New("Range check error")
+		return nil, errors.New("range check error")
 	}
 
 	// Check base
 	name, ok = arr.Get(1).(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("Error: Invalid cs array 2nd element not a name (array: %#v)", *arr)
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 	if *name != "G" && *name != "RGB" && *name != "CMYK" && *name != "DeviceGray" && *name != "DeviceRGB" && *name != "DeviceCMYK" {
 		common.Log.Debug("Error: Invalid cs array 2nd element != G/RGB/CMYK (got: %v)", *name)
-		return nil, errors.New("Range check error")
+		return nil, errors.New("range check error")
 	}
 	basename := ""
 	switch *name {

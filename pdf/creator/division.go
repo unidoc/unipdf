@@ -61,7 +61,7 @@ func (div *Division) Add(d VectorDrawable) error {
 	}
 
 	if !supported {
-		return errors.New("Unsupported type in Division")
+		return errors.New("unsupported type in Division")
 	}
 
 	div.components = append(div.components, d)

@@ -55,37 +55,37 @@ func (k *LicenseKey) isExpired() bool {
 
 func (k *LicenseKey) Validate() error {
 	if len(k.LicenseId) < 10 {
-		return fmt.Errorf("Invalid license: License Id")
+		return fmt.Errorf("invalid license: License Id")
 	}
 
 	if len(k.CustomerId) < 10 {
-		return fmt.Errorf("Invalid license: Customer Id")
+		return fmt.Errorf("invalid license: Customer Id")
 	}
 
 	if len(k.CustomerName) < 1 {
-		return fmt.Errorf("Invalid license: Customer Name")
+		return fmt.Errorf("invalid license: Customer Name")
 	}
 
 	if testTime.After(k.CreatedAt) {
-		return fmt.Errorf("Invalid license: Created At is invalid")
+		return fmt.Errorf("invalid license: Created At is invalid")
 	}
 
 	if k.ExpiresAt != nil {
 		if k.CreatedAt.After(*k.ExpiresAt) {
-			return fmt.Errorf("Invalid license: Created At cannot be Greater than Expires At")
+			return fmt.Errorf("invalid license: Created At cannot be Greater than Expires At")
 		}
 	}
 
 	if k.isExpired() {
-		return fmt.Errorf("Invalid license: The license has already expired")
+		return fmt.Errorf("invalid license: The license has already expired")
 	}
 
 	if len(k.CreatorName) < 1 {
-		return fmt.Errorf("Invalid license: Creator name")
+		return fmt.Errorf("invalid license: Creator name")
 	}
 
 	if len(k.CreatorEmail) < 1 {
-		return fmt.Errorf("Invalid license: Creator email")
+		return fmt.Errorf("invalid license: Creator email")
 	}
 
 	return nil

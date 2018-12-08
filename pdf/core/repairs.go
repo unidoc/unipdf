@@ -38,7 +38,7 @@ func (parser *PdfParser) repairLocateXref() (int64, error) {
 	results := repairReXrefTable.FindAllStringIndex(string(b2), -1)
 	if len(results) < 1 {
 		common.Log.Debug("ERROR: Repair: xref not found!")
-		return 0, errors.New("Repair: xref not found")
+		return 0, errors.New("repair: xref not found")
 	}
 
 	localOffset := int64(results[len(results)-1][0])
@@ -85,7 +85,7 @@ func (parser *PdfParser) rebuildXrefTable() error {
 func parseObjectNumberFromString(str string) (int, int, error) {
 	result := reIndirectObject.FindStringSubmatch(str)
 	if len(result) < 3 {
-		return 0, 0, errors.New("Unable to detect indirect object signature")
+		return 0, 0, errors.New("unable to detect indirect object signature")
 	}
 
 	on, _ := strconv.Atoi(result[1])
@@ -100,7 +100,7 @@ func parseObjectNumberFromString(str string) (int, int, error) {
 func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 	if parser.repairsAttempted {
 		// Avoid multiple repairs (only try once).
-		return nil, fmt.Errorf("Repair failed")
+		return nil, fmt.Errorf("repair failed")
 	}
 	parser.repairsAttempted = true
 
@@ -282,5 +282,5 @@ func (parser *PdfParser) seekPdfVersionTopDown() (int, int, error) {
 		last = append(last[1:bufLen], b)
 	}
 
-	return 0, 0, errors.New("Version not found")
+	return 0, 0, errors.New("version not found")
 }

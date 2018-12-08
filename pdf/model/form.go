@@ -88,7 +88,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 		}
 		fieldArray, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
-			return nil, fmt.Errorf("Fields not an array (%T)", obj)
+			return nil, fmt.Errorf("fields not an array (%T)", obj)
 		}
 
 		var fields []*PdfField
@@ -104,7 +104,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 					continue
 				}
 				common.Log.Debug("Field not contained in indirect object %T", obj)
-				return nil, fmt.Errorf("Field not in an indirect object")
+				return nil, fmt.Errorf("field not in an indirect object")
 			}
 			field, err := r.newPdfFieldFromIndirectObject(container, nil)
 			if err != nil {

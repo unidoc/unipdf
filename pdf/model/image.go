@@ -152,7 +152,7 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 	} else {
 		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
-		return nil, errors.New("Unsupported colors")
+		return nil, errors.New("unsupported colors")
 	}
 
 	// Draw the data on the image..

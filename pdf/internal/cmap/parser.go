@@ -147,7 +147,7 @@ func (p *cMapParser) parseName() (cmapName, error) {
 				p.reader.ReadByte()
 			} else {
 				common.Log.Debug("ERROR: Name starting with %s (% x)", bb, bb)
-				return cmapName{name}, fmt.Errorf("Invalid name: (%c)", bb[0])
+				return cmapName{name}, fmt.Errorf("invalid name: (%c)", bb[0])
 			}
 		} else {
 			if core.IsWhiteSpace(bb[0]) {
@@ -462,7 +462,7 @@ func (p *cMapParser) parseOperand() (cmapOperand, error) {
 	}
 
 	if buf.Len() == 0 {
-		return op, fmt.Errorf("Invalid operand (empty)")
+		return op, fmt.Errorf("invalid operand (empty)")
 	}
 
 	op.Operand = buf.String()

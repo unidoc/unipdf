@@ -226,7 +226,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	case "Type0":
 		if !allowType0 {
 			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", base)
-			return nil, errors.New("Cyclical type0 loading")
+			return nil, errors.New("cyclical type0 loading")
 		}
 		type0font, err := newPdfFontType0FromPdfObject(d, base)
 		if err != nil {
@@ -284,7 +284,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = cidfont
 	default:
 		common.Log.Debug("ERROR: Unsupported font type: font=%s", base)
-		return nil, fmt.Errorf("Unsupported font type: font=%s", base)
+		return nil, fmt.Errorf("unsupported font type: font=%s", base)
 	}
 
 	return font, nil
