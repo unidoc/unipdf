@@ -13,12 +13,18 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	goimage "image"
+	"image/png"
+	"io"
 	"io/ioutil"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/boombuler/barcode"
@@ -84,9 +90,7 @@ func TestTemplate1(t *testing.T) {
 	template.SetPos(100, 200)
 	creator.Draw(template)
 
-	creator.WriteToFile(tempFile("template_1.pdf"))
-
-	return
+	testWriteAndRender(t, creator, "template_1.pdf")
 }
 
 // TestImage1 tests loading an image and adding to file at an absolute position.
@@ -114,11 +118,7 @@ func TestImage1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile(tempFile("1.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1.pdf")
 }
 
 // TestImageWithEncoder tests loading inserting an image with a specified encoder.
@@ -153,11 +153,7 @@ func TestImageWithEncoder(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile(tempFile("1_dct.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1_dct.pdf")
 }
 
 func TestShapes1(t *testing.T) {
@@ -239,11 +235,7 @@ func TestShapes1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile(tempFile("1_shapes.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1_shapes.pdf")
 }
 
 // Example drawing image and line shape on a block and applying to pages, also demonstrating block
@@ -288,11 +280,7 @@ func TestShapesOnBlock(t *testing.T) {
 	block.SetAngle(90)
 	creator.Draw(block)
 
-	err = creator.WriteToFile(tempFile("1_shapes_on_block.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1_shapes_on_block.pdf")
 }
 
 // Test image wrapping between pages when using relative context mode.
@@ -321,11 +309,7 @@ func TestImageWrapping(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile(tempFile("1_wrap.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1_wrap.pdf")
 }
 
 // Test rotating image.  Rotating about upper left corner.
@@ -361,11 +345,7 @@ func TestImageRotation(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile(tempFile("1_rotate.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "1_rotate.pdf")
 }
 
 // Test image, rotation and page wrapping.  Disadvantage here is that content is overlapping.  May be reconsidered
@@ -403,11 +383,7 @@ func TestImageRotationAndWrap(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile(tempFile("rotate_2.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "rotate_2.pdf")
 }
 
 // Test basic paragraph with default font.
@@ -426,11 +402,7 @@ func TestParagraph1(t *testing.T) {
 		return
 	}
 
-	err = creator.WriteToFile(tempFile("2_p1.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "2_p1.pdf")
 }
 
 // Test paragraph and page and text wrapping with left, justify, center and right modes.
@@ -538,11 +510,7 @@ func TestParagraphFonts(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile(tempFile("2_pArial.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "2_pArial.pdf")
 }
 
 // Test writing with the 14 built in fonts.
@@ -608,11 +576,7 @@ func TestParagraphStandardFonts(t *testing.T) {
 		}
 	}
 
-	err := creator.WriteToFile(tempFile("2_standard14fonts.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "2_standard14fonts.pdf")
 }
 
 // Test paragraph with Chinese characters.
@@ -643,13 +607,8 @@ func TestParagraphChinese(t *testing.T) {
 		}
 	}
 
+	testWriteAndRender(t, creator, "2_p_nihao.pdf")
 	fname := tempFile("2_p_nihao.pdf")
-	err = creator.WriteToFile(fname)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
-
 	st, err := os.Stat(fname)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -710,11 +669,7 @@ func TestParagraphUnicode(t *testing.T) {
 		}
 	}
 
-	err = creator.WriteToFile(tempFile("2_p_multi.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, creator, "2_p_multi.pdf")
 }
 
 // Tests creating a chapter with paragraphs.
@@ -763,11 +718,7 @@ func TestChapterMargins(t *testing.T) {
 		c.Draw(ch)
 	}
 
-	err := c.WriteToFile(tempFile("3_chapters_margins.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "3_chapters_margins.pdf")
 }
 
 // Test creating and drawing subchapters with text content.
@@ -872,11 +823,7 @@ func TestSubchaptersSimple(t *testing.T) {
 		return nil
 	})
 
-	err := c.WriteToFile(tempFile("3_subchapters_simple.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "3_subchapters_simple.pdf")
 }
 
 func TestSubchapters(t *testing.T) {
@@ -1042,11 +989,7 @@ func TestTable(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile(tempFile("4_table.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "4_table.pdf")
 }
 
 func TestTableCellWrapping(t *testing.T) {
@@ -1133,10 +1076,7 @@ func TestTableCellWrapping(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	err = c.WriteToFile(tempFile("tablecell_wrap.pdf"))
-	if err != nil {
-		t.Fatalf("Fail: %v\n", err)
-	}
+	testWriteAndRender(t, c, "tablecell_wrap.pdf")
 }
 
 // Test creating and drawing a table.
@@ -1174,11 +1114,7 @@ func TestBorderedTable1(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile(tempFile("4_table_bordered.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "4_table_bordered.pdf")
 }
 
 // Test creating and drawing a table.
@@ -1235,11 +1171,7 @@ func TestBorderedTable2(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile(tempFile("4_table_bordered.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "4_table_bordered2.pdf")
 }
 
 func newContent(c *Creator, text string, alignment TextAlignment, font *model.PdfFont, fontSize float64, color Color) *Paragraph {
@@ -1466,11 +1398,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 	c.Draw(table2)
 	c.Draw(table3)
 
-	err := c.WriteToFile(tempFile("hendricks.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "hendricks.pdf")
 }
 
 func TestCreatorTableBorderReq1(t *testing.T) {
@@ -1797,11 +1725,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 	c.Draw(table9)
 	c.Draw(table10)
 
-	err := c.WriteToFile(tempFile("table_border_req1_test.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "table_border_req1_test.pdf")
 }
 
 func TestCellBorder(t *testing.T) {
@@ -1818,11 +1742,7 @@ func TestCellBorder(t *testing.T) {
 
 	c.Draw(table)
 
-	err := c.WriteToFile(tempFile("cell.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "cell.pdf")
 }
 
 func TestTableInSubchapter(t *testing.T) {
@@ -1917,11 +1837,7 @@ func TestTableInSubchapter(t *testing.T) {
 		return
 	}
 
-	err = c.WriteToFile(tempFile("4_tables_in_subchap.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "4_tables_in_subchap.pdf")
 }
 
 // Add headers and footers via creator.
@@ -1992,11 +1908,7 @@ func TestHeadersAndFooters(t *testing.T) {
 	// Make unidoc headers and footers.
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile(tempFile("4_headers.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	testWriteAndRender(t, c, "4_headers.pdf")
 }
 
 func makeQrCodeImage(text string, width float64, oversampling int) (goimage.Image, error) {
@@ -2037,7 +1949,7 @@ func TestQRCodeOnNewPage(t *testing.T) {
 		creator.Draw(img)
 	}
 
-	creator.WriteToFile(tempFile("3_barcode_qr_newpage.pdf"))
+	testWriteAndRender(t, creator, "3_barcode_qr_newpage.pdf")
 }
 
 // Example of using a template Page, generating and applying QR
@@ -2115,7 +2027,7 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	creator.Draw(loremTpl)
 
 	// Write the example to file.
-	creator.WriteToFile(tempFile("4_barcode_on_tpl.pdf"))
+	testWriteAndRender(t, creator, "4_barcode_on_tpl.pdf")
 }
 
 // Test adding encryption to output.
@@ -2966,4 +2878,104 @@ func TestCreatorStable(t *testing.T) {
 	if h1 != h2 {
 		t.Fatal("output is not stable")
 	}
+}
+
+var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
+
+func renderPDFToFile(pdf string, dpi int, out string) error {
+	if dpi == 0 {
+		// default is 150, but 100 should be good enough for tests
+		dpi = 100
+	}
+	if _, err := exec.LookPath("pdftoppm"); err != nil {
+		return errRenderNotSupported
+	}
+	dpis := strconv.Itoa(dpi)
+	return exec.Command("pdftoppm", pdf, out, "-png", "-rx", dpis, "-ry", dpis).Run()
+}
+
+func renderPDF(pdf string, dpi int) (goimage.Image, error) {
+	f, err := ioutil.TempFile("", "pdf_render_")
+	if err != nil {
+		return nil, err
+	}
+	f.Close()
+	defer os.Remove(f.Name())
+	if err := renderPDFToFile(pdf, dpi, f.Name()); err != nil {
+		return nil, err
+	}
+	return readPNG(f.Name())
+}
+
+func readPNG(file string) (goimage.Image, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return png.Decode(f)
+}
+
+func comparePNGFiles(file1, file2 string) (bool, error) {
+	// compare hashes; if this turn out to be unreliable, switch to comparing images
+	h1, err := hashFile(file1)
+	if err != nil {
+		return false, err
+	}
+	h2, err := hashFile(file2)
+	if err != nil {
+		return false, err
+	}
+	return h1 == h2, nil
+}
+
+func hashFile(file string) (string, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := md5.New()
+	_, err = io.Copy(h, f)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func testWriteAndRender(t *testing.T, c *Creator, pname string) {
+	pname = tempFile(pname)
+	err := c.WriteToFile(pname)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	testRender(t, pname)
+}
+
+func testRender(t *testing.T, pname string) {
+	tname := strings.TrimSuffix(filepath.Base(pname), filepath.Ext(pname))
+	t.Run("render", func(t *testing.T) {
+		fname := "./testdata/" + tname
+		// will emit template_1-x.png
+		err := renderPDFToFile(pname, 0, fname)
+		if err != nil {
+			t.Skip(err)
+		}
+		for i := 1; true; i++ {
+			name1 := fmt.Sprintf(fname+"-%d.png", i)
+			name2 := fmt.Sprintf(fname+"-%d_exp.png", i)
+			if _, err := os.Stat(name1); i > 1 && err != nil {
+				break
+			}
+			t.Run(fmt.Sprintf("page%d", i), func(t *testing.T) {
+				ok, err := comparePNGFiles(name1, name2)
+				if os.IsNotExist(err) {
+					t.Skip("no test file")
+				} else if !ok {
+					t.Fatal("wrong page rendered")
+				}
+			})
+		}
+	})
 }
