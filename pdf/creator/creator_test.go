@@ -33,7 +33,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/optimize"
 )
@@ -570,14 +569,6 @@ func TestParagraphStandardFonts(t *testing.T) {
 		p.SetFontSize(12)
 		p.SetLineHeight(1.2)
 		p.SetMargins(0, 0, 5, 0)
-
-		if names[idx] == "Symbol" {
-			// For Symbol font, need to use Symbol encoder.
-			p.SetEncoder(textencoding.NewSymbolEncoder())
-		} else if names[idx] == "ZapfDingbats" {
-			// Font ZapfDingbats font, need to use ZapfDingbats encoder.
-			p.SetEncoder(textencoding.NewZapfDingbatsEncoder())
-		}
 
 		err := creator.Draw(p)
 		if err != nil {

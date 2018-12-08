@@ -80,6 +80,7 @@ func newParagraph(text string, style TextStyle) *Paragraph {
 		p.textFont = model.DefaultFont()
 	}
 	p.textFont = font
+	// TODO(dennwc): can it use the default font encoder?
 	p.SetEncoder(encoder)
 
 	p.fontSize = 10
