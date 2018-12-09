@@ -190,7 +190,7 @@ func GetAlphabet(text string) map[rune]int {
 
 // sortedAlphabet the runes in `alphabet` sorted by frequency.
 func sortedAlphabet(alphabet map[rune]int) []rune {
-	runes := []rune{}
+	var runes []rune
 	for r := range alphabet {
 		runes = append(runes, r)
 	}
@@ -682,7 +682,7 @@ func (descriptor *PdfFontDescriptor) GetCapHeight() (float64, error) {
 
 // String returns a string describing the font descriptor.
 func (descriptor *PdfFontDescriptor) String() string {
-	parts := []string{}
+	var parts []string
 	if descriptor.FontName != nil {
 		parts = append(parts, descriptor.FontName.String())
 	}

@@ -338,7 +338,7 @@ func (parser *PdfParser) parseString() (*PdfObjectString, error) {
 					return MakeString(r.String()), err
 				}
 
-				numeric := []byte{}
+				var numeric []byte
 				numeric = append(numeric, b)
 				for _, val := range bb {
 					if IsOctalDigit(val) {
@@ -898,7 +898,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 	// Subsections cannot overlap; an object number may have at most
 	// one entry in a section.
 	// Default value: [0 Size].
-	indexList := []int{}
+	var indexList []int
 	if indexObj != nil {
 		common.Log.Trace("Index: %b", indexObj)
 		indicesArray, ok := indexObj.(*PdfObjectArray)
@@ -1235,7 +1235,7 @@ func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 	}
 
 	// Load old objects also.  Only if not already specified.
-	prevList := []int64{}
+	var prevList []int64
 	intInSlice := func(val int64, list []int64) bool {
 		for _, b := range list {
 			if b == val {

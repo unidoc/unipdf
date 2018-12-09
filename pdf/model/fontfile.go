@@ -85,7 +85,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 	}
 
 	segment1 := data[:length1]
-	segment2 := []byte{}
+	var segment2 []byte
 	if length2 > 0 {
 		segment2 = data[length1 : length1+length2]
 	}

@@ -152,7 +152,7 @@ func (table *Table) SetPos(x, y float64) {
 // over multiple pages.
 // Implements the Drawable interface.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	blocks := []*Block{}
+	var blocks []*Block
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	origCtx := ctx

@@ -1130,7 +1130,7 @@ func newRunLengthEncoderFromStream(streamObj *PdfObjectStream, decodeParams *Pdf
 */
 func (this *RunLengthEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
-	inb := []byte{}
+	var inb []byte
 	for {
 		b, err := bufReader.ReadByte()
 		if err != nil {
@@ -1168,8 +1168,8 @@ func (this *RunLengthEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, 
 // Encode a bytes array and return the encoded value based on the encoder parameters.
 func (this *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(data)
-	inb := []byte{}
-	literal := []byte{}
+	var inb []byte
+	var literal []byte
 
 	b0, err := bufReader.ReadByte()
 	if err == io.EOF {
@@ -1272,7 +1272,7 @@ func (this *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
 
 func (this *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
-	inb := []byte{}
+	var inb []byte
 	for {
 		b, err := bufReader.ReadByte()
 		if err != nil {
@@ -1348,7 +1348,7 @@ func (this *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
 
 // 5 ASCII characters -> 4 raw binary bytes
 func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	decoded := []byte{}
+	var decoded []byte
 
 	common.Log.Trace("ASCII85 Decode")
 
@@ -1663,7 +1663,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 	// Prepare the decode params array (one for each filter type)
 	// Optional, not always present.
 	var decodeParamsDict *PdfObjectDictionary
-	decodeParamsArray := []PdfObject{}
+	var decodeParamsArray []PdfObject
 	obj := encDict.Get("DecodeParms")
 	if obj != nil {
 		// If it is a dictionary, assume it applies to all

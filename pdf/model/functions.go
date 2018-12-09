@@ -300,7 +300,7 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 		decode = this.Range
 	}
 
-	indices := []int{}
+	var indices []int
 	// Start with nearest neighbour interpolation.
 	for i := 0; i < len(x); i++ {
 		xi := x[i]
@@ -339,7 +339,7 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	m *= this.NumOutputs
 
 	// Output values.
-	outputs := []float64{}
+	var outputs []float64
 	for j := 0; j < this.NumOutputs; j++ {
 		rj := this.data[m+j]
 		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(this.BitsPerSample)), decode[2*j], decode[2*j+1])
@@ -534,7 +534,7 @@ func (this *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 		c1 = this.C1
 	}
 
-	y := []float64{}
+	var y []float64
 	for i := 0; i < len(c0); i++ {
 		yi := c0[i] + math.Pow(x[0], this.N)*(c1[i]-c0[i])
 		y = append(y, yi)
@@ -744,7 +744,7 @@ func (this *PdfFunctionType4) Evaluate(xVec []float64) ([]float64, error) {
 		this.executor = ps.NewPSExecutor(this.Program)
 	}
 
-	inputs := []ps.PSObject{}
+	var inputs []ps.PSObject
 	for _, val := range xVec {
 		inputs = append(inputs, ps.MakeReal(val))
 	}

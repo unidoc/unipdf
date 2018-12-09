@@ -28,7 +28,7 @@ func NewPSExecutor(program *PSProgram) *PSExecutor {
 // PSObjectArrayToFloat64Array converts []PSObject into a []float64 array. Each PSObject must represent a number,
 // otherwise a ErrTypeCheck error occurs.
 func PSObjectArrayToFloat64Array(objects []PSObject) ([]float64, error) {
-	vals := []float64{}
+	var vals []float64
 
 	for _, obj := range objects {
 		if number, is := obj.(*PSInteger); is {

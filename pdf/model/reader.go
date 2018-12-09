@@ -397,8 +397,8 @@ func (this *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
 
 // GetOutlinesFlattened returns a flattened list of tree nodes and titles.
 func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
-	outlineNodeList := []*PdfOutlineTreeNode{}
-	flattenedTitleList := []string{}
+	var outlineNodeList []*PdfOutlineTreeNode
+	var flattenedTitleList []string
 
 	// Recursive flattening function.
 	var flattenFunc func(*PdfOutlineTreeNode, *[]*PdfOutlineTreeNode, *[]string, int)

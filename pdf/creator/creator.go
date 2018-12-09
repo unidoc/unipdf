@@ -399,7 +399,7 @@ func (c *Creator) finalize() error {
 		}
 
 		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
-		tocpages := []*model.PdfPage{}
+		var tocpages []*model.PdfPage
 		for _, block := range blocks {
 			block.SetPos(0, 0)
 			totPages++

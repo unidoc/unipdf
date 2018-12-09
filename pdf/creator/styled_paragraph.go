@@ -463,7 +463,7 @@ func (p *StyledParagraph) wrapText() error {
 // if the contents wrap over multiple pages. Implements the Drawable interface.
 func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
-	blocks := []*Block{}
+	var blocks []*Block
 
 	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if p.positioning.isRelative() {
@@ -549,10 +549,10 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	p.wrapText()
 
 	// Add the fonts of all chunks to the page resources.
-	fonts := [][]core.PdfObjectName{}
+	var fonts [][]core.PdfObjectName
 
 	for _, line := range p.lines {
-		fontLine := []core.PdfObjectName{}
+		var fontLine []core.PdfObjectName
 
 		for _, chunk := range line {
 			fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
@@ -647,7 +647,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 		height *= p.lineHeight
 
 		// Add line shifts.
-		objs := []core.PdfObject{}
+		var objs []core.PdfObject
 
 		wrapWidth := p.wrapWidth * 1000.0
 		if p.alignment == TextAlignmentJustify {

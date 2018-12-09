@@ -326,7 +326,7 @@ func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotati
 		return nil, fmt.Errorf("Annots not an array")
 	}
 
-	annotations := []*PdfAnnotation{}
+	var annotations []*PdfAnnotation
 	for _, obj := range annotsArr.Elements() {
 		obj, err = reader.traceToObject(obj)
 		if err != nil {
@@ -785,7 +785,7 @@ func (this *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder)
 		encoder = NewRawEncoder()
 	}
 
-	streamObjs := []*PdfObjectStream{}
+	var streamObjs []*PdfObjectStream
 	for _, cStream := range cStreams {
 		stream := &PdfObjectStream{}
 
@@ -845,7 +845,7 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 	contents := TraceToDirectObject(this.Contents)
 	if contArray, isArray := contents.(*PdfObjectArray); isArray {
 		// If an array of content streams, append it.
-		cstreams := []string{}
+		var cstreams []string
 		for _, cstreamObj := range contArray.Elements() {
 			cstreamStr, err := getContentStreamAsString(cstreamObj)
 			if err != nil {

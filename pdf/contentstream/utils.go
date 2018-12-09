@@ -14,7 +14,7 @@ import (
 )
 
 func makeParamsFromFloats(vals []float64) []core.PdfObject {
-	params := []core.PdfObject{}
+	var params []core.PdfObject
 	for _, val := range vals {
 		params = append(params, core.MakeFloat(val))
 	}
@@ -22,7 +22,7 @@ func makeParamsFromFloats(vals []float64) []core.PdfObject {
 }
 
 func makeParamsFromNames(vals []core.PdfObjectName) []core.PdfObject {
-	params := []core.PdfObject{}
+	var params []core.PdfObject
 	for _, val := range vals {
 		params = append(params, core.MakeName(string(val)))
 	}
@@ -30,7 +30,7 @@ func makeParamsFromNames(vals []core.PdfObjectName) []core.PdfObject {
 }
 
 func makeParamsFromStrings(vals []core.PdfObjectString) []core.PdfObject {
-	params := []core.PdfObject{}
+	var params []core.PdfObject
 	for _, val := range vals {
 		params = append(params, core.MakeString(val.Str()))
 	}
@@ -38,7 +38,7 @@ func makeParamsFromStrings(vals []core.PdfObjectString) []core.PdfObject {
 }
 
 func makeParamsFromInts(vals []int64) []core.PdfObject {
-	params := []core.PdfObject{}
+	var params []core.PdfObject
 	for _, val := range vals {
 		params = append(params, core.MakeInteger(val))
 	}

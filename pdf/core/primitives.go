@@ -422,7 +422,7 @@ func (array *PdfObjectArray) Clear() {
 // returned if the array contains non-numeric objects (each element can be either PdfObjectInteger
 // or PdfObjectFloat).
 func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
-	vals := []float64{}
+	var vals []float64
 
 	for _, obj := range array.Elements() {
 		switch t := obj.(type) {
@@ -441,7 +441,7 @@ func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 // ToIntegerArray returns a slice of all array elements as an int slice. An error is returned if the
 // array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
-	vals := []int{}
+	var vals []int
 
 	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
@@ -457,7 +457,7 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 // ToInt64Slice returns a slice of all array elements as an int64 slice. An error is returned if the
 // array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToInt64Slice() ([]int64, error) {
-	vals := []int64{}
+	var vals []int64
 
 	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
@@ -560,7 +560,7 @@ func getNumberAsFloatOrNull(obj PdfObject) (*float64, error) {
 // GetAsFloat64Slice returns the array as []float64 slice.
 // Returns an error if not entirely numeric (only PdfObjectIntegers, PdfObjectFloats).
 func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
-	slice := []float64{}
+	var slice []float64
 
 	for _, obj := range array.Elements() {
 		number, err := GetNumberAsFloat(TraceToDirectObject(obj))

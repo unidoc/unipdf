@@ -378,7 +378,7 @@ func sum(widths []float64) float64 {
 // over multiple pages. Implements the Drawable interface.
 func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
-	blocks := []*Block{}
+	var blocks []*Block
 
 	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)
 	if p.positioning.isRelative() {
@@ -507,7 +507,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			w += p.fontSize * metrics.Wx
 		}
 
-		objs := []core.PdfObject{}
+		var objs []core.PdfObject
 
 		spaceMetrics, found := p.textFont.GetGlyphCharMetrics("space")
 		if !found {
@@ -530,7 +530,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			objs = append(objs, core.MakeFloat(-shift))
 		}
 
-		encoded := []byte{}
+		var encoded []byte
 		isCID := p.textFont.IsCID()
 		for _, r := range runes {
 			glyph, ok := p.textFont.Encoder().RuneToGlyph(r)

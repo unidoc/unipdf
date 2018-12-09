@@ -644,7 +644,7 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 
 		// Eject a victim if the cache is full.
 		if len(to.e.fontCache) >= maxFontCache {
-			names := []string{}
+			var names []string
 			for name := range to.e.fontCache {
 				names = append(names, name)
 			}

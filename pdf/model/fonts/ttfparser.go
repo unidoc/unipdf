@@ -208,7 +208,7 @@ func (t *ttfParser) Parse() (TtfType, error) {
 
 // describeTables returns a string describing `tables`, the tables in a TrueType font file.
 func describeTables(tables map[string]uint32) string {
-	tags := []string{}
+	var tags []string
 	for tag := range tables {
 		tags = append(tags, tag)
 	}

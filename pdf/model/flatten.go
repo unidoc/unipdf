@@ -77,7 +77,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 
 	// Go through all pages and flatten specified annotations.
 	for _, page := range pdf.PageList {
-		annots := []*PdfAnnotation{}
+		var annots []*PdfAnnotation
 
 		// Wrap the content streams.
 		err := appgen.WrapContentStream(page)
@@ -132,7 +132,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 			// Generate the content stream to display the XForm.
 			// TODO(gunnsth): Creating the contentstream directly here as cannot import contentstream package into
 			// model (as contentstream depends on model). Consider if we can change the dependency pattern.
-			ops := []string{}
+			var ops []string
 			ops = append(ops, "q")
 			ops = append(ops, fmt.Sprintf("%.6f %.6f %.6f %.6f %.6f %.6f cm", 1.0, 0.0, 0.0, 1.0, xRect, yRect))
 			ops = append(ops, fmt.Sprintf("/%s Do", name.String()))

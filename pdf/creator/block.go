@@ -126,7 +126,7 @@ func (blk *Block) duplicate() *Block {
 // GeneratePageBlocks draws the block contents on a template Page block.
 // Implements the Drawable interface.
 func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	blocks := []*Block{}
+	var blocks []*Block
 
 	if blk.positioning.isRelative() {
 		// Draw at current ctx.X, ctx.Y position

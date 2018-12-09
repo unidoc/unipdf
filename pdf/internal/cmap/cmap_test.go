@@ -672,12 +672,12 @@ func checkCmapWriteRead(t *testing.T, codeToUnicode map[CharCode]rune) {
 		return
 	}
 
-	codes0 := []CharCode{}
+	var codes0 []CharCode
 	for code := range codeToUnicode {
 		codes0 = append(codes0, code)
 	}
 	sort.Slice(codes0, func(i, j int) bool { return codes0[i] < codes0[j] })
-	codes := []CharCode{}
+	var codes []CharCode
 	for code := range cmap.codeToUnicode {
 		codes = append(codes, code)
 	}

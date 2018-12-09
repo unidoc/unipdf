@@ -26,7 +26,7 @@ func (cmap CMapIdentityH) CharacterCodesToCID(raw []byte) ([]CID, error) {
 		return nil, core.ErrRangeError
 	}
 
-	cids := []CID{}
+	var cids []CID
 	for i := 0; i < len(raw); i += 2 {
 		b1 := CID(raw[i])
 		b2 := CID(raw[i+1])

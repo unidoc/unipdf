@@ -168,7 +168,7 @@ func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		img.makeXObject()
 	}
 
-	blocks := []*Block{}
+	var blocks []*Block
 	origCtx := ctx
 
 	blk := NewBlock(ctx.PageWidth, ctx.PageHeight)

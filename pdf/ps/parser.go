@@ -220,7 +220,7 @@ func (p *PSParser) parseBool() (*PSBoolean, error) {
 
 // An operand is a text command represented by a word.
 func (p *PSParser) parseOperand() (*PSOperand, error) {
-	bytes := []byte{}
+	var bytes []byte
 	for {
 		bb, err := p.reader.Peek(1)
 		if err != nil {

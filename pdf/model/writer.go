@@ -492,7 +492,7 @@ func procPage(p *PdfPage) {
 	f := fonts.NewFontHelvetica()
 	p.Resources.SetFontByName("UF1", f.ToPdfObject())
 
-	ops := []string{}
+	var ops []string
 	ops = append(ops, "q")
 	ops = append(ops, "BT")
 	ops = append(ops, "/UF1 14 Tf")
@@ -519,7 +519,7 @@ func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
 // What if something appears on many pages?
 func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
 	common.Log.Trace("Seek by name.. %T", obj)
-	list := []PdfObject{}
+	var list []PdfObject
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
 		return this.seekByName(io.PdfObject, followKeys, key)
 	}

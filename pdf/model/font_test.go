@@ -528,7 +528,7 @@ func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
 	common.Log.Debug("parsePdfObjects")
 
 	// Build the numObj {object number: object} map
-	nums := []int{}
+	var nums []int
 	for {
 		obj, err := parser.ParseIndirectObject()
 		common.Log.Debug("parsePdfObjects:  %T %v", obj, err)

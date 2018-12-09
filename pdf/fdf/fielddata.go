@@ -80,7 +80,7 @@ func (fdf *Data) FieldValues() (map[string]core.PdfObject, error) {
 		return nil, err
 	}
 
-	keys := []string{}
+	var keys []string
 	for fieldName := range fieldDictMap {
 		keys = append(keys, fieldName)
 	}

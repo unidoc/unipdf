@@ -300,7 +300,7 @@ func (this *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	common.Log.Trace("DeviceGray-ToRGB Samples: % d", samples)
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i++ {
 		grayVal := samples[i]
 		rgbSamples = append(rgbSamples, grayVal, grayVal, grayVal)
@@ -445,7 +445,7 @@ func (this *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 	samples := img.GetSamples()
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
-	graySamples := []uint32{}
+	var graySamples []uint32
 	for i := 0; i < len(samples); i += 3 {
 		// Normalized data, range 0-1.
 		r := float64(samples[i]) / maxVal
@@ -629,7 +629,7 @@ func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 	common.Log.Trace("MaxVal: %f", maxVal)
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i += 4 {
 		// Normalized c, m, y, k values.
 		c := interpolate(float64(samples[i]), 0, maxVal, decode[0], decode[1])
@@ -893,7 +893,7 @@ func (this *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i++ {
 		// A represents the gray component of calibrated gray space.
 		// It shall be in the range 0.0 - 1.0
@@ -1224,7 +1224,7 @@ func (this *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples)-2; i++ {
 		// A, B, C in range 0.0 to 1.0
 		aVal := float64(samples[i]) / maxVal
@@ -1589,7 +1589,7 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i += 3 {
 		// Get normalized L*, a*, b* values. [0-1]
 		LNorm := float64(samples[i]) / maxVal
@@ -1825,7 +1825,7 @@ func (this *PdfColorspaceICCBased) ToPdfObject() PdfObject {
 		dict.Set("Metadata", this.Metadata)
 	}
 	if this.Range != nil {
-		ranges := []PdfObject{}
+		var ranges []PdfObject
 		for _, r := range this.Range {
 			ranges = append(ranges, MakeFloat(r))
 		}
@@ -2251,7 +2251,7 @@ func (this *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfCol
 	}
 
 	cvals := this.colorLookup[index : index+N]
-	floats := []float64{}
+	var floats []float64
 	for _, val := range cvals {
 		floats = append(floats, float64(val)/255.0)
 	}
@@ -2299,7 +2299,7 @@ func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	N := this.Base.GetNumComponents()
 
-	baseSamples := []uint32{}
+	var baseSamples []uint32
 	// Convert the indexed data to base color map data.
 	for i := 0; i < len(samples); i++ {
 		// Each data point represents an index location.
@@ -2514,7 +2514,7 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 
 	altDecode := this.AlternateSpace.DecodeArray()
 
-	altSamples := []uint32{}
+	var altSamples []uint32
 	// Convert tints to color data in the alternate colorspace.
 	for i := 0; i < len(samples); i++ {
 		// A single tint component is in the range 0.0 - 1.0
@@ -2583,7 +2583,7 @@ func (this *PdfColorspaceDeviceN) GetNumComponents() int {
 // DecodeArray returns the component range values for the DeviceN colorspace.
 // [0 1.0 0 1.0 ...] for each color component.
 func (this *PdfColorspaceDeviceN) DecodeArray() []float64 {
-	decode := []float64{}
+	var decode []float64
 	for i := 0; i < this.GetNumComponents(); i++ {
 		decode = append(decode, 0.0, 1.0)
 	}
@@ -2726,13 +2726,13 @@ func (this *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	// Convert tints to color data in the alternate colorspace.
-	altSamples := []uint32{}
+	var altSamples []uint32
 	for i := 0; i < len(samples); i += this.GetNumComponents() {
 		// The input to the tint transformation is the tint
 		// for each color component.
 		//
 		// A single tint component is in the range 0.0 - 1.0
-		inputs := []float64{}
+		var inputs []float64
 		for j := 0; j < this.GetNumComponents(); j++ {
 			tint := float64(samples[i+j]) / maxVal
 			inputs = append(inputs, tint)
