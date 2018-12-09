@@ -69,6 +69,8 @@ type Paragraph struct {
 // newParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and
 // wrap enabled with a wrap width of 100 points.
 func newParagraph(text string, style TextStyle) *Paragraph {
+	// TODO(dennwc): style is unused
+
 	p := &Paragraph{}
 	p.text = text
 

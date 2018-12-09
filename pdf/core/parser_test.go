@@ -44,16 +44,16 @@ var namePairs = map[string]string{
 	"/Name1":                             "Name1",
 	"/ASomewhatLongerName":               "ASomewhatLongerName",
 	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
-	"/1.2":                     "1.2",
-	"/$$":                      "$$",
-	"/@pattern":                "@pattern",
-	"/.notdef":                 ".notdef",
-	"/Lime#20Green":            "Lime Green",
-	"/paired#28#29parentheses": "paired()parentheses",
-	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
-	"/A#42":                    "AB",
-	"/":                        "",
-	"/ ":                       "",
+	"/1.2":                               "1.2",
+	"/$$":                                "$$",
+	"/@pattern":                          "@pattern",
+	"/.notdef":                           ".notdef",
+	"/Lime#20Green":                      "Lime Green",
+	"/paired#28#29parentheses":           "paired()parentheses",
+	"/The_Key_of_F#23_Minor":             "The_Key_of_F#_Minor",
+	"/A#42":                              "AB",
+	"/":                                  "",
+	"/ ":                                 "",
 	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
 }
 
@@ -92,11 +92,6 @@ func TestNameParsing(t *testing.T) {
 	}
 }
 
-type testStringEntry struct {
-	raw      string
-	expected string
-}
-
 func BenchmarkStringParsing(b *testing.B) {
 	entry := "(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)"
 	parser := makeParserForText(entry)
@@ -110,18 +105,18 @@ func BenchmarkStringParsing(b *testing.B) {
 }
 
 var stringPairs = map[string]string{
-	"(This is a string)":                                                                        "This is a string",
-	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
+	"(This is a string)":                        "This is a string",
+	"(Strings may contain\n newlines and such)": "Strings may contain\n newlines and such",
 	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
 	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
 	"(These two strings are the same.)":                                                         "These two strings are the same.",
-	"(\\\\)": "\\",
-	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
-	"(So does this one.\\n)":                               "So does this one.\n",
-	"(\\0053)":                                             "\0053",
-	"(\\53)":                                               "\053",
-	"(\\053)":                                              "+",
-	"(\\53\\101)":                                          "+A",
+	"(\\\\)":                                                                                    "\\",
+	"(This string has an end-of-line at the end of it.\n)":                                      "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                                                                    "So does this one.\n",
+	"(\\0053)":                                                                                  "\0053",
+	"(\\53)":                                                                                    "\053",
+	"(\\053)":                                                                                   "+",
+	"(\\53\\101)":                                                                               "+A",
 }
 
 func TestStringParsing(t *testing.T) {
