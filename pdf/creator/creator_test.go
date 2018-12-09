@@ -19,6 +19,7 @@ import (
 	"image/png"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -2917,7 +2918,7 @@ func readPNG(file string) (goimage.Image, error) {
 }
 
 func comparePNGFiles(file1, file2 string) (bool, error) {
-	// compare hashes; if this turn out to be unreliable, switch to comparing images
+	// fast path - compare hashes
 	h1, err := hashFile(file1)
 	if err != nil {
 		return false, err
@@ -2926,7 +2927,55 @@ func comparePNGFiles(file1, file2 string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return h1 == h2, nil
+	if h1 == h2 {
+		return true, nil
+	}
+	// slow path - compare pixel by pixel
+	img1, err := readPNG(file1)
+	if err != nil {
+		return false, err
+	}
+	img2, err := readPNG(file2)
+	if err != nil {
+		return false, err
+	}
+	if img1.Bounds() != img2.Bounds() {
+		return false, nil
+	}
+	rgb1, ok := img1.(*goimage.RGBA)
+	if !ok {
+		return compareImages(img1, img2)
+	}
+	rgb2, ok := img2.(*goimage.RGBA)
+	if !ok {
+		return compareImages(img1, img2)
+	}
+	return compareImagesRGBA(rgb1, rgb2)
+}
+
+func compareImages(img1, img2 goimage.Image) (bool, error) {
+	rect := img1.Bounds()
+	for x := 0; x < rect.Size().X; x++ {
+		for y := 0; y < rect.Size().Y; y++ {
+			r1, g1, b1, a1 := img1.At(x, y).RGBA()
+			r2, g2, b2, a2 := img2.At(x, y).RGBA()
+			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
+func compareImagesRGBA(img1, img2 *goimage.RGBA) (bool, error) {
+	if img1.Stride != img2.Stride {
+		// TODO(dennwc): does this ever happen? if so, we can still optimize this
+		log.Println("WARN: RGB images with different strides")
+		return compareImages(img1, img2)
+	} else if len(img1.Pix) != len(img2.Pix) {
+		return false, nil
+	}
+	return bytes.Equal(img1.Pix, img2.Pix), nil
 }
 
 func hashFile(file string) (string, error) {
