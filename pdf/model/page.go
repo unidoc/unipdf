@@ -96,7 +96,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 
 	pType, ok := d.Get("Type").(*PdfObjectName)
 	if !ok {
-		return nil, errors.New("missing/Invalid Page dictionary Type")
+		return nil, errors.New("missing/invalid Page dictionary Type")
 	}
 	if *pType != "Page" {
 		return nil, errors.New("page dictionary Type != Page")

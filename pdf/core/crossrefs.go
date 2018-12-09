@@ -321,7 +321,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			return optr, true, nil
 		} else {
 			common.Log.Debug("?? Belongs to a non-cross referenced object ...!")
-			return nil, true, errors.New("oS belongs to a non cross referenced object")
+			return nil, true, errors.New("os belongs to a non cross referenced object")
 		}
 	}
 	return nil, false, errors.New("unknown xref type")
