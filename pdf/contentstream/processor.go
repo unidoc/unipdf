@@ -13,7 +13,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Basic graphics state implementation.
+// GraphicsState is a basic graphics state implementation.
 // Initially only implementing and tracking a portion of the information specified.  Easy to add more.
 type GraphicsState struct {
 	ColorspaceStroking    model.PdfColorspace

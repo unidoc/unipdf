@@ -14,7 +14,7 @@ import (
 // Defaults to the open source license.
 var licenseKey = MakeUnlicensedKey()
 
-// Sets and validates the license key.
+// SetLicenseKey sets and validates the license key.
 func SetLicenseKey(content string, customerName string) error {
 	lk, err := licenseKeyDecode(content)
 	if err != nil {

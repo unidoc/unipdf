@@ -362,7 +362,7 @@ func (reader *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotati
 	return annotations, nil
 }
 
-// Get the inheritable media box value, either from the page
+// GetMediaBox gets the inheritable media box value, either from the page
 // or a higher up page/pages struct.
 func (this *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	if this.MediaBox != nil {
@@ -441,7 +441,7 @@ func (this *PdfPage) getResources() (*PdfPageResources, error) {
 	return nil, nil
 }
 
-// Convert the Page to a PDF object dictionary.
+// GetPageDict convert the Page to a PDF object dictionary.
 func (this *PdfPage) GetPageDict() *PdfObjectDictionary {
 	p := this.pageDict
 	p.Clear()
@@ -547,7 +547,7 @@ func (this *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) er
 	return nil
 }
 
-// Check if has XObject resource by name.
+// HasXObjectByName checks if has XObject resource by name.
 func (this *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 	xresDict, has := this.Resources.XObject.(*PdfObjectDictionary)
 	if !has {
@@ -561,7 +561,7 @@ func (this *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 	}
 }
 
-// Get XObject by name.
+// GetXObjectByName get XObject by name.
 func (this *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
 	xresDict, has := this.Resources.XObject.(*PdfObjectDictionary)
 	if !has {
@@ -575,7 +575,7 @@ func (this *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
 	}
 }
 
-// Check if has font resource by name.
+// HasFontByName checks if has font resource by name.
 func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
 	fontDict, has := this.Resources.Font.(*PdfObjectDictionary)
 	if !has {
@@ -589,7 +589,7 @@ func (this *PdfPage) HasFontByName(name PdfObjectName) bool {
 	}
 }
 
-// Check if ExtGState name is available.
+// HasExtGState checks if ExtGState name is available.
 func (this *PdfPage) HasExtGState(name PdfObjectName) bool {
 	if this.Resources == nil {
 		return false
@@ -612,7 +612,7 @@ func (this *PdfPage) HasExtGState(name PdfObjectName) bool {
 	return has
 }
 
-// Add a graphics state to the XObject resources.
+// AddExtGState adds a graphics state to the XObject resources.
 func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) error {
 	if this.Resources == nil {
 		//this.Resources = &PdfPageResources{}
@@ -633,7 +633,7 @@ func (this *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) 
 	return nil
 }
 
-// Add a font dictionary to the Font resources.
+// AddFont adds a font dictionary to the Font resources.
 func (this *PdfPage) AddFont(name PdfObjectName, font PdfObject) error {
 	if this.Resources == nil {
 		this.Resources = NewPdfPageResources()
@@ -661,7 +661,7 @@ type WatermarkImageOptions struct {
 	PreserveAspectRatio bool
 }
 
-// Add a watermark to the page.
+// AddWatermarkImage add a watermark to the page.
 func (this *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOptions) error {
 	// Page dimensions.
 	bbox, err := this.GetMediaBox()
@@ -865,7 +865,7 @@ func (this *PdfPage) GetContentStreams() ([]string, error) {
 	}
 }
 
-// Get all the content streams for a page as one string.
+// GetAllContentStreams gets all the content streams for a page as one string.
 func (this *PdfPage) GetAllContentStreams() (string, error) {
 	cstreams, err := this.GetContentStreams()
 	if err != nil {

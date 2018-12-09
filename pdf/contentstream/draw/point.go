@@ -25,7 +25,7 @@ func (p Point) Add(dx, dy float64) Point {
 	return p
 }
 
-// Add vector to a point.
+// AddVector adds vector to a point.
 func (this Point) AddVector(v Vector) Point {
 	this.X += v.Dx
 	this.Y += v.Dy

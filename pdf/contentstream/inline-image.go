@@ -15,7 +15,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// A representation of an inline image in a Content stream. Everything between the BI and EI operands.
+// ContentStreamInlineImage is a representation of an inline image in a Content stream. Everything between the BI and EI operands.
 // ContentStreamInlineImage implements the core.PdfObject interface although strictly it is not a PDF object.
 type ContentStreamInlineImage struct {
 	BitsPerComponent core.PdfObject
@@ -31,7 +31,7 @@ type ContentStreamInlineImage struct {
 	stream           []byte
 }
 
-// Make a new content stream inline image object from an image.
+// NewInlineImageFromImage makes a new content stream inline image object from an image.
 func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*ContentStreamInlineImage, error) {
 	if encoder == nil {
 		encoder = core.NewRawEncoder()
@@ -198,7 +198,7 @@ func (img *ContentStreamInlineImage) GetEncoder() (core.StreamEncoder, error) {
 	return newEncoderFromInlineImage(img)
 }
 
-// Is a mask ?
+// IsMask check if an image is a mask.
 // The image mask entry in the image dictionary specifies that the image data shall be used as a stencil
 // mask for painting in the current color. The mask data is 1bpc, grayscale.
 func (img *ContentStreamInlineImage) IsMask() (bool, error) {
@@ -216,7 +216,7 @@ func (img *ContentStreamInlineImage) IsMask() (bool, error) {
 
 }
 
-// Export the inline image to Image which can be transformed or exported easily.
+// ToImage export the inline image to Image which can be transformed or exported easily.
 // Page resources are needed to look up colorspace information.
 func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) (*model.Image, error) {
 	// Decode the imaging data if encoded.
@@ -297,7 +297,7 @@ func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) 
 	return image, nil
 }
 
-// Parse an inline image from a content stream, both read its properties and binary data.
+// ParseInlineImage parses an inline image from a content stream, both read its properties and binary data.
 // When called, "BI" has already been read from the stream.  This function
 // finishes reading through "EI" and then returns the ContentStreamInlineImage.
 func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {

@@ -47,7 +47,7 @@ func (v Vector) Rotate(phi float64) Vector {
 	return NewVectorPolar(mag, angle+phi)
 }
 
-// Change the sign of the vector: -vector.
+// Flip changes the sign of the vector: -vector.
 func (this Vector) Flip() Vector {
 	mag := this.Magnitude()
 	theta := this.GetPolarAngle()

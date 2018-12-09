@@ -233,7 +233,7 @@ func (this *PdfOutline) GetContainingPdfObject() PdfObject {
 	return this.primitive
 }
 
-// Recursively build the Outline tree PDF object.
+// ToPdfObject recursively builds the Outline tree PDF object.
 func (this *PdfOutline) ToPdfObject() PdfObject {
 	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
@@ -260,8 +260,7 @@ func (this *PdfOutlineItem) GetContainingPdfObject() PdfObject {
 	return this.primitive
 }
 
-// Outline item.
-// Recursively build the Outline tree PDF object.
+// ToPdfObject recursively builds the Outline tree PDF object.
 func (this *PdfOutlineItem) ToPdfObject() PdfObject {
 	container := this.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)

@@ -37,12 +37,12 @@ func (this *PdfShading) GetContainingPdfObject() PdfObject {
 	return this.container
 }
 
-// Context in this case is a reference to the subshading entry as represented by PdfShadingType1-7.
+// GetContext returns a reference to the subshading entry as represented by PdfShadingType1-7.
 func (this *PdfShading) GetContext() PdfModel {
 	return this.context
 }
 
-// Set the sub annotation (context).
+// SetContext set the sub annotation (context).
 func (this *PdfShading) SetContext(ctx PdfModel) {
 	this.context = ctx
 }
@@ -67,7 +67,7 @@ func (this *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
 	}
 }
 
-// Shading type 1: Function-based shading.
+// PdfShadingType1 is a Function-based shading.
 type PdfShadingType1 struct {
 	*PdfShading
 	Domain   *PdfObjectArray
@@ -75,7 +75,7 @@ type PdfShadingType1 struct {
 	Function []PdfFunction
 }
 
-// Shading type 2: Axial shading.
+// PdfShadingType2 is a Axial shading.
 type PdfShadingType2 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
@@ -84,7 +84,7 @@ type PdfShadingType2 struct {
 	Extend   *PdfObjectArray
 }
 
-// Shading type 3: Radial shading.
+// PdfShadingType3 is a Radial shading.
 type PdfShadingType3 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
@@ -93,7 +93,7 @@ type PdfShadingType3 struct {
 	Extend   *PdfObjectArray
 }
 
-// Shading type 4: Free-form Gouraud-shaded triangle mesh.
+// PdfShadingType4 is a Free-form Gouraud-shaded triangle mesh.
 type PdfShadingType4 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -103,7 +103,7 @@ type PdfShadingType4 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 5: Lattice-form Gouraud-shaded triangle mesh.
+// PdfShadingType5 is a Lattice-form Gouraud-shaded triangle mesh.
 type PdfShadingType5 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -113,7 +113,7 @@ type PdfShadingType5 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 6: Coons patch mesh.
+// PdfShadingType6 is a Coons patch mesh.
 type PdfShadingType6 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -123,7 +123,7 @@ type PdfShadingType6 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 7: Tensor-product patch mesh.
+// PdfShadingType7 is a Tensor-product patch mesh.
 type PdfShadingType7 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger

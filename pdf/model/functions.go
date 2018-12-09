@@ -95,11 +95,9 @@ func interpolate(x, xmin, xmax, ymin, ymax float64) float64 {
 	return y
 }
 
-//
-// Type 0 functions use a sequence of sample values (contained in a stream) to provide an approximation
+// PdfFunctionType0 uses a sequence of sample values (contained in a stream) to provide an approximation
 // for functions whose domains and ranges are bounded. The samples are organized as an m-dimensional
 // table in which each entry has n components
-//
 type PdfFunctionType0 struct {
 	Domain []float64 // required; 2*m length; where m is the number of input values
 	Range  []float64 // required (type 0); 2*n length; where n is the number of output values
@@ -360,13 +358,11 @@ func (this *PdfFunctionType0) processSamples() error {
 	return nil
 }
 
-//
-// Type 2 functions define an exponential interpolation of one input value and n
+// PdfFunctionType2 defines an exponential interpolation of one input value and n
 // output values:
 //      f(x) = y_0, ..., y_(n-1)
 // y_j = C0_j + x^N * (C1_j - C0_j); for 0 <= j < n
 // When N=1 ; linear interpolation between C0 and C1.
-//
 type PdfFunctionType2 struct {
 	Domain []float64
 	Range  []float64
@@ -543,10 +539,8 @@ func (this *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 	return y, nil
 }
 
-//
-// Type 3 functions define stitching of the subdomains of serveral 1-input functions to produce
+// PdfFunctionType3 defines stitching of the subdomains of serveral 1-input functions to produce
 // a single new 1-input function.
-//
 type PdfFunctionType3 struct {
 	Domain []float64
 	Range  []float64
@@ -724,9 +718,7 @@ func (this *PdfFunctionType3) ToPdfObject() PdfObject {
 	}
 }
 
-//
-// Type 4.  Postscript calculator functions.
-//
+// PdfFunctionType4 is a Postscript calculator functions.
 type PdfFunctionType4 struct {
 	Domain  []float64
 	Range   []float64
@@ -738,7 +730,7 @@ type PdfFunctionType4 struct {
 	container *PdfObjectStream
 }
 
-// Input [x1 x2 x3]
+// Evaluate runs the function. Input is [x1 x2 x3].
 func (this *PdfFunctionType4) Evaluate(xVec []float64) ([]float64, error) {
 	if this.executor == nil {
 		this.executor = ps.NewPSExecutor(this.Program)

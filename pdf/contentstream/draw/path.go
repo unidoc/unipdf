@@ -5,7 +5,7 @@
 
 package draw
 
-// A path consists of straight line connections between each point defined in an array of points.
+// Path consists of straight line connections between each point defined in an array of points.
 type Path struct {
 	Points []Point
 }

@@ -4,7 +4,7 @@ import (
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 )
 
-// Make the path with the content creator.
+// DrawPathWithCreator makes the path with the content creator.
 // Adds the PDF commands to draw the path to the creator instance.
 func DrawPathWithCreator(path Path, creator *pdfcontent.ContentCreator) {
 	for idx, p := range path.Points {
@@ -16,7 +16,7 @@ func DrawPathWithCreator(path Path, creator *pdfcontent.ContentCreator) {
 	}
 }
 
-// Make the bezier path with the content creator.
+// DrawBezierPathWithCreator makes the bezier path with the content creator.
 // Adds the PDF commands to draw the path to the creator instance.
 func DrawBezierPathWithCreator(bpath CubicBezierPath, creator *pdfcontent.ContentCreator) {
 	for idx, c := range bpath.Curves {

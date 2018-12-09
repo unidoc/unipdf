@@ -221,7 +221,7 @@ type ImageHandler interface {
 	// Read any image type and load into a new Image object.
 	Read(r io.Reader) (*Image, error)
 
-	// Load a unidoc Image from a standard Go image structure.
+	// NewImageFromGoImage load a unidoc Image from a standard Go image structure.
 	NewImageFromGoImage(goimg goimage.Image) (*Image, error)
 
 	// Compress an image.
@@ -231,7 +231,7 @@ type ImageHandler interface {
 // DefaultImageHandler is the default implementation of the ImageHandler using the standard go library.
 type DefaultImageHandler struct{}
 
-// Create a unidoc Image from a golang Image.
+// NewImageFromGoImage creates a unidoc Image from a golang Image.
 func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
@@ -289,7 +289,7 @@ func (ih DefaultImageHandler) Compress(input *Image, quality int64) (*Image, err
 	return input, nil
 }
 
-// ImageHandler is used for handling images.
+// ImageHandling is used for handling images.
 var ImageHandling ImageHandler = DefaultImageHandler{}
 
 // SetImageHandler sets the image handler used by the package.

@@ -157,7 +157,7 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (TtfType, error) {
 	return t.Parse()
 }
 
-// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in disk file `fileStr`.
+// TtfParse returns a TtfType describing the TrueType font file in disk file `fileStr`.
 func TtfParse(fileStr string) (TtfType, error) {
 	f, err := os.Open(fileStr)
 	if err != nil {
@@ -169,7 +169,7 @@ func TtfParse(fileStr string) (TtfType, error) {
 	return t.Parse()
 }
 
-// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in io.Reader `t`.f.
+// Parse returns a TtfType describing the TrueType font file in io.Reader `t`.f.
 func (t *ttfParser) Parse() (TtfType, error) {
 
 	version, err := t.ReadStr(4)
@@ -813,7 +813,7 @@ func (t *ttfParser) ReadULong() (val uint32) {
 	return val
 }
 
-// ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
+// Read32Fixed reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
 // the second 2 bytes for the fraction.
 func (t *ttfParser) Read32Fixed() float64 {
 	whole := float64(t.ReadShort())

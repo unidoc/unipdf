@@ -30,12 +30,12 @@ func (this *PdfPattern) GetContainingPdfObject() PdfObject {
 	return this.container
 }
 
-// Context in this case is a reference to the subpattern entry: either PdfTilingPattern or PdfShadingPattern.
+// GetContext returns a reference to the subpattern entry: either PdfTilingPattern or PdfShadingPattern.
 func (this *PdfPattern) GetContext() PdfModel {
 	return this.context
 }
 
-// Set the sub pattern (context).  Either PdfTilingPattern or PdfShadingPattern.
+// SetContext sets the sub pattern (context).  Either PdfTilingPattern or PdfShadingPattern.
 func (this *PdfPattern) SetContext(ctx PdfModel) {
 	this.context = ctx
 }
@@ -48,17 +48,17 @@ func (this *PdfPattern) IsShading() bool {
 	return this.PatternType == 2
 }
 
-// Check with IsTiling() prior to using this to ensure is a tiling pattern.
+// GetAsTilingPattern returns a tiling pattern. Check with IsTiling() prior to using this.
 func (this *PdfPattern) GetAsTilingPattern() *PdfTilingPattern {
 	return this.context.(*PdfTilingPattern)
 }
 
-// Check with IsShading() prior to using this, to ensure is a shading pattern.
+// GetAsShadingPattern returns a shading pattern. Check with IsShading() prior to using this.
 func (this *PdfPattern) GetAsShadingPattern() *PdfShadingPattern {
 	return this.context.(*PdfShadingPattern)
 }
 
-// A Tiling pattern consists of repetitions of a pattern cell with defined intervals.
+// PdfTilingPattern is a Tiling pattern that consists of repetitions of a pattern cell with defined intervals.
 // It is a type 1 pattern. (PatternType = 1).
 // A tiling pattern is represented by a stream object, where the stream content is
 // a content stream that describes the pattern cell.
@@ -111,7 +111,7 @@ func (this *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncod
 	return decoded, encoder, nil
 }
 
-// Set the pattern cell's content stream.
+// SetContentStream sets the pattern cell's content stream.
 func (this *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncoder) error {
 	streamObj, ok := this.container.(*PdfObjectStream)
 	if !ok {
@@ -144,8 +144,8 @@ func (this *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEnc
 	return nil
 }
 
-// Shading patterns provide a smooth transition between colors across an area to be painted, i.e.
-// color(x,y) = f(x,y) at each point.
+// PdfShadingPattern is a Shading patterns that provide a smooth transition between colors across an area to be painted,
+// i.e. color(x,y) = f(x,y) at each point.
 // It is a type 2 pattern (PatternType = 2).
 type PdfShadingPattern struct {
 	*PdfPattern

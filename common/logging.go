@@ -21,7 +21,7 @@ type Logger interface {
 	Trace(format string, args ...interface{})
 }
 
-// Dummy Logger does nothing.
+// DummyLogger does nothing.
 type DummyLogger struct{}
 
 func (this DummyLogger) Error(format string, args ...interface{}) {
@@ -42,7 +42,7 @@ func (this DummyLogger) Debug(format string, args ...interface{}) {
 func (this DummyLogger) Trace(format string, args ...interface{}) {
 }
 
-// Simple Console Logger that the tests use.
+// LogLevel is the verbosity level for logging.
 type LogLevel int
 
 const (

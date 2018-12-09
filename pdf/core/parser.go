@@ -589,7 +589,7 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 	}
 }
 
-// Reads and parses a PDF dictionary object enclosed with '<<' and '>>'
+// ParseDict reads and parses a PDF dictionary object enclosed with '<<' and '>>'
 // TODO: Unexport (v3).
 func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
@@ -1325,7 +1325,7 @@ func (parser *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, erro
 	return slo, nil
 }
 
-// Parse an indirect object from the input stream. Can also be an object stream.
+// ParseIndirectObject parses an indirect object from the input stream. Can also be an object stream.
 // Returns the indirect object (*PdfIndirectObject) or the stream object (*PdfObjectStream).
 // TODO: Unexport (v3).
 func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
@@ -1504,7 +1504,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	return &indirect, nil
 }
 
-// For testing purposes.
+// NewParserFromString is used for testing purposes.
 // TODO: Unexport (v3) or move to test files, if needed by external test cases.
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}

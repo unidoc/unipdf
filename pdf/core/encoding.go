@@ -63,7 +63,7 @@ type StreamEncoder interface {
 	DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 }
 
-// Flate encoding.
+// FlateEncoder represents Flate encoding.
 type FlateEncoder struct {
 	Predictor        int
 	BitsPerComponent int
@@ -72,7 +72,7 @@ type FlateEncoder struct {
 	Colors  int
 }
 
-// Make a new flate encoder with default parameters, predictor 1 and bits per component 8.
+// NewFlateEncoder makes a new flate encoder with default parameters, predictor 1 and bits per component 8.
 func NewFlateEncoder() *FlateEncoder {
 	encoder := &FlateEncoder{}
 
@@ -88,7 +88,7 @@ func NewFlateEncoder() *FlateEncoder {
 	return encoder
 }
 
-// Set the predictor function.  Specify the number of columns per row.
+// SetPredictor sets the predictor function.  Specify the number of columns per row.
 // The columns indicates the number of samples per row.
 // Used for grouping data together for compression.
 func (this *FlateEncoder) SetPredictor(columns int) {
@@ -122,7 +122,7 @@ func (this *FlateEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 // Has the Filter set and the DecodeParms.
 func (this *FlateEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
@@ -246,7 +246,7 @@ func (this *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return outBuf.Bytes(), nil
 }
 
-// Decode a FlateEncoded stream object and give back decoded bytes.
+// DecodeStream decodes a FlateEncoded stream object and give back decoded bytes.
 func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	// TODO: Handle more filter bytes and support more values of BitsPerComponent.
 
@@ -398,7 +398,7 @@ func (this *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, erro
 	return outData, nil
 }
 
-// Encode a bytes array and return the encoded value based on the encoder parameters.
+// EncodeBytes encodes a bytes array and return the encoded value based on the encoder parameters.
 func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	if this.Predictor != 1 && this.Predictor != 11 {
 		common.Log.Debug("Encoding error: FlateEncoder Predictor = 1, 11 only supported")
@@ -445,7 +445,7 @@ func (this *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// LZW encoding/decoding functionality.
+// LZWEncoder provides LZW encoding/decoding functionality.
 type LZWEncoder struct {
 	Predictor        int
 	BitsPerComponent int
@@ -456,7 +456,7 @@ type LZWEncoder struct {
 	EarlyChange int
 }
 
-// Make a new LZW encoder with default parameters.
+// NewLZWEncoder makes a new LZW encoder with default parameters.
 func NewLZWEncoder() *LZWEncoder {
 	encoder := &LZWEncoder{}
 
@@ -497,7 +497,7 @@ func (this *LZWEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 // Has the Filter set and the DecodeParms.
 func (this *LZWEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
@@ -770,7 +770,7 @@ func (this *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 	return outData, nil
 }
 
-// Support for encoding LZW.  Currently not supporting predictors (raw compressed data only).
+// EncodeBytes implements support for LZW encoding.  Currently not supporting predictors (raw compressed data only).
 // Only supports the Early change = 1 algorithm (compress/lzw) as the other implementation
 // does not have a write method.
 // TODO: Consider refactoring compress/lzw to allow both.
@@ -791,8 +791,7 @@ func (this *LZWEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-//
-// DCT (JPG) encoding/decoding functionality for images.
+// DCTEncoder provides a DCT (JPG) encoding/decoding functionality for images.
 type DCTEncoder struct {
 	ColorComponents  int // 1 (gray), 3 (rgb), 4 (cmyk)
 	BitsPerComponent int // 8 or 16 bit
@@ -801,7 +800,7 @@ type DCTEncoder struct {
 	Quality          int
 }
 
-// Make a new DCT encoder with default parameters.
+// NewDCTEncoder makes a new DCT encoder with default parameters.
 func NewDCTEncoder() *DCTEncoder {
 	encoder := &DCTEncoder{}
 
@@ -822,7 +821,7 @@ func (this *DCTEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 // Has the Filter set.  Some other parameters are generated elsewhere.
 func (this *DCTEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
@@ -1102,11 +1101,11 @@ func (this *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Run length encoding.
+// RunLengthEncoder represents Run length encoding.
 type RunLengthEncoder struct {
 }
 
-// Make a new run length encoder
+// NewRunLengthEncoder makes a new run length encoder
 func NewRunLengthEncoder() *RunLengthEncoder {
 	return &RunLengthEncoder{}
 }
@@ -1117,19 +1116,20 @@ func (this *RunLengthEncoder) GetFilterName() string {
 
 // Create a new run length decoder from a stream object.
 func newRunLengthEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*RunLengthEncoder, error) {
-	// TODO(dennwc): unused paramaters
+	// TODO(dennwc): unused paramaters; should verify that they are empty?
 	return NewRunLengthEncoder(), nil
 }
 
-/*
-	7.4.5 RunLengthDecode Filter
-	The RunLengthDecode filter decodes data that has been encoded in a simple byte-oriented format based on run length.
-	The encoded data shall be a sequence of runs, where each run shall consist of a length byte followed by 1 to 128
-	bytes of data. If the length byte is in the range 0 to 127, the following length + 1 (1 to 128) bytes shall be
-	copied literally during decompression. If length is in the range 129 to 255, the following single byte shall be
-	copied 257 - length (2 to 128) times during decompression. A length value of 128 shall denote EOD.
-*/
+// DecodeBytes decodes a byte slice from Run length encoding.
+//
+// 7.4.5 RunLengthDecode Filter
+// The RunLengthDecode filter decodes data that has been encoded in a simple byte-oriented format based on run length.
+// The encoded data shall be a sequence of runs, where each run shall consist of a length byte followed by 1 to 128
+// bytes of data. If the length byte is in the range 0 to 127, the following length + 1 (1 to 128) bytes shall be
+// copied literally during decompression. If length is in the range 129 to 255, the following single byte shall be
+// copied 257 - length (2 to 128) times during decompression. A length value of 128 shall denote EOD.
 func (this *RunLengthEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	// TODO(dennwc): use encoded slice directly, instead of wrapping it into a Reader
 	bufReader := bytes.NewReader(encoded)
 	var inb []byte
 	for {
@@ -1161,12 +1161,12 @@ func (this *RunLengthEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return inb, nil
 }
 
-// Decode RunLengthEncoded stream object and give back decoded bytes.
+// DecodeStream decodes RunLengthEncoded stream object and give back decoded bytes.
 func (this *RunLengthEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return this.DecodeBytes(streamObj.Stream)
 }
 
-// Encode a bytes array and return the encoded value based on the encoder parameters.
+// EncodeBytes encodes a bytes array and return the encoded value based on the encoder parameters.
 func (this *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(data)
 	var inb []byte
@@ -1238,19 +1238,18 @@ func (this *RunLengthEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *RunLengthEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(this.GetFilterName()))
 	return dict
 }
 
-/////
-// ASCII hex encoder/decoder.
+// ASCIIHexEncoder implements ASCII hex encoder/decoder.
 type ASCIIHexEncoder struct {
 }
 
-// Make a new ASCII hex encoder.
+// NewASCIIHexEncoder makes a new ASCII hex encoder.
 func NewASCIIHexEncoder() *ASCIIHexEncoder {
 	encoder := &ASCIIHexEncoder{}
 	return encoder
@@ -1264,7 +1263,7 @@ func (this *ASCIIHexEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(this.GetFilterName()))
@@ -1304,7 +1303,7 @@ func (this *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return outb, nil
 }
 
-// ASCII hex decoding.
+// DecodeStream implements ASCII hex decoding.
 func (this *ASCIIHexEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return this.DecodeBytes(streamObj.Stream)
 }
@@ -1320,13 +1319,11 @@ func (this *ASCIIHexEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoded.Bytes(), nil
 }
 
-//
-// ASCII85 encoder/decoder.
-//
+// ASCII85Encoder implements ASCII85 encoder/decoder.
 type ASCII85Encoder struct {
 }
 
-// Make a new ASCII85 encoder.
+// NewASCII85Encoder makes a new ASCII85 encoder.
 func NewASCII85Encoder() *ASCII85Encoder {
 	encoder := &ASCII85Encoder{}
 	return encoder
@@ -1340,14 +1337,14 @@ func (this *ASCII85Encoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict make a new instance of an encoding dictionary for a stream object.
 func (this *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(this.GetFilterName()))
 	return dict
 }
 
-// 5 ASCII characters -> 4 raw binary bytes
+// DecodeBytes decodes byte array with ASCII85. 5 ASCII characters -> 4 raw binary bytes
 func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	var decoded []byte
 
@@ -1425,7 +1422,7 @@ func (this *ASCII85Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return decoded, nil
 }
 
-// ASCII85 stream decoding.
+// DecodeStream implements ASCII85 stream decoding.
 func (this *ASCII85Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return this.DecodeBytes(streamObj.Stream)
 }
@@ -1449,7 +1446,7 @@ func (this *ASCII85Encoder) base256Tobase85(base256val uint32) [5]byte {
 	return base85
 }
 
-// Encode data into ASCII85 encoded format.
+// EncodeBytes encodes data into ASCII85 encoded format.
 func (this *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	var encoded bytes.Buffer
 
@@ -1492,9 +1489,7 @@ func (this *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoded.Bytes(), nil
 }
 
-//
-// Raw encoder/decoder (no encoding, pass through)
-//
+// RawEncoder implements Raw encoder/decoder (no encoding, pass through)
 type RawEncoder struct{}
 
 func NewRawEncoder() *RawEncoder {
@@ -1509,7 +1504,7 @@ func (this *RawEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *RawEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
 }
@@ -1526,9 +1521,8 @@ func (this *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-//
-// CCITTFax encoder/decoder (dummy, for now)
-//
+// CCITTFaxEncoder implements CCITTFax encoder/decoder (dummy, for now)
+// FIXME: implement
 type CCITTFaxEncoder struct{}
 
 func NewCCITTFaxEncoder() *CCITTFaxEncoder {
@@ -1543,7 +1537,7 @@ func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
 }
@@ -1563,9 +1557,8 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, ErrNoCCITTFaxDecode
 }
 
-//
-// JBIG2 encoder/decoder (dummy, for now)
-//
+// JBIG2Encoder implements JBIG2 encoder/decoder (dummy, for now)
+// FIXME: implement
 type JBIG2Encoder struct{}
 
 func NewJBIG2Encoder() *JBIG2Encoder {
@@ -1580,7 +1573,7 @@ func (this *JBIG2Encoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
 }
@@ -1600,9 +1593,8 @@ func (this *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, ErrNoJBIG2Decode
 }
 
-//
-// JPX encoder/decoder (dummy, for now)
-//
+// JPXEncoder implements JPX encoder/decoder (dummy, for now)
+// FIXME: implement
 type JPXEncoder struct{}
 
 func NewJPXEncoder() *JPXEncoder {
@@ -1617,7 +1609,7 @@ func (this *JPXEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *JPXEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
 }
@@ -1637,9 +1629,7 @@ func (this *JPXEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, ErrNoJPXDecode
 }
 
-//
-// Multi encoder: support serial encoding.
-//
+// MultiEncoder supports serial encoding.
 type MultiEncoder struct {
 	// Encoders in the order that they are to be applied.
 	encoders []StreamEncoder

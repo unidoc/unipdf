@@ -11,7 +11,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Cubic bezier curves are defined by:
+// CubicBezierCurve is defined by:
 // R(t) = P0*(1-t)^3 + P1*3*t*(1-t)^2 + P2*3*t^2*(1-t) + P3*t^3
 // where P0 is the current point, P1, P2 control points and P3 the final point.
 type CubicBezierCurve struct {
@@ -30,7 +30,7 @@ func NewCubicBezierCurve(x0, y0, x1, y1, x2, y2, x3, y3 float64) CubicBezierCurv
 	return curve
 }
 
-// Add X,Y offset to all points on a curve.
+// AddOffsetXY adds X,Y offset to all points on a curve.
 func (curve CubicBezierCurve) AddOffsetXY(offX, offY float64) CubicBezierCurve {
 	curve.P0.X += offX
 	curve.P1.X += offX

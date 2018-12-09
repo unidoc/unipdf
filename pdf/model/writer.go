@@ -250,7 +250,7 @@ func (this *PdfWriter) copyObjects() {
 	}
 }
 
-// Set the PDF version of the output file.
+// SetVersion sets the PDF version of the output file.
 func (this *PdfWriter) SetVersion(majorVersion, minorVersion int) {
 	this.majorVersion = majorVersion
 	this.minorVersion = minorVersion

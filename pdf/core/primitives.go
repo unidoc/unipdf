@@ -17,10 +17,10 @@ import (
 
 // PdfObject is an interface which all primitive PDF objects must implement.
 type PdfObject interface {
-	// Output a string representation of the primitive (for debugging).
+	// String outputs a string representation of the primitive (for debugging).
 	String() string
 
-	// Output the PDF primitive as written to file as expected by the standard.
+	// DefaultWriteString outputs the PDF primitive as written to file as expected by the standard.
 	DefaultWriteString() string
 }
 
@@ -869,7 +869,7 @@ func GetStringVal(obj PdfObject) (val string, found bool) {
 	return
 }
 
-// GetStringVal is like GetStringVal except that it returns the string as a []byte.
+// GetStringBytes is like GetStringVal except that it returns the string as a []byte.
 // It is for convenience.
 func GetStringBytes(obj PdfObject) (val []byte, found bool) {
 	so, found := TraceToDirectObject(obj).(*PdfObjectString)
