@@ -35,12 +35,12 @@ type FieldAppearanceGenerator interface {
 // When `allannots` is true, all annotations will be flattened. Keep false if want to keep non-form related
 // annotations intact.
 // When `appgen` is not nil, it will be used to generate appearance streams for the field annotations.
-func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerator) error {
+func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerator) error {
 	// Load all target widget annotations to be flattened into a map.
 	// The bool value indicates whether the annotation has value content.
 	ftargets := map[*PdfAnnotation]bool{}
 	{
-		acroForm := pdf.AcroForm
+		acroForm := r.AcroForm
 		if acroForm == nil {
 			return nil
 		}
@@ -68,7 +68,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 
 	// If all annotations are to be flattened, add to targets.
 	if allannots {
-		for _, page := range pdf.PageList {
+		for _, page := range r.PageList {
 			for _, annot := range page.Annotations {
 				ftargets[annot] = true
 			}
@@ -76,7 +76,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 	}
 
 	// Go through all pages and flatten specified annotations.
-	for _, page := range pdf.PageList {
+	for _, page := range r.PageList {
 		var annots []*PdfAnnotation
 
 		// Wrap the content streams.
@@ -168,7 +168,7 @@ func (pdf *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenera
 		}
 	}
 
-	pdf.AcroForm = nil
+	r.AcroForm = nil
 
 	return nil
 }

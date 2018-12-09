@@ -45,17 +45,17 @@ import (
 )
 
 // MakeEncoder returns an encoder built from the tables in  `rec`.
-func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
+func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := make(map[textencoding.CharCode]GlyphName)
 	for code := textencoding.CharCode(0); code <= 256; code++ {
 		r := rune(code) // TODO(dennwc): make sure this conversion is valid
-		gid, ok := rec.Chars[r]
+		gid, ok := ttf.Chars[r]
 		if !ok {
 			continue
 		}
 		var glyph GlyphName
-		if int(gid) >= 0 && int(gid) < len(rec.GlyphNames) {
-			glyph = rec.GlyphNames[gid]
+		if int(gid) >= 0 && int(gid) < len(ttf.GlyphNames) {
+			glyph = ttf.GlyphNames[gid]
 		} else {
 			// TODO(dennwc): shouldn't this be uniXXX?
 			glyph = GlyphName(rune(gid))
@@ -63,8 +63,8 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 		encoding[code] = glyph
 	}
 	if len(encoding) == 0 {
-		common.Log.Debug("WARNING: Zero length TrueType enconding. rec=%s Chars=[% 02x]",
-			rec, rec.Chars)
+		common.Log.Debug("WARNING: Zero length TrueType enconding. ttf=%s Chars=[% 02x]",
+			ttf, ttf.Chars)
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }

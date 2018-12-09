@@ -229,60 +229,60 @@ func copyObject(obj PdfObject, objectToObjectCopyMap map[PdfObject]PdfObject) Pd
 }
 
 // copyObjects makes objects copy and set as working.
-func (this *PdfWriter) copyObjects() {
+func (w *PdfWriter) copyObjects() {
 	objectToObjectCopyMap := make(map[PdfObject]PdfObject)
-	objects := make([]PdfObject, len(this.objects))
+	objects := make([]PdfObject, len(w.objects))
 	objectsMap := make(map[PdfObject]bool)
-	for i, obj := range this.objects {
+	for i, obj := range w.objects {
 		newObject := copyObject(obj, objectToObjectCopyMap)
 		objects[i] = newObject
-		if this.objectsMap[obj] {
+		if w.objectsMap[obj] {
 			objectsMap[newObject] = true
 		}
 	}
 
-	this.objects = objects
-	this.objectsMap = objectsMap
-	this.infoObj = copyObject(this.infoObj, objectToObjectCopyMap).(*PdfIndirectObject)
-	this.root = copyObject(this.root, objectToObjectCopyMap).(*PdfIndirectObject)
-	if this.encryptObj != nil {
-		this.encryptObj = copyObject(this.encryptObj, objectToObjectCopyMap).(*PdfIndirectObject)
+	w.objects = objects
+	w.objectsMap = objectsMap
+	w.infoObj = copyObject(w.infoObj, objectToObjectCopyMap).(*PdfIndirectObject)
+	w.root = copyObject(w.root, objectToObjectCopyMap).(*PdfIndirectObject)
+	if w.encryptObj != nil {
+		w.encryptObj = copyObject(w.encryptObj, objectToObjectCopyMap).(*PdfIndirectObject)
 	}
 }
 
 // SetVersion sets the PDF version of the output file.
-func (this *PdfWriter) SetVersion(majorVersion, minorVersion int) {
-	this.majorVersion = majorVersion
-	this.minorVersion = minorVersion
+func (w *PdfWriter) SetVersion(majorVersion, minorVersion int) {
+	w.majorVersion = majorVersion
+	w.minorVersion = minorVersion
 }
 
 // SetOCProperties sets the optional content properties.
-func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
-	dict := this.catalog
+func (w *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
+	dict := w.catalog
 
 	if ocProperties != nil {
 		common.Log.Trace("Setting OC Properties...")
 		dict.Set("OCProperties", ocProperties)
 		// Any risk of infinite loops?
-		this.addObjects(ocProperties)
+		w.addObjects(ocProperties)
 	}
 
 	return nil
 }
 
 // SetOptimizer sets the optimizer to optimize PDF before writing.
-func (this *PdfWriter) SetOptimizer(optimizer Optimizer) {
-	this.optimizer = optimizer
+func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
+	w.optimizer = optimizer
 }
 
 // GetOptimizer returns current PDF optimizer.
-func (this *PdfWriter) GetOptimizer() Optimizer {
-	return this.optimizer
+func (w *PdfWriter) GetOptimizer() Optimizer {
+	return w.optimizer
 }
 
-func (this *PdfWriter) hasObject(obj PdfObject) bool {
+func (w *PdfWriter) hasObject(obj PdfObject) bool {
 	// Check if already added.
-	for _, o := range this.objects {
+	for _, o := range w.objects {
 		// GH: May perform better to use a hash map to check if added?
 		if o == obj {
 			return true
@@ -294,25 +294,25 @@ func (this *PdfWriter) hasObject(obj PdfObject) bool {
 // Adds the object to list of objects and returns true if the obj was
 // not already added.
 // Returns false if the object was previously added.
-func (this *PdfWriter) addObject(obj PdfObject) bool {
-	hasObj := this.hasObject(obj)
+func (w *PdfWriter) addObject(obj PdfObject) bool {
+	hasObj := w.hasObject(obj)
 	if !hasObj {
-		this.objects = append(this.objects, obj)
+		w.objects = append(w.objects, obj)
 		return true
 	}
 
 	return false
 }
 
-func (this *PdfWriter) addObjects(obj PdfObject) error {
+func (w *PdfWriter) addObjects(obj PdfObject) error {
 	common.Log.Trace("Adding objects!")
 
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
 		common.Log.Trace("Indirect")
 		common.Log.Trace("- %s (%p)", obj, io)
 		common.Log.Trace("- %s", io.PdfObject)
-		if this.addObject(io) {
-			err := this.addObjects(io.PdfObject)
+		if w.addObject(io) {
+			err := w.addObjects(io.PdfObject)
 			if err != nil {
 				return err
 			}
@@ -323,8 +323,8 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
 		common.Log.Trace("Stream")
 		common.Log.Trace("- %s %p", obj, obj)
-		if this.addObject(so) {
-			err := this.addObjects(so.PdfObjectDictionary)
+		if w.addObject(so) {
+			err := w.addObjects(so.PdfObjectDictionary)
 			if err != nil {
 				return err
 			}
@@ -339,7 +339,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 			v := dict.Get(k)
 			common.Log.Trace("Key %s", k)
 			if k != "Parent" {
-				err := this.addObjects(v)
+				err := w.addObjects(v)
 				if err != nil {
 					return err
 				}
@@ -349,9 +349,9 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 					continue
 				}
 
-				if hasObj := this.hasObject(v); !hasObj {
+				if hasObj := w.hasObject(v); !hasObj {
 					common.Log.Debug("Parent obj is missing!! %T %p %v", v, v, v)
-					this.pendingObjects[v] = dict
+					w.pendingObjects[v] = dict
 					// Although it is missing at this point, it could be added later...
 				}
 				// How to handle the parent?  Make sure it is present?
@@ -375,7 +375,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 			return errors.New("Array is nil")
 		}
 		for _, v := range arr.Elements() {
-			err := this.addObjects(v)
+			err := w.addObjects(v)
 			if err != nil {
 				return err
 			}
@@ -393,7 +393,7 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 }
 
 // AddPage adds a page to the PDF file. The new page should be an indirect object.
-func (this *PdfWriter) AddPage(page *PdfPage) error {
+func (w *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
@@ -451,11 +451,11 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 
 	// Update the dictionary.
 	// Reuses the input object, updating the fields.
-	pDict.Set("Parent", this.pages)
+	pDict.Set("Parent", w.pages)
 	pageObj.PdfObject = pDict
 
 	// Add to Pages.
-	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
+	pagesDict, ok := w.pages.PdfObject.(*PdfObjectDictionary)
 	if !ok {
 		return errors.New("Invalid Pages obj (not a dict)")
 	}
@@ -471,10 +471,10 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 	// Update the count.
 	*pageCount = *pageCount + 1
 
-	this.addObject(pageObj)
+	w.addObject(pageObj)
 
 	// Traverse the page and record all object references.
-	err := this.addObjects(pDict)
+	err := w.addObjects(pDict)
 	if err != nil {
 		return err
 	}
@@ -511,21 +511,21 @@ func procPage(p *PdfPage) {
 }
 
 // AddOutlineTree adds outlines to a PDF file.
-func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
-	this.outlineTree = outlineTree
+func (w *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
+	w.outlineTree = outlineTree
 }
 
 // Look for a specific key.  Returns a list of entries.
 // What if something appears on many pages?
-func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
+func (w *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
 	common.Log.Trace("Seek by name.. %T", obj)
 	var list []PdfObject
 	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
-		return this.seekByName(io.PdfObject, followKeys, key)
+		return w.seekByName(io.PdfObject, followKeys, key)
 	}
 
 	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
-		return this.seekByName(so.PdfObjectDictionary, followKeys, key)
+		return w.seekByName(so.PdfObjectDictionary, followKeys, key)
 	}
 
 	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
@@ -538,7 +538,7 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 			for _, followKey := range followKeys {
 				if string(k) == followKey {
 					common.Log.Trace("Follow key %s", followKey)
-					items, err := this.seekByName(v, followKeys, key)
+					items, err := w.seekByName(v, followKeys, key)
 					if err != nil {
 						return list, err
 					}
@@ -556,39 +556,39 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 }
 
 // SetForms sets the Acroform for a PDF file.
-func (this *PdfWriter) SetForms(form *PdfAcroForm) error {
-	this.acroForm = form
+func (w *PdfWriter) SetForms(form *PdfAcroForm) error {
+	w.acroForm = form
 	return nil
 }
 
 // writeObject writes out an indirect / stream object.
-func (this *PdfWriter) writeObject(num int, obj PdfObject) {
+func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 	common.Log.Trace("Write obj #%d\n", num)
 
 	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-		this.crossReferenceMap[num] = crossReference{Type: 1, Offset: this.writePos, Generation: pobj.GenerationNumber}
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObject.DefaultWriteString()
 		outStr += "\nendobj\n"
-		this.writeString(outStr)
+		w.writeString(outStr)
 		return
 	}
 
 	// TODO: Add a default encoder if Filter not specified?
 	// Still need to make sure is encrypted.
 	if pobj, isStream := obj.(*PdfObjectStream); isStream {
-		this.crossReferenceMap[num] = crossReference{Type: 1, Offset: this.writePos, Generation: pobj.GenerationNumber}
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
 		outStr += "\nstream\n"
-		this.writeString(outStr)
-		this.writeBytes(pobj.Stream)
-		this.writeString("\nendstream\nendobj\n")
+		w.writeString(outStr)
+		w.writeBytes(pobj.Stream)
+		w.writeString("\nendstream\nendobj\n")
 		return
 	}
 
 	if ostreams, isObjStreams := obj.(*PdfObjectStreams); isObjStreams {
-		this.crossReferenceMap[num] = crossReference{Type: 1, Offset: this.writePos, Generation: ostreams.GenerationNumber}
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: ostreams.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
 		var offsets []string
 		var objData string
@@ -602,7 +602,7 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 			data := io.PdfObject.DefaultWriteString() + " "
 			objData = objData + data
 			offsets = append(offsets, fmt.Sprintf("%d %d", io.ObjectNumber, offset))
-			this.crossReferenceMap[int(io.ObjectNumber)] = crossReference{Type: 2, ObjectNumber: num, Index: index}
+			w.crossReferenceMap[int(io.ObjectNumber)] = crossReference{Type: 2, ObjectNumber: num, Index: index}
 			offset = offset + int64(len([]byte(data)))
 		}
 		offsetsStr := strings.Join(offsets, " ") + " "
@@ -621,19 +621,19 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		dict.Set(PdfObjectName("Length"), MakeInteger(length))
 		outStr += dict.DefaultWriteString()
 		outStr += "\nstream\n"
-		this.writeString(outStr)
-		this.writeBytes(data)
-		this.writeString("\nendstream\nendobj\n")
+		w.writeString(outStr)
+		w.writeBytes(data)
+		w.writeString("\nendstream\nendobj\n")
 		return
 	}
 
-	this.writer.WriteString(obj.DefaultWriteString())
+	w.writer.WriteString(obj.DefaultWriteString())
 }
 
 // Update all the object numbers prior to writing.
-func (this *PdfWriter) updateObjectNumbers() {
+func (w *PdfWriter) updateObjectNumbers() {
 	// Update numbers
-	for idx, obj := range this.objects {
+	for idx, obj := range w.objects {
 		switch o := obj.(type) {
 		case *PdfIndirectObject:
 			o.ObjectNumber = int64(idx + 1)
@@ -667,7 +667,7 @@ const (
 )
 
 // Encrypt encrypts the output file with a specified user/owner password.
-func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
+func (w *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
 	algo := RC4_128bit
 	if options != nil {
 		algo = options.Algorithm
@@ -692,44 +692,44 @@ func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptio
 	if err != nil {
 		return err
 	}
-	this.crypter = crypter
+	w.crypter = crypter
 	if info.Major != 0 {
-		this.SetVersion(info.Major, info.Minor)
+		w.SetVersion(info.Major, info.Minor)
 	}
-	this.encryptDict = info.Encrypt
+	w.encryptDict = info.Encrypt
 
-	this.ids = MakeArray(MakeHexString(info.ID0), MakeHexString(info.ID1))
+	w.ids = MakeArray(MakeHexString(info.ID0), MakeHexString(info.ID1))
 
 	// Make an object to contain the encryption dictionary.
 	io := MakeIndirectObject(info.Encrypt)
-	this.encryptObj = io
-	this.addObject(io)
+	w.encryptObj = io
+	w.addObject(io)
 
 	return nil
 }
 
 // Wrapper function to handle writing out string.
-func (this *PdfWriter) writeString(s string) error {
-	n, err := this.writer.WriteString(s)
+func (w *PdfWriter) writeString(s string) error {
+	n, err := w.writer.WriteString(s)
 	if err != nil {
 		return err
 	}
-	this.writePos += int64(n)
+	w.writePos += int64(n)
 	return nil
 }
 
 // Wrapper function to handle writing out bytes.
-func (this *PdfWriter) writeBytes(bb []byte) error {
-	n, err := this.writer.Write(bb)
+func (w *PdfWriter) writeBytes(bb []byte) error {
+	n, err := w.writer.Write(bb)
 	if err != nil {
 		return err
 	}
-	this.writePos += int64(n)
+	w.writePos += int64(n)
 	return nil
 }
 
 // Write writes out the PDF.
-func (this *PdfWriter) Write(writer io.Writer) error {
+func (w *PdfWriter) Write(writer io.Writer) error {
 	common.Log.Trace("Write()")
 
 	lk := license.GetLicenseKey()
@@ -739,32 +739,32 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 	}
 
 	// Outlines.
-	if this.outlineTree != nil {
-		common.Log.Trace("OutlineTree: %+v", this.outlineTree)
-		outlines := this.outlineTree.ToPdfObject()
+	if w.outlineTree != nil {
+		common.Log.Trace("OutlineTree: %+v", w.outlineTree)
+		outlines := w.outlineTree.ToPdfObject()
 		common.Log.Trace("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
-		this.catalog.Set("Outlines", outlines)
-		err := this.addObjects(outlines)
+		w.catalog.Set("Outlines", outlines)
+		err := w.addObjects(outlines)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Form fields.
-	if this.acroForm != nil {
+	if w.acroForm != nil {
 		common.Log.Trace("Writing acro forms")
-		indObj := this.acroForm.ToPdfObject()
+		indObj := w.acroForm.ToPdfObject()
 		common.Log.Trace("AcroForm: %+v", indObj)
-		this.catalog.Set("AcroForm", indObj)
-		err := this.addObjects(indObj)
+		w.catalog.Set("AcroForm", indObj)
+		err := w.addObjects(indObj)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check pending objects prior to write.
-	for pendingObj, pendingObjDict := range this.pendingObjects {
-		if !this.hasObject(pendingObj) {
+	for pendingObj, pendingObjDict := range w.pendingObjects {
+		if !w.hasObject(pendingObj) {
 			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
 			for _, key := range pendingObjDict.Keys() {
 				val := pendingObjDict.Get(key)
@@ -777,26 +777,25 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 		}
 	}
 	// Set version in the catalog.
-	this.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion)))
+	w.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", w.majorVersion, w.minorVersion)))
 
 	// Make a copy of objects prior to optimizing as this can alter the objects.
-	this.copyObjects()
+	w.copyObjects()
 
-	if this.optimizer != nil {
+	if w.optimizer != nil {
 		var err error
-		this.objects, err = this.optimizer.Optimize(this.objects)
+		w.objects, err = w.optimizer.Optimize(w.objects)
 		if err != nil {
 			return err
 		}
 	}
 
-	w := bufio.NewWriter(writer)
-	this.writer = w
-	this.writePos = 0
-	useCrossReferenceStream := this.majorVersion > 1 || (this.majorVersion == 1 && this.minorVersion > 4)
+	w.writer = bufio.NewWriter(writer)
+	w.writePos = 0
+	useCrossReferenceStream := w.majorVersion > 1 || (w.majorVersion == 1 && w.minorVersion > 4)
 	objectsInObjectStreams := make(map[PdfObject]bool)
 	if !useCrossReferenceStream {
-		for _, obj := range this.objects {
+		for _, obj := range w.objects {
 			if objStm, isObjectStreams := obj.(*PdfObjectStreams); isObjectStreams {
 				useCrossReferenceStream = true
 				for _, obj := range objStm.Elements() {
@@ -809,20 +808,20 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 		}
 	}
 
-	if useCrossReferenceStream && this.majorVersion == 1 && this.minorVersion < 5 {
-		this.minorVersion = 5
+	if useCrossReferenceStream && w.majorVersion == 1 && w.minorVersion < 5 {
+		w.minorVersion = 5
 	}
 
-	this.writeString(fmt.Sprintf("%%PDF-%d.%d\n", this.majorVersion, this.minorVersion))
-	this.writeString("%âãÏÓ\n")
+	w.writeString(fmt.Sprintf("%%PDF-%d.%d\n", w.majorVersion, w.minorVersion))
+	w.writeString("%âãÏÓ\n")
 
-	this.updateObjectNumbers()
+	w.updateObjectNumbers()
 
 	// Write objects
-	common.Log.Trace("Writing %d obj", len(this.objects))
-	this.crossReferenceMap = make(map[int]crossReference)
-	this.crossReferenceMap[0] = crossReference{Type: 0, ObjectNumber: 0, Generation: 0xFFFF}
-	for idx, obj := range this.objects {
+	common.Log.Trace("Writing %d obj", len(w.objects))
+	w.crossReferenceMap = make(map[int]crossReference)
+	w.crossReferenceMap[0] = crossReference{Type: 0, ObjectNumber: 0, Generation: 0xFFFF}
+	for idx, obj := range w.objects {
 		if skip := objectsInObjectStreams[obj]; skip {
 			continue
 		}
@@ -830,26 +829,26 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 
 		// Encrypt prior to writing.
 		// Encrypt dictionary should not be encrypted.
-		if this.crypter != nil && obj != this.encryptObj {
-			err := this.crypter.Encrypt(obj, int64(idx+1), 0)
+		if w.crypter != nil && obj != w.encryptObj {
+			err := w.crypter.Encrypt(obj, int64(idx+1), 0)
 			if err != nil {
 				common.Log.Debug("ERROR: Failed encrypting (%s)", err)
 				return err
 			}
 		}
-		this.writeObject(idx+1, obj)
+		w.writeObject(idx+1, obj)
 	}
 
-	xrefOffset := this.writePos
+	xrefOffset := w.writePos
 
 	if useCrossReferenceStream {
 
-		crossObjNumber := len(this.crossReferenceMap)
-		this.crossReferenceMap[crossObjNumber] = crossReference{Type: 1, ObjectNumber: crossObjNumber, Offset: xrefOffset}
+		crossObjNumber := len(w.crossReferenceMap)
+		w.crossReferenceMap[crossObjNumber] = crossReference{Type: 1, ObjectNumber: crossObjNumber, Offset: xrefOffset}
 		crossReferenceData := bytes.NewBuffer(nil)
 
-		for idx := 0; idx < len(this.crossReferenceMap); idx++ {
-			ref := this.crossReferenceMap[idx]
+		for idx := 0; idx < len(w.crossReferenceMap); idx++ {
+			ref := w.crossReferenceMap[idx]
 			switch ref.Type {
 			case 0:
 				binary.Write(crossReferenceData, binary.BigEndian, byte(0))
@@ -874,56 +873,56 @@ func (this *PdfWriter) Write(writer io.Writer) error {
 		crossReferenceStream.PdfObjectDictionary.Set("W", MakeArray(MakeInteger(1), MakeInteger(4), MakeInteger(2)))
 		crossReferenceStream.PdfObjectDictionary.Set("Index", MakeArray(MakeInteger(0), MakeInteger(crossReferenceStream.ObjectNumber+1)))
 		crossReferenceStream.PdfObjectDictionary.Set("Size", MakeInteger(crossReferenceStream.ObjectNumber+1))
-		crossReferenceStream.PdfObjectDictionary.Set("Info", this.infoObj)
-		crossReferenceStream.PdfObjectDictionary.Set("Root", this.root)
+		crossReferenceStream.PdfObjectDictionary.Set("Info", w.infoObj)
+		crossReferenceStream.PdfObjectDictionary.Set("Root", w.root)
 		// If encrypted!
-		if this.crypter != nil {
-			crossReferenceStream.Set("Encrypt", this.encryptObj)
-			crossReferenceStream.Set("ID", this.ids)
-			common.Log.Trace("Ids: %s", this.ids)
+		if w.crypter != nil {
+			crossReferenceStream.Set("Encrypt", w.encryptObj)
+			crossReferenceStream.Set("ID", w.ids)
+			common.Log.Trace("Ids: %s", w.ids)
 		}
 
-		this.writeObject(int(crossReferenceStream.ObjectNumber), crossReferenceStream)
+		w.writeObject(int(crossReferenceStream.ObjectNumber), crossReferenceStream)
 
 	} else {
-		this.writeString("xref\r\n")
-		outStr := fmt.Sprintf("%d %d\r\n", 0, len(this.crossReferenceMap))
-		this.writeString(outStr)
-		for idx := 0; idx < len(this.crossReferenceMap); idx++ {
-			ref := this.crossReferenceMap[idx]
+		w.writeString("xref\r\n")
+		outStr := fmt.Sprintf("%d %d\r\n", 0, len(w.crossReferenceMap))
+		w.writeString(outStr)
+		for idx := 0; idx < len(w.crossReferenceMap); idx++ {
+			ref := w.crossReferenceMap[idx]
 			switch ref.Type {
 			case 0:
 				outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
-				this.writeString(outStr)
+				w.writeString(outStr)
 			case 1:
 				outStr = fmt.Sprintf("%.10d %.5d n\r\n", ref.Offset, 0)
-				this.writeString(outStr)
+				w.writeString(outStr)
 			}
 		}
 
 		// Generate & write trailer
 		trailer := MakeDict()
-		trailer.Set("Info", this.infoObj)
-		trailer.Set("Root", this.root)
-		trailer.Set("Size", MakeInteger(int64(len(this.objects)+1)))
+		trailer.Set("Info", w.infoObj)
+		trailer.Set("Root", w.root)
+		trailer.Set("Size", MakeInteger(int64(len(w.objects)+1)))
 		// If encrypted!
-		if this.crypter != nil {
-			trailer.Set("Encrypt", this.encryptObj)
-			trailer.Set("ID", this.ids)
-			common.Log.Trace("Ids: %s", this.ids)
+		if w.crypter != nil {
+			trailer.Set("Encrypt", w.encryptObj)
+			trailer.Set("ID", w.ids)
+			common.Log.Trace("Ids: %s", w.ids)
 		}
-		this.writeString("trailer\n")
-		this.writeString(trailer.DefaultWriteString())
-		this.writeString("\n")
+		w.writeString("trailer\n")
+		w.writeString(trailer.DefaultWriteString())
+		w.writeString("\n")
 
 	}
 
 	// Make offset reference.
 	outStr := fmt.Sprintf("startxref\n%d\n", xrefOffset)
-	this.writeString(outStr)
-	this.writeString("%%EOF\n")
+	w.writeString(outStr)
+	w.writeString("%%EOF\n")
 
-	this.writer.Flush()
+	w.writer.Flush()
 
 	return nil
 }

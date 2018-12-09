@@ -48,13 +48,13 @@ func (v Vector) Rotate(phi float64) Vector {
 }
 
 // Flip changes the sign of the vector: -vector.
-func (this Vector) Flip() Vector {
-	mag := this.Magnitude()
-	theta := this.GetPolarAngle()
+func (v Vector) Flip() Vector {
+	mag := v.Magnitude()
+	theta := v.GetPolarAngle()
 
-	this.Dx = mag * math.Cos(theta+math.Pi)
-	this.Dy = mag * math.Sin(theta+math.Pi)
-	return this
+	v.Dx = mag * math.Cos(theta+math.Pi)
+	v.Dy = mag * math.Sin(theta+math.Pi)
+	return v
 }
 
 func (v Vector) FlipY() Vector {
@@ -67,19 +67,19 @@ func (v Vector) FlipX() Vector {
 	return v
 }
 
-func (this Vector) Scale(factor float64) Vector {
-	mag := this.Magnitude()
-	theta := this.GetPolarAngle()
+func (v Vector) Scale(factor float64) Vector {
+	mag := v.Magnitude()
+	theta := v.GetPolarAngle()
 
-	this.Dx = factor * mag * math.Cos(theta)
-	this.Dy = factor * mag * math.Sin(theta)
-	return this
+	v.Dx = factor * mag * math.Cos(theta)
+	v.Dy = factor * mag * math.Sin(theta)
+	return v
 }
 
-func (this Vector) Magnitude() float64 {
-	return math.Sqrt(math.Pow(this.Dx, 2.0) + math.Pow(this.Dy, 2.0))
+func (v Vector) Magnitude() float64 {
+	return math.Sqrt(math.Pow(v.Dx, 2.0) + math.Pow(v.Dy, 2.0))
 }
 
-func (this Vector) GetPolarAngle() float64 {
-	return math.Atan2(this.Dy, this.Dx)
+func (v Vector) GetPolarAngle() float64 {
+	return math.Atan2(v.Dy, v.Dx)
 }

@@ -666,36 +666,36 @@ type PdfFontDescriptor struct {
 }
 
 // GetDescent returns the Descent of the font `descriptor`.
-func (descriptor *PdfFontDescriptor) GetDescent() (float64, error) {
-	return core.GetNumberAsFloat(descriptor.Descent)
+func (desc *PdfFontDescriptor) GetDescent() (float64, error) {
+	return core.GetNumberAsFloat(desc.Descent)
 }
 
 // GetAscent returns the Ascent of the font `descriptor`.
-func (descriptor *PdfFontDescriptor) GetAscent() (float64, error) {
-	return core.GetNumberAsFloat(descriptor.Ascent)
+func (desc *PdfFontDescriptor) GetAscent() (float64, error) {
+	return core.GetNumberAsFloat(desc.Ascent)
 }
 
 // GetCapHeight returns the CapHeight of the font `descriptor`.
-func (descriptor *PdfFontDescriptor) GetCapHeight() (float64, error) {
-	return core.GetNumberAsFloat(descriptor.CapHeight)
+func (desc *PdfFontDescriptor) GetCapHeight() (float64, error) {
+	return core.GetNumberAsFloat(desc.CapHeight)
 }
 
 // String returns a string describing the font descriptor.
-func (descriptor *PdfFontDescriptor) String() string {
+func (desc *PdfFontDescriptor) String() string {
 	var parts []string
-	if descriptor.FontName != nil {
-		parts = append(parts, descriptor.FontName.String())
+	if desc.FontName != nil {
+		parts = append(parts, desc.FontName.String())
 	}
-	if descriptor.FontFamily != nil {
-		parts = append(parts, descriptor.FontFamily.String())
+	if desc.FontFamily != nil {
+		parts = append(parts, desc.FontFamily.String())
 	}
-	if descriptor.fontFile != nil {
-		parts = append(parts, descriptor.fontFile.String())
+	if desc.fontFile != nil {
+		parts = append(parts, desc.fontFile.String())
 	}
-	if descriptor.fontFile2 != nil {
-		parts = append(parts, descriptor.fontFile2.String())
+	if desc.fontFile2 != nil {
+		parts = append(parts, desc.fontFile2.String())
 	}
-	parts = append(parts, fmt.Sprintf("FontFile3=%t", descriptor.FontFile3 != nil))
+	parts = append(parts, fmt.Sprintf("FontFile3=%t", desc.FontFile3 != nil))
 
 	return fmt.Sprintf("FONT_DESCRIPTOR{%s}", strings.Join(parts, ", "))
 }
@@ -779,114 +779,114 @@ func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, 
 }
 
 // ToPdfObject returns the PdfFontDescriptor as a PDF dictionary inside an indirect object.
-func (this *PdfFontDescriptor) ToPdfObject() core.PdfObject {
+func (desc *PdfFontDescriptor) ToPdfObject() core.PdfObject {
 	d := core.MakeDict()
-	if this.container == nil {
-		this.container = &core.PdfIndirectObject{}
+	if desc.container == nil {
+		desc.container = &core.PdfIndirectObject{}
 	}
-	this.container.PdfObject = d
+	desc.container.PdfObject = d
 
 	d.Set("Type", core.MakeName("FontDescriptor"))
 
-	if this.FontName != nil {
-		d.Set("FontName", this.FontName)
+	if desc.FontName != nil {
+		d.Set("FontName", desc.FontName)
 	}
 
-	if this.FontFamily != nil {
-		d.Set("FontFamily", this.FontFamily)
+	if desc.FontFamily != nil {
+		d.Set("FontFamily", desc.FontFamily)
 	}
 
-	if this.FontStretch != nil {
-		d.Set("FontStretch", this.FontStretch)
+	if desc.FontStretch != nil {
+		d.Set("FontStretch", desc.FontStretch)
 	}
 
-	if this.FontWeight != nil {
-		d.Set("FontWeight", this.FontWeight)
+	if desc.FontWeight != nil {
+		d.Set("FontWeight", desc.FontWeight)
 	}
 
-	if this.Flags != nil {
-		d.Set("Flags", this.Flags)
+	if desc.Flags != nil {
+		d.Set("Flags", desc.Flags)
 	}
 
-	if this.FontBBox != nil {
-		d.Set("FontBBox", this.FontBBox)
+	if desc.FontBBox != nil {
+		d.Set("FontBBox", desc.FontBBox)
 	}
 
-	if this.ItalicAngle != nil {
-		d.Set("ItalicAngle", this.ItalicAngle)
+	if desc.ItalicAngle != nil {
+		d.Set("ItalicAngle", desc.ItalicAngle)
 	}
 
-	if this.Ascent != nil {
-		d.Set("Ascent", this.Ascent)
+	if desc.Ascent != nil {
+		d.Set("Ascent", desc.Ascent)
 	}
 
-	if this.Descent != nil {
-		d.Set("Descent", this.Descent)
+	if desc.Descent != nil {
+		d.Set("Descent", desc.Descent)
 	}
 
-	if this.Leading != nil {
-		d.Set("Leading", this.Leading)
+	if desc.Leading != nil {
+		d.Set("Leading", desc.Leading)
 	}
 
-	if this.CapHeight != nil {
-		d.Set("CapHeight", this.CapHeight)
+	if desc.CapHeight != nil {
+		d.Set("CapHeight", desc.CapHeight)
 	}
 
-	if this.XHeight != nil {
-		d.Set("XHeight", this.XHeight)
+	if desc.XHeight != nil {
+		d.Set("XHeight", desc.XHeight)
 	}
 
-	if this.StemV != nil {
-		d.Set("StemV", this.StemV)
+	if desc.StemV != nil {
+		d.Set("StemV", desc.StemV)
 	}
 
-	if this.StemH != nil {
-		d.Set("StemH", this.StemH)
+	if desc.StemH != nil {
+		d.Set("StemH", desc.StemH)
 	}
 
-	if this.AvgWidth != nil {
-		d.Set("AvgWidth", this.AvgWidth)
+	if desc.AvgWidth != nil {
+		d.Set("AvgWidth", desc.AvgWidth)
 	}
 
-	if this.MaxWidth != nil {
-		d.Set("MaxWidth", this.MaxWidth)
+	if desc.MaxWidth != nil {
+		d.Set("MaxWidth", desc.MaxWidth)
 	}
 
-	if this.MissingWidth != nil {
-		d.Set("MissingWidth", this.MissingWidth)
+	if desc.MissingWidth != nil {
+		d.Set("MissingWidth", desc.MissingWidth)
 	}
 
-	if this.FontFile != nil {
-		d.Set("FontFile", this.FontFile)
+	if desc.FontFile != nil {
+		d.Set("FontFile", desc.FontFile)
 	}
 
-	if this.FontFile2 != nil {
-		d.Set("FontFile2", this.FontFile2)
+	if desc.FontFile2 != nil {
+		d.Set("FontFile2", desc.FontFile2)
 	}
 
-	if this.FontFile3 != nil {
-		d.Set("FontFile3", this.FontFile3)
+	if desc.FontFile3 != nil {
+		d.Set("FontFile3", desc.FontFile3)
 	}
 
-	if this.CharSet != nil {
-		d.Set("CharSet", this.CharSet)
+	if desc.CharSet != nil {
+		d.Set("CharSet", desc.CharSet)
 	}
 
-	if this.Style != nil {
-		d.Set("FontName", this.FontName)
+	if desc.Style != nil {
+		d.Set("FontName", desc.FontName)
 	}
 
-	if this.Lang != nil {
-		d.Set("Lang", this.Lang)
+	if desc.Lang != nil {
+		d.Set("Lang", desc.Lang)
 	}
 
-	if this.FD != nil {
-		d.Set("FD", this.FD)
+	if desc.FD != nil {
+		d.Set("FD", desc.FD)
 	}
 
-	if this.CIDSet != nil {
-		d.Set("CIDSet", this.CIDSet)
+	if desc.CIDSet != nil {
+		d.Set("CIDSet", desc.CIDSet)
 	}
 
-	return this.container
+	return desc.container
 }

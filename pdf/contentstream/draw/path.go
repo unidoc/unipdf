@@ -11,61 +11,59 @@ type Path struct {
 }
 
 func NewPath() Path {
-	path := Path{}
-	path.Points = []Point{}
-	return path
+	return Path{}
 }
 
-func (this Path) AppendPoint(point Point) Path {
-	this.Points = append(this.Points, point)
-	return this
+func (p Path) AppendPoint(point Point) Path {
+	p.Points = append(p.Points, point)
+	return p
 }
 
-func (this Path) RemovePoint(number int) Path {
-	if number < 1 || number > len(this.Points) {
-		return this
+func (p Path) RemovePoint(number int) Path {
+	if number < 1 || number > len(p.Points) {
+		return p
 	}
 
 	idx := number - 1
-	this.Points = append(this.Points[:idx], this.Points[idx+1:]...)
-	return this
+	p.Points = append(p.Points[:idx], p.Points[idx+1:]...)
+	return p
 }
 
-func (this Path) Length() int {
-	return len(this.Points)
+func (p Path) Length() int {
+	return len(p.Points)
 }
 
-func (this Path) GetPointNumber(number int) Point {
-	if number < 1 || number > len(this.Points) {
+func (p Path) GetPointNumber(number int) Point {
+	if number < 1 || number > len(p.Points) {
 		return Point{}
 	}
-	return this.Points[number-1]
+	return p.Points[number-1]
 }
 
-func (path Path) Copy() Path {
+func (p Path) Copy() Path {
 	pathcopy := Path{}
 	pathcopy.Points = []Point{}
-	for _, p := range path.Points {
+	for _, p := range p.Points {
 		pathcopy.Points = append(pathcopy.Points, p)
 	}
 	return pathcopy
 }
 
-func (path Path) Offset(offX, offY float64) Path {
-	for i, p := range path.Points {
-		path.Points[i] = p.Add(offX, offY)
+func (p Path) Offset(offX, offY float64) Path {
+	for i, pt := range p.Points {
+		p.Points[i] = pt.Add(offX, offY)
 	}
-	return path
+	return p
 }
 
-func (path Path) GetBoundingBox() BoundingBox {
+func (p Path) GetBoundingBox() BoundingBox {
 	bbox := BoundingBox{}
 
 	minX := 0.0
 	maxX := 0.0
 	minY := 0.0
 	maxY := 0.0
-	for idx, p := range path.Points {
+	for idx, p := range p.Points {
 		if idx == 0 {
 			minX = p.X
 			maxX = p.X

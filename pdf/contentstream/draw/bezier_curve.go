@@ -94,35 +94,35 @@ func NewCubicBezierPath() CubicBezierPath {
 	return bpath
 }
 
-func (this CubicBezierPath) AppendCurve(curve CubicBezierCurve) CubicBezierPath {
-	this.Curves = append(this.Curves, curve)
-	return this
+func (p CubicBezierPath) AppendCurve(curve CubicBezierCurve) CubicBezierPath {
+	p.Curves = append(p.Curves, curve)
+	return p
 }
 
-func (bpath CubicBezierPath) Copy() CubicBezierPath {
+func (p CubicBezierPath) Copy() CubicBezierPath {
 	bpathcopy := CubicBezierPath{}
 	bpathcopy.Curves = []CubicBezierCurve{}
-	for _, c := range bpath.Curves {
+	for _, c := range p.Curves {
 		bpathcopy.Curves = append(bpathcopy.Curves, c)
 	}
 	return bpathcopy
 }
 
-func (bpath CubicBezierPath) Offset(offX, offY float64) CubicBezierPath {
-	for i, c := range bpath.Curves {
-		bpath.Curves[i] = c.AddOffsetXY(offX, offY)
+func (p CubicBezierPath) Offset(offX, offY float64) CubicBezierPath {
+	for i, c := range p.Curves {
+		p.Curves[i] = c.AddOffsetXY(offX, offY)
 	}
-	return bpath
+	return p
 }
 
-func (bpath CubicBezierPath) GetBoundingBox() Rectangle {
+func (p CubicBezierPath) GetBoundingBox() Rectangle {
 	bbox := Rectangle{}
 
 	minX := 0.0
 	maxX := 0.0
 	minY := 0.0
 	maxY := 0.0
-	for idx, c := range bpath.Curves {
+	for idx, c := range p.Curves {
 		curveBounds := c.GetBounds()
 		if idx == 0 {
 			minX = curveBounds.Llx
