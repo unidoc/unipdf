@@ -574,7 +574,7 @@ func (this *PdfWriter) writeObject(num int, obj PdfObject) {
 		return
 	}
 
-	// XXX/TODO: Add a default encoder if Filter not specified?
+	// TODO: Add a default encoder if Filter not specified?
 	// Still need to make sure is encrypted.
 	if pobj, isStream := obj.(*PdfObjectStream); isStream {
 		this.crossReferenceMap[num] = crossReference{Type: 1, Offset: this.writePos, Generation: pobj.GenerationNumber}

@@ -135,7 +135,7 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cc.Translate(ctx.X, ctx.PageHeight-ctx.Y-blk.height)
 		if blk.angle != 0 {
 			// Make the rotation about the upper left corner.
-			// XXX/TODO: Account for rotation origin. (Consider).
+			// TODO: Account for rotation origin. (Consider).
 			cc.Translate(0, blk.Height())
 			cc.RotateDeg(blk.angle)
 			cc.Translate(0, -blk.Height())
@@ -154,7 +154,7 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cc.Translate(blk.xPos, ctx.PageHeight-blk.yPos-blk.height)
 		if blk.angle != 0 {
 			// Make the rotation about the upper left corner.
-			// XXX/TODO: Consider supporting specification of rotation origin.
+			// TODO: Consider supporting specification of rotation origin.
 			cc.Translate(0, blk.Height())
 			cc.RotateDeg(blk.angle)
 			cc.Translate(0, -blk.Height())

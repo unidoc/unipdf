@@ -695,7 +695,7 @@ func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error
 	page := this.pageList[pageNumber-1]
 
 	// Look up all references related to page and load everything.
-	// XXX/TODO: Use of traverse object data will be limited when lazy-loading is supported.
+	// TODO: Use of traverse object data will be limited when lazy-loading is supported.
 	err := this.traverseObjectData(page)
 	if err != nil {
 		return nil, err

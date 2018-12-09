@@ -68,7 +68,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 	if !ok {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
-			// XXX: TODO Add Type1C support
+			// TODO: Add Type1C support
 			common.Log.Debug("Type1C fonts are currently not supported")
 			return nil, ErrType1CFontNotSupported
 		}
@@ -153,7 +153,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		}
 		encoder, err := textencoding.NewCustomSimpleTextEncoder(encodings, nil)
 		if err != nil {
-			// XXX: Logging an error because we need to fix all these misses.
+			// TODO: Logging an error because we need to fix all these misses.
 			common.Log.Error("UNKNOWN GLYPH: err=%v", err)
 			return nil
 		}

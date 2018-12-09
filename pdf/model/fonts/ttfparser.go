@@ -99,7 +99,7 @@ type TtfType struct {
 }
 
 // MakeToUnicode returns a ToUnicode CMap based on the encoding of `ttf`.
-// XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
+// TODO(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := make(map[cmap.CharCode]rune)
@@ -504,7 +504,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 		return t.parseCmapFormat12()
 	default:
 		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
-		return nil // XXX(peterwilliams97): Can't return an error here if creator_test.go is to pass.
+		return nil // TODO(peterwilliams97): Can't return an error here if creator_test.go is to pass.
 	}
 }
 

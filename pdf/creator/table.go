@@ -65,7 +65,7 @@ func newTable(cols int) *Table {
 	t.rowHeights = []float64{}
 
 	// Default row height
-	// XXX/TODO: Base on contents instead?
+	// TODO: Base on contents instead?
 	t.defaultRowHeight = 10.0
 
 	t.cells = []*TableCell{}

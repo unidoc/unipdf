@@ -175,7 +175,7 @@ func (p *PSParser) parseNumber() (PSObject, error) {
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
-			// XXX Is this supported in PS?
+			// TODO: Is this supported in PS?
 			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true

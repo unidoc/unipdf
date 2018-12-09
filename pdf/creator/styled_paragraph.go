@@ -238,7 +238,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return -1
 			}
 
@@ -251,7 +251,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			if !found {
 				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return -1
 			}
 
@@ -273,7 +273,7 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %s\n", r)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return -1
 			}
 
@@ -286,7 +286,7 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			if !found {
 				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return -1
 			}
 
@@ -329,7 +329,7 @@ func (p *StyledParagraph) getTextHeight() float64 {
 
 // wrapText splits text into lines. It uses a simple greedy algorithm to wrap
 // fill the lines.
-// XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
+// TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *StyledParagraph) wrapText() error {
 	if !p.enableWrap || int(p.wrapWidth) <= 0 {
 		p.lines = [][]*TextChunk{p.chunks}
@@ -362,7 +362,7 @@ func (p *StyledParagraph) wrapText() error {
 			if !found {
 				common.Log.Debug("Error! Glyph not found for rune: %v\n", r)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return errors.New("Glyph not found for rune")
 			}
 
@@ -388,7 +388,7 @@ func (p *StyledParagraph) wrapText() error {
 			if !found {
 				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
 
-				// XXX/FIXME: return error.
+				// FIXME: return error.
 				return errors.New("Glyph char metrics missing")
 			}
 
@@ -396,7 +396,7 @@ func (p *StyledParagraph) wrapText() error {
 			if lineWidth+w > p.wrapWidth*1000.0 {
 				// Goes out of bounds: Wrap.
 				// Breaks on the character.
-				// XXX/TODO: when goes outside: back up to next space,
+				// TODO: when goes outside: back up to next space,
 				// otherwise break on the character.
 				idx := -1
 				for j := len(glyphs) - 1; j >= 0; j-- {
@@ -479,7 +479,7 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 		if p.Height() > ctx.Height {
 			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
 			// left corner.
-			// XXX/TODO: Handle case when Paragraph is larger than the Page...
+			// TODO: Handle case when Paragraph is larger than the Page...
 			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
 
 			blocks = append(blocks, blk)

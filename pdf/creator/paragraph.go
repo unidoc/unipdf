@@ -217,7 +217,7 @@ func (p *Paragraph) getTextWidth() float64 {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 		if !found {
 			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
-			return -1 // XXX/FIXME: return error.
+			return -1 // FIXME: return error.
 		}
 
 		// Ignore newline for this.. Handles as if all in one line.
@@ -228,7 +228,7 @@ func (p *Paragraph) getTextWidth() float64 {
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
 			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
-			return -1 // XXX/FIXME: return error.
+			return -1 // FIXME: return error.
 		}
 		w += p.fontSize * metrics.Wx
 	}
@@ -243,7 +243,7 @@ func (p *Paragraph) getTextLineWidth(line string) float64 {
 		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
 		if !found {
 			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
-			return -1 // XXX/FIXME: return error.
+			return -1 // FIXME: return error.
 		}
 
 		// Ignore newline for this.. Handles as if all in one line.
@@ -254,7 +254,7 @@ func (p *Paragraph) getTextLineWidth(line string) float64 {
 		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
 		if !found {
 			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
-			return -1 // XXX/FIXME: return error.
+			return -1 // FIXME: return error.
 		}
 
 		width += p.fontSize * metrics.Wx
@@ -281,7 +281,7 @@ func (p *Paragraph) getMaxLineWidth() float64 {
 }
 
 // Simple algorithm to wrap the text into lines (greedy algorithm - fill the lines).
-// XXX/TODO: Consider the Knuth/Plass algorithm or an alternative.
+// TODO: Consider the Knuth/Plass algorithm or an alternative.
 func (p *Paragraph) wrapText() error {
 	if !p.enableWrap || int(p.wrapWidth) <= 0 {
 		p.textLines = []string{p.text}
@@ -331,7 +331,7 @@ func (p *Paragraph) wrapText() error {
 			// Breaks on the character.
 			idx := -1
 			for i := len(glyphs) - 1; i >= 0; i-- {
-				if glyphs[i] == "space" { // XXX: What about other space glyphs like controlHT?
+				if glyphs[i] == "space" { // TODO: What about other space glyphs like controlHT?
 					idx = i
 					break
 				}
@@ -396,7 +396,7 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		if p.Height() > ctx.Height {
 			// Goes out of the bounds.  Write on a new template instead and create a new context at
 			// upper left corner.
-			// XXX/TODO: Handle case when Paragraph is larger than the Page...
+			// TODO: Handle case when Paragraph is larger than the Page...
 			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
 
 			blocks = append(blocks, blk)
@@ -541,7 +541,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 				return ctx, errors.New("Unsupported rune in text encoding")
 			}
 
-			if glyph == "space" { // XXX: What about \t and other spaces.
+			if glyph == "space" { // TODO: What about \t and other spaces.
 				if len(encoded) > 0 {
 					objs = append(objs, core.MakeStringFromBytes(encoded))
 					encoded = []byte{}

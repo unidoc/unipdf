@@ -974,7 +974,7 @@ func (this *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 						// indicates that either the jpeg package is converting the raw
 						// data into YCbCr with some kind of mapping, or that the original
 						// data is not in R,G,B...
-						// XXX: This is not good as it means we end up with R, G, B... even
+						// TODO: This is not good as it means we end up with R, G, B... even
 						// if the original colormap was different.  Unless calling the RGBA()
 						// call exactly reverses the previous conversion to YCbCr (even if
 						// real data is not rgb)... ?
@@ -1716,7 +1716,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 
 		common.Log.Trace("Next name: %s, dp: %v, dParams: %v", *name, dp, dParams)
 		if *name == StreamEncodingFilterNameFlate {
-			// XXX: need to separate out the DecodeParms..
+			// TODO: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)
 			if err != nil {
 				return nil, err

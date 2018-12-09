@@ -212,7 +212,7 @@ func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		// Absolute drawing should not affect context.
 		ctx = origCtx
 	} else {
-		// XXX/TODO: Use projected height.
+		// TODO: Use projected height.
 		ctx.Y += img.margins.bottom
 		ctx.Height -= img.margins.bottom
 	}

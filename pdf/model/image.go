@@ -150,7 +150,7 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 	} else if img.ColorComponents == 4 {
 		imgout = goimage.NewCMYK(bounds)
 	} else {
-		// XXX? Force RGB convert?
+		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
 		return nil, errors.New("Unsupported colors")
 	}

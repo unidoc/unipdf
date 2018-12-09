@@ -63,7 +63,7 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 	if filterName != core.StreamEncodingFilterNameRaw {
 		inlineImage.Filter = core.MakeName(filterName)
 	}
-	// XXX/FIXME: Add decode params?
+	// FIXME: Add decode params?
 
 	return &inlineImage, nil
 }

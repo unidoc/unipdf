@@ -182,7 +182,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 		}
 	}
 	if obj := dict.Get("SE"); obj != nil {
-		// XXX: To add structure element support.
+		// TODO: To add structure element support.
 		// Currently not supporting structure elements.
 		item.SE = nil
 		/*
@@ -270,7 +270,7 @@ func (this *PdfOutlineItem) ToPdfObject() PdfObject {
 		dict.Set("A", this.A)
 	}
 	if obj := dict.Get("SE"); obj != nil {
-		// XXX: Currently not supporting structure element hierarchy.
+		// TODO: Currently not supporting structure element hierarchy.
 		// Remove it.
 		dict.Remove("SE")
 		//	delete(*dict, "SE")

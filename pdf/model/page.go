@@ -90,7 +90,7 @@ func (this *PdfPage) Duplicate() *PdfPage {
 // Note that a new container is created (indirect object).
 func (reader *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
-	page.pageDict = p //XXX?
+	page.pageDict = p // TODO
 
 	d := *p
 
