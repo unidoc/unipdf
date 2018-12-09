@@ -74,14 +74,14 @@ func newParagraph(text string, style TextStyle) *Paragraph {
 	p := &Paragraph{}
 	p.text = text
 
-	font, encoder, err := model.NewStandard14FontWithEncoding("Helvetica", model.GetAlphabet(text))
+	// TODO(dennwc): looks like it's tried to verify if the font has some runes missing
+	//				 but do we really care? the user knows better what font to use, and he can change it with SetFont
+	font, err := model.NewStandard14Font("Helvetica")
 	if err != nil {
 		common.Log.Debug("ERROR: NewStandard14FontWithEncoding failed err=%v. Falling back.", err)
 		p.textFont = model.DefaultFont()
 	}
 	p.textFont = font
-	// TODO(dennwc): can it use the default font encoder?
-	p.SetEncoder(encoder)
 
 	p.fontSize = 10
 	p.lineHeight = 1.0
@@ -114,11 +114,6 @@ func (p *Paragraph) SetFontSize(fontSize float64) {
 // SetTextAlignment sets the horizontal alignment of the text within the space provided.
 func (p *Paragraph) SetTextAlignment(align TextAlignment) {
 	p.alignment = align
-}
-
-// SetEncoder sets the text encoding.
-func (p *Paragraph) SetEncoder(encoder textencoding.TextEncoder) {
-	p.textFont.SetEncoder(encoder)
 }
 
 // SetLineHeight sets the line height (1.0 default).

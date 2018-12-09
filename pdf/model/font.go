@@ -380,20 +380,6 @@ func (font PdfFont) Encoder() textencoding.TextEncoder {
 	return t.Encoder()
 }
 
-// SetEncoder sets the encoding for the underlying font.
-func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
-	t := font.actualFont()
-	if t == nil {
-		common.Log.Debug("ERROR: SetEncoder. Not implemented for font type=%#T", font.context)
-		return
-	}
-	if t, ok := t.(interface {
-		SetEncoder(encoder textencoding.TextEncoder)
-	}); ok {
-		t.SetEncoder(encoder)
-	}
-}
-
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
 func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
