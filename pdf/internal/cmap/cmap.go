@@ -68,7 +68,7 @@ func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
 			Ordering:   "UCS",
 			Supplement: 0,
 		},
-		codespaces:    []Codespace{Codespace{Low: 0, High: 0xffff}},
+		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
 		codeToUnicode: codeToUnicode,
 	}
 }
