@@ -27,7 +27,7 @@ func (dup *CombineDuplicateDirectObjects) Optimize(objects []core.PdfObject) (op
 			obj := pDict.Get(key)
 			if dict, isDictObj := obj.(*core.PdfObjectDictionary); isDictObj {
 				hasher := md5.New()
-				hasher.Write([]byte(dict.DefaultWriteString()))
+				hasher.Write([]byte(dict.WriteString()))
 				hash := string(hasher.Sum(nil))
 				dictsByHash[hash] = append(dictsByHash[hash], dict)
 				processDict(dict)

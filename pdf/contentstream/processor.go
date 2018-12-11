@@ -56,12 +56,12 @@ type HandlerEntry struct {
 
 type HandlerConditionEnum int
 
-func (h HandlerConditionEnum) All() bool {
-	return h == HandlerConditionEnumAllOperands
+func (e HandlerConditionEnum) All() bool {
+	return e == HandlerConditionEnumAllOperands
 }
 
-func (h HandlerConditionEnum) Operand() bool {
-	return h == HandlerConditionEnumOperand
+func (e HandlerConditionEnum) Operand() bool {
+	return e == HandlerConditionEnumOperand
 }
 
 const (

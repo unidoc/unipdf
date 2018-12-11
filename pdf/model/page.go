@@ -441,7 +441,7 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 	return nil, nil
 }
 
-// GetPageDict convert the Page to a PDF object dictionary.
+// GetPageDict converts the Page to a PDF object dictionary.
 func (p *PdfPage) GetPageDict() *PdfObjectDictionary {
 	d := p.pageDict
 	d.Clear()
@@ -561,7 +561,7 @@ func (p *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 	}
 }
 
-// GetXObjectByName get XObject by name.
+// GetXObjectByName gets XObject by name.
 func (p *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
 	xresDict, has := p.Resources.XObject.(*PdfObjectDictionary)
 	if !has {
@@ -661,7 +661,7 @@ type WatermarkImageOptions struct {
 	PreserveAspectRatio bool
 }
 
-// AddWatermarkImage add a watermark to the page.
+// AddWatermarkImage adds a watermark to the page.
 func (p *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOptions) error {
 	// Page dimensions.
 	bbox, err := p.GetMediaBox()
@@ -892,11 +892,11 @@ func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
 }
 
 // Set sets the colorspace corresponding to key.  Add to Names if not set.
-func (r *PdfPageResourcesColorspaces) Set(key PdfObjectName, val PdfColorspace) {
-	if _, has := r.Colorspaces[string(key)]; !has {
-		r.Names = append(r.Names, string(key))
+func (rcs *PdfPageResourcesColorspaces) Set(key PdfObjectName, val PdfColorspace) {
+	if _, has := rcs.Colorspaces[string(key)]; !has {
+		rcs.Names = append(rcs.Names, string(key))
 	}
-	r.Colorspaces[string(key)] = val
+	rcs.Colorspaces[string(key)] = val
 }
 
 func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
@@ -928,15 +928,15 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourc
 	return colorspaces, nil
 }
 
-func (r *PdfPageResourcesColorspaces) ToPdfObject() PdfObject {
+func (rcs *PdfPageResourcesColorspaces) ToPdfObject() PdfObject {
 	dict := MakeDict()
-	for _, csName := range r.Names {
-		dict.Set(PdfObjectName(csName), r.Colorspaces[csName].ToPdfObject())
+	for _, csName := range rcs.Names {
+		dict.Set(PdfObjectName(csName), rcs.Colorspaces[csName].ToPdfObject())
 	}
 
-	if r.container != nil {
-		r.container.PdfObject = dict
-		return r.container
+	if rcs.container != nil {
+		rcs.container.PdfObject = dict
+		return rcs.container
 	}
 
 	return dict

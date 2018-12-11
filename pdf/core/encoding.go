@@ -1116,7 +1116,7 @@ func (enc *RunLengthEncoder) GetFilterName() string {
 
 // Create a new run length decoder from a stream object.
 func newRunLengthEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*RunLengthEncoder, error) {
-	// TODO(dennwc): unused paramaters; should verify that they are empty?
+	// TODO(dennwc): unused paramaters; check if it can have any in PDF spec
 	return NewRunLengthEncoder(), nil
 }
 

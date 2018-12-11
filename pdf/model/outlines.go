@@ -256,18 +256,18 @@ func (o *PdfOutline) ToPdfObject() PdfObject {
 	return container
 }
 
-func (o *PdfOutlineItem) GetContainingPdfObject() PdfObject {
-	return o.primitive
+func (oi *PdfOutlineItem) GetContainingPdfObject() PdfObject {
+	return oi.primitive
 }
 
 // ToPdfObject recursively builds the Outline tree PDF object.
-func (o *PdfOutlineItem) ToPdfObject() PdfObject {
-	container := o.primitive
+func (oi *PdfOutlineItem) ToPdfObject() PdfObject {
+	container := oi.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	dict.Set("Title", o.Title)
-	if o.A != nil {
-		dict.Set("A", o.A)
+	dict.Set("Title", oi.Title)
+	if oi.A != nil {
+		dict.Set("A", oi.A)
 	}
 	if obj := dict.Get("SE"); obj != nil {
 		// TODO: Currently not supporting structure element hierarchy.
@@ -276,39 +276,39 @@ func (o *PdfOutlineItem) ToPdfObject() PdfObject {
 		//	delete(*dict, "SE")
 	}
 	/*
-		if o.SE != nil {
-			(*dict)["SE"] = o.SE
+		if oi.SE != nil {
+			(*dict)["SE"] = oi.SE
 		}
 	*/
-	if o.C != nil {
-		dict.Set("C", o.C)
+	if oi.C != nil {
+		dict.Set("C", oi.C)
 	}
-	if o.Dest != nil {
-		dict.Set("Dest", o.Dest)
+	if oi.Dest != nil {
+		dict.Set("Dest", oi.Dest)
 	}
-	if o.F != nil {
-		dict.Set("F", o.F)
+	if oi.F != nil {
+		dict.Set("F", oi.F)
 	}
-	if o.Count != nil {
-		dict.Set("Count", MakeInteger(*o.Count))
+	if oi.Count != nil {
+		dict.Set("Count", MakeInteger(*oi.Count))
 	}
-	if o.Next != nil {
-		dict.Set("Next", o.Next.ToPdfObject())
+	if oi.Next != nil {
+		dict.Set("Next", oi.Next.ToPdfObject())
 	}
-	if o.First != nil {
-		dict.Set("First", o.First.ToPdfObject())
+	if oi.First != nil {
+		dict.Set("First", oi.First.ToPdfObject())
 	}
-	if o.Prev != nil {
-		dict.Set("Prev", o.Prev.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[o.Prev.getOuter()]
+	if oi.Prev != nil {
+		dict.Set("Prev", oi.Prev.getOuter().GetContainingPdfObject())
+		//PdfObjectConverterCache[oi.Prev.getOuter()]
 	}
-	if o.Last != nil {
-		dict.Set("Last", o.Last.getOuter().GetContainingPdfObject())
-		// PdfObjectConverterCache[o.Last.getOuter()]
+	if oi.Last != nil {
+		dict.Set("Last", oi.Last.getOuter().GetContainingPdfObject())
+		// PdfObjectConverterCache[oi.Last.getOuter()]
 	}
-	if o.Parent != nil {
-		dict.Set("Parent", o.Parent.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[o.Parent.getOuter()]
+	if oi.Parent != nil {
+		dict.Set("Parent", oi.Parent.getOuter().GetContainingPdfObject())
+		//PdfObjectConverterCache[oi.Parent.getOuter()]
 	}
 
 	return container

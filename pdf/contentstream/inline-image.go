@@ -71,39 +71,39 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 func (img *ContentStreamInlineImage) String() string {
 	s := fmt.Sprintf("InlineImage(len=%d)\n", len(img.stream))
 	if img.BitsPerComponent != nil {
-		s += "- BPC " + img.BitsPerComponent.DefaultWriteString() + "\n"
+		s += "- BPC " + img.BitsPerComponent.WriteString() + "\n"
 	}
 	if img.ColorSpace != nil {
-		s += "- CS " + img.ColorSpace.DefaultWriteString() + "\n"
+		s += "- CS " + img.ColorSpace.WriteString() + "\n"
 	}
 	if img.Decode != nil {
-		s += "- D " + img.Decode.DefaultWriteString() + "\n"
+		s += "- D " + img.Decode.WriteString() + "\n"
 	}
 	if img.DecodeParms != nil {
-		s += "- DP " + img.DecodeParms.DefaultWriteString() + "\n"
+		s += "- DP " + img.DecodeParms.WriteString() + "\n"
 	}
 	if img.Filter != nil {
-		s += "- F " + img.Filter.DefaultWriteString() + "\n"
+		s += "- F " + img.Filter.WriteString() + "\n"
 	}
 	if img.Height != nil {
-		s += "- H " + img.Height.DefaultWriteString() + "\n"
+		s += "- H " + img.Height.WriteString() + "\n"
 	}
 	if img.ImageMask != nil {
-		s += "- IM " + img.ImageMask.DefaultWriteString() + "\n"
+		s += "- IM " + img.ImageMask.WriteString() + "\n"
 	}
 	if img.Intent != nil {
-		s += "- Intent " + img.Intent.DefaultWriteString() + "\n"
+		s += "- Intent " + img.Intent.WriteString() + "\n"
 	}
 	if img.Interpolate != nil {
-		s += "- I " + img.Interpolate.DefaultWriteString() + "\n"
+		s += "- I " + img.Interpolate.WriteString() + "\n"
 	}
 	if img.Width != nil {
-		s += "- W " + img.Width.DefaultWriteString() + "\n"
+		s += "- W " + img.Width.WriteString() + "\n"
 	}
 	return s
 }
 
-func (img *ContentStreamInlineImage) DefaultWriteString() string {
+func (img *ContentStreamInlineImage) WriteString() string {
 	var output bytes.Buffer
 
 	// We do not start with "BI" as that is the operand and is written out separately.
@@ -111,34 +111,34 @@ func (img *ContentStreamInlineImage) DefaultWriteString() string {
 	s := ""
 
 	if img.BitsPerComponent != nil {
-		s += "/BPC " + img.BitsPerComponent.DefaultWriteString() + "\n"
+		s += "/BPC " + img.BitsPerComponent.WriteString() + "\n"
 	}
 	if img.ColorSpace != nil {
-		s += "/CS " + img.ColorSpace.DefaultWriteString() + "\n"
+		s += "/CS " + img.ColorSpace.WriteString() + "\n"
 	}
 	if img.Decode != nil {
-		s += "/D " + img.Decode.DefaultWriteString() + "\n"
+		s += "/D " + img.Decode.WriteString() + "\n"
 	}
 	if img.DecodeParms != nil {
-		s += "/DP " + img.DecodeParms.DefaultWriteString() + "\n"
+		s += "/DP " + img.DecodeParms.WriteString() + "\n"
 	}
 	if img.Filter != nil {
-		s += "/F " + img.Filter.DefaultWriteString() + "\n"
+		s += "/F " + img.Filter.WriteString() + "\n"
 	}
 	if img.Height != nil {
-		s += "/H " + img.Height.DefaultWriteString() + "\n"
+		s += "/H " + img.Height.WriteString() + "\n"
 	}
 	if img.ImageMask != nil {
-		s += "/IM " + img.ImageMask.DefaultWriteString() + "\n"
+		s += "/IM " + img.ImageMask.WriteString() + "\n"
 	}
 	if img.Intent != nil {
-		s += "/Intent " + img.Intent.DefaultWriteString() + "\n"
+		s += "/Intent " + img.Intent.WriteString() + "\n"
 	}
 	if img.Interpolate != nil {
-		s += "/I " + img.Interpolate.DefaultWriteString() + "\n"
+		s += "/I " + img.Interpolate.WriteString() + "\n"
 	}
 	if img.Width != nil {
-		s += "/W " + img.Width.DefaultWriteString() + "\n"
+		s += "/W " + img.Width.WriteString() + "\n"
 	}
 	output.WriteString(s)
 
@@ -198,7 +198,7 @@ func (img *ContentStreamInlineImage) GetEncoder() (core.StreamEncoder, error) {
 	return newEncoderFromInlineImage(img)
 }
 
-// IsMask check if an image is a mask.
+// IsMask checks if an image is a mask.
 // The image mask entry in the image dictionary specifies that the image data shall be used as a stencil
 // mask for painting in the current color. The mask data is 1bpc, grayscale.
 func (img *ContentStreamInlineImage) IsMask() (bool, error) {
@@ -216,7 +216,7 @@ func (img *ContentStreamInlineImage) IsMask() (bool, error) {
 
 }
 
-// ToImage export the inline image to Image which can be transformed or exported easily.
+// ToImage exports the inline image to Image which can be transformed or exported easily.
 // Page resources are needed to look up colorspace information.
 func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) (*model.Image, error) {
 	// Decode the imaging data if encoded.
@@ -297,7 +297,7 @@ func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) 
 	return image, nil
 }
 
-// ParseInlineImage parses an inline image from a content stream, both read its properties and binary data.
+// ParseInlineImage parses an inline image from a content stream, both reading its properties and binary data.
 // When called, "BI" has already been read from the stream.  This function
 // finishes reading through "EI" and then returns the ContentStreamInlineImage.
 func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, error) {

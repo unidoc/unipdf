@@ -568,7 +568,7 @@ func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
 		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
-		outStr += pobj.PdfObject.DefaultWriteString()
+		outStr += pobj.PdfObject.WriteString()
 		outStr += "\nendobj\n"
 		w.writeString(outStr)
 		return
@@ -579,7 +579,7 @@ func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 	if pobj, isStream := obj.(*PdfObjectStream); isStream {
 		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
-		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
+		outStr += pobj.PdfObjectDictionary.WriteString()
 		outStr += "\nstream\n"
 		w.writeString(outStr)
 		w.writeBytes(pobj.Stream)
@@ -599,7 +599,7 @@ func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 			if !isIndirect {
 				common.Log.Error("Object streams N %d contains non indirect pdf object %v", num, obj)
 			}
-			data := io.PdfObject.DefaultWriteString() + " "
+			data := io.PdfObject.WriteString() + " "
 			objData = objData + data
 			offsets = append(offsets, fmt.Sprintf("%d %d", io.ObjectNumber, offset))
 			w.crossReferenceMap[int(io.ObjectNumber)] = crossReference{Type: 2, ObjectNumber: num, Index: index}
@@ -619,7 +619,7 @@ func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 		length := int64(len(data))
 
 		dict.Set(PdfObjectName("Length"), MakeInteger(length))
-		outStr += dict.DefaultWriteString()
+		outStr += dict.WriteString()
 		outStr += "\nstream\n"
 		w.writeString(outStr)
 		w.writeBytes(data)
@@ -627,7 +627,7 @@ func (w *PdfWriter) writeObject(num int, obj PdfObject) {
 		return
 	}
 
-	w.writer.WriteString(obj.DefaultWriteString())
+	w.writer.WriteString(obj.WriteString())
 }
 
 // Update all the object numbers prior to writing.
@@ -912,7 +912,7 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 			common.Log.Trace("Ids: %s", w.ids)
 		}
 		w.writeString("trailer\n")
-		w.writeString(trailer.DefaultWriteString())
+		w.writeString(trailer.WriteString())
 		w.writeString("\n")
 
 	}

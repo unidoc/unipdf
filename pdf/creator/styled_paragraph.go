@@ -387,8 +387,6 @@ func (p *StyledParagraph) wrapText() error {
 			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
 			if !found {
 				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
-
-				// FIXME: return error.
 				return errors.New("Glyph char metrics missing")
 			}
 

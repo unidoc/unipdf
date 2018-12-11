@@ -20,8 +20,9 @@ type PdfObject interface {
 	// String outputs a string representation of the primitive (for debugging).
 	String() string
 
-	// DefaultWriteString outputs the PDF primitive as written to file as expected by the standard.
-	DefaultWriteString() string
+	// WriteString outputs the PDF primitive as written to file as expected by the standard.
+	// TODO(dennwc): it should return a byte slice, or accept a writer
+	WriteString() string
 }
 
 // PdfObjectBool represents the primitive PDF boolean object.
@@ -242,8 +243,8 @@ func (bool *PdfObjectBool) String() string {
 	return "false"
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (bool *PdfObjectBool) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (bool *PdfObjectBool) WriteString() string {
 	if *bool {
 		return "true"
 	}
@@ -254,8 +255,8 @@ func (int *PdfObjectInteger) String() string {
 	return fmt.Sprintf("%d", *int)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (int *PdfObjectInteger) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (int *PdfObjectInteger) WriteString() string {
 	return fmt.Sprintf("%d", *int)
 }
 
@@ -263,8 +264,8 @@ func (float *PdfObjectFloat) String() string {
 	return fmt.Sprintf("%f", *float)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (float *PdfObjectFloat) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (float *PdfObjectFloat) WriteString() string {
 	return fmt.Sprintf("%f", *float)
 }
 
@@ -298,8 +299,8 @@ func (str *PdfObjectString) Bytes() []byte {
 	return []byte(str.val)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (str *PdfObjectString) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (str *PdfObjectString) WriteString() string {
 	var output bytes.Buffer
 
 	// Handle hex representation.
@@ -343,8 +344,8 @@ func (name *PdfObjectName) String() string {
 	return string(*name)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (name *PdfObjectName) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (name *PdfObjectName) WriteString() string {
 	var output bytes.Buffer
 
 	if len(*name) > 127 {
@@ -483,11 +484,11 @@ func (array *PdfObjectArray) String() string {
 	return outStr
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (array *PdfObjectArray) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (array *PdfObjectArray) WriteString() string {
 	outStr := "["
 	for ind, o := range array.Elements() {
-		outStr += o.DefaultWriteString()
+		outStr += o.WriteString()
 		if ind < (array.Len() - 1) {
 			outStr += " "
 		}
@@ -594,15 +595,15 @@ func (d *PdfObjectDictionary) String() string {
 	return outStr
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (d *PdfObjectDictionary) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (d *PdfObjectDictionary) WriteString() string {
 	outStr := "<<"
 	for _, k := range d.keys {
 		v := d.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
-		outStr += k.DefaultWriteString()
+		outStr += k.WriteString()
 		outStr += " "
-		outStr += v.DefaultWriteString()
+		outStr += v.WriteString()
 	}
 	outStr += ">>"
 	return outStr
@@ -735,8 +736,8 @@ func (ref *PdfObjectReference) String() string {
 	return fmt.Sprintf("Ref(%d %d)", ref.ObjectNumber, ref.GenerationNumber)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (ref *PdfObjectReference) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (ref *PdfObjectReference) WriteString() string {
 	return fmt.Sprintf("%d %d R", ref.ObjectNumber, ref.GenerationNumber)
 }
 
@@ -747,8 +748,8 @@ func (ind *PdfIndirectObject) String() string {
 	return fmt.Sprintf("IObject:%d", (*ind).ObjectNumber)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (ind *PdfIndirectObject) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (ind *PdfIndirectObject) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*ind).ObjectNumber)
 	return outStr
 }
@@ -758,8 +759,8 @@ func (stream *PdfObjectStream) String() string {
 	return fmt.Sprintf("Object stream %d: %s", stream.ObjectNumber, stream.PdfObjectDictionary)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (stream *PdfObjectStream) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (stream *PdfObjectStream) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*stream).ObjectNumber)
 	return outStr
 }
@@ -769,8 +770,8 @@ func (null *PdfObjectNull) String() string {
 	return "null"
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (null *PdfObjectNull) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (null *PdfObjectNull) WriteString() string {
 	return "null"
 }
 
@@ -969,8 +970,8 @@ func (streams *PdfObjectStreams) Len() int {
 	return len(streams.vec)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (streams *PdfObjectStreams) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (streams *PdfObjectStreams) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*streams).ObjectNumber)
 	return outStr
 }

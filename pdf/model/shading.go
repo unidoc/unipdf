@@ -75,7 +75,7 @@ type PdfShadingType1 struct {
 	Function []PdfFunction
 }
 
-// PdfShadingType2 is a Axial shading.
+// PdfShadingType2 is an Axial shading.
 type PdfShadingType2 struct {
 	*PdfShading
 	Coords   *PdfObjectArray

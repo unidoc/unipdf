@@ -152,7 +152,7 @@ func (xform *XObjectForm) SetContentStream(content []byte, encoder StreamEncoder
 	return nil
 }
 
-// ToPdfObject return a stream object.
+// ToPdfObject returns a stream object.
 func (xform *XObjectForm) ToPdfObject() PdfObject {
 	stream := xform.primitive
 
@@ -367,7 +367,7 @@ func toGray(matte *PdfObjectArray) (float64, error) {
 	return 0.0, err
 }
 
-// NewXObjectImageFromStream build the image xobject from a stream object.
+// NewXObjectImageFromStream builds the image xobject from a stream object.
 // An image dictionary is the dictionary portion of a stream object representing an image XObject.
 func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	img := &XObjectImage{}
@@ -445,7 +445,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	return img, nil
 }
 
-// SetImage update XObject Image with new image data.
+// SetImage updates XObject Image with new image data.
 func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	encoded, err := ximg.Filter.EncodeBytes(img.Data)
 	if err != nil {
@@ -543,7 +543,7 @@ func (ximg *XObjectImage) GetContainingPdfObject() PdfObject {
 	return ximg.primitive
 }
 
-// ToPdfObject return a stream object.
+// ToPdfObject returns a stream object.
 func (ximg *XObjectImage) ToPdfObject() PdfObject {
 	stream := ximg.primitive
 

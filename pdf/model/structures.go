@@ -58,7 +58,7 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	return &rect, nil
 }
 
-// ToPdfObject convert rectangle to a PDF object.
+// ToPdfObject converts rectangle to a PDF object.
 func (rect *PdfRectangle) ToPdfObject() PdfObject {
 	arr := MakeArray(MakeFloat(rect.Llx), MakeFloat(rect.Lly), MakeFloat(rect.Urx), MakeFloat(rect.Ury))
 	return arr
