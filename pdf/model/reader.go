@@ -33,6 +33,7 @@ type PdfReader struct {
 
 	// For tracking traversal (cache).
 	traversed map[PdfObject]bool
+	rs        io.ReadSeeker
 }
 
 // NewPdfReader returns a new PdfReader for an input io.ReadSeeker interface. Can be used to read PDF from
@@ -40,6 +41,7 @@ type PdfReader struct {
 // not encrypted).
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	pdfReader := &PdfReader{}
+	pdfReader.rs = rs
 	pdfReader.traversed = map[PdfObject]bool{}
 
 	pdfReader.modelManager = newModelManager()

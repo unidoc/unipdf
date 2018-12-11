@@ -40,7 +40,7 @@ func (parser *PdfParser) Inspect() (map[string]int, error) {
 func (parser *PdfParser) GetObjectNums() []int {
 	objNums := []int{}
 	for _, x := range parser.xrefs {
-		objNums = append(objNums, x.objectNumber)
+		objNums = append(objNums, x.ObjectNumber)
 	}
 
 	// Sort the object numbers to give consistent ordering of PDF objects in output.
@@ -76,15 +76,15 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	i := 0
 	for _, k := range keys {
 		xref := parser.xrefs[k]
-		if xref.objectNumber == 0 {
+		if xref.ObjectNumber == 0 {
 			continue
 		}
 		objCount++
 		common.Log.Trace("==========")
-		common.Log.Trace("Looking up object number: %d", xref.objectNumber)
-		o, err := parser.LookupByNumber(xref.objectNumber)
+		common.Log.Trace("Looking up object number: %d", xref.ObjectNumber)
+		o, err := parser.LookupByNumber(xref.ObjectNumber)
 		if err != nil {
-			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
+			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.ObjectNumber, err)
 			failedCount++
 			continue
 		}
@@ -93,7 +93,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 
 		iobj, isIndirect := o.(*PdfIndirectObject)
 		if isIndirect {
-			common.Log.Trace("IND OOBJ %d: %s", xref.objectNumber, iobj)
+			common.Log.Trace("IND OOBJ %d: %s", xref.ObjectNumber, iobj)
 			dict, isDict := iobj.PdfObject.(*PdfObjectDictionary)
 			if isDict {
 				// Check if has Type parameter.
@@ -148,7 +148,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 					objTypes[otype]++
 				}
 			}
-			common.Log.Trace("DIRECT OBJ %d: %s", xref.objectNumber, o)
+			common.Log.Trace("DIRECT OBJ %d: %s", xref.ObjectNumber, o)
 		}
 
 		i++

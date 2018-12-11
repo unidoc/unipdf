@@ -61,6 +61,8 @@ type PdfObjectNull struct{}
 
 // PdfObjectReference represents the primitive PDF reference object.
 type PdfObjectReference struct {
+	// For PdfAppender, need access to the parser (and the cross reference table for object access).
+	parser           *PdfParser
 	ObjectNumber     int64
 	GenerationNumber int64
 }
@@ -232,6 +234,11 @@ func MakeObjectStreams(objects ...PdfObject) *PdfObjectStreams {
 		streams.vec = append(streams.vec, obj)
 	}
 	return streams
+}
+
+// GetParser returns the parser for lazy-loading or compare references.
+func (ref *PdfObjectReference) GetParser() *PdfParser {
+	return ref.parser
 }
 
 // String returns the state of the bool as "true" or "false".
@@ -945,6 +952,15 @@ func (streams *PdfObjectStreams) Append(objects ...PdfObject) {
 	for _, obj := range objects {
 		streams.vec = append(streams.vec, obj)
 	}
+}
+
+// Set sets the PdfObject at index i of the streams. An error is returned if the index is outside bounds.
+func (streams *PdfObjectStreams) Set(i int, obj PdfObject) error {
+	if i < 0 || i >= len(streams.vec) {
+		return errors.New("Outside bounds")
+	}
+	streams.vec[i] = obj
+	return nil
 }
 
 // Elements returns a slice of the PdfObject elements in the array.
