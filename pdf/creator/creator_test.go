@@ -42,6 +42,8 @@ func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
+var baselineRenderPath = os.Getenv("UNIDOC_RENDERTEST_BASELINE_PATH")
+
 const testPdfFile1 = "./testdata/minimal.pdf"
 const testPdfLoremIpsumFile = "./testdata/lorem.pdf"
 const testPdfTemplatesFile1 = "./testdata/templates1.pdf"
@@ -3005,7 +3007,10 @@ func testWriteAndRender(t *testing.T, c *Creator, pname string) {
 func testRender(t *testing.T, pname string) {
 	tname := strings.TrimSuffix(filepath.Base(pname), filepath.Ext(pname))
 	t.Run("render", func(t *testing.T) {
-		fname := "./testdata/" + tname
+		if baselineRenderPath == "" {
+			t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
+		}
+		fname := filepath.Join(baselineRenderPath, tname)
 		// will emit template_1-x.png
 		err := renderPDFToFile(pname, 0, fname)
 		if err != nil {
