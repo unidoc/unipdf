@@ -33,22 +33,22 @@ type PdfShading struct {
 	container PdfObject // The container.  Can be stream, indirect object, or dictionary.
 }
 
-func (this *PdfShading) GetContainingPdfObject() PdfObject {
-	return this.container
+func (s *PdfShading) GetContainingPdfObject() PdfObject {
+	return s.container
 }
 
-// Context in this case is a reference to the subshading entry as represented by PdfShadingType1-7.
-func (this *PdfShading) GetContext() PdfModel {
-	return this.context
+// GetContext returns a reference to the subshading entry as represented by PdfShadingType1-7.
+func (s *PdfShading) GetContext() PdfModel {
+	return s.context
 }
 
-// Set the sub annotation (context).
-func (this *PdfShading) SetContext(ctx PdfModel) {
-	this.context = ctx
+// SetContext set the sub annotation (context).
+func (s *PdfShading) SetContext(ctx PdfModel) {
+	s.context = ctx
 }
 
-func (this *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
-	obj := this.container
+func (s *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
+	obj := s.container
 
 	if indObj, isInd := obj.(*PdfIndirectObject); isInd {
 		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
@@ -67,7 +67,7 @@ func (this *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
 	}
 }
 
-// Shading type 1: Function-based shading.
+// PdfShadingType1 is a Function-based shading.
 type PdfShadingType1 struct {
 	*PdfShading
 	Domain   *PdfObjectArray
@@ -75,7 +75,7 @@ type PdfShadingType1 struct {
 	Function []PdfFunction
 }
 
-// Shading type 2: Axial shading.
+// PdfShadingType2 is an Axial shading.
 type PdfShadingType2 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
@@ -84,7 +84,7 @@ type PdfShadingType2 struct {
 	Extend   *PdfObjectArray
 }
 
-// Shading type 3: Radial shading.
+// PdfShadingType3 is a Radial shading.
 type PdfShadingType3 struct {
 	*PdfShading
 	Coords   *PdfObjectArray
@@ -93,7 +93,7 @@ type PdfShadingType3 struct {
 	Extend   *PdfObjectArray
 }
 
-// Shading type 4: Free-form Gouraud-shaded triangle mesh.
+// PdfShadingType4 is a Free-form Gouraud-shaded triangle mesh.
 type PdfShadingType4 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -103,7 +103,7 @@ type PdfShadingType4 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 5: Lattice-form Gouraud-shaded triangle mesh.
+// PdfShadingType5 is a Lattice-form Gouraud-shaded triangle mesh.
 type PdfShadingType5 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -113,7 +113,7 @@ type PdfShadingType5 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 6: Coons patch mesh.
+// PdfShadingType6 is a Coons patch mesh.
 type PdfShadingType6 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -123,7 +123,7 @@ type PdfShadingType6 struct {
 	Function          []PdfFunction
 }
 
-// Shading type 7: Tensor-product patch mesh.
+// PdfShadingType7 is a Tensor-product patch mesh.
 type PdfShadingType7 struct {
 	*PdfShading
 	BitsPerCoordinate *PdfObjectInteger
@@ -833,68 +833,68 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-func (this *PdfShading) ToPdfObject() PdfObject {
-	container := this.container
+func (s *PdfShading) ToPdfObject() PdfObject {
+	container := s.container
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.ShadingType != nil {
-		d.Set("ShadingType", this.ShadingType)
+	if s.ShadingType != nil {
+		d.Set("ShadingType", s.ShadingType)
 	}
-	if this.ColorSpace != nil {
-		d.Set("ColorSpace", this.ColorSpace.ToPdfObject())
+	if s.ColorSpace != nil {
+		d.Set("ColorSpace", s.ColorSpace.ToPdfObject())
 	}
-	if this.Background != nil {
-		d.Set("Background", this.Background)
+	if s.Background != nil {
+		d.Set("Background", s.Background)
 	}
-	if this.BBox != nil {
-		d.Set("BBox", this.BBox.ToPdfObject())
+	if s.BBox != nil {
+		d.Set("BBox", s.BBox.ToPdfObject())
 	}
-	if this.AntiAlias != nil {
-		d.Set("AntiAlias", this.AntiAlias)
+	if s.AntiAlias != nil {
+		d.Set("AntiAlias", s.AntiAlias)
 	}
 
 	return container
 }
 
-func (this *PdfShadingType1) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType1) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.Domain != nil {
-		d.Set("Domain", this.Domain)
+	if s.Domain != nil {
+		d.Set("Domain", s.Domain)
 	}
-	if this.Matrix != nil {
-		d.Set("Matrix", this.Matrix)
+	if s.Matrix != nil {
+		d.Set("Matrix", s.Matrix)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType2) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType2) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
@@ -903,203 +903,203 @@ func (this *PdfShadingType2) ToPdfObject() PdfObject {
 		common.Log.Error("Shading dict is nil")
 		return nil
 	}
-	if this.Coords != nil {
-		d.Set("Coords", this.Coords)
+	if s.Coords != nil {
+		d.Set("Coords", s.Coords)
 	}
-	if this.Domain != nil {
-		d.Set("Domain", this.Domain)
+	if s.Domain != nil {
+		d.Set("Domain", s.Domain)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
-	if this.Extend != nil {
-		d.Set("Extend", this.Extend)
+	if s.Extend != nil {
+		d.Set("Extend", s.Extend)
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType3) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType3) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.Coords != nil {
-		d.Set("Coords", this.Coords)
+	if s.Coords != nil {
+		d.Set("Coords", s.Coords)
 	}
-	if this.Domain != nil {
-		d.Set("Domain", this.Domain)
+	if s.Domain != nil {
+		d.Set("Domain", s.Domain)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
-	if this.Extend != nil {
-		d.Set("Extend", this.Extend)
+	if s.Extend != nil {
+		d.Set("Extend", s.Extend)
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType4) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType4) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.BitsPerCoordinate != nil {
-		d.Set("BitsPerCoordinate", this.BitsPerCoordinate)
+	if s.BitsPerCoordinate != nil {
+		d.Set("BitsPerCoordinate", s.BitsPerCoordinate)
 	}
-	if this.BitsPerComponent != nil {
-		d.Set("BitsPerComponent", this.BitsPerComponent)
+	if s.BitsPerComponent != nil {
+		d.Set("BitsPerComponent", s.BitsPerComponent)
 	}
-	if this.BitsPerFlag != nil {
-		d.Set("BitsPerFlag", this.BitsPerFlag)
+	if s.BitsPerFlag != nil {
+		d.Set("BitsPerFlag", s.BitsPerFlag)
 	}
-	if this.Decode != nil {
-		d.Set("Decode", this.Decode)
+	if s.Decode != nil {
+		d.Set("Decode", s.Decode)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType5) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType5) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.BitsPerCoordinate != nil {
-		d.Set("BitsPerCoordinate", this.BitsPerCoordinate)
+	if s.BitsPerCoordinate != nil {
+		d.Set("BitsPerCoordinate", s.BitsPerCoordinate)
 	}
-	if this.BitsPerComponent != nil {
-		d.Set("BitsPerComponent", this.BitsPerComponent)
+	if s.BitsPerComponent != nil {
+		d.Set("BitsPerComponent", s.BitsPerComponent)
 	}
-	if this.VerticesPerRow != nil {
-		d.Set("VerticesPerRow", this.VerticesPerRow)
+	if s.VerticesPerRow != nil {
+		d.Set("VerticesPerRow", s.VerticesPerRow)
 	}
-	if this.Decode != nil {
-		d.Set("Decode", this.Decode)
+	if s.Decode != nil {
+		d.Set("Decode", s.Decode)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType6) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType6) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.BitsPerCoordinate != nil {
-		d.Set("BitsPerCoordinate", this.BitsPerCoordinate)
+	if s.BitsPerCoordinate != nil {
+		d.Set("BitsPerCoordinate", s.BitsPerCoordinate)
 	}
-	if this.BitsPerComponent != nil {
-		d.Set("BitsPerComponent", this.BitsPerComponent)
+	if s.BitsPerComponent != nil {
+		d.Set("BitsPerComponent", s.BitsPerComponent)
 	}
-	if this.BitsPerFlag != nil {
-		d.Set("BitsPerFlag", this.BitsPerFlag)
+	if s.BitsPerFlag != nil {
+		d.Set("BitsPerFlag", s.BitsPerFlag)
 	}
-	if this.Decode != nil {
-		d.Set("Decode", this.Decode)
+	if s.Decode != nil {
+		d.Set("Decode", s.Decode)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
 
-	return this.container
+	return s.container
 }
 
-func (this *PdfShadingType7) ToPdfObject() PdfObject {
-	this.PdfShading.ToPdfObject()
+func (s *PdfShadingType7) ToPdfObject() PdfObject {
+	s.PdfShading.ToPdfObject()
 
-	d, err := this.getShadingDict()
+	d, err := s.getShadingDict()
 	if err != nil {
 		common.Log.Error("Unable to access shading dict")
 		return nil
 	}
 
-	if this.BitsPerCoordinate != nil {
-		d.Set("BitsPerCoordinate", this.BitsPerCoordinate)
+	if s.BitsPerCoordinate != nil {
+		d.Set("BitsPerCoordinate", s.BitsPerCoordinate)
 	}
-	if this.BitsPerComponent != nil {
-		d.Set("BitsPerComponent", this.BitsPerComponent)
+	if s.BitsPerComponent != nil {
+		d.Set("BitsPerComponent", s.BitsPerComponent)
 	}
-	if this.BitsPerFlag != nil {
-		d.Set("BitsPerFlag", this.BitsPerFlag)
+	if s.BitsPerFlag != nil {
+		d.Set("BitsPerFlag", s.BitsPerFlag)
 	}
-	if this.Decode != nil {
-		d.Set("Decode", this.Decode)
+	if s.Decode != nil {
+		d.Set("Decode", s.Decode)
 	}
-	if this.Function != nil {
-		if len(this.Function) == 1 {
-			d.Set("Function", this.Function[0].ToPdfObject())
+	if s.Function != nil {
+		if len(s.Function) == 1 {
+			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
 			farr := MakeArray()
-			for _, f := range this.Function {
+			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
 			d.Set("Function", farr)
 		}
 	}
 
-	return this.container
+	return s.container
 }

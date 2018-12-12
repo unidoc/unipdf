@@ -68,7 +68,7 @@ func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
 			Ordering:   "UCS",
 			Supplement: 0,
 		},
-		codespaces:    []Codespace{Codespace{Low: 0, High: 0xffff}},
+		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
 		codeToUnicode: codeToUnicode,
 	}
 }
@@ -318,14 +318,14 @@ func (cmap *CMap) toBfData() string {
 	}
 
 	// codes is a sorted list of the codeToUnicode keys.
-	codes := []CharCode{}
+	var codes []CharCode
 	for code := range cmap.codeToUnicode {
 		codes = append(codes, code)
 	}
 	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
 
 	// charRanges is a list of the contiguous character code ranges in `codes`.
-	charRanges := []charRange{}
+	var charRanges []charRange
 	c0, c1 := codes[0], codes[0]+1
 	for _, c := range codes[1:] {
 		if c != c1 {
@@ -339,8 +339,8 @@ func (cmap *CMap) toBfData() string {
 	}
 
 	// fbChars is a list of single character ranges. fbRanges is a list of multiple character ranges.
-	fbChars := []CharCode{}
-	fbRanges := []fbRange{}
+	var fbChars []CharCode
+	var fbRanges []fbRange
 	for _, cr := range charRanges {
 		if cr.code0+1 == cr.code1 {
 			fbChars = append(fbChars, cr.code0)
@@ -355,7 +355,7 @@ func (cmap *CMap) toBfData() string {
 	common.Log.Trace("charRanges=%d fbChars=%d fbRanges=%d", len(charRanges), len(fbChars),
 		len(fbRanges))
 
-	lines := []string{}
+	var lines []string
 	if len(fbChars) > 0 {
 		numRanges := (len(fbChars) + maxBfEntries - 1) / maxBfEntries
 		for i := 0; i < numRanges; i++ {

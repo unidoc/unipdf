@@ -17,7 +17,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// Definition of a rectangle.
+// PdfRectangle is a definition of a rectangle.
 type PdfRectangle struct {
 	Llx float64 // Lower left corner (ll).
 	Lly float64
@@ -58,7 +58,7 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	return &rect, nil
 }
 
-// Convert to a PDF object.
+// ToPdfObject converts rectangle to a PDF object.
 func (rect *PdfRectangle) ToPdfObject() PdfObject {
 	arr := MakeArray(MakeFloat(rect.Llx), MakeFloat(rect.Lly), MakeFloat(rect.Urx), MakeFloat(rect.Ury))
 	return arr
@@ -120,7 +120,7 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 	return d, nil
 }
 
-// Convert to a PDF string object.
+// ToPdfObject converts date to a PDF string object.
 func (date *PdfDate) ToPdfObject() PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
 		date.year, date.month, date.day, date.hour, date.minute, date.second,

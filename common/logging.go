@@ -21,28 +21,28 @@ type Logger interface {
 	Trace(format string, args ...interface{})
 }
 
-// Dummy Logger does nothing.
+// DummyLogger does nothing.
 type DummyLogger struct{}
 
-func (this DummyLogger) Error(format string, args ...interface{}) {
+func (DummyLogger) Error(format string, args ...interface{}) {
 }
 
-func (this DummyLogger) Warning(format string, args ...interface{}) {
+func (DummyLogger) Warning(format string, args ...interface{}) {
 }
 
-func (this DummyLogger) Notice(format string, args ...interface{}) {
+func (DummyLogger) Notice(format string, args ...interface{}) {
 }
 
-func (this DummyLogger) Info(format string, args ...interface{}) {
+func (DummyLogger) Info(format string, args ...interface{}) {
 }
 
-func (this DummyLogger) Debug(format string, args ...interface{}) {
+func (DummyLogger) Debug(format string, args ...interface{}) {
 }
 
-func (this DummyLogger) Trace(format string, args ...interface{}) {
+func (DummyLogger) Trace(format string, args ...interface{}) {
 }
 
-// Simple Console Logger that the tests use.
+// LogLevel is the verbosity level for logging.
 type LogLevel int
 
 const (
@@ -64,45 +64,45 @@ func NewConsoleLogger(logLevel LogLevel) *ConsoleLogger {
 	return &logger
 }
 
-func (this ConsoleLogger) Error(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelError {
+func (l ConsoleLogger) Error(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelError {
 		prefix := "[ERROR] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) Warning(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelWarning {
+func (l ConsoleLogger) Warning(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelWarning {
 		prefix := "[WARNING] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) Notice(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelNotice {
+func (l ConsoleLogger) Notice(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelNotice {
 		prefix := "[NOTICE] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) Info(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelInfo {
+func (l ConsoleLogger) Info(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelInfo {
 		prefix := "[INFO] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) Debug(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelDebug {
+func (l ConsoleLogger) Debug(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelDebug {
 		prefix := "[DEBUG] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
-func (this ConsoleLogger) Trace(format string, args ...interface{}) {
-	if this.LogLevel >= LogLevelTrace {
+func (l ConsoleLogger) Trace(format string, args ...interface{}) {
+	if l.LogLevel >= LogLevelTrace {
 		prefix := "[TRACE] "
-		this.output(os.Stdout, prefix, format, args...)
+		l.output(os.Stdout, prefix, format, args...)
 	}
 }
 
@@ -113,7 +113,7 @@ func SetLogger(logger Logger) {
 }
 
 // output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
-func (this ConsoleLogger) output(f *os.File, prefix string, format string, args ...interface{}) {
+func (l ConsoleLogger) output(f *os.File, prefix string, format string, args ...interface{}) {
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		file = "???"

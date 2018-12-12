@@ -731,6 +731,8 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 // genFieldCheckboxAppearance generates an appearance dictionary for a widget annotation `wa` referenced by
 // a button field `fbtn` with form resources `dr` (DR).
 func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFieldButton, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
+	// TODO(dennwc): unused parameters
+
 	// Get bounding Rect.
 	array, ok := core.GetArray(wa.Rect)
 	if !ok {

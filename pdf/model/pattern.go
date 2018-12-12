@@ -26,39 +26,39 @@ type PdfPattern struct {
 	container PdfObject
 }
 
-func (this *PdfPattern) GetContainingPdfObject() PdfObject {
-	return this.container
+func (p *PdfPattern) GetContainingPdfObject() PdfObject {
+	return p.container
 }
 
-// Context in this case is a reference to the subpattern entry: either PdfTilingPattern or PdfShadingPattern.
-func (this *PdfPattern) GetContext() PdfModel {
-	return this.context
+// GetContext returns a reference to the subpattern entry: either PdfTilingPattern or PdfShadingPattern.
+func (p *PdfPattern) GetContext() PdfModel {
+	return p.context
 }
 
-// Set the sub pattern (context).  Either PdfTilingPattern or PdfShadingPattern.
-func (this *PdfPattern) SetContext(ctx PdfModel) {
-	this.context = ctx
+// SetContext sets the sub pattern (context).  Either PdfTilingPattern or PdfShadingPattern.
+func (p *PdfPattern) SetContext(ctx PdfModel) {
+	p.context = ctx
 }
 
-func (this *PdfPattern) IsTiling() bool {
-	return this.PatternType == 1
+func (p *PdfPattern) IsTiling() bool {
+	return p.PatternType == 1
 }
 
-func (this *PdfPattern) IsShading() bool {
-	return this.PatternType == 2
+func (p *PdfPattern) IsShading() bool {
+	return p.PatternType == 2
 }
 
-// Check with IsTiling() prior to using this to ensure is a tiling pattern.
-func (this *PdfPattern) GetAsTilingPattern() *PdfTilingPattern {
-	return this.context.(*PdfTilingPattern)
+// GetAsTilingPattern returns a tiling pattern. Check with IsTiling() prior to using this.
+func (p *PdfPattern) GetAsTilingPattern() *PdfTilingPattern {
+	return p.context.(*PdfTilingPattern)
 }
 
-// Check with IsShading() prior to using this, to ensure is a shading pattern.
-func (this *PdfPattern) GetAsShadingPattern() *PdfShadingPattern {
-	return this.context.(*PdfShadingPattern)
+// GetAsShadingPattern returns a shading pattern. Check with IsShading() prior to using this.
+func (p *PdfPattern) GetAsShadingPattern() *PdfShadingPattern {
+	return p.context.(*PdfShadingPattern)
 }
 
-// A Tiling pattern consists of repetitions of a pattern cell with defined intervals.
+// PdfTilingPattern is a Tiling pattern that consists of repetitions of a pattern cell with defined intervals.
 // It is a type 1 pattern. (PatternType = 1).
 // A tiling pattern is represented by a stream object, where the stream content is
 // a content stream that describes the pattern cell.
@@ -73,8 +73,8 @@ type PdfTilingPattern struct {
 	Matrix     *PdfObjectArray // Pattern matrix (6 numbers).
 }
 
-func (this *PdfTilingPattern) IsColored() bool {
-	if this.PaintType != nil && *this.PaintType == 1 {
+func (p *PdfTilingPattern) IsColored() bool {
+	if p.PaintType != nil && *p.PaintType == 1 {
 		return true
 	} else {
 		return false
@@ -82,17 +82,17 @@ func (this *PdfTilingPattern) IsColored() bool {
 }
 
 // GetContentStream returns the pattern cell's content stream
-func (this *PdfTilingPattern) GetContentStream() ([]byte, error) {
-	decoded, _, err := this.GetContentStreamWithEncoder()
+func (p *PdfTilingPattern) GetContentStream() ([]byte, error) {
+	decoded, _, err := p.GetContentStreamWithEncoder()
 	return decoded, err
 }
 
 // GetContentStreamWithEncoder returns the pattern cell's content stream and its encoder
 // TODO (v3): Change GetContentStreamWithEncoder to GetContentStream
-func (this *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncoder, error) {
-	streamObj, ok := this.container.(*PdfObjectStream)
+func (p *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncoder, error) {
+	streamObj, ok := p.container.(*PdfObjectStream)
 	if !ok {
-		common.Log.Debug("Tiling pattern container not a stream (got %T)", this.container)
+		common.Log.Debug("Tiling pattern container not a stream (got %T)", p.container)
 		return nil, nil, ErrTypeError
 	}
 
@@ -111,11 +111,11 @@ func (this *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncod
 	return decoded, encoder, nil
 }
 
-// Set the pattern cell's content stream.
-func (this *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncoder) error {
-	streamObj, ok := this.container.(*PdfObjectStream)
+// SetContentStream sets the pattern cell's content stream.
+func (p *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncoder) error {
+	streamObj, ok := p.container.(*PdfObjectStream)
 	if !ok {
-		common.Log.Debug("Tiling pattern container not a stream (got %T)", this.container)
+		common.Log.Debug("Tiling pattern container not a stream (got %T)", p.container)
 		return ErrTypeError
 	}
 
@@ -144,8 +144,8 @@ func (this *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEnc
 	return nil
 }
 
-// Shading patterns provide a smooth transition between colors across an area to be painted, i.e.
-// color(x,y) = f(x,y) at each point.
+// PdfShadingPattern is a Shading patterns that provide a smooth transition between colors across an area to be painted,
+// i.e. color(x,y) = f(x,y) at each point.
 // It is a type 2 pattern (PatternType = 2).
 type PdfShadingPattern struct {
 	*PdfPattern
@@ -355,71 +355,71 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 
 /* Conversions to pdf objects. */
 
-func (this *PdfPattern) getDict() *PdfObjectDictionary {
-	if indObj, is := this.container.(*PdfIndirectObject); is {
+func (p *PdfPattern) getDict() *PdfObjectDictionary {
+	if indObj, is := p.container.(*PdfIndirectObject); is {
 		dict, ok := indObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
 			return nil
 		}
 		return dict
-	} else if streamObj, is := this.container.(*PdfObjectStream); is {
+	} else if streamObj, is := p.container.(*PdfObjectStream); is {
 		return streamObj.PdfObjectDictionary
 	} else {
-		common.Log.Debug("Trying to access pattern dictionary of invalid object type (%T)", this.container)
+		common.Log.Debug("Trying to access pattern dictionary of invalid object type (%T)", p.container)
 		return nil
 	}
 }
 
-func (this *PdfPattern) ToPdfObject() PdfObject {
-	d := this.getDict()
+func (p *PdfPattern) ToPdfObject() PdfObject {
+	d := p.getDict()
 	d.Set("Type", MakeName("Pattern"))
-	d.Set("PatternType", MakeInteger(this.PatternType))
+	d.Set("PatternType", MakeInteger(p.PatternType))
 
-	return this.container
+	return p.container
 }
 
-func (this *PdfTilingPattern) ToPdfObject() PdfObject {
-	this.PdfPattern.ToPdfObject()
+func (p *PdfTilingPattern) ToPdfObject() PdfObject {
+	p.PdfPattern.ToPdfObject()
 
-	d := this.getDict()
-	if this.PaintType != nil {
-		d.Set("PaintType", this.PaintType)
+	d := p.getDict()
+	if p.PaintType != nil {
+		d.Set("PaintType", p.PaintType)
 	}
-	if this.TilingType != nil {
-		d.Set("TilingType", this.TilingType)
+	if p.TilingType != nil {
+		d.Set("TilingType", p.TilingType)
 	}
-	if this.BBox != nil {
-		d.Set("BBox", this.BBox.ToPdfObject())
+	if p.BBox != nil {
+		d.Set("BBox", p.BBox.ToPdfObject())
 	}
-	if this.XStep != nil {
-		d.Set("XStep", this.XStep)
+	if p.XStep != nil {
+		d.Set("XStep", p.XStep)
 	}
-	if this.YStep != nil {
-		d.Set("YStep", this.YStep)
+	if p.YStep != nil {
+		d.Set("YStep", p.YStep)
 	}
-	if this.Resources != nil {
-		d.Set("Resources", this.Resources.ToPdfObject())
+	if p.Resources != nil {
+		d.Set("Resources", p.Resources.ToPdfObject())
 	}
-	if this.Matrix != nil {
-		d.Set("Matrix", this.Matrix)
+	if p.Matrix != nil {
+		d.Set("Matrix", p.Matrix)
 	}
 
-	return this.container
+	return p.container
 }
 
-func (this *PdfShadingPattern) ToPdfObject() PdfObject {
-	this.PdfPattern.ToPdfObject()
-	d := this.getDict()
+func (p *PdfShadingPattern) ToPdfObject() PdfObject {
+	p.PdfPattern.ToPdfObject()
+	d := p.getDict()
 
-	if this.Shading != nil {
-		d.Set("Shading", this.Shading.ToPdfObject())
+	if p.Shading != nil {
+		d.Set("Shading", p.Shading.ToPdfObject())
 	}
-	if this.Matrix != nil {
-		d.Set("Matrix", this.Matrix)
+	if p.Matrix != nil {
+		d.Set("Matrix", p.Matrix)
 	}
-	if this.ExtGState != nil {
-		d.Set("ExtGState", this.ExtGState)
+	if p.ExtGState != nil {
+		d.Set("ExtGState", p.ExtGState)
 	}
 
-	return this.container
+	return p.container
 }

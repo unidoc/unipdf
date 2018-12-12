@@ -91,7 +91,7 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 		dict.Set("ContactInfo", sig.ContactInfo)
 	}
 
-	// XXX/FIXME: ByteRange and Contents need to be updated dynamically.
+	// FIXME: ByteRange and Contents need to be updated dynamically.
 	return container
 }
 

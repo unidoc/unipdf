@@ -31,7 +31,7 @@ func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
 	}
 
 	// Load the pages.
-	pages := []*model.PdfPage{}
+	var pages []*model.PdfPage
 	for i := 0; i < numPages; i++ {
 		page, err := pdfReader.GetPage(i + 1)
 		if err != nil {

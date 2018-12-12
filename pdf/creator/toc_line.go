@@ -156,11 +156,11 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 	sp.chunks = []*TextChunk{
 		&tl.Number,
-		&TextChunk{
+		{
 			Text:  title,
 			Style: tl.Title.Style,
 		},
-		&TextChunk{
+		{
 			Text:  page,
 			Style: tl.Page.Style,
 		},

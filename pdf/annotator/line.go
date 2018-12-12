@@ -12,8 +12,8 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
-// Defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
-// or arrows at either end.  The line also has a specified width, color and opacity.
+// LineAnnotationDef defines a line between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none
+// (regular line), or arrows at either end.  The line also has a specified width, color and opacity.
 type LineAnnotationDef struct {
 	X1               float64
 	Y1               float64
@@ -26,7 +26,7 @@ type LineAnnotationDef struct {
 	LineEndingStyle2 draw.LineEndingStyle // Line ending style of point 2.
 }
 
-// Creates a line annotation object that can be added to page PDF annotations.
+// CreateLineAnnotation creates a line annotation object that can be added to page PDF annotations.
 func CreateLineAnnotation(lineDef LineAnnotationDef) (*pdf.PdfAnnotation, error) {
 	// Line annotation.
 	lineAnnotation := pdf.NewPdfAnnotationLine()

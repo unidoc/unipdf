@@ -7,7 +7,7 @@ package creator
 
 // Drawable is a widget that can be used to draw with the Creator.
 type Drawable interface {
-	// Draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
+	// GeneratePageBlocks draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
 	// templates are returned, one per Page.  The function also takes a draw context containing information
 	// where to draw (if relative positioning) and the available height to draw on accounting for Margins etc.
 	GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error)

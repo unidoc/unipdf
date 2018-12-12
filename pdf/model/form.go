@@ -53,7 +53,7 @@ func flattenFields(field *PdfField) []*PdfField {
 
 // AllFields returns a flattened list of all fields in the form.
 func (form *PdfAcroForm) AllFields() []*PdfField {
-	fields := []*PdfField{}
+	var fields []*PdfField
 	if form.Fields != nil {
 		for _, field := range *form.Fields {
 			fields = append(fields, flattenFields(field)...)
@@ -64,7 +64,7 @@ func (form *PdfAcroForm) AllFields() []*PdfField {
 
 // signatureFields returns a slice of all signature fields in the form.
 func (form *PdfAcroForm) signatureFields() []*PdfFieldSignature {
-	sigfields := []*PdfFieldSignature{}
+	var sigfields []*PdfFieldSignature
 
 	for _, f := range form.AllFields() {
 		switch t := f.GetContext().(type) {
@@ -91,7 +91,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 			return nil, fmt.Errorf("Fields not an array (%T)", obj)
 		}
 
-		fields := []*PdfField{}
+		var fields []*PdfField
 		for _, obj := range fieldArray.Elements() {
 			obj, err := r.traceToObject(obj)
 			if err != nil {

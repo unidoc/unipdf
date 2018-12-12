@@ -203,7 +203,7 @@ func (p *cMapParser) parseString() (cmapString, error) {
 					return cmapString{buf.String()}, err
 				}
 
-				numeric := []byte{}
+				var numeric []byte
 				numeric = append(numeric, b)
 				for _, val := range bb {
 					if core.IsOctalDigit(val) {

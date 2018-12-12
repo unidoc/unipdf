@@ -13,7 +13,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// Page resources model.
+// PdfPageResources is a Page resources model.
 // Implements PdfModel.
 type PdfPageResources struct {
 	ExtGState  PdfObject
@@ -89,8 +89,8 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	return d
 }
 
-// Add External Graphics State (GState).  The gsDict can be specified either directly as a dictionary or an indirect
-// object containing a dictionary.
+// AddExtGState add External Graphics State (GState).  The gsDict can be specified either directly as a dictionary or an
+// indirect object containing a dictionary.
 func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) error {
 	if r.ExtGState == nil {
 		r.ExtGState = MakeDict()
@@ -107,7 +107,7 @@ func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) 
 	return nil
 }
 
-// Get the ExtGState specified by keyName.  Returns a bool indicating whether it was found or not.
+// GetExtGState gets the ExtGState specified by keyName.  Returns a bool indicating whether it was found or not.
 func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool) {
 	if r.ExtGState == nil {
 		return nil, false
@@ -126,14 +126,14 @@ func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool)
 	}
 }
 
-// Check whether a font is defined by the specified keyName.
+// HasExtGState checks whether a font is defined by the specified keyName.
 func (r *PdfPageResources) HasExtGState(keyName PdfObjectName) bool {
 	_, has := r.GetFontByName(keyName)
 	return has
 }
 
-// Get the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
-// or not.
+// GetShadingByName gets the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether
+// it was found or not.
 func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading, bool) {
 	if r.Shading == nil {
 		return nil, false
@@ -157,7 +157,7 @@ func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading,
 	}
 }
 
-// Set a shading resource specified by keyName.
+// SetShadingByName sets a shading resource specified by keyName.
 func (r *PdfPageResources) SetShadingByName(keyName PdfObjectName, shadingObj PdfObject) error {
 	if r.Shading == nil {
 		r.Shading = MakeDict()
@@ -172,8 +172,8 @@ func (r *PdfPageResources) SetShadingByName(keyName PdfObjectName, shadingObj Pd
 	return nil
 }
 
-// Get the pattern specified by keyName.  Returns nil if not existing. The bool flag indicated whether it was found
-// or not.
+// GetPatternByName gets the pattern specified by keyName.  Returns nil if not existing. The bool flag indicated whether
+// it was found or not.
 func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern, bool) {
 	if r.Pattern == nil {
 		return nil, false
@@ -198,7 +198,7 @@ func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern,
 	}
 }
 
-// Set a pattern resource specified by keyName.
+// SetPatternByName sets a pattern resource specified by keyName.
 func (r *PdfPageResources) SetPatternByName(keyName PdfObjectName, pattern PdfObject) error {
 	if r.Pattern == nil {
 		r.Pattern = MakeDict()
@@ -213,7 +213,7 @@ func (r *PdfPageResources) SetPatternByName(keyName PdfObjectName, pattern PdfOb
 	return nil
 }
 
-// Get the font specified by keyName.  Returns the PdfObject which the entry refers to.
+// GetFontByName gets the font specified by keyName.  Returns the PdfObject which the entry refers to.
 // Returns a bool value indicating whether or not the entry was found.
 func (r *PdfPageResources) GetFontByName(keyName PdfObjectName) (PdfObject, bool) {
 	if r.Font == nil {
@@ -233,13 +233,13 @@ func (r *PdfPageResources) GetFontByName(keyName PdfObjectName) (PdfObject, bool
 	}
 }
 
-// Check whether a font is defined by the specified keyName.
+// HasFontByName checks whether a font is defined by the specified keyName.
 func (r *PdfPageResources) HasFontByName(keyName PdfObjectName) bool {
 	_, has := r.GetFontByName(keyName)
 	return has
 }
 
-// Set the font specified by keyName to the given object.
+// SetFontByName sets the font specified by keyName to the given object.
 func (r *PdfPageResources) SetFontByName(keyName PdfObjectName, obj PdfObject) error {
 	if r.Font == nil {
 		// Create if not existing.
@@ -287,7 +287,7 @@ func (r *PdfPageResources) SetColorspaceByName(keyName PdfObjectName, cs PdfColo
 	return nil
 }
 
-// Check if an XObject with a specified keyName is defined.
+// HasXObjectByName checks if an XObject with a specified keyName is defined.
 func (r *PdfPageResources) HasXObjectByName(keyName PdfObjectName) bool {
 	obj, _ := r.GetXObjectByName(keyName)
 	if obj != nil {
@@ -321,7 +321,7 @@ const (
 	XObjectTypeUnknown   XObjectType = iota
 )
 
-// Returns the XObject with the specified keyName and the object type.
+// GetXObjectByName returns the XObject with the specified keyName and the object type.
 func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectStream, XObjectType) {
 	if r.XObject == nil {
 		return nil, XObjectTypeUndefined

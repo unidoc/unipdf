@@ -34,7 +34,7 @@ func (c *CombineIdenticalIndirectObjects) Optimize(objects []core.PdfObject) (op
 				continue
 			}
 			hasher := md5.New()
-			hasher.Write([]byte(dict.DefaultWriteString()))
+			hasher.Write([]byte(dict.WriteString()))
 
 			hash := string(hasher.Sum(nil))
 			indWithDictByHash[hash] = append(indWithDictByHash[hash], ind)

@@ -13,7 +13,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Basic graphics state implementation.
+// GraphicsState is a basic graphics state implementation.
 // Initially only implementing and tracking a portion of the information specified.  Easy to add more.
 type GraphicsState struct {
 	ColorspaceStroking    model.PdfColorspace
@@ -56,12 +56,12 @@ type HandlerEntry struct {
 
 type HandlerConditionEnum int
 
-func (this HandlerConditionEnum) All() bool {
-	return this == HandlerConditionEnumAllOperands
+func (e HandlerConditionEnum) All() bool {
+	return e == HandlerConditionEnumAllOperands
 }
 
-func (this HandlerConditionEnum) Operand() bool {
-	return this == HandlerConditionEnumOperand
+func (e HandlerConditionEnum) Operand() bool {
+	return e == HandlerConditionEnumOperand
 }
 
 const (
