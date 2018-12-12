@@ -42,6 +42,13 @@ func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
+// Rendering tests are run when UNIDOC_RENDERTEST_BASELINE_PATH environment variable is set to
+// a folder containing a rendered PNG image of each page of generated PDF files.
+// Rendering requires pdftoppm to be present on the system.
+// To generate the images based on the current version of unidoc, set UNIDOC_RENDERTEST_BASELINE_PATH
+// and run the test as usual. Files for all tests will be generated. Rename ones you want to test from
+// xxx.png to xxx_exp.png, make changes to the code and run the test again (with environment variable set).
+
 var baselineRenderPath = os.Getenv("UNIDOC_RENDERTEST_BASELINE_PATH")
 
 const testPdfFile1 = "./testdata/minimal.pdf"
@@ -2885,7 +2892,9 @@ func TestCreatorStable(t *testing.T) {
 
 var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
 
-func renderPDFToFile(pdf string, dpi int, out string) error {
+// renderPDFToPNGs uses pdftoppm tool to render specified PDF file into a set of PNG images (one per page).
+// PNG images will be named xxx-N.png where N is the number of page, starting from 1.
+func renderPDFToPNGs(pdfPath string, dpi int, out string) error {
 	if dpi == 0 {
 		// default is 150, but 100 should be good enough for tests
 		dpi = 100
@@ -2894,20 +2903,7 @@ func renderPDFToFile(pdf string, dpi int, out string) error {
 		return errRenderNotSupported
 	}
 	dpis := strconv.Itoa(dpi)
-	return exec.Command("pdftoppm", pdf, out, "-png", "-rx", dpis, "-ry", dpis).Run()
-}
-
-func renderPDF(pdf string, dpi int) (goimage.Image, error) {
-	f, err := ioutil.TempFile("", "pdf_render_")
-	if err != nil {
-		return nil, err
-	}
-	f.Close()
-	defer os.Remove(f.Name())
-	if err := renderPDFToFile(pdf, dpi, f.Name()); err != nil {
-		return nil, err
-	}
-	return readPNG(f.Name())
+	return exec.Command("pdftoppm", pdfPath, out, "-png", "-rx", dpis, "-ry", dpis).Run()
 }
 
 func readPNG(file string) (goimage.Image, error) {
@@ -3012,7 +3008,7 @@ func testRender(t *testing.T, pname string) {
 		}
 		fname := filepath.Join(baselineRenderPath, tname)
 		// will emit template_1-x.png
-		err := renderPDFToFile(pname, 0, fname)
+		err := renderPDFToPNGs(pname, 0, fname)
 		if err != nil {
 			t.Skip(err)
 		}
