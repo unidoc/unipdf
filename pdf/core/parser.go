@@ -40,7 +40,7 @@ type PdfParser struct {
 	rs               io.ReadSeeker
 	reader           *bufio.Reader
 	fileSize         int64
-	xrefs            xrefTable
+	xrefs            XrefTable
 	objstms          objectStreams
 	trailer          *PdfObjectDictionary
 	ObjCache         objectCache // TODO: Unexport (v3).
@@ -84,6 +84,11 @@ func (parser *PdfParser) IsAuthenticated() bool {
 // referencing other key objects that are important in the document structure.
 func (parser *PdfParser) GetTrailer() *PdfObjectDictionary {
 	return parser.trailer
+}
+
+// GetXrefTable returns the PDFs xref table.
+func (parser *PdfParser) GetXrefTable() XrefTable {
+	return parser.xrefs
 }
 
 // Skip over any spaces.
@@ -563,6 +568,7 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 				bb, _ = parser.reader.ReadBytes('R')
 				common.Log.Trace("-> !Ref: '%s'", string(bb[:]))
 				ref, err := parseReference(string(bb))
+				ref.parser = parser
 				return &ref, err
 			}
 
@@ -760,10 +766,10 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 				// Usually should not happen, lower generation numbers
 				// would be marked as free.  But can still happen!
 				x, ok := parser.xrefs[curObjNum]
-				if !ok || gen > x.generation {
-					obj := xrefObject{objectNumber: curObjNum,
-						xtype:  xrefTypeTableEntry,
-						offset: first, generation: gen}
+				if !ok || gen > x.Generation {
+					obj := XrefObject{ObjectNumber: curObjNum,
+						XType:  XrefTypeTableEntry,
+						Offset: first, Generation: gen}
 					parser.xrefs[curObjNum] = obj
 				}
 			}
@@ -1016,19 +1022,19 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 			common.Log.Trace("- In use - uncompressed via offset %b", p2)
 			// Object type 1: Objects that are in use but are not
 			// compressed, i.e. defined by an offset (normal entry)
-			if xr, ok := parser.xrefs[objNum]; !ok || int(n3) > xr.generation {
+			if xr, ok := parser.xrefs[objNum]; !ok || int(n3) > xr.Generation {
 				// Only overload if not already loaded!
 				// or has a newer generation number. (should not happen)
-				obj := xrefObject{objectNumber: objNum,
-					xtype: xrefTypeTableEntry, offset: n2, generation: int(n3)}
+				obj := XrefObject{ObjectNumber: objNum,
+					XType: XrefTypeTableEntry, Offset: n2, Generation: int(n3)}
 				parser.xrefs[objNum] = obj
 			}
 		} else if ftype == 2 {
 			// Object type 2: Compressed object.
 			common.Log.Trace("- In use - compressed object")
 			if _, ok := parser.xrefs[objNum]; !ok {
-				obj := xrefObject{objectNumber: objNum,
-					xtype: xrefTypeObjectStream, osObjNumber: int(n2), osObjIndex: int(n3)}
+				obj := XrefObject{ObjectNumber: objNum,
+					XType: XrefTypeObjectStream, OsObjNumber: int(n2), OsObjIndex: int(n3)}
 				parser.xrefs[objNum] = obj
 				common.Log.Trace("entry: %s", parser.xrefs[objNum])
 			}
@@ -1149,7 +1155,7 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 // loaded will ignore older versions.
 //
 func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
-	parser.xrefs = make(xrefTable)
+	parser.xrefs = make(XrefTable)
 	parser.objstms = make(objectStreams)
 
 	// Get the file size.
@@ -1290,8 +1296,8 @@ func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 func (parser *PdfParser) xrefNextObjectOffset(offset int64) int64 {
 	nextOffset := int64(0)
 	for _, xref := range parser.xrefs {
-		if xref.offset > offset && (xref.offset < nextOffset || nextOffset == 0) {
-			nextOffset = xref.offset
+		if xref.Offset > offset && (xref.Offset < nextOffset || nextOffset == 0) {
+			nextOffset = xref.Offset
 		}
 	}
 	return nextOffset
@@ -1330,7 +1336,7 @@ func (parser *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, erro
 // TODO: Unexport (v3).
 func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	indirect := PdfIndirectObject{}
-
+	indirect.parser = parser
 	common.Log.Trace("-Read indirect obj")
 	bb, err := parser.reader.Peek(20)
 	if err != nil {
@@ -1488,6 +1494,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					streamobj.PdfObjectDictionary = indirect.PdfObject.(*PdfObjectDictionary)
 					streamobj.ObjectNumber = indirect.ObjectNumber
 					streamobj.GenerationNumber = indirect.GenerationNumber
+					streamobj.PdfObjectReference.parser = parser
 
 					parser.skipSpaces()
 					parser.reader.Discard(9) // endstream
