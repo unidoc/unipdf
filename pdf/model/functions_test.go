@@ -1,5 +1,5 @@
 // Test functions
-// XXX: We need tests of type 0, type 2, type 3, type 4 functions.  Particularly type 0 is complex and
+// TODO: We need tests of type 0, type 2, type 3, type 4 functions.  Particularly type 0 is complex and
 // needs comprehensive tests.
 
 package model
@@ -23,7 +23,7 @@ type Type4TestCase struct {
 	Expected []float64
 }
 
-// TODO/XXX: Implement example 2 from page 167.
+// TODO: Implement example 2 from page 167.
 
 func TestType4Function1(t *testing.T) {
 	rawText := `

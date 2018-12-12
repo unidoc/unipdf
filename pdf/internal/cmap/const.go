@@ -7,7 +7,6 @@ package cmap
 
 import (
 	"errors"
-	"regexp"
 )
 
 var (
@@ -34,5 +33,3 @@ const (
 	cmaptype    = "CMapType"
 	cmapversion = "CMapVersion"
 )
-
-var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)

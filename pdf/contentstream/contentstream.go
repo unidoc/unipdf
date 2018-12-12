@@ -89,12 +89,12 @@ func (ops *ContentStreamOperations) Bytes() []byte {
 		if op.Operand == "BI" {
 			// Inline image requires special handling.
 			buf.WriteString(op.Operand + "\n")
-			buf.WriteString(op.Params[0].DefaultWriteString())
+			buf.WriteString(op.Params[0].WriteString())
 
 		} else {
 			// Default handler.
 			for _, param := range op.Params {
-				buf.WriteString(param.DefaultWriteString())
+				buf.WriteString(param.WriteString())
 				buf.WriteString(" ")
 
 			}

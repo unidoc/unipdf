@@ -103,7 +103,7 @@ func (div *Division) Width() float64 {
 // GeneratePageBlocks generates the page blocks for the Division component.
 // Multiple blocks are generated if the contents wrap over multiple pages.
 func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	pageblocks := []*Block{}
+	var pageblocks []*Block
 
 	origCtx := ctx
 

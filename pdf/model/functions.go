@@ -95,11 +95,9 @@ func interpolate(x, xmin, xmax, ymin, ymax float64) float64 {
 	return y
 }
 
-//
-// Type 0 functions use a sequence of sample values (contained in a stream) to provide an approximation
+// PdfFunctionType0 uses a sequence of sample values (contained in a stream) to provide an approximation
 // for functions whose domains and ranges are bounded. The samples are organized as an m-dimensional
 // table in which each entry has n components
-//
 type PdfFunctionType0 struct {
 	Domain []float64 // required; 2*m length; where m is the number of input values
 	Range  []float64 // required (type 0); 2*n length; where n is the number of output values
@@ -228,9 +226,9 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	return fun, nil
 }
 
-func (this *PdfFunctionType0) ToPdfObject() PdfObject {
-	if this.container == nil {
-		this.container = &PdfObjectStream{}
+func (f *PdfFunctionType0) ToPdfObject() PdfObject {
+	if f.container == nil {
+		f.container = &PdfObjectStream{}
 	}
 
 	dict := MakeDict()
@@ -238,77 +236,77 @@ func (this *PdfFunctionType0) ToPdfObject() PdfObject {
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
-	for _, val := range this.Domain {
+	for _, val := range f.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
 	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	rangeArray := &PdfObjectArray{}
-	for _, val := range this.Range {
+	for _, val := range f.Range {
 		rangeArray.Append(MakeFloat(val))
 	}
 	dict.Set("Range", rangeArray)
 
 	// Size (required).
 	sizeArray := &PdfObjectArray{}
-	for _, val := range this.Size {
+	for _, val := range f.Size {
 		sizeArray.Append(MakeInteger(int64(val)))
 	}
 	dict.Set("Size", sizeArray)
 
-	dict.Set("BitsPerSample", MakeInteger(int64(this.BitsPerSample)))
+	dict.Set("BitsPerSample", MakeInteger(int64(f.BitsPerSample)))
 
-	if this.Order != 1 {
-		dict.Set("Order", MakeInteger(int64(this.Order)))
+	if f.Order != 1 {
+		dict.Set("Order", MakeInteger(int64(f.Order)))
 	}
 
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.
-	dict.Set("Length", MakeInteger(int64(len(this.rawData))))
-	this.container.Stream = this.rawData
+	dict.Set("Length", MakeInteger(int64(len(f.rawData))))
+	f.container.Stream = f.rawData
 
-	this.container.PdfObjectDictionary = dict
-	return this.container
+	f.container.PdfObjectDictionary = dict
+	return f.container
 }
 
-func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
-	if len(x) != this.NumInputs {
+func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
+	if len(x) != f.NumInputs {
 		common.Log.Error("Number of inputs not matching what is needed")
 		return nil, errors.New("Range check error")
 	}
 
-	if this.data == nil {
+	if f.data == nil {
 		// Process the samples if not already done.
-		err := this.processSamples()
+		err := f.processSamples()
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Fall back to default Encode/Decode params if not set.
-	encode := this.Encode
+	encode := f.Encode
 	if encode == nil {
 		encode = []float64{}
-		for i := 0; i < len(this.Size); i++ {
+		for i := 0; i < len(f.Size); i++ {
 			encode = append(encode, 0)
-			encode = append(encode, float64(this.Size[i]-1))
+			encode = append(encode, float64(f.Size[i]-1))
 		}
 	}
-	decode := this.Decode
+	decode := f.Decode
 	if decode == nil {
-		decode = this.Range
+		decode = f.Range
 	}
 
-	indices := []int{}
+	var indices []int
 	// Start with nearest neighbour interpolation.
 	for i := 0; i < len(x); i++ {
 		xi := x[i]
 
-		xip := math.Min(math.Max(xi, this.Domain[2*i]), this.Domain[2*i+1])
+		xip := math.Min(math.Max(xi, f.Domain[2*i]), f.Domain[2*i+1])
 
-		ei := interpolate(xip, this.Domain[2*i], this.Domain[2*i+1], encode[2*i], encode[2*i+1])
-		eip := math.Min(math.Max(ei, 0), float64(this.Size[i]))
+		ei := interpolate(xip, f.Domain[2*i], f.Domain[2*i+1], encode[2*i], encode[2*i+1])
+		eip := math.Min(math.Max(ei, 0), float64(f.Size[i]))
 		// eip represents coordinate into the data table.
 		// At this point it is real values.
 
@@ -320,8 +318,8 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 		index := int(math.Floor(eip + 0.5))
 		if index < 0 {
 			index = 0
-		} else if index > this.Size[i] {
-			index = this.Size[i] - 1
+		} else if index > f.Size[i] {
+			index = f.Size[i] - 1
 		}
 		indices = append(indices, index)
 
@@ -329,21 +327,21 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 
 	// Calculate the index
 	m := indices[0]
-	for i := 1; i < this.NumInputs; i++ {
+	for i := 1; i < f.NumInputs; i++ {
 		add := indices[i]
 		for j := 0; j < i; j++ {
-			add *= this.Size[j]
+			add *= f.Size[j]
 		}
 		m += add
 	}
-	m *= this.NumOutputs
+	m *= f.NumOutputs
 
 	// Output values.
-	outputs := []float64{}
-	for j := 0; j < this.NumOutputs; j++ {
-		rj := this.data[m+j]
-		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(this.BitsPerSample)), decode[2*j], decode[2*j+1])
-		yj := math.Min(math.Max(rjp, this.Range[2*j]), this.Range[2*j+1])
+	var outputs []float64
+	for j := 0; j < f.NumOutputs; j++ {
+		rj := f.data[m+j]
+		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(f.BitsPerSample)), decode[2*j], decode[2*j+1])
+		yj := math.Min(math.Max(rjp, f.Range[2*j]), f.Range[2*j+1])
 		outputs = append(outputs, yj)
 	}
 
@@ -353,20 +351,18 @@ func (this *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 // Convert raw data to data table.  The maximum supported BitsPerSample is 32, so we store the resulting data
 // in a uint32 array.  This is somewhat wasteful in the case of a small BitsPerSample, but these tables are
 // presumably not huge at any rate.
-func (this *PdfFunctionType0) processSamples() error {
-	data := sampling.ResampleBytes(this.rawData, this.BitsPerSample)
-	this.data = data
+func (f *PdfFunctionType0) processSamples() error {
+	data := sampling.ResampleBytes(f.rawData, f.BitsPerSample)
+	f.data = data
 
 	return nil
 }
 
-//
-// Type 2 functions define an exponential interpolation of one input value and n
+// PdfFunctionType2 defines an exponential interpolation of one input value and n
 // output values:
 //      f(x) = y_0, ..., y_(n-1)
 // y_j = C0_j + x^N * (C1_j - C0_j); for 0 <= j < n
 // When N=1 ; linear interpolation between C0 and C1.
-//
 type PdfFunctionType2 struct {
 	Domain []float64
 	Range  []float64
@@ -466,59 +462,59 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	return fun, nil
 }
 
-func (this *PdfFunctionType2) ToPdfObject() PdfObject {
+func (f *PdfFunctionType2) ToPdfObject() PdfObject {
 	dict := MakeDict()
 
 	dict.Set("FunctionType", MakeInteger(2))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
-	for _, val := range this.Domain {
+	for _, val := range f.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
 	dict.Set("Domain", domainArray)
 
 	// Range (required).
-	if this.Range != nil {
+	if f.Range != nil {
 		rangeArray := &PdfObjectArray{}
-		for _, val := range this.Range {
+		for _, val := range f.Range {
 			rangeArray.Append(MakeFloat(val))
 		}
 		dict.Set("Range", rangeArray)
 	}
 
 	// C0.
-	if this.C0 != nil {
+	if f.C0 != nil {
 		c0Array := &PdfObjectArray{}
-		for _, val := range this.C0 {
+		for _, val := range f.C0 {
 			c0Array.Append(MakeFloat(val))
 		}
 		dict.Set("C0", c0Array)
 	}
 
 	// C1.
-	if this.C1 != nil {
+	if f.C1 != nil {
 		c1Array := &PdfObjectArray{}
-		for _, val := range this.C1 {
+		for _, val := range f.C1 {
 			c1Array.Append(MakeFloat(val))
 		}
 		dict.Set("C1", c1Array)
 	}
 
 	// exponent
-	dict.Set("N", MakeFloat(this.N))
+	dict.Set("N", MakeFloat(f.N))
 
 	// Wrap in a container if we have one already specified.
-	if this.container != nil {
-		this.container.PdfObject = dict
-		return this.container
+	if f.container != nil {
+		f.container.PdfObject = dict
+		return f.container
 	} else {
 		return dict
 	}
 
 }
 
-func (this *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
+func (f *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
 		return nil, errors.New("Range check")
@@ -526,27 +522,25 @@ func (this *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 
 	// Prepare.
 	c0 := []float64{0.0}
-	if this.C0 != nil {
-		c0 = this.C0
+	if f.C0 != nil {
+		c0 = f.C0
 	}
 	c1 := []float64{1.0}
-	if this.C1 != nil {
-		c1 = this.C1
+	if f.C1 != nil {
+		c1 = f.C1
 	}
 
-	y := []float64{}
+	var y []float64
 	for i := 0; i < len(c0); i++ {
-		yi := c0[i] + math.Pow(x[0], this.N)*(c1[i]-c0[i])
+		yi := c0[i] + math.Pow(x[0], f.N)*(c1[i]-c0[i])
 		y = append(y, yi)
 	}
 
 	return y, nil
 }
 
-//
-// Type 3 functions define stitching of the subdomains of serveral 1-input functions to produce
+// PdfFunctionType3 defines stitching of the subdomains of serveral 1-input functions to produce
 // a single new 1-input function.
-//
 type PdfFunctionType3 struct {
 	Domain []float64
 	Range  []float64
@@ -558,7 +552,7 @@ type PdfFunctionType3 struct {
 	container *PdfIndirectObject
 }
 
-func (this *PdfFunctionType3) Evaluate(x []float64) ([]float64, error) {
+func (f *PdfFunctionType3) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
 		return nil, errors.New("Range check")
@@ -667,66 +661,64 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	return fun, nil
 }
 
-func (this *PdfFunctionType3) ToPdfObject() PdfObject {
+func (f *PdfFunctionType3) ToPdfObject() PdfObject {
 	dict := MakeDict()
 
 	dict.Set("FunctionType", MakeInteger(3))
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
-	for _, val := range this.Domain {
+	for _, val := range f.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
 	dict.Set("Domain", domainArray)
 
 	// Range (required).
-	if this.Range != nil {
+	if f.Range != nil {
 		rangeArray := &PdfObjectArray{}
-		for _, val := range this.Range {
+		for _, val := range f.Range {
 			rangeArray.Append(MakeFloat(val))
 		}
 		dict.Set("Range", rangeArray)
 	}
 
 	// Functions
-	if this.Functions != nil {
+	if f.Functions != nil {
 		fArray := &PdfObjectArray{}
-		for _, fun := range this.Functions {
+		for _, fun := range f.Functions {
 			fArray.Append(fun.ToPdfObject())
 		}
 		dict.Set("Functions", fArray)
 	}
 
 	// Bounds.
-	if this.Bounds != nil {
+	if f.Bounds != nil {
 		bArray := &PdfObjectArray{}
-		for _, val := range this.Bounds {
+		for _, val := range f.Bounds {
 			bArray.Append(MakeFloat(val))
 		}
 		dict.Set("Bounds", bArray)
 	}
 
 	// Encode.
-	if this.Encode != nil {
+	if f.Encode != nil {
 		eArray := &PdfObjectArray{}
-		for _, val := range this.Encode {
+		for _, val := range f.Encode {
 			eArray.Append(MakeFloat(val))
 		}
 		dict.Set("Encode", eArray)
 	}
 
 	// Wrap in a container if we have one already specified.
-	if this.container != nil {
-		this.container.PdfObject = dict
-		return this.container
+	if f.container != nil {
+		f.container.PdfObject = dict
+		return f.container
 	} else {
 		return dict
 	}
 }
 
-//
-// Type 4.  Postscript calculator functions.
-//
+// PdfFunctionType4 is a Postscript calculator functions.
 type PdfFunctionType4 struct {
 	Domain  []float64
 	Range   []float64
@@ -738,18 +730,18 @@ type PdfFunctionType4 struct {
 	container *PdfObjectStream
 }
 
-// Input [x1 x2 x3]
-func (this *PdfFunctionType4) Evaluate(xVec []float64) ([]float64, error) {
-	if this.executor == nil {
-		this.executor = ps.NewPSExecutor(this.Program)
+// Evaluate runs the function. Input is [x1 x2 x3].
+func (f *PdfFunctionType4) Evaluate(xVec []float64) ([]float64, error) {
+	if f.executor == nil {
+		f.executor = ps.NewPSExecutor(f.Program)
 	}
 
-	inputs := []ps.PSObject{}
+	var inputs []ps.PSObject
 	for _, val := range xVec {
 		inputs = append(inputs, ps.MakeReal(val))
 	}
 
-	outputs, err := this.executor.Execute(inputs)
+	outputs, err := f.executor.Execute(inputs)
 	if err != nil {
 		return nil, err
 	}
@@ -818,11 +810,11 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	return fun, nil
 }
 
-func (this *PdfFunctionType4) ToPdfObject() PdfObject {
-	container := this.container
+func (f *PdfFunctionType4) ToPdfObject() PdfObject {
+	container := f.container
 	if container == nil {
-		this.container = &PdfObjectStream{}
-		container = this.container
+		f.container = &PdfObjectStream{}
+		container = f.container
 	}
 
 	dict := MakeDict()
@@ -830,28 +822,28 @@ func (this *PdfFunctionType4) ToPdfObject() PdfObject {
 
 	// Domain (required).
 	domainArray := &PdfObjectArray{}
-	for _, val := range this.Domain {
+	for _, val := range f.Domain {
 		domainArray.Append(MakeFloat(val))
 	}
 	dict.Set("Domain", domainArray)
 
 	// Range (required).
 	rangeArray := &PdfObjectArray{}
-	for _, val := range this.Range {
+	for _, val := range f.Range {
 		rangeArray.Append(MakeFloat(val))
 	}
 	dict.Set("Range", rangeArray)
 
-	if this.decodedData == nil && this.Program != nil {
+	if f.decodedData == nil && f.Program != nil {
 		// Update data.  This is used for created functions (not parsed ones).
-		this.decodedData = []byte(this.Program.String())
+		f.decodedData = []byte(f.Program.String())
 	}
 
 	// TODO: Encode.
 	// Either here, or automatically later on when writing out.
-	dict.Set("Length", MakeInteger(int64(len(this.decodedData))))
+	dict.Set("Length", MakeInteger(int64(len(f.decodedData))))
 
-	container.Stream = this.decodedData
+	container.Stream = f.decodedData
 	container.PdfObjectDictionary = dict
 
 	return container

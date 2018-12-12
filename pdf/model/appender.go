@@ -169,7 +169,7 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 					isNotChanged = true
 				}
 				if dict, ok := core.GetDict(streamObj); isNotChanged && ok {
-					isNotChanged = dict.DefaultWriteString() == v.PdfObjectDictionary.DefaultWriteString()
+					isNotChanged = dict.WriteString() == v.PdfObjectDictionary.WriteString()
 				}
 				if isNotChanged {
 					return

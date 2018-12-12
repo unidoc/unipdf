@@ -301,7 +301,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 	// Prepare the decode params array (one for each filter type)
 	// Optional, not always present.
 	var decodeParamsDict *core.PdfObjectDictionary
-	decodeParamsArray := []core.PdfObject{}
+	var decodeParamsArray []core.PdfObject
 	if obj := inlineImage.DecodeParms; obj != nil {
 		// If it is a dictionary, assume it applies to all
 		dict, isDict := obj.(*core.PdfObjectDictionary)
@@ -360,7 +360,7 @@ func newMultiEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (*cor
 		}
 
 		if *name == core.StreamEncodingFilterNameFlate || *name == "Fl" {
-			// XXX: need to separate out the DecodeParms..
+			// TODO: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromInlineImage(inlineImage, dParams)
 			if err != nil {
 				return nil, err

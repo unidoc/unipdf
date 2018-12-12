@@ -86,7 +86,7 @@ func resolveReferences(obj core.PdfObject, objmap map[int64]core.PdfObject) erro
 func CompareDictionariesDeep(d1, d2 *core.PdfObjectDictionary) bool {
 	if len(d1.Keys()) != len(d2.Keys()) {
 		common.Log.Debug("Dict entries mismatch (%d != %d)", len(d1.Keys()), len(d2.Keys()))
-		common.Log.Debug("Was '%s' vs '%s'", d1.DefaultWriteString(), d2.DefaultWriteString())
+		common.Log.Debug("Was '%s' vs '%s'", d1.WriteString(), d2.WriteString())
 		return false
 	}
 
@@ -140,8 +140,8 @@ func CompareDictionariesDeep(d1, d2 *core.PdfObjectDictionary) bool {
 						return false
 					}
 				} else {
-					if v1.DefaultWriteString() != v2.DefaultWriteString() {
-						common.Log.Debug("Mismatch '%s' != '%s'", v1.DefaultWriteString(), v2.DefaultWriteString())
+					if v1.WriteString() != v2.WriteString() {
+						common.Log.Debug("Mismatch '%s' != '%s'", v1.WriteString(), v2.WriteString())
 						return false
 					}
 				}

@@ -211,18 +211,18 @@ func NewPdfColorDeviceGray(grayVal float64) *PdfColorDeviceGray {
 }
 
 // GetNumComponents returns the number of color components (1 for grayscale).
-func (this *PdfColorDeviceGray) GetNumComponents() int {
+func (col *PdfColorDeviceGray) GetNumComponents() int {
 	return 1
 }
 
-func (this *PdfColorDeviceGray) Val() float64 {
-	return float64(*this)
+func (col *PdfColorDeviceGray) Val() float64 {
+	return float64(*col)
 }
 
-// Convert to an integer format.
-func (this *PdfColorDeviceGray) ToInteger(bits int) uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorDeviceGray) ToInteger(bits int) uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return uint32(maxVal * this.Val())
+	return uint32(maxVal * col.Val())
 }
 
 type PdfColorspaceDeviceGray struct{}
@@ -231,24 +231,24 @@ func NewPdfColorspaceDeviceGray() *PdfColorspaceDeviceGray {
 	return &PdfColorspaceDeviceGray{}
 }
 
-func (this *PdfColorspaceDeviceGray) GetNumComponents() int {
+func (cs *PdfColorspaceDeviceGray) GetNumComponents() int {
 	return 1
 }
 
 // DecodeArray returns the range of color component values in DeviceGray colorspace.
-func (this *PdfColorspaceDeviceGray) DecodeArray() []float64 {
+func (cs *PdfColorspaceDeviceGray) DecodeArray() []float64 {
 	return []float64{0, 1.0}
 }
 
-func (this *PdfColorspaceDeviceGray) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceDeviceGray) ToPdfObject() PdfObject {
 	return MakeName("DeviceGray")
 }
 
-func (this *PdfColorspaceDeviceGray) String() string {
+func (cs *PdfColorspaceDeviceGray) String() string {
 	return "DeviceGray"
 }
 
-func (this *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -269,7 +269,7 @@ func (this *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, 
 	return NewPdfColorDeviceGray(val), nil
 }
 
-func (this *PdfColorspaceDeviceGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -279,11 +279,11 @@ func (this *PdfColorspaceDeviceGray) ColorFromPdfObjects(objects []PdfObject) (P
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-// Convert gray -> rgb for a single color component.
-func (this *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) {
+// ColorToRGB converts gray -> rgb for a single color component.
+func (cs *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 	gray, ok := color.(*PdfColorDeviceGray)
 	if !ok {
 		common.Log.Debug("Input color not device gray %T", color)
@@ -293,14 +293,14 @@ func (this *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error
 	return NewPdfColorDeviceRGB(float64(*gray), float64(*gray), float64(*gray)), nil
 }
 
-// Convert 1-component grayscale data to 3-component RGB.
-func (this *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
+// ImageToRGB convert 1-component grayscale data to 3-component RGB.
+func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
 	samples := img.GetSamples()
 	common.Log.Trace("DeviceGray-ToRGB Samples: % d", samples)
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i++ {
 		grayVal := samples[i]
 		rgbSamples = append(rgbSamples, grayVal, grayVal, grayVal)
@@ -327,31 +327,31 @@ func NewPdfColorDeviceRGB(r, g, b float64) *PdfColorDeviceRGB {
 	return &color
 }
 
-func (this *PdfColorDeviceRGB) GetNumComponents() int {
+func (col *PdfColorDeviceRGB) GetNumComponents() int {
 	return 3
 }
 
-func (this *PdfColorDeviceRGB) R() float64 {
-	return float64(this[0])
+func (col *PdfColorDeviceRGB) R() float64 {
+	return float64(col[0])
 }
 
-func (this *PdfColorDeviceRGB) G() float64 {
-	return float64(this[1])
+func (col *PdfColorDeviceRGB) G() float64 {
+	return float64(col[1])
 }
 
-func (this *PdfColorDeviceRGB) B() float64 {
-	return float64(this[2])
+func (col *PdfColorDeviceRGB) B() float64 {
+	return float64(col[2])
 }
 
-// Convert to an integer format.
-func (this *PdfColorDeviceRGB) ToInteger(bits int) [3]uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorDeviceRGB) ToInteger(bits int) [3]uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return [3]uint32{uint32(maxVal * this.R()), uint32(maxVal * this.G()), uint32(maxVal * this.B())}
+	return [3]uint32{uint32(maxVal * col.R()), uint32(maxVal * col.G()), uint32(maxVal * col.B())}
 }
 
-func (this *PdfColorDeviceRGB) ToGray() *PdfColorDeviceGray {
+func (col *PdfColorDeviceRGB) ToGray() *PdfColorDeviceGray {
 	// Calculate grayValue [0-1]
-	grayValue := 0.3*this.R() + 0.59*this.G() + 0.11*this.B()
+	grayValue := 0.3*col.R() + 0.59*col.G() + 0.11*col.B()
 
 	// Clip to [0-1]
 	grayValue = math.Min(math.Max(grayValue, 0.0), 1.0)
@@ -367,24 +367,24 @@ func NewPdfColorspaceDeviceRGB() *PdfColorspaceDeviceRGB {
 	return &PdfColorspaceDeviceRGB{}
 }
 
-func (this *PdfColorspaceDeviceRGB) String() string {
+func (cs *PdfColorspaceDeviceRGB) String() string {
 	return "DeviceRGB"
 }
 
-func (this *PdfColorspaceDeviceRGB) GetNumComponents() int {
+func (cs *PdfColorspaceDeviceRGB) GetNumComponents() int {
 	return 3
 }
 
 // DecodeArray returns the range of color component values in DeviceRGB colorspace.
-func (this *PdfColorspaceDeviceRGB) DecodeArray() []float64 {
+func (cs *PdfColorspaceDeviceRGB) DecodeArray() []float64 {
 	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
-func (this *PdfColorspaceDeviceRGB) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceDeviceRGB) ToPdfObject() PdfObject {
 	return MakeName("DeviceRGB")
 }
 
-func (this *PdfColorspaceDeviceRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -412,8 +412,8 @@ func (this *PdfColorspaceDeviceRGB) ColorFromFloats(vals []float64) (PdfColor, e
 
 }
 
-// Get the color from a series of pdf objects (3 for rgb).
-func (this *PdfColorspaceDeviceRGB) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+// ColorFromPdfObjects gets the color from a series of pdf objects (3 for rgb).
+func (cs *PdfColorspaceDeviceRGB) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -423,10 +423,10 @@ func (this *PdfColorspaceDeviceRGB) ColorFromPdfObjects(objects []PdfObject) (Pd
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceDeviceRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	rgb, ok := color.(*PdfColorDeviceRGB)
 	if !ok {
 		common.Log.Debug("Input color not device RGB")
@@ -435,17 +435,17 @@ func (this *PdfColorspaceDeviceRGB) ColorToRGB(color PdfColor) (PdfColor, error)
 	return rgb, nil
 }
 
-func (this *PdfColorspaceDeviceRGB) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceDeviceRGB) ImageToRGB(img Image) (Image, error) {
 	return img, nil
 }
 
-func (this *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
+func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 	grayImage := img
 
 	samples := img.GetSamples()
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
-	graySamples := []uint32{}
+	var graySamples []uint32
 	for i := 0; i < len(samples); i += 3 {
 		// Normalized data, range 0-1.
 		r := float64(samples[i]) / maxVal
@@ -473,7 +473,7 @@ func (this *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 // C, M, Y, K components.
 // No other parameters.
 
-// Each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
+// PdfColorDeviceCMYK is a CMYK color, where each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
 type PdfColorDeviceCMYK [4]float64
 
 func NewPdfColorDeviceCMYK(c, m, y, k float64) *PdfColorDeviceCMYK {
@@ -481,30 +481,30 @@ func NewPdfColorDeviceCMYK(c, m, y, k float64) *PdfColorDeviceCMYK {
 	return &color
 }
 
-func (this *PdfColorDeviceCMYK) GetNumComponents() int {
+func (col *PdfColorDeviceCMYK) GetNumComponents() int {
 	return 4
 }
 
-func (this *PdfColorDeviceCMYK) C() float64 {
-	return float64(this[0])
+func (col *PdfColorDeviceCMYK) C() float64 {
+	return float64(col[0])
 }
 
-func (this *PdfColorDeviceCMYK) M() float64 {
-	return float64(this[1])
+func (col *PdfColorDeviceCMYK) M() float64 {
+	return float64(col[1])
 }
 
-func (this *PdfColorDeviceCMYK) Y() float64 {
-	return float64(this[2])
+func (col *PdfColorDeviceCMYK) Y() float64 {
+	return float64(col[2])
 }
 
-func (this *PdfColorDeviceCMYK) K() float64 {
-	return float64(this[3])
+func (col *PdfColorDeviceCMYK) K() float64 {
+	return float64(col[3])
 }
 
-// Convert to an integer format.
-func (this *PdfColorDeviceCMYK) ToInteger(bits int) [4]uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorDeviceCMYK) ToInteger(bits int) [4]uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return [4]uint32{uint32(maxVal * this.C()), uint32(maxVal * this.M()), uint32(maxVal * this.Y()), uint32(maxVal * this.K())}
+	return [4]uint32{uint32(maxVal * col.C()), uint32(maxVal * col.M()), uint32(maxVal * col.Y()), uint32(maxVal * col.K())}
 }
 
 type PdfColorspaceDeviceCMYK struct{}
@@ -513,24 +513,24 @@ func NewPdfColorspaceDeviceCMYK() *PdfColorspaceDeviceCMYK {
 	return &PdfColorspaceDeviceCMYK{}
 }
 
-func (this *PdfColorspaceDeviceCMYK) String() string {
+func (cs *PdfColorspaceDeviceCMYK) String() string {
 	return "DeviceCMYK"
 }
 
-func (this *PdfColorspaceDeviceCMYK) GetNumComponents() int {
+func (cs *PdfColorspaceDeviceCMYK) GetNumComponents() int {
 	return 4
 }
 
 // DecodeArray returns the range of color component values in DeviceCMYK colorspace.
-func (this *PdfColorspaceDeviceCMYK) DecodeArray() []float64 {
+func (cs *PdfColorspaceDeviceCMYK) DecodeArray() []float64 {
 	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
-func (this *PdfColorspaceDeviceCMYK) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceDeviceCMYK) ToPdfObject() PdfObject {
 	return MakeName("DeviceCMYK")
 }
 
-func (this *PdfColorspaceDeviceCMYK) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceCMYK) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 4 {
 		return nil, errors.New("Range check")
 	}
@@ -563,8 +563,8 @@ func (this *PdfColorspaceDeviceCMYK) ColorFromFloats(vals []float64) (PdfColor, 
 	return color, nil
 }
 
-// Get the color from a series of pdf objects (4 for cmyk).
-func (this *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+// ColorFromPdfObjects gets the color from a series of pdf objects (4 for cmyk).
+func (cs *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 4 {
 		return nil, errors.New("Range check")
 	}
@@ -574,10 +574,10 @@ func (this *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []PdfObject) (P
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) {
 	cmyk, ok := color.(*PdfColorDeviceCMYK)
 	if !ok {
 		common.Log.Debug("Input color not device cmyk")
@@ -601,7 +601,7 @@ func (this *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error
 }
 
 // ImageToRGB converts an image in CMYK colorspace to an RGB image.
-func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
 	samples := img.GetSamples()
@@ -629,7 +629,7 @@ func (this *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 	common.Log.Trace("MaxVal: %f", maxVal)
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i += 4 {
 		// Normalized c, m, y, k values.
 		c := interpolate(float64(samples[i]), 0, maxVal, decode[0], decode[1])
@@ -671,21 +671,21 @@ func NewPdfColorCalGray(grayVal float64) *PdfColorCalGray {
 	return &color
 }
 
-func (this *PdfColorCalGray) GetNumComponents() int {
+func (col *PdfColorCalGray) GetNumComponents() int {
 	return 1
 }
 
-func (this *PdfColorCalGray) Val() float64 {
-	return float64(*this)
+func (col *PdfColorCalGray) Val() float64 {
+	return float64(*col)
 }
 
-// Convert to an integer format.
-func (this *PdfColorCalGray) ToInteger(bits int) uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorCalGray) ToInteger(bits int) uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return uint32(maxVal * this.Val())
+	return uint32(maxVal * col.Val())
 }
 
-// CalGray color space.
+// PdfColorspaceCalGray represents CalGray color space.
 type PdfColorspaceCalGray struct {
 	WhitePoint []float64 // [XW, YW, ZW]: Required
 	BlackPoint []float64 // [XB, YB, ZB]
@@ -704,16 +704,16 @@ func NewPdfColorspaceCalGray() *PdfColorspaceCalGray {
 	return cs
 }
 
-func (this *PdfColorspaceCalGray) String() string {
+func (cs *PdfColorspaceCalGray) String() string {
 	return "CalGray"
 }
 
-func (this *PdfColorspaceCalGray) GetNumComponents() int {
+func (cs *PdfColorspaceCalGray) GetNumComponents() int {
 	return 1
 }
 
 // DecodeArray returns the range of color component values in CalGray colorspace.
-func (this *PdfColorspaceCalGray) DecodeArray() []float64 {
+func (cs *PdfColorspaceCalGray) DecodeArray() []float64 {
 	return []float64{0.0, 1.0}
 }
 
@@ -803,35 +803,35 @@ func newPdfColorspaceCalGrayFromPdfObject(obj PdfObject) (*PdfColorspaceCalGray,
 }
 
 // ToPdfObject return the CalGray colorspace as a PDF object (name dictionary).
-func (this *PdfColorspaceCalGray) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceCalGray) ToPdfObject() PdfObject {
 	// CalGray color space dictionary..
 	cspace := &PdfObjectArray{}
 
 	cspace.Append(MakeName("CalGray"))
 
 	dict := MakeDict()
-	if this.WhitePoint != nil {
-		dict.Set("WhitePoint", MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2])))
+	if cs.WhitePoint != nil {
+		dict.Set("WhitePoint", MakeArray(MakeFloat(cs.WhitePoint[0]), MakeFloat(cs.WhitePoint[1]), MakeFloat(cs.WhitePoint[2])))
 	} else {
 		common.Log.Error("CalGray: Missing WhitePoint (Required)")
 	}
 
-	if this.BlackPoint != nil {
-		dict.Set("BlackPoint", MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2])))
+	if cs.BlackPoint != nil {
+		dict.Set("BlackPoint", MakeArray(MakeFloat(cs.BlackPoint[0]), MakeFloat(cs.BlackPoint[1]), MakeFloat(cs.BlackPoint[2])))
 	}
 
-	dict.Set("Gamma", MakeFloat(this.Gamma))
+	dict.Set("Gamma", MakeFloat(cs.Gamma))
 	cspace.Append(dict)
 
-	if this.container != nil {
-		this.container.PdfObject = cspace
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = cspace
+		return cs.container
 	}
 
 	return cspace
 }
 
-func (this *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -845,7 +845,7 @@ func (this *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, err
 	return color, nil
 }
 
-func (this *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -855,10 +855,10 @@ func (this *PdfColorspaceCalGray) ColorFromPdfObjects(objects []PdfObject) (PdfC
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 	calgray, ok := color.(*PdfColorCalGray)
 	if !ok {
 		common.Log.Debug("Input color not cal gray")
@@ -868,9 +868,9 @@ func (this *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 	ANorm := calgray.Val()
 
 	// A -> X,Y,Z
-	X := this.WhitePoint[0] * math.Pow(ANorm, this.Gamma)
-	Y := this.WhitePoint[1] * math.Pow(ANorm, this.Gamma)
-	Z := this.WhitePoint[2] * math.Pow(ANorm, this.Gamma)
+	X := cs.WhitePoint[0] * math.Pow(ANorm, cs.Gamma)
+	Y := cs.WhitePoint[1] * math.Pow(ANorm, cs.Gamma)
+	Z := cs.WhitePoint[2] * math.Pow(ANorm, cs.Gamma)
 
 	// X,Y,Z -> rgb
 	// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
@@ -886,23 +886,23 @@ func (this *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
-// A, B, C -> X, Y, Z
-func (this *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
+// ImageToRGB converts image in CalGray color space to RGB (A, B, C -> X, Y, Z).
+func (cs *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i++ {
 		// A represents the gray component of calibrated gray space.
 		// It shall be in the range 0.0 - 1.0
 		ANorm := float64(samples[i]) / maxVal
 
 		// A -> X,Y,Z
-		X := this.WhitePoint[0] * math.Pow(ANorm, this.Gamma)
-		Y := this.WhitePoint[1] * math.Pow(ANorm, this.Gamma)
-		Z := this.WhitePoint[2] * math.Pow(ANorm, this.Gamma)
+		X := cs.WhitePoint[0] * math.Pow(ANorm, cs.Gamma)
+		Y := cs.WhitePoint[1] * math.Pow(ANorm, cs.Gamma)
+		Z := cs.WhitePoint[2] * math.Pow(ANorm, cs.Gamma)
 
 		// X,Y,Z -> rgb
 		// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
@@ -940,29 +940,29 @@ func NewPdfColorCalRGB(a, b, c float64) *PdfColorCalRGB {
 	return &color
 }
 
-func (this *PdfColorCalRGB) GetNumComponents() int {
+func (col *PdfColorCalRGB) GetNumComponents() int {
 	return 3
 }
 
-func (this *PdfColorCalRGB) A() float64 {
-	return float64(this[0])
+func (col *PdfColorCalRGB) A() float64 {
+	return float64(col[0])
 }
 
-func (this *PdfColorCalRGB) B() float64 {
-	return float64(this[1])
+func (col *PdfColorCalRGB) B() float64 {
+	return float64(col[1])
 }
 
-func (this *PdfColorCalRGB) C() float64 {
-	return float64(this[2])
+func (col *PdfColorCalRGB) C() float64 {
+	return float64(col[2])
 }
 
-// Convert to an integer format.
-func (this *PdfColorCalRGB) ToInteger(bits int) [3]uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorCalRGB) ToInteger(bits int) [3]uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return [3]uint32{uint32(maxVal * this.A()), uint32(maxVal * this.B()), uint32(maxVal * this.C())}
+	return [3]uint32{uint32(maxVal * col.A()), uint32(maxVal * col.B()), uint32(maxVal * col.C())}
 }
 
-// A, B, C components
+// PdfColorspaceCalRGB stores A, B, C components
 type PdfColorspaceCalRGB struct {
 	WhitePoint []float64
 	BlackPoint []float64
@@ -973,8 +973,8 @@ type PdfColorspaceCalRGB struct {
 	container *PdfIndirectObject
 }
 
-// require parameters?
 func NewPdfColorspaceCalRGB() *PdfColorspaceCalRGB {
+	// TODO: require parameters?
 	cs := &PdfColorspaceCalRGB{}
 
 	// Set optional parameters to default values.
@@ -985,16 +985,16 @@ func NewPdfColorspaceCalRGB() *PdfColorspaceCalRGB {
 	return cs
 }
 
-func (this *PdfColorspaceCalRGB) String() string {
+func (cs *PdfColorspaceCalRGB) String() string {
 	return "CalRGB"
 }
 
-func (this *PdfColorspaceCalRGB) GetNumComponents() int {
+func (cs *PdfColorspaceCalRGB) GetNumComponents() int {
 	return 3
 }
 
 // DecodeArray returns the range of color component values in CalRGB colorspace.
-func (this *PdfColorspaceCalRGB) DecodeArray() []float64 {
+func (cs *PdfColorspaceCalRGB) DecodeArray() []float64 {
 	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
@@ -1106,46 +1106,46 @@ func newPdfColorspaceCalRGBFromPdfObject(obj PdfObject) (*PdfColorspaceCalRGB, e
 	return cs, nil
 }
 
-// Return as PDF object format [name dictionary]
-func (this *PdfColorspaceCalRGB) ToPdfObject() PdfObject {
+// ToPdfObject returns colorspace in a PDF object format [name dictionary]
+func (cs *PdfColorspaceCalRGB) ToPdfObject() PdfObject {
 	// CalRGB color space dictionary..
 	cspace := &PdfObjectArray{}
 
 	cspace.Append(MakeName("CalRGB"))
 
 	dict := MakeDict()
-	if this.WhitePoint != nil {
-		wp := MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+	if cs.WhitePoint != nil {
+		wp := MakeArray(MakeFloat(cs.WhitePoint[0]), MakeFloat(cs.WhitePoint[1]), MakeFloat(cs.WhitePoint[2]))
 		dict.Set("WhitePoint", wp)
 	} else {
 		common.Log.Error("CalRGB: Missing WhitePoint (Required)")
 	}
 
-	if this.BlackPoint != nil {
-		bp := MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+	if cs.BlackPoint != nil {
+		bp := MakeArray(MakeFloat(cs.BlackPoint[0]), MakeFloat(cs.BlackPoint[1]), MakeFloat(cs.BlackPoint[2]))
 		dict.Set("BlackPoint", bp)
 	}
-	if this.Gamma != nil {
-		g := MakeArray(MakeFloat(this.Gamma[0]), MakeFloat(this.Gamma[1]), MakeFloat(this.Gamma[2]))
+	if cs.Gamma != nil {
+		g := MakeArray(MakeFloat(cs.Gamma[0]), MakeFloat(cs.Gamma[1]), MakeFloat(cs.Gamma[2]))
 		dict.Set("Gamma", g)
 	}
-	if this.Matrix != nil {
-		matrix := MakeArray(MakeFloat(this.Matrix[0]), MakeFloat(this.Matrix[1]), MakeFloat(this.Matrix[2]),
-			MakeFloat(this.Matrix[3]), MakeFloat(this.Matrix[4]), MakeFloat(this.Matrix[5]),
-			MakeFloat(this.Matrix[6]), MakeFloat(this.Matrix[7]), MakeFloat(this.Matrix[8]))
+	if cs.Matrix != nil {
+		matrix := MakeArray(MakeFloat(cs.Matrix[0]), MakeFloat(cs.Matrix[1]), MakeFloat(cs.Matrix[2]),
+			MakeFloat(cs.Matrix[3]), MakeFloat(cs.Matrix[4]), MakeFloat(cs.Matrix[5]),
+			MakeFloat(cs.Matrix[6]), MakeFloat(cs.Matrix[7]), MakeFloat(cs.Matrix[8]))
 		dict.Set("Matrix", matrix)
 	}
 	cspace.Append(dict)
 
-	if this.container != nil {
-		this.container.PdfObject = cspace
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = cspace
+		return cs.container
 	}
 
 	return cspace
 }
 
-func (this *PdfColorspaceCalRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceCalRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -1172,7 +1172,7 @@ func (this *PdfColorspaceCalRGB) ColorFromFloats(vals []float64) (PdfColor, erro
 	return color, nil
 }
 
-func (this *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -1182,10 +1182,10 @@ func (this *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []PdfObject) (PdfCo
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	calrgb, ok := color.(*PdfColorCalRGB)
 	if !ok {
 		common.Log.Debug("Input color not cal rgb")
@@ -1200,9 +1200,9 @@ func (this *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	// A, B, C -> X,Y,Z
 	// Gamma [GR GC GB]
 	// Matrix [XA YA ZA XB YB ZB XC YC ZC]
-	X := this.Matrix[0]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[3]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[6]*math.Pow(cVal, this.Gamma[2])
-	Y := this.Matrix[1]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[4]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[7]*math.Pow(cVal, this.Gamma[2])
-	Z := this.Matrix[2]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[5]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[8]*math.Pow(cVal, this.Gamma[2])
+	X := cs.Matrix[0]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[3]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[6]*math.Pow(cVal, cs.Gamma[2])
+	Y := cs.Matrix[1]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[4]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[7]*math.Pow(cVal, cs.Gamma[2])
+	Z := cs.Matrix[2]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[5]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[8]*math.Pow(cVal, cs.Gamma[2])
 
 	// X, Y, Z -> R, G, B
 	// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
@@ -1218,13 +1218,13 @@ func (this *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
-func (this *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples)-2; i++ {
 		// A, B, C in range 0.0 to 1.0
 		aVal := float64(samples[i]) / maxVal
@@ -1234,9 +1234,9 @@ func (this *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 		// A, B, C -> X,Y,Z
 		// Gamma [GR GC GB]
 		// Matrix [XA YA ZA XB YB ZB XC YC ZC]
-		X := this.Matrix[0]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[3]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[6]*math.Pow(cVal, this.Gamma[2])
-		Y := this.Matrix[1]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[4]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[7]*math.Pow(cVal, this.Gamma[2])
-		Z := this.Matrix[2]*math.Pow(aVal, this.Gamma[0]) + this.Matrix[5]*math.Pow(bVal, this.Gamma[1]) + this.Matrix[8]*math.Pow(cVal, this.Gamma[2])
+		X := cs.Matrix[0]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[3]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[6]*math.Pow(cVal, cs.Gamma[2])
+		Y := cs.Matrix[1]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[4]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[7]*math.Pow(cVal, cs.Gamma[2])
+		Z := cs.Matrix[2]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[5]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[8]*math.Pow(cVal, cs.Gamma[2])
 
 		// X, Y, Z -> R, G, B
 		// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
@@ -1273,29 +1273,29 @@ func NewPdfColorLab(l, a, b float64) *PdfColorLab {
 	return &color
 }
 
-func (this *PdfColorLab) GetNumComponents() int {
+func (col *PdfColorLab) GetNumComponents() int {
 	return 3
 }
 
-func (this *PdfColorLab) L() float64 {
-	return float64(this[0])
+func (col *PdfColorLab) L() float64 {
+	return float64(col[0])
 }
 
-func (this *PdfColorLab) A() float64 {
-	return float64(this[1])
+func (col *PdfColorLab) A() float64 {
+	return float64(col[1])
 }
 
-func (this *PdfColorLab) B() float64 {
-	return float64(this[2])
+func (col *PdfColorLab) B() float64 {
+	return float64(col[2])
 }
 
-// Convert to an integer format.
-func (this *PdfColorLab) ToInteger(bits int) [3]uint32 {
+// ToInteger convert to an integer format.
+func (col *PdfColorLab) ToInteger(bits int) [3]uint32 {
 	maxVal := math.Pow(2, float64(bits)) - 1
-	return [3]uint32{uint32(maxVal * this.L()), uint32(maxVal * this.A()), uint32(maxVal * this.B())}
+	return [3]uint32{uint32(maxVal * col.L()), uint32(maxVal * col.A()), uint32(maxVal * col.B())}
 }
 
-// L*, a*, b* 3 component colorspace.
+// PdfColorspaceLab is a L*, a*, b* 3 component colorspace.
 type PdfColorspaceLab struct {
 	WhitePoint []float64 // Required.
 	BlackPoint []float64
@@ -1304,22 +1304,22 @@ type PdfColorspaceLab struct {
 	container *PdfIndirectObject
 }
 
-func (this *PdfColorspaceLab) String() string {
+func (cs *PdfColorspaceLab) String() string {
 	return "Lab"
 }
 
-func (this *PdfColorspaceLab) GetNumComponents() int {
+func (cs *PdfColorspaceLab) GetNumComponents() int {
 	return 3
 }
 
 // DecodeArray returns the range of color component values in the Lab colorspace.
-func (this *PdfColorspaceLab) DecodeArray() []float64 {
+func (cs *PdfColorspaceLab) DecodeArray() []float64 {
 	// Range for L
 	decode := []float64{0, 100}
 
 	// Range for A,B specified by range or default
-	if this.Range != nil && len(this.Range) == 4 {
-		decode = append(decode, this.Range...)
+	if cs.Range != nil && len(cs.Range) == 4 {
+		decode = append(decode, cs.Range...)
 	} else {
 		decode = append(decode, -100, 100, -100, 100)
 	}
@@ -1327,8 +1327,8 @@ func (this *PdfColorspaceLab) DecodeArray() []float64 {
 	return decode
 }
 
-// require parameters?
 func NewPdfColorspaceLab() *PdfColorspaceLab {
+	// TODO: require parameters?
 	cs := &PdfColorspaceLab{}
 
 	// Set optional parameters to default values.
@@ -1429,41 +1429,41 @@ func newPdfColorspaceLabFromPdfObject(obj PdfObject) (*PdfColorspaceLab, error) 
 	return cs, nil
 }
 
-// Return as PDF object format [name dictionary]
-func (this *PdfColorspaceLab) ToPdfObject() PdfObject {
+// ToPdfObject returns colorspace in a PDF object format [name dictionary]
+func (cs *PdfColorspaceLab) ToPdfObject() PdfObject {
 	// CalRGB color space dictionary..
 	csObj := MakeArray()
 
 	csObj.Append(MakeName("Lab"))
 
 	dict := MakeDict()
-	if this.WhitePoint != nil {
-		wp := MakeArray(MakeFloat(this.WhitePoint[0]), MakeFloat(this.WhitePoint[1]), MakeFloat(this.WhitePoint[2]))
+	if cs.WhitePoint != nil {
+		wp := MakeArray(MakeFloat(cs.WhitePoint[0]), MakeFloat(cs.WhitePoint[1]), MakeFloat(cs.WhitePoint[2]))
 		dict.Set("WhitePoint", wp)
 	} else {
 		common.Log.Error("Lab: Missing WhitePoint (Required)")
 	}
 
-	if this.BlackPoint != nil {
-		bp := MakeArray(MakeFloat(this.BlackPoint[0]), MakeFloat(this.BlackPoint[1]), MakeFloat(this.BlackPoint[2]))
+	if cs.BlackPoint != nil {
+		bp := MakeArray(MakeFloat(cs.BlackPoint[0]), MakeFloat(cs.BlackPoint[1]), MakeFloat(cs.BlackPoint[2]))
 		dict.Set("BlackPoint", bp)
 	}
 
-	if this.Range != nil {
-		val := MakeArray(MakeFloat(this.Range[0]), MakeFloat(this.Range[1]), MakeFloat(this.Range[2]), MakeFloat(this.Range[3]))
+	if cs.Range != nil {
+		val := MakeArray(MakeFloat(cs.Range[0]), MakeFloat(cs.Range[1]), MakeFloat(cs.Range[2]), MakeFloat(cs.Range[3]))
 		dict.Set("Range", val)
 	}
 	csObj.Append(dict)
 
-	if this.container != nil {
-		this.container.PdfObject = csObj
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csObj
+		return cs.container
 	}
 
 	return csObj
 }
 
-func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -1479,9 +1479,9 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 	a := vals[1]
 	aMin := float64(-100)
 	aMax := float64(100)
-	if len(this.Range) > 1 {
-		aMin = this.Range[0]
-		aMax = this.Range[1]
+	if len(cs.Range) > 1 {
+		aMin = cs.Range[0]
+		aMax = cs.Range[1]
 	}
 	if a < aMin || a > aMax {
 		common.Log.Debug("A out of range (got %v; range %v to %v)", a, aMin, aMax)
@@ -1492,9 +1492,9 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 	b := vals[2]
 	bMin := float64(-100)
 	bMax := float64(100)
-	if len(this.Range) > 3 {
-		bMin = this.Range[2]
-		bMax = this.Range[3]
+	if len(cs.Range) > 3 {
+		bMin = cs.Range[2]
+		bMax = cs.Range[3]
 	}
 	if b < bMin || b > bMax {
 		common.Log.Debug("b out of range (got %v; range %v to %v)", b, bMin, bMax)
@@ -1505,7 +1505,7 @@ func (this *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) 
 	return color, nil
 }
 
-func (this *PdfColorspaceLab) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceLab) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 3 {
 		return nil, errors.New("Range check")
 	}
@@ -1515,10 +1515,10 @@ func (this *PdfColorspaceLab) ColorFromPdfObjects(objects []PdfObject) (PdfColor
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	gFunc := func(x float64) float64 {
 		if x >= 6.0/29 {
 			return x * x * x
@@ -1544,9 +1544,9 @@ func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	N := (LStar+16)/116 - BStar/200
 
 	// L, M, N -> X,Y,Z
-	X := this.WhitePoint[0] * gFunc(L)
-	Y := this.WhitePoint[1] * gFunc(M)
-	Z := this.WhitePoint[2] * gFunc(N)
+	X := cs.WhitePoint[0] * gFunc(L)
+	Y := cs.WhitePoint[1] * gFunc(M)
+	Z := cs.WhitePoint[2] * gFunc(N)
 
 	// Convert to RGB.
 	// X, Y, Z -> R, G, B
@@ -1563,7 +1563,7 @@ func (this *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
-func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 	g := func(x float64) float64 {
 		if x >= 6.0/29 {
 			return x * x * x
@@ -1583,13 +1583,13 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 	if len(componentRanges) != 6 {
 		// If image's Decode not appropriate, fall back to default decode array.
 		common.Log.Trace("Image - Lab Decode range != 6... use [0 100 amin amax bmin bmax] default decode array")
-		componentRanges = this.DecodeArray()
+		componentRanges = cs.DecodeArray()
 	}
 
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	rgbSamples := []uint32{}
+	var rgbSamples []uint32
 	for i := 0; i < len(samples); i += 3 {
 		// Get normalized L*, a*, b* values. [0-1]
 		LNorm := float64(samples[i]) / maxVal
@@ -1606,9 +1606,9 @@ func (this *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		N := (LStar+16)/116 - BStar/200
 
 		// L, M, N -> X,Y,Z
-		X := this.WhitePoint[0] * g(L)
-		Y := this.WhitePoint[1] * g(M)
-		Z := this.WhitePoint[2] * g(N)
+		X := cs.WhitePoint[0] * g(L)
+		Y := cs.WhitePoint[1] * g(M)
+		Z := cs.WhitePoint[2] * g(N)
 
 		// Convert to RGB.
 		// X, Y, Z -> R, G, B
@@ -1668,7 +1668,7 @@ func (this *PdfColorICCBased) ToInteger(bits int) []uint32 {
 */
 // See p. 157 for calculations...
 
-// format [/ICCBased stream]
+// PdfColorspaceICCBased format [/ICCBased stream]
 //
 // The stream shall contain the ICC profile.
 // A conforming reader shall support ICC.1:2004:10 as required by PDF 1.7, which will enable it
@@ -1688,16 +1688,16 @@ type PdfColorspaceICCBased struct {
 	stream    *PdfObjectStream
 }
 
-func (this *PdfColorspaceICCBased) GetNumComponents() int {
-	return this.N
+func (cs *PdfColorspaceICCBased) GetNumComponents() int {
+	return cs.N
 }
 
 // DecodeArray returns the range of color component values in the ICCBased colorspace.
-func (this *PdfColorspaceICCBased) DecodeArray() []float64 {
-	return this.Range
+func (cs *PdfColorspaceICCBased) DecodeArray() []float64 {
+	return cs.Range
 }
 
-func (this *PdfColorspaceICCBased) String() string {
+func (cs *PdfColorspaceICCBased) String() string {
 	return "ICCBased"
 }
 
@@ -1801,62 +1801,62 @@ func newPdfColorspaceICCBasedFromPdfObject(obj PdfObject) (*PdfColorspaceICCBase
 	return cs, nil
 }
 
-// Return as PDF object format [name stream]
-func (this *PdfColorspaceICCBased) ToPdfObject() PdfObject {
+// ToPdfObject returns colorspace in a PDF object format [name stream]
+func (cs *PdfColorspaceICCBased) ToPdfObject() PdfObject {
 	csObj := &PdfObjectArray{}
 
 	csObj.Append(MakeName("ICCBased"))
 
 	var stream *PdfObjectStream
-	if this.stream != nil {
-		stream = this.stream
+	if cs.stream != nil {
+		stream = cs.stream
 	} else {
 		stream = &PdfObjectStream{}
 	}
 	dict := MakeDict()
 
-	dict.Set("N", MakeInteger(int64(this.N)))
+	dict.Set("N", MakeInteger(int64(cs.N)))
 
-	if this.Alternate != nil {
-		dict.Set("Alternate", this.Alternate.ToPdfObject())
+	if cs.Alternate != nil {
+		dict.Set("Alternate", cs.Alternate.ToPdfObject())
 	}
 
-	if this.Metadata != nil {
-		dict.Set("Metadata", this.Metadata)
+	if cs.Metadata != nil {
+		dict.Set("Metadata", cs.Metadata)
 	}
-	if this.Range != nil {
-		ranges := []PdfObject{}
-		for _, r := range this.Range {
+	if cs.Range != nil {
+		var ranges []PdfObject
+		for _, r := range cs.Range {
 			ranges = append(ranges, MakeFloat(r))
 		}
 		dict.Set("Range", MakeArray(ranges...))
 	}
 
 	// Encode with a default encoder?
-	dict.Set("Length", MakeInteger(int64(len(this.Data))))
+	dict.Set("Length", MakeInteger(int64(len(cs.Data))))
 	// Need to have a representation of the stream...
-	stream.Stream = this.Data
+	stream.Stream = cs.Data
 	stream.PdfObjectDictionary = dict
 
 	csObj.Append(stream)
 
-	if this.container != nil {
-		this.container.PdfObject = csObj
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csObj
+		return cs.container
 	}
 
 	return csObj
 }
 
-func (this *PdfColorspaceICCBased) ColorFromFloats(vals []float64) (PdfColor, error) {
-	if this.Alternate == nil {
-		if this.N == 1 {
+func (cs *PdfColorspaceICCBased) ColorFromFloats(vals []float64) (PdfColor, error) {
+	if cs.Alternate == nil {
+		if cs.N == 1 {
 			cs := NewPdfColorspaceDeviceGray()
 			return cs.ColorFromFloats(vals)
-		} else if this.N == 3 {
+		} else if cs.N == 3 {
 			cs := NewPdfColorspaceDeviceRGB()
 			return cs.ColorFromFloats(vals)
-		} else if this.N == 4 {
+		} else if cs.N == 4 {
 			cs := NewPdfColorspaceDeviceCMYK()
 			return cs.ColorFromFloats(vals)
 		} else {
@@ -1864,18 +1864,18 @@ func (this *PdfColorspaceICCBased) ColorFromFloats(vals []float64) (PdfColor, er
 		}
 	}
 
-	return this.Alternate.ColorFromFloats(vals)
+	return cs.Alternate.ColorFromFloats(vals)
 }
 
-func (this *PdfColorspaceICCBased) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
-	if this.Alternate == nil {
-		if this.N == 1 {
+func (cs *PdfColorspaceICCBased) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+	if cs.Alternate == nil {
+		if cs.N == 1 {
 			cs := NewPdfColorspaceDeviceGray()
 			return cs.ColorFromPdfObjects(objects)
-		} else if this.N == 3 {
+		} else if cs.N == 3 {
 			cs := NewPdfColorspaceDeviceRGB()
 			return cs.ColorFromPdfObjects(objects)
-		} else if this.N == 4 {
+		} else if cs.N == 4 {
 			cs := NewPdfColorspaceDeviceCMYK()
 			return cs.ColorFromPdfObjects(objects)
 		} else {
@@ -1883,10 +1883,10 @@ func (this *PdfColorspaceICCBased) ColorFromPdfObjects(objects []PdfObject) (Pdf
 		}
 	}
 
-	return this.Alternate.ColorFromPdfObjects(objects)
+	return cs.Alternate.ColorFromPdfObjects(objects)
 }
 
-func (this *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
 	/*
 		_, ok := color.(*PdfColorICCBased)
 		if !ok {
@@ -1895,17 +1895,17 @@ func (this *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) 
 		}
 	*/
 
-	if this.Alternate == nil {
+	if cs.Alternate == nil {
 		common.Log.Debug("ICC Based colorspace missing alternative")
-		if this.N == 1 {
+		if cs.N == 1 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceGray (N=1)")
 			grayCS := NewPdfColorspaceDeviceGray()
 			return grayCS.ColorToRGB(color)
-		} else if this.N == 3 {
+		} else if cs.N == 3 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceRGB (N=3)")
 			// Already in RGB.
 			return color, nil
-		} else if this.N == 4 {
+		} else if cs.N == 4 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceCMYK (N=4)")
 			// CMYK
 			cmykCS := NewPdfColorspaceDeviceCMYK()
@@ -1915,22 +1915,22 @@ func (this *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) 
 		}
 	}
 
-	common.Log.Trace("ICC Based colorspace with alternative: %#v", this)
-	return this.Alternate.ColorToRGB(color)
+	common.Log.Trace("ICC Based colorspace with alternative: %#v", cs)
+	return cs.Alternate.ColorToRGB(color)
 }
 
-func (this *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
-	if this.Alternate == nil {
+func (cs *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
+	if cs.Alternate == nil {
 		common.Log.Debug("ICC Based colorspace missing alternative")
-		if this.N == 1 {
+		if cs.N == 1 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceGray (N=1)")
 			grayCS := NewPdfColorspaceDeviceGray()
 			return grayCS.ImageToRGB(img)
-		} else if this.N == 3 {
+		} else if cs.N == 3 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceRGB (N=3)")
 			// Already in RGB.
 			return img, nil
-		} else if this.N == 4 {
+		} else if cs.N == 4 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceCMYK (N=4)")
 			// CMYK
 			cmykCS := NewPdfColorspaceDeviceCMYK()
@@ -1939,12 +1939,12 @@ func (this *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 			return img, errors.New("ICC Based colorspace missing alternative")
 		}
 	}
-	common.Log.Trace("ICC Based colorspace with alternative: %#v", this)
+	common.Log.Trace("ICC Based colorspace with alternative: %#v", cs)
 
-	output, err := this.Alternate.ImageToRGB(img)
+	output, err := cs.Alternate.ImageToRGB(img)
 	common.Log.Trace("ICC Input image: %+v", img)
 	common.Log.Trace("ICC Output image: %+v", output)
-	return output, err //this.Alternate.ImageToRGB(img)
+	return output, err //cs.Alternate.ImageToRGB(img)
 }
 
 //////////////////////
@@ -1955,7 +1955,7 @@ type PdfColorPattern struct {
 	PatternName PdfObjectName // Name of the pattern (reference via resource dicts).
 }
 
-// Pattern colorspace.
+// PdfColorspaceSpecialPattern is a Pattern colorspace.
 // Can be defined either as /Pattern or with an underlying colorspace [/Pattern cs].
 type PdfColorspaceSpecialPattern struct {
 	UnderlyingCS PdfColorspace
@@ -1967,16 +1967,16 @@ func NewPdfColorspaceSpecialPattern() *PdfColorspaceSpecialPattern {
 	return &PdfColorspaceSpecialPattern{}
 }
 
-func (this *PdfColorspaceSpecialPattern) String() string {
+func (cs *PdfColorspaceSpecialPattern) String() string {
 	return "Pattern"
 }
 
-func (this *PdfColorspaceSpecialPattern) GetNumComponents() int {
-	return this.UnderlyingCS.GetNumComponents()
+func (cs *PdfColorspaceSpecialPattern) GetNumComponents() int {
+	return cs.UnderlyingCS.GetNumComponents()
 }
 
 // DecodeArray returns an empty slice as there are no components associated with pattern colorspace.
-func (this *PdfColorspaceSpecialPattern) DecodeArray() []float64 {
+func (cs *PdfColorspaceSpecialPattern) DecodeArray() []float64 {
 	return []float64{}
 }
 
@@ -2030,32 +2030,33 @@ func newPdfColorspaceSpecialPatternFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	return cs, nil
 }
 
-func (this *PdfColorspaceSpecialPattern) ToPdfObject() PdfObject {
-	if this.UnderlyingCS == nil {
+func (cs *PdfColorspaceSpecialPattern) ToPdfObject() PdfObject {
+	if cs.UnderlyingCS == nil {
 		return MakeName("Pattern")
 	}
 
 	csObj := MakeArray(MakeName("Pattern"))
-	csObj.Append(this.UnderlyingCS.ToPdfObject())
+	csObj.Append(cs.UnderlyingCS.ToPdfObject())
 
-	if this.container != nil {
-		this.container.PdfObject = csObj
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csObj
+		return cs.container
 	}
 
 	return csObj
 }
 
-func (this *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfColor, error) {
-	if this.UnderlyingCS == nil {
+func (cs *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfColor, error) {
+	if cs.UnderlyingCS == nil {
 		return nil, errors.New("Underlying CS not specified")
 	}
-	return this.UnderlyingCS.ColorFromFloats(vals)
+	return cs.UnderlyingCS.ColorFromFloats(vals)
 }
 
+// ColorFromPdfObjects loads the color from PDF objects.
 // The first objects (if present) represent the color in underlying colorspace.  The last one represents
 // the name of the pattern.
-func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) < 1 {
 		return nil, errors.New("Invalid number of parameters")
 	}
@@ -2072,11 +2073,11 @@ func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject
 	// Pattern color if specified.
 	if len(objects) > 1 {
 		colorObjs := objects[0 : len(objects)-1]
-		if this.UnderlyingCS == nil {
+		if cs.UnderlyingCS == nil {
 			common.Log.Debug("Pattern color with defined color components but underlying cs missing")
 			return nil, errors.New("Underlying CS not defined")
 		}
-		color, err := this.UnderlyingCS.ColorFromPdfObjects(colorObjs)
+		color, err := cs.UnderlyingCS.ColorFromPdfObjects(colorObjs)
 		if err != nil {
 			common.Log.Debug("ERROR: Unable to convert color via underlying cs: %v", err)
 			return nil, err
@@ -2087,10 +2088,10 @@ func (this *PdfColorspaceSpecialPattern) ColorFromPdfObjects(objects []PdfObject
 	return patternColor, nil
 }
 
-// Only converts color used with uncolored patterns (defined in underlying colorspace).  Does not go into the
+// ColorToRGB only converts color used with uncolored patterns (defined in underlying colorspace).  Does not go into the
 // pattern objects and convert those.  If that is desired, needs to be done separately.  See for example
 // grayscale conversion example in unidoc-examples repo.
-func (this *PdfColorspaceSpecialPattern) ColorToRGB(color PdfColor) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialPattern) ColorToRGB(color PdfColor) (PdfColor, error) {
 	patternColor, ok := color.(*PdfColorPattern)
 	if !ok {
 		common.Log.Debug("Color not pattern (got %T)", color)
@@ -2102,22 +2103,21 @@ func (this *PdfColorspaceSpecialPattern) ColorToRGB(color PdfColor) (PdfColor, e
 		return color, nil
 	}
 
-	if this.UnderlyingCS == nil {
+	if cs.UnderlyingCS == nil {
 		return nil, errors.New("Underlying CS not defined.")
 	}
 
-	return this.UnderlyingCS.ColorToRGB(patternColor.Color)
+	return cs.UnderlyingCS.ColorToRGB(patternColor.Color)
 }
 
-// An image cannot be defined in a pattern colorspace, returns an error.
-func (this *PdfColorspaceSpecialPattern) ImageToRGB(img Image) (Image, error) {
+// ImageToRGB returns an error since an image cannot be defined in a pattern colorspace.
+func (cs *PdfColorspaceSpecialPattern) ImageToRGB(img Image) (Image, error) {
 	common.Log.Debug("Error: Image cannot be specified in Pattern colorspace")
 	return img, errors.New("Invalid colorspace for image (pattern)")
 }
 
-//////////////////////
-// Indexed colorspace. An indexed color space is a lookup table, where the input element is an index to the lookup
-// table and the output is a color defined in the lookup table in the Base colorspace.
+// PdfColorspaceSpecialIndexed is an indexed color space is a lookup table, where the input element is an index to the
+// lookup table and the output is a color defined in the lookup table in the Base colorspace.
 // [/Indexed base hival lookup]
 type PdfColorspaceSpecialIndexed struct {
 	Base   PdfColorspace
@@ -2135,17 +2135,17 @@ func NewPdfColorspaceSpecialIndexed() *PdfColorspaceSpecialIndexed {
 	return cs
 }
 
-func (this *PdfColorspaceSpecialIndexed) String() string {
+func (cs *PdfColorspaceSpecialIndexed) String() string {
 	return "Indexed"
 }
 
-func (this *PdfColorspaceSpecialIndexed) GetNumComponents() int {
+func (cs *PdfColorspaceSpecialIndexed) GetNumComponents() int {
 	return 1
 }
 
 // DecodeArray returns the component range values for the Indexed colorspace.
-func (this *PdfColorspaceSpecialIndexed) DecodeArray() []float64 {
-	return []float64{0, float64(this.HiVal)}
+func (cs *PdfColorspaceSpecialIndexed) DecodeArray() []float64 {
+	return []float64{0, float64(cs.HiVal)}
 }
 
 func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceSpecialIndexed, error) {
@@ -2238,24 +2238,24 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj PdfObject) (*PdfColorspaceS
 	return cs, nil
 }
 
-func (this *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("Range check")
 	}
 
-	N := this.Base.GetNumComponents()
+	N := cs.Base.GetNumComponents()
 
 	index := int(vals[0]) * N
-	if index < 0 || (index+N-1) >= len(this.colorLookup) {
+	if index < 0 || (index+N-1) >= len(cs.colorLookup) {
 		return nil, errors.New("Outside range")
 	}
 
-	cvals := this.colorLookup[index : index+N]
-	floats := []float64{}
+	cvals := cs.colorLookup[index : index+N]
+	var floats []float64
 	for _, val := range cvals {
 		floats = append(floats, float64(val)/255.0)
 	}
-	color, err := this.Base.ColorFromFloats(floats)
+	color, err := cs.Base.ColorFromFloats(floats)
 	if err != nil {
 		return nil, err
 	}
@@ -2263,7 +2263,7 @@ func (this *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfCol
 	return color, nil
 }
 
-func (this *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -2273,19 +2273,19 @@ func (this *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []PdfObject
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, error) {
-	if this.Base == nil {
+func (cs *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, error) {
+	if cs.Base == nil {
 		return nil, errors.New("Indexed base colorspace undefined")
 	}
 
-	return this.Base.ColorToRGB(color)
+	return cs.Base.ColorToRGB(color)
 }
 
-// Convert an indexed image to RGB.
-func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
+// ImageToRGB convert an indexed image to RGB.
+func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	//baseImage := img
 	// Make a new representation of the image to be converted with the base colorspace.
 	baseImage := Image{}
@@ -2297,9 +2297,9 @@ func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	baseImage.ColorComponents = img.ColorComponents
 
 	samples := img.GetSamples()
-	N := this.Base.GetNumComponents()
+	N := cs.Base.GetNumComponents()
 
-	baseSamples := []uint32{}
+	var baseSamples []uint32
 	// Convert the indexed data to base color map data.
 	for i := 0; i < len(samples); i++ {
 		// Each data point represents an index location.
@@ -2307,13 +2307,13 @@ func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 		index := int(samples[i]) * N
 		common.Log.Trace("Indexed Index: %d", index)
 		// Ensure does not go out of bounds.
-		if index+N-1 >= len(this.colorLookup) {
+		if index+N-1 >= len(cs.colorLookup) {
 			// Clip to the end value.
-			index = len(this.colorLookup) - N - 1
+			index = len(cs.colorLookup) - N - 1
 			common.Log.Trace("Clipping to index: %d", index)
 		}
 
-		cvals := this.colorLookup[index : index+N]
+		cvals := cs.colorLookup[index : index+N]
 		common.Log.Trace("C Vals: % d", cvals)
 		for _, val := range cvals {
 			baseSamples = append(baseSamples, uint32(val))
@@ -2326,26 +2326,25 @@ func (this *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	common.Log.Trace("-> Output samples: %d", baseSamples)
 
 	// Convert to rgb.
-	return this.Base.ImageToRGB(baseImage)
+	return cs.Base.ImageToRGB(baseImage)
 }
 
-// [/Indexed base hival lookup]
-func (this *PdfColorspaceSpecialIndexed) ToPdfObject() PdfObject {
+// ToPdfObject converts colorspace to a PDF object. [/Indexed base hival lookup]
+func (cs *PdfColorspaceSpecialIndexed) ToPdfObject() PdfObject {
 	csObj := MakeArray(MakeName("Indexed"))
-	csObj.Append(this.Base.ToPdfObject())
-	csObj.Append(MakeInteger(int64(this.HiVal)))
-	csObj.Append(this.Lookup)
+	csObj.Append(cs.Base.ToPdfObject())
+	csObj.Append(MakeInteger(int64(cs.HiVal)))
+	csObj.Append(cs.Lookup)
 
-	if this.container != nil {
-		this.container.PdfObject = csObj
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csObj
+		return cs.container
 	}
 
 	return csObj
 }
 
-//////////////////////
-// Separation colorspace.
+// PdfColorspaceSpecialSeparation is a Separation colorspace.
 // At the moment the colour space is set to a Separation space, the conforming reader shall determine whether the
 // device has an available colorant (e.g. dye) corresponding to the name of the requested space. If so, the conforming
 // reader shall ignore the alternateSpace and tintTransform parameters; subsequent painting operations within the
@@ -2366,16 +2365,16 @@ func NewPdfColorspaceSpecialSeparation() *PdfColorspaceSpecialSeparation {
 	return cs
 }
 
-func (this *PdfColorspaceSpecialSeparation) String() string {
+func (cs *PdfColorspaceSpecialSeparation) String() string {
 	return "Separation"
 }
 
-func (this *PdfColorspaceSpecialSeparation) GetNumComponents() int {
+func (cs *PdfColorspaceSpecialSeparation) GetNumComponents() int {
 	return 1
 }
 
 // DecodeArray returns the component range values for the Separation colorspace.
-func (this *PdfColorspaceSpecialSeparation) DecodeArray() []float64 {
+func (cs *PdfColorspaceSpecialSeparation) DecodeArray() []float64 {
 	return []float64{0, 1.0}
 }
 
@@ -2437,39 +2436,39 @@ func newPdfColorspaceSpecialSeparationFromPdfObject(obj PdfObject) (*PdfColorspa
 	return cs, nil
 }
 
-func (this *PdfColorspaceSpecialSeparation) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceSpecialSeparation) ToPdfObject() PdfObject {
 	csArray := MakeArray(MakeName("Separation"))
 
-	csArray.Append(this.ColorantName)
-	csArray.Append(this.AlternateSpace.ToPdfObject())
-	csArray.Append(this.TintTransform.ToPdfObject())
+	csArray.Append(cs.ColorantName)
+	csArray.Append(cs.AlternateSpace.ToPdfObject())
+	csArray.Append(cs.TintTransform.ToPdfObject())
 
 	// If in a container, replace the contents and return back.
 	// Helps not getting too many duplicates of the same objects.
-	if this.container != nil {
-		this.container.PdfObject = csArray
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csArray
+		return cs.container
 	}
 
 	return csArray
 }
 
-func (this *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("Range check")
 	}
 
 	tint := vals[0]
 	input := []float64{tint}
-	output, err := this.TintTransform.Evaluate(input)
+	output, err := cs.TintTransform.Evaluate(input)
 	if err != nil {
 		common.Log.Debug("Error, failed to evaluate: %v", err)
-		common.Log.Trace("Tint transform: %+v", this.TintTransform)
+		common.Log.Trace("Tint transform: %+v", cs.TintTransform)
 		return nil, err
 	}
 
-	common.Log.Trace("Processing ColorFromFloats(%+v) on AlternateSpace: %#v", output, this.AlternateSpace)
-	color, err := this.AlternateSpace.ColorFromFloats(output)
+	common.Log.Trace("Processing ColorFromFloats(%+v) on AlternateSpace: %#v", output, cs.AlternateSpace)
+	color, err := cs.AlternateSpace.ColorFromFloats(output)
 	if err != nil {
 		common.Log.Debug("Error, failed to evaluate in alternate space: %v", err)
 		return nil, err
@@ -2478,7 +2477,7 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (Pdf
 	return color, nil
 }
 
-func (this *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+func (cs *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("Range check")
 	}
@@ -2488,21 +2487,21 @@ func (this *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []PdfObj
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
 // ColorToRGB converts a color in Separation colorspace to RGB colorspace.
-func (this *PdfColorspaceSpecialSeparation) ColorToRGB(color PdfColor) (PdfColor, error) {
-	if this.AlternateSpace == nil {
+func (cs *PdfColorspaceSpecialSeparation) ColorToRGB(color PdfColor) (PdfColor, error) {
+	if cs.AlternateSpace == nil {
 		return nil, errors.New("Alternate colorspace undefined")
 	}
 
-	return this.AlternateSpace.ColorToRGB(color)
+	return cs.AlternateSpace.ColorToRGB(color)
 }
 
 // ImageToRGB converts an image with samples in Separation CS to an image with samples specified in
 // DeviceRGB CS.
-func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 	altImage := img
 
 	samples := img.GetSamples()
@@ -2510,19 +2509,19 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 
 	common.Log.Trace("Separation color space -> ToRGB conversion")
 	common.Log.Trace("samples in: %d", len(samples))
-	common.Log.Trace("TintTransform: %+v", this.TintTransform)
+	common.Log.Trace("TintTransform: %+v", cs.TintTransform)
 
-	altDecode := this.AlternateSpace.DecodeArray()
+	altDecode := cs.AlternateSpace.DecodeArray()
 
-	altSamples := []uint32{}
+	var altSamples []uint32
 	// Convert tints to color data in the alternate colorspace.
 	for i := 0; i < len(samples); i++ {
 		// A single tint component is in the range 0.0 - 1.0
 		tint := float64(samples[i]) / maxVal
 
 		// Convert the tint value to the alternate space value.
-		outputs, err := this.TintTransform.Evaluate([]float64{tint})
-		//common.Log.Trace("%v Converting tint value: %f -> [% f]", this.AlternateSpace, tint, outputs)
+		outputs, err := cs.TintTransform.Evaluate([]float64{tint})
+		//common.Log.Trace("%v Converting tint value: %f -> [% f]", cs.AlternateSpace, tint, outputs)
 
 		if err != nil {
 			return img, err
@@ -2540,13 +2539,13 @@ func (this *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error)
 	}
 	common.Log.Trace("Samples out: %d", len(altSamples))
 	altImage.SetSamples(altSamples)
-	altImage.ColorComponents = this.AlternateSpace.GetNumComponents()
+	altImage.ColorComponents = cs.AlternateSpace.GetNumComponents()
 
 	// Set the image's decode parameters for interpretation in the alternative CS.
 	altImage.decode = altDecode
 
 	// Convert to RGB via the alternate colorspace.
-	return this.AlternateSpace.ImageToRGB(altImage)
+	return cs.AlternateSpace.ImageToRGB(altImage)
 }
 
 // PdfColorspaceDeviceN represents a DeviceN color space. DeviceN color spaces are similar to Separation color
@@ -2571,20 +2570,20 @@ func NewPdfColorspaceDeviceN() *PdfColorspaceDeviceN {
 }
 
 // String returns the name of the colorspace (DeviceN).
-func (this *PdfColorspaceDeviceN) String() string {
+func (cs *PdfColorspaceDeviceN) String() string {
 	return "DeviceN"
 }
 
 // GetNumComponents returns the number of input color components, i.e. that are input to the tint transform.
-func (this *PdfColorspaceDeviceN) GetNumComponents() int {
-	return this.ColorantNames.Len()
+func (cs *PdfColorspaceDeviceN) GetNumComponents() int {
+	return cs.ColorantNames.Len()
 }
 
 // DecodeArray returns the component range values for the DeviceN colorspace.
 // [0 1.0 0 1.0 ...] for each color component.
-func (this *PdfColorspaceDeviceN) DecodeArray() []float64 {
-	decode := []float64{}
-	for i := 0; i < this.GetNumComponents(); i++ {
+func (cs *PdfColorspaceDeviceN) DecodeArray() []float64 {
+	var decode []float64
+	for i := 0; i < cs.GetNumComponents(); i++ {
 		decode = append(decode, 0.0, 1.0)
 	}
 	return decode
@@ -2662,35 +2661,35 @@ func newPdfColorspaceDeviceNFromPdfObject(obj PdfObject) (*PdfColorspaceDeviceN,
 // ToPdfObject returns a *PdfIndirectObject containing a *PdfObjectArray representation of the DeviceN colorspace.
 // Format: [/DeviceN names alternateSpace tintTransform]
 //     or: [/DeviceN names alternateSpace tintTransform attributes]
-func (this *PdfColorspaceDeviceN) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceDeviceN) ToPdfObject() PdfObject {
 	csArray := MakeArray(MakeName("DeviceN"))
-	csArray.Append(this.ColorantNames)
-	csArray.Append(this.AlternateSpace.ToPdfObject())
-	csArray.Append(this.TintTransform.ToPdfObject())
-	if this.Attributes != nil {
-		csArray.Append(this.Attributes.ToPdfObject())
+	csArray.Append(cs.ColorantNames)
+	csArray.Append(cs.AlternateSpace.ToPdfObject())
+	csArray.Append(cs.TintTransform.ToPdfObject())
+	if cs.Attributes != nil {
+		csArray.Append(cs.Attributes.ToPdfObject())
 	}
 
-	if this.container != nil {
-		this.container.PdfObject = csArray
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = csArray
+		return cs.container
 	}
 
 	return csArray
 }
 
 // ColorFromFloats returns a new PdfColor based on input color components.
-func (this *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, error) {
-	if len(vals) != this.GetNumComponents() {
+func (cs *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, error) {
+	if len(vals) != cs.GetNumComponents() {
 		return nil, errors.New("Range check")
 	}
 
-	output, err := this.TintTransform.Evaluate(vals)
+	output, err := cs.TintTransform.Evaluate(vals)
 	if err != nil {
 		return nil, err
 	}
 
-	color, err := this.AlternateSpace.ColorFromFloats(output)
+	color, err := cs.AlternateSpace.ColorFromFloats(output)
 	if err != nil {
 		return nil, err
 	}
@@ -2699,8 +2698,8 @@ func (this *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, err
 
 // ColorFromPdfObjects returns a new PdfColor based on input color components. The input PdfObjects should
 // be numeric.
-func (this *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
-	if len(objects) != this.GetNumComponents() {
+func (cs *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []PdfObject) (PdfColor, error) {
+	if len(objects) != cs.GetNumComponents() {
 		return nil, errors.New("Range check")
 	}
 
@@ -2709,38 +2708,38 @@ func (this *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []PdfObject) (PdfC
 		return nil, err
 	}
 
-	return this.ColorFromFloats(floats)
+	return cs.ColorFromFloats(floats)
 }
 
-func (this *PdfColorspaceDeviceN) ColorToRGB(color PdfColor) (PdfColor, error) {
-	if this.AlternateSpace == nil {
+func (cs *PdfColorspaceDeviceN) ColorToRGB(color PdfColor) (PdfColor, error) {
+	if cs.AlternateSpace == nil {
 		return nil, errors.New("DeviceN alternate space undefined")
 	}
-	return this.AlternateSpace.ColorToRGB(color)
+	return cs.AlternateSpace.ColorToRGB(color)
 }
 
-func (this *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
+func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 	altImage := img
 
 	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	// Convert tints to color data in the alternate colorspace.
-	altSamples := []uint32{}
-	for i := 0; i < len(samples); i += this.GetNumComponents() {
+	var altSamples []uint32
+	for i := 0; i < len(samples); i += cs.GetNumComponents() {
 		// The input to the tint transformation is the tint
 		// for each color component.
 		//
 		// A single tint component is in the range 0.0 - 1.0
-		inputs := []float64{}
-		for j := 0; j < this.GetNumComponents(); j++ {
+		var inputs []float64
+		for j := 0; j < cs.GetNumComponents(); j++ {
 			tint := float64(samples[i+j]) / maxVal
 			inputs = append(inputs, tint)
 		}
 
 		// Transform the tints to the alternate colorspace.
 		// (scaled units).
-		outputs, err := this.TintTransform.Evaluate(inputs)
+		outputs, err := cs.TintTransform.Evaluate(inputs)
 		if err != nil {
 			return img, err
 		}
@@ -2756,7 +2755,7 @@ func (this *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 	altImage.SetSamples(altSamples)
 
 	// Convert to RGB via the alternate colorspace.
-	return this.AlternateSpace.ImageToRGB(altImage)
+	return cs.AlternateSpace.ImageToRGB(altImage)
 }
 
 // PdfColorspaceDeviceNAttributes contains additional information about the components of colour space that
@@ -2821,19 +2820,19 @@ func newPdfColorspaceDeviceNAttributesFromPdfObject(obj PdfObject) (*PdfColorspa
 
 // ToPdfObject returns a PdfObject representation of PdfColorspaceDeviceNAttributes as a PdfObjectDictionary directly
 // or indirectly within an indirect object container.
-func (this *PdfColorspaceDeviceNAttributes) ToPdfObject() PdfObject {
+func (cs *PdfColorspaceDeviceNAttributes) ToPdfObject() PdfObject {
 	dict := MakeDict()
 
-	if this.Subtype != nil {
-		dict.Set("Subtype", this.Subtype)
+	if cs.Subtype != nil {
+		dict.Set("Subtype", cs.Subtype)
 	}
-	dict.SetIfNotNil("Colorants", this.Colorants)
-	dict.SetIfNotNil("Process", this.Process)
-	dict.SetIfNotNil("MixingHints", this.MixingHints)
+	dict.SetIfNotNil("Colorants", cs.Colorants)
+	dict.SetIfNotNil("Process", cs.Process)
+	dict.SetIfNotNil("MixingHints", cs.MixingHints)
 
-	if this.container != nil {
-		this.container.PdfObject = dict
-		return this.container
+	if cs.container != nil {
+		cs.container.PdfObject = dict
+		return cs.container
 	}
 
 	return dict

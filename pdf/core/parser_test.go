@@ -92,11 +92,6 @@ func TestNameParsing(t *testing.T) {
 	}
 }
 
-type testStringEntry struct {
-	raw      string
-	expected string
-}
-
 func BenchmarkStringParsing(b *testing.B) {
 	entry := "(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)"
 	parser := makeParserForText(entry)

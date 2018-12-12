@@ -16,7 +16,7 @@ func TestHexStringWriteBasic(t *testing.T) {
 
 	for src, expected := range testcases {
 		strObj := MakeHexString(src)
-		ws := strObj.DefaultWriteString()
+		ws := strObj.WriteString()
 
 		if ws != expected {
 			t.Fatalf("%s: '%s' != '%s'\n", src, ws, expected)
@@ -39,8 +39,8 @@ func TestHexStringMulti(t *testing.T) {
 		shex := MakeHexString(testcase)
 
 		// Write out.
-		writestr := s.DefaultWriteString()
-		writestrhex := shex.DefaultWriteString()
+		writestr := s.WriteString()
+		writestrhex := shex.WriteString()
 
 		// Parse back.
 		parser1 := makeParserForText(writestr)

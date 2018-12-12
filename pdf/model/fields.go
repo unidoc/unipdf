@@ -25,17 +25,20 @@ const (
 	FieldFlagClear FieldFlag = 0
 
 	// Flags for all field types.
+
 	FieldFlagReadOnly FieldFlag = 1
 	FieldFlagRequired FieldFlag = (1 << 1)
 	FieldFlagNoExport FieldFlag = (2 << 1)
 
 	// Flags for button fields only.
+
 	FieldFlagNoToggleToOff   FieldFlag = (1 << 14)
 	FieldFlagRadio           FieldFlag = (1 << 15)
 	FieldFlagPushbutton      FieldFlag = (1 << 16)
 	FieldFlagRadiosInUnision FieldFlag = (1 << 25)
 
 	// Flags for text fields only.
+
 	FieldFlagMultiline   FieldFlag = (1 << 12)
 	FieldFlagPassword    FieldFlag = (1 << 13)
 	FieldFlagFileSelect  FieldFlag = (1 << 20)
@@ -44,9 +47,11 @@ const (
 	FieldFlagRichText    FieldFlag = (1 << 25)
 
 	// Flags for text and choice fields.
+
 	FieldFlagDoNotSpellCheck FieldFlag = (1 << 22)
 
 	// Flags for choice fields only.
+
 	FieldFlagCombo             FieldFlag = (1 << 17)
 	FieldFlagEdit              FieldFlag = (1 << 18)
 	FieldFlagSort              FieldFlag = (1 << 19)

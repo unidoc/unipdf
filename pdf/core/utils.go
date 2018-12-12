@@ -38,7 +38,7 @@ func (parser *PdfParser) Inspect() (map[string]int, error) {
 
 // GetObjectNums returns a sorted list of object numbers of the PDF objects in the file.
 func (parser *PdfParser) GetObjectNums() []int {
-	objNums := []int{}
+	var objNums []int
 	for _, x := range parser.xrefs {
 		objNums = append(objNums, x.ObjectNumber)
 	}
@@ -67,7 +67,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	objCount := 0
 	failedCount := 0
 
-	keys := []int{}
+	var keys []int
 	for k := range parser.xrefs {
 		keys = append(keys, k)
 	}

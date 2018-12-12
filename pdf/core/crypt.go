@@ -315,7 +315,7 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.cryptFilters = cryptFilters{}
 
 	obj := ed.Get("CF")
-	obj = TraceToDirectObject(obj) // XXX may need to resolve reference...
+	obj = TraceToDirectObject(obj) // TODO: may need to resolve reference...
 	if ref, isRef := obj.(*PdfObjectReference); isRef {
 		o, err := crypt.parser.LookupByReference(*ref)
 		if err != nil {

@@ -60,7 +60,7 @@ func StringToUTF16(s string) string {
 
 // PDFDocEncodingToRunes decodes PDFDocEncoded byte slice `b` to unicode runes.
 func PDFDocEncodingToRunes(b []byte) []rune {
-	runes := []rune{}
+	var runes []rune
 	for _, bval := range b {
 		rune, has := pdfDocEncoding[bval]
 		if !has {

@@ -380,7 +380,7 @@ func (to *textObject) setFont(name string, size float64) error {
 			(*to.fontStack)[len(*to.fontStack)-1] = font
 		}
 	} else if err == model.ErrFontNotSupported {
-		// XXX: Do we need to handle this case in a special way?
+		// TODO: Do we need to handle this case in a special way?
 		return err
 	} else {
 		return err
@@ -644,7 +644,7 @@ func (to *textObject) getFont(name string) (*model.PdfFont, error) {
 
 		// Eject a victim if the cache is full.
 		if len(to.e.fontCache) >= maxFontCache {
-			names := []string{}
+			var names []string
 			for name := range to.e.fontCache {
 				names = append(names, name)
 			}

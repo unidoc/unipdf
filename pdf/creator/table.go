@@ -65,7 +65,7 @@ func newTable(cols int) *Table {
 	t.rowHeights = []float64{}
 
 	// Default row height
-	// XXX/TODO: Base on contents instead?
+	// TODO: Base on contents instead?
 	t.defaultRowHeight = 10.0
 
 	t.cells = []*TableCell{}
@@ -152,7 +152,7 @@ func (table *Table) SetPos(x, y float64) {
 // over multiple pages.
 // Implements the Drawable interface.
 func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	blocks := []*Block{}
+	var blocks []*Block
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	origCtx := ctx
@@ -468,10 +468,10 @@ type CellBorderStyle int
 
 // Currently supported table styles are: None (no border) and boxed (line along each side).
 const (
-	// No border
-	CellBorderStyleNone CellBorderStyle = iota
+	CellBorderStyleNone CellBorderStyle = iota // no border
 
 	// Borders along all sides (boxed).
+
 	CellBorderStyleSingle
 	CellBorderStyleDouble
 )
@@ -501,13 +501,13 @@ type CellHorizontalAlignment int
 
 // Table cells have three horizontal alignment modes: left, center and right.
 const (
-	// Align cell content on the left (with specified indent); unused space on the right.
+	// CellHorizontalAlignmentLeft aligns cell content on the left (with specified indent); unused space on the right.
 	CellHorizontalAlignmentLeft CellHorizontalAlignment = iota
 
-	// Align cell content in the middle (unused space divided equally on the left/right).
+	// CellHorizontalAlignmentCenter aligns cell content in the middle (unused space divided equally on the left/right).
 	CellHorizontalAlignmentCenter
 
-	// Align the cell content on the right; unsued space on the left.
+	// CellHorizontalAlignmentRight aligns the cell content on the right; unsued space on the left.
 	CellHorizontalAlignmentRight
 )
 
@@ -516,13 +516,13 @@ type CellVerticalAlignment int
 
 // Table cells have three vertical alignment modes: top, middle and bottom.
 const (
-	// Align cell content vertically to the top; unused space below.
+	// CellVerticalAlignmentTop aligns cell content vertically to the top; unused space below.
 	CellVerticalAlignmentTop CellVerticalAlignment = iota
 
-	// Align cell content in the middle; unused space divided equally above and below.
+	// CellVerticalAlignmentMiddle aligns cell content in the middle; unused space divided equally above and below.
 	CellVerticalAlignmentMiddle
 
-	// Align cell content on the bottom; unused space above.
+	// CellVerticalAlignmentBottom aligns cell content on the bottom; unused space above.
 	CellVerticalAlignmentBottom
 )
 
