@@ -451,7 +451,7 @@ const (
 	ZapfDingbats         = Standard14Font(fonts.ZapfDingbatsName)
 )
 
-// TODO(dennwc): merge with font.Type1Font
+// TODO(dennwc): merge with font.StdFont
 var standard14Fonts = map[Standard14Font]pdfFontSimple{
 	Courier: {
 		fontCommon: fontCommon{

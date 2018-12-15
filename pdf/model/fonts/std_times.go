@@ -21,23 +21,23 @@ const (
 )
 
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesRoman() Type1Font {
-	return NewType1Font(TimesRomanName, TimesRomanCharMetrics)
+func NewFontTimesRoman() StdFont {
+	return NewStdFont(TimesRomanName, TimesRomanCharMetrics)
 }
 
 // NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBold() Type1Font {
-	return NewType1Font(TimesBoldName, TimesBoldCharMetrics)
+func NewFontTimesBold() StdFont {
+	return NewStdFont(TimesBoldName, TimesBoldCharMetrics)
 }
 
 // NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesItalic() Type1Font {
-	return NewType1Font(TimesItalicName, TimesItalicCharMetrics)
+func NewFontTimesItalic() StdFont {
+	return NewStdFont(TimesItalicName, TimesItalicCharMetrics)
 }
 
 // NewFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBoldItalic() Type1Font {
-	return NewType1Font(TimesBoldItalicName, TimesBoldItalicCharMetrics)
+func NewFontTimesBoldItalic() StdFont {
+	return NewStdFont(TimesBoldItalicName, TimesBoldItalicCharMetrics)
 }
 
 func init() {

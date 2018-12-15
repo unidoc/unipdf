@@ -10,24 +10,24 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-var _ Font = Type1Font{}
+var _ Font = StdFont{}
 
-// Type1Font represents one of the built-in fonts and it is assumed that every reader has access to it.
-type Type1Font struct {
+// StdFont represents one of the built-in fonts and it is assumed that every reader has access to it.
+type StdFont struct {
 	name    string
 	metrics map[GlyphName]CharMetrics
 	encoder textencoding.TextEncoder
 }
 
-// NewType1Font returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewType1Font(name string, metrics map[GlyphName]CharMetrics) Type1Font {
+// NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func NewStdFont(name string, metrics map[GlyphName]CharMetrics) StdFont {
 	enc := textencoding.NewWinAnsiTextEncoder() // Default
-	return NewType1FontWithEncoding(name, metrics, enc)
+	return NewStdFontWithEncoding(name, metrics, enc)
 }
 
-// NewType1FontWithEncoding returns a new instance of the font with a specified encoder.
-func NewType1FontWithEncoding(name string, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) Type1Font {
-	return Type1Font{
+// NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
+func NewStdFontWithEncoding(name string, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) StdFont {
+	return StdFont{
 		name:    name,
 		metrics: metrics,
 		encoder: encoder,
@@ -35,17 +35,17 @@ func NewType1FontWithEncoding(name string, metrics map[GlyphName]CharMetrics, en
 }
 
 // Name returns a PDF name of the font.
-func (font Type1Font) Name() string {
+func (font StdFont) Name() string {
 	return font.name
 }
 
 // Encoder returns the font's text encoder.
-func (font Type1Font) Encoder() textencoding.TextEncoder {
+func (font StdFont) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
 // GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font Type1Font) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
+func (font StdFont) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	metrics, has := font.metrics[glyph]
 	if !has {
 		return metrics, false
@@ -55,7 +55,7 @@ func (font Type1Font) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.
-func (font Type1Font) ToPdfObject() core.PdfObject {
+func (font StdFont) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))

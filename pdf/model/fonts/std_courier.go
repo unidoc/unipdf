@@ -21,24 +21,24 @@ const (
 )
 
 // NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourier() Type1Font {
-	return NewType1Font(CourierName, CourierCharMetrics)
+func NewFontCourier() StdFont {
+	return NewStdFont(CourierName, CourierCharMetrics)
 }
 
 // NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourierBold() Type1Font {
-	return NewType1Font(CourierBoldName, CourierBoldCharMetrics)
+func NewFontCourierBold() StdFont {
+	return NewStdFont(CourierBoldName, CourierBoldCharMetrics)
 }
 
 // NewFontCourierOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourierOblique() Type1Font {
-	return NewType1Font(CourierObliqueName, CourierObliqueCharMetrics)
+func NewFontCourierOblique() StdFont {
+	return NewStdFont(CourierObliqueName, CourierObliqueCharMetrics)
 }
 
 // NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontCourierBoldOblique() Type1Font {
-	return NewType1Font(CourierBoldObliqueName, CourierBoldObliqueCharMetrics)
+func NewFontCourierBoldOblique() StdFont {
+	return NewStdFont(CourierBoldObliqueName, CourierBoldObliqueCharMetrics)
 }
 
 func init() {

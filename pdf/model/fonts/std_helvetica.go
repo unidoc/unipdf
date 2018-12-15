@@ -21,24 +21,24 @@ const (
 )
 
 // NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelvetica() Type1Font {
-	return NewType1Font(HelveticaName, HelveticaCharMetrics)
+func NewFontHelvetica() StdFont {
+	return NewStdFont(HelveticaName, HelveticaCharMetrics)
 }
 
 // NewFontHelveticaBold returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontHelveticaBold() Type1Font {
-	return NewType1Font(HelveticaBoldName, HelveticaBoldCharMetrics)
+func NewFontHelveticaBold() StdFont {
+	return NewStdFont(HelveticaBoldName, HelveticaBoldCharMetrics)
 }
 
 // NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaOblique() Type1Font {
-	return NewType1Font(HelveticaObliqueName, HelveticaObliqueCharMetrics)
+func NewFontHelveticaOblique() StdFont {
+	return NewStdFont(HelveticaObliqueName, HelveticaObliqueCharMetrics)
 }
 
 // NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaBoldOblique() Type1Font {
-	return NewType1Font(HelveticaBoldObliqueName, HelveticaBoldObliqueCharMetrics)
+func NewFontHelveticaBoldOblique() StdFont {
+	return NewStdFont(HelveticaBoldObliqueName, HelveticaBoldObliqueCharMetrics)
 }
 
 func init() {

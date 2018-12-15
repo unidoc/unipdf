@@ -21,15 +21,15 @@ const (
 )
 
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
-func NewFontSymbol() Type1Font {
+func NewFontSymbol() StdFont {
 	enc := textencoding.NewSymbolEncoder()
-	return NewType1FontWithEncoding(SymbolName, SymbolCharMetrics, enc)
+	return NewStdFontWithEncoding(SymbolName, SymbolCharMetrics, enc)
 }
 
 // NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
-func NewFontZapfDingbats() Type1Font {
+func NewFontZapfDingbats() StdFont {
 	enc := textencoding.NewZapfDingbatsEncoder()
-	return NewType1FontWithEncoding(ZapfDingbatsName, ZapfDingbatsCharMetrics, enc)
+	return NewStdFontWithEncoding(ZapfDingbatsName, ZapfDingbatsCharMetrics, enc)
 }
 
 // SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
