@@ -68,14 +68,14 @@ type Paragraph struct {
 
 // newParagraph create a new text paragraph. Uses default parameters: Helvetica, WinAnsiEncoding and
 // wrap enabled with a wrap width of 100 points.
+//
+// Standard font may will have an encdoing set to WinAnsiEncoding. To set a different encoding, make a new font
+// and use SetFont on the paragraph to override the defaut one.
 func newParagraph(text string, style TextStyle) *Paragraph {
 	// TODO(dennwc): style is unused
 
-	p := &Paragraph{}
-	p.text = text
+	p := &Paragraph{text: text}
 
-	// TODO(dennwc): looks like it's tried to verify if the font has some runes missing
-	//				 but do we really care? the user knows better what font to use, and he can change it with SetFont
 	font, err := model.NewStandard14Font("Helvetica")
 	if err != nil {
 		common.Log.Debug("ERROR: NewStandard14FontWithEncoding failed err=%v. Falling back.", err)
