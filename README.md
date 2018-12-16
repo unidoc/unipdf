@@ -4,7 +4,7 @@ Version 3 of UniDoc is currently in alpha. It marks multiple significant new maj
 
 - [ ] Composite fonts supported and font handling has and is being completely revamped, including unicode support.
 - [ ] Digital signing validation and signing
-- [ ] Append mode
+- [x] Append mode
 - [x] PDF compression and optimization of outputs with several options 1) combining duplicates, 2) compressed object streams, 3) image points per inch threshold, 4) image quality.
 - [ ] Text extraction significantly improved in quality and support for vectorized (position-based) text extraction (XY)
 - [x] Paragraph in creator handling multiple styles within the same paragraph
