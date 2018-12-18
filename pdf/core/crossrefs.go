@@ -77,11 +77,11 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 
 		so, ok := soi.(*PdfObjectStream)
 		if !ok {
-			return nil, errors.New("Invalid object stream")
+			return nil, errors.New("invalid object stream")
 		}
 
 		if parser.crypter != nil && !parser.crypter.isDecrypted(so) {
-			return nil, errors.New("Need to decrypt the stream")
+			return nil, errors.New("need to decrypt the stream")
 		}
 
 		sod := so.PdfObjectDictionary
@@ -89,20 +89,20 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 		name, ok := sod.Get("Type").(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("ERROR: Object stream should always have a Type")
-			return nil, errors.New("Object stream missing Type")
+			return nil, errors.New("object stream missing Type")
 		}
 		if strings.ToLower(string(*name)) != "objstm" {
 			common.Log.Debug("ERROR: Object stream type shall always be ObjStm !")
-			return nil, errors.New("Object stream type != ObjStm")
+			return nil, errors.New("object stream type != ObjStm")
 		}
 
 		N, ok := sod.Get("N").(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid N in stream dictionary")
+			return nil, errors.New("invalid N in stream dictionary")
 		}
 		firstOffset, ok := sod.Get("First").(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid First in stream dictionary")
+			return nil, errors.New("invalid First in stream dictionary")
 		}
 
 		common.Log.Trace("type: %s number of objects: %d", name, *N)
@@ -134,7 +134,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 			}
 			onum, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, errors.New("Invalid object stream offset table")
+				return nil, errors.New("invalid object stream offset table")
 			}
 
 			parser.skipSpaces()
@@ -145,7 +145,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 			}
 			offset, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, errors.New("Invalid object stream offset table")
+				return nil, errors.New("invalid object stream offset table")
 			}
 
 			common.Log.Trace("obj %d offset %d", *onum, *offset)
@@ -180,7 +180,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 		return nil, err
 	}
 	if val == nil {
-		return nil, errors.New("Object cannot be null")
+		return nil, errors.New("object cannot be null")
 	}
 
 	// Make an indirect object around it.
@@ -226,7 +226,7 @@ func getObjectNumber(obj PdfObject) (int64, int64, error) {
 	if so, isStream := obj.(*PdfObjectStream); isStream {
 		return so.ObjectNumber, so.GenerationNumber, nil
 	}
-	return 0, 0, errors.New("Not an indirect/stream object")
+	return 0, 0, errors.New("not an indirect/stream object")
 }
 
 // lookupByNumber is used by LookupByNumber.
@@ -302,7 +302,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 
 		if xref.OsObjNumber == objNumber {
 			common.Log.Debug("ERROR Circular reference!?!")
-			return nil, true, errors.New("Xref circular reference")
+			return nil, true, errors.New("xref circular reference")
 		}
 		_, exists := parser.xrefs[xref.OsObjNumber]
 		if exists {
@@ -321,10 +321,10 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			return optr, true, nil
 		} else {
 			common.Log.Debug("?? Belongs to a non-cross referenced object ...!")
-			return nil, true, errors.New("OS belongs to a non cross referenced object")
+			return nil, true, errors.New("os belongs to a non cross referenced object")
 		}
 	}
-	return nil, false, errors.New("Unknown xref type")
+	return nil, false, errors.New("unknown xref type")
 }
 
 // LookupByReference looks up a PdfObject by a reference.
@@ -357,7 +357,7 @@ func (parser *PdfParser) Resolve(obj PdfObject) (PdfObject, error) {
 	o = io.PdfObject
 	_, isRef = o.(*PdfObjectReference)
 	if isRef {
-		return io, errors.New("Multi depth trace pointer to pointer")
+		return io, errors.New("multi depth trace pointer to pointer")
 	}
 
 	return o, nil

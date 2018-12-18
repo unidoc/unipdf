@@ -371,7 +371,7 @@ func (r *PdfPageResources) SetXObjectByName(keyName PdfObjectName, stream *PdfOb
 	xresDict, has := obj.(*PdfObjectDictionary)
 	if !has {
 		common.Log.Debug("Invalid XObject, got %T/%T", r.XObject, obj)
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	}
 
 	xresDict.Set(keyName, stream)
@@ -384,7 +384,7 @@ func (r *PdfPageResources) GetXObjectImageByName(keyName PdfObjectName) (*XObjec
 		return nil, nil
 	}
 	if xtype != XObjectTypeImage {
-		return nil, errors.New("Not an image")
+		return nil, errors.New("not an image")
 	}
 
 	ximg, err := NewXObjectImageFromStream(stream)
@@ -407,7 +407,7 @@ func (r *PdfPageResources) GetXObjectFormByName(keyName PdfObjectName) (*XObject
 		return nil, nil
 	}
 	if xtype != XObjectTypeForm {
-		return nil, errors.New("Not a form")
+		return nil, errors.New("not a form")
 	}
 
 	xform, err := NewXObjectFormFromStream(stream)

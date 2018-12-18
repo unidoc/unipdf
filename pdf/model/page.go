@@ -96,10 +96,10 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 
 	pType, ok := d.Get("Type").(*PdfObjectName)
 	if !ok {
-		return nil, errors.New("Missing/Invalid Page dictionary Type")
+		return nil, errors.New("missing/invalid Page dictionary Type")
 	}
 	if *pType != "Page" {
-		return nil, errors.New("Page dictionary Type != Page")
+		return nil, errors.New("page dictionary Type != Page")
 	}
 
 	if obj := d.Get("Parent"); obj != nil {
@@ -114,7 +114,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		strObj, ok := TraceToDirectObject(obj).(*PdfObjectString)
 		if !ok {
-			return nil, errors.New("Page dictionary LastModified != string")
+			return nil, errors.New("page dictionary LastModified != string")
 		}
 		lastmod, err := NewPdfDate(strObj.Str())
 		if err != nil {
@@ -132,7 +132,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 
 		dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
 		if !ok {
-			return nil, fmt.Errorf("Invalid resource dictionary (%T)", obj)
+			return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
 		}
 
 		page.Resources, err = NewPdfPageResourcesFromDict(dict)
@@ -160,7 +160,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
-			return nil, errors.New("Page MediaBox not an array")
+			return nil, errors.New("page MediaBox not an array")
 		}
 		page.MediaBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
@@ -175,7 +175,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
-			return nil, errors.New("Page CropBox not an array")
+			return nil, errors.New("page CropBox not an array")
 		}
 		page.CropBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
@@ -190,7 +190,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
-			return nil, errors.New("Page BleedBox not an array")
+			return nil, errors.New("page BleedBox not an array")
 		}
 		page.BleedBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
@@ -205,7 +205,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
-			return nil, errors.New("Page TrimBox not an array")
+			return nil, errors.New("page TrimBox not an array")
 		}
 		page.TrimBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
@@ -220,7 +220,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
 		if !ok {
-			return nil, errors.New("Page ArtBox not an array")
+			return nil, errors.New("page ArtBox not an array")
 		}
 		page.ArtBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
@@ -241,7 +241,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		}
 		iObj, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid Page Rotate object")
+			return nil, errors.New("invalid Page Rotate object")
 		}
 		iVal := int64(*iObj)
 		page.Rotate = &iVal
@@ -348,7 +348,7 @@ func (r *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, e
 			indirectObj.PdfObject = annotDict
 		} else {
 			if !isIndirect {
-				return nil, fmt.Errorf("Annotation not in an indirect object")
+				return nil, fmt.Errorf("annotation not in an indirect object")
 			}
 		}
 
@@ -373,18 +373,18 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	for node != nil {
 		dictObj, ok := node.(*PdfIndirectObject)
 		if !ok {
-			return nil, errors.New("Invalid parent object")
+			return nil, errors.New("invalid parent object")
 		}
 
 		dict, ok := dictObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
-			return nil, errors.New("Invalid parent objects dictionary")
+			return nil, errors.New("invalid parent objects dictionary")
 		}
 
 		if obj := dict.Get("MediaBox"); obj != nil {
 			arr, ok := obj.(*PdfObjectArray)
 			if !ok {
-				return nil, errors.New("Invalid media box")
+				return nil, errors.New("invalid media box")
 			}
 			rect, err := NewPdfRectangle(*arr)
 
@@ -398,7 +398,7 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 		node = dict.Get("Parent")
 	}
 
-	return nil, errors.New("Media box not defined")
+	return nil, errors.New("media box not defined")
 }
 
 // Get the inheritable resources, either from the page or or a higher up page/pages struct.
@@ -411,18 +411,18 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 	for node != nil {
 		dictObj, ok := node.(*PdfIndirectObject)
 		if !ok {
-			return nil, errors.New("Invalid parent object")
+			return nil, errors.New("invalid parent object")
 		}
 
 		dict, ok := dictObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
-			return nil, errors.New("Invalid parent objects dictionary")
+			return nil, errors.New("invalid parent objects dictionary")
 		}
 
 		if obj := dict.Get("Resources"); obj != nil {
 			prDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
 			if !ok {
-				return nil, errors.New("Invalid resource dict!")
+				return nil, errors.New("invalid resource dict!")
 			}
 			resources, err := NewPdfPageResourcesFromDict(prDict)
 
@@ -537,7 +537,7 @@ func (p *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error
 		var ok bool
 		xresDict, ok = (p.Resources.XObject).(*PdfObjectDictionary)
 		if !ok {
-			return errors.New("Invalid xres dict type")
+			return errors.New("invalid xres dict type")
 		}
 
 	}
@@ -626,7 +626,7 @@ func (p *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) err
 	egsDict, ok := TraceToDirectObject(p.Resources.ExtGState).(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", TraceToDirectObject(p.Resources.ExtGState))
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	}
 
 	egsDict.Set(name, egs)
@@ -646,7 +646,7 @@ func (p *PdfPage) AddFont(name PdfObjectName, font PdfObject) error {
 	fontDict, ok := TraceToDirectObject(p.Resources.Font).(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Expected font dictionary is not a dictionary: %v", TraceToDirectObject(p.Resources.Font))
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	}
 
 	// Update the dictionary.
@@ -833,7 +833,7 @@ func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
 
 		return string(buf), nil
 	}
-	return "", fmt.Errorf("Invalid content stream object holder (%T)", TraceToDirectObject(cstreamObj))
+	return "", fmt.Errorf("invalid content stream object holder (%T)", TraceToDirectObject(cstreamObj))
 }
 
 // GetContentStreams returns the content stream as an array of strings.

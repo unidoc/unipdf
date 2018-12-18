@@ -63,11 +63,11 @@ func NewXObjectFormFromStream(stream *PdfObjectStream) (*XObjectForm, error) {
 	if obj := dict.Get("Subtype"); obj != nil {
 		name, ok := obj.(*PdfObjectName)
 		if !ok {
-			return nil, errors.New("Type error")
+			return nil, errors.New("type error")
 		}
 		if *name != "Form" {
 			common.Log.Debug("Invalid form subtype")
-			return nil, errors.New("Invalid form subtype")
+			return nil, errors.New("invalid form subtype")
 		}
 	}
 
@@ -272,7 +272,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		} else if img.ColorComponents == 4 {
 			xobj.ColorSpace = NewPdfColorspaceDeviceCMYK()
 		} else {
-			return nil, errors.New("Colorspace undefined")
+			return nil, errors.New("colorspace undefined")
 		}
 	} else {
 		xobj.ColorSpace = cs
@@ -362,7 +362,7 @@ func toGray(matte *PdfObjectArray) (float64, error) {
 		}
 		return rgbColor.(*PdfColorDeviceRGB).ToGray().Val(), nil
 	}
-	err = errors.New("Bad Matte color")
+	err = errors.New("bad Matte color")
 	common.Log.Error("toGray: matte=%s err=%v", matte, err)
 	return 0.0, err
 }
@@ -384,23 +384,23 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	if obj := TraceToDirectObject(dict.Get("Width")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid image width object")
+			return nil, errors.New("invalid image width object")
 		}
 		iVal := int64(*iObj)
 		img.Width = &iVal
 	} else {
-		return nil, errors.New("Width missing")
+		return nil, errors.New("width missing")
 	}
 
 	if obj := TraceToDirectObject(dict.Get("Height")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid image height object")
+			return nil, errors.New("invalid image height object")
 		}
 		iVal := int64(*iObj)
 		img.Height = &iVal
 	} else {
-		return nil, errors.New("Height missing")
+		return nil, errors.New("height missing")
 	}
 
 	if obj := TraceToDirectObject(dict.Get("ColorSpace")); obj != nil {
@@ -418,7 +418,7 @@ func NewXObjectImageFromStream(stream *PdfObjectStream) (*XObjectImage, error) {
 	if obj := TraceToDirectObject(dict.Get("BitsPerComponent")); obj != nil {
 		iObj, ok := obj.(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid image height object")
+			return nil, errors.New("invalid image height object")
 		}
 		iVal := int64(*iObj)
 		img.BitsPerComponent = &iVal
@@ -468,7 +468,7 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 		} else if img.ColorComponents == 4 {
 			ximg.ColorSpace = NewPdfColorspaceDeviceCMYK()
 		} else {
-			return errors.New("Colorspace undefined")
+			return errors.New("colorspace undefined")
 		}
 	} else {
 		ximg.ColorSpace = cs
@@ -501,17 +501,17 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 	image := &Image{}
 
 	if ximg.Height == nil {
-		return nil, errors.New("Height attribute missing")
+		return nil, errors.New("height attribute missing")
 	}
 	image.Height = *ximg.Height
 
 	if ximg.Width == nil {
-		return nil, errors.New("Width attribute missing")
+		return nil, errors.New("width attribute missing")
 	}
 	image.Width = *ximg.Width
 
 	if ximg.BitsPerComponent == nil {
-		return nil, errors.New("Bits per component missing")
+		return nil, errors.New("bits per component missing")
 	}
 	image.BitsPerComponent = *ximg.BitsPerComponent
 
@@ -527,7 +527,7 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 		darr, ok := ximg.Decode.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Invalid Decode object")
-			return nil, errors.New("Invalid type")
+			return nil, errors.New("invalid type")
 		}
 		decode, err := darr.ToFloat64Array()
 		if err != nil {

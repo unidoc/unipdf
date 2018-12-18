@@ -175,7 +175,7 @@ func (f *PdfField) FullName() (string, error) {
 	var fn bytes.Buffer
 
 	if f.T == nil {
-		return fn.String(), errors.New("Field partial name (T) not specified")
+		return fn.String(), errors.New("field partial name (T) not specified")
 	}
 	parts := []string{f.T.Decoded()}
 
@@ -186,11 +186,11 @@ func (f *PdfField) FullName() (string, error) {
 	parent := f.Parent
 	for parent != nil {
 		if _, has := noscanMap[parent]; has {
-			return fn.String(), errors.New("Recursive traversal")
+			return fn.String(), errors.New("recursive traversal")
 		}
 
 		if parent.T == nil {
-			return fn.String(), errors.New("Field partial name (T) not specified")
+			return fn.String(), errors.New("field partial name (T) not specified")
 		}
 		parts = append(parts, parent.T.Decoded())
 
@@ -493,7 +493,7 @@ func (f *PdfField) inherit(eval func(*PdfField) bool) (bool, error) {
 	node := f
 	for node != nil {
 		if _, has := nodeMap[node]; has {
-			return false, errors.New("Recursive traversal")
+			return false, errors.New("recursive traversal")
 		}
 
 		stop := eval(node)

@@ -33,7 +33,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
-			return nil, errors.New("Invalid parameter or missing")
+			return nil, errors.New("invalid parameter or missing")
 		}
 
 		if *ftype == 0 {
@@ -41,7 +41,7 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 		} else if *ftype == 4 {
 			return newPdfFunctionType4FromStream(stream)
 		} else {
-			return nil, errors.New("Invalid function type")
+			return nil, errors.New("invalid function type")
 		}
 	} else if indObj, is := obj.(*PdfIndirectObject); is {
 		// Indirect object containing a dictionary.
@@ -49,13 +49,13 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 		dict, ok := indObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
 			common.Log.Error("Function Indirect object not containing dictionary")
-			return nil, errors.New("Invalid parameter or missing")
+			return nil, errors.New("invalid parameter or missing")
 		}
 
 		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
-			return nil, errors.New("Invalid parameter or missing")
+			return nil, errors.New("invalid parameter or missing")
 		}
 
 		if *ftype == 2 {
@@ -63,13 +63,13 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 		} else if *ftype == 3 {
 			return newPdfFunctionType3FromPdfObject(indObj)
 		} else {
-			return nil, errors.New("Invalid function type")
+			return nil, errors.New("invalid function type")
 		}
 	} else if dict, is := obj.(*PdfObjectDictionary); is {
 		ftype, ok := dict.Get("FunctionType").(*PdfObjectInteger)
 		if !ok {
 			common.Log.Error("FunctionType number missing")
-			return nil, errors.New("Invalid parameter or missing")
+			return nil, errors.New("invalid parameter or missing")
 		}
 
 		if *ftype == 2 {
@@ -77,11 +77,11 @@ func newPdfFunctionFromPdfObject(obj PdfObject) (PdfFunction, error) {
 		} else if *ftype == 3 {
 			return newPdfFunctionType3FromPdfObject(dict)
 		} else {
-			return nil, errors.New("Invalid function type")
+			return nil, errors.New("invalid function type")
 		}
 	} else {
 		common.Log.Debug("Function Type error: %#v", obj)
-		return nil, errors.New("Type error")
+		return nil, errors.New("type error")
 	}
 }
 
@@ -129,11 +129,11 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if array.Len() < 0 || array.Len()%2 != 0 {
 		common.Log.Error("Domain invalid")
-		return nil, errors.New("Invalid domain range")
+		return nil, errors.New("invalid domain range")
 	}
 	fun.NumInputs = array.Len() / 2
 	domain, err := array.ToFloat64Array()
@@ -146,10 +146,10 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Range not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if array.Len() < 0 || array.Len()%2 != 0 {
-		return nil, errors.New("Invalid range")
+		return nil, errors.New("invalid range")
 	}
 	fun.NumOutputs = array.Len() / 2
 	rang, err := array.ToFloat64Array()
@@ -162,7 +162,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	array, has = TraceToDirectObject(dict.Get("Size")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Size not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	tablesize, err := array.ToIntegerArray()
 	if err != nil {
@@ -170,7 +170,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	}
 	if len(tablesize) != fun.NumInputs {
 		common.Log.Error("Table size not matching number of inputs")
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 	fun.Size = tablesize
 
@@ -178,11 +178,11 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	bps, has := TraceToDirectObject(dict.Get("BitsPerSample")).(*PdfObjectInteger)
 	if !has {
 		common.Log.Error("BitsPerSample not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if *bps != 1 && *bps != 2 && *bps != 4 && *bps != 8 && *bps != 12 && *bps != 16 && *bps != 24 && *bps != 32 {
 		common.Log.Error("Bits per sample outside range (%d)", *bps)
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 	fun.BitsPerSample = int(*bps)
 
@@ -191,7 +191,7 @@ func newPdfFunctionType0FromStream(stream *PdfObjectStream) (*PdfFunctionType0, 
 	if has {
 		if *order != 1 && *order != 3 {
 			common.Log.Error("Invalid order (%d)", *order)
-			return nil, errors.New("Range check")
+			return nil, errors.New("range check")
 		}
 		fun.Order = int(*order)
 	}
@@ -273,7 +273,7 @@ func (f *PdfFunctionType0) ToPdfObject() PdfObject {
 func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != f.NumInputs {
 		common.Log.Error("Number of inputs not matching what is needed")
-		return nil, errors.New("Range check error")
+		return nil, errors.New("range check error")
 	}
 
 	if f.data == nil {
@@ -384,14 +384,14 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	if indObj, is := obj.(*PdfIndirectObject); is {
 		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
-			return nil, errors.New("Type check error")
+			return nil, errors.New("type check error")
 		}
 		fun.container = indObj
 		dict = d
 	} else if d, is := obj.(*PdfObjectDictionary); is {
 		dict = d
 	} else {
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 
 	common.Log.Trace("FUNC2: %s", dict.String())
@@ -400,11 +400,11 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if array.Len() < 0 || array.Len()%2 != 0 {
 		common.Log.Error("Domain range invalid")
-		return nil, errors.New("Invalid domain range")
+		return nil, errors.New("invalid domain range")
 	}
 	domain, err := array.ToFloat64Array()
 	if err != nil {
@@ -416,7 +416,7 @@ func newPdfFunctionType2FromPdfObject(obj PdfObject) (*PdfFunctionType2, error) 
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if array.Len() < 0 || array.Len()%2 != 0 {
-			return nil, errors.New("Invalid range")
+			return nil, errors.New("invalid range")
 		}
 
 		rang, err := array.ToFloat64Array()
@@ -517,7 +517,7 @@ func (f *PdfFunctionType2) ToPdfObject() PdfObject {
 func (f *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 
 	// Prepare.
@@ -555,14 +555,14 @@ type PdfFunctionType3 struct {
 func (f *PdfFunctionType3) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 
 	// Determine which function to use
 
 	// Encode
 
-	return nil, errors.New("Not implemented yet")
+	return nil, errors.New("not implemented yet")
 }
 
 func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) {
@@ -572,25 +572,25 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	if indObj, is := obj.(*PdfIndirectObject); is {
 		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
 		if !ok {
-			return nil, errors.New("Type check error")
+			return nil, errors.New("type check error")
 		}
 		fun.container = indObj
 		dict = d
 	} else if d, is := obj.(*PdfObjectDictionary); is {
 		dict = d
 	} else {
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 
 	// Domain
 	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if array.Len() != 2 {
 		common.Log.Error("Domain invalid")
-		return nil, errors.New("Invalid domain range")
+		return nil, errors.New("invalid domain range")
 	}
 	domain, err := array.ToFloat64Array()
 	if err != nil {
@@ -602,7 +602,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if array.Len() < 0 || array.Len()%2 != 0 {
-			return nil, errors.New("Invalid range")
+			return nil, errors.New("invalid range")
 		}
 		rang, err := array.ToFloat64Array()
 		if err != nil {
@@ -615,7 +615,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	array, has = TraceToDirectObject(dict.Get("Functions")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Functions not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	fun.Functions = []PdfFunction{}
 	for _, obj := range array.Elements() {
@@ -630,7 +630,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	array, has = TraceToDirectObject(dict.Get("Bounds")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Bounds not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	bounds, err := array.ToFloat64Array()
 	if err != nil {
@@ -639,14 +639,14 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	fun.Bounds = bounds
 	if len(fun.Bounds) != len(fun.Functions)-1 {
 		common.Log.Error("Bounds (%d) and num functions (%d) not matching", len(fun.Bounds), len(fun.Functions))
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 
 	// Encode.
 	array, has = TraceToDirectObject(dict.Get("Encode")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Encode not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	encode, err := array.ToFloat64Array()
 	if err != nil {
@@ -655,7 +655,7 @@ func newPdfFunctionType3FromPdfObject(obj PdfObject) (*PdfFunctionType3, error) 
 	fun.Encode = encode
 	if len(fun.Encode) != 2*len(fun.Functions) {
 		common.Log.Error("Len encode (%d) and num functions (%d) not matching up", len(fun.Encode), len(fun.Functions))
-		return nil, errors.New("Range check")
+		return nil, errors.New("range check")
 	}
 
 	return fun, nil
@@ -768,11 +768,11 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	array, has := TraceToDirectObject(dict.Get("Domain")).(*PdfObjectArray)
 	if !has {
 		common.Log.Error("Domain not specified")
-		return nil, errors.New("Required attribute missing or invalid")
+		return nil, errors.New("required attribute missing or invalid")
 	}
 	if array.Len()%2 != 0 {
 		common.Log.Error("Domain invalid")
-		return nil, errors.New("Invalid domain range")
+		return nil, errors.New("invalid domain range")
 	}
 	domain, err := array.ToFloat64Array()
 	if err != nil {
@@ -784,7 +784,7 @@ func newPdfFunctionType4FromStream(stream *PdfObjectStream) (*PdfFunctionType4, 
 	array, has = TraceToDirectObject(dict.Get("Range")).(*PdfObjectArray)
 	if has {
 		if array.Len() < 0 || array.Len()%2 != 0 {
-			return nil, errors.New("Invalid range")
+			return nil, errors.New("invalid range")
 		}
 		rang, err := array.ToFloat64Array()
 		if err != nil {

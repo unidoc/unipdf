@@ -120,18 +120,18 @@ func (r *PdfReader) CheckAccessRights(password []byte) (bool, security.Permissio
 // Loads the structure of the pdf file: pages, outlines, etc.
 func (r *PdfReader) loadStructure() error {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return fmt.Errorf("File need to be decrypted first")
+		return fmt.Errorf("file need to be decrypted first")
 	}
 
 	trailerDict := r.parser.GetTrailer()
 	if trailerDict == nil {
-		return fmt.Errorf("Missing trailer")
+		return fmt.Errorf("missing trailer")
 	}
 
 	// Catalog.
 	root, ok := trailerDict.Get("Root").(*PdfObjectReference)
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", trailerDict)
+		return fmt.Errorf("invalid Root (trailer: %s)", trailerDict)
 	}
 	oc, err := r.parser.LookupByReference(*root)
 	if err != nil {
@@ -141,19 +141,19 @@ func (r *PdfReader) loadStructure() error {
 	pcatalog, ok := oc.(*PdfIndirectObject)
 	if !ok {
 		common.Log.Debug("ERROR: Missing catalog: (root %q) (trailer %s)", oc, *trailerDict)
-		return errors.New("Missing catalog")
+		return errors.New("missing catalog")
 	}
 	catalog, ok := (*pcatalog).PdfObject.(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid catalog (%s)", pcatalog.PdfObject)
-		return errors.New("Invalid catalog")
+		return errors.New("invalid catalog")
 	}
 	common.Log.Trace("Catalog: %s", catalog)
 
 	// Pages.
 	pagesRef, ok := catalog.Get("Pages").(*PdfObjectReference)
 	if !ok {
-		return errors.New("Pages in catalog should be a reference")
+		return errors.New("pages in catalog should be a reference")
 	}
 	op, err := r.parser.LookupByReference(*pagesRef)
 	if err != nil {
@@ -164,17 +164,17 @@ func (r *PdfReader) loadStructure() error {
 	if !ok {
 		common.Log.Debug("ERROR: Pages object invalid")
 		common.Log.Debug("op: %p", ppages)
-		return errors.New("Pages object invalid")
+		return errors.New("pages object invalid")
 	}
 	pages, ok := ppages.PdfObject.(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Pages object invalid (%s)", ppages)
-		return errors.New("Pages object invalid")
+		return errors.New("pages object invalid")
 	}
 	pageCount, ok := pages.Get("Count").(*PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("ERROR: Pages count object invalid")
-		return errors.New("Pages count invalid")
+		return errors.New("pages count invalid")
 	}
 
 	r.root = root
@@ -222,7 +222,7 @@ func (r *PdfReader) traceToObjectWrapper(obj PdfObject, refList map[*PdfObjectRe
 	if isRef {
 		// Make sure not already visited (circular ref).
 		if _, alreadyTraversed := refList[ref]; alreadyTraversed {
-			return nil, errors.New("Circular reference")
+			return nil, errors.New("circular reference")
 		}
 		refList[ref] = true
 		obj, err := r.parser.LookupByReference(*ref)
@@ -243,7 +243,7 @@ func (r *PdfReader) traceToObject(obj PdfObject) (PdfObject, error) {
 
 func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+		return nil, fmt.Errorf("file need to be decrypted first")
 	}
 
 	// Has outlines? Otherwise return an empty outlines structure.
@@ -269,12 +269,12 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
 	if !ok {
-		return nil, errors.New("Outline root should be an indirect object")
+		return nil, errors.New("outline root should be an indirect object")
 	}
 
 	dict, ok := outlineRoot.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return nil, errors.New("Outline indirect object should contain a dictionary")
+		return nil, errors.New("outline indirect object should contain a dictionary")
 	}
 
 	common.Log.Trace("Outline root dict: %v", dict)
@@ -297,11 +297,11 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 func (r *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
 	container, isInd := obj.(*PdfIndirectObject)
 	if !isInd {
-		return nil, nil, fmt.Errorf("Outline container not an indirect object %T", obj)
+		return nil, nil, fmt.Errorf("outline container not an indirect object %T", obj)
 	}
 	dict, ok := container.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return nil, nil, errors.New("Not a dictionary object")
+		return nil, nil, errors.New("not a dictionary object")
 	}
 	common.Log.Trace("build outline tree: dict: %v (%v) p: %p", dict, container, container)
 
@@ -435,7 +435,7 @@ func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err
 // loadForms loads the AcroForm.
 func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+		return nil, fmt.Errorf("file need to be decrypted first")
 	}
 
 	// Has forms?
@@ -460,7 +460,7 @@ func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if !ok {
 		common.Log.Debug("Invalid AcroForm entry %T", obj)
 		common.Log.Debug("Does not have forms")
-		return nil, fmt.Errorf("Invalid acroform entry %T", obj)
+		return nil, fmt.Errorf("invalid acroform entry %T", obj)
 	}
 	common.Log.Trace("Has Acro forms")
 	// Load it.
@@ -485,7 +485,7 @@ func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 func (r *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
 	// can be indirect, direct, or reference
 	// look up the corresponding page
-	return nil, errors.New("Page not found")
+	return nil, errors.New("page not found")
 }
 
 // Build the table of contents.
@@ -504,12 +504,12 @@ func (r *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectOb
 
 	nodeDict, ok := node.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Node not a dictionary")
+		return errors.New("node not a dictionary")
 	}
 
 	objType, ok := (*nodeDict).Get("Type").(*PdfObjectName)
 	if !ok {
-		return errors.New("Node missing Type (Required)")
+		return errors.New("node missing Type (Required)")
 	}
 	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
@@ -530,7 +530,7 @@ func (r *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectOb
 	}
 	if *objType != "Pages" {
 		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
-		return errors.New("Table of content containing non Page/Pages object!")
+		return errors.New("table of content containing non Page/Pages object!")
 	}
 
 	// A Pages object.  Update the parent.
@@ -555,11 +555,11 @@ func (r *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectOb
 	if !ok {
 		kidsIndirect, isIndirect := kidsObj.(*PdfIndirectObject)
 		if !isIndirect {
-			return errors.New("Invalid Kids object")
+			return errors.New("invalid Kids object")
 		}
 		kids, ok = kidsIndirect.PdfObject.(*PdfObjectArray)
 		if !ok {
-			return errors.New("Invalid Kids indirect object")
+			return errors.New("invalid Kids indirect object")
 		}
 	}
 	common.Log.Trace("Kids: %s", kids)
@@ -567,7 +567,7 @@ func (r *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectOb
 		child, ok := child.(*PdfIndirectObject)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
-			return errors.New("Page not indirect object")
+			return errors.New("page not indirect object")
 		}
 		kids.Set(idx, child)
 		err = r.buildPageList(child, node, traversedPageNodes)
@@ -582,7 +582,7 @@ func (r *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectOb
 // GetNumPages returns the number of pages in the document.
 func (r *PdfReader) GetNumPages() (int, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return 0, fmt.Errorf("File need to be decrypted first")
+		return 0, fmt.Errorf("file need to be decrypted first")
 	}
 	return len(r.pageList), nil
 }
@@ -679,7 +679,7 @@ func (r *PdfReader) traverseObjectData(o PdfObject) error {
 
 	if _, isRef := o.(*PdfObjectReference); isRef {
 		common.Log.Debug("ERROR: Reader tracing a reference!")
-		return errors.New("Reader tracing a reference!")
+		return errors.New("reader tracing a reference!")
 	}
 
 	return nil
@@ -689,10 +689,10 @@ func (r *PdfReader) traverseObjectData(o PdfObject) error {
 // Indirect object with type /Page.
 func (r *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File needs to be decrypted first")
+		return nil, fmt.Errorf("file needs to be decrypted first")
 	}
 	if len(r.pageList) < pageNumber {
-		return nil, errors.New("Invalid page number (page count too short)")
+		return nil, errors.New("invalid page number (page count too short)")
 	}
 	page := r.pageList[pageNumber-1]
 
@@ -719,20 +719,20 @@ func (r *PdfReader) PageFromIndirectObject(ind *PdfIndirectObject) (*PdfPage, in
 			return r.PageList[i], i + 1, nil
 		}
 	}
-	return nil, 0, errors.New("Page not found")
+	return nil, 0, errors.New("page not found")
 }
 
 // GetPage returns the PdfPage model for the specified page number.
 func (r *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File needs to be decrypted first")
+		return nil, fmt.Errorf("file needs to be decrypted first")
 	}
 	if len(r.pageList) < pageNumber {
-		return nil, errors.New("Invalid page number (page count too short)")
+		return nil, errors.New("invalid page number (page count too short)")
 	}
 	idx := pageNumber - 1
 	if idx < 0 {
-		return nil, fmt.Errorf("Page numbering must start at 1")
+		return nil, fmt.Errorf("page numbering must start at 1")
 	}
 	page := r.PageList[idx]
 
@@ -786,7 +786,7 @@ func (r *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
 func (r *PdfReader) GetTrailer() (*PdfObjectDictionary, error) {
 	trailerDict := r.parser.GetTrailer()
 	if trailerDict == nil {
-		return nil, errors.New("Trailer missing")
+		return nil, errors.New("trailer missing")
 	}
 
 	return trailerDict, nil

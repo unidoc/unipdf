@@ -22,7 +22,7 @@ func NewFilterAESV2() Filter {
 
 func newFilterAESV2(d FilterDict) (Filter, error) {
 	if d.Length != 0 && d.Length != 16 {
-		return nil, fmt.Errorf("Invalid AESV2 crypt filter length (%d)", d.Length)
+		return nil, fmt.Errorf("invalid AESV2 crypt filter length (%d)", d.Length)
 	}
 	return filterAESV2{}, nil
 }

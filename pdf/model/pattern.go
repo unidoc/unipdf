@@ -211,7 +211,7 @@ func newPdfPatternFromPdfObject(container PdfObject) (*PdfPattern, error) {
 		return pattern, nil
 	}
 
-	return nil, errors.New("Unknown pattern")
+	return nil, errors.New("unknown pattern")
 }
 
 // Load entries specific to a pdf tiling pattern from a dictionary. Used in parsing/loading PDFs.
@@ -297,7 +297,7 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	}
 	dict, ok = TraceToDirectObject(obj).(*PdfObjectDictionary)
 	if !ok {
-		return nil, fmt.Errorf("Invalid resource dictionary (%T)", obj)
+		return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
 	}
 	resources, err := NewPdfPageResourcesFromDict(dict)
 	if err != nil {

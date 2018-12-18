@@ -338,7 +338,7 @@ var reGlyphCodes = regexp.MustCompile(`^\s*(\w+)\s*;\s*(.+?)\s*$`)
 func parseGlyphRune(line string) (string, rune, error) {
 	groups := reGlyphCodes.FindStringSubmatch(line)
 	if groups == nil {
-		return "", rune(0), errors.New("No match")
+		return "", rune(0), errors.New("no match")
 	}
 	glyph, codesStr := groups[1], groups[2]
 	runes, err := parseRunes(codesStr)

@@ -100,18 +100,18 @@ func (chap *Chapter) GetMargins() (float64, float64, float64, float64) {
 func (chap *Chapter) Add(d Drawable) error {
 	if Drawable(chap) == d {
 		common.Log.Debug("ERROR: Cannot add itself")
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	switch d.(type) {
 	case *Chapter:
 		common.Log.Debug("ERROR: Cannot add chapter to a chapter")
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	case *Paragraph, *Image, *Block, *Subchapter, *Table, *PageBreak:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	}
 
 	return nil

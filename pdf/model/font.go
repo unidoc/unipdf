@@ -226,7 +226,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	case "Type0":
 		if !allowType0 {
 			common.Log.Debug("ERROR: Loading type0 not allowed. font=%s", base)
-			return nil, errors.New("Cyclical type0 loading")
+			return nil, errors.New("cyclical type0 loading")
 		}
 		type0font, err := newPdfFontType0FromPdfObject(d, base)
 		if err != nil {
@@ -284,7 +284,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = cidfont
 	default:
 		common.Log.Debug("ERROR: Unsupported font type: font=%s", base)
-		return nil, fmt.Errorf("Unsupported font type: font=%s", base)
+		return nil, fmt.Errorf("unsupported font type: font=%s", base)
 	}
 
 	return font, nil
@@ -380,16 +380,6 @@ func (font PdfFont) Encoder() textencoding.TextEncoder {
 	return t.Encoder()
 }
 
-// SetEncoder sets the encoding for the underlying font.
-func (font PdfFont) SetEncoder(encoder textencoding.TextEncoder) {
-	t := font.actualFont()
-	if t == nil {
-		common.Log.Debug("ERROR: SetEncoder. Not implemented for font type=%#T", font.context)
-		return
-	}
-	t.SetEncoder(encoder)
-}
-
 // GetGlyphCharMetrics returns the specified char metrics for a specified glyph name.
 func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
@@ -414,7 +404,7 @@ func (font PdfFont) actualFont() fonts.Font {
 		return t
 	case *pdfCIDFontType2:
 		return t
-	case fonts.FontCourier:
+	case fonts.StdFont:
 		return t
 	default:
 		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)

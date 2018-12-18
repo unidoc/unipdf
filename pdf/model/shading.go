@@ -163,7 +163,7 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 
 	if dict == nil {
 		common.Log.Debug("Dictionary missing")
-		return nil, errors.New("Dict missing")
+		return nil, errors.New("dict missing")
 	}
 
 	// Shading type (required).
@@ -298,7 +298,7 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 		return shading, nil
 	}
 
-	return nil, errors.New("Unknown shading type")
+	return nil, errors.New("unknown shading type")
 }
 
 // Load shading type 1 specific attributes from pdf object.  Used in parsing/loading PDFs.
@@ -311,7 +311,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Domain not an array (got %T)", obj)
-			return nil, errors.New("Type check error")
+			return nil, errors.New("type check error")
 		}
 		shading.Domain = arr
 	}
@@ -322,7 +322,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, errors.New("Type check error")
+			return nil, errors.New("type check error")
 		}
 		shading.Matrix = arr
 	}
@@ -368,11 +368,11 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	arr, ok := obj.(*PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Coords not an array (got %T)", obj)
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 	if arr.Len() != 4 {
 		common.Log.Debug("Coords length not 4 (got %d)", arr.Len())
-		return nil, errors.New("Invalid attribute")
+		return nil, errors.New("invalid attribute")
 	}
 	shading.Coords = arr
 
@@ -382,7 +382,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		arr, ok := obj.(*PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Domain not an array (got %T)", obj)
-			return nil, errors.New("Type check error")
+			return nil, errors.New("type check error")
 		}
 		shading.Domain = arr
 	}

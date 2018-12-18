@@ -93,7 +93,7 @@ func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
 func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline, error) {
 	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
 	if !isDict {
-		return nil, fmt.Errorf("Outline object not a dictionary")
+		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
 	outline := PdfOutline{}
@@ -128,7 +128,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectObject) (*PdfOutlineItem, error) {
 	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
 	if !isDict {
-		return nil, fmt.Errorf("Outline object not a dictionary")
+		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
 	item := PdfOutlineItem{}
@@ -138,7 +138,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectOb
 	// Title (required).
 	obj := dict.Get("Title")
 	if obj == nil {
-		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
+		return nil, fmt.Errorf("missing Title from Outline Item (required)")
 	}
 	obj, err := r.traceToObject(obj)
 	if err != nil {
@@ -146,7 +146,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectOb
 	}
 	title, ok := TraceToDirectObject(obj).(*PdfObjectString)
 	if !ok {
-		return nil, fmt.Errorf("Title not a string (%T)", obj)
+		return nil, fmt.Errorf("title not a string (%T)", obj)
 	}
 	item.Title = title
 
@@ -154,7 +154,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectOb
 	if obj := dict.Get("Count"); obj != nil {
 		countVal, ok := obj.(*PdfObjectInteger)
 		if !ok {
-			return nil, fmt.Errorf("Count not an integer (%T)", obj)
+			return nil, fmt.Errorf("count not an integer (%T)", obj)
 		}
 		count := int64(*countVal)
 		item.Count = &count

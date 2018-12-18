@@ -30,7 +30,7 @@ func NewFilterAESV3() Filter {
 
 func newFilterAESV3(d FilterDict) (Filter, error) {
 	if d.Length != 0 && d.Length != 32 {
-		return nil, fmt.Errorf("Invalid AESV3 crypt filter length (%d)", d.Length)
+		return nil, fmt.Errorf("invalid AESV3 crypt filter length (%d)", d.Length)
 	}
 	return filterAESV3{}, nil
 }
@@ -144,7 +144,7 @@ func (filterAES) DecryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	padLen := int(buf[len(buf)-1])
 	if padLen >= len(buf) {
 		common.Log.Debug("Illegal pad length")
-		return buf, fmt.Errorf("Invalid pad length")
+		return buf, fmt.Errorf("invalid pad length")
 	}
 	buf = buf[:len(buf)-padLen]
 

@@ -31,7 +31,7 @@ type PdfRectangle struct {
 func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	rect := PdfRectangle{}
 	if arr.Len() != 4 {
-		return nil, errors.New("Invalid rectangle array, len != 4")
+		return nil, errors.New("invalid rectangle array, len != 4")
 	}
 
 	var err error
@@ -87,10 +87,10 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 
 	matches := reDate.FindAllStringSubmatch(dateStr, 1)
 	if len(matches) < 1 {
-		return d, fmt.Errorf("Invalid date string (%s)", dateStr)
+		return d, fmt.Errorf("invalid date string (%s)", dateStr)
 	}
 	if len(matches[0]) != 10 {
-		return d, errors.New("Invalid regexp group match length != 10")
+		return d, errors.New("invalid regexp group match length != 10")
 	}
 
 	// No need to handle err from ParseInt, as pre-validated via regexp.

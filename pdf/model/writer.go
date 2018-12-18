@@ -365,7 +365,7 @@ func (w *PdfWriter) addObjects(obj PdfObject) error {
 					// Should be done by the reader already.
 					// -> ERROR.
 					common.Log.Debug("ERROR: Parent is a reference object - Cannot be in writer (needs to be resolved)")
-					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
+					return fmt.Errorf("parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
 				}
 			}
 		}
@@ -376,7 +376,7 @@ func (w *PdfWriter) addObjects(obj PdfObject) error {
 		common.Log.Trace("Array")
 		common.Log.Trace("- %s", obj)
 		if arr == nil {
-			return errors.New("Array is nil")
+			return errors.New("array is nil")
 		}
 		for _, v := range arr.Elements() {
 			err := w.addObjects(v)
@@ -390,7 +390,7 @@ func (w *PdfWriter) addObjects(obj PdfObject) error {
 	if _, isReference := obj.(*PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
 		common.Log.Debug("ERROR: Cannot be a reference!")
-		return errors.New("Reference not allowed")
+		return errors.New("reference not allowed")
 	}
 
 	return nil
@@ -405,19 +405,19 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 
 	pageObj, ok := obj.(*PdfIndirectObject)
 	if !ok {
-		return errors.New("Page should be an indirect object")
+		return errors.New("page should be an indirect object")
 	}
 	common.Log.Trace("%s", pageObj)
 	common.Log.Trace("%s", pageObj.PdfObject)
 
 	pDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Page object should be a dictionary")
+		return errors.New("page object should be a dictionary")
 	}
 
 	otype, ok := pDict.Get("Type").(*PdfObjectName)
 	if !ok {
-		return fmt.Errorf("Page should have a Type key with a value of type name (%T)", pDict.Get("Type"))
+		return fmt.Errorf("page should have a Type key with a value of type name (%T)", pDict.Get("Type"))
 
 	}
 	if *otype != "Page" {
@@ -432,7 +432,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 		common.Log.Trace("Page Parent: %T", parent)
 		parentDict, ok := parent.PdfObject.(*PdfObjectDictionary)
 		if !ok {
-			return errors.New("Invalid Parent object")
+			return errors.New("invalid Parent object")
 		}
 		for _, field := range inheritedFields {
 			common.Log.Trace("Field %s", field)
@@ -461,16 +461,16 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 	// Add to Pages.
 	pagesDict, ok := w.pages.PdfObject.(*PdfObjectDictionary)
 	if !ok {
-		return errors.New("Invalid Pages obj (not a dict)")
+		return errors.New("invalid Pages obj (not a dict)")
 	}
 	kids, ok := pagesDict.Get("Kids").(*PdfObjectArray)
 	if !ok {
-		return errors.New("Invalid Pages Kids obj (not an array)")
+		return errors.New("invalid Pages Kids obj (not an array)")
 	}
 	kids.Append(pageObj)
 	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
 	if !ok {
-		return errors.New("Invalid Pages Count object (not an integer)")
+		return errors.New("invalid Pages Count object (not an integer)")
 	}
 	// Update the count.
 	*pageCount = *pageCount + 1

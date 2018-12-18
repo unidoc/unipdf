@@ -127,11 +127,6 @@ func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the font.
-func (font pdfFontType0) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // ToPdfObject converts the font to a PDF representation.
 func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
@@ -219,11 +214,6 @@ func (font pdfCIDFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the truetype font.
-func (font pdfCIDFontType0) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
@@ -262,8 +252,7 @@ type pdfCIDFontType2 struct {
 	container *core.PdfIndirectObject
 
 	// These fields are specific to Type 0 fonts.
-	encoder   textencoding.TextEncoder
-	ttfParser *fonts.TtfType
+	encoder textencoding.TextEncoder
 
 	CIDSystemInfo *core.PdfObjectDictionary
 	DW            core.PdfObject
@@ -273,10 +262,10 @@ type pdfCIDFontType2 struct {
 	CIDToGIDMap   core.PdfObject
 
 	// Mapping between unicode runes to widths.
+	// TODO(dennwc): both are used only in GetGlyphCharMetrics
+	//  			 we can precompute metrics and drop both
 	runeToWidthMap map[rune]int
-
-	// Also mapping between GIDs (glyph index) and width.
-	gidToWidthMap map[fonts.GID]int
+	ttfParser      *fonts.TtfType
 }
 
 // pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
@@ -296,17 +285,13 @@ func (font pdfCIDFontType2) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// SetEncoder sets the encoder for the truetype font.
-func (font pdfCIDFontType2) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
-}
-
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	metrics := fonts.CharMetrics{}
 
-	enc := textencoding.NewTrueTypeFontEncoder(font.ttfParser.Chars)
+	// TODO(dennwc): why not use font.encoder? however it's not set in the constructor
+	enc := font.ttfParser.NewEncoder()
 
 	// Convert the glyph to character code.
 	r, found := enc.GlyphToRune(glyph)
@@ -405,8 +390,12 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		fontCommon: fontCommon{
 			subtype: "CIDFontType2",
 		},
+		ttfParser: &ttf,
+
+		// Use identity character id (CID) to glyph id (GID) mapping.
+		// Code below relies on the fact that identity mapping is used.
+		CIDToGIDMap: core.MakeName("Identity"),
 	}
-	cidfont.ttfParser = &ttf
 
 	// 2-byte character codes ➞ runes
 	runes := make([]rune, 0, len(ttf.Chars))
@@ -428,47 +417,20 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	// Construct a rune ➞ width map.
 	runeToWidthMap := make(map[rune]int)
-	gidToWidthMap := map[fonts.GID]int{}
 	for _, r := range runes {
 		gid := ttf.Chars[r]
 
 		w := k * float64(ttf.Widths[gid])
 		runeToWidthMap[r] = int(w)
-		gidToWidthMap[gid] = int(w)
 	}
 	cidfont.runeToWidthMap = runeToWidthMap
-	cidfont.gidToWidthMap = gidToWidthMap
 
 	// Default width.
 	cidfont.DW = core.MakeInteger(int64(missingWidth))
 
 	// Construct W array.  Stores character code to width mappings.
-	wArr := &core.PdfObjectArray{}
-
-	for i := uint16(0); int(i) < len(runes); {
-
-		j := i + 1
-		for int(j) < len(runes) {
-			if runeToWidthMap[runes[i]] != runeToWidthMap[runes[j]] {
-				break
-			}
-			j++
-		}
-
-		// The W maps from CID to width, here CID = GID.
-		gid1 := ttf.Chars[runes[i]]
-		gid2 := ttf.Chars[runes[j-1]]
-
-		wArr.Append(core.MakeInteger(int64(gid1)))
-		wArr.Append(core.MakeInteger(int64(gid2)))
-		wArr.Append(core.MakeInteger(int64(runeToWidthMap[runes[i]])))
-
-		i = j
-	}
+	wArr := makeCIDWidthArr(runes, runeToWidthMap, ttf.Chars)
 	cidfont.W = core.MakeIndirectObject(wArr)
-
-	// Use identity character id (CID) to glyph id (GID) mapping.
-	cidfont.CIDToGIDMap = core.MakeName("Identity")
 
 	d := core.MakeDict()
 	d.Set("Ordering", core.MakeString("Identity"))
@@ -536,7 +498,7 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 			context: cidfont,
 		},
 		Encoding: core.MakeName("Identity-H"),
-		encoder:  textencoding.NewTrueTypeFontEncoder(ttf.Chars),
+		encoder:  ttf.NewEncoder(),
 	}
 
 	type0.toUnicodeCmap = ttf.MakeToUnicode()
@@ -547,4 +509,43 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	return &font, nil
+}
+
+func makeCIDWidthArr(runes []rune, widths map[rune]int, gids map[rune]fonts.GID) *core.PdfObjectArray {
+	// Construct W array. Stores character code to width mappings.
+	arr := &core.PdfObjectArray{}
+
+	// 9.7.4.3 Glyph metrics in CIDFonts
+
+	// In the first format, c shall be an integer specifying a starting CID value; it shall be followed by an array of
+	// n numbers that shall specify the widths for n consecutive CIDs, starting with c.
+	// The second format shall define the same width, w, as a number, for all CIDs in the range c_first to c_last.
+
+	// We always use the second format.
+
+	// TODO(dennwc): this can be done on GIDs instead of runes
+	for i := 0; i < len(runes); {
+		w := widths[runes[i]]
+
+		li := i
+		for j := i + 1; j < len(runes); j++ {
+			w2 := widths[runes[j]]
+			if w == w2 {
+				li = j
+			} else {
+				break
+			}
+		}
+
+		// The W maps from CID to width, here CID = GID.
+		gid1 := gids[runes[i]]
+		gid2 := gids[runes[li]]
+
+		arr.Append(core.MakeInteger(int64(gid1)))
+		arr.Append(core.MakeInteger(int64(gid2)))
+		arr.Append(core.MakeInteger(int64(w)))
+
+		i = li + 1
+	}
+	return arr
 }

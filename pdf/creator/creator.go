@@ -13,7 +13,6 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -57,9 +56,6 @@ type Creator struct {
 	// Default fonts used by all components instantiated through the creator.
 	defaultFontRegular *model.PdfFont
 	defaultFontBold    *model.PdfFont
-
-	// Default encoder used by all components instantiated through the creator.
-	defaultTextEncoder textencoding.TextEncoder
 }
 
 // SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
@@ -112,9 +108,6 @@ func New() *Creator {
 	c.pageMargins.top = m
 	c.pageMargins.bottom = m
 
-	// Initialize default text encoder.
-	c.defaultTextEncoder = textencoding.NewWinAnsiTextEncoder()
-
 	// Initialize default fonts.
 	var err error
 
@@ -122,13 +115,11 @@ func New() *Creator {
 	if err != nil {
 		c.defaultFontRegular = model.DefaultFont()
 	}
-	c.defaultFontRegular.SetEncoder(c.defaultTextEncoder)
 
 	c.defaultFontBold, err = model.NewStandard14Font(model.HelveticaBold)
 	if err != nil {
 		c.defaultFontRegular = model.DefaultFont()
 	}
-	c.defaultFontBold.SetEncoder(c.defaultTextEncoder)
 
 	// Initialize creator table of contents.
 	c.toc = c.NewTOC("Table of Contents")
@@ -308,11 +299,11 @@ func (c *Creator) RotateDeg(angleDeg int64) error {
 	page := c.getActivePage()
 	if page == nil {
 		common.Log.Debug("Fail to rotate: no page currently active")
-		return errors.New("No page active")
+		return errors.New("no page active")
 	}
 	if angleDeg%90 != 0 {
 		common.Log.Debug("ERROR: Page rotation angle not a multiple of 90")
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	// Do the rotation.

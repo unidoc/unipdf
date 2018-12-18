@@ -46,7 +46,7 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 		inlineImage.ColorSpace = core.MakeName("CMYK") // CMYK short for DeviceCMYK
 	} else {
 		common.Log.Debug("Invalid number of color components for inline image: %d", img.ColorComponents)
-		return nil, errors.New("Invalid number of color components")
+		return nil, errors.New("invalid number of color components")
 	}
 	inlineImage.BitsPerComponent = core.MakeInteger(img.BitsPerComponent)
 	inlineImage.Width = core.MakeInteger(img.Width)
@@ -164,7 +164,7 @@ func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResou
 	name, ok := img.ColorSpace.(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("Error: Invalid object type (%T;%+v)", img.ColorSpace, img.ColorSpace)
-		return nil, errors.New("Type check error")
+		return nil, errors.New("type check error")
 	}
 
 	if *name == "G" || *name == "DeviceGray" {
@@ -174,19 +174,19 @@ func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResou
 	} else if *name == "CMYK" || *name == "DeviceCMYK" {
 		return model.NewPdfColorspaceDeviceCMYK(), nil
 	} else if *name == "I" {
-		return nil, errors.New("Unsupported Index colorspace")
+		return nil, errors.New("unsupported Index colorspace")
 	} else {
 		if resources.ColorSpace == nil {
 			// Can also refer to a name in the PDF page resources...
 			common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)
-			return nil, errors.New("Unknown colorspace")
+			return nil, errors.New("unknown colorspace")
 		}
 
 		cs, has := resources.ColorSpace.Colorspaces[string(*name)]
 		if !has {
 			// Can also refer to a name in the PDF page resources...
 			common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)
-			return nil, errors.New("Unknown colorspace")
+			return nil, errors.New("unknown colorspace")
 		}
 
 		return cs, nil
@@ -206,7 +206,7 @@ func (img *ContentStreamInlineImage) IsMask() (bool, error) {
 		imMask, ok := img.ImageMask.(*core.PdfObjectBool)
 		if !ok {
 			common.Log.Debug("Image mask not a boolean")
-			return false, errors.New("Invalid object type")
+			return false, errors.New("invalid object type")
 		}
 
 		return bool(*imMask), nil
@@ -236,21 +236,21 @@ func (img *ContentStreamInlineImage) ToImage(resources *model.PdfPageResources) 
 
 	// Height.
 	if img.Height == nil {
-		return nil, errors.New("Height attribute missing")
+		return nil, errors.New("height attribute missing")
 	}
 	height, ok := img.Height.(*core.PdfObjectInteger)
 	if !ok {
-		return nil, errors.New("Invalid height")
+		return nil, errors.New("invalid height")
 	}
 	image.Height = int64(*height)
 
 	// Width.
 	if img.Width == nil {
-		return nil, errors.New("Width attribute missing")
+		return nil, errors.New("width attribute missing")
 	}
 	width, ok := img.Width.(*core.PdfObjectInteger)
 	if !ok {
-		return nil, errors.New("Invalid width")
+		return nil, errors.New("invalid width")
 	}
 	image.Width = int64(*width)
 
@@ -316,7 +316,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 			param, ok := obj.(*core.PdfObjectName)
 			if !ok {
 				common.Log.Debug("Invalid inline image property (expecting name) - %T", obj)
-				return nil, fmt.Errorf("Invalid inline image property (expecting name) - %T", obj)
+				return nil, fmt.Errorf("invalid inline image property (expecting name) - %T", obj)
 			}
 
 			valueObj, err, isOperand := csp.parseObject()
@@ -324,7 +324,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 				return nil, err
 			}
 			if isOperand {
-				return nil, fmt.Errorf("Not expecting an operand")
+				return nil, fmt.Errorf("not expecting an operand")
 			}
 
 			if *param == "BPC" || *param == "BitsPerComponent" {
@@ -348,14 +348,14 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 			} else if *param == "W" || *param == "Width" {
 				im.Width = valueObj
 			} else {
-				return nil, fmt.Errorf("Unknown inline image parameter %s", *param)
+				return nil, fmt.Errorf("unknown inline image parameter %s", *param)
 			}
 		}
 
 		if isOperand {
 			operand, ok := obj.(*core.PdfObjectString)
 			if !ok {
-				return nil, fmt.Errorf("Failed to read inline image - invalid operand")
+				return nil, fmt.Errorf("failed to read inline image - invalid operand")
 			}
 
 			if operand.Str() == "EI" {

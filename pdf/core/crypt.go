@@ -227,7 +227,7 @@ func decodeCryptFilter(cf *crypto.FilterDict, d *PdfObjectDictionary) error {
 	// Method.
 	name, ok := d.Get("CFM").(*PdfObjectName)
 	if !ok {
-		return fmt.Errorf("Unsupported crypt filter (None)")
+		return fmt.Errorf("unsupported crypt filter (None)")
 	}
 	cf.CFM = string(*name)
 
@@ -328,7 +328,7 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	cf, ok := obj.(*PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Invalid CF, type: %T", obj)
-		return errors.New("Invalid CF")
+		return errors.New("invalid CF")
 	}
 
 	for _, name := range cf.Keys() {
@@ -345,7 +345,7 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 
 		dict, ok := v.(*PdfObjectDictionary)
 		if !ok {
-			return fmt.Errorf("Invalid dict in CF (name %s) - not a dictionary but %T", name, v)
+			return fmt.Errorf("invalid dict in CF (name %s) - not a dictionary but %T", name, v)
 		}
 
 		if name == "Identity" {
@@ -370,7 +370,7 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.stringFilter = "Identity"
 	if strf, ok := ed.Get("StrF").(*PdfObjectName); ok {
 		if _, exists := crypt.cryptFilters[string(*strf)]; !exists {
-			return fmt.Errorf("Crypt filter for StrF not specified in CF dictionary (%s)", *strf)
+			return fmt.Errorf("crypt filter for StrF not specified in CF dictionary (%s)", *strf)
 		}
 		crypt.stringFilter = string(*strf)
 	}
@@ -379,7 +379,7 @@ func (crypt *PdfCrypt) loadCryptFilters(ed *PdfObjectDictionary) error {
 	crypt.streamFilter = "Identity"
 	if stmf, ok := ed.Get("StmF").(*PdfObjectName); ok {
 		if _, exists := crypt.cryptFilters[string(*stmf)]; !exists {
-			return fmt.Errorf("Crypt filter for StmF not specified in CF dictionary (%s)", *stmf)
+			return fmt.Errorf("crypt filter for StmF not specified in CF dictionary (%s)", *stmf)
 		}
 		crypt.streamFilter = string(*stmf)
 	}
@@ -433,11 +433,11 @@ func PdfCryptNewDecrypt(parser *PdfParser, ed, trailer *PdfObjectDictionary) (*P
 	filter, ok := ed.Get("Filter").(*PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR Crypt dictionary missing required Filter field!")
-		return crypter, errors.New("Required crypt field Filter missing")
+		return crypter, errors.New("required crypt field Filter missing")
 	}
 	if *filter != "Standard" {
 		common.Log.Debug("ERROR Unsupported filter (%s)", *filter)
-		return crypter, errors.New("Unsupported Filter")
+		return crypter, errors.New("unsupported Filter")
 	}
 	crypter.encrypt.Filter = string(*filter)
 
@@ -449,7 +449,7 @@ func PdfCryptNewDecrypt(parser *PdfParser, ed, trailer *PdfObjectDictionary) (*P
 	if L, ok := ed.Get("Length").(*PdfObjectInteger); ok {
 		if (*L % 8) != 0 {
 			common.Log.Debug("ERROR Invalid encryption length")
-			return crypter, errors.New("Invalid encryption length")
+			return crypter, errors.New("invalid encryption length")
 		}
 		crypter.encrypt.Length = int(*L)
 	} else {
@@ -469,7 +469,7 @@ func PdfCryptNewDecrypt(parser *PdfParser, ed, trailer *PdfObjectDictionary) (*P
 			}
 		} else {
 			common.Log.Debug("ERROR Unsupported encryption algo V = %d", V)
-			return crypter, errors.New("Unsupported algorithm")
+			return crypter, errors.New("unsupported algorithm")
 		}
 	}
 
@@ -485,7 +485,7 @@ func PdfCryptNewDecrypt(parser *PdfParser, ed, trailer *PdfObjectDictionary) (*P
 	if idArray, ok := trailer.Get("ID").(*PdfObjectArray); ok && idArray.Len() >= 1 {
 		id0obj, ok := GetString(idArray.Get(0))
 		if !ok {
-			return crypter, errors.New("Invalid trailer ID")
+			return crypter, errors.New("invalid trailer ID")
 		}
 		id0 = id0obj.Str()
 	} else {
@@ -547,7 +547,7 @@ func (crypt *PdfCrypt) checkAccessRights(password []byte) (bool, security.Permis
 func (crypt *PdfCrypt) makeKey(filter string, objNum, genNum uint32, ekey []byte) ([]byte, error) {
 	f, ok := crypt.cryptFilters[filter]
 	if !ok {
-		return nil, fmt.Errorf("Unknown crypt filter (%s)", filter)
+		return nil, fmt.Errorf("unknown crypt filter (%s)", filter)
 	}
 	return f.MakeKey(objNum, genNum, ekey)
 }
@@ -602,7 +602,7 @@ func (crypt *PdfCrypt) decryptBytes(buf []byte, filter string, okey []byte) ([]b
 	common.Log.Trace("Decrypt bytes")
 	f, ok := crypt.cryptFilters[filter]
 	if !ok {
-		return nil, fmt.Errorf("Unknown crypt filter (%s)", filter)
+		return nil, fmt.Errorf("unknown crypt filter (%s)", filter)
 	}
 	return f.DecryptBytes(buf, okey)
 }
@@ -789,7 +789,7 @@ func (crypt *PdfCrypt) encryptBytes(buf []byte, filter string, okey []byte) ([]b
 	common.Log.Trace("Encrypt bytes")
 	f, ok := crypt.cryptFilters[filter]
 	if !ok {
-		return nil, fmt.Errorf("Unknown crypt filter (%s)", filter)
+		return nil, fmt.Errorf("unknown crypt filter (%s)", filter)
 	}
 	return f.EncryptBytes(buf, okey)
 }

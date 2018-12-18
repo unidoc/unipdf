@@ -131,7 +131,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 	// or
 	//     %!FontType1-1.0
 	if len(data) < 2 || string(data[:2]) != "%!" {
-		return errors.New("Invalid start of ASCII segment")
+		return errors.New("invalid start of ASCII segment")
 	}
 
 	keySection, encodingSection, err := getAsciiSections(data)

@@ -29,7 +29,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	if !ok {
 		array, ok := filterObj.(*PdfObjectArray)
 		if !ok {
-			return nil, fmt.Errorf("Filter not a Name or Array object")
+			return nil, fmt.Errorf("filter not a Name or Array object")
 		}
 		if array.Len() == 0 {
 			// Empty array -> indicates raw filter (no filter).
@@ -51,7 +51,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		filterObj = array.Get(0)
 		method, ok = filterObj.(*PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Filter array member not a Name object")
+			return nil, fmt.Errorf("filter array member not a Name object")
 		}
 	}
 
@@ -75,7 +75,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		return NewJPXEncoder(), nil
 	} else {
 		common.Log.Debug("ERROR: Unsupported encoding method!")
-		return nil, fmt.Errorf("Unsupported encoding method (%s)", *method)
+		return nil, fmt.Errorf("unsupported encoding method (%s)", *method)
 	}
 }
 
