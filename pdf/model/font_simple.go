@@ -15,6 +15,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
+// pdfFontSimple implements pdfFont
+var _ pdfFont = (*pdfFontSimple)(nil)
+
 // pdfFontSimple describes a Simple Font
 //
 // 9.6 Simple Fonts (page 254)
@@ -62,6 +65,10 @@ func pdfFontSimpleFromSkeleton(base *fontCommon) *pdfFontSimple {
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfFontSimple) baseFields() *fontCommon {
 	return &font.fontCommon
+}
+
+func (font *pdfFontSimple) getFontDescriptor() *PdfFontDescriptor {
+	return font.fontDescriptor
 }
 
 // Encoder returns the font's text encoder.

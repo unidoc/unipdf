@@ -18,31 +18,27 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
+// pdfFont is an internal interface for fonts that can e stored in PDF documents.
+type pdfFont interface {
+	fonts.Font
+	// getFontDescriptor returns the font descriptor for `font`.
+	getFontDescriptor() *PdfFontDescriptor
+	// baseFields returns the fields of `font` that are common to all PDF fonts.
+	baseFields() *fontCommon
+}
+
 // PdfFont represents an underlying font structure which can be of type:
 // - Type0
 // - Type1
 // - TrueType
 // etc.
 type PdfFont struct {
-	// TODO(dennwc): this actually assumes that the font is from this package, other implementations won't work
-	//				 instead, define a new font interface in this package, that can additionally return font descriptor
-	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+	context pdfFont // The underlying font: Type0, Type1, Truetype, etc..
 }
 
 // GetFontDescriptor returns the font descriptor for `font`.
 func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t.fontDescriptor, nil
-	case *pdfFontType0:
-		return t.fontDescriptor, nil
-	case *pdfCIDFontType0:
-		return t.fontDescriptor, nil
-	case *pdfCIDFontType2:
-		return t.fontDescriptor, nil
-	}
-	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
-	return nil, errors.New("fontdescriptor not found")
+	return font.context.getFontDescriptor(), nil
 }
 
 // String returns a string that describes `font`.
@@ -64,7 +60,7 @@ func (font PdfFont) BaseFont() string {
 func (font PdfFont) Subtype() string {
 	subtype := font.baseFields().subtype
 	if t, ok := font.context.(*pdfFontType0); ok {
-		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
+		subtype = subtype + ":" + t.DescendantFont.Subtype()
 	}
 	return subtype
 }
@@ -397,25 +393,11 @@ func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.Cha
 }
 
 // actualFont returns the Font in font.context
-func (font PdfFont) actualFont() fonts.Font {
+func (font PdfFont) actualFont() pdfFont {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
 	}
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t
-	case *pdfFontType0:
-		return t
-	case *pdfCIDFontType0:
-		return t
-	case *pdfCIDFontType2:
-		return t
-	case fonts.StdFont:
-		return t
-	default:
-		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
-		return nil
-	}
+	return font.context
 }
 
 // baseFields returns the fields of `font`.context that are common to all PDF fonts.
@@ -424,19 +406,7 @@ func (font PdfFont) baseFields() *fontCommon {
 		common.Log.Debug("ERROR: baseFields. context is nil.")
 		return nil
 	}
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t.baseFields()
-	case *pdfFontType0:
-		return t.baseFields()
-	case *pdfCIDFontType0:
-		return t.baseFields()
-	case *pdfCIDFontType2:
-		return t.baseFields()
-	default:
-		common.Log.Debug("ERROR: base. Unknown font type %t. font=%s", t, font.String())
-		return nil
-	}
+	return font.context.baseFields()
 }
 
 // fontCommon represents the fields that are common to all PDF fonts.
