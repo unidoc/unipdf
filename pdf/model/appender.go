@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -370,6 +371,65 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 	}
 }
 
+// Sign a document
+func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfAppearance, err error) {
+	acroForm = a.Reader.AcroForm
+	if acroForm == nil {
+		acroForm = NewPdfAcroForm()
+	}
+	pageIndex := pageNum - 1
+	var page *PdfPage
+	for i, p := range a.pages {
+		if i == pageIndex {
+			page = p.Duplicate()
+			break
+		}
+	}
+	if page == nil {
+		return nil, nil, fmt.Errorf("page %d not found", pageNum)
+	}
+
+	// TODO add more checks before set the fields
+	acroForm.SigFlags = core.MakeInteger(3)
+	acroForm.DA = core.MakeString("/F1 0 Tf 0 g")
+	n2ResourcesFont := core.MakeDict()
+	n2ResourcesFont.Set("F1", DefaultFont().ToPdfObject())
+	acroForm.DR = NewPdfPageResources()
+	acroForm.DR.Font = n2ResourcesFont
+	sig := NewPdfSignature()
+	sig.M = core.MakeString(time.Now().Format("D:20060102150405-07'00'"))
+	//sig.M = core.MakeString("D:20150226112648Z")
+	sig.Type = core.MakeName("Sig")
+	sig.Reason = core.MakeString("Test1")
+	if err := handler.InitSignature(sig); err != nil {
+		return nil, nil, err
+	}
+	a.addNewObjects(sig.container)
+
+	appearance = NewPdfAppearance()
+
+	fields := append(acroForm.AllFields(), appearance.PdfField)
+	acroForm.Fields = &fields
+
+	procPage(page)
+
+	appearance.V = sig.ToPdfObject()
+	appearance.FT = core.MakeName("Sig")
+	appearance.V = sig.ToPdfObject()
+	//appearance.Ff = core.MakeInteger(0)
+	appearance.T = core.MakeString("Signature1")
+	appearance.F = core.MakeInteger(132)
+	appearance.P = page.ToPdfObject()
+	appearance.Rect = core.MakeArray(core.MakeInteger(0), core.MakeInteger(0), core.MakeInteger(0),
+		core.MakeInteger(0))
+	appearance.Signature = sig
+
+	a.pages[pageIndex] = page
+
+	a.ReplaceAcroForm(acroForm)
+	return acroForm, appearance, nil
+}
+
 // ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which replaces the original acrobat form.
 func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 	a.acroForm = acroForm
@@ -377,13 +437,6 @@ func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 
 // Write writes the Appender output to io.Writer.
 func (a *PdfAppender) Write(w io.Writer) error {
-	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	offset, err := io.Copy(w, a.rs)
-	if err != nil {
-		return err
-	}
 
 	writer := NewPdfWriter()
 
@@ -473,6 +526,51 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		writer.SetForms(a.acroForm)
 	}
 
+	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	digestWriters := make(map[SignatureHandler]io.Writer)
+	byteRange := core.MakeArray()
+	for _, obj := range a.newObjects {
+		if ind, found := core.GetIndirect(obj); found {
+			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+				handler := *sigDict.handler
+				// TODO fix it
+				digestWriters[handler], _ = handler.NewDigest(sigDict.signature)
+				byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
+			}
+		}
+	}
+	if byteRange.Len() > 0 {
+		byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
+	}
+
+	for _, obj := range a.newObjects {
+		if ind, found := core.GetIndirect(obj); found {
+			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+				sigDict.Set("ByteRange", byteRange)
+			}
+		}
+	}
+
+	hasSigDict := len(digestWriters) > 0
+
+	var reader io.Reader = a.rs
+	if hasSigDict {
+		writers := make([]io.Writer, 0, len(digestWriters))
+		for _, hash := range digestWriters {
+			writers = append(writers, hash)
+		}
+		//hashSha1 := sha1.New() // if needed
+		reader = io.TeeReader(a.rs, io.MultiWriter(writers...))
+	}
+
+	offset, err := io.Copy(w, reader)
+	if err != nil {
+		return err
+	}
+
 	if len(a.newObjects) == 0 {
 		return nil
 	}
@@ -481,13 +579,97 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	writer.ObjNumOffset = a.greatestObjNum
 	writer.appendMode = true
 	writer.appendToXrefs = a.xrefs
+	writer.minorVersion = 7
 
 	for _, obj := range a.newObjects {
 		writer.addObject(obj)
 	}
-	if err := writer.Write(w); err != nil {
+
+	writerW := w
+
+	if hasSigDict {
+		writerW = bytes.NewBuffer(nil)
+	}
+
+	if err := writer.Write(writerW); err != nil {
 		return err
 	}
+
+	if hasSigDict {
+		bufferData := writerW.(*bytes.Buffer).Bytes()
+		byteRange := core.MakeArray()
+		var sigDicts []*pdfSignDictionary
+		var lastPosition int64
+		for _, obj := range writer.objects {
+			if ind, found := core.GetIndirect(obj); found {
+				if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+					sigDicts = append(sigDicts, sigDict)
+					newPosition := sigDict.fileOffset + int64(sigDict.contentsOffsetStart)
+					byteRange.Append(
+						core.MakeInteger(lastPosition),
+						core.MakeInteger(newPosition-lastPosition),
+					)
+					lastPosition = sigDict.fileOffset + int64(sigDict.contentsOffsetEnd)
+				}
+			}
+		}
+		byteRange.Append(
+			core.MakeInteger(lastPosition),
+			core.MakeInteger(offset+int64(len(bufferData))-lastPosition),
+		)
+		// set the ByteRange value
+		byteRangeData := []byte(byteRange.WriteString())
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			for i := sigDict.byteRangeOffsetStart; i < sigDict.byteRangeOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+			dst := bufferData[bufferOffset+sigDict.byteRangeOffsetStart : bufferOffset+sigDict.byteRangeOffsetEnd]
+			copy(dst, byteRangeData)
+		}
+		var prevOffset int
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			data := bufferData[prevOffset : bufferOffset+sigDict.contentsOffsetStart]
+			handler := *sigDict.handler
+			digestWriters[handler].Write(data)
+			prevOffset = bufferOffset + sigDict.contentsOffsetEnd
+		}
+		for _, sigDict := range sigDicts {
+			data := bufferData[prevOffset:]
+			handler := *sigDict.handler
+			digestWriters[handler].Write(data)
+		}
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			handler := *sigDict.handler
+			digest := digestWriters[handler]
+			if err := handler.Sign(sigDict.signature, digest); err != nil {
+				return err
+			}
+			contents := []byte(sigDict.signature.Contents.WriteString())
+
+			for i := sigDict.byteRangeOffsetStart; i < sigDict.byteRangeOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+			for i := sigDict.contentsOffsetStart; i < sigDict.contentsOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+
+			dst := bufferData[bufferOffset+sigDict.byteRangeOffsetStart : bufferOffset+sigDict.byteRangeOffsetEnd]
+			copy(dst, byteRangeData)
+			dst = bufferData[bufferOffset+sigDict.contentsOffsetStart : bufferOffset+sigDict.contentsOffsetEnd]
+			copy(dst, contents)
+		}
+
+		writerW = bytes.NewBuffer(bufferData)
+
+	}
+
+	if buffer, ok := writerW.(*bytes.Buffer); ok {
+		_, err = io.Copy(w, buffer)
+	}
+
 	return err
 }
 

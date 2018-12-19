@@ -254,26 +254,22 @@ func (f *PdfField) ToPdfObject() core.PdfObject {
 	if f.Parent != nil {
 		d.Set("Parent", f.Parent.GetContainingPdfObject())
 	}
-
+	kids := core.MakeArray()
 	if f.Kids != nil {
 		// Create an array of the kids (fields or widgets).
-		kids := core.MakeArray()
 		for _, child := range f.Kids {
 			kids.Append(child.ToPdfObject())
 		}
-		d.Set("Kids", kids)
 	}
 
 	if f.Annotations != nil {
-		_, hasKids := d.Get("Kids").(*core.PdfObjectArray)
-		if !hasKids {
-			d.Set("Kids", &core.PdfObjectArray{})
-		}
-		// TODO: If only 1 widget annotation, it can be merged in.
-		kids := d.Get("Kids").(*core.PdfObjectArray)
 		for _, annot := range f.Annotations {
 			kids.Append(annot.GetContext().ToPdfObject())
 		}
+	}
+
+	if f.Kids != nil || f.Annotations != nil {
+		d.Set("Kids", kids)
 	}
 
 	d.SetIfNotNil("T", f.T)
