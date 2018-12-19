@@ -18,12 +18,12 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
-// pdfFont is an internal interface for fonts that can e stored in PDF documents.
+// pdfFont is an internal interface for fonts that can be stored in PDF documents.
 type pdfFont interface {
 	fonts.Font
-	// getFontDescriptor returns the font descriptor for `font`.
+	// getFontDescriptor returns the font descriptor of the font.
 	getFontDescriptor() *PdfFontDescriptor
-	// baseFields returns the fields of `font` that are common to all PDF fonts.
+	// baseFields returns fields that are common for PDF fonts.
 	baseFields() *fontCommon
 }
 
