@@ -11,11 +11,12 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 var (
-	fontHelvetica     = model.NewStandard14FontMustCompile(model.Helvetica)
-	fontHelveticaBold = model.NewStandard14FontMustCompile(model.HelveticaBold)
+	fontHelvetica     = model.NewStandard14FontMustCompile(fonts.HelveticaName)
+	fontHelveticaBold = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 )
 
 func TestTableMultiParagraphWrapped(t *testing.T) {

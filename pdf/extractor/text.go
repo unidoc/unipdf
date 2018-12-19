@@ -675,7 +675,7 @@ func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 
 	// This is a hack for testing.
 	if name == "UniDocCourier" {
-		return model.NewStandard14FontMustCompile(model.Courier), nil
+		return model.NewStandard14FontMustCompile(fonts.CourierName), nil
 	}
 
 	fontObj, err := to.getFontDict(name)

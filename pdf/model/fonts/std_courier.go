@@ -9,6 +9,15 @@
 
 package fonts
 
+import "sync"
+
+func init() {
+	RegisterStdFont(CourierName, NewFontCourier)
+	RegisterStdFont(CourierBoldName, NewFontCourierBold)
+	RegisterStdFont(CourierObliqueName, NewFontCourierOblique)
+	RegisterStdFont(CourierBoldObliqueName, NewFontCourierBoldOblique)
+}
+
 const (
 	// CourierName is a PDF name of the Courier font.
 	CourierName = "Courier"
@@ -22,58 +31,55 @@ const (
 
 // NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourier() StdFont {
-	return NewStdFont(CourierName, CourierCharMetrics)
+	courierOnce.Do(initCourier)
+	return NewStdFont(CourierName, courierCharMetrics)
 }
 
 // NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierBold() StdFont {
-	return NewStdFont(CourierBoldName, CourierBoldCharMetrics)
+	courierOnce.Do(initCourier)
+	return NewStdFont(CourierBoldName, courierBoldCharMetrics)
 }
 
 // NewFontCourierOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierOblique() StdFont {
-	return NewStdFont(CourierObliqueName, CourierObliqueCharMetrics)
+	courierOnce.Do(initCourier)
+	return NewStdFont(CourierObliqueName, courierObliqueCharMetrics)
 }
 
 // NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
 func NewFontCourierBoldOblique() StdFont {
-	return NewStdFont(CourierBoldObliqueName, CourierBoldObliqueCharMetrics)
+	courierOnce.Do(initCourier)
+	return NewStdFont(CourierBoldObliqueName, courierBoldObliqueCharMetrics)
 }
 
-func init() {
+var courierOnce sync.Once
+
+func initCourier() {
 	// the only font that has same metrics for all glyphs (fixed-width)
-	// TODO(dennwc): once unexported, unpack on-demand (once)
 	const wx = 600
-	CourierCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	courierCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for _, glyph := range type1CommonGlyphs {
-		CourierCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: wx}
+		courierCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: wx}
 	}
 	// other font variant still have the same metrics
-	CourierBoldCharMetrics = CourierCharMetrics
-	CourierBoldObliqueCharMetrics = CourierCharMetrics
-	CourierObliqueCharMetrics = CourierCharMetrics
+	courierBoldCharMetrics = courierCharMetrics
+	courierBoldObliqueCharMetrics = courierCharMetrics
+	courierObliqueCharMetrics = courierCharMetrics
 }
 
-// CourierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
+// courierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
 // license information.
-//
-// TODO(dennwc): unexport
-var CourierCharMetrics map[GlyphName]CharMetrics
+var courierCharMetrics map[GlyphName]CharMetrics
 
 // Courier-Bold font metrics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var CourierBoldCharMetrics map[GlyphName]CharMetrics
+var courierBoldCharMetrics map[GlyphName]CharMetrics
 
-// CourierBoldObliqueCharMetrics are the font metrics loaded from afms/Courier-BoldOblique.afm.
+// courierBoldObliqueCharMetrics are the font metrics loaded from afms/Courier-BoldOblique.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var CourierBoldObliqueCharMetrics map[GlyphName]CharMetrics
+var courierBoldObliqueCharMetrics map[GlyphName]CharMetrics
 
-// CourierObliqueCharMetrics are the font metrics loaded from afms/Courier-Oblique.afm.
+// courierObliqueCharMetrics are the font metrics loaded from afms/Courier-Oblique.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var CourierObliqueCharMetrics map[GlyphName]CharMetrics
+var courierObliqueCharMetrics map[GlyphName]CharMetrics

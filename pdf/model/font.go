@@ -24,6 +24,8 @@ import (
 // - TrueType
 // etc.
 type PdfFont struct {
+	// TODO(dennwc): this actually assumes that the font is from this package, other implementations won't work
+	//				 instead, define a new font interface in this package, that can additionally return font descriptor
 	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
 }
 
@@ -82,25 +84,26 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts[Helvetica]
+	std := stdFontToSimpleFont(fonts.NewFontHelvetica())
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
-func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
-	std, ok := standard14Fonts[basefont]
+func NewStandard14Font(basefont string) (*PdfFont, error) {
+	fnt, ok := fonts.NewStdFontByName(basefont)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
 	}
+	std := stdFontToSimpleFont(fnt)
 	return &PdfFont{context: &std}, nil
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
 // If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
 // is guaranteed to succeed.
-func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
+func NewStandard14FontMustCompile(basefont string) *PdfFont {
 	font, err := NewStandard14Font(basefont)
 	if err != nil {
 		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
@@ -111,15 +114,17 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
-	std, ok := standard14Fonts[basefont]
+	fnt, ok := fonts.NewStdFontByName(basefont)
 	if !ok {
 		return nil, nil, ErrFontNotSupported
 	}
+	std := stdFontToSimpleFont(fnt)
+
 	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
 	if err != nil {
 		return nil, nil, err
@@ -236,7 +241,8 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
+		if fnt, ok := fonts.NewStdFontByName(base.basefont); ok && base.subtype == "Type1" {
+			std := stdFontToSimpleFont(fnt)
 			font.context = &std
 			simplefont, err = newSimpleFontFromPdfObject(d, base, true)
 			if err != nil {

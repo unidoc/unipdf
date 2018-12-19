@@ -34,6 +34,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 	"github.com/unidoc/unidoc/pdf/model/optimize"
 )
 
@@ -496,7 +497,7 @@ func TestParagraphFonts(t *testing.T) {
 		return
 	}
 
-	helvetica := model.NewStandard14FontMustCompile(model.Helvetica)
+	helvetica := model.NewStandard14FontMustCompile(fonts.HelveticaName)
 
 	fonts := []*model.PdfFont{roboto, robotoBold, helvetica, roboto, robotoBold, helvetica}
 	for _, font := range fonts {
@@ -526,21 +527,21 @@ func TestParagraphFonts(t *testing.T) {
 func TestParagraphStandardFonts(t *testing.T) {
 	creator := New()
 
-	names := []model.Standard14Font{
-		model.Courier,
-		model.CourierBold,
-		model.CourierBoldOblique,
-		model.CourierOblique,
-		model.Helvetica,
-		model.HelveticaBold,
-		model.HelveticaBoldOblique,
-		model.HelveticaOblique,
-		model.TimesRoman,
-		model.TimesBold,
-		model.TimesBoldItalic,
-		model.TimesItalic,
-		model.Symbol,
-		model.ZapfDingbats,
+	names := []string{
+		fonts.CourierName,
+		fonts.CourierBoldName,
+		fonts.CourierBoldObliqueName,
+		fonts.CourierObliqueName,
+		fonts.HelveticaName,
+		fonts.HelveticaBoldName,
+		fonts.HelveticaBoldObliqueName,
+		fonts.HelveticaObliqueName,
+		fonts.TimesRomanName,
+		fonts.TimesBoldName,
+		fonts.TimesBoldItalicName,
+		fonts.TimesItalicName,
+		fonts.SymbolName,
+		fonts.ZapfDingbatsName,
 	}
 
 	texts := []string{
@@ -731,7 +732,7 @@ func TestSubchaptersSimple(t *testing.T) {
 	c.AddTOC = true
 
 	lineStyle := c.NewTextStyle()
-	lineStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+	lineStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 
 	toc := c.TOC()
 	toc.SetLineStyle(lineStyle)
@@ -811,7 +812,7 @@ func TestSubchaptersSimple(t *testing.T) {
 		lineStyle.FontSize = 14
 
 		pageStyle := lineStyle
-		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+		pageStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 
 		lines := toc.Lines()
 		for _, line := range lines {
@@ -834,7 +835,7 @@ func TestSubchapters(t *testing.T) {
 	c.AddTOC = true
 
 	lineStyle := c.NewTextStyle()
-	lineStyle.Font = model.NewStandard14FontMustCompile(model.Helvetica)
+	lineStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaName)
 	lineStyle.FontSize = 14
 	lineStyle.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
 
@@ -917,7 +918,7 @@ func TestSubchapters(t *testing.T) {
 
 		// Set style of TOC lines just before render.
 		pageStyle := c.NewTextStyle()
-		pageStyle.Font = model.NewStandard14FontMustCompile(model.HelveticaBold)
+		pageStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 		pageStyle.FontSize = 10
 
 		lines := toc.Lines()
@@ -1185,7 +1186,7 @@ func newContent(c *Creator, text string, alignment TextAlignment, font *model.Pd
 }
 
 func newBillItem(c *Creator, t *Table, no, date, notes, amount, con, retApplied, ret, netBill string) {
-	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
+	timesBold := model.NewStandard14FontMustCompile(fonts.TimesBoldName)
 
 	billNo := t.NewCell()
 	billNo.SetContent(newContent(c, no, TextAlignmentLeft, timesBold, 8, ColorBlack))
@@ -1209,8 +1210,8 @@ func newBillItem(c *Creator, t *Table, no, date, notes, amount, con, retApplied,
 func TestCreatorHendricksReq1(t *testing.T) {
 	c := New()
 
-	timesRoman := model.NewStandard14FontMustCompile(model.TimesRoman)
-	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
+	timesRoman := model.NewStandard14FontMustCompile(fonts.TimesRomanName)
+	timesBold := model.NewStandard14FontMustCompile(fonts.TimesBoldName)
 	table := c.NewTable(3) // Mx4 table
 	// Default, equal column sizes (4x0.25)...
 	table.SetColumnWidths(0.35, 0.30, 0.35)
@@ -1405,7 +1406,7 @@ func TestCreatorHendricksReq1(t *testing.T) {
 func TestCreatorTableBorderReq1(t *testing.T) {
 	c := New()
 
-	timesRoman := model.NewStandard14FontMustCompile(model.TimesRoman)
+	timesRoman := model.NewStandard14FontMustCompile(fonts.TimesRomanName)
 	table := c.NewTable(1) // Mx4 table
 	table.SetColumnWidths(1)
 
@@ -1732,7 +1733,7 @@ func TestCreatorTableBorderReq1(t *testing.T) {
 func TestCellBorder(t *testing.T) {
 	c := New()
 
-	timesBold := model.NewStandard14FontMustCompile(model.TimesBold)
+	timesBold := model.NewStandard14FontMustCompile(fonts.TimesBoldName)
 
 	table := c.NewTable(2)
 	table.SetColumnWidths(0.50, 0.50)
@@ -1749,8 +1750,8 @@ func TestCellBorder(t *testing.T) {
 func TestTableInSubchapter(t *testing.T) {
 	c := New()
 
-	fontRegular := model.NewStandard14FontMustCompile(model.Helvetica)
-	fontBold := model.NewStandard14FontMustCompile(model.HelveticaBold)
+	fontRegular := model.NewStandard14FontMustCompile(fonts.HelveticaName)
+	fontBold := model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 
 	ch := c.NewChapter("Document control")
 	ch.SetMargins(0, 0, 40, 0)
@@ -2198,7 +2199,7 @@ func createPdf4Optimization(t *testing.T) *Creator {
 
 	p := c.NewParagraph("Test text1")
 	// Change to times bold font (default is helvetica).
-	font, err := model.NewStandard14Font(model.CourierBold)
+	font, err := model.NewStandard14Font(fonts.CourierBoldName)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		t.FailNow()
@@ -2269,7 +2270,7 @@ func createPdf4Optimization(t *testing.T) *Creator {
 	c.NewPage()
 	p = c.NewParagraph("Test text2")
 	// Change to times bold font (default is helvetica).
-	font, err = model.NewStandard14Font(model.Helvetica)
+	font, err = model.NewStandard14Font(fonts.HelveticaName)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		t.FailNow()
@@ -2658,7 +2659,7 @@ func TestCompressStreams(t *testing.T) {
 
 		page := c.pages[0]
 		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
-		times := model.NewStandard14FontMustCompile(model.TimesRoman)
+		times := model.NewStandard14FontMustCompile(fonts.TimesRomanName)
 		page.Resources.SetFontByName("Times", times.ToPdfObject())
 		rawContent := `
 BT

@@ -10,6 +10,25 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
+var stdFonts = make(map[string]func() StdFont)
+
+// NewStdFontByName creates a new StdFont by registered name. See RegisterStdFont.
+func NewStdFontByName(name string) (StdFont, bool) {
+	fnc, ok := stdFonts[name]
+	if !ok {
+		return StdFont{}, false
+	}
+	return fnc(), true
+}
+
+// RegisterStdFont registers a given StdFont constructor by font name. Font can then be created with NewStdFontByName.
+func RegisterStdFont(name string, fnc func() StdFont) {
+	if _, ok := stdFonts[name]; ok {
+		panic("font already registered: " + name)
+	}
+	stdFonts[name] = fnc
+}
+
 var _ Font = StdFont{}
 
 // StdFont represents one of the built-in fonts and it is assumed that every reader has access to it.
@@ -52,6 +71,12 @@ func (font StdFont) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	}
 
 	return metrics, true
+}
+
+// GetMetricsTable is a method specific to standard fonts. It returns the metrics table of all glyphs.
+// Caller should not modify the table.
+func (font StdFont) GetMetricsTable() map[GlyphName]CharMetrics {
+	return font.metrics
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.

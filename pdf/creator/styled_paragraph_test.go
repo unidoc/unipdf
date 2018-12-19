@@ -8,12 +8,12 @@ package creator
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 func TestParagraphRegularVsStyled(t *testing.T) {
-	fontRegular := newStandard14Font(t, model.Helvetica)
-	fontBold := newStandard14Font(t, model.HelveticaBold)
+	fontRegular := newStandard14Font(t, fonts.HelveticaName)
+	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
@@ -277,9 +277,9 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 }
 
 func TestStyledParagraph(t *testing.T) {
-	fontRegular := newStandard14Font(t, model.Courier)
-	fontBold := newStandard14Font(t, model.CourierBold)
-	fontHelvetica := newStandard14Font(t, model.Helvetica)
+	fontRegular := newStandard14Font(t, fonts.CourierName)
+	fontBold := newStandard14Font(t, fonts.CourierBoldName)
+	fontHelvetica := newStandard14Font(t, fonts.HelveticaName)
 
 	c := New()
 	c.NewPage()
