@@ -527,7 +527,7 @@ func TestParagraphFonts(t *testing.T) {
 func TestParagraphStandardFonts(t *testing.T) {
 	creator := New()
 
-	names := []string{
+	names := []fonts.StdFontName{
 		fonts.CourierName,
 		fonts.CourierBoldName,
 		fonts.CourierBoldObliqueName,

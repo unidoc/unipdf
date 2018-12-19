@@ -86,7 +86,7 @@ func DefaultFont() *PdfFont {
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
-func NewStandard14Font(basefont string) (*PdfFont, error) {
+func NewStandard14Font(basefont fonts.StdFontName) (*PdfFont, error) {
 	fnt, ok := fonts.NewStdFontByName(basefont)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
@@ -99,7 +99,7 @@ func NewStandard14Font(basefont string) (*PdfFont, error) {
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
 // If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
 // is guaranteed to succeed.
-func NewStandard14FontMustCompile(basefont string) *PdfFont {
+func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 	font, err := NewStandard14Font(basefont)
 	if err != nil {
 		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
@@ -110,7 +110,7 @@ func NewStandard14FontMustCompile(basefont string) *PdfFont {
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont string, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
@@ -237,7 +237,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if fnt, ok := fonts.NewStdFontByName(base.basefont); ok && base.subtype == "Type1" {
+		if fnt, ok := fonts.NewStdFontByName(fonts.StdFontName(base.basefont)); ok && base.subtype == "Type1" {
 			std := stdFontToSimpleFont(fnt)
 			font.context = &std
 			simplefont, err = newSimpleFontFromPdfObject(d, base, true)

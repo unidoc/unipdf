@@ -27,7 +27,7 @@ func RandString(length int) string {
 	return string(b)
 }
 
-func newStandard14Font(t testing.TB, base string) *model.PdfFont {
+func newStandard14Font(t testing.TB, base fonts.StdFontName) *model.PdfFont {
 	f, err := model.NewStandard14Font(base)
 	if err != nil {
 		t.Fatalf("Error opening font: %v", err)

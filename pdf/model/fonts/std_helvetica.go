@@ -20,13 +20,13 @@ func init() {
 
 const (
 	// HelveticaName is a PDF name of the Helvetica font.
-	HelveticaName = "Helvetica"
+	HelveticaName = StdFontName("Helvetica")
 	// HelveticaBoldName is a PDF name of the Helvetica (bold) font.
-	HelveticaBoldName = "Helvetica-Bold"
+	HelveticaBoldName = StdFontName("Helvetica-Bold")
 	// HelveticaObliqueName is a PDF name of the Helvetica (oblique) font.
-	HelveticaObliqueName = "Helvetica-Oblique"
+	HelveticaObliqueName = StdFontName("Helvetica-Oblique")
 	// HelveticaBoldObliqueName is a PDF name of the Helvetica (bold, oblique) font.
-	HelveticaBoldObliqueName = "Helvetica-BoldOblique"
+	HelveticaBoldObliqueName = StdFontName("Helvetica-BoldOblique")
 )
 
 // NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).

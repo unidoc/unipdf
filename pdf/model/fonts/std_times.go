@@ -20,13 +20,13 @@ func init() {
 
 const (
 	// TimesRomanName is a PDF name of the Times font.
-	TimesRomanName = "Times-Roman"
+	TimesRomanName = StdFontName("Times-Roman")
 	// TimesBoldName is a PDF name of the Times (bold) font.
-	TimesBoldName = "Times-Bold"
+	TimesBoldName = StdFontName("Times-Bold")
 	// TimesItalicName is a PDF name of the Times (italic) font.
-	TimesItalicName = "Times-Italic"
+	TimesItalicName = StdFontName("Times-Italic")
 	// TimesBoldItalicName is a PDF name of the Times (bold, italic) font.
-	TimesBoldItalicName = "Times-BoldItalic"
+	TimesBoldItalicName = StdFontName("Times-BoldItalic")
 )
 
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).

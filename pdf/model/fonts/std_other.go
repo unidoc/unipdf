@@ -20,9 +20,9 @@ func init() {
 
 const (
 	// SymbolName is a PDF name of the Symbol font.
-	SymbolName = "Symbol"
+	SymbolName = StdFontName("Symbol")
 	// ZapfDingbatsName is a PDF name of the ZapfDingbats font.
-	ZapfDingbatsName = "ZapfDingbats"
+	ZapfDingbatsName = StdFontName("ZapfDingbats")
 )
 
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).

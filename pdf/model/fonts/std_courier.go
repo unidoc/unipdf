@@ -20,13 +20,13 @@ func init() {
 
 const (
 	// CourierName is a PDF name of the Courier font.
-	CourierName = "Courier"
+	CourierName = StdFontName("Courier")
 	// CourierBoldName is a PDF name of the Courier (bold) font.
-	CourierBoldName = "Courier-Bold"
+	CourierBoldName = StdFontName("Courier-Bold")
 	// CourierObliqueName is a PDF name of the Courier (oblique) font.
-	CourierObliqueName = "Courier-Oblique"
+	CourierObliqueName = StdFontName("Courier-Oblique")
 	// CourierBoldObliqueName is a PDF name of the Courier (bold, oblique) font.
-	CourierBoldObliqueName = "Courier-BoldOblique"
+	CourierBoldObliqueName = StdFontName("Courier-BoldOblique")
 )
 
 // NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
