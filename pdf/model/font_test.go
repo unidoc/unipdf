@@ -112,7 +112,7 @@ func TestNewStandard14Font(t *testing.T) {
 		basefont string
 		fonts.CharMetrics
 	}
-	tests := map[model.Standard14Font]expect{
+	tests := map[fonts.StdFontName]expect{
 		"Courier": {
 			subtype:     "Type1",
 			basefont:    "Courier",
@@ -151,7 +151,7 @@ func TestSimpleFonts(t *testing.T) {
 // Importantly, this test makes sure that the output dictionary does not have an `Encoding`
 // key and uses the encoding of the standard font (ZapfEncoding in this case).
 func TestStandardFontOutputDict(t *testing.T) {
-	zapfdb, err := model.NewStandard14Font(model.ZapfDingbats)
+	zapfdb, err := model.NewStandard14Font(fonts.ZapfDingbatsName)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}

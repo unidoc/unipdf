@@ -87,6 +87,9 @@ import (
     ....
 */
 
+// pdfFontType0 implements pdfFont
+var _ pdfFont = (*pdfFontType0)(nil)
+
 // pdfFontType0 represents a Type0 font in PDF. Used for composite fonts which can encode multiple
 // bytes for complex symbols (e.g. used in Asian languages). Represents the root font whereas the
 // associated CIDFont is called its descendant.
@@ -110,6 +113,10 @@ func pdfFontType0FromSkeleton(base *fontCommon) *pdfFontType0 {
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfFontType0) baseFields() *fontCommon {
 	return &font.fontCommon
+}
+
+func (font *pdfFontType0) getFontDescriptor() *PdfFontDescriptor {
+	return font.fontDescriptor
 }
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
@@ -184,6 +191,9 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 	return font, nil
 }
 
+// pdfCIDFontType0 implements pdfFont
+var _ pdfFont = (*pdfCIDFontType0)(nil)
+
 // pdfCIDFontType0 represents a CIDFont Type0 font dictionary.
 type pdfCIDFontType0 struct {
 	fontCommon
@@ -207,6 +217,10 @@ func pdfCIDFontType0FromSkeleton(base *fontCommon) *pdfCIDFontType0 {
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfCIDFontType0) baseFields() *fontCommon {
 	return &font.fontCommon
+}
+
+func (font *pdfCIDFontType0) getFontDescriptor() *PdfFontDescriptor {
+	return font.fontDescriptor
 }
 
 // Encoder returns the font's text encoder.
@@ -246,6 +260,9 @@ func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	return font, nil
 }
 
+// pdfCIDFontType2 implements pdfFont
+var _ pdfFont = (*pdfCIDFontType2)(nil)
+
 // pdfCIDFontType2 represents a CIDFont Type2 font dictionary.
 type pdfCIDFontType2 struct {
 	fontCommon
@@ -278,6 +295,10 @@ func pdfCIDFontType2FromSkeleton(base *fontCommon) *pdfCIDFontType2 {
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfCIDFontType2) baseFields() *fontCommon {
 	return &font.fontCommon
+}
+
+func (font *pdfCIDFontType2) getFontDescriptor() *PdfFontDescriptor {
+	return font.fontDescriptor
 }
 
 // Encoder returns the font's text encoder.

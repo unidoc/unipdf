@@ -10,23 +10,45 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
+// StdFontName is a name of a standard font.
+type StdFontName string
+
+var stdFonts = make(map[StdFontName]func() StdFont)
+
+// NewStdFontByName creates a new StdFont by registered name. See RegisterStdFont.
+func NewStdFontByName(name StdFontName) (StdFont, bool) {
+	fnc, ok := stdFonts[name]
+	if !ok {
+		return StdFont{}, false
+	}
+	return fnc(), true
+}
+
+// RegisterStdFont registers a given StdFont constructor by font name. Font can then be created with NewStdFontByName.
+func RegisterStdFont(name StdFontName, fnc func() StdFont) {
+	if _, ok := stdFonts[name]; ok {
+		panic("font already registered: " + string(name))
+	}
+	stdFonts[name] = fnc
+}
+
 var _ Font = StdFont{}
 
 // StdFont represents one of the built-in fonts and it is assumed that every reader has access to it.
 type StdFont struct {
-	name    string
+	name    StdFontName
 	metrics map[GlyphName]CharMetrics
 	encoder textencoding.TextEncoder
 }
 
 // NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewStdFont(name string, metrics map[GlyphName]CharMetrics) StdFont {
+func NewStdFont(name StdFontName, metrics map[GlyphName]CharMetrics) StdFont {
 	enc := textencoding.NewWinAnsiTextEncoder() // Default
 	return NewStdFontWithEncoding(name, metrics, enc)
 }
 
 // NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
-func NewStdFontWithEncoding(name string, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) StdFont {
+func NewStdFontWithEncoding(name StdFontName, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) StdFont {
 	return StdFont{
 		name:    name,
 		metrics: metrics,
@@ -36,7 +58,7 @@ func NewStdFontWithEncoding(name string, metrics map[GlyphName]CharMetrics, enco
 
 // Name returns a PDF name of the font.
 func (font StdFont) Name() string {
-	return font.name
+	return string(font.name)
 }
 
 // Encoder returns the font's text encoder.
@@ -54,12 +76,18 @@ func (font StdFont) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 	return metrics, true
 }
 
+// GetMetricsTable is a method specific to standard fonts. It returns the metrics table of all glyphs.
+// Caller should not modify the table.
+func (font StdFont) GetMetricsTable() map[GlyphName]CharMetrics {
+	return font.metrics
+}
+
 // ToPdfObject returns a primitive PDF object representation of the font.
 func (font StdFont) ToPdfObject() core.PdfObject {
 	fontDict := core.MakeDict()
 	fontDict.Set("Type", core.MakeName("Font"))
 	fontDict.Set("Subtype", core.MakeName("Type1"))
-	fontDict.Set("BaseFont", core.MakeName(font.name))
+	fontDict.Set("BaseFont", core.MakeName(font.Name()))
 	fontDict.Set("Encoding", font.encoder.ToPdfObject())
 
 	return core.MakeIndirectObject(fontDict)

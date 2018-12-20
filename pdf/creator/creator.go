@@ -14,6 +14,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 // Creator is a wrapper around functionality for creating PDF reports and/or adding new
@@ -111,12 +112,12 @@ func New() *Creator {
 	// Initialize default fonts.
 	var err error
 
-	c.defaultFontRegular, err = model.NewStandard14Font(model.Helvetica)
+	c.defaultFontRegular, err = model.NewStandard14Font(fonts.HelveticaName)
 	if err != nil {
 		c.defaultFontRegular = model.DefaultFont()
 	}
 
-	c.defaultFontBold, err = model.NewStandard14Font(model.HelveticaBold)
+	c.defaultFontBold, err = model.NewStandard14Font(fonts.HelveticaBoldName)
 	if err != nil {
 		c.defaultFontRegular = model.DefaultFont()
 	}

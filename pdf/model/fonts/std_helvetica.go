@@ -9,74 +9,80 @@
 
 package fonts
 
+import "sync"
+
+func init() {
+	RegisterStdFont(HelveticaName, NewFontHelvetica)
+	RegisterStdFont(HelveticaBoldName, NewFontHelveticaBold)
+	RegisterStdFont(HelveticaObliqueName, NewFontHelveticaOblique)
+	RegisterStdFont(HelveticaBoldObliqueName, NewFontHelveticaBoldOblique)
+}
+
 const (
 	// HelveticaName is a PDF name of the Helvetica font.
-	HelveticaName = "Helvetica"
+	HelveticaName = StdFontName("Helvetica")
 	// HelveticaBoldName is a PDF name of the Helvetica (bold) font.
-	HelveticaBoldName = "Helvetica-Bold"
+	HelveticaBoldName = StdFontName("Helvetica-Bold")
 	// HelveticaObliqueName is a PDF name of the Helvetica (oblique) font.
-	HelveticaObliqueName = "Helvetica-Oblique"
+	HelveticaObliqueName = StdFontName("Helvetica-Oblique")
 	// HelveticaBoldObliqueName is a PDF name of the Helvetica (bold, oblique) font.
-	HelveticaBoldObliqueName = "Helvetica-BoldOblique"
+	HelveticaBoldObliqueName = StdFontName("Helvetica-BoldOblique")
 )
 
 // NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelvetica() StdFont {
-	return NewStdFont(HelveticaName, HelveticaCharMetrics)
+	helveticaOnce.Do(initHelvetica)
+	return NewStdFont(HelveticaName, helveticaCharMetrics)
 }
 
 // NewFontHelveticaBold returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
 func NewFontHelveticaBold() StdFont {
-	return NewStdFont(HelveticaBoldName, HelveticaBoldCharMetrics)
+	helveticaOnce.Do(initHelvetica)
+	return NewStdFont(HelveticaBoldName, helveticaBoldCharMetrics)
 }
 
 // NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelveticaOblique() StdFont {
-	return NewStdFont(HelveticaObliqueName, HelveticaObliqueCharMetrics)
+	helveticaOnce.Do(initHelvetica)
+	return NewStdFont(HelveticaObliqueName, helveticaObliqueCharMetrics)
 }
 
 // NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelveticaBoldOblique() StdFont {
-	return NewStdFont(HelveticaBoldObliqueName, HelveticaBoldObliqueCharMetrics)
+	helveticaOnce.Do(initHelvetica)
+	return NewStdFont(HelveticaBoldObliqueName, helveticaBoldObliqueCharMetrics)
 }
 
-func init() {
+var helveticaOnce sync.Once
+
+func initHelvetica() {
 	// unpack font metrics
-	// TODO(dennwc): once unexported, unpack on-demand (once)
-	HelveticaCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	HelveticaBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	helveticaCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	helveticaBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for i, glyph := range type1CommonGlyphs {
-		HelveticaCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaWx[i])}
-		HelveticaBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaBoldWx[i])}
+		helveticaCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaWx[i])}
+		helveticaBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaBoldWx[i])}
 	}
-	HelveticaObliqueCharMetrics = HelveticaCharMetrics
-	HelveticaBoldObliqueCharMetrics = HelveticaBoldCharMetrics
+	helveticaObliqueCharMetrics = helveticaCharMetrics
+	helveticaBoldObliqueCharMetrics = helveticaBoldCharMetrics
 }
 
-// HelveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
+// helveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var HelveticaCharMetrics map[GlyphName]CharMetrics
+var helveticaCharMetrics map[GlyphName]CharMetrics
 
-// HelveticaBoldCharMetrics are the font metrics loaded from afms/Helvetica-Bold.afm.
+// helveticaBoldCharMetrics are the font metrics loaded from afms/Helvetica-Bold.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var HelveticaBoldCharMetrics map[GlyphName]CharMetrics
+var helveticaBoldCharMetrics map[GlyphName]CharMetrics
 
-// HelveticaBoldObliqueCharMetrics are the font metrics loaded from afms/Helvetica-BoldOblique.afm.
+// helveticaBoldObliqueCharMetrics are the font metrics loaded from afms/Helvetica-BoldOblique.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var HelveticaBoldObliqueCharMetrics map[GlyphName]CharMetrics
+var helveticaBoldObliqueCharMetrics map[GlyphName]CharMetrics
 
-// HelveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.
+// helveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var HelveticaObliqueCharMetrics map[GlyphName]CharMetrics
+var helveticaObliqueCharMetrics map[GlyphName]CharMetrics
 
 // helveticaWx are the font metrics loaded from afms/Helvetica.afm.
 // See afms/MustRead.html for license information.

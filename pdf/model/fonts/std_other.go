@@ -13,28 +13,33 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
+func init() {
+	RegisterStdFont(SymbolName, NewFontSymbol)
+	RegisterStdFont(ZapfDingbatsName, NewFontZapfDingbats)
+}
+
 const (
 	// SymbolName is a PDF name of the Symbol font.
-	SymbolName = "Symbol"
+	SymbolName = StdFontName("Symbol")
 	// ZapfDingbatsName is a PDF name of the ZapfDingbats font.
-	ZapfDingbatsName = "ZapfDingbats"
+	ZapfDingbatsName = StdFontName("ZapfDingbats")
 )
 
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
 func NewFontSymbol() StdFont {
 	enc := textencoding.NewSymbolEncoder()
-	return NewStdFontWithEncoding(SymbolName, SymbolCharMetrics, enc)
+	return NewStdFontWithEncoding(SymbolName, symbolCharMetrics, enc)
 }
 
 // NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
 func NewFontZapfDingbats() StdFont {
 	enc := textencoding.NewZapfDingbatsEncoder()
-	return NewStdFontWithEncoding(ZapfDingbatsName, ZapfDingbatsCharMetrics, enc)
+	return NewStdFontWithEncoding(ZapfDingbatsName, zapfDingbatsCharMetrics, enc)
 }
 
-// SymbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
+// symbolCharMetrics are the font metrics loaded from afms/Symbol.afm.
 // See afms/MustRead.html for license information.
-var SymbolCharMetrics = map[GlyphName]CharMetrics{
+var symbolCharMetrics = map[GlyphName]CharMetrics{
 	"Alpha":          {GlyphName: "Alpha", Wx: 722.000000},
 	"Beta":           {GlyphName: "Beta", Wx: 667.000000},
 	"Chi":            {GlyphName: "Chi", Wx: 722.000000},
@@ -227,9 +232,9 @@ var SymbolCharMetrics = map[GlyphName]CharMetrics{
 	"zeta":           {GlyphName: "zeta", Wx: 494.000000},
 }
 
-// ZapfDingbatsCharMetrics are the font metrics loaded from afms/ZapfDingbats.afm.
+// zapfDingbatsCharMetrics are the font metrics loaded from afms/ZapfDingbats.afm.
 // See afms/MustRead.html for license information.
-var ZapfDingbatsCharMetrics = map[GlyphName]CharMetrics{
+var zapfDingbatsCharMetrics = map[GlyphName]CharMetrics{
 	"a1":    {GlyphName: "a1", Wx: 974.000000},
 	"a10":   {GlyphName: "a10", Wx: 692.000000},
 	"a100":  {GlyphName: "a100", Wx: 668.000000},

@@ -9,75 +9,81 @@
 
 package fonts
 
+import "sync"
+
+func init() {
+	RegisterStdFont(TimesRomanName, NewFontTimesRoman)
+	RegisterStdFont(TimesBoldName, NewFontTimesBold)
+	RegisterStdFont(TimesItalicName, NewFontTimesItalic)
+	RegisterStdFont(TimesBoldItalicName, NewFontTimesBoldItalic)
+}
+
 const (
 	// TimesRomanName is a PDF name of the Times font.
-	TimesRomanName = "Times-Roman"
+	TimesRomanName = StdFontName("Times-Roman")
 	// TimesBoldName is a PDF name of the Times (bold) font.
-	TimesBoldName = "Times-Bold"
+	TimesBoldName = StdFontName("Times-Bold")
 	// TimesItalicName is a PDF name of the Times (italic) font.
-	TimesItalicName = "Times-Italic"
+	TimesItalicName = StdFontName("Times-Italic")
 	// TimesBoldItalicName is a PDF name of the Times (bold, italic) font.
-	TimesBoldItalicName = "Times-BoldItalic"
+	TimesBoldItalicName = StdFontName("Times-BoldItalic")
 )
 
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesRoman() StdFont {
-	return NewStdFont(TimesRomanName, TimesRomanCharMetrics)
+	timesOnce.Do(initTimes)
+	return NewStdFont(TimesRomanName, timesRomanCharMetrics)
 }
 
 // NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBold() StdFont {
-	return NewStdFont(TimesBoldName, TimesBoldCharMetrics)
+	timesOnce.Do(initTimes)
+	return NewStdFont(TimesBoldName, timesBoldCharMetrics)
 }
 
 // NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesItalic() StdFont {
-	return NewStdFont(TimesItalicName, TimesItalicCharMetrics)
+	timesOnce.Do(initTimes)
+	return NewStdFont(TimesItalicName, timesItalicCharMetrics)
 }
 
 // NewFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBoldItalic() StdFont {
-	return NewStdFont(TimesBoldItalicName, TimesBoldItalicCharMetrics)
+	timesOnce.Do(initTimes)
+	return NewStdFont(TimesBoldItalicName, timesBoldItalicCharMetrics)
 }
 
-func init() {
+var timesOnce sync.Once
+
+func initTimes() {
 	// unpack font metrics
-	// TODO(dennwc): once unexported, unpack on-demand (once)
-	TimesRomanCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	TimesBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	TimesBoldItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	TimesItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	timesRomanCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	timesBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	timesBoldItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
+	timesItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for i, glyph := range type1CommonGlyphs {
-		TimesRomanCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesRomanWx[i])}
-		TimesBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldWx[i])}
-		TimesBoldItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldItalicWx[i])}
-		TimesItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesItalicWx[i])}
+		timesRomanCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesRomanWx[i])}
+		timesBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldWx[i])}
+		timesBoldItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldItalicWx[i])}
+		timesItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesItalicWx[i])}
 	}
 }
 
-// TimesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
+// timesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var TimesRomanCharMetrics map[GlyphName]CharMetrics
+var timesRomanCharMetrics map[GlyphName]CharMetrics
 
-// TimesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.
+// timesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var TimesBoldCharMetrics map[GlyphName]CharMetrics
+var timesBoldCharMetrics map[GlyphName]CharMetrics
 
-// TimesBoldItalicCharMetrics are the font metrics loaded from afms/Times-BoldItalic.afm.
+// timesBoldItalicCharMetrics are the font metrics loaded from afms/Times-BoldItalic.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var TimesBoldItalicCharMetrics map[GlyphName]CharMetrics
+var timesBoldItalicCharMetrics map[GlyphName]CharMetrics
 
-// TimesItalicCharMetrics font metrics loaded from afms/Times-Italic.afm.
+// timesItalicCharMetrics font metrics loaded from afms/Times-Italic.afm.
 // See afms/MustRead.html for license information.
-//
-// TODO(dennwc): unexport
-var TimesItalicCharMetrics map[GlyphName]CharMetrics
+var timesItalicCharMetrics map[GlyphName]CharMetrics
 
 // timesRomanWx are the font metrics loaded from afms/Times-Roman.afm.
 // See afms/MustRead.html for license information.

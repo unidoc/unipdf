@@ -18,29 +18,27 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
+// pdfFont is an internal interface for fonts that can be stored in PDF documents.
+type pdfFont interface {
+	fonts.Font
+	// getFontDescriptor returns the font descriptor of the font.
+	getFontDescriptor() *PdfFontDescriptor
+	// baseFields returns fields that are common for PDF fonts.
+	baseFields() *fontCommon
+}
+
 // PdfFont represents an underlying font structure which can be of type:
 // - Type0
 // - Type1
 // - TrueType
 // etc.
 type PdfFont struct {
-	context fonts.Font // The underlying font: Type0, Type1, Truetype, etc..
+	context pdfFont // The underlying font: Type0, Type1, Truetype, etc..
 }
 
 // GetFontDescriptor returns the font descriptor for `font`.
 func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t.fontDescriptor, nil
-	case *pdfFontType0:
-		return t.fontDescriptor, nil
-	case *pdfCIDFontType0:
-		return t.fontDescriptor, nil
-	case *pdfCIDFontType2:
-		return t.fontDescriptor, nil
-	}
-	common.Log.Debug("ERROR: Cannot get font descriptor for font type %t (%s)", font, font)
-	return nil, errors.New("fontdescriptor not found")
+	return font.context.getFontDescriptor(), nil
 }
 
 // String returns a string that describes `font`.
@@ -62,7 +60,7 @@ func (font PdfFont) BaseFont() string {
 func (font PdfFont) Subtype() string {
 	subtype := font.baseFields().subtype
 	if t, ok := font.context.(*pdfFontType0); ok {
-		subtype = fmt.Sprintf("%s:%s", subtype, t.DescendantFont.Subtype())
+		subtype = subtype + ":" + t.DescendantFont.Subtype()
 	}
 	return subtype
 }
@@ -82,25 +80,26 @@ func (font PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := standard14Fonts[Helvetica]
+	std := stdFontToSimpleFont(fonts.NewFontHelvetica())
 	return &PdfFont{context: &std}
 }
 
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
-func NewStandard14Font(basefont Standard14Font) (*PdfFont, error) {
-	std, ok := standard14Fonts[basefont]
+func NewStandard14Font(basefont fonts.StdFontName) (*PdfFont, error) {
+	fnt, ok := fonts.NewStdFontByName(basefont)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
 		return nil, ErrFontNotSupported
 	}
+	std := stdFontToSimpleFont(fnt)
 	return &PdfFont{context: &std}, nil
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
 // If `basefont` is one of the 14 Standard14Font values defined above then NewStandard14FontMustCompile
 // is guaranteed to succeed.
-func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
+func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 	font, err := NewStandard14Font(basefont)
 	if err != nil {
 		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
@@ -111,15 +110,17 @@ func NewStandard14FontMustCompile(basefont Standard14Font) *PdfFont {
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and an
 // a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if`basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont Standard14Font, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
+func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont, *textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
 
-	std, ok := standard14Fonts[basefont]
+	fnt, ok := fonts.NewStdFontByName(basefont)
 	if !ok {
 		return nil, nil, ErrFontNotSupported
 	}
+	std := stdFontToSimpleFont(fnt)
+
 	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
 	if err != nil {
 		return nil, nil, err
@@ -236,7 +237,8 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		font.context = type0font
 	case "Type1", "Type3", "MMType1", "TrueType":
 		var simplefont *pdfFontSimple
-		if std, ok := standard14Fonts[Standard14Font(base.basefont)]; ok && base.subtype == "Type1" {
+		if fnt, ok := fonts.NewStdFontByName(fonts.StdFontName(base.basefont)); ok && base.subtype == "Type1" {
+			std := stdFontToSimpleFont(fnt)
 			font.context = &std
 			simplefont, err = newSimpleFontFromPdfObject(d, base, true)
 			if err != nil {
@@ -391,25 +393,11 @@ func (font PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.Cha
 }
 
 // actualFont returns the Font in font.context
-func (font PdfFont) actualFont() fonts.Font {
+func (font PdfFont) actualFont() pdfFont {
 	if font.context == nil {
 		common.Log.Debug("ERROR: actualFont. context is nil. font=%s", font)
 	}
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t
-	case *pdfFontType0:
-		return t
-	case *pdfCIDFontType0:
-		return t
-	case *pdfCIDFontType2:
-		return t
-	case fonts.StdFont:
-		return t
-	default:
-		common.Log.Debug("ERROR: actualFont. Unknown font type %t. font=%s", t, font)
-		return nil
-	}
+	return font.context
 }
 
 // baseFields returns the fields of `font`.context that are common to all PDF fonts.
@@ -418,19 +406,7 @@ func (font PdfFont) baseFields() *fontCommon {
 		common.Log.Debug("ERROR: baseFields. context is nil.")
 		return nil
 	}
-	switch t := font.context.(type) {
-	case *pdfFontSimple:
-		return t.baseFields()
-	case *pdfFontType0:
-		return t.baseFields()
-	case *pdfCIDFontType0:
-		return t.baseFields()
-	case *pdfCIDFontType2:
-		return t.baseFields()
-	default:
-		common.Log.Debug("ERROR: base. Unknown font type %t. font=%s", t, font.String())
-		return nil
-	}
+	return font.context.baseFields()
 }
 
 // fontCommon represents the fields that are common to all PDF fonts.
