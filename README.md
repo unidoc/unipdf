@@ -8,7 +8,7 @@ Version 3 of UniDoc is currently in alpha. It marks multiple significant new maj
 - [x] PDF compression and optimization of outputs with several options 1) combining duplicates, 2) compressed object streams, 3) image points per inch threshold, 4) image quality.
 - [ ] Text extraction significantly improved in quality and support for vectorized (position-based) text extraction (XY)
 - [x] Paragraph in creator handling multiple styles within the same paragraph
-- [x] Invoice component for easy PDF invoice generation
+- [x] [Invoice component for easy PDF invoice generation](https://unidoc.io/news/simple-invoices)
 - [x] Table of contents automatically generated
 - [x] Encryption support refactored and AESv3 support added
 - [x] Form field filling and form flattening with appearance generation
