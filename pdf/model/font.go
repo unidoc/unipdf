@@ -489,17 +489,17 @@ func (font *PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.Ch
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
-		return fonts.CharMetrics{GlyphName: glyph}, false
+		return fonts.CharMetrics{}, false
 	}
 	if m, ok := t.GetGlyphCharMetrics(glyph); ok {
 		return m, true
 	}
 	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
-		return fonts.CharMetrics{GlyphName: glyph, Wx: descriptor.missingWidth}, true
+		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
 	}
 
 	common.Log.Debug("GetGlyphCharMetrics: No metrics for font=%s", font)
-	return fonts.CharMetrics{GlyphName: glyph}, false
+	return fonts.CharMetrics{}, false
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.

@@ -22,11 +22,10 @@ type Font interface {
 
 // CharMetrics represents width and height metrics of a glyph.
 type CharMetrics struct {
-	GlyphName textencoding.GlyphName
-	Wx        float64
-	Wy        float64
+	Wx float64
+	Wy float64
 }
 
 func (m CharMetrics) String() string {
-	return fmt.Sprintf("<%q,%.1f,%.1f>", m.GlyphName, m.Wx, m.Wy)
+	return fmt.Sprintf("<%.1f,%.1f>", m.Wx, m.Wy)
 }

@@ -123,10 +123,10 @@ func initTimes() {
 	timesBoldItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	timesItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for i, glyph := range type1CommonGlyphs {
-		timesRomanCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesRomanWx[i])}
-		timesBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldWx[i])}
-		timesBoldItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesBoldItalicWx[i])}
-		timesItalicCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(timesItalicWx[i])}
+		timesRomanCharMetrics[glyph] = CharMetrics{Wx: float64(timesRomanWx[i])}
+		timesBoldCharMetrics[glyph] = CharMetrics{Wx: float64(timesBoldWx[i])}
+		timesBoldItalicCharMetrics[glyph] = CharMetrics{Wx: float64(timesBoldItalicWx[i])}
+		timesItalicCharMetrics[glyph] = CharMetrics{Wx: float64(timesItalicWx[i])}
 	}
 }
 

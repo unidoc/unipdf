@@ -122,13 +122,11 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fon
 		}
 	}
 
-	metrics := fonts.CharMetrics{GlyphName: glyph}
-
 	encoder := font.Encoder()
 
 	if encoder == nil {
 		common.Log.Debug("No encoder for fonts=%s", font)
-		return metrics, false
+		return fonts.CharMetrics{}, false
 	}
 	code, found := encoder.GlyphToCharcode(glyph)
 
@@ -136,11 +134,10 @@ func (font pdfFontSimple) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fon
 		if glyph != "space" {
 			common.Log.Trace("No charcode for glyph=%q font=%s", glyph, font)
 		}
-		return fonts.CharMetrics{GlyphName: glyph}, false
+		return fonts.CharMetrics{}, false
 	}
 
 	metrics, ok := font.GetCharMetrics(code)
-	metrics.GlyphName = glyph
 	return metrics, ok
 }
 

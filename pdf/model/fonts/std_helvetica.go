@@ -120,8 +120,8 @@ func initHelvetica() {
 	helveticaCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	helveticaBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for i, glyph := range type1CommonGlyphs {
-		helveticaCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaWx[i])}
-		helveticaBoldCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: float64(helveticaBoldWx[i])}
+		helveticaCharMetrics[glyph] = CharMetrics{Wx: float64(helveticaWx[i])}
+		helveticaBoldCharMetrics[glyph] = CharMetrics{Wx: float64(helveticaBoldWx[i])}
 	}
 	helveticaObliqueCharMetrics = helveticaCharMetrics
 	helveticaBoldObliqueCharMetrics = helveticaBoldCharMetrics

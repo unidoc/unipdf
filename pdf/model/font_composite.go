@@ -361,7 +361,6 @@ func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (f
 		}
 		w = int(*dw)
 	}
-	metrics.GlyphName = glyph
 	metrics.Wx = float64(w)
 
 	font.glyphToMetricsCache[glyph] = metrics
