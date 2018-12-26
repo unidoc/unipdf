@@ -7,7 +7,7 @@ package creator
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -439,10 +439,10 @@ func (p *Paragraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContext, error) {
 	// Find a free name for the font.
 	num := 1
-	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))
+	fontName := core.PdfObjectName("Font" + strconv.Itoa(num))
 	for blk.resources.HasFontByName(fontName) {
 		num++
-		fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
+		fontName = core.PdfObjectName("Font" + strconv.Itoa(num))
 	}
 
 	// Add to the Page resources.
