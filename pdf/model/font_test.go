@@ -119,7 +119,7 @@ func TestNewStandard14Font(t *testing.T) {
 		"Courier": {
 			subtype:     "Type1",
 			basefont:    "Courier",
-			CharMetrics: fonts.CharMetrics{Wx: 600, Wy: 0}},
+			CharMetrics: fonts.CharMetrics{Wx: 600}},
 	}
 
 	for in, expect := range tests {

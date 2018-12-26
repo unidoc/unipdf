@@ -23,7 +23,7 @@ type Font interface {
 // CharMetrics represents width and height metrics of a glyph.
 type CharMetrics struct {
 	Wx float64
-	Wy float64
+	Wy float64 // TODO(dennwc): none of code paths sets this to anything except 0
 }
 
 func (m CharMetrics) String() string {
