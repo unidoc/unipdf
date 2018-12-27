@@ -660,7 +660,7 @@ func (to *textObject) renderText(data []byte) error {
 
 	charcodes := font.BytesToCharcodes(data)
 
-	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
+	str, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -679,16 +679,16 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, str, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.Trise)
 
-	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+	common.Log.Trace("renderText: %d codes=%+v str=%q", len(charcodes), charcodes, str)
 
-	for i, r := range runes {
+	for i, r := range str {
 		// TODO(peterwilliams97): Need to find and fix cases where this happens.
 		if r == '\x00' {
 			continue
