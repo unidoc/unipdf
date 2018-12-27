@@ -142,8 +142,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 
 	fontfile.name = keyValues["FontName"]
 	if fontfile.name == "" {
-		common.Log.Debug("ERROR: FontFile has no /FontName")
-		return ErrRequiredAttributeMissing
+		common.Log.Debug(" FontFile has no /FontName")
 	}
 
 	if encodingSection != "" {
@@ -153,8 +152,8 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		}
 		encoder, err := textencoding.NewCustomSimpleTextEncoder(encodings, nil)
 		if err != nil {
-			// TODO: Logging an error because we need to fix all these misses.
-			common.Log.Error("UNKNOWN GLYPH: err=%v", err)
+			// NOTE(peterwilliams97): Logging an error because we need to fix all these misses.
+			common.Log.Debug("ERROR :UNKNOWN GLYPH: err=%v", err)
 			return nil
 		}
 		fontfile.encoder = encoder

@@ -13,7 +13,39 @@ import (
 // StdFontName is a name of a standard font.
 type StdFontName string
 
+// FontWeight specified font weight.
+type FontWeight int
+
+// Font weights
+const (
+	FontWeightMedium FontWeight = iota // Medium
+	FontWeightBold                     // Bold
+	FontWeightRoman                    // Roman
+)
+
+// Descriptor describes geometric properties of a font.
+type Descriptor struct {
+	Name        StdFontName
+	Family      string
+	Weight      FontWeight
+	Flags       uint
+	BBox        [4]float64
+	ItalicAngle float64
+	Ascent      float64
+	Descent     float64
+	CapHeight   float64
+	XHeight     float64
+	StemV       float64
+	StemH       float64
+}
+
 var stdFonts = make(map[StdFontName]func() StdFont)
+
+// IsStdFont check if a name is registered for a standard font.
+func IsStdFont(name StdFontName) bool {
+	_, ok := stdFonts[name]
+	return ok
+}
 
 // NewStdFontByName creates a new StdFont by registered name. See RegisterStdFont.
 func NewStdFontByName(name StdFontName) (StdFont, bool) {
@@ -25,32 +57,35 @@ func NewStdFontByName(name StdFontName) (StdFont, bool) {
 }
 
 // RegisterStdFont registers a given StdFont constructor by font name. Font can then be created with NewStdFontByName.
-func RegisterStdFont(name StdFontName, fnc func() StdFont) {
+func RegisterStdFont(name StdFontName, fnc func() StdFont, aliases ...StdFontName) {
 	if _, ok := stdFonts[name]; ok {
 		panic("font already registered: " + string(name))
 	}
 	stdFonts[name] = fnc
+	for _, alias := range aliases {
+		RegisterStdFont(alias, fnc)
+	}
 }
 
 var _ Font = StdFont{}
 
 // StdFont represents one of the built-in fonts and it is assumed that every reader has access to it.
 type StdFont struct {
-	name    StdFontName
+	desc    Descriptor
 	metrics map[GlyphName]CharMetrics
-	encoder textencoding.TextEncoder
+	encoder *textencoding.SimpleEncoder
 }
 
 // NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewStdFont(name StdFontName, metrics map[GlyphName]CharMetrics) StdFont {
+func NewStdFont(desc Descriptor, metrics map[GlyphName]CharMetrics) StdFont {
 	enc := textencoding.NewWinAnsiTextEncoder() // Default
-	return NewStdFontWithEncoding(name, metrics, enc)
+	return NewStdFontWithEncoding(desc, metrics, enc)
 }
 
 // NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
-func NewStdFontWithEncoding(name StdFontName, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) StdFont {
+func NewStdFontWithEncoding(desc Descriptor, metrics map[GlyphName]CharMetrics, encoder *textencoding.SimpleEncoder) StdFont {
 	return StdFont{
-		name:    name,
+		desc:    desc,
 		metrics: metrics,
 		encoder: encoder,
 	}
@@ -58,11 +93,16 @@ func NewStdFontWithEncoding(name StdFontName, metrics map[GlyphName]CharMetrics,
 
 // Name returns a PDF name of the font.
 func (font StdFont) Name() string {
-	return string(font.name)
+	return string(font.desc.Name)
 }
 
 // Encoder returns the font's text encoder.
 func (font StdFont) Encoder() textencoding.TextEncoder {
+	return font.SimpleEncoder()
+}
+
+// SimpleEncoder returns the font's text encoder.
+func (font StdFont) SimpleEncoder() *textencoding.SimpleEncoder {
 	return font.encoder
 }
 
@@ -80,6 +120,11 @@ func (font StdFont) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
 // Caller should not modify the table.
 func (font StdFont) GetMetricsTable() map[GlyphName]CharMetrics {
 	return font.metrics
+}
+
+// Descriptor returns a font descriptor.
+func (font StdFont) Descriptor() Descriptor {
+	return font.desc
 }
 
 // ToPdfObject returns a primitive PDF object representation of the font.

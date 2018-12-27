@@ -12,10 +12,13 @@ package fonts
 import "sync"
 
 func init() {
-	RegisterStdFont(HelveticaName, NewFontHelvetica)
-	RegisterStdFont(HelveticaBoldName, NewFontHelveticaBold)
-	RegisterStdFont(HelveticaObliqueName, NewFontHelveticaOblique)
-	RegisterStdFont(HelveticaBoldObliqueName, NewFontHelveticaBoldOblique)
+	// The aliases seen for the standard 14 font names.
+	// Most of these are from table 5.5.1 in
+	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
+	RegisterStdFont(HelveticaName, NewFontHelvetica, "Arial")
+	RegisterStdFont(HelveticaBoldName, NewFontHelveticaBold, "Arial,Bold")
+	RegisterStdFont(HelveticaObliqueName, NewFontHelveticaOblique, "Arial,Italic")
+	RegisterStdFont(HelveticaBoldObliqueName, NewFontHelveticaBoldOblique, "Arial,BoldItalic")
 }
 
 const (
@@ -32,26 +35,82 @@ const (
 // NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelvetica() StdFont {
 	helveticaOnce.Do(initHelvetica)
-	return NewStdFont(HelveticaName, helveticaCharMetrics)
+	desc := Descriptor{
+		Name:        HelveticaName,
+		Family:      string(HelveticaName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0020,
+		BBox:        [4]float64{-166, -225, 1000, 931},
+		ItalicAngle: 0,
+		Ascent:      718,
+		Descent:     -207,
+		CapHeight:   718,
+		XHeight:     523,
+		StemV:       88,
+		StemH:       76,
+	}
+	return NewStdFont(desc, helveticaCharMetrics)
 }
 
 // NewFontHelveticaBold returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
 func NewFontHelveticaBold() StdFont {
 	helveticaOnce.Do(initHelvetica)
-	return NewStdFont(HelveticaBoldName, helveticaBoldCharMetrics)
+	desc := Descriptor{
+		Name:        HelveticaBoldName,
+		Family:      string(HelveticaName),
+		Weight:      FontWeightBold,
+		Flags:       0x0020,
+		BBox:        [4]float64{-170, -228, 1003, 962},
+		ItalicAngle: 0,
+		Ascent:      718,
+		Descent:     -207,
+		CapHeight:   718,
+		XHeight:     532,
+		StemV:       140,
+		StemH:       118,
+	}
+	return NewStdFont(desc, helveticaBoldCharMetrics)
 }
 
 // NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelveticaOblique() StdFont {
 	helveticaOnce.Do(initHelvetica)
-	return NewStdFont(HelveticaObliqueName, helveticaObliqueCharMetrics)
+	desc := Descriptor{
+		Name:        HelveticaObliqueName,
+		Family:      string(HelveticaName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0060,
+		BBox:        [4]float64{-170, -225, 1116, 931},
+		ItalicAngle: -12,
+		Ascent:      718,
+		Descent:     -207,
+		CapHeight:   718,
+		XHeight:     523,
+		StemV:       88,
+		StemH:       76,
+	}
+	return NewStdFont(desc, helveticaObliqueCharMetrics)
 }
 
 // NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontHelveticaBoldOblique() StdFont {
 	helveticaOnce.Do(initHelvetica)
-	return NewStdFont(HelveticaBoldObliqueName, helveticaBoldObliqueCharMetrics)
+	desc := Descriptor{
+		Name:        HelveticaBoldObliqueName,
+		Family:      string(HelveticaName),
+		Weight:      FontWeightBold,
+		Flags:       0x0060,
+		BBox:        [4]float64{-174, -228, 1114, 962},
+		ItalicAngle: -12,
+		Ascent:      718,
+		Descent:     -207,
+		CapHeight:   718,
+		XHeight:     532,
+		StemV:       140,
+		StemH:       118,
+	}
+	return NewStdFont(desc, helveticaBoldObliqueCharMetrics)
 }
 
 var helveticaOnce sync.Once

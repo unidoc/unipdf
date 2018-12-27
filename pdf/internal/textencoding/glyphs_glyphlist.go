@@ -107,6 +107,7 @@ var ligatureMap = map[GlyphName]rune{
 	"f_f_b": 0xe008,
 	"f_f_h": 0xe009,
 	"f_f_k": 0xe00a,
+	"T_h":   0xe00b,
 }
 
 // ligatureToString is a map from ligature runes to their constituent characters.
@@ -114,8 +115,6 @@ var ligatureMap = map[GlyphName]rune{
 var ligatureToString = map[rune]string{
 	'Ꜳ':          "AA",
 	'ꜳ':          "aa",
-	'Æ':          "AE",
-	'æ':          "ae",
 	'Ꜵ':          "aa",
 	'ꜵ':          "ao",
 	'Ꜷ':          "AU",
@@ -153,6 +152,7 @@ var ligatureToString = map[rune]string{
 	0xe008: "ffb",
 	0xe009: "ffh",
 	0xe00a: "ffk",
+	0xe00b: "T_h",
 }
 
 var glyphAliases = map[GlyphName]GlyphName{ // 2462 entries

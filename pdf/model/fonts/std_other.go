@@ -14,7 +14,10 @@ import (
 )
 
 func init() {
-	RegisterStdFont(SymbolName, NewFontSymbol)
+	// The aliases seen for the standard 14 font names.
+	// Most of these are from table 5.5.1 in
+	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
+	RegisterStdFont(SymbolName, NewFontSymbol, "Symbol,Italic", "Symbol,Bold", "Symbol,BoldItalic")
 	RegisterStdFont(ZapfDingbatsName, NewFontZapfDingbats)
 }
 
@@ -28,13 +31,41 @@ const (
 // NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
 func NewFontSymbol() StdFont {
 	enc := textencoding.NewSymbolEncoder()
-	return NewStdFontWithEncoding(SymbolName, symbolCharMetrics, enc)
+	desc := Descriptor{
+		Name:        SymbolName,
+		Family:      string(SymbolName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0004,
+		BBox:        [4]float64{-180, -293, 1090, 1010},
+		ItalicAngle: 0,
+		Ascent:      0,
+		Descent:     0,
+		CapHeight:   0,
+		XHeight:     0,
+		StemV:       85,
+		StemH:       92,
+	}
+	return NewStdFontWithEncoding(desc, symbolCharMetrics, enc)
 }
 
 // NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
 func NewFontZapfDingbats() StdFont {
 	enc := textencoding.NewZapfDingbatsEncoder()
-	return NewStdFontWithEncoding(ZapfDingbatsName, zapfDingbatsCharMetrics, enc)
+	desc := Descriptor{
+		Name:        ZapfDingbatsName,
+		Family:      string(ZapfDingbatsName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0004,
+		BBox:        [4]float64{-1, -143, 981, 820},
+		ItalicAngle: 0,
+		Ascent:      0,
+		Descent:     0,
+		CapHeight:   0,
+		XHeight:     0,
+		StemV:       90,
+		StemH:       28,
+	}
+	return NewStdFontWithEncoding(desc, zapfDingbatsCharMetrics, enc)
 }
 
 // symbolCharMetrics are the font metrics loaded from afms/Symbol.afm.

@@ -6,8 +6,8 @@
 package textencoding
 
 // NewWinAnsiTextEncoder returns a SimpleEncoder that implements WinAnsiEncoding.
-func NewWinAnsiTextEncoder() SimpleEncoder {
+func NewWinAnsiTextEncoder() *SimpleEncoder {
 	const baseName = "WinAnsiEncoding"
 	enc := newSimpleTextEncoder(winAnsiEncoding, baseName, nil)
-	return *enc
+	return enc
 }

@@ -8,7 +8,6 @@ package model_test
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -26,6 +25,10 @@ func init() {
 }
 
 var simpleFontDicts = []string{
+	`<< /Type /Font
+		/BaseFont /Courier-BoldOblique
+		/Subtype /Type1
+		>>`,
 	`<< /Type /Font
 		/BaseFont /Helvetica
 		/Subtype /Type1
@@ -143,7 +146,9 @@ func TestNewStandard14Font(t *testing.T) {
 // TestSimpleFonts checks that we correctly recreate simple fonts that we parse.
 func TestSimpleFonts(t *testing.T) {
 	for _, d := range simpleFontDicts {
-		objFontObj(t, d)
+		t.Run("", func(t *testing.T) {
+			objFontObj(t, d)
+		})
 	}
 }
 
@@ -162,7 +167,7 @@ func TestStandardFontOutputDict(t *testing.T) {
 	}
 
 	if len(dict.Keys()) != 3 {
-		t.Fatalf("Incorrect number of keys (%d)", len(dict.Keys()))
+		t.Fatalf("Incorrect number of keys (%d): %v", len(dict.Keys()), dict.Keys())
 	}
 
 	ntype, ok := core.GetName(dict.Get("Type"))
@@ -244,7 +249,101 @@ func TestCompositeFonts(t *testing.T) {
 // ToUnicode cmap.
 func TestCharcodeBytesToUnicode(t *testing.T) {
 	for _, test := range charcodeBytesToUnicodeTest {
-		test.check(t)
+		t.Run(test.description, func(t *testing.T) {
+			test.check(t)
+		})
+	}
+}
+
+// TestFontDescriptor checks that the builtin standard 14 font descriptors are working.
+func TestFontDescriptor(t *testing.T) {
+	type params struct {
+		FontName   string
+		FontFamily string
+		Flags      uint
+		FontBBox   [4]float64
+		CapHeight  float64
+		XHeight    float64
+	}
+
+	tests := map[fonts.StdFontName]params{
+		"Courier": params{
+			FontName:   "Courier",
+			FontFamily: "Courier",
+			Flags:      0x0021,
+			FontBBox:   [4]float64{-23, -250, 715, 805},
+			CapHeight:  562,
+			XHeight:    426,
+		},
+		"ZapfDingbats": params{
+			FontName:   "ZapfDingbats",
+			FontFamily: "ZapfDingbats",
+			Flags:      0x0004,
+			FontBBox:   [4]float64{-1, -143, 981, 820},
+			CapHeight:  0,
+			XHeight:    0,
+		},
+	}
+
+	for fontName, expect := range tests {
+		t.Run(string(fontName), func(t *testing.T) {
+			font := model.NewStandard14FontMustCompile(fontName)
+
+			descriptor := font.FontDescriptor()
+			if descriptor == nil {
+				t.Fatalf("%#q: No descriptor.", fontName)
+			}
+			actualFontName, ok := core.GetNameVal(descriptor.FontName)
+			if !ok {
+				t.Fatalf("%#q: No FontName. descriptor=%+v", fontName, descriptor)
+			}
+			fontFamily, ok := core.GetNameVal(descriptor.FontFamily)
+			if !ok {
+				t.Fatalf("%#q: No FontFamily. descriptor=%+v", fontName, descriptor)
+			}
+			flags, ok := core.GetIntVal(descriptor.Flags)
+			if !ok {
+				t.Fatalf("%#q: No Flags. descriptor=%+v", fontName, descriptor)
+			}
+			arr, ok := core.GetArray(descriptor.FontBBox)
+			if !ok {
+				t.Fatalf("%#q: No FontBBox. descriptor=%+v", fontName, descriptor)
+			}
+			fontBBox := [4]float64{}
+			for i := 0; i < 4; i++ {
+				x, ok := core.GetFloatVal(arr.Get(i))
+				if !ok {
+					t.Fatalf("%#q: Bad FontBBox. descriptor=%+v", fontName, descriptor)
+				}
+				fontBBox[i] = x
+			}
+
+			capHeight, ok := core.GetFloatVal(descriptor.CapHeight)
+			if !ok {
+				t.Fatalf("%#q: No CapHeight. descriptor=%+v", fontName, descriptor)
+			}
+			xHeight, ok := core.GetFloatVal(descriptor.XHeight)
+			if !ok {
+				t.Fatalf("%#q: No XHeight. descriptor=%+v", fontName, descriptor)
+			}
+
+			actual := params{
+				FontName:   actualFontName,
+				FontFamily: fontFamily,
+				Flags:      uint(flags),
+				FontBBox:   fontBBox,
+				CapHeight:  capHeight,
+				XHeight:    xHeight,
+			}
+
+			if actual.FontName != expect.FontName ||
+				actual.FontFamily != expect.FontFamily ||
+				actual.Flags != expect.Flags ||
+				actual.FontBBox != expect.FontBBox ||
+				actual.CapHeight != expect.CapHeight {
+				t.Fatalf("%s:\n\texpect=%+v\n\tactual=%+v", fontName, expect, actual)
+			}
+		})
 	}
 }
 
@@ -265,7 +364,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255},
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
 			"abcdefghijklmnopqrstuvwxyz{|}~€‚ƒ„…†‡ˆ‰Š‹OEŽ‘’“”•–—˜™š›oežŸ¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·" +
-			"¸¹º»¼½¾¿ÀÁÂÃÄÅAEÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞfzàáâãäåaeçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
+			"¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞfzàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
 	},
 	{"Symbol built-in",
 		"./testdata/font/simple.txt", 3,
@@ -312,8 +411,8 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 			225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243,
 			244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255},
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
-			"abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶fz®©™´¨≠AEØ∞" +
-			"±≤≥¥µ∂∑∏π∫ªºΩaeø¿¡¬√ƒ≈∆«»…ÀÃÕOEoe–—“”‘’÷◊ÿŸ⁄€‹›fifl‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ",
+			"abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶fz®©™´¨≠ÆØ∞" +
+			"±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…ÀÃÕOEoe–—“”‘’÷◊ÿŸ⁄€‹›fifl‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ",
 	},
 	{"Test beginbfchar and beginbfrange cmap entries",
 		"./testdata/font/Yemeni.txt", 470,
@@ -342,7 +441,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 	{"Type1 font with /Encoding with /Differences",
 		"./testdata/font/noise-invariant.txt", 102,
 		[]byte{96, 247, 39, 32, 147, 231, 148, 32, 232, 32, 193, 111, 180, 32, 105, 116,
-			169, 115, 32, 204, 195, 196, 197, 198, 199, 168, 202, 206, 226, 234, 172, 244, 173, 151,
+			169, 115, 32, 204, 195, 196, 197, 198, 199, 168, 202, 206, 226, 234, 172, 245, 173, 151,
 			177, 151, 178, 179, 183, 185, 188, 205, 184, 189},
 		"‘ł’ “Ł” Ø `o´ it's ˝ˆ˜¯˘˙¨˚ˇªº‹ı›—–—†‡•„…˛¸‰",
 	},
@@ -425,7 +524,7 @@ var charcodeBytesToUnicodeTest = []fontFragmentTest{
 type fontFragmentTest struct {
 	description string
 	filename    string
-	objNum      int
+	objNum      int64
 	data        []byte
 	expected    string
 }
@@ -437,7 +536,6 @@ func (f *fontFragmentTest) String() string {
 // check loads the font in PDF fragment `filename`, object number `objNum`, runs
 // CharcodeBytesToUnicode on `data` and checks that output equals `expected`.
 func (f *fontFragmentTest) check(t *testing.T) {
-	common.Log.Debug("fontFragmentTest: %s", f)
 	numObj, err := parsePdfFragment(f.filename)
 	if err != nil {
 		t.Errorf("Failed to parse. %s err=%v", f, err)
@@ -456,12 +554,12 @@ func (f *fontFragmentTest) check(t *testing.T) {
 
 	actualText, numChars, numMisses := font.CharcodeBytesToUnicode(f.data)
 	if numMisses != 0 {
-		t.Errorf("Some codes not decoded. numMisses=%d", numMisses)
+		t.Errorf("Some codes not decoded %s. font=%s numMisses=%d", f, font, numMisses)
 		return
 	}
 	if actualText != f.expected {
-		t.Errorf("Incorrect decoding. %s\nexpected=%q\n  actual=%q",
-			f, f.expected, actualText)
+		t.Errorf("Incorrect decoding. %s encoding=%s\nexpected=%q\n  actual=%q",
+			f, font.Encoder(), f.expected, actualText)
 		act, exp := []rune(actualText), []rune(f.expected)
 		if len(act) != len(exp) {
 			t.Errorf("\texpected=%d actual=%d", len(exp), len(act))
@@ -473,7 +571,6 @@ func (f *fontFragmentTest) check(t *testing.T) {
 				}
 			}
 		}
-
 	}
 	if numChars != len([]rune(actualText)) {
 		t.Errorf("Incorrect numChars. %s numChars=%d expected=%d\n%+v\n%c",
@@ -512,95 +609,17 @@ func objFontObj(t *testing.T, fontDict string) error {
 // parsePdfFragment parses a file containing fragments of a PDF `filename` (see
 // charcodeBytesToUnicodeTest) and returns a map of {object number: object} with indirect objects
 // replaced by their values if they are in `filename`.
-func parsePdfFragment(filename string) (map[int]core.PdfObject, error) {
+func parsePdfFragment(filename string) (map[int64]core.PdfObject, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return parsePdfObjects(string(data))
+
+	return testutils.ParseIndirectObjects(string(data))
 }
 
-// parsePdfObjects parses a fragment of a PDF `text` and returns a map of {object number: object}
-// with indirect objects replaced by their values if they are in `text`.
-func parsePdfObjects(text string) (map[int]core.PdfObject, error) {
-	numObj := map[int]core.PdfObject{}
-	parser := core.NewParserFromString(text)
-	common.Log.Debug("parsePdfObjects")
-
-	// Build the numObj {object number: object} map
-	var nums []int
-	for {
-		obj, err := parser.ParseIndirectObject()
-		common.Log.Debug("parsePdfObjects:  %T %v", obj, err)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			common.Log.Debug("parsePdfObjects:  err=%v", err)
-			return numObj, err
-		}
-		common.Log.Debug("parsePdfObjects: %d %T", len(numObj), obj)
-		switch t := obj.(type) {
-		case *core.PdfIndirectObject:
-			numObj[int(t.ObjectNumber)] = obj
-			nums = append(nums, int(t.ObjectNumber))
-		case *core.PdfObjectStream:
-			numObj[int(t.ObjectNumber)] = obj
-			nums = append(nums, int(t.ObjectNumber))
-		}
-	}
-
-	common.Log.Debug("parsePdfObjects: Parsed %d objects %+v", len(numObj), nums)
-
-	// Replace the indirect objects in all dicts and arrays with their values, if they are in numObj.
-	for n, obj := range numObj {
-		common.Log.Debug("-- 0 %d obj %T", n, obj)
-		iobj, ok := obj.(*core.PdfIndirectObject)
-		if !ok {
-			continue
-		}
-		common.Log.Debug("   -- %T", iobj.PdfObject)
-		iobj.PdfObject, ok = replaceReferences(numObj, iobj.PdfObject)
-		if !ok {
-			common.Log.Debug("ERROR: unresolved reference")
-		}
-	}
-	return numObj, nil
-}
-
-// replaceReferences replaces the object references in all dicts and arrays with their values, if
-// they are in numObj. The boolean return is true if all object references were successfuly
-// replaced.
-func replaceReferences(numObj map[int]core.PdfObject, obj core.PdfObject) (core.PdfObject, bool) {
-	var ok bool
-	switch t := obj.(type) {
-	case *core.PdfObjectReference:
-		o, ok := numObj[int(t.ObjectNumber)]
-		common.Log.Debug("    %d 0 R  %t ", t.ObjectNumber, ok)
-		return o, ok
-	case *core.PdfObjectDictionary:
-		for _, k := range t.Keys() {
-			o := t.Get(k)
-			o, ok = replaceReferences(numObj, o)
-			if !ok {
-				return o, ok
-			}
-			t.Set(k, o)
-		}
-	case *core.PdfObjectArray:
-		for i, o := range t.Elements() {
-			o, ok = replaceReferences(numObj, o)
-			if !ok {
-				return o, ok
-			}
-			t.Set(i, o)
-		}
-	}
-	return obj, true
-}
-
-// Test loading a simple font with a Differences encoding.
-// Checks if the loaded font encoding fulfills expected characteristics.
+// TestLoadedSimpleFontEncoding tests loading a simple font with a Differences encoding.
+// It checks if the loaded font encoding has the expected characteristics.
 func TestLoadedSimpleFontEncoding(t *testing.T) {
 	rawpdf := `
 59 0 obj
@@ -621,8 +640,9 @@ endobj
 		t.Fatalf("Error: %v", err)
 	}
 
-	// Expected is WinAnsiEncoding with the applied differences.
-	winansi := textencoding.NewWinAnsiTextEncoder()
+	// The expected encoding is StandardEncoding with the applied differences.
+	baseEncoding := newStandandTextEncoder(t)
+
 	differencesMap := map[textencoding.CharCode]textencoding.GlyphName{
 		24:  `/breve`,
 		25:  `/caron`,
@@ -757,7 +777,7 @@ endobj
 	for ccode := textencoding.CharCode(32); ccode < 255; ccode++ {
 		fontglyph, has := font.Encoder().CharcodeToGlyph(ccode)
 		if !has {
-			baseglyph, bad := winansi.CharcodeToGlyph(ccode)
+			baseglyph, bad := baseEncoding.CharcodeToGlyph(ccode)
 			if bad {
 				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", ccode, baseglyph)
 			}
@@ -770,17 +790,25 @@ endobj
 			if glyph != fontglyph {
 				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", ccode, fontglyph, glyph)
 			}
+
 			continue
 		}
 
-		// If not in differences, should be according to WinAnsiEncoding (base).
-		glyph, has = winansi.CharcodeToGlyph(ccode)
-		if !has {
-			t.Fatalf("WinAnsi not having glyph for char code %d", ccode)
-		}
-		if glyph != fontglyph {
-			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (WinAnsiEncoding)", ccode, ccode, fontglyph, glyph)
+		// If not in differences, should be according to StandardEncoding (base).
+		glyph, has = baseEncoding.CharcodeToGlyph(ccode)
+		if has && glyph != fontglyph {
+			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (StandardEncoding)", ccode, ccode, fontglyph, glyph)
 		}
 	}
 
+}
+
+// newStandandTextEncoder returns a SimpleEncoder that implements StandardEncoding.
+// The non-symbolic standard 14 fonts have StandardEncoding.
+func newStandandTextEncoder(t *testing.T) textencoding.SimpleEncoder {
+	enc, err := textencoding.NewSimpleTextEncoder("StandardEncoding", nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	return *enc
 }

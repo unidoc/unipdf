@@ -119,9 +119,26 @@ func (se SimpleEncoder) String() string {
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
+// BaseName returns `se`'s base name.
+func (se SimpleEncoder) BaseName() string {
+	return se.baseName
+}
+
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
 func (se SimpleEncoder) Encode(raw string) []byte {
 	return encodeString8bit(se, raw)
+}
+
+// Charcodes returns a slice of all charcodes in this encoding.
+func (se SimpleEncoder) Charcodes() []CharCode {
+	codes := make([]CharCode, 0, len(se.codeToGlyph))
+	for code := range se.codeToGlyph {
+		codes = append(codes, code)
+	}
+	sort.Slice(codes, func(i, j int) bool {
+		return codes[i] < codes[j]
+	})
+	return codes
 }
 
 // CharcodeToGlyph returns the glyph name for character code `code`.
@@ -1318,7 +1335,7 @@ var simpleEncodings = map[string]map[CharCode]rune{
 		0xe9: 0x0152, //  Œ "OE"
 		0xea: 0x00ba, //  º "ordmasculine"
 		0xf0: 0x00e6, //  æ "ae"
-		0xf4: 0x0131, //  ı "dotlessi"
+		0xf5: 0x0131, //  ı "dotlessi"
 		0xf7: 0x0142, //  ł "lslash"
 		0xf8: 0x00f8, //  ø "oslash"
 		0xf9: 0x0153, //  œ "oe"

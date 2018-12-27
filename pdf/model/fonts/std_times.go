@@ -12,13 +12,18 @@ package fonts
 import "sync"
 
 func init() {
-	RegisterStdFont(TimesRomanName, NewFontTimesRoman)
-	RegisterStdFont(TimesBoldName, NewFontTimesBold)
-	RegisterStdFont(TimesItalicName, NewFontTimesItalic)
-	RegisterStdFont(TimesBoldItalicName, NewFontTimesBoldItalic)
+	// The aliases seen for the standard 14 font names.
+	// Most of these are from table 5.5.1 in
+	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
+	RegisterStdFont(TimesRomanName, NewFontTimesRoman, "TimesNewRoman", "Times")
+	RegisterStdFont(TimesBoldName, NewFontTimesBold, "TimesNewRoman,Bold", "Times,Bold")
+	RegisterStdFont(TimesItalicName, NewFontTimesItalic, "TimesNewRoman,Italic", "Times,Italic")
+	RegisterStdFont(TimesBoldItalicName, NewFontTimesBoldItalic, "TimesNewRoman,BoldItalic", "Times,BoldItalic")
 }
 
 const (
+	// timesFamily is a PDF name of the Times font family.
+	timesFamily = "Times"
 	// TimesRomanName is a PDF name of the Times font.
 	TimesRomanName = StdFontName("Times-Roman")
 	// TimesBoldName is a PDF name of the Times (bold) font.
@@ -32,25 +37,81 @@ const (
 // NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesRoman() StdFont {
 	timesOnce.Do(initTimes)
-	return NewStdFont(TimesRomanName, timesRomanCharMetrics)
+	desc := Descriptor{
+		Name:        TimesRomanName,
+		Family:      timesFamily,
+		Weight:      FontWeightRoman,
+		Flags:       0x0020,
+		BBox:        [4]float64{-168, -218, 1000, 898},
+		ItalicAngle: 0,
+		Ascent:      683,
+		Descent:     -217,
+		CapHeight:   662,
+		XHeight:     450,
+		StemV:       84,
+		StemH:       28,
+	}
+	return NewStdFont(desc, timesRomanCharMetrics)
 }
 
 // NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBold() StdFont {
 	timesOnce.Do(initTimes)
-	return NewStdFont(TimesBoldName, timesBoldCharMetrics)
+	desc := Descriptor{
+		Name:        TimesBoldName,
+		Family:      timesFamily,
+		Weight:      FontWeightBold,
+		Flags:       0x0020,
+		BBox:        [4]float64{-168, -218, 1000, 935},
+		ItalicAngle: 0,
+		Ascent:      683,
+		Descent:     -217,
+		CapHeight:   676,
+		XHeight:     461,
+		StemV:       139,
+		StemH:       44,
+	}
+	return NewStdFont(desc, timesBoldCharMetrics)
 }
 
 // NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesItalic() StdFont {
 	timesOnce.Do(initTimes)
-	return NewStdFont(TimesItalicName, timesItalicCharMetrics)
+	desc := Descriptor{
+		Name:        TimesItalicName,
+		Family:      timesFamily,
+		Weight:      FontWeightMedium,
+		Flags:       0x0060,
+		BBox:        [4]float64{-169, -217, 1010, 883},
+		ItalicAngle: -15.5,
+		Ascent:      683,
+		Descent:     -217,
+		CapHeight:   653,
+		XHeight:     441,
+		StemV:       76,
+		StemH:       32,
+	}
+	return NewStdFont(desc, timesItalicCharMetrics)
 }
 
 // NewFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontTimesBoldItalic() StdFont {
 	timesOnce.Do(initTimes)
-	return NewStdFont(TimesBoldItalicName, timesBoldItalicCharMetrics)
+	desc := Descriptor{
+		Name:        TimesBoldItalicName,
+		Family:      timesFamily,
+		Weight:      FontWeightBold,
+		Flags:       0x0060,
+		BBox:        [4]float64{-200, -218, 996, 921},
+		ItalicAngle: -15,
+		Ascent:      683,
+		Descent:     -217,
+		CapHeight:   669,
+		XHeight:     462,
+		StemV:       121,
+		StemH:       42,
+	}
+	return NewStdFont(desc, timesBoldItalicCharMetrics)
 }
 
 var timesOnce sync.Once

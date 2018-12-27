@@ -6,6 +6,8 @@
 package fonts
 
 import (
+	"fmt"
+
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
@@ -23,4 +25,8 @@ type CharMetrics struct {
 	GlyphName textencoding.GlyphName
 	Wx        float64
 	Wy        float64
+}
+
+func (m CharMetrics) String() string {
+	return fmt.Sprintf("<%q,%.1f,%.1f>", m.GlyphName, m.Wx, m.Wy)
 }

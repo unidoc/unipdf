@@ -10,28 +10,38 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/internal/transform"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// GraphicsState is a basic graphics state implementation.
-// Initially only implementing and tracking a portion of the information specified.  Easy to add more.
+// GraphicsState is a basic graphics state implementation for PDF processing.
+// Initially only implementing and tracking a portion of the information specified. Easy to add more.
 type GraphicsState struct {
 	ColorspaceStroking    model.PdfColorspace
 	ColorspaceNonStroking model.PdfColorspace
 	ColorStroking         model.PdfColor
 	ColorNonStroking      model.PdfColor
+	CTM                   transform.Matrix
 }
 
+// GraphicsStateStack represents a stack of GraphicsState.
 type GraphicStateStack []GraphicsState
 
+// Push pushes `gs` on the `gsStack`.
 func (gsStack *GraphicStateStack) Push(gs GraphicsState) {
 	*gsStack = append(*gsStack, gs)
 }
 
+// Pop pops and returns the topmost GraphicsState off the `gsStack`.
 func (gsStack *GraphicStateStack) Pop() GraphicsState {
 	gs := (*gsStack)[len(*gsStack)-1]
 	*gsStack = (*gsStack)[:len(*gsStack)-1]
 	return gs
+}
+
+// Transform returns coordinates x, y transformed by the CTM.
+func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
+	return gs.CTM.Transform(x, y)
 }
 
 // ContentStreamProcessor defines a data structure and methods for processing a content stream, keeping track of the
@@ -42,33 +52,40 @@ type ContentStreamProcessor struct {
 	operations    []*ContentStreamOperation
 	graphicsState GraphicsState
 
-	handlers     []HandlerEntry
+	handlers     []handlerEntry
 	currentIndex int
 }
 
+// HandlerFunc is the function syntax that the ContentStreamProcessor handler must implement.
 type HandlerFunc func(op *ContentStreamOperation, gs GraphicsState, resources *model.PdfPageResources) error
 
-type HandlerEntry struct {
+type handlerEntry struct {
 	Condition HandlerConditionEnum
 	Operand   string
 	Handler   HandlerFunc
 }
 
+// HandlerConditionEnum represents the type of operand content stream processor (handler).
+// The handler may process a single specific named operand or all operands.
 type HandlerConditionEnum int
 
-func (e HandlerConditionEnum) All() bool {
-	return e == HandlerConditionEnumAllOperands
-}
-
-func (e HandlerConditionEnum) Operand() bool {
-	return e == HandlerConditionEnumOperand
-}
-
+// Handler types.
 const (
-	HandlerConditionEnumOperand     HandlerConditionEnum = iota
-	HandlerConditionEnumAllOperands HandlerConditionEnum = iota
+	HandlerConditionEnumOperand     HandlerConditionEnum = iota // Single (specific) operand.
+	HandlerConditionEnumAllOperands                             // All operands.
 )
 
+// All returns true if `hce` is equivalent to HandlerConditionEnumAllOperands.
+func (hce HandlerConditionEnum) All() bool {
+	return hce == HandlerConditionEnumAllOperands
+}
+
+// Operand returns true if `hce` is equivalent to HandlerConditionEnumOperand.
+func (hce HandlerConditionEnum) Operand() bool {
+	return hce == HandlerConditionEnumOperand
+}
+
+// NewContentStreamProcessor returns a new ContentStreamProcessor for operations `ops`.
 func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProcessor {
 	csp := ContentStreamProcessor{}
 	csp.graphicsStack = GraphicStateStack{}
@@ -78,15 +95,16 @@ func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProc
 
 	csp.graphicsState = gs
 
-	csp.handlers = []HandlerEntry{}
+	csp.handlers = []handlerEntry{}
 	csp.currentIndex = 0
 	csp.operations = ops
 
 	return &csp
 }
 
+// AddHandler adds a new ContentStreamProcessor `handler` of type `condition` for `operand`.
 func (proc *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, operand string, handler HandlerFunc) {
-	entry := HandlerEntry{}
+	entry := handlerEntry{}
 	entry.Condition = condition
 	entry.Operand = operand
 	entry.Handler = handler
@@ -193,13 +211,15 @@ func (proc *ContentStreamProcessor) getInitialColor(cs model.PdfColorspace) (mod
 	return nil, errors.New("unsupported colorspace")
 }
 
-// Process the entire operations.
+// Process processes the entire list of operations. Maintains the graphics state that is passed to any
+// handlers that are triggered during processing (either on specific operators or all).
 func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) error {
 	// Initialize graphics state
 	proc.graphicsState.ColorspaceStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
 	proc.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
 	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
+	proc.graphicsState.CTM = transform.IdentityMatrix()
 
 	for _, op := range proc.operations {
 		var err error
@@ -236,6 +256,8 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 			err = proc.handleCommand_K(op, resources)
 		case "k":
 			err = proc.handleCommand_k(op, resources)
+		case "cm":
+			err = proc.handleCommand_cm(op, resources)
 		}
 		if err != nil {
 			common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
@@ -446,13 +468,14 @@ func (proc *ContentStreamProcessor) handleCommand_G(op *ContentStreamOperation, 
 func (proc *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceGray()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Invalid number of parameters for g")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("invalid number of parameters")
 	}
 
 	color, err := cs.ColorFromPdfObjects(op.Params)
 	if err != nil {
+		common.Log.Debug("ERROR: handleCommand_g Invalid params. cs=%T op=%s err=%v", cs, op, err)
 		return err
 	}
 
@@ -467,7 +490,7 @@ func (proc *ContentStreamProcessor) handleCommand_g(op *ContentStreamOperation, 
 func (proc *ContentStreamProcessor) handleCommand_RG(op *ContentStreamOperation, resources *model.PdfPageResources) error {
 	cs := model.NewPdfColorspaceDeviceRGB()
 	if len(op.Params) != cs.GetNumComponents() {
-		common.Log.Debug("Invalid number of parameters for SC")
+		common.Log.Debug("Invalid number of parameters for RG")
 		common.Log.Debug("Number %d not matching colorspace %T", len(op.Params), cs)
 		return errors.New("invalid number of parameters")
 	}
@@ -540,6 +563,24 @@ func (proc *ContentStreamProcessor) handleCommand_k(op *ContentStreamOperation, 
 
 	proc.graphicsState.ColorspaceNonStroking = cs
 	proc.graphicsState.ColorNonStroking = color
+
+	return nil
+}
+
+// cm: concatenates an affine transform to the CTM.
+func (proc *ContentStreamProcessor) handleCommand_cm(op *ContentStreamOperation,
+	resources *model.PdfPageResources) error {
+	if len(op.Params) != 6 {
+		common.Log.Debug("ERROR: Invalid number of parameters for cm: %d", len(op.Params))
+		return errors.New("invalid number of parameters")
+	}
+
+	f, err := core.GetNumbersAsFloat(op.Params)
+	if err != nil {
+		return err
+	}
+	m := transform.NewMatrix(f[0], f[1], f[2], f[3], f[4], f[5])
+	proc.graphicsState.CTM.Concat(m)
 
 	return nil
 }

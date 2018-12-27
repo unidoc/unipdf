@@ -12,10 +12,13 @@ package fonts
 import "sync"
 
 func init() {
-	RegisterStdFont(CourierName, NewFontCourier)
-	RegisterStdFont(CourierBoldName, NewFontCourierBold)
-	RegisterStdFont(CourierObliqueName, NewFontCourierOblique)
-	RegisterStdFont(CourierBoldObliqueName, NewFontCourierBoldOblique)
+	// The aliases seen for the standard 14 font names.
+	// Most of these are from table 5.5.1 in
+	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
+	RegisterStdFont(CourierName, NewFontCourier, "CourierCourierNew", "CourierNew")
+	RegisterStdFont(CourierBoldName, NewFontCourierBold, "CourierNew,Bold")
+	RegisterStdFont(CourierObliqueName, NewFontCourierOblique, "CourierNew,Italic")
+	RegisterStdFont(CourierBoldObliqueName, NewFontCourierBoldOblique, "CourierNew,BoldItalic")
 }
 
 const (
@@ -32,26 +35,82 @@ const (
 // NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourier() StdFont {
 	courierOnce.Do(initCourier)
-	return NewStdFont(CourierName, courierCharMetrics)
+	desc := Descriptor{
+		Name:        CourierName,
+		Family:      string(CourierName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0021,
+		BBox:        [4]float64{-23, -250, 715, 805},
+		ItalicAngle: 0,
+		Ascent:      629,
+		Descent:     -157,
+		CapHeight:   562,
+		XHeight:     426,
+		StemV:       51,
+		StemH:       51,
+	}
+	return NewStdFont(desc, courierCharMetrics)
 }
 
 // NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierBold() StdFont {
 	courierOnce.Do(initCourier)
-	return NewStdFont(CourierBoldName, courierBoldCharMetrics)
+	desc := Descriptor{
+		Name:        CourierBoldName,
+		Family:      string(CourierName),
+		Weight:      FontWeightBold,
+		Flags:       0x0021,
+		BBox:        [4]float64{-113, -250, 749, 801},
+		ItalicAngle: 0,
+		Ascent:      629,
+		Descent:     -157,
+		CapHeight:   562,
+		XHeight:     439,
+		StemV:       106,
+		StemH:       84,
+	}
+	return NewStdFont(desc, courierBoldCharMetrics)
 }
 
 // NewFontCourierOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewFontCourierOblique() StdFont {
 	courierOnce.Do(initCourier)
-	return NewStdFont(CourierObliqueName, courierObliqueCharMetrics)
+	desc := Descriptor{
+		Name:        CourierObliqueName,
+		Family:      string(CourierName),
+		Weight:      FontWeightMedium,
+		Flags:       0x0061,
+		BBox:        [4]float64{-27, -250, 849, 805},
+		ItalicAngle: -12,
+		Ascent:      629,
+		Descent:     -157,
+		CapHeight:   562,
+		XHeight:     426,
+		StemV:       51,
+		StemH:       51,
+	}
+	return NewStdFont(desc, courierObliqueCharMetrics)
 }
 
 // NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
 func NewFontCourierBoldOblique() StdFont {
 	courierOnce.Do(initCourier)
-	return NewStdFont(CourierBoldObliqueName, courierBoldObliqueCharMetrics)
+	desc := Descriptor{
+		Name:        CourierBoldObliqueName,
+		Family:      string(CourierName),
+		Weight:      FontWeightBold,
+		Flags:       0x0061,
+		BBox:        [4]float64{-57, -250, 869, 801},
+		ItalicAngle: -12,
+		Ascent:      629,
+		Descent:     -157,
+		CapHeight:   562,
+		XHeight:     439,
+		StemV:       106,
+		StemH:       84,
+	}
+	return NewStdFont(desc, courierBoldObliqueCharMetrics)
 }
 
 var courierOnce sync.Once

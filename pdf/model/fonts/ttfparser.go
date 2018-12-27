@@ -44,7 +44,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-// MakeEncoder returns an encoder built from the tables in  `rec`.
+// MakeEncoder returns an encoder built from the tables in `rec`.
 func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := make(map[textencoding.CharCode]GlyphName)
 	for code := textencoding.CharCode(0); code <= 256; code++ {
@@ -57,13 +57,17 @@ func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 		if int(gid) >= 0 && int(gid) < len(ttf.GlyphNames) {
 			glyph = ttf.GlyphNames[gid]
 		} else {
-			// TODO(dennwc): shouldn't this be uniXXX?
-			glyph = GlyphName(rune(gid))
+			r := rune(gid)
+			if g, ok := textencoding.RuneToGlyph(r); ok {
+				glyph = g
+			}
 		}
-		encoding[code] = glyph
+		if glyph != "" {
+			encoding[code] = glyph
+		}
 	}
 	if len(encoding) == 0 {
-		common.Log.Debug("WARNING: Zero length TrueType enconding. ttf=%s Chars=[% 02x]",
+		common.Log.Debug("WARNING: Zero length TrueType encoding. ttf=%s Chars=[% 02x]",
 			ttf, ttf.Chars)
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
@@ -91,8 +95,10 @@ type TtfType struct {
 	CapHeight              int16
 	Widths                 []uint16
 
-	// Chars maps rune values (unicode) to the indexes in GlyphNames. i.e. GlyphNames[Chars[r]] is
+	// Chars maps rune values (unicode) to GIDs (the indexes in GlyphNames). i.e. GlyphNames[Chars[r]] is
 	// the glyph corresponding to rune r.
+	//
+	// TODO(dennwc,peterwilliams97): it should map char codes to GIDs
 	Chars map[rune]GID
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
 	GlyphNames []GlyphName
@@ -184,9 +190,10 @@ func (t *ttfParser) Parse() (TtfType, error) {
 		return TtfType{}, err
 	}
 	if version == "OTTO" {
+		// See https://docs.microsoft.com/en-us/typography/opentype/spec/otff
 		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
 	}
-	if version != "\x00\x01\x00\x00" {
+	if version != "\x00\x01\x00\x00" && version != "true" {
 		// This is not an error. In the font_test.go example axes.txt we see version "true".
 		common.Log.Debug("Unrecognized TrueType file format. version=%q", version)
 	}
@@ -227,7 +234,7 @@ func describeTables(tables map[string]uint32) string {
 	return strings.Join(parts, "\n")
 }
 
-// ParseComponents parses the tables in a TrueType font file/
+// ParseComponents parses the tables in a TrueType font file.
 // The standard TrueType tables are
 // "head"
 // "hhea"
@@ -287,7 +294,10 @@ func (t *ttfParser) ParseHead() error {
 	t.Skip(3 * 4) // version, fontRevision, checkSumAdjustment
 	magicNumber := t.ReadULong()
 	if magicNumber != 0x5F0F3CF5 {
-		return fmt.Errorf("incorrect magic number")
+		// outputmanager.pdf displays in Adobe Reader but has a bad magic
+		// number so we don't return an error here.
+		// TODO(dennwc): check if it's a "head" table different format - this should not blindly accept anything
+		common.Log.Debug("ERROR: Incorrect magic number. Font may not display correctly. %s", t)
 	}
 	t.Skip(2) // flags
 	t.rec.UnitsPerEm = t.ReadUShort()
@@ -317,6 +327,7 @@ func (t *ttfParser) ParseMaxp() error {
 	return nil
 }
 
+// ParseHmtx parses the Horizontal Metrics table in a TrueType.
 func (t *ttfParser) ParseHmtx() error {
 	if err := t.Seek("hmtx"); err != nil {
 		return err
@@ -707,7 +718,7 @@ func (t *ttfParser) ParsePost() error {
 			t.rec.GlyphNames[i] = name
 		}
 	case 3.0:
-		// no PostScript information is provided.
+		// No PostScript information is provided.
 		common.Log.Debug("No PostScript name information is provided for the font.")
 	default:
 		common.Log.Debug("ERROR: Unknown formatType=%f", formatType)

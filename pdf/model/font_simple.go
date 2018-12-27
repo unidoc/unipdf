@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"io/ioutil"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -39,10 +40,15 @@ type pdfFontSimple struct {
 	container *core.PdfIndirectObject
 
 	// These fields are specific to simple PDF fonts.
-	firstChar  textencoding.CharCode
-	lastChar   textencoding.CharCode
-	charWidths []float64
-	encoder    textencoding.TextEncoder
+
+	charWidths map[textencoding.CharCode]float64
+	// std14Encoder is the encoder specified by the /Encoding entry in the font dict.
+	encoder *textencoding.SimpleEncoder
+	// std14Encoder is used for Standard 14 fonts where no /Encoding is specified in the font dict.
+	std14Encoder *textencoding.SimpleEncoder
+
+	// std14Descriptor is used for Standard 14 fonts where no /FontDescriptor is specified in the font dict.
+	std14Descriptor *PdfFontDescriptor
 
 	// Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 	// BaseFont is derived differently.
@@ -68,69 +74,108 @@ func (font *pdfFontSimple) baseFields() *fontCommon {
 }
 
 func (font *pdfFontSimple) getFontDescriptor() *PdfFontDescriptor {
-	return font.fontDescriptor
+	if d := font.fontDescriptor; d != nil {
+		return d
+	}
+	return font.std14Descriptor
 }
 
 // Encoder returns the font's text encoder.
 func (font *pdfFontSimple) Encoder() textencoding.TextEncoder {
-	return font.encoder
+	// TODO(peterwilliams97): Need to make font.Encoder()==nil test work for
+	// font.std14=Encoder=font.encoder=nil See https://golang.org/doc/faq#nil_error
+	if font.encoder != nil {
+		return font.encoder
+	}
+
+	// Standard 14 fonts have builtin encoders that we fall back to when no /Encoding is specified
+	// in the font dict.
+	if font.std14Encoder != nil {
+		return font.std14Encoder
+	}
+
+	// Default to StandardEncoding
+	enc, _ := textencoding.NewSimpleTextEncoder("StandardEncoding", nil)
+	return enc
 }
 
 // SetEncoder sets the encoding for the underlying font.
+// TODO(peterwilliams97): Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
+// TODO(gunnsth): Makes sense if SetEncoder is removed from the interface fonts.Font as proposed in PR #260.
 func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
-	font.encoder = encoder
+	simple, ok := encoder.(*textencoding.SimpleEncoder)
+	if !ok {
+		// This can't happen.
+		common.Log.Error("pdfFontSimple.SetEncoder passed bad encoder type %T", encoder)
+		simple = nil
+	}
+	font.encoder = simple
 }
 
 // GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
 // returned to indicate whether or not the entry was found in the glyph to charcode mapping.
 func (font pdfFontSimple) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
 	if font.fontMetrics != nil {
-		metrics, ok := font.fontMetrics[glyph]
-		return metrics, ok
+		metrics, has := font.fontMetrics[glyph]
+		if has {
+			return metrics, true
+		}
 	}
 
-	metrics := fonts.CharMetrics{}
+	metrics := fonts.CharMetrics{GlyphName: glyph}
 
-	code, found := font.encoder.GlyphToCharcode(glyph)
+	encoder := font.Encoder()
+
+	if encoder == nil {
+		common.Log.Debug("No encoder for fonts=%s", font)
+		return metrics, false
+	}
+	code, found := encoder.GlyphToCharcode(glyph)
+
 	if !found {
-		return metrics, false
+		if glyph != "space" {
+			common.Log.Trace("No charcode for glyph=%q font=%s", glyph, font)
+		}
+		return fonts.CharMetrics{GlyphName: glyph}, false
 	}
+
+	metrics, ok := font.GetCharMetrics(code)
 	metrics.GlyphName = glyph
+	return metrics, ok
+}
 
-	if code < font.firstChar {
-		common.Log.Debug("Code lower than firstchar (%d < %d)", code, font.firstChar)
-		return metrics, false
+// GetCharMetrics returns the character metrics for the specified character code.  A bool flag is
+// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
+// How it works:
+//  1) Return a value the /Widths array (charWidths) if there is one.
+//  2) If the font has the same name as a standard 14 font then return width=250.
+//  3) Otherwise return no match and let the caller substitute a default.
+func (font pdfFontSimple) GetCharMetrics(code textencoding.CharCode) (fonts.CharMetrics, bool) {
+	if width, ok := font.charWidths[code]; ok {
+		return fonts.CharMetrics{Wx: width}, true
 	}
-
-	if code > font.lastChar {
-		common.Log.Debug("Code higher than lastchar (%d < %d)", code, font.lastChar)
-		return metrics, false
+	if fonts.IsStdFont(fonts.StdFontName(font.basefont)) {
+		// PdfBox says this is what Acrobat does. Their reference is PDFBOX-2334.
+		return fonts.CharMetrics{Wx: 250}, true
 	}
-
-	index := int(code - font.firstChar)
-	if index >= len(font.charWidths) {
-		common.Log.Debug("Code outside of widths range")
-		return metrics, false
-	}
-
-	width := font.charWidths[index]
-	metrics.Wx = width
-
-	return metrics, true
+	return fonts.CharMetrics{}, false
 }
 
 // newSimpleFontFromPdfObject creates a pdfFontSimple from dictionary `d`. Elements of `d` that
 // are already parsed are contained in `base`.
+// Standard 14 fonts need to to specify their builtin encoders in the `std14Encoder` parameter.
 // An error is returned if there is a problem with loading.
 //
 // The value of Encoding is subject to limitations that are described in 9.6.6, "Character Encoding".
 // • The value of BaseFont is derived differently.
 //
-func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, std14 bool) (*pdfFontSimple, error) {
+func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
+	std14Encoder *textencoding.SimpleEncoder) (*pdfFontSimple, error) {
 	font := pdfFontSimpleFromSkeleton(base)
+	font.std14Encoder = std14Encoder
 
 	// FirstChar is not defined in ~/testdata/shamirturing.pdf
-	if !std14 {
+	if std14Encoder == nil {
 		obj := d.Get("FirstChar")
 		if obj == nil {
 			obj = core.MakeInteger(0)
@@ -142,7 +187,7 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 			common.Log.Debug("ERROR: Invalid FirstChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.firstChar = textencoding.CharCode(intVal)
+		firstChar := textencoding.CharCode(intVal)
 
 		obj = d.Get("LastChar")
 		if obj == nil {
@@ -154,9 +199,9 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 			common.Log.Debug("ERROR: Invalid LastChar type (%T)", obj)
 			return nil, core.ErrTypeError
 		}
-		font.lastChar = textencoding.CharCode(intVal)
+		lastChar := textencoding.CharCode(intVal)
 
-		font.charWidths = []float64{}
+		font.charWidths = make(map[textencoding.CharCode]float64)
 		obj = d.Get("Widths")
 		if obj != nil {
 			font.Widths = obj
@@ -173,12 +218,14 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 				return nil, err
 			}
 
-			if len(widths) != int(font.lastChar-font.firstChar+1) {
+			if len(widths) != int(lastChar-firstChar+1) {
 				common.Log.Debug("ERROR: Invalid widths length != %d (%d)",
-					font.lastChar-font.firstChar+1, len(widths))
+					lastChar-firstChar+1, len(widths))
 				return nil, core.ErrRangeError
 			}
-			font.charWidths = widths
+			for i, w := range widths {
+				font.charWidths[firstChar+textencoding.CharCode(i)] = w
+			}
 		}
 	}
 
@@ -186,26 +233,36 @@ func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon, s
 	return font, nil
 }
 
-// addEncoding adds the encoding to the font.
-// The order of precedence is important.
+// addEncoding adds the encoding to the font and sets the `font.encoder` field.
+// The order of precedence is important:
+// 1. If encoder already set, load it initially (with subsequent steps potentially overwriting).
+// 2. Attempts to construct the encoder from the Encoding dictionary.
+// 3. If no encoder loaded, attempt to load from the font file.
+// 4. Apply differences map and set as the `font`'s encoder.
 func (font *pdfFontSimple) addEncoding() error {
 	var (
 		baseEncoder string
 		differences map[textencoding.CharCode]textencoding.GlyphName
-		err         error
 		encoder     *textencoding.SimpleEncoder
 	)
 
+	if font.Encoder() != nil {
+		encoder, ok := font.Encoder().(*textencoding.SimpleEncoder)
+		if ok && encoder != nil {
+			baseEncoder = encoder.BaseName()
+		}
+	}
+
 	if font.Encoding != nil {
-		baseEncoder, differences, err = getFontEncoding(font.Encoding)
+		baseEncoderName, differences, err := font.getFontEncoding()
 		if err != nil {
 			common.Log.Debug("ERROR: BaseFont=%q Subtype=%q Encoding=%s (%T) err=%v", font.basefont,
 				font.subtype, font.Encoding, font.Encoding, err)
 			return err
 		}
-		base := font.baseFields()
-		common.Log.Trace("addEncoding: BaseFont=%q Subtype=%q Encoding=%s (%T)", base.basefont,
-			base.subtype, font.Encoding, font.Encoding)
+		if baseEncoderName != "" {
+			baseEncoder = baseEncoderName
+		}
 
 		encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
 		if err != nil {
@@ -256,17 +313,27 @@ func (font *pdfFontSimple) addEncoding() error {
 // Except for Type 3 fonts, every font program shall have a built-in encoding. Under certain
 // circumstances, a PDF font dictionary may change the encoding used with the font program to match
 // the requirements of the conforming writer generating the text being shown.
-func getFontEncoding(obj core.PdfObject) (baseName string, differences map[textencoding.CharCode]textencoding.GlyphName, err error) {
+func (font *pdfFontSimple) getFontEncoding() (baseName string, differences map[textencoding.CharCode]textencoding.GlyphName, err error) {
 	baseName = "StandardEncoding"
+	if name, ok := builtinEncodings[font.basefont]; ok {
+		baseName = name
+	} else if font.fontFlags()&fontFlagSymbolic != 0 {
+		for base, name := range builtinEncodings {
+			if strings.Contains(font.basefont, base) {
+				baseName = name
+				break
+			}
+		}
+	}
 
-	if obj == nil {
-		// Fall back to StandardEncoding
+	if font.Encoding == nil {
+		// Fall back to StandardEncoding | SymbolEncoding | ZapfDingbatsEncoding
 		// This works because the only way BaseEncoding can get overridden is by FontFile entries
 		// and the only encoding names we have seen in FontFile's are StandardEncoding or no entry.
 		return baseName, nil, nil
 	}
 
-	switch encoding := obj.(type) {
+	switch encoding := font.Encoding.(type) {
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
@@ -275,18 +342,25 @@ func getFontEncoding(obj core.PdfObject) (baseName string, differences map[texte
 				baseName = base
 			}
 		}
-		diffList, ok := core.GetArray(encoding.Get("Differences"))
-		if !ok {
-			common.Log.Debug("ERROR: Bad font encoding dict=%+v", encoding)
-			return "", nil, core.ErrTypeError
+		if diffObj := encoding.Get("Differences"); diffObj != nil {
+			diffList, ok := core.GetArray(diffObj)
+			if !ok {
+				common.Log.Debug("ERROR: Bad font encoding dict=%+v Differences=%T",
+					encoding, encoding.Get("Differences"))
+				return "", nil, core.ErrTypeError
+			}
+			differences, err = textencoding.FromFontDifferences(diffList)
 		}
-
-		differences, err = textencoding.FromFontDifferences(diffList)
 		return baseName, differences, err
 	default:
-		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", obj, obj.String())
+		common.Log.Debug("ERROR: Encoding not a name or dict (%T) %s", font.Encoding, font.Encoding)
 		return "", nil, core.ErrTypeError
 	}
+}
+
+var builtinEncodings = map[string]string{
+	"Symbol":       "SymbolEncoding",
+	"ZapfDingbats": "ZapfDingbatsEncoding",
 }
 
 // ToPdfObject converts the pdfFontSimple to its PDF representation for outputting.
@@ -332,17 +406,13 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	truefont := &pdfFontSimple{
+		charWidths: make(map[textencoding.CharCode]float64),
 		fontCommon: fontCommon{
 			subtype: "TrueType",
 		},
 	}
 
-	// TODO: Make more generic to allow customization... Need to know which glyphs are to be used,
-	// then can derive
-	// TODO: Subsetting fonts.
 	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
-	truefont.firstChar = minCode
-	truefont.lastChar = maxCode
 
 	truefont.basefont = ttf.PostScriptName
 	truefont.FirstChar = core.MakeInteger(int64(minCode))
@@ -378,12 +448,14 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 
 	truefont.Widths = core.MakeIndirectObject(core.MakeArrayFromFloats(vals))
 
-	if len(vals) < (255 - 32 + 1) {
+	if len(vals) < int(maxCode-minCode+1) {
 		common.Log.Debug("ERROR: Invalid length of widths, %d < %d", len(vals), 255-32+1)
 		return nil, core.ErrRangeError
 	}
 
-	truefont.charWidths = vals[:255-32+1]
+	for i := textencoding.CharCode(minCode); i <= maxCode; i++ {
+		truefont.charWidths[i] = vals[i-minCode]
+	}
 
 	// Use WinAnsiEncoding by default.
 	truefont.Encoding = core.MakeName("WinAnsiEncoding")
@@ -437,13 +509,47 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	return font, nil
 }
 
+// updateStandard14Font fills the font.charWidths for standard 14 fonts.
+// Don't call this function with a font that is not in the standard 14.
+func (font *pdfFontSimple) updateStandard14Font() {
+	se, ok := font.Encoder().(*textencoding.SimpleEncoder)
+	if !ok {
+		// This can't happen.
+		common.Log.Error("Wrong encoder type: %T. font=%s.", font.Encoder(), font)
+		return
+	}
+
+	codes := se.Charcodes()
+	font.charWidths = make(map[textencoding.CharCode]float64, len(codes))
+	for _, code := range codes {
+		// codes was built from CharcodeToGlyph mapping, so each should have a glyph
+		glyph, _ := se.CharcodeToGlyph(code)
+		font.charWidths[code] = font.fontMetrics[glyph].Wx
+	}
+}
+
 func stdFontToSimpleFont(f fonts.StdFont) pdfFontSimple {
+	l := f.Descriptor()
 	return pdfFontSimple{
 		fontCommon: fontCommon{
 			subtype:  "Type1",
 			basefont: f.Name(),
 		},
-		encoder:     f.Encoder(),
 		fontMetrics: f.GetMetricsTable(),
+		std14Descriptor: &PdfFontDescriptor{
+			FontName:    core.MakeName(string(l.Name)),
+			FontFamily:  core.MakeName(l.Family),
+			FontWeight:  core.MakeFloat(float64(l.Weight)),
+			Flags:       core.MakeInteger(int64(l.Flags)),
+			FontBBox:    core.MakeArrayFromFloats(l.BBox[:]),
+			ItalicAngle: core.MakeFloat(l.ItalicAngle),
+			Ascent:      core.MakeFloat(l.Ascent),
+			Descent:     core.MakeFloat(l.Descent),
+			CapHeight:   core.MakeFloat(l.CapHeight),
+			XHeight:     core.MakeFloat(l.XHeight),
+			StemV:       core.MakeFloat(l.StemV),
+			StemH:       core.MakeFloat(l.StemH),
+		},
+		std14Encoder: f.SimpleEncoder(),
 	}
 }
