@@ -40,14 +40,23 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 	return textList.ToText(), numChars, numMisses, nil
 }
 
-// ExtractXYText returns the text contents of `e` as a TextList.
+// ExtractXYText returns the text contents of `e` (an Extractor for a page) as a TextList.
 func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
+	return e.extractXYText(e.contents, e.resources, 0)
+}
+
+// extractXYText returns the text contents of content stream `e` and resouces `resources` as a
+// TextList.
+// This can be called on a page or a form XObject.
+func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResources, level int) (*TextList, int, int, error) {
+
+	common.Log.Trace("extractXYText: level=%d", level)
 	textList := &TextList{}
 	state := newTextState()
 	fontStack := fontStacker{}
 	var to *textObject
 
-	cstreamParser := contentstream.NewContentStreamParser(e.contents)
+	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
 		common.Log.Debug("ERROR: ExtractXYText parse failed. err=%v", err)
@@ -92,7 +101,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				if to != nil {
 					common.Log.Debug("BT called while in a text object")
 				}
-				to = newTextObject(e, gs, &state, &fontStack)
+				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
 				*textList = append(*textList, to.Texts...)
 				to = nil
@@ -119,7 +128,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				to.moveTextSetLeading(x, y)
-			case "Tj": // Show text
+			case "Tj": // Show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Tj op=%s err=%v", op, err)
 					return err
@@ -130,7 +139,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return core.ErrTypeError
 				}
 				return to.showText(charcodes)
-			case "TJ": // Show text with adjustable spacing
+			case "TJ": // Show text with adjustable spacing.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: TJ err=%v", err)
 					return err
@@ -141,7 +150,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				return to.showTextAdjusted(args)
-			case "'": // Move to next line and show text
+			case "'": // Move to next line and show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: ' err=%v", err)
 					return err
@@ -153,7 +162,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				}
 				to.nextLine()
 				return to.showText(charcodes)
-			case `"`: // Set word and character spacing, move to next line, and show text
+			case `"`: // Set word and character spacing, move to next line, and show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
@@ -171,24 +180,24 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				to.setWordSpacing(y)
 				to.nextLine()
 				return to.showText(charcodes)
-			case "TL": // Set text leading
+			case "TL": // Set text leading.
 				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: TL err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
-			case "Tc": // Set character spacing
+			case "Tc": // Set character spacing.
 				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: Tc err=%v", err)
 					return err
 				}
 				to.setCharSpacing(y)
-			case "Tf": // Set font
+			case "Tf": // Set font.
 				if to == nil {
 					// This is needed for 26-Hazard-Thermal-environment.pdf
-					to = newTextObject(e, gs, &state, &fontStack)
+					to = newTextObject(e, resources, gs, &state, &fontStack)
 				}
 				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: Tf err=%v", err)
@@ -208,7 +217,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 				if err != nil {
 					return err
 				}
-			case "Tm": // Set text matrix
+			case "Tm": // Set text matrix.
 				if ok, err := to.checkOp(op, 6, true); !ok {
 					common.Log.Debug("ERROR: Tm err=%v", err)
 					return err
@@ -219,7 +228,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				to.setTextMatrix(floats)
-			case "Tr": // Set text rendering mode
+			case "Tr": // Set text rendering mode.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Tr err=%v", err)
 					return err
@@ -230,7 +239,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return core.ErrTypeError
 				}
 				to.setTextRenderMode(mode)
-			case "Ts": // Set text rise
+			case "Ts": // Set text rise.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Ts err=%v", err)
 					return err
@@ -241,7 +250,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				to.setTextRise(y)
-			case "Tw": // Set word spacing
+			case "Tw": // Set word spacing.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -253,7 +262,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 
 				}
 				to.setWordSpacing(y)
-			case "Tz": // Set horizontal scaling
+			case "Tz": // Set horizontal scaling.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -264,16 +273,59 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 					return err
 				}
 				to.setHorizScaling(y)
-			}
 
+			case "Do":
+				// Handle XObjects by recursing through form XObjects.
+				name := *op.Params[0].(*core.PdfObjectName)
+				_, xtype := resources.GetXObjectByName(name)
+				if xtype != model.XObjectTypeForm {
+					break
+				}
+				// Only process each form once.
+				formResult, ok := e.formResults[string(name)]
+				if !ok {
+					xform, err := resources.GetXObjectFormByName(name)
+					if err != nil {
+						common.Log.Debug("ERROR: %v", err)
+						return err
+					}
+					formContent, err := xform.GetContentStream()
+					if err != nil {
+						common.Log.Debug("ERROR: %v", err)
+						return err
+					}
+					formResources := xform.Resources
+					if formResources == nil {
+						formResources = resources
+					}
+					tList, numChars, numMisses, err := e.extractXYText(string(formContent),
+						formResources, level+1)
+					if err != nil {
+						common.Log.Debug("ERROR: %v", err)
+						return err
+					}
+					formResult = textResult{*tList, numChars, numMisses}
+					e.formResults[string(name)] = formResult
+				}
+
+				*textList = append(*textList, formResult.textList...)
+				state.numChars += formResult.numChars
+				state.numMisses += formResult.numMisses
+			}
 			return nil
 		})
 
-	err = processor.Process(e.resources)
+	err = processor.Process(resources)
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
 	return textList, state.numChars, state.numMisses, err
+}
+
+type textResult struct {
+	textList  TextList
+	numChars  int
+	numMisses int
 }
 
 //
@@ -389,7 +441,7 @@ func (to *textObject) setFont(name string, size float64) error {
 			(*to.fontStack)[len(*to.fontStack)-1] = font
 		}
 	} else if err == model.ErrFontNotSupported {
-		// TODO: Do we need to handle this case in a special way?
+		// TODO(peterwilliams97): Do we need to handle this case in a special way?
 		return err
 	} else {
 		return err
@@ -570,6 +622,7 @@ type textState struct {
 // textObject represents a PDF text object.
 type textObject struct {
 	e         *Extractor
+	resources *model.PdfPageResources
 	gs        contentstream.GraphicsState
 	fontStack *fontStacker
 	State     *textState
@@ -587,10 +640,12 @@ func newTextState() textState {
 }
 
 // newTextObject returns a default textObject.
-func newTextObject(e *Extractor, gs contentstream.GraphicsState, state *textState,
+func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentstream.GraphicsState,
+	state *textState,
 	fontStack *fontStacker) *textObject {
 	return &textObject{
 		e:         e,
+		resources: resources,
 		gs:        gs,
 		fontStack: fontStack,
 		State:     state,
@@ -797,7 +852,7 @@ func (tl TextList) ToText() string {
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
-	common.Log.Trace("ToText: fontHeight=%.1f tol=%.1f", fontHeight, tol)
+	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(tl), fontHeight, tol)
 
 	tl.SortPosition(tol)
 
@@ -1084,7 +1139,7 @@ func combine(parts []string) string {
 }
 
 // countDiacritic returns the combining diacritic version of `w` (usually itself) and the number of
-// non-diacritics in `w` (0 or 1)
+// non-diacritics in `w` (0 or 1).
 func countDiacritic(w string) (string, int) {
 	runes := []rune(w)
 	if len(runes) != 1 {
@@ -1092,7 +1147,8 @@ func countDiacritic(w string) (string, int) {
 	}
 	r := runes[0]
 	c := 1
-	if unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r) {
+	if (unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r)) &&
+		r != '\'' && r != '"' && r != '`' {
 		c = 0
 	}
 	if w2, ok := diacritics[r]; ok {
@@ -1210,10 +1266,10 @@ func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 	return font, err
 }
 
-// getFontDict returns the font dict with key `name` if it exists in the page's Font resources or
-// an error if it doesn't.
+// getFontDict returns the font dict with key `name` if it exists in the page's or form's Font
+// resources or an error if it doesn't.
 func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
-	resources := to.e.resources
+	resources := to.resources
 	if resources == nil {
 		common.Log.Debug("getFontDict. No resources. name=%#q", name)
 		return nil, nil
@@ -1221,6 +1277,7 @@ func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 	fontObj, found := resources.GetFontByName(core.PdfObjectName(name))
 	if !found {
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q", name)
+		panic(errors.New("font not in resources"))
 		return nil, errors.New("font not in resources")
 	}
 	return fontObj, nil
