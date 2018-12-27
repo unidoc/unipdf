@@ -45,7 +45,7 @@ func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
 	return e.extractXYText(e.contents, e.pageResources, 0)
 }
 
-// extractXYText returns the text contents of content stream `e` and resouces `resources` as a 
+// extractXYText returns the text contents of content stream `e` and resouces `resources` as a
 // TextList.
 // This can be called on a page or a Form XObject.
 func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResources, level int) (*TextList, int, int, error) {
@@ -70,7 +70,6 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 			resources *model.PdfPageResources) error {
 
 			operand := op.Operand
-
 
 			switch operand {
 			case "q":
@@ -282,7 +281,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				if xtype != model.XObjectTypeForm {
 					break
 				}
-				// Only process each one once.
+				// Only process each form once.
 				formResult, ok := e.formResults[string(name)]
 				if !ok {
 					xform, err := resources.GetXObjectFormByName(name)
