@@ -146,7 +146,9 @@ func TestNewStandard14Font(t *testing.T) {
 // TestSimpleFonts checks that we correctly recreate simple fonts that we parse.
 func TestSimpleFonts(t *testing.T) {
 	for _, d := range simpleFontDicts {
-		objFontObj(t, d)
+		t.Run("", func(t *testing.T) {
+			objFontObj(t, d)
+		})
 	}
 }
 
@@ -165,7 +167,7 @@ func TestStandardFontOutputDict(t *testing.T) {
 	}
 
 	if len(dict.Keys()) != 3 {
-		t.Fatalf("Incorrect number of keys (%d)", len(dict.Keys()))
+		t.Fatalf("Incorrect number of keys (%d): %v", len(dict.Keys()), dict.Keys())
 	}
 
 	ntype, ok := core.GetName(dict.Get("Type"))
@@ -247,7 +249,9 @@ func TestCompositeFonts(t *testing.T) {
 // ToUnicode cmap.
 func TestCharcodeBytesToUnicode(t *testing.T) {
 	for _, test := range charcodeBytesToUnicodeTest {
-		test.check(t)
+		t.Run(test.description, func(t *testing.T) {
+			test.check(t)
+		})
 	}
 }
 
@@ -282,64 +286,65 @@ func TestFontDescriptor(t *testing.T) {
 	}
 
 	for fontName, expect := range tests {
-		font := model.NewStandard14FontMustCompile(fontName)
+		t.Run(string(fontName), func(t *testing.T) {
+			font := model.NewStandard14FontMustCompile(fontName)
 
-		descriptor := font.FontDescriptor()
-		if descriptor == nil {
-			t.Fatalf("%#q: No descriptor.", fontName)
-		}
-		actualFontName, ok := core.GetNameVal(descriptor.FontName)
-		if !ok {
-			t.Fatalf("%#q: No FontName. descriptor=%+v", fontName, descriptor)
-		}
-		fontFamily, ok := core.GetNameVal(descriptor.FontFamily)
-		if !ok {
-			t.Fatalf("%#q: No FontFamily. descriptor=%+v", fontName, descriptor)
-		}
-		flags, ok := core.GetIntVal(descriptor.Flags)
-		if !ok {
-			t.Fatalf("%#q: No Flags. descriptor=%+v", fontName, descriptor)
-		}
-		arr, ok := core.GetArray(descriptor.FontBBox)
-		if !ok {
-			t.Fatalf("%#q: No FontBBox. descriptor=%+v", fontName, descriptor)
-		}
-		fontBBox := [4]float64{}
-		for i := 0; i < 4; i++ {
-			x, ok := core.GetFloatVal(arr.Get(i))
-			if !ok {
-				t.Fatalf("%#q: Bad FontBBox. descriptor=%+v", fontName, descriptor)
+			descriptor := font.FontDescriptor()
+			if descriptor == nil {
+				t.Fatalf("%#q: No descriptor.", fontName)
 			}
-			fontBBox[i] = x
-		}
+			actualFontName, ok := core.GetNameVal(descriptor.FontName)
+			if !ok {
+				t.Fatalf("%#q: No FontName. descriptor=%+v", fontName, descriptor)
+			}
+			fontFamily, ok := core.GetNameVal(descriptor.FontFamily)
+			if !ok {
+				t.Fatalf("%#q: No FontFamily. descriptor=%+v", fontName, descriptor)
+			}
+			flags, ok := core.GetIntVal(descriptor.Flags)
+			if !ok {
+				t.Fatalf("%#q: No Flags. descriptor=%+v", fontName, descriptor)
+			}
+			arr, ok := core.GetArray(descriptor.FontBBox)
+			if !ok {
+				t.Fatalf("%#q: No FontBBox. descriptor=%+v", fontName, descriptor)
+			}
+			fontBBox := [4]float64{}
+			for i := 0; i < 4; i++ {
+				x, ok := core.GetFloatVal(arr.Get(i))
+				if !ok {
+					t.Fatalf("%#q: Bad FontBBox. descriptor=%+v", fontName, descriptor)
+				}
+				fontBBox[i] = x
+			}
 
-		capHeight, ok := core.GetFloatVal(descriptor.CapHeight)
-		if !ok {
-			t.Fatalf("%#q: No CapHeight. descriptor=%+v", fontName, descriptor)
-		}
-		xHeight, ok := core.GetFloatVal(descriptor.XHeight)
-		if !ok {
-			t.Fatalf("%#q: No XHeight. descriptor=%+v", fontName, descriptor)
-		}
+			capHeight, ok := core.GetFloatVal(descriptor.CapHeight)
+			if !ok {
+				t.Fatalf("%#q: No CapHeight. descriptor=%+v", fontName, descriptor)
+			}
+			xHeight, ok := core.GetFloatVal(descriptor.XHeight)
+			if !ok {
+				t.Fatalf("%#q: No XHeight. descriptor=%+v", fontName, descriptor)
+			}
 
-		actual := params{
-			FontName:   actualFontName,
-			FontFamily: fontFamily,
-			Flags:      uint(flags),
-			FontBBox:   fontBBox,
-			CapHeight:  capHeight,
-			XHeight:    xHeight,
-		}
+			actual := params{
+				FontName:   actualFontName,
+				FontFamily: fontFamily,
+				Flags:      uint(flags),
+				FontBBox:   fontBBox,
+				CapHeight:  capHeight,
+				XHeight:    xHeight,
+			}
 
-		if actual.FontName != expect.FontName ||
-			actual.FontFamily != expect.FontFamily ||
-			actual.Flags != expect.Flags ||
-			actual.FontBBox != expect.FontBBox ||
-			actual.CapHeight != expect.CapHeight {
-			t.Fatalf("%s:\n\texpect=%+v\n\tactual=%+v", fontName, expect, actual)
-		}
+			if actual.FontName != expect.FontName ||
+				actual.FontFamily != expect.FontFamily ||
+				actual.Flags != expect.Flags ||
+				actual.FontBBox != expect.FontBBox ||
+				actual.CapHeight != expect.CapHeight {
+				t.Fatalf("%s:\n\texpect=%+v\n\tactual=%+v", fontName, expect, actual)
+			}
+		})
 	}
-
 }
 
 var charcodeBytesToUnicodeTest = []fontFragmentTest{
@@ -531,8 +536,6 @@ func (f *fontFragmentTest) String() string {
 // check loads the font in PDF fragment `filename`, object number `objNum`, runs
 // CharcodeBytesToUnicode on `data` and checks that output equals `expected`.
 func (f *fontFragmentTest) check(t *testing.T) {
-	common.Log.Debug("fontFragmentTest: %s", f)
-
 	numObj, err := parsePdfFragment(f.filename)
 	if err != nil {
 		t.Errorf("Failed to parse. %s err=%v", f, err)

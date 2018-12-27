@@ -75,8 +75,8 @@ func (font *PdfFont) FontDescriptor() *PdfFontDescriptor {
 	if font.baseFields().fontDescriptor != nil {
 		return font.baseFields().fontDescriptor
 	}
-	if t, ok := font.context.(*pdfFontSimple); ok {
-		return t.std14Descriptor
+	if d := font.context.getFontDescriptor(); d != nil {
+		return d
 	}
 	common.Log.Error("All fonts have a Descriptor. font=%s", font)
 	return nil
@@ -99,13 +99,8 @@ func DefaultFont() *PdfFont {
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont fonts.StdFontName) (*PdfFont, error) {
-	fnt, ok := fonts.NewStdFontByName(basefont)
-	if !ok {
-		common.Log.Debug("ERROR: Invalid standard 14 font name %#q", basefont)
-		return nil, ErrFontNotSupported
-	}
-	std := stdFontToSimpleFont(fnt)
-	return &PdfFont{context: &std}, nil
+	std, _, err := NewStandard14FontWithEncoding(basefont, nil)
+	return std, err
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
@@ -297,7 +292,7 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 		if builtin && simplefont.encoder == nil && simplefont.std14Encoder == nil {
 			// This is not possible.
 			common.Log.Error("simplefont=%s", simplefont)
-			common.Log.Error("fnt=%s", fnt)
+			common.Log.Error("fnt=%+v", fnt)
 		}
 		if len(simplefont.charWidths) == 0 {
 			common.Log.Debug("ERROR: No widths. font=%s", simplefont)

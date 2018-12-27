@@ -74,7 +74,10 @@ func (font *pdfFontSimple) baseFields() *fontCommon {
 }
 
 func (font *pdfFontSimple) getFontDescriptor() *PdfFontDescriptor {
-	return font.fontDescriptor
+	if d := font.fontDescriptor; d != nil {
+		return d
+	}
+	return font.std14Descriptor
 }
 
 // Encoder returns the font's text encoder.
@@ -526,12 +529,27 @@ func (font *pdfFontSimple) updateStandard14Font() {
 }
 
 func stdFontToSimpleFont(f fonts.StdFont) pdfFontSimple {
+	l := f.Descriptor()
 	return pdfFontSimple{
 		fontCommon: fontCommon{
 			subtype:  "Type1",
 			basefont: f.Name(),
 		},
-		encoder:     f.SimpleEncoder(),
 		fontMetrics: f.GetMetricsTable(),
+		std14Descriptor: &PdfFontDescriptor{
+			FontName:    core.MakeName(string(l.Name)),
+			FontFamily:  core.MakeName(l.Family),
+			FontWeight:  core.MakeFloat(float64(l.Weight)),
+			Flags:       core.MakeInteger(int64(l.Flags)),
+			FontBBox:    core.MakeArrayFromFloats(l.BBox[:]),
+			ItalicAngle: core.MakeFloat(l.ItalicAngle),
+			Ascent:      core.MakeFloat(l.Ascent),
+			Descent:     core.MakeFloat(l.Descent),
+			CapHeight:   core.MakeFloat(l.CapHeight),
+			XHeight:     core.MakeFloat(l.XHeight),
+			StemV:       core.MakeFloat(l.StemV),
+			StemH:       core.MakeFloat(l.StemH),
+		},
+		std14Encoder: f.SimpleEncoder(),
 	}
 }
