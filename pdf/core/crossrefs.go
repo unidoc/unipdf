@@ -20,30 +20,30 @@ import (
 type xrefType int
 
 const (
-	// xrefTypeTableEntry indicates a normal xref table entry.
-	xrefTypeTableEntry xrefType = iota
+	// XrefTypeTableEntry indicates a normal xref table entry.
+	XrefTypeTableEntry xrefType = iota
 
-	// xrefTypeObjectStream indicates an xref entry in an xref object stream.
-	xrefTypeObjectStream xrefType = iota
+	// XrefTypeObjectStream indicates an xref entry in an xref object stream.
+	XrefTypeObjectStream xrefType = iota
 )
 
-// xrefObject defines a cross reference entry which is a map between object number (with generation number) and the
+// XrefObject defines a cross reference entry which is a map between object number (with generation number) and the
 // location of the actual object, either as a file offset (xref table entry), or as a location within an xref
 // stream object (xref object stream).
-type xrefObject struct {
-	xtype        xrefType
-	objectNumber int
-	generation   int
+type XrefObject struct {
+	XType        xrefType
+	ObjectNumber int
+	Generation   int
 	// For normal xrefs (defined by OFFSET)
-	offset int64
+	Offset int64
 	// For xrefs to object streams.
-	osObjNumber int
-	osObjIndex  int
+	OsObjNumber int
+	OsObjIndex  int
 }
 
-// xrefTable is a map between object number and corresponding xrefObject.
+// XrefTable is a map between object number and corresponding XrefObject.
 // TODO: Consider changing to a slice, so can maintain the object order without sorting when analyzing.
-type xrefTable map[int]xrefObject
+type XrefTable map[int]XrefObject
 
 // objectStream represents an object stream's information which can contain multiple indirect objects.
 // The information specifies the number of objects and has information about offset locations for
@@ -77,11 +77,11 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 
 		so, ok := soi.(*PdfObjectStream)
 		if !ok {
-			return nil, errors.New("Invalid object stream")
+			return nil, errors.New("invalid object stream")
 		}
 
 		if parser.crypter != nil && !parser.crypter.isDecrypted(so) {
-			return nil, errors.New("Need to decrypt the stream")
+			return nil, errors.New("need to decrypt the stream")
 		}
 
 		sod := so.PdfObjectDictionary
@@ -89,20 +89,20 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 		name, ok := sod.Get("Type").(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("ERROR: Object stream should always have a Type")
-			return nil, errors.New("Object stream missing Type")
+			return nil, errors.New("object stream missing Type")
 		}
 		if strings.ToLower(string(*name)) != "objstm" {
 			common.Log.Debug("ERROR: Object stream type shall always be ObjStm !")
-			return nil, errors.New("Object stream type != ObjStm")
+			return nil, errors.New("object stream type != ObjStm")
 		}
 
 		N, ok := sod.Get("N").(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid N in stream dictionary")
+			return nil, errors.New("invalid N in stream dictionary")
 		}
 		firstOffset, ok := sod.Get("First").(*PdfObjectInteger)
 		if !ok {
-			return nil, errors.New("Invalid First in stream dictionary")
+			return nil, errors.New("invalid First in stream dictionary")
 		}
 
 		common.Log.Trace("type: %s number of objects: %d", name, *N)
@@ -134,7 +134,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 			}
 			onum, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, errors.New("Invalid object stream offset table")
+				return nil, errors.New("invalid object stream offset table")
 			}
 
 			parser.skipSpaces()
@@ -145,7 +145,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 			}
 			offset, ok := obj.(*PdfObjectInteger)
 			if !ok {
-				return nil, errors.New("Invalid object stream offset table")
+				return nil, errors.New("invalid object stream offset table")
 			}
 
 			common.Log.Trace("obj %d offset %d", *onum, *offset)
@@ -180,7 +180,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 		return nil, err
 	}
 	if val == nil {
-		return nil, errors.New("Object cannot be null")
+		return nil, errors.New("object cannot be null")
 	}
 
 	// Make an indirect object around it.
@@ -226,7 +226,7 @@ func getObjectNumber(obj PdfObject) (int64, int64, error) {
 	if so, isStream := obj.(*PdfObjectStream); isStream {
 		return so.ObjectNumber, so.GenerationNumber, nil
 	}
-	return 0, 0, errors.New("Not an indirect/stream object")
+	return 0, 0, errors.New("not an indirect/stream object")
 }
 
 // lookupByNumber is used by LookupByNumber.
@@ -249,12 +249,12 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 	}
 
 	common.Log.Trace("Lookup obj number %d", objNumber)
-	if xref.xtype == xrefTypeTableEntry {
-		common.Log.Trace("xrefobj obj num %d", xref.objectNumber)
-		common.Log.Trace("xrefobj gen %d", xref.generation)
-		common.Log.Trace("xrefobj offset %d", xref.offset)
+	if xref.XType == XrefTypeTableEntry {
+		common.Log.Trace("xrefobj obj num %d", xref.ObjectNumber)
+		common.Log.Trace("xrefobj gen %d", xref.Generation)
+		common.Log.Trace("xrefobj offset %d", xref.Offset)
 
-		parser.rs.Seek(xref.offset, os.SEEK_SET)
+		parser.rs.Seek(xref.Offset, os.SEEK_SET)
 		parser.reader = bufio.NewReader(parser.rs)
 
 		obj, err := parser.ParseIndirectObject()
@@ -295,18 +295,18 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 		common.Log.Trace("Returning obj")
 		parser.ObjCache[objNumber] = obj
 		return obj, false, nil
-	} else if xref.xtype == xrefTypeObjectStream {
+	} else if xref.XType == XrefTypeObjectStream {
 		common.Log.Trace("xref from object stream!")
 		common.Log.Trace(">Load via OS!")
-		common.Log.Trace("Object stream available in object %d/%d", xref.osObjNumber, xref.osObjIndex)
+		common.Log.Trace("Object stream available in object %d/%d", xref.OsObjNumber, xref.OsObjIndex)
 
-		if xref.osObjNumber == objNumber {
+		if xref.OsObjNumber == objNumber {
 			common.Log.Debug("ERROR Circular reference!?!")
-			return nil, true, errors.New("Xref circular reference")
+			return nil, true, errors.New("xref circular reference")
 		}
-		_, exists := parser.xrefs[xref.osObjNumber]
+		_, exists := parser.xrefs[xref.OsObjNumber]
 		if exists {
-			optr, err := parser.lookupObjectViaOS(xref.osObjNumber, objNumber) //xref.osObjIndex)
+			optr, err := parser.lookupObjectViaOS(xref.OsObjNumber, objNumber) //xref.OsObjIndex)
 			if err != nil {
 				common.Log.Debug("ERROR Returning ERR (%s)", err)
 				return nil, true, err
@@ -321,10 +321,10 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			return optr, true, nil
 		} else {
 			common.Log.Debug("?? Belongs to a non-cross referenced object ...!")
-			return nil, true, errors.New("OS belongs to a non cross referenced object")
+			return nil, true, errors.New("os belongs to a non cross referenced object")
 		}
 	}
-	return nil, false, errors.New("Unknown xref type")
+	return nil, false, errors.New("unknown xref type")
 }
 
 // LookupByReference looks up a PdfObject by a reference.
@@ -357,18 +357,18 @@ func (parser *PdfParser) Resolve(obj PdfObject) (PdfObject, error) {
 	o = io.PdfObject
 	_, isRef = o.(*PdfObjectReference)
 	if isRef {
-		return io, errors.New("Multi depth trace pointer to pointer")
+		return io, errors.New("multi depth trace pointer to pointer")
 	}
 
 	return o, nil
 }
 
-func printXrefTable(xrefTable xrefTable) {
+func printXrefTable(xrefTable XrefTable) {
 	common.Log.Debug("=X=X=X=")
 	common.Log.Debug("Xref table:")
 	i := 0
 	for _, xref := range xrefTable {
-		common.Log.Debug("i+1: %d (obj num: %d gen: %d) -> %d", i+1, xref.objectNumber, xref.generation, xref.offset)
+		common.Log.Debug("i+1: %d (obj num: %d gen: %d) -> %d", i+1, xref.ObjectNumber, xref.Generation, xref.Offset)
 		i++
 	}
 }

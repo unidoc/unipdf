@@ -68,7 +68,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 	if !ok {
 		fontfile.subtype = subtype
 		if subtype == "Type1C" {
-			// XXX: TODO Add Type1C support
+			// TODO: Add Type1C support
 			common.Log.Debug("Type1C fonts are currently not supported")
 			return nil, ErrType1CFontNotSupported
 		}
@@ -85,7 +85,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 	}
 
 	segment1 := data[:length1]
-	segment2 := []byte{}
+	var segment2 []byte
 	if length2 > 0 {
 		segment2 = data[length1 : length1+length2]
 	}
@@ -131,7 +131,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 	// or
 	//     %!FontType1-1.0
 	if len(data) < 2 || string(data[:2]) != "%!" {
-		return errors.New("Invalid start of ASCII segment")
+		return errors.New("invalid start of ASCII segment")
 	}
 
 	keySection, encodingSection, err := getAsciiSections(data)
@@ -270,12 +270,4 @@ func isBinary(data []byte) bool {
 		}
 	}
 	return false
-}
-
-// truncate returns the first `n` characters f string `s`.
-func truncate(s string, n int) string {
-	if len(s) < n {
-		return s
-	}
-	return s[:n]
 }

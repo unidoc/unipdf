@@ -34,7 +34,7 @@ func (c *CompressStreams) Optimize(objects []core.PdfObject) (optimizedObjects [
 		}
 		dict := encoder.MakeStreamDict()
 		// compare compressed and uncompressed sizes
-		if len(data)+len(dict.DefaultWriteString()) < len(stream.Stream) {
+		if len(data)+len(dict.WriteString()) < len(stream.Stream) {
 			stream.Stream = data
 			stream.PdfObjectDictionary.Merge(dict)
 			stream.PdfObjectDictionary.Set("Length", core.MakeInteger(int64(len(stream.Stream))))

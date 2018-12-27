@@ -16,6 +16,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
+// pdfFontSimple implements pdfFont
+var _ pdfFont = (*pdfFontSimple)(nil)
+
 // pdfFontSimple describes a Simple Font
 //
 // 9.6 Simple Fonts (page 254)
@@ -68,6 +71,10 @@ func pdfFontSimpleFromSkeleton(base *fontCommon) *pdfFontSimple {
 // baseFields returns the fields of `font` that are common to all PDF fonts.
 func (font *pdfFontSimple) baseFields() *fontCommon {
 	return &font.fontCommon
+}
+
+func (font *pdfFontSimple) getFontDescriptor() *PdfFontDescriptor {
+	return font.fontDescriptor
 }
 
 // Encoder returns the font's text encoder.
@@ -144,7 +151,7 @@ func (font pdfFontSimple) GetCharMetrics(code textencoding.CharCode) (fonts.Char
 	if width, ok := font.charWidths[code]; ok {
 		return fonts.CharMetrics{Wx: width}, true
 	}
-	if isBuiltin(Standard14Font(font.basefont)) {
+	if fonts.IsStdFont(fonts.StdFontName(font.basefont)) {
 		// PdfBox says this is what Acrobat does. Their reference is PDFBOX-2334.
 		return fonts.CharMetrics{Wx: 250}, true
 	}
@@ -499,57 +506,6 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	return font, nil
 }
 
-// Standard14Font is to be used only to define the standard 14 font names that follow.
-// This guarantees that calls to NewStandard14FontMustCompile will succeed.
-type Standard14Font string
-
-// Standard 14 fonts constant definitions.
-const (
-	Courier              Standard14Font = "Courier"
-	CourierBold          Standard14Font = "Courier-Bold"
-	CourierBoldOblique   Standard14Font = "Courier-BoldOblique"
-	CourierOblique       Standard14Font = "Courier-Oblique"
-	Helvetica            Standard14Font = "Helvetica"
-	HelveticaBold        Standard14Font = "Helvetica-Bold"
-	HelveticaBoldOblique Standard14Font = "Helvetica-BoldOblique"
-	HelveticaOblique     Standard14Font = "Helvetica-Oblique"
-	TimesRoman           Standard14Font = "Times-Roman"
-	TimesBold            Standard14Font = "Times-Bold"
-	TimesBoldItalic      Standard14Font = "Times-BoldItalic"
-	TimesItalic          Standard14Font = "Times-Italic"
-	Symbol               Standard14Font = "Symbol"
-	ZapfDingbats         Standard14Font = "ZapfDingbats"
-)
-
-func isBuiltin(basefont Standard14Font) bool {
-	if alias, ok := standard14Aliases[basefont]; ok {
-		basefont = alias
-	}
-	_, ok := standard14Fonts[basefont]
-	return ok
-}
-
-// loadStandard14Font returns the builtin font named `baseFont`. The boolean return indicates whether
-// the builtin font exists.
-func loadStandard14Font(baseFont Standard14Font) (pdfFontSimple, bool) {
-	if alias, ok := standard14Aliases[baseFont]; ok {
-		baseFont = alias
-	}
-	std, ok := standard14Fonts[baseFont]
-	if !ok {
-		return pdfFontSimple{}, false
-	}
-
-	descriptor := builtinDescriptor(string(baseFont))
-	if descriptor == nil {
-		return pdfFontSimple{}, false
-	}
-
-	std.std14Descriptor = descriptor
-
-	return std, true
-}
-
 // updateStandard14Font fills the font.charWidths for standard 14 fonts.
 // Don't call this function with a font that is not in the standard 14.
 func (font *pdfFontSimple) updateStandard14Font() {
@@ -569,167 +525,13 @@ func (font *pdfFontSimple) updateStandard14Font() {
 	}
 }
 
-// The aliases seen for the standard 14 font names.
-// Most of these are from table 5.5.1 in
-// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
-var standard14Aliases = map[Standard14Font]Standard14Font{
-	"CourierCourierNew":        "Courier",
-	"CourierNew":               "Courier",
-	"CourierNew,Italic":        "Courier-Oblique",
-	"CourierNew,Bold":          "Courier-Bold",
-	"CourierNew,BoldItalic":    "Courier-BoldOblique",
-	"Arial":                    "Helvetica",
-	"Arial,Italic":             "Helvetica-Oblique",
-	"Arial,Bold":               "Helvetica-Bold",
-	"Arial,BoldItalic":         "Helvetica-BoldOblique",
-	"TimesNewRoman":            "Times-Roman",
-	"TimesNewRoman,Italic":     "Times-Italic",
-	"TimesNewRoman,Bold":       "Times-Bold",
-	"TimesNewRoman,BoldItalic": "Times-BoldItalic",
-	"Times":                    "Times-Roman",
-	"Times,Italic":             "Times-Italic",
-	"Times,Bold":               "Times-Bold",
-	"Times,BoldItalic":         "Times-BoldItalic",
-	"Symbol,Italic":            "Symbol",
-	"Symbol,Bold":              "Symbol",
-	"Symbol,BoldItalic":        "Symbol",
-}
-
-var standard14Fonts = map[Standard14Font]pdfFontSimple{
-	Courier: {
+func stdFontToSimpleFont(f fonts.StdFont) pdfFontSimple {
+	return pdfFontSimple{
 		fontCommon: fontCommon{
 			subtype:  "Type1",
-			basefont: "Courier",
+			basefont: f.Name(),
 		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.CourierCharMetrics,
-	},
-	CourierBold: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Courier-Bold",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.CourierBoldCharMetrics,
-	},
-	CourierBoldOblique: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Courier-BoldOblique",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.CourierBoldObliqueCharMetrics,
-	},
-	CourierOblique: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Courier-Oblique",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.CourierObliqueCharMetrics,
-	},
-	Helvetica: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Helvetica",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.HelveticaCharMetrics,
-	},
-	HelveticaBold: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Helvetica-Bold",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.HelveticaBoldCharMetrics,
-	},
-	HelveticaBoldOblique: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Helvetica-BoldOblique",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.HelveticaBoldObliqueCharMetrics,
-	},
-	HelveticaOblique: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Helvetica-Oblique",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.HelveticaObliqueCharMetrics,
-	},
-	TimesRoman: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Times-Roman",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.TimesRomanCharMetrics,
-	},
-	TimesBold: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Times-Bold",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.TimesBoldCharMetrics,
-	},
-	TimesBoldItalic: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Times-BoldItalic",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.TimesBoldItalicCharMetrics,
-	},
-	TimesItalic: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Times-Italic",
-		},
-		std14Encoder: textencoding.NewWinAnsiTextEncoder(),
-		fontMetrics:  fonts.TimesItalicCharMetrics,
-	},
-	Symbol: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "Symbol",
-		},
-		std14Encoder: textencoding.NewSymbolEncoder(),
-		fontMetrics:  fonts.SymbolCharMetrics,
-	},
-	ZapfDingbats: {
-		fontCommon: fontCommon{
-			subtype:  "Type1",
-			basefont: "ZapfDingbats",
-		},
-		std14Encoder: textencoding.NewZapfDingbatsEncoder(),
-		fontMetrics:  fonts.ZapfDingbatsCharMetrics,
-	},
-}
-
-// builtinDescriptor returns the PdfFontDescriptor for the builtin font named `baseFont`, or nil if
-// there is none.
-func builtinDescriptor(baseFont string) *PdfFontDescriptor {
-	l, ok := fonts.Standard14Descriptors[baseFont]
-	if !ok {
-		return nil
-	}
-
-	return &PdfFontDescriptor{
-		FontName:    core.MakeName(l.FontName),
-		FontFamily:  core.MakeName(l.FontFamily),
-		FontWeight:  core.MakeFloat(float64(l.FontWeight)),
-		Flags:       core.MakeInteger(int64(l.Flags)),
-		FontBBox:    core.MakeArrayFromFloats(l.FontBBox[:]),
-		ItalicAngle: core.MakeFloat(l.ItalicAngle),
-		Ascent:      core.MakeFloat(l.Ascent),
-		Descent:     core.MakeFloat(l.Descent),
-		CapHeight:   core.MakeFloat(l.CapHeight),
-		XHeight:     core.MakeFloat(l.XHeight),
-		StemV:       core.MakeFloat(l.StemV),
-		StemH:       core.MakeFloat(l.StemH),
+		encoder:     f.SimpleEncoder(),
+		fontMetrics: f.GetMetricsTable(),
 	}
 }

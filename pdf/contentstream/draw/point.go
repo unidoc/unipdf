@@ -13,10 +13,7 @@ type Point struct {
 }
 
 func NewPoint(x, y float64) Point {
-	point := Point{}
-	point.X = x
-	point.Y = y
-	return point
+	return Point{X: x, Y: y}
 }
 
 func (p Point) Add(dx, dy float64) Point {
@@ -25,11 +22,11 @@ func (p Point) Add(dx, dy float64) Point {
 	return p
 }
 
-// Add vector to a point.
-func (this Point) AddVector(v Vector) Point {
-	this.X += v.Dx
-	this.Y += v.Dy
-	return this
+// AddVector adds vector to a point.
+func (p Point) AddVector(v Vector) Point {
+	p.X += v.Dx
+	p.Y += v.Dy
+	return p
 }
 
 func (p Point) String() string {

@@ -23,7 +23,7 @@ func (parser *fdfParser) readAtLeast(p []byte, n int) (int, error) {
 		nRead, err := parser.reader.Read(p[start:])
 		if err != nil {
 			common.Log.Debug("ERROR Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
-			return start, errors.New("Failed reading")
+			return start, errors.New("failed reading")
 		}
 		numRounds++
 		start += nRead

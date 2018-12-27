@@ -34,7 +34,7 @@ func Load(r io.ReadSeeker) (*Data, error) {
 
 	fields, found := core.GetArray(fdfDict.Get("Fields"))
 	if !found {
-		return nil, errors.New("Fields missing")
+		return nil, errors.New("fields missing")
 	}
 
 	return &Data{
@@ -80,7 +80,7 @@ func (fdf *Data) FieldValues() (map[string]core.PdfObject, error) {
 		return nil, err
 	}
 
-	keys := []string{}
+	var keys []string
 	for fieldName := range fieldDictMap {
 		keys = append(keys, fieldName)
 	}

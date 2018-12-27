@@ -29,7 +29,7 @@ const (
 // toFloatXY returns `objs` as 2 floats, if that's what `objs` is, or an error if it isn't.
 func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {
 	if len(objs) != 2 {
-		return 0, 0, fmt.Errorf("Invalid number of params: %d", len(objs))
+		return 0, 0, fmt.Errorf("invalid number of params: %d", len(objs))
 	}
 	floats, err := core.GetNumbersAsFloat(objs)
 	if err != nil {

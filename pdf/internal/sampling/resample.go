@@ -5,10 +5,10 @@
 
 package sampling
 
-// Resample the raw data which is in 8-bit (byte) format as a different
+// ResampleBytes resamples the raw data which is in 8-bit (byte) format as a different
 // bit count per sample, up to 32 bits (uint32).
 func ResampleBytes(data []byte, bitsPerSample int) []uint32 {
-	samples := []uint32{}
+	var samples []uint32
 
 	bitsLeftPerSample := bitsPerSample
 	var sample uint32
@@ -96,13 +96,13 @@ func ResampleBytes(data []byte, bitsPerSample int) []uint32 {
 	return samples
 }
 
-// Resample the raw data which is in <=32-bit (uint32) format as a different
+// ResampleUint32 resamples the raw data which is in <=32-bit (uint32) format as a different
 // bit count per sample, up to 32 bits (uint32).
 //
 // bitsPerOutputSample is the number of bits for each output sample (up to 32)
 // bitsPerInputSample is the number of bits used in each input sample (up to 32)
 func ResampleUint32(data []uint32, bitsPerInputSample int, bitsPerOutputSample int) []uint32 {
-	samples := []uint32{}
+	var samples []uint32
 
 	bitsLeftPerSample := bitsPerOutputSample
 	var sample uint32

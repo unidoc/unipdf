@@ -121,7 +121,7 @@ func (sh stdHandlerR4) alg3(R int, upass, opass []byte) ([]byte, error) {
 
 	ociph, err := rc4.NewCipher(encKey)
 	if err != nil {
-		return nil, errors.New("Failed rc4 ciph")
+		return nil, errors.New("failed rc4 ciph")
 	}
 
 	ukey := sh.paddedPass(upass)
@@ -136,7 +136,7 @@ func (sh stdHandlerR4) alg3(R int, upass, opass []byte) ([]byte, error) {
 			}
 			ciph, err := rc4.NewCipher(encKey2)
 			if err != nil {
-				return nil, errors.New("Failed rc4 ciph")
+				return nil, errors.New("failed rc4 ciph")
 			}
 			ciph.XORKeyStream(encrypted, encrypted)
 		}
@@ -148,7 +148,7 @@ func (sh stdHandlerR4) alg3(R int, upass, opass []byte) ([]byte, error) {
 func (sh stdHandlerR4) alg4(ekey []byte, upass []byte) ([]byte, error) {
 	ciph, err := rc4.NewCipher(ekey)
 	if err != nil {
-		return nil, errors.New("Failed rc4 ciph")
+		return nil, errors.New("failed rc4 ciph")
 	}
 
 	s := []byte(padding)
@@ -169,12 +169,12 @@ func (sh stdHandlerR4) alg5(ekey []byte, upass []byte) ([]byte, error) {
 	common.Log.Trace("ID: % x", sh.ID0)
 
 	if len(hash) != 16 {
-		return nil, errors.New("Hash length not 16 bytes")
+		return nil, errors.New("hash length not 16 bytes")
 	}
 
 	ciph, err := rc4.NewCipher(ekey)
 	if err != nil {
-		return nil, errors.New("Failed rc4 ciph")
+		return nil, errors.New("failed rc4 ciph")
 	}
 	encrypted := make([]byte, 16)
 	ciph.XORKeyStream(encrypted, hash)
@@ -192,7 +192,7 @@ func (sh stdHandlerR4) alg5(ekey []byte, upass []byte) ([]byte, error) {
 		}
 		ciph, err = rc4.NewCipher(ekey2)
 		if err != nil {
-			return nil, errors.New("Failed rc4 ciph")
+			return nil, errors.New("failed rc4 ciph")
 		}
 		ciph.XORKeyStream(encrypted, encrypted)
 		common.Log.Trace("i = %d, ekey: % x", i, ekey2)
@@ -209,7 +209,7 @@ func (sh stdHandlerR4) alg5(ekey []byte, upass []byte) ([]byte, error) {
 	// the value of the U entry in the encryption dictionary.
 	_, err = rand.Read(bb[16:32])
 	if err != nil {
-		return nil, errors.New("Failed to gen rand number")
+		return nil, errors.New("failed to gen rand number")
 	}
 	return bb, nil
 }
@@ -263,7 +263,7 @@ func (sh stdHandlerR4) alg7(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	if d.R == 2 {
 		ciph, err := rc4.NewCipher(encKey)
 		if err != nil {
-			return nil, errors.New("Failed cipher")
+			return nil, errors.New("failed cipher")
 		}
 		ciph.XORKeyStream(decrypted, d.O)
 	} else if d.R >= 3 {
@@ -276,7 +276,7 @@ func (sh stdHandlerR4) alg7(d *StdEncryptDict, opass []byte) ([]byte, error) {
 			}
 			ciph, err := rc4.NewCipher(newKey)
 			if err != nil {
-				return nil, errors.New("Failed cipher")
+				return nil, errors.New("failed cipher")
 			}
 			ciph.XORKeyStream(decrypted, s)
 			s = append([]byte{}, decrypted...)

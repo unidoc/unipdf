@@ -28,7 +28,6 @@ var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
 var reExponential = regexp.MustCompile(`^[\+-.]*([0-9.]+)e[\+-.]*([0-9.]+)`)
 var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
 var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
-var reTrailer = regexp.MustCompile(`trailer`)
 
 // fdfParser parses a FDF file and provides access to the object structure of the FDF.
 type fdfParser struct {

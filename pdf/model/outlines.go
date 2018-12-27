@@ -93,7 +93,7 @@ func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
 func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline, error) {
 	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
 	if !isDict {
-		return nil, fmt.Errorf("Outline object not a dictionary")
+		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
 	outline := PdfOutline{}
@@ -125,10 +125,10 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 }
 
 // Does not traverse the tree.
-func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectObject) (*PdfOutlineItem, error) {
+func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectObject) (*PdfOutlineItem, error) {
 	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
 	if !isDict {
-		return nil, fmt.Errorf("Outline object not a dictionary")
+		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
 	item := PdfOutlineItem{}
@@ -138,15 +138,15 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 	// Title (required).
 	obj := dict.Get("Title")
 	if obj == nil {
-		return nil, fmt.Errorf("Missing Title from Outline Item (required)")
+		return nil, fmt.Errorf("missing Title from Outline Item (required)")
 	}
-	obj, err := this.traceToObject(obj)
+	obj, err := r.traceToObject(obj)
 	if err != nil {
 		return nil, err
 	}
 	title, ok := TraceToDirectObject(obj).(*PdfObjectString)
 	if !ok {
-		return nil, fmt.Errorf("Title not a string (%T)", obj)
+		return nil, fmt.Errorf("title not a string (%T)", obj)
 	}
 	item.Title = title
 
@@ -154,7 +154,7 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 	if obj := dict.Get("Count"); obj != nil {
 		countVal, ok := obj.(*PdfObjectInteger)
 		if !ok {
-			return nil, fmt.Errorf("Count not an integer (%T)", obj)
+			return nil, fmt.Errorf("count not an integer (%T)", obj)
 		}
 		count := int64(*countVal)
 		item.Count = &count
@@ -162,44 +162,44 @@ func (this *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirec
 
 	// Other keys.
 	if obj := dict.Get("Dest"); obj != nil {
-		item.Dest, err = this.traceToObject(obj)
+		item.Dest, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
-		err := this.traverseObjectData(item.Dest)
+		err := r.traverseObjectData(item.Dest)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := dict.Get("A"); obj != nil {
-		item.A, err = this.traceToObject(obj)
+		item.A, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
-		err := this.traverseObjectData(item.A)
+		err := r.traverseObjectData(item.A)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := dict.Get("SE"); obj != nil {
-		// XXX: To add structure element support.
+		// TODO: To add structure element support.
 		// Currently not supporting structure elements.
 		item.SE = nil
 		/*
-			item.SE, err = this.traceToObject(obj)
+			item.SE, err = r.traceToObject(obj)
 			if err != nil {
 				return nil, err
 			}
 		*/
 	}
 	if obj := dict.Get("C"); obj != nil {
-		item.C, err = this.traceToObject(obj)
+		item.C, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := dict.Get("F"); obj != nil {
-		item.F, err = this.traceToObject(obj)
+		item.F, err = r.traceToObject(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -221,95 +221,94 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 	return nil
 }
 
-func (this *PdfOutlineTreeNode) GetContainingPdfObject() PdfObject {
-	return this.getOuter().GetContainingPdfObject()
+func (n *PdfOutlineTreeNode) GetContainingPdfObject() PdfObject {
+	return n.getOuter().GetContainingPdfObject()
 }
 
-func (this *PdfOutlineTreeNode) ToPdfObject() PdfObject {
-	return this.getOuter().ToPdfObject()
+func (n *PdfOutlineTreeNode) ToPdfObject() PdfObject {
+	return n.getOuter().ToPdfObject()
 }
 
-func (this *PdfOutline) GetContainingPdfObject() PdfObject {
-	return this.primitive
+func (o *PdfOutline) GetContainingPdfObject() PdfObject {
+	return o.primitive
 }
 
-// Recursively build the Outline tree PDF object.
-func (this *PdfOutline) ToPdfObject() PdfObject {
-	container := this.primitive
+// ToPdfObject recursively builds the Outline tree PDF object.
+func (o *PdfOutline) ToPdfObject() PdfObject {
+	container := o.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
 	dict.Set("Type", MakeName("Outlines"))
 
-	if this.First != nil {
-		dict.Set("First", this.First.ToPdfObject())
+	if o.First != nil {
+		dict.Set("First", o.First.ToPdfObject())
 	}
 
-	if this.Last != nil {
-		dict.Set("Last", this.Last.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[this.Last.getOuter()]
+	if o.Last != nil {
+		dict.Set("Last", o.Last.getOuter().GetContainingPdfObject())
+		//PdfObjectConverterCache[o.Last.getOuter()]
 	}
 
-	if this.Parent != nil {
-		dict.Set("Parent", this.Parent.getOuter().GetContainingPdfObject())
+	if o.Parent != nil {
+		dict.Set("Parent", o.Parent.getOuter().GetContainingPdfObject())
 	}
 
 	return container
 }
 
-func (this *PdfOutlineItem) GetContainingPdfObject() PdfObject {
-	return this.primitive
+func (oi *PdfOutlineItem) GetContainingPdfObject() PdfObject {
+	return oi.primitive
 }
 
-// Outline item.
-// Recursively build the Outline tree PDF object.
-func (this *PdfOutlineItem) ToPdfObject() PdfObject {
-	container := this.primitive
+// ToPdfObject recursively builds the Outline tree PDF object.
+func (oi *PdfOutlineItem) ToPdfObject() PdfObject {
+	container := oi.primitive
 	dict := container.PdfObject.(*PdfObjectDictionary)
 
-	dict.Set("Title", this.Title)
-	if this.A != nil {
-		dict.Set("A", this.A)
+	dict.Set("Title", oi.Title)
+	if oi.A != nil {
+		dict.Set("A", oi.A)
 	}
 	if obj := dict.Get("SE"); obj != nil {
-		// XXX: Currently not supporting structure element hierarchy.
+		// TODO: Currently not supporting structure element hierarchy.
 		// Remove it.
 		dict.Remove("SE")
 		//	delete(*dict, "SE")
 	}
 	/*
-		if this.SE != nil {
-			(*dict)["SE"] = this.SE
+		if oi.SE != nil {
+			(*dict)["SE"] = oi.SE
 		}
 	*/
-	if this.C != nil {
-		dict.Set("C", this.C)
+	if oi.C != nil {
+		dict.Set("C", oi.C)
 	}
-	if this.Dest != nil {
-		dict.Set("Dest", this.Dest)
+	if oi.Dest != nil {
+		dict.Set("Dest", oi.Dest)
 	}
-	if this.F != nil {
-		dict.Set("F", this.F)
+	if oi.F != nil {
+		dict.Set("F", oi.F)
 	}
-	if this.Count != nil {
-		dict.Set("Count", MakeInteger(*this.Count))
+	if oi.Count != nil {
+		dict.Set("Count", MakeInteger(*oi.Count))
 	}
-	if this.Next != nil {
-		dict.Set("Next", this.Next.ToPdfObject())
+	if oi.Next != nil {
+		dict.Set("Next", oi.Next.ToPdfObject())
 	}
-	if this.First != nil {
-		dict.Set("First", this.First.ToPdfObject())
+	if oi.First != nil {
+		dict.Set("First", oi.First.ToPdfObject())
 	}
-	if this.Prev != nil {
-		dict.Set("Prev", this.Prev.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[this.Prev.getOuter()]
+	if oi.Prev != nil {
+		dict.Set("Prev", oi.Prev.getOuter().GetContainingPdfObject())
+		//PdfObjectConverterCache[oi.Prev.getOuter()]
 	}
-	if this.Last != nil {
-		dict.Set("Last", this.Last.getOuter().GetContainingPdfObject())
-		// PdfObjectConverterCache[this.Last.getOuter()]
+	if oi.Last != nil {
+		dict.Set("Last", oi.Last.getOuter().GetContainingPdfObject())
+		// PdfObjectConverterCache[oi.Last.getOuter()]
 	}
-	if this.Parent != nil {
-		dict.Set("Parent", this.Parent.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[this.Parent.getOuter()]
+	if oi.Parent != nil {
+		dict.Set("Parent", oi.Parent.getOuter().GetContainingPdfObject())
+		//PdfObjectConverterCache[oi.Parent.getOuter()]
 	}
 
 	return container

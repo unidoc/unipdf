@@ -79,7 +79,7 @@ func (l *List) Add(item VectorDrawable) (*TextChunk, error) {
 			t.indent = 15
 		}
 	default:
-		return nil, errors.New("This type of drawable is not supported in list")
+		return nil, errors.New("this type of drawable is not supported in list")
 	}
 
 	l.items = append(l.items, listItem)

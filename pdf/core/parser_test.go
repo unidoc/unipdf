@@ -44,16 +44,16 @@ var namePairs = map[string]string{
 	"/Name1":                             "Name1",
 	"/ASomewhatLongerName":               "ASomewhatLongerName",
 	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
-	"/1.2":                     "1.2",
-	"/$$":                      "$$",
-	"/@pattern":                "@pattern",
-	"/.notdef":                 ".notdef",
-	"/Lime#20Green":            "Lime Green",
-	"/paired#28#29parentheses": "paired()parentheses",
-	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
-	"/A#42":                    "AB",
-	"/":                        "",
-	"/ ":                       "",
+	"/1.2":                               "1.2",
+	"/$$":                                "$$",
+	"/@pattern":                          "@pattern",
+	"/.notdef":                           ".notdef",
+	"/Lime#20Green":                      "Lime Green",
+	"/paired#28#29parentheses":           "paired()parentheses",
+	"/The_Key_of_F#23_Minor":             "The_Key_of_F#_Minor",
+	"/A#42":                              "AB",
+	"/":                                  "",
+	"/ ":                                 "",
 	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
 }
 
@@ -92,11 +92,6 @@ func TestNameParsing(t *testing.T) {
 	}
 }
 
-type testStringEntry struct {
-	raw      string
-	expected string
-}
-
 func BenchmarkStringParsing(b *testing.B) {
 	entry := "(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)"
 	parser := makeParserForText(entry)
@@ -110,18 +105,18 @@ func BenchmarkStringParsing(b *testing.B) {
 }
 
 var stringPairs = map[string]string{
-	"(This is a string)":                                                                        "This is a string",
-	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
+	"(This is a string)":                        "This is a string",
+	"(Strings may contain\n newlines and such)": "Strings may contain\n newlines and such",
 	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
 	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
 	"(These two strings are the same.)":                                                         "These two strings are the same.",
-	"(\\\\)": "\\",
-	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
-	"(So does this one.\\n)":                               "So does this one.\n",
-	"(\\0053)":                                             "\0053",
-	"(\\53)":                                               "\053",
-	"(\\053)":                                              "+",
-	"(\\53\\101)":                                          "+A",
+	"(\\\\)":                                                                                    "\\",
+	"(This string has an end-of-line at the end of it.\n)":                                      "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                                                                    "So does this one.\n",
+	"(\\0053)":                                                                                  "\0053",
+	"(\\53)":                                                                                    "\053",
+	"(\\053)":                                                                                   "+",
+	"(\\53\\101)":                                                                               "+A",
 }
 
 func TestStringParsing(t *testing.T) {
@@ -147,7 +142,7 @@ func TestReadTextLine(t *testing.T) {
 		t.Errorf("Unable to parse string, error: %s", err)
 	}
 	if parser.GetFileOffset() != int64(len(s)) {
-		t.Errorf("File offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
+		t.Errorf("File Offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
 	}
 }
 
@@ -556,7 +551,7 @@ stream
 endstream
 endobj`
 	parser := PdfParser{}
-	parser.xrefs = make(xrefTable)
+	parser.xrefs = make(XrefTable)
 	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
@@ -577,15 +572,15 @@ endobj`
 		return
 	}
 
-	if parser.xrefs[3].xtype != xrefTypeObjectStream {
+	if parser.xrefs[3].XType != XrefTypeObjectStream {
 		t.Errorf("Invalid type")
 		return
 	}
-	if parser.xrefs[3].osObjNumber != 15 {
+	if parser.xrefs[3].OsObjNumber != 15 {
 		t.Errorf("Wrong object stream obj number")
 		return
 	}
-	if parser.xrefs[3].osObjIndex != 2 {
+	if parser.xrefs[3].OsObjIndex != 2 {
 		t.Errorf("Wrong object stream obj index")
 		return
 	}
@@ -699,22 +694,22 @@ func TestMinimalPDFFile(t *testing.T) {
 		t.Errorf("Wrong number of xrefs %d != 4", len(parser.xrefs))
 	}
 
-	if parser.xrefs[1].objectNumber != 1 {
-		t.Errorf("Invalid xref0 object number != 1 (%d)", parser.xrefs[0].objectNumber)
+	if parser.xrefs[1].ObjectNumber != 1 {
+		t.Errorf("Invalid xref0 object number != 1 (%d)", parser.xrefs[0].ObjectNumber)
 	}
-	if parser.xrefs[1].offset != 18 {
-		t.Errorf("Invalid offset != 18 (%d)", parser.xrefs[0].offset)
+	if parser.xrefs[1].Offset != 18 {
+		t.Errorf("Invalid Offset != 18 (%d)", parser.xrefs[0].Offset)
 	}
-	if parser.xrefs[1].xtype != xrefTypeTableEntry {
+	if parser.xrefs[1].XType != XrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
-	if parser.xrefs[3].objectNumber != 3 {
-		t.Errorf("Invalid xref object number != 3 (%d)", parser.xrefs[2].objectNumber)
+	if parser.xrefs[3].ObjectNumber != 3 {
+		t.Errorf("Invalid xref object number != 3 (%d)", parser.xrefs[2].ObjectNumber)
 	}
-	if parser.xrefs[3].offset != 178 {
-		t.Errorf("Invalid offset != 178")
+	if parser.xrefs[3].Offset != 178 {
+		t.Errorf("Invalid Offset != 178")
 	}
-	if parser.xrefs[3].xtype != xrefTypeTableEntry {
+	if parser.xrefs[3].XType != XrefTypeTableEntry {
 		t.Errorf("Invalid xref type")
 	}
 

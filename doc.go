@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// UniDoc is a comprehensive PDF library for Go (golang). The library has advanced capabilities for generating,
+// Package unidoc is a comprehensive PDF library for Go (golang). The library has advanced capabilities for generating,
 // processing and modifying PDFs. UniDoc is written and supported by the owners of the
 // FoxyUtils.com website, where the library is used to power many of the PDF services offered.
 //

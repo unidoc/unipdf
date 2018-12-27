@@ -21,14 +21,14 @@ import (
 const MissingCodeRune = '\ufffd' // �
 
 // GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
-// XXX: TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
-//            rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to
-//            glyphs.
-//            We are currently applying RuneToString to the output of functions that call
-//            GlyphToRune. While this gives the same result, it makes the calling code complex and
-//            fragile.
-// XXX: TODO: Can we combine all the tables glyphAliases, glyphlistGlyphToRuneMap,
-//            texGlyphlistGlyphToStringMap, additionalGlyphlistGlyphToRuneMap and ".notdef"?
+// TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
+//       rather than 'ﬃ'. We only need a glyph ➞ rune map when we need to convert back to
+//       glyphs.
+//       We are currently applying RuneToString to the output of functions that call
+//       GlyphToRune. While this gives the same result, it makes the calling code complex and
+//       fragile.
+// TODO: Can we combine all the tables glyphAliases, glyphlistGlyphToRuneMap,
+//       texGlyphlistGlyphToStringMap, additionalGlyphlistGlyphToRuneMap and ".notdef"?
 func GlyphToRune(glyph GlyphName) (rune, bool) {
 	// We treat glyph "eight.lf" the same as glyph "eight".
 	// See contrib/testdata/font/Ingmar.txt

@@ -142,7 +142,7 @@ func (csp *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 				csp.reader.ReadByte()
 			} else {
 				common.Log.Error("Name starting with %s (% x)", bb, bb)
-				return core.PdfObjectName(name), fmt.Errorf("Invalid name: (%c)", bb[0])
+				return core.PdfObjectName(name), fmt.Errorf("invalid name: (%c)", bb[0])
 			}
 		} else {
 			if core.IsWhiteSpace(bb[0]) {
@@ -255,7 +255,7 @@ func (csp *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 func (csp *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 	csp.reader.ReadByte()
 
-	bytes := []byte{}
+	var bytes []byte
 	count := 1
 	for {
 		bb, err := csp.reader.Peek(1)
@@ -277,7 +277,7 @@ func (csp *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 					return core.MakeString(string(bytes)), err
 				}
 
-				numeric := []byte{}
+				var numeric []byte
 				numeric = append(numeric, b)
 				for _, val := range bb {
 					if core.IsOctalDigit(val) {
@@ -340,7 +340,7 @@ func (csp *ContentStreamParser) parseHexString() (*core.PdfObjectString, error) 
 
 	hextable := []byte("0123456789abcdefABCDEF")
 
-	tmp := []byte{}
+	var tmp []byte
 	for {
 		csp.skipSpaces()
 
@@ -417,7 +417,7 @@ func (csp *ContentStreamParser) parseBool() (core.PdfObjectBool, error) {
 		return core.PdfObjectBool(false), nil
 	}
 
-	return core.PdfObjectBool(false), errors.New("Unexpected boolean string")
+	return core.PdfObjectBool(false), errors.New("unexpected boolean string")
 }
 
 // Parse null object.
@@ -434,11 +434,11 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 	// Pass the '<<'
 	c, _ := csp.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 	c, _ = csp.reader.ReadByte()
 	if c != '<' {
-		return nil, errors.New("Invalid dict")
+		return nil, errors.New("invalid dict")
 	}
 
 	for {
@@ -495,7 +495,7 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 
 // An operand is a text command represented by a word.
 func (csp *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
-	bytes := []byte{}
+	var bytes []byte
 	for {
 		bb, err := csp.reader.Peek(1)
 		if err != nil {

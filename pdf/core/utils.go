@@ -18,13 +18,13 @@ import (
 //    slice[a:b] where sliceLen=len(slice).
 func checkBounds(sliceLen, a, b int) error {
 	if a < 0 || a > sliceLen {
-		return errors.New("Slice index a out of bounds")
+		return errors.New("slice index a out of bounds")
 	}
 	if b < a {
-		return errors.New("Invalid slice index b < a")
+		return errors.New("invalid slice index b < a")
 	}
 	if b > sliceLen {
-		return errors.New("Slice index b out of bounds")
+		return errors.New("slice index b out of bounds")
 	}
 
 	return nil
@@ -38,9 +38,9 @@ func (parser *PdfParser) Inspect() (map[string]int, error) {
 
 // GetObjectNums returns a sorted list of object numbers of the PDF objects in the file.
 func (parser *PdfParser) GetObjectNums() []int {
-	objNums := []int{}
+	var objNums []int
 	for _, x := range parser.xrefs {
-		objNums = append(objNums, x.objectNumber)
+		objNums = append(objNums, x.ObjectNumber)
 	}
 
 	// Sort the object numbers to give consistent ordering of PDF objects in output.
@@ -67,7 +67,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	objCount := 0
 	failedCount := 0
 
-	keys := []int{}
+	var keys []int
 	for k := range parser.xrefs {
 		keys = append(keys, k)
 	}
@@ -76,15 +76,15 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	i := 0
 	for _, k := range keys {
 		xref := parser.xrefs[k]
-		if xref.objectNumber == 0 {
+		if xref.ObjectNumber == 0 {
 			continue
 		}
 		objCount++
 		common.Log.Trace("==========")
-		common.Log.Trace("Looking up object number: %d", xref.objectNumber)
-		o, err := parser.LookupByNumber(xref.objectNumber)
+		common.Log.Trace("Looking up object number: %d", xref.ObjectNumber)
+		o, err := parser.LookupByNumber(xref.ObjectNumber)
 		if err != nil {
-			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.objectNumber, err)
+			common.Log.Trace("ERROR: Fail to lookup obj %d (%s)", xref.ObjectNumber, err)
 			failedCount++
 			continue
 		}
@@ -93,7 +93,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 
 		iobj, isIndirect := o.(*PdfIndirectObject)
 		if isIndirect {
-			common.Log.Trace("IND OOBJ %d: %s", xref.objectNumber, iobj)
+			common.Log.Trace("IND OOBJ %d: %s", xref.ObjectNumber, iobj)
 			dict, isDict := iobj.PdfObject.(*PdfObjectDictionary)
 			if isDict {
 				// Check if has Type parameter.
@@ -148,7 +148,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 					objTypes[otype]++
 				}
 			}
-			common.Log.Trace("DIRECT OBJ %d: %s", xref.objectNumber, o)
+			common.Log.Trace("DIRECT OBJ %d: %s", xref.ObjectNumber, o)
 		}
 
 		i++
@@ -164,7 +164,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 
 	if len(parser.xrefs) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
-		return nil, fmt.Errorf("Invalid document (xref table missing)")
+		return nil, fmt.Errorf("invalid document (xref table missing)")
 	}
 
 	fontObjs, ok := objTypes["Font"]

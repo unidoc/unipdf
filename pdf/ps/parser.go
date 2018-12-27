@@ -175,7 +175,7 @@ func (p *PSParser) parseNumber() (PSObject, error) {
 			isFloat = true
 		} else if bb[0] == 'e' {
 			// Exponential number format.
-			// XXX Is this supported in PS?
+			// TODO: Is this supported in PS?
 			b, _ := p.reader.ReadByte()
 			numStr += string(b)
 			isFloat = true
@@ -220,7 +220,7 @@ func (p *PSParser) parseBool() (*PSBoolean, error) {
 
 // An operand is a text command represented by a word.
 func (p *PSParser) parseOperand() (*PSOperand, error) {
-	bytes := []byte{}
+	var bytes []byte
 	for {
 		bb, err := p.reader.Peek(1)
 		if err != nil {

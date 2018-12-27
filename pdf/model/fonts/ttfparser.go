@@ -45,17 +45,17 @@ import (
 )
 
 // MakeEncoder returns an encoder built from the tables in `rec`.
-func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
+func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := make(map[textencoding.CharCode]GlyphName)
 	for code := textencoding.CharCode(0); code <= 256; code++ {
 		r := rune(code) // TODO(dennwc): make sure this conversion is valid
-		gid, ok := rec.Chars[r]
+		gid, ok := ttf.Chars[r]
 		if !ok {
 			continue
 		}
 		var glyph GlyphName
-		if int(gid) >= 0 && int(gid) < len(rec.GlyphNames) {
-			glyph = rec.GlyphNames[gid]
+		if int(gid) >= 0 && int(gid) < len(ttf.GlyphNames) {
+			glyph = ttf.GlyphNames[gid]
 		} else {
 			r := rune(gid)
 			if g, ok := textencoding.RuneToGlyph(r); ok {
@@ -67,8 +67,8 @@ func (rec *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 		}
 	}
 	if len(encoding) == 0 {
-		common.Log.Debug("WARNING: Zero length TrueType encoding. rec=%s Chars=[% 02x]",
-			rec, rec.Chars)
+		common.Log.Debug("WARNING: Zero length TrueType encoding. ttf=%s Chars=[% 02x]",
+			ttf, ttf.Chars)
 	}
 	return textencoding.NewCustomSimpleTextEncoder(encoding, nil)
 }
@@ -105,11 +105,15 @@ type TtfType struct {
 }
 
 // MakeToUnicode returns a ToUnicode CMap based on the encoding of `ttf`.
-// XXX(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
+// TODO(peterwilliams97): This currently gives a bad text mapping for creator_test.go but leads to an
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := make(map[cmap.CharCode]rune)
 	for code, gid := range ttf.Chars {
+		// TODO(dennwc): this function is used only in one place and relies on
+		//  			 the fact that the code uses identity CID<->GID mapping
+		charcode := cmap.CharCode(code)
+
 		glyph := ttf.GlyphNames[gid]
 
 		// TODO(dennwc): 'code' is already a rune; do we need this extra lookup?
@@ -118,10 +122,13 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)
 			r = textencoding.MissingCodeRune
 		}
-		// TODO(dennwc): implies rune <-> charcode identity?
-		codeToUnicode[cmap.CharCode(code)] = r
+		codeToUnicode[charcode] = r
 	}
 	return cmap.NewToUnicodeCMap(codeToUnicode)
+}
+
+func (ttf *TtfType) NewEncoder() textencoding.TextEncoder {
+	return textencoding.NewTrueTypeFontEncoder(ttf.Chars)
 }
 
 // String returns a human readable representation of `ttf`.
@@ -163,7 +170,7 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (TtfType, error) {
 	return t.Parse()
 }
 
-// NewFontFile2FromPdfObject returns a TtfType describing the TrueType font file in disk file `fileStr`.
+// TtfParse returns a TtfType describing the TrueType font file in disk file `fileStr`.
 func TtfParse(fileStr string) (TtfType, error) {
 	f, err := os.Open(fileStr)
 	if err != nil {
@@ -215,7 +222,7 @@ func (t *ttfParser) Parse() (TtfType, error) {
 
 // describeTables returns a string describing `tables`, the tables in a TrueType font file.
 func describeTables(tables map[string]uint32) string {
-	tags := []string{}
+	var tags []string
 	for tag := range tables {
 		tags = append(tags, tag)
 	}
@@ -289,6 +296,7 @@ func (t *ttfParser) ParseHead() error {
 	if magicNumber != 0x5F0F3CF5 {
 		// outputmanager.pdf displays in Adobe Reader but has a bad magic
 		// number so we don't return an error here.
+		// TODO(dennwc): check if it's a "head" table different format - this should not blindly accept anything
 		common.Log.Debug("ERROR: Incorrect magic number. Font may not display correctly. %s", t)
 	}
 	t.Skip(2) // flags
@@ -514,7 +522,7 @@ func (t *ttfParser) parseCmapVersion(offset int64) error {
 		return t.parseCmapFormat12()
 	default:
 		common.Log.Debug("ERROR: Unsupported cmap format=%d", format)
-		return nil // XXX(peterwilliams97): Can't return an error here if creator_test.go is to pass.
+		return nil // TODO(peterwilliams97): Can't return an error here if creator_test.go is to pass.
 	}
 }
 
@@ -823,7 +831,7 @@ func (t *ttfParser) ReadULong() (val uint32) {
 	return val
 }
 
-// ReadULong reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
+// Read32Fixed reads 4 bytes and returns them as a float, the first 2 bytes for the whole number and
 // the second 2 bytes for the fraction.
 func (t *ttfParser) Read32Fixed() float64 {
 	whole := float64(t.ReadShort())

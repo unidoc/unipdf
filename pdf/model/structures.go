@@ -18,7 +18,7 @@ import (
 	. "github.com/unidoc/unidoc/pdf/core"
 )
 
-// Definition of a rectangle.
+// PdfRectangle is a definition of a rectangle.
 type PdfRectangle struct {
 	Llx float64 // Lower left corner (ll).
 	Lly float64
@@ -32,7 +32,7 @@ type PdfRectangle struct {
 func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	rect := PdfRectangle{}
 	if arr.Len() != 4 {
-		return nil, errors.New("Invalid rectangle array, len != 4")
+		return nil, errors.New("invalid rectangle array, len != 4")
 	}
 
 	var err error
@@ -69,7 +69,7 @@ func (rect *PdfRectangle) Width() float64 {
 	return math.Abs(rect.Urx - rect.Llx)
 }
 
-// Convert to a PDF object.
+// ToPdfObject converts rectangle to a PDF object.
 func (rect *PdfRectangle) ToPdfObject() PdfObject {
 	arr := MakeArray(MakeFloat(rect.Llx), MakeFloat(rect.Lly), MakeFloat(rect.Urx), MakeFloat(rect.Ury))
 	return arr
@@ -98,10 +98,10 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 
 	matches := reDate.FindAllStringSubmatch(dateStr, 1)
 	if len(matches) < 1 {
-		return d, fmt.Errorf("Invalid date string (%s)", dateStr)
+		return d, fmt.Errorf("invalid date string (%s)", dateStr)
 	}
 	if len(matches[0]) != 10 {
-		return d, errors.New("Invalid regexp group match length != 10")
+		return d, errors.New("invalid regexp group match length != 10")
 	}
 
 	// No need to handle err from ParseInt, as pre-validated via regexp.
@@ -131,7 +131,7 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 	return d, nil
 }
 
-// Convert to a PDF string object.
+// ToPdfObject converts date to a PDF string object.
 func (date *PdfDate) ToPdfObject() PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
 		date.year, date.month, date.day, date.hour, date.minute, date.second,

@@ -17,11 +17,12 @@ import (
 
 // PdfObject is an interface which all primitive PDF objects must implement.
 type PdfObject interface {
-	// Output a string representation of the primitive (for debugging).
+	// String outputs a string representation of the primitive (for debugging).
 	String() string
 
-	// Output the PDF primitive as written to file as expected by the standard.
-	DefaultWriteString() string
+	// WriteString outputs the PDF primitive as written to file as expected by the standard.
+	// TODO(dennwc): it should return a byte slice, or accept a writer
+	WriteString() string
 }
 
 // PdfObjectBool represents the primitive PDF boolean object.
@@ -61,6 +62,8 @@ type PdfObjectNull struct{}
 
 // PdfObjectReference represents the primitive PDF reference object.
 type PdfObjectReference struct {
+	// For PdfAppender, need access to the parser (and the cross reference table for object access).
+	parser           *PdfParser
 	ObjectNumber     int64
 	GenerationNumber int64
 }
@@ -234,6 +237,11 @@ func MakeObjectStreams(objects ...PdfObject) *PdfObjectStreams {
 	return streams
 }
 
+// GetParser returns the parser for lazy-loading or compare references.
+func (ref *PdfObjectReference) GetParser() *PdfParser {
+	return ref.parser
+}
+
 // String returns the state of the bool as "true" or "false".
 func (bool *PdfObjectBool) String() string {
 	if *bool {
@@ -242,8 +250,8 @@ func (bool *PdfObjectBool) String() string {
 	return "false"
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (bool *PdfObjectBool) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (bool *PdfObjectBool) WriteString() string {
 	if *bool {
 		return "true"
 	}
@@ -254,8 +262,8 @@ func (int *PdfObjectInteger) String() string {
 	return fmt.Sprintf("%d", *int)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (int *PdfObjectInteger) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (int *PdfObjectInteger) WriteString() string {
 	return fmt.Sprintf("%d", *int)
 }
 
@@ -263,8 +271,8 @@ func (float *PdfObjectFloat) String() string {
 	return fmt.Sprintf("%f", *float)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (float *PdfObjectFloat) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (float *PdfObjectFloat) WriteString() string {
 	return fmt.Sprintf("%f", *float)
 }
 
@@ -298,8 +306,8 @@ func (str *PdfObjectString) Bytes() []byte {
 	return []byte(str.val)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (str *PdfObjectString) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (str *PdfObjectString) WriteString() string {
 	var output bytes.Buffer
 
 	// Handle hex representation.
@@ -343,8 +351,8 @@ func (name *PdfObjectName) String() string {
 	return string(*name)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (name *PdfObjectName) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (name *PdfObjectName) WriteString() string {
 	var output bytes.Buffer
 
 	if len(*name) > 127 {
@@ -392,7 +400,7 @@ func (array *PdfObjectArray) Get(i int) PdfObject {
 // Set sets the PdfObject at index i of the array. An error is returned if the index is outside bounds.
 func (array *PdfObjectArray) Set(i int, obj PdfObject) error {
 	if i < 0 || i >= len(array.vec) {
-		return errors.New("Outside bounds")
+		return errors.New("outside bounds")
 	}
 	array.vec[i] = obj
 	return nil
@@ -422,7 +430,7 @@ func (array *PdfObjectArray) Clear() {
 // returned if the array contains non-numeric objects (each element can be either PdfObjectInteger
 // or PdfObjectFloat).
 func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
-	vals := []float64{}
+	var vals []float64
 
 	for _, obj := range array.Elements() {
 		switch t := obj.(type) {
@@ -441,7 +449,7 @@ func (array *PdfObjectArray) ToFloat64Array() ([]float64, error) {
 // ToIntegerArray returns a slice of all array elements as an int slice. An error is returned if the
 // array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
-	vals := []int{}
+	var vals []int
 
 	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
@@ -457,7 +465,7 @@ func (array *PdfObjectArray) ToIntegerArray() ([]int, error) {
 // ToInt64Slice returns a slice of all array elements as an int64 slice. An error is returned if the
 // array non-integer objects. Each element can only be PdfObjectInteger.
 func (array *PdfObjectArray) ToInt64Slice() ([]int64, error) {
-	vals := []int64{}
+	var vals []int64
 
 	for _, obj := range array.Elements() {
 		if number, is := obj.(*PdfObjectInteger); is {
@@ -483,11 +491,11 @@ func (array *PdfObjectArray) String() string {
 	return outStr
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (array *PdfObjectArray) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (array *PdfObjectArray) WriteString() string {
 	outStr := "["
 	for ind, o := range array.Elements() {
-		outStr += o.DefaultWriteString()
+		outStr += o.WriteString()
 		if ind < (array.Len() - 1) {
 			outStr += " "
 		}
@@ -560,12 +568,12 @@ func getNumberAsFloatOrNull(obj PdfObject) (*float64, error) {
 // GetAsFloat64Slice returns the array as []float64 slice.
 // Returns an error if not entirely numeric (only PdfObjectIntegers, PdfObjectFloats).
 func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
-	slice := []float64{}
+	var slice []float64
 
 	for _, obj := range array.Elements() {
 		number, err := GetNumberAsFloat(TraceToDirectObject(obj))
 		if err != nil {
-			return nil, fmt.Errorf("Array element not a number")
+			return nil, fmt.Errorf("array element not a number")
 		}
 		slice = append(slice, number)
 	}
@@ -594,15 +602,15 @@ func (d *PdfObjectDictionary) String() string {
 	return outStr
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (d *PdfObjectDictionary) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (d *PdfObjectDictionary) WriteString() string {
 	outStr := "<<"
 	for _, k := range d.keys {
 		v := d.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
-		outStr += k.DefaultWriteString()
+		outStr += k.WriteString()
 		outStr += " "
-		outStr += v.DefaultWriteString()
+		outStr += v.WriteString()
 	}
 	outStr += ">>"
 	return outStr
@@ -735,8 +743,8 @@ func (ref *PdfObjectReference) String() string {
 	return fmt.Sprintf("Ref(%d %d)", ref.ObjectNumber, ref.GenerationNumber)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (ref *PdfObjectReference) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (ref *PdfObjectReference) WriteString() string {
 	return fmt.Sprintf("%d %d R", ref.ObjectNumber, ref.GenerationNumber)
 }
 
@@ -747,8 +755,8 @@ func (ind *PdfIndirectObject) String() string {
 	return fmt.Sprintf("IObject:%d", (*ind).ObjectNumber)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (ind *PdfIndirectObject) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (ind *PdfIndirectObject) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*ind).ObjectNumber)
 	return outStr
 }
@@ -758,8 +766,8 @@ func (stream *PdfObjectStream) String() string {
 	return fmt.Sprintf("Object stream %d: %s", stream.ObjectNumber, stream.PdfObjectDictionary)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (stream *PdfObjectStream) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (stream *PdfObjectStream) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*stream).ObjectNumber)
 	return outStr
 }
@@ -769,8 +777,8 @@ func (null *PdfObjectNull) String() string {
 	return "null"
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (null *PdfObjectNull) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (null *PdfObjectNull) WriteString() string {
 	return "null"
 }
 
@@ -869,7 +877,7 @@ func GetStringVal(obj PdfObject) (val string, found bool) {
 	return
 }
 
-// GetStringVal is like GetStringVal except that it returns the string as a []byte.
+// GetStringBytes is like GetStringVal except that it returns the string as a []byte.
 // It is for convenience.
 func GetStringBytes(obj PdfObject) (val []byte, found bool) {
 	so, found := TraceToDirectObject(obj).(*PdfObjectString)
@@ -947,6 +955,15 @@ func (streams *PdfObjectStreams) Append(objects ...PdfObject) {
 	}
 }
 
+// Set sets the PdfObject at index i of the streams. An error is returned if the index is outside bounds.
+func (streams *PdfObjectStreams) Set(i int, obj PdfObject) error {
+	if i < 0 || i >= len(streams.vec) {
+		return errors.New("Outside bounds")
+	}
+	streams.vec[i] = obj
+	return nil
+}
+
 // Elements returns a slice of the PdfObject elements in the array.
 // Preferred over accessing the array directly as type may be changed in future major versions (v3).
 func (streams *PdfObjectStreams) Elements() []PdfObject {
@@ -969,8 +986,8 @@ func (streams *PdfObjectStreams) Len() int {
 	return len(streams.vec)
 }
 
-// DefaultWriteString outputs the object as it is to be written to file.
-func (streams *PdfObjectStreams) DefaultWriteString() string {
+// WriteString outputs the object as it is to be written to file.
+func (streams *PdfObjectStreams) WriteString() string {
 	outStr := fmt.Sprintf("%d 0 R", (*streams).ObjectNumber)
 	return outStr
 }

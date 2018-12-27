@@ -34,7 +34,7 @@ func runeToGlyph(r rune, runeToGlyphMap map[rune]GlyphName) (GlyphName, bool) {
 func splitWords(raw string, encoder TextEncoder) []string {
 	runes := []rune(raw)
 
-	words := []string{}
+	var words []string
 
 	startsAt := 0
 	for idx, r := range runes {

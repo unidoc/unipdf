@@ -638,14 +638,14 @@ func NewPdfAnnotationWidget() *PdfAnnotationWidget {
 func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndirectObject) (*PdfAnnotation, error) {
 	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
 	if !isDict {
-		return nil, fmt.Errorf("Annotation indirect object not containing a dictionary")
+		return nil, fmt.Errorf("annotation indirect object not containing a dictionary")
 	}
 
 	// Check if cached, return cached model if exists.
 	if model := r.modelManager.GetModelFromPrimitive(d); model != nil {
 		annot, ok := model.(*PdfAnnotation)
 		if !ok {
-			return nil, fmt.Errorf("Cached model not a PDF annotation")
+			return nil, fmt.Errorf("cached model not a PDF annotation")
 		}
 		return annot, nil
 	}
@@ -724,7 +724,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndire
 	subtype, ok := subtypeObj.(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Subtype object type != name (%T)", subtypeObj)
-		return nil, fmt.Errorf("Invalid Subtype object type != name (%T)", subtypeObj)
+		return nil, fmt.Errorf("invalid Subtype object type != name (%T)", subtypeObj)
 	}
 	switch *subtype {
 	case "Text":
@@ -957,7 +957,7 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndire
 		return annot, nil
 	}
 
-	err := fmt.Errorf("Unknown annotation (%s)", *subtype)
+	err := fmt.Errorf("unknown annotation (%s)", *subtype)
 	return nil, err
 }
 
@@ -1949,7 +1949,7 @@ func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error)
 	obj = core.TraceToDirectObject(obj)
 	d, ok := obj.(*core.PdfObjectDictionary)
 	if !ok {
-		return nil, errors.New("Type check")
+		return nil, errors.New("type check")
 	}
 
 	// Type.
@@ -1978,7 +1978,7 @@ func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error)
 	if obj := d.Get("S"); obj != nil {
 		name, ok := obj.(*core.PdfObjectName)
 		if !ok {
-			return nil, errors.New("Border S not a name object")
+			return nil, errors.New("border S not a name object")
 		}
 
 		var style BorderStyle
@@ -1995,7 +1995,7 @@ func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error)
 			style = BorderStyleUnderline
 		default:
 			common.Log.Debug("Invalid style name %s", *name)
-			return nil, errors.New("Style type range check")
+			return nil, errors.New("style type range check")
 		}
 
 		bs.S = &style
@@ -2006,7 +2006,7 @@ func newPdfBorderStyleFromPdfObject(obj core.PdfObject) (*PdfBorderStyle, error)
 		vec, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Border D dash not an array: %T", obj)
-			return nil, errors.New("Border D type check error")
+			return nil, errors.New("border D type check error")
 		}
 
 		vals, err := vec.ToIntegerArray()

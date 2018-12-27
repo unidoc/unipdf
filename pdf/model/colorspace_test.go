@@ -133,7 +133,7 @@ endstream endobj
 	if !ok {
 		t.Fatalf("error")
 	}
-	fmt.Printf("%s\n", outDict.DefaultWriteString())
+	fmt.Printf("%s\n", outDict.WriteString())
 	r99, ok := resources.GetColorspaceByName("R99")
 	if !ok {
 		t.Fatalf("error")

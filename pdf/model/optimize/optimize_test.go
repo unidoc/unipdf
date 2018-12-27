@@ -18,7 +18,7 @@ import (
 // parseIndirectObjects parses a sequence of indirect/stream objects sequentially from a `rawpdf` text.
 func parseIndirectObjects(rawpdf string) ([]core.PdfObject, error) {
 	p := core.NewParserFromString(rawpdf)
-	indirects := []core.PdfObject{}
+	var indirects []core.PdfObject
 	for {
 		obj, err := p.ParseIndirectObject()
 		if err != nil {

@@ -13,8 +13,8 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
-// A rectangle defined with a specified Width and Height and a lower left corner at (X,Y).  The rectangle can
-// optionally have a border and a filling color.
+// RectangleAnnotationDef is a rectangle defined with a specified Width and Height and a lower left corner at (X,Y).
+// The rectangle can optionally have a border and a filling color.
 // The Width/Height includes the border (if any specified).
 type RectangleAnnotationDef struct {
 	X             float64
@@ -29,7 +29,7 @@ type RectangleAnnotationDef struct {
 	Opacity       float64 // Alpha value (0-1).
 }
 
-// Creates a rectangle annotation object that can be added to page PDF annotations.
+// CreateRectangleAnnotation creates a rectangle annotation object that can be added to page PDF annotations.
 func CreateRectangleAnnotation(rectDef RectangleAnnotationDef) (*pdf.PdfAnnotation, error) {
 	rectAnnotation := pdf.NewPdfAnnotationSquare()
 

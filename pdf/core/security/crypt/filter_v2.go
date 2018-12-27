@@ -29,7 +29,7 @@ func NewFilterV2(length int) Filter {
 // newFilterV2 creates a RC4-based filter from a Filter dictionary.
 func newFilterV2(d FilterDict) (Filter, error) {
 	if d.Length%8 != 0 {
-		return nil, fmt.Errorf("Crypt filter length not multiple of 8 (%d)", d.Length)
+		return nil, fmt.Errorf("crypt filter length not multiple of 8 (%d)", d.Length)
 	}
 	// Standard security handler expresses the length in multiples of 8 (16 means 128)
 	// We only deal with standard so far. (Public key not supported yet).
@@ -38,7 +38,7 @@ func newFilterV2(d FilterDict) (Filter, error) {
 			common.Log.Debug("STANDARD VIOLATION: Crypt Length appears to be in bits rather than bytes - assuming bits (%d)", d.Length)
 			d.Length /= 8
 		} else {
-			return nil, fmt.Errorf("Crypt filter length not in range 40 - 128 bit (%d)", d.Length)
+			return nil, fmt.Errorf("crypt filter length not in range 40 - 128 bit (%d)", d.Length)
 		}
 	}
 	return filterV2{length: d.Length}, nil

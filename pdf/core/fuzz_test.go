@@ -50,14 +50,14 @@ endstream
 `
 
 	parser := PdfParser{}
-	parser.xrefs = make(xrefTable)
+	parser.xrefs = make(XrefTable)
 	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
-	parser.xrefs[13] = xrefObject{
-		xrefTypeTableEntry,
+	parser.xrefs[13] = XrefObject{
+		XrefTypeTableEntry,
 		13,
 		0,
 		0,
@@ -83,15 +83,15 @@ endstream
 `
 
 	parser := PdfParser{}
-	parser.xrefs = make(xrefTable)
+	parser.xrefs = make(XrefTable)
 	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
 	// Point to the start of the stream (where obj 13 starts).
 	// NOTE: using incorrect object number here:
-	parser.xrefs[12] = xrefObject{
-		xrefTypeTableEntry,
+	parser.xrefs[12] = XrefObject{
+		XrefTypeTableEntry,
 		12,
 		0,
 		0,

@@ -6,8 +6,6 @@
 package ps
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -19,13 +17,6 @@ import (
 func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-}
-
-func makeReaderForText(txt string) *bufio.Reader {
-	buf := []byte(txt)
-	bufReader := bytes.NewReader(buf)
-	bufferedReader := bufio.NewReader(bufReader)
-	return bufferedReader
 }
 
 func quickEval(progText string) (PSObject, error) {
