@@ -1277,7 +1277,6 @@ func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err erro
 	fontObj, found := resources.GetFontByName(core.PdfObjectName(name))
 	if !found {
 		common.Log.Debug("ERROR: getFontDict: Font not found: name=%#q", name)
-		panic(errors.New("font not in resources"))
 		return nil, errors.New("font not in resources")
 	}
 	return fontObj, nil
