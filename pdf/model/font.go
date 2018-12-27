@@ -475,8 +475,6 @@ func (font *PdfFont) ToPdfObject() core.PdfObject {
 func (font *PdfFont) Encoder() textencoding.TextEncoder {
 	t := font.actualFont()
 	if t == nil {
-		common.Log.Debug("ERROR: Encoder not implemented for font type=%T", font.context)
-		// XXX: Should we return a default encoding?
 		common.Log.Debug("ERROR: Encoder not implemented for font type=%#T", font.context)
 		// TODO: Should we return a default encoding?
 		return nil
