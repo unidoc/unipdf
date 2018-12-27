@@ -132,7 +132,7 @@ func TestNewStandard14Font(t *testing.T) {
 				in, expect.basefont, expect.subtype, font.BaseFont(), font.Subtype())
 		}
 
-		metrics, ok := font.GetGlyphCharMetrics("space")
+		metrics, ok := font.GetRuneMetrics(' ')
 		if !ok {
 			t.Fatalf("%s: failed to get glyph metric", in)
 		}
@@ -226,14 +226,9 @@ func TestLoadStandardFontEncodings(t *testing.T) {
 
 	str := "Aabcdefg0123456790*"
 	for _, r := range str {
-		glyph, has := font.Encoder().RuneToGlyph(r)
+		_, has := font.GetRuneMetrics(r)
 		if !has {
-			t.Fatalf("Encoder does not have '%c'", r)
-		}
-
-		_, has = font.GetGlyphCharMetrics(glyph)
-		if !has {
-			t.Fatalf("Loaded simple font not having glyph char metrics for %s", glyph)
+			t.Fatalf("Loaded simple font not having glyph char metrics for %v", r)
 		}
 	}
 }

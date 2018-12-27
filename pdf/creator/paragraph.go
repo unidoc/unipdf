@@ -12,7 +12,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -210,20 +209,14 @@ func (p *Paragraph) getTextWidth() float64 {
 	w := 0.0
 
 	for _, r := range p.text {
-		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
-		if !found {
-			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
-			return -1 // FIXME: return error.
-		}
-
 		// Ignore newline for this.. Handles as if all in one line.
-		if glyph == "controlLF" {
+		if r == '\u000A' { // LF
 			continue
 		}
 
-		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
+		metrics, found := p.textFont.GetRuneMetrics(r)
 		if !found {
-			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
+			common.Log.Debug("ERROR: Rune char metrics not found! (rune 0x%04x=%c)", r, r)
 			return -1 // FIXME: return error.
 		}
 		w += p.fontSize * metrics.Wx
@@ -236,20 +229,14 @@ func (p *Paragraph) getTextWidth() float64 {
 func (p *Paragraph) getTextLineWidth(line string) float64 {
 	var width float64
 	for _, r := range line {
-		glyph, found := p.textFont.Encoder().RuneToGlyph(r)
-		if !found {
-			common.Log.Debug("ERROR: Glyph not found for rune: 0x%04x=%c", r, r)
-			return -1 // FIXME: return error.
-		}
-
 		// Ignore newline for this.. Handles as if all in one line.
-		if glyph == "controlLF" {
+		if r == '\u000A' { // LF
 			continue
 		}
 
-		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
+		metrics, found := p.textFont.GetRuneMetrics(r)
 		if !found {
-			common.Log.Debug("ERROR: Glyph char metrics not found! %q (rune 0x%04x=%c)", glyph, r, r)
+			common.Log.Debug("ERROR: Rune char metrics not found! (rune 0x%04x=%c)", r, r)
 			return -1 // FIXME: return error.
 		}
 
@@ -289,33 +276,23 @@ func (p *Paragraph) wrapText() error {
 	p.textLines = nil
 
 	runes := []rune(p.text)
-	var (
-		glyphs []textencoding.GlyphName
-		widths []float64
-	)
+	var widths []float64
 
-	for _, val := range runes {
-		glyph, found := p.textFont.Encoder().RuneToGlyph(val)
-		if !found {
-			common.Log.Debug("ERROR: Glyph not found for rune: %c", val)
-			return errors.New("glyph not found for rune")
-		}
-
+	for _, r := range runes {
 		// Newline wrapping.
-		if glyph == "controlLF" {
+		if r == '\u000A' { // LF
 			// Moves to next line.
 			p.textLines = append(p.textLines, string(line))
 			line = nil
 			lineWidth = 0
 			widths = nil
-			glyphs = nil
 			continue
 		}
 
-		metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
+		metrics, found := p.textFont.GetRuneMetrics(r)
 		if !found {
-			common.Log.Debug("ERROR: Glyph char metrics not found! %q rune=0x%04x=%c font=%s %#q",
-				glyph, val, val, p.textFont.BaseFont(), p.textFont.Subtype())
+			common.Log.Debug("ERROR: Rune char metrics not found! rune=0x%04x=%c font=%s %#q",
+				r, r, p.textFont.BaseFont(), p.textFont.Subtype())
 			common.Log.Trace("Font: %#v", p.textFont)
 			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
 			return errors.New("glyph char metrics missing")
@@ -326,8 +303,8 @@ func (p *Paragraph) wrapText() error {
 			// Goes out of bounds: Wrap.
 			// Breaks on the character.
 			idx := -1
-			for i := len(glyphs) - 1; i >= 0; i-- {
-				if glyphs[i] == "space" { // TODO: What about other space glyphs like controlHT?
+			for i := len(line) - 1; i >= 0; i-- {
+				if line[i] == ' ' { // TODO: What about other space glyphs like controlHT?
 					idx = i
 					break
 				}
@@ -337,22 +314,19 @@ func (p *Paragraph) wrapText() error {
 				p.textLines = append(p.textLines, string(line[0:idx+1]))
 
 				// Remainder of line.
-				line = append(line[idx+1:], val)
-				glyphs = append(glyphs[idx+1:], glyph)
+				line = append(line[idx+1:], r)
 				widths = append(widths[idx+1:], w)
 				lineWidth = sum(widths)
 
 			} else {
 				p.textLines = append(p.textLines, string(line))
-				line = []rune{val}
-				glyphs = []textencoding.GlyphName{glyph}
+				line = []rune{r}
 				widths = []float64{w}
 				lineWidth = w
 			}
 		} else {
-			line = append(line, val)
+			line = append(line, r)
 			lineWidth += w
-			glyphs = append(glyphs, glyph)
 			widths = append(widths, w)
 		}
 	}
@@ -482,22 +456,17 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		w := 0.0
 		spaces := 0
 		for i, r := range runes {
-			glyph, found := p.textFont.Encoder().RuneToGlyph(r)
-			if !found {
-				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-				return ctx, errors.New("unsupported rune in text encoding")
-			}
-			if glyph == "space" {
+			if r == ' ' {
 				spaces++
 				continue
 			}
-			if glyph == "controlLF" {
+			if r == '\u000A' { // LF
 				continue
 			}
-			metrics, found := p.textFont.GetGlyphCharMetrics(glyph)
+			metrics, found := p.textFont.GetRuneMetrics(r)
 			if !found {
-				common.Log.Debug("Unsupported glyph %q i=%d rune=0x%04x=%c in font %s %s",
-					glyph, i, r, r,
+				common.Log.Debug("Unsupported rune i=%d rune=0x%04x=%c in font %s %s",
+					i, r, r,
 					p.textFont.BaseFont(), p.textFont.Subtype())
 				return ctx, errors.New("unsupported text glyph")
 			}
@@ -507,7 +476,7 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 
 		var objs []core.PdfObject
 
-		spaceMetrics, found := p.textFont.GetGlyphCharMetrics("space")
+		spaceMetrics, found := p.textFont.GetRuneMetrics(' ')
 		if !found {
 			return ctx, errors.New("the font does not have a space glyph")
 		}

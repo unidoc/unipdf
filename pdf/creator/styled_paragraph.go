@@ -11,8 +11,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -233,23 +231,15 @@ func (p *StyledParagraph) getTextWidth() float64 {
 	for _, chunk := range p.chunks {
 		style := &chunk.Style
 
-		for _, rune := range chunk.Text {
-			glyph, found := style.Font.Encoder().RuneToGlyph(rune)
-			if !found {
-				common.Log.Debug("Error! Glyph not found for rune: %s\n", rune)
-
-				// FIXME: return error.
-				return -1
-			}
-
+		for _, r := range chunk.Text {
 			// Ignore newline for this.. Handles as if all in one line.
-			if glyph == "controlLF" {
+			if r == '\u000A' { // LF
 				continue
 			}
 
-			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
-				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+				common.Log.Debug("Rune char metrics not found! %v\n", r)
 
 				// FIXME: return error.
 				return -1
@@ -269,22 +259,14 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 		style := &chunk.Style
 
 		for _, r := range chunk.Text {
-			glyph, found := style.Font.Encoder().RuneToGlyph(r)
-			if !found {
-				common.Log.Debug("Error! Glyph not found for rune: %s\n", r)
-
-				// FIXME: return error.
-				return -1
-			}
-
 			// Ignore newline for this.. Handles as if all in one line.
-			if glyph == "controlLF" {
+			if r == '\u000A' { // LF
 				continue
 			}
 
-			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
-				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+				common.Log.Debug("Rune char metrics not found! %v\n", r)
 
 				// FIXME: return error.
 				return -1
@@ -353,21 +335,14 @@ func (p *StyledParagraph) wrapText() error {
 		style := chunk.Style
 		annotation := chunk.annotation
 
-		var part []rune
-		var glyphs []textencoding.GlyphName
-		var widths []float64
+		var (
+			part   []rune
+			widths []float64
+		)
 
 		for _, r := range chunk.Text {
-			glyph, found := style.Font.Encoder().RuneToGlyph(r)
-			if !found {
-				common.Log.Debug("Error! Glyph not found for rune: %v\n", r)
-
-				// FIXME: return error.
-				return errors.New("glyph not found for rune")
-			}
-
 			// newline wrapping.
-			if glyph == "controlLF" {
+			if r == '\u000A' { // LF
 				// moves to next line.
 				line = append(line, &TextChunk{
 					Text:       strings.TrimRightFunc(string(part), unicode.IsSpace),
@@ -380,13 +355,12 @@ func (p *StyledParagraph) wrapText() error {
 				lineWidth = 0
 				part = nil
 				widths = nil
-				glyphs = nil
 				continue
 			}
 
-			metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
-				common.Log.Debug("Glyph char metrics not found! %s\n", glyph)
+				common.Log.Debug("Rune char metrics not found! %v\n", r)
 				return errors.New("glyph char metrics missing")
 			}
 
@@ -397,8 +371,8 @@ func (p *StyledParagraph) wrapText() error {
 				// TODO: when goes outside: back up to next space,
 				// otherwise break on the character.
 				idx := -1
-				for j := len(glyphs) - 1; j >= 0; j-- {
-					if glyphs[j] == "space" {
+				for j := len(part) - 1; j >= 0; j-- {
+					if part[j] == ' ' {
 						idx = j
 						break
 					}
@@ -410,8 +384,6 @@ func (p *StyledParagraph) wrapText() error {
 
 					part = part[idx+1:]
 					part = append(part, r)
-					glyphs = glyphs[idx+1:]
-					glyphs = append(glyphs, glyph)
 					widths = widths[idx+1:]
 					widths = append(widths, w)
 
@@ -422,7 +394,6 @@ func (p *StyledParagraph) wrapText() error {
 				} else {
 					lineWidth = w
 					part = []rune{r}
-					glyphs = []textencoding.GlyphName{glyph}
 					widths = []float64{w}
 				}
 
@@ -436,7 +407,6 @@ func (p *StyledParagraph) wrapText() error {
 			} else {
 				lineWidth += w
 				part = append(part, r)
-				glyphs = append(glyphs, glyph)
 				widths = append(widths, w)
 			}
 		}
@@ -592,10 +562,12 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 		isLastLine := idx == len(p.lines)-1
 
 		// Get width of the line (excluding spaces).
-		var width float64
-		var height float64
-		var spaceWidth float64
-		var spaces uint
+		var (
+			width      float64
+			height     float64
+			spaceWidth float64
+			spaces     uint
+		)
 
 		var chunkWidths []float64
 		for _, chunk := range line {
@@ -605,7 +577,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				height = style.FontSize
 			}
 
-			spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
+			spaceMetrics, found := style.Font.GetRuneMetrics(' ')
 			if !found {
 				return ctx, errors.New("the font does not have a space glyph")
 			}
@@ -613,23 +585,17 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			var chunkSpaces uint
 			var chunkWidth float64
 			for _, r := range chunk.Text {
-				glyph, found := style.Font.Encoder().RuneToGlyph(r)
-				if !found {
-					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-					return ctx, errors.New("unsupported rune in text encoding")
-				}
-
-				if glyph == "space" {
+				if r == ' ' {
 					chunkSpaces++
 					continue
 				}
-				if glyph == "controlLF" {
+				if r == '\u000A' { // LF
 					continue
 				}
 
-				metrics, found := style.Font.GetGlyphCharMetrics(glyph)
+				metrics, found := style.Font.GetRuneMetrics(r)
 				if !found {
-					common.Log.Debug("Unsupported glyph %s in font\n", glyph)
+					common.Log.Debug("Unsupported rune %v in font\n", r)
 					return ctx, errors.New("unsupported text glyph")
 				}
 
@@ -684,7 +650,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			fontSize := defaultFontSize
 
 			if p.alignment != TextAlignmentJustify || isLastLine {
-				spaceMetrics, found := style.Font.GetGlyphCharMetrics("space")
+				spaceMetrics, found := style.Font.GetRuneMetrics(' ')
 				if !found {
 					return ctx, errors.New("the font does not have a space glyph")
 				}

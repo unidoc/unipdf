@@ -120,14 +120,14 @@ func (font *pdfFontType0) getFontDescriptor() *PdfFontDescriptor {
 	return font.fontDescriptor
 }
 
-// GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
-// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
+// GetRuneMetrics returns the character metrics for the specified rune.
+// A bool flag is returned to indicate whether or not the entry was found.
+func (font pdfFontType0) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 	if font.DescendantFont == nil {
 		common.Log.Debug("ERROR: No descendant. font=%s", font)
 		return fonts.CharMetrics{}, false
 	}
-	return font.DescendantFont.GetGlyphCharMetrics(glyph)
+	return font.DescendantFont.GetRuneMetrics(r)
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
@@ -238,9 +238,9 @@ func (font pdfCIDFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
-// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfCIDFontType0) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
+// GetRuneMetrics returns the character metrics for the specified rune.
+// A bool flag is returned to indicate whether or not the entry was found.
+func (font pdfCIDFontType0) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 	return fonts.CharMetrics{}, true
 }
 
@@ -300,11 +300,6 @@ type pdfCIDFontType2 struct {
 	// TODO(dennwc): both are used only in GetGlyphCharMetrics
 	//  			 we can precompute metrics and drop both
 	runeToWidthMap map[rune]int
-
-	// Cache for glyph to metrics.
-	glyphToMetricsCache map[textencoding.GlyphName]fonts.CharMetrics
-
-	ttfParser *fonts.TtfType
 }
 
 // pdfCIDFontType2FromSkeleton returns a pdfCIDFontType2 with its common fields initalized.
@@ -328,44 +323,18 @@ func (font pdfCIDFontType2) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
-// GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
-// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfCIDFontType2) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
-	// Return cached value if cached.
-	if font.glyphToMetricsCache == nil {
-		font.glyphToMetricsCache = make(map[textencoding.GlyphName]fonts.CharMetrics)
-	}
-	if metrics, cached := font.glyphToMetricsCache[glyph]; cached {
-		return metrics, true
-	}
-	metrics := fonts.CharMetrics{}
-
-	if font.ttfParser == nil {
-		return metrics, false
-	}
-	// TODO(dennwc): why not use font.encoder? however it's not set in the constructor
-	enc := font.ttfParser.NewEncoder()
-
-	// Convert the glyph to character code.
-	r, found := enc.GlyphToRune(glyph)
-	if !found {
-		common.Log.Debug("Unable to convert glyph %q to charcode (identity)", glyph)
-		return metrics, false
-	}
-
+// GetRuneMetrics returns the character metrics for the specified rune.
+// A bool flag is returned to indicate whether or not the entry was found.
+func (font pdfCIDFontType2) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 	w, found := font.runeToWidthMap[r]
 	if !found {
 		dw, ok := core.GetInt(font.DW)
 		if !ok {
-			return metrics, false
+			return fonts.CharMetrics{}, false
 		}
 		w = int(*dw)
 	}
-	metrics.Wx = float64(w)
-
-	font.glyphToMetricsCache[glyph] = metrics
-
-	return metrics, true
+	return fonts.CharMetrics{Wx: float64(w)}, true
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
@@ -510,7 +479,6 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		fontCommon: fontCommon{
 			subtype: "CIDFontType2",
 		},
-		ttfParser: &ttf,
 
 		// Use identity character id (CID) to glyph id (GID) mapping.
 		// Code below relies on the fact that identity mapping is used.

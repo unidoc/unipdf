@@ -112,31 +112,30 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 	font.encoder = simple
 }
 
-// GetGlyphCharMetrics returns the character metrics for the specified glyph.  A bool flag is
-// returned to indicate whether or not the entry was found in the glyph to charcode mapping.
-func (font pdfFontSimple) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
-	if font.fontMetrics != nil {
-		metrics, has := font.fontMetrics[glyph]
-		if has {
-			return metrics, true
-		}
-	}
-
+// GetRuneMetrics returns the character metrics for the rune.
+// A bool flag is returned to indicate whether or not the entry was found.
+func (font pdfFontSimple) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 	encoder := font.Encoder()
-
 	if encoder == nil {
 		common.Log.Debug("No encoder for fonts=%s", font)
 		return fonts.CharMetrics{}, false
 	}
-	code, found := encoder.GlyphToCharcode(glyph)
 
+	code, found := encoder.RuneToCharcode(r)
 	if !found {
-		if glyph != "space" {
-			common.Log.Trace("No charcode for glyph=%q font=%s", glyph, font)
+		if r != ' ' {
+			common.Log.Trace("No charcode for rune=%v font=%s", r, font)
 		}
 		return fonts.CharMetrics{}, false
 	}
-
+	if font.fontMetrics != nil {
+		if glyph, found := encoder.CharcodeToGlyph(code); found {
+			metrics, has := font.fontMetrics[glyph]
+			if has {
+				return metrics, true
+			}
+		}
+	}
 	metrics, ok := font.GetCharMetrics(code)
 	return metrics, ok
 }

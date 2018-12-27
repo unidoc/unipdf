@@ -16,7 +16,7 @@ import (
 // mapped to and from glyphs.  Each glyph has metrics.
 type Font interface {
 	Encoder() textencoding.TextEncoder
-	GetGlyphCharMetrics(glyph textencoding.GlyphName) (CharMetrics, bool)
+	GetRuneMetrics(r rune) (CharMetrics, bool)
 	ToPdfObject() core.PdfObject
 }
 

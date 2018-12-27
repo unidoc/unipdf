@@ -34,6 +34,7 @@ type AppearanceStyle struct {
 	// How much of Rect height to fill when autosizing text.
 	AutoFontSizeFraction float64
 	// Glyph used for check mark in checkboxes (for ZapfDingbats font).
+	// TODO(dennwc): can be a rune
 	CheckmarkGlyph textencoding.GlyphName
 
 	BorderSize  float64
@@ -302,18 +303,13 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 			lastbreakindex := -1
 			linewidth := 0.0
 			for index, r := range lines[i] {
-				glyph, has := encoder.RuneToGlyph(r)
-				if !has {
-					common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
-					continue
-				}
-				if glyph == "space" {
+				if r == ' ' {
 					lastbreakindex = index
 					lastwidth = linewidth
 				}
-				metrics, has := font.GetGlyphCharMetrics(glyph)
+				metrics, has := font.GetRuneMetrics(r)
 				if !has {
-					common.Log.Debug("Font does not have glyph metrics for %s - skipping", glyph)
+					common.Log.Debug("Font does not have rune metrics for %v - skipping", r)
 					continue
 				}
 				linewidth += metrics.Wx
@@ -427,12 +423,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	for i, line := range lines {
 		wLine := 0.0
 		for _, r := range line {
-			glyph, has := encoder.RuneToGlyph(r)
-			if !has {
-				common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
-				continue
-			}
-			metrics, has := font.GetGlyphCharMetrics(glyph)
+			metrics, has := font.GetRuneMetrics(r)
 			if !has {
 				continue
 			}
@@ -611,24 +602,17 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	// Get max glyph height.
 	var maxGlyphWy float64
 	for _, r := range text {
-		if encoder != nil {
-			glyph, has := encoder.RuneToGlyph(r)
-			if !has {
-				common.Log.Debug("ERROR: Rune not found %#v - skipping over", r)
-				continue
-			}
-			metrics, found := font.GetGlyphCharMetrics(glyph)
-			if !found {
-				common.Log.Debug("ERROR: Glyph not found in font: %v - skipping over", glyph)
-				continue
-			}
-			wy := metrics.Wy
-			if int(wy) <= 0 {
-				wy = metrics.Wx
-			}
-			if wy > maxGlyphWy {
-				maxGlyphWy = wy
-			}
+		metrics, found := font.GetRuneMetrics(r)
+		if !found {
+			common.Log.Debug("ERROR: Rune not found in font: %v - skipping over", r)
+			continue
+		}
+		wy := metrics.Wy
+		if int(wy) <= 0 {
+			wy = metrics.Wx
+		}
+		if wy > maxGlyphWy {
+			maxGlyphWy = wy
 		}
 	}
 	if int(maxGlyphWy) == 0 {
@@ -686,14 +670,9 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 		tx := 2.0
 		encoded := string(r)
 		if encoder != nil {
-			glyph, has := encoder.RuneToGlyph(r)
-			if !has {
-				common.Log.Debug("ERROR: Rune not found %#v - skipping over", r)
-				continue
-			}
-			metrics, found := font.GetGlyphCharMetrics(glyph)
+			metrics, found := font.GetRuneMetrics(r)
 			if !found {
-				common.Log.Debug("ERROR: Glyph not found in font: %v - skipping over", glyph)
+				common.Log.Debug("ERROR: Rune not found in font: %v - skipping over", r)
 				continue
 			}
 
@@ -780,13 +759,17 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 
 		fontsize := style.AutoFontSizeFraction * height
 
-		checkmetrics, ok := zapfdb.GetGlyphCharMetrics(style.CheckmarkGlyph)
-		if !ok {
-			return nil, errors.New("glyph not found")
-		}
 		checkcode, ok := zapfdb.Encoder().GlyphToCharcode(style.CheckmarkGlyph)
 		if !ok {
 			return nil, errors.New("checkmark glyph - charcode mapping not found")
+		}
+		checkrune, ok := zapfdb.Encoder().CharcodeToRune(checkcode)
+		if !ok {
+			return nil, errors.New("checkmark glyph - rune mapping not found")
+		}
+		checkmetrics, ok := zapfdb.GetRuneMetrics(checkrune)
+		if !ok {
+			return nil, errors.New("glyph not found")
 		}
 		checkwidth := checkmetrics.Wx * fontsize / 1000.0
 		// TODO: Get bbox of specific glyph that is chosen.  Choice of specific value will cause slight
@@ -995,14 +978,9 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 	linewidth := 0.0
 	if encoder != nil {
 		for _, r := range text {
-			glyph, has := encoder.RuneToGlyph(r)
+			metrics, has := font.GetRuneMetrics(r)
 			if !has {
-				common.Log.Debug("Encoder w/o rune '%c' (%X) - skip", r, r)
-				continue
-			}
-			metrics, has := font.GetGlyphCharMetrics(glyph)
-			if !has {
-				common.Log.Debug("Font does not have glyph metrics for %s - skipping", glyph)
+				common.Log.Debug("Font does not have rune metrics for %v - skipping", r)
 				continue
 			}
 			linewidth += metrics.Wx
