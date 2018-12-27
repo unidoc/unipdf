@@ -412,18 +412,18 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	return charcodes
 }
 
-// CharcodesToUnicode converts the character codes `charcodes` to a unicode string.
+// CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
 // How it works:
 //  1) Use the ToUnicode CMap if there is one.
 //  2) Use the underlying font's encoding.
-func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) string {
+func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
 	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
 	return strlist
 }
 
-// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical information
-// about hits and misses from the reverse mapping process.
-func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (strlist string, numRunes, numMisses int) {
+// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
+// information about hits and misses from the reverse mapping process.
+func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
 	runes := make([]rune, 0, len(charcodes))
 	numMisses = 0
 	for _, code := range charcodes {
@@ -457,7 +457,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			len(charcodes), numMisses, font)
 	}
 
-	return string(runes), len(runes), numMisses
+	return runes, len(runes), numMisses
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.

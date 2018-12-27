@@ -6,16 +6,14 @@
 package extractor
 
 import (
-	"fmt"
-
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Extractor stores and offers functionality for extracting content from PDF pages.
 type Extractor struct {
 	// stream contents and resources for page
-	contents      string
-	pageResources *model.PdfPageResources
+	contents  string
+	resources *model.PdfPageResources
 
 	// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
 	// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
@@ -45,9 +43,9 @@ func New(page *model.PdfPage) (*Extractor, error) {
 	// fmt.Println("========================= ::: =========================")
 
 	e := &Extractor{
-		contents:       contents,
-		pageResources:  page.Resources,
-		fontCache:      map[string]fontEntry{},
+		contents:    contents,
+		resources:   page.Resources,
+		fontCache:   map[string]fontEntry{},
 		formResults: map[string]textResult{},
 	}
 	return e, nil

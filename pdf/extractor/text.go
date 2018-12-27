@@ -42,12 +42,12 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 
 // ExtractXYText returns the text contents of `e` (an Extractor for a page) as a TextList.
 func (e *Extractor) ExtractXYText() (*TextList, int, int, error) {
-	return e.extractXYText(e.contents, e.pageResources, 0)
+	return e.extractXYText(e.contents, e.resources, 0)
 }
 
 // extractXYText returns the text contents of content stream `e` and resouces `resources` as a
 // TextList.
-// This can be called on a page or a Form XObject.
+// This can be called on a page or a form XObject.
 func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResources, level int) (*TextList, int, int, error) {
 
 	common.Log.Trace("extractXYText: level=%d", level)
@@ -128,7 +128,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return err
 				}
 				to.moveTextSetLeading(x, y)
-			case "Tj": // Show text
+			case "Tj": // Show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Tj op=%s err=%v", op, err)
 					return err
@@ -139,7 +139,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return core.ErrTypeError
 				}
 				return to.showText(charcodes)
-			case "TJ": // Show text with adjustable spacing
+			case "TJ": // Show text with adjustable spacing.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: TJ err=%v", err)
 					return err
@@ -150,7 +150,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return err
 				}
 				return to.showTextAdjusted(args)
-			case "'": // Move to next line and show text
+			case "'": // Move to next line and show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: ' err=%v", err)
 					return err
@@ -162,7 +162,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				}
 				to.nextLine()
 				return to.showText(charcodes)
-			case `"`: // Set word and character spacing, move to next line, and show text
+			case `"`: // Set word and character spacing, move to next line, and show text.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
@@ -180,21 +180,21 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				to.setWordSpacing(y)
 				to.nextLine()
 				return to.showText(charcodes)
-			case "TL": // Set text leading
+			case "TL": // Set text leading.
 				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: TL err=%v", err)
 					return err
 				}
 				to.setTextLeading(y)
-			case "Tc": // Set character spacing
+			case "Tc": // Set character spacing.
 				y, err := floatParam(op)
 				if err != nil {
 					common.Log.Debug("ERROR: Tc err=%v", err)
 					return err
 				}
 				to.setCharSpacing(y)
-			case "Tf": // Set font
+			case "Tf": // Set font.
 				if to == nil {
 					// This is needed for 26-Hazard-Thermal-environment.pdf
 					to = newTextObject(e, resources, gs, &state, &fontStack)
@@ -217,7 +217,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				if err != nil {
 					return err
 				}
-			case "Tm": // Set text matrix
+			case "Tm": // Set text matrix.
 				if ok, err := to.checkOp(op, 6, true); !ok {
 					common.Log.Debug("ERROR: Tm err=%v", err)
 					return err
@@ -228,7 +228,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return err
 				}
 				to.setTextMatrix(floats)
-			case "Tr": // Set text rendering mode
+			case "Tr": // Set text rendering mode.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Tr err=%v", err)
 					return err
@@ -239,7 +239,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return core.ErrTypeError
 				}
 				to.setTextRenderMode(mode)
-			case "Ts": // Set text rise
+			case "Ts": // Set text rise.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: Ts err=%v", err)
 					return err
@@ -250,7 +250,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 					return err
 				}
 				to.setTextRise(y)
-			case "Tw": // Set word spacing
+			case "Tw": // Set word spacing.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -262,7 +262,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 
 				}
 				to.setWordSpacing(y)
-			case "Tz": // Set horizontal scaling
+			case "Tz": // Set horizontal scaling.
 				if ok, err := to.checkOp(op, 1, true); !ok {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
@@ -275,7 +275,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				to.setHorizScaling(y)
 
 			case "Do":
-				// XObject.
+				// Handle XObjects by recursing through form XObjects.
 				name := *op.Params[0].(*core.PdfObjectName)
 				_, xtype := resources.GetXObjectByName(name)
 				if xtype != model.XObjectTypeForm {
@@ -1266,8 +1266,8 @@ func (to *textObject) getFontDirect(name string) (*model.PdfFont, error) {
 	return font, err
 }
 
-// getFontDict returns the font dict with key `name` if it exists in the page's Font resources or
-// an error if it doesn't.
+// getFontDict returns the font dict with key `name` if it exists in the page's or form's Font
+// resources or an error if it doesn't.
 func (to *textObject) getFontDict(name string) (fontObj core.PdfObject, err error) {
 	resources := to.resources
 	if resources == nil {
