@@ -6,6 +6,8 @@ node {
     env.GOPATH="${WORKSPACE}/gopath"
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
     env.GOCACHE="off"
+    env.UNIDOC_EXTRACT_FORCETEST="1"
+    env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
 
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
