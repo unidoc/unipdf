@@ -120,7 +120,7 @@ func initCourier() {
 	const wx = 600
 	courierCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
 	for _, glyph := range type1CommonGlyphs {
-		courierCharMetrics[glyph] = CharMetrics{GlyphName: glyph, Wx: wx}
+		courierCharMetrics[glyph] = CharMetrics{Wx: wx}
 	}
 	// other font variant still have the same metrics
 	courierBoldCharMetrics = courierCharMetrics

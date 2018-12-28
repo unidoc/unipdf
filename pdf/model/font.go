@@ -482,24 +482,24 @@ func (font *PdfFont) Encoder() textencoding.TextEncoder {
 	return t.Encoder()
 }
 
-// GetGlyphCharMetrics returns the char metrics for glyph name `glyph`.
+// GetRuneMetrics returns the char metrics for a rune.
 // TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
 //                       well give them 0 width. There is no need for the bool return.
-func (font *PdfFont) GetGlyphCharMetrics(glyph textencoding.GlyphName) (fonts.CharMetrics, bool) {
+func (font *PdfFont) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 	t := font.actualFont()
 	if t == nil {
 		common.Log.Debug("ERROR: GetGlyphCharMetrics Not implemented for font type=%#T", font.context)
-		return fonts.CharMetrics{GlyphName: glyph}, false
+		return fonts.CharMetrics{}, false
 	}
-	if m, ok := t.GetGlyphCharMetrics(glyph); ok {
+	if m, ok := t.GetRuneMetrics(r); ok {
 		return m, true
 	}
-	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
-		return fonts.CharMetrics{GlyphName: glyph, Wx: descriptor.missingWidth}, true
+	if desc, err := font.GetFontDescriptor(); err == nil && desc != nil {
+		return fonts.CharMetrics{Wx: desc.missingWidth}, true
 	}
 
 	common.Log.Debug("GetGlyphCharMetrics: No metrics for font=%s", font)
-	return fonts.CharMetrics{GlyphName: glyph}, false
+	return fonts.CharMetrics{}, false
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
@@ -558,17 +558,11 @@ func (font *PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
 
 	encoder := font.Encoder()
 	if encoder != nil {
-
-		glyph, found := encoder.RuneToGlyph(r)
-		if !found {
-			common.Log.Debug("Error! Glyph not found for rune=%s %s", r, font.String())
-		} else {
-			m, ok := font.GetGlyphCharMetrics(glyph)
-			if ok {
-				return m, true
-			}
+		m, ok := font.context.GetRuneMetrics(r)
+		if ok {
+			return m, true
 		}
-		common.Log.Debug("ERROR: Metrics not found for rune=%+v glyph=%#q %s", r, glyph, font)
+		common.Log.Debug("ERROR: Metrics not found for rune=%+v %s", r, font)
 	}
 	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
 		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true

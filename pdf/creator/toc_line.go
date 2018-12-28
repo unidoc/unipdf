@@ -186,7 +186,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	// Push page numbers to the end of the line.
 	availWidth = availWidth - float64(sepCount)*sepWidth
 	if availWidth > 500 {
-		spaceMetrics, found := sepStyle.Font.GetGlyphCharMetrics("space")
+		spaceMetrics, found := sepStyle.Font.GetRuneMetrics(' ')
 		if found && availWidth > spaceMetrics.Wx {
 			spaces := int(availWidth / spaceMetrics.Wx)
 			if spaces > 0 {
