@@ -297,8 +297,8 @@ type pdfCIDFontType2 struct {
 	defaultWidth float64
 
 	// Mapping between unicode runes to widths.
-	// TODO(dennwc): both are used only in GetGlyphCharMetrics
-	//  			 we can precompute metrics and drop both
+	// TODO(dennwc): it is used only in GetGlyphCharMetrics
+	//  			 we can precompute metrics and drop it
 	runeToWidthMap map[rune]int
 }
 

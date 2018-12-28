@@ -516,9 +516,10 @@ func (font *PdfFont) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 func (font *PdfFont) GetCharMetrics(code textencoding.CharCode) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
-	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
-	// through this function. Would it be more straightforward for pdfFontType0.GetCharMetrics() to
-	// call pdfCIDFontType0.GetCharMetrics() and pdfCIDFontType2.GetCharMetrics() directly?
+	// TODO(peterwilliams97): pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
+	// 						  through this function. Would it be more straightforward for
+	// 						  pdfFontType0.GetCharMetrics() to call pdfCIDFontType0.GetCharMetrics()
+	// 						  and pdfCIDFontType2.GetCharMetrics() directly?
 
 	switch t := font.context.(type) {
 	case *pdfFontSimple:
