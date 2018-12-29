@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -14,10 +15,6 @@ import (
 	"os/exec"
 	"testing"
 	"time"
-
-	"github.com/gunnsth/crypto/asn1"
-	"github.com/gunnsth/crypto/x509"
-	"github.com/gunnsth/crypto/x509/pkix"
 )
 
 func TestVerify(t *testing.T) {

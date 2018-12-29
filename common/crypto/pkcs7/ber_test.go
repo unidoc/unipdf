@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-
-	"github.com/gunnsth/crypto/asn1"
 )
 
 func TestBer2Der(t *testing.T) {
