@@ -17,13 +17,14 @@ import (
 // GID is a glyph index.
 type GID uint16
 
+// TODO(dennwc): should not mix Identity-H CMap and Encoding in the same object
+
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
 // It performs mapping between character ids and glyph ids.
 // It has a preloaded rune (unicode code point) to glyph index map that has been loaded from a font.
-// Corresponds to Identity-H.
+// Corresponds to Identity-H CMap and Identity encoding.
 type TrueTypeFontEncoder struct {
 	runeToGIDMap map[rune]GID
-	cmap         CMap
 }
 
 // NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a runeToGlyphIndexMap that
@@ -33,7 +34,6 @@ type TrueTypeFontEncoder struct {
 func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 	return TrueTypeFontEncoder{
 		runeToGIDMap: runeToGIDMap,
-		cmap:         CMapIdentityH{},
 	}
 }
 
@@ -75,7 +75,7 @@ func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	r, found := enc.CharcodeToRune(code)
-	if found && r == 0x20 {
+	if found && r == ' ' {
 		return "space", true
 	}
 
@@ -139,9 +139,10 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
-	if r == 0x20 {
+	if r == ' ' {
 		return "space", true
 	}
+	// TODO(dennwc): this is wrong; font may override this with a "post" table that specifies glyph names
 	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
 	return glyph, true
 }
@@ -149,6 +150,7 @@ func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 // GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
+	// TODO(dennwc): this is wrong; font may override this with a "post" table that specifies glyph names
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		unicode := uint16(0)
@@ -168,5 +170,6 @@ func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
 func (enc TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
+	// TODO(dennwc): reasonable question: why it have to implement this interface then?
 	return core.MakeNull()
 }

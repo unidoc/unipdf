@@ -47,6 +47,8 @@ import (
 // MakeEncoder returns an encoder built from the tables in `rec`.
 func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
 	encoding := make(map[textencoding.CharCode]GlyphName)
+	// TODO(dennwc): this is a bit strange, since TTF may contain more than 256 characters
+	//				 should probably make a different encoder here
 	for code := textencoding.CharCode(0); code <= 256; code++ {
 		r := rune(code) // TODO(dennwc): make sure this conversion is valid
 		gid, ok := ttf.Chars[r]
@@ -93,11 +95,14 @@ type TtfType struct {
 	UnderlineThickness     int16
 	Xmin, Ymin, Xmax, Ymax int16
 	CapHeight              int16
-	Widths                 []uint16
+	// Widths is a list of glyph widths indexed by GID.
+	Widths []uint16
 
 	// Chars maps rune values (unicode) to GIDs (the indexes in GlyphNames). i.e. GlyphNames[Chars[r]] is
 	// the glyph corresponding to rune r.
 	//
+	// TODO(dennwc): CharCode is currently defined as uint16, but some tables may store 32 bit charcodes
+	//				 not the case right now, but make sure to update it once we support those tables
 	// TODO(dennwc,peterwilliams97): it should map char codes to GIDs
 	Chars map[rune]GID
 	// GlyphNames is a list of glyphs from the "post" section of the TrueType file.
@@ -117,6 +122,9 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 		glyph := ttf.GlyphNames[gid]
 
 		// TODO(dennwc): 'code' is already a rune; do we need this extra lookup?
+		// TODO(dennwc): this cannot be done here; glyphNames might be empty
+		//				 the parent font may specify a different encoding
+		//				 so we should remap on a higher level
 		r, ok := textencoding.GlyphToRune(glyph)
 		if !ok {
 			common.Log.Debug("No rune. code=0x%04x glyph=%q", code, glyph)

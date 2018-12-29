@@ -15,6 +15,11 @@ func TestWinAnsiEncoder(t *testing.T) {
 		t.Errorf("Glyph != space")
 		return
 	}
+	code, found := enc.RuneToCharcode('þ')
+	if !found || code != 254 {
+		t.Errorf("code != 254")
+		return
+	}
 
 	glyph, found = enc.RuneToGlyph('þ')
 	if !found || glyph != "thorn" {
