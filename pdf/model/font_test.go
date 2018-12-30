@@ -798,12 +798,12 @@ endobj
 
 }
 
-// newStandandTextEncoder returns a SimpleEncoder that implements StandardEncoding.
+// newStandandTextEncoder returns a simpleEncoder that implements StandardEncoding.
 // The non-symbolic standard 14 fonts have StandardEncoding.
 func newStandandTextEncoder(t *testing.T) textencoding.SimpleEncoder {
 	enc, err := textencoding.NewSimpleTextEncoder("StandardEncoding", nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
-	return *enc
+	return enc
 }

@@ -5,8 +5,8 @@
 
 package textencoding
 
-// NewZapfDingbatsEncoder returns a SimpleEncoder that implements ZapfDingbatsEncoding.
-func NewZapfDingbatsEncoder() *SimpleEncoder {
+// NewZapfDingbatsEncoder returns a TextEncoder that implements ZapfDingbatsEncoding.
+func NewZapfDingbatsEncoder() TextEncoder {
 	enc, _ := NewSimpleTextEncoder("ZapfDingbatsEncoding", nil)
 	return enc
 }

@@ -20,11 +20,21 @@ import (
 //     MacRomanEncoding
 //     PdfDocEncoding
 //     StandardEncoding
-//     WinAnsiEncoding
 //     ZapfDingbatsEncoding
+//
+// WinAnsiEncoding is implemented via charmapEncoding.
 
-// SimpleEncoder represents a 1 byte encoding
-type SimpleEncoder struct {
+// SimpleEncoder represents a 1 byte encoding.
+type SimpleEncoder interface {
+	TextEncoder
+	BaseName() string
+	Charcodes() []CharCode
+}
+
+var _ SimpleEncoder = (*simpleEncoder)(nil)
+
+// simpleEncoder represents a 1 byte encoding
+type simpleEncoder struct {
 	baseName string
 
 	baseEncoding map[CharCode]rune
@@ -35,15 +45,15 @@ type SimpleEncoder struct {
 	codeToRune  map[CharCode]rune
 }
 
-// NewCustomSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
+// NewCustomSimpleTextEncoder returns a simpleEncoder based on map `encoding` and difference map
 // `differences`.
 func NewCustomSimpleTextEncoder(encoding, differences map[CharCode]GlyphName) (
-	*SimpleEncoder, error) {
-	baseName := "custom"
-	baseEncoding := make(map[CharCode]rune)
+	SimpleEncoder, error) {
 	if len(encoding) == 0 {
-		return &SimpleEncoder{}, errors.New("empty custom encoding")
+		return nil, errors.New("empty custom encoding")
 	}
+	const baseName = "custom"
+	baseEncoding := make(map[CharCode]rune)
 	for code, glyph := range encoding {
 		r, ok := GlyphToRune(glyph)
 		if !ok {
@@ -55,42 +65,50 @@ func NewCustomSimpleTextEncoder(encoding, differences map[CharCode]GlyphName) (
 	return newSimpleTextEncoder(baseEncoding, baseName, differences), nil
 }
 
-// ApplyDifferences applies the encoding delta `differences` to `se`.
-func (se *SimpleEncoder) ApplyDifferences(differences map[CharCode]GlyphName) {
+// applyDifferences applies the encoding delta `differences` to `se`.
+func (se *simpleEncoder) applyDifferences(differences map[CharCode]GlyphName) {
 	se.differences = differences
 	se.computeTables()
 }
 
-// NewSimpleTextEncoder returns a SimpleEncoder based on predefined encoding `baseName` and
+// NewSimpleTextEncoder returns a simpleEncoder based on predefined encoding `baseName` and
 // difference map `differences`.
-func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (*SimpleEncoder, error) {
+func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (SimpleEncoder, error) {
+	switch baseName {
+	case baseWinAnsi:
+		enc := NewWinAnsiTextEncoder()
+		if len(differences) != 0 {
+			enc = ApplyDifferences(enc, differences)
+		}
+		return enc, nil
+	}
 	baseEncoding, ok := simpleEncodings[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
-		return &SimpleEncoder{}, errors.New("unsupported font encoding")
+		return nil, errors.New("unsupported font encoding")
 	}
 	return newSimpleTextEncoder(baseEncoding, baseName, differences), nil
 }
 
-// newSimpleTextEncoder returns a SimpleEncoder based on map `encoding` and difference map
+// newSimpleTextEncoder returns a simpleEncoder based on map `encoding` and difference map
 // `differences`.
 func newSimpleTextEncoder(baseEncoding map[CharCode]rune, baseName string,
-	differences map[CharCode]GlyphName) *SimpleEncoder {
+	differences map[CharCode]GlyphName) SimpleEncoder {
 
-	se := SimpleEncoder{
+	se := &simpleEncoder{
 		baseName:     baseName,
 		baseEncoding: baseEncoding,
 		differences:  differences,
 	}
 	se.computeTables()
-	return &se
+	return se
 }
 
-// simpleEncoderNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String()
+// simpleEncoderNumEntries is the maximum number of encoding entries shown in simpleEncoder.String()
 const simpleEncoderNumEntries = 0
 
 // String returns a string that describes `se`.
-func (se SimpleEncoder) String() string {
+func (se simpleEncoder) String() string {
 	name := se.baseName
 	if len(se.differences) > 0 {
 		name = fmt.Sprintf("%s(diff)", se.baseName)
@@ -100,37 +118,29 @@ func (se SimpleEncoder) String() string {
 		fmt.Sprintf("differences=%+v", se.differences),
 	}
 
-	codes := make([]CharCode, 0, len(se.codeToGlyph))
-	for c := range se.codeToGlyph {
-		codes = append(codes, c)
-	}
-	sort.Slice(codes, func(i, j int) bool {
-		return codes[i] < codes[j]
-	})
-	numCodes := len(codes)
-	if numCodes > simpleEncoderNumEntries {
-		numCodes = simpleEncoderNumEntries
+	codes := se.Charcodes()
+	if len(codes) > simpleEncoderNumEntries {
+		codes = codes[:simpleEncoderNumEntries]
 	}
 
-	for i := 0; i < numCodes; i++ {
-		c := codes[i]
+	for _, c := range codes {
 		parts = append(parts, fmt.Sprintf("%d=0x%02x: %q", c, c, se.codeToGlyph[c]))
 	}
 	return fmt.Sprintf("SIMPLE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
 // BaseName returns `se`'s base name.
-func (se SimpleEncoder) BaseName() string {
+func (se simpleEncoder) BaseName() string {
 	return se.baseName
 }
 
 // Encode converts a Go unicode string `raw` to a PDF encoded string.
-func (se SimpleEncoder) Encode(raw string) []byte {
+func (se simpleEncoder) Encode(raw string) []byte {
 	return encodeString8bit(se, raw)
 }
 
 // Charcodes returns a slice of all charcodes in this encoding.
-func (se SimpleEncoder) Charcodes() []CharCode {
+func (se simpleEncoder) Charcodes() []CharCode {
 	codes := make([]CharCode, 0, len(se.codeToGlyph))
 	for code := range se.codeToGlyph {
 		codes = append(codes, code)
@@ -143,7 +153,7 @@ func (se SimpleEncoder) Charcodes() []CharCode {
 
 // CharcodeToGlyph returns the glyph name for character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
+func (se simpleEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	glyph, ok := se.codeToGlyph[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Glyph error: charcode not found: 0x%04x", code)
@@ -153,7 +163,7 @@ func (se SimpleEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 
 // GlyphToCharcode returns character code for glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
+func (se simpleEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	code, ok := se.glyphToCode[glyph]
 	if !ok {
 		common.Log.Debug("Glyph -> Charcode error: glyph not found: %q %s", glyph, se)
@@ -163,13 +173,13 @@ func (se SimpleEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 
 // RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) RuneToCharcode(val rune) (CharCode, bool) {
+func (se simpleEncoder) RuneToCharcode(val rune) (CharCode, bool) {
 	return doRuneToCharcode(se, val)
 }
 
 // CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) CharcodeToRune(code CharCode) (rune, bool) {
+func (se simpleEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	r, ok := se.codeToRune[code]
 	if !ok {
 		common.Log.Debug("Charcode -> Rune error: charcode not found: 0x%04x", code)
@@ -179,21 +189,21 @@ func (se SimpleEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 
 // RuneToGlyph returns the glyph corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
+func (se simpleEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	return runeToGlyph(r, glyphlistRuneToGlyphMap)
 }
 
 // GlyphToRune returns the rune corresponding to glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (se SimpleEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
+func (se simpleEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
 }
 
 // ToPdfObject returns `se` as a PdfObject
-func (se SimpleEncoder) ToPdfObject() core.PdfObject {
-	if se.differences == nil || len(se.differences) == 0 {
+func (se simpleEncoder) ToPdfObject() core.PdfObject {
+	if len(se.differences) == 0 {
 		switch se.baseName {
-		case "MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding":
+		case "MacRomanEncoding", "MacExpertEncoding":
 			return core.MakeName(se.baseName)
 		}
 		return nil // Use font's built-in encoding.
@@ -201,13 +211,13 @@ func (se SimpleEncoder) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 	dict.Set("Type", core.MakeName("Encoding"))
 	dict.Set("BaseEncoding", core.MakeName(se.baseName))
-	dict.Set("Differences", ToFontDifferences(se.differences))
+	dict.Set("Differences", toFontDifferences(se.differences))
 	return core.MakeIndirectObject(dict)
 }
 
-// computeTables computes the tables needed for a working SimpleEncoder from the member
+// computeTables computes the tables needed for a working simpleEncoder from the member
 // fields `baseEncoding` and `differences`.
-func (se *SimpleEncoder) computeTables() {
+func (se *simpleEncoder) computeTables() {
 	codeToRune := make(map[CharCode]rune)
 	for code, r := range se.baseEncoding {
 		codeToRune[code] = r
@@ -255,9 +265,9 @@ func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]GlyphName,
 	return differences, nil
 }
 
-// ToFontDifferences converts `differences` (a map representing character code to glyph mappings)
+// toFontDifferences converts `differences` (a map representing character code to glyph mappings)
 // to a /Differences array for an /Encoding object.
-func ToFontDifferences(differences map[CharCode]GlyphName) *core.PdfObjectArray {
+func toFontDifferences(differences map[CharCode]GlyphName) *core.PdfObjectArray {
 	if len(differences) == 0 {
 		return nil
 	}
@@ -1305,7 +1315,6 @@ var simpleEncodings = map[string]map[CharCode]rune{
 		0xfd: 0xf8fd, //  "bracerightmid"
 		0xfe: 0xf8fe, //  "bracerightbt"
 	},
-	"WinAnsiEncoding": winAnsiEncoding,
 	"ZapfDingbatsEncoding": { // 202 entries
 		0x20: 0x0020, //    "space"
 		0x21: 0x2701, //  ✁ "a1"

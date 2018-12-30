@@ -37,7 +37,7 @@ func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 	}
 }
 
-// ttEncoderMaxNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String().
+// ttEncoderMaxNumEntries is the maximum number of encoding entries shown in simpleEncoder.String().
 const ttEncoderMaxNumEntries = 10
 
 // String returns a string that describes `enc`.

@@ -73,7 +73,7 @@ var _ Font = StdFont{}
 type StdFont struct {
 	desc    Descriptor
 	metrics map[GlyphName]CharMetrics
-	encoder *textencoding.SimpleEncoder
+	encoder textencoding.TextEncoder
 }
 
 // NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
@@ -83,7 +83,7 @@ func NewStdFont(desc Descriptor, metrics map[GlyphName]CharMetrics) StdFont {
 }
 
 // NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
-func NewStdFontWithEncoding(desc Descriptor, metrics map[GlyphName]CharMetrics, encoder *textencoding.SimpleEncoder) StdFont {
+func NewStdFontWithEncoding(desc Descriptor, metrics map[GlyphName]CharMetrics, encoder textencoding.TextEncoder) StdFont {
 	return StdFont{
 		desc:    desc,
 		metrics: metrics,
@@ -98,11 +98,6 @@ func (font StdFont) Name() string {
 
 // Encoder returns the font's text encoder.
 func (font StdFont) Encoder() textencoding.TextEncoder {
-	return font.SimpleEncoder()
-}
-
-// SimpleEncoder returns the font's text encoder.
-func (font StdFont) SimpleEncoder() *textencoding.SimpleEncoder {
 	return font.encoder
 }
 

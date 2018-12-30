@@ -115,10 +115,10 @@ func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 }
 
 // NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
-// a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
+// a TextEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
 // An error can occur if `basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont,
-	*textencoding.SimpleEncoder, error) {
+	textencoding.SimpleEncoder, error) {
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))

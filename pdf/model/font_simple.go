@@ -43,9 +43,9 @@ type pdfFontSimple struct {
 
 	charWidths map[textencoding.CharCode]float64
 	// std14Encoder is the encoder specified by the /Encoding entry in the font dict.
-	encoder *textencoding.SimpleEncoder
+	encoder textencoding.TextEncoder
 	// std14Encoder is used for Standard 14 fonts where no /Encoding is specified in the font dict.
-	std14Encoder *textencoding.SimpleEncoder
+	std14Encoder textencoding.TextEncoder
 
 	// std14Descriptor is used for Standard 14 fonts where no /FontDescriptor is specified in the font dict.
 	std14Descriptor *PdfFontDescriptor
@@ -100,16 +100,10 @@ func (font *pdfFontSimple) Encoder() textencoding.TextEncoder {
 }
 
 // SetEncoder sets the encoding for the underlying font.
-// TODO(peterwilliams97): Change function signature to SetEncoder(encoder *textencoding.SimpleEncoder).
+// TODO(peterwilliams97): Change function signature to SetEncoder(encoder *textencoding.simpleEncoder).
 // TODO(gunnsth): Makes sense if SetEncoder is removed from the interface fonts.Font as proposed in PR #260.
 func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
-	simple, ok := encoder.(*textencoding.SimpleEncoder)
-	if !ok {
-		// This can't happen.
-		common.Log.Error("pdfFontSimple.SetEncoder passed bad encoder type %T", encoder)
-		simple = nil
-	}
-	font.encoder = simple
+	font.encoder = encoder
 }
 
 // GetRuneMetrics returns the character metrics for the rune.
@@ -166,7 +160,7 @@ func (font pdfFontSimple) GetCharMetrics(code textencoding.CharCode) (fonts.Char
 // • The value of BaseFont is derived differently.
 //
 func newSimpleFontFromPdfObject(d *core.PdfObjectDictionary, base *fontCommon,
-	std14Encoder *textencoding.SimpleEncoder) (*pdfFontSimple, error) {
+	std14Encoder textencoding.TextEncoder) (*pdfFontSimple, error) {
 	font := pdfFontSimpleFromSkeleton(base)
 	font.std14Encoder = std14Encoder
 
@@ -239,11 +233,11 @@ func (font *pdfFontSimple) addEncoding() error {
 	var (
 		baseEncoder string
 		differences map[textencoding.CharCode]textencoding.GlyphName
-		encoder     *textencoding.SimpleEncoder
+		encoder     textencoding.SimpleEncoder
 	)
 
 	if font.Encoder() != nil {
-		encoder, ok := font.Encoder().(*textencoding.SimpleEncoder)
+		encoder, ok := font.Encoder().(textencoding.SimpleEncoder)
 		if ok && encoder != nil {
 			baseEncoder = encoder.BaseName()
 		}
@@ -291,7 +285,7 @@ func (font *pdfFontSimple) addEncoding() error {
 		// At the end, apply the differences.
 		if differences != nil {
 			common.Log.Trace("differences=%+v font=%s", differences, font.baseFields())
-			encoder.ApplyDifferences(differences)
+			encoder = textencoding.ApplyDifferences(encoder, differences)
 		}
 		font.SetEncoder(encoder)
 	}
@@ -508,7 +502,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 // updateStandard14Font fills the font.charWidths for standard 14 fonts.
 // Don't call this function with a font that is not in the standard 14.
 func (font *pdfFontSimple) updateStandard14Font() {
-	se, ok := font.Encoder().(*textencoding.SimpleEncoder)
+	se, ok := font.Encoder().(textencoding.SimpleEncoder)
 	if !ok {
 		// This can't happen.
 		common.Log.Error("Wrong encoder type: %T. font=%s.", font.Encoder(), font)
@@ -546,6 +540,6 @@ func stdFontToSimpleFont(f fonts.StdFont) pdfFontSimple {
 			StemV:       core.MakeFloat(l.StemV),
 			StemH:       core.MakeFloat(l.StemH),
 		},
-		std14Encoder: f.SimpleEncoder(),
+		std14Encoder: f.Encoder(),
 	}
 }

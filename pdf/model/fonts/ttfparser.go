@@ -45,7 +45,7 @@ import (
 )
 
 // MakeEncoder returns an encoder built from the tables in `rec`.
-func (ttf *TtfType) MakeEncoder() (*textencoding.SimpleEncoder, error) {
+func (ttf *TtfType) MakeEncoder() (textencoding.SimpleEncoder, error) {
 	encoding := make(map[textencoding.CharCode]GlyphName)
 	// TODO(dennwc): this is a bit strange, since TTF may contain more than 256 characters
 	//				 should probably make a different encoder here
