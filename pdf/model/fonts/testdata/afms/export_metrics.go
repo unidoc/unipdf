@@ -69,7 +69,7 @@ func runCharmetricsOnFile(path string) error {
 	fmt.Printf("var xxfontCharMetrics map[string]CharMetrics = map[string]CharMetrics{\n")
 	for _, key := range keys {
 		metric := metrics[key]
-		fmt.Printf("\t\"%s\":\t{GlyphName:\"%s\", Wx:%f, Wy:%f},\n", key, metric.GlyphName, metric.Wx, metric.Wy)
+		fmt.Printf("\t\"%s\":\t{Wx:%f, Wy:%f},\n", key, metric.Wx, metric.Wy)
 	}
 	fmt.Printf("}\n")
 	return nil
@@ -151,8 +151,8 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 		}
 
 		parts = strings.Split(line, ";")
-		metrics := fonts.CharMetrics{}
-		metrics.GlyphName = ""
+		var metrics fonts.CharMetrics
+		glyphName := ""
 		for _, part := range parts {
 			cmd := strings.TrimSpace(part)
 			if len(cmd) == 0 {
@@ -169,7 +169,7 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 					pdfcommon.Log.Debug("Failed C line: ", line)
 					return nil, errors.New("invalid C line")
 				}
-				metrics.GlyphName = strings.TrimSpace(args[1])
+				glyphName = strings.TrimSpace(args[1])
 			case "WX":
 				if len(args) != 2 {
 					pdfcommon.Log.Debug("WX: Invalid number of args != 1 (%s)\n", line)
@@ -204,8 +204,8 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 			}
 		}
 
-		if len(metrics.GlyphName) > 0 {
-			glyphMetricsMap[metrics.GlyphName] = metrics
+		if len(glyphName) > 0 {
+			glyphMetricsMap[glyphName] = metrics
 		}
 	}
 

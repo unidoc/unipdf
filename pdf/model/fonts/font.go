@@ -16,17 +16,16 @@ import (
 // mapped to and from glyphs.  Each glyph has metrics.
 type Font interface {
 	Encoder() textencoding.TextEncoder
-	GetGlyphCharMetrics(glyph textencoding.GlyphName) (CharMetrics, bool)
+	GetRuneMetrics(r rune) (CharMetrics, bool)
 	ToPdfObject() core.PdfObject
 }
 
 // CharMetrics represents width and height metrics of a glyph.
 type CharMetrics struct {
-	GlyphName textencoding.GlyphName
-	Wx        float64
-	Wy        float64
+	Wx float64
+	Wy float64 // TODO(dennwc): none of code paths sets this to anything except 0
 }
 
 func (m CharMetrics) String() string {
-	return fmt.Sprintf("<%q,%.1f,%.1f>", m.GlyphName, m.Wx, m.Wy)
+	return fmt.Sprintf("<%.1f,%.1f>", m.Wx, m.Wy)
 }

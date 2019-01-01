@@ -106,13 +106,13 @@ func (font StdFont) SimpleEncoder() *textencoding.SimpleEncoder {
 	return font.encoder
 }
 
-// GetGlyphCharMetrics returns character metrics for a given glyph.
-func (font StdFont) GetGlyphCharMetrics(glyph GlyphName) (CharMetrics, bool) {
-	metrics, has := font.metrics[glyph]
+// GetRuneMetrics returns character metrics for a given rune.
+func (font StdFont) GetRuneMetrics(r rune) (CharMetrics, bool) {
+	glyph, has := font.encoder.RuneToGlyph(r)
 	if !has {
-		return metrics, false
+		return CharMetrics{}, false
 	}
-
+	metrics, has := font.metrics[glyph]
 	return metrics, true
 }
 
