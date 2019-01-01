@@ -146,7 +146,7 @@ func (e *Extractor) extractXYText(contents string, resources *model.PdfPageResou
 				}
 				args, ok := core.GetArray(op.Params[0])
 				if !ok {
-					common.Log.Debug("ERROR: Tj op=%s GetArrayVal failed", op)
+					common.Log.Debug("ERROR: TJ op=%s GetArrayVal failed", op)
 					return err
 				}
 				return to.showTextAdjusted(args)
@@ -656,11 +656,12 @@ func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentst
 
 // renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
+
 	font := to.getCurrentFont()
 
 	charcodes := font.BytesToCharcodes(data)
 
-	str, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
+	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -679,16 +680,16 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, str, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.Trise)
 
-	common.Log.Trace("renderText: %d codes=%+v str=%q", len(charcodes), charcodes, str)
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
 
-	for i, r := range str {
+	for i, r := range runes {
 		// TODO(peterwilliams97): Need to find and fix cases where this happens.
 		if r == '\x00' {
 			continue
@@ -727,7 +728,7 @@ func (to *textObject) renderText(data []byte) error {
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
 
-		common.Log.Trace("\"%s\" stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.Tm)
+		common.Log.Trace("\"%c\" stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.Tm)
 		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.Tc, w, state.Tw)
 		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.Tm).Mult(to.gs.CTM))
 
@@ -807,7 +808,7 @@ func (to *textObject) newXYText(text string, trm transform.Matrix, end transform
 	}
 }
 
-// nearestMultiple return the multiple of `m` that is closest to `x`.
+// nearestMultiple return the integer multiple of `m` that is closest to `x`.
 func nearestMultiple(x float64, m int) int {
 	if m == 0 {
 		m = 1
@@ -818,6 +819,7 @@ func nearestMultiple(x float64, m int) int {
 
 // String returns a string describing `t`.
 func (t XYText) String() string {
+
 	return fmt.Sprintf("XYText{@%03d [%.3f,%.3f] %.1f %d° %q}",
 		t.count, t.OrientedStart.X, t.OrientedStart.Y, t.Width(), t.Orient, truncate(t.Text, 100))
 }
@@ -829,6 +831,15 @@ func (t XYText) Width() float64 {
 
 // TextList is a list of texts and their positions on a PDF page.
 type TextList []XYText
+
+// String returns a string describing `tl`.
+func (tl TextList) String() string {
+	parts := []string{fmt.Sprintf("TextList: %d elements", tl.Length())}
+	for _, t := range tl {
+		parts = append(parts, t.String())
+	}
+	return strings.Join(parts, "\n")
+}
 
 // Length returns the number of elements in `tl`.
 func (tl TextList) Length() int {
@@ -848,13 +859,15 @@ func (tl TextList) height() float64 {
 
 // ToText returns the contents of `tl` as a single string.
 func (tl TextList) ToText() string {
-
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
 	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(tl), fontHeight, tol)
 
+	// Uncomment the 2 following Trace statements to see the effects of sorting/
+	// common.Log.Trace("ToText: Before sorting %s", tl)
 	tl.SortPosition(tol)
+	// common.Log.Trace("ToText: After sorting %s", tl)
 
 	lines := tl.toLines(tol)
 	texts := make([]string, 0, len(lines))
@@ -930,7 +943,8 @@ func (tl TextList) toLinesOrient(tol float64) []Line {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
 				if averageCharWidth.running {
-					line = combineDiacritics(line, averageCharWidth.ave)
+					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
+					// line = combineDiacritics(line, averageCharWidth.ave)
 					line = removeDuplicates(line, averageCharWidth.ave)
 				}
 				lines = append(lines, line)
@@ -1012,7 +1026,7 @@ func (exp *exponAve) update(x float64) float64 {
 		exp.ave = x
 		exp.running = true
 	} else {
-		// NOTE(peterwilliams97) 0.5 is a guess. It may be possible to improve average character
+		// NOTE(peterwilliams97): 0.5 is a guess. It may be possible to improve average character
 		// and space width estimation by tuning this value. It may be that different exponents
 		// would work better for character and space estimation.
 		exp.ave = (exp.ave + x) * 0.5
