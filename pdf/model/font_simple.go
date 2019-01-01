@@ -58,7 +58,7 @@ type pdfFontSimple struct {
 	Encoding  core.PdfObject
 
 	// Standard 14 fonts metrics
-	fontMetrics map[textencoding.GlyphName]fonts.CharMetrics
+	fontMetrics map[rune]fonts.CharMetrics
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfFontSimple with its common fields initalized.
@@ -109,26 +109,23 @@ func (font *pdfFontSimple) SetEncoder(encoder textencoding.TextEncoder) {
 // GetRuneMetrics returns the character metrics for the rune.
 // A bool flag is returned to indicate whether or not the entry was found.
 func (font pdfFontSimple) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
+	if font.fontMetrics != nil {
+		metrics, has := font.fontMetrics[r]
+		if has {
+			return metrics, true
+		}
+	}
 	encoder := font.Encoder()
 	if encoder == nil {
 		common.Log.Debug("No encoder for fonts=%s", font)
 		return fonts.CharMetrics{}, false
 	}
-
 	code, found := encoder.RuneToCharcode(r)
 	if !found {
 		if r != ' ' {
 			common.Log.Trace("No charcode for rune=%v font=%s", r, font)
 		}
 		return fonts.CharMetrics{}, false
-	}
-	if font.fontMetrics != nil {
-		if glyph, found := encoder.CharcodeToGlyph(code); found {
-			metrics, has := font.fontMetrics[glyph]
-			if has {
-				return metrics, true
-			}
-		}
 	}
 	metrics, ok := font.GetCharMetrics(code)
 	return metrics, ok
@@ -512,9 +509,9 @@ func (font *pdfFontSimple) updateStandard14Font() {
 	codes := se.Charcodes()
 	font.charWidths = make(map[textencoding.CharCode]float64, len(codes))
 	for _, code := range codes {
-		// codes was built from CharcodeToGlyph mapping, so each should have a glyph
-		glyph, _ := se.CharcodeToGlyph(code)
-		font.charWidths[code] = font.fontMetrics[glyph].Wx
+		// codes was built from the same mapping mapping, so each should have a rune
+		r, _ := se.CharcodeToRune(code)
+		font.charWidths[code] = font.fontMetrics[r].Wx
 	}
 }
 

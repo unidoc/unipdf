@@ -175,7 +175,7 @@ func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune
 			common.Log.Debug("No glyph for rune 0x%02x=%c", r, r)
 			continue
 		}
-		if _, ok = std.fontMetrics[glyph]; !ok {
+		if _, ok = std.fontMetrics[r]; !ok {
 			common.Log.Trace("Glyph %q (0x%04x=%c)not in font", glyph, r, r)
 			continue
 		}

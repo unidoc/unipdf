@@ -117,11 +117,11 @@ var helveticaOnce sync.Once
 
 func initHelvetica() {
 	// unpack font metrics
-	helveticaCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	helveticaBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	for i, glyph := range type1CommonGlyphs {
-		helveticaCharMetrics[glyph] = CharMetrics{Wx: float64(helveticaWx[i])}
-		helveticaBoldCharMetrics[glyph] = CharMetrics{Wx: float64(helveticaBoldWx[i])}
+	helveticaCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	helveticaBoldCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	for i, r := range type1CommonRunes {
+		helveticaCharMetrics[r] = CharMetrics{Wx: float64(helveticaWx[i])}
+		helveticaBoldCharMetrics[r] = CharMetrics{Wx: float64(helveticaBoldWx[i])}
 	}
 	helveticaObliqueCharMetrics = helveticaCharMetrics
 	helveticaBoldObliqueCharMetrics = helveticaBoldCharMetrics
@@ -129,19 +129,19 @@ func initHelvetica() {
 
 // helveticaCharMetrics are the font metrics loaded from afms/Helvetica.afm.
 // See afms/MustRead.html for license information.
-var helveticaCharMetrics map[GlyphName]CharMetrics
+var helveticaCharMetrics map[rune]CharMetrics
 
 // helveticaBoldCharMetrics are the font metrics loaded from afms/Helvetica-Bold.afm.
 // See afms/MustRead.html for license information.
-var helveticaBoldCharMetrics map[GlyphName]CharMetrics
+var helveticaBoldCharMetrics map[rune]CharMetrics
 
 // helveticaBoldObliqueCharMetrics are the font metrics loaded from afms/Helvetica-BoldOblique.afm.
 // See afms/MustRead.html for license information.
-var helveticaBoldObliqueCharMetrics map[GlyphName]CharMetrics
+var helveticaBoldObliqueCharMetrics map[rune]CharMetrics
 
 // helveticaObliqueCharMetrics are the font metrics loaded from afms/Helvetica-Oblique.afm.
 // See afms/MustRead.html for license information.
-var helveticaObliqueCharMetrics map[GlyphName]CharMetrics
+var helveticaObliqueCharMetrics map[rune]CharMetrics
 
 // helveticaWx are the font metrics loaded from afms/Helvetica.afm.
 // See afms/MustRead.html for license information.
