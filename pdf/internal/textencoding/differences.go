@@ -126,9 +126,9 @@ func (enc *differencesEncoding) Charcodes() []CharCode {
 	return codes
 }
 
-// Encode converts a Go unicode string `raw` to a PDF encoded string.
-func (enc *differencesEncoding) Encode(raw string) []byte {
-	runes := []rune(raw)
+// Encode converts a Go unicode string to a PDF encoded string.
+func (enc *differencesEncoding) Encode(str string) []byte {
+	runes := []rune(str)
 	buf := bytes.NewBuffer(nil)
 	buf.Grow(len(runes))
 	for _, r := range runes {
@@ -137,6 +137,17 @@ func (enc *differencesEncoding) Encode(raw string) []byte {
 		buf.WriteByte(byte(code))
 	}
 	return buf.Bytes()
+}
+
+// Decode converts PDF encoded string to a Go unicode string.
+func (enc *differencesEncoding) Decode(raw []byte) string {
+	runes := make([]rune, 0, len(raw))
+	// relies on the fact that underlying encoding is 8 bit
+	for _, b := range raw {
+		r, _ := enc.CharcodeToRune(CharCode(b))
+		runes = append(runes, r)
+	}
+	return string(runes)
 }
 
 // RuneToCharcode returns the PDF character code corresponding to rune `r`.
@@ -159,32 +170,6 @@ func (enc *differencesEncoding) CharcodeToRune(code CharCode) (rune, bool) {
 		return r, true
 	}
 	return enc.base.CharcodeToRune(code)
-}
-
-// CharcodeToGlyph returns the glyph name for character code `code`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc *differencesEncoding) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
-	if glyph, ok := enc.differences[code]; ok {
-		return glyph, true
-	}
-	return enc.base.CharcodeToGlyph(code)
-}
-
-// GlyphToCharcode returns character code for glyph `glyph`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc *differencesEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
-	// TODO: store reverse map?
-	for code, glyph2 := range enc.differences {
-		if glyph2 == glyph {
-			return code, true
-		}
-	}
-	// TODO(dennwc): only redirects the call - remove from the interface
-	r, ok := GlyphToRune(glyph)
-	if !ok {
-		return MissingCodeRune, false
-	}
-	return enc.RuneToCharcode(r)
 }
 
 // ToPdfObject returns the encoding as a PdfObject.

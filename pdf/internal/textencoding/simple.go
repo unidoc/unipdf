@@ -105,9 +105,16 @@ type simpleEncoding struct {
 	decode map[byte]rune
 }
 
-func (enc *simpleEncoding) Encode(raw string) []byte {
-	data, _ := enc.NewEncoder().Bytes([]byte(raw))
+// Encode converts the Go unicode string to a PDF encoded string.
+func (enc *simpleEncoding) Encode(str string) []byte {
+	data, _ := enc.NewEncoder().Bytes([]byte(str))
 	return data
+}
+
+// Decode converts PDF encoded string to a Go unicode string.
+func (enc *simpleEncoding) Decode(raw []byte) string {
+	data, _ := enc.NewDecoder().Bytes(raw)
+	return string(data)
 }
 
 // NewDecoder implements encoding.Encoding.
@@ -216,24 +223,6 @@ func (enc *simpleEncoding) CharcodeToRune(code CharCode) (rune, bool) {
 	b := byte(code)
 	r, ok := enc.decode[b]
 	return r, ok
-}
-
-func (enc *simpleEncoding) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
-	// TODO(dennwc): only redirects the call - remove from the interface
-	r, ok := enc.CharcodeToRune(code)
-	if !ok {
-		return "", false
-	}
-	return runeToGlyph(r, glyphlistRuneToGlyphMap)
-}
-
-func (enc *simpleEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
-	// TODO(dennwc): only redirects the call - remove from the interface
-	r, ok := GlyphToRune(glyph)
-	if !ok {
-		return MissingCodeRune, false
-	}
-	return enc.RuneToCharcode(r)
 }
 
 func (enc *simpleEncoding) ToPdfObject() core.PdfObject {

@@ -66,22 +66,14 @@ func (enc TrueTypeFontEncoder) String() string {
 	return fmt.Sprintf("TRUETYPE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
-// Encode converts the Go unicode string `raw` to a PDF encoded string.
-func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
-	return encodeString16bit(enc, raw)
+// Encode converts the Go unicode string to a PDF encoded string.
+func (enc TrueTypeFontEncoder) Encode(str string) []byte {
+	return encodeString16bit(enc, str)
 }
 
-// CharcodeToGlyph returns the glyph name matching character code `code`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
-	r, found := enc.CharcodeToRune(code)
-	if found && r == ' ' {
-		return "space", true
-	}
-
-	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
-	return glyph, true
+// Decode converts PDF encoded string to a Go unicode string.
+func (enc TrueTypeFontEncoder) Decode(raw []byte) string {
+	return decodeString16bit(enc, raw)
 }
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.

@@ -29,32 +29,14 @@ func (enc IdentityEncoder) String() string {
 	return enc.baseName
 }
 
-// Encode converts the Go unicode string `raw` to a PDF encoded string.
-func (enc IdentityEncoder) Encode(raw string) []byte {
-	return encodeString16bit(enc, raw)
+// Encode converts the Go unicode string to a PDF encoded string.
+func (enc IdentityEncoder) Encode(str string) []byte {
+	return encodeString16bit(enc, str)
 }
 
-// CharcodeToGlyph returns the glyph name matching character code `code`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
-	r, found := enc.CharcodeToRune(code)
-	if found && r == 0x20 {
-		return "space", true
-	}
-
-	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
-	return glyph, true
-}
-
-// GlyphToCharcode returns the character code matching glyph `glyph`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
-	r, ok := enc.GlyphToRune(glyph)
-	if !ok {
-		return 0, false
-	}
-	return enc.RuneToCharcode(r)
+// Decode converts PDF encoded string to a Go unicode string.
+func (enc IdentityEncoder) Decode(raw []byte) string {
+	return decodeString16bit(enc, raw)
 }
 
 // RuneToCharcode converts rune `r` to a PDF character code.
