@@ -402,7 +402,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		},
 	}
 
-	truefont.encoder = textencoding.NewWinAnsiTextEncoder()
+	truefont.encoder = textencoding.NewWinAnsiEncoder()
 
 	truefont.basefont = ttf.PostScriptName
 	truefont.FirstChar = core.MakeInteger(int64(minCode))

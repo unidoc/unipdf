@@ -9,44 +9,88 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// ApplyDifferences modifies or wraps the base encoding and overlays differences over it.
-func ApplyDifferences(base SimpleEncoder, differences map[CharCode]GlyphName) SimpleEncoder {
-	if enc, ok := base.(*simpleEncoder); ok {
-		enc.applyDifferences(differences)
-		return enc
+// FromFontDifferences converts `diffList` (a /Differences array from an /Encoding object) to a map
+// representing character code to glyph mappings.
+func FromFontDifferences(diffList *core.PdfObjectArray) (map[CharCode]GlyphName, error) {
+	differences := make(map[CharCode]GlyphName)
+	var n CharCode
+	for _, obj := range diffList.Elements() {
+		switch v := obj.(type) {
+		case *core.PdfObjectInteger:
+			n = CharCode(*v)
+		case *core.PdfObjectName:
+			s := string(*v)
+			differences[n] = GlyphName(s)
+			n++
+		default:
+			common.Log.Debug("ERROR: Bad type. obj=%s", obj)
+			return nil, core.ErrTypeError
+		}
 	}
-	return newDifferencesEncoding(base, differences)
+	return differences, nil
 }
 
-func newDifferencesEncoding(base SimpleEncoder, differences map[CharCode]GlyphName) SimpleEncoder {
+// toFontDifferences converts `differences` (a map representing character code to glyph mappings)
+// to a /Differences array for an /Encoding object.
+func toFontDifferences(differences map[CharCode]GlyphName) *core.PdfObjectArray {
+	if len(differences) == 0 {
+		return nil
+	}
+
+	codes := make([]CharCode, 0, len(differences))
+	for c := range differences {
+		codes = append(codes, c)
+	}
+	sort.Slice(codes, func(i, j int) bool {
+		return codes[i] < codes[j]
+	})
+
+	n := codes[0]
+	diffList := []core.PdfObject{core.MakeInteger(int64(n)), core.MakeName(string(differences[n]))}
+	for _, c := range codes[1:] {
+		if c == n+1 {
+			diffList = append(diffList, core.MakeName(string(differences[c])))
+		} else {
+			diffList = append(diffList, core.MakeInteger(int64(c)))
+		}
+		n = c
+	}
+	return core.MakeArray(diffList...)
+}
+
+// ApplyDifferences modifies or wraps the base encoding and overlays differences over it.
+func ApplyDifferences(base SimpleEncoder, differences map[CharCode]GlyphName) SimpleEncoder {
 	// TODO(dennwc): check if it's a differencesEncoding, and merge the mapping
 	d := &differencesEncoding{
 		base:        base,
 		differences: differences,
-		code2rune:   make(map[CharCode]rune),
-		rune2code:   make(map[rune]CharCode),
+		decode:      make(map[byte]rune),
+		encode:      make(map[rune]byte),
 	}
 	for code, glyph := range differences {
+		b := byte(code)
 		r, ok := GlyphToRune(glyph)
 		if ok {
-			d.rune2code[r] = code
+			d.encode[r] = b
 		} else {
 			common.Log.Debug("ERROR: No match for glyph=%q differences=%+v", glyph, differences)
 		}
-		d.code2rune[code] = r
+		d.decode[b] = r
 	}
 	return d
 }
 
 // differencesEncoding remaps characters of a base encoding and act as a pass-trough for other characters.
+// Assumes that an underlying encoding is 8 bit.
 type differencesEncoding struct {
 	base SimpleEncoder
 
 	// original mapping to encode to PDF
 	differences map[CharCode]GlyphName
-	// overlayed on top of base encoding
-	code2rune map[CharCode]rune
-	rune2code map[rune]CharCode
+
+	// overlayed on top of base encoding (8 bit)
+	decode map[byte]rune
+	encode map[rune]byte
 }
 
 // BaseName returns base encoding name.
@@ -63,8 +107,13 @@ func (enc *differencesEncoding) String() string {
 func (enc *differencesEncoding) Charcodes() []CharCode {
 	codes := enc.base.Charcodes()
 	sorted := true
+	seen := make(map[CharCode]struct{}, len(codes))
 	for _, code := range codes {
-		if _, ok := enc.code2rune[code]; !ok {
+		seen[code] = struct{}{}
+	}
+	for b := range enc.decode {
+		code := CharCode(b)
+		if _, ok := seen[code]; !ok {
 			codes = append(codes, code)
 			sorted = false
 		}
@@ -93,8 +142,8 @@ func (enc *differencesEncoding) Encode(raw string) []byte {
 // RuneToCharcode returns the PDF character code corresponding to rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc *differencesEncoding) RuneToCharcode(r rune) (CharCode, bool) {
-	if code, ok := enc.rune2code[r]; ok {
-		return code, true
+	if b, ok := enc.encode[r]; ok {
+		return CharCode(b), true
 	}
 	return enc.base.RuneToCharcode(r)
 }
@@ -102,7 +151,11 @@ func (enc *differencesEncoding) RuneToCharcode(r rune) (CharCode, bool) {
 // CharcodeToRune returns the rune corresponding to character code `code`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc *differencesEncoding) CharcodeToRune(code CharCode) (rune, bool) {
-	if r, ok := enc.code2rune[code]; ok {
+	if code > 0xff {
+		return MissingCodeRune, false
+	}
+	b := byte(code)
+	if r, ok := enc.decode[b]; ok {
 		return r, true
 	}
 	return enc.base.CharcodeToRune(code)
@@ -114,12 +167,7 @@ func (enc *differencesEncoding) CharcodeToGlyph(code CharCode) (GlyphName, bool)
 	if glyph, ok := enc.differences[code]; ok {
 		return glyph, true
 	}
-	// TODO(dennwc): only redirects the call - remove from the interface
-	r, ok := enc.CharcodeToRune(code)
-	if !ok {
-		return "", false
-	}
-	return enc.RuneToGlyph(r)
+	return enc.base.CharcodeToGlyph(code)
 }
 
 // GlyphToCharcode returns character code for glyph `glyph`.
@@ -143,14 +191,25 @@ func (enc *differencesEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc *differencesEncoding) RuneToGlyph(r rune) (GlyphName, bool) {
 	// TODO(dennwc): should be in the font interface
-	return runeToGlyph(r, glyphlistRuneToGlyphMap)
+	code, ok := enc.RuneToCharcode(r)
+	if !ok {
+		return "", false
+	}
+	if glyph, ok := enc.differences[code]; ok {
+		return glyph, true
+	}
+	return enc.base.RuneToGlyph(r)
 }
 
 // GlyphToRune returns the rune corresponding to glyph `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc *differencesEncoding) GlyphToRune(glyph GlyphName) (rune, bool) {
 	// TODO(dennwc): should be in the font interface
-	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
+	code, ok := enc.GlyphToCharcode(glyph)
+	if !ok {
+		return MissingCodeRune, false
+	}
+	return enc.CharcodeToRune(code)
 }
 
 // ToPdfObject returns the encoding as a PdfObject.

@@ -5,7 +5,6 @@
 package model
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -84,8 +83,8 @@ endobj
 			t.Errorf("Failed: %v", err)
 			return
 		}
-		fmt.Println(testcase)
-		fmt.Println(outputs)
+		t.Log(testcase)
+		t.Log(outputs)
 
 		if len(outputs) != len(testcase.Expected) {
 			t.Errorf("Failed, output length mismatch")
@@ -99,5 +98,5 @@ endobj
 		}
 	}
 
-	fmt.Printf("%s", stream.Stream)
+	t.Logf("%s", stream.Stream)
 }

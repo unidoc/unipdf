@@ -119,7 +119,8 @@ func TestNewStandard14Font(t *testing.T) {
 		"Courier": {
 			subtype:     "Type1",
 			basefont:    "Courier",
-			CharMetrics: fonts.CharMetrics{Wx: 600}},
+			CharMetrics: fonts.CharMetrics{Wx: 600},
+		},
 	}
 
 	for in, expect := range tests {
@@ -769,30 +770,31 @@ endobj
 		255: `/ydieresis`,
 	}
 
-	for ccode := textencoding.CharCode(32); ccode < 255; ccode++ {
-		fontglyph, has := font.Encoder().CharcodeToGlyph(ccode)
+	enc := font.Encoder()
+	for code := textencoding.CharCode(32); code < 255; code++ {
+		fontglyph, has := enc.CharcodeToGlyph(code)
 		if !has {
-			baseglyph, bad := baseEncoding.CharcodeToGlyph(ccode)
+			baseglyph, bad := baseEncoding.CharcodeToGlyph(code)
 			if bad {
-				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", ccode, baseglyph)
+				t.Fatalf("font not having glyph for char code %d - whereas base encoding had '%s'", code, baseglyph)
 			}
 		}
 
 		// Check if in differencesmap first.
-		glyph, has := differencesMap[ccode]
+		glyph, has := differencesMap[code]
 		if has {
 			glyph = textencoding.GlyphName(strings.Trim(string(glyph), `/`))
 			if glyph != fontglyph {
-				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", ccode, fontglyph, glyph)
+				t.Fatalf("Mismatch for char code %d, font has: %s and expected is: %s (differences)", code, fontglyph, glyph)
 			}
 
 			continue
 		}
 
 		// If not in differences, should be according to StandardEncoding (base).
-		glyph, has = baseEncoding.CharcodeToGlyph(ccode)
+		glyph, has = baseEncoding.CharcodeToGlyph(code)
 		if has && glyph != fontglyph {
-			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (StandardEncoding)", ccode, ccode, fontglyph, glyph)
+			t.Fatalf("Mismatch for char code %d (%X), font has: %s and expected is: %s (StandardEncoding)", code, code, fontglyph, glyph)
 		}
 	}
 

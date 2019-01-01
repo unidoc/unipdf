@@ -78,7 +78,7 @@ type StdFont struct {
 
 // NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
 func NewStdFont(desc Descriptor, metrics map[GlyphName]CharMetrics) StdFont {
-	enc := textencoding.NewWinAnsiTextEncoder() // Default
+	enc := textencoding.NewWinAnsiEncoder() // Default
 	return NewStdFontWithEncoding(desc, metrics, enc)
 }
 

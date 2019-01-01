@@ -8,7 +8,7 @@ package textencoding
 import "testing"
 
 func TestWinAnsiEncoder(t *testing.T) {
-	enc := NewWinAnsiTextEncoder()
+	enc := NewWinAnsiEncoder()
 
 	glyph, found := enc.CharcodeToGlyph(32)
 	if !found || glyph != "space" {
