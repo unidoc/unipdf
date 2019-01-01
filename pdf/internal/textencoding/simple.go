@@ -224,7 +224,7 @@ func (enc *simpleEncoding) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
 	if !ok {
 		return "", false
 	}
-	return enc.RuneToGlyph(r)
+	return runeToGlyph(r, glyphlistRuneToGlyphMap)
 }
 
 func (enc *simpleEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
@@ -234,16 +234,6 @@ func (enc *simpleEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 		return MissingCodeRune, false
 	}
 	return enc.RuneToCharcode(r)
-}
-
-func (enc *simpleEncoding) RuneToGlyph(r rune) (GlyphName, bool) {
-	// TODO(dennwc): should be in the font interface
-	return runeToGlyph(r, glyphlistRuneToGlyphMap)
-}
-
-func (enc *simpleEncoding) GlyphToRune(glyph GlyphName) (rune, bool) {
-	// TODO(dennwc): should be in the font interface
-	return glyphToRune(glyph, glyphlistGlyphToRuneMap)
 }
 
 func (enc *simpleEncoding) ToPdfObject() core.PdfObject {

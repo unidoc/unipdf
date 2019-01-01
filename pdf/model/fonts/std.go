@@ -103,7 +103,12 @@ func (font StdFont) Encoder() textencoding.TextEncoder {
 
 // GetRuneMetrics returns character metrics for a given rune.
 func (font StdFont) GetRuneMetrics(r rune) (CharMetrics, bool) {
-	glyph, has := font.encoder.RuneToGlyph(r)
+	// TODO(dennwc): rebuild tables for runes instead of glyphs
+	code, has := font.encoder.RuneToCharcode(r)
+	if !has {
+		return CharMetrics{}, false
+	}
+	glyph, has := font.encoder.CharcodeToGlyph(code)
 	if !has {
 		return CharMetrics{}, false
 	}

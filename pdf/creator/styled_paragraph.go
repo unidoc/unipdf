@@ -659,16 +659,11 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				fontSize = style.FontSize
 				spaceWidth = spaceMetrics.Wx
 			}
+			enc := style.Font.Encoder()
 
 			var encStr []byte
 			for _, rn := range chunk.Text {
-				glyph, found := style.Font.Encoder().RuneToGlyph(rn)
-				if !found {
-					common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-					return ctx, errors.New("unsupported rune in text encoding")
-				}
-
-				if glyph == "space" {
+				if rn == ' ' {
 					if len(encStr) > 0 {
 						cc.Add_rg(r, g, b).
 							Add_Tf(fonts[idx][k], style.FontSize).
@@ -684,7 +679,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 					chunkWidths[k] += spaceWidth * fontSize
 				} else {
-					encStr = append(encStr, style.Font.Encoder().Encode(string(rn))...)
+					encStr = append(encStr, enc.Encode(string(rn))...)
 				}
 			}
 

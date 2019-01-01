@@ -187,31 +187,6 @@ func (enc *differencesEncoding) GlyphToCharcode(glyph GlyphName) (CharCode, bool
 	return enc.RuneToCharcode(r)
 }
 
-// RuneToGlyph returns the glyph corresponding to rune `r`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc *differencesEncoding) RuneToGlyph(r rune) (GlyphName, bool) {
-	// TODO(dennwc): should be in the font interface
-	code, ok := enc.RuneToCharcode(r)
-	if !ok {
-		return "", false
-	}
-	if glyph, ok := enc.differences[code]; ok {
-		return glyph, true
-	}
-	return enc.base.RuneToGlyph(r)
-}
-
-// GlyphToRune returns the rune corresponding to glyph `glyph`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc *differencesEncoding) GlyphToRune(glyph GlyphName) (rune, bool) {
-	// TODO(dennwc): should be in the font interface
-	code, ok := enc.GlyphToCharcode(glyph)
-	if !ok {
-		return MissingCodeRune, false
-	}
-	return enc.CharcodeToRune(code)
-}
-
 // ToPdfObject returns the encoding as a PdfObject.
 func (enc *differencesEncoding) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()

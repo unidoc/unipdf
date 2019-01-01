@@ -44,14 +44,6 @@ type TextEncoder interface {
 	// This is usually implemented as CharcodeToGlyph->GlyphToRune
 	CharcodeToRune(code CharCode) (rune, bool)
 
-	// RuneToGlyph returns the glyph name for rune `r`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	RuneToGlyph(r rune) (GlyphName, bool)
-
-	// GlyphToRune returns the rune corresponding to glyph name `glyph`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToRune(glyph GlyphName) (rune, bool)
-
 	// ToPdfObject returns a PDF Object that represents the encoding.
 	ToPdfObject() core.PdfObject
 }
@@ -92,24 +84,4 @@ func encodeString16bit(enc TextEncoder, raw string) []byte {
 		encoded = append(encoded, v[:]...)
 	}
 	return encoded
-}
-
-// doRuneToCharcode converts rune `r` to a PDF character code.
-// The bool return flag is true if there was a match, and false otherwise.
-func doRuneToCharcode(enc TextEncoder, r rune) (CharCode, bool) {
-	g, ok := enc.RuneToGlyph(r)
-	if !ok {
-		return 0, false
-	}
-	return enc.GlyphToCharcode(g)
-}
-
-// doCharcodeToRune converts PDF character code `code` to a rune.
-// The bool return flag is true if there was a match, and false otherwise.
-func doCharcodeToRune(enc TextEncoder, code CharCode) (rune, bool) {
-	g, ok := enc.CharcodeToGlyph(code)
-	if !ok {
-		return 0, false
-	}
-	return enc.GlyphToRune(g)
 }

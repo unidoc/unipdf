@@ -21,7 +21,7 @@ func TestWinAnsiEncoder(t *testing.T) {
 		return
 	}
 
-	glyph, found = enc.RuneToGlyph('þ')
+	glyph, found = RuneToGlyph('þ')
 	if !found || glyph != "thorn" {
 		t.Errorf("Glyph != thorn")
 		return

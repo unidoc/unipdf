@@ -136,38 +136,6 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	return 0, false
 }
 
-// RuneToGlyph returns the glyph name for rune `r`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
-	if r == ' ' {
-		return "space", true
-	}
-	// TODO(dennwc): this is wrong; font may override this with a "post" table that specifies glyph names
-	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
-	return glyph, true
-}
-
-// GlyphToRune returns the rune corresponding to glyph name `glyph`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
-	// TODO(dennwc): this is wrong; font may override this with a "post" table that specifies glyph names
-	// String with "uniXXXX" format where XXXX is the hexcode.
-	if len(glyph) == 7 && glyph[0:3] == "uni" {
-		unicode := uint16(0)
-		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
-		if n == 1 && err == nil {
-			return rune(unicode), true
-		}
-	}
-
-	// Look in glyphlist.
-	if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
-		return r, true
-	}
-
-	return 0, false
-}
-
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
 func (enc TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
 	// TODO(dennwc): reasonable question: why it have to implement this interface then?

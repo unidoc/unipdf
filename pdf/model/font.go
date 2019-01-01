@@ -96,11 +96,23 @@ func DefaultFont() *PdfFont {
 	return &PdfFont{context: &std}
 }
 
+func newStandard14Font(basefont fonts.StdFontName) (pdfFontSimple, error) {
+	fnt, ok := fonts.NewStdFontByName(basefont)
+	if !ok {
+		return pdfFontSimple{}, ErrFontNotSupported
+	}
+	std := stdFontToSimpleFont(fnt)
+	return std, nil
+}
+
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont fonts.StdFontName) (*PdfFont, error) {
-	std, _, err := NewStandard14FontWithEncoding(basefont, nil)
-	return std, err
+	std, err := newStandard14Font(basefont)
+	if err != nil {
+		return nil, err
+	}
+	return &PdfFont{context: &std}, nil
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
@@ -119,15 +131,16 @@ func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 // An error can occur if `basefont` is not one the standard 14 font names.
 func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont,
 	textencoding.SimpleEncoder, error) {
+
+	std, err := newStandard14Font(basefont)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO(dennwc): what if the font is Symbol and uses different encoding?
 	baseEncoder := "MacRomanEncoding"
 	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
 		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
-
-	fnt, ok := fonts.NewStdFontByName(basefont)
-	if !ok {
-		return nil, nil, ErrFontNotSupported
-	}
-	std := stdFontToSimpleFont(fnt)
 
 	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
 	if err != nil {
