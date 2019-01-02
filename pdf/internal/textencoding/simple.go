@@ -14,7 +14,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"golang.org/x/text/encoding"
-	"golang.org/x/text/transform"
+	xtransform "golang.org/x/text/transform"
 )
 
 // SimpleEncoder represents a 1 byte encoding.
@@ -121,7 +121,7 @@ type simpleDecoder struct {
 	m map[byte]rune
 }
 
-// Transform implements transform.Transformer.
+// Transform implements xtransform.Transformer.
 func (enc simpleDecoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, _ error) {
 	for len(src) != 0 {
 		b := src[0]
@@ -132,7 +132,7 @@ func (enc simpleDecoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 			r = MissingCodeRune
 		}
 		if utf8.RuneLen(r) > len(dst) {
-			return nDst, nSrc, transform.ErrShortDst
+			return nDst, nSrc, xtransform.ErrShortDst
 		}
 		n := utf8.EncodeRune(dst, r)
 		dst = dst[n:]
@@ -143,7 +143,7 @@ func (enc simpleDecoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 	return nDst, nSrc, nil
 }
 
-// Reset implements transform.Transformer.
+// Reset implements xtransform.Transformer.
 func (enc simpleDecoder) Reset() {}
 
 // NewEncoder implements encoding.Encoding.
@@ -155,13 +155,13 @@ type simpleEncoder struct {
 	m map[rune]byte
 }
 
-// Transform implements transform.Transformer.
+// Transform implements xtransform.Transformer.
 func (enc simpleEncoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, _ error) {
 	for len(src) != 0 {
 		if !utf8.FullRune(src) && !atEOF {
-			return nDst, nSrc, transform.ErrShortSrc
+			return nDst, nSrc, xtransform.ErrShortSrc
 		} else if len(dst) == 0 {
-			return nDst, nSrc, transform.ErrShortDst
+			return nDst, nSrc, xtransform.ErrShortDst
 		}
 		r, n := utf8.DecodeRune(src)
 		if r == utf8.RuneError {
@@ -182,7 +182,7 @@ func (enc simpleEncoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 	return nDst, nSrc, nil
 }
 
-// Reset implements transform.Transformer.
+// Reset implements xtransform.Transformer.
 func (enc simpleEncoder) Reset() {}
 
 // String returns a text representation of encoding.
