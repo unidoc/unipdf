@@ -38,7 +38,6 @@ node {
             sh '(golint ./... >golint.txt 2>&1) || true'
         }
 
-
         stage('Testing') {
             // Go test - No tolerance.
             sh "rm -f ${env.TMPDIR}/*.pdf"
@@ -52,10 +51,10 @@ node {
 
         stage('Test coverage') {
             sh 'go test -coverprofile=coverage.out ./...'
+            sh '/home/jenkins/codecov.sh'
             sh 'gocover-cobertura < coverage.out > coverage.xml'
             step([$class: 'CoberturaPublisher', coberturaReportFile: 'coverage.xml'])
         }
-
 
         stage('Post') {
             // Assemble vet and lint info.
