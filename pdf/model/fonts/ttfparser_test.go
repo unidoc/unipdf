@@ -80,7 +80,7 @@ func TestTTFParse(t *testing.T) {
 		t.Run(c.path, func(t *testing.T) {
 			path := filepath.Join(fontDir, c.path)
 
-			ft, err := TtfParse(path)
+			ft, err := TtfParseFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
