@@ -350,7 +350,7 @@ func (to *textObject) moveTextSetLeading(tx, ty float64) {
 	to.moveTo(tx, ty)
 }
 
-// nextLine "T*"" Moves start of text `textLine` to next text line
+// nextLine "T*"" Moves start of text line to next text line
 // Move to the start of the next line. This operator has the same effect as the code
 //    0 -Tl Td
 // where Tl denotes the current leading parameter in the text state. The negative of Tl is used
@@ -732,7 +732,7 @@ func (to *textObject) renderText(data []byte) error {
 		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.tc, w, state.tw)
 		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.tm).Mult(to.gs.CTM))
 
-		xyt := to.newtextMark(
+		xyt := to.newTextMark(
 			string(r),
 			trm,
 			translation(td0.Mult(to.tm).Mult(to.gs.CTM)),
@@ -783,10 +783,10 @@ type textMark struct {
 	count         int64           // To help with reading debug logs.
 }
 
-// newtextMark returns an textMark for text `text` rendered with text rendering matrix (TRM) `trm` and end
+// newTextMark returns an textMark for text `text` rendered with text rendering matrix (TRM) `trm` and end
 // of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
 // the font the text is rendered in device coordinates.
-func (to *textObject) newtextMark(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) textMark {
+func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
