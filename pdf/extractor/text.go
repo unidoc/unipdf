@@ -30,28 +30,28 @@ func (e *Extractor) ExtractText() (string, error) {
 	return text, err
 }
 
-// ExtractTextWithStats works like ExtractText but returns the number of characters in the output (`numChars`) and the
-// the number of characters that were not decoded (`numMisses`).
+// ExtractTextWithStats works like ExtractText but returns the number of characters in the output
+// (`numChars`) and the number of characters that were not decoded (`numMisses`).
 func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numMisses int, err error) {
-	textList, numChars, numMisses, err := e.ExtractTextList()
+	pageText, numChars, numMisses, err := e.ExtractPageText()
 	if err != nil {
 		return "", numChars, numMisses, err
 	}
-	return textList.ToText(), numChars, numMisses, nil
+	return pageText.ToText(), numChars, numMisses, nil
 }
 
-// ExtractTextList returns the text contents of `e` (an Extractor for a page) as a TextList.
-func (e *Extractor) ExtractTextList() (*TextList, int, int, error) {
-	return e.extractTextList(e.contents, e.resources, 0)
+// ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
+func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
+	return e.extractPageText(e.contents, e.resources, 0)
 }
 
-// extractTextList returns the text contents of content stream `e` and resouces `resources` as a
-// TextList.
+// extractPageText returns the text contents of content stream `e` and resouces `resources` as a
+// PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractTextList(contents string, resources *model.PdfPageResources, level int) (*TextList, int, int, error) {
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (*PageText, int, int, error) {
 
-	common.Log.Trace("extractTextList: level=%d", level)
-	textList := &TextList{}
+	common.Log.Trace("extractPageText: level=%d", level)
+	pageText := &PageText{}
 	state := newTextState()
 	fontStack := fontStacker{}
 	var to *textObject
@@ -59,8 +59,8 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
-		common.Log.Debug("ERROR: extractTextList parse failed. err=%v", err)
-		return textList, state.numChars, state.numMisses, err
+		common.Log.Debug("ERROR: extractPageText parse failed. err=%v", err)
+		return pageText, state.numChars, state.numMisses, err
 	}
 
 	processor := contentstream.NewContentStreamProcessor(*operations)
@@ -103,7 +103,7 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 				}
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
-				(*textList).marks = append((*textList).marks, to.marks...)
+				(*pageText).marks = append((*pageText).marks, to.marks...)
 				to = nil
 			case "T*": // Move to start of next text line
 				to.nextLine()
@@ -297,7 +297,7 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 					if formResources == nil {
 						formResources = resources
 					}
-					tList, numChars, numMisses, err := e.extractTextList(string(formContent),
+					tList, numChars, numMisses, err := e.extractPageText(string(formContent),
 						formResources, level+1)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
@@ -307,7 +307,7 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 					e.formResults[string(name)] = formResult
 				}
 
-				(*textList).marks = append((*textList).marks, formResult.textList.marks...)
+				(*pageText).marks = append((*pageText).marks, formResult.pageText.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
 			}
@@ -318,11 +318,11 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
-	return textList, state.numChars, state.numMisses, err
+	return pageText, state.numChars, state.numMisses, err
 }
 
 type textResult struct {
-	textList  TextList
+	pageText  PageText
 	numChars  int
 	numMisses int
 }
@@ -827,31 +827,31 @@ func (t textMark) Width() float64 {
 	return math.Abs(t.orientedStart.X - t.orientedEnd.X)
 }
 
-// TextList represents the layout of text on a device page.
+// PageText represents the layout of text on a device page.
 // It's implementation is opaque to allow for future optimizations.
-type TextList struct {
-	// TextList is currently implemented as a list of texts and their positions on a PDF page.
+type PageText struct {
+	// PageText is currently implemented as a list of texts and their positions on a PDF page.
 	marks []textMark
 }
 
-// String returns a string describing `tl`.
-func (tl TextList) String() string {
-	parts := []string{fmt.Sprintf("TextList: %d elements", tl.length())}
-	for _, t := range tl.marks {
+// String returns a string describing `pt`.
+func (pt PageText) String() string {
+	parts := []string{fmt.Sprintf("PageText: %d elements", pt.length())}
+	for _, t := range pt.marks {
 		parts = append(parts, t.String())
 	}
 	return strings.Join(parts, "\n")
 }
 
-// length returns the number of elements in `tl.marks`.
-func (tl TextList) length() int {
-	return len(tl.marks)
+// length returns the number of elements in `pt.marks`.
+func (pt PageText) length() int {
+	return len(pt.marks)
 }
 
-// height returns the max height of the elements in `tl.marks`.
-func (tl TextList) height() float64 {
+// height returns the max height of the elements in `pt.marks`.
+func (pt PageText) height() float64 {
 	fontHeight := 0.0
-	for _, t := range tl.marks {
+	for _, t := range pt.marks {
 		if t.height > fontHeight {
 			fontHeight = t.height
 		}
@@ -859,19 +859,19 @@ func (tl TextList) height() float64 {
 	return fontHeight
 }
 
-// ToText returns the contents of `tl` as a single string.
-func (tl TextList) ToText() string {
-	fontHeight := tl.height()
+// ToText returns the contents of `pt` as a single string.
+func (pt PageText) ToText() string {
+	fontHeight := pt.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
-	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(tl.marks), fontHeight, tol)
+	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
 
 	// Uncomment the 2 following Trace statements to see the effects of sorting/
-	// common.Log.Trace("ToText: Before sorting %s", tl)
-	tl.sortPosition(tol)
-	// common.Log.Trace("ToText: After sorting %s", tl)
+	// common.Log.Trace("ToText: Before sorting %s", pt)
+	pt.sortPosition(tol)
+	// common.Log.Trace("ToText: After sorting %s", pt)
 
-	lines := tl.toLines(tol)
+	lines := pt.toLines(tol)
 	texts := make([]string, 0, len(lines))
 	for _, l := range lines {
 		texts = append(texts, l.text)
@@ -882,9 +882,9 @@ func (tl TextList) ToText() string {
 // sortPosition sorts a text list by its elements' position on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
-func (tl *TextList) sortPosition(tol float64) {
-	sort.SliceStable((*tl).marks, func(i, j int) bool {
-		ti, tj := (*tl).marks[i], (*tl).marks[j]
+func (pt *PageText) sortPosition(tol float64) {
+	sort.SliceStable((*pt).marks, func(i, j int) bool {
+		ti, tj := (*pt).marks[i], (*pt).marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
@@ -903,44 +903,44 @@ type textLine struct {
 	words  []string  // words in the line.
 }
 
-// toLines returns the text and positions in `tl.marks` as a slice of textLine.
+// toLines returns the text and positions in `pt.marks` as a slice of textLine.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLines(tol float64) []textLine {
-	// We divide `tl.marks` into slices which contain texts with the same orientation, extract the lines
+func (pt PageText) toLines(tol float64) []textLine {
+	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the lines
 	// for each orientation then return the concatention of these lines sorted by orientation.
-	tlOrient := make(map[int][]textMark, len(tl.marks))
-	for _, t := range tl.marks {
+	tlOrient := make(map[int][]textMark, len(pt.marks))
+	for _, t := range pt.marks {
 		tlOrient[t.orient] = append(tlOrient[t.orient], t)
 	}
 	var lines []textLine
 	for _, o := range orientKeys(tlOrient) {
-		lines = append(lines, TextList{tlOrient[o]}.toLinesOrient(tol)...)
+		lines = append(lines, PageText{tlOrient[o]}.toLinesOrient(tol)...)
 	}
 	return lines
 }
 
-// toLinesOrient returns the text and positions in `tl.marks` as a slice of textLine.
+// toLinesOrient returns the text and positions in `pt.marks` as a slice of textLine.
 // NOTE: This function only works on text lists where all text is the same orientation so it should
 // only be called from toLines.
 // Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
-func (tl TextList) toLinesOrient(tol float64) []textLine {
-	if len(tl.marks) == 0 {
+func (pt PageText) toLinesOrient(tol float64) []textLine {
+	if len(pt.marks) == 0 {
 		return []textLine{}
 	}
 	var lines []textLine
 	var words []string
 	var x []float64
-	y := tl.marks[0].orientedStart.Y
+	y := pt.marks[0].orientedStart.Y
 
 	scanning := false
 
 	averageCharWidth := exponAve{}
 	wordSpacing := exponAve{}
-	lastEndX := 0.0 // lastEndX is tl.marks[i-1].orientedEnd.X
+	lastEndX := 0.0 // lastEndX is pt.marks[i-1].orientedEnd.X
 
-	for _, t := range tl.marks {
+	for _, t := range pt.marks {
 		if t.orientedStart.Y+tol < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
