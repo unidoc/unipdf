@@ -103,7 +103,7 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 				}
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
-				*textList = append(*textList, to.textList...)
+				(*textList).marks = append((*textList).marks, to.marks...)
 				to = nil
 			case "T*": // Move to start of next text line
 				to.nextLine()
@@ -259,7 +259,6 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 				if err != nil {
 					common.Log.Debug("ERROR: err=%v", err)
 					return err
-
 				}
 				to.setWordSpacing(y)
 			case "Tz": // Set horizontal scaling.
@@ -308,7 +307,7 @@ func (e *Extractor) extractTextList(contents string, resources *model.PdfPageRes
 					e.formResults[string(name)] = formResult
 				}
 
-				*textList = append(*textList, formResult.textList...)
+				(*textList).marks = append((*textList).marks, formResult.textList.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
 			}
@@ -628,7 +627,7 @@ type textObject struct {
 	state     *textState
 	tm        transform.Matrix // Text matrix. For the character pointer.
 	tlm       transform.Matrix // Text line matrix. For the start of line pointer.
-	textList  TextList         // Text gets written here.
+	marks     []textMark       // Text marks get written here.
 }
 
 // newTextState returns a default textState.
@@ -732,13 +731,13 @@ func (to *textObject) renderText(data []byte) error {
 		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.tc, w, state.tw)
 		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.tm).Mult(to.gs.CTM))
 
-		xyt := to.newTextMark(
+		mark := to.newTextMark(
 			string(r),
 			trm,
 			translation(td0.Mult(to.tm).Mult(to.gs.CTM)),
 			spaceWidth*trm.ScalingFactorX())
-		common.Log.Trace("i=%d code=%d xyt=%s trm=%s", i, code, xyt, trm)
-		to.textList = append(to.textList, xyt)
+		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
+		to.marks = append(to.marks, mark)
 
 		// update the text matrix by the displacement of the text location.
 		to.tm = td.Mult(to.tm)
@@ -819,7 +818,6 @@ func nearestMultiple(x float64, m int) int {
 
 // String returns a string describing `t`.
 func (t textMark) String() string {
-
 	return fmt.Sprintf("textMark{@%03d [%.3f,%.3f] %.1f %d° %q}",
 		t.count, t.orientedStart.X, t.orientedStart.Y, t.Width(), t.orient, truncate(t.text, 100))
 }
@@ -829,27 +827,31 @@ func (t textMark) Width() float64 {
 	return math.Abs(t.orientedStart.X - t.orientedEnd.X)
 }
 
-// TextList is a list of texts and their positions on a PDF page.
-type TextList []textMark
+// TextList represents the layout of text on a device page.
+// It's implementation is opaque to allow for future optimizations.
+type TextList struct {
+	// TextList is currently implemented as a list of texts and their positions on a PDF page.
+	marks []textMark
+}
 
 // String returns a string describing `tl`.
 func (tl TextList) String() string {
 	parts := []string{fmt.Sprintf("TextList: %d elements", tl.length())}
-	for _, t := range tl {
+	for _, t := range tl.marks {
 		parts = append(parts, t.String())
 	}
 	return strings.Join(parts, "\n")
 }
 
-// Length returns the number of elements in `tl`.
+// length returns the number of elements in `tl.marks`.
 func (tl TextList) length() int {
-	return len(tl)
+	return len(tl.marks)
 }
 
-// height returns the max height of the elements in `tl`.
+// height returns the max height of the elements in `tl.marks`.
 func (tl TextList) height() float64 {
 	fontHeight := 0.0
-	for _, t := range tl {
+	for _, t := range tl.marks {
 		if t.height > fontHeight {
 			fontHeight = t.height
 		}
@@ -862,7 +864,7 @@ func (tl TextList) ToText() string {
 	fontHeight := tl.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
-	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(tl), fontHeight, tol)
+	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(tl.marks), fontHeight, tol)
 
 	// Uncomment the 2 following Trace statements to see the effects of sorting/
 	// common.Log.Trace("ToText: Before sorting %s", tl)
@@ -881,8 +883,8 @@ func (tl TextList) ToText() string {
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (tl *TextList) sortPosition(tol float64) {
-	sort.SliceStable(*tl, func(i, j int) bool {
-		ti, tj := (*tl)[i], (*tl)[j]
+	sort.SliceStable((*tl).marks, func(i, j int) bool {
+		ti, tj := (*tl).marks[i], (*tl).marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
@@ -901,44 +903,44 @@ type textLine struct {
 	words  []string  // words in the line.
 }
 
-// toLines returns the text and positions in `tl` as a slice of textLine.
+// toLines returns the text and positions in `tl.marks` as a slice of textLine.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLines(tol float64) []textLine {
-	// We divide `tl` into slices which contain texts with the same orientation, extract the lines
+	// We divide `tl.marks` into slices which contain texts with the same orientation, extract the lines
 	// for each orientation then return the concatention of these lines sorted by orientation.
-	tlOrient := make(map[int]TextList, len(tl))
-	for _, t := range tl {
+	tlOrient := make(map[int][]textMark, len(tl.marks))
+	for _, t := range tl.marks {
 		tlOrient[t.orient] = append(tlOrient[t.orient], t)
 	}
 	var lines []textLine
 	for _, o := range orientKeys(tlOrient) {
-		lines = append(lines, tlOrient[o].toLinesOrient(tol)...)
+		lines = append(lines, TextList{tlOrient[o]}.toLinesOrient(tol)...)
 	}
 	return lines
 }
 
-// toLinesOrient returns the text and positions in `tl` as a slice of textLine.
+// toLinesOrient returns the text and positions in `tl.marks` as a slice of textLine.
 // NOTE: This function only works on text lists where all text is the same orientation so it should
 // only be called from toLines.
 // Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (tl TextList) toLinesOrient(tol float64) []textLine {
-	if len(tl) == 0 {
+	if len(tl.marks) == 0 {
 		return []textLine{}
 	}
 	var lines []textLine
 	var words []string
 	var x []float64
-	y := tl[0].orientedStart.Y
+	y := tl.marks[0].orientedStart.Y
 
 	scanning := false
 
 	averageCharWidth := exponAve{}
 	wordSpacing := exponAve{}
-	lastEndX := 0.0 // lastEndX is tl[i-1].orientedEnd.X
+	lastEndX := 0.0 // lastEndX is tl.marks[i-1].orientedEnd.X
 
-	for _, t := range tl {
+	for _, t := range tl.marks {
 		if t.orientedStart.Y+tol < y {
 			if len(words) > 0 {
 				line := newLine(y, x, words)
@@ -1005,7 +1007,7 @@ func (tl TextList) toLinesOrient(tol float64) []textLine {
 }
 
 // orientKeys returns the keys of `tlOrient` as a sorted slice.
-func orientKeys(tlOrient map[int]TextList) []int {
+func orientKeys(tlOrient map[int][]textMark) []int {
 	keys := []int{}
 	for k := range tlOrient {
 		keys = append(keys, k)
