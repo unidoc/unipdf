@@ -883,8 +883,8 @@ func (pt PageText) ToText() string {
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (pt *PageText) sortPosition(tol float64) {
-	sort.SliceStable((*pt).marks, func(i, j int) bool {
-		ti, tj := (*pt).marks[i], (*pt).marks[j]
+	sort.SliceStable(pt.marks, func(i, j int) bool {
+		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
