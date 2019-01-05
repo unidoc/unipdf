@@ -178,15 +178,20 @@ func NewFontFile2FromPdfObject(obj core.PdfObject) (TtfType, error) {
 	return t.Parse()
 }
 
-// TtfParse returns a TtfType describing the TrueType font file in disk file `fileStr`.
-func TtfParse(fileStr string) (TtfType, error) {
+// TtfParseFile returns a TtfType describing the TrueType font file in disk file `fileStr`.
+func TtfParseFile(fileStr string) (TtfType, error) {
 	f, err := os.Open(fileStr)
 	if err != nil {
 		return TtfType{}, err
 	}
 	defer f.Close()
 
-	t := ttfParser{f: f}
+	return TtfParse(f)
+}
+
+// TtfParse returns a TtfType describing the TrueType font.
+func TtfParse(r io.ReadSeeker) (TtfType, error) {
+	t := &ttfParser{f: r}
 	return t.Parse()
 }
 

@@ -386,7 +386,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	const minCode = textencoding.CharCode(32)
 	const maxCode = textencoding.CharCode(255)
 
-	ttf, err := fonts.TtfParse(filePath)
+	ttf, err := fonts.TtfParseFile(filePath)
 	if err != nil {
 		common.Log.Debug("ERROR: loading ttf font: %v", err)
 		return nil, err

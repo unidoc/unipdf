@@ -165,7 +165,19 @@ func NewPdfFontFromPdfObject(fontObj core.PdfObject) (*PdfFont, error) {
 func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont, error) {
 	d, base, err := newFontBaseFieldsFromPdfObject(fontObj)
 	if err != nil {
-		return nil, err
+		// In the case of not yet supported fonts, we attempt to return enough information in the
+		// font for the caller to see some font properties.
+		// TODO(peterwilliams97): Add support for these fonts and remove this special error handling.
+		if err == ErrType3FontNotSupported || err == ErrType1CFontNotSupported {
+			simplefont, err2 := newSimpleFontFromPdfObject(d, base, nil)
+			if err2 != nil {
+				common.Log.Debug("ERROR: While loading simple font: font=%s err=%v", base, err2)
+				return nil, err
+			}
+			return &PdfFont{context: simplefont}, err
+		} else {
+			return nil, err
+		}
 	}
 
 	font := &PdfFont{}
@@ -652,14 +664,14 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 	}
 
 	if subtype == "Type3" {
-		common.Log.Debug("ERROR: Type 3 font not supprted. d=%s", d)
-		return nil, nil, ErrFontNotSupported
+		common.Log.Debug("ERROR: Type 3 font not supported. d=%s", d)
+		return d, font, ErrType3FontNotSupported
 	}
 
 	basefont, ok := core.GetNameVal(d.Get("BaseFont"))
 	if !ok {
 		common.Log.Debug("ERROR: Font Incompatibility. BaseFont (Required) missing")
-		return nil, nil, ErrRequiredAttributeMissing
+		return d, font, ErrRequiredAttributeMissing
 	}
 	font.basefont = basefont
 
@@ -668,7 +680,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		fontDescriptor, err := newPdfFontDescriptorFromPdfObject(obj)
 		if err != nil {
 			common.Log.Debug("ERROR: Bad font descriptor. err=%v", err)
-			return nil, nil, err
+			return d, font, err
 		}
 		font.fontDescriptor = fontDescriptor
 	}
@@ -678,7 +690,7 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 		font.toUnicode = core.TraceToDirectObject(toUnicode)
 		codemap, err := toUnicodeToCmap(font.toUnicode, font)
 		if err != nil {
-			return nil, nil, err
+			return d, font, err
 		}
 		font.toUnicodeCmap = codemap
 	}

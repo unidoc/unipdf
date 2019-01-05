@@ -6,6 +6,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -468,7 +469,12 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 // TODO: May be extended in the future to support a larger variety of CMaps and vertical fonts.
 func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	// Load the truetype font data.
-	ttf, err := fonts.TtfParse(filePath)
+	ttfBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		common.Log.Debug("ERROR: while reading ttf font: %v", err)
+		return nil, err
+	}
+	ttf, err := fonts.TtfParse(bytes.NewReader(ttfBytes))
 	if err != nil {
 		common.Log.Debug("ERROR: while loading ttf font: %v", err)
 		return nil, err
@@ -543,12 +549,6 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	}
 
 	// Embed the TrueType font program.
-	ttfBytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		common.Log.Debug("ERROR: Unable to read file contents: %v", err)
-		return nil, err
-	}
-
 	stream, err := core.MakeStream(ttfBytes, core.NewFlateEncoder())
 	if err != nil {
 		common.Log.Debug("ERROR: Unable to make stream: %v", err)
