@@ -72,18 +72,18 @@ var _ Font = StdFont{}
 // StdFont represents one of the built-in fonts and it is assumed that every reader has access to it.
 type StdFont struct {
 	desc    Descriptor
-	metrics map[GlyphName]CharMetrics
-	encoder *textencoding.SimpleEncoder
+	metrics map[rune]CharMetrics
+	encoder textencoding.TextEncoder
 }
 
 // NewStdFont returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewStdFont(desc Descriptor, metrics map[GlyphName]CharMetrics) StdFont {
-	enc := textencoding.NewWinAnsiTextEncoder() // Default
+func NewStdFont(desc Descriptor, metrics map[rune]CharMetrics) StdFont {
+	enc := textencoding.NewWinAnsiEncoder() // Default
 	return NewStdFontWithEncoding(desc, metrics, enc)
 }
 
 // NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
-func NewStdFontWithEncoding(desc Descriptor, metrics map[GlyphName]CharMetrics, encoder *textencoding.SimpleEncoder) StdFont {
+func NewStdFontWithEncoding(desc Descriptor, metrics map[rune]CharMetrics, encoder textencoding.TextEncoder) StdFont {
 	return StdFont{
 		desc:    desc,
 		metrics: metrics,
@@ -98,27 +98,18 @@ func (font StdFont) Name() string {
 
 // Encoder returns the font's text encoder.
 func (font StdFont) Encoder() textencoding.TextEncoder {
-	return font.SimpleEncoder()
-}
-
-// SimpleEncoder returns the font's text encoder.
-func (font StdFont) SimpleEncoder() *textencoding.SimpleEncoder {
 	return font.encoder
 }
 
 // GetRuneMetrics returns character metrics for a given rune.
 func (font StdFont) GetRuneMetrics(r rune) (CharMetrics, bool) {
-	glyph, has := font.encoder.RuneToGlyph(r)
-	if !has {
-		return CharMetrics{}, false
-	}
-	metrics, has := font.metrics[glyph]
-	return metrics, true
+	metrics, has := font.metrics[r]
+	return metrics, has
 }
 
 // GetMetricsTable is a method specific to standard fonts. It returns the metrics table of all glyphs.
 // Caller should not modify the table.
-func (font StdFont) GetMetricsTable() map[GlyphName]CharMetrics {
+func (font StdFont) GetMetricsTable() map[rune]CharMetrics {
 	return font.metrics
 }
 
@@ -138,69 +129,38 @@ func (font StdFont) ToPdfObject() core.PdfObject {
 	return core.MakeIndirectObject(fontDict)
 }
 
-// type1CommonGlyphs is list of common glyph names for some Type1. Used to unpack character metrics.
-var type1CommonGlyphs = []textencoding.GlyphName{
-	"A", "AE", "Aacute", "Abreve", "Acircumflex",
-	"Adieresis", "Agrave", "Amacron", "Aogonek", "Aring",
-	"Atilde", "B", "C", "Cacute", "Ccaron",
-	"Ccedilla", "D", "Dcaron", "Dcroat", "Delta",
-	"E", "Eacute", "Ecaron", "Ecircumflex", "Edieresis",
-	"Edotaccent", "Egrave", "Emacron", "Eogonek", "Eth",
-	"Euro", "F", "G", "Gbreve", "Gcommaaccent",
-	"H", "I", "Iacute", "Icircumflex", "Idieresis",
-	"Idotaccent", "Igrave", "Imacron", "Iogonek", "J",
-	"K", "Kcommaaccent", "L", "Lacute", "Lcaron",
-	"Lcommaaccent", "Lslash", "M", "N", "Nacute",
-	"Ncaron", "Ncommaaccent", "Ntilde", "O", "OE",
-	"Oacute", "Ocircumflex", "Odieresis", "Ograve", "Ohungarumlaut",
-	"Omacron", "Oslash", "Otilde", "P", "Q",
-	"R", "Racute", "Rcaron", "Rcommaaccent", "S",
-	"Sacute", "Scaron", "Scedilla", "Scommaaccent", "T",
-	"Tcaron", "Tcommaaccent", "Thorn", "U", "Uacute",
-	"Ucircumflex", "Udieresis", "Ugrave", "Uhungarumlaut", "Umacron",
-	"Uogonek", "Uring", "V", "W", "X",
-	"Y", "Yacute", "Ydieresis", "Z", "Zacute",
-	"Zcaron", "Zdotaccent", "a", "aacute", "abreve",
-	"acircumflex", "acute", "adieresis", "ae", "agrave",
-	"amacron", "ampersand", "aogonek", "aring", "asciicircum",
-	"asciitilde", "asterisk", "at", "atilde", "b",
-	"backslash", "bar", "braceleft", "braceright", "bracketleft",
-	"bracketright", "breve", "brokenbar", "bullet", "c",
-	"cacute", "caron", "ccaron", "ccedilla", "cedilla",
-	"cent", "circumflex", "colon", "comma", "commaaccent",
-	"copyright", "currency", "d", "dagger", "daggerdbl",
-	"dcaron", "dcroat", "degree", "dieresis", "divide",
-	"dollar", "dotaccent", "dotlessi", "e", "eacute",
-	"ecaron", "ecircumflex", "edieresis", "edotaccent", "egrave",
-	"eight", "ellipsis", "emacron", "emdash", "endash",
-	"eogonek", "equal", "eth", "exclam", "exclamdown",
-	"f", "fi", "five", "fl", "florin",
-	"four", "fraction", "g", "gbreve", "gcommaaccent",
-	"germandbls", "grave", "greater", "greaterequal", "guillemotleft",
-	"guillemotright", "guilsinglleft", "guilsinglright", "h", "hungarumlaut",
-	"hyphen", "i", "iacute", "icircumflex", "idieresis",
-	"igrave", "imacron", "iogonek", "j", "k",
-	"kcommaaccent", "l", "lacute", "lcaron", "lcommaaccent",
-	"less", "lessequal", "logicalnot", "lozenge", "lslash",
-	"m", "macron", "minus", "mu", "multiply",
-	"n", "nacute", "ncaron", "ncommaaccent", "nine",
-	"notequal", "ntilde", "numbersign", "o", "oacute",
-	"ocircumflex", "odieresis", "oe", "ogonek", "ograve",
-	"ohungarumlaut", "omacron", "one", "onehalf", "onequarter",
-	"onesuperior", "ordfeminine", "ordmasculine", "oslash", "otilde",
-	"p", "paragraph", "parenleft", "parenright", "partialdiff",
-	"percent", "period", "periodcentered", "perthousand", "plus",
-	"plusminus", "q", "question", "questiondown", "quotedbl",
-	"quotedblbase", "quotedblleft", "quotedblright", "quoteleft", "quoteright",
-	"quotesinglbase", "quotesingle", "r", "racute", "radical",
-	"rcaron", "rcommaaccent", "registered", "ring", "s",
-	"sacute", "scaron", "scedilla", "scommaaccent", "section",
-	"semicolon", "seven", "six", "slash", "space",
-	"sterling", "summation", "t", "tcaron", "tcommaaccent",
-	"thorn", "three", "threequarters", "threesuperior", "tilde",
-	"trademark", "two", "twosuperior", "u", "uacute",
-	"ucircumflex", "udieresis", "ugrave", "uhungarumlaut", "umacron",
-	"underscore", "uogonek", "uring", "v", "w",
-	"x", "y", "yacute", "ydieresis", "yen",
-	"z", "zacute", "zcaron", "zdotaccent", "zero",
+// type1CommonRunes is list of runes common for some Type1 fonts. Used to unpack character metrics.
+var type1CommonRunes = []rune{
+	'A', 'Æ', 'Á', 'Ă', 'Â', 'Ä', 'À', 'Ā', 'Ą', 'Å',
+	'Ã', 'B', 'C', 'Ć', 'Č', 'Ç', 'D', 'Ď', 'Đ', '∆',
+	'E', 'É', 'Ě', 'Ê', 'Ë', 'Ė', 'È', 'Ē', 'Ę', 'Ð',
+	'€', 'F', 'G', 'Ğ', 'Ģ', 'H', 'I', 'Í', 'Î', 'Ï',
+	'İ', 'Ì', 'Ī', 'Į', 'J', 'K', 'Ķ', 'L', 'Ĺ', 'Ľ',
+	'Ļ', 'Ł', 'M', 'N', 'Ń', 'Ň', 'Ņ', 'Ñ', 'O', 'Œ',
+	'Ó', 'Ô', 'Ö', 'Ò', 'Ő', 'Ō', 'Ø', 'Õ', 'P', 'Q',
+	'R', 'Ŕ', 'Ř', 'Ŗ', 'S', 'Ś', 'Š', 'Ş', 'Ș', 'T',
+	'Ť', 'Ţ', 'Þ', 'U', 'Ú', 'Û', 'Ü', 'Ù', 'Ű', 'Ū',
+	'Ų', 'Ů', 'V', 'W', 'X', 'Y', 'Ý', 'Ÿ', 'Z', 'Ź',
+	'Ž', 'Ż', 'a', 'á', 'ă', 'â', '´', 'ä', 'æ', 'à',
+	'ā', '&', 'ą', 'å', '^', '~', '*', '@', 'ã', 'b',
+	'\\', '|', '{', '}', '[', ']', '˘', '¦', '•', 'c',
+	'ć', 'ˇ', 'č', 'ç', '¸', '¢', 'ˆ', ':', ',', '\uf6c3',
+	'©', '¤', 'd', '†', '‡', 'ď', 'đ', '°', '¨', '÷',
+	'$', '˙', 'ı', 'e', 'é', 'ě', 'ê', 'ë', 'ė', 'è',
+	'8', '…', 'ē', '—', '–', 'ę', '=', 'ð', '!', '¡',
+	'f', 'ﬁ', '5', 'ﬂ', 'ƒ', '4', '⁄', 'g', 'ğ', 'ģ',
+	'ß', '`', '>', '≥', '«', '»', '‹', '›', 'h', '˝',
+	'-', 'i', 'í', 'î', 'ï', 'ì', 'ī', 'į', 'j', 'k',
+	'ķ', 'l', 'ĺ', 'ľ', 'ļ', '<', '≤', '¬', '◊', 'ł',
+	'm', '¯', '−', 'µ', '×', 'n', 'ń', 'ň', 'ņ', '9',
+	'≠', 'ñ', '#', 'o', 'ó', 'ô', 'ö', 'œ', '˛', 'ò',
+	'ő', 'ō', '1', '½', '¼', '¹', 'ª', 'º', 'ø', 'õ',
+	'p', '¶', '(', ')', '∂', '%', '.', '·', '‰', '+',
+	'±', 'q', '?', '¿', '"', '„', '“', '”', '‘', '’',
+	'‚', '\'', 'r', 'ŕ', '√', 'ř', 'ŗ', '®', '˚', 's',
+	'ś', 'š', 'ş', 'ș', '§', ';', '7', '6', '/', ' ',
+	'£', '∑', 't', 'ť', 'ţ', 'þ', '3', '¾', '³', '˜',
+	'™', '2', '²', 'u', 'ú', 'û', 'ü', 'ù', 'ű', 'ū',
+	'_', 'ų', 'ů', 'v', 'w', 'x', 'y', 'ý', 'ÿ', '¥',
+	'z', 'ź', 'ž', 'ż', '0',
 }

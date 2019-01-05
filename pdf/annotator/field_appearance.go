@@ -12,7 +12,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
@@ -33,9 +32,8 @@ type FieldAppearance struct {
 type AppearanceStyle struct {
 	// How much of Rect height to fill when autosizing text.
 	AutoFontSizeFraction float64
-	// Glyph used for check mark in checkboxes (for ZapfDingbats font).
-	// TODO(dennwc): can be a rune
-	CheckmarkGlyph textencoding.GlyphName
+	// CheckmarkRune is a rune used for check mark in checkboxes (for ZapfDingbats font).
+	CheckmarkRune rune
 
 	BorderSize  float64
 	BorderColor model.PdfColor
@@ -73,7 +71,7 @@ func (fa FieldAppearance) Style() AppearanceStyle {
 	// Default values returned if style not set.
 	return AppearanceStyle{
 		AutoFontSizeFraction:  0.65,
-		CheckmarkGlyph:        "a20",
+		CheckmarkRune:         '✔',
 		BorderSize:            0.0,
 		BorderColor:           model.NewPdfColorDeviceGray(0),
 		FillColor:             model.NewPdfColorDeviceGray(1),
@@ -759,18 +757,13 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 
 		fontsize := style.AutoFontSizeFraction * height
 
-		checkcode, ok := zapfdb.Encoder().GlyphToCharcode(style.CheckmarkGlyph)
-		if !ok {
-			return nil, errors.New("checkmark glyph - charcode mapping not found")
-		}
-		checkrune, ok := zapfdb.Encoder().CharcodeToRune(checkcode)
-		if !ok {
-			return nil, errors.New("checkmark glyph - rune mapping not found")
-		}
-		checkmetrics, ok := zapfdb.GetRuneMetrics(checkrune)
+		checkmetrics, ok := zapfdb.GetRuneMetrics(style.CheckmarkRune)
 		if !ok {
 			return nil, errors.New("glyph not found")
 		}
+		enc := zapfdb.Encoder()
+		checkstr := enc.Encode(string(style.CheckmarkRune))
+
 		checkwidth := checkmetrics.Wx * fontsize / 1000.0
 		// TODO: Get bbox of specific glyph that is chosen.  Choice of specific value will cause slight
 		// deviations for other glyphs, but should be fairly close.
@@ -791,7 +784,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			Add_BT().
 			Add_Tf("ZaDb", fontsize).
 			Add_Td(tx, ty).
-			Add_Tj(*core.MakeString(string(checkcode))).
+			Add_Tj(*core.MakeStringFromBytes(checkstr)).
 			Add_ET().
 			Add_Q()
 
@@ -1091,11 +1084,10 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	// Normal caption.
 	if CA, has := core.GetString(mkDict.Get("CA")); has && font != nil {
 		encoded := CA.Bytes()
-		if len(encoded) == 1 {
-			// TODO: this may be a multi-byte encoding
-			charcode := textencoding.CharCode(encoded[0])
-			if checkglyph, has := font.Encoder().CharcodeToGlyph(charcode); has {
-				style.CheckmarkGlyph = checkglyph
+		if len(encoded) != 0 {
+			runes := []rune(font.Encoder().Decode(encoded))
+			if len(runes) == 1 {
+				style.CheckmarkRune = runes[0]
 			}
 		}
 	}

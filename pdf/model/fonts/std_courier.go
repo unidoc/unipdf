@@ -118,9 +118,9 @@ var courierOnce sync.Once
 func initCourier() {
 	// the only font that has same metrics for all glyphs (fixed-width)
 	const wx = 600
-	courierCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	for _, glyph := range type1CommonGlyphs {
-		courierCharMetrics[glyph] = CharMetrics{Wx: wx}
+	courierCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	for _, r := range type1CommonRunes {
+		courierCharMetrics[r] = CharMetrics{Wx: wx}
 	}
 	// other font variant still have the same metrics
 	courierBoldCharMetrics = courierCharMetrics
@@ -130,15 +130,15 @@ func initCourier() {
 
 // courierCharMetrics are the font metrics loaded from afms/Courier.afm.  See afms/MustRead.html for
 // license information.
-var courierCharMetrics map[GlyphName]CharMetrics
+var courierCharMetrics map[rune]CharMetrics
 
 // Courier-Bold font metrics loaded from afms/Courier-Bold.afm.  See afms/MustRead.html for license information.
-var courierBoldCharMetrics map[GlyphName]CharMetrics
+var courierBoldCharMetrics map[rune]CharMetrics
 
 // courierBoldObliqueCharMetrics are the font metrics loaded from afms/Courier-BoldOblique.afm.
 // See afms/MustRead.html for license information.
-var courierBoldObliqueCharMetrics map[GlyphName]CharMetrics
+var courierBoldObliqueCharMetrics map[rune]CharMetrics
 
 // courierObliqueCharMetrics are the font metrics loaded from afms/Courier-Oblique.afm.
 // See afms/MustRead.html for license information.
-var courierObliqueCharMetrics map[GlyphName]CharMetrics
+var courierObliqueCharMetrics map[rune]CharMetrics

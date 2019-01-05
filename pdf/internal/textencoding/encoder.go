@@ -23,16 +23,11 @@ type TextEncoder interface {
 	// String returns a string that describes the TextEncoder instance.
 	String() string
 
-	// Encode converts the Go unicode string `raw` to a PDF encoded string.
-	Encode(raw string) []byte
+	// Encode converts the Go unicode string to a PDF encoded string.
+	Encode(str string) []byte
 
-	// CharcodeToGlyph returns the glyph name for character code `code`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	CharcodeToGlyph(code CharCode) (GlyphName, bool)
-
-	// GlyphToCharcode returns the PDF character code corresponding to glyph name `glyph`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToCharcode(glyph GlyphName) (CharCode, bool)
+	// Decode converts PDF encoded string to a Go unicode string.
+	Decode(raw []byte) string
 
 	// RuneToCharcode returns the PDF character code corresponding to rune `r`.
 	// The bool return flag is true if there was a match, and false otherwise.
@@ -43,14 +38,6 @@ type TextEncoder interface {
 	// The bool return flag is true if there was a match, and false otherwise.
 	// This is usually implemented as CharcodeToGlyph->GlyphToRune
 	CharcodeToRune(code CharCode) (rune, bool)
-
-	// RuneToGlyph returns the glyph name for rune `r`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	RuneToGlyph(r rune) (GlyphName, bool)
-
-	// GlyphToRune returns the rune corresponding to glyph name `glyph`.
-	// The bool return flag is true if there was a match, and false otherwise.
-	GlyphToRune(glyph GlyphName) (rune, bool)
 
 	// ToPdfObject returns a PDF Object that represents the encoding.
 	ToPdfObject() core.PdfObject
@@ -94,22 +81,26 @@ func encodeString16bit(enc TextEncoder, raw string) []byte {
 	return encoded
 }
 
-// doRuneToCharcode converts rune `r` to a PDF character code.
-// The bool return flag is true if there was a match, and false otherwise.
-func doRuneToCharcode(enc TextEncoder, r rune) (CharCode, bool) {
-	g, ok := enc.RuneToGlyph(r)
-	if !ok {
-		return 0, false
-	}
-	return enc.GlyphToCharcode(g)
-}
+// decodeString16bit converts PDF encoded string to a Go unicode string using the encoder `enc`.
+// Each character will be decoded from two bytes.
+func decodeString16bit(enc TextEncoder, raw []byte) string {
+	// bytes -> character codes -> runes
+	runes := make([]rune, 0, len(raw)/2+len(raw)%2)
 
-// doCharcodeToRune converts PDF character code `code` to a rune.
-// The bool return flag is true if there was a match, and false otherwise.
-func doCharcodeToRune(enc TextEncoder, code CharCode) (rune, bool) {
-	g, ok := enc.CharcodeToGlyph(code)
-	if !ok {
-		return 0, false
+	for len(raw) > 0 {
+		if len(raw) == 1 {
+			raw = []byte{raw[0], 0}
+		}
+		// Each entry represented by 2 bytes.
+		code := CharCode(binary.BigEndian.Uint16(raw[:]))
+		raw = raw[2:]
+
+		r, ok := enc.CharcodeToRune(code)
+		if !ok {
+			common.Log.Debug("Failed to map charcode to rune. charcode=%#x", code)
+			continue
+		}
+		runes = append(runes, r)
 	}
-	return enc.GlyphToRune(g)
+	return string(runes)
 }

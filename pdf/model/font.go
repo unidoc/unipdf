@@ -96,11 +96,23 @@ func DefaultFont() *PdfFont {
 	return &PdfFont{context: &std}
 }
 
+func newStandard14Font(basefont fonts.StdFontName) (pdfFontSimple, error) {
+	fnt, ok := fonts.NewStdFontByName(basefont)
+	if !ok {
+		return pdfFontSimple{}, ErrFontNotSupported
+	}
+	std := stdFontToSimpleFont(fnt)
+	return std, nil
+}
+
 // NewStandard14Font returns the standard 14 font named `basefont` as a *PdfFont, or an error if it
 // `basefont` is not one of the standard 14 font names.
 func NewStandard14Font(basefont fonts.StdFontName) (*PdfFont, error) {
-	std, _, err := NewStandard14FontWithEncoding(basefont, nil)
-	return std, err
+	std, err := newStandard14Font(basefont)
+	if err != nil {
+		return nil, err
+	}
+	return &PdfFont{context: &std}, nil
 }
 
 // NewStandard14FontMustCompile returns the standard 14 font named `basefont` as a *PdfFont.
@@ -112,86 +124,6 @@ func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 		panic(fmt.Errorf("invalid Standard14Font %#q", basefont))
 	}
 	return font
-}
-
-// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
-// a SimpleEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
-// An error can occur if `basefont` is not one the standard 14 font names.
-func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont,
-	*textencoding.SimpleEncoder, error) {
-	baseEncoder := "MacRomanEncoding"
-	common.Log.Trace("NewStandard14FontWithEncoding: basefont=%#q baseEncoder=%#q alphabet=%q",
-		basefont, baseEncoder, string(sortedAlphabet(alphabet)))
-
-	fnt, ok := fonts.NewStdFontByName(basefont)
-	if !ok {
-		return nil, nil, ErrFontNotSupported
-	}
-	std := stdFontToSimpleFont(fnt)
-
-	encoder, err := textencoding.NewSimpleTextEncoder(baseEncoder, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// glyphCode are the encoding glyphs. We need to match them to the font glyphs.
-	glyphCode := make(map[textencoding.GlyphName]textencoding.CharCode)
-
-	// slots are the indexes in the encoding where the new character codes are added.
-	// slots are unused indexes, which are filled first. slots1 are the used indexes.
-	var slots, slots1 []textencoding.CharCode
-	for code := textencoding.CharCode(1); code <= 0xff; code++ {
-		if glyph, ok := encoder.CharcodeToGlyph(code); ok {
-			glyphCode[glyph] = code
-			// Don't overwrite space
-			if glyph != "space" {
-
-				slots1 = append(slots1, code)
-			}
-		} else {
-			slots = append(slots, code)
-		}
-	}
-	slots = append(slots, slots1...)
-
-	// `glyphs` are the font glyphs that we need to encode.
-	var glyphs []textencoding.GlyphName
-	for _, r := range sortedAlphabet(alphabet) {
-		glyph, ok := textencoding.RuneToGlyph(r)
-		if !ok {
-			common.Log.Debug("No glyph for rune 0x%02x=%c", r, r)
-			continue
-		}
-		if _, ok = std.fontMetrics[glyph]; !ok {
-			common.Log.Trace("Glyph %q (0x%04x=%c)not in font", glyph, r, r)
-			continue
-		}
-		if len(glyphs) >= 255 {
-			common.Log.Debug("Too many characters for encoding")
-			break
-		}
-		glyphs = append(glyphs, glyph)
-
-	}
-
-	// Fill the slots, starting with the empty ones.
-	slotIdx := 0
-	differences := make(map[textencoding.CharCode]textencoding.GlyphName)
-	for _, glyph := range glyphs {
-		if _, ok := glyphCode[glyph]; !ok {
-			differences[slots[slotIdx]] = glyph
-			slotIdx++
-		}
-	}
-
-	encoder, err = textencoding.NewSimpleTextEncoder(baseEncoder, differences)
-	if err != nil {
-		return nil, nil, err
-	}
-	std.std14Encoder = encoder
-	std.updateStandard14Font()
-
-	return &PdfFont{context: &std}, encoder, nil
 }
 
 // GetAlphabet returns a map of the runes in `text` and their frequencies.
@@ -528,9 +460,10 @@ func (font *PdfFont) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
 func (font *PdfFont) GetCharMetrics(code textencoding.CharCode) (fonts.CharMetrics, bool) {
 	var nometrics fonts.CharMetrics
 
-	// XXX(peterwilliams97) pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
-	// through this function. Would it be more straightforward for pdfFontType0.GetCharMetrics() to
-	// call pdfCIDFontType0.GetCharMetrics() and pdfCIDFontType2.GetCharMetrics() directly?
+	// TODO(peterwilliams97): pdfFontType0.GetCharMetrics() calls pdfCIDFontType2.GetCharMetrics()
+	// 						  through this function. Would it be more straightforward for
+	// 						  pdfFontType0.GetCharMetrics() to call pdfCIDFontType0.GetCharMetrics()
+	// 						  and pdfCIDFontType2.GetCharMetrics() directly?
 
 	switch t := font.context.(type) {
 	case *pdfFontSimple:

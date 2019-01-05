@@ -118,33 +118,33 @@ var timesOnce sync.Once
 
 func initTimes() {
 	// unpack font metrics
-	timesRomanCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	timesBoldCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	timesBoldItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	timesItalicCharMetrics = make(map[GlyphName]CharMetrics, len(type1CommonGlyphs))
-	for i, glyph := range type1CommonGlyphs {
-		timesRomanCharMetrics[glyph] = CharMetrics{Wx: float64(timesRomanWx[i])}
-		timesBoldCharMetrics[glyph] = CharMetrics{Wx: float64(timesBoldWx[i])}
-		timesBoldItalicCharMetrics[glyph] = CharMetrics{Wx: float64(timesBoldItalicWx[i])}
-		timesItalicCharMetrics[glyph] = CharMetrics{Wx: float64(timesItalicWx[i])}
+	timesRomanCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	timesBoldCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	timesBoldItalicCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	timesItalicCharMetrics = make(map[rune]CharMetrics, len(type1CommonRunes))
+	for i, r := range type1CommonRunes {
+		timesRomanCharMetrics[r] = CharMetrics{Wx: float64(timesRomanWx[i])}
+		timesBoldCharMetrics[r] = CharMetrics{Wx: float64(timesBoldWx[i])}
+		timesBoldItalicCharMetrics[r] = CharMetrics{Wx: float64(timesBoldItalicWx[i])}
+		timesItalicCharMetrics[r] = CharMetrics{Wx: float64(timesItalicWx[i])}
 	}
 }
 
 // timesRomanCharMetrics are the font metrics loaded from afms/Times-Roman.afm.
 // See afms/MustRead.html for license information.
-var timesRomanCharMetrics map[GlyphName]CharMetrics
+var timesRomanCharMetrics map[rune]CharMetrics
 
 // timesBoldCharMetrics are the font metrics loaded from afms/Times-Bold.afm.
 // See afms/MustRead.html for license information.
-var timesBoldCharMetrics map[GlyphName]CharMetrics
+var timesBoldCharMetrics map[rune]CharMetrics
 
 // timesBoldItalicCharMetrics are the font metrics loaded from afms/Times-BoldItalic.afm.
 // See afms/MustRead.html for license information.
-var timesBoldItalicCharMetrics map[GlyphName]CharMetrics
+var timesBoldItalicCharMetrics map[rune]CharMetrics
 
 // timesItalicCharMetrics font metrics loaded from afms/Times-Italic.afm.
 // See afms/MustRead.html for license information.
-var timesItalicCharMetrics map[GlyphName]CharMetrics
+var timesItalicCharMetrics map[rune]CharMetrics
 
 // timesRomanWx are the font metrics loaded from afms/Times-Roman.afm.
 // See afms/MustRead.html for license information.

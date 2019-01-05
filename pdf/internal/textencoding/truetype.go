@@ -17,13 +17,14 @@ import (
 // GID is a glyph index.
 type GID uint16
 
+// TODO(dennwc): should not mix Identity-H CMap and Encoding in the same object
+
 // TrueTypeFontEncoder handles text encoding for composite TrueType fonts.
 // It performs mapping between character ids and glyph ids.
 // It has a preloaded rune (unicode code point) to glyph index map that has been loaded from a font.
-// Corresponds to Identity-H.
+// Corresponds to Identity-H CMap and Identity encoding.
 type TrueTypeFontEncoder struct {
 	runeToGIDMap map[rune]GID
-	cmap         CMap
 }
 
 // NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a runeToGlyphIndexMap that
@@ -33,11 +34,10 @@ type TrueTypeFontEncoder struct {
 func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 	return TrueTypeFontEncoder{
 		runeToGIDMap: runeToGIDMap,
-		cmap:         CMapIdentityH{},
 	}
 }
 
-// ttEncoderMaxNumEntries is the maximum number of encoding entries shown in SimpleEncoder.String().
+// ttEncoderMaxNumEntries is the maximum number of encoding entries shown in simpleEncoder.String().
 const ttEncoderMaxNumEntries = 10
 
 // String returns a string that describes `enc`.
@@ -66,22 +66,14 @@ func (enc TrueTypeFontEncoder) String() string {
 	return fmt.Sprintf("TRUETYPE_ENCODER{%s}", strings.Join(parts, ", "))
 }
 
-// Encode converts the Go unicode string `raw` to a PDF encoded string.
-func (enc TrueTypeFontEncoder) Encode(raw string) []byte {
-	return encodeString16bit(enc, raw)
+// Encode converts the Go unicode string to a PDF encoded string.
+func (enc TrueTypeFontEncoder) Encode(str string) []byte {
+	return encodeString16bit(enc, str)
 }
 
-// CharcodeToGlyph returns the glyph name matching character code `code`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToGlyph(code CharCode) (GlyphName, bool) {
-	r, found := enc.CharcodeToRune(code)
-	if found && r == 0x20 {
-		return "space", true
-	}
-
-	// Returns "uniXXXX" format where XXXX is the code in hex format.
-	glyph := GlyphName(fmt.Sprintf("uni%.4X", code))
-	return glyph, true
+// Decode converts PDF encoded string to a Go unicode string.
+func (enc TrueTypeFontEncoder) Decode(raw []byte) string {
+	return decodeString16bit(enc, raw)
 }
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.
@@ -136,37 +128,8 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	return 0, false
 }
 
-// RuneToGlyph returns the glyph name for rune `r`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
-	if r == 0x20 {
-		return "space", true
-	}
-	glyph := GlyphName(fmt.Sprintf("uni%.4X", r))
-	return glyph, true
-}
-
-// GlyphToRune returns the rune corresponding to glyph name `glyph`.
-// The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
-	// String with "uniXXXX" format where XXXX is the hexcode.
-	if len(glyph) == 7 && glyph[0:3] == "uni" {
-		unicode := uint16(0)
-		n, err := fmt.Sscanf(string(glyph), "uni%X", &unicode)
-		if n == 1 && err == nil {
-			return rune(unicode), true
-		}
-	}
-
-	// Look in glyphlist.
-	if r, ok := glyphlistGlyphToRuneMap[glyph]; ok {
-		return r, true
-	}
-
-	return 0, false
-}
-
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
 func (enc TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
+	// TODO(dennwc): reasonable question: why it have to implement this interface then?
 	return core.MakeNull()
 }

@@ -31,34 +31,6 @@ func runeToGlyph(r rune, runeToGlyphMap map[rune]GlyphName) (GlyphName, bool) {
 	return "", false
 }
 
-func splitWords(raw string, encoder TextEncoder) []string {
-	runes := []rune(raw)
-
-	var words []string
-
-	startsAt := 0
-	for idx, r := range runes {
-		glyph, ok := encoder.RuneToGlyph(r)
-		if !ok {
-			common.Log.Debug("Glyph not found for rune %s", rs(r))
-			continue
-		}
-
-		if glyph == "space" || glyph == "uni0020" {
-			word := runes[startsAt:idx]
-			words = append(words, string(word))
-			startsAt = idx + 1
-		}
-	}
-
-	word := runes[startsAt:]
-	if len(word) > 0 {
-		words = append(words, string(word))
-	}
-
-	return words
-}
-
 // rs returns a string describing rune `r`.
 func rs(r rune) string {
 	c := "unprintable"

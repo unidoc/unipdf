@@ -7,6 +7,7 @@ package creator
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
@@ -496,31 +497,30 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 			shift := (p.wrapWidth*1000.0 - textWidth) / p.fontSize
 			objs = append(objs, core.MakeFloat(-shift))
 		}
+		enc := p.textFont.Encoder()
 
 		var encoded []byte
 		isCID := p.textFont.IsCID()
 		for _, r := range runes {
-			glyph, ok := p.textFont.Encoder().RuneToGlyph(r)
-			if !ok {
-				common.Log.Debug("Rune 0x%x not supported by text encoder", r)
-				return ctx, errors.New("unsupported rune in text encoding")
-			}
-
-			if glyph == "space" { // TODO: What about \t and other spaces.
+			if r == ' ' { // TODO: What about \t and other spaces.
 				if len(encoded) > 0 {
 					objs = append(objs, core.MakeStringFromBytes(encoded))
-					encoded = []byte{}
+					encoded = nil
 				}
 				objs = append(objs, core.MakeFloat(-spaceWidth))
 			} else {
-				code, ok := p.textFont.Encoder().RuneToCharcode(r)
-				if ok {
-					if isCID {
-						hi, lo := code>>8, code&0xff
-						encoded = append(encoded, byte(hi), byte(lo))
-					} else {
-						encoded = append(encoded, byte(code))
-					}
+				code, ok := enc.RuneToCharcode(r)
+				if !ok {
+					err := fmt.Errorf("unsupported rune in text encoding: %#x (%c)", r, r)
+					common.Log.Debug("%s", err)
+					return ctx, err
+				}
+				// TODO(dennwc): this should not be done manually; encoder should do this
+				if isCID {
+					hi, lo := code>>8, code&0xff
+					encoded = append(encoded, byte(hi), byte(lo))
+				} else {
+					encoded = append(encoded, byte(code))
 				}
 			}
 		}
