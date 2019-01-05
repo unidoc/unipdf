@@ -17,5 +17,6 @@ var (
 	ErrNoFont                   = errors.New("font not defined")
 	ErrFontNotSupported         = errors.New("unsupported font")
 	ErrType1CFontNotSupported   = errors.New("Type1C fonts are not currently supported")
+	ErrType3FontNotSupported    = errors.New("Type3 fonts are not currently supported")
 	ErrTTCmapNotSupported       = errors.New("unsupported TrueType cmap format")
 )
