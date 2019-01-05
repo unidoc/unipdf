@@ -103,7 +103,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				}
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
-				(*pageText).marks = append((*pageText).marks, to.marks...)
+				pageText.marks = append(pageText.marks, to.marks...)
 				to = nil
 			case "T*": // Move to start of next text line
 				to.nextLine()
@@ -307,7 +307,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					e.formResults[string(name)] = formResult
 				}
 
-				(*pageText).marks = append((*pageText).marks, formResult.pageText.marks...)
+				pageText.marks = append(pageText.marks, formResult.pageText.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
 			}
