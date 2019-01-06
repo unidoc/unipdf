@@ -63,12 +63,23 @@ func ApplyDifferences(base SimpleEncoder, differences map[CharCode]GlyphName) Si
 	if len(differences) == 0 {
 		return base
 	}
-	// TODO(dennwc): check if it's a differencesEncoding, and merge the mapping
 	d := &differencesEncoding{
 		base:        base,
 		differences: differences,
 		decode:      make(map[byte]rune),
 		encode:      make(map[rune]byte),
+	}
+	if d2, ok := base.(*differencesEncoding); ok {
+		// merge differences
+		diff := make(map[CharCode]GlyphName)
+		for code, glyph := range d2.differences {
+			diff[code] = glyph
+		}
+		for code, glyph := range differences {
+			diff[code] = glyph
+		}
+		differences = diff
+		base = d2.base
 	}
 	for code, glyph := range differences {
 		b := byte(code)
