@@ -221,16 +221,7 @@ func (enc *simpleEncoding) CharcodeToRune(code CharCode) (rune, bool) {
 }
 
 func (enc *simpleEncoding) ToPdfObject() core.PdfObject {
-	switch enc.baseName {
-	case "MacRomanEncoding", "MacExpertEncoding", baseWinAnsi:
-		return core.MakeName(enc.baseName)
-	}
-	// TODO(dennwc): check if this switch is necessary, or an old code was incorrect
-	dict := core.MakeDict()
-	dict.Set("Type", core.MakeName("Encoding"))
-	dict.Set("BaseEncoding", core.MakeName(enc.baseName))
-	dict.Set("Differences", toFontDifferences(nil))
-	return core.MakeIndirectObject(dict)
+	return core.MakeName(enc.baseName)
 }
 
 // newSimpleMapping creates a byte-to-rune mapping that can be used to create simple encodings.
