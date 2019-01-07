@@ -51,7 +51,7 @@ func TestInvoiceSimple(t *testing.T) {
 	})
 
 	// Add invoice line items.
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 75; i++ {
 		invoice.AddLine(
 			fmt.Sprintf("Test product #%d", i+1),
 			"1",
