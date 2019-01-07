@@ -60,12 +60,26 @@ func toFontDifferences(differences map[CharCode]GlyphName) *core.PdfObjectArray 
 
 // ApplyDifferences modifies or wraps the base encoding and overlays differences over it.
 func ApplyDifferences(base SimpleEncoder, differences map[CharCode]GlyphName) SimpleEncoder {
-	// TODO(dennwc): check if it's a differencesEncoding, and merge the mapping
+	if len(differences) == 0 {
+		return base
+	}
 	d := &differencesEncoding{
 		base:        base,
 		differences: differences,
 		decode:      make(map[byte]rune),
 		encode:      make(map[rune]byte),
+	}
+	if d2, ok := base.(*differencesEncoding); ok {
+		// merge differences
+		diff := make(map[CharCode]GlyphName)
+		for code, glyph := range d2.differences {
+			diff[code] = glyph
+		}
+		for code, glyph := range differences {
+			diff[code] = glyph
+		}
+		differences = diff
+		base = d2.base
 	}
 	for code, glyph := range differences {
 		b := byte(code)
@@ -177,6 +191,11 @@ func (enc *differencesEncoding) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 	dict.Set("Type", core.MakeName("Encoding"))
 	dict.Set("BaseEncoding", enc.base.ToPdfObject())
-	dict.Set("Differences", toFontDifferences(enc.differences))
+	diff := toFontDifferences(enc.differences)
+	if diff == nil {
+		// this should never happen, because the constructor checks if it is empty
+		panic("differences should not be nil")
+	}
+	dict.Set("Differences", diff)
 	return core.MakeIndirectObject(dict)
 }
