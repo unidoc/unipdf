@@ -119,7 +119,7 @@ To use unidoc in your projects, you need to get a license.
 Get your license on [https://unidoc.io](https://unidoc.io).
 
 To load your license, simply do:
-```
+```go
 unidocLicenseKey := "... your license here ..."
 err := license.SetLicenseKey(unidocLicenseKey)
 if err != nil {
