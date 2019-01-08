@@ -698,6 +698,7 @@ func (i *Invoice) generateHeaderBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		cell := table.NewCell()
 		cell.SetHorizontalAlignment(CellHorizontalAlignmentLeft)
 		cell.SetVerticalAlignment(CellVerticalAlignmentMiddle)
+		cell.SetIndent(0)
 		cell.SetContent(i.logo)
 
 		i.logo.ScaleToHeight(titleParagraph.Height() + 20)
@@ -738,6 +739,7 @@ func (i *Invoice) generateInformationBlocks(ctx DrawContext) ([]*Block, DrawCont
 	table.SetMargins(0, 0, 25, 0)
 
 	cell := table.NewCell()
+	cell.SetIndent(0)
 	cell.SetContent(addrDivision)
 
 	cell = table.NewCell()
