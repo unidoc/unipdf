@@ -148,15 +148,18 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 	if subchap.includeInTOC {
 		// Add to TOC.
 		subchapNumber := ""
-		if subchap.chapterNum != 0 {
-			subchapNumber = strconv.Itoa(subchap.chapterNum)
-		}
-		if subchap.subchapterNum != 0 {
-			if subchapNumber != "" {
-				subchapNumber += "."
-			}
 
-			subchapNumber += strconv.Itoa(subchap.subchapterNum) + "."
+		if subchap.showNumbering {
+			if subchap.chapterNum != 0 {
+				subchapNumber = strconv.Itoa(subchap.chapterNum)
+			}
+			if subchap.subchapterNum != 0 {
+				if subchapNumber != "" {
+					subchapNumber += "."
+				}
+
+				subchapNumber += strconv.Itoa(subchap.subchapterNum) + "."
+			}
 		}
 
 		subchap.toc.Add(subchapNumber, subchap.title, strconv.Itoa(ctx.Page), 2)
