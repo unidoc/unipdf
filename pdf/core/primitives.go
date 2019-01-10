@@ -654,7 +654,11 @@ func (d *PdfObjectDictionary) GetString(key PdfObjectName) (string, bool) {
 }
 
 // Keys returns the list of keys in the dictionary.
+// If `d` is nil returns a nil slice.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
+	if d == nil {
+		return nil
+	}
 	return d.keys
 }
 
