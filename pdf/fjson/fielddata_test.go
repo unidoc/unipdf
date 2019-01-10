@@ -16,7 +16,7 @@ import (
 )
 
 func TestLoadPDFFormData(t *testing.T) {
-	fdata, err := LoadPDFFromPath(`./testdata/basicform.pdf`)
+	fdata, err := LoadFromPDFFile(`./testdata/basicform.pdf`)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestLoadPDFFormData(t *testing.T) {
 
 // Tests loading JSON form data, filling in a form and loading the PDF form data and comparing the results.
 func TestFillPDFForm(t *testing.T) {
-	fdata, err := LoadJSONFromPath(`./testdata/formdata.json`)
+	fdata, err := LoadFromJSONFile(`./testdata/formdata.json`)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestFillPDFForm(t *testing.T) {
 	bufReader := bytes.NewReader(buf.Bytes())
 
 	// Read back.
-	fdata2, err := LoadPDF(bufReader)
+	fdata2, err := LoadFromPDF(bufReader)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}

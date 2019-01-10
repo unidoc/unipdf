@@ -8,10 +8,8 @@ package fjson
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
@@ -21,42 +19,38 @@ type FieldData struct {
 	values []fieldValue
 }
 
-// fieldValue represents a field name and value for a PDF form field.  Options lists
-// a list of allowed values if present.
+// fieldValue represents a field name and value for a PDF form field.
 type fieldValue struct {
-	Name    string   `json:"name"`
-	Value   string   `json:"value"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+
+	// Options lists allowed values if present.
 	Options []string `json:"options,omitempty"`
 }
 
-// LoadJSON loads JSON form data from `r`.
-func LoadJSON(r io.Reader) (*FieldData, error) {
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
+// LoadFromJSON loads JSON form data from `r`.
+func LoadFromJSON(r io.Reader) (*FieldData, error) {
 	var fdata FieldData
-	err = json.Unmarshal(data, &fdata.values)
+	err := json.NewDecoder(r).Decode(&fdata.values)
 	if err != nil {
 		return nil, err
 	}
-
 	return &fdata, nil
 }
 
-// LoadJSONFromPath loads form field data from a JSON file.
-func LoadJSONFromPath(jsonPath string) (*FieldData, error) {
-	f, err := os.Open(jsonPath)
+// LoadFromJSONFile loads form field data from a JSON file.
+func LoadFromJSONFile(filePath string) (*FieldData, error) {
+	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
-	return LoadJSON(f)
+	return LoadFromJSON(f)
 }
 
-// LoadPDF loads form field data from a PDF.
-func LoadPDF(rs io.ReadSeeker) (*FieldData, error) {
+// LoadFromPDF loads form field data from a PDF.
+func LoadFromPDF(rs io.ReadSeeker) (*FieldData, error) {
 	pdfReader, err := model.NewPdfReader(rs)
 	if err != nil {
 		return nil, err
@@ -76,43 +70,41 @@ func LoadPDF(rs io.ReadSeeker) (*FieldData, error) {
 		if err != nil {
 			return nil, err
 		}
-		var val string
-		switch t := f.V.(type) {
-		case *core.PdfObjectString:
-			val = t.Decoded()
-		default:
-			common.Log.Debug("%s: Unsupported %T", name, t)
-			if len(f.Annotations) > 0 {
-				for _, wa := range f.Annotations {
-					state, found := core.GetName(wa.AS)
-					if found {
-						val = state.String()
-					}
 
-					// Options are the keys in the N/D dictionaries in the AP appearance dict.
-					apDict, has := core.GetDict(wa.AP)
-					if has {
-						nDict, has := core.GetDict(apDict.Get("N"))
-						if has {
-							for _, key := range nDict.Keys() {
-								keystr := key.String()
-								if _, has := optMap[keystr]; !has {
-									options = append(options, keystr)
-									optMap[keystr] = struct{}{}
-								}
-							}
-						}
-						dDict, has := core.GetDict(apDict.Get("D"))
-						if has {
-							for _, key := range dDict.Keys() {
-								keystr := key.String()
-								if _, has := optMap[keystr]; !has {
-									options = append(options, keystr)
-									optMap[keystr] = struct{}{}
-								}
-							}
-						}
-					}
+		if t, ok := f.V.(*core.PdfObjectString); ok {
+			fieldvals = append(fieldvals, fieldValue{
+				Name:  name,
+				Value: t.Decoded(),
+			})
+			continue
+		}
+
+		var val string
+		for _, wa := range f.Annotations {
+			state, found := core.GetName(wa.AS)
+			if found {
+				val = state.String()
+			}
+
+			// Options are the keys in the N/D dictionaries in the AP appearance dict.
+			apDict, has := core.GetDict(wa.AP)
+			if !has {
+				continue
+			}
+			nDict, _ := core.GetDict(apDict.Get("N"))
+			for _, key := range nDict.Keys() {
+				keystr := key.String()
+				if _, has := optMap[keystr]; !has {
+					options = append(options, keystr)
+					optMap[keystr] = struct{}{}
+				}
+			}
+			dDict, _ := core.GetDict(apDict.Get("D"))
+			for _, key := range dDict.Keys() {
+				keystr := key.String()
+				if _, has := optMap[keystr]; !has {
+					options = append(options, keystr)
+					optMap[keystr] = struct{}{}
 				}
 			}
 		}
@@ -132,15 +124,15 @@ func LoadPDF(rs io.ReadSeeker) (*FieldData, error) {
 	return &fdata, nil
 }
 
-// LoadPDFfromPath loads form field data from a PDF file.
-func LoadPDFFromPath(pdfPath string) (*FieldData, error) {
-	f, err := os.Open(pdfPath)
+// LoadFromPDFFile loads form field data from a PDF file.
+func LoadFromPDFFile(filePath string) (*FieldData, error) {
+	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	return LoadPDF(f)
+	return LoadFromPDF(f)
 }
 
 // JSON returns the field data as a string in JSON format.
