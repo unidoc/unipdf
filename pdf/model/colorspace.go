@@ -67,37 +67,40 @@ func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 	var csName *PdfObjectName
 	var csArray *PdfObjectArray
 
-	if indObj, is := obj.(*PdfIndirectObject); is {
-		if array, is := indObj.PdfObject.(*PdfObjectArray); is {
-			container = indObj
-			csArray = array
-		} else if name, is := indObj.PdfObject.(*PdfObjectName); is {
-			container = indObj
-			csName = name
-		}
-	} else if array, is := obj.(*PdfObjectArray); is {
-		csArray = array
-	} else if name, is := obj.(*PdfObjectName); is {
-		csName = name
+	if indObj, isInd := obj.(*PdfIndirectObject); isInd {
+		container = indObj
+	}
+
+	// 8.6.3 p. 149 (PDF32000_2008):
+	// A colour space shall be defined by an array object whose first element is a name object identifying the
+	// colour space family. The remaining array elements, if any, are parameters that further characterize the
+	// colour space; their number and types vary according to the particular family.
+	//
+	// For families that do not require parameters, the colour space may be specified simply by the family name
+	// itself instead of an array.
+
+	obj = TraceToDirectObject(obj)
+	switch t := obj.(type) {
+	case *PdfObjectArray:
+		csArray = t
+	case *PdfObjectName:
+		csName = t
 	}
 
 	// If specified by a name directly: Device colorspace or Pattern.
 	if csName != nil {
-		if *csName == "DeviceGray" {
-			cs := NewPdfColorspaceDeviceGray()
-			return cs, nil
-		} else if *csName == "DeviceRGB" {
-			cs := NewPdfColorspaceDeviceRGB()
-			return cs, nil
-		} else if *csName == "DeviceCMYK" {
-			cs := NewPdfColorspaceDeviceCMYK()
-			return cs, nil
-		} else if *csName == "Pattern" {
-			cs := NewPdfColorspaceSpecialPattern()
-			return cs, nil
-		} else {
-			common.Log.Error("Unknown colorspace %s", *csName)
-			return nil, errors.New("unknown colorspace")
+		switch *csName {
+		case "DeviceGray":
+			return NewPdfColorspaceDeviceGray(), nil
+		case "DeviceRGB":
+			return NewPdfColorspaceDeviceRGB(), nil
+		case "DeviceCMYK":
+			return NewPdfColorspaceDeviceCMYK(), nil
+		case "Pattern":
+			return NewPdfColorspaceSpecialPattern(), nil
+		default:
+			common.Log.Debug("ERROR: Unknown colorspace %s", *csName)
+			return nil, ErrRangeError
 		}
 	}
 
@@ -106,49 +109,44 @@ func NewPdfColorspaceFromPdfObject(obj PdfObject) (PdfColorspace, error) {
 		if container == nil {
 			csObject = csArray
 		}
-
-		if name, is := csArray.Get(0).(*PdfObjectName); is {
-			if *name == "DeviceGray" && csArray.Len() == 1 {
-				cs := NewPdfColorspaceDeviceGray()
-				return cs, nil
-			} else if *name == "DeviceRGB" && csArray.Len() == 1 {
-				cs := NewPdfColorspaceDeviceRGB()
-				return cs, nil
-			} else if *name == "DeviceCMYK" && csArray.Len() == 1 {
-				cs := NewPdfColorspaceDeviceCMYK()
-				return cs, nil
-			} else if *name == "CalGray" {
-				cs, err := newPdfColorspaceCalGrayFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "CalRGB" {
-				cs, err := newPdfColorspaceCalRGBFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "Lab" {
-				cs, err := newPdfColorspaceLabFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "ICCBased" {
-				cs, err := newPdfColorspaceICCBasedFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "Pattern" {
-				cs, err := newPdfColorspaceSpecialPatternFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "Indexed" {
-				cs, err := newPdfColorspaceSpecialIndexedFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "Separation" {
-				cs, err := newPdfColorspaceSpecialSeparationFromPdfObject(csObject)
-				return cs, err
-			} else if *name == "DeviceN" {
-				cs, err := newPdfColorspaceDeviceNFromPdfObject(csObject)
-				return cs, err
-			} else {
+		if name, found := GetName(csArray.Get(0)); found {
+			switch name.String() {
+			case "DeviceGray":
+				if csArray.Len() == 1 {
+					return NewPdfColorspaceDeviceGray(), nil
+				}
+			case "DeviceRGB":
+				if csArray.Len() == 1 {
+					return NewPdfColorspaceDeviceRGB(), nil
+				}
+			case "DeviceCMYK":
+				if csArray.Len() == 1 {
+					return NewPdfColorspaceDeviceCMYK(), nil
+				}
+			case "CalGray":
+				return newPdfColorspaceCalGrayFromPdfObject(csObject)
+			case "CalRGB":
+				return newPdfColorspaceCalRGBFromPdfObject(csObject)
+			case "Lab":
+				return newPdfColorspaceLabFromPdfObject(csObject)
+			case "ICCBased":
+				return newPdfColorspaceICCBasedFromPdfObject(csObject)
+			case "Pattern":
+				return newPdfColorspaceSpecialPatternFromPdfObject(csObject)
+			case "Indexed":
+				return newPdfColorspaceSpecialIndexedFromPdfObject(csObject)
+			case "Separation":
+				return newPdfColorspaceSpecialSeparationFromPdfObject(csObject)
+			case "DeviceN":
+				return newPdfColorspaceDeviceNFromPdfObject(csObject)
+			default:
 				common.Log.Debug("Array with invalid name: %s", *name)
 			}
 		}
 	}
 
 	common.Log.Debug("PDF File Error: Colorspace type error: %s", obj.String())
-	return nil, errors.New("type error")
+	return nil, ErrTypeCheck
 }
 
 // DetermineColorspaceNameFromPdfObject determines PDF colorspace from a PdfObject.  Returns the colorspace name and
