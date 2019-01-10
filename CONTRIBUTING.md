@@ -1,3 +1,5 @@
 ## Contributor License Agreement
 
-* Please sign the [Contributor License Agreement](https://docs.google.com/a/owlglobal.io/forms/d/1PfTjEAi67-x0JOTU45SDonJnWy1fWB_J1aopGss34bY/viewform) in order to have your changes merged.
+[![CLA assistant](https://cla-assistant.io/readme/badge/unidoc/unidoc)](https://cla-assistant.io/unidoc/unidoc)
+
+All contributors are must sign a contributor license agreement before their code will be reviewed and merged.
