@@ -51,7 +51,7 @@ func TestInvoiceSimple(t *testing.T) {
 	})
 
 	// Add invoice line items.
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 75; i++ {
 		invoice.AddLine(
 			fmt.Sprintf("Test product #%d", i+1),
 			"1",
@@ -204,11 +204,11 @@ func TestInvoiceAdvanced(t *testing.T) {
 	invoice.AddSection("Custom section", "This is a custom section.")
 
 	// Customize note styles.
-	noteStyle := invoice.AddressStyle()
+	noteStyle := invoice.NoteStyle()
 	noteStyle.Font = fontHelvetica
 	noteStyle.FontSize = 12
 
-	noteHeadingStyle := invoice.AddressHeadingStyle()
+	noteHeadingStyle := invoice.NoteHeadingStyle()
 	noteHeadingStyle.Color = blue
 	noteHeadingStyle.Font = fontHelvetica
 	noteHeadingStyle.FontSize = 14
