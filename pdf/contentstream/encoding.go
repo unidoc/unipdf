@@ -54,19 +54,25 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 		}
 	}
 
-	if *filterName == "AHx" {
+	// From Table 94 p. 224 (PDF32000_2008):
+	// Additional Abbreviations in an Inline Image Object:
+
+	switch *filterName {
+	case "AHx", "ASCIIHexDecode":
 		return core.NewASCIIHexEncoder(), nil
-	} else if *filterName == "A85" {
+	case "A85", "ASCII85Decode":
 		return core.NewASCII85Encoder(), nil
-	} else if *filterName == "DCT" {
+	case "DCT", "DCTDecode":
 		return newDCTEncoderFromInlineImage(inlineImage)
-	} else if *filterName == "Fl" {
+	case "Fl", "FlateDecode":
 		return newFlateEncoderFromInlineImage(inlineImage, nil)
-	} else if *filterName == "LZW" {
+	case "LZW", "LZWDecode":
 		return newLZWEncoderFromInlineImage(inlineImage, nil)
-	} else if *filterName == "CCF" {
+	case "CCF", "CCITTFaxDecode":
 		return core.NewCCITTFaxEncoder(), nil
-	} else {
+	case "RL", "RunLengthDecode":
+		return core.NewRunLengthEncoder(), nil
+	default:
 		common.Log.Debug("Unsupported inline image encoding filter name : %s", *filterName)
 		return nil, errors.New("unsupported inline encoding method")
 	}
