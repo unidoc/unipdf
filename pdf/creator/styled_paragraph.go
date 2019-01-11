@@ -327,8 +327,15 @@ func (p *StyledParagraph) wrapText() error {
 			return nil
 		}
 
-		annotation := *src
-		return &annotation
+		var annotation *model.PdfAnnotation
+		switch t := src.GetContext().(type) {
+		case *model.PdfAnnotationLink:
+			if annot := copyLinkAnnotation(t); annot != nil {
+				annotation = annot.PdfAnnotation
+			}
+		}
+
+		return annotation
 	}
 
 	for _, chunk := range p.chunks {
@@ -698,8 +705,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 				// Process annotation.
 				if !chunk.annotationProcessed {
-					annotCtx := chunk.annotation.GetContext()
-					switch t := annotCtx.(type) {
+					switch t := chunk.annotation.GetContext().(type) {
 					case *model.PdfAnnotationLink:
 						// Initialize annotation rectangle.
 						annotRect = core.MakeArray()

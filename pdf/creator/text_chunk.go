@@ -76,3 +76,20 @@ func newInternalLinkAnnotation(page int64, x, y, zoom float64) *model.PdfAnnotat
 
 	return annotation.PdfAnnotation
 }
+
+// copyLinkAnnotation returns a new link annotation based on an existing one.
+func copyLinkAnnotation(link *model.PdfAnnotationLink) *model.PdfAnnotationLink {
+	if link == nil {
+		return nil
+	}
+
+	annotation := model.NewPdfAnnotationLink()
+	annotation.BS = link.BS
+	annotation.A = link.A
+
+	if annotDest, ok := link.Dest.(*core.PdfObjectArray); ok {
+		annotation.Dest = core.MakeArray(annotDest.Elements()...)
+	}
+
+	return annotation
+}

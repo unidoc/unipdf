@@ -158,8 +158,8 @@ func (tl *TOCLine) SetLink(page int64, x, y float64) {
 	tl.SetStyle(tl.sp.defaultLinkStyle)
 }
 
-// getLink returns a new annotation if the line has a link set.
-func (tl *TOCLine) getLink() *model.PdfAnnotation {
+// getLineLink returns a new annotation if the line has a link set.
+func (tl *TOCLine) getLineLink() *model.PdfAnnotation {
 	if tl.linkPage <= 0 {
 		return nil
 	}
@@ -186,17 +186,17 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 		{
 			Text:       tl.Number.Text,
 			Style:      tl.Number.Style,
-			annotation: tl.getLink(),
+			annotation: tl.getLineLink(),
 		},
 		{
 			Text:       title,
 			Style:      tl.Title.Style,
-			annotation: tl.getLink(),
+			annotation: tl.getLineLink(),
 		},
 		{
 			Text:       page,
 			Style:      tl.Page.Style,
-			annotation: tl.getLink(),
+			annotation: tl.getLineLink(),
 		},
 	}
 
@@ -216,7 +216,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 	chunk := sp.Insert(2, sepText)
 	chunk.Style = sepStyle
-	chunk.annotation = tl.getLink()
+	chunk.annotation = tl.getLineLink()
 
 	// Push page numbers to the end of the line.
 	availWidth = availWidth - float64(sepCount)*sepWidth
@@ -230,7 +230,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 				chunk = sp.Insert(2, strings.Repeat(" ", spaces))
 				chunk.Style = style
-				chunk.annotation = tl.getLink()
+				chunk.annotation = tl.getLineLink()
 			}
 		}
 	}
