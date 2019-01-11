@@ -2380,7 +2380,7 @@ func (cs *PdfColorspaceSpecialSeparation) DecodeArray() []float64 {
 func newPdfColorspaceSpecialSeparationFromPdfObject(obj core.PdfObject) (*PdfColorspaceSpecialSeparation, error) {
 	cs := NewPdfColorspaceSpecialSeparation()
 
-	// If within an indirect object, then make a note of it.  If we write out thecore.PdfObject later
+	// If within an indirect object, then make a note of it.  If we write out the PdfObject later
 	// we can reference the same container.  Otherwise is not within a container, but rather
 	// a new array.
 	if indObj, isIndirect := obj.(*core.PdfIndirectObject); isIndirect {
@@ -2592,7 +2592,7 @@ func (cs *PdfColorspaceDeviceN) DecodeArray() []float64 {
 func newPdfColorspaceDeviceNFromPdfObject(obj core.PdfObject) (*PdfColorspaceDeviceN, error) {
 	cs := NewPdfColorspaceDeviceN()
 
-	// If within an indirect object, then make a note of it.  If we write out thecore.PdfObject later
+	// If within an indirect object, then make a note of it.  If we write out the PdfObject later
 	// we can reference the same container.  Otherwise is not within a container, but rather
 	// a new array.
 	if indObj, isIndirect := obj.(*core.PdfIndirectObject); isIndirect {
