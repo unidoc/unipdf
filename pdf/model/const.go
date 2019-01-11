@@ -9,10 +9,13 @@ import (
 	"errors"
 )
 
+// Errors when parsing/loading data in PDF.
+// TODO(gunnsth): Unexport errors.
 var (
-	ErrTypeCheck                = errors.New("type check")
 	ErrRequiredAttributeMissing = errors.New("required attribute missing")
 	ErrInvalidAttribute         = errors.New("invalid attribute")
+	ErrTypeCheck                = errors.New("type check")
+	errRangeError               = errors.New("range check error")
 	ErrEncrypted                = errors.New("file needs to be decrypted first")
 	ErrNoFont                   = errors.New("font not defined")
 	ErrFontNotSupported         = errors.New("unsupported font")
