@@ -2587,7 +2587,7 @@ func (cs *PdfColorspaceDeviceN) DecodeArray() []float64 {
 	return decode
 }
 
-// newPdfColorspaceDeviceNFromPdfObject loads a DeviceN colorspace from a core.PdfObjectArray which can be
+// newPdfColorspaceDeviceNFromPdfObject loads a DeviceN colorspace from a PdfObjectArray which can be
 // contained within an indirect object.
 func newPdfColorspaceDeviceNFromPdfObject(obj core.PdfObject) (*PdfColorspaceDeviceN, error) {
 	cs := NewPdfColorspaceDeviceN()
@@ -2656,7 +2656,7 @@ func newPdfColorspaceDeviceNFromPdfObject(obj core.PdfObject) (*PdfColorspaceDev
 	return cs, nil
 }
 
-// ToPdfObject returns a *core.PdfIndirectObject containing a *core.PdfObjectArray representation of the DeviceN colorspace.
+// ToPdfObject returns a *PdfIndirectObject containing a *PdfObjectArray representation of the DeviceN colorspace.
 // Format: [/DeviceN names alternateSpace tintTransform]
 //     or: [/DeviceN names alternateSpace tintTransform attributes]
 func (cs *PdfColorspaceDeviceN) ToPdfObject() core.PdfObject {
@@ -2694,7 +2694,7 @@ func (cs *PdfColorspaceDeviceN) ColorFromFloats(vals []float64) (PdfColor, error
 	return color, nil
 }
 
-// ColorFromPdfObjects returns a new PdfColor based on input color components. The inputcore.PdfObjects should
+// ColorFromPdfObjects returns a new PdfColor based on input color components. The input PdfObjects should
 // be numeric.
 func (cs *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != cs.GetNumComponents() {
@@ -2771,7 +2771,7 @@ type PdfColorspaceDeviceNAttributes struct {
 }
 
 // newPdfColorspaceDeviceNAttributesFromPdfObject loads a PdfColorspaceDeviceNAttributes from an input
-//core.PdfObjectDictionary (direct/indirect).
+// PdfObjectDictionary (direct/indirect).
 func newPdfColorspaceDeviceNAttributesFromPdfObject(obj core.PdfObject) (*PdfColorspaceDeviceNAttributes, error) {
 	attr := &PdfColorspaceDeviceNAttributes{}
 
