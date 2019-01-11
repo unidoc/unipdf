@@ -130,6 +130,9 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= chap.margins.top
 	}
 
+	origX := ctx.X
+	origY := ctx.Y
+
 	blocks, ctx, err := chap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
@@ -147,7 +150,10 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 			}
 		}
 
-		chap.toc.Add(chapNumber, chap.title, strconv.Itoa(ctx.Page), 1)
+		line := chap.toc.Add(chapNumber, chap.title, strconv.Itoa(ctx.Page), 1)
+		if chap.toc.showLinks {
+			line.SetLink(int64(ctx.Page), origX, origY)
+		}
 	}
 
 	for _, d := range chap.contents {

@@ -104,6 +104,12 @@ func (blk *Block) SetAngle(angleDeg float64) {
 // AddAnnotation adds an annotation to the current block.
 // The annotation will be added to the page the block will be rendered on.
 func (blk *Block) AddAnnotation(annotation *model.PdfAnnotation) {
+	for _, annot := range blk.annotations {
+		if annot == annotation {
+			return
+		}
+	}
+
 	blk.annotations = append(blk.annotations, annotation)
 }
 
@@ -351,7 +357,16 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 // mergeBlocks appends another block onto the block.
 func (blk *Block) mergeBlocks(toAdd *Block) error {
 	err := mergeContents(blk.contents, blk.resources, toAdd.contents, toAdd.resources)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Merge annotations.
+	for _, annot := range toAdd.annotations {
+		blk.AddAnnotation(annot)
+	}
+
+	return nil
 }
 
 // mergeContents merges contents and content streams.

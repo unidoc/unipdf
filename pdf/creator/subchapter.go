@@ -138,6 +138,9 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 		ctx.Height -= subchap.margins.top
 	}
 
+	origX := ctx.X
+	origY := ctx.Y
+
 	blocks, ctx, err := subchap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
@@ -162,7 +165,10 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 			}
 		}
 
-		subchap.toc.Add(subchapNumber, subchap.title, strconv.Itoa(ctx.Page), 2)
+		line := subchap.toc.Add(subchapNumber, subchap.title, strconv.Itoa(ctx.Page), 2)
+		if subchap.toc.showLinks {
+			line.SetLink(int64(ctx.Page), origX, origY)
+		}
 	}
 
 	for _, d := range subchap.contents {

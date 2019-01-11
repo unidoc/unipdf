@@ -390,8 +390,16 @@ func (c *Creator) finalize() error {
 			}
 		}
 
-		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
+		// Account for the front page and the table of content pages.
+		lines := c.toc.Lines()
+		for _, line := range lines {
+			line.linkPage += int64(genpages)
+		}
+
+		// Create TOC pages.
 		var tocpages []*model.PdfPage
+		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
+
 		for _, block := range blocks {
 			block.SetPos(0, 0)
 			totPages++
@@ -410,7 +418,6 @@ func (c *Creator) finalize() error {
 		} else {
 			c.pages = append(tocpages, c.pages...)
 		}
-
 	}
 
 	for idx, page := range c.pages {
@@ -431,7 +438,6 @@ func (c *Creator) finalize() error {
 				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
-
 		}
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.

@@ -122,7 +122,7 @@ func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
 	return p.appendChunk(chunk)
 }
 
-// AddInternalLink adds a new internal link tot the paragraph.
+// AddInternalLink adds a new internal link to the paragraph.
 // The text parameter represents the text that is displayed.
 // The user is taken to the specified page, at the specified x and y
 // coordinates. Position 0, 0 is at the top left of the page.
