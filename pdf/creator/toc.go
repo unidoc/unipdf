@@ -44,6 +44,9 @@ type TOC struct {
 
 	// Default style used for internal operations.
 	defaultStyle TextStyle
+
+	// Specifies if the TOC displays links.
+	showLinks bool
 }
 
 // newTOC creates a new table of contents.
@@ -71,6 +74,7 @@ func newTOC(title string, style, styleHeading TextStyle) *TOC {
 		lineMargins:        margins{0, 0, 2, 2},
 		positioning:        positionRelative,
 		defaultStyle:       style,
+		showLinks:          true,
 	}
 }
 
@@ -195,6 +199,11 @@ func (t *TOC) SetLineLevelOffset(levelOffset float64) {
 	t.lineLevelOffset = levelOffset
 }
 
+// SetShowLinks sets visibility of links for the TOC lines.
+func (t *TOC) SetShowLinks(showLinks bool) {
+	t.showLinks = showLinks
+}
+
 // GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
 // if the contents wrap over multiple pages.
 func (t *TOC) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
@@ -208,7 +217,14 @@ func (t *TOC) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error)
 
 	// Generate blocks for the table of contents lines.
 	for _, line := range t.lines {
+		linkPage := line.linkPage
+		if !t.showLinks {
+			line.linkPage = 0
+		}
+
 		newBlocks, c, err := line.GeneratePageBlocks(ctx)
+		line.linkPage = linkPage
+
 		if err != nil {
 			return blocks, ctx, err
 		}

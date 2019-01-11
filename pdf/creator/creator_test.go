@@ -811,15 +811,12 @@ func TestSubchaptersSimple(t *testing.T) {
 		lineStyle := c.NewTextStyle()
 		lineStyle.FontSize = 14
 
-		pageStyle := lineStyle
-		pageStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
+		helveticaBold := model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 
 		lines := toc.Lines()
 		for _, line := range lines {
-			line.SetStyle(lineStyle)
-
 			// Make page part bold.
-			line.Page.Style = pageStyle
+			line.Page.Style.Font = helveticaBold
 		}
 
 		return nil
@@ -917,13 +914,12 @@ func TestSubchapters(t *testing.T) {
 		toc.SetHeading("Table of Contents", style)
 
 		// Set style of TOC lines just before render.
-		pageStyle := c.NewTextStyle()
-		pageStyle.Font = model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
-		pageStyle.FontSize = 10
+		helveticaBold := model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
 
 		lines := toc.Lines()
 		for _, line := range lines {
-			line.Page.Style = pageStyle
+			line.Page.Style.Font = helveticaBold
+			line.Page.Style.FontSize = 10
 		}
 
 		return nil
