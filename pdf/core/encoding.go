@@ -1564,7 +1564,8 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 //
 // JBIG2 encoder/decoder (dummy, for now)
 //
-type JBIG2Encoder struct{}
+type JBIG2Encoder struct {
+}
 
 func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
