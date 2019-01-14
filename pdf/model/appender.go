@@ -536,8 +536,11 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		if ind, found := core.GetIndirect(obj); found {
 			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
 				handler := *sigDict.handler
-				// TODO fix it
-				digestWriters[handler], _ = handler.NewDigest(sigDict.signature)
+				var err error
+				digestWriters[handler], err = handler.NewDigest(sigDict.signature)
+				if err != nil {
+					return err
+				}
 				byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
 			}
 		}
@@ -562,7 +565,6 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		for _, hash := range digestWriters {
 			writers = append(writers, hash)
 		}
-		//hashSha1 := sha1.New() // if needed
 		reader = io.TeeReader(a.rs, io.MultiWriter(writers...))
 	}
 

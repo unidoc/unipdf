@@ -18,8 +18,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// Digest is the interface that wraps the basic Write method.
-type Digest interface {
+// Hasher is the interface that wraps the basic Write method.
+type Hasher interface {
 	Write(p []byte) (n int, err error)
 }
 
@@ -27,11 +27,11 @@ type Digest interface {
 // need to be capable of validating digital signatures and signing PDF documents.
 type SignatureHandler interface {
 	IsApplicable(sig *PdfSignature) bool
-	Validate(sig *PdfSignature, digest Digest) (SignatureValidationResult, error)
+	Validate(sig *PdfSignature, digest Hasher) (SignatureValidationResult, error)
 	// InitSignature sets the PdfSignature parameters.
 	InitSignature(*PdfSignature) error
-	NewDigest(sig *PdfSignature) (Digest, error)
-	Sign(sig *PdfSignature, digest Digest) error
+	NewDigest(sig *PdfSignature) (Hasher, error)
+	Sign(sig *PdfSignature, digest Hasher) error
 }
 
 // SignatureValidationResult defines the response from the signature validation handler.
@@ -112,7 +112,7 @@ func (a *adobeX509RSASHA1SignatureHandler) getCertificate(sig *PdfSignature) (*x
 }
 
 // NewDigest creates a new digest.
-func (a *adobeX509RSASHA1SignatureHandler) NewDigest(sig *PdfSignature) (Digest, error) {
+func (a *adobeX509RSASHA1SignatureHandler) NewDigest(sig *PdfSignature) (Hasher, error) {
 	certificate, err := a.getCertificate(sig)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (a *adobeX509RSASHA1SignatureHandler) NewDigest(sig *PdfSignature) (Digest,
 }
 
 // Validate validates PdfSignature.
-func (a *adobeX509RSASHA1SignatureHandler) Validate(sig *PdfSignature, digest Digest) (SignatureValidationResult, error) {
+func (a *adobeX509RSASHA1SignatureHandler) Validate(sig *PdfSignature, digest Hasher) (SignatureValidationResult, error) {
 	certData := sig.Cert.(*core.PdfObjectString).Bytes()
 	certs, err := x509.ParseCertificates(certData)
 	if err != nil {
@@ -153,7 +153,7 @@ func (a *adobeX509RSASHA1SignatureHandler) Validate(sig *PdfSignature, digest Di
 }
 
 // Sign sets the Contents fields.
-func (a *adobeX509RSASHA1SignatureHandler) Sign(sig *PdfSignature, digest Digest) error {
+func (a *adobeX509RSASHA1SignatureHandler) Sign(sig *PdfSignature, digest Hasher) error {
 	h, ok := digest.(hash.Hash)
 	if !ok {
 		return errors.New("hash type error")
@@ -194,7 +194,7 @@ func (r *PdfReader) Validate(handlers []SignatureHandler) ([]SignatureValidation
 	}
 	var pairs []*sigFieldPair
 
-	for _, f := range *r.AcroForm.Fields {
+	for _, f := range r.AcroForm.AllFields() {
 		if f.V == nil {
 			continue
 		}

@@ -65,12 +65,12 @@ func (a *adobePKCS7DetachedSignatureHandler) getCertificate(sig *PdfSignature) (
 }
 
 // NewDigest creates a new digest.
-func (a *adobePKCS7DetachedSignatureHandler) NewDigest(sig *PdfSignature) (Digest, error) {
+func (a *adobePKCS7DetachedSignatureHandler) NewDigest(sig *PdfSignature) (Hasher, error) {
 	return bytes.NewBuffer(nil), nil
 }
 
 // Validate validates PdfSignature.
-func (a *adobePKCS7DetachedSignatureHandler) Validate(sig *PdfSignature, digest Digest) (SignatureValidationResult, error) {
+func (a *adobePKCS7DetachedSignatureHandler) Validate(sig *PdfSignature, digest Hasher) (SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
 
 	buffer := digest.(*bytes.Buffer)
@@ -88,7 +88,7 @@ func (a *adobePKCS7DetachedSignatureHandler) Validate(sig *PdfSignature, digest 
 }
 
 // Sign sets the Contents fields.
-func (a *adobePKCS7DetachedSignatureHandler) Sign(sig *PdfSignature, digest Digest) error {
+func (a *adobePKCS7DetachedSignatureHandler) Sign(sig *PdfSignature, digest Hasher) error {
 
 	buffer := digest.(*bytes.Buffer)
 	signedData, err := pkcs7.NewSignedData(buffer.Bytes())

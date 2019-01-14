@@ -6,6 +6,8 @@
 package model
 
 import (
+	"bytes"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
@@ -40,33 +42,33 @@ func (d *pdfSignDictionary) WriteString() string {
 	d.contentsOffsetEnd = 0
 	d.byteRangeOffsetStart = 0
 	d.byteRangeOffsetEnd = 0
-
-	outStr := "<<"
+	out := bytes.NewBuffer(nil)
+	out.WriteString("<<")
 	for _, k := range d.Keys() {
 		v := d.Get(k)
 		switch k {
 		case "ByteRange":
-			outStr += k.WriteString()
-			outStr += " "
-			d.byteRangeOffsetStart = len(outStr)
-			outStr += v.WriteString()
-			outStr += "                       "
-			d.byteRangeOffsetEnd = len(outStr)
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.byteRangeOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString("                       ")
+			d.byteRangeOffsetEnd = out.Len()
 		case "Contents":
-			outStr += k.WriteString()
-			outStr += " "
-			d.contentsOffsetStart = len(outStr)
-			outStr += v.WriteString()
-			outStr += "                       "
-			d.contentsOffsetEnd = len(outStr)
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.contentsOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString("                       ")
+			d.contentsOffsetEnd = out.Len()
 		default:
-			outStr += k.WriteString()
-			outStr += " "
-			outStr += v.WriteString()
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			out.WriteString(v.WriteString())
 		}
 	}
-	outStr += ">>"
-	return outStr
+	out.WriteString(">>")
+	return out.String()
 }
 
 // PdfSignature represents a PDF signature dictionary and is used for signing via form signature fields.

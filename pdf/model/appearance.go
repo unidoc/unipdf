@@ -14,7 +14,7 @@ type PdfAppearance struct {
 	Signature *PdfSignature
 }
 
-// NewPdfAnnotationWidget returns an initialized annotation widget.
+// NewPdfAppearance returns an initialized annotation widget.
 func NewPdfAppearance() *PdfAppearance {
 	app := &PdfAppearance{}
 	app.PdfField = NewPdfField()
