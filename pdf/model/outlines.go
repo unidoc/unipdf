@@ -46,13 +46,13 @@ type PdfOutlineItem struct {
 
 // NewPdfOutline returns an initialized PdfOutline.
 func NewPdfOutline() *PdfOutline {
-	outline := &PdfOutline{}
+	outline := &PdfOutline{
+		primitive: &PdfIndirectObject{
+			PdfObject: MakeDict(),
+		},
+	}
 
-	container := &PdfIndirectObject{}
-	container.PdfObject = MakeDict()
-
-	outline.primitive = container
-
+	outline.context = outline
 	return outline
 }
 
@@ -65,12 +65,13 @@ func NewPdfOutlineTree() *PdfOutline {
 
 // NewPdfOutlineItem returns an initialized PdfOutlineItem.
 func NewPdfOutlineItem() *PdfOutlineItem {
-	outlineItem := &PdfOutlineItem{}
+	outlineItem := &PdfOutlineItem{
+		primitive: &PdfIndirectObject{
+			PdfObject: MakeDict(),
+		},
+	}
 
-	container := &PdfIndirectObject{}
-	container.PdfObject = MakeDict()
-
-	outlineItem.primitive = container
+	outlineItem.context = outlineItem
 	return outlineItem
 }
 
@@ -251,6 +252,10 @@ func (o *PdfOutline) ToPdfObject() PdfObject {
 
 	if o.Parent != nil {
 		dict.Set("Parent", o.Parent.getOuter().GetContainingPdfObject())
+	}
+
+	if o.Count != nil {
+		dict.Set("Count", MakeInteger(*o.Count))
 	}
 
 	return container
