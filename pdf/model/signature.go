@@ -6,13 +6,75 @@
 package model
 
 import (
+	"bytes"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// pdfSignDictionary is needed because of the digital checksum calculates after a new file creation and writes as a value into PdfDictionary in the existing file.
+type pdfSignDictionary struct {
+	*core.PdfObjectDictionary
+	handler              *SignatureHandler
+	signature            *PdfSignature
+	fileOffset           int64
+	contentsOffsetStart  int
+	contentsOffsetEnd    int
+	byteRangeOffsetStart int
+	byteRangeOffsetEnd   int
+}
+
+// GetSubFilter returns SubFilter value or empty string.
+func (d *pdfSignDictionary) GetSubFilter() string {
+	obj := d.Get("SubFilter")
+	if obj == nil {
+		return ""
+	}
+	if sf, found := core.GetNameVal(obj); found {
+		return sf
+	}
+	return ""
+}
+
+// WriteString outputs the object as it is to be written to file.
+func (d *pdfSignDictionary) WriteString() string {
+	d.contentsOffsetStart = 0
+	d.contentsOffsetEnd = 0
+	d.byteRangeOffsetStart = 0
+	d.byteRangeOffsetEnd = 0
+	out := bytes.NewBuffer(nil)
+	out.WriteString("<<")
+	for _, k := range d.Keys() {
+		v := d.Get(k)
+		switch k {
+		case "ByteRange":
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.byteRangeOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString("                       ")
+			d.byteRangeOffsetEnd = out.Len()
+		case "Contents":
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.contentsOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString("                       ")
+			d.contentsOffsetEnd = out.Len()
+		default:
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			out.WriteString(v.WriteString())
+		}
+	}
+	out.WriteString(">>")
+	return out.String()
+}
+
 // PdfSignature represents a PDF signature dictionary and is used for signing via form signature fields.
 // (Section 12.8, Table 252 - Entries in a signature dictionary p. 475 in PDF32000_2008).
 type PdfSignature struct {
+	Handler   SignatureHandler
 	container *core.PdfIndirectObject
 	// Type: Sig/DocTimeStamp
 	Type         *core.PdfObjectName
@@ -35,6 +97,14 @@ type PdfSignature struct {
 	PropAuthType *core.PdfObjectName
 }
 
+// NewPdfSignature creates a new PdfSignature object.
+func NewPdfSignature() *PdfSignature {
+	sig := &PdfSignature{}
+	sigDict := &pdfSignDictionary{PdfObjectDictionary: core.MakeDict(), handler: &sig.Handler, signature: sig}
+	sig.container = core.MakeIndirectObject(sigDict)
+	return sig
+}
+
 // PdfSignatureReference represents a signature reference dictionary.
 // (Table 253 - p. 477 in PDF32000_2008).
 type PdfSignatureReference struct {
@@ -53,7 +123,13 @@ func (sig *PdfSignature) GetContainingPdfObject() core.PdfObject {
 // ToPdfObject implements interface PdfModel.
 func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	container := sig.container
-	dict := container.PdfObject.(*core.PdfObjectDictionary)
+
+	var dict *core.PdfObjectDictionary
+	if sigDict, ok := container.PdfObject.(*pdfSignDictionary); ok {
+		dict = sigDict.PdfObjectDictionary
+	} else {
+		dict = container.PdfObject.(*core.PdfObjectDictionary)
+	}
 
 	dict.Set("Type", sig.Type)
 
@@ -90,7 +166,12 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	if sig.ContactInfo != nil {
 		dict.Set("ContactInfo", sig.ContactInfo)
 	}
-
+	if sig.ByteRange != nil {
+		dict.Set("ByteRange", sig.ByteRange)
+	}
+	if sig.Contents != nil {
+		dict.Set("Contents", sig.Contents)
+	}
 	// FIXME: ByteRange and Contents need to be updated dynamically.
 	return container
 }
@@ -175,6 +256,7 @@ type PdfSignatureField struct {
 	// V: *PdfSignature...
 	Lock *core.PdfIndirectObject // Shall be an indirect reference.
 	SV   *core.PdfIndirectObject // Shall be an indirect reference.
+	Kids *core.PdfObjectArray
 }
 
 // NewPdfSignatureField prepares a PdfSignatureField from a PdfSignature.
@@ -201,6 +283,9 @@ func (sf *PdfSignatureField) ToPdfObject() core.PdfObject {
 	if sf.SV != nil {
 		dict.Set("SV", sf.SV)
 	}
+	if sf.Kids != nil {
+		dict.Set("Kids", sf.Kids)
+	}
 	// Other standard fields...
 
 	return container
@@ -218,6 +303,7 @@ type PdfSignatureFieldLock struct {
 // PdfSignatureFieldSeed represents signature field seed value dictionary.
 // (Table 234 - p. 455 in PDF32000_2008).
 type PdfSignatureFieldSeed struct {
+	container *core.PdfIndirectObject
 	// Type
 	Ff               *core.PdfObjectInteger
 	Filter           *core.PdfObjectName
@@ -234,9 +320,56 @@ type PdfSignatureFieldSeed struct {
 	AppearanceFilter *core.PdfObjectString
 }
 
+func (pss *PdfSignatureFieldSeed) ToPdfObject() core.PdfObject {
+	container := pss.container
+	dict := container.PdfObject.(*core.PdfObjectDictionary)
+
+	if pss.Ff != nil {
+		dict.Set("Ff", pss.Ff)
+	}
+	if pss.Filter != nil {
+		dict.Set("Filter", pss.Filter)
+	}
+	if pss.SubFilter != nil {
+		dict.Set("SubFilter", pss.SubFilter)
+	}
+	if pss.DigestMethod != nil {
+		dict.Set("DigestMethod", pss.DigestMethod)
+	}
+	if pss.V != nil {
+		dict.Set("V", pss.V)
+	}
+	if pss.Cert != nil {
+		dict.Set("Cert", pss.Cert)
+	}
+	if pss.Reasons != nil {
+		dict.Set("Reasons", pss.Reasons)
+	}
+	if pss.MDP != nil {
+		dict.Set("MDP", pss.MDP)
+	}
+	if pss.TimeStamp != nil {
+		dict.Set("TimeStamp", pss.TimeStamp)
+	}
+	if pss.LegalAttestation != nil {
+		dict.Set("LegalAttestation", pss.LegalAttestation)
+	}
+	if pss.AddRevInfo != nil {
+		dict.Set("AddRevInfo", pss.AddRevInfo)
+	}
+	if pss.LockDocument != nil {
+		dict.Set("LockDocument", pss.LockDocument)
+	}
+	if pss.AppearanceFilter != nil {
+		dict.Set("AppearanceFilter", pss.AppearanceFilter)
+	}
+	return container
+}
+
 // PdfCertificateSeed represents certificate seed value dictionary.
 // (Table 235 - p. 457 in PDF32000_2008).
 type PdfCertificateSeed struct {
+	container *core.PdfIndirectObject
 	// Type
 	Ff                            *core.PdfObjectInteger
 	Subject                       *core.PdfObjectArray
@@ -250,4 +383,46 @@ type PdfCertificateSeed struct {
 	OID                           *core.PdfObjectArray
 	URL                           *core.PdfObjectString
 	URLType                       *core.PdfObjectName
+}
+
+func (pcs *PdfCertificateSeed) ToPdfObject() core.PdfObject {
+	container := pcs.container
+	dict := container.PdfObject.(*core.PdfObjectDictionary)
+	if pcs.Ff != nil {
+		dict.Set("Ff", pcs.Ff)
+	}
+	if pcs.Subject != nil {
+		dict.Set("Subject", pcs.Subject)
+	}
+	if pcs.SignaturePolicyOID != nil {
+		dict.Set("SignaturePolicyOID", pcs.SignaturePolicyOID)
+	}
+	if pcs.SignaturePolicyHashValue != nil {
+		dict.Set("SignaturePolicyHashValue", pcs.SignaturePolicyHashValue)
+	}
+	if pcs.SignaturePolicyHashAlgorithm != nil {
+		dict.Set("SignaturePolicyHashAlgorithm", pcs.SignaturePolicyHashAlgorithm)
+	}
+	if pcs.SignaturePolicyCommitmentType != nil {
+		dict.Set("SignaturePolicyCommitmentType", pcs.SignaturePolicyCommitmentType)
+	}
+	if pcs.SubjectDN != nil {
+		dict.Set("SubjectDN", pcs.SubjectDN)
+	}
+	if pcs.KeyUsage != nil {
+		dict.Set("KeyUsage", pcs.KeyUsage)
+	}
+	if pcs.Issuer != nil {
+		dict.Set("Issuer", pcs.Issuer)
+	}
+	if pcs.OID != nil {
+		dict.Set("OID", pcs.OID)
+	}
+	if pcs.URL != nil {
+		dict.Set("URL", pcs.URL)
+	}
+	if pcs.URLType != nil {
+		dict.Set("URLType", pcs.URLType)
+	}
+	return container
 }

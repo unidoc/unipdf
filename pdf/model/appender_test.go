@@ -6,12 +6,16 @@
 package model
 
 import (
+	"bytes"
+	"crypto/rsa"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+	"golang.org/x/crypto/pkcs12"
 )
 
 // This test file contains multiple tests to generate PDFs from existing Pdf files. The outputs are written into /tmp as files.  The files
@@ -31,6 +35,11 @@ const imgPdfFile2 = "./testdata/img1-2.pdf"
 
 // source http://foersom.com/net/HowTo/data/OoPdfFormExample.pdf
 const testPdfAcroFormFile1 = "./testdata/OoPdfFormExample.pdf"
+
+const testPdfSignedPDFDocument = "./testdata/SampleSignedPDFDocument.pdf"
+
+const testPKS12Key = "./testdata/ks12"
+const testPKS12KeyPassword = "password"
 
 func tempFile(name string) string {
 	return filepath.Join(os.TempDir(), name)
@@ -361,4 +370,87 @@ func TestAppenderMergePage3(t *testing.T) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
+}
+
+func validateFile(t *testing.T, fileName string) {
+	data, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	reader, err := NewPdfReader(bytes.NewReader(data))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, _ := NewAdobeX509RSASHA1SignatureHandler(nil, nil)
+	handler2, _ := NewAdobePKCS7DetachedSignatureHandler(nil, nil)
+	handlers := []SignatureHandler{handler, handler2}
+
+	res, err := reader.Validate(handlers)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	if len(res) == 0 {
+		t.Errorf("Fail: signature fields not found")
+		return
+	}
+
+	if !res[0].IsSigned || !res[0].IsVerified {
+		t.Errorf("Fail: validation failed")
+		return
+	}
+}
+
+func TestAppenderSignPage4(t *testing.T) {
+	// TODO move to reader_test.go
+	validateFile(t, testPdfSignedPDFDocument)
+
+	f1, err := os.Open(testPdfFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f1.Close()
+	pdf1, err := NewPdfReader(f1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err := NewPdfAppender(pdf1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	f, _ := ioutil.ReadFile(testPKS12Key)
+	privateKey, cert, err := pkcs12.Decode(f, testPKS12KeyPassword)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := NewAdobePKCS7DetachedSignatureHandler(privateKey.(*rsa.PrivateKey), cert)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	_, appearance, err := appender.Sign(1, handler)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
+	appearance.Signature.Name = core.MakeString("Test Appender")
+
+	err = appender.WriteToFile(tempFile("appender_sign_page_4.pdf"))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	validateFile(t, tempFile("appender_sign_page_4.pdf"))
 }
