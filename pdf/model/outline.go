@@ -5,7 +5,9 @@
 
 package model
 
-import "github.com/unidoc/unidoc/pdf/core"
+import (
+	"github.com/unidoc/unidoc/pdf/core"
+)
 
 /*
 OutlineDest
@@ -47,6 +49,15 @@ func NewOutline() *Outline {
 
 func (o *Outline) Add(item *OutlineItem) {
 	o.items = append(o.items, item)
+}
+
+func (o *Outline) Insert(index uint, item *OutlineItem) {
+	l := uint(len(o.items))
+	if index > l {
+		index = l
+	}
+
+	o.items = append(o.items[:index], append([]*OutlineItem{item}, o.items[index:]...)...)
 }
 
 func (o *Outline) Items() []*OutlineItem {
@@ -110,6 +121,15 @@ func (oi *OutlineItem) Add(item *OutlineItem) {
 	oi.items = append(oi.items, item)
 }
 
+func (oi *OutlineItem) Insert(index uint, item *OutlineItem) {
+	l := uint(len(oi.items))
+	if index > l {
+		index = l
+	}
+
+	oi.items = append(oi.items[:index], append([]*OutlineItem{item}, oi.items[index:]...)...)
+}
+
 func (oi *OutlineItem) Items() []*OutlineItem {
 	return oi.items
 }
@@ -141,6 +161,8 @@ func (oi *OutlineItem) ToPdfOutlineItem() (*PdfOutlineItem, int64) {
 
 	// Add outline item linked list properties.
 	lenOutlineItems := len(outlineItems)
+	lenDescendants += int64(lenOutlineItems)
+
 	if lenOutlineItems > 0 {
 		currItem.First = &outlineItems[0].PdfOutlineTreeNode
 		currItem.Last = &outlineItems[lenOutlineItems-1].PdfOutlineTreeNode
