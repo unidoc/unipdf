@@ -453,6 +453,19 @@ func (c *Creator) finalize() error {
 		for _, outlineItem := range outlineItems {
 			adjustOutlineDest(outlineItem)
 		}
+
+		// Add outline TOC item.
+		if c.AddTOC {
+			var tocPage int64
+			if hasFrontPage {
+				tocPage = 1
+			}
+
+			c.outline.Insert(0, model.NewOutlineItem(
+				"Table of Contents",
+				model.NewOutlineDest(tocPage, 0, c.pageHeight),
+			))
+		}
 	}
 
 	for idx, page := range c.pages {
