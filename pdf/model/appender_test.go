@@ -3,24 +3,28 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package model
+package model_test
 
 import (
 	"bytes"
 	"crypto/rsa"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"golang.org/x/crypto/pkcs12"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
-	"golang.org/x/crypto/pkcs12"
+	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unidoc/pdf/model/sighandler"
 )
 
-// This test file contains multiple tests to generate PDFs from existing Pdf files. The outputs are written into /tmp as files.  The files
-// themselves need to be observed to check for correctness as we don't have a good way to automatically check
-// if every detail is correct.
+// This test file contains multiple tests to generate PDFs from existing Pdf files. The outputs are written
+// into TMPDIR as files.  The files themselves need to be observed to check for correctness as we don't have
+// a good way to automatically check if every detail is correct.
 
 func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -52,7 +56,7 @@ func TestAppenderAddPage(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -63,13 +67,13 @@ func TestAppenderAddPage(t *testing.T) {
 		return
 	}
 	defer f2.Close()
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -94,7 +98,7 @@ func TestAppenderAddPage2(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -105,13 +109,13 @@ func TestAppenderAddPage2(t *testing.T) {
 		return
 	}
 	defer f2.Close()
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -135,13 +139,13 @@ func TestAppenderRemovePage(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -164,7 +168,7 @@ func TestAppenderReplacePage(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -176,13 +180,13 @@ func TestAppenderReplacePage(t *testing.T) {
 		return
 	}
 	defer f2.Close()
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -205,21 +209,21 @@ func TestAppenderAddAnnotation(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
 	page := pdf1.PageList[0]
-	annotation := NewPdfAnnotationSquare()
-	rect := PdfRectangle{Ury: 250.0, Urx: 150.0, Lly: 50.0, Llx: 50.0}
+	annotation := model.NewPdfAnnotationSquare()
+	rect := model.PdfRectangle{Ury: 250.0, Urx: 150.0, Lly: 50.0, Llx: 50.0}
 	annotation.Rect = rect.ToPdfObject()
 	annotation.IC = core.MakeArrayFromFloats([]float64{4.0, 0.0, 0.3})
 	annotation.CA = core.MakeFloat(0.5)
@@ -242,7 +246,7 @@ func TestAppenderMergePage(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -254,13 +258,13 @@ func TestAppenderMergePage(t *testing.T) {
 		return
 	}
 	defer f2.Close()
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -287,7 +291,7 @@ func TestAppenderMergePage2(t *testing.T) {
 	}
 	defer f1.Close()
 
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -300,13 +304,13 @@ func TestAppenderMergePage2(t *testing.T) {
 	}
 	defer f2.Close()
 
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -334,7 +338,7 @@ func TestAppenderMergePage3(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -347,13 +351,13 @@ func TestAppenderMergePage3(t *testing.T) {
 	}
 	defer f2.Close()
 
-	pdf2, err := NewPdfReader(f2)
+	pdf2, err := model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -378,17 +382,17 @@ func validateFile(t *testing.T, fileName string) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	reader, err := NewPdfReader(bytes.NewReader(data))
+	reader, err := model.NewPdfReader(bytes.NewReader(data))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	handler, _ := NewAdobeX509RSASHA1SignatureHandler(nil, nil)
-	handler2, _ := NewAdobePKCS7DetachedSignatureHandler(nil, nil)
-	handlers := []SignatureHandler{handler, handler2}
+	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
+	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
+	handlers := []model.SignatureHandler{handler, handler2}
 
-	res, err := reader.Validate(handlers)
+	res, err := reader.ValidateSignatures(handlers)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -402,6 +406,11 @@ func validateFile(t *testing.T, fileName string) {
 		t.Errorf("Fail: validation failed")
 		return
 	}
+
+	for i, item := range res {
+		t.Logf("== Signature %d", i+1)
+		t.Logf("%s", item.String())
+	}
 }
 
 func TestAppenderSignPage4(t *testing.T) {
@@ -414,13 +423,13 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 	defer f1.Close()
-	pdf1, err := NewPdfReader(f1)
+	pdf1, err := model.NewPdfReader(f1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	appender, err := NewPdfAppender(pdf1)
+	appender, err := model.NewPdfAppender(pdf1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -433,7 +442,7 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 
-	handler, err := NewAdobePKCS7DetachedSignatureHandler(privateKey.(*rsa.PrivateKey), cert)
+	handler, err := sighandler.NewAdobePKCS7Detached(privateKey.(*rsa.PrivateKey), cert)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -444,8 +453,8 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 
-	appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
 	appearance.Signature.Name = core.MakeString("Test Appender")
+	appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
 
 	err = appender.WriteToFile(tempFile("appender_sign_page_4.pdf"))
 	if err != nil {
@@ -453,4 +462,79 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 	validateFile(t, tempFile("appender_sign_page_4.pdf"))
+}
+
+func TestAppenderSignMultiple(t *testing.T) {
+	inputPath := testPdfFile1
+
+	for i := 0; i < 3; i++ {
+		f, err := os.Open(inputPath)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+
+		pdfReader, err := model.NewPdfReader(f)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+
+		t.Logf("Fields: %d", len(pdfReader.AcroForm.AllFields()))
+
+		if len(pdfReader.AcroForm.AllFields()) != i {
+			t.Fatalf("fields != %d (got %d)", i, len(pdfReader.AcroForm.AllFields()))
+		}
+
+		t.Logf("Annotations: %d", len(pdfReader.PageList[0].Annotations))
+		if len(pdfReader.PageList[0].Annotations) != i {
+			t.Fatalf("page annotations != %d (got %d)", i, len(pdfReader.PageList[0].Annotations))
+		}
+
+		appender, err := model.NewPdfAppender(pdfReader)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+
+		pfxData, _ := ioutil.ReadFile(testPKS12Key)
+		privateKey, cert, err := pkcs12.Decode(pfxData, testPKS12KeyPassword)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+
+		handler, err := sighandler.NewAdobePKCS7Detached(privateKey.(*rsa.PrivateKey), cert)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+		_, appearance, err := appender.Sign(1, handler)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+
+		appearance.Signature.Name = core.MakeString(fmt.Sprintf("Test Appender - Round %d", i+1))
+		appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
+
+		outPath := tempFile(fmt.Sprintf("appender_sign_multiple_%d.pdf", i+1))
+
+		err = appender.WriteToFile(outPath)
+		if err != nil {
+			t.Errorf("Fail: %v\n", err)
+			f.Close()
+			return
+		}
+
+		validateFile(t, outPath)
+		inputPath = outPath
+
+		f.Close()
+	}
 }

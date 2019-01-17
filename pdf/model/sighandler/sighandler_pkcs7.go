@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package model
+package sighandler
 
 import (
 	"bytes"
@@ -13,21 +13,23 @@ import (
 
 	"github.com/unidoc/unidoc/common/crypto/pkcs7"
 	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
-type adobePKCS7DetachedSignatureHandler struct {
+// Adobe PKCS7 detached signature handler.
+type adobePKCS7Detached struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
 }
 
-// NewAdobePKCS7DetachedSignatureHandler creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
+// NewAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
 // The both parameters may be nil for the signature validation.
-func NewAdobePKCS7DetachedSignatureHandler(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (SignatureHandler, error) {
-	return &adobePKCS7DetachedSignatureHandler{certificate: certificate, privateKey: privateKey}, nil
+func NewAdobePKCS7Detached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
+	return &adobePKCS7Detached{certificate: certificate, privateKey: privateKey}, nil
 }
 
 // InitSignature initialises the PdfSignature.
-func (a *adobePKCS7DetachedSignatureHandler) InitSignature(sig *PdfSignature) error {
+func (a *adobePKCS7Detached) InitSignature(sig *model.PdfSignature) error {
 	if a.certificate == nil {
 		return errors.New("certificate must not be nil")
 	}
@@ -38,9 +40,7 @@ func (a *adobePKCS7DetachedSignatureHandler) InitSignature(sig *PdfSignature) er
 	handler := *a
 	sig.Handler = &handler
 	sig.Filter = core.MakeName("Adobe.PPKLite")
-	//sig.Filter = core.MakeName("Adobe.PPKMS")
 	sig.SubFilter = core.MakeName("adbe.pkcs7.detached")
-	sig.Cert = core.MakeString(string(handler.certificate.Raw))
 
 	sig.Reference = nil
 	digest, err := handler.NewDigest(sig)
@@ -51,7 +51,7 @@ func (a *adobePKCS7DetachedSignatureHandler) InitSignature(sig *PdfSignature) er
 	return handler.Sign(sig, digest)
 }
 
-func (a *adobePKCS7DetachedSignatureHandler) getCertificate(sig *PdfSignature) (*x509.Certificate, error) {
+func (a *adobePKCS7Detached) getCertificate(sig *model.PdfSignature) (*x509.Certificate, error) {
 	certificate := a.certificate
 	if certificate == nil {
 		certData := sig.Cert.(*core.PdfObjectString).Bytes()
@@ -65,31 +65,34 @@ func (a *adobePKCS7DetachedSignatureHandler) getCertificate(sig *PdfSignature) (
 }
 
 // NewDigest creates a new digest.
-func (a *adobePKCS7DetachedSignatureHandler) NewDigest(sig *PdfSignature) (Hasher, error) {
+func (a *adobePKCS7Detached) NewDigest(sig *model.PdfSignature) (model.Hasher, error) {
 	return bytes.NewBuffer(nil), nil
 }
 
 // Validate validates PdfSignature.
-func (a *adobePKCS7DetachedSignatureHandler) Validate(sig *PdfSignature, digest Hasher) (SignatureValidationResult, error) {
+func (a *adobePKCS7Detached) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
 
 	buffer := digest.(*bytes.Buffer)
 	p7, err := pkcs7.Parse(signed)
 	if err != nil {
-		return SignatureValidationResult{}, err
+		return model.SignatureValidationResult{}, err
 	}
 	p7.Content = buffer.Bytes()
 	err = p7.Verify()
 	if err != nil {
-		return SignatureValidationResult{}, err
+		return model.SignatureValidationResult{}, err
 	}
 
-	return SignatureValidationResult{IsSigned: true, IsVerified: true}, nil
+	result := model.SignatureValidationResult{
+		IsSigned:   true,
+		IsVerified: true,
+	}
+	return result, nil
 }
 
 // Sign sets the Contents fields.
-func (a *adobePKCS7DetachedSignatureHandler) Sign(sig *PdfSignature, digest Hasher) error {
-
+func (a *adobePKCS7Detached) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	buffer := digest.(*bytes.Buffer)
 	signedData, err := pkcs7.NewSignedData(buffer.Bytes())
 	if err != nil {
@@ -118,7 +121,7 @@ func (a *adobePKCS7DetachedSignatureHandler) Sign(sig *PdfSignature, digest Hash
 }
 
 // IsApplicable returns true if the signature handler is applicable for the PdfSignature
-func (a *adobePKCS7DetachedSignatureHandler) IsApplicable(sig *PdfSignature) bool {
+func (a *adobePKCS7Detached) IsApplicable(sig *model.PdfSignature) bool {
 	if sig == nil || sig.Filter == nil || sig.SubFilter == nil {
 		return false
 	}
