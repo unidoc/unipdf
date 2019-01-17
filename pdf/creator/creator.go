@@ -431,7 +431,7 @@ func (c *Creator) finalize() error {
 	}
 
 	// Account for the front page and the table of content pages.
-	if c.AddOutlines {
+	if c.outline != nil && c.AddOutlines {
 		var adjustOutlineDest func(item *model.OutlineItem)
 		adjustOutlineDest = func(item *model.OutlineItem) {
 			item.Dest.Page += int64(genpages)
