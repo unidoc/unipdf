@@ -31,6 +31,7 @@ type PdfAppender struct {
 	xrefs          core.XrefTable
 	greatestObjNum int
 
+	// List of new objects and a map for quick lookups.
 	newObjects   []core.PdfObject
 	hasNewObject map[core.PdfObject]struct{}
 }
@@ -95,18 +96,24 @@ func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
 
 // NewPdfAppender creates a new Pdf appender from a Pdf reader.
 func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
-	a := &PdfAppender{}
-	a.rs = reader.rs
-	a.Reader = reader
-	a.parser = a.Reader.parser
+	a := &PdfAppender{
+		rs:     reader.rs,
+		Reader: reader,
+		parser: reader.parser,
+	}
 	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
 	var err error
-	// Create a readonly (immutable) reader. It increases memory using.
-	// Why? We can not check the original reader objects are changed or not.
-	// When we merge, replace a page content. The new page will contain objects from the readonly reader and other objects.
-	// The readonly objects won't append to the result Pdf file. This check is not resource demanding. It checks indirect objects owners only.
+
+	// Create a readonly (immutable) reader. It increases memory use but is necessary to be able
+	// to detect changes in the original reader objects.
+	//
+	// In the case where an existing page is modified, the page contents are replaced upon merging
+	// (appending). The new page will refer to objects from the read-only reader and new instances
+	// of objects that have been changes. Objects from the original reader are not appended, only
+	// new objects that modify the PDF. The change detection check is not resource demanding. It
+	// only checks owners (source) of indirect objects.
 	a.roReader, err = NewPdfReader(a.rs)
 	if err != nil {
 		return nil, err
@@ -133,7 +140,7 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 	switch v := obj.(type) {
 	case *core.PdfIndirectObject:
 		// Check the object is changing.
-		// If the indirect object has not the readonly parser then the object is changed.
+		// If the indirect object has not the read-only parser then the object is changed.
 		if v.GetParser() != a.roReader.parser {
 			a.newObjects = append(a.newObjects, obj)
 			a.hasNewObject[obj] = struct{}{}
@@ -332,7 +339,7 @@ func (a *PdfAppender) MergePageWith(pageNum int, page *PdfPage) error {
 	return nil
 }
 
-// AddPages adds pages to end of the source Pdf.
+// AddPages adds pages to be appended to the end of the source PDF.
 func (a *PdfAppender) AddPages(pages ...*PdfPage) {
 	for _, page := range pages {
 		page = page.Duplicate()
@@ -371,7 +378,7 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 	}
 }
 
-// Sign a document
+// Sign signs a document with a digital signature.
 func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfAppearance, err error) {
 	acroForm = a.Reader.AcroForm
 	if acroForm == nil {
@@ -434,7 +441,8 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 	return acroForm, appearance, nil
 }
 
-// ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which replaces the original acrobat form.
+// ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which
+// replaces the original AcroForm.
 func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 	a.acroForm = acroForm
 }
@@ -596,7 +604,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		writerW = bytes.NewBuffer(nil)
 	}
 
-	// Do a mock write to get offsets.
+	// Do a mock write to get offsets (needed for signing).
 	// TODO(gunnsth): Only needed when dealing with signatures?
 	if err := writer.Write(writerW); err != nil {
 		return err
@@ -671,7 +679,6 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		}
 
 		writerW = bytes.NewBuffer(bufferData)
-
 	}
 
 	if buffer, ok := writerW.(*bytes.Buffer); ok {
