@@ -11,7 +11,8 @@ import (
 	"crypto/x509"
 	"errors"
 
-	"github.com/unidoc/unidoc/common/crypto/pkcs7"
+	"github.com/gunnsth/pkcs7"
+
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
