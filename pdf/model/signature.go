@@ -12,7 +12,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// pdfSignDictionary is needed because of the digital checksum calculates after a new file creation and writes as a value into PdfDictionary in the existing file.
+// pdfSignDictionary is used as a wrapper around PdfSignature for digital checksum calculation
+// and population of /Contents and /ByteRange.
 type pdfSignDictionary struct {
 	*core.PdfObjectDictionary
 	handler              *SignatureHandler
@@ -52,15 +53,15 @@ func (d *pdfSignDictionary) WriteString() string {
 			out.WriteString(" ")
 			d.byteRangeOffsetStart = out.Len()
 			out.WriteString(v.WriteString())
-			out.WriteString("                       ")
-			d.byteRangeOffsetEnd = out.Len()
+			out.WriteString(" ")
+			d.byteRangeOffsetEnd = out.Len() - 1
 		case "Contents":
 			out.WriteString(k.WriteString())
 			out.WriteString(" ")
 			d.contentsOffsetStart = out.Len()
 			out.WriteString(v.WriteString())
-			out.WriteString("                       ")
-			d.contentsOffsetEnd = out.Len()
+			out.WriteString(" ")
+			d.contentsOffsetEnd = out.Len() - 1
 		default:
 			out.WriteString(k.WriteString())
 			out.WriteString(" ")
@@ -100,7 +101,11 @@ type PdfSignature struct {
 // NewPdfSignature creates a new PdfSignature object.
 func NewPdfSignature() *PdfSignature {
 	sig := &PdfSignature{}
-	sigDict := &pdfSignDictionary{PdfObjectDictionary: core.MakeDict(), handler: &sig.Handler, signature: sig}
+	sigDict := &pdfSignDictionary{
+		PdfObjectDictionary: core.MakeDict(),
+		handler:             &sig.Handler,
+		signature:           sig,
+	}
 	sig.container = core.MakeIndirectObject(sigDict)
 	return sig
 }
@@ -172,7 +177,9 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	if sig.Contents != nil {
 		dict.Set("Contents", sig.Contents)
 	}
-	// FIXME: ByteRange and Contents need to be updated dynamically.
+	// NOTE: ByteRange and Contents need to be updated dynamically.
+	// TODO: Currently dynamic update is only in the appender, need to support in the PdfWriter
+	// too for the initial signature on document creation.
 	return container
 }
 
@@ -251,11 +258,9 @@ func (r *PdfReader) newPdfSignatureFromIndirect(container *core.PdfIndirectObjec
 type PdfSignatureField struct {
 	container *core.PdfIndirectObject
 
-	V *PdfSignature
-	// Type: /Sig
-	// V: *PdfSignature...
-	Lock *core.PdfIndirectObject // Shall be an indirect reference.
-	SV   *core.PdfIndirectObject // Shall be an indirect reference.
+	V    *PdfSignature
+	Lock *core.PdfIndirectObject
+	SV   *core.PdfIndirectObject
 	Kids *core.PdfObjectArray
 }
 
@@ -304,7 +309,7 @@ type PdfSignatureFieldLock struct {
 // (Table 234 - p. 455 in PDF32000_2008).
 type PdfSignatureFieldSeed struct {
 	container *core.PdfIndirectObject
-	// Type
+
 	Ff               *core.PdfObjectInteger
 	Filter           *core.PdfObjectName
 	SubFilter        *core.PdfObjectArray

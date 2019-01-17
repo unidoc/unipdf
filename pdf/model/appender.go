@@ -19,7 +19,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// PdfAppender appends a new Pdf content to an existing Pdf document.
+// PdfAppender appends new PDF content to an existing PDF document via incremental updates.
 type PdfAppender struct {
 	rs       io.ReadSeeker
 	parser   *core.PdfParser
@@ -416,7 +416,6 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 	appearance.V = sig.ToPdfObject()
 	appearance.FT = core.MakeName("Sig")
 	appearance.V = sig.ToPdfObject()
-	//appearance.Ff = core.MakeInteger(0)
 	appearance.T = core.MakeString("Signature1")
 	appearance.F = core.MakeInteger(132)
 	appearance.P = page.ToPdfObject()
@@ -424,9 +423,14 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 		core.MakeInteger(0))
 	appearance.Signature = sig
 
+	// Add the signature appearance to the page annotations.
+	page.Annotations = append(page.Annotations, appearance.PdfAnnotationWidget.PdfAnnotation)
+
 	a.pages[pageIndex] = page
 
+	// Update acroform.
 	a.ReplaceAcroForm(acroForm)
+
 	return acroForm, appearance, nil
 }
 
@@ -437,7 +441,6 @@ func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 
 // Write writes the Appender output to io.Writer.
 func (a *PdfAppender) Write(w io.Writer) error {
-
 	writer := NewPdfWriter()
 
 	pagesDict, ok := core.GetDict(writer.pages)
@@ -499,7 +502,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 				common.Log.Trace("Page Parent: %T", parent)
 				parentDict, ok := parent.PdfObject.(*core.PdfObjectDictionary)
 				if !ok {
-					return errors.New("Invalid Parent object")
+					return errors.New("invalid Parent object")
 				}
 				for _, field := range inheritedFields {
 					common.Log.Trace("Field %s", field)
@@ -593,10 +596,13 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		writerW = bytes.NewBuffer(nil)
 	}
 
+	// Do a mock write to get offsets.
+	// TODO(gunnsth): Only needed when dealing with signatures?
 	if err := writer.Write(writerW); err != nil {
 		return err
 	}
 
+	// TODO(gunnsth): Consider whether the dynamic content can be handled with generic write hooks?
 	if hasSigDict {
 		bufferData := writerW.(*bytes.Buffer).Bytes()
 		byteRange := core.MakeArray()
