@@ -292,6 +292,9 @@ func (str *PdfObjectString) Str() string {
 // UTF-16BE is applied when the first two bytes are 0xFE, 0XFF, otherwise decoding of
 // PDFDocEncoding is performed.
 func (str *PdfObjectString) Decoded() string {
+	if str == nil {
+		return ""
+	}
 	b := []byte(str.val)
 	if len(b) >= 2 && b[0] == 0xFE && b[1] == 0xFF {
 		// UTF16BE.

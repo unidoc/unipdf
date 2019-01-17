@@ -11,6 +11,7 @@ import "github.com/unidoc/unidoc/pdf/core"
 type PdfAppearance struct {
 	*PdfField
 	*PdfAnnotationWidget
+	// TODO(gunnsth): Signature is not really part of an appearance.
 	Signature *PdfSignature
 }
 
