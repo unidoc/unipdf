@@ -34,6 +34,8 @@ type PdfAppender struct {
 	// List of new objects and a map for quick lookups.
 	newObjects   []core.PdfObject
 	hasNewObject map[core.PdfObject]struct{}
+
+	written bool
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -378,7 +380,8 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 	}
 }
 
-// Sign signs a document with a digital signature.
+// Sign signs a specific page with a digital signature using a specified signature handler.
+// Returns an Acroform and PdfAppearance that can be used to customize the signature appearance.
 func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfAppearance, err error) {
 	acroForm = a.Reader.AcroForm
 	if acroForm == nil {
@@ -448,7 +451,13 @@ func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 }
 
 // Write writes the Appender output to io.Writer.
+// It can only be called once and further invokations will result in an error.
 func (a *PdfAppender) Write(w io.Writer) error {
+	if a.written {
+		return errors.New("appender write can only be invoked once")
+	}
+	a.written = true
+
 	writer := NewPdfWriter()
 
 	pagesDict, ok := core.GetDict(writer.pages)
@@ -541,6 +550,9 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		return err
 	}
 
+	// Digital signature handling: Check if any of the new objects represent a signature dictionary.
+	// The byte range is later updated dynamically based on the position of the actual signature
+	// Contents.
 	digestWriters := make(map[SignatureHandler]io.Writer)
 	byteRange := core.MakeArray()
 	for _, obj := range a.newObjects {
@@ -559,7 +571,6 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	if byteRange.Len() > 0 {
 		byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
 	}
-
 	for _, obj := range a.newObjects {
 		if ind, found := core.GetIndirect(obj); found {
 			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
@@ -579,6 +590,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		reader = io.TeeReader(a.rs, io.MultiWriter(writers...))
 	}
 
+	// Write the original PDF.
 	offset, err := io.Copy(w, reader)
 	if err != nil {
 		return err
@@ -599,19 +611,22 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	}
 
 	writerW := w
-
 	if hasSigDict {
+		// For signatures, we need to write twice. First to find the byte offset of the Contents and then
+		// dynamically update file with the signature and ByteRange.
+		// Thus we create an empty buffer to write to and then at the e
 		writerW = bytes.NewBuffer(nil)
 	}
 
-	// Do a mock write to get offsets (needed for signing).
-	// TODO(gunnsth): Only needed when dealing with signatures?
+	// Perform the write. For signatures will do a mock write to a buffer.
 	if err := writer.Write(writerW); err != nil {
 		return err
 	}
 
-	// TODO(gunnsth): Consider whether the dynamic content can be handled with generic write hooks?
+	// TODO(gunnsth): Consider whether the dynamic content can be handled efficiently with generic write hooks?
+	// Logic is getting pretty complex here.
 	if hasSigDict {
+		// Update the byteRanges based on mock write.
 		bufferData := writerW.(*bytes.Buffer).Bytes()
 		byteRange := core.MakeArray()
 		var sigDicts []*pdfSignDictionary
@@ -665,6 +680,9 @@ func (a *PdfAppender) Write(w io.Writer) error {
 			}
 			contents := []byte(sigDict.signature.Contents.WriteString())
 
+			// Empty out the ByteRange and Content data.
+			// FIXME(gunnsth): Is this needed?  Seems like the correct data is copied below?  Prefer
+			// to keep the rest space?
 			for i := sigDict.byteRangeOffsetStart; i < sigDict.byteRangeOffsetEnd; i++ {
 				bufferData[bufferOffset+i] = ' '
 			}
@@ -672,20 +690,21 @@ func (a *PdfAppender) Write(w io.Writer) error {
 				bufferData[bufferOffset+i] = ' '
 			}
 
+			// Copy the actual ByteRange and Contents data into the buffer prepared by first write.
 			dst := bufferData[bufferOffset+sigDict.byteRangeOffsetStart : bufferOffset+sigDict.byteRangeOffsetEnd]
 			copy(dst, byteRangeData)
 			dst = bufferData[bufferOffset+sigDict.contentsOffsetStart : bufferOffset+sigDict.contentsOffsetEnd]
 			copy(dst, contents)
 		}
 
-		writerW = bytes.NewBuffer(bufferData)
-	}
-
-	if buffer, ok := writerW.(*bytes.Buffer); ok {
+		buffer := bytes.NewBuffer(bufferData)
 		_, err = io.Copy(w, buffer)
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
 }
 
 // WriteToFile writes the Appender output to file specified by path.

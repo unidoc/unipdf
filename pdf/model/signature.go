@@ -12,8 +12,11 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+var _ core.PdfObject = &pdfSignDictionary{}
+
 // pdfSignDictionary is used as a wrapper around PdfSignature for digital checksum calculation
 // and population of /Contents and /ByteRange.
+// Implements interface core.PdfObject.
 type pdfSignDictionary struct {
 	*core.PdfObjectDictionary
 	handler              *SignatureHandler

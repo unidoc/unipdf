@@ -538,3 +538,50 @@ func TestAppenderSignMultiple(t *testing.T) {
 		f.Close()
 	}
 }
+
+// Each Appender can only be written out once, further invokations of Write should result in an error.
+func TestAppenderAttemptMultiWrite(t *testing.T) {
+	f1, err := os.Open(testPdfLoremIpsumFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f1.Close()
+	pdf1, err := model.NewPdfReader(f1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	f2, err := os.Open(testPdfFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f2.Close()
+	pdf2, err := model.NewPdfReader(f2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err := model.NewPdfAppender(pdf1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender.AddPages(pdf1.PageList...)
+	appender.AddPages(pdf2.PageList...)
+	appender.AddPages(pdf2.PageList...)
+
+	// Write twice to buffer and compare results.
+	var buf1, buf2 bytes.Buffer
+	err = appender.Write(&buf1)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	err = appender.Write(&buf2)
+	if err == nil {
+		t.Fatalf("Second invokation of appender.Write should yield an error")
+	}
+}
