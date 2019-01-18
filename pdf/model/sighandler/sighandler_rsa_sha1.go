@@ -143,7 +143,7 @@ func (a *adobeX509RSASHA1) Sign(sig *model.PdfSignature, digest model.Hasher) er
 	return nil
 }
 
-// IsApplicable returns true if the signature handler is applicable for the PdfSignature
+// IsApplicable returns true if the signature handler is applicable for the PdfSignature.
 func (a *adobeX509RSASHA1) IsApplicable(sig *model.PdfSignature) bool {
 	if sig == nil || sig.Filter == nil || sig.SubFilter == nil {
 		return false
