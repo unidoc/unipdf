@@ -39,6 +39,7 @@ func (od OutlineDest) ToPdfObject() core.PdfObject {
 }
 
 // Outline represents a PDF outline dictionary (Table 152 - p. 376).
+// Currently, the Outline object can only be used to construct PDF outlines.
 type Outline struct {
 	items []*OutlineItem
 }

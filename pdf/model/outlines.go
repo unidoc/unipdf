@@ -47,9 +47,7 @@ type PdfOutlineItem struct {
 // NewPdfOutline returns an initialized PdfOutline.
 func NewPdfOutline() *PdfOutline {
 	outline := &PdfOutline{
-		primitive: &PdfIndirectObject{
-			PdfObject: MakeDict(),
-		},
+		primitive: MakeIndirectObject(MakeDict()),
 	}
 
 	outline.context = outline
@@ -66,9 +64,7 @@ func NewPdfOutlineTree() *PdfOutline {
 // NewPdfOutlineItem returns an initialized PdfOutlineItem.
 func NewPdfOutlineItem() *PdfOutlineItem {
 	outlineItem := &PdfOutlineItem{
-		primitive: &PdfIndirectObject{
-			PdfObject: MakeDict(),
-		},
+		primitive: MakeIndirectObject(MakeDict()),
 	}
 
 	outlineItem.context = outlineItem
