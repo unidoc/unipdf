@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
@@ -39,12 +40,18 @@ type Chapter struct {
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
-	// Reference to the creator's TOC.
+	// Reference to the TOC of the creator.
 	toc *TOC
+
+	// Reference to the outline of the creator.
+	outline *model.Outline
+
+	// The item of the chapter in the outline.
+	outlineItem *model.OutlineItem
 }
 
 // newChapter creates a new chapter with the specified title as the heading.
-func newChapter(toc *TOC, title string, number int, style TextStyle) *Chapter {
+func newChapter(toc *TOC, outline *model.Outline, title string, number int, style TextStyle) *Chapter {
 	p := newParagraph(fmt.Sprintf("%d. %s", number, title), style)
 	p.SetFont(style.Font)
 	p.SetFontSize(16)
@@ -55,6 +62,7 @@ func newChapter(toc *TOC, title string, number int, style TextStyle) *Chapter {
 		showNumbering: true,
 		includeInTOC:  true,
 		toc:           toc,
+		outline:       outline,
 		heading:       p,
 		contents:      []Drawable{},
 	}
@@ -141,19 +149,41 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Page++ // Did not fit, moved to new Page block.
 	}
 
-	if chap.includeInTOC {
-		// Add to TOC.
-		chapNumber := ""
-		if chap.showNumbering {
-			if chap.number != 0 {
-				chapNumber = strconv.Itoa(chap.number) + "."
-			}
-		}
+	// Generate chapter title and number.
+	chapTitle := chap.title
+	var chapNumber string
+	page := int64(ctx.Page)
 
-		line := chap.toc.Add(chapNumber, chap.title, strconv.Itoa(ctx.Page), 1)
-		if chap.toc.showLinks {
-			line.SetLink(int64(ctx.Page), origX, origY)
+	if chap.showNumbering {
+		if chap.number != 0 {
+			chapNumber = strconv.Itoa(chap.number) + "."
 		}
+	}
+
+	if chapNumber != "" {
+		chapTitle = fmt.Sprintf("%s %s", chapNumber, chapTitle)
+	}
+
+	// Add to TOC.
+	if chap.includeInTOC {
+		line := chap.toc.Add(chapNumber, chap.title, strconv.FormatInt(page, 10), 1)
+		if chap.toc.showLinks {
+			line.SetLink(page, origX, origY)
+		}
+	}
+
+	// Add to outline.
+	if chap.outlineItem == nil {
+		chap.outlineItem = model.NewOutlineItem(
+			chapTitle,
+			model.NewOutlineDest(page-1, origX, origY),
+		)
+		chap.outline.Add(chap.outlineItem)
+	} else {
+		outlineDest := &chap.outlineItem.Dest
+		outlineDest.Page = page - 1
+		outlineDest.X = origX
+		outlineDest.Y = origY
 	}
 
 	for _, d := range chap.contents {
