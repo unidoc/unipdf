@@ -9,7 +9,7 @@ import (
 // and saves the data into the SegmentReader structure
 // Returns error on fail.
 type SegmentReader interface {
-	ReadSegment(r *reader.Reader) error
+	Decode(r *reader.Reader) error
 }
 
 type Segmenter interface {
@@ -22,5 +22,5 @@ type Segmenter interface {
 // SymbolDictionarySegmenter is the interface that is used by SymbolDictionarySegment to return
 // exported symbols number
 type SymbolDictionarySegmenter interface {
-	ExportedSymbolsNumber() int
+	ExportedSymbolsNumber() uint32
 }

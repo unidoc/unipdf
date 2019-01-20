@@ -16,9 +16,10 @@ var log = common.Log
 type GenericRegionSegment struct {
 	*regions.RegionSegment
 
-	genericRegionFlags *GenericRegionFlags
+	GenericRegionFlags *GenericRegionFlags
 
 	inlineImage, unknownLength bool
+	UseMMR                     bool
 
 	Bitmap *bitmap.Bitmap
 }
@@ -33,7 +34,7 @@ func NewGenericRegionSegment(
 	g := &GenericRegionSegment{
 		RegionSegment:      regions.NewRegionSegment(decoders, h),
 		inlineImage:        inlineImage,
-		genericRegionFlags: newFlags(),
+		GenericRegionFlags: newFlags(),
 	}
 
 	return g
@@ -45,54 +46,55 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	common.Log.Debug("[READ] Generic Region Segment started.")
 	defer common.Log.Debug("[READ] Generic Region Segment finished.")
 
+	common.Log.Debug("Decode RegionSegment basics")
 	// Read the segment basics
 	if err := g.RegionSegment.Decode(r); err != nil {
 		common.Log.Debug("RegionSegment.Decode failed.")
 		return err
 	}
 
+	common.Log.Debug("ReadGenericSegmentFlags")
 	// Read generic region segment flags
 	if err := g.readGenericRegionFlags(r); err != nil {
 		common.Log.Debug("readGenericRegionFlags failed. %v", err)
 		return err
 	}
 
+	g.UseMMR = g.GenericRegionFlags.GetValue(MMR) != 0
 	var (
-		useMMR   bool = g.genericRegionFlags.GetValue(mmr) != 0
-		template      = g.genericRegionFlags.GetValue(gbTemplate)
+		template = g.GenericRegionFlags.GetValue(GBTemplate)
 
-		genericBAdaptiveTemplateX []byte = make([]byte, 4)
-		genericBAdaptiveTemplateY []byte = make([]byte, 4)
+		AdaptiveTemplateX, AdaptiveTemplateY []int8 = make([]int8, 4), make([]int8, 4)
 	)
 
-	if !useMMR {
+	common.Log.Debug("UseMMR: %v ", g.UseMMR)
+	if !g.UseMMR {
+
 		var err error
+		var buf []byte = make([]byte, 2)
 		if template == 0 {
+
 			for i := 0; i < 4; i++ {
-				genericBAdaptiveTemplateX[i], err = r.ReadByte()
-				if err != nil {
-					common.Log.Debug("GenericBAdaptiveTemplate X at %d failed", i)
+				if _, err := r.Read(buf); err != nil {
+					common.Log.Debug("Reading AdaptiveTemplate at %d failed", i)
 					return err
 				}
-				genericBAdaptiveTemplateY[i], err = r.ReadByte()
-				if err != nil {
-					common.Log.Debug("GenericBAdaptiveTemplate Y at %d failed", i)
-					return err
-				}
+
+				AdaptiveTemplateX[i] = int8(buf[0])
+				AdaptiveTemplateY[i] = int8(buf[1])
+
 			}
 
 		} else {
-			genericBAdaptiveTemplateX[0], err = r.ReadByte()
-			if err != nil {
-				common.Log.Debug("GenericBAdaptiveTemplate X at %d failed")
+			if _, err := r.Read(buf); err != nil {
+				common.Log.Debug("Reading first AdaptiveTemplate failed")
 				return err
 			}
-			genericBAdaptiveTemplateY[0], err = r.ReadByte()
-			if err != nil {
-				common.Log.Debug("GenericBAdaptiveTemplate Y at %d failed")
-				return err
-			}
+			AdaptiveTemplateX[0] = int8(buf[0])
+			AdaptiveTemplateY[0] = int8(buf[1])
 		}
+		common.Log.Debug("AdaptiveTemplateX %v", AdaptiveTemplateX)
+		common.Log.Debug("AdaptiveTemplateY %v", AdaptiveTemplateY)
 
 		g.Decoders.Arithmetic.ResetGenericStats(template, nil)
 
@@ -103,7 +105,7 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	}
 
 	var (
-		typicalPrediction bool = g.genericRegionFlags.GetValue(tpgdon) != 0
+		typicalPrediction bool = g.GenericRegionFlags.GetValue(TPGDOn) != 0
 		length            int  = g.Segment.Header.DataLength
 	)
 
@@ -111,11 +113,13 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 		// If lenght of data is unknown it needs to be determined through examination of the data
 		// JBIG2 7.2.7
 
+		common.Log.Debug("Length set to: %v", length)
+
 		g.unknownLength = true
 
 		var match1, match2 byte
 
-		if useMMR {
+		if g.UseMMR {
 			match1 = 0
 			match2 = 0
 		} else {
@@ -154,16 +158,29 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 		}
 	}
 
+	common.Log.Debug("Create new bitmap - w: %d, h: %d", g.BMHeight, g.BMWidth)
 	bm := bitmap.New(g.BMWidth, g.BMHeight, g.Decoders)
-
 	bm.Clear(false)
 
 	var mmrDataLength int
-	if !useMMR {
+	if !g.UseMMR {
 		mmrDataLength = length - 18
 	}
 
-	bm.Read(template, useMMR, typicalPrediction, false, nil, genericBAdaptiveTemplateX, genericBAdaptiveTemplateY, mmrDataLength)
+	err := bm.Read(
+		r,
+		g.UseMMR,
+		template,
+		typicalPrediction,
+		false,
+		nil,
+		AdaptiveTemplateX,
+		AdaptiveTemplateY,
+		mmrDataLength,
+	)
+	if err != nil {
+		return err
+	}
 
 	if g.inlineImage {
 		// If the segment is an inline image get the page info segment
@@ -171,7 +188,8 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 		pageSegmenter := g.Decoders.FindPageSegment(g.PageAssociation())
 		if pageSegmenter != nil {
 			// the page segmenter must be pageinformation.PISegment
-			pageSegment := pageSegmenter.(*pageinformation.PISegment)
+
+			pageSegment := pageSegmenter.(*pageinformation.PageInformationSegment)
 
 			// get page bitmap
 			pageBM := pageSegment.PageBitmap
@@ -195,20 +213,24 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	}
 
 	if g.unknownLength {
-		r.Seek(4, io.SeekCurrent)
+		if _, err := r.Seek(4, io.SeekCurrent); err != nil {
+			common.Log.Debug("Seek 4 from current failed: %v", err)
+			return err
+		}
+
 	}
 
 	return nil
 }
 
 func (g *GenericRegionSegment) readGenericRegionFlags(r io.ByteReader) error {
-	genericRegionFlags, err := r.ReadByte()
+	GenericRegionFlags, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
 
-	g.genericRegionFlags.SetValue(int(genericRegionFlags))
+	g.GenericRegionFlags.SetValue(int(GenericRegionFlags))
 
-	common.Log.Debug("Generic Region Segment Flags: %d", genericRegionFlags)
+	common.Log.Debug("Generic Region Segment Flags: %d", GenericRegionFlags)
 	return nil
 }

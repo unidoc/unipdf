@@ -26,7 +26,7 @@ func (d *DecoderStats) Reset() {
 
 // SetEntry sets the decoder stats coding context table with moreprobableSymbol
 func (d *DecoderStats) SetEntry(codingContext, i, moreProbableSymbol int) {
-	d.codingContextTable[codingContext] = (i << 1) + moreProbableSymbol
+	d.codingContextTable[codingContext] = (i << uint(i)) + moreProbableSymbol
 }
 
 // Overwrite overwrites the codingContextTable from new DecoderStats
