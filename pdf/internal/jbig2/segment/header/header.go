@@ -1,14 +1,16 @@
 package header
 
 import (
-	"bufio"
 	"encoding/binary"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
 	"io"
 	"math"
 )
+
+var log common.Logger = common.Log
 
 // Header is the segment header used to define the segment parameters
 type Header struct {
@@ -26,9 +28,9 @@ type Header struct {
 	DataLength         int
 }
 
-// ReadFrom reads the header from the provided reader
+// Decode reads the header from the provided reader
 // Implements io.ReaderFrom
-func (h *Header) ReadFrom(r bufio.Reader) (int, error) {
+func (h *Header) Decode(r *reader.Reader) (int, error) {
 
 	var bytesRead int
 	n, err := h.handleSegmentNumber(r)
@@ -81,7 +83,7 @@ func (h *Header) ReadFrom(r bufio.Reader) (int, error) {
 
 }
 
-func (h *Header) handleSegmentNumber(r bufio.Reader) (int, error) {
+func (h *Header) handleSegmentNumber(r *reader.Reader) (int, error) {
 	b := make([]byte, 4)
 
 	n, err := r.Read(b)
@@ -94,7 +96,7 @@ func (h *Header) handleSegmentNumber(r bufio.Reader) (int, error) {
 	return n, nil
 }
 
-func (h *Header) handleSegmentHeaderFlags(r bufio.Reader) error {
+func (h *Header) handleSegmentHeaderFlags(r *reader.Reader) error {
 	b, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -105,7 +107,7 @@ func (h *Header) handleSegmentHeaderFlags(r bufio.Reader) error {
 	return nil
 }
 
-func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) (int, error) {
+func (h *Header) handleSegmentReferredToCountAndRententionFlags(r *reader.Reader) (int, error) {
 	var bytesRead int
 	b, err := r.ReadByte()
 	if err != nil {
@@ -118,7 +120,7 @@ func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) 
 
 	var referedToSegmentCount int
 
-	referedToSegmentCount = (int(referedToSgmCountAndFlags) & 224) >> 5
+	referedToSegmentCount = int((referedToSgmCountAndFlags & 0xE0) >> 5)
 
 	var retentionFlags []byte
 
@@ -136,7 +138,7 @@ func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) 
 		// add the first byte
 		longFormCountAndFlags[0] = firstByte
 
-		for i := 0; i < 4; i++ {
+		for i := 1; i < 4; i++ {
 
 			sb, err := r.ReadByte()
 			if err != nil {
@@ -152,11 +154,14 @@ func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) 
 		referedToSegmentCount = int(binary.BigEndian.Uint32(longFormCountAndFlags))
 
 		// calculate the number of bytes in this field
-		var noOfBytesInField int = int(math.Ceil(float64(4 + (referedToSegmentCount+1)/8.0)))
+
+		var bytesCount float64 = float64(referedToSegmentCount) + 1.0
+
+		var noOfBytesInField int = 4 + int(math.Ceil(bytesCount/8.0))
 
 		var noOfRententionFlagBytes = noOfBytesInField - 4
 
-		var retentionFlags = make([]byte, noOfRententionFlagBytes)
+		retentionFlags = make([]byte, noOfRententionFlagBytes)
 
 		n, err := r.Read(retentionFlags)
 		if err != nil {
@@ -164,8 +169,9 @@ func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) 
 		}
 
 		bytesRead += n
+
 	} else {
-		return bytesRead, errors.Errorf("3 bit Segment count field = %v", referedToSegmentCount)
+		return bytesRead, errors.Errorf("3 bit Segment count field = %v must not contain value of 5 and 6", referedToSegmentCount)
 	}
 
 	h.ReferredToSegmentCount = referedToSegmentCount
@@ -179,13 +185,14 @@ func (h *Header) handleSegmentReferredToCountAndRententionFlags(r bufio.Reader) 
 	return bytesRead, nil
 }
 
-func (h *Header) handleReferedSegmentNumbers(r bufio.Reader) (int, error) {
+func (h *Header) handleReferedSegmentNumbers(r *reader.Reader) (int, error) {
 	h.ReferredToSegments = make([]int, h.ReferredToSegmentCount)
 	var (
 		bytesRead int
 	)
 
 	if h.SegmentNumber <= 256 {
+
 		for i := 0; i < h.ReferredToSegmentCount; i++ {
 			b, err := r.ReadByte()
 			if err != nil {
@@ -195,15 +202,19 @@ func (h *Header) handleReferedSegmentNumbers(r bufio.Reader) (int, error) {
 			bytesRead += 1
 		}
 	} else if h.SegmentNumber <= 65536 {
+
 		b := make([]byte, 2)
 		for i := 0; i < h.ReferredToSegmentCount; i++ {
 			n, err := r.Read(b)
 			if err != nil {
 				return bytesRead, err
 			}
+
 			bytesRead += n
 			s := binary.BigEndian.Uint16(b)
+
 			h.ReferredToSegments[i] = int(s)
+
 		}
 	} else {
 		b := make([]byte, 4)
@@ -221,7 +232,7 @@ func (h *Header) handleReferedSegmentNumbers(r bufio.Reader) (int, error) {
 	return bytesRead, nil
 }
 
-func (h *Header) handlePageAssociation(r bufio.Reader) (int, error) {
+func (h *Header) handlePageAssociation(r *reader.Reader) (int, error) {
 	var bytesRead int
 	if h.PageAssociationSizeSet {
 		buf := make([]byte, 4)
@@ -245,7 +256,7 @@ func (h *Header) handlePageAssociation(r bufio.Reader) (int, error) {
 	return bytesRead, nil
 }
 
-func (h *Header) handleSegmentDataLength(r bufio.Reader) (int, error) {
+func (h *Header) handleSegmentDataLength(r *reader.Reader) (int, error) {
 	length := make([]byte, 4)
 	n, err := r.Read(length)
 	if err != nil {
@@ -264,9 +275,9 @@ func (h *Header) setFlags(flags byte) {
 	h.SegmentType = int(flags & 63)
 	common.Log.Debug("Segment Type: %v", h.SegmentType)
 
-	h.PageAssociationSizeSet = (flags & 64) == 64
+	h.PageAssociationSizeSet = (flags & (1 << 6)) != 0
 	common.Log.Debug("PageAssociationSizeSet: %v", h.PageAssociationSizeSet)
 
-	h.DeferredNonRetainSet = (flags & 80) == 80
-	common.Log.Debug("DeferredNonRetainSet: %s", h.DeferredNonRetainSet)
+	h.DeferredNonRetainSet = (flags & (1 << 7)) != 0
+	common.Log.Debug("DeferredNonRetainSet: %v", h.DeferredNonRetainSet)
 }

@@ -12,7 +12,7 @@ var (
 	log = common.Log
 )
 
-type PISegment struct {
+type PageInformationSegment struct {
 	*model.Segment
 
 	PageBMHeight, PageBMWidth int
@@ -25,7 +25,7 @@ type PISegment struct {
 }
 
 // Read reads the segment from the input reader
-func (p *PISegment) ReadSegment(r *reader.Reader) error {
+func (p *PageInformationSegment) Decode(r *reader.Reader) error {
 	log.Debug("[READ] Page Information Segment")
 
 	var buf []byte = make([]byte, 4)

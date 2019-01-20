@@ -279,7 +279,11 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 	}
 
 	var (
-		symbolRefine bool = t.TRFlags.GetValue(SBRefine) != 0
+		symbolRefine       bool = t.TRFlags.GetValue(SBRefine) != 0
+		logStrips          int  = t.TRFlags.GetValue(LogSbStripes)
+		defaultPixel       int  = t.TRFlags.GetValue(SbDefPixel)
+		cominationOperator bool = t.TRFlags.GetValue(SbCombOp)
+		transposed         bool
 	)
 
 	return nil

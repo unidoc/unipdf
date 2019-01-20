@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	mmr        = "MMR"
-	gbTemplate = "GB_TEMPLATE"
-	tpgdon     = "TPGDON"
+	MMR        = "MMR"
+	GBTemplate = "GB_TEMPLATE"
+	TPGDOn     = "TPGDON"
 )
 
 // GenericRegionFlags is the GenericRegionSegment flagger container
@@ -27,11 +27,11 @@ func (g *GenericRegionFlags) SetValue(flag int) {
 	g.IntFlags = flag
 
 	// Extract MMR
-	g.Flags.Map[mmr] = (flag & 1)
+	g.Flags.Map[MMR] = (flag & 1)
 
 	// Extract GB_TEMPLATE
-	g.Flags.Map[gbTemplate] = int((flag >> 1) & 3)
+	g.Flags.Map[GBTemplate] = int((flag >> 1) & 3)
 
 	// Extract TPGDON
-	g.Flags.Map[tpgdon] = int((flag >> 3) & 1)
+	g.Flags.Map[TPGDOn] = int((flag >> 3) & 1)
 }
