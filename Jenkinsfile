@@ -50,7 +50,7 @@ node {
         }
 
         stage('Test coverage') {
-            sh 'go test -coverprofile=coverage.out ./...'
+            sh 'go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...'
             sh '/home/jenkins/codecov.sh'
             sh 'gocover-cobertura < coverage.out > coverage.xml'
             step([$class: 'CoberturaPublisher', coberturaReportFile: 'coverage.xml'])
