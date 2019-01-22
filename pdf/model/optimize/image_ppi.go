@@ -55,7 +55,8 @@ func scaleImage(stream *core.PdfObjectStream, scale float64) error {
 	if err != nil {
 		return err
 	}
-	xImg.SetImage(i, xImg.ColorSpace)
+
+	xImg.SetImage(i, model.NewPdfColorspaceDeviceRGB())
 	xImg.ToPdfObject()
 	return nil
 }
