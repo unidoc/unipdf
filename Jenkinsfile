@@ -7,7 +7,10 @@ node {
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
     env.GOCACHE="off"
     env.UNIDOC_EXTRACT_FORCETEST="1"
+    env.UNIDOC_E2E_FORCE_TESTS="1"
     env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
+    env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
 
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
