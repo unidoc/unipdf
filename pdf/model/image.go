@@ -13,6 +13,7 @@ import (
 	_ "image/gif"
 	_ "image/png"
 	"io"
+	"math"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -170,8 +171,9 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				val := uint8(samples[i] & 0xff)
-				c = gocolor.Gray{val}
+				// Account 1-bit/2-bit color images
+				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
+				c = gocolor.Gray{uint8(val & 0xff)}
 			}
 		} else if img.ColorComponents == 3 {
 			if img.BitsPerComponent == 16 {
