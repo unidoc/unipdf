@@ -65,7 +65,6 @@ func (m *Matrix) Concat(b Matrix) {
 		b[3]*m[0] + b[4]*m[3], b[3]*m[1] + b[4]*m[4], 0,
 		b[6]*m[0] + b[7]*m[3] + m[6], b[6]*m[1] + b[7]*m[4] + m[7], 1,
 	}
-	// panic("gggg")
 	m.clampRange()
 }
 
