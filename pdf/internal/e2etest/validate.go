@@ -26,9 +26,9 @@ var (
 // validatePdf a pdf file using Ghostscript, returns an error if unable to execute.
 // Also returns the number of output warnings, which can be used as some sort of measure
 // of validity, especially when comparing with a transformed version of same file.
-func validatePdf(path string, password string) (error, int) {
+func validatePdf(path string, password string) (int, error) {
 	if len(ghostscriptBinPath) == 0 {
-		return errors.New("UNIDOC_GS_BIN_PATH not set"), 0
+		return 0, errors.New("UNIDOC_GS_BIN_PATH not set")
 	}
 	common.Log.Debug("Validating: %s", path)
 
@@ -50,7 +50,7 @@ func validatePdf(path string, password string) (error, int) {
 		common.Log.Debug("%s", out.String())
 		common.Log.Debug("%s", errOut.String())
 		common.Log.Error("GS failed with error %s", err)
-		return fmt.Errorf("GS failed with error (%s)", err), 0
+		return 0, fmt.Errorf("GS failed with error (%s)", err)
 	}
 
 	outputErr := errOut.String()
@@ -62,9 +62,9 @@ func validatePdf(path string, password string) (error, int) {
 			outputErr = outputErr[:80] // Trim the output.
 		}
 		common.Log.Debug("ERROR: Invalid - %d warnings %s", warnings, outputErr)
-		return nil, warnings
+		return warnings, nil
 	}
 
 	// Valid if no error.
-	return nil, 0
+	return 0, nil
 }

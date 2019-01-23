@@ -158,16 +158,16 @@ func passthroughSinglePdf(params passthroughParams) error {
 	// GS validation of input, output pdfs.
 	if params.gsValidation {
 		common.Log.Debug("Validating input file")
-		err, inputWarnings := validatePdf(params.inputPath, "")
+		inputWarnings, err := validatePdf(params.inputPath, "")
 		if err != nil {
 			return err
 		}
 
 		common.Log.Debug("Validating output file")
 
-		err, warnings := validatePdf(params.outPath, "")
+		warnings, err := validatePdf(params.outPath, "")
 		if err != nil && warnings > inputWarnings {
-			common.Log.Error("Input warnings %d vs output %d", inputWarnings, warnings)
+			common.Log.Debug("Input warnings %d vs output %d", inputWarnings, warnings)
 			return fmt.Errorf("Invalid PDF input %d/ output %d warnings", inputWarnings, warnings)
 		}
 		common.Log.Debug("Valid PDF!")
