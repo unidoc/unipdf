@@ -16,6 +16,9 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// To enable ghostscript validation, the path to the binary needs to be specified.
+// Set environment variable:
+//		UNIDOC_GS_BIN_PATH to the path of the ghosccript binary (gs).
 var (
 	ghostscriptBinPath = os.Getenv("UNIDOC_GS_BIN_PATH")
 )
@@ -52,14 +55,13 @@ func validatePdf(path string, password string) (error, int) {
 
 	outputErr := errOut.String()
 	warnings := strings.Count(outputErr, "****")
-	common.Log.Error(": - %d warnings %s", warnings, outputErr)
+	common.Log.Debug("ERROR: - %d warnings %s", warnings, outputErr)
 
 	if warnings > 1 {
 		if len(outputErr) > 80 {
 			outputErr = outputErr[:80] // Trim the output.
 		}
-		common.Log.Error("Invalid - %d warnings %s", warnings, outputErr)
-		//return fmt.Errorf("Invalid - %d warnings (%s)", warnings, outputErr), warnings
+		common.Log.Debug("ERROR: Invalid - %d warnings %s", warnings, outputErr)
 		return nil, warnings
 	}
 
