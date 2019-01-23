@@ -171,7 +171,7 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				// Account 1-bit/2-bit color images
+				// Account for 1-bit/2-bit color images.
 				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
 				c = gocolor.Gray{uint8(val & 0xff)}
 			}

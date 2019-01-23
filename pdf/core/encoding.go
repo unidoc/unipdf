@@ -1048,7 +1048,7 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 				val := uint16(data[i])<<8 | uint16(data[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				// Account 1-bit/2-bit color images
+				// Account for 1-bit/2-bit color images.
 				val := uint32(data[i]) * 255 / uint32(math.Pow(2, float64(enc.BitsPerComponent))-1)
 				c = gocolor.Gray{uint8(val & 0xff)}
 			}
