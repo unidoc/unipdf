@@ -27,7 +27,6 @@ import (
 	gocolor "image/color"
 	"image/jpeg"
 	"io"
-	"math"
 
 	// Need two slightly different implementations of LZW (EarlyChange parameter).
 	lzw0 "compress/lzw"
@@ -1118,9 +1117,17 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	// Draw the data on the image..
+	if enc.BitsPerComponent < 8 {
+		enc.BitsPerComponent = 8
+	}
+
+	bytesPerColor := enc.ColorComponents * enc.BitsPerComponent / 8
+	if bytesPerColor < 1 {
+		bytesPerColor = 1
+	}
+
 	x := 0
 	y := 0
-	bytesPerColor := enc.ColorComponents * enc.BitsPerComponent / 8
 	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
 		var c gocolor.Color
 		if enc.ColorComponents == 1 {
@@ -1128,9 +1135,8 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 				val := uint16(data[i])<<8 | uint16(data[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				// Account for 1-bit/2-bit color images.
-				val := uint32(data[i]) * 255 / uint32(math.Pow(2, float64(enc.BitsPerComponent))-1)
-				c = gocolor.Gray{uint8(val & 0xff)}
+				val := uint8(data[i] & 0xff)
+				c = gocolor.Gray{val}
 			}
 		} else if enc.ColorComponents == 3 {
 			if enc.BitsPerComponent == 16 {

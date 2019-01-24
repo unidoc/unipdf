@@ -10,8 +10,6 @@ import (
 	"image"
 	"math"
 
-	goimage "image"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -45,7 +43,7 @@ func scaleImage(stream *core.PdfObjectStream, scale float64) error {
 	rect := image.Rect(0, 0, newW, newH)
 
 	var newImage draw.Image
-	var imageHandler func(goimage.Image) (*model.Image, error)
+	var imageHandler func(image.Image) (*model.Image, error)
 
 	switch xImg.ColorSpace.String() {
 	case "DeviceRGB":
