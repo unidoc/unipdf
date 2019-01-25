@@ -171,7 +171,6 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				// Account for 1-bit/2-bit color images.
 				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
 				c = gocolor.Gray{uint8(val & 0xff)}
 			}
@@ -277,22 +276,21 @@ func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, 
 // NewGrayImageFromGoImage creates a new grayscale unidoc Image from a golang Image.
 func (ih DefaultImageHandler) NewGrayImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	b := goimg.Bounds()
-	m := goimage.NewGray(goimage.Rect(0, 0, b.Dx(), b.Dy()))
-	draw.Draw(m, m.Bounds(), goimg, b.Min, draw.Src)
+	m := goimage.NewGray(b)
+	draw.Draw(m, b, goimg, b.Min, draw.Src)
 
 	data := []byte{}
 	for i := 0; i < len(m.Pix); i += 1 {
 		data = append(data, m.Pix[i])
 	}
 
-	imag := Image{}
-	imag.Width = int64(b.Dx())
-	imag.Height = int64(b.Dy())
-	imag.BitsPerComponent = 8
-	imag.ColorComponents = 1
-	imag.Data = data // buf.Bytes()
-
-	return &imag, nil
+	return &Image{
+		Width:            int64(b.Dx()),
+		Height:           int64(b.Dy()),
+		BitsPerComponent: 8,
+		ColorComponents:  1,
+		Data:             data,
+	}, nil
 }
 
 // Read reads an image and loads into a new Image object with an RGB
