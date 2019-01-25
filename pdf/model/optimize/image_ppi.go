@@ -41,21 +41,41 @@ func scaleImage(stream *core.PdfObjectStream, scale float64) error {
 	newW := int(math.RoundToEven(float64(i.Width) * scale))
 	newH := int(math.RoundToEven(float64(i.Height) * scale))
 	rect := image.Rect(0, 0, newW, newH)
+
 	var newImage draw.Image
+	var imageHandler func(image.Image) (*model.Image, error)
+
 	switch xImg.ColorSpace.String() {
 	case "DeviceRGB":
 		newImage = image.NewRGBA(rect)
+		imageHandler = model.ImageHandling.NewImageFromGoImage
 	case "DeviceGray":
 		newImage = image.NewGray(rect)
+		imageHandler = model.ImageHandling.NewGrayImageFromGoImage
 	default:
 		return fmt.Errorf("optimization is not supported for color space %s", xImg.ColorSpace.String())
 	}
+
 	draw.CatmullRom.Scale(newImage, newImage.Bounds(), goimg, goimg.Bounds(), draw.Over, &draw.Options{})
-	i, err = model.ImageHandling.NewImageFromGoImage(newImage)
-	if err != nil {
+	if i, err = imageHandler(newImage); err != nil {
 		return err
 	}
-	xImg.SetImage(i, xImg.ColorSpace)
+
+	// Update image encoder
+	encoderParams := core.MakeDict()
+	encoderParams.Set("ColorComponents", core.MakeInteger(int64(i.ColorComponents)))
+	encoderParams.Set("BitsPerComponent", core.MakeInteger(i.BitsPerComponent))
+	encoderParams.Set("Width", core.MakeInteger(i.Width))
+	encoderParams.Set("Height", core.MakeInteger(i.Height))
+	encoderParams.Set("Quality", core.MakeInteger(100))
+	encoderParams.Set("Predictor", core.MakeInteger(1))
+
+	xImg.Filter.UpdateParams(encoderParams)
+
+	// Update image
+	if err := xImg.SetImage(i, nil); err != nil {
+		return err
+	}
 	xImg.ToPdfObject()
 	return nil
 }
