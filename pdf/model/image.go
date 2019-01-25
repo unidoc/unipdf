@@ -222,7 +222,7 @@ type ImageHandler interface {
 	// Read any image type and load into a new Image object.
 	Read(r io.Reader) (*Image, error)
 
-	// NewImageFromGoImage loads a RGB unidoc Image from a standard Go image structure.
+	// NewImageFromGoImage loads a RGBA unidoc Image from a standard Go image structure.
 	NewImageFromGoImage(goimg goimage.Image) (*Image, error)
 
 	// NewGrayImageFromGoImage loads a grayscale unidoc Image from a standard Go image structure.
@@ -235,7 +235,7 @@ type ImageHandler interface {
 // DefaultImageHandler is the default implementation of the ImageHandler using the standard go library.
 type DefaultImageHandler struct{}
 
-// NewImageFromGoImage creates a new RGB unidoc Image from a golang Image.
+// NewImageFromGoImage creates a new RGBA unidoc Image from a golang Image.
 func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
@@ -279,17 +279,12 @@ func (ih DefaultImageHandler) NewGrayImageFromGoImage(goimg goimage.Image) (*Ima
 	m := goimage.NewGray(b)
 	draw.Draw(m, b, goimg, b.Min, draw.Src)
 
-	data := []byte{}
-	for i := 0; i < len(m.Pix); i += 1 {
-		data = append(data, m.Pix[i])
-	}
-
 	return &Image{
 		Width:            int64(b.Dx()),
 		Height:           int64(b.Dy()),
 		BitsPerComponent: 8,
 		ColorComponents:  1,
-		Data:             data,
+		Data:             m.Pix,
 	}, nil
 }
 
