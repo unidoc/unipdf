@@ -3,6 +3,8 @@ package bitmap
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/unidoc/unidoc/common"
 	// "github.com/unidoc/unidoc/common"
 	"testing"
 )
@@ -159,6 +161,40 @@ func TestBitSetGet(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestBitSetBytes(t *testing.T) {
+	if testing.Verbose() {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	}
+
+	t.Run("LargerThanSingleUint64", func(t *testing.T) {
+		bs := NewBitSet(129)
+		err := bs.Set(129, true)
+		require.NoError(t, err)
+
+		bytes := bs.Bytes()
+
+		assert.Len(t, bytes, (129/8 + 1))
+		for i := 0; i < len(bytes)-1; i++ {
+			assert.Equal(t, byte(0), bytes[i])
+		}
+		assert.Equal(t, byte(2), bytes[len(bytes)-1])
+	})
+
+	t.Run("SmallerThan8bytes", func(t *testing.T) {
+		bs := NewBitSet(15)
+
+		err := bs.Set(15, true)
+		require.NoError(t, err)
+
+		bytes := bs.Bytes()
+		assert.Len(t, bytes, 2)
+
+		assert.Equal(t, byte(0), bytes[0])
+		assert.Equal(t, byte(128), bytes[1])
+	})
+
 }
 
 func benchmarkInitBitSet(size int, b *testing.B) {

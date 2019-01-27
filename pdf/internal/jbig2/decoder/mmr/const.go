@@ -1,7 +1,8 @@
 package mmr
 
 const (
-	CcittEndOfLine           int = -2
+	CcittEndOfLine int = -2
+
 	TwoDimensionalPass       int = 0
 	TwoDimensionalHorizontal int = 1
 	TwoDimensionalVertical0  int = 2

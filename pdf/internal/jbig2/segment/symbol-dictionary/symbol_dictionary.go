@@ -11,6 +11,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
 	"math"
+	"time"
 
 	// "github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
@@ -74,9 +75,11 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		inputSymbolsNumber uint32
 	)
 
+	// GetTotal InputSymbolsNumber from the referred segments
 	for i := 0; i < s.Header.ReferredToSegmentCount; i++ {
 		seg := s.Decoders.FindSegment(s.Header.ReferredToSegments[i])
 		if seg.Kind() == kind.SymbolDictionary {
+			common.Log.Debug("Found SymbolDictionary ReferredToSegment")
 			inputSymbolsNumber += (seg).(*SymbolDictionarySegment).ExportedSymbolsNumber
 		}
 	}
@@ -85,7 +88,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 
 	var symbolCodeLength int
 
-	for i := 1; uint32(i) < inputSymbolsNumber+s.NewSymbolsNumber; i <<= 1 {
+	var isc uint32
+	for isc = 1; isc < inputSymbolsNumber+s.NewSymbolsNumber; isc <<= 1 {
 		symbolCodeLength++
 	}
 
@@ -103,8 +107,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			inputSymbolDictionary = seg.(*SymbolDictionarySegment)
 			for j := 0; uint32(j) < inputSymbolDictionary.ExportedSymbolsNumber; j++ {
 				bitmaps[k] = inputSymbolDictionary.Bitmaps[j]
-				k += 1
-				j += 1
+				k++
 			}
 		}
 	}
@@ -124,15 +127,19 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 	if sdHuff {
 		switch s.SDFlags.GetValue(SD_HUFF_DH) {
 		case 0:
+			common.Log.Debug("Setting HuffmanDHTable to table D")
 			huffmanDHTable = huffman.TableD
 		case 1:
+			common.Log.Debug("Setting HuffmanDHTable to table E")
 			huffmanDHTable = huffman.TableE
 		}
 
 		switch s.SDFlags.GetValue(SD_HUFF_DW) {
 		case 0:
+			common.Log.Debug("Setting HuffmanDWTable to table B")
 			huffmanDWTable = huffman.TableB
 		case 1:
+			common.Log.Debug("Setting HuffmanDWTable to table B")
 			huffmanDWTable = huffman.TableC
 		}
 
@@ -145,8 +152,9 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		}
 	}
 
+	sdTemplate := s.SDFlags.GetValue(SD_TEMPLATE)
+
 	if !sdHuff {
-		sdTemplate := s.SDFlags.GetValue(SD_TEMPLATE)
 		if s.SDFlags.GetValue(BITMAP_CC_USED) != 0 && inputSymbolDictionary != nil {
 			s.Decoders.Arithmetic.ResetGenericStats(
 				sdTemplate,
@@ -158,6 +166,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 				nil,
 			)
 		}
+
 		s.Decoders.Arithmetic.ResetIntStats(symbolCodeLength)
 
 		common.Log.Debug("Arithmetic->Start begins")
@@ -192,11 +201,14 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 	i = 0
 
 	for i < int(s.NewSymbolsNumber) {
+
 		var instanceDeltaHeight int
 		var err error
 
+		common.Log.Debug("Setting DeltaHeight")
 		// if huffman use huffman decoder
 		if sdHuff {
+			common.Log.Debug("HUFFMAN DH TABLE: %v", huffmanDHTable)
 			instanceDeltaHeight, _, err = s.Decoders.Huffman.DecodeInt(r, huffmanDHTable)
 			if err != nil {
 				common.Log.Error("Decoders Huffman->DecodeInt(huffmanDHTable). %v", err)
@@ -238,12 +250,14 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			)
 
 			if sdHuff {
+				common.Log.Debug("Huffman Decoding deltaWidth")
 				deltaWidth, deltaWidthBool, err = s.Decoders.Huffman.DecodeInt(r, huffmanDWTable)
 				if err != nil {
 					common.Log.Error("Huffman DecodeInt->(huffmanDWTable) failed. %v", err)
 					return err
 				}
 			} else {
+				common.Log.Debug("ArithmeticDecoder deltaWidth")
 				deltaWidth, deltaWidthBool, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IadwStats)
 				if err != nil {
 					common.Log.Error("Arithmetic DecodeInt->(iadwStats) failed: %v", err)
@@ -252,7 +266,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			}
 
 			common.Log.Debug("DeltaWidth: %d, %v", deltaWidth, deltaWidthBool)
-
+			time.Sleep(time.Nanosecond * 1)
 			if !deltaWidthBool {
 				break
 			}
@@ -266,6 +280,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			sdRefinement := s.SDFlags.GetValue(SD_REF_AGG)
 
 			if sdHuff && sdRefinement == 0 {
+				common.Log.Debug("DeltaWidth at i: %d", i)
 				deltaWidths[i] = symbolWidth
 				totalWidth += symbolWidth
 
@@ -312,13 +327,14 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 							return err
 						}
 					} else {
-
-						symbolID, err = s.Decoders.Arithmetic.DecodeIAID(r, uint64(symbolCodeLength), s.Decoders.Arithmetic.IaidStats)
+						var ssymbolID int64
+						ssymbolID, err = s.Decoders.Arithmetic.DecodeIAID(r, uint64(symbolCodeLength), s.Decoders.Arithmetic.IaidStats)
 						if err != nil {
 							common.Log.Debug("Arithmetic->DecodeIAID(symbolCodeLength,IaidStats) failed: %v", err)
 							return err
 						}
 
+						symbolID = uint64(ssymbolID)
 						referenceDX, _, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IardxStats)
 						if err != nil {
 							common.Log.Debug("Arithmetic->DecodeInt(IardxStats) failed: %v", err)
@@ -331,6 +347,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 							return err
 						}
 					}
+
+					common.Log.Debug("SymbolID: %d", symbolID)
 
 					referedToBitmap := bitmaps[symbolID]
 
@@ -350,6 +368,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					common.Log.Debug("Add bitmap: %d at index: %d", bm.BitmapNumber, inputSymbolsNumber+uint32(i))
 					bitmaps[inputSymbolsNumber+uint32(i)] = bm
 				} else {
+
 					common.Log.Debug("Creating new Bitmap with no refinment region")
 					bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
 					err = bm.ReadTextRegion(r, sdHuff, true, uint(refAggNum), 0,
@@ -359,6 +378,11 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 						huffman.TableO, huffman.TableO, huffman.TableO, huffman.TableO,
 						huffman.TableA, sdRefinementTemplate, s.AdaptiveTemplateX, s.AdaptiveTemplateY,
 					)
+					if err != nil {
+						common.Log.Debug("Bitmap->ReadTextRegion failed: %v", err)
+						return err
+					}
+
 					common.Log.Debug("Add bitmap: %d at index: %d", bm.BitmapNumber, inputSymbolsNumber+uint32(i))
 					bitmaps[int(inputSymbolsNumber)+i] = bm
 				}
@@ -378,16 +402,21 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		}
 
 		if sdHuff && s.SDFlags.GetValue(SD_REF_AGG) == 0 {
+
+			common.Log.Debug("GetBitmap size")
 			bmSize, _, err := s.Decoders.Huffman.DecodeInt(r, huffmanBMSizeTable)
 			if err != nil {
 				common.Log.Debug("Huffman->DecodeInt(huffmanBMSizeTable) failed: %v", err)
 				return err
 			}
 
+			common.Log.Debug("Bitmap Size: %v", bmSize)
+
 			r.ConsumeRemainingBits()
 
 			collectiveBitMap := bitmap.New(totalWidth, deltaHeight, s.Decoders)
 			if bmSize == 0 {
+
 				var (
 					padding     int    = totalWidth % 8
 					bytesPerRow int    = int(math.Ceil(float64(totalWidth) / 8))
@@ -395,11 +424,15 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					buf         []byte = make([]byte, size)
 				)
 
-				_, err = r.Read(buf)
+				common.Log.Debug("BM Size to read: %v. Delta Height: %v, totalWidth: %v", size, deltaHeight, totalWidth)
+
+				n, err := r.Read(buf)
 				if err != nil {
 					common.Log.Debug("Read bitmap buf bytes: %v", err)
 					return err
 				}
+
+				common.Log.Debug("Collective Bitmap: %d, read %d bytes data.", collectiveBitMap.BitmapNumber, n)
 
 				var logicalMap [][]byte = make([][]byte, deltaHeight)
 				for i := 0; i < deltaHeight; i++ {
@@ -420,6 +453,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					for col := 0; col < bytesPerRow; col++ {
 						if col == bytesPerRow-1 {
 							currentByte := logicalMap[row][col]
+
 							for bitPointer := 7; bitPointer >= padding; bitPointer-- {
 								mask := byte(1 << byte(bitPointer))
 								bit := int((currentByte & mask) >> byte(bitPointer))
@@ -442,6 +476,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					}
 				}
 			} else {
+				common.Log.Debug("Bitmap size: %v", bmSize)
 				err := collectiveBitMap.Read(r, true, 0, false, false, nil, nil, nil, bmSize)
 				if err != nil {
 					common.Log.Debug("CollectiveBitMap.Read failed: %v", err)
@@ -453,11 +488,11 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 
 			for j < i {
 				bitmaps[int(inputSymbolsNumber)+j], err = collectiveBitMap.GetSlice(x, 0, deltaWidths[j], deltaHeight)
-
 				if err != nil {
 					return err
 				}
 				x += deltaWidths[j]
+
 				j++
 			}
 		}
@@ -471,9 +506,11 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		err    error
 	)
 
+	common.Log.Debug("InputSymbols Number: %d. New Symbols Number: %d", inputSymbolsNumber, s.NewSymbolsNumber)
 	for uint32(i) < inputSymbolsNumber+s.NewSymbolsNumber {
 		var run int
 		if sdHuff {
+			common.Log.Debug("Huffman decoder from standard table B1(A)")
 			run, _, err = s.Decoders.Huffman.DecodeInt(r, huffman.TableA)
 			if err != nil {
 				common.Log.Debug("Huffman->DecodeInt(huffmanTableA) at i : %d. %v", i, err)
@@ -486,9 +523,10 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 				return err
 			}
 		}
-
+		common.Log.Debug("'run': %v", run)
 		if export {
 			for cnt := 0; cnt < run; cnt++ {
+				common.Log.Debug("Setting bitmap at: '%d' index.", j)
 				s.Bitmaps[j] = bitmaps[i]
 				j++
 				i++
@@ -497,6 +535,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			i += run
 		}
 		export = !export
+		common.Log.Debug("i: %d", i)
 	}
 
 	if !sdHuff && s.SDFlags.GetValue(BITMAP_CC_RETAINED) == 1 {
@@ -522,11 +561,13 @@ func (s *SymbolDictionarySegment) readFlags(r *reader.Reader) error {
 		return err
 	}
 
+	// get Flag value
 	flagValue := binary.BigEndian.Uint16(flagsField)
 
 	common.Log.Debug("SymbolDictionryFlags SetValue: %16b", flagValue)
 	s.SDFlags.SetValue(int(flagValue))
 
+	// Check if th HuffMan decoding is used
 	if s.SDFlags.GetValue(SD_HUFF) == 0 {
 		var buf []byte = make([]byte, 2)
 		if s.SDFlags.GetValue(SD_TEMPLATE) == 0 {
@@ -551,6 +592,8 @@ func (s *SymbolDictionarySegment) readFlags(r *reader.Reader) error {
 			s.AdaptiveTemplateX[0] = int8(buf[0])
 			s.AdaptiveTemplateY[0] = int8(buf[1])
 		}
+		common.Log.Debug("Adaptive Template X: %v", s.AdaptiveTemplateX)
+		common.Log.Debug("Adaptive Template Y: %v", s.AdaptiveTemplateY)
 	}
 
 	if s.SDFlags.GetValue(SD_REF_AGG) != 0 && s.SDFlags.GetValue(SD_R_TEMPLATE) == 0 {

@@ -97,6 +97,59 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		common.Log = common.NewConsoleLogger(common.LogLevelDebug)
 	}
 
+	t.Run("1stAnnexH", func(t *testing.T) {
+		var data []byte = []byte{
+			// Header
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18,
+			// Data part
+			0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0xE9, 0xCB,
+			0xF4, 0x00, 0x26, 0xAF, 0x04, 0xBF, 0xF0, 0x78, 0x2F, 0xE0, 0x00, 0x40,
+		}
+
+		r := reader.New(data)
+
+		h := &header.Header{}
+		_, err := h.Decode(r)
+		if assert.NoError(t, err) {
+			s := New(container.New(), h)
+
+			assert.Equal(t, kind.SymbolDictionary, kind.SegmentKind(h.SegmentType))
+			assert.False(t, h.DeferredNonRetainSet)
+			assert.Equal(t, 0, h.ReferredToSegmentCount)
+			assert.False(t, h.PageAssociationSizeSet)
+			assert.Equal(t, 24, h.DataLength)
+
+			// Decode MMR
+			err = s.Decode(r)
+			if assert.NoError(t, err) {
+				assert.True(t, s.SDFlags.GetValue(SD_HUFF) == 1)
+				assert.False(t, s.SDFlags.GetValue(SD_REF_AGG) == 1)
+				assert.Equal(t, uint32(1), s.ExportedSymbolsNumber)
+				assert.Equal(t, uint32(1), s.NewSymbolsNumber)
+
+				if assert.Equal(t, 1, len(s.Bitmaps)) {
+
+					symbolP := [][]int{
+						{1, 1, 1, 1, 0},
+						{1, 0, 0, 0, 1},
+						{1, 0, 0, 0, 1},
+						{1, 0, 0, 0, 1},
+						{1, 1, 1, 1, 0},
+						{1, 0, 0, 0, 0},
+						{1, 0, 0, 0, 0},
+						{1, 0, 0, 0, 0},
+					}
+
+					pBitset := symbolToBitset(t, symbolP, 40)
+					pBitset.Equals(s.Bitmaps[0].Data)
+
+				}
+
+			}
+		}
+
+	})
+
 	t.Run("3rdAnnexHHuffman", func(t *testing.T) {
 		// t.Skip("Skipping Huffman")
 		if testing.Verbose() {
@@ -123,7 +176,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 
 			s := New(container.New(), h)
 			err = s.Decode(r)
-			if err != io.EOF {
+			if err != nil {
 				require.NoError(t, err)
 			}
 
@@ -141,14 +194,163 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 				{0, 1, 1, 1, 1, 0},
 			}
 
+			symbolA := [][]int{
+				{0, 1, 1, 1, 1, 0},
+				{0, 0, 0, 0, 0, 1},
+				{0, 1, 1, 1, 1, 1},
+				{1, 0, 0, 0, 0, 1},
+				{1, 0, 0, 0, 0, 1},
+				{0, 1, 1, 1, 1, 1},
+			}
+
 			if assert.Len(t, s.Bitmaps, 2) {
 				bs := symbolToBitset(t, symbolC, 36)
 				if assert.NotNil(t, bs) {
-					assert.True(t, s.Bitmaps[0].Data.Equals(bs))
+					cBitmap := s.Bitmaps[0]
+					if assert.NotNil(t, cBitmap) {
+						assert.True(t, cBitmap.Data.Equals(bs))
+					}
+
+				}
+
+				bs = symbolToBitset(t, symbolA, 36)
+				if assert.NotNil(t, bs) {
+					aBitmap := s.Bitmaps[1]
+					if assert.NotNil(t, aBitmap) {
+						assert.True(t, aBitmap.Data.Equals(bs))
+					}
 				}
 
 			}
 		}
+	})
+
+	/**
+
+	  IMMEDIATE LOSSLESS TEXT REGION
+
+	*/
+	// t.Run("5thAnnexH", func(t *testing.T) {
+	// 	var data []byte = []byte{
+	// 		// Header
+	// 		0x00, 0x00, 0x00, 0x03, 0x07, 0x42, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x31,
+
+	// 		//Data Part
+	// 		0x00, 0x00, 0x00, 0x25, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+	// 		0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0C, 0x09, 0x00, 0x10, 0x00,
+	// 		0x00, 0x00, 0x05, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	// 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x40,
+	// 		0x07, 0x08, 0x70, 0x41, 0xD0,
+	// 	}
+
+	// 	r := reader.New(data)
+
+	// 	h := &header.Header{}
+	// 	_, err := h.Decode(r)
+	// 	if assert.NoError(t, err) {
+	// 		assert.
+
+	// 		s := New(container.New(), h)
+	// 		err = s.Decode(r)
+	// 		if assert.NoError(t, err) {
+
+	// 		}
+	// 	}
+
+	// })
+
+	t.Run("17thAnnexH", func(t *testing.T) {
+		var data []byte = []byte{
+			// Header
+			0x00, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x16,
+
+			// Data part
+			0x08, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+			0x01, 0x4F, 0xE7, 0x8D, 0x68, 0x1B, 0x14, 0x2F, 0x3F, 0xFF, 0xAC,
+		}
+
+		r := reader.New(data)
+
+		h := &header.Header{}
+		_, err := h.Decode(r)
+		if assert.NoError(t, err) {
+
+			assert.Equal(t, kind.SymbolDictionary, kind.SegmentKind(h.SegmentType))
+			assert.Equal(t, 16, h.SegmentNumber)
+			assert.Equal(t, 22, h.DataLength)
+
+			s := New(container.New(), h)
+			err := s.Decode(r)
+			if assert.NoError(t, err) {
+				assert.Equal(t, 2, s.SDFlags.GetValue(SD_TEMPLATE))
+				assert.Equal(t, 0, s.SDFlags.GetValue(SD_HUFF))
+				assert.Equal(t, 0, s.SDFlags.GetValue(SD_REF_AGG))
+
+				assert.Equal(t, 0, s.SDFlags.GetValue(BITMAP_CC_USED))
+				assert.Equal(t, 0, s.SDFlags.GetValue(BITMAP_CC_RETAINED))
+
+				assert.Equal(t, uint32(1), s.ExportedSymbolsNumber)
+				assert.Equal(t, 1, len(s.Bitmaps))
+
+			}
+		}
+	})
+
+	t.Run("17th&18thAnnexH", func(t *testing.T) {
+		var data []byte = []byte{
+			// Header
+			0x00, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x16,
+
+			// Data part
+			0x08, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+			0x01, 0x4F, 0xE7, 0x8D, 0x68, 0x1B, 0x14, 0x2F, 0x3F, 0xFF, 0xAC,
+
+			// header
+			0x00, 0x00, 0x00, 0x11, 0x00, 0x21, 0x10, 0x03, 0x00, 0x00, 0x00, 0x20,
+
+			// data
+			0x08, 0x02, 0x02, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x03,
+			0x00, 0x00, 0x00, 0x02, 0x4F, 0xE9, 0xD7, 0xD5, 0x90, 0xC3, 0xB5, 0x26,
+			0xA7, 0xFB, 0x6D, 0x14, 0x98, 0x3F, 0xFF, 0xAC,
+		}
+
+		d := container.New()
+		r := reader.New(data)
+
+		h := &header.Header{}
+		_, err := h.Decode(r)
+		require.NoError(t, err)
+		assert.Equal(t, kind.SymbolDictionary, kind.SegmentKind(h.SegmentType))
+		assert.Equal(t, 16, h.SegmentNumber)
+
+		s17th := New(d, h)
+		err = s17th.Decode(r)
+		require.NoError(t, err)
+
+		d.Segments = append(d.Segments, s17th)
+
+		h2 := &header.Header{}
+		_, err = h2.Decode(r)
+		require.NoError(t, err)
+
+		assert.Equal(t, kind.SymbolDictionary, kind.SegmentKind(h2.SegmentType))
+		assert.False(t, h2.DeferredNonRetainSet)
+		assert.Equal(t, 1, h2.ReferredToSegmentCount)
+		assert.Equal(t, 32, h2.DataLength)
+
+		// Get SimbolDictionary
+		s := New(d, h2)
+		err = s.Decode(r)
+		if assert.NoError(t, err) {
+			assert.True(t, s.SDFlags.GetValue(SD_HUFF) == 0)
+			assert.Equal(t, 2, s.SDFlags.GetValue(SD_TEMPLATE))
+			assert.Equal(t, 0, s.SDFlags.GetValue(SD_R_TEMPLATE))
+			assert.Equal(t, 0, s.SDFlags.GetValue(BITMAP_CC_USED))
+			assert.Equal(t, 0, s.SDFlags.GetValue(BITMAP_CC_RETAINED))
+			assert.Equal(t, uint32(3), s.ExportedSymbolsNumber)
+			assert.Equal(t, uint32(2), s.NewSymbolsNumber)
+		}
+
 	})
 
 }

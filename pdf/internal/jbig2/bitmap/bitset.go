@@ -2,6 +2,8 @@ package bitmap
 
 import (
 	"errors"
+	"fmt"
+	"github.com/unidoc/unidoc/common"
 )
 
 const (
@@ -13,8 +15,7 @@ var (
 )
 
 // BitSet is the fast set for the binary data
-// The data is set into a slice of uint64 where each holds
-// 64 bit data
+// The data is set into a slice of uint64 where each holds 64 bit data
 // The set and get operations use bitwise operaitons
 type BitSet struct {
 	data []uint64
@@ -146,3 +147,66 @@ func (b *BitSet) Set(index uint, value bool) error {
 func (b *BitSet) Size() int {
 	return b.length
 }
+
+func (b *BitSet) String() string {
+	var val string
+	for i := 0; i < b.length; i++ {
+		bv, err := b.Get(uint(i))
+		if err != nil {
+			panic(err)
+		}
+		if bv {
+			if val != "" {
+				val = fmt.Sprintf("1%s", val)
+			} else {
+				val = "1"
+			}
+		} else {
+			if val != "" {
+				val = fmt.Sprintf("0%s", val)
+			} else {
+				val = "0"
+			}
+		}
+	}
+	return val
+}
+
+// Bytes returns the data representation as the byte stream
+func (b *BitSet) Bytes() []byte {
+
+	byteLen := (b.length / 8) + 1
+
+	common.Log.Debug("Bytes len: %v", byteLen)
+	var data []byte = make([]byte, byteLen)
+
+	for i := 0; i < len(b.data); i++ {
+		// data length is the
+		for j := 0; j < 8; j++ {
+
+			if (i*8 + j) >= byteLen {
+				break
+			}
+			v := uint8(b.data[i] >> uint(j*8))
+			common.Log.Debug("Setting data: %08b at index: %v", v, i*8+j)
+			data[i*8+j] = v
+		}
+	}
+
+	return data
+}
+
+// 	fmt.Println("Hello, playground")
+
+// 	var b uint64 = 2<<63 - 1
+
+// 	b &= ^(uint64(1) << 26)
+// 	b &= ^(uint64(1) << 35)
+// 	b &= ^(uint64(1) << 42)
+
+// 	fmt.Printf("%64b\n", b)
+
+// 	for i := 1; i < 64/8; i++ {
+// 		fmt.Printf("%08b\n", uint8(b>>uint(i*8)))
+// 	}
+// }

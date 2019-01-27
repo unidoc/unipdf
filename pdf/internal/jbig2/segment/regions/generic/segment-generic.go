@@ -13,6 +13,7 @@ import (
 
 var log = common.Log
 
+// GenericRegionSegment is the model that represents JBIG2 Generic Region Segment
 type GenericRegionSegment struct {
 	*regions.RegionSegment
 
@@ -221,6 +222,11 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	}
 
 	return nil
+}
+
+// GetBitmap implements bitmap.BitmapGetter interface
+func (g *GenericRegionSegment) GetBitmap() *bitmap.Bitmap {
+	return g.Bitmap
 }
 
 func (g *GenericRegionSegment) readGenericRegionFlags(r io.ByteReader) error {

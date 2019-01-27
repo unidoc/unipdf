@@ -1,6 +1,7 @@
 package huffman
 
 import (
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
@@ -34,15 +35,19 @@ type HuffmanDecoder struct {
 // DecodeInt
 func (h *HuffmanDecoder) DecodeInt(r *reader.Reader, table [][]int) (int, bool, error) {
 
-	var prefix int
+	var prefix, length int
 
 	for i := 0; table[i][2] != EOT; i++ {
-		for length := 0; length < table[i][1]; length++ {
-			bit, err := r.ReadBits(1)
+		// common.Log.Debug("value i: '%v'", i)
+		// common.Log.Debug("table[i][2] == %b", table[i][2])
+		for ; length < table[i][1]; length++ {
+			bit, err := r.ReadBit()
 			if err != nil {
 				return 0, false, err
 			}
+			// common.Log.Debug("Bit: %b", bit)
 			prefix = (prefix << 1) | int(bit)
+			// common.Log.Debug("Prefix: %b", prefix)
 		}
 
 		if prefix == table[i][3] {
@@ -56,16 +61,24 @@ func (h *HuffmanDecoder) DecodeInt(r *reader.Reader, table [][]int) (int, bool, 
 				if err != nil {
 					return -1, false, nil
 				}
+
 				decoded = table[i][0] - int(readBits)
 			} else if table[i][2] > 0 {
+				// common.Log.Debug("table[i][2] > 0")
 				readBits, err := r.ReadBits(byte(table[i][2]))
 				if err != nil {
 					return -1, false, nil
 				}
-				decoded = table[i][0] - int(readBits)
+
+				// common.Log.Debug("Value read: %b%03b", prefix, readBits)
+				// common.Log.Debug("readBits of length: '%d' and value: %b", table[i][2], readBits)
+				decoded = table[i][0] + int(readBits)
 			} else {
+				// common.Log.Debug("else")
 				decoded = table[i][0]
 			}
+			// common.Log.Debug("table[i][0] = %d", table[i][0])
+			common.Log.Debug("Decoded value: %v, bitwise: '%b'", decoded, decoded)
 
 			return decoded, true, nil
 		}

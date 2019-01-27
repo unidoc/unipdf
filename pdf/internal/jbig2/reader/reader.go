@@ -2,6 +2,7 @@ package reader
 
 import (
 	"errors"
+	"github.com/unidoc/unidoc/common"
 	"io"
 )
 
@@ -170,8 +171,13 @@ func (r *Reader) Align() (skipped byte) {
 }
 
 func (r *Reader) ConsumeRemainingBits() {
-	if r.bits != byte(7) {
-		r.ReadBits(r.bits + 1)
+	if r.bits != 0 {
+		common.Log.Debug("Consumed: %d bits", r.bits)
+		_, err := r.ReadBits(r.bits)
+		if err != nil {
+			common.Log.Debug("ConsumeRemainigBits failed: %v", err)
+		}
+
 	}
 }
 

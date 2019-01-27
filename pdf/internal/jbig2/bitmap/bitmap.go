@@ -48,15 +48,20 @@ func (b *Bitmap) Read(
 	common.Log.Debug("[BITMAP][READ] begins")
 	defer func() { common.Log.Debug("[BITMAP][READ] finished") }()
 
+	common.Log.Debug("b: %+v", b)
 	if useMMR {
+		common.Log.Debug("Using MMR Decoder")
+
 		b.Decoder.MMR.Reset()
 
 		var (
 			referenceLine []int = make([]int, b.Width+2)
 			codingLine    []int = make([]int, b.Width+2)
 		)
+
 		codingLine[0], codingLine[1] = b.Width, b.Width
 		for row := 0; row < b.Height; row++ {
+
 			i := 0
 			for ; codingLine[i] < b.Width; i++ {
 				referenceLine[i] = codingLine[i]
@@ -76,13 +81,19 @@ func (b *Bitmap) Read(
 
 				switch code1 {
 				case mmr.TwoDimensionalPass:
+					common.Log.Debug("mmr.TwoDimensionalPass")
 					if referenceLine[referenceI] < b.Width {
 						a0 = referenceLine[referenceI+1]
 						referenceI += 2
 					}
 
 				case mmr.TwoDimensionalHorizontal:
+					common.Log.Debug("mmr.TwoDimensionalHorizontal")
+
+					common.Log.Debug("codingI: %v", codingI)
 					if (codingI & 1) != 0 {
+						common.Log.Debug("$[codingI & 1 != 0]")
+						// initial code1
 						code1 = 0
 
 						for {
@@ -92,11 +103,14 @@ func (b *Bitmap) Read(
 								return err
 							}
 							code1 += code3
-							if code3 >= 64 {
+							if code3 < 64 {
 								break
 							}
 						}
+						common.Log.Debug("Code1: %v", code1)
+
 						code2 = 0
+
 						for {
 							code3, err = b.Decoder.MMR.GetWhiteCode(r)
 							if err != nil {
@@ -104,12 +118,15 @@ func (b *Bitmap) Read(
 								return err
 							}
 							code2 += code3
-							if code3 >= 64 {
+							if code3 < 64 {
 								break
 							}
 						}
 					} else {
+						common.Log.Debug("$[codingI & 1 == 0]")
+
 						code1 = 0
+
 						for {
 							code3, err = b.Decoder.MMR.GetWhiteCode(r)
 							if err != nil {
@@ -117,10 +134,11 @@ func (b *Bitmap) Read(
 								return err
 							}
 							code1 += code3
-							if code3 >= 64 {
+							if code3 < 64 {
 								break
 							}
 						}
+						common.Log.Debug("code 1 set with GetWhiteCode")
 
 						code2 = 0
 						for {
@@ -130,11 +148,13 @@ func (b *Bitmap) Read(
 								return err
 							}
 							code2 += code3
-							if code3 >= 64 {
+							if code3 < 64 {
 								break
 							}
 						}
+						common.Log.Debug("code 2 set with GetBlackCode")
 					}
+
 					if code1 > 0 || code2 > 0 {
 						var v int = a0 + code1
 						codingLine[codingI] = v
@@ -253,7 +273,7 @@ func (b *Bitmap) Read(
 				}
 
 				// while condition
-				if a0 < b.Width {
+				if !(a0 < b.Width) {
 					break
 				}
 			}
@@ -271,18 +291,23 @@ func (b *Bitmap) Read(
 		if mmrDataLength >= 0 {
 			err := b.Decoder.MMR.SkipTo(r, mmrDataLength)
 			if err != nil {
+				common.Log.Debug("MMR.SkipTo: '%v' failed. %v", mmrDataLength, err)
 				return err
 			}
 		} else {
 			b, err := b.Decoder.MMR.Get24Bits(r)
 			if err != nil {
+				common.Log.Debug("MMR.Get24Bits failed. %v", err)
 				return err
 			}
 			if b != 0x001001 {
-				common.Log.Debug("Missing EOFB in JBIG2 MMR bitmap data")
+				common.Log.Debug("Missing EOFB in JBIG2 MMR bitmap data: Value: %b", b)
 			}
 		}
 	} else {
+
+		common.Log.Debug("Not a MMR Decoder.")
+
 		cxPtr0, cxPtr1 := NewPointer(b), NewPointer(b)
 		axPtr0, axPtr1 := NewPointer(b), NewPointer(b)
 		axPtr2, axPtr3 := NewPointer(b), NewPointer(b)
@@ -308,7 +333,7 @@ func (b *Bitmap) Read(
 
 		for row := 0; row < b.Height; row++ {
 			if typicalPrediction {
-				bit, err := b.Decoder.Arithmetic.DecodeBit(r, uint64(ltpCX), b.Decoder.Arithmetic.GenericRegionStats)
+				bit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCX, b.Decoder.Arithmetic.GenericRegionStats)
 				if err != nil {
 					return err
 				}
@@ -350,7 +375,9 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.GenericRegionStats)
+
+						common.Log.Debug("Arithmetic.DecodeBit")
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -359,8 +386,8 @@ func (b *Bitmap) Read(
 						}
 					}
 
-					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel()&0x07))
-					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel()&0x1f))
+					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel())) & 0x07
+					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel())) & 0x1f
 					cx2 = ((cx2 << 1) | int64(pixel)) & 0x0f
 				}
 			case 1:
@@ -386,7 +413,7 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.GenericRegionStats)
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -395,8 +422,8 @@ func (b *Bitmap) Read(
 						}
 					}
 
-					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel()&0x0f))
-					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel()&0x1f))
+					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel())) & 0x0f
+					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel())) & 0x1f
 					cx2 = ((cx2 << 1) | int64(pixel)) & 0x07
 				}
 
@@ -421,7 +448,7 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.GenericRegionStats)
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -430,8 +457,8 @@ func (b *Bitmap) Read(
 						}
 					}
 
-					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel()&0x07))
-					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel()&0x0f))
+					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel())) & 0x07
+					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel())) & 0x0f
 					cx2 = ((cx2 << 1) | int64(pixel)) & 0x03
 				}
 			case 3:
@@ -452,7 +479,7 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.GenericRegionStats)
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -461,7 +488,7 @@ func (b *Bitmap) Read(
 						}
 					}
 
-					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel()&0x1f))
+					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel())) & 0x1f
 					cx2 = ((cx2 << 1) | int64(pixel)) & 0x0f
 				}
 			}
@@ -469,6 +496,7 @@ func (b *Bitmap) Read(
 		}
 
 	}
+
 	return nil
 }
 
@@ -573,7 +601,7 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 					typPredictGenRefCx1 = ((typPredictGenRefCx1 << 1) | int64(typPredicGenRefCxPtr1.NextPixel())) & 7
 					typPredictGenRefCx2 = ((typPredictGenRefCx2 << 1) | int64(typPredicGenRefCxPtr2.NextPixel())) & 7
 
-					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, uint64(ltpCx), b.Decoder.Arithmetic.RefinementRegionStats)
+					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCx, b.Decoder.Arithmetic.RefinementRegionStats)
 					if err != nil {
 						return err
 					}
@@ -593,7 +621,7 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 				cx = (cx0 << 7) | int64(cxPtr1.NextPixel()<<6) |
 					int64(cxPtr2.NextPixel()<<5) | int64(cx3<<2) | cx4
 
-				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.RefinementRegionStats)
+				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.RefinementRegionStats)
 				if err != nil {
 					return err
 				}
@@ -654,7 +682,7 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 					typPredictGenRefCx1 = ((typPredictGenRefCx1 << 1) | int64(typPredicGenRefCxPtr1.NextPixel())) & 7
 					typPredictGenRefCx2 = ((typPredictGenRefCx2 << 1) | int64(typPredicGenRefCxPtr2.NextPixel())) & 7
 
-					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, uint64(ltpCx), b.Decoder.Arithmetic.RefinementRegionStats)
+					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCx, b.Decoder.Arithmetic.RefinementRegionStats)
 					if err != nil {
 						return err
 					}
@@ -674,7 +702,7 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 
 				cx = (cx0 << 11) | (int64(cxPtr1.NextPixel()) << 10) | (cx2 << 8) | (cx3 << 5) | (cx4 << 2) | (int64(cxPtr5.NextPixel()) << 1) | int64(cxPtr6.NextPixel())
 
-				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, uint64(cx), b.Decoder.Arithmetic.RefinementRegionStats)
+				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.RefinementRegionStats)
 				if err != nil {
 					return err
 				}

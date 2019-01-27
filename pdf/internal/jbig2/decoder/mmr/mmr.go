@@ -9,8 +9,6 @@ type MmrDecoder struct {
 	BufferLength    int64
 	Buffer          int64
 	BytesReadNumber int64
-
-	twoDimensionalTable1 [][]int
 }
 
 func New() *MmrDecoder {
@@ -21,6 +19,7 @@ func (m *MmrDecoder) Reset() {
 	m.Buffer = 0
 	m.BufferLength = 0
 	m.BytesReadNumber = 0
+	common.Log.Debug("MMR Decoder Reset: %+v", m)
 }
 
 // SkipTo skips the reader to the 'length' value
@@ -36,16 +35,20 @@ func (m *MmrDecoder) SkipTo(r *reader.Reader, length int) error {
 
 // Gets24bits from the reader
 func (m *MmrDecoder) Get24Bits(r *reader.Reader) (int64, error) {
+
+	common.Log.Debug("[MMR] Get24Bits starts")
 	for m.BufferLength < int64(24) {
 		b, err := r.ReadByte()
 		if err != nil {
 			return 0, err
 		}
 
-		m.Buffer = (m.Buffer << 8) | int64((b & 0xff))
+		m.Buffer = (m.Buffer << 8) | (int64(b) & 0xff)
+		m.BufferLength += 8
+		m.BytesReadNumber++
 	}
 
-	return ((m.Buffer >> uint64(m.BufferLength-24)) | 0xffffff), nil
+	return ((m.Buffer >> uint32(m.BufferLength-24)) & 0xffffff), nil
 }
 
 func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
@@ -57,18 +60,32 @@ func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
 			return 0, err
 		}
 
-		m.Buffer = int64(b & 0xff)
+		// set buffer to byte & 0xff
+		m.Buffer = (int64(b) & 0xff)
 
+		// buffer length is set to 8
 		m.BufferLength = 8
+
+		// increate bytesReadNumber
 		m.BytesReadNumber++
 
-		var lookup int = int((m.Buffer >> 1) & 0x7f)
+		// the lookup should be the buffer value shiffted right by 1
+		var lookup int = int((int(m.Buffer) >> 1) & 0x7f)
+
+		// get tuple from twoDimensionalTable1 at lookup
 		tuple = twoDimensionalTable1[lookup]
 	} else if m.BufferLength == 8 {
-		var lookup int = int((m.Buffer >> 1) & 0x7f)
+
+		var lookup int = int((int(m.Buffer) >> 1) & 0x7f)
+
+		// get tuple from twoDimensionalTable1 at lookup
 		tuple = twoDimensionalTable1[lookup]
 	} else {
-		var lookup int = int((m.Buffer << uint64(7-m.BufferLength)) & 0x7f)
+
+		// the lookup should be the buffer value shiffted left by 1
+		var lookup int = int((int(m.Buffer) << uint32(7-m.BufferLength)) & 0x7f)
+
+		// tuple should be the twoDimensionalTable1 at lookup
 		tuple = twoDimensionalTable1[lookup]
 
 		if tuple[0] < 0 || tuple[0] > int(m.BufferLength) {
@@ -76,15 +93,14 @@ func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			right := int(b & 0xff)
-
-			var left int64 = int64(m.Buffer << 8)
+			right := int(b) & 0xff
+			var left int64 = (m.Buffer << 8)
 
 			m.Buffer = left | int64(right)
 			m.BufferLength += 8
 			m.BytesReadNumber++
 
-			var look int = int((m.Buffer >> uint64(m.BufferLength-7)) & 0x7f)
+			var look int = int((int(m.Buffer) >> uint32(m.BufferLength-7)) & 0x7f)
 
 			tuple = twoDimensionalTable1[look]
 
@@ -95,7 +111,10 @@ func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
 		common.Log.Debug("Bad two dim code in JBIG2 MMR stream")
 		return 0, nil
 	}
+
 	m.BufferLength -= int64(tuple[0])
+	// common.Log.Debug("2D value: %v", tuple[1])
+
 	return tuple[1], nil
 }
 
@@ -105,33 +124,43 @@ func (m *MmrDecoder) GetWhiteCode(r *reader.Reader) (int, error) {
 		code  int64
 	)
 
+	common.Log.Debug("GetWhiteCode(). m: %+v", m)
+
 	if m.BufferLength == 0 {
+
+		// read first byte
 		b, err := r.ReadByte()
 		if err != nil {
 			return 0, err
 		}
+
+		common.Log.Debug("BufferLenght == 0. Read Byte: %2X", b)
 		m.Buffer = int64(b & 0xff)
 		m.BufferLength = 8
 		m.BytesReadNumber++
 	}
 
 	for {
-		if m.BufferLength >= 7 && ((m.Buffer>>uint64(m.BufferLength-7))&0x7f) == 0 {
+
+		if m.BufferLength >= 7 && ((m.Buffer>>uint32(m.BufferLength-7))&0x7f) == 0 {
 			if m.BufferLength <= 12 {
-				code = (m.Buffer << uint64(12-m.BufferLength))
+				code = (m.Buffer << uint32(12-m.BufferLength))
 			} else {
-				code = (m.Buffer >> uint64(m.BufferLength-12))
+				code = (m.Buffer >> uint32(m.BufferLength-12))
 			}
 
 			tuple = whiteTable1[code&0x1f]
+
 		} else {
+
 			if m.BufferLength <= 9 {
-				code = (m.Buffer << uint64(9-m.BufferLength))
+				code = (m.Buffer << uint32(9-m.BufferLength))
 			} else {
-				code = (m.Buffer >> uint64(m.BufferLength-9))
+				code = (m.Buffer >> uint32(m.BufferLength-9))
 			}
 
-			var lookup int = int(code & 0x1ff)
+			var lookup int = int(code & 0x11f)
+
 			if lookup >= 0 {
 				tuple = whiteTable2[lookup]
 			} else {
@@ -141,21 +170,26 @@ func (m *MmrDecoder) GetWhiteCode(r *reader.Reader) (int, error) {
 
 		if tuple[0] > 0 && tuple[0] <= int(m.BufferLength) {
 			m.BufferLength -= int64(tuple[0])
+			common.Log.Debug("Returning value: %V", tuple[1])
 			return tuple[1], nil
 		}
+
 		if m.BufferLength >= 12 {
 			break
 		}
+
 		b, err := r.ReadByte()
 		if err != nil {
 			return 0, err
 		}
 
-		m.Buffer = ((m.Buffer << 8) | int64(b&0xff))
+		common.Log.Debug("Read Byte: %X", b)
+
+		m.Buffer = ((m.Buffer << 8) | int64(b)&0xff)
 		m.BufferLength += 8
 		m.BytesReadNumber++
 	}
-
+	common.Log.Debug("Bad white code in JBIG2 MMR stream")
 	m.BufferLength--
 
 	return 1, nil
@@ -166,12 +200,15 @@ func (m *MmrDecoder) GetBlackCode(r *reader.Reader) (int, error) {
 		tuple []int
 		code  int64
 	)
+	common.Log.Debug("GetBlackCode(). m: %+v", m)
 
 	if m.BufferLength == 0 {
 		b, err := r.ReadByte()
 		if err != nil {
 			return 0, err
 		}
+
+		common.Log.Debug("BufferLenght == 0. Read byte: %02x", b)
 		m.Buffer = int64(b & 0xff)
 		m.BufferLength = 8
 		m.BytesReadNumber++
@@ -190,7 +227,7 @@ func (m *MmrDecoder) GetBlackCode(r *reader.Reader) (int, error) {
 			if m.BufferLength <= 12 {
 				code = (m.Buffer << uint64(12-m.BufferLength))
 			} else {
-				code = (m.Buffer << uint64(m.BufferLength-12))
+				code = (m.Buffer >> uint64(m.BufferLength-12))
 			}
 
 			var lookup int = int((code & 0xff) - 64)

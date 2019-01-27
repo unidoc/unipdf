@@ -28,31 +28,31 @@ func (s *SymbolDictFlags) SetValue(flagValue int) {
 	s.Map[SD_HUFF] = flagValue & 1
 
 	// Extract SD_REF_AGG flag
-	s.Map[SD_REF_AGG] = (flagValue >> 1) & 1
+	s.Map[SD_REF_AGG] = ((flagValue >> 1) & 1)
 
 	// Extract SD_HUFF_DH
-	s.Map[SD_HUFF_DH] = (flagValue >> 2) & 3
+	s.Map[SD_HUFF_DH] = ((flagValue >> 2) & 3)
 
 	// Extract SD_HUFF_DW
-	s.Map[SD_HUFF_DW] = (flagValue >> 4) & 3
+	s.Map[SD_HUFF_DW] = ((flagValue >> 4) & 3)
 
 	// Extract SD_HUFF_BM_SIZE
-	s.Map[SD_HUFF_BM_SIZE] = (flagValue >> 6) & 1
+	s.Map[SD_HUFF_BM_SIZE] = ((flagValue >> 6) & 1)
 
 	// Extract SD_HUFF_AGG_INST
-	s.Map[SD_HUFF_AGG_INST] = (flagValue >> 7) & 1
+	s.Map[SD_HUFF_AGG_INST] = ((flagValue >> 7) & 1)
 
 	// Extract BITMAP_CC_USED
-	s.Map[BITMAP_CC_USED] = (flagValue >> 8) & 1
+	s.Map[BITMAP_CC_USED] = ((flagValue >> 8) & 1)
 
 	// Extract BITMAP_CC_RETAINED
-	s.Map[BITMAP_CC_RETAINED] = (flagValue >> 9) & 1
+	s.Map[BITMAP_CC_RETAINED] = ((flagValue >> 9) & 1)
 
 	// Extract SD_TEMPLATE
-	s.Map[SD_TEMPLATE] = (flagValue >> 10) & 3
+	s.Map[SD_TEMPLATE] = ((flagValue >> 10) & 3)
 
 	// Extract SD_R_TEMPLATE
-	s.Map[SD_R_TEMPLATE] = (flagValue >> 12) & 1
+	s.Map[SD_R_TEMPLATE] = ((flagValue >> 12) & 1)
 
 	common.Log.Debug("Symbol Dictionary Flags: %v", s.Map)
 }

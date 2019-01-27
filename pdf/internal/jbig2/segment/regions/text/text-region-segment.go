@@ -2,12 +2,16 @@ package text
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/pageinformation"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/regions"
 	"io"
 )
@@ -27,10 +31,21 @@ type TextRegionSegment struct {
 	inlineImage bool
 
 	// The locations of the adaptive template pixel RA1,2 at X coordinate
-	SymbolRegionATX []byte
+	SymbolRegionATX []int8
 
 	// The location of the adaptive template pixel RA1,2 at Y coordinate
-	SymbolRegionATY []byte
+	SymbolRegionATY []int8
+
+	bm *bitmap.Bitmap
+}
+
+func New(d *container.Decoder, h *header.Header, inline bool) *TextRegionSegment {
+	t := &TextRegionSegment{
+		RegionSegment: regions.NewRegionSegment(d, h),
+		TRFlags:       newFlags(),
+		inlineImage:   inline,
+	}
+	return t
 }
 
 // Decode decodes the segment from the provided reader stream
@@ -75,7 +90,7 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 			referencedSegments = append(referencedSegments, seg)
 
 			// add the symbols number of the referenced segment
-			symbolsNumber += seg.(segment.SymbolDictionarySegmenter).ExportedSymbolsNumber()
+			symbolsNumber += int(seg.(segment.SymbolDictionarySegmenter).ExportedSymbolsNumber())
 		} else if tp == kind.Tables {
 
 		}
@@ -244,7 +259,7 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 
 		for i < symbolsNumber {
 
-			j, _, err := t.Decoders.Huffman.DecodeInt(r, table)
+			j, _, err := t.Decoders.Huffman.DecodeInt(r, runLengthTable)
 			if err != nil {
 				return err
 			}
@@ -256,7 +271,7 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 				}
 			} else if j > 0x100 {
 				for j -= 0x100; j != 0 && j < symbolsNumber; j-- {
-					symbolCodeLength[i][1] = symbolCodeTable[i-1][1]
+					symbolCodeTable[i][1] = symbolCodeTable[i-1][1]
 					i++
 				}
 			} else {
@@ -266,7 +281,10 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 		}
 		symbolCodeTable[symbolsNumber][1] = 0
 		symbolCodeTable[symbolsNumber][2] = huffman.EOT
-		symbolCodeTable = t.Decoders.Huffman.BuildTable(symbolCodeTable, symbolsNumber)
+		symbolCodeTable, err = t.Decoders.Huffman.BuildTable(symbolCodeTable, symbolsNumber)
+		if err != nil {
+			return err
+		}
 		r.ConsumeRemainingBits()
 	} else {
 		symbolCodeTable = nil
@@ -279,14 +297,63 @@ func (t *TextRegionSegment) Decode(r *reader.Reader) (err error) {
 	}
 
 	var (
-		symbolRefine       bool = t.TRFlags.GetValue(SBRefine) != 0
-		logStrips          int  = t.TRFlags.GetValue(LogSbStripes)
-		defaultPixel       int  = t.TRFlags.GetValue(SbDefPixel)
-		cominationOperator bool = t.TRFlags.GetValue(SbCombOp)
-		transposed         bool
+		symbolRefine        bool = t.TRFlags.GetValue(SBRefine) != 0
+		logStrips           int  = t.TRFlags.GetValue(LogSbStripes)
+		defaultPixel        int  = t.TRFlags.GetValue(SbDefPixel)
+		combinationOperator int  = t.TRFlags.GetValue(SbCombOp)
+		transposed          bool = t.TRFlags.GetValue(Transposed) != 0
+		referenceCorner     int  = t.TRFlags.GetValue(RefCorner)
+		sOffset             int  = t.TRFlags.GetValue(SbDsOffset)
+		template            int  = t.TRFlags.GetValue(SbRTemplate)
 	)
 
+	// Check if the symbols is refine
+	if symbolRefine {
+		t.Decoders.Arithmetic.ResetRefinementStats(template, nil)
+	}
+
+	bm := bitmap.New(t.BMWidth, t.BMHeight, t.Decoders)
+
+	err = bm.ReadTextRegion(r, sbHuffman, symbolRefine, uint(symbolInstancesNumber), uint(logStrips), uint(symbolsNumber), symbolCodeTable, symbolCodeLength, symbols, defaultPixel, int64(combinationOperator), transposed, referenceCorner, sOffset,
+		huffmanFSTable, huffmanDSTable, huffmanDTTable, huffmanRDWTable, huffmanRDHTable, huffmanRDXTable, huffmanRDYTable, huffmanRSizeTable,
+		template, t.SymbolRegionATX, t.SymbolRegionATY,
+	)
+
+	if err != nil {
+		log.Error("ReadTextRegion failed: %v", err)
+		return err
+	}
+
+	if t.inlineImage {
+		s := t.Decoders.FindPageSegment(t.Header.PageAssociation)
+		if s != nil {
+			return errors.New("Can't find page segment")
+		}
+
+		ps := s.(*pageinformation.PageInformationSegment)
+
+		externalCombinationOperator := t.RegionFlags.GetValue(regions.ExternalCombinationOperator)
+		err = ps.PageBitmap.Combine(bm, t.BMXLocation, t.BMYLocation, int64(externalCombinationOperator))
+		if err != nil {
+			log.Error("PageBitmap.Combine failed: %v", err)
+			return err
+		}
+	} else {
+		bm.BitmapNumber = t.Header.SegmentNumber
+		t.bm = bm
+	}
+
+	r.ConsumeRemainingBits()
 	return nil
+}
+
+// GetBitmap returns TextRegionSegment bitmap
+// If the segment was inline the bitmap returned would be nil
+func (t *TextRegionSegment) GetBitmap() *bitmap.Bitmap {
+	if t.inlineImage {
+		return nil
+	}
+	return t.bm
 }
 
 // decodeTRFlags extracts the text region segment flag
@@ -325,29 +392,34 @@ func (t *TextRegionSegment) decodeTRFlags(r *reader.Reader) error {
 	sbrTemplate := t.TRFlags.GetValue(SbRTemplate)
 
 	if sbRefine && sbrTemplate == 0 {
-		t.SymbolRegionATX[0], err = r.ReadByte()
+		var b byte
+		b, err = r.ReadByte()
 		if err != nil {
 			log.Error("Text Region Segment read Adaptive template X[0] failed. %v", err)
 			return err
 		}
+		t.SymbolRegionATX[0] = int8(b)
 
-		t.SymbolRegionATY[0], err = r.ReadByte()
+		b, err = r.ReadByte()
 		if err != nil {
 			log.Error("Text Region Segment read Adaptive template Y[0] failed. %v", err)
 			return err
 		}
+		t.SymbolRegionATY[0] = int8(b)
 
-		t.SymbolRegionATX[1], err = r.ReadByte()
+		b, err = r.ReadByte()
 		if err != nil {
 			log.Error("Text Region Segment read Adaptive template X[1] failed. %v", err)
 			return err
 		}
+		t.SymbolRegionATX[1] = int8(b)
 
-		t.SymbolRegionATY[1], err = r.ReadByte()
+		b, err = r.ReadByte()
 		if err != nil {
 			log.Error("Text Region Segment read Adaptive template Y[1] failed. %v", err)
 			return err
 		}
+		t.SymbolRegionATY[1] = int8(b)
 	}
 
 	return nil

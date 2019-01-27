@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/model"
 )
 
@@ -22,6 +24,14 @@ type PageInformationSegment struct {
 	pageStripping int
 
 	PageBitmap *bitmap.Bitmap
+}
+
+func New(d *container.Decoder, h *header.Header) *PageInformationSegment {
+	p := &PageInformationSegment{
+		Segment:       model.New(d, h),
+		PageInfoFlags: newFlags(),
+	}
+	return p
 }
 
 // Read reads the segment from the input reader
@@ -82,5 +92,6 @@ func (p *PageInformationSegment) Decode(r *reader.Reader) error {
 
 	p.PageBitmap = bitmap.New(p.PageBMWidth, height, p.Decoders)
 	p.PageBitmap.Clear(defPix == 1)
+
 	return nil
 }
