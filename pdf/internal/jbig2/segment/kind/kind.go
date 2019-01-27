@@ -26,3 +26,53 @@ const (
 	Extension                                SegmentKind = 62
 	Bitmap                                   SegmentKind = 70
 )
+
+func (k SegmentKind) String() string {
+	switch k {
+	case SymbolDictionary:
+		return "Symbol Dictionary"
+	case IntermediateTextRegion:
+		return "Intermediate Text Region"
+	case ImmediateTextRegion:
+		return "Immediate Text Region"
+	case ImmediateLosslessTextRegion:
+		return "Immediate Lossless Text Region"
+	case PatternDictionary:
+		return "Pattern Dictionary"
+	case IntermediateHalftoneRegion:
+		return "Intermediate Halftone Region"
+	case ImmediateHalftoneRegion:
+		return "Immediate Halftone Region"
+	case ImmediateLosslessHalftoneRegion:
+		return "Immediate Lossless Halftone Region"
+	case IntermediateGenericRegion:
+		return "Intermediate Generic Region"
+	case ImmediateGenericRegion:
+		return "Immediate Generic Region"
+	case ImmediateLosslessGenericRegion:
+		return "Immediate Lossless Generic Region"
+	case IntermediateGenericRefinementRegion:
+		return "Intermediate Generic Refinement Region"
+	case ImmediateGenericRefinementRegion:
+		return "Immediate Generic Refinement Region"
+	case ImmediateLosslessGenericRefinementRegion:
+		return "Immediate Lossless Generic Refinement Region"
+	case PageInformation:
+		return "Page Information"
+	case EndOfPage:
+		return "End Of Page"
+	case EndOfStrip:
+		return "End Of Strip"
+	case EndOfFile:
+		return "End Of File"
+	case Profiles:
+		return "Profiles"
+	case Tables:
+		return "Tables"
+	case Extension:
+		return "Extension"
+	case Bitmap:
+		return "Bitmap"
+	}
+	return "Invalid Segment Kind"
+}

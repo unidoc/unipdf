@@ -31,7 +31,8 @@ type Header struct {
 // Decode reads the header from the provided reader
 // Implements io.ReaderFrom
 func (h *Header) Decode(r *reader.Reader) (int, error) {
-
+	common.Log.Debug("[SEGMENT-HEADER][DECODE] Begins")
+	defer func() { common.Log.Debug("[SEGMENT-HEADER][DECODE] Finished") }()
 	var bytesRead int
 	n, err := h.handleSegmentNumber(r)
 	if err != nil {

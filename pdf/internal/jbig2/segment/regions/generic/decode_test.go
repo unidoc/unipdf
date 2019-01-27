@@ -2,7 +2,7 @@ package generic
 
 import (
 	"github.com/stretchr/testify/assert"
-	// "github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
@@ -12,8 +12,12 @@ import (
 )
 
 func TestGenericRegionSegment(t *testing.T) {
-	// common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	if testing.Verbose() {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	}
+
 	t.Run("12th-AnnexH", func(t *testing.T) {
+
 		data := []byte{
 			0x00, 0x00, 0x00, 0x0B, 0x27, 0x00, 0x02, 0x00, 0x00, 0x00, 0x23, // header
 			0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x04,

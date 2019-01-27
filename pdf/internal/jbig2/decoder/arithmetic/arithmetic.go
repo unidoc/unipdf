@@ -84,7 +84,7 @@ type Decoder struct {
 	Buffer1 int64
 
 	c, a     int64
-	previous uint64
+	previous int64
 
 	counter int
 }
@@ -95,20 +95,20 @@ func New() *Decoder {
 		GenericRegionStats:    NewStats(1 << 1),
 		RefinementRegionStats: NewStats(1 << 1),
 
-		IadhStats:            NewStats(1 << 9),
-		IadwStats:            NewStats(1 << 9),
-		IaexStats:            NewStats(1 << 9),
-		IaaiStats:            NewStats(1 << 9),
-		IadtStats:            NewStats(1 << 9),
-		IaitStats:            NewStats(1 << 9),
-		IafsStats:            NewStats(1 << 9),
-		IadsStats:            NewStats(1 << 9),
-		IardxStats:           NewStats(1 << 9),
-		IardyStats:           NewStats(1 << 9),
-		IardwStats:           NewStats(1 << 9),
-		IardhStats:           NewStats(1 << 9),
-		IariStats:            NewStats(1 << 9),
-		IaidStats:            NewStats(1 << 1),
+		IadhStats:            NewStats(int(uint(1) << uint(9))),
+		IadwStats:            NewStats(int(uint(1) << uint(9))),
+		IaexStats:            NewStats(int(uint(1) << uint(9))),
+		IaaiStats:            NewStats(int(uint(1) << uint(9))),
+		IadtStats:            NewStats(int(uint(1) << uint(9))),
+		IaitStats:            NewStats(int(uint(1) << uint(9))),
+		IafsStats:            NewStats(int(uint(1) << uint(9))),
+		IadsStats:            NewStats(int(uint(1) << uint(9))),
+		IardxStats:           NewStats(int(uint(1) << uint(9))),
+		IardyStats:           NewStats(int(uint(1) << uint(9))),
+		IardwStats:           NewStats(int(uint(1) << uint(9))),
+		IardhStats:           NewStats(int(uint(1) << uint(9))),
+		IariStats:            NewStats(int(uint(1) << uint(9))),
+		IaidStats:            NewStats(int(uint(1) << uint(1))),
 		ContextSize:          []int{16, 13, 10, 10},
 		ReferedToContextSize: []int{13, 10},
 	}
@@ -186,9 +186,8 @@ func (d *Decoder) Start(r io.ByteReader) error {
 		common.Log.Debug("Buffer0 readByte failed. %v", err)
 		return err
 	}
-
 	d.Buffer0 = int64(b)
-	common.Log.Debug("Decoder Buffer0 init value: %b", d.Buffer0)
+	// common.Log.Debug("Decoder Buffer0 init value: %b, %02x", d.Buffer0, d.Buffer0)
 	b, err = r.ReadByte()
 	if err != nil {
 		common.Log.Debug("Buffer0 readByte failed. %v", err)
@@ -196,11 +195,11 @@ func (d *Decoder) Start(r io.ByteReader) error {
 	}
 
 	d.Buffer1 = int64(b)
-	common.Log.Debug("Decoder Buffer1 init value: %b", d.Buffer1)
+	// common.Log.Debug("Decoder Buffer1 init value: %b, %02x", d.Buffer1, d.Buffer1)
 	// the values of Buffer0 and Buffer1 are set
 
 	// Shift buffer0
-	d.c = ((d.Buffer0 ^ 0xff) << 16)
+	d.c = ((d.Buffer0 ^ 0xFF) << 16)
 
 	// Decoder.readByte()
 	if err = d.readByte(r); err != nil {
@@ -208,24 +207,24 @@ func (d *Decoder) Start(r io.ByteReader) error {
 	}
 
 	// Shift c value again
-	d.c = (d.c << 7)
-	common.Log.Debug("Decoder 'c' value: %b", d.c)
+	d.c <<= 7
+	// common.Log.Debug("Decoder 'c' value: %b", d.c)
 
 	// set
 	d.counter -= 7
 
-	common.Log.Debug("Decoder Counter: %v", d.counter)
+	// common.Log.Debug("Decoder Counter: %v", d.counter)
 
 	d.a = 0x800000001
 
-	common.Log.Debug("Decoder 'a' value: %b", d.a)
+	// common.Log.Debug("Decoder 'a' value: %b", d.a)
 
 	return nil
 }
 
 func (d *Decoder) readByte(r io.ByteReader) error {
-	if d.Buffer0 == 0xff {
-		if d.Buffer1 > 0x8f {
+	if d.Buffer0 == 0xFF {
+		if d.Buffer1 > 0x8F {
 			d.counter = 8
 		} else {
 			d.Buffer0 = d.Buffer1
@@ -234,7 +233,7 @@ func (d *Decoder) readByte(r io.ByteReader) error {
 				return err
 			}
 			d.Buffer1 = int64(b)
-			d.c = d.c + 0xfe00 - (d.Buffer0 << 9)
+			d.c = d.c + 0xfe00 - int64(d.Buffer0<<9)
 			d.counter = 7
 		}
 	} else {
@@ -246,7 +245,7 @@ func (d *Decoder) readByte(r io.ByteReader) error {
 
 		d.Buffer1 = int64(b)
 
-		d.c = d.c + 0xff00 - (d.Buffer0 << 8)
+		d.c = d.c + 0xff00 - int64(d.Buffer0<<8)
 		d.counter = 8
 	}
 	return nil
@@ -257,17 +256,19 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 
 	d.previous = 1
 
+	// first bit defines the sign of the integer
 	s, err := d.decodeIntBit(r, stats)
 	if err != nil {
 		return 0, false, err
 	}
+	// common.Log.Debug("Sign int bit: '%01b'", s)
 
 	bit, err := d.decodeIntBit(r, stats)
 	if err != nil {
 		return 0, false, err
 	}
 
-	common.Log.Debug("First bit value: %b", bit)
+	// common.Log.Debug("First bit value: %b", bit)
 	// First read
 	if bit != 0 {
 
@@ -310,7 +311,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 						}
 
 						value += 4436
-						common.Log.Debug("Read sixth value: %v ", value)
+						// common.Log.Debug("Read sixth value: %v ", value)
 
 					} else {
 						// Fifth Read
@@ -327,7 +328,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 
 						value += 340
 
-						common.Log.Debug("Read fifth value: %v ", value)
+						// common.Log.Debug("Read fifth value: %v ", value)
 					}
 				} else {
 					// Fourth Read
@@ -342,7 +343,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 					}
 					value += 84
 
-					common.Log.Debug("Read fourth value: %v ", value)
+					// common.Log.Debug("Read fourth value: %v ", value)
 				}
 			} else {
 				// Third Read
@@ -358,7 +359,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 
 				value += 20
 
-				common.Log.Debug("Read third value: %v ", value)
+				// common.Log.Debug("Read third value: %v ", value)
 			}
 		} else {
 			// SecondRead
@@ -379,7 +380,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 
 			value += 4
 
-			common.Log.Debug("Read Second value: %v ", value)
+			// common.Log.Debug("Read Second value: %v ", value)
 		}
 	} else {
 		// First read
@@ -395,7 +396,7 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 		}
 		value = ((value << 1) | int32(bit))
 
-		common.Log.Debug("Read First value: %v ", value)
+		// common.Log.Debug("Read First value: %v ", value)
 	}
 
 	var decodedInt int
@@ -411,24 +412,28 @@ func (d *Decoder) DecodeInt(r io.ByteReader, stats *DecoderStats) (int, bool, er
 	return decodedInt, true, nil
 }
 
-func (d *Decoder) DecodeBit(r io.ByteReader, context uint64, stats *DecoderStats) (int, error) {
-	var iCX int = ((stats.codingContextTable[context] >> 1) & 0xff)
-	var mpsCX int = (stats.codingContextTable[context] & 1)
+func (d *Decoder) DecodeBit(r io.ByteReader, context int64, stats *DecoderStats) (int, error) {
+	var iCX int = (stats.codingContextTable[context] >> 1) & 0xFF
+	var mpsCX int = stats.codingContextTable[context] & 1
 	var qe int = qeTable[iCX]
+
+	common.Log.Debug("mpsCX: %v, iCX: %v, qe: %v, context: %v", mpsCX, iCX, qe, context)
 
 	d.a -= int64(qe)
 
 	var bit int
 
 	if d.c < d.a {
+
 		// 0x80000000 is OOB vvalue
 		if (d.a & 0x80000000) != 0 {
 			bit = mpsCX
-			common.Log.Debug("Bit set to mpsCX: %b", bit)
+			// common.Log.Debug("Bit set to mpsCX: %b", bit)
 		} else {
+
 			if d.a < int64(qe) {
 				bit = 1 - mpsCX
-				common.Log.Debug("Bit set to '1 - mpsCX': %b", bit)
+				// common.Log.Debug("Bit set to '1 - mpsCX': %b", bit)
 				if switchTable[iCX] != 0 {
 					stats.codingContextTable[context] = ((nlpsTable[iCX] << 1) | (1 - mpsCX))
 				} else {
@@ -440,7 +445,7 @@ func (d *Decoder) DecodeBit(r io.ByteReader, context uint64, stats *DecoderStats
 				stats.codingContextTable[context] = ((nmpsTable[iCX] << 1) | mpsCX)
 			}
 
-			common.Log.Debug("Bit set to mpsCX: %b start looping ", bit)
+			// common.Log.Debug("Bit set to mpsCX: %b start looping ", bit)
 
 			for {
 				if d.counter == 0 {
@@ -448,25 +453,26 @@ func (d *Decoder) DecodeBit(r io.ByteReader, context uint64, stats *DecoderStats
 						return 0, err
 					}
 				}
-				d.a = d.a << 1
-				d.c = d.c << 1
+				d.a <<= 1
+				d.c <<= 1
 
 				d.counter -= 1
-				if (d.a & 0x80000000) == 0 {
+				if !((d.a & 0x80000000) == 0) {
 					break
 				}
 			}
 		}
 	} else {
-		d.c = -d.a
+		d.c -= d.a
 
 		if d.a < int64(qe) {
 			bit = mpsCX
-			common.Log.Debug("Bit set to mpsCX: %b", bit)
+			// common.Log.Debug("Bit set to mpsCX: %b", bit)
 			stats.codingContextTable[context] = ((nmpsTable[iCX] << 1) | mpsCX)
 		} else {
+
 			bit = 1 - mpsCX
-			common.Log.Debug("Bit set to 1 - mpsCX: %b", bit)
+			// common.Log.Debug("Bit set to 1 - mpsCX: %b", bit)
 			if switchTable[iCX] != 0 {
 				stats.codingContextTable[context] = ((nlpsTable[iCX] << 1) | (1 - mpsCX))
 			} else {
@@ -482,12 +488,12 @@ func (d *Decoder) DecodeBit(r io.ByteReader, context uint64, stats *DecoderStats
 				}
 			}
 
-			d.a = (d.a << 1)
-			d.c = (d.c << 1)
+			d.a <<= 1
+			d.c <<= 1
 
 			d.counter -= 1
 
-			if (d.a & 0x80000000) == 0 {
+			if !((d.a & 0x80000000) == 0) {
 				break
 			}
 		}
@@ -497,29 +503,29 @@ func (d *Decoder) DecodeBit(r io.ByteReader, context uint64, stats *DecoderStats
 
 func (d *Decoder) decodeIntBit(r io.ByteReader, stats *DecoderStats) (int, error) {
 	// get bit
-	common.Log.Debug("[decodeIntBit] starts")
-	defer func() { common.Log.Debug("[decodeIntBit] finished") }()
+	// common.Log.Debug("[decodeIntBit] starts")
+	// defer func() { common.Log.Debug("[decodeIntBit] finished") }()
 	bit, err := d.DecodeBit(r, d.previous, stats)
 	if err != nil {
 		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
 		return bit, err
 	}
-
-	common.Log.Debug("'previous' before: %b", d.previous)
+	common.Log.Debug("bit: %1b", bit)
+	// common.Log.Debug("'previous' before: %b", d.previous)
 
 	// if prev < 256
 	if d.previous < 0x100 {
-		d.previous = ((d.previous << 1) | uint64(bit))
+		d.previous = (d.previous << uint(1)) | int64(bit)
 	} else {
-		d.previous = ((((d.previous << 1) | uint64(bit)) & 0x1ff) | 0x100)
+		d.previous = ((d.previous<<uint(1) | int64(bit)) & 0x1ff) | 0x100
 	}
 
-	common.Log.Debug("'previous' after: %b", d.previous)
+	// common.Log.Debug("'previous' after: %b", d.previous)
 
 	return bit, nil
 }
 
-func (d *Decoder) DecodeIAID(r io.ByteReader, codeLen uint64, stats *DecoderStats) (uint64, error) {
+func (d *Decoder) DecodeIAID(r io.ByteReader, codeLen uint64, stats *DecoderStats) (int64, error) {
 	d.previous = 1
 
 	var i uint64
@@ -529,7 +535,7 @@ func (d *Decoder) DecodeIAID(r io.ByteReader, codeLen uint64, stats *DecoderStat
 			return 0, err
 		}
 
-		d.previous = ((d.previous << 1) | uint64(bit))
+		d.previous = ((d.previous << 1) | int64(bit))
 	}
 	return d.previous - (1 << codeLen), nil
 }
