@@ -18,7 +18,7 @@ import (
 
 // To enable ghostscript validation, the path to the binary needs to be specified.
 // Set environment variable:
-//		UNIDOC_GS_BIN_PATH to the path of the ghosccript binary (gs).
+//		UNIDOC_GS_BIN_PATH to the path of the ghostscript binary (gs).
 var (
 	ghostscriptBinPath = os.Getenv("UNIDOC_GS_BIN_PATH")
 )
@@ -32,16 +32,17 @@ func validatePdf(path string, password string) (int, error) {
 	}
 	common.Log.Debug("Validating: %s", path)
 
-	var cmd *exec.Cmd
+	params := []string{"-dBATCH", "-dNODISPLAY", "-dNOPAUSE"}
 	if len(password) > 0 {
-		option := fmt.Sprintf("-sPDFPassword=%s", password)
-		cmd = exec.Command(ghostscriptBinPath, "-dBATCH", "-dNODISPLAY", "-dNOPAUSE", option, path)
-	} else {
-		cmd = exec.Command(ghostscriptBinPath, "-dBATCH", "-dNODISPLAY", "-dNOPAUSE", path)
+		params = append(params, fmt.Sprintf("-sPDFPassword=%s", password))
 	}
+	params = append(params, path)
 
-	var out bytes.Buffer
-	var errOut bytes.Buffer
+	var (
+		out    bytes.Buffer
+		errOut bytes.Buffer
+	)
+	cmd := exec.Command(ghostscriptBinPath, params...)
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
 

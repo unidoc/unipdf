@@ -20,7 +20,7 @@ import (
 // Set environment variables:
 //		UNIDOC_E2E_FORCE_TESTS to "1" to force the tests to execute.
 //		UNIDOC_PASSTHROUGH_TESTDATA to the path of the corpus folder.
-//		UNIDOC_GS_BIN_PATH to the path of the ghosccript binary (gs).
+//		UNIDOC_GS_BIN_PATH to the path of the ghostscript binary (gs).
 var (
 	forceTest               = os.Getenv("UNIDOC_E2E_FORCE_TESTS") == "1"
 	passthroughCorpusFolder = os.Getenv("UNIDOC_PASSTHROUGH_TESTDATA")
@@ -55,7 +55,7 @@ func TestPassthrough(t *testing.T) {
 		params := passthroughParams{
 			inputPath:    fpath,
 			outPath:      filepath.Join(tempdir, "1.pdf"),
-			gsValidation: false,
+			gsValidation: len(ghostscriptBinPath) > 0,
 		}
 		err := passthroughSinglePdf(params)
 		if err != nil {
