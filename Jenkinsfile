@@ -11,6 +11,7 @@ node {
     env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
     env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
 
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
