@@ -6,6 +6,7 @@
 package extractor
 
 import (
+	"math"
 	"os"
 	"testing"
 
@@ -15,13 +16,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
-
-// TODO(gunnsth): Create more test cases:
-//     - Inline image extraction.
-//     - Caching when extracting multiple copies of same image with different scaling.
-//     - Images within XObject forms.
-//     - A more complex example with more images.
-//     - Check extracted image data.
 
 func loadPageFromPDFFile(filePath string, pageNum int) (*model.PdfPage, error) {
 	f, err := os.Open(filePath)
@@ -64,6 +58,21 @@ func TestImageExtractionBasic(t *testing.T) {
 					Y:      294.865385,
 					Width:  612,
 					Height: 197.134615,
+					Angle:  0,
+				},
+			},
+		},
+		{
+			"inline image",
+			1,
+			"./testdata/inline.pdf",
+			[]ImageMark{
+				{
+					Image:  nil,
+					X:      0,
+					Y:      -0.000000358,
+					Width:  12,
+					Height: 12,
 					Angle:  0,
 				},
 			},
@@ -175,6 +184,61 @@ func TestImageExtractionNestedCM(t *testing.T) {
 		for i, img := range pageImages.Images {
 			img.Image = nil // Discard image data.
 			assert.Equalf(t, tcase.Expected[i], img, "i = %d", i)
+		}
+	}
+}
+
+// Test multiple copies of same image XObject with different scales.
+func TestImageExtractionMulti(t *testing.T) {
+	testcases := []struct {
+		PageNum       int
+		Path          string
+		NumImages     int
+		DimensionFunc func(i int) (dy float64, w float64, h float64)
+		NumSamples    int
+	}{
+		{
+			1,
+			"./testdata/multi.pdf",
+			12,
+			func(i int) (dy float64, w float64, h float64) {
+				w = 100 + 10*float64(i+1)
+				ar := 35.432692 / 110.0
+				h = w * ar
+
+				dy = h
+
+				return dy, w, h
+			},
+			416 * 134 * 3,
+		},
+	}
+
+	for _, tcase := range testcases {
+		page, err := loadPageFromPDFFile(tcase.Path, tcase.PageNum)
+		require.NoError(t, err)
+
+		pageExtractor, err := New(page)
+		require.NoError(t, err)
+
+		pageImages, err := pageExtractor.ExtractPageImages()
+		require.NoError(t, err)
+
+		assert.Equal(t, tcase.NumImages, len(pageImages.Images))
+
+		for i, img := range pageImages.Images {
+			dy, w, h := tcase.DimensionFunc(i)
+
+			assert.Equalf(t, tcase.NumSamples, len(img.Image.GetSamples()), "i = %d", i)
+
+			// Comparison with tolerance.
+			assert.Truef(t, math.Abs(w-img.Width) < 0.00001, "i = %d", i)
+			assert.Truef(t, math.Abs(h-img.Height) < 0.00001, "i = %d", i)
+
+			if i > 0 {
+				measDY := pageImages.Images[i-1].Y - pageImages.Images[i].Y
+				assert.Truef(t, math.Abs(dy-measDY) < 0.00001, "i = %d", i)
+			}
 		}
 	}
 }
