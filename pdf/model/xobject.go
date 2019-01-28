@@ -455,9 +455,14 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	ximg.Stream = encoded
 
 	// Width, height and bits.
-	ximg.Width = &img.Width
-	ximg.Height = &img.Height
-	ximg.BitsPerComponent = &img.BitsPerComponent
+	w := img.Width
+	ximg.Width = &w
+
+	h := img.Height
+	ximg.Height = &h
+
+	bpc := img.BitsPerComponent
+	ximg.BitsPerComponent = &bpc
 
 	// Guess colorspace if not explicitly set.
 	if cs == nil {
