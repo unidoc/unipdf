@@ -1,19 +1,27 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package extractor
 
 import (
 	"os"
-	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// TODO(gunnsth): Create test cases, specifically:
-// 1. Basic test (one XObject image at specific position).
-// 2. Test transform matrix handling (nested cms).
-// 3. Inline image extraction.
-// 4. Check caching.
-// 5. Benchmark.
+// TODO(gunnsth): Create more test cases:
+//     - Inline image extraction.
+//     - Caching when extracting multiple copies of same image with different scaling.
+//     - Images within XObject forms.
+//     - A more complex example with more images.
+//     - Check extracted image data.
 
 func loadPageFromPDFFile(filePath string, pageNum int) (*model.PdfPage, error) {
 	f, err := os.Open(filePath)
@@ -64,40 +72,127 @@ func TestImageExtractionBasic(t *testing.T) {
 
 	for _, tcase := range testcases {
 		page, err := loadPageFromPDFFile(tcase.Path, tcase.PageNum)
-		if err != nil {
-			t.Fatalf("Error: %v", err)
-		}
-		pageExtractor, err := New(page)
-		if err != nil {
-			t.Fatalf("Error: %v", err)
-		}
-		pageImages, err := pageExtractor.ExtractPageImages()
-		if err != nil {
-			t.Fatalf("Error: %v", err)
-		}
+		require.NoError(t, err)
 
-		if len(pageImages.Images) != len(tcase.Expected) {
-			t.Fatalf("%d != %d", len(pageImages.Images), len(tcase.Expected))
-		}
+		pageExtractor, err := New(page)
+		require.NoError(t, err)
+
+		pageImages, err := pageExtractor.ExtractPageImages()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(tcase.Expected), len(pageImages.Images))
 
 		for i, img := range pageImages.Images {
 			img.Image = nil // Discard image data.
-			if !reflect.DeepEqual(img, tcase.Expected[i]) {
-				t.Fatalf("i: %d - %#v != %#v", i, img, tcase.Expected[i])
-			}
+			assert.Equalf(t, tcase.Expected[i], img, "i = %d", i)
 		}
 	}
 }
 
-// Test position extraction with nest transform matrices.
+// Test position extraction with nested transform matrices.
 func TestImageExtractionNestedCM(t *testing.T) {
-}
+	testcases := []struct {
+		Name      string
+		PageNum   int
+		Path      string
+		PrependCS string
+		AppendCS  string
+		Expected  []ImageMark
+	}{
+		{
+			"basic xobject - translate (100,50)",
+			1,
+			"./testdata/basic_xobject.pdf",
+			"1 0 0 1 100.0 50.0 cm q",
+			"Q",
+			[]ImageMark{
+				{
+					Image:  nil,
+					X:      0 + 100.0,
+					Y:      294.865385 + 50.0,
+					Width:  612,
+					Height: 197.134615,
+					Angle:  0,
+				},
+			},
+		},
+		{
+			"basic xobject - scale (1.5,2)X",
+			1,
+			"./testdata/basic_xobject.pdf",
+			"1.5 0 0 2.0 0 0 cm q",
+			"Q",
+			[]ImageMark{
+				{
+					Image:  nil,
+					X:      0,
+					Y:      294.865385 * 2.0,
+					Width:  612 * 1.5,
+					Height: 197.134615 * 2.0,
+					Angle:  0,
+				},
+			},
+		},
+		{
+			"basic xobject - translate (100,50) scale (1.5,2)X",
+			1,
+			"./testdata/basic_xobject.pdf",
+			"1.5 0 0 2.0 0 0 cm q 1 0 0 1 100.0 50.0 cm q",
+			"Q Q",
+			[]ImageMark{
+				{
+					Image:  nil,
+					X:      100.0 * 1.5,
+					Y:      (294.865385 + 50.0) * 2.0,
+					Width:  612 * 1.5,
+					Height: 197.134615 * 2.0,
+					Angle:  0,
+				},
+			},
+		},
+	}
 
-func TestImageExtractionInline(t *testing.T) {
-}
+	for _, tcase := range testcases {
+		page, err := loadPageFromPDFFile(tcase.Path, tcase.PageNum)
+		require.NoError(t, err)
 
-func TestImageExtractionCaching(t *testing.T) {
+		contentstr, err := page.GetAllContentStreams()
+		require.NoError(t, err)
+
+		// Modify the contentstream to alter the position by way of nested transform matrices.
+		contentstr = tcase.PrependCS + " " + contentstr + " " + tcase.AppendCS
+		err = page.SetContentStreams([]string{contentstr}, core.NewFlateEncoder())
+		require.NoError(t, err)
+
+		pageExtractor, err := New(page)
+		require.NoError(t, err)
+
+		pageImages, err := pageExtractor.ExtractPageImages()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(tcase.Expected), len(pageImages.Images))
+
+		for i, img := range pageImages.Images {
+			img.Image = nil // Discard image data.
+			assert.Equalf(t, tcase.Expected[i], img, "i = %d", i)
+		}
+	}
 }
 
 func BenchmarkImageExtraction(b *testing.B) {
+	cnt := 0
+	for i := 0; i < b.N; i++ {
+		page, err := loadPageFromPDFFile("./testdata/basic_xobject.pdf", 1)
+		require.NoError(b, err)
+
+		pageExtractor, err := New(page)
+		require.NoError(b, err)
+
+		pageImages, err := pageExtractor.ExtractPageImages()
+		require.NoError(b, err)
+
+		cnt += len(pageImages.Images)
+	}
+
+	assert.Equal(b, b.N, cnt)
 }
