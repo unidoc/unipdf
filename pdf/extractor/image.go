@@ -58,8 +58,13 @@ type imageExtractContext struct {
 	xObjectImages   int
 	xObjectForms    int
 
-	// Cache to avoid processing same objects many times.
-	processedXObjects map[string]bool
+	// Cache to avoid processing same image many times.
+	cacheXObjectImages map[*core.PdfObjectStream]*cachedImage
+}
+
+type cachedImage struct {
+	image *model.Image
+	cs    model.PdfColorspace
 }
 
 func (ctx *imageExtractContext) extractImagesInContentStream(contents string, resources *model.PdfPageResources) error {
@@ -69,7 +74,9 @@ func (ctx *imageExtractContext) extractImagesInContentStream(contents string, re
 		return err
 	}
 
-	ctx.processedXObjects = map[string]bool{}
+	if ctx.cacheXObjectImages == nil {
+		ctx.cacheXObjectImages = map[*core.PdfObjectStream]*cachedImage{}
+	}
 
 	processor := contentstream.NewContentStreamProcessor(*operations)
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
@@ -136,27 +143,39 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 			return errTypeCheck
 		}
 
-		// Only process each one once.
-		_, has := ctx.processedXObjects[string(*name)]
-		if has {
-			// Already processed.
-			return nil
-		}
-		ctx.processedXObjects[string(*name)] = true
-
 		_, xtype := resources.GetXObjectByName(*name)
 		if xtype == model.XObjectTypeImage {
 			common.Log.Debug(" XObject Image: %s", *name)
 
-			ximg, err := resources.GetXObjectImageByName(*name)
-			if err != nil {
-				return err
+			stream, _ := resources.GetXObjectByName(*name)
+			if stream == nil {
+				return nil
 			}
 
-			img, err := ximg.ToImage()
-			if err != nil {
-				return err
+			// Cache on stream pointer so can ensure that it is the same object (better than using name).
+			cimg, cached := ctx.cacheXObjectImages[stream]
+			if !cached {
+				ximg, err := resources.GetXObjectImageByName(*name)
+				if err != nil {
+					return err
+				}
+				if ximg == nil {
+					return nil
+				}
+
+				img, err := ximg.ToImage()
+				if err != nil {
+					return err
+				}
+
+				cimg = &cachedImage{
+					image: img,
+					cs:    ximg.ColorSpace,
+				}
+				ctx.cacheXObjectImages[stream] = cimg
 			}
+			img := cimg.image
+			cs := cimg.cs
 
 			common.Log.Debug("@Do CTM: %s", gs.CTM.String())
 			xDim := gs.CTM.ScalingFactorX()
@@ -164,7 +183,7 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 			xPos, yPos := gs.CTM.Translation()
 			angle := gs.CTM.Angle()
 
-			rgbImg, err := ximg.ColorSpace.ImageToRGB(*img)
+			rgbImg, err := cs.ImageToRGB(*img)
 			if err != nil {
 				return err
 			}
@@ -184,6 +203,9 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 			xform, err := resources.GetXObjectFormByName(*name)
 			if err != nil {
 				return err
+			}
+			if xform == nil {
+				return nil
 			}
 
 			formContent, err := xform.GetContentStream()
