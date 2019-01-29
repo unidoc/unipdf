@@ -17,15 +17,14 @@ import (
 func (e *Extractor) ExtractPageImages() (*PageImages, error) {
 	ctx := &imageExtractContext{}
 
-	err := ctx.extractImagesInContentStream(e.contents, e.resources)
+	err := ctx.extractContentStreamImages(e.contents, e.resources)
 	if err != nil {
 		return nil, err
 	}
 
-	images := &PageImages{
+	return &PageImages{
 		Images: ctx.extractedImages,
-	}
-	return images, nil
+	}, nil
 }
 
 // PageImages represents extracted images on a PDF page with spatial information:
@@ -67,7 +66,7 @@ type cachedImage struct {
 	cs    model.PdfColorspace
 }
 
-func (ctx *imageExtractContext) extractImagesInContentStream(contents string, resources *model.PdfPageResources) error {
+func (ctx *imageExtractContext) extractContentStreamImages(contents string, resources *model.PdfPageResources) error {
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
@@ -84,58 +83,19 @@ func (ctx *imageExtractContext) extractImagesInContentStream(contents string, re
 			return ctx.processOperand(op, gs, resources)
 		})
 
-	err = processor.Process(resources)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return processor.Process(resources)
 }
 
 // Process individual content stream operands for image extraction.
 func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
 	if op.Operand == "BI" && len(op.Params) == 1 {
 		// BI: Inline image.
-
 		iimg, ok := op.Params[0].(*contentstream.ContentStreamInlineImage)
 		if !ok {
 			return nil
 		}
 
-		img, err := iimg.ToImage(resources)
-		if err != nil {
-			return err
-		}
-
-		cs, err := iimg.GetColorSpace(resources)
-		if err != nil {
-			return err
-		}
-		if cs == nil {
-			// Default if not specified?
-			cs = model.NewPdfColorspaceDeviceGray()
-		}
-
-		rgbImg, err := cs.ImageToRGB(*img)
-		if err != nil {
-			return err
-		}
-		xDim := gs.CTM.ScalingFactorX()
-		yDim := gs.CTM.ScalingFactorY()
-		xPos, yPos := gs.CTM.Translation()
-		angle := gs.CTM.Angle()
-
-		imgMark := ImageMark{
-			Image:  &rgbImg,
-			X:      xPos,
-			Y:      yPos,
-			Width:  xDim,
-			Height: yDim,
-			Angle:  angle,
-		}
-
-		ctx.extractedImages = append(ctx.extractedImages, imgMark)
-		ctx.inlineImages++
+		return ctx.extractInlineImage(iimg, gs, resources)
 	} else if op.Operand == "Do" && len(op.Params) == 1 {
 		// Do: XObject.
 		name, ok := core.GetName(op.Params[0])
@@ -144,88 +104,125 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 		}
 
 		_, xtype := resources.GetXObjectByName(*name)
-		if xtype == model.XObjectTypeImage {
-			common.Log.Debug(" XObject Image: %s", *name)
-
-			stream, _ := resources.GetXObjectByName(*name)
-			if stream == nil {
-				return nil
-			}
-
-			// Cache on stream pointer so can ensure that it is the same object (better than using name).
-			cimg, cached := ctx.cacheXObjectImages[stream]
-			if !cached {
-				ximg, err := resources.GetXObjectImageByName(*name)
-				if err != nil {
-					return err
-				}
-				if ximg == nil {
-					return nil
-				}
-
-				img, err := ximg.ToImage()
-				if err != nil {
-					return err
-				}
-
-				cimg = &cachedImage{
-					image: img,
-					cs:    ximg.ColorSpace,
-				}
-				ctx.cacheXObjectImages[stream] = cimg
-			}
-			img := cimg.image
-			cs := cimg.cs
-
-			common.Log.Debug("@Do CTM: %s", gs.CTM.String())
-			xDim := gs.CTM.ScalingFactorX()
-			yDim := gs.CTM.ScalingFactorY()
-			xPos, yPos := gs.CTM.Translation()
-			angle := gs.CTM.Angle()
-
-			rgbImg, err := cs.ImageToRGB(*img)
-			if err != nil {
-				return err
-			}
-			imgMark := ImageMark{
-				Image:  &rgbImg,
-				X:      xPos,
-				Y:      yPos,
-				Width:  xDim,
-				Height: yDim,
-				Angle:  angle,
-			}
-
-			ctx.extractedImages = append(ctx.extractedImages, imgMark)
-			ctx.xObjectImages++
-		} else if xtype == model.XObjectTypeForm {
-			// Go through the XObject Form content stream.
-			xform, err := resources.GetXObjectFormByName(*name)
-			if err != nil {
-				return err
-			}
-			if xform == nil {
-				return nil
-			}
-
-			formContent, err := xform.GetContentStream()
-			if err != nil {
-				return err
-			}
-
-			// Process the content stream in the Form object too:
-			formResources := xform.Resources
-			if formResources == nil {
-				formResources = resources
-			}
-
-			// Process the content stream in the Form object too:
-			err = ctx.extractImagesInContentStream(string(formContent), formResources)
-			if err != nil {
-				return err
-			}
-			ctx.xObjectForms++
+		switch xtype {
+		case model.XObjectTypeImage:
+			return ctx.extractXObjectImage(name, gs, resources)
+		case model.XObjectTypeForm:
+			return ctx.extractFormImages(name, gs, resources)
 		}
 	}
+	return nil
+}
+
+func (ctx *imageExtractContext) extractInlineImage(iimg *contentstream.ContentStreamInlineImage, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
+	img, err := iimg.ToImage(resources)
+	if err != nil {
+		return err
+	}
+
+	cs, err := iimg.GetColorSpace(resources)
+	if err != nil {
+		return err
+	}
+	if cs == nil {
+		// Default if not specified?
+		cs = model.NewPdfColorspaceDeviceGray()
+	}
+
+	rgbImg, err := cs.ImageToRGB(*img)
+	if err != nil {
+		return err
+	}
+
+	imgMark := ImageMark{
+		Image:  &rgbImg,
+		Width:  gs.CTM.ScalingFactorX(),
+		Height: gs.CTM.ScalingFactorY(),
+		Angle:  gs.CTM.Angle(),
+	}
+	imgMark.X, imgMark.Y = gs.CTM.Translation()
+
+	ctx.extractedImages = append(ctx.extractedImages, imgMark)
+	ctx.inlineImages++
+	return nil
+}
+
+func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
+	stream, _ := resources.GetXObjectByName(*name)
+	if stream == nil {
+		return nil
+	}
+
+	// Cache on stream pointer so can ensure that it is the same object (better than using name).
+	cimg, cached := ctx.cacheXObjectImages[stream]
+	if !cached {
+		ximg, err := resources.GetXObjectImageByName(*name)
+		if err != nil {
+			return err
+		}
+		if ximg == nil {
+			return nil
+		}
+
+		img, err := ximg.ToImage()
+		if err != nil {
+			return err
+		}
+
+		cimg = &cachedImage{
+			image: img,
+			cs:    ximg.ColorSpace,
+		}
+		ctx.cacheXObjectImages[stream] = cimg
+	}
+	img := cimg.image
+	cs := cimg.cs
+
+	rgbImg, err := cs.ImageToRGB(*img)
+	if err != nil {
+		return err
+	}
+
+	common.Log.Debug("@Do CTM: %s", gs.CTM.String())
+	imgMark := ImageMark{
+		Image:  &rgbImg,
+		Width:  gs.CTM.ScalingFactorX(),
+		Height: gs.CTM.ScalingFactorY(),
+		Angle:  gs.CTM.Angle(),
+	}
+	imgMark.X, imgMark.Y = gs.CTM.Translation()
+
+	ctx.extractedImages = append(ctx.extractedImages, imgMark)
+	ctx.xObjectImages++
+	return nil
+}
+
+// Go through the XObject Form content stream (recursive processing).
+func (ctx *imageExtractContext) extractFormImages(name *core.PdfObjectName, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
+	xform, err := resources.GetXObjectFormByName(*name)
+	if err != nil {
+		return err
+	}
+	if xform == nil {
+		return nil
+	}
+
+	formContent, err := xform.GetContentStream()
+	if err != nil {
+		return err
+	}
+
+	// Process the content stream in the Form object too:
+	formResources := xform.Resources
+	if formResources == nil {
+		formResources = resources
+	}
+
+	// Process the content stream in the Form object too:
+	err = ctx.extractContentStreamImages(string(formContent), formResources)
+	if err != nil {
+		return err
+	}
+	ctx.xObjectForms++
 	return nil
 }
