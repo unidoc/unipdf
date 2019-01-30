@@ -439,11 +439,11 @@ Sed imperdiet sodales lacus sed sollicitudin. In porta tortor quis augue tempor,
 
 func TestStyledParagraphRenderingModes(t *testing.T) {
 	fontRegular := newStandard14Font(t, fonts.HelveticaName)
-	//fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
 
+	// Showcase rendering modes.
 	tmodes := []TextRenderingMode{
 		TextRenderingModeFill,
 		TextRenderingModeStroke,
@@ -481,6 +481,23 @@ func TestStyledParagraphRenderingModes(t *testing.T) {
 	}
 
 	err := c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Invisible, manually positioned paragraph.
+	p = c.NewStyledParagraph()
+	p.SetPos(150, 500)
+	chunk := p.Append("Invisible text >>> ")
+	chunk.Style.Font = fontRegular
+	chunk.Style.FontSize = 12
+
+	chunk = p.Append("Some invisible text manually positioned")
+	chunk.Style.Font = fontRegular
+	chunk.Style.FontSize = 15
+	chunk.Style.RenderingMode = TextRenderingModeInvisible
+
+	err = c.Draw(p)
 	if err != nil {
 		t.Fatalf("Error drawing: %v", err)
 	}
