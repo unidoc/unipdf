@@ -19,6 +19,9 @@ type TextStyle struct {
 
 	// The size of the font.
 	FontSize float64
+
+	// The rendering mode.
+	RenderingMode TextRenderingMode
 }
 
 // newTextStyle creates a new text style object using the specified font.
