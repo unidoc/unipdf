@@ -436,3 +436,58 @@ Sed imperdiet sodales lacus sed sollicitudin. In porta tortor quis augue tempor,
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestStyledParagraphRenderingModes(t *testing.T) {
+	fontRegular := newStandard14Font(t, fonts.HelveticaName)
+	//fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+
+	c := New()
+	c.NewPage()
+
+	tmodes := []TextRenderingMode{
+		TextRenderingModeFill,
+		TextRenderingModeStroke,
+		TextRenderingModeFillStroke,
+		TextRenderingModeInvisible,
+		TextRenderingModeFillClip,
+		TextRenderingModeStrokeClip,
+		TextRenderingModeFillStrokeClip,
+		TextRenderingModeClip,
+	}
+
+	tmodesDesc := []string{
+		"- Text rendering mode fill: ",
+		"- Text rendering mode stroke: ",
+		"- Text rendering mode fill and stroke: ",
+		"- Text rendering mode invisible: ",
+		"- Text rendering mode fill and clip: ",
+		"- Text rendering mode stroke and clip: ",
+		"- Text rendering mode fill, stroke and clip: ",
+		"- Text rendering mode clip: ",
+	}
+
+	p := c.NewStyledParagraph()
+	p.SetLineHeight(1.5)
+
+	for i, tmode := range tmodes {
+		chunk := p.Append(tmodesDesc[i])
+		chunk.Style.Font = fontRegular
+		chunk.Style.FontSize = 12
+
+		chunk = p.Append("This is some sample text\n")
+		chunk.Style.RenderingMode = tmode
+		chunk.Style.Font = fontRegular
+		chunk.Style.FontSize = 22
+	}
+
+	err := c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Write output file.
+	err = c.WriteToFile(tempFile("styled_paragraph_rendering_mode.pdf"))
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}
