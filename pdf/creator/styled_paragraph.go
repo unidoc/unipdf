@@ -656,6 +656,9 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			fontName := defaultFontName
 			fontSize := defaultFontSize
 
+			// Set chunk rendering mode.
+			cc.Add_Tr(int64(style.RenderingMode))
+
 			if p.alignment != TextAlignmentJustify || isLastLine {
 				spaceMetrics, found := style.Font.GetRuneMetrics(' ')
 				if !found {
@@ -744,6 +747,9 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			}
 
 			currX += chunkWidth
+
+			// Reset rendering mode.
+			cc.Add_Tr(int64(TextRenderingModeFill))
 		}
 
 		currY -= height
