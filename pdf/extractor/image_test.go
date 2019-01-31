@@ -8,6 +8,7 @@ package extractor
 import (
 	"math"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -239,6 +240,71 @@ func TestImageExtractionMulti(t *testing.T) {
 				measDY := pageImages.Images[i-1].Y - pageImages.Images[i].Y
 				assert.Truef(t, math.Abs(dy-measDY) < 0.00001, "i = %d", i)
 			}
+		}
+	}
+}
+
+func TestImageExtractionRealWorld(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+
+	testcases := []struct {
+		Name     string
+		PageNum  int
+		Path     string
+		Expected []ImageMark
+	}{
+		{
+			"ICC color space",
+			3,
+			"icnp12-qinghua.pdf",
+			[]ImageMark{
+				{
+					Image:  nil,
+					Width:  2.877,
+					Height: 22.344,
+					X:      236.508,
+					Y:      685.248,
+					Angle:  0.0,
+				},
+				{
+					Image:  nil,
+					Width:  247.44,
+					Height: 0.48,
+					X:      313.788,
+					Y:      715.248,
+					Angle:  0.0,
+				},
+				{
+					Image:  nil,
+					Width:  247.44,
+					Height: 0.48,
+					X:      313.788,
+					Y:      594.648,
+					Angle:  0.0,
+				},
+			},
+		},
+	}
+
+	for _, tcase := range testcases {
+		inputPath := filepath.Join(corpusFolder, tcase.Path)
+		page, err := loadPageFromPDFFile(inputPath, tcase.PageNum)
+		require.NoError(t, err)
+
+		pageExtractor, err := New(page)
+		require.NoError(t, err)
+
+		pageImages, err := pageExtractor.ExtractPageImages()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(tcase.Expected), len(pageImages.Images))
+
+		for i, img := range pageImages.Images {
+			img.Image = nil // Discard image data.
+			assert.Equalf(t, tcase.Expected[i], img, "i = %d", i)
 		}
 	}
 }
