@@ -36,6 +36,10 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (r *Reader) CurrentBytePosition() int64 {
+	return r.r
+}
+
 func (r *Reader) read(p []byte) (n int, err error) {
 	if r.r >= int64(len(r.in)) {
 		return 0, io.EOF

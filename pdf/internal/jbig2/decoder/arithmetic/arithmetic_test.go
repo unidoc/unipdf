@@ -31,21 +31,8 @@ func TestArithmeticDecoder(t *testing.T) {
 	err := a.Start(r)
 	if assert.NoError(t, err) {
 		// var b byte
-		for j := 0; j < 8; j++ {
-			for i := 0; i < 8; i++ {
-				s, v, err := a.DecodeInt(r, a.IaaiStats)
-				if assert.NoError(t, err) {
-					t.Logf("%08b, %v", s, v)
-				}
-				// s, err := a.DecodeBit(r, 0, a.IaaiStats)
-				// if assert.NoError(t, err) {
-				// 	t.Logf("S: %v", s)
-				// 	if s == 1 {
-				// 		b |= 1 << uint(i)
-				// 	}
-				// }
-			}
-
+		for i := 0; i < len(encoded)*8; i++ {
+			a.DecodeBit(r, a.IaaiStats)
 		}
 	}
 
