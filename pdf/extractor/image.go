@@ -46,7 +46,7 @@ type ImageMark struct {
 	X float64
 	Y float64
 
-	// Angle if rotated.
+	// Angle in degrees, if rotated.
 	Angle float64
 }
 
