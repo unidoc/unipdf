@@ -3,14 +3,96 @@ package text
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/pageinformation"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/symbol-dictionary"
 	"testing"
 )
 
 func TestTextRegionDecode(t *testing.T) {
+	if testing.Verbose() {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	}
+
+	d := container.New()
+
+	getFirst := func() *symboldict.SymbolDictionarySegment {
+		var data []byte = []byte{
+			// Header
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18,
+			// Data part
+			0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0xE9, 0xCB,
+			0xF4, 0x00, 0x26, 0xAF, 0x04, 0xBF, 0xF0, 0x78, 0x2F, 0xE0, 0x00, 0x40,
+		}
+
+		r := reader.New(data)
+
+		h := &header.Header{}
+		_, err := h.Decode(r)
+		require.NoError(t, err)
+
+		s := symboldict.New(d, h)
+		err = s.Decode(r)
+		require.NoError(t, err)
+		d.Segments = append(d.Segments, s)
+		return s
+	}
+
+	getThird := func() *symboldict.SymbolDictionarySegment {
+		data := []byte{
+			// Header
+			0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x1C,
+
+			// Segment data
+			0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0xE5, 0xCD,
+			0xF8, 0x00, 0x79, 0xE0, 0x84, 0x10, 0x81, 0xF0, 0x82, 0x10, 0x86, 0x10,
+			0x79, 0xF0, 0x00, 0x80, 0x00, 0x00, 0x00, 0x03, 0x07, 0x42, 0x00, 0x02,
+			0x01, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00,
+		}
+		r := reader.New(data)
+
+		h := &header.Header{}
+		_, err := h.Decode(r)
+		require.NoError(t, err)
+
+		s := symboldict.New(d, h)
+		err = s.Decode(r)
+		require.NoError(t, err)
+
+		d.Segments = append(d.Segments, s)
+		return s
+	}
+
+	getPage := func() *pageinformation.PageInformationSegment {
+		var data []byte = []byte{
+
+			// header
+			0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x01, 0x00, 0x00, 0x00, 0x13,
+
+			// data part
+			0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+		}
+
+		r := reader.New(data)
+
+		h := &header.Header{}
+
+		_, err := h.Decode(r)
+		require.NoError(t, err)
+
+		p := pageinformation.New(container.New(), h)
+		require.NoError(t, p.Decode(r))
+
+		d.Segments = append(d.Segments, p)
+
+		return p
+	}
+
 	var data []byte = []byte{
 		// header
 		0x00, 0x00, 0x00, 0x03, 0x07, 0x42, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x31,
@@ -32,13 +114,15 @@ func TestTextRegionDecode(t *testing.T) {
 	assert.Equal(t, kind.ImmediateLosslessTextRegion, kind.SegmentKind(h.SegmentType))
 	assert.True(t, h.PageAssociationSizeSet)
 	if assert.Equal(t, 2, h.ReferredToSegmentCount) {
-		assert.Contains(t, 0, h.ReferredToSegments)
-		assert.Contains(t, 2, h.ReferredToSegments)
+		assert.Contains(t, h.ReferredToSegments, 0)
+		assert.Contains(t, h.ReferredToSegments, 2)
 	}
 
 	assert.Equal(t, 49, h.DataLength)
 
-	d := container.New()
+	getFirst()
+	getPage()
+	getThird()
 
 	ts := New(d, h, true)
 	err = ts.Decode(r)

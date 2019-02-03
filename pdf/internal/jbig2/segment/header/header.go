@@ -33,6 +33,8 @@ type Header struct {
 func (h *Header) Decode(r *reader.Reader) (int, error) {
 	common.Log.Debug("[SEGMENT-HEADER][DECODE] Begins")
 	defer func() { common.Log.Debug("[SEGMENT-HEADER][DECODE] Finished") }()
+
+	common.Log.Debug("Reader ReadIndex: %04X", r.CurrentBytePosition())
 	var bytesRead int
 	n, err := h.handleSegmentNumber(r)
 	if err != nil {
@@ -91,6 +93,8 @@ func (h *Header) handleSegmentNumber(r *reader.Reader) (int, error) {
 	if err != nil {
 		return n, err
 	}
+
+	//
 
 	sgNumber := binary.BigEndian.Uint32(b)
 	h.SegmentNumber = int(sgNumber)

@@ -48,6 +48,8 @@ func TestPageInformationDecode(t *testing.T) {
 			assert.Equal(t, 0, s.PageInfoFlags.GetValue(DefaultPixelValue))
 			assert.Equal(t, 0, s.PageInfoFlags.GetValue(DefaultCombinationOperator))
 			assert.Equal(t, 0, s.pageStripping)
+
+			common.Log.Debug("Page bitmap: \n%s", s.PageBitmap)
 		}
 
 	})

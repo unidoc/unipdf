@@ -11,7 +11,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/header"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
 	"math"
-	"time"
 
 	// "github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
@@ -266,7 +265,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			}
 
 			common.Log.Debug("DeltaWidth: %d, %v", deltaWidth, deltaWidthBool)
-			time.Sleep(time.Nanosecond * 1)
+
 			if !deltaWidthBool {
 				break
 			}
@@ -280,6 +279,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			sdRefinement := s.SDFlags.GetValue(SD_REF_AGG)
 
 			if sdHuff && sdRefinement == 0 {
+				// 4 c) iii)
 				common.Log.Debug("DeltaWidth at i: %d", i)
 				deltaWidths[i] = symbolWidth
 				totalWidth += symbolWidth
@@ -326,6 +326,12 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 							common.Log.Debug("Huffman DecodeInt ReferenceDY failed. %v", err)
 							return err
 						}
+
+						r.ConsumeRemainingBits()
+						if err := s.Decoders.Arithmetic.Start(r); err != nil {
+							return err
+						}
+
 					} else {
 						var ssymbolID int64
 						ssymbolID, err = s.Decoders.Arithmetic.DecodeIAID(r, uint64(symbolCodeLength), s.Decoders.Arithmetic.IaidStats)
@@ -353,6 +359,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					referedToBitmap := bitmaps[symbolID]
 
 					bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
+
 					err = bm.ReadGenericRefinementRegion(
 						r,
 						sdRefinementTemplate,
@@ -635,10 +642,10 @@ func (s *SymbolDictionarySegment) readFlags(r *reader.Reader) error {
 
 }
 
-// func (s *SymbolDictionarySegment) ExportedSymbolsNumber() int {
-// 	return int
-// }
+func (s *SymbolDictionarySegment) AmmountOfExportedSymbols() int {
+	return int(s.ExportedSymbolsNumber)
+}
 
-// func (s *SymbolDictionarySegment) ListBitmaps() []*bitmap.Bitmap {
-
-// }
+func (s *SymbolDictionarySegment) ListBitmaps() []*bitmap.Bitmap {
+	return s.Bitmaps
+}

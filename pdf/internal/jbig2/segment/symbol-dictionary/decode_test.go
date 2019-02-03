@@ -139,9 +139,11 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 						{1, 0, 0, 0, 0},
 						{1, 0, 0, 0, 0},
 					}
+					t.Logf("P sign: %v", s.Bitmaps[0])
+					t.Logf("Bitset: %v", s.Bitmaps[0].Data)
 
 					pBitset := symbolToBitset(t, symbolP, 40)
-					pBitset.Equals(s.Bitmaps[0].Data)
+					assert.True(t, pBitset.Equals(s.Bitmaps[0].Data))
 
 				}
 

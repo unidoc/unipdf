@@ -1,14 +1,13 @@
 package huffman
 
 import (
-	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
 const (
 	HTLOW = 0xfffffffd
 	HTOOB = 0xfffffffe
-	EOT   = 0xffffffff
+	EOT   = int(int32(-1))
 )
 
 var (
@@ -78,7 +77,6 @@ func (h *HuffmanDecoder) DecodeInt(r *reader.Reader, table [][]int) (int, bool, 
 				decoded = table[i][0]
 			}
 			// common.Log.Debug("table[i][0] = %d", table[i][0])
-			common.Log.Debug("Decoded value: %v, bitwise: '%b'", decoded, decoded)
 
 			return decoded, true, nil
 		}
@@ -92,7 +90,7 @@ func (h *HuffmanDecoder) BuildTable(table [][]int, length int) ([][]int, error) 
 	var tab []int
 
 	for i = 0; i < length; i++ {
-		for j = i; j < length && table[j][i] == 0; j++ {
+		for j = i; j < length && table[j][1] == 0; j++ {
 		}
 		if j == length {
 			break
@@ -104,7 +102,7 @@ func (h *HuffmanDecoder) BuildTable(table [][]int, length int) ([][]int, error) 
 			}
 		}
 
-		if j != 1 {
+		if j != i {
 			tab = table[j]
 
 			for k = j; k > i; k-- {
@@ -122,11 +120,11 @@ func (h *HuffmanDecoder) BuildTable(table [][]int, length int) ([][]int, error) 
 
 	for i = 1; table[i][2] != EOT; i++ {
 		prefix <<= uint(table[i][1] - table[i-1][1])
-		table[i][3] = prefix
-		prefix++
+		table[i][3] = int(prefix)
+		prefix += 1
 	}
 
-	return nil, nil
+	return table, nil
 
 }
 

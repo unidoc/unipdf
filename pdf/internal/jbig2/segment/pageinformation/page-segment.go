@@ -10,10 +10,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/model"
 )
 
-var (
-	log = common.Log
-)
-
 type PageInformationSegment struct {
 	*model.Segment
 
@@ -36,13 +32,14 @@ func New(d *container.Decoder, h *header.Header) *PageInformationSegment {
 
 // Read reads the segment from the input reader
 func (p *PageInformationSegment) Decode(r *reader.Reader) error {
-	log.Debug("[READ] Page Information Segment")
+	common.Log.Debug("[PAGE-SEGMENT][DECODE] Begins ")
+	defer func() { common.Log.Debug("[PAGE-SEGMENT][DECODE] Finished") }()
 
 	var buf []byte = make([]byte, 4)
 
 	_, err := r.Read(buf)
 	if err != nil {
-		log.Debug("Read Width block failed. %v", err)
+		common.Log.Debug("Read Width block failed. %v", err)
 		return err
 	}
 
@@ -52,33 +49,53 @@ func (p *PageInformationSegment) Decode(r *reader.Reader) error {
 
 	_, err = r.Read(buf)
 	if err != nil {
-		log.Debug("Read Height block failed. %v", err)
+		common.Log.Debug("Read Height block failed. %v", err)
 		return err
 	}
 
 	p.PageBMHeight = int(binary.BigEndian.Uint32(buf))
 
-	log.Debug("Bitmap size. Height: %v, Width: %v", p.PageBMHeight, p.PageBMWidth)
+	buf = make([]byte, 4)
+
+	_, err = r.Read(buf)
+	if err != nil {
+		common.Log.Debug("Read Height block failed. %v", err)
+		return err
+	}
+
+	p.XResolution = int(binary.BigEndian.Uint32(buf))
+
+	buf = make([]byte, 4)
+
+	_, err = r.Read(buf)
+	if err != nil {
+		common.Log.Debug("Read Height block failed. %v", err)
+		return err
+	}
+
+	p.YResolution = int(binary.BigEndian.Uint32(buf))
+
+	common.Log.Debug("Page Bitmap size: Height: %v, Width: %v", p.PageBMHeight, p.PageBMWidth)
 
 	flags, err := r.ReadByte()
 	if err != nil {
-		log.Debug("Read Flags block failed. %v", err)
+		common.Log.Debug("Read Flags block failed. %v", err)
 		return err
 	}
 
 	p.PageInfoFlags.SetValue(int(flags))
-	log.Debug("Flags: %d", flags)
+	common.Log.Debug("Flags: %d", flags)
 
 	buf = make([]byte, 2)
 
 	_, err = r.Read(buf)
 	if err != nil {
-		log.Debug("Read Page Stripping block. %v", err)
+		common.Log.Debug("Read Page Stripping block. %v", err)
 		return err
 	}
 
 	p.pageStripping = int(binary.BigEndian.Uint16(buf))
-	log.Debug("Page Stripping: %d", p.pageStripping)
+	common.Log.Debug("Page Stripping: %d", p.pageStripping)
 
 	defPix := p.PageInfoFlags.GetValue(DefaultPixelValue)
 
@@ -91,7 +108,7 @@ func (p *PageInformationSegment) Decode(r *reader.Reader) error {
 	}
 
 	p.PageBitmap = bitmap.New(p.PageBMWidth, height, p.Decoders)
-	p.PageBitmap.Clear(defPix == 1)
+	p.PageBitmap.Clear(defPix != 0)
 
 	return nil
 }

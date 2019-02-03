@@ -1,6 +1,7 @@
 package container
 
 import (
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/mmr"
@@ -27,11 +28,16 @@ func New() *Decoder {
 
 // FindPageSegment searches for the page information segment int the segments slice
 func (d *Decoder) FindPageSegment(page int) segment.Segmenter {
+	common.Log.Debug("Looking for Page Segment with number: %d", page)
 	for _, s := range d.Segments {
-		if s.Kind() == kind.PageInformation && s.PageAssociation() == page {
+		common.Log.Debug("Kind: %s", s.Kind())
+		common.Log.Debug("Page: %d", s.PageAssociation())
+		if s.Kind() == kind.PageInformation && s.Number() == page {
+			common.Log.Debug("Paget found.")
 			return s
 		}
 	}
+	common.Log.Debug("Page not found")
 	return nil
 }
 
