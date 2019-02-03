@@ -27,5 +27,5 @@ func (f *Flags) SetValue(flag int) {
 	f.Map[DefaultPixelValue] = ((flag >> 2) & 1)
 	f.Map[DefaultCombinationOperator] = ((flag >> 3) & 3)
 
-	common.Log.Debug("Set Pageinformation flags: %v", f.Map)
+	common.Log.Debug("Set Pageinformation flags: %v, %b", f.Map, flag)
 }

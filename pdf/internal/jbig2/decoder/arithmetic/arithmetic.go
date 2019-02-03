@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	qe [][4]int = [][4]int{{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
+	qe [][4]uint32 = [][4]uint32{{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
 		{0x1801, 3, 9, 0}, {0x0AC1, 4, 12, 0}, {0x0521, 5, 29, 0}, {0x0221, 38, 33, 0},
 		{0x5601, 7, 6, 1}, {0x5401, 8, 14, 0}, {0x4801, 9, 14, 0}, {0x3801, 10, 14, 0},
 		{0x3001, 11, 17, 0}, {0x2401, 12, 18, 0}, {0x1C01, 13, 20, 0},
@@ -98,7 +98,7 @@ type Decoder struct {
 	ContextSize          []int
 	ReferedToContextSize []int
 
-	b byte
+	b int
 
 	c        uint64
 	a        uint32
@@ -209,7 +209,7 @@ func (d *Decoder) Start(r *reader.Reader) error {
 		common.Log.Debug("Buffer0 readByte failed. %v", err)
 		return err
 	}
-	d.b = b
+	d.b = int(b)
 
 	d.c = (uint64(b) << 16)
 	if err = d.readByte(r); err != nil {
@@ -234,35 +234,39 @@ func (d *Decoder) Start(r *reader.Reader) error {
 func (d *Decoder) readByte(r *reader.Reader) error {
 
 	if r.CurrentBytePosition() > d.streamPosition {
-		if _, err := r.Seek(r.CurrentBytePosition(), io.SeekCurrent); err != nil {
+		if _, err := r.Seek(-1, io.SeekCurrent); err != nil {
 			return err
 		}
 	}
-	var err error
 
-	d.b, err = r.ReadByte()
+	b, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
+
+	d.b = int(b)
 
 	if d.b == 0xFF {
 		b1, err := r.ReadByte()
 		if err != nil {
 			return err
 		}
-		if b1 > 0x8f {
+		if b1 > 0x8F {
 			d.c += 0xFF00
 			d.ct = 8
-			r.Seek(r.CurrentBytePosition()-2, io.SeekCurrent)
+			if _, err := r.Seek(-2, io.SeekCurrent); err != nil {
+				return err
+			}
 		} else {
 			d.c += uint64(b1) << 9
 			d.ct = 7
 		}
 	} else {
-		d.b, err = r.ReadByte()
+		b, err = r.ReadByte()
 		if err != nil {
 			return err
 		}
+		d.b = int(b)
 
 		d.c += uint64(d.b) << 8
 		d.ct = 8
@@ -274,179 +278,131 @@ func (d *Decoder) readByte(r *reader.Reader) error {
 }
 
 func (d *Decoder) DecodeInt(r *reader.Reader, stats *DecoderStats) (int, bool, error) {
-	var value int32
+	var (
+		value, bit, s, bitsToRead, offset int
+		err                               error
+	)
 
 	d.previous = 1
 
 	// first bit defines the sign of the integer
-	s, err := d.decodeIntBit(r, stats)
+	s, err = d.decodeIntBit(r, stats)
 	if err != nil {
 		return 0, false, err
 	}
+
 	// common.Log.Debug("Sign int bit: '%01b'", s)
 
-	bit, err := d.decodeIntBit(r, stats)
+	bit, err = d.decodeIntBit(r, stats)
 	if err != nil {
 		return 0, false, err
 	}
 
 	// common.Log.Debug("First bit value: %b", bit)
 	// First read
-	if bit != 0 {
-
-		bit, err := d.decodeIntBit(r, stats)
-		if err != nil {
-			return 0, false, err
-		}
-		// Second Read
-		if bit != 0 {
-
-			bit, err := d.decodeIntBit(r, stats)
-			if err != nil {
-				return 0, false, err
-			}
-			// Third Read
-			if bit != 0 {
-
-				bit, err := d.decodeIntBit(r, stats)
-				if err != nil {
-					return 0, false, err
-				}
-				// Fourth Read
-				if bit != 0 {
-
-					bit, err := d.decodeIntBit(r, stats)
-					if err != nil {
-						return 0, false, err
-					}
-					// Fifth Read
-					if bit != 0 {
-						value = 0
-
-						for i := 0; i < 32; i++ {
-							bit, err := d.decodeIntBit(r, stats)
-							if err != nil {
-								return 0, false, err
-							}
-
-							value = ((value << 1) | int32(bit))
-						}
-
-						value += 4436
-						// common.Log.Debug("Read sixth value: %v ", value)
-
-					} else {
-						// Fifth Read
-
-						value = 0
-						for i := 0; i < 12; i++ {
-							bit, err := d.decodeIntBit(r, stats)
-							if err != nil {
-								return 0, false, err
-							}
-
-							value = ((value << 1) | int32(bit))
-						}
-
-						value += 340
-
-						// common.Log.Debug("Read fifth value: %v ", value)
-					}
-				} else {
-					// Fourth Read
-					value = 0
-					for i := 0; i < 8; i++ {
-						bit, err := d.decodeIntBit(r, stats)
-						if err != nil {
-							return 0, false, err
-						}
-
-						value = ((value << 1) | int32(bit))
-					}
-					value += 84
-
-					// common.Log.Debug("Read fourth value: %v ", value)
-				}
-			} else {
-				// Third Read
-				value = 0
-				for i := 0; i < 6; i++ {
-					bit, err := d.decodeIntBit(r, stats)
-					if err != nil {
-						return 0, false, err
-					}
-
-					value = ((value << 1) | int32(bit))
-				}
-
-				value += 20
-
-				// common.Log.Debug("Read third value: %v ", value)
-			}
-		} else {
-			// SecondRead
-			bit, err := d.decodeIntBit(r, stats)
-			if err != nil {
-				return 0, false, err
-			}
-
-			value = int32(bit)
-
-			for i := 0; i < 3; i++ {
-				bit, err := d.decodeIntBit(r, stats)
-				if err != nil {
-					return 0, false, err
-				}
-				value = ((value << 1) | int32(bit))
-			}
-
-			value += 4
-
-			// common.Log.Debug("Read Second value: %v ", value)
-		}
-	} else {
-		// First read
-		bit, err := d.decodeIntBit(r, stats)
-		if err != nil {
-			return 0, false, err
-		}
-		value = int32(bit)
-
+	if bit == 1 {
 		bit, err = d.decodeIntBit(r, stats)
 		if err != nil {
 			return 0, false, err
 		}
-		value = ((value << 1) | int32(bit))
+
+		// Second Read
+		if bit == 1 {
+
+			bit, err = d.decodeIntBit(r, stats)
+			if err != nil {
+				return 0, false, err
+			}
+
+			// Third Read
+			if bit == 1 {
+
+				bit, err = d.decodeIntBit(r, stats)
+				if err != nil {
+					return 0, false, err
+				}
+
+				// Fourth Read
+				if bit == 1 {
+
+					bit, err = d.decodeIntBit(r, stats)
+					if err != nil {
+						return 0, false, err
+					}
+					// Fifth Read
+					if bit != 1 {
+
+						bitsToRead = 32
+						offset = 4436
+
+					} else {
+						// Fifth Read
+
+						bitsToRead = 12
+						offset = 340
+					}
+				} else {
+					// Fourth Read
+					bitsToRead = 8
+					offset = 84
+
+				}
+			} else {
+				// Third Read
+				bitsToRead = 6
+				offset = 20
+
+			}
+		} else {
+			// SecondRead
+			bitsToRead = 4
+			offset = 4
+
+		}
+	} else {
+		// First read
+		bitsToRead = 2
+		offset = 0
 
 		// common.Log.Debug("Read First value: %v ", value)
 	}
 
-	var decodedInt int
-	if s != 0 {
-		if value == 0 {
-			return int(value), false, nil
+	for i := 0; i < bitsToRead; i++ {
+		bit, err = d.decodeIntBit(r, stats)
+		if err != nil {
+			return 0, false, err
 		}
-		decodedInt = -(int(value))
-	} else {
-		decodedInt = int(value)
+		value = (value << 1) | bit
+	}
+	value += offset
+
+	common.Log.Debug("Value decoded: %v with sign: %b", value, s)
+
+	if s == 0 {
+
+		return int(value), true, nil
+	} else if s == 1 && value > 0 {
+
+		return int(-value), true, nil
 	}
 
-	return decodedInt, true, nil
+	return int(0), false, nil
 }
 
 func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) {
-
-	var bit int
-	qeValue := qe[stats.cx()][0]
-	icx := int(stats.cx())
+	var (
+		bit     int
+		qeValue uint32 = qe[stats.cx()][0]
+		icx            = int(stats.cx())
+	)
 
 	defer func() {
 		d.prvCtr += 1
 		// common.Log.Debug("Decoder 'a' value: %b", d.a)
-		common.Log.Debug("%d, D: %01b C: %08x A: %04x, CTR: %d, B: %02x  QE: %04x", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
+		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
 	}()
 
-	d.a -= uint32(qeValue)
+	d.a -= qeValue
 
 	if (d.c >> 16) < uint64(qeValue) {
 		bit = d.lpsExchange(stats, icx, qeValue)
@@ -471,36 +427,34 @@ func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) 
 }
 
 func (d *Decoder) decodeIntBit(r *reader.Reader, stats *DecoderStats) (int, error) {
-	// get bit
-	// common.Log.Debug("[decodeIntBit] starts")
-	// defer func() { common.Log.Debug("[decodeIntBit] finished") }()
+
 	stats.SetIndex(int(d.previous))
 	bit, err := d.DecodeBit(r, stats)
 	if err != nil {
 		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
 		return bit, err
 	}
+
 	common.Log.Debug("bit: %1b", bit)
 	// common.Log.Debug("'previous' before: %b", d.previous)
 
 	// if prev < 256
-	if d.previous < 0x100 {
-		d.previous = (d.previous << uint(1)) | int64(bit)
-	} else {
-		d.previous = ((d.previous<<uint(1) | int64(bit)) & 0x1ff) | 0x100
-	}
+	if d.previous < 256 {
 
-	// common.Log.Debug("'previous' after: %b", d.previous)
+		d.previous = ((d.previous << uint(1)) | int64(bit)) & 0x1FF
+	} else {
+
+		d.previous = (((d.previous<<uint(1) | int64(bit)) & 511) | 256) & 0x1FF
+	}
 
 	return bit, nil
 }
 
 func (d *Decoder) DecodeIAID(r *reader.Reader, codeLen uint64, stats *DecoderStats) (int64, error) {
 	d.previous = 1
-
+	stats.SetIndex(int(d.previous))
 	var i uint64
 	for i = 0; i < codeLen; i++ {
-		stats.SetIndex(int(d.previous))
 		bit, err := d.DecodeBit(r, stats)
 		if err != nil {
 			return 0, err
@@ -512,6 +466,7 @@ func (d *Decoder) DecodeIAID(r *reader.Reader, codeLen uint64, stats *DecoderSta
 }
 
 func (d *Decoder) renormalize(r *reader.Reader) error {
+fl:
 	for {
 		if d.ct == 0 {
 			if err := d.readByte(r); err != nil {
@@ -522,8 +477,9 @@ func (d *Decoder) renormalize(r *reader.Reader) error {
 		d.a <<= 1
 		d.c <<= 1
 		d.ct -= 1
+
 		if (d.a & 0x8000) != 0 {
-			break
+			break fl
 		}
 	}
 
@@ -534,33 +490,34 @@ func (d *Decoder) renormalize(r *reader.Reader) error {
 func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 	mps := stats.mps[stats.index]
 
-	if d.a < uint32(qe[icx][0]) {
+	if d.a < qe[icx][0] {
 		if qe[icx][3] == 1 {
 			stats.toggleMps()
 		}
 
-		stats.SetEntry(qe[icx][2])
+		stats.SetEntry(int(qe[icx][2]))
 		return int(1 - mps)
 	} else {
-		stats.SetEntry(qe[icx][1])
+		stats.SetEntry(int(qe[icx][1]))
 		return int(mps)
 	}
 }
 
-func (d *Decoder) lpsExchange(stats *DecoderStats, icx, qeValue int) int {
+func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {
 	mps := stats.mps[stats.index]
 
-	if d.a < uint32(qeValue) {
-		stats.SetEntry(qe[icx][1])
-		d.a = uint32(qeValue)
+	if d.a < qeValue {
+		stats.SetEntry(int(qe[icx][1]))
+		d.a = qeValue
 		return int(mps)
 	} else {
+
 		if qe[icx][3] == 1 {
 			stats.toggleMps()
 		}
 
-		stats.SetEntry(qe[icx][2])
-		d.a = uint32(qeValue)
+		stats.SetEntry(int(qe[icx][2]))
+		d.a = qeValue
 		return int(1 - mps)
 	}
 }

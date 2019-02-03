@@ -34,6 +34,7 @@ func NewBitSet(length int) *BitSet {
 	if (length % uint64Bits) != 0 {
 		wcount += 1
 	}
+	// common.Log.Debug("Length: %d, WCount: %d", length, wcount)
 
 	b.data = make([]uint64, wcount)
 	return b
@@ -65,7 +66,14 @@ func (b *BitSet) Get(index uint) (bool, error) {
 	return value, nil
 }
 
+// Or makes a union of two sets saving the result into the 'b' Bitset
+// Arguments
+// - startIndex - index where union begins in the 'b' set
+// - setStartIndex - index where union begins in the 'set' set
+// - set - the bitset that is being unioned with the 'b' set
+// - length - the length of the bitset
 func (b *BitSet) Or(startIndex uint, set *BitSet, setStartIndex uint, length int) {
+
 	var shift uint = startIndex - setStartIndex
 
 	var k uint64 = set.data[setStartIndex>>6]
@@ -76,13 +84,16 @@ func (b *BitSet) Or(startIndex uint, set *BitSet, setStartIndex uint, length int
 		setStartIndex += shift
 
 		for i := 0; i < length; i++ {
-			b.data[(startIndex)>>6] |= k & (uint64(1) << setStartIndex)
+			index := startIndex >> 6
+
+			b.data[index] |= (k & (uint64(1) << setStartIndex))
 			setStartIndex++
 			startIndex++
 		}
 	} else {
 		for i := 0; i < length; i++ {
 			if (setStartIndex & 63) == 0 {
+
 				k = set.data[(setStartIndex)>>6]
 				k = (k << shift) | (k >> (64 - shift))
 			}

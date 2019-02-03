@@ -1,6 +1,7 @@
 package text
 
 import (
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/flags"
 )
 
@@ -44,7 +45,8 @@ func (f *Flags) SetValue(flag int) {
 	f.Map[SbDsOffset] = sOffset
 	f.Map[SbRTemplate] = (flag >> 15) & 1
 
-	log.Debug("Flags: %v", f.Map)
+	common.Log.Debug("Flags: %v", f.Map)
+	common.Log.Debug("%016b", flag)
 
 }
 
@@ -74,7 +76,8 @@ func (h *HuffmanFlags) SetValue(flag int) {
 	h.Map[SBHUFFRDX] = (flag >> 10) & 3
 	h.Map[SBHUFFRDY] = (flag >> 12) & 3
 	h.Map[SBHUFFRSIZE] = (flag >> 14) & 1
-	log.Debug("HuffmanFlags: %v", h.Map)
+	common.Log.Debug("HuffmanFlags: %v", h.Map)
+	common.Log.Debug("%016b", flag)
 }
 
 // newHuffmanFlags is the creator for the HuffmanFlags

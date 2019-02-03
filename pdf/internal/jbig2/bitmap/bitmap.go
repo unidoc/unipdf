@@ -1,6 +1,8 @@
 package bitmap
 
 import (
+	"errors"
+	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/mmr"
@@ -48,7 +50,6 @@ func (b *Bitmap) Read(
 	common.Log.Debug("[BITMAP][READ] begins")
 	defer func() { common.Log.Debug("[BITMAP][READ] finished") }()
 
-	common.Log.Debug("b: %+v", b)
 	if useMMR {
 		common.Log.Debug("Using MMR Decoder")
 
@@ -156,15 +157,16 @@ func (b *Bitmap) Read(
 					}
 
 					if code1 > 0 || code2 > 0 {
+
 						var v int = a0 + code1
 						codingLine[codingI] = v
 						a0 = v
-						codingI++
+						codingI += 1
 
 						v = a0 + code2
 						codingLine[codingI] = v
 						a0 = v
-						codingI++
+						codingI += 1
 
 						for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
 							referenceI += 2
@@ -172,15 +174,19 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVertical0:
+					common.Log.Debug("mmr.TwoDimensionalVertical0")
 					var v int = referenceLine[referenceI]
+
 					codingLine[codingI] = v
 					a0 = v
-					codingI++
-					if referenceLine[referenceI] < b.Width {
-						referenceI++
+					codingI += 1
+
+					if v < b.Width {
+						referenceI += 1
 					}
 
 				case mmr.TwoDimensionalVerticalR1:
+					common.Log.Debug("mmr.TwoDimensionalVerticalR1")
 					var v int = referenceLine[referenceI] + 1
 					codingLine[codingI] = v
 					a0 = v
@@ -194,6 +200,8 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVerticalR2:
+					common.Log.Debug("mmr.TwoDimensionalVerticalR2")
+
 					var v int = referenceLine[referenceI] + 2
 					codingLine[codingI] = v
 					a0 = v
@@ -207,6 +215,7 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVerticalR3:
+					common.Log.Debug("mmr.TwoDimensionalVerticalR3")
 					var v int = referenceLine[referenceI] + 3
 					codingLine[codingI] = v
 					a0 = v
@@ -220,6 +229,7 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVerticalL1:
+					common.Log.Debug("mmr.TwoDimensionalVerticalL1")
 					var v int = referenceLine[referenceI] - 1
 					codingLine[codingI] = v
 					a0 = v
@@ -236,6 +246,7 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVerticalL2:
+					common.Log.Debug("mmr.TwoDimensionalVerticalL2")
 					var v int = referenceLine[referenceI] - 2
 					codingLine[codingI] = v
 					a0 = v
@@ -252,6 +263,7 @@ func (b *Bitmap) Read(
 					}
 
 				case mmr.TwoDimensionalVerticalL3:
+					common.Log.Debug("mmr.TwoDimensionalVerticalL3")
 					var v int = referenceLine[referenceI] - 3
 					codingLine[codingI] = v
 					a0 = v
@@ -279,7 +291,7 @@ func (b *Bitmap) Read(
 			}
 
 			codingLine[codingI] = b.Width
-			codingI++
+			codingI += 1
 
 			for j := 0; codingLine[j] < b.Width; j += 2 {
 				for col := codingLine[j]; col < codingLine[j+1]; col++ {
@@ -316,13 +328,13 @@ func (b *Bitmap) Read(
 		if typicalPrediction {
 			switch template {
 			case 0:
-				ltpCX = 0x3953
+				ltpCX = 0x9b25
 			case 1:
-				ltpCX = 0x079a
+				ltpCX = 0x795
 			case 2:
-				ltpCX = 0x0e3
+				ltpCX = 0xe5
 			case 3:
-				ltpCX = 0x18a
+				ltpCX = 0x195
 			}
 		}
 
@@ -333,7 +345,10 @@ func (b *Bitmap) Read(
 
 		for row := 0; row < b.Height; row++ {
 			if typicalPrediction {
-				bit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCX, b.Decoder.Arithmetic.GenericRegionStats)
+				b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(ltpCX))
+				bit, err := b.Decoder.Arithmetic.DecodeBit(r,
+					b.Decoder.Arithmetic.GenericRegionStats,
+				)
 				if err != nil {
 					return err
 				}
@@ -352,13 +367,14 @@ func (b *Bitmap) Read(
 
 			switch template {
 			case 0:
+
 				cxPtr0.SetPointer(0, row-2)
-				cx0 = int64(cxPtr0.NextPixel() << 1)
+				cx0 = int64(cxPtr0.NextPixel()) << 1
 				cx0 |= int64(cxPtr0.NextPixel())
 
 				cxPtr1.SetPointer(0, row-1)
-				cx1 = int64(cxPtr1.NextPixel() << 2)
-				cx1 |= int64(cxPtr1.NextPixel() << 1)
+				cx1 = int64(cxPtr1.NextPixel()) << 2
+				cx1 |= int64(cxPtr1.NextPixel()) << 1
 				cx1 |= int64(cxPtr1.NextPixel())
 
 				cx2 = 0
@@ -377,7 +393,8 @@ func (b *Bitmap) Read(
 						var err error
 
 						common.Log.Debug("Arithmetic.DecodeBit")
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
+						b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(cx))
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -413,7 +430,8 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
+						b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(cx))
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -448,7 +466,8 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
+						b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(cx))
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -479,7 +498,8 @@ func (b *Bitmap) Read(
 						pixel = 0
 					} else {
 						var err error
-						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.GenericRegionStats)
+						b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(cx))
+						pixel, err = b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.GenericRegionStats)
 						if err != nil {
 							return err
 						}
@@ -510,6 +530,8 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 	AdaptiveTemplateX []int8,
 	AdaptiveTemplateY []int8,
 ) error {
+	common.Log.Debug("[READ-GENERIC-REFINEMENT-REGION] Begins")
+	defer func() { common.Log.Debug("[READ-GENERIC-REFINEMENT-REGION] Finished") }()
 
 	var cxPtr0, cxPtr1, cxPtr2, cxPtr3, cxPtr4, cxPtr5, cxPtr6,
 		typPredicGenRefCxPtr0, typPredicGenRefCxPtr1, typPredicGenRefCxPtr2 *BMPointer
@@ -601,7 +623,8 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 					typPredictGenRefCx1 = ((typPredictGenRefCx1 << 1) | int64(typPredicGenRefCxPtr1.NextPixel())) & 7
 					typPredictGenRefCx2 = ((typPredictGenRefCx2 << 1) | int64(typPredicGenRefCxPtr2.NextPixel())) & 7
 
-					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCx, b.Decoder.Arithmetic.RefinementRegionStats)
+					b.Decoder.Arithmetic.RefinementRegionStats.SetIndex(int(ltpCx))
+					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.RefinementRegionStats)
 					if err != nil {
 						return err
 					}
@@ -621,7 +644,8 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 				cx = (cx0 << 7) | int64(cxPtr1.NextPixel()<<6) |
 					int64(cxPtr2.NextPixel()<<5) | int64(cx3<<2) | cx4
 
-				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.RefinementRegionStats)
+				b.Decoder.Arithmetic.RefinementRegionStats.SetIndex(int(cx))
+				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.RefinementRegionStats)
 				if err != nil {
 					return err
 				}
@@ -682,7 +706,8 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 					typPredictGenRefCx1 = ((typPredictGenRefCx1 << 1) | int64(typPredicGenRefCxPtr1.NextPixel())) & 7
 					typPredictGenRefCx2 = ((typPredictGenRefCx2 << 1) | int64(typPredicGenRefCxPtr2.NextPixel())) & 7
 
-					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, ltpCx, b.Decoder.Arithmetic.RefinementRegionStats)
+					b.Decoder.Arithmetic.RefinementRegionStats.SetIndex(int(ltpCx))
+					decodeBit, err := b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.RefinementRegionStats)
 					if err != nil {
 						return err
 					}
@@ -702,7 +727,8 @@ func (b *Bitmap) ReadGenericRefinementRegion(
 
 				cx = (cx0 << 11) | (int64(cxPtr1.NextPixel()) << 10) | (cx2 << 8) | (cx3 << 5) | (cx4 << 2) | (int64(cxPtr5.NextPixel()) << 1) | int64(cxPtr6.NextPixel())
 
-				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, cx, b.Decoder.Arithmetic.RefinementRegionStats)
+				b.Decoder.Arithmetic.RefinementRegionStats.SetIndex(int(cx))
+				pixel, err := b.Decoder.Arithmetic.DecodeBit(r, b.Decoder.Arithmetic.RefinementRegionStats)
 				if err != nil {
 					return err
 				}
@@ -762,27 +788,39 @@ func (b *Bitmap) ReadTextRegion(
 		}
 	}
 
+	// common.Log.Debug("Initial t: %v", t)
+
 	t *= -strips
+
+	// common.Log.Debug("Multiplied t: %v", t)
 
 	var (
 		currentInstance, firstS, dt, tt, ds, s int
 	)
+	common.Log.Debug("SymbolInstanceNumber: %d", symbolInstancesNumber)
+	common.Log.Debug("SymbolNumbers: %d", symbolsNo)
 
 	for uint(currentInstance) < symbolInstancesNumber {
+
 		if huffman {
+			common.Log.Debug("Huffman dt decoding...")
 			dt, _, err = b.Decoder.Huffman.DecodeInt(r, huffmanDTTable)
 			if err != nil {
 				common.Log.Debug("CurrentInstance: %d Huffman.DecodeInt(DTTable) failed. %v", currentInstance, err)
 				return err
 			}
 		} else {
+			common.Log.Debug("Arithmetic dt decoding...")
 			dt, _, err = b.Decoder.Arithmetic.DecodeInt(r, b.Decoder.Arithmetic.IadtStats)
 			if err != nil {
 				common.Log.Debug("CurrentInstance: %d Arithmetic.DecodeInt(IadtStats) failed: %v", currentInstance, err)
 				return err
 			}
 		}
+
+		// common.Log.Debug("Dt Decoded: %v", dt)
 		t += dt * strips
+		// common.Log.Debug("Dt: %v, T: %v", dt, t)
 
 		if huffman {
 			ds, _, err = b.Decoder.Huffman.DecodeInt(r, huffmanFSTable)
@@ -800,15 +838,22 @@ func (b *Bitmap) ReadTextRegion(
 		firstS += ds
 		s = firstS
 
+		// common.Log.Debug("FirstS: %v S: %v", firstS, s)
 		for {
+			common.Log.Debug("CurrentInstance: %d", currentInstance)
+
 			if strips == 1 {
 				dt = 0
 			} else if huffman {
+
 				bits, err := r.ReadBits(byte(logStrips))
 				if err != nil {
 					common.Log.Debug("ReadBits for logStrips: %d failed: %v", logStrips, err)
 					return err
 				}
+				bitsLen := fmt.Sprintf("%d", logStrips)
+				txt := "Bits: %0" + bitsLen + "b"
+				common.Log.Debug(txt, bits)
 				dt = int(bits)
 			} else {
 				dt, _, err = b.Decoder.Arithmetic.DecodeInt(r, b.Decoder.Arithmetic.IaitStats)
@@ -818,12 +863,16 @@ func (b *Bitmap) ReadTextRegion(
 				}
 			}
 
+			// common.Log.Debug("dt: %v, t : %v", dt, t)
 			tt = t + dt
 
 			var symbolID int64
 
+			// get symbol id
 			if huffman {
 				if symbolCodeTable != nil {
+					common.Log.Debug("symbolCodeTable not nil: %v", symbolCodeTable)
+
 					symbol, _, err := b.Decoder.Huffman.DecodeInt(r, symbolCodeTable)
 					if err != nil {
 						common.Log.Debug("Huffman.DecodeInt(symbolCodeTable) failed: %v", err)
@@ -831,6 +880,7 @@ func (b *Bitmap) ReadTextRegion(
 					}
 					symbolID = int64(symbol)
 				} else {
+					common.Log.Debug("symbolCodeTable nil")
 					symbols, err := r.ReadBits(byte(symbolCodeLength))
 					if err != nil {
 						common.Log.Debug("ReadBits(symbolCodeLength) failed: %v", err)
@@ -847,9 +897,12 @@ func (b *Bitmap) ReadTextRegion(
 				symbolID = int64(symbols)
 			}
 
+			common.Log.Debug("symbolID: %v", symbolID)
+
 			if symbolID >= int64(symbolsNo) {
 				common.Log.Debug("Invalid symbol number: %d in JBIG2 text region.", symbolID)
 			} else {
+
 				symbolBitmap = nil
 
 				var ri int
@@ -1014,6 +1067,10 @@ func (b *Bitmap) ReadTextRegion(
 				break
 			}
 
+			if currentInstance >= int(symbolInstancesNumber) {
+				break
+			}
+
 			ds = intRes
 			s += sOffset + ds
 		}
@@ -1021,6 +1078,31 @@ func (b *Bitmap) ReadTextRegion(
 	}
 
 	return nil
+}
+
+// Stringify the bitmap
+func (b *Bitmap) String() string {
+	var rows []string = make([]string, b.Height)
+
+	for i := 0; i < b.Width; i++ {
+		for j := 0; j < b.Height; j++ {
+			pix := b.GetPixel(i, j)
+			if pix {
+				rows[j] += "1"
+			} else {
+				rows[j] += "0"
+			}
+		}
+	}
+
+	var s string
+	for i, row := range rows {
+		s += row
+		if i != len(rows)-1 {
+			s += "\n"
+		}
+	}
+	return s
 }
 
 // Clear clears the bitmap according to the defPixel
@@ -1031,17 +1113,24 @@ func (b *Bitmap) Clear(defPixel bool) {
 // Combine combines the bitmap data with the provided bitmap with respect to the
 // coordinates x and y and the provided comination operator 'combOp'
 func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
+
+	//define the source width and height
 	var (
-		srcWidth  int = b.Width
-		srcHeight int = b.Height
+		srcWidth  int = bitmap.Width
+		srcHeight int = bitmap.Height
 	)
 
+	// common.Log.Debug("Combine x:%v, y:%v, srcWidth: %v, srcHeight: %v", x, y, srcWidth, srcHeight)
+
+	// minimal width is the src width
 	var minWidth int = srcWidth
 
+	// Decrease the width if the values are greater then the source width
 	if (x + srcWidth) > b.Width {
 		minWidth = b.Width - x
 	}
 
+	// Decrease the height if the
 	if (y + srcHeight) > b.Height {
 		srcHeight = b.Height - y
 	}
@@ -1050,7 +1139,8 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 
 	var indx int = y*b.Width + x
 
-	if combOp == 0 {
+	// Or operator
+	if combOp == int64(CmbOpOr) {
 		if x == 0 && y == 0 && srcHeight == b.Height && srcWidth == b.Width {
 			for i := 0; i < len(b.Data.data); i++ {
 				b.Data.data[i] |= bitmap.Data.data[i]
@@ -1061,7 +1151,9 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 			b.Data.Or(uint(indx), bitmap.Data, uint(srcIndx), minWidth)
 			srcIndx += srcWidth
 		}
-	} else if combOp == 1 {
+
+		// And Operator
+	} else if combOp == int64(CmbOpAnd) {
 		if x == 0 && y == 0 && srcHeight == b.Height && srcWidth == b.Width {
 			for i := 0; i < len(b.Data.data); i++ {
 				b.Data.data[i] &= bitmap.Data.data[i]
@@ -1085,7 +1177,9 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 
 			srcIndx += srcWidth
 		}
-	} else if combOp == 2 {
+
+		// XOR operator
+	} else if combOp == int64(CmbOpXor) {
 		if x == 0 && y == 0 && srcHeight == b.Height && srcWidth == b.Width {
 			for i := 0; i < len(b.Data.data); i++ {
 				b.Data.data[i] ^= bitmap.Data.data[i]
@@ -1111,7 +1205,8 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 			srcIndx += srcWidth
 		}
 
-	} else if combOp == 3 {
+		// XNOR operator
+	} else if combOp == int64(CmbOpXNor) {
 		for row := y; row < y+srcHeight; row++ {
 			indx = row*b.Width + x
 			for col := 0; col < minWidth; col++ {
@@ -1131,13 +1226,17 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 
 			srcIndx += srcWidth
 		}
-	} else if combOp == 4 {
+
+		// Replace Operator
+	} else if combOp == int64(CmbOpReplace) {
 		if x == 0 && y == 0 && srcHeight == b.Height && srcWidth == b.Width {
 			for i := 0; i < len(b.Data.data); i++ {
 				b.Data.data[i] = bitmap.Data.data[i]
 			}
 		}
-	} else {
+
+		// Operator Not
+	} else if combOp == int64(CmbOpNot) {
 
 		for row := y; row < y+srcHeight; row++ {
 			indx = row*b.Width + x
@@ -1153,6 +1252,9 @@ func (b *Bitmap) Combine(bitmap *Bitmap, x, y int, combOp int64) error {
 				}
 			}
 		}
+	} else {
+		common.Log.Error("Unknown Combination Operator: %d", combOp)
+		return errors.New("Unknown Combination operator")
 	}
 
 	return nil
@@ -1197,7 +1299,10 @@ func (b *Bitmap) GetPixel(col, row int) bool {
 }
 
 func (b *Bitmap) Expand(newHeight int, defaultPixel int) {
+	common.Log.Debug("Expanding bitmap to newHeight: %v with default pixel: %01b", newHeight, defaultPixel)
+
 	newData := NewBitSet(newHeight * b.Width)
+
 	for row := 0; row < b.Height; row++ {
 		for col := 0; col < b.Width; col++ {
 			b.setPixel(col, row, newData, b.GetPixel(col, row))

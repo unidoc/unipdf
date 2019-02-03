@@ -48,7 +48,7 @@ func (m *MmrDecoder) Get24Bits(r *reader.Reader) (int64, error) {
 		m.BytesReadNumber++
 	}
 
-	return ((m.Buffer >> uint32(m.BufferLength-24)) & 0xffffff), nil
+	return ((m.Buffer >> uint64(m.BufferLength-24)) & 0xffffff), nil
 }
 
 func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
@@ -83,7 +83,7 @@ func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
 	} else {
 
 		// the lookup should be the buffer value shiffted left by 1
-		var lookup int = int((int(m.Buffer) << uint32(7-m.BufferLength)) & 0x7f)
+		var lookup int = int((int(m.Buffer) << uint64(7-m.BufferLength)) & 0x7f)
 
 		// tuple should be the twoDimensionalTable1 at lookup
 		tuple = twoDimensionalTable1[lookup]
@@ -93,10 +93,10 @@ func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			right := int(b) & 0xff
+			right := int64(b)
 			var left int64 = (m.Buffer << 8)
 
-			m.Buffer = left | int64(right)
+			m.Buffer = left | right
 			m.BufferLength += 8
 			m.BytesReadNumber++
 

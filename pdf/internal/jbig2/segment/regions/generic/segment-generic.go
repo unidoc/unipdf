@@ -47,7 +47,7 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	common.Log.Debug("[READ] Generic Region Segment started.")
 	defer common.Log.Debug("[READ] Generic Region Segment finished.")
 
-	common.Log.Debug("Decode RegionSegment basics")
+	common.Log.Debug("Decode RegionSegment")
 	// Read the segment basics
 	if err := g.RegionSegment.Decode(r); err != nil {
 		common.Log.Debug("RegionSegment.Decode failed.")
@@ -67,10 +67,11 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 
 		AdaptiveTemplateX, AdaptiveTemplateY []int8 = make([]int8, 4), make([]int8, 4)
 	)
+	common.Log.Debug("UseMMR: %v, Template: %v", g.UseMMR, template)
 
-	common.Log.Debug("UseMMR: %v ", g.UseMMR)
 	if !g.UseMMR {
 
+		// set Adaptive Templates
 		var err error
 		var buf []byte = make([]byte, 2)
 		if template == 0 {
@@ -103,14 +104,20 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 			common.Log.Debug("ArithmeticDecoder Start failed. %v", err)
 			return err
 		}
+
+		common.Log.Debug("Read Adaptive Template X, and Adaptive Template Y finished.")
+		common.Log.Debug("AdaptiveTemplateX: %v", AdaptiveTemplateX)
+		common.Log.Debug("AdaptiveTemplateY: %v", AdaptiveTemplateY)
 	}
 
 	var (
 		typicalPrediction bool = g.GenericRegionFlags.GetValue(TPGDOn) != 0
-		length            int  = g.Segment.Header.DataLength
+		length            int  = g.Header.DataLength
 	)
 
-	if length != -1 {
+	common.Log.Debug("Typical Prediction: %v", typicalPrediction)
+
+	if length == -1 {
 		// If lenght of data is unknown it needs to be determined through examination of the data
 		// JBIG2 7.2.7
 
@@ -120,16 +127,19 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 
 		var match1, match2 byte
 
+		// Match1 And Match2 are the bytes to look for
 		if g.UseMMR {
-			match1 = 0
-			match2 = 0
+			match1 = 0x00
+			match2 = 0x00
 		} else {
-			match1 = 255
-			match2 = 172
+			match1 = 0xFF
+			match2 = 0xAC
 		}
 
 		var bytesRead int64
+
 		for {
+			//
 			b1, err := r.ReadByte()
 			if err != nil {
 				common.Log.Debug("GenericSegment->Decode->ReadByte failed. %v", err)
@@ -138,13 +148,17 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 
 			bytesRead += 1
 
+			// check if b1 matches match1
+			// continue to read the
 			if b1 == match1 {
 				b2, err := r.ReadByte()
 				if err != nil {
 					common.Log.Debug("GenericSegment->Decode->ReadByte Byte2 failed. %v", err)
 					return err
 				}
+				bytesRead += 1
 
+				// if b2 matches match2
 				if b2 == match2 {
 					length = int(bytesRead) - 2
 					break
@@ -152,6 +166,7 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 			}
 		}
 
+		common.Log.Debug("Bytes read: %d. Rewind", bytesRead)
 		_, err := r.Seek(-bytesRead, io.SeekCurrent)
 		if err != nil {
 			log.Debug("GenericSegment->Decode->Seek() failed: %v", err)
@@ -168,6 +183,7 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 		mmrDataLength = length - 18
 	}
 
+	common.Log.Debug("Reading Generic Bitmap with: MMR-%v,template-%v,typicalPredition:%v,ATX:%v, ATY:%v,mmrDL:%v", g.UseMMR, template, typicalPrediction, AdaptiveTemplateX, AdaptiveTemplateY, mmrDataLength)
 	err := bm.Read(
 		r,
 		g.UseMMR,
@@ -182,6 +198,8 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	common.Log.Debug("Generic Bitmap: \n%s", bm)
 
 	if g.inlineImage {
 		// If the segment is an inline image get the page info segment
@@ -202,10 +220,15 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 
 			}
 
-			pageBM.Combine(bm, g.BMXLocation, g.BMYLocation, int64(extComboOp))
+			common.Log.Debug("Combine Operation: %d", extComboOp)
+			err := pageBM.Combine(bm, g.BMXLocation, g.BMYLocation, int64(extComboOp))
+			if err != nil {
+				common.Log.Debug("PageBitmap Combine failed: %v", err)
+				return err
+			}
 
 		} else {
-			log.Debug("Page segment is nil.")
+			common.Log.Debug("Page segment is nil.")
 		}
 	} else {
 		// if not an inline image set the bitmap to the segment variable

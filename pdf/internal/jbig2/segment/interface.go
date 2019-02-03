@@ -22,5 +22,6 @@ type Segmenter interface {
 // SymbolDictionarySegmenter is the interface that is used by SymbolDictionarySegment to return
 // exported symbols number
 type SymbolDictionarySegmenter interface {
-	ExportedSymbolsNumber() uint32
+	AmmountOfExportedSymbols() int
+	Segmenter
 }

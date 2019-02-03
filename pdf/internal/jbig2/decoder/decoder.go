@@ -159,7 +159,10 @@ func (j *JBIG2Decoder) decodeSegments(r *reader.Reader) error {
 		err      error
 	)
 
+	var ctr int
 	for !finished {
+		ctr += 1
+		common.Log.Debug("Decoding # %d segment", ctr)
 		h := &header.Header{}
 
 		_, err = h.Decode(r)
@@ -239,7 +242,7 @@ func (j *JBIG2Decoder) decodeSegments(r *reader.Reader) error {
 			}
 		}
 
-		j.Container.Segments = append(j.Container.Segments)
+		j.Container.Segments = append(j.Container.Segments, s)
 	}
 
 	if j.RandomAccessOrganisation {
