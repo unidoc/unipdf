@@ -287,6 +287,12 @@ func TestImageExtractionRealWorld(t *testing.T) {
 				},
 			},
 		},
+		{
+			"Indexed color space",
+			1,
+			"MondayAM.pdf",
+			[]ImageMark{},
+		},
 	}
 
 	for _, tcase := range testcases {
@@ -300,6 +306,10 @@ func TestImageExtractionRealWorld(t *testing.T) {
 		pageImages, err := pageExtractor.ExtractPageImages()
 		require.NoError(t, err)
 
+		if len(tcase.Expected) == 0 {
+			// This is to test that images parse without error only.
+			continue
+		}
 		assert.Equal(t, len(tcase.Expected), len(pageImages.Images))
 
 		for i, img := range pageImages.Images {
