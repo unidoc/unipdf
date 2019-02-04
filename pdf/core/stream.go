@@ -68,7 +68,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	} else if *method == StreamEncodingFilterNameASCII85 || *method == "A85" {
 		return NewASCII85Encoder(), nil
 	} else if *method == StreamEncodingFilterNameCCITTFax {
-		return NewCCITTFaxEncoder(), nil
+		return newCCITTFaxEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameJBIG2 {
 		return NewJBIG2Encoder(), nil
 	} else if *method == StreamEncodingFilterNameJPX {

@@ -34,6 +34,7 @@ import (
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/core/ccittfaxdecode"
 )
 
 const (
@@ -1521,39 +1522,457 @@ func (enc *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-// CCITTFaxEncoder implements CCITTFax encoder/decoder (dummy, for now)
-// FIXME: implement
-type CCITTFaxEncoder struct{}
+//
+// CCITTFax encoder/decoder (dummy, for now)
+//
+type CCITTFaxEncoder struct {
+	Mode                   CCITTMode
+	K                      int
+	EndOfLine              bool
+	EncodedByteAlign       bool
+	Columns                int
+	Rows                   int
+	EndOfBlock             bool
+	BlackIs1               bool
+	DamagedRowsBeforeError int
+}
+
+type CCITTMode int
+
+const (
+	Group3 CCITTMode = iota
+	Group4
+	GroupMixed
+	GroupUnknown
+)
+
+func (mode CCITTMode) String() string {
+	switch mode {
+	case Group3:
+		return "Group 3"
+	case Group4:
+		return "Group 4"
+	case GroupMixed:
+		return "Mixed"
+	default:
+		return "Unknown"
+	}
+}
+
+// <0 : Pure two-dimensional encoding (Group 4)
+// =0 : Pure one-dimensional encoding (Group 3, 1-D)
+// >0 : Mixed one- and two-dimensional encoding (Group 3, 2-D)
+func IntToCCITTMode(v int) CCITTMode {
+	switch {
+	case v == 0:
+		return Group3
+	case v < 0:
+		return Group4
+	case v > 0:
+		return GroupMixed
+	default:
+		return GroupUnknown
+	}
+}
 
 func NewCCITTFaxEncoder() *CCITTFaxEncoder {
 	return &CCITTFaxEncoder{}
 }
 
-func (enc *CCITTFaxEncoder) GetFilterName() string {
+func (this *CCITTFaxEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameCCITTFax
 }
 
-func (enc *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
-	return nil
+func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
+	decodeParams := MakeDict()
+	decodeParams.Set("K", MakeInteger(int64(this.K)))
+	decodeParams.Set("Columns", MakeInteger(int64(this.Columns)))
+	decodeParams.Set("BlackIs1", MakeBool(this.BlackIs1))
+	decodeParams.Set("EncodedByteAlign", MakeBool(this.EncodedByteAlign))
+	decodeParams.Set("EndOfLine", MakeBool(this.EndOfLine))
+	decodeParams.Set("Rows", MakeInteger(int64(this.Rows)))
+	decodeParams.Set("EndOfBlock", MakeBool(this.EndOfBlock))
+	decodeParams.Set("DamagedRowsBeforeError", MakeInteger(int64(this.DamagedRowsBeforeError)))
+
+	return decodeParams
 }
 
-// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
-func (enc *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
-	return MakeDict()
+// Make a new instance of an encoding dictionary for a stream object.
+func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := MakeDict()
+	dict.Set("Filter", MakeName(this.GetFilterName()))
+
+	decodeParams := this.MakeDecodeParams()
+	if decodeParams != nil {
+		dict.Set("DecodeParms", decodeParams)
+	}
+
+	return dict
 }
 
-func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
-	return encoded, ErrNoCCITTFaxDecode
+// Create a new CCITTFax decoder from a stream object, getting all the encoding parameters
+// from the DecodeParms stream object dictionary entry.
+func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*CCITTFaxEncoder, error) {
+	encoder := NewCCITTFaxEncoder()
+
+	encDict := streamObj.PdfObjectDictionary
+	if encDict == nil {
+		// No encoding dictionary.
+		return encoder, nil
+	}
+
+	// If decodeParams not provided, see if we can get from the stream.
+	if decodeParams == nil {
+		obj := encDict.Get("DecodeParms")
+		if obj != nil {
+			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
+				decodeParams = dp
+			} else if a, isArr := obj.(*PdfObjectArray); isArr {
+				if a.Len() == 1 {
+					if dp, isDict := a.Get(0).(*PdfObjectDictionary); isDict {
+						decodeParams = dp
+					}
+				}
+			}
+			if decodeParams == nil {
+				common.Log.Error("DecodeParms not a dictionary %#v", obj)
+				return nil, fmt.Errorf("Invalid DecodeParms")
+			}
+		}
+	}
+
+	obj := decodeParams.Get("K")
+	if obj != nil {
+		k, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("K is invalid")
+		}
+		fmt.Printf("K = %v\n", *k)
+
+		encoder.Mode = IntToCCITTMode(int(*k))
+		encoder.K = int(*k)
+	}
+
+	encoder.Columns = 1728
+	obj = decodeParams.Get("Columns")
+	if obj != nil {
+		columns, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("Columns is invalid")
+		}
+
+		encoder.Columns = int(*columns)
+	}
+
+	obj = decodeParams.Get("BlackIs1")
+	if obj != nil {
+		switch inverse := obj.(type) {
+		case *PdfObjectInteger:
+			encoder.BlackIs1 = inverse != nil && *inverse > 0
+		case *PdfObjectBool:
+			encoder.BlackIs1 = inverse != nil && bool(*inverse)
+		default:
+			common.Log.Trace("BlackIs1 type: %T", obj)
+			return nil, fmt.Errorf("BlackIs1 is invalid")
+		}
+	} else {
+		obj = encDict.Get("Decode")
+		if arr, ok := obj.(*PdfObjectArray); ok {
+			intArr, err := arr.ToIntegerArray()
+			if err != nil {
+				return nil, fmt.Errorf("Decode is invalid")
+			}
+
+			encoder.BlackIs1 = intArr[0] == 1 && intArr[1] == 0
+		}
+	}
+
+	obj = decodeParams.Get("EncodedByteAlign")
+	if obj != nil {
+		switch align := obj.(type) {
+		case *PdfObjectInteger:
+			encoder.EncodedByteAlign = align != nil && *align > 0
+		case *PdfObjectBool:
+			encoder.EncodedByteAlign = align != nil && bool(*align)
+		default:
+			common.Log.Trace("EncodedByteAlign type: %T", obj)
+			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+		}
+	}
+
+	obj = decodeParams.Get("EndOfLine")
+	if obj != nil {
+		switch eol := obj.(type) {
+		case *PdfObjectInteger:
+			encoder.EndOfLine = eol != nil && *eol > 0
+		case *PdfObjectBool:
+			encoder.EncodedByteAlign = eol != nil && bool(*eol)
+		default:
+			common.Log.Trace("EncodedByteAlign type: %T", obj)
+			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+		}
+	}
+
+	encoder.Rows = 0
+	obj = decodeParams.Get("Rows")
+	if obj != nil {
+		rows, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("Rows is invalid")
+		}
+
+		encoder.Columns = int(*rows)
+	}
+
+	encoder.EndOfBlock = true
+	obj = decodeParams.Get("EndOfBlock")
+	if obj != nil {
+		switch eob := obj.(type) {
+		case *PdfObjectInteger:
+			if eob != nil && *eob <= 0 {
+				encoder.EndOfBlock = false
+			}
+		case *PdfObjectBool:
+			if eob != nil {
+				encoder.EndOfBlock = bool(*eob)
+			}
+		default:
+			common.Log.Trace("EncodedByteAlign type: %T", obj)
+			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+		}
+	}
+
+	encoder.DamagedRowsBeforeError = 0
+	obj = decodeParams.Get("DamagedRowsBeforeError")
+	if obj != nil {
+		rows, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			return nil, fmt.Errorf("DamagedRowsBeforeError is invalid")
+		}
+
+		encoder.DamagedRowsBeforeError = int(*rows)
+	}
+
+	common.Log.Trace("decode params: %s", decodeParams.String())
+	return encoder, nil
 }
 
-func (enc *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
-	return streamObj.Stream, ErrNoCCITTFaxDecode
+/*func getPixels(file io.Reader) ([][]byte, error) {
+	img, _, err := goimage.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	bounds := img.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+	var pixels [][]byte
+	for y := 0; y < h; y++ {
+		var row []byte
+		for x := 0; x < w; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			if r == 65535 && g == 65535 && b == 65535 {
+				// append white
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
+			}
+		}
+		pixels = append(pixels, row)
+	}
+	return pixels, nil
+}*/
+
+func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	encoder := &ccittfaxdecode.Encoder{
+		K:                      this.K,
+		Columns:                this.Columns,
+		EndOfLine:              this.EndOfLine,
+		EndOfBlock:             this.EndOfBlock,
+		BlackIs1:               this.BlackIs1,
+		DamagedRowsBeforeError: this.DamagedRowsBeforeError,
+		Rows:             this.Rows,
+		EncodedByteAlign: this.EncodedByteAlign,
+	}
+
+	pixels, err := encoder.Decode(encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	decoded := make([]byte, len(pixels)*len(pixels[0])*3)
+
+	decodedInd := 0
+	for i := range pixels {
+		for j := range pixels[i] {
+			if pixels[i][j] == 1 {
+				decoded[decodedInd] = 255
+				decoded[decodedInd+1] = 255
+				decoded[decodedInd+2] = 255
+				//decoded[decodedInd+3] = 255
+			} else {
+				decoded[decodedInd] = 0
+				decoded[decodedInd+1] = 0
+				decoded[decodedInd+2] = 0
+				//decoded[decodedInd+3] = 255
+			}
+
+			decodedInd += 3
+		}
+	}
+
+	/*goimage.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+	t := goimage.NewRGBA(goimage.Rect(0, 0, len(pixels[0]), len(pixels)))
+	t.Pix = decoded
+	file, err := os.Create("/home/darkrengarius/Downloads/test2222222.png")
+	if err != nil {
+		log.Fatalf("Error opening file: %v\n", err)
+	}
+	defer file.Close()
+	err = png.Encode(file, t)
+	if err != nil {
+		return nil, err
+	}*/
+
+	/*file, err := os.Open("/home/darkrengarius/Downloads/scan223.png")
+	if err != nil {
+		log.Fatalf("Error opening file: %v\n", err)
+	}
+	defer file.Close()
+	img, _, err := goimage.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	bounds := img.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+	for y := 0; y < h; y++ {
+		var row []byte
+		for x := 0; x < w; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			if r == 65535 && g == 65535 && b == 65535 {
+				// append white
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
+			}
+		}
+		pixels = append(pixels, row)
+	}*/
+
+	/*img := image.NewRGBA(image.Rect(0, 0, len(pixels[0]), len(pixels)))
+	imgPix := 0
+	for i := range pixels {
+		for j := range pixels[i] {
+			//log.Printf("%v: %v\n", i, j)
+			img.Pix[imgPix] = 255 * pixels[i][j]
+			img.Pix[imgPix+1] = 255 * pixels[i][j]
+			img.Pix[imgPix+2] = 255 * pixels[i][j]
+			img.Pix[imgPix+3] = 255
+			imgPix += 4
+		}
+	}
+	buf := new(bytes.Buffer)
+	err := png.Encode(buf, img)
+	if err != nil {
+		return nil, err
+	}
+	imgData := buf.Bytes()
+	f, err := os.Create("/home/darkrengarius/Downloads/testDecodePdf.png")
+	if err != nil {
+		log.Fatalf("Error writing to file: %v\n", err)
+	}
+	defer f.Close()
+	if _, err := f.Write(imgData); err != nil {
+		log.Fatalf("Error writing to file: %v\n", err)
+	}*/
+
+	/*arr, err := ccittfaxdecode.NewCCITTFaxDecoder(uint(this.Columns), encoded).Decode()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]byte, 0)
+	for i := range arr {
+		result = append(result, arr[i]...)
+	}*/
+
+	return decoded, nil
 }
 
-func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
+func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return this.DecodeBytes(streamObj.Stream)
+}
+
+func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	/*file, err := os.Open("/home/darkrengarius/Downloads/scan223.png")
+	if err != nil {
+		log.Fatalf("Error opening file: %v\n", err)
+	}
+	defer file.Close()
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	bounds := img.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+	var pixels [][]byte
+	for y := 0; y < h; y++ {
+		var row []byte
+		for x := 0; x < w; x++ {
+			if y == 8 && x == 12 {
+				log.Println()
+			}
+			r, g, b, _ := img.At(x, y).RGBA()
+			if r == 65535 && g == 65535 && b == 65535 {
+				// append white
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
+			}
+		}
+		pixels = append(pixels, row)
+	}*/
+
+	var pixels [][]byte
+
+	for i := 0; i < len(data); i += 3 * this.Columns {
+		pixelsRow := make([]byte, this.Columns)
+
+		pixel := 0
+		for j := 0; j < 3*this.Columns; j += 3 {
+
+			// TODO: check BlackIs1
+			if data[i+j] == 255 {
+				if this.BlackIs1 {
+					pixelsRow[pixel] = 0
+				} else {
+					pixelsRow[pixel] = 1
+				}
+			} else {
+				if this.BlackIs1 {
+					pixelsRow[pixel] = 1
+				} else {
+					pixelsRow[pixel] = 0
+				}
+			}
+
+			pixel++
+		}
+
+		pixels = append(pixels, pixelsRow)
+	}
+
+	encoder := &ccittfaxdecode.Encoder{
+		K:                      this.K,
+		Columns:                this.Columns,
+		EndOfLine:              this.EndOfLine,
+		EndOfBlock:             this.EndOfBlock,
+		BlackIs1:               this.BlackIs1,
+		DamagedRowsBeforeError: this.DamagedRowsBeforeError,
+		Rows:             this.Rows,
+		EncodedByteAlign: this.EncodedByteAlign,
+	}
+
+	return encoder.Encode(pixels), nil
+
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
 	return data, ErrNoCCITTFaxDecode
 }
 
