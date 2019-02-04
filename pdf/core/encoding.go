@@ -1798,6 +1798,44 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	//decoded := make([]byte, int(math.Ceil(float64(float64(len(pixels)*len(pixels[0]))/8.0))))
+
+	/*var decoded []byte
+	decodedIdx := 0
+	var bitPos byte = 0
+	var currentByte byte = 0
+	for i := range pixels {
+		for j := range pixels[i] {
+			currentByte |= pixels[i][j] << (7 - bitPos)
+
+			bitPos++
+
+			if bitPos == 8 {
+				decoded = append(decoded, currentByte)
+				//decoded[decodedIdx] = currentByte
+				currentByte = 0
+
+				decodedIdx++
+
+				bitPos = 0
+			}
+		}
+
+		/*if bitPos > 0 {
+			decoded = append(decoded, currentByte)
+			currentByte = 0
+
+			decodedIdx++
+
+			bitPos = 0
+		}*/
+	/*}
+
+	if bitPos > 0 {
+		decoded = append(decoded, currentByte)
+		//decoded[decodedIdx] = currentByte
+	}*/
+
 	decoded := make([]byte, len(pixels)*len(pixels[0])*3)
 
 	decodedInd := 0
