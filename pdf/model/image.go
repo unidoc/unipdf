@@ -169,6 +169,9 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 			if img.BitsPerComponent == 16 {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
+			} else if img.BitsPerComponent == 1 {
+				val := uint8(samples[i]&0xff) * 255
+				c = gocolor.Gray{val}
 			} else {
 				val := uint8(samples[i] & 0xff)
 				c = gocolor.Gray{val}

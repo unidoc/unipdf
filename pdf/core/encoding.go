@@ -1587,12 +1587,30 @@ func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
 	decodeParams := MakeDict()
 	decodeParams.Set("K", MakeInteger(int64(this.K)))
 	decodeParams.Set("Columns", MakeInteger(int64(this.Columns)))
-	decodeParams.Set("BlackIs1", MakeBool(this.BlackIs1))
-	decodeParams.Set("EncodedByteAlign", MakeBool(this.EncodedByteAlign))
-	decodeParams.Set("EndOfLine", MakeBool(this.EndOfLine))
-	decodeParams.Set("Rows", MakeInteger(int64(this.Rows)))
-	decodeParams.Set("EndOfBlock", MakeBool(this.EndOfBlock))
-	decodeParams.Set("DamagedRowsBeforeError", MakeInteger(int64(this.DamagedRowsBeforeError)))
+
+	if this.BlackIs1 {
+		decodeParams.Set("BlackIs1", MakeBool(this.BlackIs1))
+	}
+
+	if this.EncodedByteAlign {
+		decodeParams.Set("EncodedByteAlign", MakeBool(this.EncodedByteAlign))
+	}
+
+	if this.EndOfLine && this.K >= 0 {
+		decodeParams.Set("EndOfLine", MakeBool(this.EndOfLine))
+	}
+
+	if this.Rows != 0 && !this.EndOfBlock {
+		decodeParams.Set("Rows", MakeInteger(int64(this.Rows)))
+	}
+
+	if !this.EndOfBlock {
+		decodeParams.Set("EndOfBlock", MakeBool(this.EndOfBlock))
+	}
+
+	if this.DamagedRowsBeforeError != 0 {
+		decodeParams.Set("DamagedRowsBeforeError", MakeInteger(int64(this.DamagedRowsBeforeError)))
+	}
 
 	return decodeParams
 }
@@ -1706,7 +1724,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 		case *PdfObjectInteger:
 			encoder.EndOfLine = eol != nil && *eol > 0
 		case *PdfObjectBool:
-			encoder.EncodedByteAlign = eol != nil && bool(*eol)
+			encoder.EndOfLine = eol != nil && bool(*eol)
 		default:
 			common.Log.Trace("EncodedByteAlign type: %T", obj)
 			return nil, fmt.Errorf("EncodedByteAlign is invalid")
@@ -1721,7 +1739,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 			return nil, fmt.Errorf("Rows is invalid")
 		}
 
-		encoder.Columns = int(*rows)
+		encoder.Rows = int(*rows)
 	}
 
 	encoder.EndOfBlock = true
@@ -1800,7 +1818,7 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 	//decoded := make([]byte, int(math.Ceil(float64(float64(len(pixels)*len(pixels[0]))/8.0))))
 
-	/*var decoded []byte
+	var decoded []byte
 	decodedIdx := 0
 	var bitPos byte = 0
 	var currentByte byte = 0
@@ -1829,14 +1847,14 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 			bitPos = 0
 		}*/
-	/*}
+	}
 
 	if bitPos > 0 {
 		decoded = append(decoded, currentByte)
 		//decoded[decodedIdx] = currentByte
-	}*/
+	}
 
-	decoded := make([]byte, len(pixels)*len(pixels[0])*3)
+	/*decoded := make([]byte, len(pixels)*len(pixels[0])*3)
 
 	decodedInd := 0
 	for i := range pixels {
@@ -1855,7 +1873,7 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 			decodedInd += 3
 		}
-	}
+	}*/
 
 	/*goimage.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
 	t := goimage.NewRGBA(goimage.Rect(0, 0, len(pixels[0]), len(pixels)))

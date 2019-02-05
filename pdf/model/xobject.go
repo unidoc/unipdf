@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+	"log"
 
 	"github.com/unidoc/unidoc/common"
 	. "github.com/unidoc/unidoc/pdf/core"
@@ -246,6 +247,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	}
 
 	encoded, err := encoder.EncodeBytes(img.Data)
+	log.Printf("Encoded: %v", encoded)
 	if err != nil {
 		common.Log.Debug("Error with encoding: %v", err)
 		return nil, err

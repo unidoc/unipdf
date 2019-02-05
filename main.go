@@ -3,7 +3,9 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+	"image"
 	"image/png"
+	"log"
 	"os"
 
 	unicommon "github.com/unidoc/unidoc/common"
@@ -88,13 +90,13 @@ var inlineImages = 0
 
 func main() {
 	// save images to pdf
-	/*if err := imagesToPdf([]string{"/home/darkrengarius/Downloads/scan2.png"}, "/home/darkrengarius/Downloads/testCombined2232.pdf"); err != nil {
+	if err := imagesToPdf([]string{"/home/darkrengarius/Downloads/scan223.png"}, "/home/darkrengarius/Downloads/testCombined2232.pdf"); err != nil {
 		log.Fatalf("Error writing images to pdf: %v\n", err)
-	}*/
+	}
 
 	// extract images from pdf to zip
-	inputPath := "/home/darkrengarius/Downloads/000444.pdf"
-	outputPath := "/home/darkrengarius/Downloads/000444_2.zip"
+	inputPath := "/home/darkrengarius/Downloads/testCombined2232.pdf"
+	outputPath := "/home/darkrengarius/Downloads/testCombined2232.zip"
 
 	fmt.Printf("Input file: %s\n", inputPath)
 	err := extractImagesToArchive(inputPath, outputPath)
@@ -173,11 +175,34 @@ func imagesToPdf(inputPaths []string, outputPath string) error {
 	for _, imgPath := range inputPaths {
 		unicommon.Log.Debug("Image: %s", imgPath)
 
-		img, err := c.NewImageFromFile(imgPath)
+		file, err := os.Open(imgPath)
+		if err != nil {
+			log.Fatalf("Error opening file: %v\n", err)
+		}
+
+		imgF, _, err := image.Decode(file)
+		if err != nil {
+			file.Close()
+
+			return err
+		}
+
+		file.Close()
+
+		modelImg, err := pdf.ImageHandling.NewImageFromGoImage(imgF)
 		if err != nil {
 			unicommon.Log.Debug("Error loading image: %v", err)
 			return err
 		}
+		modelImg.BitsPerComponent = 1
+		modelImg.ColorComponents = 1
+
+		img, err := c.NewImage(modelImg)
+		if err != nil {
+			unicommon.Log.Debug("Error loading image: %v", err)
+			return err
+		}
+
 		img.ScaleToWidth(612.0)
 
 		// Use page width of 612 points, and calculate the height proportionally based on the image.
@@ -185,6 +210,16 @@ func imagesToPdf(inputPaths []string, outputPath string) error {
 		height := 612.0 * img.Height() / img.Width()
 		c.SetPageSize(creator.PageSize{612, height})
 		c.NewPage()
+
+		encoder := pdfcore.NewCCITTFaxEncoder()
+		encoder.Columns = int(modelImg.Width)
+		encoder.EndOfBlock = true
+		encoder.EndOfLine = true
+		encoder.EncodedByteAlign = true
+		encoder.BlackIs1 = true
+		encoder.K = 4
+		img.SetEncoder(encoder)
+
 		img.SetPos(0, 0)
 		_ = c.Draw(img)
 	}
@@ -360,8 +395,8 @@ func extractImagesInContentStream(contents string, resources *pdf.PdfPageResourc
 					return nil, err
 				}
 
-				img.ColorComponents = 3
-				img.BitsPerComponent = 8
+				//img.ColorComponents = 3
+				//img.BitsPerComponent = 8
 
 				goimg, err := img.ToGoImage()
 				if err != nil {
@@ -385,7 +420,7 @@ func extractImagesInContentStream(contents string, resources *pdf.PdfPageResourc
 					cs = pdf.NewPdfColorspaceDeviceGray()
 				}
 
-				cs = pdf.NewPdfColorspaceDeviceRGB()
+				//cs = pdf.NewPdfColorspaceDeviceRGB()
 
 				fmt.Printf("Cs: %T\n", cs)
 

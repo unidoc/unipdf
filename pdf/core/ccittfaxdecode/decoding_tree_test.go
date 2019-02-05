@@ -1,0 +1,3 @@
+package ccittfaxdecode
+
+//func TestAddNode()
