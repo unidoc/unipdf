@@ -225,14 +225,18 @@ func (p *StyledParagraph) Height() float64 {
 	return height
 }
 
-// getTextWidth calculates the text width as if all in one line (not taking wrapping into account).
+// getTextWidth calculates the text width as if all in one line (not taking
+// wrapping into account).
 func (p *StyledParagraph) getTextWidth() float64 {
 	var width float64
-	for _, chunk := range p.chunks {
-		style := &chunk.Style
+	lenChunks := len(p.chunks)
 
-		for _, r := range chunk.Text {
-			// Ignore newline for this.. Handles as if all in one line.
+	for i, chunk := range p.chunks {
+		style := &chunk.Style
+		lenRunes := len(chunk.Text)
+
+		for j, r := range chunk.Text {
+			// Ignore newline for this. Handles as if all in one line.
 			if r == '\u000A' { // LF
 				continue
 			}
@@ -246,6 +250,11 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			}
 
 			width += style.FontSize * metrics.Wx
+
+			// Do not add character spacing for the last character of the line.
+			if i != lenChunks-1 || j != lenRunes-1 {
+				width += style.CharSpacing * 1000.0
+			}
 		}
 	}
 
@@ -255,11 +264,14 @@ func (p *StyledParagraph) getTextWidth() float64 {
 // getTextLineWidth calculates the text width of a provided collection of text chunks.
 func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 	var width float64
-	for _, chunk := range line {
-		style := &chunk.Style
+	lenChunks := len(line)
 
-		for _, r := range chunk.Text {
-			// Ignore newline for this.. Handles as if all in one line.
+	for i, chunk := range line {
+		style := &chunk.Style
+		lenRunes := len(chunk.Text)
+
+		for j, r := range chunk.Text {
+			// Ignore newline for this. Handles as if all in one line.
 			if r == '\u000A' { // LF
 				continue
 			}
@@ -273,6 +285,11 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			}
 
 			width += style.FontSize * metrics.Wx
+
+			// Do not add character spacing for the last character of the line.
+			if i != lenChunks-1 || j != lenRunes-1 {
+				width += style.CharSpacing * 1000.0
+			}
 		}
 	}
 
@@ -372,6 +389,8 @@ func (p *StyledParagraph) wrapText() error {
 			}
 
 			w := style.FontSize * metrics.Wx
+			charWidth := w + style.CharSpacing*1000.0
+
 			if lineWidth+w > p.wrapWidth*1000.0 {
 				// Goes out of bounds: Wrap.
 				// Breaks on the character.
@@ -392,16 +411,16 @@ func (p *StyledParagraph) wrapText() error {
 					part = part[idx+1:]
 					part = append(part, r)
 					widths = widths[idx+1:]
-					widths = append(widths, w)
+					widths = append(widths, charWidth)
 
 					lineWidth = 0
 					for _, width := range widths {
 						lineWidth += width
 					}
 				} else {
-					lineWidth = w
+					lineWidth = charWidth
 					part = []rune{r}
-					widths = []float64{w}
+					widths = []float64{charWidth}
 				}
 
 				line = append(line, &TextChunk{
@@ -412,9 +431,9 @@ func (p *StyledParagraph) wrapText() error {
 				p.lines = append(p.lines, line)
 				line = []*TextChunk{}
 			} else {
-				lineWidth += w
+				lineWidth += charWidth
 				part = append(part, r)
-				widths = append(widths, w)
+				widths = append(widths, charWidth)
 			}
 		}
 
@@ -591,7 +610,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			var chunkSpaces uint
 			var chunkWidth float64
-			for _, r := range chunk.Text {
+			lenChunk := len(chunk.Text)
+			for i, r := range chunk.Text {
 				if r == ' ' {
 					chunkSpaces++
 					continue
@@ -607,6 +627,11 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				}
 
 				chunkWidth += style.FontSize * metrics.Wx
+
+				// Do not add character spacing for the last character of the line.
+				if i != lenChunk-1 {
+					chunkWidth += style.CharSpacing * 1000.0
+				}
 			}
 
 			chunkWidths = append(chunkWidths, chunkWidth)
@@ -658,6 +683,9 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			// Set chunk rendering mode.
 			cc.Add_Tr(int64(style.RenderingMode))
+
+			// Set chunk character spacing.
+			cc.Add_Tc(style.CharSpacing)
 
 			if p.alignment != TextAlignmentJustify || isLastLine {
 				spaceMetrics, found := style.Font.GetRuneMetrics(' ')
@@ -750,6 +778,9 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			// Reset rendering mode.
 			cc.Add_Tr(int64(TextRenderingModeFill))
+
+			// Reset character spacing.
+			cc.Add_Tc(0)
 		}
 
 		currY -= height
