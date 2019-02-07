@@ -20,6 +20,9 @@ type TextStyle struct {
 	// The size of the font.
 	FontSize float64
 
+	// The character spacing.
+	CharSpacing float64
+
 	// The rendering mode.
 	RenderingMode TextRenderingMode
 }
