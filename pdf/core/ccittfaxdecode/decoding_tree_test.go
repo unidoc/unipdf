@@ -201,7 +201,7 @@ func TestSetBitToUint16(t *testing.T) {
 	}
 }
 
-/*func TestFindRunLen(t *testing.T) {
+func TestFindRunLen(t *testing.T) {
 	for runLen, code := range WTerms {
 		addNode(whiteTree, code, 0, runLen)
 	}
@@ -220,170 +220,481 @@ func TestSetBitToUint16(t *testing.T) {
 		Code   Code
 	}
 
-	tests := []struct {
-		Code uint16
-		Want testResult
-	}{
+	type testData struct {
+		Codes []uint16
+		Want  testResult
+	}
+
+	whiteTerminalTests := []testData{
 		{
-			Code: 13568,
+			Codes: formTestCodes(13568, 8),
 			Want: testResult{
 				RunLen: 0,
 				Code:   WTerms[0],
 			},
 		},
 		{
-			Code: 7168,
+			Codes: formTestCodes(7168, 6),
 			Want: testResult{
 				RunLen: 1,
 				Code:   WTerms[1],
 			},
 		},
 		{
-			Code: 28672,
+			Codes: formTestCodes(28672, 4),
 			Want: testResult{
 				RunLen: 2,
 				Code:   WTerms[2],
 			},
 		},
 		{
-			Code: 32768,
+			Codes: formTestCodes(32768, 4),
 			Want: testResult{
 				RunLen: 3,
 				Code:   WTerms[3],
 			},
 		},
 		{
-			Code: 45056,
+			Codes: formTestCodes(45056, 4),
 			Want: testResult{
 				RunLen: 4,
 				Code:   WTerms[4],
 			},
 		},
 		{
-			Code: 49152,
+			Codes: formTestCodes(49152, 4),
 			Want: testResult{
 				RunLen: 5,
 				Code:   WTerms[5],
 			},
 		},
 		{
-			Code: 57344,
+			Codes: formTestCodes(57344, 4),
 			Want: testResult{
 				RunLen: 6,
 				Code:   WTerms[6],
 			},
 		},
 		{
-			Code: 61440,
+			Codes: formTestCodes(61440, 4),
 			Want: testResult{
 				RunLen: 7,
 				Code:   WTerms[7],
 			},
 		},
 		{
-			Code: 38912,
+			Codes: formTestCodes(38912, 5),
 			Want: testResult{
 				RunLen: 8,
 				Code:   WTerms[8],
 			},
 		},
 		{
-			Code: 40960,
+			Codes: formTestCodes(40960, 5),
 			Want: testResult{
 				RunLen: 9,
 				Code:   WTerms[9],
 			},
 		},
 		{
-			Code: 14336,
+			Codes: formTestCodes(14336, 5),
 			Want: testResult{
 				RunLen: 10,
 				Code:   WTerms[10],
 			},
 		},
 		{
-			Code: 16384,
+			Codes: formTestCodes(16384, 5),
 			Want: testResult{
 				RunLen: 11,
 				Code:   WTerms[11],
 			},
 		},
 		{
-			Code: 8192,
+			Codes: formTestCodes(8192, 6),
 			Want: testResult{
 				RunLen: 12,
 				Code:   WTerms[12],
 			},
 		},
 		{
-			Code: 3072,
+			Codes: formTestCodes(3072, 6),
 			Want: testResult{
 				RunLen: 13,
 				Code:   WTerms[13],
 			},
 		},
 		{
-			Code: 53248,
+			Codes: formTestCodes(53248, 6),
 			Want: testResult{
 				RunLen: 14,
 				Code:   WTerms[14],
 			},
 		},
 		{
-			Code: 54272,
+			Codes: formTestCodes(54272, 6),
 			Want: testResult{
 				RunLen: 15,
 				Code:   WTerms[15],
 			},
 		},
 		{
-			Code: 43008,
+			Codes: formTestCodes(43008, 6),
 			Want: testResult{
 				RunLen: 16,
 				Code:   WTerms[16],
 			},
 		},
 		{
-			Code: 44032,
+			Codes: formTestCodes(44032, 6),
 			Want: testResult{
 				RunLen: 17,
 				Code:   WTerms[17],
 			},
 		},
 		{
-			Code: 19968,
+			Codes: formTestCodes(19968, 7),
 			Want: testResult{
 				RunLen: 18,
 				Code:   WTerms[18],
 			},
 		},
 		{
-			Code: 6144,
+			Codes: formTestCodes(6144, 7),
 			Want: testResult{
 				RunLen: 19,
 				Code:   WTerms[19],
 			},
 		},
 		{
-			Code: 4096,
+			Codes: formTestCodes(4096, 7),
 			Want: testResult{
 				RunLen: 20,
 				Code:   WTerms[20],
 			},
 		},
 		{
-			Code: 11776,
+			Codes: formTestCodes(11776, 7),
 			Want: testResult{
 				RunLen: 21,
 				Code:   WTerms[21],
 			},
 		},
 		{
-			Code: 1536,
+			Codes: formTestCodes(1536, 7),
 			Want: testResult{
 				RunLen: 22,
 				Code:   WTerms[22],
 			},
 		},
+		{
+			Codes: formTestCodes(2048, 7),
+			Want: testResult{
+				RunLen: 23,
+				Code:   WTerms[23],
+			},
+		},
+		{
+			Codes: formTestCodes(20480, 7),
+			Want: testResult{
+				RunLen: 24,
+				Code:   WTerms[24],
+			},
+		},
+		{
+			Codes: formTestCodes(22016, 7),
+			Want: testResult{
+				RunLen: 25,
+				Code:   WTerms[25],
+			},
+		},
+		{
+			Codes: formTestCodes(9728, 7),
+			Want: testResult{
+				RunLen: 26,
+				Code:   WTerms[26],
+			},
+		},
+		{
+			Codes: formTestCodes(18432, 7),
+			Want: testResult{
+				RunLen: 27,
+				Code:   WTerms[27],
+			},
+		},
+		{
+			Codes: formTestCodes(12288, 7),
+			Want: testResult{
+				RunLen: 28,
+				Code:   WTerms[28],
+			},
+		},
+		{
+			Codes: formTestCodes(512, 8),
+			Want: testResult{
+				RunLen: 29,
+				Code:   WTerms[29],
+			},
+		},
+		{
+			Codes: formTestCodes(768, 8),
+			Want: testResult{
+				RunLen: 30,
+				Code:   WTerms[30],
+			},
+		},
+		{
+			Codes: formTestCodes(6656, 8),
+			Want: testResult{
+				RunLen: 31,
+				Code:   WTerms[31],
+			},
+		},
+		{
+			Codes: formTestCodes(6912, 8),
+			Want: testResult{
+				RunLen: 32,
+				Code:   WTerms[32],
+			},
+		},
+		{
+			Codes: formTestCodes(4608, 8),
+			Want: testResult{
+				RunLen: 33,
+				Code:   WTerms[33],
+			},
+		},
+		{
+			Codes: formTestCodes(4864, 8),
+			Want: testResult{
+				RunLen: 34,
+				Code:   WTerms[34],
+			},
+		},
+		{
+			Codes: formTestCodes(5120, 8),
+			Want: testResult{
+				RunLen: 35,
+				Code:   WTerms[35],
+			},
+		},
+		{
+			Codes: formTestCodes(5376, 8),
+			Want: testResult{
+				RunLen: 36,
+				Code:   WTerms[36],
+			},
+		},
+		{
+			Codes: formTestCodes(5632, 8),
+			Want: testResult{
+				RunLen: 37,
+				Code:   WTerms[37],
+			},
+		},
+		{
+			Codes: formTestCodes(5888, 8),
+			Want: testResult{
+				RunLen: 38,
+				Code:   WTerms[38],
+			},
+		},
+		{
+			Codes: formTestCodes(10240, 8),
+			Want: testResult{
+				RunLen: 39,
+				Code:   WTerms[39],
+			},
+		},
+		{
+			Codes: formTestCodes(10496, 8),
+			Want: testResult{
+				RunLen: 40,
+				Code:   WTerms[40],
+			},
+		},
+		{
+			Codes: formTestCodes(10752, 8),
+			Want: testResult{
+				RunLen: 41,
+				Code:   WTerms[41],
+			},
+		},
+		{
+			Codes: formTestCodes(11008, 8),
+			Want: testResult{
+				RunLen: 42,
+				Code:   WTerms[42],
+			},
+		},
+		{
+			Codes: formTestCodes(11264, 8),
+			Want: testResult{
+				RunLen: 43,
+				Code:   WTerms[43],
+			},
+		},
+		{
+			Codes: formTestCodes(11520, 8),
+			Want: testResult{
+				RunLen: 44,
+				Code:   WTerms[44],
+			},
+		},
+		{
+			Codes: formTestCodes(1024, 8),
+			Want: testResult{
+				RunLen: 45,
+				Code:   WTerms[45],
+			},
+		},
+		{
+			Codes: formTestCodes(1280, 8),
+			Want: testResult{
+				RunLen: 46,
+				Code:   WTerms[46],
+			},
+		},
+		{
+			Codes: formTestCodes(2560, 8),
+			Want: testResult{
+				RunLen: 47,
+				Code:   WTerms[47],
+			},
+		},
+		{
+			Codes: formTestCodes(2816, 8),
+			Want: testResult{
+				RunLen: 48,
+				Code:   WTerms[48],
+			},
+		},
+		{
+			Codes: formTestCodes(20992, 8),
+			Want: testResult{
+				RunLen: 49,
+				Code:   WTerms[49],
+			},
+		},
+		{
+			Codes: formTestCodes(21248, 8),
+			Want: testResult{
+				RunLen: 50,
+				Code:   WTerms[50],
+			},
+		},
+		{
+			Codes: formTestCodes(21504, 8),
+			Want: testResult{
+				RunLen: 51,
+				Code:   WTerms[51],
+			},
+		},
+		{
+			Codes: formTestCodes(21760, 8),
+			Want: testResult{
+				RunLen: 52,
+				Code:   WTerms[52],
+			},
+		},
+		{
+			Codes: formTestCodes(9216, 8),
+			Want: testResult{
+				RunLen: 53,
+				Code:   WTerms[53],
+			},
+		},
+		{
+			Codes: formTestCodes(9472, 8),
+			Want: testResult{
+				RunLen: 54,
+				Code:   WTerms[54],
+			},
+		},
+		{
+			Codes: formTestCodes(22528, 8),
+			Want: testResult{
+				RunLen: 55,
+				Code:   WTerms[55],
+			},
+		},
+		{
+			Codes: formTestCodes(22784, 8),
+			Want: testResult{
+				RunLen: 56,
+				Code:   WTerms[56],
+			},
+		},
+		{
+			Codes: formTestCodes(23040, 8),
+			Want: testResult{
+				RunLen: 57,
+				Code:   WTerms[57],
+			},
+		},
+		{
+			Codes: formTestCodes(23296, 8),
+			Want: testResult{
+				RunLen: 58,
+				Code:   WTerms[58],
+			},
+		},
+		{
+			Codes: formTestCodes(18944, 8),
+			Want: testResult{
+				RunLen: 59,
+				Code:   WTerms[59],
+			},
+		},
+		{
+			Codes: formTestCodes(19200, 8),
+			Want: testResult{
+				RunLen: 60,
+				Code:   WTerms[60],
+			},
+		},
+		{
+			Codes: formTestCodes(12800, 8),
+			Want: testResult{
+				RunLen: 61,
+				Code:   WTerms[61],
+			},
+		},
+		{
+			Codes: formTestCodes(13056, 8),
+			Want: testResult{
+				RunLen: 62,
+				Code:   WTerms[62],
+			},
+		},
+		{
+			Codes: formTestCodes(13312, 8),
+			Want: testResult{
+				RunLen: 63,
+				Code:   WTerms[63],
+			},
+		},
 	}
-}*/
+
+	for _, test := range whiteTerminalTests {
+		for _, code := range test.Codes {
+			gotRunLenPtr, gotCodePtr := findRunLen(whiteTree, code, 0)
+
+			if gotRunLenPtr == nil {
+				t.Errorf("Got nil value for run len for code %v\n", code)
+			} else if gotCodePtr == nil {
+				t.Errorf("Got nil value for code for code: %v\n", code)
+			} else {
+				if *gotRunLenPtr != test.Want.RunLen {
+					t.Errorf("Wrong run len for code: %v. Got %v, want %v\n",
+						code, *gotRunLenPtr, test.Want.RunLen)
+				}
+
+				if *gotCodePtr != test.Want.Code {
+					t.Errorf("Wrong code for code: %v. Got %v, want %v\n",
+						code, *gotCodePtr, test.Want.Code)
+				}
+			}
+		}
+	}
+}
