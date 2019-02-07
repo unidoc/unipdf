@@ -16,8 +16,8 @@ func init() {
 	common.SetLogger(common.ConsoleLogger{})
 }
 
-// Test flate encoding.
-func TestFlateEncoding(t *testing.T) {
+// Test flate encoding - Predictor 1.
+func TestFlateEncodingPredictor1(t *testing.T) {
 	rawStream := []byte("this is a dummy text with some \x01\x02\x03 binary data")
 
 	encoder := NewFlateEncoder()
@@ -40,6 +40,128 @@ func TestFlateEncoding(t *testing.T) {
 		t.Errorf("Decoded (%d): % x", len(encoded), encoded)
 		t.Errorf("Raw     (%d): % x", len(rawStream), rawStream)
 		return
+	}
+}
+
+// Test post decoding predictors.
+func TestPostDecodingPredictors(t *testing.T) {
+
+	testcases := []struct {
+		BitsPerComponent int
+		Colors           int
+		Columns          int
+		Predictor        int
+		Input            []byte
+		Expected         []byte
+	}{
+		// BPC=8, Colors=3, PNG predictor = none.
+		{
+			BitsPerComponent: 8,
+			Colors:           3,
+			Columns:          3,
+			Predictor:        15,
+			Input: []byte{
+				pfNone, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 1.
+				pfNone, 3, 2, 1, 3, 2, 1, 3, 2, 1, // Row 2.
+				pfNone, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 3.
+			},
+			Expected: []byte{
+				1, 2, 3, 1, 2, 3, 1, 2, 3,
+				3, 2, 1, 3, 2, 1, 3, 2, 1,
+				1, 2, 3, 1, 2, 3, 1, 2, 3,
+			},
+		},
+		// BPC=8, Colors=3, PNG predictor = sub (same as left).
+		{
+			BitsPerComponent: 8,
+			Colors:           3,
+			Columns:          3,
+			Predictor:        15,
+			Input: []byte{
+				pfSub, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 1.
+				pfSub, 3, 2, 1, 3, 2, 1, 3, 2, 1, // Row 2.
+				pfSub, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 3.
+			},
+			Expected: []byte{
+				1, 2, 3, 1 + 1, 2 + 2, 3 + 3, 1 + 1 + 1, 2 + 2 + 2, 3 + 3 + 3,
+				3, 2, 1, 3 + 3, 2 + 2, 1 + 1, 3 + 3 + 3, 2 + 2 + 2, 1 + 1 + 1,
+				1, 2, 3, 1 + 1, 2 + 2, 3 + 3, 1 + 1 + 1, 2 + 2 + 2, 3 + 3 + 3,
+			},
+		},
+		// BPC=8, Colors=3, PNG predictor = up (same as above).
+		{
+			BitsPerComponent: 8,
+			Colors:           3,
+			Columns:          3,
+			Predictor:        15,
+			Input: []byte{
+				pfUp, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 1.
+				pfUp, 3, 2, 1, 3, 2, 1, 3, 2, 1, // Row 2.
+				pfUp, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 3.
+			},
+			Expected: []byte{
+				1, 2, 3, 1, 2, 3, 1, 2, 3,
+				3 + 1, 2 + 2, 1 + 3, 3 + 1, 2 + 2, 1 + 3, 3 + 1, 2 + 2, 1 + 3,
+				1 + 3 + 1, 2 + 2 + 2, 3 + 1 + 3, 1 + 3 + 1, 2 + 2 + 2, 3 + 1 + 3, 1 + 3 + 1, 2 + 2 + 2, 3 + 1 + 3,
+			},
+		},
+		// BPC=8, Colors=3, PNG predictor = avg (average of left and above).
+		// Use a spreadsheet to get expected values.
+		{
+			BitsPerComponent: 8,
+			Colors:           3,
+			Columns:          3,
+			Predictor:        15,
+			Input: []byte{
+				pfAvg, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 1.
+				pfAvg, 3, 2, 1, 3, 2, 1, 3, 2, 1, // Row 2.
+				pfAvg, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 3.
+			},
+			Expected: []byte{
+				1, 2, 3, 1, 3, 4, 1, 3, 5,
+				3, 3, 2, 5, 5, 4, 6, 6, 5,
+				2, 3, 4, 4, 6, 7, 6, 8, 9,
+			},
+		},
+		// BPC=8, Colors=3, PNG predictor = Paeth.
+		// Use a spreadsheet to get expected values.
+		{
+			BitsPerComponent: 8,
+			Colors:           3,
+			Columns:          3,
+			Predictor:        15,
+			Input: []byte{
+				pfPaeth, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 1.
+				pfPaeth, 3, 2, 1, 3, 2, 1, 3, 2, 1, // Row 2.
+				pfPaeth, 1, 2, 3, 1, 2, 3, 1, 2, 3, // Row 3.
+			},
+			Expected: []byte{
+				1, 2, 3, 2, 4, 6, 3, 6, 9,
+				4, 4, 4, 7, 6, 7, 10, 8, 10,
+				5, 6, 7, 8, 8, 10, 11, 10, 13,
+			},
+		},
+	}
+
+	for i, tcase := range testcases {
+		encoder := &FlateEncoder{
+			BitsPerComponent: tcase.BitsPerComponent,
+			Colors:           tcase.Colors,
+			Columns:          tcase.Columns,
+			Predictor:        tcase.Predictor,
+		}
+
+		predicted, err := encoder.postDecodePredict(tcase.Input)
+		if err != nil {
+			t.Fatalf("Error: %v", err)
+		}
+
+		t.Logf("%d: % d\n", i, predicted)
+		if !compareSlices(predicted, tcase.Expected) {
+			t.Errorf("Slices not matching (i = %d)", i)
+			t.Errorf("Predicted (%d): % d", len(predicted), predicted)
+			t.Fatalf("Expected  (%d): % d", len(tcase.Expected), tcase.Expected)
+		}
 	}
 }
 

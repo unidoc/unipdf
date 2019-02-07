@@ -436,3 +436,239 @@ Sed imperdiet sodales lacus sed sollicitudin. In porta tortor quis augue tempor,
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestStyledParagraphRenderingModes(t *testing.T) {
+	fontRegular := newStandard14Font(t, fonts.HelveticaName)
+
+	c := New()
+	c.NewPage()
+
+	// Showcase rendering modes.
+	tmodes := []TextRenderingMode{
+		TextRenderingModeFill,
+		TextRenderingModeStroke,
+		TextRenderingModeFillStroke,
+		TextRenderingModeInvisible,
+		TextRenderingModeFillClip,
+		TextRenderingModeStrokeClip,
+		TextRenderingModeFillStrokeClip,
+		TextRenderingModeClip,
+	}
+
+	tmodesDesc := []string{
+		"- Text rendering mode fill: ",
+		"- Text rendering mode stroke: ",
+		"- Text rendering mode fill and stroke: ",
+		"- Text rendering mode invisible: ",
+		"- Text rendering mode fill and clip: ",
+		"- Text rendering mode stroke and clip: ",
+		"- Text rendering mode fill, stroke and clip: ",
+		"- Text rendering mode clip: ",
+	}
+
+	p := c.NewStyledParagraph()
+	p.SetLineHeight(1.5)
+
+	for i, tmode := range tmodes {
+		chunk := p.Append(tmodesDesc[i])
+		chunk.Style.Font = fontRegular
+		chunk.Style.FontSize = 12
+
+		chunk = p.Append("This is some sample text\n")
+		chunk.Style.RenderingMode = tmode
+		chunk.Style.Font = fontRegular
+		chunk.Style.FontSize = 22
+	}
+
+	err := c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Invisible, manually positioned paragraph.
+	p = c.NewStyledParagraph()
+	p.SetPos(150, 500)
+	chunk := p.Append("Invisible text >>> ")
+	chunk.Style.Font = fontRegular
+	chunk.Style.FontSize = 12
+
+	chunk = p.Append("Some invisible text manually positioned")
+	chunk.Style.Font = fontRegular
+	chunk.Style.FontSize = 15
+	chunk.Style.RenderingMode = TextRenderingModeInvisible
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Write output file.
+	err = c.WriteToFile(tempFile("styled_paragraph_rendering_mode.pdf"))
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}
+
+func TestStyledParagraphCharacterSpacing(t *testing.T) {
+	fontRegular := newStandard14Font(t, fonts.HelveticaName)
+	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+
+	c := New()
+	c.NewPage()
+
+	// Draw section title.
+	s := c.NewStyledParagraph()
+	chunk := s.Append("Text align: left (regular vs character spacing)")
+	chunk.Style.Font = fontBold
+
+	err := c.Draw(s)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text align left - regular.
+	p := c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 0)
+	p.SetTextAlignment(TextAlignmentLeft)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text align left - character spacing.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 50)
+	p.SetTextAlignment(TextAlignmentLeft)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+	chunk.Style.CharSpacing = 0.75
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Draw section title.
+	s = c.NewStyledParagraph()
+	chunk = s.Append("Text align: center (regular vs character spacing)")
+	chunk.Style.Font = fontBold
+
+	err = c.Draw(s)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment center - regular.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 0)
+	p.SetTextAlignment(TextAlignmentCenter)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment center - character spacing.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 50)
+	p.SetTextAlignment(TextAlignmentCenter)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+	chunk.Style.CharSpacing = 1
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	c.NewPage()
+
+	// Draw section title.
+	s = c.NewStyledParagraph()
+	chunk = s.Append("Text align: right (regular vs character spacing)")
+	chunk.Style.Font = fontBold
+
+	err = c.Draw(s)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment right - regular.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 0)
+	p.SetTextAlignment(TextAlignmentRight)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment right - character spacing.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 50)
+	p.SetTextAlignment(TextAlignmentRight)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+	chunk.Style.CharSpacing = 1
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Draw section title.
+	s = c.NewStyledParagraph()
+	chunk = s.Append("Text align: justify (regular vs character spacing)")
+	chunk.Style.Font = fontBold
+
+	err = c.Draw(s)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment justify - regular.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 0)
+	p.SetTextAlignment(TextAlignmentJustify)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Text alignment justify - character spacing.
+	p = c.NewStyledParagraph()
+	p.SetMargins(0, 0, 20, 0)
+	p.SetTextAlignment(TextAlignmentJustify)
+
+	chunk = p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed enim ut sem viverra aliquet eget sit amet. Sed viverra ipsum nunc aliquet bibendum enim facilisis. Consectetur libero id faucibus nisl. Cras adipiscing enim eu turpis egestas pretium aenean pharetra. Viverra suspendisse potenti nullam ac tortor vitae purus. Ultrices in iaculis nunc sed augue lacus viverra. Sed pulvinar proin gravida hendrerit lectus. Tempus quam pellentesque nec nam aliquam sem et tortor consequat. Magna ac placerat vestibulum lectus mauris ultrices eros in. Non diam phasellus vestibulum lorem. Lorem donec massa sapien faucibus et molestie ac. Est placerat in egestas erat. Massa id neque aliquam vestibulum morbi blandit cursus.")
+	chunk.Style.Font = fontRegular
+	chunk.Style.CharSpacing = 0.75
+
+	err = c.Draw(p)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Write output file.
+	err = c.WriteToFile(tempFile("styled_paragraph_character_spacing.pdf"))
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}

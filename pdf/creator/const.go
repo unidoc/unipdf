@@ -41,6 +41,39 @@ const (
 	TextAlignmentJustify
 )
 
+// TextRenderingMode determines whether showing text shall cause glyph
+// outlines to be stroked, filled, used as a clipping boundary, or some
+// combination of the three.
+// See section 9.3 "Text State Parameters and Operators" and
+// Table 106 (pp. 254-255 PDF32000_2008).
+type TextRenderingMode int
+
+const (
+	// TextRenderingModeFill (default) - Fill text.
+	TextRenderingModeFill TextRenderingMode = iota
+
+	// TextRenderingModeStroke - Stroke text.
+	TextRenderingModeStroke
+
+	// TextRenderingModeFillStroke - Fill, then stroke text.
+	TextRenderingModeFillStroke
+
+	// TextRenderingModeInvisible - Neither fill nor stroke text (invisible).
+	TextRenderingModeInvisible
+
+	// TextRenderingModeFillClip - Fill text and add to path for clipping.
+	TextRenderingModeFillClip
+
+	// TextRenderingModeStrokeClip - Stroke text and add to path for clipping.
+	TextRenderingModeStrokeClip
+
+	// TextRenderingModeFillStrokeClip - Fill, then stroke text and add to path for clipping.
+	TextRenderingModeFillStrokeClip
+
+	// TextRenderingModeClip - Add text to path for clipping.
+	TextRenderingModeClip
+)
+
 // Relative and absolute positioning types.
 type positioning int
 
