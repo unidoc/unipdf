@@ -89,14 +89,25 @@ var xObjectImages = 0
 var inlineImages = 0
 
 func main() {
-	// save images to pdf
-	if err := imagesToPdf([]string{"/home/darkrengarius/Downloads/scan223.png"}, "/home/darkrengarius/Downloads/testCombined2232.pdf"); err != nil {
-		log.Fatalf("Error writing images to pdf: %v\n", err)
+	/*var files []string
+
+	err := filepath.Walk("/home/darkrengarius/Downloads/4111112", func(path string, info os.FileInfo, err error) error {
+		if filepath.Ext(path) == ".png" {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("Error scanning directory: %v\n", err)
 	}
 
+	if err := imagesToPdf(files, "/home/darkrengarius/Downloads/testCombined4111112.pdf"); err != nil {
+		log.Fatalf("Error writing images to pdf: %v\n", err)
+	}*/
+
 	// extract images from pdf to zip
-	inputPath := "/home/darkrengarius/Downloads/testCombined2232.pdf"
-	outputPath := "/home/darkrengarius/Downloads/testCombined2232.zip"
+	inputPath := "/home/darkrengarius/Downloads/testCombined000141.pdf"
+	outputPath := "/home/darkrengarius/Downloads/testCombined000141.zip"
 
 	fmt.Printf("Input file: %s\n", inputPath)
 	err := extractImagesToArchive(inputPath, outputPath)
@@ -216,8 +227,7 @@ func imagesToPdf(inputPaths []string, outputPath string) error {
 		encoder.EndOfBlock = true
 		encoder.EndOfLine = true
 		encoder.EncodedByteAlign = true
-		encoder.BlackIs1 = true
-		encoder.K = 4
+		encoder.K = -1
 		img.SetEncoder(encoder)
 
 		img.SetPos(0, 0)

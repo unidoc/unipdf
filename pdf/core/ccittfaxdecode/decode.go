@@ -479,6 +479,8 @@ func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 			if i > 1 {
 				return false, startingBitPos, errors.New("RTC code is corrupted")
 			} else {
+				bitPos = startingBitPos
+
 				break
 			}
 		}
