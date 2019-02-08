@@ -2,13 +2,13 @@ package ccittfaxdecode
 
 import (
 	"errors"
-	"image"
-	"image/png"
 	"log"
-	"os"
 )
 
 var (
+	ErrEOFBCorrupt = errors.New("EOFB code is corrupted")
+	ErrRTCCorrupt  = errors.New("RTC code is corrupted")
+
 	whiteTree = &decodingTreeNode{
 		Val: 255,
 	}
@@ -124,38 +124,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 		}
 	}
 
-	//saveToImage(pixels, "/home/darkrengarius/Downloads/yeatAnotherTest.png")
-
 	return pixels, nil
-}
-
-func saveToImage(pixels [][]byte, path string) error {
-	img := image.NewRGBA(image.Rect(0, 0, len(pixels[0]), len(pixels)))
-
-	imgPix := 0
-	for i := range pixels {
-		for j := range pixels[i] {
-			img.Pix[imgPix] = 255 * pixels[i][j]
-			img.Pix[imgPix+1] = 255 * pixels[i][j]
-			img.Pix[imgPix+2] = 255 * pixels[i][j]
-			img.Pix[imgPix+3] = 255
-
-			imgPix += 4
-		}
-	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = png.Encode(f, img)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (e *Encoder) decodeG32D(encoded []byte) ([][]byte, error) {
@@ -477,7 +446,7 @@ func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 
 		if !gotEOL {
 			if i > 1 {
-				return false, startingBitPos, errors.New("RTC code is corrupted")
+				return false, startingBitPos, ErrRTCCorrupt
 			} else {
 				bitPos = startingBitPos
 
@@ -501,7 +470,7 @@ func tryFetchEOFB(encoded []byte, bitPos int) (bool, int, error) {
 		if gotEOL {
 			return true, bitPos, nil
 		} else {
-			return false, startingBitPos, errors.New("EOFB code is corrupted")
+			return false, startingBitPos, ErrEOFBCorrupt
 		}
 	}
 
@@ -656,6 +625,10 @@ func (e *Encoder) decodeRow1D(encoded []byte, bitPos int) ([]byte, int) {
 }
 
 func drawPixels(row []byte, isWhite bool, length int) []byte {
+	if length < 0 {
+		return row
+	}
+
 	runLenPixels := make([]byte, length)
 	if isWhite {
 		for i := 0; i < len(runLenPixels); i++ {

@@ -223,6 +223,16 @@ func TestFindRunLen(t *testing.T) {
 		addNode(blackTree, code, 0, runLen)
 	}
 
+	addNode(twoDimTree, P, 0, 0)
+	addNode(twoDimTree, H, 0, 0)
+	addNode(twoDimTree, V0, 0, 0)
+	addNode(twoDimTree, V1R, 0, 0)
+	addNode(twoDimTree, V2R, 0, 0)
+	addNode(twoDimTree, V3R, 0, 0)
+	addNode(twoDimTree, V1L, 0, 0)
+	addNode(twoDimTree, V2L, 0, 0)
+	addNode(twoDimTree, V3L, 0, 0)
+
 	type testResult struct {
 		RunLen      int
 		Code        uint16
@@ -1904,6 +1914,84 @@ func TestFindRunLen(t *testing.T) {
 		},
 	}
 
+	twoDimTests := []struct {
+		Codes []uint16
+		Want  testResult
+	}{
+		{
+			Codes: formTestCodes(4096, 4),
+			Want: testResult{
+				RunLen:      0,
+				Code:        4096,
+				BitsWritten: 4,
+			},
+		},
+		{
+			Codes: formTestCodes(8192, 3),
+			Want: testResult{
+				RunLen:      0,
+				Code:        8192,
+				BitsWritten: 3,
+			},
+		},
+		{
+			Codes: formTestCodes(32768, 1),
+			Want: testResult{
+				RunLen:      0,
+				Code:        32768,
+				BitsWritten: 1,
+			},
+		},
+		{
+			Codes: formTestCodes(24576, 3),
+			Want: testResult{
+				RunLen:      0,
+				Code:        24576,
+				BitsWritten: 3,
+			},
+		},
+		{
+			Codes: formTestCodes(3072, 6),
+			Want: testResult{
+				RunLen:      0,
+				Code:        3072,
+				BitsWritten: 6,
+			},
+		},
+		{
+			Codes: formTestCodes(1536, 7),
+			Want: testResult{
+				RunLen:      0,
+				Code:        1536,
+				BitsWritten: 7,
+			},
+		},
+		{
+			Codes: formTestCodes(16384, 3),
+			Want: testResult{
+				RunLen:      0,
+				Code:        16384,
+				BitsWritten: 3,
+			},
+		},
+		{
+			Codes: formTestCodes(2048, 6),
+			Want: testResult{
+				RunLen:      0,
+				Code:        2048,
+				BitsWritten: 6,
+			},
+		},
+		{
+			Codes: formTestCodes(1024, 7),
+			Want: testResult{
+				RunLen:      0,
+				Code:        1024,
+				BitsWritten: 7,
+			},
+		},
+	}
+
 	for _, test := range whiteTests {
 		for _, code := range test.Codes {
 			gotRunLenPtr, gotCodePtr := findRunLen(whiteTree, code, 0)
@@ -1934,6 +2022,33 @@ func TestFindRunLen(t *testing.T) {
 	for _, test := range blackTests {
 		for _, code := range test.Codes {
 			gotRunLenPtr, gotCodePtr := findRunLen(blackTree, code, 0)
+
+			if gotRunLenPtr == nil {
+				t.Errorf("Got nil value for run len for code %v\n", code)
+			} else if gotCodePtr == nil {
+				t.Errorf("Got nil value for code for code: %v\n", code)
+			} else {
+				if *gotRunLenPtr != test.Want.RunLen {
+					t.Errorf("Wrong run len for code: %v. Got %v, want %v\n",
+						code, *gotRunLenPtr, test.Want.RunLen)
+				}
+
+				if gotCodePtr.Code != test.Want.Code {
+					t.Errorf("Wrong code for code: %v. Got %v, want %v\n",
+						code, *gotCodePtr, test.Want.Code)
+				}
+
+				if gotCodePtr.BitsWritten != test.Want.BitsWritten {
+					t.Errorf("Wrong bits written for code: %v. Got %v, want %v\n",
+						code, gotCodePtr.BitsWritten, test.Want.BitsWritten)
+				}
+			}
+		}
+	}
+
+	for _, test := range twoDimTests {
+		for _, code := range test.Codes {
+			gotRunLenPtr, gotCodePtr := findRunLen(twoDimTree, code, 0)
 
 			if gotRunLenPtr == nil {
 				t.Errorf("Got nil value for run len for code %v\n", code)
