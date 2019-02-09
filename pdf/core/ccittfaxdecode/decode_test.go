@@ -1,23 +1,258 @@
 package ccittfaxdecode
 
-import "testing"
+import (
+	"log"
+	"testing"
+)
 
-/*func TestDecodeRow1D(t *testing.T) {
+func TestDecodeRow1D(t *testing.T) {
 	type testResult struct {
 		PixelsRow []byte
 		BitPos    int
 	}
 
-	tests := []struct {
+	type testData struct {
 		Encoder *Encoder
 		Encoded []byte
 		BitPos  int
-	}{
+		Want    testResult
+	}
+
+	tests := []testData{
 		{
-			Encoder: &Encoder{}
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{160, 199},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 16,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{40, 49, 192},
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 18,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{40, 49, 192, 0},
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 18,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{160, 199, 0},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 16,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{160, 199, 7},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 16,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 17,
+			},
+			Encoded: []byte{40, 49, 193, 192},
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white},
+				BitPos: 18,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 31,
+			},
+			Encoded: []byte{40, 49, 193, 192},
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white, black, black, black,
+					black, black, black, black, black, black, black, black, black, black, black},
+				BitPos: 26,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 31,
+			},
+			Encoded: []byte{160, 199, 7},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white, black, black, black,
+					black, black, black, black, black, black, black, black, black, black, black},
+				BitPos: 24,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 31,
+			},
+			Encoded: []byte{160, 199, 7, 0},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white,
+					black, black, black, black, black, black, black, white, black, black, black,
+					black, black, black, black, black, black, black, black, black, black, black},
+				BitPos: 24,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 40,
+			},
+			Encoded: []byte{},
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 40,
+			},
+			Encoded: []byte{},
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 40,
+			},
+			Encoded: nil,
+			BitPos:  0,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				Columns: 40,
+			},
+			Encoded: nil,
+			BitPos:  2,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+			},
+		},
+	}
+
+	resultsPixels := drawPixels(nil, true, 0)
+	resultsPixels = drawPixels(resultsPixels, false, 2486)
+	resultsPixels = drawPixels(resultsPixels, true, 6338)
+	resultsPixels = drawPixels(resultsPixels, false, 1)
+
+	tests = append(tests, testData{
+		Encoder: &Encoder{
+			Columns: 8825,
+		},
+		Encoded: []byte{53, 1, 208, 56, 1, 240, 31, 108, 58},
+		BitPos:  0,
+		Want: testResult{
+			PixelsRow: resultsPixels,
+			BitPos:    72,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoder: &Encoder{
+			Columns: 8825,
+		},
+		Encoded: []byte{53, 1, 208, 56, 1, 240, 31, 108, 58, 0},
+		BitPos:  0,
+		Want: testResult{
+			PixelsRow: resultsPixels,
+			BitPos:    72,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoder: &Encoder{
+			Columns: 8825,
+		},
+		Encoded: []byte{13, 64, 116, 14, 0, 124, 7, 219, 14, 128},
+		BitPos:  2,
+		Want: testResult{
+			PixelsRow: resultsPixels,
+			BitPos:    74,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoder: &Encoder{
+			Columns: 8825,
+		},
+		Encoded: []byte{13, 64, 116, 14, 0, 124, 7, 219, 14, 128, 0},
+		BitPos:  2,
+		Want: testResult{
+			PixelsRow: resultsPixels,
+			BitPos:    74,
+		},
+	})
+
+	for i, test := range tests {
+		gotPixelsRow, gotBitPos := test.Encoder.decodeRow1D(test.Encoded, test.BitPos)
+
+		if i == 6 {
+			log.Println()
+		}
+
+		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
+			t.Errorf("Wrong pixels row len. Got %v, want %v\n",
+				len(gotPixelsRow), len(test.Want.PixelsRow))
+		} else {
+			for i := range gotPixelsRow {
+				if gotPixelsRow[i] != test.Want.PixelsRow[i] {
+					t.Errorf("Wrong value at %v. Got %v, want %v\n",
+						i, gotPixelsRow[i], test.Want.PixelsRow[i])
+				}
+			}
+		}
+
+		if gotBitPos != test.Want.BitPos {
+			t.Errorf("Wrong bit pos. Got %v, want %v\n", gotBitPos, test.Want.BitPos)
 		}
 	}
-}*/
+}
 
 func TestTryFetchEOFB(t *testing.T) {
 	type testResult struct {
