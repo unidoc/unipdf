@@ -16,7 +16,7 @@ import (
 	"math"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/sampling"
 )
 
@@ -134,7 +134,7 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 func (img *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
-	var imgout DrawableImage
+	var imgout core.DrawableImage
 
 	if img.ColorComponents == 1 {
 		if img.BitsPerComponent == 16 {

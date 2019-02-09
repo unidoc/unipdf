@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 func init() {
@@ -48,7 +48,7 @@ endobj
 	 * z = sin(y * 360)/2 + sin(x * 360)/2
 	 */
 
-	parser := NewParserFromString(rawText)
+	parser := core.NewParserFromString(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -56,7 +56,7 @@ endobj
 		return
 	}
 
-	stream, ok := obj.(*PdfObjectStream)
+	stream, ok := obj.(*core.PdfObjectStream)
 	if !ok {
 		t.Errorf("Invalid object type (%q)", obj)
 		return

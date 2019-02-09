@@ -19,12 +19,12 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // PdfPage represents a page in a PDF document. (7.7.3.3 - Table 30).
 type PdfPage struct {
-	Parent               PdfObject
+	Parent               core.PdfObject
 	LastModified         *PdfDate
 	Resources            *PdfPageResources
 	CropBox              *PdfRectangle
@@ -32,46 +32,46 @@ type PdfPage struct {
 	BleedBox             *PdfRectangle
 	TrimBox              *PdfRectangle
 	ArtBox               *PdfRectangle
-	BoxColorInfo         PdfObject
-	Contents             PdfObject
+	BoxColorInfo         core.PdfObject
+	Contents             core.PdfObject
 	Rotate               *int64
-	Group                PdfObject
-	Thumb                PdfObject
-	B                    PdfObject
-	Dur                  PdfObject
-	Trans                PdfObject
-	AA                   PdfObject
-	Metadata             PdfObject
-	PieceInfo            PdfObject
-	StructParents        PdfObject
-	ID                   PdfObject
-	PZ                   PdfObject
-	SeparationInfo       PdfObject
-	Tabs                 PdfObject
-	TemplateInstantiated PdfObject
-	PresSteps            PdfObject
-	UserUnit             PdfObject
-	VP                   PdfObject
+	Group                core.PdfObject
+	Thumb                core.PdfObject
+	B                    core.PdfObject
+	Dur                  core.PdfObject
+	Trans                core.PdfObject
+	AA                   core.PdfObject
+	Metadata             core.PdfObject
+	PieceInfo            core.PdfObject
+	StructParents        core.PdfObject
+	ID                   core.PdfObject
+	PZ                   core.PdfObject
+	SeparationInfo       core.PdfObject
+	Tabs                 core.PdfObject
+	TemplateInstantiated core.PdfObject
+	PresSteps            core.PdfObject
+	UserUnit             core.PdfObject
+	VP                   core.PdfObject
 
 	Annotations []*PdfAnnotation
 
 	// Primitive container.
-	pageDict  *PdfObjectDictionary
-	primitive *PdfIndirectObject
+	pageDict  *core.PdfObjectDictionary
+	primitive *core.PdfIndirectObject
 }
 
 func NewPdfPage() *PdfPage {
 	page := PdfPage{}
-	page.pageDict = MakeDict()
+	page.pageDict = core.MakeDict()
 
-	container := PdfIndirectObject{}
+	container := core.PdfIndirectObject{}
 	container.PdfObject = page.pageDict
 	page.primitive = &container
 
 	return &page
 }
 
-func (p *PdfPage) setContainer(container *PdfIndirectObject) {
+func (p *PdfPage) setContainer(container *core.PdfIndirectObject) {
 	container.PdfObject = p.pageDict
 	p.primitive = container
 }
@@ -79,8 +79,8 @@ func (p *PdfPage) setContainer(container *PdfIndirectObject) {
 func (p *PdfPage) Duplicate() *PdfPage {
 	var dup PdfPage
 	dup = *p
-	dup.pageDict = MakeDict()
-	dup.primitive = MakeIndirectObject(dup.pageDict)
+	dup.pageDict = core.MakeDict()
+	dup.primitive = core.MakeIndirectObject(dup.pageDict)
 
 	return &dup
 }
@@ -88,13 +88,13 @@ func (p *PdfPage) Duplicate() *PdfPage {
 // Build a PdfPage based on the underlying dictionary.
 // Used in loading existing PDF files.
 // Note that a new container is created (indirect object).
-func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error) {
+func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
 	page.pageDict = p // TODO
 
 	d := *p
 
-	pType, ok := d.Get("Type").(*PdfObjectName)
+	pType, ok := d.Get("Type").(*core.PdfObjectName)
 	if !ok {
 		return nil, errors.New("missing/invalid Page dictionary Type")
 	}
@@ -112,7 +112,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		strObj, ok := TraceToDirectObject(obj).(*PdfObjectString)
+		strObj, ok := core.TraceToDirectObject(obj).(*core.PdfObjectString)
 		if !ok {
 			return nil, errors.New("page dictionary LastModified != string")
 		}
@@ -130,7 +130,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 			return nil, err
 		}
 
-		dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+		dict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
 		if !ok {
 			return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
 		}
@@ -158,7 +158,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, errors.New("page MediaBox not an array")
 		}
@@ -173,7 +173,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, errors.New("page CropBox not an array")
 		}
@@ -188,7 +188,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, errors.New("page BleedBox not an array")
 		}
@@ -203,7 +203,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, errors.New("page TrimBox not an array")
 		}
@@ -218,7 +218,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		boxArr, ok := TraceToDirectObject(obj).(*PdfObjectArray)
+		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
 		if !ok {
 			return nil, errors.New("page ArtBox not an array")
 		}
@@ -239,7 +239,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 		if err != nil {
 			return nil, err
 		}
-		iObj, ok := TraceToDirectObject(obj).(*PdfObjectInteger)
+		iObj, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
 		if !ok {
 			return nil, errors.New("invalid Page Rotate object")
 		}
@@ -310,7 +310,7 @@ func (r *PdfReader) newPdfPageFromDict(p *PdfObjectDictionary) (*PdfPage, error)
 	return page, nil
 }
 
-func (r *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, error) {
+func (r *PdfReader) LoadAnnotations(d *core.PdfObjectDictionary) ([]*PdfAnnotation, error) {
 	annotsObj := d.Get("Annots")
 	if annotsObj == nil {
 		return nil, nil
@@ -321,7 +321,7 @@ func (r *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, e
 	if err != nil {
 		return nil, err
 	}
-	annotsArr, ok := TraceToDirectObject(annotsObj).(*PdfObjectArray)
+	annotsArr, ok := core.TraceToDirectObject(annotsObj).(*core.PdfObjectArray)
 	if !ok {
 		return nil, fmt.Errorf("Annots not an array")
 	}
@@ -335,16 +335,16 @@ func (r *PdfReader) LoadAnnotations(d *PdfObjectDictionary) ([]*PdfAnnotation, e
 
 		// Technically all annotation dictionaries should be inside indirect objects.
 		// In reality, sometimes the annotation dictionary is inline within the Annots array.
-		if _, isNull := obj.(*PdfObjectNull); isNull {
+		if _, isNull := obj.(*core.PdfObjectNull); isNull {
 			// Can safely ignore.
 			continue
 		}
 
-		annotDict, isDict := obj.(*PdfObjectDictionary)
-		indirectObj, isIndirect := obj.(*PdfIndirectObject)
+		annotDict, isDict := obj.(*core.PdfObjectDictionary)
+		indirectObj, isIndirect := obj.(*core.PdfIndirectObject)
 		if isDict {
 			// Create a container; indirect object; around the dictionary.
-			indirectObj = &PdfIndirectObject{}
+			indirectObj = &core.PdfIndirectObject{}
 			indirectObj.PdfObject = annotDict
 		} else {
 			if !isIndirect {
@@ -371,18 +371,18 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 
 	node := p.Parent
 	for node != nil {
-		dictObj, ok := node.(*PdfIndirectObject)
+		dictObj, ok := node.(*core.PdfIndirectObject)
 		if !ok {
 			return nil, errors.New("invalid parent object")
 		}
 
-		dict, ok := dictObj.PdfObject.(*PdfObjectDictionary)
+		dict, ok := dictObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
 			return nil, errors.New("invalid parent objects dictionary")
 		}
 
 		if obj := dict.Get("MediaBox"); obj != nil {
-			arr, ok := obj.(*PdfObjectArray)
+			arr, ok := obj.(*core.PdfObjectArray)
 			if !ok {
 				return nil, errors.New("invalid media box")
 			}
@@ -409,18 +409,18 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 
 	node := p.Parent
 	for node != nil {
-		dictObj, ok := node.(*PdfIndirectObject)
+		dictObj, ok := node.(*core.PdfIndirectObject)
 		if !ok {
 			return nil, errors.New("invalid parent object")
 		}
 
-		dict, ok := dictObj.PdfObject.(*PdfObjectDictionary)
+		dict, ok := dictObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
 			return nil, errors.New("invalid parent objects dictionary")
 		}
 
 		if obj := dict.Get("Resources"); obj != nil {
-			prDict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+			prDict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
 			if !ok {
 				return nil, errors.New("invalid resource dict!")
 			}
@@ -442,10 +442,10 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 }
 
 // GetPageDict converts the Page to a PDF object dictionary.
-func (p *PdfPage) GetPageDict() *PdfObjectDictionary {
+func (p *PdfPage) GetPageDict() *core.PdfObjectDictionary {
 	d := p.pageDict
 	d.Clear()
-	d.Set("Type", MakeName("Page"))
+	d.Set("Type", core.MakeName("Page"))
 	d.Set("Parent", p.Parent)
 
 	if p.LastModified != nil {
@@ -473,7 +473,7 @@ func (p *PdfPage) GetPageDict() *PdfObjectDictionary {
 	d.SetIfNotNil("Contents", p.Contents)
 
 	if p.Rotate != nil {
-		d.Set("Rotate", MakeInteger(*p.Rotate))
+		d.Set("Rotate", core.MakeInteger(*p.Rotate))
 	}
 
 	d.SetIfNotNil("Group", p.Group)
@@ -495,7 +495,7 @@ func (p *PdfPage) GetPageDict() *PdfObjectDictionary {
 	d.SetIfNotNil("VP", p.VP)
 
 	if p.Annotations != nil {
-		arr := MakeArray()
+		arr := core.MakeArray()
 		for _, annot := range p.Annotations {
 			if subannot := annot.GetContext(); subannot != nil {
 				arr.Append(subannot.ToPdfObject())
@@ -511,31 +511,31 @@ func (p *PdfPage) GetPageDict() *PdfObjectDictionary {
 }
 
 // GetPageAsIndirectObject returns the page as a dictionary within an PdfIndirectObject.
-func (p *PdfPage) GetPageAsIndirectObject() *PdfIndirectObject {
+func (p *PdfPage) GetPageAsIndirectObject() *core.PdfIndirectObject {
 	return p.primitive
 }
 
 // GetContainingPdfObject returns the page as a dictionary within an PdfIndirectObject.
-func (p *PdfPage) GetContainingPdfObject() PdfObject {
+func (p *PdfPage) GetContainingPdfObject() core.PdfObject {
 	return p.primitive
 }
 
 // ToPdfObject converts the PdfPage to a dictionary within an indirect object container.
-func (p *PdfPage) ToPdfObject() PdfObject {
+func (p *PdfPage) ToPdfObject() core.PdfObject {
 	container := p.primitive
 	p.GetPageDict() // update.
 	return container
 }
 
 // AddImageResource adds an image to the XObject resources.
-func (p *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error {
-	var xresDict *PdfObjectDictionary
+func (p *PdfPage) AddImageResource(name core.PdfObjectName, ximg *XObjectImage) error {
+	var xresDict *core.PdfObjectDictionary
 	if p.Resources.XObject == nil {
-		xresDict = MakeDict()
+		xresDict = core.MakeDict()
 		p.Resources.XObject = xresDict
 	} else {
 		var ok bool
-		xresDict, ok = (p.Resources.XObject).(*PdfObjectDictionary)
+		xresDict, ok = (p.Resources.XObject).(*core.PdfObjectDictionary)
 		if !ok {
 			return errors.New("invalid xres dict type")
 		}
@@ -548,8 +548,8 @@ func (p *PdfPage) AddImageResource(name PdfObjectName, ximg *XObjectImage) error
 }
 
 // HasXObjectByName checks if has XObject resource by name.
-func (p *PdfPage) HasXObjectByName(name PdfObjectName) bool {
-	xresDict, has := p.Resources.XObject.(*PdfObjectDictionary)
+func (p *PdfPage) HasXObjectByName(name core.PdfObjectName) bool {
+	xresDict, has := p.Resources.XObject.(*core.PdfObjectDictionary)
 	if !has {
 		return false
 	}
@@ -562,8 +562,8 @@ func (p *PdfPage) HasXObjectByName(name PdfObjectName) bool {
 }
 
 // GetXObjectByName gets XObject by name.
-func (p *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
-	xresDict, has := p.Resources.XObject.(*PdfObjectDictionary)
+func (p *PdfPage) GetXObjectByName(name core.PdfObjectName) (core.PdfObject, bool) {
+	xresDict, has := p.Resources.XObject.(*core.PdfObjectDictionary)
 	if !has {
 		return nil, false
 	}
@@ -576,8 +576,8 @@ func (p *PdfPage) GetXObjectByName(name PdfObjectName) (PdfObject, bool) {
 }
 
 // HasFontByName checks if has font resource by name.
-func (p *PdfPage) HasFontByName(name PdfObjectName) bool {
-	fontDict, has := p.Resources.Font.(*PdfObjectDictionary)
+func (p *PdfPage) HasFontByName(name core.PdfObjectName) bool {
+	fontDict, has := p.Resources.Font.(*core.PdfObjectDictionary)
 	if !has {
 		return false
 	}
@@ -590,7 +590,7 @@ func (p *PdfPage) HasFontByName(name PdfObjectName) bool {
 }
 
 // HasExtGState checks if ExtGState name is available.
-func (p *PdfPage) HasExtGState(name PdfObjectName) bool {
+func (p *PdfPage) HasExtGState(name core.PdfObjectName) bool {
 	if p.Resources == nil {
 		return false
 	}
@@ -599,9 +599,9 @@ func (p *PdfPage) HasExtGState(name PdfObjectName) bool {
 		return false
 	}
 
-	egsDict, ok := TraceToDirectObject(p.Resources.ExtGState).(*PdfObjectDictionary)
+	egsDict, ok := core.TraceToDirectObject(p.Resources.ExtGState).(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", TraceToDirectObject(p.Resources.ExtGState))
+		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", core.TraceToDirectObject(p.Resources.ExtGState))
 		return false
 	}
 
@@ -613,19 +613,19 @@ func (p *PdfPage) HasExtGState(name PdfObjectName) bool {
 }
 
 // AddExtGState adds a graphics state to the XObject resources.
-func (p *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) error {
+func (p *PdfPage) AddExtGState(name core.PdfObjectName, egs *core.PdfObjectDictionary) error {
 	if p.Resources == nil {
 		//p.Resources = &PdfPageResources{}
 		p.Resources = NewPdfPageResources()
 	}
 
 	if p.Resources.ExtGState == nil {
-		p.Resources.ExtGState = MakeDict()
+		p.Resources.ExtGState = core.MakeDict()
 	}
 
-	egsDict, ok := TraceToDirectObject(p.Resources.ExtGState).(*PdfObjectDictionary)
+	egsDict, ok := core.TraceToDirectObject(p.Resources.ExtGState).(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", TraceToDirectObject(p.Resources.ExtGState))
+		common.Log.Debug("Expected ExtGState dictionary is not a dictionary: %v", core.TraceToDirectObject(p.Resources.ExtGState))
 		return errors.New("type check error")
 	}
 
@@ -634,18 +634,18 @@ func (p *PdfPage) AddExtGState(name PdfObjectName, egs *PdfObjectDictionary) err
 }
 
 // AddFont adds a font dictionary to the Font resources.
-func (p *PdfPage) AddFont(name PdfObjectName, font PdfObject) error {
+func (p *PdfPage) AddFont(name core.PdfObjectName, font core.PdfObject) error {
 	if p.Resources == nil {
 		p.Resources = NewPdfPageResources()
 	}
 
 	if p.Resources.Font == nil {
-		p.Resources.Font = MakeDict()
+		p.Resources.Font = core.MakeDict()
 	}
 
-	fontDict, ok := TraceToDirectObject(p.Resources.Font).(*PdfObjectDictionary)
+	fontDict, ok := core.TraceToDirectObject(p.Resources.Font).(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("Expected font dictionary is not a dictionary: %v", TraceToDirectObject(p.Resources.Font))
+		common.Log.Debug("Expected font dictionary is not a dictionary: %v", core.TraceToDirectObject(p.Resources.Font))
 		return errors.New("type check error")
 	}
 
@@ -690,10 +690,10 @@ func (p *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOption
 
 	// Find available image name for this page.
 	i := 0
-	imgName := PdfObjectName(fmt.Sprintf("Imw%d", i))
+	imgName := core.PdfObjectName(fmt.Sprintf("Imw%d", i))
 	for p.Resources.HasXObjectByName(imgName) {
 		i++
-		imgName = PdfObjectName(fmt.Sprintf("Imw%d", i))
+		imgName = core.PdfObjectName(fmt.Sprintf("Imw%d", i))
 	}
 
 	err = p.AddImageResource(imgName, ximg)
@@ -702,15 +702,15 @@ func (p *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOption
 	}
 
 	i = 0
-	gsName := PdfObjectName(fmt.Sprintf("GS%d", i))
+	gsName := core.PdfObjectName(fmt.Sprintf("GS%d", i))
 	for p.HasExtGState(gsName) {
 		i++
-		gsName = PdfObjectName(fmt.Sprintf("GS%d", i))
+		gsName = core.PdfObjectName(fmt.Sprintf("GS%d", i))
 	}
-	gs0 := MakeDict()
-	gs0.Set("BM", MakeName("Normal"))
-	gs0.Set("CA", MakeFloat(opt.Alpha))
-	gs0.Set("ca", MakeFloat(opt.Alpha))
+	gs0 := core.MakeDict()
+	gs0.Set("BM", core.MakeName("Normal"))
+	gs0.Set("CA", core.MakeFloat(opt.Alpha))
+	gs0.Set("ca", core.MakeFloat(opt.Alpha))
 	err = p.AddExtGState(gsName, gs0)
 	if err != nil {
 		return err
@@ -726,10 +726,10 @@ func (p *PdfPage) AddWatermarkImage(ximg *XObjectImage, opt WatermarkImageOption
 	return nil
 }
 
-// AddContentStreamByString adds content stream by string.  Puts the content string into a stream
-// object and points the content stream towards it.
+// AddContentStreamByString adds content stream by string. Puts the content
+// string into a stream object and points the content stream towards it.
 func (p *PdfPage) AddContentStreamByString(contentStr string) error {
-	stream, err := MakeStream([]byte(contentStr), NewFlateEncoder())
+	stream, err := core.MakeStream([]byte(contentStr), core.NewFlateEncoder())
 	if err != nil {
 		return err
 	}
@@ -737,12 +737,12 @@ func (p *PdfPage) AddContentStreamByString(contentStr string) error {
 	if p.Contents == nil {
 		// If not set, place it directly.
 		p.Contents = stream
-	} else if contArray, isArray := TraceToDirectObject(p.Contents).(*PdfObjectArray); isArray {
+	} else if contArray, isArray := core.TraceToDirectObject(p.Contents).(*core.PdfObjectArray); isArray {
 		// If an array of content streams, append it.
 		contArray.Append(stream)
 	} else {
 		// Only 1 element in place. Wrap inside a new array and add the new one.
-		contArray := MakeArray(p.Contents, stream)
+		contArray := core.MakeArray(p.Contents, stream)
 		p.Contents = contArray
 	}
 
@@ -758,7 +758,7 @@ func (p *PdfPage) AppendContentStream(contentStr string) error {
 	}
 	if len(cstreams) == 0 {
 		cstreams = []string{contentStr}
-		return p.SetContentStreams(cstreams, NewFlateEncoder())
+		return p.SetContentStreams(cstreams, core.NewFlateEncoder())
 	}
 
 	var buf bytes.Buffer
@@ -767,14 +767,14 @@ func (p *PdfPage) AppendContentStream(contentStr string) error {
 	buf.WriteString(contentStr)
 	cstreams[len(cstreams)-1] = buf.String()
 
-	return p.SetContentStreams(cstreams, NewFlateEncoder())
+	return p.SetContentStreams(cstreams, core.NewFlateEncoder())
 }
 
-// SetContentStreams sets the content streams based on a string array.  Will make 1 object stream
-// for each string and reference from the page Contents.  Each stream will be
-// encoded using the encoding specified by the StreamEncoder, if empty, will
-// use identity encoding (raw data).
-func (p *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) error {
+// SetContentStreams sets the content streams based on a string array. Will make
+// 1 object stream for each string and reference from the page Contents.
+// Each stream will be encoded using the encoding specified by the StreamEncoder,
+// if empty, will use identity encoding (raw data).
+func (p *PdfPage) SetContentStreams(cStreams []string, encoder core.StreamEncoder) error {
 	if len(cStreams) == 0 {
 		p.Contents = nil
 		return nil
@@ -782,12 +782,12 @@ func (p *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) er
 
 	// If encoding is not set, use default raw encoder.
 	if encoder == nil {
-		encoder = NewRawEncoder()
+		encoder = core.NewRawEncoder()
 	}
 
-	var streamObjs []*PdfObjectStream
+	var streamObjs []*core.PdfObjectStream
 	for _, cStream := range cStreams {
-		stream := &PdfObjectStream{}
+		stream := &core.PdfObjectStream{}
 
 		// Make a new stream dict based on the encoding parameters.
 		sDict := encoder.MakeStreamDict()
@@ -797,7 +797,7 @@ func (p *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) er
 			return err
 		}
 
-		sDict.Set("Length", MakeInteger(int64(len(encoded))))
+		sDict.Set("Length", core.MakeInteger(int64(len(encoded))))
 
 		stream.PdfObjectDictionary = sDict
 		stream.Stream = []byte(encoded)
@@ -810,7 +810,7 @@ func (p *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) er
 	if len(streamObjs) == 1 {
 		p.Contents = streamObjs[0]
 	} else {
-		contArray := MakeArray()
+		contArray := core.MakeArray()
 		for _, streamObj := range streamObjs {
 			contArray.Append(streamObj)
 		}
@@ -820,20 +820,20 @@ func (p *PdfPage) SetContentStreams(cStreams []string, encoder StreamEncoder) er
 	return nil
 }
 
-func getContentStreamAsString(cstreamObj PdfObject) (string, error) {
-	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectString); ok {
+func getContentStreamAsString(cstreamObj core.PdfObject) (string, error) {
+	if cstream, ok := core.TraceToDirectObject(cstreamObj).(*core.PdfObjectString); ok {
 		return cstream.Str(), nil
 	}
 
-	if cstream, ok := TraceToDirectObject(cstreamObj).(*PdfObjectStream); ok {
-		buf, err := DecodeStream(cstream)
+	if cstream, ok := core.TraceToDirectObject(cstreamObj).(*core.PdfObjectStream); ok {
+		buf, err := core.DecodeStream(cstream)
 		if err != nil {
 			return "", err
 		}
 
 		return string(buf), nil
 	}
-	return "", fmt.Errorf("invalid content stream object holder (%T)", TraceToDirectObject(cstreamObj))
+	return "", fmt.Errorf("invalid content stream object holder (%T)", core.TraceToDirectObject(cstreamObj))
 }
 
 // GetContentStreams returns the content stream as an array of strings.
@@ -842,8 +842,8 @@ func (p *PdfPage) GetContentStreams() ([]string, error) {
 		return nil, nil
 	}
 
-	contents := TraceToDirectObject(p.Contents)
-	if contArray, isArray := contents.(*PdfObjectArray); isArray {
+	contents := core.TraceToDirectObject(p.Contents)
+	if contArray, isArray := contents.(*core.PdfObjectArray); isArray {
 		// If an array of content streams, append it.
 		var cstreams []string
 		for _, cstreamObj := range contArray.Elements() {
@@ -880,34 +880,34 @@ type PdfPageResourcesColorspaces struct {
 	Names       []string
 	Colorspaces map[string]PdfColorspace
 
-	container *PdfIndirectObject
+	container *core.PdfIndirectObject
 }
 
 func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
 	colorspaces := &PdfPageResourcesColorspaces{}
 	colorspaces.Names = []string{}
 	colorspaces.Colorspaces = map[string]PdfColorspace{}
-	colorspaces.container = &PdfIndirectObject{}
+	colorspaces.container = &core.PdfIndirectObject{}
 	return colorspaces
 }
 
-// Set sets the colorspace corresponding to key.  Add to Names if not set.
-func (rcs *PdfPageResourcesColorspaces) Set(key PdfObjectName, val PdfColorspace) {
+// Set sets the colorspace corresponding to key. Add to Names if not set.
+func (rcs *PdfPageResourcesColorspaces) Set(key core.PdfObjectName, val PdfColorspace) {
 	if _, has := rcs.Colorspaces[string(key)]; !has {
 		rcs.Names = append(rcs.Names, string(key))
 	}
 	rcs.Colorspaces[string(key)] = val
 }
 
-func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourcesColorspaces, error) {
+func newPdfPageResourcesColorspacesFromPdfObject(obj core.PdfObject) (*PdfPageResourcesColorspaces, error) {
 	colorspaces := &PdfPageResourcesColorspaces{}
 
-	if indObj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
+	if indObj, isIndirect := obj.(*core.PdfIndirectObject); isIndirect {
 		colorspaces.container = indObj
 		obj = indObj.PdfObject
 	}
 
-	dict, ok := obj.(*PdfObjectDictionary)
+	dict, ok := obj.(*core.PdfObjectDictionary)
 	if !ok {
 		return nil, errors.New("CS attribute type error")
 	}
@@ -928,10 +928,10 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj PdfObject) (*PdfPageResourc
 	return colorspaces, nil
 }
 
-func (rcs *PdfPageResourcesColorspaces) ToPdfObject() PdfObject {
-	dict := MakeDict()
+func (rcs *PdfPageResourcesColorspaces) ToPdfObject() core.PdfObject {
+	dict := core.MakeDict()
 	for _, csName := range rcs.Names {
-		dict.Set(PdfObjectName(csName), rcs.Colorspaces[csName].ToPdfObject())
+		dict.Set(core.PdfObjectName(csName), rcs.Colorspaces[csName].ToPdfObject())
 	}
 
 	if rcs.container != nil {
