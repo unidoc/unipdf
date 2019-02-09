@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // A PdfPattern can represent a Pattern, either a tiling pattern or a shading pattern.
@@ -23,10 +23,10 @@ type PdfPattern struct {
 	PatternType int64
 	context     PdfModel // The sub pattern, either PdfTilingPattern (Type 1) or PdfShadingPattern (Type 2).
 
-	container PdfObject
+	container core.PdfObject
 }
 
-func (p *PdfPattern) GetContainingPdfObject() PdfObject {
+func (p *PdfPattern) GetContainingPdfObject() core.PdfObject {
 	return p.container
 }
 
@@ -64,13 +64,13 @@ func (p *PdfPattern) GetAsShadingPattern() *PdfShadingPattern {
 // a content stream that describes the pattern cell.
 type PdfTilingPattern struct {
 	*PdfPattern
-	PaintType  *PdfObjectInteger // Colored or uncolored tiling pattern.
-	TilingType *PdfObjectInteger // Constant spacing, no distortion or constant spacing/faster tiling.
+	PaintType  *core.PdfObjectInteger // Colored or uncolored tiling pattern.
+	TilingType *core.PdfObjectInteger // Constant spacing, no distortion or constant spacing/faster tiling.
 	BBox       *PdfRectangle
-	XStep      *PdfObjectFloat
-	YStep      *PdfObjectFloat
+	XStep      *core.PdfObjectFloat
+	YStep      *core.PdfObjectFloat
 	Resources  *PdfPageResources
-	Matrix     *PdfObjectArray // Pattern matrix (6 numbers).
+	Matrix     *core.PdfObjectArray // Pattern matrix (6 numbers).
 }
 
 func (p *PdfTilingPattern) IsColored() bool {
@@ -89,20 +89,20 @@ func (p *PdfTilingPattern) GetContentStream() ([]byte, error) {
 
 // GetContentStreamWithEncoder returns the pattern cell's content stream and its encoder
 // TODO (v3): Change GetContentStreamWithEncoder to GetContentStream
-func (p *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncoder, error) {
-	streamObj, ok := p.container.(*PdfObjectStream)
+func (p *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, core.StreamEncoder, error) {
+	streamObj, ok := p.container.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("Tiling pattern container not a stream (got %T)", p.container)
-		return nil, nil, ErrTypeError
+		return nil, nil, core.ErrTypeError
 	}
 
-	decoded, err := DecodeStream(streamObj)
+	decoded, err := core.DecodeStream(streamObj)
 	if err != nil {
 		common.Log.Debug("Failed decoding stream, err: %v", err)
 		return nil, nil, err
 	}
 
-	encoder, err := NewEncoderFromStream(streamObj)
+	encoder, err := core.NewEncoderFromStream(streamObj)
 	if err != nil {
 		common.Log.Debug("Failed finding decoding encoder: %v", err)
 		return nil, nil, err
@@ -112,16 +112,16 @@ func (p *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, StreamEncoder,
 }
 
 // SetContentStream sets the pattern cell's content stream.
-func (p *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncoder) error {
-	streamObj, ok := p.container.(*PdfObjectStream)
+func (p *PdfTilingPattern) SetContentStream(content []byte, encoder core.StreamEncoder) error {
+	streamObj, ok := p.container.(*core.PdfObjectStream)
 	if !ok {
 		common.Log.Debug("Tiling pattern container not a stream (got %T)", p.container)
-		return ErrTypeError
+		return core.ErrTypeError
 	}
 
 	// If encoding is not set, use raw encoder.
 	if encoder == nil {
-		encoder = NewRawEncoder()
+		encoder = core.NewRawEncoder()
 	}
 
 	streamDict := streamObj.PdfObjectDictionary
@@ -137,7 +137,7 @@ func (p *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncode
 	}
 
 	// Update length.
-	streamDict.Set("Length", MakeInteger(int64(len(encoded))))
+	streamDict.Set("Length", core.MakeInteger(int64(len(encoded))))
 
 	streamObj.Stream = []byte(encoded)
 
@@ -150,29 +150,29 @@ func (p *PdfTilingPattern) SetContentStream(content []byte, encoder StreamEncode
 type PdfShadingPattern struct {
 	*PdfPattern
 	Shading   *PdfShading
-	Matrix    *PdfObjectArray
-	ExtGState PdfObject
+	Matrix    *core.PdfObjectArray
+	ExtGState core.PdfObject
 }
 
 // Load a pdf pattern from an indirect object. Used in parsing/loading PDFs.
-func newPdfPatternFromPdfObject(container PdfObject) (*PdfPattern, error) {
+func newPdfPatternFromPdfObject(container core.PdfObject) (*PdfPattern, error) {
 	pattern := &PdfPattern{}
 
-	var dict *PdfObjectDictionary
-	if indObj, is := container.(*PdfIndirectObject); is {
+	var dict *core.PdfObjectDictionary
+	if indObj, is := container.(*core.PdfIndirectObject); is {
 		pattern.container = indObj
-		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
+		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
 			common.Log.Debug("Pattern indirect object not containing dictionary (got %T)", indObj.PdfObject)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		dict = d
-	} else if streamObj, is := container.(*PdfObjectStream); is {
+	} else if streamObj, is := container.(*core.PdfObjectStream); is {
 		pattern.container = streamObj
 		dict = streamObj.PdfObjectDictionary
 	} else {
 		common.Log.Debug("Pattern not an indirect object or stream")
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 
 	// PatternType.
@@ -181,14 +181,14 @@ func newPdfPatternFromPdfObject(container PdfObject) (*PdfPattern, error) {
 		common.Log.Debug("Pdf Pattern not containing PatternType")
 		return nil, ErrRequiredAttributeMissing
 	}
-	patternType, ok := obj.(*PdfObjectInteger)
+	patternType, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("Pattern type not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	if *patternType != 1 && *patternType != 2 {
 		common.Log.Debug("Pattern type != 1/2 (got %d)", *patternType)
-		return nil, ErrRangeError
+		return nil, core.ErrRangeError
 	}
 	pattern.PatternType = int64(*patternType)
 
@@ -214,8 +214,9 @@ func newPdfPatternFromPdfObject(container PdfObject) (*PdfPattern, error) {
 	return nil, errors.New("unknown pattern")
 }
 
-// Load entries specific to a pdf tiling pattern from a dictionary. Used in parsing/loading PDFs.
-func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPattern, error) {
+// Load entries specific to a pdf tiling pattern from a dictionary.
+// Used in parsing/loading PDFs.
+func newPdfTilingPatternFromDictionary(dict *core.PdfObjectDictionary) (*PdfTilingPattern, error) {
 	pattern := &PdfTilingPattern{}
 
 	// PaintType (required).
@@ -224,10 +225,10 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("PaintType missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	paintType, ok := obj.(*PdfObjectInteger)
+	paintType, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("PaintType not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	pattern.PaintType = paintType
 
@@ -237,10 +238,10 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("TilingType missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	tilingType, ok := obj.(*PdfObjectInteger)
+	tilingType, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("TilingType not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	pattern.TilingType = tilingType
 
@@ -250,11 +251,11 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("BBox missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	obj = TraceToDirectObject(obj)
-	arr, ok := obj.(*PdfObjectArray)
+	obj = core.TraceToDirectObject(obj)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("BBox should be specified by an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	rect, err := NewPdfRectangle(*arr)
 	if err != nil {
@@ -269,12 +270,12 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("XStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	xStep, err := GetNumberAsFloat(obj)
+	xStep, err := core.GetNumberAsFloat(obj)
 	if err != nil {
 		common.Log.Debug("Error getting XStep as float: %v", xStep)
 		return nil, err
 	}
-	pattern.XStep = MakeFloat(xStep)
+	pattern.XStep = core.MakeFloat(xStep)
 
 	// YStep (required).
 	obj = dict.Get("YStep")
@@ -282,12 +283,12 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("YStep missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	yStep, err := GetNumberAsFloat(obj)
+	yStep, err := core.GetNumberAsFloat(obj)
 	if err != nil {
 		common.Log.Debug("Error getting YStep as float: %v", yStep)
 		return nil, err
 	}
-	pattern.YStep = MakeFloat(yStep)
+	pattern.YStep = core.MakeFloat(yStep)
 
 	// Resources (required).
 	obj = dict.Get("Resources")
@@ -295,7 +296,7 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 		common.Log.Debug("Resources missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	dict, ok = TraceToDirectObject(obj).(*PdfObjectDictionary)
+	dict, ok = core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
 	if !ok {
 		return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
 	}
@@ -307,10 +308,10 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 
 	// Matrix (optional).
 	if obj := dict.Get("Matrix"); obj != nil {
-		arr, ok := obj.(*PdfObjectArray)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		pattern.Matrix = arr
 	}
@@ -318,8 +319,9 @@ func newPdfTilingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfTilingPat
 	return pattern, nil
 }
 
-// Load entries specific to a pdf shading pattern from a dictionary. Used in parsing/loading PDFs.
-func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingPattern, error) {
+// Load entries specific to a pdf shading pattern from a dictionary.
+// Used in parsing/loading PDFs.
+func newPdfShadingPatternFromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingPattern, error) {
 	pattern := &PdfShadingPattern{}
 
 	// Shading (required).
@@ -337,10 +339,10 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 
 	// Matrix (optional).
 	if obj := dict.Get("Matrix"); obj != nil {
-		arr, ok := obj.(*PdfObjectArray)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		pattern.Matrix = arr
 	}
@@ -355,14 +357,14 @@ func newPdfShadingPatternFromDictionary(dict *PdfObjectDictionary) (*PdfShadingP
 
 /* Conversions to pdf objects. */
 
-func (p *PdfPattern) getDict() *PdfObjectDictionary {
-	if indObj, is := p.container.(*PdfIndirectObject); is {
-		dict, ok := indObj.PdfObject.(*PdfObjectDictionary)
+func (p *PdfPattern) getDict() *core.PdfObjectDictionary {
+	if indObj, is := p.container.(*core.PdfIndirectObject); is {
+		dict, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
 			return nil
 		}
 		return dict
-	} else if streamObj, is := p.container.(*PdfObjectStream); is {
+	} else if streamObj, is := p.container.(*core.PdfObjectStream); is {
 		return streamObj.PdfObjectDictionary
 	} else {
 		common.Log.Debug("Trying to access pattern dictionary of invalid object type (%T)", p.container)
@@ -370,15 +372,15 @@ func (p *PdfPattern) getDict() *PdfObjectDictionary {
 	}
 }
 
-func (p *PdfPattern) ToPdfObject() PdfObject {
+func (p *PdfPattern) ToPdfObject() core.PdfObject {
 	d := p.getDict()
-	d.Set("Type", MakeName("Pattern"))
-	d.Set("PatternType", MakeInteger(p.PatternType))
+	d.Set("Type", core.MakeName("Pattern"))
+	d.Set("PatternType", core.MakeInteger(p.PatternType))
 
 	return p.container
 }
 
-func (p *PdfTilingPattern) ToPdfObject() PdfObject {
+func (p *PdfTilingPattern) ToPdfObject() core.PdfObject {
 	p.PdfPattern.ToPdfObject()
 
 	d := p.getDict()
@@ -407,7 +409,7 @@ func (p *PdfTilingPattern) ToPdfObject() PdfObject {
 	return p.container
 }
 
-func (p *PdfShadingPattern) ToPdfObject() PdfObject {
+func (p *PdfShadingPattern) ToPdfObject() core.PdfObject {
 	p.PdfPattern.ToPdfObject()
 	d := p.getDict()
 
