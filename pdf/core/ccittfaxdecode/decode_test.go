@@ -1,9 +1,722 @@
 package ccittfaxdecode
 
 import (
-	"log"
 	"testing"
 )
+
+func TestDecodeNextRunLen(t *testing.T) {
+	type testResult struct {
+		PixelsRow []byte
+		BitPos    int
+		Err       error
+	}
+
+	type testData struct {
+		Encoded   []byte
+		PixelsRow []byte
+		BitPos    int
+		IsWhite   bool
+		Want      testResult
+	}
+
+	tests := []testData{
+		{
+			Encoded:   []byte{1, 28, 2},
+			PixelsRow: []byte{},
+			BitPos:    16,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white},
+				BitPos: 24,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 2, 0, 0, 0},
+			PixelsRow: []byte{},
+			BitPos:    16,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white},
+				BitPos: 24,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 56},
+			PixelsRow: []byte{},
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: []byte{black, black, black, black, black, black, black, black, black, black, black,
+					black, black, black},
+				BitPos: 29,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 56, 0, 0, 0},
+			PixelsRow: []byte{},
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: []byte{black, black, black, black, black, black, black, black, black, black, black,
+					black, black, black},
+				BitPos: 29,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 154, 80},
+			PixelsRow: []byte{},
+			BitPos:    23,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, true, 1624),
+				BitPos:    39,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 154, 80, 0, 0},
+			PixelsRow: []byte{},
+			BitPos:    23,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, true, 1624),
+				BitPos:    39,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 29, 67, 128},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, false, 1100),
+				BitPos:    41,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 29, 67, 128, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, false, 1100),
+				BitPos:    41,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 9, 166, 188},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, true, 3655),
+				BitPos:    46,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 9, 166, 188, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, true, 3655),
+				BitPos:    46,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 15, 129, 200, 21, 128},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, false, 3502),
+				BitPos:    58,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 15, 129, 200, 21, 128, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    21,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: drawPixels(nil, false, 3502),
+				BitPos:    58,
+				Err:       nil,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		gotPixelsRow, gotBitPos, gotErr := decodeNextRunLen(test.Encoded, test.PixelsRow, test.BitPos, test.IsWhite)
+
+		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
+			t.Errorf("Wrong pixels row len. Got %v, want %v\n", len(gotPixelsRow), len(test.Want.PixelsRow))
+		} else {
+			for i := range gotPixelsRow {
+				if gotPixelsRow[i] != test.Want.PixelsRow[i] {
+					t.Errorf("Wrong pixel at %v. Got %v, want %v\n",
+						i, gotPixelsRow[i], test.Want.PixelsRow[i])
+				}
+			}
+		}
+
+		if gotBitPos != test.Want.BitPos {
+			t.Errorf("Wrong bit pos. Got %v, want %v\n", gotBitPos, test.Want.BitPos)
+		}
+
+		if gotErr != test.Want.Err {
+			t.Errorf("Wrong err. Got %v, want %v\n", gotErr, test.Want.Err)
+		}
+	}
+}
+
+func TestDecodeHorizontalMode(t *testing.T) {
+	type testResult struct {
+		PixelsRow []byte
+		BitPos    int
+		A0        int
+		Err       error
+	}
+
+	type testData struct {
+		Encoded   []byte
+		PixelsRow []byte
+		BitPos    int
+		IsWhite   bool
+		A0        int
+		Want      testResult
+	}
+
+	tests := []testData{
+		{
+			Encoded:   []byte{1, 28, 2, 192},
+			PixelsRow: []byte{},
+			BitPos:    16,
+			IsWhite:   true,
+			A0:        0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, black, black},
+				BitPos: 26,
+				A0:     31,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 2, 192, 0, 0, 0},
+			PixelsRow: []byte{},
+			BitPos:    16,
+			IsWhite:   true,
+			A0:        7,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, black, black},
+				BitPos: 26,
+				A0:     31,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 56, 224},
+			PixelsRow: []byte{},
+			BitPos:    21,
+			IsWhite:   false,
+			A0:        0,
+			Want: testResult{
+				PixelsRow: []byte{black, black, black, black, black, black, black, black, black, black, black,
+					black, black, black, white},
+				BitPos: 35,
+				A0:     15,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 40, 56, 224, 0, 0, 0},
+			PixelsRow: []byte{},
+			BitPos:    21,
+			IsWhite:   false,
+			A0:        10,
+			Want: testResult{
+				PixelsRow: []byte{black, black, black, black, black, black, black, black, black, black, black,
+					black, black, black, white},
+				BitPos: 35,
+				A0:     15,
+				Err:    nil,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			A0:        0,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        0,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			A0:        120,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        120,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			A0:        10,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        10,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			A0:        13,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        13,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			A0:        23,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        23,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			A0:        34,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        34,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			A0:        134,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        134,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{},
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			A0:        35,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        35,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   true,
+			A0:        876,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        876,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   true,
+			A0:        738,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        738,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    0,
+			IsWhite:   false,
+			A0:        283,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    0,
+				A0:        283,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   nil,
+			PixelsRow: nil,
+			BitPos:    2,
+			IsWhite:   false,
+			A0:        29,
+			Want: testResult{
+				PixelsRow: nil,
+				BitPos:    2,
+				A0:        29,
+				Err:       ErrWrongCodeInHorizontalMode,
+			},
+		},
+		{
+			Encoded:   []byte{1, 28, 2, 0, 0, 0, 0, 0},
+			PixelsRow: nil,
+			BitPos:    16,
+			IsWhite:   true,
+			A0:        0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white, white, white, white, white, white, white, white, white, white, white, white,
+					white, white, white},
+				BitPos: 16,
+				A0:     0,
+				Err:    ErrWrongCodeInHorizontalMode,
+			},
+		},
+	}
+
+	resultingPixelsRow1 := drawPixels(nil, true, 1624)
+	resultingPixelsRow1 = drawPixels(resultingPixelsRow1, false, 1728)
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 154, 80, 6, 80, 220},
+		PixelsRow: []byte{},
+		BitPos:    23,
+		IsWhite:   true,
+		A0:        0,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow1,
+			BitPos:    62,
+			A0:        3352,
+			Err:       nil,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 154, 80, 6, 80, 220, 0, 0, 0},
+		PixelsRow: []byte{},
+		BitPos:    23,
+		IsWhite:   true,
+		A0:        112,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow1,
+			BitPos:    62,
+			A0:        3352,
+			Err:       nil,
+		},
+	})
+
+	resultingPixelsRow2 := drawPixels(nil, false, 1100)
+	resultingPixelsRow2 = drawPixels(resultingPixelsRow2, true, 1027)
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 29, 67, 181, 96},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   false,
+		A0:        0,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow2,
+			BitPos:    54,
+			A0:        2127,
+			Err:       nil,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 29, 67, 181, 96, 0, 0, 0},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   false,
+		A0:        109,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow2,
+			BitPos:    54,
+			A0:        2127,
+			Err:       nil,
+		},
+	})
+
+	resultingPixelsRow3 := drawPixels(nil, true, 3655)
+	resultingPixelsRow3 = drawPixels(resultingPixelsRow3, false, 3547)
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 9, 166, 188, 7, 192, 230, 25, 96},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   true,
+		A0:        0,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow3,
+			BitPos:    83,
+			A0:        7202,
+			Err:       nil,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 9, 166, 188, 7, 192, 230, 25, 96, 0, 0, 0},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   true,
+		A0:        1121,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow3,
+			BitPos:    83,
+			A0:        7202,
+			Err:       nil,
+		},
+	})
+
+	resultingPixelsRow4 := drawPixels(nil, false, 3502)
+	resultingPixelsRow4 = drawPixels(resultingPixelsRow4, true, 3488)
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 15, 129, 200, 21, 128, 125, 166, 54},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   false,
+		A0:        0,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow4,
+			BitPos:    87,
+			A0:        6990,
+			Err:       nil,
+		},
+	})
+
+	tests = append(tests, testData{
+		Encoded:   []byte{1, 28, 40, 15, 129, 200, 21, 128, 125, 166, 54, 0, 0, 0},
+		PixelsRow: nil,
+		BitPos:    21,
+		IsWhite:   false,
+		A0:        2148,
+		Want: testResult{
+			PixelsRow: resultingPixelsRow4,
+			BitPos:    87,
+			A0:        6990,
+			Err:       nil,
+		},
+	})
+
+	for _, test := range tests {
+		gotPixelsRow, gotBitPos, gotA0, gotErr := decodeHorizontalMode(test.Encoded, test.PixelsRow,
+			test.BitPos, test.IsWhite, test.A0)
+
+		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
+			t.Errorf("Wrong pixels row len. Got %v, want %v\n", len(gotPixelsRow), len(test.Want.PixelsRow))
+		} else {
+			for i := range gotPixelsRow {
+				if gotPixelsRow[i] != test.Want.PixelsRow[i] {
+					t.Errorf("Wrong pixel at %v. Got %v, want %v\n",
+						i, gotPixelsRow[i], test.Want.PixelsRow[i])
+				}
+			}
+		}
+
+		if gotBitPos != test.Want.BitPos {
+			t.Errorf("Wrong bit pos. Got %v, want %v\n", gotBitPos, test.Want.BitPos)
+		}
+
+		if gotA0 != test.Want.A0 {
+			t.Errorf("Wrong A0. Got %v, want %v\n", gotA0, test.Want.A0)
+		}
+
+		if gotErr != test.Want.Err {
+			t.Errorf("Wrong err. Got %v, want %v\n", gotErr, test.Want.Err)
+		}
+	}
+}
 
 func TestDecodeRow1D(t *testing.T) {
 	type testResult struct {
@@ -229,12 +942,8 @@ func TestDecodeRow1D(t *testing.T) {
 		},
 	})
 
-	for i, test := range tests {
+	for _, test := range tests {
 		gotPixelsRow, gotBitPos := test.Encoder.decodeRow1D(test.Encoded, test.BitPos)
-
-		if i == 6 {
-			log.Println()
-		}
 
 		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
 			t.Errorf("Wrong pixels row len. Got %v, want %v\n",

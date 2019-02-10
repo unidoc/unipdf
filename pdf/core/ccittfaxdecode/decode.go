@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	ErrEOFBCorrupt = errors.New("EOFB code is corrupted")
-	ErrRTCCorrupt  = errors.New("RTC code is corrupted")
+	ErrEOFBCorrupt               = errors.New("EOFB code is corrupted")
+	ErrRTCCorrupt                = errors.New("RTC code is corrupted")
+	ErrWrongCodeInHorizontalMode = errors.New("wrong code in horizontal mode")
 
 	whiteTree = &decodingTreeNode{
 		Val: 255,
@@ -430,7 +431,7 @@ func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]by
 	}
 
 	if runLen == -1 {
-		return pixelsRow, startingBitPos, errors.New("wrong code in horizontal mode")
+		return pixelsRow, startingBitPos, ErrWrongCodeInHorizontalMode
 	}
 
 	return pixelsRow, bitPos, nil
