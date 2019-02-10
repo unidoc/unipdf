@@ -9,6 +9,9 @@ var (
 	ErrEOFBCorrupt               = errors.New("EOFB code is corrupted")
 	ErrRTCCorrupt                = errors.New("RTC code is corrupted")
 	ErrWrongCodeInHorizontalMode = errors.New("wrong code in horizontal mode")
+	ErrNoEOLFound                = errors.New("no EOL found while the EndOfLine parameter is true")
+	ErrInvalidEOL                = errors.New("invalid EOL")
+	ErrInvalid2DCode             = errors.New("invalid 2D code")
 
 	whiteTree = &decodingTreeNode{
 		Val: 255,
@@ -89,7 +92,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 		gotEOL, bitPos = tryFetchEOL(encoded, bitPos)
 		if !gotEOL {
 			if e.EndOfLine {
-				return nil, errors.New("no EOL found while the EndOfLine parameter is true")
+				return nil, ErrNoEOLFound
 			}
 		} else {
 			// 5 EOLs left to fill RTC
@@ -101,7 +104,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 						break
 					}
 
-					return nil, errors.New("invalid EOL")
+					return nil, ErrInvalidEOL
 				}
 			}
 
@@ -150,7 +153,7 @@ byteLoop:
 
 		if !gotEOL {
 			if e.EndOfLine {
-				return nil, errors.New("no EOL found while the EndOfLine parameter is true")
+				return nil, ErrNoEOLFound
 			}
 		}
 
@@ -183,7 +186,7 @@ byteLoop:
 					break byteLoop
 				} else {
 					if e.EndOfLine {
-						return nil, errors.New("no EOL found while the EndOfLine parameter is true")
+						return nil, ErrNoEOLFound
 					}
 				}
 			}
@@ -298,7 +301,7 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		for a0 < e.Columns {
 			twoDimCode, bitPos, ok = fetchNext2DCode(encoded, bitPos)
 			if !ok {
-				return nil, errors.New("wrong 2 dim code")
+				return nil, ErrInvalid2DCode
 			}
 
 			switch twoDimCode {

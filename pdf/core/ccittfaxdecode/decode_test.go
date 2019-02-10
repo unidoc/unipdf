@@ -4,6 +4,10 @@ import (
 	"testing"
 )
 
+const (
+	testDataPath = "./testdata"
+)
+
 func TestDecodeNextRunLen(t *testing.T) {
 	type testResult struct {
 		PixelsRow []byte
@@ -714,6 +718,260 @@ func TestDecodeHorizontalMode(t *testing.T) {
 
 		if gotErr != test.Want.Err {
 			t.Errorf("Wrong err. Got %v, want %v\n", gotErr, test.Want.Err)
+		}
+	}
+}
+
+func TestDecodePassMode(t *testing.T) {
+	type testResult struct {
+		PixelsRow []byte
+		A0        int
+	}
+
+	type testData struct {
+		Pixels    [][]byte
+		PixelsRow []byte
+		IsWhite   bool
+		A0        int
+		Want      testResult
+	}
+
+	tests := []testData{
+		{
+			Pixels: [][]byte{
+				{white, white, white, white, white},
+			},
+			PixelsRow: nil,
+			IsWhite:   true,
+			A0:        -1,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white},
+				A0:        5,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black},
+				{white, white, white, white, white},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Want: testResult{
+				PixelsRow: []byte{black, white, white, white, white},
+				A0:        5,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black},
+				{white, white, white, white, white},
+			},
+			PixelsRow: []byte{},
+			IsWhite:   false,
+			A0:        0,
+			Want: testResult{
+				PixelsRow: []byte{black, black, black, black, black},
+				A0:        5,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		gotPixelsRow, gotA0 := decodePassMode(test.Pixels, test.PixelsRow, test.IsWhite, test.A0)
+
+		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
+			t.Errorf("Wrong pixels row len. Got %v, want %v\n", len(gotPixelsRow), len(test.Want.PixelsRow))
+		} else {
+			for i := range gotPixelsRow {
+				if gotPixelsRow[i] != test.Want.PixelsRow[i] {
+					t.Errorf("Wrong pixel at %v. Got %v, want %v\n",
+						i, gotPixelsRow[i], test.Want.PixelsRow[i])
+				}
+			}
+		}
+
+		if gotA0 != test.Want.A0 {
+			t.Errorf("Wrong a0. Got %v, want %v\n", gotA0, test.Want.A0)
+		}
+	}
+}
+
+func TestDecode(t *testing.T) {
+	type testResult struct {
+		Pixels [][]byte
+		Err    error
+	}
+
+	type testData struct {
+		Encoder       Encoder
+		InputFilePath string
+		Want          testResult
+	}
+
+	tests := []testData{}
+}
+
+func TestDecodeVerticalMode(t *testing.T) {
+	type testResult struct {
+		PixelsRow []byte
+		A0        int
+	}
+
+	type testData struct {
+		Pixels    [][]byte
+		PixelsRow []byte
+		IsWhite   bool
+		A0        int
+		Shift     int
+		Want      testResult
+	}
+
+	tests := []testData{
+		{
+			Pixels: [][]byte{
+				{white, white, white, white, white},
+			},
+			PixelsRow: nil,
+			IsWhite:   true,
+			A0:        -1,
+			Shift:     0,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white, white, white},
+				A0:        5,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black},
+				{white, white, white, white, white},
+			},
+			PixelsRow: []byte{white},
+			IsWhite:   false,
+			A0:        1,
+			Shift:     -1,
+			Want: testResult{
+				PixelsRow: []byte{white, black, black, black},
+				A0:        4,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black},
+				{white, white, white, white, white},
+			},
+			PixelsRow: []byte{},
+			IsWhite:   true,
+			A0:        -1,
+			Shift:     -2,
+			Want: testResult{
+				PixelsRow: []byte{white, white, white},
+				A0:        3,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black},
+				{white, white, white, white, white},
+			},
+			PixelsRow: nil,
+			IsWhite:   true,
+			A0:        -1,
+			Shift:     -3,
+			Want: testResult{
+				PixelsRow: []byte{white, white},
+				A0:        2,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black, black, black, black},
+				{white, black, white, black, black, black, black, black},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Shift:     -1,
+			Want: testResult{
+				PixelsRow: []byte{black, white},
+				A0:        2,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black, black, black, black},
+				{white, black, white, black, black, black, black, black},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Shift:     0,
+			Want: testResult{
+				PixelsRow: []byte{black, white, white},
+				A0:        3,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black, black, black, black},
+				{white, black, white, black, black, black, black, black},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Shift:     1,
+			Want: testResult{
+				PixelsRow: []byte{black, white, white, white},
+				A0:        4,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black, black, black, black},
+				{white, black, white, black, black, black, black, black},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Shift:     2,
+			Want: testResult{
+				PixelsRow: []byte{black, white, white, white, white},
+				A0:        5,
+			},
+		},
+		{
+			Pixels: [][]byte{
+				{black, black, black, black, black, black, black, black},
+				{white, black, white, black, black, black, black, black},
+			},
+			PixelsRow: []byte{black},
+			IsWhite:   true,
+			A0:        1,
+			Shift:     3,
+			Want: testResult{
+				PixelsRow: []byte{black, white, white, white, white, white},
+				A0:        6,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		gotPixelsRow, gotA0 := decodeVerticalMode(test.Pixels, test.PixelsRow, test.IsWhite, test.A0, test.Shift)
+
+		if len(gotPixelsRow) != len(test.Want.PixelsRow) {
+			t.Errorf("Wrong pixels row len. Got %v, want %v\n",
+				len(gotPixelsRow), len(test.Want.PixelsRow))
+		} else {
+			for i := range gotPixelsRow {
+				if gotPixelsRow[i] != test.Want.PixelsRow[i] {
+					t.Errorf("Wrong pixel at %v. Got %v, want %v\n",
+						i, gotPixelsRow[i], test.Want.PixelsRow[i])
+				}
+			}
+		}
+
+		if gotA0 != test.Want.A0 {
+			t.Errorf("Wrong a0. Got %v, want %v\n", gotA0, test.Want.A0)
 		}
 	}
 }

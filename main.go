@@ -2,9 +2,11 @@ package main
 
 import (
 	"archive/zip"
+	"ccitt/ccitt"
 	"fmt"
 	"image"
 	"image/png"
+	"io"
 	"log"
 	"os"
 
@@ -15,7 +17,7 @@ import (
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
 
-/*func getPixels(file io.Reader) ([][]byte, error) {
+func getPixels(file io.Reader) ([][]byte, error) {
 	img, _, err := image.Decode(file)
 	if err != nil {
 		return nil, err
@@ -38,6 +40,7 @@ import (
 	}
 	return pixels, nil
 }
+
 // sliceDiff compares two slices returning the first index of the different
 // elements pair. Returns -1 if the slices contain the same elements
 func slicesDiff(s1, s2 []byte) int {
@@ -54,7 +57,8 @@ func slicesDiff(s1, s2 []byte) int {
 	}
 	return -1
 }
-func main() {
+
+/*func main() {
 	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
 	file, err := os.Open("/home/darkrengarius/Downloads/scan2.png")
 	if err != nil {
@@ -89,6 +93,38 @@ var xObjectImages = 0
 var inlineImages = 0
 
 func main() {
+	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+	file, err := os.Open("/home/darkrengarius/Downloads/p3_0.png")
+	if err != nil {
+		log.Fatalf("Error opening file: %v\n", err)
+	}
+	defer file.Close()
+	pixels, err := getPixels(file)
+	if err != nil {
+		log.Fatalf("Error decoding the image: %v\n", err)
+	}
+	encoder := &ccitt.Encoder{
+		Columns:          2560,
+		K:                4,
+		EndOfLine:        true,
+		EncodedByteAlign: true,
+		EndOfBlock:       true,
+		//Rows:             3295,
+	}
+	encoded := encoder.Encode(pixels)
+
+	f, err := os.Create("/home/darkrengarius/Downloads/K4-Columns2560-EOL-Aligned-EOFB.gr3")
+	if err != nil {
+		log.Fatalf("Error creating file: %v\n", err)
+	}
+
+	_, err = f.Write(encoded)
+	if err != nil {
+		log.Fatalf("Error saving to file: %v\n", err)
+	}
+
+	log.Println()
+
 	/*var files []string
 
 	err := filepath.Walk("/home/darkrengarius/Downloads/4111112", func(path string, info os.FileInfo, err error) error {
@@ -110,7 +146,7 @@ func main() {
 	outputPath := "/home/darkrengarius/Downloads/testCombined000141.zip"
 
 	fmt.Printf("Input file: %s\n", inputPath)
-	err := extractImagesToArchive(inputPath, outputPath)
+	err = extractImagesToArchive(inputPath, outputPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

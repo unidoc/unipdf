@@ -1775,30 +1775,6 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 	return encoder, nil
 }
 
-/*func getPixels(file io.Reader) ([][]byte, error) {
-	img, _, err := goimage.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-	bounds := img.Bounds()
-	w, h := bounds.Max.X, bounds.Max.Y
-	var pixels [][]byte
-	for y := 0; y < h; y++ {
-		var row []byte
-		for x := 0; x < w; x++ {
-			r, g, b, _ := img.At(x, y).RGBA()
-			if r == 65535 && g == 65535 && b == 65535 {
-				// append white
-				row = append(row, 1)
-			} else {
-				row = append(row, 0)
-			}
-		}
-		pixels = append(pixels, row)
-	}
-	return pixels, nil
-}*/
-
 func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	encoder := &ccittfaxdecode.Encoder{
 		K:                      this.K,
