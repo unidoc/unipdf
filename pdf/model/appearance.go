@@ -7,17 +7,17 @@ package model
 
 import "github.com/unidoc/unidoc/pdf/core"
 
-// PdfAppearance contains the common attributes of an appearance form field.
-type PdfAppearance struct {
+// PdfSignatureAppearance contains the common attributes of an appearance form field.
+type PdfSignatureAppearance struct {
 	*PdfField
 	*PdfAnnotationWidget
 	// TODO(gunnsth): Signature is not really part of an appearance.
 	Signature *PdfSignature
 }
 
-// NewPdfAppearance returns an initialized annotation widget.
-func NewPdfAppearance() *PdfAppearance {
-	app := &PdfAppearance{}
+// NewPdfSignatureAppearance returns an initialized annotation widget.
+func NewPdfSignatureAppearance() *PdfSignatureAppearance {
+	app := &PdfSignatureAppearance{}
 	app.PdfField = NewPdfField()
 	app.PdfAnnotationWidget = NewPdfAnnotationWidget()
 	app.PdfField.SetContext(app)
@@ -27,12 +27,13 @@ func NewPdfAppearance() *PdfAppearance {
 }
 
 // ToPdfObject implements interface PdfModel.
-func (app *PdfAppearance) ToPdfObject() core.PdfObject {
+func (app *PdfSignatureAppearance) ToPdfObject() core.PdfObject {
 	if app.Signature != nil {
 		app.V = app.Signature.ToPdfObject()
 	}
 	app.PdfAnnotation.ToPdfObject()
 	app.PdfField.ToPdfObject()
+
 	container := app.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 

@@ -245,46 +245,37 @@ func (f *PdfField) String() string {
 }
 
 // ToPdfObject sets the common field elements.
-// Note: Call the more field context's ToPdfObject to set both the generic and non-generic information.
+// Note: Call the more field context's ToPdfObject to set both the generic and
+// non-generic information.
 func (f *PdfField) ToPdfObject() core.PdfObject {
 	container := f.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
-	d.SetIfNotNil("FT", f.FT)
-	if f.Parent != nil {
-		d.Set("Parent", f.Parent.GetContainingPdfObject())
-	}
+	// Create an array of the kids (fields or widgets).
 	kids := core.MakeArray()
-	if f.Kids != nil {
-		// Create an array of the kids (fields or widgets).
-		for _, child := range f.Kids {
-			kids.Append(child.ToPdfObject())
-		}
+	for _, child := range f.Kids {
+		kids.Append(child.ToPdfObject())
+	}
+	for _, annot := range f.Annotations {
+		kids.Append(annot.GetContext().ToPdfObject())
 	}
 
-	if f.Annotations != nil {
-		for _, annot := range f.Annotations {
-			kids.Append(annot.GetContext().ToPdfObject())
-		}
+	// Set fields.
+	if f.Parent != nil {
+		d.SetIfNotNil("Parent", f.Parent.GetContainingPdfObject())
 	}
-
-	if f.Kids != nil || f.Annotations != nil {
+	if kids.Len() > 0 {
 		d.Set("Kids", kids)
 	}
 
+	d.SetIfNotNil("FT", f.FT)
 	d.SetIfNotNil("T", f.T)
 	d.SetIfNotNil("TU", f.TU)
 	d.SetIfNotNil("TM", f.TM)
 	d.SetIfNotNil("Ff", f.Ff)
-	if f.V != nil {
-		d.Set("V", f.V)
-	}
-	if f.DV != nil {
-		d.Set("DV", f.DV)
-	}
-	if f.AA != nil {
-		d.Set("AA", f.AA)
-	}
+	d.SetIfNotNil("V", f.V)
+	d.SetIfNotNil("DV", f.DV)
+	d.SetIfNotNil("AA", f.AA)
 
 	return container
 }
