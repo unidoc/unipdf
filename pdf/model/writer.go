@@ -226,9 +226,11 @@ func copyObject(obj core.PdfObject, objectToObjectCopyMap map[core.PdfObject]cor
 		objectToObjectCopyMap[obj] = &newObj
 		return &newObj
 	case *pdfSignDictionary:
-		newObj := &pdfSignDictionary{PdfObjectDictionary: MakeDict()}
-		newObj.handler = t.handler
-		newObj.signature = t.signature
+		newObj := &pdfSignDictionary{
+			PdfObjectDictionary: core.MakeDict(),
+			handler:             t.handler,
+			signature:           t.signature,
+		}
 		objectToObjectCopyMap[obj] = newObj
 		for _, key := range t.Keys() {
 			val := t.Get(key)

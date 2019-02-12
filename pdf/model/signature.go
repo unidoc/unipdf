@@ -140,49 +140,23 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	}
 
 	dict.Set("Type", sig.Type)
+	dict.SetIfNotNil("Filter", sig.Filter)
+	dict.SetIfNotNil("SubFilter", sig.SubFilter)
+	dict.SetIfNotNil("Contents", sig.Contents)
+	dict.SetIfNotNil("Cert", sig.Cert)
+	dict.SetIfNotNil("ByteRange", sig.ByteRange)
+	dict.SetIfNotNil("Reference", sig.Reference)
+	dict.SetIfNotNil("Changes", sig.Changes)
+	dict.SetIfNotNil("Name", sig.Name)
+	dict.SetIfNotNil("M", sig.M)
+	dict.SetIfNotNil("Reason", sig.Reason)
+	dict.SetIfNotNil("ContactInfo", sig.ContactInfo)
+	dict.SetIfNotNil("ByteRange", sig.ByteRange)
+	dict.SetIfNotNil("Contents", sig.Contents)
 
-	if sig.Filter != nil {
-		dict.Set("Filter", sig.Filter)
-	}
-	if sig.SubFilter != nil {
-		dict.Set("SubFilter", sig.SubFilter)
-	}
-	if sig.Contents != nil {
-		dict.Set("Contents", sig.Contents)
-	}
-	if sig.Cert != nil {
-		dict.Set("Cert", sig.Cert)
-	}
-	if sig.ByteRange != nil {
-		dict.Set("ByteRange", sig.ByteRange)
-	}
-	if sig.Reference != nil {
-		dict.Set("Reference", sig.Reference)
-	}
-	if sig.Changes != nil {
-		dict.Set("Changes", sig.Changes)
-	}
-	if sig.Name != nil {
-		dict.Set("Name", sig.Name)
-	}
-	if sig.M != nil {
-		dict.Set("M", sig.M)
-	}
-	if sig.Reason != nil {
-		dict.Set("Reason", sig.Reason)
-	}
-	if sig.ContactInfo != nil {
-		dict.Set("ContactInfo", sig.ContactInfo)
-	}
-	if sig.ByteRange != nil {
-		dict.Set("ByteRange", sig.ByteRange)
-	}
-	if sig.Contents != nil {
-		dict.Set("Contents", sig.Contents)
-	}
 	// NOTE: ByteRange and Contents need to be updated dynamically.
-	// TODO: Currently dynamic update is only in the appender, need to support in the PdfWriter
-	// too for the initial signature on document creation.
+	// TODO: Currently dynamic update is only in the appender, need to support
+	// in the PdfWriter too for the initial signature on document creation.
 	return container
 }
 
@@ -281,19 +255,10 @@ func (sf *PdfSignatureField) ToPdfObject() core.PdfObject {
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
 	dict.Set("FT", core.MakeName("Sig"))
-
-	if sf.V != nil {
-		dict.Set("V", sf.V.ToPdfObject())
-	}
-	if sf.Lock != nil {
-		dict.Set("Lock", sf.Lock)
-	}
-	if sf.SV != nil {
-		dict.Set("SV", sf.SV)
-	}
-	if sf.Kids != nil {
-		dict.Set("Kids", sf.Kids)
-	}
+	dict.SetIfNotNil("V", sf.V.ToPdfObject())
+	dict.SetIfNotNil("Lock", sf.Lock)
+	dict.SetIfNotNil("SV", sf.SV)
+	dict.SetIfNotNil("Kids", sf.Kids)
 	// Other standard fields...
 
 	return container
@@ -332,45 +297,20 @@ func (pss *PdfSignatureFieldSeed) ToPdfObject() core.PdfObject {
 	container := pss.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
-	if pss.Ff != nil {
-		dict.Set("Ff", pss.Ff)
-	}
-	if pss.Filter != nil {
-		dict.Set("Filter", pss.Filter)
-	}
-	if pss.SubFilter != nil {
-		dict.Set("SubFilter", pss.SubFilter)
-	}
-	if pss.DigestMethod != nil {
-		dict.Set("DigestMethod", pss.DigestMethod)
-	}
-	if pss.V != nil {
-		dict.Set("V", pss.V)
-	}
-	if pss.Cert != nil {
-		dict.Set("Cert", pss.Cert)
-	}
-	if pss.Reasons != nil {
-		dict.Set("Reasons", pss.Reasons)
-	}
-	if pss.MDP != nil {
-		dict.Set("MDP", pss.MDP)
-	}
-	if pss.TimeStamp != nil {
-		dict.Set("TimeStamp", pss.TimeStamp)
-	}
-	if pss.LegalAttestation != nil {
-		dict.Set("LegalAttestation", pss.LegalAttestation)
-	}
-	if pss.AddRevInfo != nil {
-		dict.Set("AddRevInfo", pss.AddRevInfo)
-	}
-	if pss.LockDocument != nil {
-		dict.Set("LockDocument", pss.LockDocument)
-	}
-	if pss.AppearanceFilter != nil {
-		dict.Set("AppearanceFilter", pss.AppearanceFilter)
-	}
+	dict.SetIfNotNil("Ff", pss.Ff)
+	dict.SetIfNotNil("Filter", pss.Filter)
+	dict.SetIfNotNil("SubFilter", pss.SubFilter)
+	dict.SetIfNotNil("DigestMethod", pss.DigestMethod)
+	dict.SetIfNotNil("V", pss.V)
+	dict.SetIfNotNil("Cert", pss.Cert)
+	dict.SetIfNotNil("Reasons", pss.Reasons)
+	dict.SetIfNotNil("MDP", pss.MDP)
+	dict.SetIfNotNil("TimeStamp", pss.TimeStamp)
+	dict.SetIfNotNil("LegalAttestation", pss.LegalAttestation)
+	dict.SetIfNotNil("AddRevInfo", pss.AddRevInfo)
+	dict.SetIfNotNil("LockDocument", pss.LockDocument)
+	dict.SetIfNotNil("AppearanceFilter", pss.AppearanceFilter)
+
 	return container
 }
 
@@ -396,41 +336,19 @@ type PdfCertificateSeed struct {
 func (pcs *PdfCertificateSeed) ToPdfObject() core.PdfObject {
 	container := pcs.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
-	if pcs.Ff != nil {
-		dict.Set("Ff", pcs.Ff)
-	}
-	if pcs.Subject != nil {
-		dict.Set("Subject", pcs.Subject)
-	}
-	if pcs.SignaturePolicyOID != nil {
-		dict.Set("SignaturePolicyOID", pcs.SignaturePolicyOID)
-	}
-	if pcs.SignaturePolicyHashValue != nil {
-		dict.Set("SignaturePolicyHashValue", pcs.SignaturePolicyHashValue)
-	}
-	if pcs.SignaturePolicyHashAlgorithm != nil {
-		dict.Set("SignaturePolicyHashAlgorithm", pcs.SignaturePolicyHashAlgorithm)
-	}
-	if pcs.SignaturePolicyCommitmentType != nil {
-		dict.Set("SignaturePolicyCommitmentType", pcs.SignaturePolicyCommitmentType)
-	}
-	if pcs.SubjectDN != nil {
-		dict.Set("SubjectDN", pcs.SubjectDN)
-	}
-	if pcs.KeyUsage != nil {
-		dict.Set("KeyUsage", pcs.KeyUsage)
-	}
-	if pcs.Issuer != nil {
-		dict.Set("Issuer", pcs.Issuer)
-	}
-	if pcs.OID != nil {
-		dict.Set("OID", pcs.OID)
-	}
-	if pcs.URL != nil {
-		dict.Set("URL", pcs.URL)
-	}
-	if pcs.URLType != nil {
-		dict.Set("URLType", pcs.URLType)
-	}
+
+	dict.SetIfNotNil("Ff", pcs.Ff)
+	dict.SetIfNotNil("Subject", pcs.Subject)
+	dict.SetIfNotNil("SignaturePolicyOID", pcs.SignaturePolicyOID)
+	dict.SetIfNotNil("SignaturePolicyHashValue", pcs.SignaturePolicyHashValue)
+	dict.SetIfNotNil("SignaturePolicyHashAlgorithm", pcs.SignaturePolicyHashAlgorithm)
+	dict.SetIfNotNil("SignaturePolicyCommitmentType", pcs.SignaturePolicyCommitmentType)
+	dict.SetIfNotNil("SubjectDN", pcs.SubjectDN)
+	dict.SetIfNotNil("KeyUsage", pcs.KeyUsage)
+	dict.SetIfNotNil("Issuer", pcs.Issuer)
+	dict.SetIfNotNil("OID", pcs.OID)
+	dict.SetIfNotNil("URL", pcs.URL)
+	dict.SetIfNotNil("URLType", pcs.URLType)
+
 	return container
 }

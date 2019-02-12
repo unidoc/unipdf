@@ -387,17 +387,12 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 	if acroForm == nil {
 		acroForm = NewPdfAcroForm()
 	}
+
 	pageIndex := pageNum - 1
-	var page *PdfPage
-	for i, p := range a.pages {
-		if i == pageIndex {
-			page = p.Duplicate()
-			break
-		}
-	}
-	if page == nil {
+	if pageIndex < 0 || pageIndex > len(a.pages)-1 {
 		return nil, nil, fmt.Errorf("page %d not found", pageNum)
 	}
+	page := a.pages[pageIndex].Duplicate()
 
 	// TODO add more checks before set the fields
 	acroForm.SigFlags = core.MakeInteger(3)
@@ -456,7 +451,6 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	if a.written {
 		return errors.New("appender write can only be invoked once")
 	}
-	a.written = true
 
 	writer := NewPdfWriter()
 
@@ -704,6 +698,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		}
 	}
 
+	a.written = true
 	return nil
 }
 

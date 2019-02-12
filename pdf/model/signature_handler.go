@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
@@ -104,35 +105,44 @@ func (r *PdfReader) ValidateSignatures(handlers []SignatureHandler) ([]Signature
 		field   *PdfField
 		handler SignatureHandler
 	}
-	var pairs []*sigFieldPair
 
+	var pairs []*sigFieldPair
 	for _, f := range r.AcroForm.AllFields() {
 		if f.V == nil {
 			continue
 		}
 		if d, found := core.GetDict(f.V); found {
 			if name, ok := core.GetNameVal(d.Get("Type")); ok && name == "Sig" {
-				ind, _ := core.GetIndirect(f.V) // TODO refactoring
+				ind, found := core.GetIndirect(f.V)
+				if !found {
+					common.Log.Debug("ERROR: Signature container is nil")
+					return nil, ErrTypeCheck
+				}
+
 				sig, err := r.newPdfSignatureFromIndirect(ind)
 				if err != nil {
 					return nil, err
 				}
-				pairs = append(pairs, &sigFieldPair{sig: sig, field: f})
-			}
-		}
-	}
 
-	for _, pair := range pairs {
-		for _, handler := range handlers {
-			if handler.IsApplicable(pair.sig) {
-				pair.handler = handler
-				break
+				// Search for an appropriate handler.
+				var sigHandler SignatureHandler
+				for _, handler := range handlers {
+					if handler.IsApplicable(sig) {
+						sigHandler = handler
+						break
+					}
+				}
+
+				pairs = append(pairs, &sigFieldPair{
+					sig:     sig,
+					field:   f,
+					handler: sigHandler,
+				})
 			}
 		}
 	}
 
 	var results []SignatureValidationResult
-
 	for _, pair := range pairs {
 		defaultResult := SignatureValidationResult{
 			IsSigned: true,
