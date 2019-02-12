@@ -382,7 +382,7 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 
 // Sign signs a specific page with a digital signature using a specified signature handler.
 // Returns an Acroform and PdfAppearance that can be used to customize the signature appearance.
-func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfAppearance, err error) {
+func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfSignatureAppearance, err error) {
 	acroForm = a.Reader.AcroForm
 	if acroForm == nil {
 		acroForm = NewPdfAcroForm()
@@ -411,7 +411,7 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 	}
 	a.addNewObjects(sig.container)
 
-	appearance = NewPdfAppearance()
+	appearance = NewPdfSignatureAppearance()
 
 	fields := append(acroForm.AllFields(), appearance.PdfField)
 	acroForm.Fields = &fields
