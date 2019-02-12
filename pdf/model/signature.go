@@ -254,8 +254,12 @@ func (sf *PdfSignatureField) ToPdfObject() core.PdfObject {
 	container := sf.container
 	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
+	// Set fields.
+	if sf.V != nil {
+		dict.Set("V", sf.V.ToPdfObject())
+	}
+
 	dict.Set("FT", core.MakeName("Sig"))
-	dict.SetIfNotNil("V", sf.V.ToPdfObject())
 	dict.SetIfNotNil("Lock", sf.Lock)
 	dict.SetIfNotNil("SV", sf.SV)
 	dict.SetIfNotNil("Kids", sf.Kids)

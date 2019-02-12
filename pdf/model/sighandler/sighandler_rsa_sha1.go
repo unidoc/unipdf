@@ -45,8 +45,8 @@ func (a *adobeX509RSASHA1) InitSignature(sig *model.PdfSignature) error {
 	//sig.Filter = core.MakeName("Adobe.PPKMS")
 	sig.SubFilter = core.MakeName("adbe.x509.rsa_sha1")
 	sig.Cert = core.MakeString(string(handler.certificate.Raw))
-
 	sig.Reference = nil
+
 	digest, err := handler.NewDigest(sig)
 	if err != nil {
 		return err

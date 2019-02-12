@@ -33,6 +33,7 @@ func (app *PdfAppearance) ToPdfObject() core.PdfObject {
 	}
 	app.PdfAnnotation.ToPdfObject()
 	app.PdfField.ToPdfObject()
+
 	container := app.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 

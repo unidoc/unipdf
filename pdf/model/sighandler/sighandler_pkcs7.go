@@ -42,8 +42,8 @@ func (a *adobePKCS7Detached) InitSignature(sig *model.PdfSignature) error {
 	sig.Handler = &handler
 	sig.Filter = core.MakeName("Adobe.PPKLite")
 	sig.SubFilter = core.MakeName("adbe.pkcs7.detached")
-
 	sig.Reference = nil
+
 	digest, err := handler.NewDigest(sig)
 	if err != nil {
 		return err
@@ -73,23 +73,21 @@ func (a *adobePKCS7Detached) NewDigest(sig *model.PdfSignature) (model.Hasher, e
 // Validate validates PdfSignature.
 func (a *adobePKCS7Detached) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
-
-	buffer := digest.(*bytes.Buffer)
 	p7, err := pkcs7.Parse(signed)
 	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
+
+	buffer := digest.(*bytes.Buffer)
 	p7.Content = buffer.Bytes()
-	err = p7.Verify()
-	if err != nil {
+	if err = p7.Verify(); err != nil {
 		return model.SignatureValidationResult{}, err
 	}
 
-	result := model.SignatureValidationResult{
+	return model.SignatureValidationResult{
 		IsSigned:   true,
 		IsVerified: true,
-	}
-	return result, nil
+	}, nil
 }
 
 // Sign sets the Contents fields.
