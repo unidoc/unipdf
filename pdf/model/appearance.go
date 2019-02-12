@@ -7,15 +7,16 @@ package model
 
 import "github.com/unidoc/unidoc/pdf/core"
 
-// PdfSignatureAppearance contains the common attributes of an appearance form field.
+// PdfSignatureAppearance defines a signature with a specified form field and
+// annotation widget for appearance styling.
 type PdfSignatureAppearance struct {
 	*PdfField
 	*PdfAnnotationWidget
-	// TODO(gunnsth): Signature is not really part of an appearance.
+	
 	Signature *PdfSignature
 }
 
-// NewPdfSignatureAppearance returns an initialized annotation widget.
+// NewPdfSignatureAppearance returns an initialized signature field appearance.
 func NewPdfSignatureAppearance() *PdfSignatureAppearance {
 	app := &PdfSignatureAppearance{}
 	app.PdfField = NewPdfField()
