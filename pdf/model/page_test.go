@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // ParseIndObjSeries loads a series of indirect objects until it runs into an error or EOF.
@@ -28,9 +28,9 @@ func (r *PdfReader) ParseIndObjSeries() error {
 		}
 
 		switch t := obj.(type) {
-		case *PdfObjectStream:
+		case *core.PdfObjectStream:
 			r.parser.ObjCache[int(t.ObjectNumber)] = t
-		case *PdfIndirectObject:
+		case *core.PdfIndirectObject:
 			r.parser.ObjCache[int(t.ObjectNumber)] = t
 		default:
 			common.Log.Debug("Incorrect type for ind obj: %T", obj)
@@ -221,7 +221,7 @@ func TestPdfDateBuild(t *testing.T) {
 	}
 
 	obj := date.ToPdfObject()
-	strObj, ok := obj.(*PdfObjectString)
+	strObj, ok := obj.(*core.PdfObjectString)
 	if !ok {
 		t.Errorf("Date PDF object should be a string")
 		return
@@ -251,7 +251,7 @@ func TestPdfPage1(t *testing.T) {
 >>
 endobj
     `
-	parser := NewParserFromString(rawText)
+	parser := core.NewParserFromString(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -259,12 +259,12 @@ endobj
 		return
 	}
 
-	pageObj, ok := obj.(*PdfIndirectObject)
+	pageObj, ok := obj.(*core.PdfIndirectObject)
 	if !ok {
 		t.Errorf("Invalid page object type != dictionary (%q)", obj)
 		return
 	}
-	pageDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
+	pageDict, ok := pageObj.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
 		t.Errorf("Page object != dictionary")
 		return
@@ -296,7 +296,7 @@ func TestRect(t *testing.T) {
 
 	//parser := PdfParser{}
 	//parser.reader = makeReaderForText(rawText)
-	parser := NewParserFromString(rawText)
+	parser := core.NewParserFromString(rawText)
 
 	dict, err := parser.ParseDict()
 	if err != nil {
@@ -305,7 +305,7 @@ func TestRect(t *testing.T) {
 	}
 
 	obj := dict.Get("MediaBox")
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		t.Errorf("Type != Array")
 		return

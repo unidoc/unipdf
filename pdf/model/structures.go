@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // PdfRectangle is a definition of a rectangle.
@@ -30,29 +30,29 @@ type PdfRectangle struct {
 // NewPdfRectangle creates a PDF rectangle object based on an input array of 4 integers.
 // Defining the lower left (LL) and upper right (UR) corners with
 // floating point numbers.
-func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
+func NewPdfRectangle(arr core.PdfObjectArray) (*PdfRectangle, error) {
 	rect := PdfRectangle{}
 	if arr.Len() != 4 {
 		return nil, errors.New("invalid rectangle array, len != 4")
 	}
 
 	var err error
-	rect.Llx, err = GetNumberAsFloat(arr.Get(0))
+	rect.Llx, err = core.GetNumberAsFloat(arr.Get(0))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Lly, err = GetNumberAsFloat(arr.Get(1))
+	rect.Lly, err = core.GetNumberAsFloat(arr.Get(1))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Urx, err = GetNumberAsFloat(arr.Get(2))
+	rect.Urx, err = core.GetNumberAsFloat(arr.Get(2))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Ury, err = GetNumberAsFloat(arr.Get(3))
+	rect.Ury, err = core.GetNumberAsFloat(arr.Get(3))
 	if err != nil {
 		return nil, err
 	}
@@ -71,9 +71,13 @@ func (rect *PdfRectangle) Width() float64 {
 }
 
 // ToPdfObject converts rectangle to a PDF object.
-func (rect *PdfRectangle) ToPdfObject() PdfObject {
-	arr := MakeArray(MakeFloat(rect.Llx), MakeFloat(rect.Lly), MakeFloat(rect.Urx), MakeFloat(rect.Ury))
-	return arr
+func (rect *PdfRectangle) ToPdfObject() core.PdfObject {
+	return core.MakeArray(
+		core.MakeFloat(rect.Llx),
+		core.MakeFloat(rect.Lly),
+		core.MakeFloat(rect.Urx),
+		core.MakeFloat(rect.Ury),
+	)
 }
 
 // PdfDate represents a date, which is a PDF string of the form:
@@ -148,9 +152,9 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 }
 
 // ToPdfObject converts date to a PDF string object.
-func (date *PdfDate) ToPdfObject() PdfObject {
+func (date *PdfDate) ToPdfObject() core.PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
 		date.year, date.month, date.day, date.hour, date.minute, date.second,
 		date.utOffsetSign, date.utOffsetHours, date.utOffsetMins)
-	return MakeString(str)
+	return core.MakeString(str)
 }
