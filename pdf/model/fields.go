@@ -433,28 +433,41 @@ func (ch *PdfFieldChoice) ToPdfObject() core.PdfObject {
 // the name of the signer and verifying document contents.
 type PdfFieldSignature struct {
 	*PdfField
+	*PdfAnnotationWidget
+
 	V    *PdfSignature
 	Lock *core.PdfIndirectObject
 	SV   *core.PdfIndirectObject
 }
 
+// NewPdfFieldSignature returns an initialized signature field.
+func NewPdfFieldSignature() *PdfFieldSignature {
+	sig := &PdfFieldSignature{}
+	sig.PdfField = NewPdfField()
+	sig.PdfAnnotationWidget = NewPdfAnnotationWidget()
+	sig.PdfField.SetContext(sig)
+	sig.PdfAnnotationWidget.SetContext(sig)
+	sig.PdfAnnotationWidget.container = sig.PdfField.container
+	return sig
+}
+
 // ToPdfObject returns an indirect object containing the signature field dictionary.
 func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
 	// Set general field attributes
+	if sig.PdfAnnotationWidget != nil {
+		sig.PdfAnnotation.ToPdfObject()
+	}
 	sig.PdfField.ToPdfObject()
-	container := sig.container
 
 	// Handle signature field specific attributes
+	container := sig.container
+
 	d := container.PdfObject.(*core.PdfObjectDictionary)
-	d.Set("FT", core.MakeName("Sig"))
+	d.SetIfNotNil("FT", core.MakeName("Sig"))
+	d.SetIfNotNil("Lock", sig.Lock)
+	d.SetIfNotNil("SV", sig.SV)
 	if sig.V != nil {
-		d.Set("V", sig.V.ToPdfObject())
-	}
-	if sig.Lock != nil {
-		d.Set("Lock", sig.Lock)
-	}
-	if sig.SV != nil {
-		d.Set("SV", sig.SV)
+		d.SetIfNotNil("V", sig.V.ToPdfObject())
 	}
 
 	return container

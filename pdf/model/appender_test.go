@@ -453,8 +453,8 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 
-	appearance.Signature.Name = core.MakeString("Test Appender")
-	appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
+	appearance.V.Name = core.MakeString("Test Appender")
+	appearance.V.Reason = core.MakeString("TestAppenderSignPage4")
 
 	err = appender.WriteToFile(tempFile("appender_sign_page_4.pdf"))
 	if err != nil {
@@ -520,8 +520,8 @@ func TestAppenderSignMultiple(t *testing.T) {
 			return
 		}
 
-		appearance.Signature.Name = core.MakeString(fmt.Sprintf("Test Appender - Round %d", i+1))
-		appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
+		appearance.V.Name = core.MakeString(fmt.Sprintf("Test Appender - Round %d", i+1))
+		appearance.V.Reason = core.MakeString("TestAppenderSignPage4")
 
 		outPath := tempFile(fmt.Sprintf("appender_sign_multiple_%d.pdf", i+1))
 

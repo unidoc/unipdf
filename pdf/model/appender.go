@@ -381,8 +381,8 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 }
 
 // Sign signs a specific page with a digital signature using a specified signature handler.
-// Returns an Acroform and PdfAppearance that can be used to customize the signature appearance.
-func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfSignatureAppearance, err error) {
+// Returns an Acroform and PdfFieldSignature that can be used to customize the signature appearance.
+func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, signatureField *PdfFieldSignature, err error) {
 	acroForm = a.Reader.AcroForm
 	if acroForm == nil {
 		acroForm = NewPdfAcroForm()
@@ -411,32 +411,31 @@ func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *Pdf
 	}
 	a.addNewObjects(sig.container)
 
-	appearance = NewPdfSignatureAppearance()
-
-	fields := append(acroForm.AllFields(), appearance.PdfField)
+	signatureField = NewPdfFieldSignature()
+	fields := append(acroForm.AllFields(), signatureField.PdfField)
 	acroForm.Fields = &fields
 
 	procPage(page)
 
-	appearance.V = sig.ToPdfObject()
-	appearance.FT = core.MakeName("Sig")
-	appearance.V = sig.ToPdfObject()
-	appearance.T = core.MakeString("Signature1")
-	appearance.F = core.MakeInteger(132)
-	appearance.P = page.ToPdfObject()
-	appearance.Rect = core.MakeArray(core.MakeInteger(0), core.MakeInteger(0), core.MakeInteger(0),
-		core.MakeInteger(0))
-	appearance.Signature = sig
+	signatureField.FT = core.MakeName("Sig")
+	signatureField.V = sig
+	signatureField.T = core.MakeString("Signature1")
+	signatureField.F = core.MakeInteger(132)
+	signatureField.P = page.ToPdfObject()
+	signatureField.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
 
-	// Add the signature appearance to the page annotations.
-	page.Annotations = append(page.Annotations, appearance.PdfAnnotationWidget.PdfAnnotation)
-
+	// Add the signature field to the page annotations.
+	page.Annotations = append(page.Annotations, signatureField.PdfAnnotationWidget.PdfAnnotation)
 	a.pages[pageIndex] = page
 
 	// Update acroform.
 	a.ReplaceAcroForm(acroForm)
-
-	return acroForm, appearance, nil
+	return acroForm, signatureField, nil
 }
 
 // ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which
