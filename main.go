@@ -94,7 +94,7 @@ var inlineImages = 0
 
 func main() {
 	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
-	file, err := os.Open("/home/darkrengarius/Downloads/p3_0.png")
+	file, err := os.Open("/home/darkrengarius/go/src/github.com/unidoc/unidoc/pdf/core/ccittfaxdecode/testdata/p3_0.png")
 	if err != nil {
 		log.Fatalf("Error opening file: %v\n", err)
 	}
@@ -106,14 +106,14 @@ func main() {
 	encoder := &ccittfaxdecode.Encoder{
 		Columns:          2560,
 		K:                -1,
-		EndOfLine:        true,
+		EndOfLine:        false,
 		EncodedByteAlign: true,
-		EndOfBlock:       true,
-		//Rows:             3295,
+		EndOfBlock:       false,
+		Rows:             3295,
 	}
 	encoded := encoder.Encode(pixels)
 
-	f, err := os.Create("/home/darkrengarius/Downloads/K-1-Columns2560-EOL-Aligned-EOFB.gr4")
+	f, err := os.Create("/home/darkrengarius/Downloads/K-1-Columns2560-Aligned-Rows3295.gr4")
 	if err != nil {
 		log.Fatalf("Error creating file: %v\n", err)
 	}
@@ -122,6 +122,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error saving to file: %v\n", err)
 	}
+
+	f.Close()
 
 	log.Println()
 
