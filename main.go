@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"ccitt/ccitt"
 	"fmt"
 	"image"
 	"image/png"
@@ -13,6 +12,7 @@ import (
 	unicommon "github.com/unidoc/unidoc/common"
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/ccittfaxdecode"
 	"github.com/unidoc/unidoc/pdf/creator"
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
@@ -103,9 +103,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error decoding the image: %v\n", err)
 	}
-	encoder := &ccitt.Encoder{
+	encoder := &ccittfaxdecode.Encoder{
 		Columns:          2560,
-		K:                4,
+		K:                -1,
 		EndOfLine:        true,
 		EncodedByteAlign: true,
 		EndOfBlock:       true,
@@ -113,7 +113,7 @@ func main() {
 	}
 	encoded := encoder.Encode(pixels)
 
-	f, err := os.Create("/home/darkrengarius/Downloads/K4-Columns2560-EOL-Aligned-EOFB.gr3")
+	f, err := os.Create("/home/darkrengarius/Downloads/K-1-Columns2560-EOL-Aligned-EOFB.gr4")
 	if err != nil {
 		log.Fatalf("Error creating file: %v\n", err)
 	}

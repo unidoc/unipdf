@@ -157,7 +157,7 @@ func (e *Encoder) encodeG4(pixels [][]byte) []byte {
 	var encoded []byte
 	var prevBitPos int
 	for i := 1; i < len(pixels); i++ {
-		if e.Rows > 0 && !e.EndOfBlock && i == e.Rows {
+		if e.Rows > 0 && !e.EndOfBlock && i == (e.Rows+1) {
 			break
 		}
 

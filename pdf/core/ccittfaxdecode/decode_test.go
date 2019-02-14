@@ -1,11 +1,15 @@
 package ccittfaxdecode
 
 import (
+	"image"
+	"image/png"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
 const (
-	testDataPath = "./testdata"
+	testDataPath = "./testdata/"
 )
 
 func TestDecodeNextRunLen(t *testing.T) {
@@ -804,12 +808,396 @@ func TestDecode(t *testing.T) {
 	}
 
 	type testData struct {
-		Encoder       Encoder
+		Encoder       *Encoder
 		InputFilePath string
 		Want          testResult
 	}
 
-	tests := []testData{}
+	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+
+	wantPixels, err := getPixels(testDataPath + "p3_0.png")
+	if err != nil {
+		t.Fatalf("Error reading image: %v\n", err)
+	}
+
+	tests := []testData{
+		{
+			Encoder: &Encoder{
+				K:       0,
+				Columns: 2560,
+				Rows:    3295,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:         0,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-EOL-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          0,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-EOL-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                0,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-EOL-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                0,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-EOL-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          0,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                0,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                0,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K0-Columns2560-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:       4,
+				Columns: 2560,
+				Rows:    3295,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:         4,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-EOL-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          4,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-EOL-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                4,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-EOL-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                4,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-EOL-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          4,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                4,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                4,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K4-Columns2560-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:       -1,
+				Columns: 2560,
+				Rows:    3295,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:         -1,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-EOL-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          -1,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-EOL-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                -1,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-EOL-Aligned-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                -1,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-EOL-Aligned-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:          -1,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                -1,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-Aligned-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				K:                -1,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "K-1-Columns2560-Aligned-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		f, err := os.Open(test.InputFilePath)
+		if err != nil {
+			t.Fatalf("Error opening encoded file: %v\n", err)
+		}
+
+		encodedData, err := ioutil.ReadAll(f)
+		if err != nil {
+			t.Fatalf("Error reading encoded data from file: %v\n", err)
+		}
+
+		gotPixels, gotErr := test.Encoder.Decode(encodedData)
+		if gotErr != test.Want.Err {
+			t.Errorf("Wrong err. Got %v, want %v\n", gotErr, test.Want.Err)
+		} else {
+			if len(gotPixels) != len(test.Want.Pixels) {
+				t.Errorf("Wrong pixels len. Got %v, want %v\n",
+					len(gotPixels), len(test.Want.Pixels))
+			} else {
+				for i := range gotPixels {
+					for j := range gotPixels[i] {
+						if gotPixels[i][j] != test.Want.Pixels[i][j] {
+							t.Errorf("Wrong pixel at %v:%v. Got %v, want %v\n",
+								i, j, gotPixels[i][j], test.Want.Pixels[i][j])
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func getPixels(imagePath string) ([][]byte, error) {
+	file, err := os.Open(imagePath)
+	if err != nil {
+		return nil, err
+	}
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+
+	bounds := img.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+
+	var pixels [][]byte
+	for y := 0; y < h; y++ {
+		var row []byte
+		for x := 0; x < w; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			if r == 65535 && g == 65535 && b == 65535 {
+				// append white
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
+			}
+		}
+
+		pixels = append(pixels, row)
+	}
+
+	return pixels, nil
 }
 
 func TestDecodeVerticalMode(t *testing.T) {

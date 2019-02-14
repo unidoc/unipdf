@@ -2,7 +2,6 @@ package ccittfaxdecode
 
 import (
 	"errors"
-	"log"
 )
 
 var (
@@ -278,9 +277,6 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		bitPos int
 	)
 	for (bitPos / 8) < len(encoded) {
-		if len(pixels) == 1198 {
-			log.Println()
-		}
 		// try get EOFB
 		gotEOL, bitPos, err = tryFetchEOFB(encoded, bitPos)
 		if err != nil {
@@ -355,7 +351,7 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 
 		pixels = append(pixels, pixelsRow)
 
-		if e.Rows > 0 && !e.EndOfBlock && len(pixels) >= e.Rows {
+		if e.Rows > 0 && !e.EndOfBlock && len(pixels) >= (e.Rows+1) {
 			break
 		}
 	}
