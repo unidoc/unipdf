@@ -1637,50 +1637,50 @@ func NewCCITTFaxEncoder() *CCITTFaxEncoder {
 }
 
 // GetFilterName gets the filter name.
-func (this *CCITTFaxEncoder) GetFilterName() string {
+func (enc *CCITTFaxEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameCCITTFax
 }
 
 // MakeDecodeParams makes a new instance of an encoding dictionary based on
 // the current encoder settings.
-func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
+func (enc *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
 	decodeParams := MakeDict()
-	decodeParams.Set("K", MakeInteger(int64(this.K)))
-	decodeParams.Set("Columns", MakeInteger(int64(this.Columns)))
+	decodeParams.Set("K", MakeInteger(int64(enc.K)))
+	decodeParams.Set("Columns", MakeInteger(int64(enc.Columns)))
 
-	if this.BlackIs1 {
-		decodeParams.Set("BlackIs1", MakeBool(this.BlackIs1))
+	if enc.BlackIs1 {
+		decodeParams.Set("BlackIs1", MakeBool(enc.BlackIs1))
 	}
 
-	if this.EncodedByteAlign {
-		decodeParams.Set("EncodedByteAlign", MakeBool(this.EncodedByteAlign))
+	if enc.EncodedByteAlign {
+		decodeParams.Set("EncodedByteAlign", MakeBool(enc.EncodedByteAlign))
 	}
 
-	if this.EndOfLine && this.K >= 0 {
-		decodeParams.Set("EndOfLine", MakeBool(this.EndOfLine))
+	if enc.EndOfLine && enc.K >= 0 {
+		decodeParams.Set("EndOfLine", MakeBool(enc.EndOfLine))
 	}
 
-	if this.Rows != 0 && !this.EndOfBlock {
-		decodeParams.Set("Rows", MakeInteger(int64(this.Rows)))
+	if enc.Rows != 0 && !enc.EndOfBlock {
+		decodeParams.Set("Rows", MakeInteger(int64(enc.Rows)))
 	}
 
-	if !this.EndOfBlock {
-		decodeParams.Set("EndOfBlock", MakeBool(this.EndOfBlock))
+	if !enc.EndOfBlock {
+		decodeParams.Set("EndOfBlock", MakeBool(enc.EndOfBlock))
 	}
 
-	if this.DamagedRowsBeforeError != 0 {
-		decodeParams.Set("DamagedRowsBeforeError", MakeInteger(int64(this.DamagedRowsBeforeError)))
+	if enc.DamagedRowsBeforeError != 0 {
+		decodeParams.Set("DamagedRowsBeforeError", MakeInteger(int64(enc.DamagedRowsBeforeError)))
 	}
 
 	return decodeParams
 }
 
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
-func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
+func (enc *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-	dict.Set("Filter", MakeName(this.GetFilterName()))
+	dict.Set("Filter", MakeName(enc.GetFilterName()))
 
-	decodeParams := this.MakeDecodeParams()
+	decodeParams := enc.MakeDecodeParams()
 	if decodeParams != nil {
 		dict.Set("DecodeParms", decodeParams)
 	}
@@ -1720,115 +1720,62 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 		}
 	}
 
-	obj := decodeParams.Get("K")
-	if obj != nil {
-		k, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, fmt.Errorf("K is invalid")
-		}
-
-		encoder.K = int(*k)
+	if k, err := GetNumberAsInt64(decodeParams.Get("K")); err == nil {
+		encoder.K = int(k)
 	}
 
-	encoder.Columns = 1728
-	obj = decodeParams.Get("Columns")
-	if obj != nil {
-		columns, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, fmt.Errorf("Columns is invalid")
-		}
-
-		encoder.Columns = int(*columns)
-	}
-
-	obj = decodeParams.Get("BlackIs1")
-	if obj != nil {
-		switch inverse := obj.(type) {
-		case *PdfObjectInteger:
-			encoder.BlackIs1 = inverse != nil && *inverse > 0
-		case *PdfObjectBool:
-			encoder.BlackIs1 = inverse != nil && bool(*inverse)
-		default:
-			common.Log.Trace("BlackIs1 type: %T", obj)
-			return nil, fmt.Errorf("BlackIs1 is invalid")
-		}
+	if columns, err := GetNumberAsInt64(decodeParams.Get("Columns")); err == nil {
+		encoder.Columns = int(columns)
 	} else {
-		// may also be passed as the part of Decode array
-		obj = encDict.Get("Decode")
-		if arr, ok := obj.(*PdfObjectArray); ok {
-			intArr, err := arr.ToIntegerArray()
-			if err != nil {
-				return nil, fmt.Errorf("Decode is invalid")
+		encoder.Columns = 1728
+	}
+
+	if blackIs1, err := GetNumberAsInt64(decodeParams.Get("BlackIs1")); err == nil {
+		encoder.BlackIs1 = blackIs1 > 0
+	} else {
+		if blackIs1, ok := GetBoolVal(decodeParams.Get("BlackIs1")); ok {
+			encoder.BlackIs1 = blackIs1
+		} else {
+			if decodeArr, ok := GetArray(decodeParams.Get("Decode")); ok {
+				intArr, err := decodeArr.ToIntegerArray()
+				if err == nil {
+					encoder.BlackIs1 = intArr[0] == 1 && intArr[1] == 0
+				}
 			}
-
-			encoder.BlackIs1 = intArr[0] == 1 && intArr[1] == 0
 		}
 	}
 
-	obj = decodeParams.Get("EncodedByteAlign")
-	if obj != nil {
-		switch align := obj.(type) {
-		case *PdfObjectInteger:
-			encoder.EncodedByteAlign = align != nil && *align > 0
-		case *PdfObjectBool:
-			encoder.EncodedByteAlign = align != nil && bool(*align)
-		default:
-			common.Log.Trace("EncodedByteAlign type: %T", obj)
-			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+	if align, err := GetNumberAsInt64(decodeParams.Get("EncodedByteAlign")); err == nil {
+		encoder.EncodedByteAlign = align > 0
+	} else {
+		if align, ok := GetBoolVal(decodeParams.Get("EncodedByteAlign")); ok {
+			encoder.EncodedByteAlign = align
 		}
 	}
 
-	obj = decodeParams.Get("EndOfLine")
-	if obj != nil {
-		switch eol := obj.(type) {
-		case *PdfObjectInteger:
-			encoder.EndOfLine = eol != nil && *eol > 0
-		case *PdfObjectBool:
-			encoder.EndOfLine = eol != nil && bool(*eol)
-		default:
-			common.Log.Trace("EncodedByteAlign type: %T", obj)
-			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+	if eol, err := GetNumberAsInt64(decodeParams.Get("EndOfLine")); err == nil {
+		encoder.EndOfLine = eol > 0
+	} else {
+		if eol, ok := GetBoolVal(decodeParams.Get("EndOfLine")); ok {
+			encoder.EndOfLine = eol
 		}
 	}
 
-	encoder.Rows = 0
-	obj = decodeParams.Get("Rows")
-	if obj != nil {
-		rows, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, fmt.Errorf("Rows is invalid")
-		}
-
-		encoder.Rows = int(*rows)
+	if rows, err := GetNumberAsInt64(decodeParams.Get("Rows")); err == nil {
+		encoder.Rows = int(rows)
 	}
 
 	encoder.EndOfBlock = true
-	obj = decodeParams.Get("EndOfBlock")
-	if obj != nil {
-		switch eob := obj.(type) {
-		case *PdfObjectInteger:
-			if eob != nil && *eob <= 0 {
-				encoder.EndOfBlock = false
-			}
-		case *PdfObjectBool:
-			if eob != nil {
-				encoder.EndOfBlock = bool(*eob)
-			}
-		default:
-			common.Log.Trace("EncodedByteAlign type: %T", obj)
-			return nil, fmt.Errorf("EncodedByteAlign is invalid")
+	if eofb, err := GetNumberAsInt64(decodeParams.Get("EndOfBlock")); err == nil {
+		encoder.EndOfBlock = eofb > 0
+	} else {
+		if eofb, ok := GetBoolVal(decodeParams.Get("EndOfBlock")); ok {
+			encoder.EndOfBlock = eofb
 		}
 	}
 
-	encoder.DamagedRowsBeforeError = 0
-	obj = decodeParams.Get("DamagedRowsBeforeError")
-	if obj != nil {
-		rows, ok := obj.(*PdfObjectInteger)
-		if !ok {
-			return nil, fmt.Errorf("DamagedRowsBeforeError is invalid")
-		}
-
-		encoder.DamagedRowsBeforeError = int(*rows)
+	if rows, err := GetNumberAsInt64(decodeParams.Get("DamagedRowsBeforeError")); err != nil {
+		encoder.DamagedRowsBeforeError = int(rows)
 	}
 
 	common.Log.Trace("decode params: %s", decodeParams.String())
@@ -1837,19 +1784,73 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 
 // UpdateParams updates the parameter values of the encoder.
 func (enc *CCITTFaxEncoder) UpdateParams(params *PdfObjectDictionary) {
+	if k, err := GetNumberAsInt64(params.Get("K")); err == nil {
+		enc.K = int(k)
+	}
+
+	if columns, err := GetNumberAsInt64(params.Get("Columns")); err == nil {
+		enc.Columns = int(columns)
+	}
+
+	if blackIs1, err := GetNumberAsInt64(params.Get("BlackIs1")); err == nil {
+		enc.BlackIs1 = blackIs1 > 0
+	} else {
+		if blackIs1, ok := GetBoolVal(params.Get("BlackIs1")); ok {
+			enc.BlackIs1 = blackIs1
+		} else {
+			if decodeArr, ok := GetArray(params.Get("Decode")); ok {
+				intArr, err := decodeArr.ToIntegerArray()
+				if err == nil {
+					enc.BlackIs1 = intArr[0] == 1 && intArr[1] == 0
+				}
+			}
+		}
+	}
+
+	if align, err := GetNumberAsInt64(params.Get("EncodedByteAlign")); err == nil {
+		enc.EncodedByteAlign = align > 0
+	} else {
+		if align, ok := GetBoolVal(params.Get("EncodedByteAlign")); ok {
+			enc.EncodedByteAlign = align
+		}
+	}
+
+	if eol, err := GetNumberAsInt64(params.Get("EndOfLine")); err == nil {
+		enc.EndOfLine = eol > 0
+	} else {
+		if eol, ok := GetBoolVal(params.Get("EndOfLine")); ok {
+			enc.EndOfLine = eol
+		}
+	}
+
+	if rows, err := GetNumberAsInt64(params.Get("Rows")); err == nil {
+		enc.Rows = int(rows)
+	}
+
+	if eofb, err := GetNumberAsInt64(params.Get("EndOfBlock")); err == nil {
+		enc.EndOfBlock = eofb > 0
+	} else {
+		if eofb, ok := GetBoolVal(params.Get("EndOfBlock")); ok {
+			enc.EndOfBlock = eofb
+		}
+	}
+
+	if rows, err := GetNumberAsInt64(params.Get("DamagedRowsBeforeError")); err != nil {
+		enc.DamagedRowsBeforeError = int(rows)
+	}
 }
 
 // DecodeBytes decodes the CCITTFax encoded image data.
-func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
+func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	encoder := &ccittfaxdecode.Encoder{
-		K:                      this.K,
-		Columns:                this.Columns,
-		EndOfLine:              this.EndOfLine,
-		EndOfBlock:             this.EndOfBlock,
-		BlackIs1:               this.BlackIs1,
-		DamagedRowsBeforeError: this.DamagedRowsBeforeError,
-		Rows:             this.Rows,
-		EncodedByteAlign: this.EncodedByteAlign,
+		K:                      enc.K,
+		Columns:                enc.Columns,
+		EndOfLine:              enc.EndOfLine,
+		EndOfBlock:             enc.EndOfBlock,
+		BlackIs1:               enc.BlackIs1,
+		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
+		Rows:             enc.Rows,
+		EncodedByteAlign: enc.EncodedByteAlign,
 	}
 
 	pixels, err := encoder.Decode(encoded)
@@ -1887,19 +1888,19 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 }
 
 // DecodeStream decodes the stream containing CCITTFax encoded image data.
-func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	return this.DecodeBytes(streamObj.Stream)
+func (enc *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return enc.DecodeBytes(streamObj.Stream)
 }
 
 // EncodeBytes encodes the image data using either Group3 or Group4 CCITT facsimile (fax) encoding.
-func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
+func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	var pixels [][]byte
 
-	for i := 0; i < len(data); i += 3 * this.Columns {
-		pixelsRow := make([]byte, this.Columns)
+	for i := 0; i < len(data); i += 3 * enc.Columns {
+		pixelsRow := make([]byte, enc.Columns)
 
 		pixel := 0
-		for j := 0; j < 3*this.Columns; j += 3 {
+		for j := 0; j < 3*enc.Columns; j += 3 {
 			if data[i+j] == 255 {
 				pixelsRow[pixel] = 1
 			} else {
@@ -1913,14 +1914,14 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	encoder := &ccittfaxdecode.Encoder{
-		K:                      this.K,
-		Columns:                this.Columns,
-		EndOfLine:              this.EndOfLine,
-		EndOfBlock:             this.EndOfBlock,
-		BlackIs1:               this.BlackIs1,
-		DamagedRowsBeforeError: this.DamagedRowsBeforeError,
-		Rows:             this.Rows,
-		EncodedByteAlign: this.EncodedByteAlign,
+		K:                      enc.K,
+		Columns:                enc.Columns,
+		EndOfLine:              enc.EndOfLine,
+		EndOfBlock:             enc.EndOfBlock,
+		BlackIs1:               enc.BlackIs1,
+		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
+		Rows:             enc.Rows,
+		EncodedByteAlign: enc.EncodedByteAlign,
 	}
 
 	return encoder.Encode(pixels), nil
