@@ -1133,6 +1133,342 @@ func TestDecode(t *testing.T) {
 				Err:    nil,
 			},
 		},
+		{
+			Encoder: &Encoder{
+				BlackIs1: true,
+				K:        0,
+				Columns:  2560,
+				Rows:     3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:  true,
+				K:         0,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-EOL-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          0,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-EOL-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                0,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-EOL-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                0,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-EOL-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          0,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                0,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                0,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K0-Columns2560-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1: true,
+				K:        4,
+				Columns:  2560,
+				Rows:     3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:  true,
+				K:         4,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-EOL-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          4,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-EOL-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                4,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-EOL-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                4,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-EOL-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          4,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                4,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-Aligned-Rows3295.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                4,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K4-Columns2560-Aligned-EOFB.gr3",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1: true,
+				K:        -1,
+				Columns:  2560,
+				Rows:     3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:  true,
+				K:         -1,
+				Columns:   2560,
+				EndOfLine: true,
+				Rows:      3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-EOL-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          -1,
+				Columns:    2560,
+				EndOfLine:  true,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-EOL-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                -1,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-EOL-Aligned-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                -1,
+				Columns:          2560,
+				EndOfLine:        true,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-EOL-Aligned-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:   true,
+				K:          -1,
+				Columns:    2560,
+				EndOfBlock: true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                -1,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				Rows:             3295,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-Aligned-Rows3295.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
+		{
+			Encoder: &Encoder{
+				BlackIs1:         true,
+				K:                -1,
+				Columns:          2560,
+				EncodedByteAlign: true,
+				EndOfBlock:       true,
+			},
+			InputFilePath: testDataPath + "BlackIs1-K-1-Columns2560-Aligned-EOFB.gr4",
+			Want: testResult{
+				Pixels: wantPixels,
+				Err:    nil,
+			},
+		},
 	}
 
 	for _, test := range tests {

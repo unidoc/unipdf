@@ -8,11 +8,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	unicommon "github.com/unidoc/unidoc/common"
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
 	pdfcore "github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/core/ccittfaxdecode"
 	"github.com/unidoc/unidoc/pdf/creator"
 	pdf "github.com/unidoc/unidoc/pdf/model"
 )
@@ -93,7 +93,7 @@ var xObjectImages = 0
 var inlineImages = 0
 
 func main() {
-	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+	/*image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
 	file, err := os.Open("/home/darkrengarius/go/src/github.com/unidoc/unidoc/pdf/core/ccittfaxdecode/testdata/p3_0.png")
 	if err != nil {
 		log.Fatalf("Error opening file: %v\n", err)
@@ -104,16 +104,17 @@ func main() {
 		log.Fatalf("Error decoding the image: %v\n", err)
 	}
 	encoder := &ccittfaxdecode.Encoder{
+		BlackIs1:         true,
 		Columns:          2560,
 		K:                -1,
-		EndOfLine:        false,
+		EndOfLine:        true,
 		EncodedByteAlign: true,
-		EndOfBlock:       false,
-		Rows:             3295,
+		EndOfBlock:       true,
+		//Rows:             3295,
 	}
 	encoded := encoder.Encode(pixels)
 
-	f, err := os.Create("/home/darkrengarius/Downloads/K-1-Columns2560-Aligned-Rows3295.gr4")
+	f, err := os.Create("/home/darkrengarius/Downloads/BlackIs1-K-1-Columns2560-EOL-Aligned-EOFB.gr4")
 	if err != nil {
 		log.Fatalf("Error creating file: %v\n", err)
 	}
@@ -125,9 +126,9 @@ func main() {
 
 	f.Close()
 
-	log.Println()
+	log.Println()*/
 
-	/*var files []string
+	var files []string
 
 	err := filepath.Walk("/home/darkrengarius/Downloads/4111112", func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".png" {
@@ -139,9 +140,9 @@ func main() {
 		log.Fatalf("Error scanning directory: %v\n", err)
 	}
 
-	if err := imagesToPdf(files, "/home/darkrengarius/Downloads/testCombined4111112.pdf"); err != nil {
+	if err := imagesToPdf(files, "/home/darkrengarius/Downloads/testCombined4111112_2.pdf"); err != nil {
 		log.Fatalf("Error writing images to pdf: %v\n", err)
-	}*/
+	}
 
 	// extract images from pdf to zip
 	inputPath := "/home/darkrengarius/Downloads/testCombined000141.pdf"
@@ -266,6 +267,7 @@ func imagesToPdf(inputPaths []string, outputPath string) error {
 		encoder.EndOfLine = true
 		encoder.EncodedByteAlign = true
 		encoder.K = -1
+		encoder.BlackIs1 = true
 		img.SetEncoder(encoder)
 
 		img.SetPos(0, 0)

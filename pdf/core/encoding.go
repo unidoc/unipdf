@@ -1792,8 +1792,6 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	//decoded := make([]byte, int(math.Ceil(float64(float64(len(pixels)*len(pixels[0]))/8.0))))
-
 	var decoded []byte
 	decodedIdx := 0
 	var bitPos byte = 0
@@ -1806,7 +1804,6 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 
 			if bitPos == 8 {
 				decoded = append(decoded, currentByte)
-				//decoded[decodedIdx] = currentByte
 				currentByte = 0
 
 				decodedIdx++
@@ -1814,116 +1811,11 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 				bitPos = 0
 			}
 		}
-
-		/*if bitPos > 0 {
-			decoded = append(decoded, currentByte)
-			currentByte = 0
-
-			decodedIdx++
-
-			bitPos = 0
-		}*/
 	}
 
 	if bitPos > 0 {
 		decoded = append(decoded, currentByte)
-		//decoded[decodedIdx] = currentByte
 	}
-
-	/*decoded := make([]byte, len(pixels)*len(pixels[0])*3)
-
-	decodedInd := 0
-	for i := range pixels {
-		for j := range pixels[i] {
-			if pixels[i][j] == 1 {
-				decoded[decodedInd] = 255
-				decoded[decodedInd+1] = 255
-				decoded[decodedInd+2] = 255
-				//decoded[decodedInd+3] = 255
-			} else {
-				decoded[decodedInd] = 0
-				decoded[decodedInd+1] = 0
-				decoded[decodedInd+2] = 0
-				//decoded[decodedInd+3] = 255
-			}
-
-			decodedInd += 3
-		}
-	}*/
-
-	/*goimage.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
-	t := goimage.NewRGBA(goimage.Rect(0, 0, len(pixels[0]), len(pixels)))
-	t.Pix = decoded
-	file, err := os.Create("/home/darkrengarius/Downloads/test2222222.png")
-	if err != nil {
-		log.Fatalf("Error opening file: %v\n", err)
-	}
-	defer file.Close()
-	err = png.Encode(file, t)
-	if err != nil {
-		return nil, err
-	}*/
-
-	/*file, err := os.Open("/home/darkrengarius/Downloads/scan223.png")
-	if err != nil {
-		log.Fatalf("Error opening file: %v\n", err)
-	}
-	defer file.Close()
-	img, _, err := goimage.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-	bounds := img.Bounds()
-	w, h := bounds.Max.X, bounds.Max.Y
-	for y := 0; y < h; y++ {
-		var row []byte
-		for x := 0; x < w; x++ {
-			r, g, b, _ := img.At(x, y).RGBA()
-			if r == 65535 && g == 65535 && b == 65535 {
-				// append white
-				row = append(row, 1)
-			} else {
-				row = append(row, 0)
-			}
-		}
-		pixels = append(pixels, row)
-	}*/
-
-	/*img := image.NewRGBA(image.Rect(0, 0, len(pixels[0]), len(pixels)))
-	imgPix := 0
-	for i := range pixels {
-		for j := range pixels[i] {
-			//log.Printf("%v: %v\n", i, j)
-			img.Pix[imgPix] = 255 * pixels[i][j]
-			img.Pix[imgPix+1] = 255 * pixels[i][j]
-			img.Pix[imgPix+2] = 255 * pixels[i][j]
-			img.Pix[imgPix+3] = 255
-			imgPix += 4
-		}
-	}
-	buf := new(bytes.Buffer)
-	err := png.Encode(buf, img)
-	if err != nil {
-		return nil, err
-	}
-	imgData := buf.Bytes()
-	f, err := os.Create("/home/darkrengarius/Downloads/testDecodePdf.png")
-	if err != nil {
-		log.Fatalf("Error writing to file: %v\n", err)
-	}
-	defer f.Close()
-	if _, err := f.Write(imgData); err != nil {
-		log.Fatalf("Error writing to file: %v\n", err)
-	}*/
-
-	/*arr, err := ccittfaxdecode.NewCCITTFaxDecoder(uint(this.Columns), encoded).Decode()
-	if err != nil {
-		return nil, err
-	}
-	result := make([]byte, 0)
-	for i := range arr {
-		result = append(result, arr[i]...)
-	}*/
 
 	return decoded, nil
 }
@@ -1933,35 +1825,6 @@ func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, e
 }
 
 func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	/*file, err := os.Open("/home/darkrengarius/Downloads/scan223.png")
-	if err != nil {
-		log.Fatalf("Error opening file: %v\n", err)
-	}
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-	bounds := img.Bounds()
-	w, h := bounds.Max.X, bounds.Max.Y
-	var pixels [][]byte
-	for y := 0; y < h; y++ {
-		var row []byte
-		for x := 0; x < w; x++ {
-			if y == 8 && x == 12 {
-				log.Println()
-			}
-			r, g, b, _ := img.At(x, y).RGBA()
-			if r == 65535 && g == 65535 && b == 65535 {
-				// append white
-				row = append(row, 1)
-			} else {
-				row = append(row, 0)
-			}
-		}
-		pixels = append(pixels, row)
-	}*/
-
 	var pixels [][]byte
 
 	for i := 0; i < len(data); i += 3 * this.Columns {
@@ -1969,20 +1832,10 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 
 		pixel := 0
 		for j := 0; j < 3*this.Columns; j += 3 {
-
-			// TODO: check BlackIs1
 			if data[i+j] == 255 {
-				if this.BlackIs1 {
-					pixelsRow[pixel] = 0
-				} else {
-					pixelsRow[pixel] = 1
-				}
+				pixelsRow[pixel] = 1
 			} else {
-				if this.BlackIs1 {
-					pixelsRow[pixel] = 1
-				} else {
-					pixelsRow[pixel] = 0
-				}
+				pixelsRow[pixel] = 0
 			}
 
 			pixel++
@@ -2003,9 +1856,6 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	return encoder.Encode(pixels), nil
-
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
-	return data, ErrNoCCITTFaxDecode
 }
 
 // JBIG2Encoder implements JBIG2 encoder/decoder (dummy, for now)

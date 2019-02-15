@@ -151,7 +151,9 @@ func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 	return encoded
 }
 
-func (e *Encoder) encodeG4(pixels [][]byte) []byte {
+func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
+	pixels := make([][]byte, len(pixelsToEncode))
+	copy(pixels, pixelsToEncode)
 	pixels = appendWhiteReferenceLine(pixels)
 
 	var encoded []byte
@@ -388,18 +390,6 @@ func (e *Encoder) appendEncodedRow(encoded, newRow []byte, bitPos int) []byte {
 	}
 
 	return encoded
-}
-
-func rightShiftArray(row []byte, shiftAmount int) []byte {
-	for i := len(row) - 1; i >= 0; i-- {
-		row[i] = row[i] >> uint(shiftAmount)
-
-		if i > 0 {
-			row[i] |= row[i-1] << uint(8-shiftAmount)
-		}
-	}
-
-	return row
 }
 
 // seekChangingElem gets the position of the changing elem in the row based on
