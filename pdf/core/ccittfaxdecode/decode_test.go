@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ccittfaxdecode
 
 import (
@@ -2217,7 +2222,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 
 func TestFetchNext2DCode(t *testing.T) {
 	type testResult struct {
-		Code   Code
+		Code   code
 		BitPos int
 		OK     bool
 	}
@@ -2231,7 +2236,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{16},
 			BitPos: 0,
 			Want: testResult{
-				Code:   P,
+				Code:   p,
 				BitPos: 4,
 				OK:     true,
 			},
@@ -2240,7 +2245,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{4},
 			BitPos: 2,
 			Want: testResult{
-				Code:   P,
+				Code:   p,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2249,7 +2254,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{16, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   P,
+				Code:   p,
 				BitPos: 4,
 				OK:     true,
 			},
@@ -2258,7 +2263,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{4, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   P,
+				Code:   p,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2267,7 +2272,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{32},
 			BitPos: 0,
 			Want: testResult{
-				Code:   H,
+				Code:   h,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2276,7 +2281,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{8},
 			BitPos: 2,
 			Want: testResult{
-				Code:   H,
+				Code:   h,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2285,7 +2290,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{32, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   H,
+				Code:   h,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2294,7 +2299,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{8, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   H,
+				Code:   h,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2303,7 +2308,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{128},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V0,
+				Code:   v0,
 				BitPos: 1,
 				OK:     true,
 			},
@@ -2312,7 +2317,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{32},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V0,
+				Code:   v0,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2321,7 +2326,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{128, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V0,
+				Code:   v0,
 				BitPos: 1,
 				OK:     true,
 			},
@@ -2330,7 +2335,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{32, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V0,
+				Code:   v0,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2339,7 +2344,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{96},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V1R,
+				Code:   v1r,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2348,7 +2353,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{24},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V1R,
+				Code:   v1r,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2357,7 +2362,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{96, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V1R,
+				Code:   v1r,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2366,7 +2371,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{24, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V1R,
+				Code:   v1r,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2375,7 +2380,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{12},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V2R,
+				Code:   v2r,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2384,7 +2389,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{3},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V2R,
+				Code:   v2r,
 				BitPos: 8,
 				OK:     true,
 			},
@@ -2393,7 +2398,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{12, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V2R,
+				Code:   v2r,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2402,7 +2407,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{3, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V2R,
+				Code:   v2r,
 				BitPos: 8,
 				OK:     true,
 			},
@@ -2411,7 +2416,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{6},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V3R,
+				Code:   v3r,
 				BitPos: 7,
 				OK:     true,
 			},
@@ -2420,7 +2425,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{1, 128},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V3R,
+				Code:   v3r,
 				BitPos: 9,
 				OK:     true,
 			},
@@ -2429,7 +2434,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{6, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V3R,
+				Code:   v3r,
 				BitPos: 7,
 				OK:     true,
 			},
@@ -2438,7 +2443,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{1, 128, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V3R,
+				Code:   v3r,
 				BitPos: 9,
 				OK:     true,
 			},
@@ -2447,7 +2452,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{64},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V1L,
+				Code:   v1l,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2456,7 +2461,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{16},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V1L,
+				Code:   v1l,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2465,7 +2470,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{64, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V1L,
+				Code:   v1l,
 				BitPos: 3,
 				OK:     true,
 			},
@@ -2474,7 +2479,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{16, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V1L,
+				Code:   v1l,
 				BitPos: 5,
 				OK:     true,
 			},
@@ -2483,7 +2488,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{8},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V2L,
+				Code:   v2l,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2492,7 +2497,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{2},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V2L,
+				Code:   v2l,
 				BitPos: 8,
 				OK:     true,
 			},
@@ -2501,7 +2506,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{8, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V2L,
+				Code:   v2l,
 				BitPos: 6,
 				OK:     true,
 			},
@@ -2510,7 +2515,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{2, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V2L,
+				Code:   v2l,
 				BitPos: 8,
 				OK:     true,
 			},
@@ -2519,7 +2524,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{4},
 			BitPos: 0,
 			Want: testResult{
-				Code:   V3L,
+				Code:   v3l,
 				BitPos: 7,
 				OK:     true,
 			},
@@ -2528,7 +2533,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{1, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   V3L,
+				Code:   v3l,
 				BitPos: 9,
 				OK:     true,
 			},
@@ -2537,7 +2542,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{0, 0, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 0,
 				OK:     false,
 			},
@@ -2546,7 +2551,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{0, 0, 0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 2,
 				OK:     false,
 			},
@@ -2555,7 +2560,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{0},
 			BitPos: 0,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 0,
 				OK:     false,
 			},
@@ -2564,7 +2569,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{0},
 			BitPos: 2,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 2,
 				OK:     false,
 			},
@@ -2573,7 +2578,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{},
 			BitPos: 0,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 0,
 				OK:     false,
 			},
@@ -2582,7 +2587,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   []byte{},
 			BitPos: 2,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 2,
 				OK:     false,
 			},
@@ -2591,7 +2596,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   nil,
 			BitPos: 0,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 0,
 				OK:     false,
 			},
@@ -2600,7 +2605,7 @@ func TestFetchNext2DCode(t *testing.T) {
 			Data:   nil,
 			BitPos: 2,
 			Want: testResult{
-				Code:   Code{},
+				Code:   code{},
 				BitPos: 2,
 				OK:     false,
 			},
@@ -2626,7 +2631,7 @@ func TestFetchNext2DCode(t *testing.T) {
 
 func TestGet2DCodeFromUint16(t *testing.T) {
 	type testResult struct {
-		Code Code
+		Code code
 		OK   bool
 	}
 
@@ -2639,7 +2644,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(4096, 4),
 			BitPos: 0,
 			Want: testResult{
-				Code: P,
+				Code: p,
 				OK:   true,
 			},
 		},
@@ -2647,7 +2652,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(8192, 3),
 			BitPos: 0,
 			Want: testResult{
-				Code: H,
+				Code: h,
 				OK:   true,
 			},
 		},
@@ -2655,7 +2660,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(32768, 1),
 			BitPos: 0,
 			Want: testResult{
-				Code: V0,
+				Code: v0,
 				OK:   true,
 			},
 		},
@@ -2663,7 +2668,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(24576, 3),
 			BitPos: 0,
 			Want: testResult{
-				Code: V1R,
+				Code: v1r,
 				OK:   true,
 			},
 		},
@@ -2671,7 +2676,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(3072, 6),
 			BitPos: 0,
 			Want: testResult{
-				Code: V2R,
+				Code: v2r,
 				OK:   true,
 			},
 		},
@@ -2679,7 +2684,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(1536, 7),
 			BitPos: 0,
 			Want: testResult{
-				Code: V3R,
+				Code: v3r,
 				OK:   true,
 			},
 		},
@@ -2687,7 +2692,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(16384, 3),
 			BitPos: 0,
 			Want: testResult{
-				Code: V1L,
+				Code: v1l,
 				OK:   true,
 			},
 		},
@@ -2695,7 +2700,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(2048, 6),
 			BitPos: 0,
 			Want: testResult{
-				Code: V2L,
+				Code: v2l,
 				OK:   true,
 			},
 		},
@@ -2703,7 +2708,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  formTestCodes(1024, 7),
 			BitPos: 0,
 			Want: testResult{
-				Code: V3L,
+				Code: v3l,
 				OK:   true,
 			},
 		},
@@ -2711,7 +2716,7 @@ func TestGet2DCodeFromUint16(t *testing.T) {
 			Codes:  []uint16{0, 0, 0},
 			BitPos: 0,
 			Want: testResult{
-				Code: Code{},
+				Code: code{},
 				OK:   false,
 			},
 		},

@@ -1522,11 +1522,8 @@ func (enc *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-//
-// CCITTFax encoder/decoder (dummy, for now)
-//
+// CCITTFaxEncoder implements Group3 and Group4 facsimile (fax) encoder/decoder.
 type CCITTFaxEncoder struct {
-	Mode                   CCITTMode
 	K                      int
 	EndOfLine              bool
 	EncodedByteAlign       bool
@@ -1537,52 +1534,18 @@ type CCITTFaxEncoder struct {
 	DamagedRowsBeforeError int
 }
 
-type CCITTMode int
-
-const (
-	Group3 CCITTMode = iota
-	Group4
-	GroupMixed
-	GroupUnknown
-)
-
-func (mode CCITTMode) String() string {
-	switch mode {
-	case Group3:
-		return "Group 3"
-	case Group4:
-		return "Group 4"
-	case GroupMixed:
-		return "Mixed"
-	default:
-		return "Unknown"
-	}
-}
-
-// <0 : Pure two-dimensional encoding (Group 4)
-// =0 : Pure one-dimensional encoding (Group 3, 1-D)
-// >0 : Mixed one- and two-dimensional encoding (Group 3, 2-D)
-func IntToCCITTMode(v int) CCITTMode {
-	switch {
-	case v == 0:
-		return Group3
-	case v < 0:
-		return Group4
-	case v > 0:
-		return GroupMixed
-	default:
-		return GroupUnknown
-	}
-}
-
+// NewCCITTFaxEncoder makes a new CCITTFax encoder.
 func NewCCITTFaxEncoder() *CCITTFaxEncoder {
 	return &CCITTFaxEncoder{}
 }
 
+// GetFilterName gets the filter name.
 func (this *CCITTFaxEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameCCITTFax
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
 	decodeParams := MakeDict()
 	decodeParams.Set("K", MakeInteger(int64(this.K)))
@@ -1615,7 +1578,7 @@ func (this *CCITTFaxEncoder) MakeDecodeParams() PdfObject {
 	return decodeParams
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(this.GetFilterName()))
@@ -1628,7 +1591,7 @@ func (this *CCITTFaxEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return dict
 }
 
-// Create a new CCITTFax decoder from a stream object, getting all the encoding parameters
+// newCCITTFaxEncoderFromStream creates a new CCITTFax decoder from a stream object, getting all the encoding parameters
 // from the DecodeParms stream object dictionary entry.
 func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*CCITTFaxEncoder, error) {
 	encoder := NewCCITTFaxEncoder()
@@ -1643,16 +1606,17 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 	if decodeParams == nil {
 		obj := encDict.Get("DecodeParms")
 		if obj != nil {
-			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
-				decodeParams = dp
-			} else if a, isArr := obj.(*PdfObjectArray); isArr {
-				if a.Len() == 1 {
-					if dp, isDict := a.Get(0).(*PdfObjectDictionary); isDict {
+			switch t := obj.(type) {
+			case *PdfObjectDictionary:
+				decodeParams = t
+				break
+			case *PdfObjectArray:
+				if t.Len() == 1 {
+					if dp, isDict := t.Get(0).(*PdfObjectDictionary); isDict {
 						decodeParams = dp
 					}
 				}
-			}
-			if decodeParams == nil {
+			default:
 				common.Log.Error("DecodeParms not a dictionary %#v", obj)
 				return nil, fmt.Errorf("Invalid DecodeParms")
 			}
@@ -1665,9 +1629,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 		if !ok {
 			return nil, fmt.Errorf("K is invalid")
 		}
-		fmt.Printf("K = %v\n", *k)
 
-		encoder.Mode = IntToCCITTMode(int(*k))
 		encoder.K = int(*k)
 	}
 
@@ -1694,6 +1656,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 			return nil, fmt.Errorf("BlackIs1 is invalid")
 		}
 	} else {
+		// may also be passed as the part of Decode array
 		obj = encDict.Get("Decode")
 		if arr, ok := obj.(*PdfObjectArray); ok {
 			intArr, err := arr.ToIntegerArray()
@@ -1775,6 +1738,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 	return encoder, nil
 }
 
+// DecodeBytes decodes the CCITTFax encoded image data.
 func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	encoder := &ccittfaxdecode.Encoder{
 		K:                      this.K,
@@ -1792,6 +1756,7 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// reassemble image
 	var decoded []byte
 	decodedIdx := 0
 	var bitPos byte = 0
@@ -1820,10 +1785,12 @@ func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return decoded, nil
 }
 
+// DecodeStream decodes the stream containing CCITTFax encoded image data.
 func (this *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return this.DecodeBytes(streamObj.Stream)
 }
 
+// EncodeBytes encodes the image data using either Group3 or Group4 CCITT facsimile (fax) encoding.
 func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	var pixels [][]byte
 

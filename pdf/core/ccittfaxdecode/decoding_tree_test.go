@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ccittfaxdecode
 
 import (
@@ -202,36 +207,36 @@ func TestSetBitToUint16(t *testing.T) {
 }
 
 func TestFindRunLen(t *testing.T) {
-	for runLen, code := range WTerms {
+	for runLen, code := range wTerms {
 		addNode(whiteTree, code, 0, runLen)
 	}
 
-	for runLen, code := range WMakeups {
+	for runLen, code := range wMakeups {
 		addNode(whiteTree, code, 0, runLen)
 	}
 
-	for runLen, code := range BTerms {
+	for runLen, code := range bTerms {
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	for runLen, code := range BMakeups {
+	for runLen, code := range bMakeups {
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	for runLen, code := range CommonMakeups {
+	for runLen, code := range commonMakeups {
 		addNode(whiteTree, code, 0, runLen)
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	addNode(twoDimTree, P, 0, 0)
-	addNode(twoDimTree, H, 0, 0)
-	addNode(twoDimTree, V0, 0, 0)
-	addNode(twoDimTree, V1R, 0, 0)
-	addNode(twoDimTree, V2R, 0, 0)
-	addNode(twoDimTree, V3R, 0, 0)
-	addNode(twoDimTree, V1L, 0, 0)
-	addNode(twoDimTree, V2L, 0, 0)
-	addNode(twoDimTree, V3L, 0, 0)
+	addNode(twoDimTree, p, 0, 0)
+	addNode(twoDimTree, h, 0, 0)
+	addNode(twoDimTree, v0, 0, 0)
+	addNode(twoDimTree, v1r, 0, 0)
+	addNode(twoDimTree, v2r, 0, 0)
+	addNode(twoDimTree, v3r, 0, 0)
+	addNode(twoDimTree, v1l, 0, 0)
+	addNode(twoDimTree, v2l, 0, 0)
+	addNode(twoDimTree, v3l, 0, 0)
 
 	type testResult struct {
 		RunLen      int

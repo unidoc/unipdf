@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ccittfaxdecode
 
 import (
@@ -5,13 +10,22 @@ import (
 )
 
 var (
-	ErrEOFBCorrupt               = errors.New("EOFB code is corrupted")
-	ErrRTCCorrupt                = errors.New("RTC code is corrupted")
+	// ErrEOFBCorrupt is returned when the corrupt EOFB (end-of-block) code is found.
+	ErrEOFBCorrupt = errors.New("EOFB code is corrupted")
+	// ErrRTCCorrupt is returned when the corrupt RTC (return-the-carriage) code is found.
+	ErrRTCCorrupt = errors.New("RTC code is corrupted")
+	// ErrWrongCodeInHorizontalMode is returned when entered the horizontal mode and unknown bit
+	// sequence met.
 	ErrWrongCodeInHorizontalMode = errors.New("wrong code in horizontal mode")
-	ErrNoEOLFound                = errors.New("no EOL found while the EndOfLine parameter is true")
-	ErrInvalidEOL                = errors.New("invalid EOL")
-	ErrInvalid2DCode             = errors.New("invalid 2D code")
+	// ErrNoEOLFound is returned when the EndOfLine parameter is true in filter but no EOL (end-of-line) met.
+	ErrNoEOLFound = errors.New("no EOL found while the EndOfLine parameter is true")
+	// ErrInvalidEOL is returned when the EOL code is corrupt.
+	ErrInvalidEOL = errors.New("invalid EOL")
+	// ErrInvalid2DCode is returned when the invalid 2 dimensional code is met. 2 dimensional code
+	// according to the CCITT reccommendations is one of the following: H, P, V0, V1L, V2L, V3L, V1R, V2R, V3R.
+	ErrInvalid2DCode = errors.New("invalid 2D code")
 
+	// trees represent the finite state machine for parsing bit sequences and fetching pixel run lengths
 	whiteTree = &decodingTreeNode{
 		Val: 255,
 	}
@@ -24,38 +38,40 @@ var (
 )
 
 func init() {
-	for runLen, code := range WTerms {
+	for runLen, code := range wTerms {
 		addNode(whiteTree, code, 0, runLen)
 	}
 
-	for runLen, code := range WMakeups {
+	for runLen, code := range wMakeups {
 		addNode(whiteTree, code, 0, runLen)
 	}
 
-	for runLen, code := range BTerms {
+	for runLen, code := range bTerms {
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	for runLen, code := range BMakeups {
+	for runLen, code := range bMakeups {
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	for runLen, code := range CommonMakeups {
+	for runLen, code := range commonMakeups {
 		addNode(whiteTree, code, 0, runLen)
 		addNode(blackTree, code, 0, runLen)
 	}
 
-	addNode(twoDimTree, P, 0, 0)
-	addNode(twoDimTree, H, 0, 0)
-	addNode(twoDimTree, V0, 0, 0)
-	addNode(twoDimTree, V1R, 0, 0)
-	addNode(twoDimTree, V2R, 0, 0)
-	addNode(twoDimTree, V3R, 0, 0)
-	addNode(twoDimTree, V1L, 0, 0)
-	addNode(twoDimTree, V2L, 0, 0)
-	addNode(twoDimTree, V3L, 0, 0)
+	addNode(twoDimTree, p, 0, 0)
+	addNode(twoDimTree, h, 0, 0)
+	addNode(twoDimTree, v0, 0, 0)
+	addNode(twoDimTree, v1r, 0, 0)
+	addNode(twoDimTree, v2r, 0, 0)
+	addNode(twoDimTree, v3r, 0, 0)
+	addNode(twoDimTree, v1l, 0, 0)
+	addNode(twoDimTree, v2l, 0, 0)
+	addNode(twoDimTree, v3l, 0, 0)
 }
 
+// Decode performs decoding operation on the encoded image using the Group3 or Group4
+// CCITT facsimile (fax) algorithm.
 func (e *Encoder) Decode(encoded []byte) ([][]byte, error) {
 	if e.BlackIs1 {
 		white = 0
@@ -66,20 +82,25 @@ func (e *Encoder) Decode(encoded []byte) ([][]byte, error) {
 	}
 
 	if e.K == 0 {
+		// decode Group3 1-dimensional
 		return e.decodeG31D(encoded)
 	}
 
 	if e.K > 0 {
+		// decode Group3 mixed dimensional (1D/2D)
 		return e.decodeG32D(encoded)
 	}
 
 	if e.K < 4 {
+		// decode Group4
 		return e.decodeG4(encoded)
 	}
 
 	return nil, nil
 }
 
+// decodeG31D decodes the encoded image data using the Group3 1-dimensional
+// CCITT facsimile (fax) decoding algorithm.
 func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 	var pixels [][]byte
 
@@ -117,6 +138,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 		row, bitPos = e.decodeRow1D(encoded, bitPos)
 
 		if e.EncodedByteAlign && bitPos%8 != 0 {
+			// align to byte border
 			bitPos += 8 - bitPos%8
 		}
 
@@ -130,6 +152,8 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 	return pixels, nil
 }
 
+// decodeG32D decodes the encoded image data using the Group3 mixed (1D/2D) dimensional
+// CCITT facsimile (fax) decoding algorithm.
 func (e *Encoder) decodeG32D(encoded []byte) ([][]byte, error) {
 	var (
 		pixels [][]byte
@@ -156,11 +180,12 @@ byteLoop:
 			}
 		}
 
-		// decode 1 of K rows as 1D
+		// decode 1st of K rows as 1D
 		var row []byte
 		row, bitPos = e.decodeRow1D(encoded, bitPos)
 
 		if e.EncodedByteAlign && bitPos%8 != 0 {
+			// align to byte border
 			bitPos += 8 - bitPos%8
 		}
 
@@ -176,6 +201,8 @@ byteLoop:
 		for i := 1; i < e.K && (bitPos/8) < len(encoded); i++ {
 			gotEOL, bitPos = tryFetchEOL0(encoded, bitPos)
 			if !gotEOL {
+				// only EOL0 or RTC should be met here. If neither of these met -
+				// the data is considered corrupt
 				gotEOL, bitPos, err = tryFetchRTC2D(encoded, bitPos)
 				if err != nil {
 					return nil, err
@@ -191,7 +218,7 @@ byteLoop:
 			}
 
 			var (
-				twoDimCode Code
+				twoDimCode code
 				ok         bool
 			)
 
@@ -200,52 +227,52 @@ byteLoop:
 			a0 := -1
 			for twoDimCode, bitPos, ok = fetchNext2DCode(encoded, bitPos); ok; twoDimCode, bitPos, ok = fetchNext2DCode(encoded, bitPos) {
 				switch twoDimCode {
-				case P:
+				case p:
 					// do pass mode decoding
 					pixelsRow, a0 = decodePassMode(pixels, pixelsRow, isWhite, a0)
-				case H:
+				case h:
 					// do horizontal mode decoding
 					pixelsRow, bitPos, a0, err = decodeHorizontalMode(encoded, pixelsRow, bitPos, isWhite, a0)
 					if err != nil {
 						return nil, err
 					}
-				case V0:
+				case v0:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 0)
 
 					isWhite = !isWhite
-				case V1R:
+				case v1r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 1)
 
 					isWhite = !isWhite
-				case V2R:
+				case v2r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 2)
 
 					isWhite = !isWhite
-				case V3R:
+				case v3r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 3)
 
 					isWhite = !isWhite
-				case V1L:
+				case v1l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -1)
 
 					isWhite = !isWhite
-				case V2L:
+				case v2l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -2)
 
 					isWhite = !isWhite
-				case V3L:
+				case v3l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -3)
 
 					isWhite = !isWhite
 				}
 
-				// TODO: additionally check for errors. EOL should be fetched when a0 == len(pixels[len(pixels)-1])
 				if len(pixelsRow) >= e.Columns {
 					break
 				}
 			}
 
 			if e.EncodedByteAlign && bitPos%8 != 0 {
+				// align to byte border
 				bitPos += 8 - bitPos%8
 			}
 
@@ -262,7 +289,10 @@ byteLoop:
 	return pixels, nil
 }
 
+// decodeG4 decodes the encoded image data using the Group4 CCITT facsimile (fax)
+// decoding algorithm.
 func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
+	// append white reference line
 	whiteReferenceLine := make([]byte, e.Columns)
 	for i := range whiteReferenceLine {
 		whiteReferenceLine[i] = white
@@ -287,7 +317,7 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		}
 
 		var (
-			twoDimCode Code
+			twoDimCode code
 			ok         bool
 		)
 
@@ -301,40 +331,40 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 			}
 
 			switch twoDimCode {
-			case P:
+			case p:
 				// do pass mode decoding
 				pixelsRow, a0 = decodePassMode(pixels, pixelsRow, isWhite, a0)
-			case H:
+			case h:
 				// do horizontal mode decoding
 				pixelsRow, bitPos, a0, err = decodeHorizontalMode(encoded, pixelsRow, bitPos, isWhite, a0)
 				if err != nil {
 					return nil, err
 				}
-			case V0:
+			case v0:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 0)
 
 				isWhite = !isWhite
-			case V1R:
+			case v1r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 1)
 
 				isWhite = !isWhite
-			case V2R:
+			case v2r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 2)
 
 				isWhite = !isWhite
-			case V3R:
+			case v3r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 3)
 
 				isWhite = !isWhite
-			case V1L:
+			case v1l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -1)
 
 				isWhite = !isWhite
-			case V2L:
+			case v2l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -2)
 
 				isWhite = !isWhite
-			case V3L:
+			case v3l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -3)
 
 				isWhite = !isWhite
@@ -346,6 +376,7 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		}
 
 		if e.EncodedByteAlign && bitPos%8 != 0 {
+			// align to byte border
 			bitPos += 8 - bitPos%8
 		}
 
@@ -356,11 +387,14 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		}
 	}
 
+	// remove the white reference line
 	pixels = pixels[1:]
 
 	return pixels, nil
 }
 
+// decodeVerticalMode decodes the part of data using the vertical mode. Returns the moved `a0` and the
+// pixels row filled with the decoded pixels.
 func decodeVerticalMode(pixels [][]byte, pixelsRow []byte, isWhite bool, a0, shift int) ([]byte, int) {
 	b1 := seekB12D(pixelsRow, pixels[len(pixels)-1], a0, isWhite)
 	// true for V0
@@ -377,6 +411,8 @@ func decodeVerticalMode(pixels [][]byte, pixelsRow []byte, isWhite bool, a0, shi
 	return pixelsRow, a0
 }
 
+// decodePassMode decodes the part of data using the pass mode. Returns the moved `a0` and the
+// pixels row filled with the decoded pixels.
 func decodePassMode(pixels [][]byte, pixelsRow []byte, isWhite bool, a0 int) ([]byte, int) {
 	b1 := seekB12D(pixelsRow, pixels[len(pixels)-1], a0, isWhite)
 	b2 := seekChangingElem(pixels[len(pixels)-1], b1)
@@ -392,6 +428,9 @@ func decodePassMode(pixels [][]byte, pixelsRow []byte, isWhite bool, a0 int) ([]
 	return pixelsRow, a0
 }
 
+// decodeHorizontalMode decodes the part of data using the horizontal mode. Returns the moved `a0`, the moved
+// global bit position and the pixels row filled with the decoded pixels. The returned bit position is not
+// moved is the error occurs.
 func decodeHorizontalMode(encoded, pixelsRow []byte, bitPos int, isWhite bool, a0 int) ([]byte, int, int, error) {
 	startingBitPos := bitPos
 
@@ -415,6 +454,9 @@ func decodeHorizontalMode(encoded, pixelsRow []byte, bitPos int, isWhite bool, a
 	return pixelsRow, bitPos, a0, nil
 }
 
+// decodeNextRunLen decodes tries to decode the next part of data using the Group3 1-dimensional code.
+// Returns moved bit position and the pixels row filled with the decoded pixels. The returned bit position
+// is not moved if the error occurs. Returns `ErrWrongCodeInHorizontalMode` if none of the 1-dimensional codes found.
 func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]byte, int, error) {
 	startingBitPos := bitPos
 
@@ -436,6 +478,10 @@ func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]by
 	return pixelsRow, bitPos, nil
 }
 
+// tryFetchRTC2D tries to fetch the RTC code (0000000000011 X 6) for Group3 mixed (1D/2D) dimensional encoding from
+// the encoded data. Returns the moved bit position if the code was found. The other way returns the
+// the original bit position. The `ErrRTCCorrupt` is returned if the RTC code is corrupt. The RTC code is considered
+// corrupt if there are more than one EOL1 code (0000000000011) is met.
 func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 	startingBitPos := bitPos
 	var gotEOL = false
@@ -458,6 +504,10 @@ func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 	return gotEOL, bitPos, nil
 }
 
+// tryFetchEOFB tries to fetch the EOFB code (000000000001 X 2) for Group4 encoding from
+// the encoded data. Returns the moved bit position if the code was found. The other way returns the
+// the original bit position. The `ErrEOFBCorrupt` is returned if the EOFB code is corrupt. The EOFB code is considered
+// corrupt if there is a single EOL code (000000000001).
 func tryFetchEOFB(encoded []byte, bitPos int) (bool, int, error) {
 	startingBitPos := bitPos
 
@@ -477,6 +527,7 @@ func tryFetchEOFB(encoded []byte, bitPos int) (bool, int, error) {
 	return false, startingBitPos, nil
 }
 
+// bitFromUint16 fetches the bit value from the `num` at the `bitPos` position.
 func bitFromUint16(num uint16, bitPos int) byte {
 	if bitPos < 8 {
 		num >>= 8
@@ -489,6 +540,9 @@ func bitFromUint16(num uint16, bitPos int) byte {
 	return (byte(num) & mask) >> (7 - uint(bitPos))
 }
 
+// fetchNextRunLen fetches the next Group3 1 dimensional code from the encoded data.
+// Returns the corresponding pixel run length and the moved bit position. The returned
+// bit position is not moved if no valid code is met.
 func fetchNextRunLen(data []byte, bitPos int, isWhite bool) (int, int) {
 	var (
 		codeNum        uint16
@@ -507,7 +561,10 @@ func fetchNextRunLen(data []byte, bitPos int, isWhite bool) (int, int) {
 	return runLen, startingBitPos + code.BitsWritten
 }
 
-func fetchNext2DCode(data []byte, bitPos int) (Code, int, bool) {
+// fetchNext2DCode fetches the next 2-dimensional code from the encoded data.
+// Returns the code and the moved bit position. The returned bit position is not moved
+// if no valid code is met.
+func fetchNext2DCode(data []byte, bitPos int) (code, int, bool) {
 	var (
 		codeNum        uint16
 		codeBitPos     int
@@ -517,27 +574,31 @@ func fetchNext2DCode(data []byte, bitPos int) (Code, int, bool) {
 	startingBitPos = bitPos
 	codeNum, codeBitPos, bitPos = fetchNextCode(data, bitPos)
 
-	code, ok := get2DCodeFromUint16(codeNum, codeBitPos)
+	codeStruct, ok := get2DCodeFromUint16(codeNum, codeBitPos)
 	if !ok {
-		return Code{}, startingBitPos, false
+		return code{}, startingBitPos, false
 	}
 
-	return code, startingBitPos + code.BitsWritten, true
+	return codeStruct, startingBitPos + codeStruct.BitsWritten, true
 }
 
-func get2DCodeFromUint16(encoded uint16, bitPos int) (Code, bool) {
+// get2DCodeFromUint16 finds the 2-dimensional code from the encoded data presented as
+// uint16.
+func get2DCodeFromUint16(encoded uint16, bitPos int) (code, bool) {
 	_, codePtr := findRunLen(twoDimTree, encoded, bitPos)
 
 	if codePtr == nil {
-		return Code{}, false
+		return code{}, false
 	}
 
 	return *codePtr, true
 }
 
-func decodeRunLenFromUint16(encoded uint16, bitPos int, isWhite bool) (int, Code) {
+// decodeRunLenFromUint16 finds the 1-dimensional code from the encoded data presented as
+// uint16.
+func decodeRunLenFromUint16(encoded uint16, bitPos int, isWhite bool) (int, code) {
 	var runLenPtr *int
-	var codePtr *Code
+	var codePtr *code
 
 	if isWhite {
 		runLenPtr, codePtr = findRunLen(whiteTree, encoded, bitPos)
@@ -546,12 +607,14 @@ func decodeRunLenFromUint16(encoded uint16, bitPos int, isWhite bool) (int, Code
 	}
 
 	if runLenPtr == nil {
-		return -1, Code{}
+		return -1, code{}
 	}
 
 	return *runLenPtr, *codePtr
 }
 
+// fetchNextCode assembles the next at most 16 bits starting from the `bitPos` into
+// a single uint16 value. Returns the moved bit position.
 func fetchNextCode(data []byte, bitPos int) (uint16, int, int) {
 	startingBitPos := bitPos
 
@@ -599,6 +662,8 @@ func fetchNextCode(data []byte, bitPos int) (uint16, int, int) {
 	return code, 0, startingBitPos + 16
 }
 
+// decodeRow1D decodes the next pixels row using the Group3 1-dimensional CCITT facsimile (fax)
+// decoding algorithm.
 func (e *Encoder) decodeRow1D(encoded []byte, bitPos int) ([]byte, int) {
 	var pixelsRow []byte
 
@@ -624,6 +689,7 @@ func (e *Encoder) decodeRow1D(encoded []byte, bitPos int) ([]byte, int) {
 	return pixelsRow, bitPos
 }
 
+// drawPixels appends the length pixels of the specified color to the `row`.
 func drawPixels(row []byte, isWhite bool, length int) []byte {
 	if length < 0 {
 		return row
@@ -645,6 +711,9 @@ func drawPixels(row []byte, isWhite bool, length int) []byte {
 	return row
 }
 
+// tryFetchEOL tries to fetch the EOL code (000000000001) from the encoded data starting
+// from the `bitPos` position. Returns the moved bit position if the code was met, and the original
+// position otherwise.
 func tryFetchEOL(encoded []byte, bitPos int) (bool, int) {
 	startingBitPos := bitPos
 
@@ -665,14 +734,17 @@ func tryFetchEOL(encoded []byte, bitPos int) (bool, int) {
 	code >>= uint(4 - codeBitPos)
 	code <<= 4
 
-	if code != EOL.Code {
+	if code != eol.Code {
 		return false, startingBitPos
 	} else {
 		return true, bitPos - 4 + codeBitPos
 	}
 }
 
-func tryFetchExtendedEOL(encoded []byte, bitPos int, eolCode Code) (bool, int) {
+// tryFetchExtendedEOL tries to fetch the extended EOL code (0000000000011 or 0000000000010) from
+// the encoded data. Returns the moved bit position if the code was met, and the original
+// position otherwise.
+func tryFetchExtendedEOL(encoded []byte, bitPos int, eolCode code) (bool, int) {
 	startingBitPos := bitPos
 
 	var (
@@ -699,10 +771,14 @@ func tryFetchExtendedEOL(encoded []byte, bitPos int, eolCode Code) (bool, int) {
 	}
 }
 
+// tryFetchEOL0 tries to fetch the EOL0 code (0000000000010) from the encoded data. Returns the moved bit
+// position if the code was met, and the original position otherwise.
 func tryFetchEOL0(encoded []byte, bitPos int) (bool, int) {
-	return tryFetchExtendedEOL(encoded, bitPos, EOL0)
+	return tryFetchExtendedEOL(encoded, bitPos, eol0)
 }
 
+// tryFetchEOL1 tries to fetch the EOL1 code (0000000000011) from the encoded data. Returns the moved bit
+// position if the code was met, and the original position otherwise.
 func tryFetchEOL1(encoded []byte, bitPos int) (bool, int) {
-	return tryFetchExtendedEOL(encoded, bitPos, EOL1)
+	return tryFetchExtendedEOL(encoded, bitPos, eol1)
 }

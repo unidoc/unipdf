@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package ccittfaxdecode
 
 import (
@@ -9,6 +14,7 @@ var (
 	black byte = 0
 )
 
+// Encoder implements a CCITT facsimile (fax) Group3 and Group4 encoding/decoding algorithms.
 type Encoder struct {
 	K                      int
 	EndOfLine              bool
@@ -20,6 +26,9 @@ type Encoder struct {
 	DamagedRowsBeforeError int
 }
 
+// Encode encodes the original image pixels.
+// Note: `pixels` here are the pixels of the image where each byte value is 1 for white
+// pixels and 0 for the black ones.
 func (e *Encoder) Encode(pixels [][]byte) []byte {
 	if e.BlackIs1 {
 		white = 0
@@ -30,17 +39,17 @@ func (e *Encoder) Encode(pixels [][]byte) []byte {
 	}
 
 	if e.K == 0 {
-		// do G31D
+		// do Group3 1-dimensional encoding
 		return e.encodeG31D(pixels)
 	}
 
 	if e.K > 0 {
-		// do G32D
+		// do Group3 mixed (1D/2D) encoding
 		return e.encodeG32D(pixels)
 	}
 
 	if e.K < 0 {
-		// do G4
+		// do Group4 encoding
 		return e.encodeG4(pixels)
 	}
 
@@ -48,6 +57,7 @@ func (e *Encoder) Encode(pixels [][]byte) []byte {
 	return nil
 }
 
+// encodeG31D encodes the image data using the CCITT facsimile (fax) Group3 1-dimensional encoding.
 func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 	var encoded []byte
 
@@ -57,11 +67,12 @@ func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 			break
 		}
 
-		encodedRow, bitPos := encodeRow1D(pixels[i], prevBitPos, EOL)
+		encodedRow, bitPos := encodeRow1D(pixels[i], prevBitPos, eol)
 
 		encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
 
 		if e.EncodedByteAlign {
+			// align to the byte border
 			bitPos = 0
 		}
 
@@ -69,7 +80,7 @@ func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 	}
 
 	if e.EndOfBlock {
-		// put rtc
+		// put RTC
 		encodedRTC, _ := encodeRTC(prevBitPos)
 
 		encoded = e.appendEncodedRow(encoded, encodedRTC, prevBitPos)
@@ -78,6 +89,7 @@ func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 	return encoded
 }
 
+// encodeG32D encodes the image data using the CCITT facsimile (fax) Group3 mixed (1D/2D) dimensional encoding.
 func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 	var encoded []byte
 	var prevBitPos int
@@ -86,28 +98,30 @@ func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 			break
 		}
 
-		encodedRow, bitPos := encodeRow1D(pixels[i], prevBitPos, EOL1)
+		// encode 1st of K rows 1-dimensionally
+		encodedRow, bitPos := encodeRow1D(pixels[i], prevBitPos, eol1)
 
 		encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
 
 		if e.EncodedByteAlign {
+			// align to byte border
 			bitPos = 0
 		}
 
 		prevBitPos = bitPos
 
+		// encode the rest K-1 rows 2-dimensionally
 		for j := i + 1; j < (i+e.K) && j < len(pixels); j++ {
 			if e.Rows > 0 && !e.EndOfBlock && j == e.Rows {
 				break
 			}
 
-			encodedRow, bitPos := addCode(nil, prevBitPos, EOL0)
+			encodedRow, bitPos := addCode(nil, prevBitPos, eol0)
 
 			var a1, b1, b2 int
 
 			a0 := -1
 
-			// !EOL
 			for a0 < len(pixels[j]) {
 				a1 = seekChangingElem(pixels[j], a0)
 				b1 = seekB1(pixels[j], pixels[j-1], a0)
@@ -134,6 +148,7 @@ func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 			encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
 
 			if e.EncodedByteAlign {
+				//align to byte border
 				bitPos = 0
 			}
 
@@ -142,7 +157,7 @@ func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 	}
 
 	if e.EndOfBlock {
-		// put rtc
+		// put RTC
 		encodedRTC, _ := encodeRTC2D(prevBitPos)
 
 		encoded = e.appendEncodedRow(encoded, encodedRTC, prevBitPos)
@@ -151,9 +166,12 @@ func (e *Encoder) encodeG32D(pixels [][]byte) []byte {
 	return encoded
 }
 
+// encodeG4 encodes the image data using the CCITT facsimile (fax) Group4 encoding.
 func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
+	// copy the outer slice of pixels in order to avoid the modification of the original data
 	pixels := make([][]byte, len(pixelsToEncode))
 	copy(pixels, pixelsToEncode)
+	// append white reference line
 	pixels = appendWhiteReferenceLine(pixels)
 
 	var encoded []byte
@@ -169,7 +187,6 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 		bitPos := prevBitPos
 		a0 := -1
 
-		// !EOL
 		for a0 < len(pixels[i]) {
 			a1 = seekChangingElem(pixels[i], a0)
 			b1 = seekB1(pixels[i], pixels[i-1], a0)
@@ -177,7 +194,7 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 
 			if b2 < a1 {
 				// do pass mode
-				encodedRow, bitPos = addCode(encodedRow, bitPos, P)
+				encodedRow, bitPos = addCode(encodedRow, bitPos, p)
 
 				a0 = b2
 			} else {
@@ -195,6 +212,7 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 		encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
 
 		if e.EncodedByteAlign {
+			// align to byte border
 			bitPos = 0
 		}
 
@@ -202,7 +220,7 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 	}
 
 	if e.EndOfBlock {
-		// put eofb
+		// put EOFB
 		encodedEOFB, _ := encodeEOFB(prevBitPos)
 
 		encoded = e.appendEncodedRow(encoded, encodedEOFB, prevBitPos)
@@ -211,47 +229,47 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 	return encoded
 }
 
-// encodeRTC encodes the RTC code for the G3 1D (6 EOL in a row). bitPos is equal to the one in
-// encodeRow
+// encodeRTC encodes the RTC code for the G3 1D (6 EOL in a row). `bitPos` is equal to the one in
+// `encodeRow`.
 func encodeRTC(bitPos int) ([]byte, int) {
 	var encoded []byte
 
 	for i := 0; i < 6; i++ {
-		encoded, bitPos = addCode(encoded, bitPos, EOL)
+		encoded, bitPos = addCode(encoded, bitPos, eol)
 	}
 
 	return encoded, bitPos % 8
 }
 
-// encodeRTC2D encodes the RTC code for the G3 2D (6 EOL + 1 bit in a row). bitPos is equal to the one in
-// encodeRow
+// encodeRTC2D encodes the RTC code for the G3 2D (6 EOL + 1 bit in a row). `bitPos` is equal to the one in
+// `encodeRow`.
 func encodeRTC2D(bitPos int) ([]byte, int) {
 	var encoded []byte
 
 	for i := 0; i < 6; i++ {
-		encoded, bitPos = addCode(encoded, bitPos, EOL1)
+		encoded, bitPos = addCode(encoded, bitPos, eol1)
 	}
 
 	return encoded, bitPos % 8
 }
 
-// encodeEOFB encodes the EOFB code for the G4 (2 EOL in a row). bitPos is equal to the one in
-// encodeRow
+// encodeEOFB encodes the EOFB code for the G4 (2 EOL in a row). `bitPos` is equal to the one in
+// `encodeRow`.
 func encodeEOFB(bitPos int) ([]byte, int) {
 	var encoded []byte
 
 	for i := 0; i < 2; i++ {
-		encoded, bitPos = addCode(encoded, bitPos, EOL)
+		encoded, bitPos = addCode(encoded, bitPos, eol)
 	}
 
 	return encoded, bitPos % 8
 }
 
-// encodeRow1D encodes single raw of the image in 1D mode. bitPos is the bit position
-// global for the row array. bitPos is used to indicate where to start the
+// encodeRow1D encodes single row of the image pixels in 1D mode. `bitPos` is the bit position
+// global for the `row` array. `bitPos` is used to indicate where to start the
 // encoded sequences. It is used for the EncodedByteAlign option implementation.
-// Returns the encoded data and the number of the bits taken from the last byte
-func encodeRow1D(row []byte, bitPos int, prefix Code) ([]byte, int) {
+// Returns the encoded data and the number of the bits taken from the last byte.
+func encodeRow1D(row []byte, bitPos int, prefix code) ([]byte, int) {
 	// always start with whites
 	isWhite := true
 	var encoded []byte
@@ -273,10 +291,10 @@ func encodeRow1D(row []byte, bitPos int, prefix Code) ([]byte, int) {
 	return encoded, bitPos % 8
 }
 
-// encodeRunLen encodes the calculated run length to the encoded starting with bitPos bit
+// encodeRunLen writes the calculated run length to the `encoded` starting with `bitPos` bit.
 func encodeRunLen(encoded []byte, bitPos int, runLen int, isWhite bool) ([]byte, int) {
 	var (
-		code       Code
+		code       code
 		isTerminal bool
 	)
 
@@ -291,13 +309,13 @@ func encodeRunLen(encoded []byte, bitPos int, runLen int, isWhite bool) ([]byte,
 // getRunCode gets the code for the specified run. If the code is not
 // terminal, returns the remainder to be determined later. Otherwise
 // returns 0 remainder. Also returns the bool flag to indicate if
-// the code is terminal
-func getRunCode(runLen int, isWhite bool) (Code, int, bool) {
+// the code is terminal.
+func getRunCode(runLen int, isWhite bool) (code, int, bool) {
 	if runLen < 64 {
 		if isWhite {
-			return WTerms[runLen], 0, true
+			return wTerms[runLen], 0, true
 		} else {
-			return BTerms[runLen], 0, true
+			return bTerms[runLen], 0, true
 		}
 	} else {
 		multiplier := runLen / 64
@@ -305,26 +323,26 @@ func getRunCode(runLen int, isWhite bool) (Code, int, bool) {
 		// stands for lens more than 2560 which are not
 		// covered by the Huffman codes
 		if multiplier > 40 {
-			return CommonMakeups[2560], runLen - 2560, false
+			return commonMakeups[2560], runLen - 2560, false
 		}
 
 		// stands for lens more than 1728. These should be common
 		// for both colors
 		if multiplier > 27 {
-			return CommonMakeups[multiplier*64], runLen - multiplier*64, false
+			return commonMakeups[multiplier*64], runLen - multiplier*64, false
 		}
 
 		// for lens < 27 we use the specific makeups for each color
 		if isWhite {
-			return WMakeups[multiplier*64], runLen - multiplier*64, false
+			return wMakeups[multiplier*64], runLen - multiplier*64, false
 		} else {
-			return BMakeups[multiplier*64], runLen - multiplier*64, false
+			return bMakeups[multiplier*64], runLen - multiplier*64, false
 		}
 	}
 }
 
 // calcRun calculates the nex pixel run. Returns the number of the
-// pixels and the new position in the original array
+// pixels and the new position in the original array.
 func calcRun(row []byte, isWhite bool, pos int) (int, int) {
 	count := 0
 	for pos < len(row) {
@@ -345,9 +363,9 @@ func calcRun(row []byte, isWhite bool, pos int) (int, int) {
 	return count, pos
 }
 
-// addCode encodes the specified code to the encoded starting with pos bit. pos
-// bit is a bit position global to the whole encoded array
-func addCode(encoded []byte, pos int, code Code) ([]byte, int) {
+// addCode writes the specified `code` to the `encoded` starting with `pos` bit. `pos`
+// bit is a bit position global to the whole encoded array.
+func addCode(encoded []byte, pos int, code code) ([]byte, int) {
 	i := 0
 	for i < code.BitsWritten {
 		bytePos := pos / 8
@@ -378,8 +396,8 @@ func addCode(encoded []byte, pos int, code Code) ([]byte, int) {
 }
 
 // appendEncodedRow appends the newly encoded row to the array of the encoded data.
-// bitPos is a bitPos in the last byte of the encoded data. bitPos points where to
-// write the next piece of data
+// `bitPos` is a bit position in the last byte of the encoded data. `bitPos` points where to
+// write the next piece of data.
 func (e *Encoder) appendEncodedRow(encoded, newRow []byte, bitPos int) []byte {
 	if len(encoded) > 0 && bitPos != 0 && !e.EncodedByteAlign {
 		encoded[len(encoded)-1] = encoded[len(encoded)-1] | newRow[0]
@@ -392,8 +410,8 @@ func (e *Encoder) appendEncodedRow(encoded, newRow []byte, bitPos int) []byte {
 	return encoded
 }
 
-// seekChangingElem gets the position of the changing elem in the row based on
-// the position of the currElem
+// seekChangingElem gets the position of the changing elem in the `row` based on
+// the position of the `currElem`.
 func seekChangingElem(row []byte, currElem int) int {
 	if currElem >= len(row) {
 		return currElem
@@ -418,7 +436,7 @@ func seekChangingElem(row []byte, currElem int) int {
 	return i
 }
 
-// seekB1 gets the position of b1 based on the position of a0
+// seekB1 gets the position of b1 based on the position of `a0`.
 func seekB1(codingLine, refLine []byte, a0 int) int {
 	changingElem := seekChangingElem(refLine, a0)
 
@@ -431,6 +449,8 @@ func seekB1(codingLine, refLine []byte, a0 int) int {
 	return changingElem
 }
 
+// seekB12D gets the position of b1 based on the position of `a0`.
+// Note: Used for the Group4 encoding.
 func seekB12D(codingLine, refLine []byte, a0 int, a0isWhite bool) int {
 	changingElem := seekChangingElem(refLine, a0)
 
@@ -444,18 +464,18 @@ func seekB12D(codingLine, refLine []byte, a0 int, a0isWhite bool) int {
 	return changingElem
 }
 
-// encodePassMode encodes the pass mode to the encodedRow starting with bitPos bit
+// encodePassMode encodes the pass mode to the `encodedRow` starting with `bitPos` bit.
 func encodePassMode(encodedRow []byte, bitPos int) ([]byte, int) {
-	return addCode(encodedRow, bitPos, P)
+	return addCode(encodedRow, bitPos, p)
 }
 
-// encodeHorizontalMode encodes the horizontal mode to the encodedRow starting with bitPos bit
+// encodeHorizontalMode encodes the horizontal mode to the `encodedRow` starting with `bitPos` bit.
 func encodeHorizontalMode(row, encodedRow []byte, bitPos, a0, a1 int) ([]byte, int, int) {
 	a2 := seekChangingElem(row, a1)
 
 	isWhite := a0 >= 0 && row[a0] == white || a0 == -1
 
-	encodedRow, bitPos = addCode(encodedRow, bitPos, H)
+	encodedRow, bitPos = addCode(encodedRow, bitPos, h)
 	var a0a1RunLen int
 	if a0 > -1 {
 		a0a1RunLen = a1 - a0
@@ -476,7 +496,7 @@ func encodeHorizontalMode(row, encodedRow []byte, bitPos, a0, a1 int) ([]byte, i
 	return encodedRow, bitPos, a0
 }
 
-// encodeVerticalMode encodes vertical mode to the encodedRow starting with bitPos bit
+// encodeVerticalMode encodes vertical mode to the encodedRow starting with `bitPos` bit.
 func encodeVerticalMode(encodedRow []byte, bitPos, a1, b1 int) ([]byte, int) {
 	vCode := getVCode(a1, b1)
 
@@ -486,32 +506,32 @@ func encodeVerticalMode(encodedRow []byte, bitPos, a1, b1 int) ([]byte, int) {
 }
 
 // getVCode get the code for the vertical mode based on
-// the locations of a1 and b1
-func getVCode(a1, b1 int) Code {
-	var vCode Code
+// the locations of `a1` and `b1`.
+func getVCode(a1, b1 int) code {
+	var vCode code
 
 	switch b1 - a1 {
 	case -1:
-		vCode = V1R
+		vCode = v1r
 	case -2:
-		vCode = V2R
+		vCode = v2r
 	case -3:
-		vCode = V3R
+		vCode = v3r
 	case 0:
-		vCode = V0
+		vCode = v0
 	case 1:
-		vCode = V1L
+		vCode = v1l
 	case 2:
-		vCode = V2L
+		vCode = v2l
 	case 3:
-		vCode = V3L
+		vCode = v3l
 	}
 
 	return vCode
 }
 
 // appendWhiteReferenceLine appends the line full of white pixels just before
-// the first image line
+// the first image line.
 func appendWhiteReferenceLine(pixels [][]byte) [][]byte {
 	whiteRefLine := make([]byte, len(pixels[0]))
 	for i := range whiteRefLine {
