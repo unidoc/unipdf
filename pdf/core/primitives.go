@@ -654,7 +654,11 @@ func (d *PdfObjectDictionary) GetString(key PdfObjectName) (string, bool) {
 }
 
 // Keys returns the list of keys in the dictionary.
+// If `d` is nil returns a nil slice.
 func (d *PdfObjectDictionary) Keys() []PdfObjectName {
+	if d == nil {
+		return nil
+	}
 	return d.keys
 }
 
@@ -799,7 +803,7 @@ func TraceToDirectObject(obj PdfObject) PdfObject {
 		iobj, isIndirectObj = obj.(*PdfIndirectObject)
 		depth++
 		if depth > TraceMaxDepth {
-			common.Log.Error("Trace depth level beyond 20 - error!")
+			common.Log.Error("ERROR: Trace depth level beyond %d - not going deeper!", TraceMaxDepth)
 			return nil
 		}
 	}

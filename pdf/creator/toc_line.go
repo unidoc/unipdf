@@ -7,6 +7,8 @@ package creator
 
 import (
 	"strings"
+
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // TOCLine represents a line in a table of contents.
@@ -42,6 +44,11 @@ type TOCLine struct {
 
 	// Positioning: relative/absolute.
 	positioning positioning
+
+	// Page and position of the line link, if any.
+	linkX    float64
+	linkY    float64
+	linkPage int64
 }
 
 // newTOCLine creates a new table of contents line with the default style.
@@ -139,6 +146,27 @@ func (tl *TOCLine) SetMargins(left, right, top, bottom float64) {
 	m.bottom = bottom
 }
 
+// SetLink makes the line an internal link.
+// The text parameter represents the text that is displayed.
+// The user is taken to the specified page, at the specified x and y
+// coordinates. Position 0, 0 is at the top left of the page.
+func (tl *TOCLine) SetLink(page int64, x, y float64) {
+	tl.linkX = x
+	tl.linkY = y
+	tl.linkPage = page
+
+	tl.SetStyle(tl.sp.defaultLinkStyle)
+}
+
+// getLineLink returns a new annotation if the line has a link set.
+func (tl *TOCLine) getLineLink() *model.PdfAnnotation {
+	if tl.linkPage <= 0 {
+		return nil
+	}
+
+	return newInternalLinkAnnotation(tl.linkPage-1, tl.linkX, tl.linkY, 0)
+}
+
 // prepareParagraph generates and adds all the components of the TOC line
 // to the underlying paragraph.
 func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
@@ -155,14 +183,20 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 	}
 
 	sp.chunks = []*TextChunk{
-		&tl.Number,
 		{
-			Text:  title,
-			Style: tl.Title.Style,
+			Text:       tl.Number.Text,
+			Style:      tl.Number.Style,
+			annotation: tl.getLineLink(),
 		},
 		{
-			Text:  page,
-			Style: tl.Page.Style,
+			Text:       title,
+			Style:      tl.Title.Style,
+			annotation: tl.getLineLink(),
+		},
+		{
+			Text:       page,
+			Style:      tl.Page.Style,
+			annotation: tl.getLineLink(),
 		},
 	}
 
@@ -182,6 +216,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 	chunk := sp.Insert(2, sepText)
 	chunk.Style = sepStyle
+	chunk.annotation = tl.getLineLink()
 
 	// Push page numbers to the end of the line.
 	availWidth = availWidth - float64(sepCount)*sepWidth
@@ -195,6 +230,7 @@ func (tl *TOCLine) prepareParagraph(sp *StyledParagraph, ctx DrawContext) {
 
 				chunk = sp.Insert(2, strings.Repeat(" ", spaces))
 				chunk.Style = style
+				chunk.annotation = tl.getLineLink()
 			}
 		}
 	}

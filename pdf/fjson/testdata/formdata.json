@@ -1,0 +1,46 @@
+[
+    {
+        "name": "full_name",
+        "value": "Jónas Þorgrímsson"
+    },
+    {
+        "name": "address_line_1",
+        "value": "Laugalæk 103"
+    },
+    {
+        "name": "address_line_2",
+        "value": ""
+    },
+    {
+        "name": "age",
+        "value": "39"
+    },
+    {
+        "name": "city",
+        "value": "Reykjavík"
+    },
+    {
+        "name": "country",
+        "value": "Ísland"
+    },
+    {
+        "name": "male",
+        "value": "Yes",
+        "options": [
+            "Off",
+            "Yes"
+        ]
+    },
+    {
+        "name": "female",
+        "value": "Off",
+        "options": [
+            "Off",
+            "Yes"
+        ]
+    },
+    {
+        "name": "fav_color",
+        "value": ""
+    }
+]

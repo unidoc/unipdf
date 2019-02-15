@@ -10,37 +10,37 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // PdfPageResources is a Page resources model.
 // Implements PdfModel.
 type PdfPageResources struct {
-	ExtGState  PdfObject
+	ExtGState  core.PdfObject
 	ColorSpace *PdfPageResourcesColorspaces
-	Pattern    PdfObject
-	Shading    PdfObject
-	XObject    PdfObject
-	Font       PdfObject
-	ProcSet    PdfObject
-	Properties PdfObject
+	Pattern    core.PdfObject
+	Shading    core.PdfObject
+	XObject    core.PdfObject
+	Font       core.PdfObject
+	ProcSet    core.PdfObject
+	Properties core.PdfObject
 	// Primitive resource container.
-	primitive *PdfObjectDictionary
+	primitive *core.PdfObjectDictionary
 }
 
 func NewPdfPageResources() *PdfPageResources {
 	r := &PdfPageResources{}
-	r.primitive = MakeDict()
+	r.primitive = core.MakeDict()
 	return r
 }
 
-func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, error) {
+func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResources, error) {
 	r := NewPdfPageResources()
 
 	if obj := dict.Get("ExtGState"); obj != nil {
 		r.ExtGState = obj
 	}
-	if obj := dict.Get("ColorSpace"); obj != nil && !IsNullObject(obj) {
+	if obj := dict.Get("ColorSpace"); obj != nil && !core.IsNullObject(obj) {
 		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
 		if err != nil {
 			return nil, err
@@ -69,11 +69,11 @@ func NewPdfPageResourcesFromDict(dict *PdfObjectDictionary) (*PdfPageResources, 
 	return r, nil
 }
 
-func (r *PdfPageResources) GetContainingPdfObject() PdfObject {
+func (r *PdfPageResources) GetContainingPdfObject() core.PdfObject {
 	return r.primitive
 }
 
-func (r *PdfPageResources) ToPdfObject() PdfObject {
+func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d := r.primitive
 	d.SetIfNotNil("ExtGState", r.ExtGState)
 	if r.ColorSpace != nil {
@@ -89,31 +89,32 @@ func (r *PdfPageResources) ToPdfObject() PdfObject {
 	return d
 }
 
-// AddExtGState add External Graphics State (GState).  The gsDict can be specified either directly as a dictionary or an
-// indirect object containing a dictionary.
-func (r *PdfPageResources) AddExtGState(gsName PdfObjectName, gsDict PdfObject) error {
+// AddExtGState add External Graphics State (GState). The gsDict can be specified
+// either directly as a dictionary or an indirect object containing a dictionary.
+func (r *PdfPageResources) AddExtGState(gsName core.PdfObjectName, gsDict core.PdfObject) error {
 	if r.ExtGState == nil {
-		r.ExtGState = MakeDict()
+		r.ExtGState = core.MakeDict()
 	}
 
 	obj := r.ExtGState
-	dict, ok := TraceToDirectObject(obj).(*PdfObjectDictionary)
+	dict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
 	if !ok {
-		common.Log.Debug("ExtGState type error (got %T/%T)", obj, TraceToDirectObject(obj))
-		return ErrTypeError
+		common.Log.Debug("ExtGState type error (got %T/%T)", obj, core.TraceToDirectObject(obj))
+		return core.ErrTypeError
 	}
 
 	dict.Set(gsName, gsDict)
 	return nil
 }
 
-// GetExtGState gets the ExtGState specified by keyName.  Returns a bool indicating whether it was found or not.
-func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool) {
+// GetExtGState gets the ExtGState specified by keyName. Returns a bool
+// indicating whether it was found or not.
+func (r *PdfPageResources) GetExtGState(keyName core.PdfObjectName) (core.PdfObject, bool) {
 	if r.ExtGState == nil {
 		return nil, false
 	}
 
-	dict, ok := TraceToDirectObject(r.ExtGState).(*PdfObjectDictionary)
+	dict, ok := core.TraceToDirectObject(r.ExtGState).(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid ExtGState entry - not a dict (got %T)", r.ExtGState)
 		return nil, false
@@ -127,19 +128,19 @@ func (r *PdfPageResources) GetExtGState(keyName PdfObjectName) (PdfObject, bool)
 }
 
 // HasExtGState checks whether a font is defined by the specified keyName.
-func (r *PdfPageResources) HasExtGState(keyName PdfObjectName) bool {
+func (r *PdfPageResources) HasExtGState(keyName core.PdfObjectName) bool {
 	_, has := r.GetFontByName(keyName)
 	return has
 }
 
-// GetShadingByName gets the shading specified by keyName.  Returns nil if not existing. The bool flag indicated whether
-// it was found or not.
-func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading, bool) {
+// GetShadingByName gets the shading specified by keyName. Returns nil if not existing.
+// The bool flag indicated whether it was found or not.
+func (r *PdfPageResources) GetShadingByName(keyName core.PdfObjectName) (*PdfShading, bool) {
 	if r.Shading == nil {
 		return nil, false
 	}
 
-	shadingDict, ok := TraceToDirectObject(r.Shading).(*PdfObjectDictionary)
+	shadingDict, ok := core.TraceToDirectObject(r.Shading).(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Shading entry - not a dict (got %T)", r.Shading)
 		return nil, false
@@ -158,28 +159,28 @@ func (r *PdfPageResources) GetShadingByName(keyName PdfObjectName) (*PdfShading,
 }
 
 // SetShadingByName sets a shading resource specified by keyName.
-func (r *PdfPageResources) SetShadingByName(keyName PdfObjectName, shadingObj PdfObject) error {
+func (r *PdfPageResources) SetShadingByName(keyName core.PdfObjectName, shadingObj core.PdfObject) error {
 	if r.Shading == nil {
-		r.Shading = MakeDict()
+		r.Shading = core.MakeDict()
 	}
 
-	shadingDict, has := r.Shading.(*PdfObjectDictionary)
+	shadingDict, has := r.Shading.(*core.PdfObjectDictionary)
 	if !has {
-		return ErrTypeError
+		return core.ErrTypeError
 	}
 
 	shadingDict.Set(keyName, shadingObj)
 	return nil
 }
 
-// GetPatternByName gets the pattern specified by keyName.  Returns nil if not existing. The bool flag indicated whether
-// it was found or not.
-func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern, bool) {
+// GetPatternByName gets the pattern specified by keyName. Returns nil if not existing.
+// The bool flag indicated whether it was found or not.
+func (r *PdfPageResources) GetPatternByName(keyName core.PdfObjectName) (*PdfPattern, bool) {
 	if r.Pattern == nil {
 		return nil, false
 	}
 
-	patternDict, ok := TraceToDirectObject(r.Pattern).(*PdfObjectDictionary)
+	patternDict, ok := core.TraceToDirectObject(r.Pattern).(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid Pattern entry - not a dict (got %T)", r.Pattern)
 		return nil, false
@@ -199,30 +200,30 @@ func (r *PdfPageResources) GetPatternByName(keyName PdfObjectName) (*PdfPattern,
 }
 
 // SetPatternByName sets a pattern resource specified by keyName.
-func (r *PdfPageResources) SetPatternByName(keyName PdfObjectName, pattern PdfObject) error {
+func (r *PdfPageResources) SetPatternByName(keyName core.PdfObjectName, pattern core.PdfObject) error {
 	if r.Pattern == nil {
-		r.Pattern = MakeDict()
+		r.Pattern = core.MakeDict()
 	}
 
-	patternDict, has := r.Pattern.(*PdfObjectDictionary)
+	patternDict, has := r.Pattern.(*core.PdfObjectDictionary)
 	if !has {
-		return ErrTypeError
+		return core.ErrTypeError
 	}
 
 	patternDict.Set(keyName, pattern)
 	return nil
 }
 
-// GetFontByName gets the font specified by keyName.  Returns the PdfObject which the entry refers to.
-// Returns a bool value indicating whether or not the entry was found.
-func (r *PdfPageResources) GetFontByName(keyName PdfObjectName) (PdfObject, bool) {
+// GetFontByName gets the font specified by keyName. Returns the PdfObject which
+// the entry refers to. Returns a bool value indicating whether or not the entry was found.
+func (r *PdfPageResources) GetFontByName(keyName core.PdfObjectName) (core.PdfObject, bool) {
 	if r.Font == nil {
 		return nil, false
 	}
 
-	fontDict, has := TraceToDirectObject(r.Font).(*PdfObjectDictionary)
+	fontDict, has := core.TraceToDirectObject(r.Font).(*core.PdfObjectDictionary)
 	if !has {
-		common.Log.Debug("ERROR: Font not a dictionary! (got %T)", TraceToDirectObject(r.Font))
+		common.Log.Debug("ERROR: Font not a dictionary! (got %T)", core.TraceToDirectObject(r.Font))
 		return nil, false
 	}
 
@@ -234,29 +235,29 @@ func (r *PdfPageResources) GetFontByName(keyName PdfObjectName) (PdfObject, bool
 }
 
 // HasFontByName checks whether a font is defined by the specified keyName.
-func (r *PdfPageResources) HasFontByName(keyName PdfObjectName) bool {
+func (r *PdfPageResources) HasFontByName(keyName core.PdfObjectName) bool {
 	_, has := r.GetFontByName(keyName)
 	return has
 }
 
 // SetFontByName sets the font specified by keyName to the given object.
-func (r *PdfPageResources) SetFontByName(keyName PdfObjectName, obj PdfObject) error {
+func (r *PdfPageResources) SetFontByName(keyName core.PdfObjectName, obj core.PdfObject) error {
 	if r.Font == nil {
 		// Create if not existing.
-		r.Font = MakeDict()
+		r.Font = core.MakeDict()
 	}
 
-	fontDict, has := TraceToDirectObject(r.Font).(*PdfObjectDictionary)
+	fontDict, has := core.TraceToDirectObject(r.Font).(*core.PdfObjectDictionary)
 	if !has {
-		common.Log.Debug("ERROR: Font not a dictionary! (got %T)", TraceToDirectObject(r.Font))
-		return ErrTypeError
+		common.Log.Debug("ERROR: Font not a dictionary! (got %T)", core.TraceToDirectObject(r.Font))
+		return core.ErrTypeError
 	}
 
 	fontDict.Set(keyName, obj)
 	return nil
 }
 
-func (r *PdfPageResources) GetColorspaceByName(keyName PdfObjectName) (PdfColorspace, bool) {
+func (r *PdfPageResources) GetColorspaceByName(keyName core.PdfObjectName) (PdfColorspace, bool) {
 	if r.ColorSpace == nil {
 		return nil, false
 	}
@@ -269,7 +270,7 @@ func (r *PdfPageResources) GetColorspaceByName(keyName PdfObjectName) (PdfColors
 	return cs, true
 }
 
-func (r *PdfPageResources) HasColorspaceByName(keyName PdfObjectName) bool {
+func (r *PdfPageResources) HasColorspaceByName(keyName core.PdfObjectName) bool {
 	if r.ColorSpace == nil {
 		return false
 	}
@@ -278,7 +279,7 @@ func (r *PdfPageResources) HasColorspaceByName(keyName PdfObjectName) bool {
 	return has
 }
 
-func (r *PdfPageResources) SetColorspaceByName(keyName PdfObjectName, cs PdfColorspace) error {
+func (r *PdfPageResources) SetColorspaceByName(keyName core.PdfObjectName, cs PdfColorspace) error {
 	if r.ColorSpace == nil {
 		r.ColorSpace = NewPdfPageResourcesColorspaces()
 	}
@@ -288,7 +289,7 @@ func (r *PdfPageResources) SetColorspaceByName(keyName PdfObjectName, cs PdfColo
 }
 
 // HasXObjectByName checks if an XObject with a specified keyName is defined.
-func (r *PdfPageResources) HasXObjectByName(keyName PdfObjectName) bool {
+func (r *PdfPageResources) HasXObjectByName(keyName core.PdfObjectName) bool {
 	obj, _ := r.GetXObjectByName(keyName)
 	if obj != nil {
 		return true
@@ -297,12 +298,12 @@ func (r *PdfPageResources) HasXObjectByName(keyName PdfObjectName) bool {
 	}
 }
 
-// GenerateXObjectName generates an unused XObject name that can be used for adding new XObjects.
-// Uses format XObj1, XObj2, ...
-func (r *PdfPageResources) GenerateXObjectName() PdfObjectName {
+// GenerateXObjectName generates an unused XObject name that can be used for
+// adding new XObjects. Uses format XObj1, XObj2, ...
+func (r *PdfPageResources) GenerateXObjectName() core.PdfObjectName {
 	num := 1
 	for {
-		name := MakeName(fmt.Sprintf("XObj%d", num))
+		name := core.MakeName(fmt.Sprintf("XObj%d", num))
 		if !r.HasXObjectByName(*name) {
 			return *name
 		}
@@ -322,26 +323,26 @@ const (
 )
 
 // GetXObjectByName returns the XObject with the specified keyName and the object type.
-func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectStream, XObjectType) {
+func (r *PdfPageResources) GetXObjectByName(keyName core.PdfObjectName) (*core.PdfObjectStream, XObjectType) {
 	if r.XObject == nil {
 		return nil, XObjectTypeUndefined
 	}
 
-	xresDict, has := TraceToDirectObject(r.XObject).(*PdfObjectDictionary)
+	xresDict, has := core.TraceToDirectObject(r.XObject).(*core.PdfObjectDictionary)
 	if !has {
-		common.Log.Debug("ERROR: XObject not a dictionary! (got %T)", TraceToDirectObject(r.XObject))
+		common.Log.Debug("ERROR: XObject not a dictionary! (got %T)", core.TraceToDirectObject(r.XObject))
 		return nil, XObjectTypeUndefined
 	}
 
 	if obj := xresDict.Get(keyName); obj != nil {
-		stream, ok := obj.(*PdfObjectStream)
+		stream, ok := obj.(*core.PdfObjectStream)
 		if !ok {
 			common.Log.Debug("XObject not pointing to a stream %T", obj)
 			return nil, XObjectTypeUndefined
 		}
 		dict := stream.PdfObjectDictionary
 
-		name, ok := TraceToDirectObject(dict.Get("Subtype")).(*PdfObjectName)
+		name, ok := core.TraceToDirectObject(dict.Get("Subtype")).(*core.PdfObjectName)
 		if !ok {
 			common.Log.Debug("XObject Subtype not a Name, dict: %s", dict.String())
 			return nil, XObjectTypeUndefined
@@ -362,13 +363,13 @@ func (r *PdfPageResources) GetXObjectByName(keyName PdfObjectName) (*PdfObjectSt
 	}
 }
 
-func (r *PdfPageResources) SetXObjectByName(keyName PdfObjectName, stream *PdfObjectStream) error {
+func (r *PdfPageResources) SetXObjectByName(keyName core.PdfObjectName, stream *core.PdfObjectStream) error {
 	if r.XObject == nil {
-		r.XObject = MakeDict()
+		r.XObject = core.MakeDict()
 	}
 
-	obj := TraceToDirectObject(r.XObject)
-	xresDict, has := obj.(*PdfObjectDictionary)
+	obj := core.TraceToDirectObject(r.XObject)
+	xresDict, has := obj.(*core.PdfObjectDictionary)
 	if !has {
 		common.Log.Debug("Invalid XObject, got %T/%T", r.XObject, obj)
 		return errors.New("type check error")
@@ -378,7 +379,7 @@ func (r *PdfPageResources) SetXObjectByName(keyName PdfObjectName, stream *PdfOb
 	return nil
 }
 
-func (r *PdfPageResources) GetXObjectImageByName(keyName PdfObjectName) (*XObjectImage, error) {
+func (r *PdfPageResources) GetXObjectImageByName(keyName core.PdfObjectName) (*XObjectImage, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
 		return nil, nil
@@ -395,13 +396,13 @@ func (r *PdfPageResources) GetXObjectImageByName(keyName PdfObjectName) (*XObjec
 	return ximg, nil
 }
 
-func (r *PdfPageResources) SetXObjectImageByName(keyName PdfObjectName, ximg *XObjectImage) error {
-	stream := ximg.ToPdfObject().(*PdfObjectStream)
+func (r *PdfPageResources) SetXObjectImageByName(keyName core.PdfObjectName, ximg *XObjectImage) error {
+	stream := ximg.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)
 	return err
 }
 
-func (r *PdfPageResources) GetXObjectFormByName(keyName PdfObjectName) (*XObjectForm, error) {
+func (r *PdfPageResources) GetXObjectFormByName(keyName core.PdfObjectName) (*XObjectForm, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
 		return nil, nil
@@ -418,8 +419,8 @@ func (r *PdfPageResources) GetXObjectFormByName(keyName PdfObjectName) (*XObject
 	return xform, nil
 }
 
-func (r *PdfPageResources) SetXObjectFormByName(keyName PdfObjectName, xform *XObjectForm) error {
-	stream := xform.ToPdfObject().(*PdfObjectStream)
+func (r *PdfPageResources) SetXObjectFormByName(keyName core.PdfObjectName, xform *XObjectForm) error {
+	stream := xform.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)
 	return err
 }

@@ -10,12 +10,12 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Subchapter simply represents a sub chapter pertaining to a specific Chapter.  It can contain
 // multiple Drawables, just like a chapter.
 type Subchapter struct {
-	chapterNum    int
 	subchapterNum int
 	title         string
 	heading       *Paragraph
@@ -39,6 +39,15 @@ type Subchapter struct {
 
 	// Reference to the creator's TOC.
 	toc *TOC
+
+	// Reference to the chapter the subchapter belongs to.
+	chapter *Chapter
+
+	// Reference to the outline of the creator.
+	outline *model.Outline
+
+	// The item of the subchapter in the outline.
+	outlineItem *model.OutlineItem
 }
 
 // newSubchapter creates a new Subchapter under Chapter ch with specified title.
@@ -52,13 +61,14 @@ func newSubchapter(ch *Chapter, title string, style TextStyle) *Subchapter {
 
 	subchapter := &Subchapter{
 		subchapterNum: ch.subchapters,
-		chapterNum:    ch.number,
 		title:         title,
 		showNumbering: true,
 		includeInTOC:  true,
 		heading:       p,
 		contents:      []Drawable{},
+		chapter:       ch,
 		toc:           ch.toc,
+		outline:       ch.outline,
 	}
 
 	// Add subchapter to chapter.
@@ -70,7 +80,7 @@ func newSubchapter(ch *Chapter, title string, style TextStyle) *Subchapter {
 // SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
 func (subchap *Subchapter) SetShowNumbering(show bool) {
 	if show {
-		heading := fmt.Sprintf("%d.%d. %s", subchap.chapterNum, subchap.subchapterNum, subchap.title)
+		heading := fmt.Sprintf("%d.%d. %s", subchap.chapter.number, subchap.subchapterNum, subchap.title)
 		subchap.heading.SetText(heading)
 	} else {
 		heading := fmt.Sprintf("%s", subchap.title)
@@ -138,6 +148,9 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 		ctx.Height -= subchap.margins.top
 	}
 
+	origX := ctx.X
+	origY := ctx.Y
+
 	blocks, ctx, err := subchap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
@@ -145,11 +158,15 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 	if len(blocks) > 1 {
 		ctx.Page++ // did not fit - moved to next Page.
 	}
-	if subchap.includeInTOC {
-		// Add to TOC.
-		subchapNumber := ""
-		if subchap.chapterNum != 0 {
-			subchapNumber = strconv.Itoa(subchap.chapterNum)
+
+	// Generate subchapter title and number.
+	subchapTitle := subchap.title
+	var subchapNumber string
+	page := int64(ctx.Page)
+
+	if subchap.showNumbering {
+		if subchap.chapter.number != 0 {
+			subchapNumber = strconv.Itoa(subchap.chapter.number)
 		}
 		if subchap.subchapterNum != 0 {
 			if subchapNumber != "" {
@@ -158,8 +175,32 @@ func (subchap *Subchapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCo
 
 			subchapNumber += strconv.Itoa(subchap.subchapterNum) + "."
 		}
+	}
 
-		subchap.toc.Add(subchapNumber, subchap.title, strconv.Itoa(ctx.Page), 2)
+	if subchapNumber != "" {
+		subchapTitle = fmt.Sprintf("%s %s", subchapNumber, subchapTitle)
+	}
+
+	// Add to TOC.
+	if subchap.includeInTOC {
+		line := subchap.toc.Add(subchapNumber, subchap.title, strconv.FormatInt(page, 10), 2)
+		if subchap.toc.showLinks {
+			line.SetLink(page, origX, origY)
+		}
+	}
+
+	// Add to outline.
+	if subchap.outlineItem == nil {
+		subchap.outlineItem = model.NewOutlineItem(
+			subchapTitle,
+			model.NewOutlineDest(page-1, origX, origY),
+		)
+		subchap.chapter.outlineItem.Add(subchap.outlineItem)
+	} else {
+		outlineDest := &subchap.outlineItem.Dest
+		outlineDest.Page = page - 1
+		outlineDest.X = origX
+		outlineDest.Y = origY
 	}
 
 	for _, d := range subchap.contents {

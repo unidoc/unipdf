@@ -3,12 +3,5 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package extractor
-
-import "errors"
-
-var isTesting = false
-
-var (
-	errTypeCheck = errors.New("type check error")
-)
+// Package fjson provides support for loading PDF form field data from JSON data/files.
+package fjson

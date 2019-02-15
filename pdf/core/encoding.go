@@ -58,6 +58,7 @@ type StreamEncoder interface {
 	GetFilterName() string
 	MakeDecodeParams() PdfObject
 	MakeStreamDict() *PdfObjectDictionary
+	UpdateParams(params *PdfObjectDictionary)
 
 	EncodeBytes(data []byte) ([]byte, error)
 	DecodeBytes(encoded []byte) ([]byte, error)
@@ -135,6 +136,29 @@ func (enc *FlateEncoder) MakeStreamDict() *PdfObjectDictionary {
 	}
 
 	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *FlateEncoder) UpdateParams(params *PdfObjectDictionary) {
+	predictor, err := GetNumberAsInt64(params.Get("Predictor"))
+	if err == nil {
+		enc.Predictor = int(predictor)
+	}
+
+	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
+	if err == nil {
+		enc.BitsPerComponent = int(bpc)
+	}
+
+	columns, err := GetNumberAsInt64(params.Get("Width"))
+	if err == nil {
+		enc.Columns = int(columns)
+	}
+
+	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
+	if err == nil {
+		enc.Colors = int(colorComponents)
+	}
 }
 
 // Create a new flate decoder from a stream object, getting all the encoding parameters
@@ -241,31 +265,23 @@ func (enc *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	var outBuf bytes.Buffer
 	outBuf.ReadFrom(r)
 
-	common.Log.Trace("En: % x\n", encoded)
-	common.Log.Trace("De: % x\n", outBuf.Bytes())
-
 	return outBuf.Bytes(), nil
 }
 
-// DecodeStream decodes a FlateEncoded stream object and give back decoded bytes.
-func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	// TODO: Handle more filter bytes and support more values of BitsPerComponent.
+// Prediction filters for PNG predictors.
+const (
+	pfNone  = 0 // No prediction (raw).
+	pfSub   = 1 // Predicts same as left sample.
+	pfUp    = 2 // Predicts same as sample above.
+	pfAvg   = 3 // Predict based on left and above.
+	pfPaeth = 4 // Paeth algorithm prediction.
+)
 
-	common.Log.Trace("FlateDecode stream")
-	common.Log.Trace("Predictor: %d", enc.Predictor)
-	if enc.BitsPerComponent != 8 {
-		return nil, fmt.Errorf("invalid BitsPerComponent=%d (only 8 supported)", enc.BitsPerComponent)
-	}
-
-	outData, err := enc.DecodeBytes(streamObj.Stream)
-	if err != nil {
-		return nil, err
-	}
-	common.Log.Trace("En: % x\n", streamObj.Stream)
-	common.Log.Trace("De: % x\n", outData)
-
+// Apply predictor to decoded `outData` to get final output data.
+func (enc *FlateEncoder) postDecodePredict(outData []byte) ([]byte, error) {
 	if enc.Predictor > 1 {
-		if enc.Predictor == 2 { // TIFF encoding: Needs some tests.
+		if enc.Predictor == 2 { // TIFF encoding.
+			// TODO(gunnsth): Needs test cases.
 			common.Log.Trace("Tiff encoding")
 			common.Log.Trace("Colors: %d", enc.Colors)
 
@@ -296,7 +312,7 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 				// Predicts the same as the sample to the left.
 				// Interleaved by colors.
 				for j := enc.Colors; j < rowLength; j++ {
-					rowData[j] = byte(int(rowData[j]+rowData[j-enc.Colors]) % 256)
+					rowData[j] += rowData[j-enc.Colors]
 				}
 				pOutBuffer.Write(rowData)
 			}
@@ -326,66 +342,49 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 				prevRowData[i] = 0
 			}
 
+			bytesPerPixel := enc.Colors // Assuming BPC = 8.
+
 			for i := 0; i < rows; i++ {
 				rowData := outData[rowLength*i : rowLength*(i+1)]
 
 				fb := rowData[0]
 				switch fb {
-				case 0:
-					// No prediction. (No operation).
-				case 1:
-					// Sub: Predicts the same as the sample to the left.
-					for j := 2; j < rowLength; j++ {
-						rowData[j] = byte(int(rowData[j]+rowData[j-1]) % 256)
+				case pfNone:
+				case pfSub:
+					for j := 1 + bytesPerPixel; j < rowLength; j++ {
+						rowData[j] += rowData[j-bytesPerPixel]
 					}
-				case 2:
+				case pfUp:
 					// Up: Predicts the same as the sample above
 					for j := 1; j < rowLength; j++ {
-						rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
+						rowData[j] += prevRowData[j]
 					}
-				case 3:
+				case pfAvg:
 					// Avg: Predicts the same as the average of the sample to the left and above.
+					for j := 1; j < bytesPerPixel+1; j++ {
+						rowData[j] += prevRowData[j] / 2
+					}
+					for j := bytesPerPixel + 1; j < rowLength; j++ {
+						rowData[j] += byte((int(rowData[j-bytesPerPixel]) + int(prevRowData[j])) / 2)
+					}
+				case pfPaeth:
+					// Paeth: a nonlinear function of the sample to the left (a), sample above (b)
+					// and the upper left (c).
 					for j := 1; j < rowLength; j++ {
-						if j == 1 {
-							rowData[j] = byte(int(rowData[j]+prevRowData[j]) % 256)
-						} else {
-							avg := (rowData[j-1] + prevRowData[j]) / 2
-							rowData[j] = byte(int(rowData[j]+avg) % 256)
+						var a, b, c byte
+						b = prevRowData[j] // above.
+						if j >= bytesPerPixel+1 {
+							a = rowData[j-bytesPerPixel]
+							c = prevRowData[j-bytesPerPixel]
 						}
+						rowData[j] += paeth(a, b, c)
 					}
-				case 4:
-					// Paeth: a nonlinear function of the sample above, the sample to the left and the sample
-					// to the upper left.
-					for j := 2; j < rowLength; j++ {
-						a := rowData[j-1]     // left
-						b := prevRowData[j]   // above
-						c := prevRowData[j-1] // upper left
-
-						p := int(a + b - c)
-						pa := absInt(p - int(a))
-						pb := absInt(p - int(b))
-						pc := absInt(p - int(c))
-
-						if pa <= pb && pa <= pc {
-							// Use a (left).
-							rowData[j] = byte(int(rowData[j]+a) % 256)
-						} else if pb <= pc {
-							// Use b (upper).
-							rowData[j] = byte(int(rowData[j]+b) % 256)
-						} else {
-							// Use c (upper left).
-							rowData[j] = byte(int(rowData[j]+c) % 256)
-						}
-					}
-
 				default:
 					common.Log.Debug("ERROR: Invalid filter byte (%d) @row %d", fb, i)
 					return nil, fmt.Errorf("invalid filter byte (%d)", fb)
 				}
 
-				for i := 0; i < rowLength; i++ {
-					prevRowData[i] = rowData[i]
-				}
+				copy(prevRowData, rowData)
 				pOutBuffer.Write(rowData[1:])
 			}
 			pOutData := pOutBuffer.Bytes()
@@ -397,6 +396,24 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 	}
 
 	return outData, nil
+}
+
+// DecodeStream decodes a FlateEncoded stream object and give back decoded bytes.
+func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	// TODO: Handle more filter bytes and support more values of BitsPerComponent.
+
+	common.Log.Trace("FlateDecode stream")
+	common.Log.Trace("Predictor: %d", enc.Predictor)
+	if enc.BitsPerComponent != 8 {
+		return nil, fmt.Errorf("invalid BitsPerComponent=%d (only 8 supported)", enc.BitsPerComponent)
+	}
+
+	outData, err := enc.DecodeBytes(streamObj.Stream)
+	if err != nil {
+		return nil, err
+	}
+
+	return enc.postDecodePredict(outData)
 }
 
 // EncodeBytes encodes a bytes array and return the encoded value based on the encoder parameters.
@@ -513,6 +530,34 @@ func (enc *LZWEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict.Set("EarlyChange", MakeInteger(int64(enc.EarlyChange)))
 
 	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *LZWEncoder) UpdateParams(params *PdfObjectDictionary) {
+	predictor, err := GetNumberAsInt64(params.Get("Predictor"))
+	if err == nil {
+		enc.Predictor = int(predictor)
+	}
+
+	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
+	if err == nil {
+		enc.BitsPerComponent = int(bpc)
+	}
+
+	columns, err := GetNumberAsInt64(params.Get("Width"))
+	if err == nil {
+		enc.Columns = int(columns)
+	}
+
+	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
+	if err == nil {
+		enc.Colors = int(colorComponents)
+	}
+
+	earlyChange, err := GetNumberAsInt64(params.Get("EarlyChange"))
+	if err == nil {
+		enc.EarlyChange = int(earlyChange)
+	}
 }
 
 // Create a new LZW encoder/decoder from a stream object, getting all the encoding parameters
@@ -832,6 +877,34 @@ func (enc *DCTEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return dict
 }
 
+// UpdateParams updates the parameter values of the encoder.
+func (enc *DCTEncoder) UpdateParams(params *PdfObjectDictionary) {
+	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
+	if err == nil {
+		enc.ColorComponents = int(colorComponents)
+	}
+
+	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
+	if err == nil {
+		enc.BitsPerComponent = int(bpc)
+	}
+
+	width, err := GetNumberAsInt64(params.Get("Width"))
+	if err == nil {
+		enc.Width = int(width)
+	}
+
+	height, err := GetNumberAsInt64(params.Get("Height"))
+	if err == nil {
+		enc.Height = int(height)
+	}
+
+	quality, err := GetNumberAsInt64(params.Get("Quality"))
+	if err == nil {
+		enc.Quality = int(quality)
+	}
+}
+
 // Create a new DCT encoder/decoder from a stream object, getting all the encoding parameters
 // from the stream object dictionary entry and the image data itself.
 // TODO: Support if used with other filters [ASCII85Decode FlateDecode DCTDecode]...
@@ -1045,9 +1118,17 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	// Draw the data on the image..
+	if enc.BitsPerComponent < 8 {
+		enc.BitsPerComponent = 8
+	}
+
+	bytesPerColor := enc.ColorComponents * enc.BitsPerComponent / 8
+	if bytesPerColor < 1 {
+		bytesPerColor = 1
+	}
+
 	x := 0
 	y := 0
-	bytesPerColor := enc.ColorComponents * enc.BitsPerComponent / 8
 	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
 		var c gocolor.Color
 		if enc.ColorComponents == 1 {
@@ -1246,6 +1327,10 @@ func (enc *RunLengthEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return dict
 }
 
+// UpdateParams updates the parameter values of the encoder.
+func (enc *RunLengthEncoder) UpdateParams(params *PdfObjectDictionary) {
+}
+
 // ASCIIHexEncoder implements ASCII hex encoder/decoder.
 type ASCIIHexEncoder struct {
 }
@@ -1269,6 +1354,10 @@ func (enc *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
 	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *ASCIIHexEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
 func (enc *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
@@ -1343,6 +1432,10 @@ func (enc *ASCII85Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
 	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *ASCII85Encoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
 // DecodeBytes decodes byte array with ASCII85. 5 ASCII characters -> 4 raw binary bytes
@@ -1508,6 +1601,10 @@ func (enc *RawEncoder) MakeDecodeParams() PdfObject {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *RawEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *RawEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
 func (enc *RawEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
@@ -1738,6 +1835,10 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 	return encoder, nil
 }
 
+// UpdateParams updates the parameter values of the encoder.
+func (enc *CCITTFaxEncoder) UpdateParams(params *PdfObjectDictionary) {
+}
+
 // DecodeBytes decodes the CCITTFax encoded image data.
 func (this *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	encoder := &ccittfaxdecode.Encoder{
@@ -1846,6 +1947,10 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
 }
 
+// UpdateParams updates the parameter values of the encoder.
+func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
+}
+
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return encoded, ErrNoJBIG2Decode
@@ -1880,6 +1985,10 @@ func (enc *JPXEncoder) MakeDecodeParams() PdfObject {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *JPXEncoder) MakeStreamDict() *PdfObjectDictionary {
 	return MakeDict()
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *JPXEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
 func (enc *JPXEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
@@ -2078,6 +2187,13 @@ func (enc *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	}
 
 	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *MultiEncoder) UpdateParams(params *PdfObjectDictionary) {
+	for _, encoder := range enc.encoders {
+		encoder.UpdateParams(params)
+	}
 }
 
 func (enc *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {

@@ -43,11 +43,17 @@ type Creator struct {
 
 	finalized bool
 
+	// Controls whether a table of contents will be generated.
+	AddTOC bool
+
 	// The table of contents.
 	toc *TOC
 
-	// Controls whether a table of contents will be added.
-	AddTOC bool
+	// Controls whether outlines will be generated.
+	AddOutlines bool
+
+	// Outline.
+	outline *model.Outline
 
 	// Forms.
 	acroForm *model.PdfAcroForm
@@ -124,6 +130,10 @@ func New() *Creator {
 
 	// Initialize creator table of contents.
 	c.toc = c.NewTOC("Table of Contents")
+
+	// Initialize outline.
+	c.AddOutlines = true
+	c.outline = model.NewOutline()
 
 	return c
 }
@@ -390,8 +400,16 @@ func (c *Creator) finalize() error {
 			}
 		}
 
-		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
+		// Account for the front page and the table of content pages.
+		lines := c.toc.Lines()
+		for _, line := range lines {
+			line.linkPage += int64(genpages)
+		}
+
+		// Create TOC pages.
 		var tocpages []*model.PdfPage
+		blocks, _, _ := c.toc.GeneratePageBlocks(c.context)
+
 		for _, block := range blocks {
 			block.SetPos(0, 0)
 			totPages++
@@ -410,7 +428,44 @@ func (c *Creator) finalize() error {
 		} else {
 			c.pages = append(tocpages, c.pages...)
 		}
+	}
 
+	// Account for the front page and the table of content pages.
+	if c.outline != nil && c.AddOutlines {
+		var adjustOutlineDest func(item *model.OutlineItem)
+		adjustOutlineDest = func(item *model.OutlineItem) {
+			item.Dest.Page += int64(genpages)
+
+			// Reverse the Y axis of the destination coordinates.
+			// The user passes in the annotation coordinates as if
+			// position 0, 0 is at the top left of the page.
+			// However, position 0, 0 in the PDF is at the bottom
+			// left of the page.
+			item.Dest.Y = c.pageHeight - item.Dest.Y
+
+			outlineItems := item.Items()
+			for _, outlineItem := range outlineItems {
+				adjustOutlineDest(outlineItem)
+			}
+		}
+
+		outlineItems := c.outline.Items()
+		for _, outlineItem := range outlineItems {
+			adjustOutlineDest(outlineItem)
+		}
+
+		// Add outline TOC item.
+		if c.AddTOC {
+			var tocPage int64
+			if hasFrontPage {
+				tocPage = 1
+			}
+
+			c.outline.Insert(0, model.NewOutlineItem(
+				"Table of Contents",
+				model.NewOutlineDest(tocPage, 0, c.pageHeight),
+			))
+		}
 	}
 
 	for idx, page := range c.pages {
@@ -431,7 +486,6 @@ func (c *Creator) finalize() error {
 				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
-
 		}
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.
@@ -534,7 +588,12 @@ func (c *Creator) Write(ws io.Writer) error {
 		}
 	}
 
-	// Pdf Writer access hook.  Can be used to encrypt, etc. via the PdfWriter instance.
+	// Outlines.
+	if c.outline != nil && c.AddOutlines {
+		pdfWriter.AddOutlineTree(&c.outline.ToPdfOutline().PdfOutlineTreeNode)
+	}
+
+	// Pdf Writer access hook. Can be used to encrypt, etc. via the PdfWriter instance.
 	if c.pdfWriterAccessFunc != nil {
 		err := c.pdfWriterAccessFunc(&pdfWriter)
 		if err != nil {
@@ -655,7 +714,7 @@ func (c *Creator) NewStyledTOCLine(number, title, page TextChunk, level uint, st
 // NewChapter creates a new chapter with the specified title as the heading.
 func (c *Creator) NewChapter(title string) *Chapter {
 	c.chapters++
-	return newChapter(c.toc, title, c.chapters, c.NewTextStyle())
+	return newChapter(c.toc, c.outline, title, c.chapters, c.NewTextStyle())
 }
 
 // NewSubchapter creates a new Subchapter under Chapter ch with specified title.

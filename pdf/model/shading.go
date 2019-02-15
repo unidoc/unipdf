@@ -9,7 +9,7 @@ import (
 	"errors"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // PdfShading represents a shading dictionary. There are 7 types of shading,
@@ -23,17 +23,17 @@ import (
 // 7: Tensor-product patch mesh.
 // types 4-7 are contained in a stream object, where the dictionary is given by the stream dictionary.
 type PdfShading struct {
-	ShadingType *PdfObjectInteger
+	ShadingType *core.PdfObjectInteger
 	ColorSpace  PdfColorspace
-	Background  *PdfObjectArray
+	Background  *core.PdfObjectArray
 	BBox        *PdfRectangle
-	AntiAlias   *PdfObjectBool
+	AntiAlias   *core.PdfObjectBool
 
-	context   PdfModel  // The sub shading type entry (types 1-7).  Represented by PdfShadingType1-7.
-	container PdfObject // The container.  Can be stream, indirect object, or dictionary.
+	context   PdfModel       // The sub shading type entry (types 1-7). Represented by PdfShadingType1-7.
+	container core.PdfObject // The container. Can be stream, indirect object, or dictionary.
 }
 
-func (s *PdfShading) GetContainingPdfObject() PdfObject {
+func (s *PdfShading) GetContainingPdfObject() core.PdfObject {
 	return s.container
 }
 
@@ -47,118 +47,118 @@ func (s *PdfShading) SetContext(ctx PdfModel) {
 	s.context = ctx
 }
 
-func (s *PdfShading) getShadingDict() (*PdfObjectDictionary, error) {
+func (s *PdfShading) getShadingDict() (*core.PdfObjectDictionary, error) {
 	obj := s.container
 
-	if indObj, isInd := obj.(*PdfIndirectObject); isInd {
-		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
+	if indObj, isInd := obj.(*core.PdfIndirectObject); isInd {
+		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 
 		return d, nil
-	} else if streamObj, isStream := obj.(*PdfObjectStream); isStream {
+	} else if streamObj, isStream := obj.(*core.PdfObjectStream); isStream {
 		return streamObj.PdfObjectDictionary, nil
-	} else if d, isDict := obj.(*PdfObjectDictionary); isDict {
+	} else if d, isDict := obj.(*core.PdfObjectDictionary); isDict {
 		return d, nil
 	} else {
 		common.Log.Debug("Unable to access shading dictionary")
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 }
 
 // PdfShadingType1 is a Function-based shading.
 type PdfShadingType1 struct {
 	*PdfShading
-	Domain   *PdfObjectArray
-	Matrix   *PdfObjectArray
+	Domain   *core.PdfObjectArray
+	Matrix   *core.PdfObjectArray
 	Function []PdfFunction
 }
 
 // PdfShadingType2 is an Axial shading.
 type PdfShadingType2 struct {
 	*PdfShading
-	Coords   *PdfObjectArray
-	Domain   *PdfObjectArray
+	Coords   *core.PdfObjectArray
+	Domain   *core.PdfObjectArray
 	Function []PdfFunction
-	Extend   *PdfObjectArray
+	Extend   *core.PdfObjectArray
 }
 
 // PdfShadingType3 is a Radial shading.
 type PdfShadingType3 struct {
 	*PdfShading
-	Coords   *PdfObjectArray
-	Domain   *PdfObjectArray
+	Coords   *core.PdfObjectArray
+	Domain   *core.PdfObjectArray
 	Function []PdfFunction
-	Extend   *PdfObjectArray
+	Extend   *core.PdfObjectArray
 }
 
 // PdfShadingType4 is a Free-form Gouraud-shaded triangle mesh.
 type PdfShadingType4 struct {
 	*PdfShading
-	BitsPerCoordinate *PdfObjectInteger
-	BitsPerComponent  *PdfObjectInteger
-	BitsPerFlag       *PdfObjectInteger
-	Decode            *PdfObjectArray
+	BitsPerCoordinate *core.PdfObjectInteger
+	BitsPerComponent  *core.PdfObjectInteger
+	BitsPerFlag       *core.PdfObjectInteger
+	Decode            *core.PdfObjectArray
 	Function          []PdfFunction
 }
 
 // PdfShadingType5 is a Lattice-form Gouraud-shaded triangle mesh.
 type PdfShadingType5 struct {
 	*PdfShading
-	BitsPerCoordinate *PdfObjectInteger
-	BitsPerComponent  *PdfObjectInteger
-	VerticesPerRow    *PdfObjectInteger
-	Decode            *PdfObjectArray
+	BitsPerCoordinate *core.PdfObjectInteger
+	BitsPerComponent  *core.PdfObjectInteger
+	VerticesPerRow    *core.PdfObjectInteger
+	Decode            *core.PdfObjectArray
 	Function          []PdfFunction
 }
 
 // PdfShadingType6 is a Coons patch mesh.
 type PdfShadingType6 struct {
 	*PdfShading
-	BitsPerCoordinate *PdfObjectInteger
-	BitsPerComponent  *PdfObjectInteger
-	BitsPerFlag       *PdfObjectInteger
-	Decode            *PdfObjectArray
+	BitsPerCoordinate *core.PdfObjectInteger
+	BitsPerComponent  *core.PdfObjectInteger
+	BitsPerFlag       *core.PdfObjectInteger
+	Decode            *core.PdfObjectArray
 	Function          []PdfFunction
 }
 
 // PdfShadingType7 is a Tensor-product patch mesh.
 type PdfShadingType7 struct {
 	*PdfShading
-	BitsPerCoordinate *PdfObjectInteger
-	BitsPerComponent  *PdfObjectInteger
-	BitsPerFlag       *PdfObjectInteger
-	Decode            *PdfObjectArray
+	BitsPerCoordinate *core.PdfObjectInteger
+	BitsPerComponent  *core.PdfObjectInteger
+	BitsPerFlag       *core.PdfObjectInteger
+	Decode            *core.PdfObjectArray
 	Function          []PdfFunction
 }
 
 // Used for PDF parsing. Loads the PDF shading from a PDF object.
-// Can be either an indirect object (types 1-3) containing the dictionary, or a stream object with the stream
-// dictionary containing the shading dictionary (types 4-7).
-func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
+// Can be either an indirect object (types 1-3) containing the dictionary, or
+// a stream object with the stream dictionary containing the shading dictionary (types 4-7).
+func newPdfShadingFromPdfObject(obj core.PdfObject) (*PdfShading, error) {
 	shading := &PdfShading{}
 
-	var dict *PdfObjectDictionary
-	if indObj, isInd := obj.(*PdfIndirectObject); isInd {
+	var dict *core.PdfObjectDictionary
+	if indObj, isInd := obj.(*core.PdfIndirectObject); isInd {
 		shading.container = indObj
 
-		d, ok := indObj.PdfObject.(*PdfObjectDictionary)
+		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
 			common.Log.Debug("Object not a dictionary type")
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 
 		dict = d
-	} else if streamObj, isStream := obj.(*PdfObjectStream); isStream {
+	} else if streamObj, isStream := obj.(*core.PdfObjectStream); isStream {
 		shading.container = streamObj
 		dict = streamObj.PdfObjectDictionary
-	} else if d, isDict := obj.(*PdfObjectDictionary); isDict {
+	} else if d, isDict := obj.(*core.PdfObjectDictionary); isDict {
 		shading.container = d
 		dict = d
 	} else {
 		common.Log.Debug("Object type unexpected (%T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 
 	if dict == nil {
@@ -172,15 +172,15 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 		common.Log.Debug("Required shading type missing")
 		return nil, ErrRequiredAttributeMissing
 	}
-	obj = TraceToDirectObject(obj)
-	shadingType, ok := obj.(*PdfObjectInteger)
+	obj = core.TraceToDirectObject(obj)
+	shadingType, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("Invalid type for shading type (%T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	if *shadingType < 1 || *shadingType > 7 {
 		common.Log.Debug("Invalid shading type, not 1-7 (got %d)", *shadingType)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.ShadingType = shadingType
 
@@ -200,11 +200,11 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	// Background (optional). Array of color components.
 	obj = dict.Get("Background")
 	if obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Background should be specified by an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		shading.Background = arr
 	}
@@ -212,11 +212,11 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	// BBox.
 	obj = dict.Get("BBox")
 	if obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Background should be specified by an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		rect, err := NewPdfRectangle(*arr)
 		if err != nil {
@@ -229,11 +229,11 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	// AntiAlias.
 	obj = dict.Get("AntiAlias")
 	if obj != nil {
-		obj = TraceToDirectObject(obj)
-		val, ok := obj.(*PdfObjectBool)
+		obj = core.TraceToDirectObject(obj)
+		val, ok := obj.(*core.PdfObjectBool)
 		if !ok {
 			common.Log.Debug("AntiAlias invalid type, should be bool (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		shading.AntiAlias = val
 	}
@@ -301,14 +301,15 @@ func newPdfShadingFromPdfObject(obj PdfObject) (*PdfShading, error) {
 	return nil, errors.New("unknown shading type")
 }
 
-// Load shading type 1 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType1, error) {
+// Load shading type 1 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType1FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType1, error) {
 	shading := PdfShadingType1{}
 
 	// Domain (optional).
 	if obj := dict.Get("Domain"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Domain not an array (got %T)", obj)
 			return nil, errors.New("type check error")
@@ -318,8 +319,8 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Matrix (optional).
 	if obj := dict.Get("Matrix"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
 			return nil, errors.New("type check error")
@@ -334,7 +335,7 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		return nil, ErrRequiredAttributeMissing
 	}
 	shading.Function = []PdfFunction{}
-	if array, is := obj.(*PdfObjectArray); is {
+	if array, is := obj.(*core.PdfObjectArray); is {
 		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
@@ -355,8 +356,9 @@ func newPdfShadingType1FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 2 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType2, error) {
+// Load shading type 2 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType2FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType2, error) {
 	shading := PdfShadingType2{}
 
 	// Coords (required).
@@ -365,7 +367,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing:  Coords")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Coords not an array (got %T)", obj)
 		return nil, errors.New("type check error")
@@ -378,8 +380,8 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Domain (optional).
 	if obj := dict.Get("Domain"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Domain not an array (got %T)", obj)
 			return nil, errors.New("type check error")
@@ -394,7 +396,7 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		return nil, ErrRequiredAttributeMissing
 	}
 	shading.Function = []PdfFunction{}
-	if array, is := obj.(*PdfObjectArray); is {
+	if array, is := obj.(*core.PdfObjectArray); is {
 		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
@@ -414,11 +416,11 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Extend (optional).
 	if obj := dict.Get("Extend"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		if arr.Len() != 2 {
 			common.Log.Debug("Extend length not 2 (got %d)", arr.Len())
@@ -430,8 +432,9 @@ func newPdfShadingType2FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 3 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType3, error) {
+// Load shading type 3 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType3FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType3, error) {
 	shading := PdfShadingType3{}
 
 	// Coords (required).
@@ -440,10 +443,10 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: Coords")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Coords not an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	if arr.Len() != 6 {
 		common.Log.Debug("Coords length not 6 (got %d)", arr.Len())
@@ -453,11 +456,11 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Domain (optional).
 	if obj := dict.Get("Domain"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Domain not an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		shading.Domain = arr
 	}
@@ -469,7 +472,7 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		return nil, ErrRequiredAttributeMissing
 	}
 	shading.Function = []PdfFunction{}
-	if array, is := obj.(*PdfObjectArray); is {
+	if array, is := obj.(*core.PdfObjectArray); is {
 		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
@@ -489,11 +492,11 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 
 	// Extend (optional).
 	if obj := dict.Get("Extend"); obj != nil {
-		obj = TraceToDirectObject(obj)
-		arr, ok := obj.(*PdfObjectArray)
+		obj = core.TraceToDirectObject(obj)
+		arr, ok := obj.(*core.PdfObjectArray)
 		if !ok {
 			common.Log.Debug("Matrix not an array (got %T)", obj)
-			return nil, ErrTypeError
+			return nil, core.ErrTypeError
 		}
 		if arr.Len() != 2 {
 			common.Log.Debug("Extend length not 2 (got %d)", arr.Len())
@@ -505,8 +508,9 @@ func newPdfShadingType3FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 4 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType4, error) {
+// Load shading type 4 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType4FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType4, error) {
 	shading := PdfShadingType4{}
 
 	// BitsPerCoordinate (required).
@@ -515,10 +519,10 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok := obj.(*PdfObjectInteger)
+	integer, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerCoordinate not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerCoordinate = integer
 
@@ -528,10 +532,10 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerComponent not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -541,10 +545,10 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerFlag not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -554,10 +558,10 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Decode not an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.Decode = arr
 
@@ -568,7 +572,7 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		return nil, ErrRequiredAttributeMissing
 	}
 	shading.Function = []PdfFunction{}
-	if array, is := obj.(*PdfObjectArray); is {
+	if array, is := obj.(*core.PdfObjectArray); is {
 		for _, obj := range array.Elements() {
 			function, err := newPdfFunctionFromPdfObject(obj)
 			if err != nil {
@@ -589,8 +593,9 @@ func newPdfShadingType4FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 5 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType5, error) {
+// Load shading type 5 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType5FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType5, error) {
 	shading := PdfShadingType5{}
 
 	// BitsPerCoordinate (required).
@@ -599,10 +604,10 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok := obj.(*PdfObjectInteger)
+	integer, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerCoordinate not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerCoordinate = integer
 
@@ -612,10 +617,10 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerComponent not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -625,10 +630,10 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: VerticesPerRow")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("VerticesPerRow not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.VerticesPerRow = integer
 
@@ -638,10 +643,10 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Decode not an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.Decode = arr
 
@@ -649,7 +654,7 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	if obj := dict.Get("Function"); obj != nil {
 		// Function (required).
 		shading.Function = []PdfFunction{}
-		if array, is := obj.(*PdfObjectArray); is {
+		if array, is := obj.(*core.PdfObjectArray); is {
 			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
@@ -671,8 +676,9 @@ func newPdfShadingType5FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 6 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType6, error) {
+// Load shading type 6 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType6FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType6, error) {
 	shading := PdfShadingType6{}
 
 	// BitsPerCoordinate (required).
@@ -681,10 +687,10 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok := obj.(*PdfObjectInteger)
+	integer, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerCoordinate not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerCoordinate = integer
 
@@ -694,10 +700,10 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerComponent not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -707,10 +713,10 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerFlag not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -720,17 +726,17 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Decode not an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.Decode = arr
 
 	// Function (optional).
 	if obj := dict.Get("Function"); obj != nil {
 		shading.Function = []PdfFunction{}
-		if array, is := obj.(*PdfObjectArray); is {
+		if array, is := obj.(*core.PdfObjectArray); is {
 			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
@@ -752,8 +758,9 @@ func newPdfShadingType6FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-// Load shading type 7 specific attributes from pdf object.  Used in parsing/loading PDFs.
-func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingType7, error) {
+// Load shading type 7 specific attributes from pdf object.
+// Used in parsing/loading PDFs.
+func newPdfShadingType7FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadingType7, error) {
 	shading := PdfShadingType7{}
 
 	// BitsPerCoordinate (required).
@@ -762,10 +769,10 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerCoordinate")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok := obj.(*PdfObjectInteger)
+	integer, ok := obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerCoordinate not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerCoordinate = integer
 
@@ -775,10 +782,10 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerComponent")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerComponent not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -788,10 +795,10 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: BitsPerFlag")
 		return nil, ErrRequiredAttributeMissing
 	}
-	integer, ok = obj.(*PdfObjectInteger)
+	integer, ok = obj.(*core.PdfObjectInteger)
 	if !ok {
 		common.Log.Debug("BitsPerFlag not an integer (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.BitsPerComponent = integer
 
@@ -801,17 +808,17 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 		common.Log.Debug("Required attribute missing: Decode")
 		return nil, ErrRequiredAttributeMissing
 	}
-	arr, ok := obj.(*PdfObjectArray)
+	arr, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		common.Log.Debug("Decode not an array (got %T)", obj)
-		return nil, ErrTypeError
+		return nil, core.ErrTypeError
 	}
 	shading.Decode = arr
 
 	// Function (optional).
 	if obj := dict.Get("Function"); obj != nil {
 		shading.Function = []PdfFunction{}
-		if array, is := obj.(*PdfObjectArray); is {
+		if array, is := obj.(*core.PdfObjectArray); is {
 			for _, obj := range array.Elements() {
 				function, err := newPdfFunctionFromPdfObject(obj)
 				if err != nil {
@@ -833,7 +840,7 @@ func newPdfShadingType7FromDictionary(dict *PdfObjectDictionary) (*PdfShadingTyp
 	return &shading, nil
 }
 
-func (s *PdfShading) ToPdfObject() PdfObject {
+func (s *PdfShading) ToPdfObject() core.PdfObject {
 	container := s.container
 
 	d, err := s.getShadingDict()
@@ -861,7 +868,7 @@ func (s *PdfShading) ToPdfObject() PdfObject {
 	return container
 }
 
-func (s *PdfShadingType1) ToPdfObject() PdfObject {
+func (s *PdfShadingType1) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -880,7 +887,7 @@ func (s *PdfShadingType1) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -891,7 +898,7 @@ func (s *PdfShadingType1) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType2) ToPdfObject() PdfObject {
+func (s *PdfShadingType2) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -913,7 +920,7 @@ func (s *PdfShadingType2) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -927,7 +934,7 @@ func (s *PdfShadingType2) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType3) ToPdfObject() PdfObject {
+func (s *PdfShadingType3) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -946,7 +953,7 @@ func (s *PdfShadingType3) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -960,7 +967,7 @@ func (s *PdfShadingType3) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType4) ToPdfObject() PdfObject {
+func (s *PdfShadingType4) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -985,7 +992,7 @@ func (s *PdfShadingType4) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -996,7 +1003,7 @@ func (s *PdfShadingType4) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType5) ToPdfObject() PdfObject {
+func (s *PdfShadingType5) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -1021,7 +1028,7 @@ func (s *PdfShadingType5) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -1032,7 +1039,7 @@ func (s *PdfShadingType5) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType6) ToPdfObject() PdfObject {
+func (s *PdfShadingType6) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -1057,7 +1064,7 @@ func (s *PdfShadingType6) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}
@@ -1068,7 +1075,7 @@ func (s *PdfShadingType6) ToPdfObject() PdfObject {
 	return s.container
 }
 
-func (s *PdfShadingType7) ToPdfObject() PdfObject {
+func (s *PdfShadingType7) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
 	d, err := s.getShadingDict()
@@ -1093,7 +1100,7 @@ func (s *PdfShadingType7) ToPdfObject() PdfObject {
 		if len(s.Function) == 1 {
 			d.Set("Function", s.Function[0].ToPdfObject())
 		} else {
-			farr := MakeArray()
+			farr := core.MakeArray()
 			for _, f := range s.Function {
 				farr.Append(f.ToPdfObject())
 			}

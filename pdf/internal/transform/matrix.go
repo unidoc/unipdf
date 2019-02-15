@@ -54,21 +54,21 @@ func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 	m.clampRange()
 }
 
-// Concat sets `m` to `m` × `b`.
+// Concat sets `m` to `b` × `m`.
 // `b` needs to be created by newMatrix. i.e. It must be an affine transform.
 //    m00 m01 0     b00 b01 0     m00*b00 + m01*b01        m00*b10 + m01*b11        0
 //    m10 m11 0  ×  b10 b11 0  =  m10*b00 + m11*b01        m10*b10 + m11*b11        0
 //    m20 m21 1     b20 b21 1     m20*b00 + m21*b10 + b20  m20*b01 + m21*b11 + b21  1
 func (m *Matrix) Concat(b Matrix) {
 	*m = Matrix{
-		m[0]*b[0] + m[1]*b[3], m[0]*b[1] + m[1]*b[4], 0,
-		m[3]*b[0] + m[4]*b[3], m[3]*b[1] + m[4]*b[4], 0,
-		m[6]*b[0] + m[7]*b[3] + b[6], m[6]*b[1] + m[7]*b[4] + b[7], 1,
+		b[0]*m[0] + b[1]*m[3], b[0]*m[1] + b[1]*m[4], 0,
+		b[3]*m[0] + b[4]*m[3], b[3]*m[1] + b[4]*m[4], 0,
+		b[6]*m[0] + b[7]*m[3] + m[6], b[6]*m[1] + b[7]*m[4] + m[7], 1,
 	}
 	m.clampRange()
 }
 
-// Mult returns `m` × `b`.
+// Mult returns `b` × `m`.
 func (m Matrix) Mult(b Matrix) Matrix {
 	m.Concat(b)
 	return m
