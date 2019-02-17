@@ -126,6 +126,90 @@ func NewStandard14FontMustCompile(basefont fonts.StdFontName) *PdfFont {
 	return font
 }
 
+// NewStandard14FontWithEncoding returns the standard 14 font named `basefont` as a *PdfFont and
+// a TextEncoder that encodes all the runes in `alphabet`, or an error if this is not possible.
+// An error can occur if `basefont` is not one the standard 14 font names.
+func NewStandard14FontWithEncoding(basefont fonts.StdFontName, alphabet map[rune]int) (*PdfFont,
+	textencoding.SimpleEncoder, error) {
+	std, err := newStandard14Font(basefont)
+	if err != nil {
+		return nil, nil, err
+	}
+	enc, ok := std.Encoder().(textencoding.SimpleEncoder)
+	if !ok {
+		return nil, nil, fmt.Errorf("only simple encoding is supported, got %T", std.Encoder())
+	}
+
+	// collect all runes from alphabet that are missing in the encoding
+	// and find corresponding glyph names
+	missing := make(map[rune]textencoding.GlyphName)
+	for r := range alphabet {
+		if _, ok := enc.RuneToCharcode(r); !ok {
+			_, ok := std.fontMetrics[r]
+			if !ok {
+				common.Log.Trace("rune %#x=%q not in the font", r, r)
+				continue
+			}
+			glyph, ok := textencoding.RuneToGlyph(r)
+			if !ok {
+				common.Log.Debug("no glyph for rune %#x=%q", r, r)
+				continue
+			}
+			if len(missing) >= 255 {
+				return nil, nil, errors.New("too many characters for simple encoding")
+			}
+			missing[r] = glyph
+		}
+	}
+
+	// collect the list of empty indexes in the encoding that can be filed
+	// and join the list of runes unused in the alphabet to overwrite, if necessary
+	var (
+		gaps   []textencoding.CharCode
+		unused []textencoding.CharCode
+	)
+	// note, that this loop will become endless if CharCode becomes a byte
+	for code := textencoding.CharCode(1); code <= 0xff; code++ {
+		r, ok := enc.CharcodeToRune(code)
+		if !ok {
+			gaps = append(gaps, code)
+			continue
+		}
+		if _, ok = alphabet[r]; !ok {
+			unused = append(unused, code)
+		}
+	}
+	// join into a single list of replacable charcodes, gaps first
+	replacable := append(gaps, unused...)
+
+	if len(replacable) < len(missing) {
+		return nil, nil, fmt.Errorf("need to encode %d runes, but have only %d slots",
+			len(missing), len(replacable))
+	}
+
+	// sort, make an order predictable
+	runes := make([]rune, 0, len(missing))
+	for r := range missing {
+		runes = append(runes, r)
+	}
+	sort.Slice(runes, func(i, j int) bool {
+		return runes[i] < runes[j]
+	})
+
+	// build a map of replacements
+	differences := make(map[textencoding.CharCode]textencoding.GlyphName, len(runes))
+	for _, r := range runes {
+		code := replacable[0]
+		replacable = replacable[1:]
+
+		differences[code] = missing[r]
+	}
+	enc = textencoding.ApplyDifferences(enc, differences)
+	std.SetEncoder(enc)
+
+	return &PdfFont{context: &std}, enc, nil
+}
+
 // GetAlphabet returns a map of the runes in `text` and their frequencies.
 func GetAlphabet(text string) map[rune]int {
 	alphabet := map[rune]int{}
@@ -133,23 +217,6 @@ func GetAlphabet(text string) map[rune]int {
 		alphabet[r]++
 	}
 	return alphabet
-}
-
-// sortedAlphabet the runes in `alphabet` sorted by frequency.
-func sortedAlphabet(alphabet map[rune]int) []rune {
-	var runes []rune
-	for r := range alphabet {
-		runes = append(runes, r)
-	}
-	sort.Slice(runes, func(i, j int) bool {
-		ri, rj := runes[i], runes[j]
-		ni, nj := alphabet[ri], alphabet[rj]
-		if ni != nj {
-			return ni < nj
-		}
-		return ri < rj
-	})
-	return runes
 }
 
 // NewPdfFontFromPdfObject loads a PdfFont from the dictionary `fontObj`.  If there is a problem an
