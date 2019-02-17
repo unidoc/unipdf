@@ -66,6 +66,15 @@ func (b *BitSet) Get(index uint) (bool, error) {
 	return value, nil
 }
 
+//
+func (b *BitSet) SetByteOffset(bt byte, byteOffset int) error {
+	if byteOffset*8 > b.length {
+		return ErrIndexOutOfRange
+	}
+
+	return nil
+}
+
 // Or makes a union of two sets saving the result into the 'b' Bitset
 // Arguments
 // - startIndex - index where union begins in the 'b' set

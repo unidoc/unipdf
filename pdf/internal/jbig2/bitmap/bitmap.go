@@ -53,269 +53,16 @@ func (b *Bitmap) Read(
 	if useMMR {
 		common.Log.Debug("Using MMR Decoder")
 
-		b.Decoder.MMR.Reset()
-
-		var (
-			referenceLine []int = make([]int, b.Width+2)
-			codingLine    []int = make([]int, b.Width+2)
-		)
-
-		codingLine[0], codingLine[1] = b.Width, b.Width
-		for row := 0; row < b.Height; row++ {
-
-			i := 0
-			for ; codingLine[i] < b.Width; i++ {
-				referenceLine[i] = codingLine[i]
-			}
-			referenceLine[i], referenceLine[i+1] = b.Width, b.Width
-
-			var referenceI, codingI, a0 int
-
-			for {
-				code1, err := b.Decoder.MMR.Get2DCode(r)
-				if err != nil {
-					common.Log.Debug("MMR.Get2DCode(reader) failed. %v", err)
-					return err
-				}
-
-				var code2, code3 int
-
-				switch code1 {
-				case mmr.TwoDimensionalPass:
-					common.Log.Debug("mmr.TwoDimensionalPass")
-					if referenceLine[referenceI] < b.Width {
-						a0 = referenceLine[referenceI+1]
-						referenceI += 2
-					}
-
-				case mmr.TwoDimensionalHorizontal:
-					common.Log.Debug("mmr.TwoDimensionalHorizontal")
-
-					common.Log.Debug("codingI: %v", codingI)
-					if (codingI & 1) != 0 {
-						common.Log.Debug("$[codingI & 1 != 0]")
-						// initial code1
-						code1 = 0
-
-						for {
-							code3, err = b.Decoder.MMR.GetBlackCode(r)
-							if err != nil {
-								common.Log.Debug("MMR.GetBlackCode() - code1 failed. %v", err)
-								return err
-							}
-							code1 += code3
-							if code3 < 64 {
-								break
-							}
-						}
-						common.Log.Debug("Code1: %v", code1)
-
-						code2 = 0
-
-						for {
-							code3, err = b.Decoder.MMR.GetWhiteCode(r)
-							if err != nil {
-								common.Log.Debug("MMR.GetWhiteCode() - code2 failed. %v", err)
-								return err
-							}
-							code2 += code3
-							if code3 < 64 {
-								break
-							}
-						}
-					} else {
-						common.Log.Debug("$[codingI & 1 == 0]")
-
-						code1 = 0
-
-						for {
-							code3, err = b.Decoder.MMR.GetWhiteCode(r)
-							if err != nil {
-								common.Log.Debug("MMR.GetWhiteCode() - code1 failed. %v", err)
-								return err
-							}
-							code1 += code3
-							if code3 < 64 {
-								break
-							}
-						}
-						common.Log.Debug("code 1 set with GetWhiteCode")
-
-						code2 = 0
-						for {
-							code3, err = b.Decoder.MMR.GetBlackCode(r)
-							if err != nil {
-								common.Log.Debug("MMR.GetBlackCode() - code2 failed. %v", err)
-								return err
-							}
-							code2 += code3
-							if code3 < 64 {
-								break
-							}
-						}
-						common.Log.Debug("code 2 set with GetBlackCode")
-					}
-
-					if code1 > 0 || code2 > 0 {
-
-						var v int = a0 + code1
-						codingLine[codingI] = v
-						a0 = v
-						codingI += 1
-
-						v = a0 + code2
-						codingLine[codingI] = v
-						a0 = v
-						codingI += 1
-
-						for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-							referenceI += 2
-						}
-					}
-
-				case mmr.TwoDimensionalVertical0:
-					common.Log.Debug("mmr.TwoDimensionalVertical0")
-					var v int = referenceLine[referenceI]
-
-					codingLine[codingI] = v
-					a0 = v
-					codingI += 1
-
-					if v < b.Width {
-						referenceI += 1
-					}
-
-				case mmr.TwoDimensionalVerticalR1:
-					common.Log.Debug("mmr.TwoDimensionalVerticalR1")
-					var v int = referenceLine[referenceI] + 1
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceLine[referenceI] < b.Width {
-						referenceI++
-						for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-							referenceI += 2
-						}
-					}
-
-				case mmr.TwoDimensionalVerticalR2:
-					common.Log.Debug("mmr.TwoDimensionalVerticalR2")
-
-					var v int = referenceLine[referenceI] + 2
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceLine[referenceI] < b.Width {
-						referenceI++
-						for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-							referenceI += 2
-						}
-					}
-
-				case mmr.TwoDimensionalVerticalR3:
-					common.Log.Debug("mmr.TwoDimensionalVerticalR3")
-					var v int = referenceLine[referenceI] + 3
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceLine[referenceI] < b.Width {
-						referenceI++
-						for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-							referenceI += 2
-						}
-					}
-
-				case mmr.TwoDimensionalVerticalL1:
-					common.Log.Debug("mmr.TwoDimensionalVerticalL1")
-					var v int = referenceLine[referenceI] - 1
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceI > 0 {
-						referenceI--
-					} else {
-						referenceI++
-					}
-
-					for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-						referenceI += 2
-					}
-
-				case mmr.TwoDimensionalVerticalL2:
-					common.Log.Debug("mmr.TwoDimensionalVerticalL2")
-					var v int = referenceLine[referenceI] - 2
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceI > 0 {
-						referenceI--
-					} else {
-						referenceI++
-					}
-
-					for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-						referenceI += 2
-					}
-
-				case mmr.TwoDimensionalVerticalL3:
-					common.Log.Debug("mmr.TwoDimensionalVerticalL3")
-					var v int = referenceLine[referenceI] - 3
-					codingLine[codingI] = v
-					a0 = v
-					codingI++
-
-					if referenceI > 0 {
-						referenceI--
-					} else {
-						referenceI++
-					}
-
-					for referenceLine[referenceI] <= a0 && referenceLine[referenceI] < b.Width {
-						referenceI += 2
-					}
-
-				default:
-					common.Log.Debug("Illegal code in MMR bitmap data")
-
-				}
-
-				// while condition
-				if !(a0 < b.Width) {
-					break
-				}
-			}
-
-			codingLine[codingI] = b.Width
-			codingI += 1
-
-			for j := 0; codingLine[j] < b.Width; j += 2 {
-				for col := codingLine[j]; col < codingLine[j+1]; col++ {
-					b.SetPixel(col, row, 1)
-				}
-			}
+		mmrDecompressor, err := mmr.New(r, b.Width, b.Height, int(r.CurrentBytePosition()), mmrDataLength)
+		if err != nil {
+			return err
 		}
 
-		if mmrDataLength >= 0 {
-			err := b.Decoder.MMR.SkipTo(r, mmrDataLength)
-			if err != nil {
-				common.Log.Debug("MMR.SkipTo: '%v' failed. %v", mmrDataLength, err)
-				return err
-			}
-		} else {
-			b, err := b.Decoder.MMR.Get24Bits(r)
-			if err != nil {
-				common.Log.Debug("MMR.Get24Bits failed. %v", err)
-				return err
-			}
-			if b != 0x001001 {
-				common.Log.Debug("Missing EOFB in JBIG2 MMR bitmap data: Value: %b", b)
-			}
+		err = b.UncompressMMR(mmrDecompressor)
+		if err != nil {
+			return err
 		}
+
 	} else {
 
 		common.Log.Debug("Not a MMR Decoder.")
@@ -1108,6 +855,93 @@ func (b *Bitmap) String() string {
 // Clear clears the bitmap according to the defPixel
 func (b *Bitmap) Clear(defPixel bool) {
 	b.Data.SetAll(defPixel)
+}
+
+func (b *Bitmap) UncompressMMR(m *mmr.MmrDecoder) error {
+
+	var (
+		currentOffsets   []int = make([]int, b.Width+5)
+		referenceOffsets []int = make([]int, b.Width+5)
+		err              error
+	)
+
+	referenceOffsets[0] = b.Width
+	var refRunLength int = 1
+
+	count := 0
+
+	common.Log.Debug("Height: %v", b.Height)
+	for line := 0; line < b.Height; line++ {
+		common.Log.Debug("Line: %d", line)
+
+		count, err = m.Uncompress2d(m.Data(), referenceOffsets, refRunLength, currentOffsets, b.Width)
+		if err != nil {
+			return err
+		}
+
+		if count == mmr.EOF {
+			break
+		}
+
+		if count > 0 {
+			err := b.FillMMR(m, line, currentOffsets, count)
+			if err != nil {
+				return err
+			}
+		}
+		// swap lines
+		referenceOffsets, currentOffsets = currentOffsets, referenceOffsets
+		refRunLength = count
+	}
+	if err := m.DetectAndSkipEOL(); err != nil {
+		return err
+	}
+
+	m.Data().Align()
+	return nil
+}
+
+func (b *Bitmap) FillMMR(m *mmr.MmrDecoder, line int, currentOffsets []int, count int) error {
+	x := 0
+
+	targetByte := b.getByteIndex(0, line)
+
+	var targetByteValue byte
+
+	for index := 0; index < count; index++ {
+		offset := currentOffsets[index]
+
+		var value byte
+
+		if (index & 1) == 0 {
+			value = 0
+		} else {
+			value = 1
+		}
+
+		for x < offset {
+			targetByteValue = (targetByteValue << 1) | value
+			x += 1
+
+			if (x & 7) == 0 {
+				b.Data.SetByteOffset(targetByteValue, targetByte)
+				targetByte += 1
+				targetByteValue = 0
+			}
+		}
+	}
+
+	if (x & 7) != 0 {
+		targetByteValue <<= uint(8 - (x & 7))
+		b.Data.SetByteOffset(targetByteValue, targetByte)
+	}
+
+	return nil
+
+}
+
+func (b *Bitmap) getByteIndex(x, y int) int {
+	return y*b.Line + (x >> 3)
 }
 
 // Combine combines the bitmap data with the provided bitmap with respect to the
