@@ -4,7 +4,6 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
-	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/mmr"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segment/kind"
 )
@@ -13,7 +12,6 @@ import (
 type Decoder struct {
 	Arithmetic *arithmetic.Decoder
 	Huffman    *huffman.HuffmanDecoder
-	MMR        *mmr.MmrDecoder
 
 	Segments []segment.Segmenter
 }
@@ -22,7 +20,6 @@ func New() *Decoder {
 	return &Decoder{
 		Arithmetic: arithmetic.New(),
 		Huffman:    huffman.New(),
-		MMR:        mmr.New(),
 	}
 }
 

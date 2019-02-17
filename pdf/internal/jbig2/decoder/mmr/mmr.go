@@ -1,276 +1,409 @@
 package mmr
 
 import (
+	"errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
 type MmrDecoder struct {
-	BufferLength    int64
-	Buffer          int64
-	BytesReadNumber int64
+	width, height int
+	data          *runData
+
+	whiteTable []*code
+	blackTable []*code
+	modeTable  []*code
 }
 
-func New() *MmrDecoder {
-	return &MmrDecoder{}
+func New(r *reader.Reader, width, height int, dataOffset, dataLength int) (*MmrDecoder, error) {
+	m := &MmrDecoder{
+		width:  width,
+		height: height,
+	}
+
+	s, err := reader.NewSubstreamReader(r, uint64(dataOffset), uint64(dataLength))
+	if err != nil {
+		return nil, err
+	}
+
+	rd, err := newRunData(s)
+	if err != nil {
+		return nil, err
+	}
+
+	m.data = rd
+
+	if err := m.initTables(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
-func (m *MmrDecoder) Reset() {
-	m.Buffer = 0
-	m.BufferLength = 0
-	m.BytesReadNumber = 0
-	common.Log.Debug("MMR Decoder Reset: %+v", m)
+func (m *MmrDecoder) Data() *runData {
+	return m.data
 }
 
-// SkipTo skips the reader to the 'length' value
-func (m *MmrDecoder) SkipTo(r *reader.Reader, length int) error {
-	for m.BytesReadNumber < int64(length) {
-		if _, err := r.ReadByte(); err != nil {
-			return err
+func (m *MmrDecoder) initTables() (err error) {
+	if m.whiteTable == nil {
+		m.whiteTable, err = m.createLittleEndianTable(WhiteCodes)
+		if err != nil {
+			return
 		}
-		m.BytesReadNumber++
+		m.blackTable, err = m.createLittleEndianTable(BlackCodes)
+		if err != nil {
+			return
+		}
+		m.modeTable, err = m.createLittleEndianTable(ModeCodes)
+		if err != nil {
+			return
+		}
 	}
 	return nil
 }
 
-// Gets24bits from the reader
-func (m *MmrDecoder) Get24Bits(r *reader.Reader) (int64, error) {
+func (m *MmrDecoder) Uncompress2d(
+	rd *runData,
+	referenceOffsets []int,
+	refRunLength int,
+	runOffsets []int,
+	width int,
+) (int, error) {
 
-	common.Log.Debug("[MMR] Get24Bits starts")
-	for m.BufferLength < int64(24) {
-		b, err := r.ReadByte()
+	var (
+		referenceBuffOffset    int
+		currentBuffOffset      int
+		currentLineBitPosition int
+
+		whiteRun bool = true
+		err      error
+
+		c *code
+	)
+
+	common.Log.Debug("refRunLength: %v", refRunLength)
+	referenceOffsets[refRunLength] = width
+	referenceOffsets[refRunLength+1] = width
+	referenceOffsets[refRunLength+2] = width + 1
+	referenceOffsets[refRunLength+3] = width + 1
+
+decodeLoop:
+	for currentLineBitPosition < width {
+		common.Log.Debug("CurrentLineBitPosition: %v, Width: %v", currentLineBitPosition, m.width)
+
+		common.Log.Debug("Mode Table")
+
+		// Get the mode code
+		c, err = rd.uncompressGetCode(m.modeTable)
 		if err != nil {
-			return 0, err
+			common.Log.Debug("UncompressedGetCode failed: %v", err)
+			return eol, nil
 		}
 
-		m.Buffer = (m.Buffer << 8) | (int64(b) & 0xff)
-		m.BufferLength += 8
-		m.BytesReadNumber++
+		common.Log.Debug("Code: %v", c)
+
+		if c == nil {
+			common.Log.Debug("Nil code")
+			rd.offset += 1
+			break decodeLoop
+		}
+
+		rd.offset += c.bitLength
+		common.Log.Debug("MMRCode: %v", c.runLength)
+
+		switch mmrCode(c.runLength) {
+		case codeV0:
+
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset]
+		case codeVR1:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] + 1
+		case codeVL1:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 1
+		case codeH:
+			var ever int = 1
+			common.Log.Debug("CodeH")
+			for ever > 0 {
+				var table []*code
+				common.Log.Debug("WhiteRun: %v", whiteRun)
+				if whiteRun {
+					table = m.whiteTable
+				} else {
+					table = m.blackTable
+				}
+
+				common.Log.Debug("UncompressGetCode")
+				c, err = rd.uncompressGetCode(table)
+				if err != nil {
+					return 0, err
+				}
+
+				if c == nil {
+					common.Log.Debug("uncompressGetCode no code found.")
+					break decodeLoop
+				}
+
+				rd.offset += c.bitLength
+
+				common.Log.Debug("RunLength: %v", c.runLength)
+				if c.runLength < 64 {
+					if c.runLength < 0 {
+						common.Log.Debug("runLength smaller than 0")
+						runOffsets[currentBuffOffset] = currentLineBitPosition
+						currentBuffOffset += 1
+						c = nil
+						break decodeLoop
+					}
+					currentLineBitPosition += c.runLength
+					runOffsets[currentBuffOffset] = currentLineBitPosition
+					currentBuffOffset += 1
+					break
+				}
+				currentLineBitPosition += c.runLength
+			}
+
+			firstHalfBitPost := currentLineBitPosition
+
+			var ever1 = 1
+
+		ever1Loop:
+			for ever1 > 0 {
+				var table []*code
+				common.Log.Debug("Ever1: WhiteRun: %v", whiteRun)
+				if !whiteRun {
+					table = m.whiteTable
+				} else {
+					table = m.blackTable
+				}
+
+				common.Log.Debug("UncompressGetCode")
+				c, err = rd.uncompressGetCode(table)
+				if err != nil {
+					return 0, err
+				}
+
+				if c == nil {
+					common.Log.Debug("Nil code")
+					break decodeLoop
+				}
+
+				common.Log.Debug("Ever1 runLength: %v", c.runLength)
+				rd.offset += c.bitLength
+				if c.runLength < 64 {
+					if c.runLength < 0 {
+						runOffsets[currentBuffOffset] = currentLineBitPosition
+						currentBuffOffset += 1
+						break decodeLoop
+					}
+
+					currentLineBitPosition += c.runLength
+					// don't generate 0-length run at EOL for cases where the line ends in an H-run
+					if currentLineBitPosition < width ||
+						currentLineBitPosition != firstHalfBitPost {
+
+						runOffsets[currentBuffOffset] = currentLineBitPosition
+						currentBuffOffset += 1
+					}
+					break ever1Loop
+				}
+				currentLineBitPosition += c.runLength
+			}
+
+			for currentLineBitPosition < width &&
+				referenceOffsets[referenceBuffOffset] <= currentLineBitPosition {
+				referenceBuffOffset += 2
+			}
+			continue decodeLoop
+
+		case codeP:
+			referenceBuffOffset += 1
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset]
+			referenceBuffOffset += 1
+			continue decodeLoop
+		case codeVR2:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] + 2
+		case codeVL2:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 2
+		case codeVR3:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] + 3
+		case codeVL3:
+			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 3
+		default:
+			common.Log.Debug("Unknown MMR Code type: %v", c.runLength)
+
+			// Possibly MMR Decoded
+			if rd.offset == 12 && c.runLength == eol {
+				rd.offset = 0
+				m.Uncompress1d(rd, referenceOffsets, width)
+				rd.offset += 1
+				m.Uncompress1d(rd, runOffsets, width)
+				retCode, err := m.Uncompress1d(rd, referenceOffsets, width)
+				if err != nil {
+					return eof, err
+				}
+				rd.offset += 1
+				return retCode, nil
+			}
+			currentLineBitPosition = width
+			continue decodeLoop
+		}
+
+		if currentLineBitPosition <= width {
+			whiteRun = !whiteRun
+
+			runOffsets[currentBuffOffset] = currentLineBitPosition
+			currentBuffOffset += 1
+
+			if referenceBuffOffset > 0 {
+				referenceBuffOffset -= 1
+			} else {
+				referenceBuffOffset += 1
+			}
+
+			for currentLineBitPosition < width &&
+				referenceOffsets[referenceBuffOffset] <= currentLineBitPosition {
+
+				referenceBuffOffset += 2
+			}
+		}
 	}
 
-	return ((m.Buffer >> uint64(m.BufferLength-24)) & 0xffffff), nil
+	if runOffsets[currentBuffOffset] != width {
+		runOffsets[currentBuffOffset] = width
+	}
+
+	common.Log.Debug("Code is nil.")
+
+	if c == nil {
+		common.Log.Debug("EOL")
+		return eol, nil
+	}
+	return currentBuffOffset, nil
 }
 
-func (m *MmrDecoder) Get2DCode(r *reader.Reader) (int, error) {
-	var tuple []int
+func (m *MmrDecoder) Uncompress1d(data *runData, runOffsets []int, width int) (int, error) {
 
-	if m.BufferLength == 0 {
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
+	var (
+		whiteRun  bool = true
+		iBitPos   int
+		cd        *code
+		refOffset int
+		err       error
+	)
+
+outer:
+	for iBitPos < width {
+
+	inner:
+		for {
+			if whiteRun {
+				common.Log.Debug("White table")
+				cd, err = data.uncompressGetCode(m.whiteTable)
+				if err != nil {
+					return 0, err
+				}
+			} else {
+				common.Log.Debug("White table")
+				cd, err = data.uncompressGetCode(m.blackTable)
+				if err != nil {
+					return 0, err
+				}
+			}
+			data.offset += cd.bitLength
+
+			if cd.runLength < 0 {
+				break outer
+			}
+
+			iBitPos += cd.runLength
+
+			if cd.runLength < 64 {
+				whiteRun = !whiteRun
+				runOffsets[refOffset] = iBitPos
+				refOffset += 1
+				break inner
+			}
 		}
+	}
 
-		// set buffer to byte & 0xff
-		m.Buffer = (int64(b) & 0xff)
-
-		// buffer length is set to 8
-		m.BufferLength = 8
-
-		// increate bytesReadNumber
-		m.BytesReadNumber++
-
-		// the lookup should be the buffer value shiffted right by 1
-		var lookup int = int((int(m.Buffer) >> 1) & 0x7f)
-
-		// get tuple from twoDimensionalTable1 at lookup
-		tuple = twoDimensionalTable1[lookup]
-	} else if m.BufferLength == 8 {
-
-		var lookup int = int((int(m.Buffer) >> 1) & 0x7f)
-
-		// get tuple from twoDimensionalTable1 at lookup
-		tuple = twoDimensionalTable1[lookup]
+	if runOffsets[refOffset] != width {
+		runOffsets[refOffset] = width
+	}
+	var result int
+	if cd != nil && cd.runLength != eol {
+		result = refOffset
 	} else {
-
-		// the lookup should be the buffer value shiffted left by 1
-		var lookup int = int((int(m.Buffer) << uint64(7-m.BufferLength)) & 0x7f)
-
-		// tuple should be the twoDimensionalTable1 at lookup
-		tuple = twoDimensionalTable1[lookup]
-
-		if tuple[0] < 0 || tuple[0] > int(m.BufferLength) {
-			b, err := r.ReadByte()
-			if err != nil {
-				return 0, err
-			}
-			right := int64(b)
-			var left int64 = (m.Buffer << 8)
-
-			m.Buffer = left | right
-			m.BufferLength += 8
-			m.BytesReadNumber++
-
-			var look int = int((int(m.Buffer) >> uint32(m.BufferLength-7)) & 0x7f)
-
-			tuple = twoDimensionalTable1[look]
-
-		}
+		result = eol
 	}
-
-	if tuple[0] < 0 {
-		common.Log.Debug("Bad two dim code in JBIG2 MMR stream")
-		return 0, nil
-	}
-
-	m.BufferLength -= int64(tuple[0])
-	// common.Log.Debug("2D value: %v", tuple[1])
-
-	return tuple[1], nil
+	return result, nil
 }
 
-func (m *MmrDecoder) GetWhiteCode(r *reader.Reader) (int, error) {
-	var (
-		tuple []int
-		code  int64
-	)
+func (m *MmrDecoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 
-	common.Log.Debug("GetWhiteCode(). m: %+v", m)
+	var firstLevelTable []*code = make([]*code, firstLevelTablemask+1)
 
-	if m.BufferLength == 0 {
+	// common.Log.Debug("CodesLength: %v", len(codes))
+	for i := 0; i < len(codes); i++ {
+		// common.Log.Debug("I: %v", i)
+		var cd *code = newCode(codes[i])
 
-		// read first byte
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
+		if cd.bitLength <= firstLevelTableSize {
 
-		common.Log.Debug("BufferLenght == 0. Read Byte: %2X", b)
-		m.Buffer = int64(b & 0xff)
-		m.BufferLength = 8
-		m.BytesReadNumber++
-	}
-
-	for {
-
-		if m.BufferLength >= 7 && ((m.Buffer>>uint32(m.BufferLength-7))&0x7f) == 0 {
-			if m.BufferLength <= 12 {
-				code = (m.Buffer << uint32(12-m.BufferLength))
-			} else {
-				code = (m.Buffer >> uint32(m.BufferLength-12))
+			variantLength := firstLevelTableSize - cd.bitLength
+			// common.Log.Debug("CodeWord: %v", cd.codeWord)
+			baseWord := cd.codeWord << uint(variantLength)
+			// common.Log.Debug("BaseWord: %v VariantLength %v", baseWord, variantLength)
+			for variant := (1 << uint(variantLength)) - 1; variant >= 0; variant-- {
+				index := baseWord | variant
+				// common.Log.Debug("Variant: %v, index: %v", variant, index)
+				firstLevelTable[index] = cd
 			}
-
-			tuple = whiteTable1[code&0x1f]
 
 		} else {
 
-			if m.BufferLength <= 9 {
-				code = (m.Buffer << uint32(9-m.BufferLength))
-			} else {
-				code = (m.Buffer >> uint32(m.BufferLength-9))
+			firstLevelIndex := cd.codeWord >> uint(cd.bitLength-firstLevelTableSize)
+			// common.Log.Debug("SL: FirstLevelIndex: %v", firstLevelIndex)
+
+			if firstLevelTable[firstLevelIndex] == nil {
+
+				var firstLevelCode *code = newCode([3]int{})
+				firstLevelCode.subTable = make([]*code, secondLevelTableMask+1)
+
+				firstLevelTable[firstLevelIndex] = firstLevelCode
 			}
 
-			var lookup int = int(code & 0x11f)
+			if cd.bitLength <= firstLevelTableSize+secondLevelTableSize {
 
-			if lookup >= 0 {
-				tuple = whiteTable2[lookup]
+				// var secondLevelTable []*code = firstLevelTable[firstLevelIndex].subTable
+
+				variantLength := firstLevelTableSize + secondLevelTableSize - cd.bitLength
+				baseWord := (cd.codeWord << uint(variantLength)) & secondLevelTableMask
+				// common.Log.Debug("SL BaseWord: %v VariantLength %v", baseWord, variantLength)
+				firstLevelTable[firstLevelIndex].nonNilSubTable = true
+				for variant := (1 << uint(variantLength)) - 1; variant >= 0; variant-- {
+					// common.Log.Debug("Variant: %v", variant)
+					firstLevelTable[firstLevelIndex].subTable[baseWord|variant] = cd
+				}
 			} else {
-				tuple = whiteTable2[len(whiteTable2)+lookup]
+				return nil, errors.New("Code table overflow in MMRDecoder")
 			}
 		}
-
-		if tuple[0] > 0 && tuple[0] <= int(m.BufferLength) {
-			m.BufferLength -= int64(tuple[0])
-			common.Log.Debug("Returning value: %V", tuple[1])
-			return tuple[1], nil
-		}
-
-		if m.BufferLength >= 12 {
-			break
-		}
-
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-
-		common.Log.Debug("Read Byte: %X", b)
-
-		m.Buffer = ((m.Buffer << 8) | int64(b)&0xff)
-		m.BufferLength += 8
-		m.BytesReadNumber++
 	}
-	common.Log.Debug("Bad white code in JBIG2 MMR stream")
-	m.BufferLength--
-
-	return 1, nil
+	common.Log.Debug("%s", firstLevelTable)
+	return firstLevelTable, nil
 }
 
-func (m *MmrDecoder) GetBlackCode(r *reader.Reader) (int, error) {
-	var (
-		tuple []int
-		code  int64
-	)
-	common.Log.Debug("GetBlackCode(). m: %+v", m)
-
-	if m.BufferLength == 0 {
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-
-		common.Log.Debug("BufferLenght == 0. Read byte: %02x", b)
-		m.Buffer = int64(b & 0xff)
-		m.BufferLength = 8
-		m.BytesReadNumber++
-	}
-
+func (m *MmrDecoder) DetectAndSkipEOL() error {
 	for {
-		if m.BufferLength >= 6 && ((m.Buffer>>uint64(m.BufferLength-6))&0x3f) == 0 {
-			if m.BufferLength <= 13 {
-				code = (m.Buffer << uint64(13-m.BufferLength))
-			} else {
-				code = (m.Buffer >> uint64(m.BufferLength-13))
-			}
-
-			tuple = blackTable1[code&0x7f]
-		} else if m.BufferLength >= 4 && ((m.Buffer>>uint64(m.BufferLength-4))&0x0f) == 0 {
-			if m.BufferLength <= 12 {
-				code = (m.Buffer << uint64(12-m.BufferLength))
-			} else {
-				code = (m.Buffer >> uint64(m.BufferLength-12))
-			}
-
-			var lookup int = int((code & 0xff) - 64)
-			if lookup >= 0 {
-				tuple = blackTable2[lookup]
-			} else {
-				tuple = blackTable1[len(blackTable1)+lookup]
-			}
-
-		} else {
-			if m.BufferLength <= 6 {
-				code = (m.Buffer << uint64(6-m.BufferLength))
-			} else {
-				code = (m.Buffer >> uint64(m.BufferLength-6))
-			}
-
-			var lookup int = int(code & 0x3f)
-			if lookup >= 0 {
-				tuple = blackTable3[lookup]
-			} else {
-				tuple = blackTable2[len(blackTable2)+lookup]
-			}
-		}
-
-		if tuple[0] > 0 && tuple[0] <= int(m.BufferLength) {
-			m.BufferLength -= int64(tuple[0])
-			return tuple[1], nil
-		}
-		if m.BufferLength >= 13 {
-			break
-		}
-		b, err := r.ReadByte()
+		cd, err := m.data.uncompressGetCode(m.modeTable)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
-		m.Buffer = ((m.Buffer << 8) | int64(b&0xff))
-		m.BufferLength += 8
-		m.BytesReadNumber++
+		if cd == nil && cd.runLength == eol {
+			m.data.offset += cd.bitLength
+		} else {
+			return nil
+		}
 	}
-
-	common.Log.Debug("Bad black code in MMR stream")
-	m.BufferLength--
-
-	return 1, nil
+	return nil
 }

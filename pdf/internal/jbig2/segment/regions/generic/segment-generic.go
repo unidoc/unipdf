@@ -174,6 +174,8 @@ func (g *GenericRegionSegment) Decode(r *reader.Reader) error {
 		}
 	}
 
+	common.Log.Debug("Position: %02X", r.CurrentBytePosition())
+
 	common.Log.Debug("Create new bitmap - w: %d, h: %d", g.BMHeight, g.BMWidth)
 	bm := bitmap.New(g.BMWidth, g.BMHeight, g.Decoders)
 	bm.Clear(false)

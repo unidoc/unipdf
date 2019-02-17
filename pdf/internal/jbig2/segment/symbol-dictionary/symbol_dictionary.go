@@ -483,6 +483,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					}
 				}
 			} else {
+
 				common.Log.Debug("Bitmap size: %v", bmSize)
 				err := collectiveBitMap.Read(r, true, 0, false, false, nil, nil, nil, bmSize)
 				if err != nil {
