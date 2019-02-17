@@ -13,9 +13,10 @@ import (
 	_ "image/gif"
 	_ "image/png"
 	"io"
+	"math"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/sampling"
 )
 
@@ -133,7 +134,7 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 func (img *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
-	var imgout DrawableImage
+	var imgout core.DrawableImage
 
 	if img.ColorComponents == 1 {
 		if img.BitsPerComponent == 16 {
@@ -170,8 +171,8 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
 			} else {
-				val := uint8(samples[i] & 0xff)
-				c = gocolor.Gray{val}
+				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
+				c = gocolor.Gray{uint8(val & 0xff)}
 			}
 		} else if img.ColorComponents == 3 {
 			if img.BitsPerComponent == 16 {
@@ -221,8 +222,11 @@ type ImageHandler interface {
 	// Read any image type and load into a new Image object.
 	Read(r io.Reader) (*Image, error)
 
-	// NewImageFromGoImage load a unidoc Image from a standard Go image structure.
+	// NewImageFromGoImage loads a RGBA unidoc Image from a standard Go image structure.
 	NewImageFromGoImage(goimg goimage.Image) (*Image, error)
+
+	// NewGrayImageFromGoImage loads a grayscale unidoc Image from a standard Go image structure.
+	NewGrayImageFromGoImage(goimg goimage.Image) (*Image, error)
 
 	// Compress an image.
 	Compress(input *Image, quality int64) (*Image, error)
@@ -231,7 +235,7 @@ type ImageHandler interface {
 // DefaultImageHandler is the default implementation of the ImageHandler using the standard go library.
 type DefaultImageHandler struct{}
 
-// NewImageFromGoImage creates a unidoc Image from a golang Image.
+// NewImageFromGoImage creates a new RGBA unidoc Image from a golang Image.
 func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	// Speed up jpeg encoding by converting to RGBA first.
 	// Will not be required once the golang image/jpeg package is optimized.
@@ -267,6 +271,21 @@ func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, 
 	}
 
 	return &imag, nil
+}
+
+// NewGrayImageFromGoImage creates a new grayscale unidoc Image from a golang Image.
+func (ih DefaultImageHandler) NewGrayImageFromGoImage(goimg goimage.Image) (*Image, error) {
+	b := goimg.Bounds()
+	m := goimage.NewGray(b)
+	draw.Draw(m, b, goimg, b.Min, draw.Src)
+
+	return &Image{
+		Width:            int64(b.Dx()),
+		Height:           int64(b.Dy()),
+		BitsPerComponent: 8,
+		ColorComponents:  1,
+		Data:             m.Pix,
+	}, nil
 }
 
 // Read reads an image and loads into a new Image object with an RGB

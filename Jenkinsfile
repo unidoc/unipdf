@@ -7,7 +7,11 @@ node {
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
     env.GOCACHE="off"
     env.UNIDOC_EXTRACT_FORCETEST="1"
+    env.UNIDOC_E2E_FORCE_TESTS="1"
     env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
+    env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
 
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
@@ -50,7 +54,7 @@ node {
         }
 
         stage('Test coverage') {
-            sh 'go test -coverprofile=coverage.out ./...'
+            sh 'go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...'
             sh '/home/jenkins/codecov.sh'
             sh 'gocover-cobertura < coverage.out > coverage.xml'
             step([$class: 'CoberturaPublisher', coberturaReportFile: 'coverage.xml'])

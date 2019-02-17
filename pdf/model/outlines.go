@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 type PdfOutlineTreeNode struct {
@@ -24,30 +24,30 @@ type PdfOutline struct {
 	Parent *PdfOutlineTreeNode
 	Count  *int64
 
-	primitive *PdfIndirectObject
+	primitive *core.PdfIndirectObject
 }
 
 // PdfOutlineItem represents an outline item dictionary (Table 153 - pp. 376 - 377).
 type PdfOutlineItem struct {
 	PdfOutlineTreeNode
-	Title  *PdfObjectString
+	Title  *core.PdfObjectString
 	Parent *PdfOutlineTreeNode
 	Prev   *PdfOutlineTreeNode
 	Next   *PdfOutlineTreeNode
 	Count  *int64
-	Dest   PdfObject
-	A      PdfObject
-	SE     PdfObject
-	C      PdfObject
-	F      PdfObject
+	Dest   core.PdfObject
+	A      core.PdfObject
+	SE     core.PdfObject
+	C      core.PdfObject
+	F      core.PdfObject
 
-	primitive *PdfIndirectObject
+	primitive *core.PdfIndirectObject
 }
 
 // NewPdfOutline returns an initialized PdfOutline.
 func NewPdfOutline() *PdfOutline {
 	outline := &PdfOutline{
-		primitive: MakeIndirectObject(MakeDict()),
+		primitive: core.MakeIndirectObject(core.MakeDict()),
 	}
 
 	outline.context = outline
@@ -64,7 +64,7 @@ func NewPdfOutlineTree() *PdfOutline {
 // NewPdfOutlineItem returns an initialized PdfOutlineItem.
 func NewPdfOutlineItem() *PdfOutlineItem {
 	outlineItem := &PdfOutlineItem{
-		primitive: MakeIndirectObject(MakeDict()),
+		primitive: core.MakeIndirectObject(core.MakeDict()),
 	}
 
 	outlineItem.context = outlineItem
@@ -72,23 +72,23 @@ func NewPdfOutlineItem() *PdfOutlineItem {
 }
 
 // NewOutlineBookmark returns an initialized PdfOutlineItem for a given bookmark title and page.
-func NewOutlineBookmark(title string, page *PdfIndirectObject) *PdfOutlineItem {
+func NewOutlineBookmark(title string, page *core.PdfIndirectObject) *PdfOutlineItem {
 	bookmark := PdfOutlineItem{}
 	bookmark.context = &bookmark
 
-	bookmark.Title = MakeString(title)
+	bookmark.Title = core.MakeString(title)
 
-	destArray := MakeArray()
+	destArray := core.MakeArray()
 	destArray.Append(page)
-	destArray.Append(MakeName("Fit"))
+	destArray.Append(core.MakeName("Fit"))
 	bookmark.Dest = destArray
 
 	return &bookmark
 }
 
 // Does not traverse the tree.
-func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline, error) {
-	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
+func newPdfOutlineFromIndirectObject(container *core.PdfIndirectObject) (*PdfOutline, error) {
+	dict, isDict := container.PdfObject.(*core.PdfObjectDictionary)
 	if !isDict {
 		return nil, fmt.Errorf("outline object not a dictionary")
 	}
@@ -98,7 +98,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 	outline.context = &outline
 
 	if obj := dict.Get("Type"); obj != nil {
-		typeVal, ok := obj.(*PdfObjectName)
+		typeVal, ok := obj.(*core.PdfObjectName)
 		if ok {
 			if *typeVal != "Outlines" {
 				common.Log.Debug("ERROR Type != Outlines (%s)", *typeVal)
@@ -111,7 +111,7 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 
 	if obj := dict.Get("Count"); obj != nil {
 		// This should always be an integer, but in a few cases has been a float.
-		count, err := GetNumberAsInt64(obj)
+		count, err := core.GetNumberAsInt64(obj)
 		if err != nil {
 			return nil, err
 		}
@@ -122,8 +122,8 @@ func newPdfOutlineFromIndirectObject(container *PdfIndirectObject) (*PdfOutline,
 }
 
 // Does not traverse the tree.
-func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectObject) (*PdfOutlineItem, error) {
-	dict, isDict := container.PdfObject.(*PdfObjectDictionary)
+func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndirectObject) (*PdfOutlineItem, error) {
+	dict, isDict := container.PdfObject.(*core.PdfObjectDictionary)
 	if !isDict {
 		return nil, fmt.Errorf("outline object not a dictionary")
 	}
@@ -141,7 +141,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectOb
 	if err != nil {
 		return nil, err
 	}
-	title, ok := TraceToDirectObject(obj).(*PdfObjectString)
+	title, ok := core.TraceToDirectObject(obj).(*core.PdfObjectString)
 	if !ok {
 		return nil, fmt.Errorf("title not a string (%T)", obj)
 	}
@@ -149,7 +149,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *PdfIndirectOb
 
 	// Count (optional).
 	if obj := dict.Get("Count"); obj != nil {
-		countVal, ok := obj.(*PdfObjectInteger)
+		countVal, ok := obj.(*core.PdfObjectInteger)
 		if !ok {
 			return nil, fmt.Errorf("count not an integer (%T)", obj)
 		}
@@ -218,24 +218,24 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 	return nil
 }
 
-func (n *PdfOutlineTreeNode) GetContainingPdfObject() PdfObject {
+func (n *PdfOutlineTreeNode) GetContainingPdfObject() core.PdfObject {
 	return n.getOuter().GetContainingPdfObject()
 }
 
-func (n *PdfOutlineTreeNode) ToPdfObject() PdfObject {
+func (n *PdfOutlineTreeNode) ToPdfObject() core.PdfObject {
 	return n.getOuter().ToPdfObject()
 }
 
-func (o *PdfOutline) GetContainingPdfObject() PdfObject {
+func (o *PdfOutline) GetContainingPdfObject() core.PdfObject {
 	return o.primitive
 }
 
 // ToPdfObject recursively builds the Outline tree PDF object.
-func (o *PdfOutline) ToPdfObject() PdfObject {
+func (o *PdfOutline) ToPdfObject() core.PdfObject {
 	container := o.primitive
-	dict := container.PdfObject.(*PdfObjectDictionary)
+	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
-	dict.Set("Type", MakeName("Outlines"))
+	dict.Set("Type", core.MakeName("Outlines"))
 
 	if o.First != nil {
 		dict.Set("First", o.First.ToPdfObject())
@@ -251,20 +251,20 @@ func (o *PdfOutline) ToPdfObject() PdfObject {
 	}
 
 	if o.Count != nil {
-		dict.Set("Count", MakeInteger(*o.Count))
+		dict.Set("Count", core.MakeInteger(*o.Count))
 	}
 
 	return container
 }
 
-func (oi *PdfOutlineItem) GetContainingPdfObject() PdfObject {
+func (oi *PdfOutlineItem) GetContainingPdfObject() core.PdfObject {
 	return oi.primitive
 }
 
 // ToPdfObject recursively builds the Outline tree PDF object.
-func (oi *PdfOutlineItem) ToPdfObject() PdfObject {
+func (oi *PdfOutlineItem) ToPdfObject() core.PdfObject {
 	container := oi.primitive
-	dict := container.PdfObject.(*PdfObjectDictionary)
+	dict := container.PdfObject.(*core.PdfObjectDictionary)
 
 	dict.Set("Title", oi.Title)
 	if oi.A != nil {
@@ -291,7 +291,7 @@ func (oi *PdfOutlineItem) ToPdfObject() PdfObject {
 		dict.Set("F", oi.F)
 	}
 	if oi.Count != nil {
-		dict.Set("Count", MakeInteger(*oi.Count))
+		dict.Set("Count", core.MakeInteger(*oi.Count))
 	}
 	if oi.Next != nil {
 		dict.Set("Next", oi.Next.ToPdfObject())

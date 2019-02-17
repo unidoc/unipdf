@@ -393,7 +393,7 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 				dy, dx = dx, dy
 			}
 			td := translationMatrix(transform.Point{X: dx, Y: dy})
-			to.tm = td.Mult(to.tm)
+			to.tm.Concat(td)
 			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.tm)
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
@@ -616,7 +616,7 @@ type textState struct {
 // Trm  = | 0         Tfs     0 | × Tm × CTM
 //        | 0         Trise   1 |
 // This corresponds to the following code in renderText()
-//  trm := stateMatrix.Mult(to.tm).Mult(to.gs.CTM))
+//  trm := to.gs.CTM.Mult(stateMatrix).Mult(to.tm)
 
 // textObject represents a PDF text object.
 type textObject struct {
@@ -697,7 +697,7 @@ func (to *textObject) renderText(data []byte) error {
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
-		trm := stateMatrix.Mult(to.tm).Mult(to.gs.CTM)
+		trm := to.gs.CTM.Mult(to.tm).Mult(stateMatrix)
 
 		// calculate the text location displacement due to writing `r`. We will use this to update
 		// to.tm
@@ -734,13 +734,13 @@ func (to *textObject) renderText(data []byte) error {
 		mark := to.newTextMark(
 			string(r),
 			trm,
-			translation(td0.Mult(to.tm).Mult(to.gs.CTM)),
+			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
 			spaceWidth*trm.ScalingFactorX())
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
 		// update the text matrix by the displacement of the text location.
-		to.tm = td.Mult(to.tm)
+		to.tm.Concat(td)
 		common.Log.Trace("to.tm=%s", to.tm)
 	}
 
@@ -766,7 +766,7 @@ func translationMatrix(p transform.Point) transform.Matrix {
 // Move to the start of the next line, offset from the start of the current line by (tx, ty).
 // `tx` and `ty` are in unscaled text space units.
 func (to *textObject) moveTo(tx, ty float64) {
-	to.tlm = transform.NewMatrix(1, 0, 0, 1, tx, ty).Mult(to.tlm)
+	to.tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, ty))
 	to.tm = to.tlm
 }
 

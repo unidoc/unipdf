@@ -300,7 +300,7 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 
 	var rgbSamples []uint32
 	for i := 0; i < len(samples); i++ {
-		grayVal := samples[i]
+		grayVal := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
 		rgbSamples = append(rgbSamples, grayVal, grayVal, grayVal)
 	}
 	rgbImage.BitsPerComponent = 8
@@ -1719,6 +1719,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj core.PdfObject) (*PdfColorspaceIC
 	}
 
 	obj = core.TraceToDirectObject(obj)
+
 	array, ok := obj.(*core.PdfObjectArray)
 	if !ok {
 		return nil, fmt.Errorf("type error")
@@ -1779,6 +1780,13 @@ func newPdfColorspaceICCBasedFromPdfObject(obj core.PdfObject) (*PdfColorspaceIC
 			return nil, err
 		}
 		cs.Range = r
+	} else {
+		// Set defaults
+		cs.Range = make([]float64, 2*cs.N)
+		for i := 0; i < cs.N; i++ {
+			cs.Range[2*i] = 0.0
+			cs.Range[2*i+1] = 1.0
+		}
 	}
 
 	if obj := dict.Get("Metadata"); obj != nil {
@@ -2303,12 +2311,16 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 		// Each data point represents an index location.
 		// For each entry there are N values.
 		index := int(samples[i]) * N
-		common.Log.Trace("Indexed Index: %d", index)
+		common.Log.Trace("Indexed: index=%d N=%d lut=%d", index, N, len(cs.colorLookup))
 		// Ensure does not go out of bounds.
 		if index+N-1 >= len(cs.colorLookup) {
 			// Clip to the end value.
 			index = len(cs.colorLookup) - N - 1
 			common.Log.Trace("Clipping to index: %d", index)
+			if index < 0 {
+				common.Log.Debug("ERROR: Can't clip index. Is PDF file damaged?")
+				break
+			}
 		}
 
 		cvals := cs.colorLookup[index : index+N]
@@ -2513,9 +2525,9 @@ func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 
 	var altSamples []uint32
 	// Convert tints to color data in the alternate colorspace.
-	for i := 0; i < len(samples); i++ {
+	for _, sample := range samples {
 		// A single tint component is in the range 0.0 - 1.0
-		tint := float64(samples[i]) / maxVal
+		tint := float64(sample) / maxVal
 
 		// Convert the tint value to the alternate space value.
 		outputs, err := cs.TintTransform.Evaluate([]float64{tint})
