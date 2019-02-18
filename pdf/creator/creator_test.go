@@ -59,6 +59,7 @@ const testImageFile2 = "./testdata/signature.png"
 const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
 const testWts11TTFFile = "./testdata/wts11.ttf"
+const testImageFileCCITT = "./testdata/p3_0.png"
 
 // TODO(peterwilliams97): /tmp/2_p_multi.pdf which is created in this test gives an error message
 //      when opened in Adobe Reader: The font FreeSans contains bad Widths.
@@ -164,6 +165,58 @@ func TestImageWithEncoder(t *testing.T) {
 	}
 
 	testWriteAndRender(t, creator, "1_dct.pdf")
+}
+
+func TestImageWithCCITTFaxEncoder(t *testing.T) {
+	creator := New()
+
+	file, err := os.Open(testImageFileCCITT)
+	if err != nil {
+		t.Errorf("Error opening test image file: %v\n", err)
+		return
+	}
+
+	imgF, _, err := goimage.Decode(file)
+	if err != nil {
+		file.Close()
+		t.Errorf("Error decoding test image file: %v\n", err)
+		return
+	}
+
+	file.Close()
+
+	modelImg, err := model.ImageHandling.NewImageFromGoImage(imgF)
+	if err != nil {
+		t.Errorf("Error creating image from go image: %v\n", err)
+		return
+	}
+
+	modelImg.BitsPerComponent = 1
+	modelImg.ColorComponents = 1
+
+	img, err := creator.NewImage(modelImg)
+	if err != nil {
+		t.Errorf("Error creating image: %v\n", err)
+		return
+	}
+
+	encoder := core.NewCCITTFaxEncoder()
+	encoder.Columns = int(img.Width())
+	img.SetEncoder(encoder)
+
+	img.SetPos(0, 0)
+	img.ScaleToWidth(612.0)
+	height := 612.0 * img.Height() / img.Width()
+	creator.SetPageSize(PageSize{612, height})
+	creator.NewPage()
+
+	err = creator.Draw(img)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	testWriteAndRender(t, creator, "1_ccitt.pdf")
 }
 
 func TestShapes1(t *testing.T) {
