@@ -3,11 +3,10 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 import (
-	"image"
-	"image/png"
+	_ "image/png"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -19,8 +18,6 @@ func TestEncode(t *testing.T) {
 		Pixels       [][]byte
 		WantFilePath string
 	}
-
-	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
 
 	pixels, err := getPixels(testDataPath + "p3_0.png")
 	if err != nil {

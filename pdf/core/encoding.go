@@ -34,7 +34,7 @@ import (
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core/ccittfaxdecode"
+	"github.com/unidoc/unidoc/pdf/internal/ccittfax"
 )
 
 const (
@@ -1633,7 +1633,10 @@ type CCITTFaxEncoder struct {
 
 // NewCCITTFaxEncoder makes a new CCITTFax encoder.
 func NewCCITTFaxEncoder() *CCITTFaxEncoder {
-	return &CCITTFaxEncoder{}
+	return &CCITTFaxEncoder{
+		Columns:    1728,
+		EndOfBlock: true,
+	}
 }
 
 // GetFilterName gets the filter name.
@@ -1842,7 +1845,7 @@ func (enc *CCITTFaxEncoder) UpdateParams(params *PdfObjectDictionary) {
 
 // DecodeBytes decodes the CCITTFax encoded image data.
 func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	encoder := &ccittfaxdecode.Encoder{
+	encoder := &ccittfax.Encoder{
 		K:                      enc.K,
 		Columns:                enc.Columns,
 		EndOfLine:              enc.EndOfLine,
@@ -1913,7 +1916,7 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		pixels = append(pixels, pixelsRow)
 	}
 
-	encoder := &ccittfaxdecode.Encoder{
+	encoder := &ccittfax.Encoder{
 		K:                      enc.K,
 		Columns:                enc.Columns,
 		EndOfLine:              enc.EndOfLine,

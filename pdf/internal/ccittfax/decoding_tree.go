@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 // decodingTreeNode is a node of a tree which represents the finite state machine for
 // searching the decoded pixel run lengths having the bit sequence. `Val` is a single bit

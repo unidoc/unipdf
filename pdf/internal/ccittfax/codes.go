@@ -3,9 +3,10 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 // map pixel run lengths to the encoded bit sequences
+// all the bit sequences for all groups could be found here https://www.itu.int/rec/T-REC-T.6-198811-I/en
 var (
 	bTerms        map[int]code
 	wTerms        map[int]code

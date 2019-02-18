@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 import (
 	"image"
@@ -32,6 +32,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 		Want      testResult
 	}
 
+	// Calculated test data based on the reference documentation.
 	tests := []testData{
 		{
 			Encoded:   []byte{1, 28, 2},
@@ -179,7 +180,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -190,7 +191,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -201,7 +202,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -212,7 +213,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -223,7 +224,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -234,7 +235,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -245,7 +246,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -256,7 +257,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -267,7 +268,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -278,7 +279,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -289,7 +290,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -300,7 +301,7 @@ func TestDecodeNextRunLen(t *testing.T) {
 			Want: testResult{
 				PixelsRow: nil,
 				BitPos:    2,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 	}
@@ -415,7 +416,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        0,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -428,7 +429,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        120,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -441,7 +442,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        10,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -454,7 +455,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        13,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -467,7 +468,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        23,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -480,7 +481,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        34,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -493,7 +494,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        134,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -506,7 +507,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        35,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -519,7 +520,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        876,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -532,7 +533,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        738,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -545,7 +546,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    0,
 				A0:        283,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -558,7 +559,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 				PixelsRow: nil,
 				BitPos:    2,
 				A0:        29,
-				Err:       ErrWrongCodeInHorizontalMode,
+				Err:       errWrongCodeInHorizontalMode,
 			},
 		},
 		{
@@ -573,7 +574,7 @@ func TestDecodeHorizontalMode(t *testing.T) {
 					white, white, white},
 				BitPos: 16,
 				A0:     0,
-				Err:    ErrWrongCodeInHorizontalMode,
+				Err:    errWrongCodeInHorizontalMode,
 			},
 		},
 	}
@@ -2005,7 +2006,7 @@ func TestTryFetchEOFB(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 0,
-				Err:    ErrEOFBCorrupt,
+				Err:    errEOFBCorrupt,
 			},
 		},
 		{
@@ -2099,7 +2100,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 0,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2108,7 +2109,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 2,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2117,7 +2118,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 0,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2126,7 +2127,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 2,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2135,7 +2136,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 0,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2144,7 +2145,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 2,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2153,7 +2154,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 0,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{
@@ -2162,7 +2163,7 @@ func TestTryFetchRTC2D(t *testing.T) {
 			Want: testResult{
 				OK:     false,
 				BitPos: 2,
-				Err:    ErrRTCCorrupt,
+				Err:    errRTCCorrupt,
 			},
 		},
 		{

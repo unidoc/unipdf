@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 import (
 	"math"
@@ -68,7 +68,6 @@ func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 		}
 
 		encodedRow, bitPos := encodeRow1D(pixels[i], prevBitPos, eol)
-
 		encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
 
 		if e.EncodedByteAlign {
@@ -82,7 +81,6 @@ func (e *Encoder) encodeG31D(pixels [][]byte) []byte {
 	if e.EndOfBlock {
 		// put RTC
 		encodedRTC, _ := encodeRTC(prevBitPos)
-
 		encoded = e.appendEncodedRow(encoded, encodedRTC, prevBitPos)
 	}
 
@@ -210,7 +208,6 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 		}
 
 		encoded = e.appendEncodedRow(encoded, encodedRow, prevBitPos)
-
 		if e.EncodedByteAlign {
 			// align to byte border
 			bitPos = 0
@@ -222,7 +219,6 @@ func (e *Encoder) encodeG4(pixelsToEncode [][]byte) []byte {
 	if e.EndOfBlock {
 		// put EOFB
 		encodedEOFB, _ := encodeEOFB(prevBitPos)
-
 		encoded = e.appendEncodedRow(encoded, encodedEOFB, prevBitPos)
 	}
 

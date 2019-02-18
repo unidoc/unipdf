@@ -3,29 +3,31 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package ccittfaxdecode
+package ccittfax
 
 import (
 	"errors"
 )
 
 var (
-	// ErrEOFBCorrupt is returned when the corrupt EOFB (end-of-block) code is found.
-	ErrEOFBCorrupt = errors.New("EOFB code is corrupted")
-	// ErrRTCCorrupt is returned when the corrupt RTC (return-the-carriage) code is found.
-	ErrRTCCorrupt = errors.New("RTC code is corrupted")
-	// ErrWrongCodeInHorizontalMode is returned when entered the horizontal mode and unknown bit
+	// errEOFBCorrupt is returned when the corrupt EOFB (end-of-block) code is found.
+	errEOFBCorrupt = errors.New("EOFB code is corrupted")
+	// errRTCCorrupt is returned when the corrupt RTC (return-the-carriage) code is found.
+	errRTCCorrupt = errors.New("RTC code is corrupted")
+	// errWrongCodeInHorizontalMode is returned when entered the horizontal mode and unknown bit
 	// sequence met.
-	ErrWrongCodeInHorizontalMode = errors.New("wrong code in horizontal mode")
-	// ErrNoEOLFound is returned when the EndOfLine parameter is true in filter but no EOL (end-of-line) met.
-	ErrNoEOLFound = errors.New("no EOL found while the EndOfLine parameter is true")
-	// ErrInvalidEOL is returned when the EOL code is corrupt.
-	ErrInvalidEOL = errors.New("invalid EOL")
-	// ErrInvalid2DCode is returned when the invalid 2 dimensional code is met. 2 dimensional code
+	errWrongCodeInHorizontalMode = errors.New("wrong code in horizontal mode")
+	// errNoEOLFound is returned when the EndOfLine parameter is true in filter but no EOL (end-of-line) met.
+	errNoEOLFound = errors.New("no EOL found while the EndOfLine parameter is true")
+	// errInvalidEOL is returned when the EOL code is corrupt.
+	errInvalidEOL = errors.New("invalid EOL")
+	// errInvalid2DCode is returned when the invalid 2 dimensional code is met. 2 dimensional code
 	// according to the CCITT reccommendations is one of the following: H, P, V0, V1L, V2L, V3L, V1R, V2R, V3R.
-	ErrInvalid2DCode = errors.New("invalid 2D code")
+	errInvalid2DCode = errors.New("invalid 2D code")
+)
 
-	// trees represent the finite state machine for parsing bit sequences and fetching pixel run lengths
+// trees represent the finite state machine for parsing bit sequences and fetching pixel run lengths
+var (
 	whiteTree = &decodingTreeNode{
 		Val: 255,
 	}
@@ -112,7 +114,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 		gotEOL, bitPos = tryFetchEOL(encoded, bitPos)
 		if !gotEOL {
 			if e.EndOfLine {
-				return nil, ErrNoEOLFound
+				return nil, errNoEOLFound
 			}
 		} else {
 			// 5 EOLs left to fill RTC
@@ -124,7 +126,7 @@ func (e *Encoder) decodeG31D(encoded []byte) ([][]byte, error) {
 						break
 					}
 
-					return nil, ErrInvalidEOL
+					return nil, errInvalidEOL
 				}
 			}
 
@@ -176,7 +178,7 @@ byteLoop:
 
 		if !gotEOL {
 			if e.EndOfLine {
-				return nil, ErrNoEOLFound
+				return nil, errNoEOLFound
 			}
 		}
 
@@ -212,7 +214,7 @@ byteLoop:
 					break byteLoop
 				} else {
 					if e.EndOfLine {
-						return nil, ErrNoEOLFound
+						return nil, errNoEOLFound
 					}
 				}
 			}
@@ -238,31 +240,24 @@ byteLoop:
 					}
 				case v0:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 0)
-
 					isWhite = !isWhite
 				case v1r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 1)
-
 					isWhite = !isWhite
 				case v2r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 2)
-
 					isWhite = !isWhite
 				case v3r:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 3)
-
 					isWhite = !isWhite
 				case v1l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -1)
-
 					isWhite = !isWhite
 				case v2l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -2)
-
 					isWhite = !isWhite
 				case v3l:
 					pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -3)
-
 					isWhite = !isWhite
 				}
 
@@ -327,7 +322,7 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 		for a0 < e.Columns {
 			twoDimCode, bitPos, ok = fetchNext2DCode(encoded, bitPos)
 			if !ok {
-				return nil, ErrInvalid2DCode
+				return nil, errInvalid2DCode
 			}
 
 			switch twoDimCode {
@@ -342,31 +337,24 @@ func (e *Encoder) decodeG4(encoded []byte) ([][]byte, error) {
 				}
 			case v0:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 0)
-
 				isWhite = !isWhite
 			case v1r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 1)
-
 				isWhite = !isWhite
 			case v2r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 2)
-
 				isWhite = !isWhite
 			case v3r:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, 3)
-
 				isWhite = !isWhite
 			case v1l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -1)
-
 				isWhite = !isWhite
 			case v2l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -2)
-
 				isWhite = !isWhite
 			case v3l:
 				pixelsRow, a0 = decodeVerticalMode(pixels, pixelsRow, isWhite, a0, -3)
-
 				isWhite = !isWhite
 			}
 
@@ -456,7 +444,7 @@ func decodeHorizontalMode(encoded, pixelsRow []byte, bitPos int, isWhite bool, a
 
 // decodeNextRunLen decodes tries to decode the next part of data using the Group3 1-dimensional code.
 // Returns moved bit position and the pixels row filled with the decoded pixels. The returned bit position
-// is not moved if the error occurs. Returns `ErrWrongCodeInHorizontalMode` if none of the 1-dimensional codes found.
+// is not moved if the error occurs. Returns `errWrongCodeInHorizontalMode` if none of the 1-dimensional codes found.
 func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]byte, int, error) {
 	startingBitPos := bitPos
 
@@ -472,7 +460,7 @@ func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]by
 	}
 
 	if runLen == -1 {
-		return pixelsRow, startingBitPos, ErrWrongCodeInHorizontalMode
+		return pixelsRow, startingBitPos, errWrongCodeInHorizontalMode
 	}
 
 	return pixelsRow, bitPos, nil
@@ -480,7 +468,7 @@ func decodeNextRunLen(encoded, pixelsRow []byte, bitPos int, isWhite bool) ([]by
 
 // tryFetchRTC2D tries to fetch the RTC code (0000000000011 X 6) for Group3 mixed (1D/2D) dimensional encoding from
 // the encoded data. Returns the moved bit position if the code was found. The other way returns the
-// the original bit position. The `ErrRTCCorrupt` is returned if the RTC code is corrupt. The RTC code is considered
+// the original bit position. The `errRTCCorrupt` is returned if the RTC code is corrupt. The RTC code is considered
 // corrupt if there are more than one EOL1 code (0000000000011) is met.
 func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 	startingBitPos := bitPos
@@ -492,7 +480,7 @@ func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 
 		if !gotEOL {
 			if i > 1 {
-				return false, startingBitPos, ErrRTCCorrupt
+				return false, startingBitPos, errRTCCorrupt
 			} else {
 				bitPos = startingBitPos
 
@@ -506,7 +494,7 @@ func tryFetchRTC2D(encoded []byte, bitPos int) (bool, int, error) {
 
 // tryFetchEOFB tries to fetch the EOFB code (000000000001 X 2) for Group4 encoding from
 // the encoded data. Returns the moved bit position if the code was found. The other way returns the
-// the original bit position. The `ErrEOFBCorrupt` is returned if the EOFB code is corrupt. The EOFB code is considered
+// the original bit position. The `errEOFBCorrupt` is returned if the EOFB code is corrupt. The EOFB code is considered
 // corrupt if there is a single EOL code (000000000001).
 func tryFetchEOFB(encoded []byte, bitPos int) (bool, int, error) {
 	startingBitPos := bitPos
@@ -520,7 +508,7 @@ func tryFetchEOFB(encoded []byte, bitPos int) (bool, int, error) {
 		if gotEOL {
 			return true, bitPos, nil
 		} else {
-			return false, startingBitPos, ErrEOFBCorrupt
+			return false, startingBitPos, errEOFBCorrupt
 		}
 	}
 
