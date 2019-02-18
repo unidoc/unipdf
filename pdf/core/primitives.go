@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/strutils"
@@ -607,16 +608,17 @@ func (d *PdfObjectDictionary) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (d *PdfObjectDictionary) WriteString() string {
-	outStr := "<<"
+	b := strings.Builder{}
+	b.WriteString("<<")
 	for _, k := range d.keys {
 		v := d.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
-		outStr += k.WriteString()
-		outStr += " "
-		outStr += v.WriteString()
+		b.WriteString(k.WriteString())
+		b.WriteString(" ")
+		b.WriteString(v.WriteString())
 	}
-	outStr += ">>"
-	return outStr
+	b.WriteString(">>")
+	return b.String()
 }
 
 // Set sets the dictionary's key -> val mapping entry. Overwrites if key already set.

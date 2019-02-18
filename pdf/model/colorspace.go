@@ -303,6 +303,7 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 		grayVal := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
 		rgbSamples = append(rgbSamples, grayVal, grayVal, grayVal)
 	}
+
 	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
 	rgbImage.SetSamples(rgbSamples)
