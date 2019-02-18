@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/pkcs12"
 
@@ -447,14 +448,32 @@ func TestAppenderSignPage4(t *testing.T) {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	_, appearance, err := appender.Sign(1, handler)
-	if err != nil {
+
+	// Create signature field and appearance.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test Appender")
+	signature.SetReason("TestAppenderSignPage4")
+	signature.SetDate(time.Now(), "")
+
+	sigField := model.NewPdfFieldSignature(signature)
+	sigField.T = core.MakeString("Signature1")
+
+	widget := model.NewPdfAnnotationWidget()
+	widget.F = core.MakeInteger(132)
+	widget.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
+	widget.Parent = sigField.GetContainingPdfObject()
+
+	sigField.Annotations = append(sigField.Annotations, widget)
+
+	if err = appender.Sign(1, sigField); err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-
-	appearance.Signature.Name = core.MakeString("Test Appender")
-	appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
 
 	err = appender.WriteToFile(tempFile("appender_sign_page_4.pdf"))
 	if err != nil {
@@ -513,15 +532,33 @@ func TestAppenderSignMultiple(t *testing.T) {
 			f.Close()
 			return
 		}
-		_, appearance, err := appender.Sign(1, handler)
-		if err != nil {
+
+		// Create signature field and appearance.
+		signature := model.NewPdfSignature(handler)
+		signature.SetName(fmt.Sprintf("Test Appender - Round %d", i+1))
+		signature.SetReason("TestAppenderSignPage4")
+		signature.SetDate(time.Now(), "")
+
+		sigField := model.NewPdfFieldSignature(signature)
+		sigField.T = core.MakeString("Signature1")
+
+		widget := model.NewPdfAnnotationWidget()
+		widget.F = core.MakeInteger(132)
+		widget.Rect = core.MakeArray(
+			core.MakeInteger(0),
+			core.MakeInteger(0),
+			core.MakeInteger(0),
+			core.MakeInteger(0),
+		)
+		widget.Parent = sigField.GetContainingPdfObject()
+
+		sigField.Annotations = append(sigField.Annotations, widget)
+
+		if err = appender.Sign(1, sigField); err != nil {
 			t.Errorf("Fail: %v\n", err)
 			f.Close()
 			return
 		}
-
-		appearance.Signature.Name = core.MakeString(fmt.Sprintf("Test Appender - Round %d", i+1))
-		appearance.Signature.Reason = core.MakeString("TestAppenderSignPage4")
 
 		outPath := tempFile(fmt.Sprintf("appender_sign_multiple_%d.pdf", i+1))
 

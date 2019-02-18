@@ -13,7 +13,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -381,62 +380,58 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 }
 
 // Sign signs a specific page with a digital signature using a specified signature handler.
-// Returns an Acroform and PdfAppearance that can be used to customize the signature appearance.
-func (a *PdfAppender) Sign(pageNum int, handler SignatureHandler) (acroForm *PdfAcroForm, appearance *PdfSignatureAppearance, err error) {
-	acroForm = a.Reader.AcroForm
+// Returns a PdfFieldSignature that can be used to customize the signature appearance.
+func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
+	if field == nil {
+		return errors.New("signature field cannot be nil")
+	}
+
+	signature := field.V
+	if signature == nil {
+		return errors.New("field signature cannot be nil")
+	}
+
+	// Get a copy of the selected page.
+	pageIndex := pageNum - 1
+	if pageIndex < 0 || pageIndex > len(a.pages)-1 {
+		return fmt.Errorf("page %d not found", pageNum)
+	}
+	page := a.pages[pageIndex].Duplicate()
+
+	// Initialize signature.
+	if err := signature.Initialize(); err != nil {
+		return err
+	}
+	a.addNewObjects(signature.container)
+
+	// Add signature field annotations to the page annotations.
+	for _, annotation := range field.Annotations {
+		annotation.P = page.ToPdfObject()
+		page.Annotations = append(page.Annotations, annotation.PdfAnnotation)
+	}
+
+	// Add signature field to the form.
+	acroForm := a.Reader.AcroForm
 	if acroForm == nil {
 		acroForm = NewPdfAcroForm()
 	}
 
-	pageIndex := pageNum - 1
-	if pageIndex < 0 || pageIndex > len(a.pages)-1 {
-		return nil, nil, fmt.Errorf("page %d not found", pageNum)
-	}
-	page := a.pages[pageIndex].Duplicate()
-
-	// TODO add more checks before set the fields
 	acroForm.SigFlags = core.MakeInteger(3)
 	acroForm.DA = core.MakeString("/F1 0 Tf 0 g")
 	n2ResourcesFont := core.MakeDict()
 	n2ResourcesFont.Set("F1", DefaultFont().ToPdfObject())
 	acroForm.DR = NewPdfPageResources()
 	acroForm.DR.Font = n2ResourcesFont
-	sig := NewPdfSignature()
-	sig.M = core.MakeString(time.Now().Format("D:20060102150405-07'00'"))
-	//sig.M = core.MakeString("D:20150226112648Z")
-	sig.Type = core.MakeName("Sig")
-	sig.Reason = core.MakeString("Test1")
-	if err := handler.InitSignature(sig); err != nil {
-		return nil, nil, err
-	}
-	a.addNewObjects(sig.container)
 
-	appearance = NewPdfSignatureAppearance()
-
-	fields := append(acroForm.AllFields(), appearance.PdfField)
+	fields := append(acroForm.AllFields(), field.PdfField)
 	acroForm.Fields = &fields
-
-	procPage(page)
-
-	appearance.V = sig.ToPdfObject()
-	appearance.FT = core.MakeName("Sig")
-	appearance.V = sig.ToPdfObject()
-	appearance.T = core.MakeString("Signature1")
-	appearance.F = core.MakeInteger(132)
-	appearance.P = page.ToPdfObject()
-	appearance.Rect = core.MakeArray(core.MakeInteger(0), core.MakeInteger(0), core.MakeInteger(0),
-		core.MakeInteger(0))
-	appearance.Signature = sig
-
-	// Add the signature appearance to the page annotations.
-	page.Annotations = append(page.Annotations, appearance.PdfAnnotationWidget.PdfAnnotation)
-
-	a.pages[pageIndex] = page
-
-	// Update acroform.
 	a.ReplaceAcroForm(acroForm)
 
-	return acroForm, appearance, nil
+	// Replace original page.
+	procPage(page)
+	a.pages[pageIndex] = page
+
+	return nil
 }
 
 // ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which
