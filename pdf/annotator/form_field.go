@@ -366,19 +366,26 @@ func genFieldSignatureAppearance(fields []*SignatureLine, opts *SignatureFieldOp
 		offsetY += (rectHeight - float64(len(lines))*lineHeight) / 2
 	}
 
-	// Draw signature.
+	// Draw annotation rectangle.
 	cc := contentstream.NewContentCreator()
 
-	if opts.BorderSize > 0 {
-		cc.Add_q().
-			Add_re(rect[0], rect[1], rectWidth, rectHeight).
-			Add_w(opts.BorderSize).
-			SetStrokingColor(opts.BorderColor).
-			SetNonStrokingColor(opts.FillColor).
-			Add_B().
-			Add_Q()
+	if opts.BorderSize <= 0 {
+		opts.BorderSize = 0
+		opts.BorderColor = model.NewPdfColorDeviceGray(1)
+	}
+	if opts.BorderColor == nil {
+		opts.FillColor = model.NewPdfColorDeviceGray(1)
+	}
+	if opts.FillColor == nil {
+		opts.FillColor = model.NewPdfColorDeviceGray(1)
 	}
 
+	cc.Add_q().Add_re(rect[0], rect[1], rectWidth, rectHeight).
+		Add_w(opts.BorderSize).SetStrokingColor(opts.BorderColor).
+		SetNonStrokingColor(opts.FillColor).
+		Add_B().Add_Q()
+
+	// Draw signature.
 	cc.Add_q()
 	cc.Translate(rect[0], rect[3]-lineHeight-offsetY)
 	cc.Add_BT()
