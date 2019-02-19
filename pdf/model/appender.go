@@ -140,8 +140,8 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 	}
 	switch v := obj.(type) {
 	case *core.PdfIndirectObject:
-		// Check the object is changing.
-		// If the indirect object has not the read-only parser then the object is changed.
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
 		if v.GetParser() != a.roReader.parser {
 			a.newObjects = append(a.newObjects, obj)
 			a.hasNewObject[obj] = struct{}{}
@@ -156,22 +156,25 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 			a.addNewObjects(v.Get(key))
 		}
 	case *core.PdfObjectStreams:
-		// Check the object is changing.
-		// If the indirect object has not the readonly parser then the object is changed.
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
 		if v.GetParser() != a.roReader.parser {
 			for _, o := range v.Elements() {
 				a.addNewObjects(o)
 			}
 		}
 	case *core.PdfObjectStream:
-		// Check the object is changing.
-		// If the indirect object has the readonly parser then the object is not changed.
-		if v.GetParser() == a.roReader.parser {
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
+		parser := v.GetParser()
+		if parser == a.roReader.parser {
 			return
 		}
-		// If the indirect object has not the origin parser then the object may be changed orr not.
-		if v.GetParser() == a.Reader.parser {
-			// Check data is not changed.
+
+		// If the current parser is different from the parser of the reader,
+		// then the object may have changed.
+		if parser == a.Reader.parser {
+			// Check if data has changed.
 			if streamObj, err := a.roReader.parser.LookupByReference(v.PdfObjectReference); err == nil {
 				var isNotChanged bool
 				if stream, ok := core.GetStream(streamObj); ok && bytes.Equal(stream.Stream, v.Stream) {
@@ -379,8 +382,9 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 	}
 }
 
-// Sign signs a specific page with a digital signature using a specified signature handler.
-// Returns a PdfFieldSignature that can be used to customize the signature appearance.
+// Sign signs a specific page with a digital signature.
+// The signature field parameter must have a valid signature dictionary
+// specified by its V field.
 func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	if field == nil {
 		return errors.New("signature field cannot be nil")
@@ -388,7 +392,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 
 	signature := field.V
 	if signature == nil {
-		return errors.New("field signature cannot be nil")
+		return errors.New("signature dictionary cannot be nil")
 	}
 
 	// Get a copy of the selected page.
@@ -424,6 +428,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	acroForm.DR.Font = n2ResourcesFont
 
 	fields := append(acroForm.AllFields(), field.PdfField)
+
 	acroForm.Fields = &fields
 	a.ReplaceAcroForm(acroForm)
 
@@ -441,7 +446,7 @@ func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 }
 
 // Write writes the Appender output to io.Writer.
-// It can only be called once and further invokations will result in an error.
+// It can only be called once and further invocations will result in an error.
 func (a *PdfAppender) Write(w io.Writer) error {
 	if a.written {
 		return errors.New("appender write can only be invoked once")
@@ -601,9 +606,9 @@ func (a *PdfAppender) Write(w io.Writer) error {
 
 	writerW := w
 	if hasSigDict {
-		// For signatures, we need to write twice. First to find the byte offset of the Contents and then
-		// dynamically update file with the signature and ByteRange.
-		// Thus we create an empty buffer to write to and then at the e
+		// For signatures, we need to write twice. First to find the byte offset
+		// of the Contents and then dynamically update the file with the
+		// signature and ByteRange.
 		writerW = bytes.NewBuffer(nil)
 	}
 
