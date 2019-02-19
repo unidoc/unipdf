@@ -677,6 +677,8 @@ func TestSignatureAppearance(t *testing.T) {
 		opts.BorderSize = 1
 		opts.FontSize = 10
 		opts.Rect = []float64{475, 25, 590, 80}
+		opts.FillColor = model.NewPdfColorDeviceRGB(255, 255, 0)
+		opts.TextColor = model.NewPdfColorDeviceRGB(0, 0, 200)
 
 		sigField, err = annotator.NewSignatureField(
 			signature,
