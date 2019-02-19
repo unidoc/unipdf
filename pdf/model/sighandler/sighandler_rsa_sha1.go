@@ -42,7 +42,6 @@ func (a *adobeX509RSASHA1) InitSignature(sig *model.PdfSignature) error {
 	handler := *a
 	sig.Handler = &handler
 	sig.Filter = core.MakeName("Adobe.PPKLite")
-	//sig.Filter = core.MakeName("Adobe.PPKMS")
 	sig.SubFilter = core.MakeName("adbe.x509.rsa_sha1")
 	sig.Cert = core.MakeString(string(handler.certificate.Raw))
 	sig.Reference = nil
@@ -57,17 +56,6 @@ func (a *adobeX509RSASHA1) InitSignature(sig *model.PdfSignature) error {
 
 func getHashFromSignatureAlgorithm(sa x509.SignatureAlgorithm) (crypto.Hash, bool) {
 	return crypto.SHA1, true
-	/*
-		switch sa {
-		case x509.SHA1WithRSA:
-			return crypto.SHA1, true
-		case x509.SHA256WithRSA:
-			return crypto.SHA256, true
-		case x509.SHA512WithRSA:
-			return crypto.SHA512, true
-		}
-		return crypto.MD5, false
-	*/
 }
 
 func (a *adobeX509RSASHA1) getCertificate(sig *model.PdfSignature) (*x509.Certificate, error) {

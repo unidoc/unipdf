@@ -145,6 +145,11 @@ func (sig *PdfSignature) SetReason(reason string) {
 	sig.Reason = core.MakeString(reason)
 }
 
+// SetLocation sets the `Location` field of the signature.
+func (sig *PdfSignature) SetLocation(location string) {
+	sig.Location = core.MakeString(location)
+}
+
 // Initialize initializes the PdfSignature.
 func (sig *PdfSignature) Initialize() error {
 	if sig.Handler == nil {
