@@ -14,6 +14,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/unidoc/unidoc/pdf/core"
 )
@@ -91,6 +92,21 @@ type PdfDate struct {
 	utOffsetSign  byte  // O ('+' / '-' / 'Z')
 	utOffsetHours int64 // HH' (00-23 followed by ')
 	utOffsetMins  int64 // mm (00-59)
+}
+
+// ToGoTime returns the date in time.Time format.
+func (d PdfDate) ToGoTime() time.Time {
+	utcOffset := int(d.utOffsetHours*60*60 + d.utOffsetMins*60)
+	switch d.utOffsetSign {
+	case '-':
+		utcOffset = -utcOffset
+	case 'Z':
+		utcOffset = 0
+	}
+	tzName := fmt.Sprintf("UTC%c%.2d%.2d", d.utOffsetSign, d.utOffsetHours, d.utOffsetMins)
+	tz := time.FixedZone(tzName, utcOffset)
+
+	return time.Date(int(d.year), time.Month(d.month), int(d.day), int(d.hour), int(d.minute), int(d.second), 0, tz)
 }
 
 var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])?(\d{2})?'?(\d{2})?`)

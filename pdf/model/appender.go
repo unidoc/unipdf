@@ -18,7 +18,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// PdfAppender appends a new Pdf content to an existing Pdf document.
+// PdfAppender appends new PDF content to an existing PDF document via incremental updates.
 type PdfAppender struct {
 	rs       io.ReadSeeker
 	parser   *core.PdfParser
@@ -30,8 +30,11 @@ type PdfAppender struct {
 	xrefs          core.XrefTable
 	greatestObjNum int
 
+	// List of new objects and a map for quick lookups.
 	newObjects   []core.PdfObject
 	hasNewObject map[core.PdfObject]struct{}
+
+	written bool
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -94,18 +97,24 @@ func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
 
 // NewPdfAppender creates a new Pdf appender from a Pdf reader.
 func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
-	a := &PdfAppender{}
-	a.rs = reader.rs
-	a.Reader = reader
-	a.parser = a.Reader.parser
+	a := &PdfAppender{
+		rs:     reader.rs,
+		Reader: reader,
+		parser: reader.parser,
+	}
 	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
 	var err error
-	// Create a readonly (immutable) reader. It increases memory using.
-	// Why? We can not check the original reader objects are changed or not.
-	// When we merge, replace a page content. The new page will contain objects from the readonly reader and other objects.
-	// The readonly objects won't append to the result Pdf file. This check is not resource demanding. It checks indirect objects owners only.
+
+	// Create a readonly (immutable) reader. It increases memory use but is necessary to be able
+	// to detect changes in the original reader objects.
+	//
+	// In the case where an existing page is modified, the page contents are replaced upon merging
+	// (appending). The new page will refer to objects from the read-only reader and new instances
+	// of objects that have been changes. Objects from the original reader are not appended, only
+	// new objects that modify the PDF. The change detection check is not resource demanding. It
+	// only checks owners (source) of indirect objects.
 	a.roReader, err = NewPdfReader(a.rs)
 	if err != nil {
 		return nil, err
@@ -131,8 +140,8 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 	}
 	switch v := obj.(type) {
 	case *core.PdfIndirectObject:
-		// Check the object is changing.
-		// If the indirect object has not the readonly parser then the object is changed.
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
 		if v.GetParser() != a.roReader.parser {
 			a.newObjects = append(a.newObjects, obj)
 			a.hasNewObject[obj] = struct{}{}
@@ -147,22 +156,25 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 			a.addNewObjects(v.Get(key))
 		}
 	case *core.PdfObjectStreams:
-		// Check the object is changing.
-		// If the indirect object has not the readonly parser then the object is changed.
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
 		if v.GetParser() != a.roReader.parser {
 			for _, o := range v.Elements() {
 				a.addNewObjects(o)
 			}
 		}
 	case *core.PdfObjectStream:
-		// Check the object is changing.
-		// If the indirect object has the readonly parser then the object is not changed.
-		if v.GetParser() == a.roReader.parser {
+		// If the current parser is different from the read-only parser, then
+		// the object has changed.
+		parser := v.GetParser()
+		if parser == a.roReader.parser {
 			return
 		}
-		// If the indirect object has not the origin parser then the object may be changed orr not.
-		if v.GetParser() == a.Reader.parser {
-			// Check data is not changed.
+
+		// If the current parser is different from the parser of the reader,
+		// then the object may have changed.
+		if parser == a.Reader.parser {
+			// Check if data has changed.
 			if streamObj, err := a.roReader.parser.LookupByReference(v.PdfObjectReference); err == nil {
 				var isNotChanged bool
 				if stream, ok := core.GetStream(streamObj); ok && bytes.Equal(stream.Stream, v.Stream) {
@@ -331,7 +343,7 @@ func (a *PdfAppender) MergePageWith(pageNum int, page *PdfPage) error {
 	return nil
 }
 
-// AddPages adds pages to end of the source Pdf.
+// AddPages adds pages to be appended to the end of the source PDF.
 func (a *PdfAppender) AddPages(pages ...*PdfPage) {
 	for _, page := range pages {
 		page = page.Duplicate()
@@ -370,19 +382,74 @@ func (a *PdfAppender) ReplacePage(pageNum int, page *PdfPage) {
 	}
 }
 
-// ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which replaces the original acrobat form.
+// Sign signs a specific page with a digital signature.
+// The signature field parameter must have a valid signature dictionary
+// specified by its V field.
+func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
+	if field == nil {
+		return errors.New("signature field cannot be nil")
+	}
+
+	signature := field.V
+	if signature == nil {
+		return errors.New("signature dictionary cannot be nil")
+	}
+
+	// Get a copy of the selected page.
+	pageIndex := pageNum - 1
+	if pageIndex < 0 || pageIndex > len(a.pages)-1 {
+		return fmt.Errorf("page %d not found", pageNum)
+	}
+	page := a.pages[pageIndex].Duplicate()
+
+	// Initialize signature.
+	if err := signature.Initialize(); err != nil {
+		return err
+	}
+	a.addNewObjects(signature.container)
+
+	// Add signature field annotations to the page annotations.
+	for _, annotation := range field.Annotations {
+		annotation.P = page.ToPdfObject()
+		page.Annotations = append(page.Annotations, annotation.PdfAnnotation)
+	}
+
+	// Add signature field to the form.
+	acroForm := a.Reader.AcroForm
+	if acroForm == nil {
+		acroForm = NewPdfAcroForm()
+	}
+
+	acroForm.SigFlags = core.MakeInteger(3)
+	acroForm.DA = core.MakeString("/F1 0 Tf 0 g")
+	n2ResourcesFont := core.MakeDict()
+	n2ResourcesFont.Set("F1", DefaultFont().ToPdfObject())
+	acroForm.DR = NewPdfPageResources()
+	acroForm.DR.Font = n2ResourcesFont
+
+	fields := append(acroForm.AllFields(), field.PdfField)
+
+	acroForm.Fields = &fields
+	a.ReplaceAcroForm(acroForm)
+
+	// Replace original page.
+	procPage(page)
+	a.pages[pageIndex] = page
+
+	return nil
+}
+
+// ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which
+// replaces the original AcroForm.
 func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 	a.acroForm = acroForm
 }
 
 // Write writes the Appender output to io.Writer.
+// It can only be called once and further invocations will result in an error.
 func (a *PdfAppender) Write(w io.Writer) error {
-	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	offset, err := io.Copy(w, a.rs)
-	if err != nil {
-		return err
+	if a.written {
+		return errors.New("appender write can only be invoked once")
 	}
 
 	writer := NewPdfWriter()
@@ -446,7 +513,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 				common.Log.Trace("Page Parent: %T", parent)
 				parentDict, ok := parent.PdfObject.(*core.PdfObjectDictionary)
 				if !ok {
-					return errors.New("Invalid Parent object")
+					return errors.New("invalid Parent object")
 				}
 				for _, field := range inheritedFields {
 					common.Log.Trace("Field %s", field)
@@ -473,6 +540,56 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		writer.SetForms(a.acroForm)
 	}
 
+	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	// Digital signature handling: Check if any of the new objects represent a signature dictionary.
+	// The byte range is later updated dynamically based on the position of the actual signature
+	// Contents.
+	digestWriters := make(map[SignatureHandler]io.Writer)
+	byteRange := core.MakeArray()
+	for _, obj := range a.newObjects {
+		if ind, found := core.GetIndirect(obj); found {
+			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+				handler := *sigDict.handler
+				var err error
+				digestWriters[handler], err = handler.NewDigest(sigDict.signature)
+				if err != nil {
+					return err
+				}
+				byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
+			}
+		}
+	}
+	if byteRange.Len() > 0 {
+		byteRange.Append(core.MakeInteger(0xfffff), core.MakeInteger(0xfffff))
+	}
+	for _, obj := range a.newObjects {
+		if ind, found := core.GetIndirect(obj); found {
+			if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+				sigDict.Set("ByteRange", byteRange)
+			}
+		}
+	}
+
+	hasSigDict := len(digestWriters) > 0
+
+	var reader io.Reader = a.rs
+	if hasSigDict {
+		writers := make([]io.Writer, 0, len(digestWriters))
+		for _, hash := range digestWriters {
+			writers = append(writers, hash)
+		}
+		reader = io.TeeReader(a.rs, io.MultiWriter(writers...))
+	}
+
+	// Write the original PDF.
+	offset, err := io.Copy(w, reader)
+	if err != nil {
+		return err
+	}
+
 	if len(a.newObjects) == 0 {
 		return nil
 	}
@@ -481,14 +598,108 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	writer.ObjNumOffset = a.greatestObjNum
 	writer.appendMode = true
 	writer.appendToXrefs = a.xrefs
+	writer.minorVersion = 7
 
 	for _, obj := range a.newObjects {
 		writer.addObject(obj)
 	}
-	if err := writer.Write(w); err != nil {
+
+	writerW := w
+	if hasSigDict {
+		// For signatures, we need to write twice. First to find the byte offset
+		// of the Contents and then dynamically update the file with the
+		// signature and ByteRange.
+		writerW = bytes.NewBuffer(nil)
+	}
+
+	// Perform the write. For signatures will do a mock write to a buffer.
+	if err := writer.Write(writerW); err != nil {
 		return err
 	}
-	return err
+
+	// TODO(gunnsth): Consider whether the dynamic content can be handled efficiently with generic write hooks?
+	// Logic is getting pretty complex here.
+	if hasSigDict {
+		// Update the byteRanges based on mock write.
+		bufferData := writerW.(*bytes.Buffer).Bytes()
+		byteRange := core.MakeArray()
+		var sigDicts []*pdfSignDictionary
+		var lastPosition int64
+		for _, obj := range writer.objects {
+			if ind, found := core.GetIndirect(obj); found {
+				if sigDict, found := ind.PdfObject.(*pdfSignDictionary); found {
+					sigDicts = append(sigDicts, sigDict)
+					newPosition := sigDict.fileOffset + int64(sigDict.contentsOffsetStart)
+					byteRange.Append(
+						core.MakeInteger(lastPosition),
+						core.MakeInteger(newPosition-lastPosition),
+					)
+					lastPosition = sigDict.fileOffset + int64(sigDict.contentsOffsetEnd)
+				}
+			}
+		}
+		byteRange.Append(
+			core.MakeInteger(lastPosition),
+			core.MakeInteger(offset+int64(len(bufferData))-lastPosition),
+		)
+		// set the ByteRange value
+		byteRangeData := []byte(byteRange.WriteString())
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			for i := sigDict.byteRangeOffsetStart; i < sigDict.byteRangeOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+			dst := bufferData[bufferOffset+sigDict.byteRangeOffsetStart : bufferOffset+sigDict.byteRangeOffsetEnd]
+			copy(dst, byteRangeData)
+		}
+		var prevOffset int
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			data := bufferData[prevOffset : bufferOffset+sigDict.contentsOffsetStart]
+			handler := *sigDict.handler
+			digestWriters[handler].Write(data)
+			prevOffset = bufferOffset + sigDict.contentsOffsetEnd
+		}
+		for _, sigDict := range sigDicts {
+			data := bufferData[prevOffset:]
+			handler := *sigDict.handler
+			digestWriters[handler].Write(data)
+		}
+		for _, sigDict := range sigDicts {
+			bufferOffset := int(sigDict.fileOffset - offset)
+			handler := *sigDict.handler
+			digest := digestWriters[handler]
+			if err := handler.Sign(sigDict.signature, digest); err != nil {
+				return err
+			}
+			contents := []byte(sigDict.signature.Contents.WriteString())
+
+			// Empty out the ByteRange and Content data.
+			// FIXME(gunnsth): Is this needed?  Seems like the correct data is copied below?  Prefer
+			// to keep the rest space?
+			for i := sigDict.byteRangeOffsetStart; i < sigDict.byteRangeOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+			for i := sigDict.contentsOffsetStart; i < sigDict.contentsOffsetEnd; i++ {
+				bufferData[bufferOffset+i] = ' '
+			}
+
+			// Copy the actual ByteRange and Contents data into the buffer prepared by first write.
+			dst := bufferData[bufferOffset+sigDict.byteRangeOffsetStart : bufferOffset+sigDict.byteRangeOffsetEnd]
+			copy(dst, byteRangeData)
+			dst = bufferData[bufferOffset+sigDict.contentsOffsetStart : bufferOffset+sigDict.contentsOffsetEnd]
+			copy(dst, contents)
+		}
+
+		buffer := bytes.NewBuffer(bufferData)
+		_, err = io.Copy(w, buffer)
+		if err != nil {
+			return err
+		}
+	}
+
+	a.written = true
+	return nil
 }
 
 // WriteToFile writes the Appender output to file specified by path.

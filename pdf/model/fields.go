@@ -245,50 +245,37 @@ func (f *PdfField) String() string {
 }
 
 // ToPdfObject sets the common field elements.
-// Note: Call the more field context's ToPdfObject to set both the generic and non-generic information.
+// Note: Call the more field context's ToPdfObject to set both the generic and
+// non-generic information.
 func (f *PdfField) ToPdfObject() core.PdfObject {
 	container := f.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
-	d.SetIfNotNil("FT", f.FT)
-	if f.Parent != nil {
-		d.Set("Parent", f.Parent.GetContainingPdfObject())
+	// Create an array of the kids (fields or widgets).
+	kids := core.MakeArray()
+	for _, child := range f.Kids {
+		kids.Append(child.ToPdfObject())
+	}
+	for _, annot := range f.Annotations {
+		kids.Append(annot.GetContext().ToPdfObject())
 	}
 
-	if f.Kids != nil {
-		// Create an array of the kids (fields or widgets).
-		kids := core.MakeArray()
-		for _, child := range f.Kids {
-			kids.Append(child.ToPdfObject())
-		}
+	// Set fields.
+	if f.Parent != nil {
+		d.SetIfNotNil("Parent", f.Parent.GetContainingPdfObject())
+	}
+	if kids.Len() > 0 {
 		d.Set("Kids", kids)
 	}
 
-	if f.Annotations != nil {
-		_, hasKids := d.Get("Kids").(*core.PdfObjectArray)
-		if !hasKids {
-			d.Set("Kids", &core.PdfObjectArray{})
-		}
-		// TODO: If only 1 widget annotation, it can be merged in.
-		kids := d.Get("Kids").(*core.PdfObjectArray)
-		for _, annot := range f.Annotations {
-			kids.Append(annot.GetContext().ToPdfObject())
-		}
-	}
-
+	d.SetIfNotNil("FT", f.FT)
 	d.SetIfNotNil("T", f.T)
 	d.SetIfNotNil("TU", f.TU)
 	d.SetIfNotNil("TM", f.TM)
 	d.SetIfNotNil("Ff", f.Ff)
-	if f.V != nil {
-		d.Set("V", f.V)
-	}
-	if f.DV != nil {
-		d.Set("DV", f.DV)
-	}
-	if f.AA != nil {
-		d.Set("AA", f.AA)
-	}
+	d.SetIfNotNil("V", f.V)
+	d.SetIfNotNil("DV", f.DV)
+	d.SetIfNotNil("AA", f.AA)
 
 	return container
 }
@@ -446,28 +433,38 @@ func (ch *PdfFieldChoice) ToPdfObject() core.PdfObject {
 // the name of the signer and verifying document contents.
 type PdfFieldSignature struct {
 	*PdfField
+
 	V    *PdfSignature
 	Lock *core.PdfIndirectObject
 	SV   *core.PdfIndirectObject
+}
+
+// NewPdfFieldSignature returns an initialized signature field.
+func NewPdfFieldSignature(signature *PdfSignature) *PdfFieldSignature {
+	field := &PdfFieldSignature{
+		PdfField: NewPdfField(),
+		V:        signature,
+	}
+	field.PdfField.SetContext(field)
+	field.FT = core.MakeName("Sig")
+
+	return field
 }
 
 // ToPdfObject returns an indirect object containing the signature field dictionary.
 func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
 	// Set general field attributes
 	sig.PdfField.ToPdfObject()
-	container := sig.container
 
 	// Handle signature field specific attributes
+	container := sig.container
+
 	d := container.PdfObject.(*core.PdfObjectDictionary)
-	d.Set("FT", core.MakeName("Sig"))
+	d.SetIfNotNil("FT", core.MakeName("Sig"))
+	d.SetIfNotNil("Lock", sig.Lock)
+	d.SetIfNotNil("SV", sig.SV)
 	if sig.V != nil {
-		d.Set("V", sig.V.ToPdfObject())
-	}
-	if sig.Lock != nil {
-		d.Set("Lock", sig.Lock)
-	}
-	if sig.SV != nil {
-		d.Set("SV", sig.SV)
+		d.SetIfNotNil("V", sig.V.ToPdfObject())
 	}
 
 	return container

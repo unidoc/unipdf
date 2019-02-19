@@ -6,14 +6,83 @@
 package model
 
 import (
+	"bytes"
+	"errors"
+	"time"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+var _ core.PdfObject = &pdfSignDictionary{}
+
+// pdfSignDictionary is used as a wrapper around PdfSignature for digital checksum calculation
+// and population of /Contents and /ByteRange.
+// Implements interface core.PdfObject.
+type pdfSignDictionary struct {
+	*core.PdfObjectDictionary
+	handler              *SignatureHandler
+	signature            *PdfSignature
+	fileOffset           int64
+	contentsOffsetStart  int
+	contentsOffsetEnd    int
+	byteRangeOffsetStart int
+	byteRangeOffsetEnd   int
+}
+
+// GetSubFilter returns SubFilter value or empty string.
+func (d *pdfSignDictionary) GetSubFilter() string {
+	obj := d.Get("SubFilter")
+	if obj == nil {
+		return ""
+	}
+	if sf, found := core.GetNameVal(obj); found {
+		return sf
+	}
+	return ""
+}
+
+// WriteString outputs the object as it is to be written to file.
+func (d *pdfSignDictionary) WriteString() string {
+	d.contentsOffsetStart = 0
+	d.contentsOffsetEnd = 0
+	d.byteRangeOffsetStart = 0
+	d.byteRangeOffsetEnd = 0
+	out := bytes.NewBuffer(nil)
+	out.WriteString("<<")
+	for _, k := range d.Keys() {
+		v := d.Get(k)
+		switch k {
+		case "ByteRange":
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.byteRangeOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString(" ")
+			d.byteRangeOffsetEnd = out.Len() - 1
+		case "Contents":
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			d.contentsOffsetStart = out.Len()
+			out.WriteString(v.WriteString())
+			out.WriteString(" ")
+			d.contentsOffsetEnd = out.Len() - 1
+		default:
+			out.WriteString(k.WriteString())
+			out.WriteString(" ")
+			out.WriteString(v.WriteString())
+		}
+	}
+	out.WriteString(">>")
+	return out.String()
+}
+
 // PdfSignature represents a PDF signature dictionary and is used for signing via form signature fields.
 // (Section 12.8, Table 252 - Entries in a signature dictionary p. 475 in PDF32000_2008).
 type PdfSignature struct {
+	Handler   SignatureHandler
 	container *core.PdfIndirectObject
+
 	// Type: Sig/DocTimeStamp
 	Type         *core.PdfObjectName
 	Filter       *core.PdfObjectName
@@ -35,14 +104,21 @@ type PdfSignature struct {
 	PropAuthType *core.PdfObjectName
 }
 
-// PdfSignatureReference represents a signature reference dictionary.
-// (Table 253 - p. 477 in PDF32000_2008).
-type PdfSignatureReference struct {
-	// Type: SigRef
-	TransformMethod *core.PdfObjectName
-	TransformParams *core.PdfObjectDictionary
-	Data            core.PdfObject
-	DigestMethod    *core.PdfObjectName
+// NewPdfSignature creates a new PdfSignature object.
+func NewPdfSignature(handler SignatureHandler) *PdfSignature {
+	sig := &PdfSignature{
+		Type:    core.MakeName("Sig"),
+		Handler: handler,
+	}
+
+	dict := &pdfSignDictionary{
+		PdfObjectDictionary: core.MakeDict(),
+		handler:             &handler,
+		signature:           sig,
+	}
+
+	sig.container = core.MakeIndirectObject(dict)
+	return sig
 }
 
 // GetContainingPdfObject implements interface PdfModel.
@@ -50,48 +126,68 @@ func (sig *PdfSignature) GetContainingPdfObject() core.PdfObject {
 	return sig.container
 }
 
+// SetName sets the `Name` field of the signature.
+func (sig *PdfSignature) SetName(name string) {
+	sig.Name = core.MakeString(name)
+}
+
+// SetDate sets the `M` field of the signature.
+func (sig *PdfSignature) SetDate(date time.Time, format string) {
+	if format == "" {
+		format = "D:20060102150405-07'00'"
+	}
+
+	sig.M = core.MakeString(date.Format(format))
+}
+
+// SetReason sets the `Reason` field of the signature.
+func (sig *PdfSignature) SetReason(reason string) {
+	sig.Reason = core.MakeString(reason)
+}
+
+// SetLocation sets the `Location` field of the signature.
+func (sig *PdfSignature) SetLocation(location string) {
+	sig.Location = core.MakeString(location)
+}
+
+// Initialize initializes the PdfSignature.
+func (sig *PdfSignature) Initialize() error {
+	if sig.Handler == nil {
+		return errors.New("signature handler cannot be nil")
+	}
+
+	return sig.Handler.InitSignature(sig)
+}
+
 // ToPdfObject implements interface PdfModel.
 func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	container := sig.container
-	dict := container.PdfObject.(*core.PdfObjectDictionary)
+
+	var dict *core.PdfObjectDictionary
+	if sigDict, ok := container.PdfObject.(*pdfSignDictionary); ok {
+		dict = sigDict.PdfObjectDictionary
+	} else {
+		dict = container.PdfObject.(*core.PdfObjectDictionary)
+	}
 
 	dict.Set("Type", sig.Type)
+	dict.SetIfNotNil("Filter", sig.Filter)
+	dict.SetIfNotNil("SubFilter", sig.SubFilter)
+	dict.SetIfNotNil("Contents", sig.Contents)
+	dict.SetIfNotNil("Cert", sig.Cert)
+	dict.SetIfNotNil("ByteRange", sig.ByteRange)
+	dict.SetIfNotNil("Reference", sig.Reference)
+	dict.SetIfNotNil("Changes", sig.Changes)
+	dict.SetIfNotNil("Name", sig.Name)
+	dict.SetIfNotNil("M", sig.M)
+	dict.SetIfNotNil("Reason", sig.Reason)
+	dict.SetIfNotNil("ContactInfo", sig.ContactInfo)
+	dict.SetIfNotNil("ByteRange", sig.ByteRange)
+	dict.SetIfNotNil("Contents", sig.Contents)
 
-	if sig.Filter != nil {
-		dict.Set("Filter", sig.Filter)
-	}
-	if sig.SubFilter != nil {
-		dict.Set("SubFilter", sig.SubFilter)
-	}
-	if sig.Contents != nil {
-		dict.Set("Contents", sig.Contents)
-	}
-	if sig.Cert != nil {
-		dict.Set("Cert", sig.Cert)
-	}
-	if sig.ByteRange != nil {
-		dict.Set("ByteRange", sig.ByteRange)
-	}
-	if sig.Reference != nil {
-		dict.Set("Reference", sig.Reference)
-	}
-	if sig.Changes != nil {
-		dict.Set("Changes", sig.Changes)
-	}
-	if sig.Name != nil {
-		dict.Set("Name", sig.Name)
-	}
-	if sig.M != nil {
-		dict.Set("M", sig.M)
-	}
-	if sig.Reason != nil {
-		dict.Set("Reason", sig.Reason)
-	}
-	if sig.ContactInfo != nil {
-		dict.Set("ContactInfo", sig.ContactInfo)
-	}
-
-	// FIXME: ByteRange and Contents need to be updated dynamically.
+	// NOTE: ByteRange and Contents need to be updated dynamically.
+	// TODO: Currently dynamic update is only in the appender, need to support
+	// in the PdfWriter too for the initial signature on document creation.
 	return container
 }
 
@@ -147,107 +243,4 @@ func (r *PdfReader) newPdfSignatureFromIndirect(container *core.PdfIndirectObjec
 	sig.PropAuthType, _ = core.GetName(dict.Get("Prop_AuthType"))
 
 	return sig, nil
-}
-
-// PdfSignatureField represents a form field that contains a digital signature.
-// (12.7.4.5 - Signature Fields p. 454 in PDF32000_2008).
-//
-// The signature form field serves two primary purposes. 1. Define the form field that will provide the
-// visual signing properties for display but may also hold information needed when the actual signing
-// takes place such as signature method. This carries information from the author of the document to the
-// software that later does signing.
-//
-// Filling in (signing) the signature field entails updating at least the V entry and usually the AP entry of the
-// associated widget annotation. (Exporting a signature field exports the T, V, AP entries)
-//
-// The annotation rectangle (Rect) in such a dictionary shall give the position of the field on its page. Signature
-// fields that are not intended to be visible shall have an annotation rectangle that has zero height and width. PDF
-// processors shall treat such signatures as not visible. PDF processors shall also treat signatures as not
-// visible if either the Hidden bit or the NoView bit of the F entry is true
-//
-// The location of a signature within a document can have a bearing on its legal meaning. For this reason,
-// signature fields shall never refer to more than one annotation.
-type PdfSignatureField struct {
-	container *core.PdfIndirectObject
-
-	V *PdfSignature
-	// Type: /Sig
-	// V: *PdfSignature...
-	Lock *core.PdfIndirectObject // Shall be an indirect reference.
-	SV   *core.PdfIndirectObject // Shall be an indirect reference.
-}
-
-// NewPdfSignatureField prepares a PdfSignatureField from a PdfSignature.
-func NewPdfSignatureField(signature *PdfSignature) *PdfSignatureField {
-	return &PdfSignatureField{
-		V:         signature,
-		container: core.MakeIndirectObject(core.MakeDict()),
-	}
-}
-
-// ToPdfObject implements interface PdfModel.
-func (sf *PdfSignatureField) ToPdfObject() core.PdfObject {
-	container := sf.container
-	dict := container.PdfObject.(*core.PdfObjectDictionary)
-
-	dict.Set("FT", core.MakeName("Sig"))
-
-	if sf.V != nil {
-		dict.Set("V", sf.V.ToPdfObject())
-	}
-	if sf.Lock != nil {
-		dict.Set("Lock", sf.Lock)
-	}
-	if sf.SV != nil {
-		dict.Set("SV", sf.SV)
-	}
-	// Other standard fields...
-
-	return container
-}
-
-// PdfSignatureFieldLock represents signature field lock dictionary.
-// (Table 233 - p. 455 in PDF32000_2008).
-type PdfSignatureFieldLock struct {
-	Type   core.PdfObject
-	Action *core.PdfObjectName
-	Fields *core.PdfObjectArray
-	P      *core.PdfObjectInteger
-}
-
-// PdfSignatureFieldSeed represents signature field seed value dictionary.
-// (Table 234 - p. 455 in PDF32000_2008).
-type PdfSignatureFieldSeed struct {
-	// Type
-	Ff               *core.PdfObjectInteger
-	Filter           *core.PdfObjectName
-	SubFilter        *core.PdfObjectArray
-	DigestMethod     *core.PdfObjectArray
-	V                *core.PdfObjectInteger
-	Cert             core.PdfObject
-	Reasons          *core.PdfObjectArray
-	MDP              *core.PdfObjectDictionary
-	TimeStamp        *core.PdfObjectDictionary
-	LegalAttestation *core.PdfObjectArray
-	AddRevInfo       *core.PdfObjectBool
-	LockDocument     *core.PdfObjectName
-	AppearanceFilter *core.PdfObjectString
-}
-
-// PdfCertificateSeed represents certificate seed value dictionary.
-// (Table 235 - p. 457 in PDF32000_2008).
-type PdfCertificateSeed struct {
-	// Type
-	Ff                            *core.PdfObjectInteger
-	Subject                       *core.PdfObjectArray
-	SignaturePolicyOID            *core.PdfObjectString
-	SignaturePolicyHashValue      *core.PdfObjectString
-	SignaturePolicyHashAlgorithm  *core.PdfObjectName
-	SignaturePolicyCommitmentType *core.PdfObjectArray
-	SubjectDN                     *core.PdfObjectArray
-	KeyUsage                      *core.PdfObjectArray
-	Issuer                        *core.PdfObjectArray
-	OID                           *core.PdfObjectArray
-	URL                           *core.PdfObjectString
-	URLType                       *core.PdfObjectName
 }

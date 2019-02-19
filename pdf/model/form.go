@@ -53,6 +53,9 @@ func flattenFields(field *PdfField) []*PdfField {
 
 // AllFields returns a flattened list of all fields in the form.
 func (form *PdfAcroForm) AllFields() []*PdfField {
+	if form == nil {
+		return nil
+	}
 	var fields []*PdfField
 	if form.Fields != nil {
 		for _, field := range *form.Fields {
