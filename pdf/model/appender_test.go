@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"golang.org/x/crypto/pkcs12"
 
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/annotator"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 	"github.com/unidoc/unidoc/pdf/model/sighandler"
@@ -574,6 +576,132 @@ func TestAppenderSignMultiple(t *testing.T) {
 
 		f.Close()
 	}
+}
+
+func TestSignatureAppearance(t *testing.T) {
+	f, err := os.Open(testPdf3pages)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f.Close()
+
+	pdfReader, err := model.NewPdfReader(f)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	t.Logf("Fields: %d", len(pdfReader.AcroForm.AllFields()))
+
+	appender, err := model.NewPdfAppender(pdfReader)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	pfxData, _ := ioutil.ReadFile(testPKS12Key)
+	privateKey, cert, err := pkcs12.Decode(pfxData, testPKS12KeyPassword)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := sighandler.NewAdobePKCS7Detached(privateKey.(*rsa.PrivateKey), cert)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test Signature Appearance Name")
+	signature.SetReason("TestSignatureAppearance Reason")
+	signature.SetDate(time.Now(), "")
+
+	numPages, err := pdfReader.GetNumPages()
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	for i := 0; i < numPages; i++ {
+		pageNum := i + 1
+
+		// Annot1
+		opts := annotator.NewSignatureFieldOpts()
+		opts.FontSize = 10
+		opts.Rect = []float64{10, 25, 75, 60}
+
+		sigField, err := annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "Jane Doe"),
+				annotator.NewSignatureLine("Date", "2019.01.03"),
+				annotator.NewSignatureLine("Reason", "Some reason"),
+				annotator.NewSignatureLine("Location", "New York"),
+				annotator.NewSignatureLine("DN", "authority1:name1"),
+			},
+			opts,
+		)
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+
+		// Annot2
+		opts = annotator.NewSignatureFieldOpts()
+		opts.FontSize = 8
+		opts.Rect = []float64{250, 25, 325, 70}
+		opts.TextColor = model.NewPdfColorDeviceRGB(255, 0, 0)
+
+		sigField, err = annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "John Doe"),
+				annotator.NewSignatureLine("Date", "2019.03.14"),
+				annotator.NewSignatureLine("Reason", "No reason"),
+				annotator.NewSignatureLine("Location", "London"),
+				annotator.NewSignatureLine("DN", "authority2:name2"),
+			},
+			opts,
+		)
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			log.Fatalf("Fail: %v\n", err)
+		}
+
+		// Annot3
+		opts = annotator.NewSignatureFieldOpts()
+		opts.BorderSize = 1
+		opts.FontSize = 10
+		opts.Rect = []float64{475, 25, 590, 80}
+
+		sigField, err = annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "John Smith"),
+				annotator.NewSignatureLine("Date", "2019.02.19"),
+				annotator.NewSignatureLine("Reason", "Another reason"),
+				annotator.NewSignatureLine("Location", "Paris"),
+				annotator.NewSignatureLine("DN", "authority3:name3"),
+			},
+			opts,
+		)
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			log.Fatalf("Fail: %v\n", err)
+		}
+	}
+
+	outPath := tempFile("appender_signature_appearance.pdf")
+	if err = appender.WriteToFile(outPath); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	validateFile(t, outPath)
 }
 
 // Each Appender can only be written out once, further invokations of Write should result in an error.
