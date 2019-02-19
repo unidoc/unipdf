@@ -420,15 +420,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 		acroForm = NewPdfAcroForm()
 	}
 
-	acroForm.SigFlags = core.MakeInteger(3)
-	acroForm.DA = core.MakeString("/F1 0 Tf 0 g")
-	n2ResourcesFont := core.MakeDict()
-	n2ResourcesFont.Set("F1", DefaultFont().ToPdfObject())
-	acroForm.DR = NewPdfPageResources()
-	acroForm.DR.Font = n2ResourcesFont
-
 	fields := append(acroForm.AllFields(), field.PdfField)
-
 	acroForm.Fields = &fields
 	a.ReplaceAcroForm(acroForm)
 
