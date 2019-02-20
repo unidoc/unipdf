@@ -394,6 +394,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	if signature == nil {
 		return errors.New("signature dictionary cannot be nil")
 	}
+	a.addNewObjects(signature.container)
 
 	// Get a copy of the selected page.
 	pageIndex := pageNum - 1
@@ -402,17 +403,9 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	}
 	page := a.pages[pageIndex].Duplicate()
 
-	// Initialize signature.
-	if err := signature.Initialize(); err != nil {
-		return err
-	}
-	a.addNewObjects(signature.container)
-
 	// Add signature field annotations to the page annotations.
-	for _, annotation := range field.Annotations {
-		annotation.P = page.ToPdfObject()
-		page.Annotations = append(page.Annotations, annotation.PdfAnnotation)
-	}
+	field.P = page.ToPdfObject()
+	page.Annotations = append(page.Annotations, field.PdfAnnotationWidget.PdfAnnotation)
 
 	// Add signature field to the form.
 	acroForm := a.Reader.AcroForm

@@ -249,21 +249,15 @@ func NewSignatureField(signature *model.PdfSignature, fields []*SignatureLine, o
 		return nil, errors.New("signature cannot be nil")
 	}
 
-	field := model.NewPdfFieldSignature(signature)
-	field.T = core.MakeString("")
-
 	apDict, err := genFieldSignatureAppearance(fields, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	widget := model.NewPdfAnnotationWidget()
-	widget.Rect = core.MakeArrayFromFloats(opts.Rect)
-	widget.F = core.MakeInteger(4)
-	widget.Parent = field.ToPdfObject()
-	widget.AP = apDict
-
-	field.Annotations = append(field.Annotations, widget)
+	field := model.NewPdfFieldSignature(signature)
+	field.Rect = core.MakeArrayFromFloats(opts.Rect)
+	field.F = core.MakeInteger(132)
+	field.AP = apDict
 	return field, nil
 }
 
@@ -380,10 +374,13 @@ func genFieldSignatureAppearance(fields []*SignatureLine, opts *SignatureFieldOp
 		opts.FillColor = model.NewPdfColorDeviceGray(1)
 	}
 
-	cc.Add_q().Add_re(rect[0], rect[1], rectWidth, rectHeight).
-		Add_w(opts.BorderSize).SetStrokingColor(opts.BorderColor).
+	cc.Add_q().
+		Add_re(rect[0], rect[1], rectWidth, rectHeight).
+		Add_w(opts.BorderSize).
+		SetStrokingColor(opts.BorderColor).
 		SetNonStrokingColor(opts.FillColor).
-		Add_B().Add_Q()
+		Add_B().
+		Add_Q()
 
 	// Draw signature.
 	cc.Add_q()
