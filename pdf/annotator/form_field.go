@@ -8,8 +8,6 @@ package annotator
 import (
 	"bytes"
 	"errors"
-	"math"
-	"unicode"
 
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -206,11 +204,14 @@ func NewComboboxField(page *model.PdfPage, name string, rect []float64, opt Comb
 	return chfield, nil
 }
 
+// SignatureLine represents a line of information in the signature field appearance.
 type SignatureLine struct {
 	Desc string
 	Text string
 }
 
+// NewSignatureLine returns a new signature line displayed as a part of the
+// signature field appearance.
 func NewSignatureLine(desc, text string) *SignatureLine {
 	return &SignatureLine{
 		Desc: desc,
@@ -218,20 +219,40 @@ func NewSignatureLine(desc, text string) *SignatureLine {
 	}
 }
 
+// SignatureFieldOpts represents a set of options used to configure
+// an appearance widget dictionary.
 type SignatureFieldOpts struct {
-	Rect     []float64
+	// Rect represents the area the signature annotation is displayed on.
+	Rect []float64
+
+	// AutoSize specifies is the content of the appearance should be
+	// scaled to fit in the annotation rectangle.
 	AutoSize bool
 
-	Font       *model.PdfFont
-	FontSize   float64
-	LineHeight float64
-	TextColor  model.PdfColor
+	// Font specifies the font of the text content.
+	Font *model.PdfFont
 
-	FillColor   model.PdfColor
-	BorderSize  float64
+	// FontSize specifies the size of the text content.
+	FontSize float64
+
+	// LineHeight specifies the height of a line of text in the appearance annotation.
+	LineHeight float64
+
+	// TextColor represents the color of the text content displayed.
+	TextColor model.PdfColor
+
+	// FillColor represents the background color of the appearance annotation area.
+	FillColor model.PdfColor
+
+	// BorderSize represents border size of the appearance annotation area.
+	BorderSize float64
+
+	// BorderColor represents the border color of the appearance annotation area.
 	BorderColor model.PdfColor
 }
 
+// NewSignatureFieldOpts returns a new initialized instance of options
+// used to generate a signature appearance.
 func NewSignatureFieldOpts() *SignatureFieldOpts {
 	return &SignatureFieldOpts{
 		Font:        model.DefaultFont(),
@@ -244,12 +265,15 @@ func NewSignatureFieldOpts() *SignatureFieldOpts {
 	}
 }
 
-func NewSignatureField(signature *model.PdfSignature, fields []*SignatureLine, opts *SignatureFieldOpts) (*model.PdfFieldSignature, error) {
+// NewSignatureField returns a new signature field with a visible appearance
+// containing the specified signature lines and styled according to the
+// specified options.
+func NewSignatureField(signature *model.PdfSignature, lines []*SignatureLine, opts *SignatureFieldOpts) (*model.PdfFieldSignature, error) {
 	if signature == nil {
 		return nil, errors.New("signature cannot be nil")
 	}
 
-	apDict, err := genFieldSignatureAppearance(fields, opts)
+	apDict, err := genFieldSignatureAppearance(lines, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -259,178 +283,4 @@ func NewSignatureField(signature *model.PdfSignature, fields []*SignatureLine, o
 	field.F = core.MakeInteger(132)
 	field.AP = apDict
 	return field, nil
-}
-
-func genFieldSignatureAppearance(fields []*SignatureLine, opts *SignatureFieldOpts) (*core.PdfObjectDictionary, error) {
-	if opts == nil {
-		opts = NewSignatureFieldOpts()
-	}
-
-	// Get font.
-	var err error
-	var fontName *core.PdfObjectName
-	font := opts.Font
-
-	if font != nil {
-		descriptor, _ := font.GetFontDescriptor()
-		if descriptor != nil {
-			if f, ok := descriptor.FontName.(*core.PdfObjectName); ok {
-				fontName = f
-			}
-		}
-		if fontName == nil {
-			fontName = core.MakeName("Font1")
-		}
-	} else {
-		if font, err = model.NewStandard14Font("Helvetica"); err != nil {
-			return nil, err
-		}
-		fontName = core.MakeName("Helv")
-	}
-
-	// Get font size and line height.
-	fontSize := opts.FontSize
-	if fontSize <= 0 {
-		fontSize = 10
-	}
-
-	if opts.LineHeight <= 0 {
-		opts.LineHeight = 1
-	}
-	lineHeight := opts.LineHeight * fontSize
-
-	// Get space character width.
-	spaceMetrics, found := font.GetRuneMetrics(' ')
-	if !found {
-		return nil, errors.New("the font does not have a space glyph")
-	}
-	spaceWidth := spaceMetrics.Wx
-
-	// Generate lines.
-	var maxLineWidth float64
-	var lines []string
-
-	for _, field := range fields {
-		if field.Text == "" {
-			continue
-		}
-
-		line := field.Text
-		if field.Desc != "" {
-			line = field.Desc + ": " + line
-		}
-		lines = append(lines, line)
-
-		var lineWidth float64
-		for _, r := range line {
-			metrics, has := font.GetRuneMetrics(r)
-			if !has {
-				continue
-			}
-
-			lineWidth += metrics.Wx
-		}
-
-		if lineWidth > maxLineWidth {
-			maxLineWidth = lineWidth
-		}
-	}
-
-	maxLineWidth = maxLineWidth * fontSize / 1000.0
-	height := float64(len(lines)) * lineHeight
-
-	// Calculate annotation rectangle.
-	rect := opts.Rect
-	if rect == nil {
-		rect = []float64{0, 0, maxLineWidth, height}
-		opts.Rect = rect
-	}
-	rectWidth := rect[2] - rect[0]
-	rectHeight := rect[3] - rect[1]
-
-	// Fit contents
-	var offsetY float64
-	if opts.AutoSize {
-		if maxLineWidth > rectWidth || height > rectHeight {
-			scale := math.Min(rectWidth/maxLineWidth, rectHeight/height)
-			fontSize *= scale
-		}
-
-		lineHeight = opts.LineHeight * fontSize
-		offsetY += (rectHeight - float64(len(lines))*lineHeight) / 2
-	}
-
-	// Draw annotation rectangle.
-	cc := contentstream.NewContentCreator()
-
-	if opts.BorderSize <= 0 {
-		opts.BorderSize = 0
-		opts.BorderColor = model.NewPdfColorDeviceGray(1)
-	}
-	if opts.BorderColor == nil {
-		opts.FillColor = model.NewPdfColorDeviceGray(1)
-	}
-	if opts.FillColor == nil {
-		opts.FillColor = model.NewPdfColorDeviceGray(1)
-	}
-
-	cc.Add_q().
-		Add_re(rect[0], rect[1], rectWidth, rectHeight).
-		Add_w(opts.BorderSize).
-		SetStrokingColor(opts.BorderColor).
-		SetNonStrokingColor(opts.FillColor).
-		Add_B().
-		Add_Q()
-
-	// Draw signature.
-	cc.Add_q()
-	cc.Translate(rect[0], rect[3]-lineHeight-offsetY)
-	cc.Add_BT()
-
-	encoder := font.Encoder()
-	for _, line := range lines {
-		var encStr []byte
-		for _, r := range line {
-			if unicode.IsSpace(r) {
-				if len(encStr) > 0 {
-					cc.SetNonStrokingColor(opts.TextColor).
-						Add_Tf(*fontName, fontSize).
-						Add_TL(lineHeight).
-						Add_TJ([]core.PdfObject{core.MakeStringFromBytes(encStr)}...)
-					encStr = nil
-				}
-
-				cc.Add_Tf(*fontName, fontSize).
-					Add_TL(lineHeight).
-					Add_TJ([]core.PdfObject{core.MakeFloat(-spaceWidth)}...)
-			} else {
-				encStr = append(encStr, encoder.Encode(string(r))...)
-			}
-		}
-
-		if len(encStr) > 0 {
-			cc.SetNonStrokingColor(opts.TextColor).
-				Add_Tf(*fontName, fontSize).
-				Add_TL(lineHeight).
-				Add_TJ([]core.PdfObject{core.MakeStringFromBytes(encStr)}...)
-		}
-
-		cc.Add_Td(0, -lineHeight)
-	}
-
-	cc.Add_ET()
-	cc.Add_Q()
-
-	// Create appearance dictionary.
-	resources := model.NewPdfPageResources()
-	resources.SetFontByName(*fontName, font.ToPdfObject())
-
-	xform := model.NewXObjectForm()
-	xform.Resources = resources
-	xform.BBox = core.MakeArrayFromFloats(rect)
-	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
-
-	apDict := core.MakeDict()
-	apDict.Set("N", xform.ToPdfObject())
-	return apDict, nil
 }
