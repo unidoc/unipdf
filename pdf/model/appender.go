@@ -129,6 +129,12 @@ func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
 	for _, p := range a.roReader.PageList {
 		a.pages = append(a.pages, p)
 	}
+
+	// Load interactive forms and fields.
+	a.roReader.AcroForm, err = a.roReader.loadForms()
+	if err != nil {
+		return nil, err
+	}
 	a.acroForm = a.roReader.AcroForm
 
 	return a, nil
@@ -412,9 +418,12 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	page.Annotations = append(page.Annotations, field.PdfAnnotationWidget.PdfAnnotation)
 
 	// Add signature field to the form.
-	acroForm := a.Reader.AcroForm
+	acroForm := a.acroForm
 	if acroForm == nil {
-		acroForm = NewPdfAcroForm()
+		acroForm = a.Reader.AcroForm
+		if acroForm == nil {
+			acroForm = NewPdfAcroForm()
+		}
 	}
 	acroForm.SigFlags = core.MakeInteger(3)
 
@@ -526,7 +535,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		a.addNewObjects(obj)
 		kids.Append(obj)
 	}
-	if a.acroForm != nil && a.acroForm != a.roReader.AcroForm {
+	if a.acroForm != nil {
 		writer.SetForms(a.acroForm)
 	}
 
