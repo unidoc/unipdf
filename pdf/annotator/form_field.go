@@ -203,3 +203,83 @@ func NewComboboxField(page *model.PdfPage, name string, rect []float64, opt Comb
 
 	return chfield, nil
 }
+
+// SignatureLine represents a line of information in the signature field appearance.
+type SignatureLine struct {
+	Desc string
+	Text string
+}
+
+// NewSignatureLine returns a new signature line displayed as a part of the
+// signature field appearance.
+func NewSignatureLine(desc, text string) *SignatureLine {
+	return &SignatureLine{
+		Desc: desc,
+		Text: text,
+	}
+}
+
+// SignatureFieldOpts represents a set of options used to configure
+// an appearance widget dictionary.
+type SignatureFieldOpts struct {
+	// Rect represents the area the signature annotation is displayed on.
+	Rect []float64
+
+	// AutoSize specifies if the content of the appearance should be
+	// scaled to fit in the annotation rectangle.
+	AutoSize bool
+
+	// Font specifies the font of the text content.
+	Font *model.PdfFont
+
+	// FontSize specifies the size of the text content.
+	FontSize float64
+
+	// LineHeight specifies the height of a line of text in the appearance annotation.
+	LineHeight float64
+
+	// TextColor represents the color of the text content displayed.
+	TextColor model.PdfColor
+
+	// FillColor represents the background color of the appearance annotation area.
+	FillColor model.PdfColor
+
+	// BorderSize represents border size of the appearance annotation area.
+	BorderSize float64
+
+	// BorderColor represents the border color of the appearance annotation area.
+	BorderColor model.PdfColor
+}
+
+// NewSignatureFieldOpts returns a new initialized instance of options
+// used to generate a signature appearance.
+func NewSignatureFieldOpts() *SignatureFieldOpts {
+	return &SignatureFieldOpts{
+		Font:        model.DefaultFont(),
+		FontSize:    10,
+		LineHeight:  1,
+		AutoSize:    true,
+		TextColor:   model.NewPdfColorDeviceGray(0),
+		BorderColor: model.NewPdfColorDeviceGray(0),
+		FillColor:   model.NewPdfColorDeviceGray(1),
+	}
+}
+
+// NewSignatureField returns a new signature field with a visible appearance
+// containing the specified signature lines and styled according to the
+// specified options.
+func NewSignatureField(signature *model.PdfSignature, lines []*SignatureLine, opts *SignatureFieldOpts) (*model.PdfFieldSignature, error) {
+	if signature == nil {
+		return nil, errors.New("signature cannot be nil")
+	}
+
+	apDict, err := genFieldSignatureAppearance(lines, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	field := model.NewPdfFieldSignature(signature)
+	field.Rect = core.MakeArrayFromFloats(opts.Rect)
+	field.AP = apDict
+	return field, nil
+}

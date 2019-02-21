@@ -433,6 +433,7 @@ func (ch *PdfFieldChoice) ToPdfObject() core.PdfObject {
 // the name of the signer and verifying document contents.
 type PdfFieldSignature struct {
 	*PdfField
+	*PdfAnnotationWidget
 
 	V    *PdfSignature
 	Lock *core.PdfIndirectObject
@@ -441,22 +442,29 @@ type PdfFieldSignature struct {
 
 // NewPdfFieldSignature returns an initialized signature field.
 func NewPdfFieldSignature(signature *PdfSignature) *PdfFieldSignature {
-	field := &PdfFieldSignature{
-		PdfField: NewPdfField(),
-		V:        signature,
-	}
+	field := &PdfFieldSignature{}
+	field.PdfField = NewPdfField()
 	field.PdfField.SetContext(field)
-	field.FT = core.MakeName("Sig")
 
+	field.PdfAnnotationWidget = NewPdfAnnotationWidget()
+	field.PdfAnnotationWidget.SetContext(field)
+	field.PdfAnnotationWidget.container = field.PdfField.container
+
+	field.T = core.MakeString("")
+	field.F = core.MakeInteger(132)
+	field.V = signature
 	return field
 }
 
 // ToPdfObject returns an indirect object containing the signature field dictionary.
 func (sig *PdfFieldSignature) ToPdfObject() core.PdfObject {
-	// Set general field attributes
+	// Set general field attributes.
+	if sig.PdfAnnotationWidget != nil {
+		sig.PdfAnnotationWidget.ToPdfObject()
+	}
 	sig.PdfField.ToPdfObject()
 
-	// Handle signature field specific attributes
+	// Handle signature field specific attributes.
 	container := sig.container
 
 	d := container.PdfObject.(*core.PdfObjectDictionary)
