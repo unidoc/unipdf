@@ -451,6 +451,7 @@ func NewPdfFieldSignature(signature *PdfSignature) *PdfFieldSignature {
 	field.PdfAnnotationWidget.container = field.PdfField.container
 
 	field.T = core.MakeString("")
+	field.F = core.MakeInteger(132)
 	field.V = signature
 	return field
 }
