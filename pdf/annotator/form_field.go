@@ -280,7 +280,6 @@ func NewSignatureField(signature *model.PdfSignature, lines []*SignatureLine, op
 
 	field := model.NewPdfFieldSignature(signature)
 	field.Rect = core.MakeArrayFromFloats(opts.Rect)
-	field.F = core.MakeInteger(132)
 	field.AP = apDict
 	return field, nil
 }

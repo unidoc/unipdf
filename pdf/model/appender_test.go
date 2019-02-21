@@ -463,18 +463,12 @@ func TestAppenderSignPage4(t *testing.T) {
 
 	sigField := model.NewPdfFieldSignature(signature)
 	sigField.T = core.MakeString("Signature1")
-
-	widget := model.NewPdfAnnotationWidget()
-	widget.F = core.MakeInteger(132)
-	widget.Rect = core.MakeArray(
+	sigField.Rect = core.MakeArray(
 		core.MakeInteger(0),
 		core.MakeInteger(0),
 		core.MakeInteger(0),
 		core.MakeInteger(0),
 	)
-	widget.Parent = sigField.GetContainingPdfObject()
-
-	sigField.Annotations = append(sigField.Annotations, widget)
 
 	if err = appender.Sign(1, sigField); err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -542,7 +536,7 @@ func TestAppenderSignMultiple(t *testing.T) {
 		// Create signature field and appearance.
 		signature := model.NewPdfSignature(handler)
 		signature.SetName(fmt.Sprintf("Test Appender - Round %d", i+1))
-		signature.SetReason("TestAppenderSignPage4")
+		signature.SetReason(fmt.Sprintf("Test Appender - Round %d", i+1))
 		signature.SetDate(time.Now(), "")
 
 		if err := signature.Initialize(); err != nil {
@@ -550,19 +544,13 @@ func TestAppenderSignMultiple(t *testing.T) {
 		}
 
 		sigField := model.NewPdfFieldSignature(signature)
-		sigField.T = core.MakeString("Signature1")
-
-		widget := model.NewPdfAnnotationWidget()
-		widget.F = core.MakeInteger(132)
-		widget.Rect = core.MakeArray(
+		sigField.T = core.MakeString(fmt.Sprintf("Signature %d", i+1))
+		sigField.Rect = core.MakeArray(
 			core.MakeInteger(0),
 			core.MakeInteger(0),
 			core.MakeInteger(0),
 			core.MakeInteger(0),
 		)
-		widget.Parent = sigField.GetContainingPdfObject()
-
-		sigField.Annotations = append(sigField.Annotations, widget)
 
 		if err = appender.Sign(1, sigField); err != nil {
 			t.Errorf("Fail: %v\n", err)
@@ -657,7 +645,6 @@ func TestSignatureAppearance(t *testing.T) {
 			opts,
 		)
 		sigField.T = core.MakeString(fmt.Sprintf("Signature %d", pageNum))
-		sigField.F = core.MakeInteger(132)
 
 		if err = appender.Sign(pageNum, sigField); err != nil {
 			t.Errorf("Fail: %v\n", err)
@@ -682,7 +669,6 @@ func TestSignatureAppearance(t *testing.T) {
 			opts,
 		)
 		sigField.T = core.MakeString(fmt.Sprintf("Signature2 %d", pageNum))
-		sigField.F = core.MakeInteger(132)
 
 		if err = appender.Sign(pageNum, sigField); err != nil {
 			log.Fatalf("Fail: %v\n", err)
@@ -708,7 +694,6 @@ func TestSignatureAppearance(t *testing.T) {
 			opts,
 		)
 		sigField.T = core.MakeString(fmt.Sprintf("Signature3 %d", pageNum))
-		sigField.F = core.MakeInteger(132)
 
 		if err = appender.Sign(pageNum, sigField); err != nil {
 			log.Fatalf("Fail: %v\n", err)

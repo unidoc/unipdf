@@ -406,7 +406,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	// Add signature field annotations to the page annotations.
 	field.P = page.ToPdfObject()
 	if field.T == nil || field.T.String() == "" {
-		field.T = core.MakeString(fmt.Sprintf("Signature %d", page))
+		field.T = core.MakeString(fmt.Sprintf("Signature %d", pageNum))
 	}
 
 	page.Annotations = append(page.Annotations, field.PdfAnnotationWidget.PdfAnnotation)
