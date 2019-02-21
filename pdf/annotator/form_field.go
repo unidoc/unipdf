@@ -225,7 +225,7 @@ type SignatureFieldOpts struct {
 	// Rect represents the area the signature annotation is displayed on.
 	Rect []float64
 
-	// AutoSize specifies is the content of the appearance should be
+	// AutoSize specifies if the content of the appearance should be
 	// scaled to fit in the annotation rectangle.
 	AutoSize bool
 

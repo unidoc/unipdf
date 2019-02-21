@@ -1249,7 +1249,7 @@ func genFieldSignatureAppearance(fields []*SignatureLine, opts *SignatureFieldOp
 	rectWidth := rect[2] - rect[0]
 	rectHeight := rect[3] - rect[1]
 
-	// Fit contents
+	// Fit contents.
 	var offsetY float64
 	if opts.AutoSize {
 		if maxLineWidth > rectWidth || height > rectHeight {
