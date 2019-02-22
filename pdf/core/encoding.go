@@ -1712,16 +1712,21 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 				break
 			case *PdfObjectArray:
 				if t.Len() == 1 {
-					if dp, isDict := t.Get(0).(*PdfObjectDictionary); isDict {
+					if dp, ok := GetDict(t.Get(0)); ok {
 						decodeParams = dp
 					}
 				}
 			default:
 				common.Log.Error("DecodeParms not a dictionary %#v", obj)
-				return nil, fmt.Errorf("Invalid DecodeParms")
+				return nil, errors.New("invalid DecodeParms")
 			}
 		}
+		if decodeParams == nil {
+			common.Log.Error("DecodeParms not specified %#v", obj)
+			return nil, errors.New("invalid DecodeParms")
+		}
 	}
+
 
 	if k, err := GetNumberAsInt64(decodeParams.Get("K")); err == nil {
 		encoder.K = int(k)
