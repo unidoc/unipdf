@@ -671,6 +671,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 			if err := handler.Sign(sigDict.signature, digest); err != nil {
 				return err
 			}
+			sigDict.signature.ByteRange = byteRange
 			contents := []byte(sigDict.signature.Contents.WriteString())
 
 			// Empty out the ByteRange and Content data.
