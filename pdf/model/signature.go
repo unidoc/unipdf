@@ -173,17 +173,15 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	dict.Set("Type", sig.Type)
 	dict.SetIfNotNil("Filter", sig.Filter)
 	dict.SetIfNotNil("SubFilter", sig.SubFilter)
+	dict.SetIfNotNil("ByteRange", sig.ByteRange)
 	dict.SetIfNotNil("Contents", sig.Contents)
 	dict.SetIfNotNil("Cert", sig.Cert)
-	dict.SetIfNotNil("ByteRange", sig.ByteRange)
+	dict.SetIfNotNil("Name", sig.Name)
+	dict.SetIfNotNil("Reason", sig.Reason)
+	dict.SetIfNotNil("M", sig.M)
 	dict.SetIfNotNil("Reference", sig.Reference)
 	dict.SetIfNotNil("Changes", sig.Changes)
-	dict.SetIfNotNil("Name", sig.Name)
-	dict.SetIfNotNil("M", sig.M)
-	dict.SetIfNotNil("Reason", sig.Reason)
 	dict.SetIfNotNil("ContactInfo", sig.ContactInfo)
-	dict.SetIfNotNil("ByteRange", sig.ByteRange)
-	dict.SetIfNotNil("Contents", sig.Contents)
 
 	// NOTE: ByteRange and Contents need to be updated dynamically.
 	// TODO: Currently dynamic update is only in the appender, need to support
