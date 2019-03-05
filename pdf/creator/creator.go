@@ -714,13 +714,10 @@ func (c *Creator) NewStyledTOCLine(number, title, page TextChunk, level uint, st
 // NewChapter creates a new chapter with the specified title as the heading.
 func (c *Creator) NewChapter(title string) *Chapter {
 	c.chapters++
-	return newChapter(c.toc, c.outline, title, c.chapters, c.NewTextStyle())
-}
+	style := c.NewTextStyle()
+	style.FontSize = 16
 
-// NewSubchapter creates a new Subchapter under Chapter ch with specified title.
-// All other parameters are set to their defaults.
-func (c *Creator) NewSubchapter(ch *Chapter, title string) *Subchapter {
-	return newSubchapter(ch, title, c.NewTextStyle())
+	return newChapter(nil, c.toc, c.outline, title, c.chapters, style)
 }
 
 // NewInvoice returns an instance of an empty invoice.
