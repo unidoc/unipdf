@@ -182,19 +182,17 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= chap.margins.top
 	}
 
-	origX := ctx.X
-	origY := ctx.Y
-
-	blocks, ctx, err := chap.heading.GeneratePageBlocks(ctx)
+	blocks, c, err := chap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
 	}
-	if len(blocks) > 1 {
-		ctx.Page++ // Did not fit, moved to new Page block.
-	}
+	ctx = c
 
 	// Generate chapter title and number.
+	posX := ctx.X
+	posY := ctx.Y - chap.heading.Height()
 	page := int64(ctx.Page)
+
 	chapNumber := chap.headingNumber()
 	chapTitle := chap.headingText()
 
@@ -202,7 +200,7 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 	if chap.includeInTOC {
 		line := chap.toc.Add(chapNumber, chap.title, strconv.FormatInt(page, 10), chap.level)
 		if chap.toc.showLinks {
-			line.SetLink(page, origX, origY)
+			line.SetLink(page, posX, posY)
 		}
 	}
 
@@ -210,7 +208,7 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 	if chap.outlineItem == nil {
 		chap.outlineItem = model.NewOutlineItem(
 			chapTitle,
-			model.NewOutlineDest(page-1, origX, origY),
+			model.NewOutlineDest(page-1, posX, posY),
 		)
 
 		if chap.parent != nil {
@@ -221,8 +219,8 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 	} else {
 		outlineDest := &chap.outlineItem.Dest
 		outlineDest.Page = page - 1
-		outlineDest.X = origX
-		outlineDest.Y = origY
+		outlineDest.X = posX
+		outlineDest.Y = posY
 	}
 
 	for _, d := range chap.contents {
