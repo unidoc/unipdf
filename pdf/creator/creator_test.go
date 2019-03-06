@@ -898,8 +898,6 @@ func TestSubchapters(t *testing.T) {
 	subchap1 := ch1.NewSubchapter("The fundamentals")
 	subchap1.SetMargins(0, 0, 5, 0)
 
-	//subCh1 := NewSubchapter(ch1, "Workflow")
-
 	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
 		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
 		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
@@ -921,6 +919,15 @@ func TestSubchapters(t *testing.T) {
 	subchap3.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 19; j++ {
 		subchap3.Add(p)
+	}
+
+	// Create multi-level subchapters.
+	subchap := subchap3
+	for i := 0; i < 5; i++ {
+		subchap = subchap.NewSubchapter(fmt.Sprintf("Discussion %d", i+1))
+		for j := 0; j < 5; j++ {
+			subchap.Add(p)
+		}
 	}
 
 	subchap4 := ch1.NewSubchapter("Conclusion")
