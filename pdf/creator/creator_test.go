@@ -793,7 +793,7 @@ func TestSubchaptersSimple(t *testing.T) {
 
 	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
-	subchap1 := c.NewSubchapter(ch1, "The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
+	subchap1 := ch1.NewSubchapter("The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
 	subchap1.SetMargins(0, 0, 5, 0)
 
 	//subCh1 := NewSubchapter(ch1, "Workflow")
@@ -809,19 +809,19 @@ func TestSubchaptersSimple(t *testing.T) {
 		subchap1.Add(p)
 	}
 
-	subchap2 := c.NewSubchapter(ch1, "Mechanism")
+	subchap2 := ch1.NewSubchapter("Mechanism")
 	subchap2.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 1; j++ {
 		subchap2.Add(p)
 	}
 
-	subchap3 := c.NewSubchapter(ch1, "Discussion")
+	subchap3 := ch1.NewSubchapter("Discussion")
 	subchap3.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 1; j++ {
 		subchap3.Add(p)
 	}
 
-	subchap4 := c.NewSubchapter(ch1, "Conclusion")
+	subchap4 := ch1.NewSubchapter("Conclusion")
 	subchap4.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 1; j++ {
 		subchap4.Add(p)
@@ -895,10 +895,8 @@ func TestSubchapters(t *testing.T) {
 
 	// Add chapters.
 	ch1 := c.NewChapter("Introduction")
-	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+	subchap1 := ch1.NewSubchapter("The fundamentals")
 	subchap1.SetMargins(0, 0, 5, 0)
-
-	//subCh1 := NewSubchapter(ch1, "Workflow")
 
 	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
 		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
@@ -911,19 +909,28 @@ func TestSubchapters(t *testing.T) {
 		subchap1.Add(p)
 	}
 
-	subchap2 := c.NewSubchapter(ch1, "Mechanism")
+	subchap2 := ch1.NewSubchapter("Mechanism")
 	subchap2.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 15; j++ {
 		subchap2.Add(p)
 	}
 
-	subchap3 := c.NewSubchapter(ch1, "Discussion")
+	subchap3 := ch1.NewSubchapter("Discussion")
 	subchap3.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 19; j++ {
 		subchap3.Add(p)
 	}
 
-	subchap4 := c.NewSubchapter(ch1, "Conclusion")
+	// Create multi-level subchapters.
+	subchap := subchap3
+	for i := 0; i < 5; i++ {
+		subchap = subchap.NewSubchapter(fmt.Sprintf("Discussion %d", i+1))
+		for j := 0; j < 5; j++ {
+			subchap.Add(p)
+		}
+	}
+
+	subchap4 := ch1.NewSubchapter("Conclusion")
 	subchap4.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 23; j++ {
 		subchap4.Add(p)
@@ -1808,7 +1815,7 @@ func TestTableInSubchapter(t *testing.T) {
 	ch.GetHeading().SetFontSize(18)
 	ch.GetHeading().SetColor(ColorRGBFrom8bit(72, 86, 95))
 
-	sc := c.NewSubchapter(ch, "Issuer details")
+	sc := ch.NewSubchapter("Issuer details")
 	sc.SetMargins(0, 0, 5, 0)
 	sc.GetHeading().SetFont(fontRegular)
 	sc.GetHeading().SetFontSize(18)
@@ -1862,7 +1869,7 @@ func TestTableInSubchapter(t *testing.T) {
 
 	ch.Add(issuerTable)
 
-	sc = c.NewSubchapter(ch, "My Statement")
+	sc = ch.NewSubchapter("My Statement")
 	//sc.SetMargins(0, 0, 5, 0)
 	sc.GetHeading().SetFont(fontRegular)
 	sc.GetHeading().SetFontSize(18)
@@ -2381,7 +2388,7 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 		c.AddTOC = true
 
 		ch1 := c.NewChapter("Introduction")
-		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+		subchap1 := ch1.NewSubchapter("The fundamentals")
 		subchap1.SetMargins(0, 0, 5, 0)
 
 		//subCh1 := NewSubchapter(ch1, "Workflow")
@@ -2398,19 +2405,19 @@ func TestCombineDuplicateDirectObjects(t *testing.T) {
 			subchap1.Add(p)
 		}
 
-		subchap2 := c.NewSubchapter(ch1, "Mechanism")
+		subchap2 := ch1.NewSubchapter("Mechanism")
 		subchap2.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 3; j++ {
 			subchap2.Add(p)
 		}
 
-		subchap3 := c.NewSubchapter(ch1, "Discussion")
+		subchap3 := ch1.NewSubchapter("Discussion")
 		subchap3.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 4; j++ {
 			subchap3.Add(p)
 		}
 
-		subchap4 := c.NewSubchapter(ch1, "Conclusion")
+		subchap4 := ch1.NewSubchapter("Conclusion")
 		subchap4.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 3; j++ {
 			subchap4.Add(p)
@@ -2588,7 +2595,7 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 	c.AddTOC = true
 
 	ch1 := c.NewChapter("Introduction")
-	subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+	subchap1 := ch1.NewSubchapter("The fundamentals")
 	subchap1.SetMargins(0, 0, 5, 0)
 
 	//subCh1 := NewSubchapter(ch1, "Workflow")
@@ -2604,19 +2611,19 @@ func TestCombineIdenticalIndirectObjects(t *testing.T) {
 		subchap1.Add(p)
 	}
 
-	subchap2 := c.NewSubchapter(ch1, "Mechanism")
+	subchap2 := ch1.NewSubchapter("Mechanism")
 	subchap2.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 15; j++ {
 		subchap2.Add(p)
 	}
 
-	subchap3 := c.NewSubchapter(ch1, "Discussion")
+	subchap3 := ch1.NewSubchapter("Discussion")
 	subchap3.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 19; j++ {
 		subchap3.Add(p)
 	}
 
-	subchap4 := c.NewSubchapter(ch1, "Conclusion")
+	subchap4 := ch1.NewSubchapter("Conclusion")
 	subchap4.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 23; j++ {
 		subchap4.Add(p)
@@ -2781,7 +2788,7 @@ func TestAllOptimizations(t *testing.T) {
 		c.AddTOC = true
 
 		ch1 := c.NewChapter("Introduction")
-		subchap1 := c.NewSubchapter(ch1, "The fundamentals")
+		subchap1 := ch1.NewSubchapter("The fundamentals")
 		subchap1.SetMargins(0, 0, 5, 0)
 
 		//subCh1 := NewSubchapter(ch1, "Workflow")
@@ -2797,19 +2804,19 @@ func TestAllOptimizations(t *testing.T) {
 			subchap1.Add(p)
 		}
 
-		subchap2 := c.NewSubchapter(ch1, "Mechanism")
+		subchap2 := ch1.NewSubchapter("Mechanism")
 		subchap2.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 15; j++ {
 			subchap2.Add(p)
 		}
 
-		subchap3 := c.NewSubchapter(ch1, "Discussion")
+		subchap3 := ch1.NewSubchapter("Discussion")
 		subchap3.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 19; j++ {
 			subchap3.Add(p)
 		}
 
-		subchap4 := c.NewSubchapter(ch1, "Conclusion")
+		subchap4 := ch1.NewSubchapter("Conclusion")
 		subchap4.SetMargins(0, 0, 5, 0)
 		for j := 0; j < 23; j++ {
 			subchap4.Add(p)
