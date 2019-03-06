@@ -17,9 +17,16 @@ import (
 // Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
 // The concept is the same as a book or a report chapter.
 type Chapter struct {
-	number   int
-	title    string
-	heading  *Paragraph
+	// The number of the chapter.
+	number int
+
+	// The title of the chapter.
+	title string
+
+	// The heading paragraph of the chapter.
+	heading *Paragraph
+
+	// The content components of the chapter.
 	contents []Drawable
 
 	// The number of subchapters the chapter has.
@@ -83,7 +90,7 @@ func newChapter(parent *Chapter, toc *TOC, outline *model.Outline, title string,
 	return chapter
 }
 
-// NewSubchapter creates a new child chapter with specified heading.
+// NewSubchapter creates a new child chapter with the specified title.
 func (chap *Chapter) NewSubchapter(title string) *Chapter {
 	style := newTextStyle(chap.heading.textFont)
 	style.FontSize = 14
@@ -142,6 +149,8 @@ func (chap *Chapter) Add(d Drawable) error {
 	return nil
 }
 
+// headingNumber returns the chapter heading number based on the chapter
+// hierarchy and the showNumbering property.
 func (chap *Chapter) headingNumber() string {
 	var chapNumber string
 	if chap.showNumbering {
@@ -160,6 +169,7 @@ func (chap *Chapter) headingNumber() string {
 	return chapNumber
 }
 
+// headingText returns the chapter heading text content.
 func (chap *Chapter) headingText() string {
 	heading := chap.title
 	if chapNumber := chap.headingNumber(); chapNumber != "" {
