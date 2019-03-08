@@ -12,20 +12,20 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// ImageExtractOpts contains options for controlling image extraction from
+// ImageExtractOptions contains options for controlling image extraction from
 // PDF pages.
-type ImageExtractOpts struct {
+type ImageExtractOptions struct {
 	IncludeInlineStencilMasks bool
 }
 
 // ExtractPageImages returns the image contents of the page extractor, including data
 // and position, size information for each image.
-// A set of options to control page image extraction can be passed in. The opts
+// A set of options to control page image extraction can be passed in. The options
 // parameter can be nil for the default options. By default, inline stencil masks
 // are not extracted.
-func (e *Extractor) ExtractPageImages(opts *ImageExtractOpts) (*PageImages, error) {
+func (e *Extractor) ExtractPageImages(options *ImageExtractOptions) (*PageImages, error) {
 	ctx := &imageExtractContext{
-		opts: opts,
+		options: options,
 	}
 
 	err := ctx.extractContentStreamImages(e.contents, e.resources)
@@ -72,7 +72,7 @@ type imageExtractContext struct {
 	cacheXObjectImages map[*core.PdfObjectStream]*cachedImage
 
 	// Extract options.
-	opts *ImageExtractOpts
+	options *ImageExtractOptions
 }
 
 type cachedImage struct {
@@ -90,8 +90,8 @@ func (ctx *imageExtractContext) extractContentStreamImages(contents string, reso
 	if ctx.cacheXObjectImages == nil {
 		ctx.cacheXObjectImages = map[*core.PdfObjectStream]*cachedImage{}
 	}
-	if ctx.opts == nil {
-		ctx.opts = &ImageExtractOpts{}
+	if ctx.options == nil {
+		ctx.options = &ImageExtractOptions{}
 	}
 
 	processor := contentstream.NewContentStreamProcessor(*operations)
@@ -113,7 +113,7 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 		}
 
 		if isImageMask, ok := core.GetBoolVal(iimg.ImageMask); ok {
-			if isImageMask && !ctx.opts.IncludeInlineStencilMasks {
+			if isImageMask && !ctx.options.IncludeInlineStencilMasks {
 				return nil
 			}
 		}
