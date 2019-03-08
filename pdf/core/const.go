@@ -7,6 +7,7 @@ package core
 
 import "errors"
 
+// Common errors that may occur on PDF parsing/writing.
 var (
 	// ErrUnsupportedEncodingParameters error indicates that encoding/decoding was attempted with unsupported
 	// encoding parameters.

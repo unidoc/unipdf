@@ -37,6 +37,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/ccittfax"
 )
 
+// Stream encoding filter names.
 const (
 	StreamEncodingFilterNameFlate     = "FlateDecode"
 	StreamEncodingFilterNameLZW       = "LZWDecode"
@@ -51,9 +52,11 @@ const (
 )
 
 const (
+	// DefaultJPEGQuality is the default quality produced by JPEG encoders.
 	DefaultJPEGQuality = 75
 )
 
+// StreamEncoder represents the interface for all PDF stream encoders.
 type StreamEncoder interface {
 	GetFilterName() string
 	MakeDecodeParams() PdfObject
@@ -99,10 +102,13 @@ func (enc *FlateEncoder) SetPredictor(columns int) {
 	enc.Columns = columns
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *FlateEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameFlate
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *FlateEncoder) MakeDecodeParams() PdfObject {
 	if enc.Predictor > 1 {
 		decodeParams := MakeDict()
@@ -250,6 +256,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	return encoder, nil
 }
 
+// DecodeBytes decodes a slice of Flate encoded bytes and returns the result.
 func (enc *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Trace("FlateDecode bytes")
 
@@ -491,10 +498,13 @@ func NewLZWEncoder() *LZWEncoder {
 	return encoder
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *LZWEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameLZW
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *LZWEncoder) MakeDecodeParams() PdfObject {
 	if enc.Predictor > 1 {
 		decodeParams := MakeDict()
@@ -669,6 +679,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 	return encoder, nil
 }
 
+// DecodeBytes decodes a slice of LZW encoded bytes and returns the result.
 func (enc *LZWEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	var outBuf bytes.Buffer
 	bufReader := bytes.NewReader(encoded)
@@ -691,6 +702,8 @@ func (enc *LZWEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return outBuf.Bytes(), nil
 }
 
+// DecodeStream decodes a LZW encoded stream and returns the result as a
+// slice of bytes.
 func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	// Revamp this support to handle TIFF predictor (2).
 	// Also handle more filter bytes and check
@@ -858,10 +871,13 @@ func NewDCTEncoder() *DCTEncoder {
 	return encoder
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *DCTEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameDCT
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *DCTEncoder) MakeDecodeParams() PdfObject {
 	// Does not have decode params.
 	return nil
@@ -971,6 +987,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	return encoder, nil
 }
 
+// DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
 	//img, _, err := goimage.Decode(bufReader)
@@ -1084,6 +1101,8 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return decoded, nil
 }
 
+// DecodeStream decodes a DCT encoded stream and returns the result as a
+// slice of bytes.
 func (enc *DCTEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return enc.DecodeBytes(streamObj.Stream)
 }
@@ -1096,6 +1115,7 @@ type DrawableImage interface {
 	Set(x, y int, c gocolor.Color)
 }
 
+// EncodeBytes DCT encodes the passed in slice of bytes.
 func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	bounds := goimage.Rect(0, 0, enc.Width, enc.Height)
 	var img DrawableImage
@@ -1192,6 +1212,7 @@ func NewRunLengthEncoder() *RunLengthEncoder {
 	return &RunLengthEncoder{}
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *RunLengthEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameRunLength
 }
@@ -1316,6 +1337,8 @@ func (enc *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return inb, nil
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *RunLengthEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1341,10 +1364,13 @@ func NewASCIIHexEncoder() *ASCIIHexEncoder {
 	return encoder
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *ASCIIHexEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameASCIIHex
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *ASCIIHexEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1360,6 +1386,7 @@ func (enc *ASCIIHexEncoder) MakeStreamDict() *PdfObjectDictionary {
 func (enc *ASCIIHexEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
+// DecodeBytes decodes a slice of ASCII encoded bytes and returns the result.
 func (enc *ASCIIHexEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
 	var inb []byte
@@ -1398,6 +1425,7 @@ func (enc *ASCIIHexEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, er
 	return enc.DecodeBytes(streamObj.Stream)
 }
 
+// EncodeBytes ASCII encodes the passed in slice of bytes.
 func (enc *ASCIIHexEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	var encoded bytes.Buffer
 
@@ -1419,10 +1447,13 @@ func NewASCII85Encoder() *ASCII85Encoder {
 	return encoder
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *ASCII85Encoder) GetFilterName() string {
 	return StreamEncodingFilterNameASCII85
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *ASCII85Encoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1586,14 +1617,18 @@ func (enc *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
 // RawEncoder implements Raw encoder/decoder (no encoding, pass through)
 type RawEncoder struct{}
 
+// NewRawEncoder returns a new instace of RawEncoder.
 func NewRawEncoder() *RawEncoder {
 	return &RawEncoder{}
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *RawEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameRaw
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *RawEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1607,14 +1642,20 @@ func (enc *RawEncoder) MakeStreamDict() *PdfObjectDictionary {
 func (enc *RawEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
+// DecodeBytes returns the passed in slice of bytes.
+// The purpose of the method is to satisfy the StreamEncoder interface.
 func (enc *RawEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
 
+// DecodeStream returns the passed in stream as a slice of bytes.
+// The purpose of the method is to satisfy the StreamEncoder interface.
 func (enc *RawEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return streamObj.Stream, nil
 }
 
+// EncodeBytes returns the passed in slice of bytes.
+// The purpose of the method is to satisfy the StreamEncoder interface.
 func (enc *RawEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return data, nil
 }
@@ -1639,7 +1680,7 @@ func NewCCITTFaxEncoder() *CCITTFaxEncoder {
 	}
 }
 
-// GetFilterName gets the filter name.
+// GetFilterName returns the name of the encoding filter.
 func (enc *CCITTFaxEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameCCITTFax
 }
@@ -1938,14 +1979,18 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 // FIXME: implement
 type JBIG2Encoder struct{}
 
+// NewJBIG2Encoder returns a new instance of JBIG2Encoder.
 func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *JBIG2Encoder) GetFilterName() string {
 	return StreamEncodingFilterNameJBIG2
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1959,16 +2004,20 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
+// DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the result.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return encoded, ErrNoJBIG2Decode
 }
 
+// DecodeStream decodes a JBIG2 encoded stream and returns the result as a
+// slice of bytes.
 func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return streamObj.Stream, ErrNoJBIG2Decode
 }
 
+// EncodeBytes JBIG2 encodes the passed in slice of bytes.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return data, ErrNoJBIG2Decode
@@ -1978,14 +2027,18 @@ func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 // FIXME: implement
 type JPXEncoder struct{}
 
+// NewJPXEncoder returns a new instance of JPXEncoder.
 func NewJPXEncoder() *JPXEncoder {
 	return &JPXEncoder{}
 }
 
+// GetFilterName returns the name of the encoding filter.
 func (enc *JPXEncoder) GetFilterName() string {
 	return StreamEncodingFilterNameJPX
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *JPXEncoder) MakeDecodeParams() PdfObject {
 	return nil
 }
@@ -1999,16 +2052,20 @@ func (enc *JPXEncoder) MakeStreamDict() *PdfObjectDictionary {
 func (enc *JPXEncoder) UpdateParams(params *PdfObjectDictionary) {
 }
 
+// DecodeBytes decodes a slice of JPX encoded bytes and returns the result.
 func (enc *JPXEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return encoded, ErrNoJPXDecode
 }
 
+// DecodeStream decodes a JPX encoded stream and returns the result as a
+// slice of bytes.
 func (enc *JPXEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return streamObj.Stream, ErrNoJPXDecode
 }
 
+// EncodeBytes JPX encodes the passed in slice of bytes.
 func (enc *JPXEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return data, ErrNoJPXDecode
@@ -2020,6 +2077,7 @@ type MultiEncoder struct {
 	encoders []StreamEncoder
 }
 
+// NewMultiEncoder returns a new instance of MultiEncoder.
 func NewMultiEncoder() *MultiEncoder {
 	encoder := MultiEncoder{}
 	encoder.encoders = []StreamEncoder{}
@@ -2136,6 +2194,8 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 	return mencoder, nil
 }
 
+// GetFilterName returns the names of the underlying encoding filters,
+// separated by spaces.
 func (enc *MultiEncoder) GetFilterName() string {
 	name := ""
 	for idx, encoder := range enc.encoders {
@@ -2147,6 +2207,8 @@ func (enc *MultiEncoder) GetFilterName() string {
 	return name
 }
 
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
 func (enc *MultiEncoder) MakeDecodeParams() PdfObject {
 	if len(enc.encoders) == 0 {
 		return nil
@@ -2169,10 +2231,12 @@ func (enc *MultiEncoder) MakeDecodeParams() PdfObject {
 	return array
 }
 
+// AddEncoder adds the passed in encoder to the underlying encoder slice.
 func (enc *MultiEncoder) AddEncoder(encoder StreamEncoder) {
 	enc.encoders = append(enc.encoders, encoder)
 }
 
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
@@ -2204,6 +2268,8 @@ func (enc *MultiEncoder) UpdateParams(params *PdfObjectDictionary) {
 	}
 }
 
+// DecodeBytes decodes a multi-encoded slice of bytes by passing it through the
+// DecodeBytes method of the underlying encoders.
 func (enc *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	decoded := encoded
 	var err error
@@ -2220,10 +2286,14 @@ func (enc *MultiEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return decoded, nil
 }
 
+// DecodeStream decodes a multi-encoded stream by passing it through the
+// DecodeStream method of the underlying encoders.
 func (enc *MultiEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return enc.DecodeBytes(streamObj.Stream)
 }
 
+// EncodeBytes encodes the passed in slice of bytes by passing it through the
+// EncodeBytes method of the underlying encoders.
 func (enc *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	encoded := data
 	var err error
