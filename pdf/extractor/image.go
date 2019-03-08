@@ -12,9 +12,9 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// ExtractImagesOpts contains options for controlling image extraction from
+// ImageExtractOpts contains options for controlling image extraction from
 // PDF pages.
-type ExtractPageImagesOpts struct {
+type ImageExtractOpts struct {
 	IncludeInlineStencilMasks bool
 }
 
@@ -23,7 +23,7 @@ type ExtractPageImagesOpts struct {
 // A set of options to control page image extraction can be passed in. The opts
 // parameter can be nil for the default options. By default, inline stencil masks
 // are not extracted.
-func (e *Extractor) ExtractPageImages(opts *ExtractPageImagesOpts) (*PageImages, error) {
+func (e *Extractor) ExtractPageImages(opts *ImageExtractOpts) (*PageImages, error) {
 	ctx := &imageExtractContext{
 		opts: opts,
 	}
@@ -72,7 +72,7 @@ type imageExtractContext struct {
 	cacheXObjectImages map[*core.PdfObjectStream]*cachedImage
 
 	// Extract options.
-	opts *ExtractPageImagesOpts
+	opts *ImageExtractOpts
 }
 
 type cachedImage struct {
@@ -91,7 +91,7 @@ func (ctx *imageExtractContext) extractContentStreamImages(contents string, reso
 		ctx.cacheXObjectImages = map[*core.PdfObjectStream]*cachedImage{}
 	}
 	if ctx.opts == nil {
-		ctx.opts = &ExtractPageImagesOpts{}
+		ctx.opts = &ImageExtractOpts{}
 	}
 
 	processor := contentstream.NewContentStreamProcessor(*operations)
