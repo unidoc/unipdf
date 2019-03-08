@@ -195,7 +195,7 @@ func (parser *PdfParser) repairSeekXrefMarker() error {
 	reXrefTableStart := regexp.MustCompile(`\sxref\s*`)
 
 	// Define the starting point (from the end of the file) to search from.
-	var offset int64 = 0
+	var offset int64
 
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
 	var buflen int64 = 1000
@@ -237,10 +237,9 @@ func (parser *PdfParser) repairSeekXrefMarker() error {
 			}
 
 			return nil
-		} else {
-			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		}
 
+		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		offset += buflen
 	}
 

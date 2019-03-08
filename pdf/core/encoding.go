@@ -1727,7 +1727,6 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 		}
 	}
 
-
 	if k, err := GetNumberAsInt64(decodeParams.Get("K")); err == nil {
 		encoder.K = int(k)
 	}
@@ -1857,8 +1856,8 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:             enc.Rows,
-		EncodedByteAlign: enc.EncodedByteAlign,
+		Rows:                   enc.Rows,
+		EncodedByteAlign:       enc.EncodedByteAlign,
 	}
 
 	pixels, err := encoder.Decode(encoded)
@@ -1869,8 +1868,8 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	// reassemble image
 	var decoded []byte
 	decodedIdx := 0
-	var bitPos byte = 0
-	var currentByte byte = 0
+	var bitPos byte
+	var currentByte byte
 	for i := range pixels {
 		for j := range pixels[i] {
 			currentByte |= pixels[i][j] << (7 - bitPos)
@@ -1928,8 +1927,8 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:             enc.Rows,
-		EncodedByteAlign: enc.EncodedByteAlign,
+		Rows:                   enc.Rows,
+		EncodedByteAlign:       enc.EncodedByteAlign,
 	}
 
 	return encoder.Encode(pixels), nil

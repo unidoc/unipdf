@@ -304,8 +304,8 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			common.Log.Debug("ERROR Circular reference!?!")
 			return nil, true, errors.New("xref circular reference")
 		}
-		_, exists := parser.xrefs[xref.OsObjNumber]
-		if exists {
+
+		if _, exists := parser.xrefs[xref.OsObjNumber]; exists {
 			optr, err := parser.lookupObjectViaOS(xref.OsObjNumber, objNumber) //xref.OsObjIndex)
 			if err != nil {
 				common.Log.Debug("ERROR Returning ERR (%s)", err)
@@ -319,10 +319,10 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 				parser.crypter.decryptedObjects[optr] = true
 			}
 			return optr, true, nil
-		} else {
-			common.Log.Debug("?? Belongs to a non-cross referenced object ...!")
-			return nil, true, errors.New("os belongs to a non cross referenced object")
 		}
+
+		common.Log.Debug("?? Belongs to a non-cross referenced object ...!")
+		return nil, true, errors.New("os belongs to a non cross referenced object")
 	}
 	return nil, false, errors.New("unknown xref type")
 }

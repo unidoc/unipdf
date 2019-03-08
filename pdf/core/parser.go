@@ -123,12 +123,13 @@ func (parser *PdfParser) skipComments() error {
 			common.Log.Debug("Error %s", err.Error())
 			return err
 		}
+
 		if isFirst && bb[0] != '%' {
 			// Not a comment clearly.
 			return nil
-		} else {
-			isFirst = false
 		}
+		isFirst = false
+
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			parser.reader.ReadByte()
 		} else {
@@ -158,9 +159,9 @@ func (parser *PdfParser) readComment() (string, error) {
 		}
 		if isFirst && bb[0] != '%' {
 			return r.String(), errors.New("comment should start with %")
-		} else {
-			isFirst = false
 		}
+		isFirst = false
+
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			b, _ := parser.reader.ReadByte()
 			r.WriteByte(b)
@@ -301,6 +302,7 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 		}
 	}
 
+	var o PdfObject
 	if isFloat {
 		fVal, err := strconv.ParseFloat(r.String(), 64)
 		if err != nil {
@@ -308,13 +310,22 @@ func (parser *PdfParser) parseNumber() (PdfObject, error) {
 			fVal = 0.0
 			err = nil
 		}
-		o := PdfObjectFloat(fVal)
-		return &o, err
+
+		objFloat := PdfObjectFloat(fVal)
+		o = &objFloat
 	} else {
 		intVal, err := strconv.ParseInt(r.String(), 10, 64)
-		o := PdfObjectInteger(intVal)
-		return &o, err
+		if err != nil {
+			common.Log.Debug("Error parsing number %v err=%v. Using 0. Output may be incorrect", r.String(), err)
+			intVal = 0
+			err = nil
+		}
+
+		objInt := PdfObjectInteger(intVal)
+		o = &objInt
 	}
+
+	return o, nil
 }
 
 // A string starts with '(' and ends with ')'.
@@ -963,7 +974,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 
 	// Convert byte array to a larger integer, little-endian.
 	convertBytes := func(v []byte) int64 {
-		var tmp int64 = 0
+		var tmp int64
 		for i := 0; i < len(v); i++ {
 			tmp += int64(v[i]) * (1 << uint(8*(len(v)-i-1)))
 		}
@@ -1097,7 +1108,7 @@ func (parser *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 // Define an offset position from the end of the file.
 func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 	// Define the starting point (from the end of the file) to search from.
-	var offset int64 = 0
+	var offset int64
 
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
 	var buflen int64 = 1000
@@ -1124,10 +1135,9 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 			common.Log.Trace("Ind: % d", ind)
 			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
-		} else {
-			common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		}
 
+		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
 		offset += buflen
 	}
 

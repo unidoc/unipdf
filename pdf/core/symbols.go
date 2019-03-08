@@ -27,9 +27,9 @@ func IsFloatDigit(c byte) bool {
 func IsDecimalDigit(c byte) bool {
 	if c >= '0' && c <= '9' {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // IsOctalDigit checks if a character can be part of an octal digit string.
@@ -37,9 +37,9 @@ func IsDecimalDigit(c byte) bool {
 func IsOctalDigit(c byte) bool {
 	if c >= '0' && c <= '7' {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // IsPrintable checks if a character is printable.
