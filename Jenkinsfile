@@ -90,11 +90,19 @@ node {
                 }
                 // Special cases.
                 switch("${env.BRANCH_NAME}") {
-                    case "v3-enhance-forms":
-                        examplesBranch = "v3-enhance-forms"
+                    case "v3-reduce-fonts-exports":
+                        examplesBranch = "v3-reduce-fonts-exports"
                         break
                 }
             }
+
+            // Check if connected branch is defined explicitly.
+            def safeName = env.BRANCH_NAME.replaceAll(/[\/\.]/, '')
+            def fpath = "/home/jenkins/exbranch/" + safeName
+            if (fileExists(fpath)) {
+                examplesBranch = readFile(fpath).trim()
+            }
+
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
             

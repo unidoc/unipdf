@@ -753,7 +753,7 @@ const glyphTextRatio = 1.0 / 1000.0
 // translation returns the translation part of `m`.
 func translation(m transform.Matrix) transform.Point {
 	tx, ty := m.Translation()
-	return transform.Point{tx, ty}
+	return transform.Point{X: tx, Y: ty}
 }
 
 // translationMatrix returns a matrix that translates by `p`.

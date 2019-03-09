@@ -701,7 +701,7 @@ func (t *ttfParser) ParsePost() error {
 		if maxIndex >= len(macGlyphNames) {
 			nameArray = make([]GlyphName, maxIndex-len(macGlyphNames)+1)
 			for i := 0; i < maxIndex-len(macGlyphNames)+1; i++ {
-				numberOfChars := int(t.ReadByte())
+				numberOfChars := int(t.readByte())
 				names, err := t.ReadStr(numberOfChars)
 				if err != nil {
 					return err
@@ -814,8 +814,8 @@ func (t *ttfParser) ReadStr(length int) (string, error) {
 	return string(buf), nil
 }
 
-// ReadByte reads a byte and returns it as unsigned.
-func (t *ttfParser) ReadByte() (val uint8) {
+// readByte reads a byte and returns it as unsigned.
+func (t *ttfParser) readByte() (val uint8) {
 	binary.Read(t.f, binary.BigEndian, &val)
 	return val
 }
