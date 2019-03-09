@@ -7,7 +7,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
-const fontDir = `../../creator/testdata`
+const fontDir = `../../../creator/testdata`
 
 type charCode = textencoding.CharCode
 
