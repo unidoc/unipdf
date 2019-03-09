@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/unidoc/unidoc/common"
+	"math/bits"
 )
 
 const (
@@ -66,11 +67,89 @@ func (b *BitSet) Get(index uint) (bool, error) {
 	return value, nil
 }
 
-//
-func (b *BitSet) SetByteOffset(bt byte, byteOffset int) error {
-	if byteOffset*8 > b.length {
+// valueLength should be in range from 0 to 8
+// i.e. the valueLength = 5 means that the byte 00011011 have 5 bits -> 11011
+// bitOffset is the offset the the bitSet
+func (b *BitSet) setByteBitwiseOffset(bt byte, valueLength, bitOffset int, reverse bool) error {
+	if bitOffset > b.length {
 		return ErrIndexOutOfRange
 	}
+
+	if valueLength == 0 {
+		return errors.New("No value provided")
+	}
+
+	if reverse {
+		bt = byte(bits.Reverse8(uint8(bt)))
+
+		common.Log.Debug("Reversed: %08b", bt)
+	}
+
+	// wIndex is the index of the data within the b.data
+	wIndex := uint(bitOffset) >> 6
+
+	// get the bitOffset
+	// i index is the index within the uint64 data
+	iIndex := (bitOffset % 64)
+
+	// apply the mask
+	mask := byte(1<<byte(valueLength+1)) - 1
+	btMasked := bt & mask
+
+	common.Log.Debug("Mask: %08b, btMasked: %08b", mask, btMasked)
+
+	data := b.data[wIndex]
+
+	common.Log.Debug("Data before: %064b", data)
+	data |= uint64(uint64(btMasked) << uint(iIndex))
+
+	common.Log.Debug("Data after: %064b", data)
+
+	b.data[wIndex] = data
+
+	// if bitOffset + vlength overflows index within single int64
+	overflown := iIndex + valueLength
+
+	// i.e. bitOffset: 125 % 64 => 61 valueLength = 5 then overflown would be 66
+	// last bits should be parsed to the next uint64
+
+	if overflown > 64 {
+		nData := b.data[wIndex+1]
+
+		// the shiftSize can't be greater than 8
+		shiftSize := uint(overflown % 64)
+
+		nData |= uint64(bt >> shiftSize)
+		b.data[wIndex+1] = nData
+	}
+
+	return nil
+}
+
+// SetByteOffset sets the byte at the provided offset
+func (b *BitSet) SetByteOffset(bt byte, byteOffset int) error {
+	// Check if it is within the length
+	if (byteOffset*8 + 8) > b.length {
+		return ErrIndexOutOfRange
+	}
+
+	// dataIndex is the index of the int64 in the data
+	dataIndex := byteOffset / 8 // 15 / 8 = 1
+
+	// byteDataIndex is the index within the provided int64 data
+	byteDataIndex := byteOffset % 8 // 15 % 8 = 7
+
+	// get the data
+	data := b.data[dataIndex]
+
+	common.Log.Debug("Data before shifting: %08b", bt)
+
+	// shift the
+	data |= (uint64(bt) << uint(byteDataIndex*8))
+
+	common.Log.Debug("Setting data: %064b at index: %d", data, dataIndex)
+
+	b.data[dataIndex] = data
 
 	return nil
 }

@@ -1,5 +1,9 @@
 package bitmap
 
+import (
+	"github.com/unidoc/unidoc/common"
+)
+
 // BMPointer is the BitmapPointer structure that contain the parameters that points to the bitmap
 // pixel
 type BMPointer struct {
@@ -19,6 +23,7 @@ func NewPointer(b *Bitmap) *BMPointer {
 }
 
 func (b *BMPointer) SetPointer(x, y int) {
+	common.Log.Debug("Setting Pointer at: [%d,%d]", x, y)
 	b.X = x
 	b.Y = y
 
@@ -38,6 +43,7 @@ func (b *BMPointer) NextPixel() int {
 		b.X++
 		return 0
 	}
+
 	pixel, err := b.BM.Data.Get(uint(b.Count + b.X))
 	if err != nil {
 		panic(err)

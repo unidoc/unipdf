@@ -28,6 +28,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.bits == 0 {
 		return r.read(p)
 	}
+
 	for ; n < len(p); n++ {
 		if p[n], err = r.readUnalignedByte(); err != nil {
 			return
