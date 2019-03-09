@@ -68,20 +68,24 @@ func (b *Bitmap) Read(
 		common.Log.Debug("Not a MMR Decoder.")
 
 		cxPtr0, cxPtr1 := NewPointer(b), NewPointer(b)
-		axPtr0, axPtr1 := NewPointer(b), NewPointer(b)
-		axPtr2, axPtr3 := NewPointer(b), NewPointer(b)
+		atPtr0, atPtr1 := NewPointer(b), NewPointer(b)
+		atPtr2, atPtr3 := NewPointer(b), NewPointer(b)
 
 		var ltpCX int64
 		if typicalPrediction {
 			switch template {
 			case 0:
-				ltpCX = 0x9b25
+				// ltpCX = 0x9b25
+				ltpCX = 0x3953
 			case 1:
-				ltpCX = 0x795
+				// ltpCX = 0x795
+				ltpCX = 0x079a
 			case 2:
-				ltpCX = 0xe5
+				// ltpCX = 0xe5
+				ltpCX = 0x0e3
 			case 3:
-				ltpCX = 0x195
+				// ltpCX = 0x195
+				ltpCX = 0x18a
 			}
 		}
 
@@ -90,12 +94,18 @@ func (b *Bitmap) Read(
 			cx, cx0, cx1, cx2 int64
 		)
 
+		// Decoding Arithmetic
 		for row := 0; row < b.Height; row++ {
+
+			common.Log.Debug("Row: %d", row)
 			if typicalPrediction {
+
+				common.Log.Debug("Typical prediction")
 				b.Decoder.Arithmetic.GenericRegionStats.SetIndex(int(ltpCX))
 				bit, err := b.Decoder.Arithmetic.DecodeBit(r,
 					b.Decoder.Arithmetic.GenericRegionStats,
 				)
+
 				if err != nil {
 					return err
 				}
@@ -105,13 +115,16 @@ func (b *Bitmap) Read(
 				}
 
 				if ltp {
+					// 6.5.2.7 3.c)
 					b.duplicateRow(row, row-1)
+					common.Log.Debug("Duplicate row: %d", row)
 					continue
 				}
 			}
 
 			var pixel int
 
+			common.Log.Debug("GB_Template: %v", template)
 			switch template {
 			case 0:
 
@@ -126,13 +139,13 @@ func (b *Bitmap) Read(
 
 				cx2 = 0
 
-				axPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
-				axPtr1.SetPointer(int(AdaptiveTemplateX[1]), row+int(AdaptiveTemplateY[1]))
-				axPtr2.SetPointer(int(AdaptiveTemplateX[2]), row+int(AdaptiveTemplateY[2]))
-				axPtr3.SetPointer(int(AdaptiveTemplateX[3]), row+int(AdaptiveTemplateY[3]))
+				atPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
+				atPtr1.SetPointer(int(AdaptiveTemplateX[1]), row+int(AdaptiveTemplateY[1]))
+				atPtr2.SetPointer(int(AdaptiveTemplateX[2]), row+int(AdaptiveTemplateY[2]))
+				atPtr3.SetPointer(int(AdaptiveTemplateX[3]), row+int(AdaptiveTemplateY[3]))
 
 				for col := 0; col < b.Width; col++ {
-					cx = ((cx0 << 13) | (cx1 << 8) | (cx2 << 4) | int64(axPtr0.NextPixel()<<3) | int64(axPtr1.NextPixel()<<2) | int64(axPtr2.NextPixel()<<1) | int64(axPtr3.NextPixel()))
+					cx = ((cx0 << 13) | (cx1 << 8) | (cx2 << 4) | int64(atPtr0.NextPixel()<<3) | int64(atPtr1.NextPixel()<<2) | int64(atPtr2.NextPixel()<<1) | int64(atPtr3.NextPixel()))
 
 					if useSkip && !skipBitmap.GetPixel(col, row) {
 						pixel = 0
@@ -167,11 +180,11 @@ func (b *Bitmap) Read(
 
 				cx2 = 0
 
-				axPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
+				atPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
 
 				for col := 0; col < b.Width; col++ {
 
-					cx = ((cx0 << 9) | (cx1 << 4) | (cx2 << 1) | int64(axPtr0.NextPixel()))
+					cx = ((cx0 << 9) | (cx1 << 4) | (cx2 << 1) | int64(atPtr0.NextPixel()))
 
 					if useSkip && !skipBitmap.GetPixel(col, row) {
 						pixel = 0
@@ -193,9 +206,12 @@ func (b *Bitmap) Read(
 				}
 
 			case 2:
+
 				cxPtr0.SetPointer(0, row-2)
 				cx0 = int64(cxPtr0.NextPixel() << 1)
+				common.Log.Debug("First cx0: %d", cx0)
 				cx0 |= int64(cxPtr0.NextPixel())
+				common.Log.Debug("Second cx0: %d", cx0)
 
 				cxPtr1.SetPointer(0, row-1)
 				cx1 = int64(cxPtr1.NextPixel() << 1)
@@ -203,13 +219,17 @@ func (b *Bitmap) Read(
 
 				cx2 = 0
 
-				axPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
+				// get values from adaptive template
+				atPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
 
 				for col := 0; col < b.Width; col++ {
 
-					cx = ((cx0 << 7) | (cx1 << 3) | (cx2 << 1) | int64(axPtr0.NextPixel()))
+					common.Log.Debug("Column: %d", col)
 
+					cx = ((cx0 << 7) | (cx1 << 3) | (cx2 << 1) | int64(atPtr0.NextPixel()))
+					common.Log.Debug("Context: %d", cx)
 					if useSkip && !skipBitmap.GetPixel(col, row) {
+						common.Log.Debug("Skip pixel")
 						pixel = 0
 					} else {
 						var err error
@@ -218,10 +238,12 @@ func (b *Bitmap) Read(
 						if err != nil {
 							return err
 						}
+
 						if pixel != 0 {
 							b.Data.Set(uint(row*b.Width+col), true)
 						}
 					}
+					common.Log.Debug("Pixel: %d", pixel)
 
 					cx0 = ((cx0 << 1) | int64(cxPtr0.NextPixel())) & 0x07
 					cx1 = ((cx1 << 1) | int64(cxPtr1.NextPixel())) & 0x0f
@@ -235,11 +257,11 @@ func (b *Bitmap) Read(
 
 				cx2 = 0
 
-				axPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
+				atPtr0.SetPointer(int(AdaptiveTemplateX[0]), row+int(AdaptiveTemplateY[0]))
 
 				for col := 0; col < b.Width; col++ {
 
-					cx = ((cx1 << 5) | (cx2 << 1) | int64(axPtr0.NextPixel()))
+					cx = ((cx1 << 5) | (cx2 << 1) | int64(atPtr0.NextPixel()))
 
 					if useSkip && !skipBitmap.GetPixel(col, row) {
 						pixel = 0
@@ -829,9 +851,11 @@ func (b *Bitmap) ReadTextRegion(
 
 // Stringify the bitmap
 func (b *Bitmap) String() string {
+
 	var rows []string = make([]string, b.Height)
 
 	for i := 0; i < b.Width; i++ {
+
 		for j := 0; j < b.Height; j++ {
 			pix := b.GetPixel(i, j)
 			if pix {
@@ -842,13 +866,14 @@ func (b *Bitmap) String() string {
 		}
 	}
 
-	var s string
+	var s string = "\n"
 	for i, row := range rows {
 		s += row
 		if i != len(rows)-1 {
 			s += "\n"
 		}
 	}
+
 	return s
 }
 
@@ -903,19 +928,27 @@ func (b *Bitmap) UncompressMMR(m *mmr.MmrDecoder) error {
 
 func (b *Bitmap) FillMMR(m *mmr.MmrDecoder, line int, currentOffsets []int, count int) error {
 	x := 0
-
+	common.Log.Debug("Filling MMR. Line: %d", line)
+	common.Log.Debug("CurrentOffsets: %v. Count: %d", currentOffsets, count)
 	targetByte := b.getByteIndex(0, line)
 
+	targetBit := b.getBitIndex(line)
+
 	var targetByteValue byte
+	common.Log.Debug("Target byte: %d", targetByte)
 
 	for index := 0; index < count; index++ {
+		common.Log.Debug("Index: %d", index)
 		offset := currentOffsets[index]
 
+		common.Log.Debug("Offset: %d", offset)
 		var value byte
 
 		if (index & 1) == 0 {
+			common.Log.Debug("Is zero")
 			value = 0
 		} else {
+			common.Log.Debug("Non zero")
 			value = 1
 		}
 
@@ -924,20 +957,32 @@ func (b *Bitmap) FillMMR(m *mmr.MmrDecoder, line int, currentOffsets []int, coun
 			x += 1
 
 			if (x & 7) == 0 {
-				b.Data.SetByteOffset(targetByteValue, targetByte)
-				targetByte += 1
+				b.Data.setByteBitwiseOffset(targetByteValue, count, targetBit, true)
+				// b.Data.SetByteOffset(targetByteValue, targetByte)
+				targetBit += count
 				targetByteValue = 0
 			}
 		}
+
+		common.Log.Debug("TargetByteValue: %08b", targetByteValue)
 	}
 
 	if (x & 7) != 0 {
 		targetByteValue <<= uint(8 - (x & 7))
-		b.Data.SetByteOffset(targetByteValue, targetByte)
+
+		// the value here is in little endian manner
+		// we should
+		common.Log.Debug("TargetByteValue at the end: %08b", targetByteValue)
+		// b.Data.SetByteOffset(targetByteValue, targetByte)
+		b.Data.setByteBitwiseOffset(targetByteValue, count, targetBit, true)
 	}
 
 	return nil
 
+}
+
+func (b *Bitmap) getBitIndex(line int) int {
+	return b.Width * line
 }
 
 func (b *Bitmap) getByteIndex(x, y int) int {
@@ -1129,6 +1174,7 @@ func (b *Bitmap) GetPixel(col, row int) bool {
 	if err != nil {
 		panic(err)
 	}
+
 	return p
 }
 

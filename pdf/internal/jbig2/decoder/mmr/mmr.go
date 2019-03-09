@@ -118,6 +118,7 @@ decodeLoop:
 		case codeVR1:
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] + 1
 		case codeVL1:
+
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 1
 		case codeH:
 			var ever int = 1
@@ -399,7 +400,7 @@ func (m *MmrDecoder) DetectAndSkipEOL() error {
 			return err
 		}
 
-		if cd == nil && cd.runLength == eol {
+		if cd != nil && cd.runLength == eol {
 			m.data.offset += cd.bitLength
 		} else {
 			return nil

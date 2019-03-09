@@ -342,7 +342,8 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 
 		// Get SimbolDictionary
 		s := New(d, h2)
-		err = s.Decode(r)
+		require.NotPanics(t, func() { err = s.Decode(r) })
+
 		if assert.NoError(t, err) {
 			assert.True(t, s.SDFlags.GetValue(SD_HUFF) == 0)
 			assert.Equal(t, 2, s.SDFlags.GetValue(SD_TEMPLATE))

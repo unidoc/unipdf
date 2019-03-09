@@ -153,6 +153,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 
 	sdTemplate := s.SDFlags.GetValue(SD_TEMPLATE)
 
+	common.Log.Debug("SD_TEMPLATE: %d", sdTemplate)
+
 	if !sdHuff {
 		if s.SDFlags.GetValue(BITMAP_CC_USED) != 0 && inputSymbolDictionary != nil {
 			s.Decoders.Arithmetic.ResetGenericStats(
@@ -200,6 +202,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 	i = 0
 
 	for i < int(s.NewSymbolsNumber) {
+
+		// iterate over the symbols
 
 		var instanceDeltaHeight int
 		var err error
@@ -278,6 +282,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 
 			sdRefinement := s.SDFlags.GetValue(SD_REF_AGG)
 
+			common.Log.Debug("SD_REF_AGG: %v", sdRefinement)
+
 			if sdHuff && sdRefinement == 0 {
 				// 4 c) iii)
 				common.Log.Debug("DeltaWidth at i: %d", i)
@@ -307,6 +313,8 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 						symbolID                 uint64
 						referenceDX, referenceDY int
 					)
+
+					common.Log.Debug("6.5.8.2 - Refinement/Aggregate-coded")
 
 					if sdHuff {
 						symbolID, err = r.ReadBits(byte(symbolCodeLength))
@@ -394,13 +402,22 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 					bitmaps[int(inputSymbolsNumber)+i] = bm
 				}
 			} else {
-				common.Log.Debug("Not a SD_REF_AGG")
+
+				// SD_REFINEMENT = 0 && SD_HUFF = 0
+				// 6.5.8.1 - Direct Coded
+				common.Log.Debug("6.5.8.1 - Direct Coded")
+
 				bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
-				err := bm.Read(r, false, s.SDFlags.GetValue(SD_TEMPLATE), false, false, nil, s.AdaptiveTemplateX, s.AdaptiveTemplateY, 0)
+
+				err := bm.Read(r, false, sdTemplate, false, false, nil, s.AdaptiveTemplateX, s.AdaptiveTemplateY, 0)
 				if err != nil {
 					common.Log.Debug("bitmap.Read i: '%d', j: '%d' failed. %v", i, j, err)
 					return err
 				}
+
+				common.Log.Debug("Bitmap: %v at index: %d", bm, inputSymbolsNumber+1)
+
+				bitmaps[int(inputSymbolsNumber)+i] = bm
 			}
 
 			i++
@@ -409,6 +426,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		}
 
 		if sdHuff && s.SDFlags.GetValue(SD_REF_AGG) == 0 {
+			common.Log.Debug("6.5.9")
 
 			common.Log.Debug("GetBitmap size")
 			bmSize, _, err := s.Decoders.Huffman.DecodeInt(r, huffmanBMSizeTable)
@@ -485,11 +503,14 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 			} else {
 
 				common.Log.Debug("Bitmap size: %v", bmSize)
+
 				err := collectiveBitMap.Read(r, true, 0, false, false, nil, nil, nil, bmSize)
 				if err != nil {
 					common.Log.Debug("CollectiveBitMap.Read failed: %v", err)
 					return err
 				}
+				common.Log.Debug("Collective Bitmap: %v", collectiveBitMap)
+
 			}
 
 			var x int
@@ -535,6 +556,7 @@ func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
 		if export {
 			for cnt := 0; cnt < run; cnt++ {
 				common.Log.Debug("Setting bitmap at: '%d' index.", j)
+				common.Log.Debug("Bitmap: %v", bitmaps[i])
 				s.Bitmaps[j] = bitmaps[i]
 				j++
 				i++

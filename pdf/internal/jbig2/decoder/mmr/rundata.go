@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	maxRunDataBuffer int = 1024 << 7
-	minRunDataBuffer int = 3
-	codeOffset           = 24
+	maxRunDataBuffer int  = 1024 << 7
+	minRunDataBuffer int  = 3
+	codeOffset       uint = 24
 )
 
 type runData struct {
@@ -57,8 +57,8 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 		common.Log.Debug("UncompressGetNextCodeLittleEndian failed: %v", err)
 		return nil, err
 	}
-	common.Log.Debug("Code Before: %v", cd)
 
+	common.Log.Debug("Code Before: %v", cd)
 	cd = cd & 0xFFFFFF
 
 	common.Log.Debug("Code: %v", cd)
@@ -87,7 +87,6 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 	var bitsToFill int = r.offset - r.lastOffset
 
 	common.Log.Debug("BitsToFil: %v", bitsToFill)
-
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 
@@ -117,6 +116,8 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 		lastCode <<= bitOffset
 		r.lastCode = int(lastCode)
 
+		common.Log.Debug("CD_1: LastCode: %d", lastCode)
+
 	} else {
 
 		// the offset to the next byte boundary as seen from the last offset
@@ -132,11 +133,13 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 			byteOffset := (r.lastOffset >> 3) + 3 - r.bufferBase
 
 			if byteOffset >= r.bufferTop {
+
 				byteOffset += r.bufferBase
 				if err := r.fillBuffer(byteOffset); err != nil {
 					return 0, err
 				}
 				byteOffset -= r.bufferBase
+
 			}
 
 			bitOffset = 8 - bitOffset
@@ -164,31 +167,39 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 
 func (r *runData) fillBuffer(byteOffset int) error {
 
+	common.Log.Debug("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
+
 	r.bufferBase = byteOffset
 
-	_, err := r.r.Seek(int64(byteOffset), io.SeekCurrent)
+	_, err := r.r.Seek(int64(byteOffset), io.SeekStart)
 	if err != nil {
 		if err == io.EOF {
+			common.Log.Debug("Seak EOF")
 			r.bufferTop = -1
 		} else {
 			return err
 		}
 	}
+
 	if err == nil {
+		common.Log.Debug("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
 		r.bufferTop, err = r.r.Read(r.buffer)
 		if err != nil {
 			if err == io.EOF {
+				common.Log.Debug("Read EOF")
 				r.bufferTop = -1
 			} else {
 				return err
 			}
 		}
 	}
+	common.Log.Debug("BufferTop after read: %d", r.bufferTop)
 
 	// check filling degree
 	if r.bufferTop > -1 && r.bufferTop < 3 {
-
+		common.Log.Debug("BufferTop in size of filling degree: %d", r.bufferTop)
 		for r.bufferTop < 3 {
+
 			b, err := r.r.ReadByte()
 			if err != nil {
 				if err == io.EOF {

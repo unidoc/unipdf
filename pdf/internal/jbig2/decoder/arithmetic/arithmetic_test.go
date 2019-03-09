@@ -31,6 +31,7 @@ func TestArithmeticDecoder(t *testing.T) {
 	err := a.Start(r)
 	if assert.NoError(t, err) {
 		// var b byte
+
 		for i := 0; i < len(encoded)*8; i++ {
 			a.DecodeBit(r, a.IaaiStats)
 		}
