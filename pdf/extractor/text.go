@@ -671,12 +671,12 @@ func (to *textObject) renderText(data []byte) error {
 	state := to.state
 	tfs := state.tfs
 	th := state.th / 100.0
-	spaceMetrics, ok := font.GetRuneCharMetrics(' ')
+	spaceMetrics, ok := font.GetRuneMetrics(' ')
 	if !ok {
 		spaceMetrics, ok = font.GetCharMetrics(32)
 	}
 	if !ok {
-		spaceMetrics, _ = model.DefaultFont().GetRuneCharMetrics(' ')
+		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
 	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)

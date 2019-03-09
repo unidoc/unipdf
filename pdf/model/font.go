@@ -589,28 +589,6 @@ func (font *PdfFont) GetCharMetrics(code textencoding.CharCode) (CharMetrics, bo
 	return nometrics, false
 }
 
-// GetRuneCharMetrics returns the char metrics for rune `r`.
-// TODO(peterwilliams97) There is nothing callers can do if no CharMetrics are found so we might as
-//                       well give them 0 width. There is no need for the bool return.
-func (font *PdfFont) GetRuneCharMetrics(r rune) (fonts.CharMetrics, bool) {
-	var nometrics fonts.CharMetrics
-
-	encoder := font.Encoder()
-	if encoder != nil {
-		m, ok := font.context.GetRuneMetrics(r)
-		if ok {
-			return m, true
-		}
-		common.Log.Debug("ERROR: Metrics not found for rune=%+v %s", r, font)
-	}
-	if descriptor, err := font.GetFontDescriptor(); err == nil && descriptor != nil {
-		return fonts.CharMetrics{Wx: descriptor.missingWidth}, true
-	}
-
-	common.Log.Debug("GetRuneCharMetrics: No metrics for font=%s", font)
-	return nometrics, false
-}
-
 // actualFont returns the Font in font.context
 func (font PdfFont) actualFont() pdfFont {
 	if font.context == nil {
