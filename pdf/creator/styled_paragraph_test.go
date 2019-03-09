@@ -8,12 +8,12 @@ package creator
 import (
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func TestParagraphRegularVsStyled(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.HelveticaName)
-	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
@@ -277,9 +277,9 @@ func TestParagraphRegularVsStyled(t *testing.T) {
 }
 
 func TestStyledParagraph(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.CourierName)
-	fontBold := newStandard14Font(t, fonts.CourierBoldName)
-	fontHelvetica := newStandard14Font(t, fonts.HelveticaName)
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
+	fontHelvetica := newStandard14Font(t, model.HelveticaName)
 
 	c := New()
 	c.NewPage()
@@ -438,7 +438,7 @@ Sed imperdiet sodales lacus sed sollicitudin. In porta tortor quis augue tempor,
 }
 
 func TestStyledParagraphRenderingModes(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.HelveticaName)
+	fontRegular := newStandard14Font(t, model.HelveticaName)
 
 	c := New()
 	c.NewPage()
@@ -510,8 +510,8 @@ func TestStyledParagraphRenderingModes(t *testing.T) {
 }
 
 func TestStyledParagraphCharacterSpacing(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.HelveticaName)
-	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()

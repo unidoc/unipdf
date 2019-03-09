@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model/internal/fonts"
 )
 
 func TestCIDWidthArr(t *testing.T) {

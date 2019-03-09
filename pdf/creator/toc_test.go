@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 func TestTOCAdvanced(t *testing.T) {
-	fontHelvetica := model.NewStandard14FontMustCompile(fonts.HelveticaName)
-	fontHelveticaBold := model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
+	fontHelvetica := model.NewStandard14FontMustCompile(model.HelveticaName)
+	fontHelveticaBold := model.NewStandard14FontMustCompile(model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()

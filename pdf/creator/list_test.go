@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 func TestListSimple(t *testing.T) {
@@ -57,7 +56,7 @@ func TestListSimple(t *testing.T) {
 }
 
 func TestListAdvanced(t *testing.T) {
-	fontHelveticaBold := model.NewStandard14FontMustCompile(fonts.HelveticaBoldName)
+	fontHelveticaBold := model.NewStandard14FontMustCompile(model.HelveticaBoldName)
 
 	red := ColorRGBFrom8bit(255, 0, 0)
 	blue := ColorRGBFrom8bit(0, 0, 255)

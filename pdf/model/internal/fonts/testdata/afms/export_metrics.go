@@ -18,7 +18,8 @@ import (
 	"flag"
 
 	pdfcommon "github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/internal/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 func main() {
@@ -117,8 +118,8 @@ func runGlyphToCharcodeRetrievalOnFile(afmpath string) error {
 	return nil
 }
 
-func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, error) {
-	glyphMetricsMap := map[string]fonts.CharMetrics{}
+func GetCharmetricsFromAfmFile(filename string) (map[string]model.CharMetrics, error) {
+	glyphMetricsMap := map[string]model.CharMetrics{}
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -151,7 +152,7 @@ func GetCharmetricsFromAfmFile(filename string) (map[string]fonts.CharMetrics, e
 		}
 
 		parts = strings.Split(line, ";")
-		var metrics fonts.CharMetrics
+		var metrics model.CharMetrics
 		glyphName := ""
 		for _, part := range parts {
 			cmd := strings.TrimSpace(part)
@@ -334,7 +335,7 @@ var standard14Names = []string{
 }
 
 // createFontDescriptor creates a literal DescriptorLiteral that can be copied into
-// pdf/model/fonts/const.go.
+// pdf/internal/fonts/const.go.
 func createFontDescriptor(name, filename string) (string, error) {
 	fmt.Println("----------------------------------------------------")
 	fmt.Printf("createFontDescriptor: name=%#q filename=%q\n", name, filename)

@@ -22,7 +22,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/core/security"
 	"github.com/unidoc/unidoc/pdf/core/security/crypt"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+
+	"github.com/unidoc/unidoc/pdf/model/internal/fonts"
 )
 
 type crossReference struct {

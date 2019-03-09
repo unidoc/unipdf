@@ -14,10 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/model"
+
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -100,8 +99,8 @@ func TestTextExtractionFragments(t *testing.T) {
 	// Setup mock resources.
 	resources := model.NewPdfPageResources()
 	{
-		courier := model.NewStandard14FontMustCompile(fonts.CourierName)
-		helvetica := model.NewStandard14FontMustCompile(fonts.HelveticaName)
+		courier := model.NewStandard14FontMustCompile(model.CourierName)
+		helvetica := model.NewStandard14FontMustCompile(model.HelveticaName)
 		resources.SetFontByName("UniDocHelvetica", helvetica.ToPdfObject())
 		resources.SetFontByName("UniDocCourier", courier.ToPdfObject())
 	}

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 var seed = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -27,7 +26,7 @@ func RandString(length int) string {
 	return string(b)
 }
 
-func newStandard14Font(t testing.TB, base fonts.StdFontName) *model.PdfFont {
+func newStandard14Font(t testing.TB, base model.StdFontName) *model.PdfFont {
 	f, err := model.NewStandard14Font(base)
 	if err != nil {
 		t.Fatalf("Error opening font: %v", err)
@@ -36,8 +35,8 @@ func newStandard14Font(t testing.TB, base fonts.StdFontName) *model.PdfFont {
 }
 
 func TestDivVertical(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.CourierName)
-	fontBold := newStandard14Font(t, fonts.CourierBoldName)
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
@@ -94,8 +93,8 @@ func TestDivVertical(t *testing.T) {
 }
 
 func TestDivInline(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.CourierName)
-	fontBold := newStandard14Font(t, fonts.CourierBoldName)
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
@@ -172,8 +171,8 @@ func TestDivInline(t *testing.T) {
 }
 
 func TestDivNumberMatrix(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.CourierName)
-	fontBold := newStandard14Font(t, fonts.CourierBoldName)
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
@@ -223,8 +222,8 @@ func TestDivNumberMatrix(t *testing.T) {
 }
 
 func TestDivRandomSequences(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.HelveticaName)
-	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
@@ -299,8 +298,8 @@ func TestDivRandomSequences(t *testing.T) {
 }
 
 func TestTableDivisions(t *testing.T) {
-	fontRegular := newStandard14Font(t, fonts.HelveticaName)
-	fontBold := newStandard14Font(t, fonts.HelveticaBoldName)
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()

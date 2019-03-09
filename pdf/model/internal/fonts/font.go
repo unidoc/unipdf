@@ -8,7 +8,6 @@ package fonts
 import (
 	"fmt"
 
-	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
 )
 
@@ -17,7 +16,7 @@ import (
 type Font interface {
 	Encoder() textencoding.TextEncoder
 	GetRuneMetrics(r rune) (CharMetrics, bool)
-	ToPdfObject() core.PdfObject
+	//ToPdfObject() core.PdfObject
 }
 
 // CharMetrics represents width and height metrics of a glyph.

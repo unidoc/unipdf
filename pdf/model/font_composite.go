@@ -14,8 +14,9 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
+
 	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model/internal/fonts"
 )
 
 /*

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 func TestInvoiceSimple(t *testing.T) {
@@ -82,7 +81,7 @@ func TestInvoiceSimple(t *testing.T) {
 }
 
 func TestInvoiceAdvanced(t *testing.T) {
-	fontHelvetica := model.NewStandard14FontMustCompile(fonts.HelveticaName)
+	fontHelvetica := model.NewStandard14FontMustCompile(model.HelveticaName)
 
 	c := New()
 	c.NewPage()

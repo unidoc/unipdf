@@ -12,7 +12,6 @@ import (
 	"github.com/unidoc/unidoc/pdf/contentstream"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
 )
 
 // TextFieldOptions defines optional parameter for a text field in a form.
@@ -77,7 +76,10 @@ func NewCheckboxField(page *model.PdfPage, name string, rect []float64, opt Chec
 		return nil, errors.New("invalid range")
 	}
 
-	zapfdb := fonts.NewFontZapfDingbats()
+	zapfdb, err := model.NewStandard14Font(model.ZapfDingbatsName)
+	if err != nil {
+		return nil, err
+	}
 
 	field := model.NewPdfField()
 	buttonfield := &model.PdfFieldButton{}
