@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
@@ -265,7 +266,7 @@ func (int *PdfObjectInteger) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (int *PdfObjectInteger) WriteString() string {
-	return fmt.Sprintf("%d", *int)
+	return strconv.FormatInt(int64(*int), 10)
 }
 
 func (float *PdfObjectFloat) String() string {
@@ -274,7 +275,7 @@ func (float *PdfObjectFloat) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (float *PdfObjectFloat) WriteString() string {
-	return fmt.Sprintf("%f", *float)
+	return strconv.FormatFloat(float64(*float), 'f', -1, 64)
 }
 
 // String returns a string representation of the *PdfObjectString.
@@ -324,7 +325,6 @@ func (str *PdfObjectString) WriteString() string {
 	}
 
 	// Otherwise regular string.
-
 	escapeSequences := map[byte]string{
 		'\n': "\\n",
 		'\r': "\\r",
@@ -346,7 +346,6 @@ func (str *PdfObjectString) WriteString() string {
 		}
 	}
 	output.WriteString(")")
-
 	return output.String()
 }
 
@@ -497,15 +496,18 @@ func (array *PdfObjectArray) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (array *PdfObjectArray) WriteString() string {
-	outStr := "["
+	var b strings.Builder
+	b.WriteString("[")
+
 	for ind, o := range array.Elements() {
-		outStr += o.WriteString()
+		b.WriteString(o.WriteString())
 		if ind < (array.Len() - 1) {
-			outStr += " "
+			b.WriteString(" ")
 		}
 	}
-	outStr += "]"
-	return outStr
+
+	b.WriteString("]")
+	return b.String()
 }
 
 // GetNumberAsFloat returns the contents of `obj` as a float if it is an integer or float, or an
@@ -608,15 +610,18 @@ func (d *PdfObjectDictionary) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (d *PdfObjectDictionary) WriteString() string {
-	b := strings.Builder{}
+	var b strings.Builder
+
 	b.WriteString("<<")
 	for _, k := range d.keys {
 		v := d.dict[k]
 		common.Log.Trace("Writing k: %s %T %v %v", k, v, k, v)
+
 		b.WriteString(k.WriteString())
 		b.WriteString(" ")
 		b.WriteString(v.WriteString())
 	}
+
 	b.WriteString(">>")
 	return b.String()
 }
@@ -754,7 +759,12 @@ func (ref *PdfObjectReference) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (ref *PdfObjectReference) WriteString() string {
-	return fmt.Sprintf("%d %d R", ref.ObjectNumber, ref.GenerationNumber)
+	var b strings.Builder
+	b.WriteString(strconv.FormatInt(ref.ObjectNumber, 10))
+	b.WriteString(" ")
+	b.WriteString(strconv.FormatInt(ref.GenerationNumber, 10))
+	b.WriteString(" R")
+	return b.String()
 }
 
 // String returns a string describing `ind`.
@@ -766,8 +776,10 @@ func (ind *PdfIndirectObject) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (ind *PdfIndirectObject) WriteString() string {
-	outStr := fmt.Sprintf("%d 0 R", (*ind).ObjectNumber)
-	return outStr
+	var b strings.Builder
+	b.WriteString(strconv.FormatInt(ind.ObjectNumber, 10))
+	b.WriteString(" 0 R")
+	return b.String()
 }
 
 // String returns a string describing `stream`.
@@ -777,8 +789,10 @@ func (stream *PdfObjectStream) String() string {
 
 // WriteString outputs the object as it is to be written to file.
 func (stream *PdfObjectStream) WriteString() string {
-	outStr := fmt.Sprintf("%d 0 R", (*stream).ObjectNumber)
-	return outStr
+	var b strings.Builder
+	b.WriteString(strconv.FormatInt(stream.ObjectNumber, 10))
+	b.WriteString(" 0 R")
+	return b.String()
 }
 
 // String returns a string describing `null`.
@@ -997,6 +1011,8 @@ func (streams *PdfObjectStreams) Len() int {
 
 // WriteString outputs the object as it is to be written to file.
 func (streams *PdfObjectStreams) WriteString() string {
-	outStr := fmt.Sprintf("%d 0 R", (*streams).ObjectNumber)
-	return outStr
+	var b strings.Builder
+	b.WriteString(strconv.FormatInt(streams.ObjectNumber, 10))
+	b.WriteString(" 0 R")
+	return b.String()
 }
