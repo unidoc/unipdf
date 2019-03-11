@@ -6,6 +6,8 @@
 package core
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -110,5 +112,95 @@ func TestUTF16StringEncodeDecode(t *testing.T) {
 			t.Fatalf("% X != % X (%s)", str.Decoded(), tc, tc)
 		}
 
+	}
+}
+
+func BenchmarkPdfObjectIntegerWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		i := MakeInteger(int64(n))
+		i.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectFloatWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		f := MakeFloat(float64(n))
+		f.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectStringWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		s := MakeString(strings.Repeat("a", n))
+		s.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectNameWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		c := n
+		if n > 127 {
+			c = 127
+		}
+
+		o := MakeString(strings.Repeat("z", c))
+		o.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectArrayWriteString(b *testing.B) {
+	a := MakeArray()
+	for i := 0; i < 10000; i++ {
+		a.Append(MakeInteger(int64(i)))
+	}
+
+	for n := 0; n < b.N; n++ {
+		a.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectDictionaryWriteString(b *testing.B) {
+	a := MakeDict()
+	for i := 0; i < 10000; i++ {
+		o := MakeName(strconv.Itoa(i))
+		a.Set(*o, MakeInteger(int64(i)))
+	}
+
+	for n := 0; n < b.N; n++ {
+		a.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectReferenceWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		r := &PdfObjectReference{
+			ObjectNumber:     int64(n),
+			GenerationNumber: int64(n),
+		}
+		r.WriteString()
+	}
+}
+
+func BenchmarkPdfIndirectObjectWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		i := &PdfIndirectObject{}
+		i.ObjectNumber = int64(n)
+		i.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectStreamWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		s := &PdfObjectStream{}
+		s.ObjectNumber = int64(n)
+		s.WriteString()
+	}
+}
+
+func BenchmarkPdfObjectStreamsWriteString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		s := &PdfObjectStreams{}
+		s.ObjectNumber = int64(n)
+		s.WriteString()
 	}
 }
