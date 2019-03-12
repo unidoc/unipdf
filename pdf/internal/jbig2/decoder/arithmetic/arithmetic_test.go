@@ -24,16 +24,15 @@ func TestArithmeticDecoder(t *testing.T) {
 	// 	0x9E, 0xF6, 0xBF, 0x7F, 0xED, 0x90, 0x4F, 0x46, 0xA3, 0xBF,
 	// }
 
-	a := New()
-
 	r := reader.New(encoded)
 
-	err := a.Start(r)
+	a, err := New(r)
 	if assert.NoError(t, err) {
 		// var b byte
 
+		cx := NewStats(512, 0)
 		for i := 0; i < len(encoded)*8; i++ {
-			a.DecodeBit(r, a.IaaiStats)
+			a.DecodeBit(cx)
 		}
 	}
 

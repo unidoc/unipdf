@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"encoding/binary"
 	"errors"
 	"github.com/unidoc/unidoc/common"
 	"io"
@@ -16,6 +17,9 @@ type Reader struct {
 	err          error
 	lastByte     int
 	lastRuneSize int
+
+	mark     int64
+	markBits byte
 }
 
 // New creates a new reader using the byte slice data as input
@@ -35,6 +39,19 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 		}
 	}
 	return
+}
+
+// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
+func (r *Reader) Mark() {
+	r.mark = r.r
+	r.markBits = r.bits
+}
+
+// Reset returns the stream pointer to its previous position, including the bit offset,
+// at the time of the most recent unmatched call to mark.
+func (r *Reader) Reset() {
+	r.r = r.mark
+	r.bits = r.markBits
 }
 
 func (r *Reader) CurrentBytePosition() int64 {
@@ -61,6 +78,18 @@ func (r *Reader) readBufferByte() (b byte, err error) {
 	r.r++
 	r.lastByte = int(c)
 	return c, nil
+}
+
+func (r *Reader) ReadUnsignedInt() (uint32, error) {
+	ub := make([]byte, 4)
+
+	_, err := r.Read(ub)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint32(ub), nil
+
 }
 
 // ReadBits reads the bits of size 'n' from the reader
@@ -184,6 +213,11 @@ func (r *Reader) ConsumeRemainingBits() {
 		}
 
 	}
+}
+
+// Size returns the size of the data in the reader
+func (r *Reader) Size() int64 {
+	return int64(len(r.in))
 }
 
 // Seek implements the io.Seeker interface
