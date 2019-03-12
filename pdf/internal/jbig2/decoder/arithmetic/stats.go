@@ -50,6 +50,10 @@ func (d *DecoderStats) toggleMps() {
 	d.mps[d.index] ^= 1
 }
 
+func (d *DecoderStats) getMps() byte {
+	return d.mps[d.index]
+}
+
 // Copy copies the DecoderStats
 func (d *DecoderStats) Copy() *DecoderStats {
 	cp := &DecoderStats{

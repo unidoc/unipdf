@@ -50,54 +50,10 @@ var (
 // Decoder is the arithmetic Decoder structure that is used to decode the
 // segments in an arithmetic method.
 type Decoder struct {
-	GenericRegionStats, RefinementRegionStats *DecoderStats
-
-	// IaaiStats is used to decode the number of symbol instances in an aggregation
-	IaaiStats *DecoderStats
-
-	// IadhStats is used to decode the difference in height between two height classes
-	IadhStats *DecoderStats
-
-	// IadwStats is used to decode the difference in width between two symbols in a height class
-	IadwStats *DecoderStats
-
-	// IaexStats is used to decode export flags
-	IaexStats *DecoderStats
-
-	// IadtStats is used to decode the T coordinate of the second and subsequent symbol instances
-	// in a strip
-	IadtStats *DecoderStats
-
-	// IaitStats is used to decode the T coordinate of the symbol instances in a strip
-	IaitStats *DecoderStats
-
-	// IafsStats is used to decode the S coordinate of the first symbol instance in a strip
-	IafsStats *DecoderStats
-
-	// IadsStats is used to decode the S coordinate of the second and subsequent symbol instances in a strip
-	IadsStats *DecoderStats
-
-	// IardxStats is used to decode the delta X position of symbol instance refinements
-	IardxStats *DecoderStats
-
-	// IardyStats is used to decode the delta Y position of symbol instance refinements
-	IardyStats *DecoderStats
-
-	// IardwStats is used to decode the delta width of symbol instance refinements
-	IardwStats *DecoderStats
-
-	// IardhStats is used to decode the delta height of symbol instance refinements
-	IardhStats *DecoderStats
-
-	// IariStats is used to decode the R_i bit of symbol instances
-	IariStats *DecoderStats
-
-	// IaidStats is used to decode the symbol IDs of symbol instances
-	IaidStats *DecoderStats
-
 	ContextSize          []int
 	ReferedToContextSize []int
 
+	r *reader.Reader
 	b int
 
 	c        uint64
@@ -112,99 +68,87 @@ type Decoder struct {
 }
 
 // New creates new arithmetic Decoder
-func New() *Decoder {
+func New(r *reader.Reader) (*Decoder, error) {
 	d := &Decoder{
-		GenericRegionStats:    NewStats(1<<1, 1),
-		RefinementRegionStats: NewStats(1<<1, 1),
-
-		IadhStats:            NewStats(512, 1),
-		IadwStats:            NewStats(512, 1),
-		IaexStats:            NewStats(512, 1),
-		IaaiStats:            NewStats(512, 1),
-		IadtStats:            NewStats(512, 1),
-		IaitStats:            NewStats(512, 1),
-		IafsStats:            NewStats(512, 1),
-		IadsStats:            NewStats(512, 1),
-		IardxStats:           NewStats(512, 1),
-		IardyStats:           NewStats(512, 1),
-		IardwStats:           NewStats(512, 1),
-		IardhStats:           NewStats(512, 1),
-		IariStats:            NewStats(512, 1),
-		IaidStats:            NewStats(512, 1),
+		r:                    r,
 		ContextSize:          []int{16, 13, 10, 10},
 		ReferedToContextSize: []int{13, 10},
 	}
 
-	return d
-}
-
-// ResetIntStats resets the context stats for the decoder
-func (d *Decoder) ResetIntStats(symbolCodeLength int) {
-	d.IadhStats.Reset()
-	d.IadwStats.Reset()
-	d.IaexStats.Reset()
-	d.IaaiStats.Reset()
-	d.IadtStats.Reset()
-	d.IaitStats.Reset()
-	d.IafsStats.Reset()
-	d.IadsStats.Reset()
-	d.IardxStats.Reset()
-	d.IardyStats.Reset()
-	d.IardwStats.Reset()
-	d.IardhStats.Reset()
-	d.IariStats.Reset()
-
-	if d.IaidStats.contextSize == (1 << uint(symbolCodeLength+1)) {
-		d.IaidStats.Reset()
-	} else {
-		d.IaidStats = NewStats(1<<uint(symbolCodeLength+1), 1)
+	if err := d.init(); err != nil {
+		return nil, err
 	}
+
+	return d, nil
 }
+
+// // ResetIntStats resets the context stats for the decoder
+// func (d *Decoder) ResetIntStats(symbolCodeLength int) {
+// 	d.IadhStats.Reset()
+// 	d.IadwStats.Reset()
+// 	d.IaexStats.Reset()
+// 	d.IaaiStats.Reset()
+// 	d.IadtStats.Reset()
+// 	d.IaitStats.Reset()
+// 	d.IafsStats.Reset()
+// 	d.IadsStats.Reset()
+// 	d.IardxStats.Reset()
+// 	d.IardyStats.Reset()
+// 	d.IardwStats.Reset()
+// 	d.IardhStats.Reset()
+// 	d.IariStats.Reset()
+
+// 	if d.IaidStats.contextSize == (1 << uint(symbolCodeLength+1)) {
+// 		d.IaidStats.Reset()
+// 	} else {
+// 		d.IaidStats = NewStats(1<<uint(symbolCodeLength+1), 1)
+// 	}
+// }
 
 // ResetGenericStats resets the decoder's generic stats.
 // If the previousStats are not nil then the decoder would copy
 // the genericRegionStats from the previous stats
-func (d *Decoder) ResetGenericStats(template int, previousStats *DecoderStats) {
-	size := d.ContextSize[template]
+// func (d *Decoder) ResetGenericStats(template int, previousStats *DecoderStats) {
+// 	size := d.ContextSize[template]
 
-	if previousStats != nil && previousStats.contextSize == size {
-		if d.GenericRegionStats.contextSize == size {
-			d.GenericRegionStats.Overwrite(previousStats)
-		} else {
-			d.GenericRegionStats = previousStats.Copy()
-		}
-	} else {
-		if d.GenericRegionStats.contextSize == size {
-			d.GenericRegionStats.Reset()
-		} else {
-			d.GenericRegionStats = NewStats(1<<uint(size), 1)
-		}
-	}
-}
+// 	if previousStats != nil && previousStats.contextSize == size {
+// 		if d.GenericRegionStats.contextSize == size {
+// 			d.GenericRegionStats.Overwrite(previousStats)
+// 		} else {
+// 			d.GenericRegionStats = previousStats.Copy()
+// 		}
+// 	} else {
+// 		if d.GenericRegionStats.contextSize == size {
+// 			d.GenericRegionStats.Reset()
+// 		} else {
+// 			d.GenericRegionStats = NewStats(1<<uint(size), 1)
+// 		}
+// 	}
+// }
 
-// ResetRefinementStats resets the RefinementsRegionStats for the given template
-// If the previouseStats are not 'nil' then the values are set from the previousStats
-func (d *Decoder) ResetRefinementStats(template int, previousStats *DecoderStats) {
-	size := d.ContextSize[template]
+// // ResetRefinementStats resets the RefinementsRegionStats for the given template
+// // If the previouseStats are not 'nil' then the values are set from the previousStats
+// func (d *Decoder) ResetRefinementStats(template int, previousStats *DecoderStats) {
+// 	size := d.ContextSize[template]
 
-	if previousStats != nil && previousStats.contextSize == size {
-		if d.RefinementRegionStats.contextSize == size {
-			d.RefinementRegionStats.Overwrite(previousStats)
-		} else {
-			d.RefinementRegionStats = previousStats.Copy()
-		}
-	} else {
-		if d.RefinementRegionStats.contextSize == size {
-			d.RefinementRegionStats.Reset()
-		} else {
-			d.RefinementRegionStats = NewStats(1<<uint(size), 1)
-		}
-	}
-}
+// 	if previousStats != nil && previousStats.contextSize == size {
+// 		if d.RefinementRegionStats.contextSize == size {
+// 			d.RefinementRegionStats.Overwrite(previousStats)
+// 		} else {
+// 			d.RefinementRegionStats = previousStats.Copy()
+// 		}
+// 	} else {
+// 		if d.RefinementRegionStats.contextSize == size {
+// 			d.RefinementRegionStats.Reset()
+// 		} else {
+// 			d.RefinementRegionStats = NewStats(1<<uint(size), 1)
+// 		}
+// 	}
+// }
 
-func (d *Decoder) Start(r *reader.Reader) error {
-	d.streamPosition = r.CurrentBytePosition()
-	b, err := r.ReadByte()
+func (d *Decoder) init() error {
+	d.streamPosition = d.r.CurrentBytePosition()
+	b, err := d.r.ReadByte()
 	if err != nil {
 		common.Log.Debug("Buffer0 readByte failed. %v", err)
 		return err
@@ -212,7 +156,7 @@ func (d *Decoder) Start(r *reader.Reader) error {
 	d.b = int(b)
 
 	d.c = (uint64(b) << 16)
-	if err = d.readByte(r); err != nil {
+	if err = d.readByte(); err != nil {
 		return err
 	}
 
@@ -231,15 +175,15 @@ func (d *Decoder) Start(r *reader.Reader) error {
 	return nil
 }
 
-func (d *Decoder) readByte(r *reader.Reader) error {
+func (d *Decoder) readByte() error {
 
-	if r.CurrentBytePosition() > d.streamPosition {
-		if _, err := r.Seek(-1, io.SeekCurrent); err != nil {
+	if d.r.CurrentBytePosition() > d.streamPosition {
+		if _, err := d.r.Seek(-1, io.SeekCurrent); err != nil {
 			return err
 		}
 	}
 
-	b, err := r.ReadByte()
+	b, err := d.r.ReadByte()
 	if err != nil {
 		return err
 	}
@@ -247,14 +191,14 @@ func (d *Decoder) readByte(r *reader.Reader) error {
 	d.b = int(b)
 
 	if d.b == 0xFF {
-		b1, err := r.ReadByte()
+		b1, err := d.r.ReadByte()
 		if err != nil {
 			return err
 		}
 		if b1 > 0x8F {
 			d.c += 0xFF00
 			d.ct = 8
-			if _, err := r.Seek(-2, io.SeekCurrent); err != nil {
+			if _, err := d.r.Seek(-2, io.SeekCurrent); err != nil {
 				return err
 			}
 		} else {
@@ -262,7 +206,7 @@ func (d *Decoder) readByte(r *reader.Reader) error {
 			d.ct = 7
 		}
 	} else {
-		b, err = r.ReadByte()
+		b, err = d.r.ReadByte()
 		if err != nil {
 			return err
 		}
@@ -277,7 +221,7 @@ func (d *Decoder) readByte(r *reader.Reader) error {
 	return nil
 }
 
-func (d *Decoder) DecodeInt(r *reader.Reader, stats *DecoderStats) (int, bool, error) {
+func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	var (
 		value, bit, s, bitsToRead, offset int
 		err                               error
@@ -286,48 +230,48 @@ func (d *Decoder) DecodeInt(r *reader.Reader, stats *DecoderStats) (int, bool, e
 	d.previous = 1
 
 	// first bit defines the sign of the integer
-	s, err = d.decodeIntBit(r, stats)
+	s, err = d.decodeIntBit(stats)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 
 	// common.Log.Debug("Sign int bit: '%01b'", s)
 
-	bit, err = d.decodeIntBit(r, stats)
+	bit, err = d.decodeIntBit(stats)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 
 	// common.Log.Debug("First bit value: %b", bit)
 	// First read
 	if bit == 1 {
-		bit, err = d.decodeIntBit(r, stats)
+		bit, err = d.decodeIntBit(stats)
 		if err != nil {
-			return 0, false, err
+			return 0, err
 		}
 
 		// Second Read
 		if bit == 1 {
 
-			bit, err = d.decodeIntBit(r, stats)
+			bit, err = d.decodeIntBit(stats)
 			if err != nil {
-				return 0, false, err
+				return 0, err
 			}
 
 			// Third Read
 			if bit == 1 {
 
-				bit, err = d.decodeIntBit(r, stats)
+				bit, err = d.decodeIntBit(stats)
 				if err != nil {
-					return 0, false, err
+					return 0, err
 				}
 
 				// Fourth Read
 				if bit == 1 {
 
-					bit, err = d.decodeIntBit(r, stats)
+					bit, err = d.decodeIntBit(stats)
 					if err != nil {
-						return 0, false, err
+						return 0, err
 					}
 					// Fifth Read
 					if bit != 1 {
@@ -368,28 +312,28 @@ func (d *Decoder) DecodeInt(r *reader.Reader, stats *DecoderStats) (int, bool, e
 	}
 
 	for i := 0; i < bitsToRead; i++ {
-		bit, err = d.decodeIntBit(r, stats)
+		bit, err = d.decodeIntBit(stats)
 		if err != nil {
-			return 0, false, err
+			return 0, err
 		}
 		value = (value << 1) | bit
 	}
 	value += offset
 
-	common.Log.Debug("Value decoded: %v with sign: %b", value, s)
+	// common.Log.Debug("Value decoded: %v with sign: %b", value, s)
 
 	if s == 0 {
 
-		return int(value), true, nil
+		return int(value), nil
 	} else if s == 1 && value > 0 {
 
-		return int(-value), true, nil
+		return int(-value), nil
 	}
 
-	return int(0), false, nil
+	return int(^(uint(0)) >> 1), nil
 }
 
-func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) {
+func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	var (
 		bit     int
 		qeValue uint32 = qe[stats.cx()][0]
@@ -397,9 +341,10 @@ func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) 
 	)
 
 	defer func() {
+
 		d.prvCtr += 1
-		// common.Log.Debug("Decoder 'a' value: %b", d.a)
-		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
+		common.Log.Debug("Decoder 'a' value: %b", d.a)
+		common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
 	}()
 
 	d.a -= qeValue
@@ -407,7 +352,7 @@ func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) 
 	if (d.c >> 16) < uint64(qeValue) {
 		bit = d.lpsExchange(stats, icx, qeValue)
 
-		if err := d.renormalize(r); err != nil {
+		if err := d.renormalize(); err != nil {
 			return 0, err
 		}
 	} else {
@@ -415,27 +360,31 @@ func (d *Decoder) DecodeBit(r *reader.Reader, stats *DecoderStats) (int, error) 
 
 		if (d.a & 0x8000) == 0 {
 			bit = d.mpsExchange(stats, icx)
-			if err := d.renormalize(r); err != nil {
+			if err := d.renormalize(); err != nil {
 				return 0, err
 			}
 		} else {
-			return int(stats.cx()), nil
+			bit = int(stats.getMps())
 		}
+	}
+
+	if bit > 0 {
+		bit = 1
 	}
 
 	return bit, nil
 }
 
-func (d *Decoder) decodeIntBit(r *reader.Reader, stats *DecoderStats) (int, error) {
+func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
 
 	stats.SetIndex(int(d.previous))
-	bit, err := d.DecodeBit(r, stats)
+	bit, err := d.DecodeBit(stats)
 	if err != nil {
 		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
 		return bit, err
 	}
 
-	common.Log.Debug("bit: %1b", bit)
+	// common.Log.Debug("bit: %1b", bit)
 	// common.Log.Debug("'previous' before: %b", d.previous)
 
 	// if prev < 256
@@ -450,12 +399,12 @@ func (d *Decoder) decodeIntBit(r *reader.Reader, stats *DecoderStats) (int, erro
 	return bit, nil
 }
 
-func (d *Decoder) DecodeIAID(r *reader.Reader, codeLen uint64, stats *DecoderStats) (int64, error) {
+func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error) {
 	d.previous = 1
 	stats.SetIndex(int(d.previous))
 	var i uint64
 	for i = 0; i < codeLen; i++ {
-		bit, err := d.DecodeBit(r, stats)
+		bit, err := d.DecodeBit(stats)
 		if err != nil {
 			return 0, err
 		}
@@ -465,11 +414,11 @@ func (d *Decoder) DecodeIAID(r *reader.Reader, codeLen uint64, stats *DecoderSta
 	return d.previous - (1 << codeLen), nil
 }
 
-func (d *Decoder) renormalize(r *reader.Reader) error {
+func (d *Decoder) renormalize() error {
 fl:
 	for {
 		if d.ct == 0 {
-			if err := d.readByte(r); err != nil {
+			if err := d.readByte(); err != nil {
 				return err
 			}
 		}

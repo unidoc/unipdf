@@ -1,57 +1,57 @@
 package bitmap
 
-import (
-	"github.com/unidoc/unidoc/common"
-)
+// import (
+// 	"github.com/unidoc/unidoc/common"
+// )
 
-// BMPointer is the BitmapPointer structure that contain the parameters that points to the bitmap
-// pixel
-type BMPointer struct {
-	X, Y          int
-	Width, Height int
+// // BMPointer is the BitmapPointer structure that contain the parameters that points to the bitmap
+// // pixel
+// type BMPointer struct {
+// 	X, Y          int
+// 	Width, Height int
 
-	Bits, Count int
-	Output      bool
+// 	Bits, Count int
+// 	Output      bool
 
-	BM *Bitmap
-}
+// 	BM *Bitmap
+// }
 
-func NewPointer(b *Bitmap) *BMPointer {
-	return &BMPointer{
-		BM: b,
-	}
-}
+// func NewPointer(b *Bitmap) *BMPointer {
+// 	return &BMPointer{
+// 		BM: b,
+// 	}
+// }
 
-func (b *BMPointer) SetPointer(x, y int) {
-	common.Log.Debug("Setting Pointer at: [%d,%d]", x, y)
-	b.X = x
-	b.Y = y
+// func (b *BMPointer) SetPointer(x, y int) {
+// 	common.Log.Debug("Setting Pointer at: [%d,%d]", x, y)
+// 	b.X = x
+// 	b.Y = y
 
-	b.Output = true
+// 	b.Output = true
 
-	if y < 0 || y >= b.Height || x >= b.Width {
-		b.Output = false
-	}
+// 	if y < 0 || y >= b.Height || x >= b.Width {
+// 		b.Output = false
+// 	}
 
-	b.Count = y * b.Width
-}
+// 	b.Count = y * b.Width
+// }
 
-func (b *BMPointer) NextPixel() int {
-	if !b.Output {
-		return 0
-	} else if b.X < 0 || b.X >= b.Width {
-		b.X++
-		return 0
-	}
+// func (b *BMPointer) NextPixel() int {
+// 	if !b.Output {
+// 		return 0
+// 	} else if b.X < 0 || b.X >= b.Width {
+// 		b.X++
+// 		return 0
+// 	}
 
-	pixel, err := b.BM.Data.Get(uint(b.Count + b.X))
-	if err != nil {
-		panic(err)
-	}
-	b.X++
+// 	pixel, err := b.BM.Data.Get(uint(b.Count + b.X))
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	b.X++
 
-	if pixel {
-		return 1
-	}
-	return 0
-}
+// 	if pixel {
+// 		return 1
+// 	}
+// 	return 0
+// }

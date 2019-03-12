@@ -3,6 +3,7 @@ package mmr
 import (
 	"errors"
 	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
@@ -15,7 +16,7 @@ type MmrDecoder struct {
 	modeTable  []*code
 }
 
-func New(r *reader.Reader, width, height int, dataOffset, dataLength int) (*MmrDecoder, error) {
+func New(r *reader.Reader, width, height int, dataOffset, dataLength int64) (*MmrDecoder, error) {
 	m := &MmrDecoder{
 		width:  width,
 		height: height,
@@ -407,4 +408,122 @@ func (m *MmrDecoder) DetectAndSkipEOL() error {
 		}
 	}
 	return nil
+}
+
+// UncompressMMR decompress the
+func (m *MmrDecoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
+
+	b = bitmap.New(m.width, m.height)
+
+	// define offsets
+	var (
+		currentOffsets   []int = make([]int, b.Width+5)
+		referenceOffsets []int = make([]int, b.Width+5)
+	)
+
+	referenceOffsets[0] = b.Width
+	var refRunLength int = 1
+
+	count := 0
+
+	common.Log.Debug("Height: %v", b.Height)
+	for line := 0; line < b.Height; line++ {
+		common.Log.Debug("Line: %d", line)
+
+		count, err = m.Uncompress2d(m.Data(), referenceOffsets, refRunLength, currentOffsets, b.Width)
+		if err != nil {
+			return
+		}
+
+		if count == EOF {
+			break
+		}
+
+		if count > 0 {
+			err = m.FillBitmap(b, line, currentOffsets, count)
+			if err != nil {
+				return
+			}
+		}
+		// swap lines
+		referenceOffsets, currentOffsets = currentOffsets, referenceOffsets
+		refRunLength = count
+	}
+	if err = m.DetectAndSkipEOL(); err != nil {
+		return
+	}
+
+	m.Data().Align()
+	return
+}
+
+// FillMMR fills the bitmap with the current line and offsets from the MmrDecoder
+func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, count int) error {
+	x := 0
+	common.Log.Debug("Filling MMR. Line: %d", line)
+	common.Log.Debug("CurrentOffsets: %v. Count: %d", currentOffsets, count)
+
+	targetByte := b.GetByteIndex(x, line)
+
+	var targetByteValue byte
+
+	for index := 0; index < count; index++ {
+		common.Log.Debug("Index: %d", index)
+		offset := currentOffsets[index]
+
+		common.Log.Debug("Offset: %d", offset)
+		var value byte
+
+		if (index & 1) == 0 {
+			common.Log.Debug("Is zero")
+			value = 0
+		} else {
+			common.Log.Debug("Non zero")
+			value = 1
+		}
+
+		for x < offset {
+			targetByteValue = (targetByteValue << 1) | value
+			x += 1
+
+			if (x & 7) == 0 {
+
+				if err := b.SetByte(targetByte, targetByteValue); err != nil {
+					common.Log.Debug("SetByte error: %v", err)
+					return err
+				}
+				// // err := b.Data.SetByteBitwiseOffset(targetByteValue, count, targetBit, true)
+				// if err != nil {
+
+				// 	return err
+				// }
+				// b.Data.SetByteOffset(targetByteValue, targetByte)
+				targetByte += 1
+				targetByteValue = 0
+			}
+		}
+
+		common.Log.Debug("TargetByteValue: %08b", targetByteValue)
+	}
+
+	if (x & 7) != 0 {
+		targetByteValue <<= uint(8 - (x & 7))
+
+		if err := b.SetByte(targetByte, targetByteValue); err != nil {
+			common.Log.Debug("SetByte error: %v", err)
+			return err
+		}
+		// the value here is in little endian manner
+		// we should
+		// common.Log.Debug("TargetByteValue at the end: %08b", targetByteValue)
+		// b.Data.SetByteOffset(targetByteValue, targetByte)
+		// err := b.Data.SetByteBitwiseOffset(targetByteValue, count, targetBit, true)
+		// if err != nil {
+		// 	common.Log.Debug("SetByteBitwiseOffset failed: %v", err)
+		// 	return err
+		// }
+	}
+
+	return nil
+
 }
