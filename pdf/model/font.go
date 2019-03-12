@@ -95,7 +95,11 @@ func (font *PdfFont) ToUnicode() string {
 
 // DefaultFont returns the default font, which is currently the built in Helvetica.
 func DefaultFont() *PdfFont {
-	std := stdFontToSimpleFont(fonts.NewFontHelvetica())
+	helvetica, ok := fonts.NewStdFontByName(HelveticaName)
+	if !ok {
+		panic("Helvetica should always be available")
+	}
+	std := stdFontToSimpleFont(helvetica)
 	return &PdfFont{context: &std}
 }
 

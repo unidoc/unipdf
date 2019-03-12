@@ -15,10 +15,10 @@ func init() {
 	// The aliases seen for the standard 14 font names.
 	// Most of these are from table 5.5.1 in
 	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
-	RegisterStdFont(TimesRomanName, NewFontTimesRoman, "TimesNewRoman", "Times")
-	RegisterStdFont(TimesBoldName, NewFontTimesBold, "TimesNewRoman,Bold", "Times,Bold")
-	RegisterStdFont(TimesItalicName, NewFontTimesItalic, "TimesNewRoman,Italic", "Times,Italic")
-	RegisterStdFont(TimesBoldItalicName, NewFontTimesBoldItalic, "TimesNewRoman,BoldItalic", "Times,BoldItalic")
+	RegisterStdFont(TimesRomanName, newFontTimesRoman, "TimesNewRoman", "Times")
+	RegisterStdFont(TimesBoldName, newFontTimesBold, "TimesNewRoman,Bold", "Times,Bold")
+	RegisterStdFont(TimesItalicName, newFontTimesItalic, "TimesNewRoman,Italic", "Times,Italic")
+	RegisterStdFont(TimesBoldItalicName, newFontTimesBoldItalic, "TimesNewRoman,BoldItalic", "Times,BoldItalic")
 }
 
 const (
@@ -34,8 +34,8 @@ const (
 	TimesBoldItalicName = StdFontName("Times-BoldItalic")
 )
 
-// NewFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesRoman() StdFont {
+// newFontTimesRoman returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontTimesRoman() StdFont {
 	timesOnce.Do(initTimes)
 	desc := Descriptor{
 		Name:        TimesRomanName,
@@ -54,8 +54,8 @@ func NewFontTimesRoman() StdFont {
 	return NewStdFont(desc, timesRomanCharMetrics)
 }
 
-// NewFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBold() StdFont {
+// newFontTimesBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontTimesBold() StdFont {
 	timesOnce.Do(initTimes)
 	desc := Descriptor{
 		Name:        TimesBoldName,
@@ -74,8 +74,8 @@ func NewFontTimesBold() StdFont {
 	return NewStdFont(desc, timesBoldCharMetrics)
 }
 
-// NewFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesItalic() StdFont {
+// newFontTimesItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontTimesItalic() StdFont {
 	timesOnce.Do(initTimes)
 	desc := Descriptor{
 		Name:        TimesItalicName,
@@ -94,8 +94,8 @@ func NewFontTimesItalic() StdFont {
 	return NewStdFont(desc, timesItalicCharMetrics)
 }
 
-// NewFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontTimesBoldItalic() StdFont {
+// newFontTimesBoldItalic returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontTimesBoldItalic() StdFont {
 	timesOnce.Do(initTimes)
 	desc := Descriptor{
 		Name:        TimesBoldItalicName,

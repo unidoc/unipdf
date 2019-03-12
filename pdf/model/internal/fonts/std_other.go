@@ -17,8 +17,8 @@ func init() {
 	// The aliases seen for the standard 14 font names.
 	// Most of these are from table 5.5.1 in
 	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
-	RegisterStdFont(SymbolName, NewFontSymbol, "Symbol,Italic", "Symbol,Bold", "Symbol,BoldItalic")
-	RegisterStdFont(ZapfDingbatsName, NewFontZapfDingbats)
+	RegisterStdFont(SymbolName, newFontSymbol, "Symbol,Italic", "Symbol,Bold", "Symbol,BoldItalic")
+	RegisterStdFont(ZapfDingbatsName, newFontZapfDingbats)
 }
 
 const (
@@ -28,8 +28,8 @@ const (
 	ZapfDingbatsName = StdFontName("ZapfDingbats")
 )
 
-// NewFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
-func NewFontSymbol() StdFont {
+// newFontSymbol returns a new instance of the font with a default encoder set (SymbolEncoder).
+func newFontSymbol() StdFont {
 	enc := textencoding.NewSymbolEncoder()
 	desc := Descriptor{
 		Name:        SymbolName,
@@ -48,8 +48,8 @@ func NewFontSymbol() StdFont {
 	return NewStdFontWithEncoding(desc, symbolCharMetrics, enc)
 }
 
-// NewFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
-func NewFontZapfDingbats() StdFont {
+// newFontZapfDingbats returns a new instance of the font with a default encoder set (ZapfDingbatsEncoder).
+func newFontZapfDingbats() StdFont {
 	enc := textencoding.NewZapfDingbatsEncoder()
 	desc := Descriptor{
 		Name:        ZapfDingbatsName,

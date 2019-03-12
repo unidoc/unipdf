@@ -15,10 +15,10 @@ func init() {
 	// The aliases seen for the standard 14 font names.
 	// Most of these are from table 5.5.1 in
 	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
-	RegisterStdFont(CourierName, NewFontCourier, "CourierCourierNew", "CourierNew")
-	RegisterStdFont(CourierBoldName, NewFontCourierBold, "CourierNew,Bold")
-	RegisterStdFont(CourierObliqueName, NewFontCourierOblique, "CourierNew,Italic")
-	RegisterStdFont(CourierBoldObliqueName, NewFontCourierBoldOblique, "CourierNew,BoldItalic")
+	RegisterStdFont(CourierName, newFontCourier, "CourierCourierNew", "CourierNew")
+	RegisterStdFont(CourierBoldName, newFontCourierBold, "CourierNew,Bold")
+	RegisterStdFont(CourierObliqueName, newFontCourierOblique, "CourierNew,Italic")
+	RegisterStdFont(CourierBoldObliqueName, newFontCourierBoldOblique, "CourierNew,BoldItalic")
 }
 
 const (
@@ -32,8 +32,8 @@ const (
 	CourierBoldObliqueName = StdFontName("Courier-BoldOblique")
 )
 
-// NewFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourier() StdFont {
+// newFontCourier returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontCourier() StdFont {
 	courierOnce.Do(initCourier)
 	desc := Descriptor{
 		Name:        CourierName,
@@ -52,8 +52,8 @@ func NewFontCourier() StdFont {
 	return NewStdFont(desc, courierCharMetrics)
 }
 
-// NewFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourierBold() StdFont {
+// newFontCourierBold returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontCourierBold() StdFont {
 	courierOnce.Do(initCourier)
 	desc := Descriptor{
 		Name:        CourierBoldName,
@@ -73,7 +73,7 @@ func NewFontCourierBold() StdFont {
 }
 
 // NewFontCourierOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontCourierOblique() StdFont {
+func newFontCourierOblique() StdFont {
 	courierOnce.Do(initCourier)
 	desc := Descriptor{
 		Name:        CourierObliqueName,
@@ -94,7 +94,7 @@ func NewFontCourierOblique() StdFont {
 
 // NewFontCourierBoldOblique returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontCourierBoldOblique() StdFont {
+func newFontCourierBoldOblique() StdFont {
 	courierOnce.Do(initCourier)
 	desc := Descriptor{
 		Name:        CourierBoldObliqueName,

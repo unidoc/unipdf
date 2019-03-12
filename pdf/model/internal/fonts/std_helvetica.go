@@ -15,10 +15,10 @@ func init() {
 	// The aliases seen for the standard 14 font names.
 	// Most of these are from table 5.5.1 in
 	// https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/adobe_supplement_iso32000.pdf
-	RegisterStdFont(HelveticaName, NewFontHelvetica, "Arial")
-	RegisterStdFont(HelveticaBoldName, NewFontHelveticaBold, "Arial,Bold")
-	RegisterStdFont(HelveticaObliqueName, NewFontHelveticaOblique, "Arial,Italic")
-	RegisterStdFont(HelveticaBoldObliqueName, NewFontHelveticaBoldOblique, "Arial,BoldItalic")
+	RegisterStdFont(HelveticaName, newFontHelvetica, "Arial")
+	RegisterStdFont(HelveticaBoldName, newFontHelveticaBold, "Arial,Bold")
+	RegisterStdFont(HelveticaObliqueName, newFontHelveticaOblique, "Arial,Italic")
+	RegisterStdFont(HelveticaBoldObliqueName, newFontHelveticaBoldOblique, "Arial,BoldItalic")
 }
 
 const (
@@ -32,8 +32,8 @@ const (
 	HelveticaBoldObliqueName = StdFontName("Helvetica-BoldOblique")
 )
 
-// NewFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelvetica() StdFont {
+// newFontHelvetica returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontHelvetica() StdFont {
 	helveticaOnce.Do(initHelvetica)
 	desc := Descriptor{
 		Name:        HelveticaName,
@@ -52,9 +52,9 @@ func NewFontHelvetica() StdFont {
 	return NewStdFont(desc, helveticaCharMetrics)
 }
 
-// NewFontHelveticaBold returns a new instance of the font with a default encoder set
+// newFontHelveticaBold returns a new instance of the font with a default encoder set
 // (WinAnsiEncoding).
-func NewFontHelveticaBold() StdFont {
+func newFontHelveticaBold() StdFont {
 	helveticaOnce.Do(initHelvetica)
 	desc := Descriptor{
 		Name:        HelveticaBoldName,
@@ -73,8 +73,8 @@ func NewFontHelveticaBold() StdFont {
 	return NewStdFont(desc, helveticaBoldCharMetrics)
 }
 
-// NewFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaOblique() StdFont {
+// newFontHelveticaOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontHelveticaOblique() StdFont {
 	helveticaOnce.Do(initHelvetica)
 	desc := Descriptor{
 		Name:        HelveticaObliqueName,
@@ -93,8 +93,8 @@ func NewFontHelveticaOblique() StdFont {
 	return NewStdFont(desc, helveticaObliqueCharMetrics)
 }
 
-// NewFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
-func NewFontHelveticaBoldOblique() StdFont {
+// newFontHelveticaBoldOblique returns a new instance of the font with a default encoder set (WinAnsiEncoding).
+func newFontHelveticaBoldOblique() StdFont {
 	helveticaOnce.Do(initHelvetica)
 	desc := Descriptor{
 		Name:        HelveticaBoldObliqueName,
