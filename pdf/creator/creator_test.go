@@ -930,6 +930,14 @@ func TestSubchapters(t *testing.T) {
 		}
 	}
 
+	// Add a styled paragraph to the chapter.
+	sp := c.NewStyledParagraph()
+	sp.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
+		"eiusmod tempor incididunt ut labore et dolore magna aliqua.\n").Style.Color = ColorRed
+	sp.Append("Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris " +
+		"nisi ut aliquip ex ea commodo consequat.").Style.Color = ColorBlue
+	subchap3.Add(sp)
+
 	subchap4 := ch1.NewSubchapter("Conclusion")
 	subchap4.SetMargins(0, 0, 5, 0)
 	for j := 0; j < 23; j++ {
