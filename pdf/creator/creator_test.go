@@ -19,12 +19,10 @@ import (
 	"image/png"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -44,7 +42,7 @@ func init() {
 
 // Rendering tests are run when UNIDOC_RENDERTEST_BASELINE_PATH environment variable is set to
 // a folder containing a rendered PNG image of each page of generated PDF files.
-// Rendering requires pdftoppm to be present on the system.
+// Rendering requires gs (ghostscript) to be present on the system.
 // To generate the images based on the current version of unidoc, set UNIDOC_RENDERTEST_BASELINE_PATH
 // and run the test as usual. Files for all tests will be generated. Rename ones you want to test from
 // xxx.png to xxx_exp.png, make changes to the code and run the test again (with environment variable set).
@@ -3002,18 +3000,16 @@ func TestCreatorStable(t *testing.T) {
 
 var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
 
-// renderPDFToPNGs uses pdftoppm tool to render specified PDF file into a set of PNG images (one per page).
+// renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
 // PNG images will be named xxx-N.png where N is the number of page, starting from 1.
-func renderPDFToPNGs(pdfPath string, dpi int, out string) error {
+func renderPDFToPNGs(pdfPath string, dpi int, outpathTpl string) error {
 	if dpi == 0 {
-		// default is 150, but 100 should be good enough for tests
 		dpi = 100
 	}
-	if _, err := exec.LookPath("pdftoppm"); err != nil {
+	if _, err := exec.LookPath("gs"); err != nil {
 		return errRenderNotSupported
 	}
-	dpis := strconv.Itoa(dpi)
-	return exec.Command("pdftoppm", pdfPath, out, "-png", "-rx", dpis, "-ry", dpis).Run()
+	return exec.Command("gs", "-sDEVICE=pngalpha", "-o", outpathTpl, fmt.Sprintf("-r%d", dpi), pdfPath).Run()
 }
 
 func readPNG(file string) (goimage.Image, error) {
@@ -3050,40 +3046,29 @@ func comparePNGFiles(file1, file2 string) (bool, error) {
 	if img1.Bounds() != img2.Bounds() {
 		return false, nil
 	}
-	rgb1, ok := img1.(*goimage.RGBA)
-	if !ok {
-		return compareImages(img1, img2)
-	}
-	rgb2, ok := img2.(*goimage.RGBA)
-	if !ok {
-		return compareImages(img1, img2)
-	}
-	return compareImagesRGBA(rgb1, rgb2)
+	return compareImages(img1, img2)
 }
 
 func compareImages(img1, img2 goimage.Image) (bool, error) {
 	rect := img1.Bounds()
+	diff := 0
 	for x := 0; x < rect.Size().X; x++ {
 		for y := 0; y < rect.Size().Y; y++ {
-			r1, g1, b1, a1 := img1.At(x, y).RGBA()
-			r2, g2, b2, a2 := img2.At(x, y).RGBA()
-			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
-				return false, nil
+			r1, g1, b1, _ := img1.At(x, y).RGBA()
+			r2, g2, b2, _ := img2.At(x, y).RGBA()
+			if r1 != r2 || g1 != g2 || b1 != b2 {
+				diff++
 			}
 		}
 	}
-	return true, nil
-}
 
-func compareImagesRGBA(img1, img2 *goimage.RGBA) (bool, error) {
-	if img1.Stride != img2.Stride {
-		// TODO(dennwc): does this ever happen? if so, we can still optimize this
-		log.Println("WARN: RGB images with different strides")
-		return compareImages(img1, img2)
-	} else if len(img1.Pix) != len(img2.Pix) {
+	diffFraction := float64(diff) / float64(rect.Dx()*rect.Dy())
+	if diffFraction > 0.0001 {
+		fmt.Printf("diff fraction: %v (%d)\n", diffFraction, diff)
 		return false, nil
 	}
-	return bytes.Equal(img1.Pix, img2.Pix), nil
+
+	return true, nil
 }
 
 func hashFile(file string) (string, error) {
@@ -3110,32 +3095,76 @@ func testWriteAndRender(t *testing.T, c *Creator, pname string) {
 	testRender(t, pname)
 }
 
-func testRender(t *testing.T, pname string) {
-	tname := strings.TrimSuffix(filepath.Base(pname), filepath.Ext(pname))
+func testRender(t *testing.T, pdfPath string) {
+	if baselineRenderPath == "" {
+		t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
+	}
+	// Set to true to create the baseline.
+	saveBaseline := false
+
+	// Write rendering outputs to a temporary directory that is cleaned up afterwards.
+	tempDir, err := ioutil.TempDir("", "unidoc")
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	tplName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
 	t.Run("render", func(t *testing.T) {
-		if baselineRenderPath == "" {
-			t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
-		}
-		fname := filepath.Join(baselineRenderPath, tname)
-		// will emit template_1-x.png
-		err := renderPDFToPNGs(pname, 0, fname)
+		imgPathPrefix := filepath.Join(tempDir, tplName)
+		imgPathTpl := filepath.Join(tempDir, tplName) + "-%d.png"
+		// will emit /tmp/dir/template-x.png for each page x.
+		err := renderPDFToPNGs(pdfPath, 0, imgPathTpl)
 		if err != nil {
 			t.Skip(err)
 		}
 		for i := 1; true; i++ {
-			name1 := fmt.Sprintf(fname+"-%d.png", i)
-			name2 := fmt.Sprintf(fname+"-%d_exp.png", i)
-			if _, err := os.Stat(name1); i > 1 && err != nil {
+			imgPath := imgPathPrefix + fmt.Sprintf("-%d.png", i)
+			expImgPath := filepath.Join(baselineRenderPath, tplName+fmt.Sprintf("-%d_exp.png", i))
+
+			if _, err := os.Stat(imgPath); err != nil {
 				break
 			}
+			t.Logf("%s", expImgPath)
+			if _, err := os.Stat(expImgPath); os.IsNotExist(err) {
+				if saveBaseline {
+					t.Logf("Copying %s -> %s", imgPath, expImgPath)
+					copyFile(imgPath, expImgPath)
+					continue
+				}
+				break
+			}
+
 			t.Run(fmt.Sprintf("page%d", i), func(t *testing.T) {
-				ok, err := comparePNGFiles(name1, name2)
+				t.Logf("Comparing %s vs %s", imgPath, expImgPath)
+				ok, err := comparePNGFiles(imgPath, expImgPath)
 				if os.IsNotExist(err) {
-					t.Skip("no test file")
+					t.Fatal("image file missing")
 				} else if !ok {
 					t.Fatal("wrong page rendered")
 				}
 			})
 		}
 	})
+}
+
+// copyFile copies file from src to dst.
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Close()
 }
