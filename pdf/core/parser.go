@@ -1054,7 +1054,7 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 				obj := XrefObject{ObjectNumber: objNum,
 					XType: XrefTypeObjectStream, OsObjNumber: int(n2), OsObjIndex: int(n3)}
 				parser.xrefs[objNum] = obj
-				common.Log.Trace("entry: %s", parser.xrefs[objNum])
+				common.Log.Trace("entry: %+v", parser.xrefs[objNum])
 			}
 		} else {
 			common.Log.Debug("ERROR: --------INVALID TYPE XrefStm invalid?-------")
