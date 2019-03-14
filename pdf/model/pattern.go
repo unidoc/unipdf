@@ -76,9 +76,9 @@ type PdfTilingPattern struct {
 func (p *PdfTilingPattern) IsColored() bool {
 	if p.PaintType != nil && *p.PaintType == 1 {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // GetContentStream returns the pattern cell's content stream

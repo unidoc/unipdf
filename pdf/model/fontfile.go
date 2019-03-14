@@ -105,7 +105,7 @@ func newFontFileFromPdfObject(obj core.PdfObject) (*fontFile, error) {
 // Based on pdfbox
 func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
 	common.Log.Trace("loadFromSegments: %d %d", len(segment1), len(segment2))
-	err := fontfile.parseAsciiPart(segment1)
+	err := fontfile.parseASCIIPart(segment1)
 	if err != nil {
 		return err
 	}
@@ -117,8 +117,8 @@ func (fontfile *fontFile) loadFromSegments(segment1, segment2 []byte) error {
 	return nil
 }
 
-// parseAsciiPart parses the ASCII part of the FontFile.
-func (fontfile *fontFile) parseAsciiPart(data []byte) error {
+// parseASCIIPart parses the ASCII part of the FontFile.
+func (fontfile *fontFile) parseASCIIPart(data []byte) error {
 
 	// Uncomment these lines to see the contents of the font file. For debugging.
 	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~^^^~~~~~~~~~~~~~~~~~~~~~~~")
@@ -134,7 +134,7 @@ func (fontfile *fontFile) parseAsciiPart(data []byte) error {
 		return errors.New("invalid start of ASCII segment")
 	}
 
-	keySection, encodingSection, err := getAsciiSections(data)
+	keySection, encodingSection, err := getASCIISections(data)
 	if err != nil {
 		return err
 	}
@@ -170,14 +170,14 @@ var (
 	binaryStart   = "currentfile eexec"
 )
 
-// getAsciiSections returns two sections of `data`, the ASCII part of the FontFile
+// getASCIISections returns two sections of `data`, the ASCII part of the FontFile
 //   - the general key values in `keySection`
 //   - the encoding in `encodingSection`
-func getAsciiSections(data []byte) (keySection, encodingSection string, err error) {
-	common.Log.Trace("getAsciiSections: %d ", len(data))
+func getASCIISections(data []byte) (keySection, encodingSection string, err error) {
+	common.Log.Trace("getASCIISections: %d ", len(data))
 	loc := reDictBegin.FindIndex(data)
 	if loc == nil {
-		common.Log.Debug("ERROR: getAsciiSections. No dict.")
+		common.Log.Debug("ERROR: getASCIISections. No dict.")
 		return "", "", core.ErrTypeError
 	}
 	i0 := loc[1]
@@ -192,7 +192,7 @@ func getAsciiSections(data []byte) (keySection, encodingSection string, err erro
 	i2 := i1
 	i = strings.Index(string(data[i2:]), encodingEnd)
 	if i < 0 {
-		common.Log.Debug("ERROR: getAsciiSections. err=%v", err)
+		common.Log.Debug("ERROR: getASCIISections. err=%v", err)
 		return "", "", core.ErrTypeError
 	}
 	i3 := i2 + i

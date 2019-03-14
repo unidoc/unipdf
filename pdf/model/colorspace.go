@@ -1521,9 +1521,8 @@ func (cs *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	gFunc := func(x float64) float64 {
 		if x >= 6.0/29 {
 			return x * x * x
-		} else {
-			return 108.0 / 841 * (x - 4/29)
 		}
+		return 108.0 / 841 * (x - 4/29)
 	}
 
 	lab, ok := color.(*PdfColorLab)
@@ -1566,9 +1565,8 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 	g := func(x float64) float64 {
 		if x >= 6.0/29 {
 			return x * x * x
-		} else {
-			return 108.0 / 841 * (x - 4/29)
 		}
+		return 108.0 / 841 * (x - 4/29)
 	}
 
 	rgbImage := img
@@ -2111,7 +2109,7 @@ func (cs *PdfColorspaceSpecialPattern) ColorToRGB(color PdfColor) (PdfColor, err
 	}
 
 	if cs.UnderlyingCS == nil {
-		return nil, errors.New("underlying CS not defined.")
+		return nil, errors.New("underlying CS not defined")
 	}
 
 	return cs.UnderlyingCS.ColorToRGB(patternColor.Color)

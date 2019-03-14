@@ -422,7 +422,7 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 		if obj := dict.Get("Resources"); obj != nil {
 			prDict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
 			if !ok {
-				return nil, errors.New("invalid resource dict!")
+				return nil, errors.New("invalid resource dict")
 			}
 			resources, err := NewPdfPageResourcesFromDict(prDict)
 
@@ -553,12 +553,11 @@ func (p *PdfPage) HasXObjectByName(name core.PdfObjectName) bool {
 	if !has {
 		return false
 	}
-
 	if obj := xresDict.Get(name); obj != nil {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // GetXObjectByName gets XObject by name.
@@ -567,12 +566,11 @@ func (p *PdfPage) GetXObjectByName(name core.PdfObjectName) (core.PdfObject, boo
 	if !has {
 		return nil, false
 	}
-
 	if obj := xresDict.Get(name); obj != nil {
 		return obj, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 // HasFontByName checks if has font resource by name.
@@ -581,12 +579,11 @@ func (p *PdfPage) HasFontByName(name core.PdfObjectName) bool {
 	if !has {
 		return false
 	}
-
 	if obj := fontDict.Get(name); obj != nil {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // HasExtGState checks if ExtGState name is available.
@@ -841,28 +838,25 @@ func (p *PdfPage) GetContentStreams() ([]string, error) {
 	if p.Contents == nil {
 		return nil, nil
 	}
-
 	contents := core.TraceToDirectObject(p.Contents)
-	if contArray, isArray := contents.(*core.PdfObjectArray); isArray {
-		// If an array of content streams, append it.
-		var cstreams []string
-		for _, cstreamObj := range contArray.Elements() {
-			cstreamStr, err := getContentStreamAsString(cstreamObj)
-			if err != nil {
-				return nil, err
-			}
-			cstreams = append(cstreams, cstreamStr)
-		}
-		return cstreams, nil
+
+	var cStreamObjs []core.PdfObject
+	if contArray, ok := contents.(*core.PdfObjectArray); ok {
+		cStreamObjs = contArray.Elements()
 	} else {
-		// Only 1 element in place. Wrap inside a new array and add the new one.
-		cstreamStr, err := getContentStreamAsString(contents)
+		cStreamObjs = []core.PdfObject{contents}
+	}
+
+	var cStreams []string
+	for _, cStreamObj := range cStreamObjs {
+		cStreamStr, err := getContentStreamAsString(cStreamObj)
 		if err != nil {
 			return nil, err
 		}
-		cstreams := []string{cstreamStr}
-		return cstreams, nil
+		cStreams = append(cStreams, cStreamStr)
 	}
+
+	return cStreams, nil
 }
 
 // GetAllContentStreams gets all the content streams for a page as one string.

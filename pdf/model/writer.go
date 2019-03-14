@@ -431,7 +431,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 
 	}
 	if *otype != "Page" {
-		return errors.New("Type != Page (Required).")
+		return errors.New("field Type != Page (Required)")
 	}
 
 	// Copy inherited fields if missing.

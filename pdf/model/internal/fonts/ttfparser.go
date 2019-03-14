@@ -135,6 +135,7 @@ func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	return cmap.NewToUnicodeCMap(codeToUnicode)
 }
 
+// NewEncoder returns a new TrueType font encoder.
 func (ttf *TtfType) NewEncoder() textencoding.TextEncoder {
 	return textencoding.NewTrueTypeFontEncoder(ttf.Chars)
 }
@@ -547,8 +548,8 @@ func (t *ttfParser) parseCmapFormat0() error {
 	data := []byte(dataStr)
 	common.Log.Trace("parseCmapFormat0: %s\ndataStr=%+q\ndata=[% 02x]", t.rec.String(), dataStr, data)
 
-	for code, glyphId := range data {
-		t.rec.Chars[rune(code)] = GID(glyphId)
+	for code, glyphID := range data {
+		t.rec.Chars[rune(code)] = GID(glyphID)
 	}
 	return nil
 }
@@ -562,8 +563,8 @@ func (t *ttfParser) parseCmapFormat6() error {
 		t.rec.String(), firstCode, entryCount)
 
 	for i := 0; i < entryCount; i++ {
-		glyphId := GID(t.ReadUShort())
-		t.rec.Chars[rune(i+firstCode)] = glyphId
+		glyphID := GID(t.ReadUShort())
+		t.rec.Chars[rune(i+firstCode)] = glyphID
 	}
 
 	return nil
@@ -589,16 +590,12 @@ func (t *ttfParser) parseCmapFormat12() error {
 		}
 
 		for j := uint32(0); j <= endCode-firstCode; j++ {
-			glyphId := startGlyph + j
-			// if glyphId >= numGlyphs {
-			// 	common.Log.Debug("ERROR: Format 12 cmap contains an invalid glyph index")
-			// 	break
-			// }
+			glyphID := startGlyph + j
 			if firstCode+j > 0x10FFFF {
 				common.Log.Debug("Format 12 cmap contains character beyond UCS-4")
 			}
 
-			t.rec.Chars[rune(i+firstCode)] = GID(glyphId)
+			t.rec.Chars[rune(i+firstCode)] = GID(glyphID)
 		}
 
 	}

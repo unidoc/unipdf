@@ -270,9 +270,9 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 				return nil, err
 			}
 			return &PdfFont{context: simplefont}, err
-		} else {
-			return nil, err
 		}
+
+		return nil, err
 	}
 
 	font := &PdfFont{}

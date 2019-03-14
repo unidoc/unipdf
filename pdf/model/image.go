@@ -10,10 +10,12 @@ import (
 	goimage "image"
 	gocolor "image/color"
 	"image/draw"
-	_ "image/gif"
-	_ "image/png"
 	"io"
 	"math"
+
+	// imported for initialization side effects.
+	_ "image/gif"
+	_ "image/png"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"

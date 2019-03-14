@@ -152,9 +152,9 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 }
 
 // ToPdfObject converts date to a PDF string object.
-func (date *PdfDate) ToPdfObject() core.PdfObject {
+func (d *PdfDate) ToPdfObject() core.PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
-		date.year, date.month, date.day, date.hour, date.minute, date.second,
-		date.utOffsetSign, date.utOffsetHours, date.utOffsetMins)
+		d.year, d.month, d.day, d.hour, d.minute, d.second,
+		d.utOffsetSign, d.utOffsetHours, d.utOffsetMins)
 	return core.MakeString(str)
 }

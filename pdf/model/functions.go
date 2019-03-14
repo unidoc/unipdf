@@ -507,10 +507,9 @@ func (f *PdfFunctionType2) ToPdfObject() core.PdfObject {
 	if f.container != nil {
 		f.container.PdfObject = dict
 		return f.container
-	} else {
-		return dict
 	}
 
+	return dict
 }
 
 func (f *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
@@ -712,9 +711,9 @@ func (f *PdfFunctionType3) ToPdfObject() core.PdfObject {
 	if f.container != nil {
 		f.container.PdfObject = dict
 		return f.container
-	} else {
-		return dict
 	}
+
+	return dict
 }
 
 // PdfFunctionType4 is a Postscript calculator functions.

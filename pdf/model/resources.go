@@ -119,12 +119,11 @@ func (r *PdfPageResources) GetExtGState(keyName core.PdfObjectName) (core.PdfObj
 		common.Log.Debug("ERROR: Invalid ExtGState entry - not a dict (got %T)", r.ExtGState)
 		return nil, false
 	}
-
 	if obj := dict.Get(keyName); obj != nil {
 		return obj, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 // HasExtGState checks whether a font is defined by the specified keyName.
@@ -145,7 +144,6 @@ func (r *PdfPageResources) GetShadingByName(keyName core.PdfObjectName) (*PdfSha
 		common.Log.Debug("ERROR: Invalid Shading entry - not a dict (got %T)", r.Shading)
 		return nil, false
 	}
-
 	if obj := shadingDict.Get(keyName); obj != nil {
 		shading, err := newPdfShadingFromPdfObject(obj)
 		if err != nil {
@@ -153,9 +151,9 @@ func (r *PdfPageResources) GetShadingByName(keyName core.PdfObjectName) (*PdfSha
 			return nil, false
 		}
 		return shading, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 // SetShadingByName sets a shading resource specified by keyName.
@@ -185,7 +183,6 @@ func (r *PdfPageResources) GetPatternByName(keyName core.PdfObjectName) (*PdfPat
 		common.Log.Debug("ERROR: Invalid Pattern entry - not a dict (got %T)", r.Pattern)
 		return nil, false
 	}
-
 	if obj := patternDict.Get(keyName); obj != nil {
 		pattern, err := newPdfPatternFromPdfObject(obj)
 		if err != nil {
@@ -194,9 +191,9 @@ func (r *PdfPageResources) GetPatternByName(keyName core.PdfObjectName) (*PdfPat
 		}
 
 		return pattern, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 // SetPatternByName sets a pattern resource specified by keyName.
@@ -226,12 +223,11 @@ func (r *PdfPageResources) GetFontByName(keyName core.PdfObjectName) (core.PdfOb
 		common.Log.Debug("ERROR: Font not a dictionary! (got %T)", core.TraceToDirectObject(r.Font))
 		return nil, false
 	}
-
 	if obj := fontDict.Get(keyName); obj != nil {
 		return obj, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 // HasFontByName checks whether a font is defined by the specified keyName.
@@ -293,9 +289,9 @@ func (r *PdfPageResources) HasXObjectByName(keyName core.PdfObjectName) bool {
 	obj, _ := r.GetXObjectByName(keyName)
 	if obj != nil {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // GenerateXObjectName generates an unused XObject name that can be used for

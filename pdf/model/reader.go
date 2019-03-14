@@ -347,50 +347,32 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		}
 
 		return &outlineItem.PdfOutlineTreeNode, &outlineItem.PdfOutlineTreeNode, nil
-	} else {
-		// Outline dictionary (structure element).
+	}
 
-		outline, err := newPdfOutlineFromIndirectObject(container)
+	// Outline dictionary (structure element).
+	outline, err := newPdfOutlineFromIndirectObject(container)
+	if err != nil {
+		return nil, nil, err
+	}
+	outline.Parent = parent
+
+	if firstObj := dict.Get("First"); firstObj != nil {
+		// Has children...
+		firstObj, err = r.traceToObject(firstObj)
 		if err != nil {
 			return nil, nil, err
 		}
-		outline.Parent = parent
-		//outline.Prev = parent
-
-		if firstObj := dict.Get("First"); firstObj != nil {
-			// Has children...
-			firstObj, err = r.traceToObject(firstObj)
+		if _, isNull := firstObj.(*core.PdfObjectNull); !isNull {
+			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 			if err != nil {
 				return nil, nil, err
 			}
-			if _, isNull := firstObj.(*core.PdfObjectNull); !isNull {
-				first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
-				if err != nil {
-					return nil, nil, err
-				}
-				outline.First = first
-				outline.Last = last
-			}
+			outline.First = first
+			outline.Last = last
 		}
-
-		/*
-			if nextObj, hasNext := (*dict)["Next"]; hasNext {
-				nextObj, err = r.traceToObject(nextObj)
-				if err != nil {
-					return nil, nil, err
-				}
-				if _, isNull := nextObj.(*PdfObjectNull); !isNull {
-					next, last, err := r.buildOutlineTree(nextObj, parent, &outline.PdfOutlineTreeNode)
-					if err != nil {
-						return nil, nil, err
-					}
-					outline.Next = next
-					return &outline.PdfOutlineTreeNode, last, nil
-				}
-			}*/
-
-		return &outline.PdfOutlineTreeNode, &outline.PdfOutlineTreeNode, nil
 	}
+
+	return &outline.PdfOutlineTreeNode, &outline.PdfOutlineTreeNode, nil
 }
 
 // GetOutlineTree returns the outline tree.
@@ -531,7 +513,7 @@ func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.Pdf
 	}
 	if *objType != "Pages" {
 		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
-		return errors.New("table of content containing non Page/Pages object!")
+		return errors.New("table of content containing non Page/Pages object")
 	}
 
 	// A Pages object.  Update the parent.
@@ -680,7 +662,7 @@ func (r *PdfReader) traverseObjectData(o core.PdfObject) error {
 
 	if _, isRef := o.(*core.PdfObjectReference); isRef {
 		common.Log.Debug("ERROR: Reader tracing a reference!")
-		return errors.New("reader tracing a reference!")
+		return errors.New("reader tracing a reference")
 	}
 
 	return nil
