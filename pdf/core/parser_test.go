@@ -44,16 +44,16 @@ var namePairs = map[string]string{
 	"/Name1":                             "Name1",
 	"/ASomewhatLongerName":               "ASomewhatLongerName",
 	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
-	"/1.2":                               "1.2",
-	"/$$":                                "$$",
-	"/@pattern":                          "@pattern",
-	"/.notdef":                           ".notdef",
-	"/Lime#20Green":                      "Lime Green",
-	"/paired#28#29parentheses":           "paired()parentheses",
-	"/The_Key_of_F#23_Minor":             "The_Key_of_F#_Minor",
-	"/A#42":                              "AB",
-	"/":                                  "",
-	"/ ":                                 "",
+	"/1.2":                     "1.2",
+	"/$$":                      "$$",
+	"/@pattern":                "@pattern",
+	"/.notdef":                 ".notdef",
+	"/Lime#20Green":            "Lime Green",
+	"/paired#28#29parentheses": "paired()parentheses",
+	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
+	"/A#42":                    "AB",
+	"/":                        "",
+	"/ ":                       "",
 	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
 }
 
@@ -105,18 +105,18 @@ func BenchmarkStringParsing(b *testing.B) {
 }
 
 var stringPairs = map[string]string{
-	"(This is a string)":                        "This is a string",
-	"(Strings may contain\n newlines and such)": "Strings may contain\n newlines and such",
+	"(This is a string)":                                                                        "This is a string",
+	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
 	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
 	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
 	"(These two strings are the same.)":                                                         "These two strings are the same.",
-	"(\\\\)":                                                                                    "\\",
-	"(This string has an end-of-line at the end of it.\n)":                                      "This string has an end-of-line at the end of it.\n",
-	"(So does this one.\\n)":                                                                    "So does this one.\n",
-	"(\\0053)":                                                                                  "\0053",
-	"(\\53)":                                                                                    "\053",
-	"(\\053)":                                                                                   "+",
-	"(\\53\\101)":                                                                               "+A",
+	"(\\\\)": "\\",
+	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                               "So does this one.\n",
+	"(\\0053)":                                             "\0053",
+	"(\\53)":                                               "\053",
+	"(\\053)":                                              "+",
+	"(\\53\\101)":                                          "+A",
 }
 
 func TestStringParsing(t *testing.T) {
@@ -588,6 +588,7 @@ endobj`
 	common.Log.Debug("Xref dict: %s", xrefDict)
 }
 
+// TODO(gunnsth): Clear up. Should define clear inputs and expectation data and then run it.
 func TestObjectParse(t *testing.T) {
 	parser := PdfParser{}
 
@@ -602,6 +603,24 @@ func TestObjectParse(t *testing.T) {
 	}
 
 	// Integer
+	rawText = "0"
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
+	obj, err = parser.parseObject()
+	if err != nil {
+		t.Errorf("Error parsing object: %v", err)
+		return
+	}
+	nump, ok := obj.(*PdfObjectInteger)
+	if !ok {
+		t.Errorf("Unable to identify integer")
+		return
+	}
+	if *nump != 0 {
+		t.Errorf("Wrong value, expecting 9 (%d)", *nump)
+		return
+	}
+
+	// Integer
 	rawText = "9 0 false"
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	obj, err = parser.parseObject()
@@ -610,7 +629,7 @@ func TestObjectParse(t *testing.T) {
 		t.Errorf("Error parsing object")
 		return
 	}
-	nump, ok := obj.(*PdfObjectInteger)
+	nump, ok = obj.(*PdfObjectInteger)
 	if !ok {
 		t.Errorf("Unable to identify integer")
 		return

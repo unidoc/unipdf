@@ -85,7 +85,7 @@ func (parser *PdfParser) lookupObjectViaOS(sobjNumber int, objNum int) (PdfObjec
 		}
 
 		sod := so.PdfObjectDictionary
-		common.Log.Trace("so d: %s\n", *sod)
+		common.Log.Trace("so d: %s\n", sod.String())
 		name, ok := sod.Get("Type").(*PdfObjectName)
 		if !ok {
 			common.Log.Debug("ERROR: Object stream should always have a Type")

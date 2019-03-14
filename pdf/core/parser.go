@@ -526,7 +526,14 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 	for {
 		bb, err := parser.reader.Peek(2)
 		if err != nil {
-			return nil, err
+			// If EOFs after 1 byte then should still try to continue parsing.
+			if err != io.EOF || len(bb) == 0 {
+				return nil, err
+			}
+			if len(bb) == 1 {
+				// Add space as code below is expecting 2 bytes.
+				bb = append(bb, ' ')
+			}
 		}
 
 		common.Log.Trace("Peek string: %s", string(bb))
