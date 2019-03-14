@@ -12,6 +12,8 @@ node {
     env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
+    // Hack for 1.11.5 testing work.
+    env.CGO_ENABLED="0"
 
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
