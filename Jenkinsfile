@@ -1,6 +1,6 @@
 node {
     // Install the desired Go version
-    def root = tool name: 'go 1.10.3', type: 'go'
+    def root = tool name: 'go 1.11.5', type: 'go'
 
     env.GOROOT="${root}"
     env.GOPATH="${WORKSPACE}/gopath"
