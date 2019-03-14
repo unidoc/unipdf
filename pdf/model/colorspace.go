@@ -1988,14 +1988,6 @@ func (cs *PdfColorspaceICCBased) ColorFromPdfObjects(objects []core.PdfObject) (
 
 // ColorToRGB converts a ICCBased color to an RGB color.
 func (cs *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
-	/*
-		_, ok := color.(*PdfColorICCBased)
-		if !ok {
-			common.Log.Debug("ICC Based color error, type: %T", color)
-			return nil, errors.New("type check error")
-		}
-	*/
-
 	if cs.Alternate == nil {
 		common.Log.Debug("ICC Based colorspace missing alternative")
 		if cs.N == 1 {
