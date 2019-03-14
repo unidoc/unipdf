@@ -226,6 +226,7 @@ func newPdfFunctionType0FromStream(stream *core.PdfObjectStream) (*PdfFunctionTy
 	return fun, nil
 }
 
+// ToPdfObject returns the PDF representation of the function.
 func (f *PdfFunctionType0) ToPdfObject() core.PdfObject {
 	if f.container == nil {
 		f.container = &core.PdfObjectStream{}
@@ -270,6 +271,7 @@ func (f *PdfFunctionType0) ToPdfObject() core.PdfObject {
 	return f.container
 }
 
+// Evaluate runs the function on the passed in slice and returns the results.
 func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != f.NumInputs {
 		common.Log.Error("Number of inputs not matching what is needed")
@@ -461,6 +463,7 @@ func newPdfFunctionType2FromPdfObject(obj core.PdfObject) (*PdfFunctionType2, er
 	return fun, nil
 }
 
+// ToPdfObject returns the PDF representation of the function.
 func (f *PdfFunctionType2) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 
@@ -512,6 +515,7 @@ func (f *PdfFunctionType2) ToPdfObject() core.PdfObject {
 	return dict
 }
 
+// Evaluate runs the function on the passed in slice and returns the results.
 func (f *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
@@ -537,7 +541,7 @@ func (f *PdfFunctionType2) Evaluate(x []float64) ([]float64, error) {
 	return y, nil
 }
 
-// PdfFunctionType3 defines stitching of the subdomains of serveral 1-input functions to produce
+// PdfFunctionType3 defines stitching of the subdomains of several 1-input functions to produce
 // a single new 1-input function.
 type PdfFunctionType3 struct {
 	Domain []float64
@@ -550,6 +554,7 @@ type PdfFunctionType3 struct {
 	container *core.PdfIndirectObject
 }
 
+// Evaluate runs the function on the passed in slice and returns the results.
 func (f *PdfFunctionType3) Evaluate(x []float64) ([]float64, error) {
 	if len(x) != 1 {
 		common.Log.Error("Only one input allowed")
@@ -659,6 +664,7 @@ func newPdfFunctionType3FromPdfObject(obj core.PdfObject) (*PdfFunctionType3, er
 	return fun, nil
 }
 
+// ToPdfObject returns the PDF representation of the function.
 func (f *PdfFunctionType3) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 
@@ -808,6 +814,7 @@ func newPdfFunctionType4FromStream(stream *core.PdfObjectStream) (*PdfFunctionTy
 	return fun, nil
 }
 
+// ToPdfObject returns the PDF representation of the function.
 func (f *PdfFunctionType4) ToPdfObject() core.PdfObject {
 	container := f.container
 	if container == nil {

@@ -213,6 +213,7 @@ func (col *PdfColorDeviceGray) GetNumComponents() int {
 	return 1
 }
 
+// Val returns the color value.
 func (col *PdfColorDeviceGray) Val() float64 {
 	return float64(*col)
 }
@@ -223,12 +224,16 @@ func (col *PdfColorDeviceGray) ToInteger(bits int) uint32 {
 	return uint32(maxVal * col.Val())
 }
 
+// PdfColorspaceDeviceGray represents a grayscale colorspace.
 type PdfColorspaceDeviceGray struct{}
 
+// NewPdfColorspaceDeviceGray returns a new grayscale colorspace.
 func NewPdfColorspaceDeviceGray() *PdfColorspaceDeviceGray {
 	return &PdfColorspaceDeviceGray{}
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 1 for a grayscale device.
 func (cs *PdfColorspaceDeviceGray) GetNumComponents() int {
 	return 1
 }
@@ -238,6 +243,7 @@ func (cs *PdfColorspaceDeviceGray) DecodeArray() []float64 {
 	return []float64{0, 1.0}
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (cs *PdfColorspaceDeviceGray) ToPdfObject() core.PdfObject {
 	return core.MakeName("DeviceGray")
 }
@@ -246,6 +252,8 @@ func (cs *PdfColorspaceDeviceGray) String() string {
 	return "DeviceGray"
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single element between 0 and 1.
 func (cs *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("range check")
@@ -267,6 +275,9 @@ func (cs *PdfColorspaceDeviceGray) ColorFromFloats(vals []float64) (PdfColor, er
 	return NewPdfColorDeviceGray(val), nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single PdfObjectFloat element in
+// range 0-1.
 func (cs *PdfColorspaceDeviceGray) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("range check")
@@ -326,18 +337,22 @@ func NewPdfColorDeviceRGB(r, g, b float64) *PdfColorDeviceRGB {
 	return &color
 }
 
+// GetNumComponents returns the number of color components (3 for RGB).
 func (col *PdfColorDeviceRGB) GetNumComponents() int {
 	return 3
 }
 
+// R returns the value of the red component of the color.
 func (col *PdfColorDeviceRGB) R() float64 {
 	return float64(col[0])
 }
 
+// G returns the value of the green component of the color.
 func (col *PdfColorDeviceRGB) G() float64 {
 	return float64(col[1])
 }
 
+// B returns the value of the blue component of the color.
 func (col *PdfColorDeviceRGB) B() float64 {
 	return float64(col[2])
 }
@@ -348,6 +363,7 @@ func (col *PdfColorDeviceRGB) ToInteger(bits int) [3]uint32 {
 	return [3]uint32{uint32(maxVal * col.R()), uint32(maxVal * col.G()), uint32(maxVal * col.B())}
 }
 
+// ToGray returns a PdfColorDeviceGray color based on the current RGB color.
 func (col *PdfColorDeviceRGB) ToGray() *PdfColorDeviceGray {
 	// Calculate grayValue [0-1]
 	grayValue := 0.3*col.R() + 0.59*col.G() + 0.11*col.B()
@@ -360,8 +376,10 @@ func (col *PdfColorDeviceRGB) ToGray() *PdfColorDeviceGray {
 
 // RGB colorspace.
 
+// PdfColorspaceDeviceRGB represents an RGB colorspace.
 type PdfColorspaceDeviceRGB struct{}
 
+// NewPdfColorspaceDeviceRGB returns a new RGB colorspace object.
 func NewPdfColorspaceDeviceRGB() *PdfColorspaceDeviceRGB {
 	return &PdfColorspaceDeviceRGB{}
 }
@@ -370,6 +388,8 @@ func (cs *PdfColorspaceDeviceRGB) String() string {
 	return "DeviceRGB"
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 3 for an RGB device.
 func (cs *PdfColorspaceDeviceRGB) GetNumComponents() int {
 	return 3
 }
@@ -379,10 +399,15 @@ func (cs *PdfColorspaceDeviceRGB) DecodeArray() []float64 {
 	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (cs *PdfColorspaceDeviceRGB) ToPdfObject() core.PdfObject {
 	return core.MakeName("DeviceRGB")
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain three elements representing the
+// red, green and blue components of the color. The values of the elements
+// should be between 0 and 1.
 func (cs *PdfColorspaceDeviceRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("range check")
@@ -425,6 +450,8 @@ func (cs *PdfColorspaceDeviceRGB) ColorFromPdfObjects(objects []core.PdfObject) 
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB verifies that the input color is an RGB color. Method exists in
+// order to satisfy the PdfColorspace interface.
 func (cs *PdfColorspaceDeviceRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	rgb, ok := color.(*PdfColorDeviceRGB)
 	if !ok {
@@ -434,10 +461,13 @@ func (cs *PdfColorspaceDeviceRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return rgb, nil
 }
 
+// ImageToRGB returns the passed in image. Method exists in order to satisfy
+// the PdfColorspace interface.
 func (cs *PdfColorspaceDeviceRGB) ImageToRGB(img Image) (Image, error) {
 	return img, nil
 }
 
+// ImageToGray returns a new grayscale image based on the passed in RGB image.
 func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 	grayImage := img
 
@@ -475,27 +505,33 @@ func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 // PdfColorDeviceCMYK is a CMYK color, where each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
 type PdfColorDeviceCMYK [4]float64
 
+// NewPdfColorDeviceCMYK returns a new CMYK color.
 func NewPdfColorDeviceCMYK(c, m, y, k float64) *PdfColorDeviceCMYK {
 	color := PdfColorDeviceCMYK{c, m, y, k}
 	return &color
 }
 
+// GetNumComponents returns the number of color components (4 for CMYK).
 func (col *PdfColorDeviceCMYK) GetNumComponents() int {
 	return 4
 }
 
+// C returns the value of the cyan component of the color.
 func (col *PdfColorDeviceCMYK) C() float64 {
 	return float64(col[0])
 }
 
+// M returns the value of the magenta component of the color.
 func (col *PdfColorDeviceCMYK) M() float64 {
 	return float64(col[1])
 }
 
+// Y returns the value of the yellow component of the color.
 func (col *PdfColorDeviceCMYK) Y() float64 {
 	return float64(col[2])
 }
 
+// K returns the value of the key component of the color.
 func (col *PdfColorDeviceCMYK) K() float64 {
 	return float64(col[3])
 }
@@ -506,8 +542,10 @@ func (col *PdfColorDeviceCMYK) ToInteger(bits int) [4]uint32 {
 	return [4]uint32{uint32(maxVal * col.C()), uint32(maxVal * col.M()), uint32(maxVal * col.Y()), uint32(maxVal * col.K())}
 }
 
+// PdfColorspaceDeviceCMYK represents a CMYK colorspace.
 type PdfColorspaceDeviceCMYK struct{}
 
+// NewPdfColorspaceDeviceCMYK returns a new CMYK colorspace object.
 func NewPdfColorspaceDeviceCMYK() *PdfColorspaceDeviceCMYK {
 	return &PdfColorspaceDeviceCMYK{}
 }
@@ -516,6 +554,8 @@ func (cs *PdfColorspaceDeviceCMYK) String() string {
 	return "DeviceCMYK"
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 4 for a CMYK device.
 func (cs *PdfColorspaceDeviceCMYK) GetNumComponents() int {
 	return 4
 }
@@ -525,10 +565,15 @@ func (cs *PdfColorspaceDeviceCMYK) DecodeArray() []float64 {
 	return []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (cs *PdfColorspaceDeviceCMYK) ToPdfObject() core.PdfObject {
 	return core.MakeName("DeviceCMYK")
 }
 
+// ColorFromFloats returns a new PdfColorDevice based on the input slice of
+// color components. The slice should contain four elements representing the
+// cyan, magenta, yellow and key components of the color. The values of the
+// elements should be between 0 and 1.
 func (cs *PdfColorspaceDeviceCMYK) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 4 {
 		return nil, errors.New("range check")
@@ -576,6 +621,7 @@ func (cs *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []core.PdfObject)
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a CMYK color to an RGB color.
 func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) {
 	cmyk, ok := color.(*PdfColorDeviceCMYK)
 	if !ok {
@@ -663,17 +709,21 @@ func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 // Single component
 // Each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
 
+// PdfColorCalGray represents a CalGray colorspace.
 type PdfColorCalGray float64
 
+// NewPdfColorCalGray returns a new CalGray color.
 func NewPdfColorCalGray(grayVal float64) *PdfColorCalGray {
 	color := PdfColorCalGray(grayVal)
 	return &color
 }
 
+// GetNumComponents returns the number of color components (1 for CalGray).
 func (col *PdfColorCalGray) GetNumComponents() int {
 	return 1
 }
 
+// Val returns the value of the color.
 func (col *PdfColorCalGray) Val() float64 {
 	return float64(*col)
 }
@@ -693,6 +743,7 @@ type PdfColorspaceCalGray struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfColorspaceCalGray returns a new CalGray colorspace object.
 func NewPdfColorspaceCalGray() *PdfColorspaceCalGray {
 	cs := &PdfColorspaceCalGray{}
 
@@ -707,6 +758,8 @@ func (cs *PdfColorspaceCalGray) String() string {
 	return "CalGray"
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 1 for a CalGray device.
 func (cs *PdfColorspaceCalGray) GetNumComponents() int {
 	return 1
 }
@@ -830,6 +883,8 @@ func (cs *PdfColorspaceCalGray) ToPdfObject() core.PdfObject {
 	return cspace
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single element between 0 and 1.
 func (cs *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("range check")
@@ -844,6 +899,9 @@ func (cs *PdfColorspaceCalGray) ColorFromFloats(vals []float64) (PdfColor, error
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single PdfObjectFloat element in
+// range 0-1.
 func (cs *PdfColorspaceCalGray) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("range check")
@@ -857,6 +915,7 @@ func (cs *PdfColorspaceCalGray) ColorFromPdfObjects(objects []core.PdfObject) (P
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a CalGray color to an RGB color.
 func (cs *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 	calgray, ok := color.(*PdfColorCalGray)
 	if !ok {
@@ -927,30 +986,33 @@ func (cs *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
 	return rgbImage, nil
 }
 
-//////////////////////
-// Colorimetric CIE RGB colorspace.
+// PdfColorCalRGB represents a color in the Colorimetric CIE RGB colorspace.
 // A, B, C components
 // Each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
-
 type PdfColorCalRGB [3]float64
 
+// NewPdfColorCalRGB returns a new CalRBG color.
 func NewPdfColorCalRGB(a, b, c float64) *PdfColorCalRGB {
 	color := PdfColorCalRGB{a, b, c}
 	return &color
 }
 
+// GetNumComponents returns the number of color components (3 for CalRGB).
 func (col *PdfColorCalRGB) GetNumComponents() int {
 	return 3
 }
 
+// A returns the value of the A component of the color.
 func (col *PdfColorCalRGB) A() float64 {
 	return float64(col[0])
 }
 
+// B returns the value of the B component of the color.
 func (col *PdfColorCalRGB) B() float64 {
 	return float64(col[1])
 }
 
+// C returns the value of the C component of the color.
 func (col *PdfColorCalRGB) C() float64 {
 	return float64(col[2])
 }
@@ -972,6 +1034,7 @@ type PdfColorspaceCalRGB struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfColorspaceCalRGB returns a new CalRGB colorspace object.
 func NewPdfColorspaceCalRGB() *PdfColorspaceCalRGB {
 	// TODO: require parameters?
 	cs := &PdfColorspaceCalRGB{}
@@ -988,6 +1051,8 @@ func (cs *PdfColorspaceCalRGB) String() string {
 	return "CalRGB"
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 3 for a CalRGB device.
 func (cs *PdfColorspaceCalRGB) GetNumComponents() int {
 	return 3
 }
@@ -1144,6 +1209,10 @@ func (cs *PdfColorspaceCalRGB) ToPdfObject() core.PdfObject {
 	return cspace
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain three elements representing the
+// A, B and C components of the color. The values of the elements should be
+// between 0 and 1.
 func (cs *PdfColorspaceCalRGB) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("range check")
@@ -1171,6 +1240,9 @@ func (cs *PdfColorspaceCalRGB) ColorFromFloats(vals []float64) (PdfColor, error)
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain three PdfObjectFloat elements representing
+// the A, B and C components of the color.
 func (cs *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 3 {
 		return nil, errors.New("range check")
@@ -1184,6 +1256,7 @@ func (cs *PdfColorspaceCalRGB) ColorFromPdfObjects(objects []core.PdfObject) (Pd
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a CalRGB color to an RGB color.
 func (cs *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	calrgb, ok := color.(*PdfColorCalRGB)
 	if !ok {
@@ -1217,6 +1290,7 @@ func (cs *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
+// ImageToRGB converts CalRGB colorspace image to RGB and returns the result.
 func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
@@ -1261,29 +1335,32 @@ func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 	return rgbImage, nil
 }
 
-//////////////////////
-// L*, a*, b* 3 component colorspace.
+// PdfColorLab represents a color in the L*, a*, b* 3 component colorspace.
 // Each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
-
 type PdfColorLab [3]float64
 
+// NewPdfColorLab returns a new Lab color.
 func NewPdfColorLab(l, a, b float64) *PdfColorLab {
 	color := PdfColorLab{l, a, b}
 	return &color
 }
 
+// GetNumComponents returns the number of color components (3 for Lab).
 func (col *PdfColorLab) GetNumComponents() int {
 	return 3
 }
 
+// L returns the value of the L component of the color.
 func (col *PdfColorLab) L() float64 {
 	return float64(col[0])
 }
 
+// A returns the value of the A component of the color.
 func (col *PdfColorLab) A() float64 {
 	return float64(col[1])
 }
 
+// B returns the value of the B component of the color.
 func (col *PdfColorLab) B() float64 {
 	return float64(col[2])
 }
@@ -1307,6 +1384,8 @@ func (cs *PdfColorspaceLab) String() string {
 	return "Lab"
 }
 
+// GetNumComponents returns the number of color components of the colorspace device.
+// Returns 3 for a Lab device.
 func (cs *PdfColorspaceLab) GetNumComponents() int {
 	return 3
 }
@@ -1326,6 +1405,7 @@ func (cs *PdfColorspaceLab) DecodeArray() []float64 {
 	return decode
 }
 
+// NewPdfColorspaceLab returns a new Lab colorspace object.
 func NewPdfColorspaceLab() *PdfColorspaceLab {
 	// TODO: require parameters?
 	cs := &PdfColorspaceLab{}
@@ -1462,6 +1542,10 @@ func (cs *PdfColorspaceLab) ToPdfObject() core.PdfObject {
 	return csObj
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain three elements representing the
+// L (range 0-100), A (range -100-100) and B (range -100-100) components of
+// the color.
 func (cs *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 3 {
 		return nil, errors.New("range check")
@@ -1504,6 +1588,9 @@ func (cs *PdfColorspaceLab) ColorFromFloats(vals []float64) (PdfColor, error) {
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain three PdfObjectFloat elements representing
+// the L, A and B components of the color.
 func (cs *PdfColorspaceLab) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 3 {
 		return nil, errors.New("range check")
@@ -1517,6 +1604,7 @@ func (cs *PdfColorspaceLab) ColorFromPdfObjects(objects []core.PdfObject) (PdfCo
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a Lab color to an RGB color.
 func (cs *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	gFunc := func(x float64) float64 {
 		if x >= 6.0/29 {
@@ -1561,6 +1649,7 @@ func (cs *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
+// ImageToRGB converts Lab colorspace image to RGB and returns the result.
 func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 	g := func(x float64) float64 {
 		if x >= 6.0/29 {
@@ -1685,6 +1774,7 @@ type PdfColorspaceICCBased struct {
 	stream    *core.PdfObjectStream
 }
 
+// GetNumComponents returns the number of color components.
 func (cs *PdfColorspaceICCBased) GetNumComponents() int {
 	return cs.N
 }
@@ -1698,6 +1788,7 @@ func (cs *PdfColorspaceICCBased) String() string {
 	return "ICCBased"
 }
 
+// NewPdfColorspaceICCBased returns a new ICCBased colorspace object.
 func NewPdfColorspaceICCBased(N int) (*PdfColorspaceICCBased, error) {
 	cs := &PdfColorspaceICCBased{}
 
@@ -1853,6 +1944,8 @@ func (cs *PdfColorspaceICCBased) ToPdfObject() core.PdfObject {
 	return csObj
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components.
 func (cs *PdfColorspaceICCBased) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if cs.Alternate == nil {
 		if cs.N == 1 {
@@ -1872,6 +1965,8 @@ func (cs *PdfColorspaceICCBased) ColorFromFloats(vals []float64) (PdfColor, erro
 	return cs.Alternate.ColorFromFloats(vals)
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// component PDF objects.
 func (cs *PdfColorspaceICCBased) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if cs.Alternate == nil {
 		if cs.N == 1 {
@@ -1891,6 +1986,7 @@ func (cs *PdfColorspaceICCBased) ColorFromPdfObjects(objects []core.PdfObject) (
 	return cs.Alternate.ColorFromPdfObjects(objects)
 }
 
+// ColorToRGB converts a ICCBased color to an RGB color.
 func (cs *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
 	/*
 		_, ok := color.(*PdfColorICCBased)
@@ -1924,6 +2020,7 @@ func (cs *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return cs.Alternate.ColorToRGB(color)
 }
 
+// ImageToRGB converts ICCBased colorspace image to RGB and returns the result.
 func (cs *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 	if cs.Alternate == nil {
 		common.Log.Debug("ICC Based colorspace missing alternative")
@@ -1952,9 +2049,7 @@ func (cs *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 	return output, err //cs.Alternate.ImageToRGB(img)
 }
 
-//////////////////////
-// Pattern color.
-
+// PdfColorPattern represents a pattern color.
 type PdfColorPattern struct {
 	Color       PdfColor           // Color defined in underlying colorspace.
 	PatternName core.PdfObjectName // Name of the pattern (reference via resource dicts).
@@ -1968,6 +2063,7 @@ type PdfColorspaceSpecialPattern struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfColorspaceSpecialPattern returns a new pattern color.
 func NewPdfColorspaceSpecialPattern() *PdfColorspaceSpecialPattern {
 	return &PdfColorspaceSpecialPattern{}
 }
@@ -1976,6 +2072,8 @@ func (cs *PdfColorspaceSpecialPattern) String() string {
 	return "Pattern"
 }
 
+// GetNumComponents returns the number of color components of the underlying
+// colorspace device.
 func (cs *PdfColorspaceSpecialPattern) GetNumComponents() int {
 	return cs.UnderlyingCS.GetNumComponents()
 }
@@ -2035,6 +2133,7 @@ func newPdfColorspaceSpecialPatternFromPdfObject(obj core.PdfObject) (*PdfColors
 	return cs, nil
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (cs *PdfColorspaceSpecialPattern) ToPdfObject() core.PdfObject {
 	if cs.UnderlyingCS == nil {
 		return core.MakeName("Pattern")
@@ -2051,6 +2150,8 @@ func (cs *PdfColorspaceSpecialPattern) ToPdfObject() core.PdfObject {
 	return csObj
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components.
 func (cs *PdfColorspaceSpecialPattern) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if cs.UnderlyingCS == nil {
 		return nil, errors.New("underlying CS not specified")
@@ -2134,6 +2235,7 @@ type PdfColorspaceSpecialIndexed struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfColorspaceSpecialIndexed returns a new Indexed color.
 func NewPdfColorspaceSpecialIndexed() *PdfColorspaceSpecialIndexed {
 	cs := &PdfColorspaceSpecialIndexed{}
 	cs.HiVal = 255
@@ -2144,6 +2246,7 @@ func (cs *PdfColorspaceSpecialIndexed) String() string {
 	return "Indexed"
 }
 
+// GetNumComponents returns the number of color components (1 for Indexed).
 func (cs *PdfColorspaceSpecialIndexed) GetNumComponents() int {
 	return 1
 }
@@ -2243,6 +2346,8 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj core.PdfObject) (*PdfColors
 	return cs, nil
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single element.
 func (cs *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("range check")
@@ -2268,6 +2373,8 @@ func (cs *PdfColorspaceSpecialIndexed) ColorFromFloats(vals []float64) (PdfColor
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single PdfObjectFloat element.
 func (cs *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("range check")
@@ -2281,6 +2388,7 @@ func (cs *PdfColorspaceSpecialIndexed) ColorFromPdfObjects(objects []core.PdfObj
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts an Indexed color to an RGB color.
 func (cs *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, error) {
 	if cs.Base == nil {
 		return nil, errors.New("indexed base colorspace undefined")
@@ -2369,6 +2477,7 @@ type PdfColorspaceSpecialSeparation struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfColorspaceSpecialSeparation returns a new separation color.
 func NewPdfColorspaceSpecialSeparation() *PdfColorspaceSpecialSeparation {
 	cs := &PdfColorspaceSpecialSeparation{}
 	return cs
@@ -2378,6 +2487,7 @@ func (cs *PdfColorspaceSpecialSeparation) String() string {
 	return "Separation"
 }
 
+// GetNumComponents returns the number of color components (1 for Separation).
 func (cs *PdfColorspaceSpecialSeparation) GetNumComponents() int {
 	return 1
 }
@@ -2445,6 +2555,7 @@ func newPdfColorspaceSpecialSeparationFromPdfObject(obj core.PdfObject) (*PdfCol
 	return cs, nil
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (cs *PdfColorspaceSpecialSeparation) ToPdfObject() core.PdfObject {
 	csArray := core.MakeArray(core.MakeName("Separation"))
 
@@ -2462,6 +2573,8 @@ func (cs *PdfColorspaceSpecialSeparation) ToPdfObject() core.PdfObject {
 	return csArray
 }
 
+// ColorFromFloats returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single element.
 func (cs *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (PdfColor, error) {
 	if len(vals) != 1 {
 		return nil, errors.New("range check")
@@ -2486,6 +2599,8 @@ func (cs *PdfColorspaceSpecialSeparation) ColorFromFloats(vals []float64) (PdfCo
 	return color, nil
 }
 
+// ColorFromPdfObjects returns a new PdfColor based on the input slice of color
+// components. The slice should contain a single PdfObjectFloat element.
 func (cs *PdfColorspaceSpecialSeparation) ColorFromPdfObjects(objects []core.PdfObject) (PdfColor, error) {
 	if len(objects) != 1 {
 		return nil, errors.New("range check")
@@ -2720,6 +2835,7 @@ func (cs *PdfColorspaceDeviceN) ColorFromPdfObjects(objects []core.PdfObject) (P
 	return cs.ColorFromFloats(floats)
 }
 
+// ColorToRGB converts a DeviceN color to an RGB color.
 func (cs *PdfColorspaceDeviceN) ColorToRGB(color PdfColor) (PdfColor, error) {
 	if cs.AlternateSpace == nil {
 		return nil, errors.New("DeviceN alternate space undefined")
@@ -2727,6 +2843,7 @@ func (cs *PdfColorspaceDeviceN) ColorToRGB(color PdfColor) (PdfColor, error) {
 	return cs.AlternateSpace.ColorToRGB(color)
 }
 
+// ImageToRGB converts an Image in a given PdfColorspace to an RGB image.
 func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 	altImage := img
 

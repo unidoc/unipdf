@@ -26,6 +26,7 @@ type PdfPattern struct {
 	container core.PdfObject
 }
 
+// GetContainingPdfObject returns the container of the pattern object (indirect object).
 func (p *PdfPattern) GetContainingPdfObject() core.PdfObject {
 	return p.container
 }
@@ -40,10 +41,12 @@ func (p *PdfPattern) SetContext(ctx PdfModel) {
 	p.context = ctx
 }
 
+// IsTiling specifies if the pattern is a tiling pattern.
 func (p *PdfPattern) IsTiling() bool {
 	return p.PatternType == 1
 }
 
+// IsShading specifies if the pattern is a shading pattern.
 func (p *PdfPattern) IsShading() bool {
 	return p.PatternType == 2
 }
@@ -73,6 +76,7 @@ type PdfTilingPattern struct {
 	Matrix     *core.PdfObjectArray // Pattern matrix (6 numbers).
 }
 
+// IsColored specifies if the pattern is colored.
 func (p *PdfTilingPattern) IsColored() bool {
 	if p.PaintType != nil && *p.PaintType == 1 {
 		return true
@@ -372,6 +376,7 @@ func (p *PdfPattern) getDict() *core.PdfObjectDictionary {
 	}
 }
 
+// ToPdfObject returns the PDF representation of the pattern.
 func (p *PdfPattern) ToPdfObject() core.PdfObject {
 	d := p.getDict()
 	d.Set("Type", core.MakeName("Pattern"))
@@ -380,6 +385,7 @@ func (p *PdfPattern) ToPdfObject() core.PdfObject {
 	return p.container
 }
 
+// ToPdfObject returns the PDF representation of the tiling pattern.
 func (p *PdfTilingPattern) ToPdfObject() core.PdfObject {
 	p.PdfPattern.ToPdfObject()
 
@@ -409,6 +415,7 @@ func (p *PdfTilingPattern) ToPdfObject() core.PdfObject {
 	return p.container
 }
 
+// ToPdfObject returns the PDF representation of the shading pattern.
 func (p *PdfShadingPattern) ToPdfObject() core.PdfObject {
 	p.PdfPattern.ToPdfObject()
 	d := p.getDict()

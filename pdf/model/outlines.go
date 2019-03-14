@@ -12,6 +12,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/core"
 )
 
+// PdfOutlineTreeNode contains common fields used by the outline and outline
+// item objects.
 type PdfOutlineTreeNode struct {
 	context interface{} // Allow accessing outer structure.
 	First   *PdfOutlineTreeNode
@@ -218,14 +220,17 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 	return nil
 }
 
+// GetContainingPdfObject returns the container of the outline tree node (indirect object).
 func (n *PdfOutlineTreeNode) GetContainingPdfObject() core.PdfObject {
 	return n.getOuter().GetContainingPdfObject()
 }
 
+// ToPdfObject returns the PDF representation of the outline tree node.
 func (n *PdfOutlineTreeNode) ToPdfObject() core.PdfObject {
 	return n.getOuter().ToPdfObject()
 }
 
+// GetContainingPdfObject returns the container of the outline (indirect object).
 func (o *PdfOutline) GetContainingPdfObject() core.PdfObject {
 	return o.primitive
 }
@@ -257,6 +262,7 @@ func (o *PdfOutline) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// GetContainingPdfObject returns the container of the outline item (indirect object).
 func (oi *PdfOutlineItem) GetContainingPdfObject() core.PdfObject {
 	return oi.primitive
 }

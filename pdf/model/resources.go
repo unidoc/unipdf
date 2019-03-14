@@ -28,12 +28,15 @@ type PdfPageResources struct {
 	primitive *core.PdfObjectDictionary
 }
 
+// NewPdfPageResources returns a new PdfPageResources object.
 func NewPdfPageResources() *PdfPageResources {
 	r := &PdfPageResources{}
 	r.primitive = core.MakeDict()
 	return r
 }
 
+// NewPdfPageResourcesFromDict creates and returns a new PdfPageResources object
+// from the input dictionary.
 func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResources, error) {
 	r := NewPdfPageResources()
 
@@ -69,10 +72,12 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	return r, nil
 }
 
+// GetContainingPdfObject returns the container of the resources object (indirect object).
 func (r *PdfPageResources) GetContainingPdfObject() core.PdfObject {
 	return r.primitive
 }
 
+// ToPdfObject returns the PDF representation of the page resources.
 func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d := r.primitive
 	d.SetIfNotNil("ExtGState", r.ExtGState)
@@ -253,6 +258,7 @@ func (r *PdfPageResources) SetFontByName(keyName core.PdfObjectName, obj core.Pd
 	return nil
 }
 
+// GetColorspaceByName returns the colorspace with the specified name from the page resources.
 func (r *PdfPageResources) GetColorspaceByName(keyName core.PdfObjectName) (PdfColorspace, bool) {
 	if r.ColorSpace == nil {
 		return nil, false
@@ -266,6 +272,7 @@ func (r *PdfPageResources) GetColorspaceByName(keyName core.PdfObjectName) (PdfC
 	return cs, true
 }
 
+// HasColorspaceByName checks if the colorspace with the specified name exists in the page resources.
 func (r *PdfPageResources) HasColorspaceByName(keyName core.PdfObjectName) bool {
 	if r.ColorSpace == nil {
 		return false
@@ -275,6 +282,7 @@ func (r *PdfPageResources) HasColorspaceByName(keyName core.PdfObjectName) bool 
 	return has
 }
 
+// SetColorspaceByName adds the provided colorspace to the page resources.
 func (r *PdfPageResources) SetColorspaceByName(keyName core.PdfObjectName, cs PdfColorspace) error {
 	if r.ColorSpace == nil {
 		r.ColorSpace = NewPdfPageResourcesColorspaces()
@@ -308,8 +316,10 @@ func (r *PdfPageResources) GenerateXObjectName() core.PdfObjectName {
 	// Not reached.
 }
 
+// XObjectType represents the type of an XObject.
 type XObjectType int
 
+// XObject types.
 const (
 	XObjectTypeUndefined XObjectType = iota
 	XObjectTypeImage     XObjectType = iota
@@ -359,6 +369,8 @@ func (r *PdfPageResources) GetXObjectByName(keyName core.PdfObjectName) (*core.P
 	}
 }
 
+// SetXObjectByName adds the XObject from the passed in stream to the page resources.
+// The added XObject is identified by the specified name.
 func (r *PdfPageResources) SetXObjectByName(keyName core.PdfObjectName, stream *core.PdfObjectStream) error {
 	if r.XObject == nil {
 		r.XObject = core.MakeDict()
@@ -375,6 +387,8 @@ func (r *PdfPageResources) SetXObjectByName(keyName core.PdfObjectName, stream *
 	return nil
 }
 
+// GetXObjectImageByName returns the XObjectImage with the specified name from the
+// page resources, if it exists.
 func (r *PdfPageResources) GetXObjectImageByName(keyName core.PdfObjectName) (*XObjectImage, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
@@ -392,12 +406,16 @@ func (r *PdfPageResources) GetXObjectImageByName(keyName core.PdfObjectName) (*X
 	return ximg, nil
 }
 
+// SetXObjectImageByName adds the provided XObjectImage to the page resources.
+// The added XObjectImage is identified by the specified name.
 func (r *PdfPageResources) SetXObjectImageByName(keyName core.PdfObjectName, ximg *XObjectImage) error {
 	stream := ximg.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)
 	return err
 }
 
+// GetXObjectFormByName returns the XObjectForm with the specified name from the
+// page resources, if it exists.
 func (r *PdfPageResources) GetXObjectFormByName(keyName core.PdfObjectName) (*XObjectForm, error) {
 	stream, xtype := r.GetXObjectByName(keyName)
 	if stream == nil {
@@ -415,6 +433,8 @@ func (r *PdfPageResources) GetXObjectFormByName(keyName core.PdfObjectName) (*XO
 	return xform, nil
 }
 
+// SetXObjectFormByName adds the provided XObjectForm to the page resources.
+// The added XObjectForm is identified by the specified name.
 func (r *PdfPageResources) SetXObjectFormByName(keyName core.PdfObjectName, xform *XObjectForm) error {
 	stream := xform.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)

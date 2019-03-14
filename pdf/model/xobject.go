@@ -218,6 +218,7 @@ type XObjectImage struct {
 	primitive *core.PdfObjectStream
 }
 
+// NewXObjectImage returns a new XObjectImage.
 func NewXObjectImage() *XObjectImage {
 	xobj := &XObjectImage{}
 	stream := &core.PdfObjectStream{}
@@ -545,6 +546,7 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 	return image, nil
 }
 
+// GetContainingPdfObject returns the container of the image object (indirect object).
 func (ximg *XObjectImage) GetContainingPdfObject() core.PdfObject {
 	return ximg.primitive
 }

@@ -13,7 +13,7 @@ import (
 	"io"
 	"math"
 
-	// imported for initialization side effects.
+	// Imported for initialization side effects.
 	_ "image/gif"
 	_ "image/png"
 

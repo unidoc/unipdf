@@ -60,6 +60,7 @@ type PdfPage struct {
 	primitive *core.PdfIndirectObject
 }
 
+// NewPdfPage returns a new PDF page.
 func NewPdfPage() *PdfPage {
 	page := PdfPage{}
 	page.pageDict = core.MakeDict()
@@ -76,6 +77,7 @@ func (p *PdfPage) setContainer(container *core.PdfIndirectObject) {
 	p.primitive = container
 }
 
+// Duplicate creates a duplicate page based on the current one and returns it.
 func (p *PdfPage) Duplicate() *PdfPage {
 	var dup PdfPage
 	dup = *p
@@ -310,6 +312,7 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	return page, nil
 }
 
+// LoadAnnotations loads and returns the PDF annotations from the input dictionary.
 func (r *PdfReader) LoadAnnotations(d *core.PdfObjectDictionary) ([]*PdfAnnotation, error) {
 	annotsObj := d.Get("Annots")
 	if annotsObj == nil {
@@ -652,6 +655,7 @@ func (p *PdfPage) AddFont(name core.PdfObjectName, font core.PdfObject) error {
 	return nil
 }
 
+// WatermarkImageOptions contains options for configuring the watermark process.
 type WatermarkImageOptions struct {
 	Alpha               float64
 	FitToWidth          bool
@@ -877,6 +881,7 @@ type PdfPageResourcesColorspaces struct {
 	container *core.PdfIndirectObject
 }
 
+// NewPdfPageResourcesColorspaces returns a new PdfPageResourcesColorspaces object.
 func NewPdfPageResourcesColorspaces() *PdfPageResourcesColorspaces {
 	colorspaces := &PdfPageResourcesColorspaces{}
 	colorspaces.Names = []string{}
@@ -922,6 +927,7 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj core.PdfObject) (*PdfPageRe
 	return colorspaces, nil
 }
 
+// ToPdfObject returns the PDF representation of the colorspace.
 func (rcs *PdfPageResourcesColorspaces) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 	for _, csName := range rcs.Names {

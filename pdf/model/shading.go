@@ -33,6 +33,7 @@ type PdfShading struct {
 	container core.PdfObject // The container. Can be stream, indirect object, or dictionary.
 }
 
+// GetContainingPdfObject returns the container of the shading object (indirect object).
 func (s *PdfShading) GetContainingPdfObject() core.PdfObject {
 	return s.container
 }
@@ -840,6 +841,7 @@ func newPdfShadingType7FromDictionary(dict *core.PdfObjectDictionary) (*PdfShadi
 	return &shading, nil
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShading) ToPdfObject() core.PdfObject {
 	container := s.container
 
@@ -868,6 +870,7 @@ func (s *PdfShading) ToPdfObject() core.PdfObject {
 	return container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType1) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -898,6 +901,7 @@ func (s *PdfShadingType1) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType2) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -934,6 +938,7 @@ func (s *PdfShadingType2) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType3) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -967,6 +972,7 @@ func (s *PdfShadingType3) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType4) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -1003,6 +1009,7 @@ func (s *PdfShadingType4) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType5) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -1039,6 +1046,7 @@ func (s *PdfShadingType5) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType6) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
@@ -1075,6 +1083,7 @@ func (s *PdfShadingType6) ToPdfObject() core.PdfObject {
 	return s.container
 }
 
+// ToPdfObject returns the PDF representation of the shading dictionary.
 func (s *PdfShadingType7) ToPdfObject() core.PdfObject {
 	s.PdfShading.ToPdfObject()
 
