@@ -8,6 +8,7 @@ package model_test
 import (
 	"bytes"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -47,6 +48,7 @@ const testPdfSignedPDFDocument = "./testdata/SampleSignedPDFDocument.pdf"
 
 const testPKS12Key = "./testdata/ks12"
 const testPKS12KeyPassword = "password"
+const testSampleSignatureFile = "./testdata/sample_signature"
 
 func tempFile(name string) string {
 	return filepath.Join(os.TempDir(), name)
@@ -416,6 +418,35 @@ func validateFile(t *testing.T, fileName string) {
 	}
 }
 
+func parseByteRange(byteRange *core.PdfObjectArray) ([]int64, error) {
+	if byteRange == nil {
+		return nil, errors.New("byte range cannot be nil")
+	}
+	if byteRange.Len() != 4 {
+		return nil, errors.New("invalid byte range length")
+	}
+
+	s1, err := core.GetNumberAsInt64(byteRange.Get(0))
+	if err != nil {
+		return nil, errors.New("invalid byte range value")
+	}
+	l1, err := core.GetNumberAsInt64(byteRange.Get(1))
+	if err != nil {
+		return nil, errors.New("invalid byte range value")
+	}
+
+	s2, err := core.GetNumberAsInt64(byteRange.Get(2))
+	if err != nil {
+		return nil, errors.New("invalid byte range value")
+	}
+	l2, err := core.GetNumberAsInt64(byteRange.Get(3))
+	if err != nil {
+		return nil, errors.New("invalid byte range value")
+	}
+
+	return []int64{s1, s1 + l1, s2, s2 + l2}, nil
+}
+
 func TestAppenderSignPage4(t *testing.T) {
 	// TODO move to reader_test.go
 	validateFile(t, testPdfSignedPDFDocument)
@@ -707,6 +738,109 @@ func TestSignatureAppearance(t *testing.T) {
 	}
 
 	validateFile(t, outPath)
+}
+
+func TestAppenderExternalSignature(t *testing.T) {
+	validateFile(t, testPdfSignedPDFDocument)
+
+	f1, err := os.Open(testPdfFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f1.Close()
+
+	reader, err := model.NewPdfReader(f1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err := model.NewPdfAppender(reader)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := sighandler.NewEmptyAdobePKCS7Detached(8192)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test External Signature")
+	signature.SetReason("TestAppenderExternalSignature")
+	signature.SetDate(time.Date(2019, 3, 15, 4, 25, 24, 0, time.Local), "")
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	// Create signature field and appearance.
+	opts := annotator.NewSignatureFieldOpts()
+	opts.FontSize = 10
+	opts.Rect = []float64{10, 25, 75, 60}
+
+	sigField, err := annotator.NewSignatureField(
+		signature,
+		[]*annotator.SignatureLine{
+			annotator.NewSignatureLine("Name", "John Doe"),
+			annotator.NewSignatureLine("Date", "2019.15.03"),
+			annotator.NewSignatureLine("Reason", "External signature test"),
+		},
+		opts,
+	)
+	sigField.T = core.MakeString("External signature")
+
+	if err = appender.Sign(1, sigField); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Write PDF file to buffer.
+	pdfBuf := bytes.NewBuffer(nil)
+	if err = appender.Write(pdfBuf); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	pdfData := pdfBuf.Bytes()
+
+	// Parse signature byte range.
+	byteRange, err := parseByteRange(signature.ByteRange)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// This would be the time to send the PDF buffer to a signing device or
+	// signing web service and get back the signature. We will simulate this by
+	// reading the signature from a sample signature file.
+
+	// Read external signature data.
+	signatureData, err := ioutil.ReadFile(testSampleSignatureFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Apply external signature to the PDF data buffer.
+	sigBytes := make([]byte, 8192)
+	copy(sigBytes, signatureData)
+
+	sig := core.MakeHexString(string(sigBytes)).WriteString()
+	copy(pdfData[byteRange[1]:byteRange[2]], []byte(sig))
+
+	// Write output file.
+	outputPath := tempFile("appender_sign_external_signature.pdf")
+	if err := ioutil.WriteFile(outputPath, pdfData, os.ModePerm); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Validate output file.
+	validateFile(t, outputPath)
 }
 
 // Each Appender can only be written out once, further invokations of Write should result in an error.
