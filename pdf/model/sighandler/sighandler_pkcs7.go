@@ -21,21 +21,39 @@ import (
 type adobePKCS7Detached struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
+
+	emptySignature    bool
+	emptySignatureLen int
+}
+
+// NewEmptyAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
+// signature handler. The generated signature is empty and of size signatureLen.
+// The signatureLen parameter can 0 for the signature validation.
+func NewEmptyAdobePKCS7Detached(signatureLen int) (model.SignatureHandler, error) {
+	return &adobePKCS7Detached{
+		emptySignature:    true,
+		emptySignatureLen: signatureLen,
+	}, nil
 }
 
 // NewAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
-// The both parameters may be nil for the signature validation.
+// Both parameters may be nil for the signature validation.
 func NewAdobePKCS7Detached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
-	return &adobePKCS7Detached{certificate: certificate, privateKey: privateKey}, nil
+	return &adobePKCS7Detached{
+		certificate: certificate,
+		privateKey:  privateKey,
+	}, nil
 }
 
 // InitSignature initialises the PdfSignature.
 func (a *adobePKCS7Detached) InitSignature(sig *model.PdfSignature) error {
-	if a.certificate == nil {
-		return errors.New("certificate must not be nil")
-	}
-	if a.privateKey == nil {
-		return errors.New("privateKey must not be nil")
+	if !a.emptySignature {
+		if a.certificate == nil {
+			return errors.New("certificate must not be nil")
+		}
+		if a.privateKey == nil {
+			return errors.New("privateKey must not be nil")
+		}
 	}
 
 	handler := *a
@@ -92,6 +110,16 @@ func (a *adobePKCS7Detached) Validate(sig *model.PdfSignature, digest model.Hash
 
 // Sign sets the Contents fields.
 func (a *adobePKCS7Detached) Sign(sig *model.PdfSignature, digest model.Hasher) error {
+	if a.emptySignature {
+		sigLen := a.emptySignatureLen
+		if sigLen <= 0 {
+			sigLen = 8192
+		}
+
+		sig.Contents = core.MakeHexString(string(make([]byte, sigLen)))
+		return nil
+	}
+
 	buffer := digest.(*bytes.Buffer)
 	signedData, err := pkcs7.NewSignedData(buffer.Bytes())
 	if err != nil {
