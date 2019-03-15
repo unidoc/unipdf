@@ -28,7 +28,7 @@ type adobePKCS7Detached struct {
 
 // NewEmptyAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
 // signature handler. The generated signature is empty and of size signatureLen.
-// The signatureLen parameter can 0 for the signature validation.
+// The signatureLen parameter can be 0 for the signature validation.
 func NewEmptyAdobePKCS7Detached(signatureLen int) (model.SignatureHandler, error) {
 	return &adobePKCS7Detached{
 		emptySignature:    true,
