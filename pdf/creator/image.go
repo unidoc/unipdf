@@ -14,6 +14,7 @@ import (
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
+	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
 )
@@ -35,6 +36,9 @@ type Image struct {
 	// Positioning: relative / absolute.
 	positioning positioning
 
+	// Image horizontal alignment in relative positioning.
+	hAlignment HorizontalAlignment
+
 	// Absolute coordinates (when in absolute mode).
 	xPos float64
 	yPos float64
@@ -54,20 +58,20 @@ type Image struct {
 
 // newImage create a new image from a unidoc image (model.Image).
 func newImage(img *model.Image) (*Image, error) {
-	image := &Image{}
-	image.img = img
-
 	// Image original size in points = pixel size.
-	image.origWidth = float64(img.Width)
-	image.origHeight = float64(img.Height)
-	image.width = image.origWidth
-	image.height = image.origHeight
-	image.angle = 0
-	image.opacity = 1.0
+	width := float64(img.Width)
+	height := float64(img.Height)
 
-	image.positioning = positionRelative
-
-	return image, nil
+	return &Image{
+		img:         img,
+		origWidth:   width,
+		origHeight:  height,
+		width:       width,
+		height:      height,
+		angle:       0,
+		opacity:     1.0,
+		positioning: positionRelative,
+	}, nil
 }
 
 // newImageFromData creates an Image from image data.
@@ -127,6 +131,16 @@ func (img *Image) Width() float64 {
 // SetOpacity sets opacity for Image.
 func (img *Image) SetOpacity(opacity float64) {
 	img.opacity = opacity
+}
+
+// GetHorizontalAlignment returns the horizontal alignment of the image.
+func (img *Image) GetHorizontalAlignment() HorizontalAlignment {
+	return img.hAlignment
+}
+
+// SetHorizontalAlignment sets the horizontal alignment of the image.
+func (img *Image) SetHorizontalAlignment(alignment HorizontalAlignment) {
+	img.hAlignment = alignment
 }
 
 // SetMargins sets the margins for the Image (in relative mode): left, right, top, bottom.
@@ -263,6 +277,27 @@ func (img *Image) SetAngle(angle float64) {
 	img.angle = angle
 }
 
+// rotatedSize returns the width and height of the rotated image bounding box.
+func (img *Image) rotatedSize() (float64, float64) {
+	width := img.width
+	height := img.height
+	angle := img.angle
+
+	if angle == 0 {
+		return width, height
+	}
+
+	// Get rotated size
+	bbox := draw.Path{Points: []draw.Point{
+		draw.NewPoint(0, 0).Rotate(angle),
+		draw.NewPoint(width, 0).Rotate(angle),
+		draw.NewPoint(0, height).Rotate(angle),
+		draw.NewPoint(width, height).Rotate(angle),
+	}}.GetBoundingBox()
+
+	return bbox.Width, bbox.Height
+}
+
 // Draw the image onto the specified blk.
 func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, error) {
 	origCtx := ctx
@@ -302,26 +337,41 @@ func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, err
 		return ctx, err
 	}
 
+	width := img.Width()
+	height := img.Height()
+	_, rotatedHeight := img.rotatedSize()
+
+	// Calculate x coordinate based on the image alignment.
 	xPos := ctx.X
-	yPos := ctx.PageHeight - ctx.Y - img.Height()
+	yPos := ctx.PageHeight - ctx.Y - height
+	if img.positioning.isRelative() {
+		yPos -= (rotatedHeight - height) / 2
+
+		switch img.hAlignment {
+		case HorizontalAlignmentCenter:
+			xPos += (ctx.Width - width) / 2
+		case HorizontalAlignmentRight:
+			xPos = ctx.PageWidth - ctx.Margins.right - img.margins.right - width
+		}
+	}
 	angle := img.angle
 
 	// Create content stream to add to the Page contents.
 	contentCreator := contentstream.NewContentCreator()
 
-	contentCreator.Add_gs(gsName) // Set graphics state.
+	// Set graphics state.
+	contentCreator.Add_gs(gsName)
 
 	contentCreator.Translate(xPos, yPos)
 	if angle != 0 {
-		// Make the rotation about the upper left corner.
-		contentCreator.Translate(0, img.Height())
+		// Make rotation origin the center of the image.
+		contentCreator.Translate(width/2, height/2)
 		contentCreator.RotateDeg(angle)
-		contentCreator.Translate(0, -img.Height())
+		contentCreator.Translate(-width/2, -height/2)
 	}
 
-	contentCreator.
-		Scale(img.Width(), img.Height()).
-		Add_Do(imgName) // Draw the image.
+	// Draw the image.
+	contentCreator.Scale(width, height).Add_Do(imgName)
 
 	ops := contentCreator.Operations()
 	ops.WrapIfNeeded()
@@ -329,10 +379,11 @@ func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, err
 	blk.addContents(ops)
 
 	if img.positioning.isRelative() {
-		ctx.Y += img.Height()
-		ctx.Height -= img.Height()
+		ctx.Y += rotatedHeight
+		ctx.Height -= rotatedHeight
 		return ctx, nil
 	}
+
 	// Absolute positioning - return original context.
 	return origCtx, nil
 }

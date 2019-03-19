@@ -88,3 +88,14 @@ func (p positioning) isRelative() bool {
 func (p positioning) isAbsolute() bool {
 	return p == positionAbsolute
 }
+
+// HorizontalAlignment represents the horizontal alignment of components
+// within a page.
+type HorizontalAlignment int
+
+// Horizontal alignment options.
+const (
+	HorizontalAlignmentLeft HorizontalAlignment = iota
+	HorizontalAlignmentCenter
+	HorizontalAlignmentRight
+)

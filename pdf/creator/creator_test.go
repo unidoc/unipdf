@@ -375,7 +375,7 @@ func TestImageWrapping(t *testing.T) {
 	testWriteAndRender(t, creator, "1_wrap.pdf")
 }
 
-// Test rotating image.  Rotating about upper left corner.
+// Test rotating image. Rotating about the center of the image.
 func TestImageRotation(t *testing.T) {
 	creator := New()
 
@@ -447,6 +447,58 @@ func TestImageRotationAndWrap(t *testing.T) {
 	}
 
 	testWriteAndRender(t, creator, "rotate_2.pdf")
+}
+
+// Test image horizontal alignment.
+func TestHorizontalAlignment(t *testing.T) {
+	creator := New()
+
+	imgData, err := ioutil.ReadFile(testImageFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	img, err := creator.NewImageFromData(imgData)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	img.ScaleToWidth(100)
+
+	angles := []float64{0, 45, 90, 180, 270}
+	hAligns := []HorizontalAlignment{
+		HorizontalAlignmentLeft,
+		HorizontalAlignmentCenter,
+		HorizontalAlignmentRight,
+	}
+
+	p := creator.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore" +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+
+	for _, hAlign := range hAligns {
+		creator.NewPage()
+
+		img.SetHorizontalAlignment(hAlign)
+		for _, angle := range angles {
+			img.SetAngle(angle)
+			if err = creator.Draw(img); err != nil {
+				t.Errorf("Fail: %v\n", err)
+				return
+			}
+
+			err := creator.Draw(p)
+			if err != nil {
+				t.Errorf("Fail: %v\n", err)
+				return
+			}
+		}
+	}
+
+	testWriteAndRender(t, creator, "image_horizontal_alignment.pdf")
 }
 
 // Test basic paragraph with default font.
