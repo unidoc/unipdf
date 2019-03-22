@@ -230,3 +230,67 @@ func TestTableWithDiv(t *testing.T) {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestTableColSpan(t *testing.T) {
+	c := New()
+
+	table := c.NewTable(4)
+	table.SetColumnWidths(0.25, 0.25, 0.25, 0.25)
+
+	p := c.NewStyledParagraph()
+	p.Append("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt" +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore" +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+
+	// Colspan 1 + 1 + 1 + 1
+	cell := table.MultiColCell(1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	// Colspan 2 + 2
+	cell = table.MultiColCell(2)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(2)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	// Colspan 3 + 1
+	cell = table.MultiColCell(3)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	// Colspan 4
+	cell = table.MultiColCell(4)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	err := c.Draw(table)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	err = c.WriteToFile(tempFile("table_col_span.pdf"))
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}
