@@ -570,8 +570,18 @@ type TableCell struct {
 	table *Table
 }
 
-// NewCell makes a new cell and inserts into the table at current position in the table.
+// NewCell makes a new cell and inserts it into the table at the current position.
 func (table *Table) NewCell() *TableCell {
+	return table.newCell(1)
+}
+
+// MultiColCell makes a new cell with the specified column span and inserts it
+// into the table at the current position.
+func (table *Table) MultiColCell(colspan int) *TableCell {
+	return table.newCell(colspan)
+}
+
+func (table *Table) newCell(colspan int) *TableCell {
 	table.curCell++
 
 	curRow := (table.curCell-1)/table.cols + 1
@@ -584,6 +594,7 @@ func (table *Table) NewCell() *TableCell {
 	cell := &TableCell{}
 	cell.row = curRow
 	cell.col = curCol
+	cell.rowspan = 1
 
 	// Default left indent
 	cell.indent = 5
@@ -606,8 +617,15 @@ func (table *Table) NewCell() *TableCell {
 	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
 	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 
-	cell.rowspan = 1
-	cell.colspan = 1
+	// Set column span
+	if colspan <= 0 {
+		colspan = 1
+	}
+	if colspan > table.cols {
+		colspan = table.cols
+	}
+	cell.colspan = colspan
+	table.curCell += colspan - 1
 
 	table.cells = append(table.cells, cell)
 
