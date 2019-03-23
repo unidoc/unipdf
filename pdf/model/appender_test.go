@@ -46,7 +46,7 @@ const testPdfAcroFormFile1 = "./testdata/OoPdfFormExample.pdf"
 
 const testPdfSignedPDFDocument = "./testdata/SampleSignedPDFDocument.pdf"
 
-const testPKS12Key = "./testdata/ks12"
+const testPKS12Key = "./testdata/certificate.p12"
 const testPKS12KeyPassword = "password"
 const testSampleSignatureFile = "./testdata/sample_signature"
 
@@ -382,6 +382,7 @@ func TestAppenderMergePage3(t *testing.T) {
 }
 
 func validateFile(t *testing.T, fileName string) {
+	t.Logf("Validating %s", fileName)
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
