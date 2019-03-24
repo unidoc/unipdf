@@ -245,19 +245,19 @@ func TestTableColSpan(t *testing.T) {
 		"mollit anim id est laborum.")
 
 	// Colspan 1 + 1 + 1 + 1
-	cell := table.MultiColCell(1)
+	cell := table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
-	cell = table.MultiColCell(1)
+	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
-	cell = table.MultiColCell(1)
+	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
-	cell = table.MultiColCell(1)
+	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
@@ -275,7 +275,7 @@ func TestTableColSpan(t *testing.T) {
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
-	cell = table.MultiColCell(1)
+	cell = table.NewCell()
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
