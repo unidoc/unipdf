@@ -43,7 +43,7 @@ type pdfFontSimple struct {
 	// These fields are specific to simple PDF fonts.
 
 	charWidths map[textencoding.CharCode]float64
-	// std14Encoder is the encoder specified by the /Encoding entry in the font dict.
+	// encoder is the encoder specified by the /Encoding entry in the font dict.
 	encoder textencoding.TextEncoder
 	// std14Encoder is used for Standard 14 fonts where no /Encoding is specified in the font dict.
 	std14Encoder textencoding.TextEncoder

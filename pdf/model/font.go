@@ -140,6 +140,12 @@ func NewStandard14Font(basefont StdFontName) (*PdfFont, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if basefont != SymbolName && basefont != ZapfDingbatsName {
+		// Default to using WinAnsiEncoder for text generation as it spans a large number of symbols.
+		std.encoder = textencoding.NewWinAnsiEncoder()
+	}
+
 	return &PdfFont{context: &std}, nil
 }
 
@@ -502,12 +508,11 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
 func (font *PdfFont) ToPdfObject() core.PdfObject {
-	if t := font.actualFont(); t != nil {
-		return t.ToPdfObject()
+	if font.context == nil {
+		common.Log.Debug("ERROR: font context is nil")
+		return core.MakeNull()
 	}
-	common.Log.Debug("ERROR: ToPdfObject Not implemented for font type=%T. Returning null object.",
-		font.context)
-	return core.MakeNull()
+	return font.context.ToPdfObject()
 }
 
 // Encoder returns the font's text encoder.
