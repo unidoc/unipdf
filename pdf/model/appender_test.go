@@ -773,7 +773,7 @@ func TestAppenderExternalSignature(t *testing.T) {
 	signature := model.NewPdfSignature(handler)
 	signature.SetName("Test External Signature")
 	signature.SetReason("TestAppenderExternalSignature")
-	signature.SetDate(time.Date(2019, 3, 15, 4, 25, 24, 0, time.UTC), "")
+	signature.SetDate(time.Date(2019, 3, 24, 7, 30, 24, 0, time.UTC), "")
 
 	if err := signature.Initialize(); err != nil {
 		return
