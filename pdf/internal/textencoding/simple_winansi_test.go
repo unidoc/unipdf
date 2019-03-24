@@ -5,7 +5,11 @@
 
 package textencoding
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestWinAnsiEncoder(t *testing.T) {
 	enc := NewWinAnsiEncoder()
@@ -25,5 +29,16 @@ func TestWinAnsiEncoder(t *testing.T) {
 	if !found || glyph != "thorn" {
 		t.Errorf("Glyph != thorn")
 		return
+	}
+
+	// Should encode hyphen to 0x2D consistently (not alternative 0xAD)
+	b := enc.Encode(strings.Repeat("-", 100))
+	if !bytes.Equal(b, bytes.Repeat([]byte{0x2D}, 100)) {
+		t.Fatalf("Incorrect encoding of hyphen")
+	}
+
+	s := enc.Decode([]byte{0xAD, 0x2D})
+	if s != "--" {
+		t.Fatalf("Incorrect decoding of hyphen")
 	}
 }
