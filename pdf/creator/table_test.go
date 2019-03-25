@@ -284,6 +284,15 @@ func TestTableColSpan(t *testing.T) {
 	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(p)
 
+	// Invalid colspans -1 and 5. Will be adjusted to 1 and 3.
+	cell = table.MultiColCell(-1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
+	cell = table.MultiColCell(5)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	cell.SetContent(p)
+
 	err := c.Draw(table)
 	if err != nil {
 		t.Fatalf("Error drawing: %v", err)
