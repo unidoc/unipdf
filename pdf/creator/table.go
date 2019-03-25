@@ -617,12 +617,16 @@ func (table *Table) newCell(colspan int) *TableCell {
 	cell.borderColorRight = model.NewPdfColorDeviceRGB(col.ToRGB())
 	cell.borderColorTop = model.NewPdfColorDeviceRGB(col.ToRGB())
 
-	// Set column span
-	if colspan <= 0 {
+	// Set column span.
+	if colspan < 1 {
+		common.Log.Debug("Table: cell colspan less than 1 (%d). Setting cell colspan to 1.", colspan)
 		colspan = 1
 	}
-	if colspan > table.cols {
-		colspan = table.cols
+
+	remainingCols := table.cols - (cell.col - 1)
+	if colspan > remainingCols {
+		common.Log.Debug("Table: cell colspan (%d) exceeds remaining row cols (%d). Adjusting colspan.", colspan, remainingCols)
+		colspan = remainingCols
 	}
 	cell.colspan = colspan
 	table.curCell += colspan - 1
