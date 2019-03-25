@@ -2651,92 +2651,94 @@ func TestOptimizeImagePPI(t *testing.T) {
 
 // TestCombineIdenticalIndirectObjects tests optimizing PDFs to reduce output file size.
 func TestCombineIdenticalIndirectObjects(t *testing.T) {
-	c := New()
-	c.AddTOC = true
+	optimizeIndirectObjectsTest := func() *Creator {
+		c := New()
+		c.AddTOC = true
 
-	ch1 := c.NewChapter("Introduction")
-	subchap1 := ch1.NewSubchapter("The fundamentals")
-	subchap1.SetMargins(0, 0, 5, 0)
+		ch1 := c.NewChapter("Introduction")
+		subchap1 := ch1.NewSubchapter("The fundamentals")
+		subchap1.SetMargins(0, 0, 5, 0)
 
-	//subCh1 := NewSubchapter(ch1, "Workflow")
-
-	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
-		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
-		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
-		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
-		"mollit anim id est laborum.")
-	p.SetTextAlignment(TextAlignmentJustify)
-	p.SetMargins(0, 0, 5, 0)
-	for j := 0; j < 5; j++ {
-		subchap1.Add(p)
-	}
-
-	subchap2 := ch1.NewSubchapter("Mechanism")
-	subchap2.SetMargins(0, 0, 5, 0)
-	for j := 0; j < 15; j++ {
-		subchap2.Add(p)
-	}
-
-	subchap3 := ch1.NewSubchapter("Discussion")
-	subchap3.SetMargins(0, 0, 5, 0)
-	for j := 0; j < 19; j++ {
-		subchap3.Add(p)
-	}
-
-	subchap4 := ch1.NewSubchapter("Conclusion")
-	subchap4.SetMargins(0, 0, 5, 0)
-	for j := 0; j < 23; j++ {
-		subchap4.Add(p)
-	}
-
-	c.Draw(ch1)
-
-	for i := 0; i < 50; i++ {
-		ch2 := c.NewChapter("References")
-		for j := 0; j < 13; j++ {
-			ch2.Add(p)
+		p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+			"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+			"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+			"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+			"mollit anim id est laborum.")
+		p.SetTextAlignment(TextAlignmentJustify)
+		p.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 5; j++ {
+			subchap1.Add(p)
 		}
 
-		c.Draw(ch2)
+		subchap2 := ch1.NewSubchapter("Mechanism")
+		subchap2.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 15; j++ {
+			subchap2.Add(p)
+		}
+
+		subchap3 := ch1.NewSubchapter("Discussion")
+		subchap3.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 19; j++ {
+			subchap3.Add(p)
+		}
+
+		subchap4 := ch1.NewSubchapter("Conclusion")
+		subchap4.SetMargins(0, 0, 5, 0)
+		for j := 0; j < 23; j++ {
+			subchap4.Add(p)
+		}
+
+		c.Draw(ch1)
+
+		for i := 0; i < 50; i++ {
+			ch2 := c.NewChapter("References")
+			for j := 0; j < 13; j++ {
+				ch2.Add(p)
+			}
+
+			c.Draw(ch2)
+		}
+
+		// Set a function to create the front Page.
+		c.CreateFrontPage(func(args FrontpageFunctionArgs) {
+			p := c.NewParagraph("Example Report")
+			p.SetWidth(c.Width())
+			p.SetTextAlignment(TextAlignmentCenter)
+			p.SetFontSize(32)
+			p.SetPos(0, 300)
+			c.Draw(p)
+
+			p.SetFontSize(22)
+			p.SetText("Example Report Data Results")
+			p.SetPos(0, 340)
+			c.Draw(p)
+		})
+
+		// The table of contents is created automatically if the
+		// AddTOC property of the creator is set to true.
+		// This function is used just to customize the style of the TOC.
+		c.CreateTableOfContents(func(toc *TOC) error {
+			style := c.NewTextStyle()
+			style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
+			style.FontSize = 20
+
+			toc.SetHeading("Table of Contents", style)
+			return nil
+		})
+
+		addHeadersAndFooters(c)
+		return c
 	}
 
-	// Set a function to create the front Page.
-	c.CreateFrontPage(func(args FrontpageFunctionArgs) {
-		p := c.NewParagraph("Example Report")
-		p.SetWidth(c.Width())
-		p.SetTextAlignment(TextAlignmentCenter)
-		p.SetFontSize(32)
-		p.SetPos(0, 300)
-		c.Draw(p)
-
-		p.SetFontSize(22)
-		p.SetText("Example Report Data Results")
-		p.SetPos(0, 340)
-		c.Draw(p)
-	})
-
-	// The table of contents is created automatically if the
-	// AddTOC property of the creator is set to true.
-	// This function is used just to customize the style of the TOC.
-	c.CreateTableOfContents(func(toc *TOC) error {
-		style := c.NewTextStyle()
-		style.Color = ColorRGBFromArithmetic(0.5, 0.5, 0.5)
-		style.FontSize = 20
-
-		toc.SetHeading("Table of Contents", style)
-		return nil
-	})
-
-	addHeadersAndFooters(c)
-
+	c := optimizeIndirectObjectsTest()
 	err := c.WriteToFile(tempFile("12_identical_indirect_objects_not_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
+	c = optimizeIndirectObjectsTest()
 	c.SetOptimizer(optimize.New(optimize.Options{CombineIdenticalIndirectObjects: true}))
-
 	err = c.WriteToFile(tempFile("12_identical_indirect_objects_optimized.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
