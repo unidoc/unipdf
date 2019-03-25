@@ -72,32 +72,21 @@ type Paragraph struct {
 // Standard font may will have an encdoing set to WinAnsiEncoding. To set a different encoding, make a new font
 // and use SetFont on the paragraph to override the defaut one.
 func newParagraph(text string, style TextStyle) *Paragraph {
-	// TODO(dennwc): style is unused
-
-	p := &Paragraph{text: text}
-
-	font, err := model.NewStandard14Font("Helvetica")
-	if err != nil {
-		common.Log.Debug("ERROR: NewStandard14FontWithEncoding failed err=%v. Falling back.", err)
-		p.textFont = model.DefaultFont()
+	p := &Paragraph{
+		text:        text,
+		textFont:    style.Font,
+		fontSize:    style.FontSize,
+		lineHeight:  1.0,
+		enableWrap:  true,
+		defaultWrap: true,
+		alignment:   TextAlignmentLeft,
+		angle:       0,
+		scaleX:      1,
+		scaleY:      1,
+		positioning: positionRelative,
 	}
-	p.textFont = font
 
-	p.fontSize = 10
-	p.lineHeight = 1.0
-
-	// TODO: Can we wrap intellectually, only if given width is known?
-	p.enableWrap = true
-	p.defaultWrap = true
-	p.SetColor(ColorRGBFrom8bit(0, 0, 0))
-	p.alignment = TextAlignmentLeft
-	p.angle = 0
-
-	p.scaleX = 1
-	p.scaleY = 1
-
-	p.positioning = positionRelative
-
+	p.SetColor(style.Color)
 	return p
 }
 
