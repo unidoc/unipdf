@@ -65,6 +65,8 @@ func NewPdfPage() *PdfPage {
 	page := PdfPage{}
 	page.pageDict = core.MakeDict()
 
+	page.Resources = NewPdfPageResources()
+
 	container := core.PdfIndirectObject{}
 	container.PdfObject = page.pageDict
 	page.primitive = &container
