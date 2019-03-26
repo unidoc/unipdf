@@ -363,7 +363,7 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			return nil, nil, err
 		}
 		firstObjDirect := core.TraceToDirectObject(firstObj)
-		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull {
+		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull && firstObjDirect != nil {
 			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 			if err != nil {
 				return nil, nil, err
