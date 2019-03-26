@@ -39,6 +39,9 @@ type PdfAnnotation struct {
 // GetContext returns the annotation context which contains the specific type-dependent context.
 // The context represents the subannotation.
 func (a *PdfAnnotation) GetContext() PdfModel {
+	if a == nil {
+		return nil
+	}
 	return a.context
 }
 
@@ -957,8 +960,8 @@ func (r *PdfReader) newPdfAnnotationFromIndirectObject(container *core.PdfIndire
 		return annot, nil
 	}
 
-	err := fmt.Errorf("unknown annotation (%s)", *subtype)
-	return nil, err
+	common.Log.Debug("ERROR: Ignoring unknown annotation: %s", *subtype)
+	return nil, nil
 }
 
 // Load data for markup annotation subtypes.
@@ -980,12 +983,13 @@ func (r *PdfReader) newPdfAnnotationMarkupFromDict(d *core.PdfObjectDictionary) 
 			if err != nil {
 				return nil, err
 			}
-			popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
-			if !isPopupAnnot {
-				return nil, errors.New("object not referring to a popup annotation")
+			if popupAnnotObj != nil {
+				popupAnnot, isPopupAnnot := popupAnnotObj.context.(*PdfAnnotationPopup)
+				if !isPopupAnnot {
+					return nil, errors.New("object not referring to a popup annotation")
+				}
+				annot.Popup = popupAnnot
 			}
-
-			annot.Popup = popupAnnot
 		}
 	}
 
