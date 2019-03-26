@@ -359,7 +359,9 @@ func (r *PdfReader) LoadAnnotations(d *core.PdfObjectDictionary) ([]*PdfAnnotati
 		if err != nil {
 			return nil, err
 		}
-		annotations = append(annotations, annot)
+		if annot != nil {
+			annotations = append(annotations, annot)
+		}
 	}
 
 	return annotations, nil
