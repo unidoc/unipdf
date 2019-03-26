@@ -218,7 +218,7 @@ var fileExtractionTests = []struct {
 	{filename: "/rfc6962.txt.pdf",
 		expectedPageText: map[int][]string{
 			4: []string{
-				"timestamps for certificates they then don't log",
+				"timestamps for certificates they then don’t log",
 				`The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",`},
 		},
 	},
