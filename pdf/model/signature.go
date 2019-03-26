@@ -170,7 +170,7 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 		dict = container.PdfObject.(*core.PdfObjectDictionary)
 	}
 
-	dict.Set("Type", sig.Type)
+	dict.SetIfNotNil("Type", sig.Type)
 	dict.SetIfNotNil("Filter", sig.Filter)
 	dict.SetIfNotNil("SubFilter", sig.SubFilter)
 	dict.SetIfNotNil("ByteRange", sig.ByteRange)
@@ -183,9 +183,7 @@ func (sig *PdfSignature) ToPdfObject() core.PdfObject {
 	dict.SetIfNotNil("Changes", sig.Changes)
 	dict.SetIfNotNil("ContactInfo", sig.ContactInfo)
 
-	// NOTE: ByteRange and Contents need to be updated dynamically.
-	// TODO: Currently dynamic update is only in the appender, need to support
-	// in the PdfWriter too for the initial signature on document creation.
+	// NOTE: ByteRange and Contents are updated dynamically (appender).
 	return container
 }
 
@@ -205,11 +203,7 @@ func (r *PdfReader) newPdfSignatureFromIndirect(container *core.PdfIndirectObjec
 	sig := &PdfSignature{}
 	sig.container = container
 
-	sig.Type, ok = core.GetName(dict.Get("Type"))
-	if !ok {
-		common.Log.Error("ERROR: Signature Type attribute invalid or missing")
-		return nil, ErrInvalidAttribute
-	}
+	sig.Type, _ = core.GetName(dict.Get("Type"))
 
 	sig.Filter, ok = core.GetName(dict.Get("Filter"))
 	if !ok {
