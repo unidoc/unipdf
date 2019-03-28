@@ -48,7 +48,6 @@ const testPdfSignedPDFDocument = "./testdata/SampleSignedPDFDocument.pdf"
 
 const testPKS12Key = "./testdata/certificate.p12"
 const testPKS12KeyPassword = "password"
-const testSampleSignatureFile = "./testdata/sample_signature"
 
 func tempFile(name string) string {
 	return filepath.Join(os.TempDir(), name)
