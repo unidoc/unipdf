@@ -3112,15 +3112,15 @@ func testRender(t *testing.T, pdfPath string) {
 	tplName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
 	t.Run("render", func(t *testing.T) {
 		imgPathPrefix := filepath.Join(tempDir, tplName)
-		imgPathTpl := filepath.Join(tempDir, tplName) + "-%d.png"
+		imgPathTpl := imgPathPrefix + "-%d.png"
 		// will emit /tmp/dir/template-x.png for each page x.
 		err := renderPDFToPNGs(pdfPath, 0, imgPathTpl)
 		if err != nil {
 			t.Skip(err)
 		}
 		for i := 1; true; i++ {
-			imgPath := imgPathPrefix + fmt.Sprintf("-%d.png", i)
-			expImgPath := filepath.Join(baselineRenderPath, tplName+fmt.Sprintf("-%d_exp.png", i))
+			imgPath := fmt.Sprintf("%s-%d.png", imgPathPrefix, i)
+			expImgPath := filepath.Join(baselineRenderPath, fmt.Sprintf("%s-%d_exp.png", tplName, i))
 
 			if _, err := os.Stat(imgPath); err != nil {
 				break
@@ -3163,8 +3163,5 @@ func copyFile(src, dst string) error {
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-	return out.Close()
+	return err
 }
