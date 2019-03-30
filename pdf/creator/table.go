@@ -45,30 +45,30 @@ type Table struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Specifies whether the table has a header.
+	hasHeader bool
+
+	// Header rows.
+	headerStartRow int
+	headerEndRow   int
 }
 
 // newTable create a new Table with a specified number of columns.
 func newTable(cols int) *Table {
-	t := &Table{}
-	t.rows = 0
-	t.cols = cols
-
-	t.curCell = 0
+	t := &Table{
+		cols:             cols,
+		defaultRowHeight: 10.0,
+		colWidths:        []float64{},
+		rowHeights:       []float64{},
+		cells:            []*TableCell{},
+	}
 
 	// Initialize column widths as all equal.
-	t.colWidths = []float64{}
 	colWidth := float64(1.0) / float64(cols)
 	for i := 0; i < cols; i++ {
 		t.colWidths = append(t.colWidths, colWidth)
 	}
-
-	t.rowHeights = []float64{}
-
-	// Default row height
-	// TODO: Base on contents instead?
-	t.defaultRowHeight = 10.0
-
-	t.cells = []*TableCell{}
 
 	return t
 }
@@ -83,7 +83,6 @@ func (table *Table) SetColumnWidths(widths ...float64) error {
 	}
 
 	table.colWidths = widths
-
 	return nil
 }
 
@@ -148,6 +147,25 @@ func (table *Table) SetPos(x, y float64) {
 	table.yPos = y
 }
 
+// SetHeaderRows turns the selected table rows into headers that are repeated
+// for every page the table spans. startRow and endRow are inclusive.
+func (table *Table) SetHeaderRows(startRow, endRow int) error {
+	if startRow <= 0 {
+		return errors.New("header start row must be greater than 0")
+	}
+	if endRow <= 0 {
+		return errors.New("header end row must be greater than 0")
+	}
+	if startRow > endRow {
+		return errors.New("header start row  must be less than or equal to the end row")
+	}
+
+	table.hasHeader = true
+	table.headerStartRow = startRow
+	table.headerEndRow = endRow
+	return nil
+}
+
 // GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap
 // over multiple pages.
 // Implements the Drawable interface.
@@ -178,8 +196,12 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	// Start row keeps track of starting row (wraps to 0 on new page).
 	startrow := 0
 
+	// Indices of the first and the last header cells.
+	startHeaderCell := -1
+	endHeaderCell := -1
+
 	// Prepare for drawing: Calculate cell dimensions, row, cell heights.
-	for _, cell := range table.cells {
+	for cellIdx, cell := range table.cells {
 		// Get total width fraction
 		wf := float64(0.0)
 		for i := 0; i < cell.colspan; i++ {
@@ -203,6 +225,16 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		h := float64(0.0)
 		for i := 0; i < cell.rowspan; i++ {
 			h += table.rowHeights[cell.row+i-1]
+		}
+
+		// Calculate header cell range.
+		if table.hasHeader {
+			if cell.row >= table.headerStartRow && cell.row <= table.headerEndRow {
+				if startHeaderCell < 0 {
+					startHeaderCell = cellIdx
+				}
+				endHeaderCell = cellIdx
+			}
 		}
 
 		// For text: Calculate width, height, wrapping within available space if specified.
@@ -292,22 +324,28 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
 		}
-
 	}
 
 	// Draw cells.
 	// row height, cell height
-	for _, cell := range table.cells {
+	var drawingHeaders bool
+	var resumeIdx, resumeStartRow int
+
+	for cellIdx := 0; cellIdx < len(table.cells); cellIdx++ {
+		cell := table.cells[cellIdx]
+
 		// Get total width fraction
 		wf := float64(0.0)
 		for i := 0; i < cell.colspan; i++ {
 			wf += table.colWidths[cell.col+i-1]
 		}
+
 		// Get x pos relative to table upper left corner.
 		xrel := float64(0.0)
 		for i := 0; i < cell.col-1; i++ {
 			xrel += table.colWidths[i] * tableWidth
 		}
+
 		// Get y pos relative to table upper left corner.
 		yrel := float64(0.0)
 		for i := startrow; i < cell.row-1; i++ {
@@ -324,7 +362,6 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		ctx.Height = origHeight - yrel
-
 		if h > ctx.Height {
 			// Go to next page.
 			blocks = append(blocks, block)
@@ -337,6 +374,18 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 			startrow = cell.row - 1
 			yrel = 0
+
+			// Save state and jump back to the first header cell.
+			if table.hasHeader && startHeaderCell >= 0 {
+				resumeIdx = cellIdx
+				cellIdx = startHeaderCell - 1
+
+				resumeStartRow = startrow
+				startrow = table.headerStartRow - 1
+
+				drawingHeaders = true
+				continue
+			}
 		}
 
 		// Height should be how much space there is left of the page.
@@ -448,6 +497,18 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		ctx.Y += h
+
+		// Resume previous state after headers have been rendered.
+		if drawingHeaders && cellIdx+1 > endHeaderCell {
+			// Account for the height of the rendered headers.
+			ulY += yrel + h
+			origHeight -= h + yrel
+
+			startrow = resumeStartRow
+			cellIdx = resumeIdx - 1
+
+			drawingHeaders = false
+		}
 	}
 	blocks = append(blocks, block)
 
