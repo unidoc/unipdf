@@ -78,3 +78,32 @@ func (k SegmentType) String() string {
 	}
 	return "Invalid Segment Kind"
 }
+
+var emptySegment Segmenter
+
+var kindMap map[SegmentType]func() Segmenter = map[SegmentType]func() Segmenter{
+	TSymbolDictionary: func() Segmenter {
+		return &SymbolDictionarySegment{}
+	},
+	TIntermediateTextRegion:                   func() Segmenter { return &TextRegion{} },
+	TImmediateTextRegion:                      func() Segmenter { return &TextRegion{} },
+	TImmediateLosslessTextRegion:              func() Segmenter { return &TextRegion{} },
+	TPatternDictionary:                        func() Segmenter { return &PatternDictionary{} },
+	TIntermediateHalftoneRegion:               func() Segmenter { return &HalftoneRegion{} },
+	TImmediateHalftoneRegion:                  func() Segmenter { return &HalftoneRegion{} },
+	TImmediateLosslessHalftoneRegion:          func() Segmenter { return &HalftoneRegion{} },
+	TIntermediateGenericRegion:                func() Segmenter { return &GenericRegionSegment{} },
+	TImmediateGenericRegion:                   func() Segmenter { return &GenericRegionSegment{} },
+	TImmediateLosslessGenericRegion:           func() Segmenter { return &GenericRegionSegment{} },
+	TIntermediateGenericRefinementRegion:      func() Segmenter { return &GenericRefinementRegion{} },
+	TImmediateGenericRefinementRegion:         func() Segmenter { return &GenericRefinementRegion{} },
+	TImmediateLosslessGenericRefinementRegion: func() Segmenter { return &GenericRefinementRegion{} },
+	TPageInformation:                          func() Segmenter { return &PageInformationSegment{} },
+	TEndOfPage:                                func() Segmenter { return emptySegment },
+	TEndOfStrip:                               func() Segmenter { return &EndOfStripe{} },
+	TEndOfFile:                                func() Segmenter { return emptySegment },
+	TProfiles:                                 func() Segmenter { return emptySegment },
+	TTables:                                   func() Segmenter { return &TableSegment{} },
+	TExtension:                                func() Segmenter { return emptySegment },
+	TBitmap:                                   func() Segmenter { return emptySegment },
+}

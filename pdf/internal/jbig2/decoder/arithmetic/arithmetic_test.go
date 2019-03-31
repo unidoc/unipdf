@@ -31,7 +31,7 @@ func TestArithmeticDecoder(t *testing.T) {
 		// var b byte
 
 		cx := NewStats(512, 0)
-		for i := 0; i < len(encoded)*8; i++ {
+		for i := 0; i < 256; i++ {
 			a.DecodeBit(cx)
 		}
 	}

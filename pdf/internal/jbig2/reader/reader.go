@@ -27,6 +27,12 @@ func New(data []byte) *Reader {
 	return &Reader{in: data}
 }
 
+// BitPosition gets the current bit position of the Reader
+func (r *Reader) BitPosition() int {
+
+	return int(r.bits)
+}
+
 // Read reads the data from the provided bytes
 func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.bits == 0 {
@@ -54,7 +60,8 @@ func (r *Reader) Reset() {
 	r.bits = r.markBits
 }
 
-func (r *Reader) CurrentBytePosition() int64 {
+// StreamPosition gets the stream position of the substream reader
+func (r *Reader) StreamPosition() int64 {
 	return r.r
 }
 
@@ -80,6 +87,7 @@ func (r *Reader) readBufferByte() (b byte, err error) {
 	return c, nil
 }
 
+// ReadUnsignedInt reads the unsigned uint32 from the reader
 func (r *Reader) ReadUnsignedInt() (uint32, error) {
 	ub := make([]byte, 4)
 
@@ -215,9 +223,9 @@ func (r *Reader) ConsumeRemainingBits() {
 	}
 }
 
-// Size returns the size of the data in the reader
-func (r *Reader) Size() int64 {
-	return int64(len(r.in))
+// Length returns the length of the data in the reader
+func (r *Reader) Length() uint64 {
+	return uint64(len(r.in))
 }
 
 // Seek implements the io.Seeker interface
@@ -234,12 +242,13 @@ func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekEnd:
 		abs = int64(len(r.in)) + offset
 	default:
-		return 0, errors.New("bitio.Reader.Seek: invalid whence")
+		return 0, errors.New("reader.Reader.Seek: invalid whence")
 	}
 
 	if abs < 0 {
-		return 0, errors.New("bitio.Reader.Seek: negative position")
+		return 0, errors.New("reader.Reader.Seek: negative position")
 	}
 	r.r = abs
+	r.bits = 0
 	return abs, nil
 }

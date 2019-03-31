@@ -8,7 +8,7 @@ import (
 
 // PageInformationSegment represents the segment type Page Information 7.4.8
 type PageInformationSegment struct {
-	r *reader.Reader
+	r reader.StreamReader
 
 	// Page bitmap height, four byte, 7.4.8.1
 	PageBMHeight int
@@ -35,16 +35,30 @@ type PageInformationSegment struct {
 	MaxStripeSize uint16
 }
 
-func New(h *SegmentHeader) *PageInformationSegment {
+func newPageInformation(h *SegmentHeader) *PageInformationSegment {
 	p := &PageInformationSegment{}
+
 	return p
 }
 
-func (p *PageInformationSegment) Init() error {
+// Init initialize the PageInformation Segment
+func (p *PageInformationSegment) Init(h *SegmentHeader, r reader.StreamReader) error {
+	p.r = r
+	p.parseHeader()
 	return nil
 }
 
 func (p *PageInformationSegment) parseHeader() (err error) {
+	common.Log.Debug("[PageInformationSegment] ParsingHeader...")
+	defer func() {
+		var str = "[PageInformationSegment] ParsingHeader Finished"
+		if err != nil {
+			str += " with error"
+		} else {
+			str += " succesfully"
+		}
+		common.Log.Debug(str)
+	}()
 	if err = p.readWidthAndHeight(); err != nil {
 		return err
 	}
@@ -250,86 +264,3 @@ func (p *PageInformationSegment) init(header *SegmentHeader, r *reader.Reader) e
 	return nil
 
 }
-
-// // Read reads the segment from the input reader
-// func (p *PageInformationSegment) Decode(r *reader.Reader) error {
-// 	common.Log.Debug("[PAGE-SEGMENT][DECODE] Begins ")
-// 	defer func() { common.Log.Debug("[PAGE-SEGMENT][DECODE] Finished") }()
-
-// 	var buf []byte = make([]byte, 4)
-
-// 	_, err := r.Read(buf)
-// 	if err != nil {
-// 		common.Log.Debug("Read Width block failed. %v", err)
-// 		return err
-// 	}
-
-// 	p.PageBMWidth = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-
-// 	_, err = r.Read(buf)
-// 	if err != nil {
-// 		common.Log.Debug("Read Height block failed. %v", err)
-// 		return err
-// 	}
-
-// 	p.PageBMHeight = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-
-// 	_, err = r.Read(buf)
-// 	if err != nil {
-// 		common.Log.Debug("Read Height block failed. %v", err)
-// 		return err
-// 	}
-
-// 	p.XResolution = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-
-// 	_, err = r.Read(buf)
-// 	if err != nil {
-// 		common.Log.Debug("Read Height block failed. %v", err)
-// 		return err
-// 	}
-
-// 	p.YResolution = int(binary.BigEndian.Uint32(buf))
-
-// 	common.Log.Debug("Page Bitmap size: Height: %v, Width: %v", p.PageBMHeight, p.PageBMWidth)
-
-// 	flags, err := r.ReadByte()
-// 	if err != nil {
-// 		common.Log.Debug("Read Flags block failed. %v", err)
-// 		return err
-// 	}
-
-// 	p.PageInfoFlags.SetValue(int(flags))
-// 	common.Log.Debug("Flags: %d", flags)
-
-// 	buf = make([]byte, 2)
-
-// 	_, err = r.Read(buf)
-// 	if err != nil {
-// 		common.Log.Debug("Read Page Stripping block. %v", err)
-// 		return err
-// 	}
-
-// 	p.pageStripping = int(binary.BigEndian.Uint16(buf))
-// 	common.Log.Debug("Page Stripping: %d", p.pageStripping)
-
-// 	defPix := p.PageInfoFlags.GetValue(DefaultPixelValue)
-
-// 	var height int
-
-// 	if p.PageBMHeight == -1 {
-// 		height = p.pageStripping & 0x7fff
-// 	} else {
-// 		height = p.PageBMHeight
-// 	}
-
-// 	p.PageBitmap = bitmap.New(p.PageBMWidth, height, p.Decoders)
-// 	p.PageBitmap.Clear(defPix != 0)
-
-// 	return nil
-// }

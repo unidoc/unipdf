@@ -1,15 +1,15 @@
 package jbig2
 
 import (
-	"container/list"
 	"errors"
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"io"
 )
 
 var (
 	/** ID string in file header, see ISO/IEC 14492:2001, D.4.1 */
-	fileHeaderID []byte = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
+	fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 )
 
 // According to D.4.2. - File header bit 0
@@ -75,11 +75,11 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
 // MapData maps the data and stores all segments
 func (d *Document) mapData() error {
 	// Get the header list
-	segments := list.New()
+	var segments []*SegmentHeader
 
 	var (
-		offset      uint64
-		segmentType int
+		offset      int64
+		segmentType SegmentType
 	)
 
 	isFileHeaderPresent, err := d.isFileHeaderPresent()
@@ -93,20 +93,54 @@ func (d *Document) mapData() error {
 			return err
 		}
 
-		offset += uint64(d.fileHeaderLength)
+		offset += int64(d.fileHeaderLength)
 	}
 
-	// var (
-	// 	page      *Page
-	// 	segmentNo int
-	// )
+	var (
+		page       *Page
+		segmentNo  int
+		reachedEOF bool
+	)
 
-	for segmentType != 51 {
-		// TODO: Finish mapping the data
-		if segments.Front() == nil {
+	// type 51 is
+	for segmentType != 51 && !reachedEOF {
+		common.Log.Debug("Segment number: %d", segmentNo)
+		segmentNo++
 
+		// get new segment
+		segment, err := NewHeader(d, d.InputStream, offset, d.OrgainsationType)
+		if err != nil {
+			return err
+		}
+		common.Log.Debug("Decoding segment type: %s", segment.SegmentType)
+		segmentType = segment.SegmentType
+
+		if segment.PageAssociation != 0 {
+			page = d.Pages[segment.PageAssociation]
+			if page == nil {
+				page = NewPage(d, segment.PageAssociation)
+				d.Pages[segment.PageAssociation] = page
+			}
+
+			page.Segments[int(segment.SegmentNumber)] = segment
+		} else {
+			d.GlobalSegments.AddSegment(int(segment.SegmentNumber), segment)
+		}
+
+		segments = append(segments, segment)
+
+		offset = d.InputStream.StreamPosition()
+
+		if d.OrgainsationType == OSequential {
+			offset += int64(segment.SegmentDataLength)
+		}
+
+		reachedEOF, err = d.reachedEOF(offset)
+		if err != nil {
+			return err
 		}
 	}
+	d.determineRandomDataOffsets(segments, uint64(offset))
 
 	return nil
 
@@ -131,17 +165,14 @@ func (d *Document) isFileHeaderPresent() (bool, error) {
 	return true, nil
 }
 
-func (d *Document) determineRandomDataOffsets(segments *list.List, offset *uint64) {
+func (d *Document) determineRandomDataOffsets(segments []*SegmentHeader, offset uint64) {
 
 	if d.OrgainsationType == ORandom {
 
-		for s := segments.Front(); s != nil; s.Next() {
-			// h := s.Value.(*Header)
-			// TODO: h.setSegmentDataStartOffset(offset)
-
-			// TODO: offset += h.getSegmentDataLength
+		for _, s := range segments {
+			s.SegmentDataStartOffset = offset
+			offset += s.SegmentDataLength
 		}
-
 	}
 }
 
@@ -220,7 +251,18 @@ func (d *Document) GetAmountOfPages() (uint32, error) {
 	return d.AmountOfPages, nil
 }
 
-// func (d *Document) reachedEOF(offset uint64) (bool, error) {
-// 	_, err := d.InputStream.Seek(offset, io.SeekStart)
+func (d *Document) reachedEOF(offset int64) (bool, error) {
+	_, err := d.InputStream.Seek(offset, io.SeekStart)
+	if err != nil {
+		return false, err
+	}
 
-// }
+	_, err = d.InputStream.ReadBits(32)
+	if err == io.EOF {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return false, nil
+}

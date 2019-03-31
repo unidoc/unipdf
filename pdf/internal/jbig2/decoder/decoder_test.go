@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/unidoc/unidoc/common"
 	"testing"
 )
 
