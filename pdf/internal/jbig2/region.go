@@ -1,13 +1,14 @@
 package jbig2
 
 import (
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
 // RegionSegment is the segment that takes
 type RegionSegment struct {
-	r *reader.Reader
+	r reader.StreamReader
 
 	/** Region segment bitmap width, 7.4.1.1 */
 	BitmapWidth int
@@ -26,13 +27,17 @@ type RegionSegment struct {
 }
 
 // NewRegionSegment creates new Region segment model
-func NewRegionSegment(r *reader.Reader) *RegionSegment {
+func NewRegionSegment(r reader.StreamReader) *RegionSegment {
 	rs := &RegionSegment{r: r}
 	return rs
 }
 
-// ParseHeader parses the RegionSegment Header
-func (r *RegionSegment) ParseHeader() error {
+// parseHeader parses the RegionSegment Header
+func (r *RegionSegment) parseHeader() error {
+	common.Log.Debug("[REGION][PARSE-HEADER] Begin")
+	defer func() {
+		common.Log.Debug("[REGION][PARSE-HEADER] Finished")
+	}()
 	temp, err := r.r.ReadBits(32)
 	if err != nil {
 		return err

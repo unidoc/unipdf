@@ -4,10 +4,11 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"io"
+	"math"
 )
 
 var (
-	qe [][4]uint32 = [][4]uint32{{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
+	qe = [][4]uint32{{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
 		{0x1801, 3, 9, 0}, {0x0AC1, 4, 12, 0}, {0x0521, 5, 29, 0}, {0x0221, 38, 33, 0},
 		{0x5601, 7, 6, 1}, {0x5401, 8, 14, 0}, {0x4801, 9, 14, 0}, {0x3801, 10, 14, 0},
 		{0x3001, 11, 17, 0}, {0x2401, 12, 18, 0}, {0x1C01, 13, 20, 0},
@@ -24,23 +25,23 @@ var (
 		{0x0009, 44, 41, 0}, {0x0005, 45, 42, 0}, {0x0001, 45, 43, 0},
 		{0x5601, 46, 46, 0}}
 
-	qeTable []int = []int{0x56010000, 0x34010000, 0x18010000, 0x0AC10000, 0x05210000, 0x02210000, 0x56010000, 0x54010000, 0x48010000, 0x38010000, 0x30010000, 0x24010000, 0x1C010000, 0x16010000, 0x56010000, 0x54010000, 0x51010000, 0x48010000, 0x38010000, 0x34010000, 0x30010000, 0x28010000, 0x24010000, 0x22010000, 0x1C010000, 0x18010000, 0x16010000, 0x14010000, 0x12010000, 0x11010000, 0x0AC10000, 0x09C10000, 0x08A10000, 0x05210000, 0x04410000, 0x02A10000, 0x02210000, 0x01410000, 0x01110000, 0x00850000, 0x00490000, 0x00250000, 0x00150000, 0x00090000, 0x00050000, 0x00010000,
+	qeTable = []int{0x56010000, 0x34010000, 0x18010000, 0x0AC10000, 0x05210000, 0x02210000, 0x56010000, 0x54010000, 0x48010000, 0x38010000, 0x30010000, 0x24010000, 0x1C010000, 0x16010000, 0x56010000, 0x54010000, 0x51010000, 0x48010000, 0x38010000, 0x34010000, 0x30010000, 0x28010000, 0x24010000, 0x22010000, 0x1C010000, 0x18010000, 0x16010000, 0x14010000, 0x12010000, 0x11010000, 0x0AC10000, 0x09C10000, 0x08A10000, 0x05210000, 0x04410000, 0x02A10000, 0x02210000, 0x01410000, 0x01110000, 0x00850000, 0x00490000, 0x00250000, 0x00150000, 0x00090000, 0x00050000, 0x00010000,
 		0x56010000}
 
-	nmpsTable []int = []int{
+	nmpsTable = []int{
 		1, 2, 3, 4, 5, 38, 7, 8, 9, 10, 11, 12, 13, 29, 15,
 		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 		30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
 		44, 45, 45, 46,
 	}
 
-	nlpsTable []int = []int{
+	nlpsTable = []int{
 		1, 6, 9, 12, 29, 33, 6, 14, 14, 14, 17, 18, 20, 21, 14, 14, 15, 16, 17, 18, 19,
 		19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
 		39, 40, 41, 42, 43, 46,
 	}
 
-	switchTable []int = []int{
+	switchTable = []int{
 		1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -53,7 +54,7 @@ type Decoder struct {
 	ContextSize          []int
 	ReferedToContextSize []int
 
-	r *reader.Reader
+	r reader.StreamReader
 	b int
 
 	c        uint64
@@ -68,7 +69,7 @@ type Decoder struct {
 }
 
 // New creates new arithmetic Decoder
-func New(r *reader.Reader) (*Decoder, error) {
+func New(r reader.StreamReader) (*Decoder, error) {
 	d := &Decoder{
 		r:                    r,
 		ContextSize:          []int{16, 13, 10, 10},
@@ -82,150 +83,64 @@ func New(r *reader.Reader) (*Decoder, error) {
 	return d, nil
 }
 
-// // ResetIntStats resets the context stats for the decoder
-// func (d *Decoder) ResetIntStats(symbolCodeLength int) {
-// 	d.IadhStats.Reset()
-// 	d.IadwStats.Reset()
-// 	d.IaexStats.Reset()
-// 	d.IaaiStats.Reset()
-// 	d.IadtStats.Reset()
-// 	d.IaitStats.Reset()
-// 	d.IafsStats.Reset()
-// 	d.IadsStats.Reset()
-// 	d.IardxStats.Reset()
-// 	d.IardyStats.Reset()
-// 	d.IardwStats.Reset()
-// 	d.IardhStats.Reset()
-// 	d.IariStats.Reset()
+// DecodeBit decodes the arithmetic Bit
+func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
+	var (
+		bit     int
+		qeValue uint32 = qe[stats.cx()][0]
+		icx            = int(stats.cx())
+	)
 
-// 	if d.IaidStats.contextSize == (1 << uint(symbolCodeLength+1)) {
-// 		d.IaidStats.Reset()
-// 	} else {
-// 		d.IaidStats = NewStats(1<<uint(symbolCodeLength+1), 1)
-// 	}
-// }
+	defer func() {
 
-// ResetGenericStats resets the decoder's generic stats.
-// If the previousStats are not nil then the decoder would copy
-// the genericRegionStats from the previous stats
-// func (d *Decoder) ResetGenericStats(template int, previousStats *DecoderStats) {
-// 	size := d.ContextSize[template]
+		d.prvCtr += 1
+		// common.Log.Debug("Decoder 'a' value: %b", d.a)
+		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
+	}()
 
-// 	if previousStats != nil && previousStats.contextSize == size {
-// 		if d.GenericRegionStats.contextSize == size {
-// 			d.GenericRegionStats.Overwrite(previousStats)
-// 		} else {
-// 			d.GenericRegionStats = previousStats.Copy()
-// 		}
-// 	} else {
-// 		if d.GenericRegionStats.contextSize == size {
-// 			d.GenericRegionStats.Reset()
-// 		} else {
-// 			d.GenericRegionStats = NewStats(1<<uint(size), 1)
-// 		}
-// 	}
-// }
+	d.a -= qeValue
 
-// // ResetRefinementStats resets the RefinementsRegionStats for the given template
-// // If the previouseStats are not 'nil' then the values are set from the previousStats
-// func (d *Decoder) ResetRefinementStats(template int, previousStats *DecoderStats) {
-// 	size := d.ContextSize[template]
+	// common.Log.Debug("Icx: %d, qeValue: %d", icx, qeValue)
 
-// 	if previousStats != nil && previousStats.contextSize == size {
-// 		if d.RefinementRegionStats.contextSize == size {
-// 			d.RefinementRegionStats.Overwrite(previousStats)
-// 		} else {
-// 			d.RefinementRegionStats = previousStats.Copy()
-// 		}
-// 	} else {
-// 		if d.RefinementRegionStats.contextSize == size {
-// 			d.RefinementRegionStats.Reset()
-// 		} else {
-// 			d.RefinementRegionStats = NewStats(1<<uint(size), 1)
-// 		}
-// 	}
-// }
+	if (d.c >> 16) < uint64(qeValue) {
+		// common.Log.Debug("d.c >> 16 < qeValue")
+		bit = d.lpsExchange(stats, icx, qeValue)
 
-func (d *Decoder) init() error {
-	d.streamPosition = d.r.CurrentBytePosition()
-	b, err := d.r.ReadByte()
-	if err != nil {
-		common.Log.Debug("Buffer0 readByte failed. %v", err)
-		return err
-	}
-	d.b = int(b)
-
-	d.c = (uint64(b) << 16)
-	if err = d.readByte(); err != nil {
-		return err
-	}
-
-	// Shift c value again
-	d.c <<= 7
-
-	// set
-	d.ct -= 7
-
-	d.a = 0x8000
-
-	d.prvCtr += 1
-	// common.Log.Debug("Decoder 'a' value: %b", d.a)
-	common.Log.Debug("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
-
-	return nil
-}
-
-func (d *Decoder) readByte() error {
-
-	if d.r.CurrentBytePosition() > d.streamPosition {
-		if _, err := d.r.Seek(-1, io.SeekCurrent); err != nil {
-			return err
-		}
-	}
-
-	b, err := d.r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	d.b = int(b)
-
-	if d.b == 0xFF {
-		b1, err := d.r.ReadByte()
-		if err != nil {
-			return err
-		}
-		if b1 > 0x8F {
-			d.c += 0xFF00
-			d.ct = 8
-			if _, err := d.r.Seek(-2, io.SeekCurrent); err != nil {
-				return err
-			}
-		} else {
-			d.c += uint64(b1) << 9
-			d.ct = 7
+		if err := d.renormalize(); err != nil {
+			return 0, err
 		}
 	} else {
-		b, err = d.r.ReadByte()
-		if err != nil {
-			return err
-		}
-		d.b = int(b)
+		// common.Log.Debug("d.c >> 16 >= qeValue")
+		d.c -= (uint64(qeValue) << 16)
 
-		d.c += uint64(d.b) << 8
-		d.ct = 8
+		if (d.a & 0x8000) == 0 {
+			// common.Log.Debug("mpsExchange, renormalize")
+			bit = d.mpsExchange(stats, icx)
+			if err := d.renormalize(); err != nil {
+				return 0, err
+			}
+		} else {
+			// common.Log.Debug("stats.getMPS")
+			bit = int(stats.getMps())
+		}
 	}
 
-	d.c &= 0xFFFFFFFFFF
+	// if bit > 0 {
+	// 	bit = 1
+	// }
 
-	return nil
+	return bit, nil
 }
 
+// DecodeInt decodes the Integer from the arithmetic Decoder
 func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	var (
 		value, bit, s, bitsToRead, offset int
 		err                               error
 	)
+	if stats == nil {
+		stats = NewStats(512, 1)
+	}
 
 	d.previous = 1
 
@@ -330,88 +245,109 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		return int(-value), nil
 	}
 
-	return int(^(uint(0)) >> 1), nil
+	return math.MaxInt64, nil
 }
 
-func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
-	var (
-		bit     int
-		qeValue uint32 = qe[stats.cx()][0]
-		icx            = int(stats.cx())
-	)
-
-	defer func() {
-
-		d.prvCtr += 1
-		common.Log.Debug("Decoder 'a' value: %b", d.a)
-		common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
-	}()
-
-	d.a -= qeValue
-
-	if (d.c >> 16) < uint64(qeValue) {
-		bit = d.lpsExchange(stats, icx, qeValue)
-
-		if err := d.renormalize(); err != nil {
-			return 0, err
-		}
-	} else {
-		d.c -= (uint64(qeValue) << 16)
-
-		if (d.a & 0x8000) == 0 {
-			bit = d.mpsExchange(stats, icx)
-			if err := d.renormalize(); err != nil {
-				return 0, err
-			}
-		} else {
-			bit = int(stats.getMps())
-		}
-	}
-
-	if bit > 0 {
-		bit = 1
-	}
-
-	return bit, nil
-}
-
-func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
-
-	stats.SetIndex(int(d.previous))
-	bit, err := d.DecodeBit(stats)
-	if err != nil {
-		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
-		return bit, err
-	}
-
-	// common.Log.Debug("bit: %1b", bit)
-	// common.Log.Debug("'previous' before: %b", d.previous)
-
-	// if prev < 256
-	if d.previous < 256 {
-
-		d.previous = ((d.previous << uint(1)) | int64(bit)) & 0x1FF
-	} else {
-
-		d.previous = (((d.previous<<uint(1) | int64(bit)) & 511) | 256) & 0x1FF
-	}
-
-	return bit, nil
-}
-
+// DecodeIAID decodes the IAID procedure, Annex A.3
 func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error) {
+
+	// common.Log.Debug("DecodeIAID with codeLen: %d", codeLen)
+	// A.3 1)
 	d.previous = 1
-	stats.SetIndex(int(d.previous))
+
 	var i uint64
+
+	// A.3 2)
 	for i = 0; i < codeLen; i++ {
+
+		stats.SetIndex(int(d.previous))
 		bit, err := d.DecodeBit(stats)
 		if err != nil {
 			return 0, err
 		}
 
-		d.previous = ((d.previous << 1) | int64(bit))
+		d.previous = (d.previous << 1) | int64(bit)
 	}
-	return d.previous - (1 << codeLen), nil
+
+	// A.3 3) & 5)
+	result := d.previous - (1 << codeLen)
+	// common.Log.Debug("decodeIAID result: %d", result)
+	return result, nil
+}
+
+func (d *Decoder) init() error {
+	d.streamPosition = d.r.StreamPosition()
+	b, err := d.r.ReadByte()
+	if err != nil {
+		common.Log.Debug("Buffer0 readByte failed. %v", err)
+		return err
+	}
+	d.b = int(b)
+
+	d.c = (uint64(b) << 16)
+	if err = d.readByte(); err != nil {
+		return err
+	}
+
+	// Shift c value again
+	d.c <<= 7
+
+	// set
+	d.ct -= 7
+
+	d.a = 0x8000
+
+	d.prvCtr += 1
+	// common.Log.Debug("Decoder 'a' value: %b", d.a)
+	// common.Log.Debug("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
+
+	return nil
+}
+
+func (d *Decoder) readByte() error {
+
+	if d.r.StreamPosition() > d.streamPosition {
+		if _, err := d.r.Seek(-1, io.SeekCurrent); err != nil {
+			return err
+		}
+	}
+
+	b, err := d.r.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	d.b = int(b)
+
+	if d.b == 0xFF {
+		b1, err := d.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b1 > 0x8F {
+			d.c += 0xFF00
+			d.ct = 8
+			if _, err := d.r.Seek(-2, io.SeekCurrent); err != nil {
+				return err
+			}
+		} else {
+			d.c += uint64(b1) << 9
+			d.ct = 7
+		}
+	} else {
+		b, err = d.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		d.b = int(b)
+
+		d.c += uint64(d.b) << 8
+		d.ct = 8
+	}
+
+	d.c &= 0xFFFFFFFFFF
+
+	return nil
 }
 
 func (d *Decoder) renormalize() error {
@@ -432,8 +368,32 @@ fl:
 		}
 	}
 
-	d.c &= 0xFFFFFFFF
+	d.c &= 0xffffffff
 	return nil
+}
+
+func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
+	stats.SetIndex(int(d.previous))
+	bit, err := d.DecodeBit(stats)
+	if err != nil {
+		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
+		return bit, err
+	}
+
+	// common.Log.Debug("decodedIntBit: %d", bit)
+
+	// setPrev(bit)
+	if d.previous < 256 {
+		// common.Log.Debug("Lower than 256 - %d", d.previous)
+		d.previous = ((d.previous << uint64(1)) | int64(bit)) & 0x1ff
+	} else {
+		// common.Log.Debug("Greater than 256 - %d", d.previous)
+		d.previous = (((d.previous<<uint64(1) | int64(bit)) & 511) | 256) & 0x1ff
+	}
+
+	// common.Log.Debug("Previous: %d", d.previous)
+
+	return bit, nil
 }
 
 func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
@@ -453,20 +413,22 @@ func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 }
 
 func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {
-	mps := stats.mps[stats.index]
-
+	// common.Log.Debug("LPS Exchange for icx: %d...", icx)
+	mps := stats.getMps()
 	if d.a < qeValue {
+		// common.Log.Debug("Smaller than qeValue")
 		stats.SetEntry(int(qe[icx][1]))
 		d.a = qeValue
 		return int(mps)
-	} else {
-
-		if qe[icx][3] == 1 {
-			stats.toggleMps()
-		}
-
-		stats.SetEntry(int(qe[icx][2]))
-		d.a = qeValue
-		return int(1 - mps)
 	}
+
+	if qe[icx][3] == 1 {
+		// common.Log.Debug("toggleMps")
+		stats.toggleMps()
+	}
+
+	stats.SetEntry(int(qe[icx][2]))
+	d.a = qeValue
+	return int(1 - mps)
+
 }

@@ -16,7 +16,7 @@ type MmrDecoder struct {
 	modeTable  []*code
 }
 
-func New(r *reader.Reader, width, height int, dataOffset, dataLength int64) (*MmrDecoder, error) {
+func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64) (*MmrDecoder, error) {
 	m := &MmrDecoder{
 		width:  width,
 		height: height,
@@ -82,7 +82,7 @@ func (m *MmrDecoder) Uncompress2d(
 		c *code
 	)
 
-	common.Log.Debug("refRunLength: %v", refRunLength)
+	// common.Log.Debug("refRunLength: %v", refRunLength)
 	referenceOffsets[refRunLength] = width
 	referenceOffsets[refRunLength+1] = width
 	referenceOffsets[refRunLength+2] = width + 1
@@ -90,27 +90,27 @@ func (m *MmrDecoder) Uncompress2d(
 
 decodeLoop:
 	for currentLineBitPosition < width {
-		common.Log.Debug("CurrentLineBitPosition: %v, Width: %v", currentLineBitPosition, m.width)
+		// common.Log.Debug("CurrentLineBitPosition: %v, Width: %v", currentLineBitPosition, m.width)
 
-		common.Log.Debug("Mode Table")
+		// common.Log.Debug("Mode Table")
 
 		// Get the mode code
 		c, err = rd.uncompressGetCode(m.modeTable)
 		if err != nil {
-			common.Log.Debug("UncompressedGetCode failed: %v", err)
+			// common.Log.Debug("UncompressedGetCode failed: %v", err)
 			return eol, nil
 		}
 
-		common.Log.Debug("Code: %v", c)
+		// common.Log.Debug("Code: %v", c)
 
 		if c == nil {
-			common.Log.Debug("Nil code")
+			// common.Log.Debug("Nil code")
 			rd.offset += 1
 			break decodeLoop
 		}
 
 		rd.offset += c.bitLength
-		common.Log.Debug("MMRCode: %v", c.runLength)
+		// common.Log.Debug("MMRCode: %v", c.runLength)
 
 		switch mmrCode(c.runLength) {
 		case codeV0:
@@ -123,33 +123,33 @@ decodeLoop:
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 1
 		case codeH:
 			var ever int = 1
-			common.Log.Debug("CodeH")
+			// common.Log.Debug("CodeH")
 			for ever > 0 {
 				var table []*code
-				common.Log.Debug("WhiteRun: %v", whiteRun)
+				// common.Log.Debug("WhiteRun: %v", whiteRun)
 				if whiteRun {
 					table = m.whiteTable
 				} else {
 					table = m.blackTable
 				}
 
-				common.Log.Debug("UncompressGetCode")
+				// common.Log.Debug("UncompressGetCode")
 				c, err = rd.uncompressGetCode(table)
 				if err != nil {
 					return 0, err
 				}
 
 				if c == nil {
-					common.Log.Debug("uncompressGetCode no code found.")
+					// common.Log.Debug("uncompressGetCode no code found.")
 					break decodeLoop
 				}
 
 				rd.offset += c.bitLength
 
-				common.Log.Debug("RunLength: %v", c.runLength)
+				// common.Log.Debug("RunLength: %v", c.runLength)
 				if c.runLength < 64 {
 					if c.runLength < 0 {
-						common.Log.Debug("runLength smaller than 0")
+						// common.Log.Debug("runLength smaller than 0")
 						runOffsets[currentBuffOffset] = currentLineBitPosition
 						currentBuffOffset += 1
 						c = nil
@@ -170,25 +170,25 @@ decodeLoop:
 		ever1Loop:
 			for ever1 > 0 {
 				var table []*code
-				common.Log.Debug("Ever1: WhiteRun: %v", whiteRun)
+				// common.Log.Debug("Ever1: WhiteRun: %v", whiteRun)
 				if !whiteRun {
 					table = m.whiteTable
 				} else {
 					table = m.blackTable
 				}
 
-				common.Log.Debug("UncompressGetCode")
+				// common.Log.Debug("UncompressGetCode")
 				c, err = rd.uncompressGetCode(table)
 				if err != nil {
 					return 0, err
 				}
 
 				if c == nil {
-					common.Log.Debug("Nil code")
+					// common.Log.Debug("Nil code")
 					break decodeLoop
 				}
 
-				common.Log.Debug("Ever1 runLength: %v", c.runLength)
+				// common.Log.Debug("Ever1 runLength: %v", c.runLength)
 				rd.offset += c.bitLength
 				if c.runLength < 64 {
 					if c.runLength < 0 {
@@ -230,7 +230,7 @@ decodeLoop:
 		case codeVL3:
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 3
 		default:
-			common.Log.Debug("Unknown MMR Code type: %v", c.runLength)
+			// common.Log.Debug("Unknown MMR Code type: %v", c.runLength)
 
 			// Possibly MMR Decoded
 			if rd.offset == 12 && c.runLength == eol {
@@ -273,10 +273,10 @@ decodeLoop:
 		runOffsets[currentBuffOffset] = width
 	}
 
-	common.Log.Debug("Code is nil.")
+	// common.Log.Debug("Code is nil.")
 
 	if c == nil {
-		common.Log.Debug("EOL")
+		// common.Log.Debug("EOL")
 		return eol, nil
 	}
 	return currentBuffOffset, nil
@@ -298,13 +298,13 @@ outer:
 	inner:
 		for {
 			if whiteRun {
-				common.Log.Debug("White table")
+				// common.Log.Debug("White table")
 				cd, err = data.uncompressGetCode(m.whiteTable)
 				if err != nil {
 					return 0, err
 				}
 			} else {
-				common.Log.Debug("White table")
+				// common.Log.Debug("White table")
 				cd, err = data.uncompressGetCode(m.blackTable)
 				if err != nil {
 					return 0, err
@@ -390,7 +390,7 @@ func (m *MmrDecoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 			}
 		}
 	}
-	common.Log.Debug("%s", firstLevelTable)
+	// common.Log.Debug("%s", firstLevelTable)
 	return firstLevelTable, nil
 }
 
@@ -426,11 +426,10 @@ func (m *MmrDecoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 
 	count := 0
 
-	common.Log.Debug("Height: %v", b.Height)
+	// common.Log.Debug("Height: %v", b.Height)
 	for line := 0; line < b.Height; line++ {
 		common.Log.Debug("Line: %d", line)
-
-		count, err = m.Uncompress2d(m.Data(), referenceOffsets, refRunLength, currentOffsets, b.Width)
+		count, err = m.Uncompress2d(m.data, referenceOffsets, refRunLength, currentOffsets, b.Width)
 		if err != nil {
 			return
 		}
@@ -460,25 +459,25 @@ func (m *MmrDecoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 // FillMMR fills the bitmap with the current line and offsets from the MmrDecoder
 func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, count int) error {
 	x := 0
-	common.Log.Debug("Filling MMR. Line: %d", line)
-	common.Log.Debug("CurrentOffsets: %v. Count: %d", currentOffsets, count)
+	// common.Log.Debug("Filling MMR. Line: %d", line)
+	// common.Log.Debug("CurrentOffsets: %v. Count: %d", currentOffsets, count)
 
 	targetByte := b.GetByteIndex(x, line)
 
 	var targetByteValue byte
 
 	for index := 0; index < count; index++ {
-		common.Log.Debug("Index: %d", index)
+		// common.Log.Debug("Index: %d", index)
 		offset := currentOffsets[index]
 
-		common.Log.Debug("Offset: %d", offset)
+		// common.Log.Debug("Offset: %d", offset)
 		var value byte
 
 		if (index & 1) == 0 {
-			common.Log.Debug("Is zero")
+			// common.Log.Debug("Is zero")
 			value = 0
 		} else {
-			common.Log.Debug("Non zero")
+			// common.Log.Debug("Non zero")
 			value = 1
 		}
 
@@ -489,7 +488,7 @@ func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int
 			if (x & 7) == 0 {
 
 				if err := b.SetByte(targetByte, targetByteValue); err != nil {
-					common.Log.Debug("SetByte error: %v", err)
+					// common.Log.Debug("SetByte error: %v", err)
 					return err
 				}
 				// // err := b.Data.SetByteBitwiseOffset(targetByteValue, count, targetBit, true)
@@ -503,14 +502,14 @@ func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int
 			}
 		}
 
-		common.Log.Debug("TargetByteValue: %08b", targetByteValue)
+		// common.Log.Debug("TargetByteValue: %08b", targetByteValue)
 	}
 
 	if (x & 7) != 0 {
 		targetByteValue <<= uint(8 - (x & 7))
 
 		if err := b.SetByte(targetByte, targetByteValue); err != nil {
-			common.Log.Debug("SetByte error: %v", err)
+			// common.Log.Debug("SetByte error: %v", err)
 			return err
 		}
 		// the value here is in little endian manner
@@ -519,7 +518,7 @@ func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int
 		// b.Data.SetByteOffset(targetByteValue, targetByte)
 		// err := b.Data.SetByteBitwiseOffset(targetByteValue, count, targetBit, true)
 		// if err != nil {
-		// 	common.Log.Debug("SetByteBitwiseOffset failed: %v", err)
+		// common.Log.Debug("SetByteBitwiseOffset failed: %v", err)
 		// 	return err
 		// }
 	}

@@ -1,5 +1,10 @@
 package arithmetic
 
+import (
+	"fmt"
+	"strings"
+)
+
 // DecoderStats is the structure that contains arithmetic
 // decoder stats
 type DecoderStats struct {
@@ -31,11 +36,14 @@ func (d *DecoderStats) Reset() {
 
 // SetEntry sets the decoder stats coding context table with moreprobableSymbol
 func (d *DecoderStats) SetEntry(value int) {
-	d.codingContextTable[d.index] = byte(value)
+	v := byte(value & 0x7f)
+	// common.Log.Debug("setCX for index: %d and value: %d and v: %d", d.index, value, v)
+	d.codingContextTable[d.index] = v
 }
 
 func (d *DecoderStats) SetIndex(index int) {
-	d.index = index
+	// common.Log.Debug("Setting index: %32b", index)
+	d.index = int(uint(index))
 }
 
 // Overwrite overwrites the codingContextTable from new DecoderStats
@@ -46,8 +54,11 @@ func (d *DecoderStats) Overwrite(dNew *DecoderStats) {
 	}
 }
 
+// flips the bit in the actual more predictable index
 func (d *DecoderStats) toggleMps() {
+	// common.Log.Debug("Before: %d", d.mps[d.index])
 	d.mps[d.index] ^= 1
+	// common.Log.Debug("After: %d", d.mps[d.index])
 }
 
 func (d *DecoderStats) getMps() byte {
@@ -70,4 +81,16 @@ func (d *DecoderStats) Copy() *DecoderStats {
 
 func (d *DecoderStats) cx() byte {
 	return d.codingContextTable[d.index]
+}
+
+// String implements Stringer interface
+func (d *DecoderStats) String() string {
+	b := &strings.Builder{}
+	b.WriteString(fmt.Sprintf("Stats:  %d\n", len(d.codingContextTable)))
+	for i, v := range d.codingContextTable {
+		if v != 0 {
+			b.WriteString(fmt.Sprintf("Not zero at: %d - %d\n", i, v))
+		}
+	}
+	return b.String()
 }

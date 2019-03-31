@@ -1,658 +1,1111 @@
 package jbig2
 
 import (
-	// "encoding/binary"
-	// "github.com/unidoc/unidoc/common"
+	"github.com/pkg/errors"
+	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
-	// "github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
-	// "github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/container"
-	// "github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
-	// "math"
-	// "github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
-	// "github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"image"
+	"math"
+	"time"
 )
 
 // SymbolDictionarySegment is the struct that represents Symbol Dictionary Segment for JBIG2
 // encoding
 type SymbolDictionarySegment struct {
-	AdaptiveTemplateX []int8
-	AdaptiveTemplateY []int8
+	r reader.StreamReader
 
-	RAdaptiveTemplateX []int8
-	RAdaptiveTemplateY []int8
+	// Symbol Dictionary flags, 7.4.2.1.1
+	sdrTemplate                 int8
+	sdTemplate                  int8
+	isCodingContextRetained     bool
+	isCodingContextUsed         bool
+	sdHuffAggInstanceSelection  int8
+	sdHuffBMSizeSelection       int8
+	sdHuffDecodeWidthSelection  int8
+	sdHuffDecodeHeightSelection int8
+	useRefinementAggregation    bool
+	isHuffmanEncoded            bool
 
-	Bitmaps []*bitmap.Bitmap
+	// Symbol Dictionary AT flags 7.4.2.1.2
+	sdATX []int8
+	sdATY []int8
 
-	// privates
-	ExportedSymbolsNumber uint32
-	NewSymbolsNumber      uint32
+	// Symbol Dictionary refinement AT flags 7.4.2.1.3
+	sdrATX []int8
+	sdrATY []int8
+
+	// Number of exported symbols, 7.4.2.1.4
+	amountOfExportedSymbols int
+
+	// Number of new symbols 7.4.2.1.5
+	amountOfNewSymbols int
+
+	// Further parameters
+	segmentHeader           *SegmentHeader
+	amountOfImportedSymbols int
+	importSymbols           []*bitmap.Bitmap
+	amountOfDecodedSymbols  int
+	newSymbols              []*bitmap.Bitmap
+
+	// User-supplied tables
+	dhTable      huffman.HuffmanTabler
+	dwTable      huffman.HuffmanTabler
+	bmSizeTable  huffman.HuffmanTabler
+	aggInstTable huffman.HuffmanTabler
+
+	// Return value of that segment
+	exportSymbols []*bitmap.Bitmap
+	sbSymbols     []*bitmap.Bitmap
+
+	arithmeticDecoder *arithmetic.Decoder
+
+	textRegion              *TextRegion
+	genericRegion           *GenericRegionSegment
+	genericRefinementRegion *GenericRefinementRegion
+	cx                      *arithmetic.DecoderStats
+
+	cxIADH  *arithmetic.DecoderStats
+	cxIADW  *arithmetic.DecoderStats
+	cxIAAI  *arithmetic.DecoderStats
+	cxIAEX  *arithmetic.DecoderStats
+	cxIARDX *arithmetic.DecoderStats
+	cxIARDY *arithmetic.DecoderStats
+	cxIADT  *arithmetic.DecoderStats
+
+	cxIAID       *arithmetic.DecoderStats
+	sbSymCodeLen int
 }
 
 // New creates new SymbolDictionarySegment
-func NewSymbolDictionarySegment(h *SegmentHeader) *SymbolDictionarySegment {
+func NewSymbolDictionarySegment(h *SegmentHeader, r reader.StreamReader,
+) *SymbolDictionarySegment {
 	s := &SymbolDictionarySegment{
-
-		AdaptiveTemplateX: make([]int8, 4),
-		AdaptiveTemplateY: make([]int8, 4),
-
-		RAdaptiveTemplateX: make([]int8, 2),
-		RAdaptiveTemplateY: make([]int8, 2),
+		r:             r,
+		segmentHeader: h,
 	}
 
 	return s
-
 }
 
-// // Decode decodes the SymbolDictionarySegment from the jbig2 encoding
-// func (s *SymbolDictionarySegment) Decode(r *reader.Reader) error {
-// 	common.Log.Debug("[DECODE] Symbol Dictionary Segment 'Decode' starts")
-// 	defer func() { common.Log.Debug("[DECODE] Symbol Dictionary Segment 'Decode' finished") }()
-
-// 	// Read Symbol Dictionary Segment Flags
-// 	if err := s.readFlags(r); err != nil {
-// 		common.Log.Debug("readFlags failed.")
-// 		return err
-// 	}
-
-// 	var (
-// 		inputSymbolsNumber uint32
-// 	)
-
-// 	// GetTotal InputSymbolsNumber from the referred segments
-// 	for i := 0; i < s.Header.ReferredToSegmentCount; i++ {
-// 		seg := s.Decoders.FindSegment(s.Header.ReferredToSegments[i])
-// 		if seg.Kind() == kind.SymbolDictionary {
-// 			common.Log.Debug("Found SymbolDictionary ReferredToSegment")
-// 			inputSymbolsNumber += (seg).(*SymbolDictionarySegment).ExportedSymbolsNumber
-// 		}
-// 	}
-
-// 	common.Log.Debug("InputSymbolsNumber: %d", inputSymbolsNumber)
-
-// 	var symbolCodeLength int
-
-// 	var isc uint32
-// 	for isc = 1; isc < inputSymbolsNumber+s.NewSymbolsNumber; isc <<= 1 {
-// 		symbolCodeLength++
-// 	}
-
-// 	common.Log.Debug("SymbolCodeLength: %d", symbolCodeLength)
-
-// 	var bitmaps []*bitmap.Bitmap = make([]*bitmap.Bitmap, inputSymbolsNumber+s.NewSymbolsNumber)
-
-// 	var k int
-
-// 	var inputSymbolDictionary *SymbolDictionarySegment
-
-// 	for i := 0; i < s.Header.ReferredToSegmentCount; i++ {
-// 		seg := s.Decoders.FindSegment(s.Header.ReferredToSegments[i])
-// 		if seg.Kind() == kind.SymbolDictionary {
-// 			inputSymbolDictionary = seg.(*SymbolDictionarySegment)
-// 			for j := 0; uint32(j) < inputSymbolDictionary.ExportedSymbolsNumber; j++ {
-// 				bitmaps[k] = inputSymbolDictionary.Bitmaps[j]
-// 				k++
-// 			}
-// 		}
-// 	}
-// 	common.Log.Debug("Copied bitmaps from inputsymboldictionary.")
-
-// 	var (
-// 		huffmanDHTable [][]int
-// 		huffmanDWTable [][]int
-
-// 		huffmanBMSizeTable  [][]int
-// 		huffmanAggInstTable [][]int
-// 	)
-
-// 	sdHuff := s.SDFlags.GetValue(SD_HUFF) != 0
-
-// 	i := 0
-// 	if sdHuff {
-// 		switch s.SDFlags.GetValue(SD_HUFF_DH) {
-// 		case 0:
-// 			common.Log.Debug("Setting HuffmanDHTable to table D")
-// 			huffmanDHTable = huffman.TableD
-// 		case 1:
-// 			common.Log.Debug("Setting HuffmanDHTable to table E")
-// 			huffmanDHTable = huffman.TableE
-// 		}
-
-// 		switch s.SDFlags.GetValue(SD_HUFF_DW) {
-// 		case 0:
-// 			common.Log.Debug("Setting HuffmanDWTable to table B")
-// 			huffmanDWTable = huffman.TableB
-// 		case 1:
-// 			common.Log.Debug("Setting HuffmanDWTable to table B")
-// 			huffmanDWTable = huffman.TableC
-// 		}
-
-// 		if s.SDFlags.GetValue(SD_HUFF_BM_SIZE) == 0 {
-// 			huffmanBMSizeTable = huffman.TableA
-// 		}
-
-// 		if s.SDFlags.GetValue(SD_HUFF_AGG_INST) == 0 {
-// 			huffmanAggInstTable = huffman.TableA
-// 		}
-// 	}
-
-// 	sdTemplate := s.SDFlags.GetValue(SD_TEMPLATE)
-
-// 	common.Log.Debug("SD_TEMPLATE: %d", sdTemplate)
-
-// 	if !sdHuff {
-// 		if s.SDFlags.GetValue(BITMAP_CC_USED) != 0 && inputSymbolDictionary != nil {
-// 			s.Decoders.Arithmetic.ResetGenericStats(
-// 				sdTemplate,
-// 				inputSymbolDictionary.GenericRegionStats,
-// 			)
-// 		} else {
-// 			s.Decoders.Arithmetic.ResetGenericStats(
-// 				sdTemplate,
-// 				nil,
-// 			)
-// 		}
-
-// 		s.Decoders.Arithmetic.ResetIntStats(symbolCodeLength)
-
-// 		common.Log.Debug("Arithmetic->Start begins")
-// 		if err := s.Decoders.Arithmetic.Start(r); err != nil {
-// 			common.Log.Error("Arithmetic Start failed: %v", err)
-// 			return err
-// 		}
-// 		common.Log.Debug("Arithmetic->Start finished")
-// 	}
-
-// 	sdRefinementTemplate := s.SDFlags.GetValue(SD_R_TEMPLATE)
-
-// 	if s.SDFlags.GetValue(SD_REF_AGG) != 0 {
-// 		if s.SDFlags.GetValue(BITMAP_CC_USED) != 0 && inputSymbolDictionary != nil {
-// 			s.Decoders.Arithmetic.ResetRefinementStats(
-// 				sdRefinementTemplate,
-// 				inputSymbolDictionary.RefinementRegionStats,
-// 			)
-// 		} else {
-// 			s.Decoders.Arithmetic.ResetRefinementStats(
-// 				sdRefinementTemplate,
-// 				nil,
-// 			)
-// 		}
-// 	}
-
-// 	var (
-// 		deltaWidths []int = make([]int, s.NewSymbolsNumber)
-// 		deltaHeight int
-// 	)
-
-// 	i = 0
-
-// 	for i < int(s.NewSymbolsNumber) {
-
-// 		// iterate over the symbols
-
-// 		var instanceDeltaHeight int
-// 		var err error
-
-// 		common.Log.Debug("Setting DeltaHeight")
-// 		// if huffman use huffman decoder
-// 		if sdHuff {
-// 			common.Log.Debug("HUFFMAN DH TABLE: %v", huffmanDHTable)
-// 			instanceDeltaHeight, _, err = s.Decoders.Huffman.DecodeInt(r, huffmanDHTable)
-// 			if err != nil {
-// 				common.Log.Error("Decoders Huffman->DecodeInt(huffmanDHTable). %v", err)
-// 				return err
-// 			}
-// 			common.Log.Debug("Huffman->DecodeInt(huffmanDHTable) finished")
-// 		} else {
-// 			// otherwise use the arithmetic decoder
-// 			instanceDeltaHeight, _, err = s.Decoders.Arithmetic.DecodeInt(
-// 				r, s.Decoders.Arithmetic.IadhStats,
-// 			)
-// 			if err != nil {
-// 				common.Log.Error("Decoders Arithmetic->DecodeInt(iadhStats) failed. %v", err)
-// 				return err
-// 			}
-// 			common.Log.Debug("Arithmetic->DecodeInt(IadhStats) finished")
-// 		}
-
-// 		common.Log.Debug("Instance Delta Height: %d", instanceDeltaHeight)
-
-// 		// check the instanceDeltaHeight value
-// 		if instanceDeltaHeight < 0 && (-instanceDeltaHeight >= deltaHeight) {
-// 			common.Log.Debug("Bad delta-height value in JBIG2 symbol dictionary. InstanceDeltaHeight: %v. DeltaHeight: %v", instanceDeltaHeight, deltaHeight)
-// 		}
-
-// 		deltaHeight += instanceDeltaHeight
-// 		var (
-// 			symbolWidth int
-// 			totalWidth  int
-// 			j           int = i
-// 		)
-// 		common.Log.Debug("deltaHeight: %v, j: %v", deltaHeight, j)
-
-// 		for {
-
-// 			var (
-// 				deltaWidth     int
-// 				deltaWidthBool bool
-// 			)
-
-// 			if sdHuff {
-// 				common.Log.Debug("Huffman Decoding deltaWidth")
-// 				deltaWidth, deltaWidthBool, err = s.Decoders.Huffman.DecodeInt(r, huffmanDWTable)
-// 				if err != nil {
-// 					common.Log.Error("Huffman DecodeInt->(huffmanDWTable) failed. %v", err)
-// 					return err
-// 				}
-// 			} else {
-// 				common.Log.Debug("ArithmeticDecoder deltaWidth")
-// 				deltaWidth, deltaWidthBool, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IadwStats)
-// 				if err != nil {
-// 					common.Log.Error("Arithmetic DecodeInt->(iadwStats) failed: %v", err)
-// 					return err
-// 				}
-// 			}
-
-// 			common.Log.Debug("DeltaWidth: %d, %v", deltaWidth, deltaWidthBool)
-
-// 			if !deltaWidthBool {
-// 				break
-// 			}
-
-// 			if deltaWidth < 0 && -deltaWidth >= symbolWidth {
-// 				common.Log.Debug("Bad delta-width value in JBIG2 symbol dictionary. DeltaWidth: %v. SymbolWidth: %v", deltaWidth, symbolWidth)
-// 			}
-
-// 			symbolWidth += deltaWidth
-
-// 			sdRefinement := s.SDFlags.GetValue(SD_REF_AGG)
-
-// 			common.Log.Debug("SD_REF_AGG: %v", sdRefinement)
-
-// 			if sdHuff && sdRefinement == 0 {
-// 				// 4 c) iii)
-// 				common.Log.Debug("DeltaWidth at i: %d", i)
-// 				deltaWidths[i] = symbolWidth
-// 				totalWidth += symbolWidth
-
-// 			} else if sdRefinement == 1 {
-
-// 				var refAggNum int
-
-// 				if sdHuff {
-// 					refAggNum, _, err = s.Decoders.Huffman.DecodeInt(r, huffmanAggInstTable)
-// 					if err != nil {
-// 						common.Log.Debug("Huffman DecodeInt(huffmanAggInstTable) failed: %v", err)
-// 						return err
-// 					}
-// 				} else {
-// 					refAggNum, _, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IaaiStats)
-// 					if err != nil {
-// 						common.Log.Debug("Arithmetic->DecodeInt(iaaiStats) failed. %v", err)
-// 						return err
-// 					}
-// 				}
-
-// 				if refAggNum == 1 {
-// 					var (
-// 						symbolID                 uint64
-// 						referenceDX, referenceDY int
-// 					)
-
-// 					common.Log.Debug("6.5.8.2 - Refinement/Aggregate-coded")
-
-// 					if sdHuff {
-// 						symbolID, err = r.ReadBits(byte(symbolCodeLength))
-// 						if err != nil {
-// 							common.Log.Debug("ReadBits(symbolCodeLength) failed: %v", err)
-// 							return err
-// 						}
-
-// 						referenceDX, _, err = s.Decoders.Huffman.DecodeInt(r, huffman.TableO)
-// 						if err != nil {
-// 							common.Log.Debug("Huffman DecodeInt ReferenceDX failed. %v", err)
-// 							return err
-// 						}
-
-// 						referenceDY, _, err = s.Decoders.Huffman.DecodeInt(r, huffman.TableO)
-// 						if err != nil {
-// 							common.Log.Debug("Huffman DecodeInt ReferenceDY failed. %v", err)
-// 							return err
-// 						}
-
-// 						r.ConsumeRemainingBits()
-// 						if err := s.Decoders.Arithmetic.Start(r); err != nil {
-// 							return err
-// 						}
-
-// 					} else {
-// 						var ssymbolID int64
-// 						ssymbolID, err = s.Decoders.Arithmetic.DecodeIAID(r, uint64(symbolCodeLength), s.Decoders.Arithmetic.IaidStats)
-// 						if err != nil {
-// 							common.Log.Debug("Arithmetic->DecodeIAID(symbolCodeLength,IaidStats) failed: %v", err)
-// 							return err
-// 						}
-
-// 						symbolID = uint64(ssymbolID)
-// 						referenceDX, _, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IardxStats)
-// 						if err != nil {
-// 							common.Log.Debug("Arithmetic->DecodeInt(IardxStats) failed: %v", err)
-// 							return err
-// 						}
-
-// 						referenceDY, _, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IardyStats)
-// 						if err != nil {
-// 							common.Log.Debug("Arithmetic->DecodeInt(IardyStats) failed: %v", err)
-// 							return err
-// 						}
-// 					}
-
-// 					common.Log.Debug("SymbolID: %d", symbolID)
-
-// 					referedToBitmap := bitmaps[symbolID]
-
-// 					bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
-
-// 					err = bm.ReadGenericRefinementRegion(
-// 						r,
-// 						sdRefinementTemplate,
-// 						false,
-// 						referedToBitmap,
-// 						referenceDX, referenceDY,
-// 						s.AdaptiveTemplateX, s.AdaptiveTemplateY,
-// 					)
-// 					if err != nil {
-// 						common.Log.Debug("Bitmap->ReadGenericRefinementRegion failed: %v", err)
-// 						return err
-// 					}
-// 					common.Log.Debug("Add bitmap: %d at index: %d", bm.BitmapNumber, inputSymbolsNumber+uint32(i))
-// 					bitmaps[inputSymbolsNumber+uint32(i)] = bm
-// 				} else {
-
-// 					common.Log.Debug("Creating new Bitmap with no refinment region")
-// 					bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
-// 					err = bm.ReadTextRegion(r, sdHuff, true, uint(refAggNum), 0,
-// 						uint(inputSymbolsNumber)+uint(i), nil, symbolCodeLength,
-// 						bitmaps, 0, 0, false, 1, 0,
-// 						huffman.TableF, huffman.TableH, huffman.TableK,
-// 						huffman.TableO, huffman.TableO, huffman.TableO, huffman.TableO,
-// 						huffman.TableA, sdRefinementTemplate, s.AdaptiveTemplateX, s.AdaptiveTemplateY,
-// 					)
-// 					if err != nil {
-// 						common.Log.Debug("Bitmap->ReadTextRegion failed: %v", err)
-// 						return err
-// 					}
-
-// 					common.Log.Debug("Add bitmap: %d at index: %d", bm.BitmapNumber, inputSymbolsNumber+uint32(i))
-// 					bitmaps[int(inputSymbolsNumber)+i] = bm
-// 				}
-// 			} else {
-
-// 				// SD_REFINEMENT = 0 && SD_HUFF = 0
-// 				// 6.5.8.1 - Direct Coded
-// 				common.Log.Debug("6.5.8.1 - Direct Coded")
-
-// 				bm := bitmap.New(symbolWidth, deltaHeight, s.Decoders)
-
-// 				err := bm.Read(r, false, sdTemplate, false, false, nil, s.AdaptiveTemplateX, s.AdaptiveTemplateY, 0)
-// 				if err != nil {
-// 					common.Log.Debug("bitmap.Read i: '%d', j: '%d' failed. %v", i, j, err)
-// 					return err
-// 				}
-
-// 				common.Log.Debug("Bitmap: %v at index: %d", bm, inputSymbolsNumber+1)
-
-// 				bitmaps[int(inputSymbolsNumber)+i] = bm
-// 			}
-
-// 			i++
-// 			common.Log.Debug("i: %v", i)
-// 			// time.Sleep(time.Millisecond * 100)
-// 		}
-
-// 		if sdHuff && s.SDFlags.GetValue(SD_REF_AGG) == 0 {
-// 			common.Log.Debug("6.5.9")
-
-// 			common.Log.Debug("GetBitmap size")
-// 			bmSize, _, err := s.Decoders.Huffman.DecodeInt(r, huffmanBMSizeTable)
-// 			if err != nil {
-// 				common.Log.Debug("Huffman->DecodeInt(huffmanBMSizeTable) failed: %v", err)
-// 				return err
-// 			}
-
-// 			common.Log.Debug("Bitmap Size: %v", bmSize)
-
-// 			r.ConsumeRemainingBits()
-
-// 			collectiveBitMap := bitmap.New(totalWidth, deltaHeight, s.Decoders)
-// 			if bmSize == 0 {
-
-// 				var (
-// 					padding     int    = totalWidth % 8
-// 					bytesPerRow int    = int(math.Ceil(float64(totalWidth) / 8))
-// 					size        int    = deltaHeight * ((totalWidth + 7) >> 3)
-// 					buf         []byte = make([]byte, size)
-// 				)
-
-// 				common.Log.Debug("BM Size to read: %v. Delta Height: %v, totalWidth: %v", size, deltaHeight, totalWidth)
-
-// 				n, err := r.Read(buf)
-// 				if err != nil {
-// 					common.Log.Debug("Read bitmap buf bytes: %v", err)
-// 					return err
-// 				}
-
-// 				common.Log.Debug("Collective Bitmap: %d, read %d bytes data.", collectiveBitMap.BitmapNumber, n)
-
-// 				var logicalMap [][]byte = make([][]byte, deltaHeight)
-// 				for i := 0; i < deltaHeight; i++ {
-// 					logicalMap[i] = make([]byte, bytesPerRow)
-// 				}
-
-// 				var count int
-// 				for row := 0; row < deltaHeight; row++ {
-// 					for col := 0; col < bytesPerRow; col++ {
-// 						logicalMap[row][col] = buf[count]
-// 						count++
-
-// 					}
-// 				}
-
-// 				var collectiveBitMapRow, collectiveBitmapCol int
-// 				for row := 0; row < deltaHeight; row++ {
-// 					for col := 0; col < bytesPerRow; col++ {
-// 						if col == bytesPerRow-1 {
-// 							currentByte := logicalMap[row][col]
-
-// 							for bitPointer := 7; bitPointer >= padding; bitPointer-- {
-// 								mask := byte(1 << byte(bitPointer))
-// 								bit := int((currentByte & mask) >> byte(bitPointer))
-
-// 								collectiveBitMap.SetPixel(collectiveBitmapCol, collectiveBitMapRow, bit)
-// 								collectiveBitmapCol++
-// 							}
-// 							collectiveBitMapRow++
-// 							collectiveBitmapCol = 0
-// 						} else {
-// 							currentByte := logicalMap[row][col]
-// 							for bitPointer := 7; bitPointer >= 0; bitPointer-- {
-// 								mask := byte(1 << byte(bitPointer))
-// 								bit := int((currentByte & mask) >> byte(bitPointer))
-
-// 								collectiveBitMap.SetPixel(collectiveBitmapCol, collectiveBitMapRow, bit)
-// 								collectiveBitmapCol++
-// 							}
-// 						}
-// 					}
-// 				}
-// 			} else {
-
-// 				common.Log.Debug("Bitmap size: %v", bmSize)
-
-// 				err := collectiveBitMap.Read(r, true, 0, false, false, nil, nil, nil, bmSize)
-// 				if err != nil {
-// 					common.Log.Debug("CollectiveBitMap.Read failed: %v", err)
-// 					return err
-// 				}
-// 				common.Log.Debug("Collective Bitmap: %v", collectiveBitMap)
-
-// 			}
-
-// 			var x int
-
-// 			for j < i {
-// 				bitmaps[int(inputSymbolsNumber)+j], err = collectiveBitMap.GetSlice(x, 0, deltaWidths[j], deltaHeight)
-// 				if err != nil {
-// 					return err
-// 				}
-// 				x += deltaWidths[j]
-
-// 				j++
-// 			}
-// 		}
-// 	}
-
-// 	s.Bitmaps = make([]*bitmap.Bitmap, s.ExportedSymbolsNumber)
-// 	i = 0
-// 	var (
-// 		j      int = i
-// 		export bool
-// 		err    error
-// 	)
-
-// 	common.Log.Debug("InputSymbols Number: %d. New Symbols Number: %d", inputSymbolsNumber, s.NewSymbolsNumber)
-// 	for uint32(i) < inputSymbolsNumber+s.NewSymbolsNumber {
-// 		var run int
-// 		if sdHuff {
-// 			common.Log.Debug("Huffman decoder from standard table B1(A)")
-// 			run, _, err = s.Decoders.Huffman.DecodeInt(r, huffman.TableA)
-// 			if err != nil {
-// 				common.Log.Debug("Huffman->DecodeInt(huffmanTableA) at i : %d. %v", i, err)
-// 				return err
-// 			}
-// 		} else {
-// 			run, _, err = s.Decoders.Arithmetic.DecodeInt(r, s.Decoders.Arithmetic.IaexStats)
-// 			if err != nil {
-// 				common.Log.Debug("Arithmetic->DecodeInt(iaexStats) failed at i= %d. %v", i, err)
-// 				return err
-// 			}
-// 		}
-// 		common.Log.Debug("'run': %v", run)
-// 		if export {
-// 			for cnt := 0; cnt < run; cnt++ {
-// 				common.Log.Debug("Setting bitmap at: '%d' index.", j)
-// 				common.Log.Debug("Bitmap: %v", bitmaps[i])
-// 				s.Bitmaps[j] = bitmaps[i]
-// 				j++
-// 				i++
-// 			}
-// 		} else {
-// 			i += run
-// 		}
-// 		export = !export
-// 		common.Log.Debug("i: %d", i)
-// 	}
-
-// 	if !sdHuff && s.SDFlags.GetValue(BITMAP_CC_RETAINED) == 1 {
-// 		s.GenericRegionStats = s.GenericRegionStats.Copy()
-// 		if s.SDFlags.GetValue(SD_REF_AGG) == 1 {
-// 			s.RefinementRegionStats = s.RefinementRegionStats.Copy()
-// 		}
-// 	}
-
-// 	// consume any remaining bits
-// 	r.ConsumeRemainingBits()
-
-// 	return nil
-// }
-
-// func (s *SymbolDictionarySegment) readFlags(r *reader.Reader) error {
-// 	common.Log.Debug("[readFlags] SymbolDictionarySegment 'readFlags' starts")
-// 	defer func() { common.Log.Debug("[readFlags] SymbolDictionarySegment 'readFlags' finished.") }()
-// 	var flagsField []byte = make([]byte, 2)
-
-// 	if _, err := r.Read(flagsField); err != nil {
-// 		common.Log.Error("Reading SymbolDictionarySegment flags failed. %v", err)
-// 		return err
-// 	}
-
-// 	// get Flag value
-// 	flagValue := binary.BigEndian.Uint16(flagsField)
-
-// 	common.Log.Debug("SymbolDictionryFlags SetValue: %16b", flagValue)
-// 	s.SDFlags.SetValue(int(flagValue))
-
-// 	// Check if th HuffMan decoding is used
-// 	if s.SDFlags.GetValue(SD_HUFF) == 0 {
-// 		var buf []byte = make([]byte, 2)
-// 		if s.SDFlags.GetValue(SD_TEMPLATE) == 0 {
-
-// 			for i := 0; i < 4; i++ {
-// 				_, err := r.Read(buf)
-// 				if err != nil {
-// 					common.Log.Error("Reading AdaptiveTemplate bytes at %d failed.", i)
-// 					return err
-// 				}
-
-// 				// Set AdaptiveTemplates at 'i'
-// 				s.AdaptiveTemplateX[i] = int8(buf[0])
-// 				s.AdaptiveTemplateY[i] = int8(buf[1])
-// 			}
-// 		} else {
-// 			if _, err := r.Read(buf); err != nil {
-// 				common.Log.Error("Reading AdaptiveTemplate 0th elem failed. %v", err)
-// 				return err
-// 			}
-
-// 			s.AdaptiveTemplateX[0] = int8(buf[0])
-// 			s.AdaptiveTemplateY[0] = int8(buf[1])
-// 		}
-// 		common.Log.Debug("Adaptive Template X: %v", s.AdaptiveTemplateX)
-// 		common.Log.Debug("Adaptive Template Y: %v", s.AdaptiveTemplateY)
-// 	}
-
-// 	if s.SDFlags.GetValue(SD_REF_AGG) != 0 && s.SDFlags.GetValue(SD_R_TEMPLATE) == 0 {
-// 		var buf []byte = make([]byte, 4)
-// 		if _, err := r.Read(buf); err != nil {
-// 			common.Log.Error("Reading RAdaptiveTemplate bytes failed. %v", err)
-// 			return err
-// 		}
-
-// 		// Set RAdaptiveTemplates
-// 		s.RAdaptiveTemplateX[0] = int8(buf[0])
-// 		s.RAdaptiveTemplateY[0] = int8(buf[1])
-// 		s.RAdaptiveTemplateX[1] = int8(buf[2])
-// 		s.RAdaptiveTemplateY[1] = int8(buf[3])
-// 	}
-
-// 	// Read Number of exported symbols field
-// 	var buf []byte = make([]byte, 4)
-
-// 	if _, err := r.Read(buf); err != nil {
-// 		common.Log.Error("Reading bytes for Exported Symbols Number failed. %v", err)
-// 		return err
-// 	}
-
-// 	s.ExportedSymbolsNumber = binary.BigEndian.Uint32(buf)
-// 	common.Log.Debug("Exported Symbols Number: %d", s.ExportedSymbolsNumber)
-
-// 	// Read Number of new symbols
-// 	if _, err := r.Read(buf); err != nil {
-// 		common.Log.Error("Reading bytes for New Symbols Number failed: %v", err)
-// 		return err
-// 	}
-
-// 	s.NewSymbolsNumber = binary.BigEndian.Uint32(buf)
-
-// 	common.Log.Debug("New Symbols Number: %v", s.NewSymbolsNumber)
-
-// 	return nil
-
-// }
-
-// func (s *SymbolDictionarySegment) AmmountOfExportedSymbols() int {
-// 	return int(s.ExportedSymbolsNumber)
-// }
-
-// func (s *SymbolDictionarySegment) ListBitmaps() []*bitmap.Bitmap {
-// 	return s.Bitmaps
-// }
+func (s *SymbolDictionarySegment) Init(h *SegmentHeader, r reader.StreamReader) error {
+	s.segmentHeader = h
+	s.r = r
+
+	return s.parseHeader()
+}
+
+func (s *SymbolDictionarySegment) parseHeader() (err error) {
+	if err = s.readRegionFlags(); err != nil {
+		return
+	}
+	if err = s.setAtPixels(); err != nil {
+		return
+	}
+	if err = s.setRefinementAtPixels(); err != nil {
+		return
+	}
+	if err = s.readAmountOfExportedSymbols(); err != nil {
+		return
+	}
+	if err = s.readAmountOfNewSymbols(); err != nil {
+		return
+	}
+	if err = s.setInSyms(); err != nil {
+		return
+	}
+
+	if s.isCodingContextUsed {
+		rtSegments := s.segmentHeader.RTSegments
+		for i := len(rtSegments) - 1; i >= 0; i-- {
+
+			if rtSegments[i].SegmentType == 0 {
+				symbolDictionary, ok := rtSegments[i].SegmentData.(*SymbolDictionarySegment)
+				if !ok {
+					err = errors.Errorf("Related Segment: %v is not a Symbol Dictionary Segment", rtSegments[i])
+					return
+				}
+
+				if symbolDictionary.isCodingContextUsed {
+					if err = s.setRetainedCodingContexts(symbolDictionary); err != nil {
+						return
+					}
+				}
+				break
+			}
+		}
+	}
+	return s.checkInput()
+}
+
+func (s *SymbolDictionarySegment) readRegionFlags() error {
+	var (
+		bits uint64
+		bit  int
+	)
+
+	/* Bit 13 - 15 */
+	_, err := s.r.ReadBits(3) // Dirty read
+	if err != nil {
+		return err
+	}
+
+	/* Bit 12 - SDRTemplate*/
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	s.sdrTemplate = int8(bit)
+
+	/* Bit 10 - 11 - SDTemplate */
+	bits, err = s.r.ReadBits(2)
+	if err != nil {
+		return err
+	}
+	s.sdTemplate = int8(bits & 0xf)
+
+	/* Bit 9 - isCodingContextRetained */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	if bit == 1 {
+		s.isCodingContextRetained = true
+	}
+
+	/* Bit 8 - isCodingContextUsed */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	if bit == 1 {
+		s.isCodingContextUsed = true
+	}
+
+	/* Bit 7 - sdHuffAggInstanceSelection */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	s.sdHuffBMSizeSelection = int8(bit)
+
+	/* Bit 6 - sdHuffBMSizeSelection */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	s.sdHuffBMSizeSelection = int8(bit)
+
+	/* Bit 4 - 5 - sdHuffDecodeWidthSelection */
+	bits, err = s.r.ReadBits(2)
+	if err != nil {
+		return err
+	}
+	s.sdHuffDecodeWidthSelection = int8(bits & 0xf)
+
+	/* Bit 2 - 3 - sdHuffDecodeWidthSelection */
+	bits, err = s.r.ReadBits(2)
+	if err != nil {
+		return err
+	}
+	s.sdHuffDecodeHeightSelection = int8(bits & 0xf)
+
+	/* Bit 1 */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	if bit == 1 {
+		s.useRefinementAggregation = true
+	}
+
+	/* Bit 0 */
+	bit, err = s.r.ReadBit()
+	if err != nil {
+		return err
+	}
+	if bit == 1 {
+		s.isHuffmanEncoded = true
+	}
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) setAtPixels() error {
+	if !s.isHuffmanEncoded {
+		if s.sdTemplate == 0 {
+			if err := s.readAtPixels(4); err != nil {
+				return err
+			}
+		} else {
+			if err := s.readAtPixels(1); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *SymbolDictionarySegment) setRefinementAtPixels() error {
+	if s.useRefinementAggregation && s.sdrTemplate == 0 {
+		if err := s.readRefinementAtPixels(2); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SymbolDictionarySegment) setInSyms() error {
+	if s.segmentHeader.RTSegments != nil {
+		return s.retrieveImportSymbols()
+	}
+	s.importSymbols = make([]*bitmap.Bitmap, 0)
+	return nil
+}
+
+func (s *SymbolDictionarySegment) setRetainedCodingContexts(sd *SymbolDictionarySegment) error {
+
+	s.arithmeticDecoder = sd.arithmeticDecoder
+	s.isHuffmanEncoded = sd.isHuffmanEncoded
+	s.useRefinementAggregation = sd.useRefinementAggregation
+	s.sdTemplate = sd.sdTemplate
+	s.sdrTemplate = sd.sdrTemplate
+	s.sdATX = sd.sdATX
+	s.sdATY = sd.sdATY
+	s.sdrATX = sd.sdrATX
+	s.sdrATY = sd.sdrATY
+	s.cx = sd.cx
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) readAtPixels(amountOfPixels int) error {
+	s.sdATX = make([]int8, amountOfPixels)
+	s.sdATY = make([]int8, amountOfPixels)
+
+	var (
+		b   byte
+		err error
+	)
+
+	for i := 0; i < amountOfPixels; i++ {
+		b, err = s.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		s.sdATX[i] = int8(b)
+		b, err = s.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		s.sdATY[i] = int8(b)
+	}
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) readRefinementAtPixels(amountOfAtPixels int) error {
+	s.sdrATX = make([]int8, amountOfAtPixels)
+	s.sdrATY = make([]int8, amountOfAtPixels)
+
+	var (
+		b   byte
+		err error
+	)
+
+	for i := 0; i < amountOfAtPixels; i++ {
+		b, err = s.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		s.sdrATX[i] = int8(b)
+		b, err = s.r.ReadByte()
+		if err != nil {
+			return err
+		}
+		s.sdrATY[i] = int8(b)
+	}
+	return nil
+}
+
+func (s *SymbolDictionarySegment) readAmountOfExportedSymbols() error {
+	bits, err := s.r.ReadBits(32)
+	if err != nil {
+		return err
+	}
+	s.amountOfExportedSymbols = int(bits & 0xffffffff)
+	return nil
+}
+
+func (s *SymbolDictionarySegment) readAmountOfNewSymbols() error {
+	bits, err := s.r.ReadBits(32)
+	if err != nil {
+		return err
+	}
+	s.amountOfNewSymbols = int(bits & 0xffffffff)
+	return nil
+}
+
+func (s *SymbolDictionarySegment) checkInput() error {
+	if s.sdHuffDecodeHeightSelection == 2 {
+		common.Log.Info("Symbol Dictionary Decode Heigh Selection: %d value not permitted", s.sdHuffDecodeHeightSelection)
+	}
+
+	if s.sdHuffDecodeWidthSelection == 2 {
+		common.Log.Info("Symbol Dictionary Decode Width Selection: %d value not permitted", s.sdHuffDecodeWidthSelection)
+	}
+
+	if s.isHuffmanEncoded {
+		if s.sdTemplate != 0 {
+			common.Log.Info("SDTemplate = %d (should be 0)", s.sdTemplate)
+		}
+
+		if !s.useRefinementAggregation {
+			if !s.useRefinementAggregation {
+				if s.isCodingContextRetained {
+					common.Log.Info("IsCodingContextRetained = true (should be false)")
+					s.isCodingContextRetained = false
+				}
+
+				if s.isCodingContextUsed {
+					common.Log.Info("isCodingContextUsed = true (should be false)")
+					s.isCodingContextUsed = false
+				}
+
+			}
+		}
+	} else {
+		if s.sdHuffBMSizeSelection != 0 {
+			common.Log.Info("sdHuffBMSizeSelection should be 0")
+			s.sdHuffBMSizeSelection = 0
+		}
+
+		if s.sdHuffDecodeWidthSelection != 0 {
+			common.Log.Info("sdHuffDecodeWidthSelection should be 0")
+			s.sdHuffDecodeWidthSelection = 0
+		}
+
+		if s.sdHuffDecodeHeightSelection != 0 {
+			common.Log.Info("sdHuffDecodeHeightSelection should be 0")
+			s.sdHuffDecodeHeightSelection = 0
+		}
+
+	}
+
+	if !s.useRefinementAggregation {
+		if s.sdrTemplate != 0 {
+			common.Log.Info("SDRTemplate = %d (should be 0)", s.sdrTemplate)
+			s.sdrTemplate = 0
+		}
+	}
+
+	if !s.isHuffmanEncoded || !s.useRefinementAggregation {
+		if s.sdHuffAggInstanceSelection != 0 {
+			common.Log.Info("sdHuffAggInstanceSelection = %d (should be 0)", s.sdHuffAggInstanceSelection)
+		}
+	}
+	return nil
+}
+
+func (s *SymbolDictionarySegment) GetDictionary() ([]*bitmap.Bitmap, error) {
+	ts := time.Now()
+	if s.exportSymbols == nil {
+		var err error
+		if s.useRefinementAggregation {
+			s.sbSymCodeLen = s.getSbSymCodeLen()
+		}
+
+		if !s.isHuffmanEncoded {
+			if err = s.setCodingStatistics(); err != nil {
+				return nil, err
+			}
+		}
+
+		/* 6.5.5. 1) */
+		s.newSymbols = make([]*bitmap.Bitmap, s.amountOfNewSymbols)
+
+		/* 6.5.5. 2) */
+		var newSymbolsWidth []int
+		if s.isHuffmanEncoded && !s.useRefinementAggregation {
+			newSymbolsWidth = make([]int, s.amountOfNewSymbols)
+		}
+
+		if err = s.setSymbolsArray(); err != nil {
+			return nil, err
+		}
+
+		/* 6.5.5 3) */
+		var heightClassHeight, temp int64
+		s.amountOfDecodedSymbols = 0
+
+		/* 6.5.5 4 a) */
+		for s.amountOfDecodedSymbols < s.amountOfNewSymbols {
+
+			/* 6.5.5 4 b) */
+			temp, err = s.decodeHeightClassDeltaHeight()
+			if err != nil {
+				return nil, err
+			}
+			heightClassHeight += temp
+			var symbolWidth, totalWidth int
+			heightClassFirstSymbolIndex := s.amountOfDecodedSymbols
+
+			/* 6.5.5 4 c) */
+
+			// Repeat until OOB - OOB sends a break
+			for {
+				/* 4 c) i) */
+				var differenceWidth int64
+				differenceWidth, err = s.decodeDifferenceWidth()
+				if err != nil {
+					return nil, err
+				}
+
+				/*
+				 * If result is OOB, then all the symbols in this height class has been decoded;
+				 * proceed to step 4 d). Also exit, if the expected number of symbols have been
+				 * decoded.
+				 * The latter exit condition guards against pathological cases where a symbol's DW
+				 * never contains OOB and thus never terminates
+				 */
+				if differenceWidth == math.MaxInt64 || s.amountOfDecodedSymbols >= s.amountOfNewSymbols {
+					break
+				}
+
+				symbolWidth += int(differenceWidth)
+				totalWidth += symbolWidth
+
+				/* 4 c) ii) */
+				if !s.isHuffmanEncoded || s.useRefinementAggregation {
+
+					if !s.useRefinementAggregation {
+						/* 6.5.8.1 - Directly coded */
+						err = s.decodeDirectlyThroughGenericRegion(symbolWidth, int(heightClassHeight))
+						if err != nil {
+							return nil, err
+						}
+					} else {
+						/* 6.5.8.2 - Refinement / Aggregate -coded*/
+						err = s.decodeAggregate(symbolWidth, int(heightClassHeight))
+						if err != nil {
+							return nil, err
+						}
+					}
+				} else if s.isHuffmanEncoded && !s.useRefinementAggregation {
+					/* 4 c) iii) */
+					newSymbolsWidth[s.amountOfDecodedSymbols] = symbolWidth
+				}
+				s.amountOfDecodedSymbols += 1
+			}
+
+			/* 6.5.5 4 d) */
+			if s.isHuffmanEncoded && !s.useRefinementAggregation {
+				var bmSize int64
+				if s.sdHuffBMSizeSelection == 0 {
+					var st huffman.HuffmanTabler
+					st, err = huffman.GetStandardTable(1)
+					if err != nil {
+						return nil, err
+					}
+					bmSize, err = st.Decode(s.r)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					bmSize, err = s.huffDecodeBmSize()
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				s.r.Align()
+
+				var heightClassCollectiveBitmap *bitmap.Bitmap
+				heightClassCollectiveBitmap, err = s.decodeHeightClassCollectiveBitmap(
+					bmSize, int(heightClassHeight), totalWidth)
+				if err != nil {
+					return nil, err
+				}
+
+				err = s.decodeHeightClassBitmap(
+					heightClassCollectiveBitmap, heightClassFirstSymbolIndex,
+					int(heightClassHeight), newSymbolsWidth,
+				)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		/* 5) */
+		/* 6.5.10 1) - 5 */
+		exFlags, err := s.getToExportFlags()
+		if err != nil {
+			return nil, err
+		}
+		s.setExportedSymbols(exFlags)
+	}
+
+	common.Log.Debug("PERFORMANCE TEST: Symbol Decoding %d ns", time.Since(ts).Nanoseconds())
+
+	return s.exportSymbols, nil
+}
+
+func (s *SymbolDictionarySegment) setCodingStatistics() error {
+	if s.cxIADT == nil {
+		s.cxIADT = arithmetic.NewStats(512, 1)
+	}
+
+	if s.cxIADH == nil {
+		s.cxIADH = arithmetic.NewStats(512, 1)
+	}
+
+	if s.cxIADW == nil {
+		s.cxIADW = arithmetic.NewStats(512, 1)
+	}
+
+	if s.cxIAAI == nil {
+		s.cxIAAI = arithmetic.NewStats(512, 1)
+	}
+	if s.cxIAEX == nil {
+		s.cxIAEX = arithmetic.NewStats(512, 1)
+	}
+
+	if s.useRefinementAggregation && s.cxIAID == nil {
+		s.cxIAID = arithmetic.NewStats(1<<uint(s.sbSymCodeLen), 1)
+		s.cxIARDX = arithmetic.NewStats(512, 1)
+		s.cxIARDY = arithmetic.NewStats(512, 1)
+	}
+
+	if s.cx == nil {
+		s.cx = arithmetic.NewStats(65536, 1)
+	}
+
+	if s.arithmeticDecoder == nil {
+		var err error
+		s.arithmeticDecoder, err = arithmetic.New(s.r)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) decodeHeightClassBitmap(
+	heightClassCollectiveBitmap *bitmap.Bitmap,
+	heightClassFirstSymbol, heightClassHeight int,
+	newSymbolsWidths []int,
+) error {
+	for i := heightClassFirstSymbol; i < s.amountOfDecodedSymbols; i++ {
+
+		var startColumn int
+
+		for j := heightClassFirstSymbol; j <= i-1; j++ {
+			startColumn += newSymbolsWidths[j]
+		}
+
+		roi := image.Rect(startColumn, 0, startColumn+newSymbolsWidths[i], heightClassHeight)
+		symbolBitmap, err := bitmap.Extract(roi, heightClassCollectiveBitmap)
+		if err != nil {
+			return err
+		}
+		s.newSymbols[i] = symbolBitmap
+		s.sbSymbols = append(s.sbSymbols, symbolBitmap)
+	}
+
+	return nil
+}
+
+// decodeAggregate - 6.5.8.2.1
+func (s *SymbolDictionarySegment) decodeAggregate(symbolWidth, heightClassHeight int) error {
+	var (
+		amountOfRefinementAggregationInstanves int64
+		err                                    error
+	)
+
+	if s.isHuffmanEncoded {
+
+		amountOfRefinementAggregationInstanves, err = s.huffDecodeRefAggNInst()
+		if err != nil {
+			return err
+		}
+	} else {
+		t, err := s.arithmeticDecoder.DecodeInt(s.cxIAAI)
+		if err != nil {
+			return err
+		}
+		amountOfRefinementAggregationInstanves = int64(t)
+	}
+
+	if amountOfRefinementAggregationInstanves > 1 {
+		// 6.5.8.2
+
+		return s.decodeThroughTextRegion(symbolWidth, heightClassHeight, amountOfRefinementAggregationInstanves)
+	} else if amountOfRefinementAggregationInstanves == 1 {
+		return s.decodeRefinedSymbol(symbolWidth, heightClassHeight)
+	}
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) huffDecodeRefAggNInst() (int64, error) {
+	if s.sdHuffAggInstanceSelection == 0 {
+		t, err := huffman.GetStandardTable(1)
+		if err != nil {
+			return 0, err
+		}
+
+		return t.Decode(s.r)
+	} else if s.sdHuffAggInstanceSelection == 1 {
+		if s.aggInstTable == nil {
+			var aggregationInstanceNumber int
+
+			if s.sdHuffDecodeHeightSelection == 3 {
+				aggregationInstanceNumber += 1
+			}
+
+			if s.sdHuffDecodeWidthSelection == 3 {
+				aggregationInstanceNumber += 1
+			}
+
+			if s.sdHuffBMSizeSelection == 3 {
+				aggregationInstanceNumber += 1
+			}
+
+			var err error
+			s.aggInstTable, err = s.getUserTable(aggregationInstanceNumber)
+			if err != nil {
+				return 0, err
+			}
+		}
+		return s.aggInstTable.Decode(s.r)
+	}
+	return 0, nil
+}
+
+func (s *SymbolDictionarySegment) decodeThroughTextRegion(
+	symbolWidth, heightClassHeight int, amountOfRefinementAggregationInstances int64,
+) error {
+	if s.textRegion == nil {
+		s.textRegion = newTextRegion(s.r, nil)
+
+		s.textRegion.setContexts(
+			s.cx,
+			arithmetic.NewStats(512, 1), // IADT
+			arithmetic.NewStats(512, 1), // IAFS
+			arithmetic.NewStats(512, 1), // IADS
+			arithmetic.NewStats(512, 1), // IAIT
+			s.cxIAID,
+			arithmetic.NewStats(512, 1), // IARDW
+			arithmetic.NewStats(512, 1), // IARDH
+			arithmetic.NewStats(512, 1), // IARDX
+			arithmetic.NewStats(512, 1), // IARDY
+		)
+	}
+	// 6.5.8.2.4 Concatenating the array used as parameter later
+	if err := s.setSymbolsArray(); err != nil {
+		return err
+	}
+
+	s.textRegion.SetParameters(s.arithmeticDecoder, s.isHuffmanEncoded, true, symbolWidth,
+		heightClassHeight, amountOfRefinementAggregationInstances, 1, (s.amountOfImportedSymbols + s.amountOfDecodedSymbols), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, s.sdrTemplate, s.sdrATX, s.sdrATY, s.sbSymbols, s.sbSymCodeLen)
+
+	return s.addSymbol(s.textRegion)
+}
+
+func (s *SymbolDictionarySegment) decodeRefinedSymbol(
+	symbolWidth, heightClassHeight int,
+) error {
+	var (
+		id, rdx, rdy int
+	)
+
+	if s.isHuffmanEncoded {
+		/* 2) - 4)*/
+		v, err := s.r.ReadBits(byte(s.sbSymCodeLen))
+		if err != nil {
+			return err
+		}
+		id = int(v)
+
+		st, err := huffman.GetStandardTable(15)
+		if err != nil {
+			return err
+		}
+
+		iv, err := st.Decode(s.r)
+		if err != nil {
+			return err
+		}
+
+		rdx = int(iv)
+
+		iv, err = st.Decode(s.r)
+		if err != nil {
+			return err
+		}
+		rdy = int(iv)
+
+		st, err = huffman.GetStandardTable(1)
+		if err != nil {
+			return err
+		}
+		if _, err = st.Decode(s.r); err != nil {
+			return err
+		}
+
+		// skip over remaining bits
+		s.r.Align()
+	} else {
+		tid, err := s.arithmeticDecoder.DecodeIAID(uint64(s.sbSymCodeLen), s.cxIAID)
+		if err != nil {
+			return err
+		}
+		id = int(tid)
+
+		rdx, err = s.arithmeticDecoder.DecodeInt(s.cxIARDX)
+		if err != nil {
+			return err
+		}
+
+		rdy, err = s.arithmeticDecoder.DecodeInt(s.cxIARDY)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := s.setSymbolsArray(); err != nil {
+		return err
+	}
+
+	ibo := s.sbSymbols[id]
+
+	if err := s.decodeNewSymbols(symbolWidth, heightClassHeight, ibo, rdx, rdy); err != nil {
+		return err
+	}
+
+	if s.isHuffmanEncoded {
+		s.r.Align()
+		// make sure that the processed bytes are equal to the value read in step 5
+	}
+	return nil
+}
+
+func (s *SymbolDictionarySegment) decodeNewSymbols(
+	symWidth, hcHeight int, ibo *bitmap.Bitmap, rdx, rdy int,
+) (err error) {
+	if s.genericRefinementRegion == nil {
+
+		s.genericRefinementRegion = newGenericRefinementRegion(s.r, nil)
+
+		if s.arithmeticDecoder == nil {
+			s.arithmeticDecoder, err = arithmetic.New(s.r)
+			if err != nil {
+				return
+			}
+		}
+
+		if s.cx == nil {
+			s.cx = arithmetic.NewStats(65536, 1)
+		}
+	}
+
+	s.genericRefinementRegion.SetParameters(s.cx, s.arithmeticDecoder, s.sdrTemplate, symWidth, hcHeight, ibo, rdx, rdy, false, s.sdrATX, s.sdrATY)
+
+	return s.addSymbol(s.genericRefinementRegion)
+}
+
+func (s *SymbolDictionarySegment) decodeDirectlyThroughGenericRegion(
+	symWidth, hcHeight int,
+) error {
+	if s.genericRegion == nil {
+		s.genericRegion = NewGenericRegionSegment(s.r)
+	}
+
+	s.genericRegion.setParametersWithAt(false, byte(s.sdTemplate), false, false, s.sdATX, s.sdATY, symWidth, hcHeight, s.cx, s.arithmeticDecoder)
+
+	return s.addSymbol(s.genericRegion)
+}
+
+func (s *SymbolDictionarySegment) addSymbol(region Regioner) error {
+	symbol, err := region.GetRegionBitmap()
+	if err != nil {
+		return err
+	}
+	s.newSymbols[s.amountOfDecodedSymbols] = symbol
+	s.sbSymbols = append(s.sbSymbols, symbol)
+	return nil
+}
+
+func (s *SymbolDictionarySegment) decodeDifferenceWidth() (int64, error) {
+	if s.isHuffmanEncoded {
+		switch s.sdHuffDecodeWidthSelection {
+		case 0:
+			t, err := huffman.GetStandardTable(2)
+			if err != nil {
+				return 0, err
+			}
+			return t.Decode(s.r)
+		case 1:
+			t, err := huffman.GetStandardTable(3)
+			if err != nil {
+				return 0, err
+			}
+			return t.Decode(s.r)
+		case 3:
+			if s.dwTable == nil {
+				var dwNr int
+				if s.sdHuffDecodeHeightSelection == 3 {
+					dwNr += 1
+				}
+				t, err := huffman.GetStandardTable(2)
+				if err != nil {
+					return 0, err
+				}
+				s.dwTable = t
+			}
+			return s.dwTable.Decode(s.r)
+		}
+	} else {
+		i, err := s.arithmeticDecoder.DecodeInt(s.cxIADW)
+		if err != nil {
+			return 0, err
+		}
+		return int64(i), nil
+	}
+	return 0, nil
+}
+
+func (s *SymbolDictionarySegment) decodeHeightClassDeltaHeight() (int64, error) {
+	if s.isHuffmanEncoded {
+		return s.decodeHeightClassDeltaHeightWithHuffman()
+	} else {
+		i, err := s.arithmeticDecoder.DecodeInt(s.cxIADH)
+		if err != nil {
+			return 0, err
+		}
+
+		return int64(i), nil
+	}
+}
+
+// decodeHeightClassDeltaHeightWithHuffman - 6.5.6 if isHuffmanEncoded
+func (s *SymbolDictionarySegment) decodeHeightClassDeltaHeightWithHuffman() (int64, error) {
+
+	switch s.sdHuffDecodeHeightSelection {
+	case 0:
+		t, err := huffman.GetStandardTable(4)
+		if err != nil {
+			return 0, err
+		}
+		return t.Decode(s.r)
+	case 1:
+		t, err := huffman.GetStandardTable(5)
+		if err != nil {
+			return 0, err
+		}
+		return t.Decode(s.r)
+	case 3:
+		if s.dhTable == nil {
+			t, err := huffman.GetStandardTable(0)
+			if err != nil {
+				return 0, err
+			}
+			s.dhTable = t
+		}
+		return s.dhTable.Decode(s.r)
+
+	}
+	return 0, nil
+}
+
+func (s *SymbolDictionarySegment) decodeHeightClassCollectiveBitmap(
+	bmSize int64, heightClassHeight, totalWidth int,
+) (*bitmap.Bitmap, error) {
+	if bmSize == 0 {
+		heightClassColleciveBitmap := bitmap.New(totalWidth, heightClassHeight)
+		var (
+			b   byte
+			err error
+		)
+		for i := 0; i < len(heightClassColleciveBitmap.Data); i++ {
+			b, err = s.r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			// common.Log.Debug("Setting HeightClassCollectiveBitmap Byte: %08b at index: %d", b, i)
+			if err = heightClassColleciveBitmap.SetByte(i, b); err != nil {
+				return nil, err
+			}
+		}
+		return heightClassColleciveBitmap, nil
+	} else {
+		if s.genericRegion == nil {
+			s.genericRegion = NewGenericRegionSegment(s.r)
+		}
+
+		s.genericRegion.setParameters(true, s.r.StreamPosition(), bmSize, heightClassHeight, totalWidth)
+
+		bm, err := s.genericRegion.GetRegionBitmap()
+		if err != nil {
+			return nil, err
+		}
+		return bm, nil
+	}
+}
+
+func (s *SymbolDictionarySegment) setExportedSymbols(toExportFlags []int) {
+	for i := 0; i < s.amountOfImportedSymbols+s.amountOfNewSymbols; i++ {
+		if toExportFlags[i] == 1 {
+			if i < s.amountOfImportedSymbols {
+				s.exportSymbols = append(s.exportSymbols, s.importSymbols[i])
+			} else {
+				s.exportSymbols = append(s.exportSymbols, s.newSymbols[i-s.amountOfImportedSymbols])
+			}
+		}
+	}
+}
+
+func (s *SymbolDictionarySegment) getToExportFlags() ([]int, error) {
+	var (
+		currentExportFlag int
+		exRunLength       int
+		err               error
+		totalNewSymbols   int   = s.amountOfImportedSymbols + s.amountOfNewSymbols
+		exportFlags       []int = make([]int, totalNewSymbols)
+	)
+
+	for exportIndex := 0; exportIndex < totalNewSymbols; exportIndex += exRunLength {
+
+		if s.isHuffmanEncoded {
+			t, err := huffman.GetStandardTable(1)
+			if err != nil {
+				return nil, err
+			}
+
+			i, err := t.Decode(s.r)
+			if err != nil {
+				return nil, err
+			}
+			exRunLength = int(i)
+		} else {
+			exRunLength, err = s.arithmeticDecoder.DecodeInt(s.cxIAEX)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if exRunLength != 0 {
+			for index := exportIndex; index < exportIndex+exRunLength; index++ {
+				exportFlags[index] = currentExportFlag
+			}
+		}
+
+		if currentExportFlag == 0 {
+			currentExportFlag = 1
+		} else {
+			currentExportFlag = 0
+		}
+
+	}
+
+	return exportFlags, nil
+}
+
+func (s *SymbolDictionarySegment) huffDecodeBmSize() (int64, error) {
+	if s.bmSizeTable == nil {
+		var bmNr int
+
+		if s.sdHuffDecodeHeightSelection == 3 {
+			bmNr += 1
+		}
+
+		if s.sdHuffDecodeWidthSelection == 3 {
+			bmNr += 1
+		}
+
+		var err error
+
+		s.bmSizeTable, err = s.getUserTable(bmNr)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return s.bmSizeTable.Decode(s.r)
+}
+
+// getSbSymCodeLen 6.5.8.2.3 - Setting SBSYMCODES
+func (s *SymbolDictionarySegment) getSbSymCodeLen() int {
+	first := int(
+		math.Ceil(
+			math.Log(float64(s.amountOfImportedSymbols+s.amountOfNewSymbols)) / math.Log(2)))
+
+	if s.isHuffmanEncoded && first < 1 {
+		return 1
+	}
+
+	return first
+}
+
+// setSymbolsArray 6.5.8.2.4 - Setting SBSYMS
+func (s *SymbolDictionarySegment) setSymbolsArray() error {
+	if s.importSymbols == nil {
+		if err := s.retrieveImportSymbols(); err != nil {
+			return err
+		}
+	}
+
+	if s.sbSymbols == nil {
+		s.sbSymbols = append(s.sbSymbols, s.importSymbols...)
+	}
+
+	return nil
+}
+
+func (s *SymbolDictionarySegment) getUserTable(tablePosition int) (huffman.HuffmanTabler, error) {
+	var tableCounter int
+
+	for _, h := range s.segmentHeader.RTSegments {
+		if h.SegmentType == 53 {
+			if tableCounter == tablePosition {
+				d, err := h.getSegmentData()
+				if err != nil {
+					return nil, err
+				}
+				t := d.(huffman.Tabler)
+				return huffman.NewEncodedTable(t)
+			} else {
+				tableCounter += 1
+			}
+		}
+	}
+	return nil, nil
+}
+
+// retrieveImportSymbols Concatenates symbols from all referred-to segments.
+func (s *SymbolDictionarySegment) retrieveImportSymbols() error {
+	for _, h := range s.segmentHeader.RTSegments {
+		if h.SegmentType == 0 {
+			sd, err := h.getSegmentData()
+			if err != nil {
+				return err
+			}
+
+			dict, ok := sd.(*SymbolDictionarySegment)
+			if !ok {
+				return errors.Errorf("Provided Segment Data is not a SymbolDictionary Segment: %T", sd)
+			}
+
+			relatedDict, err := dict.GetDictionary()
+			if err != nil {
+				return errors.Wrapf(err, "Related segment with index: %d getDictionary failed.", h.SegmentNumber)
+			}
+			s.importSymbols = append(s.importSymbols, relatedDict...)
+			s.amountOfImportedSymbols += dict.amountOfExportedSymbols
+		}
+	}
+	return nil
+}

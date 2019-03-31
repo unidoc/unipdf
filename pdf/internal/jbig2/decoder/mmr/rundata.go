@@ -42,8 +42,8 @@ func newRunData(r *reader.SubstreamReader) (*runData, error) {
 			return nil, err
 		}
 	}
-	common.Log.Debug("RunData: %+v", d)
-	common.Log.Debug("[%X]", d.buffer)
+	// common.Log.Debug("RunData: %+v", d)
+	// common.Log.Debug("[%X]", d.buffer)
 	return d, nil
 }
 
@@ -58,12 +58,12 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 		return nil, err
 	}
 
-	common.Log.Debug("Code Before: %v", cd)
+	// common.Log.Debug("Code Before: %v", cd)
 	cd = cd & 0xFFFFFF
 
-	common.Log.Debug("Code: %v", cd)
+	// common.Log.Debug("Code: %v", cd)
 	index := cd >> (codeOffset - firstLevelTableSize)
-	common.Log.Debug("Index: %v", index)
+	// common.Log.Debug("Index: %v", index)
 	var result *code = table[index]
 
 	// common.Log.Debug("Code: %v", result)
@@ -71,7 +71,7 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 	if result != nil && result.nonNilSubTable {
 		// common.Log.Debug("Setting it to subtables: %v", result.subTable)
 		index = (cd >> (codeOffset - firstLevelTableSize - secondLevelTableSize)) & secondLevelTableMask
-		common.Log.Debug("SubIndex: %v", index)
+		// common.Log.Debug("SubIndex: %v", index)
 		result = result.subTable[index]
 	}
 
@@ -86,7 +86,7 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 	var bitsToFill int = r.offset - r.lastOffset
 
-	common.Log.Debug("BitsToFil: %v", bitsToFill)
+	// common.Log.Debug("BitsToFil: %v", bitsToFill)
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 
@@ -116,7 +116,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 		lastCode <<= bitOffset
 		r.lastCode = int(lastCode)
 
-		common.Log.Debug("CD_1: LastCode: %d", lastCode)
+		// common.Log.Debug("CD_1: LastCode: %d", lastCode)
 
 	} else {
 
@@ -167,7 +167,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 
 func (r *runData) fillBuffer(byteOffset int) error {
 
-	common.Log.Debug("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
+	// common.Log.Debug("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
 
 	r.bufferBase = byteOffset
 
@@ -182,7 +182,7 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	}
 
 	if err == nil {
-		common.Log.Debug("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
+		// common.Log.Debug("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
 		r.bufferTop, err = r.r.Read(r.buffer)
 		if err != nil {
 			if err == io.EOF {
@@ -193,11 +193,11 @@ func (r *runData) fillBuffer(byteOffset int) error {
 			}
 		}
 	}
-	common.Log.Debug("BufferTop after read: %d", r.bufferTop)
+	// common.Log.Debug("BufferTop after read: %d", r.bufferTop)
 
 	// check filling degree
 	if r.bufferTop > -1 && r.bufferTop < 3 {
-		common.Log.Debug("BufferTop in size of filling degree: %d", r.bufferTop)
+		// common.Log.Debug("BufferTop in size of filling degree: %d", r.bufferTop)
 		for r.bufferTop < 3 {
 
 			b, err := r.r.ReadByte()
