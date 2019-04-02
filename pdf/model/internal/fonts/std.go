@@ -83,6 +83,12 @@ func NewStdFont(desc Descriptor, metrics map[rune]CharMetrics) StdFont {
 
 // NewStdFontWithEncoding returns a new instance of the font with a specified encoder.
 func NewStdFontWithEncoding(desc Descriptor, metrics map[rune]CharMetrics, encoder textencoding.TextEncoder) StdFont {
+	var nbsp rune = 0xA0
+	if _, ok := metrics[nbsp]; !ok {
+		// Use same metrics for 0xA0 (no-break space) and 0x20 (space).
+		metrics[nbsp] = metrics[0x20]
+	}
+
 	return StdFont{
 		desc:    desc,
 		metrics: metrics,

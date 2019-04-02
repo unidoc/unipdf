@@ -133,7 +133,19 @@ func TestNewStandard14Font(t *testing.T) {
 				in, expect.basefont, expect.subtype, font.BaseFont(), font.Subtype())
 		}
 
+		// Test space character metrics.
 		metrics, ok := font.GetRuneMetrics(' ')
+		if !ok {
+			t.Fatalf("%s: failed to get glyph metric", in)
+		}
+		if metrics.Wx != expect.Wx || metrics.Wy != expect.Wy {
+			t.Fatalf("%s: expected glyph metrics is Wx=%f Wy=%f, but got Wx=%f Wy=%f",
+				in, expect.Wx, expect.Wy, metrics.Wx, metrics.Wy)
+		}
+
+		// Test no-break space character metrics.
+		// Values should be the same as the metrics for regular space.
+		metrics, ok = font.GetRuneMetrics(0xA0)
 		if !ok {
 			t.Fatalf("%s: failed to get glyph metric", in)
 		}
