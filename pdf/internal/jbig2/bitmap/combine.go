@@ -5,6 +5,7 @@ import (
 	"image"
 )
 
+// CombineBytes combines the provided bytes with respect to the CombinationOperator
 func CombineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 	return combineBytes(oldByte, newByte, op)
 }

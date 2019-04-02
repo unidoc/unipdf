@@ -4,18 +4,13 @@ import (
 	"errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
 	"io"
 )
 
 var (
 	/** ID string in file header, see ISO/IEC 14492:2001, D.4.1 */
 	fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
-)
-
-// According to D.4.2. - File header bit 0
-const (
-	ORandom     uint8 = 0
-	OSequential uint8 = 1
 )
 
 // Document is the structure of jbig2 document with it's pages  and global segments
@@ -54,14 +49,14 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
 	d := &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          reader.New(data),
-		OrgainsationType:     OSequential,
+		OrgainsationType:     segments.OSequential,
 		AmountOfPagesUnknown: true,
 		GlobalSegments:       globals,
 		fileHeaderLength:     9,
 	}
 
 	if d.GlobalSegments == nil {
-		d.GlobalSegments = Globals(make(map[int]*SegmentHeader))
+		d.GlobalSegments = Globals(make(map[int]*segments.Header))
 	}
 
 	// mapData map the data stream
@@ -72,14 +67,22 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
 	return d, nil
 }
 
+func (d *Document) GetGlobalSegment(i int) *segments.Header {
+	if d.GlobalSegments == nil {
+		common.Log.Debug("Trying to get Global segment from nil Globals")
+		return nil
+	}
+	return d.GlobalSegments[i]
+}
+
 // MapData maps the data and stores all segments
 func (d *Document) mapData() error {
 	// Get the header list
-	var segments []*SegmentHeader
+	var segmentHeaders []*segments.Header
 
 	var (
-		offset      int64
-		segmentType SegmentType
+		offset int64
+		Type   segments.Type
 	)
 
 	isFileHeaderPresent, err := d.isFileHeaderPresent()
@@ -103,17 +106,17 @@ func (d *Document) mapData() error {
 	)
 
 	// type 51 is
-	for segmentType != 51 && !reachedEOF {
+	for Type != 51 && !reachedEOF {
 		common.Log.Debug("Segment number: %d", segmentNo)
 		segmentNo++
 
 		// get new segment
-		segment, err := NewHeader(d, d.InputStream, offset, d.OrgainsationType)
+		segment, err := segments.NewHeader(d, d.InputStream, offset, d.OrgainsationType)
 		if err != nil {
 			return err
 		}
-		common.Log.Debug("Decoding segment type: %s", segment.SegmentType)
-		segmentType = segment.SegmentType
+		common.Log.Debug("Decoding segment type: %s", segment.Type)
+		Type = segment.Type
 
 		if segment.PageAssociation != 0 {
 			page = d.Pages[segment.PageAssociation]
@@ -127,11 +130,11 @@ func (d *Document) mapData() error {
 			d.GlobalSegments.AddSegment(int(segment.SegmentNumber), segment)
 		}
 
-		segments = append(segments, segment)
+		segmentHeaders = append(segmentHeaders, segment)
 
 		offset = d.InputStream.StreamPosition()
 
-		if d.OrgainsationType == OSequential {
+		if d.OrgainsationType == segments.OSequential {
 			offset += int64(segment.SegmentDataLength)
 		}
 
@@ -140,7 +143,7 @@ func (d *Document) mapData() error {
 			return err
 		}
 	}
-	d.determineRandomDataOffsets(segments, uint64(offset))
+	d.determineRandomDataOffsets(segmentHeaders, uint64(offset))
 
 	return nil
 
@@ -165,11 +168,11 @@ func (d *Document) isFileHeaderPresent() (bool, error) {
 	return true, nil
 }
 
-func (d *Document) determineRandomDataOffsets(segments []*SegmentHeader, offset uint64) {
+func (d *Document) determineRandomDataOffsets(segmentHeaders []*segments.Header, offset uint64) {
 
-	if d.OrgainsationType == ORandom {
+	if d.OrgainsationType == segments.ORandom {
 
-		for _, s := range segments {
+		for _, s := range segmentHeaders {
 			s.SegmentDataStartOffset = offset
 			offset += s.SegmentDataLength
 		}
@@ -231,7 +234,7 @@ func (d *Document) parseFileHeader() error {
 }
 
 // GetPage gets the gage for the provided 'pageNumber'
-func (d *Document) GetPage(pageNumber int) (*Page, error) {
+func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	p, ok := d.Pages[pageNumber]
 	if !ok {
 		return nil, errors.New("No page found")

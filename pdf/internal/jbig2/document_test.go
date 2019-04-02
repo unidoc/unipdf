@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
 	"testing"
 )
 
@@ -76,7 +77,7 @@ func TestDocument(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, uint32(3), d.AmountOfPages)
-	assert.Equal(t, OSequential, d.OrgainsationType)
+	assert.Equal(t, segments.OSequential, d.OrgainsationType)
 	assert.Equal(t, false, d.GBUseExtTemplate)
 
 	p1 := d.Pages[1]
@@ -86,16 +87,16 @@ func TestDocument(t *testing.T) {
 		s1 := p1.GetSegment(0)
 		require.NotNil(t, s1)
 
-		seg, err := s1.getSegmentData()
+		seg, err := s1.GetSegmentData()
 		require.NoError(t, err)
 
-		sd, ok := seg.(*SymbolDictionarySegment)
+		sd, ok := seg.(*segments.SymbolDictionary)
 		require.True(t, ok)
 
-		assert.True(t, sd.isHuffmanEncoded)
-		assert.False(t, sd.useRefinementAggregation)
-		assert.Equal(t, 1, sd.amountOfExportedSymbols)
-		assert.Equal(t, 1, sd.amountOfNewSymbols)
+		assert.True(t, sd.IsHuffmanEncoded())
+		assert.False(t, sd.UseRefinementAggregation())
+		assert.Equal(t, 1, sd.AmountOfExportedSymbols())
+		assert.Equal(t, 1, sd.AmountOfNewSymbols())
 
 		bm, err := sd.GetDictionary()
 		require.NoError(t, err)
@@ -112,10 +113,10 @@ func TestDocument(t *testing.T) {
 	t.Run("Segment#1", func(t *testing.T) {
 		h := p1.GetSegment(1)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		pi, ok := seg.(*PageInformationSegment)
+		pi, ok := seg.(*segments.PageInformationSegment)
 		require.True(t, ok)
 
 		assert.Equal(t, 64, pi.PageBMWidth)
@@ -124,7 +125,7 @@ func TestDocument(t *testing.T) {
 		assert.Equal(t, 0, pi.ResolutionX)
 		assert.Equal(t, 0, pi.ResolutionY)
 
-		assert.Equal(t, bitmap.CmbOpOr, pi.combinationOperator)
+		assert.Equal(t, bitmap.CmbOpOr, pi.CombinationOperator())
 		assert.False(t, pi.IsStripe)
 	})
 
@@ -132,10 +133,10 @@ func TestDocument(t *testing.T) {
 		h := p1.GetSegment(2)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		sd, ok := seg.(*SymbolDictionarySegment)
+		sd, ok := seg.(*segments.SymbolDictionary)
 		require.True(t, ok)
 
 		dict, err := sd.GetDictionary()
@@ -153,10 +154,10 @@ func TestDocument(t *testing.T) {
 		h := p1.GetSegment(3)
 		require.NotNil(t, 3)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		tr, ok := seg.(*TextRegion)
+		tr, ok := seg.(*segments.TextRegion)
 		require.True(t, ok)
 
 		bm, err := tr.GetRegionBitmap()
@@ -184,10 +185,10 @@ func TestDocument(t *testing.T) {
 		h := p1.GetSegment(4)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		g, ok := seg.(*GenericRegionSegment)
+		g, ok := seg.(*segments.GenericRegion)
 		require.True(t, ok)
 
 		bm, err := g.GetRegionBitmap()
@@ -200,10 +201,10 @@ func TestDocument(t *testing.T) {
 		h := p1.GetSegment(5)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		p, ok := seg.(*PatternDictionary)
+		p, ok := seg.(*segments.PatternDictionary)
 		require.True(t, ok)
 
 		dict, err := p.GetDictionary()
@@ -214,16 +215,16 @@ func TestDocument(t *testing.T) {
 		header := p1.GetSegment(6)
 		require.NotNil(t, header)
 
-		seg, err := header.getSegmentData()
+		seg, err := header.GetSegmentData()
 		require.NoError(t, err)
 
-		h, ok := seg.(*HalftoneRegion)
+		h, ok := seg.(*segments.HalftoneRegion)
 		require.True(t, ok)
 
-		patterns, err := h.getPatterns()
+		patterns, err := h.GetPatterns()
 		require.NoError(t, err)
 
-		expected := getPatternsFirst(t)
+		expected := GetPatternsFirst(t)
 		if assert.Equal(t, len(expected), len(patterns)) {
 			for i, p := range patterns {
 				assert.True(t, expected[i].Equals(p))
@@ -250,10 +251,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(8)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		_, ok := seg.(*PageInformationSegment)
+		_, ok := seg.(*segments.PageInformationSegment)
 		require.True(t, ok)
 	})
 
@@ -261,10 +262,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(9)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		sd, ok := seg.(*SymbolDictionarySegment)
+		sd, ok := seg.(*segments.SymbolDictionary)
 		require.True(t, ok)
 
 		dict, err := sd.GetDictionary()
@@ -279,10 +280,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(10)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		tx, ok := seg.(*TextRegion)
+		tx, ok := seg.(*segments.TextRegion)
 		require.True(t, ok)
 
 		bm, err := tx.GetRegionBitmap()
@@ -307,10 +308,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(11)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		g, ok := seg.(*GenericRegionSegment)
+		g, ok := seg.(*segments.GenericRegion)
 		require.True(t, ok)
 
 		bm, err := g.GetRegionBitmap()
@@ -324,10 +325,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(12)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		pd, ok := seg.(*PatternDictionary)
+		pd, ok := seg.(*segments.PatternDictionary)
 		require.True(t, ok)
 
 		dict, err := pd.GetDictionary()
@@ -340,10 +341,10 @@ func TestDocument(t *testing.T) {
 		h := p2.GetSegment(13)
 		require.NotNil(t, h)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		ht, ok := seg.(*HalftoneRegion)
+		ht, ok := seg.(*segments.HalftoneRegion)
 		require.True(t, ok)
 
 		bm, err := ht.GetRegionBitmap()
@@ -366,10 +367,10 @@ func TestDocument(t *testing.T) {
 	t.Run("Segment#16", func(t *testing.T) {
 		h := p3.GetSegment(15)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		pi, ok := seg.(*PageInformationSegment)
+		pi, ok := seg.(*segments.PageInformationSegment)
 		require.True(t, ok)
 
 		assert.Equal(t, 37, pi.PageBMWidth)
@@ -379,10 +380,10 @@ func TestDocument(t *testing.T) {
 	t.Run("Segment#17", func(t *testing.T) {
 		h := p3.GetSegment(16)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		sd, ok := seg.(*SymbolDictionarySegment)
+		sd, ok := seg.(*segments.SymbolDictionary)
 		require.True(t, ok)
 
 		dict, err := sd.GetDictionary()
@@ -395,18 +396,51 @@ func TestDocument(t *testing.T) {
 	t.Run("Segment#18", func(t *testing.T) {
 		h := p3.GetSegment(17)
 
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		require.NoError(t, err)
 
-		sd, ok := seg.(*SymbolDictionarySegment)
+		sd, ok := seg.(*segments.SymbolDictionary)
 		require.True(t, ok)
 
 		dict, err := sd.GetDictionary()
 		require.NoError(t, err)
 
-		for _, b := range dict {
-			t.Logf("Dict: %s", b.String())
-		}
+		require.Len(t, dict, 3)
+
+		assert.True(t, dict[0].Equals(aSymbol(t)))
+		assert.True(t, dict[1].Equals(cSymbol(t)))
+		expected := bitmap.New(14, 6)
+
+		require.NoError(t, bitmap.Blit(aSymbol(t), expected, 0, 0, bitmap.CmbOpOr))
+		require.NoError(t, bitmap.Blit(cSymbol(t), expected, 8, 0, bitmap.CmbOpOr))
+		assert.True(t, dict[2].Equals(expected), expected.String())
+	})
+
+	t.Run("Segment#19", func(t *testing.T) {
+		h := p3.GetSegment(18)
+
+		seg, err := h.GetSegmentData()
+		require.NoError(t, err)
+
+		tr, ok := seg.(*segments.TextRegion)
+		require.True(t, ok)
+
+		bm, err := tr.GetRegionBitmap()
+		require.NoError(t, err)
+
+		expected := bitmap.New(37, 8)
+		err = bitmap.Blit(cSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
+		require.NoError(t, err)
+		err = bitmap.Blit(aSymbol(t), expected, 8, 0, bitmap.CmbOpOr)
+		require.NoError(t, err)
+		err = bitmap.Blit(pSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
+		require.NoError(t, err)
+		err = bitmap.Blit(aSymbol(t), expected, 23, 0, bitmap.CmbOpOr)
+		require.NoError(t, err)
+		err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
+		require.NoError(t, err)
+
+		assert.True(t, expected.Equals(bm))
 	})
 
 }
@@ -499,7 +533,7 @@ func getFrame(t *testing.T) *bitmap.Bitmap {
 	return expected
 }
 
-func getPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
+func GetPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
 	t.Helper()
 
 	for i := 0; i < 16; i++ {
@@ -615,7 +649,7 @@ func checkPatternDictionary(t *testing.T, dict []*bitmap.Bitmap) {
 // func firstHalftoneBitmap(t *testing.T) *bitmap.Bitmap {
 // 	t.Helper()
 // 	frame := getFrame(t)
-// 	patterns := getPatternsFirst(t)
+// 	patterns := GetPatternsFirst(t)
 
 // 	var minX, maxX int = 3, (frame.Width - 1) - 2
 // 	var minY = 3

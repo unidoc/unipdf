@@ -4,11 +4,13 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// Blit blits the source Bitmap 'src' into the Destination bitmap: 'dst' on the provided 'x' and 'y' coordinates
+// with respect with the combination operator 'op'.
 func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error) {
 
-	common.Log.Debug("Blitting bitmaps with operator: %s, at X: %d, Y: %d", op, x, y)
-	common.Log.Debug("Source bitmap: %s", src)
-	common.Log.Debug("Dst bitmap: %s", dst)
+	// common.Log.Debug("Blitting bitmaps with operator: %s, at X: %d, Y: %d", op, x, y)
+	// common.Log.Debug("Source bitmap: %s", src)
+	// common.Log.Debug("Dst bitmap: %s", dst)
 
 	var startLine, srcStartIdx, srcEndIdx int
 	srcEndIdx = src.RowStride - 1
@@ -56,6 +58,9 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 	} else {
 		err = blitShifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2, op, padding)
 	}
+	if err != nil {
+		common.Log.Debug("Blit failed: %s", err)
+	}
 
 	return
 }
@@ -65,7 +70,7 @@ func blitUnshifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int,
 	op CombinationOperator,
 ) error {
-	common.Log.Debug("Blit unshifted")
+	// common.Log.Debug("Blit unshifted")
 	var dstLine int
 
 	increaser := func() {
@@ -102,7 +107,7 @@ func blitShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator, padding int,
 ) error {
-	common.Log.Debug("Blit shifted")
+	// common.Log.Debug("Blit shifted")
 	var dstLine int
 
 	// increaser increases the for loop values
@@ -166,7 +171,7 @@ func blitSpecialShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator,
 ) error {
-	common.Log.Debug("Blit special shifted")
+	// common.Log.Debug("Blit special shifted")
 	var dstLine int
 	increaser := func() {
 		dstLine += 1
