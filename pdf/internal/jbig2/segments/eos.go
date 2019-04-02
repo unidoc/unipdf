@@ -1,4 +1,4 @@
-package jbig2
+package segments
 
 import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
@@ -10,7 +10,7 @@ type EndOfStripe struct {
 	lineNumber int
 }
 
-func (e *EndOfStripe) parseHeader(h *SegmentHeader, r reader.StreamReader) error {
+func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
 	temp, err := e.r.ReadBits(32)
 	if err != nil {
 		return err
@@ -20,7 +20,12 @@ func (e *EndOfStripe) parseHeader(h *SegmentHeader, r reader.StreamReader) error
 }
 
 // Init implements Segmenter interface
-func (e *EndOfStripe) Init(h *SegmentHeader, r reader.StreamReader) error {
+func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
 	e.r = r
 	return e.parseHeader(h, r)
+}
+
+// LineNumber gets the EndOfStripe line number
+func (e *EndOfStripe) LineNumber() int {
+	return e.lineNumber
 }

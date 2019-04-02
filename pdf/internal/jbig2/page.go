@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
 )
 
 // Page represents JBIG2 Page structure
 type Page struct {
 	// All segments for this page
-	Segments map[int]*SegmentHeader
+	Segments map[int]*segments.Header
 
 	// NOTE: page number != segmentList.index
 	PageNumber int
@@ -29,11 +30,11 @@ type Page struct {
 // NewPage is the creator for the Page model
 func NewPage(d *Document, pageNumber int) *Page {
 	common.Log.Debug("Creating Page #%d...", pageNumber)
-	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*SegmentHeader{}}
+	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
 }
 
 // GetSegment searches for a segment specified by its number
-func (p *Page) GetSegment(number int) *SegmentHeader {
+func (p *Page) GetSegment(number int) *segments.Header {
 	s, ok := p.Segments[number]
 	if ok {
 		return s
@@ -49,9 +50,9 @@ func (p *Page) GetSegment(number int) *SegmentHeader {
 }
 
 // getPageInformationSegment Returns the associated page information segment
-func (p *Page) getPageInformationSegment() *SegmentHeader {
+func (p *Page) getPageInformationSegment() *segments.Header {
 	for _, s := range p.Segments {
-		if s.SegmentType == TPageInformation {
+		if s.Type == segments.TPageInformation {
 			return s
 		}
 	}
@@ -81,12 +82,12 @@ func (p *Page) composePageBitmap() error {
 		}
 
 		// get the Segment data
-		seg, err := h.getSegmentData()
+		seg, err := h.GetSegmentData()
 		if err != nil {
 			return err
 		}
 
-		pageInformation, ok := seg.(*PageInformationSegment)
+		pageInformation, ok := seg.(*segments.PageInformationSegment)
 		if !ok {
 			return errors.New("PageInformation Segment is of invalid type")
 		}
@@ -100,7 +101,7 @@ func (p *Page) composePageBitmap() error {
 	return nil
 }
 
-func (p *Page) createPage(i *PageInformationSegment) (err error) {
+func (p *Page) createPage(i *segments.PageInformationSegment) (err error) {
 	if !i.IsStripe || i.PageBMHeight != -1 {
 		// Page 79, 4)
 		err = p.createNormalPage(i)
@@ -110,25 +111,25 @@ func (p *Page) createPage(i *PageInformationSegment) (err error) {
 	return
 }
 
-func (p *Page) createNormalPage(i *PageInformationSegment) error {
+func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 	p.Bitmap = bitmap.New(i.PageBMWidth, i.PageBMHeight)
 
 	// Page 79, 3)
 	// if default pixel value is not 0, byte will be filled with 0xff
-	if i.defaultPixelValue != 0 {
+	if i.DefaultPixelValue() != 0 {
 		p.Bitmap.SetDefaultPixel()
 
 	}
 
 	for _, h := range p.Segments {
-		switch h.SegmentType {
+		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
-			s, err := h.getSegmentData()
+			s, err := h.GetSegmentData()
 			if err != nil {
 				return err
 			}
 
-			r, ok := s.(Regioner)
+			r, ok := s.(segments.Regioner)
 			if !ok {
 				common.Log.Debug("Segment: %T is not a Regioner", s)
 				return errors.New("Current segment type is not a regioner")
@@ -156,7 +157,7 @@ func (p *Page) createNormalPage(i *PageInformationSegment) error {
 	return nil
 }
 
-func (p *Page) createStripedPage(i *PageInformationSegment) error {
+func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 	pageStripes, err := p.collectPageStripes()
 	if err != nil {
 		return err
@@ -164,10 +165,10 @@ func (p *Page) createStripedPage(i *PageInformationSegment) error {
 
 	var startLine int
 	for _, sd := range pageStripes {
-		if eos, ok := sd.(*EndOfStripe); ok {
-			startLine = eos.lineNumber + 1
+		if eos, ok := sd.(*segments.EndOfStripe); ok {
+			startLine = eos.LineNumber() + 1
 		} else {
-			r := sd.(Regioner)
+			r := sd.(segments.Regioner)
 			regionInfo := r.GetRegionInfo()
 			op := p.getCombinationOperator(i, regionInfo.CombinaionOperator)
 			regionBitmap, err := r.GetRegionBitmap()
@@ -184,9 +185,9 @@ func (p *Page) createStripedPage(i *PageInformationSegment) error {
 	return nil
 }
 
-func (p *Page) fitsPage(i *PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
+func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
 	return p.countRegions() != 1 &&
-		i.defaultPixelValue == 0 &&
+		i.DefaultPixelValue() == 0 &&
 		i.PageBMHeight == regionBitmap.Width &&
 		i.PageBMHeight == regionBitmap.Height
 }
@@ -196,7 +197,7 @@ func (p *Page) countRegions() int {
 	var regionCount int
 
 	for _, h := range p.Segments {
-		switch h.SegmentType {
+		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
 			regionCount++
 		}
@@ -204,37 +205,37 @@ func (p *Page) countRegions() int {
 	return regionCount
 }
 
-func (p *Page) getCombinationOperator(i *PageInformationSegment, newOperator bitmap.CombinationOperator) bitmap.CombinationOperator {
-	if i.combinaitonOperatorOverrideAllowed {
+func (p *Page) getCombinationOperator(i *segments.PageInformationSegment, newOperator bitmap.CombinationOperator) bitmap.CombinationOperator {
+	if i.CombinationOperatorOverrideAllowed() {
 		return newOperator
 	}
-	return i.combinationOperator
+	return i.CombinationOperator()
 }
 
-func (p *Page) collectPageStripes() (stripes []Segmenter, err error) {
+func (p *Page) collectPageStripes() (stripes []segments.Segmenter, err error) {
 	for _, h := range p.Segments {
-		switch h.SegmentType {
+		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
-			var s Segmenter
-			s, err = h.getSegmentData()
+			var s segments.Segmenter
+			s, err = h.GetSegmentData()
 			if err != nil {
 				return
 			}
 			stripes = append(stripes, s)
 		case 50:
-			var s Segmenter
-			s, err = h.getSegmentData()
+			var s segments.Segmenter
+			s, err = h.GetSegmentData()
 			if err != nil {
 				return
 			}
-			eos, ok := s.(*EndOfStripe)
+			eos, ok := s.(*segments.EndOfStripe)
 			if !ok {
 				err = errors.New("EndOfStrip Segmenter is of invalid type")
 				return
 			}
 
 			stripes = append(stripes, eos)
-			p.FinalHeight = eos.lineNumber
+			p.FinalHeight = eos.LineNumber()
 		}
 	}
 	return
@@ -242,7 +243,7 @@ func (p *Page) collectPageStripes() (stripes []Segmenter, err error) {
 
 func (p *Page) clearSegmentData() {
 	for i := range p.Segments {
-		p.Segments[i].cleanSegmentData()
+		p.Segments[i].CleanSegmentData()
 	}
 }
 
@@ -260,12 +261,12 @@ func (p *Page) getHeight() (int, error) {
 			return 0, errors.New("Nil page information")
 		}
 
-		s, err := h.getSegmentData()
+		s, err := h.GetSegmentData()
 		if err != nil {
 			return 0, err
 		}
 
-		pi, ok := s.(*PageInformationSegment)
+		pi, ok := s.(*segments.PageInformationSegment)
 		if !ok {
 			return 0, errors.New("PageInformationSegment is of invalid type")
 		}
@@ -292,12 +293,12 @@ func (p *Page) getWidth() (int, error) {
 			return 0, errors.New("Nil page information")
 		}
 
-		s, err := h.getSegmentData()
+		s, err := h.GetSegmentData()
 		if err != nil {
 			return 0, err
 		}
 
-		pi, ok := s.(*PageInformationSegment)
+		pi, ok := s.(*segments.PageInformationSegment)
 		if !ok {
 			return 0, errors.New("PageInformationSegment is of invalid type")
 		}
@@ -318,12 +319,12 @@ func (p *Page) getResolutionX() (int, error) {
 			return 0, errors.New("Nil page information")
 		}
 
-		s, err := h.getSegmentData()
+		s, err := h.GetSegmentData()
 		if err != nil {
 			return 0, err
 		}
 
-		pi, ok := s.(*PageInformationSegment)
+		pi, ok := s.(*segments.PageInformationSegment)
 		if !ok {
 			return 0, errors.New("PageInformationSegment is of invalid type")
 		}
@@ -344,12 +345,12 @@ func (p *Page) getResolutionY() (int, error) {
 			return 0, errors.New("Nil page information")
 		}
 
-		s, err := h.getSegmentData()
+		s, err := h.GetSegmentData()
 		if err != nil {
 			return 0, err
 		}
 
-		pi, ok := s.(*PageInformationSegment)
+		pi, ok := s.(*segments.PageInformationSegment)
 		if !ok {
 			return 0, errors.New("PageInformationSegment is of invalid type")
 		}
