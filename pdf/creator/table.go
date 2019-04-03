@@ -7,6 +7,7 @@ package creator
 
 import (
 	"errors"
+	"sort"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
@@ -64,12 +65,7 @@ func newTable(cols int) *Table {
 		cells:            []*TableCell{},
 	}
 
-	// Initialize column widths as all equal.
-	colWidth := float64(1.0) / float64(cols)
-	for i := 0; i < cols; i++ {
-		t.colWidths = append(t.colWidths, colWidth)
-	}
-
+	t.resetColumnWidths()
 	return t
 }
 
@@ -84,6 +80,16 @@ func (table *Table) SetColumnWidths(widths ...float64) error {
 
 	table.colWidths = widths
 	return nil
+}
+
+func (table *Table) resetColumnWidths() {
+	table.colWidths = []float64{}
+	colWidth := float64(1.0) / float64(table.cols)
+
+	// Initialize column widths as all equal.
+	for i := 0; i < table.cols; i++ {
+		table.colWidths = append(table.colWidths, colWidth)
+	}
 }
 
 // Height returns the total height of all rows.
@@ -164,6 +170,53 @@ func (table *Table) SetHeaderRows(startRow, endRow int) error {
 	table.headerStartRow = startRow
 	table.headerEndRow = endRow
 	return nil
+}
+
+// AddSubtable copies the cells of the subtable in the table, starting with the
+// specified position. The table row and column indices are 1-based, which
+// makes the position of the first cell of the first row of the table 1,1.
+// The table is automatically extended if the subtable exceeds its columns.
+// This can happen when the subtable has more columns than the table or when
+// one or more columns of the subtable starting from the specified position
+// exceed the last column of the table.
+func (table *Table) AddSubtable(row, col int, subtable *Table) {
+	for _, cell := range subtable.cells {
+		c := &TableCell{}
+		*c = *cell
+		c.table = table
+
+		// Adjust added cell column. Add extra columns to the table to
+		// accomodate the new cell, if needed.
+		c.col += col - 1
+		if colsLeft := table.cols - (c.col - 1); colsLeft < c.colspan {
+			table.cols += c.colspan - colsLeft
+			table.resetColumnWidths()
+			common.Log.Debug("Table: subtable exceeds destination table. Expanding table to %d columns.", table.cols)
+		}
+
+		// Extend number of rows, if needed.
+		c.row += row - 1
+		for c.row > table.rows {
+			table.rows++
+			table.rowHeights = append(table.rowHeights, table.defaultRowHeight)
+		}
+
+		table.cells = append(table.cells, c)
+	}
+
+	// Sort cells by row, column.
+	sort.Slice(table.cells, func(i, j int) bool {
+		rowA := table.cells[i].row
+		rowB := table.cells[j].row
+		if rowA < rowB {
+			return true
+		}
+		if rowA > rowB {
+			return false
+		}
+
+		return table.cells[i].col < table.cells[j].col
+	})
 }
 
 // GeneratePageBlocks generate the page blocks.  Multiple blocks are generated if the contents wrap

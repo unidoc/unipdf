@@ -406,3 +406,94 @@ func TestTableHeaderTest(t *testing.T) {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestTableSubtables(t *testing.T) {
+	c := New()
+	headerColor := ColorRGBFrom8bit(255, 255, 0)
+	footerColor := ColorRGBFrom8bit(0, 255, 0)
+
+	generateSubtable := func(rows, cols, index int, rightBorder bool) *Table {
+		subtable := c.NewTable(cols)
+
+		// Add header row.
+		sp := c.NewStyledParagraph()
+		sp.Append(fmt.Sprintf("Header of subtable %d", index))
+
+		cell := subtable.MultiColCell(cols)
+		cell.SetContent(sp)
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+		cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+		cell.SetBackgroundColor(headerColor)
+
+		for i := 0; i < rows; i++ {
+			for j := 0; j < cols; j++ {
+				sp = c.NewStyledParagraph()
+				sp.Append(fmt.Sprintf("%d-%d", i+1, j+1))
+				cell = subtable.NewCell()
+				cell.SetContent(sp)
+
+				if j == 0 {
+					cell.SetBorder(CellBorderSideLeft, CellBorderStyleSingle, 1)
+				}
+				if rightBorder && j == cols-1 {
+					cell.SetBorder(CellBorderSideRight, CellBorderStyleSingle, 1)
+				}
+			}
+		}
+
+		// Add footer row.
+		sp = c.NewStyledParagraph()
+		sp.Append(fmt.Sprintf("Footer of subtable %d", index))
+
+		cell = subtable.MultiColCell(cols)
+		cell.SetContent(sp)
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+		cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+		cell.SetBackgroundColor(footerColor)
+
+		return subtable
+	}
+
+	table := c.NewTable(6)
+
+	// Add subtable 1 on row 1, col 1 (4x4)
+	table.AddSubtable(1, 1, generateSubtable(4, 4, 1, false))
+
+	// Add subtable 2 on row 1, col 5 (4x4)
+	// Table will be expanded to 8 columns because the subtable does not fit.
+	table.AddSubtable(1, 5, generateSubtable(4, 4, 2, true))
+
+	// Add subtable 3 on row 7, col 1 (4x4)
+	table.AddSubtable(7, 1, generateSubtable(4, 4, 3, false))
+
+	// Add subtable 4 on row 7, col 5 (4x4)
+	table.AddSubtable(7, 5, generateSubtable(4, 4, 4, true))
+
+	// Add subtable 5 on row 13, col 3 (4x4)
+	table.AddSubtable(13, 3, generateSubtable(4, 4, 5, true))
+
+	// Add subtable 6 on row 13, col 1 (3x2)
+	table.AddSubtable(13, 1, generateSubtable(3, 2, 6, false))
+
+	// Add subtable 7 on row 13, col 7 (3x2)
+	table.AddSubtable(13, 7, generateSubtable(3, 2, 7, true))
+
+	// Add subtable 8 on row 18, col 1 (3x2)
+	table.AddSubtable(18, 1, generateSubtable(3, 2, 8, false))
+
+	// Add subtable 9 on row 19, col 3 (2x4)
+	table.AddSubtable(19, 3, generateSubtable(2, 4, 9, true))
+
+	// Add subtable 10 on row 18, col 7 (3x2)
+	table.AddSubtable(18, 7, generateSubtable(3, 2, 10, true))
+
+	err := c.Draw(table)
+	if err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	err = c.WriteToFile(tempFile("table_add_subtables.pdf"))
+	if err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}
