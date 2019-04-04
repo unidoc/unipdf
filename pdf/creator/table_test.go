@@ -456,6 +456,14 @@ func TestTableSubtables(t *testing.T) {
 
 	table := c.NewTable(6)
 
+	// Test number of rows and columns.
+	if rows := table.Rows(); rows != 0 {
+		t.Errorf("Table error: expected 0 rows. Got %d rows", rows)
+	}
+	if cols := table.Cols(); cols != 6 {
+		t.Errorf("Table error: expected 6 cols. Got %d cols", cols)
+	}
+
 	// Add subtable 1 on row 1, col 1 (4x4)
 	table.AddSubtable(1, 1, generateSubtable(4, 4, 1, false))
 
@@ -486,6 +494,14 @@ func TestTableSubtables(t *testing.T) {
 
 	// Add subtable 10 on row 18, col 7 (3x2)
 	table.AddSubtable(18, 7, generateSubtable(3, 2, 10, true))
+
+	// Test number of rows and columns.
+	if rows := table.Rows(); rows != 22 {
+		t.Errorf("Table error: expected 22 rows. Got %d rows", rows)
+	}
+	if cols := table.Cols(); cols != 8 {
+		t.Errorf("Table error: expected 8 cols. Got %d cols", cols)
+	}
 
 	err := c.Draw(table)
 	if err != nil {

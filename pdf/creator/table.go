@@ -131,6 +131,16 @@ func (table *Table) SetRowHeight(row int, h float64) error {
 	return nil
 }
 
+// Rows returns the total number of rows the table has.
+func (table *Table) Rows() int {
+	return table.rows
+}
+
+// Cols returns the total number of columns the table has.
+func (table *Table) Cols() int {
+	return table.cols
+}
+
 // CurRow returns the currently active cell's row number.
 func (table *Table) CurRow() int {
 	curRow := (table.curCell-1)/table.cols + 1
