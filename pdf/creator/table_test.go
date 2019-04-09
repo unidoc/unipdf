@@ -423,6 +423,7 @@ func TestTableSubtables(t *testing.T) {
 		cell.SetContent(sp)
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 		cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+		cell.SetVerticalAlignment(CellVerticalAlignmentMiddle)
 		cell.SetBackgroundColor(headerColor)
 
 		for i := 0; i < rows; i++ {
@@ -449,8 +450,11 @@ func TestTableSubtables(t *testing.T) {
 		cell.SetContent(sp)
 		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 		cell.SetHorizontalAlignment(CellHorizontalAlignmentCenter)
+		cell.SetVerticalAlignment(CellVerticalAlignmentMiddle)
 		cell.SetBackgroundColor(footerColor)
 
+		subtable.SetRowHeight(1, 30)
+		subtable.SetRowHeight(subtable.Rows(), 40)
 		return subtable
 	}
 
@@ -501,6 +505,14 @@ func TestTableSubtables(t *testing.T) {
 	}
 	if cols := table.Cols(); cols != 8 {
 		t.Errorf("Table error: expected 8 cols. Got %d cols", cols)
+	}
+
+	// Test row height
+	if rowHeight, err := table.GetRowHeight(1); err != nil || rowHeight != 30.0 {
+		t.Errorf("Table error: expected row height 30.0. Got %f", rowHeight)
+	}
+	if rowHeight, err := table.GetRowHeight(18); err != nil || rowHeight != 40.0 {
+		t.Errorf("Table error: expected row height 40.0. Got %f", rowHeight)
 	}
 
 	err := c.Draw(table)

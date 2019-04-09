@@ -7,6 +7,7 @@ package creator
 
 import (
 	"errors"
+	"math"
 	"sort"
 
 	"github.com/unidoc/unidoc/common"
@@ -121,6 +122,15 @@ func (table *Table) GetMargins() (float64, float64, float64, float64) {
 	return table.margins.left, table.margins.right, table.margins.top, table.margins.bottom
 }
 
+// GetRowHeight returns the height of the specified row.
+func (table *Table) GetRowHeight(row int) (float64, error) {
+	if row < 1 || row > len(table.rowHeights) {
+		return 0, errors.New("range check error")
+	}
+
+	return table.rowHeights[row-1], nil
+}
+
 // SetRowHeight sets the height for a specified row.
 func (table *Table) SetRowHeight(row int, h float64) error {
 	if row < 1 || row > len(table.rowHeights) {
@@ -206,9 +216,17 @@ func (table *Table) AddSubtable(row, col int, subtable *Table) {
 
 		// Extend number of rows, if needed.
 		c.row += row - 1
-		for c.row > table.rows {
-			table.rows++
-			table.rowHeights = append(table.rowHeights, table.defaultRowHeight)
+
+		subRowHeight := subtable.rowHeights[cell.row-1]
+		if c.row > table.rows {
+			for c.row > table.rows {
+				table.rows++
+				table.rowHeights = append(table.rowHeights, table.defaultRowHeight)
+			}
+
+			table.rowHeights[c.row-1] = subRowHeight
+		} else {
+			table.rowHeights[c.row-1] = math.Max(table.rowHeights[c.row-1], subRowHeight)
 		}
 
 		table.cells = append(table.cells, c)
