@@ -25,6 +25,7 @@ func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 	}
 }
 
+// Extract extracts the rectangle of provided size from the source 'src' bitmap
 func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	dst := New(roi.Dx(), roi.Dy())
 
@@ -67,7 +68,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				if err != nil {
 					return nil, err
 				}
-				srcIdx += 1
+				srcIdx++
 
 				common.Log.Debug("Value Byte: %08b", value)
 
@@ -78,7 +79,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				if err != nil {
 					return nil, err
 				}
-				dstIdx += 1
+				dstIdx++
 			}
 
 		} else {
@@ -130,7 +131,7 @@ func copyLine(
 			if err != nil {
 				return err
 			}
-			targetOffset += 1
+			targetOffset++
 
 			if isLastByte && usePadding {
 				temp, err := src.GetByte(sourceOffset)
