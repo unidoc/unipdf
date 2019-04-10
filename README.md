@@ -82,7 +82,9 @@ Check out the Releases section to see the tagged releases.
 
 ## Contributing
 
-Contributors need to approve the [Contributor License Agreement](https://docs.google.com/a/owlglobal.io/forms/d/1PfTjEAi67-x0JOTU45SDonJnWy1fWB_J1aopGss34bY/viewform) before any code will be reviewed. Preferably add a test case to make sure there is no regression and that the new behaviour is as expected.
+[![CLA assistant](https://cla-assistant.io/readme/badge/unidoc/unidoc)](https://cla-assistant.io/unidoc/unidoc)
+
+All contributors must sign a contributor license agreement before their code will be reviewed and merged.
 
 ## Support and consulting
 
@@ -119,7 +121,7 @@ To use unidoc in your projects, you need to get a license.
 Get your license on [https://unidoc.io](https://unidoc.io).
 
 To load your license, simply do:
-```
+```go
 unidocLicenseKey := "... your license here ..."
 err := license.SetLicenseKey(unidocLicenseKey)
 if err != nil {
