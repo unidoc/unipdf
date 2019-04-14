@@ -168,35 +168,12 @@ func TestImageWithEncoder(t *testing.T) {
 func TestImageWithCCITTFaxEncoder(t *testing.T) {
 	creator := New()
 
-	file, err := os.Open(testImageFileCCITT)
-	if err != nil {
-		t.Errorf("Error opening test image file: %v\n", err)
-		return
-	}
-
-	imgF, _, err := goimage.Decode(file)
-	if err != nil {
-		file.Close()
-		t.Errorf("Error decoding test image file: %v\n", err)
-		return
-	}
-
-	file.Close()
-
-	modelImg, err := model.ImageHandling.NewImageFromGoImage(imgF)
-	if err != nil {
-		t.Errorf("Error creating image from go image: %v\n", err)
-		return
-	}
-
-	modelImg.BitsPerComponent = 1
-	modelImg.ColorComponents = 1
-
-	img, err := creator.NewImage(modelImg)
+	img, err := creator.NewImageFromFile(testImageFileCCITT)
 	if err != nil {
 		t.Errorf("Error creating image: %v\n", err)
 		return
 	}
+	img.img.BitsPerComponent = 1
 
 	encoder := core.NewCCITTFaxEncoder()
 	encoder.Columns = int(img.Width())

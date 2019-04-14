@@ -9,8 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	goimage "image"
-
-	"io/ioutil"
+	"os"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -90,17 +89,20 @@ func newImageFromData(data []byte) (*Image, error) {
 
 // newImageFromFile creates an Image from a file.
 func newImageFromFile(path string) (*Image, error) {
-	imgData, err := ioutil.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
-	img, err := newImageFromData(imgData)
+	// Load the image with default handler.
+	img, err := model.ImageHandling.Read(f)
 	if err != nil {
+		common.Log.Error("Error loading image: %s", err)
 		return nil, err
 	}
 
-	return img, nil
+	return newImage(img)
 }
 
 // newImageFromGoImage creates an Image from a go image.Image data structure.

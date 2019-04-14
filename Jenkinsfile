@@ -11,7 +11,7 @@ node {
     env.UNIDOC_EXTRACT_FORCETEST="1"
     env.UNIDOC_E2E_FORCE_TESTS="1"
     env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
-    env.UNIDOC_RENDERTEST_BASELINE_PATH="/home/jenkins/corpus/unidoc-creator-render-testdata"
+    env.UNIDOC_RENDERTEST_BASELINE_PATH="/home/jenkins/corpus/unidoc-creator-render-testdata-upd2"
     env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_SPLIT_TESTDATA="/home/jenkins/corpus/unidoc-e2e-split-testdata"

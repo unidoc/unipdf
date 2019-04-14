@@ -1941,14 +1941,15 @@ func (enc *CCITTFaxEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, er
 }
 
 // EncodeBytes encodes the image data using either Group3 or Group4 CCITT facsimile (fax) encoding.
+// `data` is expected to be 1 color component, 1 byte per component.
 func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	var pixels [][]byte
 
-	for i := 0; i < len(data); i += 3 * enc.Columns {
+	for i := 0; i < len(data); i += enc.Columns {
 		pixelsRow := make([]byte, enc.Columns)
 
 		pixel := 0
-		for j := 0; j < 3*enc.Columns; j += 3 {
+		for j := 0; j < enc.Columns; j++ {
 			if data[i+j] == 255 {
 				pixelsRow[pixel] = 1
 			} else {
