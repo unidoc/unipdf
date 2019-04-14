@@ -4,6 +4,8 @@ node {
 
     env.GOROOT="${root}"
     env.GOPATH="${WORKSPACE}/gopath"
+    // Hack for 1.11.5 testing work.
+    env.CGO_ENABLED="0"
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
     env.GOCACHE="off"
     env.UNIDOC_EXTRACT_FORCETEST="1"

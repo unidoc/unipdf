@@ -95,6 +95,16 @@ func TestDateParse(t *testing.T) {
 		return
 	}
 
+	dateFromTime, err := NewPdfDateFromTime(date.ToGoTime())
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if dateFromTime.ToPdfObject().String() != date.ToPdfObject().String() {
+		t.Errorf("Convert to and from time failed")
+		return
+	}
+
 	// Case 2: Negative sign.
 	str = "D:20150811050933-07'00'"
 	date, err = NewPdfDate(str)
@@ -110,6 +120,15 @@ func TestDateParse(t *testing.T) {
 		t.Errorf("Invalid offset hours")
 		return
 	}
+	dateFromTime, err = NewPdfDateFromTime(date.ToGoTime())
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if dateFromTime.ToPdfObject().String() != date.ToPdfObject().String() {
+		t.Errorf("Convert to and from time failed")
+		return
+	}
 
 	// Case 3. Offset minutes.
 	str = "D:20110807220047+09'30'"
@@ -120,6 +139,15 @@ func TestDateParse(t *testing.T) {
 	}
 	if date.utOffsetMins != 30 {
 		t.Errorf("Offset mins != 30")
+		return
+	}
+	dateFromTime, err = NewPdfDateFromTime(date.ToGoTime())
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if dateFromTime.ToPdfObject().String() != date.ToPdfObject().String() {
+		t.Errorf("Convert to and from time failed")
 		return
 	}
 
@@ -166,6 +194,15 @@ func TestDateParse(t *testing.T) {
 		t.Errorf("Invalid offset minutes")
 		return
 	}
+	dateFromTime, err = NewPdfDateFromTime(date.ToGoTime())
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if dateFromTime.ToPdfObject().String() != date.ToPdfObject().String() {
+		t.Errorf("Convert to and from time failed")
+		return
+	}
 
 	// Case 5: Missing some more parameters.
 	// Seems that many implementations consider some stuff optional...
@@ -206,6 +243,15 @@ func TestDateParse(t *testing.T) {
 	}
 	if date.utOffsetMins != 0 {
 		t.Errorf("Invalid offset minutes")
+		return
+	}
+	dateFromTime, err = NewPdfDateFromTime(date.ToGoTime())
+	if err != nil {
+		t.Errorf("Fail: %s", err)
+		return
+	}
+	if dateFromTime.ToPdfObject().String() != date.ToPdfObject().String() {
+		t.Errorf("Convert to and from time failed")
 		return
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
@@ -23,6 +24,15 @@ import (
 	"github.com/unidoc/unidoc/pdf/core/security"
 	"github.com/unidoc/unidoc/pdf/core/security/crypt"
 )
+
+var pdfAuthor = ""
+var pdfCreationDate time.Time
+var pdfCreator = ""
+var pdfKeywords = ""
+var pdfModifiedDate time.Time
+var pdfProducer = ""
+var pdfSubject = ""
+var pdfTitle = ""
 
 type crossReference struct {
 	Type int
@@ -34,11 +44,22 @@ type crossReference struct {
 	Index        int
 }
 
-var pdfCreator = ""
+func getPdfAuthor() string {
+	return pdfAuthor
+}
 
-func getPdfProducer() string {
-	licenseKey := license.GetLicenseKey()
-	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+// SetPdfAuthor sets the Author attribute of the output PDF.
+func SetPdfAuthor(author string) {
+	pdfAuthor = author
+}
+
+func getPdfCreationDate() time.Time {
+	return pdfCreationDate
+}
+
+// SetPdfCreationDate sets the CreationDate attribute of the output PDF.
+func SetPdfCreationDate(creationDate time.Time) {
+	pdfCreationDate = creationDate
 }
 
 func getPdfCreator() string {
@@ -53,6 +74,57 @@ func getPdfCreator() string {
 // SetPdfCreator sets the Creator attribute of the output PDF.
 func SetPdfCreator(creator string) {
 	pdfCreator = creator
+}
+
+func getPdfKeywords() string {
+	return pdfKeywords
+}
+
+// SetPdfKeywords sets the Keywords attribute of the output PDF.
+func SetPdfKeywords(keywords string) {
+	pdfKeywords = keywords
+}
+
+func getPdfModifiedDate() time.Time {
+	return pdfModifiedDate
+}
+
+// SetPdfModifiedDate sets the ModDate attribute of the output PDF.
+func SetPdfModifiedDate(modifiedDate time.Time) {
+	pdfCreationDate = modifiedDate
+}
+
+func getPdfProducer() string {
+	licenseKey := license.GetLicenseKey()
+	if len(pdfProducer) > 0 && licenseKey.IsLicensed() {
+		return pdfProducer
+	}
+
+	// Return default.
+	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+}
+
+// SetPdfProducer sets the Producer attribute of the output PDF.
+func SetPdfProducer(producer string) {
+	pdfProducer = producer
+}
+
+func getPdfSubject() string {
+	return pdfSubject
+}
+
+// SetPdfSubject sets the Subject attribute of the output PDF.
+func SetPdfSubject(subject string) {
+	pdfSubject = subject
+}
+
+func getPdfTitle() string {
+	return pdfTitle
+}
+
+// SetPdfTitle sets the Title attribute of the output PDF.
+func SetPdfTitle(title string) {
+	pdfTitle = title
 }
 
 // PdfWriter handles outputing PDF content.
@@ -112,8 +184,42 @@ func NewPdfWriter() PdfWriter {
 
 	// Creation info.
 	infoDict := core.MakeDict()
-	infoDict.Set("Producer", core.MakeString(getPdfProducer()))
-	infoDict.Set("Creator", core.MakeString(getPdfCreator()))
+	metadata := []struct {
+		key   core.PdfObjectName
+		value string
+	}{
+		{
+			"Producer", getPdfProducer(),
+		}, {
+			"Creator", getPdfCreator(),
+		}, {
+			"Author", getPdfAuthor(),
+		}, {
+			"Subject", getPdfSubject(),
+		}, {
+			"Title", getPdfTitle(),
+		}, {
+			"Keywords", getPdfKeywords(),
+		},
+	}
+	for _, tuple := range metadata {
+		if tuple.value != "" {
+			infoDict.Set(tuple.key, core.MakeString(tuple.value))
+		}
+	}
+
+	// Set creation and modified dates.
+	if creationDate := getPdfCreationDate(); !creationDate.IsZero() {
+		if cd, err := NewPdfDateFromTime(creationDate); err == nil {
+			infoDict.Set("CreationDate", cd.ToPdfObject())
+		}
+	}
+	if modifiedDate := getPdfModifiedDate(); !modifiedDate.IsZero() {
+		if md, err := NewPdfDateFromTime(modifiedDate); err == nil {
+			infoDict.Set("ModDate", md.ToPdfObject())
+		}
+	}
+
 	infoObj := core.PdfIndirectObject{}
 	infoObj.PdfObject = infoDict
 	w.infoObj = &infoObj
