@@ -43,9 +43,10 @@ type PdfParser struct {
 	xrefs            XrefTable
 	objstms          objectStreams
 	trailer          *PdfObjectDictionary
-	ObjCache         objectCache // TODO: Unexport (v3).
 	crypter          *PdfCrypt
 	repairsAttempted bool // Avoid multiple attempts for repair.
+
+	ObjCache objectCache
 
 	// Tracker for reference lookups when looking up Length entry of stream objects.
 	// The Length entries of stream objects are a special case, as they can require recursive parsing, i.e. look up
@@ -616,7 +617,6 @@ func (parser *PdfParser) parseObject() (PdfObject, error) {
 }
 
 // ParseDict reads and parses a PDF dictionary object enclosed with '<<' and '>>'
-// TODO: Unexport (v3).
 func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 	common.Log.Trace("Reading PDF Dict!")
 
@@ -680,7 +680,10 @@ func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 		}
 		dict.Set(keyName, val)
 
-		common.Log.Trace("dict[%s] = %s", keyName, val.String())
+		if common.Log.IsLogLevel(common.LogLevelTrace) {
+			// Avoid calling unless needed as the String() can be heavy for large objects.
+			common.Log.Trace("dict[%s] = %s", keyName, val.String())
+		}
 	}
 	common.Log.Trace("returning PDF Dict!")
 
@@ -1368,7 +1371,6 @@ func (parser *PdfParser) traceStreamLength(lengthObj PdfObject) (PdfObject, erro
 
 // ParseIndirectObject parses an indirect object from the input stream. Can also be an object stream.
 // Returns the indirect object (*PdfIndirectObject) or the stream object (*PdfObjectStream).
-// TODO: Unexport (v3).
 func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	indirect := PdfIndirectObject{}
 	indirect.parser = parser
@@ -1547,7 +1549,6 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 }
 
 // NewParserFromString is used for testing purposes.
-// TODO: Unexport (v3) or move to test files, if needed by external test cases.
 func NewParserFromString(txt string) *PdfParser {
 	parser := PdfParser{}
 	parser.ObjCache = objectCache{}
@@ -1600,6 +1601,20 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	parser.trailer = trailer
 
 	return parser, nil
+}
+
+// Resolves a reference, returning the object and indicates whether or not it was cached.
+func (parser *PdfParser) resolveReference(ref *PdfObjectReference) (PdfObject, bool, error) {
+	cachedObj, isCached := parser.ObjCache[int(ref.ObjectNumber)]
+	if isCached {
+		return cachedObj, true, nil
+	}
+	obj, err := parser.LookupByReference(*ref)
+	if err != nil {
+		return nil, false, err
+	}
+	parser.ObjCache[int(ref.ObjectNumber)] = obj
+	return obj, false, nil
 }
 
 // IsEncrypted checks if the document is encrypted. A bool flag is returned indicating the result.

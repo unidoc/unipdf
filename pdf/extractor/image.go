@@ -123,6 +123,7 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 		// Do: XObject.
 		name, ok := core.GetName(op.Params[0])
 		if !ok {
+			common.Log.Debug("ERROR: Type")
 			return errTypeCheck
 		}
 

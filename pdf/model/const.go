@@ -10,7 +10,7 @@ import (
 )
 
 // Errors when parsing/loading data in PDF.
-// TODO(gunnsth): Unexport errors.
+// TODO(gunnsth): Unexport errors except if there is a clear use case.
 var (
 	ErrRequiredAttributeMissing = errors.New("required attribute missing")
 	ErrInvalidAttribute         = errors.New("invalid attribute")

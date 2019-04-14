@@ -50,6 +50,92 @@ func (parser *PdfParser) GetObjectNums() []int {
 	return objNums
 }
 
+// ResolveReference resolves reference if `o` is a *PdfObjectReference and returns the object referenced to.
+// Otherwise returns back `o`.
+func ResolveReference(obj PdfObject) PdfObject {
+	if ref, isRef := obj.(*PdfObjectReference); isRef {
+		return ref.Resolve()
+	}
+	return obj
+}
+
+/*
+ * ResolveReferencesDeep recursively traverses through object `o`, looking up and replacing
+ * references with indirect objects.
+ * Optionally a map of already deep-resolved objects can be provided via `traversed`. The `traversed` map
+ * is updated while traversing the objects to avoid traversing same objects multiple times.
+ */
+func ResolveReferencesDeep(o PdfObject, traversed map[PdfObject]struct{}) error {
+	if traversed == nil {
+		traversed = map[PdfObject]struct{}{}
+	}
+	return resolveReferencesDeep(o, 0, traversed)
+}
+
+func resolveReferencesDeep(o PdfObject, depth int, traversed map[PdfObject]struct{}) error {
+	common.Log.Trace("Traverse object data (depth = %d)", depth)
+	if _, isTraversed := traversed[o]; isTraversed {
+		common.Log.Trace("-Already traversed...")
+		return nil
+	}
+	traversed[o] = struct{}{}
+
+	switch t := o.(type) {
+	case *PdfIndirectObject:
+		io := t
+		common.Log.Trace("io: %s", io)
+		common.Log.Trace("- %s", io.PdfObject)
+		return resolveReferencesDeep(io.PdfObject, depth+1, traversed)
+	case *PdfObjectStream:
+		so := t
+		return resolveReferencesDeep(so.PdfObjectDictionary, depth+1, traversed)
+	case *PdfObjectDictionary:
+		dict := t
+		common.Log.Trace("- dict: %s", dict)
+		for _, name := range dict.Keys() {
+			v := dict.Get(name)
+			if ref, isRef := v.(*PdfObjectReference); isRef {
+				resolvedObj := ref.Resolve()
+				dict.Set(name, resolvedObj)
+				err := resolveReferencesDeep(resolvedObj, depth+1, traversed)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := resolveReferencesDeep(v, depth+1, traversed)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	case *PdfObjectArray:
+		arr := t
+		common.Log.Trace("- array: %s", arr)
+		for idx, v := range arr.Elements() {
+			if ref, isRef := v.(*PdfObjectReference); isRef {
+				resolvedObj := ref.Resolve()
+				arr.Set(idx, resolvedObj)
+				err := resolveReferencesDeep(resolvedObj, depth+1, traversed)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := resolveReferencesDeep(v, depth+1, traversed)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	case *PdfObjectReference:
+		common.Log.Debug("ERROR: Tracing a reference!")
+		return errors.New("error tracing a reference")
+	}
+
+	return nil
+}
+
 func getUniDocVersion() string {
 	return common.Version
 }
@@ -196,8 +282,8 @@ func EqualObjects(obj1, obj2 PdfObject) bool {
 // It recursively checks the contents of indirect objects, arrays and dicts to a depth of
 // TraceMaxDepth. `depth` is the current recusion depth.
 func equalObjects(obj1, obj2 PdfObject, depth int) bool {
-	if depth > TraceMaxDepth {
-		common.Log.Error("Trace depth level beyond %d - error!", TraceMaxDepth)
+	if depth > traceMaxDepth {
+		common.Log.Error("Trace depth level beyond %d - error!", traceMaxDepth)
 		return false
 	}
 
@@ -262,7 +348,7 @@ func equalObjects(obj1, obj2 PdfObject, depth int) bool {
 
 // FlattenObject returns the contents of `obj`. In other words, `obj` with indirect objects replaced
 // by their values.
-// The replacements are made recursively to a depth of TraceMaxDepth.
+// The replacements are made recursively to a depth of traceMaxDepth.
 // NOTE: Dicts are sorted to make objects with same contents have the same PDF object strings.
 func FlattenObject(obj PdfObject) PdfObject {
 	return flattenObject(obj, 0)
@@ -271,8 +357,8 @@ func FlattenObject(obj PdfObject) PdfObject {
 // flattenObject returns `obj` with indirect objects recursively replaced by their values.
 // `depth` is the recursion depth.
 func flattenObject(obj PdfObject, depth int) PdfObject {
-	if depth > TraceMaxDepth {
-		common.Log.Error("Trace depth level beyond %d - error!", TraceMaxDepth)
+	if depth > traceMaxDepth {
+		common.Log.Error("Trace depth level beyond %d - error!", traceMaxDepth)
 		return MakeNull()
 	}
 	switch t := obj.(type) {

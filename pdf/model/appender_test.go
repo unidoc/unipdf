@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pkcs12"
 
 	"github.com/unidoc/unidoc/common"
@@ -232,7 +233,7 @@ func TestAppenderAddAnnotation(t *testing.T) {
 	annotation.IC = core.MakeArrayFromFloats([]float64{4.0, 0.0, 0.3})
 	annotation.CA = core.MakeFloat(0.5)
 
-	page.Annotations = append(page.Annotations, annotation.PdfAnnotation)
+	page.AddAnnotation(annotation.PdfAnnotation)
 
 	appender.ReplacePage(1, page)
 
@@ -537,9 +538,11 @@ func TestAppenderSignMultiple(t *testing.T) {
 			t.Fatalf("fields != %d (got %d)", i, len(pdfReader.AcroForm.AllFields()))
 		}
 
-		t.Logf("Annotations: %d", len(pdfReader.PageList[0].Annotations))
-		if len(pdfReader.PageList[0].Annotations) != i {
-			t.Fatalf("page annotations != %d (got %d)", i, len(pdfReader.PageList[0].Annotations))
+		annotations, err := pdfReader.PageList[0].GetAnnotations()
+		require.NoError(t, err)
+		t.Logf("Annotations: %d", len(annotations))
+		if len(annotations) != i {
+			t.Fatalf("page annotations != %d (got %d)", i, len(annotations))
 		}
 
 		appender, err := model.NewPdfAppender(pdfReader)

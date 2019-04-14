@@ -893,12 +893,13 @@ func (desc *PdfFontDescriptor) String() string {
 func newPdfFontDescriptorFromPdfObject(obj core.PdfObject) (*PdfFontDescriptor, error) {
 	descriptor := &PdfFontDescriptor{}
 
+	obj = core.ResolveReference(obj)
 	if ind, is := obj.(*core.PdfIndirectObject); is {
 		descriptor.container = ind
 		obj = ind.PdfObject
 	}
 
-	d, ok := obj.(*core.PdfObjectDictionary)
+	d, ok := core.GetDict(obj)
 	if !ok {
 		common.Log.Debug("ERROR: FontDescriptor not given by a dictionary (%T)", obj)
 		return nil, core.ErrTypeError

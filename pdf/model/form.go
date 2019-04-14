@@ -85,22 +85,14 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	acroForm := NewPdfAcroForm()
 
 	if obj := d.Get("Fields"); obj != nil {
-		obj, err := r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		fieldArray, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		fieldArray, ok := core.GetArray(obj)
 		if !ok {
 			return nil, fmt.Errorf("fields not an array (%T)", obj)
 		}
 
 		var fields []*PdfField
 		for _, obj := range fieldArray.Elements() {
-			obj, err := r.traceToObject(obj)
-			if err != nil {
-				return nil, err
-			}
-			container, isIndirect := obj.(*core.PdfIndirectObject)
+			container, isIndirect := core.GetIndirect(obj)
 			if !isIndirect {
 				if _, isNull := obj.(*core.PdfObjectNull); isNull {
 					common.Log.Trace("Skipping over null field")
@@ -120,7 +112,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("NeedAppearances"); obj != nil {
-		val, ok := obj.(*core.PdfObjectBool)
+		val, ok := core.GetBool(obj)
 		if ok {
 			acroForm.NeedAppearances = val
 		} else {
@@ -129,7 +121,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("SigFlags"); obj != nil {
-		val, ok := obj.(*core.PdfObjectInteger)
+		val, ok := core.GetInt(obj)
 		if ok {
 			acroForm.SigFlags = val
 		} else {
@@ -138,8 +130,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("CO"); obj != nil {
-		obj = core.TraceToDirectObject(obj)
-		arr, ok := obj.(*core.PdfObjectArray)
+		arr, ok := core.GetArray(obj)
 		if ok {
 			acroForm.CO = arr
 		} else {
@@ -148,8 +139,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("DR"); obj != nil {
-		obj = core.TraceToDirectObject(obj)
-		if d, ok := obj.(*core.PdfObjectDictionary); ok {
+		if d, ok := core.GetDict(obj); ok {
 			resources, err := NewPdfPageResourcesFromDict(d)
 			if err != nil {
 				common.Log.Error("Invalid DR: %v", err)
@@ -163,7 +153,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("DA"); obj != nil {
-		str, ok := obj.(*core.PdfObjectString)
+		str, ok := core.GetString(obj)
 		if ok {
 			acroForm.DA = str
 		} else {
@@ -172,7 +162,7 @@ func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcr
 	}
 
 	if obj := d.Get("Q"); obj != nil {
-		val, ok := obj.(*core.PdfObjectInteger)
+		val, ok := core.GetInt(obj)
 		if ok {
 			acroForm.Q = val
 		} else {

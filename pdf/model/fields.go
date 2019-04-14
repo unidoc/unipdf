@@ -679,12 +679,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 		field.Kids = []*PdfField{}
 
 		for _, obj := range kids.Elements() {
-			obj, err := r.traceToObject(obj)
-			if err != nil {
-				return nil, err
-			}
-
-			container, isIndirect := obj.(*core.PdfIndirectObject)
+			container, isIndirect := core.GetIndirect(obj)
 			if !isIndirect {
 				return nil, errors.New("not an indirect object (form field)")
 			}

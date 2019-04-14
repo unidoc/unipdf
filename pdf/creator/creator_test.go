@@ -28,6 +28,7 @@ import (
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
+	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream/draw"
@@ -71,17 +72,15 @@ func tempFile(name string) string {
 func TestTemplate1(t *testing.T) {
 	creator := New()
 
-	pages, err := loadPagesFromFile(testPdfFile1)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	f, err := os.Open(testPdfFile1)
+	require.NoError(t, err)
+	defer f.Close()
+
+	pages, err := loadPagesFromFile(f)
+	require.NoError(t, err)
 
 	template, err := NewBlockFromPage(pages[0])
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
 
 	template.SetPos(0, 0)
 	creator.Draw(template)
@@ -2049,37 +2048,30 @@ func TestQRCodeOnNewPage(t *testing.T) {
 func TestQRCodeOnTemplate(t *testing.T) {
 	creator := New()
 
-	pages, err := loadPagesFromFile(testPdfTemplatesFile1)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	f, err := os.Open(testPdfTemplatesFile1)
+	require.NoError(t, err)
+	defer f.Close()
+
+	pages, err := loadPagesFromFile(f)
+	require.NoError(t, err)
+
 	if len(pages) < 2 {
-		t.Errorf("Fail: %v\n", err)
-		return
+		t.Fatalf("Fail: %v", err)
 	}
 
 	// Load Page 1 as template.
 	tpl, err := NewBlockFromPage(pages[1])
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
 	tpl.SetPos(0, 0)
 
 	// Generate QR code.
 	qrCode, err := makeQrCodeImage("HELLO", 50, 5)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Prepare content image.
 	image, err := creator.NewImageFromGoImage(qrCode)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
+
 	image.SetWidth(50)
 	image.SetHeight(50)
 	image.SetPos(480, 100)
@@ -2097,23 +2089,21 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	creator.Draw(tpl)
 
 	// Add another Page where the template is rotated 90 degrees.
-	loremPages, err := loadPagesFromFile(testPdfLoremIpsumFile)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	f2, err := os.Open(testPdfLoremIpsumFile)
+	require.NoError(t, err)
+	defer f2.Close()
+
+	loremPages, err := loadPagesFromFile(f2)
+	require.NoError(t, err)
 	if len(loremPages) != 1 {
-		t.Errorf("Pages != 1")
-		return
+		t.Fatalf("Pages != 1")
 	}
 
 	// Add another Page where another Page is embedded on the Page.  The other Page is scaled and shifted to fit
 	// on the right of the template.
 	loremTpl, err := NewBlockFromPage(loremPages[0])
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
+
 	loremTpl.ScaleToWidth(0.8 * creator.Width())
 	loremTpl.SetPos(100, 100)
 

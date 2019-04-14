@@ -139,11 +139,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 	if obj == nil {
 		return nil, fmt.Errorf("missing Title from Outline Item (required)")
 	}
-	obj, err := r.traceToObject(obj)
-	if err != nil {
-		return nil, err
-	}
-	title, ok := core.TraceToDirectObject(obj).(*core.PdfObjectString)
+	title, ok := core.GetString(obj)
 	if !ok {
 		return nil, fmt.Errorf("title not a string (%T)", obj)
 	}
@@ -161,47 +157,33 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 
 	// Other keys.
 	if obj := dict.Get("Dest"); obj != nil {
-		item.Dest, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		err := r.traverseObjectData(item.Dest)
-		if err != nil {
-			return nil, err
+		item.Dest = core.ResolveReference(obj)
+		if !r.isLazy {
+			err := r.traverseObjectData(item.Dest)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if obj := dict.Get("A"); obj != nil {
-		item.A, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		err := r.traverseObjectData(item.A)
-		if err != nil {
-			return nil, err
+		item.A = core.ResolveReference(obj)
+		if !r.isLazy {
+			err := r.traverseObjectData(item.A)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if obj := dict.Get("SE"); obj != nil {
 		// TODO: To add structure element support.
 		// Currently not supporting structure elements.
 		item.SE = nil
-		/*
-			item.SE, err = r.traceToObject(obj)
-			if err != nil {
-				return nil, err
-			}
-		*/
 	}
 	if obj := dict.Get("C"); obj != nil {
-		item.C, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
+		item.C = core.ResolveReference(obj)
 	}
 	if obj := dict.Get("F"); obj != nil {
-		item.F, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
+		item.F = core.ResolveReference(obj)
 	}
 
 	return &item, nil

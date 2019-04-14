@@ -18,7 +18,7 @@ func getUniDocVersion() string {
 func NewReaderForText(txt string) *PdfReader {
 	// Create the parser, loads the cross reference table and trailer.
 	return &PdfReader{
-		traversed:    map[core.PdfObject]bool{},
+		traversed:    map[core.PdfObject]struct{}{},
 		modelManager: newModelManager(),
 		parser:       core.NewParserFromString(txt),
 	}

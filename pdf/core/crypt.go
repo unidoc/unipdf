@@ -93,7 +93,6 @@ func PdfCryptNewEncrypt(cf crypto.Filter, userPass, ownerPass []byte, perm secur
 
 // PdfCrypt provides PDF encryption/decryption support.
 // The PDF standard supports encryption of strings and streams (Section 7.6).
-// TODO (v3): Consider unexporting.
 type PdfCrypt struct {
 	encrypt    encryptDict
 	encryptStd security.StdEncryptDict

@@ -182,7 +182,7 @@ func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResou
 			return nil, errors.New("unknown colorspace")
 		}
 
-		cs, has := resources.ColorSpace.Colorspaces[string(*name)]
+		cs, has := resources.GetColorspaceByName(*name)
 		if !has {
 			// Can also refer to a name in the PDF page resources...
 			common.Log.Debug("Error, unsupported inline image colorspace: %s", *name)

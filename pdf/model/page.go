@@ -52,12 +52,15 @@ type PdfPage struct {
 	PresSteps            core.PdfObject
 	UserUnit             core.PdfObject
 	VP                   core.PdfObject
+	Annots               core.PdfObject
 
-	Annotations []*PdfAnnotation
+	annotations []*PdfAnnotation
 
 	// Primitive container.
 	pageDict  *core.PdfObjectDictionary
 	primitive *core.PdfIndirectObject
+
+	reader *PdfReader
 }
 
 // NewPdfPage returns a new PDF page.
@@ -111,12 +114,7 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj := d.Get("LastModified"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		strObj, ok := core.TraceToDirectObject(obj).(*core.PdfObjectString)
+		strObj, ok := core.GetString(obj)
 		if !ok {
 			return nil, errors.New("page dictionary LastModified != string")
 		}
@@ -128,17 +126,12 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj := d.Get("Resources"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-
-		dict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
+		dict, ok := core.GetDict(obj)
 		if !ok {
 			return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
 		}
 
+		var err error
 		page.Resources, err = NewPdfPageResourcesFromDict(dict)
 		if err != nil {
 			return nil, err
@@ -157,75 +150,56 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	}
 
 	if obj := d.Get("MediaBox"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		boxArr, ok := core.GetArray(obj)
 		if !ok {
 			return nil, errors.New("page MediaBox not an array")
 		}
+		var err error
 		page.MediaBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
+
 	if obj := d.Get("CropBox"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		boxArr, ok := core.GetArray(obj)
 		if !ok {
 			return nil, errors.New("page CropBox not an array")
 		}
+		var err error
 		page.CropBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := d.Get("BleedBox"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		boxArr, ok := core.GetArray(obj)
 		if !ok {
 			return nil, errors.New("page BleedBox not an array")
 		}
+		var err error
 		page.BleedBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := d.Get("TrimBox"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		boxArr, ok := core.GetArray(obj)
 		if !ok {
 			return nil, errors.New("page TrimBox not an array")
 		}
+		var err error
 		page.TrimBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if obj := d.Get("ArtBox"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		boxArr, ok := core.TraceToDirectObject(obj).(*core.PdfObjectArray)
+		boxArr, ok := core.GetArray(obj)
 		if !ok {
 			return nil, errors.New("page ArtBox not an array")
 		}
+		var err error
 		page.ArtBox, err = NewPdfRectangle(*boxArr)
 		if err != nil {
 			return nil, err
@@ -238,12 +212,7 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 		page.Contents = obj
 	}
 	if obj := d.Get("Rotate"); obj != nil {
-		var err error
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		iObj, ok := core.TraceToDirectObject(obj).(*core.PdfObjectInteger)
+		iObj, ok := core.GetInt(obj)
 		if !ok {
 			return nil, errors.New("invalid Page Rotate object")
 		}
@@ -265,9 +234,6 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	if obj := d.Get("Trans"); obj != nil {
 		page.Trans = obj
 	}
-	//if obj := d.Get("Annots"); obj != nil {
-	//	page.Annots = obj
-	//}
 	if obj := d.Get("AA"); obj != nil {
 		page.AA = obj
 	}
@@ -304,39 +270,65 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 	if obj := d.Get("VP"); obj != nil {
 		page.VP = obj
 	}
-
-	var err error
-	page.Annotations, err = r.LoadAnnotations(&d)
-	if err != nil {
-		return nil, err
+	if obj := d.Get("Annots"); obj != nil {
+		page.Annots = obj
 	}
+
+	page.reader = r
 
 	return page, nil
 }
 
-// LoadAnnotations loads and returns the PDF annotations from the input dictionary.
-func (r *PdfReader) LoadAnnotations(d *core.PdfObjectDictionary) ([]*PdfAnnotation, error) {
-	annotsObj := d.Get("Annots")
-	if annotsObj == nil {
+// GetAnnotations returns the list of page annotations for `page`. If not loaded attempts to load the
+// annotations, otherwise returns the loaded list.
+func (page *PdfPage) GetAnnotations() ([]*PdfAnnotation, error) {
+	if page.annotations != nil {
+		return page.annotations, nil
+	}
+	if page.Annots == nil {
+		page.annotations = []*PdfAnnotation{}
+		return nil, nil
+	}
+	if page.reader == nil {
+		page.annotations = []*PdfAnnotation{}
 		return nil, nil
 	}
 
-	var err error
-	annotsObj, err = r.traceToObject(annotsObj)
+	annots, err := page.reader.loadAnnotations(page.Annots)
 	if err != nil {
 		return nil, err
 	}
-	annotsArr, ok := core.TraceToDirectObject(annotsObj).(*core.PdfObjectArray)
+	if annots == nil {
+		page.annotations = []*PdfAnnotation{}
+	}
+
+	page.annotations = annots
+	return page.annotations, nil
+}
+
+// AddAnnotation appends `annot` to the list of page annotations.
+func (page *PdfPage) AddAnnotation(annot *PdfAnnotation) {
+	if page.annotations == nil {
+		page.GetAnnotations() // Ensure has been loaded.
+	}
+	page.annotations = append(page.annotations, annot)
+}
+
+// SetAnnotations sets the annotations list.
+func (page *PdfPage) SetAnnotations(annotations []*PdfAnnotation) {
+	page.annotations = annotations
+}
+
+// loadAnnotations loads and returns the PDF annotations from the input annotations object (array).
+func (r *PdfReader) loadAnnotations(annotsObj core.PdfObject) ([]*PdfAnnotation, error) {
+	annotsArr, ok := core.GetArray(annotsObj)
 	if !ok {
 		return nil, fmt.Errorf("Annots not an array")
 	}
 
 	var annotations []*PdfAnnotation
 	for _, obj := range annotsArr.Elements() {
-		obj, err = r.traceToObject(obj)
-		if err != nil {
-			return nil, err
-		}
+		obj = core.ResolveReference(obj)
 
 		// Technically all annotation dictionaries should be inside indirect objects.
 		// In reality, sometimes the annotation dictionary is inline within the Annots array.
@@ -378,12 +370,7 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 
 	node := p.Parent
 	for node != nil {
-		dictObj, ok := node.(*core.PdfIndirectObject)
-		if !ok {
-			return nil, errors.New("invalid parent object")
-		}
-
-		dict, ok := dictObj.PdfObject.(*core.PdfObjectDictionary)
+		dict, ok := core.GetDict(node)
 		if !ok {
 			return nil, errors.New("invalid parent objects dictionary")
 		}
@@ -416,18 +403,14 @@ func (p *PdfPage) getResources() (*PdfPageResources, error) {
 
 	node := p.Parent
 	for node != nil {
-		dictObj, ok := node.(*core.PdfIndirectObject)
+		dict, ok := core.GetDict(node)
 		if !ok {
+			common.Log.Debug("ERROR: invalid parent node")
 			return nil, errors.New("invalid parent object")
 		}
 
-		dict, ok := dictObj.PdfObject.(*core.PdfObjectDictionary)
-		if !ok {
-			return nil, errors.New("invalid parent objects dictionary")
-		}
-
 		if obj := dict.Get("Resources"); obj != nil {
-			prDict, ok := core.TraceToDirectObject(obj).(*core.PdfObjectDictionary)
+			prDict, ok := core.GetDict(obj)
 			if !ok {
 				return nil, errors.New("invalid resource dict")
 			}
@@ -501,9 +484,9 @@ func (p *PdfPage) GetPageDict() *core.PdfObjectDictionary {
 	d.SetIfNotNil("UserUnit", p.UserUnit)
 	d.SetIfNotNil("VP", p.VP)
 
-	if p.Annotations != nil {
+	if p.annotations != nil {
 		arr := core.MakeArray()
-		for _, annot := range p.Annotations {
+		for _, annot := range p.annotations {
 			if subannot := annot.GetContext(); subannot != nil {
 				arr.Append(subannot.ToPdfObject())
 			} else {
@@ -826,19 +809,20 @@ func (p *PdfPage) SetContentStreams(cStreams []string, encoder core.StreamEncode
 }
 
 func getContentStreamAsString(cstreamObj core.PdfObject) (string, error) {
-	if cstream, ok := core.TraceToDirectObject(cstreamObj).(*core.PdfObjectString); ok {
-		return cstream.Str(), nil
-	}
+	cstreamObj = core.TraceToDirectObject(cstreamObj)
 
-	if cstream, ok := core.TraceToDirectObject(cstreamObj).(*core.PdfObjectStream); ok {
-		buf, err := core.DecodeStream(cstream)
+	switch v := cstreamObj.(type) {
+	case *core.PdfObjectString:
+		return v.Str(), nil
+	case *core.PdfObjectStream:
+		buf, err := core.DecodeStream(v)
 		if err != nil {
 			return "", err
 		}
-
 		return string(buf), nil
 	}
-	return "", fmt.Errorf("invalid content stream object holder (%T)", core.TraceToDirectObject(cstreamObj))
+
+	return "", fmt.Errorf("invalid content stream object holder (%T)", cstreamObj)
 }
 
 // GetContentStreams returns the content stream as an array of strings.

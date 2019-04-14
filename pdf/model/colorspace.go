@@ -1831,7 +1831,7 @@ func newPdfColorspaceICCBasedFromPdfObject(obj core.PdfObject) (*PdfColorspaceIC
 
 	// Stream
 	obj = array.Get(1)
-	stream, ok := obj.(*core.PdfObjectStream)
+	stream, ok := core.GetStream(obj)
 	if !ok {
 		common.Log.Error("ICCBased not pointing to stream: %T", obj)
 		return nil, fmt.Errorf("ICCBased stream invalid")
@@ -2320,6 +2320,7 @@ func newPdfColorspaceSpecialIndexedFromPdfObject(obj core.PdfObject) (*PdfColors
 		common.Log.Trace("Decoded (%d) : % X", len(decoded), decoded)
 		data = decoded
 	} else {
+		common.Log.Debug("Type: %T", obj)
 		return nil, fmt.Errorf("indexed CS: Invalid table format")
 	}
 

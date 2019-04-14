@@ -167,6 +167,9 @@ type PdfWriter struct {
 	ObjNumOffset      int
 	appendMode        bool
 	appendToXrefs     core.XrefTable
+
+	// Cache of objects traversed while resolving references.
+	traversed map[core.PdfObject]struct{}
 }
 
 // NewPdfWriter initializes a new PdfWriter.
@@ -176,6 +179,7 @@ func NewPdfWriter() PdfWriter {
 	w.objectsMap = map[core.PdfObject]bool{}
 	w.objects = []core.PdfObject{}
 	w.pendingObjects = map[core.PdfObject]*core.PdfObjectDictionary{}
+	w.traversed = map[core.PdfObject]struct{}{}
 
 	// PDF Version. Can be changed if using more advanced features in PDF.
 	// By default it is set to 1.3.
@@ -404,7 +408,7 @@ func (w *PdfWriter) GetOptimizer() Optimizer {
 func (w *PdfWriter) hasObject(obj core.PdfObject) bool {
 	// Check if already added.
 	for _, o := range w.objects {
-		// GH: May perform better to use a hash map to check if added?
+		// TODO(gunnsth): Replace with a map to check if added - should improve performance.
 		if o == obj {
 			return true
 		}
@@ -417,6 +421,11 @@ func (w *PdfWriter) hasObject(obj core.PdfObject) bool {
 func (w *PdfWriter) addObject(obj core.PdfObject) bool {
 	hasObj := w.hasObject(obj)
 	if !hasObj {
+		err := core.ResolveReferencesDeep(obj, w.traversed)
+		if err != nil {
+			common.Log.Debug("ERROR: %v - skipping", err)
+		}
+
 		w.objects = append(w.objects, obj)
 		return true
 	}
@@ -505,7 +514,7 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 
 	if _, isReference := obj.(*core.PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
-		common.Log.Debug("ERROR: Cannot be a reference!")
+		common.Log.Debug("ERROR: Cannot be a reference - got %#v!", obj)
 		return errors.New("reference not allowed")
 	}
 
@@ -515,6 +524,7 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 // AddPage adds a page to the PDF file. The new page should be an indirect object.
 func (w *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
+
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
 	procPage(page)
@@ -640,6 +650,7 @@ func (w *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
 func (w *PdfWriter) seekByName(obj core.PdfObject, followKeys []string, key string) ([]core.PdfObject, error) {
 	common.Log.Trace("Seek by name.. %T", obj)
 	var list []core.PdfObject
+
 	if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
 		return w.seekByName(io.PdfObject, followKeys, key)
 	}
@@ -904,6 +915,8 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	w.catalog.Set("Version", core.MakeName(fmt.Sprintf("%d.%d", w.majorVersion, w.minorVersion)))
 
 	// Make a copy of objects prior to optimizing as this can alter the objects.
+	// TODO: Copying wastes memory. Might be worth making user responsible for handling properly.
+	//       Is copy needed for optimization?
 	w.copyObjects()
 
 	if w.optimizer != nil {
@@ -994,7 +1007,6 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		}
 	}
 	if useCrossReferenceStream {
-
 		crossObjNumber := maxIndex + 1
 		w.crossReferenceMap[crossObjNumber] = crossReference{Type: 1, ObjectNumber: crossObjNumber, Offset: xrefOffset}
 		crossReferenceData := bytes.NewBuffer(nil)
@@ -1066,7 +1078,6 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		w.writeString("trailer\n")
 		w.writeString(trailer.WriteString())
 		w.writeString("\n")
-
 	}
 
 	// Make offset reference.

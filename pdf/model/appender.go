@@ -34,6 +34,10 @@ type PdfAppender struct {
 	newObjects   []core.PdfObject
 	hasNewObject map[core.PdfObject]struct{}
 
+	// Map of objects traversed while resolving references. Set to that of the PdfReader on
+	// creation (NewPdfAppender).
+	traversed map[core.PdfObject]struct{}
+
 	written bool
 }
 
@@ -98,9 +102,10 @@ func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
 // NewPdfAppender creates a new Pdf appender from a Pdf reader.
 func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
 	a := &PdfAppender{
-		rs:     reader.rs,
-		Reader: reader,
-		parser: reader.parser,
+		rs:        reader.rs,
+		Reader:    reader,
+		parser:    reader.parser,
+		traversed: reader.traversed,
 	}
 	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
 		return nil, err
@@ -144,6 +149,11 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 	if _, ok := a.hasNewObject[obj]; ok || obj == nil {
 		return
 	}
+	err := core.ResolveReferencesDeep(obj, a.traversed)
+	if err != nil {
+		common.Log.Debug("ERROR: %v", err)
+	}
+
 	switch v := obj.(type) {
 	case *core.PdfIndirectObject:
 		// If the current parser is different from the read-only parser, then
@@ -295,8 +305,8 @@ func (a *PdfAppender) MergePageWith(pageNum int, page *PdfPage) error {
 		return err
 	}
 
-	for _, a := range page.Annotations {
-		srcPage.Annotations = append(srcPage.Annotations, a)
+	for _, a := range page.annotations {
+		srcPage.annotations = append(srcPage.annotations, a)
 	}
 
 	if srcPage.Resources == nil {
@@ -415,7 +425,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 		field.T = core.MakeString(fmt.Sprintf("Signature %d", pageNum))
 	}
 
-	page.Annotations = append(page.Annotations, field.PdfAnnotationWidget.PdfAnnotation)
+	page.AddAnnotation(field.PdfAnnotationWidget.PdfAnnotation)
 
 	// Add signature field to the form.
 	acroForm := a.acroForm
@@ -499,6 +509,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	for _, p := range a.pages {
 		// Update the count.
 		obj := p.ToPdfObject()
+
 		*pageCount = *pageCount + 1
 		// Check the object is not changing.
 		// If the indirect object has the parser which equals to the readonly then the object is not changed.

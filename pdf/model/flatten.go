@@ -69,7 +69,7 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 	// If all annotations are to be flattened, add to targets.
 	if allannots {
 		for _, page := range r.PageList {
-			for _, annot := range page.Annotations {
+			for _, annot := range page.annotations {
 				ftargets[annot] = true
 			}
 		}
@@ -85,7 +85,7 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 			return err
 		}
 
-		for _, annot := range page.Annotations {
+		for _, annot := range page.annotations {
 			hasV, toflatten := ftargets[annot]
 			if !toflatten {
 				// Not to be flattened.
@@ -162,9 +162,9 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 
 		// Remove reference to flattened annotations.
 		if len(annots) > 0 {
-			page.Annotations = annots
+			page.annotations = annots
 		} else {
-			page.Annotations = nil
+			page.annotations = nil
 		}
 	}
 

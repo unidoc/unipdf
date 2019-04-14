@@ -92,7 +92,6 @@ func (p *PdfTilingPattern) GetContentStream() ([]byte, error) {
 }
 
 // GetContentStreamWithEncoder returns the pattern cell's content stream and its encoder
-// TODO (v3): Change GetContentStreamWithEncoder to GetContentStream
 func (p *PdfTilingPattern) GetContentStreamWithEncoder() ([]byte, core.StreamEncoder, error) {
 	streamObj, ok := p.container.(*core.PdfObjectStream)
 	if !ok {

@@ -27,6 +27,7 @@ type PdfFunction interface {
 
 // Loads a PDF Function from a PdfObject (can be either stream or dictionary).
 func newPdfFunctionFromPdfObject(obj core.PdfObject) (PdfFunction, error) {
+	obj = core.ResolveReference(obj)
 	if stream, is := obj.(*core.PdfObjectStream); is {
 		dict := stream.PdfObjectDictionary
 

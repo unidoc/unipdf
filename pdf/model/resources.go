@@ -17,7 +17,7 @@ import (
 // Implements PdfModel.
 type PdfPageResources struct {
 	ExtGState  core.PdfObject
-	ColorSpace *PdfPageResourcesColorspaces
+	ColorSpace core.PdfObject
 	Pattern    core.PdfObject
 	Shading    core.PdfObject
 	XObject    core.PdfObject
@@ -26,6 +26,9 @@ type PdfPageResources struct {
 	Properties core.PdfObject
 	// Primitive resource container.
 	primitive *core.PdfObjectDictionary
+
+	// Loaded objects.
+	colorspace *PdfPageResourcesColorspaces
 }
 
 // NewPdfPageResources returns a new PdfPageResources object.
@@ -44,11 +47,7 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 		r.ExtGState = obj
 	}
 	if obj := dict.Get("ColorSpace"); obj != nil && !core.IsNullObject(obj) {
-		colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(obj)
-		if err != nil {
-			return nil, err
-		}
-		r.ColorSpace = colorspaces
+		r.ColorSpace = obj
 	}
 	if obj := dict.Get("Pattern"); obj != nil {
 		r.Pattern = obj
@@ -72,6 +71,29 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	return r, nil
 }
 
+// GetColorspaces loads PdfPageResourcesColorspaces from `r.ColorSpace` and returns an error if there
+// is a problem loading. Once loaded, the same object is returned on multiple calls.
+func (r *PdfPageResources) GetColorspaces() (*PdfPageResourcesColorspaces, error) {
+	if r.colorspace != nil {
+		return r.colorspace, nil
+	}
+	if r.ColorSpace == nil {
+		return nil, nil
+	}
+
+	colorspaces, err := newPdfPageResourcesColorspacesFromPdfObject(r.ColorSpace)
+	if err != nil {
+		return nil, err
+	}
+	r.colorspace = colorspaces
+	return r.colorspace, nil
+}
+
+// SetColorSpace sets `r` colorspace object to `colorspace`.
+func (r *PdfPageResources) SetColorSpace(colorspace *PdfPageResourcesColorspaces) {
+	r.colorspace = colorspace
+}
+
 // GetContainingPdfObject returns the container of the resources object (indirect object).
 func (r *PdfPageResources) GetContainingPdfObject() core.PdfObject {
 	return r.primitive
@@ -81,9 +103,10 @@ func (r *PdfPageResources) GetContainingPdfObject() core.PdfObject {
 func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d := r.primitive
 	d.SetIfNotNil("ExtGState", r.ExtGState)
-	if r.ColorSpace != nil {
-		d.SetIfNotNil("ColorSpace", r.ColorSpace.ToPdfObject())
+	if r.colorspace != nil {
+		r.ColorSpace = r.colorspace.ToPdfObject()
 	}
+	d.SetIfNotNil("ColorSpace", r.ColorSpace)
 	d.SetIfNotNil("Pattern", r.Pattern)
 	d.SetIfNotNil("Shading", r.Shading)
 	d.SetIfNotNil("XObject", r.XObject)
@@ -260,11 +283,17 @@ func (r *PdfPageResources) SetFontByName(keyName core.PdfObjectName, obj core.Pd
 
 // GetColorspaceByName returns the colorspace with the specified name from the page resources.
 func (r *PdfPageResources) GetColorspaceByName(keyName core.PdfObjectName) (PdfColorspace, bool) {
-	if r.ColorSpace == nil {
+	colorspace, err := r.GetColorspaces()
+	if err != nil {
+		common.Log.Debug("ERROR getting colorsprace: %v", err)
 		return nil, false
 	}
 
-	cs, has := r.ColorSpace.Colorspaces[string(keyName)]
+	if colorspace == nil {
+		return nil, false
+	}
+
+	cs, has := colorspace.Colorspaces[string(keyName)]
 	if !has {
 		return nil, false
 	}
@@ -274,21 +303,32 @@ func (r *PdfPageResources) GetColorspaceByName(keyName core.PdfObjectName) (PdfC
 
 // HasColorspaceByName checks if the colorspace with the specified name exists in the page resources.
 func (r *PdfPageResources) HasColorspaceByName(keyName core.PdfObjectName) bool {
-	if r.ColorSpace == nil {
+	colorspace, err := r.GetColorspaces()
+	if err != nil {
+		common.Log.Debug("ERROR getting colorsprace: %v", err)
+		return false
+	}
+	if colorspace == nil {
 		return false
 	}
 
-	_, has := r.ColorSpace.Colorspaces[string(keyName)]
+	_, has := colorspace.Colorspaces[string(keyName)]
 	return has
 }
 
 // SetColorspaceByName adds the provided colorspace to the page resources.
 func (r *PdfPageResources) SetColorspaceByName(keyName core.PdfObjectName, cs PdfColorspace) error {
-	if r.ColorSpace == nil {
-		r.ColorSpace = NewPdfPageResourcesColorspaces()
+	colorspace, err := r.GetColorspaces()
+	if err != nil {
+		common.Log.Debug("ERROR getting colorsprace: %v", err)
+		return err
+	}
+	if colorspace == nil {
+		colorspace = NewPdfPageResourcesColorspaces()
+		r.SetColorSpace(colorspace)
 	}
 
-	r.ColorSpace.Set(keyName, cs)
+	colorspace.Set(keyName, cs)
 	return nil
 }
 
@@ -341,7 +381,7 @@ func (r *PdfPageResources) GetXObjectByName(keyName core.PdfObjectName) (*core.P
 	}
 
 	if obj := xresDict.Get(keyName); obj != nil {
-		stream, ok := obj.(*core.PdfObjectStream)
+		stream, ok := core.GetStream(obj)
 		if !ok {
 			common.Log.Debug("XObject not pointing to a stream %T", obj)
 			return nil, XObjectTypeUndefined

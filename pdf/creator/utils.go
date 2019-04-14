@@ -13,14 +13,7 @@ import (
 )
 
 // Loads the template from path as a list of pages.
-func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
-	// Read the input pdf file.
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+func loadPagesFromFile(f *os.File) ([]*model.PdfPage, error) {
 	pdfReader, err := model.NewPdfReader(f)
 	if err != nil {
 		return nil, err

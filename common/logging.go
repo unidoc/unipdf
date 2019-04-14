@@ -19,27 +19,39 @@ type Logger interface {
 	Info(format string, args ...interface{})
 	Debug(format string, args ...interface{})
 	Trace(format string, args ...interface{})
+	IsLogLevel(level LogLevel) bool
 }
 
 // DummyLogger does nothing.
 type DummyLogger struct{}
 
+// Error does nothing for dummy logger.
 func (DummyLogger) Error(format string, args ...interface{}) {
 }
 
+// Warning does nothing for dummy logger.
 func (DummyLogger) Warning(format string, args ...interface{}) {
 }
 
+// Notice does nothing for dummy logger.
 func (DummyLogger) Notice(format string, args ...interface{}) {
 }
 
+// Info does nothing for dummy logger.
 func (DummyLogger) Info(format string, args ...interface{}) {
 }
 
+// Debug does nothing for dummy logger.
 func (DummyLogger) Debug(format string, args ...interface{}) {
 }
 
+// Trace does nothing for dummy logger.
 func (DummyLogger) Trace(format string, args ...interface{}) {
+}
+
+// IsLogLevel returns true from dummy logger.
+func (DummyLogger) IsLogLevel(level LogLevel) bool {
+	return true
 }
 
 // LogLevel is the verbosity level for logging.
@@ -62,6 +74,12 @@ func NewConsoleLogger(logLevel LogLevel) *ConsoleLogger {
 	logger := ConsoleLogger{}
 	logger.LogLevel = logLevel
 	return &logger
+}
+
+// IsLogLevel returns true if log level is greater or equal than `level`.
+// Can be used to avoid resource intensive calls to loggers.
+func (l ConsoleLogger) IsLogLevel(level LogLevel) bool {
+	return l.LogLevel >= level
 }
 
 func (l ConsoleLogger) Error(format string, args ...interface{}) {
