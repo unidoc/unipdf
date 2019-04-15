@@ -18,14 +18,25 @@ import (
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
+// SignFunc represents a custom signing function. The function should return
+// the computed signature.
+type SignFunc func(sig *model.PdfSignature, digest model.Hasher) ([]byte, error)
+
 // Adobe X509 RSA SHA1 signature handler.
 type adobeX509RSASHA1 struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
+	signFunc    SignFunc
+}
+
+// NewAdobeX509RSASHA1Custom creates a new Adobe.PPKMS/Adobe.PPKLite adbe.x509.rsa_sha1 signature handler
+// with a custom signing function. Both parameters may be nil for the signature validation.
+func NewAdobeX509RSASHA1Custom(certificate *x509.Certificate, signFunc SignFunc) (model.SignatureHandler, error) {
+	return &adobeX509RSASHA1{certificate: certificate, signFunc: signFunc}, nil
 }
 
 // NewAdobeX509RSASHA1 creates a new Adobe.PPKMS/Adobe.PPKLite adbe.x509.rsa_sha1 signature handler.
-// The both parameters may be nil for the signature validation.
+// Both parameters may be nil for the signature validation.
 func NewAdobeX509RSASHA1(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
 	return &adobeX509RSASHA1{certificate: certificate, privateKey: privateKey}, nil
 }
@@ -35,8 +46,8 @@ func (a *adobeX509RSASHA1) InitSignature(sig *model.PdfSignature) error {
 	if a.certificate == nil {
 		return errors.New("certificate must not be nil")
 	}
-	if a.privateKey == nil {
-		return errors.New("privateKey must not be nil")
+	if a.privateKey == nil && a.signFunc == nil {
+		return errors.New("must provide either a private key or a signing function")
 	}
 
 	handler := *a
@@ -114,19 +125,32 @@ func (a *adobeX509RSASHA1) Validate(sig *model.PdfSignature, digest model.Hasher
 
 // Sign sets the Contents fields for the PdfSignature.
 func (a *adobeX509RSASHA1) Sign(sig *model.PdfSignature, digest model.Hasher) error {
-	h, ok := digest.(hash.Hash)
-	if !ok {
-		return errors.New("hash type error")
+	var data []byte
+	var err error
+
+	if a.signFunc != nil {
+		data, err = a.signFunc(sig, digest)
+		if err != nil {
+			return err
+		}
+	} else {
+		h, ok := digest.(hash.Hash)
+		if !ok {
+			return errors.New("hash type error")
+		}
+		ha, _ := getHashFromSignatureAlgorithm(a.certificate.SignatureAlgorithm)
+
+		data, err = rsa.SignPKCS1v15(rand.Reader, a.privateKey, ha, h.Sum(nil))
+		if err != nil {
+			return err
+		}
 	}
-	ha, _ := getHashFromSignatureAlgorithm(a.certificate.SignatureAlgorithm)
-	data, err := rsa.SignPKCS1v15(rand.Reader, a.privateKey, ha, h.Sum(nil))
-	if err != nil {
-		return err
-	}
+
 	data, err = asn1.Marshal(data)
 	if err != nil {
 		return err
 	}
+
 	sig.Contents = core.MakeHexString(string(data))
 	return nil
 }
