@@ -140,10 +140,9 @@ func (filterAES) DecryptBytes(buf []byte, okey []byte) ([]byte, error) {
 	}
 
 	// The padded length is indicated by the last values.  Remove those.
-
 	padLen := int(buf[len(buf)-1])
-	if padLen >= len(buf) {
-		common.Log.Debug("Illegal pad length")
+	if padLen > len(buf) {
+		common.Log.Debug("Illegal pad length (%d > %d)", padLen, len(buf))
 		return buf, fmt.Errorf("invalid pad length")
 	}
 	buf = buf[:len(buf)-padLen]
