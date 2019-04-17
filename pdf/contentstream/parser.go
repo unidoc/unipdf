@@ -43,7 +43,7 @@ func (csp *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 		operation := ContentStreamOperation{}
 
 		for {
-			obj, err, isOperand := csp.parseObject()
+			obj, isOperand, err := csp.parseObject()
 			if err != nil {
 				if err == io.EOF {
 					// End of data. Successful exit point.
@@ -108,9 +108,9 @@ func (csp *ContentStreamParser) skipComments() error {
 		if isFirst && bb[0] != '%' {
 			// Not a comment clearly.
 			return nil
-		} else {
-			isFirst = false
 		}
+		isFirst = false
+
 		if (bb[0] != '\r') && (bb[0] != '\n') {
 			csp.reader.ReadByte()
 		} else {
@@ -230,25 +230,28 @@ func (csp *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 		}
 	}
 
+	var o core.PdfObject
 	if isFloat {
 		fVal, err := strconv.ParseFloat(numStr, 64)
 		if err != nil {
 			common.Log.Debug("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
 			fVal = 0.0
-			err = nil
 		}
-		o := core.PdfObjectFloat(fVal)
-		return &o, err
+
+		objFloat := core.PdfObjectFloat(fVal)
+		o = &objFloat
 	} else {
 		intVal, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
 			common.Log.Debug("Error parsing integer %q err=%v. Using 0. Output may be incorrect", numStr, err)
 			intVal = 0
-			err = nil
 		}
-		o := core.PdfObjectInteger(intVal)
-		return &o, err
+
+		objInt := core.PdfObjectInteger(intVal)
+		o = &objInt
 	}
+
+	return o, nil
 }
 
 // A string starts with '(' and ends with ')'.
@@ -387,7 +390,7 @@ func (csp *ContentStreamParser) parseArray() (*core.PdfObjectArray, error) {
 			break
 		}
 
-		obj, err, _ := csp.parseObject()
+		obj, _, err := csp.parseObject()
 		if err != nil {
 			return arr, err
 		}
@@ -481,7 +484,7 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 
 		csp.skipSpaces()
 
-		val, err, _ := csp.parseObject()
+		val, _, err := csp.parseObject()
 		if err != nil {
 			return nil, err
 		}
@@ -518,7 +521,7 @@ func (csp *ContentStreamParser) parseOperand() (*core.PdfObjectString, error) {
 // Parse a generic object.  Returns the object, an error code, and a bool
 // value indicating whether the object is an operand.  An operand
 // is contained in a pdf string object.
-func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, err error, isop bool) {
+func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, isop bool, err error) {
 	// Determine the kind of object.
 	// parse it!
 	// make a list of operands, then once operand arrives put into a package.
@@ -527,7 +530,7 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, err error, is
 	for {
 		bb, err := csp.reader.Peek(2)
 		if err != nil {
-			return nil, err, false
+			return nil, false, err
 		}
 
 		common.Log.Trace("Peek string: %s", string(bb))
@@ -538,26 +541,26 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, err error, is
 		} else if bb[0] == '/' {
 			name, err := csp.parseName()
 			common.Log.Trace("->Name: '%s'", name)
-			return &name, err, false
+			return &name, false, err
 		} else if bb[0] == '(' {
 			common.Log.Trace("->String!")
 			str, err := csp.parseString()
-			return str, err, false
+			return str, false, err
 		} else if bb[0] == '<' && bb[1] != '<' {
 			common.Log.Trace("->Hex String!")
 			str, err := csp.parseHexString()
-			return str, err, false
+			return str, false, err
 		} else if bb[0] == '[' {
 			common.Log.Trace("->Array!")
 			arr, err := csp.parseArray()
-			return arr, err, false
+			return arr, false, err
 		} else if core.IsFloatDigit(bb[0]) || (bb[0] == '-' && core.IsFloatDigit(bb[1])) {
 			common.Log.Trace("->Number!")
 			number, err := csp.parseNumber()
-			return number, err, false
+			return number, false, err
 		} else if bb[0] == '<' && bb[1] == '<' {
 			dict, err := csp.parseDict()
-			return dict, err, false
+			return dict, false, err
 		} else {
 			// Otherwise, can be: keyword such as "null", "false", "true" or an operand...
 			common.Log.Trace("->Operand or bool?")
@@ -568,23 +571,23 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, err error, is
 
 			if (len(peekStr) > 3) && (peekStr[:4] == "null") {
 				null, err := csp.parseNull()
-				return &null, err, false
+				return &null, false, err
 			} else if (len(peekStr) > 4) && (peekStr[:5] == "false") {
 				b, err := csp.parseBool()
-				return &b, err, false
+				return &b, false, err
 			} else if (len(peekStr) > 3) && (peekStr[:4] == "true") {
 				b, err := csp.parseBool()
-				return &b, err, false
+				return &b, false, err
 			}
 
 			operand, err := csp.parseOperand()
 			if err != nil {
-				return operand, err, false
+				return operand, false, err
 			}
 			if len(operand.String()) < 1 {
-				return operand, ErrInvalidOperand, false
+				return operand, false, ErrInvalidOperand
 			}
-			return operand, nil, true
+			return operand, true, nil
 		}
 	}
 }

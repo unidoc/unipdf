@@ -103,6 +103,7 @@ func (img *ContentStreamInlineImage) String() string {
 	return s
 }
 
+// WriteString outputs the object as it is to be written to file.
 func (img *ContentStreamInlineImage) WriteString() string {
 	var output bytes.Buffer
 
@@ -149,6 +150,7 @@ func (img *ContentStreamInlineImage) WriteString() string {
 	return output.String()
 }
 
+// GetColorSpace returns the colorspace of the inline image.
 func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResources) (model.PdfColorspace, error) {
 	if img.ColorSpace == nil {
 		// Default.
@@ -194,6 +196,7 @@ func (img *ContentStreamInlineImage) GetColorSpace(resources *model.PdfPageResou
 
 }
 
+// GetEncoder returns the encoder of the inline image.
 func (img *ContentStreamInlineImage) GetEncoder() (core.StreamEncoder, error) {
 	return newEncoderFromInlineImage(img)
 }
@@ -210,10 +213,9 @@ func (img *ContentStreamInlineImage) IsMask() (bool, error) {
 		}
 
 		return bool(*imMask), nil
-	} else {
-		return false, nil
 	}
 
+	return false, nil
 }
 
 // ToImage exports the inline image to Image which can be transformed or exported easily.
@@ -306,7 +308,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 
 	for {
 		csp.skipSpaces()
-		obj, err, isOperand := csp.parseObject()
+		obj, isOperand, err := csp.parseObject()
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +321,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 				return nil, fmt.Errorf("invalid inline image property (expecting name) - %T", obj)
 			}
 
-			valueObj, err, isOperand := csp.parseObject()
+			valueObj, isOperand, err := csp.parseObject()
 			if err != nil {
 				return nil, err
 			}
@@ -443,12 +445,12 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 							}
 							// Exit point.
 							return &im, nil
-						} else {
-							// Seems like "<ws>EI" was part of the data.
-							im.stream = append(im.stream, skipBytes...)
-							skipBytes = []byte{} // Clear.
-							state = 0
 						}
+
+						// Seems like "<ws>EI" was part of the data.
+						im.stream = append(im.stream, skipBytes...)
+						skipBytes = []byte{} // Clear.
+						state = 0
 					}
 				}
 				// Never reached (exit point is at end of EI).

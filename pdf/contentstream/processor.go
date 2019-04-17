@@ -24,7 +24,7 @@ type GraphicsState struct {
 	CTM                   transform.Matrix
 }
 
-// GraphicsStateStack represents a stack of GraphicsState.
+// GraphicStateStack represents a stack of GraphicsState.
 type GraphicStateStack []GraphicsState
 
 // Push pushes `gs` on the `gsStack`.
