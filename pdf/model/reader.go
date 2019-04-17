@@ -219,6 +219,10 @@ func (r *PdfReader) loadStructure() error {
 		common.Log.Debug("ERROR: Pages count object invalid")
 		return errors.New("pages count invalid")
 	}
+	if _, ok = core.GetName(pages.Get("Type")); !ok {
+		common.Log.Debug("Pages dict Type field not set. Setting Type to Pages.")
+		pages.Set("Type", core.MakeName("Pages"))
+	}
 
 	r.root = root
 	r.catalog = catalog
