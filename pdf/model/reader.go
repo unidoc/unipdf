@@ -280,7 +280,12 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	outlineRoot, ok := outlineRootObj.(*core.PdfIndirectObject)
 	if !ok {
-		return nil, errors.New("outline root should be an indirect object")
+		if _, ok := core.GetDict(outlineRootObj); !ok {
+			return nil, errors.New("outline root should be an indirect object")
+		}
+
+		common.Log.Debug("Outline root is a dict. Should be an indirect object")
+		outlineRoot = core.MakeIndirectObject(outlineRootObj)
 	}
 
 	dict, ok := outlineRoot.PdfObject.(*core.PdfObjectDictionary)
