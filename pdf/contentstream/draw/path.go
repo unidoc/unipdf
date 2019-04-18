@@ -10,15 +10,19 @@ type Path struct {
 	Points []Point
 }
 
+// NewPath returns a new empty path.
 func NewPath() Path {
 	return Path{}
 }
 
+// AppendPoint adds the specified point to the path.
 func (p Path) AppendPoint(point Point) Path {
 	p.Points = append(p.Points, point)
 	return p
 }
 
+// RemovePoint removes the point at the index specified by number from the
+// path. The index is 1-based.
 func (p Path) RemovePoint(number int) Path {
 	if number < 1 || number > len(p.Points) {
 		return p
@@ -29,10 +33,13 @@ func (p Path) RemovePoint(number int) Path {
 	return p
 }
 
+// Length returns the number of points in the path.
 func (p Path) Length() int {
 	return len(p.Points)
 }
 
+// GetPointNumber returns the path point at the index specified by number.
+// The index is 1-based.
 func (p Path) GetPointNumber(number int) Point {
 	if number < 1 || number > len(p.Points) {
 		return Point{}
@@ -40,6 +47,7 @@ func (p Path) GetPointNumber(number int) Point {
 	return p.Points[number-1]
 }
 
+// Copy returns a clone of the path.
 func (p Path) Copy() Path {
 	pathcopy := Path{}
 	pathcopy.Points = []Point{}
@@ -49,6 +57,7 @@ func (p Path) Copy() Path {
 	return pathcopy
 }
 
+// Offset shifts the path with the specified offsets.
 func (p Path) Offset(offX, offY float64) Path {
 	for i, pt := range p.Points {
 		p.Points[i] = pt.Add(offX, offY)
@@ -56,6 +65,7 @@ func (p Path) Offset(offX, offY float64) Path {
 	return p
 }
 
+// GetBoundingBox returns the bounding box of the path.
 func (p Path) GetBoundingBox() BoundingBox {
 	bbox := BoundingBox{}
 
@@ -93,6 +103,7 @@ func (p Path) GetBoundingBox() BoundingBox {
 	return bbox
 }
 
+// BoundingBox represents the smallest rectangular area that encapsulates an object.
 type BoundingBox struct {
 	X      float64
 	Y      float64

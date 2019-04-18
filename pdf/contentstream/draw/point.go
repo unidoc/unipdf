@@ -11,15 +11,18 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/transform"
 )
 
+// Point represents a two-dimensional point.
 type Point struct {
 	X float64
 	Y float64
 }
 
+// NewPoint returns a new point with the coordinates x, y.
 func NewPoint(x, y float64) Point {
 	return Point{X: x, Y: y}
 }
 
+// Add shifts the coordinates of the point with dx, dy and returns the result.
 func (p Point) Add(dx, dy float64) Point {
 	p.X += dx
 	p.Y += dy

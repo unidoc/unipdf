@@ -171,6 +171,7 @@ func (rect Rectangle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 // The currently supported line ending styles are None, Arrow (ClosedArrow) and Butt.
 type LineEndingStyle int
 
+// Line ending styles.
 const (
 	LineEndingStyleNone  LineEndingStyle = 0
 	LineEndingStyleArrow LineEndingStyle = 1
@@ -180,6 +181,7 @@ const (
 // LineStyle refers to how the line will be created.
 type LineStyle int
 
+// Line styles.
 const (
 	LineStyleSolid  LineStyle = 0
 	LineStyleDashed LineStyle = 1

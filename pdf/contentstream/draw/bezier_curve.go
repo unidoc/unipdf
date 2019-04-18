@@ -21,6 +21,7 @@ type CubicBezierCurve struct {
 	P3 Point // Final point.
 }
 
+// NewCubicBezierCurve returns a new cubic Bezier curve.
 func NewCubicBezierCurve(x0, y0, x1, y1, x2, y2, x3, y3 float64) CubicBezierCurve {
 	curve := CubicBezierCurve{}
 	curve.P0 = NewPoint(x0, y0)
@@ -45,6 +46,7 @@ func (curve CubicBezierCurve) AddOffsetXY(offX, offY float64) CubicBezierCurve {
 	return curve
 }
 
+// GetBounds returns the bounding box of the Bezier curve.
 func (curve CubicBezierCurve) GetBounds() model.PdfRectangle {
 	minX := curve.P0.X
 	maxX := curve.P0.X
@@ -84,21 +86,25 @@ func (curve CubicBezierCurve) GetBounds() model.PdfRectangle {
 	return bounds
 }
 
+// CubicBezierPath represents a collection of cubic Bezier curves.
 type CubicBezierPath struct {
 	Curves []CubicBezierCurve
 }
 
+// NewCubicBezierPath returns a new empty cubic Bezier path.
 func NewCubicBezierPath() CubicBezierPath {
 	bpath := CubicBezierPath{}
 	bpath.Curves = []CubicBezierCurve{}
 	return bpath
 }
 
+// AppendCurve appends the specified Bezier curve to the path.
 func (p CubicBezierPath) AppendCurve(curve CubicBezierCurve) CubicBezierPath {
 	p.Curves = append(p.Curves, curve)
 	return p
 }
 
+// Copy returns a clone of the Bezier path.
 func (p CubicBezierPath) Copy() CubicBezierPath {
 	bpathcopy := CubicBezierPath{}
 	bpathcopy.Curves = []CubicBezierCurve{}
@@ -108,6 +114,7 @@ func (p CubicBezierPath) Copy() CubicBezierPath {
 	return bpathcopy
 }
 
+// Offset shifts the Bezier path with the specified offsets.
 func (p CubicBezierPath) Offset(offX, offY float64) CubicBezierPath {
 	for i, c := range p.Curves {
 		p.Curves[i] = c.AddOffsetXY(offX, offY)
@@ -115,6 +122,7 @@ func (p CubicBezierPath) Offset(offX, offY float64) CubicBezierPath {
 	return p
 }
 
+// GetBoundingBox returns the bounding box of the Bezier path.
 func (p CubicBezierPath) GetBoundingBox() Rectangle {
 	bbox := Rectangle{}
 
