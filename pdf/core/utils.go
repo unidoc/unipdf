@@ -39,7 +39,7 @@ func (parser *PdfParser) Inspect() (map[string]int, error) {
 // GetObjectNums returns a sorted list of object numbers of the PDF objects in the file.
 func (parser *PdfParser) GetObjectNums() []int {
 	var objNums []int
-	for _, x := range parser.xrefs {
+	for _, x := range parser.xrefs.ObjectMap {
 		objNums = append(objNums, x.ObjectNumber)
 	}
 
@@ -154,14 +154,14 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	failedCount := 0
 
 	var keys []int
-	for k := range parser.xrefs {
+	for k := range parser.xrefs.ObjectMap {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
 
 	i := 0
 	for _, k := range keys {
-		xref := parser.xrefs[k]
+		xref := parser.xrefs.ObjectMap[k]
 		if xref.ObjectNumber == 0 {
 			continue
 		}
@@ -248,7 +248,7 @@ func (parser *PdfParser) inspect() (map[string]int, error) {
 	}
 	common.Log.Trace("=======")
 
-	if len(parser.xrefs) < 1 {
+	if len(parser.xrefs.ObjectMap) < 1 {
 		common.Log.Debug("ERROR: This document is invalid (xref table missing!)")
 		return nil, fmt.Errorf("invalid document (xref table missing)")
 	}

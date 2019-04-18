@@ -568,7 +568,7 @@ stream
 endstream
 endobj`
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
+	parser.xrefs.ObjectMap = make(map[int]XrefObject)
 	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
@@ -584,20 +584,20 @@ endobj`
 		return
 	}
 
-	if len(parser.xrefs) != 4 {
-		t.Errorf("Wrong length (%d)", len(parser.xrefs))
+	if len(parser.xrefs.ObjectMap) != 4 {
+		t.Errorf("Wrong length (%d)", len(parser.xrefs.ObjectMap))
 		return
 	}
 
-	if parser.xrefs[3].XType != XrefTypeObjectStream {
+	if parser.xrefs.ObjectMap[3].XType != XrefTypeObjectStream {
 		t.Errorf("Invalid type")
 		return
 	}
-	if parser.xrefs[3].OsObjNumber != 15 {
+	if parser.xrefs.ObjectMap[3].OsObjNumber != 15 {
 		t.Errorf("Wrong object stream obj number")
 		return
 	}
-	if parser.xrefs[3].OsObjIndex != 2 {
+	if parser.xrefs.ObjectMap[3].OsObjIndex != 2 {
 		t.Errorf("Wrong object stream obj index")
 		return
 	}
@@ -714,101 +714,56 @@ func TestObjectParse(t *testing.T) {
 // TestMinimalPDFFile test basic parsing of a minimal pdf file.
 func TestMinimalPDFFile(t *testing.T) {
 	file, err := os.Open("./testdata/minimal.pdf")
-	if err != nil {
-		t.Errorf("Unable to open minimal test file (%s)", err)
-		return
-	}
+	require.NoError(t, err)
 	defer file.Close()
 
 	parser, err := NewParser(file)
-	if err != nil {
-		t.Errorf("Unable to parse test file: %v", err)
-		return
-	}
+	require.NoError(t, err)
 
-	if len(parser.xrefs) != 4 {
-		t.Errorf("Wrong number of xrefs %d != 4", len(parser.xrefs))
-	}
-
-	if parser.xrefs[1].ObjectNumber != 1 {
-		t.Errorf("Invalid xref0 object number != 1 (%d)", parser.xrefs[0].ObjectNumber)
-	}
-	if parser.xrefs[1].Offset != 18 {
-		t.Errorf("Invalid Offset != 18 (%d)", parser.xrefs[0].Offset)
-	}
-	if parser.xrefs[1].XType != XrefTypeTableEntry {
-		t.Errorf("Invalid xref type")
-	}
-	if parser.xrefs[3].ObjectNumber != 3 {
-		t.Errorf("Invalid xref object number != 3 (%d)", parser.xrefs[2].ObjectNumber)
-	}
-	if parser.xrefs[3].Offset != 178 {
-		t.Errorf("Invalid Offset != 178")
-	}
-	if parser.xrefs[3].XType != XrefTypeTableEntry {
-		t.Errorf("Invalid xref type")
-	}
+	require.Len(t, parser.xrefs.ObjectMap, 4)
+	require.Equal(t, 1, parser.xrefs.ObjectMap[1].ObjectNumber)
+	require.Equal(t, int64(18), parser.xrefs.ObjectMap[1].Offset)
+	require.Equal(t, XrefTypeTableEntry, parser.xrefs.ObjectMap[1].XType)
+	require.Equal(t, 3, parser.xrefs.ObjectMap[3].ObjectNumber)
+	require.Equal(t, int64(178), parser.xrefs.ObjectMap[3].Offset)
+	require.Equal(t, XrefTypeTableEntry, parser.xrefs.ObjectMap[3].XType)
 
 	// Check catalog object.
 	catalogObj, err := parser.LookupByNumber(1)
-	if err != nil {
-		t.Error("Unable to look up catalog object")
-	}
+	require.NoError(t, err)
+
 	catalog, ok := catalogObj.(*PdfIndirectObject)
-	if !ok {
-		t.Error("Unable to look up catalog object")
-	}
+	require.True(t, ok)
+
 	catalogDict, ok := catalog.PdfObject.(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to find dictionary")
-	}
+	require.True(t, ok)
+
 	typename, ok := catalogDict.Get("Type").(*PdfObjectName)
-	if !ok {
-		t.Error("Unable to check type")
-	}
-	if *typename != "Catalog" {
-		t.Errorf("Wrong type name (%s != Catalog)", *typename)
-	}
+	require.True(t, ok)
+	require.Equal(t, "Catalog", typename.String())
 
 	// Check Page object.
 	pageObj, err := parser.LookupByNumber(3)
-	if err != nil {
-		t.Fatalf("Unable to look up Page")
-	}
+	require.NoError(t, err)
+
 	page, ok := pageObj.(*PdfIndirectObject)
-	if !ok {
-		t.Fatalf("Unable to look up Page")
-	}
+	require.True(t, ok)
 	pageDict, ok := page.PdfObject.(*PdfObjectDictionary)
-	if !ok {
-		t.Fatalf("Unable to load Page dictionary")
-	}
-	if len(pageDict.Keys()) != 4 {
-		t.Fatalf("Page dict should have 4 objects (%d)", len(pageDict.Keys()))
-	}
+	require.True(t, ok)
+	require.Len(t, pageDict.Keys(), 4)
+
 	resourcesDict, ok := pageDict.Get("Resources").(*PdfObjectDictionary)
-	if !ok {
-		t.Fatalf("Unable to load Resources dictionary")
-	}
-	if len(resourcesDict.Keys()) != 1 {
-		t.Fatalf("Page Resources dict should have 1 member (%d)", len(resourcesDict.Keys()))
-	}
+	require.True(t, ok)
+	require.Len(t, resourcesDict.Keys(), 1)
+
 	fontDict, ok := resourcesDict.Get("Font").(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load font")
-	}
+	require.True(t, ok)
+
 	f1Dict, ok := fontDict.Get("F1").(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load F1 dict")
-	}
-	if len(f1Dict.Keys()) != 3 {
-		t.Errorf("Invalid F1 dict length 3 != %d", len(f1Dict.Keys()))
-	}
+	require.True(t, ok)
+	require.Len(t, f1Dict.Keys(), 3)
+
 	baseFont, ok := f1Dict.Get("BaseFont").(*PdfObjectName)
-	if !ok {
-		t.Error("Unable to load base font")
-	}
-	if *baseFont != "Times-Roman" {
-		t.Errorf("Invalid base font (should be Times-Roman not %s)", *baseFont)
-	}
+	require.True(t, ok)
+	require.Equal(t, "Times-Roman", baseFont.String())
 }

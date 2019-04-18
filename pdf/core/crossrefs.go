@@ -41,9 +41,14 @@ type XrefObject struct {
 	OsObjIndex  int
 }
 
-// XrefTable is a map between object number and corresponding XrefObject.
-// TODO: Consider changing to a slice, so can maintain the object order without sorting when analyzing.
-type XrefTable map[int]XrefObject
+// XrefTable represents the cross references in a PDF, i.e. the table of objects and information
+// where to access within the PDF file.
+type XrefTable struct {
+	ObjectMap map[int]XrefObject // Maps object number to XrefObject
+
+	// List of objects sorted by offset (only objects with offsets, not ones in streams).
+	sortedObjects []XrefObject
+}
 
 // objectStream represents an object stream's information which can contain multiple indirect objects.
 // The information specifies the number of objects and has information about offset locations for
@@ -238,7 +243,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 		return obj, false, nil
 	}
 
-	xref, ok := parser.xrefs[objNumber]
+	xref, ok := parser.xrefs.ObjectMap[objNumber]
 	if !ok {
 		// An indirect reference to an undefined object shall not be
 		// considered an error by a conforming reader; it shall be
@@ -305,7 +310,7 @@ func (parser *PdfParser) lookupByNumber(objNumber int, attemptRepairs bool) (Pdf
 			return nil, true, errors.New("xref circular reference")
 		}
 
-		if _, exists := parser.xrefs[xref.OsObjNumber]; exists {
+		if _, exists := parser.xrefs.ObjectMap[xref.OsObjNumber]; exists {
 			optr, err := parser.lookupObjectViaOS(xref.OsObjNumber, objNumber) //xref.OsObjIndex)
 			if err != nil {
 				common.Log.Debug("ERROR Returning ERR (%s)", err)
@@ -367,7 +372,7 @@ func printXrefTable(xrefTable XrefTable) {
 	common.Log.Debug("=X=X=X=")
 	common.Log.Debug("Xref table:")
 	i := 0
-	for _, xref := range xrefTable {
+	for _, xref := range xrefTable.ObjectMap {
 		common.Log.Debug("i+1: %d (obj num: %d gen: %d) -> %d", i+1, xref.ObjectNumber, xref.Generation, xref.Offset)
 		i++
 	}

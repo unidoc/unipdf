@@ -51,7 +51,8 @@ func (parser *PdfParser) repairLocateXref() (int64, error) {
 // Update the table.
 func (parser *PdfParser) rebuildXrefTable() error {
 	newXrefs := XrefTable{}
-	for objNum, xref := range parser.xrefs {
+	newXrefs.ObjectMap = map[int]XrefObject{}
+	for objNum, xref := range parser.xrefs.ObjectMap {
 		obj, _, err := parser.lookupByNumberWrapper(objNum, false)
 		if err != nil {
 			common.Log.Debug("ERROR: Unable to look up object (%s)", err)
@@ -72,7 +73,7 @@ func (parser *PdfParser) rebuildXrefTable() error {
 
 		xref.ObjectNumber = int(actObjNum)
 		xref.Generation = int(actGenNum)
-		newXrefs[int(actObjNum)] = xref
+		newXrefs.ObjectMap[int(actObjNum)] = xref
 	}
 
 	parser.xrefs = newXrefs
@@ -113,6 +114,7 @@ func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 	last := make([]byte, bufLen)
 
 	xrefTable := XrefTable{}
+	xrefTable.ObjectMap = make(map[int]XrefObject)
 	for {
 		b, err := parser.reader.ReadByte()
 		if err != nil {
@@ -167,14 +169,14 @@ func (parser *PdfParser) repairRebuildXrefsTopDown() (*XrefTable, error) {
 			}
 
 			// Create and insert the XREF entry if not existing, or the generation number is higher.
-			if curXref, has := xrefTable[objNum]; !has || curXref.Generation < genNum {
+			if curXref, has := xrefTable.ObjectMap[objNum]; !has || curXref.Generation < genNum {
 				// Make the entry for the cross ref table.
 				xrefEntry := XrefObject{}
 				xrefEntry.XType = XrefTypeTableEntry
 				xrefEntry.ObjectNumber = int(objNum)
 				xrefEntry.Generation = int(genNum)
 				xrefEntry.Offset = objOffset
-				xrefTable[objNum] = xrefEntry
+				xrefTable.ObjectMap[objNum] = xrefEntry
 			}
 		}
 

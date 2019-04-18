@@ -131,8 +131,8 @@ func SetPdfTitle(title string) {
 type PdfWriter struct {
 	root        *core.PdfIndirectObject
 	pages       *core.PdfIndirectObject
-	objects     []core.PdfObject
-	objectsMap  map[core.PdfObject]bool // Quick lookup table.
+	objects     []core.PdfObject            // Objects to write.
+	objectsMap  map[core.PdfObject]struct{} // Quick lookup table.
 	writer      *bufio.Writer
 	writePos    int64 // Represents the current position within output file.
 	outlines    []*core.PdfIndirectObject
@@ -176,7 +176,7 @@ type PdfWriter struct {
 func NewPdfWriter() PdfWriter {
 	w := PdfWriter{}
 
-	w.objectsMap = map[core.PdfObject]bool{}
+	w.objectsMap = map[core.PdfObject]struct{}{}
 	w.objects = []core.PdfObject{}
 	w.pendingObjects = map[core.PdfObject]*core.PdfObjectDictionary{}
 	w.traversed = map[core.PdfObject]struct{}{}
@@ -357,13 +357,11 @@ func copyObject(obj core.PdfObject, objectToObjectCopyMap map[core.PdfObject]cor
 func (w *PdfWriter) copyObjects() {
 	objectToObjectCopyMap := make(map[core.PdfObject]core.PdfObject)
 	objects := make([]core.PdfObject, len(w.objects))
-	objectsMap := make(map[core.PdfObject]bool)
+	objectsMap := make(map[core.PdfObject]struct{}, len(w.objects))
 	for i, obj := range w.objects {
 		newObject := copyObject(obj, objectToObjectCopyMap)
 		objects[i] = newObject
-		if w.objectsMap[obj] {
-			objectsMap[newObject] = true
-		}
+		objectsMap[newObject] = struct{}{}
 	}
 
 	w.objects = objects
@@ -406,14 +404,8 @@ func (w *PdfWriter) GetOptimizer() Optimizer {
 }
 
 func (w *PdfWriter) hasObject(obj core.PdfObject) bool {
-	// Check if already added.
-	for _, o := range w.objects {
-		// TODO(gunnsth): Replace with a map to check if added - should improve performance.
-		if o == obj {
-			return true
-		}
-	}
-	return false
+	_, found := w.objectsMap[obj]
+	return found
 }
 
 // Adds the object to list of objects and returns true if the obj was
@@ -427,6 +419,7 @@ func (w *PdfWriter) addObject(obj core.PdfObject) bool {
 		}
 
 		w.objects = append(w.objects, obj)
+		w.objectsMap[obj] = struct{}{}
 		return true
 	}
 
@@ -925,6 +918,11 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		if err != nil {
 			return err
 		}
+		objMap := make(map[core.PdfObject]struct{}, len(w.objects))
+		for _, obj := range w.objects {
+			objMap[obj] = struct{}{}
+		}
+		w.objectsMap = objMap
 	}
 
 	w.writePos = w.writeOffset
@@ -963,8 +961,8 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	common.Log.Trace("Writing %d obj", len(w.objects))
 	w.crossReferenceMap = make(map[int]crossReference)
 	w.crossReferenceMap[0] = crossReference{Type: 0, ObjectNumber: 0, Generation: 0xFFFF}
-	if w.appendToXrefs != nil {
-		for idx, xref := range w.appendToXrefs {
+	if w.appendToXrefs.ObjectMap != nil {
+		for idx, xref := range w.appendToXrefs.ObjectMap {
 			if idx == 0 {
 				continue
 			}

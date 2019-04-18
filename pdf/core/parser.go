@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -788,12 +789,12 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 				// Load if not existing or higher generation number than previous.
 				// Usually should not happen, lower generation numbers
 				// would be marked as free.  But can still happen!
-				x, ok := parser.xrefs[curObjNum]
+				x, ok := parser.xrefs.ObjectMap[curObjNum]
 				if !ok || gen > x.Generation {
 					obj := XrefObject{ObjectNumber: curObjNum,
 						XType:  XrefTypeTableEntry,
 						Offset: first, Generation: gen}
-					parser.xrefs[curObjNum] = obj
+					parser.xrefs.ObjectMap[curObjNum] = obj
 				}
 			}
 
@@ -1061,21 +1062,21 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 
 			// Object type 1: Objects that are in use but are not
 			// compressed, i.e. defined by an offset (normal entry)
-			if xr, ok := parser.xrefs[objNum]; !ok || int(n3) > xr.Generation {
+			if xr, ok := parser.xrefs.ObjectMap[objNum]; !ok || int(n3) > xr.Generation {
 				// Only overload if not already loaded!
 				// or has a newer generation number. (should not happen)
 				obj := XrefObject{ObjectNumber: objNum,
 					XType: XrefTypeTableEntry, Offset: n2, Generation: int(n3)}
-				parser.xrefs[objNum] = obj
+				parser.xrefs.ObjectMap[objNum] = obj
 			}
 		} else if ftype == 2 {
 			// Object type 2: Compressed object.
 			common.Log.Trace("- In use - compressed object")
-			if _, ok := parser.xrefs[objNum]; !ok {
+			if _, ok := parser.xrefs.ObjectMap[objNum]; !ok {
 				obj := XrefObject{ObjectNumber: objNum,
 					XType: XrefTypeObjectStream, OsObjNumber: int(n2), OsObjIndex: int(n3)}
-				parser.xrefs[objNum] = obj
-				common.Log.Trace("entry: %+v", parser.xrefs[objNum])
+				parser.xrefs.ObjectMap[objNum] = obj
+				common.Log.Trace("entry: %+v", obj)
 			}
 		} else {
 			common.Log.Debug("ERROR: --------INVALID TYPE XrefStm invalid?-------")
@@ -1193,7 +1194,7 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 // loaded will ignore older versions.
 //
 func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
-	parser.xrefs = make(XrefTable)
+	parser.xrefs.ObjectMap = make(map[int]XrefObject)
 	parser.objstms = make(objectStreams)
 
 	// Get the file size.
@@ -1333,11 +1334,45 @@ func (parser *PdfParser) loadXrefs() (*PdfObjectDictionary, error) {
 // Return the closest object following offset from the xrefs table.
 func (parser *PdfParser) xrefNextObjectOffset(offset int64) int64 {
 	nextOffset := int64(0)
-	for _, xref := range parser.xrefs {
-		if xref.Offset > offset && (xref.Offset < nextOffset || nextOffset == 0) {
-			nextOffset = xref.Offset
-		}
+
+	if len(parser.xrefs.ObjectMap) == 0 {
+		return 0
 	}
+
+	if len(parser.xrefs.sortedObjects) == 0 {
+		count := 0
+		for _, xref := range parser.xrefs.ObjectMap {
+			if xref.Offset > 0 {
+				count++
+			}
+		}
+		if count == 0 {
+			// No objects with offset.
+			return 0
+		}
+		parser.xrefs.sortedObjects = make([]XrefObject, count)
+
+		i := 0
+		for _, xref := range parser.xrefs.ObjectMap {
+			if xref.Offset > 0 {
+				parser.xrefs.sortedObjects[i] = xref
+				i++
+			}
+		}
+
+		// Sort by offset, ascending.
+		sort.Slice(parser.xrefs.sortedObjects, func(i, j int) bool {
+			return parser.xrefs.sortedObjects[i].Offset < parser.xrefs.sortedObjects[j].Offset
+		})
+	}
+
+	i := sort.Search(len(parser.xrefs.sortedObjects), func(i int) bool {
+		return parser.xrefs.sortedObjects[i].Offset >= offset
+	})
+	if i < len(parser.xrefs.sortedObjects) {
+		nextOffset = parser.xrefs.sortedObjects[i].Offset
+	}
+
 	return nextOffset
 }
 
@@ -1563,7 +1598,7 @@ func NewParserFromString(txt string) *PdfParser {
 	parser.fileSize = int64(len(txt))
 	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
 
-	parser.xrefs = XrefTable{}
+	parser.xrefs.ObjectMap = make(map[int]XrefObject)
 
 	return &parser
 }
@@ -1586,7 +1621,7 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 
 	common.Log.Trace("Trailer: %s", trailer)
 
-	if len(parser.xrefs) == 0 {
+	if len(parser.xrefs.ObjectMap) == 0 {
 		return nil, fmt.Errorf("empty XREF table - Invalid")
 	}
 
