@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -96,7 +97,7 @@ func SetPdfModifiedDate(modifiedDate time.Time) {
 
 func getPdfProducer() string {
 	licenseKey := license.GetLicenseKey()
-	if len(pdfProducer) > 0 && licenseKey.IsLicensed() {
+	if len(pdfProducer) > 0 && (licenseKey.IsLicensed() || flag.Lookup("test.v") != nil) {
 		return pdfProducer
 	}
 
@@ -192,19 +193,12 @@ func NewPdfWriter() PdfWriter {
 		key   core.PdfObjectName
 		value string
 	}{
-		{
-			"Producer", getPdfProducer(),
-		}, {
-			"Creator", getPdfCreator(),
-		}, {
-			"Author", getPdfAuthor(),
-		}, {
-			"Subject", getPdfSubject(),
-		}, {
-			"Title", getPdfTitle(),
-		}, {
-			"Keywords", getPdfKeywords(),
-		},
+		{"Producer", getPdfProducer()},
+		{"Creator", getPdfCreator()},
+		{"Author", getPdfAuthor()},
+		{"Subject", getPdfSubject()},
+		{"Title", getPdfTitle()},
+		{"Keywords", getPdfKeywords()},
 	}
 	for _, tuple := range metadata {
 		if tuple.value != "" {
