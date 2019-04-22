@@ -574,13 +574,8 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	// attributes for descendant terminal fields. Does not logically have a type of its own.
 	// Terminal field: An actual field with a type.
 
-	// Partial field name (Required)
-	if s, has := d.Get("T").(*core.PdfObjectString); has {
-		field.T = s
-	} else {
-		common.Log.Debug("Invalid - T field missing (required)")
-		return nil, ErrTypeCheck
-	}
+	// Partial field name.
+	field.T, _ = d.Get("T").(*core.PdfObjectString)
 
 	// Alternate description (Optional)
 	field.TU, _ = d.Get("TU").(*core.PdfObjectString)
