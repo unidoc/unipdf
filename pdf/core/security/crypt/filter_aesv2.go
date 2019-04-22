@@ -5,7 +5,11 @@
 
 package crypt
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/unidoc/unidoc/common"
+)
 
 func init() {
 	registerFilter("AESV2", newFilterAESV2)
@@ -21,6 +25,10 @@ func NewFilterAESV2() Filter {
 }
 
 func newFilterAESV2(d FilterDict) (Filter, error) {
+	if d.Length == 128 {
+		common.Log.Debug("AESV2 crypt filter length appears to be in bits rather than bytes - assuming bits (%d)", d.Length)
+		d.Length /= 8
+	}
 	if d.Length != 0 && d.Length != 16 {
 		return nil, fmt.Errorf("invalid AESV2 crypt filter length (%d)", d.Length)
 	}
