@@ -214,7 +214,7 @@ func (r *PdfReader) loadStructure() error {
 		common.Log.Debug("ERROR: Pages object invalid (%s)", ppages)
 		return errors.New("pages object invalid")
 	}
-	pageCount, ok := pages.Get("Count").(*core.PdfObjectInteger)
+	pageCount, ok := core.GetInt(pages.Get("Count"))
 	if !ok {
 		common.Log.Debug("ERROR: Pages count object invalid")
 		return errors.New("pages count invalid")
