@@ -695,36 +695,45 @@ func (parser *PdfParser) ParseDict() (*PdfObjectDictionary, error) {
 // Returns the major and minor parts of the version.
 // E.g. for "PDF-1.7" would return 1 and 7.
 func (parser *PdfParser) parsePdfVersion() (int, int, error) {
-	parser.rs.Seek(0, os.SEEK_SET)
 	var offset int64 = 20
 	b := make([]byte, offset)
+	parser.rs.Seek(0, os.SEEK_SET)
 	parser.rs.Read(b)
 
-	result1 := rePdfVersion.FindStringSubmatch(string(b))
-	if len(result1) < 3 {
-		major, minor, err := parser.seekPdfVersionTopDown()
-		if err != nil {
+	// Try matching the PDF version at the start of the file, within the
+	// first 20 bytes. If the PDF version is not found, search for it
+	// starting from the top of the file.
+	var err error
+	var major, minor int
+
+	if match := rePdfVersion.FindStringSubmatch(string(b)); len(match) < 3 {
+		if major, minor, err = parser.seekPdfVersionTopDown(); err != nil {
 			common.Log.Debug("Failed recovery - unable to find version")
 			return 0, 0, err
 		}
 
-		return major, minor, nil
+		// Create a new offset reader that ignores the invalid data before
+		// the PDF version. Sets reader offset at the start of the PDF
+		// version string.
+		parser.rs, err = newOffsetReader(parser.rs, parser.GetFileOffset()-8)
+		if err != nil {
+			return 0, 0, err
+		}
+	} else {
+		if major, err = strconv.Atoi(match[1]); err != nil {
+			return 0, 0, err
+		}
+		if minor, err = strconv.Atoi(match[2]); err != nil {
+			return 0, 0, err
+		}
+
+		// Reset parser reader offset.
+		parser.SetFileOffset(0)
 	}
+	parser.reader = bufio.NewReader(parser.rs)
 
-	majorVersion, err := strconv.ParseInt(result1[1], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	minorVersion, err := strconv.ParseInt(result1[2], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	//version, _ := strconv.Atoi(result1[1])
-	common.Log.Debug("Pdf version %d.%d", majorVersion, minorVersion)
-
-	return int(majorVersion), int(minorVersion), nil
+	common.Log.Debug("Pdf version %d.%d", major, minor)
+	return major, minor, nil
 }
 
 // Conventional xref table starting with 'xref'.
@@ -1585,46 +1594,30 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 
 // NewParserFromString is used for testing purposes.
 func NewParserFromString(txt string) *PdfParser {
-	parser := PdfParser{}
-	parser.ObjCache = objectCache{}
-	buf := []byte(txt)
+	bufReader := bytes.NewReader([]byte(txt))
 
-	bufReader := bytes.NewReader(buf)
-	parser.rs = bufReader
-
-	bufferedReader := bufio.NewReader(bufReader)
-	parser.reader = bufferedReader
-
-	parser.fileSize = int64(len(txt))
-	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
-
+	parser := &PdfParser{
+		ObjCache:                              objectCache{},
+		rs:                                    bufReader,
+		reader:                                bufio.NewReader(bufReader),
+		fileSize:                              int64(len(txt)),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
+	}
 	parser.xrefs.ObjectMap = make(map[int]XrefObject)
 
-	return &parser
+	return parser
 }
 
 // NewParser creates a new parser for a PDF file via ReadSeeker. Loads the cross reference stream and trailer.
 // An error is returned on failure.
 func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
-	parser := &PdfParser{}
-
-	parser.rs = rs
-	parser.ObjCache = make(objectCache)
-	parser.streamLengthReferenceLookupInProgress = map[int64]bool{}
-
-	// Start by reading the xrefs (from bottom).
-	trailer, err := parser.loadXrefs()
-	if err != nil {
-		common.Log.Debug("ERROR: Failed to load xref table! %s", err)
-		return nil, err
+	parser := &PdfParser{
+		rs:                                    rs,
+		ObjCache:                              make(objectCache),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
 	}
 
-	common.Log.Trace("Trailer: %s", trailer)
-
-	if len(parser.xrefs.ObjectMap) == 0 {
-		return nil, fmt.Errorf("empty XREF table - Invalid")
-	}
-
+	// Parse PDF version.
 	majorVersion, minorVersion, err := parser.parsePdfVersion()
 	if err != nil {
 		common.Log.Error("Unable to parse version: %v", err)
@@ -1633,7 +1626,16 @@ func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	parser.version.Major = majorVersion
 	parser.version.Minor = minorVersion
 
-	parser.trailer = trailer
+	// Start by reading the xrefs (from bottom).
+	if parser.trailer, err = parser.loadXrefs(); err != nil {
+		common.Log.Debug("ERROR: Failed to load xref table! %s", err)
+		return nil, err
+	}
+	common.Log.Trace("Trailer: %s", parser.trailer)
+
+	if len(parser.xrefs.ObjectMap) == 0 {
+		return nil, fmt.Errorf("empty XREF table - Invalid")
+	}
 
 	return parser, nil
 }

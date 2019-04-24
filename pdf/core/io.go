@@ -13,6 +13,48 @@ import (
 	"github.com/unidoc/unidoc/common"
 )
 
+// Offset reader encapsulates io.ReadSeeker and offsets it by the specified
+// offset, thus skipping the first offset bytes. Reading always occurs after the
+// offset.
+type offsetReader struct {
+	reader io.ReadSeeker
+	offset int64
+}
+
+func newOffsetReader(reader io.ReadSeeker, offset int64) (*offsetReader, error) {
+	r := &offsetReader{
+		reader: reader,
+		offset: offset,
+	}
+
+	_, err := r.Seek(0, io.SeekStart)
+	return r, err
+}
+
+func (r *offsetReader) Read(p []byte) (n int, err error) {
+	return r.reader.Read(p)
+}
+
+func (r *offsetReader) Seek(offset int64, whence int) (int64, error) {
+	if whence == io.SeekStart {
+		offset += r.offset
+	}
+
+	n, err := r.reader.Seek(offset, whence)
+	if err != nil {
+		return n, err
+	}
+
+	if whence == io.SeekCurrent {
+		n -= r.offset
+	}
+	if n < 0 {
+		return 0, errors.New("core.offsetReader.Seek: negative position")
+	}
+
+	return n, nil
+}
+
 // ReadAtLeast reads at least n bytes into slice p.
 // Returns the number of bytes read (should always be == n), and an error on failure.
 func (parser *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {

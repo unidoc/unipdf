@@ -767,3 +767,54 @@ func TestMinimalPDFFile(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "Times-Roman", baseFont.String())
 }
+
+// Test PDF version parsing.
+func TestPDFVersionParse(t *testing.T) {
+	// Test parsing when the version is at the start of the file.
+	f1, err := os.Open("./testdata/minimal.pdf")
+	require.NoError(t, err)
+	defer f1.Close()
+
+	parser := &PdfParser{
+		rs:                                    f1,
+		ObjCache:                              make(objectCache),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
+	}
+
+	// Test parsed version.
+	majorVersion, minorVersion, err := parser.parsePdfVersion()
+	require.NoError(t, err)
+	require.Equal(t, majorVersion, 1)
+	require.Equal(t, minorVersion, 1)
+
+	// Test file offset position.
+	expected := "%PDF-1.1"
+	b := make([]byte, len(expected))
+	_, err = parser.reader.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, string(b), expected)
+
+	// Test parsing when the file has invalid data before the version.
+	f2, err := os.Open("./testdata/invalidstart.pdf")
+	require.NoError(t, err)
+	defer f2.Close()
+
+	parser = &PdfParser{
+		rs:                                    f2,
+		ObjCache:                              make(objectCache),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
+	}
+
+	// Test parsed version.
+	majorVersion, minorVersion, err = parser.parsePdfVersion()
+	require.NoError(t, err)
+	require.Equal(t, majorVersion, 1)
+	require.Equal(t, minorVersion, 3)
+
+	// Test file offset position.
+	expected = "%PDF-1.3"
+	b = make([]byte, len(expected))
+	_, err = parser.reader.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, string(b), expected)
+}
