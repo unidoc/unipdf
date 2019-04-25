@@ -43,16 +43,16 @@ var namePairs = map[string]string{
 	"/Name1":                             "Name1",
 	"/ASomewhatLongerName":               "ASomewhatLongerName",
 	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
-	"/1.2":                     "1.2",
-	"/$$":                      "$$",
-	"/@pattern":                "@pattern",
-	"/.notdef":                 ".notdef",
-	"/Lime#20Green":            "Lime Green",
-	"/paired#28#29parentheses": "paired()parentheses",
-	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
-	"/A#42":                    "AB",
-	"/":                        "",
-	"/ ":                       "",
+	"/1.2":                               "1.2",
+	"/$$":                                "$$",
+	"/@pattern":                          "@pattern",
+	"/.notdef":                           ".notdef",
+	"/Lime#20Green":                      "Lime Green",
+	"/paired#28#29parentheses":           "paired()parentheses",
+	"/The_Key_of_F#23_Minor":             "The_Key_of_F#_Minor",
+	"/A#42":                              "AB",
+	"/":                                  "",
+	"/ ":                                 "",
 	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
 }
 
@@ -134,18 +134,18 @@ func BenchmarkStringParsing(b *testing.B) {
 }
 
 var stringPairs = map[string]string{
-	"(This is a string)":                                                                        "This is a string",
-	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
+	"(This is a string)":                        "This is a string",
+	"(Strings may contain\n newlines and such)": "Strings may contain\n newlines and such",
 	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
 	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
 	"(These two strings are the same.)":                                                         "These two strings are the same.",
-	"(\\\\)": "\\",
-	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
-	"(So does this one.\\n)":                               "So does this one.\n",
-	"(\\0053)":                                             "\0053",
-	"(\\53)":                                               "\053",
-	"(\\053)":                                              "+",
-	"(\\53\\101)":                                          "+A",
+	"(\\\\)":                                                                                    "\\",
+	"(This string has an end-of-line at the end of it.\n)":                                      "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                                                                    "So does this one.\n",
+	"(\\0053)":                                                                                  "\0053",
+	"(\\53)":                                                                                    "\053",
+	"(\\053)":                                                                                   "+",
+	"(\\53\\101)":                                                                               "+A",
 }
 
 func TestStringParsing(t *testing.T) {
@@ -199,14 +199,8 @@ func TestStringParsing2(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	list, err := parser.parseArray()
-	if err != nil {
-		t.Errorf("Failed to parse string list (%s)", err)
-		return
-	}
-	if list.Len() != 2 {
-		t.Errorf("Length of list should be 2 (%d)", list.Len())
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 2, list.Len())
 }
 
 func TestBoolParsing(t *testing.T) {
@@ -219,14 +213,8 @@ func TestBoolParsing(t *testing.T) {
 		parser := PdfParser{}
 		parser.rs, parser.reader, parser.fileSize = makeReaderForText(key)
 		val, err := parser.parseBool()
-		if err != nil {
-			t.Errorf("Error parsing bool: %s", err)
-			return
-		}
-		if bool(val) != expected {
-			t.Errorf("bool not as expected (got %t, expected %t)", bool(val), expected)
-			return
-		}
+		require.NoError(t, err)
+		require.Equal(t, expected, bool(val))
 	}
 }
 
@@ -237,10 +225,7 @@ func BenchmarkNumericParsing(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		_, err := parser.parseArray()
-		if err != nil {
-			b.Errorf("Error parsing array")
-			return
-		}
+		require.NoError(b, err)
 		parser.SetFileOffset(0)
 	}
 }
@@ -251,14 +236,8 @@ func TestNumericParsing1(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(txt1)
 	list, err := parser.parseArray()
-	if err != nil {
-		t.Errorf("Error parsing array")
-		return
-	}
-	if list.Len() != 7 {
-		t.Errorf("Len list != 7 (%d)", list.Len())
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 7, list.Len())
 
 	expectedFloats := map[int]float32{
 		0: 34.5,
@@ -271,24 +250,13 @@ func TestNumericParsing1(t *testing.T) {
 
 	for idx, val := range expectedFloats {
 		num, ok := list.Get(idx).(*PdfObjectFloat)
-		if !ok {
-			t.Errorf("Idx %d not float (%f)", idx, val)
-			return
-		}
-		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
-		}
+		require.True(t, ok)
+		require.Equal(t, val, float32(*num))
 	}
 
 	inum, ok := list.Get(2).(*PdfObjectInteger)
-	if !ok {
-		t.Errorf("Number 3 not int")
-		return
-	}
-	if *inum != 1 {
-		t.Errorf("Number 3, val != 1")
-		return
-	}
+	require.True(t, ok)
+	require.Equal(t, 1, int(*inum))
 }
 
 func TestNumericParsing2(t *testing.T) {
@@ -512,7 +480,13 @@ func TestStreamParsing(t *testing.T) {
 }
 
 func TestIndirectObjParsing1(t *testing.T) {
-	rawText := `1 0 obj
+	testcases := []struct {
+		description string
+		rawPDF      string
+		checkFunc   func(obj PdfObject)
+	}{
+		{"Typical case",
+			`1 0 obj
 <<
 /Names 2 0 R
 /Pages 3 0 R
@@ -534,17 +508,74 @@ func TestIndirectObjParsing1(t *testing.T) {
 >>
 endobj
 3 0 obj
-`
-	parser := PdfParser{}
-	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
+`,
+			func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				require.Equal(t, int64(1), indirect.ObjectNumber)
+				require.Equal(t, int64(0), indirect.GenerationNumber)
 
-	obj, err := parser.ParseIndirectObject()
-	if err != nil {
-		t.Errorf("Failed to parse indirect obj (%s)", err)
-		return
+				dict, isDict := GetDict(indirect)
+				require.True(t, isDict)
+
+				dict, isDict = GetDict(dict.Get("ViewerPreferences"))
+				require.True(t, isDict)
+				require.Len(t, dict.Keys(), 1)
+
+				dict, isDict = GetDict(dict.Get("Rights"))
+				require.True(t, isDict)
+
+				version, ok := GetIntVal(dict.Get("Version"))
+				require.True(t, ok)
+				require.Equal(t, 1, version)
+			},
+		},
+		{
+			"Basic object with short inner string",
+			`1 0 obj
+(a)
+endobj
+`, func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				str, ok := GetString(obj)
+				require.True(t, ok)
+				require.Equal(t, "a", str.String())
+			},
+		},
+		{"Empty indirect object interpreted as containing null object",
+			`1 0 obj
+endobj
+`,
+			func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				require.True(t, IsNullObject(indirect.PdfObject))
+			},
+		},
 	}
 
-	common.Log.Debug("Parsed obj: %s", obj)
+	for _, tcase := range testcases {
+		t.Logf("%s", tcase.description)
+		parser := PdfParser{}
+		parser.rs, parser.reader, parser.fileSize = makeReaderForText(tcase.rawPDF)
+
+		obj, err := parser.ParseIndirectObject()
+		if err != nil && err != io.EOF {
+			t.Errorf("Failed to parse indirect obj (%s)", err)
+			return
+		}
+
+		tcase.checkFunc(obj)
+
+		common.Log.Debug("Parsed obj: %s", obj)
+	}
 }
 
 // Test /Prev and xref tables.  Check if the priority order is right.

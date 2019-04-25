@@ -1423,13 +1423,18 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 	if err != nil {
 		if err != io.EOF {
 			common.Log.Debug("ERROR: Fail to read indirect obj")
+			return &indirect, err
 		}
-		return &indirect, err
 	}
 	common.Log.Trace("(indirect obj peek \"%s\"", string(bb))
 
 	indices := reIndirectObject.FindStringSubmatchIndex(string(bb))
 	if len(indices) < 6 {
+		if err == io.EOF {
+			// If an EOF error occurred above and the object signature was not found, then return
+			// with the EOF error.
+			return nil, err
+		}
 		common.Log.Debug("ERROR: Unable to find object signature (%s)", string(bb))
 		return &indirect, errors.New("unable to detect indirect object signature")
 	}
@@ -1585,8 +1590,16 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 			}
 
 			indirect.PdfObject, err = parser.parseObject()
+			if indirect.PdfObject == nil {
+				common.Log.Debug("INCOMPATIBILITY: Indirect object not containing an object - assuming null object")
+				indirect.PdfObject = MakeNull()
+			}
 			return &indirect, err
 		}
+	}
+	if indirect.PdfObject == nil {
+		common.Log.Debug("INCOMPATIBILITY: Indirect object not containing an object - assuming null object")
+		indirect.PdfObject = MakeNull()
 	}
 	common.Log.Trace("Returning indirect!")
 	return &indirect, nil

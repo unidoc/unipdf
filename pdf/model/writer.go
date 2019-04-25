@@ -689,6 +689,10 @@ func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 		if sDict, ok := pobj.PdfObject.(*pdfSignDictionary); ok {
 			sDict.fileOffset = w.writePos + int64(len(outStr))
 		}
+		if pobj.PdfObject == nil {
+			common.Log.Debug("Error: indirect object's PdfObject should never be nil - setting to PdfObjectNull")
+			pobj.PdfObject = core.MakeNull()
+		}
 		outStr += pobj.PdfObject.WriteString()
 		outStr += "\nendobj\n"
 		w.writeString(outStr)
