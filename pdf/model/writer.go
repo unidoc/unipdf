@@ -157,7 +157,7 @@ type PdfWriter struct {
 	// for writing.
 	// The map stores the object and the dictionary it is contained in.
 	// Only way so we can access the dictionary entry later.
-	pendingObjects map[core.PdfObject]*core.PdfObjectDictionary
+	pendingObjects map[core.PdfObject][]*core.PdfObjectDictionary
 
 	// Forms.
 	acroForm *PdfAcroForm
@@ -179,7 +179,7 @@ func NewPdfWriter() PdfWriter {
 
 	w.objectsMap = map[core.PdfObject]struct{}{}
 	w.objects = []core.PdfObject{}
-	w.pendingObjects = map[core.PdfObject]*core.PdfObjectDictionary{}
+	w.pendingObjects = map[core.PdfObject][]*core.PdfObjectDictionary{}
 	w.traversed = map[core.PdfObject]struct{}{}
 
 	// PDF Version. Can be changed if using more advanced features in PDF.
@@ -466,8 +466,8 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 				}
 
 				if hasObj := w.hasObject(v); !hasObj {
-					common.Log.Debug("Parent obj is missing!! %T %p %v", v, v, v)
-					w.pendingObjects[v] = dict
+					common.Log.Debug("Parent obj not added yet!! %T %p %v", v, v, v)
+					w.pendingObjects[v] = append(w.pendingObjects[v], dict)
 					// Although it is missing at this point, it could be added later...
 				}
 				// How to handle the parent? Make sure it is present?
@@ -889,15 +889,17 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	}
 
 	// Check pending objects prior to write.
-	for pendingObj, pendingObjDict := range w.pendingObjects {
+	for pendingObj, pendingObjDicts := range w.pendingObjects {
 		if !w.hasObject(pendingObj) {
-			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
-			for _, key := range pendingObjDict.Keys() {
-				val := pendingObjDict.Get(key)
-				if val == pendingObj {
-					common.Log.Debug("Pending object found! and replaced with null")
-					pendingObjDict.Set(key, core.MakeNull())
-					break
+			common.Log.Debug("WARN Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
+			for _, pendingObjDict := range pendingObjDicts {
+				for _, key := range pendingObjDict.Keys() {
+					val := pendingObjDict.Get(key)
+					if val == pendingObj {
+						common.Log.Debug("Pending object found! and replaced with null")
+						pendingObjDict.Set(key, core.MakeNull())
+						break
+					}
 				}
 			}
 		}

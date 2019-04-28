@@ -306,6 +306,8 @@ type PdfAnnotationWidget struct {
 	AA     core.PdfObject
 	BS     core.PdfObject
 	Parent core.PdfObject
+
+	parent *PdfField
 }
 
 // PdfAnnotationWatermark represents Watermark annotations.
@@ -1796,7 +1798,12 @@ func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("A", widget.A)
 	d.SetIfNotNil("AA", widget.AA)
 	d.SetIfNotNil("BS", widget.BS)
-	d.SetIfNotNil("Parent", widget.Parent)
+
+	if widget.parent != nil {
+		d.SetIfNotNil("Parent", widget.parent.GetContainingPdfObject())
+	} else if widget.Parent != nil {
+		d.SetIfNotNil("Parent", widget.Parent)
+	}
 
 	return container
 }

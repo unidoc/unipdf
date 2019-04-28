@@ -495,6 +495,8 @@ func (p *PdfPage) GetPageDict() *core.PdfObjectDictionary {
 			}
 		}
 		d.Set("Annots", arr)
+	} else if p.Annots != nil {
+		d.SetIfNotNil("Annots", p.Annots)
 	}
 
 	return d

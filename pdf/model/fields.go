@@ -547,14 +547,14 @@ func (f *PdfField) SetFlag(flag FieldFlag) {
 
 // newPdfFieldFromIndirectObject load a field from an indirect object containing the field dictionary.
 func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObject, parent *PdfField) (*PdfField, error) {
-	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
-	if !isDict {
-		return nil, fmt.Errorf("PdfField indirect object not containing a dictionary")
-	}
-
 	// If already processed and cached - return processed model.
 	if field, cached := r.modelManager.GetModelFromPrimitive(container).(*PdfField); cached {
 		return field, nil
+	}
+
+	d, isDict := core.GetDict(container)
+	if !isDict {
+		return nil, fmt.Errorf("PdfField indirect object not containing a dictionary")
 	}
 
 	field := NewPdfField()
@@ -661,7 +661,8 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 			if !ok {
 				return nil, errors.New("invalid widget annotation")
 			}
-			widget.Parent = field.GetContainingPdfObject()
+			widget.parent = field
+			widget.Parent = field.container
 
 			field.Annotations = append(field.Annotations, widget)
 
@@ -695,6 +696,7 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 				if !ok {
 					return nil, ErrTypeCheck
 				}
+				wa.parent = field
 				field.Annotations = append(field.Annotations, wa)
 			} else {
 				childf, err := r.newPdfFieldFromIndirectObject(container, field)
