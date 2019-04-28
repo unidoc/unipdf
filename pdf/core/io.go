@@ -83,6 +83,10 @@ func (parser *PdfParser) GetFileOffset() int64 {
 
 // SetFileOffset sets the file to an offset position and resets buffer.
 func (parser *PdfParser) SetFileOffset(offset int64) {
+	if offset < 0 {
+		offset = 0
+	}
+
 	parser.rs.Seek(offset, io.SeekStart)
 	parser.reader = bufio.NewReader(parser.rs)
 }
