@@ -1,9 +1,11 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"strings"
 )
 
 // PageInformationSegment represents the segment type Page Information 7.4.8
@@ -68,7 +70,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 	defer func() {
 		var str = "[PageInformationSegment] ParsingHeader Finished"
 		if err != nil {
-			str += " with error"
+			str += " with error " + err.Error()
 		} else {
 			str += " succesfully"
 		}
@@ -131,6 +133,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 	if err = p.checkInput(); err != nil {
 		return err
 	}
+	common.Log.Debug("%s", p)
 
 	return nil
 }
@@ -278,4 +281,23 @@ func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {
 	p.r = r
 	return nil
 
+}
+
+// String implements Stringer interface
+func (p *PageInformationSegment) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[PAGE-INFORMATION-SEGMENT]\n")
+	sb.WriteString(fmt.Sprintf("\t- BMHeight: %d\n", p.PageBMHeight))
+	sb.WriteString(fmt.Sprintf("\t- BMWidth: %d\n", p.PageBMWidth))
+	sb.WriteString(fmt.Sprintf("\t- ResolutionX: %d\n", p.ResolutionX))
+	sb.WriteString(fmt.Sprintf("\t- ResolutionY: %d\n", p.ResolutionY))
+	sb.WriteString(fmt.Sprintf("\t- CombinationOperator: %s\n", p.combinationOperator))
+	sb.WriteString(fmt.Sprintf("\t- CombinationOperatorOverride: %v\n", p.combinaitonOperatorOverrideAllowed))
+	sb.WriteString(fmt.Sprintf("\t- IsLossless: %v\n", p.isLossless))
+	sb.WriteString(fmt.Sprintf("\t- RequiresAuxiliaryBuffer: %v\n", p.requiresAuxiliaryBuffer))
+	sb.WriteString(fmt.Sprintf("\t- MightContainRefinements: %v\n", p.mightContainRefinements))
+	sb.WriteString(fmt.Sprintf("\t- IsStriped: %v\n", p.IsStripe))
+	sb.WriteString(fmt.Sprintf("\t- MaxStripeSize: %v\n", p.MaxStripeSize))
+	return sb.String()
 }

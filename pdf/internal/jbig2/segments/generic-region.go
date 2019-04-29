@@ -1,16 +1,18 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/mmr"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"strings"
 )
 
-// GenericRegion represents a generic region segment.<br>
-// Parsing is done as described in 7.4.5.<br>
+// GenericRegion represents a generic region segment.
+// Parsing is done as described in 7.4.5.
 // Decoding procedure is done as described in 6.2.5.7 and 7.4.6.4.
 type GenericRegion struct {
 	r reader.StreamReader
@@ -67,6 +69,7 @@ func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
 }
 
 func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
+	log.Debug("%s", g.String())
 	if g.Bitmap == nil {
 		if g.IsMMREncoded {
 			// common.Log.Debug("DataOffset: %d, Data length: %d, Header Offset: %d, Header Length: %d", g.DataOffset, g.DataLength, g.DataHeaderOffset, g.DataHeaderLength)
@@ -108,10 +111,11 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 				g.cx = arithmetic.NewStats(65536, 1)
 			}
 
+			common.Log.Debug("Arithmetic Decoding of:%s", g)
 			/* 6.2.5.7 - 2) */
 			g.Bitmap = bitmap.New(g.RegionSegment.BitmapWidth, g.RegionSegment.BitmapHeight)
 
-			paddedWidth := (g.Bitmap.Width + 7) & -8
+			paddedWidth := int(uint32(g.Bitmap.Width+7) & (^uint32(7)))
 
 			/* 6.2.5.7 - 3) */
 			for line := 0; line < g.Bitmap.Height; line++ {
@@ -154,12 +158,12 @@ func (g *GenericRegion) GetRegionInfo() *RegionSegment {
 }
 
 func (g *GenericRegion) parseHeader() (err error) {
-	common.Log.Debug("[GenericRegion] ParsingHeader...")
+	common.Log.Debug("[GENERIC-REGION] ParsingHeader...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[GenericRegion] ParsingHeader Finished with error...")
+			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
 		} else {
-			common.Log.Debug("[GenericRegion] ParsingHeader Finished Succesfully...")
+			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
 		}
 	}()
 
@@ -233,7 +237,7 @@ func (g *GenericRegion) parseHeader() (err error) {
 	if err = g.computeSegmentDataStructure(); err != nil {
 		return err
 	}
-
+	common.Log.Debug("%s", g)
 	return g.checkInput()
 }
 
@@ -252,12 +256,11 @@ func (g *GenericRegion) copyLineAbove(line int) error {
 		if err != nil {
 			return err
 		}
+		sourceByteIndex++
 		if err = g.Bitmap.SetByte(targetByteIndex, b); err != nil {
 			return err
 		}
-
-		targetByteIndex += 1
-		sourceByteIndex += 1
+		targetByteIndex++
 	}
 	return nil
 }
@@ -338,6 +341,12 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 	context = (line1 & 0xf0) | (line2 & 0x3800)
 
 	var nextByte int
+	// if line < 10 {
+	// 	common.Log.Debug("Context: %d", context)
+	// 	common.Log.Debug("Line1: %d", line1)
+	// 	common.Log.Debug("Line2: %d", line2)
+	// 	common.Log.Debug("PaddedWidth: %d", paddedWidth)
+	// }
 
 	for x := 0; x < paddedWidth; x = nextByte {
 		/* 6.2.5.7 3d */
@@ -367,7 +376,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 		if line > 1 {
 
 			index := idx - g.Bitmap.RowStride + 1
-			line2 <<= 8
+			line2 = line2 << 8
 
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(index)
@@ -378,6 +387,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			} else {
 				line2 |= 0
 			}
+
 		}
 
 		for minorX := 0; minorX < minorWidth; minorX++ {
@@ -399,7 +409,15 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			result |= byte(bit) << uint(toShift)
 
 			context = ((context & 0x7bf7) << 1) | bit | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
+
+			if line > 400 && line < 420 && x < 400 && x > 200 {
+				// common.Log.Debug("Line: %d, Result: %08b, Context: %064b, Line1: %d, Line2: %d", line, result, context, line1, line2)
+			}
 		}
+
+		// if line > 400 && line < 450 {
+		// 	common.Log.Debug("Line: %d, X:%d Result: %08b, byteIndex: %d", line, x, result, byteIndex)
+		// }
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
 			return err
@@ -482,7 +500,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 			toShift := uint(7 - minorX)
 
 			if g.override {
-				overriddenContext = g.overrideAtTemplate0a(context, x+minorX, line, int(result), minorX, int(toShift))
+				overriddenContext = g.overrideAtTemplate0b(context, x+minorX, line, int(result), minorX, int(toShift))
 				g.cx.SetIndex(overriddenContext)
 			} else {
 				g.cx.SetIndex(context)
@@ -502,8 +520,8 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 			return err
 		}
 		// byteIndex + 1
-		byteIndex += 1
-		idx += 1
+		byteIndex++
+		idx++
 	}
 
 	return nil
@@ -1138,6 +1156,8 @@ func (g *GenericRegion) setParametersWithAt(
 
 	g.mmrDecoder = nil
 	g.Bitmap = nil
+
+	common.Log.Debug("[GENERIC-REGION] setParameters SDAt: %s", g)
 }
 
 func (g *GenericRegion) setParametersMMR(
@@ -1162,4 +1182,21 @@ func (g *GenericRegion) setParametersMMR(
 	g.GBAtX = gbAtX
 	g.GBAtY = gbAtY
 
+}
+
+// String implements Stringer interface
+func (g *GenericRegion) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[GENERIC REGION]\n")
+	sb.WriteString(g.RegionSegment.String() + "\n")
+	sb.WriteString(fmt.Sprintf("\t- UseExtTemplates: %v\n", g.UseExtTemplates))
+	sb.WriteString(fmt.Sprintf("\t- IsTPGDon: %v\n", g.IsTPGDon))
+	sb.WriteString(fmt.Sprintf("\t- GBTemplate: %d\n", g.GBTemplate))
+	sb.WriteString(fmt.Sprintf("\t- IsMMREncoded: %v\n", g.IsMMREncoded))
+
+	sb.WriteString(fmt.Sprintf("\t- GBAtX: %v\n", g.GBAtX))
+	sb.WriteString(fmt.Sprintf("\t- GBAtY: %v\n", g.GBAtY))
+	sb.WriteString(fmt.Sprintf("\t- GBAtOverride: %v\n", g.GBAtOverride))
+	return sb.String()
 }

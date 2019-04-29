@@ -20,6 +20,8 @@ func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 		return newByte ^ oldByte
 	case CmbOpXNor:
 		return ^(newByte ^ oldByte)
+	case CmbOpNot:
+		return ^(newByte)
 	default:
 		return newByte
 	}
@@ -149,15 +151,17 @@ func copyLine(
 		} else {
 			value, err := src.GetByte(sourceOffset)
 			if err != nil {
+				common.Log.Debug("Getting the value at: %d failed: %s", sourceOffset, err)
 				return err
 			}
 			value <<= sourceUpShift
-			sourceOffset += 1
+			sourceOffset++
 			err = dst.SetByte(targetOffset, value)
 			if err != nil {
+
 				return err
 			}
-			targetOffset += 1
+			targetOffset++
 		}
 	}
 	return nil

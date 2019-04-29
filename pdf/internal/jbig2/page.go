@@ -6,6 +6,7 @@ import (
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
+	"runtime/debug"
 )
 
 // Page represents JBIG2 Page structure
@@ -63,19 +64,43 @@ func (p *Page) getPageInformationSegment() *segments.Header {
 }
 
 // GetBitmap returns the decoded bitmap if present
-func (p *Page) GetBitmap() (*bitmap.Bitmap, error) {
-	if p.Bitmap == nil {
-		err := p.composePageBitmap()
+func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			switch e := x.(type) {
+			case error:
+				err = e
+			default:
+				err = fmt.Errorf("JBIG2 Internal Error: %v. Trace: %s", e, string(debug.Stack()))
+			}
+			debug.PrintStack()
+		}
+	}()
+
+	common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
+	defer func() {
 		if err != nil {
-			return nil, err
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
+		} else {
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
+		}
+
+	}()
+
+	if p.Bitmap == nil {
+		err = p.composePageBitmap()
+		if err != nil {
+			return
 		}
 	}
-	return p.Bitmap, nil
+	bm = p.Bitmap
+	return
 }
 
 // composePageBitmap composes the segment's bitmaps to a page and stores the page as a Bitmap
 func (p *Page) composePageBitmap() error {
 	if p.PageNumber > 0 {
+		common.Log.Debug("Composing bitmap for the Page: #%d", p.PageNumber)
 		h := p.getPageInformationSegment()
 		if h == nil {
 			return errors.New("Page Information segment not found")
@@ -104,14 +129,17 @@ func (p *Page) composePageBitmap() error {
 func (p *Page) createPage(i *segments.PageInformationSegment) (err error) {
 	if !i.IsStripe || i.PageBMHeight != -1 {
 		// Page 79, 4)
+		common.Log.Debug("Creating Normal page")
 		err = p.createNormalPage(i)
 	} else {
+		common.Log.Debug("Creating Striped page")
 		err = p.createStripedPage(i)
 	}
 	return
 }
 
 func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
+	common.Log.Debug("Create Normal page")
 	p.Bitmap = bitmap.New(i.PageBMWidth, i.PageBMHeight)
 
 	// Page 79, 3)
@@ -124,6 +152,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 	for _, h := range p.Segments {
 		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
+			common.Log.Debug("Getting Segment: %d", h.SegmentNumber)
 			s, err := h.GetSegmentData()
 			if err != nil {
 				return err
@@ -141,8 +170,10 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 			}
 
 			if p.fitsPage(i, regionBitmap) {
+				common.Log.Debug("Fits page...")
 				p.Bitmap = regionBitmap
 			} else {
+				common.Log.Debug("Requires blit...")
 				regionInfo := r.GetRegionInfo()
 				op := p.getCombinationOperator(i, regionInfo.CombinaionOperator)
 				err = bitmap.Blit(regionBitmap, p.Bitmap, regionInfo.XLocation, regionInfo.YLocation, op)
@@ -158,6 +189,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 }
 
 func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
+	common.Log.Debug("Create striped page")
 	pageStripes, err := p.collectPageStripes()
 	if err != nil {
 		return err
@@ -186,9 +218,9 @@ func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 }
 
 func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
-	return p.countRegions() != 1 &&
+	return p.countRegions() == 1 &&
 		i.DefaultPixelValue() == 0 &&
-		i.PageBMHeight == regionBitmap.Width &&
+		i.PageBMWidth == regionBitmap.Width &&
 		i.PageBMHeight == regionBitmap.Height
 }
 

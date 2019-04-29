@@ -49,6 +49,7 @@ func (this Image) AlphaMap(mapFunc AlphaMapFunc) {
 // Convert the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
 func (this *Image) GetSamples() []uint32 {
+	common.Log.Debug("GetSamples() - BitsPerComponent: %d ", this.BitsPerComponent)
 	samples := sampling.ResampleBytes(this.Data, int(this.BitsPerComponent))
 
 	expectedLen := int(this.Width) * int(this.Height) * this.ColorComponents
@@ -160,6 +161,7 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 	aidx := 0
 
 	samples := this.GetSamples()
+	common.Log.Debug("ToGoImage Bits per component: %d", this.BitsPerComponent)
 	//bytesPerColor := colorComponents * int(this.BitsPerComponent) / 8
 	bytesPerColor := this.ColorComponents
 	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
@@ -168,9 +170,17 @@ func (this *Image) ToGoImage() (goimage.Image, error) {
 			if this.BitsPerComponent == 16 {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
+			} else if this.BitsPerComponent == 1 {
+				b := samples[i]&0x01 == 1
+				// if one it should be black
+				if b {
+					c = gocolor.Gray{0}
+				} else {
+					c = gocolor.Gray{255}
+				}
 			} else {
-				val := uint8(samples[i] & 0xff)
-				c = gocolor.Gray{val}
+				c = gocolor.Gray{uint8(samples[i] & 0xff)}
+
 			}
 		} else if this.ColorComponents == 3 {
 			if this.BitsPerComponent == 16 {

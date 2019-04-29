@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/unidoc/unidoc/pdf/internal/jbig2"
 	goimage "image"
 	gocolor "image/color"
 	"image/jpeg"
@@ -1562,40 +1563,97 @@ func (this *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 }
 
 //
-// JBIG2 encoder/decoder (dummy, for now)
-//
+// JBIG2Encoder is the jbig2 filter encoder
 type JBIG2Encoder struct {
 }
 
+// NewJBIG2Encoder creates new jbig2Encoder
 func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
 }
 
-func (this *JBIG2Encoder) GetFilterName() string {
+// GetFilterName returns the jbig2 encoder filter name
+func (j *JBIG2Encoder) GetFilterName() string {
 	return StreamEncodingFilterNameJBIG2
 }
 
-func (this *JBIG2Encoder) MakeDecodeParams() PdfObject {
+// MakeDecodeParams creates the decode parameters
+func (j *JBIG2Encoder) MakeDecodeParams() PdfObject {
+	// decodeParams := MakeDict()
+	// decodeParams.Set("BitsPerComponent", val)
 	return nil
 }
 
-// Make a new instance of an encoding dictionary for a stream object.
-func (this *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
+// MakeStreamDict make a new instance of an encoding dictionary for a stream object.
+func (j *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
+
 	return MakeDict()
 }
 
-func (this *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
-	return encoded, ErrNoJBIG2Decode
+var i int
+
+// DecodeBytes decode the jbig2 raw 'encoded' data
+func (j *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", j.GetFilterName())
+	doc, err := jbig2.NewDocument(encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	// the document should have only one page
+	page, err := doc.GetPage(1)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the page data
+	bm, err := page.GetBitmap()
+	if err != nil {
+		return nil, err
+	}
+
+	return bm.Data, nil
 }
 
-func (this *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
-	return streamObj.Stream, ErrNoJBIG2Decode
+// DecodeStream decodes the pdf stream object from the jbig2 encoding
+func (j *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	// TODO: Set Globals
+	doc, err := jbig2.NewDocument(streamObj.Stream)
+	if err != nil {
+		return nil, err
+	}
+
+	page, err := doc.GetPage(1)
+	if err != nil {
+		return nil, err
+	}
+
+	bm, err := page.GetBitmap()
+	if err != nil {
+		return nil, err
+	}
+	i++
+
+	// f, err := os.Create("/home/kucjac/Developer/golang/src/github.com/unidoc/unidoc/pdf/internal/jbig2/tests/jbig_test_" + strconv.Itoa(i) + ".jpg")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer f.Close()
+
+	// common.Log.Debug("Writing to: %s", f.Name())
+
+	// img := bm.ToImage()
+
+	// if err = jpeg.Encode(f, img, &jpeg.Options{Quality: 100}); err != nil {
+	// 	return nil, err
+	// }
+
+	return bm.Data, nil
 }
 
-func (this *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", this.GetFilterName())
+// EncodeBytes encodes the raw data bytes into the jbig2 encoded data.
+func (j *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", j.GetFilterName())
 	return data, ErrNoJBIG2Decode
 }
 

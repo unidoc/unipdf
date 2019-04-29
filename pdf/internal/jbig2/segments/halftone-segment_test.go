@@ -14,12 +14,11 @@ package segments
 
 // 	t.Run("AnnexH", func(t *testing.T) {
 // 		t.Run("S-7th", func(t *testing.T) {
-// 			p := &Page{PageNumber: 1, Segments: make(map[int]*Header)}
-// 			d := &Document{
-// 				Pages:          map[int]*Page{1: p},
-// 				GlobalSegments: Globals(make(map[int]*Header)),
+// 			p := &page{segments: make([]*Header, 10)}
+// 			d := &document{
+// 				pages:   []Pager{p},
+// 				globals: []*Header{},
 // 			}
-// 			p.Document = d
 
 // 			patternData := []byte{
 // 				// Header
@@ -48,7 +47,7 @@ package segments
 // 			}
 // 			common.Log.Debug("Pattern Data Length: %d", len(patternData))
 // 			common.Log.Debug("Halftone Data Length: %d", len(halftoneData))
-// 			var data []byte = append(patternData, halftoneData...)
+// 			var data = append(patternData, halftoneData...)
 
 // 			r := reader.New(data)
 // 			// init by adding pattern dictionaryt
@@ -58,15 +57,15 @@ package segments
 // 				h, err := NewHeader(d, r, 0, OSequential)
 // 				require.NoError(t, err)
 
-// 				// h.SegmentDataStartOffset = 10
-// 				// h.SegmentDataLength = 45
-
 // 				common.Log.Debug("%#v", h)
 
 // 				return h
 // 			}
 
 // 			ph := getPattern(t)
+// 			require.NotNil(t, ph)
+
+// 			p.setSegment(ph)
 
 // 			offset := r.StreamPosition() + int64(ph.SegmentDataLength)
 

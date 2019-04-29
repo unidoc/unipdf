@@ -34,6 +34,7 @@ func ResampleBytes(data []byte, bitsPerSample int) []uint32 {
 				remainder = 0
 			}
 			bitsLeftPerSample -= take
+
 			if bitsLeftPerSample == 0 {
 				//samples[index] = sample
 				samples = append(samples, sample)

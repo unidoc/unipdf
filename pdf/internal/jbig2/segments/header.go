@@ -25,6 +25,7 @@ type Header struct {
 	SegmentDataStartOffset   uint64
 	Reader                   reader.StreamReader
 	SegmentData              Segmenter
+	RTSNumbers               []int
 }
 
 // NewHeader creates new segment header
@@ -75,30 +76,36 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	return segmentDataPart, nil
 }
 
-// String implements Stringer interface
-func (h *Header) String() string {
-	b := strings.Builder{}
+// // String implements Stringer interface
+// func (h *Header) String() string {
+// 	b := strings.Builder{}
 
-	if h.RTSegments != nil {
-		for _, s := range h.RTSegments {
-			b.WriteString(fmt.Sprintf("%d ", s.SegmentNumber))
-		}
-	} else {
-		b.WriteString("none")
-	}
+// 	if h.RTSegments != nil {
+// 		for _, s := range h.RTSegments {
+// 			b.WriteString(fmt.Sprintf("%d ", s.SegmentNumber))
+// 		}
+// 	} else {
+// 		b.WriteString("none")
+// 	}
 
-	return fmt.Sprintf("\n#SegmentNr: %d\n Type: %s\n PageAssociation: %d\n Referred-to segments: %s\n", h.SegmentNumber, h.Type, h.PageAssociation, b.String())
-}
+// 	return fmt.Sprintf("\n#SegmentNr: %d\n Type: %s\n PageAssociation: %d\n Referred-to segments: %s\n", h.SegmentNumber, h.Type, h.PageAssociation, b.String())
+// }
 
 // Parse parses the current segment header for the provided document 'd'.
 func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
 	offset int64, organisationType uint8,
-) error {
+) (err error) {
 	common.Log.Debug("[SEGMENT-HEADER][PARSE] Begins")
-	defer func() { common.Log.Debug("[SEGMENT-HEADER][PARSE] Finished") }()
+	defer func() {
+		if err != nil {
+			common.Log.Debug("[SEGMENT-HEADER][PARSE] Failed. %v", err)
+		} else {
+			common.Log.Debug("[SEGMENT-HEADER][PARSE] Finished")
+		}
+	}()
 
-	_, err := r.Seek(offset, io.SeekStart)
+	_, err = r.Seek(offset, io.SeekStart)
 	if err != nil {
 		return err
 	}
@@ -122,26 +129,31 @@ func (h *Header) parse(
 	}
 
 	// 7.2.5 Refered-tp segment numbers
-	var rtsNumbers []int
-	rtsNumbers, err = h.readReferedToSegmentNumbers(r, int(countOfRTS))
+	h.RTSNumbers, err = h.readReferedToSegmentNumbers(r, int(countOfRTS))
 	if err != nil {
 		return err
 	}
+
+	common.Log.Debug("readReferedToSegments done...")
 
 	// 7.2.6 Segment page association
-	err = h.readSegmentPageAssociation(d, r, countOfRTS, rtsNumbers...)
+	err = h.readSegmentPageAssociation(d, r, countOfRTS, h.RTSNumbers...)
 	if err != nil {
 		return err
 	}
+	common.Log.Debug("readSegmentPageAssociation done...")
 
-	// 7.2.7 Segment data length (Contains the length of the data)
-	if err = h.readSegmentDataLength(r); err != nil {
-		return err
+	if h.Type != TEndOfPage && h.Type != TEndOfFile {
+		// 7.2.7 Segment data length (Contains the length of the data)
+		if err = h.readSegmentDataLength(r); err != nil {
+			return err
+		}
 	}
 
 	h.readDataStartOffset(r, organisationType)
 	h.readHeaderLength(r, offset)
 
+	common.Log.Debug("%s", h)
 	return nil
 }
 
@@ -302,10 +314,7 @@ func (h *Header) readSegmentPageAssociation(
 	}
 
 	if countOfRTS > 0 {
-		page, err := d.GetPage(h.PageAssociation)
-		if err != nil {
-			return err
-		}
+		page, _ := d.GetPage(h.PageAssociation)
 
 		var i uint64
 
@@ -352,4 +361,25 @@ func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {
 
 func (h *Header) subInputReader() (reader.StreamReader, error) {
 	return reader.NewSubstreamReader(h.Reader, h.SegmentDataStartOffset, h.SegmentDataLength)
+}
+
+// String implements Stringer interface
+func (h *Header) String() string {
+	sb := &strings.Builder{}
+	sb.WriteString("\n[SEGMENT-HEADER]\n")
+	sb.WriteString(fmt.Sprintf("\t- SegmentNumber: %v\n", h.SegmentNumber))
+	sb.WriteString(fmt.Sprintf("\t- Type: %v\n", h.Type))
+	sb.WriteString(fmt.Sprintf("\t- RetainFlag: %v\n", h.RetainFlag))
+	sb.WriteString(fmt.Sprintf("\t- PageAssociation: %v\n", h.PageAssociation))
+	sb.WriteString(fmt.Sprintf("\t- PageAssociationFieldSize: %v\n", h.PageAssociationFieldSize))
+	// iterate over ids
+	sb.WriteString("\t- RTSEGMENTS:\n")
+	for _, rt := range h.RTSNumbers {
+		sb.WriteString(fmt.Sprintf("\t\t- %d\n", rt))
+	}
+	sb.WriteString(fmt.Sprintf("\t- HeaderLength: %v\n", h.HeaderLength))
+	sb.WriteString(fmt.Sprintf("\t- SegmentDataLength: %v\n", h.SegmentDataLength))
+	sb.WriteString(fmt.Sprintf("\t- SegmentDataStartOffset: %v\n", h.SegmentDataStartOffset))
+
+	return sb.String()
 }
