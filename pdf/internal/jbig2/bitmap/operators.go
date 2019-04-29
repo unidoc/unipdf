@@ -1,17 +1,29 @@
 package bitmap
 
-// Combination Operator is the operator used while combining the bitmaps
+// CombinationOperator is the operator used while combining the bitmaps
 type CombinationOperator int
 
 const (
+	// CmbOpOr the 'OR' operator
 	CmbOpOr CombinationOperator = iota
+
+	// CmbOpAnd the 'AND' operator
 	CmbOpAnd
+
+	// CmbOpXor the 'XOR' operator
 	CmbOpXor
+
+	// CmbOpXNor the 'XNOR' operator
 	CmbOpXNor
+
+	// CmbOpReplace the 'REPLACE' operator
 	CmbOpReplace
+
+	// CmbOpNot the 'NOT' operator
 	CmbOpNot
 )
 
+// String implements Stringer interface
 func (c CombinationOperator) String() string {
 	var result string
 	switch c {

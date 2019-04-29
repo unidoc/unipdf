@@ -1,6 +1,7 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
@@ -8,6 +9,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"math"
+	"strings"
 )
 
 // TextRegion is the model for the JBIG2 Text Region Segment
@@ -128,6 +130,14 @@ func (t *TextRegion) GetRegionInfo() *RegionSegment {
 }
 
 func (t *TextRegion) parseHeader() (err error) {
+	common.Log.Debug("[TEXT REGION][PARSE-HEADER] begins...")
+	defer func() {
+		if err != nil {
+			common.Log.Debug("[TEXT REGION][PARSE-HEADER] failed. %v", err)
+		} else {
+			common.Log.Debug("[TEXT REGION][PARSE-HEADER] finished.")
+		}
+	}()
 	if err = t.regionInfo.parseHeader(); err != nil {
 		return
 	}
@@ -149,6 +159,8 @@ func (t *TextRegion) parseHeader() (err error) {
 	if err = t.readAmountOfSymbolInstances(); err != nil {
 		return
 	}
+
+	common.Log.Debug("%s", t.String())
 
 	// 7.4.3.1.7
 	if err = t.getSymbols(); err != nil {
@@ -366,7 +378,7 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 
 	bits &= 0xffffffff
 	t.amountOfSymbolInstances = int64(bits)
-	var pixels int64 = int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
+	var pixels = int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
 
 	if pixels < t.amountOfSymbolInstances {
 		common.Log.Warning("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.amountOfSymbolInstances)
@@ -501,11 +513,11 @@ func (t *TextRegion) decodeStripT() (stripT int64, err error) {
 			if t.table == nil {
 				var dtNr int
 				if t.sbHuffFS == 3 {
-					dtNr += 1
+					dtNr++
 				}
 
 				if t.sbHuffDS == 3 {
-					dtNr += 1
+					dtNr++
 				}
 
 				t.table, err = t.getUserTable(dtNr)
@@ -619,7 +631,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 				return err
 			}
 
-			instanceCounter += 1
+			instanceCounter++
 		}
 	}
 
@@ -692,38 +704,6 @@ func (t *TextRegion) decodeDfs() (int64, error) {
 	}
 
 }
-
-// func (t *TextRegion) dedoceIdS() (int64, error) {
-// 	if t.isHuffmanEncoded {
-// 		if t.sbHuffDS == 3 {
-// 			if t.dsTable == nil {
-// 				var dsNr int
-// 				if t.sbHuffFS == 3 {
-// 					dsNr += 1
-// 				}
-
-// 				var err error
-// 				t.dsTable, err = t.getUserTable(dsNr)
-// 				if err != nil {
-// 					return 0, err
-// 				}
-// 			}
-// 			return t.dsTable.Decode(t.r)
-// 		} else {
-// 			st, err := huffman.GetStandardTable(8 + int(t.sbHuffDS))
-// 			if err != nil {
-// 				return 0, err
-// 			}
-// 			return st.Decode(t.r)
-// 		}
-// 	} else {
-// 		temp, err := t.arithmDecoder.DecodeInt(t.cxIADS)
-// 		if err != nil {
-// 			return 0, err
-// 		}
-// 		return int64(temp), nil
-// 	}
-// }
 
 func (t *TextRegion) decodeCurrentT() (int64, error) {
 	if t.sbStrips != 1 {
@@ -844,13 +824,12 @@ func (t *TextRegion) decodeIds() (int64, error) {
 				}
 			}
 			return t.dsTable.Decode(t.r)
-		} else {
-			st, err := huffman.GetStandardTable(8 + int(t.sbHuffDS))
-			if err != nil {
-				return 0, err
-			}
-			return st.Decode(t.r)
 		}
+		st, err := huffman.GetStandardTable(8 + int(t.sbHuffDS))
+		if err != nil {
+			return 0, err
+		}
+		return st.Decode(t.r)
 	}
 
 	i, err := t.arithmDecoder.DecodeInt(t.cxIADS)
@@ -870,15 +849,15 @@ func (t *TextRegion) decodeRdw() (int64, error) {
 			if t.rdwTable == nil {
 				var rdwNr int
 				if t.sbHuffFS == 3 {
-					rdwNr += 1
+					rdwNr++
 				}
 
 				if t.sbHuffDS == 3 {
-					rdwNr += 1
+					rdwNr++
 				}
 
 				if t.sbHuffDT == 3 {
-					rdwNr += 1
+					rdwNr++
 				}
 
 				var err error
@@ -907,19 +886,19 @@ func (t *TextRegion) decodeRdh() (int64, error) {
 			if t.rdhTable == nil {
 				var rdhNr int
 				if t.sbHuffFS == 3 {
-					rdhNr += 1
+					rdhNr++
 				}
 
 				if t.sbHuffDS == 3 {
-					rdhNr += 1
+					rdhNr++
 				}
 
 				if t.sbHuffDT == 3 {
-					rdhNr += 1
+					rdhNr++
 				}
 
 				if t.sbHuffRDWidth == 3 {
-					rdhNr += 1
+					rdhNr++
 				}
 
 				var err error
@@ -948,21 +927,21 @@ func (t *TextRegion) decodeRdx() (int64, error) {
 			if t.rdxTable == nil {
 				var rdxNr int
 				if t.sbHuffFS == 3 {
-					rdxNr += 1
+					rdxNr++
 				}
 
 				if t.sbHuffDS == 3 {
-					rdxNr += 1
+					rdxNr++
 				}
 
 				if t.sbHuffDT == 3 {
-					rdxNr += 1
+					rdxNr++
 				}
 				if t.sbHuffRDWidth == 3 {
-					rdxNr += 1
+					rdxNr++
 				}
 				if t.sbHuffRDHeight == 3 {
-					rdxNr += 1
+					rdxNr++
 				}
 
 				var err error
@@ -994,27 +973,27 @@ func (t *TextRegion) decodeRdy() (int64, error) {
 
 				var rdyNr int
 				if t.sbHuffFS == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 
 				if t.sbHuffDS == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 
 				if t.sbHuffDT == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 
 				if t.sbHuffRDWidth == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 
 				if t.sbHuffRDHeight == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 
 				if t.sbHuffRDX == 3 {
-					rdyNr += 1
+					rdyNr++
 				}
 				var err error
 				t.rdyTable, err = t.getUserTable(rdyNr)
@@ -1046,31 +1025,31 @@ func (t *TextRegion) decodeSymInRefSize() (int64, error) {
 	if t.rSizeTable == nil {
 		var rSizeNr int
 		if t.sbHuffFS == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffDS == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffDT == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffRDWidth == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffRDHeight == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffRDX == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		if t.sbHuffRDY == 3 {
-			rSizeNr += 1
+			rSizeNr++
 		}
 
 		var err error
@@ -1133,6 +1112,7 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 }
 
 func (t *TextRegion) initSymbols() error {
+
 	for _, segment := range t.Header.RTSegments {
 		if segment.Type == 0 {
 			s, err := segment.GetSegmentData()
@@ -1173,7 +1153,7 @@ func (t *TextRegion) getUserTable(tablePosition int) (huffman.HuffmanTabler, err
 
 				return huffman.NewEncodedTable(ts)
 			} else {
-				tableCounter += 1
+				tableCounter++
 			}
 		}
 	}
@@ -1252,7 +1232,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 				if currCodeLength > 0 {
 					sbSymCodes = append(sbSymCodes, huffman.NewCode(int(currCodeLength), 0, counter, false))
 				}
-				counter += 1
+				counter++
 			}
 		}
 	}
@@ -1321,4 +1301,37 @@ func (t *TextRegion) SetParameters(
 	t.symbols = sbSyms
 	t.symbolCodeLength = sbSymCodeLen
 
+}
+
+// String implements the Stringer interface
+func (t *TextRegion) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[TEXT REGION]\n")
+	sb.WriteString(t.regionInfo.String() + "\n")
+	sb.WriteString(fmt.Sprintf("\t- sbrTemplate: %v\n", t.sbrTemplate))
+	sb.WriteString(fmt.Sprintf("\t- sbdsOffset: %v\n", t.sbdsOffset))
+	sb.WriteString(fmt.Sprintf("\t- defaultPixel: %v\n", t.defaultPixel))
+	sb.WriteString(fmt.Sprintf("\t- combinationOperator: %v\n", t.combinationOperator))
+	sb.WriteString(fmt.Sprintf("\t- isTransposed: %v\n", t.isTransposed))
+	sb.WriteString(fmt.Sprintf("\t- referenceCorner: %v\n", t.referenceCorner))
+	sb.WriteString(fmt.Sprintf("\t- useRefinement: %v\n", t.useRefinement))
+	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded: %v\n", t.isHuffmanEncoded))
+	if t.isHuffmanEncoded {
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRSize: %v\n", t.sbHuffRSize))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDY: %v\n", t.sbHuffRDY))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDX: %v\n", t.sbHuffRDX))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDHeight: %v\n", t.sbHuffRDHeight))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDWidth: %v\n", t.sbHuffRDWidth))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffDT: %v\n", t.sbHuffDT))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffDS: %v\n", t.sbHuffDS))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffFS: %v\n", t.sbHuffFS))
+	}
+
+	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
+	sb.WriteString(fmt.Sprintf("\t- sbrATY: %v\n", t.sbrATY))
+	sb.WriteString(fmt.Sprintf("\t- amountOfSymbolInstances: %v\n", t.amountOfSymbolInstances))
+	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
+
+	return sb.String()
 }

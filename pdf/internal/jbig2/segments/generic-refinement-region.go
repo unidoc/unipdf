@@ -1,11 +1,13 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"strings"
 	"time"
 )
 
@@ -64,12 +66,21 @@ func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) er
 	return g.parseHeader()
 }
 
-func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
+// GetRegionBitmap gets the Refinement Region bitmap
+func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
+	common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap begins...")
+	defer func() {
+		if err != nil {
+			common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap failed. %v", err)
+		} else {
+			common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap finished.")
+		}
+	}()
 	if g.RegionBitmap != nil {
-		return g.RegionBitmap, nil
+		bm = g.RegionBitmap
+		return
 	}
 
-	var err error
 	/* 6.3.5.6 - 1) */
 	isLineTypicalPredicted := 0
 
@@ -77,14 +88,14 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 		// Get the reference bitmap, which is the base of refinement process
 		g.ReferenceBitmap, err = g.getGrReference()
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
 	if g.arithDecode == nil {
 		g.arithDecode, err = arithmetic.New(g.r)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
@@ -96,7 +107,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 
 	if g.TemplateID == 0 {
 		if err = g.updateOverride(); err != nil {
-			return nil, err
+			return
 		}
 	}
 
@@ -133,20 +144,26 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 			}
 		}
 	}
+
 	/* 6.3.5.6 - 4) */
-	return g.RegionBitmap, nil
+	bm = g.RegionBitmap
+	return
 }
 
+// GetRegionInfo gets the RegionSegment
 func (g *GenericRefinementRegion) GetRegionInfo() *RegionSegment {
 	return g.RegionInfo
 }
 
+// SetParameters sets the parameters for the Generic Refinemenet Regino
 func (g *GenericRefinementRegion) SetParameters(
 	cx *arithmetic.DecoderStats, arithmDecoder *arithmetic.Decoder,
 	grTemplate int8, regionWidth, regionHeight int,
 	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int,
 	isTPGRon bool, grAtX []int8, grAtY []int8,
 ) {
+	common.Log.Debug("[GENERIC-REF-REGION] SetParameters")
+	defer func() { common.Log.Debug("[GENERIC-REF-REGION] SetParameters finished. %s", g) }()
 	if cx != nil {
 		g.cx = cx
 	}
@@ -1032,3 +1049,18 @@ func (t *template1) setIndex(cx *arithmetic.DecoderStats) {
 }
 
 var _ templater = &template1{}
+
+// String implements the Stringer interface
+func (g *GenericRefinementRegion) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[GENERIC REGION]\n")
+	sb.WriteString(g.RegionInfo.String() + "\n")
+	sb.WriteString(fmt.Sprintf("\t- IsTPGRon: %v\n", g.IsTPGROn))
+	sb.WriteString(fmt.Sprintf("\t- TemplateID: %v\n", g.TemplateID))
+	sb.WriteString(fmt.Sprintf("\t- GrAtX: %v\n", g.GrAtX))
+	sb.WriteString(fmt.Sprintf("\t- GrAtY: %v\n", g.GrAtY))
+	sb.WriteString(fmt.Sprintf("\t- ReferenceDX %v\n", g.ReferenceDX))
+	sb.WriteString(fmt.Sprintf("\t- ReferencDeY: %v\n", g.ReferenceDY))
+	return sb.String()
+}

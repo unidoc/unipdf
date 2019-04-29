@@ -139,6 +139,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		err                               error
 	)
 	if stats == nil {
+		common.Log.Debug("Nil stats")
 		stats = NewStats(512, 1)
 	}
 
@@ -189,7 +190,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 						return 0, err
 					}
 					// Fifth Read
-					if bit != 1 {
+					if bit == 1 {
 
 						bitsToRead = 32
 						offset = 4436

@@ -1,7 +1,7 @@
 package bitmap
 
-// BitmapGetter gets the bitmap from the segment
-type BitmapGetter interface {
+// Getter gets the bitmap from the segment
+type Getter interface {
 	GetBitmap() *Bitmap
 }
 

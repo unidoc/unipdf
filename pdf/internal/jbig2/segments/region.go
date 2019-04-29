@@ -1,9 +1,11 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
+	"strings"
 )
 
 // RegionSegment is the segment that takes
@@ -30,6 +32,17 @@ type RegionSegment struct {
 func NewRegionSegment(r reader.StreamReader) *RegionSegment {
 	rs := &RegionSegment{r: r}
 	return rs
+}
+
+// String implements the Stringer interface
+func (r *RegionSegment) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\t[REGION SEGMENT]\n")
+	sb.WriteString(fmt.Sprintf("\t\t- Bitmap (width, height) [%dx%d]\n", r.BitmapWidth, r.BitmapHeight))
+	sb.WriteString(fmt.Sprintf("\t\t- Location (x,y): [%d,%d]\n", r.XLocation, r.YLocation))
+	sb.WriteString(fmt.Sprintf("\t\t- CombinationOperator: %s", r.CombinaionOperator))
+	return sb.String()
 }
 
 // parseHeader parses the RegionSegment Header
@@ -82,43 +95,3 @@ func (r *RegionSegment) readCombinationOperator() error {
 	r.CombinaionOperator = bitmap.CombinationOperator(temp & 0xF)
 	return nil
 }
-
-// // Decode decodes the Region segment's basic paramters
-// func (rs *RegionSegment) Decode(r io.Reader) (err error) {
-// 	buf := make([]byte, 4)
-
-// 	if _, err = r.Read(buf); err != nil {
-// 		return
-// 	}
-
-// 	rs.BMWidth = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-// 	if _, err = r.Read(buf); err != nil {
-// 		return
-// 	}
-
-// 	rs.BMHeight = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-// 	if _, err = r.Read(buf); err != nil {
-// 		return
-// 	}
-
-// 	rs.BMXLocation = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 4)
-// 	if _, err = r.Read(buf); err != nil {
-// 		return
-// 	}
-
-// 	rs.BMYLocation = int(binary.BigEndian.Uint32(buf))
-
-// 	buf = make([]byte, 1)
-// 	if _, err = r.Read(buf); err != nil {
-// 		return
-// 	}
-
-// 	rs.RegionFlags.SetValue(int(buf[0]))
-// 	return
-// }

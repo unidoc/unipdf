@@ -2,10 +2,12 @@ package jbig2
 
 import (
 	"errors"
+	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
 	"io"
+	"runtime/debug"
 )
 
 var (
@@ -34,6 +36,7 @@ type Document struct {
 	// GlobalSegments contains all segments that aren't associated with a page
 	GlobalSegments Globals
 
+	// OrganisationType
 	OrgainsationType uint8
 
 	fileHeaderLength uint8
@@ -45,8 +48,18 @@ func NewDocument(data []byte) (*Document, error) {
 }
 
 // NewDocumentWithGlobals creates new jbig2.Document
-func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
-	d := &Document{
+func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			switch e := x.(type) {
+			case error:
+				err = e
+			default:
+				err = fmt.Errorf("JBIG2 Internal Error: %v. Trace: %s", e, string(debug.Stack()))
+			}
+		}
+	}()
+	d = &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          reader.New(data),
 		OrgainsationType:     segments.OSequential,
@@ -60,13 +73,14 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
 	}
 
 	// mapData map the data stream
-	if err := d.mapData(); err != nil {
-		return nil, err
+	if err = d.mapData(); err != nil {
+		return
 	}
 
-	return d, nil
+	return
 }
 
+// GetGlobalSegment gets the global segment
 func (d *Document) GetGlobalSegment(i int) *segments.Header {
 	if d.GlobalSegments == nil {
 		common.Log.Debug("Trying to get Global segment from nil Globals")
@@ -107,7 +121,7 @@ func (d *Document) mapData() error {
 
 	// type 51 is
 	for Type != 51 && !reachedEOF {
-		common.Log.Debug("Segment number: %d", segmentNo)
+
 		segmentNo++
 
 		// get new segment
@@ -115,7 +129,8 @@ func (d *Document) mapData() error {
 		if err != nil {
 			return err
 		}
-		common.Log.Debug("Decoding segment type: %s", segment.Type)
+
+		common.Log.Debug("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
 		Type = segment.Type
 
 		if segment.PageAssociation != 0 {
@@ -140,8 +155,10 @@ func (d *Document) mapData() error {
 
 		reachedEOF, err = d.reachedEOF(offset)
 		if err != nil {
+			common.Log.Debug("reachedEOF error: %v", err)
 			return err
 		}
+
 	}
 	d.determineRandomDataOffsets(segmentHeaders, uint64(offset))
 
@@ -237,12 +254,14 @@ func (d *Document) parseFileHeader() error {
 func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	p, ok := d.Pages[pageNumber]
 	if !ok {
+		common.Log.Debug("Can't get proper page: %d. %s", pageNumber, debug.Stack())
 		return nil, errors.New("No page found")
 	}
 
 	return p, nil
 }
 
+// GetAmountOfPages gets the amount of Pages
 func (d *Document) GetAmountOfPages() (uint32, error) {
 	if d.AmountOfPagesUnknown || d.AmountOfPages == 0 {
 		if len(d.Pages) == 0 {
@@ -257,6 +276,7 @@ func (d *Document) GetAmountOfPages() (uint32, error) {
 func (d *Document) reachedEOF(offset int64) (bool, error) {
 	_, err := d.InputStream.Seek(offset, io.SeekStart)
 	if err != nil {
+		common.Log.Debug("reachedEOF - d.InputStream.Seek failed: %v", err)
 		return false, err
 	}
 

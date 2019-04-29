@@ -1,6 +1,7 @@
 package segments
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
@@ -9,6 +10,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"image"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -119,6 +121,14 @@ func (s *SymbolDictionary) UseRefinementAggregation() bool {
 }
 
 func (s *SymbolDictionary) parseHeader() (err error) {
+	common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
+	defer func() {
+		if err != nil {
+			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] failed. %v", err)
+		} else {
+			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] finished.")
+		}
+	}()
 	if err = s.readRegionFlags(); err != nil {
 		return
 	}
@@ -158,6 +168,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 			}
 		}
 	}
+	common.Log.Debug("%s", s.String())
 	return s.checkInput()
 }
 
@@ -430,8 +441,14 @@ func (s *SymbolDictionary) checkInput() error {
 	return nil
 }
 
+// GetDictionary gets the decoded dictionary symbols
 func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
+	common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary begins...")
+	defer func() {
+		common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary finished")
+	}()
 	ts := time.Now()
+
 	if s.exportSymbols == nil {
 		var err error
 		if s.useRefinementAggregation {
@@ -463,7 +480,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 
 		/* 6.5.5 4 a) */
 		for s.amountOfDecodedSymbols < s.amountOfNewSymbols {
-
+			common.Log.Debug("Decoding Symbol: %d", s.amountOfDecodedSymbols+1)
 			/* 6.5.5 4 b) */
 			temp, err = s.decodeHeightClassDeltaHeight()
 			if err != nil {
@@ -477,12 +494,16 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 
 			// Repeat until OOB - OOB sends a break
 			for {
+				common.Log.Debug("HeightClassHeight: %d", heightClassHeight)
 				/* 4 c) i) */
 				var differenceWidth int64
 				differenceWidth, err = s.decodeDifferenceWidth()
 				if err != nil {
 					return nil, err
 				}
+
+				common.Log.Debug("Difference Width: %d", differenceWidth)
+				common.Log.Debug("MaxInt64: %d", math.MaxInt64)
 
 				/*
 				 * If result is OOB, then all the symbols in this height class has been decoded;
@@ -492,6 +513,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 				 * never contains OOB and thus never terminates
 				 */
 				if differenceWidth == math.MaxInt64 || s.amountOfDecodedSymbols >= s.amountOfNewSymbols {
+					common.Log.Debug("Break")
 					break
 				}
 
@@ -518,7 +540,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 					/* 4 c) iii) */
 					newSymbolsWidth[s.amountOfDecodedSymbols] = symbolWidth
 				}
-				s.amountOfDecodedSymbols += 1
+				s.amountOfDecodedSymbols++
 			}
 
 			/* 6.5.5 4 d) */
@@ -903,6 +925,8 @@ func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 	if s.isHuffmanEncoded {
 		return s.decodeHeightClassDeltaHeightWithHuffman()
 	} else {
+
+		common.Log.Debug("Reader: %d", s.r.StreamPosition())
 		i, err := s.arithmeticDecoder.DecodeInt(s.cxIADH)
 		if err != nil {
 			return 0, err
@@ -994,8 +1018,8 @@ func (s *SymbolDictionary) getToExportFlags() ([]int, error) {
 		currentExportFlag int
 		exRunLength       int
 		err               error
-		totalNewSymbols   int   = s.amountOfImportedSymbols + s.amountOfNewSymbols
-		exportFlags       []int = make([]int, totalNewSymbols)
+		totalNewSymbols   = s.amountOfImportedSymbols + s.amountOfNewSymbols
+		exportFlags       = make([]int, totalNewSymbols)
 	)
 
 	for exportIndex := 0; exportIndex < totalNewSymbols; exportIndex += exRunLength {
@@ -1129,4 +1153,30 @@ func (s *SymbolDictionary) retrieveImportSymbols() error {
 		}
 	}
 	return nil
+}
+
+// String implements the Stringer interface
+func (s *SymbolDictionary) String() string {
+	sb := &strings.Builder{}
+	sb.WriteString("\n[SYMBOL-DICTIONARY]\n")
+	sb.WriteString(fmt.Sprintf("\t- sdrTemplate %v\n", s.sdrTemplate))
+	sb.WriteString(fmt.Sprintf("\t- sdTemplate %v\n", s.sdTemplate))
+	sb.WriteString(fmt.Sprintf("\t- isCodingContextRetained %v\n", s.isCodingContextRetained))
+	sb.WriteString(fmt.Sprintf("\t- isCodingContextUsed %v\n", s.isCodingContextUsed))
+	sb.WriteString(fmt.Sprintf("\t- sdHuffAggInstanceSelection %v\n", s.sdHuffAggInstanceSelection))
+	sb.WriteString(fmt.Sprintf("\t- sdHuffBMSizeSelection %v\n", s.sdHuffBMSizeSelection))
+	sb.WriteString(fmt.Sprintf("\t- sdHuffDecodeWidthSelection %v\n", s.sdHuffDecodeWidthSelection))
+	sb.WriteString(fmt.Sprintf("\t- sdHuffDecodeHeightSelection %v\n", s.sdHuffDecodeHeightSelection))
+	sb.WriteString(fmt.Sprintf("\t- useRefinementAggregation %v\n", s.useRefinementAggregation))
+	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded %v\n", s.isHuffmanEncoded))
+	sb.WriteString(fmt.Sprintf("\t- sdATX %v\n", s.sdATX))
+	sb.WriteString(fmt.Sprintf("\t- sdATY %v\n", s.sdATY))
+	sb.WriteString(fmt.Sprintf("\t- sdrATX %v\n", s.sdrATX))
+	sb.WriteString(fmt.Sprintf("\t- sdrATY %v\n", s.sdrATY))
+	sb.WriteString(fmt.Sprintf("\t- amountOfExportedSymbols %v\n", s.amountOfExportedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- amountOfNewSymbols %v\n", s.amountOfNewSymbols))
+	sb.WriteString(fmt.Sprintf("\t- amountOfImportedSymbols %v\n", s.amountOfImportedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- amountOfDecodedSymbols %v\n", s.amountOfDecodedSymbols))
+
+	return sb.String()
 }

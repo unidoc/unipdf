@@ -33,13 +33,13 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 	}
 
 	var (
-		shiftVal1   int  = x & 0x07
-		shiftVal2   int  = 8 - shiftVal1
-		padding     int  = src.Width & 0x07
-		toShift     int  = shiftVal2 - padding
-		useShift    bool = shiftVal2&0x07 != 0
-		specialCase bool = src.Width <= ((srcEndIdx-srcStartIdx)<<3)+shiftVal2
-		dstStartIdx int  = dst.GetByteIndex(x, y)
+		shiftVal1   = x & 0x07
+		shiftVal2   = 8 - shiftVal1
+		padding     = src.Width & 0x07
+		toShift     = shiftVal2 - padding
+		useShift    = shiftVal2&0x07 != 0
+		specialCase = src.Width <= ((srcEndIdx-srcStartIdx)<<3)+shiftVal2
+		dstStartIdx = dst.GetByteIndex(x, y)
 		lastLine    int
 	)
 
@@ -50,6 +50,8 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 	} else {
 		lastLine = src.Height
 	}
+
+	common.Log.Debug("Blit params - shiftVal1: %v, shiftVal2: %v, padding: %v, toShift: %v, useShift: %v, dstStartIdx: %v", shiftVal1, shiftVal2, padding, toShift, useShift, dstStartIdx)
 
 	if !useShift {
 		err = blitUnshifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, op)
@@ -70,11 +72,11 @@ func blitUnshifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int,
 	op CombinationOperator,
 ) error {
-	// common.Log.Debug("Blit unshifted")
+	common.Log.Debug("Blit unshifted")
 	var dstLine int
 
 	increaser := func() {
-		dstLine += 1
+		dstLine++
 		dstStartIdx += dst.RowStride
 		srcStartIdx += src.RowStride
 		srcEndIdx += src.RowStride
@@ -95,7 +97,7 @@ func blitUnshifted(
 			if err = dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op)); err != nil {
 				return err
 			}
-			dstIdx += 1
+			dstIdx++
 		}
 	}
 
@@ -107,7 +109,7 @@ func blitShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator, padding int,
 ) error {
-	// common.Log.Debug("Blit shifted")
+	common.Log.Debug("Blit shifted")
 	var dstLine int
 
 	// increaser increases the for loop values
@@ -134,7 +136,7 @@ func blitShifted(
 			if err != nil {
 				return err
 			}
-			register = (register | uint16(newByte)) << uint(shiftVal2)
+			register = (register | (uint16(newByte) & 0xff)) << uint(shiftVal2)
 
 			newByte = byte(register >> 8)
 			dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op))
@@ -171,17 +173,17 @@ func blitSpecialShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator,
 ) error {
-	// common.Log.Debug("Blit special shifted")
+	common.Log.Debug("Blit special shifted")
 	var dstLine int
 	increaser := func() {
-		dstLine += 1
+		dstLine++
 		dstStartIdx += dst.RowStride
 		srcStartIdx += src.RowStride
 		srcEndIdx += src.RowStride
 	}
 
 	for dstLine = startLine; dstLine < lastLine; increaser() {
-		var register uint16 = 0
+		var register uint16
 		dstIdx := dstStartIdx
 
 		for srcIdx := srcStartIdx; srcIdx <= srcEndIdx; srcIdx++ {
@@ -205,7 +207,7 @@ func blitSpecialShifted(
 			if err = dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op)); err != nil {
 				return err
 			}
-			dstIdx += 1
+			dstIdx++
 
 			register <<= uint(shiftVal1)
 		}
