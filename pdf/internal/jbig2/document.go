@@ -135,6 +135,7 @@ func (d *Document) mapData() error {
 
 		if segment.PageAssociation != 0 {
 			page = d.Pages[segment.PageAssociation]
+
 			if page == nil {
 				page = NewPage(d, segment.PageAssociation)
 				d.Pages[segment.PageAssociation] = page
@@ -254,7 +255,7 @@ func (d *Document) parseFileHeader() error {
 func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	p, ok := d.Pages[pageNumber]
 	if !ok {
-		common.Log.Debug("Can't get proper page: %d. %s", pageNumber, debug.Stack())
+		common.Log.Debug("Can't find the page: %d. %s", pageNumber, debug.Stack())
 		return nil, errors.New("No page found")
 	}
 
