@@ -266,6 +266,11 @@ func (blk *Block) translate(tx, ty float64) {
 // drawToPage draws the block on a PdfPage. Generates the content streams and appends to the PdfPage's content
 // stream and links needed resources.
 func (blk *Block) drawToPage(page *model.PdfPage) error {
+
+	// TODO(gunnsth): Appears very wasteful to do this all the time.
+	//        Possibly create another wrapper around model.PdfPage (creator.page) which can keep track of whether
+	//        this has already been done.
+
 	// Check if Page contents are wrapped - if not wrap it.
 	content, err := page.GetAllContentStreams()
 	if err != nil {
@@ -373,6 +378,10 @@ func (blk *Block) mergeBlocks(toAdd *Block) error {
 // Active in the sense that it modified the input contents and resources.
 func mergeContents(contents *contentstream.ContentStreamOperations, resources *model.PdfPageResources,
 	contentsToAdd *contentstream.ContentStreamOperations, resourcesToAdd *model.PdfPageResources) error {
+
+	// TODO(gunnsth): It seems rather expensive to mergeContents all the time. A lot of repetition.
+	//    It would be more efficient to perform the merge at the very and when we have all the "blocks"
+	//    for each page.
 
 	// To properly add contents from a block, we need to handle the resources that the block is
 	// using and make sure it is accessible in the modified Page.
