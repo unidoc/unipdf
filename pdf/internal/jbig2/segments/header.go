@@ -62,6 +62,7 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 		}
 		segmentDataPart = creator()
 
+		common.Log.Debug("[SEGMENT-HEADER][#%d] GetSegmentData at Offset: %04X", h.SegmentNumber, h.SegmentDataStartOffset)
 		subReader, err := h.subInputReader()
 		if err != nil {
 			return nil, err
@@ -110,6 +111,18 @@ func (h *Header) parse(
 		return err
 	}
 
+	var b byte
+	b, err = r.ReadByte()
+	if err != nil {
+		return err
+	}
+	common.Log.Debug("First Byte at segment: %02x at offset: %04X", b, offset)
+
+	_, err = r.Seek(offset, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
 	// 7.2.2 Segment Number
 	if err = h.readSegmentNumber(r); err != nil {
 		return err
@@ -143,7 +156,7 @@ func (h *Header) parse(
 	}
 	common.Log.Debug("readSegmentPageAssociation done...")
 
-	if h.Type != TEndOfPage && h.Type != TEndOfFile {
+	if h.Type != TEndOfPage || h.Type != TEndOfFile {
 		// 7.2.7 Segment data length (Contains the length of the data)
 		if err = h.readSegmentDataLength(r); err != nil {
 			return err

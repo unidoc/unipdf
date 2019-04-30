@@ -98,7 +98,7 @@ func (s *SymbolDictionary) AmountOfExportedSymbols() int {
 }
 
 // AmmountOfNewSymbols returns the ammount of new symbols defined by the Symbol Dictionary
-func (s *SymbolDictionary) AmountOfNewSymbols() int {
+func (s *SymbolDictionary) AmmountOfNewSymbols() int {
 	return s.amountOfNewSymbols
 }
 
@@ -141,7 +141,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 	if err = s.readAmountOfExportedSymbols(); err != nil {
 		return
 	}
-	if err = s.readAmountOfNewSymbols(); err != nil {
+	if err = s.readAmmountOfNewSymbols(); err != nil {
 		return
 	}
 	if err = s.setInSyms(); err != nil {
@@ -149,6 +149,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 	}
 
 	if s.isCodingContextUsed {
+
 		rtSegments := s.Header.RTSegments
 		for i := len(rtSegments) - 1; i >= 0; i-- {
 
@@ -371,7 +372,7 @@ func (s *SymbolDictionary) readAmountOfExportedSymbols() error {
 	return nil
 }
 
-func (s *SymbolDictionary) readAmountOfNewSymbols() error {
+func (s *SymbolDictionary) readAmmountOfNewSymbols() error {
 	bits, err := s.r.ReadBits(32)
 	if err != nil {
 		return err
