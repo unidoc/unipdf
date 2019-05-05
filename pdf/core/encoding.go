@@ -1612,13 +1612,49 @@ func (j *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return bm.Data, nil
+	return bm.GetChocolateData(), nil
 }
 
 // DecodeStream decodes the pdf stream object from the jbig2 encoding
 func (j *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	// TODO: Set Globals
-	doc, err := jbig2.NewDocument(streamObj.Stream)
+
+	var globals jbig2.Globals
+
+	common.Log.Info("KEYS: %v", streamObj.PdfObjectDictionary.Keys())
+	parms := streamObj.PdfObjectDictionary.Get("DecodeParms")
+	if parms != nil {
+		p, ok := parms.(*PdfObjectDictionary)
+		if ok {
+			globalsStream := p.Get("JBIG2Globals")
+			common.Log.Debug("Globals: %v", globalsStream)
+
+			s, ok := globalsStream.(*PdfObjectStream)
+			if !ok {
+				err := errors.New("The Globals stream should be an Object Stream...")
+				common.Log.Error(err.Error())
+				return nil, err
+			}
+
+			gdoc, err := jbig2.NewDocument(s.Stream)
+			if err != nil {
+				return nil, err
+			}
+
+			globals = gdoc.GlobalSegments
+		} else {
+			err := errors.New("The DecodeParam should be a PdfObjectDictionary")
+			common.Log.Error(err)
+			return nil, err
+		}
+	}
+
+	// if decode := streamObj.PdfObjectDictionary.Get("Decode"); decode != nil {
+	// 	common.Log.Debug("Decode: %v", decode)
+	// 	panic(decode.String())
+	// }
+
+	doc, err := jbig2.NewDocumentWithGlobals(streamObj.Stream, globals)
 	if err != nil {
 		return nil, err
 	}
@@ -1632,23 +1668,8 @@ func (j *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	i++
 
-	// f, err := os.Create("/home/kucjac/Developer/golang/src/github.com/unidoc/unidoc/pdf/internal/jbig2/tests/jbig_test_" + strconv.Itoa(i) + ".jpg")
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer f.Close()
-
-	// common.Log.Debug("Writing to: %s", f.Name())
-
-	// img := bm.ToImage()
-
-	// if err = jpeg.Encode(f, img, &jpeg.Options{Quality: 100}); err != nil {
-	// 	return nil, err
-	// }
-
-	return bm.Data, nil
+	return bm.GetChocolateData(), nil
 }
 
 // EncodeBytes encodes the raw data bytes into the jbig2 encoded data.
