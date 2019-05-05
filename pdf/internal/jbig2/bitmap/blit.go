@@ -51,7 +51,7 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		lastLine = src.Height
 	}
 
-	common.Log.Debug("Blit params - shiftVal1: %v, shiftVal2: %v, padding: %v, toShift: %v, useShift: %v, dstStartIdx: %v", shiftVal1, shiftVal2, padding, toShift, useShift, dstStartIdx)
+	// common.Log.Debug("Blit params - shiftVal1: %v, shiftVal2: %v, padding: %v, toShift: %v, useShift: %v, dstStartIdx: %v", shiftVal1, shiftVal2, padding, toShift, useShift, dstStartIdx)
 
 	if !useShift {
 		err = blitUnshifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, op)
@@ -72,7 +72,7 @@ func blitUnshifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int,
 	op CombinationOperator,
 ) error {
-	common.Log.Debug("Blit unshifted")
+	// common.Log.Debug("Blit unshifted")
 	var dstLine int
 
 	increaser := func() {
@@ -109,7 +109,7 @@ func blitShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator, padding int,
 ) error {
-	common.Log.Debug("Blit shifted")
+	// common.Log.Debug("Blit shifted")
 	var dstLine int
 
 	// increaser increases the for loop values
@@ -173,7 +173,7 @@ func blitSpecialShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator,
 ) error {
-	common.Log.Debug("Blit special shifted")
+	// common.Log.Debug("Blit special shifted")
 	var dstLine int
 	increaser := func() {
 		dstLine++
