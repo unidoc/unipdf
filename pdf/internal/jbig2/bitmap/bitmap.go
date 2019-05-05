@@ -22,6 +22,8 @@ type Bitmap struct {
 
 	// Data saves the bits data for the bitmap
 	Data []byte
+
+	isVanilla bool
 }
 
 // New creates new bitmap with the parameters as provided in the arguments
@@ -302,4 +304,29 @@ func (b *Bitmap) ToImage() image.Image {
 		}
 	}
 	return img
+}
+
+// GetVanillaData vanilla is the bit interpretation where the 0'th bit means black and 1'th bit means white
+func (b *Bitmap) GetVanillaData() []byte {
+	if b.isVanilla {
+		return b.Data
+	}
+	b.inverseData()
+	return b.Data
+}
+
+// GetChocolateData 'chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black
+func (b *Bitmap) GetChocolateData() []byte {
+	if !b.isVanilla {
+		return b.Data
+	}
+	b.inverseData()
+	return b.Data
+}
+
+func (b *Bitmap) inverseData() {
+	for i := 0; i < len(b.Data); i++ {
+		b.Data[i] = ^b.Data[i]
+	}
+	b.isVanilla = !b.isVanilla
 }

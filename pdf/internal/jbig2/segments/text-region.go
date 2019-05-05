@@ -1114,6 +1114,7 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 func (t *TextRegion) initSymbols() error {
 
 	for _, segment := range t.Header.RTSegments {
+
 		if segment.Type == 0 {
 			s, err := segment.GetSegmentData()
 			if err != nil {

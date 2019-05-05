@@ -65,6 +65,16 @@ func (p *Page) getPageInformationSegment() *segments.Header {
 
 // GetBitmap returns the decoded bitmap if present
 func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
+
+	common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
+	defer func() {
+		if err != nil {
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
+		} else {
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
+		}
+
+	}()
 	defer func() {
 		if x := recover(); x != nil {
 			switch e := x.(type) {
@@ -75,16 +85,6 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 			}
 			debug.PrintStack()
 		}
-	}()
-
-	common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
-	defer func() {
-		if err != nil {
-			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
-		} else {
-			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
-		}
-
 	}()
 
 	if p.Bitmap == nil {

@@ -119,32 +119,34 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 		if op.Operand == "BI" && len(op.Params) == 1 {
 			// BI: Inline image.
 
-			iimg, ok := op.Params[0].(*pdfcontent.ContentStreamInlineImage)
-			if !ok {
-				continue
-			}
+			// iimg, ok := op.Params[0].(*pdfcontent.ContentStreamInlineImage)
+			// if !ok {
+			// 	continue
+			// }
 
-			img, err := iimg.ToImage(resources)
-			if err != nil {
-				return nil, nil, err
-			}
+			// iimg.
 
-			cs, err := iimg.GetColorSpace(resources)
-			if err != nil {
-				return nil, nil, err
-			}
-			if cs == nil {
-				// Default if not specified?
-				cs = pdf.NewPdfColorspaceDeviceGray()
-			}
-			fmt.Printf("Cs: %T\n", cs)
+			// img, err := iimg.ToImage(resources)
+			// if err != nil {
+			// 	return nil, nil, err
+			// }
 
-			rgbImg, err := cs.ImageToRGB(*img)
-			if err != nil {
-				return nil, nil, err
-			}
+			// cs, err := iimg.GetColorSpace(resources)
+			// if err != nil {
+			// 	return nil, nil, err
+			// }
+			// if cs == nil {
+			// 	// Default if not specified?
+			// 	cs = pdf.NewPdfColorspaceDeviceGray()
+			// }
+			// fmt.Printf("Cs: %T\n", cs)
 
-			rgbImages = append(rgbImages, &rgbImg)
+			// rgbImg, err := cs.ImageToRGB(*img)
+			// if err != nil {
+			// 	return nil, nil, err
+			// }
+
+			// rgbImages = append(rgbImages, &rgbImg)
 			// inlineImages++
 		} else if op.Operand == "Do" && len(op.Params) == 1 {
 			// Do: XObject.
