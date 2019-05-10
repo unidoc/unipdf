@@ -42,13 +42,13 @@ func newRunData(r *reader.SubstreamReader) (*runData, error) {
 	if err := d.fillBuffer(0); err != nil {
 		if err == io.EOF {
 			d.buffer = make([]byte, 10)
-			common.Log.Trace("FillBuffer failed: %v", err)
+			common.Log.Debug("FillBuffer failed: %v", err)
 		} else {
 			return nil, err
 		}
 	}
-	// common.Log.Trace("RunData: %+v", d)
-	// common.Log.Trace("[%X]", d.buffer)
+	// common.Log.Debug("RunData: %+v", d)
+	// common.Log.Debug("[%X]", d.buffer)
 	return d, nil
 }
 
@@ -59,24 +59,24 @@ func (r *runData) uncompressGetCode(table []*code) (*code, error) {
 func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 	cd, err := r.uncompressGetNextCodeLittleEndian()
 	if err != nil {
-		common.Log.Trace("UncompressGetNextCodeLittleEndian failed: %v", err)
+		common.Log.Debug("UncompressGetNextCodeLittleEndian failed: %v", err)
 		return nil, err
 	}
 
-	// common.Log.Trace("Code Before: %v", cd)
+	// common.Log.Debug("Code Before: %v", cd)
 	cd = cd & 0xFFFFFF
 
-	// common.Log.Trace("Code: %v", cd)
+	// common.Log.Debug("Code: %v", cd)
 	index := cd >> (codeOffset - firstLevelTableSize)
-	// common.Log.Trace("Index: %v", index)
+	// common.Log.Debug("Index: %v", index)
 	var result = table[index]
 
-	// common.Log.Trace("Code: %v", result)
+	// common.Log.Debug("Code: %v", result)
 
 	if result != nil && result.nonNilSubTable {
-		// common.Log.Trace("Setting it to subtables: %v", result.subTable)
+		// common.Log.Debug("Setting it to subtables: %v", result.subTable)
 		index = (cd >> (codeOffset - firstLevelTableSize - secondLevelTableSize)) & secondLevelTableMask
-		// common.Log.Trace("SubIndex: %v", index)
+		// common.Log.Debug("SubIndex: %v", index)
 		result = result.subTable[index]
 	}
 
@@ -91,14 +91,14 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 	var bitsToFill = r.offset - r.lastOffset
 
-	// common.Log.Trace("BitsToFil: %v", bitsToFill)
+	// common.Log.Debug("BitsToFil: %v", bitsToFill)
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 
 		// refill at absolute offset
 		var byteOffset = (r.offset >> 3) - r.bufferBase
-		// common.Log.Trace("ByteOffset: %v", byteOffset)
-		// common.Log.Trace("BufferTop: %v", r.bufferTop)
+		// common.Log.Debug("ByteOffset: %v", byteOffset)
+		// common.Log.Debug("BufferTop: %v", r.bufferTop)
 
 		if byteOffset >= r.bufferTop {
 
@@ -114,14 +114,14 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 			(uint32(r.buffer[byteOffset+1]&0xFF) << 8) |
 			(uint32(r.buffer[byteOffset+2] & 0xFF))
 
-		// common.Log.Trace("LastCode: %v", lastCode)
+		// common.Log.Debug("LastCode: %v", lastCode)
 
 		bitOffset := uint32(r.offset & 7)
 
 		lastCode <<= bitOffset
 		r.lastCode = int(lastCode)
 
-		// common.Log.Trace("CD_1: LastCode: %d", lastCode)
+		// common.Log.Debug("CD_1: LastCode: %d", lastCode)
 
 	} else {
 
@@ -172,14 +172,14 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 
 func (r *runData) fillBuffer(byteOffset int) error {
 
-	// common.Log.Trace("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
+	// common.Log.Debug("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
 
 	r.bufferBase = byteOffset
 
 	_, err := r.r.Seek(int64(byteOffset), io.SeekStart)
 	if err != nil {
 		if err == io.EOF {
-			common.Log.Trace("Seak EOF")
+			common.Log.Debug("Seak EOF")
 			r.bufferTop = -1
 		} else {
 			return err
@@ -187,22 +187,22 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	}
 
 	if err == nil {
-		// common.Log.Trace("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
+		// common.Log.Debug("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
 		r.bufferTop, err = r.r.Read(r.buffer)
 		if err != nil {
 			if err == io.EOF {
-				common.Log.Trace("Read EOF")
+				common.Log.Debug("Read EOF")
 				r.bufferTop = -1
 			} else {
 				return err
 			}
 		}
 	}
-	// common.Log.Trace("BufferTop after read: %d", r.bufferTop)
+	// common.Log.Debug("BufferTop after read: %d", r.bufferTop)
 
 	// check filling degree
 	if r.bufferTop > -1 && r.bufferTop < 3 {
-		// common.Log.Trace("BufferTop in size of filling degree: %d", r.bufferTop)
+		// common.Log.Debug("BufferTop in size of filling degree: %d", r.bufferTop)
 		for r.bufferTop < 3 {
 
 			b, err := r.r.ReadByte()

@@ -35,7 +35,7 @@ type Page struct {
 
 // NewPage is the creator for the Page model
 func NewPage(d *Document, pageNumber int) *Page {
-	common.Log.Trace("Creating Page #%d...", pageNumber)
+	common.Log.Debug("Creating Page #%d...", pageNumber)
 	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
 }
 
@@ -71,12 +71,12 @@ func (p *Page) getPageInformationSegment() *segments.Header {
 // GetBitmap returns the decoded bitmap if present
 func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 
-	common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
+	common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
 	defer func() {
 		if err != nil {
-			common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
 		} else {
-			common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
+			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
 		}
 
 	}()
@@ -89,7 +89,7 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 				err = fmt.Errorf("JBIG2 Internal Error: %v. Trace: %s", e, string(debug.Stack()))
 			}
 			common.Log.Debug("Page GetBitmap failed - panic recovered. %v", err)
-			common.Log.Trace(string(debug.Stack()))
+			common.Log.Debug(string(debug.Stack()))
 		}
 	}()
 
@@ -106,7 +106,7 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 // composePageBitmap composes the segment's bitmaps to a page and stores the page as a Bitmap
 func (p *Page) composePageBitmap() error {
 	if p.PageNumber > 0 {
-		common.Log.Trace("Composing bitmap for the Page: #%d", p.PageNumber)
+		common.Log.Debug("Composing bitmap for the Page: #%d", p.PageNumber)
 		h := p.getPageInformationSegment()
 		if h == nil {
 			return errors.New("Page Information segment not found")
@@ -135,17 +135,17 @@ func (p *Page) composePageBitmap() error {
 func (p *Page) createPage(i *segments.PageInformationSegment) (err error) {
 	if !i.IsStripe || i.PageBMHeight != -1 {
 		// Page 79, 4)
-		common.Log.Trace("Creating Normal page")
+		common.Log.Debug("Creating Normal page")
 		err = p.createNormalPage(i)
 	} else {
-		common.Log.Trace("Creating Striped page")
+		common.Log.Debug("Creating Striped page")
 		err = p.createStripedPage(i)
 	}
 	return
 }
 
 func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
-	common.Log.Trace("Create Normal page")
+	common.Log.Debug("Create Normal page")
 	p.Bitmap = bitmap.New(i.PageBMWidth, i.PageBMHeight)
 
 	// Page 79, 3)
@@ -158,7 +158,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 	for _, h := range p.Segments {
 		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
-			common.Log.Trace("Getting Segment: %d", h.SegmentNumber)
+			common.Log.Debug("Getting Segment: %d", h.SegmentNumber)
 			s, err := h.GetSegmentData()
 			if err != nil {
 				return err
@@ -166,7 +166,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 
 			r, ok := s.(segments.Regioner)
 			if !ok {
-				common.Log.Trace("Segment: %T is not a Regioner", s)
+				common.Log.Debug("Segment: %T is not a Regioner", s)
 				return errors.New("Current segment type is not a regioner")
 			}
 
@@ -176,10 +176,10 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 			}
 
 			if p.fitsPage(i, regionBitmap) {
-				common.Log.Trace("Fits page...")
+				common.Log.Debug("Fits page...")
 				p.Bitmap = regionBitmap
 			} else {
-				common.Log.Trace("Requires blit...")
+				common.Log.Debug("Requires blit...")
 				regionInfo := r.GetRegionInfo()
 				op := p.getCombinationOperator(i, regionInfo.CombinaionOperator)
 				err = bitmap.Blit(regionBitmap, p.Bitmap, regionInfo.XLocation, regionInfo.YLocation, op)
@@ -195,7 +195,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 }
 
 func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
-	common.Log.Trace("Create striped page")
+	common.Log.Debug("Create striped page")
 	pageStripes, err := p.collectPageStripes()
 	if err != nil {
 		return err

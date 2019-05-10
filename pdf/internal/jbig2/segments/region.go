@@ -52,9 +52,9 @@ func (r *RegionSegment) String() string {
 
 // parseHeader parses the RegionSegment Header
 func (r *RegionSegment) parseHeader() error {
-	common.Log.Trace("[REGION][PARSE-HEADER] Begin")
+	common.Log.Debug("[REGION][PARSE-HEADER] Begin")
 	defer func() {
-		common.Log.Trace("[REGION][PARSE-HEADER] Finished")
+		common.Log.Debug("[REGION][PARSE-HEADER] Finished")
 	}()
 	temp, err := r.r.ReadBits(32)
 	if err != nil {

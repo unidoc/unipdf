@@ -13,9 +13,9 @@ import (
 // with respect with the combination operator 'op'.
 func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error) {
 
-	// common.Log.Trace("Blitting bitmaps with operator: %s, at X: %d, Y: %d", op, x, y)
-	// common.Log.Trace("Source bitmap: %s", src)
-	// common.Log.Trace("Dst bitmap: %s", dst)
+	// common.Log.Debug("Blitting bitmaps with operator: %s, at X: %d, Y: %d", op, x, y)
+	// common.Log.Debug("Source bitmap: %s", src)
+	// common.Log.Debug("Dst bitmap: %s", dst)
 
 	var startLine, srcStartIdx, srcEndIdx int
 	srcEndIdx = src.RowStride - 1
@@ -56,7 +56,7 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		lastLine = src.Height
 	}
 
-	// common.Log.Trace("Blit params - shiftVal1: %v, shiftVal2: %v, padding: %v, toShift: %v, useShift: %v, dstStartIdx: %v", shiftVal1, shiftVal2, padding, toShift, useShift, dstStartIdx)
+	// common.Log.Debug("Blit params - shiftVal1: %v, shiftVal2: %v, padding: %v, toShift: %v, useShift: %v, dstStartIdx: %v", shiftVal1, shiftVal2, padding, toShift, useShift, dstStartIdx)
 
 	if !useShift {
 		err = blitUnshifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, op)
@@ -66,7 +66,7 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		err = blitShifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2, op, padding)
 	}
 	if err != nil {
-		common.Log.Trace("Blit failed: %s", err)
+		common.Log.Debug("Blit failed: %s", err)
 	}
 
 	return
@@ -77,7 +77,7 @@ func blitUnshifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int,
 	op CombinationOperator,
 ) error {
-	// common.Log.Trace("Blit unshifted")
+	// common.Log.Debug("Blit unshifted")
 	var dstLine int
 
 	increaser := func() {
@@ -114,7 +114,7 @@ func blitShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator, padding int,
 ) error {
-	// common.Log.Trace("Blit shifted")
+	// common.Log.Debug("Blit shifted")
 	var dstLine int
 
 	// increaser increases the for loop values
@@ -178,7 +178,7 @@ func blitSpecialShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator,
 ) error {
-	// common.Log.Trace("Blit special shifted")
+	// common.Log.Debug("Blit special shifted")
 	var dstLine int
 	increaser := func() {
 		dstLine++
