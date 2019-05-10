@@ -13,7 +13,7 @@ import (
 	"image"
 )
 
-// PatternDictionary is the model used
+// PatternDictionary is the jbig2 model for the pattern dictionary segment
 type PatternDictionary struct {
 	r reader.StreamReader
 
@@ -51,8 +51,8 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	}
 
 	genericRegion := NewGenericRegion(p.r)
-	// common.Log.Debug("GrayMax: %d", p.GrayMax)
-	// common.Log.Debug("GrayMax+1 * hdpWidth: %v", (p.GrayMax+1)*int(p.HdpWidth))
+	// common.Log.Trace("GrayMax: %d", p.GrayMax)
+	// common.Log.Trace("GrayMax+1 * hdpWidth: %v", (p.GrayMax+1)*int(p.HdpWidth))
 	genericRegion.setParametersMMR(p.IsMMREncoded, p.DataOffset, p.DataLength, int(p.HdpHeight), (p.GrayMax+1)*int(p.HdpWidth), p.HDTemplate, false, false, p.GBAtX, p.GBAtY)
 
 	collectiveBitmap, err := genericRegion.GetRegionBitmap()
@@ -74,9 +74,9 @@ func (p *PatternDictionary) Init(h *Header, r reader.StreamReader) error {
 }
 
 func (p *PatternDictionary) parseHeader() error {
-	common.Log.Debug("[PATTERN-DICTIONARY][parseHeader] begin")
+	common.Log.Trace("[PATTERN-DICTIONARY][parseHeader] begin")
 	defer func() {
-		common.Log.Debug("[PATTERN-DICTIONARY][parseHeader] finished")
+		common.Log.Trace("[PATTERN-DICTIONARY][parseHeader] finished")
 	}()
 	/** Bit 3-7 dirty read*/
 	_, err := p.r.ReadBits(5)
@@ -130,14 +130,14 @@ func (p *PatternDictionary) readIsMMREncoded() error {
 }
 
 func (p *PatternDictionary) readPatternWidthAndHeight() error {
-	common.Log.Debug("Reading Pattern Width and Height")
+	common.Log.Trace("Reading Pattern Width and Height")
 	temp, err := p.r.ReadByte()
 	if err != nil {
 		return err
 	}
 	p.HdpWidth = temp
 
-	common.Log.Debug("Stream pos: %v", p.r.StreamPosition())
+	common.Log.Trace("Stream pos: %v", p.r.StreamPosition())
 	temp, err = p.r.ReadByte()
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func (p *PatternDictionary) readGrayMax() error {
 	if err != nil {
 		return err
 	}
-	common.Log.Debug("GrayMax: %d", temp)
+	common.Log.Trace("GrayMax: %d", temp)
 	p.GrayMax = int(temp & 0xffffffff)
 	return nil
 }
@@ -182,7 +182,7 @@ func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) err
 	// 3)
 	var gray int
 	patterns := make([]*bitmap.Bitmap, p.GrayMax+1)
-	common.Log.Debug("GrayMax: %d", p.GrayMax)
+	common.Log.Trace("GrayMax: %d", p.GrayMax)
 
 	// 4
 	for gray <= p.GrayMax {
@@ -208,7 +208,7 @@ func (p *PatternDictionary) computeSegmentDataStructure() error {
 	p.DataOffset = p.r.StreamPosition()
 	p.DataHeaderLength = p.DataOffset - p.DataHeaderOffset
 	p.DataLength = int64(p.r.Length()) - p.DataHeaderLength
-	common.Log.Debug("DataOffset: %d, DataHeaderLength: %d, DataLength: %d", p.DataOffset, p.DataHeaderLength, p.DataLength)
+	common.Log.Trace("DataOffset: %d, DataHeaderLength: %d, DataLength: %d", p.DataOffset, p.DataHeaderLength, p.DataLength)
 	return nil
 }
 

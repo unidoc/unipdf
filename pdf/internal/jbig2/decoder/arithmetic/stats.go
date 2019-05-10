@@ -42,13 +42,13 @@ func (d *DecoderStats) Reset() {
 // SetEntry sets the decoder stats coding context table with moreprobableSymbol
 func (d *DecoderStats) SetEntry(value int) {
 	v := byte(value & 0x7f)
-	// common.Log.Debug("setCX for index: %d and value: %d and v: %d", d.index, value, v)
+	// common.Log.Trace("setCX for index: %d and value: %d and v: %d", d.index, value, v)
 	d.codingContextTable[d.index] = v
 }
 
 // SetIndex sets the decoderStats index
 func (d *DecoderStats) SetIndex(index int) {
-	// common.Log.Debug("Setting index: %32b", index)
+	// common.Log.Trace("Setting index: %32b", index)
 	d.index = int(uint(index))
 }
 
@@ -62,9 +62,9 @@ func (d *DecoderStats) Overwrite(dNew *DecoderStats) {
 
 // flips the bit in the actual more predictable index
 func (d *DecoderStats) toggleMps() {
-	// common.Log.Debug("Before: %d", d.mps[d.index])
+	// common.Log.Trace("Before: %d", d.mps[d.index])
 	d.mps[d.index] ^= 1
-	// common.Log.Debug("After: %d", d.mps[d.index])
+	// common.Log.Trace("After: %d", d.mps[d.index])
 }
 
 func (d *DecoderStats) getMps() byte {

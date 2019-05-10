@@ -219,10 +219,10 @@ func (r *Reader) Align() (skipped byte) {
 
 func (r *Reader) ConsumeRemainingBits() {
 	if r.bits != 0 {
-		common.Log.Debug("Consumed: %d bits", r.bits)
+		common.Log.Trace("Consumed: %d bits", r.bits)
 		_, err := r.ReadBits(r.bits)
 		if err != nil {
-			common.Log.Debug("ConsumeRemainigBits failed: %v", err)
+			common.Log.Trace("ConsumeRemainigBits failed: %v", err)
 		}
 
 	}

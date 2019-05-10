@@ -211,7 +211,7 @@ func (h *HalftoneRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 		if err != nil {
 			return
 		}
-		common.Log.Debug("Taken patterns: %v", h.Patterns)
+		common.Log.Trace("Taken patterns: %v", h.Patterns)
 	}
 
 	if h.HDefaultPixel == 1 {
@@ -223,20 +223,20 @@ func (h *HalftoneRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	// 3)
 	bitsPerValueF := math.Ceil(math.Log(float64(len(h.Patterns))) / math.Log(2))
 
-	common.Log.Debug("Patterns: %v", len(h.Patterns))
-	common.Log.Debug("PatternsLog: %v", math.Log(float64(len(h.Patterns))))
-	common.Log.Debug("Log:%v", math.Log(2))
-	common.Log.Debug("BitsPerValue: %v", bitsPerValueF)
+	common.Log.Trace("Patterns: %v", len(h.Patterns))
+	common.Log.Trace("PatternsLog: %v", math.Log(float64(len(h.Patterns))))
+	common.Log.Trace("Log:%v", math.Log(2))
+	common.Log.Trace("BitsPerValue: %v", bitsPerValueF)
 	bitsPerValue := int(bitsPerValueF)
 
-	common.Log.Debug("BitsPerValue: %d", bitsPerValue)
+	common.Log.Trace("BitsPerValue: %d", bitsPerValue)
 	// 4)
 	var grayScaleValues [][]int
 	grayScaleValues, err = h.grayScaleDecoding(bitsPerValue)
 	if err != nil {
 		return
 	}
-	common.Log.Debug("Grayscale values: %v", grayScaleValues)
+	common.Log.Trace("Grayscale values: %v", grayScaleValues)
 	if err = h.renderPattern(grayScaleValues); err != nil {
 		return
 	}
@@ -251,16 +251,16 @@ func (h *HalftoneRegion) GetRegionInfo() *RegionSegment {
 
 // GetPatterns gets the HalftoneRegion patterns
 func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
-	common.Log.Debug("RT Segments: %v", h.h.RTSegments)
+	common.Log.Trace("RT Segments: %v", h.h.RTSegments)
 	for _, s := range h.h.RTSegments {
 		var data Segmenter
 		data, err = s.GetSegmentData()
 		if err != nil {
-			common.Log.Debug("GetSegmentData failed: %v", err)
+			common.Log.Trace("GetSegmentData failed: %v", err)
 			return
 		}
 
-		common.Log.Debug("Data :%v", data)
+		common.Log.Trace("Data :%v", data)
 		pattern, ok := data.(*PatternDictionary)
 		if !ok {
 			err = errors.Errorf("Related segment not a pattern dictionary: %T", data)
@@ -269,7 +269,7 @@ func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
 		var tempPatterns []*bitmap.Bitmap
 		tempPatterns, err = pattern.GetDictionary()
 		if err != nil {
-			common.Log.Debug("GetDictionary failed: %v", err)
+			common.Log.Trace("GetDictionary failed: %v", err)
 			return
 		}
 
@@ -308,14 +308,14 @@ func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int, error) {
 	var grayScalePlanes []*bitmap.Bitmap = make([]*bitmap.Bitmap, bitsPerValue)
 
 	// 1)
-	common.Log.Debug("BeforeNewGenericSegment StreamPos: %d", h.r.StreamPosition())
+	common.Log.Trace("BeforeNewGenericSegment StreamPos: %d", h.r.StreamPosition())
 	genericRegion := NewGenericRegion(h.r)
 	genericRegion.setParametersMMR(h.IsMMREncoded, h.DataOffset, h.DataLength, h.HGridHeight, h.HGridWidth, h.HTemplate, false, h.HSkipEnabled, gbAtX, gbAtY)
 
 	// 2)
 	j := bitsPerValue - 1
 
-	common.Log.Debug("J - bits per value: %d, %d", j, bitsPerValue)
+	common.Log.Trace("J - bits per value: %d, %d", j, bitsPerValue)
 
 	var err error
 	grayScalePlanes[j], err = genericRegion.GetRegionBitmap()
@@ -323,7 +323,7 @@ func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int, error) {
 		return nil, err
 	}
 
-	common.Log.Debug("First bm: %s", grayScalePlanes[j].String())
+	common.Log.Trace("First bm: %s", grayScalePlanes[j].String())
 
 	for j > 0 {
 		j--
@@ -333,12 +333,12 @@ func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int, error) {
 			return nil, err
 		}
 
-		common.Log.Debug("Before at j: %d, %s", j, grayScalePlanes[j].String())
+		common.Log.Trace("Before at j: %d, %s", j, grayScalePlanes[j].String())
 		if err = h.combineGrayscalePlanes(grayScalePlanes, j); err != nil {
 			return nil, err
 		}
 
-		common.Log.Debug("After at j: %d, %s", j, grayScalePlanes[j].String())
+		common.Log.Trace("After at j: %d, %s", j, grayScalePlanes[j].String())
 	}
 
 	return h.computeGrayScalePlanes(grayScalePlanes, bitsPerValue)
@@ -377,8 +377,8 @@ func (h *HalftoneRegion) computeGrayScalePlanes(
 		grayScaleValues[i] = make([]int, h.HGridWidth)
 	}
 
-	common.Log.Debug("ComputGrayScale patterns init value: %v", grayScaleValues)
-	common.Log.Debug("Base\n: %s", grayScalePlanes[0].String())
+	common.Log.Trace("ComputGrayScale patterns init value: %v", grayScaleValues)
+	common.Log.Trace("Base\n: %s", grayScalePlanes[0].String())
 	for y := 0; y < h.HGridHeight; y++ {
 		for x := 0; x < h.HGridWidth; x += 8 {
 			var minorWidth int
@@ -403,7 +403,7 @@ func (h *HalftoneRegion) computeGrayScalePlanes(
 					and1 := shifted & 1
 					multiplier := 1 << uint(j)
 					v := int(and1) * multiplier
-					common.Log.Debug("GrayScaleValue[%d][%d] Bv: %d, Shifter: %d, and1: %v, multiplier: %d, v: %d", y, i, bv, shifted, and1, multiplier, v)
+					common.Log.Trace("GrayScaleValue[%d][%d] Bv: %d, Shifter: %d, and1: %v, multiplier: %d, v: %d", y, i, bv, shifted, and1, multiplier, v)
 					grayScaleValues[y][i] += v
 				}
 			}
@@ -416,15 +416,15 @@ func (h *HalftoneRegion) computeGrayScalePlanes(
 // described in 6.6.5.2, page 42
 func (h *HalftoneRegion) renderPattern(grayScaleValues [][]int) (err error) {
 	var x, y int
-	common.Log.Debug("Rendering pattern begins")
+	common.Log.Trace("Rendering pattern begins")
 	for m := 0; m < h.HGridHeight; m++ {
 		for n := 0; n < h.HGridWidth; n++ {
 
-			// common.Log.Debug("X: %d, Y: %d", x, y)
+			// common.Log.Trace("X: %d, Y: %d", x, y)
 			x = h.computeX(m, n)
 			y = h.computeY(m, n)
 
-			common.Log.Debug("Getting pattern at: %d, %d", m, n)
+			common.Log.Trace("Getting pattern at: %d, %d", m, n)
 			patternBitmap := h.Patterns[grayScaleValues[m][n]]
 
 			if err = bitmap.Blit(

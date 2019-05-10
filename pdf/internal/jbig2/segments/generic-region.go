@@ -79,7 +79,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	log.Debug("%s", g.String())
 	if g.Bitmap == nil {
 		if g.IsMMREncoded {
-			// common.Log.Debug("DataOffset: %d, Data length: %d, Header Offset: %d, Header Length: %d", g.DataOffset, g.DataLength, g.DataHeaderOffset, g.DataHeaderLength)
+			// common.Log.Trace("DataOffset: %d, Data length: %d, Header Offset: %d, Header Length: %d", g.DataOffset, g.DataLength, g.DataHeaderOffset, g.DataHeaderLength)
 			// MMR Decoder Call
 			if g.mmrDecoder == nil {
 				g.mmrDecoder, err = mmr.New(
@@ -118,7 +118,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 				g.cx = arithmetic.NewStats(65536, 1)
 			}
 
-			common.Log.Debug("Arithmetic Decoding of:%s", g)
+			common.Log.Trace("Arithmetic Decoding of:%s", g)
 			/* 6.2.5.7 - 2) */
 			g.Bitmap = bitmap.New(g.RegionSegment.BitmapWidth, g.RegionSegment.BitmapHeight)
 
@@ -126,8 +126,8 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 
 			/* 6.2.5.7 - 3) */
 			for line := 0; line < g.Bitmap.Height; line++ {
-				// common.Log.Debug("Decoding line: %d", line)
-				// common.Log.Debug("----------================================----------------")
+				// common.Log.Trace("Decoding line: %d", line)
+				// common.Log.Trace("----------================================----------------")
 				/* 6.2.5.7 - 3 c) */
 				if g.IsTPGDon {
 					var temp int
@@ -165,12 +165,12 @@ func (g *GenericRegion) GetRegionInfo() *RegionSegment {
 }
 
 func (g *GenericRegion) parseHeader() (err error) {
-	common.Log.Debug("[GENERIC-REGION] ParsingHeader...")
+	common.Log.Trace("[GENERIC-REGION] ParsingHeader...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
+			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
 		} else {
-			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
+			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
 		}
 	}()
 
@@ -178,7 +178,7 @@ func (g *GenericRegion) parseHeader() (err error) {
 		return err
 	}
 
-	// common.Log.Debug("Reader pos after region segment: %d", g.r.StreamPosition())
+	// common.Log.Trace("Reader pos after region segment: %d", g.r.StreamPosition())
 	/* Bit 5-7 */
 	if _, err = g.r.ReadBits(3); err != nil {
 		return err
@@ -217,12 +217,12 @@ func (g *GenericRegion) parseHeader() (err error) {
 	if err != nil {
 		return err
 	}
-	// common.Log.Debug("IsMMREncoded: %d", b)
+	// common.Log.Trace("IsMMREncoded: %d", b)
 	if b == 1 {
 		g.IsMMREncoded = true
 	}
 
-	// common.Log.Debug("Reader StreamPos after last bit: %d", g.r.StreamPosition())
+	// common.Log.Trace("Reader StreamPos after last bit: %d", g.r.StreamPosition())
 
 	if !g.IsMMREncoded {
 		var amountOfGbAt int
@@ -244,7 +244,7 @@ func (g *GenericRegion) parseHeader() (err error) {
 	if err = g.computeSegmentDataStructure(); err != nil {
 		return err
 	}
-	common.Log.Debug("%s", g)
+	common.Log.Trace("%s", g)
 	return g.checkInput()
 }
 
@@ -297,24 +297,24 @@ func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
 	// idx originalyl byteIndex - rowStride
 	idx := byteIndex - g.Bitmap.RowStride
 
-	// common.Log.Debug("decodeLine: %d", g.GBTemplate)
+	// common.Log.Trace("decodeLine: %d", g.GBTemplate)
 	switch g.GBTemplate {
 	case 0:
 		if !g.UseExtTemplates {
-			// common.Log.Debug("DecodeTemplate0a")
+			// common.Log.Trace("DecodeTemplate0a")
 			return g.decodeTemplate0a(line, width, paddedWidth, byteIndex, idx)
 		}
-		// common.Log.Debug("DecodeTemplate0b")
+		// common.Log.Trace("DecodeTemplate0b")
 		return g.decodeTemplate0b(line, width, paddedWidth, byteIndex, idx)
 
 	case 1:
-		// common.Log.Debug("DecodeTemplate1")
+		// common.Log.Trace("DecodeTemplate1")
 		return g.decodeTemplate1(line, width, paddedWidth, byteIndex, idx)
 	case 2:
-		// common.Log.Debug("DecodeTemplate2")
+		// common.Log.Trace("DecodeTemplate2")
 		return g.decodeTemplate2(line, width, paddedWidth, byteIndex, idx)
 	case 3:
-		// common.Log.Debug("DecodeTemplate3")
+		// common.Log.Trace("DecodeTemplate3")
 		return g.decodeTemplate3(line, width, paddedWidth, byteIndex, idx)
 	}
 
@@ -349,10 +349,10 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 
 	var nextByte int
 	// if line < 10 {
-	// 	common.Log.Debug("Context: %d", context)
-	// 	common.Log.Debug("Line1: %d", line1)
-	// 	common.Log.Debug("Line2: %d", line2)
-	// 	common.Log.Debug("PaddedWidth: %d", paddedWidth)
+	// 	common.Log.Trace("Context: %d", context)
+	// 	common.Log.Trace("Line1: %d", line1)
+	// 	common.Log.Trace("Line2: %d", line2)
+	// 	common.Log.Trace("PaddedWidth: %d", paddedWidth)
 	// }
 
 	for x := 0; x < paddedWidth; x = nextByte {
@@ -418,12 +418,12 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			context = ((context & 0x7bf7) << 1) | bit | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
 
 			if line > 400 && line < 420 && x < 400 && x > 200 {
-				// common.Log.Debug("Line: %d, Result: %08b, Context: %064b, Line1: %d, Line2: %d", line, result, context, line1, line2)
+				// common.Log.Trace("Line: %d, Result: %08b, Context: %064b, Line1: %d, Line2: %d", line, result, context, line1, line2)
 			}
 		}
 
 		// if line > 400 && line < 450 {
-		// 	common.Log.Debug("Line: %d, X:%d Result: %08b, byteIndex: %d", line, x, result, byteIndex)
+		// 	common.Log.Trace("Line: %d, X:%d Result: %08b, byteIndex: %d", line, x, result, byteIndex)
 		// }
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -738,7 +738,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 		temp byte
 	)
 
-	// common.Log.Debug("CX: %s", g.cx)
+	// common.Log.Trace("CX: %s", g.cx)
 	if line >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
@@ -748,10 +748,10 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 		line1 = int(temp)
 	}
 
-	// common.Log.Debug("Line1: %d", line1)
+	// common.Log.Trace("Line1: %d", line1)
 
 	context = (line1 >> 1) & 0x70
-	// common.Log.Debug("Context: %d", context)
+	// common.Log.Trace("Context: %d", context)
 
 	var nextByte int
 
@@ -779,13 +779,13 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 				line1 |= int(temp)
 			}
 		}
-		// common.Log.Debug("-===========================--------------------====================-------")
-		// common.Log.Debug("Line1: %d", line1)
-		// common.Log.Debug("StreamPos: %d", g.r.StreamPosition())
+		// common.Log.Trace("-===========================--------------------====================-------")
+		// common.Log.Trace("Line1: %d", line1)
+		// common.Log.Trace("StreamPos: %d", g.r.StreamPosition())
 		for minorX := 0; minorX < minorWidth; minorX++ {
 
 			if g.override {
-				// common.Log.Debug("Override")
+				// common.Log.Trace("Override")
 				overriddenContext = g.overrideAtTemplate3(context, x+minorX, line, int(result), minorX)
 				g.cx.SetIndex(overriddenContext)
 			} else {
@@ -798,15 +798,15 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 				return err
 			}
 
-			// common.Log.Debug("Minor at: %d, bit: %d", minorX, bit)
+			// common.Log.Trace("Minor at: %d, bit: %d", minorX, bit)
 
 			result |= byte(bit) << byte(7-minorX)
-			// common.Log.Debug("Result: %08b", result)
+			// common.Log.Trace("Result: %08b", result)
 
 			context = ((context & 0x1f7) << 1) | bit | ((line1 >> uint(8-minorX)) & 0x010)
-			// common.Log.Debug("Context: %b", context)
+			// common.Log.Trace("Context: %b", context)
 		}
-		// common.Log.Debug("Final Result: %08b, %d", result, byteIndex)
+		// common.Log.Trace("Final Result: %08b, %d", result, byteIndex)
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
 			return err
 		}
@@ -1164,7 +1164,7 @@ func (g *GenericRegion) setParametersWithAt(
 	g.mmrDecoder = nil
 	g.Bitmap = nil
 
-	common.Log.Debug("[GENERIC-REGION] setParameters SDAt: %s", g)
+	common.Log.Trace("[GENERIC-REGION] setParameters SDAt: %s", g)
 }
 
 func (g *GenericRegion) setParametersMMR(

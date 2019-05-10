@@ -19,8 +19,7 @@ import (
 	"time"
 )
 
-// SymbolDictionary is the struct that represents Symbol Dictionary Segment for JBIG2
-// encoding
+// SymbolDictionary is the model for the JBIG2 Symbol Dictionary Segment
 type SymbolDictionary struct {
 	r reader.StreamReader
 
@@ -126,12 +125,12 @@ func (s *SymbolDictionary) UseRefinementAggregation() bool {
 }
 
 func (s *SymbolDictionary) parseHeader() (err error) {
-	common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
+	common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] failed. %v", err)
+			common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] failed. %v", err)
 		} else {
-			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] finished.")
+			common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] finished.")
 		}
 	}()
 	if err = s.readRegionFlags(); err != nil {
@@ -174,7 +173,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 			}
 		}
 	}
-	common.Log.Debug("%s", s.String())
+	common.Log.Trace("%s", s.String())
 	return s.checkInput()
 }
 
@@ -449,9 +448,9 @@ func (s *SymbolDictionary) checkInput() error {
 
 // GetDictionary gets the decoded dictionary symbols
 func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
-	common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary begins...")
+	common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary begins...")
 	defer func() {
-		common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary finished")
+		common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary finished")
 	}()
 	ts := time.Now()
 
@@ -486,7 +485,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 
 		/* 6.5.5 4 a) */
 		for s.amountOfDecodedSymbols < s.amountOfNewSymbols {
-			common.Log.Debug("Decoding Symbol: %d", s.amountOfDecodedSymbols+1)
+			common.Log.Trace("Decoding Symbol: %d", s.amountOfDecodedSymbols+1)
 			/* 6.5.5 4 b) */
 			temp, err = s.decodeHeightClassDeltaHeight()
 			if err != nil {
@@ -500,7 +499,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 
 			// Repeat until OOB - OOB sends a break
 			for {
-				common.Log.Debug("HeightClassHeight: %d", heightClassHeight)
+				common.Log.Trace("HeightClassHeight: %d", heightClassHeight)
 				/* 4 c) i) */
 				var differenceWidth int64
 				differenceWidth, err = s.decodeDifferenceWidth()
@@ -508,8 +507,8 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 					return nil, err
 				}
 
-				common.Log.Debug("Difference Width: %d", differenceWidth)
-				common.Log.Debug("MaxInt64: %d", math.MaxInt64)
+				common.Log.Trace("Difference Width: %d", differenceWidth)
+				common.Log.Trace("MaxInt64: %d", math.MaxInt64)
 
 				/*
 				 * If result is OOB, then all the symbols in this height class has been decoded;
@@ -519,7 +518,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 				 * never contains OOB and thus never terminates
 				 */
 				if differenceWidth == math.MaxInt64 || s.amountOfDecodedSymbols >= s.amountOfNewSymbols {
-					common.Log.Debug("Break")
+					common.Log.Trace("Break")
 					break
 				}
 
@@ -596,7 +595,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 		s.setExportedSymbols(exFlags)
 	}
 
-	common.Log.Debug("PERFORMANCE TEST: Symbol Decoding %d ns", time.Since(ts).Nanoseconds())
+	common.Log.Trace("PERFORMANCE TEST: Symbol Decoding %d ns", time.Since(ts).Nanoseconds())
 
 	return s.exportSymbols, nil
 }
@@ -932,7 +931,7 @@ func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 		return s.decodeHeightClassDeltaHeightWithHuffman()
 	}
 
-	common.Log.Debug("Reader: %d", s.r.StreamPosition())
+	common.Log.Trace("Reader: %d", s.r.StreamPosition())
 	i, err := s.arithmeticDecoder.DecodeInt(s.cxIADH)
 	if err != nil {
 		return 0, err
@@ -986,7 +985,7 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 			if err != nil {
 				return nil, err
 			}
-			// common.Log.Debug("Setting HeightClassCollectiveBitmap Byte: %08b at index: %d", b, i)
+			// common.Log.Trace("Setting HeightClassCollectiveBitmap Byte: %08b at index: %d", b, i)
 			if err = heightClassColleciveBitmap.SetByte(i, b); err != nil {
 				return nil, err
 			}

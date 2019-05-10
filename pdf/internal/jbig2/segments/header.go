@@ -68,14 +68,14 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 		}
 		segmentDataPart = creator()
 
-		common.Log.Debug("[SEGMENT-HEADER][#%d] GetSegmentData at Offset: %04X", h.SegmentNumber, h.SegmentDataStartOffset)
+		common.Log.Trace("[SEGMENT-HEADER][#%d] GetSegmentData at Offset: %04X", h.SegmentNumber, h.SegmentDataStartOffset)
 		subReader, err := h.subInputReader()
 		if err != nil {
 			return nil, err
 		}
 
 		if err := segmentDataPart.Init(h, subReader); err != nil {
-			common.Log.Debug("Init failed: %v for type: %T", err, segmentDataPart)
+			common.Log.Trace("Init failed: %v for type: %T", err, segmentDataPart)
 			return nil, err
 		}
 		h.SegmentData = segmentDataPart
@@ -88,12 +88,12 @@ func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
 	offset int64, organisationType uint8,
 ) (err error) {
-	common.Log.Debug("[SEGMENT-HEADER][PARSE] Begins")
+	common.Log.Trace("[SEGMENT-HEADER][PARSE] Begins")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[SEGMENT-HEADER][PARSE] Failed. %v", err)
+			common.Log.Trace("[SEGMENT-HEADER][PARSE] Failed. %v", err)
 		} else {
-			common.Log.Debug("[SEGMENT-HEADER][PARSE] Finished")
+			common.Log.Trace("[SEGMENT-HEADER][PARSE] Finished")
 		}
 	}()
 
@@ -104,7 +104,7 @@ func (h *Header) parse(
 
 	var b = make([]byte, 4)
 	_, err = r.Read(b)
-	common.Log.Debug("First 4 Bytes at segment: %s at offset: %04X", hex.EncodeToString(b), offset)
+	common.Log.Trace("First 4 Bytes at segment: %s at offset: %04X", hex.EncodeToString(b), offset)
 
 	_, err = r.Seek(offset, io.SeekStart)
 	if err != nil {
@@ -135,14 +135,14 @@ func (h *Header) parse(
 		return err
 	}
 
-	common.Log.Debug("readReferedToSegments done...")
+	common.Log.Trace("readReferedToSegments done...")
 
 	// 7.2.6 Segment page association
 	err = h.readSegmentPageAssociation(d, r, countOfRTS, h.RTSNumbers...)
 	if err != nil {
 		return err
 	}
-	common.Log.Debug("readSegmentPageAssociation done...")
+	common.Log.Trace("readSegmentPageAssociation done...")
 
 	if h.Type != TEndOfFile {
 		// 7.2.7 Segment data length (Contains the length of the data)
@@ -154,7 +154,7 @@ func (h *Header) parse(
 	h.readDataStartOffset(r, organisationType)
 	h.readHeaderLength(r, offset)
 
-	common.Log.Debug("%s", h)
+	common.Log.Trace("%s", h)
 	return nil
 }
 
@@ -201,9 +201,9 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	}
 
 	h.Type = Type(int(tp))
-	// common.Log.Debug("Segment Type: %v", h.Type)
-	// common.Log.Debug("PageAssociationSizeSet: %v", h.PageAssociationFieldSize)
-	// common.Log.Debug("DeferredNonRetainSet: %v", h.RetainFlag)
+	// common.Log.Trace("Segment Type: %v", h.Type)
+	// common.Log.Trace("PageAssociationSizeSet: %v", h.PageAssociationFieldSize)
+	// common.Log.Trace("DeferredNonRetainSet: %v", h.RetainFlag)
 
 	return nil
 }
@@ -335,7 +335,7 @@ func (h *Header) readSegmentPageAssociation(
 
 // readSegmentDataLength 7.2.7 - contains the length of the data part in bytes
 func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
-	common.Log.Debug("SegmentData BitPosition: %d", r.BitPosition())
+	common.Log.Trace("SegmentData BitPosition: %d", r.BitPosition())
 	h.SegmentDataLength, err = r.ReadBits(32)
 	if err != nil {
 		return err
@@ -350,7 +350,7 @@ func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
 // is OSequential.
 func (h *Header) readDataStartOffset(r reader.StreamReader, organisationType uint8) {
 	if organisationType == OSequential {
-		common.Log.Debug("Sequential organisation")
+		common.Log.Trace("Sequential organisation")
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())
 	}
 
