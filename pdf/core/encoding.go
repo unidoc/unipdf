@@ -2095,23 +2095,18 @@ func (enc *JBIG2Encoder) GetFilterName() string {
 // MakeDecodeParams makes a new instance of an encoding dictionary based on
 // the current encoder settings.
 func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
-	decodeParams := MakeDict()
-	if enc.IsChocolateData {
-		// /Decode[1.000 0.000]
-		decodeParams.Set("Decode", MakeArray(MakeFloat(1.000), MakeFloat(0.000)))
-
-	}
-	return decodeParams
+	return MakeDict()
 }
 
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-
 	if enc.IsChocolateData {
-		decodeParams := enc.MakeDecodeParams()
-		dict.Set("DecodeParms", decodeParams)
+		// /Decode[1.000 0.000]
+		dict.Set("Decode", MakeArray(MakeFloat(1.000), MakeFloat(0.000)))
 	}
+	dict.Set("Filter", MakeName(enc.GetFilterName()))
+
 	return dict
 }
 
