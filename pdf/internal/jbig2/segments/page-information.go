@@ -71,7 +71,7 @@ func (p *PageInformationSegment) DefaultPixelValue() uint8 {
 }
 
 func (p *PageInformationSegment) parseHeader() (err error) {
-	common.Log.Trace("[PageInformationSegment] ParsingHeader...")
+	common.Log.Debug("[PageInformationSegment] ParsingHeader...")
 	defer func() {
 		var str = "[PageInformationSegment] ParsingHeader Finished"
 		if err != nil {
@@ -79,7 +79,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		} else {
 			str += " succesfully"
 		}
-		common.Log.Trace(str)
+		common.Log.Debug(str)
 	}()
 	if err = p.readWidthAndHeight(); err != nil {
 		return err
@@ -138,7 +138,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 	if err = p.checkInput(); err != nil {
 		return err
 	}
-	common.Log.Trace("%s", p)
+	common.Log.Debug("%s", p)
 
 	return nil
 }
@@ -163,7 +163,7 @@ func (p *PageInformationSegment) readResoultion() error {
 func (p *PageInformationSegment) checkInput() error {
 	if p.PageBMHeight == 0xFFFFFFFFFF {
 		if !p.IsStripe {
-			common.Log.Trace("isStriped should contaion the value true")
+			common.Log.Debug("isStriped should contaion the value true")
 		}
 	}
 	return nil

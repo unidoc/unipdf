@@ -39,7 +39,7 @@ func New(width, height int) *Bitmap {
 		RowStride: (width + 7) >> 3,
 	}
 
-	common.Log.Trace("Created bitmap - Width: %d, Height: %d", width, height)
+	common.Log.Debug("Created bitmap - Width: %d, Height: %d", width, height)
 
 	bm.Data = make([]byte, height*bm.RowStride)
 
@@ -71,7 +71,7 @@ func (b *Bitmap) GetPixel(x, y int) bool {
 	o := b.GetBitOffset(x)
 	shift := uint(7 - o)
 	if i > len(b.Data)-1 {
-		common.Log.Trace("Trying to get pixel out of the data range. x: '%d', y:'%d', bm: '%s'", x, y, b)
+		common.Log.Debug("Trying to get pixel out of the data range. x: '%d', y:'%d', bm: '%s'", x, y, b)
 		return false
 	}
 
@@ -126,7 +126,7 @@ func (b *Bitmap) SetByte(index int, v byte) error {
 		return ErrIndexOutOfRange
 	}
 
-	// common.Log.Trace("SetByte: %08b at index: %d", v, index)
+	// common.Log.Debug("SetByte: %08b at index: %d", v, index)
 	b.Data[index] = v
 	return nil
 }
@@ -162,14 +162,14 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 		useShift = padding != 0
 	)
 
-	common.Log.Trace("Padding: %d, rowStride: %d, Width: %d", padding, b.RowStride, b.Width)
+	common.Log.Debug("Padding: %d, rowStride: %d, Width: %d", padding, b.RowStride, b.Width)
 
 	if !useShift {
 		return b.Data
 	}
 
 	size := b.Width * b.Height
-	common.Log.Trace("Size before: %d", size)
+	common.Log.Debug("Size before: %d", size)
 	if size%8 != 0 {
 		size >>= 3
 		size++
@@ -178,7 +178,7 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 	}
 	padding = 8 - padding
 
-	common.Log.Trace("Size: %d, Width: %d Height: %d", size, b.Width, b.Height)
+	common.Log.Debug("Size: %d, Width: %d Height: %d", size, b.Width, b.Height)
 
 	var data = make([]byte, size)
 
@@ -215,10 +215,10 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 				// the padding should be 7 - padding
 				lastByte := data[currentIndex]
 
-				common.Log.Trace("Line: %d, byteNo: %d, byteValue: %08b currentIndex: %d", line, i, bt, currentIndex)
+				common.Log.Debug("Line: %d, byteNo: %d, byteValue: %08b currentIndex: %d", line, i, bt, currentIndex)
 
 				if i == b.RowStride-1 {
-					common.Log.Trace("LastRow")
+					common.Log.Debug("LastRow")
 					// if the line is the last in the row add the default padding to the current padding
 					// i.e.
 					// source byte: 0100100 with padding = 2 the data to take should be 01001000
@@ -228,22 +228,22 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 					// significantBits is 3 and byte is 01110000 shoule be now 01110000 | (010010xx >> (8-(8-3)))
 					// the data which still needs to be added is 0100000 with significantBits
 					dif := significantBits + (8 - padding)
-					common.Log.Trace("Significant: %d, Padding: %d, Dif: %d", significantBits, padding, dif)
+					common.Log.Debug("Significant: %d, Padding: %d, Dif: %d", significantBits, padding, dif)
 					if dif > 8 {
-						common.Log.Trace("more significant bits.")
+						common.Log.Debug("more significant bits.")
 						// if the current significant bits number and the padded bits number greater than 8
 						// write as many bits as possible to the current byte and add the currentIndex
 						// 5 + (8 - 2) = 11
 						// get 8-5 bits at first and store it on the index
-						common.Log.Trace("LastByte before: %08b", lastByte)
-						common.Log.Trace("Byte: %08b", bt)
+						common.Log.Debug("LastByte before: %08b", lastByte)
+						common.Log.Debug("Byte: %08b", bt)
 						lastByte = lastByte | (bt >> (8 - significantBits))
 						data[currentIndex] = lastByte
-						common.Log.Trace("LastByte after first: %08b", lastByte)
+						common.Log.Debug("LastByte after first: %08b", lastByte)
 
 						// increase the index
 						currentIndex++
-						common.Log.Trace("Current Index: %d", currentIndex)
+						common.Log.Debug("Current Index: %d", currentIndex)
 
 						// get the rest bits 11 - (8 - 5) =  (dif - (8 - significantBits))
 						// which would be the significant bits
@@ -255,7 +255,7 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 						lastByte = lastByte | (bt >> (8 - significantBits))
 						data[currentIndex] = lastByte
 					} else {
-						common.Log.Trace("Dif: %d", dif)
+						common.Log.Debug("Dif: %d", dif)
 						// if the difference is smaller or equal to 8
 						lastByte = lastByte | bt>>(8-dif)
 						significantBits = dif
@@ -270,18 +270,18 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 					// byte bt: 00011000 significantBits: 3 lastByte is 10100000
 					// the lastByte should be 10100011
 					// so it should be 10100000 | 00011000 >> 3
-					common.Log.Trace("Normal - Current LastByte: %08b, sigBits: %d", lastByte, significantBits)
+					common.Log.Debug("Normal - Current LastByte: %08b, sigBits: %d", lastByte, significantBits)
 					lastByte |= (bt >> (8 - significantBits))
 
 					data[currentIndex] = lastByte
-					common.Log.Trace("The LastByte value: %08b", lastByte)
+					common.Log.Debug("The LastByte value: %08b", lastByte)
 
 					currentIndex++
 
 					lastByte = bt << significantBits
 					data[currentIndex] = lastByte
 
-					common.Log.Trace("Normal - 2 - LastByte: %08b Significant bits: %d", lastByte, significantBits)
+					common.Log.Debug("Normal - 2 - LastByte: %08b Significant bits: %d", lastByte, significantBits)
 
 				}
 

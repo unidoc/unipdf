@@ -16,7 +16,7 @@ import (
 // TestExtract tests the extraction of the image.Rectangle from the source bitmap
 func TestExtract(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
 	t.Run("SmallerSize", func(t *testing.T) {
 		// Tests the extraction when the dimensions are smaller than in the source bitmap

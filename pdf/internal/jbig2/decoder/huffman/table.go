@@ -87,10 +87,10 @@ func preprocessCodes(codeTable []*Code) {
 
 	// Annex B.3 3)
 	for curLen := 1; curLen <= len(lenCount); curLen++ {
-		// common.Log.Trace("First: %d, Lencount-1: %d, LenCount-1 shifted: %d", firstCode[curLen-1], lenCount[curLen-1], lenCount[curLen-1]<<1)
+		// common.Log.Debug("First: %d, Lencount-1: %d, LenCount-1 shifted: %d", firstCode[curLen-1], lenCount[curLen-1], lenCount[curLen-1]<<1)
 		firstCode[curLen] = (firstCode[curLen-1] + (lenCount[curLen-1])) << 1
 		curCode = firstCode[curLen]
-		// common.Log.Trace("CurCode %d at i: %d", curCode, curLen)
+		// common.Log.Debug("CurCode %d at i: %d", curCode, curLen)
 		for _, c := range codeTable {
 			if c.prefixLength == curLen {
 				c.code = curCode
@@ -98,7 +98,7 @@ func preprocessCodes(codeTable []*Code) {
 			}
 		}
 	}
-	// common.Log.Trace("Table: %v", codeTable)
+	// common.Log.Debug("Table: %v", codeTable)
 }
 
 func maxInt(x, y int) int {

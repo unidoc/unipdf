@@ -74,12 +74,12 @@ func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) er
 
 // GetRegionBitmap gets the Refinement Region bitmap
 func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
-	common.Log.Trace("[GENERIC-REF-REGION] GetRegionBitmap begins...")
+	common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap begins...")
 	defer func() {
 		if err != nil {
-			common.Log.Trace("[GENERIC-REF-REGION] GetRegionBitmap failed. %v", err)
+			common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap failed. %v", err)
 		} else {
-			common.Log.Trace("[GENERIC-REF-REGION] GetRegionBitmap finished.")
+			common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap finished.")
 		}
 	}()
 	if g.RegionBitmap != nil {
@@ -168,8 +168,8 @@ func (g *GenericRefinementRegion) SetParameters(
 	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int,
 	isTPGRon bool, grAtX []int8, grAtY []int8,
 ) {
-	common.Log.Trace("[GENERIC-REF-REGION] SetParameters")
-	defer func() { common.Log.Trace("[GENERIC-REF-REGION] SetParameters finished. %s", g) }()
+	common.Log.Debug("[GENERIC-REF-REGION] SetParameters")
+	defer func() { common.Log.Debug("[GENERIC-REF-REGION] SetParameters finished. %s", g) }()
 	if cx != nil {
 		g.cx = cx
 	}
@@ -179,9 +179,9 @@ func (g *GenericRefinementRegion) SetParameters(
 
 	g.TemplateID = grTemplate
 
-	// common.Log.Trace("Setting BitmapWidth: %d", regionWidth)
+	// common.Log.Debug("Setting BitmapWidth: %d", regionWidth)
 	g.RegionInfo.BitmapWidth = regionWidth
-	// common.Log.Trace("Setting BitmapHeigth: %d", regionHeight)
+	// common.Log.Debug("Setting BitmapHeigth: %d", regionHeight)
 	if regionHeight < 0 {
 		panic("Invalid RegionHeight")
 	}
@@ -776,11 +776,11 @@ func (g *GenericRefinementRegion) decodeTemplate(
 	for x := 0; x < width; x++ {
 		minorX := x & 0x07
 
-		// common.Log.Trace("C1: %d, C2: %d, C3: %d, C4: %d, C5: %d", c1, c2, c3, c4, c5)
+		// common.Log.Debug("C1: %d, C2: %d, C3: %d, C4: %d, C5: %d", c1, c2, c3, c4, c5)
 		tval := templateFormation.form(c1, c2, c3, c4, c5)
-		// common.Log.Trace("tVal: %d, c1: %d, c2: %d, c3: %d, c4: %d, c5: %d", tval, c1, c2, c3, c4, c5)
+		// common.Log.Debug("tVal: %d, c1: %d, c2: %d, c3: %d, c4: %d, c5: %d", tval, c1, c2, c3, c4, c5)
 		if g.override {
-			// common.Log.Trace("With Override")
+			// common.Log.Debug("With Override")
 			temp, err = g.RegionBitmap.GetByte(g.RegionBitmap.GetByteIndex(x, lineNumber))
 			if err != nil {
 				return err
@@ -788,12 +788,12 @@ func (g *GenericRefinementRegion) decodeTemplate(
 
 			g.cx.SetIndex(g.overrideAtTemplate0(int(tval), x, lineNumber, int(temp), minorX))
 		} else {
-			// common.Log.Trace("Without Override")
+			// common.Log.Debug("Without Override")
 			g.cx.SetIndex(int(tval))
 		}
 
 		var bit int
-		// common.Log.Trace("CX Index: %+v", g.cx)
+		// common.Log.Debug("CX Index: %+v", g.cx)
 		bit, err = g.arithDecode.DecodeBit(g.cx)
 		if err != nil {
 			return err
@@ -944,13 +944,13 @@ func (g *GenericRefinementRegion) updateOverride() error {
 }
 
 func (g *GenericRefinementRegion) parseHeader() (err error) {
-	common.Log.Trace("[GENERIC-REF-REGION] parsing Header...")
+	common.Log.Debug("[GENERIC-REF-REGION] parsing Header...")
 	ts := time.Now()
 	defer func() {
 		if err == nil {
-			common.Log.Trace("[GENERIC-REF-REGION] parsing header finishid in: %d ns", time.Since(ts).Nanoseconds())
+			common.Log.Debug("[GENERIC-REF-REGION] parsing header finishid in: %d ns", time.Since(ts).Nanoseconds())
 		} else {
-			common.Log.Trace("[GENERIC-REF-REGION] parsing header failed: %s", err)
+			common.Log.Debug("[GENERIC-REF-REGION] parsing header failed: %s", err)
 		}
 	}()
 	if err = g.RegionInfo.parseHeader(); err != nil {

@@ -88,7 +88,7 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err erro
 // GetGlobalSegment gets the global segment
 func (d *Document) GetGlobalSegment(i int) *segments.Header {
 	if d.GlobalSegments == nil {
-		common.Log.Trace("Trying to get Global segment from nil Globals")
+		common.Log.Debug("Trying to get Global segment from nil Globals")
 		return nil
 	}
 	return d.GlobalSegments[i]
@@ -135,7 +135,7 @@ func (d *Document) mapData() error {
 			return err
 		}
 
-		common.Log.Trace("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
+		common.Log.Debug("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
 		kind = segment.Type
 		if kind != segments.TEndOfFile {
 			if segment.PageAssociation != 0 {
@@ -265,13 +265,13 @@ func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	}
 
 	if pageNumber > len(d.Pages) {
-		common.Log.Trace("Can't find the page: %d. %s", pageNumber, debug.Stack())
+		common.Log.Debug("Can't find the page: %d. %s", pageNumber, debug.Stack())
 		return nil, errors.New("JBIG2 Document page not found")
 	}
 
 	p, ok := d.Pages[pageNumber]
 	if !ok {
-		common.Log.Trace("Can't find the page: %d. %s", pageNumber, debug.Stack())
+		common.Log.Debug("Can't find the page: %d. %s", pageNumber, debug.Stack())
 		return nil, errors.New("JBIG2 Document page not found")
 	}
 
@@ -293,7 +293,7 @@ func (d *Document) GetAmountOfPages() (uint32, error) {
 func (d *Document) reachedEOF(offset int64) (bool, error) {
 	_, err := d.InputStream.Seek(offset, io.SeekStart)
 	if err != nil {
-		common.Log.Trace("reachedEOF - d.InputStream.Seek failed: %v", err)
+		common.Log.Debug("reachedEOF - d.InputStream.Seek failed: %v", err)
 		return false, err
 	}
 

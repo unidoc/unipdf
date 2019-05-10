@@ -16,7 +16,7 @@ import (
 
 func TestDecodeGenericRegion(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
 	t.Run("AnnexH", func(t *testing.T) {
 		t.Run("S-12th", func(t *testing.T) {
