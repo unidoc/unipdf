@@ -273,6 +273,9 @@ func (enc *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	var outBuf bytes.Buffer
 	outBuf.ReadFrom(r)
 
+	return outBuf.Bytes(), nil
+}
+
 // Prediction filters for PNG predictors.
 const (
 	pfNone  = 0 // No prediction (raw).
@@ -419,9 +422,142 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 	}
 
 	return enc.postDecodePredict(outData)
-
 }
 
+// EncodeBytes encodes a bytes array and return the encoded value based on the encoder parameters.
+func (enc *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
+	if enc.Predictor != 1 && enc.Predictor != 11 {
+		common.Log.Debug("Encoding error: FlateEncoder Predictor = 1, 11 only supported")
+		return nil, ErrUnsupportedEncodingParameters
+	}
+
+	if enc.Predictor == 11 {
+		// The length of each output row in number of samples.
+		// N.B. Each output row has one extra sample as compared to the input to indicate the
+		// predictor type.
+		rowLength := int(enc.Columns)
+		rows := len(data) / rowLength
+		if len(data)%rowLength != 0 {
+			common.Log.Error("Invalid column length")
+			return nil, errors.New("invalid row length")
+		}
+
+		pOutBuffer := bytes.NewBuffer(nil)
+
+		tmpData := make([]byte, rowLength)
+
+		for i := 0; i < rows; i++ {
+			rowData := data[rowLength*i : rowLength*(i+1)]
+
+			// PNG SUB method.
+			// Sub: Predicts the same as the sample to the left.
+			tmpData[0] = rowData[0]
+			for j := 1; j < rowLength; j++ {
+				tmpData[j] = byte(int(rowData[j]-rowData[j-1]) % 256)
+			}
+
+			pOutBuffer.WriteByte(1) // sub method
+			pOutBuffer.Write(tmpData)
+		}
+
+		data = pOutBuffer.Bytes()
+	}
+
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
+	w.Write(data)
+	w.Close()
+
+	return b.Bytes(), nil
+}
+
+// LZWEncoder provides LZW encoding/decoding functionality.
+type LZWEncoder struct {
+	Predictor        int
+	BitsPerComponent int
+	// For predictors
+	Columns int
+	Colors  int
+	// LZW algorithm setting.
+	EarlyChange int
+}
+
+// NewLZWEncoder makes a new LZW encoder with default parameters.
+func NewLZWEncoder() *LZWEncoder {
+	encoder := &LZWEncoder{}
+
+	// Default (No prediction)
+	encoder.Predictor = 1
+
+	// Currently only supporting 8.
+	encoder.BitsPerComponent = 8
+
+	encoder.Colors = 1
+	encoder.Columns = 1
+	encoder.EarlyChange = 1
+
+	return encoder
+}
+
+// GetFilterName returns the name of the encoding filter.
+func (enc *LZWEncoder) GetFilterName() string {
+	return StreamEncodingFilterNameLZW
+}
+
+// MakeDecodeParams makes a new instance of an encoding dictionary based on
+// the current encoder settings.
+func (enc *LZWEncoder) MakeDecodeParams() PdfObject {
+	if enc.Predictor > 1 {
+		decodeParams := MakeDict()
+		decodeParams.Set("Predictor", MakeInteger(int64(enc.Predictor)))
+
+		// Only add if not default option.
+		if enc.BitsPerComponent != 8 {
+			decodeParams.Set("BitsPerComponent", MakeInteger(int64(enc.BitsPerComponent)))
+		}
+		if enc.Columns != 1 {
+			decodeParams.Set("Columns", MakeInteger(int64(enc.Columns)))
+		}
+		if enc.Colors != 1 {
+			decodeParams.Set("Colors", MakeInteger(int64(enc.Colors)))
+		}
+		return decodeParams
+	}
+	return nil
+}
+
+// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
+// Has the Filter set and the DecodeParms.
+func (enc *LZWEncoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := MakeDict()
+
+	dict.Set("Filter", MakeName(enc.GetFilterName()))
+
+	decodeParams := enc.MakeDecodeParams()
+	if decodeParams != nil {
+		dict.Set("DecodeParms", decodeParams)
+	}
+
+	dict.Set("EarlyChange", MakeInteger(int64(enc.EarlyChange)))
+
+	return dict
+}
+
+// UpdateParams updates the parameter values of the encoder.
+func (enc *LZWEncoder) UpdateParams(params *PdfObjectDictionary) {
+	predictor, err := GetNumberAsInt64(params.Get("Predictor"))
+	if err == nil {
+		enc.Predictor = int(predictor)
+	}
+
+	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
+	if err == nil {
+		enc.BitsPerComponent = int(bpc)
+	}
+
+	columns, err := GetNumberAsInt64(params.Get("Width"))
+	if err == nil {
+		enc.Columns = int(columns)
 	}
 
 	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
@@ -716,7 +852,6 @@ func (enc *LZWEncoder) EncodeBytes(data []byte) ([]byte, error) {
 }
 
 // DCTEncoder provides a DCT (JPG) encoding/decoding functionality for images.
-
 type DCTEncoder struct {
 	ColorComponents  int // 1 (gray), 3 (rgb), 4 (cmyk)
 	BitsPerComponent int // 8 or 16 bit
@@ -852,6 +987,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 
 	return encoder, nil
 }
+
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
@@ -1014,7 +1150,6 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 
 	x := 0
 	y := 0
-
 	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
 		var c gocolor.Color
 		if enc.ColorComponents == 1 {
@@ -1150,6 +1285,7 @@ func (enc *RunLengthEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	runLen := 1
 
 	for {
+		b, err := bufReader.ReadByte()
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -1303,7 +1439,6 @@ func (enc *ASCIIHexEncoder) EncodeBytes(data []byte) ([]byte, error) {
 }
 
 // ASCII85Encoder implements ASCII85 encoder/decoder.
-
 type ASCII85Encoder struct {
 }
 
@@ -1439,6 +1574,8 @@ func (enc *ASCII85Encoder) base256Tobase85(base256val uint32) [5]byte {
 
 // EncodeBytes encodes data into ASCII85 encoded format.
 func (enc *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	var encoded bytes.Buffer
+
 	for i := 0; i < len(data); i += 4 {
 		b1 := data[i]
 		n := 1
@@ -1479,7 +1616,6 @@ func (enc *ASCII85Encoder) EncodeBytes(data []byte) ([]byte, error) {
 }
 
 // RawEncoder implements Raw encoder/decoder (no encoding, pass through)
-
 type RawEncoder struct{}
 
 // NewRawEncoder returns a new instace of RawEncoder.
@@ -1616,6 +1752,8 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 			case *PdfObjectDictionary:
 				decodeParams = t
 				break
+			case *PdfObjectArray:
+				if t.Len() == 1 {
 					if dp, ok := GetDict(t.Get(0)); ok {
 						decodeParams = dp
 					}
@@ -1839,13 +1977,115 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoder.Encode(pixels), nil
 }
 
+const (
+	jbig2Globals = "JBIG2Globals"
+)
+
 // JBIG2Encoder implements JBIG2 encoder/decoder (dummy, for now)
 // FIXME: implement
-type JBIG2Encoder struct{}
+type JBIG2Encoder struct {
+	// Globals are the JBIG2 global segments
+	Globals jbig2.Globals
+
+	// IsVanillaData defines if the data is encoded such that one means when the binary data '1' means white and '0' black
+	// otherwise the data is called chocolate
+	IsVanillaData bool
+}
 
 // NewJBIG2Encoder returns a new instance of JBIG2Encoder.
 func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
+}
+
+func (enc *JBIG2Encoder) setVanillaData(decode PdfObject) {
+	arr, ok := decode.(*PdfObjectArray)
+	if !ok {
+		common.Log.Debug("JBIG2Encoder - DecodeParams->Decode is not an array. %T", decode)
+	} else {
+		// the array should have two int or floats
+		fsl, err := arr.GetAsFloat64Slice()
+		if err != nil {
+			iArr, err := arr.ToIntegerArray()
+			if err != nil {
+				common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value. %s", arr.String())
+			} else {
+				if iArr[0] == 1 && iArr[1] == 0 {
+					enc.IsVanillaData = true
+				} else if iArr[1] == 0 && iArr[0] == 1 {
+					enc.IsVanillaData = false
+				} else {
+					common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
+				}
+			}
+		} else {
+			if len(fsl) == 2 {
+				if fsl[0] == 1.0 && fsl[1] == 0.0 {
+					enc.IsVanillaData = true
+				} else if fsl[0] == 0.0 && fsl[1] == 1.0 {
+					enc.IsVanillaData = false
+				} else {
+					common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
+				}
+			}
+		}
+	}
+}
+
+func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
+	encoder := NewJBIG2Encoder()
+
+	encDict := streamObj.PdfObjectDictionary
+	if encDict == nil {
+		// No encoding dictionary.
+		return encoder, nil
+	}
+
+	// If decodeParams not provided, see if we can get from the stream.
+	if decodeParams == nil {
+		obj := encDict.Get("DecodeParms")
+		if obj != nil {
+			switch t := obj.(type) {
+			case *PdfObjectDictionary:
+				decodeParams = t
+				break
+			case *PdfObjectArray:
+				if t.Len() == 1 {
+					if dp, ok := GetDict(t.Get(0)); ok {
+						decodeParams = dp
+					}
+				}
+			default:
+				common.Log.Error("DecodeParms not a dictionary %#v", obj)
+				return nil, errors.New("invalid DecodeParms")
+			}
+		}
+		if decodeParams == nil {
+			common.Log.Error("DecodeParms not specified %#v", obj)
+			return nil, errors.New("invalid DecodeParms")
+		}
+	}
+
+	if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
+		globalsStream, ok := globals.(*PdfObjectStream)
+		if !ok {
+			err := errors.New("the Globals stream should be an Object Stream")
+			common.Log.Debug("ERROR: %s", err.Error())
+			return nil, err
+		}
+		gdoc, err := jbig2.NewDocument(globalsStream.Stream)
+		if err != nil {
+			err = fmt.Errorf("decoding global stream failed. %s", err.Error())
+			common.Log.Debug("ERROR: %s", err)
+			return nil, err
+		}
+
+		encoder.Globals = gdoc.GlobalSegments
+	}
+	if decode := decodeParams.Get("Decode"); decode != nil {
+		encoder.setVanillaData(decode)
+	}
+
+	return encoder, nil
 }
 
 // GetFilterName returns the name of the encoding filter.
@@ -1856,22 +2096,38 @@ func (enc *JBIG2Encoder) GetFilterName() string {
 // MakeDecodeParams makes a new instance of an encoding dictionary based on
 // the current encoder settings.
 func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
+	decodeParams := MakeDict()
+	if enc.IsVanillaData {
+		// /Decode[1.000 0.000]
+		decodeParams.Set("Decode", MakeArray(MakeFloat(1.000), MakeFloat(0.000)))
 
-	return nil
+	}
+	return decodeParams
 }
 
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
+	dict := MakeDict()
 
-	return MakeDict()
+	if enc.IsVanillaData {
+		decodeParams := enc.MakeDecodeParams()
+		dict.Set("DecodeParams", decodeParams)
+	}
+	return dict
 }
 
-var i int
+// UpdateParams updates the parameter values of the encoder.
+func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
+	if decode := params.Get("Decode"); decode != nil {
+		enc.setVanillaData(decode)
+	}
+}
 
 // DecodeBytes decode the jbig2 raw 'encoded' data
-func (j *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", j.GetFilterName())
-	doc, err := jbig2.NewDocument(encoded)
+func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
+
+	// create new JBIG2 document
+	doc, err := jbig2.NewDocumentWithGlobals(encoded, enc.Globals)
 	if err != nil {
 		return nil, err
 	}
@@ -1882,81 +2138,39 @@ func (j *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// check if page is not nil
+	if page == nil {
+		err = errors.New("JBIG2 provided nil page")
+		common.Log.Debug("ERROR: %s", err.Error())
+		return nil, err
+	}
+
 	// get the page data
 	bm, err := page.GetBitmap()
 	if err != nil {
 		return nil, err
 	}
 
+	// check if data is vanilla
+	if enc.IsVanillaData {
+		return bm.GetVanillaData(), nil
+	}
 	return bm.GetChocolateData(), nil
 }
 
 // DecodeStream decodes the pdf stream object from the jbig2 encoding
-func (j *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	// TODO: Set Globals
-
-	var globals jbig2.Globals
-
-	common.Log.Info("KEYS: %v", streamObj.PdfObjectDictionary.Keys())
-	parms := streamObj.PdfObjectDictionary.Get("DecodeParms")
-	if parms != nil {
-		p, ok := parms.(*PdfObjectDictionary)
-		if ok {
-			globalsStream := p.Get("JBIG2Globals")
-			common.Log.Debug("Globals: %v", globalsStream)
-
-			s, ok := globalsStream.(*PdfObjectStream)
-			if !ok {
-				err := errors.New("The Globals stream should be an Object Stream...")
-				common.Log.Error(err.Error())
-				return nil, err
-			}
-
-			gdoc, err := jbig2.NewDocument(s.Stream)
-			if err != nil {
-				return nil, err
-			}
-
-			globals = gdoc.GlobalSegments
-		} else {
-			err := errors.New("The DecodeParam should be a PdfObjectDictionary")
-			common.Log.Error(err)
-			return nil, err
-		}
-	}
-
-	// if decode := streamObj.PdfObjectDictionary.Get("Decode"); decode != nil {
-	// 	common.Log.Debug("Decode: %v", decode)
-	// 	panic(decode.String())
-	// }
-
-	doc, err := jbig2.NewDocumentWithGlobals(streamObj.Stream, globals)
-	if err != nil {
-		return nil, err
-	}
-
-	page, err := doc.GetPage(1)
-	if err != nil {
-		return nil, err
-	}
-
-	bm, err := page.GetBitmap()
-	if err != nil {
-		return nil, err
-	}
-
-	return bm.GetChocolateData(), nil
+func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
+	return enc.DecodeBytes(streamObj.Stream)
 }
 
 // EncodeBytes encodes the raw data bytes into the jbig2 encoded data.
-func (j *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", j.GetFilterName())
+func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
+	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return data, ErrNoJBIG2Decode
 }
 
 // JPXEncoder implements JPX encoder/decoder (dummy, for now)
 // FIXME: implement
-
 type JPXEncoder struct{}
 
 // NewJPXEncoder returns a new instance of JPXEncoder.
@@ -1994,15 +2208,16 @@ func (enc *JPXEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 // slice of bytes.
 func (enc *JPXEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
+	return streamObj.Stream, ErrNoJPXDecode
 }
 
 // EncodeBytes JPX encodes the passed in slice of bytes.
 func (enc *JPXEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
+	return data, ErrNoJPXDecode
 }
 
 // MultiEncoder supports serial encoding.
-
 type MultiEncoder struct {
 	// Encoders in the order that they are to be applied.
 	encoders []StreamEncoder
@@ -2092,6 +2307,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 		if *name == StreamEncodingFilterNameFlate {
 			// TODO: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)
+			if err != nil {
 				return nil, err
 			}
 			mencoder.AddEncoder(encoder)
@@ -2139,6 +2355,8 @@ func (enc *MultiEncoder) GetFilterName() string {
 
 // MakeDecodeParams makes a new instance of an encoding dictionary based on
 // the current encoder settings.
+func (enc *MultiEncoder) MakeDecodeParams() PdfObject {
+	if len(enc.encoders) == 0 {
 		return nil
 	}
 

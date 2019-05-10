@@ -77,21 +77,6 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	return segmentDataPart, nil
 }
 
-// // String implements Stringer interface
-// func (h *Header) String() string {
-// 	b := strings.Builder{}
-
-// 	if h.RTSegments != nil {
-// 		for _, s := range h.RTSegments {
-// 			b.WriteString(fmt.Sprintf("%d ", s.SegmentNumber))
-// 		}
-// 	} else {
-// 		b.WriteString("none")
-// 	}
-
-// 	return fmt.Sprintf("\n#SegmentNr: %d\n Type: %s\n PageAssociation: %d\n Referred-to segments: %s\n", h.SegmentNumber, h.Type, h.PageAssociation, b.String())
-// }
-
 // Parse parses the current segment header for the provided document 'd'.
 func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
@@ -156,12 +141,12 @@ func (h *Header) parse(
 	}
 	common.Log.Debug("readSegmentPageAssociation done...")
 
-	if h.Type != TEndOfPage || h.Type != TEndOfFile {
-		// 7.2.7 Segment data length (Contains the length of the data)
-		if err = h.readSegmentDataLength(r); err != nil {
-			return err
-		}
+	// if h.Type != TEndOfPage || h.Type != TEndOfFile {
+	// 7.2.7 Segment data length (Contains the length of the data)
+	if err = h.readSegmentDataLength(r); err != nil {
+		return err
 	}
+	// }
 
 	h.readDataStartOffset(r, organisationType)
 	h.readHeaderLength(r, offset)
