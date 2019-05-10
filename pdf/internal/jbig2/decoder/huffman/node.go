@@ -6,8 +6,8 @@
 package huffman
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"math"
 	"strings"
@@ -134,13 +134,13 @@ func (i *InternalNode) append(c *Code) error {
 			// the child will be OutOfBand
 			if bit == 1 {
 				if i.one != nil {
-					return errors.Errorf("OOB already set for code %s", c)
+					return fmt.Errorf("OOB already set for code %s", c)
 				}
 
 				i.one = newOufOfBandNode(c)
 			} else {
 				if i.zero != nil {
-					return errors.Errorf("OOB already set for code %s", c)
+					return fmt.Errorf("OOB already set for code %s", c)
 				}
 				i.zero = newOufOfBandNode(c)
 			}
@@ -150,12 +150,12 @@ func (i *InternalNode) append(c *Code) error {
 			// the child will be a ValueNode
 			if bit == 1 {
 				if i.one != nil {
-					return errors.Errorf("Value Node already set for code %s", c)
+					return fmt.Errorf("Value Node already set for code %s", c)
 				}
 				i.one = newValueNode(c)
 			} else {
 				if i.zero != nil {
-					return errors.Errorf("Value Node already set for code %s", c)
+					return fmt.Errorf("Value Node already set for code %s", c)
 				}
 				i.zero = newValueNode(c)
 			}

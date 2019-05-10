@@ -7,7 +7,6 @@ package segments
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
@@ -318,7 +317,7 @@ func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
 		return g.decodeTemplate3(line, width, paddedWidth, byteIndex, idx)
 	}
 
-	return errors.Errorf("Invalid GBTemplate provided: %d", g.GBTemplate)
+	return fmt.Errorf("Invalid GBTemplate provided: %d", g.GBTemplate)
 }
 
 func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex, idx int) (err error) {
@@ -837,7 +836,7 @@ func (g *GenericRegion) updateOverrideFlags() error {
 	}
 
 	if len(g.GBAtX) != len(g.GBAtY) {
-		return errors.Errorf("Incosistent AT pixel. Amount of 'x' pixels: %d, Amount of 'y' pixels: %d", len(g.GBAtX), len(g.GBAtY))
+		return fmt.Errorf("Incosistent AT pixel. Amount of 'x' pixels: %d, Amount of 'y' pixels: %d", len(g.GBAtX), len(g.GBAtY))
 	}
 
 	g.GBAtOverride = make([]bool, len(g.GBAtX))

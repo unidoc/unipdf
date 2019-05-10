@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"io"
@@ -64,7 +63,7 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	if segmentDataPart == nil {
 		creator, ok := kindMap[h.Type]
 		if !ok {
-			return nil, errors.Errorf("Type: %s/ %d creator not found. ", h.Type, h.Type)
+			return nil, fmt.Errorf("Type: %s/ %d creator not found. ", h.Type, h.Type)
 		}
 		segmentDataPart = creator()
 

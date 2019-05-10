@@ -6,7 +6,7 @@
 package segments
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
@@ -36,7 +36,7 @@ func (t *TableSegment) parseHeader() (err error) {
 		return
 	}
 	if bit == 1 {
-		return errors.Errorf("B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
+		return fmt.Errorf("B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
 	}
 
 	var bits uint64

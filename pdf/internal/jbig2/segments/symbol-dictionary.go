@@ -7,7 +7,6 @@ package segments
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
@@ -160,7 +159,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 			if rtSegments[i].Type == 0 {
 				symbolDictionary, ok := rtSegments[i].SegmentData.(*SymbolDictionary)
 				if !ok {
-					err = errors.Errorf("Related Segment: %v is not a Symbol Dictionary Segment", rtSegments[i])
+					err = fmt.Errorf("Related Segment: %v is not a Symbol Dictionary Segment", rtSegments[i])
 					return
 				}
 
@@ -1145,12 +1144,12 @@ func (s *SymbolDictionary) retrieveImportSymbols() error {
 
 			dict, ok := sd.(*SymbolDictionary)
 			if !ok {
-				return errors.Errorf("Provided Segment Data is not a SymbolDictionary Segment: %T", sd)
+				return fmt.Errorf("Provided Segment Data is not a SymbolDictionary Segment: %T", sd)
 			}
 
 			relatedDict, err := dict.GetDictionary()
 			if err != nil {
-				return errors.Wrapf(err, "Related segment with index: %d getDictionary failed.", h.SegmentNumber)
+				return fmt.Errorf("Related segment with index: %d getDictionary failed. %s", h.SegmentNumber, err.Error())
 			}
 			s.importSymbols = append(s.importSymbols, relatedDict...)
 			s.amountOfImportedSymbols += dict.amountOfExportedSymbols
