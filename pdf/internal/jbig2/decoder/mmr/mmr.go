@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package mmr
 
 import (
@@ -7,7 +12,8 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
-type MmrDecoder struct {
+// Decoder is the mmr decoder model
+type Decoder struct {
 	width, height int
 	data          *runData
 
@@ -16,8 +22,9 @@ type MmrDecoder struct {
 	modeTable  []*code
 }
 
-func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64) (*MmrDecoder, error) {
-	m := &MmrDecoder{
+// New creates new mmr decoder
+func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64) (*Decoder, error) {
+	m := &Decoder{
 		width:  width,
 		height: height,
 	}
@@ -41,11 +48,12 @@ func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64)
 	return m, nil
 }
 
-func (m *MmrDecoder) Data() *runData {
+// Data returns the decoder RunData
+func (m *Decoder) Data() *runData {
 	return m.data
 }
 
-func (m *MmrDecoder) initTables() (err error) {
+func (m *Decoder) initTables() (err error) {
 	if m.whiteTable == nil {
 		m.whiteTable, err = m.createLittleEndianTable(WhiteCodes)
 		if err != nil {
@@ -63,7 +71,8 @@ func (m *MmrDecoder) initTables() (err error) {
 	return nil
 }
 
-func (m *MmrDecoder) Uncompress2d(
+// Uncompress2d uncopmresses the 2d rows
+func (m *Decoder) Uncompress2d(
 	rd *runData,
 	referenceOffsets []int,
 	refRunLength int,
@@ -76,7 +85,7 @@ func (m *MmrDecoder) Uncompress2d(
 		currentBuffOffset      int
 		currentLineBitPosition int
 
-		whiteRun bool = true
+		whiteRun = true
 		err      error
 
 		c *code
@@ -104,8 +113,7 @@ decodeLoop:
 		// common.Log.Debug("Code: %v", c)
 
 		if c == nil {
-			// common.Log.Debug("Nil code")
-			rd.offset += 1
+			rd.offset++
 			break decodeLoop
 		}
 
@@ -122,7 +130,7 @@ decodeLoop:
 
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] - 1
 		case codeH:
-			var ever int = 1
+			var ever = 1
 			// common.Log.Debug("CodeH")
 			for ever > 0 {
 				var table []*code
@@ -151,13 +159,13 @@ decodeLoop:
 					if c.runLength < 0 {
 						// common.Log.Debug("runLength smaller than 0")
 						runOffsets[currentBuffOffset] = currentLineBitPosition
-						currentBuffOffset += 1
+						currentBuffOffset++
 						c = nil
 						break decodeLoop
 					}
 					currentLineBitPosition += c.runLength
 					runOffsets[currentBuffOffset] = currentLineBitPosition
-					currentBuffOffset += 1
+					currentBuffOffset++
 					break
 				}
 				currentLineBitPosition += c.runLength
@@ -193,7 +201,7 @@ decodeLoop:
 				if c.runLength < 64 {
 					if c.runLength < 0 {
 						runOffsets[currentBuffOffset] = currentLineBitPosition
-						currentBuffOffset += 1
+						currentBuffOffset++
 						break decodeLoop
 					}
 
@@ -203,7 +211,7 @@ decodeLoop:
 						currentLineBitPosition != firstHalfBitPost {
 
 						runOffsets[currentBuffOffset] = currentLineBitPosition
-						currentBuffOffset += 1
+						currentBuffOffset++
 					}
 					break ever1Loop
 				}
@@ -217,9 +225,9 @@ decodeLoop:
 			continue decodeLoop
 
 		case codeP:
-			referenceBuffOffset += 1
+			referenceBuffOffset++
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset]
-			referenceBuffOffset += 1
+			referenceBuffOffset++
 			continue decodeLoop
 		case codeVR2:
 			currentLineBitPosition = referenceOffsets[referenceBuffOffset] + 2
@@ -236,13 +244,13 @@ decodeLoop:
 			if rd.offset == 12 && c.runLength == eol {
 				rd.offset = 0
 				m.Uncompress1d(rd, referenceOffsets, width)
-				rd.offset += 1
+				rd.offset++
 				m.Uncompress1d(rd, runOffsets, width)
 				retCode, err := m.Uncompress1d(rd, referenceOffsets, width)
 				if err != nil {
 					return eof, err
 				}
-				rd.offset += 1
+				rd.offset++
 				return retCode, nil
 			}
 			currentLineBitPosition = width
@@ -253,12 +261,12 @@ decodeLoop:
 			whiteRun = !whiteRun
 
 			runOffsets[currentBuffOffset] = currentLineBitPosition
-			currentBuffOffset += 1
+			currentBuffOffset++
 
 			if referenceBuffOffset > 0 {
-				referenceBuffOffset -= 1
+				referenceBuffOffset--
 			} else {
-				referenceBuffOffset += 1
+				referenceBuffOffset++
 			}
 
 			for currentLineBitPosition < width &&
@@ -282,10 +290,11 @@ decodeLoop:
 	return currentBuffOffset, nil
 }
 
-func (m *MmrDecoder) Uncompress1d(data *runData, runOffsets []int, width int) (int, error) {
+// Uncompress1d decopmresses 1 row of data
+func (m *Decoder) Uncompress1d(data *runData, runOffsets []int, width int) (int, error) {
 
 	var (
-		whiteRun  bool = true
+		whiteRun  = true
 		iBitPos   int
 		cd        *code
 		refOffset int
@@ -321,7 +330,7 @@ outer:
 			if cd.runLength < 64 {
 				whiteRun = !whiteRun
 				runOffsets[refOffset] = iBitPos
-				refOffset += 1
+				refOffset++
 				break inner
 			}
 		}
@@ -339,14 +348,14 @@ outer:
 	return result, nil
 }
 
-func (m *MmrDecoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
+func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 
-	var firstLevelTable []*code = make([]*code, firstLevelTablemask+1)
+	var firstLevelTable = make([]*code, firstLevelTablemask+1)
 
 	// common.Log.Debug("CodesLength: %v", len(codes))
 	for i := 0; i < len(codes); i++ {
 		// common.Log.Debug("I: %v", i)
-		var cd *code = newCode(codes[i])
+		var cd = newCode(codes[i])
 
 		if cd.bitLength <= firstLevelTableSize {
 
@@ -367,7 +376,7 @@ func (m *MmrDecoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 
 			if firstLevelTable[firstLevelIndex] == nil {
 
-				var firstLevelCode *code = newCode([3]int{})
+				var firstLevelCode = newCode([3]int{})
 				firstLevelCode.subTable = make([]*code, secondLevelTableMask+1)
 
 				firstLevelTable[firstLevelIndex] = firstLevelCode
@@ -394,7 +403,8 @@ func (m *MmrDecoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 	return firstLevelTable, nil
 }
 
-func (m *MmrDecoder) DetectAndSkipEOL() error {
+// DetectAndSkipEOL detects and skip the eond of line
+func (m *Decoder) DetectAndSkipEOL() error {
 	for {
 		cd, err := m.data.uncompressGetCode(m.modeTable)
 		if err != nil {
@@ -407,22 +417,21 @@ func (m *MmrDecoder) DetectAndSkipEOL() error {
 			return nil
 		}
 	}
-	return nil
 }
 
 // UncompressMMR decompress the
-func (m *MmrDecoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
+func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 
 	b = bitmap.New(m.width, m.height)
 
 	// define offsets
 	var (
-		currentOffsets   []int = make([]int, b.Width+5)
-		referenceOffsets []int = make([]int, b.Width+5)
+		currentOffsets   = make([]int, b.Width+5)
+		referenceOffsets = make([]int, b.Width+5)
 	)
 
 	referenceOffsets[0] = b.Width
-	var refRunLength int = 1
+	var refRunLength = 1
 
 	count := 0
 
@@ -456,8 +465,8 @@ func (m *MmrDecoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 	return
 }
 
-// FillMMR fills the bitmap with the current line and offsets from the MmrDecoder
-func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, count int) error {
+// FillBitmap fills the bitmap with the current line and offsets from the Decoder
+func (m *Decoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, count int) error {
 	x := 0
 	// common.Log.Debug("Filling MMR. Line: %d", line)
 	// common.Log.Debug("CurrentOffsets: %v. Count: %d", currentOffsets, count)
@@ -483,7 +492,7 @@ func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int
 
 		for x < offset {
 			targetByteValue = (targetByteValue << 1) | value
-			x += 1
+			x++
 
 			if (x & 7) == 0 {
 
@@ -497,7 +506,7 @@ func (m *MmrDecoder) FillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int
 				// 	return err
 				// }
 				// b.Data.SetByteOffset(targetByteValue, targetByte)
-				targetByte += 1
+				targetByte++
 				targetByteValue = 0
 			}
 		}

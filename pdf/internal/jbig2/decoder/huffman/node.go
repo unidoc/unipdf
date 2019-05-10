@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package huffman
 
 import (
@@ -8,7 +13,7 @@ import (
 	"strings"
 )
 
-// Interface defined for all huffman tree nodes
+// Node is the interface defined for all huffman tree nodes
 type Node interface {
 	Decode(r reader.StreamReader) (int64, error)
 	String() string
@@ -90,9 +95,8 @@ func (i *InternalNode) Decode(r reader.StreamReader) (int64, error) {
 	}
 	if b == 0 {
 		return i.zero.Decode(r)
-	} else {
-		return i.one.Decode(r)
 	}
+	return i.one.Decode(r)
 }
 
 // String implements the Stringer interface

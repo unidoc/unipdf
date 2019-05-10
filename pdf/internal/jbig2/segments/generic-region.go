@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -47,7 +52,7 @@ type GenericRegion struct {
 
 	arithDecoder *arithmetic.Decoder
 	cx           *arithmetic.DecoderStats
-	mmrDecoder   *mmr.MmrDecoder
+	mmrDecoder   *mmr.Decoder
 }
 
 // NewGenericRegion creates new GenericRegion
@@ -62,12 +67,14 @@ func NewGenericRegion(
 	return g
 }
 
+// Init initializes the GenericRegion
 func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
 	g.RegionSegment = NewRegionSegment(r)
 	g.r = r
 	return g.parseHeader()
 }
 
+// GetRegionBitmap gets the bitmap for the GenericRegion
 func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	log.Debug("%s", g.String())
 	if g.Bitmap == nil {
@@ -296,10 +303,10 @@ func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
 		if !g.UseExtTemplates {
 			// common.Log.Debug("DecodeTemplate0a")
 			return g.decodeTemplate0a(line, width, paddedWidth, byteIndex, idx)
-		} else {
-			// common.Log.Debug("DecodeTemplate0b")
-			return g.decodeTemplate0b(line, width, paddedWidth, byteIndex, idx)
 		}
+		// common.Log.Debug("DecodeTemplate0b")
+		return g.decodeTemplate0b(line, width, paddedWidth, byteIndex, idx)
+
 	case 1:
 		// common.Log.Debug("DecodeTemplate1")
 		return g.decodeTemplate1(line, width, paddedWidth, byteIndex, idx)
@@ -716,8 +723,8 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 			return err
 		}
 		// byteIndex + 1
-		byteIndex += 1
-		idx += 1
+		byteIndex++
+		idx++
 	}
 
 	return nil

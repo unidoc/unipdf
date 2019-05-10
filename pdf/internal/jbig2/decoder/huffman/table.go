@@ -1,8 +1,12 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package huffman
 
 import (
 	"fmt"
-	// "github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 	"strings"
 )
@@ -48,7 +52,7 @@ func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
 }
 
 func bitPattern(v, l int) string {
-	var result []rune = make([]rune, l)
+	var result = make([]rune, l)
 	var temp int
 	for i := 1; i <= l; i++ {
 		temp = (v >> uint(l-i) & 1)
@@ -69,15 +73,15 @@ func preprocessCodes(codeTable []*Code) {
 		maxPrefixLength = maxInt(maxPrefixLength, c.prefixLength)
 	}
 
-	var lenCount []int = make([]int, maxPrefixLength+1)
+	var lenCount = make([]int, maxPrefixLength+1)
 
 	for _, c := range codeTable {
-		lenCount[c.prefixLength] += 1
+		lenCount[c.prefixLength]++
 	}
 
 	var (
 		curCode   int
-		firstCode []int = make([]int, len(lenCount)+1)
+		firstCode = make([]int, len(lenCount)+1)
 	)
 	lenCount[0] = 0
 

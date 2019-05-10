@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package arithmetic
 
 import (
@@ -41,6 +46,7 @@ func (d *DecoderStats) SetEntry(value int) {
 	d.codingContextTable[d.index] = v
 }
 
+// SetIndex sets the decoderStats index
 func (d *DecoderStats) SetIndex(index int) {
 	// common.Log.Debug("Setting index: %32b", index)
 	d.index = int(uint(index))

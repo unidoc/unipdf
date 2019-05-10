@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package huffman
 
 import (
@@ -101,6 +106,7 @@ func (e *EncodedTable) ParseTable() (err error) {
 	return nil
 }
 
+// RootNode returns the EncodedTable root node
 func (e *EncodedTable) RootNode() *InternalNode {
 	return e.rootNode
 }
@@ -124,6 +130,7 @@ func (e *EncodedTable) String() string {
 
 // func NewEncodedTable(table Tabler)
 
+// Tabler is the interface common for the tables
 type Tabler interface {
 	HtHigh() int
 	HtLow() int

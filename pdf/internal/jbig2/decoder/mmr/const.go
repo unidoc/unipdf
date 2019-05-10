@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package mmr
 
 type compression int
@@ -35,7 +40,9 @@ const (
 	eof     = -3
 	invalid = -2
 	eol     = -1
-	EOF     = -3
+
+	// EOF means the End Of File
+	EOF = -3
 
 	firstLevelTableSize  = 8
 	firstLevelTablemask  = (1 << firstLevelTableSize) - 1
@@ -43,7 +50,8 @@ const (
 	secondLevelTableMask = (1 << secondLevelTableSize) - 1
 )
 
-var ModeCodes [][3]int = [][3]int{
+// ModeCodes are predefined codes for the run data
+var ModeCodes = [][3]int{
 	{4, 0x1, int(codeP)},      // 0001 pass
 	{3, 0x1, int(codeH)},      // 001 horizontal
 	{1, 0x1, int(codeV0)},     // 1 vert 0
@@ -58,8 +66,8 @@ var ModeCodes [][3]int = [][3]int{
 	{12, 0x1, int(eol)},       // 0000000000001
 }
 
-// White Codes
-var WhiteCodes [][3]int = [][3]int{
+// WhiteCodes for the white decoder
+var WhiteCodes = [][3]int{
 	{4, 0x07, 2},        // 0111
 	{4, 0x08, 3},        // 1000
 	{4, 0x0B, 4},        // 1011
@@ -175,7 +183,8 @@ const (
 	maxWhiteRun int = 2500
 )
 
-var BlackCodes [][3]int = [][3]int{
+// BlackCodes are the codes used by the black iterations
+var BlackCodes = [][3]int{
 	{2, 0x02, 3},        // 10
 	{2, 0x03, 2},        // 11
 	{3, 0x02, 1},        // 010

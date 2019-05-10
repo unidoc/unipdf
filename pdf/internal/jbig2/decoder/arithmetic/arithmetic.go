@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package arithmetic
 
 import (
@@ -87,13 +92,13 @@ func New(r reader.StreamReader) (*Decoder, error) {
 func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	var (
 		bit     int
-		qeValue uint32 = qe[stats.cx()][0]
-		icx            = int(stats.cx())
+		qeValue = qe[stats.cx()][0]
+		icx     = int(stats.cx())
 	)
 
 	defer func() {
 
-		d.prvCtr += 1
+		d.prvCtr++
 		// common.Log.Debug("Decoder 'a' value: %b", d.a)
 		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
 	}()
@@ -298,7 +303,7 @@ func (d *Decoder) init() error {
 
 	d.a = 0x8000
 
-	d.prvCtr += 1
+	d.prvCtr++
 	// common.Log.Debug("Decoder 'a' value: %b", d.a)
 	// common.Log.Debug("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
 
@@ -362,7 +367,7 @@ fl:
 
 		d.a <<= 1
 		d.c <<= 1
-		d.ct -= 1
+		d.ct--
 
 		if (d.a & 0x8000) != 0 {
 			break fl
@@ -407,10 +412,10 @@ func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 
 		stats.SetEntry(int(qe[icx][2]))
 		return int(1 - mps)
-	} else {
-		stats.SetEntry(int(qe[icx][1]))
-		return int(mps)
 	}
+	stats.SetEntry(int(qe[icx][1]))
+	return int(mps)
+
 }
 
 func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {

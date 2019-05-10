@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package jbig2
 
 import (
@@ -5,6 +10,7 @@ import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/segments"
 )
 
+// common errors definition
 var (
 	ErrNoGlobalsYet  error = errors.New("No global segment added yet.")
 	ErrNoGlobalFound error = errors.New("No global segment found.")

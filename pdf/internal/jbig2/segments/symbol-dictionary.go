@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -92,7 +97,7 @@ func NewSymbolDictionary(h *Header, r reader.StreamReader,
 	return s
 }
 
-// AmmountOfExportedSymbols defines how many symbols are being exported by this SymbolDictionary
+// AmountOfExportedSymbols defines how many symbols are being exported by this SymbolDictionary
 func (s *SymbolDictionary) AmountOfExportedSymbols() int {
 	return s.amountOfExportedSymbols
 }
@@ -707,15 +712,15 @@ func (s *SymbolDictionary) huffDecodeRefAggNInst() (int64, error) {
 			var aggregationInstanceNumber int
 
 			if s.sdHuffDecodeHeightSelection == 3 {
-				aggregationInstanceNumber += 1
+				aggregationInstanceNumber++
 			}
 
 			if s.sdHuffDecodeWidthSelection == 3 {
-				aggregationInstanceNumber += 1
+				aggregationInstanceNumber++
 			}
 
 			if s.sdHuffBMSizeSelection == 3 {
-				aggregationInstanceNumber += 1
+				aggregationInstanceNumber++
 			}
 
 			var err error
@@ -902,7 +907,7 @@ func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
 			if s.dwTable == nil {
 				var dwNr int
 				if s.sdHuffDecodeHeightSelection == 3 {
-					dwNr += 1
+					dwNr++
 				}
 				t, err := huffman.GetStandardTable(2)
 				if err != nil {
@@ -925,16 +930,16 @@ func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
 func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 	if s.isHuffmanEncoded {
 		return s.decodeHeightClassDeltaHeightWithHuffman()
-	} else {
-
-		common.Log.Debug("Reader: %d", s.r.StreamPosition())
-		i, err := s.arithmeticDecoder.DecodeInt(s.cxIADH)
-		if err != nil {
-			return 0, err
-		}
-
-		return int64(i), nil
 	}
+
+	common.Log.Debug("Reader: %d", s.r.StreamPosition())
+	i, err := s.arithmeticDecoder.DecodeInt(s.cxIADH)
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(i), nil
+
 }
 
 // decodeHeightClassDeltaHeightWithHuffman - 6.5.6 if isHuffmanEncoded
@@ -987,19 +992,19 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 			}
 		}
 		return heightClassColleciveBitmap, nil
-	} else {
-		if s.genericRegion == nil {
-			s.genericRegion = NewGenericRegion(s.r)
-		}
-
-		s.genericRegion.setParameters(true, s.r.StreamPosition(), bmSize, heightClassHeight, totalWidth)
-
-		bm, err := s.genericRegion.GetRegionBitmap()
-		if err != nil {
-			return nil, err
-		}
-		return bm, nil
 	}
+	if s.genericRegion == nil {
+		s.genericRegion = NewGenericRegion(s.r)
+	}
+
+	s.genericRegion.setParameters(true, s.r.StreamPosition(), bmSize, heightClassHeight, totalWidth)
+
+	bm, err := s.genericRegion.GetRegionBitmap()
+	if err != nil {
+		return nil, err
+	}
+	return bm, nil
+
 }
 
 func (s *SymbolDictionary) setExportedSymbols(toExportFlags []int) {
@@ -1065,11 +1070,11 @@ func (s *SymbolDictionary) huffDecodeBmSize() (int64, error) {
 		var bmNr int
 
 		if s.sdHuffDecodeHeightSelection == 3 {
-			bmNr += 1
+			bmNr++
 		}
 
 		if s.sdHuffDecodeWidthSelection == 3 {
-			bmNr += 1
+			bmNr++
 		}
 
 		var err error
@@ -1123,9 +1128,8 @@ func (s *SymbolDictionary) getUserTable(tablePosition int) (huffman.HuffmanTable
 				}
 				t := d.(huffman.Tabler)
 				return huffman.NewEncodedTable(t)
-			} else {
-				tableCounter += 1
 			}
+			tableCounter++
 		}
 	}
 	return nil, nil

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -96,7 +101,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 
 	t.Run("10th", func(t *testing.T) {
 
-		var data []byte = []byte{
+		var data = []byte{
 			// Header
 			0x00, 0x00, 0x00, 0x09, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x1B,
 
