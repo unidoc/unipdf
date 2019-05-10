@@ -1987,9 +1987,9 @@ type JBIG2Encoder struct {
 	// Globals are the JBIG2 global segments
 	Globals jbig2.Globals
 
-	// IsVanillaData defines if the data is encoded such that one means when the binary data '1' means white and '0' black
-	// otherwise the data is called chocolate
-	IsVanillaData bool
+	// IsChocolateData defines if the data is encoded such that one means when the binary data '1' means black and '0' white
+	// otherwise the data is called vanilla
+	IsChocolateData bool
 }
 
 // NewJBIG2Encoder returns a new instance of JBIG2Encoder.
@@ -1997,32 +1997,32 @@ func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
 }
 
-func (enc *JBIG2Encoder) setVanillaData(decode PdfObject) {
+func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 	arr, ok := decode.(*PdfObjectArray)
 	if !ok {
-		common.Log.Debug("JBIG2Encoder - DecodeParams->Decode is not an array. %T", decode)
+		common.Log.Debug("JBIG2Encoder - Decode is not an array. %T", decode)
 	} else {
 		// the array should have two int or floats
 		fsl, err := arr.GetAsFloat64Slice()
 		if err != nil {
 			iArr, err := arr.ToIntegerArray()
 			if err != nil {
-				common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value. %s", arr.String())
+				common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
 			} else {
 				if iArr[0] == 1 && iArr[1] == 0 {
-					enc.IsVanillaData = true
+					enc.IsChocolateData = true
 				} else if iArr[1] == 0 && iArr[0] == 1 {
-					enc.IsVanillaData = false
+					enc.IsChocolateData = false
 				} else {
-					common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
+					common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
 				}
 			}
 		} else {
 			if len(fsl) == 2 {
 				if fsl[0] == 1.0 && fsl[1] == 0.0 {
-					enc.IsVanillaData = true
+					enc.IsChocolateData = true
 				} else if fsl[0] == 0.0 && fsl[1] == 1.0 {
-					enc.IsVanillaData = false
+					enc.IsChocolateData = false
 				} else {
 					common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
 				}
@@ -2055,34 +2055,33 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 					}
 				}
 			default:
-				common.Log.Error("DecodeParms not a dictionary %#v", obj)
+				common.Log.Error("DecodeParams not a dictionary %#v", obj)
 				return nil, errors.New("invalid DecodeParms")
 			}
 		}
-		if decodeParams == nil {
-			common.Log.Error("DecodeParms not specified %#v", obj)
-			return nil, errors.New("invalid DecodeParms")
-		}
 	}
 
-	if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
-		globalsStream, ok := globals.(*PdfObjectStream)
-		if !ok {
-			err := errors.New("the Globals stream should be an Object Stream")
-			common.Log.Debug("ERROR: %s", err.Error())
-			return nil, err
-		}
-		gdoc, err := jbig2.NewDocument(globalsStream.Stream)
-		if err != nil {
-			err = fmt.Errorf("decoding global stream failed. %s", err.Error())
-			common.Log.Debug("ERROR: %s", err)
-			return nil, err
-		}
+	if decodeParams != nil {
 
-		encoder.Globals = gdoc.GlobalSegments
+		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
+			globalsStream, ok := globals.(*PdfObjectStream)
+			if !ok {
+				err := errors.New("the Globals stream should be an Object Stream")
+				common.Log.Debug("ERROR: %s", err.Error())
+				return nil, err
+			}
+			gdoc, err := jbig2.NewDocument(globalsStream.Stream)
+			if err != nil {
+				err = fmt.Errorf("decoding global stream failed. %s", err.Error())
+				common.Log.Debug("ERROR: %s", err)
+				return nil, err
+			}
+
+			encoder.Globals = gdoc.GlobalSegments
+		}
 	}
-	if decode := decodeParams.Get("Decode"); decode != nil {
-		encoder.setVanillaData(decode)
+	if decode := streamObj.Get("Decode"); decode != nil {
+		encoder.setChocolateData(decode)
 	}
 
 	return encoder, nil
@@ -2097,7 +2096,7 @@ func (enc *JBIG2Encoder) GetFilterName() string {
 // the current encoder settings.
 func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 	decodeParams := MakeDict()
-	if enc.IsVanillaData {
+	if enc.IsChocolateData {
 		// /Decode[1.000 0.000]
 		decodeParams.Set("Decode", MakeArray(MakeFloat(1.000), MakeFloat(0.000)))
 
@@ -2109,9 +2108,9 @@ func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 
-	if enc.IsVanillaData {
+	if enc.IsChocolateData {
 		decodeParams := enc.MakeDecodeParams()
-		dict.Set("DecodeParams", decodeParams)
+		dict.Set("DecodeParms", decodeParams)
 	}
 	return dict
 }
@@ -2119,7 +2118,7 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 // UpdateParams updates the parameter values of the encoder.
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 	if decode := params.Get("Decode"); decode != nil {
-		enc.setVanillaData(decode)
+		enc.setChocolateData(decode)
 	}
 }
 
@@ -2152,10 +2151,10 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	}
 
 	// check if data is vanilla
-	if enc.IsVanillaData {
-		return bm.GetVanillaData(), nil
+	if enc.IsChocolateData {
+		return bm.GetChocolateData(), nil
 	}
-	return bm.GetChocolateData(), nil
+	return bm.GetVanillaData(), nil
 }
 
 // DecodeStream decodes the pdf stream object from the jbig2 encoding

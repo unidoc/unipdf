@@ -284,7 +284,6 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 
 	_, err = d.InputStream.ReadBits(32)
 	if err == io.EOF {
-		common.Log.Debug("FINISH Document - EOF")
 		return true, nil
 	} else if err != nil {
 		return false, err

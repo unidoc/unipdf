@@ -12,8 +12,8 @@ import (
 )
 
 // BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding
+// in order to run the benchmark run the DecodeJBIG2Files with the same JBIG2 environmental variable
 func BenchmarkDecodeSingleJBIG2(b *testing.B) {
-	// prepare the files
 	b.Helper()
 	dirName := os.Getenv("JBIG2")
 	require.NotEmpty(b, dirName, "No Environment variable 'JBIG2' found")
