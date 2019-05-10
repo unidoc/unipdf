@@ -2,6 +2,7 @@ package segments
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
@@ -96,12 +97,9 @@ func (h *Header) parse(
 		return err
 	}
 
-	var b byte
-	b, err = r.ReadByte()
-	if err != nil {
-		return err
-	}
-	common.Log.Debug("First Byte at segment: %02x at offset: %04X", b, offset)
+	var b = make([]byte, 4)
+	_, err = r.Read(b)
+	common.Log.Debug("First 4 Bytes at segment: %s at offset: %04X", hex.EncodeToString(b), offset)
 
 	_, err = r.Seek(offset, io.SeekStart)
 	if err != nil {
@@ -141,12 +139,12 @@ func (h *Header) parse(
 	}
 	common.Log.Debug("readSegmentPageAssociation done...")
 
-	// if h.Type != TEndOfPage || h.Type != TEndOfFile {
-	// 7.2.7 Segment data length (Contains the length of the data)
-	if err = h.readSegmentDataLength(r); err != nil {
-		return err
+	if h.Type != TEndOfFile {
+		// 7.2.7 Segment data length (Contains the length of the data)
+		if err = h.readSegmentDataLength(r); err != nil {
+			return err
+		}
 	}
-	// }
 
 	h.readDataStartOffset(r, organisationType)
 	h.readHeaderLength(r, offset)
@@ -255,7 +253,7 @@ func (h *Header) readReferedToSegmentNumbers(
 	r reader.StreamReader, countOfRTS int,
 ) ([]int, error) {
 
-	var rtsNumbers []int = make([]int, countOfRTS)
+	var rtsNumbers = make([]int, countOfRTS)
 
 	if countOfRTS > 0 {
 

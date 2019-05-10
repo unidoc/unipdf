@@ -96,7 +96,7 @@ func (d *Document) mapData() error {
 
 	var (
 		offset int64
-		Type   segments.Type
+		kind   segments.Type
 	)
 
 	isFileHeaderPresent, err := d.isFileHeaderPresent()
@@ -120,7 +120,7 @@ func (d *Document) mapData() error {
 	)
 
 	// type 51 is
-	for Type != 51 && !reachedEOF {
+	for kind != 51 && !reachedEOF {
 
 		segmentNo++
 
@@ -131,19 +131,20 @@ func (d *Document) mapData() error {
 		}
 
 		common.Log.Debug("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
-		Type = segment.Type
+		kind = segment.Type
+		if kind != segments.TEndOfFile {
+			if segment.PageAssociation != 0 {
+				page = d.Pages[segment.PageAssociation]
 
-		if segment.PageAssociation != 0 {
-			page = d.Pages[segment.PageAssociation]
+				if page == nil {
+					page = NewPage(d, segment.PageAssociation)
+					d.Pages[segment.PageAssociation] = page
+				}
 
-			if page == nil {
-				page = NewPage(d, segment.PageAssociation)
-				d.Pages[segment.PageAssociation] = page
+				page.Segments[int(segment.SegmentNumber)] = segment
+			} else {
+				d.GlobalSegments.AddSegment(int(segment.SegmentNumber), segment)
 			}
-
-			page.Segments[int(segment.SegmentNumber)] = segment
-		} else {
-			d.GlobalSegments.AddSegment(int(segment.SegmentNumber), segment)
 		}
 
 		segmentHeaders = append(segmentHeaders, segment)
@@ -283,6 +284,7 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 
 	_, err = d.InputStream.ReadBits(32)
 	if err == io.EOF {
+		common.Log.Debug("FINISH Document - EOF")
 		return true, nil
 	} else if err != nil {
 		return false, err

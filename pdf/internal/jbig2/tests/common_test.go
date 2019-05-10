@@ -2,14 +2,10 @@ package tests
 
 import (
 	"archive/zip"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/internal/jbig2"
 	"image/jpeg"
-	"io/ioutil"
 	"strings"
 
 	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
@@ -259,33 +255,4 @@ func writeJBIG2Files(t testing.TB, zw *zip.Writer, dirname, filename string, pag
 
 		require.NoError(t, err)
 	}
-}
-
-// TestDecodeSingle tests single file single file
-func TestDecodeSingle(t *testing.T) {
-	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
-	}
-	f, err := os.Open("000187_55_0.jbig2")
-	require.NoError(t, err)
-
-	data, err := ioutil.ReadAll(f)
-	require.NoError(t, err)
-
-	d, err := jbig2.NewDocument(data)
-	require.NoError(t, err)
-
-	p, err := d.GetPage(1)
-	require.NoError(t, err)
-
-	bm, err := p.GetBitmap()
-	require.NoError(t, err)
-
-	h := md5.New()
-
-	_, err = h.Write(bm.Data)
-	require.NoError(t, err)
-
-	t.Logf("Hash: %s", hex.EncodeToString(h.Sum(nil)))
-
 }
