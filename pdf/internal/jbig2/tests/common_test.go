@@ -261,6 +261,7 @@ func writeJBIG2Files(t testing.TB, zw *zip.Writer, dirname, filename string, pag
 	}
 }
 
+// TestDecodeSingle tests single file single file
 func TestDecodeSingle(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
