@@ -16,7 +16,6 @@ import (
 	// Imported for initialization side effects.
 	_ "image/gif"
 	_ "image/png"
-
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/sampling"
@@ -55,7 +54,6 @@ func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
 func (img *Image) GetSamples() []uint32 {
 	samples := sampling.ResampleBytes(img.Data, int(img.BitsPerComponent))
 
-	expectedLen := int(img.Width) * int(img.Height) * img.ColorComponents
 	if len(samples) < expectedLen {
 		// Return error, or fill with 0s?
 		common.Log.Debug("Error: Too few samples (got %d, expecting %d)", len(samples), expectedLen)
@@ -165,22 +163,14 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 
 	samples := img.GetSamples()
 	bytesPerColor := img.ColorComponents
+
 	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
-		var c gocolor.Color
-		if img.ColorComponents == 1 {
 			if img.BitsPerComponent == 16 {
 				val := uint16(samples[i])<<8 | uint16(samples[i+1])
 				c = gocolor.Gray16{val}
+
 			} else {
 				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
-				c = gocolor.Gray{uint8(val & 0xff)}
-			}
-		} else if img.ColorComponents == 3 {
-			if img.BitsPerComponent == 16 {
-				r := uint16(samples[i])<<8 | uint16(samples[i+1])
-				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
-				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				a := uint16(0xffff) // Default: solid (0xffff) whereas transparent=0.
 				if img.alphaData != nil && len(img.alphaData) > aidx+1 {
 					a = (uint16(img.alphaData[aidx]) << 8) | uint16(img.alphaData[aidx+1])
 					aidx += 2
@@ -234,21 +224,21 @@ type ImageHandler interface {
 }
 
 // DefaultImageHandler is the default implementation of the ImageHandler using the standard go library.
+
 type DefaultImageHandler struct{}
 
 // NewImageFromGoImage creates a new RGBA unidoc Image from a golang Image.
 // If `goimg` is grayscale (*goimage.Gray) then calls NewGrayImageFromGoImage instead.
 func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
+
 	b := goimg.Bounds()
 
 	var m *goimage.RGBA
-	switch t := goimg.(type) {
 	case *goimage.Gray, *goimage.Gray16:
 		return ih.NewGrayImageFromGoImage(goimg)
 	case *goimage.RGBA:
 		m = t
 	default:
-		// Speed up jpeg encoding by converting to RGBA first.
 		// Will not be required once the golang image/jpeg package is optimized.
 		m = goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
 		draw.Draw(m, m.Bounds(), goimg, b.Min, draw.Src)
@@ -272,7 +262,6 @@ func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, 
 				// If all alpha values are 255 (opaque), means that the alpha transparency channel is unnecessary.
 				hasAlpha = true
 			}
-			alphaData[j] = alpha
 			j++
 		}
 
