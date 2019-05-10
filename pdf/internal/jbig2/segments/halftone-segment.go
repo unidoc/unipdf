@@ -6,7 +6,7 @@
 package segments
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
@@ -263,7 +263,7 @@ func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
 		common.Log.Trace("Data :%v", data)
 		pattern, ok := data.(*PatternDictionary)
 		if !ok {
-			err = errors.Errorf("Related segment not a pattern dictionary: %T", data)
+			err = fmt.Errorf("Related segment not a pattern dictionary: %T", data)
 			return
 		}
 		var tempPatterns []*bitmap.Bitmap

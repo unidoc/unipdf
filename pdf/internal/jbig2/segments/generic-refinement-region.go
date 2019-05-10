@@ -6,8 +6,8 @@
 package segments
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
@@ -217,7 +217,7 @@ func (g *GenericRefinementRegion) getGrReference() (*bitmap.Bitmap, error) {
 
 	r, ok := s.(Regioner)
 	if !ok {
-		return nil, errors.Errorf("Refered to Segment is not a Regioner: %T", s)
+		return nil, fmt.Errorf("Refered to Segment is not a Regioner: %T", s)
 	}
 
 	return r.GetRegionBitmap()

@@ -6,8 +6,8 @@
 package segments
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/bitmap"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/decoder/arithmetic"
@@ -1123,7 +1123,7 @@ func (t *TextRegion) initSymbols() error {
 			}
 			sd, ok := s.(*SymbolDictionary)
 			if !ok {
-				return errors.New("SymbolDictionary segment with an invalid kind. ")
+				return errors.New("Text Region - Refered To Segment is not a SymbolDictionary. ")
 			}
 
 			sd.cxIAID = t.cxIAID
@@ -1150,7 +1150,7 @@ func (t *TextRegion) getUserTable(tablePosition int) (huffman.HuffmanTabler, err
 				}
 				ts, ok := sd.(*TableSegment)
 				if !ok {
-					return nil, errors.Errorf("Segment with Type 53 - and index: %d not a TableSegment", rts.SegmentNumber)
+					return nil, fmt.Errorf("Segment with Type 53 - and index: %d not a TableSegment", rts.SegmentNumber)
 				}
 
 				return huffman.NewEncodedTable(ts)
