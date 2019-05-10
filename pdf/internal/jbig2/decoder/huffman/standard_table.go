@@ -79,7 +79,7 @@ func newStandardTable(table [][]int) (*StandardTable, error) {
 
 		codeTable = append(codeTable, NewCode(prefixLength, rangeLength, rangeLow, isLowerRange))
 	}
-	// common.Log.Debug("Getting table for: %v", codeTable)
+	// common.Log.Trace("Getting table for: %v", codeTable)
 
 	s := &StandardTable{rootNode: newInternalNode(0)}
 	if err := s.InitTree(codeTable); err != nil {

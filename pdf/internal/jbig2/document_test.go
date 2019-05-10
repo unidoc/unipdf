@@ -18,7 +18,7 @@ import (
 // TestDocument tests the document
 func TestDocument(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	}
 
 	t.Run("AnnexH", func(t *testing.T) {

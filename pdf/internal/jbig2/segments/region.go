@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// RegionSegment is the segment that takes
+// RegionSegment is the segment model representing base segment region definition
 type RegionSegment struct {
 	r reader.StreamReader
 
@@ -52,9 +52,9 @@ func (r *RegionSegment) String() string {
 
 // parseHeader parses the RegionSegment Header
 func (r *RegionSegment) parseHeader() error {
-	common.Log.Debug("[REGION][PARSE-HEADER] Begin")
+	common.Log.Trace("[REGION][PARSE-HEADER] Begin")
 	defer func() {
-		common.Log.Debug("[REGION][PARSE-HEADER] Finished")
+		common.Log.Trace("[REGION][PARSE-HEADER] Finished")
 	}()
 	temp, err := r.r.ReadBits(32)
 	if err != nil {

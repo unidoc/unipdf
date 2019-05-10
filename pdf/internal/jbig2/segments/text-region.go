@@ -136,12 +136,12 @@ func (t *TextRegion) GetRegionInfo() *RegionSegment {
 }
 
 func (t *TextRegion) parseHeader() (err error) {
-	common.Log.Debug("[TEXT REGION][PARSE-HEADER] begins...")
+	common.Log.Trace("[TEXT REGION][PARSE-HEADER] begins...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] failed. %v", err)
+			common.Log.Trace("[TEXT REGION][PARSE-HEADER] failed. %v", err)
 		} else {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] finished.")
+			common.Log.Trace("[TEXT REGION][PARSE-HEADER] finished.")
 		}
 	}()
 	if err = t.regionInfo.parseHeader(); err != nil {
@@ -166,7 +166,7 @@ func (t *TextRegion) parseHeader() (err error) {
 		return
 	}
 
-	common.Log.Debug("%s", t.String())
+	common.Log.Trace("%s", t.String())
 
 	// 7.4.3.1.7
 	if err = t.getSymbols(); err != nil {
@@ -509,7 +509,7 @@ func (t *TextRegion) createRegionBitmap() error {
 }
 
 func (t *TextRegion) decodeStripT() (stripT int64, err error) {
-	// common.Log.Debug("decodeStripT curStreamPos: %d", t.r.StreamPosition())
+	// common.Log.Trace("decodeStripT curStreamPos: %d", t.r.StreamPosition())
 
 	/* 2) */
 	if t.isHuffmanEncoded {
@@ -552,11 +552,11 @@ func (t *TextRegion) decodeStripT() (stripT int64, err error) {
 		if err != nil {
 			return 0, err
 		}
-		// common.Log.Debug("StripT %v", temp)
+		// common.Log.Trace("StripT %v", temp)
 		stripT = int64(temp)
 	}
 	stripT *= int64(-t.sbStrips)
-	// common.Log.Debug("Decoded strip T: %d", stripT)
+	// common.Log.Trace("Decoded strip T: %d", stripT)
 	return stripT, nil
 }
 
@@ -650,27 +650,27 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 
 	if t.isHuffmanEncoded {
 		if t.sbHuffDT == 3 {
-			// common.Log.Debug("sbHuffDT == 3")
+			// common.Log.Trace("sbHuffDT == 3")
 			dT, err = t.table.Decode(t.r)
 			if err != nil {
 				return
 			}
 		} else {
-			// common.Log.Debug("sbHuffDT != 3 -> %d", t.sbHuffDT)
+			// common.Log.Trace("sbHuffDT != 3 -> %d", t.sbHuffDT)
 			var st huffman.HuffmanTabler
 			st, err = huffman.GetStandardTable(11 + int(t.sbHuffDT))
 			if err != nil {
 				return
 			}
-			// common.Log.Debug("Current stream pos: %d", t.r.StreamPosition())
+			// common.Log.Trace("Current stream pos: %d", t.r.StreamPosition())
 			dT, err = st.Decode(t.r)
 			if err != nil {
 				return
 			}
-			// common.Log.Debug("dT: %d", dT)
+			// common.Log.Trace("dT: %d", dT)
 		}
 	} else {
-		// common.Log.Debug("IntegerDecoder")
+		// common.Log.Trace("IntegerDecoder")
 		var temp int
 		temp, err = t.arithmDecoder.DecodeInt(t.cxIADT)
 		if err != nil {
@@ -679,7 +679,7 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 		dT = int64(temp)
 	}
 	dT *= int64(t.sbStrips)
-	// common.Log.Debug("Decoded dT: %d", dT)
+	// common.Log.Trace("Decoded dT: %d", dT)
 	return
 }
 
@@ -773,7 +773,7 @@ func (t *TextRegion) decodeIb(r, id int64) (ib *bitmap.Bitmap, err error) {
 			return
 		}
 
-		// common.Log.Debug("Rdw: %d, rdh: %d, rdx: %d, rdy: %d", rdw, rdh, rdx, rdy)
+		// common.Log.Trace("Rdw: %d, rdh: %d, rdx: %d, rdy: %d", rdw, rdh, rdx, rdy)
 
 		/* 5) */
 		/* long symInRefSize = 0; */
@@ -788,7 +788,7 @@ func (t *TextRegion) decodeIb(r, id int64) (ib *bitmap.Bitmap, err error) {
 		ibo := t.symbols[id]
 		wo := ibo.Width
 		ho := ibo.Height
-		// common.Log.Debug("Wo:%d, Ho: %d", wo, ho)
+		// common.Log.Trace("Wo:%d, Ho: %d", wo, ho)
 		genericRegionReferenceDX := int(uint(rdw)>>1) + int(rdx)
 		genericRegionReferenceDY := int(uint(rdh)>>1) + int(rdy)
 

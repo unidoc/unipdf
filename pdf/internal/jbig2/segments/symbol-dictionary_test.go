@@ -288,6 +288,6 @@ var alreadySet bool
 
 func setLogger() {
 	if testing.Verbose() && !alreadySet {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	}
 }

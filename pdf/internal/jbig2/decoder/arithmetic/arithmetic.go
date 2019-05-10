@@ -99,33 +99,33 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	defer func() {
 
 		d.prvCtr++
-		// common.Log.Debug("Decoder 'a' value: %b", d.a)
-		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
+		// common.Log.Trace("Decoder 'a' value: %b", d.a)
+		// common.Log.Trace("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
 	}()
 
 	d.a -= qeValue
 
-	// common.Log.Debug("Icx: %d, qeValue: %d", icx, qeValue)
+	// common.Log.Trace("Icx: %d, qeValue: %d", icx, qeValue)
 
 	if (d.c >> 16) < uint64(qeValue) {
-		// common.Log.Debug("d.c >> 16 < qeValue")
+		// common.Log.Trace("d.c >> 16 < qeValue")
 		bit = d.lpsExchange(stats, icx, qeValue)
 
 		if err := d.renormalize(); err != nil {
 			return 0, err
 		}
 	} else {
-		// common.Log.Debug("d.c >> 16 >= qeValue")
+		// common.Log.Trace("d.c >> 16 >= qeValue")
 		d.c -= (uint64(qeValue) << 16)
 
 		if (d.a & 0x8000) == 0 {
-			// common.Log.Debug("mpsExchange, renormalize")
+			// common.Log.Trace("mpsExchange, renormalize")
 			bit = d.mpsExchange(stats, icx)
 			if err := d.renormalize(); err != nil {
 				return 0, err
 			}
 		} else {
-			// common.Log.Debug("stats.getMPS")
+			// common.Log.Trace("stats.getMPS")
 			bit = int(stats.getMps())
 		}
 	}
@@ -144,7 +144,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		err                               error
 	)
 	if stats == nil {
-		common.Log.Debug("Nil stats")
+		common.Log.Trace("Nil stats")
 		stats = NewStats(512, 1)
 	}
 
@@ -156,14 +156,14 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		return 0, err
 	}
 
-	// common.Log.Debug("Sign int bit: '%01b'", s)
+	// common.Log.Trace("Sign int bit: '%01b'", s)
 
 	bit, err = d.decodeIntBit(stats)
 	if err != nil {
 		return 0, err
 	}
 
-	// common.Log.Debug("First bit value: %b", bit)
+	// common.Log.Trace("First bit value: %b", bit)
 	// First read
 	if bit == 1 {
 		bit, err = d.decodeIntBit(stats)
@@ -229,7 +229,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		bitsToRead = 2
 		offset = 0
 
-		// common.Log.Debug("Read First value: %v ", value)
+		// common.Log.Trace("Read First value: %v ", value)
 	}
 
 	for i := 0; i < bitsToRead; i++ {
@@ -241,7 +241,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	}
 	value += offset
 
-	// common.Log.Debug("Value decoded: %v with sign: %b", value, s)
+	// common.Log.Trace("Value decoded: %v with sign: %b", value, s)
 
 	if s == 0 {
 
@@ -257,7 +257,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 // DecodeIAID decodes the IAID procedure, Annex A.3
 func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error) {
 
-	// common.Log.Debug("DecodeIAID with codeLen: %d", codeLen)
+	// common.Log.Trace("DecodeIAID with codeLen: %d", codeLen)
 	// A.3 1)
 	d.previous = 1
 
@@ -277,7 +277,7 @@ func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error)
 
 	// A.3 3) & 5)
 	result := d.previous - (1 << codeLen)
-	// common.Log.Debug("decodeIAID result: %d", result)
+	// common.Log.Trace("decodeIAID result: %d", result)
 	return result, nil
 }
 
@@ -285,7 +285,7 @@ func (d *Decoder) init() error {
 	d.streamPosition = d.r.StreamPosition()
 	b, err := d.r.ReadByte()
 	if err != nil {
-		common.Log.Debug("Buffer0 readByte failed. %v", err)
+		common.Log.Trace("Buffer0 readByte failed. %v", err)
 		return err
 	}
 	d.b = int(b)
@@ -304,8 +304,8 @@ func (d *Decoder) init() error {
 	d.a = 0x8000
 
 	d.prvCtr++
-	// common.Log.Debug("Decoder 'a' value: %b", d.a)
-	// common.Log.Debug("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
+	// common.Log.Trace("Decoder 'a' value: %b", d.a)
+	// common.Log.Trace("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
 
 	return nil
 }
@@ -382,22 +382,22 @@ func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
 	stats.SetIndex(int(d.previous))
 	bit, err := d.DecodeBit(stats)
 	if err != nil {
-		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
+		common.Log.Trace("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
 		return bit, err
 	}
 
-	// common.Log.Debug("decodedIntBit: %d", bit)
+	// common.Log.Trace("decodedIntBit: %d", bit)
 
 	// setPrev(bit)
 	if d.previous < 256 {
-		// common.Log.Debug("Lower than 256 - %d", d.previous)
+		// common.Log.Trace("Lower than 256 - %d", d.previous)
 		d.previous = ((d.previous << uint64(1)) | int64(bit)) & 0x1ff
 	} else {
-		// common.Log.Debug("Greater than 256 - %d", d.previous)
+		// common.Log.Trace("Greater than 256 - %d", d.previous)
 		d.previous = (((d.previous<<uint64(1) | int64(bit)) & 511) | 256) & 0x1ff
 	}
 
-	// common.Log.Debug("Previous: %d", d.previous)
+	// common.Log.Trace("Previous: %d", d.previous)
 
 	return bit, nil
 }
@@ -419,17 +419,17 @@ func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 }
 
 func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {
-	// common.Log.Debug("LPS Exchange for icx: %d...", icx)
+	// common.Log.Trace("LPS Exchange for icx: %d...", icx)
 	mps := stats.getMps()
 	if d.a < qeValue {
-		// common.Log.Debug("Smaller than qeValue")
+		// common.Log.Trace("Smaller than qeValue")
 		stats.SetEntry(int(qe[icx][1]))
 		d.a = qeValue
 		return int(mps)
 	}
 
 	if qe[icx][3] == 1 {
-		// common.Log.Debug("toggleMps")
+		// common.Log.Trace("toggleMps")
 		stats.toggleMps()
 	}
 

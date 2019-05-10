@@ -18,7 +18,7 @@ import (
 func TestPatternDictionary(t *testing.T) {
 	t.Run("AnnexH", func(t *testing.T) {
 		if testing.Verbose() {
-			common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+			common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 		}
 
 		t.Run("S-6th", func(t *testing.T) {

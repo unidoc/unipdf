@@ -47,7 +47,7 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 	if r == nil {
 		return nil, errors.New("Root reader is nil")
 	}
-	common.Log.Debug("New substream at offset: %d with length: %d", offset, length)
+	common.Log.Trace("New substream at offset: %d with length: %d", offset, length)
 	s := &SubstreamReader{
 
 		wrapped: r,
@@ -63,10 +63,10 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 	// 	if err != nil {
 	// 		return nil, err
 	// 	}
-	// 	common.Log.Debug("Seeked the root reader to offset: %d", n)
+	// 	common.Log.Trace("Seeked the root reader to offset: %d", n)
 	// }
 
-	// common.Log.Debug("SubstreamReader offset: %d. length: %d. Reader.offset: %d", offset, length, r.r)
+	// common.Log.Trace("SubstreamReader offset: %d. length: %d. Reader.offset: %d", offset, length, r.r)
 	return s, nil
 }
 
@@ -86,7 +86,7 @@ func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 
 	// if the stream position is
 	if s.streamPos >= s.length {
-		common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
+		common.Log.Trace("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
 	}
 
@@ -118,7 +118,7 @@ func (s *SubstreamReader) ReadBit() (b int, err error) {
 		b = 1
 	}
 
-	// common.Log.Debug("Bit position after readingBit: %d", s.bits)
+	// common.Log.Trace("Bit position after readingBit: %d", s.bits)
 	return
 }
 
@@ -127,9 +127,9 @@ func (s *SubstreamReader) ReadBool() (bool, error) {
 }
 
 func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
-	// common.Log.Debug("Bit position before reading bits n: %d,  %d", n, s.bits)
+	// common.Log.Trace("Bit position before reading bits n: %d,  %d", n, s.bits)
 	// defer func() {
-	// common.Log.Debug("Bit position after readingBits n:%d  b: %d", size, s.bits)
+	// common.Log.Trace("Bit position after readingBits n:%d  b: %d", size, s.bits)
 	// }()
 	if n < s.bits {
 		shift := s.bits - n
@@ -237,7 +237,7 @@ func (s *SubstreamReader) fillBuffer() error {
 	toRead := min(uint64(len(s.buffer)), s.length-s.streamPos)
 
 	bytes := make([]byte, toRead)
-	// common.Log.Debug("toRead :%d", s.length)
+	// common.Log.Trace("toRead :%d", s.length)
 
 	read, err := s.wrapped.Read(bytes)
 	if err != nil {
@@ -283,12 +283,12 @@ func (s *SubstreamReader) readUnalignedByte() (b byte, err error) {
 
 func (s *SubstreamReader) readBufferByte() (b byte, err error) {
 	if s.streamPos >= s.length {
-		// common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
+		// common.Log.Trace("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
 	}
 
 	if s.streamPos >= s.bufferTop || s.streamPos < s.bufferBase {
-		// common.Log.Debug("Fill the buffer.")
+		// common.Log.Trace("Fill the buffer.")
 		if err := s.fillBuffer(); err != nil {
 			return 0, err
 		}

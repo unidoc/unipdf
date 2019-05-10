@@ -14,7 +14,7 @@ import (
 
 func TestArithmeticDecoder(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	}
 	var encoded = []byte{
 		0x84, 0xC7, 0x3B, 0xFC, 0xE1, 0xA1, 0x43, 0x04, 0x02,

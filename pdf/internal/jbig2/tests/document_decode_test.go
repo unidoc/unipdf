@@ -1,9 +1,8 @@
+// +build integration
 /*
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.md', which is part of this source code package.
  */
-
-// +build integration
 
 package tests
 
@@ -23,10 +22,10 @@ const (
 )
 
 // TestDecodeJBIG2Files tries to decode the provided jbig2 files
-// Requires environmental variable 'JBIG2_TD' that contains the jbig2 testdata
+// Requires environmental variable 'JBIG2' that contains the jbig2 testdata
 func TestDecodeJBIG2Files(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	}
 	dirName := os.Getenv(EnvDirectory)
 	if dirName == "" {

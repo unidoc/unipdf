@@ -18,6 +18,7 @@ import (
 
 // BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding
 // in order to run the benchmark run the DecodeJBIG2Files with the same JBIG2 environmental variable
+// the zipped files containing raw jbig2 streams shoud be created
 func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 	b.Helper()
 	dirName := os.Getenv("JBIG2")

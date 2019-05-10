@@ -183,8 +183,8 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 					return nil, nil, err
 				}
 
-				common.Log.Debug("Components: %d", ximg.ColorSpace.GetNumComponents())
-				common.Log.Debug("BitsPerComponent: %d", *ximg.BitsPerComponent)
+				common.Log.Trace("Components: %d", ximg.ColorSpace.GetNumComponents())
+				common.Log.Trace("BitsPerComponent: %d", *ximg.BitsPerComponent)
 
 				img, err := ximg.ToImage()
 				if err != nil {
@@ -222,8 +222,8 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 			}
 		}
 	}
-	// common.Log.Debug("Extracted: '%d' XObject images.", xObjectImages)
-	// common.Log.Debug("Extracted: '%d' Inline images.", inlineImages)
+	// common.Log.Trace("Extracted: '%d' XObject images.", xObjectImages)
+	// common.Log.Trace("Extracted: '%d' Inline images.", inlineImages)
 
 	return rgbImages, jbig2RawData, nil
 }
@@ -233,7 +233,7 @@ func writeImages(t testing.TB, zw *zip.Writer, dirname, filename string, pageNo 
 
 	for idx, img := range images {
 		fname := fmt.Sprintf("%s_%d_%d.jpg", rawFileName(filename), pageNo, idx)
-		common.Log.Debug("Writing: %s", fname)
+		common.Log.Trace("Writing: %s", fname)
 		f, err := zw.Create(fname)
 		require.NoError(t, err)
 
@@ -252,7 +252,7 @@ func writeJBIG2Files(t testing.TB, zw *zip.Writer, dirname, filename string, pag
 
 	for idx, file := range files {
 		fname := fmt.Sprintf("%s_%d_%d.jbig2", rawFileName(filename), pageNo, idx)
-		common.Log.Debug("Writing: %s", fname)
+		common.Log.Trace("Writing: %s", fname)
 		f, err := zw.Create(fname)
 		require.NoError(t, err)
 

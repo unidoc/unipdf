@@ -152,7 +152,7 @@ func TestBitmap(t *testing.T) {
 
 		t.Run("EqualPadding", func(t *testing.T) {
 			if testing.Verbose() {
-				common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+				common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 			}
 			// the widht of 20 would have some padding
 			bm := New(20, 2)
@@ -194,7 +194,7 @@ func TestBitmap(t *testing.T) {
 
 		t.Run("NotEqualPadding", func(t *testing.T) {
 			if testing.Verbose() {
-				common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+				common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 			}
 			// the widht of 20 would have some padding
 			bm := New(19, 2)

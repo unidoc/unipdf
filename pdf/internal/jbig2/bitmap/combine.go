@@ -46,8 +46,8 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	srcLineStartIdx := src.GetByteIndex(roi.Min.X, roi.Min.Y)
 	srcLineEndIdx := src.GetByteIndex(roi.Max.X-1, roi.Min.Y)
 
-	common.Log.Debug("SrcLineStartIdx: %d", srcLineStartIdx)
-	common.Log.Debug("SrcLineEndIdx: %d", srcLineEndIdx)
+	common.Log.Trace("SrcLineStartIdx: %d", srcLineStartIdx)
+	common.Log.Trace("SrcLineEndIdx: %d", srcLineEndIdx)
 	usePadding := dst.RowStride == srcLineEndIdx+1-srcLineStartIdx
 
 	for y := roi.Min.Y; y < roi.Max.Y; y++ {
@@ -62,7 +62,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 			}
 
 			pixels <<= uint(upShift)
-			common.Log.Debug("Pixels Byte: %08b", pixels)
+			common.Log.Trace("Pixels Byte: %08b", pixels)
 			err = dst.SetByte(dstIdx, unpad(padding, pixels))
 			if err != nil {
 				return nil, err
@@ -77,7 +77,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				}
 				srcIdx++
 
-				common.Log.Debug("Value Byte: %08b", value)
+				common.Log.Trace("Value Byte: %08b", value)
 
 				if x == srcLineEndIdx && usePadding {
 					value = unpad(padding, value)
@@ -133,7 +133,7 @@ func copyLine(
 				value = unpad(padding, value)
 			}
 
-			// common.Log.Debug("Value Byte in CopyLine: %08b", value)
+			// common.Log.Trace("Value Byte in CopyLine: %08b", value)
 			err = dst.SetByte(targetOffset, value)
 			if err != nil {
 				return err
@@ -156,7 +156,7 @@ func copyLine(
 		} else {
 			value, err := src.GetByte(sourceOffset)
 			if err != nil {
-				common.Log.Debug("Getting the value at: %d failed: %s", sourceOffset, err)
+				common.Log.Trace("Getting the value at: %d failed: %s", sourceOffset, err)
 				return err
 			}
 			value <<= sourceUpShift
