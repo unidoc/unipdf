@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package mmr
 
 import (
@@ -64,7 +69,7 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 	// common.Log.Debug("Code: %v", cd)
 	index := cd >> (codeOffset - firstLevelTableSize)
 	// common.Log.Debug("Index: %v", index)
-	var result *code = table[index]
+	var result = table[index]
 
 	// common.Log.Debug("Code: %v", result)
 
@@ -84,14 +89,14 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 // The lowest 8 bits are used as a "queue" of bits so that an access to the actual data is only
 // needed, when this queue becomes empty.
 func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
-	var bitsToFill int = r.offset - r.lastOffset
+	var bitsToFill = r.offset - r.lastOffset
 
 	// common.Log.Debug("BitsToFil: %v", bitsToFill)
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 
 		// refill at absolute offset
-		var byteOffset int = (r.offset >> 3) - r.bufferBase
+		var byteOffset = (r.offset >> 3) - r.bufferBase
 		// common.Log.Debug("ByteOffset: %v", byteOffset)
 		// common.Log.Debug("BufferTop: %v", r.bufferTop)
 
@@ -148,7 +153,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 				r.lastCode <<= uint(bitOffset)
 				r.lastCode |= int(uint(r.buffer[byteOffset]) & 0xFF)
 				bitsToFill -= bitOffset
-				byteOffset += 1
+				byteOffset++
 				bitOffset = 8
 
 				if !(bitsToFill >= 8) {
@@ -211,7 +216,7 @@ func (r *runData) fillBuffer(byteOffset int) error {
 				r.buffer[r.bufferTop] = b & 0xFF
 			}
 
-			r.bufferTop += 1
+			r.bufferTop++
 		}
 	}
 

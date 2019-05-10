@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -36,6 +41,7 @@ type PatternDictionary struct {
 	GrayMax int
 }
 
+// GetDictionary gets the PatternDictionary segment Dictionary bitmaps
 func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	if p.Patterns != nil {
 		return p.Patterns, nil
@@ -61,6 +67,7 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	return p.Patterns, nil
 }
 
+// Init initializes the PatternDictionary segment
 func (p *PatternDictionary) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
 	return p.parseHeader()
@@ -190,7 +197,7 @@ func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) err
 		patterns[gray] = patternBitmap
 
 		// 4 b)
-		gray += 1
+		gray++
 	}
 
 	p.Patterns = patterns

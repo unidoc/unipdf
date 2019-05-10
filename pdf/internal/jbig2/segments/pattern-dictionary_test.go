@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -17,7 +22,7 @@ func TestPatternDictionary(t *testing.T) {
 		}
 
 		t.Run("S-6th", func(t *testing.T) {
-			var data []byte = []byte{
+			var data = []byte{
 				// Header
 				0x00, 0x00, 0x00, 0x05, 0x10, 0x01, 0x01, 0x00, 0x00, 0x00, 0x2D,
 

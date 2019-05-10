@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -63,32 +68,38 @@ func (t *TableSegment) parseHeader() (err error) {
 	return
 }
 
+// Init initializes the TableSegment
 func (t *TableSegment) Init(h *Header, r reader.StreamReader) error {
 	t.r = r
 	return t.parseHeader()
 }
 
-// Getters
+// HtPS returns the HtPs
 func (t *TableSegment) HtPS() int {
 	return t.htPS
 }
 
+// HtRS returns the table HtRs
 func (t *TableSegment) HtRS() int {
 	return t.htRS
 }
 
+// HtLow returns the table HtLow
 func (t *TableSegment) HtLow() int {
 	return t.htLow
 }
 
+// HtHigh return the table HtHigh
 func (t *TableSegment) HtHigh() int {
 	return t.htHight
 }
 
+// HtOOB returns the table HtoutOfBand value
 func (t *TableSegment) HtOOB() int {
 	return t.htOutOfBand
 }
 
+// StreamReader returns the table segment stream reader
 func (t *TableSegment) StreamReader() reader.StreamReader {
 	return t.r
 }

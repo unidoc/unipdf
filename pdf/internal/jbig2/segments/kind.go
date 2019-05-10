@@ -1,8 +1,14 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 // Type defines the segment
 type Type int
 
+// Enums defining the Segment types
 const (
 	TSymbolDictionary                         Type = 0
 	TIntermediateTextRegion                   Type = 4
@@ -81,7 +87,7 @@ func (k Type) String() string {
 
 var emptySegment Segmenter
 
-var kindMap map[Type]func() Segmenter = map[Type]func() Segmenter{
+var kindMap = map[Type]func() Segmenter{
 	TSymbolDictionary: func() Segmenter {
 		return &SymbolDictionary{}
 	},

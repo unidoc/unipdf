@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -64,6 +69,7 @@ func newHalftoneRegion(r *reader.Reader) *HalftoneRegion {
 	return hr
 }
 
+// Init initializes the HalfotoneRegion
 func (h *HalftoneRegion) Init(hd *Header, r reader.StreamReader) error {
 	h.r = r
 	h.h = hd
@@ -243,6 +249,7 @@ func (h *HalftoneRegion) GetRegionInfo() *RegionSegment {
 	return h.RegionSegment
 }
 
+// GetPatterns gets the HalftoneRegion patterns
 func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
 	common.Log.Debug("RT Segments: %v", h.h.RTSegments)
 	for _, s := range h.h.RTSegments {
@@ -356,7 +363,7 @@ func (h *HalftoneRegion) combineGrayscalePlanes(
 			if err != nil {
 				return err
 			}
-			byteIndex += 1
+			byteIndex++
 		}
 	}
 	return nil

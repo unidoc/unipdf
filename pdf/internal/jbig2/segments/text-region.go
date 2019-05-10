@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -117,6 +122,7 @@ func (t *TextRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	return t.regionBitmap, nil
 }
 
+// Init initializes the text region
 func (t *TextRegion) Init(header *Header, r reader.StreamReader) error {
 	t.Header = header
 	t.r = r
@@ -688,21 +694,19 @@ func (t *TextRegion) decodeDfs() (int64, error) {
 				}
 			}
 			return t.fsTable.Decode(t.r)
-		} else {
-			st, err := huffman.GetStandardTable(6 + int(t.sbHuffFS))
-			if err != nil {
-				return 0, err
-			}
-			return st.Decode(t.r)
 		}
-	} else {
-		temp, err := t.arithmDecoder.DecodeInt(t.cxIAFS)
+		st, err := huffman.GetStandardTable(6 + int(t.sbHuffFS))
 		if err != nil {
 			return 0, err
 		}
-		return int64(temp), nil
-	}
+		return st.Decode(t.r)
 
+	}
+	temp, err := t.arithmDecoder.DecodeInt(t.cxIAFS)
+	if err != nil {
+		return 0, err
+	}
+	return int64(temp), nil
 }
 
 func (t *TextRegion) decodeCurrentT() (int64, error) {
@@ -710,13 +714,12 @@ func (t *TextRegion) decodeCurrentT() (int64, error) {
 		if t.isHuffmanEncoded {
 			bits, err := t.r.ReadBits(byte(t.logSBStrips))
 			return int64(bits), err
-		} else {
-			temp, err := t.arithmDecoder.DecodeInt(t.cxIAIT)
-			if err != nil {
-				return 0, err
-			}
-			return int64(temp), nil
 		}
+		temp, err := t.arithmDecoder.DecodeInt(t.cxIAIT)
+		if err != nil {
+			return 0, err
+		}
+		return int64(temp), nil
 	}
 	return 0, nil
 }
@@ -738,10 +741,10 @@ func (t *TextRegion) decodeRI() (int64, error) {
 		if t.isHuffmanEncoded {
 			temp, err := t.r.ReadBit()
 			return int64(temp), err
-		} else {
-			temp, err := t.arithmDecoder.DecodeInt(t.cxIARI)
-			return int64(temp), err
 		}
+		temp, err := t.arithmDecoder.DecodeInt(t.cxIARI)
+		return int64(temp), err
+
 	}
 	return 0, nil
 }
@@ -867,13 +870,13 @@ func (t *TextRegion) decodeRdw() (int64, error) {
 				}
 			}
 			return t.rdwTable.Decode(t.r)
-		} else {
-			ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDWidth))
-			if err != nil {
-				return 0, err
-			}
-			return ts.Decode(t.r)
 		}
+		ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDWidth))
+		if err != nil {
+			return 0, err
+		}
+		return ts.Decode(t.r)
+
 	}
 	temp, err := t.arithmDecoder.DecodeInt(t.cxIARDW)
 	return int64(temp), err
@@ -908,14 +911,13 @@ func (t *TextRegion) decodeRdh() (int64, error) {
 				}
 			}
 			return t.rdhTable.Decode(t.r)
-		} else {
-			ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDHeight))
-			if err != nil {
-				return 0, err
-			}
-
-			return ts.Decode(t.r)
 		}
+		ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDHeight))
+		if err != nil {
+			return 0, err
+		}
+
+		return ts.Decode(t.r)
 	}
 	temp, err := t.arithmDecoder.DecodeInt(t.cxIARDH)
 	return int64(temp), err
@@ -951,13 +953,13 @@ func (t *TextRegion) decodeRdx() (int64, error) {
 				}
 			}
 			return t.rdxTable.Decode(t.r)
-		} else {
-			ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDX))
-			if err != nil {
-				return 0, err
-			}
-			return ts.Decode(t.r)
 		}
+		ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDX))
+		if err != nil {
+			return 0, err
+		}
+		return ts.Decode(t.r)
+
 	}
 	temp, err := t.arithmDecoder.DecodeInt(t.cxIARDX)
 	return int64(temp), err
@@ -1002,13 +1004,12 @@ func (t *TextRegion) decodeRdy() (int64, error) {
 				}
 			}
 			return t.rdyTable.Decode(t.r)
-		} else {
-			ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDY))
-			if err != nil {
-				return 0, err
-			}
-			return ts.Decode(t.r)
 		}
+		ts, err := huffman.GetStandardTable(14 + int(t.sbHuffRDY))
+		if err != nil {
+			return 0, err
+		}
+		return ts.Decode(t.r)
 	}
 	temp, err := t.arithmDecoder.DecodeInt(t.cxIARDY)
 	return int64(temp), err
@@ -1153,9 +1154,8 @@ func (t *TextRegion) getUserTable(tablePosition int) (huffman.HuffmanTabler, err
 				}
 
 				return huffman.NewEncodedTable(ts)
-			} else {
-				tableCounter++
 			}
+			tableCounter++
 		}
 	}
 	return nil, nil
@@ -1261,6 +1261,7 @@ func (t *TextRegion) setContexts(cx *arithmetic.DecoderStats, cxIADT *arithmetic
 	t.cx = cx
 }
 
+// SetParameters sets the text region segment parameters
 func (t *TextRegion) SetParameters(
 	arithmeticDecoder *arithmetic.Decoder,
 	isHuffmanEncoded, sbRefine bool, sbw, sbh int,

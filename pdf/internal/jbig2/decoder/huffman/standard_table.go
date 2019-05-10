@@ -1,11 +1,16 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package huffman
 
 import (
 	"errors"
-	// "github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
+// StandardTable is the implementation for the standard jbig2 table
 type StandardTable struct {
 	rootNode *InternalNode
 }
@@ -15,6 +20,7 @@ func (s *StandardTable) Decode(r reader.StreamReader) (int64, error) {
 	return s.rootNode.Decode(r)
 }
 
+// InitTree initializes the tree for the standard table
 func (s *StandardTable) InitTree(codeTable []*Code) error {
 	preprocessCodes(codeTable)
 
@@ -82,7 +88,7 @@ func newStandardTable(table [][]int) (*StandardTable, error) {
 	return s, nil
 }
 
-var tables [][][]int = [][][]int{
+var tables = [][][]int{
 	// B1
 	{
 		{1, 4, 0},      //
@@ -315,4 +321,4 @@ var tables [][][]int = [][][]int{
 	},
 }
 
-var standardTables []HuffmanTabler = make([]HuffmanTabler, len(tables))
+var standardTables = make([]HuffmanTabler, len(tables))

@@ -1,9 +1,15 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package huffman
 
 import (
 	"github.com/unidoc/unidoc/pdf/internal/jbig2/reader"
 )
 
+// FixedSizeTable defines the table with the fixed size
 type FixedSizeTable struct {
 	rootNode *InternalNode
 }

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package segments
 
 import (
@@ -408,7 +413,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 				}
 			}
 
-			var toShift uint = uint(7 - minorX)
+			var toShift = uint(7 - minorX)
 			result |= int(bit << toShift)
 
 			context = ((context & 0xdb6) << 1) | bit | (previousLine>>toShift+5)&0x002 |
@@ -420,8 +425,8 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 		if err != nil {
 			return
 		}
-		byteIndex += 1
-		refByteIndex += 1
+		byteIndex++
+		refByteIndex++
 	}
 
 	return nil
@@ -478,7 +483,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate1(
 	var nextByte int
 
 	for x := 0; x < paddedWidth; x = nextByte {
-		var result int = 0
+		var result = 0
 		nextByte = x + 8
 		var minorWidth int
 		if minorWidth = width - x; minorWidth > 8 {
@@ -558,7 +563,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate1(
 				}
 			}
 
-			var toShift uint = uint(7 - minorX)
+			var toShift = uint(7 - minorX)
 			result |= int(bit << toShift)
 
 			context = ((context & 0x0d6) << 1) | bit | (previousLine>>toShift+5)&0x002 |
@@ -575,8 +580,8 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate1(
 		if err != nil {
 			return
 		}
-		byteIndex += 1
-		refByteIndex += 1
+		byteIndex++
+		refByteIndex++
 	}
 
 	return nil
@@ -616,7 +621,7 @@ func (g *GenericRefinementRegion) decodeTemplate(
 		}
 		w3 = int(temp)
 	}
-	refByteIndex += 1
+	refByteIndex++
 
 	if lineNumber >= 1 {
 		temp, err = g.RegionBitmap.GetByte(byteIndex - rowStride)
@@ -625,7 +630,7 @@ func (g *GenericRefinementRegion) decodeTemplate(
 		}
 		w4 = int(temp)
 	}
-	byteIndex += 1
+	byteIndex++
 
 	modReferenceDX := g.ReferenceDX % 8
 	shiftOffset := 6 + modReferenceDX
@@ -710,7 +715,7 @@ func (g *GenericRefinementRegion) decodeTemplate(
 					w3 = int(temp)
 				}
 			}
-			refByteIndex += 1
+			refByteIndex++
 		}
 	} else {
 		c1 = int16(w1<<1) & 0x07
@@ -750,7 +755,7 @@ func (g *GenericRefinementRegion) decodeTemplate(
 				w3 = int(temp)
 			}
 
-			refByteIndex += 1
+			refByteIndex++
 		}
 
 		c1 |= int16((w1 >> 7) & 0x07)
