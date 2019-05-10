@@ -1,0 +1,15 @@
+# Steps used for creating the certificate here.
+
+# 1. Generate the private key and public certificate. (Need to fill in some info fields).
+openssl req -newkey rsa:2048 -nodes -keyout privkey.pem -x509 -days 36500 -out pubcert.pem
+
+# 2. Review the created certificate
+openssl x509 -text -noout -in pubcert.pem
+
+# 3. Combine into a PKCS#12 bundle. (Need to enter a password: Use "password" for testing).
+openssl pkcs12 -inkey privkey.pem -in pubcert.pem -export -out certificate.p12
+
+# 4. Validate.
+openssl pkcs12 -in certificate.p12  -noout -info
+
+

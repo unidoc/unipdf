@@ -12,7 +12,8 @@ type PageSize [2]float64
 var PPI float64 = 72 // Points per inch. (Default resolution).
 
 // PPMM specifies the default PDF resolution in points/mm.
-var PPMM float64 = 72 * 1.0 / 25.4 // Points per mm. (Default resolution).
+// Points per mm. (Default resolution).
+var PPMM = float64(72 * 1.0 / 25.4)
 
 //
 // Commonly used page sizes
@@ -40,6 +41,39 @@ const (
 	TextAlignmentJustify
 )
 
+// TextRenderingMode determines whether showing text shall cause glyph
+// outlines to be stroked, filled, used as a clipping boundary, or some
+// combination of the three.
+// See section 9.3 "Text State Parameters and Operators" and
+// Table 106 (pp. 254-255 PDF32000_2008).
+type TextRenderingMode int
+
+const (
+	// TextRenderingModeFill (default) - Fill text.
+	TextRenderingModeFill TextRenderingMode = iota
+
+	// TextRenderingModeStroke - Stroke text.
+	TextRenderingModeStroke
+
+	// TextRenderingModeFillStroke - Fill, then stroke text.
+	TextRenderingModeFillStroke
+
+	// TextRenderingModeInvisible - Neither fill nor stroke text (invisible).
+	TextRenderingModeInvisible
+
+	// TextRenderingModeFillClip - Fill text and add to path for clipping.
+	TextRenderingModeFillClip
+
+	// TextRenderingModeStrokeClip - Stroke text and add to path for clipping.
+	TextRenderingModeStrokeClip
+
+	// TextRenderingModeFillStrokeClip - Fill, then stroke text and add to path for clipping.
+	TextRenderingModeFillStrokeClip
+
+	// TextRenderingModeClip - Add text to path for clipping.
+	TextRenderingModeClip
+)
+
 // Relative and absolute positioning types.
 type positioning int
 
@@ -54,3 +88,14 @@ func (p positioning) isRelative() bool {
 func (p positioning) isAbsolute() bool {
 	return p == positionAbsolute
 }
+
+// HorizontalAlignment represents the horizontal alignment of components
+// within a page.
+type HorizontalAlignment int
+
+// Horizontal alignment options.
+const (
+	HorizontalAlignmentLeft HorizontalAlignment = iota
+	HorizontalAlignmentCenter
+	HorizontalAlignmentRight
+)

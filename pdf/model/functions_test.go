@@ -1,16 +1,15 @@
 // Test functions
-// XXX: We need tests of type 0, type 2, type 3, type 4 functions.  Particularly type 0 is complex and
+// TODO: We need tests of type 0, type 2, type 3, type 4 functions.  Particularly type 0 is complex and
 // needs comprehensive tests.
 
 package model
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
 func init() {
@@ -23,7 +22,7 @@ type Type4TestCase struct {
 	Expected []float64
 }
 
-// TODO/XXX: Implement example 2 from page 167.
+// TODO: Implement example 2 from page 167.
 
 func TestType4Function1(t *testing.T) {
 	rawText := `
@@ -49,7 +48,7 @@ endobj
 	 * z = sin(y * 360)/2 + sin(x * 360)/2
 	 */
 
-	parser := NewParserFromString(rawText)
+	parser := core.NewParserFromString(rawText)
 
 	obj, err := parser.ParseIndirectObject()
 	if err != nil {
@@ -57,7 +56,7 @@ endobj
 		return
 	}
 
-	stream, ok := obj.(*PdfObjectStream)
+	stream, ok := obj.(*core.PdfObjectStream)
 	if !ok {
 		t.Errorf("Invalid object type (%q)", obj)
 		return
@@ -84,8 +83,8 @@ endobj
 			t.Errorf("Failed: %v", err)
 			return
 		}
-		fmt.Println(testcase)
-		fmt.Println(outputs)
+		t.Log(testcase)
+		t.Log(outputs)
 
 		if len(outputs) != len(testcase.Expected) {
 			t.Errorf("Failed, output length mismatch")
@@ -99,5 +98,5 @@ endobj
 		}
 	}
 
-	fmt.Printf("%s", stream.Stream)
+	t.Logf("%s", stream.Stream)
 }

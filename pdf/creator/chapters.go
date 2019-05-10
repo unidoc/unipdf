@@ -8,21 +8,29 @@ package creator
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
-// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section. The concept is
-// the same as a book or a report chapter.
+// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
+// The concept is the same as a book or a report chapter.
 type Chapter struct {
-	number  int
-	title   string
+	// The number of the chapter.
+	number int
+
+	// The title of the chapter.
+	title string
+
+	// The heading paragraph of the chapter.
 	heading *Paragraph
 
-	subchapters int
-
+	// The content components of the chapter.
 	contents []Drawable
+
+	// The number of subchapters the chapter has.
+	subchapters int
 
 	// Show chapter numbering
 	showNumbering bool
@@ -39,45 +47,64 @@ type Chapter struct {
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
 
-	// Reference to the creator's TOC.
-	toc *TableOfContents
+	// Reference to the parent chapter the current chapter belongs to.
+	parent *Chapter
+
+	// Reference to the TOC of the creator.
+	toc *TOC
+
+	// Reference to the outline of the creator.
+	outline *model.Outline
+
+	// The item of the chapter in the outline.
+	outlineItem *model.OutlineItem
+
+	// The level of the chapter in the chapters hierarchy.
+	level uint
 }
 
-// NewChapter creates a new chapter with the specified title as the heading.
-func (c *Creator) NewChapter(title string) *Chapter {
-	chap := &Chapter{}
+// newChapter creates a new chapter with the specified title as the heading.
+func newChapter(parent *Chapter, toc *TOC, outline *model.Outline, title string, number int, style TextStyle) *Chapter {
+	var level uint = 1
+	if parent != nil {
+		level = parent.level + 1
+	}
 
-	c.chapters++
-	chap.number = c.chapters
-	chap.title = title
+	chapter := &Chapter{
+		number:        number,
+		title:         title,
+		showNumbering: true,
+		includeInTOC:  true,
+		parent:        parent,
+		toc:           toc,
+		outline:       outline,
+		contents:      []Drawable{},
+		level:         level,
+	}
 
-	chap.showNumbering = true
-	chap.includeInTOC = true
+	p := newParagraph(chapter.headingText(), style)
+	p.SetFont(style.Font)
+	p.SetFontSize(style.FontSize)
 
-	heading := fmt.Sprintf("%d. %s", c.chapters, title)
-	p := NewParagraph(heading)
-	p.SetFontSize(16)
-	p.SetFont(fonts.NewFontHelvetica()) // bold?
+	chapter.heading = p
+	return chapter
+}
 
-	chap.heading = p
-	chap.contents = []Drawable{}
+// NewSubchapter creates a new child chapter with the specified title.
+func (chap *Chapter) NewSubchapter(title string) *Chapter {
+	style := newTextStyle(chap.heading.textFont)
+	style.FontSize = 14
 
-	// Keep a reference for toc.
-	chap.toc = c.toc
+	chap.subchapters++
+	subchapter := newChapter(chap, chap.toc, chap.outline, title, chap.subchapters, style)
+	chap.Add(subchapter)
 
-	return chap
+	return subchapter
 }
 
 // SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
 func (chap *Chapter) SetShowNumbering(show bool) {
-	if show {
-		heading := fmt.Sprintf("%d. %s", chap.number, chap.title)
-		chap.heading.SetText(heading)
-	} else {
-		heading := fmt.Sprintf("%s", chap.title)
-		chap.heading.SetText(heading)
-	}
-	chap.showNumbering = show
+	chap.heading.SetText(chap.headingText())
 }
 
 // SetIncludeInTOC sets a flag to indicate whether or not to include in tOC.
@@ -108,25 +135,52 @@ func (chap *Chapter) GetMargins() (float64, float64, float64, float64) {
 func (chap *Chapter) Add(d Drawable) error {
 	if Drawable(chap) == d {
 		common.Log.Debug("ERROR: Cannot add itself")
-		return errors.New("Range check error")
+		return errors.New("range check error")
 	}
 
 	switch d.(type) {
-	case *Chapter:
-		common.Log.Debug("Error: Cannot add chapter to a chapter")
-		return errors.New("Type check error")
-	case *Paragraph, *Image, *Block, *Subchapter, *Table, *PageBreak:
+	case *Paragraph, *StyledParagraph, *Image, *Block, *Table, *PageBreak, *Chapter:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
-		return errors.New("Type check error")
+		return errors.New("type check error")
 	}
 
 	return nil
 }
 
-// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap over
-// multiple pages.
+// headingNumber returns the chapter heading number based on the chapter
+// hierarchy and the showNumbering property.
+func (chap *Chapter) headingNumber() string {
+	var chapNumber string
+	if chap.showNumbering {
+		if chap.number != 0 {
+			chapNumber = strconv.Itoa(chap.number) + "."
+		}
+
+		if chap.parent != nil {
+			parentChapNumber := chap.parent.headingNumber()
+			if parentChapNumber != "" {
+				chapNumber = parentChapNumber + chapNumber
+			}
+		}
+	}
+
+	return chapNumber
+}
+
+// headingText returns the chapter heading text content.
+func (chap *Chapter) headingText() string {
+	heading := chap.title
+	if chapNumber := chap.headingNumber(); chapNumber != "" {
+		heading = fmt.Sprintf("%s %s", chapNumber, heading)
+	}
+
+	return heading
+}
+
+// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages.
 func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origCtx := ctx
 
@@ -138,17 +192,45 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.Height -= chap.margins.top
 	}
 
-	blocks, ctx, err := chap.heading.GeneratePageBlocks(ctx)
+	blocks, c, err := chap.heading.GeneratePageBlocks(ctx)
 	if err != nil {
 		return blocks, ctx, err
 	}
-	if len(blocks) > 1 {
-		ctx.Page++ // Did not fit, moved to new Page block.
+	ctx = c
+
+	// Generate chapter title and number.
+	posX := ctx.X
+	posY := ctx.Y - chap.heading.Height()
+	page := int64(ctx.Page)
+
+	chapNumber := chap.headingNumber()
+	chapTitle := chap.headingText()
+
+	// Add to TOC.
+	if chap.includeInTOC {
+		line := chap.toc.Add(chapNumber, chap.title, strconv.FormatInt(page, 10), chap.level)
+		if chap.toc.showLinks {
+			line.SetLink(page, posX, posY)
+		}
 	}
 
-	if chap.includeInTOC {
-		// Add to TOC.
-		chap.toc.add(chap.title, chap.number, 0, ctx.Page)
+	// Add to outline.
+	if chap.outlineItem == nil {
+		chap.outlineItem = model.NewOutlineItem(
+			chapTitle,
+			model.NewOutlineDest(page-1, posX, posY),
+		)
+
+		if chap.parent != nil {
+			chap.parent.outlineItem.Add(chap.outlineItem)
+		} else {
+			chap.outline.Add(chap.outlineItem)
+		}
+	} else {
+		outlineDest := &chap.outlineItem.Dest
+		outlineDest.Page = page - 1
+		outlineDest.X = posX
+		outlineDest.Y = posY
 	}
 
 	for _, d := range chap.contents {
@@ -175,7 +257,6 @@ func (chap *Chapter) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 	if chap.positioning.isAbsolute() {
 		// If absolute: return original context.
 		return blocks, origCtx, nil
-
 	}
 
 	return blocks, ctx, nil

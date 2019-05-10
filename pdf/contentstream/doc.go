@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// The contentstream package provides functionality for parsing and creating content streams for PDF files.
+// Package contentstream provides functionality for parsing and creating content streams for PDF files.
 //
 // For processing and manipulating content streams, it allows parse the content stream into a list of
 // operands that can then be processed further for rendering or extraction of information.

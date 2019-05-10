@@ -7,6 +7,20 @@ node {
     // Hack for 1.11.5 testing work.
     env.CGO_ENABLED="0"
     env.PATH="${root}/bin:${env.GOPATH}/bin:${env.PATH}"
+    env.GOCACHE="off"
+    env.UNIDOC_EXTRACT_FORCETEST="1"
+    env.UNIDOC_E2E_FORCE_TESTS="1"
+    env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
+    env.UNIDOC_RENDERTEST_BASELINE_PATH="/home/jenkins/corpus/unidoc-creator-render-testdata-upd2"
+    env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
+    env.UNIDOC_SPLIT_TESTDATA="/home/jenkins/corpus/unidoc-e2e-split-testdata"
+    env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
+    // Hack for 1.11.5 testing work.
+    env.CGO_ENABLED="0"
+
+    env.TMPDIR="${WORKSPACE}/temp"
+    sh "mkdir -p ${env.TMPDIR}"
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc") {
         sh 'go version'
@@ -22,9 +36,8 @@ node {
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
 
-            // Get dependencies
-            sh 'go get golang.org/x/image/tiff/lzw'
-            sh 'go get github.com/boombuler/barcode'
+            // Get all dependencies (for tests also).
+            sh 'go get -t ./...'
         }
 
         stage('Linting') {
@@ -35,19 +48,23 @@ node {
             sh '(golint ./... >golint.txt 2>&1) || true'
         }
 
-
         stage('Testing') {
             // Go test - No tolerance.
-            //sh 'go test -v ./... >gotest.txt 2>&1'
+            sh "rm -f ${env.TMPDIR}/*.pdf"
             sh '2>&1 go test -v ./... | tee gotest.txt'
         }
 
+        stage('Check generated PDFs') {
+            // Check the created output pdf files.
+            sh "find ${env.TMPDIR} -maxdepth 1 -name \"*.pdf\" -print0 | xargs -t -n 1 -0 gs -dNOPAUSE -dBATCH -sDEVICE=nullpage -sPDFPassword=password -dPDFSTOPONERROR -dPDFSTOPONWARNING"
+        }
+
         stage('Test coverage') {
-            sh 'go test -coverprofile=coverage.out ./...'
+            sh 'go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...'
+            sh '/home/jenkins/codecov.sh'
             sh 'gocover-cobertura < coverage.out > coverage.xml'
             step([$class: 'CoberturaPublisher', coberturaReportFile: 'coverage.xml'])
         }
-
 
         stage('Post') {
             // Assemble vet and lint info.
@@ -63,21 +80,47 @@ node {
 
     dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
         stage('Build examples') {
+            // Output environment variables (useful for debugging).
+            sh("printenv")
+
             // Pull unidoc-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
-            switch("${env.BRANCH_NAME}") {
-                case "v3":
+            if (env.BRANCH_NAME.take(3) == "PR-") {
+                // Pull requests (PR) require separate handling.
+                if (env.CHANGE_TARGET.take(2) == "v3") {
                     examplesBranch = "v3"
-                    break
+                }
+            } else {
+                if (env.BRANCH_NAME.take(2) == "v3") {
+                    examplesBranch = "v3"
+                }
+                // Special cases.
+                switch("${env.BRANCH_NAME}") {
+                    case "v3-reduce-fonts-exports":
+                        examplesBranch = "v3-reduce-fonts-exports"
+                        break
+                }
             }
+
+            // Check if connected branch is defined explicitly.
+            def safeName = env.BRANCH_NAME.replaceAll(/[\/\.]/, '')
+            def fpath = "/home/jenkins/exbranch/" + safeName
+            if (fileExists(fpath)) {
+                examplesBranch = readFile(fpath).trim()
+            }
+
             echo "Pulling unidoc-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
             
             // Dependencies for examples.
             sh 'go get github.com/wcharczuk/go-chart'
+            sh 'CGO_ENABLED=1 go get github.com/miekg/pkcs11'
+            sh 'CGO_ENABLED=1 go get github.com/ThalesIgnite/crypto11'
 
             // Build all examples.
-            sh 'find . -name "*.go" -print0 | xargs -0 -n1 go build'
+            // CGO_ENABLED=1 required for crypto11 dependency (one example).
+            sh 'find . -name "*.go" ! -name "*pkcs11*.go" -print0 | xargs -0 -n1 go build'
+            sh 'find . -name "*pkcs11*.go" -print0 | CGO_ENABLED=1 xargs -0 -n1 go build'
         }
 
         stage('Passthrough benchmark pdfdb_small') {

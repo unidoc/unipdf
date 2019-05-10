@@ -70,7 +70,7 @@ func verifyContent(pubKey string, content string) ([]byte, error) {
 	if sepIdx == -1 {
 		sepIdx = strings.Index(content, separatorFallback)
 		if sepIdx == -1 {
-			return nil, fmt.Errorf("Invalid input, signature separator")
+			return nil, fmt.Errorf("invalid input, signature separator")
 		}
 	}
 
@@ -82,17 +82,17 @@ func verifyContent(pubKey string, content string) ([]byte, error) {
 	signature := content[signatureStarts:]
 
 	if original == "" || signature == "" {
-		return nil, fmt.Errorf("Invalid input, missing original or signature")
+		return nil, fmt.Errorf("invalid input, missing original or signature")
 	}
 
 	originalBytes, err := base64.StdEncoding.DecodeString(original)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid input original")
+		return nil, fmt.Errorf("invalid input original")
 	}
 
 	signatureBytes, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid input signature")
+		return nil, fmt.Errorf("invalid input signature")
 	}
 
 	pubBlock, _ := pem.Decode([]byte(pubKey))
@@ -127,12 +127,12 @@ func getWrappedContent(header string, footer string, content string) (string, er
 	// Find all content between header and footer.
 	headerIdx := strings.Index(content, header)
 	if headerIdx == -1 {
-		return "", fmt.Errorf("Header not found")
+		return "", fmt.Errorf("header not found")
 	}
 
 	footerIdx := strings.Index(content, footer)
 	if footerIdx == -1 {
-		return "", fmt.Errorf("Footer not found")
+		return "", fmt.Errorf("footer not found")
 	}
 
 	start := headerIdx + len(header) + 1

@@ -6,8 +6,7 @@
 package ps
 
 import (
-	"bufio"
-	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -18,13 +17,6 @@ import (
 func init() {
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	//common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-}
-
-func makeReaderForText(txt string) *bufio.Reader {
-	buf := []byte(txt)
-	bufReader := bytes.NewReader(buf)
-	bufferedReader := bufio.NewReader(bufReader)
-	return bufferedReader
 }
 
 func quickEval(progText string) (PSObject, error) {
@@ -46,7 +38,7 @@ func quickEval(progText string) (PSObject, error) {
 	}
 
 	if len(outputs) != 1 {
-		return nil, fmt.Errorf("Stack result has too many values (>1)")
+		return nil, errors.New("stack result has too many values (>1)")
 	}
 
 	stack := PSStack(outputs)
@@ -111,7 +103,7 @@ func TestAdd2(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-9.1) > TOLERANCE {
+	if math.Abs(val.Val-9.1) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}
@@ -134,7 +126,7 @@ func TestSub1(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-1.7) > TOLERANCE {
+	if math.Abs(val.Val-1.7) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}
@@ -154,7 +146,7 @@ func TestSub2(t *testing.T) {
 		t.Errorf("Wrong output type")
 		return
 	}
-	if math.Abs(val.Val-1.7) > TOLERANCE {
+	if math.Abs(val.Val-1.7) > tolerance {
 		t.Errorf("Wrong result")
 		return
 	}

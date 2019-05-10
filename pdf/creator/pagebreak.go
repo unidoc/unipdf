@@ -4,8 +4,8 @@ package creator
 type PageBreak struct {
 }
 
-// NewPageBreak create a new page break.
-func NewPageBreak() *PageBreak {
+// newPageBreak create a new page break.
+func newPageBreak() *PageBreak {
 	return &PageBreak{}
 }
 

@@ -10,27 +10,57 @@ package model
 
 import (
 	"bufio"
-	"crypto/md5"
-	"crypto/rand"
+	"bytes"
+	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
-	"math"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/common/license"
-	. "github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
+	"github.com/unidoc/unidoc/pdf/core/security/crypt"
 )
 
+var pdfAuthor = ""
+var pdfCreationDate time.Time
 var pdfCreator = ""
+var pdfKeywords = ""
+var pdfModifiedDate time.Time
+var pdfProducer = ""
+var pdfSubject = ""
+var pdfTitle = ""
 
-func getPdfProducer() string {
-	licenseKey := license.GetLicenseKey()
-	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+type crossReference struct {
+	Type int
+	// Type 1
+	Offset     int64
+	Generation int64 // and Type 0
+	// Type 2
+	ObjectNumber int // and Type 0
+	Index        int
+}
+
+func getPdfAuthor() string {
+	return pdfAuthor
+}
+
+// SetPdfAuthor sets the Author attribute of the output PDF.
+func SetPdfAuthor(author string) {
+	pdfAuthor = author
+}
+
+func getPdfCreationDate() time.Time {
+	return pdfCreationDate
+}
+
+// SetPdfCreationDate sets the CreationDate attribute of the output PDF.
+func SetPdfCreationDate(creationDate time.Time) {
+	pdfCreationDate = creationDate
 }
 
 func getPdfCreator() string {
@@ -42,27 +72,81 @@ func getPdfCreator() string {
 	return "UniDoc - http://unidoc.io"
 }
 
+// SetPdfCreator sets the Creator attribute of the output PDF.
 func SetPdfCreator(creator string) {
 	pdfCreator = creator
 }
 
+func getPdfKeywords() string {
+	return pdfKeywords
+}
+
+// SetPdfKeywords sets the Keywords attribute of the output PDF.
+func SetPdfKeywords(keywords string) {
+	pdfKeywords = keywords
+}
+
+func getPdfModifiedDate() time.Time {
+	return pdfModifiedDate
+}
+
+// SetPdfModifiedDate sets the ModDate attribute of the output PDF.
+func SetPdfModifiedDate(modifiedDate time.Time) {
+	pdfCreationDate = modifiedDate
+}
+
+func getPdfProducer() string {
+	licenseKey := license.GetLicenseKey()
+	if len(pdfProducer) > 0 && (licenseKey.IsLicensed() || flag.Lookup("test.v") != nil) {
+		return pdfProducer
+	}
+
+	// Return default.
+	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+}
+
+// SetPdfProducer sets the Producer attribute of the output PDF.
+func SetPdfProducer(producer string) {
+	pdfProducer = producer
+}
+
+func getPdfSubject() string {
+	return pdfSubject
+}
+
+// SetPdfSubject sets the Subject attribute of the output PDF.
+func SetPdfSubject(subject string) {
+	pdfSubject = subject
+}
+
+func getPdfTitle() string {
+	return pdfTitle
+}
+
+// SetPdfTitle sets the Title attribute of the output PDF.
+func SetPdfTitle(title string) {
+	pdfTitle = title
+}
+
+// PdfWriter handles outputing PDF content.
 type PdfWriter struct {
-	root        *PdfIndirectObject
-	pages       *PdfIndirectObject
-	objects     []PdfObject
-	objectsMap  map[PdfObject]bool // Quick lookup table.
+	root        *core.PdfIndirectObject
+	pages       *core.PdfIndirectObject
+	objects     []core.PdfObject            // Objects to write.
+	objectsMap  map[core.PdfObject]struct{} // Quick lookup table.
 	writer      *bufio.Writer
-	outlines    []*PdfIndirectObject
+	writePos    int64 // Represents the current position within output file.
+	outlines    []*core.PdfIndirectObject
 	outlineTree *PdfOutlineTreeNode
-	catalog     *PdfObjectDictionary
-	fields      []PdfObject
-	infoObj     *PdfIndirectObject
+	catalog     *core.PdfObjectDictionary
+	fields      []core.PdfObject
+	infoObj     *core.PdfIndirectObject
 
 	// Encryption
-	crypter     *PdfCrypt
-	encryptDict *PdfObjectDictionary
-	encryptObj  *PdfIndirectObject
-	ids         *PdfObjectArray
+	crypter     *core.PdfCrypt
+	encryptDict *core.PdfObjectDictionary
+	encryptObj  *core.PdfIndirectObject
+	ids         *core.PdfObjectArray
 
 	// PDF version
 	majorVersion int
@@ -73,53 +157,92 @@ type PdfWriter struct {
 	// for writing.
 	// The map stores the object and the dictionary it is contained in.
 	// Only way so we can access the dictionary entry later.
-	pendingObjects map[PdfObject]*PdfObjectDictionary
+	pendingObjects map[core.PdfObject][]*core.PdfObjectDictionary
 
 	// Forms.
 	acroForm *PdfAcroForm
+
+	optimizer         Optimizer
+	crossReferenceMap map[int]crossReference
+	writeOffset       int64 // used by PdfAppender
+	ObjNumOffset      int
+	appendMode        bool
+	appendToXrefs     core.XrefTable
+
+	// Cache of objects traversed while resolving references.
+	traversed map[core.PdfObject]struct{}
 }
 
+// NewPdfWriter initializes a new PdfWriter.
 func NewPdfWriter() PdfWriter {
 	w := PdfWriter{}
 
-	w.objectsMap = map[PdfObject]bool{}
-	w.objects = []PdfObject{}
-	w.pendingObjects = map[PdfObject]*PdfObjectDictionary{}
+	w.objectsMap = map[core.PdfObject]struct{}{}
+	w.objects = []core.PdfObject{}
+	w.pendingObjects = map[core.PdfObject][]*core.PdfObjectDictionary{}
+	w.traversed = map[core.PdfObject]struct{}{}
 
-	// PDF Version.  Can be changed if using more advanced features in PDF.
+	// PDF Version. Can be changed if using more advanced features in PDF.
 	// By default it is set to 1.3.
 	w.majorVersion = 1
 	w.minorVersion = 3
 
 	// Creation info.
-	infoDict := MakeDict()
-	infoDict.Set("Producer", MakeString(getPdfProducer()))
-	infoDict.Set("Creator", MakeString(getPdfCreator()))
-	infoObj := PdfIndirectObject{}
+	infoDict := core.MakeDict()
+	metadata := []struct {
+		key   core.PdfObjectName
+		value string
+	}{
+		{"Producer", getPdfProducer()},
+		{"Creator", getPdfCreator()},
+		{"Author", getPdfAuthor()},
+		{"Subject", getPdfSubject()},
+		{"Title", getPdfTitle()},
+		{"Keywords", getPdfKeywords()},
+	}
+	for _, tuple := range metadata {
+		if tuple.value != "" {
+			infoDict.Set(tuple.key, core.MakeString(tuple.value))
+		}
+	}
+
+	// Set creation and modified dates.
+	if creationDate := getPdfCreationDate(); !creationDate.IsZero() {
+		if cd, err := NewPdfDateFromTime(creationDate); err == nil {
+			infoDict.Set("CreationDate", cd.ToPdfObject())
+		}
+	}
+	if modifiedDate := getPdfModifiedDate(); !modifiedDate.IsZero() {
+		if md, err := NewPdfDateFromTime(modifiedDate); err == nil {
+			infoDict.Set("ModDate", md.ToPdfObject())
+		}
+	}
+
+	infoObj := core.PdfIndirectObject{}
 	infoObj.PdfObject = infoDict
 	w.infoObj = &infoObj
 	w.addObject(&infoObj)
 
 	// Root catalog.
-	catalog := PdfIndirectObject{}
-	catalogDict := MakeDict()
-	catalogDict.Set("Type", MakeName("Catalog"))
+	catalog := core.PdfIndirectObject{}
+	catalogDict := core.MakeDict()
+	catalogDict.Set("Type", core.MakeName("Catalog"))
 	catalog.PdfObject = catalogDict
 
 	w.root = &catalog
-	w.addObject(&catalog)
+	w.addObject(w.root)
 
 	// Pages.
-	pages := PdfIndirectObject{}
-	pagedict := MakeDict()
-	pagedict.Set("Type", MakeName("Pages"))
-	kids := PdfObjectArray{}
+	pages := core.PdfIndirectObject{}
+	pagedict := core.MakeDict()
+	pagedict.Set("Type", core.MakeName("Pages"))
+	kids := core.PdfObjectArray{}
 	pagedict.Set("Kids", &kids)
-	pagedict.Set("Count", MakeInteger(0))
+	pagedict.Set("Count", core.MakeInteger(0))
 	pages.PdfObject = pagedict
 
 	w.pages = &pages
-	w.addObject(&pages)
+	w.addObject(w.pages)
 
 	catalogDict.Set("Pages", &pages)
 	w.catalog = catalogDict
@@ -129,59 +252,183 @@ func NewPdfWriter() PdfWriter {
 	return w
 }
 
-// Set the PDF version of the output file.
-func (this *PdfWriter) SetVersion(majorVersion, minorVersion int) {
-	this.majorVersion = majorVersion
-	this.minorVersion = minorVersion
+// copyObject creates deep copy of the Pdf object and
+// fills objectToObjectCopyMap to replace the old object to the copy of object if needed.
+// Parameter objectToObjectCopyMap is needed to replace object references to its copies.
+// Because many objects can contain references to another objects like pages to images.
+func copyObject(obj core.PdfObject, objectToObjectCopyMap map[core.PdfObject]core.PdfObject) core.PdfObject {
+	if newObj, ok := objectToObjectCopyMap[obj]; ok {
+		return newObj
+	}
+
+	switch t := obj.(type) {
+	case *core.PdfObjectArray:
+		newObj := &core.PdfObjectArray{}
+		objectToObjectCopyMap[obj] = newObj
+		for _, val := range t.Elements() {
+			newObj.Append(copyObject(val, objectToObjectCopyMap))
+		}
+		return newObj
+	case *core.PdfObjectStreams:
+		newObj := &core.PdfObjectStreams{PdfObjectReference: t.PdfObjectReference}
+		objectToObjectCopyMap[obj] = newObj
+		for _, val := range t.Elements() {
+			newObj.Append(copyObject(val, objectToObjectCopyMap))
+		}
+		return newObj
+	case *core.PdfObjectStream:
+		newObj := &core.PdfObjectStream{
+			Stream:             t.Stream,
+			PdfObjectReference: t.PdfObjectReference,
+		}
+		objectToObjectCopyMap[obj] = newObj
+		newObj.PdfObjectDictionary = copyObject(t.PdfObjectDictionary, objectToObjectCopyMap).(*core.PdfObjectDictionary)
+		return newObj
+	case *core.PdfObjectDictionary:
+		newObj := core.MakeDict()
+		objectToObjectCopyMap[obj] = newObj
+		for _, key := range t.Keys() {
+			val := t.Get(key)
+			newObj.Set(key, copyObject(val, objectToObjectCopyMap))
+		}
+		return newObj
+	case *core.PdfIndirectObject:
+		newObj := &core.PdfIndirectObject{
+			PdfObjectReference: t.PdfObjectReference,
+		}
+		objectToObjectCopyMap[obj] = newObj
+		newObj.PdfObject = copyObject(t.PdfObject, objectToObjectCopyMap)
+		return newObj
+	case *core.PdfObjectString:
+		newObj := &core.PdfObjectString{}
+		*newObj = *t
+		objectToObjectCopyMap[obj] = newObj
+		return newObj
+	case *core.PdfObjectName:
+		newObj := core.PdfObjectName(*t)
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *core.PdfObjectNull:
+		newObj := core.PdfObjectNull{}
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *core.PdfObjectInteger:
+		newObj := core.PdfObjectInteger(*t)
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *core.PdfObjectReference:
+		newObj := core.PdfObjectReference(*t)
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *core.PdfObjectFloat:
+		newObj := core.PdfObjectFloat(*t)
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *core.PdfObjectBool:
+		newObj := core.PdfObjectBool(*t)
+		objectToObjectCopyMap[obj] = &newObj
+		return &newObj
+	case *pdfSignDictionary:
+		newObj := &pdfSignDictionary{
+			PdfObjectDictionary: core.MakeDict(),
+			handler:             t.handler,
+			signature:           t.signature,
+		}
+		objectToObjectCopyMap[obj] = newObj
+		for _, key := range t.Keys() {
+			val := t.Get(key)
+			newObj.Set(key, copyObject(val, objectToObjectCopyMap))
+		}
+		return newObj
+	default:
+		common.Log.Info("TODO(a5i): implement copyObject for %+v", obj)
+	}
+	// return other objects as is
+	return obj
 }
 
-// Set the optional content properties.
-func (this *PdfWriter) SetOCProperties(ocProperties PdfObject) error {
-	dict := this.catalog
+// copyObjects makes objects copy and set as working.
+func (w *PdfWriter) copyObjects() {
+	objectToObjectCopyMap := make(map[core.PdfObject]core.PdfObject)
+	objects := make([]core.PdfObject, len(w.objects))
+	objectsMap := make(map[core.PdfObject]struct{}, len(w.objects))
+	for i, obj := range w.objects {
+		newObject := copyObject(obj, objectToObjectCopyMap)
+		objects[i] = newObject
+		objectsMap[newObject] = struct{}{}
+	}
+
+	w.objects = objects
+	w.objectsMap = objectsMap
+	w.infoObj = copyObject(w.infoObj, objectToObjectCopyMap).(*core.PdfIndirectObject)
+	w.root = copyObject(w.root, objectToObjectCopyMap).(*core.PdfIndirectObject)
+	if w.encryptObj != nil {
+		w.encryptObj = copyObject(w.encryptObj, objectToObjectCopyMap).(*core.PdfIndirectObject)
+	}
+}
+
+// SetVersion sets the PDF version of the output file.
+func (w *PdfWriter) SetVersion(majorVersion, minorVersion int) {
+	w.majorVersion = majorVersion
+	w.minorVersion = minorVersion
+}
+
+// SetOCProperties sets the optional content properties.
+func (w *PdfWriter) SetOCProperties(ocProperties core.PdfObject) error {
+	dict := w.catalog
 
 	if ocProperties != nil {
 		common.Log.Trace("Setting OC Properties...")
 		dict.Set("OCProperties", ocProperties)
 		// Any risk of infinite loops?
-		this.addObjects(ocProperties)
+		w.addObjects(ocProperties)
 	}
 
 	return nil
 }
 
-func (this *PdfWriter) hasObject(obj PdfObject) bool {
-	// Check if already added.
-	for _, o := range this.objects {
-		// GH: May perform better to use a hash map to check if added?
-		if o == obj {
-			return true
-		}
-	}
-	return false
+// SetOptimizer sets the optimizer to optimize PDF before writing.
+func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
+	w.optimizer = optimizer
+}
+
+// GetOptimizer returns current PDF optimizer.
+func (w *PdfWriter) GetOptimizer() Optimizer {
+	return w.optimizer
+}
+
+func (w *PdfWriter) hasObject(obj core.PdfObject) bool {
+	_, found := w.objectsMap[obj]
+	return found
 }
 
 // Adds the object to list of objects and returns true if the obj was
-// not already added.
-// Returns false if the object was previously added.
-func (this *PdfWriter) addObject(obj PdfObject) bool {
-	hasObj := this.hasObject(obj)
+// not already added. Returns false if the object was previously added.
+func (w *PdfWriter) addObject(obj core.PdfObject) bool {
+	hasObj := w.hasObject(obj)
 	if !hasObj {
-		this.objects = append(this.objects, obj)
+		err := core.ResolveReferencesDeep(obj, w.traversed)
+		if err != nil {
+			common.Log.Debug("ERROR: %v - skipping", err)
+		}
+
+		w.objects = append(w.objects, obj)
+		w.objectsMap[obj] = struct{}{}
 		return true
 	}
 
 	return false
 }
 
-func (this *PdfWriter) addObjects(obj PdfObject) error {
+func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 	common.Log.Trace("Adding objects!")
 
-	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
+	if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
 		common.Log.Trace("Indirect")
 		common.Log.Trace("- %s (%p)", obj, io)
 		common.Log.Trace("- %s", io.PdfObject)
-		if this.addObject(io) {
-			err := this.addObjects(io.PdfObject)
+		if w.addObject(io) {
+			err := w.addObjects(io.PdfObject)
 			if err != nil {
 				return err
 			}
@@ -189,11 +436,11 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		return nil
 	}
 
-	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
+	if so, isStreamObj := obj.(*core.PdfObjectStream); isStreamObj {
 		common.Log.Trace("Stream")
 		common.Log.Trace("- %s %p", obj, obj)
-		if this.addObject(so) {
-			err := this.addObjects(so.PdfObjectDictionary)
+		if w.addObject(so) {
+			err := w.addObjects(so.PdfObjectDictionary)
 			if err != nil {
 				return err
 			}
@@ -201,50 +448,50 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		return nil
 	}
 
-	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
+	if dict, isDict := obj.(*core.PdfObjectDictionary); isDict {
 		common.Log.Trace("Dict")
 		common.Log.Trace("- %s", obj)
 		for _, k := range dict.Keys() {
 			v := dict.Get(k)
 			common.Log.Trace("Key %s", k)
 			if k != "Parent" {
-				err := this.addObjects(v)
+				err := w.addObjects(v)
 				if err != nil {
 					return err
 				}
 			} else {
-				if _, parentIsNull := dict.Get("Parent").(*PdfObjectNull); parentIsNull {
+				if _, parentIsNull := dict.Get("Parent").(*core.PdfObjectNull); parentIsNull {
 					// Parent is null.  We can ignore it.
 					continue
 				}
 
-				if hasObj := this.hasObject(v); !hasObj {
-					common.Log.Debug("Parent obj is missing!! %T %p %v", v, v, v)
-					this.pendingObjects[v] = dict
+				if hasObj := w.hasObject(v); !hasObj {
+					common.Log.Debug("Parent obj not added yet!! %T %p %v", v, v, v)
+					w.pendingObjects[v] = append(w.pendingObjects[v], dict)
 					// Although it is missing at this point, it could be added later...
 				}
-				// How to handle the parent?  Make sure it is present?
-				if parentObj, parentIsRef := dict.Get("Parent").(*PdfObjectReference); parentIsRef {
+				// How to handle the parent? Make sure it is present?
+				if parentObj, parentIsRef := dict.Get("Parent").(*core.PdfObjectReference); parentIsRef {
 					// Parent is a reference.  Means we can drop it?
 					// Could refer to somewhere outside of the scope of the output doc.
 					// Should be done by the reader already.
 					// -> ERROR.
 					common.Log.Debug("ERROR: Parent is a reference object - Cannot be in writer (needs to be resolved)")
-					return fmt.Errorf("Parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
+					return fmt.Errorf("parent is a reference object - Cannot be in writer (needs to be resolved) - %s", parentObj)
 				}
 			}
 		}
 		return nil
 	}
 
-	if arr, isArray := obj.(*PdfObjectArray); isArray {
+	if arr, isArray := obj.(*core.PdfObjectArray); isArray {
 		common.Log.Trace("Array")
 		common.Log.Trace("- %s", obj)
 		if arr == nil {
-			return errors.New("Array is nil")
+			return errors.New("array is nil")
 		}
-		for _, v := range *arr {
-			err := this.addObjects(v)
+		for _, v := range arr.Elements() {
+			err := w.addObjects(v)
 			if err != nil {
 				return err
 			}
@@ -252,53 +499,53 @@ func (this *PdfWriter) addObjects(obj PdfObject) error {
 		return nil
 	}
 
-	if _, isReference := obj.(*PdfObjectReference); isReference {
+	if _, isReference := obj.(*core.PdfObjectReference); isReference {
 		// Should never be a reference, should already be resolved.
-		common.Log.Debug("ERROR: Cannot be a reference!")
-		return errors.New("Reference not allowed")
+		common.Log.Debug("ERROR: Cannot be a reference - got %#v!", obj)
+		return errors.New("reference not allowed")
 	}
 
 	return nil
 }
 
-// Add a page to the PDF file. The new page should be an indirect
-// object.
-func (this *PdfWriter) AddPage(page *PdfPage) error {
+// AddPage adds a page to the PDF file. The new page should be an indirect object.
+func (w *PdfWriter) AddPage(page *PdfPage) error {
 	obj := page.ToPdfObject()
+
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
 	procPage(page)
 
-	pageObj, ok := obj.(*PdfIndirectObject)
+	pageObj, ok := obj.(*core.PdfIndirectObject)
 	if !ok {
-		return errors.New("Page should be an indirect object")
+		return errors.New("page should be an indirect object")
 	}
 	common.Log.Trace("%s", pageObj)
 	common.Log.Trace("%s", pageObj.PdfObject)
 
-	pDict, ok := pageObj.PdfObject.(*PdfObjectDictionary)
+	pDict, ok := pageObj.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
-		return errors.New("Page object should be a dictionary")
+		return errors.New("page object should be a dictionary")
 	}
 
-	otype, ok := pDict.Get("Type").(*PdfObjectName)
+	otype, ok := pDict.Get("Type").(*core.PdfObjectName)
 	if !ok {
-		return fmt.Errorf("Page should have a Type key with a value of type name (%T)", pDict.Get("Type"))
+		return fmt.Errorf("page should have a Type key with a value of type name (%T)", pDict.Get("Type"))
 
 	}
 	if *otype != "Page" {
-		return errors.New("Type != Page (Required).")
+		return errors.New("field Type != Page (Required)")
 	}
 
 	// Copy inherited fields if missing.
-	inheritedFields := []PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
-	parent, hasParent := pDict.Get("Parent").(*PdfIndirectObject)
+	inheritedFields := []core.PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
+	parent, hasParent := pDict.Get("Parent").(*core.PdfIndirectObject)
 	common.Log.Trace("Page Parent: %T (%v)", pDict.Get("Parent"), hasParent)
 	for hasParent {
 		common.Log.Trace("Page Parent: %T", parent)
-		parentDict, ok := parent.PdfObject.(*PdfObjectDictionary)
+		parentDict, ok := parent.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
-			return errors.New("Invalid Parent object")
+			return errors.New("invalid Parent object")
 		}
 		for _, field := range inheritedFields {
 			common.Log.Trace("Field %s", field)
@@ -313,7 +560,7 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 				pDict.Set(field, obj)
 			}
 		}
-		parent, hasParent = parentDict.Get("Parent").(*PdfIndirectObject)
+		parent, hasParent = parentDict.Get("Parent").(*core.PdfIndirectObject)
 		common.Log.Trace("Next parent: %T", parentDict.Get("Parent"))
 	}
 
@@ -321,30 +568,30 @@ func (this *PdfWriter) AddPage(page *PdfPage) error {
 
 	// Update the dictionary.
 	// Reuses the input object, updating the fields.
-	pDict.Set("Parent", this.pages)
+	pDict.Set("Parent", w.pages)
 	pageObj.PdfObject = pDict
 
 	// Add to Pages.
-	pagesDict, ok := this.pages.PdfObject.(*PdfObjectDictionary)
+	pagesDict, ok := w.pages.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
-		return errors.New("Invalid Pages obj (not a dict)")
+		return errors.New("invalid Pages obj (not a dict)")
 	}
-	kids, ok := pagesDict.Get("Kids").(*PdfObjectArray)
+	kids, ok := pagesDict.Get("Kids").(*core.PdfObjectArray)
 	if !ok {
-		return errors.New("Invalid Pages Kids obj (not an array)")
+		return errors.New("invalid Pages Kids obj (not an array)")
 	}
-	*kids = append(*kids, pageObj)
-	pageCount, ok := pagesDict.Get("Count").(*PdfObjectInteger)
+	kids.Append(pageObj)
+	pageCount, ok := pagesDict.Get("Count").(*core.PdfObjectInteger)
 	if !ok {
-		return errors.New("Invalid Pages Count object (not an integer)")
+		return errors.New("invalid Pages Count object (not an integer)")
 	}
 	// Update the count.
 	*pageCount = *pageCount + 1
 
-	this.addObject(pageObj)
+	w.addObject(pageObj)
 
 	// Traverse the page and record all object references.
-	err := this.addObjects(pDict)
+	err := w.addObjects(pDict)
 	if err != nil {
 		return err
 	}
@@ -359,10 +606,10 @@ func procPage(p *PdfPage) {
 	}
 
 	// Add font as needed.
-	f := fonts.NewFontHelvetica()
+	f := DefaultFont()
 	p.Resources.SetFontByName("UF1", f.ToPdfObject())
 
-	ops := []string{}
+	var ops []string
 	ops = append(ops, "q")
 	ops = append(ops, "BT")
 	ops = append(ops, "/UF1 14 Tf")
@@ -380,25 +627,26 @@ func procPage(p *PdfPage) {
 	p.ToPdfObject()
 }
 
-// Add outlines to a PDF file.
-func (this *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
-	this.outlineTree = outlineTree
+// AddOutlineTree adds outlines to a PDF file.
+func (w *PdfWriter) AddOutlineTree(outlineTree *PdfOutlineTreeNode) {
+	w.outlineTree = outlineTree
 }
 
 // Look for a specific key.  Returns a list of entries.
 // What if something appears on many pages?
-func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string) ([]PdfObject, error) {
+func (w *PdfWriter) seekByName(obj core.PdfObject, followKeys []string, key string) ([]core.PdfObject, error) {
 	common.Log.Trace("Seek by name.. %T", obj)
-	list := []PdfObject{}
-	if io, isIndirectObj := obj.(*PdfIndirectObject); isIndirectObj {
-		return this.seekByName(io.PdfObject, followKeys, key)
+	var list []core.PdfObject
+
+	if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
+		return w.seekByName(io.PdfObject, followKeys, key)
 	}
 
-	if so, isStreamObj := obj.(*PdfObjectStream); isStreamObj {
-		return this.seekByName(so.PdfObjectDictionary, followKeys, key)
+	if so, isStreamObj := obj.(*core.PdfObjectStream); isStreamObj {
+		return w.seekByName(so.PdfObjectDictionary, followKeys, key)
 	}
 
-	if dict, isDict := obj.(*PdfObjectDictionary); isDict {
+	if dict, isDict := obj.(*core.PdfObjectDictionary); isDict {
 		common.Log.Trace("Dict")
 		for _, k := range dict.Keys() {
 			v := dict.Get(k)
@@ -408,7 +656,7 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 			for _, followKey := range followKeys {
 				if string(k) == followKey {
 					common.Log.Trace("Follow key %s", followKey)
-					items, err := this.seekByName(v, followKeys, key)
+					items, err := w.seekByName(v, followKeys, key)
 					if err != nil {
 						return list, err
 					}
@@ -425,56 +673,110 @@ func (this *PdfWriter) seekByName(obj PdfObject, followKeys []string, key string
 	return list, nil
 }
 
-// Add Acroforms to a PDF file.  Sets the specified form for writing.
-func (this *PdfWriter) SetForms(form *PdfAcroForm) error {
-	this.acroForm = form
+// SetForms sets the Acroform for a PDF file.
+func (w *PdfWriter) SetForms(form *PdfAcroForm) error {
+	w.acroForm = form
 	return nil
 }
 
-// Write out an indirect / stream object.
-func (this *PdfWriter) writeObject(num int, obj PdfObject) {
+// writeObject writes out an indirect / stream object.
+func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 	common.Log.Trace("Write obj #%d\n", num)
 
-	if pobj, isIndirect := obj.(*PdfIndirectObject); isIndirect {
+	if pobj, isIndirect := obj.(*core.PdfIndirectObject); isIndirect {
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
-		outStr += pobj.PdfObject.DefaultWriteString()
+		if sDict, ok := pobj.PdfObject.(*pdfSignDictionary); ok {
+			sDict.fileOffset = w.writePos + int64(len(outStr))
+		}
+		if pobj.PdfObject == nil {
+			common.Log.Debug("Error: indirect object's PdfObject should never be nil - setting to PdfObjectNull")
+			pobj.PdfObject = core.MakeNull()
+		}
+		outStr += pobj.PdfObject.WriteString()
 		outStr += "\nendobj\n"
-		this.writer.WriteString(outStr)
+		w.writeString(outStr)
 		return
 	}
 
-	// XXX/TODO: Add a default encoder if Filter not specified?
+	// TODO: Add a default encoder if Filter not specified?
 	// Still need to make sure is encrypted.
-	if pobj, isStream := obj.(*PdfObjectStream); isStream {
+	if pobj, isStream := obj.(*core.PdfObjectStream); isStream {
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: pobj.GenerationNumber}
 		outStr := fmt.Sprintf("%d 0 obj\n", num)
-		outStr += pobj.PdfObjectDictionary.DefaultWriteString()
+		outStr += pobj.PdfObjectDictionary.WriteString()
 		outStr += "\nstream\n"
-		this.writer.WriteString(outStr)
-		this.writer.Write(pobj.Stream)
-		this.writer.WriteString("\nendstream\nendobj\n")
+		w.writeString(outStr)
+		w.writeBytes(pobj.Stream)
+		w.writeString("\nendstream\nendobj\n")
 		return
 	}
 
-	this.writer.WriteString(obj.DefaultWriteString())
+	if ostreams, isObjStreams := obj.(*core.PdfObjectStreams); isObjStreams {
+		w.crossReferenceMap[num] = crossReference{Type: 1, Offset: w.writePos, Generation: ostreams.GenerationNumber}
+		outStr := fmt.Sprintf("%d 0 obj\n", num)
+		var offsets []string
+		var objData string
+		var offset int64
+
+		for index, obj := range ostreams.Elements() {
+			io, isIndirect := obj.(*core.PdfIndirectObject)
+			if !isIndirect {
+				common.Log.Error("Object streams N %d contains non indirect pdf object %v", num, obj)
+			}
+			data := io.PdfObject.WriteString() + " "
+			objData = objData + data
+			offsets = append(offsets, fmt.Sprintf("%d %d", io.ObjectNumber, offset))
+			w.crossReferenceMap[int(io.ObjectNumber)] = crossReference{Type: 2, ObjectNumber: num, Index: index}
+			offset = offset + int64(len([]byte(data)))
+		}
+		offsetsStr := strings.Join(offsets, " ") + " "
+		encoder := core.NewFlateEncoder()
+		//encoder := NewRawEncoder()
+		dict := encoder.MakeStreamDict()
+		dict.Set(core.PdfObjectName("Type"), core.MakeName("ObjStm"))
+		n := int64(ostreams.Len())
+		dict.Set(core.PdfObjectName("N"), core.MakeInteger(n))
+		first := int64(len(offsetsStr))
+		dict.Set(core.PdfObjectName("First"), core.MakeInteger(first))
+
+		data, _ := encoder.EncodeBytes([]byte(offsetsStr + objData))
+		length := int64(len(data))
+
+		dict.Set(core.PdfObjectName("Length"), core.MakeInteger(length))
+		outStr += dict.WriteString()
+		outStr += "\nstream\n"
+		w.writeString(outStr)
+		w.writeBytes(data)
+		w.writeString("\nendstream\nendobj\n")
+		return
+	}
+
+	w.writer.WriteString(obj.WriteString())
 }
 
 // Update all the object numbers prior to writing.
-func (this *PdfWriter) updateObjectNumbers() {
+func (w *PdfWriter) updateObjectNumbers() {
+	offset := w.ObjNumOffset
 	// Update numbers
-	for idx, obj := range this.objects {
-		if io, isIndirect := obj.(*PdfIndirectObject); isIndirect {
-			io.ObjectNumber = int64(idx + 1)
-			io.GenerationNumber = 0
-		}
-		if so, isStream := obj.(*PdfObjectStream); isStream {
-			so.ObjectNumber = int64(idx + 1)
-			so.GenerationNumber = 0
+	for idx, obj := range w.objects {
+		switch o := obj.(type) {
+		case *core.PdfIndirectObject:
+			o.ObjectNumber = int64(idx + 1 + offset)
+			o.GenerationNumber = 0
+		case *core.PdfObjectStream:
+			o.ObjectNumber = int64(idx + 1 + offset)
+			o.GenerationNumber = 0
+		case *core.PdfObjectStreams:
+			o.ObjectNumber = int64(idx + 1 + offset)
+			o.GenerationNumber = 0
 		}
 	}
 }
 
+// EncryptOptions represents encryption options for an output PDF.
 type EncryptOptions struct {
-	Permissions AccessPermissions
+	Permissions security.Permissions
 	Algorithm   EncryptionAlgorithm
 }
 
@@ -490,131 +792,70 @@ const (
 	AES_256bit
 )
 
-// Encrypt the output file with a specified user/owner password.
-func (this *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
-	crypter := PdfCrypt{}
-	this.crypter = &crypter
-
-	crypter.EncryptedObjects = map[PdfObject]bool{}
-
-	crypter.CryptFilters = CryptFilters{}
-
+// Encrypt encrypts the output file with a specified user/owner password.
+func (w *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions) error {
 	algo := RC4_128bit
 	if options != nil {
 		algo = options.Algorithm
 	}
+	perm := security.PermOwner
+	if options != nil {
+		perm = options.Permissions
+	}
 
-	var cf CryptFilter
+	var cf crypt.Filter
 	switch algo {
 	case RC4_128bit:
-		crypter.V = 2
-		crypter.R = 3
-		cf = NewCryptFilterV2(16)
+		cf = crypt.NewFilterV2(16)
 	case AES_128bit:
-		this.SetVersion(1, 5)
-		crypter.V = 4
-		crypter.R = 4
-		cf = NewCryptFilterAESV2()
+		cf = crypt.NewFilterAESV2()
 	case AES_256bit:
-		this.SetVersion(2, 0)
-		crypter.V = 5
-		crypter.R = 6 // TODO(dennwc): a way to set R=5?
-		cf = NewCryptFilterAESV3()
+		cf = crypt.NewFilterAESV3()
 	default:
 		return fmt.Errorf("unsupported algorithm: %v", options.Algorithm)
 	}
-	crypter.Length = cf.Length * 8
-
-	const (
-		defaultFilter = StandardCryptFilter
-	)
-	crypter.CryptFilters[defaultFilter] = cf
-	if crypter.V >= 4 {
-		crypter.StreamFilter = defaultFilter
-		crypter.StringFilter = defaultFilter
+	crypter, info, err := core.PdfCryptNewEncrypt(cf, userPass, ownerPass, perm)
+	if err != nil {
+		return err
 	}
-
-	// Set
-	crypter.P = math.MaxUint32
-	crypter.EncryptMetadata = true
-	if options != nil {
-		crypter.P = int(options.Permissions.GetP())
+	w.crypter = crypter
+	if info.Major != 0 {
+		w.SetVersion(info.Major, info.Minor)
 	}
+	w.encryptDict = info.Encrypt
 
-	// Generate the encryption dictionary.
-	ed := MakeDict()
-	ed.Set("Filter", MakeName("Standard"))
-	ed.Set("P", MakeInteger(int64(crypter.P)))
-	ed.Set("V", MakeInteger(int64(crypter.V)))
-	ed.Set("R", MakeInteger(int64(crypter.R)))
-	ed.Set("Length", MakeInteger(int64(crypter.Length)))
-	this.encryptDict = ed
-
-	// Prepare the ID object for the trailer.
-	hashcode := md5.Sum([]byte(time.Now().Format(time.RFC850)))
-	id0 := PdfObjectString(hashcode[:])
-	b := make([]byte, 100)
-	rand.Read(b)
-	hashcode = md5.Sum(b)
-	id1 := PdfObjectString(hashcode[:])
-	common.Log.Trace("Random b: % x", b)
-
-	this.ids = &PdfObjectArray{&id0, &id1}
-	common.Log.Trace("Gen Id 0: % x", id0)
-
-	// Generate encryption parameters
-	if crypter.R < 5 {
-		crypter.Id0 = string(id0)
-
-		// Make the O and U objects.
-		O, err := crypter.Alg3(userPass, ownerPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return err
-		}
-		crypter.O = []byte(O)
-		common.Log.Trace("gen O: % x", O)
-		U, key, err := crypter.Alg5(userPass)
-		if err != nil {
-			common.Log.Debug("ERROR: Error generating O for encryption (%s)", err)
-			return err
-		}
-		common.Log.Trace("gen U: % x", U)
-		crypter.U = []byte(U)
-		crypter.EncryptionKey = key
-
-		ed.Set("O", &O)
-		ed.Set("U", &U)
-	} else { // R >= 5
-		err := crypter.GenerateParams(userPass, ownerPass)
-		if err != nil {
-			return err
-		}
-		ed.Set("O", MakeString(string(crypter.O)))
-		ed.Set("U", MakeString(string(crypter.U)))
-		ed.Set("OE", MakeString(string(crypter.OE)))
-		ed.Set("UE", MakeString(string(crypter.UE)))
-		ed.Set("EncryptMetadata", MakeBool(crypter.EncryptMetadata))
-		if crypter.R > 5 {
-			ed.Set("Perms", MakeString(string(crypter.Perms)))
-		}
-	}
-	if crypter.V >= 4 {
-		if err := crypter.SaveCryptFilters(ed); err != nil {
-			return err
-		}
-	}
+	w.ids = core.MakeArray(core.MakeHexString(info.ID0), core.MakeHexString(info.ID1))
 
 	// Make an object to contain the encryption dictionary.
-	io := MakeIndirectObject(ed)
-	this.encryptObj = io
-	this.addObject(io)
+	io := core.MakeIndirectObject(info.Encrypt)
+	w.encryptObj = io
+	w.addObject(io)
 
 	return nil
 }
 
-// Write the pdf out.
-func (this *PdfWriter) Write(ws io.WriteSeeker) error {
+// Wrapper function to handle writing out string.
+func (w *PdfWriter) writeString(s string) error {
+	n, err := w.writer.WriteString(s)
+	if err != nil {
+		return err
+	}
+	w.writePos += int64(n)
+	return nil
+}
+
+// Wrapper function to handle writing out bytes.
+func (w *PdfWriter) writeBytes(bb []byte) error {
+	n, err := w.writer.Write(bb)
+	if err != nil {
+		return err
+	}
+	w.writePos += int64(n)
+	return nil
+}
+
+// Write writes out the PDF.
+func (w *PdfWriter) Write(writer io.Writer) error {
 	common.Log.Trace("Write()")
 
 	lk := license.GetLicenseKey()
@@ -624,111 +865,225 @@ func (this *PdfWriter) Write(ws io.WriteSeeker) error {
 	}
 
 	// Outlines.
-	if this.outlineTree != nil {
-		common.Log.Trace("OutlineTree: %+v", this.outlineTree)
-		outlines := this.outlineTree.ToPdfObject()
+	if w.outlineTree != nil {
+		common.Log.Trace("OutlineTree: %+v", w.outlineTree)
+		outlines := w.outlineTree.ToPdfObject()
 		common.Log.Trace("Outlines: %+v (%T, p:%p)", outlines, outlines, outlines)
-		this.catalog.Set("Outlines", outlines)
-		err := this.addObjects(outlines)
+		w.catalog.Set("Outlines", outlines)
+		err := w.addObjects(outlines)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Form fields.
-	if this.acroForm != nil {
+	if w.acroForm != nil {
 		common.Log.Trace("Writing acro forms")
-		indObj := this.acroForm.ToPdfObject()
+		indObj := w.acroForm.ToPdfObject()
 		common.Log.Trace("AcroForm: %+v", indObj)
-		this.catalog.Set("AcroForm", indObj)
-		err := this.addObjects(indObj)
+		w.catalog.Set("AcroForm", indObj)
+		err := w.addObjects(indObj)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check pending objects prior to write.
-	for pendingObj, pendingObjDict := range this.pendingObjects {
-		if !this.hasObject(pendingObj) {
-			common.Log.Debug("ERROR Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
-			for _, key := range pendingObjDict.Keys() {
-				val := pendingObjDict.Get(key)
-				if val == pendingObj {
-					common.Log.Debug("Pending object found! and replaced with null")
-					pendingObjDict.Set(key, MakeNull())
-					break
+	for pendingObj, pendingObjDicts := range w.pendingObjects {
+		if !w.hasObject(pendingObj) {
+			common.Log.Debug("WARN Pending object %+v %T (%p) never added for writing", pendingObj, pendingObj, pendingObj)
+			for _, pendingObjDict := range pendingObjDicts {
+				for _, key := range pendingObjDict.Keys() {
+					val := pendingObjDict.Get(key)
+					if val == pendingObj {
+						common.Log.Debug("Pending object found! and replaced with null")
+						pendingObjDict.Set(key, core.MakeNull())
+						break
+					}
 				}
 			}
 		}
 	}
 	// Set version in the catalog.
-	this.catalog.Set("Version", MakeName(fmt.Sprintf("%d.%d", this.majorVersion, this.minorVersion)))
+	w.catalog.Set("Version", core.MakeName(fmt.Sprintf("%d.%d", w.majorVersion, w.minorVersion)))
 
-	w := bufio.NewWriter(ws)
-	this.writer = w
+	// Make a copy of objects prior to optimizing as this can alter the objects.
+	// TODO: Copying wastes memory. Might be worth making user responsible for handling properly.
+	//       Is copy needed for optimization?
+	w.copyObjects()
 
-	w.WriteString(fmt.Sprintf("%%PDF-%d.%d\n", this.majorVersion, this.minorVersion))
-	w.WriteString("%âãÏÓ\n")
-	w.Flush()
+	if w.optimizer != nil {
+		var err error
+		w.objects, err = w.optimizer.Optimize(w.objects)
+		if err != nil {
+			return err
+		}
+		objMap := make(map[core.PdfObject]struct{}, len(w.objects))
+		for _, obj := range w.objects {
+			objMap[obj] = struct{}{}
+		}
+		w.objectsMap = objMap
+	}
 
-	this.updateObjectNumbers()
+	w.writePos = w.writeOffset
+	w.writer = bufio.NewWriter(writer)
+	useCrossReferenceStream := w.majorVersion > 1 || (w.majorVersion == 1 && w.minorVersion > 4)
 
-	offsets := []int64{}
+	objectsInObjectStreams := make(map[core.PdfObject]bool)
+	if !useCrossReferenceStream {
+		for _, obj := range w.objects {
+			if objStm, isObjectStreams := obj.(*core.PdfObjectStreams); isObjectStreams {
+				useCrossReferenceStream = true
+				for _, obj := range objStm.Elements() {
+					objectsInObjectStreams[obj] = true
+					if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
+						objectsInObjectStreams[io.PdfObject] = true
+					}
+				}
+			}
+		}
+	}
+
+	if useCrossReferenceStream && w.majorVersion == 1 && w.minorVersion < 5 {
+		w.minorVersion = 5
+	}
+
+	if w.appendMode {
+		w.writeString("\n")
+	} else {
+		w.writeString(fmt.Sprintf("%%PDF-%d.%d\n", w.majorVersion, w.minorVersion))
+		w.writeString("%âãÏÓ\n")
+	}
+
+	w.updateObjectNumbers()
 
 	// Write objects
-	common.Log.Trace("Writing %d obj", len(this.objects))
-	for idx, obj := range this.objects {
-		common.Log.Trace("Writing %d", idx)
-		this.writer.Flush()
-		offset, _ := ws.Seek(0, os.SEEK_CUR)
-		offsets = append(offsets, offset)
+	common.Log.Trace("Writing %d obj", len(w.objects))
+	w.crossReferenceMap = make(map[int]crossReference)
+	w.crossReferenceMap[0] = crossReference{Type: 0, ObjectNumber: 0, Generation: 0xFFFF}
+	if w.appendToXrefs.ObjectMap != nil {
+		for idx, xref := range w.appendToXrefs.ObjectMap {
+			if idx == 0 {
+				continue
+			}
+			if xref.XType == core.XrefTypeObjectStream {
+				cr := crossReference{Type: 2, ObjectNumber: xref.OsObjNumber, Index: xref.OsObjIndex}
+				w.crossReferenceMap[idx] = cr
+			}
+			if xref.XType == core.XrefTypeTableEntry {
+				cr := crossReference{Type: 1, ObjectNumber: xref.ObjectNumber, Offset: xref.Offset}
+				w.crossReferenceMap[idx] = cr
+			}
+		}
+	}
 
+	offset := w.ObjNumOffset
+	for idx, obj := range w.objects {
+		if skip := objectsInObjectStreams[obj]; skip {
+			continue
+		}
+		common.Log.Trace("Writing %d", idx)
+
+		objectNumber := int64(idx + 1 + offset)
 		// Encrypt prior to writing.
 		// Encrypt dictionary should not be encrypted.
-		if this.crypter != nil && obj != this.encryptObj {
-			err := this.crypter.Encrypt(obj, int64(idx+1), 0)
+		if w.crypter != nil && obj != w.encryptObj {
+			err := w.crypter.Encrypt(obj, int64(objectNumber), 0)
 			if err != nil {
 				common.Log.Debug("ERROR: Failed encrypting (%s)", err)
 				return err
 			}
-
 		}
-		this.writeObject(idx+1, obj)
-	}
-	w.Flush()
-
-	xrefOffset, _ := ws.Seek(0, os.SEEK_CUR)
-	// Write xref table.
-	this.writer.WriteString("xref\r\n")
-	outStr := fmt.Sprintf("%d %d\r\n", 0, len(this.objects)+1)
-	this.writer.WriteString(outStr)
-	outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
-	this.writer.WriteString(outStr)
-	for _, offset := range offsets {
-		outStr = fmt.Sprintf("%.10d %.5d n\r\n", offset, 0)
-		this.writer.WriteString(outStr)
+		w.writeObject(int(objectNumber), obj)
 	}
 
-	// Generate & write trailer
-	trailer := MakeDict()
-	trailer.Set("Info", this.infoObj)
-	trailer.Set("Root", this.root)
-	trailer.Set("Size", MakeInteger(int64(len(this.objects)+1)))
-	// If encrypted!
-	if this.crypter != nil {
-		trailer.Set("Encrypt", this.encryptObj)
-		trailer.Set("ID", this.ids)
-		common.Log.Trace("Ids: %s", this.ids)
+	xrefOffset := w.writePos
+	var maxIndex int
+	for idx := range w.crossReferenceMap {
+		if idx > maxIndex {
+			maxIndex = idx
+		}
 	}
-	this.writer.WriteString("trailer\n")
-	this.writer.WriteString(trailer.DefaultWriteString())
-	this.writer.WriteString("\n")
+	if useCrossReferenceStream {
+		crossObjNumber := maxIndex + 1
+		w.crossReferenceMap[crossObjNumber] = crossReference{Type: 1, ObjectNumber: crossObjNumber, Offset: xrefOffset}
+		crossReferenceData := bytes.NewBuffer(nil)
+
+		for idx := 0; idx <= maxIndex+1; idx++ {
+			ref := w.crossReferenceMap[idx]
+			switch ref.Type {
+			case 0:
+				binary.Write(crossReferenceData, binary.BigEndian, byte(0))
+				binary.Write(crossReferenceData, binary.BigEndian, uint32(0))
+				binary.Write(crossReferenceData, binary.BigEndian, uint16(0xFFFF))
+			case 1:
+				binary.Write(crossReferenceData, binary.BigEndian, byte(1))
+				binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.Offset))
+				binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Generation))
+			case 2:
+				binary.Write(crossReferenceData, binary.BigEndian, byte(2))
+				binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.ObjectNumber))
+				binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Index))
+			}
+		}
+		crossReferenceStream, err := core.MakeStream(crossReferenceData.Bytes(), core.NewFlateEncoder())
+		if err != nil {
+			return err
+		}
+		crossReferenceStream.ObjectNumber = int64(crossObjNumber)
+		crossReferenceStream.PdfObjectDictionary.Set("Type", core.MakeName("XRef"))
+		crossReferenceStream.PdfObjectDictionary.Set("W", core.MakeArray(core.MakeInteger(1), core.MakeInteger(4), core.MakeInteger(2)))
+		crossReferenceStream.PdfObjectDictionary.Set("Index", core.MakeArray(core.MakeInteger(0), core.MakeInteger(crossReferenceStream.ObjectNumber+1)))
+		crossReferenceStream.PdfObjectDictionary.Set("Size", core.MakeInteger(crossReferenceStream.ObjectNumber+1))
+		crossReferenceStream.PdfObjectDictionary.Set("Info", w.infoObj)
+		crossReferenceStream.PdfObjectDictionary.Set("Root", w.root)
+		// If encrypted!
+		if w.crypter != nil {
+			crossReferenceStream.Set("Encrypt", w.encryptObj)
+			crossReferenceStream.Set("ID", w.ids)
+			common.Log.Trace("Ids: %s", w.ids)
+		}
+
+		w.writeObject(int(crossReferenceStream.ObjectNumber), crossReferenceStream)
+
+	} else {
+		w.writeString("xref\r\n")
+		outStr := fmt.Sprintf("%d %d\r\n", 0, len(w.crossReferenceMap))
+		w.writeString(outStr)
+		for idx := 0; idx <= maxIndex; idx++ {
+			ref := w.crossReferenceMap[idx]
+			switch ref.Type {
+			case 0:
+				outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
+				w.writeString(outStr)
+			case 1:
+				outStr = fmt.Sprintf("%.10d %.5d n\r\n", ref.Offset, 0)
+				w.writeString(outStr)
+			}
+		}
+
+		// Generate & write trailer
+		trailer := core.MakeDict()
+		trailer.Set("Info", w.infoObj)
+		trailer.Set("Root", w.root)
+		trailer.Set("Size", core.MakeInteger(int64(len(w.crossReferenceMap))))
+		// If encrypted!
+		if w.crypter != nil {
+			trailer.Set("Encrypt", w.encryptObj)
+			trailer.Set("ID", w.ids)
+			common.Log.Trace("Ids: %s", w.ids)
+		}
+		w.writeString("trailer\n")
+		w.writeString(trailer.WriteString())
+		w.writeString("\n")
+	}
 
 	// Make offset reference.
-	outStr = fmt.Sprintf("startxref\n%d\n", xrefOffset)
-	this.writer.WriteString(outStr)
-	this.writer.WriteString("%%EOF\n")
-	w.Flush()
+	outStr := fmt.Sprintf("startxref\n%d\n", xrefOffset)
+	w.writeString(outStr)
+	w.writeString("%%EOF\n")
+
+	w.writer.Flush()
 
 	return nil
 }

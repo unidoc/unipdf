@@ -5,67 +5,75 @@
 
 package draw
 
-// A path consists of straight line connections between each point defined in an array of points.
+// Path consists of straight line connections between each point defined in an array of points.
 type Path struct {
 	Points []Point
 }
 
+// NewPath returns a new empty path.
 func NewPath() Path {
-	path := Path{}
-	path.Points = []Point{}
-	return path
+	return Path{}
 }
 
-func (this Path) AppendPoint(point Point) Path {
-	this.Points = append(this.Points, point)
-	return this
+// AppendPoint adds the specified point to the path.
+func (p Path) AppendPoint(point Point) Path {
+	p.Points = append(p.Points, point)
+	return p
 }
 
-func (this Path) RemovePoint(number int) Path {
-	if number < 1 || number > len(this.Points) {
-		return this
+// RemovePoint removes the point at the index specified by number from the
+// path. The index is 1-based.
+func (p Path) RemovePoint(number int) Path {
+	if number < 1 || number > len(p.Points) {
+		return p
 	}
 
 	idx := number - 1
-	this.Points = append(this.Points[:idx], this.Points[idx+1:]...)
-	return this
+	p.Points = append(p.Points[:idx], p.Points[idx+1:]...)
+	return p
 }
 
-func (this Path) Length() int {
-	return len(this.Points)
+// Length returns the number of points in the path.
+func (p Path) Length() int {
+	return len(p.Points)
 }
 
-func (this Path) GetPointNumber(number int) Point {
-	if number < 1 || number > len(this.Points) {
+// GetPointNumber returns the path point at the index specified by number.
+// The index is 1-based.
+func (p Path) GetPointNumber(number int) Point {
+	if number < 1 || number > len(p.Points) {
 		return Point{}
 	}
-	return this.Points[number-1]
+	return p.Points[number-1]
 }
 
-func (path Path) Copy() Path {
+// Copy returns a clone of the path.
+func (p Path) Copy() Path {
 	pathcopy := Path{}
 	pathcopy.Points = []Point{}
-	for _, p := range path.Points {
+	for _, p := range p.Points {
 		pathcopy.Points = append(pathcopy.Points, p)
 	}
 	return pathcopy
 }
 
-func (path Path) Offset(offX, offY float64) Path {
-	for i, p := range path.Points {
-		path.Points[i] = p.Add(offX, offY)
+// Offset shifts the path with the specified offsets.
+func (p Path) Offset(offX, offY float64) Path {
+	for i, pt := range p.Points {
+		p.Points[i] = pt.Add(offX, offY)
 	}
-	return path
+	return p
 }
 
-func (path Path) GetBoundingBox() BoundingBox {
+// GetBoundingBox returns the bounding box of the path.
+func (p Path) GetBoundingBox() BoundingBox {
 	bbox := BoundingBox{}
 
 	minX := 0.0
 	maxX := 0.0
 	minY := 0.0
 	maxY := 0.0
-	for idx, p := range path.Points {
+	for idx, p := range p.Points {
 		if idx == 0 {
 			minX = p.X
 			maxX = p.X
@@ -95,6 +103,7 @@ func (path Path) GetBoundingBox() BoundingBox {
 	return bbox
 }
 
+// BoundingBox represents the smallest rectangular area that encapsulates an object.
 type BoundingBox struct {
 	X      float64
 	Y      float64

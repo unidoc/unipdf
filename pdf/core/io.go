@@ -8,14 +8,55 @@ package core
 import (
 	"bufio"
 	"errors"
-	"os"
+	"io"
 
 	"github.com/unidoc/unidoc/common"
 )
 
+// Offset reader encapsulates io.ReadSeeker and offsets it by the specified
+// offset, thus skipping the first offset bytes. Reading always occurs after the
+// offset.
+type offsetReader struct {
+	reader io.ReadSeeker
+	offset int64
+}
+
+func newOffsetReader(reader io.ReadSeeker, offset int64) (*offsetReader, error) {
+	r := &offsetReader{
+		reader: reader,
+		offset: offset,
+	}
+
+	_, err := r.Seek(0, io.SeekStart)
+	return r, err
+}
+
+func (r *offsetReader) Read(p []byte) (n int, err error) {
+	return r.reader.Read(p)
+}
+
+func (r *offsetReader) Seek(offset int64, whence int) (int64, error) {
+	if whence == io.SeekStart {
+		offset += r.offset
+	}
+
+	n, err := r.reader.Seek(offset, whence)
+	if err != nil {
+		return n, err
+	}
+
+	if whence == io.SeekCurrent {
+		n -= r.offset
+	}
+	if n < 0 {
+		return 0, errors.New("core.offsetReader.Seek: negative position")
+	}
+
+	return n, nil
+}
+
 // ReadAtLeast reads at least n bytes into slice p.
 // Returns the number of bytes read (should always be == n), and an error on failure.
-// TODO (v3): Unexport.
 func (parser *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	remaining := n
 	start := 0
@@ -24,7 +65,7 @@ func (parser *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 		nRead, err := parser.reader.Read(p[start:])
 		if err != nil {
 			common.Log.Debug("ERROR Failed reading (%d;%d) %s", nRead, numRounds, err.Error())
-			return start, errors.New("Failed reading")
+			return start, errors.New("failed reading")
 		}
 		numRounds++
 		start += nRead
@@ -33,17 +74,40 @@ func (parser *PdfParser) ReadAtLeast(p []byte, n int) (int, error) {
 	return start, nil
 }
 
-// Get the current file offset, accounting for buffered position.
-// TODO (v3): Unexport.
+// GetFileOffset returns the current file offset, accounting for buffered position.
 func (parser *PdfParser) GetFileOffset() int64 {
-	offset, _ := parser.rs.Seek(0, os.SEEK_CUR)
+	offset, _ := parser.rs.Seek(0, io.SeekCurrent)
 	offset -= int64(parser.reader.Buffered())
 	return offset
 }
 
-// Seek the file to an offset position.
-// TODO (v3): Unexport.
+// SetFileOffset sets the file to an offset position and resets buffer.
 func (parser *PdfParser) SetFileOffset(offset int64) {
-	parser.rs.Seek(offset, os.SEEK_SET)
+	if offset < 0 {
+		offset = 0
+	}
+
+	parser.rs.Seek(offset, io.SeekStart)
 	parser.reader = bufio.NewReader(parser.rs)
+}
+
+// ReadBytesAt reads byte content at specific offset and length within the PDF.
+func (parser *PdfParser) ReadBytesAt(offset, len int64) ([]byte, error) {
+	curPos := parser.GetFileOffset()
+
+	_, err := parser.rs.Seek(offset, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	bb := make([]byte, len)
+	_, err = io.ReadAtLeast(parser.rs, bb, int(len))
+	if err != nil {
+		return nil, err
+	}
+
+	// Restore.
+	parser.SetFileOffset(curPos)
+
+	return bb, nil
 }

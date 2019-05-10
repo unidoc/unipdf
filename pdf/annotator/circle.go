@@ -26,7 +26,8 @@ type CircleAnnotationDef struct {
 	Opacity       float64 // Alpha value (0-1).
 }
 
-// Creates a circle/ellipse annotation object with appearance stream that can be added to page PDF annotations.
+// CreateCircleAnnotation creates a circle/ellipse annotation object with appearance stream that can be added to
+// page PDF annotations.
 func CreateCircleAnnotation(circDef CircleAnnotationDef) (*pdf.PdfAnnotation, error) {
 	circAnnotation := pdf.NewPdfAnnotationCircle()
 

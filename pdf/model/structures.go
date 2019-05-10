@@ -11,13 +11,15 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
+	"time"
 
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
 )
 
-// Definition of a rectangle.
+// PdfRectangle is a definition of a rectangle.
 type PdfRectangle struct {
 	Llx float64 // Lower left corner (ll).
 	Lly float64
@@ -25,32 +27,32 @@ type PdfRectangle struct {
 	Ury float64
 }
 
-// Create a PDF rectangle object based on an input array of 4 integers.
+// NewPdfRectangle creates a PDF rectangle object based on an input array of 4 integers.
 // Defining the lower left (LL) and upper right (UR) corners with
 // floating point numbers.
-func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
+func NewPdfRectangle(arr core.PdfObjectArray) (*PdfRectangle, error) {
 	rect := PdfRectangle{}
-	if len(arr) != 4 {
-		return nil, errors.New("Invalid rectangle array, len != 4")
+	if arr.Len() != 4 {
+		return nil, errors.New("invalid rectangle array, len != 4")
 	}
 
 	var err error
-	rect.Llx, err = getNumberAsFloat(arr[0])
+	rect.Llx, err = core.GetNumberAsFloat(arr.Get(0))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Lly, err = getNumberAsFloat(arr[1])
+	rect.Lly, err = core.GetNumberAsFloat(arr.Get(1))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Urx, err = getNumberAsFloat(arr[2])
+	rect.Urx, err = core.GetNumberAsFloat(arr.Get(2))
 	if err != nil {
 		return nil, err
 	}
 
-	rect.Ury, err = getNumberAsFloat(arr[3])
+	rect.Ury, err = core.GetNumberAsFloat(arr.Get(3))
 	if err != nil {
 		return nil, err
 	}
@@ -58,17 +60,27 @@ func NewPdfRectangle(arr PdfObjectArray) (*PdfRectangle, error) {
 	return &rect, nil
 }
 
-// Convert to a PDF object.
-func (rect *PdfRectangle) ToPdfObject() PdfObject {
-	arr := PdfObjectArray{}
-	arr = append(arr, MakeFloat(rect.Llx))
-	arr = append(arr, MakeFloat(rect.Lly))
-	arr = append(arr, MakeFloat(rect.Urx))
-	arr = append(arr, MakeFloat(rect.Ury))
-	return &arr
+// Height returns the height of `rect`.
+func (rect *PdfRectangle) Height() float64 {
+	return math.Abs(rect.Ury - rect.Lly)
 }
 
-// A date is a PDF string of the form:
+// Width returns the width of `rect`.
+func (rect *PdfRectangle) Width() float64 {
+	return math.Abs(rect.Urx - rect.Llx)
+}
+
+// ToPdfObject converts rectangle to a PDF object.
+func (rect *PdfRectangle) ToPdfObject() core.PdfObject {
+	return core.MakeArray(
+		core.MakeFloat(rect.Llx),
+		core.MakeFloat(rect.Lly),
+		core.MakeFloat(rect.Urx),
+		core.MakeFloat(rect.Ury),
+	)
+}
+
+// PdfDate represents a date, which is a PDF string of the form:
 // (D:YYYYMMDDHHmmSSOHH'mm)
 type PdfDate struct {
 	year          int64 // YYYY
@@ -82,19 +94,34 @@ type PdfDate struct {
 	utOffsetMins  int64 // mm (00-59)
 }
 
+// ToGoTime returns the date in time.Time format.
+func (d PdfDate) ToGoTime() time.Time {
+	utcOffset := int(d.utOffsetHours*60*60 + d.utOffsetMins*60)
+	switch d.utOffsetSign {
+	case '-':
+		utcOffset = -utcOffset
+	case 'Z':
+		utcOffset = 0
+	}
+	tzName := fmt.Sprintf("UTC%c%.2d%.2d", d.utOffsetSign, d.utOffsetHours, d.utOffsetMins)
+	tz := time.FixedZone(tzName, utcOffset)
+
+	return time.Date(int(d.year), time.Month(d.month), int(d.day), int(d.hour), int(d.minute), int(d.second), 0, tz)
+}
+
 var reDate = regexp.MustCompile(`\s*D\s*:\s*(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-Z])?(\d{2})?'?(\d{2})?`)
 
-// Make a new PdfDate object from a PDF date string (see 7.9.4 Dates).
+// NewPdfDate returns a new PdfDate object from a PDF date string (see 7.9.4 Dates).
 // format: "D: YYYYMMDDHHmmSSOHH'mm"
 func NewPdfDate(dateStr string) (PdfDate, error) {
 	d := PdfDate{}
 
 	matches := reDate.FindAllStringSubmatch(dateStr, 1)
 	if len(matches) < 1 {
-		return d, fmt.Errorf("Invalid date string (%s)", dateStr)
+		return d, fmt.Errorf("invalid date string (%s)", dateStr)
 	}
 	if len(matches[0]) != 10 {
-		return d, errors.New("Invalid regexp group match length != 10")
+		return d, errors.New("invalid regexp group match length != 10")
 	}
 
 	// No need to handle err from ParseInt, as pre-validated via regexp.
@@ -124,11 +151,30 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 	return d, nil
 }
 
-// Convert to a PDF string object.
-func (date *PdfDate) ToPdfObject() PdfObject {
+
+// NewPdfDateFromTime will create a PdfDate based on the given time
+func NewPdfDateFromTime(timeObj time.Time) (PdfDate, error) {
+	timezone := timeObj.Format("-07:00")
+	utOffsetHours, _ := strconv.ParseInt(timezone[1:3], 10, 32)
+	utOffsetMins, _ := strconv.ParseInt(timezone[4:6], 10, 32)
+
+	return PdfDate{
+		year:          int64(timeObj.Year()),
+		month:         int64(timeObj.Month()),
+		day:           int64(timeObj.Day()),
+		hour:          int64(timeObj.Hour()),
+		minute:        int64(timeObj.Minute()),
+		second:        int64(timeObj.Second()),
+		utOffsetSign:  timezone[0],
+		utOffsetHours: utOffsetHours,
+		utOffsetMins:  utOffsetMins,
+	}, nil
+}
+
+// ToPdfObject converts date to a PDF string object.
+func (d *PdfDate) ToPdfObject() core.PdfObject {
 	str := fmt.Sprintf("D:%.4d%.2d%.2d%.2d%.2d%.2d%c%.2d'%.2d'",
-		date.year, date.month, date.day, date.hour, date.minute, date.second,
-		date.utOffsetSign, date.utOffsetHours, date.utOffsetMins)
-	pdfStr := PdfObjectString(str)
-	return &pdfStr
+		d.year, d.month, d.day, d.hour, d.minute, d.second,
+		d.utOffsetSign, d.utOffsetHours, d.utOffsetMins)
+	return core.MakeString(str)
 }

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -5,11 +10,6 @@ import (
 
 	"github.com/unidoc/unidoc/pdf/core"
 )
-
-func init() {
-	// Uncomment when debugging to get trace logging output - to follow flow.
-	// common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-}
 
 // Test for an endless recursive loop in
 // func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectObject) error
@@ -56,10 +56,10 @@ func TestFuzzReaderBuildPageLoop(t *testing.T) {
 
 	// Make a dummy reader to test
 	dummyPdfReader := PdfReader{}
-	dummyPdfReader.traversed = map[core.PdfObject]bool{}
-	dummyPdfReader.modelManager = NewModelManager()
+	dummyPdfReader.traversed = map[core.PdfObject]struct{}{}
+	dummyPdfReader.modelManager = newModelManager()
 
-	traversedPageNodes := map[core.PdfObject]bool{}
+	traversedPageNodes := map[core.PdfObject]struct{}{}
 	err := dummyPdfReader.buildPageList(pages, nil, traversedPageNodes)
 
 	// Current behavior is to avoid the recursive endless loop and simply return nil.  Logs a debug message.

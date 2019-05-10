@@ -8,18 +8,12 @@ package creator
 import (
 	"os"
 
+	"github.com/unidoc/unidoc/pdf/contentstream/draw"
 	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // Loads the template from path as a list of pages.
-func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
-	// Read the input pdf file.
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+func loadPagesFromFile(f *os.File) ([]*model.PdfPage, error) {
 	pdfReader, err := model.NewPdfReader(f)
 	if err != nil {
 		return nil, err
@@ -31,7 +25,7 @@ func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
 	}
 
 	// Load the pages.
-	pages := []*model.PdfPage{}
+	var pages []*model.PdfPage
 	for i := 0; i < numPages; i++ {
 		page, err := pdfReader.GetPage(i + 1)
 		if err != nil {
@@ -42,4 +36,22 @@ func loadPagesFromFile(path string) ([]*model.PdfPage, error) {
 	}
 
 	return pages, nil
+}
+
+// Rotates rectangle (0,0,w,h) by the specified angle and returns the its
+// bounding box. The origin of rotation is the top left corner of the rectangle.
+func rotateRect(w, h, angle float64) (x, y, rotatedWidth, rotatedHeight float64) {
+	if angle == 0 {
+		return 0, 0, w, h
+	}
+
+	// Get rotated size
+	bbox := draw.Path{Points: []draw.Point{
+		draw.NewPoint(0, 0).Rotate(angle),
+		draw.NewPoint(w, 0).Rotate(angle),
+		draw.NewPoint(0, h).Rotate(angle),
+		draw.NewPoint(w, h).Rotate(angle),
+	}}.GetBoundingBox()
+
+	return bbox.X, bbox.Y, bbox.Width, bbox.Height
 }

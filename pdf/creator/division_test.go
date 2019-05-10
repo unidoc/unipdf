@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unidoc/unidoc/pdf/model/fonts"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 var seed = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -26,15 +26,23 @@ func RandString(length int) string {
 	return string(b)
 }
 
+func newStandard14Font(t testing.TB, base model.StdFontName) *model.PdfFont {
+	f, err := model.NewStandard14Font(base)
+	if err != nil {
+		t.Fatalf("Error opening font: %v", err)
+	}
+	return f
+}
+
 func TestDivVertical(t *testing.T) {
-	fontRegular := fonts.NewFontCourier()
-	fontBold := fonts.NewFontCourierBold()
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Regular division component")
+	p := c.NewParagraph("Regular division component")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -44,28 +52,31 @@ func TestDivVertical(t *testing.T) {
 	}
 
 	// Draw division.
-	div := NewDivision()
+	div := c.NewDivision()
 
 	if div.Inline() {
 		t.Fatal("Fail: Incorrect inline mode value")
 	}
 
-	p = NewParagraph("Components are stacked vertically ")
+	p = c.NewParagraph("Components are stacked vertically ")
 	p.SetFont(fontRegular)
 	div.Add(p)
 
-	p = NewParagraph("but not horizontally")
+	p = c.NewParagraph("but not horizontally")
 	p.SetFont(fontBold)
 	div.Add(p)
 
 	// Add styled paragraph
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 
-	s := NewStyledParagraph("Not even with a styled ", style)
+	s := c.NewStyledParagraph()
+	chunk := s.Append("Not even with a styled ")
+	chunk.Style = style
 
 	style.Color = ColorRGBFrom8bit(255, 0, 0)
-	s.Append("paragraph", style)
+	chunk = s.Append("paragraph")
+	chunk.Style = style
 
 	div.Add(s)
 
@@ -75,21 +86,21 @@ func TestDivVertical(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_vertical.pdf")
+	err = c.WriteToFile(tempFile("division_vertical.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
 
 func TestDivInline(t *testing.T) {
-	fontRegular := fonts.NewFontCourier()
-	fontBold := fonts.NewFontCourierBold()
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Inline division component")
+	p := c.NewParagraph("Inline division component")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -99,45 +110,51 @@ func TestDivInline(t *testing.T) {
 	}
 
 	// Draw division.
-	div := NewDivision()
+	div := c.NewDivision()
 	div.SetInline(true)
 
 	if !div.Inline() {
 		t.Fatal("Fail: Incorrect inline mode value")
 	}
 
-	p = NewParagraph("Components are stacked both vertically ")
+	p = c.NewParagraph("Components are stacked both vertically ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontRegular)
 	div.Add(p)
 
-	p = NewParagraph("and horizontally. ")
+	p = c.NewParagraph("and horizontally. ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontBold)
 	div.Add(p)
 
-	p = NewParagraph("Only if they fit right!")
+	p = c.NewParagraph("Only if they fit right!")
 	p.SetEnableWrap(false)
 	p.SetFont(fontRegular)
 	div.Add(p)
 
-	p = NewParagraph("This one did not fit in the available line space. ")
+	p = c.NewParagraph("This one did not fit in the available line space. ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontBold)
 	div.Add(p)
 
 	// Add styled paragraph
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 	style.Color = ColorRGBFrom8bit(0, 0, 255)
 
-	s := NewStyledParagraph("This styled paragraph should ", style)
+	s := c.NewStyledParagraph()
+	s.SetEnableWrap(false)
+
+	chunk := s.Append("This styled paragraph should ")
+	chunk.Style = style
 
 	style.Color = ColorRGBFrom8bit(255, 0, 0)
-	s.Append("fit", style)
+	chunk = s.Append("fit")
+	chunk.Style = style
 
 	style.Color = ColorRGBFrom8bit(0, 255, 0)
 	style.Font = fontBold
-	s.Append(" right in.", style)
+	chunk = s.Append(" in.")
+	chunk.Style = style
 
 	div.Add(s)
 
@@ -147,21 +164,21 @@ func TestDivInline(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_inline.pdf")
+	err = c.WriteToFile(tempFile("division_inline.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
 
 func TestDivNumberMatrix(t *testing.T) {
-	fontRegular := fonts.NewFontCourier()
-	fontBold := fonts.NewFontCourierBold()
+	fontRegular := newStandard14Font(t, model.CourierName)
+	fontBold := newStandard14Font(t, model.CourierBoldName)
 
 	c := New()
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("A list of numbers in an inline division")
+	p := c.NewParagraph("A list of numbers in an inline division")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -171,7 +188,7 @@ func TestDivNumberMatrix(t *testing.T) {
 	}
 
 	// Draw division.
-	div := NewDivision()
+	div := c.NewDivision()
 	div.SetInline(true)
 
 	for i := 0; i < 100; i++ {
@@ -179,7 +196,7 @@ func TestDivNumberMatrix(t *testing.T) {
 		g := byte(seed.Intn(200))
 		b := byte(seed.Intn(200))
 
-		p := NewParagraph(strconv.Itoa(i) + " ")
+		p := c.NewParagraph(strconv.Itoa(i) + " ")
 		p.SetEnableWrap(false)
 		p.SetColor(ColorRGBFrom8bit(r, g, b))
 
@@ -198,21 +215,21 @@ func TestDivNumberMatrix(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_number_matrix.pdf")
+	err = c.WriteToFile(tempFile("division_number_matrix.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
 
 func TestDivRandomSequences(t *testing.T) {
-	fontRegular := fonts.NewFontHelvetica()
-	fontBold := fonts.NewFontHelveticaBold()
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Inline division of random sequences on multiple pages")
+	p := c.NewParagraph("Inline division of random sequences on multiple pages")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -222,10 +239,10 @@ func TestDivRandomSequences(t *testing.T) {
 	}
 
 	// Draw division.
-	div := NewDivision()
+	div := c.NewDivision()
 	div.SetInline(true)
 
-	style := NewTextStyle()
+	style := c.NewTextStyle()
 
 	for i := 0; i < 350; i++ {
 		r := byte(seed.Intn(200))
@@ -236,7 +253,7 @@ func TestDivRandomSequences(t *testing.T) {
 		fontSize := float64(11 + seed.Intn(3))
 
 		if seed.Intn(2)%2 == 0 {
-			p := NewParagraph(word)
+			p := c.NewParagraph(word)
 			p.SetEnableWrap(false)
 			p.SetColor(ColorRGBFrom8bit(r, g, b))
 			p.SetFontSize(fontSize)
@@ -258,8 +275,12 @@ func TestDivRandomSequences(t *testing.T) {
 				style.Font = fontRegular
 			}
 
-			s := NewStyledParagraph(word, style)
+			s := c.NewStyledParagraph()
 			s.SetEnableWrap(false)
+
+			chunk := s.Append(word)
+			chunk.Style = style
+
 			div.Add(s)
 		}
 	}
@@ -270,21 +291,21 @@ func TestDivRandomSequences(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_random_sequences.pdf")
+	err = c.WriteToFile(tempFile("division_random_sequences.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
 
 func TestTableDivisions(t *testing.T) {
-	fontRegular := fonts.NewFontHelvetica()
-	fontBold := fonts.NewFontHelveticaBold()
+	fontRegular := newStandard14Font(t, model.HelveticaName)
+	fontBold := newStandard14Font(t, model.HelveticaBoldName)
 
 	c := New()
 	c.NewPage()
 
 	// Draw section title.
-	p := NewParagraph("Table containing division components")
+	p := c.NewParagraph("Table containing division components")
 	p.SetMargins(0, 0, 20, 10)
 	p.SetFont(fontBold)
 
@@ -293,50 +314,50 @@ func TestTableDivisions(t *testing.T) {
 		t.Fatalf("Error drawing: %v", err)
 	}
 
-	table := NewTable(2)
+	table := c.NewTable(2)
 	table.SetColumnWidths(0.35, 0.65)
 
 	// Add regular division to table.
-	divRegular := NewDivision()
+	divRegular := c.NewDivision()
 
-	p = NewParagraph("Components are stacked vertically ")
+	p = c.NewParagraph("Components are stacked vertically ")
 	p.SetFont(fontRegular)
 	divRegular.Add(p)
 
-	p = NewParagraph("but not horizontally")
+	p = c.NewParagraph("but not horizontally")
 	p.SetFont(fontBold)
 	divRegular.Add(p)
 
 	cell := table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(divRegular)
 
 	// Add inline division to table.
-	divInline := NewDivision()
+	divInline := c.NewDivision()
 	divInline.SetInline(true)
 
-	p = NewParagraph("Components are stacked vertically ")
+	p = c.NewParagraph("Components are stacked vertically ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontRegular)
 	divInline.Add(p)
 
-	p = NewParagraph("and horizontally. ")
+	p = c.NewParagraph("and horizontally. ")
 	p.SetEnableWrap(false)
 	p.SetFont(fontBold)
 	divInline.Add(p)
 
-	p = NewParagraph("Only if they fit!")
+	p = c.NewParagraph("Only if they fit!")
 	p.SetEnableWrap(false)
 	p.SetFont(fontRegular)
 	divInline.Add(p)
 
-	p = NewParagraph("This one did not fit in the available line space")
+	p = c.NewParagraph("This one did not fit in the available line space")
 	p.SetEnableWrap(false)
 	p.SetFont(fontBold)
 	divInline.Add(p)
 
 	cell = table.NewCell()
-	cell.SetBorder(CellBorderStyleBox, 1)
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
 	cell.SetContent(divInline)
 
 	// Draw table.
@@ -346,7 +367,7 @@ func TestTableDivisions(t *testing.T) {
 	}
 
 	// Write output file.
-	err = c.WriteToFile("/tmp/division_table.pdf")
+	err = c.WriteToFile(tempFile("division_table.pdf"))
 	if err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}

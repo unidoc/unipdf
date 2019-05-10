@@ -8,6 +8,8 @@ package creator
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/contentstream"
@@ -39,6 +41,9 @@ type Block struct {
 
 	// Margins to be applied around the block when drawing on Page.
 	margins margins
+
+	// Block annotations.
+	annotations []*model.PdfAnnotation
 }
 
 // NewBlock creates a new Block with specified width and height.
@@ -51,8 +56,8 @@ func NewBlock(width float64, height float64) *Block {
 	return b
 }
 
-// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks from a PDF document
-// and additional content with the creator.
+// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks
+// from a PDF document and additional content with the creator.
 func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	b := &Block{}
 
@@ -96,6 +101,18 @@ func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
 }
 
+// AddAnnotation adds an annotation to the current block.
+// The annotation will be added to the page the block will be rendered on.
+func (blk *Block) AddAnnotation(annotation *model.PdfAnnotation) {
+	for _, annot := range blk.annotations {
+		if annot == annotation {
+			return
+		}
+	}
+
+	blk.annotations = append(blk.annotations, annotation)
+}
+
 // duplicate duplicates the block with a new copy of the operations list.
 func (blk *Block) duplicate() *Block {
 	dup := &Block{}
@@ -115,7 +132,7 @@ func (blk *Block) duplicate() *Block {
 // GeneratePageBlocks draws the block contents on a template Page block.
 // Implements the Drawable interface.
 func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	blocks := []*Block{}
+	var blocks []*Block
 
 	if blk.positioning.isRelative() {
 		// Draw at current ctx.X, ctx.Y position
@@ -124,7 +141,7 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cc.Translate(ctx.X, ctx.PageHeight-ctx.Y-blk.height)
 		if blk.angle != 0 {
 			// Make the rotation about the upper left corner.
-			// XXX/TODO: Account for rotation origin. (Consider).
+			// TODO: Account for rotation origin. (Consider).
 			cc.Translate(0, blk.Height())
 			cc.RotateDeg(blk.angle)
 			cc.Translate(0, -blk.Height())
@@ -143,7 +160,7 @@ func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 		cc.Translate(blk.xPos, ctx.PageHeight-blk.yPos-blk.height)
 		if blk.angle != 0 {
 			// Make the rotation about the upper left corner.
-			// XXX/TODO: Consider supporting specification of rotation origin.
+			// TODO: Consider supporting specification of rotation origin.
 			cc.Translate(0, blk.Height())
 			cc.RotateDeg(blk.angle)
 			cc.Translate(0, -blk.Height())
@@ -249,6 +266,11 @@ func (blk *Block) translate(tx, ty float64) {
 // drawToPage draws the block on a PdfPage. Generates the content streams and appends to the PdfPage's content
 // stream and links needed resources.
 func (blk *Block) drawToPage(page *model.PdfPage) error {
+
+	// TODO(gunnsth): Appears very wasteful to do this all the time.
+	//        Possibly create another wrapper around model.PdfPage (creator.page) which can keep track of whether
+	//        this has already been done.
+
 	// Check if Page contents are wrapped - if not wrap it.
 	content, err := page.GetAllContentStreams()
 	if err != nil {
@@ -278,6 +300,11 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 		return err
 	}
 
+	// Add block annotations to the page.
+	for _, annotation := range blk.annotations {
+		page.AddAnnotation(annotation)
+	}
+
 	return nil
 }
 
@@ -298,7 +325,7 @@ func (blk *Block) Draw(d Drawable) error {
 	}
 
 	if len(blocks) != 1 {
-		return errors.New("Too many output blocks")
+		return errors.New("too many output blocks")
 	}
 
 	for _, newBlock := range blocks {
@@ -319,7 +346,7 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	}
 
 	if len(blocks) != 1 {
-		return errors.New("Too many output blocks")
+		return errors.New("too many output blocks")
 	}
 
 	for _, newBlock := range blocks {
@@ -335,13 +362,26 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 // mergeBlocks appends another block onto the block.
 func (blk *Block) mergeBlocks(toAdd *Block) error {
 	err := mergeContents(blk.contents, blk.resources, toAdd.contents, toAdd.resources)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Merge annotations.
+	for _, annot := range toAdd.annotations {
+		blk.AddAnnotation(annot)
+	}
+
+	return nil
 }
 
 // mergeContents merges contents and content streams.
 // Active in the sense that it modified the input contents and resources.
 func mergeContents(contents *contentstream.ContentStreamOperations, resources *model.PdfPageResources,
 	contentsToAdd *contentstream.ContentStreamOperations, resourcesToAdd *model.PdfPageResources) error {
+
+	// TODO(gunnsth): It seems rather expensive to mergeContents all the time. A lot of repetition.
+	//    It would be more efficient to perform the merge at the very and when we have all the "blocks"
+	//    for each page.
 
 	// To properly add contents from a block, we need to handle the resources that the block is
 	// using and make sure it is accessible in the modified Page.
@@ -391,18 +431,12 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 			if len(op.Params) == 2 {
 				if name, ok := op.Params[0].(*core.PdfObjectName); ok {
 					if _, processed := fontMap[*name]; !processed {
-						var useName core.PdfObjectName
 						// Process if not already processed.
 						obj, found := resourcesToAdd.GetFontByName(*name)
-						if found {
-							useName = *name
-							for {
-								obj2, found := resources.GetFontByName(useName)
-								if !found || obj2 == obj {
-									break
-								}
-								useName = useName + "0"
-							}
+
+						useName := *name
+						if found && obj != nil {
+							useName = resourcesNextUnusedFontName(name.String(), obj, resources)
 						}
 
 						resources.SetFontByName(useName, obj)
@@ -547,4 +581,28 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 	}
 
 	return nil
+}
+
+func resourcesNextUnusedFontName(name string, font core.PdfObject, resources *model.PdfPageResources) core.PdfObjectName {
+	prefix := strings.TrimRightFunc(strings.TrimSpace(name), func(r rune) bool {
+		return unicode.IsNumber(r)
+	})
+	if prefix == "" {
+		prefix = "Font"
+	}
+
+	num := 0
+	fontName := core.PdfObjectName(name)
+
+	for {
+		f, found := resources.GetFontByName(fontName)
+		if !found || f == font {
+			break
+		}
+
+		num++
+		fontName = core.PdfObjectName(fmt.Sprintf("%s%d", prefix, num))
+	}
+
+	return fontName
 }

@@ -29,14 +29,14 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	if !ok {
 		array, ok := filterObj.(*PdfObjectArray)
 		if !ok {
-			return nil, fmt.Errorf("Filter not a Name or Array object")
+			return nil, fmt.Errorf("filter not a Name or Array object")
 		}
-		if len(*array) == 0 {
+		if array.Len() == 0 {
 			// Empty array -> indicates raw filter (no filter).
 			return NewRawEncoder(), nil
 		}
 
-		if len(*array) != 1 {
+		if array.Len() != 1 {
 			menc, err := newMultiEncoderFromStream(streamObj)
 			if err != nil {
 				common.Log.Error("Failed creating multi encoder: %v", err)
@@ -48,10 +48,10 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		}
 
 		// Single element.
-		filterObj = (*array)[0]
+		filterObj = array.Get(0)
 		method, ok = filterObj.(*PdfObjectName)
 		if !ok {
-			return nil, fmt.Errorf("Filter array member not a Name object")
+			return nil, fmt.Errorf("filter array member not a Name object")
 		}
 	}
 
@@ -68,14 +68,14 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	} else if *method == StreamEncodingFilterNameASCII85 || *method == "A85" {
 		return NewASCII85Encoder(), nil
 	} else if *method == StreamEncodingFilterNameCCITTFax {
-		return NewCCITTFaxEncoder(), nil
+		return newCCITTFaxEncoderFromStream(streamObj, nil)
 	} else if *method == StreamEncodingFilterNameJBIG2 {
 		return NewJBIG2Encoder(), nil
 	} else if *method == StreamEncodingFilterNameJPX {
 		return NewJPXEncoder(), nil
 	} else {
 		common.Log.Debug("ERROR: Unsupported encoding method!")
-		return nil, fmt.Errorf("Unsupported encoding method (%s)", *method)
+		return nil, fmt.Errorf("unsupported encoding method (%s)", *method)
 	}
 }
 
@@ -86,14 +86,14 @@ func DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 
 	encoder, err := NewEncoderFromStream(streamObj)
 	if err != nil {
-		common.Log.Debug("Stream decoding failed: %v", err)
+		common.Log.Debug("ERROR: Stream decoding failed: %v", err)
 		return nil, err
 	}
 	common.Log.Trace("Encoder: %#v\n", encoder)
 
 	decoded, err := encoder.DecodeStream(streamObj)
 	if err != nil {
-		common.Log.Debug("Stream decoding failed: %v", err)
+		common.Log.Debug("ERROR: Stream decoding failed: %v", err)
 		return nil, err
 	}
 

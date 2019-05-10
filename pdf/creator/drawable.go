@@ -7,7 +7,7 @@ package creator
 
 // Drawable is a widget that can be used to draw with the Creator.
 type Drawable interface {
-	// Draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
+	// GeneratePageBlocks draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
 	// templates are returned, one per Page.  The function also takes a draw context containing information
 	// where to draw (if relative positioning) and the available height to draw on accounting for Margins etc.
 	GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error)
@@ -24,9 +24,9 @@ type VectorDrawable interface {
 	Height() float64
 }
 
-// DrawContext defines the drawing context. The DrawContext is continuously used and updated when drawing the page
-// contents in relative mode.  Keeps track of current X, Y position, available height as well as other page parameters
-// such as margins and dimensions.
+// DrawContext defines the drawing context. The DrawContext is continuously used and updated when
+// drawing the page contents in relative mode.  Keeps track of current X, Y position, available
+// height as well as other page parameters such as margins and dimensions.
 type DrawContext struct {
 	// Current page number.
 	Page int

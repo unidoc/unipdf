@@ -12,39 +12,49 @@ import (
 	"strings"
 
 	"github.com/unidoc/unidoc/common"
-	. "github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unidoc/pdf/core/security"
 )
 
 // PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
 // a higher level access to work with PDF structure and information, such as the page structure etc.
 type PdfReader struct {
-	parser      *PdfParser
-	root        PdfObject
-	pages       *PdfObjectDictionary
-	pageList    []*PdfIndirectObject
+	parser      *core.PdfParser
+	root        core.PdfObject
+	pages       *core.PdfObjectDictionary
+	pageList    []*core.PdfIndirectObject
 	PageList    []*PdfPage
 	pageCount   int
-	catalog     *PdfObjectDictionary
+	catalog     *core.PdfObjectDictionary
 	outlineTree *PdfOutlineTreeNode
 	AcroForm    *PdfAcroForm
 
-	modelManager *ModelManager
+	modelManager *modelManager
+
+	// Lazy loading: When enabled reference objects need to be resolved (via lookup, disk access) rather
+	// than loading entire document into memory on load.
+	isLazy bool
 
 	// For tracking traversal (cache).
-	traversed map[PdfObject]bool
+	traversed map[core.PdfObject]struct{}
+	rs        io.ReadSeeker
 }
 
 // NewPdfReader returns a new PdfReader for an input io.ReadSeeker interface. Can be used to read PDF from
 // memory or file. Immediately loads and traverses the PDF structure including pages and page contents (if
-// not encrypted).
+// not encrypted). Loads entire document structure into memory.
+// Alternatively a lazy-loading reader can be created with NewPdfReaderLazy which loads only references,
+// and references are loaded from disk into memory on an as-needed basis.
 func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
-	pdfReader := &PdfReader{}
-	pdfReader.traversed = map[PdfObject]bool{}
-
-	pdfReader.modelManager = NewModelManager()
+	pdfReader := &PdfReader{
+		rs:           rs,
+		traversed:    map[core.PdfObject]struct{}{},
+		modelManager: newModelManager(),
+		isLazy:       false,
+	}
 
 	// Create the parser, loads the cross reference table and trailer.
-	parser, err := NewParser(rs)
+	parser, err := core.NewParser(rs)
 	if err != nil {
 		return nil, err
 	}
@@ -66,45 +76,63 @@ func NewPdfReader(rs io.ReadSeeker) (*PdfReader, error) {
 	return pdfReader, nil
 }
 
-// IsEncrypted returns true if the PDF file is encrypted.
-func (this *PdfReader) IsEncrypted() (bool, error) {
-	return this.parser.IsEncrypted()
-}
+// NewPdfReaderLazy creates a new PdfReader for `rs` in lazy-loading mode. The difference
+// from NewPdfReader is that in lazy-loading mode, objects are only loaded into memory when needed
+// rather than entire structure being loaded into memory on reader creation.
+// Note that it may make sense to use the lazy-load reader when processing only parts of files,
+// rather than loading entire file into memory. Example: splitting a few pages from a large PDF file.
+func NewPdfReaderLazy(rs io.ReadSeeker) (*PdfReader, error) {
+	pdfReader := &PdfReader{
+		rs:           rs,
+		traversed:    map[core.PdfObject]struct{}{},
+		modelManager: newModelManager(),
+		isLazy:       true,
+	}
 
-// GetEncryptionMethod returns a string containing some information about the encryption method used.
-// XXX/TODO: May be better to return a standardized struct with information.
-func (this *PdfReader) GetEncryptionMethod() string {
-	crypter := this.parser.GetCrypter()
-	str := crypter.Filter + " - "
+	// Create the parser, loads the cross reference table and trailer.
+	parser, err := core.NewParser(rs)
+	if err != nil {
+		return nil, err
+	}
+	pdfReader.parser = parser
 
-	if crypter.V == 0 {
-		str += "Undocumented algorithm"
-	} else if crypter.V == 1 {
-		// RC4 or AES (bits: 40)
-		str += "RC4: 40 bits"
-	} else if crypter.V == 2 {
-		str += fmt.Sprintf("RC4: %d bits", crypter.Length)
-	} else if crypter.V == 3 {
-		str += "Unpublished algorithm"
-	} else if crypter.V >= 4 {
-		// Look at CF, StmF, StrF
-		str += fmt.Sprintf("Stream filter: %s - String filter: %s", crypter.StreamFilter, crypter.StringFilter)
-		str += "; Crypt filters:"
-		for name, cf := range crypter.CryptFilters {
-			str += fmt.Sprintf(" - %s: %s (%d)", name, cf.Cfm, cf.Length)
+	isEncrypted, err := pdfReader.IsEncrypted()
+	if err != nil {
+		return nil, err
+	}
+
+	// Load pdf doc structure if not encrypted.
+	if !isEncrypted {
+		err = pdfReader.loadStructure()
+		if err != nil {
+			return nil, err
 		}
 	}
-	perms := crypter.GetAccessPermissions()
-	str += fmt.Sprintf(" - %#v", perms)
 
-	return str
+	return pdfReader, nil
+}
+
+// PdfVersion returns version of the PDF file.
+func (r *PdfReader) PdfVersion() core.Version {
+	return r.parser.PdfVersion()
+}
+
+// IsEncrypted returns true if the PDF file is encrypted.
+func (r *PdfReader) IsEncrypted() (bool, error) {
+	return r.parser.IsEncrypted()
+}
+
+// GetEncryptionMethod returns a descriptive information string about the encryption method used.
+func (r *PdfReader) GetEncryptionMethod() string {
+	crypter := r.parser.GetCrypter()
+	return crypter.String()
 }
 
 // Decrypt decrypts the PDF file with a specified password.  Also tries to
 // decrypt with an empty password.  Returns true if successful,
 // false otherwise.
-func (this *PdfReader) Decrypt(password []byte) (bool, error) {
-	success, err := this.parser.Decrypt(password)
+func (r *PdfReader) Decrypt(password []byte) (bool, error) {
+	success, err := r.parser.Decrypt(password)
 	if err != nil {
 		return false, err
 	}
@@ -112,7 +140,7 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 		return false, nil
 	}
 
-	err = this.loadStructure()
+	err = r.loadStructure()
 	if err != nil {
 		common.Log.Debug("ERROR: Fail to load structure (%s)", err)
 		return false, err
@@ -128,95 +156,99 @@ func (this *PdfReader) Decrypt(password []byte) (bool, error) {
 // The bool flag indicates that the user can access and view the file.
 // The AccessPermissions shows what access the user has for editing etc.
 // An error is returned if there was a problem performing the authentication.
-func (this *PdfReader) CheckAccessRights(password []byte) (bool, AccessPermissions, error) {
-	return this.parser.CheckAccessRights(password)
+func (r *PdfReader) CheckAccessRights(password []byte) (bool, security.Permissions, error) {
+	return r.parser.CheckAccessRights(password)
 }
 
 // Loads the structure of the pdf file: pages, outlines, etc.
-func (this *PdfReader) loadStructure() error {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return fmt.Errorf("File need to be decrypted first")
+func (r *PdfReader) loadStructure() error {
+	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
+		return fmt.Errorf("file need to be decrypted first")
 	}
 
-	trailerDict := this.parser.GetTrailer()
+	trailerDict := r.parser.GetTrailer()
 	if trailerDict == nil {
-		return fmt.Errorf("Missing trailer")
+		return fmt.Errorf("missing trailer")
 	}
 
 	// Catalog.
-	root, ok := trailerDict.Get("Root").(*PdfObjectReference)
+	root, ok := trailerDict.Get("Root").(*core.PdfObjectReference)
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", *trailerDict)
+		return fmt.Errorf("invalid Root (trailer: %s)", trailerDict)
 	}
-	oc, err := this.parser.LookupByReference(*root)
+	oc, err := r.parser.LookupByReference(*root)
 	if err != nil {
 		common.Log.Debug("ERROR: Failed to read root element catalog: %s", err)
 		return err
 	}
-	pcatalog, ok := oc.(*PdfIndirectObject)
+	pcatalog, ok := oc.(*core.PdfIndirectObject)
 	if !ok {
 		common.Log.Debug("ERROR: Missing catalog: (root %q) (trailer %s)", oc, *trailerDict)
-		return errors.New("Missing catalog")
+		return errors.New("missing catalog")
 	}
-	catalog, ok := (*pcatalog).PdfObject.(*PdfObjectDictionary)
+	catalog, ok := (*pcatalog).PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid catalog (%s)", pcatalog.PdfObject)
-		return errors.New("Invalid catalog")
+		return errors.New("invalid catalog")
 	}
 	common.Log.Trace("Catalog: %s", catalog)
 
 	// Pages.
-	pagesRef, ok := catalog.Get("Pages").(*PdfObjectReference)
+	pagesRef, ok := catalog.Get("Pages").(*core.PdfObjectReference)
 	if !ok {
-		return errors.New("Pages in catalog should be a reference")
+		return errors.New("pages in catalog should be a reference")
 	}
-	op, err := this.parser.LookupByReference(*pagesRef)
+	op, err := r.parser.LookupByReference(*pagesRef)
 	if err != nil {
 		common.Log.Debug("ERROR: Failed to read pages")
 		return err
 	}
-	ppages, ok := op.(*PdfIndirectObject)
+	ppages, ok := op.(*core.PdfIndirectObject)
 	if !ok {
 		common.Log.Debug("ERROR: Pages object invalid")
 		common.Log.Debug("op: %p", ppages)
-		return errors.New("Pages object invalid")
+		return errors.New("pages object invalid")
 	}
-	pages, ok := ppages.PdfObject.(*PdfObjectDictionary)
+	pages, ok := ppages.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("ERROR: Pages object invalid (%s)", ppages)
-		return errors.New("Pages object invalid")
+		return errors.New("pages object invalid")
 	}
-	pageCount, ok := pages.Get("Count").(*PdfObjectInteger)
+	pageCount, ok := core.GetInt(pages.Get("Count"))
 	if !ok {
 		common.Log.Debug("ERROR: Pages count object invalid")
-		return errors.New("Pages count invalid")
+		return errors.New("pages count invalid")
+	}
+	if _, ok = core.GetName(pages.Get("Type")); !ok {
+		common.Log.Debug("Pages dict Type field not set. Setting Type to Pages.")
+		pages.Set("Type", core.MakeName("Pages"))
 	}
 
-	this.root = root
-	this.catalog = catalog
-	this.pages = pages
-	this.pageCount = int(*pageCount)
-	this.pageList = []*PdfIndirectObject{}
+	r.root = root
+	r.catalog = catalog
+	r.pages = pages
+	r.pageCount = int(*pageCount)
+	r.pageList = []*core.PdfIndirectObject{}
 
-	traversedPageNodes := map[PdfObject]bool{}
-	err = this.buildPageList(ppages, nil, traversedPageNodes)
+	traversedPageNodes := map[core.PdfObject]struct{}{}
+	err = r.buildPageList(ppages, nil, traversedPageNodes)
 	if err != nil {
 		return err
 	}
 	common.Log.Trace("---")
 	common.Log.Trace("TOC")
 	common.Log.Trace("Pages")
-	common.Log.Trace("%d: %s", len(this.pageList), this.pageList)
+	common.Log.Trace("%d: %s", len(r.pageList), r.pageList)
 
 	// Outlines.
-	this.outlineTree, err = this.loadOutlines()
+	r.outlineTree, err = r.loadOutlines()
 	if err != nil {
 		common.Log.Debug("ERROR: Failed to build outline tree (%s)", err)
 		return err
 	}
 
 	// Load interactive forms and fields.
-	this.AcroForm, err = this.loadForms()
+	r.AcroForm, err = r.loadForms()
 	if err != nil {
 		return err
 	}
@@ -224,45 +256,13 @@ func (this *PdfReader) loadStructure() error {
 	return nil
 }
 
-// Trace to object.  Keeps a list of already visited references to avoid circular references.
-//
-// Example circular reference.
-// 1 0 obj << /Next 2 0 R >>
-// 2 0 obj << /Next 1 0 R >>
-//
-func (this *PdfReader) traceToObjectWrapper(obj PdfObject, refList map[*PdfObjectReference]bool) (PdfObject, error) {
-	// Keep a list of references to avoid circular references.
-
-	ref, isRef := obj.(*PdfObjectReference)
-	if isRef {
-		// Make sure not already visited (circular ref).
-		if _, alreadyTraversed := refList[ref]; alreadyTraversed {
-			return nil, errors.New("Circular reference")
-		}
-		refList[ref] = true
-		obj, err := this.parser.LookupByReference(*ref)
-		if err != nil {
-			return nil, err
-		}
-		return this.traceToObjectWrapper(obj, refList)
-	}
-
-	// Not a reference, an object.  Can be indirect or any direct pdf object (other than reference).
-	return obj, nil
-}
-
-func (this *PdfReader) traceToObject(obj PdfObject) (PdfObject, error) {
-	refList := map[*PdfObjectReference]bool{}
-	return this.traceToObjectWrapper(obj, refList)
-}
-
-func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
+	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
+		return nil, fmt.Errorf("file need to be decrypted first")
 	}
 
 	// Has outlines? Otherwise return an empty outlines structure.
-	catalog := this.catalog
+	catalog := r.catalog
 	outlinesObj := catalog.Get("Outlines")
 	if outlinesObj == nil {
 		return nil, nil
@@ -270,31 +270,32 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	common.Log.Trace("-Has outlines")
 	// Trace references to the object.
-	outlineRootObj, err := this.traceToObject(outlinesObj)
-	if err != nil {
-		common.Log.Debug("ERROR: Failed to read outlines")
-		return nil, err
-	}
+	outlineRootObj := core.ResolveReference(outlinesObj)
 	common.Log.Trace("Outline root: %v", outlineRootObj)
 
-	if _, isNull := outlineRootObj.(*PdfObjectNull); isNull {
+	if _, isNull := outlineRootObj.(*core.PdfObjectNull); isNull {
 		common.Log.Trace("Outline root is null - no outlines")
 		return nil, nil
 	}
 
-	outlineRoot, ok := outlineRootObj.(*PdfIndirectObject)
+	outlineRoot, ok := outlineRootObj.(*core.PdfIndirectObject)
 	if !ok {
-		return nil, errors.New("Outline root should be an indirect object")
+		if _, ok := core.GetDict(outlineRootObj); !ok {
+			return nil, errors.New("outline root should be an indirect object")
+		}
+
+		common.Log.Debug("Outline root is a dict. Should be an indirect object")
+		outlineRoot = core.MakeIndirectObject(outlineRootObj)
 	}
 
-	dict, ok := outlineRoot.PdfObject.(*PdfObjectDictionary)
+	dict, ok := outlineRoot.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
-		return nil, errors.New("Outline indirect object should contain a dictionary")
+		return nil, errors.New("outline indirect object should contain a dictionary")
 	}
 
 	common.Log.Trace("Outline root dict: %v", dict)
 
-	outlineTree, _, err := this.buildOutlineTree(outlineRoot, nil, nil)
+	outlineTree, _, err := r.buildOutlineTree(outlineRoot, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -309,20 +310,20 @@ func (this *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 // Parent, Prev are the parent or previous node in the hierarchy.
 // The function returns the corresponding tree node and the last node which is used
 // for setting the Last pointer of the tree node structures.
-func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
-	container, isInd := obj.(*PdfIndirectObject)
+func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
+	container, isInd := obj.(*core.PdfIndirectObject)
 	if !isInd {
-		return nil, nil, fmt.Errorf("Outline container not an indirect object %T", obj)
+		return nil, nil, fmt.Errorf("outline container not an indirect object %T", obj)
 	}
-	dict, ok := container.PdfObject.(*PdfObjectDictionary)
+	dict, ok := container.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
-		return nil, nil, errors.New("Not a dictionary object")
+		return nil, nil, errors.New("not a dictionary object")
 	}
 	common.Log.Trace("build outline tree: dict: %v (%v) p: %p", dict, container, container)
 
 	if obj := dict.Get("Title"); obj != nil {
 		// Outline item has a title. (required)
-		outlineItem, err := this.newPdfOutlineItemFromIndirectObject(container)
+		outlineItem, err := r.newPdfOutlineItemFromIndirectObject(container)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -330,12 +331,9 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 		outlineItem.Prev = prev
 
 		if firstObj := dict.Get("First"); firstObj != nil {
-			firstObj, err = this.traceToObject(firstObj)
-			if err != nil {
-				return nil, nil, err
-			}
-			if _, isNull := firstObj.(*PdfObjectNull); !isNull {
-				first, last, err := this.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
+			firstObj = core.ResolveReference(firstObj)
+			if !core.IsNullObject(firstObj) {
+				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -346,12 +344,9 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 
 		// Resolve the reference to next
 		if nextObj := dict.Get("Next"); nextObj != nil {
-			nextObj, err = this.traceToObject(nextObj)
-			if err != nil {
-				return nil, nil, err
-			}
-			if _, isNull := nextObj.(*PdfObjectNull); !isNull {
-				next, last, err := this.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
+			nextObj = core.ResolveReference(nextObj)
+			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
+				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -361,61 +356,41 @@ func (this *PdfReader) buildOutlineTree(obj PdfObject, parent *PdfOutlineTreeNod
 		}
 
 		return &outlineItem.PdfOutlineTreeNode, &outlineItem.PdfOutlineTreeNode, nil
-	} else {
-		// Outline dictionary (structure element).
+	}
 
-		outline, err := newPdfOutlineFromIndirectObject(container)
-		if err != nil {
-			return nil, nil, err
-		}
-		outline.Parent = parent
-		//outline.Prev = parent
+	// Outline dictionary (structure element).
+	outline, err := newPdfOutlineFromIndirectObject(container)
+	if err != nil {
+		return nil, nil, err
+	}
+	outline.Parent = parent
 
-		if firstObj := dict.Get("First"); firstObj != nil {
-			// Has children...
-			firstObj, err = this.traceToObject(firstObj)
+	if firstObj := dict.Get("First"); firstObj != nil {
+		// Has children...
+		firstObj = core.ResolveReference(firstObj)
+		firstObjDirect := core.TraceToDirectObject(firstObj)
+		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull && firstObjDirect != nil {
+			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 			if err != nil {
 				return nil, nil, err
 			}
-			if _, isNull := firstObj.(*PdfObjectNull); !isNull {
-				first, last, err := this.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
-				if err != nil {
-					return nil, nil, err
-				}
-				outline.First = first
-				outline.Last = last
-			}
+			outline.First = first
+			outline.Last = last
 		}
-
-		/*
-			if nextObj, hasNext := (*dict)["Next"]; hasNext {
-				nextObj, err = this.traceToObject(nextObj)
-				if err != nil {
-					return nil, nil, err
-				}
-				if _, isNull := nextObj.(*PdfObjectNull); !isNull {
-					next, last, err := this.buildOutlineTree(nextObj, parent, &outline.PdfOutlineTreeNode)
-					if err != nil {
-						return nil, nil, err
-					}
-					outline.Next = next
-					return &outline.PdfOutlineTreeNode, last, nil
-				}
-			}*/
-
-		return &outline.PdfOutlineTreeNode, &outline.PdfOutlineTreeNode, nil
 	}
+
+	return &outline.PdfOutlineTreeNode, &outline.PdfOutlineTreeNode, nil
 }
 
 // GetOutlineTree returns the outline tree.
-func (this *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
-	return this.outlineTree
+func (r *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
+	return r.outlineTree
 }
 
 // GetOutlinesFlattened returns a flattened list of tree nodes and titles.
-func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
-	outlineNodeList := []*PdfOutlineTreeNode{}
-	flattenedTitleList := []string{}
+func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
+	var outlineNodeList []*PdfOutlineTreeNode
+	var flattenedTitleList []string
 
 	// Recursive flattening function.
 	var flattenFunc func(*PdfOutlineTreeNode, *[]*PdfOutlineTreeNode, *[]string, int)
@@ -430,7 +405,7 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 
 		if item, isItem := node.context.(*PdfOutlineItem); isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + string(*item.Title)
+			title := strings.Repeat(" ", depth*2) + item.Title.Str()
 			*titleList = append(*titleList, title)
 			if item.Next != nil {
 				flattenFunc(item.Next, outlineList, titleList, depth)
@@ -443,53 +418,50 @@ func (this *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, 
 			flattenFunc(node.First, outlineList, titleList, depth+1)
 		}
 	}
-	flattenFunc(this.outlineTree, &outlineNodeList, &flattenedTitleList, 0)
+	flattenFunc(r.outlineTree, &outlineNodeList, &flattenedTitleList, 0)
 	return outlineNodeList, flattenedTitleList, nil
 }
 
 // loadForms loads the AcroForm.
-func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File need to be decrypted first")
+func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
+	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
+		return nil, fmt.Errorf("file need to be decrypted first")
 	}
 
 	// Has forms?
-	catalog := this.catalog
+	catalog := r.catalog
 	obj := catalog.Get("AcroForm")
 	if obj == nil {
 		// Nothing to load.
 		return nil, nil
 	}
-	var err error
-	obj, err = this.traceToObject(obj)
-	if err != nil {
-		return nil, err
-	}
-	obj = TraceToDirectObject(obj)
-	if _, isNull := obj.(*PdfObjectNull); isNull {
+	obj = core.TraceToDirectObject(obj)
+	if _, isNull := obj.(*core.PdfObjectNull); isNull {
 		common.Log.Trace("Acroform is a null object (empty)\n")
 		return nil, nil
 	}
 
-	formsDict, ok := obj.(*PdfObjectDictionary)
+	formsDict, ok := obj.(*core.PdfObjectDictionary)
 	if !ok {
 		common.Log.Debug("Invalid AcroForm entry %T", obj)
 		common.Log.Debug("Does not have forms")
-		return nil, fmt.Errorf("Invalid acroform entry %T", obj)
+		return nil, fmt.Errorf("invalid acroform entry %T", obj)
 	}
 	common.Log.Trace("Has Acro forms")
 	// Load it.
 
 	// Ensure we have access to everything.
 	common.Log.Trace("Traverse the Acroforms structure")
-	err = this.traverseObjectData(formsDict)
-	if err != nil {
-		common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
-		return nil, err
+	if !r.isLazy {
+		err := r.traverseObjectData(formsDict)
+		if err != nil {
+			common.Log.Debug("ERROR: Unable to traverse AcroForms (%s)", err)
+			return nil, err
+		}
 	}
 
 	// Create the acro forms object.
-	acroForm, err := this.newPdfAcroFormFromDict(formsDict)
+	acroForm, err := r.newPdfAcroFormFromDict(formsDict)
 	if err != nil {
 		return nil, err
 	}
@@ -497,16 +469,16 @@ func (this *PdfReader) loadForms() (*PdfAcroForm, error) {
 	return acroForm, nil
 }
 
-func (this *PdfReader) lookupPageByObject(obj PdfObject) (*PdfPage, error) {
+func (r *PdfReader) lookupPageByObject(obj core.PdfObject) (*PdfPage, error) {
 	// can be indirect, direct, or reference
 	// look up the corresponding page
-	return nil, errors.New("Page not found")
+	return nil, errors.New("page not found")
 }
 
 // Build the table of contents.
 // tree, ex: Pages -> Pages -> Pages -> Page
 // Traverse through the whole thing recursively.
-func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirectObject, traversedPageNodes map[PdfObject]bool) error {
+func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.PdfIndirectObject, traversedPageNodes map[core.PdfObject]struct{}) error {
 	if node == nil {
 		return nil
 	}
@@ -515,20 +487,20 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 		common.Log.Debug("Cyclic recursion, skipping")
 		return nil
 	}
-	traversedPageNodes[node] = true
+	traversedPageNodes[node] = struct{}{}
 
-	nodeDict, ok := node.PdfObject.(*PdfObjectDictionary)
+	nodeDict, ok := node.PdfObject.(*core.PdfObjectDictionary)
 	if !ok {
-		return errors.New("Node not a dictionary")
+		return errors.New("node not a dictionary")
 	}
 
-	objType, ok := (*nodeDict).Get("Type").(*PdfObjectName)
+	objType, ok := (*nodeDict).Get("Type").(*core.PdfObjectName)
 	if !ok {
-		return errors.New("Node missing Type (Required)")
+		return errors.New("node missing Type (Required)")
 	}
-	common.Log.Trace("buildPageList node type: %s", *objType)
+	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
-		p, err := this.newPdfPageFromDict(nodeDict)
+		p, err := r.newPdfPageFromDict(nodeDict)
 		if err != nil {
 			return err
 		}
@@ -538,14 +510,14 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 			// Set the parent (in case missing or incorrect).
 			nodeDict.Set("Parent", parent)
 		}
-		this.pageList = append(this.pageList, node)
-		this.PageList = append(this.PageList, p)
+		r.pageList = append(r.pageList, node)
+		r.PageList = append(r.PageList, p)
 
 		return nil
 	}
 	if *objType != "Pages" {
 		common.Log.Debug("ERROR: Table of content containing non Page/Pages object! (%s)", objType)
-		return errors.New("Table of content containing non Page/Pages object!")
+		return errors.New("table of content containing non Page/Pages object")
 	}
 
 	// A Pages object.  Update the parent.
@@ -554,38 +526,40 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 	}
 
 	// Resolve the object recursively.
-	err := this.traverseObjectData(node)
-	if err != nil {
-		return err
+	if !r.isLazy {
+		err := r.traverseObjectData(node)
+		if err != nil {
+			return err
+		}
 	}
 
-	kidsObj, err := this.parser.Trace(nodeDict.Get("Kids"))
+	kidsObj, err := r.parser.Resolve(nodeDict.Get("Kids"))
 	if err != nil {
 		common.Log.Debug("ERROR: Failed loading Kids object")
 		return err
 	}
 
-	var kids *PdfObjectArray
-	kids, ok = kidsObj.(*PdfObjectArray)
+	var kids *core.PdfObjectArray
+	kids, ok = kidsObj.(*core.PdfObjectArray)
 	if !ok {
-		kidsIndirect, isIndirect := kidsObj.(*PdfIndirectObject)
+		kidsIndirect, isIndirect := kidsObj.(*core.PdfIndirectObject)
 		if !isIndirect {
-			return errors.New("Invalid Kids object")
+			return errors.New("invalid Kids object")
 		}
-		kids, ok = kidsIndirect.PdfObject.(*PdfObjectArray)
+		kids, ok = kidsIndirect.PdfObject.(*core.PdfObjectArray)
 		if !ok {
-			return errors.New("Invalid Kids indirect object")
+			return errors.New("invalid Kids indirect object")
 		}
 	}
 	common.Log.Trace("Kids: %s", kids)
-	for idx, child := range *kids {
-		child, ok := child.(*PdfIndirectObject)
+	for idx, child := range kids.Elements() {
+		child, ok := core.GetIndirect(child)
 		if !ok {
 			common.Log.Debug("ERROR: Page not indirect object - (%s)", child)
-			return errors.New("Page not indirect object")
+			return errors.New("page not indirect object")
 		}
-		(*kids)[idx] = child
-		err = this.buildPageList(child, node, traversedPageNodes)
+		kids.Set(idx, child)
+		err = r.buildPageList(child, node, traversedPageNodes)
 		if err != nil {
 			return err
 		}
@@ -595,24 +569,24 @@ func (this *PdfReader) buildPageList(node *PdfIndirectObject, parent *PdfIndirec
 }
 
 // GetNumPages returns the number of pages in the document.
-func (this *PdfReader) GetNumPages() (int, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return 0, fmt.Errorf("File need to be decrypted first")
+func (r *PdfReader) GetNumPages() (int, error) {
+	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
+		return 0, fmt.Errorf("file need to be decrypted first")
 	}
-	return len(this.pageList), nil
+	return len(r.pageList), nil
 }
 
 // Resolves a reference, returning the object and indicates whether or not
 // it was cached.
-func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, bool, error) {
-	cachedObj, isCached := this.parser.ObjCache[int(ref.ObjectNumber)]
+func (r *PdfReader) resolveReference(ref *core.PdfObjectReference) (core.PdfObject, bool, error) {
+	cachedObj, isCached := r.parser.ObjCache[int(ref.ObjectNumber)]
 	if !isCached {
 		common.Log.Trace("Reader Lookup ref: %s", ref)
-		obj, err := this.parser.LookupByReference(*ref)
+		obj, err := r.parser.LookupByReference(*ref)
 		if err != nil {
 			return nil, false, err
 		}
-		this.parser.ObjCache[int(ref.ObjectNumber)] = obj
+		r.parser.ObjCache[int(ref.ObjectNumber)] = obj
 		return obj, false, nil
 	}
 	return cachedObj, true, nil
@@ -624,42 +598,42 @@ func (this *PdfReader) resolveReference(ref *PdfObjectReference) (PdfObject, boo
  *
  * GH: Are we fully protected against circular references? (Add tests).
  */
-func (this *PdfReader) traverseObjectData(o PdfObject) error {
+func (r *PdfReader) traverseObjectData(o core.PdfObject) error {
 	common.Log.Trace("Traverse object data")
-	if _, isTraversed := this.traversed[o]; isTraversed {
+	if _, isTraversed := r.traversed[o]; isTraversed {
 		common.Log.Trace("-Already traversed...")
 		return nil
 	}
-	this.traversed[o] = true
+	r.traversed[o] = struct{}{}
 
-	if io, isIndirectObj := o.(*PdfIndirectObject); isIndirectObj {
+	if io, isIndirectObj := o.(*core.PdfIndirectObject); isIndirectObj {
 		common.Log.Trace("io: %s", io)
 		common.Log.Trace("- %s", io.PdfObject)
-		err := this.traverseObjectData(io.PdfObject)
+		err := r.traverseObjectData(io.PdfObject)
 		return err
 	}
 
-	if so, isStreamObj := o.(*PdfObjectStream); isStreamObj {
-		err := this.traverseObjectData(so.PdfObjectDictionary)
+	if so, isStreamObj := o.(*core.PdfObjectStream); isStreamObj {
+		err := r.traverseObjectData(so.PdfObjectDictionary)
 		return err
 	}
 
-	if dict, isDict := o.(*PdfObjectDictionary); isDict {
+	if dict, isDict := o.(*core.PdfObjectDictionary); isDict {
 		common.Log.Trace("- dict: %s", dict)
 		for _, name := range dict.Keys() {
 			v := dict.Get(name)
-			if ref, isRef := v.(*PdfObjectReference); isRef {
-				resolvedObj, _, err := this.resolveReference(ref)
+			if ref, isRef := v.(*core.PdfObjectReference); isRef {
+				resolvedObj, _, err := r.resolveReference(ref)
 				if err != nil {
 					return err
 				}
 				dict.Set(name, resolvedObj)
-				err = this.traverseObjectData(resolvedObj)
+				err = r.traverseObjectData(resolvedObj)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v)
+				err := r.traverseObjectData(v)
 				if err != nil {
 					return err
 				}
@@ -668,22 +642,22 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 		return nil
 	}
 
-	if arr, isArray := o.(*PdfObjectArray); isArray {
+	if arr, isArray := o.(*core.PdfObjectArray); isArray {
 		common.Log.Trace("- array: %s", arr)
-		for idx, v := range *arr {
-			if ref, isRef := v.(*PdfObjectReference); isRef {
-				resolvedObj, _, err := this.resolveReference(ref)
+		for idx, v := range arr.Elements() {
+			if ref, isRef := v.(*core.PdfObjectReference); isRef {
+				resolvedObj, _, err := r.resolveReference(ref)
 				if err != nil {
 					return err
 				}
-				(*arr)[idx] = resolvedObj
+				arr.Set(idx, resolvedObj)
 
-				err = this.traverseObjectData(resolvedObj)
+				err = r.traverseObjectData(resolvedObj)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := this.traverseObjectData(v)
+				err := r.traverseObjectData(v)
 				if err != nil {
 					return err
 				}
@@ -692,69 +666,59 @@ func (this *PdfReader) traverseObjectData(o PdfObject) error {
 		return nil
 	}
 
-	if _, isRef := o.(*PdfObjectReference); isRef {
+	if _, isRef := o.(*core.PdfObjectReference); isRef {
 		common.Log.Debug("ERROR: Reader tracing a reference!")
-		return errors.New("Reader tracing a reference!")
+		return errors.New("reader tracing a reference")
 	}
 
 	return nil
 }
 
-// GetPageAsIndirectObject returns an indirect object containing the page dictionary for a specified page number.
-func (this *PdfReader) GetPageAsIndirectObject(pageNumber int) (PdfObject, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File needs to be decrypted first")
+// PageFromIndirectObject returns the PdfPage and page number for a given indirect object.
+func (r *PdfReader) PageFromIndirectObject(ind *core.PdfIndirectObject) (*PdfPage, int, error) {
+	if len(r.PageList) != len(r.pageList) {
+		return nil, 0, errors.New("page list invalid")
 	}
-	if len(this.pageList) < pageNumber {
-		return nil, errors.New("Invalid page number (page count too short)")
-	}
-	page := this.pageList[pageNumber-1]
 
-	// Look up all references related to page and load everything.
-	err := this.traverseObjectData(page)
-	if err != nil {
-		return nil, err
+	for i, pageind := range r.pageList {
+		if pageind == ind {
+			return r.PageList[i], i + 1, nil
+		}
 	}
-	common.Log.Trace("Page: %T %s", page, page)
-	common.Log.Trace("- %T %s", page.PdfObject, page.PdfObject)
-
-	return page, nil
+	return nil, 0, errors.New("page not found")
 }
 
 // GetPage returns the PdfPage model for the specified page number.
-func (this *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
-	if this.parser.GetCrypter() != nil && !this.parser.IsAuthenticated() {
-		return nil, fmt.Errorf("File needs to be decrypted first")
+func (r *PdfReader) GetPage(pageNumber int) (*PdfPage, error) {
+	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
+		return nil, fmt.Errorf("file needs to be decrypted first")
 	}
-	if len(this.pageList) < pageNumber {
-		return nil, errors.New("Invalid page number (page count too short)")
+	if len(r.pageList) < pageNumber {
+		return nil, errors.New("invalid page number (page count too short)")
 	}
 	idx := pageNumber - 1
 	if idx < 0 {
-		return nil, fmt.Errorf("Page numbering must start at 1")
+		return nil, fmt.Errorf("page numbering must start at 1")
 	}
-	page := this.PageList[idx]
-
+	page := r.PageList[idx]
 	return page, nil
 }
 
 // GetOCProperties returns the optional content properties PdfObject.
-func (this *PdfReader) GetOCProperties() (PdfObject, error) {
-	dict := this.catalog
+func (r *PdfReader) GetOCProperties() (core.PdfObject, error) {
+	dict := r.catalog
 	obj := dict.Get("OCProperties")
-	var err error
-	obj, err = this.traceToObject(obj)
-	if err != nil {
-		return nil, err
-	}
+	obj = core.ResolveReference(obj)
 
 	// Resolve all references...
 	// Should be pretty safe. Should not be referencing to pages or
 	// any large structures.  Local structures and references
 	// to OC Groups.
-	err = this.traverseObjectData(obj)
-	if err != nil {
-		return nil, err
+	if !r.isLazy {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return obj, nil
@@ -762,8 +726,8 @@ func (this *PdfReader) GetOCProperties() (PdfObject, error) {
 
 // Inspect inspects the object types, subtypes and content in the PDF file returning a map of
 // object type to number of instances of each.
-func (this *PdfReader) Inspect() (map[string]int, error) {
-	return this.parser.Inspect()
+func (r *PdfReader) Inspect() (map[string]int, error) {
+	return r.parser.Inspect()
 }
 
 // GetObjectNums returns the object numbers of the PDF objects in the file
@@ -776,16 +740,16 @@ func (r *PdfReader) GetObjectNums() []int {
 }
 
 // GetIndirectObjectByNumber retrieves and returns a specific PdfObject by object number.
-func (this *PdfReader) GetIndirectObjectByNumber(number int) (PdfObject, error) {
-	obj, err := this.parser.LookupByNumber(number)
+func (r *PdfReader) GetIndirectObjectByNumber(number int) (core.PdfObject, error) {
+	obj, err := r.parser.LookupByNumber(number)
 	return obj, err
 }
 
 // GetTrailer returns the PDF's trailer dictionary.
-func (this *PdfReader) GetTrailer() (*PdfObjectDictionary, error) {
-	trailerDict := this.parser.GetTrailer()
+func (r *PdfReader) GetTrailer() (*core.PdfObjectDictionary, error) {
+	trailerDict := r.parser.GetTrailer()
 	if trailerDict == nil {
-		return nil, errors.New("Trailer missing")
+		return nil, errors.New("trailer missing")
 	}
 
 	return trailerDict, nil

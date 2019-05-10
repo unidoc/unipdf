@@ -9,17 +9,15 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	//"fmt"
+	"fmt"
 	"io"
-	//"os"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unidoc/common"
 )
-
-func init() {
-	common.SetLogger(common.ConsoleLogger{})
-}
 
 func makeReaderForText(txt string) (*bytes.Reader, *bufio.Reader, int64) {
 	buf := []byte(txt)
@@ -45,16 +43,16 @@ var namePairs = map[string]string{
 	"/Name1":                             "Name1",
 	"/ASomewhatLongerName":               "ASomewhatLongerName",
 	"/A;Name_With-Various***Characters?": "A;Name_With-Various***Characters?",
-	"/1.2":                     "1.2",
-	"/$$":                      "$$",
-	"/@pattern":                "@pattern",
-	"/.notdef":                 ".notdef",
-	"/Lime#20Green":            "Lime Green",
-	"/paired#28#29parentheses": "paired()parentheses",
-	"/The_Key_of_F#23_Minor":   "The_Key_of_F#_Minor",
-	"/A#42":                    "AB",
-	"/":                        "",
-	"/ ":                       "",
+	"/1.2":                               "1.2",
+	"/$$":                                "$$",
+	"/@pattern":                          "@pattern",
+	"/.notdef":                           ".notdef",
+	"/Lime#20Green":                      "Lime Green",
+	"/paired#28#29parentheses":           "paired()parentheses",
+	"/The_Key_of_F#23_Minor":             "The_Key_of_F#_Minor",
+	"/A#42":                              "AB",
+	"/":                                  "",
+	"/ ":                                 "",
 	"/#3CBC88#3E#3CC5ED#3E#3CD544#3E#3CC694#3E": "<BC88><C5ED><D544><C694>",
 }
 
@@ -93,9 +91,34 @@ func TestNameParsing(t *testing.T) {
 	}
 }
 
-type testStringEntry struct {
-	raw      string
-	expected string
+func TestBigDictParse(t *testing.T) {
+	numObjects := 150000
+
+	var buf bytes.Buffer
+	buf.WriteString("<<")
+	buf.WriteString("/ColorSpace <<")
+	for i := 0; i < numObjects; i++ {
+		buf.WriteString(fmt.Sprintf(`/Cs%d %d 0 R`, i, i))
+	}
+	buf.WriteString(">>")
+	buf.WriteString("/Font <<>> ")
+	buf.WriteString(">>")
+
+	rs := bytes.NewReader(buf.Bytes())
+	reader := bufio.NewReader(&buf)
+	parser := &PdfParser{rs: rs, reader: reader, fileSize: int64(buf.Len())}
+
+	val, err := parser.parseObject()
+	require.NoError(t, err)
+	require.NotNil(t, val)
+
+	d, ok := GetDict(val)
+	require.True(t, ok)
+	require.Equal(t, 2, len(d.Keys()))
+
+	d, ok = GetDict(d.Get("ColorSpace"))
+	require.True(t, ok)
+	require.Equal(t, numObjects, len(d.Keys()))
 }
 
 func BenchmarkStringParsing(b *testing.B) {
@@ -111,18 +134,18 @@ func BenchmarkStringParsing(b *testing.B) {
 }
 
 var stringPairs = map[string]string{
-	"(This is a string)":                                                                        "This is a string",
-	"(Strings may contain\n newlines and such)":                                                 "Strings may contain\n newlines and such",
+	"(This is a string)":                        "This is a string",
+	"(Strings may contain\n newlines and such)": "Strings may contain\n newlines and such",
 	"(Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).)": "Strings may contain balanced parenthesis () and\nspecial characters (*!&}^% and so on).",
 	"(These \\\ntwo strings \\\nare the same.)":                                                 "These two strings are the same.",
 	"(These two strings are the same.)":                                                         "These two strings are the same.",
-	"(\\\\)": "\\",
-	"(This string has an end-of-line at the end of it.\n)": "This string has an end-of-line at the end of it.\n",
-	"(So does this one.\\n)":                               "So does this one.\n",
-	"(\\0053)":                                             "\0053",
-	"(\\53)":                                               "\053",
-	"(\\053)":                                              "+",
-	"(\\53\\101)":                                          "+A",
+	"(\\\\)":                                                                                    "\\",
+	"(This string has an end-of-line at the end of it.\n)":                                      "This string has an end-of-line at the end of it.\n",
+	"(So does this one.\\n)":                                                                    "So does this one.\n",
+	"(\\0053)":                                                                                  "\0053",
+	"(\\53)":                                                                                    "\053",
+	"(\\053)":                                                                                   "+",
+	"(\\53\\101)":                                                                               "+A",
 }
 
 func TestStringParsing(t *testing.T) {
@@ -132,7 +155,7 @@ func TestStringParsing(t *testing.T) {
 		if err != nil && err != io.EOF {
 			t.Errorf("Unable to parse string, error: %s", err)
 		}
-		if string(o) != expected {
+		if o.Str() != expected {
 			t.Errorf("String Mismatch %s: \"%s\" != \"%s\"", raw, o, expected)
 		}
 	}
@@ -148,7 +171,7 @@ func TestReadTextLine(t *testing.T) {
 		t.Errorf("Unable to parse string, error: %s", err)
 	}
 	if parser.GetFileOffset() != int64(len(s)) {
-		t.Errorf("File offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
+		t.Errorf("File Offset after reading string of length %d is %d", len(s), parser.GetFileOffset())
 	}
 }
 
@@ -164,8 +187,8 @@ func TestBinStringParsing(t *testing.T) {
 	if err != nil && err != io.EOF {
 		t.Errorf("Unable to parse string, error: %s", err)
 	}
-	if len(string(o)) != 32 {
-		t.Errorf("Wrong length, should be 32 (got %d)", len(string(o)))
+	if len(o.Str()) != 32 {
+		t.Errorf("Wrong length, should be 32 (got %d)", len(o.Str()))
 	}
 }
 
@@ -176,14 +199,8 @@ func TestStringParsing2(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	list, err := parser.parseArray()
-	if err != nil {
-		t.Errorf("Failed to parse string list (%s)", err)
-		return
-	}
-	if len(list) != 2 {
-		t.Errorf("Length of list should be 2 (%d)", len(list))
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 2, list.Len())
 }
 
 func TestBoolParsing(t *testing.T) {
@@ -196,28 +213,19 @@ func TestBoolParsing(t *testing.T) {
 		parser := PdfParser{}
 		parser.rs, parser.reader, parser.fileSize = makeReaderForText(key)
 		val, err := parser.parseBool()
-		if err != nil {
-			t.Errorf("Error parsing bool: %s", err)
-			return
-		}
-		if bool(val) != expected {
-			t.Errorf("bool not as expected (got %t, expected %t)", bool(val), expected)
-			return
-		}
+		require.NoError(t, err)
+		require.Equal(t, expected, bool(val))
 	}
 }
 
-func BenchmarkNumbericParsing(b *testing.B) {
+func BenchmarkNumericParsing(b *testing.B) {
 	txt1 := "[34.5 -3.62 1 +123.6 4. -.002 0.0]"
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(txt1)
 
 	for n := 0; n < b.N; n++ {
 		_, err := parser.parseArray()
-		if err != nil {
-			b.Errorf("Error parsing array")
-			return
-		}
+		require.NoError(b, err)
 		parser.SetFileOffset(0)
 	}
 }
@@ -228,14 +236,8 @@ func TestNumericParsing1(t *testing.T) {
 	parser := PdfParser{}
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(txt1)
 	list, err := parser.parseArray()
-	if err != nil {
-		t.Errorf("Error parsing array")
-		return
-	}
-	if len(list) != 7 {
-		t.Errorf("Len list != 7 (%d)", len(list))
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 7, list.Len())
 
 	expectedFloats := map[int]float32{
 		0: 34.5,
@@ -247,25 +249,14 @@ func TestNumericParsing1(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
-		if !ok {
-			t.Errorf("Idx %d not float (%f)", idx, val)
-			return
-		}
-		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
-		}
+		num, ok := list.Get(idx).(*PdfObjectFloat)
+		require.True(t, ok)
+		require.Equal(t, val, float32(*num))
 	}
 
-	inum, ok := list[2].(*PdfObjectInteger)
-	if !ok {
-		t.Errorf("Number 3 not int")
-		return
-	}
-	if *inum != 1 {
-		t.Errorf("Number 3, val != 1")
-		return
-	}
+	inum, ok := list.Get(2).(*PdfObjectInteger)
+	require.True(t, ok)
+	require.Equal(t, 1, int(*inum))
 }
 
 func TestNumericParsing2(t *testing.T) {
@@ -278,8 +269,8 @@ func TestNumericParsing2(t *testing.T) {
 		t.Errorf("Error parsing array")
 		return
 	}
-	if len(list) != 2 {
-		t.Errorf("Len list != 2 (%d)", len(list))
+	if list.Len() != 2 {
+		t.Errorf("Len list != 2 (%d)", list.Len())
 		return
 	}
 
@@ -289,7 +280,7 @@ func TestNumericParsing2(t *testing.T) {
 	}
 
 	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
+		num, ok := list.Get(idx).(*PdfObjectFloat)
 		if !ok {
 			t.Errorf("Idx %d not float (%f)", idx, val)
 			return
@@ -300,38 +291,26 @@ func TestNumericParsing2(t *testing.T) {
 	}
 }
 
-// Includes exponential numbers.
-func TestNumericParsing3(t *testing.T) {
-	// 7.3.3
-	txt1 := "[+4.-.002+3e-2-2e0]" // 4.0, -0.002, 1e-2, -2.0
-	parser := PdfParser{}
-	parser.rs, parser.reader, parser.fileSize = makeReaderForText(txt1)
-	list, err := parser.parseArray()
-	if err != nil {
-		t.Errorf("Error parsing array (%s)", err)
-		return
-	}
-	if len(list) != 4 {
-		t.Errorf("Len list != 2 (%d)", len(list))
-		return
+func TestNumericParsingExponentials(t *testing.T) {
+	testcases := []struct {
+		RawObj   string
+		Expected []float64
+	}{
+		{"[+4.-.002+3e-2-2e0]", []float64{4.0, -0.002, 0.03, -2.0}}, // 7.3.3.
+		{"[-1E+35 1E+35]", []float64{-1e35, 1e35}},
 	}
 
-	expectedFloats := map[int]float32{
-		0: 4.0,
-		1: -0.002,
-		2: 0.03,
-		3: -2.0,
-	}
+	for _, tcase := range testcases {
+		t.Run(tcase.RawObj, func(t *testing.T) {
+			parser := PdfParser{}
+			parser.rs, parser.reader, parser.fileSize = makeReaderForText(tcase.RawObj)
+			list, err := parser.parseArray()
+			require.NoError(t, err)
 
-	for idx, val := range expectedFloats {
-		num, ok := list[idx].(*PdfObjectFloat)
-		if !ok {
-			t.Errorf("Idx %d not float (%f)", idx, val)
-			return
-		}
-		if float32(*num) != val {
-			t.Errorf("Idx %d, value incorrect (%f)", idx, val)
-		}
+			floats, err := list.ToFloat64Array()
+			require.NoError(t, err)
+			require.Equal(t, tcase.Expected, floats)
+		})
 	}
 }
 
@@ -347,7 +326,7 @@ func BenchmarkHexStringParsing(b *testing.B) {
 			b.Errorf("Error parsing hex string: %s", err.Error())
 			return
 		}
-		if string(hs) != ref.String() {
+		if hs.Str() != ref.String() {
 			b.Errorf("Reference and parsed hex strings mismatch")
 		}
 		parser.SetFileOffset(0)
@@ -390,12 +369,12 @@ func TestDictParsing1(t *testing.T) {
 	if !ok {
 		t.Errorf("Invalid data")
 	}
-	integer, ok := (*data)[2].(*PdfObjectInteger)
+	integer, ok := data.Get(2).(*PdfObjectInteger)
 	if !ok || *integer != 2 {
 		t.Errorf("Wrong data")
 	}
 
-	float, ok := (*data)[3].(*PdfObjectFloat)
+	float, ok := data.Get(3).(*PdfObjectFloat)
 	if !ok || *float != 3.14 {
 		t.Error("Wrong data")
 	}
@@ -426,7 +405,7 @@ func TestDictParsing2(t *testing.T) {
 	}
 
 	str, ok := dict.Get("StringItem").(*PdfObjectString)
-	if !ok || *str != "a string" {
+	if !ok || str.Str() != "a string" {
 		t.Errorf("Invalid string item")
 	}
 
@@ -501,7 +480,13 @@ func TestStreamParsing(t *testing.T) {
 }
 
 func TestIndirectObjParsing1(t *testing.T) {
-	rawText := `1 0 obj
+	testcases := []struct {
+		description string
+		rawPDF      string
+		checkFunc   func(obj PdfObject)
+	}{
+		{"Typical case",
+			`1 0 obj
 <<
 /Names 2 0 R
 /Pages 3 0 R
@@ -523,17 +508,74 @@ func TestIndirectObjParsing1(t *testing.T) {
 >>
 endobj
 3 0 obj
-`
-	parser := PdfParser{}
-	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
+`,
+			func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				require.Equal(t, int64(1), indirect.ObjectNumber)
+				require.Equal(t, int64(0), indirect.GenerationNumber)
 
-	obj, err := parser.ParseIndirectObject()
-	if err != nil {
-		t.Errorf("Failed to parse indirect obj (%s)", err)
-		return
+				dict, isDict := GetDict(indirect)
+				require.True(t, isDict)
+
+				dict, isDict = GetDict(dict.Get("ViewerPreferences"))
+				require.True(t, isDict)
+				require.Len(t, dict.Keys(), 1)
+
+				dict, isDict = GetDict(dict.Get("Rights"))
+				require.True(t, isDict)
+
+				version, ok := GetIntVal(dict.Get("Version"))
+				require.True(t, ok)
+				require.Equal(t, 1, version)
+			},
+		},
+		{
+			"Basic object with short inner string",
+			`1 0 obj
+(a)
+endobj
+`, func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				str, ok := GetString(obj)
+				require.True(t, ok)
+				require.Equal(t, "a", str.String())
+			},
+		},
+		{"Empty indirect object interpreted as containing null object",
+			`1 0 obj
+endobj
+`,
+			func(obj PdfObject) {
+				indirect, ok := GetIndirect(obj)
+				require.True(t, ok)
+				require.NotNil(t, indirect)
+				require.NotNil(t, indirect.PdfObject)
+				require.True(t, IsNullObject(indirect.PdfObject))
+			},
+		},
 	}
 
-	common.Log.Debug("Parsed obj: %s", obj)
+	for _, tcase := range testcases {
+		t.Logf("%s", tcase.description)
+		parser := PdfParser{}
+		parser.rs, parser.reader, parser.fileSize = makeReaderForText(tcase.rawPDF)
+
+		obj, err := parser.ParseIndirectObject()
+		if err != nil && err != io.EOF {
+			t.Errorf("Failed to parse indirect obj (%s)", err)
+			return
+		}
+
+		tcase.checkFunc(obj)
+
+		common.Log.Debug("Parsed obj: %s", obj)
+	}
 }
 
 // Test /Prev and xref tables.  Check if the priority order is right.
@@ -557,8 +599,8 @@ stream
 endstream
 endobj`
 	parser := PdfParser{}
-	parser.xrefs = make(XrefTable)
-	parser.objstms = make(ObjectStreams)
+	parser.xrefs.ObjectMap = make(map[int]XrefObject)
+	parser.objstms = make(objectStreams)
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 
 	xrefDict, err := parser.parseXrefStream(nil)
@@ -573,20 +615,20 @@ endobj`
 		return
 	}
 
-	if len(parser.xrefs) != 4 {
-		t.Errorf("Wrong length (%d)", len(parser.xrefs))
+	if len(parser.xrefs.ObjectMap) != 4 {
+		t.Errorf("Wrong length (%d)", len(parser.xrefs.ObjectMap))
 		return
 	}
 
-	if parser.xrefs[3].xtype != XREF_OBJECT_STREAM {
+	if parser.xrefs.ObjectMap[3].XType != XrefTypeObjectStream {
 		t.Errorf("Invalid type")
 		return
 	}
-	if parser.xrefs[3].osObjNumber != 15 {
+	if parser.xrefs.ObjectMap[3].OsObjNumber != 15 {
 		t.Errorf("Wrong object stream obj number")
 		return
 	}
-	if parser.xrefs[3].osObjIndex != 2 {
+	if parser.xrefs.ObjectMap[3].OsObjIndex != 2 {
 		t.Errorf("Wrong object stream obj index")
 		return
 	}
@@ -594,6 +636,7 @@ endobj`
 	common.Log.Debug("Xref dict: %s", xrefDict)
 }
 
+// TODO(gunnsth): Clear up. Should define clear inputs and expectation data and then run it.
 func TestObjectParse(t *testing.T) {
 	parser := PdfParser{}
 
@@ -608,6 +651,24 @@ func TestObjectParse(t *testing.T) {
 	}
 
 	// Integer
+	rawText = "0"
+	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
+	obj, err = parser.parseObject()
+	if err != nil {
+		t.Errorf("Error parsing object: %v", err)
+		return
+	}
+	nump, ok := obj.(*PdfObjectInteger)
+	if !ok {
+		t.Errorf("Unable to identify integer")
+		return
+	}
+	if *nump != 0 {
+		t.Errorf("Wrong value, expecting 9 (%d)", *nump)
+		return
+	}
+
+	// Integer
 	rawText = "9 0 false"
 	parser.rs, parser.reader, parser.fileSize = makeReaderForText(rawText)
 	obj, err = parser.parseObject()
@@ -616,7 +677,7 @@ func TestObjectParse(t *testing.T) {
 		t.Errorf("Error parsing object")
 		return
 	}
-	nump, ok := obj.(*PdfObjectInteger)
+	nump, ok = obj.(*PdfObjectInteger)
 	if !ok {
 		t.Errorf("Unable to identify integer")
 		return
@@ -681,118 +742,110 @@ func TestObjectParse(t *testing.T) {
 	}
 }
 
-/*
-var file1 = "../testfiles/minimal.pdf"
-
+// TestMinimalPDFFile test basic parsing of a minimal pdf file.
 func TestMinimalPDFFile(t *testing.T) {
-	file, err := os.Open(file1)
-	if err != nil {
-		t.Errorf("Unable to open minimal test file (%s)", err)
-		return
-	}
+	file, err := os.Open("./testdata/minimal.pdf")
+	require.NoError(t, err)
 	defer file.Close()
 
-	reader, err := NewPdfReader(file)
-	if err != nil {
-		t.Errorf("Unable to read test file (%s)", err)
-		return
-	}
+	parser, err := NewParser(file)
+	require.NoError(t, err)
 
-	numPages, err := reader.GetNumPages()
-	if err != nil {
-		t.Error("Unable to get number of pages")
-	}
-
-	fmt.Printf("Num pages: %d\n", numPages)
-	if numPages != 1 {
-		t.Error("Wrong number of pages")
-	}
-
-	parser := reader.parser
-	if len(parser.xrefs) != 4 {
-		t.Errorf("Wrong number of xrefs %d != 4", len(parser.xrefs))
-	}
-
-	if parser.xrefs[1].objectNumber != 1 {
-		t.Errorf("Invalid xref0 object number != 1 (%d)", parser.xrefs[0].objectNumber)
-	}
-	if parser.xrefs[1].offset != 18 {
-		t.Errorf("Invalid offset != 18 (%d)", parser.xrefs[0].offset)
-	}
-	if parser.xrefs[1].xtype != XREF_TABLE_ENTRY {
-		t.Errorf("Invalid xref type")
-	}
-	if parser.xrefs[3].objectNumber != 3 {
-		t.Errorf("Invalid xref object number != 3 (%d)", parser.xrefs[2].objectNumber)
-	}
-	if parser.xrefs[3].offset != 178 {
-		t.Errorf("Invalid offset != 178")
-	}
-	if parser.xrefs[3].xtype != XREF_TABLE_ENTRY {
-		t.Errorf("Invalid xref type")
-	}
+	require.Len(t, parser.xrefs.ObjectMap, 4)
+	require.Equal(t, 1, parser.xrefs.ObjectMap[1].ObjectNumber)
+	require.Equal(t, int64(18), parser.xrefs.ObjectMap[1].Offset)
+	require.Equal(t, XrefTypeTableEntry, parser.xrefs.ObjectMap[1].XType)
+	require.Equal(t, 3, parser.xrefs.ObjectMap[3].ObjectNumber)
+	require.Equal(t, int64(178), parser.xrefs.ObjectMap[3].Offset)
+	require.Equal(t, XrefTypeTableEntry, parser.xrefs.ObjectMap[3].XType)
 
 	// Check catalog object.
 	catalogObj, err := parser.LookupByNumber(1)
-	if err != nil {
-		t.Error("Unable to look up catalog object")
-	}
+	require.NoError(t, err)
+
 	catalog, ok := catalogObj.(*PdfIndirectObject)
-	if !ok {
-		t.Error("Unable to look up catalog object")
-	}
+	require.True(t, ok)
+
 	catalogDict, ok := catalog.PdfObject.(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to find dictionary")
-	}
-	typename, ok := (*catalogDict)["Type"].(*PdfObjectName)
-	if !ok {
-		t.Error("Unable to check type")
-	}
-	if *typename != "Catalog" {
-		t.Error("Wrong type name (%s != Catalog)", *typename)
-	}
+	require.True(t, ok)
+
+	typename, ok := catalogDict.Get("Type").(*PdfObjectName)
+	require.True(t, ok)
+	require.Equal(t, "Catalog", typename.String())
 
 	// Check Page object.
 	pageObj, err := parser.LookupByNumber(3)
-	if err != nil {
-		t.Error("Unable to look up Page")
-	}
+	require.NoError(t, err)
+
 	page, ok := pageObj.(*PdfIndirectObject)
-	if !ok {
-		t.Error("Unable to look up Page")
-	}
+	require.True(t, ok)
 	pageDict, ok := page.PdfObject.(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load Page dictionary")
-	}
-	if len(*pageDict) != 4 {
-		t.Error("Page dict should have 4 objects (%d)", len(*pageDict))
-	}
-	resourcesDict, ok := (*pageDict)["Resources"].(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load Resources dictionary")
-	}
-	if len(*resourcesDict) != 1 {
-		t.Error("Page Resources dict should have 1 member (%d)", len(*resourcesDict))
-	}
-	fontDict, ok := (*resourcesDict)["Font"].(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load font")
-	}
-	f1Dict, ok := (*fontDict)["F1"].(*PdfObjectDictionary)
-	if !ok {
-		t.Error("Unable to load F1 dict")
-	}
-	if len(*f1Dict) != 3 {
-		t.Error("Invalid F1 dict length 3 != %d", len(*f1Dict))
-	}
-	baseFont, ok := (*f1Dict)["BaseFont"].(*PdfObjectName)
-	if !ok {
-		t.Error("Unable to load base font")
-	}
-	if *baseFont != "Times-Roman" {
-		t.Error("Invalid base font (should be Times-Roman not %s)", *baseFont)
-	}
+	require.True(t, ok)
+	require.Len(t, pageDict.Keys(), 4)
+
+	resourcesDict, ok := pageDict.Get("Resources").(*PdfObjectDictionary)
+	require.True(t, ok)
+	require.Len(t, resourcesDict.Keys(), 1)
+
+	fontDict, ok := resourcesDict.Get("Font").(*PdfObjectDictionary)
+	require.True(t, ok)
+
+	f1Dict, ok := fontDict.Get("F1").(*PdfObjectDictionary)
+	require.True(t, ok)
+	require.Len(t, f1Dict.Keys(), 3)
+
+	baseFont, ok := f1Dict.Get("BaseFont").(*PdfObjectName)
+	require.True(t, ok)
+	require.Equal(t, "Times-Roman", baseFont.String())
 }
-*/
+
+// Test PDF version parsing.
+func TestPDFVersionParse(t *testing.T) {
+	// Test parsing when the version is at the start of the file.
+	f1, err := os.Open("./testdata/minimal.pdf")
+	require.NoError(t, err)
+	defer f1.Close()
+
+	parser := &PdfParser{
+		rs:                                    f1,
+		ObjCache:                              make(objectCache),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
+	}
+
+	// Test parsed version.
+	majorVersion, minorVersion, err := parser.parsePdfVersion()
+	require.NoError(t, err)
+	require.Equal(t, majorVersion, 1)
+	require.Equal(t, minorVersion, 1)
+
+	// Test file offset position.
+	expected := "%PDF-1.1"
+	b := make([]byte, len(expected))
+	_, err = parser.reader.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, string(b), expected)
+
+	// Test parsing when the file has invalid data before the version.
+	f2, err := os.Open("./testdata/invalidstart.pdf")
+	require.NoError(t, err)
+	defer f2.Close()
+
+	parser = &PdfParser{
+		rs:                                    f2,
+		ObjCache:                              make(objectCache),
+		streamLengthReferenceLookupInProgress: map[int64]bool{},
+	}
+
+	// Test parsed version.
+	majorVersion, minorVersion, err = parser.parsePdfVersion()
+	require.NoError(t, err)
+	require.Equal(t, majorVersion, 1)
+	require.Equal(t, minorVersion, 3)
+
+	// Test file offset position.
+	expected = "%PDF-1.3"
+	b = make([]byte, len(expected))
+	_, err = parser.reader.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, string(b), expected)
+}

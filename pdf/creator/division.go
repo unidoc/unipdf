@@ -29,8 +29,8 @@ type Division struct {
 	inline bool
 }
 
-// NewDivision returns a new Division container component.
-func NewDivision() *Division {
+// newDivision returns a new Division container component.
+func newDivision() *Division {
 	return &Division{
 		components: []VectorDrawable{},
 	}
@@ -61,7 +61,7 @@ func (div *Division) Add(d VectorDrawable) error {
 	}
 
 	if !supported {
-		return errors.New("Unsupported type in Division")
+		return errors.New("unsupported type in Division")
 	}
 
 	div.components = append(div.components, d)
@@ -77,6 +77,10 @@ func (div *Division) Height() float64 {
 		compWidth, compHeight := component.Width(), component.Height()
 		switch t := component.(type) {
 		case *Paragraph:
+			p := t
+			compWidth += p.margins.left + p.margins.right
+			compHeight += p.margins.top + p.margins.bottom
+		case *StyledParagraph:
 			p := t
 			compWidth += p.margins.left + p.margins.right
 			compHeight += p.margins.top + p.margins.bottom
@@ -99,7 +103,7 @@ func (div *Division) Width() float64 {
 // GeneratePageBlocks generates the page blocks for the Division component.
 // Multiple blocks are generated if the contents wrap over multiple pages.
 func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	pageblocks := []*Block{}
+	var pageblocks []*Block
 
 	origCtx := ctx
 

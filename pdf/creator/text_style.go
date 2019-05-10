@@ -6,8 +6,7 @@
 package creator
 
 import (
-	"github.com/unidoc/unidoc/pdf/model/fonts"
-	"github.com/unidoc/unidoc/pdf/model/textencoding"
+	"github.com/unidoc/unidoc/pdf/model"
 )
 
 // TextStyle is a collection of properties that can be assigned to a chunk of text.
@@ -16,19 +15,20 @@ type TextStyle struct {
 	Color Color
 
 	// The font the text will use.
-	Font fonts.Font
+	Font *model.PdfFont
 
 	// The size of the font.
 	FontSize float64
+
+	// The character spacing.
+	CharSpacing float64
+
+	// The rendering mode.
+	RenderingMode TextRenderingMode
 }
 
-// NewTextStyle creates a new text style object which can be used with chunks
-// of text. Uses default parameters: Helvetica, WinAnsiEncoding and wrap
-// enabled with a wrap width of 100 points.
-func NewTextStyle() TextStyle {
-	font := fonts.NewFontHelvetica()
-	font.SetEncoder(textencoding.NewWinAnsiTextEncoder())
-
+// newTextStyle creates a new text style object using the specified font.
+func newTextStyle(font *model.PdfFont) TextStyle {
 	return TextStyle{
 		Color:    ColorRGBFrom8bit(0, 0, 0),
 		Font:     font,
@@ -36,8 +36,12 @@ func NewTextStyle() TextStyle {
 	}
 }
 
-// TextChunk represents a chunk of text along with a particular style.
-type TextChunk struct {
-	Text  string
-	Style TextStyle
+// newLinkStyle creates a new text style object which can be
+// used for link annotations.
+func newLinkStyle(font *model.PdfFont) TextStyle {
+	return TextStyle{
+		Color:    ColorRGBFrom8bit(0, 0, 238),
+		Font:     font,
+		FontSize: 10,
+	}
 }
