@@ -325,10 +325,9 @@ func (font *pdfFontSimple) getFontEncoding() (baseName string, differences map[t
 	case *core.PdfObjectName:
 		return string(*encoding), nil, nil
 	case *core.PdfObjectDictionary:
-		if typ, ok := core.GetNameVal(encoding.Get("Type")); ok && typ == "Encoding" {
-			if base, ok := core.GetNameVal(encoding.Get("BaseEncoding")); ok {
-				baseName = base
-			}
+		baseenc, ok := core.GetName(encoding.Get("BaseEncoding"))
+		if ok {
+			baseName = baseenc.String()
 		}
 		if diffObj := encoding.Get("Differences"); diffObj != nil {
 			diffList, ok := core.GetArray(diffObj)

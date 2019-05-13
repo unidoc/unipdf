@@ -11,6 +11,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/model"
@@ -821,7 +823,36 @@ endobj
 			t.Fatalf("Mismatch for char code %d (%X), font has: %q and expected is: %q (StandardEncoding)", code, code, fontrune, rune)
 		}
 	}
+}
 
+func TestLoadSimpleFontWithDifferences(t *testing.T) {
+	testcases := []struct {
+		Path             string
+		FontObjNumber    int64
+		BaseEncodingName string
+	}{
+		{"./testdata/font/diff1.obj", 53, "WinAnsiEncoding"},
+	}
+
+	for _, tcase := range testcases {
+		data, err := ioutil.ReadFile(tcase.Path)
+		require.NoError(t, err)
+
+		objects, err := testutils.ParseIndirectObjects(string(data))
+		require.NoError(t, err)
+
+		font, err := model.NewPdfFontFromPdfObject(objects[tcase.FontObjNumber])
+		require.NoError(t, err)
+		require.NotNil(t, font)
+
+		encoder := font.Encoder()
+		require.NotNil(t, encoder)
+
+		stdEncoder, ok := encoder.(textencoding.SimpleEncoder)
+		require.True(t, ok)
+
+		require.Equal(t, tcase.BaseEncodingName, stdEncoder.BaseName())
+	}
 }
 
 // newStandandTextEncoder returns a simpleEncoder that implements StandardEncoding.
