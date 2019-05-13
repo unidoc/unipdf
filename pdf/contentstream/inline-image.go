@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/unidoc/unidoc/common"
 	"github.com/unidoc/unidoc/pdf/core"
@@ -437,14 +438,42 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 					} else if state == 3 {
 						skipBytes = append(skipBytes, c)
 						if core.IsWhiteSpace(c) {
-							// image data finished.
-							if len(im.stream) > 100 {
-								common.Log.Trace("Image stream (%d): % x ...", len(im.stream), im.stream[:100])
-							} else {
-								common.Log.Trace("Image stream (%d): % x", len(im.stream), im.stream)
+							// Whitspace after EI.
+							// To ensure that is not a part of encoded image data: Peek up to 20 bytes ahead
+							// and check that the following data is valid objects/operands.
+							peekbytes, err := csp.reader.Peek(20)
+							if err != nil && err != io.EOF {
+								return nil, err
 							}
-							// Exit point.
-							return &im, nil
+							dummyParser := NewContentStreamParser(string(peekbytes))
+
+							// Assume is done, check that the following 3 objects/operands are valid.
+							isDone := true
+							for i := 0; i < 3; i++ {
+								op, isOp, err := dummyParser.parseObject()
+								if err != nil {
+									if err == io.EOF {
+										break
+									}
+									continue
+								}
+								if isOp && !isValidOperand(op.String()) {
+									isDone = false
+									break
+								}
+							}
+
+							if isDone {
+								// Valid object or operand found, i.e. the EI marks the end of the data.
+								// -> image data finished.
+								if len(im.stream) > 100 {
+									common.Log.Trace("Image stream (%d): % x ...", len(im.stream), im.stream[:100])
+								} else {
+									common.Log.Trace("Image stream (%d): % x", len(im.stream), im.stream)
+								}
+								// Exit point.
+								return &im, nil
+							}
 						}
 
 						// Seems like "<ws>EI" was part of the data.
