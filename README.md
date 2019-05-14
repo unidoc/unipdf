@@ -1,12 +1,13 @@
 # Version 3 - Upcoming
 
-Version 3 of UniDoc is currently in alpha. It marks multiple significant new major advancements as well as many fixes and enhancements:
+Version 3 of UniDoc is currently in pre-release stages. It marks multiple significant new major advancements as well as many fixes and enhancements:
 
-- [ ] Composite fonts supported and font handling has and is being completely revamped, including unicode support.
-- [ ] Digital signing validation and signing
+- [x] Composite fonts supported and font handling has and is being completely revamped, including unicode support.
+- [x] Digital signing validation and signing
 - [x] Append mode
 - [x] PDF compression and optimization of outputs with several options 1) combining duplicates, 2) compressed object streams, 3) image points per inch threshold, 4) image quality.
-- [ ] Text extraction significantly improved in quality and support for vectorized (position-based) text extraction (XY)
+- [x] Text extraction significantly improved in quality and foundation in place for vectorized (position-based) text extraction (XY)
+- [x] Image extraction with coordinates
 - [x] Paragraph in creator handling multiple styles within the same paragraph
 - [x] [Invoice component for easy PDF invoice generation](https://unidoc.io/news/simple-invoices)
 - [x] Table of contents automatically generated
@@ -14,8 +15,11 @@ Version 3 of UniDoc is currently in alpha. It marks multiple significant new maj
 - [x] Form field filling and form flattening with appearance generation
 - [x] Getting form field values and listing
 - [x] FDF merge
+- [x] CCITTFaxDecode decoding and encoding support
+- [x] Advanced table generation in the creator with subtable support
+- [ ] JBIG2 decoding support
 
-Go give it a spin, checkout the `v3` branch of unidoc and `v3` branch of unidoc-examples:
+To give it a spin, checkout the `v3` branch of unidoc and `v3` branch of unidoc-examples:
 - https://github.com/unidoc/unidoc/tree/v3
 - https://github.com/unidoc/unidoc-examples/tree/v3
 
@@ -54,7 +58,7 @@ The following list describes some of the main features:
 - [x] Fill out forms and FDF merging (v3)
 - [x] Unlock PDF files / remove password
 - [x] Protect PDF files with a password
-- [ ] Digital signatures (v3)
+- [x] Digital signatures (v3)
 
 
 ## How can I convince myself and my boss to buy unidoc rather using a free alternative?
