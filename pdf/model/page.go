@@ -353,6 +353,16 @@ func (r *PdfReader) loadAnnotations(annotsObj core.PdfObject) ([]*PdfAnnotation,
 		if err != nil {
 			return nil, err
 		}
+		switch t := annot.GetContext().(type) {
+		case *PdfAnnotationWidget:
+			// Link widget annotation with form field (parent).
+			for _, field := range r.AcroForm.AllFields() {
+				if field.container == t.Parent {
+					t.parent = field
+					break
+				}
+			}
+		}
 		if annot != nil {
 			annotations = append(annotations, annot)
 		}

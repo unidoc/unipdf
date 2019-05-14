@@ -257,7 +257,9 @@ func (f *PdfField) ToPdfObject() core.PdfObject {
 		kids.Append(child.ToPdfObject())
 	}
 	for _, annot := range f.Annotations {
-		kids.Append(annot.GetContext().ToPdfObject())
+		if annot.container != f.container {
+			kids.Append(annot.GetContext().ToPdfObject())
+		}
 	}
 
 	// Set fields.
@@ -558,6 +560,8 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 	}
 
 	field := NewPdfField()
+	field.container = container
+	field.container.PdfObject = d
 
 	// Field type (required in terminal fields).
 	// Can be /Btn /Tx /Ch /Sig

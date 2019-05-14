@@ -81,8 +81,12 @@ func (form *PdfAcroForm) signatureFields() []*PdfFieldSignature {
 }
 
 // newPdfAcroFormFromDict is used when loading forms from PDF files.
-func (r *PdfReader) newPdfAcroFormFromDict(d *core.PdfObjectDictionary) (*PdfAcroForm, error) {
+func (r *PdfReader) newPdfAcroFormFromDict(container *core.PdfIndirectObject, d *core.PdfObjectDictionary) (*PdfAcroForm, error) {
 	acroForm := NewPdfAcroForm()
+	if container != nil {
+		acroForm.container = container
+		container.PdfObject = core.MakeDict()
+	}
 
 	if obj := d.Get("Fields"); obj != nil {
 		fieldArray, ok := core.GetArray(obj)

@@ -28,17 +28,23 @@ type PdfAppender struct {
 	acroForm *PdfAcroForm
 
 	xrefs          core.XrefTable
+	xrefOffset     int64
 	greatestObjNum int
 
 	// List of new objects and a map for quick lookups.
-	newObjects   []core.PdfObject
-	hasNewObject map[core.PdfObject]struct{}
+	newObjects     []core.PdfObject
+	hasNewObject   map[core.PdfObject]struct{}
+	replaceObjects map[core.PdfObject]int64
+
+	// Used for skipping certain objects that are created (Pages etc).
+	ignoreObjects map[core.PdfObject]struct{}
 
 	// Map of objects traversed while resolving references. Set to that of the PdfReader on
 	// creation (NewPdfAppender).
 	traversed map[core.PdfObject]struct{}
 
-	written bool
+	prevRevisionSize int64
+	written          bool
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -107,9 +113,16 @@ func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
 		parser:    reader.parser,
 		traversed: reader.traversed,
 	}
+	if size, err := a.rs.Seek(0, io.SeekEnd); err != nil {
+		return nil, err
+	} else {
+		a.prevRevisionSize = size
+	}
+
 	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
+
 	var err error
 
 	// Create a readonly (immutable) reader. It increases memory use but is necessary to be able
@@ -130,25 +143,31 @@ func NewPdfAppender(reader *PdfReader) (*PdfAppender, error) {
 		}
 	}
 	a.xrefs = a.parser.GetXrefTable()
+	a.xrefOffset = a.parser.GetXrefOffset()
+
 	a.hasNewObject = make(map[core.PdfObject]struct{})
 	for _, p := range a.roReader.PageList {
 		a.pages = append(a.pages, p)
 	}
+	a.replaceObjects = make(map[core.PdfObject]int64)
+	a.ignoreObjects = make(map[core.PdfObject]struct{})
 
-	// Load interactive forms and fields.
-	a.roReader.AcroForm, err = a.roReader.loadForms()
-	if err != nil {
-		return nil, err
-	}
 	a.acroForm = a.roReader.AcroForm
 
 	return a, nil
 }
 
-func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
-	if _, ok := a.hasNewObject[obj]; ok || obj == nil {
+// updatesObjectsDeep recursively marks all objects under `obj` as updated appender (deep).
+// Updated objects are appended to the new revision and keep their original object number.
+func (a *PdfAppender) updateObjectsDeep(obj core.PdfObject, processed map[core.PdfObject]struct{}) {
+	if processed == nil {
+		processed = map[core.PdfObject]struct{}{}
+	}
+	if _, ok := processed[obj]; ok || obj == nil {
 		return
 	}
+	processed[obj] = struct{}{}
+
 	err := core.ResolveReferencesDeep(obj, a.traversed)
 	if err != nil {
 		common.Log.Debug("ERROR: %v", err)
@@ -156,40 +175,54 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 
 	switch v := obj.(type) {
 	case *core.PdfIndirectObject:
-		// If the current parser is different from the read-only parser, then
-		// the object has changed.
-		if v.GetParser() != a.roReader.parser {
-			a.newObjects = append(a.newObjects, obj)
-			a.hasNewObject[obj] = struct{}{}
-			a.addNewObjects(v.PdfObject)
+		// Change detection:
+		// - obj same as in read only reader (internal use by appender) - definately no change.
+		// - obj is from original reader (derivative of original document) - mark for update if PdfObj WriteString has changed.
+		// - obj is from another source (another file or new) - add as new object.
+		switch {
+		case v.GetParser() == a.roReader.parser:
+			// obj same as in read only reader (internal use by appender) - definitely no change.
+			return
+		case v.GetParser() == a.Reader.parser:
+			// obj is from original reader (derivative of original document) - mark for update if PdfObj WriteString has changed.
+			origObj, _ := a.roReader.GetIndirectObjectByNumber(int(v.ObjectNumber))
+			origInd, ok := origObj.(*core.PdfIndirectObject)
+			if ok && origInd != nil {
+				if origInd.PdfObject != v.PdfObject && origInd.PdfObject.WriteString() != v.PdfObject.WriteString() {
+					a.addNewObject(obj)
+					a.replaceObjects[obj] = v.ObjectNumber
+				}
+			}
+		default:
+			// obj is from another source (another file or new) - add as new object.
+			a.addNewObject(obj)
 		}
+		a.updateObjectsDeep(v.PdfObject, processed)
 	case *core.PdfObjectArray:
 		for _, o := range v.Elements() {
-			a.addNewObjects(o)
+			a.updateObjectsDeep(o, processed)
 		}
 	case *core.PdfObjectDictionary:
 		for _, key := range v.Keys() {
-			a.addNewObjects(v.Get(key))
+			a.updateObjectsDeep(v.Get(key), processed)
 		}
 	case *core.PdfObjectStreams:
 		// If the current parser is different from the read-only parser, then
 		// the object has changed.
 		if v.GetParser() != a.roReader.parser {
 			for _, o := range v.Elements() {
-				a.addNewObjects(o)
+				a.updateObjectsDeep(o, processed)
 			}
 		}
 	case *core.PdfObjectStream:
 		// If the current parser is different from the read-only parser, then
 		// the object has changed.
-		parser := v.GetParser()
-		if parser == a.roReader.parser {
+		switch {
+		case v.GetParser() == a.roReader.parser:
+			// original roReader - no changes.
 			return
-		}
-
-		// If the current parser is different from the parser of the reader,
-		// then the object may have changed.
-		if parser == a.Reader.parser {
+		case v.GetParser() == a.Reader.parser:
+			// same source document, potentially modified.
 			// Check if data has changed.
 			if streamObj, err := a.roReader.parser.LookupByReference(v.PdfObjectReference); err == nil {
 				var isNotChanged bool
@@ -203,10 +236,25 @@ func (a *PdfAppender) addNewObjects(obj core.PdfObject) {
 					return
 				}
 			}
+			if v.ObjectNumber != 0 {
+				a.replaceObjects[obj] = v.ObjectNumber
+			}
+		default:
+			// other source - add new.
+			if _, has := a.hasNewObject[obj]; !has {
+				a.addNewObject(obj)
+			}
 		}
+		a.updateObjectsDeep(v.PdfObjectDictionary, processed)
+	}
+}
+
+// addNewObject adds a new object to be written out in the new revision, either with as a new
+// object or updating an older object (if replaceObjects entry set for obj).
+func (a *PdfAppender) addNewObject(obj core.PdfObject) {
+	if _, has := a.hasNewObject[obj]; !has {
 		a.newObjects = append(a.newObjects, obj)
 		a.hasNewObject[obj] = struct{}{}
-		a.addNewObjects(v.PdfObjectDictionary)
 	}
 }
 
@@ -294,13 +342,13 @@ func (a *PdfAppender) MergePageWith(pageNum int, page *PdfPage) error {
 
 	for i, stream := range contentStreams {
 		for oldName, newName := range resourcesRenameMap {
+			// TODO: Not accurate, e.g. "/F1" could replace part of "/F12" etc.
 			stream = strings.Replace(stream, "/"+string(oldName), "/"+string(newName), -1)
 		}
 		contentStreams[i] = stream
 	}
 
 	srcContentStreams = append(srcContentStreams, contentStreams...)
-
 	if err := srcPage.SetContentStreams(srcContentStreams, core.NewFlateEncoder()); err != nil {
 		return err
 	}
@@ -372,18 +420,35 @@ func (a *PdfAppender) AddPages(pages ...*PdfPage) {
 // RemovePage removes a page by number.
 func (a *PdfAppender) RemovePage(pageNum int) {
 	pageIndex := pageNum - 1
-	pages := make([]*PdfPage, 0, len(a.pages))
-	for i, p := range a.pages {
-		if i == pageIndex {
-			continue
-		}
-		if p.primitive != nil && p.primitive.GetParser() == a.roReader.parser {
-			p = p.Duplicate()
-			procPage(p)
-		}
-		pages = append(pages, p)
+
+	// Remove from the pages list.
+	a.pages = append(a.pages[0:pageIndex], a.pages[pageNum:]...)
+}
+
+// replaceObject registers `replacement` as a replacement for `obj` in the appended revision.
+// If an indirect object/stream it will maintain the same object number in the following
+// revision.
+func (a *PdfAppender) replaceObject(obj, replacement core.PdfObject) {
+	switch t := obj.(type) {
+	case *core.PdfIndirectObject:
+		a.replaceObjects[replacement] = t.ObjectNumber
+	case *core.PdfObjectStream:
+		a.replaceObjects[replacement] = t.ObjectNumber
 	}
-	a.pages = pages
+}
+
+// UpdateObject marks `obj` as updated and to be included in the following revision.
+func (a *PdfAppender) UpdateObject(obj core.PdfObject) {
+	a.replaceObject(obj, obj)
+	if _, has := a.hasNewObject[obj]; !has {
+		a.newObjects = append(a.newObjects, obj)
+		a.hasNewObject[obj] = struct{}{}
+	}
+}
+
+// UpdatePage updates the `page` in the new revision if it has changed.
+func (a *PdfAppender) UpdatePage(page *PdfPage) {
+	a.updateObjectsDeep(page.ToPdfObject(), nil)
 }
 
 // ReplacePage replaces the original page to a new page.
@@ -410,30 +475,28 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	if signature == nil {
 		return errors.New("signature dictionary cannot be nil")
 	}
-	a.addNewObjects(signature.container)
 
 	// Get a copy of the selected page.
 	pageIndex := pageNum - 1
 	if pageIndex < 0 || pageIndex > len(a.pages)-1 {
 		return fmt.Errorf("page %d not found", pageNum)
 	}
-	page := a.pages[pageIndex].Duplicate()
+	page := a.Reader.PageList[pageIndex]
 
 	// Add signature field annotations to the page annotations.
 	field.P = page.ToPdfObject()
 	if field.T == nil || field.T.String() == "" {
 		field.T = core.MakeString(fmt.Sprintf("Signature %d", pageNum))
 	}
-
 	page.AddAnnotation(field.PdfAnnotationWidget.PdfAnnotation)
 
 	// Add signature field to the form.
+	if a.acroForm == a.roReader.AcroForm {
+		a.acroForm = a.Reader.AcroForm
+	}
 	acroForm := a.acroForm
 	if acroForm == nil {
-		acroForm = a.Reader.AcroForm
-		if acroForm == nil {
-			acroForm = NewPdfAcroForm()
-		}
+		acroForm = NewPdfAcroForm()
 	}
 	acroForm.SigFlags = core.MakeInteger(3)
 
@@ -442,7 +505,7 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 	a.ReplaceAcroForm(acroForm)
 
 	// Replace original page.
-	procPage(page)
+	a.UpdatePage(page)
 	a.pages[pageIndex] = page
 
 	return nil
@@ -451,6 +514,9 @@ func (a *PdfAppender) Sign(pageNum int, field *PdfFieldSignature) error {
 // ReplaceAcroForm replaces the acrobat form. It appends a new form to the Pdf which
 // replaces the original AcroForm.
 func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
+	if acroForm != nil {
+		a.updateObjectsDeep(acroForm.ToPdfObject(), nil)
+	}
 	a.acroForm = acroForm
 }
 
@@ -465,47 +531,78 @@ func (a *PdfAppender) Write(w io.Writer) error {
 
 	pagesDict, ok := core.GetDict(writer.pages)
 	if !ok {
-		return errors.New("Invalid Pages obj (not a dict)")
+		return errors.New("invalid Pages obj (not a dict)")
 	}
 	kids, ok := pagesDict.Get("Kids").(*core.PdfObjectArray)
 	if !ok {
-		return errors.New("Invalid Pages Kids obj (not an array)")
+		return errors.New("invalid Pages Kids obj (not an array)")
 	}
 	pageCount, ok := pagesDict.Get("Count").(*core.PdfObjectInteger)
 	if !ok {
-		return errors.New("Invalid Pages Count object (not an integer)")
+		return errors.New("invalid Pages Count object (not an integer)")
 	}
 
 	parser := a.roReader.parser
 	trailer := parser.GetTrailer()
 	if trailer == nil {
-		return fmt.Errorf("Missing trailer")
+		return errors.New("missing trailer")
 	}
 	// Catalog.
-	root, ok := trailer.Get("Root").(*core.PdfObjectReference)
+	catalogContainer, ok := core.GetIndirect(trailer.Get("Root"))
 	if !ok {
-		return fmt.Errorf("Invalid Root (trailer: %s)", trailer)
+		return errors.New("catalog container not found")
+	}
+	catalog, ok := core.GetDict(catalogContainer)
+	if !ok {
+		common.Log.Debug("ERROR: Missing catalog: (root %q) (trailer %s)", catalogContainer, *trailer)
+		return errors.New("missing catalog")
 	}
 
-	oc, err := parser.LookupByReference(*root)
-	if err != nil {
-		return err
-	}
-	catalog, ok := core.GetDict(oc)
-	if !ok {
-		common.Log.Debug("ERROR: Missing catalog: (root %q) (trailer %s)", oc, *trailer)
-		return errors.New("Missing catalog")
-	}
-
+	// Add the keys which are not set.
 	for _, key := range catalog.Keys() {
 		if writer.catalog.Get(key) == nil {
 			obj := catalog.Get(key)
 			writer.catalog.Set(key, obj)
 		}
 	}
+	if a.acroForm != nil {
+		writer.catalog.Set("AcroForm", a.acroForm.ToPdfObject())
+		a.updateObjectsDeep(a.acroForm.ToPdfObject(), nil)
+	}
+
+	a.addNewObject(writer.infoObj)
+	a.addNewObject(writer.root)
+
+	// TODO: Represent the Pages as a model/object.  PdfPages should represent the Pages dictionary.
+	pagesChanged := false
+	if len(a.roReader.PageList) != len(a.pages) {
+		pagesChanged = true
+	} else {
+		for i := range a.roReader.PageList {
+			switch {
+			case a.pages[i] == a.roReader.PageList[i]:
+				// from ro reader - no change.
+			case a.pages[i] == a.Reader.PageList[i]:
+				// same as original file (possibly some modification of the page itself).
+			default:
+				// Different source.
+				pagesChanged = true
+			}
+			if pagesChanged {
+				break
+			}
+		}
+	}
+	if pagesChanged {
+		a.updateObjectsDeep(writer.pages, nil)
+	} else {
+		a.ignoreObjects[writer.pages] = struct{}{}
+	}
+	// If pages unchanged, should not change the Pages.
+	writer.pages.ObjectNumber = a.Reader.pagesContainer.ObjectNumber
+	a.replaceObjects[writer.pages] = a.Reader.pagesContainer.ObjectNumber
 
 	inheritedFields := []core.PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
-
 	for _, p := range a.pages {
 		// Update the count.
 		obj := p.ToPdfObject()
@@ -543,11 +640,8 @@ func (a *PdfAppender) Write(w io.Writer) error {
 			}
 			pDict.Set("Parent", writer.pages)
 		}
-		a.addNewObjects(obj)
+		a.updateObjectsDeep(obj, nil)
 		kids.Append(obj)
-	}
-	if a.acroForm != nil {
-		writer.SetForms(a.acroForm)
 	}
 
 	if _, err := a.rs.Seek(0, io.SeekStart); err != nil {
@@ -608,9 +702,25 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	writer.ObjNumOffset = a.greatestObjNum
 	writer.appendMode = true
 	writer.appendToXrefs = a.xrefs
-	writer.minorVersion = 7
+	writer.appendXrefPrevOffset = a.xrefOffset
+	writer.appendPrevRevisionSize = a.prevRevisionSize
+	writer.minorVersion = a.roReader.PdfVersion().Minor
+	writer.appendReplaceMap = a.replaceObjects
+
+	xrefType := a.parser.GetXrefType()
+	if xrefType != nil {
+		v := *xrefType == core.XrefTypeObjectStream
+		writer.useCrossReferenceStream = &v
+	}
+
+	// Reset the objects in the writer.
+	writer.objectsMap = map[core.PdfObject]struct{}{}
+	writer.objects = []core.PdfObject{}
 
 	for _, obj := range a.newObjects {
+		if _, ignore := a.ignoreObjects[obj]; ignore {
+			continue
+		}
 		writer.addObject(obj)
 	}
 

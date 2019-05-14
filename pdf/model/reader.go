@@ -19,15 +19,16 @@ import (
 // PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
 // a higher level access to work with PDF structure and information, such as the page structure etc.
 type PdfReader struct {
-	parser      *core.PdfParser
-	root        core.PdfObject
-	pages       *core.PdfObjectDictionary
-	pageList    []*core.PdfIndirectObject
-	PageList    []*PdfPage
-	pageCount   int
-	catalog     *core.PdfObjectDictionary
-	outlineTree *PdfOutlineTreeNode
-	AcroForm    *PdfAcroForm
+	parser         *core.PdfParser
+	root           core.PdfObject
+	pagesContainer *core.PdfIndirectObject
+	pages          *core.PdfObjectDictionary
+	pageList       []*core.PdfIndirectObject
+	PageList       []*PdfPage
+	pageCount      int
+	catalog        *core.PdfObjectDictionary
+	outlineTree    *PdfOutlineTreeNode
+	AcroForm       *PdfAcroForm
 
 	modelManager *modelManager
 
@@ -227,6 +228,7 @@ func (r *PdfReader) loadStructure() error {
 	r.root = root
 	r.catalog = catalog
 	r.pages = pages
+	r.pagesContainer = ppages
 	r.pageCount = int(*pageCount)
 	r.pageList = []*core.PdfIndirectObject{}
 
@@ -435,13 +437,16 @@ func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 		// Nothing to load.
 		return nil, nil
 	}
+
+	formsContainer, _ := core.GetIndirect(obj)
+
 	obj = core.TraceToDirectObject(obj)
-	if _, isNull := obj.(*core.PdfObjectNull); isNull {
+	if core.IsNullObject(obj) {
 		common.Log.Trace("Acroform is a null object (empty)\n")
 		return nil, nil
 	}
 
-	formsDict, ok := obj.(*core.PdfObjectDictionary)
+	formsDict, ok := core.GetDict(obj)
 	if !ok {
 		common.Log.Debug("Invalid AcroForm entry %T", obj)
 		common.Log.Debug("Does not have forms")
@@ -461,7 +466,7 @@ func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 	}
 
 	// Create the acro forms object.
-	acroForm, err := r.newPdfAcroFormFromDict(formsDict)
+	acroForm, err := r.newPdfAcroFormFromDict(formsContainer, formsDict)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +489,7 @@ func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.Pdf
 	}
 
 	if _, alreadyTraversed := traversedPageNodes[node]; alreadyTraversed {
-		common.Log.Debug("Cyclic recursion, skipping")
+		common.Log.Debug("Cyclic recursion, skipping (%v)", node.ObjectNumber)
 		return nil
 	}
 	traversedPageNodes[node] = struct{}{}

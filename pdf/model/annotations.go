@@ -307,7 +307,8 @@ type PdfAnnotationWidget struct {
 	BS     core.PdfObject
 	Parent core.PdfObject
 
-	parent *PdfField
+	parent     *PdfField
+	processing bool // Used in ToPdfObject serialization to avoid infinite loops for merged-in annots.
 }
 
 // PdfAnnotationWatermark represents Watermark annotations.
@@ -1791,6 +1792,11 @@ func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
 	widget.PdfAnnotation.ToPdfObject()
 	container := widget.container
 	d := container.PdfObject.(*core.PdfObjectDictionary)
+	if widget.processing {
+		// Avoid recursion for merged-in annotations (calling ToPdfObject from both field and annotation).
+		return container
+	}
+	widget.processing = true
 
 	d.SetIfNotNil("Subtype", core.MakeName("Widget"))
 	d.SetIfNotNil("H", widget.H)
@@ -1799,11 +1805,20 @@ func (widget *PdfAnnotationWidget) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("AA", widget.AA)
 	d.SetIfNotNil("BS", widget.BS)
 
+	parentObj := widget.Parent
 	if widget.parent != nil {
-		d.SetIfNotNil("Parent", widget.parent.GetContainingPdfObject())
-	} else if widget.Parent != nil {
-		d.SetIfNotNil("Parent", widget.Parent)
+		if widget.parent.container == widget.container {
+			// Populate the part from the field.
+			widget.parent.ToPdfObject()
+		}
+		parentObj = widget.parent.GetContainingPdfObject()
 	}
+	if parentObj != container {
+		// Accommodate merged-in field/annotations.
+		d.SetIfNotNil("Parent", parentObj)
+	}
+
+	widget.processing = false
 
 	return container
 }

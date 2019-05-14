@@ -11,8 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/unidoc/unidoc/pdf/core"
 )
 
 // Tests loading annotations from file, writing back out and reloading.
@@ -55,7 +53,7 @@ func TestReadWriteAnnotations(t *testing.T) {
 			require.NotNil(t, wa.Parent)
 		} else {
 			require.Nil(t, wa.parent)
-			require.True(t, core.IsNullObject(wa.Parent))
+			require.Nil(t, wa.Parent)
 		}
 	}
 	checkAnnots(reader, true)
@@ -73,6 +71,9 @@ func TestReadWriteAnnotations(t *testing.T) {
 		var buf bytes.Buffer
 		err = w.Write(&buf)
 		require.NoError(t, err)
+
+		// For debugging:
+		// ioutil.WriteFile("/tmp/test_read_write_annots_withacro.pdf", buf.Bytes(), 0644)
 
 		bufReader := bytes.NewReader(buf.Bytes())
 		reader, err = NewPdfReaderLazy(bufReader)
@@ -92,6 +93,9 @@ func TestReadWriteAnnotations(t *testing.T) {
 		var buf bytes.Buffer
 		err = w.Write(&buf)
 		require.NoError(t, err)
+
+		// For debugging:
+		// ioutil.WriteFile("/tmp/test_read_write_annots_noacro.pdf", buf.Bytes(), 0644)
 
 		bufReader := bytes.NewReader(buf.Bytes())
 		reader, err = NewPdfReaderLazy(bufReader)

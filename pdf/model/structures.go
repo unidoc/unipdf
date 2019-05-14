@@ -151,7 +151,6 @@ func NewPdfDate(dateStr string) (PdfDate, error) {
 	return d, nil
 }
 
-
 // NewPdfDateFromTime will create a PdfDate based on the given time
 func NewPdfDateFromTime(timeObj time.Time) (PdfDate, error) {
 	timezone := timeObj.Format("-07:00")

@@ -42,6 +42,8 @@ type PdfParser struct {
 	reader           *bufio.Reader
 	fileSize         int64
 	xrefs            XrefTable
+	xrefOffset       int64     // Offset of first xref object.
+	xrefType         *xrefType // Type of first xref object.
 	objstms          objectStreams
 	trailer          *PdfObjectDictionary
 	crypter          *PdfCrypt
@@ -91,6 +93,16 @@ func (parser *PdfParser) GetTrailer() *PdfObjectDictionary {
 // GetXrefTable returns the PDFs xref table.
 func (parser *PdfParser) GetXrefTable() XrefTable {
 	return parser.xrefs
+}
+
+// GetXrefOffset returns the offset of the xref table.
+func (parser *PdfParser) GetXrefOffset() int64 {
+	return parser.xrefOffset
+}
+
+// GetXrefType returns the type of the first xref object (table or stream).
+func (parser *PdfParser) GetXrefType() *xrefType {
+	return parser.xrefType
 }
 
 // Skip over any spaces.
@@ -840,6 +852,10 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 		common.Log.Trace("xref more : %s", txt)
 	}
 	common.Log.Trace("EOF parsing xref table!")
+	if parser.xrefType == nil {
+		t := XrefTypeTableEntry
+		parser.xrefType = &t
+	}
 
 	return trailer, nil
 }
@@ -1100,6 +1116,11 @@ func (parser *PdfParser) parseXrefStream(xstm *PdfObjectInteger) (*PdfObjectDict
 		}
 	}
 
+	if parser.xrefType == nil {
+		t := XrefTypeObjectStream
+		parser.xrefType = &t
+	}
+
 	return trailerDict, nil
 }
 
@@ -1113,6 +1134,9 @@ func (parser *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 	const bufLen = 20
 	bb, _ := parser.reader.Peek(bufLen)
 	for i := 0; i < 2; i++ {
+		if parser.xrefOffset == 0 {
+			parser.xrefOffset = parser.GetFileOffset()
+		}
 		if reIndirectObject.Match(bb) {
 			common.Log.Trace("xref points to an object. Probably xref object")
 			common.Log.Debug("starting with \"%s\"", string(bb))
@@ -1127,6 +1151,9 @@ func (parser *PdfParser) parseXref() (*PdfObjectDictionary, error) {
 		// append them to the previously read buffer and try again. Reset to the
 		// original offset after reading.
 		offset := parser.GetFileOffset()
+		if parser.xrefOffset == 0 {
+			parser.xrefOffset = offset
+		}
 		parser.SetFileOffset(offset - bufLen)
 		defer parser.SetFileOffset(offset)
 

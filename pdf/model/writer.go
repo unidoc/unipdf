@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
@@ -152,6 +153,10 @@ type PdfWriter struct {
 	majorVersion int
 	minorVersion int
 
+	// Force whether or not to use cross reference streams.
+	// Otherwise is used/not used depending on the PDF version (1.5 and above).
+	useCrossReferenceStream *bool
+
 	// Objects to be followed up on prior to writing.
 	// These are objects that are added and reference objects that are not included
 	// for writing.
@@ -162,12 +167,16 @@ type PdfWriter struct {
 	// Forms.
 	acroForm *PdfAcroForm
 
-	optimizer         Optimizer
-	crossReferenceMap map[int]crossReference
-	writeOffset       int64 // used by PdfAppender
-	ObjNumOffset      int
-	appendMode        bool
-	appendToXrefs     core.XrefTable
+	optimizer              Optimizer
+	crossReferenceMap      map[int]crossReference
+	writeOffset            int64 // used by PdfAppender
+	ObjNumOffset           int
+	appendMode             bool
+	appendToXrefs          core.XrefTable
+	appendXrefPrevOffset   int64
+	appendPrevRevisionSize int64
+	// Map of object to object number for replacements.
+	appendReplaceMap map[core.PdfObject]int64
 
 	// Cache of objects traversed while resolving references.
 	traversed map[core.PdfObject]struct{}
@@ -364,6 +373,19 @@ func (w *PdfWriter) copyObjects() {
 	w.root = copyObject(w.root, objectToObjectCopyMap).(*core.PdfIndirectObject)
 	if w.encryptObj != nil {
 		w.encryptObj = copyObject(w.encryptObj, objectToObjectCopyMap).(*core.PdfIndirectObject)
+	}
+
+	// Update replace map.
+	if w.appendMode {
+		appendReplaceMap := make(map[core.PdfObject]int64)
+		for obj, replaceNum := range w.appendReplaceMap {
+			if objCopy, has := objectToObjectCopyMap[obj]; has {
+				appendReplaceMap[objCopy] = replaceNum
+			} else {
+				common.Log.Debug("ERROR: append mode - object copy not in map")
+			}
+		}
+		w.appendReplaceMap = appendReplaceMap
 	}
 }
 
@@ -722,7 +744,8 @@ func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 		for index, obj := range ostreams.Elements() {
 			io, isIndirect := obj.(*core.PdfIndirectObject)
 			if !isIndirect {
-				common.Log.Error("Object streams N %d contains non indirect pdf object %v", num, obj)
+				common.Log.Debug("ERROR: Object streams N %d contains non indirect pdf object %v", num, obj)
+				continue
 			}
 			data := io.PdfObject.WriteString() + " "
 			objData = objData + data
@@ -732,7 +755,8 @@ func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 		}
 		offsetsStr := strings.Join(offsets, " ") + " "
 		encoder := core.NewFlateEncoder()
-		//encoder := NewRawEncoder()
+		// For debugging:
+		//encoder := core.NewRawEncoder()
 		dict := encoder.MakeStreamDict()
 		dict.Set(core.PdfObjectName("Type"), core.MakeName("ObjStm"))
 		n := int64(ostreams.Len())
@@ -758,20 +782,54 @@ func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 // Update all the object numbers prior to writing.
 func (w *PdfWriter) updateObjectNumbers() {
 	offset := w.ObjNumOffset
+
 	// Update numbers
-	for idx, obj := range w.objects {
+	i := 0
+	for _, obj := range w.objects {
+		objNum := int64(i + 1 + offset)
+		increase := true
+		if w.appendMode {
+			if replaceNum, has := w.appendReplaceMap[obj]; has {
+				objNum = replaceNum
+				increase = false
+			}
+		}
+
 		switch o := obj.(type) {
 		case *core.PdfIndirectObject:
-			o.ObjectNumber = int64(idx + 1 + offset)
+			o.ObjectNumber = objNum
 			o.GenerationNumber = 0
 		case *core.PdfObjectStream:
-			o.ObjectNumber = int64(idx + 1 + offset)
+			o.ObjectNumber = objNum
 			o.GenerationNumber = 0
 		case *core.PdfObjectStreams:
-			o.ObjectNumber = int64(idx + 1 + offset)
+			o.ObjectNumber = objNum
 			o.GenerationNumber = 0
+		default:
+			common.Log.Debug("ERROR: Unknown type %T - skipping")
+			continue
+		}
+
+		if increase {
+			i++
 		}
 	}
+
+	getObjNum := func(obj core.PdfObject) int64 {
+		switch o := obj.(type) {
+		case *core.PdfIndirectObject:
+			return o.ObjectNumber
+		case *core.PdfObjectStream:
+			return o.ObjectNumber
+		case *core.PdfObjectStreams:
+			return o.ObjectNumber
+		}
+		return 0
+	}
+	// Sort the output by object numbers so that they appear in descending order.
+	sort.SliceStable(w.objects, func(i, j int) bool {
+		return getObjNum(w.objects[i]) < getObjNum(w.objects[j])
+	})
 }
 
 // EncryptOptions represents encryption options for an output PDF.
@@ -928,17 +986,20 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	w.writePos = w.writeOffset
 	w.writer = bufio.NewWriter(writer)
 	useCrossReferenceStream := w.majorVersion > 1 || (w.majorVersion == 1 && w.minorVersion > 4)
+	if w.useCrossReferenceStream != nil {
+		useCrossReferenceStream = *w.useCrossReferenceStream
+	}
 
+	// Make a map of objects within object streams (if used).
 	objectsInObjectStreams := make(map[core.PdfObject]bool)
-	if !useCrossReferenceStream {
-		for _, obj := range w.objects {
-			if objStm, isObjectStreams := obj.(*core.PdfObjectStreams); isObjectStreams {
-				useCrossReferenceStream = true
-				for _, obj := range objStm.Elements() {
-					objectsInObjectStreams[obj] = true
-					if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
-						objectsInObjectStreams[io.PdfObject] = true
-					}
+	for _, obj := range w.objects {
+		if objStm, isObjectStreams := obj.(*core.PdfObjectStreams); isObjectStreams {
+			// Objects in object streams can only be referenced from an xref stream (not table).
+			useCrossReferenceStream = true
+			for _, obj := range objStm.Elements() {
+				objectsInObjectStreams[obj] = true
+				if io, isIndirectObj := obj.(*core.PdfIndirectObject); isIndirectObj {
+					objectsInObjectStreams[io.PdfObject] = true
 				}
 			}
 		}
@@ -977,14 +1038,25 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		}
 	}
 
-	offset := w.ObjNumOffset
-	for idx, obj := range w.objects {
+	// Write out indirect/stream objects that are not in object streams.
+	for _, obj := range w.objects {
 		if skip := objectsInObjectStreams[obj]; skip {
 			continue
 		}
-		common.Log.Trace("Writing %d", idx)
 
-		objectNumber := int64(idx + 1 + offset)
+		objectNumber := int64(0)
+		switch t := obj.(type) {
+		case *core.PdfIndirectObject:
+			objectNumber = t.ObjectNumber
+		case *core.PdfObjectStream:
+			objectNumber = t.ObjectNumber
+		case *core.PdfObjectStreams:
+			objectNumber = t.ObjectNumber
+		default:
+			common.Log.Debug("ERROR: Unsupported type in writer objects: %T", obj)
+			return ErrTypeCheck
+		}
+
 		// Encrypt prior to writing.
 		// Encrypt dictionary should not be encrypted.
 		if w.crypter != nil && obj != w.encryptObj {
@@ -1004,28 +1076,54 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 			maxIndex = idx
 		}
 	}
+
+	// Write trailer / cross reference stream (depending on which used).
 	if useCrossReferenceStream {
 		crossObjNumber := maxIndex + 1
 		w.crossReferenceMap[crossObjNumber] = crossReference{Type: 1, ObjectNumber: crossObjNumber, Offset: xrefOffset}
 		crossReferenceData := bytes.NewBuffer(nil)
 
-		for idx := 0; idx <= maxIndex+1; idx++ {
-			ref := w.crossReferenceMap[idx]
-			switch ref.Type {
-			case 0:
-				binary.Write(crossReferenceData, binary.BigEndian, byte(0))
-				binary.Write(crossReferenceData, binary.BigEndian, uint32(0))
-				binary.Write(crossReferenceData, binary.BigEndian, uint16(0xFFFF))
-			case 1:
-				binary.Write(crossReferenceData, binary.BigEndian, byte(1))
-				binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.Offset))
-				binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Generation))
-			case 2:
-				binary.Write(crossReferenceData, binary.BigEndian, byte(2))
-				binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.ObjectNumber))
-				binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Index))
+		index := core.MakeArray()
+		for idx := 0; idx <= maxIndex; {
+			// Find next to write.
+			for ; idx <= maxIndex; idx++ {
+				ref, has := w.crossReferenceMap[idx]
+				if has && (!w.appendMode || w.appendMode && (ref.Type == 1 && ref.Offset >= w.appendPrevRevisionSize || ref.Type == 0)) {
+					break
+				}
 			}
+
+			var j int
+			for j = idx + 1; j <= maxIndex; j++ {
+				ref, has := w.crossReferenceMap[j]
+				if has && (!w.appendMode || w.appendMode && (ref.Type == 1 && ref.Offset > w.appendPrevRevisionSize)) {
+					continue
+				}
+				break
+			}
+			index.Append(core.MakeInteger(int64(idx)), core.MakeInteger(int64(j-idx)))
+
+			for k := idx; k < j; k++ {
+				ref := w.crossReferenceMap[k]
+				switch ref.Type {
+				case 0:
+					binary.Write(crossReferenceData, binary.BigEndian, byte(0))
+					binary.Write(crossReferenceData, binary.BigEndian, uint32(0))
+					binary.Write(crossReferenceData, binary.BigEndian, uint16(0xFFFF))
+				case 1:
+					binary.Write(crossReferenceData, binary.BigEndian, byte(1))
+					binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.Offset))
+					binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Generation))
+				case 2:
+					binary.Write(crossReferenceData, binary.BigEndian, byte(2))
+					binary.Write(crossReferenceData, binary.BigEndian, uint32(ref.ObjectNumber))
+					binary.Write(crossReferenceData, binary.BigEndian, uint16(ref.Index))
+				}
+			}
+
+			idx = j + 1
 		}
+
 		crossReferenceStream, err := core.MakeStream(crossReferenceData.Bytes(), core.NewFlateEncoder())
 		if err != nil {
 			return err
@@ -1033,10 +1131,13 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		crossReferenceStream.ObjectNumber = int64(crossObjNumber)
 		crossReferenceStream.PdfObjectDictionary.Set("Type", core.MakeName("XRef"))
 		crossReferenceStream.PdfObjectDictionary.Set("W", core.MakeArray(core.MakeInteger(1), core.MakeInteger(4), core.MakeInteger(2)))
-		crossReferenceStream.PdfObjectDictionary.Set("Index", core.MakeArray(core.MakeInteger(0), core.MakeInteger(crossReferenceStream.ObjectNumber+1)))
-		crossReferenceStream.PdfObjectDictionary.Set("Size", core.MakeInteger(crossReferenceStream.ObjectNumber+1))
+		crossReferenceStream.PdfObjectDictionary.Set("Index", index)
+		crossReferenceStream.PdfObjectDictionary.Set("Size", core.MakeInteger(int64(crossObjNumber+1)))
 		crossReferenceStream.PdfObjectDictionary.Set("Info", w.infoObj)
 		crossReferenceStream.PdfObjectDictionary.Set("Root", w.root)
+		if w.appendMode && w.appendXrefPrevOffset > 0 {
+			crossReferenceStream.PdfObjectDictionary.Set("Prev", core.MakeInteger(w.appendXrefPrevOffset))
+		}
 		// If encrypted!
 		if w.crypter != nil {
 			crossReferenceStream.Set("Encrypt", w.encryptObj)
@@ -1045,28 +1146,51 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		}
 
 		w.writeObject(int(crossReferenceStream.ObjectNumber), crossReferenceStream)
-
 	} else {
 		w.writeString("xref\r\n")
-		outStr := fmt.Sprintf("%d %d\r\n", 0, len(w.crossReferenceMap))
-		w.writeString(outStr)
-		for idx := 0; idx <= maxIndex; idx++ {
-			ref := w.crossReferenceMap[idx]
-			switch ref.Type {
-			case 0:
-				outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
-				w.writeString(outStr)
-			case 1:
-				outStr = fmt.Sprintf("%.10d %.5d n\r\n", ref.Offset, 0)
-				w.writeString(outStr)
+		for idx := 0; idx <= maxIndex; {
+			// Find next to write.
+			for ; idx <= maxIndex; idx++ {
+				ref, has := w.crossReferenceMap[idx]
+				if has && (!w.appendMode || w.appendMode && (ref.Type == 1 && ref.Offset >= w.appendPrevRevisionSize || ref.Type == 0)) {
+					break
+				}
 			}
+
+			var j int
+			for j = idx + 1; j <= maxIndex; j++ {
+				ref, has := w.crossReferenceMap[j]
+				if has && (!w.appendMode || w.appendMode && (ref.Type == 1 && ref.Offset > w.appendPrevRevisionSize)) {
+					continue
+				}
+				break
+			}
+
+			outStr := fmt.Sprintf("%d %d\r\n", idx, j-idx)
+			w.writeString(outStr)
+			for k := idx; k < j; k++ {
+				ref := w.crossReferenceMap[k]
+				switch ref.Type {
+				case 0:
+					outStr = fmt.Sprintf("%.10d %.5d f\r\n", 0, 65535)
+					w.writeString(outStr)
+				case 1:
+					outStr = fmt.Sprintf("%.10d %.5d n\r\n", ref.Offset, 0)
+					w.writeString(outStr)
+				}
+			}
+
+			idx = j + 1
 		}
 
 		// Generate & write trailer
 		trailer := core.MakeDict()
 		trailer.Set("Info", w.infoObj)
 		trailer.Set("Root", w.root)
-		trailer.Set("Size", core.MakeInteger(int64(len(w.crossReferenceMap))))
+		trailer.Set("Size", core.MakeInteger(int64(maxIndex+1)))
+		if w.appendMode && w.appendXrefPrevOffset > 0 {
+			trailer.Set("Prev", core.MakeInteger(w.appendXrefPrevOffset))
+		}
 		// If encrypted!
 		if w.crypter != nil {
 			trailer.Set("Encrypt", w.encryptObj)

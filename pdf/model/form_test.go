@@ -8,6 +8,8 @@ package model
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unidoc/pdf/core"
 	"github.com/unidoc/unidoc/pdf/internal/testutils"
 )
@@ -90,44 +92,27 @@ endobj
 	r := NewReaderForText(rawText)
 
 	err := r.ParseIndObjSeries()
-	if err != nil {
-		t.Fatalf("Failed loading indirect object series: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Load the field from object number 1.
 	obj, err := r.parser.LookupByNumber(1)
-	if err != nil {
-		t.Fatalf("Failed to parse indirect obj (%s)", err)
-	}
+	require.NoError(t, err)
 
 	ind, ok := obj.(*core.PdfIndirectObject)
-	if !ok {
-		t.Fatalf("Incorrect type (%T)", obj)
-	}
+	require.True(t, ok)
 
 	field, err := r.newPdfFieldFromIndirectObject(ind, nil)
-	if err != nil {
-		t.Fatalf("Unable to load field (%v)", err)
-		return
-	}
+	require.NoError(t, err)
 
 	// Check properties of the field.
 	buttonf, ok := field.GetContext().(*PdfFieldButton)
-	if !ok {
-		t.Errorf("Field content incorrect (%T)", field.GetContext())
-		return
-	}
-	if buttonf == nil {
-		t.Fatalf("buttonf is nil")
-	}
+	require.True(t, ok)
+	require.NotNil(t, buttonf)
 
 	if len(field.Kids) > 0 {
 		t.Fatalf("Field should not have kids")
 	}
-
-	if len(field.Annotations) != 1 {
-		t.Fatalf("Field should have a single annotation")
-	}
+	require.Len(t, field.Annotations, 1)
 
 	// Field -> PDF object.  Regenerate the field dictionary and see if matches expectations.
 	// Reset the dictionaries for both field and annotation to avoid re-use during re-generation of PDF object.
@@ -135,21 +120,15 @@ endobj
 	field.Annotations[0].container = core.MakeIndirectObject(core.MakeDict())
 	fieldPdfObj := field.ToPdfObject()
 	fieldDict, ok := fieldPdfObj.(*core.PdfIndirectObject).PdfObject.(*core.PdfObjectDictionary)
-	if !ok {
-		t.Fatalf("Type error")
-	}
+	require.True(t, ok)
 
 	// Load the expected field dictionary (output).  Slightly different than original as the input had
 	// a merged-in annotation. Our output does not currently merge annotations.
 	obj, err = r.parser.LookupByNumber(4)
-	if err != nil {
-		t.Fatalf("Error: %v", err)
-	}
+	require.NoError(t, err)
 
 	expDict, ok := obj.(*core.PdfIndirectObject).PdfObject.(*core.PdfObjectDictionary)
-	if !ok {
-		t.Fatalf("Unable to load expected dict")
-	}
+	require.True(t, ok)
 
 	if !testutils.CompareDictionariesDeep(expDict, fieldDict) {
 		t.Fatalf("Mismatch in expected and actual field dictionaries (deep)")
@@ -158,5 +137,26 @@ endobj
 
 func TestFormNil(t *testing.T) {
 	var form *PdfAcroForm
-	form.Fill(nil)
+	err := form.Fill(nil)
+	require.NoError(t, err)
+}
+
+// TODO: Test loading and writing out of merged-in annotations.
+func TestReadWriteMergedFieldAnnotation(t *testing.T) {
+	raw := `
+6 0 obj
+<<
+/Type /Annot
+/Rect [0 0 0 0]
+/P 99 0 R
+/F 132
+/Subtype /Widget
+/T (Signature 1)
+/FT /Sig
+/V 7 0 R
+>>
+endobj
+`
+	_ = raw
+	t.Skip("Not implemented yet")
 }
