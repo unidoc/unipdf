@@ -8,7 +8,7 @@
 package ps
 
 import (
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 // PSExecutor has its own execution stack and is used to executre a PS routine (program).

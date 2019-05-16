@@ -10,7 +10,7 @@ import (
 	"crypto/rc4"
 	"fmt"
 
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 func init() {

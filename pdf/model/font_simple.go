@@ -10,11 +10,11 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/pdf/core"
 
-	"github.com/unidoc/unidoc/pdf/internal/textencoding"
-	"github.com/unidoc/unidoc/pdf/model/internal/fonts"
+	"github.com/unidoc/unipdf/v3/pdf/internal/textencoding"
+	"github.com/unidoc/unipdf/v3/pdf/model/internal/fonts"
 )
 
 // pdfFontSimple implements pdfFont

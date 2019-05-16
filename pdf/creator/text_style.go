@@ -6,7 +6,7 @@
 package creator
 
 import (
-	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unipdf/v3/pdf/model"
 )
 
 // TextStyle is a collection of properties that can be assigned to a chunk of text.

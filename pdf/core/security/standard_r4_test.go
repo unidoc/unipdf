@@ -6,7 +6,7 @@
 package security
 
 import (
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 	"testing"
 )
 

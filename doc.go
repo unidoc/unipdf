@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package unidoc is a comprehensive PDF library for Go (golang). The library has advanced capabilities for generating,
+// Package unipdf is a comprehensive PDF library for Go (golang). The library has advanced capabilities for generating,
 // processing and modifying PDFs. UniDoc is written and supported by the owners of the
 // FoxyUtils.com website, where the library is used to power many of the PDF services offered.
 //
@@ -14,7 +14,7 @@
 // https://unidoc.io/examples/getting_started/
 //
 // The godoc for unidoc provides a detailed breakdown of the API and documentation for packages, types and methods.
-// https://godoc.org/github.com/unidoc/unidoc
+// https://godoc.org/github.com/unidoc/unipdf
 //
 // Overview of Major Packages
 //
@@ -43,4 +43,4 @@
 //   - pdf/extractor: Package extractor is used for quickly extracting PDF content
 //     through a simple interface. Currently offers functionality for extracting textual
 //     content.
-package unidoc
+package unipdf

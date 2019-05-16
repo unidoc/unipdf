@@ -6,7 +6,7 @@
 package model
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unipdf/v3/pdf/core"
 )
 
 // Optimizer is the interface that performs optimization of PDF object structure for output writing.
