@@ -1,4 +1,4 @@
-module github.com/unidoc/unidoc
+module github.com/unidoc/unipdf/v3
 
 require (
 	github.com/boombuler/barcode v1.0.0
