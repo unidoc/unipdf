@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/pdf/core"
 )
 
 // FieldFlag represents form field flags. Some of the flags can apply to all types of fields whereas other

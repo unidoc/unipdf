@@ -6,10 +6,10 @@
 package creator
 
 import (
-	pdfcontent "github.com/unidoc/unidoc/pdf/contentstream"
-	"github.com/unidoc/unidoc/pdf/contentstream/draw"
-	pdfcore "github.com/unidoc/unidoc/pdf/core"
-	pdf "github.com/unidoc/unidoc/pdf/model"
+	pdfcontent "github.com/unidoc/unipdf/v3/pdf/contentstream"
+	"github.com/unidoc/unipdf/v3/pdf/contentstream/draw"
+	pdfcore "github.com/unidoc/unipdf/v3/pdf/core"
+	pdf "github.com/unidoc/unipdf/v3/pdf/model"
 )
 
 // FilledCurve represents a closed path of Bezier curves with a border and fill.

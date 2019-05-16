@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 // Check slice range to make sure within bounds for accessing:

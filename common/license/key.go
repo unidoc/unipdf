@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/unidoc/unidoc/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 var _ StdHandler = stdHandlerR4{}

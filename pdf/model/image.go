@@ -17,9 +17,9 @@ import (
 	_ "image/gif"
 	_ "image/png"
 
-	"github.com/unidoc/unidoc/common"
-	"github.com/unidoc/unidoc/pdf/core"
-	"github.com/unidoc/unidoc/pdf/internal/sampling"
+	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/pdf/core"
+	"github.com/unidoc/unipdf/v3/pdf/internal/sampling"
 )
 
 // Image interface is a basic representation of an image used in PDF.

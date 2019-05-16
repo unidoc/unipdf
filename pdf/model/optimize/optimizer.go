@@ -6,7 +6,7 @@
 package optimize
 
 import (
-	"github.com/unidoc/unidoc/pdf/core"
+	"github.com/unidoc/unipdf/v3/pdf/core"
 )
 
 // New creates a optimizers chain from options.

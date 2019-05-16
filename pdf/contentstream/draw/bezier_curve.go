@@ -8,7 +8,7 @@ package draw
 import (
 	"math"
 
-	"github.com/unidoc/unidoc/pdf/model"
+	"github.com/unidoc/unipdf/v3/pdf/model"
 )
 
 // CubicBezierCurve is defined by:
