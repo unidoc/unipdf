@@ -35,9 +35,6 @@ node {
             sh 'go get -u golang.org/x/lint/golint'
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
-
-            // Get all dependencies (for tests also).
-            sh 'go get -t ./...'
         }
 
         stage('Linting') {
