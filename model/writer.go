@@ -628,13 +628,16 @@ func procPage(p *PdfPage) {
 	}
 
 	// Add font as needed.
-	f := DefaultFont()
-	p.Resources.SetFontByName("UF1", f.ToPdfObject())
+	fontName := core.PdfObjectName("UF1")
+	if d, ok := core.GetDict(p.Resources.Font); ok && d.Get(fontName) == nil {
+		p.Resources.Font = core.MakeDict().Merge(d)
+	}
+	p.Resources.SetFontByName(fontName, DefaultFont().ToPdfObject())
 
 	var ops []string
 	ops = append(ops, "q")
 	ops = append(ops, "BT")
-	ops = append(ops, "/UF1 14 Tf")
+	ops = append(ops, fmt.Sprintf("/%s 14 Tf", fontName.String()))
 	ops = append(ops, "1 0 0 rg")
 	ops = append(ops, "10 10 Td")
 	s := "Unlicensed UniDoc - Get a license on https://unidoc.io"
