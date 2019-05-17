@@ -83,23 +83,7 @@ node {
             sh("printenv")
 
             // Pull unipdf-examples from connected branch, or master otherwise.
-            def examplesBranch = "master"
-            if (env.BRANCH_NAME.take(3) == "PR-") {
-                // Pull requests (PR) require separate handling.
-                if (env.CHANGE_TARGET.take(2) == "v3") {
-                    examplesBranch = "v3"
-                }
-            } else {
-                if (env.BRANCH_NAME.take(2) == "v3") {
-                    examplesBranch = "v3"
-                }
-                // Special cases.
-                switch("${env.BRANCH_NAME}") {
-                    case "v3-reduce-fonts-exports":
-                        examplesBranch = "v3-reduce-fonts-exports"
-                        break
-                }
-            }
+            def examplesBranch = "v3"
 
             // Check if connected branch is defined explicitly.
             def safeName = env.BRANCH_NAME.replaceAll(/[\/\.]/, '')
