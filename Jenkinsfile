@@ -22,11 +22,11 @@ node {
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
 
-    dir("${GOPATH}/src/github.com/unidoc/unidoc") {
+    dir("${GOPATH}/src/github.com/unidoc/unipdf") {
         sh 'go version'
 
         stage('Checkout') {
-            echo "Pulling unidoc on branch ${env.BRANCH_NAME}"
+            echo "Pulling unipdf on branch ${env.BRANCH_NAME}"
             checkout scm
         }
 
@@ -78,12 +78,12 @@ node {
         }
     }
 
-    dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
+    dir("${GOPATH}/src/github.com/unidoc/unipdf-examples") {
         stage('Build examples') {
             // Output environment variables (useful for debugging).
             sh("printenv")
 
-            // Pull unidoc-examples from connected branch, or master otherwise.
+            // Pull unipdf-examples from connected branch, or master otherwise.
             def examplesBranch = "master"
             if (env.BRANCH_NAME.take(3) == "PR-") {
                 // Pull requests (PR) require separate handling.
@@ -109,7 +109,7 @@ node {
                 examplesBranch = readFile(fpath).trim()
             }
 
-            echo "Pulling unidoc-examples on branch ${examplesBranch}"
+            echo "Pulling unipdf-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
             
             // Dependencies for examples.
