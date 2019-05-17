@@ -100,7 +100,7 @@ node {
         }
 
         stage('Passthrough benchmark pdfdb_small') {
-            sh './pdf_passthrough_bench /home/jenkins/corpus/pdfdb_small/* | grep -v "Testing " | grep -v "copy of" | grep -v "To get " | grep -v " - pass"'
+            sh './bin/pdf_passthrough_bench /home/jenkins/corpus/pdfdb_small/* | grep -v "Testing " | grep -v "copy of" | grep -v "To get " | grep -v " - pass"'
         }
     }
 }
