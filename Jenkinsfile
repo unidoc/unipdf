@@ -96,14 +96,7 @@ node {
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
             
             // Dependencies for examples.
-            sh 'go get github.com/wcharczuk/go-chart'
-            sh 'CGO_ENABLED=1 go get github.com/miekg/pkcs11'
-            sh 'CGO_ENABLED=1 go get github.com/ThalesIgnite/crypto11'
-
-            // Build all examples.
-            // CGO_ENABLED=1 required for crypto11 dependency (one example).
-            sh 'find . -name "*.go" ! -name "*pkcs11*.go" -print0 | xargs -0 -n1 go build'
-            sh 'find . -name "*pkcs11*.go" -print0 | CGO_ENABLED=1 xargs -0 -n1 go build'
+            sh './build_examples.sh'
         }
 
         stage('Passthrough benchmark pdfdb_small') {
