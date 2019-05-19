@@ -12,7 +12,7 @@ many of the PDF services offered.
 
 ## News
 - unidoc is being renamed to unipdf and will be maintained under https://github.com/unidoc/unipdf
-- The old repository will remain under https://github.com/unidoc/unipdf for backwards compatibility and will be read-only.
+- The old repository will remain under https://github.com/unidoc/unidoc for backwards compatibility and will be read-only.
 All development will be under the unipdf repository.
 - The initial release of unipdf v3.0.0 will be compliant with Go modules from the start.
 
