@@ -22,11 +22,11 @@ node {
     env.TMPDIR="${WORKSPACE}/temp"
     sh "mkdir -p ${env.TMPDIR}"
 
-    dir("${GOPATH}/src/github.com/unidoc/unidoc") {
+    dir("${GOPATH}/src/github.com/unidoc/unipdf") {
         sh 'go version'
 
         stage('Checkout') {
-            echo "Pulling unidoc on branch ${env.BRANCH_NAME}"
+            echo "Pulling unipdf on branch ${env.BRANCH_NAME}"
             checkout scm
         }
 
@@ -35,7 +35,6 @@ node {
             sh 'go get -u golang.org/x/lint/golint'
             sh 'go get github.com/tebeka/go2xunit'
             sh 'go get github.com/t-yuki/gocover-cobertura'
-
             // Get all dependencies (for tests also).
             sh 'go get -t ./...'
         }
@@ -78,29 +77,13 @@ node {
         }
     }
 
-    dir("${GOPATH}/src/github.com/unidoc/unidoc-examples") {
+    dir("${GOPATH}/src/github.com/unidoc/unipdf-examples") {
         stage('Build examples') {
             // Output environment variables (useful for debugging).
             sh("printenv")
 
-            // Pull unidoc-examples from connected branch, or master otherwise.
-            def examplesBranch = "master"
-            if (env.BRANCH_NAME.take(3) == "PR-") {
-                // Pull requests (PR) require separate handling.
-                if (env.CHANGE_TARGET.take(2) == "v3") {
-                    examplesBranch = "v3"
-                }
-            } else {
-                if (env.BRANCH_NAME.take(2) == "v3") {
-                    examplesBranch = "v3"
-                }
-                // Special cases.
-                switch("${env.BRANCH_NAME}") {
-                    case "v3-reduce-fonts-exports":
-                        examplesBranch = "v3-reduce-fonts-exports"
-                        break
-                }
-            }
+            // Pull unipdf-examples from connected branch, or master otherwise.
+            def examplesBranch = "v3"
 
             // Check if connected branch is defined explicitly.
             def safeName = env.BRANCH_NAME.replaceAll(/[\/\.]/, '')
@@ -109,22 +92,15 @@ node {
                 examplesBranch = readFile(fpath).trim()
             }
 
-            echo "Pulling unidoc-examples on branch ${examplesBranch}"
+            echo "Pulling unipdf-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
             
             // Dependencies for examples.
-            sh 'go get github.com/wcharczuk/go-chart'
-            sh 'CGO_ENABLED=1 go get github.com/miekg/pkcs11'
-            sh 'CGO_ENABLED=1 go get github.com/ThalesIgnite/crypto11'
-
-            // Build all examples.
-            // CGO_ENABLED=1 required for crypto11 dependency (one example).
-            sh 'find . -name "*.go" ! -name "*pkcs11*.go" -print0 | xargs -0 -n1 go build'
-            sh 'find . -name "*pkcs11*.go" -print0 | CGO_ENABLED=1 xargs -0 -n1 go build'
+            sh './build_examples.sh'
         }
 
         stage('Passthrough benchmark pdfdb_small') {
-            sh './pdf_passthrough_bench /home/jenkins/corpus/pdfdb_small/* | grep -v "Testing " | grep -v "copy of" | grep -v "To get " | grep -v " - pass"'
+            sh './bin/pdf_passthrough_bench /home/jenkins/corpus/pdfdb_small/* | grep -v "Testing " | grep -v "copy of" | grep -v "To get " | grep -v " - pass"'
         }
     }
 }
