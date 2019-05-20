@@ -546,7 +546,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Add the fonts of all chunks to the page resources.
 	var fonts [][]core.PdfObjectName
 
-	for _, line := range p.lines {
+	var flFontSize float64
+	for i, line := range p.lines {
 		var fontLine []core.PdfObjectName
 
 		for _, chunk := range line {
@@ -559,6 +560,11 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			fontLine = append(fontLine, fontName)
 			num++
+
+			// Calculate the maximum font size of the first line.
+			if i == 0 && chunk.Style.FontSize > flFontSize {
+				flFontSize = chunk.Style.FontSize
+			}
 		}
 
 		fonts = append(fonts, fontLine)
@@ -568,7 +574,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 
-	yPos := ctx.PageHeight - ctx.Y - defaultFontSize*p.lineHeight
+	yPos := ctx.PageHeight - ctx.Y - flFontSize*p.lineHeight
 	cc.Translate(ctx.X, yPos)
 
 	if p.angle != 0 {
