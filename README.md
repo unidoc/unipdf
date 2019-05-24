@@ -1,6 +1,6 @@
 # UniPDF - PDF for Go
 
-[UniDoc](http://unidoc.io)'s unipdf is a powerful PDF library for Go (golang) with capabilities for
+[UniDoc](http://unidoc.io)'s UniPDF is a powerful PDF library for Go (golang) with capabilities for
 creating and processing PDF files. The library is written and supported by 
 the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power
 many of the PDF services offered. 
@@ -21,37 +21,33 @@ All development will be under the unipdf repository.
 unipdf has a powerful set of features both for reading, processing and writing PDF.
 The following list describes some key features:
 
-- [x] Create PDF reports with easy interface
-- [x] [Invoice component for easy PDF invoice generation](https://unidoc.io/news/simple-invoices)
+- [x] [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go)
+- [x] [Create PDF invoices](https://unidoc.io/news/simple-invoices)
 - [x] Advanced table generation in the creator with subtable support
-- [x] Composite fonts supported and font handling has and is being completely revamped, including unicode support.
 - [x] Paragraph in creator handling multiple styles within the same paragraph
 - [x] Table of contents automatically generated
-- [x] PDF compression and optimization of outputs with several options 1) combining duplicates, 2) compressed object streams, 3) image points per inch threshold, 4) image quality.
 - [x] Text extraction significantly improved in quality and foundation in place for vectorized (position-based) text extraction (XY)
 - [x] Image extraction with coordinates
-- [x] Merge PDF pages
+- [x] [Merge PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_merge.go)
 - [x] Merge page contents
-- [x] Split PDF pages and change page order
-- [x] Rotate pages
-- [x] Extract text from PDF files
+- [x] [Split PDF pages and change page order](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_split.go)
+- [x] [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_rotate.go)
+- [x] [Extract text from PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_extract_text.go)
 - [x] Extract images
 - [x] Add images to pages
-- [x] Compress and optimize PDF output (v3)
-- [x] Draw watermark on PDF files
+- [x] [Compress and optimize PDF output](https://github.com/unidoc/unipdf-examples/blob/v3/compress/pdf_optimize.g)
+- [x] [Draw watermark on PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_watermark_image.go)
 - [x] Advanced page manipulation (blocks/templates)
 - [x] Load PDF templates and modify
-- [x] Flatten forms and generate appearance streams (v3)
-- [x] Fill out forms and FDF merging (v3)
-- [x] Unlock PDF files / remove password
-- [x] Protect PDF files with a password
-- [x] Digital signing validation and signing
-- [x] Encryption support refactored and AESv3 support added
+- [x] [Flatten forms and generate appearance streams](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_flatten.go)
+- [x] [Fill out forms and FDF merging](https://github.com/unidoc/unipdf-examples/tree/v3/forms)
+- [x] [FDF merge](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_fill_fdf_merge.go) and [form filling via JSON data](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_fill_json.go)
+- [x] [Form creation](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_add.go)
+- [x] [Unlock PDF files / remove password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_unlock.go)
+- [x] [Protect PDF files with a password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_protect.go)
+- [x] [Digital signing validation and signing](https://github.com/unidoc/unipdf-examples/tree/v3/signatures)
 - [x] CCITTFaxDecode decoding and encoding support
-- [x] FDF merge and form filling via JSON data
-- [x] Form field filling and form flattening with appearance generation
 - [x] Append mode
-- [x] Getting form field values and listing
 
 ## Installation
 With modules:
