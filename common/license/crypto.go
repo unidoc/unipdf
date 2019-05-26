@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/unidoc/unidoc/common"
+	_ "github.com/unidoc/unipdf/v3/common"
 )
 
 const (

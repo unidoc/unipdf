@@ -1,5 +1,5 @@
-UniDoc - PDF library for golang
-Copyright (C) 2016-2017 FoxyUtils ehf.
+UniDoc unipdf - PDF library for golang
+Copyright (C) 2016-2019 FoxyUtils ehf.
 
 This program provided by FoxyUtils ehf ("Company") is free software ("covered
 work"). You can redistribute it and/or modify it under the terms of the GNU
@@ -20,11 +20,11 @@ Section 5 of the License.
 
 You can be released from the requirements of the license by purchasing a
 commercial license. Buying such a license is mandatory as soon as you develop
-activities involving UniDoc without disclosing the source code of your own
+activities involving unipdf without disclosing the source code of your own
 applications under the AGPL license. These activities include offering services
 as an application service provider or providing an over-network based
 application programming interface (API), creating or manipulating documents for
-users in a web/server/cloud application, incorporating UniDoc into a closed
+users in a web/server/cloud application, incorporating unipdf into a closed
 source product.
 
 For more information, please contact the Company by emailing sales@unidoc.io.
