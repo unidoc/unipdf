@@ -532,11 +532,11 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 
 // AddPage adds a page to the PDF file. The new page should be an indirect object.
 func (w *PdfWriter) AddPage(page *PdfPage) error {
+	procPage(page)
 	obj := page.ToPdfObject()
 
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
-	procPage(page)
 
 	pageObj, ok := obj.(*core.PdfIndirectObject)
 	if !ok {
@@ -627,12 +627,11 @@ func procPage(p *PdfPage) {
 		return
 	}
 
-	// Add font as needed.
+	// Add font, if needed.
 	fontName := core.PdfObjectName("UF1")
-	if d, ok := core.GetDict(p.Resources.Font); ok && d.Get(fontName) == nil {
-		p.Resources.Font = core.MakeDict().Merge(d)
+	if !p.Resources.HasFontByName(fontName) {
+		p.Resources.SetFontByName(fontName, DefaultFont().ToPdfObject())
 	}
-	p.Resources.SetFontByName(fontName, DefaultFont().ToPdfObject())
 
 	var ops []string
 	ops = append(ops, "q")
