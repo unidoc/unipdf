@@ -226,6 +226,48 @@ func (p *StyledParagraph) Height() float64 {
 	return height
 }
 
+// getLineHeight returns both the capheight and the font size based height of
+// the line with the specified index.
+func (p *StyledParagraph) getLineHeight(idx int) (capHeight, height float64) {
+	if p.lines == nil || len(p.lines) == 0 {
+		p.wrapText()
+	}
+	if idx < 0 || idx > len(p.lines)-1 {
+		return 0, 0
+	}
+
+	line := p.lines[idx]
+	for _, chunk := range line {
+		descriptor, err := chunk.Style.Font.GetFontDescriptor()
+		if err != nil {
+			common.Log.Debug("Error: Unable to get font descriptor")
+		}
+
+		var fontCapHeight float64
+		if descriptor != nil {
+			if fontCapHeight, err = descriptor.GetCapHeight(); err != nil {
+				common.Log.Debug("ERROR: Unable to get font CapHeight: %v", err)
+			}
+		}
+		if int(fontCapHeight) <= 0 {
+			common.Log.Debug("WARN: CapHeight not available - setting to 1000")
+			fontCapHeight = 1000
+		}
+
+		h := fontCapHeight / 1000.0 * chunk.Style.FontSize * p.lineHeight
+		if h > capHeight {
+			capHeight = h
+		}
+
+		h = p.lineHeight * chunk.Style.FontSize
+		if h > height {
+			height = h
+		}
+	}
+
+	return capHeight, height
+}
+
 // getTextWidth calculates the text width as if all in one line (not taking
 // wrapping into account).
 func (p *StyledParagraph) getTextWidth() float64 {
