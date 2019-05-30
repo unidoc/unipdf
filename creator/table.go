@@ -516,8 +516,10 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		if cell.content != nil {
-			// content width.
-			cw := cell.content.Width()
+			cw := cell.content.Width()  // content width.
+			ch := cell.content.Height() // content height.
+			vertOffset := 0.0
+
 			switch t := cell.content.(type) {
 			case *Paragraph:
 				if t.enableWrap {
@@ -526,6 +528,26 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			case *StyledParagraph:
 				if t.enableWrap {
 					cw = t.getMaxLineWidth() / 1000.0
+				}
+
+				// Calculate the height of the paragraph.
+				lineCapHeight, lineHeight := t.getLineHeight(0)
+				if len(t.lines) == 1 {
+					ch = lineCapHeight
+				} else {
+					ch = ch - lineHeight + lineCapHeight
+				}
+
+				// Account for the top offset the paragraph adds.
+				vertOffset = lineCapHeight - t.defaultStyle.FontSize*t.lineHeight
+
+				switch cell.verticalAlignment {
+				case CellVerticalAlignmentTop:
+					// Add a bit of space from the top border of the cell.
+					vertOffset += lineCapHeight * 0.5
+				case CellVerticalAlignmentBottom:
+					// Add a bit of space from the bottom border of the cell.
+					vertOffset -= lineCapHeight * 0.5
 				}
 			case *Table:
 				cw = w
@@ -553,8 +575,9 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				}
 			}
 
+			ctx.Y += vertOffset
+
 			// Account for vertical alignment.
-			ch := cell.content.Height() // content height.
 			switch cell.verticalAlignment {
 			case CellVerticalAlignmentTop:
 				// Default: do nothing.
@@ -567,7 +590,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			case CellVerticalAlignmentBottom:
 				if h > ch {
 					ctx.Y = ctx.Y + h - ch
-					ctx.Height = ch
+					ctx.Height = h
 				}
 			}
 
@@ -575,6 +598,8 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			if err != nil {
 				common.Log.Debug("ERROR: %v", err)
 			}
+
+			ctx.Y -= vertOffset
 		}
 
 		ctx.Y += h

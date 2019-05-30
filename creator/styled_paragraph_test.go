@@ -798,3 +798,66 @@ func TestStyledLinkRotation(t *testing.T) {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestStyledParagraphTableVerticalAlignment(t *testing.T) {
+	c := New()
+
+	fontRegular := newStandard14Font(t, model.CourierName)
+
+	createTable := func(c *Creator, text string, align CellVerticalAlignment, fontSize float64) {
+		textStyle := c.NewTextStyle()
+		textStyle.Font = fontRegular
+		textStyle.FontSize = fontSize
+
+		table := c.NewTable(1)
+		table.SetMargins(0, 0, 5, 5)
+
+		cell := table.NewCell()
+		sp := c.NewStyledParagraph()
+		textChunk := sp.Append(text)
+		textChunk.Style = textStyle
+
+		cell.SetVerticalAlignment(align)
+		cell.SetContent(sp)
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+
+		if err := c.Draw(table); err != nil {
+			t.Fatalf("Error drawing: %v", err)
+		}
+	}
+
+	chunks := []string{
+		"TR",
+		"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt.",
+	}
+
+	alignments := []struct {
+		Label     string
+		Alignment CellVerticalAlignment
+	}{
+		{"Top alignment", CellVerticalAlignmentTop},
+		{"Middle alignment", CellVerticalAlignmentMiddle},
+		{"Bottom alignment", CellVerticalAlignmentBottom},
+	}
+
+	for _, chunk := range chunks {
+		for _, alignment := range alignments {
+			c.NewPage()
+
+			sp := c.NewStyledParagraph()
+			sp.Append(alignment.Label).Style.FontSize = 16
+			sp.SetMargins(0, 0, 0, 5)
+
+			if err := c.Draw(sp); err != nil {
+				t.Fatalf("Error drawing: %v", err)
+			}
+
+			for i := 4; i <= 20; i += 2 {
+				createTable(c, chunk, alignment.Alignment, float64(i))
+			}
+		}
+	}
+
+	// Write output file.
+	testWriteAndRender(t, c, "styled_paragraph_table_vertical_align.pdf")
+}
