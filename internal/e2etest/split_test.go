@@ -30,8 +30,8 @@ var (
 // knownHashes defines a list of known output hashes to ensure that the output is constant.
 // If there is a change in hash need to find out why and update only if the change is accepted.
 var knownHashes = map[string]string{
-	"bf7c9d5dabc7e7ec2fc0cf9db2d9c8e7aa456fca.pdf": "f7891d491fa9f20ed2975dd28961c205",
-	"371dce2c2720581a3eef3f123e5741dd3566ef87.pdf": "4a25934226b6b64e5d95d571260b1f01",
+	"bf7c9d5dabc7e7ec2fc0cf9db2d9c8e7aa456fca.pdf": "fdd638603c6f655babbc90358de66107",
+	"371dce2c2720581a3eef3f123e5741dd3566ef87.pdf": "4c5356ac623a96004d80315f24613fff",
 	"e815311526b50036db6e89c54af2b9626edecf30.pdf": "97dcfdde59a2f3a6eb105d0c31ebd3fb",
 	"3bf64014e0c9e4a56f1a9363f1b34fd707bd9fa0.pdf": "6f310c9fdd44d49766d3cc32d3053b89",
 	"004feecd47e2da4f2ed5cdbbf4791a77dd59ce20.pdf": "309a072a97d0566aa3f85edae504bb53",
