@@ -233,6 +233,7 @@ func (p *StyledParagraph) getLineHeight(idx int) (capHeight, height float64) {
 		p.wrapText()
 	}
 	if idx < 0 || idx > len(p.lines)-1 {
+		common.Log.Debug("ERROR: invalid paragraph line index %d. Returning 0, 0", idx)
 		return 0, 0
 	}
 
@@ -240,7 +241,7 @@ func (p *StyledParagraph) getLineHeight(idx int) (capHeight, height float64) {
 	for _, chunk := range line {
 		descriptor, err := chunk.Style.Font.GetFontDescriptor()
 		if err != nil {
-			common.Log.Debug("Error: Unable to get font descriptor")
+			common.Log.Debug("ERROR: Unable to get font descriptor")
 		}
 
 		var fontCapHeight float64
