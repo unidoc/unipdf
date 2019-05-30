@@ -859,8 +859,5 @@ func TestStyledParagraphTableVerticalAlignment(t *testing.T) {
 	}
 
 	// Write output file.
-	err := c.WriteToFile(tempFile("styled_paragraph_table_vertical_align.pdf"))
-	if err != nil {
-		t.Fatalf("Fail: %v\n", err)
-	}
+	testWriteAndRender(t, c, "styled_paragraph_table_vertical_align.pdf")
 }
