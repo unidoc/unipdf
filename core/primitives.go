@@ -605,13 +605,16 @@ func (array *PdfObjectArray) GetAsFloat64Slice() ([]float64, error) {
 }
 
 // Merge merges in key/values from another dictionary. Overwriting if has same keys.
-func (d *PdfObjectDictionary) Merge(another *PdfObjectDictionary) {
+// The mutated dictionary (d) is returned in order to allow method chaining.
+func (d *PdfObjectDictionary) Merge(another *PdfObjectDictionary) *PdfObjectDictionary {
 	if another != nil {
 		for _, key := range another.Keys() {
 			val := another.Get(key)
 			d.Set(key, val)
 		}
 	}
+
+	return d
 }
 
 // String returns a string describing `d`.
