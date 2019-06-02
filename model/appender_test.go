@@ -66,6 +66,8 @@ func TestAppenderNoop(t *testing.T) {
 	appender, err := model.NewPdfAppender(reader)
 	require.NoError(t, err)
 
+	model.SetPdfProducer("UniPDF")
+	model.SetPdfCreator("UniDoc UniPDF")
 	err = appender.WriteToFile(tempFile("appender_noop.pdf"))
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -123,7 +125,7 @@ func TestAppenderNoop(t *testing.T) {
 			3: core.XrefObject{ObjectNumber: 3, XType: 0, Offset: 178},
 			4: core.XrefObject{ObjectNumber: 4, XType: 0, Offset: 457},
 			5: core.XrefObject{ObjectNumber: 5, XType: 0, Offset: 740},
-			6: core.XrefObject{ObjectNumber: 6, XType: 0, Offset: 860},
+			6: core.XrefObject{ObjectNumber: 6, XType: 0, Offset: 802},
 		}
 		require.Equal(t, expected, xrefs.ObjectMap)
 	}
