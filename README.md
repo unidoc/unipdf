@@ -1,62 +1,60 @@
 # UniPDF - PDF for Go
 
-[UniDoc](http://unidoc.io)'s unipdf is a powerful PDF library for Go (golang) with capabilities for
-creating and processing PDF files. The library is written and supported by 
-the [FoxyUtils.com](https://foxyutils.com) website, where the library is used to power
-many of the PDF services offered. 
+[UniDoc](http://unidoc.io)'s UniPDF (formerly unidoc) is a PDF library for Go (golang) with capabilities for
+creating and reading, processing PDF files. The library is written and supported by 
+[FoxyUtils.com](https://foxyutils.com), where the library is used to power many of its services. 
 
 [![Build Status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
+[![GitHub (pre-)release](https://img.shields.io/github/release/unidoc/unipdf/all.svg)](https://github.com/unidoc/unipdf/releases)
 [![License: AGPL v3](https://img.shields.io/badge/License-Dual%20AGPL%20v3/Commercial-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/unidoc/unipdf)](https://goreportcard.com/report/github.com/unidoc/unipdf)
 [![GoDoc](https://godoc.org/github.com/unidoc/unipdf?status.svg)](https://godoc.org/github.com/unidoc/unipdf)
 
-## News
-- unidoc is being renamed to unipdf and will be maintained under https://github.com/unidoc/unipdf
-- The old repository will remain under https://github.com/unidoc/unidoc for backwards compatibility and will be read-only.
-All development will be under the unipdf repository.
-- The initial release of unipdf v3.0.0 will be compliant with Go modules from the start.
-
-
 ## Features
-unipdf has a powerful set of features both for reading, processing and writing PDF.
-The following list describes some key features:
 
-- [x] Create PDF reports with easy interface
-- [x] [Invoice component for easy PDF invoice generation](https://unidoc.io/news/simple-invoices)
-- [x] Advanced table generation in the creator with subtable support
-- [x] Composite fonts supported and font handling has and is being completely revamped, including unicode support.
-- [x] Paragraph in creator handling multiple styles within the same paragraph
-- [x] Table of contents automatically generated
-- [x] PDF compression and optimization of outputs with several options 1) combining duplicates, 2) compressed object streams, 3) image points per inch threshold, 4) image quality.
-- [x] Text extraction significantly improved in quality and foundation in place for vectorized (position-based) text extraction (XY)
-- [x] Image extraction with coordinates
-- [x] Merge PDF pages
-- [x] Merge page contents
-- [x] Split PDF pages and change page order
-- [x] Rotate pages
-- [x] Extract text from PDF files
-- [x] Extract images
-- [x] Add images to pages
-- [x] Compress and optimize PDF output (v3)
-- [x] Draw watermark on PDF files
-- [x] Advanced page manipulation (blocks/templates)
-- [x] Load PDF templates and modify
-- [x] Flatten forms and generate appearance streams (v3)
-- [x] Fill out forms and FDF merging (v3)
-- [x] Unlock PDF files / remove password
-- [x] Protect PDF files with a password
-- [x] Digital signing validation and signing
-- [x] Encryption support refactored and AESv3 support added
-- [x] CCITTFaxDecode decoding and encoding support
-- [x] FDF merge and form filling via JSON data
-- [x] Form field filling and form flattening with appearance generation
-- [x] Append mode
-- [x] Getting form field values and listing
+- [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go)
+- [Invoice creation](https://unidoc.io/news/simple-invoices)
+- Advanced table generation in the creator with subtable support
+- Paragraph in creator handling multiple styles within the same paragraph
+- [Merge PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_merge.go)
+- [Split PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_split.go) and change page order
+- [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_rotate.go)
+- [Extract text from PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_extract_text.go)
+- [Extract images](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_extract_images.go) with coordinates
+- [Images to PDF](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_images_to_pdf.go)
+- [Add images to pages](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_add_image_to_page.go)
+- [Compress and optimize PDF](https://github.com/unidoc/unipdf-examples/blob/v3/compress/pdf_optimize.go)
+- [Watermark PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_watermark_image.go)
+- Advanced page manipulation (blocks/templates)
+- Load PDF templates and modify
+- [Form creation](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_add.go)
+- [Fill and flatten forms](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_flatten.go)
+- [Fill out forms](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_fill_json.go) and [FDF merging](https://github.com/unidoc/unipdf-examples/blob/v3/forms/pdf_form_fill_fdf_merge.go)
+- [Unlock PDF files / remove password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_unlock.go)
+- [Protect PDF files with a password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_protect.go)
+- [Digital signing validation and signing](https://github.com/unidoc/unipdf-examples/tree/v3/signatures)
+- CCITTFaxDecode decoding and encoding support
+
+Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples
+as well as [documented examples](https://unidoc.io/examples) on our website.
+
+Contact us if you need any specific examples.
+
+## News
+- unidoc has been renamed to unipdf and is maintained under https://github.com/unidoc/unipdf
+- The old repository remains under https://github.com/unidoc/unidoc for backwards compatibility and will be read-only.
+All development is under the unipdf repository.
+- The initial release of unipdf v3.0.0 is compatible with Go modules from the start.
 
 ## Installation
 With modules:
 ~~~
 go get github.com/unidoc/unipdf/v3
+~~~
+
+With GOPATH:
+~~~
+go get github.com/unidoc/unipdf/...
 ~~~
 
 
@@ -70,13 +68,6 @@ Security.  We take security very seriously and we restrict access to github.com/
 
 The profits are invested back into making unipdf better. We want to make the best possible product and in order to do that we need the best people to contribute. A large fraction of the profits made goes back into developing unipdf.  That way we have been able to get many excellent people to work and contribute to unipdf that would not be able to contribute their work for free.
 
-
-## Examples
-
-Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples
-as well as [documented examples](https://unidoc.io/examples) on our website.
-
-Contact us if you need any specific examples.
 
 ## Contributing
 
