@@ -259,6 +259,10 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 // DecodeBytes decodes a slice of Flate encoded bytes and returns the result.
 func (enc *FlateEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Trace("FlateDecode bytes")
+	if len(encoded) == 0 {
+		common.Log.Debug("ERROR: empty Flate encoded buffer. Returning empty byte slice.")
+		return []byte{}, nil
+	}
 
 	bufReader := bytes.NewReader(encoded)
 	r, err := zlib.NewReader(bufReader)
