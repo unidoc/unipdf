@@ -17,6 +17,7 @@ import (
 
 // TestBitmap tests the bitmap methods and constructors.
 func TestBitmap(t *testing.T) {
+
 	t.Run("New", func(t *testing.T) {
 		// tests the creator of the bitmap
 		t.Run("SingleBytePerRow", func(t *testing.T) {
