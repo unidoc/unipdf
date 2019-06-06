@@ -6,12 +6,16 @@
 package arithmetic
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
+// TestArithmeticDecoder tests the arithmetic decoder with the Apendix A methods.
 func TestArithmeticDecoder(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -23,17 +27,10 @@ func TestArithmeticDecoder(t *testing.T) {
 		0xDF, 0xFF, 0xAC,
 	}
 
-	// var original []byte = []byte{
-	// 	0x00, 0x02, 0x00, 0x51, 0x00, 0x00, 0x00, 0xC0, 0x03, 0x52, 0x87,
-	// 	0x2A, 0xAA, 0xAA, 0xAA, 0xAA, 0x82, 0xC0, 0x20, 0x00, 0xFC, 0xD7,
-	// 	0x9E, 0xF6, 0xBF, 0x7F, 0xED, 0x90, 0x4F, 0x46, 0xA3, 0xBF,
-	// }
-
 	r := reader.New(encoded)
 
 	a, err := New(r)
 	if assert.NoError(t, err) {
-		// var b byte
 
 		cx := NewStats(512, 0)
 		for i := 0; i < 256; i++ {

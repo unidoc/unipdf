@@ -8,12 +8,13 @@ package huffman
 import (
 	"errors"
 	"fmt"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"math"
 	"strings"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// Node is the interface defined for all huffman tree nodes
+// Node is the interface defined for all huffman tree nodes.
 type Node interface {
 	Decode(r reader.StreamReader) (int64, error)
 	String() string
@@ -22,15 +23,15 @@ type Node interface {
 // OutOfBandNode represents an out of band node in a huffman tree.
 type OutOfBandNode struct{}
 
-// compile time check the OutOfBandNode
+// compile time check the OutOfBandNode.
 var _ Node = &OutOfBandNode{}
 
-// Decode decodes the out of band node by returning max int64 value
+// Decode decodes the out of band node by returning max int64 value.
 func (o *OutOfBandNode) Decode(r reader.StreamReader) (int64, error) {
 	return int64(math.MaxInt64), nil
 }
 
-// String implements the Stringer interface returns the max int binary value
+// String implements the Stringer interface returns the max int binary value.
 func (o *OutOfBandNode) String() string {
 	return fmt.Sprintf("%064b", int64(math.MaxInt64))
 }
@@ -46,10 +47,10 @@ type ValueNode struct {
 	isLowerRange bool
 }
 
-// compile time check the ValueNode
+// compile time check the ValueNode.
 var _ Node = &ValueNode{}
 
-// Decode decodes the provided Value node for the given StreamReader
+// Decode decodes the provided Value node for the given StreamReader.
 func (v *ValueNode) Decode(r reader.StreamReader) (int64, error) {
 	bits, err := r.ReadBits(byte(v.rangeLen))
 	if err != nil {
@@ -77,14 +78,14 @@ func newValueNode(c *Code) *ValueNode {
 }
 
 // InternalNode represents an internal node of a huffman tree. It contains two child nodes.
-// Implements Node interface
+// Implements Node interface.
 type InternalNode struct {
 	depth int
 	zero  Node
 	one   Node
 }
 
-// compile time check for the InternalNodefm
+// compile time check for the InternalNode.
 var _ Node = &InternalNode{}
 
 // Decode decodes the huffman Internal node for the provided StreamReader.
@@ -99,8 +100,7 @@ func (i *InternalNode) Decode(r reader.StreamReader) (int64, error) {
 	return i.one.Decode(r)
 }
 
-// String implements the Stringer interface
-// returns the internal node string representation
+// String implements the Stringer interface.
 func (i *InternalNode) String() string {
 	b := &strings.Builder{}
 

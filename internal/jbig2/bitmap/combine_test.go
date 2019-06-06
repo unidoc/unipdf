@@ -6,11 +6,13 @@
 package bitmap
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/common"
 	"image"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 // TestExtract tests the extraction of the image.Rectangle from the source bitmap

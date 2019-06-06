@@ -5,10 +5,10 @@
 
 package segments
 
-// Type defines the segment
+// Type defines the jbig2 segment type - see 7.3.
 type Type int
 
-// Enums defining the Segment types
+// Segment type enum definitions
 const (
 	TSymbolDictionary                         Type = 0
 	TIntermediateTextRegion                   Type = 4
@@ -34,7 +34,7 @@ const (
 	TBitmap                                   Type = 70
 )
 
-// String Type implements Stringer interface
+// String implements Stringer interface
 func (k Type) String() string {
 	switch k {
 	case TSymbolDictionary:
@@ -88,9 +88,7 @@ func (k Type) String() string {
 var emptySegment Segmenter
 
 var kindMap = map[Type]func() Segmenter{
-	TSymbolDictionary: func() Segmenter {
-		return &SymbolDictionary{}
-	},
+	TSymbolDictionary:                         func() Segmenter { return &SymbolDictionary{} },
 	TIntermediateTextRegion:                   func() Segmenter { return &TextRegion{} },
 	TImmediateTextRegion:                      func() Segmenter { return &TextRegion{} },
 	TImmediateLosslessTextRegion:              func() Segmenter { return &TextRegion{} },

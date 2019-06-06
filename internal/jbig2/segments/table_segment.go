@@ -7,11 +7,12 @@ package segments
 
 import (
 	"fmt"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// TableSegment is the model used for user defined Huffman Table Segment
+// TableSegment is the model used for user defined Huffman Table Segment - see 7.4.13 and appendix B..
 type TableSegment struct {
 	r reader.StreamReader
 
@@ -27,7 +28,8 @@ type TableSegment struct {
 	htHight int
 }
 
-var _ huffman.Tabler = &TableSegment{}
+// compile time check if the TableSegment implements huffman.BasicTabler
+var _ huffman.BasicTabler = &TableSegment{}
 
 func (t *TableSegment) parseHeader() (err error) {
 	var bit int
@@ -68,38 +70,45 @@ func (t *TableSegment) parseHeader() (err error) {
 	return
 }
 
-// Init initializes the TableSegment
+// Init initializes the table segment.
+// Implements Segmenter interface.
 func (t *TableSegment) Init(h *Header, r reader.StreamReader) error {
 	t.r = r
 	return t.parseHeader()
 }
 
-// HtPS returns the HtPs
+// HtPS returns the HtPs value.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) HtPS() int {
 	return t.htPS
 }
 
-// HtRS returns the table HtRs
+// HtRS returns the table HtRs value.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) HtRS() int {
 	return t.htRS
 }
 
-// HtLow returns the table HtLow
+// HtLow returns the table HtLow value.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) HtLow() int {
 	return t.htLow
 }
 
-// HtHigh return the table HtHigh
+// HtHigh return the table HtHigh value.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) HtHigh() int {
 	return t.htHight
 }
 
-// HtOOB returns the table HtoutOfBand value
+// HtOOB returns the table HtoutOfBand value.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) HtOOB() int {
 	return t.htOutOfBand
 }
 
-// StreamReader returns the table segment stream reader
+// StreamReader returns the table segment stream reader.
+// Implements huffman.BasicTabler interface.
 func (t *TableSegment) StreamReader() reader.StreamReader {
 	return t.r
 }

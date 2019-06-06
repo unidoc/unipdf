@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
 	goimage "image"
 	gocolor "image/color"
 	"image/jpeg"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
+	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
 
 // Stream encoding filter names.
@@ -1981,14 +1981,14 @@ const (
 	jbig2Globals = "JBIG2Globals"
 )
 
-// JBIG2Encoder implements JBIG2 encoder/decoder (dummy, for now)
-// FIXME: implement
+// JBIG2Encoder is the jbig2 document encoder (WIP) / decoder.
 type JBIG2Encoder struct {
 	// Globals are the JBIG2 global segments
 	Globals jbig2.Globals
 
 	// IsChocolateData defines if the data is encoded such that one means when the binary data '1' means black and '0' white
 	// otherwise the data is called vanilla
+	// Naming convention taken from: 'https://en.wikipedia.org/wiki/Binary_image#Interpretation'
 	IsChocolateData bool
 }
 
@@ -2001,39 +2001,40 @@ func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 	arr, ok := decode.(*PdfObjectArray)
 	if !ok {
 		common.Log.Debug("JBIG2Encoder - Decode is not an array. %T", decode)
-	} else {
-		// the array should have two int or floats
-		fsl, err := arr.GetAsFloat64Slice()
+		return
+	}
+
+	// the array should have two int or floats
+	fsl, err := arr.GetAsFloat64Slice()
+	if err != nil {
+		iArr, err := arr.ToIntegerArray()
 		if err != nil {
-			iArr, err := arr.ToIntegerArray()
-			if err != nil {
-				common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
-			} else {
-				if iArr[0] == 1 && iArr[1] == 0 {
-					enc.IsChocolateData = true
-				} else if iArr[1] == 0 && iArr[0] == 1 {
-					enc.IsChocolateData = false
-				} else {
-					common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
-				}
-			}
+			common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
 		} else {
-			if len(fsl) == 2 {
-				if fsl[0] == 1.0 && fsl[1] == 0.0 {
-					enc.IsChocolateData = true
-				} else if fsl[0] == 0.0 && fsl[1] == 1.0 {
-					enc.IsChocolateData = false
-				} else {
-					common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
-				}
+			if iArr[0] == 1 && iArr[1] == 0 {
+				enc.IsChocolateData = true
+			} else if iArr[1] == 0 && iArr[0] == 1 {
+				enc.IsChocolateData = false
+			} else {
+				common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
+			}
+		}
+	} else {
+		if len(fsl) == 2 {
+			if fsl[0] == 1.0 && fsl[1] == 0.0 {
+				enc.IsChocolateData = true
+			} else if fsl[0] == 0.0 && fsl[1] == 1.0 {
+				enc.IsChocolateData = false
+			} else {
+				common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
 			}
 		}
 	}
+
 }
 
 func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
 	encoder := NewJBIG2Encoder()
-
 	encDict := streamObj.PdfObjectDictionary
 	if encDict == nil {
 		// No encoding dictionary.

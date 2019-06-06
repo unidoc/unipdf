@@ -6,13 +6,17 @@
 package segments
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
+// TestSymbolDictionaryDecode tests the symbol dictionary decode process.
 func TestSymbolDictionaryDecode(t *testing.T) {
 	setLogger()
 
@@ -226,60 +230,6 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			}
 		}
 
-		// t.Run("18th", func(t *testing.T) {
-		// 	eighteenH, err := NewHeader(d, r, 33, OSequential)
-		// 	require.NoError(t, err)
-
-		// 	assert.Equal(t, TSymbolDictionary, eighteenH.Type)
-		// 	assert.Equal(t, false, eighteenH.PageAssociationFieldSize)
-		// 	assert.Equal(t, false, eighteenH.RetainFlag)
-		// 	if assert.Equal(t, 1, len(eighteenH.RTSegments)) {
-		// 		// assert.Equal(t, uint32(16), eighteenH.RTSegments[0].SegmentNumber)
-		// 	}
-		// 	assert.Equal(t, uint64(32), eighteenH.SegmentDataLength)
-
-		// 	seg, err := eighteenH.GetSegmentData()
-		// 	require.NoError(t, err)
-
-		// 	eighteenSD, ok := seg.(*SymbolDictionary)
-		// 	require.True(t, ok)
-
-		// 	assert.True(t, eighteenSD.useRefinementAggregation)
-		// 	assert.Equal(t, int8(2), eighteenSD.sdTemplate)
-		// 	assert.False(t, eighteenSD.isCodingContextUsed)
-		// 	assert.False(t, eighteenSD.isCodingContextRetained)
-
-		// 	if assert.Len(t, eighteenSD.sdATX, 1) {
-		// 		assert.Equal(t, eighteenSD.sdATX[0], int8(2))
-
-		// 	}
-		// 	if assert.Len(t, eighteenSD.sdATY, 1) {
-		// 		assert.Equal(t, eighteenSD.sdATY[0], int8(-1))
-		// 	}
-
-		// 	if assert.Len(t, eighteenSD.sdrATX, 2) {
-		// 		assert.Equal(t, eighteenSD.sdrATX[0], int8(-1))
-		// 		assert.Equal(t, eighteenSD.sdrATX[1], int8(-1))
-
-		// 	}
-		// 	if assert.Len(t, eighteenSD.sdrATY, 2) {
-		// 		assert.Equal(t, eighteenSD.sdrATY[0], int8(-1))
-		// 		assert.Equal(t, eighteenSD.sdrATY[1], int8(-1))
-		// 	}
-
-		// 	assert.Equal(t, 3, eighteenSD.amountOfExportedSymbols)
-		// 	assert.Equal(t, 2, eighteenSD.amountOfNewSymbols)
-
-		// 	dict, err := eighteenSD.GetDictionary()
-		// 	require.NoError(t, err)
-
-		// 	if assert.NotEmpty(t, dict) {
-		// 		for _, b := range dict {
-		// 			t.Logf("Bitmap: %s", b.String())
-		// 		}
-		// 	}
-
-		// })
 	})
 
 }

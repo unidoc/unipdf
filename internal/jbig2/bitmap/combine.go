@@ -6,30 +6,14 @@
 package bitmap
 
 import (
-	"github.com/unidoc/unipdf/v3/common"
 	"image"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
-// CombineBytes combines the provided bytes with respect to the CombinationOperator
+// CombineBytes combines the provided bytes with respect to the CombinationOperator.
 func CombineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 	return combineBytes(oldByte, newByte, op)
-}
-
-func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
-	switch op {
-	case CmbOpOr:
-		return newByte | oldByte
-	case CmbOpAnd:
-		return newByte & oldByte
-	case CmbOpXor:
-		return newByte ^ oldByte
-	case CmbOpXNor:
-		return ^(newByte ^ oldByte)
-	case CmbOpNot:
-		return ^(newByte)
-	default:
-		return newByte
-	}
 }
 
 // Extract extracts the rectangle of provided size from the source 'src' bitmap
@@ -46,8 +30,6 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	srcLineStartIdx := src.GetByteIndex(roi.Min.X, roi.Min.Y)
 	srcLineEndIdx := src.GetByteIndex(roi.Max.X-1, roi.Min.Y)
 
-	common.Log.Debug("SrcLineStartIdx: %d", srcLineStartIdx)
-	common.Log.Debug("SrcLineEndIdx: %d", srcLineEndIdx)
 	usePadding := dst.RowStride == srcLineEndIdx+1-srcLineStartIdx
 
 	for y := roi.Min.Y; y < roi.Max.Y; y++ {
@@ -62,7 +44,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 			}
 
 			pixels <<= uint(upShift)
-			common.Log.Debug("Pixels Byte: %08b", pixels)
+
 			err = dst.SetByte(dstIdx, unpad(padding, pixels))
 			if err != nil {
 				return nil, err
@@ -76,8 +58,6 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 					return nil, err
 				}
 				srcIdx++
-
-				common.Log.Debug("Value Byte: %08b", value)
 
 				if x == srcLineEndIdx && usePadding {
 					value = unpad(padding, value)
@@ -101,6 +81,23 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	}
 
 	return dst, nil
+}
+
+func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
+	switch op {
+	case CmbOpOr:
+		return newByte | oldByte
+	case CmbOpAnd:
+		return newByte & oldByte
+	case CmbOpXor:
+		return newByte ^ oldByte
+	case CmbOpXNor:
+		return ^(newByte ^ oldByte)
+	case CmbOpNot:
+		return ^(newByte)
+	default:
+		return newByte
+	}
 }
 
 func copyLine(

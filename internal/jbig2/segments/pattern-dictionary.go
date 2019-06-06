@@ -7,13 +7,15 @@ package segments
 
 import (
 	"errors"
+	"image"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"image"
 )
 
-// PatternDictionary is the jbig2 model for the pattern dictionary segment
+// PatternDictionary is the jbig2 model for the pattern dictionary segment - 7.4.4.
 type PatternDictionary struct {
 	r reader.StreamReader
 
@@ -41,7 +43,7 @@ type PatternDictionary struct {
 	GrayMax int
 }
 
-// GetDictionary gets the PatternDictionary segment Dictionary bitmaps
+// GetDictionary gets the PatternDictionary segment Dictionary bitmaps.
 func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	if p.Patterns != nil {
 		return p.Patterns, nil
@@ -51,8 +53,6 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	}
 
 	genericRegion := NewGenericRegion(p.r)
-	// common.Log.Debug("GrayMax: %d", p.GrayMax)
-	// common.Log.Debug("GrayMax+1 * hdpWidth: %v", (p.GrayMax+1)*int(p.HdpWidth))
 	genericRegion.setParametersMMR(p.IsMMREncoded, p.DataOffset, p.DataLength, int(p.HdpHeight), (p.GrayMax+1)*int(p.HdpWidth), p.HDTemplate, false, false, p.GBAtX, p.GBAtY)
 
 	collectiveBitmap, err := genericRegion.GetRegionBitmap()
@@ -67,10 +67,54 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	return p.Patterns, nil
 }
 
-// Init initializes the PatternDictionary segment
+// Init initializes the pattern dictionary segment.
+// Implements Segmenter interface.
 func (p *PatternDictionary) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
 	return p.parseHeader()
+}
+
+func (p *PatternDictionary) checkInput() error {
+	if p.HdpHeight < 1 || p.HdpWidth < 1 {
+		return errors.New("invalid Header Value: Width/Height must be greater than zero")
+	}
+	if p.IsMMREncoded {
+		if p.HDTemplate != 0 {
+			common.Log.Debug("variable HDTemplate should not contain the value 0")
+		}
+	}
+	return nil
+}
+
+func (p *PatternDictionary) computeSegmentDataStructure() error {
+	p.DataOffset = p.r.StreamPosition()
+	p.DataHeaderLength = p.DataOffset - p.DataHeaderOffset
+	p.DataLength = int64(p.r.Length()) - p.DataHeaderLength
+	return nil
+}
+func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) error {
+	// 3)
+	var gray int
+	patterns := make([]*bitmap.Bitmap, p.GrayMax+1)
+
+	// 4
+	for gray <= p.GrayMax {
+
+		// 4 a)
+		x0 := int(p.HdpWidth) * gray
+		roi := image.Rect(x0, 0, x0+int(p.HdpWidth), int(p.HdpHeight))
+		patternBitmap, err := bitmap.Extract(roi, collectiveBitmap)
+		if err != nil {
+			return err
+		}
+		patterns[gray] = patternBitmap
+
+		// 4 b)
+		gray++
+	}
+
+	p.Patterns = patterns
+	return nil
 }
 
 func (p *PatternDictionary) parseHeader() error {
@@ -130,14 +174,12 @@ func (p *PatternDictionary) readIsMMREncoded() error {
 }
 
 func (p *PatternDictionary) readPatternWidthAndHeight() error {
-	common.Log.Debug("Reading Pattern Width and Height")
 	temp, err := p.r.ReadByte()
 	if err != nil {
 		return err
 	}
 	p.HdpWidth = temp
 
-	common.Log.Debug("Stream pos: %v", p.r.StreamPosition())
 	temp, err = p.r.ReadByte()
 	if err != nil {
 		return err
@@ -151,7 +193,7 @@ func (p *PatternDictionary) readGrayMax() error {
 	if err != nil {
 		return err
 	}
-	common.Log.Debug("GrayMax: %d", temp)
+
 	p.GrayMax = int(temp & 0xffffffff)
 	return nil
 }
@@ -176,50 +218,4 @@ func (p *PatternDictionary) setGbAtPixels() {
 		p.GBAtX = []int8{-int8(p.HdpWidth)}
 		p.GBAtY = []int8{0}
 	}
-}
-
-func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) error {
-	// 3)
-	var gray int
-	patterns := make([]*bitmap.Bitmap, p.GrayMax+1)
-	common.Log.Debug("GrayMax: %d", p.GrayMax)
-
-	// 4
-	for gray <= p.GrayMax {
-
-		// 4 a)
-		x0 := int(p.HdpWidth) * gray
-		roi := image.Rect(x0, 0, x0+int(p.HdpWidth), int(p.HdpHeight))
-		patternBitmap, err := bitmap.Extract(roi, collectiveBitmap)
-		if err != nil {
-			return err
-		}
-		patterns[gray] = patternBitmap
-
-		// 4 b)
-		gray++
-	}
-
-	p.Patterns = patterns
-	return nil
-}
-
-func (p *PatternDictionary) computeSegmentDataStructure() error {
-	p.DataOffset = p.r.StreamPosition()
-	p.DataHeaderLength = p.DataOffset - p.DataHeaderOffset
-	p.DataLength = int64(p.r.Length()) - p.DataHeaderLength
-	common.Log.Debug("DataOffset: %d, DataHeaderLength: %d, DataLength: %d", p.DataOffset, p.DataHeaderLength, p.DataLength)
-	return nil
-}
-
-func (p *PatternDictionary) checkInput() error {
-	if p.HdpHeight < 1 || p.HdpWidth < 1 {
-		return errors.New("Invalid Header Value: Width/Height must be greater than zero")
-	}
-	if p.IsMMREncoded {
-		if p.HDTemplate != 0 {
-			common.Log.Info("HdTemplate should not contain the value 0")
-		}
-	}
-	return nil
 }

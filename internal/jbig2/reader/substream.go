@@ -7,14 +7,19 @@ package reader
 
 import (
 	"errors"
-	"github.com/unidoc/unipdf/v3/common"
 	"io"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
-// SubstreamReader is the wrapper over the Reader
+// SubstreamReader is the wrapper over the Reader's parts that is allowed only to
+// operate on the selected data space.
+// Implements StreamReader.
 type SubstreamReader struct {
+	// stream position
 	streamPos uint64
 
+	// wrapped stream reader
 	wrapped StreamReader
 
 	// The position in the wrapped stream at which the window starts. Offset is an absolute value.
@@ -42,49 +47,53 @@ type SubstreamReader struct {
 	markBits byte
 }
 
-// NewSubstreamReader
+// NewSubstreamReader creates new SubStreamReader over provided wrapped StreamReader 'r'
+// with defined offset and length.
 func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader, error) {
 	if r == nil {
 		return nil, errors.New("Root reader is nil")
 	}
 	common.Log.Debug("New substream at offset: %d with length: %d", offset, length)
 	s := &SubstreamReader{
-
 		wrapped: r,
 		offset:  offset,
 		length:  length,
 		buffer:  make([]byte, length),
 	}
-
-	// if r.StreamPosition() != int64(offset) {
-
-	// 	// seek if the offset is not at that initial position
-	// 	n, err := r.Seek(int64(offset), io.SeekStart)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	common.Log.Debug("Seeked the root reader to offset: %d", n)
-	// }
-
-	// common.Log.Debug("SubstreamReader offset: %d. length: %d. Reader.offset: %d", offset, length, r.r)
 	return s, nil
 }
 
+// Align resets the bits position of the given reader.
+// It returns how many bits left were skipped.
+func (s *SubstreamReader) Align() (skipped byte) {
+	skipped = s.bits
+	s.bits = 0
+	return
+}
+
+// BitPosition gets the current bit position.
 func (s *SubstreamReader) BitPosition() int {
 	return int(s.bits)
 }
 
-func (s *SubstreamReader) ReadByte() (byte, error) {
-	if s.bits == 0 {
-		return s.readBufferByte()
-	}
-	return s.readUnalignedByte()
+// Length returns the length of the total data used by the reader.
+func (s *SubstreamReader) Length() uint64 {
+	return s.length
 }
 
-// Read reads the substreamReader reads
-func (s *SubstreamReader) Read(b []byte) (n int, err error) {
+// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
+func (s *SubstreamReader) Mark() {
+	s.mark = s.streamPos
+	s.markBits = s.bits
+}
 
-	// if the stream position is
+// Offset returns current SubstreamReader offset
+func (s *SubstreamReader) Offset() uint64 {
+	return s.offset
+}
+
+// Read reads the bytes of the provided data length and stores them inside the data slice.
+func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 	if s.streamPos >= s.length {
 		common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
@@ -102,11 +111,9 @@ func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 	return
 }
 
-func (s *SubstreamReader) Length() uint64 {
-	return s.length
-}
-
-// ReadBit reads the next binary value from the current cache
+// ReadBit reads the next binary value from the current cache.
+// Equivalent of ReadBool method but returns an integer.
+// Implements StreamReader interface.
 func (s *SubstreamReader) ReadBit() (b int, err error) {
 	var bit bool
 	bit, err = s.readBool()
@@ -122,10 +129,7 @@ func (s *SubstreamReader) ReadBit() (b int, err error) {
 	return
 }
 
-func (s *SubstreamReader) ReadBool() (bool, error) {
-	return s.readBool()
-}
-
+// ReadBits reads the bits of size 'n' from the reader.
 func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
 	// common.Log.Debug("Bit position before reading bits n: %d,  %d", n, s.bits)
 	// defer func() {
@@ -170,24 +174,19 @@ func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
 
 	s.bits = 0
 	return uint64(s.cache), nil
-
 }
 
-func (s *SubstreamReader) Align() (skipped byte) {
-	skipped = s.bits
-	s.bits = 0
-	return
+// ReadBool reads the next binary value from the current cache
+func (s *SubstreamReader) ReadBool() (bool, error) {
+	return s.readBool()
 }
 
-// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
-func (s *SubstreamReader) Mark() {
-	s.mark = s.streamPos
-	s.markBits = s.bits
-}
-
-// Offset returns current SubstreamReader offset
-func (s *SubstreamReader) Offset() uint64 {
-	return s.offset
+// ReadByte implements io.ByteReader.
+func (s *SubstreamReader) ReadByte() (byte, error) {
+	if s.bits == 0 {
+		return s.readBufferByte()
+	}
+	return s.readUnalignedByte()
 }
 
 // Reset returns the stream pointer to its previous position, including the bit offset,
@@ -197,12 +196,7 @@ func (s *SubstreamReader) Reset() {
 	s.bits = s.markBits
 }
 
-// StreamPosition gets the stream position of the substream reader
-func (s *SubstreamReader) StreamPosition() int64 {
-	return int64(s.streamPos)
-}
-
-// Seek implements the io.Seeker interface
+// Seek implements the io.Seeker interface.
 func (s *SubstreamReader) Seek(offset int64, whence int) (int64, error) {
 
 	switch whence {
@@ -222,6 +216,11 @@ func (s *SubstreamReader) Seek(offset int64, whence int) (int64, error) {
 	s.bits = 0
 
 	return int64(s.streamPos), nil
+}
+
+// StreamPosition gets the stream position of the substream reader.
+func (s *SubstreamReader) StreamPosition() int64 {
+	return int64(s.streamPos)
 }
 
 func (s *SubstreamReader) fillBuffer() error {

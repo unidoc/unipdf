@@ -7,6 +7,7 @@ package segments
 
 import (
 	"errors"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 )
 

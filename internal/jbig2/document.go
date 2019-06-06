@@ -3,56 +3,62 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+// Package jbig2 provides the jbig2 standard image Encoder and Decoder.
+// All the comment references to the 'ISO/IEC 14992 INFORMATION TECHNOLOGY - CODED REPRESENTATION OF
+// PICTURE AND AUDIO INFORMATION - LOSSY/LOSSLESS CODING OF BI-LEVEL IMAGES
+// JBIG commitee 1999 July 16' document. The document is available and can be downloaded
+// from: 'https://github.com/agl/jbig2enc/blob/master/fcd14492.pdf'
 package jbig2
 
 import (
 	"errors"
 	"fmt"
+	"io"
+	"runtime/debug"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
-	"io"
-	"runtime/debug"
 )
 
 var (
-	/** ID string in file header, see ISO/IEC 14492:2001, D.4.1 */
+	/** ID string in file header, see D.4.1 */
 	fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 )
 
-// Document is the structure of jbig2 document with it's pages  and global segments
+// Document is the structure of jbig2 document with it's pages and global segments.
 type Document struct {
-	// Pages contains all pages of this document
+
+	// Pages contains all pages of this document.
 	Pages map[int]*Page
 
-	// AmountOfPagesUnknown defines if the ammount of the pages is knownw
+	// AmountOfPagesUnknown defines if the ammount of the pages is known.
 	AmountOfPagesUnknown bool
 
-	// AmountOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if
-	// AmountOfPagesUnknown is true
+	// AmountOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if AmountOfPagesUnknown is true.
 	AmountOfPages uint32
 
-	// GBUseExtTemplate defines wether extended Template is used
+	// GBUseExtTemplate defines wether extended Template is used.
 	GBUseExtTemplate bool
 
-	// SubInputStream is the source data stream wrapped into a SubInputStream
+	// SubInputStream is the source data stream wrapped into a SubInputStream.
 	InputStream *reader.Reader
 
-	// GlobalSegments contains all segments that aren't associated with a page
+	// GlobalSegments contains all segments that aren't associated with a page.
 	GlobalSegments Globals
 
-	// OrganisationType
-	OrgainsationType uint8
+	// OrganisationType is the document segment organization.
+	OrganizationType segments.OrganizationType
 
 	fileHeaderLength uint8
 }
 
-// NewDocument creates new jbig2.Document for the provided reader
+// NewDocument creates new jbig2.Document for the provided reader.
 func NewDocument(data []byte) (*Document, error) {
 	return NewDocumentWithGlobals(data, nil)
 }
 
-// NewDocumentWithGlobals creates new jbig2.Document
+// NewDocumentWithGlobals creates new jbig2.Document.
 func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err error) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -67,7 +73,7 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err erro
 	d = &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          reader.New(data),
-		OrgainsationType:     segments.OSequential,
+		OrganizationType:     segments.OSequential,
 		AmountOfPagesUnknown: true,
 		GlobalSegments:       globals,
 		fileHeaderLength:     9,
@@ -85,7 +91,7 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err erro
 	return
 }
 
-// GetGlobalSegment gets the global segment
+// GetGlobalSegment gets the global segment header.
 func (d *Document) GetGlobalSegment(i int) *segments.Header {
 	if d.GlobalSegments == nil {
 		common.Log.Debug("Trying to get Global segment from nil Globals")
@@ -94,8 +100,8 @@ func (d *Document) GetGlobalSegment(i int) *segments.Header {
 	return d.GlobalSegments[i]
 }
 
-// MapData maps the data and stores all segments
 func (d *Document) mapData() error {
+
 	// Get the header list
 	var segmentHeaders []*segments.Header
 
@@ -124,25 +130,25 @@ func (d *Document) mapData() error {
 		reachedEOF bool
 	)
 
-	// type 51 is
+	// type 51 is the EndOfFile segment kind
 	for kind != 51 && !reachedEOF {
-
 		segmentNo++
 
 		// get new segment
-		segment, err := segments.NewHeader(d, d.InputStream, offset, d.OrgainsationType)
+		segment, err := segments.NewHeader(d, d.InputStream, offset, d.OrganizationType)
 		if err != nil {
 			return err
 		}
 
 		common.Log.Debug("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
+
 		kind = segment.Type
 		if kind != segments.TEndOfFile {
 			if segment.PageAssociation != 0 {
 				page = d.Pages[segment.PageAssociation]
 
 				if page == nil {
-					page = NewPage(d, segment.PageAssociation)
+					page = newPage(d, segment.PageAssociation)
 					d.Pages[segment.PageAssociation] = page
 				}
 
@@ -156,7 +162,7 @@ func (d *Document) mapData() error {
 
 		offset = d.InputStream.StreamPosition()
 
-		if d.OrgainsationType == segments.OSequential {
+		if d.OrganizationType == segments.OSequential {
 			offset += int64(segment.SegmentDataLength)
 		}
 
@@ -194,7 +200,7 @@ func (d *Document) isFileHeaderPresent() (bool, error) {
 
 func (d *Document) determineRandomDataOffsets(segmentHeaders []*segments.Header, offset uint64) {
 
-	if d.OrgainsationType == segments.ORandom {
+	if d.OrganizationType == segments.ORandom {
 
 		for _, s := range segmentHeaders {
 			s.SegmentDataStartOffset = offset
@@ -206,6 +212,7 @@ func (d *Document) determineRandomDataOffsets(segmentHeaders []*segments.Header,
 // parseFileHeader - this method reads the stream and sets variables for information about
 // organization type and length etc.
 func (d *Document) parseFileHeader() error {
+
 	// D.4.1 ID string read will be skipped
 	_, err := d.InputStream.Seek(8, io.SeekStart)
 	if err != nil {
@@ -243,7 +250,7 @@ func (d *Document) parseFileHeader() error {
 	if err != nil {
 		return err
 	}
-	d.OrgainsationType = uint8(b)
+	d.OrganizationType = segments.OrganizationType(b)
 
 	// D.4.3 Number of pages
 	if !d.AmountOfPagesUnknown {
@@ -257,7 +264,7 @@ func (d *Document) parseFileHeader() error {
 	return nil
 }
 
-// GetPage gets the gage for the provided 'pageNumber'
+// GetPage gets the page for the provided 'pageNumber'.
 func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	if pageNumber < 0 {
 		common.Log.Debug("JBIG2 Page - GetPage: %d. Page cannot be lower than 0. %s", pageNumber, debug.Stack())
@@ -278,7 +285,7 @@ func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 	return p, nil
 }
 
-// GetAmountOfPages gets the amount of Pages
+// GetAmountOfPages gets the amount of Pages in the given document.
 func (d *Document) GetAmountOfPages() (uint32, error) {
 	if d.AmountOfPagesUnknown || d.AmountOfPages == 0 {
 		if len(d.Pages) == 0 {

@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-// TestDocument tests the document
+// TestDocument tests the jbig2.Document decoding.
 func TestDocument(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -85,7 +85,7 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint32(3), d.AmountOfPages)
-		assert.Equal(t, segments.OSequential, d.OrgainsationType)
+		assert.Equal(t, segments.OSequential, d.OrganizationType)
 		assert.Equal(t, false, d.GBUseExtTemplate)
 
 		p1 := d.Pages[1]
@@ -232,7 +232,7 @@ func TestDocument(t *testing.T) {
 			patterns, err := h.GetPatterns()
 			require.NoError(t, err)
 
-			expected := GetPatternsFirst(t)
+			expected := getPatternsFirst(t)
 			if assert.Equal(t, len(expected), len(patterns)) {
 				for i, p := range patterns {
 					assert.True(t, expected[i].Equals(p))
@@ -585,7 +585,7 @@ func getFrame(t *testing.T) *bitmap.Bitmap {
 	return expected
 }
 
-func GetPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
+func getPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
 	t.Helper()
 
 	for i := 0; i < 16; i++ {
@@ -697,26 +697,3 @@ func checkPatternDictionary(t *testing.T, dict []*bitmap.Bitmap) {
 		assert.True(t, toCompare.Equals(s), fmt.Sprintf("i: %d, %v, %v", i, s.String(), toCompare.String()))
 	}
 }
-
-// func firstHalftoneBitmap(t *testing.T) *bitmap.Bitmap {
-// 	t.Helper()
-// 	frame := getFrame(t)
-// 	patterns := GetPatternsFirst(t)
-
-// 	var minX, maxX int = 3, (frame.Width - 1) - 2
-// 	var minY = 3
-
-// 	op := bitmap.CmbOpOr
-
-// 	x, y := minX, minY
-// 	for _, p := range patterns {
-// 		require.NoError(t, bitmap.Blit(p, frame, x, y, op))
-// 		if x+p.Width > maxX {
-// 			x = minX
-// 			y += p.Height
-// 		} else {
-// 			x += p.Width
-// 		}
-// 	}
-// 	return frame
-// }

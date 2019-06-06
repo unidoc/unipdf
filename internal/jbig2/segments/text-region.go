@@ -8,16 +8,18 @@ package segments
 import (
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"math"
-	"strings"
 )
 
-// TextRegion is the model for the JBIG2 Text Region Segment
+// TextRegion is the model for the jbig2 text region segment - see 7.4.1.
 type TextRegion struct {
 	r reader.StreamReader
 
@@ -80,26 +82,24 @@ type TextRegion struct {
 	symbolCodeTable  *huffman.FixedSizeTable
 	Header           *Header
 
-	fsTable    huffman.HuffmanTabler
-	dsTable    huffman.HuffmanTabler
-	table      huffman.HuffmanTabler
-	rdwTable   huffman.HuffmanTabler
-	rdhTable   huffman.HuffmanTabler
-	rdxTable   huffman.HuffmanTabler
-	rdyTable   huffman.HuffmanTabler
-	rSizeTable huffman.HuffmanTabler
+	fsTable    huffman.Tabler
+	dsTable    huffman.Tabler
+	table      huffman.Tabler
+	rdwTable   huffman.Tabler
+	rdhTable   huffman.Tabler
+	rdxTable   huffman.Tabler
+	rdyTable   huffman.Tabler
+	rSizeTable huffman.Tabler
 }
 
-func newTextRegion(r reader.StreamReader, h *Header) *TextRegion {
-	t := &TextRegion{
-		r:          r,
-		Header:     h,
-		regionInfo: NewRegionSegment(r),
-	}
-	return t
-}
+// compile time checks for the TextRegion interfaces implementation
+var (
+	_ Regioner  = &TextRegion{}
+	_ Segmenter = &TextRegion{}
+)
 
-// GetRegionBitmap gets the TextRegion bitmap
+// GetRegionBitmap gets the TextRegion bitmap.
+// Implements Regioner interface.
 func (t *TextRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	if t.regionBitmap != nil {
 		return t.regionBitmap, nil
@@ -122,7 +122,14 @@ func (t *TextRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	return t.regionBitmap, nil
 }
 
-// Init initializes the text region
+// GetRegionInfo gets the text regions region information.
+// Implements Regioner interface.
+func (t *TextRegion) GetRegionInfo() *RegionSegment {
+	return t.regionInfo
+}
+
+// Init initializes the text region segment from the provided stream.
+// Implements Segmenter interface.
 func (t *TextRegion) Init(header *Header, r reader.StreamReader) error {
 	t.Header = header
 	t.r = r
@@ -130,273 +137,83 @@ func (t *TextRegion) Init(header *Header, r reader.StreamReader) error {
 	return t.parseHeader()
 }
 
-// GetRegionInfo gets the TextRegion RegionSegment
-func (t *TextRegion) GetRegionInfo() *RegionSegment {
-	return t.regionInfo
-}
+// String implements the Stringer interface.
+func (t *TextRegion) String() string {
+	sb := &strings.Builder{}
 
-func (t *TextRegion) parseHeader() (err error) {
-	common.Log.Debug("[TEXT REGION][PARSE-HEADER] begins...")
-	defer func() {
-		if err != nil {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] failed. %v", err)
-		} else {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] finished.")
-		}
-	}()
-	if err = t.regionInfo.parseHeader(); err != nil {
-		return
-	}
-
-	if err = t.readRegionFlags(); err != nil {
-		return
-	}
-
+	sb.WriteString("\n[TEXT REGION]\n")
+	sb.WriteString(t.regionInfo.String() + "\n")
+	sb.WriteString(fmt.Sprintf("\t- sbrTemplate: %v\n", t.sbrTemplate))
+	sb.WriteString(fmt.Sprintf("\t- sbdsOffset: %v\n", t.sbdsOffset))
+	sb.WriteString(fmt.Sprintf("\t- defaultPixel: %v\n", t.defaultPixel))
+	sb.WriteString(fmt.Sprintf("\t- combinationOperator: %v\n", t.combinationOperator))
+	sb.WriteString(fmt.Sprintf("\t- isTransposed: %v\n", t.isTransposed))
+	sb.WriteString(fmt.Sprintf("\t- referenceCorner: %v\n", t.referenceCorner))
+	sb.WriteString(fmt.Sprintf("\t- useRefinement: %v\n", t.useRefinement))
+	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded: %v\n", t.isHuffmanEncoded))
 	if t.isHuffmanEncoded {
-		if err = t.readHuffmanFlags(); err != nil {
-			return
-		}
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRSize: %v\n", t.sbHuffRSize))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDY: %v\n", t.sbHuffRDY))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDX: %v\n", t.sbHuffRDX))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDHeight: %v\n", t.sbHuffRDHeight))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffRDWidth: %v\n", t.sbHuffRDWidth))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffDT: %v\n", t.sbHuffDT))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffDS: %v\n", t.sbHuffDS))
+		sb.WriteString(fmt.Sprintf("\t- sbHuffFS: %v\n", t.sbHuffFS))
 	}
 
-	if err = t.readUseRefinement(); err != nil {
-		return
-	}
+	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
+	sb.WriteString(fmt.Sprintf("\t- sbrATY: %v\n", t.sbrATY))
+	sb.WriteString(fmt.Sprintf("\t- amountOfSymbolInstances: %v\n", t.amountOfSymbolInstances))
+	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
 
-	if err = t.readAmountOfSymbolInstances(); err != nil {
-		return
-	}
-
-	common.Log.Debug("%s", t.String())
-
-	// 7.4.3.1.7
-	if err = t.getSymbols(); err != nil {
-		return
-	}
-
-	if err = t.computeSymbolCodeLength(); err != nil {
-		return
-	}
-
-	return t.checkInput()
+	return sb.String()
 }
 
-func (t *TextRegion) readRegionFlags() (err error) {
+func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 
-	var (
-		bit  int
-		bits uint64
-	)
-
-	/* Bit 15 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-	t.sbrTemplate = int8(bit)
-
-	/* Bit 10 - 14 */
-	bits, err = t.r.ReadBits(5)
-	if err != nil {
-		return
+	if t.isTransposed == 0 && (t.referenceCorner == 2 || t.referenceCorner == 3) {
+		t.currentS += int64(ib.Width - 1)
+	} else if t.isTransposed == 1 && (t.referenceCorner == 0 || t.referenceCorner == 2) {
+		t.currentS += int64(ib.Height - 1)
 	}
 
-	t.sbdsOffset = int8(bits)
+	/* vii) */
+	s := t.currentS
 
-	if t.sbdsOffset > 0x0f {
-		t.sbdsOffset -= 0x20
+	/* viii) */
+	if t.isTransposed == 1 {
+		s, tc = tc, s
 	}
 
-	/* Bit 9 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-	t.defaultPixel = int8(bit)
+	if t.referenceCorner != 1 {
 
-	/* Bit 7 - 8 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.combinationOperator = bitmap.CombinationOperator(int(bits) & 0x3)
+		if t.referenceCorner == 0 {
+			// BL
+			tc -= int64(ib.Height - 1)
+		} else if t.referenceCorner == 2 {
 
-	/* Bit 6 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-	t.isTransposed = int8(bit)
-
-	/* Bit 4 - 5 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.referenceCorner = int16(bits) & 0x3
-
-	/* Bit 2 - 3 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.logSBStrips = int16(bits) & 0x3
-
-	t.sbStrips = 1 << uint(t.logSBStrips)
-
-	/* Bit 1 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-
-	if bit == 1 {
-		t.useRefinement = true
-	}
-
-	/* Bit 0 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-
-	if bit == 1 {
-		t.isHuffmanEncoded = true
-	}
-
-	return nil
-}
-
-func (t *TextRegion) readHuffmanFlags() (err error) {
-
-	var (
-		bit  int
-		bits uint64
-	)
-
-	/* Bit 15 - dirty read */
-	_, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-
-	/* Bit 14 */
-	bit, err = t.r.ReadBit()
-	if err != nil {
-		return
-	}
-	t.sbHuffRSize = int8(bit)
-
-	/* Bit 12 - 13 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffRDY = int8(bits) & 0xf
-
-	/* Bit 10 - 11 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffRDX = int8(bits) & 0xf
-
-	/* Bit 8 - 9 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffRDHeight = int8(bits) & 0xf
-
-	/* Bit 6 - 7 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffRDWidth = int8(bits) & 0xf
-
-	/* Bit 4 - 5 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffDT = int8(bits) & 0xf
-
-	/* Bit 2 - 3 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffDS = int8(bits) & 0xf
-
-	/* Bit 0 - 1 */
-	bits, err = t.r.ReadBits(2)
-	if err != nil {
-		return
-	}
-	t.sbHuffFS = int8(bits) & 0xf
-
-	return nil
-}
-
-func (t *TextRegion) readUseRefinement() (err error) {
-	if t.useRefinement && t.sbrTemplate == 0 {
-		t.sbrATX = make([]int8, 2)
-		t.sbrATY = make([]int8, 2)
-
-		var temp byte
-
-		/* Byte 0 */
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
+			// BR
+			tc -= int64(ib.Height - 1)
+			s -= int64(ib.Width - 1)
+		} else if t.referenceCorner == 3 {
+			// TR
+			s -= int64(ib.Width - 1)
 		}
-		t.sbrATX[0] = int8(temp)
-
-		/* Byte 1 */
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATY[0] = int8(temp)
-
-		/* Byte 2 */
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATX[1] = int8(temp)
-
-		/* Byte 3 */
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATY[1] = int8(temp)
 	}
-	return nil
-}
 
-func (t *TextRegion) readAmountOfSymbolInstances() error {
-	bits, err := t.r.ReadBits(32)
+	err := bitmap.Blit(ib, t.regionBitmap, int(s), int(tc), t.combinationOperator)
 	if err != nil {
 		return err
 	}
 
-	bits &= 0xffffffff
-	t.amountOfSymbolInstances = int64(bits)
-	var pixels = int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
-
-	if pixels < t.amountOfSymbolInstances {
-		common.Log.Warning("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.amountOfSymbolInstances)
-		t.amountOfSymbolInstances = pixels
+	/* x) */
+	if t.isTransposed == 0 && (t.referenceCorner == 0 || t.referenceCorner == 1) {
+		t.currentS += int64(ib.Width - 1)
 	}
 
-	return nil
-}
-
-func (t *TextRegion) getSymbols() error {
-	if t.Header.RTSegments != nil {
-		return t.initSymbols()
+	if t.isTransposed == 1 && (t.referenceCorner == 1 || t.referenceCorner == 3) {
+		t.currentS += int64(ib.Height - 1)
 	}
 	return nil
 }
@@ -451,53 +268,6 @@ func (t *TextRegion) checkInput() error {
 	return nil
 }
 
-func (t *TextRegion) setCodingStatistics() (err error) {
-	if t.cxIADT == nil {
-		t.cxIADT = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIAFS == nil {
-		t.cxIAFS = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIADS == nil {
-		t.cxIADS = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIAIT == nil {
-		t.cxIAIT = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIARI == nil {
-		t.cxIARI = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIARDW == nil {
-		t.cxIARDW = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIARDH == nil {
-		t.cxIARDH = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIAID == nil {
-		t.cxIAID = arithmetic.NewStats(1<<uint(t.symbolCodeLength), 1)
-	}
-
-	if t.cxIARDX == nil {
-		t.cxIARDX = arithmetic.NewStats(512, 1)
-	}
-
-	if t.cxIARDY == nil {
-		t.cxIARDY = arithmetic.NewStats(512, 1)
-	}
-
-	if t.arithmDecoder == nil {
-		t.arithmDecoder, err = arithmetic.New(t.r)
-	}
-	return
-}
-
 func (t *TextRegion) createRegionBitmap() error {
 	// 6.4.5
 	t.regionBitmap = bitmap.New(t.regionInfo.BitmapWidth, t.regionInfo.BitmapHeight)
@@ -536,7 +306,7 @@ func (t *TextRegion) decodeStripT() (stripT int64, err error) {
 				return 0, err
 			}
 		} else {
-			var table huffman.HuffmanTabler
+			var table huffman.Tabler
 			table, err = huffman.GetStandardTable(11 + int(t.sbHuffDT))
 			if err != nil {
 				return 0, err
@@ -657,7 +427,7 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 			}
 		} else {
 			// common.Log.Debug("sbHuffDT != 3 -> %d", t.sbHuffDT)
-			var st huffman.HuffmanTabler
+			var st huffman.Tabler
 			st, err = huffman.GetStandardTable(11 + int(t.sbHuffDT))
 			if err != nil {
 				return
@@ -797,7 +567,7 @@ func (t *TextRegion) decodeIb(r, id int64) (ib *bitmap.Bitmap, err error) {
 		}
 
 		// TODO: FIX the problem with text region
-		t.genericRefinementRegion.SetParameters(t.cx, t.arithmDecoder, t.sbrTemplate,
+		t.genericRefinementRegion.setParameters(t.cx, t.arithmDecoder, t.sbrTemplate,
 			wo+int(rdw), ho+int(rdh), ibo, genericRegionReferenceDX, genericRegionReferenceDY, false, t.sbrATX, t.sbrATY)
 
 		ib, err = t.genericRefinementRegion.GetRegionBitmap()
@@ -1060,56 +830,35 @@ func (t *TextRegion) decodeSymInRefSize() (int64, error) {
 		}
 	}
 	return t.rSizeTable.Decode(t.r)
-
 }
 
-func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
-
-	if t.isTransposed == 0 && (t.referenceCorner == 2 || t.referenceCorner == 3) {
-		t.currentS += int64(ib.Width - 1)
-	} else if t.isTransposed == 1 && (t.referenceCorner == 0 || t.referenceCorner == 2) {
-		t.currentS += int64(ib.Height - 1)
-	}
-
-	/* vii) */
-	s := t.currentS
-
-	/* viii) */
-	if t.isTransposed == 1 {
-		s, tc = tc, s
-	}
-
-	if t.referenceCorner != 1 {
-
-		if t.referenceCorner == 0 {
-			// BL
-			tc -= int64(ib.Height - 1)
-		} else if t.referenceCorner == 2 {
-
-			// BR
-			tc -= int64(ib.Height - 1)
-			s -= int64(ib.Width - 1)
-		} else if t.referenceCorner == 3 {
-			// TR
-			s -= int64(ib.Width - 1)
-		}
-	}
-
-	err := bitmap.Blit(ib, t.regionBitmap, int(s), int(tc), t.combinationOperator)
-	if err != nil {
-		return err
-	}
-
-	/* x) */
-	if t.isTransposed == 0 && (t.referenceCorner == 0 || t.referenceCorner == 1) {
-		t.currentS += int64(ib.Width - 1)
-	}
-
-	if t.isTransposed == 1 && (t.referenceCorner == 1 || t.referenceCorner == 3) {
-		t.currentS += int64(ib.Height - 1)
+func (t *TextRegion) getSymbols() error {
+	if t.Header.RTSegments != nil {
+		return t.initSymbols()
 	}
 	return nil
+}
 
+func (t *TextRegion) getUserTable(tablePosition int) (huffman.Tabler, error) {
+	var tableCounter int
+	for _, rts := range t.Header.RTSegments {
+		if rts.Type == 53 {
+			if tableCounter == tablePosition {
+				sd, err := rts.GetSegmentData()
+				if err != nil {
+					return nil, err
+				}
+				ts, ok := sd.(*TableSegment)
+				if !ok {
+					return nil, fmt.Errorf("Segment with Type 53 - and index: %d not a TableSegment", rts.SegmentNumber)
+				}
+
+				return huffman.NewEncodedTable(ts)
+			}
+			tableCounter++
+		}
+	}
+	return nil, nil
 }
 
 func (t *TextRegion) initSymbols() error {
@@ -1139,26 +888,367 @@ func (t *TextRegion) initSymbols() error {
 	return nil
 }
 
-func (t *TextRegion) getUserTable(tablePosition int) (huffman.HuffmanTabler, error) {
-	var tableCounter int
-	for _, rts := range t.Header.RTSegments {
-		if rts.Type == 53 {
-			if tableCounter == tablePosition {
-				sd, err := rts.GetSegmentData()
-				if err != nil {
-					return nil, err
-				}
-				ts, ok := sd.(*TableSegment)
-				if !ok {
-					return nil, fmt.Errorf("Segment with Type 53 - and index: %d not a TableSegment", rts.SegmentNumber)
-				}
+func (t *TextRegion) parseHeader() (err error) {
+	common.Log.Debug("[TEXT REGION][PARSE-HEADER] begins...")
+	defer func() {
+		if err != nil {
+			common.Log.Debug("[TEXT REGION][PARSE-HEADER] failed. %v", err)
+		} else {
+			common.Log.Debug("[TEXT REGION][PARSE-HEADER] finished.")
+		}
+	}()
+	if err = t.regionInfo.parseHeader(); err != nil {
+		return
+	}
 
-				return huffman.NewEncodedTable(ts)
-			}
-			tableCounter++
+	if err = t.readRegionFlags(); err != nil {
+		return
+	}
+
+	if t.isHuffmanEncoded {
+		if err = t.readHuffmanFlags(); err != nil {
+			return
 		}
 	}
-	return nil, nil
+
+	if err = t.readUseRefinement(); err != nil {
+		return
+	}
+
+	if err = t.readAmountOfSymbolInstances(); err != nil {
+		return
+	}
+
+	common.Log.Debug("%s", t.String())
+
+	// 7.4.3.1.7
+	if err = t.getSymbols(); err != nil {
+		return
+	}
+
+	if err = t.computeSymbolCodeLength(); err != nil {
+		return
+	}
+
+	return t.checkInput()
+}
+
+func (t *TextRegion) readRegionFlags() (err error) {
+
+	var (
+		bit  int
+		bits uint64
+	)
+
+	/* Bit 15 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+	t.sbrTemplate = int8(bit)
+
+	/* Bit 10 - 14 */
+	bits, err = t.r.ReadBits(5)
+	if err != nil {
+		return
+	}
+
+	t.sbdsOffset = int8(bits)
+
+	if t.sbdsOffset > 0x0f {
+		t.sbdsOffset -= 0x20
+	}
+
+	/* Bit 9 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+	t.defaultPixel = int8(bit)
+
+	/* Bit 7 - 8 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.combinationOperator = bitmap.CombinationOperator(int(bits) & 0x3)
+
+	/* Bit 6 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+	t.isTransposed = int8(bit)
+
+	/* Bit 4 - 5 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.referenceCorner = int16(bits) & 0x3
+
+	/* Bit 2 - 3 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.logSBStrips = int16(bits) & 0x3
+
+	t.sbStrips = 1 << uint(t.logSBStrips)
+
+	/* Bit 1 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+
+	if bit == 1 {
+		t.useRefinement = true
+	}
+
+	/* Bit 0 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+
+	if bit == 1 {
+		t.isHuffmanEncoded = true
+	}
+
+	return nil
+}
+
+func (t *TextRegion) readHuffmanFlags() (err error) {
+
+	var (
+		bit  int
+		bits uint64
+	)
+
+	/* Bit 15 - dirty read */
+	_, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+
+	/* Bit 14 */
+	bit, err = t.r.ReadBit()
+	if err != nil {
+		return
+	}
+	t.sbHuffRSize = int8(bit)
+
+	/* Bit 12 - 13 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffRDY = int8(bits) & 0xf
+
+	/* Bit 10 - 11 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffRDX = int8(bits) & 0xf
+
+	/* Bit 8 - 9 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffRDHeight = int8(bits) & 0xf
+
+	/* Bit 6 - 7 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffRDWidth = int8(bits) & 0xf
+
+	/* Bit 4 - 5 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffDT = int8(bits) & 0xf
+
+	/* Bit 2 - 3 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffDS = int8(bits) & 0xf
+
+	/* Bit 0 - 1 */
+	bits, err = t.r.ReadBits(2)
+	if err != nil {
+		return
+	}
+	t.sbHuffFS = int8(bits) & 0xf
+
+	return nil
+}
+
+func (t *TextRegion) readUseRefinement() (err error) {
+	if t.useRefinement && t.sbrTemplate == 0 {
+		t.sbrATX = make([]int8, 2)
+		t.sbrATY = make([]int8, 2)
+
+		var temp byte
+
+		/* Byte 0 */
+		temp, err = t.r.ReadByte()
+		if err != nil {
+			return
+		}
+		t.sbrATX[0] = int8(temp)
+
+		/* Byte 1 */
+		temp, err = t.r.ReadByte()
+		if err != nil {
+			return
+		}
+		t.sbrATY[0] = int8(temp)
+
+		/* Byte 2 */
+		temp, err = t.r.ReadByte()
+		if err != nil {
+			return
+		}
+		t.sbrATX[1] = int8(temp)
+
+		/* Byte 3 */
+		temp, err = t.r.ReadByte()
+		if err != nil {
+			return
+		}
+		t.sbrATY[1] = int8(temp)
+	}
+	return nil
+}
+
+func (t *TextRegion) readAmountOfSymbolInstances() error {
+	bits, err := t.r.ReadBits(32)
+	if err != nil {
+		return err
+	}
+
+	bits &= 0xffffffff
+	t.amountOfSymbolInstances = int64(bits)
+	var pixels = int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
+
+	if pixels < t.amountOfSymbolInstances {
+		common.Log.Warning("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.amountOfSymbolInstances)
+		t.amountOfSymbolInstances = pixels
+	}
+
+	return nil
+}
+
+func (t *TextRegion) setCodingStatistics() (err error) {
+	if t.cxIADT == nil {
+		t.cxIADT = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIAFS == nil {
+		t.cxIAFS = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIADS == nil {
+		t.cxIADS = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIAIT == nil {
+		t.cxIAIT = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIARI == nil {
+		t.cxIARI = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIARDW == nil {
+		t.cxIARDW = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIARDH == nil {
+		t.cxIARDH = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIAID == nil {
+		t.cxIAID = arithmetic.NewStats(1<<uint(t.symbolCodeLength), 1)
+	}
+
+	if t.cxIARDX == nil {
+		t.cxIARDX = arithmetic.NewStats(512, 1)
+	}
+
+	if t.cxIARDY == nil {
+		t.cxIARDY = arithmetic.NewStats(512, 1)
+	}
+
+	if t.arithmDecoder == nil {
+		t.arithmDecoder, err = arithmetic.New(t.r)
+	}
+	return
+}
+
+func (t *TextRegion) setContexts(cx *arithmetic.DecoderStats, cxIADT *arithmetic.DecoderStats, cxIAFS *arithmetic.DecoderStats, cxIADS *arithmetic.DecoderStats, cxIAIT *arithmetic.DecoderStats, cxIAID *arithmetic.DecoderStats, cxIARDW *arithmetic.DecoderStats, cxIARDH *arithmetic.DecoderStats, cxIARDX *arithmetic.DecoderStats, cxIARDY *arithmetic.DecoderStats,
+) {
+	t.cxIADT = cxIADT
+	t.cxIAFS = cxIAFS
+	t.cxIADS = cxIADS
+	t.cxIAIT = cxIAIT
+	t.cxIARDW = cxIARDW
+	t.cxIARDH = cxIARDH
+	t.cxIAID = cxIAID
+	t.cxIARDX = cxIARDX
+	t.cxIARDY = cxIARDY
+	t.cx = cx
+}
+
+// setParameters sets the text region segment parameters
+func (t *TextRegion) setParameters(
+	arithmeticDecoder *arithmetic.Decoder,
+	isHuffmanEncoded, sbRefine bool, sbw, sbh int,
+	sbNumInstances int64, sbStrips, sbNumSyms int,
+	sbDefaultPixel int8, sbCombinationOperator bitmap.CombinationOperator,
+	transposed int8, refCorner int16, sbdsOffset, sbHuffFS, sbHuffDS, sbHuffDT, sbHuffRDWidth,
+	sbHuffRDHeight, sbHuffRDX, sbHuffRDY, sbHuffRSize, sbrTemplate int8,
+	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int,
+) {
+	t.arithmDecoder = arithmeticDecoder
+
+	t.isHuffmanEncoded = isHuffmanEncoded
+	t.useRefinement = sbRefine
+
+	t.regionInfo.BitmapWidth = sbw
+	t.regionInfo.BitmapHeight = sbh
+
+	t.amountOfSymbolInstances = sbNumInstances
+	t.sbStrips = sbStrips
+	t.amountOfSymbols = sbNumSyms
+	t.defaultPixel = sbDefaultPixel
+	t.combinationOperator = sbCombinationOperator
+	t.isTransposed = transposed
+	t.referenceCorner = refCorner
+	t.sbdsOffset = sbdsOffset
+
+	t.sbHuffFS = sbHuffFS
+	t.sbHuffDS = sbHuffDS
+	t.sbHuffDT = sbHuffDT
+	t.sbHuffRDWidth = sbHuffRDWidth
+	t.sbHuffRDHeight = sbHuffRDHeight
+	t.sbHuffRDX = sbHuffRDX
+	t.sbHuffRDY = sbHuffRDY
+
+	t.sbrTemplate = sbrTemplate
+	t.sbrATX = sbrATX
+	t.sbrATY = sbrATY
+
+	t.symbols = sbSyms
+	t.symbolCodeLength = sbSymCodeLen
 }
 
 func (t *TextRegion) symbolIDCodeLengths() (err error) {
@@ -1178,7 +1268,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 		}
 	}
 
-	var ht huffman.HuffmanTabler
+	var ht huffman.Tabler
 	ht, err = huffman.NewFixedSizeTable(runCodeTable)
 	if err != nil {
 		return
@@ -1247,93 +1337,11 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 	return
 }
 
-func (t *TextRegion) setContexts(cx *arithmetic.DecoderStats, cxIADT *arithmetic.DecoderStats, cxIAFS *arithmetic.DecoderStats, cxIADS *arithmetic.DecoderStats, cxIAIT *arithmetic.DecoderStats, cxIAID *arithmetic.DecoderStats, cxIARDW *arithmetic.DecoderStats, cxIARDH *arithmetic.DecoderStats, cxIARDX *arithmetic.DecoderStats, cxIARDY *arithmetic.DecoderStats,
-) {
-	t.cxIADT = cxIADT
-	t.cxIAFS = cxIAFS
-	t.cxIADS = cxIADS
-	t.cxIAIT = cxIAIT
-	t.cxIARDW = cxIARDW
-	t.cxIARDH = cxIARDH
-	t.cxIAID = cxIAID
-	t.cxIARDX = cxIARDX
-	t.cxIARDY = cxIARDY
-	t.cx = cx
-}
-
-// SetParameters sets the text region segment parameters
-func (t *TextRegion) SetParameters(
-	arithmeticDecoder *arithmetic.Decoder,
-	isHuffmanEncoded, sbRefine bool, sbw, sbh int,
-	sbNumInstances int64, sbStrips, sbNumSyms int,
-	sbDefaultPixel int8, sbCombinationOperator bitmap.CombinationOperator,
-	transposed int8, refCorner int16, sbdsOffset, sbHuffFS, sbHuffDS, sbHuffDT, sbHuffRDWidth,
-	sbHuffRDHeight, sbHuffRDX, sbHuffRDY, sbHuffRSize, sbrTemplate int8,
-	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int,
-) {
-	t.arithmDecoder = arithmeticDecoder
-
-	t.isHuffmanEncoded = isHuffmanEncoded
-	t.useRefinement = sbRefine
-
-	t.regionInfo.BitmapWidth = sbw
-	t.regionInfo.BitmapHeight = sbh
-
-	t.amountOfSymbolInstances = sbNumInstances
-	t.sbStrips = sbStrips
-	t.amountOfSymbols = sbNumSyms
-	t.defaultPixel = sbDefaultPixel
-	t.combinationOperator = sbCombinationOperator
-	t.isTransposed = transposed
-	t.referenceCorner = refCorner
-	t.sbdsOffset = sbdsOffset
-
-	t.sbHuffFS = sbHuffFS
-	t.sbHuffDS = sbHuffDS
-	t.sbHuffDT = sbHuffDT
-	t.sbHuffRDWidth = sbHuffRDWidth
-	t.sbHuffRDHeight = sbHuffRDHeight
-	t.sbHuffRDX = sbHuffRDX
-	t.sbHuffRDY = sbHuffRDY
-
-	t.sbrTemplate = sbrTemplate
-	t.sbrATX = sbrATX
-	t.sbrATY = sbrATY
-
-	t.symbols = sbSyms
-	t.symbolCodeLength = sbSymCodeLen
-
-}
-
-// String implements the Stringer interface
-func (t *TextRegion) String() string {
-	sb := &strings.Builder{}
-
-	sb.WriteString("\n[TEXT REGION]\n")
-	sb.WriteString(t.regionInfo.String() + "\n")
-	sb.WriteString(fmt.Sprintf("\t- sbrTemplate: %v\n", t.sbrTemplate))
-	sb.WriteString(fmt.Sprintf("\t- sbdsOffset: %v\n", t.sbdsOffset))
-	sb.WriteString(fmt.Sprintf("\t- defaultPixel: %v\n", t.defaultPixel))
-	sb.WriteString(fmt.Sprintf("\t- combinationOperator: %v\n", t.combinationOperator))
-	sb.WriteString(fmt.Sprintf("\t- isTransposed: %v\n", t.isTransposed))
-	sb.WriteString(fmt.Sprintf("\t- referenceCorner: %v\n", t.referenceCorner))
-	sb.WriteString(fmt.Sprintf("\t- useRefinement: %v\n", t.useRefinement))
-	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded: %v\n", t.isHuffmanEncoded))
-	if t.isHuffmanEncoded {
-		sb.WriteString(fmt.Sprintf("\t- sbHuffRSize: %v\n", t.sbHuffRSize))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffRDY: %v\n", t.sbHuffRDY))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffRDX: %v\n", t.sbHuffRDX))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffRDHeight: %v\n", t.sbHuffRDHeight))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffRDWidth: %v\n", t.sbHuffRDWidth))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffDT: %v\n", t.sbHuffDT))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffDS: %v\n", t.sbHuffDS))
-		sb.WriteString(fmt.Sprintf("\t- sbHuffFS: %v\n", t.sbHuffFS))
+func newTextRegion(r reader.StreamReader, h *Header) *TextRegion {
+	t := &TextRegion{
+		r:          r,
+		Header:     h,
+		regionInfo: NewRegionSegment(r),
 	}
-
-	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
-	sb.WriteString(fmt.Sprintf("\t- sbrATY: %v\n", t.sbrATY))
-	sb.WriteString(fmt.Sprintf("\t- amountOfSymbolInstances: %v\n", t.amountOfSymbolInstances))
-	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
-
-	return sb.String()
+	return t
 }

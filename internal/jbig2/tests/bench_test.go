@@ -8,17 +8,19 @@ package tests
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
 
-// BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding
-// in order to run the benchmark run the DecodeJBIG2Files with the same JBIG2 environmental variable
-// the zipped files containing raw jbig2 streams shoud be created
+// BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding.
+// In order to run the benchmark run the DecodeJBIG2Files with the JBIG2 environmental variable.
+// Zipped files containing raw jbig2 streams shoud be created.
 func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 	b.Helper()
 	dirName := os.Getenv("JBIG2")

@@ -8,17 +8,18 @@ package tests
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/common"
 	"image/jpeg"
+	"os"
+	"path/filepath"
 	"strings"
+	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/common"
 	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
 	pdfcore "github.com/unidoc/unipdf/v3/core"
 	pdf "github.com/unidoc/unipdf/v3/model"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 const (
@@ -118,37 +119,6 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 	// Range through all the content stream operations.
 	for _, op := range *operations {
 		if op.Operand == "BI" && len(op.Params) == 1 {
-			// BI: Inline image.
-
-			// iimg, ok := op.Params[0].(*pdfcontent.ContentStreamInlineImage)
-			// if !ok {
-			// 	continue
-			// }
-
-			// iimg.
-
-			// img, err := iimg.ToImage(resources)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-
-			// cs, err := iimg.GetColorSpace(resources)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-			// if cs == nil {
-			// 	// Default if not specified?
-			// 	cs = pdf.NewPdfColorspaceDeviceGray()
-			// }
-			// fmt.Printf("Cs: %T\n", cs)
-
-			// rgbImg, err := cs.ImageToRGB(*img)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-
-			// rgbImages = append(rgbImages, &rgbImg)
-			// inlineImages++
 		} else if op.Operand == "Do" && len(op.Params) == 1 {
 			// Do: XObject.
 			name := op.Params[0].(*pdfcore.PdfObjectName)

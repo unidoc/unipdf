@@ -14,15 +14,18 @@ import (
 	"runtime/debug"
 )
 
-// Page represents JBIG2 Page structure
+// Page represents JBIG2 Page structure.
+// It contains all the included segments header definitions mapped to their number.
+// relation to the document and the resultant page bitmap.
 type Page struct {
-	// All segments for this page
+
+	// All segments for this page.
 	Segments map[int]*segments.Header
 
 	// NOTE: page number != segmentList.index
 	PageNumber int
 
-	// The page bitmap represents the page buffer
+	// Bitmap represents the page image.
 	Bitmap *bitmap.Bitmap
 
 	FinalHeight int
@@ -30,42 +33,8 @@ type Page struct {
 	ResolutionX int
 	ResolutionY int
 
+	// Document is a relation to page's document
 	Document *Document
-}
-
-// NewPage is the creator for the Page model
-func NewPage(d *Document, pageNumber int) *Page {
-	common.Log.Debug("Creating Page #%d...", pageNumber)
-	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
-}
-
-// GetSegment searches for a segment specified by its number
-func (p *Page) GetSegment(number int) *segments.Header {
-	s, ok := p.Segments[number]
-	if ok {
-		return s
-	}
-
-	if !ok || s == nil {
-		s, _ = p.Document.GlobalSegments.GetSegment(number)
-		return s
-	}
-
-	common.Log.Info("Segment not found, returning nil.")
-	return nil
-}
-
-// getPageInformationSegment Returns the associated page information segment
-func (p *Page) getPageInformationSegment() *segments.Header {
-	for _, s := range p.Segments {
-		if s.Type == segments.TPageInformation {
-			return s
-		}
-	}
-
-	common.Log.Info("Page information segment not found.")
-
-	return nil
 }
 
 // GetBitmap returns the decoded bitmap if present
@@ -101,6 +70,33 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 	}
 	bm = p.Bitmap
 	return
+}
+
+// GetSegment searches for a segment Header specified by its number and returns it if exists.
+func (p *Page) GetSegment(number int) *segments.Header {
+	s, ok := p.Segments[number]
+	if ok {
+		return s
+	}
+
+	if !ok || s == nil {
+		s, _ = p.Document.GlobalSegments.GetSegment(number)
+		return s
+	}
+
+	common.Log.Info("Segment not found, returning nil.")
+	return nil
+}
+
+// String implements Stringer interface
+func (p *Page) String() string {
+	return fmt.Sprintf("Page number: %d", p.PageNumber)
+}
+
+// newPage is the creator for the Page structure.
+func newPage(d *Document, pageNumber int) *Page {
+	common.Log.Debug("Creating Page #%d...", pageNumber)
+	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
 }
 
 // composePageBitmap composes the segment's bitmaps to a page and stores the page as a Bitmap
@@ -223,33 +219,6 @@ func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 	return nil
 }
 
-func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
-	return p.countRegions() == 1 &&
-		i.DefaultPixelValue() == 0 &&
-		i.PageBMWidth == regionBitmap.Width &&
-		i.PageBMHeight == regionBitmap.Height
-}
-
-// countRegions count the regions segments in the Page
-func (p *Page) countRegions() int {
-	var regionCount int
-
-	for _, h := range p.Segments {
-		switch h.Type {
-		case 6, 7, 22, 23, 38, 39, 42, 43:
-			regionCount++
-		}
-	}
-	return regionCount
-}
-
-func (p *Page) getCombinationOperator(i *segments.PageInformationSegment, newOperator bitmap.CombinationOperator) bitmap.CombinationOperator {
-	if i.CombinationOperatorOverrideAllowed() {
-		return newOperator
-	}
-	return i.CombinationOperator()
-}
-
 func (p *Page) collectPageStripes() (stripes []segments.Segmenter, err error) {
 	for _, h := range p.Segments {
 		switch h.Type {
@@ -287,6 +256,46 @@ func (p *Page) clearSegmentData() {
 
 func (p *Page) clearPageData() {
 	p.Bitmap = nil
+}
+
+// countRegions count the regions segments in the Page
+func (p *Page) countRegions() int {
+	var regionCount int
+
+	for _, h := range p.Segments {
+		switch h.Type {
+		case 6, 7, 22, 23, 38, 39, 42, 43:
+			regionCount++
+		}
+	}
+	return regionCount
+}
+
+func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
+	return p.countRegions() == 1 &&
+		i.DefaultPixelValue() == 0 &&
+		i.PageBMWidth == regionBitmap.Width &&
+		i.PageBMHeight == regionBitmap.Height
+}
+
+func (p *Page) getCombinationOperator(i *segments.PageInformationSegment, newOperator bitmap.CombinationOperator) bitmap.CombinationOperator {
+	if i.CombinationOperatorOverrideAllowed() {
+		return newOperator
+	}
+	return i.CombinationOperator()
+}
+
+// getPageInformationSegment Returns the associated page information segment
+func (p *Page) getPageInformationSegment() *segments.Header {
+	for _, s := range p.Segments {
+		if s.Type == segments.TPageInformation {
+			return s
+		}
+	}
+
+	common.Log.Info("Page information segment not found.")
+
+	return nil
 }
 
 func (p *Page) getHeight() (int, error) {
@@ -397,9 +406,4 @@ func (p *Page) getResolutionY() (int, error) {
 	}
 
 	return p.ResolutionY, nil
-}
-
-// String implements Stringer interface
-func (p *Page) String() string {
-	return fmt.Sprintf("Page number: %d", p.PageNumber)
 }

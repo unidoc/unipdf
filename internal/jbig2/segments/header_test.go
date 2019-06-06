@@ -6,14 +6,16 @@
 package segments
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
-// TestHeader test the segment header model
-func TestHeader(t *testing.T) {
+// TestDecodeHeader test the segment header model decode process.
+func TestDecodeHeader(t *testing.T) {
 	data := []byte{
 		// header
 		0x00, 0x00, 0x00, 0x0B, 0x27, 0x00, 0x02, 0x00, 0x00, 0x00, 0x23,

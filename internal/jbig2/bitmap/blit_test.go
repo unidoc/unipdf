@@ -6,9 +6,10 @@
 package bitmap
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // TestBlit tests the Blit function for the multiple CombinationOperators

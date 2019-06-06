@@ -7,15 +7,19 @@ package segments
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
-func TestPatternDictionary(t *testing.T) {
+// TestDecodePatternDictionary tests the decode process of the pattern dictionary segment.
+func TestDecodePatternDictionary(t *testing.T) {
 	t.Run("AnnexH", func(t *testing.T) {
 		if testing.Verbose() {
 			common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -45,8 +49,6 @@ func TestPatternDictionary(t *testing.T) {
 
 			p, ok := ps.(*PatternDictionary)
 			require.True(t, ok)
-
-			t.Log("Inited")
 
 			assert.Equal(t, uint32(5), h.SegmentNumber)
 			assert.Equal(t, uint64(45), h.SegmentDataLength)

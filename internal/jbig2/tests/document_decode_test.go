@@ -9,12 +9,14 @@ package tests
 
 import (
 	"archive/zip"
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/common"
-	pdf "github.com/unidoc/unipdf/v3/model"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/common"
+	pdf "github.com/unidoc/unipdf/v3/model"
 )
 
 const (
@@ -22,8 +24,8 @@ const (
 	EnvDirectory = "JBIG2"
 )
 
-// TestDecodeJBIG2Files tries to decode the provided jbig2 files
-// Requires environmental variable 'JBIG2' that contains the jbig2 testdata
+// TestDecodeJBIG2Files tries to decode the provided jbig2 files.
+// Requires environmental variable 'JBIG2' that contains the jbig2 testdata.
 func TestDecodeJBIG2Files(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))

@@ -8,16 +8,17 @@ package segments
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"strings"
-	"time"
 )
 
-// GenericRefinementRegion represtents jbig2 generic refinement region segment
-// NOTE(kucjac): requires tests - no enocded data with generic refinement region
+// GenericRefinementRegion represtents jbig2 generic refinement region segment - 7.4.7.
 type GenericRefinementRegion struct {
 	t0 templater
 	t1 templater
@@ -52,7 +53,16 @@ type GenericRefinementRegion struct {
 	grAtOverride []bool
 }
 
-// newGenericRefinementRegion is a creator for the Generic Refinement Region
+// Init initializes the GenericRefinementRegion for provided header and a reader.StreamReader.
+// Implements Segmenter interface.
+func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) error {
+	g.h = header
+	g.r = r
+	g.RegionInfo = NewRegionSegment(r)
+	return g.parseHeader()
+}
+
+// newGenericRefinementRegion is a creator for the Generic Refinement Region.
 func newGenericRefinementRegion(r reader.StreamReader, h *Header) *GenericRefinementRegion {
 	return &GenericRefinementRegion{
 		r:          r,
@@ -63,16 +73,8 @@ func newGenericRefinementRegion(r reader.StreamReader, h *Header) *GenericRefine
 	}
 }
 
-// Init initializes the GenericRefinementRegion for provided header and a reader.StreamReader
-// implements Segmenter interface
-func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) error {
-	g.h = header
-	g.r = r
-	g.RegionInfo = NewRegionSegment(r)
-	return g.parseHeader()
-}
-
-// GetRegionBitmap gets the Refinement Region bitmap
+// GetRegionBitmap gets the Refinement Region bitmap.
+// Implements Regioner interface.
 func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap begins...")
 	defer func() {
@@ -156,48 +158,10 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err erro
 	return
 }
 
-// GetRegionInfo gets the RegionSegment
+// GetRegionInfo gets the RegionSegment value.
+// Implements Regioner interface.
 func (g *GenericRefinementRegion) GetRegionInfo() *RegionSegment {
 	return g.RegionInfo
-}
-
-// SetParameters sets the parameters for the Generic Refinemenet Regino
-func (g *GenericRefinementRegion) SetParameters(
-	cx *arithmetic.DecoderStats, arithmDecoder *arithmetic.Decoder,
-	grTemplate int8, regionWidth, regionHeight int,
-	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int,
-	isTPGRon bool, grAtX []int8, grAtY []int8,
-) {
-	common.Log.Debug("[GENERIC-REF-REGION] SetParameters")
-	defer func() { common.Log.Debug("[GENERIC-REF-REGION] SetParameters finished. %s", g) }()
-	if cx != nil {
-		g.cx = cx
-	}
-	if arithmDecoder != nil {
-		g.arithDecode = arithmDecoder
-	}
-
-	g.TemplateID = grTemplate
-
-	// common.Log.Debug("Setting BitmapWidth: %d", regionWidth)
-	g.RegionInfo.BitmapWidth = regionWidth
-	// common.Log.Debug("Setting BitmapHeigth: %d", regionHeight)
-	if regionHeight < 0 {
-		panic("Invalid RegionHeight")
-	}
-	g.RegionInfo.BitmapHeight = regionHeight
-
-	g.ReferenceBitmap = grReference
-	g.ReferenceDX = grReferenceDX
-	g.ReferenceDY = grReferenceDY
-
-	g.IsTPGROn = isTPGRon
-
-	g.GrAtX = grAtX
-	g.GrAtY = grAtY
-
-	g.RegionBitmap = nil
-
 }
 
 func (g *GenericRefinementRegion) decodeSLTP() (int, error) {
@@ -876,6 +840,22 @@ func (g *GenericRefinementRegion) decodeTemplate(
 	return nil
 }
 
+func (g *GenericRefinementRegion) getPixel(b *bitmap.Bitmap, x, y int) int {
+	if x < 0 || x >= b.Width {
+		return 0
+	}
+
+	if y < 0 || y >= b.Height {
+		return 0
+	}
+
+	if b.GetPixel(x, y) {
+		return 1
+	}
+
+	return 0
+}
+
 func (g *GenericRefinementRegion) overrideAtTemplate0(context, x, y, result, minorX int) int {
 	if g.grAtOverride[0] {
 		context &= 0xfff7
@@ -898,49 +878,6 @@ func (g *GenericRefinementRegion) overrideAtTemplate0(context, x, y, result, min
 	}
 
 	return context
-}
-
-func (g *GenericRefinementRegion) getPixel(b *bitmap.Bitmap, x, y int) int {
-	if x < 0 || x >= b.Width {
-		return 0
-	}
-
-	if y < 0 || y >= b.Height {
-		return 0
-	}
-
-	if b.GetPixel(x, y) {
-		return 1
-	}
-
-	return 0
-}
-
-func (g *GenericRefinementRegion) updateOverride() error {
-	if g.GrAtX == nil || g.GrAtY == nil {
-		return errors.New("AT pixels not set")
-	}
-	if len(g.GrAtX) != len(g.GrAtY) {
-		return errors.New("AT pixel inconsistent")
-	}
-
-	g.grAtOverride = make([]bool, len(g.GrAtX))
-
-	switch g.TemplateID {
-	case 0:
-		if g.GrAtX[0] != -1 && g.GrAtY[0] != -1 {
-			g.grAtOverride[0] = true
-			g.override = true
-		}
-
-		if g.GrAtX[1] != -1 && g.GrAtY[1] != -1 {
-			g.grAtOverride[1] = true
-			g.override = true
-		}
-	case 1:
-		g.override = false
-	}
-	return nil
 }
 
 func (g *GenericRefinementRegion) parseHeader() (err error) {
@@ -1022,6 +959,72 @@ func (g *GenericRefinementRegion) readAtPixels() error {
 	}
 	g.GrAtY[1] = int8(temp)
 
+	return nil
+}
+
+// setParameters sets the parameters for the Generic Refinemenet Region.
+func (g *GenericRefinementRegion) setParameters(
+	cx *arithmetic.DecoderStats, arithmDecoder *arithmetic.Decoder,
+	grTemplate int8, regionWidth, regionHeight int,
+	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int,
+	isTPGRon bool, grAtX []int8, grAtY []int8,
+) {
+	common.Log.Debug("[GENERIC-REF-REGION] setParameters")
+	defer func() { common.Log.Debug("[GENERIC-REF-REGION] setParameters finished. %s", g) }()
+	if cx != nil {
+		g.cx = cx
+	}
+	if arithmDecoder != nil {
+		g.arithDecode = arithmDecoder
+	}
+
+	g.TemplateID = grTemplate
+
+	// common.Log.Debug("Setting BitmapWidth: %d", regionWidth)
+	g.RegionInfo.BitmapWidth = regionWidth
+	// common.Log.Debug("Setting BitmapHeigth: %d", regionHeight)
+	if regionHeight < 0 {
+		panic("Invalid RegionHeight")
+	}
+	g.RegionInfo.BitmapHeight = regionHeight
+
+	g.ReferenceBitmap = grReference
+	g.ReferenceDX = grReferenceDX
+	g.ReferenceDY = grReferenceDY
+
+	g.IsTPGROn = isTPGRon
+
+	g.GrAtX = grAtX
+	g.GrAtY = grAtY
+
+	g.RegionBitmap = nil
+
+}
+
+func (g *GenericRefinementRegion) updateOverride() error {
+	if g.GrAtX == nil || g.GrAtY == nil {
+		return errors.New("AT pixels not set")
+	}
+	if len(g.GrAtX) != len(g.GrAtY) {
+		return errors.New("AT pixel inconsistent")
+	}
+
+	g.grAtOverride = make([]bool, len(g.GrAtX))
+
+	switch g.TemplateID {
+	case 0:
+		if g.GrAtX[0] != -1 && g.GrAtY[0] != -1 {
+			g.grAtOverride[0] = true
+			g.override = true
+		}
+
+		if g.GrAtX[1] != -1 && g.GrAtY[1] != -1 {
+			g.grAtOverride[1] = true
+			g.override = true
+		}
+	case 1:
+		g.override = false
+	}
 	return nil
 }
 

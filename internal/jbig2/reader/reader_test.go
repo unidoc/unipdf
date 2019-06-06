@@ -7,12 +7,14 @@ package reader
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+// TestReader tests the reader Read methods.
 func TestReader(t *testing.T) {
 	data := []byte{3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
 
@@ -62,10 +64,9 @@ func TestReader(t *testing.T) {
 	_, err = r.Read(s)
 	require.NoError(t, err)
 	assert.True(t, bytes.Equal(s, []byte{0x80, 0x8f}))
-	// expEq(2)(r.Read(s))
-	// eq(true, bytes.Equal(s, []byte{0x80, 0x8f}))
 }
 
+// TestSeeker test the Reader Seek methods.
 func TestSeeker(t *testing.T) {
 
 	data := []byte{3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}

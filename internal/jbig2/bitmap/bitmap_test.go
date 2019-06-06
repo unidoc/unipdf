@@ -7,14 +7,17 @@ package bitmap
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
-	"testing"
 )
 
-// TestBitmap tests the bitmap methods and constructors
+// TestBitmap tests the bitmap methods and constructors.
 func TestBitmap(t *testing.T) {
+
 	t.Run("New", func(t *testing.T) {
 		// tests the creator of the bitmap
 		t.Run("SingleBytePerRow", func(t *testing.T) {

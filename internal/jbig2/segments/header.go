@@ -7,17 +7,16 @@ package segments
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
-	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"io"
 	"strings"
+
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-var log common.Logger = common.Log
-
-// Header is the segment header used to define the segment parameters
+// Header is the segment header used to define the segment parameters - see 7.2.
 type Header struct {
 	SegmentNumber            uint32
 	Type                     Type
@@ -33,27 +32,27 @@ type Header struct {
 	RTSNumbers               []int
 }
 
-// NewHeader creates new segment header
+// NewHeader creates new segment header for the provided document from the stream reader.
 func NewHeader(
 	d Documenter, r reader.StreamReader,
-	offset int64, organisationType uint8,
+	offset int64, organizationType OrganizationType,
 ) (*Header, error) {
 	h := &Header{Reader: r}
-	if err := h.parse(d, r, offset, organisationType); err != nil {
+	if err := h.parse(d, r, offset, organizationType); err != nil {
 		return nil, err
 	}
 
 	return h, nil
 }
 
-// CleanSegmentData cleans the segment's data
+// CleanSegmentData cleans the segment's data setting it's segment data to nil.
 func (h *Header) CleanSegmentData() {
 	if h.SegmentData != nil {
 		h.SegmentData = nil
 	}
 }
 
-// GetSegmentData gets the segment's data
+// GetSegmentData gets the segment's data in a Segmenter form.
 func (h *Header) GetSegmentData() (Segmenter, error) {
 	var segmentDataPart Segmenter
 	if h.SegmentData != nil {
@@ -63,7 +62,7 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	if segmentDataPart == nil {
 		creator, ok := kindMap[h.Type]
 		if !ok {
-			return nil, fmt.Errorf("Type: %s/ %d creator not found. ", h.Type, h.Type)
+			return nil, fmt.Errorf("type: %s/ %d creator not found. ", h.Type, h.Type)
 		}
 		segmentDataPart = creator()
 
@@ -82,10 +81,31 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	return segmentDataPart, nil
 }
 
-// Parse parses the current segment header for the provided document 'd'.
+// String implements Stringer interface
+func (h *Header) String() string {
+	sb := &strings.Builder{}
+	sb.WriteString("\n[SEGMENT-HEADER]\n")
+	sb.WriteString(fmt.Sprintf("\t- SegmentNumber: %v\n", h.SegmentNumber))
+	sb.WriteString(fmt.Sprintf("\t- Type: %v\n", h.Type))
+	sb.WriteString(fmt.Sprintf("\t- RetainFlag: %v\n", h.RetainFlag))
+	sb.WriteString(fmt.Sprintf("\t- PageAssociation: %v\n", h.PageAssociation))
+	sb.WriteString(fmt.Sprintf("\t- PageAssociationFieldSize: %v\n", h.PageAssociationFieldSize))
+	// iterate over ids
+	sb.WriteString("\t- RTSEGMENTS:\n")
+	for _, rt := range h.RTSNumbers {
+		sb.WriteString(fmt.Sprintf("\t\t- %d\n", rt))
+	}
+	sb.WriteString(fmt.Sprintf("\t- HeaderLength: %v\n", h.HeaderLength))
+	sb.WriteString(fmt.Sprintf("\t- SegmentDataLength: %v\n", h.SegmentDataLength))
+	sb.WriteString(fmt.Sprintf("\t- SegmentDataStartOffset: %v\n", h.SegmentDataStartOffset))
+
+	return sb.String()
+}
+
+// parse parses the current segment header for the provided document 'd'.
 func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
-	offset int64, organisationType uint8,
+	offset int64, organizationType OrganizationType,
 ) (err error) {
 	common.Log.Debug("[SEGMENT-HEADER][PARSE] Begins")
 	defer func() {
@@ -95,15 +115,6 @@ func (h *Header) parse(
 			common.Log.Debug("[SEGMENT-HEADER][PARSE] Finished")
 		}
 	}()
-
-	_, err = r.Seek(offset, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	var b = make([]byte, 4)
-	_, err = r.Read(b)
-	common.Log.Debug("First 4 Bytes at segment: %s at offset: %04X", hex.EncodeToString(b), offset)
 
 	_, err = r.Seek(offset, io.SeekStart)
 	if err != nil {
@@ -134,14 +145,11 @@ func (h *Header) parse(
 		return err
 	}
 
-	common.Log.Debug("readReferedToSegments done...")
-
 	// 7.2.6 Segment page association
 	err = h.readSegmentPageAssociation(d, r, countOfRTS, h.RTSNumbers...)
 	if err != nil {
 		return err
 	}
-	common.Log.Debug("readSegmentPageAssociation done...")
 
 	if h.Type != TEndOfFile {
 		// 7.2.7 Segment data length (Contains the length of the data)
@@ -150,7 +158,7 @@ func (h *Header) parse(
 		}
 	}
 
-	h.readDataStartOffset(r, organisationType)
+	h.readDataStartOffset(r, organizationType)
 	h.readHeaderLength(r, offset)
 
 	common.Log.Debug("%s", h)
@@ -198,11 +206,7 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	if err != nil {
 		return err
 	}
-
 	h.Type = Type(int(tp))
-	// common.Log.Debug("Segment Type: %v", h.Type)
-	// common.Log.Debug("PageAssociationSizeSet: %v", h.PageAssociationFieldSize)
-	// common.Log.Debug("DeferredNonRetainSet: %v", h.RetainFlag)
 
 	return nil
 }
@@ -322,9 +326,7 @@ func (h *Header) readSegmentPageAssociation(
 			if page != nil {
 				h.RTSegments[i] = page.GetSegment(rtsNumbers[i])
 			} else {
-
 				h.RTSegments[i] = d.GetGlobalSegment(rtsNumbers[i])
-				// TODO: d.getGlobalSegment(rtsNumber[i])
 			}
 		}
 	}
@@ -334,7 +336,6 @@ func (h *Header) readSegmentPageAssociation(
 
 // readSegmentDataLength 7.2.7 - contains the length of the data part in bytes
 func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
-	common.Log.Debug("SegmentData BitPosition: %d", r.BitPosition())
 	h.SegmentDataLength, err = r.ReadBits(32)
 	if err != nil {
 		return err
@@ -347,9 +348,8 @@ func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
 
 // readDataStartOffset sets the offset of the current reader if the organisation type
 // is OSequential.
-func (h *Header) readDataStartOffset(r reader.StreamReader, organisationType uint8) {
-	if organisationType == OSequential {
-		common.Log.Debug("Sequential organisation")
+func (h *Header) readDataStartOffset(r reader.StreamReader, organizationType OrganizationType) {
+	if organizationType == OSequential {
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())
 	}
 
@@ -361,25 +361,4 @@ func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {
 
 func (h *Header) subInputReader() (reader.StreamReader, error) {
 	return reader.NewSubstreamReader(h.Reader, h.SegmentDataStartOffset, h.SegmentDataLength)
-}
-
-// String implements Stringer interface
-func (h *Header) String() string {
-	sb := &strings.Builder{}
-	sb.WriteString("\n[SEGMENT-HEADER]\n")
-	sb.WriteString(fmt.Sprintf("\t- SegmentNumber: %v\n", h.SegmentNumber))
-	sb.WriteString(fmt.Sprintf("\t- Type: %v\n", h.Type))
-	sb.WriteString(fmt.Sprintf("\t- RetainFlag: %v\n", h.RetainFlag))
-	sb.WriteString(fmt.Sprintf("\t- PageAssociation: %v\n", h.PageAssociation))
-	sb.WriteString(fmt.Sprintf("\t- PageAssociationFieldSize: %v\n", h.PageAssociationFieldSize))
-	// iterate over ids
-	sb.WriteString("\t- RTSEGMENTS:\n")
-	for _, rt := range h.RTSNumbers {
-		sb.WriteString(fmt.Sprintf("\t\t- %d\n", rt))
-	}
-	sb.WriteString(fmt.Sprintf("\t- HeaderLength: %v\n", h.HeaderLength))
-	sb.WriteString(fmt.Sprintf("\t- SegmentDataLength: %v\n", h.SegmentDataLength))
-	sb.WriteString(fmt.Sprintf("\t- SegmentDataStartOffset: %v\n", h.SegmentDataStartOffset))
-
-	return sb.String()
 }

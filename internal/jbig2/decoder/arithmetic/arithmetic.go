@@ -6,14 +6,18 @@
 package arithmetic
 
 import (
-	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"io"
 	"math"
+
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
+// define the constant arithmetic decoder tables
 var (
-	qe = [][4]uint32{{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
+	qe = [][4]uint32{
+		{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
 		{0x1801, 3, 9, 0}, {0x0AC1, 4, 12, 0}, {0x0521, 5, 29, 0}, {0x0221, 38, 33, 0},
 		{0x5601, 7, 6, 1}, {0x5401, 8, 14, 0}, {0x4801, 9, 14, 0}, {0x3801, 10, 14, 0},
 		{0x3001, 11, 17, 0}, {0x2401, 12, 18, 0}, {0x1C01, 13, 20, 0},
@@ -28,10 +32,23 @@ var (
 		{0x0141, 38, 35, 0}, {0x0111, 39, 36, 0}, {0x0085, 40, 37, 0},
 		{0x0049, 41, 38, 0}, {0x0025, 42, 39, 0}, {0x0015, 43, 40, 0},
 		{0x0009, 44, 41, 0}, {0x0005, 45, 42, 0}, {0x0001, 45, 43, 0},
-		{0x5601, 46, 46, 0}}
+		{0x5601, 46, 46, 0},
+	}
 
-	qeTable = []int{0x56010000, 0x34010000, 0x18010000, 0x0AC10000, 0x05210000, 0x02210000, 0x56010000, 0x54010000, 0x48010000, 0x38010000, 0x30010000, 0x24010000, 0x1C010000, 0x16010000, 0x56010000, 0x54010000, 0x51010000, 0x48010000, 0x38010000, 0x34010000, 0x30010000, 0x28010000, 0x24010000, 0x22010000, 0x1C010000, 0x18010000, 0x16010000, 0x14010000, 0x12010000, 0x11010000, 0x0AC10000, 0x09C10000, 0x08A10000, 0x05210000, 0x04410000, 0x02A10000, 0x02210000, 0x01410000, 0x01110000, 0x00850000, 0x00490000, 0x00250000, 0x00150000, 0x00090000, 0x00050000, 0x00010000,
-		0x56010000}
+	qeTable = []int{
+		0x56010000, 0x34010000, 0x18010000, 0x0AC10000,
+		0x05210000, 0x02210000, 0x56010000, 0x54010000,
+		0x48010000, 0x38010000, 0x30010000, 0x24010000,
+		0x1C010000, 0x16010000, 0x56010000, 0x54010000,
+		0x51010000, 0x48010000, 0x38010000, 0x34010000,
+		0x30010000, 0x28010000, 0x24010000, 0x22010000,
+		0x1C010000, 0x18010000, 0x16010000, 0x14010000,
+		0x12010000, 0x11010000, 0x0AC10000, 0x09C10000,
+		0x08A10000, 0x05210000, 0x04410000, 0x02A10000,
+		0x02210000, 0x01410000, 0x01110000, 0x00850000,
+		0x00490000, 0x00250000, 0x00150000, 0x00090000,
+		0x00050000, 0x00010000, 0x56010000,
+	}
 
 	nmpsTable = []int{
 		1, 2, 3, 4, 5, 38, 7, 8, 9, 10, 11, 12, 13, 29, 15,
@@ -53,10 +70,12 @@ var (
 	}
 )
 
-// Decoder is the arithmetic Decoder structure that is used to decode the
-// segments in an arithmetic method.
+// Decoder is the arithmetic Decoder structure that is used to decode the segments with an arithmetic method.
 type Decoder struct {
-	ContextSize          []int
+
+	// ContextSize is the current decoder context size
+	ContextSize []int
+
 	ReferedToContextSize []int
 
 	r reader.StreamReader
@@ -73,7 +92,7 @@ type Decoder struct {
 	streamPosition int64
 }
 
-// New creates new arithmetic Decoder
+// New creates new arithmetic Decoder.
 func New(r reader.StreamReader) (*Decoder, error) {
 	d := &Decoder{
 		r:                    r,
@@ -88,7 +107,7 @@ func New(r reader.StreamReader) (*Decoder, error) {
 	return d, nil
 }
 
-// DecodeBit decodes the arithmetic Bit
+// DecodeBit decodes a single bit using provided decoder stats.
 func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	var (
 		bit     int
@@ -99,52 +118,40 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	defer func() {
 
 		d.prvCtr++
-		// common.Log.Debug("Decoder 'a' value: %b", d.a)
-		// common.Log.Debug("%d, D: %01b C: %08X A: %04X, CTR: %d, B: %02X  QE: %04X", d.prvCtr, bit, d.c, d.a, d.ct, d.b, qeValue)
 	}()
 
 	d.a -= qeValue
 
-	// common.Log.Debug("Icx: %d, qeValue: %d", icx, qeValue)
-
 	if (d.c >> 16) < uint64(qeValue) {
-		// common.Log.Debug("d.c >> 16 < qeValue")
 		bit = d.lpsExchange(stats, icx, qeValue)
 
 		if err := d.renormalize(); err != nil {
 			return 0, err
 		}
 	} else {
-		// common.Log.Debug("d.c >> 16 >= qeValue")
 		d.c -= (uint64(qeValue) << 16)
 
 		if (d.a & 0x8000) == 0 {
-			// common.Log.Debug("mpsExchange, renormalize")
 			bit = d.mpsExchange(stats, icx)
 			if err := d.renormalize(); err != nil {
 				return 0, err
 			}
 		} else {
-			// common.Log.Debug("stats.getMPS")
 			bit = int(stats.getMps())
 		}
 	}
 
-	// if bit > 0 {
-	// 	bit = 1
-	// }
-
 	return bit, nil
 }
 
-// DecodeInt decodes the Integer from the arithmetic Decoder
+// DecodeInt decodes the Integer from the arithmetic Decoder for the provided DecoderStats.
 func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	var (
 		value, bit, s, bitsToRead, offset int
 		err                               error
 	)
+
 	if stats == nil {
-		common.Log.Debug("Nil stats")
 		stats = NewStats(512, 1)
 	}
 
@@ -156,14 +163,11 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		return 0, err
 	}
 
-	// common.Log.Debug("Sign int bit: '%01b'", s)
-
 	bit, err = d.decodeIntBit(stats)
 	if err != nil {
 		return 0, err
 	}
 
-	// common.Log.Debug("First bit value: %b", bit)
 	// First read
 	if bit == 1 {
 		bit, err = d.decodeIntBit(stats)
@@ -229,7 +233,6 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		bitsToRead = 2
 		offset = 0
 
-		// common.Log.Debug("Read First value: %v ", value)
 	}
 
 	for i := 0; i < bitsToRead; i++ {
@@ -240,8 +243,6 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		value = (value << 1) | bit
 	}
 	value += offset
-
-	// common.Log.Debug("Value decoded: %v with sign: %b", value, s)
 
 	if s == 0 {
 
@@ -257,7 +258,6 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 // DecodeIAID decodes the IAID procedure, Annex A.3
 func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error) {
 
-	// common.Log.Debug("DecodeIAID with codeLen: %d", codeLen)
 	// A.3 1)
 	d.previous = 1
 
@@ -277,7 +277,7 @@ func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error)
 
 	// A.3 3) & 5)
 	result := d.previous - (1 << codeLen)
-	// common.Log.Debug("decodeIAID result: %d", result)
+
 	return result, nil
 }
 
@@ -288,9 +288,10 @@ func (d *Decoder) init() error {
 		common.Log.Debug("Buffer0 readByte failed. %v", err)
 		return err
 	}
-	d.b = int(b)
 
+	d.b = int(b)
 	d.c = (uint64(b) << 16)
+
 	if err = d.readByte(); err != nil {
 		return err
 	}
@@ -300,12 +301,8 @@ func (d *Decoder) init() error {
 
 	// set
 	d.ct -= 7
-
 	d.a = 0x8000
-
 	d.prvCtr++
-	// common.Log.Debug("Decoder 'a' value: %b", d.a)
-	// common.Log.Debug("%d, C: %08x A: %04x, CTR: %d, B0: %02x", d.prvCtr, d.c, d.a, d.ct, d.b)
 
 	return nil
 }
@@ -326,10 +323,12 @@ func (d *Decoder) readByte() error {
 	d.b = int(b)
 
 	if d.b == 0xFF {
+
 		b1, err := d.r.ReadByte()
 		if err != nil {
 			return err
 		}
+
 		if b1 > 0x8F {
 			d.c += 0xFF00
 			d.ct = 8
@@ -386,18 +385,11 @@ func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
 		return bit, err
 	}
 
-	// common.Log.Debug("decodedIntBit: %d", bit)
-
-	// setPrev(bit)
 	if d.previous < 256 {
-		// common.Log.Debug("Lower than 256 - %d", d.previous)
 		d.previous = ((d.previous << uint64(1)) | int64(bit)) & 0x1ff
 	} else {
-		// common.Log.Debug("Greater than 256 - %d", d.previous)
 		d.previous = (((d.previous<<uint64(1) | int64(bit)) & 511) | 256) & 0x1ff
 	}
-
-	// common.Log.Debug("Previous: %d", d.previous)
 
 	return bit, nil
 }
@@ -410,30 +402,27 @@ func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 			stats.toggleMps()
 		}
 
-		stats.SetEntry(int(qe[icx][2]))
+		stats.setEntry(int(qe[icx][2]))
 		return int(1 - mps)
 	}
-	stats.SetEntry(int(qe[icx][1]))
+	stats.setEntry(int(qe[icx][1]))
 	return int(mps)
 
 }
 
 func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {
-	// common.Log.Debug("LPS Exchange for icx: %d...", icx)
 	mps := stats.getMps()
 	if d.a < qeValue {
-		// common.Log.Debug("Smaller than qeValue")
-		stats.SetEntry(int(qe[icx][1]))
+		stats.setEntry(int(qe[icx][1]))
 		d.a = qeValue
 		return int(mps)
 	}
 
 	if qe[icx][3] == 1 {
-		// common.Log.Debug("toggleMps")
 		stats.toggleMps()
 	}
 
-	stats.SetEntry(int(qe[icx][2]))
+	stats.setEntry(int(qe[icx][2]))
 	d.a = qeValue
 	return int(1 - mps)
 

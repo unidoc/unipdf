@@ -6,14 +6,18 @@
 package segments
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
+// TestDecodeGenericRegion tests the decode process of the jbig2 Generic Region
 func TestDecodeGenericRegion(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -33,7 +37,6 @@ func TestDecodeGenericRegion(t *testing.T) {
 
 			r := reader.New(data)
 
-			// d := &Document{InputStream: r}
 			d := &document{}
 
 			h, err := NewHeader(d, r, 0, OSequential)

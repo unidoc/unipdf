@@ -7,39 +7,41 @@ package segments
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"strings"
 )
 
-// RegionSegment is the segment model representing base segment region definition
+// RegionSegment is the segment model representing base segment region definition - see 7.4.1.
 type RegionSegment struct {
 	r reader.StreamReader
 
-	/** Region segment bitmap width, 7.4.1.1 */
+	// Region segment bitmap width, 7.4.1.1
 	BitmapWidth int
 
-	/** Region segment bitmap height, 7.4.1.2 */
+	// Region segment bitmap height, 7.4.1.2
 	BitmapHeight int
 
-	/** Region segment bitmap X location, 7.4.1.3 */
+	// Region segment bitmap X location, 7.4.1.3
 	XLocation int
 
-	/** Region segment bitmap Y location, 7.4.1.4 */
+	// Region segment bitmap Y location, 7.4.1.4
 	YLocation int
 
-	/** Region segment flags, 7.4.1.5 */
+	// Region segment flags, 7.4.1.5
 	CombinaionOperator bitmap.CombinationOperator
 }
 
-// NewRegionSegment creates new Region segment model
+// NewRegionSegment creates new Region segment model.
 func NewRegionSegment(r reader.StreamReader) *RegionSegment {
 	rs := &RegionSegment{r: r}
 	return rs
 }
 
-// String implements the Stringer interface
+// String implements the Stringer interface.
 func (r *RegionSegment) String() string {
 	sb := &strings.Builder{}
 

@@ -47,9 +47,12 @@ func newRunData(r *reader.SubstreamReader) (*runData, error) {
 			return nil, err
 		}
 	}
-	// common.Log.Debug("RunData: %+v", d)
-	// common.Log.Debug("[%X]", d.buffer)
 	return d, nil
+}
+
+// align skips to the next byte
+func (r *runData) align() {
+	r.offset = ((r.offset + 7) >> 3) << 3
 }
 
 func (r *runData) uncompressGetCode(table []*code) (*code, error) {
@@ -63,42 +66,27 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 		return nil, err
 	}
 
-	// common.Log.Debug("Code Before: %v", cd)
 	cd = cd & 0xFFFFFF
 
-	// common.Log.Debug("Code: %v", cd)
 	index := cd >> (codeOffset - firstLevelTableSize)
-	// common.Log.Debug("Index: %v", index)
-	var result = table[index]
-
-	// common.Log.Debug("Code: %v", result)
+	result := table[index]
 
 	if result != nil && result.nonNilSubTable {
-		// common.Log.Debug("Setting it to subtables: %v", result.subTable)
 		index = (cd >> (codeOffset - firstLevelTableSize - secondLevelTableSize)) & secondLevelTableMask
-		// common.Log.Debug("SubIndex: %v", index)
 		result = result.subTable[index]
 	}
 
 	return result, nil
 }
 
-// Fill up the code word in little endian mode. This is a hotspot, therefore the algorithm is
-// heavily optimised. For the frequent cases (i.e. short words) we try to get away with as little
-// work as possible. This method returns code words of 16 bits, which are aligned to the 24th bit.
-// The lowest 8 bits are used as a "queue" of bits so that an access to the actual data is only
-// needed, when this queue becomes empty.
 func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 	var bitsToFill = r.offset - r.lastOffset
 
-	// common.Log.Debug("BitsToFil: %v", bitsToFill)
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 
 		// refill at absolute offset
 		var byteOffset = (r.offset >> 3) - r.bufferBase
-		// common.Log.Debug("ByteOffset: %v", byteOffset)
-		// common.Log.Debug("BufferTop: %v", r.bufferTop)
 
 		if byteOffset >= r.bufferTop {
 
@@ -114,14 +102,10 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 			(uint32(r.buffer[byteOffset+1]&0xFF) << 8) |
 			(uint32(r.buffer[byteOffset+2] & 0xFF))
 
-		// common.Log.Debug("LastCode: %v", lastCode)
-
 		bitOffset := uint32(r.offset & 7)
 
 		lastCode <<= bitOffset
 		r.lastCode = int(lastCode)
-
-		// common.Log.Debug("CD_1: LastCode: %d", lastCode)
 
 	} else {
 
@@ -172,8 +156,6 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 
 func (r *runData) fillBuffer(byteOffset int) error {
 
-	// common.Log.Debug("byteOffset: %d, reader stream pos: %d", byteOffset, r.r.StreamPosition())
-
 	r.bufferBase = byteOffset
 
 	_, err := r.r.Seek(int64(byteOffset), io.SeekStart)
@@ -187,7 +169,6 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	}
 
 	if err == nil {
-		// common.Log.Debug("Read state. Current stream position: %d, readSize: %d", r.r.StreamPosition(), byteOffset)
 		r.bufferTop, err = r.r.Read(r.buffer)
 		if err != nil {
 			if err == io.EOF {
@@ -198,11 +179,10 @@ func (r *runData) fillBuffer(byteOffset int) error {
 			}
 		}
 	}
-	// common.Log.Debug("BufferTop after read: %d", r.bufferTop)
 
 	// check filling degree
 	if r.bufferTop > -1 && r.bufferTop < 3 {
-		// common.Log.Debug("BufferTop in size of filling degree: %d", r.bufferTop)
+
 		for r.bufferTop < 3 {
 
 			b, err := r.r.ReadByte()
@@ -230,9 +210,4 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	}
 
 	return nil
-}
-
-// Align skips to the next byte
-func (r *runData) Align() {
-	r.offset = ((r.offset + 7) >> 3) << 3
 }

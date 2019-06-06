@@ -7,6 +7,7 @@ package huffman
 
 import (
 	"errors"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -43,7 +44,7 @@ func (s *StandardTable) RootNode() *InternalNode {
 }
 
 // GetStandardTable gets the standard table for the provided number
-func GetStandardTable(number int) (HuffmanTabler, error) {
+func GetStandardTable(number int) (Tabler, error) {
 	if number <= 0 || number > len(standardTables) {
 		return nil, errors.New("Index out of range")
 	}
@@ -321,4 +322,4 @@ var tables = [][][]int{
 	},
 }
 
-var standardTables = make([]HuffmanTabler, len(tables))
+var standardTables = make([]Tabler, len(tables))

@@ -9,35 +9,59 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-var _ HuffmanTabler = &EncodedTable{}
+// compile time check for the encoded table
+var _ Tabler = &EncodedTable{}
 
-// EncodedTable is a model for the encoded huffman table
+// EncodedTable is a model for the encoded huffman table.
 type EncodedTable struct {
-	Tabler
+	BasicTabler
 	rootNode *InternalNode
 }
 
-// NewEncodedTable creates new encoded table for the provided Tabler
-func NewEncodedTable(table Tabler) (*EncodedTable, error) {
+// NewEncodedTable creates new encoded table for the provided BasicTabler.
+func NewEncodedTable(table BasicTabler) (*EncodedTable, error) {
 	e := &EncodedTable{
-		rootNode: &InternalNode{},
-		Tabler:   table,
+		rootNode:    &InternalNode{},
+		BasicTabler: table,
 	}
 
-	if err := e.ParseTable(); err != nil {
+	if err := e.parseTable(); err != nil {
 		return nil, err
 	}
 
 	return e, nil
 }
 
-// Decode decodes the provided root node
+// Decode implenets Node interface.
 func (e *EncodedTable) Decode(r reader.StreamReader) (int64, error) {
 	return e.rootNode.Decode(r)
 }
 
-// ParseTable parses the Tabler
-func (e *EncodedTable) ParseTable() (err error) {
+// InitTree implements Tabler interface.
+func (e *EncodedTable) InitTree(codeTable []*Code) error {
+	preprocessCodes(codeTable)
+
+	for _, c := range codeTable {
+		if err := e.rootNode.append(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RootNode returns the EncodedTable root node.
+// Implements Tabler interface.
+func (e *EncodedTable) RootNode() *InternalNode {
+	return e.rootNode
+}
+
+// String implements Stringer interface.
+func (e *EncodedTable) String() string {
+	return e.rootNode.String() + "\n"
+}
+
+// parseTable parses the encoded table into BasicTabler.
+func (e *EncodedTable) parseTable() (err error) {
 	r := e.StreamReader()
 
 	var codeTable []*Code
@@ -104,38 +128,4 @@ func (e *EncodedTable) ParseTable() (err error) {
 	}
 
 	return nil
-}
-
-// RootNode returns the EncodedTable root node
-func (e *EncodedTable) RootNode() *InternalNode {
-	return e.rootNode
-}
-
-// InitTree implements HuffmanTabler interface
-func (e *EncodedTable) InitTree(codeTable []*Code) error {
-	preprocessCodes(codeTable)
-
-	for _, c := range codeTable {
-		if err := e.rootNode.append(c); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// String implements Stringer interface
-func (e *EncodedTable) String() string {
-	return e.rootNode.String() + "\n"
-}
-
-// func NewEncodedTable(table Tabler)
-
-// Tabler is the interface common for the tables
-type Tabler interface {
-	HtHigh() int
-	HtLow() int
-	StreamReader() reader.StreamReader
-	HtPS() int
-	HtRS() int
-	HtOOB() int
 }
