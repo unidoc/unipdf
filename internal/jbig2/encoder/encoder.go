@@ -5,5 +5,6 @@
 
 package encoder
 
-type Encoder interface {
+// Encoder is the jbig2 encoder structure used for encoding the image into the
+type Encoder struct {
 }
