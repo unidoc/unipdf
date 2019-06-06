@@ -865,6 +865,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		trm:           trm,
 		end:           end,
 		count:         to.e.textCount,
+		trm:           trm,
+		end:           end,
 	}
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
@@ -932,9 +934,21 @@ func (pt PageText) String() string {
 	return strings.Join(parts, "\n")
 }
 
-// length returns the number of elements in `pt.marks`.
-func (pt PageText) length() int {
-	return len(pt.marks)
+// TextMark is the public view of a textMark.
+// Currently this is the text contents and a bounding box.
+type TextMark struct {
+	BBox model.PdfRectangle
+	Text string
+}
+
+// Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
+// text marks.
+func (pt PageText) Marks() []TextMark {
+	marks := make([]TextMark, len(pt.marks))
+	for i, t := range pt.marks {
+		marks[i] = TextMark{BBox: t.bbox, Text: t.text}
+	}
+	return marks
 }
 
 // Text returns the extracted page text.
