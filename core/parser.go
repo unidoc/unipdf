@@ -1744,6 +1744,9 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 			return false, errors.New("trailer Encrypt object non dictionary")
 		}
 		dict = encDict
+	case *PdfObjectNull:
+		common.Log.Debug("Encrypt is a null object. File should not be encrypted.")
+		return false, nil
 	default:
 		return false, fmt.Errorf("unsupported type: %T", e)
 	}
