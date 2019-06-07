@@ -20,15 +20,12 @@ func TestSubstream(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
-
 	sampleData := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
 
 	t.Run("Read", func(t *testing.T) {
-
 		t.Run("Valid", func(t *testing.T) {
 			// get the base reader
 			r := New(sampleData)
-
 			var (
 				offset uint64 = 3
 				length uint64 = 2
@@ -49,7 +46,6 @@ func TestSubstream(t *testing.T) {
 		t.Run("ReadPart", func(t *testing.T) {
 			// get the base reader
 			r := New(sampleData)
-
 			var (
 				offset uint64 = 3
 				length uint64 = 2
@@ -71,7 +67,6 @@ func TestSubstream(t *testing.T) {
 		t.Run("EOF", func(t *testing.T) {
 			// get the base reader
 			r := New(sampleData)
-
 			var (
 				offset uint64 = 3
 				length uint64 = 1
@@ -90,15 +85,12 @@ func TestSubstream(t *testing.T) {
 			if assert.Error(t, err) {
 				assert.Zero(t, i)
 			}
-
 		})
 	})
 
 	t.Run("BaseOnReader", func(t *testing.T) {
-
 		data := []byte{0x00, 3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
 		br := New(data)
-
 		r, err := NewSubstreamReader(br, 1, uint64(len(data)-1))
 		require.NoError(t, err)
 

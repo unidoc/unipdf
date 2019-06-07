@@ -14,11 +14,9 @@ import (
 
 // TestBlit tests the Blit function for the multiple CombinationOperators
 func TestBlit(t *testing.T) {
-
 	t.Run("Unshifted", func(t *testing.T) {
 		t.Run("SourceEqualSize", func(t *testing.T) {
 			// test Blit when the bytes are at their 0th position
-
 			t.Run("OR", func(t *testing.T) {
 				dst := New(25, 25)
 				src := New(25, 25)
@@ -90,7 +88,6 @@ func TestBlit(t *testing.T) {
 			})
 
 			t.Run("Replace", func(t *testing.T) {
-
 				dst := New(25, 25)
 				src := New(25, 25)
 
@@ -180,5 +177,4 @@ func TestBlit(t *testing.T) {
 		assert.True(t, dst.GetPixel(3, 3))
 		assert.True(t, dst.GetPixel(5, 5), dst.String())
 	})
-
 }

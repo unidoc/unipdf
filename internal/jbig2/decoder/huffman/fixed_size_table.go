@@ -27,8 +27,7 @@ func NewFixedSizeTable(codeTable []*Code) (*FixedSizeTable, error) {
 	return f, nil
 }
 
-// Decode decodes the fixedSizeTable.
-// Implements Tabler interface.
+// Decode implements Tabler interface.
 func (f *FixedSizeTable) Decode(r reader.StreamReader) (int64, error) {
 	return f.rootNode.Decode(r)
 }
@@ -50,8 +49,7 @@ func (f *FixedSizeTable) String() string {
 	return f.rootNode.String() + "\n"
 }
 
-// RootNode returns the root node for the fixedSizeTable
-// Implements TAbler interface.
+// RootNode implements Tabler interface.
 func (f *FixedSizeTable) RootNode() *InternalNode {
 	return f.rootNode
 }

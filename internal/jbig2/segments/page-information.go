@@ -44,8 +44,7 @@ type PageInformationSegment struct {
 	MaxStripeSize uint16
 }
 
-// Init initialize the PageInformation Segment.
-// Implements Segmenter interface.
+// Init implements Segmenter interface.
 func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
 	p.parseHeader()
@@ -67,7 +66,7 @@ func (p *PageInformationSegment) DefaultPixelValue() uint8 {
 	return p.defaultPixelValue
 }
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (p *PageInformationSegment) String() string {
 	sb := &strings.Builder{}
 
@@ -111,6 +110,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		}
 		common.Log.Debug(str)
 	}()
+
 	if err = p.readWidthAndHeight(); err != nil {
 		return err
 	}
@@ -169,7 +169,6 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		return err
 	}
 	common.Log.Debug("%s", p)
-
 	return nil
 }
 
@@ -186,13 +185,11 @@ func (p *PageInformationSegment) readResoultion() error {
 	}
 
 	p.ResolutionY = int(tempResolution)
-
 	return nil
 }
 
 // readCombinationOperatorOverrideAllowed -  Bit 6
 func (p *PageInformationSegment) readCombinationOperatorOverrideAllowed() error {
-
 	b, err := p.r.ReadBit()
 	if err != nil {
 		return err
@@ -234,7 +231,6 @@ func (p *PageInformationSegment) readDefaultPixelValue() error {
 		return err
 	}
 	p.defaultPixelValue = uint8(b)
-
 	return nil
 }
 
@@ -259,7 +255,6 @@ func (p *PageInformationSegment) readIsLossless() error {
 	if b == 1 {
 		p.isLossless = true
 	}
-
 	return nil
 }
 
@@ -272,7 +267,6 @@ func (p *PageInformationSegment) readIsStriped() error {
 	if b == 1 {
 		p.IsStripe = true
 	}
-
 	return nil
 }
 
@@ -284,7 +278,6 @@ func (p *PageInformationSegment) readMaxStripeSize() error {
 	}
 
 	p.MaxStripeSize = uint16(b & 0xFFFF)
-
 	return nil
 }
 

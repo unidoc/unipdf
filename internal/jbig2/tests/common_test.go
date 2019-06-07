@@ -56,7 +56,6 @@ func readJBIGZippedFiles(dirname string) ([]string, error) {
 }
 
 func readPDF(f *os.File, password ...string) (*pdf.PdfReader, error) {
-
 	pdfReader, err := pdf.NewPdfReader(f)
 	if err != nil {
 		return nil, err
@@ -82,11 +81,10 @@ func readPDF(f *os.File, password ...string) (*pdf.PdfReader, error) {
 				}
 			}
 			if !auth {
-				return nil, fmt.Errorf("Reading the file: '%s' failed. Invalid password provided.", f.Name())
+				return nil, fmt.Errorf("reading the file: '%s' failed. Invalid password provided", f.Name())
 			}
 		}
 	}
-
 	return pdfReader, nil
 }
 
@@ -192,9 +190,6 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 			}
 		}
 	}
-	// common.Log.Debug("Extracted: '%d' XObject images.", xObjectImages)
-	// common.Log.Debug("Extracted: '%d' Inline images.", inlineImages)
-
 	return rgbImages, jbig2RawData, nil
 }
 
@@ -227,7 +222,6 @@ func writeJBIG2Files(t testing.TB, zw *zip.Writer, dirname, filename string, pag
 		require.NoError(t, err)
 
 		_, err = f.Write(file)
-
 		require.NoError(t, err)
 	}
 }

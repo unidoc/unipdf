@@ -48,6 +48,7 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	if p.Patterns != nil {
 		return p.Patterns, nil
 	}
+
 	if !p.IsMMREncoded {
 		p.setGbAtPixels()
 	}
@@ -63,12 +64,10 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	if err = p.extractPatterns(collectiveBitmap); err != nil {
 		return nil, err
 	}
-
 	return p.Patterns, nil
 }
 
-// Init initializes the pattern dictionary segment.
-// Implements Segmenter interface.
+// Init implements Segmenter interface.
 func (p *PatternDictionary) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
 	return p.parseHeader()
@@ -78,6 +77,7 @@ func (p *PatternDictionary) checkInput() error {
 	if p.HdpHeight < 1 || p.HdpWidth < 1 {
 		return errors.New("invalid Header Value: Width/Height must be greater than zero")
 	}
+
 	if p.IsMMREncoded {
 		if p.HDTemplate != 0 {
 			common.Log.Debug("variable HDTemplate should not contain the value 0")
@@ -99,7 +99,6 @@ func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) err
 
 	// 4
 	for gray <= p.GrayMax {
-
 		// 4 a)
 		x0 := int(p.HdpWidth) * gray
 		roi := image.Rect(x0, 0, x0+int(p.HdpWidth), int(p.HdpHeight))
@@ -122,17 +121,18 @@ func (p *PatternDictionary) parseHeader() error {
 	defer func() {
 		common.Log.Debug("[PATTERN-DICTIONARY][parseHeader] finished")
 	}()
-	/** Bit 3-7 dirty read*/
+
+	// Bit 3-7 dirty read
 	_, err := p.r.ReadBits(5)
 	if err != nil {
 		return err
 	}
-	/** Bit 1-2 */
+	// Bit 1-2
 	if err = p.readTemplate(); err != nil {
 		return err
 	}
 
-	/** Bit 0 */
+	// Bit 0
 	if err = p.readIsMMREncoded(); err != nil {
 		return err
 	}
@@ -148,7 +148,6 @@ func (p *PatternDictionary) parseHeader() error {
 	if err = p.computeSegmentDataStructure(); err != nil {
 		return err
 	}
-
 	return p.checkInput()
 }
 
@@ -169,7 +168,6 @@ func (p *PatternDictionary) readIsMMREncoded() error {
 	if bit != 0 {
 		p.IsMMREncoded = true
 	}
-
 	return nil
 }
 
@@ -193,7 +191,6 @@ func (p *PatternDictionary) readGrayMax() error {
 	if err != nil {
 		return err
 	}
-
 	p.GrayMax = int(temp & 0xffffffff)
 	return nil
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// define the constant arithmetic decoder tables
+// Define the constant arithmetic decoder tables.
 var (
 	qe = [][4]uint32{
 		{0x5601, 1, 1, 1}, {0x3401, 2, 6, 0},
@@ -70,25 +70,19 @@ var (
 	}
 )
 
-// Decoder is the arithmetic Decoder structure that is used to decode the segments with an arithmetic method.
+// Decoder is the arithmetic Decoder structure, used to decode the jbig2 Segments.
 type Decoder struct {
-
 	// ContextSize is the current decoder context size
-	ContextSize []int
-
+	ContextSize          []int
 	ReferedToContextSize []int
 
-	r reader.StreamReader
-	b int
-
-	c        uint64
-	a        uint32
-	previous int64
-
-	ct int
-
-	prvCtr int
-
+	r              reader.StreamReader
+	b              int
+	c              uint64
+	a              uint32
+	previous       int64
+	ct             int
+	prvCtr         int
 	streamPosition int64
 }
 
@@ -100,6 +94,7 @@ func New(r reader.StreamReader) (*Decoder, error) {
 		ReferedToContextSize: []int{13, 10},
 	}
 
+	// initialize the decoder from the reader
 	if err := d.init(); err != nil {
 		return nil, err
 	}
@@ -116,7 +111,6 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	)
 
 	defer func() {
-
 		d.prvCtr++
 	}()
 
@@ -140,7 +134,6 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 			bit = int(stats.getMps())
 		}
 	}
-
 	return bit, nil
 }
 
@@ -150,11 +143,9 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		value, bit, s, bitsToRead, offset int
 		err                               error
 	)
-
 	if stats == nil {
 		stats = NewStats(512, 1)
 	}
-
 	d.previous = 1
 
 	// first bit defines the sign of the integer
@@ -177,7 +168,6 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 
 		// Second Read
 		if bit == 1 {
-
 			bit, err = d.decodeIntBit(stats)
 			if err != nil {
 				return 0, err
@@ -185,7 +175,6 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 
 			// Third Read
 			if bit == 1 {
-
 				bit, err = d.decodeIntBit(stats)
 				if err != nil {
 					return 0, err
@@ -193,20 +182,16 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 
 				// Fourth Read
 				if bit == 1 {
-
 					bit, err = d.decodeIntBit(stats)
 					if err != nil {
 						return 0, err
 					}
 					// Fifth Read
 					if bit == 1 {
-
 						bitsToRead = 32
 						offset = 4436
-
 					} else {
 						// Fifth Read
-
 						bitsToRead = 12
 						offset = 340
 					}
@@ -214,25 +199,21 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 					// Fourth Read
 					bitsToRead = 8
 					offset = 84
-
 				}
 			} else {
 				// Third Read
 				bitsToRead = 6
 				offset = 20
-
 			}
 		} else {
 			// SecondRead
 			bitsToRead = 4
 			offset = 4
-
 		}
 	} else {
 		// First read
 		bitsToRead = 2
 		offset = 0
-
 	}
 
 	for i := 0; i < bitsToRead; i++ {
@@ -245,27 +226,21 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	value += offset
 
 	if s == 0 {
-
 		return int(value), nil
 	} else if s == 1 && value > 0 {
-
 		return int(-value), nil
 	}
-
 	return math.MaxInt64, nil
 }
 
-// DecodeIAID decodes the IAID procedure, Annex A.3
+// DecodeIAID decodes the IAID procedure, Annex A.3.
 func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error) {
-
 	// A.3 1)
 	d.previous = 1
-
 	var i uint64
 
 	// A.3 2)
 	for i = 0; i < codeLen; i++ {
-
 		stats.SetIndex(int(d.previous))
 		bit, err := d.DecodeBit(stats)
 		if err != nil {
@@ -277,7 +252,6 @@ func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error)
 
 	// A.3 3) & 5)
 	result := d.previous - (1 << codeLen)
-
 	return result, nil
 }
 
@@ -308,7 +282,6 @@ func (d *Decoder) init() error {
 }
 
 func (d *Decoder) readByte() error {
-
 	if d.r.StreamPosition() > d.streamPosition {
 		if _, err := d.r.Seek(-1, io.SeekCurrent); err != nil {
 			return err
@@ -323,7 +296,6 @@ func (d *Decoder) readByte() error {
 	d.b = int(b)
 
 	if d.b == 0xFF {
-
 		b1, err := d.r.ReadByte()
 		if err != nil {
 			return err
@@ -349,9 +321,7 @@ func (d *Decoder) readByte() error {
 		d.c += uint64(d.b) << 8
 		d.ct = 8
 	}
-
 	d.c &= 0xFFFFFFFFFF
-
 	return nil
 }
 
@@ -390,7 +360,6 @@ func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
 	} else {
 		d.previous = (((d.previous<<uint64(1) | int64(bit)) & 511) | 256) & 0x1ff
 	}
-
 	return bit, nil
 }
 
@@ -425,5 +394,4 @@ func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int 
 	stats.setEntry(int(qe[icx][2]))
 	d.a = qeValue
 	return int(1 - mps)
-
 }

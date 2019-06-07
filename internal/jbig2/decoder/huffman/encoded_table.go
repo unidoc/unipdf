@@ -9,7 +9,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// compile time check for the encoded table
+// Compile time check for the encoded table.
 var _ Tabler = &EncodedTable{}
 
 // EncodedTable is a model for the encoded huffman table.
@@ -18,7 +18,7 @@ type EncodedTable struct {
 	rootNode *InternalNode
 }
 
-// NewEncodedTable creates new encoded table for the provided BasicTabler.
+// NewEncodedTable creates new encoded table from the provided 'table' argument.
 func NewEncodedTable(table BasicTabler) (*EncodedTable, error) {
 	e := &EncodedTable{
 		rootNode:    &InternalNode{},
@@ -49,8 +49,7 @@ func (e *EncodedTable) InitTree(codeTable []*Code) error {
 	return nil
 }
 
-// RootNode returns the EncodedTable root node.
-// Implements Tabler interface.
+// RootNode Implements Tabler interface.
 func (e *EncodedTable) RootNode() *InternalNode {
 	return e.rootNode
 }
@@ -60,16 +59,13 @@ func (e *EncodedTable) String() string {
 	return e.rootNode.String() + "\n"
 }
 
-// parseTable parses the encoded table into BasicTabler.
+// parseTable parses the encoded table 'e' into BasicTabler.
 func (e *EncodedTable) parseTable() (err error) {
 	r := e.StreamReader()
-
 	var codeTable []*Code
-
 	var prefLen, rangeLen, rangeLow int
-	curRangeLow := e.HtLow()
-
 	var temp uint64
+	curRangeLow := e.HtLow()
 
 	// Annex B.2 5) - decode table lines
 	for curRangeLow < e.HtHigh() {
@@ -78,6 +74,7 @@ func (e *EncodedTable) parseTable() (err error) {
 			return
 		}
 		prefLen = int(temp)
+
 		temp, err = r.ReadBits(byte(e.HtRS()))
 		if err != nil {
 			return
@@ -85,7 +82,6 @@ func (e *EncodedTable) parseTable() (err error) {
 		rangeLen = int(temp)
 
 		codeTable = append(codeTable, NewCode(prefLen, rangeLen, rangeLow, false))
-
 		curRangeLow += (1 << uint(rangeLen))
 	}
 
@@ -126,6 +122,5 @@ func (e *EncodedTable) parseTable() (err error) {
 	if err = e.InitTree(codeTable); err != nil {
 		return
 	}
-
 	return nil
 }

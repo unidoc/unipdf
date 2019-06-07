@@ -14,7 +14,6 @@ import (
 
 // SubstreamReader is the wrapper over the Reader's parts that is allowed only to
 // operate on the selected data space.
-// Implements StreamReader.
 type SubstreamReader struct {
 	// stream position
 	streamPos uint64
@@ -47,12 +46,12 @@ type SubstreamReader struct {
 	markBits byte
 }
 
-// NewSubstreamReader creates new SubStreamReader over provided wrapped StreamReader 'r'
-// with defined offset and length.
+// NewSubstreamReader creates new SubStreamReader for the provided wrapped StreamReader 'r' with defined 'offset' and 'length'.
 func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader, error) {
 	if r == nil {
-		return nil, errors.New("Root reader is nil")
+		return nil, errors.New("root reader is nil")
 	}
+
 	common.Log.Debug("New substream at offset: %d with length: %d", offset, length)
 	s := &SubstreamReader{
 		wrapped: r,
@@ -63,36 +62,35 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 	return s, nil
 }
 
-// Align resets the bits position of the given reader.
-// It returns how many bits left were skipped.
+// Align implements StreamReader interface.
 func (s *SubstreamReader) Align() (skipped byte) {
 	skipped = s.bits
 	s.bits = 0
 	return
 }
 
-// BitPosition gets the current bit position.
+// BitPosition implements StreamReader interface.
 func (s *SubstreamReader) BitPosition() int {
 	return int(s.bits)
 }
 
-// Length returns the length of the total data used by the reader.
+// Length implements StreamReader interface.
 func (s *SubstreamReader) Length() uint64 {
 	return s.length
 }
 
-// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
+// Mark implements StreamReader interface.
 func (s *SubstreamReader) Mark() {
 	s.mark = s.streamPos
 	s.markBits = s.bits
 }
 
-// Offset returns current SubstreamReader offset
+// Offset returns current SubstreamReader offset.
 func (s *SubstreamReader) Offset() uint64 {
 	return s.offset
 }
 
-// Read reads the bytes of the provided data length and stores them inside the data slice.
+// Read implements io.Reader interface.
 func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 	if s.streamPos >= s.length {
 		common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
@@ -107,13 +105,10 @@ func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 			return
 		}
 	}
-
 	return
 }
 
-// ReadBit reads the next binary value from the current cache.
-// Equivalent of ReadBool method but returns an integer.
-// Implements StreamReader interface.
+// ReadBit implements StreamReader interface.
 func (s *SubstreamReader) ReadBit() (b int, err error) {
 	var bit bool
 	bit, err = s.readBool()
@@ -124,17 +119,11 @@ func (s *SubstreamReader) ReadBit() (b int, err error) {
 	if bit {
 		b = 1
 	}
-
-	// common.Log.Debug("Bit position after readingBit: %d", s.bits)
 	return
 }
 
-// ReadBits reads the bits of size 'n' from the reader.
+// ReadBits implements StreamReader interface.
 func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
-	// common.Log.Debug("Bit position before reading bits n: %d,  %d", n, s.bits)
-	// defer func() {
-	// common.Log.Debug("Bit position after readingBits n:%d  b: %d", size, s.bits)
-	// }()
 	if n < s.bits {
 		shift := s.bits - n
 		u = uint64(s.cache >> shift)
@@ -148,6 +137,7 @@ func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
 			u = uint64(s.cache)
 			n -= s.bits
 		}
+
 		var b byte
 		for n >= 8 {
 			b, err = s.readBufferByte()
@@ -171,12 +161,11 @@ func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
 		}
 		return u, nil
 	}
-
 	s.bits = 0
 	return uint64(s.cache), nil
 }
 
-// ReadBool reads the next binary value from the current cache
+// ReadBool implements StreamReader interface.
 func (s *SubstreamReader) ReadBool() (bool, error) {
 	return s.readBool()
 }
@@ -189,8 +178,7 @@ func (s *SubstreamReader) ReadByte() (byte, error) {
 	return s.readUnalignedByte()
 }
 
-// Reset returns the stream pointer to its previous position, including the bit offset,
-// at the time of the most recent unmatched call to mark.
+// Reset implements StreamReader interface.
 func (s *SubstreamReader) Reset() {
 	s.streamPos = s.mark
 	s.bits = s.markBits
@@ -198,7 +186,6 @@ func (s *SubstreamReader) Reset() {
 
 // Seek implements the io.Seeker interface.
 func (s *SubstreamReader) Seek(offset int64, whence int) (int64, error) {
-
 	switch whence {
 	case io.SeekStart:
 		s.streamPos = uint64(offset)
@@ -218,7 +205,7 @@ func (s *SubstreamReader) Seek(offset int64, whence int) (int64, error) {
 	return int64(s.streamPos), nil
 }
 
-// StreamPosition gets the stream position of the substream reader.
+// StreamPosition implements StreamReader interface.
 func (s *SubstreamReader) StreamPosition() int64 {
 	return int64(s.streamPos)
 }
@@ -232,16 +219,14 @@ func (s *SubstreamReader) fillBuffer() error {
 	}
 
 	s.bufferBase = uint64(s.streamPos)
-
 	toRead := min(uint64(len(s.buffer)), s.length-s.streamPos)
-
 	bytes := make([]byte, toRead)
-	// common.Log.Debug("toRead :%d", s.length)
 
 	read, err := s.wrapped.Read(bytes)
 	if err != nil {
 		return err
 	}
+
 	var i uint64
 	for i = 0; i < toRead; i++ {
 		s.buffer[i] = bytes[i]
@@ -257,6 +242,7 @@ func (s *SubstreamReader) readBool() (b bool, err error) {
 		if err != nil {
 			return
 		}
+
 		b = (s.cache & 0x80) != 0
 		s.cache, s.bits = s.cache&0x7f, 7
 		return
@@ -275,6 +261,7 @@ func (s *SubstreamReader) readUnalignedByte() (b byte, err error) {
 	if err != nil {
 		return 0, err
 	}
+
 	b |= s.cache >> bits
 	s.cache &= 1<<bits - 1
 	return
@@ -282,22 +269,19 @@ func (s *SubstreamReader) readUnalignedByte() (b byte, err error) {
 
 func (s *SubstreamReader) readBufferByte() (b byte, err error) {
 	if s.streamPos >= s.length {
-		// common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
 	}
 
 	if s.streamPos >= s.bufferTop || s.streamPos < s.bufferBase {
-		// common.Log.Debug("Fill the buffer.")
 		if err := s.fillBuffer(); err != nil {
 			return 0, err
 		}
 	}
 
 	read := s.buffer[s.streamPos-s.bufferBase]
-	s.streamPos += 1
+	s.streamPos++
 
 	return read, nil
-
 }
 
 func min(f, s uint64) uint64 {

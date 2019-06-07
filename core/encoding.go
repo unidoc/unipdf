@@ -1997,6 +1997,9 @@ func NewJBIG2Encoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
 }
 
+// setChocolateData sets the chocolate data flag when the pdf stream object contains the 'Decode' object.
+// Decode object ( PDF32000:2008 7.10.2 Type 0 (Sampled) Functions).
+// NOTE: this function is a temporary helper until the samples handle Decode function.
 func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 	arr, ok := decode.(*PdfObjectArray)
 	if !ok {
@@ -2004,31 +2007,35 @@ func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 		return
 	}
 
-	// the array should have two int or floats
-	fsl, err := arr.GetAsFloat64Slice()
+	// (PDF32000:2008 Table 39) The array should be of 2 x n size. For binary images n stands for 1bit, thus the array should contain 2 numbers.
+	floatSlice, err := arr.GetAsFloat64Slice()
 	if err != nil {
+		// check if the arr is an array of integers.
 		iArr, err := arr.ToIntegerArray()
 		if err != nil {
 			common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
+			return
+		}
+		if iArr[0] == 1 && iArr[1] == 0 {
+			enc.IsChocolateData = true
+		} else if iArr[1] == 0 && iArr[0] == 1 {
+			enc.IsChocolateData = false
 		} else {
-			if iArr[0] == 1 && iArr[1] == 0 {
-				enc.IsChocolateData = true
-			} else if iArr[1] == 0 && iArr[0] == 1 {
-				enc.IsChocolateData = false
-			} else {
-				common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
-			}
+			common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
 		}
+		return
+	}
+
+	if len(floatSlice) != 2 {
+		return
+	}
+
+	if floatSlice[0] == 1.0 && floatSlice[1] == 0.0 {
+		enc.IsChocolateData = true
+	} else if floatSlice[0] == 0.0 && floatSlice[1] == 1.0 {
+		enc.IsChocolateData = false
 	} else {
-		if len(fsl) == 2 {
-			if fsl[0] == 1.0 && fsl[1] == 0.0 {
-				enc.IsChocolateData = true
-			} else if fsl[0] == 0.0 && fsl[1] == 1.0 {
-				enc.IsChocolateData = false
-			} else {
-				common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
-			}
-		}
+		common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
 	}
 
 }
@@ -2063,7 +2070,6 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	}
 
 	if decodeParams != nil {
-
 		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
 			globalsStream, ok := globals.(*PdfObjectStream)
 			if !ok {
@@ -2071,6 +2077,7 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 				common.Log.Debug("ERROR: %s", err.Error())
 				return nil, err
 			}
+
 			gdoc, err := jbig2.NewDocument(globalsStream.Stream)
 			if err != nil {
 				err = fmt.Errorf("decoding global stream failed. %s", err.Error())
@@ -2081,6 +2088,8 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			encoder.Globals = gdoc.GlobalSegments
 		}
 	}
+
+	// Inverse the bits on the decode function (PDF32000:2008 7.10.2)
 	if decode := streamObj.Get("Decode"); decode != nil {
 		encoder.setChocolateData(decode)
 	}
@@ -2093,8 +2102,7 @@ func (enc *JBIG2Encoder) GetFilterName() string {
 	return StreamEncodingFilterNameJBIG2
 }
 
-// MakeDecodeParams makes a new instance of an encoding dictionary based on
-// the current encoder settings.
+// MakeDecodeParams makes a new instance of an encoding dictionary based on the current encoder settings.
 func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 	return MakeDict()
 }
@@ -2103,8 +2111,8 @@ func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
 	if enc.IsChocolateData {
-		// /Decode[1.000 0.000]
-		dict.Set("Decode", MakeArray(MakeFloat(1.000), MakeFloat(0.000)))
+		// /Decode[1.0 0.0] - see note in the 'setChocolateData' method.
+		dict.Set("Decode", MakeArray(MakeFloat(1.0), MakeFloat(0.0)))
 	}
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
 
@@ -2118,9 +2126,8 @@ func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 	}
 }
 
-// DecodeBytes decode the jbig2 raw 'encoded' data
+// DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-
 	// create new JBIG2 document
 	doc, err := jbig2.NewDocumentWithGlobals(encoded, enc.Globals)
 	if err != nil {
@@ -2153,12 +2160,12 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return bm.GetVanillaData(), nil
 }
 
-// DecodeStream decodes the pdf stream object from the jbig2 encoding
+// DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.
 func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	return enc.DecodeBytes(streamObj.Stream)
 }
 
-// EncodeBytes encodes the raw data bytes into the jbig2 encoded data.
+// EncodeBytes encodes the passed slice in slice of bytes into JBIG2.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return data, ErrNoJBIG2Decode

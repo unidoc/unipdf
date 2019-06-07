@@ -5,7 +5,7 @@
 
 package bitmap
 
-// CombinationOperator is the operator used while combining the bitmaps
+// CombinationOperator is the operator used for combining the bitmaps.
 type CombinationOperator int
 
 const (
@@ -28,7 +28,7 @@ const (
 	CmbOpNot
 )
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (c CombinationOperator) String() string {
 	var result string
 	switch c {

@@ -40,13 +40,12 @@ var (
 	_ StreamReader  = &Reader{}
 )
 
-// New creates a new reader using the byte slice data as input.
+// New creates a new reader.Reader using the byte slice data as input.
 func New(data []byte) *Reader {
 	return &Reader{in: data}
 }
 
-// Align resets the bits position of the given reader.
-// It returns how many bits left were skipped.
+// Align implements StreamReader interface.
 func (r *Reader) Align() (skipped byte) {
 	skipped = r.bits
 	r.bits = 0 // no need to clear cache, will be overwritten on next read
@@ -60,27 +59,26 @@ func (r *Reader) ConsumeRemainingBits() {
 		if err != nil {
 			common.Log.Debug("ConsumeRemainigBits failed: %v", err)
 		}
-
 	}
 }
 
-// BitPosition gets the current bit position of the Reader.
+// BitPosition implements StreamReader inteface.
 func (r *Reader) BitPosition() int {
 	return int(r.bits)
 }
 
-// Length returns the length of the total data used by the reader.
+// Length implements StreamReader interface.
 func (r *Reader) Length() uint64 {
 	return uint64(len(r.in))
 }
 
-// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
+// Mark implements StreamReader interface.
 func (r *Reader) Mark() {
 	r.mark = r.r
 	r.markBits = r.bits
 }
 
-// Read reads the bytes of the provided data length and stores them inside the data slice.
+// Read implements io.Reader interface.
 func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.bits == 0 {
 		return r.read(p)
@@ -94,9 +92,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	return
 }
 
-// ReadBit reads the next binary value from the current cache.
-// Equivalent of ReadBool method but returns an integer.
-// Implements StreamReader interface.
+// ReadBit implements StreamReader interface.
 func (r *Reader) ReadBit() (b int, err error) {
 	var bit bool
 	bit, err = r.readBool()
@@ -109,9 +105,9 @@ func (r *Reader) ReadBit() (b int, err error) {
 	return
 }
 
-// ReadBits reads the bits of size 'n' from the reader
+// ReadBits implements StreamReader interface.
 func (r *Reader) ReadBits(n byte) (u uint64, err error) {
-	// Some optimization, frequent cases
+	// Frequent optimization.
 	if n < r.bits {
 		// cache has all needed bits, and there are some extra which will be left in cache
 		shift := r.bits - n
@@ -122,12 +118,12 @@ func (r *Reader) ReadBits(n byte) (u uint64, err error) {
 	}
 
 	if n > r.bits {
-		// all cache bits needed, and it's not even enough so more will be read
 		if r.bits > 0 {
 			u = uint64(r.cache)
 			n -= r.bits
 		}
-		// Read whole bytes
+
+		// Read whole bytes.
 		for n >= 8 {
 			b, err2 := r.readBufferByte()
 			if err2 != nil {
@@ -136,7 +132,8 @@ func (r *Reader) ReadBits(n byte) (u uint64, err error) {
 			u = u<<8 + uint64(b)
 			n -= 8
 		}
-		// Read last fraction, if any
+
+		// Read last fraction if exists.
 		if n > 0 {
 			if r.cache, err = r.readBufferByte(); err != nil {
 				return 0, err
@@ -151,12 +148,11 @@ func (r *Reader) ReadBits(n byte) (u uint64, err error) {
 		return u, nil
 	}
 
-	// cache has exactly as many as needed
 	r.bits = 0 // no need to clear cache, will be overridden on next read
 	return uint64(r.cache), nil
 }
 
-// ReadBool reads the next binary value from the current cache
+// ReadBool implements StreamReader interface.
 func (r *Reader) ReadBool() (b bool, err error) {
 	return r.readBool()
 }
@@ -170,7 +166,7 @@ func (r *Reader) ReadByte() (b byte, err error) {
 	return r.readUnalignedByte()
 }
 
-// ReadUnsignedInt reads the unsigned uint32 from the reader
+// ReadUnsignedInt reads the unsigned uint32 from the reader.
 func (r *Reader) ReadUnsignedInt() (uint32, error) {
 	ub := make([]byte, 4)
 
@@ -182,8 +178,7 @@ func (r *Reader) ReadUnsignedInt() (uint32, error) {
 	return binary.BigEndian.Uint32(ub), nil
 }
 
-// Reset returns the stream pointer to its previous position, including the bit offset,
-// at the time of the most recent unmatched call to mark.
+// Reset implements StreamReader interface.
 func (r *Reader) Reset() {
 	r.r = r.mark
 	r.bits = r.markBits
@@ -213,7 +208,7 @@ func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	return abs, nil
 }
 
-// StreamPosition gets the stream position of the Reader
+// StreamPosition implements StreamReader interface.
 func (r *Reader) StreamPosition() int64 {
 	return r.r
 }

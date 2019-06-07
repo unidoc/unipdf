@@ -38,6 +38,7 @@ func NewHeader(
 	offset int64, organizationType OrganizationType,
 ) (*Header, error) {
 	h := &Header{Reader: r}
+
 	if err := h.parse(d, r, offset, organizationType); err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	return segmentDataPart, nil
 }
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (h *Header) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString("\n[SEGMENT-HEADER]\n")
@@ -90,7 +91,6 @@ func (h *Header) String() string {
 	sb.WriteString(fmt.Sprintf("\t- RetainFlag: %v\n", h.RetainFlag))
 	sb.WriteString(fmt.Sprintf("\t- PageAssociation: %v\n", h.PageAssociation))
 	sb.WriteString(fmt.Sprintf("\t- PageAssociationFieldSize: %v\n", h.PageAssociationFieldSize))
-	// iterate over ids
 	sb.WriteString("\t- RTSEGMENTS:\n")
 	for _, rt := range h.RTSNumbers {
 		sb.WriteString(fmt.Sprintf("\t\t- %d\n", rt))
@@ -102,7 +102,7 @@ func (h *Header) String() string {
 	return sb.String()
 }
 
-// parse parses the current segment header for the provided document 'd'.
+// parses the current segment header for the provided document 'd'.
 func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
 	offset int64, organizationType OrganizationType,
@@ -133,7 +133,6 @@ func (h *Header) parse(
 
 	// 7.2.4 Amount of referred-to segment
 	var countOfRTS uint64
-
 	countOfRTS, err = h.readAmmountOfReferredToSegments(r)
 	if err != nil {
 		return err
@@ -167,7 +166,6 @@ func (h *Header) parse(
 
 // readSegmentNumber - 7.2.2
 func (h *Header) readSegmentNumber(r reader.StreamReader) error {
-	// get 4 bytes
 	b := make([]byte, 4)
 	_, err := r.Read(b)
 	if err != nil {
@@ -176,7 +174,6 @@ func (h *Header) readSegmentNumber(r reader.StreamReader) error {
 
 	// BigEndian number
 	h.SegmentNumber = binary.BigEndian.Uint32(b)
-
 	return nil
 }
 
@@ -186,6 +183,7 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	if err != nil {
 		return err
 	}
+
 	// Bit 7: Retain Flag
 	if bit != 0 {
 		h.RetainFlag = true
@@ -218,7 +216,6 @@ func (h *Header) readAmmountOfReferredToSegments(r reader.StreamReader) (uint64,
 		return 0, err
 	}
 	countOfRTS &= 0xf
-
 	var retainBit []byte
 
 	if countOfRTS <= 4 {
@@ -260,15 +257,12 @@ func (h *Header) readAmmountOfReferredToSegments(r reader.StreamReader) (uint64,
 func (h *Header) readReferedToSegmentNumbers(
 	r reader.StreamReader, countOfRTS int,
 ) ([]int, error) {
-
-	var rtsNumbers = make([]int, countOfRTS)
+	rtsNumbers := make([]int, countOfRTS)
 
 	if countOfRTS > 0 {
-
-		var rtsSize byte = 1
+		rtsSize := byte(1)
 
 		if h.SegmentNumber > 256 {
-
 			rtsSize = 2
 
 			if h.SegmentNumber > 65536 {
@@ -298,7 +292,6 @@ func (h *Header) readSegmentPageAssociation(
 	d Documenter, r reader.StreamReader,
 	countOfRTS uint64, rtsNumbers ...int,
 ) error {
-
 	if !h.PageAssociationFieldSize {
 		// Short format
 		bits, err := r.ReadBits(8)
@@ -319,7 +312,6 @@ func (h *Header) readSegmentPageAssociation(
 
 	if countOfRTS > 0 {
 		page, _ := d.GetPage(h.PageAssociation)
-
 		var i uint64
 
 		for i = 0; i < countOfRTS; i++ {
@@ -330,7 +322,6 @@ func (h *Header) readSegmentPageAssociation(
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -352,7 +343,6 @@ func (h *Header) readDataStartOffset(r reader.StreamReader, organizationType Org
 	if organizationType == OSequential {
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())
 	}
-
 }
 
 func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {

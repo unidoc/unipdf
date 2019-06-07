@@ -15,7 +15,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// RegionSegment is the segment model representing base segment region definition - see 7.4.1.
+// RegionSegment is the model representing base jbig2 segment region - see 7.4.1.
 type RegionSegment struct {
 	r reader.StreamReader
 
@@ -52,12 +52,13 @@ func (r *RegionSegment) String() string {
 	return sb.String()
 }
 
-// parseHeader parses the RegionSegment Header
+// parseHeader parses the RegionSegment header.
 func (r *RegionSegment) parseHeader() error {
 	common.Log.Debug("[REGION][PARSE-HEADER] Begin")
 	defer func() {
 		common.Log.Debug("[REGION][PARSE-HEADER] Finished")
 	}()
+
 	temp, err := r.r.ReadBits(32)
 	if err != nil {
 		return err
@@ -89,7 +90,6 @@ func (r *RegionSegment) parseHeader() error {
 	if err = r.readCombinationOperator(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

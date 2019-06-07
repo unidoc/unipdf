@@ -13,20 +13,21 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 )
 
-// ErrIndexOutOfRange is the error that returns if the bit index is out of range
-var ErrIndexOutOfRange error = errors.New("Index out of range")
+// ErrIndexOutOfRange is the error that returns if the bitmap byte index is out of range.
+var ErrIndexOutOfRange = errors.New("Index out of range")
 
 // Bitmap is the jbig2 bitmap representation.
 type Bitmap struct {
+	// Width and Height represents bitmap dimensions.
 	Width, Height int
 
-	// BitmapNumber is the number
+	// BitmapNumber is the number.
 	BitmapNumber int
 
-	// RowStride is the number of bytes set per row
+	// RowStride is the number of bytes set per row.
 	RowStride int
 
-	// Data saves the bits data for the bitmap
+	// Data saves the bits data for the bitmap.
 	Data []byte
 
 	isVanilla bool
@@ -40,15 +41,12 @@ func New(width, height int) *Bitmap {
 		RowStride: (width + 7) >> 3,
 	}
 
-	common.Log.Debug("Created bitmap - Width: %d, Height: %d", width, height)
-
 	bm.Data = make([]byte, height*bm.RowStride)
 
 	return bm
 }
 
-// Equals checks if all the pixels in the 'b' bitmap are equals to the 's' bitmap
-// Used in testing purpose only
+// Equals checks if all the pixels in the 'b' bitmap are equals to the 's' bitmap.
 func (b *Bitmap) Equals(s *Bitmap) bool {
 	if len(b.Data) != len(s.Data) {
 		return false
@@ -65,12 +63,12 @@ func (b *Bitmap) Equals(s *Bitmap) bool {
 	return true
 }
 
-// GetBitOffset gets the bit offset at the 'x' coordinate
+// GetBitOffset gets the bit offset at the 'x' coordinate.
 func (b *Bitmap) GetBitOffset(x int) int {
 	return x & 0x07
 }
 
-// GetByte gets the byte at 'index'
+// GetByte gets and returns the byte at given 'index'.
 func (b *Bitmap) GetByte(index int) (byte, error) {
 	if index > len(b.Data)-1 {
 		return 0, ErrIndexOutOfRange
@@ -78,12 +76,13 @@ func (b *Bitmap) GetByte(index int) (byte, error) {
 	return b.Data[index], nil
 }
 
-// GetByteIndex gets the byte index from the provided data at index 'x','y'
+// GetByteIndex gets the byte index from the bitmap at coordinates 'x','y'.
 func (b *Bitmap) GetByteIndex(x, y int) int {
 	return y*b.RowStride + (x >> 3)
 }
 
-// GetChocolateData 'chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black
+// GetChocolateData gets bitmap data as a byte sice with Chocolate bit intepretation.
+// 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black
 // The naming convention based on the: `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetChocolateData() []byte {
 	if !b.isVanilla {
@@ -93,7 +92,7 @@ func (b *Bitmap) GetChocolateData() []byte {
 	return b.Data
 }
 
-// GetPixel gets the pixel value at the coordinates 'x' and 'y'
+// GetPixel gets the pixel value at the coordinates 'x', 'y'.
 func (b *Bitmap) GetPixel(x, y int) bool {
 	i := b.GetByteIndex(x, y)
 	o := b.GetBitOffset(x)
@@ -109,13 +108,10 @@ func (b *Bitmap) GetPixel(x, y int) bool {
 	return false
 }
 
-// GetUnpaddedData gets the data without padding for the rowstride
+// GetUnpaddedData gets the data without row stride padding.
 func (b *Bitmap) GetUnpaddedData() []byte {
-
-	var (
-		padding  = uint(b.Width & 0x07)
-		useShift = padding != 0
-	)
+	padding := uint(b.Width & 0x07)
+	useShift := padding != 0
 
 	if !useShift {
 		return b.Data
@@ -129,20 +125,17 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 	} else {
 		size >>= 3
 	}
+
 	padding = 8 - padding
-
-	var data = make([]byte, size)
-
+	data := make([]byte, size)
 	var (
 		// currentIndex is the index at which the byte is currently in the 'data' byte array
 		currentIndex int
-
 		// siginificantBits are the bits in the current byte that are already set and significant
 		significantBits uint
 	)
 
 	for line := 0; line < b.Height; line++ {
-
 		// iterate over all rowstrides within the line
 		for i := 0; i < b.RowStride; i++ {
 			// get the byte at x, y
@@ -158,7 +151,6 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 					currentIndex++
 				}
 			} else {
-
 				// last byte i.e. 11010000 with padding 3
 				// and 'bt' is 10101111
 				// then last byte should be 11010 | 101 and
@@ -199,7 +191,6 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 						lastByte = lastByte | (bt >> (8 - significantBits))
 						data[currentIndex] = lastByte
 					} else {
-
 						// if the difference is smaller or equal to 8
 						lastByte = lastByte | bt>>(8-dif)
 						significantBits = dif
@@ -226,11 +217,11 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 			}
 		}
 	}
-
 	return data
 }
 
-// GetVanillaData vanilla is the bit interpretation where the 0'th bit means black and 1'th bit means white
+// GetVanillaData gets bitmap data as a byte sice with Vanilla bit intepretation.
+// 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white
 // The naming convention based on the `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetVanillaData() []byte {
 	if b.isVanilla {
@@ -240,8 +231,8 @@ func (b *Bitmap) GetVanillaData() []byte {
 	return b.Data
 }
 
-// SetPixel sets the pixel at 'x', 'y' with the value of 'pixel'
-// Returns an error if the index is out of range
+// SetPixel sets the pixel at 'x', 'y' coordinates with the value of 'pixel'.
+// Returns an error if the index is out of range.
 func (b *Bitmap) SetPixel(x, y int, pixel byte) error {
 	i := b.GetByteIndex(x, y)
 	if i > len(b.Data)-1 {
@@ -258,26 +249,25 @@ func (b *Bitmap) SetPixel(x, y int, pixel byte) error {
 	return nil
 }
 
-// SetDefaultPixel sets all pixel to '1'
+// SetDefaultPixel sets all bits within bitmap to '1'.
 func (b *Bitmap) SetDefaultPixel() {
 	for i := range b.Data {
 		b.Data[i] = byte(0xff)
 	}
 }
 
-// SetByte sets the byte at 'index' of value: 'v'
-// Returns an error if the index is out of range
+// SetByte sets the byte at 'index' with value: 'v'.
+// Returns an error if the index is out of range.
 func (b *Bitmap) SetByte(index int, v byte) error {
 	if index > len(b.Data)-1 {
 		return ErrIndexOutOfRange
 	}
 
-	// common.Log.Debug("SetByte: %08b at index: %d", v, index)
 	b.Data[index] = v
 	return nil
 }
 
-// String implements the Stringer interface for the bitmap.
+// String implements the Stringer interface.
 func (b *Bitmap) String() string {
 	var s = "\n"
 	for y := 0; y < b.Height; y++ {
@@ -296,9 +286,8 @@ func (b *Bitmap) String() string {
 	return s
 }
 
-// ToImage gets the bitmap data and store in the image.Image
+// ToImage gets the bitmap data and store in the image.Image.
 func (b *Bitmap) ToImage() image.Image {
-
 	img := image.NewGray(image.Rect(0, 0, b.Width-1, b.Height-1))
 	for x := 0; x < b.Width; x++ {
 		for y := 0; y < b.Height; y++ {

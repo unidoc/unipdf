@@ -6,9 +6,11 @@
 package mmr
 
 import (
-	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"io"
+
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 const (
@@ -36,7 +38,6 @@ func newRunData(r *reader.SubstreamReader) (*runData, error) {
 	}
 
 	length := minInt(maxInt(minRunDataBuffer, int(r.Length())), maxRunDataBuffer)
-
 	d.buffer = make([]byte, length)
 
 	if err := d.fillBuffer(0); err != nil {
@@ -66,8 +67,7 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 		return nil, err
 	}
 
-	cd = cd & 0xFFFFFF
-
+	cd &= 0xffffff
 	index := cd >> (codeOffset - firstLevelTableSize)
 	result := table[index]
 
@@ -75,21 +75,18 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 		index = (cd >> (codeOffset - firstLevelTableSize - secondLevelTableSize)) & secondLevelTableMask
 		result = result.subTable[index]
 	}
-
 	return result, nil
 }
 
 func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
-	var bitsToFill = r.offset - r.lastOffset
+	bitsToFill := r.offset - r.lastOffset
 
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
-
 		// refill at absolute offset
-		var byteOffset = (r.offset >> 3) - r.bufferBase
+		byteOffset := (r.offset >> 3) - r.bufferBase
 
 		if byteOffset >= r.bufferTop {
-
 			byteOffset += r.bufferBase
 			if err := r.fillBuffer(byteOffset); err != nil {
 				return 0, err
@@ -101,34 +98,25 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 		lastCode := (uint32(r.buffer[byteOffset]&0xFF) << 16) |
 			(uint32(r.buffer[byteOffset+1]&0xFF) << 8) |
 			(uint32(r.buffer[byteOffset+2] & 0xFF))
-
 		bitOffset := uint32(r.offset & 7)
-
 		lastCode <<= bitOffset
 		r.lastCode = int(lastCode)
-
 	} else {
-
 		// the offset to the next byte boundary as seen from the last offset
 		bitOffset := r.lastOffset & 7 // lastoffset % 8
 		avail := 7 - bitOffset
 
 		if bitsToFill <= avail {
-
 			r.lastCode <<= uint(bitsToFill)
-
 		} else {
-
 			byteOffset := (r.lastOffset >> 3) + 3 - r.bufferBase
 
 			if byteOffset >= r.bufferTop {
-
 				byteOffset += r.bufferBase
 				if err := r.fillBuffer(byteOffset); err != nil {
 					return 0, err
 				}
 				byteOffset -= r.bufferBase
-
 			}
 
 			bitOffset = 8 - bitOffset
@@ -148,14 +136,11 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 			r.lastCode <<= uint(bitsToFill)
 		}
 	}
-
 	r.lastOffset = r.offset
-
 	return r.lastCode, nil
 }
 
 func (r *runData) fillBuffer(byteOffset int) error {
-
 	r.bufferBase = byteOffset
 
 	_, err := r.r.Seek(int64(byteOffset), io.SeekStart)
@@ -182,9 +167,7 @@ func (r *runData) fillBuffer(byteOffset int) error {
 
 	// check filling degree
 	if r.bufferTop > -1 && r.bufferTop < 3 {
-
 		for r.bufferTop < 3 {
-
 			b, err := r.r.ReadByte()
 			if err != nil {
 				if err == io.EOF {
@@ -195,7 +178,6 @@ func (r *runData) fillBuffer(byteOffset int) error {
 			} else {
 				r.buffer[r.bufferTop] = b & 0xFF
 			}
-
 			r.bufferTop++
 		}
 	}

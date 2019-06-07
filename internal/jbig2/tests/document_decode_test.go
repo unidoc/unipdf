@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	// EnvDirectory is the environment directory that defined the test files directory
+	// EnvDirectory is the environment variable that should contain directory path
+	// to the jbig2 encoded test files.
 	EnvDirectory = "JBIG2"
 )
 
@@ -41,18 +42,14 @@ func TestDecodeJBIG2Files(t *testing.T) {
 	filenames, err := readFileNames(dirName)
 	require.NoError(t, err)
 
-	// remove the jbig2imagesdir
-
 	passwords := map[string]string{}
 
 	for _, filename := range filenames {
-
 		t.Run(rawFileName(filename), func(t *testing.T) {
 			t.Logf("Getting file: %s", filepath.Join(dirName, filename))
 			// get the file
 			f, err := getFile(dirName, filename)
 			require.NoError(t, err)
-
 			defer f.Close()
 
 			var reader *pdf.PdfReader
@@ -74,7 +71,6 @@ func TestDecodeJBIG2Files(t *testing.T) {
 
 			w, err := os.Create(filepath.Join(dirName, jbig2ImagesDir, rawFileName(filename)+".zip"))
 			require.NoError(t, err)
-
 			defer w.Close()
 
 			zw := zip.NewWriter(w)
@@ -82,7 +78,6 @@ func TestDecodeJBIG2Files(t *testing.T) {
 
 			jbig2w, err := os.Create(filepath.Join(dirName, "jbig2_"+rawFileName(filename)+".zip"))
 			require.NoError(t, err)
-
 			defer jbig2w.Close()
 
 			jbigZW := zip.NewWriter(jbig2w)
@@ -98,8 +93,6 @@ func TestDecodeJBIG2Files(t *testing.T) {
 				writeImages(t, zw, dirName, filename, pageNo, images...)
 				writeJBIG2Files(t, jbigZW, dirName, filename, pageNo, jbig2Files...)
 			}
-
 		})
 	}
-
 }

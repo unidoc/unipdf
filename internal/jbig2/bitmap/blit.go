@@ -9,12 +9,11 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 )
 
-// Blit blits the source Bitmap 'src' into the Destination bitmap: 'dst' on the provided 'x' and 'y' coordinates
-// with respect with the combination operator 'op'.
+// Blit blits the source Bitmap 'src' into Destination bitmap: 'dst' on the provided 'x' and 'y' coordinates
+// with respect with to the combination operator 'op'.
 func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error) {
-
-	var startLine, srcStartIdx, srcEndIdx int
-	srcEndIdx = src.RowStride - 1
+	var startLine, srcStartIdx int
+	srcEndIdx := src.RowStride - 1
 
 	// ignore those parts of source bitmap which would be placed outside target bitmap
 	if x < 0 {
@@ -33,16 +32,14 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		startLine = src.Height + y - dst.Height
 	}
 
-	var (
-		shiftVal1   = x & 0x07
-		shiftVal2   = 8 - shiftVal1
-		padding     = src.Width & 0x07
-		toShift     = shiftVal2 - padding
-		useShift    = shiftVal2&0x07 != 0
-		specialCase = src.Width <= ((srcEndIdx-srcStartIdx)<<3)+shiftVal2
-		dstStartIdx = dst.GetByteIndex(x, y)
-		lastLine    int
-	)
+	var lastLine int
+	shiftVal1 := x & 0x07
+	shiftVal2 := 8 - shiftVal1
+	padding := src.Width & 0x07
+	toShift := shiftVal2 - padding
+	useShift := shiftVal2&0x07 != 0
+	specialCase := src.Width <= ((srcEndIdx-srcStartIdx)<<3)+shiftVal2
+	dstStartIdx := dst.GetByteIndex(x, y)
 
 	// get math.min()
 	temp := startLine + dst.Height
@@ -62,7 +59,6 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 	if err != nil {
 		common.Log.Debug("Blit failed: %s", err)
 	}
-
 	return
 }
 
@@ -98,7 +94,6 @@ func blitUnshifted(
 			dstIdx++
 		}
 	}
-
 	return nil
 }
 
@@ -108,8 +103,6 @@ func blitShifted(
 	op CombinationOperator, padding int,
 ) error {
 	var dstLine int
-
-	// increaser increases the for loop values
 	increaser := func() {
 		dstLine++
 		dstStartIdx += dst.RowStride
@@ -118,12 +111,10 @@ func blitShifted(
 	}
 
 	for dstLine = startLine; dstLine < lastLine; increaser() {
-
 		var register uint16
 		dstIdx := dstStartIdx
 
 		for srcIdx := srcStartIdx; srcIdx <= srcEndIdx; srcIdx++ {
-
 			oldByte, err := dst.GetByte(dstIdx)
 			if err != nil {
 				return err
@@ -142,7 +133,6 @@ func blitShifted(
 			register <<= uint(shiftVal1)
 
 			if srcIdx == srcEndIdx {
-
 				newByte = byte(register >> (8 - uint8(shiftVal2)))
 
 				if padding != 0 {
@@ -157,9 +147,7 @@ func blitShifted(
 				if err = dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op)); err != nil {
 					return err
 				}
-
 			}
-
 		}
 	}
 	return nil
@@ -170,7 +158,6 @@ func blitSpecialShifted(
 	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
 	op CombinationOperator,
 ) error {
-
 	var dstLine int
 	increaser := func() {
 		dstLine++
@@ -194,7 +181,6 @@ func blitSpecialShifted(
 				return err
 			}
 			register = (register | uint16(newByte)) << uint(shiftVal2)
-
 			newByte = byte(register >> 8)
 
 			if srcIdx == srcEndIdx {
@@ -209,11 +195,9 @@ func blitSpecialShifted(
 			register <<= uint(shiftVal1)
 		}
 	}
-
 	return nil
 }
 
 func unpad(padding uint, b byte) byte {
 	return b >> padding << padding
-
 }

@@ -34,15 +34,13 @@ const (
 	codeMax mmrCode = mmrCode(12)
 )
 
+// Constants used be the MMR decoder.
 const (
 	noMask  = 0xFFFF
 	inComp  = -4
-	eof     = -3
+	EOF     = -3
 	invalid = -2
-	eol     = -1
-
-	// EOF means the End Of File
-	EOF = -3
+	EOL     = -1
 
 	firstLevelTableSize  = 8
 	firstLevelTablemask  = (1 << firstLevelTableSize) - 1
@@ -54,9 +52,8 @@ const (
 )
 
 var (
-
-	// ModeCodes are predefined codes for the run data
-	ModeCodes = [][3]int{
+	// modeCodes are predefined codes for the runData.
+	modeCodes = [][3]int{
 		{4, 0x1, int(codeP)},      // 0001 pass
 		{3, 0x1, int(codeH)},      // 001 horizontal
 		{1, 0x1, int(codeV0)},     // 1 vert 0
@@ -68,11 +65,11 @@ var (
 		{7, 0x2, int(codeVL3)},    // 00000010 ver l 3
 		{10, 0xf, int(codeExt2D)}, // 0000001111
 		{12, 0xf, int(codeExt1D)}, // 0000000001111
-		{12, 0x1, int(eol)},       // 0000000000001
+		{12, 0x1, int(EOL)},       // 0000000000001
 	}
 
-	// WhiteCodes for the white decoder
-	WhiteCodes = [][3]int{
+	// whiteCodes are the 'white' codes for the runData.
+	whiteCodes = [][3]int{
 		{4, 0x07, 2},        // 0111
 		{4, 0x08, 3},        // 1000
 		{4, 0x0B, 4},        // 1011
@@ -170,8 +167,8 @@ var (
 		{11, 0x08, 1792},    // 0000 0001 000
 		{11, 0x0C, 1856},    // 0000 0001 100
 		{11, 0x0D, 1920},    // 0000 0001 101
-		{12, 0x00, eof},     // 0000 0000 0000
-		{12, 0x01, eol},     // 0000 0000 0001
+		{12, 0x00, EOF},     // 0000 0000 0000
+		{12, 0x01, EOL},     // 0000 0000 0001
 		{12, 0x12, 1984},    // 0000 0001 0010
 		{12, 0x13, 2048},    // 0000 0001 0011
 		{12, 0x14, 2112},    // 0000 0001 0100
@@ -184,8 +181,8 @@ var (
 		{12, 0x1F, 2560},
 	}
 
-	// BlackCodes are the codes used by the black iterations
-	BlackCodes = [][3]int{
+	// blackCodes are the 'black' codes used by the runData
+	blackCodes = [][3]int{
 		{2, 0x02, 3},        // 10
 		{2, 0x03, 2},        // 11
 		{3, 0x02, 1},        // 010
@@ -219,8 +216,8 @@ var (
 		{11, 0x08, 1792},    // 0000 0001 000
 		{11, 0x0C, 1856},    // 0000 0001 100
 		{11, 0x0D, 1920},    // 0000 0001 101
-		{12, 0x00, eof},     // 0000 0000 0000
-		{12, 0x01, eol},     // 0000 0000 0001
+		{12, 0x00, EOF},     // 0000 0000 0000
+		{12, 0x01, EOL},     // 0000 0000 0001
 		{12, 0x12, 1984},    // 0000 0001 0010
 		{12, 0x13, 2048},    // 0000 0001 0011
 		{12, 0x14, 2112},    // 0000 0001 0100

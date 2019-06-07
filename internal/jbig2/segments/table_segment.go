@@ -12,7 +12,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// TableSegment is the model used for user defined Huffman Table Segment - see 7.4.13 and appendix B..
+// TableSegment is the model used for user defined Huffman Table Segment - see 7.4.13 and appendix B.
 type TableSegment struct {
 	r reader.StreamReader
 
@@ -28,11 +28,52 @@ type TableSegment struct {
 	htHight int
 }
 
-// compile time check if the TableSegment implements huffman.BasicTabler
+// Compile time check if the TableSegment implements huffman.BasicTabler.
 var _ huffman.BasicTabler = &TableSegment{}
 
+// Init initializes the table segment.
+// Implements Segmenter interface.
+func (t *TableSegment) Init(h *Header, r reader.StreamReader) error {
+	t.r = r
+	return t.parseHeader()
+}
+
+// HtPS implements huffman.BasicTabler interface.
+func (t *TableSegment) HtPS() int {
+	return t.htPS
+}
+
+// HtRS implements huffman.BasicTabler interface.
+func (t *TableSegment) HtRS() int {
+	return t.htRS
+}
+
+// HtLow implements huffman.BasicTabler interface.
+func (t *TableSegment) HtLow() int {
+	return t.htLow
+}
+
+// HtHigh implements huffman.BasicTabler interface.
+func (t *TableSegment) HtHigh() int {
+	return t.htHight
+}
+
+// HtOOB implements huffman.BasicTabler interface.
+func (t *TableSegment) HtOOB() int {
+	return t.htOutOfBand
+}
+
+// StreamReader implements huffman.BasicTabler interface.
+func (t *TableSegment) StreamReader() reader.StreamReader {
+	return t.r
+}
+
 func (t *TableSegment) parseHeader() (err error) {
-	var bit int
+	var (
+		bit  int
+		bits uint64
+	)
+
 	bit, err = t.r.ReadBit()
 	if err != nil {
 		return
@@ -40,8 +81,6 @@ func (t *TableSegment) parseHeader() (err error) {
 	if bit == 1 {
 		return fmt.Errorf("B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
 	}
-
-	var bits uint64
 
 	// Bit 4-6
 	if bits, err = t.r.ReadBits(3); err != nil {
@@ -66,49 +105,5 @@ func (t *TableSegment) parseHeader() (err error) {
 		return
 	}
 	t.htHight = int(bits & 0xffffffff)
-
 	return
-}
-
-// Init initializes the table segment.
-// Implements Segmenter interface.
-func (t *TableSegment) Init(h *Header, r reader.StreamReader) error {
-	t.r = r
-	return t.parseHeader()
-}
-
-// HtPS returns the HtPs value.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) HtPS() int {
-	return t.htPS
-}
-
-// HtRS returns the table HtRs value.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) HtRS() int {
-	return t.htRS
-}
-
-// HtLow returns the table HtLow value.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) HtLow() int {
-	return t.htLow
-}
-
-// HtHigh return the table HtHigh value.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) HtHigh() int {
-	return t.htHight
-}
-
-// HtOOB returns the table HtoutOfBand value.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) HtOOB() int {
-	return t.htOutOfBand
-}
-
-// StreamReader returns the table segment stream reader.
-// Implements huffman.BasicTabler interface.
-func (t *TableSegment) StreamReader() reader.StreamReader {
-	return t.r
 }

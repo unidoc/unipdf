@@ -30,7 +30,6 @@ func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 	require.NoError(b, err)
 
 	for _, file := range jbig2Files {
-
 		zr, err := zip.OpenReader(filepath.Join(dirName, file))
 		require.NoError(b, err)
 
@@ -59,5 +58,4 @@ func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 			})
 		}
 	}
-
 }

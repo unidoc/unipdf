@@ -26,11 +26,10 @@ func NewStats(contextSize int, index int) *DecoderStats {
 		codingContextTable: make([]byte, contextSize),
 		mps:                make([]byte, contextSize),
 	}
-
 	return d
 }
 
-// Copy copies the DecoderStats
+// Copy copies the DecoderStats.
 func (d *DecoderStats) Copy() *DecoderStats {
 	cp := &DecoderStats{
 		contextSize:        d.contextSize,
@@ -44,7 +43,7 @@ func (d *DecoderStats) Copy() *DecoderStats {
 	return cp
 }
 
-// Overwrite overwrites the codingContextTable from new DecoderStats
+// Overwrite overwrites the codingContextTable from new DecoderStats 'dNew'.
 func (d *DecoderStats) Overwrite(dNew *DecoderStats) {
 	for i := 0; i < len(d.codingContextTable); i++ {
 		d.codingContextTable[i] = dNew.codingContextTable[i]
@@ -85,13 +84,13 @@ func (d *DecoderStats) getMps() byte {
 	return d.mps[d.index]
 }
 
-// setEntry sets the decoder stats coding context table with moreprobableSymbol
+// setEntry sets the decoder stats coding context table with moreprobableSymbol.
 func (d *DecoderStats) setEntry(value int) {
 	v := byte(value & 0x7f)
 	d.codingContextTable[d.index] = v
 }
 
-// flips the bit in the actual more predictable index
+// toggleMps flips the bit in the actual more predictable index.
 func (d *DecoderStats) toggleMps() {
 	d.mps[d.index] ^= 1
 }

@@ -25,7 +25,7 @@ func newCode(codeData [3]int) *code {
 	}
 }
 
-// String returns code string
+// String implements Stringer interface.
 func (c *code) String() string {
 	return fmt.Sprintf("%d/%d/%d", c.bitLength, c.codeWord, c.runLength)
 }

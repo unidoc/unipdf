@@ -14,9 +14,10 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 )
 
-// TestGetStandardTable tests GetStandardTable function
+// TestGetStandardTable tests GetStandardTable function.
 func TestGetStandardTable(t *testing.T) {
 	setLogger()
+
 	t.Run("Valid", func(t *testing.T) {
 		table, err := GetStandardTable(1)
 		require.NoError(t, err)
@@ -45,7 +46,6 @@ func TestGetStandardTable(t *testing.T) {
 var alreadySet bool
 
 func setLogger() {
-
 	if testing.Verbose() {
 		if !alreadySet {
 			common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))

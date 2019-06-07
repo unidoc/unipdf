@@ -24,7 +24,6 @@ func TestDecodeGenericRegion(t *testing.T) {
 	}
 	t.Run("AnnexH", func(t *testing.T) {
 		t.Run("S-12th", func(t *testing.T) {
-
 			data := []byte{
 				// header
 				0x00, 0x00, 0x00, 0x0B, 0x27, 0x00, 0x02, 0x00, 0x00, 0x00, 0x23,
@@ -36,9 +35,7 @@ func TestDecodeGenericRegion(t *testing.T) {
 			}
 
 			r := reader.New(data)
-
 			d := &document{}
-
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)
 
@@ -65,7 +62,7 @@ func TestDecodeGenericRegion(t *testing.T) {
 		})
 
 		t.Run("S-5th", func(t *testing.T) {
-			var data = []byte{
+			data := []byte{
 				// Header
 				0x00, 0x00, 0x00, 0x04, 0x27, 0x00, 0x01, 0x00, 0x00, 0x00, 0x2C,
 
@@ -75,11 +72,8 @@ func TestDecodeGenericRegion(t *testing.T) {
 				0xA7, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8, 0xF0,
 			}
-
 			r := reader.New(data)
-
 			d := &document{}
-
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)
 
@@ -102,7 +96,6 @@ func TestDecodeGenericRegion(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Log(b.String())
-
 		})
 	})
 }

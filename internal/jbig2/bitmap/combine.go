@@ -16,28 +16,23 @@ func CombineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 	return combineBytes(oldByte, newByte, op)
 }
 
-// Extract extracts the rectangle of provided size from the source 'src' bitmap
+// Extract extracts the rectangle of given size from the source 'src' Bitmap.
 func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	dst := New(roi.Dx(), roi.Dy())
-
 	upShift := roi.Min.X & 0x07
 	downShift := 8 - upShift
-
-	var dstLineStartIdx int
-
 	padding := uint(8 - dst.Width&0x07)
-
 	srcLineStartIdx := src.GetByteIndex(roi.Min.X, roi.Min.Y)
 	srcLineEndIdx := src.GetByteIndex(roi.Max.X-1, roi.Min.Y)
-
 	usePadding := dst.RowStride == srcLineEndIdx+1-srcLineStartIdx
+
+	var dstLineStartIdx int
 
 	for y := roi.Min.Y; y < roi.Max.Y; y++ {
 		srcIdx := srcLineStartIdx
 		dstIdx := dstLineStartIdx
 
 		if srcLineStartIdx == srcLineEndIdx {
-
 			pixels, err := src.GetByte(srcIdx)
 			if err != nil {
 				return nil, err
@@ -50,9 +45,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				return nil, err
 			}
 		} else if upShift == 0 {
-
 			for x := srcLineStartIdx; x <= srcLineEndIdx; x++ {
-
 				value, err := src.GetByte(srcIdx)
 				if err != nil {
 					return nil, err
@@ -62,13 +55,14 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				if x == srcLineEndIdx && usePadding {
 					value = unpad(padding, value)
 				}
+
 				err = dst.SetByte(dstIdx, value)
 				if err != nil {
 					return nil, err
 				}
+
 				dstIdx++
 			}
-
 		} else {
 			err := copyLine(src, dst, uint(upShift), uint(downShift), padding, srcLineStartIdx, srcLineEndIdx, usePadding, srcIdx, dstIdx)
 			if err != nil {
@@ -79,7 +73,6 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 		srcLineEndIdx += src.RowStride
 		dstLineStartIdx += dst.RowStride
 	}
-
 	return dst, nil
 }
 
@@ -107,7 +100,6 @@ func copyLine(
 	usePadding bool, sourceOffset, targetOffset int,
 ) error {
 	for x := firstSourceByteOfLine; x < lastSourceByteOfLine; x++ {
-
 		if sourceOffset+1 < len(src.Data) {
 			isLastByte := x+1 == lastSourceByteOfLine
 			v1, err := src.GetByte(sourceOffset)
@@ -123,14 +115,12 @@ func copyLine(
 			}
 
 			v2 >>= sourceDownShift
-
 			value := v1 | v2
 
 			if isLastByte && !usePadding {
 				value = unpad(padding, value)
 			}
 
-			// common.Log.Debug("Value Byte in CopyLine: %08b", value)
 			err = dst.SetByte(targetOffset, value)
 			if err != nil {
 				return err
@@ -149,7 +139,6 @@ func copyLine(
 					return err
 				}
 			}
-
 		} else {
 			value, err := src.GetByte(sourceOffset)
 			if err != nil {
@@ -160,7 +149,6 @@ func copyLine(
 			sourceOffset++
 			err = dst.SetByte(targetOffset, value)
 			if err != nil {
-
 				return err
 			}
 			targetOffset++

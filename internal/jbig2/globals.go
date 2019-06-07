@@ -7,13 +7,14 @@ package jbig2
 
 import (
 	"errors"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
 )
 
 // Common errors definitions.
 var (
-	ErrNoGlobalsYet  error = errors.New("No global segment added yet.")
-	ErrNoGlobalFound error = errors.New("No global segment found.")
+	ErrNoGlobalsYet  = errors.New("no global segment added yet")
+	ErrNoGlobalFound = errors.New("no global segment found")
 )
 
 // Globals store segments that aren't associated to a page.

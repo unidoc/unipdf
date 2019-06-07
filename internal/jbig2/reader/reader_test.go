@@ -19,7 +19,6 @@ func TestReader(t *testing.T) {
 	data := []byte{3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
 
 	r := New(data)
-
 	b, err := r.ReadByte()
 	require.NoError(t, err)
 	assert.Equal(t, byte(3), b)
@@ -68,7 +67,6 @@ func TestReader(t *testing.T) {
 
 // TestSeeker test the Reader Seek methods.
 func TestSeeker(t *testing.T) {
-
 	data := []byte{3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
 
 	t.Run("SeekStart", func(t *testing.T) {

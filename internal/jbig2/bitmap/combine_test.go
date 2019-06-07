@@ -20,9 +20,9 @@ func TestExtract(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
+
 	t.Run("SmallerSize", func(t *testing.T) {
 		// Tests the extraction when the dimensions are smaller than in the source bitmap
-
 		t.Run("SmallerWidth", func(t *testing.T) {
 			// create the 10x10 bitmap
 			src := New(10, 10)
@@ -42,6 +42,7 @@ func TestExtract(t *testing.T) {
 			assert.True(t, res.GetPixel(0, 0))
 			assert.True(t, res.GetPixel(4, 9))
 		})
+
 		t.Run("SmallerHeight", func(t *testing.T) {
 			// create the 10x10 bitmap
 			src := New(10, 10)
@@ -81,6 +82,7 @@ func TestExtract(t *testing.T) {
 			assert.True(t, res.GetPixel(0, 0))
 			assert.True(t, res.GetPixel(5, 5))
 		})
+
 		t.Run("Shifted", func(t *testing.T) {
 			// create the 10x10 bitmap
 			src := New(10, 10)
@@ -191,6 +193,5 @@ func TestExtract(t *testing.T) {
 		// extract the rectangle image
 		_, err := Extract(roi, src)
 		require.Error(t, err)
-
 	})
 }

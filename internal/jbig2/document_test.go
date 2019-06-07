@@ -7,12 +7,15 @@ package jbig2
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
-	"testing"
 )
 
 // TestDocument tests the jbig2.Document decoding.
@@ -22,8 +25,7 @@ func TestDocument(t *testing.T) {
 	}
 
 	t.Run("AnnexH", func(t *testing.T) {
-
-		var data = []byte{
+		data := []byte{
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
 			0x00, 0x01, 0xE9, 0xCB, 0xF4, 0x00, 0x26, 0xAF, 0x04, 0xBF, 0xF0, 0x78, 0x2F, 0xE0, 0x00, 0x40,
@@ -108,13 +110,10 @@ func TestDocument(t *testing.T) {
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
-
 			require.Len(t, bm, 1)
 
 			pLetter := bm[0]
-
 			symbol := pSymbol(t)
-
 			assert.True(t, pLetter.Equals(symbol), fmt.Sprintf("P decoded: %s - Should be: %s", pLetter, symbol))
 		})
 
@@ -185,7 +184,6 @@ func TestDocument(t *testing.T) {
 			require.NoError(t, err)
 			err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-
 			assert.True(t, expected.Equals(bm))
 		})
 
@@ -241,7 +239,6 @@ func TestDocument(t *testing.T) {
 
 			_, err = h.GetRegionBitmap()
 			require.NoError(t, err)
-			// t.Logf("Expected BM %s", bm)
 		})
 		t.Run("Segment#8", func(t *testing.T) {
 			h := p1.GetSegment(7)
@@ -365,6 +362,7 @@ func TestDocument(t *testing.T) {
 			assert.Equal(t, 36, bm.Height)
 
 		})
+
 		// EOP
 		t.Run("Page#2", func(t *testing.T) {
 			bm, err := p2.GetBitmap()
@@ -375,6 +373,7 @@ func TestDocument(t *testing.T) {
 		p3, err := d.GetPage(3)
 		require.NoError(t, err)
 		require.NotNil(t, p3)
+
 		t.Run("Segment#16", func(t *testing.T) {
 			h := p3.GetSegment(15)
 
@@ -390,7 +389,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#17", func(t *testing.T) {
 			h := p3.GetSegment(16)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -406,7 +404,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#18", func(t *testing.T) {
 			h := p3.GetSegment(17)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -429,7 +426,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#19", func(t *testing.T) {
 			h := p3.GetSegment(18)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -467,7 +463,7 @@ func TestDocument(t *testing.T) {
 		gdoc, err := NewDocument(globalsData)
 		require.NoError(t, err)
 
-		var data = []byte{
+		data := []byte{
 
 			// File Header
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -493,7 +489,6 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, d.GlobalSegments, 1)
-
 	})
 }
 

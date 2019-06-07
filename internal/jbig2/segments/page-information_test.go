@@ -18,20 +18,16 @@ import (
 // TestPageInformationSegment tests the jbig2 page information segment.
 func TestPageInformationSegment(t *testing.T) {
 	t.Run("2nd", func(t *testing.T) {
-		var data = []byte{
-
-			// header
+		data := []byte{
+			// Header
 			0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x01, 0x00, 0x00, 0x00, 0x13,
 
-			// data part
+			// Data part
 			0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
 		}
-
 		r := reader.New(data)
-
 		d := &document{}
-
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
 

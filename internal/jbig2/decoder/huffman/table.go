@@ -20,7 +20,7 @@ type Tabler interface {
 	RootNode() *InternalNode
 }
 
-// BasicTabler is the interface common for the tables
+// BasicTabler is the interface common for the huffman tables.
 type BasicTabler interface {
 	HtHigh() int
 	HtLow() int
@@ -30,7 +30,7 @@ type BasicTabler interface {
 	HtOOB() int
 }
 
-// Code is the model for the huffman table code
+// Code is the model for the huffman table code.
 type Code struct {
 	prefixLength int
 	rangeLength  int
@@ -83,21 +83,18 @@ func preprocessCodes(codeTable []*Code) {
 		maxPrefixLength = maxInt(maxPrefixLength, c.prefixLength)
 	}
 
-	var lenCount = make([]int, maxPrefixLength+1)
+	lenCount := make([]int, maxPrefixLength+1)
 
 	for _, c := range codeTable {
 		lenCount[c.prefixLength]++
 	}
 
-	var (
-		curCode   int
-		firstCode = make([]int, len(lenCount)+1)
-	)
+	var curCode int
+	firstCode := make([]int, len(lenCount)+1)
 	lenCount[0] = 0
 
 	// Annex B.3 3)
 	for curLen := 1; curLen <= len(lenCount); curLen++ {
-
 		firstCode[curLen] = (firstCode[curLen-1] + (lenCount[curLen-1])) << 1
 		curCode = firstCode[curLen]
 

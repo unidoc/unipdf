@@ -27,9 +27,7 @@ func TestDecodeHeader(t *testing.T) {
 	}
 
 	r := reader.New(data)
-
 	d := &document{}
-
 	h, err := NewHeader(d, r, 0, OSequential)
 	require.NoError(t, err)
 
@@ -41,7 +39,6 @@ func TestDecodeHeader(t *testing.T) {
 
 	b, err := s.ReadByte()
 	require.NoError(t, err)
-
 	assert.Equal(t, byte(0x00), b)
 
 	three := make([]byte, 3)
