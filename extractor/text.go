@@ -940,6 +940,7 @@ func (pt PageText) ToText() string {
 // TextLocation maps extracted text to the location of the text on the PDF page.
 // `Offset` is the offset of the start of the textMark.text in extracted text.
 // `BBox` is the bounding box of the textMark.
+// `Text` is the extracted text.
 // You can find the location of substrings in the extracted text as follows:
 //   Use ToTextLocation() to return the extracted text as a []TextLocation sorted by Offset.
 //   substring := extracted[start:end+1]
@@ -949,7 +950,7 @@ func (pt PageText) ToText() string {
 type TextLocation struct {
 	Offset int
 	BBox   model.PdfRectangle
-	Text   string // !@#$ For debugging only.
+	Text   string
 }
 
 // String returns a string describing `t`.
