@@ -106,13 +106,13 @@ func extractImagesOnPage(filename string, page *pdf.PdfPage) ([]*pdf.Image, [][]
 func extractImagesInContentStream(filename, contents string, resources *pdf.PdfPageResources) ([]*pdf.Image, [][]byte, error) {
 	rgbImages := []*pdf.Image{}
 	jbig2RawData := [][]byte{}
+	processedXObjects := make(map[string]bool)
 	cstreamParser := pdfcontent.NewContentStreamParser(contents)
+
 	operations, err := cstreamParser.Parse()
 	if err != nil {
 		return nil, nil, err
 	}
-
-	processedXObjects := map[string]bool{}
 
 	// Range through all the content stream operations.
 	for _, op := range *operations {

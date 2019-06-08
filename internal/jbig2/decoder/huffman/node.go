@@ -182,7 +182,7 @@ func (i *InternalNode) pad(sb *strings.Builder) {
 	}
 }
 
-// newInternalNode creates new internal node
+// newInternalNode creates new internal node.
 func newInternalNode(depth int) *InternalNode {
 	return &InternalNode{depth: depth}
 }

@@ -5,17 +5,13 @@
 
 package bitmap
 
-import (
-	"github.com/unidoc/unipdf/v3/common"
-)
-
 // Blit blits the source Bitmap 'src' into Destination bitmap: 'dst' on the provided 'x' and 'y' coordinates
-// with respect with to the combination operator 'op'.
-func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error) {
+// with respect to the combination operator 'op'.
+func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) error {
 	var startLine, srcStartIdx int
 	srcEndIdx := src.RowStride - 1
 
-	// ignore those parts of source bitmap which would be placed outside target bitmap
+	// ignore those parts of source bitmap placed outside target bitmap.
 	if x < 0 {
 		srcStartIdx = -x
 		x = 0
@@ -32,7 +28,10 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		startLine = src.Height + y - dst.Height
 	}
 
-	var lastLine int
+	var (
+		lastLine int
+		err      error
+	)
 	shiftVal1 := x & 0x07
 	shiftVal2 := 8 - shiftVal1
 	padding := src.Width & 0x07
@@ -49,17 +48,15 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) (err error
 		lastLine = src.Height
 	}
 
-	if !useShift {
+	switch {
+	case !useShift:
 		err = blitUnshifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, op)
-	} else if specialCase {
+	case specialCase:
 		err = blitSpecialShifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2, op)
-	} else {
+	default:
 		err = blitShifted(src, dst, startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2, op, padding)
 	}
-	if err != nil {
-		common.Log.Debug("Blit failed: %s", err)
-	}
-	return
+	return err
 }
 
 func blitUnshifted(
@@ -68,7 +65,6 @@ func blitUnshifted(
 	op CombinationOperator,
 ) error {
 	var dstLine int
-
 	increaser := func() {
 		dstLine++
 		dstStartIdx += dst.RowStride
@@ -83,6 +79,7 @@ func blitUnshifted(
 			if err != nil {
 				return err
 			}
+
 			newByte, err := src.GetByte(srcIdx)
 			if err != nil {
 				return err

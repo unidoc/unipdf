@@ -79,7 +79,7 @@ func (t *TableSegment) parseHeader() (err error) {
 		return
 	}
 	if bit == 1 {
-		return fmt.Errorf("B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
+		return fmt.Errorf("invalid table segment definition. B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
 	}
 
 	// Bit 4-6

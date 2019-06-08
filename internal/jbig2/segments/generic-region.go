@@ -45,10 +45,10 @@ type GenericRegion struct {
 	GBAtY        []int8
 	GBAtOverride []bool
 
-	// override if true AT pixels are not on their normal location and have to be overwriten
+	// override defines if AT pixels are not on their normal location and have to be overwriten.
 	override bool
 
-	// Bitmap is the decoded generic region data
+	// Bitmap is the decoded generic region image.
 	Bitmap *bitmap.Bitmap
 
 	arithDecoder *arithmetic.Decoder
@@ -83,7 +83,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 		return g.Bitmap, nil
 	}
 
-	// check the type of the encoder
+	// Check how the data is encoded.
 	if g.IsMMREncoded {
 		// MMR Decoder Call
 		if g.mmrDecoder == nil {
@@ -97,12 +97,12 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 			}
 		}
 
-		// Uncompress the bitmap
+		// Uncompress the bitmap.
 		g.Bitmap, err = g.mmrDecoder.UncompressMMR()
 		return g.Bitmap, err
 	}
 
-	// ARITHMETIC DECODER PROCEDURE for generic region segments
+	// Arithmetic decoder process for generic region segments.
 	if err = g.updateOverrideFlags(); err != nil {
 		return
 	}

@@ -62,8 +62,9 @@ func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
 }
 
 func bitPattern(v, l int) string {
-	var result = make([]rune, l)
 	var temp int
+	result := make([]rune, l)
+
 	for i := 1; i <= l; i++ {
 		temp = (v >> uint(l-i) & 1)
 		if temp != 0 {
@@ -76,7 +77,7 @@ func bitPattern(v, l int) string {
 }
 
 func preprocessCodes(codeTable []*Code) {
-	// Annex B.3 1) build the histogram
+	// Annex B.3 1) build the histogram.
 	var maxPrefixLength int
 
 	for _, c := range codeTable {

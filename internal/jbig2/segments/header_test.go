@@ -47,5 +47,4 @@ func TestDecodeHeader(t *testing.T) {
 
 	assert.Equal(t, 3, read)
 	assert.Equal(t, byte(0x36), three[2])
-
 }

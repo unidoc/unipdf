@@ -63,7 +63,9 @@ func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) er
 }
 
 // GetRegionBitmap implements Regioner interface.
-func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
+func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
+	var err error
+
 	common.Log.Debug("[GENERIC-REF-REGION] GetRegionBitmap begins...")
 	defer func() {
 		if err != nil {
@@ -74,8 +76,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err erro
 	}()
 
 	if g.RegionBitmap != nil {
-		bm = g.RegionBitmap
-		return
+		return g.RegionBitmap, nil
 	}
 
 	// 6.3.5.6 - 1)
@@ -84,14 +85,14 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err erro
 		// Get the reference bitmap, which is the base of refinement process
 		g.ReferenceBitmap, err = g.getGrReference()
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	if g.arithDecode == nil {
 		g.arithDecode, err = arithmetic.New(g.r)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
@@ -103,7 +104,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err erro
 
 	if g.TemplateID == 0 {
 		if err = g.updateOverride(); err != nil {
-			return
+			return nil, err
 		}
 	}
 
@@ -143,8 +144,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err erro
 	}
 
 	// 6.3.5.6 - 4)
-	bm = g.RegionBitmap
-	return
+	return g.RegionBitmap, nil
 }
 
 // GetRegionInfo implements Regioner interface.
@@ -225,17 +225,18 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLine(
 func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 	lineNumber, width, rowStride, refRowStride, paddedWidth,
 	deltaRefStride, byteIndex, currentLine, refByteIndex int,
-) (err error) {
+) error {
 	var (
 		context, overridenContext, previousLine, previousReferenceLine,
 		currentReferenceLine, nextReferenceLine int
 		temp byte
+		err  error
 	)
 
 	if lineNumber > 0 {
 		temp, err = g.RegionBitmap.GetByte(byteIndex - rowStride)
 		if err != nil {
-			return
+			return err
 		}
 		previousLine = int(temp)
 	}
@@ -243,7 +244,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 	if currentLine > 0 && currentLine <= g.ReferenceBitmap.Height {
 		temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride + deltaRefStride)
 		if err != nil {
-			return
+			return err
 		}
 		previousReferenceLine = int(temp) << 4
 	}
@@ -251,7 +252,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 	if currentLine >= 0 && currentLine < g.ReferenceBitmap.Height {
 		temp, err = g.ReferenceBitmap.GetByte(refByteIndex + deltaRefStride)
 		if err != nil {
-			return
+			return err
 		}
 		currentReferenceLine = int(temp) << 1
 	}
@@ -259,7 +260,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 	if currentLine > -2 && currentLine < g.ReferenceBitmap.Height-1 {
 		temp, err = g.ReferenceBitmap.GetByte(refByteIndex + refRowStride + deltaRefStride)
 		if err != nil {
-			return
+			return err
 		}
 		nextReferenceLine = int(temp)
 	}
@@ -285,7 +286,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 			if readNextByte {
 				temp, err = g.RegionBitmap.GetByte(byteIndex - rowStride + 1)
 				if err != nil {
-					return
+					return err
 				}
 			}
 			previousLine = (previousLine << 8) | int(temp)
@@ -297,7 +298,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 			if refReadNextByte {
 				temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride + yOffset)
 				if err != nil {
-					return
+					return err
 				}
 				tempVal = int(temp) << 4
 			}
@@ -309,7 +310,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 			if refReadNextByte {
 				temp, err = g.ReferenceBitmap.GetByte(refByteIndex + yOffset)
 				if err != nil {
-					return
+					return err
 				}
 				tempVal = int(temp) << 1
 			}
@@ -321,7 +322,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 			if refReadNextByte {
 				temp, err = g.ReferenceBitmap.GetByte(refByteIndex + refRowStride + yOffset)
 				if err != nil {
-					return
+					return err
 				}
 			}
 			nextReferenceLine = (nextReferenceLine << 8) | int(temp)
@@ -349,7 +350,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 
 				bit, err = g.arithDecode.DecodeBit(g.cx)
 				if err != nil {
-					return
+					return err
 				}
 			}
 
@@ -363,13 +364,12 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 
 		err = g.RegionBitmap.SetByte(byteIndex, byte(result))
 		if err != nil {
-			return
+			return err
 		}
 
 		byteIndex++
 		refByteIndex++
 	}
-
 	return nil
 }
 

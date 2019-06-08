@@ -125,7 +125,7 @@ func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 	return firstLevelTable, nil
 }
 
-// detectAndSkipEOL detects and skip the eond of line
+// detectAndSkipEOL detects and skip the EOL.
 func (m *Decoder) detectAndSkipEOL() error {
 	for {
 		cd, err := m.data.uncompressGetCode(m.modeTable)
@@ -198,7 +198,6 @@ func (m *Decoder) initTables() (err error) {
 	return nil
 }
 
-// uncompress1d decopmresses 1 row of data.
 func (m *Decoder) uncompress1d(data *runData, runOffsets []int, width int) (int, error) {
 	var (
 		whiteRun  = true

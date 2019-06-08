@@ -217,6 +217,7 @@ func TestDocument(t *testing.T) {
 			require.NoError(t, err)
 			checkPatternDictionary(t, dict)
 		})
+
 		t.Run("Segment#7", func(t *testing.T) {
 			header := p1.GetSegment(6)
 			require.NotNil(t, header)
@@ -240,6 +241,7 @@ func TestDocument(t *testing.T) {
 			_, err = h.GetRegionBitmap()
 			require.NoError(t, err)
 		})
+
 		t.Run("Segment#8", func(t *testing.T) {
 			h := p1.GetSegment(7)
 			require.NotNil(t, h)
@@ -360,10 +362,9 @@ func TestDocument(t *testing.T) {
 
 			assert.Equal(t, 32, bm.Width)
 			assert.Equal(t, 36, bm.Height)
-
 		})
 
-		// EOP
+		// EOP segment
 		t.Run("Page#2", func(t *testing.T) {
 			bm, err := p2.GetBitmap()
 			require.NoError(t, err)
@@ -688,7 +689,6 @@ func checkPatternDictionary(t *testing.T, dict []*bitmap.Bitmap) {
 		case 1:
 			require.NoError(t, toCompare.SetPixel(2, 1, 1))
 		}
-		// t.Logf("Symbol: #%d: %v - %v", i, s.String(), toCompare.String())
 		assert.True(t, toCompare.Equals(s), fmt.Sprintf("i: %d, %v, %v", i, s.String(), toCompare.String()))
 	}
 }

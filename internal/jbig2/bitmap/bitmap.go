@@ -14,14 +14,14 @@ import (
 )
 
 // ErrIndexOutOfRange is the error that returns if the bitmap byte index is out of range.
-var ErrIndexOutOfRange = errors.New("Index out of range")
+var ErrIndexOutOfRange = errors.New("bitmap byte index out of range")
 
 // Bitmap is the jbig2 bitmap representation.
 type Bitmap struct {
 	// Width and Height represents bitmap dimensions.
 	Width, Height int
 
-	// BitmapNumber is the number.
+	// BitmapNumber is the bitmap's id number.
 	BitmapNumber int
 
 	// RowStride is the number of bytes set per row.
@@ -82,7 +82,7 @@ func (b *Bitmap) GetByteIndex(x, y int) int {
 }
 
 // GetChocolateData gets bitmap data as a byte sice with Chocolate bit intepretation.
-// 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black
+// 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black.
 // The naming convention based on the: `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetChocolateData() []byte {
 	if !b.isVanilla {
@@ -129,20 +129,20 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 	padding = 8 - padding
 	data := make([]byte, size)
 	var (
-		// currentIndex is the index at which the byte is currently in the 'data' byte array
+		// currentIndex is the index at which the byte is currently in the 'data' byte array.
 		currentIndex int
-		// siginificantBits are the bits in the current byte that are already set and significant
+		// siginificantBits are the bits in the current byte that are already set and significant.
 		significantBits uint
 	)
 
 	for line := 0; line < b.Height; line++ {
-		// iterate over all rowstrides within the line
+		// iterate over all rowstrides within the line.
 		for i := 0; i < b.RowStride; i++ {
-			// get the byte at x, y
+			// get the byte at x, y.
 			bt := b.Data[line*b.RowStride+i]
 
 			if line == 0 {
-				// copy the line
+				// copy the line.
 				data[currentIndex] = bt
 
 				if i == b.RowStride-1 {
@@ -221,7 +221,7 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 }
 
 // GetVanillaData gets bitmap data as a byte sice with Vanilla bit intepretation.
-// 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white
+// 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white.
 // The naming convention based on the `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetVanillaData() []byte {
 	if b.isVanilla {

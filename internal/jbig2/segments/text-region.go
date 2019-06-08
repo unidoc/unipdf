@@ -76,7 +76,7 @@ type TextRegion struct {
 	cxIARDY *arithmetic.DecoderStats
 	cx      *arithmetic.DecoderStats
 
-	// symbolCodeTable includes a code to each symbol used in that region
+	// symbolCodeTable includes a code to each symbol used in that region.
 	symbolCodeLength int
 	symbolCodeTable  *huffman.FixedSizeTable
 	Header           *Header
@@ -171,10 +171,10 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 		t.currentS += int64(ib.Height - 1)
 	}
 
-	// vii)
+	// VII)
 	s := t.currentS
 
-	// viii)
+	// VIII)
 	if t.isTransposed == 1 {
 		s, tc = tc, s
 	}
@@ -198,7 +198,7 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 		return err
 	}
 
-	// x)
+	// X)
 	if t.isTransposed == 0 && (t.referenceCorner == 0 || t.referenceCorner == 1) {
 		t.currentS += int64(ib.Width - 1)
 	}
@@ -227,7 +227,7 @@ func (t *TextRegion) checkInput() error {
 	}
 
 	if t.sbHuffFS == 2 || t.sbHuffRDWidth == 2 || t.sbHuffRDHeight == 2 || t.sbHuffRDX == 2 || t.sbHuffRDY == 2 {
-		return errors.New("huffman flag value of text region segment is not permitted")
+		return errors.New("huffman flag value in text region segment is not permitted")
 	}
 
 	if !t.useRefinement {
@@ -335,6 +335,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 		}
 
 		stripT += dt
+
 		// 3 c) symbol instances in the strip
 		var dfs int64
 		first := true
@@ -352,7 +353,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 				firstS += dfs
 				t.currentS = firstS
 				first = false
-				// 3 c) ii) - the remaining symbol instances in the strip
+				// 3 c) II) - the remaining symbol instances in the strip
 			} else {
 				// 6.4.8
 				idS, err := t.decodeIds()
@@ -366,7 +367,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 
 				t.currentS += (idS + int64(t.sbdsOffset))
 			}
-			// 3 c) iii)
+			// 3 c) III)
 			currentT, err := t.decodeCurrentT()
 			if err != nil {
 				return err
@@ -374,13 +375,13 @@ func (t *TextRegion) decodeSymbolInstances() error {
 
 			tt := stripT + currentT
 
-			// 3 c) iv)
+			// 3 c) IV)
 			id, err := t.decodeID()
 			if err != nil {
 				return err
 			}
 
-			// 3 c) v)
+			// 3 c) V)
 			r, err := t.decodeRI()
 			if err != nil {
 				return err
@@ -499,38 +500,45 @@ func (t *TextRegion) decodeRI() (int64, error) {
 	return int64(temp), err
 }
 
-func (t *TextRegion) decodeIb(r, id int64) (ib *bitmap.Bitmap, err error) {
+func (t *TextRegion) decodeIb(r, id int64) (*bitmap.Bitmap, error) {
+	var (
+		err error
+		ib  *bitmap.Bitmap
+	)
+
 	if r == 0 {
-		ib = t.symbols[int(id)]
-		return
+		if int(id) > len(t.symbols)-1 {
+			return nil, errors.New("decoding IB bitmap. index out of range")
+		}
+		return t.symbols[int(id)], nil
 	}
 	// 1) - 4)
 	var rdw, rdh, rdx, rdy int64
 
 	rdw, err = t.decodeRdw()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	rdh, err = t.decodeRdh()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	rdx, err = t.decodeRdx()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	rdy, err = t.decodeRdy()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// 5)
 	if t.isHuffmanEncoded {
 		if _, err = t.decodeSymInRefSize(); err != nil {
-			return
+			return nil, err
 		}
 		t.r.Align()
 	}
@@ -551,15 +559,14 @@ func (t *TextRegion) decodeIb(r, id int64) (ib *bitmap.Bitmap, err error) {
 
 	ib, err = t.genericRefinementRegion.GetRegionBitmap()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// 7)
 	if t.isHuffmanEncoded {
 		t.r.Align()
 	}
-
-	return
+	return ib, nil
 }
 
 func (t *TextRegion) decodeIds() (int64, error) {
@@ -860,7 +867,7 @@ func (t *TextRegion) initSymbols() error {
 
 			sd, ok := s.(*SymbolDictionary)
 			if !ok {
-				return errors.New("text region - Refered To Segment is not a SymbolDictionary. ")
+				return errors.New("text region - Refered To Segment is not a SymbolDictionary")
 			}
 
 			sd.cxIAID = t.cxIAID
@@ -920,23 +927,24 @@ func (t *TextRegion) parseHeader() (err error) {
 	return t.checkInput()
 }
 
-func (t *TextRegion) readRegionFlags() (err error) {
+func (t *TextRegion) readRegionFlags() error {
 	var (
 		bit  int
 		bits uint64
+		err  error
 	)
 
 	// Bit 15
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	t.sbrTemplate = int8(bit)
 
 	// Bit 10 - 14
 	bits, err = t.r.ReadBits(5)
 	if err != nil {
-		return
+		return err
 	}
 
 	t.sbdsOffset = int8(bits)
@@ -947,35 +955,35 @@ func (t *TextRegion) readRegionFlags() (err error) {
 	// Bit 9
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	t.defaultPixel = int8(bit)
 
 	// Bit 7 - 8
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.combinationOperator = bitmap.CombinationOperator(int(bits) & 0x3)
 
 	// Bit 6
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	t.isTransposed = int8(bit)
 
 	// Bit 4 - 5
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.referenceCorner = int16(bits) & 0x3
 
 	// Bit 2 - 3
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.logSBStrips = int16(bits) & 0x3
 	t.sbStrips = 1 << uint(t.logSBStrips)
@@ -983,7 +991,7 @@ func (t *TextRegion) readRegionFlags() (err error) {
 	// Bit 1
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	if bit == 1 {
 		t.useRefinement = true
@@ -992,7 +1000,7 @@ func (t *TextRegion) readRegionFlags() (err error) {
 	// Bit 0
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 
 	if bit == 1 {
@@ -1001,109 +1009,116 @@ func (t *TextRegion) readRegionFlags() (err error) {
 	return nil
 }
 
-func (t *TextRegion) readHuffmanFlags() (err error) {
+func (t *TextRegion) readHuffmanFlags() error {
 	var (
 		bit  int
 		bits uint64
+		err  error
 	)
 	// Bit 15 - dirty read
 	_, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 
 	// Bit 14
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffRSize = int8(bit)
 
 	// Bit 12 - 13
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffRDY = int8(bits) & 0xf
 
 	// Bit 10 - 11
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffRDX = int8(bits) & 0xf
 
 	// Bit 8 - 9
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffRDHeight = int8(bits) & 0xf
 
 	// Bit 6 - 7
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffRDWidth = int8(bits) & 0xf
 
 	// Bit 4 - 5
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffDT = int8(bits) & 0xf
 
 	// Bit 2 - 3
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffDS = int8(bits) & 0xf
 
 	// Bit 0 - 1
 	bits, err = t.r.ReadBits(2)
 	if err != nil {
-		return
+		return err
 	}
 	t.sbHuffFS = int8(bits) & 0xf
 	return nil
 }
 
-func (t *TextRegion) readUseRefinement() (err error) {
-	if t.useRefinement && t.sbrTemplate == 0 {
-		t.sbrATX = make([]int8, 2)
-		t.sbrATY = make([]int8, 2)
-		var temp byte
-
-		// Byte 0
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATX[0] = int8(temp)
-
-		// Byte 1
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATY[0] = int8(temp)
-
-		// Byte 2
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATX[1] = int8(temp)
-
-		// Byte 3
-		temp, err = t.r.ReadByte()
-		if err != nil {
-			return
-		}
-		t.sbrATY[1] = int8(temp)
+func (t *TextRegion) readUseRefinement() error {
+	if !t.useRefinement || t.sbrTemplate != 0 {
+		return nil
 	}
+
+	var (
+		temp byte
+		err  error
+	)
+	t.sbrATX = make([]int8, 2)
+	t.sbrATY = make([]int8, 2)
+
+	// Byte 0
+	temp, err = t.r.ReadByte()
+	if err != nil {
+		return err
+	}
+	t.sbrATX[0] = int8(temp)
+
+	// Byte 1
+	temp, err = t.r.ReadByte()
+	if err != nil {
+		return err
+	}
+	t.sbrATY[0] = int8(temp)
+
+	// Byte 2
+	temp, err = t.r.ReadByte()
+	if err != nil {
+		return err
+	}
+	t.sbrATX[1] = int8(temp)
+
+	// Byte 3
+	temp, err = t.r.ReadByte()
+	if err != nil {
+		return err
+	}
+	t.sbrATY[1] = int8(temp)
+
 	return nil
 }
 
@@ -1124,7 +1139,8 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 	return nil
 }
 
-func (t *TextRegion) setCodingStatistics() (err error) {
+func (t *TextRegion) setCodingStatistics() error {
+
 	if t.cxIADT == nil {
 		t.cxIADT = arithmetic.NewStats(512, 1)
 	}
@@ -1166,9 +1182,13 @@ func (t *TextRegion) setCodingStatistics() (err error) {
 	}
 
 	if t.arithmDecoder == nil {
+		var err error
 		t.arithmDecoder, err = arithmetic.New(t.r)
+		if err != nil {
+			return err
+		}
 	}
-	return
+	return nil
 }
 
 func (t *TextRegion) setContexts(
@@ -1233,17 +1253,18 @@ func (t *TextRegion) setParameters(
 	t.symbolCodeLength = sbSymCodeLen
 }
 
-func (t *TextRegion) symbolIDCodeLengths() (err error) {
+func (t *TextRegion) symbolIDCodeLengths() error {
 	var (
 		runCodeTable []*huffman.Code
 		bits         uint64
 		ht           huffman.Tabler
+		err          error
 	)
 
 	for i := 0; i < 35; i++ {
 		bits, err = t.r.ReadBits(4)
 		if err != nil {
-			return
+			return err
 		}
 
 		prefLen := int(bits & 0xf)
@@ -1254,7 +1275,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 
 	ht, err = huffman.NewFixedSizeTable(runCodeTable)
 	if err != nil {
-		return
+		return err
 	}
 
 	// 3) - 5)
@@ -1268,7 +1289,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 	for counter < t.amountOfSymbols {
 		code, err = ht.Decode(t.r)
 		if err != nil {
-			return
+			return err
 		}
 
 		if code < 32 {
@@ -1284,7 +1305,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 			case 32:
 				bits, err = t.r.ReadBits(2)
 				if err != nil {
-					return
+					return err
 				}
 				runLength = 3 + int64(bits)
 				if counter > 0 {
@@ -1293,13 +1314,13 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 			case 33:
 				bits, err = t.r.ReadBits(3)
 				if err != nil {
-					return
+					return err
 				}
 				runLength = 3 + int64(bits)
 			case 34:
 				bits, err = t.r.ReadBits(7)
 				if err != nil {
-					return
+					return err
 				}
 				runLength = 11 + int64(bits)
 			}
@@ -1317,7 +1338,7 @@ func (t *TextRegion) symbolIDCodeLengths() (err error) {
 
 	// 7)
 	t.symbolCodeTable, err = huffman.NewFixedSizeTable(sbSymCodes)
-	return
+	return err
 }
 
 func newTextRegion(r reader.StreamReader, h *Header) *TextRegion {

@@ -31,6 +31,7 @@ func TestDecodeJBIG2Files(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
+
 	dirName := os.Getenv(EnvDirectory)
 	if dirName == "" {
 		return
@@ -42,7 +43,7 @@ func TestDecodeJBIG2Files(t *testing.T) {
 	filenames, err := readFileNames(dirName)
 	require.NoError(t, err)
 
-	passwords := map[string]string{}
+	passwords := make(map[string]string)
 
 	for _, filename := range filenames {
 		t.Run(rawFileName(filename), func(t *testing.T) {

@@ -96,7 +96,7 @@ func (s *SymbolDictionary) AmmountOfNewSymbols() int {
 	return s.amountOfNewSymbols
 }
 
-// GetDictionary gets the decoded dictionary symbols
+// GetDictionary gets the decoded dictionary symbols as a bitmap slice.
 func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary begins...")
 	defer func() {
@@ -501,7 +501,7 @@ func (s *SymbolDictionary) decodeRefinedSymbol(
 	}
 
 	if s.isHuffmanEncoded {
-		// make sure that the processed bytes are equal to the value read in step 5
+		// Make sure that the processed bytes are equal to the value read in step 5.
 		s.r.Align()
 	}
 	return nil
@@ -591,7 +591,8 @@ func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 
 }
 
-// decodeHeightClassDeltaHeightWithHuffman - 6.5.6 if isHuffmanEncoded.
+// decodeHeightClassDeltaHeightWithHuffman - 6.5.6 decodes the symbol dictionary
+// when the height class is encoded using huffman tables.
 func (s *SymbolDictionary) decodeHeightClassDeltaHeightWithHuffman() (int64, error) {
 	switch s.sdHuffDecodeHeightSelection {
 	case 0:
@@ -633,7 +634,7 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 			if err != nil {
 				return nil, err
 			}
-			// common.Log.Debug("Setting HeightClassCollectiveBitmap Byte: %08b at index: %d", b, i)
+
 			if err = heightClassColleciveBitmap.SetByte(i, b); err != nil {
 				return nil, err
 			}
@@ -654,7 +655,7 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 
 }
 
-// getSbSymCodeLen 6.5.8.2.3 - Setting SBSYMCODES.
+// getSbSymCodeLen 6.5.8.2.3 sets the SBSYMCODES variable.
 func (s *SymbolDictionary) getSbSymCodeLen() int {
 	first := int(math.Ceil(
 		math.Log(float64(s.amountOfImportedSymbols+s.amountOfNewSymbols)) / math.Log(2)))
@@ -786,7 +787,9 @@ func (s *SymbolDictionary) huffDecodeRefAggNInst() (int64, error) {
 	return 0, nil
 }
 
-func (s *SymbolDictionary) parseHeader() (err error) {
+func (s *SymbolDictionary) parseHeader() error {
+	var err error
+
 	common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
 	defer func() {
 		if err != nil {
@@ -797,22 +800,22 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 	}()
 
 	if err = s.readRegionFlags(); err != nil {
-		return
+		return err
 	}
 	if err = s.setAtPixels(); err != nil {
-		return
+		return err
 	}
 	if err = s.setRefinementAtPixels(); err != nil {
-		return
+		return err
 	}
 	if err = s.readAmountOfExportedSymbols(); err != nil {
-		return
+		return err
 	}
 	if err = s.readAmmountOfNewSymbols(); err != nil {
-		return
+		return err
 	}
 	if err = s.setInSyms(); err != nil {
-		return
+		return err
 	}
 
 	if s.isCodingContextUsed {
@@ -823,19 +826,23 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 				symbolDictionary, ok := rtSegments[i].SegmentData.(*SymbolDictionary)
 				if !ok {
 					err = fmt.Errorf("related Segment: %v is not a Symbol Dictionary Segment", rtSegments[i])
-					return
+					return err
 				}
 
 				if symbolDictionary.isCodingContextUsed {
 					if err = s.setRetainedCodingContexts(symbolDictionary); err != nil {
-						return
+						return err
 					}
 				}
 				break
 			}
 		}
 	}
-	return s.checkInput()
+
+	if err = s.checkInput(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *SymbolDictionary) readRegionFlags() error {
@@ -1118,7 +1125,7 @@ func (s *SymbolDictionary) setRetainedCodingContexts(sd *SymbolDictionary) error
 	return nil
 }
 
-// setSymbolsArray 6.5.8.2.4 - Setting SBSYMS
+// setSymbolsArray 6.5.8.2.4 sets the SBSYMS variable.
 func (s *SymbolDictionary) setSymbolsArray() error {
 	if s.importSymbols == nil {
 		if err := s.retrieveImportSymbols(); err != nil {

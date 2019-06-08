@@ -53,9 +53,10 @@ func (h *Header) CleanSegmentData() {
 	}
 }
 
-// GetSegmentData gets the segment's data in a Segmenter form.
+// GetSegmentData gets the segment's data returning the Segmenter instance.
 func (h *Header) GetSegmentData() (Segmenter, error) {
 	var segmentDataPart Segmenter
+
 	if h.SegmentData != nil {
 		segmentDataPart = h.SegmentData
 	}
@@ -121,37 +122,37 @@ func (h *Header) parse(
 		return err
 	}
 
-	// 7.2.2 Segment Number
+	// 7.2.2 Segment Number.
 	if err = h.readSegmentNumber(r); err != nil {
 		return err
 	}
 
-	// 7.2.3 Segment header flags
+	// 7.2.3 Segment header flags.
 	if err = h.readHeaderFlags(r); err != nil {
 		return err
 	}
 
-	// 7.2.4 Amount of referred-to segment
+	// 7.2.4 Amount of referred-to segment.
 	var countOfRTS uint64
 	countOfRTS, err = h.readAmmountOfReferredToSegments(r)
 	if err != nil {
 		return err
 	}
 
-	// 7.2.5 Refered-tp segment numbers
+	// 7.2.5 Refered-tp segment numbers.
 	h.RTSNumbers, err = h.readReferedToSegmentNumbers(r, int(countOfRTS))
 	if err != nil {
 		return err
 	}
 
-	// 7.2.6 Segment page association
+	// 7.2.6 Segment page association.
 	err = h.readSegmentPageAssociation(d, r, countOfRTS, h.RTSNumbers...)
 	if err != nil {
 		return err
 	}
 
 	if h.Type != TEndOfFile {
-		// 7.2.7 Segment data length (Contains the length of the data)
+		// 7.2.7 Segment data length (Contains the length of the data).
 		if err = h.readSegmentDataLength(r); err != nil {
 			return err
 		}
@@ -164,8 +165,9 @@ func (h *Header) parse(
 	return nil
 }
 
-// readSegmentNumber - 7.2.2
+// readSegmentNumber reads the segment number.
 func (h *Header) readSegmentNumber(r reader.StreamReader) error {
+	// 7.2.2
 	b := make([]byte, 4)
 	_, err := r.Read(b)
 	if err != nil {
@@ -177,8 +179,9 @@ func (h *Header) readSegmentNumber(r reader.StreamReader) error {
 	return nil
 }
 
-// readHeaderFlags - 7.2.3
+// readHeaderFlags reads the header flag values.
 func (h *Header) readHeaderFlags(r reader.StreamReader) error {
+	// 7.2.3
 	bit, err := h.Reader.ReadBit()
 	if err != nil {
 		return err
@@ -209,8 +212,9 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	return nil
 }
 
-// readAmmountOfReferredToSegments - 7.2.4 get the amount of referred-to segments
+// readAmmountOfReferredToSegments gets the amount of referred-to segments.
 func (h *Header) readAmmountOfReferredToSegments(r reader.StreamReader) (uint64, error) {
+	// 7.2.4
 	countOfRTS, err := r.ReadBits(3)
 	if err != nil {
 		return 0, err
@@ -248,15 +252,13 @@ func (h *Header) readAmmountOfReferredToSegments(r reader.StreamReader) (uint64,
 			retainBit[i] = byte(b)
 		}
 	}
-
 	return countOfRTS, nil
 }
 
-// readReferedToSegmentNumbers - 7.2.5 Gathers all segment numbers of referred-to segments. The
+// readReferedToSegmentNumbers gathers all segment numbers of referred-to segments. The
 // segment itself is in rtSegments the array.
-func (h *Header) readReferedToSegmentNumbers(
-	r reader.StreamReader, countOfRTS int,
-) ([]int, error) {
+func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS int) ([]int, error) {
+	// 7.2.5
 	rtsNumbers := make([]int, countOfRTS)
 
 	if countOfRTS > 0 {
@@ -283,15 +285,15 @@ func (h *Header) readReferedToSegmentNumbers(
 			rtsNumbers[i] = int(bits & 0xffffffff)
 		}
 	}
-
 	return rtsNumbers, nil
 }
 
-// readSegmentPageAssociation - 7.2.6
+// readSegmentPageAssociation gets the segment's associated page number.
 func (h *Header) readSegmentPageAssociation(
 	d Documenter, r reader.StreamReader,
 	countOfRTS uint64, rtsNumbers ...int,
 ) error {
+	// 7.2.6
 	if !h.PageAssociationFieldSize {
 		// Short format
 		bits, err := r.ReadBits(8)
@@ -325,20 +327,21 @@ func (h *Header) readSegmentPageAssociation(
 	return nil
 }
 
-// readSegmentDataLength 7.2.7 - contains the length of the data part in bytes
+// readSegmentDataLength contains the length of the data part in bytes.
 func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
+	// 7.2.7
 	h.SegmentDataLength, err = r.ReadBits(32)
 	if err != nil {
 		return err
 	}
 
-	// Set the 4bytes only mask
+	// Set the 4bytes mask
 	h.SegmentDataLength &= 0xffffffff
 	return nil
 }
 
-// readDataStartOffset sets the offset of the current reader if the organisation type
-// is OSequential.
+// readDataStartOffset sets the offset of the current reader if
+// the organisation type is OSequential.
 func (h *Header) readDataStartOffset(r reader.StreamReader, organizationType OrganizationType) {
 	if organizationType == OSequential {
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())

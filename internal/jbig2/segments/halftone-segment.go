@@ -15,7 +15,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// HalftoneRegion is the model for the jbig2 halftone region segment implementation - 7.4.5.1
+// HalftoneRegion is the model for the jbig2 halftone region segment implementation - 7.4.5.1.
 type HalftoneRegion struct {
 	r                reader.StreamReader
 	h                *Header
@@ -24,10 +24,10 @@ type HalftoneRegion struct {
 	DataOffset       int64
 	DataLength       int64
 
-	// Region segment information field, 7.4.1
+	// Region segment information field, 7.4.1.
 	RegionSegment *RegionSegment
 
-	// Halftone segment information field, 7.4.5.1.1
+	// Halftone segment information field, 7.4.5.1.1.
 	HDefaultPixel       int
 	CombinationOperator bitmap.CombinationOperator
 	HSkipEnabled        bool
@@ -66,20 +66,19 @@ func (h *HalftoneRegion) Init(hd *Header, r reader.StreamReader) error {
 }
 
 // GetRegionBitmap implements Regioner interface.
-func (h *HalftoneRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
+func (h *HalftoneRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	if h.HalftoneRegionBitmap != nil {
-		bm = h.HalftoneRegionBitmap
-		return
+		return h.HalftoneRegionBitmap, nil
 	}
+	var err error
 
-	// 6.6.5 page 40
-	// 1)
+	// 6.6.5 1)
 	h.HalftoneRegionBitmap = bitmap.New(h.RegionSegment.BitmapWidth, h.RegionSegment.BitmapHeight)
 
 	if h.Patterns == nil || len(h.Patterns) == 0 {
 		h.Patterns, err = h.GetPatterns()
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
@@ -95,11 +94,11 @@ func (h *HalftoneRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	var grayScaleValues [][]int
 	grayScaleValues, err = h.grayScaleDecoding(bitsPerValue)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if err = h.renderPattern(grayScaleValues); err != nil {
-		return
+		return nil, err
 	}
 
 	return h.HalftoneRegionBitmap, nil
@@ -111,7 +110,11 @@ func (h *HalftoneRegion) GetRegionInfo() *RegionSegment {
 }
 
 // GetPatterns gets the HalftoneRegion patterns.
-func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
+func (h *HalftoneRegion) GetPatterns() ([]*bitmap.Bitmap, error) {
+	var (
+		patterns []*bitmap.Bitmap
+		err      error
+	)
 	common.Log.Debug("RT Segments: %v", h.h.RTSegments)
 
 	for _, s := range h.h.RTSegments {
@@ -119,25 +122,25 @@ func (h *HalftoneRegion) GetPatterns() (patterns []*bitmap.Bitmap, err error) {
 		data, err = s.GetSegmentData()
 		if err != nil {
 			common.Log.Debug("GetSegmentData failed: %v", err)
-			return
+			return nil, err
 		}
 
 		pattern, ok := data.(*PatternDictionary)
 		if !ok {
 			err = fmt.Errorf("related segment not a pattern dictionary: %T", data)
-			return
+			return nil, err
 		}
 
 		var tempPatterns []*bitmap.Bitmap
 		tempPatterns, err = pattern.GetDictionary()
 		if err != nil {
 			common.Log.Debug("pattern GetDictionary failed: %v", err)
-			return
+			return nil, err
 		}
 
 		patterns = append(patterns, tempPatterns...)
 	}
-	return
+	return patterns, nil
 }
 
 func (h *HalftoneRegion) checkInput() error {
@@ -153,9 +156,7 @@ func (h *HalftoneRegion) checkInput() error {
 	return nil
 }
 
-func (h *HalftoneRegion) combineGrayscalePlanes(
-	grayScalePlanes []*bitmap.Bitmap, j int,
-) error {
+func (h *HalftoneRegion) combineGrayscalePlanes(grayScalePlanes []*bitmap.Bitmap, j int) error {
 	byteIndex := 0
 
 	for y := 0; y < grayScalePlanes[j].Height; y++ {
@@ -180,9 +181,7 @@ func (h *HalftoneRegion) combineGrayscalePlanes(
 	return nil
 }
 
-func (h *HalftoneRegion) computeGrayScalePlanes(
-	grayScalePlanes []*bitmap.Bitmap, bitsPerValue int,
-) ([][]int, error) {
+func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap, bitsPerValue int) ([][]int, error) {
 	grayScaleValues := make([][]int, h.HGridHeight)
 
 	for i := 0; i < len(grayScaleValues); i++ {
@@ -288,7 +287,6 @@ func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int, error) {
 			return nil, err
 		}
 	}
-
 	return h.computeGrayScalePlanes(grayScalePlanes, bitsPerValue)
 }
 
@@ -379,7 +377,7 @@ func (h *HalftoneRegion) parseHeader() error {
 	return h.checkInput()
 }
 
-// renderPattern This method draws the pattern into the region bitmap ({code htReg}), as described in 6.6.5.2.
+// renderPattern draws the pattern into the region bitmap, as described in 6.6.5.2.
 func (h *HalftoneRegion) renderPattern(grayScaleValues [][]int) (err error) {
 	var x, y int
 

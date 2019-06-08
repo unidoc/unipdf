@@ -59,12 +59,12 @@ func (d *DecoderStats) Reset() {
 	}
 }
 
-// SetIndex sets the decoderStats index
+// SetIndex sets current decoder stats 'index'.
 func (d *DecoderStats) SetIndex(index int) {
 	d.index = int(uint(index))
 }
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (d *DecoderStats) String() string {
 	b := &strings.Builder{}
 	b.WriteString(fmt.Sprintf("Stats:  %d\n", len(d.codingContextTable)))

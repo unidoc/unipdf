@@ -3,11 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package jbig2 provides the jbig2 standard image Encoder and Decoder.
-// All the comment references to the 'ISO/IEC 14992 INFORMATION TECHNOLOGY - CODED REPRESENTATION OF
-// PICTURE AND AUDIO INFORMATION - LOSSY/LOSSLESS CODING OF BI-LEVEL IMAGES
-// JBIG commitee 1999 July 16' document. The document is available and can be downloaded
-// from: 'https://github.com/agl/jbig2enc/blob/master/fcd14492.pdf'
 package jbig2
 
 import (
@@ -23,14 +18,14 @@ import (
 )
 
 var (
-	// fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1
+	// fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1.
 	fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 )
 
 // Document is the jbig2 document model containing pages and global segments.
 // By creating new document with method NewDocument or NewDocumentWithGlobals
-// all the jbig2 encoded data segments are decoded.
-// In order to decode whole document, all of it's pages should be decoded by using GetBitmap method.
+// all the jbig2 encoded data segment headers are decoded.
+// In order to decode whole document, all of it's pages should be decoded using GetBitmap method.
 // PDF encoded documents should contains only one Page with the number 1.
 type Document struct {
 	// Pages contains all pages of this document.
@@ -62,8 +57,8 @@ func NewDocument(data []byte) (*Document, error) {
 	return NewDocumentWithGlobals(data, nil)
 }
 
-// NewDocumentWithGlobals creates new Document for the provided encoded 'data' byte slice
-// and the 'globals' Globals.
+// NewDocumentWithGlobals creates new Document for the provided encoded 'data'
+// byte slice and the 'globals' Globals.
 func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err error) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -75,6 +70,7 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err erro
 			}
 		}
 	}()
+
 	d = &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          reader.New(data),
@@ -181,7 +177,7 @@ func (d *Document) mapData() error {
 		return err
 	}
 
-	// Parse the file header if exists
+	// Parse the file header if exists.
 	if isFileHeaderPresent {
 		if err = d.parseFileHeader(); err != nil {
 			return err
@@ -232,7 +228,7 @@ func (d *Document) mapData() error {
 
 		reachedEOF, err = d.reachedEOF(offset)
 		if err != nil {
-			common.Log.Debug("ERROR: JBIG2 Document Reached EOF failed: %v", err)
+			common.Log.Debug("jbig2 document reached EOF with error: %v", err)
 			return err
 		}
 	}

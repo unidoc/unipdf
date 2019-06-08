@@ -9,22 +9,22 @@ package bitmap
 type CombinationOperator int
 
 const (
-	// CmbOpOr the 'OR' operator
+	// CmbOpOr is the 'OR' CombinationOperator.
 	CmbOpOr CombinationOperator = iota
 
-	// CmbOpAnd the 'AND' operator
+	// CmbOpAnd is the 'AND' CombinationOperator.
 	CmbOpAnd
 
-	// CmbOpXor the 'XOR' operator
+	// CmbOpXor is the 'XOR' CombinationOperator.
 	CmbOpXor
 
-	// CmbOpXNor the 'XNOR' operator
+	// CmbOpXNor is the 'XNOR' CombinationOperator.
 	CmbOpXNor
 
-	// CmbOpReplace the 'REPLACE' operator
+	// CmbOpReplace is the 'REPLACE' CombinationOperator.
 	CmbOpReplace
 
-	// CmbOpNot the 'NOT' operator
+	// CmbOpNot is the 'NOT' CombinationOperator.
 	CmbOpNot
 )
 

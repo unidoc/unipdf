@@ -67,7 +67,7 @@ func (e *EncodedTable) parseTable() (err error) {
 	var temp uint64
 	curRangeLow := e.HtLow()
 
-	// Annex B.2 5) - decode table lines
+	// Annex B.2 5) - decode table lines.
 	for curRangeLow < e.HtHigh() {
 		temp, err = r.ReadBits(byte(e.HtPS()))
 		if err != nil {
@@ -109,7 +109,7 @@ func (e *EncodedTable) parseTable() (err error) {
 	rangeLow = e.HtHigh()
 	codeTable = append(codeTable, NewCode(prefLen, rangeLen, rangeLow, false))
 
-	//Annex B.2 10) oob table line
+	//Annex B.2 10) OOB table line.
 	if e.HtOOB() == 1 {
 		temp, err = r.ReadBits(byte(e.HtPS()))
 		if err != nil {

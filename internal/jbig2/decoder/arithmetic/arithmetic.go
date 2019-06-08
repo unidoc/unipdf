@@ -148,7 +148,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	}
 	d.previous = 1
 
-	// first bit defines the sign of the integer
+	// First bit defines the sign of the integer.
 	s, err = d.decodeIntBit(stats)
 	if err != nil {
 		return 0, err
@@ -159,59 +159,60 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		return 0, err
 	}
 
-	// First read
+	// Read first bit.
 	if bit == 1 {
 		bit, err = d.decodeIntBit(stats)
 		if err != nil {
 			return 0, err
 		}
 
-		// Second Read
+		// Read second bit.
 		if bit == 1 {
 			bit, err = d.decodeIntBit(stats)
 			if err != nil {
 				return 0, err
 			}
 
-			// Third Read
+			// Read third bit.
 			if bit == 1 {
 				bit, err = d.decodeIntBit(stats)
 				if err != nil {
 					return 0, err
 				}
 
-				// Fourth Read
+				// Read fourth bit.
 				if bit == 1 {
 					bit, err = d.decodeIntBit(stats)
 					if err != nil {
 						return 0, err
 					}
-					// Fifth Read
+
+					// Read fifth bit.
 					if bit == 1 {
 						bitsToRead = 32
 						offset = 4436
 					} else {
-						// Fifth Read
+						// Set fifth bit variables.
 						bitsToRead = 12
 						offset = 340
 					}
 				} else {
-					// Fourth Read
+					// Set fourth bit variables.
 					bitsToRead = 8
 					offset = 84
 				}
 			} else {
-				// Third Read
+				// Set third bit variables.
 				bitsToRead = 6
 				offset = 20
 			}
 		} else {
-			// SecondRead
+			// Set second bit variables.
 			bitsToRead = 4
 			offset = 4
 		}
 	} else {
-		// First read
+		// Set first bit variables.
 		bitsToRead = 2
 		offset = 0
 	}
@@ -270,10 +271,7 @@ func (d *Decoder) init() error {
 		return err
 	}
 
-	// Shift c value again
 	d.c <<= 7
-
-	// set
 	d.ct -= 7
 	d.a = 0x8000
 	d.prvCtr++

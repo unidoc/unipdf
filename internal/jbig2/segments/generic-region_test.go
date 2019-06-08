@@ -17,11 +17,12 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// TestDecodeGenericRegion tests the decode process of the jbig2 Generic Region
+// TestDecodeGenericRegion tests the decode process of the jbig2 Generic Region.
 func TestDecodeGenericRegion(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
+
 	t.Run("AnnexH", func(t *testing.T) {
 		t.Run("S-12th", func(t *testing.T) {
 			data := []byte{

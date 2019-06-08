@@ -3,4 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package encoder
+// Package mmr contains the jbig2 mmr decoder used to decode
+// jbig2 encoded data segments.
+package mmr

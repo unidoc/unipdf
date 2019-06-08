@@ -1981,13 +1981,14 @@ const (
 	jbig2Globals = "JBIG2Globals"
 )
 
-// JBIG2Encoder is the jbig2 document encoder (WIP) / decoder.
+// JBIG2Encoder is the jbig2 image encoder (WIP)/decoder.
 type JBIG2Encoder struct {
-	// Globals are the JBIG2 global segments
+	// Globals are the JBIG2 global segments.
 	Globals jbig2.Globals
 
-	// IsChocolateData defines if the data is encoded such that one means when the binary data '1' means black and '0' white
-	// otherwise the data is called vanilla
+	// IsChocolateData defines if the data is encoded such that
+	// binary data '1' means black and '0' white.
+	// otherwise the data is called vanilla.
 	// Naming convention taken from: 'https://en.wikipedia.org/wiki/Binary_image#Interpretation'
 	IsChocolateData bool
 }
@@ -2007,7 +2008,8 @@ func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 		return
 	}
 
-	// (PDF32000:2008 Table 39) The array should be of 2 x n size. For binary images n stands for 1bit, thus the array should contain 2 numbers.
+	// (PDF32000:2008 Table 39) The array should be of 2 x n size.
+	// For binary images n stands for 1bit, thus the array should contain 2 numbers.
 	floatSlice, err := arr.GetAsFloat64Slice()
 	if err != nil {
 		// check if the arr is an array of integers.
@@ -2089,7 +2091,7 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		}
 	}
 
-	// Inverse the bits on the decode function (PDF32000:2008 7.10.2)
+	// Inverse the bits on the 'Decode [1.0 0.0]' function (PDF32000:2008 7.10.2)
 	if decode := streamObj.Get("Decode"); decode != nil {
 		encoder.setChocolateData(decode)
 	}
@@ -2134,15 +2136,15 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// the document should have only one page
+	// the jbig2 PDF document should have only one page, where page numeration
+	// starts from '1'.
 	page, err := doc.GetPage(1)
 	if err != nil {
 		return nil, err
 	}
 
-	// check if page is not nil
 	if page == nil {
-		err = errors.New("JBIG2 provided nil page")
+		err = errors.New("jbig2 corrupted data. No page#1 found")
 		common.Log.Debug("ERROR: %s", err.Error())
 		return nil, err
 	}
@@ -2153,7 +2155,7 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// check if data is vanilla
+	// check if data IsChocolate
 	if enc.IsChocolateData {
 		return bm.GetChocolateData(), nil
 	}

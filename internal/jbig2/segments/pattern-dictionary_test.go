@@ -109,7 +109,6 @@ func TestDecodePatternDictionary(t *testing.T) {
 				case 1:
 					require.NoError(t, toCompare.SetPixel(2, 1, 1))
 				}
-				// t.Logf("Symbol: #%d: %v - %v", i, s.String(), toCompare.String())
 				assert.True(t, toCompare.Equals(s), fmt.Sprintf("i: %d, %v, %v", i, s.String(), toCompare.String()))
 			}
 		})

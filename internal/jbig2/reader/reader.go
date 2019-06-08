@@ -3,10 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package reader contains the stream readers used by the jbig2 segments decoder.
-// It defines the StreamReader interface that allows to read bit, bits, byte, bytes change and get the
-// stream position, align the bits.
-// The readers implemented in that package both implements StreamReader
 package reader
 
 import (

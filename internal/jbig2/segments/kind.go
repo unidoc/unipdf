@@ -85,6 +85,7 @@ func (k Type) String() string {
 	return "Invalid Segment Kind"
 }
 
+// set the segment type number to it's creator function.
 var (
 	emptySegment Segmenter
 	kindMap      = map[Type]func() Segmenter{
