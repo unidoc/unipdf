@@ -24,7 +24,7 @@ import (
 
 // Regular Expressions for parsing and identifying object signatures.
 var rePdfVersion = regexp.MustCompile(`%PDF-(\d)\.(\d)`)
-var reEOF = regexp.MustCompile("%%EOF")
+var reEOF = regexp.MustCompile("%%EOF?")
 var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
 var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
 var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
