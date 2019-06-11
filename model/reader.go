@@ -502,7 +502,13 @@ func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.Pdf
 
 	objType, ok := (*nodeDict).Get("Type").(*core.PdfObjectName)
 	if !ok {
-		return errors.New("node missing Type (Required)")
+		if nodeDict.Get("Kids") == nil {
+			return errors.New("node missing Type (Required)")
+		}
+
+		common.Log.Debug("ERROR: node missing Type, but has Kids. Assuming Pages node.")
+		objType = core.MakeName("Pages")
+		nodeDict.Set("Type", objType)
 	}
 	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
