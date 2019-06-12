@@ -283,7 +283,8 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	outlineRoot, ok := outlineRootObj.(*core.PdfIndirectObject)
 	if !ok {
 		if _, ok := core.GetDict(outlineRootObj); !ok {
-			return nil, errors.New("outline root should be an indirect object")
+			common.Log.Debug("Invalid outline root - skipping")
+			return nil, nil
 		}
 
 		common.Log.Debug("Outline root is a dict. Should be an indirect object")
@@ -501,7 +502,13 @@ func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.Pdf
 
 	objType, ok := (*nodeDict).Get("Type").(*core.PdfObjectName)
 	if !ok {
-		return errors.New("node missing Type (Required)")
+		if nodeDict.Get("Kids") == nil {
+			return errors.New("node missing Type (Required)")
+		}
+
+		common.Log.Debug("ERROR: node missing Type, but has Kids. Assuming Pages node.")
+		objType = core.MakeName("Pages")
+		nodeDict.Set("Type", objType)
 	}
 	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {

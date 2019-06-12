@@ -24,12 +24,12 @@ import (
 
 // Regular Expressions for parsing and identifying object signatures.
 var rePdfVersion = regexp.MustCompile(`%PDF-(\d)\.(\d)`)
-var reEOF = regexp.MustCompile("%%EOF")
+var reEOF = regexp.MustCompile("%%EOF?")
 var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
 var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
 var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
 var reExponential = regexp.MustCompile(`^[\+-.]*([0-9.]+)[eE][\+-.]*([0-9.]+)`)
-var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
+var reReference = regexp.MustCompile(`^\s*[-]*(\d+)\s+(\d+)\s+R`)
 var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
 var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
 var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
@@ -240,14 +240,21 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 				if err != nil {
 					return PdfObjectName(r.String()), err
 				}
-				parser.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
 					common.Log.Debug("ERROR: Invalid hex following '#', continuing using literal - Output may be incorrect")
-					r.WriteByte('#') // Treat as literal '#' rather than hex code.
+
+					// Treat as literal '#' rather than hex code.
+					r.WriteByte('#')
+
+					// Discard just the '#' byte and continue parsing the name.
+					parser.reader.Discard(1)
 					continue
 				}
+
+				// Hex decoding succeeded. Safe to discard all peeked bytes.
+				parser.reader.Discard(3)
 				r.Write(code)
 			} else {
 				b, _ := parser.reader.ReadByte()
@@ -1737,6 +1744,9 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 			return false, errors.New("trailer Encrypt object non dictionary")
 		}
 		dict = encDict
+	case *PdfObjectNull:
+		common.Log.Debug("Encrypt is a null object. File should not be encrypted.")
+		return false, nil
 	default:
 		return false, fmt.Errorf("unsupported type: %T", e)
 	}

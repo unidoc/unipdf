@@ -97,7 +97,7 @@ func (p *PdfPage) Duplicate() *PdfPage {
 // Note that a new container is created (indirect object).
 func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, error) {
 	page := NewPdfPage()
-	page.pageDict = p // TODO
+	page.pageDict = p
 
 	d := *p
 
@@ -138,8 +138,8 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 		}
 	} else {
 		// If Resources not explicitly defined, look up the tree (Parent objects) using
-		// the getResources() function. Resources should always be accessible.
-		resources, err := page.getResources()
+		// the getParentResources() function. Resources should always be accessible.
+		resources, err := page.getParentResources()
 		if err != nil {
 			return nil, err
 		}
@@ -405,12 +405,8 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 	return nil, errors.New("media box not defined")
 }
 
-// Get the inheritable resources, either from the page or or a higher up page/pages struct.
-func (p *PdfPage) getResources() (*PdfPageResources, error) {
-	if p.Resources != nil {
-		return p.Resources, nil
-	}
-
+// getParentResources searches for page resources in the parent nodes of the page.
+func (p *PdfPage) getParentResources() (*PdfPageResources, error) {
 	node := p.Parent
 	for node != nil {
 		dict, ok := core.GetDict(node)
