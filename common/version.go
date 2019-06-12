@@ -12,9 +12,9 @@ import (
 
 const releaseYear = 2019
 const releaseMonth = 6
-const releaseDay = 7
-const releaseHour = 11
-const releaseMin = 30
+const releaseDay = 11
+const releaseHour = 22
+const releaseMin = 10
 
 // Version holds version information, when bumping this make sure to bump the released at stamp also.
 const Version = "3.0.2"
