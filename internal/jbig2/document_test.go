@@ -86,7 +86,7 @@ func TestDocument(t *testing.T) {
 		d, err := NewDocument(data)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint32(3), d.AmountOfPages)
+		assert.Equal(t, uint32(3), d.NumberOfPages)
 		assert.Equal(t, segments.OSequential, d.OrganizationType)
 		assert.Equal(t, false, d.GBUseExtTemplate)
 

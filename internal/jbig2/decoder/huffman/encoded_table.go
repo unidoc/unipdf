@@ -60,24 +60,28 @@ func (e *EncodedTable) String() string {
 }
 
 // parseTable parses the encoded table 'e' into BasicTabler.
-func (e *EncodedTable) parseTable() (err error) {
+func (e *EncodedTable) parseTable() error {
+	var (
+		codeTable                   []*Code
+		prefLen, rangeLen, rangeLow int
+		temp                        uint64
+		err                         error
+	)
+
 	r := e.StreamReader()
-	var codeTable []*Code
-	var prefLen, rangeLen, rangeLow int
-	var temp uint64
 	curRangeLow := e.HtLow()
 
 	// Annex B.2 5) - decode table lines.
 	for curRangeLow < e.HtHigh() {
 		temp, err = r.ReadBits(byte(e.HtPS()))
 		if err != nil {
-			return
+			return err
 		}
 		prefLen = int(temp)
 
 		temp, err = r.ReadBits(byte(e.HtRS()))
 		if err != nil {
-			return
+			return err
 		}
 		rangeLen = int(temp)
 
@@ -88,7 +92,7 @@ func (e *EncodedTable) parseTable() (err error) {
 	// Annex B.2 6)
 	temp, err = r.ReadBits(byte(e.HtPS()))
 	if err != nil {
-		return
+		return err
 	}
 	prefLen = int(temp)
 
@@ -100,7 +104,7 @@ func (e *EncodedTable) parseTable() (err error) {
 	// Annex B.2 8)
 	temp, err = r.ReadBits(byte(e.HtPS()))
 	if err != nil {
-		return
+		return err
 	}
 	prefLen = int(temp)
 
@@ -113,14 +117,14 @@ func (e *EncodedTable) parseTable() (err error) {
 	if e.HtOOB() == 1 {
 		temp, err = r.ReadBits(byte(e.HtPS()))
 		if err != nil {
-			return
+			return err
 		}
 		prefLen = int(temp)
 		codeTable = append(codeTable, NewCode(prefLen, -1, -1, false))
 	}
 
 	if err = e.InitTree(codeTable); err != nil {
-		return
+		return err
 	}
 	return nil
 }

@@ -31,11 +31,11 @@ type Document struct {
 	// Pages contains all pages of this document.
 	Pages map[int]*Page
 
-	// AmountOfPagesUnknown defines if the ammount of the pages is known.
-	AmountOfPagesUnknown bool
+	// NumberOfPagesUnknown defines if the ammount of the pages is known.
+	NumberOfPagesUnknown bool
 
-	// AmountOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if AmountOfPagesUnknown is true.
-	AmountOfPages uint32
+	// NumberOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if NumberOfPagesUnknown is true.
+	NumberOfPages uint32
 
 	// GBUseExtTemplate defines wether extended Template is used.
 	GBUseExtTemplate bool
@@ -59,23 +59,12 @@ func NewDocument(data []byte) (*Document, error) {
 
 // NewDocumentWithGlobals creates new Document for the provided encoded 'data'
 // byte slice and the 'globals' Globals.
-func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err error) {
-	defer func() {
-		if x := recover(); x != nil {
-			switch e := x.(type) {
-			case error:
-				err = e
-			default:
-				err = fmt.Errorf("JBIG2 Internal Error: %v. Trace: %s", e, string(debug.Stack()))
-			}
-		}
-	}()
-
-	d = &Document{
+func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
+	d := &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          reader.New(data),
 		OrganizationType:     segments.OSequential,
-		AmountOfPagesUnknown: true,
+		NumberOfPagesUnknown: true,
 		GlobalSegments:       globals,
 		fileHeaderLength:     9,
 	}
@@ -85,21 +74,21 @@ func NewDocumentWithGlobals(data []byte, globals Globals) (d *Document, err erro
 	}
 
 	// mapData map the data stream
-	if err = d.mapData(); err != nil {
-		return
+	if err := d.mapData(); err != nil {
+		return nil, err
 	}
-	return
+	return d, nil
 }
 
-// GetAmountOfPages gets the amount of Pages in the given document.
-func (d *Document) GetAmountOfPages() (uint32, error) {
-	if d.AmountOfPagesUnknown || d.AmountOfPages == 0 {
+// GetNumberOfPages gets the amount of Pages in the given document.
+func (d *Document) GetNumberOfPages() (uint32, error) {
+	if d.NumberOfPagesUnknown || d.NumberOfPages == 0 {
 		if len(d.Pages) == 0 {
 			d.mapData()
 		}
 		return uint32(len(d.Pages)), nil
 	}
-	return d.AmountOfPages, nil
+	return d.NumberOfPages, nil
 }
 
 // GetPage implements segments.Documenter interface.
@@ -265,7 +254,7 @@ func (d *Document) parseFileHeader() error {
 		return err
 	}
 	if b != 1 {
-		d.AmountOfPagesUnknown = false
+		d.NumberOfPagesUnknown = false
 	}
 
 	// Bit 0 - Indicates file organisation type.
@@ -276,8 +265,8 @@ func (d *Document) parseFileHeader() error {
 	d.OrganizationType = segments.OrganizationType(b)
 
 	// D.4.3 Number of pages
-	if !d.AmountOfPagesUnknown {
-		d.AmountOfPages, err = d.InputStream.ReadUnsignedInt()
+	if !d.NumberOfPagesUnknown {
+		d.NumberOfPages, err = d.InputStream.ReadUnsignedInt()
 		if err != nil {
 			return err
 		}

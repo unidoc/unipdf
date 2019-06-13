@@ -134,7 +134,6 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 		// siginificantBits are the bits in the current byte that are already set and significant.
 		significantBits uint
 	)
-
 	for line := 0; line < b.Height; line++ {
 		// iterate over all rowstrides within the line.
 		for i := 0; i < b.RowStride; i++ {
@@ -144,7 +143,6 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 			if line == 0 {
 				// copy the line.
 				data[currentIndex] = bt
-
 				if i == b.RowStride-1 {
 					significantBits = padding
 				} else {
@@ -256,7 +254,7 @@ func (b *Bitmap) SetDefaultPixel() {
 	}
 }
 
-// SetByte sets the byte at 'index' with value: 'v'.
+// SetByte sets the byte at 'index' with value 'v'.
 // Returns an error if the index is out of range.
 func (b *Bitmap) SetByte(index int, v byte) error {
 	if index > len(b.Data)-1 {

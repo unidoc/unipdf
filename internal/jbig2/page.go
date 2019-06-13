@@ -8,7 +8,6 @@ package jbig2
 import (
 	"errors"
 	"fmt"
-	"runtime/debug"
 
 	"github.com/unidoc/unipdf/v3/common"
 
@@ -50,24 +49,15 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 		}
 	}()
 
-	defer func() {
-		if x := recover(); x != nil {
-			switch e := x.(type) {
-			case error:
-				err = e
-			default:
-				err = fmt.Errorf("jbig2 - internale error: %v", e)
-			}
-			common.Log.Debug("page.GetBitmap failed - panic recovered. %v. Stack: %s", err, string(debug.Stack()))
-		}
-	}()
-
-	if p.Bitmap == nil {
-		err = p.composePageBitmap()
-		if err != nil {
-			return
-		}
+	if p.Bitmap != nil {
+		return p.Bitmap, nil
 	}
+
+	err = p.composePageBitmap()
+	if err != nil {
+		return nil, err
+	}
+
 	return p.Bitmap, nil
 }
 
@@ -218,6 +208,7 @@ func (p *Page) collectPageStripes() ([]segments.Segmenter, error) {
 		stripes []segments.Segmenter
 		err     error
 	)
+
 	for _, h := range p.Segments {
 		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
