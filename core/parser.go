@@ -768,6 +768,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 	curObjNum := -1
 	secObjects := 0
 	insideSubsection := false
+	unmatchedContent := ""
 	for {
 		parser.skipSpaces()
 		_, err := parser.reader.Peek(1)
@@ -781,6 +782,16 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 		}
 
 		result1 := reXrefSubsection.FindStringSubmatch(txt)
+		if len(result1) == 0 {
+			// Try to match invalid subsection beginning lines from previously
+			// read, unidentified lines. Covers cases in which the object number
+			// and the number of entries in the subsection are not on the same line.
+			tryMatch := len(unmatchedContent) > 0
+			unmatchedContent += txt + "\n"
+			if tryMatch {
+				result1 = reXrefSubsection.FindStringSubmatch(unmatchedContent)
+			}
+		}
 		if len(result1) == 3 {
 			// Match
 			first, _ := strconv.Atoi(result1[1])
@@ -788,6 +799,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			curObjNum = first
 			secObjects = second
 			insideSubsection = true
+			unmatchedContent = ""
 			common.Log.Trace("xref subsection: first object: %d objects: %d", curObjNum, secObjects)
 			continue
 		}
@@ -801,6 +813,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			first, _ := strconv.ParseInt(result2[1], 10, 64)
 			gen, _ := strconv.Atoi(result2[2])
 			third := result2[3]
+			unmatchedContent = ""
 
 			if strings.ToLower(third) == "n" && first > 1 {
 				// Object in use in the file!  Load it.
@@ -829,6 +842,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			curObjNum++
 			continue
 		}
+
 		if (len(txt) > 6) && (txt[:7] == "trailer") {
 			common.Log.Trace("Found trailer - %s", txt)
 			// Sometimes get "trailer << ...."
