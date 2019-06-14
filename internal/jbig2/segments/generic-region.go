@@ -214,17 +214,17 @@ func (g *GenericRegion) parseHeader() (err error) {
 	}
 
 	if !g.IsMMREncoded {
-		var amountOfGbAt int
+		var numberOfGbAt int
 		if g.GBTemplate == 0 {
 			if g.UseExtTemplates {
-				amountOfGbAt = 12
+				numberOfGbAt = 12
 			} else {
-				amountOfGbAt = 4
+				numberOfGbAt = 4
 			}
 		} else {
-			amountOfGbAt = 1
+			numberOfGbAt = 1
 		}
-		if err = g.readGBAtPixels(amountOfGbAt); err != nil {
+		if err = g.readGBAtPixels(numberOfGbAt); err != nil {
 			return err
 		}
 	}
@@ -1013,11 +1013,11 @@ func (g *GenericRegion) overrideAtTemplate3(ctx, x, y, result, minorX int) int {
 	return ctx
 }
 
-func (g *GenericRegion) readGBAtPixels(amountOfGbAt int) error {
-	g.GBAtX = make([]int8, amountOfGbAt)
-	g.GBAtY = make([]int8, amountOfGbAt)
+func (g *GenericRegion) readGBAtPixels(numberOfGbAt int) error {
+	g.GBAtX = make([]int8, numberOfGbAt)
+	g.GBAtY = make([]int8, numberOfGbAt)
 
-	for i := 0; i < amountOfGbAt; i++ {
+	for i := 0; i < numberOfGbAt; i++ {
 		b, err := g.r.ReadByte()
 		if err != nil {
 			return err

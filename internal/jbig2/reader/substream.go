@@ -63,8 +63,8 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 }
 
 // Align implements StreamReader interface.
-func (s *SubstreamReader) Align() byte {
-	skipped := s.bits
+func (s *SubstreamReader) Align() (skipped byte) {
+	skipped = s.bits
 	s.bits = 0
 	return skipped
 }
@@ -91,11 +91,7 @@ func (s *SubstreamReader) Offset() uint64 {
 }
 
 // Read implements io.Reader interface.
-func (s *SubstreamReader) Read(b []byte) (int, error) {
-	var (
-		n   int
-		err error
-	)
+func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 	if s.streamPos >= s.length {
 		common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
@@ -106,31 +102,27 @@ func (s *SubstreamReader) Read(b []byte) (int, error) {
 			if err == io.EOF {
 				return n, nil
 			}
-			return n, err
+			return 0, err
 		}
 	}
 	return n, nil
 }
 
 // ReadBit implements StreamReader interface.
-func (s *SubstreamReader) ReadBit() (int, error) {
-	bit, err := s.readBool()
+func (s *SubstreamReader) ReadBit() (bit int, err error) {
+	booleanBit, err := s.readBool()
 	if err != nil {
 		return 0, err
 	}
 
-	if bit {
-		return 1, nil
+	if booleanBit {
+		bit = 1
 	}
-	return 0, nil
+	return bit, nil
 }
 
 // ReadBits implements StreamReader interface.
-func (s *SubstreamReader) ReadBits(n byte) (uint64, error) {
-	var (
-		u   uint64
-		err error
-	)
+func (s *SubstreamReader) ReadBits(n byte) (u uint64, err error) {
 	if n < s.bits {
 		shift := s.bits - n
 		u = uint64(s.cache >> shift)
@@ -242,29 +234,27 @@ func (s *SubstreamReader) fillBuffer() error {
 	return nil
 }
 
-func (s *SubstreamReader) readBool() (bool, error) {
+func (s *SubstreamReader) readBool() (bit bool, err error) {
 	if s.bits == 0 {
-		var err error
 		s.cache, err = s.readBufferByte()
 		if err != nil {
 			return false, err
 		}
 
-		b := (s.cache & 0x80) != 0
+		bit = (s.cache & 0x80) != 0
 		s.cache, s.bits = s.cache&0x7f, 7
-		return b, nil
+		return bit, nil
 	}
 
 	s.bits--
-	b := (s.cache & (1 << s.bits)) != 0
+	bit = (s.cache & (1 << s.bits)) != 0
 	s.cache &= 1<<s.bits - 1
-	return b, nil
+	return bit, nil
 }
 
-func (s *SubstreamReader) readUnalignedByte() (byte, error) {
-	var err error
+func (s *SubstreamReader) readUnalignedByte() (b byte, err error) {
 	bits := s.bits
-	b := s.cache << (8 - bits)
+	b = s.cache << (8 - bits)
 	s.cache, err = s.readBufferByte()
 	if err != nil {
 		return 0, err

@@ -45,16 +45,16 @@ type SymbolDictionary struct {
 	sdrATY []int8
 
 	// Number of exported symbols, 7.4.2.1.4
-	amountOfExportedSymbols int
+	numberOfExportedSymbols int
 
 	// Number of new symbols 7.4.2.1.5
-	amountOfNewSymbols int
+	numberOfNewSymbols int
 
 	// Further parameters
 	Header                  *Header
-	amountOfImportedSymbols int
+	numberOfImportedSymbols int
 	importSymbols           []*bitmap.Bitmap
-	amountOfDecodedSymbols  int
+	numberOfDecodedSymbols  int
 	newSymbols              []*bitmap.Bitmap
 
 	// User-supplied tables
@@ -86,14 +86,14 @@ type SymbolDictionary struct {
 	sbSymCodeLen int
 }
 
-// AmountOfExportedSymbols defines how many symbols are being exported by this SymbolDictionary.
-func (s *SymbolDictionary) AmountOfExportedSymbols() int {
-	return s.amountOfExportedSymbols
+// NumberOfExportedSymbols defines how many symbols are being exported by this SymbolDictionary.
+func (s *SymbolDictionary) NumberOfExportedSymbols() int {
+	return s.numberOfExportedSymbols
 }
 
-// AmmountOfNewSymbols returns the ammount of new symbols defined by the Symbol Dictionary.
-func (s *SymbolDictionary) AmmountOfNewSymbols() int {
-	return s.amountOfNewSymbols
+// NumberOfNewSymbols returns the amount of new symbols defined by the Symbol Dictionary.
+func (s *SymbolDictionary) NumberOfNewSymbols() int {
+	return s.numberOfNewSymbols
 }
 
 // GetDictionary gets the decoded dictionary symbols as a bitmap slice.
@@ -118,12 +118,12 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 		}
 
 		// 6.5.5. 1)
-		s.newSymbols = make([]*bitmap.Bitmap, s.amountOfNewSymbols)
+		s.newSymbols = make([]*bitmap.Bitmap, s.numberOfNewSymbols)
 
 		// 6.5.5. 2)
 		var newSymbolsWidth []int
 		if s.isHuffmanEncoded && !s.useRefinementAggregation {
-			newSymbolsWidth = make([]int, s.amountOfNewSymbols)
+			newSymbolsWidth = make([]int, s.numberOfNewSymbols)
 		}
 
 		if err = s.setSymbolsArray(); err != nil {
@@ -132,10 +132,10 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 
 		// 6.5.5 3)
 		var heightClassHeight, temp int64
-		s.amountOfDecodedSymbols = 0
+		s.numberOfDecodedSymbols = 0
 
 		// 6.5.5 4 a)
-		for s.amountOfDecodedSymbols < s.amountOfNewSymbols {
+		for s.numberOfDecodedSymbols < s.numberOfNewSymbols {
 			// 6.5.5 4 b)
 			temp, err = s.decodeHeightClassDeltaHeight()
 			if err != nil {
@@ -144,7 +144,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 			heightClassHeight += temp
 
 			var symbolWidth, totalWidth int
-			heightClassFirstSymbolIndex := s.amountOfDecodedSymbols
+			heightClassFirstSymbolIndex := s.numberOfDecodedSymbols
 
 			// 6.5.5 4 c)
 			// Repeat until OOB - OOB sends a break
@@ -156,7 +156,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 					return nil, err
 				}
 
-				if differenceWidth == math.MaxInt64 || s.amountOfDecodedSymbols >= s.amountOfNewSymbols {
+				if differenceWidth == math.MaxInt64 || s.numberOfDecodedSymbols >= s.numberOfNewSymbols {
 					break
 				}
 
@@ -181,9 +181,9 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 					}
 				} else if s.isHuffmanEncoded && !s.useRefinementAggregation {
 					// 4 c) iii)
-					newSymbolsWidth[s.amountOfDecodedSymbols] = symbolWidth
+					newSymbolsWidth[s.numberOfDecodedSymbols] = symbolWidth
 				}
-				s.amountOfDecodedSymbols++
+				s.numberOfDecodedSymbols++
 			}
 
 			// 6.5.5 4 d)
@@ -266,10 +266,10 @@ func (s *SymbolDictionary) String() string {
 	sb.WriteString(fmt.Sprintf("\t- sdATY %v\n", s.sdATY))
 	sb.WriteString(fmt.Sprintf("\t- sdrATX %v\n", s.sdrATX))
 	sb.WriteString(fmt.Sprintf("\t- sdrATY %v\n", s.sdrATY))
-	sb.WriteString(fmt.Sprintf("\t- amountOfExportedSymbols %v\n", s.amountOfExportedSymbols))
-	sb.WriteString(fmt.Sprintf("\t- amountOfNewSymbols %v\n", s.amountOfNewSymbols))
-	sb.WriteString(fmt.Sprintf("\t- amountOfImportedSymbols %v\n", s.amountOfImportedSymbols))
-	sb.WriteString(fmt.Sprintf("\t- amountOfDecodedSymbols %v\n", s.amountOfDecodedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- numberOfExportedSymbols %v\n", s.numberOfExportedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- numberOfNewSymbols %v\n", s.numberOfNewSymbols))
+	sb.WriteString(fmt.Sprintf("\t- numberOfImportedSymbols %v\n", s.numberOfImportedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- numberOfDecodedSymbols %v\n", s.numberOfDecodedSymbols))
 	return sb.String()
 }
 
@@ -342,7 +342,7 @@ func (s *SymbolDictionary) addSymbol(region Regioner) error {
 	if err != nil {
 		return err
 	}
-	s.newSymbols[s.amountOfDecodedSymbols] = symbol
+	s.newSymbols[s.numberOfDecodedSymbols] = symbol
 	s.sbSymbols = append(s.sbSymbols, symbol)
 	return nil
 }
@@ -352,7 +352,7 @@ func (s *SymbolDictionary) decodeHeightClassBitmap(
 	heightClassFirstSymbol, heightClassHeight int,
 	newSymbolsWidths []int,
 ) error {
-	for i := heightClassFirstSymbol; i < s.amountOfDecodedSymbols; i++ {
+	for i := heightClassFirstSymbol; i < s.numberOfDecodedSymbols; i++ {
 		var startColumn int
 
 		for j := heightClassFirstSymbol; j <= i-1; j++ {
@@ -372,13 +372,13 @@ func (s *SymbolDictionary) decodeHeightClassBitmap(
 
 func (s *SymbolDictionary) decodeAggregate(symbolWidth, heightClassHeight int) error {
 	var (
-		amountOfRefinementAggregationInstanves int64
+		numberOfRefinementAggregationInstances int64
 		err                                    error
 	)
 
 	//  6.5.8.2.1.
 	if s.isHuffmanEncoded {
-		amountOfRefinementAggregationInstanves, err = s.huffDecodeRefAggNInst()
+		numberOfRefinementAggregationInstances, err = s.huffDecodeRefAggNInst()
 		if err != nil {
 			return err
 		}
@@ -387,13 +387,13 @@ func (s *SymbolDictionary) decodeAggregate(symbolWidth, heightClassHeight int) e
 		if err != nil {
 			return err
 		}
-		amountOfRefinementAggregationInstanves = int64(t)
+		numberOfRefinementAggregationInstances = int64(t)
 	}
 
-	if amountOfRefinementAggregationInstanves > 1 {
+	if numberOfRefinementAggregationInstances > 1 {
 		// 6.5.8.2
-		return s.decodeThroughTextRegion(symbolWidth, heightClassHeight, amountOfRefinementAggregationInstanves)
-	} else if amountOfRefinementAggregationInstanves == 1 {
+		return s.decodeThroughTextRegion(symbolWidth, heightClassHeight, numberOfRefinementAggregationInstances)
+	} else if numberOfRefinementAggregationInstances == 1 {
 		return s.decodeRefinedSymbol(symbolWidth, heightClassHeight)
 	}
 
@@ -401,7 +401,7 @@ func (s *SymbolDictionary) decodeAggregate(symbolWidth, heightClassHeight int) e
 }
 
 func (s *SymbolDictionary) decodeThroughTextRegion(
-	symbolWidth, heightClassHeight int, amountOfRefinementAggregationInstances int64,
+	symbolWidth, heightClassHeight int, numberOfRefinementAggregationInstances int64,
 ) error {
 	if s.textRegion == nil {
 		s.textRegion = newTextRegion(s.r, nil)
@@ -425,7 +425,7 @@ func (s *SymbolDictionary) decodeThroughTextRegion(
 	}
 
 	s.textRegion.setParameters(s.arithmeticDecoder, s.isHuffmanEncoded, true, symbolWidth,
-		heightClassHeight, amountOfRefinementAggregationInstances, 1, (s.amountOfImportedSymbols + s.amountOfDecodedSymbols),
+		heightClassHeight, numberOfRefinementAggregationInstances, 1, (s.numberOfImportedSymbols + s.numberOfDecodedSymbols),
 		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, s.sdrTemplate, s.sdrATX, s.sdrATY, s.sbSymbols, s.sbSymCodeLen)
 	return s.addSymbol(s.textRegion)
 }
@@ -658,7 +658,7 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 // getSbSymCodeLen 6.5.8.2.3 sets the SBSYMCODES variable.
 func (s *SymbolDictionary) getSbSymCodeLen() int {
 	first := int(math.Ceil(
-		math.Log(float64(s.amountOfImportedSymbols+s.amountOfNewSymbols)) / math.Log(2)))
+		math.Log(float64(s.numberOfImportedSymbols+s.numberOfNewSymbols)) / math.Log(2)))
 
 	if s.isHuffmanEncoded && first < 1 {
 		return 1
@@ -672,7 +672,7 @@ func (s *SymbolDictionary) getToExportFlags() ([]int, error) {
 		currentExportFlag int
 		exRunLength       int
 		err               error
-		totalNewSymbols   = s.amountOfImportedSymbols + s.amountOfNewSymbols
+		totalNewSymbols   = s.numberOfImportedSymbols + s.numberOfNewSymbols
 		exportFlags       = make([]int, totalNewSymbols)
 	)
 
@@ -808,10 +808,10 @@ func (s *SymbolDictionary) parseHeader() error {
 	if err = s.setRefinementAtPixels(); err != nil {
 		return err
 	}
-	if err = s.readAmountOfExportedSymbols(); err != nil {
+	if err = s.readNumberOfExportedSymbols(); err != nil {
 		return err
 	}
-	if err = s.readAmmountOfNewSymbols(); err != nil {
+	if err = s.readNumberOfNewSymbols(); err != nil {
 		return err
 	}
 	if err = s.setInSyms(); err != nil {
@@ -937,15 +937,15 @@ func (s *SymbolDictionary) readRegionFlags() error {
 	return nil
 }
 
-func (s *SymbolDictionary) readAtPixels(amountOfPixels int) error {
-	s.sdATX = make([]int8, amountOfPixels)
-	s.sdATY = make([]int8, amountOfPixels)
+func (s *SymbolDictionary) readAtPixels(pixelsNumber int) error {
+	s.sdATX = make([]int8, pixelsNumber)
+	s.sdATY = make([]int8, pixelsNumber)
 	var (
 		b   byte
 		err error
 	)
 
-	for i := 0; i < amountOfPixels; i++ {
+	for i := 0; i < pixelsNumber; i++ {
 		b, err = s.r.ReadByte()
 		if err != nil {
 			return err
@@ -960,15 +960,15 @@ func (s *SymbolDictionary) readAtPixels(amountOfPixels int) error {
 	return nil
 }
 
-func (s *SymbolDictionary) readRefinementAtPixels(amountOfAtPixels int) error {
-	s.sdrATX = make([]int8, amountOfAtPixels)
-	s.sdrATY = make([]int8, amountOfAtPixels)
+func (s *SymbolDictionary) readRefinementAtPixels(numberOfAtPixels int) error {
+	s.sdrATX = make([]int8, numberOfAtPixels)
+	s.sdrATY = make([]int8, numberOfAtPixels)
 	var (
 		b   byte
 		err error
 	)
 
-	for i := 0; i < amountOfAtPixels; i++ {
+	for i := 0; i < numberOfAtPixels; i++ {
 		b, err = s.r.ReadByte()
 		if err != nil {
 			return err
@@ -983,21 +983,21 @@ func (s *SymbolDictionary) readRefinementAtPixels(amountOfAtPixels int) error {
 	return nil
 }
 
-func (s *SymbolDictionary) readAmountOfExportedSymbols() error {
+func (s *SymbolDictionary) readNumberOfExportedSymbols() error {
 	bits, err := s.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	s.amountOfExportedSymbols = int(bits & 0xffffffff)
+	s.numberOfExportedSymbols = int(bits & 0xffffffff)
 	return nil
 }
 
-func (s *SymbolDictionary) readAmmountOfNewSymbols() error {
+func (s *SymbolDictionary) readNumberOfNewSymbols() error {
 	bits, err := s.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	s.amountOfNewSymbols = int(bits & 0xffffffff)
+	s.numberOfNewSymbols = int(bits & 0xffffffff)
 	return nil
 }
 
@@ -1020,7 +1020,7 @@ func (s *SymbolDictionary) retrieveImportSymbols() error {
 				return fmt.Errorf("related segment with index: %d getDictionary failed. %s", h.SegmentNumber, err.Error())
 			}
 			s.importSymbols = append(s.importSymbols, relatedDict...)
-			s.amountOfImportedSymbols += dict.amountOfExportedSymbols
+			s.numberOfImportedSymbols += dict.numberOfExportedSymbols
 		}
 	}
 	return nil
@@ -1083,12 +1083,12 @@ func (s *SymbolDictionary) setCodingStatistics() error {
 }
 
 func (s *SymbolDictionary) setExportedSymbols(toExportFlags []int) {
-	for i := 0; i < s.amountOfImportedSymbols+s.amountOfNewSymbols; i++ {
+	for i := 0; i < s.numberOfImportedSymbols+s.numberOfNewSymbols; i++ {
 		if toExportFlags[i] == 1 {
-			if i < s.amountOfImportedSymbols {
+			if i < s.numberOfImportedSymbols {
 				s.exportSymbols = append(s.exportSymbols, s.importSymbols[i])
 			} else {
-				s.exportSymbols = append(s.exportSymbols, s.newSymbols[i-s.amountOfImportedSymbols])
+				s.exportSymbols = append(s.exportSymbols, s.newSymbols[i-s.numberOfImportedSymbols])
 			}
 		}
 	}

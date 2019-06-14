@@ -134,7 +134,7 @@ func (h *Header) parse(
 
 	// 7.2.4 Amount of referred-to segment.
 	var countOfRTS uint64
-	countOfRTS, err = h.readAmmountOfReferredToSegments(r)
+	countOfRTS, err = h.readNumberOfReferredToSegments(r)
 	if err != nil {
 		return err
 	}
@@ -212,8 +212,8 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	return nil
 }
 
-// readAmmountOfReferredToSegments gets the amount of referred-to segments.
-func (h *Header) readAmmountOfReferredToSegments(r reader.StreamReader) (uint64, error) {
+// readNumberOfReferredToSegments gets the amount of referred-to segments.
+func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, error) {
 	// 7.2.4
 	countOfRTS, err := r.ReadBits(3)
 	if err != nil {

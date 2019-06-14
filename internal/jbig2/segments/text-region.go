@@ -52,11 +52,11 @@ type TextRegion struct {
 	sbrATY []int8
 
 	// Number of symbol instances 7.4.3.1.3.
-	amountOfSymbolInstances int64
+	numberOfSymbolInstances int64
 
 	currentS        int64
 	sbStrips        int
-	amountOfSymbols int
+	numberOfSymbols int
 
 	regionBitmap *bitmap.Bitmap
 	symbols      []*bitmap.Bitmap
@@ -159,7 +159,7 @@ func (t *TextRegion) String() string {
 
 	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
 	sb.WriteString(fmt.Sprintf("\t- sbrATY: %v\n", t.sbrATY))
-	sb.WriteString(fmt.Sprintf("\t- amountOfSymbolInstances: %v\n", t.amountOfSymbolInstances))
+	sb.WriteString(fmt.Sprintf("\t- numberOfSymbolInstances: %v\n", t.numberOfSymbolInstances))
 	sb.WriteString(fmt.Sprintf("\t- sbrATX: %v\n", t.sbrATX))
 	return sb.String()
 }
@@ -214,7 +214,7 @@ func (t *TextRegion) computeSymbolCodeLength() error {
 		return t.symbolIDCodeLengths()
 	}
 
-	t.symbolCodeLength = int(math.Ceil(math.Log(float64(t.amountOfSymbols)) / math.Log(2)))
+	t.symbolCodeLength = int(math.Ceil(math.Log(float64(t.numberOfSymbols)) / math.Log(2)))
 	return nil
 }
 
@@ -328,7 +328,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 	var firstS, instanceCounter int64
 
 	// 6.4.5 3)
-	for instanceCounter < t.amountOfSymbolInstances {
+	for instanceCounter < t.numberOfSymbolInstances {
 		dt, err := t.decodeDT()
 		if err != nil {
 			return err
@@ -361,7 +361,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 					return err
 				}
 
-				if idS == math.MaxInt64 || instanceCounter >= t.amountOfSymbolInstances {
+				if idS == math.MaxInt64 || instanceCounter >= t.numberOfSymbolInstances {
 					break
 				}
 
@@ -879,7 +879,7 @@ func (t *TextRegion) initSymbols() error {
 			t.symbols = append(t.symbols, dict...)
 		}
 	}
-	t.amountOfSymbols = len(t.symbols)
+	t.numberOfSymbols = len(t.symbols)
 	return nil
 }
 
@@ -1129,12 +1129,12 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 	}
 
 	bits &= 0xffffffff
-	t.amountOfSymbolInstances = int64(bits)
+	t.numberOfSymbolInstances = int64(bits)
 	pixels := int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
 
-	if pixels < t.amountOfSymbolInstances {
-		common.Log.Debug("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.amountOfSymbolInstances)
-		t.amountOfSymbolInstances = pixels
+	if pixels < t.numberOfSymbolInstances {
+		common.Log.Debug("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.numberOfSymbolInstances)
+		t.numberOfSymbolInstances = pixels
 	}
 	return nil
 }
@@ -1228,9 +1228,9 @@ func (t *TextRegion) setParameters(
 	t.regionInfo.BitmapWidth = sbw
 	t.regionInfo.BitmapHeight = sbh
 
-	t.amountOfSymbolInstances = sbNumInstances
+	t.numberOfSymbolInstances = sbNumInstances
 	t.sbStrips = sbStrips
-	t.amountOfSymbols = sbNumSyms
+	t.numberOfSymbols = sbNumSyms
 	t.defaultPixel = sbDefaultPixel
 	t.combinationOperator = sbCombinationOperator
 	t.isTransposed = transposed
@@ -1286,7 +1286,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 		code               int64
 	)
 
-	for counter < t.amountOfSymbols {
+	for counter < t.numberOfSymbols {
 		code, err = ht.Decode(t.r)
 		if err != nil {
 			return err

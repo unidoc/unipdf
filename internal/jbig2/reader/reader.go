@@ -14,7 +14,7 @@ import (
 )
 
 // Reader is the bit reader implementation.
-// Implements io.Reader, io.ByteReader, io.Seeker
+// Implements io.Reader, io.ByteReader, io.Seeker interfaces.
 type Reader struct {
 	in           []byte
 	cache        byte  // unread bits are stored here
@@ -28,7 +28,7 @@ type Reader struct {
 	markBits byte
 }
 
-// compile time checks for the interface implementation of the Reader
+// compile time checks for the interface implementation of the Reader.
 var (
 	_ io.Reader     = &Reader{}
 	_ io.ByteReader = &Reader{}
@@ -42,9 +42,9 @@ func New(data []byte) *Reader {
 }
 
 // Align implements StreamReader interface.
-func (r *Reader) Align() byte {
-	skipped := r.bits
-	r.bits = 0 // no need to clear cache, will be overwritten on next read
+func (r *Reader) Align() (skipped byte) {
+	skipped = r.bits
+	r.bits = 0 // no need to clear cache - it would be overwritten on next read.
 	return skipped
 }
 
@@ -75,15 +75,11 @@ func (r *Reader) Mark() {
 }
 
 // Read implements io.Reader interface.
-func (r *Reader) Read(p []byte) (int, error) {
+func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.bits == 0 {
 		return r.read(p)
 	}
 
-	var (
-		n   int
-		err error
-	)
 	for ; n < len(p); n++ {
 		if p[n], err = r.readUnalignedByte(); err != nil {
 			return 0, err
@@ -93,25 +89,23 @@ func (r *Reader) Read(p []byte) (int, error) {
 }
 
 // ReadBit implements StreamReader interface.
-func (r *Reader) ReadBit() (int, error) {
-	bit, err := r.readBool()
+func (r *Reader) ReadBit() (bit int, err error) {
+	boolean, err := r.readBool()
 	if err != nil {
 		return 0, err
 	}
 
-	if bit {
-		return 1, nil
+	if boolean {
+		bit = 1
 	}
-	return 0, nil
+	return bit, nil
 }
 
 // ReadBits implements StreamReader interface.
-func (r *Reader) ReadBits(n byte) (uint64, error) {
-	var u uint64
-
+func (r *Reader) ReadBits(n byte) (u uint64, err error) {
 	// Frequent optimization.
 	if n < r.bits {
-		// cache has all needed bits, and there are some extra which will be left in cache
+		// cache has all needed bits, there are also some extra which will be left in cache.
 		shift := r.bits - n
 		u = uint64(r.cache >> shift)
 		r.cache &= 1<<shift - 1
@@ -137,7 +131,6 @@ func (r *Reader) ReadBits(n byte) (uint64, error) {
 
 		// Read last fraction if exists.
 		if n > 0 {
-			var err error
 			if r.cache, err = r.readBufferByte(); err != nil {
 				return 0, err
 			}
@@ -239,12 +232,10 @@ func (r *Reader) readBufferByte() (byte, error) {
 }
 
 // readUnalignedByte reads the next 8 bits which are (may be) unaligned and returns them as a byte.
-func (r *Reader) readUnalignedByte() (byte, error) {
-	var err error
-
+func (r *Reader) readUnalignedByte() (b byte, err error) {
 	// r.bits will be the same after reading 8 bits, so we don't need to update that.
 	bits := r.bits
-	b := r.cache << (8 - bits)
+	b = r.cache << (8 - bits)
 	r.cache, err = r.readBufferByte()
 	if err != nil {
 		return 0, err
@@ -254,20 +245,19 @@ func (r *Reader) readUnalignedByte() (byte, error) {
 	return b, nil
 }
 
-func (r *Reader) readBool() (bool, error) {
+func (r *Reader) readBool() (bit bool, err error) {
 	if r.bits == 0 {
-		var err error
 		r.cache, err = r.readBufferByte()
 		if err != nil {
 			return false, err
 		}
-		b := (r.cache & 0x80) != 0
+		bit = (r.cache & 0x80) != 0
 		r.cache, r.bits = r.cache&0x7f, 7
-		return b, nil
+		return bit, nil
 	}
 
 	r.bits--
-	b := (r.cache & (1 << r.bits)) != 0
+	bit = (r.cache & (1 << r.bits)) != 0
 	r.cache &= 1<<r.bits - 1
-	return b, nil
+	return bit, nil
 }
