@@ -681,6 +681,15 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 		for _, obj := range kids.Elements() {
 			container, isIndirect := core.GetIndirect(obj)
 			if !isIndirect {
+				stream, ok := core.GetStream(obj)
+				if ok && stream.PdfObjectDictionary != nil {
+					nodeType, ok := core.GetNameVal(stream.Get("Type"))
+					if ok && nodeType == "Metadata" {
+						common.Log.Debug("ERROR: form field Kids array contains invalid Metadata stream. Skipping.")
+						continue
+					}
+				}
+
 				return nil, errors.New("not an indirect object (form field)")
 			}
 
