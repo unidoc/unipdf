@@ -1521,6 +1521,11 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 				return &indirect, err
 			}
 			common.Log.Trace("Parsed object ... finished.")
+		} else if bb[0] == ']' {
+			// ']' not used as an array object ending marker, or array object
+			// terminated multiple times. Discarding the character.
+			common.Log.Debug("WARNING: ']' character not being used as an array ending marker. Skipping.")
+			parser.reader.Discard(1)
 		} else {
 			if bb[0] == 'e' {
 				lineStr, err := parser.readTextLine()
