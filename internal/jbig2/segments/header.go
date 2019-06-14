@@ -68,7 +68,7 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 		}
 		segmentDataPart = creator()
 
-		common.Log.Debug("[SEGMENT-HEADER][#%d] GetSegmentData at Offset: %04X", h.SegmentNumber, h.SegmentDataStartOffset)
+		common.Log.Trace("[SEGMENT-HEADER][#%d] GetSegmentData at Offset: %04X", h.SegmentNumber, h.SegmentDataStartOffset)
 		subReader, err := h.subInputReader()
 		if err != nil {
 			return nil, err
@@ -108,12 +108,12 @@ func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
 	offset int64, organizationType OrganizationType,
 ) (err error) {
-	common.Log.Debug("[SEGMENT-HEADER][PARSE] Begins")
+	common.Log.Trace("[SEGMENT-HEADER][PARSE] Begins")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[SEGMENT-HEADER][PARSE] Failed. %v", err)
+			common.Log.Trace("[SEGMENT-HEADER][PARSE] Failed. %v", err)
 		} else {
-			common.Log.Debug("[SEGMENT-HEADER][PARSE] Finished")
+			common.Log.Trace("[SEGMENT-HEADER][PARSE] Finished")
 		}
 	}()
 
@@ -161,7 +161,7 @@ func (h *Header) parse(
 	h.readDataStartOffset(r, organizationType)
 	h.readHeaderLength(r, offset)
 
-	common.Log.Debug("%s", h)
+	common.Log.Trace("%s", h)
 	return nil
 }
 

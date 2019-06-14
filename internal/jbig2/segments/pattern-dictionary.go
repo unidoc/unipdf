@@ -92,6 +92,7 @@ func (p *PatternDictionary) computeSegmentDataStructure() error {
 	p.DataLength = int64(p.r.Length()) - p.DataHeaderLength
 	return nil
 }
+
 func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) error {
 	// 3)
 	var gray int
@@ -117,9 +118,9 @@ func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) err
 }
 
 func (p *PatternDictionary) parseHeader() error {
-	common.Log.Debug("[PATTERN-DICTIONARY][parseHeader] begin")
+	common.Log.Trace("[PATTERN-DICTIONARY][parseHeader] begin")
 	defer func() {
-		common.Log.Debug("[PATTERN-DICTIONARY][parseHeader] finished")
+		common.Log.Trace("[PATTERN-DICTIONARY][parseHeader] finished")
 	}()
 
 	// Bit 3-7 dirty read

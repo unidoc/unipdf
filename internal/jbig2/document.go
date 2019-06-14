@@ -190,7 +190,7 @@ func (d *Document) mapData() error {
 			return err
 		}
 
-		common.Log.Debug("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
+		common.Log.Trace("Decoding segment number: %d, Type: %s", segmentNo, segment.Type)
 
 		kind = segment.Type
 		if kind != segments.TEndOfFile {

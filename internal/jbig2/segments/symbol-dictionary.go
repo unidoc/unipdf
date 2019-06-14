@@ -10,7 +10,6 @@ import (
 	"image"
 	"math"
 	"strings"
-	"time"
 
 	"github.com/unidoc/unipdf/v3/common"
 
@@ -98,12 +97,10 @@ func (s *SymbolDictionary) NumberOfNewSymbols() int {
 
 // GetDictionary gets the decoded dictionary symbols as a bitmap slice.
 func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
-	common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary begins...")
+	common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary begins...")
 	defer func() {
-		common.Log.Debug("[SYMBOL-DICTIONARY] GetDictionary finished")
+		common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary finished")
 	}()
-
-	ts := time.Now()
 
 	if s.exportSymbols == nil {
 		var err error
@@ -232,7 +229,6 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 		}
 		s.setExportedSymbols(exFlags)
 	}
-	common.Log.Debug("PERFORMANCE TEST: Symbol Decoding %d ns", time.Since(ts).Nanoseconds())
 	return s.exportSymbols, nil
 }
 
@@ -273,7 +269,7 @@ func (s *SymbolDictionary) String() string {
 	return sb.String()
 }
 
-// UseRefinementAggregation defines if the SymbolDictionary uses refinement aggergation.
+// UseRefinementAggregation defines if the SymbolDictionary uses refinement aggregation.
 func (s *SymbolDictionary) UseRefinementAggregation() bool {
 	return s.useRefinementAggregation
 }
@@ -430,9 +426,7 @@ func (s *SymbolDictionary) decodeThroughTextRegion(
 	return s.addSymbol(s.textRegion)
 }
 
-func (s *SymbolDictionary) decodeRefinedSymbol(
-	symbolWidth, heightClassHeight int,
-) error {
+func (s *SymbolDictionary) decodeRefinedSymbol(symbolWidth, heightClassHeight int) error {
 	var (
 		id, rdx, rdy int
 	)
@@ -507,16 +501,15 @@ func (s *SymbolDictionary) decodeRefinedSymbol(
 	return nil
 }
 
-func (s *SymbolDictionary) decodeNewSymbols(
-	symWidth, hcHeight int, ibo *bitmap.Bitmap, rdx, rdy int,
-) (err error) {
+func (s *SymbolDictionary) decodeNewSymbols(symWidth, hcHeight int, ibo *bitmap.Bitmap, rdx, rdy int) error {
 	if s.genericRefinementRegion == nil {
 		s.genericRefinementRegion = newGenericRefinementRegion(s.r, nil)
 
 		if s.arithmeticDecoder == nil {
+			var err error
 			s.arithmeticDecoder, err = arithmetic.New(s.r)
 			if err != nil {
-				return
+				return err
 			}
 		}
 
@@ -528,9 +521,7 @@ func (s *SymbolDictionary) decodeNewSymbols(
 	return s.addSymbol(s.genericRefinementRegion)
 }
 
-func (s *SymbolDictionary) decodeDirectlyThroughGenericRegion(
-	symWidth, hcHeight int,
-) error {
+func (s *SymbolDictionary) decodeDirectlyThroughGenericRegion(symWidth, hcHeight int) error {
 	if s.genericRegion == nil {
 		s.genericRegion = NewGenericRegion(s.r)
 	}
@@ -588,7 +579,6 @@ func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 	}
 
 	return int64(i), nil
-
 }
 
 // decodeHeightClassDeltaHeightWithHuffman - 6.5.6 decodes the symbol dictionary
@@ -652,7 +642,6 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 		return nil, err
 	}
 	return bm, nil
-
 }
 
 // getSbSymCodeLen 6.5.8.2.3 sets the SBSYMCODES variable.
@@ -787,15 +776,13 @@ func (s *SymbolDictionary) huffDecodeRefAggNInst() (int64, error) {
 	return 0, nil
 }
 
-func (s *SymbolDictionary) parseHeader() error {
-	var err error
-
-	common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
+func (s *SymbolDictionary) parseHeader() (err error) {
+	common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] begins...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] failed. %v", err)
+			common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] failed. %v", err)
 		} else {
-			common.Log.Debug("[SYMBOL DICTIONARY][PARSE-HEADER] finished.")
+			common.Log.Trace("[SYMBOL DICTIONARY][PARSE-HEADER] finished.")
 		}
 	}()
 

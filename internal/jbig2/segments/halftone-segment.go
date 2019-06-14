@@ -115,7 +115,6 @@ func (h *HalftoneRegion) GetPatterns() ([]*bitmap.Bitmap, error) {
 		patterns []*bitmap.Bitmap
 		err      error
 	)
-	common.Log.Debug("RT Segments: %v", h.h.RTSegments)
 
 	for _, s := range h.h.RTSegments {
 		var data Segmenter

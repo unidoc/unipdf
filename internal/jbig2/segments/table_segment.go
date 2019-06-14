@@ -68,15 +68,16 @@ func (t *TableSegment) StreamReader() reader.StreamReader {
 	return t.r
 }
 
-func (t *TableSegment) parseHeader() (err error) {
+func (t *TableSegment) parseHeader() error {
 	var (
 		bit  int
 		bits uint64
+		err  error
 	)
 
 	bit, err = t.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	if bit == 1 {
 		return fmt.Errorf("invalid table segment definition. B.2.1 Code Table flags: Bit 7 must be zero. Was: %d", bit)
@@ -84,26 +85,26 @@ func (t *TableSegment) parseHeader() (err error) {
 
 	// Bit 4-6
 	if bits, err = t.r.ReadBits(3); err != nil {
-		return
+		return err
 	}
 	t.htRS = (int(bits) + 1) & 0xf
 
 	// Bit 1-3
 	if bits, err = t.r.ReadBits(3); err != nil {
-		return
+		return err
 	}
 	t.htPS = (int(bits) + 1) & 0xf
 
 	// 4 bytes
 	if bits, err = t.r.ReadBits(32); err != nil {
-		return
+		return err
 	}
 	t.htLow = int(bits & 0xffffffff)
 
 	// 4 bytes
 	if bits, err = t.r.ReadBits(32); err != nil {
-		return
+		return err
 	}
 	t.htHight = int(bits & 0xffffffff)
-	return
+	return nil
 }

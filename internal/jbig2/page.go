@@ -40,12 +40,12 @@ type Page struct {
 
 // GetBitmap implements segments.Pager interface.
 func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
-	common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
+	common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap begins...", p.PageNumber))
 	defer func() {
 		if err != nil {
-			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
+			common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap failed. %v", p.PageNumber, err))
 		} else {
-			common.Log.Debug(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
+			common.Log.Trace(fmt.Sprintf("[PAGE][#%d] GetBitmap finished", p.PageNumber))
 		}
 	}()
 
@@ -140,7 +140,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 	for _, h := range p.Segments {
 		switch h.Type {
 		case 6, 7, 22, 23, 38, 39, 42, 43:
-			common.Log.Debug("Getting Segment: %d", h.SegmentNumber)
+			common.Log.Trace("Getting Segment: %d", h.SegmentNumber)
 			s, err := h.GetSegmentData()
 			if err != nil {
 				return err

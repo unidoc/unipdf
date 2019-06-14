@@ -409,18 +409,18 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 		if t.sbHuffDT == 3 {
 			dT, err = t.table.Decode(t.r)
 			if err != nil {
-				return
+				return 0, err
 			}
 		} else {
 			var st huffman.Tabler
 			st, err = huffman.GetStandardTable(11 + int(t.sbHuffDT))
 			if err != nil {
-				return
+				return 0, err
 			}
 
 			dT, err = st.Decode(t.r)
 			if err != nil {
-				return
+				return 0, err
 			}
 		}
 	} else {
@@ -432,7 +432,7 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 		dT = int64(temp)
 	}
 	dT *= int64(t.sbStrips)
-	return
+	return dT, nil
 }
 
 func (t *TextRegion) decodeDfs() (int64, error) {
@@ -883,48 +883,53 @@ func (t *TextRegion) initSymbols() error {
 	return nil
 }
 
-func (t *TextRegion) parseHeader() (err error) {
-	common.Log.Debug("[TEXT REGION][PARSE-HEADER] begins...")
+func (t *TextRegion) parseHeader() error {
+	var err error
+	common.Log.Trace("[TEXT REGION][PARSE-HEADER] begins...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] failed. %v", err)
+			common.Log.Trace("[TEXT REGION][PARSE-HEADER] failed. %v", err)
 		} else {
-			common.Log.Debug("[TEXT REGION][PARSE-HEADER] finished.")
+			common.Log.Trace("[TEXT REGION][PARSE-HEADER] finished.")
 		}
 	}()
 
 	if err = t.regionInfo.parseHeader(); err != nil {
-		return
+		return err
 	}
 
 	if err = t.readRegionFlags(); err != nil {
-		return
+		return err
 	}
 
 	if t.isHuffmanEncoded {
 		if err = t.readHuffmanFlags(); err != nil {
-			return
+			return err
 		}
 	}
 
 	if err = t.readUseRefinement(); err != nil {
-		return
+		return err
 	}
 
 	if err = t.readAmountOfSymbolInstances(); err != nil {
-		return
+		return err
 	}
 
 	// 7.4.3.1.7
 	if err = t.getSymbols(); err != nil {
-		return
+		return err
 	}
 
 	if err = t.computeSymbolCodeLength(); err != nil {
-		return
+		return err
 	}
-	common.Log.Debug("%s", t.String())
-	return t.checkInput()
+
+	if err = t.checkInput(); err != nil {
+		return err
+	}
+	common.Log.Trace("%s", t.String())
+	return nil
 }
 
 func (t *TextRegion) readRegionFlags() error {
@@ -1140,7 +1145,6 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 }
 
 func (t *TextRegion) setCodingStatistics() error {
-
 	if t.cxIADT == nil {
 		t.cxIADT = arithmetic.NewStats(512, 1)
 	}

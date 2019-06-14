@@ -77,8 +77,6 @@ func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
 
 // GetRegionBitmap gets the bitmap for the generic region segment.
 func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
-	common.Log.Debug("%s", g.String())
-
 	if g.Bitmap != nil {
 		return g.Bitmap, nil
 	}
@@ -157,12 +155,12 @@ func (g *GenericRegion) GetRegionInfo() *RegionSegment {
 }
 
 func (g *GenericRegion) parseHeader() (err error) {
-	common.Log.Debug("[GENERIC-REGION] ParsingHeader...")
+	common.Log.Trace("[GENERIC-REGION] ParsingHeader...")
 	defer func() {
 		if err != nil {
-			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
+			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
 		} else {
-			common.Log.Debug("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
+			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
 		}
 	}()
 	var (
@@ -233,7 +231,7 @@ func (g *GenericRegion) parseHeader() (err error) {
 	if err = g.computeSegmentDataStructure(); err != nil {
 		return err
 	}
-	common.Log.Debug("%s", g)
+	common.Log.Trace("%s", g)
 	return nil
 }
 
@@ -1078,7 +1076,7 @@ func (g *GenericRegion) setParametersWithAt(
 	if a != nil {
 		g.arithDecoder = a
 	}
-	common.Log.Debug("[GENERIC-REGION] setParameters SDAt: %s", g)
+	common.Log.Trace("[GENERIC-REGION] setParameters SDAt: %s", g)
 }
 
 func (g *GenericRegion) setParametersMMR(

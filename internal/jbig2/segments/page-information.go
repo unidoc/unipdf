@@ -100,7 +100,7 @@ func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {
 }
 
 func (p *PageInformationSegment) parseHeader() (err error) {
-	common.Log.Debug("[PageInformationSegment] ParsingHeader...")
+	common.Log.Trace("[PageInformationSegment] ParsingHeader...")
 	defer func() {
 		var str = "[PageInformationSegment] ParsingHeader Finished"
 		if err != nil {
@@ -108,14 +108,14 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		} else {
 			str += " succesfully"
 		}
-		common.Log.Debug(str)
+		common.Log.Trace(str)
 	}()
 
 	if err = p.readWidthAndHeight(); err != nil {
 		return err
 	}
 
-	if err = p.readResoultion(); err != nil {
+	if err = p.readResolution(); err != nil {
 		return err
 	}
 
@@ -168,11 +168,11 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 	if err = p.checkInput(); err != nil {
 		return err
 	}
-	common.Log.Debug("%s", p)
+	common.Log.Trace("%s", p)
 	return nil
 }
 
-func (p *PageInformationSegment) readResoultion() error {
+func (p *PageInformationSegment) readResolution() error {
 	tempResolution, err := p.r.ReadBits(32)
 	if err != nil {
 		return err
