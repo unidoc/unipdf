@@ -40,12 +40,12 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 	// The bool value indicates whether the annotation has value content.
 	ftargets := map[*PdfAnnotation]bool{}
 	{
+		var fields []*PdfField
 		acroForm := r.AcroForm
-		if acroForm == nil {
-			return nil
+		if acroForm != nil {
+			fields = acroForm.AllFields()
 		}
 
-		fields := acroForm.AllFields()
 		for _, field := range fields {
 			for _, wa := range field.Annotations {
 				// TODO(gunnsth): Check if wa.Flags() has Print flag then include, otherwise exclude.
@@ -69,7 +69,12 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 	// If all annotations are to be flattened, add to targets.
 	if allannots {
 		for _, page := range r.PageList {
-			for _, annot := range page.annotations {
+			annotations, err := page.GetAnnotations()
+			if err != nil {
+				return err
+			}
+
+			for _, annot := range annotations {
 				ftargets[annot] = true
 			}
 		}
@@ -85,7 +90,12 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 			return err
 		}
 
-		for _, annot := range page.annotations {
+		annotations, err := page.GetAnnotations()
+		if err != nil {
+			return err
+		}
+
+		for _, annot := range annotations {
 			hasV, toflatten := ftargets[annot]
 			if !toflatten {
 				// Not to be flattened.
@@ -164,7 +174,7 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 		if len(annots) > 0 {
 			page.annotations = annots
 		} else {
-			page.annotations = nil
+			page.annotations = []*PdfAnnotation{}
 		}
 	}
 
