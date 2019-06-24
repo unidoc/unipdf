@@ -535,6 +535,16 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 	procPage(page)
 	obj := page.ToPdfObject()
 
+	// Resolve references for page resources, if page reader is lazy.
+	if resources := page.Resources; resources != nil {
+		if r := page.reader; r != nil && r.isLazy {
+			err := r.traverseObjectData(resources.GetContainingPdfObject())
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
 
