@@ -33,19 +33,19 @@ var (
 // fdfMergeHashes defines a list of known output hashes to ensure that the output is constant.
 // If there is a change in hash need to find out why and update only if the change is accepted.
 var fdfMergeHashes = map[string]string{
-	"NW_null_Business_V04.fdf":      "45ccf325025b366d6e9c90bde53da1aa",
-	"NW_null_Business_V05.fdf":      "49c0c89cd2384c8a75f9cb20a778698f",
-	"NW_null_Business_V05.v1.2.fdf": "49c0c89cd2384c8a75f9cb20a778698f",
-	"NW_null_Contract_V04.fdf":      "80ebec761eba106cda38a4613819634e",
-	"N_null_Contract.fdf":           "557e9d5788ba418e3e5f6ffdf710a3b9",
-	"Network_Contract_V01.fdf":      "3bf058c9e4cefae222c92caa28fca603",
-	"checkmark_check.fdf":           "b95c8f8c0673e5541d28f212c0b25b5b",
-	"checkmark_circle.fdf":          "06bda9e3539e63aebdfc20f8fe3d83e9",
-	"checkmark_cross.fdf":           "34dc015cf122bffcef8c62c559fc0ac7",
-	"checkmark_diamond.fdf":         "5a3c2951da0aa2943e9007d4baed82bf",
-	"checkmark_square.fdf":          "83d97592cd75c2c62a2e6ae2962379db",
-	"checkmark_star.fdf":            "2e460f069e474714573724255fcdffda",
-	"test_fail.fdf":                 "d7eb6071341f823a64f7234a20830d74",
+	"NW_null_Business_V04.fdf":      "6e33f219994e4b9ee1e1843c976504df",
+	"NW_null_Business_V05.fdf":      "ff1f8bd39f9be9844a6d85bafe07c790",
+	"NW_null_Business_V05.v1.2.fdf": "ff1f8bd39f9be9844a6d85bafe07c790",
+	"NW_null_Contract_V04.fdf":      "a54f4b42dc34997cfb701ef647cdbdfe",
+	"N_null_Contract.fdf":           "c173340d6492984532cf51a4f5ceb4b6",
+	"Network_Contract_V01.fdf":      "0ae2537bf8a8366aa97c1ca965b88d1f",
+	"checkmark_check.fdf":           "8892cdb01318421f8d198233b80ab8e3",
+	"checkmark_circle.fdf":          "3b1e6ef6aae2a7497b090e0960d2c163",
+	"checkmark_cross.fdf":           "6b16b6d7437a3f59a7e9e72c1ecfd59b",
+	"checkmark_diamond.fdf":         "123488e428914832f21e213339ed74f1",
+	"checkmark_square.fdf":          "d0ac69dac7a933e440a5005b1712edeb",
+	"checkmark_star.fdf":            "1326f152fb8158dffc08e5bb51cba1bc",
+	"test_fail.fdf":                 "9a90cef679d6b4c13017c73c2528ca75",
 }
 
 // Test filling (fdf merge) and flattening form data and annotations.
