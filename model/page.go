@@ -500,7 +500,10 @@ func (p *PdfPage) GetPageDict() *core.PdfObjectDictionary {
 				arr.Append(annot.ToPdfObject())
 			}
 		}
-		d.Set("Annots", arr)
+
+		if arr.Len() > 0 {
+			d.Set("Annots", arr)
+		}
 	} else if p.Annots != nil {
 		d.SetIfNotNil("Annots", p.Annots)
 	}
