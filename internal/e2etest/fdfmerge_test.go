@@ -152,13 +152,6 @@ func fdfMergeSingle(t *testing.T, params fdfMergeParams) {
 	pdfWriter.SetForms(nil)
 
 	for _, p := range pdfReader.PageList {
-		// FIXME: Hack needed to ensure that annotations are loaded.
-		// TODO: Remove.  Resolved in PR#93.
-		{
-			_, err := p.GetAnnotations()
-			require.NoError(t, err)
-		}
-
 		err = pdfWriter.AddPage(p)
 		require.NoError(t, err)
 	}
