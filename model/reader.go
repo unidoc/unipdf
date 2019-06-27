@@ -739,6 +739,25 @@ func (r *PdfReader) GetOCProperties() (core.PdfObject, error) {
 	return obj, nil
 }
 
+// GetNamedDestinations returns the Names entry in the PDF catalog.
+// See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
+func (r *PdfReader) GetNamedDestinations() (core.PdfObject, error) {
+	obj := core.ResolveReference(r.catalog.Get("Names"))
+	if obj == nil {
+		return nil, nil
+	}
+
+	// Resolve references.
+	if !r.isLazy {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return obj, nil
+}
+
 // Inspect inspects the object types, subtypes and content in the PDF file returning a map of
 // object type to number of instances of each.
 func (r *PdfReader) Inspect() (map[string]int, error) {

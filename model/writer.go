@@ -409,6 +409,19 @@ func (w *PdfWriter) SetOCProperties(ocProperties core.PdfObject) error {
 	return nil
 }
 
+// SetNamedDestinations sets the Names entry in the PDF catalog.
+// See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
+func (w *PdfWriter) SetNamedDestinations(names core.PdfObject) error {
+	if names == nil {
+		return nil
+	}
+
+	common.Log.Trace("Setting catalog Names...")
+	w.catalog.Set("Names", names)
+	w.addObjects(names)
+	return nil
+}
+
 // SetOptimizer sets the optimizer to optimize PDF before writing.
 func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
 	w.optimizer = optimizer
