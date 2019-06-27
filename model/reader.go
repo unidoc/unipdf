@@ -338,10 +338,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			if !core.IsNullObject(firstObj) {
 				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
 				if err != nil {
-					return nil, nil, err
+					common.Log.Debug("DEBUG: could not build outline item tree: %v. Skipping node children.", err)
+				} else {
+					outlineItem.First = first
+					outlineItem.Last = last
 				}
-				outlineItem.First = first
-				outlineItem.Last = last
 			}
 		}
 
@@ -351,10 +352,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
 				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
 				if err != nil {
-					return nil, nil, err
+					common.Log.Debug("DEBUG: could not build outline tree for Next node: %v. Skipping node.", err)
+				} else {
+					outlineItem.Next = next
+					return &outlineItem.PdfOutlineTreeNode, last, nil
 				}
-				outlineItem.Next = next
-				return &outlineItem.PdfOutlineTreeNode, last, nil
 			}
 		}
 
@@ -375,10 +377,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull && firstObjDirect != nil {
 			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 			if err != nil {
-				return nil, nil, err
+				common.Log.Debug("DEBUG: could not build outline tree: %v. Skipping node children.", err)
+			} else {
+				outline.First = first
+				outline.Last = last
 			}
-			outline.First = first
-			outline.Last = last
 		}
 	}
 
