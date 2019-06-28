@@ -409,6 +409,19 @@ func (w *PdfWriter) SetOCProperties(ocProperties core.PdfObject) error {
 	return nil
 }
 
+// SetNamedDestinations sets the Names entry in the PDF catalog.
+// See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
+func (w *PdfWriter) SetNamedDestinations(names core.PdfObject) error {
+	if names == nil {
+		return nil
+	}
+
+	common.Log.Trace("Setting catalog Names...")
+	w.catalog.Set("Names", names)
+	w.addObjects(names)
+	return nil
+}
+
 // SetOptimizer sets the optimizer to optimize PDF before writing.
 func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
 	w.optimizer = optimizer
@@ -534,6 +547,16 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 func (w *PdfWriter) AddPage(page *PdfPage) error {
 	procPage(page)
 	obj := page.ToPdfObject()
+
+	// Resolve references for page resources, if page reader is lazy.
+	if resources := page.Resources; resources != nil {
+		if r := page.reader; r != nil && r.isLazy {
+			err := r.traverseObjectData(resources.GetContainingPdfObject())
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)

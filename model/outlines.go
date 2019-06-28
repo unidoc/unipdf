@@ -95,9 +95,7 @@ func newPdfOutlineFromIndirectObject(container *core.PdfIndirectObject) (*PdfOut
 		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
-	outline := PdfOutline{}
-	outline.primitive = container
-	outline.context = &outline
+	outline := NewPdfOutline()
 
 	if obj := dict.Get("Type"); obj != nil {
 		typeVal, ok := obj.(*core.PdfObjectName)
@@ -120,7 +118,7 @@ func newPdfOutlineFromIndirectObject(container *core.PdfIndirectObject) (*PdfOut
 		outline.Count = &count
 	}
 
-	return &outline, nil
+	return outline, nil
 }
 
 // Does not traverse the tree.
@@ -130,9 +128,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 		return nil, fmt.Errorf("outline object not a dictionary")
 	}
 
-	item := PdfOutlineItem{}
-	item.primitive = container
-	item.context = &item
+	item := NewPdfOutlineItem()
 
 	// Title (required).
 	obj := dict.Get("Title")
@@ -186,7 +182,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 		item.F = core.ResolveReference(obj)
 	}
 
-	return &item, nil
+	return item, nil
 }
 
 // Get the outer object of the tree node (Outline or OutlineItem).
