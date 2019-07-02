@@ -1977,10 +1977,6 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoder.Encode(pixels), nil
 }
 
-const (
-	jbig2Globals = "JBIG2Globals"
-)
-
 // JBIG2Encoder is the jbig2 image encoder (WIP)/decoder.
 type JBIG2Encoder struct {
 	// Globals are the JBIG2 global segments.
@@ -2010,36 +2006,24 @@ func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 
 	// (PDF32000:2008 Table 39) The array should be of 2 x n size.
 	// For binary images n stands for 1bit, thus the array should contain 2 numbers.
-	floatSlice, err := arr.GetAsFloat64Slice()
+	vals, err := arr.GetAsFloat64Slice()
 	if err != nil {
-		// check if the arr is an array of integers.
-		iArr, err := arr.ToIntegerArray()
-		if err != nil {
-			common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
-			return
-		}
-		if iArr[0] == 1 && iArr[1] == 0 {
-			enc.IsChocolateData = true
-		} else if iArr[1] == 0 && iArr[0] == 1 {
-			enc.IsChocolateData = false
-		} else {
-			common.Log.Debug("JBIG2Encoder unsupported Decode value: %s", arr.String())
-		}
+		common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
 		return
 	}
 
-	if len(floatSlice) != 2 {
+	if len(vals) != 2 {
 		return
 	}
 
-	if floatSlice[0] == 1.0 && floatSlice[1] == 0.0 {
+	first, second := int(vals[0]), int(vals[1])
+	if first == 1 && second == 0 {
 		enc.IsChocolateData = true
-	} else if floatSlice[0] == 0.0 && floatSlice[1] == 1.0 {
+	} else if first == 0 && second == 1 {
 		enc.IsChocolateData = false
 	} else {
 		common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
 	}
-
 }
 
 func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {

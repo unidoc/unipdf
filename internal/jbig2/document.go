@@ -17,10 +17,8 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
 )
 
-var (
-	// fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1.
-	fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
-)
+// fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1.
+var fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 
 // Document is the jbig2 document model containing pages and global segments.
 // By creating new document with method NewDocument or NewDocumentWithGlobals

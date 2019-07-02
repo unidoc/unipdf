@@ -70,7 +70,7 @@ func (b *Bitmap) GetBitOffset(x int) int {
 
 // GetByte gets and returns the byte at given 'index'.
 func (b *Bitmap) GetByte(index int) (byte, error) {
-	if index > len(b.Data)-1 {
+	if index > len(b.Data)-1 || index < 0 {
 		return 0, ErrIndexOutOfRange
 	}
 	return b.Data[index], nil
@@ -85,10 +85,9 @@ func (b *Bitmap) GetByteIndex(x, y int) int {
 // 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black.
 // The naming convention based on the: `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetChocolateData() []byte {
-	if !b.isVanilla {
-		return b.Data
+	if b.isVanilla {
+		b.inverseData()
 	}
-	b.inverseData()
 	return b.Data
 }
 
@@ -111,14 +110,12 @@ func (b *Bitmap) GetPixel(x, y int) bool {
 // GetUnpaddedData gets the data without row stride padding.
 func (b *Bitmap) GetUnpaddedData() []byte {
 	padding := uint(b.Width & 0x07)
-	useShift := padding != 0
 
-	if !useShift {
+	if padding == 0 {
 		return b.Data
 	}
 
 	size := b.Width * b.Height
-
 	if size%8 != 0 {
 		size >>= 3
 		size++
@@ -148,69 +145,70 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 				} else {
 					currentIndex++
 				}
+				continue
+			}
+			// last byte i.e. 11010000 with padding 3
+			// and 'bt' is 10101111
+			// then last byte should be 11010 | 101 and
+			// current byte at index should be 01111
+			// the padding should be 7 - padding
+			lastByte := data[currentIndex]
+
+			if i != b.RowStride-1 {
+				// byte bt: 00011000 significantBits: 3 lastByte is 10100000
+				// the lastByte should be 10100011
+				// so it should be 10100000 | 00011000 >> 3
+				lastByte |= (bt >> (8 - significantBits))
+
+				data[currentIndex] = lastByte
+
+				currentIndex++
+
+				lastByte = bt << significantBits
+				data[currentIndex] = lastByte
+				continue
+			}
+
+			// if the line is the last in the row add the default padding to the current padding
+			// i.e.
+			// source byte: 0100100 with padding = 2 the data to take should be 01001000
+			// the only significant bits are 010010xx
+			// then the lastbyte should join the data with current padding i.e.
+
+			// significantBits is 3 and byte is 01110000 shoule be now 01110000 | (010010xx >> (8-(8-3)))
+			// the data which still needs to be added is 0100000 with significantBits
+			dif := significantBits + (8 - padding)
+
+			if dif > 8 {
+				// if the current significant bits number and the padded bits number greater than 8
+				// write as many bits as possible to the current byte and add the currentIndex
+				// 5 + (8 - 2) = 11
+				// get 8-5 bits at first and store it on the index
+
+				lastByte = lastByte | (bt >> (8 - significantBits))
+				data[currentIndex] = lastByte
+
+				// increase the index
+				currentIndex++
+
+				// get the rest bits 11 - (8 - 5) =  (dif - (8 - significantBits))
+				// which would be the significant bits
+				significantBits = dif - (8 - significantBits)
+				lastByte = bt << significantBits
+
+				data[currentIndex] = lastByte
+			} else if dif == 8 {
+				lastByte = lastByte | (bt >> (8 - significantBits))
+				data[currentIndex] = lastByte
 			} else {
-				// last byte i.e. 11010000 with padding 3
-				// and 'bt' is 10101111
-				// then last byte should be 11010 | 101 and
-				// current byte at index should be 01111
-				// the padding should be 7 - padding
-				lastByte := data[currentIndex]
+				// if the difference is smaller or equal to 8
+				lastByte = lastByte | bt>>(8-dif)
+				significantBits = dif
 
-				if i == b.RowStride-1 {
-					// if the line is the last in the row add the default padding to the current padding
-					// i.e.
-					// source byte: 0100100 with padding = 2 the data to take should be 01001000
-					// the only significant bits are 010010xx
-					// then the lastbyte should join the data with current padding i.e.
+				data[currentIndex] = lastByte
 
-					// significantBits is 3 and byte is 01110000 shoule be now 01110000 | (010010xx >> (8-(8-3)))
-					// the data which still needs to be added is 0100000 with significantBits
-					dif := significantBits + (8 - padding)
-
-					if dif > 8 {
-						// if the current significant bits number and the padded bits number greater than 8
-						// write as many bits as possible to the current byte and add the currentIndex
-						// 5 + (8 - 2) = 11
-						// get 8-5 bits at first and store it on the index
-
-						lastByte = lastByte | (bt >> (8 - significantBits))
-						data[currentIndex] = lastByte
-
-						// increase the index
-						currentIndex++
-
-						// get the rest bits 11 - (8 - 5) =  (dif - (8 - significantBits))
-						// which would be the significant bits
-						significantBits = dif - (8 - significantBits)
-						lastByte = bt << significantBits
-
-						data[currentIndex] = lastByte
-					} else if dif == 8 {
-						lastByte = lastByte | (bt >> (8 - significantBits))
-						data[currentIndex] = lastByte
-					} else {
-						// if the difference is smaller or equal to 8
-						lastByte = lastByte | bt>>(8-dif)
-						significantBits = dif
-
-						data[currentIndex] = lastByte
-
-						if dif == 8 {
-							currentIndex++
-						}
-					}
-				} else {
-					// byte bt: 00011000 significantBits: 3 lastByte is 10100000
-					// the lastByte should be 10100011
-					// so it should be 10100000 | 00011000 >> 3
-					lastByte |= (bt >> (8 - significantBits))
-
-					data[currentIndex] = lastByte
-
+				if dif == 8 {
 					currentIndex++
-
-					lastByte = bt << significantBits
-					data[currentIndex] = lastByte
 				}
 			}
 		}
@@ -222,10 +220,9 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 // 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white.
 // The naming convention based on the `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetVanillaData() []byte {
-	if b.isVanilla {
-		return b.Data
+	if !b.isVanilla {
+		b.inverseData()
 	}
-	b.inverseData()
 	return b.Data
 }
 
@@ -257,7 +254,7 @@ func (b *Bitmap) SetDefaultPixel() {
 // SetByte sets the byte at 'index' with value 'v'.
 // Returns an error if the index is out of range.
 func (b *Bitmap) SetByte(index int, v byte) error {
-	if index > len(b.Data)-1 {
+	if index > len(b.Data)-1 || index < 0 {
 		return ErrIndexOutOfRange
 	}
 
@@ -289,11 +286,9 @@ func (b *Bitmap) ToImage() image.Image {
 	img := image.NewGray(image.Rect(0, 0, b.Width-1, b.Height-1))
 	for x := 0; x < b.Width; x++ {
 		for y := 0; y < b.Height; y++ {
-			var c color.Color
+			c := color.White
 			if b.GetPixel(x, y) {
 				c = color.Black
-			} else {
-				c = color.White
 			}
 			img.Set(x, y, c)
 		}

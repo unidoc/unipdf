@@ -20,13 +20,12 @@ type DecoderStats struct {
 
 // NewStats creates new DecoderStats of size 'contextSize'.
 func NewStats(contextSize int, index int) *DecoderStats {
-	d := &DecoderStats{
+	return &DecoderStats{
 		index:              index,
 		contextSize:        contextSize,
 		codingContextTable: make([]byte, contextSize),
 		mps:                make([]byte, contextSize),
 	}
-	return d
 }
 
 // Copy copies the DecoderStats.

@@ -53,13 +53,12 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 	}
 
 	common.Log.Debug("New substream at offset: %d with length: %d", offset, length)
-	s := &SubstreamReader{
+	return &SubstreamReader{
 		wrapped: r,
 		offset:  offset,
 		length:  length,
 		buffer:  make([]byte, length),
-	}
-	return s, nil
+	}, nil
 }
 
 // Align implements StreamReader interface.

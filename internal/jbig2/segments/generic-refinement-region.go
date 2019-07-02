@@ -721,19 +721,17 @@ func (g *GenericRefinementRegion) decodeTemplate(
 		c5 = int16(bit)
 
 		if (x-g.ReferenceDX)%8 == 5 {
-			if ((x-g.ReferenceDX)/8)+1 >= g.ReferenceBitmap.RowStride {
-				w1 = 0
-				w2 = 0
-				w3 = 0
-			} else {
+			w1 = 0
+			w2 = 0
+			w3 = 0
+
+			if ((x-g.ReferenceDX)/8)+1 < g.ReferenceBitmap.RowStride {
 				if currentLine >= 1 && (currentLine-1) < g.ReferenceBitmap.Height {
 					temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride)
 					if err != nil {
 						return err
 					}
 					w1 = int(temp)
-				} else {
-					w1 = 0
 				}
 
 				if currentLine >= 0 && currentLine < g.ReferenceBitmap.Height {
@@ -742,8 +740,6 @@ func (g *GenericRefinementRegion) decodeTemplate(
 						return err
 					}
 					w2 = int(temp)
-				} else {
-					w2 = 0
 				}
 
 				if currentLine >= -1 && (currentLine+1) < g.ReferenceBitmap.Height {
@@ -752,8 +748,6 @@ func (g *GenericRefinementRegion) decodeTemplate(
 						return err
 					}
 					w3 = int(temp)
-				} else {
-					w3 = 0
 				}
 			}
 			refByteIndex++
@@ -799,7 +793,6 @@ func (g *GenericRefinementRegion) getPixel(b *bitmap.Bitmap, x, y int) int {
 func (g *GenericRefinementRegion) overrideAtTemplate0(context, x, y, result, minorX int) int {
 	if g.grAtOverride[0] {
 		context &= 0xfff7
-
 		if g.GrAtY[0] == 0 && int(g.GrAtX[0]) >= -minorX {
 			context |= (result >> uint(7-(minorX+int(g.GrAtX[0]))) & 0x1) << 3
 		} else {
@@ -830,26 +823,26 @@ func (g *GenericRefinementRegion) parseHeader() (err error) {
 	}()
 
 	if err = g.RegionInfo.parseHeader(); err != nil {
-		return
+		return err
 	}
 
 	// Bit 2-7
 	_, err = g.r.ReadBits(6) // Dirty Read
 	if err != nil {
-		return
+		return err
 	}
 
 	// Bit 1
 	g.IsTPGROn, err = g.r.ReadBool()
 	if err != nil {
-		return
+		return err
 	}
 
 	// Bit 0
 	var templateID int
 	templateID, err = g.r.ReadBit()
 	if err != nil {
-		return
+		return err
 	}
 	g.TemplateID = int8(templateID)
 
@@ -907,10 +900,6 @@ func (g *GenericRefinementRegion) setParameters(
 	isTPGRon bool, grAtX []int8, grAtY []int8,
 ) {
 	common.Log.Trace("[GENERIC-REF-REGION] setParameters")
-	defer func() {
-		common.Log.Trace("[GENERIC-REF-REGION] setParameters finished. %s", g)
-	}()
-
 	if cx != nil {
 		g.cx = cx
 	}
@@ -933,6 +922,8 @@ func (g *GenericRefinementRegion) setParameters(
 	g.GrAtX = grAtX
 	g.GrAtY = grAtY
 	g.RegionBitmap = nil
+
+	common.Log.Trace("[GENERIC-REF-REGION] setParameters finished. %s", g)
 }
 
 func (g *GenericRefinementRegion) updateOverride() error {

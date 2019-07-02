@@ -136,7 +136,6 @@ func (i *InternalNode) append(c *Code) error {
 				if i.one != nil {
 					return fmt.Errorf("OOB already set for code %s", c)
 				}
-
 				i.one = newOufOfBandNode(c)
 			} else {
 				if i.zero != nil {
@@ -169,7 +168,6 @@ func (i *InternalNode) append(c *Code) error {
 			if i.zero == nil {
 				i.zero = newInternalNode(i.depth + 1)
 			}
-
 			i.zero.(*InternalNode).append(c)
 		}
 	}

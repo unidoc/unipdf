@@ -37,8 +37,7 @@ type RegionSegment struct {
 
 // NewRegionSegment creates new Region segment model.
 func NewRegionSegment(r reader.StreamReader) *RegionSegment {
-	rs := &RegionSegment{r: r}
-	return rs
+	return &RegionSegment{r: r}
 }
 
 // String implements the Stringer interface.

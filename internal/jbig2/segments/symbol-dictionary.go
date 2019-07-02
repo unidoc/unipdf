@@ -817,9 +817,7 @@ func (s *SymbolDictionary) parseHeader() (err error) {
 				}
 
 				if symbolDictionary.isCodingContextUsed {
-					if err = s.setRetainedCodingContexts(symbolDictionary); err != nil {
-						return err
-					}
+					s.setRetainedCodingContexts(symbolDictionary)
 				}
 				break
 			}
@@ -837,7 +835,6 @@ func (s *SymbolDictionary) readRegionFlags() error {
 		bits uint64
 		bit  int
 	)
-
 	// Bit 13 - 15
 	_, err := s.r.ReadBits(3) // Dirty read
 	if err != nil {
@@ -1014,16 +1011,16 @@ func (s *SymbolDictionary) retrieveImportSymbols() error {
 }
 
 func (s *SymbolDictionary) setAtPixels() error {
-	if !s.isHuffmanEncoded {
-		if s.sdTemplate == 0 {
-			if err := s.readAtPixels(4); err != nil {
-				return err
-			}
-		} else {
-			if err := s.readAtPixels(1); err != nil {
-				return err
-			}
-		}
+	if s.isHuffmanEncoded {
+		return nil
+	}
+	index := 1
+	if s.sdTemplate == 0 {
+		index = 4
+	}
+
+	if err := s.readAtPixels(index); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1065,7 +1062,6 @@ func (s *SymbolDictionary) setCodingStatistics() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -1090,15 +1086,17 @@ func (s *SymbolDictionary) setInSyms() error {
 }
 
 func (s *SymbolDictionary) setRefinementAtPixels() error {
-	if s.useRefinementAggregation && s.sdrTemplate == 0 {
-		if err := s.readRefinementAtPixels(2); err != nil {
-			return err
-		}
+	if !s.useRefinementAggregation || s.sdrTemplate != 0 {
+		return nil
+	}
+
+	if err := s.readRefinementAtPixels(2); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (s *SymbolDictionary) setRetainedCodingContexts(sd *SymbolDictionary) error {
+func (s *SymbolDictionary) setRetainedCodingContexts(sd *SymbolDictionary) {
 	s.arithmeticDecoder = sd.arithmeticDecoder
 	s.isHuffmanEncoded = sd.isHuffmanEncoded
 	s.useRefinementAggregation = sd.useRefinementAggregation
@@ -1109,7 +1107,6 @@ func (s *SymbolDictionary) setRetainedCodingContexts(sd *SymbolDictionary) error
 	s.sdrATX = sd.sdrATX
 	s.sdrATY = sd.sdrATY
 	s.cx = sd.cx
-	return nil
 }
 
 // setSymbolsArray 6.5.8.2.4 sets the SBSYMS variable.

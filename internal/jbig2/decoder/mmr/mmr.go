@@ -62,7 +62,7 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 	for line := 0; line < b.Height; line++ {
 		count, err = m.uncompress2d(m.data, referenceOffsets, refRunLength, currentOffsets, b.Width)
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		if count == EOF {
@@ -72,7 +72,7 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 		if count > 0 {
 			err = m.fillBitmap(b, line, currentOffsets, count)
 			if err != nil {
-				return
+				return nil, err
 			}
 		}
 
@@ -81,11 +81,11 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 		refRunLength = count
 	}
 	if err = m.detectAndSkipEOL(); err != nil {
-		return
+		return nil, err
 	}
 
 	m.data.align()
-	return
+	return b, nil
 }
 
 func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
@@ -148,13 +148,11 @@ func (m *Decoder) fillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, c
 	targetByte := b.GetByteIndex(x, line)
 
 	for index := 0; index < count; index++ {
-		var value byte
+		value := byte(1)
 		offset := currentOffsets[index]
 
 		if (index & 1) == 0 {
 			value = 0
-		} else {
-			value = 1
 		}
 
 		for x < offset {
@@ -243,11 +241,9 @@ outer:
 	if runOffsets[refOffset] != width {
 		runOffsets[refOffset] = width
 	}
-	var result int
+	result := EOL
 	if cd != nil && cd.runLength != EOL {
 		result = refOffset
-	} else {
-		result = EOL
 	}
 	return result, nil
 }

@@ -139,20 +139,20 @@ func copyLine(
 					return err
 				}
 			}
-		} else {
-			value, err := src.GetByte(sourceOffset)
-			if err != nil {
-				common.Log.Debug("Getting the value at: %d failed: %s", sourceOffset, err)
-				return err
-			}
-			value <<= sourceUpShift
-			sourceOffset++
-			err = dst.SetByte(targetOffset, value)
-			if err != nil {
-				return err
-			}
-			targetOffset++
+			continue
 		}
+		value, err := src.GetByte(sourceOffset)
+		if err != nil {
+			common.Log.Debug("Getting the value at: %d failed: %s", sourceOffset, err)
+			return err
+		}
+		value <<= sourceUpShift
+		sourceOffset++
+		err = dst.SetByte(targetOffset, value)
+		if err != nil {
+			return err
+		}
+		targetOffset++
 	}
 	return nil
 }

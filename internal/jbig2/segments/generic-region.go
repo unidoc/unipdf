@@ -60,12 +60,7 @@ type GenericRegion struct {
 func NewGenericRegion(
 	r reader.StreamReader,
 ) *GenericRegion {
-	g := &GenericRegion{
-		RegionSegment: NewRegionSegment(r),
-		r:             r,
-	}
-
-	return g
+	return &GenericRegion{RegionSegment: NewRegionSegment(r), r: r}
 }
 
 // Init implements Segmenter interface.
@@ -91,7 +86,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 				g.DataOffset, g.DataLength,
 			)
 			if err != nil {
-				return
+				return nil, err
 			}
 		}
 
@@ -102,7 +97,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 
 	// Arithmetic decoder process for generic region segments.
 	if err = g.updateOverrideFlags(); err != nil {
-		return
+		return nil, err
 	}
 
 	// 6.2.5.7 - 1)
@@ -110,7 +105,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	if g.arithDecoder == nil {
 		g.arithDecoder, err = arithmetic.New(g.r)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 	if g.cx == nil {
@@ -128,7 +123,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 			var temp int
 			temp, err = g.decodeSLTP()
 			if err != nil {
-				return
+				return nil, err
 			}
 			ltp ^= temp
 		}
@@ -137,12 +132,12 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 		if ltp == 1 {
 			if line > 0 {
 				if err = g.copyLineAbove(line); err != nil {
-					return
+					return nil, err
 				}
 			}
 		} else {
 			if err = g.decodeLine(line, g.Bitmap.Width, paddedWidth); err != nil {
-				return
+				return nil, err
 			}
 		}
 	}
@@ -212,15 +207,12 @@ func (g *GenericRegion) parseHeader() (err error) {
 	}
 
 	if !g.IsMMREncoded {
-		var numberOfGbAt int
+		numberOfGbAt := 1
 		if g.GBTemplate == 0 {
+			numberOfGbAt = 4
 			if g.UseExtTemplates {
 				numberOfGbAt = 12
-			} else {
-				numberOfGbAt = 4
 			}
-		} else {
-			numberOfGbAt = 1
 		}
 		if err = g.readGBAtPixels(numberOfGbAt); err != nil {
 			return err

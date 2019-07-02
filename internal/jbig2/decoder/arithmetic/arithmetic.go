@@ -324,7 +324,6 @@ func (d *Decoder) readByte() error {
 }
 
 func (d *Decoder) renormalize() error {
-fl:
 	for {
 		if d.ct == 0 {
 			if err := d.readByte(); err != nil {
@@ -337,7 +336,7 @@ fl:
 		d.ct--
 
 		if (d.a & 0x8000) != 0 {
-			break fl
+			break
 		}
 	}
 
