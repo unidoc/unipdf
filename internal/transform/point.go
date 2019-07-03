@@ -41,10 +41,10 @@ func (p Point) Displace(delta Point) Point {
 
 // Rotate returns a new Point at `p` rotated by `theta` degrees.
 func (p Point) Rotate(theta float64) Point {
-	radians := theta / 180.0 * math.Pi
 	r := math.Hypot(p.X, p.Y)
 	t := math.Atan2(p.Y, p.X)
-	return Point{r * math.Cos(t+radians), r * math.Sin(t+radians)}
+	sin, cos := math.Sincos(t + theta/180.0*math.Pi)
+	return Point{r * cos, r * sin}
 }
 
 // transformByMatrix mutates and transforms `p` by the affine transformation `m`.
