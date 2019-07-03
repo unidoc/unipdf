@@ -7,13 +7,15 @@ package segments
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"strings"
 )
 
-// PageInformationSegment represents the segment type Page Information 7.4.8
+// PageInformationSegment represents the segment type Page Information 7.4.8.
 type PageInformationSegment struct {
 	r reader.StreamReader
 
@@ -42,36 +44,63 @@ type PageInformationSegment struct {
 	MaxStripeSize uint16
 }
 
-func newPageInformation(h *Header) *PageInformationSegment {
-	p := &PageInformationSegment{}
-
-	return p
-}
-
-// Init initialize the PageInformation Segment
+// Init implements Segmenter interface.
 func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
 	p.parseHeader()
 	return nil
 }
 
-// CombinationOperator gets the combination operator for the page
+// CombinationOperator gets the combination operator used by the page information segment.
 func (p *PageInformationSegment) CombinationOperator() bitmap.CombinationOperator {
 	return p.combinationOperator
 }
 
-// CombinationOperatorOverrideAllowed defines if the Page segment has allowed override
+// CombinationOperatorOverrideAllowed defines if the Page segment has allowed override.
 func (p *PageInformationSegment) CombinationOperatorOverrideAllowed() bool {
 	return p.combinaitonOperatorOverrideAllowed
 }
 
-// DefaultPixelValue returns page segment default pixel
+// DefaultPixelValue returns page segment default pixel.
 func (p *PageInformationSegment) DefaultPixelValue() uint8 {
 	return p.defaultPixelValue
 }
 
+// String implements Stringer interface.
+func (p *PageInformationSegment) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[PAGE-INFORMATION-SEGMENT]\n")
+	sb.WriteString(fmt.Sprintf("\t- BMHeight: %d\n", p.PageBMHeight))
+	sb.WriteString(fmt.Sprintf("\t- BMWidth: %d\n", p.PageBMWidth))
+	sb.WriteString(fmt.Sprintf("\t- ResolutionX: %d\n", p.ResolutionX))
+	sb.WriteString(fmt.Sprintf("\t- ResolutionY: %d\n", p.ResolutionY))
+	sb.WriteString(fmt.Sprintf("\t- CombinationOperator: %s\n", p.combinationOperator))
+	sb.WriteString(fmt.Sprintf("\t- CombinationOperatorOverride: %v\n", p.combinaitonOperatorOverrideAllowed))
+	sb.WriteString(fmt.Sprintf("\t- IsLossless: %v\n", p.isLossless))
+	sb.WriteString(fmt.Sprintf("\t- RequiresAuxiliaryBuffer: %v\n", p.requiresAuxiliaryBuffer))
+	sb.WriteString(fmt.Sprintf("\t- MightContainRefinements: %v\n", p.mightContainRefinements))
+	sb.WriteString(fmt.Sprintf("\t- IsStriped: %v\n", p.IsStripe))
+	sb.WriteString(fmt.Sprintf("\t- MaxStripeSize: %v\n", p.MaxStripeSize))
+	return sb.String()
+}
+
+func (p *PageInformationSegment) checkInput() error {
+	if p.PageBMHeight == 0xFFFFFFFFFF {
+		if !p.IsStripe {
+			common.Log.Debug("isStriped should contaion the value true")
+		}
+	}
+	return nil
+}
+
+func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {
+	p.r = r
+	return nil
+}
+
 func (p *PageInformationSegment) parseHeader() (err error) {
-	common.Log.Debug("[PageInformationSegment] ParsingHeader...")
+	common.Log.Trace("[PageInformationSegment] ParsingHeader...")
 	defer func() {
 		var str = "[PageInformationSegment] ParsingHeader Finished"
 		if err != nil {
@@ -79,13 +108,14 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		} else {
 			str += " succesfully"
 		}
-		common.Log.Debug(str)
+		common.Log.Trace(str)
 	}()
+
 	if err = p.readWidthAndHeight(); err != nil {
 		return err
 	}
 
-	if err = p.readResoultion(); err != nil {
+	if err = p.readResolution(); err != nil {
 		return err
 	}
 
@@ -138,12 +168,11 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 	if err = p.checkInput(); err != nil {
 		return err
 	}
-	common.Log.Debug("%s", p)
-
+	common.Log.Trace("%s", p)
 	return nil
 }
 
-func (p *PageInformationSegment) readResoultion() error {
+func (p *PageInformationSegment) readResolution() error {
 	tempResolution, err := p.r.ReadBits(32)
 	if err != nil {
 		return err
@@ -156,22 +185,11 @@ func (p *PageInformationSegment) readResoultion() error {
 	}
 
 	p.ResolutionY = int(tempResolution)
-
-	return nil
-}
-
-func (p *PageInformationSegment) checkInput() error {
-	if p.PageBMHeight == 0xFFFFFFFFFF {
-		if !p.IsStripe {
-			common.Log.Debug("isStriped should contaion the value true")
-		}
-	}
 	return nil
 }
 
 // readCombinationOperatorOverrideAllowed -  Bit 6
 func (p *PageInformationSegment) readCombinationOperatorOverrideAllowed() error {
-
 	b, err := p.r.ReadBit()
 	if err != nil {
 		return err
@@ -213,7 +231,6 @@ func (p *PageInformationSegment) readDefaultPixelValue() error {
 		return err
 	}
 	p.defaultPixelValue = uint8(b)
-
 	return nil
 }
 
@@ -238,7 +255,6 @@ func (p *PageInformationSegment) readIsLossless() error {
 	if b == 1 {
 		p.isLossless = true
 	}
-
 	return nil
 }
 
@@ -251,7 +267,6 @@ func (p *PageInformationSegment) readIsStriped() error {
 	if b == 1 {
 		p.IsStripe = true
 	}
-
 	return nil
 }
 
@@ -263,7 +278,6 @@ func (p *PageInformationSegment) readMaxStripeSize() error {
 	}
 
 	p.MaxStripeSize = uint16(b & 0xFFFF)
-
 	return nil
 }
 
@@ -282,27 +296,6 @@ func (p *PageInformationSegment) readWidthAndHeight() error {
 	return nil
 }
 
-func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {
-	p.r = r
-	return nil
-
-}
-
-// String implements Stringer interface
-func (p *PageInformationSegment) String() string {
-	sb := &strings.Builder{}
-
-	sb.WriteString("\n[PAGE-INFORMATION-SEGMENT]\n")
-	sb.WriteString(fmt.Sprintf("\t- BMHeight: %d\n", p.PageBMHeight))
-	sb.WriteString(fmt.Sprintf("\t- BMWidth: %d\n", p.PageBMWidth))
-	sb.WriteString(fmt.Sprintf("\t- ResolutionX: %d\n", p.ResolutionX))
-	sb.WriteString(fmt.Sprintf("\t- ResolutionY: %d\n", p.ResolutionY))
-	sb.WriteString(fmt.Sprintf("\t- CombinationOperator: %s\n", p.combinationOperator))
-	sb.WriteString(fmt.Sprintf("\t- CombinationOperatorOverride: %v\n", p.combinaitonOperatorOverrideAllowed))
-	sb.WriteString(fmt.Sprintf("\t- IsLossless: %v\n", p.isLossless))
-	sb.WriteString(fmt.Sprintf("\t- RequiresAuxiliaryBuffer: %v\n", p.requiresAuxiliaryBuffer))
-	sb.WriteString(fmt.Sprintf("\t- MightContainRefinements: %v\n", p.mightContainRefinements))
-	sb.WriteString(fmt.Sprintf("\t- IsStriped: %v\n", p.IsStripe))
-	sb.WriteString(fmt.Sprintf("\t- MaxStripeSize: %v\n", p.MaxStripeSize))
-	return sb.String()
+func newPageInformation(h *Header) *PageInformationSegment {
+	return &PageInformationSegment{}
 }

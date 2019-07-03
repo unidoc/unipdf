@@ -7,19 +7,30 @@ package huffman
 
 import (
 	"fmt"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"strings"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// HuffmanTabler is the interface for all types of the huffman tables
-type HuffmanTabler interface {
+// Tabler is the interface for all types of the huffman tables.
+type Tabler interface {
 	Decode(r reader.StreamReader) (int64, error)
 	InitTree(codeTable []*Code) error
 	String() string
 	RootNode() *InternalNode
 }
 
-// Code is the model for the huffman table code
+// BasicTabler is the interface common for the huffman tables.
+type BasicTabler interface {
+	HtHigh() int
+	HtLow() int
+	StreamReader() reader.StreamReader
+	HtPS() int
+	HtRS() int
+	HtOOB() int
+}
+
+// Code is the model for the huffman table code.
 type Code struct {
 	prefixLength int
 	rangeLength  int
@@ -28,8 +39,7 @@ type Code struct {
 	code         int
 }
 
-// String implements Stringer interface
-// returns stringified Code
+// String implements Stringer interface.
 func (c *Code) String() string {
 	var temp string
 	if c.code != -1 {
@@ -40,7 +50,7 @@ func (c *Code) String() string {
 	return fmt.Sprintf("%s/%d/%d/%d", temp, c.prefixLength, c.rangeLength, c.rangeLow)
 }
 
-// NewCode creates new huffman code
+// NewCode creates new huffman code.
 func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
 	return &Code{
 		prefixLength: prefixLength,
@@ -52,8 +62,9 @@ func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
 }
 
 func bitPattern(v, l int) string {
-	var result = make([]rune, l)
 	var temp int
+	result := make([]rune, l)
+
 	for i := 1; i <= l; i++ {
 		temp = (v >> uint(l-i) & 1)
 		if temp != 0 {
@@ -66,31 +77,28 @@ func bitPattern(v, l int) string {
 }
 
 func preprocessCodes(codeTable []*Code) {
-	// Annex B.3 1) build the histogram
+	// Annex B.3 1) build the histogram.
 	var maxPrefixLength int
 
 	for _, c := range codeTable {
 		maxPrefixLength = maxInt(maxPrefixLength, c.prefixLength)
 	}
 
-	var lenCount = make([]int, maxPrefixLength+1)
+	lenCount := make([]int, maxPrefixLength+1)
 
 	for _, c := range codeTable {
 		lenCount[c.prefixLength]++
 	}
 
-	var (
-		curCode   int
-		firstCode = make([]int, len(lenCount)+1)
-	)
+	var curCode int
+	firstCode := make([]int, len(lenCount)+1)
 	lenCount[0] = 0
 
 	// Annex B.3 3)
 	for curLen := 1; curLen <= len(lenCount); curLen++ {
-		// common.Log.Debug("First: %d, Lencount-1: %d, LenCount-1 shifted: %d", firstCode[curLen-1], lenCount[curLen-1], lenCount[curLen-1]<<1)
 		firstCode[curLen] = (firstCode[curLen-1] + (lenCount[curLen-1])) << 1
 		curCode = firstCode[curLen]
-		// common.Log.Debug("CurCode %d at i: %d", curCode, curLen)
+
 		for _, c := range codeTable {
 			if c.prefixLength == curLen {
 				c.code = curCode
@@ -98,7 +106,6 @@ func preprocessCodes(codeTable []*Code) {
 			}
 		}
 	}
-	// common.Log.Debug("Table: %v", codeTable)
 }
 
 func maxInt(x, y int) int {

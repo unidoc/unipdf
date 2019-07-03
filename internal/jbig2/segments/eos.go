@@ -9,10 +9,21 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// EndOfStripe flags an end of stripe JBIG2 ISO Standard 7.4.9
+// EndOfStripe flags an end of stripe - see 7.4.9.
 type EndOfStripe struct {
 	r          reader.StreamReader
 	lineNumber int
+}
+
+// Init implements Segmenter interface.
+func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
+	e.r = r
+	return e.parseHeader(h, r)
+}
+
+// LineNumber gets the EndOfStripe line number.
+func (e *EndOfStripe) LineNumber() int {
+	return e.lineNumber
 }
 
 func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
@@ -22,15 +33,4 @@ func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
 	}
 	e.lineNumber = int(temp)
 	return nil
-}
-
-// Init implements Segmenter interface
-func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
-	e.r = r
-	return e.parseHeader(h, r)
-}
-
-// LineNumber gets the EndOfStripe line number
-func (e *EndOfStripe) LineNumber() int {
-	return e.lineNumber
 }

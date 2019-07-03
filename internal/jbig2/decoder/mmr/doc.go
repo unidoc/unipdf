@@ -3,8 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package encoder
-
-// Encoder is the jbig2 encoder structure used for encoding the image into the
-type Encoder struct {
-}
+// Package mmr contains the jbig2 mmr decoder used to decode
+// jbig2 encoded data segments.
+package mmr

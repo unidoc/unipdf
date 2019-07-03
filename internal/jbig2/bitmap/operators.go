@@ -5,30 +5,30 @@
 
 package bitmap
 
-// CombinationOperator is the operator used while combining the bitmaps
+// CombinationOperator is the operator used for combining the bitmaps.
 type CombinationOperator int
 
 const (
-	// CmbOpOr the 'OR' operator
+	// CmbOpOr is the 'OR' CombinationOperator.
 	CmbOpOr CombinationOperator = iota
 
-	// CmbOpAnd the 'AND' operator
+	// CmbOpAnd is the 'AND' CombinationOperator.
 	CmbOpAnd
 
-	// CmbOpXor the 'XOR' operator
+	// CmbOpXor is the 'XOR' CombinationOperator.
 	CmbOpXor
 
-	// CmbOpXNor the 'XNOR' operator
+	// CmbOpXNor is the 'XNOR' CombinationOperator.
 	CmbOpXNor
 
-	// CmbOpReplace the 'REPLACE' operator
+	// CmbOpReplace is the 'REPLACE' CombinationOperator.
 	CmbOpReplace
 
-	// CmbOpNot the 'NOT' operator
+	// CmbOpNot is the 'NOT' CombinationOperator.
 	CmbOpNot
 )
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (c CombinationOperator) String() string {
 	var result string
 	switch c {

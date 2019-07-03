@@ -5,9 +5,11 @@
 
 package segments
 
-// According to D.4.2. - File header bit 0
-// defines the stream sequence organisation
+// OrganizationType is the enum for the stream sequence organization.
+type OrganizationType uint8
+
+// Organization types defined in D.4.2. - File header bit 0 defines the stream sequence organisation.
 const (
-	ORandom     uint8 = 0
-	OSequential uint8 = 1
+	ORandom OrganizationType = iota
+	OSequential
 )

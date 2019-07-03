@@ -3,9 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package bitmap
-
-// Getter interface used for getting the Bitmap.
-type Getter interface {
-	GetBitmap() *Bitmap
-}
+// Package segments provides jbig2 segments models used in the
+// jbig2 document decoding process.
+package segments

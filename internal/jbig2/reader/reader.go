@@ -8,12 +8,13 @@ package reader
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/unidoc/unipdf/v3/common"
 	"io"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 // Reader is the bit reader implementation.
-// Implements io.Reader, io.ByteReader, io.Seeker
+// Implements io.Reader, io.ByteReader, io.Seeker interfaces.
 type Reader struct {
 	in           []byte
 	cache        byte  // unread bits are stored here
@@ -27,18 +28,53 @@ type Reader struct {
 	markBits byte
 }
 
-// New creates a new reader using the byte slice data as input
+// compile time checks for the interface implementation of the Reader.
+var (
+	_ io.Reader     = &Reader{}
+	_ io.ByteReader = &Reader{}
+	_ io.Seeker     = &Reader{}
+	_ StreamReader  = &Reader{}
+)
+
+// New creates a new reader.Reader using the byte slice data as input.
 func New(data []byte) *Reader {
 	return &Reader{in: data}
 }
 
-// BitPosition gets the current bit position of the Reader
-func (r *Reader) BitPosition() int {
+// Align implements StreamReader interface.
+func (r *Reader) Align() (skipped byte) {
+	skipped = r.bits
+	r.bits = 0 // no need to clear cache - it would be overwritten on next read.
+	return skipped
+}
 
+// ConsumeRemainingBits consumes the remaining bits from the given reader.
+func (r *Reader) ConsumeRemainingBits() {
+	if r.bits != 0 {
+		_, err := r.ReadBits(r.bits)
+		if err != nil {
+			common.Log.Debug("ConsumeRemainigBits failed: %v", err)
+		}
+	}
+}
+
+// BitPosition implements StreamReader inteface.
+func (r *Reader) BitPosition() int {
 	return int(r.bits)
 }
 
-// Read reads the data from the provided bytes
+// Length implements StreamReader interface.
+func (r *Reader) Length() uint64 {
+	return uint64(len(r.in))
+}
+
+// Mark implements StreamReader interface.
+func (r *Reader) Mark() {
+	r.mark = r.r
+	r.markBits = r.bits
+}
+
+// Read implements io.Reader interface.
 func (r *Reader) Read(p []byte) (n int, err error) {
 	if r.bits == 0 {
 		return r.read(p)
@@ -46,93 +82,54 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 
 	for ; n < len(p); n++ {
 		if p[n], err = r.readUnalignedByte(); err != nil {
-			return
+			return 0, err
 		}
 	}
-	return
+	return n, nil
 }
 
-// Mark marks a position in the stream to be returned to by a subsequent call to 'Reset'.
-func (r *Reader) Mark() {
-	r.mark = r.r
-	r.markBits = r.bits
-}
-
-// Reset returns the stream pointer to its previous position, including the bit offset,
-// at the time of the most recent unmatched call to mark.
-func (r *Reader) Reset() {
-	r.r = r.mark
-	r.bits = r.markBits
-}
-
-// StreamPosition gets the stream position of the substream reader
-func (r *Reader) StreamPosition() int64 {
-	return r.r
-}
-
-func (r *Reader) read(p []byte) (n int, err error) {
-	if r.r >= int64(len(r.in)) {
-		return 0, io.EOF
-	}
-
-	r.lastRuneSize = -1
-	n = copy(p, r.in[r.r:])
-	r.r += int64(n)
-	return
-}
-
-func (r *Reader) readBufferByte() (b byte, err error) {
-	if r.r >= int64(len(r.in)) {
-		return 0, io.EOF
-	}
-	r.lastRuneSize = -1
-	c := r.in[r.r]
-	r.r++
-	r.lastByte = int(c)
-	return c, nil
-}
-
-// ReadUnsignedInt reads the unsigned uint32 from the reader
-func (r *Reader) ReadUnsignedInt() (uint32, error) {
-	ub := make([]byte, 4)
-
-	_, err := r.Read(ub)
+// ReadBit implements StreamReader interface.
+func (r *Reader) ReadBit() (bit int, err error) {
+	boolean, err := r.readBool()
 	if err != nil {
 		return 0, err
 	}
 
-	return binary.BigEndian.Uint32(ub), nil
-
+	if boolean {
+		bit = 1
+	}
+	return bit, nil
 }
 
-// ReadBits reads the bits of size 'n' from the reader
+// ReadBits implements StreamReader interface.
 func (r *Reader) ReadBits(n byte) (u uint64, err error) {
-	// Some optimization, frequent cases
+	// Frequent optimization.
 	if n < r.bits {
-		// cache has all needed bits, and there are some extra which will be left in cache
+		// cache has all needed bits, there are also some extra which will be left in cache.
 		shift := r.bits - n
 		u = uint64(r.cache >> shift)
 		r.cache &= 1<<shift - 1
 		r.bits = shift
-		return
+		return u, nil
 	}
 
 	if n > r.bits {
-		// all cache bits needed, and it's not even enough so more will be read
 		if r.bits > 0 {
 			u = uint64(r.cache)
 			n -= r.bits
 		}
-		// Read whole bytes
+
+		// Read whole bytes.
 		for n >= 8 {
-			b, err2 := r.readBufferByte()
-			if err2 != nil {
-				return 0, err2
+			b, err := r.readBufferByte()
+			if err != nil {
+				return 0, err
 			}
 			u = u<<8 + uint64(b)
 			n -= 8
 		}
-		// Read last fraction, if any
+
+		// Read last fraction if exists.
 		if n > 0 {
 			if r.cache, err = r.readBufferByte(); err != nil {
 				return 0, err
@@ -147,13 +144,17 @@ func (r *Reader) ReadBits(n byte) (u uint64, err error) {
 		return u, nil
 	}
 
-	// cache has exactly as many as needed
 	r.bits = 0 // no need to clear cache, will be overridden on next read
 	return uint64(r.cache), nil
 }
 
+// ReadBool implements StreamReader interface.
+func (r *Reader) ReadBool() (bool, error) {
+	return r.readBool()
+}
+
 // ReadByte implements io.ByteReader.
-func (r *Reader) ReadByte() (b byte, err error) {
+func (r *Reader) ReadByte() (byte, error) {
 	// r.bits will be the same after reading 8 bits, so we don't need to update that.
 	if r.bits == 0 {
 		return r.readBufferByte()
@@ -161,82 +162,27 @@ func (r *Reader) ReadByte() (b byte, err error) {
 	return r.readUnalignedByte()
 }
 
-// readUnalignedByte reads the next 8 bits which are (may be) unaligned and returns them as a byte.
-func (r *Reader) readUnalignedByte() (b byte, err error) {
-	// r.bits will be the same after reading 8 bits, so we don't need to update that.
-	bits := r.bits
-	b = r.cache << (8 - bits)
-	r.cache, err = r.readBufferByte()
+// ReadUnsignedInt reads the unsigned uint32 from the reader.
+func (r *Reader) ReadUnsignedInt() (uint32, error) {
+	ub := make([]byte, 4)
+
+	_, err := r.Read(ub)
 	if err != nil {
 		return 0, err
 	}
-	b |= r.cache >> bits
-	r.cache &= 1<<bits - 1
-	return
+
+	return binary.BigEndian.Uint32(ub), nil
 }
 
-// ReadBit reads the next binary value from the current cache
-// Equivalent of ReadBool method but returns an integer
-func (r *Reader) ReadBit() (b int, err error) {
-	var bit bool
-	bit, err = r.readBool()
-	if err != nil {
-		return
-	}
-	if bit {
-		b = 1
-	}
-	return
+// Reset implements StreamReader interface.
+func (r *Reader) Reset() {
+	r.r = r.mark
+	r.bits = r.markBits
 }
 
-// ReadBool reads the next binary value from the current cache
-func (r *Reader) ReadBool() (b bool, err error) {
-	return r.readBool()
-}
-
-func (r *Reader) readBool() (b bool, err error) {
-	if r.bits == 0 {
-		r.cache, err = r.readBufferByte()
-		if err != nil {
-			return
-		}
-		b = (r.cache & 0x80) != 0
-		r.cache, r.bits = r.cache&0x7f, 7
-		return
-	}
-
-	r.bits--
-	b = (r.cache & (1 << r.bits)) != 0
-	r.cache &= 1<<r.bits - 1
-	return
-}
-
-func (r *Reader) Align() (skipped byte) {
-	skipped = r.bits
-	r.bits = 0 // no need to clear cache, will be overwritten on next read
-	return
-}
-
-func (r *Reader) ConsumeRemainingBits() {
-	if r.bits != 0 {
-		common.Log.Debug("Consumed: %d bits", r.bits)
-		_, err := r.ReadBits(r.bits)
-		if err != nil {
-			common.Log.Debug("ConsumeRemainigBits failed: %v", err)
-		}
-
-	}
-}
-
-// Length returns the length of the data in the reader
-func (r *Reader) Length() uint64 {
-	return uint64(len(r.in))
-}
-
-// Seek implements the io.Seeker interface
+// Seek implements the io.Seeker interface.
 func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	r.lastRuneSize = -1
-
 	var abs int64
 
 	switch whence {
@@ -256,4 +202,62 @@ func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	r.r = abs
 	r.bits = 0
 	return abs, nil
+}
+
+// StreamPosition implements StreamReader interface.
+func (r *Reader) StreamPosition() int64 {
+	return r.r
+}
+
+func (r *Reader) read(p []byte) (int, error) {
+	if r.r >= int64(len(r.in)) {
+		return 0, io.EOF
+	}
+
+	r.lastRuneSize = -1
+	n := copy(p, r.in[r.r:])
+	r.r += int64(n)
+	return n, nil
+}
+
+func (r *Reader) readBufferByte() (byte, error) {
+	if r.r >= int64(len(r.in)) {
+		return 0, io.EOF
+	}
+	r.lastRuneSize = -1
+	c := r.in[r.r]
+	r.r++
+	r.lastByte = int(c)
+	return c, nil
+}
+
+// readUnalignedByte reads the next 8 bits which are (may be) unaligned and returns them as a byte.
+func (r *Reader) readUnalignedByte() (b byte, err error) {
+	// r.bits will be the same after reading 8 bits, so we don't need to update that.
+	bits := r.bits
+	b = r.cache << (8 - bits)
+	r.cache, err = r.readBufferByte()
+	if err != nil {
+		return 0, err
+	}
+	b |= r.cache >> bits
+	r.cache &= 1<<bits - 1
+	return b, nil
+}
+
+func (r *Reader) readBool() (bit bool, err error) {
+	if r.bits == 0 {
+		r.cache, err = r.readBufferByte()
+		if err != nil {
+			return false, err
+		}
+		bit = (r.cache & 0x80) != 0
+		r.cache, r.bits = r.cache&0x7f, 7
+		return bit, nil
+	}
+
+	r.bits--
+	bit = (r.cache & (1 << r.bits)) != 0
+	r.cache &= 1<<r.bits - 1
+	return bit, nil
 }

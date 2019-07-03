@@ -7,39 +7,40 @@ package segments
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"strings"
 )
 
-// RegionSegment is the segment model representing base segment region definition
+// RegionSegment is the model representing base jbig2 segment region - see 7.4.1.
 type RegionSegment struct {
 	r reader.StreamReader
 
-	/** Region segment bitmap width, 7.4.1.1 */
+	// Region segment bitmap width, 7.4.1.1
 	BitmapWidth int
 
-	/** Region segment bitmap height, 7.4.1.2 */
+	// Region segment bitmap height, 7.4.1.2
 	BitmapHeight int
 
-	/** Region segment bitmap X location, 7.4.1.3 */
+	// Region segment bitmap X location, 7.4.1.3
 	XLocation int
 
-	/** Region segment bitmap Y location, 7.4.1.4 */
+	// Region segment bitmap Y location, 7.4.1.4
 	YLocation int
 
-	/** Region segment flags, 7.4.1.5 */
+	// Region segment flags, 7.4.1.5
 	CombinaionOperator bitmap.CombinationOperator
 }
 
-// NewRegionSegment creates new Region segment model
+// NewRegionSegment creates new Region segment model.
 func NewRegionSegment(r reader.StreamReader) *RegionSegment {
-	rs := &RegionSegment{r: r}
-	return rs
+	return &RegionSegment{r: r}
 }
 
-// String implements the Stringer interface
+// String implements the Stringer interface.
 func (r *RegionSegment) String() string {
 	sb := &strings.Builder{}
 
@@ -50,12 +51,13 @@ func (r *RegionSegment) String() string {
 	return sb.String()
 }
 
-// parseHeader parses the RegionSegment Header
+// parseHeader parses the RegionSegment header.
 func (r *RegionSegment) parseHeader() error {
-	common.Log.Debug("[REGION][PARSE-HEADER] Begin")
+	common.Log.Trace("[REGION][PARSE-HEADER] Begin")
 	defer func() {
-		common.Log.Debug("[REGION][PARSE-HEADER] Finished")
+		common.Log.Trace("[REGION][PARSE-HEADER] Finished")
 	}()
+
 	temp, err := r.r.ReadBits(32)
 	if err != nil {
 		return err
@@ -87,7 +89,6 @@ func (r *RegionSegment) parseHeader() error {
 	if err = r.readCombinationOperator(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

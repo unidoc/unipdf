@@ -6,18 +6,17 @@
 package bitmap
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
-// TestBlit tests the Blit function for the multiple CombinationOperators
+// TestBlit tests the Blit function for the multiple CombinationOperators.
 func TestBlit(t *testing.T) {
-
 	t.Run("Unshifted", func(t *testing.T) {
 		t.Run("SourceEqualSize", func(t *testing.T) {
-			// test Blit when the bytes are at their 0th position
-
+			// Test Blit when the bytes are at their 0th position.
 			t.Run("OR", func(t *testing.T) {
 				dst := New(25, 25)
 				src := New(25, 25)
@@ -89,7 +88,6 @@ func TestBlit(t *testing.T) {
 			})
 
 			t.Run("Replace", func(t *testing.T) {
-
 				dst := New(25, 25)
 				src := New(25, 25)
 
@@ -126,10 +124,10 @@ func TestBlit(t *testing.T) {
 				assert.True(t, dst.GetPixel(4, 4))
 				assert.True(t, dst.GetPixel(5, 5))
 			})
-
 		})
+
 		t.Run("SourceSmallerSize", func(t *testing.T) {
-			// test Blit when the bytes are at their 0th position
+			// Test Blit when the bytes are at their 0th position.
 			dst := New(25, 25)
 			src := New(5, 5)
 
@@ -139,16 +137,15 @@ func TestBlit(t *testing.T) {
 
 			require.NoError(t, Blit(src, dst, 0, 0, op))
 
-			// both value should be true at (2,2) and (3,3)
+			// both value should be true at (2,2) and (3,3).
 			assert.True(t, dst.GetPixel(2, 2))
 			assert.True(t, dst.GetPixel(3, 3))
 		})
-
 	})
 
 	t.Run("Shifted", func(t *testing.T) {
 		t.Run("SourceEqualSize", func(t *testing.T) {
-			// test Blit when the bytes are at their 0th position
+			// Test Blit when the bytes are at their 0th position.
 			dst := New(25, 25)
 			src := New(25, 25)
 
@@ -165,7 +162,7 @@ func TestBlit(t *testing.T) {
 	})
 
 	t.Run("SpecialShifted", func(t *testing.T) {
-		// test Blit when the bytes are at their 0th position
+		// Test Blit when the bytes are at their 0th position.
 		dst := New(25, 25)
 		src := New(5, 5)
 
@@ -179,5 +176,4 @@ func TestBlit(t *testing.T) {
 		assert.True(t, dst.GetPixel(3, 3))
 		assert.True(t, dst.GetPixel(5, 5), dst.String())
 	})
-
 }

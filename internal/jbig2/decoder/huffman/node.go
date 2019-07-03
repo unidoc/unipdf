@@ -8,12 +8,13 @@ package huffman
 import (
 	"errors"
 	"fmt"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"math"
 	"strings"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// Node is the interface defined for all huffman tree nodes
+// Node is the interface defined for all huffman tree nodes.
 type Node interface {
 	Decode(r reader.StreamReader) (int64, error)
 	String() string
@@ -22,15 +23,16 @@ type Node interface {
 // OutOfBandNode represents an out of band node in a huffman tree.
 type OutOfBandNode struct{}
 
-// compile time check the OutOfBandNode
+// Compile time check the OutOfBandNode.
 var _ Node = &OutOfBandNode{}
 
-// Decode decodes the out of band node by returning max int64 value
+// Decode implements Node interface.
+// NOTE: Decodes the out of band node by returning max int64 value.
 func (o *OutOfBandNode) Decode(r reader.StreamReader) (int64, error) {
 	return int64(math.MaxInt64), nil
 }
 
-// String implements the Stringer interface returns the max int binary value
+// String implements the Stringer interface returns the max int binary value.
 func (o *OutOfBandNode) String() string {
 	return fmt.Sprintf("%064b", int64(math.MaxInt64))
 }
@@ -46,10 +48,10 @@ type ValueNode struct {
 	isLowerRange bool
 }
 
-// compile time check the ValueNode
+// Compile time check the ValueNode.
 var _ Node = &ValueNode{}
 
-// Decode decodes the provided Value node for the given StreamReader
+// Decode implements Node interface.
 func (v *ValueNode) Decode(r reader.StreamReader) (int64, error) {
 	bits, err := r.ReadBits(byte(v.rangeLen))
 	if err != nil {
@@ -59,11 +61,11 @@ func (v *ValueNode) Decode(r reader.StreamReader) (int64, error) {
 	if v.isLowerRange {
 		// B.4 4)
 		bits = -bits
-		// else B.4 5)
 	}
 	return int64(v.rangeLow) + int64(bits), nil
 }
 
+// String implements Stringer interface.
 func (v *ValueNode) String() string {
 	return fmt.Sprintf("%d/%d", v.rangeLen, v.rangeLow)
 }
@@ -76,31 +78,32 @@ func newValueNode(c *Code) *ValueNode {
 	}
 }
 
-// InternalNode represents an internal node of a huffman tree. It contains two child nodes.
-// Implements Node interface
+// InternalNode represents an internal node of a huffman tree.
+// It is defined as a pair of  two child nodes 'zero' and 'one' and a 'depth' level.
+// Implements Node interface.
 type InternalNode struct {
 	depth int
 	zero  Node
 	one   Node
 }
 
-// compile time check for the InternalNodefm
+// Compile time check for the InternalNode.
 var _ Node = &InternalNode{}
 
-// Decode decodes the huffman Internal node for the provided StreamReader.
+// Decode implements Node interface.
 func (i *InternalNode) Decode(r reader.StreamReader) (int64, error) {
 	b, err := r.ReadBit()
 	if err != nil {
 		return 0, err
 	}
+
 	if b == 0 {
 		return i.zero.Decode(r)
 	}
 	return i.one.Decode(r)
 }
 
-// String implements the Stringer interface
-// returns the internal node string representation
+// String implements the Stringer interface.
 func (i *InternalNode) String() string {
 	b := &strings.Builder{}
 
@@ -119,7 +122,6 @@ func (i *InternalNode) append(c *Code) error {
 	if c.prefixLength == 0 {
 		return nil
 	}
-
 	shift := c.prefixLength - 1 - i.depth
 
 	if shift < 0 {
@@ -127,16 +129,13 @@ func (i *InternalNode) append(c *Code) error {
 	}
 
 	bit := (c.code >> uint(shift)) & 0x1
-
 	if shift == 0 {
 		if c.rangeLength == -1 {
-
 			// the child will be OutOfBand
 			if bit == 1 {
 				if i.one != nil {
 					return fmt.Errorf("OOB already set for code %s", c)
 				}
-
 				i.one = newOufOfBandNode(c)
 			} else {
 				if i.zero != nil {
@@ -144,9 +143,7 @@ func (i *InternalNode) append(c *Code) error {
 				}
 				i.zero = newOufOfBandNode(c)
 			}
-
 		} else {
-
 			// the child will be a ValueNode
 			if bit == 1 {
 				if i.one != nil {
@@ -160,9 +157,7 @@ func (i *InternalNode) append(c *Code) error {
 				i.zero = newValueNode(c)
 			}
 		}
-
 	} else {
-
 		// the child will be an Internal Node
 		if bit == 1 {
 			if i.one == nil {
@@ -173,7 +168,6 @@ func (i *InternalNode) append(c *Code) error {
 			if i.zero == nil {
 				i.zero = newInternalNode(i.depth + 1)
 			}
-
 			i.zero.(*InternalNode).append(c)
 		}
 	}
@@ -186,7 +180,7 @@ func (i *InternalNode) pad(sb *strings.Builder) {
 	}
 }
 
-// newInternalNode creates new internal node
+// newInternalNode creates new internal node.
 func newInternalNode(depth int) *InternalNode {
 	return &InternalNode{depth: depth}
 }

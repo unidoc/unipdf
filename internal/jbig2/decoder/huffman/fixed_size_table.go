@@ -9,12 +9,12 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// FixedSizeTable defines the table with the fixed size
+// FixedSizeTable defines the table with the fixed size.
 type FixedSizeTable struct {
 	rootNode *InternalNode
 }
 
-// NewFixedSizeTable creates new fixedSizeTable
+// NewFixedSizeTable creates new fixedSizeTable.
 func NewFixedSizeTable(codeTable []*Code) (*FixedSizeTable, error) {
 	f := &FixedSizeTable{
 		rootNode: &InternalNode{},
@@ -27,12 +27,12 @@ func NewFixedSizeTable(codeTable []*Code) (*FixedSizeTable, error) {
 	return f, nil
 }
 
-// Decode decodes the fixedSizeTable
+// Decode implements Tabler interface.
 func (f *FixedSizeTable) Decode(r reader.StreamReader) (int64, error) {
 	return f.rootNode.Decode(r)
 }
 
-// InitTree implements HuffmanTabler interface
+// InitTree implements Tabler interface.
 func (f *FixedSizeTable) InitTree(codeTable []*Code) error {
 	preprocessCodes(codeTable)
 	for _, c := range codeTable {
@@ -44,12 +44,12 @@ func (f *FixedSizeTable) InitTree(codeTable []*Code) error {
 	return nil
 }
 
-// String implements Stringer interface
+// String implements Stringer interface.
 func (f *FixedSizeTable) String() string {
 	return f.rootNode.String() + "\n"
 }
 
-// RootNode returns the root node for the fixedSizeTable
+// RootNode implements Tabler interface.
 func (f *FixedSizeTable) RootNode() *InternalNode {
 	return f.rootNode
 }

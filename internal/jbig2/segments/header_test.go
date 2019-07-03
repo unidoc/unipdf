@@ -6,14 +6,16 @@
 package segments
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
-// TestHeader test the segment header model
-func TestHeader(t *testing.T) {
+// TestDecodeHeader test the segment header model decode process.
+func TestDecodeHeader(t *testing.T) {
 	data := []byte{
 		// header
 		0x00, 0x00, 0x00, 0x0B, 0x27, 0x00, 0x02, 0x00, 0x00, 0x00, 0x23,
@@ -25,9 +27,7 @@ func TestHeader(t *testing.T) {
 	}
 
 	r := reader.New(data)
-
 	d := &document{}
-
 	h, err := NewHeader(d, r, 0, OSequential)
 	require.NoError(t, err)
 
@@ -39,7 +39,6 @@ func TestHeader(t *testing.T) {
 
 	b, err := s.ReadByte()
 	require.NoError(t, err)
-
 	assert.Equal(t, byte(0x00), b)
 
 	three := make([]byte, 3)
@@ -48,5 +47,4 @@ func TestHeader(t *testing.T) {
 
 	assert.Equal(t, 3, read)
 	assert.Equal(t, byte(0x36), three[2])
-
 }

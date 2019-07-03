@@ -10,8 +10,7 @@ import (
 	"strings"
 )
 
-// DecoderStats is the structure that contains arithmetic
-// decoder stats
+// DecoderStats is the structure that contains arithmetic decode context.
 type DecoderStats struct {
 	index              int
 	contextSize        int
@@ -19,59 +18,17 @@ type DecoderStats struct {
 	mps                []byte
 }
 
-// NewStats creates new DecoderStats of size 'contextSize'
+// NewStats creates new DecoderStats of size 'contextSize'.
 func NewStats(contextSize int, index int) *DecoderStats {
-	d := &DecoderStats{
+	return &DecoderStats{
 		index:              index,
 		contextSize:        contextSize,
 		codingContextTable: make([]byte, contextSize),
 		mps:                make([]byte, contextSize),
 	}
-
-	return d
 }
 
-// Reset resets current decoder stats
-func (d *DecoderStats) Reset() {
-	for i := 0; i < len(d.codingContextTable); i++ {
-		d.codingContextTable[i] = 0
-		d.mps[i] = 0
-	}
-}
-
-// SetEntry sets the decoder stats coding context table with moreprobableSymbol
-func (d *DecoderStats) SetEntry(value int) {
-	v := byte(value & 0x7f)
-	// common.Log.Debug("setCX for index: %d and value: %d and v: %d", d.index, value, v)
-	d.codingContextTable[d.index] = v
-}
-
-// SetIndex sets the decoderStats index
-func (d *DecoderStats) SetIndex(index int) {
-	// common.Log.Debug("Setting index: %32b", index)
-	d.index = int(uint(index))
-}
-
-// Overwrite overwrites the codingContextTable from new DecoderStats
-func (d *DecoderStats) Overwrite(dNew *DecoderStats) {
-	for i := 0; i < len(d.codingContextTable); i++ {
-		d.codingContextTable[i] = dNew.codingContextTable[i]
-		d.mps[i] = dNew.mps[i]
-	}
-}
-
-// flips the bit in the actual more predictable index
-func (d *DecoderStats) toggleMps() {
-	// common.Log.Debug("Before: %d", d.mps[d.index])
-	d.mps[d.index] ^= 1
-	// common.Log.Debug("After: %d", d.mps[d.index])
-}
-
-func (d *DecoderStats) getMps() byte {
-	return d.mps[d.index]
-}
-
-// Copy copies the DecoderStats
+// Copy copies the DecoderStats.
 func (d *DecoderStats) Copy() *DecoderStats {
 	cp := &DecoderStats{
 		contextSize:        d.contextSize,
@@ -85,11 +42,28 @@ func (d *DecoderStats) Copy() *DecoderStats {
 	return cp
 }
 
-func (d *DecoderStats) cx() byte {
-	return d.codingContextTable[d.index]
+// Overwrite overwrites the codingContextTable from new DecoderStats 'dNew'.
+func (d *DecoderStats) Overwrite(dNew *DecoderStats) {
+	for i := 0; i < len(d.codingContextTable); i++ {
+		d.codingContextTable[i] = dNew.codingContextTable[i]
+		d.mps[i] = dNew.mps[i]
+	}
 }
 
-// String implements Stringer interface
+// Reset resets current decoder stats.
+func (d *DecoderStats) Reset() {
+	for i := 0; i < len(d.codingContextTable); i++ {
+		d.codingContextTable[i] = 0
+		d.mps[i] = 0
+	}
+}
+
+// SetIndex sets current decoder stats 'index'.
+func (d *DecoderStats) SetIndex(index int) {
+	d.index = int(uint(index))
+}
+
+// String implements Stringer interface.
 func (d *DecoderStats) String() string {
 	b := &strings.Builder{}
 	b.WriteString(fmt.Sprintf("Stats:  %d\n", len(d.codingContextTable)))
@@ -99,4 +73,23 @@ func (d *DecoderStats) String() string {
 		}
 	}
 	return b.String()
+}
+
+func (d *DecoderStats) cx() byte {
+	return d.codingContextTable[d.index]
+}
+
+func (d *DecoderStats) getMps() byte {
+	return d.mps[d.index]
+}
+
+// setEntry sets the decoder stats coding context table with moreprobableSymbol.
+func (d *DecoderStats) setEntry(value int) {
+	v := byte(value & 0x7f)
+	d.codingContextTable[d.index] = v
+}
+
+// toggleMps flips the bit in the actual more predictable index.
+func (d *DecoderStats) toggleMps() {
+	d.mps[d.index] ^= 1
 }

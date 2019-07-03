@@ -7,23 +7,25 @@ package jbig2
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
-	"testing"
 )
 
-// TestDocument tests the document
+// TestDocument tests the jbig2.Document decoding.
 func TestDocument(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
 
 	t.Run("AnnexH", func(t *testing.T) {
-
-		var data = []byte{
+		data := []byte{
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
 			0x00, 0x01, 0xE9, 0xCB, 0xF4, 0x00, 0x26, 0xAF, 0x04, 0xBF, 0xF0, 0x78, 0x2F, 0xE0, 0x00, 0x40,
@@ -84,8 +86,8 @@ func TestDocument(t *testing.T) {
 		d, err := NewDocument(data)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint32(3), d.AmountOfPages)
-		assert.Equal(t, segments.OSequential, d.OrgainsationType)
+		assert.Equal(t, uint32(3), d.NumberOfPages)
+		assert.Equal(t, segments.OSequential, d.OrganizationType)
 		assert.Equal(t, false, d.GBUseExtTemplate)
 
 		p1 := d.Pages[1]
@@ -103,18 +105,15 @@ func TestDocument(t *testing.T) {
 
 			assert.True(t, sd.IsHuffmanEncoded())
 			assert.False(t, sd.UseRefinementAggregation())
-			assert.Equal(t, 1, sd.AmountOfExportedSymbols())
-			assert.Equal(t, 1, sd.AmmountOfNewSymbols())
+			assert.Equal(t, 1, sd.NumberOfExportedSymbols())
+			assert.Equal(t, 1, sd.NumberOfNewSymbols())
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
-
 			require.Len(t, bm, 1)
 
 			pLetter := bm[0]
-
 			symbol := pSymbol(t)
-
 			assert.True(t, pLetter.Equals(symbol), fmt.Sprintf("P decoded: %s - Should be: %s", pLetter, symbol))
 		})
 
@@ -185,7 +184,6 @@ func TestDocument(t *testing.T) {
 			require.NoError(t, err)
 			err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-
 			assert.True(t, expected.Equals(bm))
 		})
 
@@ -219,6 +217,7 @@ func TestDocument(t *testing.T) {
 			require.NoError(t, err)
 			checkPatternDictionary(t, dict)
 		})
+
 		t.Run("Segment#7", func(t *testing.T) {
 			header := p1.GetSegment(6)
 			require.NotNil(t, header)
@@ -232,7 +231,7 @@ func TestDocument(t *testing.T) {
 			patterns, err := h.GetPatterns()
 			require.NoError(t, err)
 
-			expected := GetPatternsFirst(t)
+			expected := getPatternsFirst(t)
 			if assert.Equal(t, len(expected), len(patterns)) {
 				for i, p := range patterns {
 					assert.True(t, expected[i].Equals(p))
@@ -241,8 +240,8 @@ func TestDocument(t *testing.T) {
 
 			_, err = h.GetRegionBitmap()
 			require.NoError(t, err)
-			// t.Logf("Expected BM %s", bm)
 		})
+
 		t.Run("Segment#8", func(t *testing.T) {
 			h := p1.GetSegment(7)
 			require.NotNil(t, h)
@@ -363,9 +362,9 @@ func TestDocument(t *testing.T) {
 
 			assert.Equal(t, 32, bm.Width)
 			assert.Equal(t, 36, bm.Height)
-
 		})
-		// EOP
+
+		// EOP segment
 		t.Run("Page#2", func(t *testing.T) {
 			bm, err := p2.GetBitmap()
 			require.NoError(t, err)
@@ -375,6 +374,7 @@ func TestDocument(t *testing.T) {
 		p3, err := d.GetPage(3)
 		require.NoError(t, err)
 		require.NotNil(t, p3)
+
 		t.Run("Segment#16", func(t *testing.T) {
 			h := p3.GetSegment(15)
 
@@ -390,7 +390,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#17", func(t *testing.T) {
 			h := p3.GetSegment(16)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -406,7 +405,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#18", func(t *testing.T) {
 			h := p3.GetSegment(17)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -429,7 +427,6 @@ func TestDocument(t *testing.T) {
 
 		t.Run("Segment#19", func(t *testing.T) {
 			h := p3.GetSegment(18)
-
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -467,7 +464,7 @@ func TestDocument(t *testing.T) {
 		gdoc, err := NewDocument(globalsData)
 		require.NoError(t, err)
 
-		var data = []byte{
+		data := []byte{
 
 			// File Header
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -493,7 +490,6 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, d.GlobalSegments, 1)
-
 	})
 }
 
@@ -585,7 +581,7 @@ func getFrame(t *testing.T) *bitmap.Bitmap {
 	return expected
 }
 
-func GetPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
+func getPatternsFirst(t *testing.T) (patterns []*bitmap.Bitmap) {
 	t.Helper()
 
 	for i := 0; i < 16; i++ {
@@ -693,30 +689,6 @@ func checkPatternDictionary(t *testing.T, dict []*bitmap.Bitmap) {
 		case 1:
 			require.NoError(t, toCompare.SetPixel(2, 1, 1))
 		}
-		// t.Logf("Symbol: #%d: %v - %v", i, s.String(), toCompare.String())
 		assert.True(t, toCompare.Equals(s), fmt.Sprintf("i: %d, %v, %v", i, s.String(), toCompare.String()))
 	}
 }
-
-// func firstHalftoneBitmap(t *testing.T) *bitmap.Bitmap {
-// 	t.Helper()
-// 	frame := getFrame(t)
-// 	patterns := GetPatternsFirst(t)
-
-// 	var minX, maxX int = 3, (frame.Width - 1) - 2
-// 	var minY = 3
-
-// 	op := bitmap.CmbOpOr
-
-// 	x, y := minX, minY
-// 	for _, p := range patterns {
-// 		require.NoError(t, bitmap.Blit(p, frame, x, y, op))
-// 		if x+p.Width > maxX {
-// 			x = minX
-// 			y += p.Height
-// 		} else {
-// 			x += p.Width
-// 		}
-// 	}
-// 	return frame
-// }

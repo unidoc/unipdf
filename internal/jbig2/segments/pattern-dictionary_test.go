@@ -7,22 +7,26 @@ package segments
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"testing"
 )
 
-func TestPatternDictionary(t *testing.T) {
+// TestDecodePatternDictionary tests the decode process of the pattern dictionary segment.
+func TestDecodePatternDictionary(t *testing.T) {
 	t.Run("AnnexH", func(t *testing.T) {
 		if testing.Verbose() {
 			common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 		}
 
 		t.Run("S-6th", func(t *testing.T) {
-			var data = []byte{
+			data := []byte{
 				// Header
 				0x00, 0x00, 0x00, 0x05, 0x10, 0x01, 0x01, 0x00, 0x00, 0x00, 0x2D,
 
@@ -34,9 +38,7 @@ func TestPatternDictionary(t *testing.T) {
 				0xB9, 0xDC, 0xEE, 0x77, 0x80,
 			}
 			r := reader.New(data)
-
 			d := &document{}
-
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)
 
@@ -45,8 +47,6 @@ func TestPatternDictionary(t *testing.T) {
 
 			p, ok := ps.(*PatternDictionary)
 			require.True(t, ok)
-
-			t.Log("Inited")
 
 			assert.Equal(t, uint32(5), h.SegmentNumber)
 			assert.Equal(t, uint64(45), h.SegmentDataLength)
@@ -109,11 +109,8 @@ func TestPatternDictionary(t *testing.T) {
 				case 1:
 					require.NoError(t, toCompare.SetPixel(2, 1, 1))
 				}
-				// t.Logf("Symbol: #%d: %v - %v", i, s.String(), toCompare.String())
 				assert.True(t, toCompare.Equals(s), fmt.Sprintf("i: %d, %v, %v", i, s.String(), toCompare.String()))
-
 			}
-
 		})
 	})
 }

@@ -5,10 +5,10 @@
 
 package segments
 
-// Type defines the segment
+// Type defines the jbig2 segment type - see 7.3.
 type Type int
 
-// Enums defining the Segment types
+// Enumerate segment type definitions.
 const (
 	TSymbolDictionary                         Type = 0
 	TIntermediateTextRegion                   Type = 4
@@ -34,7 +34,7 @@ const (
 	TBitmap                                   Type = 70
 )
 
-// String Type implements Stringer interface
+// String implements Stringer interface.
 func (k Type) String() string {
 	switch k {
 	case TSymbolDictionary:
@@ -85,31 +85,31 @@ func (k Type) String() string {
 	return "Invalid Segment Kind"
 }
 
-var emptySegment Segmenter
-
-var kindMap = map[Type]func() Segmenter{
-	TSymbolDictionary: func() Segmenter {
-		return &SymbolDictionary{}
-	},
-	TIntermediateTextRegion:                   func() Segmenter { return &TextRegion{} },
-	TImmediateTextRegion:                      func() Segmenter { return &TextRegion{} },
-	TImmediateLosslessTextRegion:              func() Segmenter { return &TextRegion{} },
-	TPatternDictionary:                        func() Segmenter { return &PatternDictionary{} },
-	TIntermediateHalftoneRegion:               func() Segmenter { return &HalftoneRegion{} },
-	TImmediateHalftoneRegion:                  func() Segmenter { return &HalftoneRegion{} },
-	TImmediateLosslessHalftoneRegion:          func() Segmenter { return &HalftoneRegion{} },
-	TIntermediateGenericRegion:                func() Segmenter { return &GenericRegion{} },
-	TImmediateGenericRegion:                   func() Segmenter { return &GenericRegion{} },
-	TImmediateLosslessGenericRegion:           func() Segmenter { return &GenericRegion{} },
-	TIntermediateGenericRefinementRegion:      func() Segmenter { return &GenericRefinementRegion{} },
-	TImmediateGenericRefinementRegion:         func() Segmenter { return &GenericRefinementRegion{} },
-	TImmediateLosslessGenericRefinementRegion: func() Segmenter { return &GenericRefinementRegion{} },
-	TPageInformation:                          func() Segmenter { return &PageInformationSegment{} },
-	TEndOfPage:                                func() Segmenter { return emptySegment },
-	TEndOfStrip:                               func() Segmenter { return &EndOfStripe{} },
-	TEndOfFile:                                func() Segmenter { return emptySegment },
-	TProfiles:                                 func() Segmenter { return emptySegment },
-	TTables:                                   func() Segmenter { return &TableSegment{} },
-	TExtension:                                func() Segmenter { return emptySegment },
-	TBitmap:                                   func() Segmenter { return emptySegment },
-}
+// set the segment type number to it's creator function.
+var (
+	emptySegment Segmenter
+	kindMap      = map[Type]func() Segmenter{
+		TSymbolDictionary:                         func() Segmenter { return &SymbolDictionary{} },
+		TIntermediateTextRegion:                   func() Segmenter { return &TextRegion{} },
+		TImmediateTextRegion:                      func() Segmenter { return &TextRegion{} },
+		TImmediateLosslessTextRegion:              func() Segmenter { return &TextRegion{} },
+		TPatternDictionary:                        func() Segmenter { return &PatternDictionary{} },
+		TIntermediateHalftoneRegion:               func() Segmenter { return &HalftoneRegion{} },
+		TImmediateHalftoneRegion:                  func() Segmenter { return &HalftoneRegion{} },
+		TImmediateLosslessHalftoneRegion:          func() Segmenter { return &HalftoneRegion{} },
+		TIntermediateGenericRegion:                func() Segmenter { return &GenericRegion{} },
+		TImmediateGenericRegion:                   func() Segmenter { return &GenericRegion{} },
+		TImmediateLosslessGenericRegion:           func() Segmenter { return &GenericRegion{} },
+		TIntermediateGenericRefinementRegion:      func() Segmenter { return &GenericRefinementRegion{} },
+		TImmediateGenericRefinementRegion:         func() Segmenter { return &GenericRefinementRegion{} },
+		TImmediateLosslessGenericRefinementRegion: func() Segmenter { return &GenericRefinementRegion{} },
+		TPageInformation:                          func() Segmenter { return &PageInformationSegment{} },
+		TEndOfPage:                                func() Segmenter { return emptySegment },
+		TEndOfStrip:                               func() Segmenter { return &EndOfStripe{} },
+		TEndOfFile:                                func() Segmenter { return emptySegment },
+		TProfiles:                                 func() Segmenter { return emptySegment },
+		TTables:                                   func() Segmenter { return &TableSegment{} },
+		TExtension:                                func() Segmenter { return emptySegment },
+		TBitmap:                                   func() Segmenter { return emptySegment },
+	}
+)

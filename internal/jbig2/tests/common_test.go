@@ -8,17 +8,18 @@ package tests
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/common"
 	"image/jpeg"
+	"os"
+	"path/filepath"
 	"strings"
+	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/common"
 	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
 	pdfcore "github.com/unidoc/unipdf/v3/core"
 	pdf "github.com/unidoc/unipdf/v3/model"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 const (
@@ -55,7 +56,6 @@ func readJBIGZippedFiles(dirname string) ([]string, error) {
 }
 
 func readPDF(f *os.File, password ...string) (*pdf.PdfReader, error) {
-
 	pdfReader, err := pdf.NewPdfReader(f)
 	if err != nil {
 		return nil, err
@@ -81,11 +81,10 @@ func readPDF(f *os.File, password ...string) (*pdf.PdfReader, error) {
 				}
 			}
 			if !auth {
-				return nil, fmt.Errorf("Reading the file: '%s' failed. Invalid password provided.", f.Name())
+				return nil, fmt.Errorf("reading the file: '%s' failed. Invalid password provided", f.Name())
 			}
 		}
 	}
-
 	return pdfReader, nil
 }
 
@@ -107,48 +106,17 @@ func extractImagesOnPage(filename string, page *pdf.PdfPage) ([]*pdf.Image, [][]
 func extractImagesInContentStream(filename, contents string, resources *pdf.PdfPageResources) ([]*pdf.Image, [][]byte, error) {
 	rgbImages := []*pdf.Image{}
 	jbig2RawData := [][]byte{}
+	processedXObjects := make(map[string]bool)
 	cstreamParser := pdfcontent.NewContentStreamParser(contents)
+
 	operations, err := cstreamParser.Parse()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	processedXObjects := map[string]bool{}
-
 	// Range through all the content stream operations.
 	for _, op := range *operations {
 		if op.Operand == "BI" && len(op.Params) == 1 {
-			// BI: Inline image.
-
-			// iimg, ok := op.Params[0].(*pdfcontent.ContentStreamInlineImage)
-			// if !ok {
-			// 	continue
-			// }
-
-			// iimg.
-
-			// img, err := iimg.ToImage(resources)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-
-			// cs, err := iimg.GetColorSpace(resources)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-			// if cs == nil {
-			// 	// Default if not specified?
-			// 	cs = pdf.NewPdfColorspaceDeviceGray()
-			// }
-			// fmt.Printf("Cs: %T\n", cs)
-
-			// rgbImg, err := cs.ImageToRGB(*img)
-			// if err != nil {
-			// 	return nil, nil, err
-			// }
-
-			// rgbImages = append(rgbImages, &rgbImg)
-			// inlineImages++
 		} else if op.Operand == "Do" && len(op.Params) == 1 {
 			// Do: XObject.
 			name := op.Params[0].(*pdfcore.PdfObjectName)
@@ -222,9 +190,6 @@ func extractImagesInContentStream(filename, contents string, resources *pdf.PdfP
 			}
 		}
 	}
-	// common.Log.Debug("Extracted: '%d' XObject images.", xObjectImages)
-	// common.Log.Debug("Extracted: '%d' Inline images.", inlineImages)
-
 	return rgbImages, jbig2RawData, nil
 }
 
@@ -257,7 +222,6 @@ func writeJBIG2Files(t testing.TB, zw *zip.Writer, dirname, filename string, pag
 		require.NoError(t, err)
 
 		_, err = f.Write(file)
-
 		require.NoError(t, err)
 	}
 }

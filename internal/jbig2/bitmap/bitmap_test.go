@@ -7,13 +7,15 @@ package bitmap
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
-	"testing"
 )
 
-// TestBitmap tests the bitmap methods and constructors
+// TestBitmap tests the bitmap methods and constructors.
 func TestBitmap(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		// tests the creator of the bitmap
@@ -41,14 +43,12 @@ func TestBitmap(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			t.Run("Small", func(t *testing.T) {
 				bm := New(5, 5)
-
 				bm.Data[0] = 0x80
 				assert.True(t, bm.GetPixel(0, 0), bm.String())
 			})
 
 			t.Run("Big", func(t *testing.T) {
 				bm := New(25, 25)
-
 				bm.Data[len(bm.Data)-1] = 0xF0
 				assert.True(t, bm.GetPixel(24, 24), bm.String())
 			})
@@ -56,23 +56,19 @@ func TestBitmap(t *testing.T) {
 
 		t.Run("Invalid", func(t *testing.T) {
 			bm := New(5, 5)
-
 			assert.False(t, bm.GetPixel(100, 100))
 		})
 	})
 
 	t.Run("SetPixel", func(t *testing.T) {
-
 		t.Run("Valid", func(t *testing.T) {
 			bm := New(5, 5)
-
 			require.NoError(t, bm.SetPixel(0, 0, 1))
 			assert.Equal(t, uint8(0x80), bm.Data[0])
 		})
 
 		t.Run("Invalid", func(t *testing.T) {
 			bm := New(5, 5)
-
 			require.Error(t, bm.SetPixel(100, 100, 1))
 		})
 	})
@@ -149,7 +145,6 @@ func TestBitmap(t *testing.T) {
 	})
 
 	t.Run("GetUnpadded", func(t *testing.T) {
-
 		t.Run("EqualPadding", func(t *testing.T) {
 			if testing.Verbose() {
 				common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -227,6 +222,5 @@ func TestBitmap(t *testing.T) {
 			}
 			t.Logf("Bitmap: %s", bm)
 		})
-
 	})
 }
