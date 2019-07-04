@@ -248,6 +248,12 @@ var fileExtractionTests = []struct {
 // If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest` global
 // variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
 func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]string) {
+	testExtractFileOptions(t, filename, expectedPageText, false)
+	// testExtractFileOptions(t, filename, expectedPageText, true)
+}
+
+func testExtractFileOptions(t *testing.T, filename string, expectedPageText map[int][]string,
+	lazy bool) {
 	filepath := filepath.Join(corpusFolder, filename)
 	exists := checkFileExists(filepath)
 	if !exists {
@@ -258,7 +264,7 @@ func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]s
 		return
 	}
 
-	_, actualPageText := extractPageTexts(t, filepath)
+	_, actualPageText := extractPageTexts(t, filepath, lazy)
 	for _, pageNum := range sortedKeys(expectedPageText) {
 		expectedSentences, ok := expectedPageText[pageNum]
 		actualText, ok := actualPageText[pageNum]
@@ -272,19 +278,11 @@ func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]s
 	}
 }
 
-// extractPageTexts runs ExtractTextWithStats on all pages in PDF `filename` and returns the result as a map
-// {page number: page text}
-func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
-	f, err := os.Open(filename)
-	if err != nil {
-		t.Fatalf("Couldn't open filename=%q err=%v", filename, err)
-	}
-	defer f.Close()
+// extractPageTexts runs ExtractTextWithStats on all pages in PDF `filename` and returns the result
+// as a map {page number: page text}
+func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]string) {
 
-	pdfReader, err := model.NewPdfReader(f)
-	if err != nil {
-		t.Fatalf("NewPdfReader failed. filename=%q err=%v", filename, err)
-	}
+	pdfReader := openPdfReader(t, filename, lazy)
 	numPages, err := pdfReader.GetNumPages()
 	if err != nil {
 		t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
@@ -298,7 +296,8 @@ func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 		}
 		ex, err := New(page)
 		if err != nil {
-			t.Fatalf("extractor.New failed. filename=%q page=%d err=%v", filename, pageNum, err)
+			t.Fatalf("extractor.New failed. filename=%q lazy=%t page=%d err=%v",
+				filename, lazy, pageNum, err)
 		}
 		text, _, _, err := ex.ExtractTextWithStats()
 		if err != nil {
@@ -308,6 +307,28 @@ func extractPageTexts(t *testing.T, filename string) (int, map[int]string) {
 		pageText[pageNum] = reduceSpaces(text)
 	}
 	return numPages, pageText
+}
+
+func openPdfReader(t *testing.T, filename string, lazy bool) *model.PdfReader {
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Fatalf("Couldn't open filename=%q err=%v", filename, err)
+	}
+	defer f.Close()
+
+	var pdfReader *model.PdfReader
+	if lazy {
+		pdfReader, err = model.NewPdfReaderLazy(f)
+		if err != nil {
+			t.Fatalf("NewPdfReaderLazy failed. filename=%q err=%v", filename, err)
+		}
+	} else {
+		pdfReader, err = model.NewPdfReader(f)
+		if err != nil {
+			t.Fatalf("NewPdfReader failed. filename=%q err=%v", filename, err)
+		}
+	}
+	return pdfReader
 }
 
 // containsSentences returns true if all strings `expectedSentences` are contained in `actualText`.
