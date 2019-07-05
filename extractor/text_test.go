@@ -7,16 +7,16 @@ package extractor
 
 import (
 	"flag"
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
-
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
-
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -296,7 +296,7 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 		}
 		ex, err := New(page)
 		if err != nil {
-			t.Fatalf("extractor.New failed. filename=%q lazy=%t page=%d err=%v",
+			t.Fatalf("New failed. filename=%q lazy=%t page=%d err=%v",
 				filename, lazy, pageNum, err)
 		}
 		text, _, _, err := ex.ExtractTextWithStats()
@@ -307,6 +307,151 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 		pageText[pageNum] = reduceSpaces(text)
 	}
 	return numPages, pageText
+}
+
+// TestTextLocations tests locations of text marks
+func TestTextLocations(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+	lazy := false
+	for _, e := range textCases {
+		e.test(t, lazy)
+	}
+}
+
+type textLocTest struct {
+	filename string
+	numPages int
+	contents map[int]pageContents
+}
+
+func (e textLocTest) String() string {
+	return fmt.Sprintf("{TEXTLOCTEST: filename=%q}", e.filename)
+}
+
+type pageContents struct {
+	terms     []string
+	locations []TextComponent
+}
+
+var textCases = []textLocTest{
+	textLocTest{
+		filename: "prop-price-list-2017.pdf",
+		numPages: 1,
+		contents: map[int]pageContents{
+			1: pageContents{
+				terms: []string{
+					"PRICE LIST",
+					"THING ONE", "$99",
+					"THING TWO", "$314",
+					"THING THREE", "$499",
+					"THING FOUR", "$667",
+				},
+				locations: []TextComponent{
+					l(1, 197.2, 725.2, 231.9, 773.2, "R"),
+					l(2, 231.9, 725.2, 245.2, 773.2, "I"),
+					l(3, 245.2, 725.2, 279.9, 773.2, "C"),
+					l(4, 279.9, 725.2, 312.0, 773.2, "E"),
+					l(5, 312.0, 725.2, 325.3, 773.2, " "),
+					l(6, 325.3, 725.2, 354.6, 773.2, "L"),
+					l(7, 354.6, 725.2, 368.0, 773.2, "I"),
+					l(8, 368.0, 725.2, 400.0, 773.2, "S"),
+					l(9, 400.0, 725.2, 429.4, 773.2, "T"),
+				},
+			},
+		},
+	},
+}
+
+func (e textLocTest) test(t *testing.T, lazy bool) {
+	desc := fmt.Sprintf("%s lazy=%t", e, lazy)
+	common.Log.Debug("textLocTest.test: %s", desc)
+
+	filename := filepath.Join(corpusFolder, e.filename)
+
+	pdfReader := openPdfReader(t, filename, lazy)
+
+	n, err := pdfReader.GetNumPages()
+	if err != nil {
+		t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
+	}
+	if n != e.numPages {
+		t.Fatalf("Wrong number of pages. Expected %d. Got %d. %s",
+			n, e.numPages, desc)
+	}
+
+	for pageNum, c := range e.contents {
+		pageDesc := fmt.Sprintf("%s pageNum=%d", desc, pageNum)
+		page, err := pdfReader.GetPage(pageNum)
+		if err != nil {
+			t.Fatalf("GetPage failed. %s err=%v", pageDesc, err)
+		}
+		c.test(t, desc, page)
+	}
+}
+
+func (c pageContents) test(t *testing.T, desc string, page *model.PdfPage) {
+
+	ex, err := New(page)
+	if err != nil {
+		t.Fatalf("extractor.New failed. %s err=%v", desc, err)
+	}
+	pageText, _, _, err := ex.ExtractPageText()
+	if err != nil {
+		t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
+	}
+	text, locations := pageText.TextByComponents()
+
+	for i, term := range c.terms {
+		common.Log.Info("%d: %q", i, term)
+		if !strings.Contains(text, term) {
+			t.Fatalf("testPdf: text doesn't contain %q. %s", term, desc)
+		}
+	}
+
+	locMap := locationsMap(locations)
+	for i, loc := range c.locations {
+		common.Log.Info("%d: %v", i, loc)
+		if !contains(locMap, loc) {
+			t.Fatalf("testPdf: locations doesn't contain %v. %s", loc, desc)
+		}
+	}
+}
+
+func locationsMap(locations []TextComponent) map[int]TextComponent {
+	locMap := make(map[int]TextComponent, len(locations))
+	for _, loc := range locations {
+		locMap[loc.Offset] = loc
+	}
+	return locMap
+}
+
+const tol = 1.0
+
+func contains(locMap map[int]TextComponent, loc0 TextComponent) bool {
+	loc, ok := locMap[loc0.Offset]
+	if !ok {
+		return false
+	}
+	if loc.Text != loc0.Text {
+		return false
+	}
+	b0 := loc0.BBox
+	b := loc.BBox
+	return math.Abs(b.Llx-b0.Llx) <= tol &&
+		math.Abs(b.Lly-b0.Lly) <= tol &&
+		math.Abs(b.Urx-b0.Urx) <= tol &&
+		math.Abs(b.Ury-b0.Ury) <= tol
+}
+
+func l(o int, llx, lly, urx, ury float64, t string) TextComponent {
+	return TextComponent{Offset: o, BBox: r(llx, lly, urx, ury), Text: t}
+}
+
+func r(llx, lly, urx, ury float64) model.PdfRectangle {
+	return model.PdfRectangle{Llx: llx, Lly: lly, Urx: urx, Ury: ury}
 }
 
 func openPdfReader(t *testing.T, filename string, lazy bool) *model.PdfReader {
