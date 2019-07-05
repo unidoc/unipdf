@@ -867,6 +867,7 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		count:         to.e.textCount,
 		trm:           trm,
 		end:           end,
+		count:         to.e.textCount,
 	}
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
@@ -942,7 +943,7 @@ type TextMark struct {
 }
 
 // Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
-// text marks.
+// text marks.  !@#$ Remove?
 func (pt PageText) Marks() []TextMark {
 	marks := make([]TextMark, len(pt.marks))
 	for i, t := range pt.marks {
