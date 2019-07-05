@@ -1,5 +1,3 @@
-// +build integration
-
 /*
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.md', which is part of this source code package.
@@ -22,11 +20,11 @@ import (
 const (
 	// EnvDirectory is the environment variable that should contain directory path
 	// to the jbig2 encoded test files.
-	EnvDirectory = "JBIG2"
+	EnvDirectory = "UNIDOC_JBIG2_TESTDATA"
 )
 
 // TestDecodeJBIG2Files tries to decode the provided jbig2 files.
-// Requires environmental variable 'JBIG2' that contains the jbig2 testdata.
+// Requires environmental variable 'UNIDOC_JBIG2_TESTDATA' that contains the jbig2 testdata.
 func TestDecodeJBIG2Files(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))

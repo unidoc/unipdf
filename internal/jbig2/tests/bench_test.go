@@ -1,5 +1,3 @@
-// +build integration
-
 /*
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.md', which is part of this source code package.
@@ -21,12 +19,12 @@ import (
 )
 
 // BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding.
-// In order to run the benchmark run the DecodeJBIG2Files with the JBIG2 environmental variable.
+// In order to run the benchmark run the DecodeJBIG2Files with the UNIDOC_JBIG2_TESTDATA environmental variable.
 // Zipped files containing raw jbig2 streams shoud be created.
 func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 	b.Helper()
-	dirName := os.Getenv("JBIG2")
-	require.NotEmpty(b, dirName, "No Environment variable 'JBIG2' found")
+	dirName := os.Getenv("UNIDOC_JBIG2_TESTDATA")
+	require.NotEmpty(b, dirName, "No Environment variable 'UNIDOC_JBIG2_TESTDATA' found")
 
 	jbig2Files, err := readJBIGZippedFiles(dirName)
 	require.NoError(b, err)
