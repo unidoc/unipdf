@@ -584,7 +584,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 
 	// Copy inherited fields if missing.
 	inheritedFields := []core.PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
-	parent, hasParent := pDict.Get("Parent").(*core.PdfIndirectObject)
+	parent, hasParent := core.GetIndirect(pDict.Get("Parent"))
 	common.Log.Trace("Page Parent: %T (%v)", pDict.Get("Parent"), hasParent)
 	for hasParent {
 		common.Log.Trace("Page Parent: %T", parent)
