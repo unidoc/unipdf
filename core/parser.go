@@ -24,12 +24,12 @@ import (
 
 // Regular Expressions for parsing and identifying object signatures.
 var rePdfVersion = regexp.MustCompile(`%PDF-(\d)\.(\d)`)
-var reEOF = regexp.MustCompile("%%EOF")
+var reEOF = regexp.MustCompile("%%EOF?")
 var reXrefTable = regexp.MustCompile(`\s*xref\s*`)
 var reStartXref = regexp.MustCompile(`startx?ref\s*(\d+)`)
 var reNumeric = regexp.MustCompile(`^[\+-.]*([0-9.]+)`)
 var reExponential = regexp.MustCompile(`^[\+-.]*([0-9.]+)[eE][\+-.]*([0-9.]+)`)
-var reReference = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+R`)
+var reReference = regexp.MustCompile(`^\s*[-]*(\d+)\s+(\d+)\s+R`)
 var reIndirectObject = regexp.MustCompile(`(\d+)\s+(\d+)\s+obj`)
 var reXrefSubsection = regexp.MustCompile(`(\d+)\s+(\d+)\s*$`)
 var reXrefEntry = regexp.MustCompile(`(\d+)\s+(\d+)\s+([nf])\s*$`)
@@ -240,14 +240,21 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 				if err != nil {
 					return PdfObjectName(r.String()), err
 				}
-				parser.reader.Discard(3)
 
 				code, err := hex.DecodeString(string(hexcode[1:3]))
 				if err != nil {
 					common.Log.Debug("ERROR: Invalid hex following '#', continuing using literal - Output may be incorrect")
-					r.WriteByte('#') // Treat as literal '#' rather than hex code.
+
+					// Treat as literal '#' rather than hex code.
+					r.WriteByte('#')
+
+					// Discard just the '#' byte and continue parsing the name.
+					parser.reader.Discard(1)
 					continue
 				}
+
+				// Hex decoding succeeded. Safe to discard all peeked bytes.
+				parser.reader.Discard(3)
 				r.Write(code)
 			} else {
 				b, _ := parser.reader.ReadByte()
@@ -761,6 +768,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 	curObjNum := -1
 	secObjects := 0
 	insideSubsection := false
+	unmatchedContent := ""
 	for {
 		parser.skipSpaces()
 		_, err := parser.reader.Peek(1)
@@ -774,6 +782,16 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 		}
 
 		result1 := reXrefSubsection.FindStringSubmatch(txt)
+		if len(result1) == 0 {
+			// Try to match invalid subsection beginning lines from previously
+			// read, unidentified lines. Covers cases in which the object number
+			// and the number of entries in the subsection are not on the same line.
+			tryMatch := len(unmatchedContent) > 0
+			unmatchedContent += txt + "\n"
+			if tryMatch {
+				result1 = reXrefSubsection.FindStringSubmatch(unmatchedContent)
+			}
+		}
 		if len(result1) == 3 {
 			// Match
 			first, _ := strconv.Atoi(result1[1])
@@ -781,6 +799,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			curObjNum = first
 			secObjects = second
 			insideSubsection = true
+			unmatchedContent = ""
 			common.Log.Trace("xref subsection: first object: %d objects: %d", curObjNum, secObjects)
 			continue
 		}
@@ -794,6 +813,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			first, _ := strconv.ParseInt(result2[1], 10, 64)
 			gen, _ := strconv.Atoi(result2[2])
 			third := result2[3]
+			unmatchedContent = ""
 
 			if strings.ToLower(third) == "n" && first > 1 {
 				// Object in use in the file!  Load it.
@@ -822,6 +842,7 @@ func (parser *PdfParser) parseXrefTable() (*PdfObjectDictionary, error) {
 			curObjNum++
 			continue
 		}
+
 		if (len(txt) > 6) && (txt[:7] == "trailer") {
 			common.Log.Trace("Found trailer - %s", txt)
 			// Sometimes get "trailer << ...."
@@ -1514,6 +1535,11 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 				return &indirect, err
 			}
 			common.Log.Trace("Parsed object ... finished.")
+		} else if bb[0] == ']' {
+			// ']' not used as an array object ending marker, or array object
+			// terminated multiple times. Discarding the character.
+			common.Log.Debug("WARNING: ']' character not being used as an array ending marker. Skipping.")
+			parser.reader.Discard(1)
 		} else {
 			if bb[0] == 'e' {
 				lineStr, err := parser.readTextLine()
@@ -1737,6 +1763,9 @@ func (parser *PdfParser) IsEncrypted() (bool, error) {
 			return false, errors.New("trailer Encrypt object non dictionary")
 		}
 		dict = encDict
+	case *PdfObjectNull:
+		common.Log.Debug("Encrypt is a null object. File should not be encrypted.")
+		return false, nil
 	default:
 		return false, fmt.Errorf("unsupported type: %T", e)
 	}

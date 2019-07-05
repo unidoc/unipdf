@@ -409,6 +409,19 @@ func (w *PdfWriter) SetOCProperties(ocProperties core.PdfObject) error {
 	return nil
 }
 
+// SetNamedDestinations sets the Names entry in the PDF catalog.
+// See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
+func (w *PdfWriter) SetNamedDestinations(names core.PdfObject) error {
+	if names == nil {
+		return nil
+	}
+
+	common.Log.Trace("Setting catalog Names...")
+	w.catalog.Set("Names", names)
+	w.addObjects(names)
+	return nil
+}
+
 // SetOptimizer sets the optimizer to optimize PDF before writing.
 func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
 	w.optimizer = optimizer
@@ -532,11 +545,21 @@ func (w *PdfWriter) addObjects(obj core.PdfObject) error {
 
 // AddPage adds a page to the PDF file. The new page should be an indirect object.
 func (w *PdfWriter) AddPage(page *PdfPage) error {
+	procPage(page)
 	obj := page.ToPdfObject()
+
+	// Resolve references for page resources, if page reader is lazy.
+	if resources := page.Resources; resources != nil {
+		if r := page.reader; r != nil && r.isLazy {
+			err := r.traverseObjectData(resources.GetContainingPdfObject())
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	common.Log.Trace("==========")
 	common.Log.Trace("Appending to page list %T", obj)
-	procPage(page)
 
 	pageObj, ok := obj.(*core.PdfIndirectObject)
 	if !ok {
@@ -627,14 +650,16 @@ func procPage(p *PdfPage) {
 		return
 	}
 
-	// Add font as needed.
-	f := DefaultFont()
-	p.Resources.SetFontByName("UF1", f.ToPdfObject())
+	// Add font, if needed.
+	fontName := core.PdfObjectName("UF1")
+	if !p.Resources.HasFontByName(fontName) {
+		p.Resources.SetFontByName(fontName, DefaultFont().ToPdfObject())
+	}
 
 	var ops []string
 	ops = append(ops, "q")
 	ops = append(ops, "BT")
-	ops = append(ops, "/UF1 14 Tf")
+	ops = append(ops, fmt.Sprintf("/%s 14 Tf", fontName.String()))
 	ops = append(ops, "1 0 0 rg")
 	ops = append(ops, "10 10 Td")
 	s := "Unlicensed UniDoc - Get a license on https://unidoc.io"

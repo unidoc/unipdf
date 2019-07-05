@@ -24,7 +24,11 @@ var testTime = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // Old licenses had expiry that were not meant to expire. Only checking expiry
 // on licenses issued later than this date.
-var startCheckingExpiry = time.Date(2018, 8, 1, 0, 0, 0, 0, time.UTC)
+// If there is no expiry set, hard code it to expire at the end of the year.
+var noLicenseExpiry = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// After this date we have a UniPDF flag.
+var dateWithUniPDFFlag = time.Date(2019, 6, 6, 0, 0, 0, 0, time.UTC)
 
 type LicenseKey struct {
 	LicenseId    string     `json:"license_id"`
@@ -38,19 +42,23 @@ type LicenseKey struct {
 	CreatedBy    string     `json:"created_by"`
 	CreatorName  string     `json:"creator_name"`
 	CreatorEmail string     `json:"creator_email"`
+	UniPDF       bool       `json:"unipdf"`
+	UniOffice    bool       `json:"unioffice"`
+	Trial        bool       `json:"trial"` // For trial licenses.
 }
 
 func (k *LicenseKey) isExpired() bool {
-	if k.ExpiresAt == nil {
-		return false
+	return k.getExpiryDateToCompare().After(*k.ExpiresAt)
+}
+
+// Returns the date to compare against, for trial licenses it is the current time,
+// but for production it is the current release date.
+func (this *LicenseKey) getExpiryDateToCompare() time.Time {
+	if this.Trial {
+		return time.Now().UTC()
 	}
 
-	if k.CreatedAt.Before(startCheckingExpiry) {
-		return false
-	}
-
-	utcNow := time.Now().UTC()
-	return utcNow.After(*k.ExpiresAt)
+	return common.ReleasedAt
 }
 
 func (k *LicenseKey) Validate() error {
@@ -70,10 +78,12 @@ func (k *LicenseKey) Validate() error {
 		return fmt.Errorf("invalid license: Created At is invalid")
 	}
 
-	if k.ExpiresAt != nil {
-		if k.CreatedAt.After(*k.ExpiresAt) {
-			return fmt.Errorf("invalid license: Created At cannot be Greater than Expires At")
-		}
+	if k.ExpiresAt == nil {
+		k.ExpiresAt = &noLicenseExpiry
+	}
+
+	if k.CreatedAt.After(*k.ExpiresAt) {
+		return fmt.Errorf("invalid license: Created At cannot be Greater than Expires At")
 	}
 
 	if k.isExpired() {
@@ -86,6 +96,13 @@ func (k *LicenseKey) Validate() error {
 
 	if len(k.CreatorEmail) < 1 {
 		return fmt.Errorf("invalid license: Creator email")
+	}
+
+	if k.CreatedAt.After(dateWithUniPDFFlag) {
+		// Can only check this for new licenses as the old one dont have this flag.
+		if !k.UniPDF {
+			return fmt.Errorf("invalid license: This UniDoc key is invalid for UniPDF.")
+		}
 	}
 
 	return nil

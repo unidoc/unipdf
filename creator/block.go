@@ -295,6 +295,12 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 		return err
 	}
 
+	// Merge resources for blocks which were created from pages.
+	// Necessary for adding resources which do not appear in the block contents.
+	if err = mergeResources(blk.resources, page.Resources); err != nil {
+		return err
+	}
+
 	err = page.SetContentStreams([]string{string(ops.Bytes())}, core.NewFlateEncoder())
 	if err != nil {
 		return err
@@ -578,6 +584,28 @@ func mergeContents(contents *contentstream.ContentStreamOperations, resources *m
 		}
 
 		*contents = append(*contents, op)
+	}
+
+	return nil
+}
+
+// mergeResources adds all resources from src which are missing from dst.
+// For now, the method only merges colorspaces.
+func mergeResources(src, dst *model.PdfPageResources) error {
+	// Merge colorspaces.
+	colorspaces, _ := src.GetColorspaces()
+	if colorspaces != nil && len(colorspaces.Colorspaces) > 0 {
+		for name, colorspace := range colorspaces.Colorspaces {
+			colorspaceName := *core.MakeName(name)
+			if dst.HasColorspaceByName(colorspaceName) {
+				continue
+			}
+
+			err := dst.SetColorspaceByName(colorspaceName, colorspace)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

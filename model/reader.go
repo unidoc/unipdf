@@ -283,7 +283,8 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	outlineRoot, ok := outlineRootObj.(*core.PdfIndirectObject)
 	if !ok {
 		if _, ok := core.GetDict(outlineRootObj); !ok {
-			return nil, errors.New("outline root should be an indirect object")
+			common.Log.Debug("Invalid outline root - skipping")
+			return nil, nil
 		}
 
 		common.Log.Debug("Outline root is a dict. Should be an indirect object")
@@ -337,10 +338,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			if !core.IsNullObject(firstObj) {
 				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
 				if err != nil {
-					return nil, nil, err
+					common.Log.Debug("DEBUG: could not build outline item tree: %v. Skipping node children.", err)
+				} else {
+					outlineItem.First = first
+					outlineItem.Last = last
 				}
-				outlineItem.First = first
-				outlineItem.Last = last
 			}
 		}
 
@@ -350,10 +352,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
 				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
 				if err != nil {
-					return nil, nil, err
+					common.Log.Debug("DEBUG: could not build outline tree for Next node: %v. Skipping node.", err)
+				} else {
+					outlineItem.Next = next
+					return &outlineItem.PdfOutlineTreeNode, last, nil
 				}
-				outlineItem.Next = next
-				return &outlineItem.PdfOutlineTreeNode, last, nil
 			}
 		}
 
@@ -374,10 +377,11 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull && firstObjDirect != nil {
 			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
 			if err != nil {
-				return nil, nil, err
+				common.Log.Debug("DEBUG: could not build outline tree: %v. Skipping node children.", err)
+			} else {
+				outline.First = first
+				outline.Last = last
 			}
-			outline.First = first
-			outline.Last = last
 		}
 	}
 
@@ -501,7 +505,13 @@ func (r *PdfReader) buildPageList(node *core.PdfIndirectObject, parent *core.Pdf
 
 	objType, ok := (*nodeDict).Get("Type").(*core.PdfObjectName)
 	if !ok {
-		return errors.New("node missing Type (Required)")
+		if nodeDict.Get("Kids") == nil {
+			return errors.New("node missing Type (Required)")
+		}
+
+		common.Log.Debug("ERROR: node missing Type, but has Kids. Assuming Pages node.")
+		objType = core.MakeName("Pages")
+		nodeDict.Set("Type", objType)
 	}
 	common.Log.Trace("buildPageList node type: %s (%+v)", *objType, node)
 	if *objType == "Page" {
@@ -719,6 +729,25 @@ func (r *PdfReader) GetOCProperties() (core.PdfObject, error) {
 	// Should be pretty safe. Should not be referencing to pages or
 	// any large structures.  Local structures and references
 	// to OC Groups.
+	if !r.isLazy {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return obj, nil
+}
+
+// GetNamedDestinations returns the Names entry in the PDF catalog.
+// See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
+func (r *PdfReader) GetNamedDestinations() (core.PdfObject, error) {
+	obj := core.ResolveReference(r.catalog.Get("Names"))
+	if obj == nil {
+		return nil, nil
+	}
+
+	// Resolve references.
 	if !r.isLazy {
 		err := r.traverseObjectData(obj)
 		if err != nil {
