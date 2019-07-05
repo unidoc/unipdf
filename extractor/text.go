@@ -737,7 +737,12 @@ func (to *textObject) renderText(data []byte) error {
 			trm,
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
-			font)
+			font,
+			to.state.tc)
+		original, ok := font.Encoder().CharcodeToRune(code)
+		if ok {
+			mark.original = string(original)
+		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
@@ -775,7 +780,8 @@ func (to *textObject) moveTo(tx, ty float64) {
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	text          string             // The text.
+	text          string             // The text (decoded via ToUnicode).
+	original      string             // Original text (decoded).
 	bbox          model.PdfRectangle // Text bounding box.
 	orient        int                // The text orientation in degrees. This is the current TRM rounded to 10°.
 	orientedStart transform.Point    // Left of text in orientation where text is horizontal.
@@ -783,6 +789,8 @@ type textMark struct {
 	height        float64            // Text height.
 	spaceWidth    float64            // Best guess at the width of a space in the font the text was rendered with.
 	font          *model.PdfFont     // The current font.
+	fontsize      float64            // !@#$ Should this be exposed in TextComponent?
+	charspacing   float64            // !@#$ Should this be exposed in TextComponent?
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
@@ -792,7 +800,7 @@ type textMark struct {
 // and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
 // space in the font the text is rendered in device coordinates.
 func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
-	spaceWidth float64, font *model.PdfFont) textMark {
+	spaceWidth float64, font *model.PdfFont, charspacing float64) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -824,9 +832,11 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		height:        math.Abs(height),
 		spaceWidth:    spaceWidth,
 		font:          font,
-		count:         to.e.textCount,
+		fontsize:      to.state.tfs,
+		charspacing:   charspacing,
 		trm:           trm,
 		end:           end,
+		count:         to.e.textCount,
 	}
 	if !isTextSpace(t.text) && t.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. t=%s\n\t=%#v", t, t)
@@ -895,7 +905,7 @@ type TextMark struct {
 }
 
 // Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
-// text marks.
+// text marks.  !@#$ Remove?
 func (pt PageText) Marks() []TextMark {
 	marks := make([]TextMark, len(pt.marks))
 	for i, t := range pt.marks {
@@ -957,10 +967,12 @@ func (pt PageText) ToText() string {
 //   The bounding box of `substring` on the PDF page is the union of the TextComponent.BBox's with
 //     start <= TextComponent.Offset < end
 type TextComponent struct {
-	Offset int
-	BBox   model.PdfRectangle
-	Font   *model.PdfFont
-	Text   string
+	Offset   int
+	Text     string
+	Original string
+	BBox     model.PdfRectangle
+	Font     *model.PdfFont
+	FontSize float64
 }
 
 // TextComponents returns a TextComponent for every text mark in `pt`. This is the publically
@@ -968,7 +980,13 @@ type TextComponent struct {
 func (pt PageText) TextComponents() []TextComponent {
 	marks := make([]TextComponent, len(pt.marks))
 	for i, t := range pt.marks {
-		marks[i] = TextComponent{Text: t.text, BBox: t.bbox, Font: t.font}
+		marks[i] = TextComponent{
+			Text:     t.text,
+			Original: t.original,
+			BBox:     t.bbox,
+			Font:     t.font,
+			FontSize: t.fontsize,
+		}
 	}
 	return marks
 }
@@ -980,12 +998,12 @@ func (t TextComponent) String() string {
 		b.Llx, b.Lly, b.Urx, b.Ury, t.Font, t.Text)
 }
 
-// ToTextLocation returns the contents of `pt` as
+// TextByComponents returns the contents of `pt` as
 // 1) the text on the PDF page that `pt` describes.
-// 2) a slice of TextComponent sorted by their order in the extracted text.
+// 2) a slice of TextComponents sorted by their order in the extracted text.
 //    The comments above the TextComponent definition describe how to use the []TextComponent to
 //    maps substrings of the page text to locations on the PDF page.
-func (pt PageText) ToTextLocation() (string, []TextComponent) {
+func (pt PageText) TextByComponents() (string, []TextComponent) {
 	fontHeight := pt.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
@@ -1020,13 +1038,13 @@ func (pt PageText) ToTextLocation() (string, []TextComponent) {
 	return text, locations
 }
 
-// GetBBox returns the BBox of the element in `index` with Offset `offset`.
-func GetBBox(index []TextComponent, offset int) (model.PdfRectangle, bool) {
-	i := sort.Search(len(index), func(i int) bool { return index[i].Offset >= offset })
-	return index[i].BBox, true
+// GetBBox returns the BBox of the element in `locations` with Offset `offset`.
+func GetBBox(locations []TextComponent, offset int) (model.PdfRectangle, bool) {
+	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
+	return locations[i].BBox, true
 }
 
-// sortPosition sorts a text list by its elements' position on a page.
+// sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (pt *PageText) sortPosition(tol float64) {
