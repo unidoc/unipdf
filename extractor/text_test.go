@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
 	"golang.org/x/text/unicode/norm"
@@ -30,7 +31,7 @@ var forceTest = os.Getenv("UNIDOC_EXTRACT_FORCETEST") == "1"
 var corpusFolder = os.Getenv("UNIDOC_EXTRACT_TESTDATA")
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelError))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelInfo))
 	if flag.Lookup("test.v") != nil {
 		isTesting = true
 	}
@@ -309,7 +310,8 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 	return numPages, pageText
 }
 
-// TestTextLocations tests locations of text marks
+// TestTextLocations tests locations of text marks.
+// TODO: Enable lazy testing.
 func TestTextLocations(t *testing.T) {
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
@@ -321,6 +323,7 @@ func TestTextLocations(t *testing.T) {
 	}
 }
 
+// textLocTest is a text extraction locations test.
 type textLocTest struct {
 	filename string
 	numPages int
@@ -350,15 +353,55 @@ var textCases = []textLocTest{
 					"THING FOUR", "$667",
 				},
 				locations: []TextComponent{
-					l(1, 197.2, 725.2, 231.9, 773.2, "R"),
-					l(2, 231.9, 725.2, 245.2, 773.2, "I"),
-					l(3, 245.2, 725.2, 279.9, 773.2, "C"),
-					l(4, 279.9, 725.2, 312.0, 773.2, "E"),
-					l(5, 312.0, 725.2, 325.3, 773.2, " "),
-					l(6, 325.3, 725.2, 354.6, 773.2, "L"),
-					l(7, 354.6, 725.2, 368.0, 773.2, "I"),
-					l(8, 368.0, 725.2, 400.0, 773.2, "S"),
-					l(9, 400.0, 725.2, 429.4, 773.2, "T"),
+					l(1, "R", 197.2, 725.2, 231.9, 773.2),
+					l(2, "I", 231.9, 725.2, 245.2, 773.2),
+					l(3, "C", 245.2, 725.2, 279.9, 773.2),
+					l(4, "E", 279.9, 725.2, 312.0, 773.2),
+					l(5, " ", 312.0, 725.2, 325.3, 773.2),
+					l(6, "L", 325.3, 725.2, 354.6, 773.2),
+					l(7, "I", 354.6, 725.2, 368.0, 773.2),
+					l(8, "S", 368.0, 725.2, 400.0, 773.2),
+					l(9, "T", 400.0, 725.2, 429.4, 773.2),
+				},
+			},
+		},
+	},
+	textLocTest{
+		filename: "thanh.pdf",
+		numPages: 6,
+		contents: map[int]pageContents{
+			1: pageContents{
+				terms: []string{
+					"result is a set of Type 1 fonts that is similar to the Blue Sky fonts",
+					"provide Vietnamese letters with the same quality of outlines and hints",
+					"Vietnamese letters and VNR fonts",
+					"Vietnamese accents can be divided into three the Czech and Polish version of CMR fonts",
+					"kinds of diacritic marks: tone, vowel and consonant. about 2 years until the ﬁrst version",
+				},
+				locations: []TextComponent{
+					l(0, "M", 72, 720, 85, 734.5),
+					l(1, "a", 85, 720, 92, 734.5),
+					l(2, "k", 92, 720, 99.5, 734.5),
+					l(3, "i", 99.5, 720, 103, 734.5),
+					l(4, "n", 103, 720, 111, 734.5),
+					l(5, "g", 111, 720, 118, 734.5),
+				},
+			},
+			2: pageContents{
+				terms: []string{
+					"number of glyphs needed for each font is 47",
+					"which 22 are Vietnamese accents and letters.",
+					"I would like to point out that I am not a type",
+					"shows all the glyphs that need to be converted",
+					"designer and therefore the aesthetic aspect of",
+					"to Type 1 format.",
+				},
+				locations: []TextComponent{
+					l(51, "w", 211.5, 720, 218.5, 730),
+					l(52, "o", 218.5, 720, 223.5, 730),
+					l(53, "u", 223.5, 720, 229, 730),
+					l(54, "l", 229, 720, 231.5, 730),
+					l(55, "d", 231.5, 720, 237.5, 730),
 				},
 			},
 		},
@@ -388,7 +431,7 @@ func (e textLocTest) test(t *testing.T, lazy bool) {
 		if err != nil {
 			t.Fatalf("GetPage failed. %s err=%v", pageDesc, err)
 		}
-		c.test(t, desc, page)
+		c.test(t, pageDesc, page)
 	}
 }
 
@@ -404,8 +447,14 @@ func (c pageContents) test(t *testing.T, desc string, page *model.PdfPage) {
 	}
 	text, locations := pageText.TextByComponents()
 
+	common.Log.Debug("text=>>>%s<<<\n", text)
+	common.Log.Debug("locations=%d %q", len(locations), desc)
+	for i, loc := range locations {
+		common.Log.Debug("%6d: %d %q %v", i, loc.Offset, loc.Text, loc.BBox)
+	}
+
 	for i, term := range c.terms {
-		common.Log.Info("%d: %q", i, term)
+		common.Log.Debug("%d: %q", i, term)
 		if !strings.Contains(text, term) {
 			t.Fatalf("testPdf: text doesn't contain %q. %s", term, desc)
 		}
@@ -413,7 +462,7 @@ func (c pageContents) test(t *testing.T, desc string, page *model.PdfPage) {
 
 	locMap := locationsMap(locations)
 	for i, loc := range c.locations {
-		common.Log.Info("%d: %v", i, loc)
+		common.Log.Debug("%d: %v", i, loc)
 		if !contains(locMap, loc) {
 			t.Fatalf("testPdf: locations doesn't contain %v. %s", loc, desc)
 		}
@@ -446,7 +495,7 @@ func contains(locMap map[int]TextComponent, loc0 TextComponent) bool {
 		math.Abs(b.Ury-b0.Ury) <= tol
 }
 
-func l(o int, llx, lly, urx, ury float64, t string) TextComponent {
+func l(o int, t string, llx, lly, urx, ury float64) TextComponent {
 	return TextComponent{Offset: o, BBox: r(llx, lly, urx, ury), Text: t}
 }
 
