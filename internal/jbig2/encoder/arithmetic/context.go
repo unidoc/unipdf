@@ -1,101 +1,63 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package arithmetic
 
-import (
-	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
-	"io"
-)
-
-// EncContext is the jbig2 arithmetic encoder context
-type EncContext struct {
-	c     uint32
-	a     uint16
-	ct, b uint8
-	bp    int
-
-	// the list of output chunks, not including the current one
-	outputChunks [][]uint8
-
-	// current output chunk
-	outbuf []uint8
-
-	// number of bytes used in outbuf
-	outbufUsed int
-
-	context []uint8
-
-	intctx [13][512]uint8
-
-	iaidctx uint8
-}
-
-// Init initializaes a new context
-func (c *EncContext) Init() {
-
-}
-
-// Flush all the data stored in a context
-func (c *EncContext) Flush() {
-
-}
-
-// Reset the arithmetic coder back to a init state
-func (c *EncContext) Reset() {
-
-}
-
-// Final flush any remaining arithmetic encoder context to the output
-func (c *EncContext) Final() {
-
-}
-
-// returns the number of ybtes of output in the given context
-func (c *EncContext) datasize() uint {
-	return 0
-}
-
-func (c *EncContext) toBuffer(w io.Writer) error {
-	return nil
-}
-
-func (c *EncContext) encodeInteger(proc encClass, value int) {
-
-}
-
-func (c *EncContext) encodeIAID(len, value int) {
-
-}
-
-func (c *EncContext) encodeOOB(proc encClass) {
-
-}
-
-// EncodeImage a bitmap with the arithmetic encoder
-// duplicateLineRemoval if true TPGD is used
-func EncodeImage(ctx *EncContext, data *bitmap.Bitmap, duplicateLineRemoval bool) {
-
-}
-
-// EncodeBitImage encodes packed data. Designed for the Leptonica's 1bpp packed format image.
-// Each row is some number of 32 bit words
-func EncodeBitImage(ctx *EncContext, data *bitmap.Bitmap, mx, my int, duplicateLineRemoval bool) {
-
-}
-
-type encClass int
-
-// encoding classes
 const (
-	IAAI encClass = iota
-	IADH
-	IADS
-	IADT
-	IADW
-	IAEX
-	IAFS
-	IAIT
-	IARDH
-	IARDW
-	IARDX
-	IARDY
-	IARI
+	maxCtx           = 65536
+	outputBufferSize = 20 * 1024
 )
+
+// stateTable is the standard state table from the
+// table defined in Table E.1 of the standard.
+var stateTable = [][3]int{
+	{0x5601, 1, 1},
+	{0x3401, 2, 6},
+	{0x1801, 3, 9},
+	{0x0AC1, 4, 12},
+	{0x0521, 5, 29},
+	{0x0221, 38, 33},
+	{0x5601, 7, 6},
+	{0x5401, 8, 14},
+	{0x4801, 9, 14},
+	{0x3801, 10, 14},
+	{0x3001, 11, 17},
+	{0x2401, 12, 18},
+	{0x1C01, 13, 20},
+	{0x1601, 29, 21},
+	{0x5601, 15, 14},
+	{0x5401, 16, 14},
+	{0x5101, 17, 15},
+	{0x4801, 18, 16},
+	{0x3801, 19, 17},
+	{0x3401, 20, 18},
+	{0x3001, 21, 19},
+	{0x2801, 22, 19},
+	{0x2401, 23, 20},
+	{0x2201, 24, 21},
+	{0x1C01, 25, 22},
+	{0x1801, 26, 23},
+	{0x1601, 27, 24},
+	{0x1401, 28, 25},
+	{0x1201, 29, 26},
+	{0x1101, 30, 27},
+	{0x0AC1, 31, 28},
+	{0x09C1, 32, 29},
+	{0x08A1, 33, 30},
+	{0x0521, 34, 31},
+	{0x0441, 35, 32},
+	{0x02A1, 36, 33},
+	{0x0221, 37, 34},
+	{0x0141, 38, 35},
+	{0x0111, 39, 36},
+	{0x0085, 40, 37},
+	{0x0049, 41, 38},
+	{0x0025, 42, 39},
+	{0x0015, 43, 40},
+	{0x0009, 44, 41},
+	{0x0005, 45, 42},
+	{0x0001, 45, 43},
+	{0x5601, 46, 46},
+}
