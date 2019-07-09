@@ -138,6 +138,26 @@ func TestTextExtractionFiles(t *testing.T) {
 	}
 }
 
+// TestTextLocations tests locations of text marks.
+// TODO: Enable lazy testing.
+func TestTextLocations(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+	lazy := false
+	for _, e := range textCases {
+		e.testTextComponent(t, lazy)
+	}
+}
+
+// TestLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
+// TODO: Enable lazy testing.
+// func TestLocationsFiles(t *testing.T) {
+// 	testLocationsFiles(t, false)
+// 	// testLocationsFiles(t, true)
+// }
+
 // fileExtractionTests are the PDFs and texts we are looking for on specified pages.
 var fileExtractionTests = []struct {
 	filename         string
@@ -310,19 +330,6 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 	return numPages, pageText
 }
 
-// TestTextLocations tests locations of text marks.
-// TODO: Enable lazy testing.
-func TestTextLocations(t *testing.T) {
-	if len(corpusFolder) == 0 && !forceTest {
-		t.Log("Corpus folder not set - skipping")
-		return
-	}
-	lazy := false
-	for _, e := range textCases {
-		e.testTextComponent(t, lazy)
-	}
-}
-
 // textLocTest is a text extraction locations test.
 type textLocTest struct {
 	filename string
@@ -330,6 +337,7 @@ type textLocTest struct {
 	contents map[int]pageContents
 }
 
+// pageNums returns the (1-offsert) page numbers that are to be tested in `e`.
 func (e textLocTest) pageNums() []int {
 	var nums []int
 	for pageNum := range e.contents {
@@ -343,21 +351,25 @@ func (e textLocTest) String() string {
 	return fmt.Sprintf("{TEXTLOCTEST: filename=%q}", e.filename)
 }
 
+// pageContents are some things that we are expected to find in the text extracted from a PDF page
+// by TextByComponents().
 type pageContents struct {
-	terms     []string
-	locations []TextComponent
-	matches   map[string]model.PdfRectangle
+	terms     []string                      // Substrings of the extracted text.
+	locations []TextComponent               // TextComponents in the extracted text.
+	termBBox  map[string]model.PdfRectangle // {term: bounding box of term on PDF page}
 }
 
+// matchTerms returns the keys of `c`.termBBox.
 func (c pageContents) matchTerms() []string {
 	var terms []string
-	for w := range c.matches {
+	for w := range c.termBBox {
 		terms = append(terms, w)
 	}
 	sort.Strings(terms)
 	return terms
 }
 
+// testCases are the extracted text location test cases. All coordinates are multiple of 0.5 points.
 var textCases = []textLocTest{
 	textLocTest{
 		filename: "prop-price-list-2017.pdf",
@@ -383,8 +395,8 @@ var textCases = []textLocTest{
 					l(8, "S", 368.0, 725.2, 400.0, 773.2),
 					l(9, "T", 400.0, 725.2, 429.4, 773.2),
 				},
-				matches: map[string]model.PdfRectangle{
-					"THING ONE": r(72, 534.5, 197, 558.5),
+				termBBox: map[string]model.PdfRectangle{
+					"THING ONE": r(72.0, 534.5, 197.0, 558.5),
 				},
 			},
 		},
@@ -394,18 +406,14 @@ var textCases = []textLocTest{
 		numPages: 2,
 		contents: map[int]pageContents{
 			1: pageContents{
-				terms: []string{
-					"global public good",
-					"international",
-				},
 				locations: []TextComponent{
-					l(3602, "W", 152.5, 185.5, 163, 196.5),
-					l(3603, "T", 163, 185.5, 169.5, 196.5),
+					l(3602, "W", 152.5, 185.5, 163.0, 196.5),
+					l(3603, "T", 163.0, 185.5, 169.5, 196.5),
 					l(3604, "O", 169.5, 185.5, 177.5, 196.5),
 				},
-				matches: map[string]model.PdfRectangle{
-					"global public good": r(244, 398.5, 332.5, 410),
-					"international":      r(323.5, 611, 377.5, 622),
+				termBBox: map[string]model.PdfRectangle{
+					"global public good": r(244.0, 398.5, 332.5, 410.0),
+					"international":      r(323.5, 611.0, 377.5, 622.0),
 				},
 			},
 		},
@@ -422,8 +430,7 @@ var textCases = []textLocTest{
 					"Vietnamese accents can be divided into three the Czech and Polish version of CMR fonts",
 					"kinds of diacritic marks: tone, vowel and consonant. about 2 years until the ﬁrst version",
 				},
-
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"the Blue Sky fonts":                       r(358.0, 532.5, 439.0, 542.5),
 					"Vietnamese letters with the same quality": r(165.5, 520.5, 344.5, 530.5),
 				},
@@ -443,7 +450,7 @@ var textCases = []textLocTest{
 					l(288, "k", 345.5, 674.5, 350.5, 684.5),
 					l(289, "e", 350.5, 674.5, 355.0, 684.5),
 				},
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"glyphs needed for each font": r(382.0, 443.0, 501.0, 453.0),
 					"22 are Vietnamese accents":   r(343.5, 431.0, 461.0, 441.0),
 				},
@@ -472,10 +479,31 @@ var textCases = []textLocTest{
 					l(455, "c", 314.5, 521.0, 320.5, 533.0),
 					l(456, "h", 320.5, 521.0, 327.0, 533.0),
 				},
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"Österreich": r(272.0, 521.0, 327.0, 533.0), "Johann Strauß": r(400.5, 521.0, 479.5, 533.0),
 					"Azərbaycan": r(272.0, 490.5, 335.0, 502.5), "Vaqif Səmədoğlu": r(400.5, 490.5, 492.0, 502.5),
 					"Азәрбајҹан": r(272.0, 460.5, 334.5, 472.5), "Вагиф Сәмәдоғлу": r(400.5, 460.5, 501.0, 472.5),
+				},
+			},
+		},
+	},
+	textLocTest{
+		filename: "AF+handout+scanned.pdf",
+		numPages: 3,
+		contents: map[int]pageContents{
+			1: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"reserved": r(505.0, 488.5, 538.5, 497.0),
+				},
+			},
+			2: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"atrium": r(414.5, 113.5, 435.5, 121.0),
+				},
+			},
+			3: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"treatment": r(348.0, 302.0, 388.0, 311.5),
 				},
 			},
 		},
@@ -497,7 +525,7 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	}
 	if n != e.numPages {
 		t.Fatalf("Wrong number of pages. Expected %d. Got %d. %s",
-			n, e.numPages, desc)
+			e.numPages, n, desc)
 	}
 
 	for _, pageNum := range e.pageNums() {
@@ -554,10 +582,10 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 
 	// 4) Check that longer terms are matched and found in their expected locations.
 	for _, term := range c.matchTerms() {
-		expectedBBox := c.matches[term]
+		expectedBBox := c.termBBox[term]
 		bbox, ok := getBBox(text, locations, term)
 		if !ok {
-			t.Fatalf("locations doesn't contain ter, %q. %s", term, desc)
+			t.Fatalf("locations doesn't contain term %q. %s", term, desc)
 		}
 		if !sameBBox(expectedBBox, bbox) {
 			t.Fatalf("bbox is wrong - %s\n"+
@@ -565,6 +593,59 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 				"\texpected: %v\n"+
 				"\t     got: %v",
 				desc, term, expectedBBox, bbox)
+		}
+	}
+}
+
+// TestLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
+// If `lazy` is true then PDFs are loaded lazily.
+func testLocationsFiles(t *testing.T, lazy bool) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+
+	pattern := filepath.Join(corpusFolder, "*.pdf")
+	pathList, err := filepath.Glob(pattern)
+	if err != nil {
+		t.Fatalf("Glob(%q) failed. err=%v", pattern, err)
+	}
+	for i, filename := range pathList {
+		pdfReader := openPdfReader(t, filename, lazy)
+		numPages, err := pdfReader.GetNumPages()
+		if err != nil {
+			continue
+			t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
+		}
+		common.Log.Info("%4d of %d: %q", i, len(pathList), filename)
+
+		for pageNum := 1; pageNum < numPages; pageNum++ {
+			desc := fmt.Sprintf("filename=%q pageNum=%d", filename, pageNum)
+			page, err := pdfReader.GetPage(pageNum)
+			if err != nil {
+				t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
+			}
+			ex, err := New(page)
+			if err != nil {
+				t.Fatalf("extractor.New failed. %s err=%v", desc, err)
+			}
+			pageText, _, _, err := ex.ExtractPageText()
+			if err != nil {
+				if err == model.ErrType3FontNotSupported ||
+					err == model.ErrFontNotSupported ||
+					err == model.ErrRequiredAttributeMissing ||
+					err.Error() == "unsupported font encoding" {
+					continue
+				}
+				t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
+			}
+			text, locations := pageText.TextByComponents()
+
+			//  Check that locationsIndex() finds TextComponent's in `locations` corresponding to
+			//   some substrings of `text`.
+			//   We do this before testing getBBox() below so can narrow down why getBBox() has failed
+			//   if it fails.
+			testLocationsIndices(t, text, locations)
 		}
 	}
 }
@@ -581,10 +662,13 @@ func testLocationsIndices(t *testing.T, text string, locations []TextComponent) 
 	}
 }
 
-// testLocationsIndices check that locationsIndex() finds TextComponent's in `locations`
+// testLocationsIndex check that locationsIndex() finds TextComponent's in `locations`
 // testLocationsIndex to some substrings of `text` with length `n`.
 func testLocationsIndex(t *testing.T, text string, locations []TextComponent, n int) {
-	common.Log.Debug("testLocationsIndex: n=%d", n)
+	if len(text) < 2 {
+		return
+	}
+	common.Log.Debug("testLocationsIndex: text=%d n=%d", len(text), n)
 	runes := []rune(text)
 	if n > len(runes)/2 {
 		n = len(runes) / 2
@@ -642,6 +726,7 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expe
 // getBBox returns the minimum bounding box around the elements in `locations` that correspond to
 // the first instance of `term` in `text`, where `text` and `locations` are the extracted text
 // returned by TextByComponents().
+// NOTE: This is how you would use TextByComponents in an application.
 func getBBox(text string, locations []TextComponent, term string) (model.PdfRectangle, bool) {
 	var bbox model.PdfRectangle
 	ofs0 := indexRunes(text, term)
