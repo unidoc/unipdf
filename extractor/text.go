@@ -937,13 +937,14 @@ func (pt PageText) String() string {
 
 // TextMark is the public view of a textMark.
 // Currently this is the text contents and a bounding box.
+// TODO(peterwilliams97): Do we still need TextMark? It is a subset of TextComponent.
 type TextMark struct {
 	BBox model.PdfRectangle
 	Text string
 }
 
 // Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
-// text marks.  !@#$ Remove?
+// text marks.
 func (pt PageText) Marks() []TextMark {
 	marks := make([]TextMark, len(pt.marks))
 	for i, t := range pt.marks {
