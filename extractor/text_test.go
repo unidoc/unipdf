@@ -1078,3 +1078,12 @@ func (l *markupList) saveOutputPdf() {
 		l.t.Fatalf("WriteFile failed. metaPath=%q err=%v", metaPath, err)
 	}
 }
+
+// rectEquals returns true if `b1` and `b2` corners are within `tol` of each other.
+// NOTE: All the coordinates in this source file are in points.
+func rectEquals(b1, b2 model.PdfRectangle) bool {
+	return math.Abs(b1.Llx-b2.Llx) <= tol &&
+		math.Abs(b1.Lly-b2.Lly) <= tol &&
+		math.Abs(b1.Urx-b2.Urx) <= tol &&
+		math.Abs(b1.Ury-b2.Ury) <= tol
+}
