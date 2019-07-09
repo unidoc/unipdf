@@ -276,8 +276,7 @@ func testExtractFile(t *testing.T, filename string, pageTerms map[int][]string) 
 	// testExtractFileOptions(t, filename, pageTerms, true)
 }
 
-func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]string,
-	lazy bool) {
+func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]string, lazy bool) {
 	filepath := filepath.Join(corpusFolder, filename)
 	exists := checkFileExists(filepath)
 	if !exists {
@@ -575,7 +574,7 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 		if !ok {
 			t.Fatalf("locations doesn't contain term %q. %s", term, desc)
 		}
-		if !sameBBox(expectedBBox, bbox) {
+		if !rectEquals(expectedBBox, bbox) {
 			t.Fatalf("bbox is wrong - %s\n"+
 				"\t    term: %q\n"+
 				"\texpected: %v\n"+
@@ -585,7 +584,7 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 	}
 }
 
-// TestLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
+// testLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
 // If `lazy` is true then PDFs are loaded lazily.
 func testLocationsFiles(t *testing.T, lazy bool) {
 	if len(corpusFolder) == 0 && !forceTest {
@@ -602,7 +601,6 @@ func testLocationsFiles(t *testing.T, lazy bool) {
 		pdfReader := openPdfReader(t, filename, lazy)
 		numPages, err := pdfReader.GetNumPages()
 		if err != nil {
-			continue
 			t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
 		}
 		common.Log.Info("%4d of %d: %q", i, len(pathList), filename)
@@ -614,11 +612,6 @@ func testLocationsFiles(t *testing.T, lazy bool) {
 				t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
 			}
 			text, locations := textByComponents(t, desc, page)
-
-			//  Check that locationsIndex() finds TextComponent's in `locations` corresponding to
-			//   some substrings of `text`.
-			//   We do this before testing getBBox() below so can narrow down why getBBox() has failed
-			//   if it fails.
 			testLocationsIndices(t, text, locations)
 		}
 	}
@@ -689,7 +682,7 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expe
 			"\t     got %v",
 			expectedLoc.Text, loc.Text, desc, expectedLoc, loc)
 	}
-	if !sameBBox(expectedLoc.BBox, loc.BBox) {
+	if !rectEquals(expectedLoc.BBox, loc.BBox) {
 		t.Fatalf("Bounding boxes doesn't match  - %s\n"+
 			"\texpected %v\n"+
 			"\t     got %v",
@@ -730,7 +723,7 @@ func getBBox(text string, locations []TextComponent, term string) (model.PdfRect
 		if i == i0 {
 			bbox = loc.BBox
 		} else {
-			bbox = union(bbox, loc.BBox)
+			bbox = rectUnion(bbox, loc.BBox)
 		}
 		common.Log.Debug("i=%d text=%v bbox=%.1f loc=%v", i, []rune(loc.Text), bbox, loc)
 	}
@@ -783,13 +776,6 @@ func locationsMap(locations []TextComponent) map[int]TextComponent {
 		locMap[loc.Offset] = loc
 	}
 	return locMap
-}
-
-func sameBBox(b0, b model.PdfRectangle) bool {
-	return math.Abs(b.Llx-b0.Llx) <= tol &&
-		math.Abs(b.Lly-b0.Lly) <= tol &&
-		math.Abs(b.Urx-b0.Urx) <= tol &&
-		math.Abs(b.Ury-b0.Ury) <= tol
 }
 
 // tol is the tolerance for matching coordinates. We are specifying coordinates to the nearest 0.5
@@ -886,12 +872,21 @@ func sortedKeys(m map[int][]string) []int {
 	return keys
 }
 
-// union returns the smallest axis-alingned rectangle that contains `b1` and `b2`.
-func union(b1, b2 model.PdfRectangle) model.PdfRectangle {
+// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
+func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 	return model.PdfRectangle{
 		Llx: math.Min(b1.Llx, b2.Llx),
 		Lly: math.Min(b1.Lly, b2.Lly),
 		Urx: math.Max(b1.Urx, b2.Urx),
 		Ury: math.Max(b1.Ury, b2.Ury),
 	}
+}
+
+// rectEquals returns true if `b1` and `b2` corners are within `tol` of each other.
+// NOTE: All the coordinates in this source file are in points.
+func rectEquals(b1, b2 model.PdfRectangle) bool {
+	return math.Abs(b1.Llx-b2.Llx) <= tol &&
+		math.Abs(b1.Lly-b2.Lly) <= tol &&
+		math.Abs(b1.Urx-b2.Urx) <= tol &&
+		math.Abs(b1.Ury-b2.Ury) <= tol
 }
