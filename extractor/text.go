@@ -789,8 +789,8 @@ type textMark struct {
 	height        float64            // Text height.
 	spaceWidth    float64            // Best guess at the width of a space in the font the text was rendered with.
 	font          *model.PdfFont     // The current font.
-	fontsize      float64            // !@#$ Should this be exposed in TextComponent?
-	charspacing   float64            // !@#$ Should this be exposed in TextComponent?
+	fontsize      float64            // TODO (peterwilliams97: Should this be exposed in TextComponent?
+	charspacing   float64            // TODO (peterwilliams97: Should this be exposed in TextComponent?
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
@@ -899,13 +899,14 @@ func (pt PageText) length() int {
 
 // TextMark is the public view of a textMark.
 // Currently this is the text contents and a bounding box.
+// TODO(peterwilliams97): Do we still need TextMark? It is a subset of TextComponent.
 type TextMark struct {
 	BBox model.PdfRectangle
 	Text string
 }
 
 // Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
-// text marks.  !@#$ Remove?
+// text marks.
 func (pt PageText) Marks() []TextMark {
 	marks := make([]TextMark, len(pt.marks))
 	for i, t := range pt.marks {
@@ -959,7 +960,8 @@ func (pt PageText) ToText() string {
 // properties of the rendered text such the font.
 // `Offset` is the offset of the start of the textMark.text in extracted text.
 // `BBox` is the bounding box of the textMark.
-// `Text` is the extracted text.
+// `Text` is the extracted text
+// `Meta` is set true for characters that don't appear in the input PDF.
 // You can find the location of substrings in the extracted text as follows:
 //   Use ToTextLocation() to return the extracted text as a []TextComponent sorted by Offset.
 //   substring := extracted[start:end+1]
@@ -973,6 +975,7 @@ type TextComponent struct {
 	BBox     model.PdfRectangle
 	Font     *model.PdfFont
 	FontSize float64
+	Meta     bool
 }
 
 // TextComponents returns a TextComponent for every text mark in `pt`. This is the publically
@@ -994,8 +997,19 @@ func (pt PageText) TextComponents() []TextComponent {
 // String returns a string describing `t`.
 func (t TextComponent) String() string {
 	b := t.BBox
-	return fmt.Sprintf("{TextComponent: %d (%5.1f, %5.1f) (%5.1f, %5.1f) %s %q}", t.Offset,
-		b.Llx, b.Lly, b.Urx, b.Ury, t.Font, t.Text)
+	var font string
+	if t.Font != nil {
+		font = t.Font.String()
+		if len(font) > 50 {
+			font = font[:50] + "..."
+		}
+	}
+	var meta string
+	if t.Meta {
+		meta = " *M*"
+	}
+	return fmt.Sprintf("{TextComponent: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}", t.Offset,
+		t.Text, []rune(t.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
 // TextByComponents returns the contents of `pt` as
@@ -1026,19 +1040,40 @@ func (pt PageText) TextByComponents() (string, []TextComponent) {
 				Offset: offset,
 				BBox:   l.bboxes[j],
 				Font:   l.fonts[j],
-				Text:   w}
-			if loc.BBox.Height() > 100.0 { //!@#$ Why?
-				common.Log.Error("@$) Too high: i=%d j=%d loc=%s\n\t%#v", i, j, loc, loc)
+				Text:   w,
 			}
 			locations = append(locations, loc)
-			offset += len(w) + wordJoinerLen
+			offset += len([]rune(w))
+			if j == len(l.words)-1 {
+				break
+			}
+			if wordJoinerLen > 0 {
+				loc := TextComponent{
+					Offset: offset,
+					Meta:   true,
+					Text:   wordJoiner,
+				}
+				locations = append(locations, loc)
+				offset += wordJoinerLen
+			}
 		}
-		offset += lineJoinerLen
+		if i == len(lines)-1 {
+			break
+		}
+		if lineJoinerLen > 0 {
+			loc := TextComponent{
+				Offset: offset,
+				Meta:   true,
+				Text:   lineJoiner,
+			}
+			locations = append(locations, loc)
+			offset += lineJoinerLen
+		}
 	}
 	return text, locations
 }
 
-// GetBBox returns the BBox of the element in `locations` with Offset `offset`.
+// GetBBox returns the bounding box of the element in `locations` with Offset `offset`.
 func GetBBox(locations []TextComponent, offset int) (model.PdfRectangle, bool) {
 	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
 	return locations[i].BBox, true
@@ -1163,7 +1198,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 		if isSpace {
 			words = append(words, " ")
 			bboxes = append(bboxes, model.PdfRectangle{})
-			fonts = append(fonts, t.font) // !@#$ ???
+			fonts = append(fonts, nil)
 			counts = append(counts, -1)
 			xx = append(xx, (lastEndX+t.orientedStart.X)*0.5)
 		}
