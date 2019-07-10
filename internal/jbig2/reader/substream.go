@@ -52,7 +52,7 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 		return nil, errors.New("root reader is nil")
 	}
 
-	common.Log.Debug("New substream at offset: %d with length: %d", offset, length)
+	common.Log.Trace("New substream at offset: %d with length: %d", offset, length)
 	return &SubstreamReader{
 		wrapped: r,
 		offset:  offset,
@@ -92,7 +92,7 @@ func (s *SubstreamReader) Offset() uint64 {
 // Read implements io.Reader interface.
 func (s *SubstreamReader) Read(b []byte) (n int, err error) {
 	if s.streamPos >= s.length {
-		common.Log.Debug("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
+		common.Log.Trace("StreamPos: '%d' >= length: '%d'", s.streamPos, s.length)
 		return 0, io.EOF
 	}
 

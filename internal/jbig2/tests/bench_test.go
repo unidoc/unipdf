@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,12 +31,16 @@ func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 	require.NoError(b, err)
 
 	for _, file := range jbig2Files {
-		zr, err := zip.OpenReader(filepath.Join(dirName, file))
+		zr, err := zip.OpenReader(filepath.Join(dirName, jbig2DecodedDirectory, file))
 		require.NoError(b, err)
 
 		defer zr.Close()
 
 		for _, zFile := range zr.File {
+			if !strings.HasSuffix(zFile.Name, ".jbig2") {
+				continue
+			}
+
 			sf, err := zFile.Open()
 			require.NoError(b, err)
 
@@ -44,7 +49,7 @@ func BenchmarkDecodeSingleJBIG2(b *testing.B) {
 			data, err := ioutil.ReadAll(sf)
 			require.NoError(b, err)
 
-			b.Run(fmt.Sprintf("%s/%d", zFile.Name, len(data)), func(b *testing.B) {
+			b.Run(fmt.Sprintf("%s/%d", rawFileName(zFile.Name), len(data)), func(b *testing.B) {
 				for n := 0; n < b.N; n++ {
 					d, err := jbig2.NewDocument(data)
 					require.NoError(b, err)

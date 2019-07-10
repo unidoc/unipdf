@@ -46,6 +46,13 @@ func New(width, height int) *Bitmap {
 	return bm
 }
 
+// NewWithData creates new bitmap with the provided 'widht', 'height' and the byte slice 'data'.
+func NewWithData(width, height int, data []byte) *Bitmap {
+	bm := New(width, height)
+	bm.Data = data
+	return bm
+}
+
 // Equals checks if all the pixels in the 'b' bitmap are equals to the 's' bitmap.
 func (b *Bitmap) Equals(s *Bitmap) bool {
 	if len(b.Data) != len(s.Data) {
@@ -277,7 +284,6 @@ func (b *Bitmap) String() string {
 		}
 		s += row + "\n"
 	}
-
 	return s
 }
 
@@ -286,9 +292,9 @@ func (b *Bitmap) ToImage() image.Image {
 	img := image.NewGray(image.Rect(0, 0, b.Width-1, b.Height-1))
 	for x := 0; x < b.Width; x++ {
 		for y := 0; y < b.Height; y++ {
-			c := color.White
+			c := color.Black
 			if b.GetPixel(x, y) {
-				c = color.Black
+				c = color.White
 			}
 			img.Set(x, y, c)
 		}

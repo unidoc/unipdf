@@ -14,14 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
-	pdf "github.com/unidoc/unipdf/v3/model"
+	"github.com/unidoc/unipdf/v3/model"
 )
 
-const (
-	// EnvDirectory is the environment variable that should contain directory path
-	// to the jbig2 encoded test files.
-	EnvDirectory = "UNIDOC_JBIG2_TESTDATA"
-)
+// EnvDirectory is the environment variable that should contain directory path
+// to the jbig2 encoded test files.
+const EnvDirectory = "UNIDOC_JBIG2_TESTDATA"
 
 // TestDecodeJBIG2Files tries to decode the provided jbig2 files.
 // Requires environmental variable 'UNIDOC_JBIG2_TESTDATA' that contains the jbig2 testdata.
@@ -34,24 +32,28 @@ func TestDecodeJBIG2Files(t *testing.T) {
 	if dirName == "" {
 		return
 	}
-
-	require.NoError(t, os.RemoveAll(filepath.Join(dirName, jbig2ImagesDir)))
-	require.NoError(t, os.Mkdir(filepath.Join(dirName, jbig2ImagesDir), os.ModePerm))
-
 	filenames, err := readFileNames(dirName)
 	require.NoError(t, err)
 
+	if len(filenames) > 0 {
+		_, err = os.Stat(filepath.Join(dirName, jbig2DecodedDirectory))
+		if err != nil {
+			err = os.Mkdir(filepath.Join(dirName, jbig2DecodedDirectory), 0666)
+			require.NoError(t, err)
+		}
+	}
 	passwords := make(map[string]string)
 
 	for _, filename := range filenames {
-		t.Run(rawFileName(filename), func(t *testing.T) {
-			t.Logf("Getting file: %s", filepath.Join(dirName, filename))
+		rawName := rawFileName(filename)
+
+		t.Run(rawName, func(t *testing.T) {
 			// get the file
 			f, err := getFile(dirName, filename)
 			require.NoError(t, err)
 			defer f.Close()
 
-			var reader *pdf.PdfReader
+			var reader *model.PdfReader
 			password, ok := passwords[filename]
 			if ok {
 				// read the pdf with the password
@@ -68,30 +70,31 @@ func TestDecodeJBIG2Files(t *testing.T) {
 			numPages, err := reader.GetNumPages()
 			require.NoError(t, err)
 
-			w, err := os.Create(filepath.Join(dirName, jbig2ImagesDir, rawFileName(filename)+".zip"))
+			// create zipped file
+			fileName := filepath.Join(dirName, "jbig2_decoded_images", rawName+".zip")
+
+			w, err := os.Create(fileName)
 			require.NoError(t, err)
 			defer w.Close()
 
 			zw := zip.NewWriter(w)
 			defer zw.Close()
 
-			jbig2w, err := os.Create(filepath.Join(dirName, "jbig2_"+rawFileName(filename)+".zip"))
-			require.NoError(t, err)
-			defer jbig2w.Close()
-
-			jbigZW := zip.NewWriter(jbig2w)
-			defer jbigZW.Close()
+			var allHashes []fileHash
 
 			for pageNo := 1; pageNo <= numPages; pageNo++ {
 				page, err := reader.GetPage(pageNo)
 				require.NoError(t, err)
 
-				images, jbig2Files, err := extractImagesOnPage(filepath.Join(dirName, rawFileName(filename)), page)
+				images, err := extractImagesOnPage(filepath.Join(dirName, rawName), page)
 				require.NoError(t, err)
 
-				writeImages(t, zw, dirName, filename, pageNo, images...)
-				writeJBIG2Files(t, jbigZW, dirName, filename, pageNo, jbig2Files...)
+				hashes, err := writeExtractedImages(zw, rawName, pageNo, images...)
+				require.NoError(t, err)
+
+				allHashes = append(allHashes, hashes...)
 			}
+			checkGoldenFiles(t, dirName, rawName, allHashes...)
 		})
 	}
 }

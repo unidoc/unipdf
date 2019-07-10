@@ -34,6 +34,7 @@ import (
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
 	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
@@ -1985,7 +1986,6 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 type JBIG2Encoder struct {
 	// Globals are the JBIG2 global segments.
 	Globals jbig2.Globals
-
 	// IsChocolateData defines if the data is encoded such that
 	// binary data '1' means black and '0' white.
 	// otherwise the data is called vanilla.
@@ -2074,7 +2074,6 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 				common.Log.Debug("ERROR: %s", err)
 				return nil, err
 			}
-
 			encoder.Globals = gdoc.GlobalSegments
 		}
 	}
@@ -2083,7 +2082,6 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	if decode := streamObj.Get("Decode"); decode != nil {
 		encoder.setChocolateData(decode)
 	}
-
 	return encoder, nil
 }
 
@@ -2105,7 +2103,6 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 		dict.Set("Decode", MakeArray(MakeFloat(1.0), MakeFloat(0.0)))
 	}
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
-
 	return dict
 }
 
