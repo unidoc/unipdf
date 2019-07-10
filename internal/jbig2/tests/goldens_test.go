@@ -7,7 +7,6 @@ package tests
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"path/filepath"
@@ -53,7 +52,6 @@ func checkGoldenFiles(t testing.TB, dirname, filename string, readHashes ...file
 			continue
 		}
 
-		assert.True(t, single.IsValid && single.IsBitmapValid)
 		// if the single raw is not valid then udate it's hash
 		single.Hash = fh.hash
 	}
