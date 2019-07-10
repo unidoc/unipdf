@@ -1083,7 +1083,22 @@ func (pt PageText) TextByComponents() (string, []TextComponent) {
 
 // GetBBox returns the bounding box of the element in `locations` with Offset `offset`.
 func GetBBox(locations []TextComponent, offset int) (model.PdfRectangle, bool) {
+	if len(locations) == 0 {
+		common.Log.Debug("No locations")
+		return model.PdfRectangle{}, false
+	}
+	if offset < locations[0].Offset {
+		common.Log.Debug("Out of range. offset=%d len=%d\n\tfirst=%v\n\t last=%v",
+			offset, len(locations), locations[0], locations[len(locations)-1])
+		return model.PdfRectangle{}, false
+	}
 	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
+	ok := 0 <= i && i < len(locations)
+	if !ok {
+		common.Log.Debug("Out of range. offset=%d i=%d len=%d\n\tfirst=%v\n\t last=%v",
+			offset, i, len(locations), locations[0], locations[len(locations)-1])
+		return model.PdfRectangle{}, false
+	}
 	return locations[i].BBox, true
 }
 

@@ -582,6 +582,14 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 				desc, term, expectedBBox, bbox)
 		}
 	}
+
+	// 5) Check out or range cases
+	if i, ok := locationsIndex(locations, -1); ok {
+		t.Fatalf("locationsIndex(-1) failed. i=%d - %s", i, desc)
+	}
+	if i, ok := locationsIndex(locations, 1e10); ok {
+		t.Fatalf("locationsIndex(1e10) returned a vlau. i=%d - %s", i, desc)
+	}
 }
 
 // testLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
@@ -754,17 +762,22 @@ func indexRunes(text, term string) int {
 
 // locationsIndex returns the index of the element of `locations` that spans `offset`
 // (i.e  idx: locations[idx] <= offset < locations[idx+1])
-// Caller must check that `locations` is not empty.
+// Caller must check that `locations` is not empty and sorted.
 func locationsIndex(locations []TextComponent, offset int) (int, bool) {
 	if len(locations) == 0 {
 		common.Log.Error("locationsIndex: No locations")
 		return 0, false
 	}
+	if offset < locations[0].Offset {
+		common.Log.Debug("locationsIndex: Out of range. offset=%d len=%d\n\tfirst=%v\n\t last=%v",
+			offset, len(locations), locations[0], locations[len(locations)-1])
+		return 0, false
+	}
 	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
 	ok := 0 <= i && i < len(locations)
 	if !ok {
-		common.Log.Error("locationsIndex: offset=%d i=%d len=%d %v==%v", offset, i, len(locations),
-			locations[0], locations[len(locations)-1])
+		common.Log.Debug("locationsIndex: Out of range. offset=%d i=%d len=%d\n\tfirst=%v\n\t last=%v",
+			offset, i, len(locations), locations[0], locations[len(locations)-1])
 	}
 	return i, ok
 }
