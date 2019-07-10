@@ -133,18 +133,41 @@ func TestTextExtractionFiles(t *testing.T) {
 
 	for _, test := range fileExtractionTests {
 		t.Run(test.filename, func(t *testing.T) {
-			testExtractFile(t, test.filename, test.expectedPageText)
+			testExtractFile(t, test.filename, test.pageTerms)
 		})
 	}
 }
 
-// fileExtractionTests are the PDFs and texts we are looking for on specified pages.
+// TestTextLocations tests locations of text marks.
+// TODO: Enable lazy testing.
+func TestTextLocations(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+	lazy := false
+	for _, e := range textCases {
+		e.testTextComponent(t, lazy)
+	}
+}
+
+// TestLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
+// TODO: Enable lazy testing.
+// func TestLocationsFiles(t *testing.T) {
+// 	testLocationsFiles(t, false)
+// 	// testLocationsFiles(t, true)
+// }
+
+// fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
+// PDF files.
+// `pageTerms`[pageNum] are  the terms we expect to find on (1-offset) page number pageNum of
+// the PDF file `filename`.
 var fileExtractionTests = []struct {
-	filename         string
-	expectedPageText map[int][]string
+	filename  string
+	pageTerms map[int][]string
 }{
 	{filename: "reader.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"A Research UNIX Reader:",
 				"Annotated Excerpts from the Programmer’s Manual,",
 				"1. Introduction",
@@ -154,61 +177,61 @@ var fileExtractionTests = []struct {
 		},
 	},
 	{filename: "000026.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"Fresh Flower",
 				"Care & Handling ",
 			},
 		},
 	},
 	{filename: "search_sim_key.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			2: []string{"A cryptographic scheme which enables searching",
 				"Untrusted server should not be able to search for a word without authorization",
 			},
 		},
 	},
 	{filename: "Theil_inequality.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"London School of Economics and Political Science"},
 			4: []string{"The purpose of this paper is to set Theil’s approach"},
 		},
 	},
 	{filename: "8207.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"In building graphic systems for use with raster devices,"},
 			2: []string{"The imaging model specifies how geometric shapes and colors are"},
 			3: []string{"The transformation matrix T that maps application defined"},
 		},
 	},
 	{filename: "ling-2013-0040ad.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"Although the linguistic variation among texts is continuous"},
 			2: []string{"distinctions. For example, much of the research on spoken/written"},
 		},
 	},
 	{filename: "26-Hazard-Thermal-environment.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"OHS Body of Knowledge"},
 			2: []string{"Copyright notice and licence terms"},
 		},
 	},
 	{filename: "Threshold_survey.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"clustering, entropy, object attributes, spatial correlation, and local"},
 		},
 	},
 	{filename: "circ2.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"Understanding and complying with copyright law can be a challenge"},
 		},
 	},
 	{filename: "rare_word.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			6: []string{"words in the test set, we increase the BLEU score"},
 		},
 	},
 	{filename: "Planck_Wien.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			1: []string{"entropy of a system of n identical resonators in a stationary radiation field"},
 		},
 	},
@@ -217,7 +240,7 @@ var fileExtractionTests = []struct {
 	// Type0:CIDFontType0 font metrics and assume zero displacemet so that we place the ' and " too
 	// close to the preceeding letters.
 	{filename: "/rfc6962.txt.pdf",
-		expectedPageText: map[int][]string{
+		pageTerms: map[int][]string{
 			4: []string{
 				"timestamps for certificates they then don’t log",
 				`The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",`},
@@ -225,7 +248,7 @@ var fileExtractionTests = []struct {
 	},
 	// TODO(peterwilliams97): Reinstate these 2 tests when diacritic combination is fixed.
 	// {filename: "Ito_Formula.pdf",
-	// 	expectedPageText: map[int][]string{
+	// 	pageTerms: map[int][]string{
 	// 		1: []string{
 	// 			"In the Itô stochastic calculus",
 	// 			"In standard, non-stochastic calculus, one computes a derivative"},
@@ -233,14 +256,14 @@ var fileExtractionTests = []struct {
 	// 	},
 	// },
 	// {filename: "thanh.pdf",
-	// 	expectedPageText: map[int][]string{
+	// 	pageTerms: map[int][]string{
 	// 		1: []string{"Hàn Thé̂ Thành"},
 	// 	},
 	// },
 }
 
 // testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the extracted
-// text to `expectedPageText`.
+// text to `pageTerms`.
 //
 // NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo
 // so you will need to set the environment variable UNIDOC_EXTRACT_TESTDATA to point at
@@ -248,13 +271,12 @@ var fileExtractionTests = []struct {
 //
 // If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest` global
 // variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
-func testExtractFile(t *testing.T, filename string, expectedPageText map[int][]string) {
-	testExtractFileOptions(t, filename, expectedPageText, false)
-	// testExtractFileOptions(t, filename, expectedPageText, true)
+func testExtractFile(t *testing.T, filename string, pageTerms map[int][]string) {
+	testExtractFileOptions(t, filename, pageTerms, false)
+	// testExtractFileOptions(t, filename, pageTerms, true)
 }
 
-func testExtractFileOptions(t *testing.T, filename string, expectedPageText map[int][]string,
-	lazy bool) {
+func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]string, lazy bool) {
 	filepath := filepath.Join(corpusFolder, filename)
 	exists := checkFileExists(filepath)
 	if !exists {
@@ -266,14 +288,14 @@ func testExtractFileOptions(t *testing.T, filename string, expectedPageText map[
 	}
 
 	_, actualPageText := extractPageTexts(t, filepath, lazy)
-	for _, pageNum := range sortedKeys(expectedPageText) {
-		expectedSentences, ok := expectedPageText[pageNum]
+	for _, pageNum := range sortedKeys(pageTerms) {
+		expectedTerms, ok := pageTerms[pageNum]
 		actualText, ok := actualPageText[pageNum]
 		if !ok {
 			t.Fatalf("%q doesn't have page %d", filename, pageNum)
 		}
 		actualText = norm.NFKC.String(actualText)
-		if !containsSentences(t, expectedSentences, actualText) {
+		if !containsTerms(t, expectedTerms, actualText) {
 			t.Fatalf("Text mismatch filepath=%q page=%d", filepath, pageNum)
 		}
 	}
@@ -310,19 +332,6 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 	return numPages, pageText
 }
 
-// TestTextLocations tests locations of text marks.
-// TODO: Enable lazy testing.
-func TestTextLocations(t *testing.T) {
-	if len(corpusFolder) == 0 && !forceTest {
-		t.Log("Corpus folder not set - skipping")
-		return
-	}
-	lazy := false
-	for _, e := range textCases {
-		e.testTextComponent(t, lazy)
-	}
-}
-
 // textLocTest is a text extraction locations test.
 type textLocTest struct {
 	filename string
@@ -330,6 +339,7 @@ type textLocTest struct {
 	contents map[int]pageContents
 }
 
+// pageNums returns the (1-offsert) page numbers that are to be tested in `e`.
 func (e textLocTest) pageNums() []int {
 	var nums []int
 	for pageNum := range e.contents {
@@ -343,21 +353,25 @@ func (e textLocTest) String() string {
 	return fmt.Sprintf("{TEXTLOCTEST: filename=%q}", e.filename)
 }
 
+// pageContents are some things that we are expected to find in the text extracted from a PDF page
+// by TextByComponents().
 type pageContents struct {
-	terms     []string
-	locations []TextComponent
-	matches   map[string]model.PdfRectangle
+	terms     []string                      // Substrings of the extracted text.
+	locations []TextComponent               // TextComponents in the extracted text.
+	termBBox  map[string]model.PdfRectangle // {term: bounding box of term on PDF page}
 }
 
+// matchTerms returns the keys of `c`.termBBox.
 func (c pageContents) matchTerms() []string {
 	var terms []string
-	for w := range c.matches {
+	for w := range c.termBBox {
 		terms = append(terms, w)
 	}
 	sort.Strings(terms)
 	return terms
 }
 
+// testCases are the extracted text location test cases. All coordinates are multiple of 0.5 points.
 var textCases = []textLocTest{
 	textLocTest{
 		filename: "prop-price-list-2017.pdf",
@@ -383,8 +397,8 @@ var textCases = []textLocTest{
 					l(8, "S", 368.0, 725.2, 400.0, 773.2),
 					l(9, "T", 400.0, 725.2, 429.4, 773.2),
 				},
-				matches: map[string]model.PdfRectangle{
-					"THING ONE": r(72, 534.5, 197, 558.5),
+				termBBox: map[string]model.PdfRectangle{
+					"THING ONE": r(72.0, 534.5, 197.0, 558.5),
 				},
 			},
 		},
@@ -394,18 +408,14 @@ var textCases = []textLocTest{
 		numPages: 2,
 		contents: map[int]pageContents{
 			1: pageContents{
-				terms: []string{
-					"global public good",
-					"international",
-				},
 				locations: []TextComponent{
-					l(3602, "W", 152.5, 185.5, 163, 196.5),
-					l(3603, "T", 163, 185.5, 169.5, 196.5),
+					l(3602, "W", 152.5, 185.5, 163.0, 196.5),
+					l(3603, "T", 163.0, 185.5, 169.5, 196.5),
 					l(3604, "O", 169.5, 185.5, 177.5, 196.5),
 				},
-				matches: map[string]model.PdfRectangle{
-					"global public good": r(244, 398.5, 332.5, 410),
-					"international":      r(323.5, 611, 377.5, 622),
+				termBBox: map[string]model.PdfRectangle{
+					"global public good": r(244.0, 398.5, 332.5, 410.0),
+					"international":      r(323.5, 611.0, 377.5, 622.0),
 				},
 			},
 		},
@@ -422,8 +432,7 @@ var textCases = []textLocTest{
 					"Vietnamese accents can be divided into three the Czech and Polish version of CMR fonts",
 					"kinds of diacritic marks: tone, vowel and consonant. about 2 years until the ﬁrst version",
 				},
-
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"the Blue Sky fonts":                       r(358.0, 532.5, 439.0, 542.5),
 					"Vietnamese letters with the same quality": r(165.5, 520.5, 344.5, 530.5),
 				},
@@ -443,7 +452,7 @@ var textCases = []textLocTest{
 					l(288, "k", 345.5, 674.5, 350.5, 684.5),
 					l(289, "e", 350.5, 674.5, 355.0, 684.5),
 				},
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"glyphs needed for each font": r(382.0, 443.0, 501.0, 453.0),
 					"22 are Vietnamese accents":   r(343.5, 431.0, 461.0, 441.0),
 				},
@@ -472,10 +481,31 @@ var textCases = []textLocTest{
 					l(455, "c", 314.5, 521.0, 320.5, 533.0),
 					l(456, "h", 320.5, 521.0, 327.0, 533.0),
 				},
-				matches: map[string]model.PdfRectangle{
+				termBBox: map[string]model.PdfRectangle{
 					"Österreich": r(272.0, 521.0, 327.0, 533.0), "Johann Strauß": r(400.5, 521.0, 479.5, 533.0),
 					"Azərbaycan": r(272.0, 490.5, 335.0, 502.5), "Vaqif Səmədoğlu": r(400.5, 490.5, 492.0, 502.5),
 					"Азәрбајҹан": r(272.0, 460.5, 334.5, 472.5), "Вагиф Сәмәдоғлу": r(400.5, 460.5, 501.0, 472.5),
+				},
+			},
+		},
+	},
+	textLocTest{
+		filename: "AF+handout+scanned.pdf",
+		numPages: 3,
+		contents: map[int]pageContents{
+			1: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"reserved": r(505.0, 488.5, 538.5, 497.0),
+				},
+			},
+			2: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"atrium": r(414.5, 113.5, 435.5, 121.0),
+				},
+			},
+			3: pageContents{
+				termBBox: map[string]model.PdfRectangle{
+					"treatment": r(348.0, 302.0, 388.0, 311.5),
 				},
 			},
 		},
@@ -497,7 +527,7 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	}
 	if n != e.numPages {
 		t.Fatalf("Wrong number of pages. Expected %d. Got %d. %s",
-			n, e.numPages, desc)
+			e.numPages, n, desc)
 	}
 
 	for _, pageNum := range e.pageNums() {
@@ -514,22 +544,7 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 // testTextByComponents tests that TextByComponents returns extracted page text and TextComponent's
 // that match the expected results in `c`.
 func (c pageContents) testTextByComponents(t *testing.T, desc string, page *model.PdfPage) {
-
-	ex, err := New(page)
-	if err != nil {
-		t.Fatalf("extractor.New failed. %s err=%v", desc, err)
-	}
-	pageText, _, _, err := ex.ExtractPageText()
-	if err != nil {
-		t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
-	}
-	text, locations := pageText.TextByComponents()
-
-	common.Log.Debug("text=>>>%s<<<\n", text)
-	common.Log.Debug("locations=%d %q", len(locations), desc)
-	for i, loc := range locations {
-		common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
-	}
+	text, locations := textByComponents(t, desc, page)
 
 	// 1) Check that all expected terms are found in `text`.
 	for i, term := range c.terms {
@@ -554,12 +569,12 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 
 	// 4) Check that longer terms are matched and found in their expected locations.
 	for _, term := range c.matchTerms() {
-		expectedBBox := c.matches[term]
+		expectedBBox := c.termBBox[term]
 		bbox, ok := getBBox(text, locations, term)
 		if !ok {
-			t.Fatalf("locations doesn't contain ter, %q. %s", term, desc)
+			t.Fatalf("locations doesn't contain term %q. %s", term, desc)
 		}
-		if !sameBBox(expectedBBox, bbox) {
+		if !rectEquals(expectedBBox, bbox) {
 			t.Fatalf("bbox is wrong - %s\n"+
 				"\t    term: %q\n"+
 				"\texpected: %v\n"+
@@ -569,7 +584,40 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 	}
 }
 
-// testLocationsIndices check that locationsIndex() finds TextComponent's in `locations`
+// testLocationsFiles stress tests testLocationsIndices() by running it on all files in the corpus.
+// If `lazy` is true then PDFs are loaded lazily.
+func testLocationsFiles(t *testing.T, lazy bool) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+
+	pattern := filepath.Join(corpusFolder, "*.pdf")
+	pathList, err := filepath.Glob(pattern)
+	if err != nil {
+		t.Fatalf("Glob(%q) failed. err=%v", pattern, err)
+	}
+	for i, filename := range pathList {
+		pdfReader := openPdfReader(t, filename, lazy)
+		numPages, err := pdfReader.GetNumPages()
+		if err != nil {
+			t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
+		}
+		common.Log.Info("%4d of %d: %q", i, len(pathList), filename)
+
+		for pageNum := 1; pageNum < numPages; pageNum++ {
+			desc := fmt.Sprintf("filename=%q pageNum=%d", filename, pageNum)
+			page, err := pdfReader.GetPage(pageNum)
+			if err != nil {
+				t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
+			}
+			text, locations := textByComponents(t, desc, page)
+			testLocationsIndices(t, text, locations)
+		}
+	}
+}
+
+// testLocationsIndices checks that locationsIndex() finds TextComponent's in `locations`
 // corresponding to some substrings of `text` with length 1-20.
 func testLocationsIndices(t *testing.T, text string, locations []TextComponent) {
 	m := len([]rune(text))
@@ -581,10 +629,13 @@ func testLocationsIndices(t *testing.T, text string, locations []TextComponent) 
 	}
 }
 
-// testLocationsIndices check that locationsIndex() finds TextComponent's in `locations`
+// testLocationsIndex checks that locationsIndex() finds TextComponent's in `locations`
 // testLocationsIndex to some substrings of `text` with length `n`.
 func testLocationsIndex(t *testing.T, text string, locations []TextComponent, n int) {
-	common.Log.Debug("testLocationsIndex: n=%d", n)
+	if len(text) < 2 {
+		return
+	}
+	common.Log.Debug("testLocationsIndex: text=%d n=%d", len(text), n)
 	runes := []rune(text)
 	if n > len(runes)/2 {
 		n = len(runes) / 2
@@ -631,7 +682,7 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expe
 			"\t     got %v",
 			expectedLoc.Text, loc.Text, desc, expectedLoc, loc)
 	}
-	if !sameBBox(expectedLoc.BBox, loc.BBox) {
+	if !rectEquals(expectedLoc.BBox, loc.BBox) {
 		t.Fatalf("Bounding boxes doesn't match  - %s\n"+
 			"\texpected %v\n"+
 			"\t     got %v",
@@ -642,6 +693,7 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expe
 // getBBox returns the minimum bounding box around the elements in `locations` that correspond to
 // the first instance of `term` in `text`, where `text` and `locations` are the extracted text
 // returned by TextByComponents().
+// NOTE: This is how you would use TextByComponents in an application.
 func getBBox(text string, locations []TextComponent, term string) (model.PdfRectangle, bool) {
 	var bbox model.PdfRectangle
 	ofs0 := indexRunes(text, term)
@@ -671,7 +723,7 @@ func getBBox(text string, locations []TextComponent, term string) (model.PdfRect
 		if i == i0 {
 			bbox = loc.BBox
 		} else {
-			bbox = union(bbox, loc.BBox)
+			bbox = rectUnion(bbox, loc.BBox)
 		}
 		common.Log.Debug("i=%d text=%v bbox=%.1f loc=%v", i, []rune(loc.Text), bbox, loc)
 	}
@@ -726,13 +778,6 @@ func locationsMap(locations []TextComponent) map[int]TextComponent {
 	return locMap
 }
 
-func sameBBox(b0, b model.PdfRectangle) bool {
-	return math.Abs(b.Llx-b0.Llx) <= tol &&
-		math.Abs(b.Lly-b0.Lly) <= tol &&
-		math.Abs(b.Urx-b0.Urx) <= tol &&
-		math.Abs(b.Ury-b0.Ury) <= tol
-}
-
 // tol is the tolerance for matching coordinates. We are specifying coordinates to the nearest 0.5
 // point so the tolerance should be just over 0.5
 const tol = 0.5001
@@ -745,6 +790,26 @@ func l(o int, t string, llx, lly, urx, ury float64) TextComponent {
 // r is a shorthand for writing model.PdfRectangle literals, which get verbose in Go,
 func r(llx, lly, urx, ury float64) model.PdfRectangle {
 	return model.PdfRectangle{Llx: llx, Lly: lly, Urx: urx, Ury: ury}
+}
+
+// textByComponents returns the  extracted page text and TextComponent's for PDF page `page`.
+func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, []TextComponent) {
+	ex, err := New(page)
+	if err != nil {
+		t.Fatalf("extractor.New failed. %s err=%v", desc, err)
+	}
+	pageText, _, _, err := ex.ExtractPageText()
+	if err != nil {
+		t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
+	}
+	text, locations := pageText.TextByComponents()
+
+	common.Log.Debug("text=>>>%s<<<\n", text)
+	common.Log.Debug("locations=%d %q", len(locations), desc)
+	for i, loc := range locations {
+		common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
+	}
+	return text, locations
 }
 
 // openPdfReader returns a PdfReader for file `filename`. If `lazy` is true, it will be lazy reader.
@@ -770,12 +835,12 @@ func openPdfReader(t *testing.T, filename string, lazy bool) *model.PdfReader {
 	return pdfReader
 }
 
-// containsSentences returns true if all strings `expectedSentences` are contained in `actualText`.
-func containsSentences(t *testing.T, expectedSentences []string, actualText string) bool {
-	for _, e := range expectedSentences {
-		e = norm.NFKC.String(e)
-		if !strings.Contains(actualText, e) {
-			t.Errorf("No match for %q", e)
+// containsTerms returns true if all strings `terms` are contained in `actualText`.
+func containsTerms(t *testing.T, terms []string, actualText string) bool {
+	for _, w := range terms {
+		w = norm.NFKC.String(w)
+		if !strings.Contains(actualText, w) {
+			t.Errorf("No match for %q", w)
 			return false
 		}
 	}
@@ -807,11 +872,21 @@ func sortedKeys(m map[int][]string) []int {
 	return keys
 }
 
-func union(b1, b2 model.PdfRectangle) model.PdfRectangle {
+// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
+func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 	return model.PdfRectangle{
 		Llx: math.Min(b1.Llx, b2.Llx),
 		Lly: math.Min(b1.Lly, b2.Lly),
 		Urx: math.Max(b1.Urx, b2.Urx),
 		Ury: math.Max(b1.Ury, b2.Ury),
 	}
+}
+
+// rectEquals returns true if `b1` and `b2` corners are within `tol` of each other.
+// NOTE: All the coordinates in this source file are in points.
+func rectEquals(b1, b2 model.PdfRectangle) bool {
+	return math.Abs(b1.Llx-b2.Llx) <= tol &&
+		math.Abs(b1.Lly-b2.Lly) <= tol &&
+		math.Abs(b1.Urx-b2.Urx) <= tol &&
+		math.Abs(b1.Ury-b2.Ury) <= tol
 }

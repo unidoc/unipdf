@@ -739,9 +739,15 @@ func (to *textObject) renderText(data []byte) error {
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
 			font,
 			to.state.tc)
-		original, ok := font.Encoder().CharcodeToRune(code)
-		if ok {
-			mark.original = string(original)
+		if font == nil {
+			common.Log.Debug("ERROR: No font.")
+		} else if font.Encoder() == nil {
+			common.Log.Debug("ERROR: No encoding. font=%s", font)
+		} else {
+			original, ok := font.Encoder().CharcodeToRune(code)
+			if ok {
+				mark.original = string(original)
+			}
 		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
@@ -968,6 +974,8 @@ func (pt PageText) ToText() string {
 //   binary search the []TextComponent for `start` and `end`.
 //   The bounding box of `substring` on the PDF page is the union of the TextComponent.BBox's with
 //     start <= TextComponent.Offset < end
+// getBBox() in test_text.go shows how to compute the bounding boxes of substrings of extracted
+// text.
 type TextComponent struct {
 	Offset   int
 	Text     string
