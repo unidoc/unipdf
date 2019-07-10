@@ -228,7 +228,7 @@ func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ..
 		hashes = append(hashes, fh)
 		h.Reset()
 
-		f, err := zw.Create(fname + "_bitmap" + ".jpg")
+		f, err = zw.Create(fname + "_bitmap" + ".jpg")
 		if err != nil {
 			return nil, err
 		}
