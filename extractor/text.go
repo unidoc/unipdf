@@ -736,7 +736,13 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
-			math.Abs(spaceWidth*trm.ScalingFactorX()))
+			math.Abs(spaceWidth*trm.ScalingFactorX()),
+			font,
+			to.state.tc)
+		original, ok := font.Encoder().CharcodeToRune(code)
+		if ok {
+			mark.original = string(original)
+		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
@@ -774,23 +780,27 @@ func (to *textObject) moveTo(tx, ty float64) {
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	text          string             // The text.
+	text          string             // The text (decoded via ToUnicode).
+	original      string             // Original text (decoded).
 	bbox          model.PdfRectangle // Text bounding box.
 	orient        int                // The text orientation in degrees. This is the current TRM rounded to 10°.
 	orientedStart transform.Point    // Left of text in orientation where text is horizontal.
 	orientedEnd   transform.Point    // Right of text in orientation where text is horizontal.
 	height        float64            // Text height.
 	spaceWidth    float64            // Best guess at the width of a space in the font the text was rendered with.
+	font          *model.PdfFont     // The current font.
+	fontsize      float64            // TODO (peterwilliams97: Should this be exposed in TextComponent?
+	charspacing   float64            // TODO (peterwilliams97: Should this be exposed in TextComponent?
+	trm           transform.Matrix   // The current text rendering matrix (TRM above).
+	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
-	trm           transform.Matrix
-	end           transform.Point
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
 // and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
 // space in the font the text is rendered in device coordinates.
 func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
-	spaceWidth float64) textMark {
+	spaceWidth float64, font *model.PdfFont, charspacing float64) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -821,9 +831,12 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		orientedEnd:   end.Rotate(theta),
 		height:        math.Abs(height),
 		spaceWidth:    spaceWidth,
-		count:         to.e.textCount,
+		font:          font,
+		fontsize:      to.state.tfs,
+		charspacing:   charspacing,
 		trm:           trm,
 		end:           end,
+		count:         to.e.textCount,
 	}
 	if !isTextSpace(t.text) && t.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. t=%s\n\t=%#v", t, t)
@@ -879,8 +892,14 @@ func (pt PageText) String() string {
 	return strings.Join(parts, "\n")
 }
 
+// length returns the number of elements in `pt.marks`.
+func (pt PageText) length() int {
+	return len(pt.marks)
+}
+
 // TextMark is the public view of a textMark.
 // Currently this is the text contents and a bounding box.
+// TODO(peterwilliams97): Do we still need TextMark? It is a subset of TextComponent.
 type TextMark struct {
 	BBox model.PdfRectangle
 	Text string
@@ -937,35 +956,68 @@ func (pt PageText) ToText() string {
 	return strings.Join(texts, lineJoiner)
 }
 
-// TextLocation maps extracted text to the location of the text on the PDF page.
+// TextComponent maps extracted text to the location of the text on the PDF page and other
+// properties of the rendered text such the font.
 // `Offset` is the offset of the start of the textMark.text in extracted text.
 // `BBox` is the bounding box of the textMark.
-// `Text` is the extracted text.
+// `Text` is the extracted text
+// `Meta` is set true for characters that don't appear in the input PDF.
 // You can find the location of substrings in the extracted text as follows:
-//   Use ToTextLocation() to return the extracted text as a []TextLocation sorted by Offset.
+//   Use ToTextLocation() to return the extracted text as a []TextComponent sorted by Offset.
 //   substring := extracted[start:end+1]
-//   binary search the []TextLocation for `start` and `end`.
-//   The bounding box of `substring` on the PDF page is the union of the TextLocation.BBox's with
-//     start <= TextLocation.Offset < end
-type TextLocation struct {
-	Offset int
-	BBox   model.PdfRectangle
-	Text   string
+//   binary search the []TextComponent for `start` and `end`.
+//   The bounding box of `substring` on the PDF page is the union of the TextComponent.BBox's with
+//     start <= TextComponent.Offset < end
+type TextComponent struct {
+	Offset   int
+	Text     string
+	Original string
+	BBox     model.PdfRectangle
+	Font     *model.PdfFont
+	FontSize float64
+	Meta     bool
+}
+
+// TextComponents returns a TextComponent for every text mark in `pt`. This is the publically
+// accessible view of text marks.
+func (pt PageText) TextComponents() []TextComponent {
+	marks := make([]TextComponent, len(pt.marks))
+	for i, t := range pt.marks {
+		marks[i] = TextComponent{
+			Text:     t.text,
+			Original: t.original,
+			BBox:     t.bbox,
+			Font:     t.font,
+			FontSize: t.fontsize,
+		}
+	}
+	return marks
 }
 
 // String returns a string describing `t`.
-func (t TextLocation) String() string {
+func (t TextComponent) String() string {
 	b := t.BBox
-	return fmt.Sprintf("{uniTextLocation: %d (%5.1f, %5.1f) (%5.1f, %5.1f) %q}", t.Offset,
-		b.Llx, b.Lly, b.Urx, b.Ury, t.Text)
+	var font string
+	if t.Font != nil {
+		font = t.Font.String()
+		if len(font) > 50 {
+			font = font[:50] + "..."
+		}
+	}
+	var meta string
+	if t.Meta {
+		meta = " *M*"
+	}
+	return fmt.Sprintf("{TextComponent: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}", t.Offset,
+		t.Text, []rune(t.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
-// ToTextLocation returns the contents of `pt` as
+// TextByComponents returns the contents of `pt` as
 // 1) the text on the PDF page that `pt` describes.
-// 2) a slice of TextLocation sorted by their order in the extracted text.
-//    The comments above the TextLocation definition describe how to use the []TextLocation to
+// 2) a slice of TextComponents sorted by their order in the extracted text.
+//    The comments above the TextComponent definition describe how to use the []TextComponent to
 //    maps substrings of the page text to locations on the PDF page.
-func (pt PageText) ToTextLocation() (string, []TextLocation) {
+func (pt PageText) TextByComponents() (string, []TextComponent) {
 	fontHeight := pt.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
 	tol := minFloat(fontHeight*0.2, 5.0)
@@ -980,29 +1032,54 @@ func (pt PageText) ToTextLocation() (string, []TextLocation) {
 		texts[i] = strings.Join(l.words, wordJoiner)
 	}
 	text := strings.Join(texts, lineJoiner)
-	var locations []TextLocation
+	var locations []TextComponent
 	offset := 0
 	for i, l := range lines {
 		for j, w := range l.words {
-			loc := TextLocation{offset, l.bboxes[j], w}
-			if loc.BBox.Height() > 100.0 {
-				common.Log.Error("@$) Too high: i=%d j=%d loc=%s\n\t%#v", i, j, loc, loc)
+			loc := TextComponent{
+				Offset: offset,
+				BBox:   l.bboxes[j],
+				Font:   l.fonts[j],
+				Text:   w,
 			}
 			locations = append(locations, loc)
-			offset += len(w) + wordJoinerLen
+			offset += len([]rune(w))
+			if j == len(l.words)-1 {
+				break
+			}
+			if wordJoinerLen > 0 {
+				loc := TextComponent{
+					Offset: offset,
+					Meta:   true,
+					Text:   wordJoiner,
+				}
+				locations = append(locations, loc)
+				offset += wordJoinerLen
+			}
 		}
-		offset += lineJoinerLen
+		if i == len(lines)-1 {
+			break
+		}
+		if lineJoinerLen > 0 {
+			loc := TextComponent{
+				Offset: offset,
+				Meta:   true,
+				Text:   lineJoiner,
+			}
+			locations = append(locations, loc)
+			offset += lineJoinerLen
+		}
 	}
 	return text, locations
 }
 
-// GetBBox returns the BBox of the element in `index` with Offset `offset`.
-func GetBBox(index []TextLocation, offset int) (model.PdfRectangle, bool) {
-	i := sort.Search(len(index), func(i int) bool { return index[i].Offset >= offset })
-	return index[i].BBox, true
+// GetBBox returns the bounding box of the element in `locations` with Offset `offset`.
+func GetBBox(locations []TextComponent, offset int) (model.PdfRectangle, bool) {
+	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
+	return locations[i].BBox, true
 }
 
-// sortPosition sorts a text list by its elements' position on a page.
+// sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (pt *PageText) sortPosition(tol float64) {
@@ -1025,8 +1102,9 @@ type textLine struct {
 	h      float64              // height of line text.
 	dxList []float64            // x distance between successive words in line.
 	words  []string             // words in the line.
-	bboxes []model.PdfRectangle // bounding boxes of words.
-	counts []int64              // textMark count To help with reading debug logs.
+	bboxes []model.PdfRectangle // bboxes[i] = bounding box of words[i].
+	fonts  []*model.PdfFont     // fonts[i] = the font words[i] was rendered with.
+	counts []int64              // textMark count (to help with reading debug logs).
 }
 
 // toLines returns the text and positions in `pt.marks` as a slice of textLine.
@@ -1060,6 +1138,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 	var words []string
 	var xx []float64
 	var bboxes []model.PdfRectangle
+	var fonts []*model.PdfFont
 	var counts []int64
 	y := pt.marks[0].orientedStart.Y
 
@@ -1072,7 +1151,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 	for _, t := range pt.marks {
 		if t.orientedStart.Y+tol < y {
 			if len(words) > 0 {
-				line := newLine(y, xx, words, bboxes, counts)
+				line := newLine(y, xx, words, bboxes, fonts, counts)
 				if averageCharWidth.running {
 					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
 					// line = combineDiacritics(line, averageCharWidth.ave)
@@ -1083,6 +1162,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 			words = []string{}
 			xx = []float64{}
 			bboxes = []model.PdfRectangle{}
+			fonts = []*model.PdfFont{}
 			counts = []int64{}
 			y = t.orientedStart.Y
 			scanning = false
@@ -1118,6 +1198,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 		if isSpace {
 			words = append(words, " ")
 			bboxes = append(bboxes, model.PdfRectangle{})
+			fonts = append(fonts, nil)
 			counts = append(counts, -1)
 			xx = append(xx, (lastEndX+t.orientedStart.X)*0.5)
 		}
@@ -1126,13 +1207,14 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 		lastEndX = t.orientedEnd.X
 		words = append(words, t.text)
 		bboxes = append(bboxes, t.bbox)
+		fonts = append(fonts, t.font)
 		counts = append(counts, t.count)
 		xx = append(xx, t.orientedStart.X)
 		scanning = true
 		common.Log.Trace("lastEndX=%.2f", lastEndX)
 	}
 	if len(words) > 0 {
-		line := newLine(y, xx, words, bboxes, counts)
+		line := newLine(y, xx, words, bboxes, fonts, counts)
 		if averageCharWidth.running {
 			line = removeDuplicates(line, averageCharWidth.ave)
 		}
@@ -1173,12 +1255,19 @@ func (exp *exponAve) update(x float64) float64 {
 
 // newLine returns the textLine representation of strings `words` with y coordinate `y` and x
 // coordinates `xx` and height `h`.
-func newLine(y float64, xx []float64, words []string, bboxes []model.PdfRectangle, counts []int64) textLine {
+func newLine(y float64, xx []float64, words []string, bboxes []model.PdfRectangle,
+	fonts []*model.PdfFont, counts []int64) textLine {
 	dxList := make([]float64, len(xx)-1)
 	for i := 1; i < len(xx); i++ {
 		dxList[i-1] = xx[i] - xx[i-1]
 	}
-	return textLine{x: xx[0], y: y, dxList: dxList, words: words, bboxes: bboxes, counts: counts}
+	return textLine{
+		x: xx[0], y: y,
+		dxList: dxList,
+		words:  words,
+		bboxes: bboxes,
+		fonts:  fonts,
+		counts: counts}
 }
 
 // removeDuplicates returns `line` with duplicate characters removed. `charWidth` is the average
@@ -1192,6 +1281,7 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 	tol := charWidth * 0.3
 	words := []string{line.words[0]}
 	bboxes := []model.PdfRectangle{line.bboxes[0]}
+	fonts := []*model.PdfFont{line.fonts[0]}
 	counts := []int64{line.counts[0]}
 	var dxList []float64
 
@@ -1199,16 +1289,23 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 	for i, dx := range line.dxList {
 		w := line.words[i+1]
 		b := line.bboxes[i+1]
+		f := line.fonts[i+1]
 		c := line.counts[i+1]
 		if w != w0 || dx > tol {
 			words = append(words, w)
 			bboxes = append(bboxes, b)
+			fonts = append(fonts, f)
 			counts = append(counts, c)
 			dxList = append(dxList, dx)
 		}
 		w0 = w
 	}
-	return textLine{x: line.x, y: line.y, dxList: dxList, words: words, bboxes: bboxes,
+	return textLine{
+		x: line.x, y: line.y,
+		dxList: dxList,
+		words:  words,
+		bboxes: bboxes,
+		fonts:  fonts,
 		counts: counts}
 }
 
@@ -1271,7 +1368,12 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 			len(words), words, len(dxList), dxList)
 		return line
 	}
-	return textLine{x: line.x, y: line.y, dxList: dxList, words: words, bboxes: line.bboxes,
+	return textLine{
+		x: line.x, y: line.y,
+		dxList: dxList,
+		words:  words,
+		bboxes: line.bboxes,
+		fonts:  line.fonts,
 		counts: line.counts}
 }
 
