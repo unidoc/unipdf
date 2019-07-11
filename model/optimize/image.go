@@ -27,7 +27,6 @@ type imageInfo struct {
 	Height           int
 	Stream           *core.PdfObjectStream
 	PPI              float64
-	OrigSize         int64
 }
 
 // findImages returns images from objects.
@@ -64,7 +63,6 @@ func findImages(objects []core.PdfObject) []*imageInfo {
 		if val, ok := core.GetIntVal(stream.PdfObjectDictionary.Get("Height")); ok {
 			img.Height = val
 		}
-		img.OrigSize = int64(len(stream.Stream))
 
 		switch img.ColorSpace {
 		case "DeviceRGB":
@@ -122,18 +120,20 @@ func (i *Image) Optimize(objects []core.PdfObject) (optimizedObjects []core.PdfO
 		if err != nil {
 			return nil, err
 		}
-		if int64(len(streamData)) < img.OrigSize {
-			newStream := &core.PdfObjectStream{Stream: streamData}
-			newStream.PdfObjectReference = stream.PdfObjectReference
-			newStream.PdfObjectDictionary = core.MakeDict()
-			newStream.PdfObjectDictionary.Merge(stream.PdfObjectDictionary)
-			fn := core.PdfObjectName(encoder.GetFilterName())
-			newStream.PdfObjectDictionary.Set(core.PdfObjectName("Filter"), &fn)
-			ln := core.PdfObjectInteger(int64(len(streamData)))
-			newStream.PdfObjectDictionary.Set(core.PdfObjectName("Length"), &ln)
-			replaceTable[stream] = newStream
-			images[index].Stream = newStream
+		originalSize := len(stream.Stream)
+		if originalSize < len(streamData) {
+			continue
 		}
+		newStream := &core.PdfObjectStream{Stream: streamData}
+		newStream.PdfObjectReference = stream.PdfObjectReference
+		newStream.PdfObjectDictionary = core.MakeDict()
+		newStream.PdfObjectDictionary.Merge(stream.PdfObjectDictionary)
+		fn := core.PdfObjectName(encoder.GetFilterName())
+		newStream.PdfObjectDictionary.Set(core.PdfObjectName("Filter"), &fn)
+		ln := core.PdfObjectInteger(int64(len(streamData)))
+		newStream.PdfObjectDictionary.Set(core.PdfObjectName("Length"), &ln)
+		replaceTable[stream] = newStream
+		images[index].Stream = newStream
 	}
 	optimizedObjects = make([]core.PdfObject, len(objects))
 	copy(optimizedObjects, objects)
