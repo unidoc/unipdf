@@ -357,7 +357,7 @@ func (e textLocTest) String() string {
 // by TextByComponents().
 type pageContents struct {
 	terms     []string                      // Substrings of the extracted text.
-	locations []TextComponent               // TextComponents in the extracted text.
+	locations []TextMark                    // TextComponents in the extracted text.
 	termBBox  map[string]model.PdfRectangle // {term: bounding box of term on PDF page}
 }
 
@@ -385,7 +385,7 @@ var textCases = []textLocTest{
 					"THING THREE", "$499",
 					"THING FOUR", "$667",
 				},
-				locations: []TextComponent{
+				locations: []TextMark{
 					l(0, "P", 165, 725.2, 197.2, 773.2),
 					l(1, "R", 197.2, 725.2, 231.9, 773.2),
 					l(2, "I", 231.9, 725.2, 245.2, 773.2),
@@ -408,7 +408,7 @@ var textCases = []textLocTest{
 		numPages: 2,
 		contents: map[int]pageContents{
 			1: pageContents{
-				locations: []TextComponent{
+				locations: []TextMark{
 					l(3602, "W", 152.5, 185.5, 163.0, 196.5),
 					l(3603, "T", 163.0, 185.5, 169.5, 196.5),
 					l(3604, "O", 169.5, 185.5, 177.5, 196.5),
@@ -446,7 +446,7 @@ var textCases = []textLocTest{
 					"designer and therefore the aesthetic aspect of",
 					"to Type 1 format.",
 				},
-				locations: []TextComponent{
+				locations: []TextMark{
 					l(286, "T", 334.0, 674.5, 341.2, 684.5),
 					l(287, "a", 340.5, 674.5, 345.5, 684.5),
 					l(288, "k", 345.5, 674.5, 350.5, 684.5),
@@ -469,7 +469,7 @@ var textCases = []textLocTest{
 					"Azərbaycan", "Vaqif Səmədoğlu",
 					"Азәрбајҹан", "Вагиф Сәмәдоғлу",
 				},
-				locations: []TextComponent{
+				locations: []TextMark{
 					l(447, "Ö", 272.0, 521.0, 281.0, 533.0),
 					l(448, "s", 281.0, 521.0, 287.0, 533.0),
 					l(449, "t", 287.0, 521.0, 290.5, 533.0),
@@ -512,7 +512,7 @@ var textCases = []textLocTest{
 	},
 }
 
-// testTextComponent tests TextComponent and TextByComponents() functionality. If `lazy` is true
+// testTextComponent tests TextMark and TextByComponents() functionality. If `lazy` is true
 // then PDFs are lazily loaded.
 func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	desc := fmt.Sprintf("%s lazy=%t", e, lazy)
@@ -541,7 +541,7 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	}
 }
 
-// testTextByComponents tests that TextByComponents returns extracted page text and TextComponent's
+// testTextByComponents tests that TextByComponents returns extracted page text and TextMark's
 // that match the expected results in `c`.
 func (c pageContents) testTextByComponents(t *testing.T, desc string, page *model.PdfPage) {
 	text, locations := textByComponents(t, desc, page)
@@ -554,14 +554,14 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 		}
 	}
 
-	// 2) Check that all expected TextComponent's and found in `locations`.
+	// 2) Check that all expected TextMark's and found in `locations`.
 	locMap := locationsMap(locations)
 	for i, loc := range c.locations {
 		common.Log.Debug("%d: %v", i, loc)
 		checkContains(t, desc, locMap, loc)
 	}
 
-	// 3) Check that locationsIndex() finds TextComponent's in `locations` corresponding to
+	// 3) Check that locationsIndex() finds TextMark's in `locations` corresponding to
 	//   some substrings of `text`.
 	//   We do this before testing getBBox() below so can narrow down why getBBox() has failed
 	//   if it fails.
@@ -625,9 +625,9 @@ func testLocationsFiles(t *testing.T, lazy bool) {
 	}
 }
 
-// testLocationsIndices checks that locationsIndex() finds TextComponent's in `locations`
+// testLocationsIndices checks that locationsIndex() finds TextMark's in `locations`
 // corresponding to some substrings of `text` with length 1-20.
-func testLocationsIndices(t *testing.T, text string, locations []TextComponent) {
+func testLocationsIndices(t *testing.T, text string, locations []TextMark) {
 	m := len([]rune(text))
 	if m > 20 {
 		m = 20
@@ -637,9 +637,9 @@ func testLocationsIndices(t *testing.T, text string, locations []TextComponent) 
 	}
 }
 
-// testLocationsIndex checks that locationsIndex() finds TextComponent's in `locations`
+// testLocationsIndex checks that locationsIndex() finds TextMark's in `locations`
 // testLocationsIndex to some substrings of `text` with length `n`.
-func testLocationsIndex(t *testing.T, text string, locations []TextComponent, n int) {
+func testLocationsIndex(t *testing.T, text string, locations []TextMark, n int) {
 	if len(text) < 2 {
 		return
 	}
@@ -653,13 +653,13 @@ func testLocationsIndex(t *testing.T, text string, locations []TextComponent, n 
 
 		i0, ok0 := locationsIndex(locations, ofs)
 		if !ok0 {
-			t.Fatalf("no TextComponent for term=%q=runes[%d:%d]=%02x",
+			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
 				term, ofs, ofs+n, runes[ofs:ofs+n])
 		}
 		loc0 := locations[i0]
 		i1, ok1 := locationsIndex(locations, ofs+n-1)
 		if !ok1 {
-			t.Fatalf("no TextComponent for term=%q=runes[%d:%d]=%02x",
+			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
 				term, ofs, ofs+n, runes[ofs:ofs+n])
 		}
 		loc1 := locations[i1]
@@ -679,7 +679,7 @@ func testLocationsIndex(t *testing.T, text string, locations []TextComponent, n 
 // Contains mean: `expectedLoc`.Offset is in `locMap` and for this element (call it loc) l
 //   loc.Text == expectedLoc.Text and the bounding boxes of
 //   loc and expectedLoc are within `tol` of each other.
-func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expectedLoc TextComponent) {
+func checkContains(t *testing.T, desc string, locMap map[int]TextMark, expectedLoc TextMark) {
 	loc, ok := locMap[expectedLoc.Offset]
 	if !ok {
 		t.Fatalf("locMap doesn't contain %v - %s", expectedLoc, desc)
@@ -702,7 +702,7 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextComponent, expe
 // the first instance of `term` in `text`, where `text` and `locations` are the extracted text
 // returned by TextByComponents().
 // NOTE: This is how you would use TextByComponents in an application.
-func getBBox(text string, locations []TextComponent, term string) (model.PdfRectangle, bool) {
+func getBBox(text string, locations []TextMark, term string) (model.PdfRectangle, bool) {
 	var bbox model.PdfRectangle
 	ofs0 := indexRunes(text, term)
 	if ofs0 < 0 {
@@ -763,7 +763,7 @@ func indexRunes(text, term string) int {
 // locationsIndex returns the index of the element of `locations` that spans `offset`
 // (i.e  idx: locations[idx] <= offset < locations[idx+1])
 // Caller must check that `locations` is not empty and sorted.
-func locationsIndex(locations []TextComponent, offset int) (int, bool) {
+func locationsIndex(locations []TextMark, offset int) (int, bool) {
 	if len(locations) == 0 {
 		common.Log.Error("locationsIndex: No locations")
 		return 0, false
@@ -782,9 +782,9 @@ func locationsIndex(locations []TextComponent, offset int) (int, bool) {
 	return i, ok
 }
 
-// locationsMap returns `locations` as a map keyed by TextComponent.Offset
-func locationsMap(locations []TextComponent) map[int]TextComponent {
-	locMap := make(map[int]TextComponent, len(locations))
+// locationsMap returns `locations` as a map keyed by TextMark.Offset
+func locationsMap(locations []TextMark) map[int]TextMark {
+	locMap := make(map[int]TextMark, len(locations))
 	for _, loc := range locations {
 		locMap[loc.Offset] = loc
 	}
@@ -795,9 +795,9 @@ func locationsMap(locations []TextComponent) map[int]TextComponent {
 // point so the tolerance should be just over 0.5
 const tol = 0.5001
 
-// l is a shorthand for writing TextComponent literals, which get verbose in Go,
-func l(o int, t string, llx, lly, urx, ury float64) TextComponent {
-	return TextComponent{Offset: o, BBox: r(llx, lly, urx, ury), Text: t}
+// l is a shorthand for writing TextMark literals, which get verbose in Go,
+func l(o int, t string, llx, lly, urx, ury float64) TextMark {
+	return TextMark{Offset: o, BBox: r(llx, lly, urx, ury), Text: t}
 }
 
 // r is a shorthand for writing model.PdfRectangle literals, which get verbose in Go,
@@ -805,23 +805,27 @@ func r(llx, lly, urx, ury float64) model.PdfRectangle {
 	return model.PdfRectangle{Llx: llx, Lly: lly, Urx: urx, Ury: ury}
 }
 
-// textByComponents returns the  extracted page text and TextComponent's for PDF page `page`.
-func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, []TextComponent) {
+// textByComponents returns the  extracted page text and TextMark's for PDF page `page`.
+func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, []TextMark) {
 	ex, err := New(page)
 	if err != nil {
 		t.Fatalf("extractor.New failed. %s err=%v", desc, err)
 	}
+	common.Log.Info("textByComponents: %s", desc)
 	pageText, _, _, err := ex.ExtractPageText()
 	if err != nil {
 		t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
 	}
-	text, locations := pageText.TextByComponents()
+
+	text := pageText.Text()
+	locations := pageText.Marks()
 
 	common.Log.Debug("text=>>>%s<<<\n", text)
 	common.Log.Debug("locations=%d %q", len(locations), desc)
 	for i, loc := range locations {
 		common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
 	}
+
 	return text, locations
 }
 
