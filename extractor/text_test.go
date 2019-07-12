@@ -132,9 +132,7 @@ func TestTextExtractionFiles(t *testing.T) {
 	}
 
 	for _, test := range fileExtractionTests {
-		t.Run(test.filename, func(t *testing.T) {
-			testExtractFile(t, test.filename, test.pageTerms)
-		})
+		testExtractFile(t, test.filename, test.pageTerms)
 	}
 }
 

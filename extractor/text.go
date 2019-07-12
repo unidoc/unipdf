@@ -883,6 +883,18 @@ func (t textMark) Width() float64 {
 	return math.Abs(t.orientedStart.X - t.orientedEnd.X)
 }
 
+func (t textMark) ToTextMark() TextMark {
+	return TextMark{
+		Text:     t.text,
+		Original: t.original,
+		BBox:     t.bbox,
+		Font:     t.font,
+		FontSize: t.fontsize,
+		count:    t.count,
+	}
+
+}
+
 // PageText represents the layout of text on a device page.
 // Its implementation is opaque to allow for future optimizations.
 // view... are the public view of an extracted page text.
@@ -943,6 +955,7 @@ type TextMark struct {
 	Font     *model.PdfFont
 	FontSize float64
 	Meta     bool
+	count    int64
 }
 
 // String returns a string describing `t`.
@@ -959,8 +972,8 @@ func (t TextMark) String() string {
 	if t.Meta {
 		meta = " *M*"
 	}
-	return fmt.Sprintf("{TextMark: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}", t.Offset,
-		t.Text, []rune(t.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
+	return fmt.Sprintf("{TextMark: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}",
+		t.Offset, t.Text, []rune(t.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
 // computeViews computes `pt`.viewText and `pt`.viewMarks the publically accessible contents and
@@ -981,24 +994,17 @@ func (pt *PageText) computeViews() {
 	lines := pt.toLines(tol)
 	texts := make([]string, len(lines))
 	for i, l := range lines {
-		texts[i] = strings.Join(l.words, wordJoiner)
+		texts[i] = strings.Join(l.words(), wordJoiner)
 	}
 	text := strings.Join(texts, lineJoiner)
 	var locations []TextMark
 	offset := 0
 	for i, l := range lines {
-		for j, w := range l.words {
-			loc := TextMark{ // !@#$ Need all TextMark fields!
-				Offset:   offset,
-				Text:     w,
-				Original: l.origs[j],
-				BBox:     l.bboxes[j],
-				Font:     l.fonts[j],
-				FontSize: l.sizes[j],
-			}
+		for j, loc := range l.marks {
+			loc.Offset = offset
 			locations = append(locations, loc)
-			offset += len([]rune(w))
-			if j == len(l.words)-1 {
+			offset += len([]rune(loc.Text))
+			if j == len(l.marks)-1 {
 				break
 			}
 			if wordJoinerLen > 0 {
@@ -1047,6 +1053,12 @@ const (
 var (
 	wordJoinerLen = len(wordJoiner)
 	lineJoinerLen = len(lineJoiner)
+	spaceMark     = TextMark{
+		Text:     " ",
+		Original: " ",
+		count:    -1,
+		Meta:     true,
+	}
 )
 
 // GetBBox returns the bounding box of the element in `locations` with Offset `offset`.
@@ -1088,16 +1100,19 @@ func (pt *PageText) sortPosition(tol float64) {
 
 // textLine represents a line of text on a page.
 type textLine struct {
-	x      float64   // x position of line.
-	y      float64   // y position of line.
-	h      float64   // height of line text.
-	dxList []float64 // x distance between successive words in line.
-	words  []string  // words in the line.
-	origs  []string
-	bboxes []model.PdfRectangle // bboxes[i] = bounding box of words[i].
-	fonts  []*model.PdfFont     // fonts[i] = the font words[i] was rendered with.
-	sizes  []float64
-	counts []int64 // textMark count (to help with reading debug logs).
+	x      float64    // x position of line.
+	y      float64    // y position of line.
+	h      float64    // height of line text.
+	dxList []float64  // x distance between successive words in line.
+	marks  []TextMark // TextMarks in the line.
+}
+
+func (l textLine) words() []string {
+	var texts []string
+	for _, m := range l.marks {
+		texts = append(texts, m.Text)
+	}
+	return texts
 }
 
 // toLines returns the text and positions in `pt.marks` as a slice of textLine.
@@ -1127,12 +1142,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 	if len(pt.marks) == 0 {
 		return []textLine{}
 	}
-	var words []string
-	var origs []string
-	var bboxes []model.PdfRectangle
-	var fonts []*model.PdfFont
-	var sizes []float64
-	var counts []int64
+	var marks []TextMark
 	var lines []textLine
 	var xx []float64
 	y := pt.marks[0].orientedStart.Y
@@ -1145,8 +1155,8 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 
 	for _, t := range pt.marks {
 		if t.orientedStart.Y+tol < y {
-			if len(words) > 0 {
-				line := newLine(y, xx, words, origs, bboxes, fonts, sizes, counts)
+			if len(marks) > 0 {
+				line := newLine(y, xx, marks)
 				if averageCharWidth.running {
 					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
 					// line = combineDiacritics(line, averageCharWidth.ave)
@@ -1154,12 +1164,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 				}
 				lines = append(lines, line)
 			}
-			words = []string{}
-			origs = []string{}
-			bboxes = []model.PdfRectangle{}
-			fonts = []*model.PdfFont{}
-			sizes = []float64{}
-			counts = []int64{}
+			marks = []TextMark{}
 			xx = []float64{}
 			y = t.orientedStart.Y
 			scanning = false
@@ -1193,29 +1198,19 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 			nextWordX-t.orientedStart.X, isSpace)
 
 		if isSpace {
-			words = append(words, " ")
-			origs = append(origs, " ")
-			bboxes = append(bboxes, model.PdfRectangle{})
-			fonts = append(fonts, nil)
-			sizes = append(sizes, 0.0)
-			counts = append(counts, -1)
+			marks = append(marks, spaceMark)
 			xx = append(xx, (lastEndX+t.orientedStart.X)*0.5)
 		}
 
-		// Add the text to the line. !@#$ Just use []texMark
+		// Add the text to the line. !@#$ Just use []TexMark
 		lastEndX = t.orientedEnd.X
-		words = append(words, t.text)
-		origs = append(origs, t.original)
-		bboxes = append(bboxes, t.bbox)
-		fonts = append(fonts, t.font)
-		sizes = append(sizes, t.fontsize)
-		counts = append(counts, t.count)
+		marks = append(marks, t.ToTextMark())
 		xx = append(xx, t.orientedStart.X)
 		scanning = true
 		common.Log.Trace("lastEndX=%.2f", lastEndX)
 	}
-	if len(words) > 0 {
-		line := newLine(y, xx, words, origs, bboxes, fonts, sizes, counts)
+	if len(marks) > 0 {
+		line := newLine(y, xx, marks)
 		if averageCharWidth.running {
 			line = removeDuplicates(line, averageCharWidth.ave)
 		}
@@ -1256,22 +1251,16 @@ func (exp *exponAve) update(x float64) float64 {
 
 // newLine returns the textLine representation of strings `words` with y coordinate `y` and x
 // coordinates `xx` and height `h`.
-func newLine(y float64, xx []float64, words, origs []string, bboxes []model.PdfRectangle,
-	fonts []*model.PdfFont, sizes []float64, counts []int64) textLine {
-
+func newLine(y float64, xx []float64, marks []TextMark) textLine {
 	dxList := make([]float64, len(xx)-1)
 	for i := 1; i < len(xx); i++ {
 		dxList[i-1] = xx[i] - xx[i-1]
 	}
 	return textLine{
-		x: xx[0], y: y,
+		x:      xx[0],
+		y:      y,
 		dxList: dxList,
-		words:  words,
-		origs:  origs,
-		bboxes: bboxes,
-		fonts:  fonts,
-		sizes:  sizes,
-		counts: counts,
+		marks:  marks,
 	}
 }
 
@@ -1284,42 +1273,23 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 
 	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.3
-	words := []string{line.words[0]} // !@#$ Replace with []textMark
-	origs := []string{line.origs[0]}
-	bboxes := []model.PdfRectangle{line.bboxes[0]}
-	fonts := []*model.PdfFont{line.fonts[0]}
-	sizes := []float64{line.sizes[0]}
-	counts := []int64{line.counts[0]}
+	marks := []TextMark{line.marks[0]}
 	var dxList []float64
 
-	w0 := line.words[0]
+	m0 := line.marks[0]
 	for i, dx := range line.dxList {
-		w := line.words[i+1]
-		o := line.origs[i+1]
-		b := line.bboxes[i+1]
-		f := line.fonts[i+1]
-		s := line.sizes[i+1]
-		c := line.counts[i+1]
-		if w != w0 || dx > tol {
-			words = append(words, w)
-			origs = append(origs, o)
-			bboxes = append(bboxes, b)
-			fonts = append(fonts, f)
-			sizes = append(sizes, s)
-			counts = append(counts, c)
+		m := line.marks[i+1]
+		if m.Text != m0.Text || dx > tol {
+			marks = append(marks, m)
 			dxList = append(dxList, dx)
 		}
-		w0 = w
+		m0 = m
 	}
 	return textLine{
-		x: line.x, y: line.y,
+		x:      line.x,
+		y:      line.y,
 		dxList: dxList,
-		words:  words,
-		origs:  origs,
-		bboxes: bboxes,
-		fonts:  fonts,
-		sizes:  sizes,
-		counts: counts,
+		marks:  marks,
 	}
 }
 
@@ -1336,19 +1306,18 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
 
-	var words []string
+	var marks []TextMark
 	var dxList []float64
-	w := line.words[0]
-	w, c := countDiacritic(w)
+	m := marks[0]
+	w, c := countDiacritic(m.Text)
 	delta := 0.0
 	dx0 := 0.0
 	parts := []string{w}
 	numChars := c
 
-	for i := 0; i < len(line.dxList); i++ {
-		w = line.words[i+1]
-		w, c := countDiacritic(w)
-		dx := line.dxList[i]
+	for i, dx := range line.dxList {
+		m = marks[i+1]
+		w, c := countDiacritic(m.Text)
 		if numChars+c <= 1 && delta+dx <= tol {
 			if len(parts) == 0 {
 				dx0 = dx
@@ -1359,10 +1328,11 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 			numChars += c
 		} else {
 			if len(parts) > 0 {
-				if len(words) > 0 {
+				if len(marks) > 0 {
 					dxList = append(dxList, dx0)
 				}
-				words = append(words, combine(parts))
+				m.Text = combine(parts)
+				marks = append(marks, m)
 			}
 			parts = []string{w}
 			numChars = c
@@ -1371,26 +1341,23 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 		}
 	}
 	if len(parts) > 0 {
-		if len(words) > 0 {
+		if len(marks) > 0 {
 			dxList = append(dxList, dx0)
 		}
-		words = append(words, combine(parts))
+		m.Text = combine(parts)
+		marks = append(marks, m)
 	}
 
-	if len(words) != len(dxList)+1 {
-		common.Log.Error("Inconsistent: \nwords=%d %q\ndxList=%d %.2f",
-			len(words), words, len(dxList), dxList)
+	if len(marks) != len(dxList)+1 {
+		common.Log.Error("Inconsistent: \nwords=%d \ndxList=%d %.2f",
+			len(marks), len(dxList), dxList)
 		return line
 	}
 	return textLine{
 		x: line.x, y: line.y,
 		dxList: dxList,
-		words:  words,
-		origs:  line.origs,
-		bboxes: line.bboxes,
-		fonts:  line.fonts,
-		sizes:  line.sizes,
-		counts: line.counts}
+		marks:  marks,
+	}
 }
 
 // combine combines any diacritics in `parts` with the single non-diacritic character in `parts`.
