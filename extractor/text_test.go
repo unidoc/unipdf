@@ -816,7 +816,7 @@ func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, [
 	}
 
 	text := pageText.Text()
-	locations := pageText.Marks()
+	locations := pageText.Marks().Elements()
 
 	common.Log.Debug("text=>>>%s<<<\n", text)
 	common.Log.Debug("locations=%d %q", len(locations), desc)

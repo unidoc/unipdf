@@ -925,9 +925,44 @@ func (pt PageText) Text() string {
 	return pt.viewText
 }
 
-// Marks are the TextMark's that correspond to pt.Text()
-func (pt PageText) Marks() []TextMark {
-	return pt.viewMarks
+// Marks are the TextMark's that  to pt.Text().
+func (pt PageText) Marks() *TextMarkArray {
+	return &TextMarkArray{marks: pt.viewMarks}
+}
+
+// TextMarkArray is a collection of TextMark's.
+type TextMarkArray struct {
+	marks []TextMark
+}
+
+// Elements returns a slice of the TextMark elements in the array.
+func (array *TextMarkArray) Elements() []TextMark {
+	return array.marks
+}
+
+// Len returns the number of elements in the array.
+func (array *TextMarkArray) Len() int {
+	if array == nil {
+		return 0
+	}
+	return len(array.marks)
+}
+
+// Get returns the `i`-th element of the array. The bool indicates if it is in the array.
+func (array *TextMarkArray) Get(i int) (TextMark, bool) {
+	if array == nil || !(0 <= i && i < len(array.marks)) {
+		return TextMark{}, false
+	}
+	return array.marks[i], true
+}
+
+// Set sets the i-th element of the array. An error is returned if `i is out of bounds.
+func (array *TextMarkArray) Set(i int, mark TextMark) error {
+	if !(0 <= i && i < len(array.marks)) {
+		return errors.New("outside bounds")
+	}
+	array.marks[i] = mark
+	return nil
 }
 
 // TextMark is the public view of a textMark.
