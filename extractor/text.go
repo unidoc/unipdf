@@ -337,6 +337,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
+
 	return pageText, state.numChars, state.numMisses, err
 }
 
@@ -943,14 +944,9 @@ type TextMark struct {
 	Text string
 }
 
-// Marks returns a TextMark for every text mark in `pt`. This is the publically accessible view of
-// text marks.
+// Marks are the TextMark's that correspond to pt.Text()
 func (pt PageText) Marks() []TextMark {
-	marks := make([]TextMark, len(pt.marks))
-	for i, t := range pt.marks {
-		marks[i] = TextMark{BBox: t.bbox, Text: t.text}
-	}
-	return marks
+	return pt.viewMarks
 }
 
 // Text returns the extracted page text.
