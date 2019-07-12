@@ -918,6 +918,18 @@ func (tm textMark) ToTextMark() TextMark {
 	}
 }
 
+func (t textMark) ToTextMark() TextMark {
+	return TextMark{
+		Text:     t.text,
+		Original: t.original,
+		BBox:     t.bbox,
+		Font:     t.font,
+		FontSize: t.fontsize,
+		count:    t.count,
+	}
+
+}
+
 // PageText represents the layout of text on a device page.
 type PageText struct {
 	marks     []textMark // Texts and their positions on a PDF page.
