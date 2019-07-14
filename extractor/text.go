@@ -935,6 +935,18 @@ type TextMarkArray struct {
 	marks []TextMark
 }
 
+// String returns a string describing `array`.
+func (array TextMarkArray) String() string {
+	n := len(array.marks)
+	if n == 0 {
+		return "EMPTY"
+	}
+	m0 := array.marks[0]
+	m1 := array.marks[n-1]
+	return fmt.Sprintf("{TEXTMARKARRAY: %d elements\n\tfirst=%s\n\t last=%s}", n, m0, m1)
+
+}
+
 // Elements returns a slice of the TextMark elements in the array.
 func (array *TextMarkArray) Elements() []TextMark {
 	return array.marks
@@ -948,21 +960,105 @@ func (array *TextMarkArray) Len() int {
 	return len(array.marks)
 }
 
-// Get returns the `i`-th element of the array. The bool indicates if it is in the array.
-func (array *TextMarkArray) Get(i int) (TextMark, bool) {
-	if array == nil || !(0 <= i && i < len(array.marks)) {
+// TODO(peterwilliams97) Does user need to know the ordering of TextMarkArray.marks?
+// // Get returns the `i`-th element of the array. The bool indicates if it is in the array.
+// func (array *TextMarkArray) Get(i int) (TextMark, bool) {
+// 	if array == nil || !(0 <= i && i < len(array.marks)) {
+// 		return TextMark{}, false
+// 	}
+// 	return array.marks[i], true
+// }
+
+// GetByOffset returns the TextMark at offset `offset` in the extracted text corresonding to `array`.
+// The bool indicates if `array` has any TextMark's with this offset
+func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
+	n := len(array.marks)
+	if n == 0 {
 		return TextMark{}, false
 	}
-	return array.marks[i], true
+	m0 := array.marks[0]
+	m1 := array.marks[n-1]
+	if !(m0.Offset <= offset && offset < m1.Offset) {
+		return TextMark{}, false
+	}
+
+	textMark, err := array.RangeOffset(offset, offset+1)
+	if err != nil {
+		return TextMark{}, false
+	}
+	if textMark.Len() != 1 {
+		common.Log.Error("This can't happen. offsets=[%d,%d) textMark=%s",
+			offset, offset+1, textMark)
+	}
+	return textMark.marks[0], true
 }
 
-// Set sets the i-th element of the array. An error is returned if `i is out of bounds.
-func (array *TextMarkArray) Set(i int, mark TextMark) error {
-	if !(0 <= i && i < len(array.marks)) {
-		return errors.New("outside bounds")
+// RangeOffset returns the TextMark's in `array` that have start <= TextMark.Offet < end.
+func (array *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
+
+	if array == nil {
+		return nil, errors.New("array=nil.RangeOffset")
 	}
-	array.marks[i] = mark
-	return nil
+	if end < start {
+		return nil, fmt.Errorf("end < start. RangeOffset not defined. start=%d end=%d ", start, end)
+	}
+	locations := array.marks
+	if len(locations) == 0 {
+		common.Log.Debug("TextMarkArray is empty")
+		return array, nil
+	}
+	if start < locations[0].Offset {
+		start = locations[0].Offset
+	}
+	if end > locations[len(locations)-1].Offset {
+		end = locations[len(locations)-1].Offset
+	}
+
+	iStart := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= start })
+	if !(0 <= iStart && iStart < len(locations)) {
+		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
+			start, iStart, len(locations), locations[0], locations[len(locations)-1])
+		return nil, err
+	}
+	iEnd := sort.Search(len(locations), func(i int) bool { return locations[i].Offset > end-1 })
+	if !(0 <= iEnd && iEnd < len(locations)) {
+		err := fmt.Errorf("Out of range. end=%d iEnd=%d len=%d\n\tfirst=%v\n\t last=%v",
+			end, iEnd, len(locations), locations[0], locations[len(locations)-1])
+		return nil, err
+	}
+
+	if iEnd <= iStart {
+		// This should never happen.
+		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
+	}
+
+	return &TextMarkArray{marks: locations[iStart:iEnd]}, nil
+}
+
+// BBox returns the smallest axis-aligned retangle that encloses all the TextMark's in `array`.
+func (array *TextMarkArray) BBox() (model.PdfRectangle, bool) {
+	locations := array.marks
+	if len(locations) == 0 {
+		return model.PdfRectangle{}, false
+	}
+	bbox := locations[0].BBox
+	for _, loc := range locations {
+		if isTextSpace(loc.Text) {
+			continue
+		}
+		bbox = rectUnion(bbox, loc.BBox)
+	}
+	return bbox, true
+}
+
+// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
+func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
+	return model.PdfRectangle{
+		Llx: math.Min(b1.Llx, b2.Llx),
+		Lly: math.Min(b1.Lly, b2.Lly),
+		Urx: math.Max(b1.Urx, b2.Urx),
+		Ury: math.Max(b1.Ury, b2.Ury),
+	}
 }
 
 // TextMark is the public view of a textMark.
@@ -1096,27 +1192,6 @@ var (
 	}
 )
 
-// GetBBox returns the bounding box of the element in `locations` with Offset `offset`.
-func GetBBox(locations []TextMark, offset int) (model.PdfRectangle, bool) {
-	if len(locations) == 0 {
-		common.Log.Debug("No locations")
-		return model.PdfRectangle{}, false
-	}
-	if offset < locations[0].Offset {
-		common.Log.Debug("Out of range. offset=%d len=%d\n\tfirst=%v\n\t last=%v",
-			offset, len(locations), locations[0], locations[len(locations)-1])
-		return model.PdfRectangle{}, false
-	}
-	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
-	ok := 0 <= i && i < len(locations)
-	if !ok {
-		common.Log.Debug("Out of range. offset=%d i=%d len=%d\n\tfirst=%v\n\t last=%v",
-			offset, i, len(locations), locations[0], locations[len(locations)-1])
-		return model.PdfRectangle{}, false
-	}
-	return locations[i].BBox, true
-}
-
 // sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
@@ -1237,7 +1312,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 			xx = append(xx, (lastEndX+t.orientedStart.X)*0.5)
 		}
 
-		// Add the text to the line. !@#$ Just use []TexMark
+		// Add the text to the line.
 		lastEndX = t.orientedEnd.X
 		marks = append(marks, t.ToTextMark())
 		xx = append(xx, t.orientedStart.X)

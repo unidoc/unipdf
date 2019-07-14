@@ -6,10 +6,13 @@
 package extractor
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -17,12 +20,22 @@ import (
 	"testing"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/creator"
 	"github.com/unidoc/unipdf/v3/model"
 	"golang.org/x/text/unicode/norm"
 )
 
-// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo so you
-// will need to setup UNIDOC_EXTRACT_TESTDATA to point at the corpus directory.
+const (
+	// markupPDFs should be set to true to save PDF pages with their bounding boxes marked.
+	// See markupList below.
+	markupPDFs = false
+	// markupDir is the directory where the marked-up PDFs are saved.
+	// The PDFs in markupDir can be viewed in a PDF viewer to check that they correct.
+	markupDir = "marked.up"
+)
+
+// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this
+// repo so you will need to setup UNIDOC_EXTRACT_TESTDATA to point at the corpus directory.
 
 // forceTest should be set to true to force running all tests.
 // NOTE: Setting environment variable UNIDOC_EXTRACT_FORCETEST = 1 sets this to true.
@@ -518,6 +531,8 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 
 	filename := filepath.Join(corpusFolder, e.filename)
 	pdfReader := openPdfReader(t, filename, lazy)
+	l := createMarkupList(t, filename, pdfReader)
+	defer l.saveOutputPdf()
 
 	n, err := pdfReader.GetNumPages()
 	if err != nil {
@@ -535,14 +550,16 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 		if err != nil {
 			t.Fatalf("GetPage failed. %s err=%v", pageDesc, err)
 		}
-		c.testTextByComponents(t, pageDesc, page)
+		l.setPageNum(pageNum)
+		c.testTextByComponents(t, l, pageDesc, page)
 	}
 }
 
 // testTextByComponents tests that TextByComponents returns extracted page text and TextMark's
 // that match the expected results in `c`.
-func (c pageContents) testTextByComponents(t *testing.T, desc string, page *model.PdfPage) {
-	text, locations := textByComponents(t, desc, page)
+func (c pageContents) testTextByComponents(t *testing.T, l *markupList, desc string,
+	page *model.PdfPage) {
+	text, textMarks := textByComponents(t, desc, page)
 
 	// 1) Check that all expected terms are found in `text`.
 	for i, term := range c.terms {
@@ -553,7 +570,7 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 	}
 
 	// 2) Check that all expected TextMark's and found in `locations`.
-	locMap := locationsMap(locations)
+	locMap := locationsMap(textMarks.Elements())
 	for i, loc := range c.locations {
 		common.Log.Debug("%d: %v", i, loc)
 		checkContains(t, desc, locMap, loc)
@@ -563,15 +580,16 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 	//   some substrings of `text`.
 	//   We do this before testing getBBox() below so can narrow down why getBBox() has failed
 	//   if it fails.
-	testLocationsIndices(t, text, locations)
+	testLocationsIndices(t, text, textMarks)
 
 	// 4) Check that longer terms are matched and found in their expected locations.
 	for _, term := range c.matchTerms() {
 		expectedBBox := c.termBBox[term]
-		bbox, ok := getBBox(text, locations, term)
-		if !ok {
+		bbox, err := getBBox(text, textMarks, term)
+		if err != nil {
 			t.Fatalf("locations doesn't contain term %q. %s", term, desc)
 		}
+		l.addMatch(term, bbox)
 		if !rectEquals(expectedBBox, bbox) {
 			t.Fatalf("bbox is wrong - %s\n"+
 				"\t    term: %q\n"+
@@ -582,11 +600,11 @@ func (c pageContents) testTextByComponents(t *testing.T, desc string, page *mode
 	}
 
 	// 5) Check out or range cases
-	if i, ok := locationsIndex(locations, -1); ok {
-		t.Fatalf("locationsIndex(-1) failed. i=%d - %s", i, desc)
+	if mark, ok := textMarks.GetByOffset(-1); ok {
+		t.Fatalf("textMarks.GetByOffset(-1) succeeded. %s\n\tmark=%s", desc, mark)
 	}
-	if i, ok := locationsIndex(locations, 1e10); ok {
-		t.Fatalf("locationsIndex(1e10) returned a vlau. i=%d - %s", i, desc)
+	if mark, ok := textMarks.GetByOffset(1e10); ok {
+		t.Fatalf("textMarks.GetByOffset(1e10) succeeded. %s\n\tmark=%s", desc, mark)
 	}
 }
 
@@ -617,27 +635,27 @@ func testLocationsFiles(t *testing.T, lazy bool) {
 			if err != nil {
 				t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
 			}
-			text, locations := textByComponents(t, desc, page)
-			testLocationsIndices(t, text, locations)
+			text, textMarks := textByComponents(t, desc, page)
+			testLocationsIndices(t, text, textMarks)
 		}
 	}
 }
 
 // testLocationsIndices checks that locationsIndex() finds TextMark's in `locations`
 // corresponding to some substrings of `text` with length 1-20.
-func testLocationsIndices(t *testing.T, text string, locations []TextMark) {
+func testLocationsIndices(t *testing.T, text string, textMarks *TextMarkArray) {
 	m := len([]rune(text))
 	if m > 20 {
 		m = 20
 	}
 	for n := 1; n <= m; n++ {
-		testLocationsIndex(t, text, locations, n)
+		testLocationsIndex(t, text, textMarks, n)
 	}
 }
 
 // testLocationsIndex checks that locationsIndex() finds TextMark's in `locations`
 // testLocationsIndex to some substrings of `text` with length `n`.
-func testLocationsIndex(t *testing.T, text string, locations []TextMark, n int) {
+func testLocationsIndex(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 	if len(text) < 2 {
 		return
 	}
@@ -649,18 +667,41 @@ func testLocationsIndex(t *testing.T, text string, locations []TextMark, n int) 
 	for ofs := 0; ofs < len(runes)-n; ofs++ {
 		term := string(runes[ofs : ofs+n])
 
-		i0, ok0 := locationsIndex(locations, ofs)
+		// Get first and last TextMark's for term match with GetByOffset(). Not recommended.
+		loc0, ok0 := textMarks.GetByOffset(ofs)
 		if !ok0 {
 			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
 				term, ofs, ofs+n, runes[ofs:ofs+n])
 		}
-		loc0 := locations[i0]
-		i1, ok1 := locationsIndex(locations, ofs+n-1)
+		loc1, ok1 := textMarks.GetByOffset(ofs + n - 1)
 		if !ok1 {
 			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
 				term, ofs, ofs+n, runes[ofs:ofs+n])
 		}
-		loc1 := locations[i1]
+
+		if !strings.HasPrefix(term, loc0.Text) {
+			t.Fatalf("loc is not a prefix for term=%q=runes[%d:%d]=%02x loc=%v",
+				term, ofs, ofs+n, runes[ofs:ofs+n], loc0)
+		}
+		if !strings.HasSuffix(term, loc1.Text) {
+			t.Fatalf("loc is not a suffix for term=%q=runes[%d:%d]=%v loc=%v",
+				term, ofs, ofs+n, runes[ofs:ofs+n], loc1)
+		}
+
+		// Get first and last TextMark's for term match with RangeOffset(). This is recommended.
+		spanArray, err := textMarks.RangeOffset(ofs, ofs+n)
+		if err != nil {
+			t.Fatalf("textMarks.RangeOffset failed term=%q=runes[%d:%d]=%02x err=%v",
+				term, ofs, ofs+n, runes[ofs:ofs+n], err)
+		}
+		if spanArray.Len() == 0 {
+			t.Fatalf("No matches. term=%q=runes[%d:%d]=%02x err=%v",
+				term, ofs, ofs+n, runes[ofs:ofs+n], err)
+		}
+
+		spanMarks := spanArray.Elements()
+		loc0 = spanMarks[0]
+		loc1 = spanMarks[spanArray.Len()-1]
 
 		if !strings.HasPrefix(term, loc0.Text) {
 			t.Fatalf("loc is not a prefix for term=%q=runes[%d:%d]=%02x loc=%v",
@@ -700,41 +741,24 @@ func checkContains(t *testing.T, desc string, locMap map[int]TextMark, expectedL
 // the first instance of `term` in `text`, where `text` and `locations` are the extracted text
 // returned by TextByComponents().
 // NOTE: This is how you would use TextByComponents in an application.
-func getBBox(text string, locations []TextMark, term string) (model.PdfRectangle, bool) {
-	var bbox model.PdfRectangle
+func getBBox(text string, textMarks *TextMarkArray, term string) (model.PdfRectangle, error) {
 	ofs0 := indexRunes(text, term)
 	if ofs0 < 0 {
-		return bbox, false
+		return model.PdfRectangle{}, fmt.Errorf("indexRunes has no match for term=%q", term)
 	}
-	ofs1 := ofs0 + len([]rune(term)) - 1
+	ofs1 := ofs0 + len([]rune(term))
 
-	i0, ok0 := locationsIndex(locations, ofs0)
-	i1, ok1 := locationsIndex(locations, ofs1)
-	if !(ok0 && ok1) {
-		return bbox, false
-	}
-
-	common.Log.Debug("term=%q text[%d:%d]=%q", term, ofs0, ofs1, text[ofs0:ofs1+1])
-
-	loc0 := locations[i0]
-	loc1 := locations[i1]
-	common.Log.Debug("i0=%d ofs0=%d loc0=%v", i0, ofs0, loc0)
-	common.Log.Debug("i1=%d ofs1=%d loc1=%v", i1, ofs1, loc1)
-
-	for i := i0; i <= i1; i++ {
-		loc := locations[i]
-		if isTextSpace(loc.Text) {
-			continue
-		}
-		if i == i0 {
-			bbox = loc.BBox
-		} else {
-			bbox = rectUnion(bbox, loc.BBox)
-		}
-		common.Log.Debug("i=%d text=%v bbox=%.1f loc=%v", i, []rune(loc.Text), bbox, loc)
+	spanMarks, err := textMarks.RangeOffset(ofs0, ofs1)
+	if err != nil {
+		return model.PdfRectangle{}, err
 	}
 
-	return bbox, true
+	bbox, ok := spanMarks.BBox()
+	if !ok {
+		return model.PdfRectangle{}, fmt.Errorf("spanMarks.BBox has no bounding box. spanMarks=%s",
+			spanMarks)
+	}
+	return bbox, nil
 }
 
 // indexRunes returns the index in `text` of the first instance of `term` if `term` is a substring
@@ -756,28 +780,6 @@ func indexRunes(text, term string) int {
 		}
 	}
 	return -1
-}
-
-// locationsIndex returns the index of the element of `locations` that spans `offset`
-// (i.e  idx: locations[idx] <= offset < locations[idx+1])
-// Caller must check that `locations` is not empty and sorted.
-func locationsIndex(locations []TextMark, offset int) (int, bool) {
-	if len(locations) == 0 {
-		common.Log.Error("locationsIndex: No locations")
-		return 0, false
-	}
-	if offset < locations[0].Offset {
-		common.Log.Debug("locationsIndex: Out of range. offset=%d len=%d\n\tfirst=%v\n\t last=%v",
-			offset, len(locations), locations[0], locations[len(locations)-1])
-		return 0, false
-	}
-	i := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= offset })
-	ok := 0 <= i && i < len(locations)
-	if !ok {
-		common.Log.Debug("locationsIndex: Out of range. offset=%d i=%d len=%d\n\tfirst=%v\n\t last=%v",
-			offset, i, len(locations), locations[0], locations[len(locations)-1])
-	}
-	return i, ok
 }
 
 // locationsMap returns `locations` as a map keyed by TextMark.Offset
@@ -804,12 +806,12 @@ func r(llx, lly, urx, ury float64) model.PdfRectangle {
 }
 
 // textByComponents returns the  extracted page text and TextMark's for PDF page `page`.
-func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, []TextMark) {
+func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, *TextMarkArray) {
 	ex, err := New(page)
 	if err != nil {
 		t.Fatalf("extractor.New failed. %s err=%v", desc, err)
 	}
-	common.Log.Info("textByComponents: %s", desc)
+	common.Log.Debug("textByComponents: %s", desc)
 	pageText, _, _, err := ex.ExtractPageText()
 	if err != nil {
 		t.Fatalf("ExtractPageText failed. %s err=%v", desc, err)
@@ -824,7 +826,7 @@ func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, [
 		common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
 	}
 
-	return text, locations
+	return text, pageText.Marks()
 }
 
 // openPdfReader returns a PdfReader for file `filename`. If `lazy` is true, it will be lazy reader.
@@ -887,16 +889,6 @@ func sortedKeys(m map[int][]string) []int {
 	return keys
 }
 
-// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
-func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
-	return model.PdfRectangle{
-		Llx: math.Min(b1.Llx, b2.Llx),
-		Lly: math.Min(b1.Lly, b2.Lly),
-		Urx: math.Max(b1.Urx, b2.Urx),
-		Ury: math.Max(b1.Ury, b2.Ury),
-	}
-}
-
 // rectEquals returns true if `b1` and `b2` corners are within `tol` of each other.
 // NOTE: All the coordinates in this source file are in points.
 func rectEquals(b1, b2 model.PdfRectangle) bool {
@@ -904,4 +896,130 @@ func rectEquals(b1, b2 model.PdfRectangle) bool {
 		math.Abs(b1.Lly-b2.Lly) <= tol &&
 		math.Abs(b1.Urx-b2.Urx) <= tol &&
 		math.Abs(b1.Ury-b2.Ury) <= tol
+}
+
+// markupList saves the results of text searches so they can be used to mark up a PDF with search
+// matches and show the search term that was matched.
+// Marked up results are saved in markupDir if markupPDFs is true.
+// The PDFs in markupDir can be viewed in a PDF viewer to check that they correct.
+type markupList struct {
+	inPath      string           // Name of input PDF that was searched
+	pageMatches map[int][]match  // {pageNum: matches on page}
+	t           *testing.T       // Testing context
+	pdfReader   *model.PdfReader // Reader for input PDF
+	pageNum     int              // (1-offset) Page number being worked on.
+}
+
+// match is a match of search term `Term` on a page. `BBox` is the bounding box around the matched
+// term on the PDF page
+type match struct {
+	Term string
+	BBox model.PdfRectangle
+}
+
+// String returns a description of `l`.
+func (l markupList) String() string {
+	return fmt.Sprintf("%q: %d pages. Input pageNums=%v", l.inPath, len(l.pageMatches), l.pageNums())
+}
+
+// createMarkupList returns an initialized markupList for saving match results to so the bounding
+// boxes can be checked for accuracy in a PDF viewer.
+func createMarkupList(t *testing.T, inPath string, pdfReader *model.PdfReader) *markupList {
+	return &markupList{
+		t:           t,
+		inPath:      inPath,
+		pdfReader:   pdfReader,
+		pageMatches: map[int][]match{},
+	}
+}
+
+// setPageNum sets the page number that markupList.addMatch() will use to add to matches to.
+func (l *markupList) setPageNum(pageNum int) {
+	l.pageNum = pageNum
+}
+
+// addMatch added a match on search term `term` that was found to have bounding box `bbox` to
+// for `l`.pageNum. l.pageNum is set with markupList.setPageNum()
+func (l *markupList) addMatch(term string, bbox model.PdfRectangle) {
+	m := match{Term: term, BBox: bbox}
+	l.pageMatches[l.pageNum] = append(l.pageMatches[l.pageNum], m)
+}
+
+// pageNums returns the (1-offset) page numbers in `l` of pages that have searc matches
+func (l *markupList) pageNums() []int {
+	var nums []int
+	for pageNum, matches := range l.pageMatches {
+		if len(matches) == 0 {
+			continue
+		}
+		nums = append(nums, pageNum)
+	}
+	sort.Ints(nums)
+	return nums
+}
+
+// saveOutputPdf is called to mark up a PDF file with the locations of text.
+// `l` contains the input PDF, the pages, search terms and bounding boexs to mark.
+func (l *markupList) saveOutputPdf() {
+
+	if !markupPDFs {
+		return
+	}
+	if len(l.pageNums()) == 0 {
+		common.Log.Info("No marked-up PDFs to save")
+		return
+	}
+	common.Log.Info("Saving marked-up PDFs. %s", l)
+
+	os.Mkdir(markupDir, 0777)
+	outPath := filepath.Join(markupDir, filepath.Base(l.inPath))
+	ext := path.Ext(outPath)
+	metaPath := outPath[:len(outPath)-len(ext)] + ".json"
+
+	// Make a new PDF creator.
+	c := creator.New()
+
+	for _, pageNum := range l.pageNums() {
+
+		common.Log.Debug("saveOutputPdf: %a pageNum=%d", l.inPath, pageNum)
+		page, err := l.pdfReader.GetPage(pageNum)
+		if err != nil {
+			l.t.Fatalf("saveOutputPdf: Could not get page  pageNum=%d. err=%v", pageNum, err)
+		}
+		mediaBox, err := page.GetMediaBox()
+		if err == nil && page.MediaBox == nil {
+			// Deal with MediaBox inherited from Parent.
+			common.Log.Info("MediaBox: %v -> %v", page.MediaBox, mediaBox)
+			page.MediaBox = mediaBox
+		}
+		h := mediaBox.Ury
+
+		if err := c.AddPage(page); err != nil {
+			l.t.Fatalf("AddPage failed %s:%d err=%v ", l, pageNum, err)
+		}
+
+		for _, m := range l.pageMatches[pageNum] {
+			r := m.BBox
+			rect := c.NewRectangle(r.Llx, h-r.Lly, r.Urx-r.Llx, -(r.Ury - r.Lly))
+			rect.SetBorderColor(creator.ColorRGBFromHex("#0000ff")) // Blue border.
+			rect.SetBorderWidth(1.0)
+			if err := c.Draw(rect); err != nil {
+				l.t.Fatalf("Draw failed. pageNum=%d match=%v err=%v", pageNum, m, err)
+			}
+		}
+	}
+
+	c.SetOutlineTree(l.pdfReader.GetOutlineTree())
+	if err := c.WriteToFile(outPath); err != nil {
+		l.t.Fatalf("WriteToFile failed. err=%v", err)
+	}
+
+	b, err := json.MarshalIndent(l.pageMatches, "", "\t")
+	if err != nil {
+		l.t.Fatalf("MarshalIndent failed. err=%v", err)
+	}
+	err = ioutil.WriteFile(metaPath, b, 0666)
+	if err != nil {
+		l.t.Fatalf("WriteFile failed. metaPath=%q err=%v", metaPath, err)
+	}
 }
