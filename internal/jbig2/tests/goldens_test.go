@@ -19,7 +19,7 @@ import (
 
 // Goldens is a model used to store the jbig2 testcase 'golden files'.
 // The golden files stores the md5 'hash' value for each 'filename' key.
-// It is used to check if the decoded jbig2 image had changed using the image md5 hash.
+// It is used to check if the decoded jbig2 image had changed using it's md5 hash.
 type Goldens map[string]string
 
 func checkGoldenFiles(t *testing.T, dirname, filename string, images ...*extractedImage) {
