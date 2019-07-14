@@ -11,6 +11,8 @@ import (
 	"image/color"
 
 	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // ErrIndexOutOfRange is the error that returns if the bitmap byte index is out of range.
@@ -40,7 +42,6 @@ func New(width, height int) *Bitmap {
 		Height:    height,
 		RowStride: (width + 7) >> 3,
 	}
-
 	bm.Data = make([]byte, height*bm.RowStride)
 
 	return bm
@@ -107,7 +108,6 @@ func (b *Bitmap) GetPixel(x, y int) bool {
 		common.Log.Debug("Trying to get pixel out of the data range. x: '%d', y:'%d', bm: '%s'", x, y, b)
 		return false
 	}
-
 	if (b.Data[i]>>shift)&0x01 >= 1 {
 		return true
 	}
@@ -115,11 +115,12 @@ func (b *Bitmap) GetPixel(x, y int) bool {
 }
 
 // GetUnpaddedData gets the data without row stride padding.
-func (b *Bitmap) GetUnpaddedData() []byte {
+// The unpadded data contains bitmap.Height * bitmap.Width bits with
+// optional last byte padding.
+func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 	padding := uint(b.Width & 0x07)
-
 	if padding == 0 {
-		return b.Data
+		return b.Data, nil
 	}
 
 	size := b.Width * b.Height
@@ -130,97 +131,30 @@ func (b *Bitmap) GetUnpaddedData() []byte {
 		size >>= 3
 	}
 
-	padding = 8 - padding
 	data := make([]byte, size)
-	var (
-		// currentIndex is the index at which the byte is currently in the 'data' byte array.
-		currentIndex int
-		// siginificantBits are the bits in the current byte that are already set and significant.
-		significantBits uint
-	)
-	for line := 0; line < b.Height; line++ {
-		// iterate over all rowstrides within the line.
-		for i := 0; i < b.RowStride; i++ {
-			// get the byte at x, y.
-			bt := b.Data[line*b.RowStride+i]
+	w := writer.NewMSB(data)
 
-			if line == 0 {
-				// copy the line.
-				data[currentIndex] = bt
-				if i == b.RowStride-1 {
-					significantBits = padding
-				} else {
-					currentIndex++
+	for y := 0; y < b.Height; y++ {
+		// btIndex is the byte index per row.
+		for btIndex := 0; btIndex < b.RowStride; btIndex++ {
+			bt := b.Data[y*b.RowStride+btIndex]
+			if btIndex != b.RowStride-1 {
+				err := w.WriteByte(bt)
+				if err != nil {
+					return nil, err
 				}
 				continue
 			}
-			// last byte i.e. 11010000 with padding 3
-			// and 'bt' is 10101111
-			// then last byte should be 11010 | 101 and
-			// current byte at index should be 01111
-			// the padding should be 7 - padding
-			lastByte := data[currentIndex]
 
-			if i != b.RowStride-1 {
-				// byte bt: 00011000 significantBits: 3 lastByte is 10100000
-				// the lastByte should be 10100011
-				// so it should be 10100000 | 00011000 >> 3
-				lastByte |= (bt >> (8 - significantBits))
-
-				data[currentIndex] = lastByte
-
-				currentIndex++
-
-				lastByte = bt << significantBits
-				data[currentIndex] = lastByte
-				continue
-			}
-
-			// if the line is the last in the row add the default padding to the current padding
-			// i.e.
-			// source byte: 0100100 with padding = 2 the data to take should be 01001000
-			// the only significant bits are 010010xx
-			// then the lastbyte should join the data with current padding i.e.
-
-			// significantBits is 3 and byte is 01110000 shoule be now 01110000 | (010010xx >> (8-(8-3)))
-			// the data which still needs to be added is 0100000 with significantBits
-			dif := significantBits + (8 - padding)
-
-			if dif > 8 {
-				// if the current significant bits number and the padded bits number greater than 8
-				// write as many bits as possible to the current byte and add the currentIndex
-				// 5 + (8 - 2) = 11
-				// get 8-5 bits at first and store it on the index
-
-				lastByte = lastByte | (bt >> (8 - significantBits))
-				data[currentIndex] = lastByte
-
-				// increase the index
-				currentIndex++
-
-				// get the rest bits 11 - (8 - 5) =  (dif - (8 - significantBits))
-				// which would be the significant bits
-				significantBits = dif - (8 - significantBits)
-				lastByte = bt << significantBits
-
-				data[currentIndex] = lastByte
-			} else if dif == 8 {
-				lastByte = lastByte | (bt >> (8 - significantBits))
-				data[currentIndex] = lastByte
-			} else {
-				// if the difference is smaller or equal to 8
-				lastByte = lastByte | bt>>(8-dif)
-				significantBits = dif
-
-				data[currentIndex] = lastByte
-
-				if dif == 8 {
-					currentIndex++
+			for i := uint(0); i < padding; i++ {
+				err := w.WriteBit(int(bt >> (7 - i) & 0x01))
+				if err != nil {
+					return nil, err
 				}
 			}
 		}
 	}
-	return data
+	return data, nil
 }
 
 // GetVanillaData gets bitmap data as a byte sice with Vanilla bit intepretation.
@@ -300,6 +234,14 @@ func (b *Bitmap) ToImage() image.Image {
 		}
 	}
 	return img
+}
+
+// InverseData inverses the data if the 'isChocolate' flag matches
+// current bitmap 'isVanilla' state.
+func (b *Bitmap) InverseData(isChocolate bool) {
+	if b.isVanilla != !isChocolate {
+		b.inverseData()
+	}
 }
 
 func (b *Bitmap) inverseData() {

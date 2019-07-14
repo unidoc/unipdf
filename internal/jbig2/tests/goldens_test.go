@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,10 +21,8 @@ type Goldens map[string]*GoldenObject
 
 // GoldenObject is a row of the golden file.
 type GoldenObject struct {
-	IsValid          bool   `json:"is_valid"`
-	Hash             string `json:"hash"`
-	MatchBitmapImage bool   `json:"match_bitmap_image"`
-	IsBitmapValid    bool   `json:"is_bitmap_valid"`
+	IsValid bool   `json:"is_valid"`
+	Hash    string `json:"hash"`
 }
 
 func checkGoldenFiles(t testing.TB, dirname, filename string, readHashes ...fileHash) {
@@ -44,16 +43,18 @@ func checkGoldenFiles(t testing.TB, dirname, filename string, readHashes ...file
 
 	for _, fh := range readHashes {
 		single, exist := goldens[fh.fileName]
-		switch {
-		case !exist:
+		if !exist {
 			goldens[fh.fileName] = &GoldenObject{Hash: fh.hash}
-			continue
-		case single.IsValid:
-			continue
 		}
 
-		// if the single raw is not valid then udate it's hash
-		single.Hash = fh.hash
+		if jbig2Validate {
+			assert.True(t, single.IsValid)
+		}
+
+		if !single.IsValid {
+			// if the single raw is not valid then udate it's hash
+			single.Hash = fh.hash
+		}
 	}
 	err = writeGoldenFile(dirname, filename, goldens)
 	require.NoError(t, err)

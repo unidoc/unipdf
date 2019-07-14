@@ -20,8 +20,6 @@ import (
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
-
-	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 )
 
 const jbig2DecodedDirectory string = "jbig2_decoded_images"
@@ -198,7 +196,7 @@ func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ..
 	for idx, img := range images {
 		fname := fmt.Sprintf("%s_%d_%d", rawFileName(filename), pageNo, idx)
 
-		common.Log.Debug("Writing file: '%s'", fname)
+		common.Log.Trace("Writing file: '%s'", fname)
 		f, err := zw.Create(fname + ".jpg")
 		if err != nil {
 			return nil, err
@@ -208,8 +206,6 @@ func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ..
 		if err != nil {
 			return nil, err
 		}
-
-		bm := bitmap.NewWithData(int(cimg.Width), int(cimg.Height), cimg.Data)
 
 		gimg, err := cimg.ToGoImage()
 		if err != nil {
@@ -227,14 +223,6 @@ func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ..
 		fh := fileHash{fileName: fname, hash: hex.EncodeToString(h.Sum(nil))}
 		hashes = append(hashes, fh)
 		h.Reset()
-
-		f, err = zw.Create(fname + "_bitmap" + ".jpg")
-		if err != nil {
-			return nil, err
-		}
-		if err = jpeg.Encode(f, bm.ToImage(), q); err != nil {
-			return nil, err
-		}
 
 		if err = writeJBIG2Stream(zw, fname+".jbig2", img.jbig2Data); err != nil {
 			return nil, err

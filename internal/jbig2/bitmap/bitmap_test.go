@@ -98,7 +98,6 @@ func TestBitmap(t *testing.T) {
 
 			_, err := bm.GetByte(5)
 			require.Error(t, err)
-
 		})
 
 	})
@@ -149,7 +148,7 @@ func TestBitmap(t *testing.T) {
 			if testing.Verbose() {
 				common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 			}
-			// the widht of 20 would have some padding
+			// the width of 20 would have some padding
 			bm := New(20, 2)
 
 			bm.SetPixel(17, 0, 1)
@@ -162,65 +161,94 @@ func TestBitmap(t *testing.T) {
 			bm.SetPixel(12, 1, 1)
 			bm.SetPixel(19, 1, 1)
 
-			unpadded := bm.GetUnpaddedData()
+			// row stride should be 3
+			// padding at last byte of row is 4
+			// 00000000	00000000 01010000
+			// 00011000	01001000 00010000
+			//
+			// 0x00		0x00	 0xA0
+			// 0x18		0x48	 0x10
+
+			// 00000100
+
+			assert.Equal(t, 6, len(bm.Data))
+			assert.Equal(t, byte(0x00), bm.Data[0], "expected: %08b, is: %08b", byte(0x00), bm.Data[0])
+			assert.Equal(t, byte(0x00), bm.Data[1], "expected: %08b, is: %08b", byte(0x00), bm.Data[1])
+			assert.Equal(t, byte(0x50), bm.Data[2], "expected: %08b, is: %08b", byte(0x50), bm.Data[2])
+			assert.Equal(t, byte(0x18), bm.Data[3], "expected: %08b, is: %08b", byte(0x18), bm.Data[3])
+			assert.Equal(t, byte(0x48), bm.Data[4], "expected: %08b, is: %08b", byte(0x48), bm.Data[4])
+			assert.Equal(t, byte(0x10), bm.Data[5], "expected: %08b, is: %08b", byte(0x10), bm.Data[5])
+
+			unpadded, err := bm.GetUnpaddedData()
+			require.NoError(t, err)
+
+			// unpadded data should be:
+			// 00000000 00000000 01010001
+			// 10000100 10000001
 
 			assert.Len(t, unpadded, 5)
-
-			for i, bt := range unpadded {
-				switch i {
-				case 0, 1:
-					// 00000000
-					assert.Equal(t, byte(0x00), bt)
-				case 2:
-					// 01010001
-					assert.Equal(t, byte(0x51), bt)
-				case 3:
-					// 10000100
-					assert.Equal(t, byte(0x84), bt)
-				case 4:
-					// 10000001
-					assert.Equal(t, byte(0x81), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x81, bt))
-				}
-				t.Logf("%d, %08b", i, bt)
-			}
-
-			t.Logf("Bitmap: %s", bm)
+			assert.Equal(t, byte(0x00), unpadded[0], "expected: %08b, is: %08b", byte(0x00), unpadded[0])
+			assert.Equal(t, byte(0x00), unpadded[1], "expected: %08b, is: %08b", byte(0x00), unpadded[1])
+			assert.Equal(t, byte(0x51), unpadded[2], "expected: %08b, is: %08b", byte(0x51), unpadded[2])
+			assert.Equal(t, byte(0x84), unpadded[3], "expected: %08b, is: %08b", byte(0x84), unpadded[3])
+			assert.Equal(t, byte(0x81), unpadded[4], "expected: %08b, is: %08b", byte(0x81), unpadded[4])
 		})
 
 		t.Run("NotEqualPadding", func(t *testing.T) {
 			if testing.Verbose() {
 				common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 			}
-			// the widht of 20 would have some padding
-			bm := New(19, 2)
-
-			bm.SetPixel(16, 0, 1)
-			bm.SetPixel(18, 0, 1)
-
-			bm.SetPixel(3, 1, 1)
-			bm.SetPixel(4, 1, 1)
-
-			bm.SetPixel(9, 1, 1)
-			bm.SetPixel(12, 1, 1)
-			bm.SetPixel(18, 1, 1)
-
-			unpadded := bm.GetUnpaddedData()
-
-			for i, bt := range unpadded {
-				switch i {
-				case 0, 1:
-					assert.Equal(t, byte(0x00), bt)
-				case 2:
-					assert.Equal(t, byte(0xa3), bt, fmt.Sprintf("Should be: %08b is: %08b", 0xa3, bt))
-				case 3:
-					assert.Equal(t, byte(0x09), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x09, bt))
-				case 4:
-					assert.Equal(t, byte(0x04), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x04, bt))
-
+			t.Run("AllMarked", func(t *testing.T) {
+				// bitmap width - 2196 % 8 = 4
+				bm := New(2196, 3)
+				for x := 0; x < bm.Width; x++ {
+					for y := 0; y < bm.Height; y++ {
+						bm.SetPixel(x, y, 1)
+					}
 				}
-				t.Logf("%d, %08b", i, bt)
-			}
-			t.Logf("Bitmap: %s", bm)
+
+				unpadded, err := bm.GetUnpaddedData()
+				require.NoError(t, err)
+
+				for i := range unpadded {
+					if i == len(unpadded)-1 {
+						assert.Equal(t, byte(0xF0), unpadded[i])
+						continue
+					}
+					assert.Equal(t, byte(0xFF), unpadded[i])
+				}
+			})
+
+			t.Run("SomeMarked", func(t *testing.T) {
+				// the width of 20 would have some padding
+				bm := New(19, 2)
+
+				bm.SetPixel(16, 0, 1)
+				bm.SetPixel(18, 0, 1)
+
+				bm.SetPixel(3, 1, 1)
+				bm.SetPixel(4, 1, 1)
+
+				bm.SetPixel(9, 1, 1)
+				bm.SetPixel(12, 1, 1)
+				bm.SetPixel(18, 1, 1)
+
+				unpadded, err := bm.GetUnpaddedData()
+				require.NoError(t, err)
+
+				for i, bt := range unpadded {
+					switch i {
+					case 0, 1:
+						assert.Equal(t, byte(0x00), bt)
+					case 2:
+						assert.Equal(t, byte(0xa3), bt, fmt.Sprintf("Should be: %08b is: %08b", 0xa3, bt))
+					case 3:
+						assert.Equal(t, byte(0x09), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x09, bt))
+					case 4:
+						assert.Equal(t, byte(0x04), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x04, bt))
+					}
+				}
+			})
 		})
 	})
 }

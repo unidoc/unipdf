@@ -2115,7 +2115,7 @@ func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 
 // DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	// create new JBIG2 document
+	// create new JBIG2 document.
 	doc, err := jbig2.NewDocumentWithGlobals(encoded, enc.Globals)
 	if err != nil {
 		return nil, err
@@ -2127,24 +2127,24 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if page == nil {
-		err = errors.New("jbig2 corrupted data. No page#1 found")
+		err = errors.New("jbig2 corrupted data. Page#1 not found")
 		common.Log.Debug("ERROR: %s", err.Error())
 		return nil, err
 	}
 
-	// get the page data
+	// Get the page bitmap data.
 	bm, err := page.GetBitmap()
 	if err != nil {
 		return nil, err
 	}
 
-	// check if data IsChocolate
-	if enc.IsChocolateData {
-		return bm.GetChocolateData(), nil
-	}
-	return bm.GetVanillaData(), nil
+	// Inverse the data representation if the decoder is marked as 'isChocolateData'.
+	bm.InverseData(enc.IsChocolateData)
+
+	// By default the bitmap data contains the rowstride padding.
+	// In order to get rid of the rowstride padding use the bitmap.GetUnpaddedData method.
+	return bm.GetUnpaddedData()
 }
 
 // DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.
