@@ -39,7 +39,7 @@ func init() {
 // Requires environmental variable 'UNIDOC_JBIG2_TESTDATA' that contains the jbig2 testdata.
 // Decoded images are stored within zipped archive files - that has the same name as the pdf file.
 // In order to check the decoded images this function creates also the directory 'goldens'
-// which would have json files for each 'pdf' input, containing valid flags.
+// which would have json files for each 'pdf' input, containing valid image hashes.
 // If the 'jbig2-update-goldens' runtime flag is provided, the test function updates all the 'hashes'
 // for the decoded jbig2 images in related 'golden' files.
 // In order to check the decoded images use 'jbig2-store-images' flag, then the function would store them
