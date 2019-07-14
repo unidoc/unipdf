@@ -26,7 +26,7 @@ var (
 	// for each decoded testcase image should be updated.
 	jbig2UpdateGoldens bool
 	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
-	// within the temporary directory: os.TempDir()/unipdf/jbig2
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'.
 	keepImageFiles bool
 )
 
