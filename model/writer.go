@@ -548,13 +548,10 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 	procPage(page)
 	obj := page.ToPdfObject()
 
-	// Resolve references for page resources, if page reader is lazy.
-	if resources := page.Resources; resources != nil {
-		if r := page.reader; r != nil && r.isLazy {
-			err := r.traverseObjectData(resources.GetContainingPdfObject())
-			if err != nil {
-				return err
-			}
+	// Resolve references if page reader is lazy.
+	if r := page.reader; r != nil && r.isLazy {
+		if err := core.ResolveReferencesDeep(obj, nil); err != nil {
+			return nil
 		}
 	}
 
@@ -584,7 +581,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 
 	// Copy inherited fields if missing.
 	inheritedFields := []core.PdfObjectName{"Resources", "MediaBox", "CropBox", "Rotate"}
-	parent, hasParent := pDict.Get("Parent").(*core.PdfIndirectObject)
+	parent, hasParent := core.GetIndirect(pDict.Get("Parent"))
 	common.Log.Trace("Page Parent: %T (%v)", pDict.Get("Parent"), hasParent)
 	for hasParent {
 		common.Log.Trace("Page Parent: %T", parent)
@@ -605,7 +602,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 				pDict.Set(field, obj)
 			}
 		}
-		parent, hasParent = parentDict.Get("Parent").(*core.PdfIndirectObject)
+		parent, hasParent = core.GetIndirect(parentDict.Get("Parent"))
 		common.Log.Trace("Next parent: %T", parentDict.Get("Parent"))
 	}
 

@@ -120,6 +120,10 @@ func (i *Image) Optimize(objects []core.PdfObject) (optimizedObjects []core.PdfO
 		if err != nil {
 			return nil, err
 		}
+		originalSize := len(stream.Stream)
+		if originalSize < len(streamData) {
+			continue
+		}
 		newStream := &core.PdfObjectStream{Stream: streamData}
 		newStream.PdfObjectReference = stream.PdfObjectReference
 		newStream.PdfObjectDictionary = core.MakeDict()
