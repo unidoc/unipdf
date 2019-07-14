@@ -16,24 +16,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Goldens is a model for goldens file json document.
-type Goldens map[string]*GoldenObject
+// Goldens is a model used to store the jbig2 testcase 'golden files'.
+// The golden files stores the md5 'hash' value for each 'filename' key.
+// It is used to check if the decoded jbig2 image had changed using the image md5 hash.
+type Goldens map[string]string
 
-// GoldenObject is a row of the golden file.
-type GoldenObject struct {
-	IsValid bool   `json:"is_valid"`
-	Hash    string `json:"hash"`
-}
-
-func checkGoldenFiles(t testing.TB, dirname, filename string, readHashes ...fileHash) {
+func checkGoldenFiles(t *testing.T, dirname, filename string, readHashes ...fileHash) {
 	goldens, err := readGoldenFile(dirname, filename)
 	require.NoError(t, err)
 
-	if len(goldens) == 0 {
+	if jbig2UpdateGoldens {
 		// copy all the file hashes into Goldens map.
 		for _, fh := range readHashes {
-			row := &GoldenObject{Hash: fh.hash}
-			goldens[fh.fileName] = row
+			goldens[fh.fileName] = fh.hash
 		}
 
 		err = writeGoldenFile(dirname, filename, goldens)
@@ -42,22 +37,15 @@ func checkGoldenFiles(t testing.TB, dirname, filename string, readHashes ...file
 	}
 
 	for _, fh := range readHashes {
-		single, exist := goldens[fh.fileName]
-		if !exist {
-			goldens[fh.fileName] = &GoldenObject{Hash: fh.hash}
-		}
-
-		if jbig2Validate {
-			assert.True(t, single.IsValid)
-		}
-
-		if !single.IsValid {
-			// if the single raw is not valid then udate it's hash
-			single.Hash = fh.hash
-		}
+		t.Run(fh.fileName, func(t *testing.T) {
+			single, exist := goldens[fh.fileName]
+			// check if the 'filename' key exists.
+			if assert.True(t, exist, "hash doesn't exists") {
+				// check if the md5 hash equals with the given fh.hash
+				assert.Equal(t, fh.hash, single, "hash: '%s' doesn't match the golden stored hash: '%s'", fh.hash, single)
+			}
+		})
 	}
-	err = writeGoldenFile(dirname, filename, goldens)
-	require.NoError(t, err)
 }
 
 func readGoldenFile(dirname, filename string) (Goldens, error) {
@@ -66,7 +54,7 @@ func readGoldenFile(dirname, filename string) (Goldens, error) {
 
 	// check if the directory exists.
 	if _, err := os.Stat(goldenDir); err != nil {
-		if err = os.Mkdir(goldenDir, 0666); err != nil {
+		if err = os.Mkdir(goldenDir, 0700); err != nil {
 			return nil, err
 		}
 		return Goldens{}, nil

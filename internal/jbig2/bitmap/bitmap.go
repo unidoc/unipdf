@@ -47,7 +47,7 @@ func New(width, height int) *Bitmap {
 	return bm
 }
 
-// NewWithData creates new bitmap with the provided 'widht', 'height' and the byte slice 'data'.
+// NewWithData creates new bitmap with the provided 'width', 'height' and the byte slice 'data'.
 func NewWithData(width, height int, data []byte) *Bitmap {
 	bm := New(width, height)
 	bm.Data = data
@@ -89,7 +89,7 @@ func (b *Bitmap) GetByteIndex(x, y int) int {
 	return y*b.RowStride + (x >> 3)
 }
 
-// GetChocolateData gets bitmap data as a byte sice with Chocolate bit intepretation.
+// GetChocolateData gets bitmap data as a byte slice with Chocolate bit interpretation.
 // 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black.
 // The naming convention based on the: `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetChocolateData() []byte {
@@ -157,7 +157,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 	return data, nil
 }
 
-// GetVanillaData gets bitmap data as a byte sice with Vanilla bit intepretation.
+// GetVanillaData gets bitmap data as a byte slice with Vanilla bit interpretation.
 // 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white.
 // The naming convention based on the `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetVanillaData() []byte {

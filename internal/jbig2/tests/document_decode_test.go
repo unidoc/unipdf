@@ -22,12 +22,18 @@ import (
 // to the jbig2 encoded test files.
 const EnvDirectory = "UNIDOC_JBIG2_TESTDATA"
 
-// jbig2Validate is the runtime flag which defines if the golden files
-// should be validated.
-var jbig2Validate bool
+var (
+	// jbig2UpdateGoldens is the runtime flag that states that the md5 hashes
+	// for each decoded testcase image should be updated.
+	jbig2UpdateGoldens bool
+	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
+	// within the temporary directory: os.TempDir()/unipdf/jbig2
+	keepImageFiles bool
+)
 
 func init() {
-	flag.BoolVar(&jbig2Validate, "jbig2-validate", false, "checks if all the jbig2 golden files are valid")
+	flag.BoolVar(&jbig2UpdateGoldens, "jbig2-update-goldens", false, "updates the golden file hashes on the run")
+	flag.BoolVar(&keepImageFiles, "jbig2-store-images", false, "stores the images in the temporary `os.TempDir`/unipdf/jbig2 directory")
 }
 
 // TestDecodeJBIG2Files tries to decode the provided jbig2 files.
@@ -35,8 +41,10 @@ func init() {
 // Decoded images are stored within zipped archive files - that has the same name as the pdf file.
 // In order to check the decoded images this function creates also the directory 'goldens'
 // which would have json files for each 'pdf' input, containing valid flags.
-// If the 'jbig2-validate' runtime flag is provided, the test function would
-// check if all the golden files has been marked as valid.
+// If the 'jbig2-update-goldens' runtime flag is provided, the test function updates all the 'hashes'
+// for the decoded jbig2 images in related 'golden' files.
+// In order to check the decoded images use 'jbig2-store-images' flag, then the function would store them
+// within zipped files in the os.TempDir()/unipdf/jbig2 directory.
 func TestDecodeJBIG2Files(t *testing.T) {
 	if testing.Verbose() {
 		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
@@ -49,13 +57,21 @@ func TestDecodeJBIG2Files(t *testing.T) {
 	filenames, err := readFileNames(dirName)
 	require.NoError(t, err)
 
-	if len(filenames) > 0 {
-		_, err = os.Stat(filepath.Join(dirName, jbig2DecodedDirectory))
-		if err != nil {
-			err = os.Mkdir(filepath.Join(dirName, jbig2DecodedDirectory), 0666)
-			require.NoError(t, err)
-		}
+	if len(filenames) == 0 {
+		return
 	}
+
+	tempDir := filepath.Join(os.TempDir(), "unipdf", "jbig2")
+	err = os.MkdirAll(tempDir, 0700)
+	require.NoError(t, err)
+
+	// if the keepImageFiles flag is false remove the temp directory
+	defer func() {
+		if !keepImageFiles {
+			os.RemoveAll(tempDir)
+		}
+	}()
+
 	passwords := make(map[string]string)
 
 	for _, filename := range filenames {
@@ -84,7 +100,7 @@ func TestDecodeJBIG2Files(t *testing.T) {
 			require.NoError(t, err)
 
 			// create zipped file
-			fileName := filepath.Join(dirName, jbig2DecodedDirectory, rawName+".zip")
+			fileName := filepath.Join(tempDir, rawName+".zip")
 
 			w, err := os.Create(fileName)
 			require.NoError(t, err)
