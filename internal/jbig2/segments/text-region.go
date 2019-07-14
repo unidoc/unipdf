@@ -859,6 +859,10 @@ func (t *TextRegion) getUserTable(tablePosition int) (huffman.Tabler, error) {
 
 func (t *TextRegion) initSymbols() error {
 	for _, segment := range t.Header.RTSegments {
+		if segment == nil {
+			return errors.New("jbig2 - internal error - nil segment provided for the text region symbols")
+		}
+
 		if segment.Type == 0 {
 			s, err := segment.GetSegmentData()
 			if err != nil {

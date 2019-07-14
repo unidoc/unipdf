@@ -20,21 +20,59 @@ import (
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
-
-const jbig2DecodedDirectory string = "jbig2_decoded_images"
-
-func extractImagesOnPage(filename string, page *model.PdfPage) ([]*extractedImage, error) {
-	contents, err := page.GetAllContentStreams()
-	if err != nil {
-		return nil, err
-	}
-	return extractImagesInContentStream(filename, contents, page.Resources)
-}
 
 type extractedImage struct {
 	jbig2Data []byte
 	pdfImage  *model.XObjectImage
+	name      string
+	pageNo    int
+	idx       int
+	hash      string
+	globals   jbig2.Globals
+}
+
+func (e *extractedImage) fullName() string {
+	return fmt.Sprintf("%s_%d_%d", e.name, e.pageNo, e.idx)
+}
+
+func extractImages(dirName string, filename string) ([]*extractedImage, error) {
+	f, err := getFile(dirName, filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	reader, err := readPDF(f)
+	if err != nil && err.Error() != "EOF not found" {
+		return nil, err
+	}
+
+	var numPages int
+	numPages, err = reader.GetNumPages()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		page               *model.PdfPage
+		images, tempImages []*extractedImage
+	)
+	for pageNo := 1; pageNo <= numPages; pageNo++ {
+		page, err = reader.GetPage(pageNo)
+		if err != nil {
+			return nil, err
+		}
+
+		tempImages, err = extractImagesOnPage(dirName, filename, page, pageNo)
+		if err != nil {
+			return nil, err
+		}
+		images = append(images, tempImages...)
+	}
+	return images, nil
 }
 
 func extractImagesInContentStream(filename, contents string, resources *model.PdfPageResources) ([]*extractedImage, error) {
@@ -83,9 +121,15 @@ func extractImagesInContentStream(filename, contents string, resources *model.Pd
 				return nil, err
 			}
 
+			enc, ok := ximg.Filter.(*core.JBIG2Encoder)
+			if !ok {
+				return nil, fmt.Errorf("Filter encoder should be a JBIG2Encoder but is: %T", ximg.Filter)
+			}
+
 			extracted := &extractedImage{
 				pdfImage:  ximg,
 				jbig2Data: xobj.Stream,
+				globals:   enc.Globals,
 			}
 
 			extractedImages = append(extractedImages, extracted)
@@ -118,9 +162,24 @@ func extractImagesInContentStream(filename, contents string, resources *model.Pd
 	return extractedImages, nil
 }
 
-type fileHash struct {
-	fileName string
-	hash     string
+func extractImagesOnPage(dirname, filename string, page *model.PdfPage, pageNo int) ([]*extractedImage, error) {
+	contents, err := page.GetAllContentStreams()
+	if err != nil {
+		return nil, err
+	}
+
+	images, err := extractImagesInContentStream(filepath.Join(dirname, filename), contents, page.Resources)
+	if err != nil {
+		return nil, err
+	}
+
+	rawName := rawFileName(filename)
+	for i, image := range images {
+		image.name = rawName
+		image.idx = i + 1
+		image.pageNo = pageNo
+	}
+	return images, nil
 }
 
 func getFile(dirName, filename string) (*os.File, error) {
@@ -189,27 +248,24 @@ func readPDF(f *os.File, password ...string) (*model.PdfReader, error) {
 	return pdfReader, nil
 }
 
-func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ...*extractedImage) (hashes []fileHash, err error) {
+func writeExtractedImages(zw *zip.Writer, images ...*extractedImage) (err error) {
 	h := md5.New()
 
-	// write images
-	for idx, img := range images {
-		fname := fmt.Sprintf("%s_%d_%d", rawFileName(filename), pageNo, idx)
-
-		common.Log.Trace("Writing file: '%s'", fname)
-		f, err := zw.Create(fname + ".jpg")
+	for _, img := range images {
+		common.Log.Trace("Writing file: '%s'", img.fullName())
+		f, err := zw.Create(img.fullName() + ".jpg")
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		cimg, err := img.pdfImage.ToImage()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		gimg, err := cimg.ToGoImage()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		multiWriter := io.MultiWriter(f, h)
@@ -217,25 +273,11 @@ func writeExtractedImages(zw *zip.Writer, filename string, pageNo int, images ..
 		// write to file
 		q := &jpeg.Options{Quality: 100}
 		if err = jpeg.Encode(multiWriter, gimg, q); err != nil {
-			return nil, err
+			return err
 		}
 
-		fh := fileHash{fileName: fname, hash: hex.EncodeToString(h.Sum(nil))}
-		hashes = append(hashes, fh)
+		img.hash = hex.EncodeToString(h.Sum(nil))
 		h.Reset()
-
-		if err = writeJBIG2Stream(zw, fname+".jbig2", img.jbig2Data); err != nil {
-			return nil, err
-		}
 	}
-	return hashes, nil
-}
-
-func writeJBIG2Stream(zw *zip.Writer, filename string, data []byte) error {
-	f, err := zw.Create(filename)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(data)
-	return err
+	return nil
 }

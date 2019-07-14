@@ -7,6 +7,7 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,14 +22,14 @@ import (
 // It is used to check if the decoded jbig2 image had changed using the image md5 hash.
 type Goldens map[string]string
 
-func checkGoldenFiles(t *testing.T, dirname, filename string, readHashes ...fileHash) {
+func checkGoldenFiles(t *testing.T, dirname, filename string, images ...*extractedImage) {
 	goldens, err := readGoldenFile(dirname, filename)
 	require.NoError(t, err)
 
 	if jbig2UpdateGoldens {
 		// copy all the file hashes into Goldens map.
-		for _, fh := range readHashes {
-			goldens[fh.fileName] = fh.hash
+		for _, img := range images {
+			goldens[img.fullName()] = img.hash
 		}
 
 		err = writeGoldenFile(dirname, filename, goldens)
@@ -36,13 +37,13 @@ func checkGoldenFiles(t *testing.T, dirname, filename string, readHashes ...file
 		return
 	}
 
-	for _, fh := range readHashes {
-		t.Run(fh.fileName, func(t *testing.T) {
-			single, exist := goldens[fh.fileName]
+	for _, img := range images {
+		t.Run(fmt.Sprintf("Page#%d/Image#%d", img.pageNo, img.idx), func(t *testing.T) {
+			single, exist := goldens[img.fullName()]
 			// check if the 'filename' key exists.
 			if assert.True(t, exist, "hash doesn't exists") {
 				// check if the md5 hash equals with the given fh.hash
-				assert.Equal(t, fh.hash, single, "hash: '%s' doesn't match the golden stored hash: '%s'", fh.hash, single)
+				assert.Equal(t, img.hash, single, "hash: '%s' doesn't match the golden stored hash: '%s'", img.hash, single)
 			}
 		})
 	}
