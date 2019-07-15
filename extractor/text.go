@@ -1052,7 +1052,9 @@ type TextMark struct {
 	//   marks := textMarks.Elements()
 	// then marks[i].Offset is the offset of marks[i].Text in text.
 	Offset int
-	// Meta is set true for characters that don't appear in the input PDF.
+	// Meta is set true for spaces and line breaks that we insert in the extracted text. We insert
+	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
+	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
 }
 
