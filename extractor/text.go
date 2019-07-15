@@ -50,9 +50,8 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 // extractPageText returns the text contents of content stream `e` and resouces `resources` as a
 // PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources,
-	level int) (*PageText, int, int, error) {
-
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (
+	*PageText, int, int, error) {
 	common.Log.Trace("extractPageText: level=%d", level)
 	pageText := &PageText{}
 	state := newTextState()
@@ -321,7 +320,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
-
 	return pageText, state.numChars, state.numMisses, err
 }
 
@@ -499,8 +497,8 @@ func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 
 // checkOp returns true if we are in a text stream and `op` has `numParams` params.
 // If `hard` is true and the number of params don't match, an error is returned.
-func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
-	hard bool) (ok bool, err error) {
+func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int, hard bool) (
+	ok bool, err error) {
 	if to == nil {
 		var params []core.PdfObject
 		if numParams > 0 {
@@ -644,8 +642,7 @@ func newTextState() textState {
 
 // newTextObject returns a default textObject.
 func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentstream.GraphicsState,
-	state *textState,
-	fontStack *fontStacker) *textObject {
+	state *textState, fontStack *fontStacker) *textObject {
 	return &textObject{
 		e:         e,
 		resources: resources,
@@ -659,11 +656,8 @@ func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentst
 
 // renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
-
 	font := to.getCurrentFont()
-
 	charcodes := font.BytesToCharcodes(data)
-
 	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
@@ -893,12 +887,9 @@ func (t textMark) ToTextMark() TextMark {
 		FontSize: t.fontsize,
 		count:    t.count,
 	}
-
 }
 
 // PageText represents the layout of text on a device page.
-// Its implementation is opaque to allow for future optimizations.
-// view... are the public view of an extracted page text.
 type PageText struct {
 	marks     []textMark // Texts and their positions on a PDF page.
 	viewText  string     // Extracted page text.
@@ -961,7 +952,6 @@ func (array *TextMarkArray) Len() int {
 	return len(array.marks)
 }
 
-
 // TODO(peterwilliams97) Does user need to know the ordering of TextMarkArray.marks?
 // // Get returns the `i`-th element of the array. The bool indicates if it is in the array.
 // func (array *TextMarkArray) Get(i int) (TextMark, bool) {
@@ -998,7 +988,6 @@ func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
 
 // RangeOffset returns the TextMark's in `array` that have `start` <= TextMark.Offet < `end`.
 func (array *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
-
 	if array == nil {
 		return nil, errors.New("array=nil.RangeOffset")
 	}
@@ -1029,12 +1018,10 @@ func (array *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) 
 			end, iEnd, len(locations), locations[0], locations[len(locations)-1])
 		return nil, err
 	}
-
 	if iEnd <= iStart {
 		// This should never happen.
 		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
 	}
-
 	return &TextMarkArray{marks: locations[iStart:iEnd]}, nil
 }
 
@@ -1197,14 +1184,17 @@ func (pt PageText) height() float64 {
 }
 
 const (
-	wordJoiner = ""   // wordJoiner is added between text marks in extracted text.
-	lineJoiner = "\n" // lineJoiner is added between lines in extracted text.
+	// wordJoiner is added between text marks in extracted text.
+	wordJoiner = ""
+	// lineJoiner is added between lines in extracted text.
+	lineJoiner = "\n"
 )
 
 var (
 	wordJoinerLen = len(wordJoiner)
 	lineJoinerLen = len(lineJoiner)
-	spaceMark     = TextMark{
+	// spaceMark is a special TextMark used for spaces.
+	spaceMark = TextMark{
 		Text:     " ",
 		Original: " ",
 		count:    -1,
@@ -1237,6 +1227,7 @@ type textLine struct {
 	marks  []TextMark // TextMarks in the line.
 }
 
+// words returns the texts in `l`.
 func (l textLine) words() []string {
 	var texts []string
 	for _, m := range l.marks {
@@ -1400,7 +1391,6 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 	if len(line.dxList) == 0 {
 		return line
 	}
-
 	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.3
 	marks := []TextMark{line.marks[0]}
@@ -1431,7 +1421,6 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 	if len(line.dxList) == 0 {
 		return line
 	}
-
 	// NOTE(peterwilliams97) 0.2 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
@@ -1477,7 +1466,6 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 		m.Text = combine(parts)
 		marks = append(marks, m)
 	}
-
 	if len(marks) != len(dxList)+1 {
 		common.Log.Error("Inconsistent: \nwords=%d \ndxList=%d %.2f",
 			len(marks), len(dxList), dxList)

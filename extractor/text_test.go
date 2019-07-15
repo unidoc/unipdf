@@ -143,7 +143,6 @@ func TestTextExtractionFiles(t *testing.T) {
 		t.Log("Corpus folder not set - skipping")
 		return
 	}
-
 	for _, test := range fileExtractionTests {
 		testExtractFile(t, test.filename, test.pageTerms)
 	}
@@ -273,20 +272,23 @@ var fileExtractionTests = []struct {
 	// },
 }
 
-// testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the extracted
-// text to `pageTerms`.
+// testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the
+// extracted text to `pageTerms`.
 //
-// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this repo
-// so you will need to set the environment variable UNIDOC_EXTRACT_TESTDATA to point at
+// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this
+// repo so you will need to set the environment variable UNIDOC_EXTRACT_TESTDATA to point at
 // the corpus directory.
 //
-// If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest` global
-// variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
+// If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest`
+// global variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
 func testExtractFile(t *testing.T, filename string, pageTerms map[int][]string) {
 	testExtractFileOptions(t, filename, pageTerms, false)
+	// TODO(peterwilliams97): Uncomment following line when lazy loading works.
 	// testExtractFileOptions(t, filename, pageTerms, true)
 }
 
+// testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the
+// extracted text to `pageTerms`. If `lazy` is true, the PDF is lazily loaded.
 func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]string, lazy bool) {
 	filepath := filepath.Join(corpusFolder, filename)
 	exists := checkFileExists(filepath)
@@ -315,7 +317,6 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 // extractPageTexts runs ExtractTextWithStats on all pages in PDF `filename` and returns the result
 // as a map {page number: page text}
 func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]string) {
-
 	pdfReader := openPdfReader(t, filename, lazy)
 	numPages, err := pdfReader.GetNumPages()
 	if err != nil {
@@ -360,6 +361,7 @@ func (e textLocTest) pageNums() []int {
 	return nums
 }
 
+// String returns a description of `e`.
 func (e textLocTest) String() string {
 	return fmt.Sprintf("{TEXTLOCTEST: filename=%q}", e.filename)
 }
@@ -964,7 +966,6 @@ func (l *markupList) pageNums() []int {
 // saveOutputPdf is called to mark up a PDF file with the locations of text.
 // `l` contains the input PDF, the pages, search terms and bounding boexs to mark.
 func (l *markupList) saveOutputPdf() {
-
 	if !markupPDFs {
 		return
 	}
