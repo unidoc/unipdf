@@ -939,12 +939,12 @@ func (ma TextMarkArray) String() string {
 
 }
 
-// Elements returns the TextMark elements in `ma`.
+// Elements returns the TextMarks in `ma`.
 func (ma *TextMarkArray) Elements() []TextMark {
 	return ma.marks
 }
 
-// Len returns the number of TexMarks in `ma`.
+// Len returns the number of TextMarks in `ma`.
 func (ma *TextMarkArray) Len() int {
 	if ma == nil {
 		return 0
@@ -952,7 +952,7 @@ func (ma *TextMarkArray) Len() int {
 	return len(ma.marks)
 }
 
-// RangeOffset returns the TextMark's in `array` that have `start` <= TextMark.Offet < `end`.
+// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offet < `end`.
 func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if ma == nil {
 		return nil, errors.New("ma==nil")
