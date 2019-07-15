@@ -385,7 +385,7 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 		}
 		ex, err := New(page)
 		if err != nil {
-			t.Fatalf("New failed. filename=%q lazy=%t page=%d err=%v",
+			t.Fatalf("extractor.New failed. filename=%q lazy=%t page=%d err=%v",
 				filename, lazy, pageNum, err)
 		}
 		text, _, _, err := ex.ExtractTextWithStats()
