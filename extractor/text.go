@@ -917,65 +917,65 @@ func (pt PageText) Text() string {
 	return pt.viewText
 }
 
-// Marks are the TextMark's that  to pt.Text().
+// Marks returns the TextMark collection for a page. It represents all the text on the page.
 func (pt PageText) Marks() *TextMarkArray {
 	return &TextMarkArray{marks: pt.viewMarks}
 }
 
-// TextMarkArray is a collection of TextMark's.
+// TextMarkArray is a collection of TextMarks.
 type TextMarkArray struct {
 	marks []TextMark
 }
 
-// String returns a string describing `array`.
-func (array TextMarkArray) String() string {
-	n := len(array.marks)
+// String returns a string describing `ma`.
+func (ma TextMarkArray) String() string {
+	n := len(ma.marks)
 	if n == 0 {
 		return "EMPTY"
 	}
-	m0 := array.marks[0]
-	m1 := array.marks[n-1]
+	m0 := ma.marks[0]
+	m1 := ma.marks[n-1]
 	return fmt.Sprintf("{TEXTMARKARRAY: %d elements\n\tfirst=%s\n\t last=%s}", n, m0, m1)
 
 }
 
-// Elements returns a slice of the TextMark elements in the array.
-func (array *TextMarkArray) Elements() []TextMark {
-	return array.marks
+// Elements returns the TextMark elements in `ma`.
+func (ma *TextMarkArray) Elements() []TextMark {
+	return ma.marks
 }
 
-// Len returns the number of elements in the array.
-func (array *TextMarkArray) Len() int {
-	if array == nil {
+// Len returns the number of TexMarks in `ma`.
+func (ma *TextMarkArray) Len() int {
+	if ma == nil {
 		return 0
 	}
-	return len(array.marks)
+	return len(ma.marks)
 }
 
 // TODO(peterwilliams97) Does user need to know the ordering of TextMarkArray.marks?
 // // Get returns the `i`-th element of the array. The bool indicates if it is in the array.
 // func (array *TextMarkArray) Get(i int) (TextMark, bool) {
-// 	if array == nil || !(0 <= i && i < len(array.marks)) {
+// 	if array == nil || !(0 <= i && i < len(ma.marks)) {
 // 		return TextMark{}, false
 // 	}
-// 	return array.marks[i], true
+// 	return ma.marks[i], true
 // }
 
 // GetByOffset returns the TextMark at offset `offset` in the extracted text corresonding to `array`.
 // The bool indicates if `array` has any TextMark's with this offset.
 // TODO(peterwilliams97): Remove this function?
-func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
-	n := len(array.marks)
+func (ma *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
+	n := len(ma.marks)
 	if n == 0 {
 		return TextMark{}, false
 	}
-	m0 := array.marks[0]
-	m1 := array.marks[n-1]
+	m0 := ma.marks[0]
+	m1 := ma.marks[n-1]
 	if !(m0.Offset <= offset && offset < m1.Offset) {
 		return TextMark{}, false
 	}
 
-	textMark, err := array.RangeOffset(offset, offset+1)
+	textMark, err := ma.RangeOffset(offset, offset+1)
 	if err != nil {
 		return TextMark{}, false
 	}
@@ -987,56 +987,53 @@ func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
 }
 
 // RangeOffset returns the TextMark's in `array` that have `start` <= TextMark.Offet < `end`.
-func (array *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
-	if array == nil {
-		return nil, errors.New("array=nil.RangeOffset")
+func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
+	if ma == nil {
+		return nil, errors.New("ma==nil")
 	}
 	if end < start {
 		return nil, fmt.Errorf("end < start. RangeOffset not defined. start=%d end=%d ", start, end)
 	}
-	locations := array.marks
-	if len(locations) == 0 {
-		common.Log.Debug("TextMarkArray is empty")
-		return array, nil
+	if len(ma.marks) == 0 {
+		return ma, nil
 	}
-	if start < locations[0].Offset {
-		start = locations[0].Offset
+	if start < ma.marks[0].Offset {
+		start = ma.marks[0].Offset
 	}
-	if end > locations[len(locations)-1].Offset {
-		end = locations[len(locations)-1].Offset
+	if end > ma.marks[len(ma.marks)-1].Offset {
+		end = ma.marks[len(ma.marks)-1].Offset
 	}
 
-	iStart := sort.Search(len(locations), func(i int) bool { return locations[i].Offset >= start })
-	if !(0 <= iStart && iStart < len(locations)) {
+	iStart := sort.Search(len(ma.marks), func(i int) bool { return ma.marks[i].Offset >= start })
+	if !(0 <= iStart && iStart < len(ma.marks)) {
 		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
-			start, iStart, len(locations), locations[0], locations[len(locations)-1])
+			start, iStart, len(ma.marks), ma.marks[0], ma.marks[len(ma.marks)-1])
 		return nil, err
 	}
-	iEnd := sort.Search(len(locations), func(i int) bool { return locations[i].Offset > end-1 })
-	if !(0 <= iEnd && iEnd < len(locations)) {
+	iEnd := sort.Search(len(ma.marks), func(i int) bool { return ma.marks[i].Offset > end-1 })
+	if !(0 <= iEnd && iEnd < len(ma.marks)) {
 		err := fmt.Errorf("Out of range. end=%d iEnd=%d len=%d\n\tfirst=%v\n\t last=%v",
-			end, iEnd, len(locations), locations[0], locations[len(locations)-1])
+			end, iEnd, len(ma.marks), ma.marks[0], ma.marks[len(ma.marks)-1])
 		return nil, err
 	}
 	if iEnd <= iStart {
 		// This should never happen.
 		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
 	}
-	return &TextMarkArray{marks: locations[iStart:iEnd]}, nil
+	return &TextMarkArray{marks: ma.marks[iStart:iEnd]}, nil
 }
 
-// BBox returns the smallest axis-aligned retangle that encloses all the TextMark's in `array`.
-func (array *TextMarkArray) BBox() (model.PdfRectangle, bool) {
-	locations := array.marks
-	if len(locations) == 0 {
+// BBox returns the smallest axis-aligned retangle that encloses all the TextMarks in `ma`.
+func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
+	if len(ma.marks) == 0 {
 		return model.PdfRectangle{}, false
 	}
-	bbox := locations[0].BBox
-	for _, loc := range locations {
-		if isTextSpace(loc.Text) {
+	bbox := ma.marks[0].BBox
+	for _, t := range ma.marks[1:] {
+		if isTextSpace(t.Text) {
 			continue
 		}
-		bbox = rectUnion(bbox, loc.BBox)
+		bbox = rectUnion(bbox, t.BBox)
 	}
 	return bbox, true
 }
@@ -1051,14 +1048,15 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 	}
 }
 
-// TextMark is the public view of a textMark.
-// Currently this is the text contents, a bounding box, font and original text.
+// TextMark represents a text mark on a PDF page.
+// It is the smallest unit of text on a PDF page, typically a single character.
 //
 // TextMark maps extracted text to the location of the text on the PDF page and other
 // properties of the rendered text such the font.
+// `Text` is the extracted text
 // `Offset` is the offset of the start of the textMark.text in extracted text.
 // `BBox` is the bounding box of the textMark.
-// `Text` is the extracted text
+// `Font` is the font the text was drawn with.
 // `Meta` is set true for characters that don't appear in the input PDF.
 // You can find the location of substrings in the extracted text as follows:
 //   Use ToTextLocation() to return the extracted text as a []TextMark sorted by Offset.
@@ -1135,23 +1133,23 @@ func (pt *PageText) computeViews() {
 		texts[i] = strings.Join(l.words(), wordJoiner)
 	}
 	text := strings.Join(texts, lineJoiner)
-	var locations []TextMark
+	var marks []TextMark
 	offset := 0
 	for i, l := range lines {
-		for j, loc := range l.marks {
-			loc.Offset = offset
-			locations = append(locations, loc)
-			offset += len([]rune(loc.Text))
+		for j, t := range l.marks {
+			t.Offset = offset
+			marks = append(marks, t)
+			offset += len([]rune(t.Text))
 			if j == len(l.marks)-1 {
 				break
 			}
 			if wordJoinerLen > 0 {
-				loc := TextMark{
+				t := TextMark{
 					Offset: offset,
 					Text:   wordJoiner,
 					Meta:   true,
 				}
-				locations = append(locations, loc)
+				marks = append(marks, t)
 				offset += wordJoinerLen
 			}
 		}
@@ -1159,17 +1157,17 @@ func (pt *PageText) computeViews() {
 			break
 		}
 		if lineJoinerLen > 0 {
-			loc := TextMark{
+			t := TextMark{
 				Offset: offset,
 				Text:   lineJoiner,
 				Meta:   true,
 			}
-			locations = append(locations, loc)
+			marks = append(marks, t)
 			offset += lineJoinerLen
 		}
 	}
 	pt.viewText = text
-	pt.viewMarks = locations
+	pt.viewMarks = marks
 }
 
 // height returns the max height of the elements in `pt.marks`.
