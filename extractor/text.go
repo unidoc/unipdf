@@ -918,6 +918,7 @@ func (tm textMark) ToTextMark() TextMark {
 	}
 }
 
+// ToTextMark returns the public view of `t`.
 func (t textMark) ToTextMark() TextMark {
 	return TextMark{
 		Text:     t.text,
