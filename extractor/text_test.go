@@ -577,9 +577,9 @@ func (c pageContents) testTextByComponents(t *testing.T, l *markupList, desc str
 
 	// 2) Check that all expected TextMarks are in `textMarks`.
 	offsetMark := marksMap(textMarks)
-	for i, mark := range c.marks {
-		common.Log.Debug("%d: %v", i, mark)
-		checkContains(t, desc, offsetMark, mark)
+	for i, tm := range c.marks {
+		common.Log.Debug("%d: %v", i, tm)
+		checkContains(t, desc, offsetMark, tm)
 	}
 
 	// 3) Check that locationsIndex() finds TextMarks in `textMarks` corresponding to some
@@ -698,25 +698,25 @@ func testTermMarks(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 }
 
 // checkContains checks that `offsetMark` contains `expectedMark`.
-// Contains means: `expectedMark`.Offset is in `offsetMark` and for this element (call it mark)
-//   mark.Text == expectedMark.Text and the bounding boxes of
-//   mark and expectedMark are within `tol` of each other.
+// Contains means: `expectedMark`.Offset is in `offsetMark` and for this element (call it tm)
+//   tm.Text == expectedMark.Text and the bounding boxes of
+//   tm and expectedMark are within `tol` of each other.
 func checkContains(t *testing.T, desc string, offsetMark map[int]TextMark, expectedMark TextMark) {
-	mark, ok := offsetMark[expectedMark.Offset]
+	tm, ok := offsetMark[expectedMark.Offset]
 	if !ok {
 		t.Fatalf("offsetMark doesn't contain %v - %s", expectedMark, desc)
 	}
-	if mark.Text != expectedMark.Text {
+	if tm.Text != expectedMark.Text {
 		t.Fatalf("text doesn't match expected=%q got=%q - %s\n"+
 			"\texpected %v\n"+
 			"\t     got %v",
-			expectedMark.Text, mark.Text, desc, expectedMark, mark)
+			expectedMark.Text, tm.Text, desc, expectedMark, tm)
 	}
-	if !rectEquals(expectedMark.BBox, mark.BBox) {
+	if !rectEquals(expectedMark.BBox, tm.BBox) {
 		t.Fatalf("Bounding boxes doesn't match  - %s\n"+
 			"\texpected %v\n"+
 			"\t     got %v",
-			desc, expectedMark, mark)
+			desc, expectedMark, tm)
 	}
 }
 
@@ -768,8 +768,8 @@ func indexRunes(text, term string) int {
 // marksMap returns `textMarks` as a map of TextMarks keyed by TextMark.Offset.
 func marksMap(textMarks *TextMarkArray) map[int]TextMark {
 	offsetMark := make(map[int]TextMark, textMarks.Len())
-	for _, mark := range textMarks.Elements() {
-		offsetMark[mark.Offset] = mark
+	for _, tm := range textMarks.Elements() {
+		offsetMark[tm.Offset] = tm
 	}
 	return offsetMark
 }
@@ -806,8 +806,8 @@ func pageTextAndMarks(t *testing.T, desc string, page *model.PdfPage) (string, *
 	{ // Some extra debugging to see how the code works. Not needed by test.
 		common.Log.Debug("text=>>>%s<<<\n", text)
 		common.Log.Debug("textMarks=%s %q", textMarks, desc)
-		for i, mark := range textMarks.Elements() {
-			common.Log.Debug("%6d: %d %q=%02x %v", i, mark.Offset, mark.Text, []rune(mark.Text), mark.BBox)
+		for i, tm := range textMarks.Elements() {
+			common.Log.Debug("%6d: %d %q=%02x %v", i, tm.Offset, tm.Text, []rune(tm.Text), tm.BBox)
 		}
 	}
 
@@ -883,7 +883,7 @@ func rectEquals(b1, b2 model.PdfRectangle) bool {
 		math.Abs(b1.Ury-b2.Ury) <= tol
 }
 
-// markupList saves the results of text searches so they can be used to mark up a PDF with search
+// markupList saves the results of text searches so they can be used to mark-up a PDF with search
 // matches and show the search term that was matched.
 // Marked up results are saved in markupDir if markupPDFs is true.
 // The PDFs in markupDir can be viewed in a PDF viewer to check that they correct.
@@ -943,8 +943,8 @@ func (l *markupList) pageNums() []int {
 	return nums
 }
 
-// saveOutputPdf is called to mark up a PDF file with the locations of text.
-// `l` contains the input PDF, the pages, search terms and bounding boexs to mark.
+// saveOutputPdf is called to mark-up a PDF file with the locations of text.
+// `l` contains the input PDF, the pages, search terms and bounding boxes to mark.
 func (l *markupList) saveOutputPdf() {
 	if !markupPDFs {
 		return
