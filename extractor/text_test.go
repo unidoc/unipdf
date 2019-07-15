@@ -145,8 +145,7 @@ func TestTextExtractionFiles(t *testing.T) {
 	}
 	for _, test := range fileExtractionTests {
 		testExtractFileOptions(t, test.filename, test.pageTerms, false)
-		// TODO(peterwilliams97): Uncomment following line when lazy loading works.
-		// testExtractFileOptions(t, test.filename, test.pageTerms, true)
+		testExtractFileOptions(t, test.filename, test.pageTerms, true)
 	}
 }
 
@@ -158,8 +157,7 @@ func TestTextLocations(t *testing.T) {
 	}
 	for _, e := range textLocTests {
 		e.testTextComponent(t, false)
-		// TODO(peterwilliams97): Enable lazy testing then uncomment the following line.
-		// e.testTextComponent(t, true)
+		e.testTextComponent(t, true)
 	}
 }
 
@@ -174,8 +172,7 @@ func TestTermMarksFiles(t *testing.T) {
 		t.Log("Corpus folder not set - skipping")
 		return
 	}
-	testTermMarksFiles(t, false)
-	testTermMarksFiles(t, true)
+	testTermMarksFiles(t)
 }
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
@@ -289,9 +286,9 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 	exists := checkFileExists(filepath)
 	if !exists {
 		if forceTest {
-			t.Fatalf("filename=%q does not exist", filename)
+			t.Fatalf("filepath=%q does not exist", filepath)
 		}
-		t.Logf("%s not found", filename)
+		t.Logf("%s not found", filepath)
 		return
 	}
 
@@ -300,7 +297,7 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 		expectedTerms, ok := pageTerms[pageNum]
 		actualText, ok := actualPageText[pageNum]
 		if !ok {
-			t.Fatalf("%q doesn't have page %d", filename, pageNum)
+			t.Fatalf("%q doesn't have page %d", filepath, pageNum)
 		}
 		actualText = norm.NFKC.String(actualText)
 		if !containsTerms(t, expectedTerms, actualText) {
@@ -312,7 +309,9 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 // extractPageTexts runs ExtractTextWithStats on all pages in PDF `filename` and returns the result
 // as a map {page number: page text}
 func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]string) {
-	pdfReader := openPdfReader(t, filename, lazy)
+	f, pdfReader := openPdfReader(t, filename, lazy)
+	defer f.Close()
+
 	numPages, err := pdfReader.GetNumPages()
 	if err != nil {
 		t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
@@ -527,7 +526,8 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	common.Log.Debug("textLocTest.testTextComponent: %s", desc)
 
 	filename := filepath.Join(corpusFolder, e.filename)
-	pdfReader := openPdfReader(t, filename, lazy)
+	f, pdfReader := openPdfReader(t, filename, lazy)
+	defer f.Close()
 	l := createMarkupList(t, filename, pdfReader)
 	defer l.saveOutputPdf()
 
@@ -609,29 +609,31 @@ func (c pageContents) testPageTextAndMarks(t *testing.T, l *markupList, desc str
 }
 
 // testTermMarksFiles stress tests testTermMarksMulti() by running it on all files in the corpus.
-// If `lazy` is true then PDFs are loaded lazily.
-func testTermMarksFiles(t *testing.T, lazy bool) {
+func testTermMarksFiles(t *testing.T) {
 	pattern := filepath.Join(corpusFolder, "*.pdf")
 	pathList, err := filepath.Glob(pattern)
 	if err != nil {
 		t.Fatalf("Glob(%q) failed. err=%v", pattern, err)
 	}
 	for i, filename := range pathList {
-		pdfReader := openPdfReader(t, filename, lazy)
-		numPages, err := pdfReader.GetNumPages()
-		if err != nil {
-			t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
-		}
-		common.Log.Info("%4d of %d: %q", i, len(pathList), filename)
-
-		for pageNum := 1; pageNum < numPages; pageNum++ {
-			desc := fmt.Sprintf("filename=%q pageNum=%d", filename, pageNum)
-			page, err := pdfReader.GetPage(pageNum)
+		for _, lazy := range []bool{false, true} {
+			common.Log.Info("%4d of %d: %q lazy=%t", i+1, len(pathList), filename, lazy)
+			f, pdfReader := openPdfReader(t, filename, lazy)
+			defer f.Close()
+			numPages, err := pdfReader.GetNumPages()
 			if err != nil {
-				t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
+				t.Fatalf("GetNumPages failed. filename=%q err=%v", filename, err)
 			}
-			text, textMarks := pageTextAndMarks(t, desc, page)
-			testTermMarksMulti(t, text, textMarks)
+
+			for pageNum := 1; pageNum < numPages; pageNum++ {
+				desc := fmt.Sprintf("filename=%q pageNum=%d", filename, pageNum)
+				page, err := pdfReader.GetPage(pageNum)
+				if err != nil {
+					t.Fatalf("GetNumPages failed. %s err=%v", desc, err)
+				}
+				text, textMarks := pageTextAndMarks(t, desc, page)
+				testTermMarksMulti(t, text, textMarks)
+			}
 		}
 	}
 }
@@ -805,13 +807,15 @@ func pageTextAndMarks(t *testing.T, desc string, page *model.PdfPage) (string, *
 	return text, textMarks
 }
 
-// openPdfReader returns a PdfReader for file `filename`. If `lazy` is true, it will be lazy reader.
-func openPdfReader(t *testing.T, filename string, lazy bool) *model.PdfReader {
+// openPdfReader returns a file handle and a PdfReader for file `filename`. If `lazy` is true, it
+// will be lazy reader.
+// The file handle needs to be returned so the caller can hold it open while the PdfReader is being
+// used in the lazy case.
+func openPdfReader(t *testing.T, filename string, lazy bool) (*os.File, *model.PdfReader) {
 	f, err := os.Open(filename)
 	if err != nil {
 		t.Fatalf("Couldn't open filename=%q err=%v", filename, err)
 	}
-	defer f.Close()
 
 	var pdfReader *model.PdfReader
 	if lazy {
@@ -825,7 +829,7 @@ func openPdfReader(t *testing.T, filename string, lazy bool) *model.PdfReader {
 			t.Fatalf("NewPdfReader failed. filename=%q err=%v", filename, err)
 		}
 	}
-	return pdfReader
+	return f, pdfReader
 }
 
 // containsTerms returns true if all strings `terms` are contained in `actualText`.
