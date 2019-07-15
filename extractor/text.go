@@ -337,7 +337,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
-
 	return pageText, state.numChars, state.numMisses, err
 }
 
