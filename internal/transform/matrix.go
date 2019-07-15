@@ -128,14 +128,14 @@ func (m *Matrix) clampRange() {
 	}
 }
 
-func (m *Matrix) CheckMatrix() {
+// Unrealistic returns true if `m` is too small to have been created intentionally.
+// If it returns true then `m` probably contains junk values, due to some processing error in the
+// PDF generator or our code.
+func (m *Matrix) Unrealistic() bool {
 	xx, xy, yx, yy := math.Abs(m[0]), math.Abs(m[1]), math.Abs(m[3]), math.Abs(m[4])
 	goodXxYy := xx > minSafeScale && yy > minSafeScale
 	goodXyYx := xy > minSafeScale && yx > minSafeScale
-	if !(goodXxYy || goodXyYx) {
-		common.Log.Error("Zero matrix: %s goodXxYy=%t goodXyYx=%t",
-			m.String(), goodXxYy, goodXyYx)
-	}
+	return !(goodXxYy || goodXyYx)
 }
 
 // minSafeScale is the minimum matrix scale that is expected to occur in a valid PDF file.

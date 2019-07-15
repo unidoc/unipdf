@@ -156,7 +156,7 @@ func TestTextLocations(t *testing.T) {
 		return
 	}
 	lazy := false
-	for _, e := range textCases {
+	for _, e := range textLocTests {
 		e.testTextComponent(t, lazy)
 	}
 }
@@ -167,6 +167,7 @@ func TestTermMarksFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping stress test")
 	}
+	common.Log.Info("Running text stress tests. go test --short to skip these.")
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
 		return
@@ -392,8 +393,8 @@ func (c pageContents) matchTerms() []string {
 	return terms
 }
 
-// testCases are the extracted text location test cases. All coordinates are multiple of 0.5 points.
-var textCases = []textLocTest{
+// textLocTests are the extracted text location tests. All coordinates are multiples of 0.5 points.
+var textLocTests = []textLocTest{
 	textLocTest{
 		filename: "prop-price-list-2017.pdf",
 		numPages: 1,
@@ -533,8 +534,8 @@ var textCases = []textLocTest{
 	},
 }
 
-// testTextComponent tests TextMark and TextByComponents() functionality. If `lazy` is true
-// then PDFs are lazily loaded.
+// testTextComponent tests TextMark and TextByComponents() functionality. If `lazy` is true then
+// PDFs are lazily loaded.
 func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 	desc := fmt.Sprintf("%s lazy=%t", e, lazy)
 	common.Log.Debug("textLocTest.testTextComponent: %s", desc)
@@ -561,13 +562,13 @@ func (e textLocTest) testTextComponent(t *testing.T, lazy bool) {
 			t.Fatalf("GetPage failed. %s err=%v", pageDesc, err)
 		}
 		l.setPageNum(pageNum)
-		c.testTextByComponents(t, l, pageDesc, page)
+		c.testPageTextAndMarks(t, l, pageDesc, page)
 	}
 }
 
-// testTextByComponents tests that TextByComponents returns extracted page text and TextMarks
+// testPageTextAndMarks tests that pageTextAndMarks returns extracted page text and TextMarks
 // that match the expected results in `c`.
-func (c pageContents) testTextByComponents(t *testing.T, l *markupList, desc string,
+func (c pageContents) testPageTextAndMarks(t *testing.T, l *markupList, desc string,
 	page *model.PdfPage) {
 	text, textMarks := pageTextAndMarks(t, desc, page)
 
