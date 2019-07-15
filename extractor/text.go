@@ -1074,12 +1074,10 @@ func (tm TextMark) String() string {
 		tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
-// computeViews computes `pt`.viewText and `pt`.viewMarks the publically accessible contents and
-// layout the PDF of the PDF page that `pt` is based on.
-//   viewText: the text on the PDF page that `pt` describes.
-//   viewMarks: a slice of TextMark sorted by their order in the extracted text.
-//    The comments above the TextMark definition describe how to use the []TextMark to
-//    maps substrings of the page text to locations on the PDF page.
+// computeViews processes the page TextMarks sorting by position and populates `pt.viewText` and
+// `pt.viewMarks` which represent the text and marks in the order which it is read on the page.
+// The comments above the TextMark definition describe how to use the []TextMark to
+// maps substrings of the page text to locations on the PDF page.
 func (pt *PageText) computeViews() {
 	fontHeight := pt.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
