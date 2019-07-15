@@ -602,11 +602,14 @@ func (c pageContents) testTextByComponents(t *testing.T, l *markupList, desc str
 	}
 
 	// 5) Check out or range cases
-	if mark, ok := textMarks.GetByOffset(-1); ok {
-		t.Fatalf("textMarks.GetByOffset(-1) succeeded. %s\n\tmark=%s", desc, mark)
+	if spanMarks, err := textMarks.RangeOffset(-1, 0); err == nil {
+		t.Fatalf("textMarks.RangeOffset(-1, 0) succeeded. %s\n\tspanMarks=%s", desc, spanMarks)
 	}
-	if mark, ok := textMarks.GetByOffset(1e10); ok {
-		t.Fatalf("textMarks.GetByOffset(1e10) succeeded. %s\n\tmark=%s", desc, mark)
+	if spanMarks, err := textMarks.RangeOffset(0, 1e10); err == nil {
+		t.Fatalf("textMarks.RangeOffset(0, 1e10) succeeded. %s\n\tspanMarks=%s", desc, spanMarks)
+	}
+	if spanMarks, err := textMarks.RangeOffset(1, 0); err == nil {
+		t.Fatalf("textMarks.RangeOffset(1, 0) succeeded. %s\n\tspanMarks=%s", desc, spanMarks)
 	}
 }
 
@@ -669,27 +672,6 @@ func testLocationsIndex(t *testing.T, text string, textMarks *TextMarkArray, n i
 	for ofs := 0; ofs < len(runes)-n; ofs++ {
 		term := string(runes[ofs : ofs+n])
 
-		// Get first and last TextMark's for term match with GetByOffset(). Not recommended.
-		loc0, ok0 := textMarks.GetByOffset(ofs)
-		if !ok0 {
-			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
-				term, ofs, ofs+n, runes[ofs:ofs+n])
-		}
-		loc1, ok1 := textMarks.GetByOffset(ofs + n - 1)
-		if !ok1 {
-			t.Fatalf("no TextMark for term=%q=runes[%d:%d]=%02x",
-				term, ofs, ofs+n, runes[ofs:ofs+n])
-		}
-
-		if !strings.HasPrefix(term, loc0.Text) {
-			t.Fatalf("loc is not a prefix for term=%q=runes[%d:%d]=%02x loc=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], loc0)
-		}
-		if !strings.HasSuffix(term, loc1.Text) {
-			t.Fatalf("loc is not a suffix for term=%q=runes[%d:%d]=%v loc=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], loc1)
-		}
-
 		// Get first and last TextMark's for term match with RangeOffset(). This is recommended.
 		spanArray, err := textMarks.RangeOffset(ofs, ofs+n)
 		if err != nil {
@@ -702,15 +684,15 @@ func testLocationsIndex(t *testing.T, text string, textMarks *TextMarkArray, n i
 		}
 
 		spanMarks := spanArray.Elements()
-		loc0 = spanMarks[0]
-		loc1 = spanMarks[spanArray.Len()-1]
+		loc0 := spanMarks[0]
+		loc1 := spanMarks[spanArray.Len()-1]
 
 		if !strings.HasPrefix(term, loc0.Text) {
-			t.Fatalf("loc is not a prefix for term=%q=runes[%d:%d]=%02x loc=%v",
+			t.Fatalf("loc0 is not a prefix for term=%q=runes[%d:%d]=%02x loc0=%v",
 				term, ofs, ofs+n, runes[ofs:ofs+n], loc0)
 		}
 		if !strings.HasSuffix(term, loc1.Text) {
-			t.Fatalf("loc is not a suffix for term=%q=runes[%d:%d]=%v loc=%v",
+			t.Fatalf("loc1 is not a suffix for term=%q=runes[%d:%d]=%v loc1=%v",
 				term, ofs, ofs+n, runes[ofs:ofs+n], loc1)
 		}
 	}

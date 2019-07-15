@@ -952,40 +952,6 @@ func (ma *TextMarkArray) Len() int {
 	return len(ma.marks)
 }
 
-// TODO(peterwilliams97) Does user need to know the ordering of TextMarkArray.marks?
-// // Get returns the `i`-th element of the array. The bool indicates if it is in the array.
-// func (array *TextMarkArray) Get(i int) (TextMark, bool) {
-// 	if array == nil || !(0 <= i && i < len(ma.marks)) {
-// 		return TextMark{}, false
-// 	}
-// 	return ma.marks[i], true
-// }
-
-// GetByOffset returns the TextMark at offset `offset` in the extracted text corresonding to `array`.
-// The bool indicates if `array` has any TextMark's with this offset.
-// TODO(peterwilliams97): Remove this function?
-func (ma *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
-	n := len(ma.marks)
-	if n == 0 {
-		return TextMark{}, false
-	}
-	m0 := ma.marks[0]
-	m1 := ma.marks[n-1]
-	if !(m0.Offset <= offset && offset < m1.Offset) {
-		return TextMark{}, false
-	}
-
-	textMark, err := ma.RangeOffset(offset, offset+1)
-	if err != nil {
-		return TextMark{}, false
-	}
-	if textMark.Len() != 1 {
-		common.Log.Error("This can't happen. offsets=[%d,%d) textMark=%s",
-			offset, offset+1, textMark)
-	}
-	return textMark.marks[0], true
-}
-
 // RangeOffset returns the TextMark's in `array` that have `start` <= TextMark.Offet < `end`.
 func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if ma == nil {
@@ -1000,8 +966,8 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if start < ma.marks[0].Offset {
 		start = ma.marks[0].Offset
 	}
-	if end > ma.marks[len(ma.marks)-1].Offset {
-		end = ma.marks[len(ma.marks)-1].Offset
+	if end > ma.marks[len(ma.marks)-1].Offset+1 {
+		end = ma.marks[len(ma.marks)-1].Offset + 1
 	}
 
 	iStart := sort.Search(len(ma.marks), func(i int) bool { return ma.marks[i].Offset >= start })
