@@ -883,6 +883,7 @@ func (t textMark) Width() float64 {
 	return math.Abs(t.orientedStart.X - t.orientedEnd.X)
 }
 
+// ToTextMark returns the public view of `t`.
 func (t textMark) ToTextMark() TextMark {
 	return TextMark{
 		Text:     t.text,
@@ -901,7 +902,7 @@ func (t textMark) ToTextMark() TextMark {
 type PageText struct {
 	marks     []textMark // Texts and their positions on a PDF page.
 	viewText  string     // Extracted page text.
-	viewMarks []TextMark // Public view of `marks`
+	viewMarks []TextMark // Public view of `marks`.
 }
 
 // String returns a string describing `pt`.
@@ -960,6 +961,7 @@ func (array *TextMarkArray) Len() int {
 	return len(array.marks)
 }
 
+
 // TODO(peterwilliams97) Does user need to know the ordering of TextMarkArray.marks?
 // // Get returns the `i`-th element of the array. The bool indicates if it is in the array.
 // func (array *TextMarkArray) Get(i int) (TextMark, bool) {
@@ -970,7 +972,8 @@ func (array *TextMarkArray) Len() int {
 // }
 
 // GetByOffset returns the TextMark at offset `offset` in the extracted text corresonding to `array`.
-// The bool indicates if `array` has any TextMark's with this offset
+// The bool indicates if `array` has any TextMark's with this offset.
+// TODO(peterwilliams97): Remove this function?
 func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
 	n := len(array.marks)
 	if n == 0 {
@@ -993,7 +996,7 @@ func (array *TextMarkArray) GetByOffset(offset int) (TextMark, bool) {
 	return textMark.marks[0], true
 }
 
-// RangeOffset returns the TextMark's in `array` that have start <= TextMark.Offet < end.
+// RangeOffset returns the TextMark's in `array` that have `start` <= TextMark.Offet < `end`.
 func (array *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 
 	if array == nil {
@@ -1062,7 +1065,7 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 }
 
 // TextMark is the public view of a textMark.
-// Currently this is the text contents and a bounding box.
+// Currently this is the text contents, a bounding box, font and original text.
 //
 // TextMark maps extracted text to the location of the text on the PDF page and other
 // properties of the rendered text such the font.
@@ -1076,8 +1079,25 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 //   binary search the []TextMark for `start` and `end`.
 //   The bounding box of `substring` on the PDF page is the union of the TextMark.BBox's with
 //     start <= TextMark.Offset < end
-// getBBox() in test_text.go shows how to compute the bounding boxes of substrings of extracted
-// text.
+//
+// getBBox() in test_text.go shows how to compute bounding boxes of substrings of extracted text.
+// The following code extracts the text on PDF page `page` into `text` then finds the bounding box
+// `bbox` of substring `term` in `text`. (indexRunes() works like strings.Index except that it
+// returns number of runes rather than numberof bytes)
+//
+//     ex, _ := New(page)
+//     // handle errors
+//     pageText, _, _, err := ex.ExtractPageText()
+//     // handle errors
+//     text := pageText.Text()
+//     textMarks := pageText.Marks()
+//
+//     start := indexRunes(text, term)
+//     end := start + len([]rune(term))
+//     spanMarks, err := textMarks.RangeOffset(start, end)
+//     // handle errors
+//     bbox, ok := spanMarks.BBox()
+//     // handle errrors
 type TextMark struct {
 	Offset   int
 	Text     string

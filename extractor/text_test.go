@@ -818,15 +818,18 @@ func textByComponents(t *testing.T, desc string, page *model.PdfPage) (string, *
 	}
 
 	text := pageText.Text()
-	locations := pageText.Marks().Elements()
+	textMarks := pageText.Marks()
 
-	common.Log.Debug("text=>>>%s<<<\n", text)
-	common.Log.Debug("locations=%d %q", len(locations), desc)
-	for i, loc := range locations {
-		common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
+	{ // Some extra debugging to see how the code works. Not needed by test
+		locations := textMarks.Elements()
+		common.Log.Debug("text=>>>%s<<<\n", text)
+		common.Log.Debug("locations=%d %q", len(locations), desc)
+		for i, loc := range locations {
+			common.Log.Debug("%6d: %d %q=%02x %v", i, loc.Offset, loc.Text, []rune(loc.Text), loc.BBox)
+		}
 	}
 
-	return text, pageText.Marks()
+	return text, textMarks
 }
 
 // openPdfReader returns a PdfReader for file `filename`. If `lazy` is true, it will be lazy reader.
