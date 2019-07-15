@@ -1198,7 +1198,7 @@ func (tl textLine) words() []string {
 // that text is horizontal) before calling this function.
 func (pt PageText) toLines(tol float64) []textLine {
 	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the
-	// lines for each orientation then return the concatention of these lines sorted by orientation.
+	// lines for each orientation then return the concatentation of these lines sorted by orientation.
 	tlOrient := make(map[int][]textMark, len(pt.marks))
 	for _, tm := range pt.marks {
 		tlOrient[tm.orient] = append(tlOrient[tm.orient], tm)
@@ -1237,7 +1237,7 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 				tl := newLine(y, xx, marks)
 				if averageCharWidth.running {
 					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
-					// line = combineDiacritics(line, averageCharWidth.ave)
+					// tl = combineDiacritics(tl, averageCharWidth.ave)
 					tl = removeDuplicates(tl, averageCharWidth.ave)
 				}
 				lines = append(lines, tl)
@@ -1342,20 +1342,20 @@ func newLine(y float64, xx []float64, marks []TextMark) textLine {
 	}
 }
 
-// removeDuplicates returns `line` with duplicate characters removed. `charWidth` is the average
+// removeDuplicates returns `tl` with duplicate characters removed. `charWidth` is the average
 // character width for the line.
-func removeDuplicates(line textLine, charWidth float64) textLine {
-	if len(line.dxList) == 0 {
-		return line
+func removeDuplicates(tl textLine, charWidth float64) textLine {
+	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
+		return tl
 	}
 	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.3
-	marks := []TextMark{line.marks[0]}
+	marks := []TextMark{tl.marks[0]}
 	var dxList []float64
 
-	tm0 := line.marks[0]
-	for i, dx := range line.dxList {
-		tm := line.marks[i+1]
+	tm0 := tl.marks[0]
+	for i, dx := range tl.dxList {
+		tm := tl.marks[i+1]
 		if tm.Text != tm0.Text || dx > tol {
 			marks = append(marks, tm)
 			dxList = append(dxList, dx)
@@ -1363,8 +1363,8 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 		tm0 = tm
 	}
 	return textLine{
-		x:      line.x,
-		y:      line.y,
+		x:      tl.x,
+		y:      tl.y,
 		dxList: dxList,
 		marks:  marks,
 	}
@@ -1374,9 +1374,9 @@ func removeDuplicates(line textLine, charWidth float64) textLine {
 // `charWidth` is the average character width for the line.
 // We have to do this because PDF can render diacritics separately to the characters they attach to
 // in extracted text.
-func combineDiacritics(line textLine, charWidth float64) textLine {
-	if len(line.dxList) == 0 {
-		return line
+func combineDiacritics(tl textLine, charWidth float64) textLine {
+	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
+		return tl
 	}
 	// NOTE(peterwilliams97) 0.2 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.2
@@ -1391,7 +1391,7 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 	parts := []string{w}
 	numChars := c
 
-	for i, dx := range line.dxList {
+	for i, dx := range tl.dxList {
 		tm = marks[i+1]
 		w, c := countDiacritic(tm.Text)
 		if numChars+c <= 1 && delta+dx <= tol {
@@ -1426,10 +1426,11 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 	if len(marks) != len(dxList)+1 {
 		common.Log.Error("Inconsistent: \nwords=%d \ndxList=%d %.2f",
 			len(marks), len(dxList), dxList)
-		return line
+		return tl
 	}
 	return textLine{
-		x: line.x, y: line.y,
+		x:      tl.x,
+		y:      tl.y,
 		dxList: dxList,
 		marks:  marks,
 	}

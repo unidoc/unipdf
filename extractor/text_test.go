@@ -161,16 +161,20 @@ func TestTextLocations(t *testing.T) {
 	}
 }
 
-// // TestTermMarksFiles stress tests testTermMarksMulti() by running it on all files in the corpus.
-// func TestTermMarksFiles(t *testing.T) {
-// 	if len(corpusFolder) == 0 && !forceTest {
-// 		t.Log("Corpus folder not set - skipping")
-// 		return
-// 	}
-// 	testTermMarksFiles(t, false)
-// 	// TODO(peterwilliams97): Enable lazy testing by uncommenting the following line,.
-// 	// testTermMarksFiles(t, true)
-// }
+// TestTermMarksFiles stress tests testTermMarksMulti() by running it on all files in the corpus.
+// It can take several minutes to run.
+func TestTermMarksFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping stress test")
+	}
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+	testTermMarksFiles(t, false)
+	// TODO(peterwilliams97): Enable lazy testing by uncommenting the following line,.
+	// testTermMarksFiles(t, true)
+}
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
 // PDF files.
@@ -370,8 +374,8 @@ func (e textLocTest) String() string {
 	return fmt.Sprintf("{TEXTLOCTEST: filename=%q}", e.filename)
 }
 
-// pageContents are some things that we are expected to find in the text extracted from a PDF page
-// by TextByComponents().
+// pageContents are the substrings and TextMark that we expect to find in the text extracted from a
+// PDF page
 type pageContents struct {
 	terms    []string                      // Substrings of the extracted text.
 	marks    []TextMark                    // TextMarks in the extracted text.
