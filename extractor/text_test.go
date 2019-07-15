@@ -144,20 +144,22 @@ func TestTextExtractionFiles(t *testing.T) {
 		return
 	}
 	for _, test := range fileExtractionTests {
-		testExtractFile(t, test.filename, test.pageTerms)
+		testExtractFileOptions(t, test.filename, test.pageTerms, false)
+		// TODO(peterwilliams97): Uncomment following line when lazy loading works.
+		// testExtractFileOptions(t, test.filename, test.pageTerms, true)
 	}
 }
 
 // TestTextLocations tests locations of text marks.
-// TODO(peterwilliams97): Enable lazy testing.
 func TestTextLocations(t *testing.T) {
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
 		return
 	}
-	lazy := false
 	for _, e := range textLocTests {
-		e.testTextComponent(t, lazy)
+		e.testTextComponent(t, false)
+		// TODO(peterwilliams97): Enable lazy testing then uncomment the following line.
+		// e.testTextComponent(t, true)
 	}
 }
 
@@ -173,8 +175,7 @@ func TestTermMarksFiles(t *testing.T) {
 		return
 	}
 	testTermMarksFiles(t, false)
-	// TODO(peterwilliams97): Enable lazy testing by uncommenting the following line,.
-	// testTermMarksFiles(t, true)
+	testTermMarksFiles(t, true)
 }
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
@@ -282,21 +283,6 @@ var fileExtractionTests = []struct {
 }
 
 // testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the
-// extracted text to `pageTerms`.
-//
-// NOTE: We do a best effort at finding the PDF file because we don't keep PDF test files in this
-// repo so you will need to set the environment variable UNIDOC_EXTRACT_TESTDATA to point at
-// the corpus directory.
-//
-// If `filename` cannot be found in `corpusFolders` then the test is skipped unless `forceTest`
-// global variable is true (e.g. setting environment variable UNIDOC_EXTRACT_FORCETESTS = 1).
-func testExtractFile(t *testing.T, filename string, pageTerms map[int][]string) {
-	testExtractFileOptions(t, filename, pageTerms, false)
-	// TODO(peterwilliams97): Uncomment following line when lazy loading works.
-	// testExtractFileOptions(t, filename, pageTerms, true)
-}
-
-// testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the
 // extracted text to `pageTerms`. If `lazy` is true, the PDF is lazily loaded.
 func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]string, lazy bool) {
 	filepath := filepath.Join(corpusFolder, filename)
@@ -340,7 +326,7 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 		}
 		ex, err := New(page)
 		if err != nil {
-			t.Fatalf("New failed. filename=%q lazy=%t page=%d err=%v",
+			t.Fatalf("extractor.New failed. filename=%q lazy=%t page=%d err=%v",
 				filename, lazy, pageNum, err)
 		}
 		text, _, _, err := ex.ExtractTextWithStats()
