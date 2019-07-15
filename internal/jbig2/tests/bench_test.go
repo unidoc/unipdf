@@ -6,12 +6,8 @@
 package tests
 
 import (
-	"archive/zip"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,48 +15,37 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
 
-// BenchmarkDecodeSingleJBIG2 benchmarks the jbig2 decoding.
-// In order to run the benchmark run the DecodeJBIG2Files with the UNIDOC_JBIG2_TESTDATA environmental variable.
-// Zipped files containing raw jbig2 streams shoud be created.
-func BenchmarkDecodeSingleJBIG2(b *testing.B) {
+// BenchmarkDecodeJBIG2Files benchmarks the decoding process of  jbig2 encoded images stored within pdf files.
+// The function reads pdf files located in the directory provided as `UNIDOC_JBIG2_TESTDATA` environmental variable.
+// Then the function extracts the images and starts subBenchmarks for each image.
+func BenchmarkDecodeJBIG2Files(b *testing.B) {
 	b.Helper()
-	dirName := os.Getenv("UNIDOC_JBIG2_TESTDATA")
+	dirName := os.Getenv(EnvDirectory)
 	require.NotEmpty(b, dirName, "No Environment variable 'UNIDOC_JBIG2_TESTDATA' found")
 
-	jbig2Files, err := readJBIGZippedFiles(dirName)
+	filenames, err := readFileNames(dirName)
 	require.NoError(b, err)
+	require.NotEmpty(b, filenames, "no files found within provided directory")
 
-	for _, file := range jbig2Files {
-		zr, err := zip.OpenReader(filepath.Join(dirName, jbig2DecodedDirectory, file))
-		require.NoError(b, err)
+	for _, filename := range filenames {
+		b.Run(rawFileName(filename), func(b *testing.B) {
+			images, err := extractImages(dirName, filename)
+			require.NoError(b, err)
 
-		defer zr.Close()
+			for _, image := range images {
+				b.Run(fmt.Sprintf("Page#%d/Image#%d-%d", image.pageNo, image.idx, len(image.jbig2Data)), func(b *testing.B) {
+					for n := 0; n < b.N; n++ {
+						d, err := jbig2.NewDocumentWithGlobals(image.jbig2Data, image.globals)
+						require.NoError(b, err)
 
-		for _, zFile := range zr.File {
-			if !strings.HasSuffix(zFile.Name, ".jbig2") {
-				continue
+						p, err := d.GetPage(1)
+						require.NoError(b, err)
+
+						_, err = p.GetBitmap()
+						require.NoError(b, err)
+					}
+				})
 			}
-
-			sf, err := zFile.Open()
-			require.NoError(b, err)
-
-			defer sf.Close()
-
-			data, err := ioutil.ReadAll(sf)
-			require.NoError(b, err)
-
-			b.Run(fmt.Sprintf("%s/%d", rawFileName(zFile.Name), len(data)), func(b *testing.B) {
-				for n := 0; n < b.N; n++ {
-					d, err := jbig2.NewDocument(data)
-					require.NoError(b, err)
-
-					p, err := d.GetPage(1)
-					require.NoError(b, err)
-
-					_, err = p.GetBitmap()
-					require.NoError(b, err)
-				}
-			})
-		}
+		})
 	}
 }
