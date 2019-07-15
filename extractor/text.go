@@ -917,15 +917,14 @@ func (tm textMark) ToTextMark() TextMark {
 	}
 }
 
-// ToTextMark returns the public view of `t`.
-func (t textMark) ToTextMark() TextMark {
+// ToTextMark returns the public view of `tm`.
+func (tm textMark) ToTextMark() TextMark {
 	return TextMark{
-		Text:     t.text,
-		Original: t.original,
-		BBox:     t.bbox,
-		Font:     t.font,
-		FontSize: t.fontsize,
-		count:    t.count,
+		Text:     tm.text,
+		Original: tm.original,
+		BBox:     tm.bbox,
+		Font:     tm.font,
+		FontSize: tm.fontsize,
 	}
 }
 
