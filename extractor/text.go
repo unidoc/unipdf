@@ -337,7 +337,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	if err != nil {
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
-
 	return pageText, state.numChars, state.numMisses, err
 }
 
@@ -928,7 +927,6 @@ func (t textMark) ToTextMark() TextMark {
 		FontSize: t.fontsize,
 		count:    t.count,
 	}
-
 }
 
 // PageText represents the layout of text on a device page.

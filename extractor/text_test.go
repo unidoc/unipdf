@@ -1151,7 +1151,6 @@ func (l *markupList) pageNums() []int {
 // saveOutputPdf is called to mark up a PDF file with the locations of text.
 // `l` contains the input PDF, the pages, search terms and bounding boexs to mark.
 func (l *markupList) saveOutputPdf() {
-
 	if !markupPDFs {
 		return
 	}
