@@ -428,9 +428,9 @@ var textLocTests = []textLocTest{
 		contents: map[int]pageContents{
 			1: pageContents{
 				marks: []TextMark{
-					l(3602, "W", 152.5, 185.5, 163.0, 196.5),
-					l(3603, "T", 163.0, 185.5, 169.5, 196.5),
-					l(3604, "O", 169.5, 185.5, 177.5, 196.5),
+					l(3914, "W", 177.0, 136.5, 188.0, 148.0),
+					l(3915, "T", 187.5, 136.5, 194.5, 148.0),
+					l(3916, "O", 194.5, 136.5, 202.5, 148.0),
 				},
 				termBBox: map[string]model.PdfRectangle{
 					"global public good": r(244.0, 398.5, 332.5, 410.0),
@@ -466,10 +466,10 @@ var textLocTests = []textLocTest{
 					"to Type 1 format.",
 				},
 				marks: []TextMark{
-					l(286, "T", 334.0, 674.5, 341.2, 684.5),
-					l(287, "a", 340.5, 674.5, 345.5, 684.5),
-					l(288, "k", 345.5, 674.5, 350.5, 684.5),
-					l(289, "e", 350.5, 674.5, 355.0, 684.5),
+					l(290, "T", 334.0, 674.5, 341.2, 684.5),
+					l(291, "a", 340.5, 674.5, 345.5, 684.5),
+					l(292, "k", 345.5, 674.5, 350.5, 684.5),
+					l(293, "e", 350.5, 674.5, 355.0, 684.5),
 				},
 				termBBox: map[string]model.PdfRectangle{
 					"glyphs needed for each font": r(382.0, 443.0, 501.0, 453.0),
@@ -489,16 +489,16 @@ var textLocTests = []textLocTest{
 					"Азәрбајҹан", "Вагиф Сәмәдоғлу",
 				},
 				marks: []TextMark{
-					l(447, "Ö", 272.0, 521.0, 281.0, 533.0),
-					l(448, "s", 281.0, 521.0, 287.0, 533.0),
-					l(449, "t", 287.0, 521.0, 290.5, 533.0),
-					l(450, "e", 290.5, 521.0, 297.0, 533.0),
-					l(451, "r", 297.0, 521.0, 301.0, 533.0),
-					l(452, "r", 301.0, 521.0, 305.0, 533.0),
-					l(453, "e", 305.0, 521.0, 312.0, 533.0),
-					l(454, "i", 312.0, 521.0, 314.5, 533.0),
-					l(455, "c", 314.5, 521.0, 320.5, 533.0),
-					l(456, "h", 320.5, 521.0, 327.0, 533.0),
+					l(468, "Ö", 272.0, 521.0, 281.0, 533.0),
+					l(470, "s", 281.0, 521.0, 287.0, 533.0),
+					l(471, "t", 287.0, 521.0, 290.5, 533.0),
+					l(472, "e", 290.5, 521.0, 297.0, 533.0),
+					l(473, "r", 297.0, 521.0, 301.0, 533.0),
+					l(474, "r", 301.0, 521.0, 305.0, 533.0),
+					l(475, "e", 305.0, 521.0, 312.0, 533.0),
+					l(476, "i", 312.0, 521.0, 314.5, 533.0),
+					l(477, "c", 314.5, 521.0, 320.5, 533.0),
+					l(478, "h", 320.5, 521.0, 327.0, 533.0),
 				},
 				termBBox: map[string]model.PdfRectangle{
 					"Österreich": r(272.0, 521.0, 327.0, 533.0), "Johann Strauß": r(400.5, 521.0, 479.5, 533.0),
@@ -694,22 +694,27 @@ func testTermMarks(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 		return
 	}
 	common.Log.Debug("testTermMarks: text=%d n=%d", len(text), n)
+	// We build our substrings out of whole runes, not fragments of utf-8 codes from the text
 	runes := []rune(text)
 	if n > len(runes)/2 {
 		n = len(runes) / 2
 	}
-	for ofs := 0; ofs < len(runes)-n; ofs++ {
-		term := string(runes[ofs : ofs+n])
+	runeString := runeStringIndex(text)
+
+	for ofsRune := 0; ofsRune < len(runes)-n; ofsRune++ {
+		term := string(runes[ofsRune : ofsRune+n])
+		ofs0 := runeString[ofsRune]
+		ofs1 := runeString[ofsRune+n]
 
 		// Get TextMarks spanned `term` with RangeOffset().
-		spanArray, err := textMarks.RangeOffset(ofs, ofs+n)
+		spanArray, err := textMarks.RangeOffset(ofs0, ofs1)
 		if err != nil {
-			t.Fatalf("textMarks.RangeOffset failed term=%q=runes[%d:%d]=%02x err=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], err)
+			t.Fatalf("textMarks.RangeOffset failed term=%q=text[%d:%d]=%02x err=%v",
+				term, ofs0, ofs1, text[ofs0:ofs1], err)
 		}
 		if spanArray.Len() == 0 {
-			t.Fatalf("No matches. term=%q=runes[%d:%d]=%02x err=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], err)
+			t.Fatalf("No matches. term=%q=text[%d:%d]=%02x err=%v",
+				term, ofs0, ofs1, text[ofs0:ofs1], err)
 		}
 
 		spanMarks := spanArray.Elements()
@@ -717,14 +722,28 @@ func testTermMarks(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 		mark1 := spanMarks[spanArray.Len()-1]
 
 		if !strings.HasPrefix(term, mark0.Text) {
-			t.Fatalf("mark0 is not a prefix for term=%q=runes[%d:%d]=%02x mark0=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], mark0)
+			t.Fatalf("mark0 is not a prefix for term=%q=text[%d:%d]=%02x mark0=%v",
+				term, ofs0, ofs1, text[ofs0:ofs1], mark0)
 		}
 		if !strings.HasSuffix(term, mark1.Text) {
-			t.Fatalf("mark1 is not a suffix for term=%q=runes[%d:%d]=%v mark1=%v",
-				term, ofs, ofs+n, runes[ofs:ofs+n], mark1)
+			t.Fatalf("mark1 is not a suffix for term=%q=text[%d:%d]=%v mark1=%v",
+				term, ofs0, ofs1, text[ofs0:ofs1], mark1)
 		}
 	}
+}
+
+// runeStringIndex returns a map of indexes of `[]rune(text)`` to the corresponding indexes in `text`.
+func runeStringIndex(text string) map[int]int {
+	runeString := map[int]int{}
+	runeIdx := 0
+	for strIdx, _ := range text {
+		runeString[runeIdx] = strIdx
+		runeIdx++
+	}
+	if len(runeString) != len([]rune(text)) {
+		panic("d")
+	}
+	return runeString
 }
 
 // checkContains checks that `offsetMark` contains `expectedMark`.
@@ -755,11 +774,11 @@ func checkContains(t *testing.T, desc string, offsetMark map[int]TextMark, expec
 // returned by TextByComponents().
 // NOTE: This is how you would use TextByComponents in an application.
 func getBBox(text string, textMarks *TextMarkArray, term string) (model.PdfRectangle, error) {
-	start := indexRunes(text, term)
+	start := strings.Index(text, term)
 	if start < 0 {
-		return model.PdfRectangle{}, fmt.Errorf("indexRunes has no match for term=%q", term)
+		return model.PdfRectangle{}, fmt.Errorf("text has no match for term=%q", term)
 	}
-	end := start + len([]rune(term))
+	end := start + len(term)
 
 	spanMarks, err := textMarks.RangeOffset(start, end)
 	if err != nil {
@@ -772,27 +791,6 @@ func getBBox(text string, textMarks *TextMarkArray, term string) (model.PdfRecta
 			spanMarks)
 	}
 	return bbox, nil
-}
-
-// indexRunes returns the index in `text` of the first instance of `term` if `term` is a substring
-// of `text`, or -1 if it is not a substring.
-// This index is over runes, unlike strings.Index.
-func indexRunes(text, term string) int {
-	runes := []rune(text)
-	substr := []rune(term)
-	for i := 0; i < len(runes)-len(substr); i++ {
-		matched := true
-		for j, r := range substr {
-			if runes[i+j] != r {
-				matched = false
-				break
-			}
-		}
-		if matched {
-			return i
-		}
-	}
-	return -1
 }
 
 // marksMap returns `textMarks` as a map of TextMarks keyed by TextMark.Offset.
@@ -837,7 +835,7 @@ func pageTextAndMarks(t *testing.T, desc string, page *model.PdfPage) (string, *
 		common.Log.Debug("text=>>>%s<<<\n", text)
 		common.Log.Debug("textMarks=%s %q", textMarks, desc)
 		for i, tm := range textMarks.Elements() {
-			common.Log.Debug("%6d: %d %q=%02x %v", i, tm.Offset, tm.Text, []rune(tm.Text), tm.BBox)
+			common.Log.Debug("%6d: %d %q=%02x %v", i, tm.Offset, tm.Text, tm.Text, tm.BBox)
 		}
 	}
 

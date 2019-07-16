@@ -1100,7 +1100,7 @@ func (pt *PageText) computeViews() {
 		for j, tm := range l.marks {
 			tm.Offset = offset
 			marks = append(marks, tm)
-			offset += len([]rune(tm.Text))
+			offset += len(tm.Text)
 			if j == len(l.marks)-1 {
 				break
 			}
