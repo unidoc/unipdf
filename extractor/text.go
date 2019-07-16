@@ -936,7 +936,6 @@ func (ma TextMarkArray) String() string {
 	m0 := ma.marks[0]
 	m1 := ma.marks[n-1]
 	return fmt.Sprintf("{TEXTMARKARRAY: %d elements\n\tfirst=%s\n\t last=%s}", n, m0, m1)
-
 }
 
 // Elements returns the TextMarks in `ma`.
@@ -952,7 +951,7 @@ func (ma *TextMarkArray) Len() int {
 	return len(ma.marks)
 }
 
-// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offet < `end`.
+// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offset < `end`.
 func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if ma == nil {
 		return nil, errors.New("ma==nil")
@@ -989,7 +988,7 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	return &TextMarkArray{marks: ma.marks[iStart:iEnd]}, nil
 }
 
-// BBox returns the smallest axis-aligned retangle that encloses all the TextMarks in `ma`.
+// BBox returns the smallest axis-aligned rectangle that encloses all the TextMarks in `ma`.
 func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
 	if len(ma.marks) == 0 {
 		return model.PdfRectangle{}, false
@@ -1045,7 +1044,7 @@ type TextMark struct {
 	BBox model.PdfRectangle
 	// Font is the font the text was drawn with.
 	Font *model.PdfFont
-	// Font is the font the text was drawn with.
+	// FontSize is the font size the text was drawn with.
 	FontSize float64
 	// Offset is the offset of the start of TextMark.Text in the extracted text. If you do this
 	//   text, textMarks := pageText.Text(), pageText.Marks()
@@ -1200,7 +1199,7 @@ func (tl textLine) words() []string {
 // that text is horizontal) before calling this function.
 func (pt PageText) toLines(tol float64) []textLine {
 	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the
-	// lines for each orientation then return the concatentation of these lines sorted by orientation.
+	// lines for each orientation then return the concatenation of these lines sorted by orientation.
 	tlOrient := make(map[int][]textMark, len(pt.marks))
 	for _, tm := range pt.marks {
 		tlOrient[tm.orient] = append(tlOrient[tm.orient], tm)
