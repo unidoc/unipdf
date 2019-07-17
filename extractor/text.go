@@ -43,6 +43,9 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, 0)
+	if err != nil {
+		return nil, numChars, numMisses, err
+	}
 	pt.computeViews()
 	return pt, numChars, numMisses, err
 }
@@ -917,6 +920,13 @@ func (pt PageText) Text() string {
 	return pt.viewText
 }
 
+// ToText returns the page text as a single string.
+// Deprecated: This function is deprecated and will be removed in a future major version. Please use
+// Text() instead.
+func (pt PageText) ToText() string {
+	return pt.Text()
+}
+
 // Marks returns the TextMark collection for a page. It represents all the text on the page.
 func (pt PageText) Marks() *TextMarkArray {
 	return &TextMarkArray{marks: pt.viewMarks}
@@ -959,26 +969,27 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if end < start {
 		return nil, fmt.Errorf("end < start. RangeOffset not defined. start=%d end=%d ", start, end)
 	}
-	if len(ma.marks) == 0 {
+	n := len(ma.marks)
+	if n == 0 {
 		return ma, nil
 	}
 	if start < ma.marks[0].Offset {
 		start = ma.marks[0].Offset
 	}
-	if end > ma.marks[len(ma.marks)-1].Offset+1 {
-		end = ma.marks[len(ma.marks)-1].Offset + 1
+	if end > ma.marks[n-1].Offset+1 {
+		end = ma.marks[n-1].Offset + 1
 	}
 
-	iStart := sort.Search(len(ma.marks), func(i int) bool { return ma.marks[i].Offset >= start })
-	if !(0 <= iStart && iStart < len(ma.marks)) {
+	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset >= start })
+	if !(0 <= iStart && iStart < n) {
 		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
-			start, iStart, len(ma.marks), ma.marks[0], ma.marks[len(ma.marks)-1])
+			start, iStart, n, ma.marks[0], ma.marks[n-1])
 		return nil, err
 	}
-	iEnd := sort.Search(len(ma.marks), func(i int) bool { return ma.marks[i].Offset > end-1 })
-	if !(0 <= iEnd && iEnd < len(ma.marks)) {
+	iEnd := sort.Search(n, func(i int) bool { return ma.marks[i].Offset > end-1 })
+	if !(0 <= iEnd && iEnd < n) {
 		err := fmt.Errorf("Out of range. end=%d iEnd=%d len=%d\n\tfirst=%v\n\t last=%v",
-			end, iEnd, len(ma.marks), ma.marks[0], ma.marks[len(ma.marks)-1])
+			end, iEnd, n, ma.marks[0], ma.marks[n-1])
 		return nil, err
 	}
 	if iEnd <= iStart {
@@ -1019,8 +1030,7 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 //
 // getBBox() in test_text.go shows how to compute bounding boxes of substrings of extracted text.
 // The following code extracts the text on PDF page `page` into `text` then finds the bounding box
-// `bbox` of substring `term` in `text`. (indexRunes() works like strings.Index except that it
-// returns number of runes rather than numberof bytes)
+// `bbox` of substring `term` in `text`.
 //
 //     ex, _ := New(page)
 //     // handle errors
@@ -1029,12 +1039,12 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 //     text := pageText.Text()
 //     textMarks := pageText.Marks()
 //
-//     start := indexRunes(text, term)
-//     end := start + len([]rune(term))
-//     spanMarks, err := textMarks.RangeOffset(start, end)
-//     // handle errors
-//     bbox, ok := spanMarks.BBox()
-//     // handle errrors
+//     	start := strings.Index(text, term)
+//      end := start + len(term)
+//      spanMarks, err := textMarks.RangeOffset(start, end)
+//      // handle errors
+//      bbox, ok := spanMarks.BBox()
+//      // handle errors
 type TextMark struct {
 	// Text is the extracted text. It has been decoded to Unicode via ToUnicode().
 	Text string
@@ -1085,9 +1095,9 @@ func (pt *PageText) computeViews() {
 	tol := minFloat(fontHeight*0.2, 5.0)
 	common.Log.Trace("ToTextLocation: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
 	// Uncomment the 2 following Debug statements to see the effects of sorting.
-	// common.Log.Debug("ToText: Before sorting %s", pt)
+	// common.Log.Debug("computeViews: Before sorting %s", pt)
 	pt.sortPosition(tol)
-	// common.Log.Debug("ToText: After sorting %s", pt)
+	// common.Log.Debug("computeViews: After sorting %s", pt)
 	lines := pt.toLines(tol)
 	texts := make([]string, len(lines))
 	for i, l := range lines {
