@@ -43,7 +43,7 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 // String returns a string describing `m`.
 func (m Matrix) String() string {
 	a, b, c, d, tx, ty := m[0], m[1], m[3], m[4], m[6], m[7]
-	return fmt.Sprintf("[%.4f,%.4f,%.4f,%.4f:%.4f,%.4f]", a, b, c, d, tx, ty)
+	return fmt.Sprintf("[%7.4f,%7.4f,%7.4f,%7.4f:%7.4f,%7.4f]", a, b, c, d, tx, ty)
 }
 
 // Set sets `m` to affine transform a,b,c,d,tx,ty.
@@ -56,9 +56,9 @@ func (m *Matrix) Set(a, b, c, d, tx, ty float64) {
 
 // Concat sets `m` to `b` × `m`.
 // `b` needs to be created by newMatrix. i.e. It must be an affine transform.
-//    m00 m01 0     b00 b01 0     m00*b00 + m01*b01        m00*b10 + m01*b11        0
-//    m10 m11 0  ×  b10 b11 0  =  m10*b00 + m11*b01        m10*b10 + m11*b11        0
-//    m20 m21 1     b20 b21 1     m20*b00 + m21*b10 + b20  m20*b01 + m21*b11 + b21  1
+//    b00 b01 0     m00 m01 0     b00*m00 + b01*m01        b00*m10 + b01*m11        0
+//    b10 b11 0  ×  m10 m11 0  ➔  b10*m00 + b11*m01        b10*m10 + b11*m11        0
+//    b20 b21 1     m20 m21 1     b20*m00 + b21*m10 + m20  b20*m01 + b21*m11 + m21  1
 func (m *Matrix) Concat(b Matrix) {
 	*m = Matrix{
 		b[0]*m[0] + b[1]*m[3], b[0]*m[1] + b[1]*m[4], 0,
@@ -119,16 +119,33 @@ func (m *Matrix) Angle() float64 {
 func (m *Matrix) clampRange() {
 	for i, x := range m {
 		if x > maxAbsNumber {
-			common.Log.Debug("CLAMP: %d -> %d", x, maxAbsNumber)
+			common.Log.Debug("CLAMP: %g -> %g", x, maxAbsNumber)
 			m[i] = maxAbsNumber
 		} else if x < -maxAbsNumber {
-			common.Log.Debug("CLAMP: %d -> %d", x, -maxAbsNumber)
+			common.Log.Debug("CLAMP: %g -> %g", x, -maxAbsNumber)
 			m[i] = -maxAbsNumber
 		}
 	}
 }
 
+// Unrealistic returns true if `m` is too small to have been created intentionally.
+// If it returns true then `m` probably contains junk values, due to some processing error in the
+// PDF generator or our code.
+func (m *Matrix) Unrealistic() bool {
+	xx, xy, yx, yy := math.Abs(m[0]), math.Abs(m[1]), math.Abs(m[3]), math.Abs(m[4])
+	goodXxYy := xx > minSafeScale && yy > minSafeScale
+	goodXyYx := xy > minSafeScale && yx > minSafeScale
+	return !(goodXxYy || goodXyYx)
+}
+
+// minSafeScale is the minimum matrix scale that is expected to occur in a valid PDF file.
+const minSafeScale = 1e-6
+
 // maxAbsNumber defines the maximum absolute value of allowed practical matrix element values as needed
 // to avoid floating point exceptions.
 // TODO(gunnsth): Add reference or point to a specific example PDF that validates this.
 const maxAbsNumber = 1e9
+
+// minDeterminant is the smallest matrix determinant we are prepared to deal with.
+// Smaller determinants may lead to rounding errors.
+const minDeterminant = 1.0e-6
