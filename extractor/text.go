@@ -37,19 +37,24 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 	if err != nil {
 		return "", numChars, numMisses, err
 	}
-	return pageText.ToText(), numChars, numMisses, nil
+	return pageText.Text(), numChars, numMisses, nil
 }
 
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
-	return e.extractPageText(e.contents, e.resources, 0)
+	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, 0)
+	if err != nil {
+		return nil, numChars, numMisses, err
+	}
+	pt.computeViews()
+	return pt, numChars, numMisses, err
 }
 
 // extractPageText returns the text contents of content stream `e` and resouces `resources` as a
 // PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (*PageText, int, int, error) {
-
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (
+	*PageText, int, int, error) {
 	common.Log.Trace("extractPageText: level=%d", level)
 	pageText := &PageText{}
 	state := newTextState()
@@ -495,8 +500,8 @@ func floatParam(op *contentstream.ContentStreamOperation) (float64, error) {
 
 // checkOp returns true if we are in a text stream and `op` has `numParams` params.
 // If `hard` is true and the number of params don't match, an error is returned.
-func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int,
-	hard bool) (ok bool, err error) {
+func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParams int, hard bool) (
+	ok bool, err error) {
 	if to == nil {
 		var params []core.PdfObject
 		if numParams > 0 {
@@ -640,8 +645,7 @@ func newTextState() textState {
 
 // newTextObject returns a default textObject.
 func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentstream.GraphicsState,
-	state *textState,
-	fontStack *fontStacker) *textObject {
+	state *textState, fontStack *fontStacker) *textObject {
 	return &textObject{
 		e:         e,
 		resources: resources,
@@ -655,11 +659,8 @@ func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentst
 
 // renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
-
 	font := to.getCurrentFont()
-
 	charcodes := font.BytesToCharcodes(data)
-
 	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
@@ -735,7 +736,19 @@ func (to *textObject) renderText(data []byte) error {
 			string(r),
 			trm,
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
-			spaceWidth*trm.ScalingFactorX())
+			math.Abs(spaceWidth*trm.ScalingFactorX()),
+			font,
+			to.state.tc)
+		if font == nil {
+			common.Log.Debug("ERROR: No font.")
+		} else if font.Encoder() == nil {
+			common.Log.Debug("ERROR: No encoding. font=%s", font)
+		} else {
+			original, ok := font.Encoder().CharcodeToRune(code)
+			if ok {
+				mark.original = string(original)
+			}
+		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
 		to.marks = append(to.marks, mark)
 
@@ -773,19 +786,27 @@ func (to *textObject) moveTo(tx, ty float64) {
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	text          string          // The text.
-	orient        int             // The text orientation in degrees. This is the current TRM rounded to 10°.
-	orientedStart transform.Point // Left of text in orientation where text is horizontal.
-	orientedEnd   transform.Point // Right of text in orientation where text is horizontal.
-	height        float64         // Text height.
-	spaceWidth    float64         // Best guess at the width of a space in the font the text was rendered with.
-	count         int64           // To help with reading debug logs.
+	text          string             // The text (decoded via ToUnicode).
+	original      string             // Original text (decoded).
+	bbox          model.PdfRectangle // Text bounding box.
+	orient        int                // The text orientation in degrees. This is the current TRM rounded to 10°.
+	orientedStart transform.Point    // Left of text in orientation where text is horizontal.
+	orientedEnd   transform.Point    // Right of text in orientation where text is horizontal.
+	height        float64            // Text height.
+	spaceWidth    float64            // Best guess at the width of a space in the font the text was rendered with.
+	font          *model.PdfFont     // The font the mark was drawn with.
+	fontsize      float64            // The font size the mark was drawn with.
+	charspacing   float64            // TODO (peterwilliams97: Should this be exposed in TextMark?
+	trm           transform.Matrix   // The current text rendering matrix (TRM above).
+	end           transform.Point    // The end of character device coordinates.
+	count         int64              // To help with reading debug logs.
 }
 
-// newTextMark returns an textMark for text `text` rendered with text rendering matrix (TRM) `trm` and end
-// of character device coordinates `end`. `spaceWidth` is our best guess at the width of a space in
-// the font the text is rendered in device coordinates.
-func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point, spaceWidth float64) textMark {
+// newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
+// and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
+// space in the font the text is rendered in device coordinates.
+func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
+	spaceWidth float64, font *model.PdfFont, charspacing float64) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -796,15 +817,47 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		height = trm.ScalingFactorX()
 	}
 
-	return textMark{
+	start := translation(trm)
+	bbox := model.PdfRectangle{Llx: start.X, Lly: start.Y, Urx: end.X, Ury: end.Y}
+	switch orient % 360 {
+	case 90:
+		bbox.Urx -= height
+	case 180:
+		bbox.Ury -= height
+	case 270:
+		bbox.Urx += height
+	default:
+		bbox.Ury += height
+	}
+	tm := textMark{
 		text:          text,
 		orient:        orient,
-		orientedStart: translation(trm).Rotate(theta),
+		bbox:          bbox,
+		orientedStart: start.Rotate(theta),
 		orientedEnd:   end.Rotate(theta),
-		height:        height,
+		height:        math.Abs(height),
 		spaceWidth:    spaceWidth,
+		font:          font,
+		fontsize:      to.state.tfs,
+		charspacing:   charspacing,
+		trm:           trm,
+		end:           end,
 		count:         to.e.textCount,
 	}
+	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
+		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
+	}
+	return tm
+}
+
+// isTextSpace returns true if `text` contains nothing but space code points.
+func isTextSpace(text string) bool {
+	for _, r := range text {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // nearestMultiple return the integer multiple of `m` that is closest to `x`.
@@ -816,30 +869,44 @@ func nearestMultiple(x float64, m int) int {
 	return int(math.Round(x/fac) * fac)
 }
 
-// String returns a string describing `t`.
-func (t textMark) String() string {
-	return fmt.Sprintf("textMark{@%03d [%.3f,%.3f] %.1f %d° %q}",
-		t.count, t.orientedStart.X, t.orientedStart.Y, t.Width(), t.orient, truncate(t.text, 100))
+// String returns a string describing `tm`.
+func (tm textMark) String() string {
+	return fmt.Sprintf("textMark{@%03d [%.3f,%.3f] w=%.1f %d° %q}",
+		tm.count, tm.orientedStart.X, tm.orientedStart.Y, tm.Width(), tm.orient,
+		truncate(tm.text, 100))
 }
 
-// Width returns the width of `t`.text in the text direction.
-func (t textMark) Width() float64 {
-	return math.Abs(t.orientedStart.X - t.orientedEnd.X)
+// Width returns the width of `tm`.text in the text direction.
+func (tm textMark) Width() float64 {
+	return math.Abs(tm.orientedStart.X - tm.orientedEnd.X)
+}
+
+// ToTextMark returns the public view of `tm`.
+func (tm textMark) ToTextMark() TextMark {
+	return TextMark{
+		Text:     tm.text,
+		Original: tm.original,
+		BBox:     tm.bbox,
+		Font:     tm.font,
+		FontSize: tm.fontsize,
+	}
 }
 
 // PageText represents the layout of text on a device page.
-// It's implementation is opaque to allow for future optimizations.
 type PageText struct {
-	// PageText is currently implemented as a list of texts and their positions on a PDF page.
-	marks []textMark
+	marks     []textMark // Texts and their positions on a PDF page.
+	viewText  string     // Extracted page text.
+	viewMarks []TextMark // Public view of `marks`.
 }
 
 // String returns a string describing `pt`.
 func (pt PageText) String() string {
-	parts := []string{fmt.Sprintf("PageText: %d elements", pt.length())}
-	for _, t := range pt.marks {
-		parts = append(parts, t.String())
+	summary := fmt.Sprintf("PageText: %d elements", len(pt.marks))
+	parts := []string{"-" + summary}
+	for _, tm := range pt.marks {
+		parts = append(parts, tm.String())
 	}
+	parts = append(parts, "+"+summary)
 	return strings.Join(parts, "\n")
 }
 
@@ -848,38 +915,262 @@ func (pt PageText) length() int {
 	return len(pt.marks)
 }
 
+// Text returns the extracted page text.
+func (pt PageText) Text() string {
+	return pt.viewText
+}
+
+// ToText returns the page text as a single string.
+// Deprecated: This function is deprecated and will be removed in a future major version. Please use
+// Text() instead.
+func (pt PageText) ToText() string {
+	return pt.Text()
+}
+
+// Marks returns the TextMark collection for a page. It represents all the text on the page.
+func (pt PageText) Marks() *TextMarkArray {
+	return &TextMarkArray{marks: pt.viewMarks}
+}
+
+// TextMarkArray is a collection of TextMarks.
+type TextMarkArray struct {
+	marks []TextMark
+}
+
+// String returns a string describing `ma`.
+func (ma TextMarkArray) String() string {
+	n := len(ma.marks)
+	if n == 0 {
+		return "EMPTY"
+	}
+	m0 := ma.marks[0]
+	m1 := ma.marks[n-1]
+	return fmt.Sprintf("{TEXTMARKARRAY: %d elements\n\tfirst=%s\n\t last=%s}", n, m0, m1)
+}
+
+// Elements returns the TextMarks in `ma`.
+func (ma *TextMarkArray) Elements() []TextMark {
+	return ma.marks
+}
+
+// Len returns the number of TextMarks in `ma`.
+func (ma *TextMarkArray) Len() int {
+	if ma == nil {
+		return 0
+	}
+	return len(ma.marks)
+}
+
+// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offset < `end`.
+func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
+	if ma == nil {
+		return nil, errors.New("ma==nil")
+	}
+	if end < start {
+		return nil, fmt.Errorf("end < start. RangeOffset not defined. start=%d end=%d ", start, end)
+	}
+	n := len(ma.marks)
+	if n == 0 {
+		return ma, nil
+	}
+	if start < ma.marks[0].Offset {
+		start = ma.marks[0].Offset
+	}
+	if end > ma.marks[n-1].Offset+1 {
+		end = ma.marks[n-1].Offset + 1
+	}
+
+	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset >= start })
+	if !(0 <= iStart && iStart < n) {
+		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
+			start, iStart, n, ma.marks[0], ma.marks[n-1])
+		return nil, err
+	}
+	iEnd := sort.Search(n, func(i int) bool { return ma.marks[i].Offset > end-1 })
+	if !(0 <= iEnd && iEnd < n) {
+		err := fmt.Errorf("Out of range. end=%d iEnd=%d len=%d\n\tfirst=%v\n\t last=%v",
+			end, iEnd, n, ma.marks[0], ma.marks[n-1])
+		return nil, err
+	}
+	if iEnd <= iStart {
+		// This should never happen.
+		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
+	}
+	return &TextMarkArray{marks: ma.marks[iStart:iEnd]}, nil
+}
+
+// BBox returns the smallest axis-aligned rectangle that encloses all the TextMarks in `ma`.
+func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
+	if len(ma.marks) == 0 {
+		return model.PdfRectangle{}, false
+	}
+	bbox := ma.marks[0].BBox
+	for _, tm := range ma.marks[1:] {
+		if isTextSpace(tm.Text) {
+			continue
+		}
+		bbox = rectUnion(bbox, tm.BBox)
+	}
+	return bbox, true
+}
+
+// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
+func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
+	return model.PdfRectangle{
+		Llx: math.Min(b1.Llx, b2.Llx),
+		Lly: math.Min(b1.Lly, b2.Lly),
+		Urx: math.Max(b1.Urx, b2.Urx),
+		Ury: math.Max(b1.Ury, b2.Ury),
+	}
+}
+
+// TextMark represents extracted text on a page with information regarding both textual content,
+// formatting (font and size) and positioning.
+// It is the smallest unit of text on a PDF page, typically a single character.
+//
+// getBBox() in test_text.go shows how to compute bounding boxes of substrings of extracted text.
+// The following code extracts the text on PDF page `page` into `text` then finds the bounding box
+// `bbox` of substring `term` in `text`.
+//
+//     ex, _ := New(page)
+//     // handle errors
+//     pageText, _, _, err := ex.ExtractPageText()
+//     // handle errors
+//     text := pageText.Text()
+//     textMarks := pageText.Marks()
+//
+//     	start := strings.Index(text, term)
+//      end := start + len(term)
+//      spanMarks, err := textMarks.RangeOffset(start, end)
+//      // handle errors
+//      bbox, ok := spanMarks.BBox()
+//      // handle errors
+type TextMark struct {
+	// Text is the extracted text. It has been decoded to Unicode via ToUnicode().
+	Text string
+	// Original is the text in the PDF. It has not been decoded like `Text`.
+	Original string
+	// BBox is the bounding box of the text.
+	BBox model.PdfRectangle
+	// Font is the font the text was drawn with.
+	Font *model.PdfFont
+	// FontSize is the font size the text was drawn with.
+	FontSize float64
+	// Offset is the offset of the start of TextMark.Text in the extracted text. If you do this
+	//   text, textMarks := pageText.Text(), pageText.Marks()
+	//   marks := textMarks.Elements()
+	// then marks[i].Offset is the offset of marks[i].Text in text.
+	Offset int
+	// Meta is set true for spaces and line breaks that we insert in the extracted text. We insert
+	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
+	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
+	Meta bool
+}
+
+// String returns a string describing `tm`.
+func (tm TextMark) String() string {
+	b := tm.BBox
+	var font string
+	if tm.Font != nil {
+		font = tm.Font.String()
+		if len(font) > 50 {
+			font = font[:50] + "..."
+		}
+	}
+	var meta string
+	if tm.Meta {
+		meta = " *M*"
+	}
+	return fmt.Sprintf("{TextMark: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}",
+		tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
+}
+
+// computeViews processes the page TextMarks sorting by position and populates `pt.viewText` and
+// `pt.viewMarks` which represent the text and marks in the order which it is read on the page.
+// The comments above the TextMark definition describe how to use the []TextMark to
+// maps substrings of the page text to locations on the PDF page.
+func (pt *PageText) computeViews() {
+	fontHeight := pt.height()
+	// We sort with a y tolerance to allow for subscripts, diacritics etc.
+	tol := minFloat(fontHeight*0.2, 5.0)
+	common.Log.Trace("ToTextLocation: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
+	// Uncomment the 2 following Debug statements to see the effects of sorting.
+	// common.Log.Debug("computeViews: Before sorting %s", pt)
+	pt.sortPosition(tol)
+	// common.Log.Debug("computeViews: After sorting %s", pt)
+	lines := pt.toLines(tol)
+	texts := make([]string, len(lines))
+	for i, l := range lines {
+		texts[i] = strings.Join(l.words(), wordJoiner)
+	}
+	text := strings.Join(texts, lineJoiner)
+	var marks []TextMark
+	offset := 0
+	for i, l := range lines {
+		for j, tm := range l.marks {
+			tm.Offset = offset
+			marks = append(marks, tm)
+			offset += len(tm.Text)
+			if j == len(l.marks)-1 {
+				break
+			}
+			if wordJoinerLen > 0 {
+				tm := TextMark{
+					Offset: offset,
+					Text:   wordJoiner,
+					Meta:   true,
+				}
+				marks = append(marks, tm)
+				offset += wordJoinerLen
+			}
+		}
+		if i == len(lines)-1 {
+			break
+		}
+		if lineJoinerLen > 0 {
+			tm := TextMark{
+				Offset: offset,
+				Text:   lineJoiner,
+				Meta:   true,
+			}
+			marks = append(marks, tm)
+			offset += lineJoinerLen
+		}
+	}
+	pt.viewText = text
+	pt.viewMarks = marks
+}
+
 // height returns the max height of the elements in `pt.marks`.
 func (pt PageText) height() float64 {
 	fontHeight := 0.0
-	for _, t := range pt.marks {
-		if t.height > fontHeight {
-			fontHeight = t.height
+	for _, tm := range pt.marks {
+		if tm.height > fontHeight {
+			fontHeight = tm.height
 		}
 	}
 	return fontHeight
 }
 
-// ToText returns the contents of `pt` as a single string.
-func (pt PageText) ToText() string {
-	fontHeight := pt.height()
-	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := minFloat(fontHeight*0.2, 5.0)
-	common.Log.Trace("ToText: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
+const (
+	// wordJoiner is added between text marks in extracted text.
+	wordJoiner = ""
+	// lineJoiner is added between lines in extracted text.
+	lineJoiner = "\n"
+)
 
-	// Uncomment the 2 following Trace statements to see the effects of sorting/
-	// common.Log.Trace("ToText: Before sorting %s", pt)
-	pt.sortPosition(tol)
-	// common.Log.Trace("ToText: After sorting %s", pt)
-
-	lines := pt.toLines(tol)
-	texts := make([]string, 0, len(lines))
-	for _, l := range lines {
-		texts = append(texts, l.text)
+var (
+	wordJoinerLen = len(wordJoiner)
+	lineJoinerLen = len(lineJoiner)
+	// spaceMark is a special TextMark used for spaces.
+	spaceMark = TextMark{
+		Text:     " ",
+		Original: " ",
+		Meta:     true,
 	}
-	return strings.Join(texts, "\n")
-}
+)
 
-// sortPosition sorts a text list by its elements' position on a page.
+// sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
 func (pt *PageText) sortPosition(tol float64) {
@@ -897,25 +1188,36 @@ func (pt *PageText) sortPosition(tol float64) {
 
 // textLine represents a line of text on a page.
 type textLine struct {
-	y      float64   // y position of line.
-	dxList []float64 // x distance between successive words in line.
-	text   string    // text in the line.
-	words  []string  // words in the line.
+	x      float64    // x position of line.
+	y      float64    // y position of line.
+	h      float64    // height of line text.
+	dxList []float64  // x distance between successive words in line.
+	marks  []TextMark // TextMarks in the line.
+}
+
+// words returns the texts in `tl`.
+func (tl textLine) words() []string {
+	var texts []string
+	for _, tm := range tl.marks {
+		texts = append(texts, tm.Text)
+	}
+	return texts
 }
 
 // toLines returns the text and positions in `pt.marks` as a slice of textLine.
 // NOTE: Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
 // that text is horizontal) before calling this function.
 func (pt PageText) toLines(tol float64) []textLine {
-	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the lines
-	// for each orientation then return the concatention of these lines sorted by orientation.
+	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the
+	// lines for each orientation then return the concatenation of these lines sorted by orientation.
 	tlOrient := make(map[int][]textMark, len(pt.marks))
-	for _, t := range pt.marks {
-		tlOrient[t.orient] = append(tlOrient[t.orient], t)
+	for _, tm := range pt.marks {
+		tlOrient[tm.orient] = append(tlOrient[tm.orient], tm)
 	}
 	var lines []textLine
 	for _, o := range orientKeys(tlOrient) {
-		lines = append(lines, PageText{tlOrient[o]}.toLinesOrient(tol)...)
+		lns := PageText{marks: tlOrient[o]}.toLinesOrient(tol)
+		lines = append(lines, lns...)
 	}
 	return lines
 }
@@ -929,9 +1231,9 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 	if len(pt.marks) == 0 {
 		return []textLine{}
 	}
+	var marks []TextMark
 	var lines []textLine
-	var words []string
-	var x []float64
+	var xx []float64
 	y := pt.marks[0].orientedStart.Y
 
 	scanning := false
@@ -940,20 +1242,20 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 	wordSpacing := exponAve{}
 	lastEndX := 0.0 // lastEndX is pt.marks[i-1].orientedEnd.X
 
-	for _, t := range pt.marks {
-		if t.orientedStart.Y+tol < y {
-			if len(words) > 0 {
-				line := newLine(y, x, words)
+	for _, tm := range pt.marks {
+		if tm.orientedStart.Y+tol < y {
+			if len(marks) > 0 {
+				tl := newLine(y, xx, marks)
 				if averageCharWidth.running {
 					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
-					// line = combineDiacritics(line, averageCharWidth.ave)
-					line = removeDuplicates(line, averageCharWidth.ave)
+					// tl = combineDiacritics(tl, averageCharWidth.ave)
+					tl = removeDuplicates(tl, averageCharWidth.ave)
 				}
-				lines = append(lines, line)
+				lines = append(lines, tl)
 			}
-			words = []string{}
-			x = []float64{}
-			y = t.orientedStart.Y
+			marks = []TextMark{}
+			xx = []float64{}
+			y = tm.orientedStart.Y
 			scanning = false
 		}
 
@@ -961,47 +1263,47 @@ func (pt PageText) toLinesOrient(tol float64) []textLine {
 		// We use a heuristic from PdfBox: If the next character starts to the right of where a
 		// character after a space at "normal spacing" would start, then there is a space before it.
 		// The tricky thing to guess here is the width of a space at normal spacing.
-		// We follow PdfBox and use minFloat(deltaSpace, deltaCharWidth).
+		// We follow PdfBox and use min(deltaSpace, deltaCharWidth).
 		deltaSpace := 0.0
-		if t.spaceWidth == 0 {
+		if tm.spaceWidth == 0 {
 			deltaSpace = math.MaxFloat64
 		} else {
-			wordSpacing.update(t.spaceWidth)
+			wordSpacing.update(tm.spaceWidth)
 			deltaSpace = wordSpacing.ave * 0.5
 		}
-		averageCharWidth.update(t.Width())
+		averageCharWidth.update(tm.Width())
 		deltaCharWidth := averageCharWidth.ave * 0.3
 
 		isSpace := false
 		nextWordX := lastEndX + minFloat(deltaSpace, deltaCharWidth)
-		if scanning && t.text != " " {
-			isSpace = nextWordX < t.orientedStart.X
+		if scanning && !isTextSpace(tm.text) {
+			isSpace = nextWordX < tm.orientedStart.X
 		}
-		common.Log.Trace("t=%s", t)
+		common.Log.Trace("tm=%s", tm)
 		common.Log.Trace("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
-			t.Width(), minFloat(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
+			tm.Width(), minFloat(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
 		common.Log.Trace("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
-			t.text, t.orientedStart.X, t.orientedStart.Y, lastEndX, nextWordX,
-			nextWordX-t.orientedStart.X, isSpace)
+			tm.text, tm.orientedStart.X, tm.orientedStart.Y, lastEndX, nextWordX,
+			nextWordX-tm.orientedStart.X, isSpace)
 
 		if isSpace {
-			words = append(words, " ")
-			x = append(x, (lastEndX+t.orientedStart.X)*0.5)
+			marks = append(marks, spaceMark)
+			xx = append(xx, (lastEndX+tm.orientedStart.X)*0.5)
 		}
 
 		// Add the text to the line.
-		lastEndX = t.orientedEnd.X
-		words = append(words, t.text)
-		x = append(x, t.orientedStart.X)
+		lastEndX = tm.orientedEnd.X
+		marks = append(marks, tm.ToTextMark())
+		xx = append(xx, tm.orientedStart.X)
 		scanning = true
 		common.Log.Trace("lastEndX=%.2f", lastEndX)
 	}
-	if len(words) > 0 {
-		line := newLine(y, x, words)
+	if len(marks) > 0 {
+		tl := newLine(y, xx, marks)
 		if averageCharWidth.running {
-			line = removeDuplicates(line, averageCharWidth.ave)
+			tl = removeDuplicates(tl, averageCharWidth.ave)
 		}
-		lines = append(lines, line)
+		lines = append(lines, tl)
 	}
 	return lines
 }
@@ -1022,7 +1324,7 @@ type exponAve struct {
 	running bool    // Has `ave` been set?
 }
 
-// update updates the exponential average `exp.ave` and returns it.
+// update updates the exponential average `exp`.ave with latest value `x` and returns `exp`.ave.
 func (exp *exponAve) update(x float64) float64 {
 	if !exp.running {
 		exp.ave = x
@@ -1037,65 +1339,72 @@ func (exp *exponAve) update(x float64) float64 {
 }
 
 // newLine returns the textLine representation of strings `words` with y coordinate `y` and x
-// coordinates `x`.
-func newLine(y float64, x []float64, words []string) textLine {
-	dxList := make([]float64, 0, len(x))
-	for i := 1; i < len(x); i++ {
-		dxList = append(dxList, x[i]-x[i-1])
+// coordinates `xx` and height `h`.
+func newLine(y float64, xx []float64, marks []TextMark) textLine {
+	dxList := make([]float64, len(xx)-1)
+	for i := 1; i < len(xx); i++ {
+		dxList[i-1] = xx[i] - xx[i-1]
 	}
-	return textLine{y: y, dxList: dxList, text: strings.Join(words, ""), words: words}
+	return textLine{
+		x:      xx[0],
+		y:      y,
+		dxList: dxList,
+		marks:  marks,
+	}
 }
 
-// removeDuplicates returns `line` with duplicate characters removed. `charWidth` is the average
+// removeDuplicates returns `tl` with duplicate characters removed. `charWidth` is the average
 // character width for the line.
-func removeDuplicates(line textLine, charWidth float64) textLine {
-	if len(line.dxList) == 0 {
-		return line
+func removeDuplicates(tl textLine, charWidth float64) textLine {
+	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
+		return tl
 	}
-
 	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.3
-	words := []string{line.words[0]}
+	marks := []TextMark{tl.marks[0]}
 	var dxList []float64
 
-	w0 := line.words[0]
-	for i, dx := range line.dxList {
-		w := line.words[i+1]
-		if w != w0 || dx > tol {
-			words = append(words, w)
+	tm0 := tl.marks[0]
+	for i, dx := range tl.dxList {
+		tm := tl.marks[i+1]
+		if tm.Text != tm0.Text || dx > tol {
+			marks = append(marks, tm)
 			dxList = append(dxList, dx)
 		}
-		w0 = w
+		tm0 = tm
 	}
-	return textLine{y: line.y, dxList: dxList, text: strings.Join(words, ""), words: words}
+	return textLine{
+		x:      tl.x,
+		y:      tl.y,
+		dxList: dxList,
+		marks:  marks,
+	}
 }
 
 // combineDiacritics returns `line` with diacritics close to characters combined with the characters.
 // `charWidth` is the average character width for the line.
 // We have to do this because PDF can render diacritics separately to the characters they attach to
 // in extracted text.
-func combineDiacritics(line textLine, charWidth float64) textLine {
-	if len(line.dxList) == 0 {
-		return line
+func combineDiacritics(tl textLine, charWidth float64) textLine {
+	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
+		return tl
 	}
-
 	// NOTE(peterwilliams97) 0.2 is a guess. It may be possible to tune this to a better value.
 	tol := charWidth * 0.2
 	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
 
-	var words []string
+	var marks []TextMark
 	var dxList []float64
-	w := line.words[0]
-	w, c := countDiacritic(w)
+	tm := marks[0]
+	w, c := countDiacritic(tm.Text)
 	delta := 0.0
 	dx0 := 0.0
 	parts := []string{w}
 	numChars := c
 
-	for i := 0; i < len(line.dxList); i++ {
-		w = line.words[i+1]
-		w, c := countDiacritic(w)
-		dx := line.dxList[i]
+	for i, dx := range tl.dxList {
+		tm = marks[i+1]
+		w, c := countDiacritic(tm.Text)
 		if numChars+c <= 1 && delta+dx <= tol {
 			if len(parts) == 0 {
 				dx0 = dx
@@ -1106,10 +1415,11 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 			numChars += c
 		} else {
 			if len(parts) > 0 {
-				if len(words) > 0 {
+				if len(marks) > 0 {
 					dxList = append(dxList, dx0)
 				}
-				words = append(words, combine(parts))
+				tm.Text = combine(parts)
+				marks = append(marks, tm)
 			}
 			parts = []string{w}
 			numChars = c
@@ -1118,18 +1428,23 @@ func combineDiacritics(line textLine, charWidth float64) textLine {
 		}
 	}
 	if len(parts) > 0 {
-		if len(words) > 0 {
+		if len(marks) > 0 {
 			dxList = append(dxList, dx0)
 		}
-		words = append(words, combine(parts))
+		tm.Text = combine(parts)
+		marks = append(marks, tm)
 	}
-
-	if len(words) != len(dxList)+1 {
-		common.Log.Error("Inconsistent: \nwords=%d %q\ndxList=%d %.2f",
-			len(words), words, len(dxList), dxList)
-		return line
+	if len(marks) != len(dxList)+1 {
+		common.Log.Error("Inconsistent: \nwords=%d \ndxList=%d %.2f",
+			len(marks), len(dxList), dxList)
+		return tl
 	}
-	return textLine{y: line.y, dxList: dxList, text: strings.Join(words, ""), words: words}
+	return textLine{
+		x:      tl.x,
+		y:      tl.y,
+		dxList: dxList,
+		marks:  marks,
+	}
 }
 
 // combine combines any diacritics in `parts` with the single non-diacritic character in `parts`.

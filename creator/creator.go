@@ -54,6 +54,9 @@ type Creator struct {
 	// Outline.
 	outline *model.Outline
 
+	// External outlines.
+	externalOutline *model.PdfOutlineTreeNode
+
 	// Forms.
 	acroForm *model.PdfAcroForm
 
@@ -68,6 +71,13 @@ type Creator struct {
 func (c *Creator) SetForms(form *model.PdfAcroForm) error {
 	c.acroForm = form
 	return nil
+}
+
+// SetOutlineTree adds the specified outline tree to the PDF file generated
+// by the creator. Adding an external outline tree disables the automatic
+// generation of outlines done by the creator for the relevant components.
+func (c *Creator) SetOutlineTree(outlineTree *model.PdfOutlineTreeNode) {
+	c.externalOutline = outlineTree
 }
 
 // FrontpageFunctionArgs holds the input arguments to a front page drawing function.
@@ -588,7 +598,9 @@ func (c *Creator) Write(ws io.Writer) error {
 	}
 
 	// Outlines.
-	if c.outline != nil && c.AddOutlines {
+	if c.externalOutline != nil {
+		pdfWriter.AddOutlineTree(c.externalOutline)
+	} else if c.outline != nil && c.AddOutlines {
 		pdfWriter.AddOutlineTree(&c.outline.ToPdfOutline().PdfOutlineTreeNode)
 	}
 

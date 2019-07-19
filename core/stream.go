@@ -55,28 +55,28 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 		}
 	}
 
-	if *method == StreamEncodingFilterNameFlate {
+	switch *method {
+	case StreamEncodingFilterNameFlate:
 		return newFlateEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameLZW {
+	case StreamEncodingFilterNameLZW:
 		return newLZWEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameDCT {
+	case StreamEncodingFilterNameDCT:
 		return newDCTEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameRunLength {
+	case StreamEncodingFilterNameRunLength:
 		return newRunLengthEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameASCIIHex {
+	case StreamEncodingFilterNameASCIIHex:
 		return NewASCIIHexEncoder(), nil
-	} else if *method == StreamEncodingFilterNameASCII85 || *method == "A85" {
+	case StreamEncodingFilterNameASCII85, "A85":
 		return NewASCII85Encoder(), nil
-	} else if *method == StreamEncodingFilterNameCCITTFax {
+	case StreamEncodingFilterNameCCITTFax:
 		return newCCITTFaxEncoderFromStream(streamObj, nil)
-	} else if *method == StreamEncodingFilterNameJBIG2 {
-		return NewJBIG2Encoder(), nil
-	} else if *method == StreamEncodingFilterNameJPX {
+	case StreamEncodingFilterNameJBIG2:
+		return newJBIG2EncoderFromStream(streamObj, nil)
+	case StreamEncodingFilterNameJPX:
 		return NewJPXEncoder(), nil
-	} else {
-		common.Log.Debug("ERROR: Unsupported encoding method!")
-		return nil, fmt.Errorf("unsupported encoding method (%s)", *method)
 	}
+	common.Log.Debug("ERROR: Unsupported encoding method!")
+	return nil, fmt.Errorf("unsupported encoding method (%s)", *method)
 }
 
 // DecodeStream decodes the stream data and returns the decoded data.
