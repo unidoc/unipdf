@@ -12,14 +12,15 @@ creating and reading, processing PDF files. The library is written and supported
 
 ## Features
 
-- [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go)
+- [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go). Example output: [unidoc-report.pdf](https://github.com/unidoc/unipdf-examples/blob/v3/report/unidoc-report.pdf).
+- [Table PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_tables.go). Example output: [unipdf-tables.pdf](https://github.com/unidoc/unipdf-examples/blob/v3/report/unipdf-tables.pdf).
 - [Invoice creation](https://unidoc.io/news/simple-invoices)
-- Advanced table generation in the creator with subtable support
 - Paragraph in creator handling multiple styles within the same paragraph
 - [Merge PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_merge.go)
 - [Split PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_split.go) and change page order
 - [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_rotate.go)
 - [Extract text from PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_extract_text.go)
+- [Text extraction support with size, position and formatting info](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_text_locations.go)
 - [Extract images](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_extract_images.go) with coordinates
 - [Images to PDF](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_images_to_pdf.go)
 - [Add images to pages](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_add_image_to_page.go)
@@ -34,6 +35,7 @@ creating and reading, processing PDF files. The library is written and supported
 - [Protect PDF files with a password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_protect.go)
 - [Digital signing validation and signing](https://github.com/unidoc/unipdf-examples/tree/v3/signatures)
 - CCITTFaxDecode decoding and encoding support
+- JBIG2 decoding support
 
 Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples
 as well as [documented examples](https://unidoc.io/examples) on our website.
