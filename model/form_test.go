@@ -137,7 +137,7 @@ endobj
 
 func TestFormNil(t *testing.T) {
 	var form *PdfAcroForm
-	err := form.Fill(nil)
+	err := form.Fill(nil, nil)
 	require.NoError(t, err)
 }
 

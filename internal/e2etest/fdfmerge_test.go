@@ -131,7 +131,7 @@ func fdfMergeSingle(t *testing.T, params fdfMergeParams) {
 	require.NoError(t, err)
 
 	// Populate the form data.
-	err = pdfReader.AcroForm.Fill(fdfData)
+	err = pdfReader.AcroForm.Fill(fdfData, nil)
 	require.NoError(t, err)
 
 	// Flatten form.

@@ -89,7 +89,7 @@ func TestFillPDFForm(t *testing.T) {
 		}
 	}
 
-	err = pdfReader.AcroForm.Fill(fdata)
+	err = pdfReader.AcroForm.Fill(fdata, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
