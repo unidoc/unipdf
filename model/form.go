@@ -238,6 +238,22 @@ type FieldValueProvider interface {
 
 // Fill populates `form` with values provided by `provider`.
 func (form *PdfAcroForm) Fill(provider FieldValueProvider) error {
+	return form.fill(provider, nil)
+}
+
+// FillWithAppearance populates `form` with values provided by `provider`.
+// If not nil, `appGen` is used to generate appearance dictionaries for the
+// field annotations, based on the specified settings. Otherwise, appearance
+// generation is skipped.
+// e.g.: appGen := annotator.FieldAppearance{OnlyIfMissing: true, RegenerateTextFields: true}
+// NOTE: In next major version this functionality will be part of Fill. (v4)
+func (form *PdfAcroForm) FillWithAppearance(provider FieldValueProvider, appGen FieldAppearanceGenerator) error {
+	return form.fill(provider, appGen)
+}
+
+// fill populates `form` with values provided by `provider`. If `appGen` is
+// not nil, field appearances are also generated.
+func (form *PdfAcroForm) fill(provider FieldValueProvider, appGen FieldAppearanceGenerator) error {
 	if form == nil {
 		return nil
 	}
@@ -256,6 +272,23 @@ func (form *PdfAcroForm) Fill(provider FieldValueProvider) error {
 			err := fillFieldValue(field, valObj)
 			if err != nil {
 				return err
+			}
+
+			// Generate field appearance based on the specified settings.
+			if appGen == nil {
+				continue
+			}
+
+			for _, annot := range field.Annotations {
+				// appGen generates the appearance based on the form/field/annotation and other settings
+				// depending on the implementation (for example may only generate appearance if none set).
+				apDict, err := appGen.GenerateAppearanceDict(form, field, annot)
+				if err != nil {
+					return err
+				}
+
+				annot.AP = apDict
+				annot.ToPdfObject()
 			}
 		}
 	}
