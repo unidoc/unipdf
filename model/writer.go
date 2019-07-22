@@ -400,6 +400,12 @@ func (w *PdfWriter) SetOCProperties(ocProperties core.PdfObject) error {
 	dict := w.catalog
 
 	if ocProperties != nil {
+		// Resolve references. Necessary if the optional content properties
+		// are added from a lazy reader.
+		if err := core.ResolveReferencesDeep(ocProperties, nil); err != nil {
+			return err
+		}
+
 		common.Log.Trace("Setting OC Properties...")
 		dict.Set("OCProperties", ocProperties)
 		// Any risk of infinite loops?
