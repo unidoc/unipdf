@@ -966,6 +966,12 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	if w.acroForm != nil {
 		common.Log.Trace("Writing acro forms")
 		indObj := w.acroForm.ToPdfObject()
+
+		// Resolve references. Necessary if the form is added from a lazy reader.
+		if err := core.ResolveReferencesDeep(indObj, nil); err != nil {
+			return err
+		}
+
 		common.Log.Trace("AcroForm: %+v", indObj)
 		w.catalog.Set("AcroForm", indObj)
 		err := w.addObjects(indObj)
