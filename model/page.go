@@ -736,7 +736,7 @@ func (p *PdfPage) AddContentStreamByString(contentStr string) error {
 	if p.Contents == nil {
 		// If not set, place it directly.
 		p.Contents = stream
-	} else if contArray, isArray := core.TraceToDirectObject(p.Contents).(*core.PdfObjectArray); isArray {
+	} else if contArray, isArray := core.GetArray(p.Contents); isArray {
 		// If an array of content streams, append it.
 		contArray.Append(stream)
 	} else {
