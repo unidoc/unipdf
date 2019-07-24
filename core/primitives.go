@@ -541,7 +541,7 @@ func GetNumberAsFloat(obj PdfObject) (float64, error) {
 
 // IsNullObject returns true if `obj` is a PdfObjectNull.
 func IsNullObject(obj PdfObject) bool {
-	_, isNull := obj.(*PdfObjectNull)
+	_, isNull := TraceToDirectObject(obj).(*PdfObjectNull)
 	return isNull
 }
 
