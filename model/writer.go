@@ -819,7 +819,7 @@ func (w *PdfWriter) updateObjectNumbers() {
 			o.ObjectNumber = objNum
 			o.GenerationNumber = 0
 		default:
-			common.Log.Debug("ERROR: Unknown type %T - skipping")
+			common.Log.Debug("ERROR: Unknown type %T - skipping", o)
 			continue
 		}
 
