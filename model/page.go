@@ -125,7 +125,7 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 		page.LastModified = &lastmod
 	}
 
-	if obj := d.Get("Resources"); obj != nil {
+	if obj := d.Get("Resources"); obj != nil && !core.IsNullObject(core.ResolveReference(obj)) {
 		dict, ok := core.GetDict(obj)
 		if !ok {
 			return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
