@@ -93,7 +93,17 @@ func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	b.width = mbox.Urx - mbox.Llx
 	b.height = mbox.Ury - mbox.Lly
 
+	// Inherit page rotation angle.
+	if page.Rotate != nil {
+		b.angle = float64(*page.Rotate)
+	}
+
 	return b, nil
+}
+
+// Angle returns the block rotation angle in degrees.
+func (blk *Block) Angle() float64 {
+	return blk.angle
 }
 
 // SetAngle sets the rotation angle in degrees.
