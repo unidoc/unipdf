@@ -21,7 +21,7 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/primitives"
 )
 
 type extractedImage struct {
@@ -31,7 +31,7 @@ type extractedImage struct {
 	pageNo    int
 	idx       int
 	hash      string
-	globals   jbig2.Globals
+	globals   primitives.Globals
 }
 
 func (e *extractedImage) fullName() string {

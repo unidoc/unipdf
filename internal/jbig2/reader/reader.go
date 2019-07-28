@@ -162,8 +162,8 @@ func (r *Reader) ReadByte() (byte, error) {
 	return r.readUnalignedByte()
 }
 
-// ReadUnsignedInt reads the unsigned uint32 from the reader.
-func (r *Reader) ReadUnsignedInt() (uint32, error) {
+// ReadUint32 implements StreamReader interface.
+func (r *Reader) ReadUint32() (uint32, error) {
 	ub := make([]byte, 4)
 
 	_, err := r.Read(ub)

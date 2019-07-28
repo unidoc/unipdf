@@ -36,7 +36,9 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 )
 
 // Stream encoding filter names.
@@ -1985,7 +1987,7 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 // JBIG2Encoder is the jbig2 image encoder (WIP)/decoder.
 type JBIG2Encoder struct {
 	// Globals are the JBIG2 global segments.
-	Globals jbig2.Globals
+	Globals document.Globals
 	// IsChocolateData defines if the data is encoded such that
 	// binary data '1' means black and '0' white.
 	// otherwise the data is called vanilla.
@@ -2067,14 +2069,18 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 				common.Log.Debug("ERROR: %s", err.Error())
 				return nil, err
 			}
-
-			gdoc, err := jbig2.NewDocument(globalsStream.Stream)
+			d, err := decoder.Decode(globalsStream.Stream, decoder.Parameters{})
 			if err != nil {
 				err = fmt.Errorf("decoding global stream failed. %s", err.Error())
 				common.Log.Debug("ERROR: %s", err)
 				return nil, err
 			}
-			encoder.Globals = gdoc.GlobalSegments
+			encoder.Globals, err = d.DecodeGlobals()
+			if err != nil {
+				err = fmt.Errorf("corrupted jbig2 encoded data. %s", err.Error())
+				common.Log.Debug("ERROR: %s", err)
+				return nil, err
+			}
 		}
 	}
 
@@ -2115,36 +2121,19 @@ func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 
 // DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	// create new JBIG2 document.
-	doc, err := jbig2.NewDocumentWithGlobals(encoded, enc.Globals)
+	parameters := decoder.Parameters{UnpaddedData: true}
+	if enc.IsChocolateData {
+		parameters.Color = bitmap.Chocolate
+	}
+
+	dec, err := decoder.Decode(encoded, parameters, enc.Globals)
 	if err != nil {
 		return nil, err
 	}
 
 	// the jbig2 PDF document should have only one page, where page numeration
 	// starts from '1'.
-	page, err := doc.GetPage(1)
-	if err != nil {
-		return nil, err
-	}
-	if page == nil {
-		err = errors.New("jbig2 corrupted data. Page#1 not found")
-		common.Log.Debug("ERROR: %s", err.Error())
-		return nil, err
-	}
-
-	// Get the page bitmap data.
-	bm, err := page.GetBitmap()
-	if err != nil {
-		return nil, err
-	}
-
-	// Inverse the data representation if the decoder is marked as 'isChocolateData'.
-	bm.InverseData(enc.IsChocolateData)
-
-	// By default the bitmap data contains the rowstride padding.
-	// In order to get rid of the rowstride padding use the bitmap.GetUnpaddedData method.
-	return bm.GetUnpaddedData()
+	return dec.DecodePage(1)
 }
 
 // DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.

@@ -3,5 +3,5 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package encoder contains jbig2 encoder structures. (WIP)
-package encoder
+// Package decoder provides primitives used to decode the jbig2 data stream.
+package decoder

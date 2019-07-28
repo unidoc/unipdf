@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package jbig2
+package document
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 )
 
 // Page represents JBIG2 Page structure.

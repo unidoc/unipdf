@@ -22,17 +22,14 @@ var ErrIndexOutOfRange = errors.New("bitmap byte index out of range")
 type Bitmap struct {
 	// Width and Height represents bitmap dimensions.
 	Width, Height int
-
 	// BitmapNumber is the bitmap's id number.
 	BitmapNumber int
-
 	// RowStride is the number of bytes set per row.
 	RowStride int
-
 	// Data saves the bits data for the bitmap.
 	Data []byte
-
-	isVanilla bool
+	// Color is the bitmap's color interpretation.
+	Color Color
 }
 
 // New creates new bitmap with the parameters as provided in the arguments.
@@ -93,7 +90,7 @@ func (b *Bitmap) GetByteIndex(x, y int) int {
 // 'Chocolate' data is the bit interpretation where the 0'th bit means white and the 1'th bit means black.
 // The naming convention based on the: `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetChocolateData() []byte {
-	if b.isVanilla {
+	if b.Color == Vanilla {
 		b.inverseData()
 	}
 	return b.Data
@@ -161,7 +158,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 // 'Vanilla' is the bit interpretation where the 0'th bit means black and 1'th bit means white.
 // The naming convention based on the `https://en.wikipedia.org/wiki/Binary_image#Interpretation` page.
 func (b *Bitmap) GetVanillaData() []byte {
-	if !b.isVanilla {
+	if b.Color == Chocolate {
 		b.inverseData()
 	}
 	return b.Data
@@ -236,17 +233,19 @@ func (b *Bitmap) ToImage() image.Image {
 	return img
 }
 
-// InverseData inverses the data if the 'isChocolate' flag matches
-// current bitmap 'isVanilla' state.
-func (b *Bitmap) InverseData(isChocolate bool) {
-	if b.isVanilla != !isChocolate {
-		b.inverseData()
-	}
+// InverseData inverses the data color interpretation.
+func (b *Bitmap) InverseData() {
+	b.inverseData()
 }
 
 func (b *Bitmap) inverseData() {
 	for i := 0; i < len(b.Data); i++ {
 		b.Data[i] = ^b.Data[i]
 	}
-	b.isVanilla = !b.isVanilla
+	// flip the color interpretation
+	if b.Color == Chocolate {
+		b.Color = Vanilla
+	} else {
+		b.Color = Chocolate
+	}
 }

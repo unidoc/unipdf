@@ -3,12 +3,12 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package jbig2
+package document
 
 import (
 	"errors"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 )
 
 // Common errors definitions.

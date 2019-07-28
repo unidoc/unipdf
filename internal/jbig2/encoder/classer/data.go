@@ -7,7 +7,6 @@ package classer
 
 import (
 	"image"
-	"io"
 
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
 )

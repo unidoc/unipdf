@@ -6,6 +6,7 @@
 package reader
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
 
@@ -174,6 +175,18 @@ func (s *SubstreamReader) ReadByte() (byte, error) {
 		return s.readBufferByte()
 	}
 	return s.readUnalignedByte()
+}
+
+// ReadUint32 implements Streamreader interface.
+func (s *SubstreamReader) ReadUint32() (uint32, error) {
+	ub := make([]byte, 4)
+
+	_, err := s.Read(ub)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint32(ub), nil
 }
 
 // Reset implements StreamReader interface.

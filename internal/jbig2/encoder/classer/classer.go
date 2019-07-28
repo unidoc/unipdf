@@ -193,4 +193,6 @@ func (d DnaHash) GetDna(key uint64, flag ObjectAccess) (*Dna, error) {
 	default:
 		return dna, nil
 	}
+	// TODO: handle this return
+	return nil, nil
 }

@@ -3,5 +3,4 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-// Package encoder contains jbig2 encoder structures. (WIP)
-package encoder
+package bitmap

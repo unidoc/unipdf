@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package jbig2
+package document
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 )
 
 // TestDocument tests the jbig2.Document decoding.

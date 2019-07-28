@@ -15,22 +15,9 @@ type Document struct {
 	FullHeaders bool
 	// PDFPageNumbering is a flag that defines if all text pages are in PDF mode - single page no #1.
 	PDFPageNumbering bool
-	// CurrentSegmentNumber current symbol number.
-	CurrentSegmentNumber int
-	// SymbolTableSegment is the segment number of the symbol table.
-	SymbolTableSegment int
-
-	// GlobalSymbolsNumber is the number of the symbols in the global symbol table.
-	GlobalSymbolsNumber int
 
 	Pages         map[int]*Page
 	GlobalSymbols map[int]int
-	Refinement    bool
-	// AverageTemplates are the grayed templates.
-	AverageTemplates *bitmap.Pixa
-	RefineLevel      int
-
-	BaseIndexes []int
 }
 
 // New creates new JBIG2 encoding context Document.

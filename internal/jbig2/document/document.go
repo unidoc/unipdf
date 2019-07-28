@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package jbig2
+package document
 
 import (
 	"errors"
@@ -13,69 +13,67 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
 )
 
 // fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1.
 var fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 
 // Document is the jbig2 document model containing pages and global segments.
-// By creating new document with method NewDocument or NewDocumentWithGlobals
-// all the jbig2 encoded data segment headers are decoded.
-// In order to decode whole document, all of it's pages should be decoded using GetBitmap method.
+// By creating new document with method New or NewWithGlobals all the jbig2
+// encoded data segment headers are decoded. In order to decode whole
+// document, all of it's pages should be decoded using GetBitmap method.
 // PDF encoded documents should contains only one Page with the number 1.
 type Document struct {
 	// Pages contains all pages of this document.
 	Pages map[int]*Page
-
 	// NumberOfPagesUnknown defines if the ammount of the pages is known.
 	NumberOfPagesUnknown bool
-
 	// NumberOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if NumberOfPagesUnknown is true.
 	NumberOfPages uint32
-
 	// GBUseExtTemplate defines wether extended Template is used.
 	GBUseExtTemplate bool
-
 	// SubInputStream is the source data stream wrapped into a SubInputStream.
-	InputStream *reader.Reader
-
+	InputStream reader.StreamReader
 	// GlobalSegments contains all segments that aren't associated with a page.
 	GlobalSegments Globals
-
 	// OrganisationType is the document segment organization.
 	OrganizationType segments.OrganizationType
+
+	// Encoder variables
+	// Classer is the document encoding classifier.
+	Classer classer.Classer
+	// XRes and YRes are the PPI for the x and y direction.
+	XRes, YRes int
+	// FullHeaders is a flag that defines if the encoder should produce full JBIG2 files.
+	FullHeaders bool
+
+	// CurrentSegmentNumber current symbol number.
+	CurrentSegmentNumber int
+	// SymbolTableSegment is the segment number of the symbol table.
+	SymbolTableSegment int
+
+	// AverageTemplates are the grayed templates.
+	AverageTemplates *bitmap.Pixa
+	BaseIndexes      []int
+
+	Refinement  bool
+	RefineLevel int
 
 	fileHeaderLength uint8
 }
 
-// NewDocument creates new Document for the 'data' byte slice.
-func NewDocument(data []byte) (*Document, error) {
-	return NewDocumentWithGlobals(data, nil)
-}
-
-// NewDocumentWithGlobals creates new Document for the provided encoded 'data'
-// byte slice and the 'globals' Globals.
-func NewDocumentWithGlobals(data []byte, globals Globals) (*Document, error) {
-	d := &Document{
-		Pages:                make(map[int]*Page),
-		InputStream:          reader.New(data),
-		OrganizationType:     segments.OSequential,
-		NumberOfPagesUnknown: true,
-		GlobalSegments:       globals,
-		fileHeaderLength:     9,
+// DecodeDocument decodes provided document based on the provided 'input' data stream
+// and with optional Global defined segments 'globals'.
+func DecodeDocument(input reader.StreamReader, globals ...Globals) (*Document, error) {
+	var globalsMap Globals
+	if len(globals) == 1 {
+		globalsMap = globals[0]
 	}
-
-	if d.GlobalSegments == nil {
-		d.GlobalSegments = Globals(make(map[int]*segments.Header))
-	}
-
-	// mapData map the data stream
-	if err := d.mapData(); err != nil {
-		return nil, err
-	}
-	return d, nil
+	return decodeWithGlobals(input, globalsMap)
 }
 
 // GetNumberOfPages gets the amount of Pages in the given document.
@@ -264,7 +262,7 @@ func (d *Document) parseFileHeader() error {
 
 	// D.4.3 Number of pages
 	if !d.NumberOfPagesUnknown {
-		d.NumberOfPages, err = d.InputStream.ReadUnsignedInt()
+		d.NumberOfPages, err = d.InputStream.ReadUint32()
 		if err != nil {
 			return err
 		}
@@ -287,4 +285,25 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 		return false, err
 	}
 	return false, nil
+}
+
+func decodeWithGlobals(input reader.StreamReader, globals Globals) (*Document, error) {
+	d := &Document{
+		Pages:                make(map[int]*Page),
+		InputStream:          input,
+		OrganizationType:     segments.OSequential,
+		NumberOfPagesUnknown: true,
+		GlobalSegments:       globals,
+		fileHeaderLength:     9,
+	}
+
+	if d.GlobalSegments == nil {
+		d.GlobalSegments = Globals(make(map[int]*segments.Header))
+	}
+
+	// mapData map the data stream
+	if err := d.mapData(); err != nil {
+		return nil, err
+	}
+	return d, nil
 }
