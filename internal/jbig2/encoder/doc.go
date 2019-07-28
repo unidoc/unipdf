@@ -5,3 +5,7 @@
 
 // Package encoder contains jbig2 encoder structures. (WIP)
 package encoder
+
+// Encoder is the jbig2 encoder structure used for encoding the image into the
+type Encoder struct {
+}
