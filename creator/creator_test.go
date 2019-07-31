@@ -2740,11 +2740,17 @@ func TestCompressStreams(t *testing.T) {
 		c.Draw(p)
 		//c.NewPage()
 
-		page := c.pages[0]
-		// Need to add Arial to the page resources to avoid generating invalid PDF (avoid build fail).
-		times := model.NewStandard14FontMustCompile(model.TimesRomanName)
-		page.Resources.SetFontByName("Times", times.ToPdfObject())
-		rawContent := `
+		c.SetPdfWriterAccessFunc(func(w *model.PdfWriter) error {
+			page := c.pages[0]
+
+			// Need to add Times to the page resources as it is used in the raw content stream.
+			times, err := model.NewStandard14Font(model.TimesRomanName)
+			if err != nil {
+				return err
+			}
+			page.Resources.SetFontByName("Times", times.ToPdfObject())
+
+			rawContent := `
 BT
 /Times 56 Tf
 20 600 Td
@@ -2762,15 +2768,17 @@ BT
 (example text)'
 ET
 `
-		{
+
 			cstreams, err := page.GetContentStreams()
 			if err != nil {
-				panic(err)
+				return err
 			}
 			cstreams = append(cstreams, rawContent)
+
 			// Set streams with raw encoder (not encoded).
 			page.SetContentStreams(cstreams, core.NewRawEncoder())
-		}
+			return nil
+		})
 
 		return c
 	}
