@@ -2802,7 +2802,7 @@ ET
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	if fileInfoOptimized.Size() >= fileInfo.Size() {
+	if fileInfoOptimized.Size() > fileInfo.Size() {
 		t.Errorf("Optimization failed: size not changed %d vs %d", fileInfo.Size(), fileInfoOptimized.Size())
 	}
 }
