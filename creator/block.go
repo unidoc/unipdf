@@ -93,7 +93,17 @@ func NewBlockFromPage(page *model.PdfPage) (*Block, error) {
 	b.width = mbox.Urx - mbox.Llx
 	b.height = mbox.Ury - mbox.Lly
 
+	// Inherit page rotation angle.
+	if page.Rotate != nil {
+		b.angle = -float64(*page.Rotate)
+	}
+
 	return b, nil
+}
+
+// Angle returns the block rotation angle in degrees.
+func (blk *Block) Angle() float64 {
+	return blk.angle
 }
 
 // SetAngle sets the rotation angle in degrees.
@@ -132,47 +142,39 @@ func (blk *Block) duplicate() *Block {
 // GeneratePageBlocks draws the block contents on a template Page block.
 // Implements the Drawable interface.
 func (blk *Block) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	var blocks []*Block
+	cc := contentstream.NewContentCreator()
 
+	// Position block.
+	blkWidth, blkHeight := blk.Width(), blk.Height()
 	if blk.positioning.isRelative() {
-		// Draw at current ctx.X, ctx.Y position
-		dup := blk.duplicate()
-		cc := contentstream.NewContentCreator()
-		cc.Translate(ctx.X, ctx.PageHeight-ctx.Y-blk.height)
-		if blk.angle != 0 {
-			// Make the rotation about the upper left corner.
-			// TODO: Account for rotation origin. (Consider).
-			cc.Translate(0, blk.Height())
-			cc.RotateDeg(blk.angle)
-			cc.Translate(0, -blk.Height())
-		}
-		contents := append(*cc.Operations(), *dup.contents...)
-		contents.WrapIfNeeded()
-		dup.contents = &contents
-
-		blocks = append(blocks, dup)
-
-		ctx.Y += blk.height
+		// Relative. Draw at current ctx.X, ctx.Y position.
+		cc.Translate(ctx.X, ctx.PageHeight-ctx.Y-blkHeight)
 	} else {
-		// Absolute. Draw at blk.xPos, blk.yPos position
-		dup := blk.duplicate()
-		cc := contentstream.NewContentCreator()
-		cc.Translate(blk.xPos, ctx.PageHeight-blk.yPos-blk.height)
-		if blk.angle != 0 {
-			// Make the rotation about the upper left corner.
-			// TODO: Consider supporting specification of rotation origin.
-			cc.Translate(0, blk.Height())
-			cc.RotateDeg(blk.angle)
-			cc.Translate(0, -blk.Height())
-		}
-		contents := append(*cc.Operations(), *dup.contents...)
-		contents.WrapIfNeeded()
-		dup.contents = &contents
-
-		blocks = append(blocks, dup)
+		// Absolute. Draw at blk.xPos, blk.yPos position.
+		cc.Translate(blk.xPos, ctx.PageHeight-blk.yPos-blkHeight)
 	}
 
-	return blocks, ctx, nil
+	// Rotate block.
+	rotatedHeight := blkHeight
+	if blk.angle != 0 {
+		// Make the rotation about the center of the block.
+		cc.Translate(blkWidth/2, blkHeight/2)
+		cc.RotateDeg(blk.angle)
+		cc.Translate(-blkWidth/2, -blkHeight/2)
+
+		_, rotatedHeight = blk.RotatedSize()
+	}
+
+	if blk.positioning.isRelative() {
+		ctx.Y += rotatedHeight
+	}
+
+	dup := blk.duplicate()
+	contents := append(*cc.Operations(), *dup.contents...)
+	contents.WrapIfNeeded()
+	dup.contents = &contents
+
+	return []*Block{dup}, ctx, nil
 }
 
 // Height returns the Block's height.
@@ -183,6 +185,12 @@ func (blk *Block) Height() float64 {
 // Width returns the Block's width.
 func (blk *Block) Width() float64 {
 	return blk.width
+}
+
+// RotatedSize returns the width and height of the rotated block.
+func (blk *Block) RotatedSize() (float64, float64) {
+	_, _, w, h := rotateRect(blk.width, blk.height, blk.angle)
+	return w, h
 }
 
 // addContents adds contents to a block.  Wrap both existing and new contents to ensure

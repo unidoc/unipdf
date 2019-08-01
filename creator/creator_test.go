@@ -85,17 +85,28 @@ func TestTemplate1(t *testing.T) {
 	template.SetPos(0, 0)
 	creator.Draw(template)
 
+	drawWithRotationOffset := func(block *Block) {
+		w, h := block.Width(), block.Height()
+		x1, y1, rW, rH := rotateRect(w, h, block.Angle())
+		offX := w/2 - (x1 + rW/2)
+		offY := h/2 - (y1 + rH/2)
+
+		block.translate(offX, offY)
+		creator.Draw(block)
+		block.translate(-offX, -offY)
+	}
+
 	template.SetAngle(45)
-	creator.Draw(template)
+	drawWithRotationOffset(template)
 
 	template.Scale(0.5, 0.5)
-	creator.Draw(template)
+	drawWithRotationOffset(template)
 
 	template.Scale(4, 4)
-	creator.Draw(template)
+	drawWithRotationOffset(template)
 
 	template.SetAngle(90)
-	template.SetPos(100, 200)
+	template.SetPos(100-(template.Width()-template.Height())/2, 200-(template.Width()+template.Height())/2)
 	creator.Draw(template)
 
 	testWriteAndRender(t, creator, "template_1.pdf")
@@ -313,8 +324,8 @@ func TestShapesOnBlock(t *testing.T) {
 	creator.Draw(block)
 
 	creator.NewPage()
-	creator.MoveTo(0, 700)
 	block.SetAngle(90)
+	creator.MoveTo(-(block.Width()-block.Height())/2, 700-(block.Width()+block.Height())/2)
 	creator.Draw(block)
 
 	testWriteAndRender(t, creator, "1_shapes_on_block.pdf")
@@ -2084,7 +2095,7 @@ func TestQRCodeOnTemplate(t *testing.T) {
 	// Add another Page where the template has been rotated.
 	creator.NewPage()
 	tpl.SetAngle(90)
-	tpl.SetPos(-50, 750)
+	tpl.SetPos((tpl.Height()-tpl.Width())/2-50, 750-(tpl.Width()+tpl.Height())/2)
 
 	creator.Draw(tpl)
 
