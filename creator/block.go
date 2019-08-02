@@ -343,8 +343,7 @@ func (blk *Block) Draw(d Drawable) error {
 	}
 
 	for _, newBlock := range blocks {
-		err := mergeContents(blk.contents, blk.resources, newBlock.contents, newBlock.resources)
-		if err != nil {
+		if err := blk.mergeBlocks(newBlock); err != nil {
 			return err
 		}
 	}
@@ -364,8 +363,7 @@ func (blk *Block) DrawWithContext(d Drawable, ctx DrawContext) error {
 	}
 
 	for _, newBlock := range blocks {
-		err := mergeContents(blk.contents, blk.resources, newBlock.contents, newBlock.resources)
-		if err != nil {
+		if err := blk.mergeBlocks(newBlock); err != nil {
 			return err
 		}
 	}
