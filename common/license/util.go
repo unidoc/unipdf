@@ -46,7 +46,7 @@ func init() {
 	lpath := os.Getenv(licensePathEnvironmentVar)
 	custName := os.Getenv(licenseCustomerNameEnvironmentVar)
 
-	if len(lpath) == 0 && len(custName) == 0 {
+	if len(lpath) == 0 || len(custName) == 0 {
 		return
 	}
 
