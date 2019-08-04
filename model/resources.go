@@ -58,7 +58,7 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	if obj := dict.Get("XObject"); obj != nil {
 		r.XObject = obj
 	}
-	if obj := dict.Get("Font"); obj != nil {
+	if obj := core.ResolveReference(dict.Get("Font")); obj != nil {
 		r.Font = obj
 	}
 	if obj := dict.Get("ProcSet"); obj != nil {

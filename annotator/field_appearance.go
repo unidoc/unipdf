@@ -245,7 +245,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")
@@ -565,7 +565,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")
@@ -940,7 +940,7 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")
