@@ -21,6 +21,7 @@ creating and reading, processing PDF files. The library is written and supported
 - [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_rotate.go)
 - [Extract text from PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_extract_text.go)
 - [Text extraction support with size, position and formatting info](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_text_locations.go)
+- [PDF to CSV](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_to_csv.go) illustrates extracting tabular data from PDF.
 - [Extract images](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_extract_images.go) with coordinates
 - [Images to PDF](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_images_to_pdf.go)
 - [Add images to pages](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_add_image_to_page.go)
@@ -41,12 +42,6 @@ Multiple examples are provided in our example repository https://github.com/unid
 as well as [documented examples](https://unidoc.io/examples) on our website.
 
 Contact us if you need any specific examples.
-
-## News
-- unidoc has been renamed to unipdf and is maintained under https://github.com/unidoc/unipdf
-- The old repository remains under https://github.com/unidoc/unidoc for backwards compatibility and will be read-only.
-All development is under the unipdf repository.
-- The initial release of unipdf v3.0.0 is compatible with Go modules from the start.
 
 ## Installation
 With modules:
@@ -111,10 +106,18 @@ To use unipdf in your projects, you need to get a license.
 
 Get your license on [https://unidoc.io](https://unidoc.io).
 
-To load your license, simply do:
+The easiest way to load your license is through environment variables, for example:
+```bash
+export UNIPDF_CUSTOMER_NAME=UniDoc
+export UNIPDF_LICENSE_PATH=/path/to/licenses/UniDoc.txt
+```
+
+Alternatively you can load the license in code, simply do:
 ```go
-unidocLicenseKey := "... your license here ..."
-err := license.SetLicenseKey(unidocLicenseKey)
+licenseKey := "... your license here ..."
+customerName := `name of license holder`
+
+err := license.SetLicenseKey(licenseKey, customerName)
 if err != nil {
     fmt.Printf("Error loading license: %v\n", err)
     os.Exit(1)
