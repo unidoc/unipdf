@@ -47,6 +47,8 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 		return nil, numChars, numMisses, err
 	}
 	pt.computeViews()
+	procBuf(pt)
+
 	return pt, numChars, numMisses, err
 }
 
@@ -935,6 +937,11 @@ func (pt PageText) Marks() *TextMarkArray {
 // TextMarkArray is a collection of TextMarks.
 type TextMarkArray struct {
 	marks []TextMark
+}
+
+// Append appends `mark` to the mark array.
+func (ma *TextMarkArray) Append(mark TextMark) {
+	ma.marks = append(ma.marks, mark)
 }
 
 // String returns a string describing `ma`.
