@@ -93,8 +93,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 
 			idx := (y*int(img.Width) + x) / divider
 			if idx >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
@@ -108,8 +106,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			// 16 bit grayscale image.
 			idx := (y*int(img.Width) + x) * 2
 			if idx+1 >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
@@ -120,8 +116,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			// Assuming 8 bit grayscale image.
 			idx := y*int(img.Width) + x
 			if idx >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
@@ -136,8 +130,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			// 4 bit per component RGB image.
 			idx := (y*int(img.Width) + x) * 3 / 2
 			if idx+1 >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 			pos := (y*int(img.Width) + x) * 3 % 2
@@ -165,8 +157,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 
 			i := idx * 3
 			if i+5 >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
@@ -187,8 +177,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 
 			i := 3 * idx
 			if i+2 >= lenData {
-				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
@@ -208,8 +196,6 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 		// CMYK image.
 		idx := y*int(img.Width) + x
 		if idx+3 >= lenData {
-			common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-				x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
 			return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 		}
 
@@ -309,7 +295,9 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 		for x := 0; x < int(img.Width); x++ {
 			color, err := img.ColorAt(x, y)
 			if err != nil {
-				return nil, err
+				common.Log.Debug("ERROR: %v. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					err, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, len(img.Data))
+				continue
 			}
 
 			imgout.Set(x, y, color)
