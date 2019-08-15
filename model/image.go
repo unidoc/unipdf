@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	goimage "image"
 	gocolor "image/color"
 	"image/draw"
@@ -69,12 +70,159 @@ func (img *Image) GetSamples() []uint32 {
 // SetSamples convert samples to byte-data and sets for the image.
 func (img *Image) SetSamples(samples []uint32) {
 	resampled := sampling.ResampleUint32(samples, int(img.BitsPerComponent), 8)
-	var data []byte
-	for _, val := range resampled {
-		data = append(data, byte(val))
+	data := make([]byte, len(resampled))
+	for i, val := range resampled {
+		data[i] = byte(val)
 	}
 
 	img.Data = data
+}
+
+// ColorAt returns the color of the image pixel specified by the x and y coordinates.
+func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
+	data := img.Data
+	lenData := len(img.Data)
+
+	switch img.ColorComponents {
+	case 1:
+		// Grayscale image.
+		switch img.BitsPerComponent {
+		case 1, 2, 4:
+			// 1, 2 or 4 bit grayscale image.
+			divider := 8 / int(img.BitsPerComponent)
+
+			idx := (y*int(img.Width) + x) / divider
+			if idx >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			pos := (y*int(img.Width) + x) % divider
+			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(pos))
+
+			return gocolor.Gray{
+				Y: uint8(uint32(val) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+			}, nil
+		case 16:
+			// 16 bit grayscale image.
+			idx := (y*int(img.Width) + x) * 2
+			if idx+1 >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			return gocolor.Gray16{
+				Y: uint16(data[idx])<<8 | uint16(data[idx+1]),
+			}, nil
+		default:
+			// Assuming 8 bit grayscale image.
+			idx := y*int(img.Width) + x
+			if idx >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			return gocolor.Gray{
+				Y: uint8(uint32(data[idx]) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+			}, nil
+		}
+	case 3:
+		// RGB image.
+		switch img.BitsPerComponent {
+		case 4:
+			// 4 bit per component RGB image.
+			idx := (y*int(img.Width) + x) * 3 / 2
+			if idx+1 >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+			pos := (y*int(img.Width) + x) * 3 % 2
+
+			var r, g, b uint8
+			if pos == 0 {
+				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
+				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
+			} else {
+				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
+				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
+			}
+
+			return gocolor.RGBA{
+				R: r,
+				G: g,
+				B: b,
+				A: uint8(0xff),
+			}, nil
+		case 16:
+			// 16 bit per component RGB image.
+			idx := (y*int(img.Width) + x) * 2
+
+			i := idx * 3
+			if i+5 >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			a := uint16(0xffff)
+			if img.alphaData != nil && len(img.alphaData) > idx+1 {
+				a = uint16(img.alphaData[idx])<<8 | uint16(img.alphaData[idx+1])
+			}
+
+			return gocolor.RGBA64{
+				R: uint16(data[i])<<8 | uint16(data[i+1]),
+				G: uint16(data[i+2])<<8 | uint16(data[i+3]),
+				B: uint16(data[i+4])<<8 | uint16(data[i+5]),
+				A: a,
+			}, nil
+		default:
+			// Assuming 8 bit per component RGB image.
+			idx := y*int(img.Width) + x
+
+			i := 3 * idx
+			if i+2 >= lenData {
+				common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			a := uint8(0xff)
+			if img.alphaData != nil && len(img.alphaData) > idx {
+				a = uint8(img.alphaData[idx])
+			}
+
+			return gocolor.RGBA{
+				R: uint8(data[i] & 0xff),
+				G: uint8(data[i+1] & 0xff),
+				B: uint8(data[i+2] & 0xff),
+				A: a,
+			}, nil
+		}
+	case 4:
+		// CMYK image.
+		idx := y*int(img.Width) + x
+		if idx+3 >= lenData {
+			common.Log.Debug("ERROR: coordinates (%d, %d) out of range. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+				x, y, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, lenData)
+			return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+		}
+
+		return gocolor.CMYK{
+			C: uint8(data[idx] & 0xff),
+			M: uint8(data[idx+1] & 0xff),
+			Y: uint8(data[idx+2] & 0xff),
+			K: uint8(data[idx+3] & 0xff),
+		}, nil
+	}
+
+	common.Log.Debug("ERROR: unsupported image. %d components, %d bits per component", img.ColorComponents, img.BitsPerComponent)
+	return nil, errors.New("unsupported image colorspace")
 }
 
 // Resample resamples the image data converting from current BitsPerComponent to a target BitsPerComponent
