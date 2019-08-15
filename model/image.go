@@ -284,80 +284,35 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 func (img *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
-	var imgout core.DrawableImage
 
-	if img.ColorComponents == 1 {
+	var imgout core.DrawableImage
+	switch img.ColorComponents {
+	case 1:
 		if img.BitsPerComponent == 16 {
 			imgout = goimage.NewGray16(bounds)
 		} else {
 			imgout = goimage.NewGray(bounds)
 		}
-	} else if img.ColorComponents == 3 {
+	case 3:
 		if img.BitsPerComponent == 16 {
 			imgout = goimage.NewRGBA64(bounds)
 		} else {
 			imgout = goimage.NewRGBA(bounds)
 		}
-	} else if img.ColorComponents == 4 {
-		imgout = goimage.NewCMYK(bounds)
-	} else {
+	default:
 		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
 		return nil, errors.New("unsupported colors")
 	}
 
-	// Draw the data on the image..
-	x := 0
-	y := 0
-	aidx := 0
-
-	samples := img.GetSamples()
-	bytesPerColor := img.ColorComponents
-	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
-		var c gocolor.Color
-		if img.ColorComponents == 1 {
-			if img.BitsPerComponent == 16 {
-				val := uint16(samples[i])<<8 | uint16(samples[i+1])
-				c = gocolor.Gray16{val}
-			} else {
-				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
-				c = gocolor.Gray{uint8(val & 0xff)}
+	for y := 0; y < int(img.Height); y++ {
+		for x := 0; x < int(img.Width); x++ {
+			color, err := img.ColorAt(x, y)
+			if err != nil {
+				return nil, err
 			}
-		} else if img.ColorComponents == 3 {
-			if img.BitsPerComponent == 16 {
-				r := uint16(samples[i])<<8 | uint16(samples[i+1])
-				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
-				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				a := uint16(0xffff) // Default: solid (0xffff) whereas transparent=0.
-				if img.alphaData != nil && len(img.alphaData) > aidx+1 {
-					a = (uint16(img.alphaData[aidx]) << 8) | uint16(img.alphaData[aidx+1])
-					aidx += 2
-				}
-				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}
-			} else {
-				r := uint8(samples[i] & 0xff)
-				g := uint8(samples[i+1] & 0xff)
-				b := uint8(samples[i+2] & 0xff)
-				a := uint8(0xff) // Default: solid (0xff) whereas transparent=0.
-				if img.alphaData != nil && len(img.alphaData) > aidx {
-					a = uint8(img.alphaData[aidx])
-					aidx++
-				}
-				c = gocolor.RGBA{R: r, G: g, B: b, A: a}
-			}
-		} else if img.ColorComponents == 4 {
-			c1 := uint8(samples[i] & 0xff)
-			m1 := uint8(samples[i+1] & 0xff)
-			y1 := uint8(samples[i+2] & 0xff)
-			k1 := uint8(samples[i+3] & 0xff)
-			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
-		}
 
-		imgout.Set(x, y, c)
-		x++
-		if x == int(img.Width) {
-			x = 0
-			y++
+			imgout.Set(x, y, color)
 		}
 	}
 
