@@ -306,24 +306,27 @@ func (cs *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) 
 func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
-	samples := img.GetSamples()
-	common.Log.Trace("DeviceGray-ToRGB Samples: % d", samples)
+	data := make([]byte, 3*img.Width*img.Height)
+	for y := 0; y < int(img.Height); y++ {
+		for x := 0; x < int(img.Width); x++ {
+			color, err := img.ColorAt(x, y)
+			if err != nil {
+				return img, err
+			}
 
-	lenSamples := len(samples)
-	rgbSamples := make([]uint32, 3*lenSamples)
-
-	for i := 0; i < lenSamples; i++ {
-		grayVal := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
-		rgbSamples[3*i], rgbSamples[3*i+1], rgbSamples[3*i+2] = grayVal, grayVal, grayVal
+			r, g, b, _ := color.RGBA()
+			idx := (y*int(img.Width) + x) * 3
+			data[idx], data[idx+1], data[idx+2] = uint8(r), uint8(g), uint8(b)
+		}
 	}
 
 	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
-	rgbImage.SetSamples(rgbSamples)
+	rgbImage.Data = data
 
 	common.Log.Trace("DeviceGray -> RGB")
-	common.Log.Trace("samples: %v", samples)
-	common.Log.Trace("RGB samples: %v", rgbSamples)
+	common.Log.Trace("samples: %v", img.Data)
+	common.Log.Trace("RGB samples: %v", rgbImage.Data)
 	common.Log.Trace("%v -> %v", img, rgbImage)
 
 	return rgbImage, nil
