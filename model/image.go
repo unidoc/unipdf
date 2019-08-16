@@ -285,6 +285,8 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 		} else {
 			imgout = goimage.NewRGBA(bounds)
 		}
+	case 4:
+		imgout = goimage.NewCMYK(bounds)
 	default:
 		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
