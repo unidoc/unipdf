@@ -15,7 +15,7 @@ type Pix struct {
 	// Width in pixels
 	Width uint
 	// Height in pixels
-	Heiht uint
+	Height uint
 	// Depth in bits (bpp)
 	Depth uint
 	// Number of samples per pixel

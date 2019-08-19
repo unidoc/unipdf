@@ -76,6 +76,17 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 	return dst, nil
 }
 
+// combineBitmap combines two bitmaps with the
+func combineBitmap(first, second *Bitmap, op CombinationOperator) *Bitmap {
+	result := New(first.Width, first.Height)
+
+	for i := 0; i < len(result.Data); i++ {
+		result.Data[i] = combineBytes(first.Data[i], second.Data[i], op)
+	}
+
+	return result
+}
+
 func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 	switch op {
 	case CmbOpOr:

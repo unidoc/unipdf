@@ -6,12 +6,16 @@
 package encoder
 
 import (
-	"github.com/unidoc/unipdf/internal/jbig2"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 )
 
 // Encoder is the jbig2 encoder structure used for encoding the image into the
-type Encoder struct{}
+type Encoder struct {
+	// some paramete
+	doc *document.Document
+}
 
-func EncodedDocument(thresh, weightFactor float32, xres, yres int, fullHeaders bool, refineLevel) *jbig2.Document {
-
+// EncodeBytes encodes input 'data' and encoding 'parameters' into jbig2 encoding.
+func (e *Encoder) EncodeBytes(data []byte, parameters Parameters) ([]byte, error) {
+	return nil, nil
 }

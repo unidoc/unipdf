@@ -6,6 +6,8 @@
 package classer
 
 import (
+	"errors"
+	"github.com/unidoc/unipdf/common"
 	"image"
 
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
@@ -30,7 +32,7 @@ type Classer struct {
 	BaseIndex int
 
 	// Number of components on each page.
-	NAComponents [][]int
+	ComponentsNumber []int
 
 	// SizeHaus is the size of square struct elem for haus.
 	SizeHaus int
@@ -53,11 +55,11 @@ type Classer struct {
 	// if 0 pixa isn't filled.
 	KeepPixaa int
 	// Instances for each class. Unbordered.
-	Pixaa *bitmap.Pixaa
+	Pixaa [][]*bitmap.Bitmap
 	// Templates for each class. Bordered and not dilated.
-	Pixat *bitmap.Pixa
+	Pixat []*bitmap.Bitmap
 	// Templates for each class. Bordered and dilated.
-	Pixatd *bitmap.Pixa
+	Pixatd []*bitmap.Bitmap
 
 	// Hash table to find templates by their size.
 	TemplatesSize map[uint64][]float64
@@ -82,19 +84,51 @@ type Classer struct {
 
 // New creates new Classer instance for provided 'method' and given 'components'.
 func New(method Method, components Component) (*Classer, error) {
-	// TODO: jbclass.c:1791
-	return &Classer{}, nil
+	if method != RankHaus && method != Correlation {
+		return nil, errors.New("jbig2 encoder invalid classer method")
+	}
+
+	switch components {
+	case ConnComps, Characters, Words:
+	default:
+		return nil, errors.New("jbig2 encoder invalid classer component")
+	}
+	return &Classer{Method: method, Components: components}, nil
 }
 
 // AddPage adds the 'inputPage' to the classer 'c'.
-func (c *Classer) AddPage(inputPage *bitmap.Pix) error {
+func (c *Classer) AddPage(inputPage *bitmap.Bitmap) error {
 	// TODO: jbclass.c:486
+	c.Width = inputPage.Width
+	c.Height = inputPage.Height
+	c.AddPageComponents(inputPage, boundingBoxes, components)
+
 	return nil
 }
 
 // AddPageComponents adds the components to the 'inputPage'.
-func (c *Classer) AddPageComponents(inputPage *bitmap.Pix, boundingBoxes *bitmap.Boxa, components *bitmap.Pixa) error {
+func (c *Classer) AddPageComponents(inputPage *bitmap.Bitmap, boundingBoxes []image.Rectangle, components []*bitmap.Bitmap) error {
 	// TODO: jbclass.c:531
+	if boundingBoxes == nil || components == nil || len(boundingBoxes) == 0 {
+		return nil
+	}
+	var err error
+	switch c.Method {
+	case RankHaus:
+		err = c.ClassifyRankHaus(boundingBoxes, components)
+	case Correlation:
+		err = c.ClassifyCorrelation(boundingBoxes, components)
+	default:
+		common.Log.Debug("Unknown classify method: '%v'", c.Method)
+		err = errors.New("unknown classify method")
+	}
+	if err != nil {
+		return err
+	}
+
+	c.BaseIndex += len(boundingBoxes)
+	c.ComponentsNumber = append(c.ComponentsNumber, len(boundingBoxes))
+
 	return nil
 }
 
@@ -106,12 +140,31 @@ func (c *Classer) AddPages(
 }
 
 // ClassifyRankHaus is the classification using windowed rank hausdorff metric.
-func (c *Classer) ClassifyRankHaus(newCompontentsBB *bitmap.Boxa, newComponentsPix *bitmap.Pixa) error {
+func (c *Classer) ClassifyRankHaus(newCompontentsBB []image.Rectangle, newComponents []*bitmap.Bitmap) error {
+	var n, nafg int
+	if n = len(newComponents); n == 0 {
+		return errors.New("empty new components")
+	}
+
+	for _, bm := range newComponents {
+		nafg += bm.CountPixels()
+	}
+
+	size := c.SizeHaus
+	sel := bitmap.SelCreateBrick(size, size, size/2, size/2, bitmap.SelHit)
+
+	bms1 := make([]*bitmap.Bitmap, n)
+	bms2 := make([]*bitmap.Bitmap, n)
+
+	for i := 0; i < n; i++ {
+		bm := bms1[i]
+	}
+
 	return nil
 }
 
 // ClassifyCorrelation is the classification using windowed correlation score.
-func (c *Classer) ClassifyCorrelation(newCompontentsBB *bitmap.Boxa, newComponentsPix *bitmap.Pixa) error {
+func (c *Classer) ClassifyCorrelation(newCompontentsBB []image.Rectangle, newComponents []*bitmap.Bitmap) error {
 	// TODO: jbclass.c:1031
 	return nil
 }

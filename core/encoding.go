@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/unidoc/unipdf/internal/jbig2"
 	goimage "image"
 	gocolor "image/color"
 	"image/jpeg"
@@ -2063,19 +2064,15 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 
 	if decodeParams != nil {
 		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
+			var err error
+
 			globalsStream, ok := globals.(*PdfObjectStream)
 			if !ok {
-				err := errors.New("the Globals stream should be an Object Stream")
+				err = errors.New("jbig2.Globals stream should be an Object Stream")
 				common.Log.Debug("ERROR: %s", err.Error())
 				return nil, err
 			}
-			d, err := decoder.Decode(globalsStream.Stream, decoder.Parameters{})
-			if err != nil {
-				err = fmt.Errorf("decoding global stream failed. %s", err.Error())
-				common.Log.Debug("ERROR: %s", err)
-				return nil, err
-			}
-			encoder.Globals, err = d.DecodeGlobals()
+			encoder.Globals, err = jbig2.DecodeGlobals(globalsStream.Stream)
 			if err != nil {
 				err = fmt.Errorf("corrupted jbig2 encoded data. %s", err.Error())
 				common.Log.Debug("ERROR: %s", err)
@@ -2126,14 +2123,7 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		parameters.Color = bitmap.Chocolate
 	}
 
-	dec, err := decoder.Decode(encoded, parameters, enc.Globals)
-	if err != nil {
-		return nil, err
-	}
-
-	// the jbig2 PDF document should have only one page, where page numeration
-	// starts from '1'.
-	return dec.DecodePage(1)
+	return jbig2.DecodeBytes(encoded, parameters, enc.Globals)
 }
 
 // DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.

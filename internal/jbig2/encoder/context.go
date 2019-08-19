@@ -2,6 +2,8 @@ package encoder
 
 import (
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/internal/jbig2/document"
+	"github.com/unidoc/unipdf/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 )
 
@@ -21,9 +23,9 @@ type Document struct {
 }
 
 // New creates new JBIG2 encoding context Document.
-func New(thresh, weightFactor float32, xRes, yRes int, fullHeaders bool, refineLevel int) *Document {
-	// TODO: jbig2enc.cc:122
-	return &Document{}
+func New(thresh, weightFactor float32, xRes, yRes int, fullHeaders bool, refineLevel int) *document.Document {
+	class := classer.CorrelationInitWithoutComponents(classer.ConnComps, 9999, 9999, thresh, weightFactor)
+	return document.InitEncodeDocument(class, XRes, YRes, fullheaders, refineLevel)
 }
 
 // UniteTemplates ...
@@ -49,7 +51,7 @@ func (d *Document) encodeGeneric() {
 }
 
 func (d *Document) producePage(pageNo, xRes, yRes int, length int) {
-	e // TODO: jbig2enc.cc:717
+	// TODO: jbig2enc.cc:717
 
 }
 

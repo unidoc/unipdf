@@ -8,8 +8,8 @@ package decoder
 import (
 	"errors"
 
-	"github.com/unidoc/unipdf/internal/jbig2/document"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -20,15 +20,6 @@ type Decoder struct {
 
 	currentDecodedPage int
 	parameters         Parameters
-}
-
-// DecodeGlobals decodes the Globally defined data segments.
-func (d *Decoder) DecodeGlobals() (document.Globals, error) {
-	globals := d.document.GlobalSegments
-	if globals == nil {
-		return nil, errors.New("no global segments found")
-	}
-	return globals, nil
 }
 
 // DecodePage decodes jbig2 encoded page for provided 'pageNumber' in the document.

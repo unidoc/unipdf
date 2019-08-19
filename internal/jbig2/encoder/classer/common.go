@@ -6,6 +6,7 @@
 package classer
 
 import (
+	"errors"
 	"image"
 
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
@@ -19,8 +20,8 @@ const (
 )
 
 const (
-	// MaxConnWidth is the default max cc width.
-	MaxConnWidth = 350
+	// MaxConnCompWidth is the default max cc width.
+	MaxConnCompWidth = 350
 	// MaxCharCompWidth is the default max char width.
 	MaxCharCompWidth = 350
 	// MaxWordCompWidth is the default max word width.
@@ -41,20 +42,14 @@ func AccumulateComposites(classes *bitmap.Pixaa, samples *[]float64, centroids *
 // CorrelationInit is the initialization function
 // used for unsupervised classification of the collections
 // of connected components. Uses correlation classification with components.
-func CorrelationInit(
-	components, maxWidth, maxHeight int,
-	thresh, weightFactor float32,
-) *Classer {
+func CorrelationInit(components Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
 	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 1)
 }
 
 // CorrelationInitWithoutComponents is the initialization function
 // used for unsupervised classification of the collections
 // of connected components. Uses correlation classification without components.
-func CorrelationInitWithoutComponents(
-	components, maxWidth, maxHeight int,
-	thresh, weightFactor float32,
-) *Classer {
+func CorrelationInitWithoutComponents(components Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
 	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 0)
 }
 
@@ -166,13 +161,45 @@ const (
 	OAInsert ObjectAccess = OANoCopy
 )
 
-func correlationInitInternal(
-	components, maxWidth, maxHeight int,
-	thresh, weightFactor float32,
-	keepComponents int,
-) *Classer {
-	// TODO: jbclass.c:383
-	return nil
+func correlationInitInternal(components Component, maxWidth, maxHeight int, thresh, weightFactor float32, keepComponents int) (*Classer, error) {
+	if components > Words || components < 0 {
+		return nil, errors.New("invalid jbig2 component")
+	}
+
+	if thresh < 0.4 || thresh > 0.98 {
+		return nil, errors.New("jbig2 encoder thresh not in range [0.4 - 0.98]")
+	}
+
+	if weightFactor < 0.0 || weightFactor > 1.0 {
+		return nil, errors.New("jbig2 encoder weight factor not in range [0.0 - 1.0]")
+	}
+
+	if maxWidth == 0 {
+		switch components {
+		case ConnComps:
+			maxWidth = MaxConnCompWidth
+		case Characters:
+			maxWidth = MaxCharCompWidth
+		default:
+			maxWidth = MaxWordCompWidth
+		}
+	}
+	if maxHeight == 0 {
+		maxHeight = MaxCompHeight
+	}
+
+	classer, err := New(Correlation, components)
+	if err != nil {
+		return nil, err
+	}
+	classer.MaxWidth = maxWidth
+	classer.MaxHeight = maxHeight
+	classer.Thresh = thresh
+	classer.WeightFactor = weightFactor
+	// TODO: setDnaHash (double hash table) ? map[int][]float64
+	classer.KeepPixaa = keepComponents
+
+	return classer, nil
 }
 
 // TwoByTwoWalk ...

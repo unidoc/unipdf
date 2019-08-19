@@ -8,14 +8,15 @@ package document
 import (
 	"errors"
 	"fmt"
+	"image"
 	"io"
 	"runtime/debug"
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -74,6 +75,35 @@ func DecodeDocument(input reader.StreamReader, globals ...Globals) (*Document, e
 		globalsMap = globals[0]
 	}
 	return decodeWithGlobals(input, globalsMap)
+}
+
+// InitEncodeDocument initializes the jbig2 document for the encoding process.
+func InitEncodeDocument(class classer.Classer, xres, yres int, fullheaders bool, refineLevel int) *Document {
+	return &Document{
+		Classer:            class,
+		XRes:               xres,
+		YRes:               yres,
+		SymbolTableSegment: -1,
+		Refinement:         refineLevel >= 0,
+		RefineLevel:        refineLevel,
+	}
+}
+
+// AutoThreshold gathers classes of symbols and uses a single representative to stand for them all.
+func (d *Document) AutoThreshold() error {
+	bms := d.Classer.Pixat
+	for i := 0; i < len(bm); i++ {
+		bm := bms[i]
+
+		for j := i + 1; j < len(bms); j++ {
+			if bm.Equivalent(bms[j]) {
+				if err := d.uniteTemplatesWithIndexes(i, j); err != nil {
+					return err
+				}
+				j--
+			}
+		}
+	}
 }
 
 // GetNumberOfPages gets the amount of Pages in the given document.
@@ -285,6 +315,40 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 		return false, err
 	}
 	return false, nil
+}
+
+func (d *Document) uniteTemplatesWithIndexes(firstTempIndex, secondTempIndex int) error {
+	if len(d.Classer.Pixat) < firstTempIndex || len(d.Classer.Pixat) < secondTempIndex {
+		return errors.New("index doesn't point to template array")
+	}
+	for i, class := range d.Classer.ClassIDs {
+		if class == secondTempIndex {
+			d.Classer.ClassIDs[i] = firstTempIndex
+		}
+	}
+
+	var (
+		endPix    *bitmap.Bitmap
+		copiedPix *bitmap.Bitmap
+		boxa      []*image.Rectangle
+	)
+
+	index := len(d.Classer.Pixat) - 1
+	if index != secondTempIndex {
+		endPix = d.Classer.Pixat[index]
+		d.Classer.Pixat[secondTempIndex] = endPix
+
+		for i, class := range d.Classer.ClassIDs {
+			if class == index {
+				d.Classer.ClassIDs[i] = secondTempIndex
+			}
+		}
+	}
+
+	// remove the bitmap
+	d.Classer.Pixat = append(d.Classer.Pixat[:index], d.Classer.Pixat[index+1:]...)
+	d.Classer.NClass--
+	return nil
 }
 
 func decodeWithGlobals(input reader.StreamReader, globals Globals) (*Document, error) {
