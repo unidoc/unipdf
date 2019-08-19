@@ -8,6 +8,7 @@ package jbig2
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 
@@ -24,15 +25,15 @@ type Page struct {
 
 	// PageNumber defines page number.
 	// NOTE: page numeration starts from 1.
-	PageNumber int
+	PageNumber int32
 
 	// Bitmap represents the page image.
 	Bitmap *bitmap.Bitmap
 
-	FinalHeight int
-	FinalWidth  int
-	ResolutionX int
-	ResolutionY int
+	FinalHeight int32
+	FinalWidth  int32
+	ResolutionX int32
+	ResolutionY int32
 
 	// Document is a relation to page's document
 	Document *Document
@@ -84,7 +85,7 @@ func (p *Page) String() string {
 
 // newPage is the creator for the Page structure.
 func newPage(d *Document, pageNumber int) *Page {
-	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
+	return &Page{Document: d, PageNumber: int32(pageNumber), Segments: map[int]*segments.Header{}}
 }
 
 // composePageBitmap composes the segment's bitmaps
@@ -180,7 +181,7 @@ func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 		return err
 	}
 
-	var startLine int
+	var startLine int32
 
 	for _, sd := range pageStripes {
 		if eos, ok := sd.(*segments.EndOfStripe); ok {
@@ -286,7 +287,7 @@ func (p *Page) getPageInformationSegment() *segments.Header {
 	return nil
 }
 
-func (p *Page) getHeight() (int, error) {
+func (p *Page) getHeight() (int32, error) {
 	if p.FinalHeight == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -303,7 +304,7 @@ func (p *Page) getHeight() (int, error) {
 			return 0, errors.New("page information segment is of invalid type")
 		}
 
-		if pi.PageBMHeight == 0xffffffff {
+		if pi.PageBMHeight == math.MaxInt32 {
 			_, err = p.GetBitmap()
 			if err != nil {
 				return 0, err
@@ -315,7 +316,7 @@ func (p *Page) getHeight() (int, error) {
 	return p.FinalHeight, nil
 }
 
-func (p *Page) getWidth() (int, error) {
+func (p *Page) getWidth() (int32, error) {
 	if p.FinalWidth == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -337,7 +338,7 @@ func (p *Page) getWidth() (int, error) {
 	return p.FinalWidth, nil
 }
 
-func (p *Page) getResolutionX() (int, error) {
+func (p *Page) getResolutionX() (int32, error) {
 	if p.ResolutionX == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -359,7 +360,7 @@ func (p *Page) getResolutionX() (int, error) {
 	return p.ResolutionX, nil
 }
 
-func (p *Page) getResolutionY() (int, error) {
+func (p *Page) getResolutionY() (int32, error) {
 	if p.ResolutionY == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {

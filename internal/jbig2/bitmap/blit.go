@@ -7,8 +7,8 @@ package bitmap
 
 // Blit blits the source Bitmap 'src' into Destination bitmap: 'dst' on the provided 'x' and 'y' coordinates
 // with respect to the combination operator 'op'.
-func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) error {
-	var startLine, srcStartIdx int
+func Blit(src *Bitmap, dst *Bitmap, x, y int32, op CombinationOperator) error {
+	var startLine, srcStartIdx int32
 	srcEndIdx := src.RowStride - 1
 
 	// ignore those parts of source bitmap placed outside target bitmap.
@@ -29,15 +29,15 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) error {
 	}
 
 	var (
-		lastLine int
+		lastLine int32
 		err      error
 	)
-	shiftVal1 := x & 0x07
+	shiftVal1 := uint8(x & 0x07)
 	shiftVal2 := 8 - shiftVal1
-	padding := src.Width & 0x07
+	padding := uint8(src.Width & 0x07)
 	toShift := shiftVal2 - padding
 	useShift := shiftVal2&0x07 != 0
-	specialCase := src.Width <= ((srcEndIdx-srcStartIdx)<<3)+shiftVal2
+	specialCase := src.Width <= ((srcEndIdx-srcStartIdx)<<3)+int32(shiftVal2)
 	dstStartIdx := dst.GetByteIndex(x, y)
 
 	// get math.min()
@@ -61,10 +61,10 @@ func Blit(src *Bitmap, dst *Bitmap, x, y int, op CombinationOperator) error {
 
 func blitUnshifted(
 	src, dst *Bitmap,
-	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int,
+	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int32,
 	op CombinationOperator,
 ) error {
-	var dstLine int
+	var dstLine int32
 	increaser := func() {
 		dstLine++
 		dstStartIdx += dst.RowStride
@@ -96,10 +96,11 @@ func blitUnshifted(
 
 func blitShifted(
 	src, dst *Bitmap,
-	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
-	op CombinationOperator, padding int,
+	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int32,
+	toShift, shiftVal1, shiftVal2 uint8,
+	op CombinationOperator, padding uint8,
 ) error {
-	var dstLine int
+	var dstLine int32
 	increaser := func() {
 		dstLine++
 		dstStartIdx += dst.RowStride
@@ -133,7 +134,7 @@ func blitShifted(
 				newByte = byte(register >> (8 - uint8(shiftVal2)))
 
 				if padding != 0 {
-					newByte = unpad(uint(8+toShift), newByte)
+					newByte = unpad(8+toShift, newByte)
 				}
 
 				oldByte, err = dst.GetByte(dstIdx)
@@ -152,10 +153,11 @@ func blitShifted(
 
 func blitSpecialShifted(
 	src, dst *Bitmap,
-	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx, toShift, shiftVal1, shiftVal2 int,
+	startLine, lastLine, dstStartIdx, srcStartIdx, srcEndIdx int32,
+	toShift, shiftVal1, shiftVal2 uint8,
 	op CombinationOperator,
 ) error {
-	var dstLine int
+	var dstLine int32
 	increaser := func() {
 		dstLine++
 		dstStartIdx += dst.RowStride
@@ -181,7 +183,7 @@ func blitSpecialShifted(
 			newByte = byte(register >> 8)
 
 			if srcIdx == srcEndIdx {
-				newByte = unpad(uint(toShift), newByte)
+				newByte = unpad(toShift, newByte)
 			}
 
 			if err = dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op)); err != nil {
@@ -195,6 +197,6 @@ func blitSpecialShifted(
 	return nil
 }
 
-func unpad(padding uint, b byte) byte {
+func unpad(padding uint8, b byte) byte {
 	return b >> padding << padding
 }

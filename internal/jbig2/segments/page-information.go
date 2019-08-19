@@ -7,6 +7,7 @@ package segments
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -20,16 +21,16 @@ type PageInformationSegment struct {
 	r reader.StreamReader
 
 	// Page bitmap height, four byte, 7.4.8.1
-	PageBMHeight int
+	PageBMHeight int32
 
 	// Page bitmap width, four byte, 7.4.8.1
-	PageBMWidth int
+	PageBMWidth int32
 
 	// Page X resolution, four byte 7.4.8.3
-	ResolutionX int
+	ResolutionX int32
 
 	// Page Y resolution, four byte 7.4.8.4
-	ResolutionY int
+	ResolutionY int32
 
 	// Page segment flags, one byte 7.4.8.5
 	combinaitonOperatorOverrideAllowed bool
@@ -86,7 +87,7 @@ func (p *PageInformationSegment) String() string {
 }
 
 func (p *PageInformationSegment) checkInput() error {
-	if p.PageBMHeight == 0xFFFFFFFFFF {
+	if p.PageBMHeight == math.MaxInt32 {
 		if !p.IsStripe {
 			common.Log.Debug("isStriped should contaion the value true")
 		}
@@ -177,14 +178,14 @@ func (p *PageInformationSegment) readResolution() error {
 	if err != nil {
 		return err
 	}
-	p.ResolutionX = int(tempResolution)
+	p.ResolutionX = int32(tempResolution)
 
 	tempResolution, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
 
-	p.ResolutionY = int(tempResolution)
+	p.ResolutionY = int32(tempResolution)
 	return nil
 }
 
@@ -286,13 +287,13 @@ func (p *PageInformationSegment) readWidthAndHeight() error {
 	if err != nil {
 		return err
 	}
-	p.PageBMWidth = int(tempInt)
+	p.PageBMWidth = int32(tempInt)
 
 	tempInt, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	p.PageBMHeight = int(tempInt)
+	p.PageBMHeight = int32(tempInt)
 	return nil
 }
 

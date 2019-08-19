@@ -35,7 +35,7 @@ var (
 		{0x5601, 46, 46, 0},
 	}
 
-	qeTable = []int{
+	qeTable = []uint32{
 		0x56010000, 0x34010000, 0x18010000, 0x0AC10000,
 		0x05210000, 0x02210000, 0x56010000, 0x54010000,
 		0x48010000, 0x38010000, 0x30010000, 0x24010000,
@@ -50,20 +50,20 @@ var (
 		0x00050000, 0x00010000, 0x56010000,
 	}
 
-	nmpsTable = []int{
+	nmpsTable = []uint32{
 		1, 2, 3, 4, 5, 38, 7, 8, 9, 10, 11, 12, 13, 29, 15,
 		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 		30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
 		44, 45, 45, 46,
 	}
 
-	nlpsTable = []int{
+	nlpsTable = []uint32{
 		1, 6, 9, 12, 29, 33, 6, 14, 14, 14, 17, 18, 20, 21, 14, 14, 15, 16, 17, 18, 19,
 		19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
 		39, 40, 41, 42, 43, 46,
 	}
 
-	switchTable = []int{
+	switchTable = []uint32{
 		1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -73,16 +73,16 @@ var (
 // Decoder is the arithmetic Decoder structure, used to decode the jbig2 Segments.
 type Decoder struct {
 	// ContextSize is the current decoder context size
-	ContextSize          []int
-	ReferedToContextSize []int
+	ContextSize          []uint32
+	ReferedToContextSize []uint32
 
 	r              reader.StreamReader
-	b              int
+	b              uint8
 	c              uint64
 	a              uint32
 	previous       int64
-	ct             int
-	prvCtr         int
+	ct             int32
+	prvCtr         int32
 	streamPosition int64
 }
 
@@ -90,8 +90,8 @@ type Decoder struct {
 func New(r reader.StreamReader) (*Decoder, error) {
 	d := &Decoder{
 		r:                    r,
-		ContextSize:          []int{16, 13, 10, 10},
-		ReferedToContextSize: []int{13, 10},
+		ContextSize:          []uint32{16, 13, 10, 10},
+		ReferedToContextSize: []uint32{13, 10},
 	}
 
 	// initialize the decoder from the reader
@@ -107,7 +107,7 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 	var (
 		bit     int
 		qeValue = qe[stats.cx()][0]
-		icx     = int(stats.cx())
+		icx     = int32(stats.cx())
 	)
 
 	defer func() {
@@ -138,10 +138,11 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 }
 
 // DecodeInt decodes the Integer from the arithmetic Decoder for the provided DecoderStats.
-func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
+func (d *Decoder) DecodeInt(stats *DecoderStats) (int32, error) {
 	var (
-		value, bit, s, bitsToRead, offset int
-		err                               error
+		value, offset      int32
+		bit, s, bitsToRead int
+		err                error
 	)
 	if stats == nil {
 		stats = NewStats(512, 1)
@@ -222,16 +223,16 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		value = (value << 1) | bit
+		value = (value << 1) | int32(bit)
 	}
 	value += offset
 
 	if s == 0 {
-		return int(value), nil
+		return value, nil
 	} else if s == 1 && value > 0 {
-		return int(-value), nil
+		return -value, nil
 	}
-	return math.MaxInt64, nil
+	return int32(math.MaxInt32), nil
 }
 
 // DecodeIAID decodes the IAID procedure, Annex A.3.
@@ -242,7 +243,7 @@ func (d *Decoder) DecodeIAID(codeLen uint64, stats *DecoderStats) (int64, error)
 
 	// A.3 2)
 	for i = 0; i < codeLen; i++ {
-		stats.SetIndex(int(d.previous))
+		stats.SetIndex(int32(d.previous))
 		bit, err := d.DecodeBit(stats)
 		if err != nil {
 			return 0, err
@@ -264,7 +265,7 @@ func (d *Decoder) init() error {
 		return err
 	}
 
-	d.b = int(b)
+	d.b = b
 	d.c = (uint64(b) << 16)
 
 	if err = d.readByte(); err != nil {
@@ -291,7 +292,7 @@ func (d *Decoder) readByte() error {
 		return err
 	}
 
-	d.b = int(b)
+	d.b = b
 
 	if d.b == 0xFF {
 		b1, err := d.r.ReadByte()
@@ -314,7 +315,7 @@ func (d *Decoder) readByte() error {
 		if err != nil {
 			return err
 		}
-		d.b = int(b)
+		d.b = b
 
 		d.c += uint64(d.b) << 8
 		d.ct = 8
@@ -345,7 +346,7 @@ func (d *Decoder) renormalize() error {
 }
 
 func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
-	stats.SetIndex(int(d.previous))
+	stats.SetIndex(int32(d.previous))
 	bit, err := d.DecodeBit(stats)
 	if err != nil {
 		common.Log.Debug("ArithmeticDecoder 'decodeIntBit'-> DecodeBit failed. %v", err)
@@ -360,7 +361,7 @@ func (d *Decoder) decodeIntBit(stats *DecoderStats) (int, error) {
 	return bit, nil
 }
 
-func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
+func (d *Decoder) mpsExchange(stats *DecoderStats, icx int32) int {
 	mps := stats.mps[stats.index]
 
 	if d.a < qe[icx][0] {
@@ -376,7 +377,7 @@ func (d *Decoder) mpsExchange(stats *DecoderStats, icx int) int {
 
 }
 
-func (d *Decoder) lpsExchange(stats *DecoderStats, icx int, qeValue uint32) int {
+func (d *Decoder) lpsExchange(stats *DecoderStats, icx int32, qeValue uint32) int {
 	mps := stats.getMps()
 	if d.a < qeValue {
 		stats.setEntry(int(qe[icx][1]))

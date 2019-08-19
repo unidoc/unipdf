@@ -12,14 +12,14 @@ import (
 
 // DecoderStats is the structure that contains arithmetic decode context.
 type DecoderStats struct {
-	index              int
-	contextSize        int
+	index              int32
+	contextSize        int32
 	codingContextTable []byte
 	mps                []byte
 }
 
 // NewStats creates new DecoderStats of size 'contextSize'.
-func NewStats(contextSize int, index int) *DecoderStats {
+func NewStats(contextSize int32, index int32) *DecoderStats {
 	return &DecoderStats{
 		index:              index,
 		contextSize:        contextSize,
@@ -59,8 +59,8 @@ func (d *DecoderStats) Reset() {
 }
 
 // SetIndex sets current decoder stats 'index'.
-func (d *DecoderStats) SetIndex(index int) {
-	d.index = int(uint(index))
+func (d *DecoderStats) SetIndex(index int32) {
+	d.index = index
 }
 
 // String implements Stringer interface.

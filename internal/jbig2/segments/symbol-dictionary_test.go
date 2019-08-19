@@ -13,6 +13,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -46,16 +47,15 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 
 		assert.True(t, s.isHuffmanEncoded)
 		assert.False(t, s.useRefinementAggregation)
-		assert.Equal(t, 1, s.numberOfExportedSymbols)
-		assert.Equal(t, 1, s.numberOfNewSymbols)
+		assert.Equal(t, uint32(1), s.numberOfExportedSymbols)
+		assert.Equal(t, uint32(1), s.numberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
 
-		if assert.NotEmpty(t, bm) {
-			for _, b := range bm {
-				t.Logf("Bitmap: %s", b.String())
-			}
+		assert.NotEmpty(t, bm)
+		if assert.Len(t, bm, 1) {
+			isLetterP(t, bm[0])
 		}
 	})
 
@@ -88,16 +88,16 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 
 		assert.True(t, s.isHuffmanEncoded)
 		assert.False(t, s.useRefinementAggregation)
-		assert.Equal(t, 2, s.numberOfExportedSymbols)
-		assert.Equal(t, 2, s.numberOfNewSymbols)
+		assert.Equal(t, uint32(2), s.numberOfExportedSymbols)
+		assert.Equal(t, uint32(2), s.numberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
 
-		if assert.NotEmpty(t, bm) {
-			for _, b := range bm {
-				t.Logf("Bitmap: %s", b.String())
-			}
+		if assert.Len(t, bm, 2) {
+			// first letter should be a 'c'
+			isLetterC(t, bm[0])
+			isLetterA(t, bm[1])
 		}
 	})
 
@@ -136,16 +136,15 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		assert.Equal(t, int8(2), s.sdATX[0])
 		assert.Equal(t, int8(-1), s.sdATY[0])
 
-		assert.Equal(t, 2, s.numberOfExportedSymbols)
-		assert.Equal(t, 2, s.numberOfNewSymbols)
+		assert.Equal(t, uint32(2), s.numberOfExportedSymbols)
+		assert.Equal(t, uint32(2), s.numberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
 
-		if assert.NotEmpty(t, bm) {
-			for _, b := range bm {
-				t.Logf("Bitmap: %s", b.String())
-			}
+		if assert.Len(t, bm, 2) {
+			isLetterC(t, bm[0])
+			isLetterA(t, bm[1])
 		}
 	})
 
@@ -204,16 +203,14 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			assert.Equal(t, s.sdATY[0], int8(-1))
 		}
 
-		assert.Equal(t, 1, s.numberOfExportedSymbols)
-		assert.Equal(t, 1, s.numberOfNewSymbols)
+		assert.Equal(t, uint32(1), s.numberOfExportedSymbols)
+		assert.Equal(t, uint32(1), s.numberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
 
-		if assert.NotEmpty(t, bm) {
-			for _, b := range bm {
-				t.Logf("Bitmap: %s", b.String())
-			}
+		if assert.Len(t, bm, 1) {
+			isLetterA(t, bm[0])
 		}
 	})
 }
@@ -222,6 +219,114 @@ var alreadySet bool
 
 func setLogger() {
 	if testing.Verbose() && !alreadySet {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+	}
+}
+
+func isLetterP(t *testing.T, b *bitmap.Bitmap) {
+	if b.Width != 5 || b.Height != 8 {
+		t.Fail()
+		return
+	}
+
+	for y := int32(0); y < b.Height; y++ {
+		for x := int32(0); x < b.Width; x++ {
+			pix := b.GetPixel(x, y)
+
+			switch y {
+			case 0, 4:
+				if x != 4 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			case 1, 2, 3:
+				if x == 0 || x == 4 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			case 5, 6, 7:
+				if x == 0 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			}
+		}
+	}
+}
+
+func isLetterC(t *testing.T, b *bitmap.Bitmap) {
+	if b.Width != 6 || b.Height != 6 {
+		t.Fail()
+		return
+	}
+
+	for y := int32(0); y < b.Height; y++ {
+		for x := int32(0); x < b.Width; x++ {
+			pix := b.GetPixel(x, y)
+
+			switch y {
+			case 0, 5:
+				if x == 0 || x == 5 {
+					assert.False(t, pix)
+				} else {
+					assert.True(t, pix)
+				}
+			case 1, 4:
+				if x == 0 || x == 5 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			default:
+				if x == 0 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			}
+		}
+	}
+}
+
+func isLetterA(t *testing.T, b *bitmap.Bitmap) {
+	if b.Width != 6 || b.Height != 6 {
+		t.Fail()
+		return
+	}
+
+	for y := int32(0); y < b.Height; y++ {
+		for x := int32(0); x < b.Width; x++ {
+			pix := b.GetPixel(x, y)
+
+			switch y {
+			case 0:
+				if x == 0 || x == 5 {
+					assert.False(t, pix)
+				} else {
+					assert.True(t, pix)
+				}
+			case 1:
+				if x == 5 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			case 2, 5:
+				if x == 0 {
+					assert.False(t, pix)
+				} else {
+					assert.True(t, pix)
+				}
+			default:
+				if x == 0 || x == 5 {
+					assert.True(t, pix)
+				} else {
+					assert.False(t, pix)
+				}
+			}
+		}
 	}
 }

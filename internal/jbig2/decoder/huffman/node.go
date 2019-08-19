@@ -27,7 +27,7 @@ type OutOfBandNode struct{}
 var _ Node = &OutOfBandNode{}
 
 // Decode implements Node interface.
-// NOTE: Decodes the out of band node by returning max int64 value.
+// Decodes the out of band node by returning max int64 value.
 func (o *OutOfBandNode) Decode(r reader.StreamReader) (int64, error) {
 	return int64(math.MaxInt64), nil
 }
@@ -43,8 +43,8 @@ func newOufOfBandNode(c *Code) *OutOfBandNode {
 
 // ValueNode represents a value node in a huffman tree. It is a leaf of a tree.
 type ValueNode struct {
-	rangeLen     int
-	rangeLow     int
+	rangeLen     int32
+	rangeLow     int32
 	isLowerRange bool
 }
 
@@ -82,7 +82,7 @@ func newValueNode(c *Code) *ValueNode {
 // It is defined as a pair of  two child nodes 'zero' and 'one' and a 'depth' level.
 // Implements Node interface.
 type InternalNode struct {
-	depth int
+	depth int32
 	zero  Node
 	one   Node
 }
@@ -175,12 +175,12 @@ func (i *InternalNode) append(c *Code) error {
 }
 
 func (i *InternalNode) pad(sb *strings.Builder) {
-	for j := 0; j < i.depth; j++ {
+	for j := int32(0); j < i.depth; j++ {
 		sb.WriteString("   ")
 	}
 }
 
 // newInternalNode creates new internal node.
-func newInternalNode(depth int) *InternalNode {
+func newInternalNode(depth int32) *InternalNode {
 	return &InternalNode{depth: depth}
 }

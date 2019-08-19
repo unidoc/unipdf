@@ -18,17 +18,17 @@ func CombineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 
 // Extract extracts the rectangle of given size from the source 'src' Bitmap.
 func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
-	dst := New(roi.Dx(), roi.Dy())
-	upShift := roi.Min.X & 0x07
+	dst := New(int32(roi.Dx()), int32(roi.Dy()))
+	upShift := uint8(roi.Min.X & 0x07)
 	downShift := 8 - upShift
-	padding := uint(8 - dst.Width&0x07)
-	srcLineStartIdx := src.GetByteIndex(roi.Min.X, roi.Min.Y)
-	srcLineEndIdx := src.GetByteIndex(roi.Max.X-1, roi.Min.Y)
+	padding := uint8(8 - dst.Width&0x07)
+	srcLineStartIdx := src.GetByteIndex(int32(roi.Min.X), int32(roi.Min.Y))
+	srcLineEndIdx := src.GetByteIndex(int32(roi.Max.X-1), int32(roi.Min.Y))
 	usePadding := dst.RowStride == srcLineEndIdx+1-srcLineStartIdx
 
-	var dstLineStartIdx int
+	var dstLineStartIdx int32
 
-	for y := roi.Min.Y; y < roi.Max.Y; y++ {
+	for y := int32(roi.Min.Y); y < int32(roi.Max.Y); y++ {
 		srcIdx := srcLineStartIdx
 		dstIdx := dstLineStartIdx
 
@@ -64,7 +64,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 				dstIdx++
 			}
 		} else {
-			err := copyLine(src, dst, uint(upShift), uint(downShift), padding, srcLineStartIdx, srcLineEndIdx, usePadding, srcIdx, dstIdx)
+			err := copyLine(src, dst, upShift, downShift, padding, srcLineStartIdx, srcLineEndIdx, usePadding, srcIdx, dstIdx)
 			if err != nil {
 				return nil, err
 			}
@@ -95,12 +95,12 @@ func combineBytes(oldByte, newByte byte, op CombinationOperator) byte {
 
 func copyLine(
 	src, dst *Bitmap,
-	sourceUpShift, sourceDownShift, padding uint,
-	firstSourceByteOfLine, lastSourceByteOfLine int,
-	usePadding bool, sourceOffset, targetOffset int,
+	sourceUpShift, sourceDownShift, padding uint8,
+	firstSourceByteOfLine, lastSourceByteOfLine int32,
+	usePadding bool, sourceOffset, targetOffset int32,
 ) error {
 	for x := firstSourceByteOfLine; x < lastSourceByteOfLine; x++ {
-		if sourceOffset+1 < len(src.Data) {
+		if sourceOffset+1 < int32(len(src.Data)) {
 			isLastByte := x+1 == lastSourceByteOfLine
 			v1, err := src.GetByte(sourceOffset)
 			if err != nil {

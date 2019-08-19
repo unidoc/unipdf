@@ -12,7 +12,7 @@ import (
 // EndOfStripe flags an end of stripe - see 7.4.9.
 type EndOfStripe struct {
 	r          reader.StreamReader
-	lineNumber int
+	lineNumber int32
 }
 
 // Init implements Segmenter interface.
@@ -22,7 +22,7 @@ func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
 }
 
 // LineNumber gets the EndOfStripe line number.
-func (e *EndOfStripe) LineNumber() int {
+func (e *EndOfStripe) LineNumber() int32 {
 	return e.lineNumber
 }
 
@@ -31,6 +31,6 @@ func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
 	if err != nil {
 		return err
 	}
-	e.lineNumber = int(temp)
+	e.lineNumber = int32(temp)
 	return nil
 }

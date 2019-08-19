@@ -21,19 +21,19 @@ func TestBitmap(t *testing.T) {
 		// tests the creator of the bitmap
 		t.Run("SingleBytePerRow", func(t *testing.T) {
 			bm := New(5, 5)
-			assert.Equal(t, 5, bm.Height)
-			assert.Equal(t, 5, bm.Width)
-			assert.Equal(t, 1, bm.RowStride)
+			assert.Equal(t, int32(5), bm.Height)
+			assert.Equal(t, int32(5), bm.Width)
+			assert.Equal(t, int32(1), bm.RowStride)
 			assert.Equal(t, 5, len(bm.Data))
 		})
 
 		t.Run("MultipleBytesPerRow", func(t *testing.T) {
 			bm := New(25, 25)
-			assert.Equal(t, 25, bm.Height)
-			assert.Equal(t, 25, bm.Width)
+			assert.Equal(t, int32(25), bm.Height)
+			assert.Equal(t, int32(25), bm.Width)
 
 			// 3 * 8 < 25 => RowStride = 4
-			assert.Equal(t, 4, bm.RowStride)
+			assert.Equal(t, int32(4), bm.RowStride)
 			// 4 * 25
 			assert.Equal(t, 100, len(bm.Data))
 		})
@@ -201,8 +201,8 @@ func TestBitmap(t *testing.T) {
 			t.Run("AllMarked", func(t *testing.T) {
 				// bitmap width - 2196 % 8 = 4
 				bm := New(2196, 3)
-				for x := 0; x < bm.Width; x++ {
-					for y := 0; y < bm.Height; y++ {
+				for x := int32(0); x < bm.Width; x++ {
+					for y := int32(0); y < bm.Height; y++ {
 						bm.SetPixel(x, y, 1)
 					}
 				}

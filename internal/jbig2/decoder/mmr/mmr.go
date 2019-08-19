@@ -14,7 +14,7 @@ import (
 
 // Decoder is the jbig2 mmr data decoder.
 type Decoder struct {
-	width, height int
+	width, height int32
 	data          *runData
 
 	whiteTable []*code
@@ -23,7 +23,7 @@ type Decoder struct {
 }
 
 // New creates new jbig2 mmr decoder for the provided data stream.
-func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64) (*Decoder, error) {
+func New(r reader.StreamReader, width, height int32, dataOffset, dataLength int64) (*Decoder, error) {
 	m := &Decoder{
 		width:  width,
 		height: height,
@@ -52,15 +52,15 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 	b = bitmap.New(m.width, m.height)
 
 	// define offsets
-	currentOffsets := make([]int, b.Width+5)
-	referenceOffsets := make([]int, b.Width+5)
-	referenceOffsets[0] = b.Width
+	currentOffsets := make([]int32, b.Width+5)
+	referenceOffsets := make([]int32, b.Width+5)
+	referenceOffsets[0] = int32(b.Width)
 
-	refRunLength := 1
-	count := 0
+	refRunLength := int32(1)
+	var count int32
 
-	for line := 0; line < b.Height; line++ {
-		count, err = m.uncompress2d(m.data, referenceOffsets, refRunLength, currentOffsets, b.Width)
+	for line := int32(0); line < b.Height; line++ {
+		count, err = m.uncompress2d(m.data, referenceOffsets, refRunLength, currentOffsets, int32(b.Width))
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 	return b, nil
 }
 
-func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
+func (m *Decoder) createLittleEndianTable(codes [][3]int32) ([]*code, error) {
 	firstLevelTable := make([]*code, firstLevelTablemask+1)
 
 	for i := 0; i < len(codes); i++ {
@@ -97,14 +97,14 @@ func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 		if cd.bitLength <= firstLevelTableSize {
 			variantLength := firstLevelTableSize - cd.bitLength
 			baseWord := cd.codeWord << uint(variantLength)
-			for variant := (1 << uint(variantLength)) - 1; variant >= 0; variant-- {
+			for variant := int32(1<<uint(variantLength)) - 1; variant >= 0; variant-- {
 				index := baseWord | variant
 				firstLevelTable[index] = cd
 			}
 		} else {
 			firstLevelIndex := cd.codeWord >> uint(cd.bitLength-firstLevelTableSize)
 			if firstLevelTable[firstLevelIndex] == nil {
-				var firstLevelCode = newCode([3]int{})
+				var firstLevelCode = newCode([3]int32{})
 				firstLevelCode.subTable = make([]*code, secondLevelTableMask+1)
 				firstLevelTable[firstLevelIndex] = firstLevelCode
 			}
@@ -114,7 +114,7 @@ func (m *Decoder) createLittleEndianTable(codes [][3]int) ([]*code, error) {
 				baseWord := (cd.codeWord << uint(variantLength)) & secondLevelTableMask
 				firstLevelTable[firstLevelIndex].nonNilSubTable = true
 
-				for variant := (1 << uint(variantLength)) - 1; variant >= 0; variant-- {
+				for variant := int32(1<<uint(variantLength)) - 1; variant >= 0; variant-- {
 					firstLevelTable[firstLevelIndex].subTable[baseWord|variant] = cd
 				}
 			} else {
@@ -142,12 +142,12 @@ func (m *Decoder) detectAndSkipEOL() error {
 }
 
 // fillBitmap fills the bitmap with the current line and offsets from the Decoder.
-func (m *Decoder) fillBitmap(b *bitmap.Bitmap, line int, currentOffsets []int, count int) error {
+func (m *Decoder) fillBitmap(b *bitmap.Bitmap, line int32, currentOffsets []int32, count int32) error {
 	var targetByteValue byte
-	x := 0
+	var x int32
 	targetByte := b.GetByteIndex(x, line)
 
-	for index := 0; index < count; index++ {
+	for index := int32(0); index < count; index++ {
 		value := byte(1)
 		offset := currentOffsets[index]
 
@@ -196,12 +196,12 @@ func (m *Decoder) initTables() (err error) {
 	return nil
 }
 
-func (m *Decoder) uncompress1d(data *runData, runOffsets []int, width int) (int, error) {
+func (m *Decoder) uncompress1d(data *runData, runOffsets []int32, width int32) (int32, error) {
 	var (
 		whiteRun  = true
-		iBitPos   int
+		iBitPos   int32
 		cd        *code
-		refOffset int
+		refOffset int32
 		err       error
 	)
 
@@ -238,8 +238,8 @@ outer:
 		}
 	}
 
-	if runOffsets[refOffset] != width {
-		runOffsets[refOffset] = width
+	if runOffsets[refOffset] != int32(width) {
+		runOffsets[refOffset] = int32(width)
 	}
 	result := EOL
 	if cd != nil && cd.runLength != EOL {
@@ -250,15 +250,15 @@ outer:
 
 func (m *Decoder) uncompress2d(
 	rd *runData,
-	referenceOffsets []int,
-	refRunLength int,
-	runOffsets []int,
-	width int,
-) (int, error) {
+	referenceOffsets []int32,
+	refRunLength int32,
+	runOffsets []int32,
+	width int32,
+) (int32, error) {
 	var (
-		referenceBuffOffset    int
-		currentBuffOffset      int
-		currentLineBitPosition int
+		referenceBuffOffset    uint32
+		currentBuffOffset      int32
+		currentLineBitPosition int32
 		whiteRun               = true
 		err                    error
 		c                      *code

@@ -14,20 +14,20 @@ import (
 )
 
 const (
-	maxRunDataBuffer int  = 1024 << 7
-	minRunDataBuffer int  = 3
-	codeOffset       uint = 24
+	maxRunDataBuffer int32 = 1024 << 7
+	minRunDataBuffer int32 = 3
+	codeOffset       uint  = 24
 )
 
 type runData struct {
 	r          *reader.SubstreamReader
-	offset     int
-	lastOffset int
-	lastCode   int
+	offset     int32
+	lastOffset int32
+	lastCode   int32
 
 	buffer     []byte
-	bufferBase int
-	bufferTop  int
+	bufferBase int32
+	bufferTop  int32
 }
 
 func newRunData(r *reader.SubstreamReader) (*runData, error) {
@@ -37,7 +37,7 @@ func newRunData(r *reader.SubstreamReader) (*runData, error) {
 		lastOffset: 1,
 	}
 
-	length := minInt(maxInt(minRunDataBuffer, int(r.Length())), maxRunDataBuffer)
+	length := minInt(maxInt(minRunDataBuffer, int32(r.Length())), maxRunDataBuffer)
 	d.buffer = make([]byte, length)
 
 	if err := d.fillBuffer(0); err != nil {
@@ -78,13 +78,13 @@ func (r *runData) uncompressGetCodeLittleEndian(table []*code) (*code, error) {
 	return result, nil
 }
 
-func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
+func (r *runData) uncompressGetNextCodeLittleEndian() (int32, error) {
 	bitsToFill := r.offset - r.lastOffset
 
 	// check whether we can refill, or need to fill in absolute mode
 	if bitsToFill < 0 || bitsToFill > 24 {
 		// refill at absolute offset
-		byteOffset := (r.offset >> 3) - r.bufferBase
+		byteOffset := int32(r.offset>>3) - r.bufferBase
 
 		if byteOffset >= r.bufferTop {
 			byteOffset += r.bufferBase
@@ -100,7 +100,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 			(uint32(r.buffer[byteOffset+2] & 0xFF))
 		bitOffset := uint32(r.offset & 7)
 		lastCode <<= bitOffset
-		r.lastCode = int(lastCode)
+		r.lastCode = int32(lastCode)
 	} else {
 		// the offset to the next byte boundary as seen from the last offset
 		bitOffset := r.lastOffset & 7 // lastoffset % 8
@@ -109,7 +109,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 		if bitsToFill <= avail {
 			r.lastCode <<= uint(bitsToFill)
 		} else {
-			byteOffset := (r.lastOffset >> 3) + 3 - r.bufferBase
+			byteOffset := int32(r.lastOffset>>3) + 3 - r.bufferBase
 
 			if byteOffset >= r.bufferTop {
 				byteOffset += r.bufferBase
@@ -123,7 +123,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 
 			for {
 				r.lastCode <<= uint(bitOffset)
-				r.lastCode |= int(uint(r.buffer[byteOffset]) & 0xFF)
+				r.lastCode |= int32(uint(r.buffer[byteOffset]) & 0xFF)
 				bitsToFill -= bitOffset
 				byteOffset++
 				bitOffset = 8
@@ -140,7 +140,7 @@ func (r *runData) uncompressGetNextCodeLittleEndian() (int, error) {
 	return r.lastCode, nil
 }
 
-func (r *runData) fillBuffer(byteOffset int) error {
+func (r *runData) fillBuffer(byteOffset int32) error {
 	r.bufferBase = byteOffset
 
 	_, err := r.r.Seek(int64(byteOffset), io.SeekStart)
@@ -154,15 +154,18 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	}
 
 	if err == nil {
-		r.bufferTop, err = r.r.Read(r.buffer)
+		var top int
+		top, err = r.r.Read(r.buffer)
+		r.bufferTop = int32(top)
 		if err != nil {
 			if err == io.EOF {
-				common.Log.Debug("Read EOF")
+				common.Log.Trace("Read EOF")
 				r.bufferTop = -1
 			} else {
 				return err
 			}
 		}
+
 	}
 
 	// check filling degree
@@ -188,7 +191,7 @@ func (r *runData) fillBuffer(byteOffset int) error {
 	if r.bufferTop < 0 {
 		// if we're at EOF just supply zero-bytes
 		r.buffer = make([]byte, len(r.buffer))
-		r.bufferTop = len(r.buffer) - 3
+		r.bufferTop = int32(len(r.buffer) - 3)
 	}
 
 	return nil

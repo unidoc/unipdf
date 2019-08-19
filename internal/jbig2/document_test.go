@@ -105,8 +105,8 @@ func TestDocument(t *testing.T) {
 
 			assert.True(t, sd.IsHuffmanEncoded())
 			assert.False(t, sd.UseRefinementAggregation())
-			assert.Equal(t, 1, sd.NumberOfExportedSymbols())
-			assert.Equal(t, 1, sd.NumberOfNewSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfExportedSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfNewSymbols())
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
@@ -126,11 +126,11 @@ func TestDocument(t *testing.T) {
 			pi, ok := seg.(*segments.PageInformationSegment)
 			require.True(t, ok)
 
-			assert.Equal(t, 64, pi.PageBMWidth)
-			assert.Equal(t, 56, pi.PageBMHeight)
+			assert.Equal(t, int32(64), pi.PageBMWidth)
+			assert.Equal(t, int32(56), pi.PageBMHeight)
 
-			assert.Equal(t, 0, pi.ResolutionX)
-			assert.Equal(t, 0, pi.ResolutionY)
+			assert.Equal(t, int32(0), pi.ResolutionX)
+			assert.Equal(t, int32(0), pi.ResolutionY)
 
 			assert.Equal(t, bitmap.CmbOpOr, pi.CombinationOperator())
 			assert.False(t, pi.IsStripe)
@@ -170,8 +170,8 @@ func TestDocument(t *testing.T) {
 			bm, err := tr.GetRegionBitmap()
 			require.NoError(t, err)
 
-			assert.Equal(t, 8, bm.Height)
-			assert.Equal(t, 37, bm.Width)
+			assert.Equal(t, int32(8), bm.Height)
+			assert.Equal(t, int32(37), bm.Width)
 
 			expected := bitmap.New(37, 8)
 			err = bitmap.Blit(cSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
@@ -360,8 +360,8 @@ func TestDocument(t *testing.T) {
 			bm, err := ht.GetRegionBitmap()
 			require.NoError(t, err)
 
-			assert.Equal(t, 32, bm.Width)
-			assert.Equal(t, 36, bm.Height)
+			assert.Equal(t, int32(32), bm.Width)
+			assert.Equal(t, int32(36), bm.Height)
 		})
 
 		// EOP segment
@@ -384,8 +384,8 @@ func TestDocument(t *testing.T) {
 			pi, ok := seg.(*segments.PageInformationSegment)
 			require.True(t, ok)
 
-			assert.Equal(t, 37, pi.PageBMWidth)
-			assert.Equal(t, 8, pi.PageBMHeight)
+			assert.Equal(t, int32(37), pi.PageBMWidth)
+			assert.Equal(t, int32(8), pi.PageBMHeight)
 		})
 
 		t.Run("Segment#17", func(t *testing.T) {
@@ -465,7 +465,6 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		data := []byte{
-
 			// File Header
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x01,
 
@@ -564,11 +563,11 @@ func cSymbol(t *testing.T) *bitmap.Bitmap {
 func getFrame(t *testing.T) *bitmap.Bitmap {
 	t.Helper()
 	expected := bitmap.New(54, 44)
-	for y := 0; y < expected.Height; y++ {
+	for y := int32(0); y < expected.Height; y++ {
 		switch y {
 		case 0, 1, expected.Height - 1, expected.Height - 2:
 			// full
-			for x := 0; x < expected.Width; x++ {
+			for x := int32(0); x < expected.Width; x++ {
 				require.NoError(t, expected.SetPixel(x, y, 1))
 			}
 		default:

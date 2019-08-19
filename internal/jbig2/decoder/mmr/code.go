@@ -10,14 +10,14 @@ import (
 )
 
 type code struct {
-	bitLength      int
-	codeWord       int
-	runLength      int
+	bitLength      int32
+	codeWord       int32
+	runLength      int32
 	subTable       []*code
 	nonNilSubTable bool
 }
 
-func newCode(codeData [3]int) *code {
+func newCode(codeData [3]int32) *code {
 	return &code{
 		bitLength: codeData[0],
 		codeWord:  codeData[1],

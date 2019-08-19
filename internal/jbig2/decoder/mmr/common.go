@@ -5,14 +5,14 @@
 
 package mmr
 
-func maxInt(f, s int) int {
+func maxInt(f, s int32) int32 {
 	if f < s {
 		return s
 	}
 	return f
 }
 
-func minInt(f, s int) int {
+func minInt(f, s int32) int32 {
 	if f > s {
 		return s
 	}

@@ -55,7 +55,7 @@ func TestDecodePatternDictionary(t *testing.T) {
 			require.Equal(t, true, p.IsMMREncoded)
 			require.Equal(t, byte(4), p.HdpWidth)
 			require.Equal(t, byte(4), p.HdpHeight)
-			require.Equal(t, 15, p.GrayMax)
+			require.Equal(t, uint32(15), p.GrayMax)
 
 			dict, err := p.GetDictionary()
 			require.NoError(t, err)
