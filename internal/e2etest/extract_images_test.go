@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -32,7 +31,7 @@ var (
 	extractImagesCorpusFolder = os.Getenv("UNIDOC_EXTRACT_IMAGES_TESTDATA")
 )
 
-// knownHashes defines a list of known output hashes to ensure that the output is constant.
+// knownExtrImgsHashes defines a list of known output hashes to ensure that the output is constant.
 // If there is a change in hash need to find out why and update only if the change is accepted.
 var knownExtrImgsHashes = map[string]string{
 	"1ecec6aa4abed1855fb88916d7feb8c9692daaf5.pdf": "64899eb2c683f2e0b1ce0e35b5377aed",
@@ -78,9 +77,6 @@ func TestExtractImages(t *testing.T) {
 
 	matchcount := 0
 	for _, file := range files {
-		// Ensure memory is garbage collected prior to running for consistency.
-		debug.FreeOSMemory()
-
 		basename := filepath.Base(file.Name())
 		outName := strings.TrimSuffix(basename, filepath.Ext(basename)) + ".zip"
 
