@@ -97,7 +97,7 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			}
 
 			pos := (y*int(img.Width) + x) % divider
-			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(pos))
+			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(7-pos))
 
 			return gocolor.Gray{
 				Y: uint8(uint32(val) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
@@ -136,13 +136,13 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 
 			var r, g, b uint8
 			if pos == 0 {
-				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
-				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
-				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
-			} else {
 				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
-				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
 				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
+			} else {
+				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
+				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
 			}
 
 			return gocolor.RGBA{
