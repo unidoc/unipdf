@@ -13,7 +13,6 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 )
 
-
 // PdfAnnotation represents an annotation in PDF (section 12.5 p. 389).
 type PdfAnnotation struct {
 	// context contains the specific annotation fields.

@@ -71,8 +71,7 @@ func (f *PdfFilespec) ToPdfObject() core.PdfObject {
 	return f.container
 }
 
-// NewPdfFilespecFromDict creates and returns a new PdfFilespec object
-// from the input dictionary.
+// NewPdfFilespecFromObj creates and returns a new PdfFilespec object.
 func NewPdfFilespecFromObj(obj core.PdfObject) (*PdfFilespec, error) {
 	fs := &PdfFilespec{}
 
