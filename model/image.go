@@ -91,13 +91,18 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			// 1, 2 or 4 bit grayscale image.
 			divider := 8 / int(img.BitsPerComponent)
 
+			// Calculate index of byte containing the gray value
+			// in the image data, based on the specified x,y coordinates.
 			idx := (y*int(img.Width) + x) / divider
 			if idx >= lenData {
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
 
-			pos := (y*int(img.Width) + x) % divider
-			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(7-pos))
+			// Calculate bit position at which the color data starts.
+			pos := 8 - uint(((y*int(img.Width)+x)%divider)+1)
+
+			// Extract gray color value starting at the calculated position.
+			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> pos)
 
 			return gocolor.Gray{
 				Y: uint8(uint32(val) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
@@ -132,14 +137,20 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			if idx+1 >= lenData {
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
+
+			// Calculate bit position at which the color data starts.
 			pos := (y*int(img.Width) + x) * 3 % 2
 
 			var r, g, b uint8
 			if pos == 0 {
+				// The R and G components are contained by the current byte
+				// and the B component is contained by the next byte.
 				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
 				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
 				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
 			} else {
+				// The R component is contained by the current byte and the
+				// G and B components are contained by the next byte.
 				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
 				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
 				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))

@@ -313,8 +313,8 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 			if err != nil {
 				return img, err
 			}
-
 			r, g, b, _ := color.RGBA()
+
 			idx := (y*int(img.Width) + x) * 3
 			data[idx], data[idx+1], data[idx+2] = uint8(r>>8), uint8(g>>8), uint8(b>>8)
 		}
