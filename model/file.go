@@ -1,7 +1,7 @@
 package model
 
 import (
-	"fmt"
+	"errors"
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 )
@@ -25,7 +25,7 @@ type PdfFilespec struct {
 	Desc core.PdfObject // Descriptive text associated with the file specification
 	CI   core.PdfObject // A collection item dictionary, which shall be used to create the user interface for portable collections
 
-	container *core.PdfIndirectObject
+	container core.PdfObject
 }
 
 // GetContainingPdfObject implements interface PdfModel.
@@ -33,10 +33,24 @@ func (f *PdfFilespec) GetContainingPdfObject() core.PdfObject {
 	return f.container
 }
 
+func (f *PdfFilespec) getDict() *core.PdfObjectDictionary {
+	if indObj, is := f.container.(*core.PdfIndirectObject); is {
+		dict, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
+		if !ok {
+			return nil
+		}
+		return dict
+	} else if dictObj, isDict := f.container.(*core.PdfObjectDictionary); isDict {
+		return dictObj
+	} else {
+		common.Log.Debug("Trying to access Filespec dictionary of invalid object type (%T)", f.container)
+		return nil
+	}
+}
+
 // ToPdfObject implements interface PdfModel.
 func (f *PdfFilespec) ToPdfObject() core.PdfObject {
-	container := f.container
-	d := container.PdfObject.(*core.PdfObjectDictionary)
+	d := f.getDict()
 
 	d.Clear()
 
@@ -54,30 +68,39 @@ func (f *PdfFilespec) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("Desc", f.Desc)
 	d.SetIfNotNil("CI", f.CI)
 
-	return container
+	return f.container
 }
 
-// Used for PDF parsing.  Loads a PDF filespec model from a PDF dictionary.
-func (r *PdfReader) newPdfFilespecFromIndirectObject(container *core.PdfIndirectObject) (*PdfFilespec, error) {
-	d, isDict := container.PdfObject.(*core.PdfObjectDictionary)
-	if !isDict {
-		return nil, fmt.Errorf("annotation indirect object not containing a dictionary")
-	}
-
-	// Check if cached, return cached model if exists.
-	if model := r.modelManager.GetModelFromPrimitive(d); model != nil {
-		fs, ok := model.(*PdfFilespec)
-		if !ok {
-			return nil, fmt.Errorf("cached model not a PDF annotation")
-		}
-		return fs, nil
-	}
-
+// NewPdfFilespecFromDict creates and returns a new PdfFilespec object
+// from the input dictionary.
+func NewPdfFilespecFromObj(obj core.PdfObject) (*PdfFilespec, error) {
 	fs := &PdfFilespec{}
-	fs.container = container
-	r.modelManager.Register(d, fs)
 
-	if obj := d.Get("Type"); obj != nil {
+	var dict *core.PdfObjectDictionary
+	if indObj, isInd := obj.(*core.PdfIndirectObject); isInd {
+		fs.container = indObj
+
+		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
+		if !ok {
+			common.Log.Debug("Object not a dictionary type")
+			return nil, core.ErrTypeError
+		}
+
+		dict = d
+	} else if d, isDict := obj.(*core.PdfObjectDictionary); isDict {
+		fs.container = d
+		dict = d
+	} else {
+		common.Log.Debug("Object type unexpected (%T)", obj)
+		return nil, core.ErrTypeError
+	}
+
+	if dict == nil {
+		common.Log.Debug("Dictionary missing")
+		return nil, errors.New("dict missing")
+	}
+
+	if obj := dict.Get("Type"); obj != nil {
 		str, ok := obj.(*core.PdfObjectName)
 		if !ok {
 			common.Log.Trace("Incompatibility! Invalid type of Type (%T) - should be Name", obj)
@@ -89,55 +112,42 @@ func (r *PdfReader) newPdfFilespecFromIndirectObject(container *core.PdfIndirect
 			}
 		}
 	}
-
-	if obj := d.Get("FS"); obj != nil {
+	if obj := dict.Get("FS"); obj != nil {
 		fs.FS = obj
 	}
-
-	if obj := d.Get("F"); obj != nil {
+	if obj := dict.Get("F"); obj != nil {
 		fs.F = obj
 	}
-
-	if obj := d.Get("UF"); obj != nil {
+	if obj := dict.Get("UF"); obj != nil {
 		fs.UF = obj
 	}
-
-	if obj := d.Get("DOS"); obj != nil {
+	if obj := dict.Get("DOS"); obj != nil {
 		fs.DOS = obj
 	}
-
-	if obj := d.Get("Mac"); obj != nil {
+	if obj := dict.Get("Mac"); obj != nil {
 		fs.Mac = obj
 	}
-
-	if obj := d.Get("Unix"); obj != nil {
+	if obj := dict.Get("Unix"); obj != nil {
 		fs.Unix = obj
 	}
-
-	if obj := d.Get("ID"); obj != nil {
+	if obj := dict.Get("ID"); obj != nil {
 		fs.ID = obj
 	}
-
-	if obj := d.Get("V"); obj != nil {
+	if obj := dict.Get("V"); obj != nil {
 		fs.V = obj
 	}
-
-	if obj := d.Get("EF"); obj != nil {
+	if obj := dict.Get("EF"); obj != nil {
 		fs.EF = obj
 	}
-
-	if obj := d.Get("RF"); obj != nil {
+	if obj := dict.Get("RF"); obj != nil {
 		fs.RF = obj
 	}
-
-	if obj := d.Get("Desc"); obj != nil {
+	if obj := dict.Get("Desc"); obj != nil {
 		fs.Desc = obj
 	}
-
-	if obj := d.Get("CI"); obj != nil {
+	if obj := dict.Get("CI"); obj != nil {
 		fs.CI = obj
 	}
-
 	return fs, nil
 }
 
