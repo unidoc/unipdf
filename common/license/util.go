@@ -8,10 +8,14 @@ package license
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
-// Defaults to the open source license.
+// Defaults to unlicensed.
 var licenseKey = MakeUnlicensedKey()
 
 // SetLicenseKey sets and validates the license key.
@@ -33,6 +37,29 @@ func SetLicenseKey(content string, customerName string) error {
 	licenseKey = &lk
 
 	return nil
+}
+
+const licensePathEnvironmentVar = `UNIPDF_LICENSE_PATH`
+const licenseCustomerNameEnvironmentVar = `UNIPDF_CUSTOMER_NAME`
+
+func init() {
+	lpath := os.Getenv(licensePathEnvironmentVar)
+	custName := os.Getenv(licenseCustomerNameEnvironmentVar)
+
+	if len(lpath) == 0 || len(custName) == 0 {
+		return
+	}
+
+	data, err := ioutil.ReadFile(lpath)
+	if err != nil {
+		common.Log.Debug("Unable to read license file: %v", err)
+		return
+	}
+	err = SetLicenseKey(string(data), custName)
+	if err != nil {
+		common.Log.Debug("Unable to load license: %v", err)
+		return
+	}
 }
 
 func GetLicenseKey() *LicenseKey {

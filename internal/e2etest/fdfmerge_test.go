@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -78,9 +77,6 @@ func TestFdfMerging(t *testing.T) {
 		fdfPath := filepath.Join(fdfMergeCorpusFolder, file.Name())
 		bareName := strings.TrimSuffix(file.Name(), ".fdf")
 		pdfPath := filepath.Join(fdfMergeCorpusFolder, bareName+".pdf")
-
-		// Ensure memory is garbage collected prior to running for consistency.
-		debug.FreeOSMemory()
 
 		t.Logf("%s", file.Name())
 		params := fdfMergeParams{
