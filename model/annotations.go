@@ -13,6 +13,7 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 )
 
+
 // PdfAnnotation represents an annotation in PDF (section 12.5 p. 389).
 type PdfAnnotation struct {
 	// context contains the specific annotation fields.
@@ -91,7 +92,7 @@ type PdfAnnotationText struct {
 // (Section 12.5.6.5 p. 403).
 type PdfAnnotationLink struct {
 	*PdfAnnotation
-	A          core.PdfObject
+	A          *PdfAction
 	Dest       core.PdfObject
 	H          core.PdfObject
 	PA         core.PdfObject
@@ -1044,7 +1045,23 @@ func (r *PdfReader) newPdfAnnotationTextFromDict(d *core.PdfObjectDictionary) (*
 func (r *PdfReader) newPdfAnnotationLinkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationLink, error) {
 	annot := PdfAnnotationLink{}
 
-	annot.A = d.Get("A")
+	if obj := d.Get("A"); obj != nil {
+		indObj, isIndirect := obj.(*core.PdfIndirectObject)
+		if !isIndirect {
+			if _, isNull := obj.(*core.PdfObjectNull); !isNull {
+				return nil, errors.New("A should point to an indirect object")
+			}
+		} else {
+			actionObj, err := r.newPdfActionFromIndirectObject(indObj)
+			if err != nil {
+				return nil, err
+			}
+			if actionObj != nil {
+				annot.A = actionObj
+			}
+		}
+	}
+
 	annot.Dest = d.Get("Dest")
 	annot.H = d.Get("H")
 	annot.PA = d.Get("PA")
@@ -1497,7 +1514,9 @@ func (link *PdfAnnotationLink) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", core.MakeName("Link"))
-	d.SetIfNotNil("A", link.A)
+	if link.A != nil {
+		d.Set("A", link.A.context.ToPdfObject())
+	}
 	d.SetIfNotNil("Dest", link.Dest)
 	d.SetIfNotNil("H", link.H)
 	d.SetIfNotNil("PA", link.PA)
