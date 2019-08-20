@@ -368,7 +368,8 @@ func TestDocument(t *testing.T) {
 		t.Run("Page#2", func(t *testing.T) {
 			bm, err := p2.GetBitmap()
 			require.NoError(t, err)
-			t.Logf("Page#2: %s", bm.String())
+
+			assert.NotEmpty(t, bm.Data)
 		})
 
 		p3, err := d.GetPage(3)
