@@ -11,31 +11,33 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 )
 
+// PdfActionType represents an action type in PDF (section 12.6.4 p. 417).
 type PdfActionType string
 
-// // (Section 12.6.4 p. 417).
+// (Section 12.6.4 p. 417).
 // See Table 198 - Action types
 const (
 	ActionTypeGoTo        PdfActionType = "GoTo"        // Go to a destination in the current document
-	ActionTypeGoToR       PdfActionType = "GoToR"       // Go to remote, Go to a destination in another document
+	ActionTypeGoTo3DView  PdfActionType = "GoTo3DView"  // Set the current view of a 3D annotation
 	ActionTypeGoToE       PdfActionType = "GoToE"       // Go to embedded, PDF 1.6, Got to a destination in an embedded file
-	ActionTypeLaunch      PdfActionType = "Launch"      // Launch an application, usually to open a file
-	ActionTypeThread      PdfActionType = "Thread"      // Begin reading an article thread
-	ActionTypeURI         PdfActionType = "URI"         // Resolves a uniform resource identifier
-	ActionTypeSound       PdfActionType = "Sound"       // Play a sound
-	ActionTypeMovie       PdfActionType = "Movie"       // Play a movie
+	ActionTypeGoToR       PdfActionType = "GoToR"       // Go to remote, Go to a destination in another document
 	ActionTypeHide        PdfActionType = "Hide"        // Set an annotation's Hidden flag
-	ActionTypeNamed       PdfActionType = "Named"       // Execute an action predefined by the conforming reader
-	ActionTypeSubmitForm  PdfActionType = "SubmitForm"  // Send data to a uniform resource locator
-	ActionTypeResetForm   PdfActionType = "ResetForm"   // Set fields to their default values
 	ActionTypeImportData  PdfActionType = "ImportData"  // Import field values from a file
 	ActionTypeJavaScript  PdfActionType = "JavaScript"  // Execute a JavaScript script
-	ActionTypeSetOCGState PdfActionType = "SetOCGState" // Set the states of optional content groups
+	ActionTypeLaunch      PdfActionType = "Launch"      // Launch an application, usually to open a file
+	ActionTypeMovie       PdfActionType = "Movie"       // Play a movie
+	ActionTypeNamed       PdfActionType = "Named"       // Execute an action predefined by the conforming reader
 	ActionTypeRendition   PdfActionType = "Rendition"   // Controls the playing of multimedia content
+	ActionTypeResetForm   PdfActionType = "ResetForm"   // Set fields to their default values
+	ActionTypeSetOCGState PdfActionType = "SetOCGState" // Set the states of optional content groups
+	ActionTypeSound       PdfActionType = "Sound"       // Play a sound
+	ActionTypeSubmitForm  PdfActionType = "SubmitForm"  // Send data to a uniform resource locator
+	ActionTypeThread      PdfActionType = "Thread"      // Begin reading an article thread
 	ActionTypeTrans       PdfActionType = "Trans"       // Updates the display of a document, using a transition dictionary
-	ActionTypeGoTo3DView  PdfActionType = "GoTo3DView"  // Set the current view of a 3D annotation
+	ActionTypeURI         PdfActionType = "URI"         // Resolves a uniform resource identifier
 )
 
+// PdfAction represents an action in PDF (section 12.6 p. 412).
 type PdfAction struct {
 	context PdfModel
 
@@ -100,7 +102,7 @@ type PdfActionGoTo struct {
 // PdfActionGoToR represents a GoToR action
 type PdfActionGoToR struct {
 	*PdfAction
-	F         core.PdfObject // file specification
+	F         *PdfFilespec
 	D         core.PdfObject // name, byte string or array
 	NewWindow core.PdfObject
 }
@@ -108,7 +110,7 @@ type PdfActionGoToR struct {
 // PdfActionGoToE represents a GoToE action
 type PdfActionGoToE struct {
 	*PdfAction
-	F         core.PdfObject // file specification
+	F         *PdfFilespec
 	D         core.PdfObject // name, byte string or array
 	NewWindow core.PdfObject
 	T         core.PdfObject
@@ -117,7 +119,7 @@ type PdfActionGoToE struct {
 // PdfActionLaunch represents a launch action
 type PdfActionLaunch struct {
 	*PdfAction
-	F         core.PdfObject // file specification
+	F         *PdfFilespec
 	Win       core.PdfObject
 	Mac       core.PdfObject
 	Unix      core.PdfObject
@@ -127,7 +129,7 @@ type PdfActionLaunch struct {
 // PdfActionThread represents a thread action
 type PdfActionThread struct {
 	*PdfAction
-	F core.PdfObject // file specification
+	F *PdfFilespec
 	D core.PdfObject
 	B core.PdfObject
 }
@@ -173,22 +175,22 @@ type PdfActionNamed struct {
 // PdfActionSubmitForm represents a submitForm action
 type PdfActionSubmitForm struct {
 	*PdfAction
-	F core.PdfObject // File specification
+	F      *PdfFilespec
 	Fields core.PdfObject
-	Flags core.PdfObject
+	Flags  core.PdfObject
 }
 
 // PdfActionResetForm represents a resetForm action
 type PdfActionResetForm struct {
 	*PdfAction
 	Fields core.PdfObject
-	Flags core.PdfObject
+	Flags  core.PdfObject
 }
 
 // PdfActionImportData represents a importData action
 type PdfActionImportData struct {
 	*PdfAction
-	F core.PdfObject // File specification
+	F *PdfFilespec
 }
 
 // PdfActionSetOCGState represents a SetOCGState action
@@ -220,7 +222,7 @@ type PdfActionGoTo3DView struct {
 	V  core.PdfObject
 }
 
-// PdfActionJavascript represents a javaScript action
+// PdfActionJavaScript represents a javaScript action
 type PdfActionJavaScript struct {
 	*PdfAction
 	JS core.PdfObject
@@ -413,7 +415,11 @@ func (gotoRAct *PdfActionGoToR) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeGoToR)))
-	d.SetIfNotNil("F", gotoRAct.F)
+
+	if gotoRAct.F != nil {
+		d.Set("F", gotoRAct.F.ToPdfObject())
+	}
+
 	d.SetIfNotNil("D", gotoRAct.D)
 	d.SetIfNotNil("NewWindow", gotoRAct.NewWindow)
 	return container
@@ -426,7 +432,11 @@ func (gotoEAct *PdfActionGoToE) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeGoToE)))
-	d.SetIfNotNil("F", gotoEAct.F)
+
+	if gotoEAct.F != nil {
+		d.Set("F", gotoEAct.F.ToPdfObject())
+	}
+
 	d.SetIfNotNil("D", gotoEAct.D)
 	d.SetIfNotNil("NewWindow", gotoEAct.NewWindow)
 	d.SetIfNotNil("T", gotoEAct.T)
@@ -440,7 +450,11 @@ func (launchAct *PdfActionLaunch) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeLaunch)))
-	d.SetIfNotNil("F", launchAct.F)
+
+	if launchAct.F != nil {
+		d.Set("F", launchAct.F.ToPdfObject())
+	}
+
 	d.SetIfNotNil("Win", launchAct.Win)
 	d.SetIfNotNil("Mac", launchAct.Mac)
 	d.SetIfNotNil("Unix", launchAct.Unix)
@@ -455,7 +469,11 @@ func (threadAct *PdfActionThread) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeThread)))
-	d.SetIfNotNil("F", threadAct.F)
+
+	if threadAct.F != nil {
+		d.Set("F", threadAct.F.ToPdfObject())
+	}
+
 	d.SetIfNotNil("D", threadAct.D)
 	d.SetIfNotNil("B", threadAct.B)
 	return container
@@ -531,7 +549,11 @@ func (submitFormAct *PdfActionSubmitForm) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeSubmitForm)))
-	d.SetIfNotNil("F", submitFormAct.F)
+
+	if submitFormAct.F != nil {
+		d.Set("F", submitFormAct.F.ToPdfObject())
+	}
+
 	d.SetIfNotNil("Fields", submitFormAct.Fields)
 	d.SetIfNotNil("Flags", submitFormAct.Flags)
 	return container
@@ -556,7 +578,11 @@ func (importDataAct *PdfActionImportData) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("S", core.MakeName(string(ActionTypeImportData)))
-	d.SetIfNotNil("F", importDataAct.F)
+
+	if importDataAct.F != nil {
+		d.Set("F", importDataAct.F.ToPdfObject())
+	}
+
 	return container
 }
 
@@ -830,7 +856,16 @@ func (r *PdfReader) newPdfActionGotoFromDict(d *core.PdfObjectDictionary) (*PdfA
 func (r *PdfReader) newPdfActionGotoRFromDict(d *core.PdfObjectDictionary) (*PdfActionGoToR, error) {
 	action := PdfActionGoToR{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
+
 	action.D = d.Get("D")
 	action.NewWindow = d.Get("NewWindow")
 
@@ -840,7 +875,16 @@ func (r *PdfReader) newPdfActionGotoRFromDict(d *core.PdfObjectDictionary) (*Pdf
 func (r *PdfReader) newPdfActionGotoEFromDict(d *core.PdfObjectDictionary) (*PdfActionGoToE, error) {
 	action := PdfActionGoToE{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
+
 	action.D = d.Get("D")
 	action.NewWindow = d.Get("NewWindow")
 	action.T = d.Get("T")
@@ -851,7 +895,16 @@ func (r *PdfReader) newPdfActionGotoEFromDict(d *core.PdfObjectDictionary) (*Pdf
 func (r *PdfReader) newPdfActionLaunchFromDict(d *core.PdfObjectDictionary) (*PdfActionLaunch, error) {
 	action := PdfActionLaunch{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
+
 	action.Win = d.Get("Win")
 	action.Mac = d.Get("Mac")
 	action.Unix = d.Get("Unix")
@@ -863,7 +916,16 @@ func (r *PdfReader) newPdfActionLaunchFromDict(d *core.PdfObjectDictionary) (*Pd
 func (r *PdfReader) newPdfActionThreadFromDict(d *core.PdfObjectDictionary) (*PdfActionThread, error) {
 	action := PdfActionThread{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
+
 	action.D = d.Get("D")
 	action.B = d.Get("B")
 
@@ -921,7 +983,16 @@ func (r *PdfReader) newPdfActionNamedFromDict(d *core.PdfObjectDictionary) (*Pdf
 func (r *PdfReader) newPdfActionSubmitFormFromDict(d *core.PdfObjectDictionary) (*PdfActionSubmitForm, error) {
 	action := PdfActionSubmitForm{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
+
 	action.Fields = d.Get("Fields")
 	action.Flags = d.Get("Flags")
 
@@ -940,7 +1011,15 @@ func (r *PdfReader) newPdfActionResetFormFromDict(d *core.PdfObjectDictionary) (
 func (r *PdfReader) newPdfActionImportDataFromDict(d *core.PdfObjectDictionary) (*PdfActionImportData, error) {
 	action := PdfActionImportData{}
 
-	action.F = d.Get("F")
+	if obj := d.Get("F"); obj != nil {
+		fileSpec, err := NewPdfFilespecFromObj(obj)
+		if err != nil {
+			return nil, err
+		}
+		if fileSpec != nil {
+			action.F = fileSpec
+		}
+	}
 
 	return &action, nil
 }
