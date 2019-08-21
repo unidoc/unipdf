@@ -89,7 +89,8 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 		switch img.BitsPerComponent {
 		case 1, 2, 4:
 			// 1, 2 or 4 bit grayscale image.
-			divider := 8 / int(img.BitsPerComponent)
+			bpc := int(img.BitsPerComponent)
+			divider := 8 / bpc
 
 			// Calculate index of byte containing the gray value
 			// in the image data, based on the specified x,y coordinates.
@@ -99,7 +100,7 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			}
 
 			// Calculate bit position at which the color data starts.
-			pos := 8 - uint(((y*int(img.Width)+x)%divider)+1)
+			pos := 8 - uint(((y*int(img.Width)+x)%divider)*bpc+bpc)
 
 			// Extract gray color value starting at the calculated position.
 			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> pos)
@@ -157,9 +158,9 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			}
 
 			return gocolor.RGBA{
-				R: r,
-				G: g,
-				B: b,
+				R: uint8(uint32(r) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+				G: uint8(uint32(g) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+				B: uint8(uint32(b) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
 				A: uint8(0xff),
 			}, nil
 		case 16:
@@ -205,7 +206,7 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 		}
 	case 4:
 		// CMYK image.
-		idx := y*int(img.Width) + x
+		idx := 4 * (y*int(img.Width) + x)
 		if idx+3 >= lenData {
 			return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 		}
