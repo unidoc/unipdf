@@ -7,6 +7,7 @@ package segments
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -20,16 +21,16 @@ type RegionSegment struct {
 	r reader.StreamReader
 
 	// Region segment bitmap width, 7.4.1.1
-	BitmapWidth int32
+	BitmapWidth int
 
 	// Region segment bitmap height, 7.4.1.2
-	BitmapHeight int32
+	BitmapHeight int
 
 	// Region segment bitmap X location, 7.4.1.3
-	XLocation int32
+	XLocation int
 
 	// Region segment bitmap Y location, 7.4.1.4
-	YLocation int32
+	YLocation int
 
 	// Region segment flags, 7.4.1.5
 	CombinaionOperator bitmap.CombinationOperator
@@ -62,25 +63,25 @@ func (r *RegionSegment) parseHeader() error {
 	if err != nil {
 		return err
 	}
-	r.BitmapWidth = int32(temp & 0xffffffff)
+	r.BitmapWidth = int(temp & math.MaxInt32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.BitmapHeight = int32(temp & 0xffffffff)
+	r.BitmapHeight = int(temp & math.MaxInt32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.XLocation = int32(temp & 0xffffffff)
+	r.XLocation = int(temp & math.MaxInt32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.YLocation = int32(temp & 0xffffffff)
+	r.YLocation = int(temp & math.MaxInt32)
 
 	// Bit 3-7
 	r.r.ReadBits(5) // dirty read

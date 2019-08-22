@@ -138,9 +138,9 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 }
 
 // DecodeInt decodes the Integer from the arithmetic Decoder for the provided DecoderStats.
-func (d *Decoder) DecodeInt(stats *DecoderStats) (int32, error) {
+func (d *Decoder) DecodeInt(stats *DecoderStats) (int, error) {
 	var (
-		value, offset      int32
+		value, offset      int
 		bit, s, bitsToRead int
 		err                error
 	)
@@ -223,7 +223,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int32, error) {
 		if err != nil {
 			return 0, err
 		}
-		value = (value << 1) | int32(bit)
+		value = (value << 1) | bit
 	}
 	value += offset
 
@@ -232,7 +232,7 @@ func (d *Decoder) DecodeInt(stats *DecoderStats) (int32, error) {
 	} else if s == 1 && value > 0 {
 		return -value, nil
 	}
-	return int32(math.MaxInt32), nil
+	return int(math.MaxInt32), nil
 }
 
 // DecodeIAID decodes the IAID procedure, Annex A.3.

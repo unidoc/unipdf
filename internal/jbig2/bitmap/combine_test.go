@@ -37,8 +37,8 @@ func TestExtract(t *testing.T) {
 			res, err := Extract(roi, src)
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(5), res.Width)
-			assert.Equal(t, int32(10), res.Height)
+			assert.Equal(t, 5, res.Width)
+			assert.Equal(t, 10, res.Height)
 			assert.True(t, res.GetPixel(0, 0))
 			assert.True(t, res.GetPixel(4, 9))
 		})
@@ -57,8 +57,8 @@ func TestExtract(t *testing.T) {
 			res, err := Extract(roi, src)
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(10), res.Width)
-			assert.Equal(t, int32(5), res.Height)
+			assert.Equal(t, 10, res.Width)
+			assert.Equal(t, 5, res.Height)
 			assert.True(t, res.GetPixel(0, 0))
 			assert.True(t, res.GetPixel(3, 3))
 		})
@@ -77,8 +77,8 @@ func TestExtract(t *testing.T) {
 			res, err := Extract(roi, src)
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(6), res.Width)
-			assert.Equal(t, int32(6), res.Height)
+			assert.Equal(t, 6, res.Width)
+			assert.Equal(t, 6, res.Height)
 			assert.True(t, res.GetPixel(0, 0))
 			assert.True(t, res.GetPixel(5, 5))
 		})
@@ -99,8 +99,8 @@ func TestExtract(t *testing.T) {
 			require.NoError(t, err)
 
 			// check the dimensions
-			assert.Equal(t, int32(3), res.Width)
-			assert.Equal(t, int32(3), res.Height)
+			assert.Equal(t, 3, res.Width)
+			assert.Equal(t, 3, res.Height)
 
 			// check the shifted pixels Before (3,3) shifted (-3,-3) -> (0,0)
 			assert.True(t, res.GetPixel(0, 0))
@@ -121,8 +121,8 @@ func TestExtract(t *testing.T) {
 			res, err := Extract(roi, src)
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(18), res.Height)
-			assert.Equal(t, int32(18), res.Width)
+			assert.Equal(t, 18, res.Height)
+			assert.Equal(t, 18, res.Width)
 
 			assert.True(t, res.GetPixel(3, 3))
 			assert.True(t, res.GetPixel(13, 13))
@@ -142,8 +142,8 @@ func TestExtract(t *testing.T) {
 			res, err := Extract(roi, src)
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(44), res.Height)
-			assert.Equal(t, int32(44), res.Width)
+			assert.Equal(t, 44, res.Height)
+			assert.Equal(t, 44, res.Width)
 
 			assert.True(t, res.GetPixel(3, 3))
 			assert.True(t, res.GetPixel(13, 13))
@@ -165,8 +165,8 @@ func TestExtract(t *testing.T) {
 		require.NoError(t, err)
 
 		// check the sizes
-		assert.Equal(t, int32(5), res.Width)
-		assert.Equal(t, int32(5), res.Height)
+		assert.Equal(t, 5, res.Width)
+		assert.Equal(t, 5, res.Height)
 
 		// check the pixels
 		assert.True(t, res.GetPixel(3, 3))

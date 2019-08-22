@@ -7,6 +7,7 @@ package segments
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
@@ -99,12 +100,12 @@ func (t *TableSegment) parseHeader() error {
 	if bits, err = t.r.ReadBits(32); err != nil {
 		return err
 	}
-	t.htLow = int32(bits & 0xffffffff)
+	t.htLow = int32(bits & math.MaxInt32)
 
 	// 4 bytes
 	if bits, err = t.r.ReadBits(32); err != nil {
 		return err
 	}
-	t.htHight = int32(bits & 0xffffffff)
+	t.htHight = int32(bits & math.MaxInt32)
 	return nil
 }

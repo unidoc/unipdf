@@ -101,7 +101,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	}
 
 	// 6.2.5.7 - 1)
-	var ltp int32
+	var ltp int
 	if g.arithDecoder == nil {
 		g.arithDecoder, err = arithmetic.New(g.r)
 		if err != nil {
@@ -114,10 +114,10 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 
 	// 6.2.5.7 - 2)
 	g.Bitmap = bitmap.New(g.RegionSegment.BitmapWidth, g.RegionSegment.BitmapHeight)
-	paddedWidth := int32(uint32(g.Bitmap.Width+7) & (^uint32(7)))
+	paddedWidth := int(uint32(g.Bitmap.Width+7) & (^uint32(7)))
 
 	// 6.2.5.7 - 3)
-	for line := int32(0); line < g.Bitmap.Height; line++ {
+	for line := 0; line < g.Bitmap.Height; line++ {
 		// 6.2.5.7 - 3 c)
 		if g.IsTPGDon {
 			var temp int
@@ -125,7 +125,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 			if err != nil {
 				return nil, err
 			}
-			ltp ^= int32(temp)
+			ltp ^= temp
 		}
 
 		// 6.2.5.7 - 3 d)
@@ -234,10 +234,10 @@ func (g *GenericRegion) computeSegmentDataStructure() error {
 	return nil
 }
 
-func (g *GenericRegion) copyLineAbove(line int32) error {
+func (g *GenericRegion) copyLineAbove(line int) error {
 	targetByteIndex := line * g.Bitmap.RowStride
 	sourceByteIndex := targetByteIndex - g.Bitmap.RowStride
-	for i := int32(0); i < g.Bitmap.RowStride; i++ {
+	for i := 0; i < g.Bitmap.RowStride; i++ {
 		b, err := g.Bitmap.GetByte(sourceByteIndex)
 		if err != nil {
 			return err
@@ -265,7 +265,7 @@ func (g *GenericRegion) decodeSLTP() (int, error) {
 	return g.arithDecoder.DecodeBit(g.cx)
 }
 
-func (g *GenericRegion) decodeLine(line, width, paddedWidth int32) error {
+func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
 	byteIndex := g.Bitmap.GetByteIndex(0, line)
 	idx := byteIndex - g.Bitmap.RowStride
 
@@ -285,12 +285,12 @@ func (g *GenericRegion) decodeLine(line, width, paddedWidth int32) error {
 	return fmt.Errorf("invalid GBTemplate provided: %d", g.GBTemplate)
 }
 
-func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteIndex, idx int32) (err error) {
+func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex, idx int) (err error) {
 	var (
-		context, overriddenContext int32
-		line1, line2               int32
+		context, overriddenContext int
+		line1, line2               int
 		temp                       byte
-		nextByte                   int32
+		nextByte                   int
 	)
 
 	if line >= 1 {
@@ -298,7 +298,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 		if err != nil {
 			return err
 		}
-		line1 = int32(temp)
+		line1 = int(temp)
 	}
 
 	if line >= 2 {
@@ -306,15 +306,15 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 		if err != nil {
 			return err
 		}
-		line2 = int32(temp) << 6
+		line2 = int(temp) << 6
 	}
 	context = (line1 & 0xf0) | (line2 & 0x3800)
 
-	for x := int32(0); x < paddedWidth; x = nextByte {
+	for x := 0; x < paddedWidth; x = nextByte {
 		// 6.2.5.7 3d
 		var (
 			result     byte
-			minorWidth int32
+			minorWidth int
 		)
 		nextByte = x + 8
 
@@ -332,7 +332,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 				if err != nil {
 					return err
 				}
-				line1 |= int32(temp)
+				line1 |= int(temp)
 			}
 		}
 
@@ -345,20 +345,20 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 				if err != nil {
 					return err
 				}
-				line2 |= (int32(temp) << 6)
+				line2 |= (int(temp) << 6)
 			} else {
 				line2 |= 0
 			}
 		}
 
-		for minorX := int32(0); minorX < minorWidth; minorX++ {
-			toShift := uint8(7 - minorX)
+		for minorX := 0; minorX < minorWidth; minorX++ {
+			toShift := uint(7 - minorX)
 
 			if g.override {
-				overriddenContext = g.overrideAtTemplate0a(context, x+minorX, line, int32(result), minorX, int32(toShift))
-				g.cx.SetIndex(overriddenContext)
+				overriddenContext = g.overrideAtTemplate0a(context, x+minorX, line, int(result), minorX, int(toShift))
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			var bit int
@@ -368,7 +368,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 			}
 
 			result |= byte(bit) << uint(toShift)
-			context = ((context & 0x7bf7) << 1) | int32(bit) | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
+			context = ((context & 0x7bf7) << 1) | bit | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -381,12 +381,12 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int32, byteInd
 	return nil
 }
 
-func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteIndex, idx int32) (err error) {
+func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex, idx int) (err error) {
 	var (
-		context, overriddenContext int32
-		line1, line2               int32
+		context, overriddenContext int
+		line1, line2               int
 		temp                       byte
-		nextByte                   int32
+		nextByte                   int
 	)
 
 	if line >= 1 {
@@ -394,7 +394,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 		if err != nil {
 			return err
 		}
-		line1 = int32(temp)
+		line1 = int(temp)
 	}
 
 	if line >= 2 {
@@ -402,15 +402,15 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 		if err != nil {
 			return err
 		}
-		line2 = int32(temp) << 6
+		line2 = int(temp) << 6
 	}
 	context = (line1 & 0xf0) | (line2 & 0x3800)
 
-	for x := int32(0); x < paddedWidth; x = nextByte {
+	for x := 0; x < paddedWidth; x = nextByte {
 		// 6.2.5.7 3d
 		var (
 			result     byte
-			minorWidth int32
+			minorWidth int
 		)
 		nextByte = x + 8
 
@@ -428,7 +428,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 				if err != nil {
 					return err
 				}
-				line1 |= int32(temp)
+				line1 |= int(temp)
 			}
 		}
 
@@ -440,18 +440,18 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 				if err != nil {
 					return err
 				}
-				line2 |= (int32(temp) << 6)
+				line2 |= (int(temp) << 6)
 			}
 		}
 
-		for minorX := int32(0); minorX < minorWidth; minorX++ {
+		for minorX := 0; minorX < minorWidth; minorX++ {
 			toShift := uint(7 - minorX)
 
 			if g.override {
-				overriddenContext = g.overrideAtTemplate0b(context, x+minorX, line, int32(result), minorX, int32(toShift))
-				g.cx.SetIndex(overriddenContext)
+				overriddenContext = g.overrideAtTemplate0b(context, x+minorX, line, int(result), minorX, int(toShift))
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			var bit int
@@ -461,7 +461,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 			}
 
 			result |= byte(bit << uint(toShift))
-			context = ((context & 0x7bf7) << 1) | int32(bit) | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
+			context = ((context & 0x7bf7) << 1) | bit | ((line1 >> toShift) & 0x10) | ((line2 >> toShift) & 0x800)
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -474,13 +474,12 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int32, byteInd
 	return nil
 }
 
-func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteIndex, idx int32) (err error) {
+func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex, idx int) (err error) {
 	var (
-		context, overriddenContext int32
-		line1, line2               int32
+		context, overriddenContext int
+		line1, line2               int
 		temp                       byte
-		nextByte                   int32
-		bit                        int
+		nextByte, bit              int
 	)
 
 	if line >= 1 {
@@ -489,7 +488,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 			return err
 		}
 
-		line1 = int32(temp)
+		line1 = int(temp)
 	}
 
 	if line >= 2 {
@@ -497,16 +496,16 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 		if err != nil {
 			return err
 		}
-		line2 = int32(temp) << 5
+		line2 = int(temp) << 5
 	}
 
 	context = ((line1 >> 1) & 0x1f8) | ((line2 >> 1) & 0x1e00)
 
-	for x := int32(0); x < paddedWidth; x = nextByte {
+	for x := 0; x < paddedWidth; x = nextByte {
 		// 6.2.5.7 3d
 		var (
 			result     byte
-			minorWidth int32
+			minorWidth int
 		)
 		nextByte = x + 8
 
@@ -524,7 +523,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 				if err != nil {
 					return err
 				}
-				line1 |= int32(temp)
+				line1 |= int(temp)
 			}
 		}
 
@@ -536,16 +535,16 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 				if err != nil {
 					return err
 				}
-				line2 |= (int32(temp) << 5)
+				line2 |= (int(temp) << 5)
 			}
 		}
 
-		for minorX := int32(0); minorX < minorWidth; minorX++ {
+		for minorX := 0; minorX < minorWidth; minorX++ {
 			if g.override {
-				overriddenContext = g.overrideAtTemplate1(context, x+minorX, line, int32(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				overriddenContext = g.overrideAtTemplate1(context, x+minorX, line, int(result), minorX)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -555,7 +554,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 
 			result |= byte(bit) << uint(7-minorX)
 			toShift := uint(8 - minorX)
-			context = ((context & 0xefb) << 1) | int32(bit) | ((line1 >> toShift) & 0x8) | ((line2 >> toShift) & 0x200)
+			context = ((context & 0xefb) << 1) | bit | ((line1 >> toShift) & 0x8) | ((line2 >> toShift) & 0x200)
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -568,13 +567,12 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int32, byteInde
 	return nil
 }
 
-func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, byteIndex, idx int32) (err error) {
+func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byteIndex, idx int) (err error) {
 	var (
-		context, overriddenContext int32
-		line1, line2               int32
+		context, overriddenContext int
+		line1, line2               int
 		temp                       byte
-		nextByte                   int32
-		bit                        int
+		nextByte, bit              int
 	)
 
 	if lineNumber >= 1 {
@@ -582,7 +580,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 		if err != nil {
 			return err
 		}
-		line1 = int32(temp)
+		line1 = int(temp)
 	}
 
 	if lineNumber >= 2 {
@@ -590,16 +588,16 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 		if err != nil {
 			return err
 		}
-		line2 = int32(temp) << 4
+		line2 = int(temp) << 4
 	}
 
 	context = (line1 >> 3 & 0x7c) | (line2 >> 3 & 0x380)
 
-	for x := int32(0); x < paddedWidth; x = nextByte {
+	for x := 0; x < paddedWidth; x = nextByte {
 		// 6.2.5.7 3d
 		var (
 			result     byte
-			minorWidth int32
+			minorWidth int
 		)
 		nextByte = x + 8
 
@@ -617,7 +615,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 				if err != nil {
 					return err
 				}
-				line1 |= int32(temp)
+				line1 |= int(temp)
 			}
 		}
 
@@ -629,18 +627,18 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 				if err != nil {
 					return err
 				}
-				line2 |= (int32(temp) << 4)
+				line2 |= (int(temp) << 4)
 			}
 		}
 
-		for minorX := int32(0); minorX < minorWidth; minorX++ {
+		for minorX := 0; minorX < minorWidth; minorX++ {
 			toShift := uint(10 - minorX)
 
 			if g.override {
-				overriddenContext = g.overrideAtTemplate2(context, x+minorX, lineNumber, int32(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				overriddenContext = g.overrideAtTemplate2(context, x+minorX, lineNumber, int(result), minorX)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -649,7 +647,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 			}
 
 			result |= byte(bit << uint(7-minorX))
-			context = ((context & 0x1bd) << 1) | int32(bit) | ((line1 >> toShift) & 0x4) | ((line2 >> toShift) & 0x80)
+			context = ((context & 0x1bd) << 1) | bit | ((line1 >> toShift) & 0x4) | ((line2 >> toShift) & 0x80)
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -662,13 +660,12 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int32, by
 	return nil
 }
 
-func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int32, byteIndex, idx int32) (err error) {
+func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex, idx int) (err error) {
 	var (
-		context, overriddenContext int32
-		line1                      int32
+		context, overriddenContext int
+		line1                      int
 		temp                       byte
-		nextByte                   int32
-		bit                        int
+		nextByte, bit              int
 	)
 
 	if line >= 1 {
@@ -676,16 +673,16 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int32, byteInde
 		if err != nil {
 			return err
 		}
-		line1 = int32(temp)
+		line1 = int(temp)
 	}
 
 	context = (line1 >> 1) & 0x70
 
-	for x := int32(0); x < paddedWidth; x = nextByte {
+	for x := 0; x < paddedWidth; x = nextByte {
 		// 6.2.5.7 3d
 		var (
 			result     byte
-			minorWidth int32
+			minorWidth int
 		)
 		nextByte = x + 8
 
@@ -703,16 +700,16 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int32, byteInde
 				if err != nil {
 					return err
 				}
-				line1 |= int32(temp)
+				line1 |= int(temp)
 			}
 		}
 
-		for minorX := int32(0); minorX < minorWidth; minorX++ {
+		for minorX := 0; minorX < minorWidth; minorX++ {
 			if g.override {
-				overriddenContext = g.overrideAtTemplate3(context, x+minorX, line, int32(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				overriddenContext = g.overrideAtTemplate3(context, x+minorX, line, int(result), minorX)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -721,7 +718,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int32, byteInde
 			}
 
 			result |= byte(bit) << byte(7-minorX)
-			context = ((context & 0x1f7) << 1) | int32(bit) | ((line1 >> uint(8-minorX)) & 0x010)
+			context = ((context & 0x1f7) << 1) | bit | ((line1 >> uint(8-minorX)) & 0x010)
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
@@ -734,7 +731,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int32, byteInde
 	return nil
 }
 
-func (g *GenericRegion) getPixel(x, y int32) int8 {
+func (g *GenericRegion) getPixel(x, y int) int8 {
 	if x < 0 || x >= g.Bitmap.Width {
 		return 0
 	}
@@ -828,13 +825,13 @@ func (g *GenericRegion) updateOverrideFlags() error {
 	return nil
 }
 
-func (g *GenericRegion) overrideAtTemplate0a(ctx, x, y, result, minorX, toShift int32) int32 {
+func (g *GenericRegion) overrideAtTemplate0a(ctx, x, y, result, minorX, toShift int) int {
 	if g.GBAtOverride[0] {
 		ctx &= 0xFFEF
 		if g.GBAtY[0] == 0 && g.GBAtX[0] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[0]&0x1)) << 4
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[0]), y+int32(g.GBAtY[0]))) << 4
+			ctx |= int(g.getPixel(x+int(g.GBAtX[0]), y+int(g.GBAtY[0]))) << 4
 		}
 	}
 
@@ -843,7 +840,7 @@ func (g *GenericRegion) overrideAtTemplate0a(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[1] == 0 && g.GBAtX[1] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[1]&0x1)) << 10
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[1]), y+int32(g.GBAtY[1]))) << 10
+			ctx |= int(g.getPixel(x+int(g.GBAtX[1]), y+int(g.GBAtY[1]))) << 10
 		}
 	}
 
@@ -852,7 +849,7 @@ func (g *GenericRegion) overrideAtTemplate0a(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[2] == 0 && g.GBAtX[2] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[2]&0x1)) << 11
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[2]), y+int32(g.GBAtY[2]))) << 11
+			ctx |= int(g.getPixel(x+int(g.GBAtX[2]), y+int(g.GBAtY[2]))) << 11
 		}
 	}
 
@@ -861,19 +858,19 @@ func (g *GenericRegion) overrideAtTemplate0a(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[3] == 0 && g.GBAtX[3] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[3]&0x1)) << 15
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[3]), y+int32(g.GBAtY[3]))) << 15
+			ctx |= int(g.getPixel(x+int(g.GBAtX[3]), y+int(g.GBAtY[3]))) << 15
 		}
 	}
 	return ctx
 }
 
-func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift int32) int32 {
+func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift int) int {
 	if g.GBAtOverride[0] {
 		ctx &= 0xFFFD
 		if g.GBAtY[0] == 0 && g.GBAtX[0] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[0]&0x1)) << 1
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[0]), y+int32(g.GBAtY[0]))) << 1
+			ctx |= int(g.getPixel(x+int(g.GBAtX[0]), y+int(g.GBAtY[0]))) << 1
 		}
 	}
 
@@ -882,7 +879,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[1] == 0 && g.GBAtX[1] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[1]&0x1)) << 13
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[1]), y+int32(g.GBAtY[1]))) << 13
+			ctx |= int(g.getPixel(x+int(g.GBAtX[1]), y+int(g.GBAtY[1]))) << 13
 		}
 	}
 
@@ -891,7 +888,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[2] == 0 && g.GBAtX[2] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[2]&0x1)) << 9
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[2]), y+int32(g.GBAtY[2]))) << 9
+			ctx |= int(g.getPixel(x+int(g.GBAtX[2]), y+int(g.GBAtY[2]))) << 9
 		}
 	}
 
@@ -900,7 +897,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[3] == 0 && g.GBAtX[3] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[3]&0x1)) << 14
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[3]), y+int32(g.GBAtY[3]))) << 14
+			ctx |= int(g.getPixel(x+int(g.GBAtX[3]), y+int(g.GBAtY[3]))) << 14
 		}
 	}
 	if g.GBAtOverride[4] {
@@ -908,7 +905,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[4] == 0 && g.GBAtX[4] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[4]&0x1)) << 12
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[4]), y+int32(g.GBAtY[4]))) << 12
+			ctx |= int(g.getPixel(x+int(g.GBAtX[4]), y+int(g.GBAtY[4]))) << 12
 		}
 	}
 
@@ -917,7 +914,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[5] == 0 && g.GBAtX[5] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[5]&0x1)) << 5
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[5]), y+int32(g.GBAtY[5]))) << 5
+			ctx |= int(g.getPixel(x+int(g.GBAtX[5]), y+int(g.GBAtY[5]))) << 5
 		}
 	}
 
@@ -926,7 +923,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[6] == 0 && g.GBAtX[6] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[6]&0x1)) << 2
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[6]), y+int32(g.GBAtY[6]))) << 2
+			ctx |= int(g.getPixel(x+int(g.GBAtX[6]), y+int(g.GBAtY[6]))) << 2
 		}
 	}
 
@@ -935,7 +932,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[7] == 0 && g.GBAtX[7] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[7]&0x1)) << 3
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[7]), y+int32(g.GBAtY[7]))) << 3
+			ctx |= int(g.getPixel(x+int(g.GBAtX[7]), y+int(g.GBAtY[7]))) << 3
 		}
 	}
 	if g.GBAtOverride[8] {
@@ -943,7 +940,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[8] == 0 && g.GBAtX[8] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[8]&0x1)) << 11
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[8]), y+int32(g.GBAtY[8]))) << 11
+			ctx |= int(g.getPixel(x+int(g.GBAtX[8]), y+int(g.GBAtY[8]))) << 11
 		}
 	}
 
@@ -952,7 +949,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[9] == 0 && g.GBAtX[9] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[9]&0x1)) << 4
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[9]), y+int32(g.GBAtY[9]))) << 4
+			ctx |= int(g.getPixel(x+int(g.GBAtX[9]), y+int(g.GBAtY[9]))) << 4
 		}
 	}
 
@@ -961,7 +958,7 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[10] == 0 && g.GBAtX[10] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[10]&0x1)) << 15
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[10]), y+int32(g.GBAtY[10]))) << 15
+			ctx |= int(g.getPixel(x+int(g.GBAtX[10]), y+int(g.GBAtY[10]))) << 15
 		}
 	}
 
@@ -970,38 +967,38 @@ func (g *GenericRegion) overrideAtTemplate0b(ctx, x, y, result, minorX, toShift 
 		if g.GBAtY[11] == 0 && g.GBAtX[11] >= -int8(minorX) {
 			ctx |= (result >> uint(int8(toShift)-g.GBAtX[11]&0x1)) << 10
 		} else {
-			ctx |= int32(g.getPixel(x+int32(g.GBAtX[11]), y+int32(g.GBAtY[11]))) << 10
+			ctx |= int(g.getPixel(x+int(g.GBAtX[11]), y+int(g.GBAtY[11]))) << 10
 		}
 	}
 	return ctx
 }
 
-func (g *GenericRegion) overrideAtTemplate1(ctx, x, y, result, minorX int32) int32 {
+func (g *GenericRegion) overrideAtTemplate1(ctx, x, y, result, minorX int) int {
 	ctx &= 0x1FF7
 	if g.GBAtY[0] == 0 && g.GBAtX[0] >= -int8(minorX) {
 		ctx |= (result >> uint(7-(int8(minorX)+g.GBAtX[0])) & 0x1) << 3
 	} else {
-		ctx |= int32(g.getPixel(x+int32(g.GBAtX[0]), y+int32(g.GBAtY[0]))) << 3
+		ctx |= int(g.getPixel(x+int(g.GBAtX[0]), y+int(g.GBAtY[0]))) << 3
 	}
 	return ctx
 }
 
-func (g *GenericRegion) overrideAtTemplate2(ctx, x, y, result, minorX int32) int32 {
+func (g *GenericRegion) overrideAtTemplate2(ctx, x, y, result, minorX int) int {
 	ctx &= 0x3FB
 	if g.GBAtY[0] == 0 && g.GBAtX[0] >= -int8(minorX) {
 		ctx |= (result >> uint(7-(int8(minorX)+g.GBAtX[0])) & 0x1) << 2
 	} else {
-		ctx |= int32(g.getPixel(x+int32(g.GBAtX[0]), y+int32(g.GBAtY[0]))) << 2
+		ctx |= int(g.getPixel(x+int(g.GBAtX[0]), y+int(g.GBAtY[0]))) << 2
 	}
 	return ctx
 }
 
-func (g *GenericRegion) overrideAtTemplate3(ctx, x, y, result, minorX int32) int32 {
+func (g *GenericRegion) overrideAtTemplate3(ctx, x, y, result, minorX int) int {
 	ctx &= 0x3EF
 	if g.GBAtY[0] == 0 && g.GBAtX[0] >= -int8(minorX) {
 		ctx |= (result >> uint(7-(int8(minorX)+g.GBAtX[0])) & 0x1) << 4
 	} else {
-		ctx |= int32(g.getPixel(x+int32(g.GBAtX[0]), y+int32(g.GBAtY[0]))) << 4
+		ctx |= int(g.getPixel(x+int(g.GBAtX[0]), y+int(g.GBAtY[0]))) << 4
 	}
 	return ctx
 }
@@ -1035,7 +1032,7 @@ func (g *GenericRegion) setOverrideFlag(index int) {
 func (g *GenericRegion) setParameters(
 	isMMREncoded bool,
 	dataOffset, dataLength int64,
-	gbh, gbw int32,
+	gbh, gbw int,
 ) {
 	g.IsMMREncoded = isMMREncoded
 	g.DataOffset = dataOffset
@@ -1051,7 +1048,7 @@ func (g *GenericRegion) setParametersWithAt(
 	SDTemplate byte,
 	isTPGDon, useSkip bool,
 	sDAtX, sDAtY []int8,
-	symWidth, hcHeight int32,
+	symWidth, hcHeight int,
 	cx *arithmetic.DecoderStats, a *arithmetic.Decoder,
 ) {
 	g.IsMMREncoded = isMMREncoded
@@ -1077,7 +1074,7 @@ func (g *GenericRegion) setParametersWithAt(
 func (g *GenericRegion) setParametersMMR(
 	isMMREncoded bool,
 	dataOffset, dataLength int64,
-	gbh, gbw int32,
+	gbh, gbw int,
 	gbTemplate byte,
 	isTPGDon, useSkip bool,
 	gbAtX, gbAtY []int8,

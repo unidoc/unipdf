@@ -55,8 +55,8 @@ type TextRegion struct {
 	numberOfSymbolInstances int64
 
 	currentS        int64
-	sbStrips        uint32
-	numberOfSymbols int32
+	sbStrips        int
+	numberOfSymbols int
 
 	regionBitmap *bitmap.Bitmap
 	symbols      []*bitmap.Bitmap
@@ -77,7 +77,7 @@ type TextRegion struct {
 	cx      *arithmetic.DecoderStats
 
 	// symbolCodeTable includes a code to each symbol used in that region.
-	symbolCodeLength int32
+	symbolCodeLength int
 	symbolCodeTable  *huffman.FixedSizeTable
 	Header           *Header
 
@@ -193,7 +193,7 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 		}
 	}
 
-	err := bitmap.Blit(ib, t.regionBitmap, int32(s), int32(tc), t.combinationOperator)
+	err := bitmap.Blit(ib, t.regionBitmap, int(s), int(tc), t.combinationOperator)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (t *TextRegion) computeSymbolCodeLength() error {
 		return t.symbolIDCodeLengths()
 	}
 
-	t.symbolCodeLength = int32(math.Ceil(math.Log(float64(t.numberOfSymbols)) / math.Log(2)))
+	t.symbolCodeLength = int(math.Ceil(math.Log(float64(t.numberOfSymbols)) / math.Log(2)))
 	return nil
 }
 
@@ -307,7 +307,7 @@ func (t *TextRegion) decodeStripT() (stripT int64, err error) {
 			}
 		}
 	} else {
-		var temp int32
+		var temp int
 		temp, err = t.arithmDecoder.DecodeInt(t.cxIADT)
 		if err != nil {
 			return 0, err
@@ -424,7 +424,7 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 			}
 		}
 	} else {
-		var temp int32
+		var temp int
 		temp, err = t.arithmDecoder.DecodeInt(t.cxIADT)
 		if err != nil {
 			return
@@ -547,15 +547,15 @@ func (t *TextRegion) decodeIb(r, id int64) (*bitmap.Bitmap, error) {
 	ibo := t.symbols[id]
 	wo := ibo.Width
 	ho := ibo.Height
-	genericRegionReferenceDX := int32(uint32(rdw)>>1) + int32(rdx)
-	genericRegionReferenceDY := int32(uint32(rdh)>>1) + int32(rdy)
+	genericRegionReferenceDX := int(uint(rdw)>>1) + int(rdx)
+	genericRegionReferenceDY := int(uint(rdh)>>1) + int(rdy)
 
 	if t.genericRefinementRegion == nil {
 		t.genericRefinementRegion = newGenericRefinementRegion(t.r, nil)
 	}
 
 	t.genericRefinementRegion.setParameters(t.cx, t.arithmDecoder, t.sbrTemplate,
-		wo+int32(rdw), ho+int32(rdh), ibo, genericRegionReferenceDX, genericRegionReferenceDY, false, t.sbrATX, t.sbrATY)
+		wo+int(rdw), ho+int(rdh), ibo, genericRegionReferenceDX, genericRegionReferenceDY, false, t.sbrATX, t.sbrATY)
 
 	ib, err = t.genericRefinementRegion.GetRegionBitmap()
 	if err != nil {
@@ -883,7 +883,7 @@ func (t *TextRegion) initSymbols() error {
 			t.symbols = append(t.symbols, dict...)
 		}
 	}
-	t.numberOfSymbols = int32(len(t.symbols))
+	t.numberOfSymbols = len(t.symbols)
 	return nil
 }
 
@@ -1137,7 +1137,7 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 		return err
 	}
 
-	bits &= 0xffffffff
+	bits &= math.MaxInt32
 	t.numberOfSymbolInstances = int64(bits)
 	pixels := int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
 
@@ -1221,12 +1221,12 @@ func (t *TextRegion) setContexts(
 // setParameters sets the text region segment parameters.
 func (t *TextRegion) setParameters(
 	arithmeticDecoder *arithmetic.Decoder,
-	isHuffmanEncoded, sbRefine bool, sbw, sbh int32,
-	sbNumInstances int64, sbStrips uint32, sbNumSyms int32,
+	isHuffmanEncoded, sbRefine bool, sbw, sbh int,
+	sbNumInstances int64, sbStrips, sbNumSyms int,
 	sbDefaultPixel int8, sbCombinationOperator bitmap.CombinationOperator,
 	transposed int8, refCorner int16, sbdsOffset, sbHuffFS, sbHuffDS, sbHuffDT, sbHuffRDWidth,
 	sbHuffRDHeight, sbHuffRDX, sbHuffRDY, sbHuffRSize, sbrTemplate int8,
-	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int32,
+	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int,
 ) {
 	t.arithmDecoder = arithmeticDecoder
 
@@ -1269,15 +1269,15 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 		err          error
 	)
 
-	for i := int32(0); i < 35; i++ {
+	for i := 0; i < 35; i++ {
 		bits, err = t.r.ReadBits(4)
 		if err != nil {
 			return err
 		}
 
-		prefLen := int32(bits & 0xf)
+		prefLen := int(bits & 0xf)
 		if prefLen > 0 {
-			runCodeTable = append(runCodeTable, huffman.NewCode(prefLen, 0, i, false))
+			runCodeTable = append(runCodeTable, huffman.NewCode(int32(prefLen), 0, int32(i), false))
 		}
 	}
 
@@ -1289,7 +1289,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 	// 3) - 5)
 	var (
 		previousCodeLength int64
-		counter            int32
+		counter            int
 		sbSymCodes         []*huffman.Code
 		code               int64
 	)
@@ -1302,7 +1302,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 
 		if code < 32 {
 			if code > 0 {
-				sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(code), 0, counter, false))
+				sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(code), 0, int32(counter), false))
 			}
 			previousCodeLength = code
 			counter++
@@ -1335,7 +1335,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 
 			for j := 0; j < int(runLength); j++ {
 				if currCodeLength > 0 {
-					sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(currCodeLength), 0, counter, false))
+					sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(currCodeLength), 0, int32(counter), false))
 				}
 				counter++
 			}

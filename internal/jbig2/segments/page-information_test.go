@@ -34,8 +34,8 @@ func TestPageInformationSegment(t *testing.T) {
 		p := &PageInformationSegment{}
 		require.NoError(t, p.Init(h, r))
 
-		assert.Equal(t, int32(64), p.PageBMWidth)
-		assert.Equal(t, int32(56), p.PageBMHeight)
+		assert.Equal(t, 64, p.PageBMWidth)
+		assert.Equal(t, 56, p.PageBMHeight)
 		assert.Equal(t, uint8(0), p.defaultPixelValue)
 		assert.Equal(t, bitmap.CombinationOperator(0), p.combinationOperator)
 		assert.False(t, p.IsStripe)

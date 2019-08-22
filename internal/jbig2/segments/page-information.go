@@ -21,16 +21,16 @@ type PageInformationSegment struct {
 	r reader.StreamReader
 
 	// Page bitmap height, four byte, 7.4.8.1
-	PageBMHeight int32
+	PageBMHeight int
 
 	// Page bitmap width, four byte, 7.4.8.1
-	PageBMWidth int32
+	PageBMWidth int
 
 	// Page X resolution, four byte 7.4.8.3
-	ResolutionX int32
+	ResolutionX int
 
 	// Page Y resolution, four byte 7.4.8.4
-	ResolutionY int32
+	ResolutionY int
 
 	// Page segment flags, one byte 7.4.8.5
 	combinaitonOperatorOverrideAllowed bool
@@ -178,14 +178,14 @@ func (p *PageInformationSegment) readResolution() error {
 	if err != nil {
 		return err
 	}
-	p.ResolutionX = int32(tempResolution)
+	p.ResolutionX = int(tempResolution & math.MaxInt32)
 
 	tempResolution, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
 
-	p.ResolutionY = int32(tempResolution)
+	p.ResolutionY = int(tempResolution & math.MaxInt32)
 	return nil
 }
 
@@ -231,7 +231,7 @@ func (p *PageInformationSegment) readDefaultPixelValue() error {
 	if err != nil {
 		return err
 	}
-	p.defaultPixelValue = uint8(b)
+	p.defaultPixelValue = uint8(b & 0xf)
 	return nil
 }
 
@@ -278,7 +278,7 @@ func (p *PageInformationSegment) readMaxStripeSize() error {
 		return err
 	}
 
-	p.MaxStripeSize = uint16(b & 0xFFFF)
+	p.MaxStripeSize = uint16(b & math.MaxUint16)
 	return nil
 }
 
@@ -287,13 +287,13 @@ func (p *PageInformationSegment) readWidthAndHeight() error {
 	if err != nil {
 		return err
 	}
-	p.PageBMWidth = int32(tempInt)
+	p.PageBMWidth = int(tempInt & math.MaxInt32)
 
 	tempInt, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	p.PageBMHeight = int32(tempInt)
+	p.PageBMHeight = int(tempInt & math.MaxInt32)
 	return nil
 }
 

@@ -6,13 +6,15 @@
 package segments
 
 import (
+	"math"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // EndOfStripe flags an end of stripe - see 7.4.9.
 type EndOfStripe struct {
 	r          reader.StreamReader
-	lineNumber int32
+	lineNumber int
 }
 
 // Init implements Segmenter interface.
@@ -22,7 +24,7 @@ func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
 }
 
 // LineNumber gets the EndOfStripe line number.
-func (e *EndOfStripe) LineNumber() int32 {
+func (e *EndOfStripe) LineNumber() int {
 	return e.lineNumber
 }
 
@@ -31,6 +33,6 @@ func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
 	if err != nil {
 		return err
 	}
-	e.lineNumber = int32(temp)
+	e.lineNumber = int(temp & math.MaxInt32)
 	return nil
 }

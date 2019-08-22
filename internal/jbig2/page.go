@@ -25,15 +25,15 @@ type Page struct {
 
 	// PageNumber defines page number.
 	// NOTE: page numeration starts from 1.
-	PageNumber int32
+	PageNumber int
 
 	// Bitmap represents the page image.
 	Bitmap *bitmap.Bitmap
 
-	FinalHeight int32
-	FinalWidth  int32
-	ResolutionX int32
-	ResolutionY int32
+	FinalHeight int
+	FinalWidth  int
+	ResolutionX int
+	ResolutionY int
 
 	// Document is a relation to page's document
 	Document *Document
@@ -85,7 +85,7 @@ func (p *Page) String() string {
 
 // newPage is the creator for the Page structure.
 func newPage(d *Document, pageNumber int) *Page {
-	return &Page{Document: d, PageNumber: int32(pageNumber), Segments: map[int]*segments.Header{}}
+	return &Page{Document: d, PageNumber: pageNumber, Segments: map[int]*segments.Header{}}
 }
 
 // composePageBitmap composes the segment's bitmaps
@@ -181,7 +181,7 @@ func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 		return err
 	}
 
-	var startLine int32
+	var startLine int
 
 	for _, sd := range pageStripes {
 		if eos, ok := sd.(*segments.EndOfStripe); ok {
@@ -287,7 +287,7 @@ func (p *Page) getPageInformationSegment() *segments.Header {
 	return nil
 }
 
-func (p *Page) getHeight() (int32, error) {
+func (p *Page) getHeight() (int, error) {
 	if p.FinalHeight == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -316,7 +316,7 @@ func (p *Page) getHeight() (int32, error) {
 	return p.FinalHeight, nil
 }
 
-func (p *Page) getWidth() (int32, error) {
+func (p *Page) getWidth() (int, error) {
 	if p.FinalWidth == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -338,7 +338,7 @@ func (p *Page) getWidth() (int32, error) {
 	return p.FinalWidth, nil
 }
 
-func (p *Page) getResolutionX() (int32, error) {
+func (p *Page) getResolutionX() (int, error) {
 	if p.ResolutionX == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {
@@ -360,7 +360,7 @@ func (p *Page) getResolutionX() (int32, error) {
 	return p.ResolutionX, nil
 }
 
-func (p *Page) getResolutionY() (int32, error) {
+func (p *Page) getResolutionY() (int, error) {
 	if p.ResolutionY == 0 {
 		h := p.getPageInformationSegment()
 		if h == nil {

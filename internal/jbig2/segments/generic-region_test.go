@@ -50,8 +50,8 @@ func TestDecodeGenericRegion(t *testing.T) {
 			s, ok := sg.(*GenericRegion)
 			require.True(t, ok)
 
-			assert.Equal(t, int32(44), s.RegionSegment.BitmapHeight)
-			assert.Equal(t, int32(54), s.RegionSegment.BitmapWidth)
+			assert.Equal(t, 44, s.RegionSegment.BitmapHeight)
+			assert.Equal(t, 54, s.RegionSegment.BitmapWidth)
 			assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
 			assert.Equal(t, true, s.IsTPGDon)
 			assert.Equal(t, byte(0), s.GBTemplate)
@@ -88,8 +88,8 @@ func TestDecodeGenericRegion(t *testing.T) {
 			s, ok := gs.(*GenericRegion)
 			require.True(t, ok)
 
-			assert.Equal(t, int32(44), s.RegionSegment.BitmapHeight)
-			assert.Equal(t, int32(54), s.RegionSegment.BitmapWidth)
+			assert.Equal(t, 44, s.RegionSegment.BitmapHeight)
+			assert.Equal(t, 54, s.RegionSegment.BitmapWidth)
 			assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
 			assert.Equal(t, true, s.IsMMREncoded)
 
@@ -102,11 +102,11 @@ func TestDecodeGenericRegion(t *testing.T) {
 }
 
 func isTestingFrame(t *testing.T, b *bitmap.Bitmap) {
-	assert.Equal(t, int32(44), b.Height)
-	assert.Equal(t, int32(54), b.Width)
+	assert.Equal(t, 44, b.Height)
+	assert.Equal(t, 54, b.Width)
 
-	for y := int32(0); y < b.Height; y++ {
-		for x := int32(0); x < b.Width; x++ {
+	for y := 0; y < b.Height; y++ {
+		for x := 0; x < b.Width; x++ {
 			pix := b.GetPixel(x, y)
 
 			// first two and last two rows are set to '1'

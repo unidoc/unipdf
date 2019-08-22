@@ -21,13 +21,13 @@ var ErrIndexOutOfRange = errors.New("bitmap byte index out of range")
 // Bitmap is the jbig2 bitmap representation.
 type Bitmap struct {
 	// Width and Height represents bitmap dimensions.
-	Width, Height int32
+	Width, Height int
 
 	// BitmapNumber is the bitmap's id number.
 	BitmapNumber int
 
 	// RowStride is the number of bytes set per row.
-	RowStride int32
+	RowStride int
 
 	// Data saves the bits data for the bitmap.
 	Data []byte
@@ -36,19 +36,19 @@ type Bitmap struct {
 }
 
 // New creates new bitmap with the parameters as provided in the arguments.
-func New(width, height int32) *Bitmap {
+func New(width, height int) *Bitmap {
 	bm := &Bitmap{
 		Width:     width,
 		Height:    height,
 		RowStride: (width + 7) >> 3,
 	}
-	bm.Data = make([]byte, height*int32(bm.RowStride))
+	bm.Data = make([]byte, height*bm.RowStride)
 
 	return bm
 }
 
 // NewWithData creates new bitmap with the provided 'width', 'height' and the byte slice 'data'.
-func NewWithData(width, height int32, data []byte) *Bitmap {
+func NewWithData(width, height int, data []byte) *Bitmap {
 	bm := New(width, height)
 	bm.Data = data
 	return bm
@@ -60,8 +60,8 @@ func (b *Bitmap) Equals(s *Bitmap) bool {
 		return false
 	}
 
-	for y := int32(0); y < b.Height; y++ {
-		for x := int32(0); x < b.Width; x++ {
+	for y := 0; y < b.Height; y++ {
+		for x := 0; x < b.Width; x++ {
 			if b.GetPixel(x, y) != s.GetPixel(x, y) {
 				return false
 			}
@@ -72,20 +72,20 @@ func (b *Bitmap) Equals(s *Bitmap) bool {
 }
 
 // GetBitOffset gets the bit offset at the 'x' coordinate.
-func (b *Bitmap) GetBitOffset(x int32) uint8 {
-	return uint8(x & 0x07)
+func (b *Bitmap) GetBitOffset(x int) int {
+	return x & 0x07
 }
 
 // GetByte gets and returns the byte at given 'index'.
-func (b *Bitmap) GetByte(index int32) (byte, error) {
-	if index > int32(len(b.Data))-1 || index < 0 {
+func (b *Bitmap) GetByte(index int) (byte, error) {
+	if index > len(b.Data)-1 || index < 0 {
 		return 0, ErrIndexOutOfRange
 	}
 	return b.Data[index], nil
 }
 
 // GetByteIndex gets the byte index from the bitmap at coordinates 'x','y'.
-func (b *Bitmap) GetByteIndex(x, y int32) int32 {
+func (b *Bitmap) GetByteIndex(x, y int) int {
 	return y*b.RowStride + (x >> 3)
 }
 
@@ -100,11 +100,11 @@ func (b *Bitmap) GetChocolateData() []byte {
 }
 
 // GetPixel gets the pixel value at the coordinates 'x', 'y'.
-func (b *Bitmap) GetPixel(x, y int32) bool {
+func (b *Bitmap) GetPixel(x, y int) bool {
 	i := b.GetByteIndex(x, y)
 	o := b.GetBitOffset(x)
 	shift := uint(7 - o)
-	if i > int32(len(b.Data))-1 {
+	if i > len(b.Data)-1 {
 		common.Log.Debug("Trying to get pixel out of the data range. x: '%d', y:'%d', bm: '%s'", x, y, b)
 		return false
 	}
@@ -134,9 +134,9 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 	data := make([]byte, size)
 	w := writer.NewMSB(data)
 
-	for y := int32(0); y < b.Height; y++ {
+	for y := 0; y < b.Height; y++ {
 		// btIndex is the byte index per row.
-		for btIndex := int32(0); btIndex < b.RowStride; btIndex++ {
+		for btIndex := 0; btIndex < b.RowStride; btIndex++ {
 			bt := b.Data[y*b.RowStride+btIndex]
 			if btIndex != b.RowStride-1 {
 				err := w.WriteByte(bt)
@@ -169,14 +169,14 @@ func (b *Bitmap) GetVanillaData() []byte {
 
 // SetPixel sets the pixel at 'x', 'y' coordinates with the value of 'pixel'.
 // Returns an error if the index is out of range.
-func (b *Bitmap) SetPixel(x, y int32, pixel byte) error {
+func (b *Bitmap) SetPixel(x, y int, pixel byte) error {
 	i := b.GetByteIndex(x, y)
-	if i > int32(len(b.Data))-1 {
+	if i > len(b.Data)-1 {
 		return ErrIndexOutOfRange
 	}
 	o := b.GetBitOffset(x)
 
-	shift := uint8(7 - o)
+	shift := uint(7 - o)
 	src := b.Data[i]
 
 	result := src | (pixel & 0x01 << shift)
@@ -194,8 +194,8 @@ func (b *Bitmap) SetDefaultPixel() {
 
 // SetByte sets the byte at 'index' with value 'v'.
 // Returns an error if the index is out of range.
-func (b *Bitmap) SetByte(index int32, v byte) error {
-	if index > int32(len(b.Data))-1 || index < 0 {
+func (b *Bitmap) SetByte(index int, v byte) error {
+	if index > len(b.Data)-1 || index < 0 {
 		return ErrIndexOutOfRange
 	}
 
@@ -206,9 +206,9 @@ func (b *Bitmap) SetByte(index int32, v byte) error {
 // String implements the Stringer interface.
 func (b *Bitmap) String() string {
 	var s = "\n"
-	for y := int32(0); y < b.Height; y++ {
+	for y := 0; y < b.Height; y++ {
 		var row string
-		for x := int32(0); x < b.Width; x++ {
+		for x := 0; x < b.Width; x++ {
 			pix := b.GetPixel(x, y)
 			if pix {
 				row += "1"
@@ -223,11 +223,11 @@ func (b *Bitmap) String() string {
 
 // ToImage gets the bitmap data and store in the image.Image.
 func (b *Bitmap) ToImage() image.Image {
-	img := image.NewGray(image.Rect(0, 0, int(b.Width-1), int(b.Height-1)))
-	for x := 0; x < int(b.Width); x++ {
-		for y := 0; y < int(b.Height); y++ {
+	img := image.NewGray(image.Rect(0, 0, b.Width-1, b.Height-1))
+	for x := 0; x < b.Width; x++ {
+		for y := 0; y < b.Height; y++ {
 			c := color.Black
-			if b.GetPixel(int32(x), int32(y)) {
+			if b.GetPixel(x, y) {
 				c = color.White
 			}
 			img.Set(x, y, c)

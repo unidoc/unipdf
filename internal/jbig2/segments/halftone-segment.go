@@ -36,13 +36,13 @@ type HalftoneRegion struct {
 
 	// Halftone grid position and size, 7.4.5.1.2
 	// Width of the gray-scale image, 7.4.5.1.2.1
-	HGridWidth uint32
+	HGridWidth int
 	// Height of the gray-scale image, 7.4.5.1.2.2
-	HGridHeight uint32
+	HGridHeight int
 	// Horizontal offset of the grid, 7.4.5.1.2.3
-	HGridX int32
+	HGridX int
 	// Vertical offset of the grid, 7.4.5.1.2.4
-	HGridY int32
+	HGridY int
 
 	// Halftone grid vector, 7.4.5.1.3
 	// Horizontal coordinate of the halftone grid vector, 7.4.5.1.3.1
@@ -91,7 +91,7 @@ func (h *HalftoneRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	bitsPerValue := int(bitsPerValueF)
 
 	// 4)
-	var grayScaleValues [][]int32
+	var grayScaleValues [][]int
 	grayScaleValues, err = h.grayScaleDecoding(bitsPerValue)
 	if err != nil {
 		return nil, err
@@ -156,10 +156,10 @@ func (h *HalftoneRegion) checkInput() error {
 }
 
 func (h *HalftoneRegion) combineGrayscalePlanes(grayScalePlanes []*bitmap.Bitmap, j int) error {
-	byteIndex := int32(0)
+	byteIndex := 0
 
-	for y := int32(0); y < grayScalePlanes[j].Height; y++ {
-		for x := int32(0); x < grayScalePlanes[j].Width; x += 8 {
+	for y := 0; y < grayScalePlanes[j].Height; y++ {
+		for x := 0; x < grayScalePlanes[j].Width; x += 8 {
 			newValue, err := grayScalePlanes[j+1].GetByte(byteIndex)
 			if err != nil {
 				return err
@@ -180,16 +180,16 @@ func (h *HalftoneRegion) combineGrayscalePlanes(grayScalePlanes []*bitmap.Bitmap
 	return nil
 }
 
-func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap, bitsPerValue int) ([][]int32, error) {
-	grayScaleValues := make([][]int32, h.HGridHeight)
+func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap, bitsPerValue int) ([][]int, error) {
+	grayScaleValues := make([][]int, h.HGridHeight)
 
 	for i := 0; i < len(grayScaleValues); i++ {
-		grayScaleValues[i] = make([]int32, h.HGridWidth)
+		grayScaleValues[i] = make([]int, h.HGridWidth)
 	}
 
-	for y := uint32(0); y < h.HGridHeight; y++ {
-		for x := uint32(0); x < h.HGridWidth; x += 8 {
-			var minorWidth uint32
+	for y := 0; y < h.HGridHeight; y++ {
+		for x := 0; x < h.HGridWidth; x += 8 {
+			var minorWidth int
 
 			if d := h.HGridWidth - x; d > 8 {
 				minorWidth = 8
@@ -197,9 +197,9 @@ func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap
 				minorWidth = d
 			}
 
-			byteIndex := grayScalePlanes[0].GetByteIndex(int32(x), int32(y))
+			byteIndex := grayScalePlanes[0].GetByteIndex(x, y)
 
-			for minorX := uint32(0); minorX < minorWidth; minorX++ {
+			for minorX := 0; minorX < minorWidth; minorX++ {
 				i := minorX + x
 				grayScaleValues[y][i] = 0
 
@@ -210,8 +210,8 @@ func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap
 					}
 					shifted := (bv >> uint(7-i&7))
 					and1 := shifted & 1
-					multiplier := int32(1) << uint(j)
-					v := int32(and1) * multiplier
+					multiplier := 1 << uint(j)
+					v := int(and1) * multiplier
 					grayScaleValues[y][i] += v
 				}
 			}
@@ -227,15 +227,15 @@ func (h *HalftoneRegion) computeSegmentDataStructure() error {
 	return nil
 }
 
-func (h *HalftoneRegion) computeX(m, n uint32) uint32 {
-	return h.shiftAndFill(uint32(h.HGridX) + m*uint32(h.HRegionY) + n*uint32(h.HRegionX))
+func (h *HalftoneRegion) computeX(m, n int) int {
+	return h.shiftAndFill(h.HGridX + m*int(h.HRegionY) + n*int(h.HRegionX))
 }
 
-func (h *HalftoneRegion) computeY(m, n uint32) uint32 {
-	return h.shiftAndFill(uint32(h.HGridY) + m*uint32(h.HRegionX) - n*uint32(h.HRegionY))
+func (h *HalftoneRegion) computeY(m, n int) int {
+	return h.shiftAndFill(h.HGridY + m*int(h.HRegionX) - n*int(h.HRegionY))
 }
 
-func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int32, error) {
+func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int, error) {
 	var (
 		gbAtX []int8
 		gbAtY []int8
@@ -263,7 +263,7 @@ func (h *HalftoneRegion) grayScaleDecoding(bitsPerValue int) ([][]int32, error) 
 
 	// 1)
 	genericRegion := NewGenericRegion(h.r)
-	genericRegion.setParametersMMR(h.IsMMREncoded, h.DataOffset, h.DataLength, int32(h.HGridHeight), int32(h.HGridWidth), h.HTemplate, false, h.HSkipEnabled, gbAtX, gbAtY)
+	genericRegion.setParametersMMR(h.IsMMREncoded, h.DataOffset, h.DataLength, h.HGridHeight, h.HGridWidth, h.HTemplate, false, h.HSkipEnabled, gbAtX, gbAtY)
 
 	// 2)
 	j := bitsPerValue - 1
@@ -338,37 +338,37 @@ func (h *HalftoneRegion) parseHeader() error {
 	if err != nil {
 		return err
 	}
-	h.HGridWidth = uint32(temp) & 0xFFFFFFFF
+	h.HGridWidth = int(temp & math.MaxInt32)
 
 	temp, err = h.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	h.HGridHeight = uint32(temp) & 0xFFFFFFFF
+	h.HGridHeight = int(temp & math.MaxInt32)
 
 	temp, err = h.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	h.HGridX = int32(temp)
+	h.HGridX = int(temp & math.MaxInt32)
 
 	temp, err = h.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	h.HGridY = int32(temp)
+	h.HGridY = int(temp & math.MaxInt32)
 
 	temp, err = h.r.ReadBits(16)
 	if err != nil {
 		return err
 	}
-	h.HRegionX = uint16(temp) & 0xFFFF
+	h.HRegionX = uint16(temp & math.MaxUint16)
 
 	temp, err = h.r.ReadBits(16)
 	if err != nil {
 		return err
 	}
-	h.HRegionY = uint16(temp) & 0xFFFF
+	h.HRegionY = uint16(temp & math.MaxUint16)
 
 	if err = h.computeSegmentDataStructure(); err != nil {
 		return err
@@ -377,18 +377,18 @@ func (h *HalftoneRegion) parseHeader() error {
 }
 
 // renderPattern draws the pattern into the region bitmap, as described in 6.6.5.2.
-func (h *HalftoneRegion) renderPattern(grayScaleValues [][]int32) (err error) {
-	var x, y uint32
+func (h *HalftoneRegion) renderPattern(grayScaleValues [][]int) (err error) {
+	var x, y int
 
-	for m := uint32(0); m < h.HGridHeight; m++ {
-		for n := uint32(0); n < h.HGridWidth; n++ {
+	for m := 0; m < h.HGridHeight; m++ {
+		for n := 0; n < h.HGridWidth; n++ {
 			x = h.computeX(m, n)
 			y = h.computeY(m, n)
 			patternBitmap := h.Patterns[grayScaleValues[m][n]]
 
 			if err = bitmap.Blit(
 				patternBitmap, h.HalftoneRegionBitmap,
-				int32(x)+h.HGridX, int32(y)+h.HGridY, h.CombinationOperator,
+				x+h.HGridX, y+h.HGridY, h.CombinationOperator,
 			); err != nil {
 				return err
 			}
@@ -401,7 +401,7 @@ func newHalftoneRegion(r *reader.Reader) *HalftoneRegion {
 	return &HalftoneRegion{r: r, RegionSegment: NewRegionSegment(r)}
 }
 
-func findMSB(n uint32) uint32 {
+func findMSB(n int) int {
 	if n == 0 {
 		return 0
 	}
@@ -413,7 +413,7 @@ func findMSB(n uint32) uint32 {
 	return (n + 1) >> 1
 }
 
-func (h *HalftoneRegion) shiftAndFill(value uint32) uint32 {
+func (h *HalftoneRegion) shiftAndFill(value int) int {
 	value >>= 8
 	if value < 0 {
 		bitPosition := int(math.Log(float64(findMSB(value))) / math.Log(2))

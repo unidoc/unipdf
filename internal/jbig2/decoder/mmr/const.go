@@ -15,7 +15,7 @@ const (
 	compFaxG3_2d
 )
 
-type mmrCode int32
+type mmrCode int
 
 const (
 	codeP mmrCode = iota
@@ -36,11 +36,11 @@ const (
 
 // Constants used be the MMR decoder.
 const (
-	noMask  = int32(0xFFFF)
-	inComp  = int32(-4)
-	EOF     = int32(-3)
-	invalid = int32(-2)
-	EOL     = int32(-1)
+	noMask  = 0xFFFF
+	inComp  = -4
+	EOF     = -3
+	invalid = -2
+	EOL     = -1
 
 	firstLevelTableSize  = 8
 	firstLevelTablemask  = (1 << firstLevelTableSize) - 1
@@ -53,23 +53,23 @@ const (
 
 var (
 	// modeCodes are predefined codes for the runData.
-	modeCodes = [][3]int32{
-		{4, 0x1, int32(codeP)},      // 0001 pass
-		{3, 0x1, int32(codeH)},      // 001 horizontal
-		{1, 0x1, int32(codeV0)},     // 1 vert 0
-		{3, 0x3, int32(codeVR1)},    // 011 vert r 1
-		{6, 0x3, int32(codeVR2)},    // 000011 ver r2
-		{7, 0x3, int32(codeVR3)},    // 0000011 vertr3
-		{3, 0x2, int32(codeVL1)},    // 010 vert l 1
-		{6, 0x2, int32(codeVL2)},    // 000010 ver 1 2
-		{7, 0x2, int32(codeVL3)},    // 00000010 ver l 3
-		{10, 0xf, int32(codeExt2D)}, // 0000001111
-		{12, 0xf, int32(codeExt1D)}, // 0000000001111
-		{12, 0x1, int32(EOL)},       // 0000000000001
+	modeCodes = [][3]int{
+		{4, 0x1, int(codeP)},      // 0001 pass
+		{3, 0x1, int(codeH)},      // 001 horizontal
+		{1, 0x1, int(codeV0)},     // 1 vert 0
+		{3, 0x3, int(codeVR1)},    // 011 vert r 1
+		{6, 0x3, int(codeVR2)},    // 000011 ver r2
+		{7, 0x3, int(codeVR3)},    // 0000011 vertr3
+		{3, 0x2, int(codeVL1)},    // 010 vert l 1
+		{6, 0x2, int(codeVL2)},    // 000010 ver 1 2
+		{7, 0x2, int(codeVL3)},    // 00000010 ver l 3
+		{10, 0xf, int(codeExt2D)}, // 0000001111
+		{12, 0xf, int(codeExt1D)}, // 0000000001111
+		{12, 0x1, int(EOL)},       // 0000000000001
 	}
 
 	// whiteCodes are the 'white' codes for the runData.
-	whiteCodes = [][3]int32{
+	whiteCodes = [][3]int{
 		{4, 0x07, 2},        // 0111
 		{4, 0x08, 3},        // 1000
 		{4, 0x0B, 4},        // 1011
@@ -182,7 +182,7 @@ var (
 	}
 
 	// blackCodes are the 'black' codes used by the runData
-	blackCodes = [][3]int32{
+	blackCodes = [][3]int{
 		{2, 0x02, 3},        // 10
 		{2, 0x03, 2},        // 11
 		{3, 0x02, 1},        // 010
