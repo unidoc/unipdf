@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -654,57 +655,54 @@ func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) 
 func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
-	samples := img.GetSamples()
-
 	common.Log.Trace("CMYK -> RGB")
-	common.Log.Trace("image bpc: %d, color comps: %d", img.BitsPerComponent, img.ColorComponents)
-	common.Log.Trace("Len data: %d, len samples: %d", len(img.Data), len(samples))
+	common.Log.Trace("Image BPC: %d, Color components: %d", img.BitsPerComponent, img.ColorComponents)
+	common.Log.Trace("Len data: %d", len(img.Data))
 	common.Log.Trace("Height: %d, Width: %d", img.Height, img.Width)
-	if len(samples)%4 != 0 {
-		//common.Log.Debug("samples: % d", samples)
-		common.Log.Debug("Input image: %#v", img)
-		common.Log.Debug("CMYK -> RGB fail, len samples: %d", len(samples))
-		return img, errors.New("CMYK data not a multiple of 4")
-	}
 
 	decode := img.decode
 	if decode == nil {
 		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 	}
 	if len(decode) != 8 {
-		common.Log.Debug("Invalid decode array (%d): % .3f", len(decode), decode)
+		common.Log.Debug("Invalid decode array (%d): %.3f", len(decode), decode)
 		return img, errors.New("invalid decode array")
 	}
-	common.Log.Trace("Decode array: % f", decode)
+	common.Log.Trace("Decode array: %f", decode)
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 	common.Log.Trace("MaxVal: %f", maxVal)
-	var rgbSamples []uint32
-	for i := 0; i < len(samples); i += 4 {
-		// Normalized c, m, y, k values.
-		c := interpolate(float64(samples[i]), 0, maxVal, decode[0], decode[1])
-		m := interpolate(float64(samples[i+1]), 0, maxVal, decode[2], decode[3])
-		y := interpolate(float64(samples[i+2]), 0, maxVal, decode[4], decode[5])
-		k := interpolate(float64(samples[i+3]), 0, maxVal, decode[6], decode[7])
 
-		c = c*(1-k) + k
-		m = m*(1-k) + k
-		y = y*(1-k) + k
+	data := make([]byte, 3*img.Width*img.Height)
+	for l := 0; l < int(img.Height); l++ {
+		for x := 0; x < int(img.Width); x++ {
+			col, err := img.ColorAt(x, l)
+			if err != nil {
+				return img, err
+			}
+			cmyk, ok := col.(color.CMYK)
+			if !ok {
+				return img, errors.New("")
+			}
 
-		r := 1 - c
-		g := 1 - m
-		b := 1 - y
+			// Normalized c, m, y, k values.
+			c := interpolate(float64(cmyk.C), 0, maxVal, decode[0], decode[1])
+			m := interpolate(float64(cmyk.M), 0, maxVal, decode[2], decode[3])
+			y := interpolate(float64(cmyk.Y), 0, maxVal, decode[4], decode[5])
+			k := interpolate(float64(cmyk.K), 0, maxVal, decode[6], decode[7])
 
-		// Convert to uint32 format.
-		R := uint32(r * maxVal)
-		G := uint32(g * maxVal)
-		B := uint32(b * maxVal)
-		//common.Log.Trace("(%f,%f,%f,%f) -> (%f,%f,%f) [%d,%d,%d]", c, m, y, k, r, g, b, R, G, B)
+			r := uint8(float64(1-(c*(1-k)+k)) * maxVal)
+			g := uint8(float64(1-(m*(1-k)+k)) * maxVal)
+			b := uint8(float64(1-(y*(1-k)+k)) * maxVal)
 
-		rgbSamples = append(rgbSamples, R, G, B)
+			idx := (l*int(img.Width) + x) * 3
+			data[idx], data[idx+1], data[idx+2] = r, g, b
+		}
 	}
-	rgbImage.SetSamples(rgbSamples)
+
+	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
+	rgbImage.Data = data
 
 	return rgbImage, nil
 }
