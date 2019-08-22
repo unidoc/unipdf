@@ -53,6 +53,10 @@ func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
 
 // GetSamples converts the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
+// NOTE: The method resamples the image byte data before returning the result and
+// this could lead to high memory usage, especially on large images. It should
+// be avoided, when possible. It is recommended to access the Data field of the
+// image directly or use the ColorAt method to extract individual pixels.
 func (img *Image) GetSamples() []uint32 {
 	samples := sampling.ResampleBytes(img.Data, int(img.BitsPerComponent))
 
@@ -68,6 +72,9 @@ func (img *Image) GetSamples() []uint32 {
 }
 
 // SetSamples convert samples to byte-data and sets for the image.
+// NOTE: The method resamples the data and this could lead to high memory usage,
+// especially on large images. It should be used only when it is not possible
+// to work with the image byte data directly.
 func (img *Image) SetSamples(samples []uint32) {
 	resampled := sampling.ResampleUint32(samples, int(img.BitsPerComponent), 8)
 	data := make([]byte, len(resampled))
