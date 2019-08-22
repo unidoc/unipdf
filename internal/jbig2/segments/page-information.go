@@ -89,7 +89,7 @@ func (p *PageInformationSegment) String() string {
 func (p *PageInformationSegment) checkInput() error {
 	if p.PageBMHeight == math.MaxInt32 {
 		if !p.IsStripe {
-			common.Log.Debug("isStriped should contaion the value true")
+			common.Log.Debug("PageInformationSegment.IsStripe should be true.")
 		}
 	}
 	return nil
