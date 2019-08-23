@@ -1181,7 +1181,7 @@ var (
 // sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
-// Text is considered to be on different lines in orientedStart.Y differs by more than `tol`.
+// Text is considered to be on different lines if the lines' orientedStart.Y differs by more than `tol`.
 func (pt *PageText) sortPosition(tol float64) {
 	if len(pt.marks) == 0 {
 		return

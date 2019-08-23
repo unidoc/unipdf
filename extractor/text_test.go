@@ -139,7 +139,6 @@ func TestTextExtractionFragments(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // TestTextExtractionFiles tests text extraction on a set of PDF files.
@@ -341,9 +340,6 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 			t.Fatalf("%q doesn't have page %d", filepath, pageNum)
 		}
 		actualText = norm.NFKC.String(actualText)
-		// fmt.Println("#################### $$ ####################")
-		// fmt.Println(actualText)
-		// fmt.Println("#################### @@ ####################")
 		if !containsTerms(t, expectedTerms, actualText) {
 			t.Fatalf("Text mismatch filepath=%q page=%d", filepath, pageNum)
 		}
