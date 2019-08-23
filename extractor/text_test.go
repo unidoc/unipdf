@@ -22,6 +22,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/creator"
+	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
 	"golang.org/x/text/unicode/norm"
 )
@@ -138,6 +139,7 @@ func TestTextExtractionFragments(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 // TestTextExtractionFiles tests text extraction on a set of PDF files.
@@ -178,6 +180,40 @@ func TestTermMarksFiles(t *testing.T) {
 		return
 	}
 	testTermMarksFiles(t)
+}
+
+//  TestTextSort checks that PageText.sortPosition() gives expected results
+func TestTextSort(t *testing.T) {
+	// marks0 is in the expected sort order for tol=15
+	marks0 := []textMark{
+		// y difference > tol => sorts by Y descending
+		textMark{orientedStart: transform.Point{X: 300, Y: 160}},
+		textMark{orientedStart: transform.Point{X: 200, Y: 140}},
+		textMark{orientedStart: transform.Point{X: 100, Y: 120}},
+
+		// y difference < tol => sort by X ascending for approx same Y
+		textMark{orientedStart: transform.Point{X: 100, Y: 30}},
+		textMark{orientedStart: transform.Point{X: 200, Y: 40}},
+		textMark{orientedStart: transform.Point{X: 300, Y: 50}},
+
+		// y difference > tol => sorts by X descending for approx same Y, different from previous Y
+		textMark{orientedStart: transform.Point{X: 100, Y: 3}},
+		textMark{orientedStart: transform.Point{X: 200, Y: 4}},
+		textMark{orientedStart: transform.Point{X: 300, Y: 5}},
+	}
+
+	marks := make([]textMark, len(marks0))
+	copy(marks, marks0)
+
+	pt := PageText{marks: marks}
+	pt.sortPosition(15)
+
+	for i, m0 := range marks0 {
+		m := pt.marks[i]
+		if m.orientedStart.X != m0.orientedStart.X || m.orientedStart.Y != m0.orientedStart.Y {
+			t.Fatalf("i=%d m=%v != m0=%v", i, m, m0)
+		}
+	}
 }
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
@@ -305,6 +341,9 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 			t.Fatalf("%q doesn't have page %d", filepath, pageNum)
 		}
 		actualText = norm.NFKC.String(actualText)
+		// fmt.Println("#################### $$ ####################")
+		// fmt.Println(actualText)
+		// fmt.Println("#################### @@ ####################")
 		if !containsTerms(t, expectedTerms, actualText) {
 			t.Fatalf("Text mismatch filepath=%q page=%d", filepath, pageNum)
 		}

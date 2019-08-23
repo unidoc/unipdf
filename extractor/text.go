@@ -802,6 +802,7 @@ type textMark struct {
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
+	yOrder        int                // y-order
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
@@ -1180,14 +1181,43 @@ var (
 // sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
+// Text is considered to be on different lines in orientedStart.Y differs by more than `tol`.
 func (pt *PageText) sortPosition(tol float64) {
+	if len(pt.marks) == 0 {
+		return
+	}
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		if math.Abs(ti.orientedStart.Y-tj.orientedStart.Y) > tol {
+		if ti.orientedStart.Y != tj.orientedStart.Y {
 			return ti.orientedStart.Y > tj.orientedStart.Y
+		}
+		return ti.orientedStart.X < tj.orientedStart.X
+	})
+
+	// Compute yOrder. yOrder increments if orientedStart.Y differs by more than `tol`.
+	yOrder := 0
+	pt.marks[0].yOrder = 0
+	y := pt.marks[0].orientedStart.Y
+	for i, t := range pt.marks[1:] {
+		if t.orientedStart.Y > y+tol {
+			yOrder = ((yOrder + 1000) / 1000) * 1000 // Next multiple of 1000
+			y = t.orientedStart.Y
+		}
+		if t.orientedStart.Y < y-tol {
+			yOrder++
+		}
+		y = t.orientedStart.Y
+		pt.marks[i+1].yOrder = yOrder
+	}
+
+	// Sort by yOrder then orientedStart.X
+	sort.SliceStable(pt.marks, func(i, j int) bool {
+		ti, tj := pt.marks[i], pt.marks[j]
+		if ti.yOrder != tj.yOrder {
+			return ti.yOrder < tj.yOrder
 		}
 		return ti.orientedStart.X < tj.orientedStart.X
 	})
