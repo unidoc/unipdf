@@ -195,18 +195,19 @@ func TestTextSort(t *testing.T) {
 		textMark{orientedStart: transform.Point{X: 200, Y: 40}},
 		textMark{orientedStart: transform.Point{X: 300, Y: 50}},
 
-		// y difference > tol => sorts by X descending for approx same Y, different from previous Y
+		// y difference < tol => sorts by X descending for approx same Y, different from previous Y
 		textMark{orientedStart: transform.Point{X: 100, Y: 3}},
 		textMark{orientedStart: transform.Point{X: 200, Y: 4}},
 		textMark{orientedStart: transform.Point{X: 300, Y: 5}},
 	}
 
+	// Copy marks0 to PageText and sort them. This should preserve order of marks.
 	marks := make([]textMark, len(marks0))
 	copy(marks, marks0)
-
 	pt := PageText{marks: marks}
 	pt.sortPosition(15)
 
+	// Check that marks order hasn't changed.
 	for i, m0 := range marks0 {
 		m := pt.marks[i]
 		if m.orientedStart.X != m0.orientedStart.X || m.orientedStart.Y != m0.orientedStart.Y {
