@@ -69,30 +69,41 @@ const (
 // 	'dest'	 	'dest' bitmap
 //	'dx'		x val of UL corner of 'dest' bitmap
 //	'dy'		y val of UL corner of 'dest' bitmap
+//	'dw'		is the width of the operational rectangle on the bitmap 'dest'
+//	'dh'		is the height of the operational rectangle on the bitmap 'dest'
 //	'op'		raster operator code
 //	'src'	 	'src' bitmap
 //	'sx'		x val of UL corner of 'src' bitmap
 //	'sy'		y val of UL corner of 'src' bitmap
-func RasterOperation(dest *Bitmap, dx, dy int, op RasterOperator, src *Bitmap, sx, sy int) error {
+func RasterOperation(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
+	return rasterOperation(dest, dx, dy, dw, dh, op, src, sx, sy)
+}
+
+// RasterOperation has the same function as the RasterOperation package function, where the
+// 'b' bitmap is the 'dest'.
+func (b *Bitmap) RasterOperation(dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
+	return rasterOperation(b, dx, dy, dw, dh, op, src, sx, sy)
+}
+
+func rasterOperation(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	if dest == nil {
 		return errors.New("nil 'dest' Bitmap")
 	}
-
 	if op == PixDst {
 		return nil
 	}
 
 	switch op {
 	case PixClr, PixSet, PixNotDst:
-		return rasterOpUniLow(dest, dx, dy, dest.Width, dest.Height, op)
+		rasterOpUniLow(dest, dx, dy, dw, dh, op)
+		return nil
 	}
 
 	if src == nil {
 		common.Log.Debug("RasterOperation source bitmap is not defined")
 		return errors.New("nil 'src' bitmap")
 	}
-
-	return rasterOpLow(dest, dx, dy, dest.Width, dest.Height, op, src, sx, sy)
+	return rasterOpLow(dest, dx, dy, dw, dh, op, src, sx, sy)
 }
 
 // rasterOpLow scales width, performs clipping, checks alignment and dispatches for the 'op' RasterOperator.
@@ -1472,16 +1483,16 @@ func rasterOpGeneralLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src
 	return nil
 }
 
-// rasterOpUniLow performs clipping, checks aligment and dispatches for the rasterop
+// rasterOpUniLow performs clipping, checks aligment and dispatches for the rasterop.
 // NOTE: (kucjac) checked rasterOpUniLow.
-func rasterOpUniLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) error {
+func rasterOpUniLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator) {
 	// clip horizontally (dx, dw)
 	if dx < 0 {
 		dw += dx
 		dx = 0
 	}
 
-	dHangw := dx + dw + dest.Width
+	dHangw := dx + dw - dest.Width
 	if dHangw > 0 {
 		// reduce dw
 		dw -= dHangw
@@ -1501,21 +1512,20 @@ func rasterOpUniLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) err
 
 	// if clipped entirely quit
 	if dw <= 0 || dh <= 0 {
-		return nil
+		return
 	}
 
-	var err error
-	if dx&7 == 0 {
-		err = rasterOpUniWordAlignedLow(dest, dx, dy, dw, dh, op)
+	if (dx & 7) == 0 {
+		rasterOpUniWordAlignedLow(dest, dx, dy, dw, dh, op)
 	} else {
-		err = rasterOpUniGeneralLow(dest, dx, dy, dw, dh, op)
+		rasterOpUniGeneralLow(dest, dx, dy, dw, dh, op)
 	}
-	return err
 }
 
 // rasterOpUniWordAligneLow is called when the 'dest' bitmap is left aligned. This means dx & 7 == 0.
 // NOTE: (kucjac) checked rasterOpUniWordAligneLow.
-func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) error {
+func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) {
+	common.Log.Trace("rasterOpUniWordAlignedLow")
 	var (
 		// firstWordIndex is the byte index of the first byte
 		firstWordIndex int
@@ -1531,6 +1541,7 @@ func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOp
 	if lwbits > 0 {
 		lwmask = lmaskByte[lwbits]
 	}
+
 	firstWordIndex = dest.RowStride*dy + (dx >> 3)
 
 	switch op {
@@ -1567,31 +1578,19 @@ func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOp
 				dest.Data[lined] = combinePartial(dest.Data[lined], ^dest.Data[lined], lwmask)
 			}
 		}
-	default:
-		common.Log.Debug("Operation: '%d' not permitted in OpUniWordAligned", op)
-		return errors.New("raster operation not permitted")
 	}
-	return nil
 }
 
 // rasterOpUniGeneralLow static low-level uni rasterop without byte aligment.
 // NOTE: (kucjac) checked rasterOpUniGeneralLow.
-func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) error {
+func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) {
 	var (
-		// fbMask is a mask for first partial 'dest' byte.
-		fbMask byte
-		// fbPartial boolean if first 'dest' byte is partial.
-		fbPartial bool
 		// fbDoublyPartial boolean if first 'dest' byte is doubly partial.
 		fbDoublyPartial bool
 		// fbFull boolean if there exists a full 'dest' byte word.
 		fbFull bool
-		// fbBits first byte 'dest' bits int ovrhang.
-		fbBits int
 		// fullBytesNumber is the number of full 'dest' bytes.
 		fullBytesNumber int
-		// firstBytePartialIndex is an index in 'dest'.Data of the first partial byte.
-		firstBytePartialIndex int
 		// firstFullByteIndex is an index in 'dest'.Data' of the first full byte.
 		firstFullByteIndex int
 
@@ -1604,15 +1603,14 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 		// lbMask mask for the last partial 'dest' byte.
 		lbMask byte
 	)
+	// fbBits first byte 'dest' bits int ovrhang.
+	fbBits := 8 - (dx & 7)
+	// fbMask is a mask for first partial 'dest' byte.
+	fbMask := rmaskByte[fbBits]
+	// firstBytePartialIndex is an index in 'dest'.Data of the first partial byte.
+	firstBytePartialIndex := dest.RowStride*dy + (dx >> 3)
 
-	if dx&7 != 0 {
-		fbPartial = true
-		fbBits = 8 - (dx & 7)
-		fbMask = rmaskByte[fbBits]
-		firstBytePartialIndex = dest.RowStride*dy + (dx >> 3)
-	}
-
-	// is the first byte is not doubly partial?
+	// is the first byte is doubly partial?
 	if dw < fbBits {
 		fbDoublyPartial = true
 		fbMask &= lmaskByte[8-fbBits+dw]
@@ -1623,11 +1621,7 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 		fullBytesNumber = (dw - fbBits) >> 3
 		if fullBytesNumber != 0 {
 			fbFull = true
-			if fbPartial {
-				firstFullByteIndex = firstBytePartialIndex + 1
-			} else {
-				firstFullByteIndex = dest.RowStride*dy + (dx >> 3)
-			}
+			firstFullByteIndex = firstBytePartialIndex + 1
 		}
 	}
 
@@ -1636,22 +1630,16 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 	if !(fbDoublyPartial || lbBits == 0) {
 		lbPartial = true
 		lbMask = lmaskByte[lbBits]
-		if fbPartial {
-			lastBytePartialIndex = firstBytePartialIndex + 1 + fullBytesNumber
-		} else {
-			lastBytePartialIndex = dest.RowStride*dy + (dx >> 3) + fullBytesNumber
-		}
+		lastBytePartialIndex = firstBytePartialIndex + 1 + fullBytesNumber
 	}
 
 	var i, j int
 	switch op {
 	case PixClr:
 		// do the first partial word
-		if fbPartial {
-			for i = 0; i < dh; i++ {
-				dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], 0x0, fbMask)
-				firstBytePartialIndex += dest.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], 0x0, fbMask)
+			firstBytePartialIndex += dest.RowStride
 		}
 
 		// do the full words
@@ -1673,11 +1661,9 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 		}
 	case PixSet:
 		// do the first partial word
-		if fbPartial {
-			for i = 0; i < dh; i++ {
-				dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], 0xff, fbMask)
-				firstBytePartialIndex += dest.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], 0xff, fbMask)
+			firstBytePartialIndex += dest.RowStride
 		}
 
 		// do the full words
@@ -1699,10 +1685,9 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 		}
 	case PixNotDst:
 		// do the first partial word
-		if fbPartial {
-			for i = 0; i < dh; i++ {
-				dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], ^dest.Data[firstBytePartialIndex], fbMask)
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[firstBytePartialIndex] = combinePartial(dest.Data[firstBytePartialIndex], ^dest.Data[firstBytePartialIndex], fbMask)
+			firstBytePartialIndex += dest.RowStride
 		}
 
 		// do the full words
@@ -1722,16 +1707,12 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 				lastBytePartialIndex += dest.RowStride
 			}
 		}
-	default:
-		common.Log.Debug("Operation: '%d' not permitted in OpUniWordAligned", op)
-		return errors.New("raster operation not permitted")
 	}
-	return nil
 }
 
 var (
-	lmaskByte = []byte{0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF}
-	rmaskByte = []byte{0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF}
+	lmaskByte = []byte{0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF}
+	rmaskByte = []byte{0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF}
 )
 
 func combinePartial(d, s, m byte) byte {

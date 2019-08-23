@@ -7,6 +7,7 @@ package bitmap
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -58,21 +59,27 @@ type Bitmap struct {
 
 // New creates new bitmap with the parameters as provided in the arguments.
 func New(width, height int) *Bitmap {
-	bm := &Bitmap{
+	bm := newBitmap(width, height)
+	bm.Data = make([]byte, height*bm.RowStride)
+	return bm
+}
+
+func newBitmap(width, height int) *Bitmap {
+	return &Bitmap{
 		Width:     width,
 		Height:    height,
 		RowStride: (width + 7) >> 3,
 	}
-	bm.Data = make([]byte, height*bm.RowStride)
-
-	return bm
 }
 
 // NewWithData creates new bitmap with the provided 'width', 'height' and the byte slice 'data'.
-func NewWithData(width, height int, data []byte) *Bitmap {
-	bm := New(width, height)
+func NewWithData(width, height int, data []byte) (*Bitmap, error) {
+	bm := newBitmap(width, height)
 	bm.Data = data
-	return bm
+	if len(data) < height*bm.RowStride {
+		return nil, fmt.Errorf("invalid data length: %d - should be: %d", len(data), height*bm.RowStride)
+	}
+	return bm, nil
 }
 
 // AddBorderGeneral creates new bitmap on the base of the bitmap 'b' with the border of lenght
