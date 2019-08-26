@@ -76,17 +76,17 @@ func NewPdfFilespecFromObj(obj core.PdfObject) (*PdfFilespec, error) {
 	fs := &PdfFilespec{}
 
 	var dict *core.PdfObjectDictionary
-	if indObj, isInd := obj.(*core.PdfIndirectObject); isInd {
+
+	if indObj, isInd := core.GetIndirect(obj); isInd {
 		fs.container = indObj
 
-		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
+		d, ok := core.GetDict(indObj.PdfObject)
 		if !ok {
 			common.Log.Debug("Object not a dictionary type")
 			return nil, core.ErrTypeError
 		}
-
 		dict = d
-	} else if d, isDict := obj.(*core.PdfObjectDictionary); isDict {
+	} else if d, isDict := core.GetDict(obj); isDict {
 		fs.container = d
 		dict = d
 	} else {
