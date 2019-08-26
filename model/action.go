@@ -83,23 +83,21 @@ func (a *PdfAction) ToPdfObject() core.PdfObject {
 
 // String implements interface PdfObject.
 func (a *PdfAction) String() string {
-	s := ""
-
 	obj, ok := a.ToPdfObject().(*core.PdfIndirectObject)
 	if ok {
-		s = fmt.Sprintf("%T: %s", a.context, obj.PdfObject.String())
+		return fmt.Sprintf("%T: %s", a.context, obj.PdfObject.String())
 	}
 
-	return s
+	return ""
 }
 
-// PdfActionGoTo represents a GoTo action
+// PdfActionGoTo represents a GoTo action.
 type PdfActionGoTo struct {
 	*PdfAction
 	D core.PdfObject // name, byte string or array
 }
 
-// PdfActionGoToR represents a GoToR action
+// PdfActionGoToR represents a GoToR action.
 type PdfActionGoToR struct {
 	*PdfAction
 	F         *PdfFilespec
@@ -107,7 +105,7 @@ type PdfActionGoToR struct {
 	NewWindow core.PdfObject
 }
 
-// PdfActionGoToE represents a GoToE action
+// PdfActionGoToE represents a GoToE action.
 type PdfActionGoToE struct {
 	*PdfAction
 	F         *PdfFilespec
@@ -116,7 +114,7 @@ type PdfActionGoToE struct {
 	T         core.PdfObject
 }
 
-// PdfActionLaunch represents a launch action
+// PdfActionLaunch represents a launch action.
 type PdfActionLaunch struct {
 	*PdfAction
 	F         *PdfFilespec
@@ -126,7 +124,7 @@ type PdfActionLaunch struct {
 	NewWindow core.PdfObject
 }
 
-// PdfActionThread represents a thread action
+// PdfActionThread represents a thread action.
 type PdfActionThread struct {
 	*PdfAction
 	F *PdfFilespec
@@ -134,14 +132,14 @@ type PdfActionThread struct {
 	B core.PdfObject
 }
 
-// PdfActionURI represents an URI action
+// PdfActionURI represents an URI action.
 type PdfActionURI struct {
 	*PdfAction
 	URI   core.PdfObject
 	IsMap core.PdfObject
 }
 
-// PdfActionSound represents a sound action
+// PdfActionSound represents a sound action.
 type PdfActionSound struct {
 	*PdfAction
 	Sound       core.PdfObject
@@ -151,7 +149,7 @@ type PdfActionSound struct {
 	Mix         core.PdfObject
 }
 
-// PdfActionMovie represents a movie action
+// PdfActionMovie represents a movie action.
 type PdfActionMovie struct {
 	*PdfAction
 	Annotation core.PdfObject
@@ -159,20 +157,20 @@ type PdfActionMovie struct {
 	Operation  core.PdfObject
 }
 
-// PdfActionHide represents a hide action
+// PdfActionHide represents a hide action.
 type PdfActionHide struct {
 	*PdfAction
 	T core.PdfObject
 	H core.PdfObject
 }
 
-// PdfActionNamed represents a named action
+// PdfActionNamed represents a named action.
 type PdfActionNamed struct {
 	*PdfAction
 	N core.PdfObject
 }
 
-// PdfActionSubmitForm represents a submitForm action
+// PdfActionSubmitForm represents a submitForm action.
 type PdfActionSubmitForm struct {
 	*PdfAction
 	F      *PdfFilespec
@@ -180,27 +178,27 @@ type PdfActionSubmitForm struct {
 	Flags  core.PdfObject
 }
 
-// PdfActionResetForm represents a resetForm action
+// PdfActionResetForm represents a resetForm action.
 type PdfActionResetForm struct {
 	*PdfAction
 	Fields core.PdfObject
 	Flags  core.PdfObject
 }
 
-// PdfActionImportData represents a importData action
+// PdfActionImportData represents a importData action.
 type PdfActionImportData struct {
 	*PdfAction
 	F *PdfFilespec
 }
 
-// PdfActionSetOCGState represents a SetOCGState action
+// PdfActionSetOCGState represents a SetOCGState action.
 type PdfActionSetOCGState struct {
 	*PdfAction
 	State      core.PdfObject
 	PreserveRB core.PdfObject
 }
 
-// PdfActionRendition represents a Rendition action
+// PdfActionRendition represents a Rendition action.
 type PdfActionRendition struct {
 	*PdfAction
 	R  core.PdfObject
@@ -209,20 +207,20 @@ type PdfActionRendition struct {
 	JS core.PdfObject
 }
 
-// PdfActionTrans represents a trans action
+// PdfActionTrans represents a trans action.
 type PdfActionTrans struct {
 	*PdfAction
 	Trans core.PdfObject
 }
 
-// PdfActionGoTo3DView represents a GoTo3DView action
+// PdfActionGoTo3DView represents a GoTo3DView action.
 type PdfActionGoTo3DView struct {
 	*PdfAction
 	TA core.PdfObject
 	V  core.PdfObject
 }
 
-// PdfActionJavaScript represents a javaScript action
+// PdfActionJavaScript represents a javaScript action.
 type PdfActionJavaScript struct {
 	*PdfAction
 	JS core.PdfObject
@@ -235,7 +233,7 @@ func NewPdfAction() *PdfAction {
 	return action
 }
 
-// NewPdfActionGoTo returns a new "go to" action
+// NewPdfActionGoTo returns a new "go to" action.
 func NewPdfActionGoTo() *PdfActionGoTo {
 	action := NewPdfAction()
 	goToAction := &PdfActionGoTo{}
@@ -244,7 +242,7 @@ func NewPdfActionGoTo() *PdfActionGoTo {
 	return goToAction
 }
 
-// NewPdfActionGoToR returns a new "go to remote" action
+// NewPdfActionGoToR returns a new "go to remote" action.
 func NewPdfActionGoToR() *PdfActionGoToR {
 	action := NewPdfAction()
 	goToRAction := &PdfActionGoToR{}
@@ -253,7 +251,7 @@ func NewPdfActionGoToR() *PdfActionGoToR {
 	return goToRAction
 }
 
-// NewPdfActionGoToE returns a new "go to embedded" action
+// NewPdfActionGoToE returns a new "go to embedded" action.
 func NewPdfActionGoToE() *PdfActionGoToE {
 	action := NewPdfAction()
 	goToEAction := &PdfActionGoToE{}
@@ -262,7 +260,7 @@ func NewPdfActionGoToE() *PdfActionGoToE {
 	return goToEAction
 }
 
-// NewPdfActionLaunch returns a new "launch" action
+// NewPdfActionLaunch returns a new "launch" action.
 func NewPdfActionLaunch() *PdfActionLaunch {
 	action := NewPdfAction()
 	launchAction := &PdfActionLaunch{}
@@ -271,7 +269,7 @@ func NewPdfActionLaunch() *PdfActionLaunch {
 	return launchAction
 }
 
-// NewPdfActionThread returns a new "thread" action
+// NewPdfActionThread returns a new "thread" action.
 func NewPdfActionThread() *PdfActionThread {
 	action := NewPdfAction()
 	threadAction := &PdfActionThread{}
@@ -280,7 +278,7 @@ func NewPdfActionThread() *PdfActionThread {
 	return threadAction
 }
 
-// NewPdfActionURI returns a new "Uri" action
+// NewPdfActionURI returns a new "Uri" action.
 func NewPdfActionURI() *PdfActionURI {
 	action := NewPdfAction()
 	uriAction := &PdfActionURI{}
@@ -289,7 +287,7 @@ func NewPdfActionURI() *PdfActionURI {
 	return uriAction
 }
 
-// NewPdfActionSound returns a new "sound" action
+// NewPdfActionSound returns a new "sound" action.
 func NewPdfActionSound() *PdfActionSound {
 	action := NewPdfAction()
 	soundAction := &PdfActionSound{}
@@ -298,7 +296,7 @@ func NewPdfActionSound() *PdfActionSound {
 	return soundAction
 }
 
-// NewPdfActionMovie returns a new "movie" action
+// NewPdfActionMovie returns a new "movie" action.
 func NewPdfActionMovie() *PdfActionMovie {
 	action := NewPdfAction()
 	movieAction := &PdfActionMovie{}
@@ -307,7 +305,7 @@ func NewPdfActionMovie() *PdfActionMovie {
 	return movieAction
 }
 
-// NewPdfActionHide returns a new "hide" action
+// NewPdfActionHide returns a new "hide" action.
 func NewPdfActionHide() *PdfActionHide {
 	action := NewPdfAction()
 	hideAction := &PdfActionHide{}
@@ -316,7 +314,7 @@ func NewPdfActionHide() *PdfActionHide {
 	return hideAction
 }
 
-// NewPdfActionNamed returns a new "named" action
+// NewPdfActionNamed returns a new "named" action.
 func NewPdfActionNamed() *PdfActionNamed {
 	action := NewPdfAction()
 	namedAction := &PdfActionNamed{}
@@ -325,7 +323,7 @@ func NewPdfActionNamed() *PdfActionNamed {
 	return namedAction
 }
 
-// NewPdfActionSubmitForm returns a new "submit form" action
+// NewPdfActionSubmitForm returns a new "submit form" action.
 func NewPdfActionSubmitForm() *PdfActionSubmitForm {
 	action := NewPdfAction()
 	submitFormAction := &PdfActionSubmitForm{}
@@ -334,7 +332,7 @@ func NewPdfActionSubmitForm() *PdfActionSubmitForm {
 	return submitFormAction
 }
 
-// NewPdfActionResetForm returns a new "reset form" action
+// NewPdfActionResetForm returns a new "reset form" action.
 func NewPdfActionResetForm() *PdfActionResetForm {
 	action := NewPdfAction()
 	resetFormAction := &PdfActionResetForm{}
@@ -343,7 +341,7 @@ func NewPdfActionResetForm() *PdfActionResetForm {
 	return resetFormAction
 }
 
-// NewPdfActionImportData returns a new "import data" action
+// NewPdfActionImportData returns a new "import data" action.
 func NewPdfActionImportData() *PdfActionImportData {
 	action := NewPdfAction()
 	importDataAction := &PdfActionImportData{}
@@ -352,7 +350,7 @@ func NewPdfActionImportData() *PdfActionImportData {
 	return importDataAction
 }
 
-// NewPdfActionSetOCGState returns a new "named" action
+// NewPdfActionSetOCGState returns a new "named" action.
 func NewPdfActionSetOCGState() *PdfActionSetOCGState {
 	action := NewPdfAction()
 	setOCGStateAction := &PdfActionSetOCGState{}
@@ -361,7 +359,7 @@ func NewPdfActionSetOCGState() *PdfActionSetOCGState {
 	return setOCGStateAction
 }
 
-// NewPdfActionRendition returns a new "rendition" action
+// NewPdfActionRendition returns a new "rendition" action.
 func NewPdfActionRendition() *PdfActionRendition {
 	action := NewPdfAction()
 	renditionAction := &PdfActionRendition{}
@@ -370,7 +368,7 @@ func NewPdfActionRendition() *PdfActionRendition {
 	return renditionAction
 }
 
-// NewPdfActionTrans returns a new "trans" action
+// NewPdfActionTrans returns a new "trans" action.
 func NewPdfActionTrans() *PdfActionTrans {
 	action := NewPdfAction()
 	transAction := &PdfActionTrans{}
@@ -379,7 +377,7 @@ func NewPdfActionTrans() *PdfActionTrans {
 	return transAction
 }
 
-// NewPdfActionGoTo3DView returns a new "goTo3DView" action
+// NewPdfActionGoTo3DView returns a new "goTo3DView" action.
 func NewPdfActionGoTo3DView() *PdfActionGoTo3DView {
 	action := NewPdfAction()
 	goTo3DViewAction := &PdfActionGoTo3DView{}
@@ -388,7 +386,7 @@ func NewPdfActionGoTo3DView() *PdfActionGoTo3DView {
 	return goTo3DViewAction
 }
 
-// NewPdfActionJavaScript returns a new "javaScript" action
+// NewPdfActionJavaScript returns a new "javaScript" action.
 func NewPdfActionJavaScript() *PdfActionJavaScript {
 	action := NewPdfAction()
 	javaScriptAction := &PdfActionJavaScript{}
@@ -677,6 +675,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 				// Not returning an error on this.
 				common.Log.Trace("Unsuspected Type != Action (%s)", *str)
 			}
+			action.Type = str
 		}
 	}
 
@@ -688,13 +687,15 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		action.S = obj
 	}
 
-	actionType, ok := action.S.(*core.PdfObjectName)
+	actionName, ok := action.S.(*core.PdfObjectName)
 	if !ok {
 		common.Log.Debug("ERROR: Invalid S object type != name (%T)", action.S)
 		return nil, fmt.Errorf("invalid S object type != name (%T)", action.S)
 	}
-	switch string(*actionType) {
-	case string(ActionTypeGoTo):
+
+	actionType := PdfActionType(actionName.String())
+	switch actionType {
+	case ActionTypeGoTo:
 		ctx, err := r.newPdfActionGotoFromDict(d)
 		if err != nil {
 			return nil, err
@@ -702,7 +703,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeGoToR):
+	case ActionTypeGoToR:
 		ctx, err := r.newPdfActionGotoRFromDict(d)
 		if err != nil {
 			return nil, err
@@ -710,7 +711,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeGoToE):
+	case ActionTypeGoToE:
 		ctx, err := r.newPdfActionGotoEFromDict(d)
 		if err != nil {
 			return nil, err
@@ -718,7 +719,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeLaunch):
+	case ActionTypeLaunch:
 		ctx, err := r.newPdfActionLaunchFromDict(d)
 		if err != nil {
 			return nil, err
@@ -726,7 +727,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeThread):
+	case ActionTypeThread:
 		ctx, err := r.newPdfActionThreadFromDict(d)
 		if err != nil {
 			return nil, err
@@ -734,7 +735,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeURI):
+	case ActionTypeURI:
 		ctx, err := r.newPdfActionURIFromDict(d)
 		if err != nil {
 			return nil, err
@@ -742,7 +743,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeSound):
+	case ActionTypeSound:
 		ctx, err := r.newPdfActionSoundFromDict(d)
 		if err != nil {
 			return nil, err
@@ -750,7 +751,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeMovie):
+	case ActionTypeMovie:
 		ctx, err := r.newPdfActionMovieFromDict(d)
 		if err != nil {
 			return nil, err
@@ -758,7 +759,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeHide):
+	case ActionTypeHide:
 		ctx, err := r.newPdfActionHideFromDict(d)
 		if err != nil {
 			return nil, err
@@ -766,7 +767,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeNamed):
+	case ActionTypeNamed:
 		ctx, err := r.newPdfActionNamedFromDict(d)
 		if err != nil {
 			return nil, err
@@ -774,7 +775,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeSubmitForm):
+	case ActionTypeSubmitForm:
 		ctx, err := r.newPdfActionSubmitFormFromDict(d)
 		if err != nil {
 			return nil, err
@@ -782,7 +783,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeResetForm):
+	case ActionTypeResetForm:
 		ctx, err := r.newPdfActionResetFormFromDict(d)
 		if err != nil {
 			return nil, err
@@ -790,7 +791,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeImportData):
+	case ActionTypeImportData:
 		ctx, err := r.newPdfActionImportDataFromDict(d)
 		if err != nil {
 			return nil, err
@@ -798,7 +799,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeSetOCGState):
+	case ActionTypeSetOCGState:
 		ctx, err := r.newPdfActionSetOCGStateFromDict(d)
 		if err != nil {
 			return nil, err
@@ -806,7 +807,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeRendition):
+	case ActionTypeRendition:
 		ctx, err := r.newPdfActionRenditionFromDict(d)
 		if err != nil {
 			return nil, err
@@ -814,7 +815,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeTrans):
+	case ActionTypeTrans:
 		ctx, err := r.newPdfActionTransFromDict(d)
 		if err != nil {
 			return nil, err
@@ -822,7 +823,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeGoTo3DView):
+	case ActionTypeGoTo3DView:
 		ctx, err := r.newPdfActionGoTo3DViewFromDict(d)
 		if err != nil {
 			return nil, err
@@ -830,7 +831,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-	case string(ActionTypeJavaScript):
+	case ActionTypeJavaScript:
 		ctx, err := r.newPdfActionJavaScriptFromDict(d)
 		if err != nil {
 			return nil, err
@@ -838,233 +839,181 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		ctx.PdfAction = action
 		action.context = ctx
 		return action, nil
-
 	}
 
-	common.Log.Debug("ERROR: Ignoring unknown action: %s", *actionType)
+	common.Log.Debug("ERROR: Ignoring unknown action: %s", actionType)
 	return nil, nil
 }
 
+func tryLoadFilespec(obj core.PdfObject) (*PdfFilespec, error) {
+	if obj == nil {
+		return nil, nil
+	}
+
+	return NewPdfFilespecFromObj(obj)
+}
+
 func (r *PdfReader) newPdfActionGotoFromDict(d *core.PdfObjectDictionary) (*PdfActionGoTo, error) {
-	action := PdfActionGoTo{}
-
-	action.D = d.Get("D")
-
-	return &action, nil
+	return &PdfActionGoTo{
+		D: d.Get("D"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionGotoRFromDict(d *core.PdfObjectDictionary) (*PdfActionGoToR, error) {
-	action := PdfActionGoToR{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	action.D = d.Get("D")
-	action.NewWindow = d.Get("NewWindow")
-
-	return &action, nil
+	return &PdfActionGoToR{
+		D:         d.Get("D"),
+		NewWindow: d.Get("NewWindow"),
+		F:         filespec,
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionGotoEFromDict(d *core.PdfObjectDictionary) (*PdfActionGoToE, error) {
-	action := PdfActionGoToE{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	action.D = d.Get("D")
-	action.NewWindow = d.Get("NewWindow")
-	action.T = d.Get("T")
-
-	return &action, nil
+	return &PdfActionGoToE{
+		D:         d.Get("D"),
+		NewWindow: d.Get("NewWindow"),
+		T:         d.Get("T"),
+		F:         filespec,
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionLaunchFromDict(d *core.PdfObjectDictionary) (*PdfActionLaunch, error) {
-	action := PdfActionLaunch{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	action.Win = d.Get("Win")
-	action.Mac = d.Get("Mac")
-	action.Unix = d.Get("Unix")
-	action.NewWindow = d.Get("NewWindow")
-
-	return &action, nil
+	return &PdfActionLaunch{
+		Win:       d.Get("Win"),
+		Mac:       d.Get("Mac"),
+		Unix:      d.Get("Unix"),
+		NewWindow: d.Get("NewWindow"),
+		F:         filespec,
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionThreadFromDict(d *core.PdfObjectDictionary) (*PdfActionThread, error) {
-	action := PdfActionThread{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	action.D = d.Get("D")
-	action.B = d.Get("B")
-
-	return &action, nil
+	return &PdfActionThread{
+		D: d.Get("D"),
+		B: d.Get("B"),
+		F: filespec,
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionURIFromDict(d *core.PdfObjectDictionary) (*PdfActionURI, error) {
-	action := PdfActionURI{}
-
-	action.URI = d.Get("URI")
-	action.IsMap = d.Get("IsMap")
-
-	return &action, nil
+	return &PdfActionURI{
+		URI:   d.Get("URI"),
+		IsMap: d.Get("IsMap"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionSoundFromDict(d *core.PdfObjectDictionary) (*PdfActionSound, error) {
-	action := PdfActionSound{}
-
-	action.Sound = d.Get("Sound")
-	action.Volume = d.Get("Volume")
-	action.Synchronous = d.Get("Synchronous")
-	action.Repeat = d.Get("Repeat")
-	action.Mix = d.Get("Mix")
-
-	return &action, nil
+	return &PdfActionSound{
+		Sound:       d.Get("Sound"),
+		Volume:      d.Get("Volume"),
+		Synchronous: d.Get("Synchronous"),
+		Repeat:      d.Get("Repeat"),
+		Mix:         d.Get("Mix"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionMovieFromDict(d *core.PdfObjectDictionary) (*PdfActionMovie, error) {
-	action := PdfActionMovie{}
-
-	action.Annotation = d.Get("Annotation")
-	action.T = d.Get("T")
-	action.Operation = d.Get("Operation")
-
-	return &action, nil
+	return &PdfActionMovie{
+		Annotation: d.Get("Annotation"),
+		T:          d.Get("T"),
+		Operation:  d.Get("Operation"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionHideFromDict(d *core.PdfObjectDictionary) (*PdfActionHide, error) {
-	action := PdfActionHide{}
-
-	action.T = d.Get("T")
-	action.H = d.Get("H")
-
-	return &action, nil
+	return &PdfActionHide{
+		T: d.Get("T"),
+		H: d.Get("H"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionNamedFromDict(d *core.PdfObjectDictionary) (*PdfActionNamed, error) {
-	action := PdfActionNamed{}
-
-	action.N = d.Get("N")
-
-	return &action, nil
+	return &PdfActionNamed{
+		N: d.Get("N"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionSubmitFormFromDict(d *core.PdfObjectDictionary) (*PdfActionSubmitForm, error) {
-	action := PdfActionSubmitForm{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	action.Fields = d.Get("Fields")
-	action.Flags = d.Get("Flags")
-
-	return &action, nil
+	return &PdfActionSubmitForm{
+		F:      filespec,
+		Fields: d.Get("Fields"),
+		Flags:  d.Get("Flags"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionResetFormFromDict(d *core.PdfObjectDictionary) (*PdfActionResetForm, error) {
-	action := PdfActionResetForm{}
-
-	action.Fields = d.Get("Fields")
-	action.Flags = d.Get("Flags")
-
-	return &action, nil
+	return &PdfActionResetForm{
+		Fields: d.Get("Fields"),
+		Flags:  d.Get("Flags"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionImportDataFromDict(d *core.PdfObjectDictionary) (*PdfActionImportData, error) {
-	action := PdfActionImportData{}
-
-	if obj := d.Get("F"); obj != nil {
-		fileSpec, err := NewPdfFilespecFromObj(obj)
-		if err != nil {
-			return nil, err
-		}
-		if fileSpec != nil {
-			action.F = fileSpec
-		}
+	filespec, err := tryLoadFilespec(d.Get("F"))
+	if err != nil {
+		return nil, err
 	}
 
-	return &action, nil
+	return &PdfActionImportData{
+		F: filespec,
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionSetOCGStateFromDict(d *core.PdfObjectDictionary) (*PdfActionSetOCGState, error) {
-	action := PdfActionSetOCGState{}
-
-	action.State = d.Get("State")
-	action.PreserveRB = d.Get("PreserveRB")
-
-	return &action, nil
+	return &PdfActionSetOCGState{
+		State:      d.Get("State"),
+		PreserveRB: d.Get("PreserveRB"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionRenditionFromDict(d *core.PdfObjectDictionary) (*PdfActionRendition, error) {
-	action := PdfActionRendition{}
-
-	action.R = d.Get("R")
-	action.AN = d.Get("AN")
-	action.OP = d.Get("OP")
-	action.JS = d.Get("JS")
-
-	return &action, nil
+	return &PdfActionRendition{
+		R:  d.Get("R"),
+		AN: d.Get("AN"),
+		OP: d.Get("OP"),
+		JS: d.Get("JS"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionTransFromDict(d *core.PdfObjectDictionary) (*PdfActionTrans, error) {
-	action := PdfActionTrans{}
-
-	action.Trans = d.Get("Trans")
-
-	return &action, nil
+	return &PdfActionTrans{
+		Trans: d.Get("Trans"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionGoTo3DViewFromDict(d *core.PdfObjectDictionary) (*PdfActionGoTo3DView, error) {
-	action := PdfActionGoTo3DView{}
-
-	action.TA = d.Get("TA")
-	action.V = d.Get("V")
-
-	return &action, nil
+	return &PdfActionGoTo3DView{
+		TA: d.Get("TA"),
+		V:  d.Get("V"),
+	}, nil
 }
 
 func (r *PdfReader) newPdfActionJavaScriptFromDict(d *core.PdfObjectDictionary) (*PdfActionJavaScript, error) {
-	action := PdfActionJavaScript{}
-
-	action.JS = d.Get("JS")
-
-	return &action, nil
+	return &PdfActionJavaScript{
+		JS: d.Get("JS"),
+	}, nil
 }
