@@ -482,6 +482,8 @@ func (c *Creator) finalize() error {
 
 	for idx, page := range c.pages {
 		c.setActivePage(page)
+
+		// Draw page header.
 		if c.drawHeaderFunc != nil {
 			// Prepare a block to draw on.
 			// Header is drawn on the top of the page. Has width of the page, but height limited to
@@ -493,12 +495,14 @@ func (c *Creator) finalize() error {
 			}
 			c.drawHeaderFunc(headerBlock, args)
 			headerBlock.SetPos(0, 0)
-			err := c.Draw(headerBlock)
-			if err != nil {
+
+			if err := c.Draw(headerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
 		}
+
+		// Draw page footer.
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.
 			// Footer is drawn on the bottom of the page. Has width of the page, but height limited
@@ -510,25 +514,25 @@ func (c *Creator) finalize() error {
 			}
 			c.drawFooterFunc(footerBlock, args)
 			footerBlock.SetPos(0, c.pageHeight-footerBlock.height)
-			err := c.Draw(footerBlock)
-			if err != nil {
+
+			if err := c.Draw(footerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing footer: %v", err)
 				return err
 			}
 		}
 
-		// Draw blocks to pages.
+		// Draw page blocks.
 		block, ok := c.pageBlocks[page]
 		if !ok {
-			return errors.New("could not find page block")
+			continue
 		}
 		if err := block.drawToPage(page); err != nil {
+			common.Log.Debug("ERROR: drawing page %d blocks: %v", idx+1, err)
 			return err
 		}
 	}
 
 	c.finalized = true
-
 	return nil
 }
 
@@ -600,7 +604,9 @@ func (c *Creator) Draw(d Drawable) error {
 // Write output of creator to io.Writer interface.
 func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
-		c.finalize()
+		if err := c.finalize(); err != nil {
+			return err
+		}
 	}
 
 	pdfWriter := model.NewPdfWriter()
