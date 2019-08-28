@@ -57,7 +57,7 @@ func init() {
 }
 
 // TestTextExtractionFragments tests text extraction on the PDF fragments in `fragmentTests`.
-func _TestTextExtractionFragments(t *testing.T) {
+func TestTextExtractionFragments(t *testing.T) {
 	fragmentTests := []struct {
 		name     string
 		contents string
@@ -144,7 +144,7 @@ func _TestTextExtractionFragments(t *testing.T) {
 // TestTextExtractionFiles tests text extraction on a set of PDF files.
 // It checks for the existence of specified strings of words on specified pages.
 // We currently only check within lines as our line order is still improving.
-func _TestTextExtractionFiles(t *testing.T) {
+func TestTextExtractionFiles(t *testing.T) {
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
 		return
@@ -156,7 +156,7 @@ func _TestTextExtractionFiles(t *testing.T) {
 }
 
 // TestTextLocations tests locations of text marks.
-func _TestTextLocations(t *testing.T) {
+func TestTextLocations(t *testing.T) {
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
 		return
@@ -169,7 +169,7 @@ func _TestTextLocations(t *testing.T) {
 
 // TestTermMarksFiles stress tests testTermMarksMulti() by running it on all files in the corpus.
 // It can take several minutes to run.
-func _TestTermMarksFiles(t *testing.T) {
+func TestTermMarksFiles(t *testing.T) {
 	if !doStress {
 		t.Skip("skipping stress test")
 	}
