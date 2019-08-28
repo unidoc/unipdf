@@ -201,52 +201,25 @@ func TestTextSort(t *testing.T) {
 		textMark{orientedStart: transform.Point{X: 300, Y: 5}, text: "22"},
 	}
 
-	// Copy marks0 to PageText and sort them. This should preserve order of marks.
+	// marks is a copy of marks0 with its order scrambled.
 	marks := make([]textMark, len(marks0))
 	copy(marks, marks0)
 	sort.Slice(marks, func(i, j int) bool {
 		ti, tj := marks[i], marks[j]
-		if ti.orient != tj.orient {
-			return ti.orient > tj.orient
-		}
 		if ti.orientedStart.X != tj.orientedStart.X {
 			return ti.orientedStart.X > tj.orientedStart.X
 		}
+		if ti.orient != tj.orient {
+			return ti.orient > tj.orient
+		}
 		return ti.orientedStart.Y < tj.orientedStart.Y
-	   })
+	})
+
+	// Copy marks to PageText and sort them. This should give the same order as marks0.
 	pt := PageText{marks: marks}
 	pt.sortPosition(15)
 
-	fmt.Println("==================================== Presorted")
-	for i, m:= range marks {
-		fmt.Printf("%3d: %v\n", i, m)
-	}
-	// Check that marks order hasn't changed.
-	for i, m0 := range marks0 {
-		m := pt.marks[i]
-		if m.orientedStart.X != m0.orientedStart.X || m.orientedStart.Y != m0.orientedStart.Y {
-			t.Fatalf("i=%d m=%v != m0=%v", i, m, m0)
-		}
-	}
-
-	sort.Slice(marks, func(i, j int) bool {
-		ti, tj := marks[i], marks[j]
-		if ti.orient != tj.orient {
-			return ti.orient > tj.orient
-		}
-		if ti.orientedStart.X != tj.orientedStart.X {
-			return ti.orientedStart.X > tj.orientedStart.X
-		}
-		return ti.orientedStart.Y < tj.orientedStart.Y
-	   })
-	pt = PageText{marks: marks}
-	pt.sortPositionGus(15)
-
-	fmt.Println("==================================== Single sort")
-	for i, m:= range marks {
-		fmt.Printf("%3d: %v\n", i, m)
-	}
-	// Check that marks order hasn't changed.
+	// Check that marks order is the same as marks0.
 	for i, m0 := range marks0 {
 		m := pt.marks[i]
 		if m.orientedStart.X != m0.orientedStart.X || m.orientedStart.Y != m0.orientedStart.Y {

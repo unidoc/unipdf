@@ -1186,25 +1186,25 @@ func (pt *PageText) sortPosition(tol float64) {
 	if len(pt.marks) == 0 {
 		return
 	}
+	// Pre-sort by orientation and Y.
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		if ti.orientedStart.Y != tj.orientedStart.Y {
-			return ti.orientedStart.Y > tj.orientedStart.Y
-		}
-		return ti.orientedStart.X < tj.orientedStart.X
+		return ti.orientedStart.Y > tj.orientedStart.Y
 	})
 
 	// Compute yOrder. yOrder increments if orientedStart.Y differs by more than `tol`.
+	// There is a separate yOrder for each orientation
 	yOrder := 0
 	pt.marks[0].yOrder = 0
+	orient := pt.marks[0].orient
 	y := pt.marks[0].orientedStart.Y
 	for i, t := range pt.marks[1:] {
-		if t.orientedStart.Y > y+tol {
-			yOrder = ((yOrder + 1000) / 1000) * 1000 // Next multiple of 1000
-			y = t.orientedStart.Y
+		if t.orient != orient {
+			orient = t.orient
+			yOrder = 0
 		}
 		if t.orientedStart.Y < y-tol {
 			yOrder++
@@ -1213,9 +1213,12 @@ func (pt *PageText) sortPosition(tol float64) {
 		pt.marks[i+1].yOrder = yOrder
 	}
 
-	// Sort by yOrder then orientedStart.X
+	// Sort by orientation, yOrder then orientedStart.X
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
+		if ti.orient != tj.orient {
+			return ti.orient < tj.orient
+		}
 		if ti.yOrder != tj.yOrder {
 			return ti.yOrder < tj.yOrder
 		}
@@ -1223,22 +1226,6 @@ func (pt *PageText) sortPosition(tol float64) {
 	})
 }
 
-func (pt *PageText) sortPositionGus(tol float64) {
-	if len(pt.marks) == 0 {
-		return
-	}
-	sort.SliceStable(pt.marks, func(i, j int) bool {
-		ti, tj := pt.marks[i], pt.marks[j]
-		if ti.orient != tj.orient {
-			return ti.orient < tj.orient
-		}
-		if math.Abs(ti.orientedStart.Y-tj.orientedStart.Y) > tol {
-			return ti.orientedStart.Y >= tj.orientedStart.Y
-		}
-		return ti.orientedStart.X < tj.orientedStart.X
-	})
-
-}
 // textLine represents a line of text on a page.
 type textLine struct {
 	x      float64    // x position of line.
