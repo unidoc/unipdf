@@ -1192,7 +1192,7 @@ func (pt *PageText) sortPosition(tol float64) {
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		return ti.orientedStart.Y > tj.orientedStart.Y
+		return ti.orientedStart.Y >= tj.orientedStart.Y
 	})
 
 	// Compute yOrder. yOrder increments if orientedStart.Y differs by more than `tol`.
