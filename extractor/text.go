@@ -1223,6 +1223,22 @@ func (pt *PageText) sortPosition(tol float64) {
 	})
 }
 
+func (pt *PageText) sortPositionGus(tol float64) {
+	if len(pt.marks) == 0 {
+		return
+	}
+	sort.SliceStable(pt.marks, func(i, j int) bool {
+		ti, tj := pt.marks[i], pt.marks[j]
+		if ti.orient != tj.orient {
+			return ti.orient < tj.orient
+		}
+		if math.Abs(ti.orientedStart.Y-tj.orientedStart.Y) > tol {
+			return ti.orientedStart.Y >= tj.orientedStart.Y
+		}
+		return ti.orientedStart.X < tj.orientedStart.X
+	})
+
+}
 // textLine represents a line of text on a page.
 type textLine struct {
 	x      float64    // x position of line.
