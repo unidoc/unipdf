@@ -89,6 +89,7 @@ func (img *Image) SetSamples(samples []uint32) {
 func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 	data := img.Data
 	lenData := len(img.Data)
+	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	switch img.ColorComponents {
 	case 1:
@@ -110,10 +111,14 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			pos := 8 - uint(((y*int(img.Width)+x)%divider)*bpc+bpc)
 
 			// Extract gray color value starting at the calculated position.
-			val := ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> pos)
+			val := float64(((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> pos))
+			if len(img.decode) == 2 {
+				dMin, dMax := img.decode[0], img.decode[1]
+				val = interpolate(float64(val), 0, maxVal, dMin, dMax)
+			}
 
 			return gocolor.Gray{
-				Y: uint8(uint32(val) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+				Y: uint8(uint32(val) * 255 / uint32(maxVal) & 0xff),
 			}, nil
 		case 16:
 			// 16 bit grayscale image.
@@ -131,9 +136,14 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			if idx >= lenData {
 				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
 			}
+			val := float64(data[idx])
+			if len(img.decode) == 2 {
+				dMin, dMax := img.decode[0], img.decode[1]
+				val = interpolate(float64(val), 0, maxVal, dMin, dMax)
+			}
 
 			return gocolor.Gray{
-				Y: uint8(uint32(data[idx]) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+				Y: uint8(uint32(val) * 255 / uint32(maxVal) & 0xff),
 			}, nil
 		}
 	case 3:
@@ -165,9 +175,9 @@ func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
 			}
 
 			return gocolor.RGBA{
-				R: uint8(uint32(r) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
-				G: uint8(uint32(g) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
-				B: uint8(uint32(b) * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1) & 0xff),
+				R: uint8(uint32(r) * 255 / uint32(maxVal) & 0xff),
+				G: uint8(uint32(g) * 255 / uint32(maxVal) & 0xff),
+				B: uint8(uint32(b) * 255 / uint32(maxVal) & 0xff),
 				A: uint8(0xff),
 			}, nil
 		case 16:
