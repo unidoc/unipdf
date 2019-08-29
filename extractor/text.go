@@ -802,7 +802,6 @@ type textMark struct {
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
-	yOrder        int                // y-order
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
@@ -1186,7 +1185,9 @@ func (pt *PageText) sortPosition(tol float64) {
 	if len(pt.marks) == 0 {
 		return
 	}
-	// Pre-sort by orientation and Y.
+
+	// For grouping data vertically into lines, it is necessary to have the data presorted by
+	// descending y position.
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
@@ -1195,32 +1196,30 @@ func (pt *PageText) sortPosition(tol float64) {
 		return ti.orientedStart.Y >= tj.orientedStart.Y
 	})
 
-	// Compute yOrder. yOrder increments if orientedStart.Y differs by more than `tol`.
-	// There is a separate yOrder for each orientation
-	yOrder := 0
-	pt.marks[0].yOrder = 0
-	orient := pt.marks[0].orient
-	y := pt.marks[0].orientedStart.Y
-	for i, t := range pt.marks[1:] {
-		if t.orient != orient {
-			orient = t.orient
-			yOrder = 0
+	// Cluster the marks into y-clusters by relative y proximity. Each cluster is our guess of what
+	// makes up a line of text.
+	clusters := make([]int, len(pt.marks))
+	cluster := 0
+	clusters[0] = cluster
+	for i := 1; i < len(pt.marks); i++ {
+		if pt.marks[i-1].orient != pt.marks[i].orient {
+			cluster++
+		} else {
+			if pt.marks[i-1].orientedStart.Y - pt.marks[i].orientedStart.Y > tol {
+				cluster++
+			}
 		}
-		if t.orientedStart.Y < y-tol {
-			yOrder++
-		}
-		y = t.orientedStart.Y
-		pt.marks[i+1].yOrder = yOrder
+		clusters[i] = cluster
 	}
 
-	// Sort by orientation, yOrder then orientedStart.X
+	// Sort by y-cluster and x.
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		if ti.yOrder != tj.yOrder {
-			return ti.yOrder < tj.yOrder
+		if clusters[i] != clusters[j] {
+			return clusters[i] < clusters[j]
 		}
 		return ti.orientedStart.X < tj.orientedStart.X
 	})
