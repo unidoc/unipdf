@@ -1180,14 +1180,46 @@ var (
 // sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
+// Text is considered to be on different lines if the lines' orientedStart.Y differs by more than `tol`.
 func (pt *PageText) sortPosition(tol float64) {
+	if len(pt.marks) == 0 {
+		return
+	}
+
+	// For grouping data vertically into lines, it is necessary to have the data presorted by
+	// descending y position.
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		if math.Abs(ti.orientedStart.Y-tj.orientedStart.Y) > tol {
-			return ti.orientedStart.Y > tj.orientedStart.Y
+		return ti.orientedStart.Y >= tj.orientedStart.Y
+	})
+
+	// Cluster the marks into y-clusters by relative y proximity. Each cluster is our guess of what
+	// makes up a line of text.
+	clusters := make([]int, len(pt.marks))
+	cluster := 0
+	clusters[0] = cluster
+	for i := 1; i < len(pt.marks); i++ {
+		if pt.marks[i-1].orient != pt.marks[i].orient {
+			cluster++
+		} else {
+			if pt.marks[i-1].orientedStart.Y - pt.marks[i].orientedStart.Y > tol {
+				cluster++
+			}
+		}
+		clusters[i] = cluster
+	}
+
+	// Sort by y-cluster and x.
+	sort.SliceStable(pt.marks, func(i, j int) bool {
+		ti, tj := pt.marks[i], pt.marks[j]
+		if ti.orient != tj.orient {
+			return ti.orient < tj.orient
+		}
+		if clusters[i] != clusters[j] {
+			return clusters[i] < clusters[j]
 		}
 		return ti.orientedStart.X < tj.orientedStart.X
 	})
