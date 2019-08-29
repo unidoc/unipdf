@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -8,6 +13,20 @@ import (
 
 // (Section 7.11.3 p. 102).
 // See Table 44 - Entries in a file specification dictionary
+
+/*
+ * A PDF file can refer to the contents of another file by using a file specification (PDF 1.1), which shall take either
+ * of two forms:
+ * • A simple file specification shall give just the name of the target file in a standard format, independent of the
+ * naming conventions of any particular file system. It shall take the form of either a string or a dictionary
+ * • A full file specification shall include information related to one or more specific file systems. It shall only be
+ * represented as a dictionary.
+ *
+ * A file specification shall refer to a file external to the PDF file or to a file embedded within the referring PDF file,
+ * allowing its contents to be stored or transmitted along with the PDF file. The file shall be considered to be
+ * external to the PDF file in either case.
+ * A file specification could describe a URL-based file system and will follow the rules of Internet RFC 1808, Relative Uniform Resource Locators
+ */
 
 // PdfFilespec represents a file specification
 type PdfFilespec struct {

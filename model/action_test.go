@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package model
 
 import (
@@ -8,36 +13,45 @@ import (
 )
 
 func testAction(t *testing.T, rawText string, actionType PdfActionType, testFunc func(t *testing.T, action *PdfAction)) {
+	// Read raw text
 	r := NewReaderForText(rawText)
 
 	err := r.ParseIndObjSeries()
 	require.NoError(t, err)
 
-	// Load the field from object number 1.
+	// Load the field from object number 1 as all actions in these tests are defined in object 1
 	obj, err := r.parser.LookupByNumber(1)
 	require.NoError(t, err)
 
 	ind, ok := obj.(*core.PdfIndirectObject)
 	require.True(t, ok)
 
+	// Parse action
 	action, err := r.newPdfActionFromIndirectObject(ind)
 	require.NoError(t, err)
 
+	// Check if raw text can be parsed to the expected action objects
+
+	// The object should be of type action + the actionType should match the expected action
 	require.Equal(t, "Action", action.Type.String())
 	require.Equal(t, string(actionType), action.S.String())
 
+	// Verify some action specific fields
 	testFunc(t, action)
+
+	// Check if object can be serialized to the expected text
 
 	outDict, ok := core.GetDict(action.context.ToPdfObject())
 	if !ok {
 		t.Fatalf("error")
 	}
 
-	contains := strings.Contains(
+	require.Containsf(
+		t,
 		strings.Replace(rawText, "\n", "", -1),
+		outDict.WriteString(),
+		"generated output doesn't match the expected output - %s",
 		outDict.WriteString())
-
-	require.True(t, contains, "generated output doesn't match the expected output - %s", outDict.WriteString())
 }
 
 func TestPdfActionGoTo(t *testing.T) {
