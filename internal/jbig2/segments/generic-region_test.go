@@ -50,8 +50,8 @@ func TestDecodeGenericRegion(t *testing.T) {
 			s, ok := sg.(*GenericRegion)
 			require.True(t, ok)
 
-			assert.Equal(t, 44, s.RegionSegment.BitmapHeight)
-			assert.Equal(t, 54, s.RegionSegment.BitmapWidth)
+			assert.Equal(t, uint32(44), s.RegionSegment.BitmapHeight)
+			assert.Equal(t, uint32(54), s.RegionSegment.BitmapWidth)
 			assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
 			assert.Equal(t, true, s.IsTPGDon)
 			assert.Equal(t, byte(0), s.GBTemplate)
@@ -88,8 +88,8 @@ func TestDecodeGenericRegion(t *testing.T) {
 			s, ok := gs.(*GenericRegion)
 			require.True(t, ok)
 
-			assert.Equal(t, 44, s.RegionSegment.BitmapHeight)
-			assert.Equal(t, 54, s.RegionSegment.BitmapWidth)
+			assert.Equal(t, uint32(44), s.RegionSegment.BitmapHeight)
+			assert.Equal(t, uint32(54), s.RegionSegment.BitmapWidth)
 			assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
 			assert.Equal(t, true, s.IsMMREncoded)
 

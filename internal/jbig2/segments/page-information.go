@@ -22,13 +22,10 @@ type PageInformationSegment struct {
 
 	// Page bitmap height, four byte, 7.4.8.1
 	PageBMHeight int
-
 	// Page bitmap width, four byte, 7.4.8.1
 	PageBMWidth int
-
 	// Page X resolution, four byte 7.4.8.3
 	ResolutionX int
-
 	// Page Y resolution, four byte 7.4.8.4
 	ResolutionY int
 

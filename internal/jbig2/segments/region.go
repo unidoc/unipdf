@@ -19,19 +19,14 @@ import (
 // RegionSegment is the model representing base jbig2 segment region - see 7.4.1.
 type RegionSegment struct {
 	r reader.StreamReader
-
 	// Region segment bitmap width, 7.4.1.1
-	BitmapWidth int
-
+	BitmapWidth uint32
 	// Region segment bitmap height, 7.4.1.2
-	BitmapHeight int
-
+	BitmapHeight uint32
 	// Region segment bitmap X location, 7.4.1.3
-	XLocation int
-
+	XLocation uint32
 	// Region segment bitmap Y location, 7.4.1.4
-	YLocation int
-
+	YLocation uint32
 	// Region segment flags, 7.4.1.5
 	CombinaionOperator bitmap.CombinationOperator
 }
@@ -63,25 +58,25 @@ func (r *RegionSegment) parseHeader() error {
 	if err != nil {
 		return err
 	}
-	r.BitmapWidth = int(temp & math.MaxInt32)
+	r.BitmapWidth = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.BitmapHeight = int(temp & math.MaxInt32)
+	r.BitmapHeight = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.XLocation = int(temp & math.MaxInt32)
+	r.XLocation = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	r.YLocation = int(temp & math.MaxInt32)
+	r.YLocation = uint32(temp & math.MaxUint32)
 
 	// Bit 3-7
 	r.r.ReadBits(5) // dirty read

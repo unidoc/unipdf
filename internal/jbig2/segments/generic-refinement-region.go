@@ -44,8 +44,8 @@ type GenericRefinementRegion struct {
 
 	// Variables for decoding.
 	ReferenceBitmap *bitmap.Bitmap
-	ReferenceDX     int
-	ReferenceDY     int
+	ReferenceDX     int32
+	ReferenceDY     int32
 
 	arithDecode *arithmetic.Decoder
 	cx          *arithmetic.DecoderStats
@@ -99,7 +99,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 		g.cx = arithmetic.NewStats(8192, 1)
 	}
 
-	g.RegionBitmap = bitmap.New(g.RegionInfo.BitmapWidth, g.RegionInfo.BitmapHeight)
+	g.RegionBitmap = bitmap.New(int(g.RegionInfo.BitmapWidth), int(g.RegionInfo.BitmapHeight))
 
 	if g.TemplateID == 0 {
 		if err = g.updateOverride(); err != nil {
@@ -111,7 +111,7 @@ func (g *GenericRefinementRegion) GetRegionBitmap() (*bitmap.Bitmap, error) {
 	var deltaRefStride int
 
 	if g.IsTPGROn {
-		deltaRefStride = -g.ReferenceDY * g.ReferenceBitmap.RowStride
+		deltaRefStride = int(-g.ReferenceDY) * g.ReferenceBitmap.RowStride
 	}
 
 	yOffset := deltaRefStride + 1
@@ -182,14 +182,14 @@ func (g *GenericRefinementRegion) decodeOptimized(
 		rx        int
 		tempIndex int
 	)
-	currentLine := lineNumber - g.ReferenceDY
-	if t := (-g.ReferenceDX); t > 0 {
+	currentLine := lineNumber - int(g.ReferenceDY)
+	if t := int(-g.ReferenceDX); t > 0 {
 		rx = t
 	}
 	refByteIndex := g.ReferenceBitmap.GetByteIndex(rx, currentLine)
 
 	if g.ReferenceDX > 0 {
-		tempIndex = g.ReferenceDX
+		tempIndex = int(g.ReferenceDX)
 	}
 
 	byteIndex := g.RegionBitmap.GetByteIndex(tempIndex, lineNumber)
@@ -207,7 +207,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLine(
 	lineNumber, width, rowStride, refRowStride, paddedWidth, deltaRefStride int,
 ) error {
 	// Offset of the reference bitmap with respect to the bitmap being decoded
-	currentLine := lineNumber - g.ReferenceDY
+	currentLine := lineNumber - int(g.ReferenceDY)
 	refByteIndex := g.ReferenceBitmap.GetByteIndex(0, currentLine)
 	byteIndex := g.RegionBitmap.GetByteIndex(0, lineNumber)
 	var err error
@@ -720,12 +720,12 @@ func (g *GenericRefinementRegion) decodeTemplate(
 		c4 = (((c4 << 1) | 0x01&int16(w4>>7)) & 0x07)
 		c5 = int16(bit)
 
-		if (x-g.ReferenceDX)%8 == 5 {
+		if (x-int(g.ReferenceDX))%8 == 5 {
 			w1 = 0
 			w2 = 0
 			w3 = 0
 
-			if ((x-g.ReferenceDX)/8)+1 < g.ReferenceBitmap.RowStride {
+			if ((x-int(g.ReferenceDX))/8)+1 < g.ReferenceBitmap.RowStride {
 				if currentLine >= 1 && (currentLine-1) < g.ReferenceBitmap.Height {
 					temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride)
 					if err != nil {
@@ -895,8 +895,8 @@ func (g *GenericRefinementRegion) readAtPixels() error {
 // setParameters sets the parameters for the Generic Refinemenet Region.
 func (g *GenericRefinementRegion) setParameters(
 	cx *arithmetic.DecoderStats, arithmDecoder *arithmetic.Decoder,
-	grTemplate int8, regionWidth, regionHeight int,
-	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int,
+	grTemplate int8, regionWidth, regionHeight uint32,
+	grReference *bitmap.Bitmap, grReferenceDX, grReferenceDY int32,
 	isTPGRon bool, grAtX []int8, grAtY []int8,
 ) {
 	common.Log.Trace("[GENERIC-REF-REGION] setParameters")

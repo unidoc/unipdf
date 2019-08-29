@@ -105,8 +105,8 @@ func TestDocument(t *testing.T) {
 
 			assert.True(t, sd.IsHuffmanEncoded())
 			assert.False(t, sd.UseRefinementAggregation())
-			assert.Equal(t, 1, sd.NumberOfExportedSymbols())
-			assert.Equal(t, 1, sd.NumberOfNewSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfExportedSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfNewSymbols())
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
