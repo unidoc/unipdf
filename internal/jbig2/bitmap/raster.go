@@ -368,22 +368,12 @@ func rasterOpByteAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator,
 }
 
 // rasterOpVAlignedLow called when the left side of the src and dest bitmaps have the same alignment
-// relative to 8-bit boundaries. That is: dx & 7 == sx & 7
+// relative to 8-bit boundaries. That is: dx & 7 == sx & 7.
 // NOTE: (kucjac) checked rasterOpVAlignedLow.
 func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	var (
-		// boolean if first dest byte is partial
-		dfwPartB bool
 		// boolean if first dest byte is doubly partial
 		dfwPart2B bool
-		// mask for first partial dest byte
-		dfwMask byte
-		// first byte dest bits in ovrhang
-		dfwBits int
-		// index of first partial dest byte
-		pdfwPart int
-		// index of first partial src byte
-		psfwPart int
 		// boolean if there exist a full dest byte
 		dfwFullB bool
 		// number of full bytes in dest
@@ -405,14 +395,14 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		i, j     int
 	)
 
-	// is the first word partial
-	if dx&7 != 0 {
-		dfwPartB = true
-		dfwBits = 8 - (dx & 7)
-		dfwMask = rmaskByte[dfwBits]
-		pdfwPart = dest.RowStride*dy + (dx >> 3)
-		psfwPart = src.RowStride*sy + (sx >> 3)
-	}
+	// first byte dest bits in ovrhang
+	dfwBits := 8 - (dx & 7)
+	// mask for first partial dest byte
+	dfwMask := rmaskByte[dfwBits]
+	// index of first partial dest byte
+	pdfwPart := dest.RowStride*dy + (dx >> 3)
+	// index of first partial src byte
+	psfwPart := src.RowStride*sy + (sx >> 3)
 
 	// is the first word doubly partial?
 	if dw < dfwBits {
@@ -426,13 +416,8 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		if dnFullBytes > 0 {
 			// there is a full dest byte
 			dfwFullB = true
-			if dfwPartB {
-				pdfwFull = pdfwPart + 1
-				psfwFull = psfwPart + 1
-			} else {
-				pdfwFull = dest.RowStride*dy + (dx >> 3)
-				psfwFull = src.RowStride*sy + (sx >> 3)
-			}
+			pdfwFull = pdfwPart + 1
+			psfwFull = psfwPart + 1
 		}
 	}
 
@@ -441,24 +426,17 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 	if !(dfwPart2B || dlwBits == 0) {
 		dlwPartB = true
 		dlwMask = lmaskByte[dlwBits]
-		if dfwPartB {
-			pdlwPart = pdfwPart + 1 + dnFullBytes
-			pslwPart = psfwPart + 1 + dnFullBytes
-		} else {
-			pdlwPart = dest.RowStride*dy + (dx >> 3) + dnFullBytes
-			pslwPart = src.RowStride*sy + (sx >> 3) + dnFullBytes
-		}
+		pdlwPart = pdfwPart + 1 + dnFullBytes
+		pslwPart = psfwPart + 1 + dnFullBytes
 	}
 
 	switch op {
 	case PixSrc:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -482,12 +460,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotSrc:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^src.Data[psfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^src.Data[psfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -511,12 +487,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixSrcOrDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]|dest.Data[pdfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]|dest.Data[pdfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -540,12 +514,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixSrcAndDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]&dest.Data[pdfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]&dest.Data[pdfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -569,12 +541,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixSrcXorDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]^dest.Data[pdfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]^dest.Data[pdfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -598,12 +568,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotSrcOrDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart])|dest.Data[pdfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart])|dest.Data[pdfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -627,12 +595,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotSrcAndDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart])&dest.Data[pdfwPart], dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart])&dest.Data[pdfwPart], dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -656,12 +622,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixSrcOrNotDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]|^(dest.Data[pdfwPart]), dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]|^(dest.Data[pdfwPart]), dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -685,12 +649,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixSrcAndNotDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]&^(dest.Data[pdfwPart]), dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], src.Data[psfwPart]&^(dest.Data[pdfwPart]), dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -714,12 +676,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotPixSrcOrDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] | dest.Data[pdfwPart]), dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] | dest.Data[pdfwPart]), dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -743,12 +703,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotPixSrcAndDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] & dest.Data[pdfwPart]), dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] & dest.Data[pdfwPart]), dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -772,12 +730,10 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	case PixNotPixSrcXorDst:
 		// do the first partial byte
-		if dfwPartB {
-			for i = 0; i < dh; i++ {
-				dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] ^ dest.Data[pdfwPart]), dfwMask)
-				pdfwPart += dest.RowStride
-				psfwPart += src.RowStride
-			}
+		for i = 0; i < dh; i++ {
+			dest.Data[pdfwPart] = combinePartial(dest.Data[pdfwPart], ^(src.Data[psfwPart] ^ dest.Data[pdfwPart]), dfwMask)
+			pdfwPart += dest.RowStride
+			psfwPart += src.RowStride
 		}
 
 		// do the full bytes
@@ -1525,7 +1481,6 @@ func rasterOpUniLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator) {
 // rasterOpUniWordAligneLow is called when the 'dest' bitmap is left aligned. This means dx & 7 == 0.
 // NOTE: (kucjac) checked rasterOpUniWordAligneLow.
 func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) {
-	common.Log.Trace("rasterOpUniWordAlignedLow")
 	var (
 		// firstWordIndex is the byte index of the first byte
 		firstWordIndex int
@@ -1711,8 +1666,46 @@ func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperat
 }
 
 var (
-	lmaskByte = []byte{0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF}
-	rmaskByte = []byte{0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF}
+	lmaskByte = []byte{
+		// 00000000
+		0x00,
+		// 10000000
+		0x80,
+		// 11000000
+		0xC0,
+		// 11100000
+		0xE0,
+		// 11110000
+		0xF0,
+		// 11111000
+		0xF8,
+		// 11111100
+		0xFC,
+		// 11111110
+		0xFE,
+		// 11111111
+		0xFF,
+	}
+	rmaskByte = []byte{
+		// 00000000
+		0x00,
+		// 00000001
+		0x01,
+		// 00000011
+		0x03,
+		// 00000111
+		0x07,
+		// 00001111
+		0x0F,
+		// 00011111
+		0x1F,
+		// 00111111
+		0x3F,
+		// 01111111
+		0x7F,
+		// 11111111
+		0xFF,
+	}
 )
 
 func combinePartial(d, s, m byte) byte {
