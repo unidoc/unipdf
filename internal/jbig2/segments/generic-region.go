@@ -80,11 +80,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	if g.IsMMREncoded {
 		// MMR Decoder Call
 		if g.mmrDecoder == nil {
-			g.mmrDecoder, err = mmr.New(
-				g.r,
-				g.RegionSegment.BitmapWidth, g.RegionSegment.BitmapHeight,
-				g.DataOffset, g.DataLength,
-			)
+			g.mmrDecoder, err = mmr.New(g.r, int(g.RegionSegment.BitmapWidth), int(g.RegionSegment.BitmapHeight), g.DataOffset, g.DataLength)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +109,7 @@ func (g *GenericRegion) GetRegionBitmap() (bm *bitmap.Bitmap, err error) {
 	}
 
 	// 6.2.5.7 - 2)
-	g.Bitmap = bitmap.New(g.RegionSegment.BitmapWidth, g.RegionSegment.BitmapHeight)
+	g.Bitmap = bitmap.New(int(g.RegionSegment.BitmapWidth), int(g.RegionSegment.BitmapHeight))
 	paddedWidth := int(uint32(g.Bitmap.Width+7) & (^uint32(7)))
 
 	// 6.2.5.7 - 3)
@@ -356,9 +352,9 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 
 			if g.override {
 				overriddenContext = g.overrideAtTemplate0a(context, x+minorX, line, int(result), minorX, int(toShift))
-				g.cx.SetIndex(overriddenContext)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			var bit int
@@ -449,9 +445,9 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 
 			if g.override {
 				overriddenContext = g.overrideAtTemplate0b(context, x+minorX, line, int(result), minorX, int(toShift))
-				g.cx.SetIndex(overriddenContext)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			var bit int
@@ -542,9 +538,9 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 		for minorX := 0; minorX < minorWidth; minorX++ {
 			if g.override {
 				overriddenContext = g.overrideAtTemplate1(context, x+minorX, line, int(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -636,9 +632,9 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 
 			if g.override {
 				overriddenContext = g.overrideAtTemplate2(context, x+minorX, lineNumber, int(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -707,9 +703,9 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 		for minorX := 0; minorX < minorWidth; minorX++ {
 			if g.override {
 				overriddenContext = g.overrideAtTemplate3(context, x+minorX, line, int(result), minorX)
-				g.cx.SetIndex(overriddenContext)
+				g.cx.SetIndex(int32(overriddenContext))
 			} else {
-				g.cx.SetIndex(context)
+				g.cx.SetIndex(int32(context))
 			}
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
@@ -1029,11 +1025,7 @@ func (g *GenericRegion) setOverrideFlag(index int) {
 	g.override = true
 }
 
-func (g *GenericRegion) setParameters(
-	isMMREncoded bool,
-	dataOffset, dataLength int64,
-	gbh, gbw int,
-) {
+func (g *GenericRegion) setParameters(isMMREncoded bool, dataOffset, dataLength int64, gbh, gbw uint32) {
 	g.IsMMREncoded = isMMREncoded
 	g.DataOffset = dataOffset
 	g.DataLength = dataLength
@@ -1048,7 +1040,7 @@ func (g *GenericRegion) setParametersWithAt(
 	SDTemplate byte,
 	isTPGDon, useSkip bool,
 	sDAtX, sDAtY []int8,
-	symWidth, hcHeight int,
+	symWidth, hcHeight uint32,
 	cx *arithmetic.DecoderStats, a *arithmetic.Decoder,
 ) {
 	g.IsMMREncoded = isMMREncoded
@@ -1074,7 +1066,7 @@ func (g *GenericRegion) setParametersWithAt(
 func (g *GenericRegion) setParametersMMR(
 	isMMREncoded bool,
 	dataOffset, dataLength int64,
-	gbh, gbw int,
+	gbh, gbw uint32,
 	gbTemplate byte,
 	isTPGDon, useSkip bool,
 	gbAtX, gbAtY []int8,

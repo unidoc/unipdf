@@ -52,11 +52,11 @@ type TextRegion struct {
 	sbrATY []int8
 
 	// Number of symbol instances 7.4.3.1.3.
-	numberOfSymbolInstances int64
+	numberOfSymbolInstances uint32
 
 	currentS        int64
-	sbStrips        int
-	numberOfSymbols int
+	sbStrips        int8
+	numberOfSymbols uint32
 
 	regionBitmap *bitmap.Bitmap
 	symbols      []*bitmap.Bitmap
@@ -77,7 +77,7 @@ type TextRegion struct {
 	cx      *arithmetic.DecoderStats
 
 	// symbolCodeTable includes a code to each symbol used in that region.
-	symbolCodeLength int
+	symbolCodeLength int8
 	symbolCodeTable  *huffman.FixedSizeTable
 	Header           *Header
 
@@ -214,7 +214,7 @@ func (t *TextRegion) computeSymbolCodeLength() error {
 		return t.symbolIDCodeLengths()
 	}
 
-	t.symbolCodeLength = int(math.Ceil(math.Log(float64(t.numberOfSymbols)) / math.Log(2)))
+	t.symbolCodeLength = int8(math.Ceil(math.Log(float64(t.numberOfSymbols)) / math.Log(2)))
 	return nil
 }
 
@@ -261,8 +261,7 @@ func (t *TextRegion) checkInput() error {
 
 func (t *TextRegion) createRegionBitmap() error {
 	// 6.4.5
-	t.regionBitmap = bitmap.New(t.regionInfo.BitmapWidth, t.regionInfo.BitmapHeight)
-
+	t.regionBitmap = bitmap.New(int(t.regionInfo.BitmapWidth), int(t.regionInfo.BitmapHeight))
 	if t.defaultPixel != 0 {
 		t.regionBitmap.SetDefaultPixel()
 	}
@@ -307,7 +306,7 @@ func (t *TextRegion) decodeStripT() (stripT int64, err error) {
 			}
 		}
 	} else {
-		var temp int
+		var temp int32
 		temp, err = t.arithmDecoder.DecodeInt(t.cxIADT)
 		if err != nil {
 			return 0, err
@@ -325,7 +324,10 @@ func (t *TextRegion) decodeSymbolInstances() error {
 	}
 
 	// Last two sentences of 6.4.5 2)
-	var firstS, instanceCounter int64
+	var (
+		firstS          int64
+		instanceCounter uint32
+	)
 
 	// 6.4.5 3)
 	for instanceCounter < t.numberOfSymbolInstances {
@@ -361,7 +363,7 @@ func (t *TextRegion) decodeSymbolInstances() error {
 					return err
 				}
 
-				if idS == math.MaxInt64 || instanceCounter >= t.numberOfSymbolInstances {
+				if idS == math.MaxInt32 || instanceCounter >= t.numberOfSymbolInstances {
 					break
 				}
 
@@ -424,7 +426,7 @@ func (t *TextRegion) decodeDT() (dT int64, err error) {
 			}
 		}
 	} else {
-		var temp int
+		var temp int32
 		temp, err = t.arithmDecoder.DecodeInt(t.cxIADT)
 		if err != nil {
 			return
@@ -545,17 +547,17 @@ func (t *TextRegion) decodeIb(r, id int64) (*bitmap.Bitmap, error) {
 
 	// 6)
 	ibo := t.symbols[id]
-	wo := ibo.Width
-	ho := ibo.Height
-	genericRegionReferenceDX := int(uint(rdw)>>1) + int(rdx)
-	genericRegionReferenceDY := int(uint(rdh)>>1) + int(rdy)
+	wo := uint32(ibo.Width)
+	ho := uint32(ibo.Height)
+	genericRegionReferenceDX := int32(uint32(rdw)>>1) + int32(rdx)
+	genericRegionReferenceDY := int32(uint32(rdh)>>1) + int32(rdy)
 
 	if t.genericRefinementRegion == nil {
 		t.genericRefinementRegion = newGenericRefinementRegion(t.r, nil)
 	}
 
 	t.genericRefinementRegion.setParameters(t.cx, t.arithmDecoder, t.sbrTemplate,
-		wo+int(rdw), ho+int(rdh), ibo, genericRegionReferenceDX, genericRegionReferenceDY, false, t.sbrATX, t.sbrATY)
+		wo+uint32(rdw), ho+uint32(rdh), ibo, genericRegionReferenceDX, genericRegionReferenceDY, false, t.sbrATX, t.sbrATY)
 
 	ib, err = t.genericRefinementRegion.GetRegionBitmap()
 	if err != nil {
@@ -883,7 +885,7 @@ func (t *TextRegion) initSymbols() error {
 			t.symbols = append(t.symbols, dict...)
 		}
 	}
-	t.numberOfSymbols = len(t.symbols)
+	t.numberOfSymbols = uint32(len(t.symbols))
 	return nil
 }
 
@@ -1136,10 +1138,8 @@ func (t *TextRegion) readAmountOfSymbolInstances() error {
 	if err != nil {
 		return err
 	}
-
-	bits &= 0xffffffff
-	t.numberOfSymbolInstances = int64(bits)
-	pixels := int64(t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight)
+	t.numberOfSymbolInstances = uint32(bits & math.MaxUint32)
+	pixels := t.regionInfo.BitmapWidth * t.regionInfo.BitmapHeight
 
 	if pixels < t.numberOfSymbolInstances {
 		common.Log.Debug("Limiting the number of decoded symbol instances to one per pixel ( %d instead of %d)", pixels, t.numberOfSymbolInstances)
@@ -1221,12 +1221,12 @@ func (t *TextRegion) setContexts(
 // setParameters sets the text region segment parameters.
 func (t *TextRegion) setParameters(
 	arithmeticDecoder *arithmetic.Decoder,
-	isHuffmanEncoded, sbRefine bool, sbw, sbh int,
-	sbNumInstances int64, sbStrips, sbNumSyms int,
+	isHuffmanEncoded, sbRefine bool, sbw, sbh uint32,
+	sbNumInstances uint32, sbStrips int8, sbNumSyms uint32,
 	sbDefaultPixel int8, sbCombinationOperator bitmap.CombinationOperator,
 	transposed int8, refCorner int16, sbdsOffset, sbHuffFS, sbHuffDS, sbHuffDT, sbHuffRDWidth,
 	sbHuffRDHeight, sbHuffRDX, sbHuffRDY, sbHuffRSize, sbrTemplate int8,
-	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int,
+	sbrATX, sbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int8,
 ) {
 	t.arithmDecoder = arithmeticDecoder
 
@@ -1277,7 +1277,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 
 		prefLen := int(bits & 0xf)
 		if prefLen > 0 {
-			runCodeTable = append(runCodeTable, huffman.NewCode(prefLen, 0, i, false))
+			runCodeTable = append(runCodeTable, huffman.NewCode(int32(prefLen), 0, int32(i), false))
 		}
 	}
 
@@ -1289,7 +1289,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 	// 3) - 5)
 	var (
 		previousCodeLength int64
-		counter            int
+		counter            uint32
 		sbSymCodes         []*huffman.Code
 		code               int64
 	)
@@ -1302,7 +1302,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 
 		if code < 32 {
 			if code > 0 {
-				sbSymCodes = append(sbSymCodes, huffman.NewCode(int(code), 0, counter, false))
+				sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(code), 0, int32(counter), false))
 			}
 			previousCodeLength = code
 			counter++
@@ -1335,7 +1335,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 
 			for j := 0; j < int(runLength); j++ {
 				if currCodeLength > 0 {
-					sbSymCodes = append(sbSymCodes, huffman.NewCode(int(currCodeLength), 0, counter, false))
+					sbSymCodes = append(sbSymCodes, huffman.NewCode(int32(currCodeLength), 0, int32(counter), false))
 				}
 				counter++
 			}

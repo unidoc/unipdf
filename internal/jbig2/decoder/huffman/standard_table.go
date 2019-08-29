@@ -65,7 +65,7 @@ func GetStandardTable(number int) (Tabler, error) {
 	return table, nil
 }
 
-func newStandardTable(table [][]int) (*StandardTable, error) {
+func newStandardTable(table [][]int32) (*StandardTable, error) {
 	var codeTable []*Code
 
 	for i := 0; i < len(table); i++ {
@@ -88,7 +88,7 @@ func newStandardTable(table [][]int) (*StandardTable, error) {
 	return s, nil
 }
 
-var tables = [][][]int{
+var tables = [][][]int32{
 	// B1
 	{
 		{1, 4, 0},

@@ -7,6 +7,7 @@ package segments
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -21,13 +22,10 @@ type PageInformationSegment struct {
 
 	// Page bitmap height, four byte, 7.4.8.1
 	PageBMHeight int
-
 	// Page bitmap width, four byte, 7.4.8.1
 	PageBMWidth int
-
 	// Page X resolution, four byte 7.4.8.3
 	ResolutionX int
-
 	// Page Y resolution, four byte 7.4.8.4
 	ResolutionY int
 
@@ -86,9 +84,9 @@ func (p *PageInformationSegment) String() string {
 }
 
 func (p *PageInformationSegment) checkInput() error {
-	if p.PageBMHeight == 0xFFFFFFFFFF {
+	if p.PageBMHeight == math.MaxInt32 {
 		if !p.IsStripe {
-			common.Log.Debug("isStriped should contaion the value true")
+			common.Log.Debug("PageInformationSegment.IsStripe should be true.")
 		}
 	}
 	return nil
@@ -177,14 +175,14 @@ func (p *PageInformationSegment) readResolution() error {
 	if err != nil {
 		return err
 	}
-	p.ResolutionX = int(tempResolution)
+	p.ResolutionX = int(tempResolution & math.MaxInt32)
 
 	tempResolution, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
 
-	p.ResolutionY = int(tempResolution)
+	p.ResolutionY = int(tempResolution & math.MaxInt32)
 	return nil
 }
 
@@ -230,7 +228,7 @@ func (p *PageInformationSegment) readDefaultPixelValue() error {
 	if err != nil {
 		return err
 	}
-	p.defaultPixelValue = uint8(b)
+	p.defaultPixelValue = uint8(b & 0xf)
 	return nil
 }
 
@@ -277,7 +275,7 @@ func (p *PageInformationSegment) readMaxStripeSize() error {
 		return err
 	}
 
-	p.MaxStripeSize = uint16(b & 0xFFFF)
+	p.MaxStripeSize = uint16(b & math.MaxUint16)
 	return nil
 }
 
@@ -286,13 +284,13 @@ func (p *PageInformationSegment) readWidthAndHeight() error {
 	if err != nil {
 		return err
 	}
-	p.PageBMWidth = int(tempInt)
+	p.PageBMWidth = int(tempInt & math.MaxInt32)
 
 	tempInt, err = p.r.ReadBits(32)
 	if err != nil {
 		return err
 	}
-	p.PageBMHeight = int(tempInt)
+	p.PageBMHeight = int(tempInt & math.MaxInt32)
 	return nil
 }
 
