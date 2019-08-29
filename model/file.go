@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 )
@@ -28,12 +29,12 @@ import (
  * A file specification could describe a URL-based file system and will follow the rules of Internet RFC 1808, Relative Uniform Resource Locators
  */
 
-// PdfFilespec represents a file specification
+// PdfFilespec represents a file specification which can either refer to an external or embedded file.
 type PdfFilespec struct {
 	Type core.PdfObject
 	FS   core.PdfObject
 	F    core.PdfObject // A file specification string
-	UF   core.PdfObject //A Unicode text string that provides file specification
+	UF   core.PdfObject // A Unicode text string that provides file specification
 	DOS  core.PdfObject // A file specification string representing a DOS file name. OBSOLETE
 	Mac  core.PdfObject // A file specification string representing a Mac OS file name. OBSOLETE
 	Unix core.PdfObject // A file specification string representing a UNIX file name. OBSOLETE

@@ -6,12 +6,17 @@
 package model
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/unidoc/unipdf/v3/core"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/core"
 )
 
+// testAction loads an action object from object number 1 loaded from `rawText` PDF content and checks that
+// it matches the `actionType`. Then it applies testFunc() on the action which does action-specific checks.
+// Lastly the serialized output is checked against the input PDF object.
 func testAction(t *testing.T, rawText string, actionType PdfActionType, testFunc func(t *testing.T, action *PdfAction)) {
 	// Read raw text
 	r := NewReaderForText(rawText)
@@ -40,7 +45,6 @@ func testAction(t *testing.T, rawText string, actionType PdfActionType, testFunc
 	testFunc(t, action)
 
 	// Check if object can be serialized to the expected text
-
 	outDict, ok := core.GetDict(action.context.ToPdfObject())
 	if !ok {
 		t.Fatalf("error")

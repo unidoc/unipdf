@@ -99,10 +99,10 @@ type PdfAnnotationLink struct {
 	BS         core.PdfObject
 
 	action *PdfAction
-
 	reader *PdfReader
 }
 
+// GetAction returns the PDF action for the annotation link.
 func (a *PdfAnnotationLink) GetAction() (*PdfAction, error) {
 	if a.action != nil {
 		return a.action, nil
@@ -123,7 +123,7 @@ func (a *PdfAnnotationLink) GetAction() (*PdfAction, error) {
 	return a.action, nil
 }
 
-// SetAnnotations sets the annotations list.
+// SetAction sets the PDF action for the annotation link.
 func (a *PdfAnnotationLink) SetAction(action *PdfAction) {
 	a.action = action
 	if action == nil {
