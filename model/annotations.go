@@ -91,12 +91,44 @@ type PdfAnnotationText struct {
 // (Section 12.5.6.5 p. 403).
 type PdfAnnotationLink struct {
 	*PdfAnnotation
-	A          *PdfAction
+	A          core.PdfObject
 	Dest       core.PdfObject
 	H          core.PdfObject
 	PA         core.PdfObject
 	QuadPoints core.PdfObject
 	BS         core.PdfObject
+
+	action *PdfAction
+
+	reader *PdfReader
+}
+
+func (a *PdfAnnotationLink) GetAction() (*PdfAction, error) {
+	if a.action != nil {
+		return a.action, nil
+	}
+	if a.A == nil {
+		return nil, nil
+	}
+	if a.reader == nil {
+		return nil, nil
+	}
+
+	action, err := a.reader.loadAction(a.A)
+	if err != nil {
+		return nil, err
+	}
+	a.action = action
+
+	return a.action, nil
+}
+
+// SetAnnotations sets the annotations list.
+func (a *PdfAnnotationLink) SetAction(action *PdfAction) {
+	a.action = action
+	if action == nil {
+		a.A = nil
+	}
 }
 
 // PdfAnnotationFreeText represents FreeText annotations.
@@ -1044,18 +1076,7 @@ func (r *PdfReader) newPdfAnnotationTextFromDict(d *core.PdfObjectDictionary) (*
 func (r *PdfReader) newPdfAnnotationLinkFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationLink, error) {
 	annot := PdfAnnotationLink{}
 
-	if obj := d.Get("A"); obj != nil {
-		if indObj, isIndirect := core.GetIndirect(obj); isIndirect {
-			actionObj, err := r.newPdfActionFromIndirectObject(indObj)
-			if err != nil {
-				return nil, err
-			}
-			annot.A = actionObj
-		} else if !core.IsNullObject(obj) {
-			return nil, errors.New("A should point to an indirect object")
-		}
-	}
-
+	annot.A = d.Get("A")
 	annot.Dest = d.Get("Dest")
 	annot.H = d.Get("H")
 	annot.PA = d.Get("PA")
@@ -1063,6 +1084,19 @@ func (r *PdfReader) newPdfAnnotationLinkFromDict(d *core.PdfObjectDictionary) (*
 	annot.BS = d.Get("BS")
 
 	return &annot, nil
+}
+
+func (r *PdfReader) loadAction(obj core.PdfObject) (*PdfAction, error) {
+	if indObj, isIndirect := core.GetIndirect(obj); isIndirect {
+		actionObj, err := r.newPdfActionFromIndirectObject(indObj)
+		if err != nil {
+			return nil, err
+		}
+		return actionObj, nil
+	} else if !core.IsNullObject(obj) {
+		return nil, errors.New("action should point to an indirect object")
+	}
+	return nil, nil
 }
 
 func (r *PdfReader) newPdfAnnotationFreeTextFromDict(d *core.PdfObjectDictionary) (*PdfAnnotationFreeText, error) {
@@ -1508,9 +1542,13 @@ func (link *PdfAnnotationLink) ToPdfObject() core.PdfObject {
 	d := container.PdfObject.(*core.PdfObjectDictionary)
 
 	d.SetIfNotNil("Subtype", core.MakeName("Link"))
-	if link.A != nil && link.A.context != nil {
-		d.Set("A", link.A.context.ToPdfObject())
+
+	if link.action != nil && link.action.context != nil {
+		d.Set("A", link.action.context.ToPdfObject())
+	} else if link.A != nil {
+		d.Set("A", link.A)
 	}
+
 	d.SetIfNotNil("Dest", link.Dest)
 	d.SetIfNotNil("H", link.H)
 	d.SetIfNotNil("PA", link.PA)
