@@ -291,10 +291,11 @@ func (c *Creator) initContext() {
 }
 
 // NewPage adds a new Page to the Creator and sets as the active Page.
-func (c *Creator) NewPage() {
+func (c *Creator) NewPage() *model.PdfPage {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
 	c.context.Page++
+	return page
 }
 
 // AddPage adds the specified page to the creator.
