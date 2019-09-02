@@ -6,7 +6,7 @@ env:
   global:
     - CGO_ENABLED="0"
     - GO111MODULE="on"
-    - TMPDIR="$(echo -n $TRAVIS_BUILD_DIR/tmp)"
+    - TMPDIR="$(echo -n $HOME/tmp)"
     - UNIDOC_GS_BIN_PATH="/usr/bin/gs"
     - UNIDOC_EXTRACT_FORCETEST="0"
     - UNIDOC_E2E_FORCE_TESTS="0"
