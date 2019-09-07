@@ -883,7 +883,7 @@ func rasterOpGeneralLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src
 		dlwPartB = true
 		dlwMask = lmaskByte[dlwBits]
 		pdlwPart = dest.RowStride*dy + ((dx + dHang) >> 3) + dnFullBytes
-		pslwPart = src.RowStride*sy + ((sx + sHang) >> 3) + dnFullBytes
+		pslwPart = src.RowStride*sy + ((sx + dHang) >> 3) + dnFullBytes
 
 		if dlwBits > int(srightShift) {
 			slwAddB = true

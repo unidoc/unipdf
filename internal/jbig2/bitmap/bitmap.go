@@ -82,19 +82,20 @@ func NewWithData(width, height int, data []byte) (*Bitmap, error) {
 	return bm, nil
 }
 
-// AddBorderGeneral creates new bitmap on the base of the bitmap 'b' with the border of lenght
-// left,right,top,bot. The 'val' sets the border white (0) or black (1).
-func (b *Bitmap) AddBorderGeneral(left, right, top, bot int, val int) (*Bitmap, error) {
-	if left < 0 || right < 0 || top < 0 || bot < 0 {
-		return nil, errors.New("negative border added")
+// AddBorder creates a new bitmap with the border of size 'borderSize'. If the 'borderSize' is different than zero
+// the resultant bitmap dimensions would increase by width += 2* borderSize, height += 2*borderSize.
+// The value 'val' represents the binary bit 'value' of the border - '0' and '1'
+func (b *Bitmap) AddBorder(borderSize, val int) (*Bitmap, error) {
+	if borderSize == 0 {
+		return b.Copy(), nil
 	}
+	return b.addBorderGeneral(borderSize, borderSize, borderSize, borderSize, val)
+}
 
-	ws, hs := b.Width, b.Height
-	wd := ws + left + right
-	hd := hs + top + bot
-
-	bd := New(wd, hd)
-	return bd, nil
+// AddBorderGeneral creates new bitmap on the base of the bitmap 'b' with the border of size for each side
+// 'left','right','top','bot'. The 'val' sets the border white (0) or black (1).
+func (b *Bitmap) AddBorderGeneral(left, right, top, bot int, val int) (*Bitmap, error) {
+	return b.addBorderGeneral(left, right, top, bot, val)
 }
 
 // Copy gets a copy of the 'b' bitmap.
@@ -237,6 +238,25 @@ func (b *Bitmap) GetVanillaData() []byte {
 	return b.Data
 }
 
+// InverseData inverses the data color interpretation.
+func (b *Bitmap) InverseData() {
+	b.inverseData()
+}
+
+// RemoveBorder create a new bitmap based on the 'b' with removed border of size 'borderSize'.
+func (b *Bitmap) RemoveBorder(borderSize int) (*Bitmap, error) {
+	if borderSize == 0 {
+		return b.Copy(), nil
+	}
+	return b.removeBorderGeneral(borderSize, borderSize, borderSize, borderSize)
+}
+
+// RemoveBorderGeneral creates a new bitmap with removed border of size 'left', 'right', 'top', 'bot'.
+// The resultant bitmap dimensions would be smaller by the value of border size.
+func (b *Bitmap) RemoveBorderGeneral(left, right, top, bot int) (*Bitmap, error) {
+	return b.removeBorderGeneral(left, right, top, bot)
+}
+
 // SetPixel sets the pixel at 'x', 'y' coordinates with the value of 'pixel'.
 // Returns an error if the index is out of range.
 func (b *Bitmap) SetPixel(x, y int, pixel byte) error {
@@ -318,9 +338,50 @@ func (b *Bitmap) ToImage() image.Image {
 	return img
 }
 
-// InverseData inverses the data color interpretation.
-func (b *Bitmap) InverseData() {
-	b.inverseData()
+func (b *Bitmap) addBorderGeneral(left, right, top, bot int, val int) (*Bitmap, error) {
+	if left < 0 || right < 0 || top < 0 || bot < 0 {
+		return nil, errors.New("negative border added")
+	}
+
+	ws, hs := b.Width, b.Height
+	wd := ws + left + right
+	hd := hs + top + bot
+
+	bd := New(wd, hd)
+	bd.Color = b.Color
+
+	op := PixClr
+	if val > 0 {
+		op = PixSet
+	}
+
+	err := bd.RasterOperation(0, 0, left, hd, op, nil, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	err = bd.RasterOperation(wd-right, 0, right, hd, op, nil, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	err = bd.RasterOperation(0, 0, wd, top, op, nil, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	err = bd.RasterOperation(0, hd-bot, wd, bot, op, nil, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// copy the pixels into the interior
+	err = bd.RasterOperation(left, top, ws, hs, PixSrc, b, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	return bd, nil
+}
+
+func (b *Bitmap) clearAll() error {
+	return b.RasterOperation(0, 0, b.Width, b.Height, PixClr, nil, 0, 0)
 }
 
 func (b *Bitmap) countPixels() int {
@@ -527,14 +588,62 @@ func (b *Bitmap) equivalent(s *Bitmap) bool {
 }
 
 func (b *Bitmap) inverseData() {
-	for i := 0; i < len(b.Data); i++ {
-		b.Data[i] = ^b.Data[i]
-	}
+	b.RasterOperation(0, 0, b.Width, b.Height, PixNotDst, nil, 0, 0)
 	// flip the color interpretation
 	if b.Color == Chocolate {
 		b.Color = Vanilla
 	} else {
 		b.Color = Chocolate
+	}
+}
+
+func (b *Bitmap) removeBorderGeneral(left, right, top, bot int) (*Bitmap, error) {
+	if left < 0 || right < 0 || top < 0 || bot < 0 {
+		return nil, errors.New("negative broder remove values")
+	}
+
+	ws, hs := b.Width, b.Height
+	wd := ws - left - right
+	hd := hs - top - bot
+
+	if wd <= 0 {
+		return nil, errors.New("width must be > 0")
+	}
+
+	if hd <= 0 {
+		return nil, errors.New("height must be > 0")
+	}
+
+	bm := New(wd, hd)
+	bm.Color = b.Color
+
+	err := bm.RasterOperation(0, 0, wd, hd, PixSrc, b, left, top)
+	if err != nil {
+		return nil, err
+	}
+	return bm, nil
+}
+
+func (b *Bitmap) setPadBits(val int) {
+	endbits := 8 - b.Width%8
+	if endbits == 0 {
+		// no partial words
+		return
+	}
+	fullBytes := b.Width / 8
+	mask := rmaskByte[endbits]
+	if val == 0 {
+		mask ^= mask
+	}
+
+	var bIndex int
+	for i := 0; i < b.Height; i++ {
+		bIndex = i*b.RowStride + fullBytes
+		if val == 0 {
+			b.Data[bIndex] &= mask
+		} else {
+			b.Data[bIndex] |= mask
+		}
 	}
 }
 
@@ -571,4 +680,212 @@ func (b *Bitmap) thresholdPixelSum(thresh int) bool {
 		}
 	}
 	return false
+}
+
+// CorrelationScoreThresholded checks whether the correlation score is >= scoreThreshold.
+func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, maxDiffW, maxDiffH int, tab, downcount []int, scoreThreshold float32) (bool, error) {
+	if bm1 == nil {
+		return false, errors.New("correlationScoreThresholded bm1 is nil")
+	}
+	if bm2 == nil {
+		return false, errors.New("correlationScoreThresholded bm2 is nil")
+	}
+
+	if area1 <= 0 || area2 <= 0 {
+		return false, errors.New("correlationScoreThresholded - areas must be > 0")
+	}
+
+	wi, hi := bm1.Width, bm1.Height
+	wt, ht := bm2.Width, bm2.Height
+
+	if abs(wi-wt) > maxDiffW {
+		return false, nil
+	}
+	if abs(hi-ht) > maxDiffH {
+		return false, nil
+	}
+	var idelX, idelY int
+	if delX >= 0 {
+		idelX = int(delX + 0.5)
+	} else {
+		idelX = int(delX - 0.5)
+	}
+	if delY >= 0 {
+		idelY = int(delY + 0.5)
+	} else {
+		idelY = int(delY + 0.5)
+	}
+
+	// compute the correlation count.
+	threshold := int(math.Ceil(math.Sqrt(float64(scoreThreshold) * float64(area1) * float64(area2))))
+	var count int
+	var rowBytes1 int
+	rowBytes2 := bm2.RowStride
+
+	// only the rows underlying the shifted bm2 need to be considered
+	loRow := max(idelY, 0)
+	hiRow := min(ht+idelY, hi)
+
+	row1Index := bm1.RowStride * loRow
+	row2Index := bm2.RowStride * (loRow - idelY)
+
+	var untouchable int
+	if hiRow <= hi {
+		// some rows of bm1 would never contribute
+		untouchable = downcount[hiRow-1]
+	}
+
+	loCol := max(idelX, 0)
+	hiCol := min(wt+idelX, wi)
+	var bm1LSkip, bm2LSkip int
+	if idelX >= 8 {
+		bm1LSkip = idelX >> 3
+		row1Index += bm1LSkip
+		loCol -= bm1LSkip << 3
+		hiCol -= bm1LSkip << 3
+		idelX &= 7
+	} else if idelX <= -8 {
+		bm2LSkip = -((idelX + 7) >> 3)
+		row2Index += bm2LSkip
+		rowBytes2 -= bm2LSkip
+		idelX += bm2LSkip << 3
+	}
+	var (
+		y, x                  int
+		andByte, byte1, byte2 byte
+	)
+	if !(loCol >= hiCol || loRow >= hiRow) {
+		rowBytes1 = (hiCol + 7) >> 3
+
+		switch {
+		case idelX == 0:
+			for y = loRow; y < hiRow; y++ {
+				for x = 0; x < rowBytes1; x++ {
+					andByte = bm1.Data[row1Index+x] & bm2.Data[row2Index+x]
+					count += tab[andByte]
+				}
+				if count >= threshold {
+					return true, nil
+				}
+				if count+downcount[y]-untouchable < threshold {
+					return false, nil
+				}
+				row1Index += bm1.RowStride
+				row2Index += bm2.RowStride
+			}
+		case idelX > 0 && rowBytes2 < rowBytes1:
+			for y = loRow; y < hiRow; y++ {
+				byte1 = bm1.Data[row1Index]
+				byte2 = bm2.Data[row2Index]
+				andByte = byte1 & byte2
+				count += tab[andByte]
+
+				for x = 1; x < rowBytes2; x++ {
+					byte1 = bm1.Data[row1Index+x]
+					byte2 = (bm2.Data[row2Index+x]>>uint(idelX) | bm2.Data[row2Index+x-1]<<uint(8-delX))
+					andByte = byte1 & byte2
+					count += tab[andByte]
+				}
+
+				byte1 = bm1.Data[row1Index+x]
+				byte2 = bm2.Data[row2Index-1] << uint(8-idelX)
+				andByte = byte1 & byte2
+				count += tab[andByte]
+
+				if count >= threshold {
+					return true, nil
+				} else if count+downcount[y]-untouchable < threshold {
+					return false, nil
+				}
+				row1Index += bm1.RowStride
+				row2Index += bm2.RowStride
+			}
+		case idelX > 0 && rowBytes1 >= rowBytes2:
+			for y = loRow; y < hiRow; y++ {
+				for x = 0; x < rowBytes1; x++ {
+					byte1 = bm1.Data[row1Index+x]
+					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
+					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
+					andByte = byte1 & byte2
+					count += tab[andByte]
+				}
+				if count >= threshold {
+					return true, nil
+				} else if count+downcount[y]-untouchable < threshold {
+					return false, nil
+				}
+				row1Index += bm1.RowStride
+				row2Index += bm2.RowStride
+			}
+		case rowBytes1 < rowBytes2:
+			for y = loRow; y < hiRow; y++ {
+				for x = 0; x < rowBytes1; x++ {
+					byte1 = bm1.Data[row1Index+x]
+					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
+					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
+					andByte = byte1 & byte2
+					count += tab[andByte]
+				}
+
+				if count >= threshold {
+					return true, nil
+				} else if count+downcount[y]-untouchable < threshold {
+					return false, nil
+				}
+				row1Index += bm1.RowStride
+				row2Index += bm2.RowStride
+			}
+		case rowBytes2 >= rowBytes1:
+			for y = loRow; y < hiRow; y++ {
+				for x = 0; x < row1Index-1; x++ {
+					byte1 = bm1.Data[row1Index+x]
+					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
+					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
+					andByte = byte1 & byte2
+					count += tab[andByte]
+				}
+
+				byte1 = bm1.Data[row1Index+x]
+				byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
+				andByte = byte1 & byte2
+				count += tab[andByte]
+
+				if count >= threshold {
+					return true, nil
+				} else if count+downcount[y]-untouchable < threshold {
+					return false, nil
+				}
+
+				row1Index += bm1.RowStride
+				row2Index += bm2.RowStride
+			}
+		}
+	}
+	score := float32(count) * float32(count) / (float32(area1) * float32(area2))
+	if score >= scoreThreshold {
+		common.Log.Debug("count: %d < threshold %d but score %f >= scoreThreshold %f", count, threshold, score, scoreThreshold)
+	}
+	return false, nil
+
+}
+
+func abs(input int) int {
+	if input < 0 {
+		return -input
+	}
+	return input
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }

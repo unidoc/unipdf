@@ -12,6 +12,11 @@ import (
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
 )
 
+const (
+	// JbAddedPixels is the size of the border added around pix of each c.c. for further processing.
+	JbAddedPixels = 6
+)
+
 // For PixHausTest, PixRankHausTest and PixCorrelationScore
 // the values should be or greater.
 const (

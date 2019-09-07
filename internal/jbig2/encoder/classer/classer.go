@@ -7,9 +7,9 @@ package classer
 
 import (
 	"errors"
-	"github.com/unidoc/unipdf/common"
 	"image"
 
+	"github.com/unidoc/unipdf/common"
 	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
 )
 
@@ -44,7 +44,7 @@ type Classer struct {
 	WeightFactor float32
 
 	// Width * Height of each template without extra border pixels.
-	NAArea [][]int
+	NAArea []int
 
 	// Width is max width of original src images.
 	Width int
@@ -66,10 +66,10 @@ type Classer struct {
 	// FgTemplates Fg areas of undilated templates. Used for rank < 1.0.
 	FgTemplates []int
 
-	// Ptac centroids of all bordered cc.
-	Ptac []image.Point
-	// Ptact centroids of all bordered template cc.
-	Ptact []image.Point
+	// CentroidPoints centroids of all bordered cc.
+	CentroidPoints []bitmap.Point
+	// CentroidPointsTemplates centroids of all bordered template cc.
+	CentroidPointsTemplates []bitmap.Point
 	// ClassIDs is the slice of class ids for each component.
 	ClassIDs []int
 	// PageNumbers it the page nums slice for each component.
@@ -155,9 +155,23 @@ func (c *Classer) ClassifyRankHaus(newCompontentsBB []image.Rectangle, newCompon
 
 	bms1 := make([]*bitmap.Bitmap, n)
 	bms2 := make([]*bitmap.Bitmap, n)
-
+	var (
+		bm, bm1, bm2 *bitmap.Bitmap
+		err          error
+	)
 	for i := 0; i < n; i++ {
 		bm := bms1[i]
+
+		bm1, err = bm.AddBorderGeneral(JbAddedPixels, JbAddedPixels, JbAddedPixels, JbAddedPixels, 0)
+		if err != nil {
+			return err
+		}
+		bm2, err = bitmap.Dilate(nil, bm1, sel)
+		if err != nil {
+			return err
+		}
+		bms1[n] = bm1 // un-dilated
+		bms2[n] = bm2 // dilated
 	}
 
 	return nil
@@ -166,6 +180,147 @@ func (c *Classer) ClassifyRankHaus(newCompontentsBB []image.Rectangle, newCompon
 // ClassifyCorrelation is the classification using windowed correlation score.
 func (c *Classer) ClassifyCorrelation(newCompontentsBB []image.Rectangle, newComponents []*bitmap.Bitmap) error {
 	// TODO: jbclass.c:1031
+	boxa, pixas := newCompontentsBB, newComponents
+	if boxa == nil {
+		return errors.New("ClassifyCorrelation - newComponents bounding boxes not found")
+	}
+	if pixas == nil {
+		return errors.New("ClassifyCorrelation - newComponents bitmap array not found")
+	}
+
+	if len(pixas) == 0 {
+		common.Log.Debug("ClassifyCorrelation - provided pixas is empty")
+		return nil
+	}
+
+	var (
+		bm, bm1 *bitmap.Bitmap
+		err     error
+	)
+	pixa1 := make([]*bitmap.Bitmap, len(pixas))
+	for i, bm := range pixas {
+		bm1, err = bm.AddBorderGeneral(JbAddedPixels, JbAddedPixels, JbAddedPixels, JbAddedPixels, 0)
+		if err != nil {
+			return err
+		}
+		pixa1[i] = bm1
+	}
+
+	nafgt := c.FgTemplates
+	sumtab := bitmap.MakePixelSumTab8()
+	centtab := bitmap.MakePixelCentroidTab8()
+	pixcts := make([]int, len(pixas))
+	pixRowCts := make([][]int, len(pixas))
+	pta := make([]bitmap.Point, len(pixas))
+
+	var (
+		xsum, ysum                    int
+		downcount, rowIndex, rowCount int
+		x, y                          int
+		bt                            byte
+	)
+	for i, bm := range pixa1 {
+		pixRowCts[i] = make([]int, bm.Height)
+
+		xsum = 0
+		ysum = 0
+
+		rowIndex = (bm.Height - 1) * bm.RowStride
+		downcount = 0
+		increaser := func() {
+			y--
+			rowIndex -= bm.RowStride
+		}
+
+		for y = bm.Height - 1; y >= 0; increaser() {
+			pixRowCts[i][y] = downcount
+			rowCount = 0
+			for x = 0; x < bm.RowStride; x++ {
+				bt = bm.Data[rowIndex+x]
+				rowCount += sumtab[bt]
+				xsum += centtab[bt] + x*8*sumtab[bt]
+			}
+			downcount += rowCount
+			ysum += rowCount * y
+		}
+		pixcts[i] = downcount
+		if downcount > 0 {
+			pta[i] = bitmap.Point{X: float32(xsum) / float32(downcount), Y: float32(ysum) / float32(downcount)}
+		} else {
+			// no pixels
+			pta[i] = bitmap.Point{X: float32(bm.Width) / float32(2), Y: float32(bm.Height) / float32(2)}
+		}
+	}
+
+	c.CentroidPoints = append(c.CentroidPoints, pta...)
+	// GOTO: jbclass.c:1143
+	var (
+		area, area1, area2 int
+		threshold          float32
+		ct1, ct2           bitmap.Point
+		found              bool
+		findContext        *FindTemplatesState
+		i                  int
+		bm2                *bitmap.Bitmap
+	)
+
+	for i, bm1 = range pixa1 {
+		area1 = pixcts[i]
+		ct1 = pta[i]
+		found = false
+		nt := len(c.Pixat)
+		findContext = c.FindSimilarSizedTemplatesInit(bm1)
+		for iclass := findContext.Next(); iclass > -1; {
+			// get the template
+			bm2 = c.Pixat[iclass]
+			area2 = nafgt[iclass]
+			ct2 = c.CentroidPointsTemplates[iclass]
+			if c.WeightFactor > 0.0 {
+				area = c.NAArea[iclass]
+				threshold = c.Thresh + (1.0-c.Thresh)*c.WeightFactor*float32(area2)/float32(area)
+			} else {
+				threshold = c.Thresh
+			}
+
+			overThreshold, err := bitmap.CorrelationScoreThresholded(bm1, bm2, area1, area2, ct1.X-ct2.X, ct1.Y-ct2.Y, MaxDiffWidth, MaxDiffHeight, sumtab, pixRowCts[i], threshold)
+			if err != nil {
+				return err
+			}
+
+			if overThreshold {
+				found = true
+				c.ClassIDs = append(c.ClassIDs, iclass)
+				c.PageNumbers = append(c.PageNumbers, c.NPages)
+
+				if c.KeepPixaa != 0 {
+					bm = pixas[i]
+					c.Pixaa[iclass] = append(c.Pixaa[iclass], bm)
+					bm.Box = boxa[i]
+				}
+				break
+			}
+		}
+		if !found {
+			c.ClassIDs = append(c.ClassIDs, nt)
+			c.PageNumbers = append(c.PageNumbers, c.NPages)
+			pixa := []*bitmap.Bitmap{}
+			pix := pixas[i]
+			pixa = append(pixa, pix)
+
+			wt, ht := pix.Width, pix.Height
+			key := uint64(ht * wt)
+			templatesSizes := c.TemplatesSize[key]
+			templatesSizes = append(templatesSizes, float64(nt))
+			c.TemplatesSize[key] = templatesSizes
+			pix.Box = boxa[i]
+			c.Pixaa = append(c.Pixaa, pixa)
+			c.CentroidPointsTemplates = append(c.CentroidPoints, ct1)
+			c.FgTemplates = append(c.FgTemplates, area1)
+			area = (bm1.Width - 2*JbAddedPixels) * (bm1.Height - 2*JbAddedPixels)
+			c.NAArea = append(c.NAArea, area)
+		}
+	}
+	c.NClass = len(c.Pixat)
 	return nil
 }
 
@@ -188,7 +343,7 @@ func (c *Classer) GetULCorners(img *bitmap.Pix, bounds *bitmap.Boxa) error {
 }
 
 // FindSimilarSizedTemplatesInit ...
-func (c *Classer) FindSimilarSizedTemplatesInit(toMatch *bitmap.Pix) *FindTemplatesState {
+func (c *Classer) FindSimilarSizedTemplatesInit(toMatch *bitmap.Bitmap) *FindTemplatesState {
 	// TODO: jbclass.c:2401
 	return nil
 }

@@ -7,6 +7,7 @@ package bitmap
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -248,6 +249,624 @@ func TestBitmap(t *testing.T) {
 						assert.Equal(t, byte(0x04), bt, fmt.Sprintf("Should be: %08b is: %08b", 0x04, bt))
 					}
 				}
+			})
+		})
+	})
+
+	t.Run("Inverse", func(t *testing.T) {
+		// having a bitmap of width: 20 and height: 2 with the data:
+		//	  11110101	  10101100	  10110000	  11010011 	  10110001	  11100000 - total 25 '1' bits.
+		//			F5			AC			B0			D3			B1			E0
+		data := []byte{0xF5, 0xAC, 0xB0, 0xD3, 0xB1, 0xE0}
+
+		t.Run("Chocolate", func(t *testing.T) {
+			cdata := make([]byte, 6)
+			copy(cdata, data)
+
+			bm, err := NewWithData(20, 2, cdata)
+			require.NoError(t, err)
+			bm.Color = Chocolate
+
+			bm.InverseData()
+			assert.Equal(t, Vanilla, bm.Color)
+			// The result should be:
+			// 	00001010	01010011	01000000	00101100	01001110	00010000
+			//		0x0A		0x53		0x40		0x2C		0x4E		0x10
+			shouldBe := []byte{0x0A, 0x53, 0x40, 0x2C, 0x4E, 0x10}
+			assert.Equal(t, shouldBe, bm.Data)
+		})
+
+		t.Run("Vanilla", func(t *testing.T) {
+			cdata := make([]byte, 6)
+			copy(cdata, data)
+
+			bm, err := NewWithData(20, 2, cdata)
+			require.NoError(t, err)
+			bm.Color = Vanilla
+
+			bm.InverseData()
+			assert.Equal(t, Chocolate, bm.Color)
+			// The result should be:
+			// 	00001010	01010011	01000000	00101100	01001110	00010000
+			//		0x0A		0x53		0x40		0x2C		0x4E		0x10
+			shouldBe := []byte{0x0A, 0x53, 0x40, 0x2C, 0x4E, 0x10}
+			assert.Equal(t, shouldBe, bm.Data)
+		})
+
+	})
+
+	t.Run("Equivalent", func(t *testing.T) {
+		t.Run("SmallSize", func(t *testing.T) {
+			// the Equivalent function take into consideration the bitmaps
+			// The root data to compare is the bitmap of width: 20 and height: 6 with the data:
+			//	  11110101	  10101100	  10110000
+			//			F5			AC			B0
+			// 	  11010011 	  10110001	  11100000
+			//			D3			B1			E0
+			//	  01101001	  01001010    10000000
+			//			69			4A			80
+			//    11101111    10101111	  01000000
+			//    		EF			AF			40
+			//	  00001000	  01011101    11010000
+			//			08			5D			D0
+			//    11101001	  11111111	  01010000
+			// 			E9			FF			50
+			data := []byte{
+				0xF5, 0xAC, 0xB0,
+				0xD3, 0xB1, 0xE0,
+				0x69, 0x4A, 0x80,
+				0xEF, 0xAF, 0x40,
+				0x08, 0x5D, 0xD0,
+				0xE9, 0xFF, 0x50,
+			}
+			bm, err := NewWithData(20, 6, data)
+			require.NoError(t, err)
+
+			// the first data contains the same byte data as the root 'bm'.
+			firstData := make([]byte, 18)
+			copy(firstData, data)
+
+			first, err := NewWithData(20, 6, firstData)
+			require.NoError(t, err)
+
+			// the result of the Equivalent should be true as the bitmaps are mostly equivalent.
+			assert.True(t, bm.Equivalent(first))
+
+			// as the size of the bitmap is relatively small changing even a bit would result in false.
+			secondData := make([]byte, 18)
+			copy(secondData, data)
+			secondData[0] = 0xF4
+
+			second, err := NewWithData(20, 6, secondData)
+			require.NoError(t, err)
+
+			assert.False(t, bm.Equivalent(second))
+		})
+
+		t.Run("BigSize", func(t *testing.T) {
+			rd := rand.New(rand.NewSource(356))
+
+			// Let's have a 1024x768 bitmap with random data bytes.
+			data := make([]byte, (1024*768)>>3)
+			n, err := rd.Read(data)
+			require.NoError(t, err)
+
+			// 1024*768 >> 3 = 98304
+			assert.Equal(t, 98304, n)
+
+			bm, err := NewWithData(1024, 768, data)
+			require.NoError(t, err)
+
+			// let's create a second bitmap with flipped one bit only.
+			firstData := make([]byte, (1024*768)>>3)
+			copy(firstData, data)
+
+			if firstData[0]&0x01 == 0 {
+				// set the first bit to '1'
+				firstData[0] |= 0x01
+			} else {
+				// clear the first bit to '0'
+				firstData[0] &^= 1
+			}
+			first, err := NewWithData(1024, 768, firstData)
+			require.NoError(t, err)
+
+			// Even though the data differs with a single bit, the bitmaps are treated as equivalent
+			// due to it's size.
+			assert.True(t, bm.Equivalent(first))
+		})
+	})
+
+	t.Run("Copy", func(t *testing.T) {
+		// Having some bitmap of size 40x50 with some random data.
+		data := make([]byte, (40*50)>>3)
+		n, err := rand.Read(data)
+		require.NoError(t, err)
+
+		// 40x50 >> 3 = 250
+		assert.Equal(t, 250, n)
+
+		bm, err := NewWithData(40, 50, data)
+		require.NoError(t, err)
+
+		copied := bm.Copy()
+		// 'assert.Equal' checks if all fields are equal for the structures.
+		assert.Equal(t, bm, copied)
+		// but while comparing the pointers they're not pointing to the same structure.
+		assert.False(t, bm == copied)
+	})
+
+	t.Run("CountPixels", func(t *testing.T) {
+		// having a bitmap of width: 20 and height: 2 with the data:
+		//	  11110101	  10101100	  10110000	  11010011 	  10110001	  11100000 - total 25 '1' bits.
+		//			F5			AC			B0			D3			B1			E0
+		data := []byte{0xF5, 0xAC, 0xB0, 0xD3, 0xB1, 0xE0}
+		bm, err := NewWithData(20, 2, data)
+		require.NoError(t, err)
+
+		oneBitsNumber := 25
+
+		assert.Equal(t, oneBitsNumber, bm.CountPixels())
+	})
+
+	t.Run("AddBorder", func(t *testing.T) {
+		t.Run("Border>0", func(t *testing.T) {
+			// The root data to add the border is the bitmap of width: 20 and height: 6 with the data:
+			//	  11110101	  10101100	  10110000
+			//			F5			AC			B0
+			// 	  11010011 	  10110001	  11100000
+			//			D3			B1			E0
+			//	  01101001	  01001010    10000000
+			//			69			4A			80
+			//    11101111    10101111	  01000000
+			//    		EF			AF			40
+			//	  00001000	  01011101    11010000
+			//			08			5D			D0
+			//    11101001	  11111111	  01010000
+			// 			E9			FF			50
+			data := []byte{
+				0xF5, 0xAC, 0xB0,
+				0xD3, 0xB1, 0xE0,
+				0x69, 0x4A, 0x80,
+				0xEF, 0xAF, 0x40,
+				0x08, 0x5D, 0xD0,
+				0xE9, 0xFF, 0x50,
+			}
+			bm, err := NewWithData(20, 6, data)
+			require.NoError(t, err)
+
+			// add the border of size 1 to each side of the bitmap
+			bmWithBorder, err := bm.AddBorder(1, 1)
+			require.NoError(t, err)
+
+			// the result should be as follows
+			//	  11111111	11111111  11111100	- 0xFF, 0xFF, 0xFC
+			//	  11111010  11010110  01011100	- 0xFA, 0xD6, 0x5C
+			// 	  11101001  11011000  11110100	- 0xE9, 0xD8, 0xF4
+			//	  10110100  10100101  01000100	- 0xB4, 0xA5, 0x44
+			//    11110111  11010111  10100100	- 0xF7, 0xD7, 0xA4
+			//	  10000100  00101110  11101100	- 0x84, 0x2E, 0xEC
+			//    11110100  11111111  10101100	- 0xF4, 0xFF, 0xAC
+			//	  11111111  11111111  11111100	- 0xFF, 0xFF, 0xFC
+			shouldBe := []byte{0xFF, 0xFF, 0xFC, 0xFA, 0xD6, 0x5C, 0xE9, 0xD8, 0xF4, 0xB4, 0xA5, 0x44, 0xF7, 0xD7, 0xA4, 0x84, 0x2E, 0xEC, 0xF4, 0xFF, 0xAC, 0xFF, 0xFF, 0xFC}
+			assert.Equal(t, bmWithBorder.Data, shouldBe)
+			assert.Equal(t, bmWithBorder.Width, bm.Width+2)
+			assert.Equal(t, bmWithBorder.Height, bm.Height+2)
+		})
+		t.Run("Border=0", func(t *testing.T) {
+			rd := rand.New(rand.NewSource(12345))
+
+			data := make([]byte, 6)
+			n, err := rd.Read(data)
+			require.NoError(t, err)
+
+			assert.Equal(t, 6, n)
+
+			bm, err := NewWithData(18, 2, data)
+			require.NoError(t, err)
+
+			copied, err := bm.AddBorder(0, 1)
+			require.NoError(t, err)
+
+			assert.Equal(t, bm, copied)
+			assert.False(t, bm == copied)
+		})
+
+		t.Run("General", func(t *testing.T) {
+			// The root data to add the border is the bitmap of width: 20 and height: 6 with the data:
+			//	  11110101	  10101100	  10110000
+			//			F5			AC			B0
+			// 	  11010011 	  10110001	  11100000
+			//			D3			B1			E0
+			//	  01101001	  01001010    10000000
+			//			69			4A			80
+			//    11101111    10101111	  01000000
+			//    		EF			AF			40
+			//	  00001000	  01011101    11010000
+			//			08			5D			D0
+			//    11101001	  11111111	  01010000
+			// 			E9			FF			50
+			data := []byte{
+				0xF5, 0xAC, 0xB0,
+				0xD3, 0xB1, 0xE0,
+				0x69, 0x4A, 0x80,
+				0xEF, 0xAF, 0x40,
+				0x08, 0x5D, 0xD0,
+				0xE9, 0xFF, 0x50,
+			}
+			bm, err := NewWithData(20, 6, data)
+			require.NoError(t, err)
+
+			t.Run("Negative", func(t *testing.T) {
+				nbm, err := bm.AddBorderGeneral(-1, 0, 0, 0, 0)
+				require.Error(t, err)
+				assert.Nil(t, nbm)
+			})
+
+			t.Run("Left", func(t *testing.T) {
+				lbm, err := bm.AddBorderGeneral(8, 0, 0, 0, 1)
+				require.NoError(t, err)
+
+				// The data with 8 bits left border should be:
+				//	11111111  11110101	  10101100	  10110000
+				//		  FF		F5			AC			B0
+				// 	11111111  11010011 	  10110001	  11100000
+				//		  FF		D3			B1			E0
+				//	11111111  01101001	  01001010    10000000
+				//		  FF		69			4A			80
+				//  11111111  11101111    10101111	  01000000
+				//		  FF   		EF			AF			40
+				//	11111111  00001000	  01011101    11010000
+				//		  FF		08			5D			D0
+				//  11111111  11101001	  11111111	  01010000
+				//		  FF 		E9			FF			50
+				data := []byte{
+					0xFF, 0xF5, 0xAC, 0xB0,
+					0xFF, 0xD3, 0xB1, 0xE0,
+					0xFF, 0x69, 0x4A, 0x80,
+					0xFF, 0xEF, 0xAF, 0x40,
+					0xFF, 0x08, 0x5D, 0xD0,
+					0xFF, 0xE9, 0xFF, 0x50,
+				}
+
+				assert.Equal(t, data, lbm.Data)
+			})
+
+			t.Run("Right", func(t *testing.T) {
+				rbm, err := bm.AddBorderGeneral(0, 4, 0, 0, 1)
+				require.NoError(t, err)
+
+				// The data with '4' bits right border should be:
+				//	  11110101	  10101100	  10111111
+				//			F5			AC			BF
+				// 	  11010011 	  10110001	  11101111
+				//			D3			B1			EF
+				//	  01101001	  01001010    10001111
+				//			69			4A			8F
+				//    11101111    10101111	  01001111
+				//    		EF			AF			4F
+				//	  00001000	  01011101    11011111
+				//			08			5D			DF
+				//    11101001	  11111111	  01011111
+				// 			E9			FF			5F
+
+				data := []byte{
+					0xF5, 0xAC, 0xBF,
+					0xD3, 0xB1, 0xEF,
+					0x69, 0x4A, 0x8F,
+					0xEF, 0xAF, 0x4F,
+					0x08, 0x5D, 0xDF,
+					0xE9, 0xFF, 0x5F,
+				}
+				assert.Equal(t, rbm.Data, data)
+			})
+
+			t.Run("Top", func(t *testing.T) {
+				tbm, err := bm.AddBorderGeneral(0, 0, 1, 0, 1)
+				require.NoError(t, err)
+
+				// The data with '1 bit' size top border should be:
+				//	  11111111	  11111111	  11110000
+				//			FF			FF			F0
+				//	  11110101	  10101100	  10110000
+				//			F5			AC			B0
+				// 	  11010011 	  10110001	  11100000
+				//			D3			B1			E0
+				//	  01101001	  01001010    10000000
+				//			69			4A			80
+				//    11101111    10101111	  01000000
+				//    		EF			AF			40
+				//	  00001000	  01011101    11010000
+				//			08			5D			D0
+				//    11101001	  11111111	  01010000
+				// 			E9			FF			50
+				data := []byte{
+					0xFF, 0xFF, 0xF0,
+					0xF5, 0xAC, 0xB0,
+					0xD3, 0xB1, 0xE0,
+					0x69, 0x4A, 0x80,
+					0xEF, 0xAF, 0x40,
+					0x08, 0x5D, 0xD0,
+					0xE9, 0xFF, 0x50,
+				}
+				assert.Equal(t, tbm.Data, data)
+			})
+
+			t.Run("Bottom", func(t *testing.T) {
+				bbm, err := bm.AddBorderGeneral(0, 0, 0, 1, 1)
+				require.NoError(t, err)
+
+				// The data with '1bit' size bottom data should be:
+				//	  11110101	  10101100	  10110000
+				//			F5			AC			B0
+				// 	  11010011 	  10110001	  11100000
+				//			D3			B1			E0
+				//	  01101001	  01001010    10000000
+				//			69			4A			80
+				//    11101111    10101111	  01000000
+				//    		EF			AF			40
+				//	  00001000	  01011101    11010000
+				//			08			5D			D0
+				//    11101001	  11111111	  01010000
+				// 			E9			FF			50
+				//	  11111111	  11111111	  11110000
+				//			FF			FF			F0
+				data := []byte{
+					0xF5, 0xAC, 0xB0,
+					0xD3, 0xB1, 0xE0,
+					0x69, 0x4A, 0x80,
+					0xEF, 0xAF, 0x40,
+					0x08, 0x5D, 0xD0,
+					0xE9, 0xFF, 0x50,
+					0xFF, 0xFF, 0xF0,
+				}
+				assert.Equal(t, bbm.Data, data)
+			})
+		})
+	})
+
+	t.Run("RemoveBorder", func(t *testing.T) {
+		t.Run("Border>0", func(t *testing.T) {
+			// having a test data of width: 22, height: 8 with a border of '1pix' size
+			// with the data:
+			//	  11111111	11111111  11111100	- 0xFF, 0xFF, 0xFC
+			//	  11111010  11010110  01011100	- 0xFA, 0xD6, 0x5C
+			// 	  11101001  11011000  11110100	- 0xE9, 0xD8, 0xF4
+			//	  10110100  10100101  01000100	- 0xB4, 0xA5, 0x44
+			//    11110111  11010111  10100100	- 0xF7, 0xD7, 0xA4
+			//	  10000100  00101110  11101100	- 0x84, 0x2E, 0xEC
+			//    11110100  11111111  10101100	- 0xF4, 0xFF, 0xAC
+			//	  11111111  11111111  11111100	- 0xFF, 0xFF, 0xFC
+			data := []byte{0xFF, 0xFF, 0xFC, 0xFA, 0xD6, 0x5C, 0xE9, 0xD8, 0xF4, 0xB4, 0xA5, 0x44, 0xF7, 0xD7, 0xA4, 0x84, 0x2E, 0xEC, 0xF4, 0xFF, 0xAC, 0xFF, 0xFF, 0xFC}
+			bm, err := NewWithData(22, 8, data)
+			require.NoError(t, err)
+
+			bmNoBorder, err := bm.RemoveBorder(1)
+			require.NoError(t, err)
+
+			// the data without border should look like
+			//	  11110101	  10101100	  10110000
+			//			F5			AC			B0
+			// 	  11010011 	  10110001	  11100000
+			//			D3			B1			E0
+			//	  01101001	  01001010    10000000
+			//			69			4A			80
+			//    11101111    10101111	  01000000
+			//    		EF			AF			40
+			//	  00001000	  01011101    11010000
+			//			08			5D			D0
+			//    11101001	  11111111	  01010000
+			// 			E9			FF			50
+			shouldBe := []byte{0xF5, 0xAC, 0xB0, 0xD3, 0xB1, 0xE0, 0x69, 0x4A, 0x80, 0xEF, 0xAF, 0x40, 0x08, 0x5D, 0xD0, 0xE9, 0xFF, 0x50}
+
+			assert.Equal(t, bm.Width-2, bmNoBorder.Width)
+			assert.Equal(t, bm.Height-2, bmNoBorder.Height)
+			assert.Equal(t, shouldBe, bmNoBorder.Data)
+		})
+
+		t.Run("Border=0", func(t *testing.T) {
+			rd := rand.New(rand.NewSource(12345))
+
+			data := make([]byte, 6)
+			n, err := rd.Read(data)
+			require.NoError(t, err)
+
+			assert.Equal(t, 6, n)
+
+			bm, err := NewWithData(18, 2, data)
+			require.NoError(t, err)
+
+			copied, err := bm.RemoveBorder(0)
+			require.NoError(t, err)
+
+			assert.Equal(t, bm, copied)
+			assert.False(t, bm == copied)
+		})
+
+		t.Run("General", func(t *testing.T) {
+			// The root data to add the border is the bitmap of width: 20 and height: 6 with the data:
+			//	  11110101	  10101100	  10110000
+			//			F5			AC			B0
+			// 	  11010011 	  10110001	  11100000
+			//			D3			B1			E0
+			//	  01101001	  01001010    10000000
+			//			69			4A			80
+			//    11101111    10101111	  01000000
+			//    		EF			AF			40
+			//	  00001000	  01011101    11010000
+			//			08			5D			D0
+			//    11101001	  11111111	  01010000
+			// 			E9			FF			50
+			generalData := []byte{
+				0xF5, 0xAC, 0xB0,
+				0xD3, 0xB1, 0xE0,
+				0x69, 0x4A, 0x80,
+				0xEF, 0xAF, 0x40,
+				0x08, 0x5D, 0xD0,
+				0xE9, 0xFF, 0x50,
+			}
+
+			t.Run("Negative", func(t *testing.T) {
+				t.Run("BorderSize", func(t *testing.T) {
+					bm, err := NewWithData(20, 2, generalData)
+					require.NoError(t, err)
+
+					nbm, err := bm.RemoveBorderGeneral(-1, 0, 0, 0)
+					require.Error(t, err)
+					assert.Nil(t, nbm)
+				})
+
+				t.Run("Resultant", func(t *testing.T) {
+					t.Run("Width", func(t *testing.T) {
+						bm, err := NewWithData(20, 2, generalData)
+						require.NoError(t, err)
+						// remove border of left + right >= 20
+						nbm, err := bm.RemoveBorderGeneral(14, 6, 0, 0)
+						require.Error(t, err)
+						assert.Nil(t, nbm)
+					})
+					t.Run("Height", func(t *testing.T) {
+						bm, err := NewWithData(20, 2, generalData)
+						require.NoError(t, err)
+
+						// remove border of top + bottom > 2
+						nbm, err := bm.RemoveBorderGeneral(0, 0, 1, 2)
+						require.Error(t, err)
+						assert.Nil(t, nbm)
+					})
+				})
+			})
+
+			t.Run("Left", func(t *testing.T) {
+				// The data with 8 bits left border should be:
+				//	11111111  11110101	  10101100	  10110000
+				//		  FF		F5			AC			B0
+				// 	11111111  11010011 	  10110001	  11100000
+				//		  FF		D3			B1			E0
+				//	11111111  01101001	  01001010    10000000
+				//		  FF		69			4A			80
+				//  11111111  11101111    10101111	  01000000
+				//		  FF   		EF			AF			40
+				//	11111111  00001000	  01011101    11010000
+				//		  FF		08			5D			D0
+				//  11111111  11101001	  11111111	  01010000
+				//		  FF 		E9			FF			50
+				data := []byte{
+					0xFF, 0xF5, 0xAC, 0xB0,
+					0xFF, 0xD3, 0xB1, 0xE0,
+					0xFF, 0x69, 0x4A, 0x80,
+					0xFF, 0xEF, 0xAF, 0x40,
+					0xFF, 0x08, 0x5D, 0xD0,
+					0xFF, 0xE9, 0xFF, 0x50,
+				}
+				bm, err := NewWithData(28, 6, data)
+				require.NoError(t, err)
+
+				lbm, err := bm.RemoveBorderGeneral(8, 0, 0, 0)
+				require.NoError(t, err)
+
+				assert.Equal(t, generalData, lbm.Data)
+			})
+
+			t.Run("Right", func(t *testing.T) {
+				// The data with '4' bits right border should be:
+				//	  11110101	  10101100	  10111111
+				//			F5			AC			BF
+				// 	  11010011 	  10110001	  11101111
+				//			D3			B1			EF
+				//	  01101001	  01001010    10001111
+				//			69			4A			8F
+				//    11101111    10101111	  01001111
+				//    		EF			AF			4F
+				//	  00001000	  01011101    11011111
+				//			08			5D			DF
+				//    11101001	  11111111	  01011111
+				// 			E9			FF			5F
+				data := []byte{
+					0xF5, 0xAC, 0xBF,
+					0xD3, 0xB1, 0xEF,
+					0x69, 0x4A, 0x8F,
+					0xEF, 0xAF, 0x4F,
+					0x08, 0x5D, 0xDF,
+					0xE9, 0xFF, 0x5F,
+				}
+
+				bm, err := NewWithData(24, 6, data)
+				require.NoError(t, err)
+
+				rbm, err := bm.RemoveBorderGeneral(0, 4, 0, 0)
+				require.NoError(t, err)
+
+				assert.Equal(t, generalData, rbm.Data)
+			})
+
+			t.Run("Top", func(t *testing.T) {
+				// The data with '1 bit' size top border should be:
+				//	  11111111	  11111111	  11110000
+				//			FF			FF			F0
+				//	  11110101	  10101100	  10110000
+				//			F5			AC			B0
+				// 	  11010011 	  10110001	  11100000
+				//			D3			B1			E0
+				//	  01101001	  01001010    10000000
+				//			69			4A			80
+				//    11101111    10101111	  01000000
+				//    		EF			AF			40
+				//	  00001000	  01011101    11010000
+				//			08			5D			D0
+				//    11101001	  11111111	  01010000
+				// 			E9			FF			50
+				data := []byte{
+					0xFF, 0xFF, 0xF0,
+					0xF5, 0xAC, 0xB0,
+					0xD3, 0xB1, 0xE0,
+					0x69, 0x4A, 0x80,
+					0xEF, 0xAF, 0x40,
+					0x08, 0x5D, 0xD0,
+					0xE9, 0xFF, 0x50,
+				}
+
+				bm, err := NewWithData(20, 7, data)
+				require.NoError(t, err)
+
+				tbm, err := bm.RemoveBorderGeneral(0, 0, 1, 0)
+				require.NoError(t, err)
+
+				assert.Equal(t, generalData, tbm.Data)
+			})
+
+			t.Run("Bottom", func(t *testing.T) {
+				// The data with '1bit' size bottom data should be:
+				//	  11110101	  10101100	  10110000
+				//			F5			AC			B0
+				// 	  11010011 	  10110001	  11100000
+				//			D3			B1			E0
+				//	  01101001	  01001010    10000000
+				//			69			4A			80
+				//    11101111    10101111	  01000000
+				//    		EF			AF			40
+				//	  00001000	  01011101    11010000
+				//			08			5D			D0
+				//    11101001	  11111111	  01010000
+				// 			E9			FF			50
+				//	  11111111	  11111111	  11110000
+				//			FF			FF			F0
+				data := []byte{
+					0xF5, 0xAC, 0xB0,
+					0xD3, 0xB1, 0xE0,
+					0x69, 0x4A, 0x80,
+					0xEF, 0xAF, 0x40,
+					0x08, 0x5D, 0xD0,
+					0xE9, 0xFF, 0x50,
+					0xFF, 0xFF, 0xF0,
+				}
+				bm, err := NewWithData(20, 7, data)
+				require.NoError(t, err)
+
+				bbm, err := bm.RemoveBorderGeneral(0, 0, 0, 1)
+				require.NoError(t, err)
+
+				assert.Equal(t, generalData, bbm.Data)
 			})
 		})
 	})
