@@ -86,7 +86,7 @@ node {
             sh("printenv")
 
             // Pull unipdf-examples from connected branch, or master otherwise.
-            def examplesBranch = "v3"
+            def examplesBranch = "development"
 
             // Check if connected branch is defined explicitly.
             def safeName = env.BRANCH_NAME.replaceAll(/[\/\.]/, '')
