@@ -105,8 +105,8 @@ func TestDocument(t *testing.T) {
 
 			assert.True(t, sd.IsHuffmanEncoded())
 			assert.False(t, sd.UseRefinementAggregation())
-			assert.Equal(t, 1, sd.NumberOfExportedSymbols())
-			assert.Equal(t, 1, sd.NumberOfNewSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfExportedSymbols())
+			assert.Equal(t, uint32(1), sd.NumberOfNewSymbols())
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
@@ -368,7 +368,8 @@ func TestDocument(t *testing.T) {
 		t.Run("Page#2", func(t *testing.T) {
 			bm, err := p2.GetBitmap()
 			require.NoError(t, err)
-			t.Logf("Page#2: %s", bm.String())
+
+			assert.NotEmpty(t, bm.Data)
 		})
 
 		p3, err := d.GetPage(3)
@@ -465,7 +466,6 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		data := []byte{
-
 			// File Header
 			0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x00, 0x00, 0x00, 0x01,
 

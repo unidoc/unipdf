@@ -114,6 +114,10 @@ type TtfType struct {
 // otherwise valid PDF file that Adobe Reader displays without error.
 func (ttf *TtfType) MakeToUnicode() *cmap.CMap {
 	codeToUnicode := make(map[cmap.CharCode]rune)
+	if len(ttf.GlyphNames) == 0 {
+		return cmap.NewToUnicodeCMap(codeToUnicode)
+	}
+
 	for code, gid := range ttf.Chars {
 		// TODO(dennwc): this function is used only in one place and relies on
 		//  			 the fact that the code uses identity CID<->GID mapping

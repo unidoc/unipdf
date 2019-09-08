@@ -22,6 +22,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/creator"
+	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
 	"golang.org/x/text/unicode/norm"
 )
@@ -178,6 +179,53 @@ func TestTermMarksFiles(t *testing.T) {
 		return
 	}
 	testTermMarksFiles(t)
+}
+
+//  TestTextSort checks that PageText.sortPosition() gives expected results
+func TestTextSort(t *testing.T) {
+	// marks0 is in the expected sort order for tol=15
+	marks0 := []textMark{
+		// y difference > tol => sorts by Y descending
+		textMark{orientedStart: transform.Point{X: 300, Y: 160}, text: "00"},
+		textMark{orientedStart: transform.Point{X: 200, Y: 140}, text: "01"},
+		textMark{orientedStart: transform.Point{X: 100, Y: 120}, text: "02"},
+
+		// y difference < tol => sort by X ascending for approx same Y
+		textMark{orientedStart: transform.Point{X: 100, Y: 30}, text: "10"},
+		textMark{orientedStart: transform.Point{X: 200, Y: 40}, text: "11"},
+		textMark{orientedStart: transform.Point{X: 300, Y: 50}, text: "12"},
+
+		// y difference < tol => sorts by X descending for approx same Y, different from previous Y
+		textMark{orientedStart: transform.Point{X: 100, Y: 3}, text: "20"},
+		textMark{orientedStart: transform.Point{X: 200, Y: 4}, text: "21"},
+		textMark{orientedStart: transform.Point{X: 300, Y: 5}, text: "22"},
+	}
+
+	// marks is a copy of marks0 with its order scrambled.
+	marks := make([]textMark, len(marks0))
+	copy(marks, marks0)
+	sort.Slice(marks, func(i, j int) bool {
+		ti, tj := marks[i], marks[j]
+		if ti.orientedStart.X != tj.orientedStart.X {
+			return ti.orientedStart.X > tj.orientedStart.X
+		}
+		if ti.orient != tj.orient {
+			return ti.orient > tj.orient
+		}
+		return ti.orientedStart.Y < tj.orientedStart.Y
+	})
+
+	// Copy marks to PageText and sort them. This should give the same order as marks0.
+	pt := PageText{marks: marks}
+	pt.sortPosition(15)
+
+	// Check that marks order is the same as marks0.
+	for i, m0 := range marks0 {
+		m := pt.marks[i]
+		if m.orientedStart.X != m0.orientedStart.X || m.orientedStart.Y != m0.orientedStart.Y {
+			t.Fatalf("i=%d m=%v != m0=%v", i, m, m0)
+		}
+	}
 }
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those

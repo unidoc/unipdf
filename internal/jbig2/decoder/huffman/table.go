@@ -22,21 +22,21 @@ type Tabler interface {
 
 // BasicTabler is the interface common for the huffman tables.
 type BasicTabler interface {
-	HtHigh() int
-	HtLow() int
+	HtHigh() int32
+	HtLow() int32
 	StreamReader() reader.StreamReader
-	HtPS() int
-	HtRS() int
-	HtOOB() int
+	HtPS() int32
+	HtRS() int32
+	HtOOB() int32
 }
 
 // Code is the model for the huffman table code.
 type Code struct {
-	prefixLength int
-	rangeLength  int
-	rangeLow     int
+	prefixLength int32
+	rangeLength  int32
+	rangeLow     int32
 	isLowerRange bool
-	code         int
+	code         int32
 }
 
 // String implements Stringer interface.
@@ -51,7 +51,7 @@ func (c *Code) String() string {
 }
 
 // NewCode creates new huffman code.
-func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
+func NewCode(prefixLength, rangeLength, rangeLow int32, isLowerRange bool) *Code {
 	return &Code{
 		prefixLength: prefixLength,
 		rangeLength:  rangeLength,
@@ -61,11 +61,11 @@ func NewCode(prefixLength, rangeLength, rangeLow int, isLowerRange bool) *Code {
 	}
 }
 
-func bitPattern(v, l int) string {
-	var temp int
+func bitPattern(v, l int32) string {
+	var temp int32
 	result := make([]rune, l)
 
-	for i := 1; i <= l; i++ {
+	for i := int32(1); i <= l; i++ {
 		temp = (v >> uint(l-i) & 1)
 		if temp != 0 {
 			result[i-1] = '1'
@@ -78,24 +78,24 @@ func bitPattern(v, l int) string {
 
 func preprocessCodes(codeTable []*Code) {
 	// Annex B.3 1) build the histogram.
-	var maxPrefixLength int
+	var maxPrefixLength int32
 
 	for _, c := range codeTable {
 		maxPrefixLength = maxInt(maxPrefixLength, c.prefixLength)
 	}
 
-	lenCount := make([]int, maxPrefixLength+1)
+	lenCount := make([]int32, maxPrefixLength+1)
 
 	for _, c := range codeTable {
 		lenCount[c.prefixLength]++
 	}
 
-	var curCode int
-	firstCode := make([]int, len(lenCount)+1)
+	var curCode int32
+	firstCode := make([]int32, len(lenCount)+1)
 	lenCount[0] = 0
 
 	// Annex B.3 3)
-	for curLen := 1; curLen <= len(lenCount); curLen++ {
+	for curLen := int32(1); curLen <= int32(len(lenCount)); curLen++ {
 		firstCode[curLen] = (firstCode[curLen-1] + (lenCount[curLen-1])) << 1
 		curCode = firstCode[curLen]
 
@@ -108,7 +108,7 @@ func preprocessCodes(codeTable []*Code) {
 	}
 }
 
-func maxInt(x, y int) int {
+func maxInt(x, y int32) int32 {
 	if x > y {
 		return x
 	}

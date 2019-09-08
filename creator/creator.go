@@ -20,6 +20,8 @@ import (
 // content onto imported PDF pages, etc.
 type Creator struct {
 	pages      []*model.PdfPage
+	pageBlocks map[*model.PdfPage]*Block
+
 	activePage *model.PdfPage
 
 	pagesize PageSize
@@ -116,6 +118,7 @@ type margins struct {
 func New() *Creator {
 	c := &Creator{}
 	c.pages = []*model.PdfPage{}
+	c.pageBlocks = map[*model.PdfPage]*Block{}
 	c.SetPageSize(PageSizeLetter)
 
 	m := 0.1 * c.pageWidth
@@ -288,10 +291,11 @@ func (c *Creator) initContext() {
 }
 
 // NewPage adds a new Page to the Creator and sets as the active Page.
-func (c *Creator) NewPage() {
+func (c *Creator) NewPage() *model.PdfPage {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
 	c.context.Page++
+	return page
 }
 
 // AddPage adds the specified page to the creator.
@@ -479,6 +483,8 @@ func (c *Creator) finalize() error {
 
 	for idx, page := range c.pages {
 		c.setActivePage(page)
+
+		// Draw page header.
 		if c.drawHeaderFunc != nil {
 			// Prepare a block to draw on.
 			// Header is drawn on the top of the page. Has width of the page, but height limited to
@@ -490,12 +496,14 @@ func (c *Creator) finalize() error {
 			}
 			c.drawHeaderFunc(headerBlock, args)
 			headerBlock.SetPos(0, 0)
-			err := c.Draw(headerBlock)
-			if err != nil {
+
+			if err := c.Draw(headerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
 		}
+
+		// Draw page footer.
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.
 			// Footer is drawn on the bottom of the page. Has width of the page, but height limited
@@ -507,16 +515,25 @@ func (c *Creator) finalize() error {
 			}
 			c.drawFooterFunc(footerBlock, args)
 			footerBlock.SetPos(0, c.pageHeight-footerBlock.height)
-			err := c.Draw(footerBlock)
-			if err != nil {
+
+			if err := c.Draw(footerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing footer: %v", err)
 				return err
 			}
 		}
+
+		// Draw page blocks.
+		block, ok := c.pageBlocks[page]
+		if !ok {
+			continue
+		}
+		if err := block.drawToPage(page); err != nil {
+			common.Log.Debug("ERROR: drawing page %d blocks: %v", idx+1, err)
+			return err
+		}
 	}
 
 	c.finalized = true
-
 	return nil
 }
 
@@ -559,15 +576,21 @@ func (c *Creator) Draw(d Drawable) error {
 		return err
 	}
 
-	for idx, blk := range blocks {
+	for idx, block := range blocks {
 		if idx > 0 {
 			c.NewPage()
 		}
 
-		p := c.getActivePage()
-		err := blk.drawToPage(p)
-		if err != nil {
-			return err
+		page := c.getActivePage()
+		if pageBlock, ok := c.pageBlocks[page]; ok {
+			if err := pageBlock.mergeBlocks(block); err != nil {
+				return err
+			}
+			if err := mergeResources(block.resources, pageBlock.resources); err != nil {
+				return err
+			}
+		} else {
+			c.pageBlocks[page] = block
 		}
 	}
 
@@ -582,7 +605,9 @@ func (c *Creator) Draw(d Drawable) error {
 // Write output of creator to io.Writer interface.
 func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
-		c.finalize()
+		if err := c.finalize(); err != nil {
+			return err
+		}
 	}
 
 	pdfWriter := model.NewPdfWriter()

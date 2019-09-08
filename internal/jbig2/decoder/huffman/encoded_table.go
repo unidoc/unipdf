@@ -63,7 +63,7 @@ func (e *EncodedTable) String() string {
 func (e *EncodedTable) parseTable() error {
 	var (
 		codeTable                   []*Code
-		prefLen, rangeLen, rangeLow int
+		prefLen, rangeLen, rangeLow int32
 		temp                        uint64
 		err                         error
 	)
@@ -77,13 +77,13 @@ func (e *EncodedTable) parseTable() error {
 		if err != nil {
 			return err
 		}
-		prefLen = int(temp)
+		prefLen = int32(temp)
 
 		temp, err = r.ReadBits(byte(e.HtRS()))
 		if err != nil {
 			return err
 		}
-		rangeLen = int(temp)
+		rangeLen = int32(temp)
 
 		codeTable = append(codeTable, NewCode(prefLen, rangeLen, rangeLow, false))
 		curRangeLow += (1 << uint(rangeLen))
@@ -94,7 +94,7 @@ func (e *EncodedTable) parseTable() error {
 	if err != nil {
 		return err
 	}
-	prefLen = int(temp)
+	prefLen = int32(temp)
 
 	// Annex B.2 7)
 	rangeLen = 32
@@ -106,7 +106,7 @@ func (e *EncodedTable) parseTable() error {
 	if err != nil {
 		return err
 	}
-	prefLen = int(temp)
+	prefLen = int32(temp)
 
 	// Annex B.2 9)
 	rangeLen = 32
@@ -119,7 +119,7 @@ func (e *EncodedTable) parseTable() error {
 		if err != nil {
 			return err
 		}
-		prefLen = int(temp)
+		prefLen = int32(temp)
 		codeTable = append(codeTable, NewCode(prefLen, -1, -1, false))
 	}
 

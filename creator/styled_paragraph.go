@@ -761,6 +761,10 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 					chunkWidths[k] += spaceWidth * fontSize
 				} else {
+					if _, ok := enc.RuneToCharcode(rn); !ok {
+						common.Log.Debug("unsupported rune in text encoding: %#x (%c)", rn, rn)
+						continue
+					}
 					encStr = append(encStr, enc.Encode(string(rn))...)
 				}
 			}

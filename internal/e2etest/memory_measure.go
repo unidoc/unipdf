@@ -34,7 +34,7 @@ func (m *memoryMeasure) Stop() {
 }
 
 func (m memoryMeasure) Summary() string {
-	alloc := float64(m.end.Alloc) - float64(m.start.Alloc)
+	alloc := float64(m.end.TotalAlloc) - float64(m.start.TotalAlloc)
 	mallocs := int64(m.end.Mallocs) - int64(m.start.Mallocs)
 	frees := int64(m.end.Frees) - int64(m.start.Frees)
 

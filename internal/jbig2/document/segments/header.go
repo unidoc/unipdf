@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -33,16 +34,11 @@ type Header struct {
 }
 
 // NewHeader creates new segment header for the provided document from the stream reader.
-func NewHeader(
-	d Documenter, r reader.StreamReader,
-	offset int64, organizationType OrganizationType,
-) (*Header, error) {
+func NewHeader(d Documenter, r reader.StreamReader, offset int64, organizationType OrganizationType) (*Header, error) {
 	h := &Header{Reader: r}
-
 	if err := h.parse(d, r, offset, organizationType); err != nil {
 		return nil, err
 	}
-
 	return h, nil
 }
 
@@ -238,7 +234,7 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 		if err != nil {
 			return 0, err
 		}
-		countOfRTS &= 0xffffffff
+		countOfRTS &= math.MaxInt32
 		arrayLength := (countOfRTS + 8) >> 3
 		arrayLength <<= 3
 		retainBit = make([]byte, arrayLength)
@@ -282,17 +278,14 @@ func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS i
 			if err != nil {
 				return nil, err
 			}
-			rtsNumbers[i] = int(bits & 0xffffffff)
+			rtsNumbers[i] = int(bits & math.MaxInt32)
 		}
 	}
 	return rtsNumbers, nil
 }
 
 // readSegmentPageAssociation gets the segment's associated page number.
-func (h *Header) readSegmentPageAssociation(
-	d Documenter, r reader.StreamReader,
-	countOfRTS uint64, rtsNumbers ...int,
-) error {
+func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader, countOfRTS uint64, rtsNumbers ...int) error {
 	// 7.2.6
 	if !h.PageAssociationFieldSize {
 		// Short format
@@ -309,7 +302,7 @@ func (h *Header) readSegmentPageAssociation(
 			return err
 		}
 
-		h.PageAssociation = int(bits & 0xFFFFFFFF)
+		h.PageAssociation = int(bits & math.MaxInt32)
 	}
 
 	if countOfRTS > 0 {
@@ -336,7 +329,7 @@ func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
 	}
 
 	// Set the 4bytes mask
-	h.SegmentDataLength &= 0xffffffff
+	h.SegmentDataLength &= math.MaxInt32
 	return nil
 }
 

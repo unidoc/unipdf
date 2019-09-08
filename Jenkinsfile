@@ -15,6 +15,7 @@ node {
     env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_ALLOBJECTS_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
     env.UNIDOC_SPLIT_TESTDATA="/home/jenkins/corpus/unidoc-e2e-split-testdata"
+    env.UNIDOC_EXTRACT_IMAGES_TESTDATA="/home/jenkins/corpus/unidoc-e2e-extract-images-testdata"
     env.UNIDOC_JBIG2_TESTDATA="/home/jenkins/corpus/jbig2-testdata"
     env.UNIDOC_FDFMERGE_TESTDATA="/home/jenkins/corpus/fdfmerge-testdata"
     env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
