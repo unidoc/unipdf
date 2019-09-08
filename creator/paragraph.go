@@ -7,7 +7,6 @@ package creator
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -489,7 +488,6 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		enc := p.textFont.Encoder()
 
 		var encoded []byte
-		isCID := p.textFont.IsCID()
 		for _, r := range runes {
 			if r == ' ' { // TODO: What about \t and other spaces.
 				if len(encoded) > 0 {
@@ -498,19 +496,11 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 				}
 				objs = append(objs, core.MakeFloat(-spaceWidth))
 			} else {
-				code, ok := enc.RuneToCharcode(r)
-				if !ok {
-					err := fmt.Errorf("unsupported rune in text encoding: %#x (%c)", r, r)
-					common.Log.Debug("%s", err)
-					return ctx, err
+				if _, ok := enc.RuneToCharcode(r); !ok {
+					common.Log.Debug("unsupported rune in text encoding: %#x (%c)", r, r)
+					continue
 				}
-				// TODO(dennwc): this should not be done manually; encoder should do this
-				if isCID {
-					hi, lo := code>>8, code&0xff
-					encoded = append(encoded, byte(hi), byte(lo))
-				} else {
-					encoded = append(encoded, byte(code))
-				}
+				encoded = append(encoded, enc.Encode(string(r))...)
 			}
 		}
 		if len(encoded) > 0 {

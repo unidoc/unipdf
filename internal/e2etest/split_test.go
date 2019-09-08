@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,9 +63,6 @@ func TestSplitting(t *testing.T) {
 
 	matchcount := 0
 	for _, file := range files {
-		// Ensure memory is garbage collected prior to running for consistency.
-		debug.FreeOSMemory()
-
 		t.Logf("%s", file.Name())
 		fpath := filepath.Join(splitCorpusFolder, file.Name())
 		params := splitParams{

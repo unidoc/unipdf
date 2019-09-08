@@ -6,6 +6,8 @@
 package segments
 
 import (
+	"math"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -31,6 +33,6 @@ func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
 	if err != nil {
 		return err
 	}
-	e.lineNumber = int(temp)
+	e.lineNumber = int(temp & math.MaxInt32)
 	return nil
 }

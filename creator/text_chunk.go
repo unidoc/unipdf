@@ -44,10 +44,9 @@ func newExternalLinkAnnotation(url string) *model.PdfAnnotation {
 	annotation.BS = bs.ToPdfObject()
 
 	// Set link destination.
-	action := core.MakeDict()
-	action.Set(core.PdfObjectName("S"), core.MakeName("URI"))
-	action.Set(core.PdfObjectName("URI"), core.MakeString(url))
-	annotation.A = action
+	action := model.NewPdfActionURI()
+	action.URI = core.MakeString(url)
+	annotation.SetAction(action.PdfAction)
 
 	return annotation.PdfAnnotation
 }

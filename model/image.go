@@ -7,11 +7,11 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	goimage "image"
 	gocolor "image/color"
 	"image/draw"
 	"io"
-	"math"
 
 	// Imported for initialization side effects.
 	_ "image/gif"
@@ -52,6 +52,10 @@ func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
 
 // GetSamples converts the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
+// NOTE: The method resamples the image byte data before returning the result and
+// this could lead to high memory usage, especially on large images. It should
+// be avoided, when possible. It is recommended to access the Data field of the
+// image directly or use the ColorAt method to extract individual pixels.
 func (img *Image) GetSamples() []uint32 {
 	samples := sampling.ResampleBytes(img.Data, int(img.BitsPerComponent))
 
@@ -67,14 +71,172 @@ func (img *Image) GetSamples() []uint32 {
 }
 
 // SetSamples convert samples to byte-data and sets for the image.
+// NOTE: The method resamples the data and this could lead to high memory usage,
+// especially on large images. It should be used only when it is not possible
+// to work with the image byte data directly.
 func (img *Image) SetSamples(samples []uint32) {
 	resampled := sampling.ResampleUint32(samples, int(img.BitsPerComponent), 8)
-	var data []byte
-	for _, val := range resampled {
-		data = append(data, byte(val))
+	data := make([]byte, len(resampled))
+	for i, val := range resampled {
+		data[i] = byte(val)
 	}
 
 	img.Data = data
+}
+
+// ColorAt returns the color of the image pixel specified by the x and y coordinates.
+func (img *Image) ColorAt(x, y int) (gocolor.Color, error) {
+	data := img.Data
+	lenData := len(img.Data)
+	maxVal := uint32(1<<uint32(img.BitsPerComponent)) - 1
+
+	switch img.ColorComponents {
+	case 1:
+		// Grayscale image.
+		switch img.BitsPerComponent {
+		case 1, 2, 4:
+			// 1, 2 or 4 bit grayscale image.
+			bpc := int(img.BitsPerComponent)
+			divider := 8 / bpc
+
+			// Calculate index of byte containing the gray value
+			// in the image data, based on the specified x,y coordinates.
+			idx := (y*int(img.Width) + x) / divider
+			if idx >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			// Calculate bit position at which the color data starts.
+			pos := 8 - uint(((y*int(img.Width)+x)%divider)*bpc+bpc)
+
+			// Extract gray color value starting at the calculated position.
+			val := float64(((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> pos))
+			if len(img.decode) == 2 {
+				dMin, dMax := img.decode[0], img.decode[1]
+				val = interpolate(float64(val), 0, float64(maxVal), dMin, dMax)
+			}
+
+			return gocolor.Gray{
+				Y: uint8(uint32(val) * 255 / maxVal & 0xff),
+			}, nil
+		case 16:
+			// 16 bit grayscale image.
+			idx := (y*int(img.Width) + x) * 2
+			if idx+1 >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			return gocolor.Gray16{
+				Y: uint16(data[idx])<<8 | uint16(data[idx+1]),
+			}, nil
+		default:
+			// Assuming 8 bit grayscale image.
+			idx := y*int(img.Width) + x
+			if idx >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+			val := float64(data[idx])
+			if len(img.decode) == 2 {
+				dMin, dMax := img.decode[0], img.decode[1]
+				val = interpolate(float64(val), 0, float64(maxVal), dMin, dMax)
+			}
+
+			return gocolor.Gray{
+				Y: uint8(uint32(val) * 255 / maxVal & 0xff),
+			}, nil
+		}
+	case 3:
+		// RGB image.
+		switch img.BitsPerComponent {
+		case 4:
+			// 4 bit per component RGB image.
+			idx := (y*int(img.Width) + x) * 3 / 2
+			if idx+1 >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			// Calculate bit position at which the color data starts.
+			pos := (y*int(img.Width) + x) * 3 % 2
+
+			var r, g, b uint8
+			if pos == 0 {
+				// The R and G components are contained by the current byte
+				// and the B component is contained by the next byte.
+				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(4))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
+				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
+			} else {
+				// The R component is contained by the current byte and the
+				// G and B components are contained by the next byte.
+				r = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx] >> uint(0))
+				g = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(4))
+				b = ((1 << uint(img.BitsPerComponent)) - 1) & (data[idx+1] >> uint(0))
+			}
+
+			return gocolor.RGBA{
+				R: uint8(uint32(r) * 255 / maxVal & 0xff),
+				G: uint8(uint32(g) * 255 / maxVal & 0xff),
+				B: uint8(uint32(b) * 255 / maxVal & 0xff),
+				A: uint8(0xff),
+			}, nil
+		case 16:
+			// 16 bit per component RGB image.
+			idx := (y*int(img.Width) + x) * 2
+
+			i := idx * 3
+			if i+5 >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			a := uint16(0xffff)
+			if img.alphaData != nil && len(img.alphaData) > idx+1 {
+				a = uint16(img.alphaData[idx])<<8 | uint16(img.alphaData[idx+1])
+			}
+
+			return gocolor.RGBA64{
+				R: uint16(data[i])<<8 | uint16(data[i+1]),
+				G: uint16(data[i+2])<<8 | uint16(data[i+3]),
+				B: uint16(data[i+4])<<8 | uint16(data[i+5]),
+				A: a,
+			}, nil
+		default:
+			// Assuming 8 bit per component RGB image.
+			idx := y*int(img.Width) + x
+
+			i := 3 * idx
+			if i+2 >= lenData {
+				return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+			}
+
+			a := uint8(0xff)
+			if img.alphaData != nil && len(img.alphaData) > idx {
+				a = uint8(img.alphaData[idx])
+			}
+
+			return gocolor.RGBA{
+				R: uint8(data[i] & 0xff),
+				G: uint8(data[i+1] & 0xff),
+				B: uint8(data[i+2] & 0xff),
+				A: a,
+			}, nil
+		}
+	case 4:
+		// CMYK image.
+		idx := 4 * (y*int(img.Width) + x)
+		if idx+3 >= lenData {
+			return nil, fmt.Errorf("image coordinates out of range (%d, %d)", x, y)
+		}
+
+		return gocolor.CMYK{
+			C: uint8(data[idx] & 0xff),
+			M: uint8(data[idx+1] & 0xff),
+			Y: uint8(data[idx+2] & 0xff),
+			K: uint8(data[idx+3] & 0xff),
+		}, nil
+	}
+
+	common.Log.Debug("ERROR: unsupported image. %d components, %d bits per component", img.ColorComponents, img.BitsPerComponent)
+	return nil, errors.New("unsupported image colorspace")
 }
 
 // Resample resamples the image data converting from current BitsPerComponent to a target BitsPerComponent
@@ -136,80 +298,39 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 func (img *Image) ToGoImage() (goimage.Image, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
-	var imgout core.DrawableImage
 
-	if img.ColorComponents == 1 {
+	var imgout core.DrawableImage
+	switch img.ColorComponents {
+	case 1:
 		if img.BitsPerComponent == 16 {
 			imgout = goimage.NewGray16(bounds)
 		} else {
 			imgout = goimage.NewGray(bounds)
 		}
-	} else if img.ColorComponents == 3 {
+	case 3:
 		if img.BitsPerComponent == 16 {
 			imgout = goimage.NewRGBA64(bounds)
 		} else {
 			imgout = goimage.NewRGBA(bounds)
 		}
-	} else if img.ColorComponents == 4 {
+	case 4:
 		imgout = goimage.NewCMYK(bounds)
-	} else {
+	default:
 		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
 		return nil, errors.New("unsupported colors")
 	}
 
-	// Draw the data on the image..
-	x := 0
-	y := 0
-	aidx := 0
-
-	samples := img.GetSamples()
-	bytesPerColor := img.ColorComponents
-	for i := 0; i+bytesPerColor-1 < len(samples); i += bytesPerColor {
-		var c gocolor.Color
-		if img.ColorComponents == 1 {
-			if img.BitsPerComponent == 16 {
-				val := uint16(samples[i])<<8 | uint16(samples[i+1])
-				c = gocolor.Gray16{val}
-			} else {
-				val := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
-				c = gocolor.Gray{uint8(val & 0xff)}
+	for y := 0; y < int(img.Height); y++ {
+		for x := 0; x < int(img.Width); x++ {
+			color, err := img.ColorAt(x, y)
+			if err != nil {
+				common.Log.Debug("ERROR: %v. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					err, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, len(img.Data))
+				continue
 			}
-		} else if img.ColorComponents == 3 {
-			if img.BitsPerComponent == 16 {
-				r := uint16(samples[i])<<8 | uint16(samples[i+1])
-				g := uint16(samples[i+2])<<8 | uint16(samples[i+3])
-				b := uint16(samples[i+4])<<8 | uint16(samples[i+5])
-				a := uint16(0xffff) // Default: solid (0xffff) whereas transparent=0.
-				if img.alphaData != nil && len(img.alphaData) > aidx+1 {
-					a = (uint16(img.alphaData[aidx]) << 8) | uint16(img.alphaData[aidx+1])
-					aidx += 2
-				}
-				c = gocolor.RGBA64{R: r, G: g, B: b, A: a}
-			} else {
-				r := uint8(samples[i] & 0xff)
-				g := uint8(samples[i+1] & 0xff)
-				b := uint8(samples[i+2] & 0xff)
-				a := uint8(0xff) // Default: solid (0xff) whereas transparent=0.
-				if img.alphaData != nil && len(img.alphaData) > aidx {
-					a = uint8(img.alphaData[aidx])
-					aidx++
-				}
-				c = gocolor.RGBA{R: r, G: g, B: b, A: a}
-			}
-		} else if img.ColorComponents == 4 {
-			c1 := uint8(samples[i] & 0xff)
-			m1 := uint8(samples[i+1] & 0xff)
-			y1 := uint8(samples[i+2] & 0xff)
-			k1 := uint8(samples[i+3] & 0xff)
-			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
-		}
 
-		imgout.Set(x, y, c)
-		x++
-		if x == int(img.Width) {
-			x = 0
-			y++
+			imgout.Set(x, y, color)
 		}
 	}
 

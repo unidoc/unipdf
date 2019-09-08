@@ -1,0 +1,35 @@
+language: go
+sudo: required
+go:
+  - 1.12.x
+env:
+  global:
+    - CGO_ENABLED="0"
+    - GO111MODULE="on"
+    - TMPDIR="$(echo -n $HOME/tmp)"
+    - UNIDOC_GS_BIN_PATH="/usr/bin/gs"
+    - UNIDOC_EXTRACT_FORCETEST="0"
+    - UNIDOC_E2E_FORCE_TESTS="0"
+    - UNIDOC_EXTRACT_TESTDATA=""
+    - UNIDOC_RENDERTEST_BASELINE_PATH=""
+    - UNIDOC_PASSTHROUGH_TESTDATA=""
+    - UNIDOC_ALLOBJECTS_TESTDATA=""
+    - UNIDOC_SPLIT_TESTDATA=""
+    - UNIDOC_EXTRACT_IMAGES_TESTDATA=""
+    - UNIDOC_JBIG2_TESTDATA=""
+    - UNIDOC_FDFMERGE_TESTDATA=""
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y git ghostscript
+  - go get golang.org/x/lint/golint
+  - go get -t ./...
+  - mkdir -p $TMPDIR
+script:
+  - go vet ./...
+  - golint ./...
+  - go test -v ./...
+  - find $TMPDIR -maxdepth 1 -name "*.pdf" -print0 | xargs -t -n 1 -0 gs -dNOPAUSE -dBATCH -sDEVICE=nullpage -sPDFPassword=password -dPDFSTOPONERROR -dPDFSTOPONWARNING
+  - go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...
+  - ./.travis/build_examples.sh
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

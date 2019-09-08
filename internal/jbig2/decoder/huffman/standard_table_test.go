@@ -22,9 +22,7 @@ func TestGetStandardTable(t *testing.T) {
 		table, err := GetStandardTable(1)
 		require.NoError(t, err)
 
-		if assert.NotNil(t, table.RootNode()) {
-			t.Logf(table.String())
-		}
+		assert.NotNil(t, table.RootNode())
 	})
 
 	t.Run("OutOfRange", func(t *testing.T) {
