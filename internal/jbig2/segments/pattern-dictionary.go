@@ -8,6 +8,7 @@ package segments
 import (
 	"errors"
 	"image"
+	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 
@@ -40,7 +41,7 @@ type PatternDictionary struct {
 	Patterns []*bitmap.Bitmap
 
 	// Largest gray-scale value 7.4.4.1.4
-	GrayMax int
+	GrayMax uint32
 }
 
 // GetDictionary gets the PatternDictionary segment Dictionary bitmaps.
@@ -54,7 +55,7 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	}
 
 	genericRegion := NewGenericRegion(p.r)
-	genericRegion.setParametersMMR(p.IsMMREncoded, p.DataOffset, p.DataLength, int(p.HdpHeight), (p.GrayMax+1)*int(p.HdpWidth), p.HDTemplate, false, false, p.GBAtX, p.GBAtY)
+	genericRegion.setParametersMMR(p.IsMMREncoded, p.DataOffset, p.DataLength, uint32(p.HdpHeight), (p.GrayMax+1)*uint32(p.HdpWidth), p.HDTemplate, false, false, p.GBAtX, p.GBAtY)
 
 	collectiveBitmap, err := genericRegion.GetRegionBitmap()
 	if err != nil {
@@ -99,7 +100,7 @@ func (p *PatternDictionary) extractPatterns(collectiveBitmap *bitmap.Bitmap) err
 	patterns := make([]*bitmap.Bitmap, p.GrayMax+1)
 
 	// 4
-	for gray <= p.GrayMax {
+	for gray <= int(p.GrayMax) {
 		// 4 a)
 		x0 := int(p.HdpWidth) * gray
 		roi := image.Rect(x0, 0, x0+int(p.HdpWidth), int(p.HdpHeight))
@@ -192,7 +193,7 @@ func (p *PatternDictionary) readGrayMax() error {
 	if err != nil {
 		return err
 	}
-	p.GrayMax = int(temp & 0xffffffff)
+	p.GrayMax = uint32(temp & math.MaxUint32)
 	return nil
 }
 

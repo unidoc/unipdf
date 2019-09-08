@@ -2138,9 +2138,7 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Inverse the data representation if the decoder is marked as 'isChocolateData'.
-	bm.InverseData(enc.IsChocolateData)
+	bm.GetVanillaData()
 
 	// By default the bitmap data contains the rowstride padding.
 	// In order to get rid of the rowstride padding use the bitmap.GetUnpaddedData method.

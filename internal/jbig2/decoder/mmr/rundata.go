@@ -157,7 +157,7 @@ func (r *runData) fillBuffer(byteOffset int) error {
 		r.bufferTop, err = r.r.Read(r.buffer)
 		if err != nil {
 			if err == io.EOF {
-				common.Log.Debug("Read EOF")
+				common.Log.Trace("Read EOF")
 				r.bufferTop = -1
 			} else {
 				return err

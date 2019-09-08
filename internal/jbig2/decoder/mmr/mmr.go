@@ -57,7 +57,7 @@ func (m *Decoder) UncompressMMR() (b *bitmap.Bitmap, err error) {
 	referenceOffsets[0] = b.Width
 
 	refRunLength := 1
-	count := 0
+	var count int
 
 	for line := 0; line < b.Height; line++ {
 		count, err = m.uncompress2d(m.data, referenceOffsets, refRunLength, currentOffsets, b.Width)

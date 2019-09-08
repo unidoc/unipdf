@@ -8,6 +8,7 @@ package jbig2
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 
@@ -162,7 +163,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 			} else {
 				regionInfo := r.GetRegionInfo()
 				op := p.getCombinationOperator(i, regionInfo.CombinaionOperator)
-				err = bitmap.Blit(regionBitmap, p.Bitmap, regionInfo.XLocation, regionInfo.YLocation, op)
+				err = bitmap.Blit(regionBitmap, p.Bitmap, int(regionInfo.XLocation), int(regionInfo.YLocation), op)
 				if err != nil {
 					return err
 				}
@@ -194,7 +195,7 @@ func (p *Page) createStripedPage(i *segments.PageInformationSegment) error {
 				return err
 			}
 
-			err = bitmap.Blit(regionBitmap, p.Bitmap, regionInfo.XLocation, startLine, op)
+			err = bitmap.Blit(regionBitmap, p.Bitmap, int(regionInfo.XLocation), startLine, op)
 			if err != nil {
 				return err
 			}
@@ -303,7 +304,7 @@ func (p *Page) getHeight() (int, error) {
 			return 0, errors.New("page information segment is of invalid type")
 		}
 
-		if pi.PageBMHeight == 0xffffffff {
+		if pi.PageBMHeight == math.MaxInt32 {
 			_, err = p.GetBitmap()
 			if err != nil {
 				return 0, err

@@ -305,8 +305,6 @@ func (cs *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) 
 
 // ImageToRGB convert 1-component grayscale data to 3-component RGB.
 func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
-	rgbImage := img
-
 	data := make([]byte, 3*img.Width*img.Height)
 	for y := 0; y < int(img.Height); y++ {
 		for x := 0; x < int(img.Width); x++ {
@@ -321,9 +319,11 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 		}
 	}
 
+	rgbImage := img
 	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
 	rgbImage.Data = data
+	rgbImage.decode = nil
 
 	common.Log.Trace("DeviceGray -> RGB")
 	common.Log.Trace("samples: %v", img.Data)
