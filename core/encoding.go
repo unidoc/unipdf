@@ -2442,3 +2442,18 @@ func (enc *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
 
 	return encoded, nil
 }
+
+
+func IsLossy(enc StreamEncoder) bool {
+	switch t := enc.(type) {
+	case *DCTEncoder, *JBIG2Encoder, *JPXEncoder:
+		return true
+	case *MultiEncoder:
+		for _, e := range t.encoders {
+			if IsLossy(e) {
+				return true
+			}
+		}
+	}
+	return false
+}

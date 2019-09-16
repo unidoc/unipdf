@@ -135,6 +135,11 @@ func (img *Image) SetOpacity(opacity float64) {
 	img.opacity = opacity
 }
 
+// SetBitsPerComponent sets BitsPerComponent for Image.
+func (img *Image) SetBitsPerComponent(bpp int64) {
+	img.img.BitsPerComponent = bpp
+}
+
 // GetHorizontalAlignment returns the horizontal alignment of the image.
 func (img *Image) GetHorizontalAlignment() HorizontalAlignment {
 	return img.hAlignment
