@@ -39,6 +39,11 @@ type Image struct {
 	decode []float64 // [Dmin Dmax ... values for each color component]
 }
 
+func (i Image) String() string {
+	return fmt.Sprintf("%dx%d cpts=%d bpc=%d alpha=%t data=%d",
+		i.Width, i.Height, i.ColorComponents, i.BitsPerComponent, i.hasAlpha, len(i.Data))
+}
+
 // AlphaMapFunc represents a alpha mapping function: byte -> byte. Can be used for
 // thresholding the alpha channel, i.e. setting all alpha values below threshold to transparent.
 type AlphaMapFunc func(alpha byte) byte
