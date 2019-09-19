@@ -416,8 +416,8 @@ func (enc *FlateEncoder) postDecodePredict(outData []byte) ([]byte, error) {
 func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
 	// TODO: Handle more filter bytes and support more values of BitsPerComponent.
 
-	common.Log.Info("FlateDecode stream")
-	common.Log.Info("Predictor: %d", enc.Predictor)
+	common.Log.Trace("FlateDecode stream")
+	common.Log.Trace("Predictor: %d", enc.Predictor)
 	if enc.BitsPerComponent != 8 {
 		return nil, fmt.Errorf("invalid BitsPerComponent=%d (only 8 supported)", enc.BitsPerComponent)
 	}
@@ -994,54 +994,20 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	return encoder, nil
 }
 
-func gocvDecode(buf []byte) (goimage.Image,error) {
-	// common.Log.Info("gocvDecode: buf=%d", len(buf))
+func gocvDecode(buf []byte) (goimage.Image, error) {
 	m, err := gocv.IMDecode(buf, gocv.IMReadAnyColor)
 	if err != nil {
 		return nil, err
 	}
-	// common.Log.Info("gocvDecode: buf=%d m=%T err=%v", len(buf), m, err)
-	// b := m.ToBytes()
-	// common.Log.Info("b=%d", len(b))
-	// dims := m.Size()
-	// cpts := m.Channels()
-	// typ := m.Type()
-	// tot := cpts
-	// for _, d := range dims {
-	// 	tot *= d
-	// }
-	// common.Log.Info("dims = %+v x %d = %d type=%v", dims, cpts, tot, typ)
-	// var typeName string
-	// switch typ {
-	// case gocv.MatTypeCV8UC1:
-	// 	typeName = "MatTypeCV8UC1"
-	// case gocv.MatTypeCV8UC2:
-	// 	typeName = "MatTypeCV8UC2"
-	// // MatTypeCV8UC3 is a Mat of 8-bit unsigned int with 3 channels
-	// case gocv.MatTypeCV8UC3:
-	// 	typeName = "MatTypeCV8UC3"
-	// case gocv.MatTypeCV8UC4:
-	// 	typeName = "MatTypeCV8UC4"
-	// default:
-	// 	panic("unknown image type")
-	// }
-	// common.Log.Info("type=%s", typeName)
-
 	return m.ToImage()
 }
 
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	common.Log.Info("DCTEncoder) DecodeBytes: encoded=%d", len(encoded))
-	img, err :=gocvDecode(encoded)
-	// panic("done")
-	// bufReader := bytes.NewReader(encoded)
-	// //img, _, err := goimage.Decode(bufReader)
-
-	// img, err := jpeg.Decode(bufReader)
+	common.Log.Trace("DCTEncoder.DecodeBytes: encoded=%d", len(encoded))
+	img, err := gocvDecode(encoded)
 	if err != nil {
 		common.Log.Debug("Error decoding image: %s", err)
-		panic(err)
 		return nil, err
 	}
 	bounds := img.Bounds()
@@ -1152,7 +1118,6 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 // DecodeStream decodes a DCT encoded stream and returns the result as a
 // slice of bytes.
 func (enc *DCTEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	common.Log.Info("DCTEncoder) DecodeStream: enc=%T", enc)
 	return enc.DecodeBytes(streamObj.Stream)
 }
 
