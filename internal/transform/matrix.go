@@ -40,7 +40,6 @@ func NewMatrix(a, b, c, d, tx, ty float64) Matrix {
 	return m
 }
 
-
 /*
  * Partial 2D affine matrix decomposition.
  *  | a b | ➡ | cosθ -sinθ | × | sX  0 |
@@ -128,12 +127,10 @@ func (m Matrix) Translate(tx, ty float64) Matrix {
 	return NewMatrix(m[0], m[1], m[3], m[4], m[6]+tx, m[7]+ty)
 }
 
-
 // Translation returns the translation part of `m`.
 func (m Matrix) Translation() (float64, float64) {
 	return m[6], m[7]
 }
-
 
 // Transform returns coordinates `x`,`y` transformed by `m`.
 func (m Matrix) Transform(x, y float64) (float64, float64) {
@@ -141,6 +138,7 @@ func (m Matrix) Transform(x, y float64) (float64, float64) {
 	yp := x*m[3] + y*m[4] + m[7]
 	return xp, yp
 }
+
 // ScalingFactorX returns the X scaling of the affine transform.
 func (m Matrix) ScalingFactorX() float64 {
 	return math.Hypot(m[0], m[1])
