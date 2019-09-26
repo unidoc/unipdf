@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"fmt"
 
 	"github.com/gunnsth/pkcs7"
 
@@ -71,16 +72,35 @@ func (a *adobePKCS7Detached) InitSignature(sig *model.PdfSignature) error {
 }
 
 func (a *adobePKCS7Detached) getCertificate(sig *model.PdfSignature) (*x509.Certificate, error) {
-	certificate := a.certificate
-	if certificate == nil {
-		certData := sig.Cert.(*core.PdfObjectString).Bytes()
-		certs, err := x509.ParseCertificates(certData)
-		if err != nil {
-			return nil, err
-		}
-		certificate = certs[0]
+	if a.certificate != nil {
+		return a.certificate, nil
 	}
-	return certificate, nil
+
+	var certData []byte
+	switch certObj := sig.Cert.(type) {
+	case *core.PdfObjectString:
+		certData = certObj.Bytes()
+	case *core.PdfObjectArray:
+		if certObj.Len() == 0 {
+			return nil, errors.New("no signature certificates found")
+		}
+		for _, obj := range certObj.Elements() {
+			certStr, ok := core.GetString(obj)
+			if !ok {
+				return nil, fmt.Errorf("invalid certificate object type in signature certificate chain: %T", obj)
+			}
+			certData = append(certData, certStr.Bytes()...)
+		}
+	default:
+		return nil, fmt.Errorf("invalid signature certificate object type: %T", certObj)
+	}
+
+	certs, err := x509.ParseCertificates(certData)
+	if err != nil {
+		return nil, err
+	}
+
+	return certs[0], nil
 }
 
 // NewDigest creates a new digest.
