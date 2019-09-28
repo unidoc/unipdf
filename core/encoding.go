@@ -444,7 +444,7 @@ func (enc *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		rowLength := int(enc.Columns)
 		rows := len(data) / rowLength
 		if len(data)%rowLength != 0 {
-			common.Log.Error("Invalid column length")
+			common.Log.Error("Invalid row length")
 			return nil, errors.New("invalid row length")
 		}
 
@@ -2451,9 +2451,10 @@ func (enc *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoded, nil
 }
 
+// IsLossy returns true if `enc` is lossy.
 func IsLossy(enc StreamEncoder) bool {
 	switch t := enc.(type) {
-	case *DCTEncoder, *JBIG2Encoder, *JPXEncoder:
+	case *DCTEncoder, *JPXEncoder:
 		return true
 	case *MultiEncoder:
 		for _, e := range t.encoders {
@@ -2462,5 +2463,6 @@ func IsLossy(enc StreamEncoder) bool {
 			}
 		}
 	}
+
 	return false
 }

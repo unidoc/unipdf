@@ -11,6 +11,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/unidoc/unipdf/v3/common"
@@ -62,7 +63,7 @@ type ImageMark struct {
 	CTM    transform.Matrix
 	Inline bool
 	Lossy  bool
-	IsMask bool
+	Mask   *core.PdfObjectReference
 	MaskOf *core.PdfObjectReference
 	Name   string
 }
@@ -86,9 +87,18 @@ func (mark ImageMark) String() string {
 		img.Width, img.Height, img.ColorComponents, img.BitsPerComponent)
 	ctm := mark.CTM
 	tx, ty := ctm.Translation()
+	theta := ctm.Angle()
+	if math.Abs(theta) < 1e-6 {
+		theta = 0.0
+	}
+	typ := fmt.Sprintf("%T", mark.Filter)
+	if strings.HasPrefix(typ, "*core.") {
+		typ = typ[6:]
+	}
 	ctmStr := fmt.Sprintf("scale=(%.1fx%.1f) ϴ=%.1f° translation=(%.1f,%.1f)",
-		ctm.ScalingFactorX(), ctm.ScalingFactorY(), ctm.Angle(), tx, ty)
-	return fmt.Sprintf("%s %s %s lossy=%t inline=%t", imgStr, ctm, ctmStr, mark.Lossy, mark.Inline)
+		ctm.ScalingFactorX(), ctm.ScalingFactorY(), theta, tx, ty)
+	return fmt.Sprintf("%s %s %s lossy=%-5t inline=%-5t encoding=%s %q",
+		imgStr, ctm, ctmStr, mark.Lossy, mark.Inline, typ, mark.Name)
 }
 
 // Clip returns `mark`.Image clipped to `box`.
@@ -207,9 +217,9 @@ type imageExtractContext struct {
 
 func (ctx *imageExtractContext) extractContentStreamImages(contents string,
 	resources *model.PdfPageResources, level int) error {
-	// common.Log.Info("extractContentStreamImages: %d (%d bytes)", level, len(contents))
-	// fmt.Printf("%s\n", contents)
-	// common.Log.Info("=============================================")
+	common.Log.Info("extractContentStreamImages: %d (%d bytes)", level, len(contents))
+	fmt.Printf("%s\n", contents)
+	common.Log.Info("=============================================")
 
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
@@ -310,6 +320,7 @@ func (ctx *imageExtractContext) extractInlineImage(iimg *contentstream.ContentSt
 
 func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName,
 	gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
+
 	stream, _ := resources.GetXObjectByName(*name)
 	if stream == nil {
 		return nil
@@ -347,15 +358,23 @@ func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName,
 		}
 	}
 
-	imgMark := cimg.toImageMark(gs.CTM, string(*name), nil)
-	ctx.extractedImages = append(ctx.extractedImages, imgMark)
-	ctx.xObjectImages++
+	imgMark := cimg.toImageMark(gs.CTM, string(*name))
+	common.Log.Info("name=%+q imgMark=%+v=%s", string(*name), imgMark,
+		imgMark.PdfObjectDictionary)
 
 	if cimgMask != nil {
-		imgMarkMask := cimgMask.toImageMark(gs.CTM, "", imgMark.PdfObjectReference)
+		imgMarkMask := cimgMask.toImageMark(gs.CTM, "")
+		common.Log.Info("name=%+q imgMarkMask=%+v=%s", string(*name), imgMarkMask,
+			imgMarkMask.PdfObjectDictionary)
+		imgMark.Mask = imgMarkMask.PdfObjectReference
+		imgMarkMask.MaskOf = imgMark.PdfObjectReference
 		ctx.extractedImages = append(ctx.extractedImages, imgMarkMask)
 		ctx.xImageMasks++
 	}
+
+	ctx.extractedImages = append(ctx.extractedImages, imgMark)
+	ctx.xObjectImages++
+
 	common.Log.Debug("extractXObjectImage: xObjectImages=%d xImageMasks=%d inlineImages=%d",
 		ctx.xObjectImages, ctx.xImageMasks, ctx.inlineImages)
 	return nil
@@ -394,8 +413,7 @@ func (ctx *imageExtractContext) extractFormImages(name *core.PdfObjectName,
 }
 
 // toImageMark add the graphics state to `cimg` and returns it as an ImageMark.
-func (cimg *cachedImage) toImageMark(CTM transform.Matrix, name string,
-	maskOf *core.PdfObjectReference) ImageMark {
+func (cimg *cachedImage) toImageMark(CTM transform.Matrix, name string) ImageMark {
 	return ImageMark{
 		PdfObjectReference:  cimg.PdfObjectReference,
 		PdfObjectDictionary: cimg.PdfObjectDictionary,
@@ -404,7 +422,6 @@ func (cimg *cachedImage) toImageMark(CTM transform.Matrix, name string,
 		Lossy:               cimg.Lossy,
 		CTM:                 CTM,
 		Name:                name,
-		MaskOf:              maskOf,
 	}
 }
 
@@ -413,7 +430,7 @@ func toCachedImage(streamObj *core.PdfObjectStream) (*cachedImage, error) {
 
 	dict := streamObj.PdfObjectDictionary
 
-	common.Log.Debug("toImageInfo: streamObj=%v=%d", streamObj.PdfObjectReference, dict)
+	common.Log.Info("toImageInfo: streamObj=%v=%s", streamObj.PdfObjectReference, dict)
 
 	img := model.Image{}
 
@@ -431,12 +448,23 @@ func toCachedImage(streamObj *core.PdfObjectStream) (*cachedImage, error) {
 	}
 	img.Width = int64(v)
 
-	o = dict.Get("ColorComponents")
-	v, ok = core.GetIntVal(o)
-	if !ok {
+	elem := dict.Get("ColorSpace")
+	common.Log.Info("elem=%s=%T", elem, elem)
+	if elem == nil {
 		img.ColorComponents = 1
 	} else {
-		img.ColorComponents = v
+		cs := elem.(*core.PdfObjectName)
+		t := string(*cs)
+		switch t {
+		case "DeviceGray":
+			img.ColorComponents = 1
+		case "DeviceRGB":
+			img.ColorComponents = 3
+		case "DeviceCMYK":
+			img.ColorComponents = 4
+		default:
+			panic(fmt.Errorf("unknown colorspace %q", t))
+		}
 	}
 
 	o = dict.Get("BitsPerComponent")
