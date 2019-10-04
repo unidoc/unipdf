@@ -26,7 +26,7 @@ type TextChunk struct {
 	annotationProcessed bool
 }
 
-// SetAnnotation sets a annotation on a TextChunk
+// SetAnnotation sets a annotation on a TextChunk.
 func (tc *TextChunk) SetAnnotation(annotation *model.PdfAnnotation) {
 	tc.annotation = annotation
 }
