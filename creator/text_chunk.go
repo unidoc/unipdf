@@ -26,6 +26,11 @@ type TextChunk struct {
 	annotationProcessed bool
 }
 
+// SetAnnotation sets a annotation on a TextChunk.
+func (tc *TextChunk) SetAnnotation(annotation *model.PdfAnnotation) {
+	tc.annotation = annotation
+}
+
 // newTextChunk returns a new text chunk instance.
 func newTextChunk(text string, style TextStyle) *TextChunk {
 	return &TextChunk{
@@ -85,6 +90,9 @@ func copyLinkAnnotation(link *model.PdfAnnotationLink) *model.PdfAnnotationLink 
 	annotation := model.NewPdfAnnotationLink()
 	annotation.BS = link.BS
 	annotation.A = link.A
+	if action, err := link.GetAction(); err == nil && action != nil {
+		annotation.SetAction(action)
+	}
 
 	if annotDest, ok := link.Dest.(*core.PdfObjectArray); ok {
 		annotation.Dest = core.MakeArray(annotDest.Elements()...)
