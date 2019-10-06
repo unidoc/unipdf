@@ -279,6 +279,9 @@ func (blk *Block) drawToPage(page *model.PdfPage) error {
 	//        Possibly create another wrapper around model.PdfPage (creator.page) which can keep track of whether
 	//        this has already been done.
 
+	// This doesn't affect any of my tests so I am leaving it out.
+	// page.Resources.AddStandardProcsets()
+
 	// Check if Page contents are wrapped - if not wrap it.
 	content, err := page.GetAllContentStreams()
 	if err != nil {

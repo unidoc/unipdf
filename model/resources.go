@@ -63,6 +63,7 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	}
 	if obj := dict.Get("ProcSet"); obj != nil {
 		r.ProcSet = obj
+		panic("l")
 	}
 	if obj := dict.Get("Properties"); obj != nil {
 		r.Properties = obj
@@ -114,6 +115,9 @@ func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("ProcSet", r.ProcSet)
 	d.SetIfNotNil("Properties", r.Properties)
 
+	// common.Log.Info("XObject=%v=%s", r.XObject, d.Get("XObject"))
+	// common.Log.Info("ProcSet=%v=%s", r.ProcSet, d.Get("ProcSet"))
+	// panic("ToPdfObject")
 	return d
 }
 
@@ -335,11 +339,7 @@ func (r *PdfPageResources) SetColorspaceByName(keyName core.PdfObjectName, cs Pd
 // HasXObjectByName checks if an XObject with a specified keyName is defined.
 func (r *PdfPageResources) HasXObjectByName(keyName core.PdfObjectName) bool {
 	obj, _ := r.GetXObjectByName(keyName)
-	if obj != nil {
-		return true
-	}
-
-	return false
+	return obj != nil
 }
 
 // GenerateXObjectName generates an unused XObject name that can be used for
@@ -362,10 +362,10 @@ type XObjectType int
 // XObject types.
 const (
 	XObjectTypeUndefined XObjectType = iota
-	XObjectTypeImage     XObjectType = iota
-	XObjectTypeForm      XObjectType = iota
-	XObjectTypePS        XObjectType = iota
-	XObjectTypeUnknown   XObjectType = iota
+	XObjectTypeImage
+	XObjectTypeForm
+	XObjectTypePS
+	XObjectTypeUnknown
 )
 
 // GetXObjectByName returns the XObject with the specified keyName and the object type.
@@ -479,4 +479,16 @@ func (r *PdfPageResources) SetXObjectFormByName(keyName core.PdfObjectName, xfor
 	stream := xform.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)
 	return err
+}
+
+// AddStandardProcsets adds the ProcSets that many PDF generators add by default.
+// XXX(peterwilliams97) I don't know if any PDF interpreters need this
+func (r *PdfPageResources) AddStandardProcsets() {
+	p := core.PdfObjectName("PDF")
+	t := core.PdfObjectName("Text")
+	c := core.PdfObjectName("ImageC")
+	b := core.PdfObjectName("ImageB")
+	i := core.PdfObjectName("ImageI")
+	procs := core.MakeArray(&p, &t, &c, &b, &i)
+	r.ProcSet = procs
 }

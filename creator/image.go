@@ -113,7 +113,6 @@ func newImageFromFile(path string) (*Image, error) {
 
 // newImageFromGoImage creates an Image from a go image.Image data structure.
 func newImageFromGoImage(goimg, gomask goimage.Image) (*Image, error) {
-	common.Log.Info("newImageFromGoImage: goimg=%t gomask=%t", goimg != nil, gomask != nil)
 	img, err := model.ImageHandling.NewImageFromGoImage(goimg)
 	if err != nil {
 		return nil, err
@@ -199,7 +198,7 @@ func (img *Image) makeXObject() error {
 	var err error
 	if img.maskImg != nil {
 		// Create the XObject mask image.
-		maskXObj, err := model.NewXObjectImageFromImageIsMask(img.maskImg /*img.maskCs*/, nil, img.maskEncoder)
+		maskXObj, err := model.NewXObjectImageFromImageIsMask(img.maskImg, nil, img.maskEncoder)
 		if err != nil {
 			common.Log.Debug("Error with mask encoding: %v", err)
 			return err
@@ -351,9 +350,6 @@ func (img *Image) rotatedSize() (float64, float64) {
 func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, error) {
 	origCtx := ctx
 
-	common.Log.Info("drawImageOnBlock: img=(%v, %v) %v x %v",
-		img.xPos, img.yPos, img.width, img.height)
-
 	// Find a free name for the image.
 	num := 1
 	imgName := core.PdfObjectName(fmt.Sprintf("Img%d", num))
@@ -363,8 +359,6 @@ func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, err
 	}
 
 	// Add to the Page resources.
-	common.Log.Info("imgName=%+q", imgName)
-	common.Log.Info("img.xobj=%s", img.xobj)
 	if img.maskXobj != nil {
 		// Add mask XObject image which is referred to by the main image img.xobj.
 		err := blk.resources.SetXObjectImageByName(imgName, img.maskXobj)

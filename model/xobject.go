@@ -268,7 +268,6 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	if encoder == nil {
 		encoder = core.NewRawEncoder()
 	}
-
 	encoded, err := encoder.EncodeBytes(img.Data)
 	if err != nil {
 		common.Log.Debug("Error with encoding: %v", err)
@@ -307,16 +306,9 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	}
 
 	if isMask {
-		one := int64(1)
-		xobj.BitsPerComponent = &one
 		objTrue := core.PdfObjectBool(true)
-		xobj.ImageMask = &objTrue
-		objFalse := core.PdfObjectBool(false)
-		xobj.BlackIs1 = &objFalse
-
-		xobj.ColorSpace = nil
-		common.Log.Info("UpdateXObjectImageFromImage: BitsPerComponent=%v ImageMask=%v xColorSpace",
-			xobj.BitsPerComponent, xobj.ImageMask, xobj.ColorSpace)
+		xobj.ImageMask = &objTrue // PDF readers won't apply mask without this
+		xobj.ColorSpace = nil     // Not needed by any PDF readers tested but PDF spec tells us to do this
 	}
 
 	if img.hasAlpha {
@@ -608,14 +600,12 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 	dict.Set("Type", core.MakeName("XObject"))
 	dict.Set("Subtype", core.MakeName("Image"))
 	dict.Set("Width", core.MakeInteger(*(ximg.Width)))
-	common.Log.Info("ToPdfObject: Width=%v->%v", ximg.Width, dict.Get("Width"))
 	dict.Set("Height", core.MakeInteger(*(ximg.Height)))
 
 	if ximg.BitsPerComponent != nil {
 		dict.Set("BitsPerComponent", core.MakeInteger(*(ximg.BitsPerComponent)))
 	}
 
-	common.Log.Info("ColorSpace=%v", ximg.ColorSpace)
 	if ximg.ColorSpace != nil {
 		dict.SetIfNotNil("ColorSpace", ximg.ColorSpace.ToPdfObject())
 	}
@@ -623,7 +613,6 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 	dict.SetIfNotNil("ImageMask", ximg.ImageMask)
 	dict.SetIfNotNil("BlackIs1", ximg.BlackIs1)
 
-	common.Log.Info("ToPdfObject: ImageMask=%v->%v", ximg.ImageMask, dict.Get("ImageMask"))
 	dict.SetIfNotNil("Mask", ximg.Mask)
 	dict.SetIfNotNil("Decode", ximg.Decode)
 	dict.SetIfNotNil("Interpolate", ximg.Interpolate)

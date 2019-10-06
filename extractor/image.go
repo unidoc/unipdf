@@ -56,20 +56,18 @@ type PageImages struct {
 // ImageMark represents an image drawn on a page and its position in device coordinates.
 // All coordinates are in device coordinates.
 type ImageMark struct {
-	*core.PdfObjectReference
-	*core.PdfObjectDictionary
-	*model.Image
-	Filter core.StreamEncoder
-	CTM    transform.Matrix
-	Inline bool
-	Lossy  bool
-	Mask   *core.PdfObjectReference
-	MaskOf *core.PdfObjectReference
-	Name   string
+	*CoreImage
+	MaskImage *CoreImage
+	CTM       transform.Matrix
+	Inline    bool
+	Lossy     bool
+	Mask      *core.PdfObjectReference
+	MaskOf    *core.PdfObjectReference
+	Name      string
 }
 
-// cachedImage contains the ImageMark fields that are the same for all references to the image.
-type cachedImage struct {
+// CoreImage contains the ImageMark fields that are the same for all references to the image.
+type CoreImage struct {
 	cs model.PdfColorspace
 	*core.PdfObjectReference
 	*core.PdfObjectDictionary
@@ -209,7 +207,7 @@ type imageExtractContext struct {
 	xObjectForms    int
 
 	// Cache to avoid processing same image many times.
-	cacheXObjectImages map[*core.PdfObjectStream]*cachedImage
+	cacheXObjectImages map[*core.PdfObjectStream]*CoreImage
 
 	// Extract options.
 	options *ImageExtractOptions
@@ -217,9 +215,9 @@ type imageExtractContext struct {
 
 func (ctx *imageExtractContext) extractContentStreamImages(contents string,
 	resources *model.PdfPageResources, level int) error {
-	common.Log.Info("extractContentStreamImages: %d (%d bytes)", level, len(contents))
-	fmt.Printf("%s\n", contents)
-	common.Log.Info("=============================================")
+	// common.Log.Info("extractContentStreamImages: %d (%d bytes)", level, len(contents))
+	// fmt.Printf("%s\n", contents)
+	// common.Log.Info("=============================================")
 
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
@@ -228,7 +226,7 @@ func (ctx *imageExtractContext) extractContentStreamImages(contents string,
 	}
 
 	if ctx.cacheXObjectImages == nil {
-		ctx.cacheXObjectImages = map[*core.PdfObjectStream]*cachedImage{}
+		ctx.cacheXObjectImages = map[*core.PdfObjectStream]*CoreImage{}
 	}
 	if ctx.options == nil {
 		ctx.options = &ImageExtractOptions{}
@@ -304,8 +302,10 @@ func (ctx *imageExtractContext) extractInlineImage(iimg *contentstream.ContentSt
 	}
 
 	imgMark := ImageMark{
-		Image:  img,
-		Filter: filter,
+		CoreImage: &CoreImage{
+			Image:  img,
+			Filter: filter,
+		},
 		CTM:    gs.CTM,
 		Lossy:  lossy,
 		Inline: true,
@@ -326,7 +326,7 @@ func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName,
 		return nil
 	}
 
-	var cimgMask *cachedImage
+	var cimgMask *CoreImage
 	// Cache on stream pointer so we can ensure that it is the same object (better than using name).
 	cimg, cached := ctx.cacheXObjectImages[stream]
 	if !cached {
@@ -358,21 +358,8 @@ func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName,
 		}
 	}
 
-	imgMark := cimg.toImageMark(gs.CTM, string(*name))
-	common.Log.Info("name=%+q imgMark=%+v=%s", string(*name), imgMark,
-		imgMark.PdfObjectDictionary)
-
-	if cimgMask != nil {
-		imgMarkMask := cimgMask.toImageMark(gs.CTM, "")
-		common.Log.Info("name=%+q imgMarkMask=%+v=%s", string(*name), imgMarkMask,
-			imgMarkMask.PdfObjectDictionary)
-		imgMark.Mask = imgMarkMask.PdfObjectReference
-		imgMarkMask.MaskOf = imgMark.PdfObjectReference
-		ctx.extractedImages = append(ctx.extractedImages, imgMarkMask)
-		ctx.xImageMasks++
-	}
-
-	ctx.extractedImages = append(ctx.extractedImages, imgMark)
+	mark := toImageMark(cimg, cimgMask, gs.CTM, string(*name))
+	ctx.extractedImages = append(ctx.extractedImages, mark)
 	ctx.xObjectImages++
 
 	common.Log.Debug("extractXObjectImage: xObjectImages=%d xImageMasks=%d inlineImages=%d",
@@ -413,24 +400,21 @@ func (ctx *imageExtractContext) extractFormImages(name *core.PdfObjectName,
 }
 
 // toImageMark add the graphics state to `cimg` and returns it as an ImageMark.
-func (cimg *cachedImage) toImageMark(CTM transform.Matrix, name string) ImageMark {
+func toImageMark(cimg, cimgMask *CoreImage, CTM transform.Matrix, name string) ImageMark {
+	if cimg == nil && cimgMask != nil {
+		panic("separated mask")
+	}
 	return ImageMark{
-		PdfObjectReference:  cimg.PdfObjectReference,
-		PdfObjectDictionary: cimg.PdfObjectDictionary,
-		Image:               cimg.Image,
-		Filter:              cimg.Filter,
-		Lossy:               cimg.Lossy,
-		CTM:                 CTM,
-		Name:                name,
+		CoreImage: cimg,
+		MaskImage: cimgMask,
+		CTM:       CTM,
+		Name:      name,
 	}
 }
 
 // toCachedImage extracts an image and metadata from `streamObj`.
-func toCachedImage(streamObj *core.PdfObjectStream) (*cachedImage, error) {
-
+func toCachedImage(streamObj *core.PdfObjectStream) (*CoreImage, error) {
 	dict := streamObj.PdfObjectDictionary
-
-	common.Log.Info("toImageInfo: streamObj=%v=%s", streamObj.PdfObjectReference, dict)
 
 	img := model.Image{}
 
@@ -449,7 +433,6 @@ func toCachedImage(streamObj *core.PdfObjectStream) (*cachedImage, error) {
 	img.Width = int64(v)
 
 	elem := dict.Get("ColorSpace")
-	common.Log.Info("elem=%s=%T", elem, elem)
 	if elem == nil {
 		img.ColorComponents = 1
 	} else {
@@ -485,7 +468,7 @@ func toCachedImage(streamObj *core.PdfObjectStream) (*cachedImage, error) {
 	}
 	img.Data = decoded
 
-	return &cachedImage{
+	return &CoreImage{
 		PdfObjectReference:  &streamObj.PdfObjectReference,
 		PdfObjectDictionary: dict,
 		Image:               &img,
