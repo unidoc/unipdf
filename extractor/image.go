@@ -56,13 +56,9 @@ type PageImages struct {
 // ImageMark represents an image drawn on a page and its position in device coordinates.
 // All coordinates are in device coordinates.
 type ImageMark struct {
-	*CoreImage
+	CoreImage
 	MaskImage *CoreImage
 	CTM       transform.Matrix
-	Inline    bool
-	Lossy     bool
-	Mask      *core.PdfObjectReference
-	MaskOf    *core.PdfObjectReference
 	Name      string
 }
 
@@ -75,14 +71,16 @@ type CoreImage struct {
 	Filter core.StreamEncoder
 	Inline bool
 	Lossy  bool
-	MaskOf core.PdfObjectReference
 }
 
 // String returns a string describing `mark`.
 func (mark ImageMark) String() string {
 	img := mark.Image
-	imgStr := fmt.Sprintf("%dx%d cpts=%d bpp=%d",
-		img.Width, img.Height, img.ColorComponents, img.BitsPerComponent)
+	var imgStr string
+	if img != nil {
+		imgStr = fmt.Sprintf("%dx%d cpts=%d bpp=%d",
+			img.Width, img.Height, img.ColorComponents, img.BitsPerComponent)
+	}
 	ctm := mark.CTM
 	tx, ty := ctm.Translation()
 	theta := ctm.Angle()
@@ -302,13 +300,13 @@ func (ctx *imageExtractContext) extractInlineImage(iimg *contentstream.ContentSt
 	}
 
 	imgMark := ImageMark{
-		CoreImage: &CoreImage{
+		CoreImage: CoreImage{
 			Image:  img,
 			Filter: filter,
+			Lossy:  lossy,
+			Inline: true,
 		},
-		CTM:    gs.CTM,
-		Lossy:  lossy,
-		Inline: true,
+		CTM: gs.CTM,
 	}
 
 	ctx.extractedImages = append(ctx.extractedImages, imgMark)
@@ -358,7 +356,7 @@ func (ctx *imageExtractContext) extractXObjectImage(name *core.PdfObjectName,
 		}
 	}
 
-	mark := toImageMark(cimg, cimgMask, gs.CTM, string(*name))
+	mark := toImageMark(*cimg, cimgMask, gs.CTM, string(*name))
 	ctx.extractedImages = append(ctx.extractedImages, mark)
 	ctx.xObjectImages++
 
@@ -400,10 +398,7 @@ func (ctx *imageExtractContext) extractFormImages(name *core.PdfObjectName,
 }
 
 // toImageMark add the graphics state to `cimg` and returns it as an ImageMark.
-func toImageMark(cimg, cimgMask *CoreImage, CTM transform.Matrix, name string) ImageMark {
-	if cimg == nil && cimgMask != nil {
-		panic("separated mask")
-	}
+func toImageMark(cimg CoreImage, cimgMask *CoreImage, CTM transform.Matrix, name string) ImageMark {
 	return ImageMark{
 		CoreImage: cimg,
 		MaskImage: cimgMask,
@@ -436,17 +431,26 @@ func toCachedImage(streamObj *core.PdfObjectStream) (*CoreImage, error) {
 	if elem == nil {
 		img.ColorComponents = 1
 	} else {
-		cs := elem.(*core.PdfObjectName)
-		t := string(*cs)
-		switch t {
-		case "DeviceGray":
-			img.ColorComponents = 1
-		case "DeviceRGB":
+		elem = core.TraceToDirectObject(elem)
+		cs, ok := elem.(*core.PdfObjectName)
+		if !ok {
+			// TODO(peterwilliams97) FIX THIS HACK
+			common.Log.Info("elem=%s", elem)
 			img.ColorComponents = 3
-		case "DeviceCMYK":
-			img.ColorComponents = 4
-		default:
-			panic(fmt.Errorf("unknown colorspace %q", t))
+		} else {
+			t := string(*cs)
+			switch t {
+			case "DeviceGray":
+				img.ColorComponents = 1
+			case "DeviceRGB":
+				img.ColorComponents = 3
+			case "DeviceCMYK":
+				img.ColorComponents = 4
+			default:
+				// TODO(peterwilliams97) FIX THIS HACK
+				common.Log.Info("unknown colorspace %q", t)
+				img.ColorComponents = 3
+			}
 		}
 	}
 
