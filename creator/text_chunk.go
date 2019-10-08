@@ -122,6 +122,9 @@ func (tc *TextChunk) Wrap(width float64) ([]string, error) {
 
 // Fit fits the chunk into the specified bounding box, cropping off the
 // remainder in a new chunk, if it exceeds the specified dimensions.
+// NOTE: The method assumes a line height of 1.0. In order to account for other
+// line height values, the passed in height must be divided by the line height:
+// height = height / lineHeight
 func (tc *TextChunk) Fit(width, height float64) (*TextChunk, error) {
 	lines, err := tc.Wrap(width)
 	if err != nil {
