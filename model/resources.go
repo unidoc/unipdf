@@ -63,7 +63,6 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	}
 	if obj := dict.Get("ProcSet"); obj != nil {
 		r.ProcSet = obj
-		panic("l")
 	}
 	if obj := dict.Get("Properties"); obj != nil {
 		r.Properties = obj
@@ -114,10 +113,6 @@ func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("Font", r.Font)
 	d.SetIfNotNil("ProcSet", r.ProcSet)
 	d.SetIfNotNil("Properties", r.Properties)
-
-	// common.Log.Info("XObject=%v=%s", r.XObject, d.Get("XObject"))
-	// common.Log.Info("ProcSet=%v=%s", r.ProcSet, d.Get("ProcSet"))
-	// panic("ToPdfObject")
 	return d
 }
 

@@ -1005,7 +1005,9 @@ func gocvDecode(buf []byte) (goimage.Image, error) {
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	common.Log.Trace("DCTEncoder.DecodeBytes: encoded=%d", len(encoded))
-	img, err := gocvDecode(encoded)
+	bufReader := bytes.NewReader(encoded)
+	img, err := jpeg.Decode(bufReader)
+	// img, err := gocvDecode(encoded)
 	if err != nil {
 		common.Log.Debug("Error decoding image: %s", err)
 		return nil, err
