@@ -96,7 +96,7 @@ These activities include:
  * creating/manipulating documents for users in a web/server/cloud application
  * shipping unipdf with a closed source product
 
-Please see [pricing](http://unidoc.io/pricing) to purchase a commercial license or contact sales at sales@unidoc.io
+Please see [pricing](https://unidoc.io/unipdf/#unipdf-pricing) to purchase a commercial license or contact sales at sales@unidoc.io
 for more info.
 
 ## Getting Rid of the Watermark - Get a License
