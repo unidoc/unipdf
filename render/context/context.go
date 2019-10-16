@@ -35,9 +35,10 @@ type Context interface {
 	MeasureString(s string) (w, h float64)
 	TextState() *TextState
 
+	Width() int
+	Height() int
 	Fill()
 	FillPreserve()
-	Height() int
 	Identity()
 	InvertMask()
 	InvertY()
@@ -82,5 +83,4 @@ type Context interface {
 	StrokePreserve()
 	Transform(x, y float64) (tx, ty float64)
 	Translate(x, y float64)
-	Width() int
 }

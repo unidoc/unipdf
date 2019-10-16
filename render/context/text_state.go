@@ -7,13 +7,13 @@ import (
 )
 
 type TextState struct {
-	Tc    float64   // Character spacing.
-	Tw    float64   // Word spacing.
-	Th    float64   // Horizontal scaling.
-	Tl    float64   // Leading.
-	Tf    font.Face // Font.
-	Tfs   float64   // Font size.
-	Trise float64   // Text rise.
+	Tc  float64   // Character spacing.
+	Tw  float64   // Word spacing.
+	Th  float64   // Horizontal scaling.
+	Tl  float64   // Leading.
+	Tf  font.Face // Font.
+	Tfs float64   // Font size.
+	Ts  float64   // Text rise.
 
 	Tm  transform.Matrix // Text matrix.
 	Tlm transform.Matrix // Text line matrix.

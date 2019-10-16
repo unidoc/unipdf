@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	imagectx "github.com/unidoc/unipdf/render/context/image"
 	"github.com/unidoc/unipdf/v3/model"
+	imagectx "github.com/unidoc/unipdf/v3/render/context/image"
 )
 
 type ImageDevice struct {

@@ -10,8 +10,8 @@ import (
 	"math"
 
 	"github.com/golang/freetype/raster"
-	"github.com/unidoc/unipdf/render/context"
 	"github.com/unidoc/unipdf/v3/internal/transform"
+	"github.com/unidoc/unipdf/v3/render/context"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/f64"
@@ -64,6 +64,7 @@ func NewContextForImage(im image.Image) *Context {
 func NewContextForRGBA(im *image.RGBA) *Context {
 	w := im.Bounds().Size().X
 	h := im.Bounds().Size().Y
+
 	return &Context{
 		width:         w,
 		height:        h,

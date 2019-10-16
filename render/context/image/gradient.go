@@ -5,7 +5,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/unidoc/unipdf/render/context"
+	"github.com/unidoc/unipdf/v3/render/context"
 )
 
 type stop struct {

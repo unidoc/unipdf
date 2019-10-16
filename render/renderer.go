@@ -6,12 +6,12 @@ import (
 
 	"github.com/flopp/go-findfont"
 	"github.com/golang/freetype/truetype"
-	"github.com/unidoc/unipdf/render/context"
 	"github.com/unidoc/unipdf/v3/common"
 	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
+	"github.com/unidoc/unipdf/v3/render/context"
 )
 
 var (
@@ -748,6 +748,66 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 			case "ET":
 				ctx.Pop()
 				textState.ResetTm()
+			// Set text leading.
+			case "TL":
+				if len(op.Params) != 1 {
+					return errRange
+				}
+
+				tl, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				textState.Tl = tl
+			// Set character spacing.
+			case "Tc":
+				if len(op.Params) != 1 {
+					return errRange
+				}
+
+				tc, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				textState.Tc = tc
+			// Set word spacing.
+			case "Tw":
+				if len(op.Params) != 1 {
+					return errRange
+				}
+
+				tw, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				textState.Tw = tw
+			// Set horizontal scaling.
+			case "Tz":
+				if len(op.Params) != 1 {
+					return errRange
+				}
+
+				th, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				textState.Th = th
+			// Set text rise.
+			case "Ts":
+				if len(op.Params) != 1 {
+					return errRange
+				}
+
+				ts, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				textState.Ts = ts
 			// Move to the next line with specified offsets.
 			case "Td":
 				if len(op.Params) != 2 {
@@ -775,17 +835,6 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 			// Move to the start of the next line.
 			case "T*":
 				textState.DoTStar()
-			case "TL":
-				if len(op.Params) != 1 {
-					return errRange
-				}
-
-				tl, err := core.GetNumberAsFloat(op.Params[0])
-				if err != nil {
-					return err
-				}
-
-				textState.Tl = tl
 			// Set text line matrix.
 			case "Tm":
 				if len(op.Params) != 6 {
@@ -976,6 +1025,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				ctx.Push()
 			case "EMC":
 				ctx.Pop()
+				textState.ResetTm()
 			default:
 				common.Log.Debug("ERROR: unsupported operand: %s", op.Operand)
 			}
