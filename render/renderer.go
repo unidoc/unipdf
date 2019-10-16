@@ -46,11 +46,12 @@ func (r renderer) renderPage(page *model.PdfPage, ctx context.Context) error {
 }
 
 func (r renderer) renderContentStream(contents string, resources *model.PdfPageResources, ctx context.Context) error {
-	cstreamParser := pdfcontent.NewContentStreamParser(contents)
-	operations, err := cstreamParser.Parse()
+	operations, err := pdfcontent.NewContentStreamParser(contents).Parse()
 	if err != nil {
 		return err
 	}
+
+	textState := ctx.TextState()
 
 	processor := pdfcontent.NewContentStreamProcessor(*operations)
 	processor.AddHandler(pdfcontent.HandlerConditionEnumAllOperands, "",
@@ -746,6 +747,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 			// End text.
 			case "ET":
 				ctx.Pop()
+				textState.ResetTm()
 			// Move to the next line with specified offsets.
 			case "Td":
 				if len(op.Params) != 2 {
@@ -757,7 +759,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				ctx.TextTranslate(fv[0], -fv[1])
+				textState.DoTd(fv[0], fv[1])
 			// Move to the next line with specified offsets.
 			case "TD":
 				if len(op.Params) != 2 {
@@ -768,21 +770,22 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				if err != nil {
 					return err
 				}
-				ctx.TextTranslate(fv[0], ctx.LineHeight()-fv[1])
+
+				textState.DoTD(fv[0], fv[1])
 			// Move to the start of the next line.
 			case "T*":
-				ctx.ResetTextTranslation(true, false)
-				ctx.TextTranslate(0, ctx.LineHeight())
+				textState.DoTStar()
 			case "TL":
 				if len(op.Params) != 1 {
 					return errRange
 				}
 
-				lineHeight, err := core.GetNumberAsFloat(op.Params[0])
+				tl, err := core.GetNumberAsFloat(op.Params[0])
 				if err != nil {
 					return err
 				}
-				ctx.SetLineHeight(lineHeight)
+
+				textState.Tl = tl
 			// Set text line matrix.
 			case "Tm":
 				if len(op.Params) != 6 {
@@ -793,17 +796,13 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				m := transform.NewMatrix(fv[0], fv[1], fv[2], fv[3], fv[4], -fv[5])
 				common.Log.Debug("Text matrix: %+v", fv)
-				ctx.SetTextMatrix(m)
+				textState.DoTm(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
 			// Move to the next line and show text string.
 			case `'`:
 				if len(op.Params) != 1 {
 					return errRange
 				}
-
-				ctx.ResetTextTranslation(true, false)
-				ctx.TextTranslate(0, ctx.LineHeight())
 
 				charcodes, ok := core.GetStringBytes(op.Params[0])
 				if !ok {
@@ -811,24 +810,29 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 				common.Log.Debug("' string: %s", string(charcodes))
 
-				// TODO: Account for encoding.
-				ctx.DrawString(string(charcodes), 0, 0)
+				textState.DoQuote(string(charcodes), ctx)
 			// Move to the next line and show text string.
 			case `''`:
 				if len(op.Params) != 3 {
 					return errRange
 				}
 
-				ctx.ResetTextTranslation(true, false)
-				ctx.TextTranslate(0, ctx.LineHeight())
+				aw, err := core.GetNumberAsFloat(op.Params[0])
+				if err != nil {
+					return err
+				}
+
+				ac, err := core.GetNumberAsFloat(op.Params[1])
+				if err != nil {
+					return err
+				}
 
 				charcodes, ok := core.GetStringBytes(op.Params[2])
 				if !ok {
 					return errType
 				}
 
-				// TODO: Account for encoding.
-				ctx.DrawString(string(charcodes), 0, 0)
+				textState.DoQuotes(string(charcodes), aw, ac, ctx)
 			// Show text string.
 			case "Tj":
 				if len(op.Params) != 1 {
@@ -840,8 +844,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 
-				// TODO: Account for encoding.
-				ctx.DrawString(string(charcodes), 0, 0)
+				textState.DoTj(string(charcodes), ctx)
 			// Show array of text strings.
 			case "TJ":
 				if len(op.Params) != 1 {
@@ -859,14 +862,12 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					switch t := obj.(type) {
 					case *core.PdfObjectString:
 						if t != nil {
-							ctx.DrawString(t.String(), 0, 0)
-							w, _ := ctx.MeasureString(t.String())
-							ctx.TextTranslate(w, 0)
+							textState.DoTj(t.String(), ctx)
 						}
 					case *core.PdfObjectFloat, *core.PdfObjectInteger:
 						val, err := core.GetNumberAsFloat(t)
 						if err == nil {
-							ctx.TextTranslate(-val/1000*ctx.FontSize(), 0)
+							textState.Translate(-val*0.001*textState.Tfs, 0)
 						}
 					}
 				}
@@ -892,9 +893,6 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 				common.Log.Debug("Font size: %v", fsize)
-				if fsize <= 1 {
-					fsize = 10
-				}
 
 				// Search font in resources.
 				fObj, has := resources.GetFontByName(*fname)
@@ -963,11 +961,10 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return nil
 				}
 
-				// Set font face.
-				ctx.SetFontSize(fsize)
-				ctx.SetFontFace(truetype.NewFace(tfont, &truetype.Options{
+				fontFace := truetype.NewFace(tfont, &truetype.Options{
 					Size: fsize,
-				}))
+				})
+				textState.DoTf(fontFace, fsize)
 
 			// ---------------------------- //
 			// - Marked content operators - //

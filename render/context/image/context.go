@@ -14,7 +14,6 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/f64"
 )
 
@@ -43,11 +42,8 @@ type Context struct {
 	lineCap       context.LineCap
 	lineJoin      context.LineJoin
 	fillRule      context.FillRule
-	fontFace      font.Face
-	fontSize      float64
-	lineHeight    float64
 	matrix        transform.Matrix
-	textMatrix    transform.Matrix
+	textState     *context.TextState
 	stack         []*Context
 }
 
@@ -78,11 +74,8 @@ func NewContextForRGBA(im *image.RGBA) *Context {
 		strokePattern: defaultStrokeStyle,
 		lineWidth:     1,
 		fillRule:      context.FillRuleWinding,
-		fontFace:      basicfont.Face7x13,
-		fontSize:      10,
-		lineHeight:    1,
 		matrix:        transform.IdentityMatrix(),
-		textMatrix:    transform.IdentityMatrix(),
+		textState:     context.NewTextState(),
 	}
 }
 
@@ -146,16 +139,6 @@ func (dc *Context) SetLineWidth(lineWidth float64) {
 	dc.lineWidth = lineWidth
 }
 
-// LineHeight returns the font line height of the context.
-func (dc *Context) LineHeight() float64 {
-	return dc.lineHeight
-}
-
-// SetLineHeight sets the text line height of the context.
-func (dc *Context) SetLineHeight(lineHeight float64) {
-	dc.lineHeight = lineHeight
-}
-
 func (dc *Context) SetLineCap(lineCap context.LineCap) {
 	dc.lineCap = lineCap
 }
@@ -200,16 +183,8 @@ func (dc *Context) Matrix() transform.Matrix {
 	return dc.matrix
 }
 
-func (dc *Context) TextMatrix() transform.Matrix {
-	return dc.textMatrix
-}
-
 func (dc *Context) SetMatrix(m transform.Matrix) {
 	dc.matrix = m
-}
-
-func (dc *Context) SetTextMatrix(m transform.Matrix) {
-	dc.textMatrix = m
 }
 
 // Color Setters
@@ -711,31 +686,15 @@ func (dc *Context) DrawImageAnchored(im image.Image, x, y int, ax, ay float64) {
 
 // Text Functions
 
-func (dc *Context) SetFontFace(fontFace font.Face) {
-	dc.fontFace = fontFace
-}
-
-func (dc *Context) LoadFontFace(path string, points float64) error {
-	face, err := LoadFontFace(path, points)
-	if err == nil {
-		dc.fontFace = face
-	}
-	return err
-}
-
-func (dc *Context) FontSize() float64 {
-	return dc.fontSize
-}
-
-func (dc *Context) SetFontSize(fontSize float64) {
-	dc.fontSize = fontSize
+func (dc *Context) TextState() *context.TextState {
+	return dc.textState
 }
 
 func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 	d := &font.Drawer{
 		Dst:  im,
 		Src:  image.NewUniform(dc.color),
-		Face: dc.fontFace,
+		Face: dc.textState.Tf,
 		Dot:  fixp(x, y),
 	}
 	// based on Drawer.DrawString() in golang.org/x/image/font/font.go
@@ -767,7 +726,7 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 
 // DrawString draws the specified text at the specified point.
 func (dc *Context) DrawString(s string, x, y float64) {
-	x, y = dc.textMatrix.Transform(x, y)
+	x, y = dc.textState.Tm.Transform(x, y)
 	dc.DrawStringAnchored(s, x, y, 0, 0)
 }
 
@@ -791,16 +750,10 @@ func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64) {
 // given the current font face.
 func (dc *Context) MeasureString(s string) (w, h float64) {
 	d := &font.Drawer{
-		Face: dc.fontFace,
+		Face: dc.textState.Tf,
 	}
 	a := d.MeasureString(s)
-	return float64(a >> 6), dc.fontSize
-}
-
-// WordWrap wraps the specified string to the given max width and current
-// font face.
-func (dc *Context) WordWrap(s string, w float64) []string {
-	return wordWrap(dc, s, w)
+	return float64(a >> 6), dc.textState.Tfs
 }
 
 // Transformation Matrix Operations
@@ -814,19 +767,6 @@ func (dc *Context) Identity() {
 // Translate updates the current matrix with a translation.
 func (dc *Context) Translate(x, y float64) {
 	dc.matrix.Translate(x, y)
-}
-
-func (dc *Context) TextTranslate(x, y float64) {
-	dc.textMatrix.Translate(x, y)
-}
-
-func (dc *Context) ResetTextTranslation(resetX, resetY bool) {
-	if resetX {
-		dc.textMatrix[6] = 0
-	}
-	if resetY {
-		dc.textMatrix[7] = 0
-	}
 }
 
 // Scale updates the current matrix with a scaling factor.
@@ -905,8 +845,5 @@ func (dc *Context) Pop() {
 	dc.start = before.start
 	dc.current = before.current
 	dc.hasCurrent = before.hasCurrent
-
-	dc.fontSize = before.fontSize
-	dc.fontFace = before.fontFace
-	dc.lineHeight = before.lineHeight
+	dc.textState = before.textState
 }

@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/unidoc/unipdf/v3/internal/transform"
-	"golang.org/x/image/font"
 )
 
 type Context interface {
@@ -16,9 +15,7 @@ type Context interface {
 	ClipPreserve()
 	ClosePath()
 	Matrix() transform.Matrix
-	TextMatrix() transform.Matrix
 	SetMatrix(m transform.Matrix)
-	SetTextMatrix(m transform.Matrix)
 	CubicTo(x1, y1, x2, y2, x3, y3 float64)
 	DrawArc(x, y, r, angle1, angle2 float64)
 	DrawCircle(x, y, r float64)
@@ -31,20 +28,21 @@ type Context interface {
 	DrawRectangle(x, y, w, h float64)
 	DrawRegularPolygon(n int, x, y, r, rotation float64)
 	DrawRoundedRectangle(x, y, w, h, r float64)
+
+	// Text functions.
 	DrawString(s string, x, y float64)
 	DrawStringAnchored(s string, x, y, ax, ay float64)
 	MeasureString(s string) (w, h float64)
+	TextState() *TextState
+
 	Fill()
 	FillPreserve()
-	FontSize() float64
 	Height() int
 	Identity()
 	InvertMask()
 	InvertY()
 	LineTo(x, y float64)
 	LineWidth() float64
-	LineHeight() float64
-	LoadFontFace(path string, points float64) error
 	MoveTo(x, y float64)
 	NewSubPath()
 	Pop()
@@ -61,8 +59,6 @@ type Context interface {
 	SetFillRuleEvenOdd()
 	SetFillRuleWinding()
 	SetFillStyle(pattern Pattern)
-	SetFontFace(fontFace font.Face)
-	SetFontSize(fontSize float64)
 	SetHexColor(x string)
 	SetLineCap(lineCap LineCap)
 	SetLineCapButt()
@@ -72,7 +68,6 @@ type Context interface {
 	SetLineJoinBevel()
 	SetLineJoinRound()
 	SetLineWidth(lineWidth float64)
-	SetLineHeight(lineHeight float64)
 	SetMask(mask *image.Alpha) error
 	SetRGB(r, g, b float64)
 	SetRGB255(r, g, b int)
@@ -87,8 +82,5 @@ type Context interface {
 	StrokePreserve()
 	Transform(x, y float64) (tx, ty float64)
 	Translate(x, y float64)
-	TextTranslate(x, y float64)
-	ResetTextTranslation(resetX, resetY bool)
 	Width() int
-	WordWrap(s string, w float64) []string
 }
