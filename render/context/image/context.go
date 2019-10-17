@@ -695,7 +695,7 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 	d := &font.Drawer{
 		Dst:  im,
 		Src:  image.NewUniform(dc.color),
-		Face: dc.textState.Tf,
+		Face: dc.textState.Tf.Face,
 		Dot:  fixp(x, y),
 	}
 	// based on Drawer.DrawString() in golang.org/x/image/font/font.go
@@ -751,10 +751,10 @@ func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64) {
 // given the current font face.
 func (dc *Context) MeasureString(s string) (w, h float64) {
 	d := &font.Drawer{
-		Face: dc.textState.Tf,
+		Face: dc.textState.Tf.Face,
 	}
 	a := d.MeasureString(s)
-	return float64(a >> 6), dc.textState.Tfs
+	return float64(a >> 6), dc.textState.Tf.Size
 }
 
 // Transformation Matrix Operations
@@ -816,13 +816,6 @@ func (dc *Context) ShearAbout(sx, sy, x, y float64) {
 // returning a transformed position.
 func (dc *Context) Transform(x, y float64) (tx, ty float64) {
 	return dc.matrix.Transform(x, y)
-}
-
-// InvertY flips the Y axis so that Y grows from bottom to top and Y=0 is at
-// the bottom of the image.
-func (dc *Context) InvertY() {
-	dc.Translate(0, float64(dc.height))
-	dc.Scale(1, -1)
 }
 
 // Stack

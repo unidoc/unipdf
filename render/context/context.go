@@ -41,7 +41,6 @@ type Context interface {
 	FillPreserve()
 	Identity()
 	InvertMask()
-	InvertY()
 	LineTo(x, y float64)
 	LineWidth() float64
 	MoveTo(x, y float64)

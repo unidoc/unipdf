@@ -2,10 +2,8 @@ package render
 
 import (
 	"errors"
-	"io/ioutil"
 
 	"github.com/flopp/go-findfont"
-	"github.com/golang/freetype/truetype"
 	"github.com/unidoc/unipdf/v3/common"
 	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
@@ -916,7 +914,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					case *core.PdfObjectFloat, *core.PdfObjectInteger:
 						val, err := core.GetNumberAsFloat(t)
 						if err == nil {
-							textState.Translate(-val*0.001*textState.Tfs, 0)
+							textState.Translate(-val*0.001*textState.Tf.Size, 0)
 						}
 					}
 				}
@@ -928,28 +926,28 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				common.Log.Debug("%#v", op.Params)
 
 				// Get font name.
-				fname, ok := core.GetName(op.Params[0])
-				if !ok || fname == nil {
+				fontName, ok := core.GetName(op.Params[0])
+				if !ok || fontName == nil {
 					common.Log.Debug("invalid font name object: %v", op.Params[0])
 					return errType
 				}
-				common.Log.Debug("Font name: %s", fname.String())
+				common.Log.Debug("Font name: %s", fontName.String())
 
 				// Get font size.
-				fsize, err := core.GetNumberAsFloat(op.Params[1])
+				fontSize, err := core.GetNumberAsFloat(op.Params[1])
 				if err != nil {
 					common.Log.Debug("invalid font size object: %v", op.Params[1])
 					return errType
 				}
-				common.Log.Debug("Font size: %v", fsize)
+				common.Log.Debug("Font size: %v", fontSize)
 
 				// Search font in resources.
-				fObj, has := resources.GetFontByName(*fname)
+				fObj, has := resources.GetFontByName(*fontName)
 				if !has {
-					common.Log.Debug("ERROR: Font %s not found", fname.String())
+					common.Log.Debug("ERROR: Font %s not found", fontName.String())
 					return errors.New("font not found")
 				}
-				common.Log.Debug("font: %T", fObj)
+				common.Log.Debug("Font: %T", fObj)
 
 				fontDict, ok := core.GetDict(fObj)
 				if !ok {
@@ -963,57 +961,32 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				var fontData []byte
-				if descriptor := pdfFont.FontDescriptor(); descriptor != nil {
-					fontStream, ok := core.GetStream(descriptor.FontFile2)
-					if ok {
-						fontData, err = core.DecodeStream(fontStream)
+				textFont, err := context.NewTextFont(pdfFont, fontSize)
+				if err != nil {
+					common.Log.Debug("ERROR: %v", err)
+
+					for _, name := range []string{pdfFont.BaseFont(), "Helvetica"} {
+						common.Log.Debug("DEBUG: searching system font `%s`", name)
+
+						fontPath, err := findfont.Find(name)
 						if err != nil {
-							return err
+							common.Log.Debug("could not find font file %s", name)
+							continue
 						}
-					} else {
-						common.Log.Debug("ERROR: could not get font stream")
-					}
-				} else {
-					common.Log.Debug("ERROR: could not get font descriptor")
-				}
 
-				var tfont *truetype.Font
-				if fontData != nil {
-					if tfont, err = truetype.Parse(fontData); err != nil {
-						common.Log.Debug("ERROR: could not parse font: %v", err)
-					}
-				}
-
-				if tfont == nil {
-					for _, fontName := range []string{pdfFont.BaseFont(), "Helvetica"} {
-						common.Log.Debug("DEBUG: searching system font `%s`", fontName)
-
-						fontPath, err := findfont.Find(fontName)
+						textFont, err = context.NewTextFontFromPath(fontPath, fontSize)
 						if err != nil {
-							common.Log.Debug("could not find font file %s", fontName)
-							continue
-						}
-						if fontData, err = ioutil.ReadFile(fontPath); err != nil {
-							common.Log.Debug("could not read font file %s", fontPath)
-							continue
-						}
-						if tfont, err = truetype.Parse(fontData); err != nil {
-							common.Log.Debug("ERROR: could not parse font: %v", err)
 							continue
 						}
 					}
 				}
 
-				if tfont == nil {
-					common.Log.Debug("ERROR: could not find font")
+				if textFont == nil {
+					common.Log.Debug("ERROR: could not find any suitable font")
 					return nil
 				}
 
-				fontFace := truetype.NewFace(tfont, &truetype.Options{
-					Size: fsize,
-				})
-				textState.DoTf(fontFace, fsize)
+				textState.DoTf(textFont)
 
 			// ---------------------------- //
 			// - Marked content operators - //
