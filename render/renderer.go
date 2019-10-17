@@ -50,6 +50,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 	}
 
 	textState := ctx.TextState()
+	fontCache := map[string]*context.TextFont{}
 
 	processor := pdfcontent.NewContentStreamProcessor(*operations)
 	processor.AddHandler(pdfcontent.HandlerConditionEnumAllOperands, "",
@@ -857,7 +858,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 				common.Log.Debug("' string: %s", string(charcodes))
 
-				textState.DoQuote(string(charcodes), ctx)
+				textState.DoQuote(charcodes, ctx)
 			// Move to the next line and show text string.
 			case `''`:
 				if len(op.Params) != 3 {
@@ -879,7 +880,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 
-				textState.DoQuotes(string(charcodes), aw, ac, ctx)
+				textState.DoQuotes(charcodes, aw, ac, ctx)
 			// Show text string.
 			case "Tj":
 				if len(op.Params) != 1 {
@@ -891,7 +892,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 
-				textState.DoTj(string(charcodes), ctx)
+				textState.DoTj(charcodes, ctx)
 			// Show array of text strings.
 			case "TJ":
 				if len(op.Params) != 1 {
@@ -909,7 +910,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					switch t := obj.(type) {
 					case *core.PdfObjectString:
 						if t != nil {
-							textState.DoTj(t.String(), ctx)
+							textState.DoTj(t.Bytes(), ctx)
 						}
 					case *core.PdfObjectFloat, *core.PdfObjectInteger:
 						val, err := core.GetNumberAsFloat(t)
@@ -961,12 +962,27 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
+				baseFont := pdfFont.BaseFont()
+				if baseFont == "" {
+					baseFont = fontName.String()
+				}
+
+				if textFont, ok := fontCache[baseFont]; ok {
+					textState.DoTf(textFont.Clone(fontSize))
+					return nil
+				}
+
 				textFont, err := context.NewTextFont(pdfFont, fontSize)
 				if err != nil {
 					common.Log.Debug("ERROR: %v", err)
 
-					for _, name := range []string{pdfFont.BaseFont(), "Helvetica"} {
+					for _, name := range []string{baseFont, "Helvetica"} {
 						common.Log.Debug("DEBUG: searching system font `%s`", name)
+
+						if textFont, ok = fontCache[name]; ok {
+							textState.DoTf(textFont.Clone(fontSize))
+							return nil
+						}
 
 						fontPath, err := findfont.Find(name)
 						if err != nil {
@@ -978,6 +994,8 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 						if err != nil {
 							continue
 						}
+
+						baseFont = name
 					}
 				}
 
@@ -986,7 +1004,8 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return nil
 				}
 
-				textState.DoTf(textFont)
+				fontCache[baseFont] = textFont
+				textState.DoTf(textFont.Clone(fontSize))
 
 			// ---------------------------- //
 			// - Marked content operators - //

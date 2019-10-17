@@ -14,6 +14,8 @@ type TextFont struct {
 	Font *model.PdfFont
 	Face font.Face
 	Size float64
+
+	ttf *truetype.Font
 }
 
 func NewTextFont(font *model.PdfFont, size float64) (*TextFont, error) {
@@ -45,6 +47,7 @@ func NewTextFont(font *model.PdfFont, size float64) (*TextFont, error) {
 		Font: font,
 		Face: truetype.NewFace(ttfFont, &truetype.Options{Size: size}),
 		Size: size,
+		ttf:  ttfFont,
 	}, nil
 }
 
@@ -55,6 +58,15 @@ func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
 	}
 
 	return NewTextFont(font, size)
+}
+
+func (tf *TextFont) Clone(size float64) *TextFont {
+	return &TextFont{
+		Font: tf.Font,
+		Face: truetype.NewFace(tf.ttf, &truetype.Options{Size: size}),
+		Size: size,
+		ttf:  tf.ttf,
+	}
 }
 
 type TextState struct {
@@ -96,25 +108,44 @@ func (ts *TextState) DoTStar() {
 	ts.DoTd(0, -ts.Tl)
 }
 
-func (ts *TextState) DoTj(text string, ctx Context) {
-	// TODO:
-	// Account for encoding.
-	// Account for Tc.
-	// Account for Tw.
-	ctx.DrawString(text, 0, 0)
-	w, _ := ctx.MeasureString(text)
-	ts.Translate(w, 0)
+func (ts *TextState) DoTj(data []byte, ctx Context) {
+	font := ts.Tf.Font
+	tfs := ts.Tf.Size
+	th := ts.Th / 100.0
+	stateMatrix := transform.NewMatrix(tfs*th, 0, 0, tfs, 0, ts.Ts)
+
+	runes := font.CharcodesToUnicode(font.BytesToCharcodes(data))
+	for _, r := range runes {
+		if r == '\x00' {
+			continue
+		}
+
+		tm := ts.Tm.Clone()
+		ts.Tm.Concat(stateMatrix)
+		ctx.DrawString(string(r), 0, 0)
+
+		tw := 0.0
+		if r == ' ' {
+			tw = ts.Tw
+		}
+
+		w, _ := ctx.MeasureString(string(r))
+		tx := (w + ts.Tc + tw) * th
+
+		ts.Tm = tm
+		ts.Translate(tx, 0)
+	}
 }
 
-func (ts *TextState) DoQuote(text string, ctx Context) {
+func (ts *TextState) DoQuote(data []byte, ctx Context) {
 	ts.DoTStar()
-	ts.DoTj(text, ctx)
+	ts.DoTj(data, ctx)
 }
 
-func (ts *TextState) DoQuotes(text string, aw, ac float64, ctx Context) {
+func (ts *TextState) DoQuotes(data []byte, aw, ac float64, ctx Context) {
 	ts.Tw = aw
 	ts.Tc = ac
-	ts.DoQuote(text, ctx)
+	ts.DoQuote(data, ctx)
 }
 
 func (ts *TextState) DoTf(font *TextFont) {
