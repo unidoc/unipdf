@@ -727,7 +727,6 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 
 // DrawString draws the specified text at the specified point.
 func (dc *Context) DrawString(s string, x, y float64) {
-	x, y = dc.textState.Tm.Transform(x, y)
 	dc.DrawStringAnchored(s, x, y, 0, 0)
 }
 

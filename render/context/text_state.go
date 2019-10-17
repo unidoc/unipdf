@@ -114,24 +114,39 @@ func (ts *TextState) DoTj(data []byte, ctx Context) {
 	th := ts.Th / 100.0
 	stateMatrix := transform.NewMatrix(tfs*th, 0, 0, tfs, 0, ts.Ts)
 
-	runes := font.CharcodesToUnicode(font.BytesToCharcodes(data))
-	for _, r := range runes {
+	charcodes := font.BytesToCharcodes(data)
+	runes := font.CharcodesToUnicode(charcodes)
+	for i, r := range runes {
 		if r == '\x00' {
 			continue
 		}
 
+		// Calculate text rendering matrix.
 		tm := ts.Tm.Clone()
 		ts.Tm.Concat(stateMatrix)
-		ctx.DrawString(string(r), 0, 0)
 
+		// Draw rune.
+		x, y := ts.Tm.Transform(0, 0)
+		ctx.DrawString(string(r), x, y)
+
+		// Calculate word spacing.
 		tw := 0.0
 		if r == ' ' {
 			tw = ts.Tw
 		}
 
-		w, _ := ctx.MeasureString(string(r))
+		// Calculate rune spacing.
+		var w float64
+		if m, ok := font.GetCharMetrics(charcodes[i]); ok {
+			w = m.Wx * 0.001 * tfs
+		} else {
+			w, _ = ctx.MeasureString(string(r))
+		}
+
+		// Calculate displacement offset.
 		tx := (w + ts.Tc + tw) * th
 
+		// Generate new text matrix.
 		ts.Tm = tm
 		ts.Translate(tx, 0)
 	}
