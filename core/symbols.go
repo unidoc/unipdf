@@ -22,52 +22,27 @@ func IsFloatDigit(c byte) bool {
 
 // IsDecimalDigit checks if the character is a part of a decimal number string.
 func IsDecimalDigit(c byte) bool {
-	if c >= '0' && c <= '9' {
-		return true
-	}
-
-	return false
+	return '0' <= c && c <= '9'
 }
 
 // IsOctalDigit checks if a character can be part of an octal digit string.
 func IsOctalDigit(c byte) bool {
-	if c >= '0' && c <= '7' {
-		return true
-	}
-
-	return false
+	return '0' <= c && c <= '7'
 }
 
 // IsPrintable checks if a character is printable.
 // Regular characters that are outside the range EXCLAMATION MARK(21h)
 // (!) to TILDE (7Eh) (~) should be written using the hexadecimal notation.
-func IsPrintable(char byte) bool {
-	if char < 0x21 || char > 0x7E {
-		return false
-	}
-	return true
+func IsPrintable(c byte) bool {
+	return 0x21 <= c && c <= 0x7E
 }
 
 // IsDelimiter checks if a character represents a delimiter.
 func IsDelimiter(char byte) bool {
-	if char == '(' || char == ')' {
-		return true
-	}
-	if char == '<' || char == '>' {
-		return true
-	}
-	if char == '[' || char == ']' {
-		return true
-	}
-	if char == '{' || char == '}' {
-		return true
-	}
-	if char == '/' {
-		return true
-	}
-	if char == '%' {
-		return true
-	}
+	return char == '(' || char == ')' ||
+		char == '<' || char == '>' ||
+		char == '[' || char == ']' ||
+		char == '{' || char == '}' ||
+		char == '/' || char == '%'
 
-	return false
 }

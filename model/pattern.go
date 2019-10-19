@@ -162,7 +162,7 @@ func newPdfPatternFromPdfObject(container core.PdfObject) (*PdfPattern, error) {
 	pattern := &PdfPattern{}
 
 	var dict *core.PdfObjectDictionary
-	if indObj, is := container.(*core.PdfIndirectObject); is {
+	if indObj, is := core.GetIndirect(container); is {
 		pattern.container = indObj
 		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
 		if !ok {
@@ -170,11 +170,11 @@ func newPdfPatternFromPdfObject(container core.PdfObject) (*PdfPattern, error) {
 			return nil, core.ErrTypeError
 		}
 		dict = d
-	} else if streamObj, is := container.(*core.PdfObjectStream); is {
+	} else if streamObj, is := core.GetStream(container); is {
 		pattern.container = streamObj
 		dict = streamObj.PdfObjectDictionary
 	} else {
-		common.Log.Debug("Pattern not an indirect object or stream")
+		common.Log.Debug("Pattern not an indirect object or stream. %T", container)
 		return nil, core.ErrTypeError
 	}
 
