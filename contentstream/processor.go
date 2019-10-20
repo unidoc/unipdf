@@ -134,9 +134,8 @@ func (proc *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, o
 	proc.handlers = append(proc.handlers, entry)
 }
 
-// Done allows handlers to terminate a Process or ProcessChannel when they have completed.
-// !@#$ HACK. Remove
-func (proc *ContentStreamProcessor) Done() {
+// Terminate allows handlers to terminate a Process or ProcessChannel when they have completed.
+func (proc *ContentStreamProcessor) Terminate() {
 	proc.done = true
 }
 
@@ -308,6 +307,7 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 			}
 		}
 		if proc.done {
+			// Handler wants to terminate processing.
 			common.Log.Debug("Done: i=%d of %d", i, len(proc.operations))
 			return nil
 		}
@@ -393,6 +393,7 @@ func (proc *ContentStreamProcessor) ProcessChannel(resources *model.PdfPageResou
 			}
 			numOps++
 			if proc.done {
+				// Handler wants to terminate processing.
 				common.Log.Debug("Done: numOps=%d", numOps)
 				return nil
 			}
