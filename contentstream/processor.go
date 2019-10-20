@@ -393,7 +393,7 @@ func (proc *ContentStreamProcessor) ProcessChannel(resources *model.PdfPageResou
 			}
 			numOps++
 			if proc.done {
-				common.Log.Info("Done: numOps=%d", numOps)
+				common.Log.Debug("Done: numOps=%d", numOps)
 				return nil
 			}
 
