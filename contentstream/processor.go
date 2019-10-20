@@ -308,7 +308,7 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 			}
 		}
 		if proc.done {
-			common.Log.Info("Done: i=%d of %d", i, len(proc.operations))
+			common.Log.Debug("Done: i=%d of %d", i, len(proc.operations))
 			return nil
 		}
 	}
