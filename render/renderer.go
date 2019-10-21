@@ -1005,7 +1005,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				fontCache[baseFont] = textFont
-				textState.DoTf(textFont.Clone(fontSize))
+				textState.DoTf(textFont)
 
 			// ---------------------------- //
 			// - Marked content operators - //
