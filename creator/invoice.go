@@ -298,7 +298,8 @@ func (i *Invoice) Columns() []*InvoiceCell {
 	return i.columns
 }
 
-// SetColumns overwrites any columns in the line items table.
+// SetColumns overwrites any columns in the line items table. This should be
+// called before AddLine.
 func (i *Invoice) SetColumns(cols []*InvoiceCell) {
 	i.columns = cols
 }
