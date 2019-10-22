@@ -742,11 +742,10 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 
 			// Begin text.
 			case "BT":
-				ctx.Push()
+				textState.Reset()
 			// End text.
 			case "ET":
-				ctx.Pop()
-				textState.ResetTm()
+				textState.Reset()
 			// Set text leading.
 			case "TL":
 				if len(op.Params) != 1 {
@@ -891,6 +890,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				if !ok {
 					return errType
 				}
+				common.Log.Debug("Tj string: %s", string(charcodes))
 
 				textState.ProcTj(charcodes, ctx)
 			// Show array of text strings.
@@ -1012,12 +1012,11 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 			// ---------------------------- //
 
 			case "BMC":
-				ctx.Push()
+				textState.Reset()
 			case "BDC":
-				ctx.Push()
+				textState.Reset()
 			case "EMC":
-				ctx.Pop()
-				textState.ResetTm()
+				textState.Reset()
 			default:
 				common.Log.Debug("ERROR: unsupported operand: %s", op.Operand)
 			}

@@ -106,7 +106,7 @@ func (ts *TextState) Translate(tx, ty float64) {
 	ts.Tm.Concat(transform.TranslationMatrix(tx, ty))
 }
 
-func (ts *TextState) ResetTm() {
+func (ts *TextState) Reset() {
 	ts.Tm = transform.IdentityMatrix()
 	ts.Tlm = transform.IdentityMatrix()
 }
