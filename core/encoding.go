@@ -31,7 +31,6 @@ import (
 	// Need two slightly different implementations of LZW (EarlyChange parameter).
 	lzw0 "compress/lzw"
 
-	"gocv.io/x/gocv"
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -994,13 +993,13 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	return encoder, nil
 }
 
-func gocvDecode(buf []byte) (goimage.Image, error) {
-	m, err := gocv.IMDecode(buf, gocv.IMReadAnyColor)
-	if err != nil {
-		return nil, err
-	}
-	return m.ToImage()
-}
+// func gocvDecode(buf []byte) (goimage.Image, error) {
+// 	m, err := gocv.IMDecode(buf, gocv.IMReadAnyColor)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return m.ToImage()
+// }
 
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
