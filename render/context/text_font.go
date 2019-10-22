@@ -59,7 +59,7 @@ func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
 	return NewTextFont(font, size)
 }
 
-func (tf *TextFont) Clone(size float64) *TextFont {
+func (tf *TextFont) WithSize(size float64) *TextFont {
 	return &TextFont{
 		Font: tf.Font,
 		Face: truetype.NewFace(tf.ttf, &truetype.Options{Size: size}),

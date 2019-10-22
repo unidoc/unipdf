@@ -696,7 +696,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 
 						// Set clipping region.
 						ctx.DrawRectangle(bf[0], -bf[1], bf[2]-bf[0], -(bf[3] - bf[1]))
-						ctx.SetRGB(1, 0, 0)
+						ctx.SetRGBA(1, 0, 0, 1)
 						ctx.Clip()
 					} else {
 						common.Log.Debug("ERROR: Required BBox missing on XObject Form")
@@ -968,7 +968,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				if textFont, ok := fontCache[baseFont]; ok {
-					textState.ProcTf(textFont.Clone(fontSize))
+					textState.ProcTf(textFont.WithSize(fontSize))
 					return nil
 				}
 
@@ -980,7 +980,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 						common.Log.Debug("DEBUG: searching system font `%s`", name)
 
 						if textFont, ok = fontCache[name]; ok {
-							textState.ProcTf(textFont.Clone(fontSize))
+							textState.ProcTf(textFont.WithSize(fontSize))
 							return nil
 						}
 
