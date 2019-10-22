@@ -1,73 +1,8 @@
 package context
 
 import (
-	"errors"
-
-	"github.com/golang/freetype/truetype"
-	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/transform"
-	"github.com/unidoc/unipdf/v3/model"
-	"golang.org/x/image/font"
 )
-
-type TextFont struct {
-	Font *model.PdfFont
-	Face font.Face
-	Size float64
-
-	ttf *truetype.Font
-}
-
-func NewTextFont(font *model.PdfFont, size float64) (*TextFont, error) {
-	descriptor := font.FontDescriptor()
-	if descriptor == nil {
-		return nil, errors.New("could not get font descriptor")
-	}
-
-	fontStream, ok := core.GetStream(descriptor.FontFile2)
-	if !ok {
-		return nil, errors.New("missing font file stream")
-	}
-
-	fontData, err := core.DecodeStream(fontStream)
-	if err != nil {
-		return nil, err
-	}
-
-	ttfFont, err := truetype.Parse(fontData)
-	if err != nil {
-		return nil, err
-	}
-
-	if size <= 1 {
-		size = 10
-	}
-
-	return &TextFont{
-		Font: font,
-		Face: truetype.NewFace(ttfFont, &truetype.Options{Size: size}),
-		Size: size,
-		ttf:  ttfFont,
-	}, nil
-}
-
-func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
-	font, err := model.NewPdfFontFromTTFFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewTextFont(font, size)
-}
-
-func (tf *TextFont) Clone(size float64) *TextFont {
-	return &TextFont{
-		Font: tf.Font,
-		Face: truetype.NewFace(tf.ttf, &truetype.Options{Size: size}),
-		Size: size,
-		ttf:  tf.ttf,
-	}
-}
 
 type TextState struct {
 	Tc float64   // Character spacing.
@@ -89,26 +24,26 @@ func NewTextState() *TextState {
 	}
 }
 
-func (ts *TextState) DoTm(a, b, c, d, e, f float64) {
+func (ts *TextState) ProcTm(a, b, c, d, e, f float64) {
 	ts.Tm = transform.NewMatrix(a, b, c, d, e, -f)
 	ts.Tlm = ts.Tm.Clone()
 }
 
-func (ts *TextState) DoTd(tx, ty float64) {
+func (ts *TextState) ProcTd(tx, ty float64) {
 	ts.Tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, -ty))
 	ts.Tm = ts.Tlm.Clone()
 }
 
-func (ts *TextState) DoTD(tx, ty float64) {
+func (ts *TextState) ProcTD(tx, ty float64) {
 	ts.Tl = -ty
-	ts.DoTd(tx, ty)
+	ts.ProcTd(tx, ty)
 }
 
-func (ts *TextState) DoTStar() {
-	ts.DoTd(0, -ts.Tl)
+func (ts *TextState) ProcTStar() {
+	ts.ProcTd(0, -ts.Tl)
 }
 
-func (ts *TextState) DoTj(data []byte, ctx Context) {
+func (ts *TextState) ProcTj(data []byte, ctx Context) {
 	font := ts.Tf.Font
 	tfs := ts.Tf.Size
 	th := ts.Th / 100.0
@@ -152,18 +87,18 @@ func (ts *TextState) DoTj(data []byte, ctx Context) {
 	}
 }
 
-func (ts *TextState) DoQuote(data []byte, ctx Context) {
-	ts.DoTStar()
-	ts.DoTj(data, ctx)
+func (ts *TextState) ProcQ(data []byte, ctx Context) {
+	ts.ProcTStar()
+	ts.ProcTj(data, ctx)
 }
 
-func (ts *TextState) DoQuotes(data []byte, aw, ac float64, ctx Context) {
+func (ts *TextState) ProcDQ(data []byte, aw, ac float64, ctx Context) {
 	ts.Tw = aw
 	ts.Tc = ac
-	ts.DoQuote(data, ctx)
+	ts.ProcQ(data, ctx)
 }
 
-func (ts *TextState) DoTf(font *TextFont) {
+func (ts *TextState) ProcTf(font *TextFont) {
 	ts.Tf = font
 }
 

@@ -818,7 +818,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				textState.DoTd(fv[0], fv[1])
+				textState.ProcTd(fv[0], fv[1])
 			// Move to the next line with specified offsets.
 			case "TD":
 				if len(op.Params) != 2 {
@@ -830,10 +830,10 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				textState.DoTD(fv[0], fv[1])
+				textState.ProcTD(fv[0], fv[1])
 			// Move to the start of the next line.
 			case "T*":
-				textState.DoTStar()
+				textState.ProcTStar()
 			// Set text line matrix.
 			case "Tm":
 				if len(op.Params) != 6 {
@@ -845,7 +845,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				common.Log.Debug("Text matrix: %+v", fv)
-				textState.DoTm(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
+				textState.ProcTm(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
 			// Move to the next line and show text string.
 			case `'`:
 				if len(op.Params) != 1 {
@@ -858,7 +858,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 				common.Log.Debug("' string: %s", string(charcodes))
 
-				textState.DoQuote(charcodes, ctx)
+				textState.ProcQ(charcodes, ctx)
 			// Move to the next line and show text string.
 			case `''`:
 				if len(op.Params) != 3 {
@@ -880,7 +880,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 
-				textState.DoQuotes(charcodes, aw, ac, ctx)
+				textState.ProcDQ(charcodes, aw, ac, ctx)
 			// Show text string.
 			case "Tj":
 				if len(op.Params) != 1 {
@@ -892,7 +892,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errType
 				}
 
-				textState.DoTj(charcodes, ctx)
+				textState.ProcTj(charcodes, ctx)
 			// Show array of text strings.
 			case "TJ":
 				if len(op.Params) != 1 {
@@ -910,7 +910,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					switch t := obj.(type) {
 					case *core.PdfObjectString:
 						if t != nil {
-							textState.DoTj(t.Bytes(), ctx)
+							textState.ProcTj(t.Bytes(), ctx)
 						}
 					case *core.PdfObjectFloat, *core.PdfObjectInteger:
 						val, err := core.GetNumberAsFloat(t)
@@ -968,7 +968,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				if textFont, ok := fontCache[baseFont]; ok {
-					textState.DoTf(textFont.Clone(fontSize))
+					textState.ProcTf(textFont.Clone(fontSize))
 					return nil
 				}
 
@@ -980,7 +980,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 						common.Log.Debug("DEBUG: searching system font `%s`", name)
 
 						if textFont, ok = fontCache[name]; ok {
-							textState.DoTf(textFont.Clone(fontSize))
+							textState.ProcTf(textFont.Clone(fontSize))
 							return nil
 						}
 
@@ -1005,7 +1005,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				fontCache[baseFont] = textFont
-				textState.DoTf(textFont)
+				textState.ProcTf(textFont)
 
 			// ---------------------------- //
 			// - Marked content operators - //
