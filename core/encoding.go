@@ -590,7 +590,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
+		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
 				decodeParams = dp
@@ -1760,7 +1760,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
+		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			switch t := obj.(type) {
 			case *PdfObjectDictionary:
@@ -2070,7 +2070,7 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 
 	if decodeParams != nil {
 		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
-			globalsStream, ok := globals.(*PdfObjectStream)
+			globalsStream, ok := GetStream(globals)
 			if !ok {
 				err := errors.New("the Globals stream should be an Object Stream")
 				common.Log.Debug("ERROR: %s", err.Error())
