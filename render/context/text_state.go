@@ -62,7 +62,9 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 
 		// Draw rune.
 		x, y := ts.Tm.Transform(0, 0)
+		ctx.Scale(1, -1)
 		ctx.DrawString(string(r), x, y)
+		ctx.Scale(1, -1)
 
 		// Calculate word spacing.
 		tw := 0.0

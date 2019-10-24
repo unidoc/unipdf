@@ -35,6 +35,7 @@ func (r renderer) renderPage(page *model.PdfPage, ctx context.Context) error {
 
 	// Change coordinate system.
 	ctx.Translate(0, float64(ctx.Height()))
+	ctx.Scale(1, -1)
 
 	// Set defaults.
 	ctx.SetLineWidth(1.0)
@@ -78,7 +79,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				m := transform.NewMatrix(fv[0], fv[1], fv[2], fv[3], fv[4], -fv[5])
+				m := transform.NewMatrix(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
 				common.Log.Debug("Graphics state matrix: %+v\n", m)
 				ctx.SetMatrix(ctx.Matrix().Mult(m))
 
@@ -241,7 +242,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				ctx.NewSubPath()
-				ctx.MoveTo(xy[0], -xy[1])
+				ctx.MoveTo(xy[0], xy[1])
 			// Line to.
 			case "l":
 				if len(op.Params) != 2 {
@@ -253,7 +254,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				ctx.LineTo(xy[0], -xy[1])
+				ctx.LineTo(xy[0], xy[1])
 			// Cubic bezier.
 			case "c":
 				if len(op.Params) != 6 {
@@ -266,7 +267,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
-				ctx.CubicTo(cbp[0], -cbp[1], cbp[2], -cbp[3], cbp[4], -cbp[5])
+				ctx.CubicTo(cbp[0], cbp[1], cbp[2], cbp[3], cbp[4], cbp[5])
 			// Cubic bezier.
 			case "v":
 				if len(op.Params) != 4 {
@@ -279,7 +280,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
-				ctx.CubicTo(0, 0, cbp[0], -cbp[1], cbp[2], -cbp[3])
+				ctx.CubicTo(0, 0, cbp[0], cbp[1], cbp[2], cbp[3])
 			// Close current subpath.
 			case "h":
 				ctx.ClosePath()
@@ -295,7 +296,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return err
 				}
 
-				ctx.DrawRectangle(xywh[0], -xywh[1], xywh[2], -xywh[3])
+				ctx.DrawRectangle(xywh[0], xywh[1], xywh[2], xywh[3])
 				ctx.NewSubPath()
 
 			// ---------------------------- //
@@ -638,7 +639,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 
 					// TODO: Handle soft masks.
 					ctx.Push()
-					ctx.Scale(1.0/float64(bounds.Dx()), 1.0/float64(bounds.Dy()))
+					ctx.Scale(1.0/float64(bounds.Dx()), -1.0/float64(bounds.Dy()))
 					ctx.DrawImageAnchored(goImg, 0, 0, 0, 1)
 					ctx.Pop()
 				case model.XObjectTypeForm:
@@ -675,7 +676,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 							return errRange
 						}
 
-						m := transform.NewMatrix(mf[0], mf[1], mf[2], mf[3], mf[4], -mf[5])
+						m := transform.NewMatrix(mf[0], mf[1], mf[2], mf[3], mf[4], mf[5])
 						ctx.SetMatrix(ctx.Matrix().Mult(m))
 					}
 
@@ -695,7 +696,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 						}
 
 						// Set clipping region.
-						ctx.DrawRectangle(bf[0], -bf[1], bf[2]-bf[0], -(bf[3] - bf[1]))
+						ctx.DrawRectangle(bf[0], bf[1], bf[2]-bf[0], bf[3]-bf[1])
 						ctx.SetRGBA(1, 0, 0, 1)
 						ctx.Clip()
 					} else {
@@ -732,7 +733,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				bounds := goImg.Bounds()
 
 				ctx.Push()
-				ctx.Scale(1.0/float64(bounds.Dx()), 1.0/float64(bounds.Dy()))
+				ctx.Scale(1.0/float64(bounds.Dx()), -1.0/float64(bounds.Dy()))
 				ctx.DrawImageAnchored(goImg, 0, 0, 0, 1)
 				ctx.Pop()
 
