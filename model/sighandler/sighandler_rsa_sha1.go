@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 	"hash"
 
 	"github.com/unidoc/unipdf/v3/core"
@@ -70,16 +71,35 @@ func getHashFromSignatureAlgorithm(sa x509.SignatureAlgorithm) (crypto.Hash, boo
 }
 
 func (a *adobeX509RSASHA1) getCertificate(sig *model.PdfSignature) (*x509.Certificate, error) {
-	certificate := a.certificate
-	if certificate == nil {
-		certData := sig.Cert.(*core.PdfObjectString).Bytes()
-		certs, err := x509.ParseCertificates(certData)
-		if err != nil {
-			return nil, err
-		}
-		certificate = certs[0]
+	if a.certificate != nil {
+		return a.certificate, nil
 	}
-	return certificate, nil
+
+	var certData []byte
+	switch certObj := sig.Cert.(type) {
+	case *core.PdfObjectString:
+		certData = certObj.Bytes()
+	case *core.PdfObjectArray:
+		if certObj.Len() == 0 {
+			return nil, errors.New("no signature certificates found")
+		}
+		for _, obj := range certObj.Elements() {
+			certStr, ok := core.GetString(obj)
+			if !ok {
+				return nil, fmt.Errorf("invalid certificate object type in signature certificate chain: %T", obj)
+			}
+			certData = append(certData, certStr.Bytes()...)
+		}
+	default:
+		return nil, fmt.Errorf("invalid signature certificate object type: %T", certObj)
+	}
+
+	certs, err := x509.ParseCertificates(certData)
+	if err != nil {
+		return nil, err
+	}
+
+	return certs[0], nil
 }
 
 // NewDigest creates a new digest.
@@ -94,15 +114,11 @@ func (a *adobeX509RSASHA1) NewDigest(sig *model.PdfSignature) (model.Hasher, err
 
 // Validate validates PdfSignature.
 func (a *adobeX509RSASHA1) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
-	certData := sig.Cert.(*core.PdfObjectString).Bytes()
-	certs, err := x509.ParseCertificates(certData)
+	certificate, err := a.getCertificate(sig)
 	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
-	if len(certs) == 0 {
-		return model.SignatureValidationResult{}, errors.New("certificate not found")
-	}
-	cert := certs[0]
+
 	signed := sig.Contents.Bytes()
 	var sigHash []byte
 	if _, err := asn1.Unmarshal(signed, &sigHash); err != nil {
@@ -112,12 +128,8 @@ func (a *adobeX509RSASHA1) Validate(sig *model.PdfSignature, digest model.Hasher
 	if !ok {
 		return model.SignatureValidationResult{}, errors.New("hash type error")
 	}
-	certificate, err := a.getCertificate(sig)
-	if err != nil {
-		return model.SignatureValidationResult{}, err
-	}
 	ha, _ := getHashFromSignatureAlgorithm(certificate.SignatureAlgorithm)
-	if err := rsa.VerifyPKCS1v15(cert.PublicKey.(*rsa.PublicKey), ha, h.Sum(nil), sigHash); err != nil {
+	if err := rsa.VerifyPKCS1v15(certificate.PublicKey.(*rsa.PublicKey), ha, h.Sum(nil), sigHash); err != nil {
 		return model.SignatureValidationResult{}, err
 	}
 	return model.SignatureValidationResult{IsSigned: true, IsVerified: true}, nil
