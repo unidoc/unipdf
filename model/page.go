@@ -905,7 +905,6 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj core.PdfObject) (*PdfPageRe
 		obj = indObj.PdfObject
 	}
 
-	// This is needed for ~/testdata/science/climate/CalliesFerrariJPO18a.pdf with lazy reading.
 	dict, ok := core.GetDict(obj)
 	if !ok {
 		return nil, errors.New("CS attribute type error")

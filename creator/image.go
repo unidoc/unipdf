@@ -23,11 +23,6 @@ type Image struct {
 	xobj *model.XObjectImage
 	img  *model.Image
 
-	// Mask
-	maskXobj    *model.XObjectImage
-	maskImg     *model.Image
-	maskEncoder core.StreamEncoder
-
 	// Rotation angle.
 	angle float64
 
@@ -60,15 +55,14 @@ type Image struct {
 	encoder core.StreamEncoder
 }
 
-// newImage creates a new image from a unidoc image (model.Image).
-func newImage(img, mask *model.Image) (*Image, error) {
+// newImage create a new image from a unidoc image (model.Image).
+func newImage(img *model.Image) (*Image, error) {
 	// Image original size in points = pixel size.
 	width := float64(img.Width)
 	height := float64(img.Height)
 
 	return &Image{
 		img:         img,
-		maskImg:     mask,
 		origWidth:   width,
 		origHeight:  height,
 		width:       width,
@@ -90,7 +84,7 @@ func newImageFromData(data []byte) (*Image, error) {
 		return nil, err
 	}
 
-	return newImage(img, nil)
+	return newImage(img)
 }
 
 // newImageFromFile creates an Image from a file.
@@ -108,34 +102,22 @@ func newImageFromFile(path string) (*Image, error) {
 		return nil, err
 	}
 
-	return newImage(img, nil)
+	return newImage(img)
 }
 
 // newImageFromGoImage creates an Image from a go image.Image data structure.
-func newImageFromGoImage(goimg, gomask goimage.Image) (*Image, error) {
+func newImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	img, err := model.ImageHandling.NewImageFromGoImage(goimg)
 	if err != nil {
 		return nil, err
 	}
 
-	var mask *model.Image
-	if gomask != nil {
-		mask, err = model.ImageHandling.NewImageFromGoImage(gomask)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return newImage(img, mask)
+	return newImage(img)
 }
 
 // SetEncoder sets the encoding/compression mechanism for the image.
 func (img *Image) SetEncoder(encoder core.StreamEncoder) {
 	img.encoder = encoder
-}
-
-func (img *Image) SetMaskEncoder(encoder core.StreamEncoder) {
-	img.maskEncoder = encoder
 }
 
 // Height returns Image's document height.
@@ -151,16 +133,6 @@ func (img *Image) Width() float64 {
 // SetOpacity sets opacity for Image.
 func (img *Image) SetOpacity(opacity float64) {
 	img.opacity = opacity
-}
-
-// SetBitsPerComponent sets BitsPerComponent for Image.
-func (img *Image) SetBitsPerComponent(bpp int64) {
-	img.img.BitsPerComponent = bpp
-}
-
-// SetMaskBitsPerComponent sets BitsPerComponent for Image.
-func (img *Image) SetMaskBitsPerComponent(bpp int64) {
-	img.maskImg.BitsPerComponent = bpp
 }
 
 // GetHorizontalAlignment returns the horizontal alignment of the image.
@@ -194,29 +166,11 @@ func (img *Image) makeXObject() error {
 		encoder = core.NewFlateEncoder()
 	}
 
-	var ximg *model.XObjectImage
-	var err error
-	if img.maskImg != nil {
-		// Create the XObject mask image.
-		maskXObj, err := model.NewXObjectImageFromImageIsMask(img.maskImg, nil, img.maskEncoder)
-		if err != nil {
-			common.Log.Debug("Error with mask encoding: %v", err)
-			return err
-		}
-		img.maskXobj = maskXObj
-		// Create the masked image.
-		ximg, err = model.NewXObjectImageFromImageWithMask(img.img, nil, img.encoder, img.maskXobj)
-		if err != nil {
-			common.Log.Error("Failed to create xobject image: %s", err)
-			return err
-		}
-	} else {
-		// Create the XObject image.
-		ximg, err = model.NewXObjectImageFromImage(img.img, nil, encoder)
-		if err != nil {
-			common.Log.Error("Failed to create xobject image: %s", err)
-			return err
-		}
+	// Create the XObject image.
+	ximg, err := model.NewXObjectImageFromImage(img.img, nil, encoder)
+	if err != nil {
+		common.Log.Error("Failed to create xobject image: %s", err)
+		return err
 	}
 
 	img.xobj = ximg
@@ -359,13 +313,6 @@ func drawImageOnBlock(blk *Block, img *Image, ctx DrawContext) (DrawContext, err
 	}
 
 	// Add to the Page resources.
-	if img.maskXobj != nil {
-		// Add mask XObject image which is referred to by the main image img.xobj.
-		err := blk.resources.SetXObjectImageByName(imgName, img.maskXobj)
-		if err != nil {
-			return ctx, err
-		}
-	}
 	err := blk.resources.SetXObjectImageByName(imgName, img.xobj)
 	if err != nil {
 		return ctx, err

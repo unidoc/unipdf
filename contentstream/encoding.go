@@ -16,14 +16,6 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 )
 
-func IsIILossy(inlineImage *ContentStreamInlineImage) bool {
-	enc, err := newEncoderFromInlineImage(inlineImage)
-	if err != nil {
-		return false
-	}
-	return core.IsLossy(enc)
-}
-
 // Creates the encoder for the inline image's Filter and DecodeParms.
 func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.StreamEncoder, error) {
 	if inlineImage.Filter == nil {

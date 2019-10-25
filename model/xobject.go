@@ -7,7 +7,6 @@ package model
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -201,7 +200,6 @@ type XObjectImage struct {
 
 	Intent       core.PdfObject
 	ImageMask    core.PdfObject
-	BlackIs1     core.PdfObject
 	Mask         core.PdfObject
 	Matte        core.PdfObject
 	Decode       core.PdfObject
@@ -220,11 +218,6 @@ type XObjectImage struct {
 	primitive *core.PdfObjectStream
 }
 
-func (xobj XObjectImage) String() string {
-	return fmt.Sprintf("%d x %d bpc=%d ColorSpace=%T SMask=%t",
-		*xobj.Width, *xobj.Height, *xobj.BitsPerComponent, xobj.ColorSpace, xobj.ImageMask != nil)
-}
-
 // NewXObjectImage returns a new XObjectImage.
 func NewXObjectImage() *XObjectImage {
 	xobj := &XObjectImage{}
@@ -238,23 +231,7 @@ func NewXObjectImage() *XObjectImage {
 // with default options. If encoder is nil, uses raw encoding (none).
 func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder core.StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
-	return UpdateXObjectImageFromImage(xobj, img, cs, encoder, nil, false)
-}
-
-// NewXObjectImageFromImageWithMask is like NewXObjectImageFromImage except that it allows a /Mask
-// image to be added. `maskXObj` is the mask image.
-func NewXObjectImageFromImageWithMask(img *Image, cs PdfColorspace,
-	encoder core.StreamEncoder, maskXObj *XObjectImage) (*XObjectImage, error) {
-	xobj := NewXObjectImage()
-	return UpdateXObjectImageFromImage(xobj, img, cs, encoder, maskXObj, false)
-}
-
-// NewXObjectImageFromImageIsMask is like NewXObjectImageFromImage except that it created an
-// ImageMask image.
-func NewXObjectImageFromImageIsMask(img *Image, cs PdfColorspace,
-	encoder core.StreamEncoder) (*XObjectImage, error) {
-	xobj := NewXObjectImage()
-	return UpdateXObjectImageFromImage(xobj, img, cs, encoder, nil, true)
+	return UpdateXObjectImageFromImage(xobj, img, cs, encoder)
 }
 
 // UpdateXObjectImageFromImage creates a new XObject Image from an
@@ -262,12 +239,13 @@ func NewXObjectImageFromImageIsMask(img *Image, cs PdfColorspace,
 // The default masks are overriden if img.hasAlpha
 // If `encoder` is nil, uses raw encoding (none).
 func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace,
-	encoder core.StreamEncoder, maskXObj *XObjectImage, isMask bool) (*XObjectImage, error) {
+	encoder core.StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
 
 	if encoder == nil {
 		encoder = core.NewRawEncoder()
 	}
+
 	encoded, err := encoder.EncodeBytes(img.Data)
 	if err != nil {
 		common.Log.Debug("Error with encoding: %v", err)
@@ -301,16 +279,6 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		xobj.ColorSpace = cs
 	}
 
-	if maskXObj != nil {
-		xobj.Mask = maskXObj.ToPdfObject()
-	}
-
-	if isMask {
-		objTrue := core.PdfObjectBool(true)
-		xobj.ImageMask = &objTrue // PDF readers won't apply mask without this
-		xobj.ColorSpace = nil     // Not needed by any PDF readers tested but PDF spec tells us to do this
-	}
-
 	if img.hasAlpha {
 		// Add the alpha channel information as a stencil mask (SMask).
 		// Has same width and height as original and stored in same
@@ -328,7 +296,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		smask.Height = &img.Height
 		smask.ColorSpace = NewPdfColorspaceDeviceGray()
 		xobj.SMask = smask.ToPdfObject()
-	} else if !isMask {
+	} else {
 		xobj.SMask = xobjIn.SMask
 		xobj.ImageMask = xobjIn.ImageMask
 		if xobj.ColorSpace.GetNumComponents() == 1 {
@@ -459,8 +427,6 @@ func NewXObjectImageFromStream(stream *core.PdfObjectStream) (*XObjectImage, err
 
 	img.Intent = dict.Get("Intent")
 	img.ImageMask = dict.Get("ImageMask")
-	img.BlackIs1 = dict.Get("BlackIs1")
-
 	img.Mask = dict.Get("Mask")
 	img.Decode = dict.Get("Decode")
 	img.Interpolate = dict.Get("Interpolate")
@@ -611,8 +577,6 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 	}
 	dict.SetIfNotNil("Intent", ximg.Intent)
 	dict.SetIfNotNil("ImageMask", ximg.ImageMask)
-	dict.SetIfNotNil("BlackIs1", ximg.BlackIs1)
-
 	dict.SetIfNotNil("Mask", ximg.Mask)
 	dict.SetIfNotNil("Decode", ximg.Decode)
 	dict.SetIfNotNil("Interpolate", ximg.Interpolate)

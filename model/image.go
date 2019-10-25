@@ -12,7 +12,6 @@ import (
 	gocolor "image/color"
 	"image/draw"
 	"io"
-	"time"
 
 	// Imported for initialization side effects.
 	_ "image/gif"
@@ -38,11 +37,6 @@ type Image struct {
 	hasAlpha  bool   // Indicates whether the alpha channel data is available.
 
 	decode []float64 // [Dmin Dmax ... values for each color component]
-}
-
-func (i Image) String() string {
-	return fmt.Sprintf("%dx%d cpts=%d bpc=%d alpha=%t data=%d",
-		i.Width, i.Height, i.ColorComponents, i.BitsPerComponent, i.hasAlpha, len(i.Data))
 }
 
 // AlphaMapFunc represents a alpha mapping function: byte -> byte. Can be used for
@@ -301,28 +295,17 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 }
 
 // ToGoImage converts the unidoc Image to a golang Image structure.
-
 func (img *Image) ToGoImage() (goimage.Image, error) {
-	imgout, _, _, err := img.ToGoImageTimed()
-	return imgout, err
-}
-
-// ToGoImage converts the unidoc Image to a golang Image structure and returns timings.
-func (img *Image) ToGoImageTimed() (goimage.Image, float64, float64, error) {
 	common.Log.Trace("Converting to go image")
 	bounds := goimage.Rect(0, 0, int(img.Width), int(img.Height))
 
 	var imgout core.DrawableImage
-
-	isGray1Bpp := false
-	t0 := time.Now()
 	switch img.ColorComponents {
 	case 1:
 		if img.BitsPerComponent == 16 {
 			imgout = goimage.NewGray16(bounds)
 		} else {
 			imgout = goimage.NewGray(bounds)
-			isGray1Bpp = true
 		}
 	case 3:
 		if img.BitsPerComponent == 16 {
@@ -335,74 +318,23 @@ func (img *Image) ToGoImageTimed() (goimage.Image, float64, float64, error) {
 	default:
 		// TODO: Force RGB convert?
 		common.Log.Debug("Unsupported number of colors components per sample: %d", img.ColorComponents)
-		return nil, 0, 0, errors.New("unsupported colors")
+		return nil, errors.New("unsupported colors")
 	}
 
-	dtSetup := time.Since(t0).Seconds()
+	for y := 0; y < int(img.Height); y++ {
+		for x := 0; x < int(img.Width); x++ {
+			color, err := img.ColorAt(x, y)
+			if err != nil {
+				common.Log.Debug("ERROR: %v. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
+					err, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, len(img.Data))
+				continue
+			}
 
-	t0 = time.Now()
-	if isGray1Bpp {
-		// We optimize Gray 1 bpp. Later on we will optimize other image configurations.
-		w := uint(img.Width)
-		h := uint(img.Height)
-		data := img.Data
-		iout := imgout.(*goimage.Gray)
-		pix := iout.Pix
-		const white = 255
-
-		for y := uint(0); y < h; y++ {
-			// Break horizontal lines into a byte-aligned middle [z0, z1) and fractions of bytes in
-			// at the start [zz, z0) and end [z1, zz+w) of the line.
-			//  |---|----------- ....-----------------|-----|
-			//  zz  z0                                z1   zz+w
-			zz := y * w
-			z0 := ((y*w + 7) / 8) * 8
-			z1 := (((y + 1) * w) / 8) * 8
-			if zz < z0 {
-				pIn := data[(z0-1)/8]
-				for z := zz; z < z0; z++ {
-					pos := 7 - (z - zz)
-					if 1&(pIn>>pos) != 0 {
-						pix[z] = white
-					}
-				}
-			}
-			for z := z0; z < z1; z += 8 {
-				pIn := data[z/8]
-				for i := uint(0); i < 8; i++ {
-					pos := 7 - i
-					if 1&(pIn>>pos) != 0 {
-						pix[z+i] = white
-					}
-				}
-			}
-			if z1 < zz+w {
-				pIn := data[z1/8]
-				for z := z1; z < zz+w; z++ {
-					pos := 7 - (z - z1)
-					if 1&(pIn>>pos) != 0 {
-						pix[z] = white
-					}
-				}
-			}
-		}
-	} else {
-		// General (unoptimized) case.
-		for y := 0; y < int(img.Height); y++ {
-			for x := 0; x < int(img.Width); x++ {
-				color, err := img.ColorAt(x, y)
-				if err != nil {
-					common.Log.Debug("ERROR: %v. Image details: %d components, %d bits per component, %dx%d dimensions, %d data length",
-						err, img.ColorComponents, img.BitsPerComponent, img.Width, img.Height, len(img.Data))
-					continue
-				}
-				imgout.Set(x, y, color)
-			}
+			imgout.Set(x, y, color)
 		}
 	}
 
-	dtLoop := time.Since(t0).Seconds()
-	return imgout, dtSetup, dtLoop, nil
+	return imgout, nil
 }
 
 // ImageHandler interface implements common image loading and processing tasks.

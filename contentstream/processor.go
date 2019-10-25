@@ -49,13 +49,11 @@ func (gs *GraphicsState) Transform(x, y float64) (float64, float64) {
 // current graphics state, and allowing external handlers to define their own functions as a part of the processing,
 // for example rendering or extracting certain information.
 type ContentStreamProcessor struct {
-	graphicsStack  GraphicStateStack
-	operations     []*ContentStreamOperation
-	operationsChan <-chan OperationsChunk
-	graphicsState  GraphicsState
+	graphicsStack GraphicStateStack
+	operations    []*ContentStreamOperation
+	graphicsState GraphicsState
 
 	handlers     []handlerEntry
-	done         bool
 	currentIndex int
 }
 
@@ -105,26 +103,6 @@ func NewContentStreamProcessor(ops []*ContentStreamOperation) *ContentStreamProc
 	return &csp
 }
 
-// NewContentStreamProcessor returns a new ContentStreamProcessor for OperationsChunk channel
-// `operationsChan`. NewContentStreamProcessorChannel() works with ProcessChannel() and
-// ContentStreamParser.ParseChannel() as NewContentStreamProcessor() works with Process() and
-// ContentStreamParser.Parse().
-func NewContentStreamProcessorChannel(operationsChan <-chan OperationsChunk) *ContentStreamProcessor {
-	csp := ContentStreamProcessor{}
-	csp.graphicsStack = GraphicStateStack{}
-
-	// Set defaults..
-	gs := GraphicsState{}
-
-	csp.graphicsState = gs
-
-	csp.handlers = []handlerEntry{}
-	csp.currentIndex = 0
-	csp.operationsChan = operationsChan
-
-	return &csp
-}
-
 // AddHandler adds a new ContentStreamProcessor `handler` of type `condition` for `operand`.
 func (proc *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, operand string, handler HandlerFunc) {
 	entry := handlerEntry{}
@@ -132,11 +110,6 @@ func (proc *ContentStreamProcessor) AddHandler(condition HandlerConditionEnum, o
 	entry.Operand = operand
 	entry.Handler = handler
 	proc.handlers = append(proc.handlers, entry)
-}
-
-// Terminate allows handlers to terminate a Process or ProcessChannel when they have completed.
-func (proc *ContentStreamProcessor) Terminate() {
-	proc.done = true
 }
 
 func (proc *ContentStreamProcessor) getColorspace(name string, resources *model.PdfPageResources) (model.PdfColorspace, error) {
@@ -249,7 +222,7 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
 	proc.graphicsState.CTM = transform.IdentityMatrix()
 
-	for i, op := range proc.operations {
+	for _, op := range proc.operations {
 		var err error
 
 		// Internal handling.
@@ -305,99 +278,6 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 				common.Log.Debug("Processor handler error: %v", err)
 				return err
 			}
-		}
-		if proc.done {
-			// Handler wants to terminate processing.
-			common.Log.Debug("Done: i=%d of %d", i, len(proc.operations))
-			return nil
-		}
-	}
-
-	return nil
-}
-
-// ProcessChannel processes the entire list of operations in proc.operationsChan. It maintains the
-// graphics state that is passed to any handlers that are triggered during processing (either on
-// specific operators or all).
-// ProcessChannel works exaclty like Process except that it reads the operations from a channel
-// proc.operationsChan instead of a slice proc.operations.
-func (proc *ContentStreamProcessor) ProcessChannel(resources *model.PdfPageResources) error {
-	// Initialize graphics state
-	proc.graphicsState.ColorspaceStroking = model.NewPdfColorspaceDeviceGray()
-	proc.graphicsState.ColorspaceNonStroking = model.NewPdfColorspaceDeviceGray()
-	proc.graphicsState.ColorStroking = model.NewPdfColorDeviceGray(0)
-	proc.graphicsState.ColorNonStroking = model.NewPdfColorDeviceGray(0)
-	proc.graphicsState.CTM = transform.IdentityMatrix()
-
-	numOps := 0
-	for chunk := range proc.operationsChan {
-		if chunk.Err != nil {
-			return fmt.Errorf("parser error=%v", chunk.Err)
-		}
-		for _, op := range chunk.Operations {
-			var err error
-
-			// Internal handling.
-			switch op.Operand {
-			case "q":
-				proc.graphicsStack.Push(proc.graphicsState)
-			case "Q":
-				proc.graphicsState = proc.graphicsStack.Pop()
-
-			// Color operations (Table 74 p. 179)
-			case "CS":
-				err = proc.handleCommand_CS(op, resources)
-			case "cs":
-				err = proc.handleCommand_cs(op, resources)
-			case "SC":
-				err = proc.handleCommand_SC(op, resources)
-			case "SCN":
-				err = proc.handleCommand_SCN(op, resources)
-			case "sc":
-				err = proc.handleCommand_sc(op, resources)
-			case "scn":
-				err = proc.handleCommand_scn(op, resources)
-			case "G":
-				err = proc.handleCommand_G(op, resources)
-			case "g":
-				err = proc.handleCommand_g(op, resources)
-			case "RG":
-				err = proc.handleCommand_RG(op, resources)
-			case "rg":
-				err = proc.handleCommand_rg(op, resources)
-			case "K":
-				err = proc.handleCommand_K(op, resources)
-			case "k":
-				err = proc.handleCommand_k(op, resources)
-			case "cm":
-				err = proc.handleCommand_cm(op, resources)
-			}
-			if err != nil {
-				common.Log.Debug("Processor handling error (%s): %v", op.Operand, err)
-				common.Log.Debug("Operand: %#v", op.Operand)
-				return err
-			}
-
-			// Check if have external handler also, and process if so.
-			for _, entry := range proc.handlers {
-				var err error
-				if entry.Condition.All() {
-					err = entry.Handler(op, proc.graphicsState, resources)
-				} else if entry.Condition.Operand() && op.Operand == entry.Operand {
-					err = entry.Handler(op, proc.graphicsState, resources)
-				}
-				if err != nil {
-					common.Log.Debug("Processor handler error: %v", err)
-					return err
-				}
-			}
-			numOps++
-			if proc.done {
-				// Handler wants to terminate processing.
-				common.Log.Debug("Done: numOps=%d", numOps)
-				return nil
-			}
-
 		}
 	}
 

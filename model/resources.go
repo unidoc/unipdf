@@ -113,6 +113,7 @@ func (r *PdfPageResources) ToPdfObject() core.PdfObject {
 	d.SetIfNotNil("Font", r.Font)
 	d.SetIfNotNil("ProcSet", r.ProcSet)
 	d.SetIfNotNil("Properties", r.Properties)
+
 	return d
 }
 
@@ -474,16 +475,4 @@ func (r *PdfPageResources) SetXObjectFormByName(keyName core.PdfObjectName, xfor
 	stream := xform.ToPdfObject().(*core.PdfObjectStream)
 	err := r.SetXObjectByName(keyName, stream)
 	return err
-}
-
-// AddStandardProcsets adds the ProcSets that many PDF generators add by default.
-// XXX(peterwilliams97) I don't know if any PDF interpreters need this
-func (r *PdfPageResources) AddStandardProcsets() {
-	p := core.PdfObjectName("PDF")
-	t := core.PdfObjectName("Text")
-	c := core.PdfObjectName("ImageC")
-	b := core.PdfObjectName("ImageB")
-	i := core.PdfObjectName("ImageI")
-	procs := core.MakeArray(&p, &t, &c, &b, &i)
-	r.ProcSet = procs
 }

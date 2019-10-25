@@ -72,70 +72,6 @@ func (csp *ContentStreamParser) Parse() (*ContentStreamOperations, error) {
 	}
 }
 
-// OperationsChunk is a container of operations sent from the parser to a channel by ParseChannel.
-type OperationsChunk struct {
-	// Number is a 0-offset chunk number
-	Number int
-	// Operations are the ContentStreamOperations parsed for this chunk.
-	Operations []*ContentStreamOperation
-	// Err is parser error
-	Err error
-}
-
-// ParseChannel works like Parse except that it writes its results to channel `operationsChan`.
-func (csp *ContentStreamParser) ParseChannel(chunkSize int, operationsChan chan<- OperationsChunk) {
-	var operations []*ContentStreamOperation
-	chunkNum := 0
-
-	// sendChunk sends an OperationsChunk of `operations` and `err` to `operationsChan` and updates
-	// the chunk counter.
-	sendChunk := func(operations []*ContentStreamOperation, err error) {
-		operationsChan <- OperationsChunk{Number: chunkNum, Operations: operations, Err: err}
-		chunkNum++
-	}
-
-	for {
-		operation := ContentStreamOperation{}
-
-		for {
-			obj, isOperand, err := csp.parseObject()
-			if err != nil {
-				if err == io.EOF {
-					// End of data. Successful exit point.
-					if chunkNum > 0 || len(operations) > 0 {
-						sendChunk(operations, nil)
-					}
-				} else {
-					sendChunk(nil, err)
-				}
-				return
-			}
-			if isOperand {
-				operation.Operand, _ = core.GetStringVal(obj)
-				operations = append(operations, &operation)
-				break
-			} else {
-				operation.Params = append(operation.Params, obj)
-			}
-		}
-
-		if operation.Operand == "BI" {
-			// Parse an inline image, reads everything between the "BI" and "EI".
-			// The image is stored as the parameter.
-			im, err := csp.ParseInlineImage()
-			if err != nil {
-				sendChunk(nil, err)
-			}
-			operation.Params = append(operation.Params, im)
-		}
-
-		if len(operations) >= chunkSize {
-			sendChunk(operations, nil)
-			operations = nil
-		}
-	}
-}
-
 // Skip over any spaces.  Returns the number of spaces skipped and
 // an error if any.
 func (csp *ContentStreamParser) skipSpaces() (int, error) {
@@ -259,7 +195,7 @@ func (csp *ContentStreamParser) parseNumber() (core.PdfObject, error) {
 	allowSigns := true
 	numStr := ""
 	for {
-		// common.Log.Trace("Parsing number \"%s\"", numStr)
+		common.Log.Trace("Parsing number \"%s\"", numStr)
 		bb, err := csp.reader.Peek(1)
 		if err == io.EOF {
 			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
@@ -355,7 +291,7 @@ func (csp *ContentStreamParser) parseString() (*core.PdfObjectString, error) {
 				}
 				csp.reader.Discard(len(numeric) - 1)
 
-				// common.Log.Trace("Numeric string \"%s\"", numeric)
+				common.Log.Trace("Numeric string \"%s\"", numeric)
 				code, err := strconv.ParseUint(string(numeric), 8, 32)
 				if err != nil {
 					return core.MakeString(string(bytes)), err
@@ -516,17 +452,17 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 			return nil, err
 		}
 
-		// common.Log.Trace("Dict peek: %s (% x)!", string(bb), string(bb))
+		common.Log.Trace("Dict peek: %s (% x)!", string(bb), string(bb))
 		if (bb[0] == '>') && (bb[1] == '>') {
-			// common.Log.Trace("EOF dictionary")
+			common.Log.Trace("EOF dictionary")
 			csp.reader.ReadByte()
 			csp.reader.ReadByte()
 			break
 		}
-		// common.Log.Trace("Parse the name!")
+		common.Log.Trace("Parse the name!")
 
 		keyName, err := csp.parseName()
-		// common.Log.Trace("Key: %s", keyName)
+		common.Log.Trace("Key: %s", keyName)
 		if err != nil {
 			common.Log.Debug("ERROR Returning name err %s", err)
 			return nil, err
@@ -536,8 +472,8 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 			// Some writers have a bug where the null is appended without
 			// space.  For example "\Boundsnull"
 			newKey := keyName[0 : len(keyName)-4]
-			// common.Log.Trace("Taking care of null bug (%s)", keyName)
-			// common.Log.Trace("New key \"%s\" = null", newKey)
+			common.Log.Trace("Taking care of null bug (%s)", keyName)
+			common.Log.Trace("New key \"%s\" = null", newKey)
 			csp.skipSpaces()
 			bb, _ := csp.reader.Peek(1)
 			if bb[0] == '/' {
@@ -554,7 +490,7 @@ func (csp *ContentStreamParser) parseDict() (*core.PdfObjectDictionary, error) {
 		}
 		dict.Set(keyName, val)
 
-		// common.Log.Trace("dict[%s] = %s", keyName, val.String())
+		common.Log.Trace("dict[%s] = %s", keyName, val.String())
 	}
 
 	return dict, nil
@@ -597,17 +533,17 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, isop bool, er
 			return nil, false, err
 		}
 
-		// common.Log.Trace("Peek string: %s", string(bb))
+		common.Log.Trace("Peek string: %s", string(bb))
 		// Determine type.
 		if bb[0] == '%' {
 			csp.skipComments()
 			continue
 		} else if bb[0] == '/' {
 			name, err := csp.parseName()
-			// common.Log.Trace("->Name: '%s'", name)
+			common.Log.Trace("->Name: '%s'", name)
 			return &name, false, err
 		} else if bb[0] == '(' {
-			// common.Log.Trace("->String!")
+			common.Log.Trace("->String!")
 			str, err := csp.parseString()
 			return str, false, err
 		} else if bb[0] == '<' && bb[1] != '<' {
@@ -615,11 +551,11 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, isop bool, er
 			str, err := csp.parseHexString()
 			return str, false, err
 		} else if bb[0] == '[' {
-			// common.Log.Trace("->Array!")
+			common.Log.Trace("->Array!")
 			arr, err := csp.parseArray()
 			return arr, false, err
 		} else if core.IsFloatDigit(bb[0]) || (bb[0] == '-' && core.IsFloatDigit(bb[1])) {
-			// common.Log.Trace("->Number!")
+			common.Log.Trace("->Number!")
 			number, err := csp.parseNumber()
 			return number, false, err
 		} else if bb[0] == '<' && bb[1] == '<' {
@@ -627,7 +563,7 @@ func (csp *ContentStreamParser) parseObject() (obj core.PdfObject, isop bool, er
 			return dict, false, err
 		} else {
 			// Otherwise, can be: keyword such as "null", "false", "true" or an operand...
-			// common.Log.Trace("->Operand or bool?")
+			common.Log.Trace("->Operand or bool?")
 			// Let's peek farther to find out.
 			bb, _ = csp.reader.Peek(5)
 			peekStr := string(bb)

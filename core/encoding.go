@@ -993,20 +993,11 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 	return encoder, nil
 }
 
-// func gocvDecode(buf []byte) (goimage.Image, error) {
-// 	m, err := gocv.IMDecode(buf, gocv.IMReadAnyColor)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return m.ToImage()
-// }
-
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	common.Log.Trace("DCTEncoder.DecodeBytes: encoded=%d", len(encoded))
 	bufReader := bytes.NewReader(encoded)
+	//img, _, err := goimage.Decode(bufReader)
 	img, err := jpeg.Decode(bufReader)
-	// img, err := gocvDecode(encoded)
 	if err != nil {
 		common.Log.Debug("Error decoding image: %s", err)
 		return nil, err
@@ -2450,20 +2441,4 @@ func (enc *MultiEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	return encoded, nil
-}
-
-// IsLossy returns true if `enc` is lossy.
-func IsLossy(enc StreamEncoder) bool {
-	switch t := enc.(type) {
-	case *DCTEncoder, *JPXEncoder:
-		return true
-	case *MultiEncoder:
-		for _, e := range t.encoders {
-			if IsLossy(e) {
-				return true
-			}
-		}
-	}
-
-	return false
 }

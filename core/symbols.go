@@ -38,11 +38,10 @@ func IsPrintable(c byte) bool {
 }
 
 // IsDelimiter checks if a character represents a delimiter.
-func IsDelimiter(char byte) bool {
-	return char == '(' || char == ')' ||
-		char == '<' || char == '>' ||
-		char == '[' || char == ']' ||
-		char == '{' || char == '}' ||
-		char == '/' || char == '%'
-
+func IsDelimiter(c byte) bool {
+	return c == '(' || c == ')' ||
+		c == '<' || c == '>' ||
+		c == '[' || c == ']' ||
+		c == '{' || c == '}' ||
+		c == '/' || c == '%'
 }

@@ -802,7 +802,7 @@ func (c *Creator) NewCurve(x1, y1, cx, cy, x2, y2 float64) *Curve {
 
 // NewImage create a new image from a unidoc image (model.Image).
 func (c *Creator) NewImage(img *model.Image) (*Image, error) {
-	return newImage(img, nil)
+	return newImage(img)
 }
 
 // NewImageFromData creates an Image from image data.
@@ -817,9 +817,5 @@ func (c *Creator) NewImageFromFile(path string) (*Image, error) {
 
 // NewImageFromGoImage creates an Image from a go image.Image data structure.
 func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
-	return newImageFromGoImage(goimg, nil)
-}
-
-func (c *Creator) NewImageWithMaskFromGoImages(goimg, gomask goimage.Image) (*Image, error) {
-	return newImageFromGoImage(goimg, gomask)
+	return newImageFromGoImage(goimg)
 }

@@ -141,7 +141,6 @@ func newPdfShadingFromPdfObject(obj core.PdfObject) (*PdfShading, error) {
 	shading := &PdfShading{}
 
 	var dict *core.PdfObjectDictionary
-	// Needed for lazy reading of coins.pdf (peterwilliams97)
 	if indObj, isInd := core.GetIndirect(obj); isInd {
 		shading.container = indObj
 
