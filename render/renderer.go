@@ -968,21 +968,20 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					baseFont = fontName.String()
 				}
 
-				if textFont, ok := fontCache[baseFont]; ok {
-					textState.ProcTf(textFont.WithSize(fontSize))
-					return nil
+				textFont, ok := fontCache[baseFont]
+				if !ok {
+					textFont, err = context.NewTextFont(pdfFont, fontSize)
+					if err != nil {
+						common.Log.Debug("ERROR: %v", err)
+					}
 				}
 
-				textFont, err := context.NewTextFont(pdfFont, fontSize)
-				if err != nil {
-					common.Log.Debug("ERROR: %v", err)
-
+				if textFont == nil {
 					for _, name := range []string{baseFont, "Helvetica"} {
 						common.Log.Debug("DEBUG: searching system font `%s`", name)
 
 						if textFont, ok = fontCache[name]; ok {
-							textState.ProcTf(textFont.WithSize(fontSize))
-							return nil
+							break
 						}
 
 						fontPath, err := findfont.Find(name)
@@ -996,17 +995,17 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 							continue
 						}
 
-						baseFont = name
+						fontCache[name] = textFont
+						break
 					}
 				}
 
 				if textFont == nil {
 					common.Log.Debug("ERROR: could not find any suitable font")
-					return nil
+					return errors.New("could not find any suitable font")
 				}
 
-				fontCache[baseFont] = textFont
-				textState.ProcTf(textFont)
+				textState.ProcTf(textFont.WithSize(fontSize, pdfFont))
 
 			// ---------------------------- //
 			// - Marked content operators - //
