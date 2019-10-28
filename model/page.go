@@ -905,7 +905,7 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj core.PdfObject) (*PdfPageRe
 		obj = indObj.PdfObject
 	}
 
-	dict, ok := obj.(*core.PdfObjectDictionary)
+	dict, ok := core.GetDict(obj)
 	if !ok {
 		return nil, errors.New("CS attribute type error")
 	}
