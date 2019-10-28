@@ -89,7 +89,7 @@ func (tf *TextFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune
 
 func (tf *TextFont) GetCharMetrics(code textencoding.CharCode) (float64, float64, bool) {
 	if tf.origFont != nil {
-		if metrics, ok := tf.origFont.GetCharMetrics(code); ok {
+		if metrics, ok := tf.origFont.GetCharMetrics(code); ok && metrics.Wx != 0 {
 			return metrics.Wx, metrics.Wy, true
 		}
 	}
