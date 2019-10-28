@@ -26,16 +26,21 @@ func (r renderer) renderPage(page *model.PdfPage, ctx context.Context) error {
 		return err
 	}
 
-	// Create white background.
-	ctx.Push()
-	ctx.SetRGBA(1, 1, 1, 1)
-	ctx.DrawRectangle(0, 0, float64(ctx.Width()), float64(ctx.Height()))
-	ctx.Fill()
-	ctx.Pop()
-
 	// Change coordinate system.
 	ctx.Translate(0, float64(ctx.Height()))
 	ctx.Scale(1, -1)
+
+	var x, y, w, h float64 = 0, 0, float64(ctx.Width()), float64(ctx.Height())
+	if box := page.CropBox; box != nil {
+		x, y, w, h = box.Llx, box.Lly, box.Urx-box.Llx, box.Ury-box.Lly
+	}
+
+	// Create white background.
+	ctx.Push()
+	ctx.SetRGBA(1, 1, 1, 1)
+	ctx.DrawRectangle(x, y, w, h)
+	ctx.Fill()
+	ctx.Pop()
 
 	// Set defaults.
 	ctx.SetLineWidth(1.0)
