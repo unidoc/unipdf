@@ -61,7 +61,8 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	pageText := &PageText{}
 	state := newTextState()
 	fontStack := fontStacker{}
-	var to *textObject
+	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &fontStack)
+	var inTextObj bool
 
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
@@ -105,13 +106,18 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				// Begin a text object, initializing the text matrix, Tm, and the text line matrix,
 				// Tlm, to the identity matrix. Text objects shall not be nested; a second BT shall
 				// not appear before an ET.
-				if to != nil {
+				if inTextObj {
 					common.Log.Debug("BT called while in a text object")
 				}
+				inTextObj = true
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
+				if !inTextObj {
+					common.Log.Debug("ET called outside of a text object")
+				}
+				inTextObj = false
 				pageText.marks = append(pageText.marks, to.marks...)
-				to = nil
+				to.resetTextMatrix()
 			case "T*": // Move to start of next text line
 				to.nextLine()
 			case "Td": // Move text location
@@ -202,10 +208,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				}
 				to.setCharSpacing(y)
 			case "Tf": // Set font.
-				if to == nil {
-					// This is needed for 26-Hazard-Thermal-environment.pdf
-					to = newTextObject(e, resources, gs, &state, &fontStack)
-				}
 				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: Tf err=%v", err)
 					return err
@@ -377,6 +379,13 @@ func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.tm = transform.NewMatrix(a, b, c, d, tx, ty)
 	to.tlm = to.tm
+}
+
+// resetTextMatrix sets the text matrix `Tm` and the text line matrix `Tlm`
+// to the identity matrix.
+func (to *textObject) resetTextMatrix() {
+	to.tm = transform.IdentityMatrix()
+	to.tlm = transform.IdentityMatrix()
 }
 
 // showText "Tj". Show a text string.
@@ -1205,7 +1214,7 @@ func (pt *PageText) sortPosition(tol float64) {
 		if pt.marks[i-1].orient != pt.marks[i].orient {
 			cluster++
 		} else {
-			if pt.marks[i-1].orientedStart.Y - pt.marks[i].orientedStart.Y > tol {
+			if pt.marks[i-1].orientedStart.Y-pt.marks[i].orientedStart.Y > tol {
 				cluster++
 			}
 		}
