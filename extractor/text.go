@@ -103,21 +103,31 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					state.tfont = fontStack.pop()
 				}
 			case "BT": // Begin text
-				// Begin a text object, initializing the text matrix, Tm, and the text line matrix,
-				// Tlm, to the identity matrix. Text objects shall not be nested; a second BT shall
-				// not appear before an ET.
+				// Begin a text object, initializing the text matrix, Tm, and
+				// the text line matrix, Tlm, to the identity matrix. Text
+				// objects shall not be nested. A second BT shall not appear
+				// before an ET. However, if that happens, all existing marks
+				// are added to the  page marks, in order to avoid losing content.
 				if inTextObj {
 					common.Log.Debug("BT called while in a text object")
+					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
+				// End text object, discarding text matrix. If the current
+				// text object contains text marks, they are added to the
+				// page text marks collection.
+				// The ET operator should always have a matching BT operator.
+				// However, if ET appears outside of a text object, the behavior
+				// does not change: the text matrices are discarded and all
+				// existing marks in the text object are added to the page marks.
 				if !inTextObj {
 					common.Log.Debug("ET called outside of a text object")
 				}
 				inTextObj = false
 				pageText.marks = append(pageText.marks, to.marks...)
-				to.resetTextMatrix()
+				to.reset()
 			case "T*": // Move to start of next text line
 				to.nextLine()
 			case "Td": // Move text location
@@ -379,13 +389,6 @@ func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.tm = transform.NewMatrix(a, b, c, d, tx, ty)
 	to.tlm = to.tm
-}
-
-// resetTextMatrix sets the text matrix `Tm` and the text line matrix `Tlm`
-// to the identity matrix.
-func (to *textObject) resetTextMatrix() {
-	to.tm = transform.IdentityMatrix()
-	to.tlm = transform.IdentityMatrix()
 }
 
 // showText "Tj". Show a text string.
@@ -666,6 +669,14 @@ func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentst
 		tm:        transform.IdentityMatrix(),
 		tlm:       transform.IdentityMatrix(),
 	}
+}
+
+// reset sets the text matrix `Tm` and the text line matrix `Tlm` of the text
+// object to the identity matrix. In addition, the marks collection is cleared.
+func (to *textObject) reset() {
+	to.tm = transform.IdentityMatrix()
+	to.tlm = transform.IdentityMatrix()
+	to.marks = nil
 }
 
 // renderText processes and renders byte array `data` for extraction purposes.
