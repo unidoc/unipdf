@@ -346,9 +346,16 @@ func (c *Creator) Context() DrawContext {
 	return c.context
 }
 
-// Call before writing out. Takes care of adding headers and footers, as well
-// as generating front Page and table of contents.
-func (c *Creator) finalize() error {
+// Finalize renders all blocks to the creator pages. In addition, it takes care
+// of adding headers and footers, as well as generating the front page,
+// table of contents and outlines.
+// Finalize is automatically called before writing the document out. Calling the
+// method manually can be useful when adding external pages to the creator,
+// using the AddPage method, as it renders all creator blocks to the added
+// pages, without having to write the document out.
+// NOTE: TOC and outlines are generated only if the AddTOC and AddOutlines
+// fields of the creator are set to true (enabled by default).
+func (c *Creator) Finalize() error {
 	totPages := len(c.pages)
 
 	// Estimate number of additional generated pages and update TOC.
@@ -563,8 +570,12 @@ func (c *Creator) MoveDown(dy float64) {
 	c.context.Y += dy
 }
 
-// Draw draws the Drawable widget to the document.  This can span over 1 or more pages. Additional
-// pages are added if the contents go over the current Page.
+// Draw processes the specified Drawable widget and generates blocks that can
+// be rendered to the output document. The generated blocks can span over one
+// or more pages. Additional pages are added if the contents go over the current
+// page. Each generated block is assigned to the creator page it will be
+// rendered to. In order to render the generated blocks to the creator pages,
+// call Finalize, Write or WriteToFile.
 func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
 		// Add a new Page if none added already.
@@ -605,7 +616,7 @@ func (c *Creator) Draw(d Drawable) error {
 // Write output of creator to io.Writer interface.
 func (c *Creator) Write(ws io.Writer) error {
 	if !c.finalized {
-		if err := c.finalize(); err != nil {
+		if err := c.Finalize(); err != nil {
 			return err
 		}
 	}
