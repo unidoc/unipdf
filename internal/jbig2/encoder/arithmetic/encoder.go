@@ -6,11 +6,12 @@
 package arithmetic
 
 import (
-	"errors"
 	"io"
 
-	"github.com/unidoc/unipdf/common"
-	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // CoderDebugging is the variable used to debug the encoder.
@@ -22,20 +23,24 @@ type Encoder struct {
 	a     uint16
 	ct, b uint8
 	bp    int
-
-	ec int
+	ec    int
 
 	// the list of output chunks, not including the current one
 	outputChunks [][]byte
-
 	// current output chunk
 	outbuf []byte
-
 	// number of bytes used in outbuf
 	outbufUsed int
 	context    *codingContext
 	intctx     [13]*codingContext
 	iaidctx    *codingContext
+}
+
+// New creates new initialized arithmetic encoder.
+func New() *Encoder {
+	e := &Encoder{}
+	e.Init()
+	return e
 }
 
 // Init initializaes a new context
@@ -51,31 +56,32 @@ func (e *Encoder) Init() {
 	for i := 0; i < len(e.intctx); i++ {
 		e.intctx[i] = newContext(512)
 	}
-
 	e.iaidctx = nil
 }
 
-const (
-	tpgdCTX = 0x9b25
-)
+const tpgdCTX = 0x9b25
 
-// EncodeBitmap encodes packed data. Designed for the Leptonica's 1bpp packed format image.
+// EncodeBitmap encodes packed data used for the Leptonica's 1bpp packed format image.
 func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemoval bool) error {
-	var ltp, sltp uint8
+	var (
+		ltp, sltp  uint8
+		c1, c2, c3 uint16
+		b1, b2, b3 byte
+		x          int
+	)
 
 	for y := 0; y < bm.Height; y++ {
-		x := 0
-		var (
-			c1, c2, c3 uint16
-			b1, b2, b3 byte
-		)
-
+		// reset the bits context values for each row.
+		// the temple used by the coder is fixed as '0' with the floating bits in the default locations.
+		c1, c2, c3 = 0, 0, 0
+		// reset the byte values which are the values of the upper rows.
+		b1, b2, b3 = 0, 0, 0
 		if y >= 2 {
 			b1 = bm.Data[(y-2)*bm.RowStride]
 		}
 		if y >= 1 {
 			b2 = bm.Data[(y-1)*bm.RowStride]
-
+			// check if the last row was not the same as this one.
 			if duplicateLineRemoval {
 				if bm.Data[y*bm.RowStride] == bm.Data[(y-1)*bm.RowStride] {
 					sltp = ltp ^ 1
@@ -95,7 +101,6 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 				continue
 			}
 		}
-
 		b3 = bm.Data[y*bm.RowStride]
 
 		// top three bits are the start of the context
@@ -122,7 +127,7 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 
 			c1 |= uint16((b1 & 0x80) >> 7)
 			c2 |= uint16((b2 & 0x80) >> 7)
-			c3 = uint16(v)
+			c3 |= uint16(v)
 
 			m := x % 8
 			byteNo := x/8 + 1
@@ -160,6 +165,34 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 		}
 	}
 	return nil
+}
+
+// EncodeIAID encodes the integer ID value.
+func (e *Encoder) EncodeIAID(symbolCodeLength, value int) (err error) {
+	if err = e.encodeIAID(symbolCodeLength, value); err != nil {
+		return errors.Wrap(err, "EncodeIAID", "")
+	}
+	return nil
+}
+
+func (e *Encoder) EncodeInteger(proc Class, value int) (err error) {
+	if err = e.encodeInteger(proc, value); err != nil {
+		return errors.Wrap(err, "EncodeInteger", "")
+	}
+	return nil
+}
+
+// EncodeOOB encodes out of band value for given class process.
+func (e *Encoder) EncodeOOB(proc Class) (err error) {
+	if err = e.encodeOOB(proc); err != nil {
+		return errors.Wrap(err, "EncodeOOB", "")
+	}
+	return nil
+}
+
+// Final flush any remaining arithmetic encoder context to the output
+func (e *Encoder) Final() {
+	e.flush()
 }
 
 // Flush all the data stored in a context
@@ -288,9 +321,29 @@ func (e *Encoder) Reset() {
 	e.context = newContext(maxCtx)
 }
 
-// Final flush any remaining arithmetic encoder context to the output
-func (e *Encoder) Final() {
-	e.flush()
+// compile time check for the io.WriterTo interface.
+var _ io.WriterTo = &Encoder{}
+
+// WriteTo implements io.WriterTo interface.
+func (e *Encoder) WriteTo(w io.Writer) (int64, error) {
+	const processName = "Encoder.WriteTo"
+	var total int64
+	for i, chunk := range e.outputChunks {
+		n, err := w.Write(chunk)
+		if err != nil {
+			return 0, errors.Wrapf(err, processName, "failed at i'th: '%d' chunk", i)
+		}
+		total += int64(n)
+	}
+
+	// remove unused bytes.
+	e.outbuf = e.outbuf[:e.outbufUsed]
+	n, err := w.Write(e.outbuf)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "buffered chunks")
+	}
+	total += int64(n)
+	return total, nil
 }
 
 func (e *Encoder) byteout() {
@@ -387,10 +440,11 @@ func (e *Encoder) emit() {
 
 func (e *Encoder) encodeBit(ctx *codingContext, ctxNum uint32, d uint8) error {
 	// NOTE: jbig2arith.cc:238
+	const processName = "Encoder.encodeBit"
 	e.ec++
 
 	if ctxNum >= uint32(len(ctx.context)) {
-		return errors.New("arithmetic encoder - invalid ctx number")
+		return errors.Errorf(processName, "arithmetic encoder - invalid ctx number: '%d'", ctxNum)
 	}
 
 	i := ctx.context[ctxNum]
@@ -411,15 +465,14 @@ func (e *Encoder) encodeBit(ctx *codingContext, ctxNum uint32, d uint8) error {
 
 func (e *Encoder) encodeInteger(proc Class, value int) error {
 	// NOTE: jbig2arith.cc:381
-	ctx := e.intctx[proc]
-
-	var i int
-
+	const processName = "Encoder.encodeInteger"
 	if value > 2000000000 || value < -2000000000 {
-		return errors.New("arithmetic encoder - invalid integer value")
+		return errors.Errorf(processName, "arithmetic encoder - invalid integer value: '%d'", value)
 	}
 
+	ctx := e.intctx[proc]
 	prev := uint32(1)
+	var i int
 
 	for {
 		if intEncRange[i].bot <= value && intEncRange[i].top >= value {
@@ -437,7 +490,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	for j := uint8(0); j < intEncRange[i].bits; j++ {
 		v := data & 1
 		if err := e.encodeBit(ctx, prev, v); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		data >>= 1
@@ -562,25 +615,4 @@ func (e *Encoder) setBits() {
 	if e.c >= tempC {
 		e.c -= 0x8000
 	}
-}
-
-func (e *Encoder) toBuffer(w io.Writer) (int, error) {
-	var total int
-	for _, chunk := range e.outputChunks {
-		n, err := w.Write(chunk)
-		if err != nil {
-			return n, err
-		}
-		total += n
-	}
-
-	buf := make([]byte, e.outbufUsed)
-	copy(buf, e.outbuf)
-
-	n, err := w.Write(buf)
-	if err != nil {
-		return n, err
-	}
-	total += n
-	return total, nil
 }

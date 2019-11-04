@@ -57,10 +57,13 @@ type GenericRegion struct {
 }
 
 // NewGenericRegion creates new GenericRegion segment.
-func NewGenericRegion(
-	r reader.StreamReader,
-) *GenericRegion {
+func NewGenericRegion(r reader.StreamReader) *GenericRegion {
 	return &GenericRegion{RegionSegment: NewRegionSegment(r), r: r}
+}
+
+// Encode implements SegmentEncoder interface.
+func (g *GenericRegion) Encode() (encoded []byte, err error) {
+	return encoded, nil
 }
 
 // Init implements Segmenter interface.

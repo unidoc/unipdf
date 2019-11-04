@@ -6,8 +6,9 @@
 package bitmap
 
 import (
-	"errors"
-	"github.com/unidoc/unipdf/common"
+	"github.com/unidoc/unipdf/v3/common"
+
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // RasterOperator is the raster operation flag operator.
@@ -86,8 +87,9 @@ func (b *Bitmap) RasterOperation(dx, dy, dw, dh int, op RasterOperator, src *Bit
 }
 
 func rasterOperation(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
+	const processName = "rasterOperation"
 	if dest == nil {
-		return errors.New("nil 'dest' Bitmap")
+		return errors.Error(processName, "nil 'dest' Bitmap")
 	}
 	if op == PixDst {
 		return nil
@@ -101,13 +103,15 @@ func rasterOperation(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *B
 
 	if src == nil {
 		common.Log.Debug("RasterOperation source bitmap is not defined")
-		return errors.New("nil 'src' bitmap")
+		return errors.Error(processName, "nil 'src' bitmap")
 	}
-	return rasterOpLow(dest, dx, dy, dw, dh, op, src, sx, sy)
+	if err := rasterOpLow(dest, dx, dy, dw, dh, op, src, sx, sy); err != nil {
+		return errors.Wrap(err, processName, "")
+	}
+	return nil
 }
 
 // rasterOpLow scales width, performs clipping, checks alignment and dispatches for the 'op' RasterOperator.
-// NOTE: (kucjac) checked rasterOpLow.
 func rasterOpLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	var dHangW, sHangW, dHangH, sHangH int
 	// first, clip horizontally (sx, dx, dw)
@@ -169,11 +173,13 @@ func rasterOpLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator, src *B
 	} else {
 		err = rasterOpGeneralLow(dest, dx, dy, dw, dh, op, src, sx, sy)
 	}
-	return err
+	if err != nil {
+		return errors.Wrap(err, "rasterOpLow", "")
+	}
+	return nil
 }
 
 // rasterOpByteAlignedLow called when both the src and dest bitmaps are left aligned on 8-bit boundaries - dx & 7 == 0 AND sx & 7 == 0.
-// NOTE: (kucjac) checked rasterOpByteAlignedLow.
 func rasterOpByteAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	var (
 		// mask for lat partial byte
@@ -362,14 +368,13 @@ func rasterOpByteAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator,
 		}
 	default:
 		common.Log.Debug("Provided invalid raster operator: %v", op)
-		return errors.New("invalid raster operator")
+		return errors.Error("rasterOpByteAlignedLow", "invalid raster operator")
 	}
 	return nil
 }
 
 // rasterOpVAlignedLow called when the left side of the src and dest bitmaps have the same alignment
 // relative to 8-bit boundaries. That is: dx & 7 == sx & 7.
-// NOTE: (kucjac) checked rasterOpVAlignedLow.
 func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	var (
 		// boolean if first dest byte is doubly partial
@@ -757,13 +762,12 @@ func rasterOpVAlignedLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, sr
 		}
 	default:
 		common.Log.Debug("Invalid raster operator: %d", op)
-		return errors.New("invalid raster operator")
+		return errors.Error("rasterOpVAlignedLow", "invalid raster operator")
 	}
 	return nil
 }
 
 // rasterOpGeneralLow called when the 'src' and 'dst' rects don't have the same byte alignment.
-// NOTE: (kucjac) checked rasterOpGeneralLow.
 func rasterOpGeneralLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src *Bitmap, sx, sy int) error {
 	var (
 		// dfwPartB boolean if first dest byte is partial.
@@ -1433,14 +1437,13 @@ func rasterOpGeneralLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator, src
 		}
 	default:
 		common.Log.Debug("Operation: '%d' not permitted", op)
-		return errors.New("raster operation not permitted")
+		return errors.Error("rasterOpGeneralLow", "raster operation not permitted")
 	}
 
 	return nil
 }
 
 // rasterOpUniLow performs clipping, checks aligment and dispatches for the rasterop.
-// NOTE: (kucjac) checked rasterOpUniLow.
 func rasterOpUniLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator) {
 	// clip horizontally (dx, dw)
 	if dx < 0 {
@@ -1479,7 +1482,6 @@ func rasterOpUniLow(dest *Bitmap, dx, dy, dw, dh int, op RasterOperator) {
 }
 
 // rasterOpUniWordAligneLow is called when the 'dest' bitmap is left aligned. This means dx & 7 == 0.
-// NOTE: (kucjac) checked rasterOpUniWordAligneLow.
 func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) {
 	var (
 		// firstWordIndex is the byte index of the first byte
@@ -1537,7 +1539,6 @@ func rasterOpUniWordAlignedLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOp
 }
 
 // rasterOpUniGeneralLow static low-level uni rasterop without byte aligment.
-// NOTE: (kucjac) checked rasterOpUniGeneralLow.
 func rasterOpUniGeneralLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator) {
 	var (
 		// fbDoublyPartial boolean if first 'dest' byte is doubly partial.

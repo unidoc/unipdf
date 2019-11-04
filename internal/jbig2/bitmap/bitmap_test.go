@@ -116,6 +116,49 @@ func TestBitmap(t *testing.T) {
 		})
 	})
 
+	t.Run("SetEightBytes", func(t *testing.T) {
+		t.Run("Partial", func(t *testing.T) {
+			s := New(70, 2)
+			err := s.setEightBytes(4, uint64(0xffffffffffffffff))
+			require.NoError(t, err)
+
+			assert.Equal(t, byte(0xff), s.Data[4])
+			assert.Equal(t, byte(0xff), s.Data[5])
+			assert.Equal(t, byte(0xff), s.Data[6])
+			assert.Equal(t, byte(0xff), s.Data[7])
+			// the eight - partial byte should contain only bits set up to the
+			// possible width: 11111100 -> 72 - 70 = 2 padding bits
+			assert.Equal(t, byte(0xfc), s.Data[8])
+		})
+		t.Run("NoPadding", func(t *testing.T) {
+			s := New(64, 2)
+			err := s.setEightBytes(4, uint64(0xffffffffffffffff))
+			require.NoError(t, err)
+
+			assert.Equal(t, byte(0xff), s.Data[4])
+			assert.Equal(t, byte(0xff), s.Data[5])
+			assert.Equal(t, byte(0xff), s.Data[6])
+			assert.Equal(t, byte(0xff), s.Data[7])
+			assert.Equal(t, byte(0x00), s.Data[8])
+		})
+		t.Run("Full", func(t *testing.T) {
+			s := New(128, 2)
+			err := s.setEightBytes(4, uint64(0xffffffffffffffff))
+			require.NoError(t, err)
+
+			assert.Equal(t, byte(0x00), s.Data[3])
+			assert.Equal(t, byte(0xff), s.Data[4])
+			assert.Equal(t, byte(0xff), s.Data[5])
+			assert.Equal(t, byte(0xff), s.Data[6])
+			assert.Equal(t, byte(0xff), s.Data[7])
+			assert.Equal(t, byte(0xff), s.Data[8])
+			assert.Equal(t, byte(0xff), s.Data[9])
+			assert.Equal(t, byte(0xff), s.Data[10])
+			assert.Equal(t, byte(0xff), s.Data[11])
+			assert.Equal(t, byte(0x00), s.Data[12])
+		})
+	})
+
 	t.Run("Equals", func(t *testing.T) {
 		src := New(5, 5)
 		src.Data[0] = 0xff
@@ -869,5 +912,221 @@ func TestBitmap(t *testing.T) {
 				assert.Equal(t, generalData, bbm.Data)
 			})
 		})
+	})
+
+	t.Run("NextOnPixel", func(t *testing.T) {
+		// Having a bitmap with given data:
+		//
+		// 00001000 00100000
+		// 00000000 00000010
+		data := []byte{0x08, 0x20, 0x00, 0x02}
+
+		bm, err := NewWithData(16, 2, data)
+		require.NoError(t, err)
+
+		// First should be at Pt(4,0)
+		pt, ok, err := bm.nextOnPixel(0, 0)
+		require.NoError(t, err)
+
+		assert.True(t, ok)
+		assert.Equal(t, pt.X, 4)
+		assert.Equal(t, pt.Y, 0)
+
+		// The second should be at Pt(10, 0)
+		pt, ok, err = bm.nextOnPixel(5, 0)
+		require.NoError(t, err)
+
+		assert.True(t, ok)
+		assert.Equal(t, pt.X, 10)
+		assert.Equal(t, pt.Y, 0)
+
+		// The third should be on another line at Pt(14,1)
+		pt, ok, err = bm.nextOnPixel(11, 0)
+		require.NoError(t, err)
+
+		assert.True(t, ok)
+		assert.Equal(t, pt.X, 14)
+		assert.Equal(t, pt.Y, 1)
+
+		// There should be no more 'ON' pixels.
+		_, ok, err = bm.nextOnPixel(15, 1)
+		require.NoError(t, err)
+
+		assert.False(t, ok)
+
+		// providing 'x' that is out of possible index range returns error.
+		_, _, err = bm.nextOnPixel(50, 0)
+		assert.Error(t, err)
+
+		// providing 'y' that is out of possible index range returns error.
+		_, _, err = bm.nextOnPixel(3, 40)
+		assert.Error(t, err)
+	})
+
+	t.Run("Zero", func(t *testing.T) {
+		t.Run("Full", func(t *testing.T) {
+			// having a bitmap of size 20,2 with filled bytes
+			data := []byte{0xFF, 0xFF, 0xF0, 0xFF, 0xFF, 0xF0}
+			bm, err := NewWithData(20, 2, data)
+			require.NoError(t, err)
+
+			// the Zero function would return false
+			assert.False(t, bm.Zero())
+		})
+
+		t.Run("Empty", func(t *testing.T) {
+			bm := New(20, 2)
+			// now the Zero function should return true.
+			assert.True(t, bm.Zero())
+		})
+
+		t.Run("PartlySet", func(t *testing.T) {
+			data := []byte{0x00, 0x00, 0xF0, 0x00, 0x00, 0x00}
+			bm, err := NewWithData(20, 2, data)
+			require.NoError(t, err)
+
+			assert.False(t, bm.Zero())
+		})
+
+	})
+
+	t.Run("ConnComponents", func(t *testing.T) {
+
+	})
+
+	t.Run("ThresholdPixelSum", func(t *testing.T) {
+		// Having a bitmap 100x100 with randomly distributed 10 pixel per row
+		bm := New(100, 100)
+		mp := [100][100]bool{}
+		var x, count int
+		for y := 0; y < bm.Height; y++ {
+			for i := 0; i < 10; i++ {
+				for {
+					x = rand.Intn(bm.Width)
+					if !mp[y][x] {
+						break
+					}
+				}
+				mp[y][x] = true
+				count++
+				require.NoError(t, bm.SetPixel(x, y, 1))
+			}
+		}
+		require.Equal(t, 1000, count)
+		tab8 := makePixelSumTab8()
+		t.Run("Above", func(t *testing.T) {
+			// for count > threshold the function returns true.
+			above, err := bm.ThresholdPixelSum(500, tab8)
+			require.NoError(t, err)
+
+			assert.True(t, above)
+		})
+
+		t.Run("Equal", func(t *testing.T) {
+			// In count > threshold  the inequality is false for count = threshold
+			above, err := bm.ThresholdPixelSum(1000, tab8)
+			require.NoError(t, err)
+
+			// count > threshold = false
+			assert.False(t, above)
+		})
+
+		t.Run("NotAbove", func(t *testing.T) {
+			// if threshold > count then the inequality 'count > threshold' is false.
+			above, err := bm.ThresholdPixelSum(1001, tab8)
+			require.NoError(t, err)
+
+			assert.False(t, above)
+		})
+	})
+}
+
+// TestSubtract tests the subtract function
+func TestSubtract(t *testing.T) {
+	// Having a 8x6 src1 bitmap.
+	//
+	// 11111000
+	// 11111100
+	// 11111000
+	// 11110000
+	// 11100000
+	// 11000000
+	d1 := []byte{0xF8, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0}
+	src1, err := NewWithData(8, 6, d1)
+	require.NoError(t, err)
+
+	// and a 8x6 src2 bitmap
+	//
+	// 00011100
+	// 00111100
+	// 00111000
+	// 00110000
+	// 00000000
+	// 00000000
+	d2 := []byte{0x1C, 0x3C, 0x38, 0x30, 0x00, 0x00}
+	src2, err := NewWithData(8, 6, d2)
+	require.NoError(t, err)
+
+	t.Run("NilDest", func(t *testing.T) {
+		d, err := subtract(nil, src1, src2)
+		require.NoError(t, err)
+
+		// the result should be:
+		// 11100000
+		// 11000000
+		// 11000000
+		// 11000000
+		// 11100000
+		// 11000000
+		expected := []byte{0xE0, 0xC0, 0xC0, 0xC0, 0xE0, 0xC0}
+		assert.Equal(t, expected, d.Data)
+	})
+
+	t.Run("DestEqualSrc1", func(t *testing.T) {
+		tm := src1.Copy()
+		_, err := subtract(tm, tm, src2)
+		require.NoError(t, err)
+
+		// the result should be:
+		// 11100000
+		// 11000000
+		// 11000000
+		// 11000000
+		// 11100000
+		// 11000000
+		expected := []byte{0xE0, 0xC0, 0xC0, 0xC0, 0xE0, 0xC0}
+		assert.Equal(t, expected, tm.Data)
+	})
+
+	t.Run("DestEqualSrc2", func(t *testing.T) {
+		tm := src2.Copy()
+		_, err := subtract(tm, src1, tm)
+		require.NoError(t, err)
+
+		// The result should be:
+		// 00000100
+		// 00000000
+		// 00000000
+		// 00000000
+		// 00000000
+		// 00000000
+		expected := []byte{0x04, 0x00, 0x00, 0x00, 0x00, 0x00}
+		assert.Equal(t, expected, tm.Data)
+	})
+
+	t.Run("SomeDest", func(t *testing.T) {
+		tm := New(10, 6)
+		d, err := subtract(tm, src1, src2)
+		require.NoError(t, err)
+
+		// the result should be:
+		// 11100000
+		// 11000000
+		// 11000000
+		// 11000000
+		// 11100000
+		// 11000000
+		expected := []byte{0xE0, 0xC0, 0xC0, 0xC0, 0xE0, 0xC0}
+		assert.Equal(t, expected, d.Data)
 	})
 }

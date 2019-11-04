@@ -16,13 +16,13 @@ type Documenter interface {
 	GetPage(int) (Pager, error)
 
 	// GetGlobalSegment gets the global segment header at given segment number.
-	GetGlobalSegment(int) *Header
+	GetGlobalSegment(int) (*Header, error)
 }
 
 // Pager is the interface used as a Page model.
 type Pager interface {
 	// GetSegment gets the segment Header with the given segment number.
-	GetSegment(int) *Header
+	GetSegment(int) (*Header, error)
 
 	// GetBitmap gets the decoded bitmap.Bitmap.
 	GetBitmap() (*bitmap.Bitmap, error)
@@ -32,6 +32,11 @@ type Pager interface {
 type Segmenter interface {
 	// Init initializes the segment from the provided data stream 'r'.
 	Init(header *Header, r reader.StreamReader) error
+}
+
+// SegmentEncoder is the interface used for encoding single segment instances.
+type SegmentEncoder interface {
+	Encode() (encoded []byte, err error)
 }
 
 // Regioner is the interface for all JBIG2 region segments.

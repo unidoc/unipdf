@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/unidoc/unipdf/internal/jbig2"
 	goimage "image"
 	gocolor "image/color"
 	"image/jpeg"
@@ -37,9 +36,11 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
+	"github.com/unidoc/unipdf/v3/internal/jbig2"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
+	jberrors "github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // Stream encoding filter names.
@@ -1906,8 +1907,8 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:                   enc.Rows,
-		EncodedByteAlign:       enc.EncodedByteAlign,
+		Rows:             enc.Rows,
+		EncodedByteAlign: enc.EncodedByteAlign,
 	}
 
 	pixels, err := encoder.Decode(encoded)
@@ -1978,16 +1979,45 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:                   enc.Rows,
-		EncodedByteAlign:       enc.EncodedByteAlign,
+		Rows:             enc.Rows,
+		EncodedByteAlign: enc.EncodedByteAlign,
 	}
 
 	return encoder.Encode(pixels), nil
 }
 
-// JBIG2Encoder is the jbig2 image encoder (WIP)/decoder.
+// JBIG2Encoder implements both jbig2 encoder and the decoder. The encoder allows to encode
+// provided images (best used document scans) in multiple way. By default it uses single page generic
+// encoder. It allows to store lossless data as a single segment. In order to obtain better compression results
+// the encoder allows to encode the input in a lossy or lossless way with a component (symbol) mode. It divides the image into components.
+// Then checks if any component is 'simmillar' to the others and maps them together. The symbol classes are stored
+// in the dictionary. Then the encoder creates text regions which uses the related symbol classes to fill it's space.
+// The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
+// matches to single class, thus the compression is better, but the result might become lossy.
+// In order to store multiple image documents use the 'FileMode' which allows to store more pages within single jbig2 document.
 type JBIG2Encoder struct {
+	// Threshold defines the threshold of the image corelation for
+	// non generic compression.
+	// Best results in range [0.7 - 0.98] - the less the better the compression would be
+	// but the more lossy.
+	// Default value: 0.95
+	Threshold float64
+	// ResolutionX defines the 'x' axis input image resolution - used for single page encoding.
+	ResolutionX int
+	// ResolutionY defines the 'y' axis input image resolution - used for single page encoding.
+	ResolutionY int
+	// ComponentMode defines if the jbig2 encoder should decompose the input into small components.
+	// It allows to create a map of symbols/words used in the input bitmap.
+	// By default - set to false - it uses simple generic region compression.
+	ComponentMode bool
+	// FileMode defines if the jbig2 encoder should return full jbig2 file instead of
+	// shortened pdf mode. This adds the file header to the jbig2 definition.
+	FileMode bool
+	// RankHausMode uses the rank Hausdorff method that classifies the input images. It is more robust,
+	// more susceptible to confusing components that should be in different classes.
+	RankHausMode bool
 	// Globals are the JBIG2 global segments.
+	// TODO: allows to encode globaly defined segments.
 	Globals document.Globals
 	// IsChocolateData defines if the data is encoded such that
 	// binary data '1' means black and '0' white.
@@ -1996,9 +2026,35 @@ type JBIG2Encoder struct {
 	IsChocolateData bool
 }
 
-// NewJBIG2Encoder returns a new instance of JBIG2Encoder.
-func NewJBIG2Encoder() *JBIG2Encoder {
+// NewJBIG2Encoder creates new instance of the jbig2 encoder.
+//	'textMode'		defines if the jbig2 encoder should decompose the into small components. For more
+// 					read the 'TextMode' variable defintion.
+func NewJBIG2Encoder(textMode bool) *JBIG2Encoder {
+	return &JBIG2Encoder{TextMode: textMode}
+}
+
+func newJBIG2Decoder() *JBIG2Encoder {
 	return &JBIG2Encoder{}
+}
+
+func (enc *JBIG2Encoder) validateEncoder() error {
+	const processName = "validateEncoder"
+	if enc.Threshold < 0 || enc.Threshold > 1.0 {
+		return jberrors.Errorf(processName, "provided threshold value: '%v' must be in range [0.0, 1.0]", enc.Threshold)
+	}
+	if enc.ResolutionX < 0 {
+		return jberrors.Errorf(processName, "provided x resoulution: '%d' must be positive value", enc.ResolutionX)
+	}
+	if enc.ResolutionY < 0 {
+		return jberrors.Errorf(processName, "provided y resoulution: '%d' must be positive value", enc.ResolutionY)
+	}
+	if enc.ComponentMode {
+		return jberrors.Errorf(processName, "the component mode is not implemented yet.")
+	}
+	if enc.RankHausMode {
+		return jberrors.Error(processName, "the rank Hausdorff method is not implemented yet.")
+	}
+	return nil
 }
 
 // setChocolateData sets the chocolate data flag when the pdf stream object contains the 'Decode' object.

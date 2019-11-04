@@ -20,7 +20,7 @@ var (
 // Globals store segments that aren't associated to a page.
 // If the data is embedded in another format, for example PDF, this
 // segments might be stored separately in the file.
-// This segments will be decoded on demand, all results are stored in the document.
+// These segments will be decoded on demand, all results are stored in the document.
 type Globals map[int]*segments.Header
 
 // GetSegment gets the global segment header.

@@ -14,7 +14,10 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/v3/internal/jbig2/basic"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // Header is the segment header used to define the segment parameters - see 7.2.
@@ -30,7 +33,10 @@ type Header struct {
 	SegmentDataStartOffset   uint64
 	Reader                   reader.StreamReader
 	SegmentData              Segmenter
-	RTSNumbers               []int
+	// RTSNumbers is the list of numbers where the segment is referred to.
+	RTSNumbers []int
+	// RetainBits are the  flags for the given segment.
+	RetainBits []uint8
 }
 
 // NewHeader creates new segment header for the provided document from the stream reader.
@@ -42,7 +48,7 @@ func NewHeader(d Documenter, r reader.StreamReader, offset int64, organizationTy
 	return h, nil
 }
 
-// CleanSegmentData cleans the segment's data setting it's segment data to nil.
+// CleanSegmentData cleans the segment's data setting its segment data to nil.
 func (h *Header) CleanSegmentData() {
 	if h.SegmentData != nil {
 		h.SegmentData = nil
@@ -79,6 +85,66 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 	return segmentDataPart, nil
 }
 
+// Encode encodes the jbi2 header structure to the provided 'w' BinaryWriter.
+func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "Header.Write"
+	// For safety Finish the current byte in the 'w'.
+	w.FinishByte()
+
+	// the header contains following bitwise parts:
+	// [SegmentNumber] - 4 byte uint32
+	// [segment header flags] - 1 byte
+	// [refered-to count and retention flags] 1 or more bytes
+	// [refered-to segment numbers] 1 or more bytes
+	// [segment page association] - 1 or more bytes
+	// [segment data length] - 4 bytes - uint32
+	if h.pageSize() == 4 {
+		h.PageAssociationFieldSize = true
+	}
+
+	// 7.2.2 Segment number
+	var temp int
+	n, err = h.writeSegmentNumber(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+
+	// 7.2.3 Segment header flags
+	if err = h.writeFlags(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n++
+
+	// 7.2.4 Referred-to segment count and retention flags
+	temp, err = h.writeReferredToCount(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+	n += temp
+
+	// 7.2.5 Referred-to segment numbers
+	temp, err = h.writeReferredToSegments(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+	n += temp
+
+	// 7.2.6 Segment page association
+	temp, err = h.writeSegmentPageAssociation(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+	n += temp
+
+	// 7.2.7 Segment data length
+	temp, err = h.writeSegmentDataLength(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+	n += temp
+	return n, nil
+}
+
 // String implements Stringer interface.
 func (h *Header) String() string {
 	sb := &strings.Builder{}
@@ -97,6 +163,14 @@ func (h *Header) String() string {
 	sb.WriteString(fmt.Sprintf("\t- SegmentDataStartOffset: %v\n", h.SegmentDataStartOffset))
 
 	return sb.String()
+}
+
+// pageSize returns the size of the segment page association field.:w
+func (h *Header) pageSize() uint {
+	if h.PageAssociation <= 255 {
+		return 1
+	}
+	return 4
 }
 
 // parses the current segment header for the provided document 'd'.
@@ -258,23 +332,13 @@ func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS i
 	rtsNumbers := make([]int, countOfRTS)
 
 	if countOfRTS > 0 {
-		rtsSize := byte(1)
-
-		if h.SegmentNumber > 256 {
-			rtsSize = 2
-
-			if h.SegmentNumber > 65536 {
-				rtsSize = 4
-			}
-		}
-
 		h.RTSegments = make([]*Header, countOfRTS)
 		var (
 			bits uint64
 			err  error
 		)
 		for i := 0; i < countOfRTS; i++ {
-			bits, err = r.ReadBits(rtsSize << 3)
+			bits, err = r.ReadBits(byte(h.referenceSize()) << 3)
 			if err != nil {
 				return nil, err
 			}
@@ -285,35 +349,48 @@ func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS i
 }
 
 // readSegmentPageAssociation gets the segment's associated page number.
-func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader, countOfRTS uint64, rtsNumbers ...int) error {
+func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader, countOfRTS uint64, rtsNumbers ...int) (err error) {
+	const processName = "readSegmentPageAssociation"
 	// 7.2.6
 	if !h.PageAssociationFieldSize {
 		// Short format
 		bits, err := r.ReadBits(8)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "short format")
 		}
-
 		h.PageAssociation = int(bits & 0xFF)
 	} else {
 		// Long format
 		bits, err := r.ReadBits(32)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "long format")
 		}
-
 		h.PageAssociation = int(bits & math.MaxInt32)
 	}
 
-	if countOfRTS > 0 {
-		page, _ := d.GetPage(h.PageAssociation)
-		var i uint64
+	// check if there are any related to segments
+	if countOfRTS == 0 {
+		return nil
+	}
+	var page Pager
+	// check if the page number is different than 0 - 'Globals' are stored under '0'
+	if h.PageAssociation != 0 {
+		page, err = d.GetPage(h.PageAssociation)
+		if err != nil {
+			return errors.Wrap(err, processName, "associated page not found")
+		}
+	}
 
-		for i = 0; i < countOfRTS; i++ {
-			if page != nil {
-				h.RTSegments[i] = page.GetSegment(rtsNumbers[i])
-			} else {
-				h.RTSegments[i] = d.GetGlobalSegment(rtsNumbers[i])
+	for i := uint64(0); i < countOfRTS; i++ {
+		if page != nil {
+			h.RTSegments[i], err = page.GetSegment(rtsNumbers[i])
+			if err != nil {
+				return errors.Wrapf(err, processName, "segment: '%d' at page: '%d' not found", rtsNumbers[i])
+			}
+		} else {
+			h.RTSegments[i], err = d.GetGlobalSegment(rtsNumbers[i])
+			if err != nil {
+				return errors.Wrapf(err, processName, "global segment: '%d' not found", rtsNumbers[i])
 			}
 		}
 	}
@@ -345,6 +422,179 @@ func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {
 	h.HeaderLength = r.StreamPosition() - offset
 }
 
+// referenceSize returns the size of the segment reference for this segment. Segments can only refer to previous
+// segments, so the bits needed is determined by the number of this segment.
+func (h *Header) referenceSize() uint {
+	if h.SegmentNumber <= 255 {
+		return 1
+	} else if h.SegmentNumber <= 65535 {
+		return 2
+	} else {
+		return 4
+	}
+}
+
 func (h *Header) subInputReader() (reader.StreamReader, error) {
 	return reader.NewSubstreamReader(h.Reader, h.SegmentDataStartOffset, h.SegmentDataLength)
+}
+func (h *Header) writeFlags(w writer.BinaryWriter) (err error) {
+	const processName = "Header.writeFlags"
+	// the header flags is composed of 8 bits.
+	// MSB 00000000 LSB
+	//     ^				the first bit is the 'retain' flag.
+	//	    ^				the second defines if the page has association field size flag.
+	// The last 6 bits are the segment header type number.
+	//
+	// at first write the type number.
+	// segment type can take value from 0 - 63 - 6-bits
+	bt := byte(h.Type)
+	if err = w.WriteByte(bt); err != nil {
+		return errors.Wrap(err, processName, "writing segment type number failed")
+	}
+
+	// check if the header should contain bits that defines other flags
+	if !h.RetainFlag && !h.PageAssociationFieldSize {
+		return nil
+	}
+
+	// skip back the bits to the previous pointer.
+	if err = w.SkipBits(-8); err != nil {
+		return errors.Wrap(err, processName, "skipping back the bits failed")
+	}
+
+	var bit int
+	// first bit is the deferred non retain flag.
+	if h.RetainFlag {
+		bit = 1
+	}
+
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "retain retain flags")
+	}
+	// reset the bit
+	bit = 0
+	// second bit is the page association field size flag.
+	if h.PageAssociationFieldSize {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "page association flag")
+	}
+
+	// finish the byte so that it contains all the flags and the type number and the byte pointer
+	// is moved to the next byte and the bitPointer is reset.
+	w.FinishByte()
+	return nil
+}
+
+func (h *Header) writeReferredToCount(w writer.BinaryWriter) (n int, err error) {
+	const processName = "writeReferredToCount"
+	// the referred to count segment is one byte long if there are up to maximum of 4
+	// referred to other headers.
+	// if the refered to count is <= 4 the header uses short format
+	if len(h.RTSNumbers) <= 4 {
+		// use the short format
+		var bt byte
+		if len(h.RetainBits) >= 1 {
+			bt = byte(h.RetainBits[0])
+		}
+		// first three bits are the number of referred to segments
+		// and the other five bits are the retain bits flags.
+		bt |= byte(len(h.RTSNumbers)) << 5
+		if err = w.WriteByte(bt); err != nil {
+			return 0, errors.Wrap(err, processName, "short format")
+		}
+		return 1, nil
+	}
+	// use the long format
+	count := uint32(len(h.RTSNumbers))
+	bts := make([]byte, 4+basic.Ceil(len(h.RTSNumbers)+1, 8))
+	count |= 0x7 << 29
+	binary.BigEndian.PutUint32(bts, count)
+	// copy retain bits to the bts
+	copy(bts[1:], h.RetainBits)
+
+	n, err = w.Write(bts)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "long format")
+	}
+	return n, nil
+}
+
+func (h *Header) writeReferredToSegments(w writer.BinaryWriter) (n int, err error) {
+	const processName = "writeReferredToSegments"
+	var (
+		short uint16
+		long  uint32
+	)
+	referenceSize := h.referenceSize()
+	// temp bytes written size initialized to '1' for uint8u
+	temp := 1
+	bts := make([]byte, referenceSize)
+	for _, referred := range h.RTSNumbers {
+		switch referenceSize {
+		case 4:
+			// referred to integers are uint32
+			long = uint32(referred)
+			binary.BigEndian.PutUint32(bts, long)
+			temp, err = w.Write(bts)
+			if err != nil {
+				return 0, errors.Wrap(err, processName, "uint32 size")
+			}
+		case 2:
+			// referred to integers are uint16
+			short = uint16(referred)
+			binary.BigEndian.PutUint16(bts, short)
+			temp, err = w.Write(bts)
+			if err != nil {
+				return 0, errors.Wrap(err, processName, "uint16")
+			}
+		default:
+			// referred to integers are uint8
+			if err = w.WriteByte(byte(referred)); err != nil {
+				return 0, errors.Wrap(err, processName, "uint8")
+			}
+		}
+		n += temp
+	}
+	return n, nil
+}
+
+func (h *Header) writeSegmentDataLength(w writer.BinaryWriter) (n int, err error) {
+	// uint32 segment number
+	temp := make([]byte, 4)
+	// the multibytes integers are stored in the big endian manner.
+	binary.BigEndian.PutUint32(temp, uint32(h.SegmentDataLength))
+	if n, err = w.Write(temp); err != nil {
+		return 0, errors.Wrap(err, "Header.writeSegmentDataLength", "")
+	}
+	return n, nil
+}
+
+func (h *Header) writeSegmentNumber(w writer.BinaryWriter) (n int, err error) {
+	// uint32 segment number
+	temp := make([]byte, 4)
+	// the multibytes integers are stored in the big endian manner.
+	binary.BigEndian.PutUint32(temp, h.SegmentNumber)
+	if n, err = w.Write(temp); err != nil {
+		return 0, errors.Wrap(err, "Header.writeSegmentNumber", "")
+	}
+	return n, nil
+}
+
+func (h *Header) writeSegmentPageAssociation(w writer.BinaryWriter) (n int, err error) {
+	const processName = "writeSegmentPageAssociation"
+	if h.pageSize() != 4 {
+		if err = w.WriteByte(byte(h.PageAssociation)); err != nil {
+			return 0, errors.Wrap(err, processName, "pageSize != 4")
+		}
+		return 1, nil
+	}
+	// the page size is written as 4 bytes - header flag page association field size is set to '1'
+	bts := make([]byte, 4)
+	binary.BigEndian.PutUint32(bts, uint32(h.PageAssociation))
+	if n, err = w.Write(bts); err != nil {
+		return 0, errors.Wrap(err, processName, "4 byte page number")
+	}
+	return n, nil
 }

@@ -6,10 +6,11 @@
 package classer
 
 import (
-	"errors"
 	"image"
+	"math"
 
-	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 const (
@@ -36,10 +37,10 @@ const (
 )
 
 // AccumulateComposites ...
-// [in] 	'classes' 	one pixa for each class.
+// [in] 	'classes' 	one slice of bitmaps for each class.
 // [out]	'samples' 	number of samples used to build each composite.
 // [out]	'centroids'	centroids of bordered composites.
-func AccumulateComposites(classes *bitmap.Pixaa, samples *[]float64, centroids *[]image.Point) (*bitmap.Pixa, error) {
+func AccumulateComposites(classes [][]*bitmap.Bitmap, samples *[]float64, centroids *[]bitmap.Point) ([]*bitmap.Bitmap, error) {
 	// TODO: jbclass.c:1656
 	return nil, nil
 }
@@ -47,85 +48,62 @@ func AccumulateComposites(classes *bitmap.Pixaa, samples *[]float64, centroids *
 // CorrelationInit is the initialization function
 // used for unsupervised classification of the collections
 // of connected components. Uses correlation classification with components.
-func CorrelationInit(components Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
+func CorrelationInit(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
 	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 1)
 }
 
 // CorrelationInitWithoutComponents is the initialization function
 // used for unsupervised classification of the collections
 // of connected components. Uses correlation classification without components.
-func CorrelationInitWithoutComponents(components Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
+func CorrelationInitWithoutComponents(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
 	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 0)
 }
 
-// FinalAlignmentPositioning ...
-func FinalAlignmentPositioning(
-	inputPageImage *bitmap.Pix,
-	x, y, iDelX, iDelY int,
-	template *bitmap.Pix,
-	sumtab []int,
-	pdX, pdY []int,
-) error {
-	// TODO: 2519
-	return nil
-}
+// finalAligmentPositioning gets the best match position for the provided arguments.
+// NOTE: jbclass.c:2519
+func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitmap.Bitmap, sumtab []int) (pt image.Point, err error) {
+	const processName = "finalAligmentPositioning"
+	if s == nil {
+		return pt, errors.Error(processName, "source not provided")
+	}
+	if t == nil {
+		return pt, errors.Error(processName, "template not provided")
+	}
 
-// GetComponents determines the image components.
-// The 'img' image argument must be of 1bpp format.
-func GetComponents(
-	img *bitmap.Pix,
-	components Component,
-	maxWidth, maxHeight int,
-	boundingBoxes []*bitmap.Boxa,
-	componentItems []*bitmap.Pixa,
-) error {
-	// TODO: jbclass.c:1313
-	return nil
-}
-
-// PixHaustest ...
-func PixHaustest(p1, p2, p3, p4 *bitmap.Pix, delX, delY float32, maxDiffW, maxDiffH int) int {
-	// TODO: jbclass.c:846
-	return 0
-}
-
-// PixRankHausTest ...
-func PixRankHausTest(
-	p1, p2, p3, p4 *bitmap.Pix,
-	delX, delY float32,
-	maxDiffW, maxDiffH, area1, area3 int,
-	rank float32,
-	// tab8 []int,
-) int {
-	// TODO: jbclass.c:944
-	return 0
-}
-
-// PixWordMaskByDilation ...
-func PixWordMaskByDilation(
-	pixS *bitmap.Pix, // 1bpp
-	// TODO: determine output arguments
-) error {
-	// TODO: jbclass.c:1455
-	return nil
-}
-
-// PixWordBoxesByDilation ...
-func PixWordBoxesByDilation(
-	pixs *bitmap.Bitmap,
-	minWidth, minHeight, maxWidth, maxHeight int,
-	// TODO: determine output arguments
-	// pBoxa []*bitmap.Boxa, // [required]
-	// pSize *int,
-	// pixAdb *bitmap.Pixa,
-) error {
-	// TODO: jbclass.c:1594
-	return nil
+	w, h := t.Width, t.Height
+	bx, by := x-iDelX-JbAddedPixels, y-iDelY-JbAddedPixels
+	box := image.Rect(bx, by, bx+w, by+h)
+	d, _, err := s.ClipRectangle(&box)
+	if err != nil {
+		return pt, errors.Wrap(err, processName, "")
+	}
+	r := bitmap.New(d.Width, d.Height)
+	minCount := math.MaxInt32
+	var i, j, count, minX, minY int
+	for i = -1; i <= 1; i++ {
+		for j = -1; j <= 1; j++ {
+			if _, err = bitmap.Copy(r, d); err != nil {
+				return pt, errors.Wrap(err, processName, "")
+			}
+			if err = r.RasterOperation(j, i, w, h, bitmap.PixSrcXorDst, t, 0, 0); err != nil {
+				return pt, errors.Wrap(err, processName, "")
+			}
+			count = r.CountPixels()
+			if count < minCount {
+				minX = j
+				minY = i
+				minCount = count
+			}
+		}
+	}
+	pt.X = minX
+	pt.Y = minY
+	return pt, nil
 }
 
 // TemplatesFromComposites ...
 // returns 8 bpp templates for each class, or NULL on error
-func TemplatesFromComposites(classCopmosits *bitmap.Pixa, samplesNumber []float64) (*bitmap.Pixa, error) {
+func TemplatesFromComposites(classCopmosits []*bitmap.Bitmap, samplesNumber []float64) ([]*bitmap.Bitmap, error) {
 	// TODO: jbclass.c:1746
 	return nil, nil
 }
@@ -139,71 +117,45 @@ const (
 	Correlation
 )
 
-// Component is the jbig2 classification components enums.
-type Component int
-
-// Enum definitions of the Components.
-const (
-	ConnComps Component = iota
-	Characters
-	Words
-)
-
-// ObjectAccess is the enum flag that determines if the related
-// access to the object.
-type ObjectAccess int
-
-// ObjectAccess enum constants
-const (
-	OANoCopy ObjectAccess = iota
-	OACopy
-	OAClone
-	OACopyClone
-)
-
-const (
-	// OAInsert one of the ObjectAccess enums.
-	OAInsert ObjectAccess = OANoCopy
-)
-
-func correlationInitInternal(components Component, maxWidth, maxHeight int, thresh, weightFactor float32, keepComponents int) (*Classer, error) {
-	if components > Words || components < 0 {
-		return nil, errors.New("invalid jbig2 component")
+func correlationInitInternal(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32, keepComponents int) (*Classer, error) {
+	const processName = "correlationInitInternal"
+	if components > bitmap.ComponentWords || components < 0 {
+		return nil, errors.Error(processName, "invalid jbig2 component")
 	}
-
 	if thresh < 0.4 || thresh > 0.98 {
-		return nil, errors.New("jbig2 encoder thresh not in range [0.4 - 0.98]")
+		return nil, errors.Error(processName, "jbig2 encoder thresh not in range [0.4 - 0.98]")
 	}
-
 	if weightFactor < 0.0 || weightFactor > 1.0 {
-		return nil, errors.New("jbig2 encoder weight factor not in range [0.0 - 1.0]")
+		return nil, errors.Error(processName, "jbig2 encoder weight factor not in range [0.0 - 1.0]")
 	}
-
+	// if max width is not defined get the value from the constants.
 	if maxWidth == 0 {
 		switch components {
-		case ConnComps:
+		case bitmap.ComponentConn:
 			maxWidth = MaxConnCompWidth
-		case Characters:
+		case bitmap.ComponentCharacters:
 			maxWidth = MaxCharCompWidth
-		default:
+		case bitmap.ComponentWords:
 			maxWidth = MaxWordCompWidth
+		default:
+			return nil, errors.Errorf(processName, "invalid components provided: %v", components)
 		}
 	}
+	// if max height is not defined take the 'MaxCompHeight' value.
 	if maxHeight == 0 {
 		maxHeight = MaxCompHeight
 	}
 
 	classer, err := New(Correlation, components)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "can't create classer")
 	}
 	classer.MaxWidth = maxWidth
 	classer.MaxHeight = maxHeight
 	classer.Thresh = thresh
 	classer.WeightFactor = weightFactor
-	// TODO: setDnaHash (double hash table) ? map[int][]float64
-	classer.KeepPixaa = keepComponents
-
+	classer.TemplatesSize = map[uint64]int{}
+	classer.KeepClassInstances = keepComponents != 0
 	return classer, nil
 }
 

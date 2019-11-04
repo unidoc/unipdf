@@ -35,7 +35,7 @@ type PageInformationSegment struct {
 	requiresAuxiliaryBuffer            bool
 	defaultPixelValue                  uint8
 	mightContainRefinements            bool
-	isLossless                         bool
+	IsLossless                         bool
 
 	// Page striping information, two byte 7.4.8.6
 	IsStripe      bool
@@ -75,7 +75,7 @@ func (p *PageInformationSegment) String() string {
 	sb.WriteString(fmt.Sprintf("\t- ResolutionY: %d\n", p.ResolutionY))
 	sb.WriteString(fmt.Sprintf("\t- CombinationOperator: %s\n", p.combinationOperator))
 	sb.WriteString(fmt.Sprintf("\t- CombinationOperatorOverride: %v\n", p.combinaitonOperatorOverrideAllowed))
-	sb.WriteString(fmt.Sprintf("\t- IsLossless: %v\n", p.isLossless))
+	sb.WriteString(fmt.Sprintf("\t- IsLossless: %v\n", p.IsLossless))
 	sb.WriteString(fmt.Sprintf("\t- RequiresAuxiliaryBuffer: %v\n", p.requiresAuxiliaryBuffer))
 	sb.WriteString(fmt.Sprintf("\t- MightContainRefinements: %v\n", p.mightContainRefinements))
 	sb.WriteString(fmt.Sprintf("\t- IsStriped: %v\n", p.IsStripe))
@@ -251,7 +251,7 @@ func (p *PageInformationSegment) readIsLossless() error {
 		return err
 	}
 	if b == 1 {
-		p.isLossless = true
+		p.IsLossless = true
 	}
 	return nil
 }

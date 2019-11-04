@@ -8,15 +8,14 @@ package document
 import (
 	"errors"
 	"fmt"
-	"image"
 	"io"
 	"runtime/debug"
 
 	"github.com/unidoc/unipdf/v3/common"
 
-	"github.com/unidoc/unipdf/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -54,11 +53,14 @@ type Document struct {
 
 	// CurrentSegmentNumber current symbol number.
 	CurrentSegmentNumber int
+	// CurrentPageNumber stores the number of given page.
+	CurrentPageNumber int
+
 	// SymbolTableSegment is the segment number of the symbol table.
 	SymbolTableSegment int
 
 	// AverageTemplates are the grayed templates.
-	AverageTemplates *bitmap.Pixa
+	AverageTemplates *bitmap.Bitmaps
 	BaseIndexes      []int
 
 	Refinement  bool
@@ -86,24 +88,86 @@ func InitEncodeDocument(class classer.Classer, xres, yres int, fullheaders bool,
 		SymbolTableSegment: -1,
 		Refinement:         refineLevel >= 0,
 		RefineLevel:        refineLevel,
+		FullHeaders:        fullheaders,
 	}
+}
+
+// AddGenericPage creates the jbig2 page based on the provided bitmap. The data provided
+func (d *Document) AddGenericPage(bm *bitmap.Bitmap, duplicateLineRemoval bool) (err error) {
+	page := &Page{Segments: []*segments.Header{}, Bitmap: bm}
+	page.PageNumber = int(d.NumberOfPages)
+	d.NumberOfPages++
+
+	pageInfo := &segments.PageInformationSegment{
+		PageBMWidth:  bm.Width,
+		PageBMHeight: bm.Height,
+		ResolutionX:  bm.XResolution,
+		ResolutionY:  bm.YResolution,
+		IsLossless:   true,
+	}
+	// add page info segment
+	h := &segments.Header{
+		Type:            segments.TPageInformation,
+		SegmentNumber:   uint32(d.CurrentSegmentNumber),
+		PageAssociation: page.PageNumber,
+		SegmentData:     pageInfo,
+		// add segment data length of the page info size.
+	}
+
+	//  add page info
+	page.Segments = append(page.Segments, h)
+	// create a generic segment header
+	generic := &segments.GenericRegion{
+		RegionSegment: &segments.RegionSegment{
+			BitmapWidth:  uint32(bm.Width),
+			BitmapHeight: uint32(bm.Height),
+		},
+		Bitmap: bm,
+	}
+	if duplicateLineRemoval {
+		generic.IsTPGDon = true
+	}
+	generic.GBAtX = []int8{3, -3, 2, -2}
+	generic.GBAtY = []int8{-1, -1, -2, -2}
+
+	// add generic segment header
+	h = &segments.Header{
+		Type:            segments.TImmediateGenericRegion,
+		SegmentData:     generic,
+		PageAssociation: page.PageNumber,
+		SegmentNumber:   uint32(d.CurrentSegmentNumber),
+	}
+	d.CurrentSegmentNumber++
+	// set the header to the page.
+	page.Segments = append(page.Segments, h)
+
+	// page end segment
+	h = &segments.Header{
+		Type:            segments.TEndOfPage,
+		SegmentNumber:   uint32(d.CurrentSegmentNumber),
+		PageAssociation: page.PageNumber,
+	}
+	page.Segments = append(page.Segments, h)
+	d.CurrentSegmentNumber++
+	return nil
 }
 
 // AutoThreshold gathers classes of symbols and uses a single representative to stand for them all.
 func (d *Document) AutoThreshold() error {
-	bms := d.Classer.Pixat
-	for i := 0; i < len(bm); i++ {
-		bm := bms[i]
-
-		for j := i + 1; j < len(bms); j++ {
-			if bm.Equivalent(bms[j]) {
-				if err := d.uniteTemplatesWithIndexes(i, j); err != nil {
-					return err
-				}
-				j--
-			}
-		}
-	}
+	// 	bms := d.Classer.Pixat
+	// 	for i := 0; i < len(bm); i++ {
+	// 		bm := bms[i]
+	//
+	// 		for j := i + 1; j < len(bms); j++ {
+	// 			if bm.Equivalent(bms[j]) {
+	// 				if err := d.uniteTemplatesWithIndexes(i, j); err != nil {
+	// 					return err
+	// 				}
+	// 				j--
+	// 			}
+	// 		}
+	// 	}
+	return nil
 }
 
 // GetNumberOfPages gets the amount of Pages in the given document.
@@ -141,12 +205,8 @@ func (d *Document) GetPage(pageNumber int) (segments.Pager, error) {
 }
 
 // GetGlobalSegment implements segments.Documenter interface.
-func (d *Document) GetGlobalSegment(i int) *segments.Header {
-	if d.GlobalSegments == nil {
-		common.Log.Debug("Trying to get Global segment from nil Globals")
-		return nil
-	}
-	return d.GlobalSegments[i]
+func (d *Document) GetGlobalSegment(i int) (*segments.Header, error) {
+	return d.GlobalSegments.GetSegment(i)
 }
 
 func (d *Document) determineRandomDataOffsets(segmentHeaders []*segments.Header, offset uint64) {
@@ -317,39 +377,39 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 	return false, nil
 }
 
-func (d *Document) uniteTemplatesWithIndexes(firstTempIndex, secondTempIndex int) error {
-	if len(d.Classer.Pixat) < firstTempIndex || len(d.Classer.Pixat) < secondTempIndex {
-		return errors.New("index doesn't point to template array")
-	}
-	for i, class := range d.Classer.ClassIDs {
-		if class == secondTempIndex {
-			d.Classer.ClassIDs[i] = firstTempIndex
-		}
-	}
-
-	var (
-		endPix    *bitmap.Bitmap
-		copiedPix *bitmap.Bitmap
-		boxa      []*image.Rectangle
-	)
-
-	index := len(d.Classer.Pixat) - 1
-	if index != secondTempIndex {
-		endPix = d.Classer.Pixat[index]
-		d.Classer.Pixat[secondTempIndex] = endPix
-
-		for i, class := range d.Classer.ClassIDs {
-			if class == index {
-				d.Classer.ClassIDs[i] = secondTempIndex
-			}
-		}
-	}
-
-	// remove the bitmap
-	d.Classer.Pixat = append(d.Classer.Pixat[:index], d.Classer.Pixat[index+1:]...)
-	d.Classer.NClass--
-	return nil
-}
+// func (d *Document) uniteTemplatesWithIndexes(firstTempIndex, secondTempIndex int) error {
+// 	if len(d.Classer.Pixat) < firstTempIndex || len(d.Classer.Pixat) < secondTempIndex {
+// 		return errors.New("index doesn't point to template array")
+// 	}
+// 	for i, class := range d.Classer.ClassIDs {
+// 		if class == secondTempIndex {
+// 			d.Classer.ClassIDs[i] = firstTempIndex
+// 		}
+// 	}
+//
+// 	var (
+// 		endPix *bitmap.Bitmap
+// 		//		copiedPix *bitmap.Bitmap
+// 		//		boxa      []*image.Rectangle
+// 	)
+//
+// 	index := len(d.Classer.Pixat) - 1
+// 	if index != secondTempIndex {
+// 		endPix = d.Classer.Pixat[index]
+// 		d.Classer.Pixat[secondTempIndex] = endPix
+//
+// 		for i, class := range d.Classer.ClassIDs {
+// 			if class == index {
+// 				d.Classer.ClassIDs[i] = secondTempIndex
+// 			}
+// 		}
+// 	}
+//
+// 	// remove the bitmap
+// 	d.Classer.Pixat = append(d.Classer.Pixat[:index], d.Classer.Pixat[index+1:]...)
+// 	d.Classer.NClass--
+// 	return nil
+// }
 
 func decodeWithGlobals(input reader.StreamReader, globals Globals) (*Document, error) {
 	d := &Document{

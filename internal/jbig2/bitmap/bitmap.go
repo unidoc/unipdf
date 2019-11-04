@@ -6,14 +6,13 @@
 package bitmap
 
 import (
-	"errors"
-	"fmt"
 	"image"
 	"image/color"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
@@ -33,9 +32,6 @@ func init() {
 	}
 }
 
-// ErrIndexOutOfRange is the error that returns if the bitmap byte index is out of range.
-var ErrIndexOutOfRange = errors.New("bitmap byte index out of range")
-
 // Bitmap is the jbig2 bitmap representation.
 type Bitmap struct {
 	// Width and Height represents bitmap dimensions.
@@ -54,7 +50,11 @@ type Bitmap struct {
 
 	// Text string associated with the pix.
 	Text string
-	Box  image.Rectangle
+
+	// The XResolution and YResolution are the
+	// image resolution parameters at width and height.
+	// This value is optional and is rarely used.
+	XResolution, YResolution int
 }
 
 // New creates new bitmap with the parameters as provided in the arguments.
@@ -62,6 +62,11 @@ func New(width, height int) *Bitmap {
 	bm := newBitmap(width, height)
 	bm.Data = make([]byte, height*bm.RowStride)
 	return bm
+}
+
+// Copy the bitmap 's' into bitmap 'd'. If 'd' is nil, it is created by the function.
+func Copy(d, s *Bitmap) (*Bitmap, error) {
+	return copyBitmap(d, s)
 }
 
 func newBitmap(width, height int) *Bitmap {
@@ -74,10 +79,11 @@ func newBitmap(width, height int) *Bitmap {
 
 // NewWithData creates new bitmap with the provided 'width', 'height' and the byte slice 'data'.
 func NewWithData(width, height int, data []byte) (*Bitmap, error) {
+	const processName = "NewWithData"
 	bm := newBitmap(width, height)
 	bm.Data = data
 	if len(data) < height*bm.RowStride {
-		return nil, fmt.Errorf("invalid data length: %d - should be: %d", len(data), height*bm.RowStride)
+		return nil, errors.Errorf(processName, "invalid data length: %d - should be: %d", len(data), height*bm.RowStride)
 	}
 	return bm, nil
 }
@@ -89,13 +95,68 @@ func (b *Bitmap) AddBorder(borderSize, val int) (*Bitmap, error) {
 	if borderSize == 0 {
 		return b.Copy(), nil
 	}
-	return b.addBorderGeneral(borderSize, borderSize, borderSize, borderSize, val)
+	d, err := b.addBorderGeneral(borderSize, borderSize, borderSize, borderSize, val)
+	if err != nil {
+		return nil, errors.Wrap(err, "AddBorder", "")
+	}
+	return d, nil
 }
 
 // AddBorderGeneral creates new bitmap on the base of the bitmap 'b' with the border of size for each side
 // 'left','right','top','bot'. The 'val' sets the border white (0) or black (1).
 func (b *Bitmap) AddBorderGeneral(left, right, top, bot int, val int) (*Bitmap, error) {
 	return b.addBorderGeneral(left, right, top, bot, val)
+}
+
+// And does the raster operation 'AND' on the provided bitmaps 'b' and 's'.
+func (b *Bitmap) And(s *Bitmap) (d *Bitmap, err error) {
+	const processName = "Bitmap.And"
+	if b == nil {
+		return nil, errors.Error(processName, "'bitmap 'b' is nil")
+	}
+
+	if s == nil {
+		return nil, errors.Error(processName, "bitmap 's' is nil")
+	}
+
+	if !b.SizesEqual(s) {
+		common.Log.Debug("%s - Bitmap 's' is not equal size with 'b'", processName)
+	}
+
+	if d, err = copyBitmap(d, b); err != nil {
+		return nil, errors.Wrap(err, processName, "can't create 'd' bitmap")
+	}
+
+	if err = d.RasterOperation(0, 0, d.Width, d.Height, PixSrcAndDst, s, 0, 0); err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return d, nil
+}
+
+// ClipRectangle clips the 'b' Bitmap to the 'box' with relatively defined coordinates.
+// If the box is not contained within the pix the 'box' is clipped to the 'b' size.
+func (b *Bitmap) ClipRectangle(box *image.Rectangle) (d *Bitmap, boxC *image.Rectangle, err error) {
+	const processName = "ClipRectangle"
+	if box == nil {
+		return nil, nil, errors.Error(processName, "box is not defined")
+	}
+	w, h := b.Width, b.Height
+	sRect := image.Rect(0, 0, w, h)
+	if !box.Overlaps(sRect) {
+		return nil, nil, errors.Error(processName, "box doesn't overlap b")
+	}
+	boxCT := box.Intersect(sRect)
+
+	bx, by := boxCT.Min.X, boxCT.Min.Y
+	bw, bh := boxCT.Dx(), boxCT.Dy()
+
+	d = New(bw, bh)
+	d.Text = b.Text
+	if err = d.RasterOperation(0, 0, bw, bh, PixSrc, b, bx, by); err != nil {
+		return nil, nil, errors.Wrap(err, processName, "PixSrc to clipped")
+	}
+	boxC = &boxCT
+	return d, boxC, nil
 }
 
 // Copy gets a copy of the 'b' bitmap.
@@ -111,7 +172,6 @@ func (b *Bitmap) Copy() *Bitmap {
 		Text:         b.Text,
 		BitmapNumber: b.BitmapNumber,
 		Special:      b.Special,
-		Box:          b.Box,
 	}
 }
 
@@ -120,15 +180,22 @@ func (b *Bitmap) CountPixels() int {
 	return b.countPixels()
 }
 
+// CreateTemplate creates a copy template bitmap on the base of the
+// bitmap 'b'. A template has the same parameters as bitmap 'b', but contains empty Data.
+func (b *Bitmap) CreateTemplate() *Bitmap {
+	return b.createTemplate()
+}
+
 // Equals checks if all the pixels in the 'b' bitmap are equals to the 's' bitmap.
 func (b *Bitmap) Equals(s *Bitmap) bool {
-	if len(b.Data) != len(s.Data) {
+	if len(b.Data) != len(s.Data) || b.Width != s.Width || b.Height != s.Height {
 		return false
 	}
 
 	for y := 0; y < b.Height; y++ {
-		for x := 0; x < b.Width; x++ {
-			if b.GetPixel(x, y) != s.GetPixel(x, y) {
+		lineIndex := y * b.RowStride
+		for i := 0; i < b.RowStride; i++ {
+			if b.Data[lineIndex+i] != s.Data[lineIndex+i] {
 				return false
 			}
 		}
@@ -150,7 +217,7 @@ func (b *Bitmap) GetBitOffset(x int) int {
 // GetByte gets and returns the byte at given 'index'.
 func (b *Bitmap) GetByte(index int) (byte, error) {
 	if index > len(b.Data)-1 || index < 0 {
-		return 0, ErrIndexOutOfRange
+		return 0, errors.Errorf("GetByte", "index: %d out of range", index)
 	}
 	return b.Data[index], nil
 }
@@ -205,6 +272,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 	data := make([]byte, size)
 	w := writer.NewMSB(data)
 
+	const processName = "GetUnpaddedData"
 	for y := 0; y < b.Height; y++ {
 		// btIndex is the byte index per row.
 		for btIndex := 0; btIndex < b.RowStride; btIndex++ {
@@ -212,7 +280,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 			if btIndex != b.RowStride-1 {
 				err := w.WriteByte(bt)
 				if err != nil {
-					return nil, err
+					return nil, errors.Wrap(err, processName, "")
 				}
 				continue
 			}
@@ -220,7 +288,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 			for i := uint(0); i < padding; i++ {
 				err := w.WriteBit(int(bt >> (7 - i) & 0x01))
 				if err != nil {
-					return nil, err
+					return nil, errors.Wrap(err, processName, "")
 				}
 			}
 		}
@@ -248,7 +316,11 @@ func (b *Bitmap) RemoveBorder(borderSize int) (*Bitmap, error) {
 	if borderSize == 0 {
 		return b.Copy(), nil
 	}
-	return b.removeBorderGeneral(borderSize, borderSize, borderSize, borderSize)
+	d, err := b.removeBorderGeneral(borderSize, borderSize, borderSize, borderSize)
+	if err != nil {
+		return nil, errors.Wrap(err, "RemoveBorder", "")
+	}
+	return d, nil
 }
 
 // RemoveBorderGeneral creates a new bitmap with removed border of size 'left', 'right', 'top', 'bot'.
@@ -262,16 +334,31 @@ func (b *Bitmap) RemoveBorderGeneral(left, right, top, bot int) (*Bitmap, error)
 func (b *Bitmap) SetPixel(x, y int, pixel byte) error {
 	i := b.GetByteIndex(x, y)
 	if i > len(b.Data)-1 {
-		return ErrIndexOutOfRange
+		return errors.Errorf("SetPixel", "index out of range: %d", i)
 	}
 	o := b.GetBitOffset(x)
 
 	shift := uint(7 - o)
 	src := b.Data[i]
-
-	result := src | (pixel & 0x01 << shift)
+	var result byte
+	if pixel == 1 {
+		result = src | (pixel & 0x01 << shift)
+	} else {
+		result = src & ^(1 << shift)
+	}
 	b.Data[i] = result
 
+	return nil
+}
+
+// SetByte sets the byte at 'index' with value 'v'.
+// Returns an error if the index is out of range.
+func (b *Bitmap) SetByte(index int, v byte) error {
+	if index > len(b.Data)-1 || index < 0 {
+		return errors.Errorf("SetByte", "index out of range: %d", index)
+	}
+
+	b.Data[index] = v
 	return nil
 }
 
@@ -280,17 +367,6 @@ func (b *Bitmap) SetDefaultPixel() {
 	for i := range b.Data {
 		b.Data[i] = byte(0xff)
 	}
-}
-
-// SetByte sets the byte at 'index' with value 'v'.
-// Returns an error if the index is out of range.
-func (b *Bitmap) SetByte(index int, v byte) error {
-	if index > len(b.Data)-1 || index < 0 {
-		return ErrIndexOutOfRange
-	}
-
-	b.Data[index] = v
-	return nil
 }
 
 // SizesEqual checks if the bitmaps are of the same size.
@@ -323,6 +399,45 @@ func (b *Bitmap) String() string {
 	return s
 }
 
+// ThresholdPixelSum checks if the number of the 'ON' pixels is above the provided 'thresh' threshold.
+// If the on pixel count > thresh the function returns quckly.
+func (b *Bitmap) ThresholdPixelSum(thresh int, tab8 []int) (above bool, err error) {
+	const processName = "Bitmap.ThresholdPixelSum"
+	if tab8 == nil {
+		tab8 = makePixelSumTab8()
+	}
+
+	fullBytes := b.Width >> 3
+	endBits := b.Width & 7
+	endMask := byte(0xff << (8 - endBits))
+	var (
+		i, j, lineIndex, count int
+		bt                     byte
+	)
+	for i = 0; i < b.Height; i++ {
+		lineIndex = b.RowStride * i
+		for j = 0; j < fullBytes; j++ {
+			bt, err = b.GetByte(lineIndex + j)
+			if err != nil {
+				return false, errors.Wrap(err, processName, "fullByte")
+			}
+			count += tab8[bt]
+		}
+		if endBits != 0 {
+			bt, err = b.GetByte(lineIndex + j)
+			if err != nil {
+				return false, errors.Wrap(err, processName, "partialByte")
+			}
+			bt &= endMask
+			count += tab8[bt]
+		}
+		if count > thresh {
+			return true, nil
+		}
+	}
+	return above, nil
+}
+
 // ToImage gets the bitmap data and store in the image.Image.
 func (b *Bitmap) ToImage() image.Image {
 	img := image.NewGray(image.Rect(0, 0, b.Width-1, b.Height-1))
@@ -338,9 +453,36 @@ func (b *Bitmap) ToImage() image.Image {
 	return img
 }
 
+// Zero check if there is no 'ONE' pixels.
+func (b *Bitmap) Zero() bool {
+	fullBytes := b.Width / 8
+	endBits := b.Width & 7
+	var endMask byte
+	if endBits != 0 {
+		endMask = byte(0xff << (8 - endBits))
+	}
+
+	var line, i, j int
+	for i = 0; i < b.Height; i++ {
+		line = b.RowStride * i
+		for j = 0; j < fullBytes; j, line = j+1, line+1 {
+			if b.Data[line] != 0 {
+				return false
+			}
+		}
+		if endBits > 0 {
+			if b.Data[line]&endMask != 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (b *Bitmap) addBorderGeneral(left, right, top, bot int, val int) (*Bitmap, error) {
+	const processName = "addBorderGeneral"
 	if left < 0 || right < 0 || top < 0 || bot < 0 {
-		return nil, errors.New("negative border added")
+		return nil, errors.Error(processName, "negative border added")
 	}
 
 	ws, hs := b.Width, b.Height
@@ -357,31 +499,61 @@ func (b *Bitmap) addBorderGeneral(left, right, top, bot int, val int) (*Bitmap, 
 
 	err := bd.RasterOperation(0, 0, left, hd, op, nil, 0, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "left")
 	}
 	err = bd.RasterOperation(wd-right, 0, right, hd, op, nil, 0, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "right")
 	}
 	err = bd.RasterOperation(0, 0, wd, top, op, nil, 0, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "top")
 	}
 	err = bd.RasterOperation(0, hd-bot, wd, bot, op, nil, 0, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "bottom")
 	}
 
 	// copy the pixels into the interior
 	err = bd.RasterOperation(left, top, ws, hs, PixSrc, b, 0, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "copy")
 	}
 	return bd, nil
 }
 
 func (b *Bitmap) clearAll() error {
 	return b.RasterOperation(0, 0, b.Width, b.Height, PixClr, nil, 0, 0)
+}
+
+// clipRectangle clips the bitmap 'b' with the bounds provided by the 'box' argument.
+// The optional 'clipped' image.Rectangle argument would be changed for the actual box of clipped bitmap.
+// The function returns the clipped bitmap. If the 'box' doesn't intersect with the 'b' bitmap the function returns nil bitmap.
+func (b *Bitmap) clipRectangle(box, boxClipped *image.Rectangle) (clipped *Bitmap, err error) {
+	const processName = "clipRectangle"
+	if box == nil {
+		return nil, errors.Error(processName, "provided nil 'box'")
+	}
+	w, h := b.Width, b.Height
+	// TODO: fix the ClipBoxRectangle 'Max + Min'
+	clippedTemp, err := ClipBoxToRectangle(box, w, h)
+	if err != nil {
+		common.Log.Warning("'box' doesn't overlap bitmap 'b': %v", err)
+		return nil, nil
+	}
+	bx, by := clippedTemp.Min.X, clippedTemp.Min.Y
+	bw, bh := clippedTemp.Max.X-clippedTemp.Min.X, clippedTemp.Max.Y-clippedTemp.Min.Y
+
+	clipped = New(bw, bh)
+
+	clipped.Text = b.Text
+	if err = clipped.RasterOperation(0, 0, bw, bh, PixSrc, b, bx, by); err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	if boxClipped != nil {
+		*boxClipped = *clippedTemp
+	}
+	return clipped, nil
 }
 
 func (b *Bitmap) countPixels() int {
@@ -408,6 +580,19 @@ func (b *Bitmap) countPixels() int {
 		}
 	}
 	return sum
+}
+
+func (b *Bitmap) createTemplate() *Bitmap {
+	return &Bitmap{
+		Width:        b.Width,
+		Height:       b.Height,
+		RowStride:    b.RowStride,
+		Color:        b.Color,
+		Text:         b.Text,
+		BitmapNumber: b.BitmapNumber,
+		Special:      b.Special,
+		Data:         make([]byte, len(b.Data)),
+	}
 }
 
 func (b *Bitmap) equivalent(s *Bitmap) bool {
@@ -587,6 +772,10 @@ func (b *Bitmap) equivalent(s *Bitmap) bool {
 	return true
 }
 
+func (b *Bitmap) getBit(n int) uint8 {
+	return b.Data[(n>>3)>>uint(7-(n&7))] & 1
+}
+
 func (b *Bitmap) inverseData() {
 	b.RasterOperation(0, 0, b.Width, b.Height, PixNotDst, nil, 0, 0)
 	// flip the color interpretation
@@ -597,9 +786,89 @@ func (b *Bitmap) inverseData() {
 	}
 }
 
+// nextOnPixel
+func (b *Bitmap) nextOnPixel(xStart, yStart int) (pt image.Point, ok bool, err error) {
+	const processName = "nextOnPixel"
+	pt, ok, err = b.nextOnPixelLow(b.Width, b.Height, b.RowStride, xStart, yStart)
+	if err != nil {
+		return pt, false, errors.Wrap(err, processName, "")
+	}
+	return pt, ok, nil
+}
+
+func (b *Bitmap) nextOnPixelLow(w, h, wpl, xStart, yStart int) (pt image.Point, ok bool, err error) {
+	const processName = "Bitmap.nextOnPixelLow"
+	var (
+		x  int
+		bt byte
+	)
+	line := yStart * wpl
+	index := line + (xStart / 8)
+
+	if bt, err = b.GetByte(index); err != nil {
+		return pt, false, errors.Wrap(err, processName, "xStart and yStart out of range")
+	}
+
+	// if the 'bt' byte is different than 0, it must contain 'ON' pixel.
+	// search the byte place.
+	if bt != 0 {
+		xEnd := xStart - (xStart % 8) + 7
+		for x = xStart; x <= xEnd && x < w; x++ {
+			if b.GetPixel(x, yStart) {
+				pt.X = x
+				pt.Y = yStart
+				return pt, true, nil
+			}
+		}
+	}
+
+	// continue with the rest of the line.
+	startByte := (xStart / 8) + 1
+	x = 8 * startByte
+	var i int
+	for index = line + startByte; x < w; index, x = index+1, x+8 {
+		if bt, err = b.GetByte(index); err != nil {
+			return pt, false, errors.Wrap(err, processName, "rest of the line byte")
+		}
+		if bt == 0 {
+			continue
+		}
+		for i = 0; i < 8 && x < w; i, x = i+1, x+1 {
+			if b.GetPixel(x, yStart) {
+				pt.X = x
+				pt.Y = yStart
+				return pt, true, nil
+			}
+		}
+	}
+	// search till the end of the bitmap data.
+	for y := yStart + 1; y < h; y++ {
+		line = y * wpl
+		for index, x = line, 0; x < w; index, x = index+1, x+8 {
+			if bt, err = b.GetByte(index); err != nil {
+				return pt, false, errors.Wrap(err, processName, "following lines")
+			}
+
+			// if the byte is different than 0x00 it must contain at least one 'ON' bit.
+			if bt == 0 {
+				continue
+			}
+			for i = 0; i < 8 && x < w; i, x = i+1, x+1 {
+				if b.GetPixel(x, y) {
+					pt.X = x
+					pt.Y = y
+					return pt, true, nil
+				}
+			}
+		}
+	}
+	return pt, false, nil
+}
+
 func (b *Bitmap) removeBorderGeneral(left, right, top, bot int) (*Bitmap, error) {
+	const processName = "removeBorderGeneral"
 	if left < 0 || right < 0 || top < 0 || bot < 0 {
-		return nil, errors.New("negative broder remove values")
+		return nil, errors.Error(processName, "negative broder remove values")
 	}
 
 	ws, hs := b.Width, b.Height
@@ -607,11 +876,11 @@ func (b *Bitmap) removeBorderGeneral(left, right, top, bot int) (*Bitmap, error)
 	hd := hs - top - bot
 
 	if wd <= 0 {
-		return nil, errors.New("width must be > 0")
+		return nil, errors.Errorf(processName, "width: %d must be > 0", wd)
 	}
 
 	if hd <= 0 {
-		return nil, errors.New("height must be > 0")
+		return nil, errors.Errorf(processName, "height: %d must be > 0", hd)
 	}
 
 	bm := New(wd, hd)
@@ -619,14 +888,42 @@ func (b *Bitmap) removeBorderGeneral(left, right, top, bot int) (*Bitmap, error)
 
 	err := bm.RasterOperation(0, 0, wd, hd, PixSrc, b, left, top)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "")
 	}
 	return bm, nil
 }
 
+func (b *Bitmap) resizeImageData(s *Bitmap) error {
+	if s == nil {
+		return errors.Error("resizeImageData", "src is not defined")
+	}
+	if b.SizesEqual(s) {
+		return nil
+	}
+
+	b.Data = make([]byte, len(s.Data))
+	b.Width = s.Width
+	b.Height = s.Height
+	b.RowStride = s.RowStride
+	// NOTE: if resolution included, set also resolution
+	return nil
+}
+
+func (b *Bitmap) setAll() error {
+	err := rasterOperation(b, 0, 0, b.Width, b.Height, PixSet, nil, 0, 0)
+	if err != nil {
+		return errors.Wrap(err, "setAll", "")
+	}
+	return nil
+}
+
+func (b *Bitmap) setBit(index int) {
+	b.Data[(index >> 3)] |= (0x80 >> uint(index&7))
+}
+
 func (b *Bitmap) setPadBits(val int) {
 	endbits := 8 - b.Width%8
-	if endbits == 0 {
+	if endbits == 8 {
 		// no partial words
 		return
 	}
@@ -645,6 +942,81 @@ func (b *Bitmap) setPadBits(val int) {
 			b.Data[bIndex] |= mask
 		}
 	}
+}
+
+func (b *Bitmap) setTwoBytes(index int, tb uint16) error {
+	if index+1 > len(b.Data)-1 {
+		return errors.Errorf("setTwoBytes", "index: '%d' out of range", index)
+	}
+	b.Data[index] = byte((tb & 0xff00) >> 8)
+	b.Data[index+1] = byte(tb & 0xff)
+	return nil
+}
+
+func (b *Bitmap) setFourBytes(index int, fb uint32) error {
+	if index+3 > len(b.Data)-1 {
+		return errors.Errorf("setFourBytes", "index: '%d' out of range", index)
+	}
+	b.Data[index] = byte((fb & 0xff000000) >> 24)
+	b.Data[index+1] = byte((fb & 0xff0000) >> 16)
+	b.Data[index+2] = byte((fb & 0xff00) >> 8)
+	b.Data[index+3] = byte(fb & 0xff)
+	return nil
+}
+
+func (b *Bitmap) setEightBytes(index int, eb uint64) error {
+	fullBytesNumber := b.RowStride - (index % b.RowStride)
+	if b.RowStride != b.Width>>3 {
+		fullBytesNumber--
+	}
+	if fullBytesNumber >= 8 {
+		return b.setEightFullBytes(index, eb)
+	}
+	return b.setEightPartlyBytes(index, fullBytesNumber, eb)
+}
+
+func (b *Bitmap) setEightPartlyBytes(index, fullBytesNumber int, eb uint64) (err error) {
+	var (
+		temp  byte
+		shift int
+	)
+	const processName = "setEightPartlyBytes"
+	for i := 1; i <= fullBytesNumber; i++ {
+		// eb >> 7 * 8 = 56
+		// 4 + 7 - 7
+		shift = (64 - i*8)
+		temp = byte(eb >> shift & 0xff)
+		common.Log.Trace("temp: %08b, index: %d, idx: %d, fullBytesNumber: %d, shift: %d", temp, index, index+i-1, fullBytesNumber, shift)
+		if err = b.SetByte(index+i-1, temp); err != nil {
+			return errors.Wrap(err, processName, "fullByte")
+		}
+	}
+	padding := b.RowStride*8 - b.Width
+	if padding == 0 {
+		return nil
+	}
+	shift -= 8
+	temp = byte(eb>>shift&0xff) << padding
+	if err = b.SetByte(index+fullBytesNumber, temp); err != nil {
+		return errors.Wrap(err, processName, "padded")
+	}
+	return nil
+}
+
+func (b *Bitmap) setEightFullBytes(index int, eb uint64) error {
+	if index+7 > len(b.Data)-1 {
+		return errors.Error("setEightBytes", "index out of range")
+	}
+
+	b.Data[index] = byte((eb & 0xff00000000000000) >> 56)
+	b.Data[index+1] = byte((eb & 0xff000000000000) >> 48)
+	b.Data[index+2] = byte((eb & 0xff0000000000) >> 40)
+	b.Data[index+3] = byte((eb & 0xff00000000) >> 32)
+	b.Data[index+4] = byte((eb & 0xff000000) >> 24)
+	b.Data[index+5] = byte((eb & 0xff0000) >> 16)
+	b.Data[index+6] = byte((eb & 0xff00) >> 8)
+	b.Data[index+7] = byte(eb & 0xff)
+	return nil
 }
 
 // thresholdPixelSum this function sums the '1' pixels and returns immediately
@@ -682,191 +1054,55 @@ func (b *Bitmap) thresholdPixelSum(thresh int) bool {
 	return false
 }
 
-// CorrelationScoreThresholded checks whether the correlation score is >= scoreThreshold.
-func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, maxDiffW, maxDiffH int, tab, downcount []int, scoreThreshold float32) (bool, error) {
-	if bm1 == nil {
-		return false, errors.New("correlationScoreThresholded bm1 is nil")
+func copyBitmap(d, s *Bitmap) (*Bitmap, error) {
+	if s == nil {
+		return nil, errors.Error("copyBitmap", "source not defined")
 	}
-	if bm2 == nil {
-		return false, errors.New("correlationScoreThresholded bm2 is nil")
-	}
-
-	if area1 <= 0 || area2 <= 0 {
-		return false, errors.New("correlationScoreThresholded - areas must be > 0")
+	if s == d {
+		return d, nil
 	}
 
-	wi, hi := bm1.Width, bm1.Height
-	wt, ht := bm2.Width, bm2.Height
-
-	if abs(wi-wt) > maxDiffW {
-		return false, nil
+	if d == nil {
+		// create new bitmap if 'd' is nil.
+		d = s.createTemplate()
+		copy(d.Data, s.Data)
+		return d, nil
 	}
-	if abs(hi-ht) > maxDiffH {
-		return false, nil
+	err := d.resizeImageData(s)
+	if err != nil {
+		return nil, errors.Wrap(err, "copyBitmap", "")
 	}
-	var idelX, idelY int
-	if delX >= 0 {
-		idelX = int(delX + 0.5)
-	} else {
-		idelX = int(delX - 0.5)
+	d.Text = s.Text
+	copy(d.Data, s.Data)
+	return d, nil
+}
+
+func xor(d, b1, b2 *Bitmap) (*Bitmap, error) {
+	const processName = "bitmap.xor"
+
+	if b1 == nil {
+		return nil, errors.Error(processName, "'b1' is nil")
 	}
-	if delY >= 0 {
-		idelY = int(delY + 0.5)
-	} else {
-		idelY = int(delY + 0.5)
-	}
-
-	// compute the correlation count.
-	threshold := int(math.Ceil(math.Sqrt(float64(scoreThreshold) * float64(area1) * float64(area2))))
-	var count int
-	var rowBytes1 int
-	rowBytes2 := bm2.RowStride
-
-	// only the rows underlying the shifted bm2 need to be considered
-	loRow := max(idelY, 0)
-	hiRow := min(ht+idelY, hi)
-
-	row1Index := bm1.RowStride * loRow
-	row2Index := bm2.RowStride * (loRow - idelY)
-
-	var untouchable int
-	if hiRow <= hi {
-		// some rows of bm1 would never contribute
-		untouchable = downcount[hiRow-1]
+	if b2 == nil {
+		return nil, errors.Error(processName, "'b2' is nil")
 	}
 
-	loCol := max(idelX, 0)
-	hiCol := min(wt+idelX, wi)
-	var bm1LSkip, bm2LSkip int
-	if idelX >= 8 {
-		bm1LSkip = idelX >> 3
-		row1Index += bm1LSkip
-		loCol -= bm1LSkip << 3
-		hiCol -= bm1LSkip << 3
-		idelX &= 7
-	} else if idelX <= -8 {
-		bm2LSkip = -((idelX + 7) >> 3)
-		row2Index += bm2LSkip
-		rowBytes2 -= bm2LSkip
-		idelX += bm2LSkip << 3
+	if d == b2 {
+		return nil, errors.Error(processName, "'d' == 'b2'")
 	}
-	var (
-		y, x                  int
-		andByte, byte1, byte2 byte
-	)
-	if !(loCol >= hiCol || loRow >= hiRow) {
-		rowBytes1 = (hiCol + 7) >> 3
 
-		switch {
-		case idelX == 0:
-			for y = loRow; y < hiRow; y++ {
-				for x = 0; x < rowBytes1; x++ {
-					andByte = bm1.Data[row1Index+x] & bm2.Data[row2Index+x]
-					count += tab[andByte]
-				}
-				if count >= threshold {
-					return true, nil
-				}
-				if count+downcount[y]-untouchable < threshold {
-					return false, nil
-				}
-				row1Index += bm1.RowStride
-				row2Index += bm2.RowStride
-			}
-		case idelX > 0 && rowBytes2 < rowBytes1:
-			for y = loRow; y < hiRow; y++ {
-				byte1 = bm1.Data[row1Index]
-				byte2 = bm2.Data[row2Index]
-				andByte = byte1 & byte2
-				count += tab[andByte]
-
-				for x = 1; x < rowBytes2; x++ {
-					byte1 = bm1.Data[row1Index+x]
-					byte2 = (bm2.Data[row2Index+x]>>uint(idelX) | bm2.Data[row2Index+x-1]<<uint(8-delX))
-					andByte = byte1 & byte2
-					count += tab[andByte]
-				}
-
-				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index-1] << uint(8-idelX)
-				andByte = byte1 & byte2
-				count += tab[andByte]
-
-				if count >= threshold {
-					return true, nil
-				} else if count+downcount[y]-untouchable < threshold {
-					return false, nil
-				}
-				row1Index += bm1.RowStride
-				row2Index += bm2.RowStride
-			}
-		case idelX > 0 && rowBytes1 >= rowBytes2:
-			for y = loRow; y < hiRow; y++ {
-				for x = 0; x < rowBytes1; x++ {
-					byte1 = bm1.Data[row1Index+x]
-					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
-					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
-					andByte = byte1 & byte2
-					count += tab[andByte]
-				}
-				if count >= threshold {
-					return true, nil
-				} else if count+downcount[y]-untouchable < threshold {
-					return false, nil
-				}
-				row1Index += bm1.RowStride
-				row2Index += bm2.RowStride
-			}
-		case rowBytes1 < rowBytes2:
-			for y = loRow; y < hiRow; y++ {
-				for x = 0; x < rowBytes1; x++ {
-					byte1 = bm1.Data[row1Index+x]
-					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
-					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
-					andByte = byte1 & byte2
-					count += tab[andByte]
-				}
-
-				if count >= threshold {
-					return true, nil
-				} else if count+downcount[y]-untouchable < threshold {
-					return false, nil
-				}
-				row1Index += bm1.RowStride
-				row2Index += bm2.RowStride
-			}
-		case rowBytes2 >= rowBytes1:
-			for y = loRow; y < hiRow; y++ {
-				for x = 0; x < row1Index-1; x++ {
-					byte1 = bm1.Data[row1Index+x]
-					byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
-					byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
-					andByte = byte1 & byte2
-					count += tab[andByte]
-				}
-
-				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index+x] << uint(8-idelX)
-				andByte = byte1 & byte2
-				count += tab[andByte]
-
-				if count >= threshold {
-					return true, nil
-				} else if count+downcount[y]-untouchable < threshold {
-					return false, nil
-				}
-
-				row1Index += bm1.RowStride
-				row2Index += bm2.RowStride
-			}
-		}
+	if !b1.SizesEqual(b2) {
+		common.Log.Debug("%s - Bitmap 'b1' is not equal size with 'b2'", processName)
 	}
-	score := float32(count) * float32(count) / (float32(area1) * float32(area2))
-	if score >= scoreThreshold {
-		common.Log.Debug("count: %d < threshold %d but score %f >= scoreThreshold %f", count, threshold, score, scoreThreshold)
+	var err error
+	if d, err = copyBitmap(d, b1); err != nil {
+		return nil, errors.Wrap(err, processName, "can't create 'd'")
 	}
-	return false, nil
 
+	if err = d.RasterOperation(0, 0, d.Width, d.Height, PixSrcXorDst, b2, 0, 0); err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return d, nil
 }
 
 func abs(input int) int {
@@ -888,4 +1124,35 @@ func min(x, y int) int {
 		return x
 	}
 	return y
+}
+
+func subtract(d, s1, s2 *Bitmap) (*Bitmap, error) {
+	const processName = "subtract"
+	if s1 == nil {
+		return nil, errors.Error(processName, "'s1' is nil")
+	}
+	if s2 == nil {
+		return nil, errors.Error(processName, "'s2' is nil")
+	}
+
+	var err error
+	switch {
+	case d == s1:
+		if err = d.RasterOperation(0, 0, s1.Width, s1.Height, PixNotSrcAndDst, s2, 0, 0); err != nil {
+			return nil, errors.Wrap(err, processName, "d == s1")
+		}
+	case d == s2:
+		if err = d.RasterOperation(0, 0, s1.Width, s1.Height, PixNotSrcAndDst, s1, 0, 0); err != nil {
+			return nil, errors.Wrap(err, processName, "d == s2")
+		}
+	default:
+		d, err = copyBitmap(d, s1)
+		if err != nil {
+			return nil, errors.Wrap(err, processName, "")
+		}
+		if err = d.RasterOperation(0, 0, s1.Width, s1.Height, PixNotSrcAndDst, s2, 0, 0); err != nil {
+			return nil, errors.Wrap(err, processName, "default")
+		}
+	}
+	return d, nil
 }

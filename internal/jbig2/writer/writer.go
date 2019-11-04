@@ -6,8 +6,10 @@
 package writer
 
 import (
-	"errors"
 	"io"
+
+	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // Writer is the structure used to write bits, bytes into predefined data.
@@ -26,13 +28,8 @@ type Writer struct {
 }
 
 var (
-	// ErrInvalidBitValue defines the error when invalid 'bit' value is provided.
-	ErrInvalidBitValue = errors.New("invalid bit value")
-)
-
-var (
-	_ io.Writer     = &Writer{}
-	_ io.ByteWriter = &Writer{}
+	_ BinaryWriter = &Writer{}
+	_ DataGetter   = &Writer{}
 )
 
 // New creates new writer for the provided data.
@@ -59,9 +56,64 @@ func (w *Writer) Data() []byte {
 	return w.data
 }
 
+// FinishByte implements BitWriter interface.
+func (w *Writer) FinishByte() {
+	if w.bitIndex == 0 {
+		return
+	}
+	w.bitIndex = 0
+	w.byteIndex++
+}
+
+// ResetBit resets the bit counter setting it to '0'.
+func (w *Writer) ResetBit() {
+	w.bitIndex = 0
+}
+
 // UseMSB gets the writer flag if it works on the MSB mode.
 func (w *Writer) UseMSB() bool {
 	return w.msb
+}
+
+// SkipBits implements BitWriter interface.
+func (w *Writer) SkipBits(skip int) error {
+	const processName = "Writer.SkipBits"
+	if skip == 0 {
+		return nil
+	}
+
+	d := int(w.bitIndex) + skip
+	if d >= 0 && d < 8 {
+		// skip only bit index. The byte index is the same.
+		w.bitIndex = uint8(d)
+		return nil
+	}
+
+	// skip bit index as well as byte index.
+	// The 'skip' value may be negative. Check if the summary bit index
+	// is not lower than zero.
+	d = int(w.bitIndex) + w.byteIndex*8 + skip
+	if d < 0 {
+		return errors.Errorf(processName, "index out of range")
+	}
+
+	byteIndex := d / 8
+	bitIndex := d % 8
+	common.Log.Trace("SkipBits")
+	common.Log.Trace("BitIndex: '%d' ByteIndex: '%d', FullBits: '%d', Len: '%d', Cap: '%d'", w.bitIndex, w.byteIndex, int(w.bitIndex)+(w.byteIndex)*8, len(w.data), cap(w.data))
+	common.Log.Trace("Skip: '%d', d: '%d', bitIndex: '%d'", skip, d, bitIndex)
+
+	w.bitIndex = uint8(bitIndex)
+
+	// expand if the the data doesnt have place for the given byte index
+	if byteDiff := byteIndex - w.byteIndex; byteDiff > 0 && len(w.data)-1 < byteIndex {
+		common.Log.Trace("ByteDiff: %d", byteDiff)
+		return errors.Errorf(processName, "index out of range")
+	}
+	w.byteIndex = byteIndex
+
+	common.Log.Trace("BitIndex: '%d', ByteIndex: '%d'", w.bitIndex, w.byteIndex)
+	return nil
 }
 
 // Write implements io.Writer interface.
@@ -89,7 +141,7 @@ func (w *Writer) WriteBit(bit int) error {
 	case 0, 1:
 		return w.writeBit(uint8(bit))
 	}
-	return ErrInvalidBitValue
+	return errors.Error("WriteBit", "invalid bit value")
 }
 
 func (w *Writer) byteCapacity() int {

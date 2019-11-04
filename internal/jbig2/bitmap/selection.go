@@ -24,6 +24,21 @@ type Selection struct {
 	Data   [][]SelectionValue
 }
 
+// findMaxTranslations finds the maximum shifts for the erosion operation.
+func (s *Selection) findMaxTranslations() (pxp, pyp, pxn, pyn int) {
+	for i := 0; i < s.Height; i++ {
+		for j := 0; j < s.Width; j++ {
+			if s.Data[i][j] == SelHit {
+				pxp = max(pxp, s.Cx-j)
+				pyp = max(pyp, s.Cy-i)
+				pxn = max(pxn, j-s.Cx)
+				pyn = max(pyn, i-s.Cy)
+			}
+		}
+	}
+	return pxp, pyp, pxn, pyn
+}
+
 func (s *Selection) setOrigin(cy, cx int) {
 	s.Cy, s.Cx = cy, cx
 }
@@ -44,7 +59,7 @@ func SelCreateBrick(h, w int, cy, cx int, tp SelectionValue) *Selection {
 func selCreate(h, w int, name string) *Selection {
 	sel := &Selection{Height: h, Width: w, Name: name}
 	sel.Data = make([][]SelectionValue, h)
-	for i := 0; i < w; i++ {
+	for i := 0; i < h; i++ {
 		sel.Data[i] = make([]SelectionValue, w)
 	}
 	return sel

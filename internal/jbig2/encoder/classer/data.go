@@ -6,16 +6,14 @@
 package classer
 
 import (
-	"image"
-
-	"github.com/unidoc/unipdf/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 )
 
 // Data holds all the data required for the compressed jbig-type representation
 // of a set of images.
 type Data struct {
 	// Pix is the template composite for all classes.
-	Pix *bitmap.Pix
+	Pix *bitmap.Bitmap
 	// PageNumber is the number of pages.
 	PageNumber int
 	// MaxWidth is the max width of original page.
@@ -34,7 +32,7 @@ type Data struct {
 	PageNumbers []int
 	// PtaUL is the slice of UL corners at which the template
 	// is to be placed for each component
-	PtaUL []image.Point
+	PtaUL []bitmap.Point
 }
 
 // Write implements io.Writer interface.
@@ -50,6 +48,6 @@ func (d *Data) Read(p []byte) (int, error) {
 }
 
 // Render renders provided data into *bitmap.Pixa instance.
-func (d *Data) Render() (*bitmap.Pixa, error) {
+func (d *Data) Render() ([]*bitmap.Bitmap, error) {
 	return nil, nil
 }
