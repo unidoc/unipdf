@@ -354,8 +354,17 @@ func (c *Creator) Context() DrawContext {
 // using the AddPage method, as it renders all creator blocks to the added
 // pages, without having to write the document out.
 // NOTE: TOC and outlines are generated only if the AddTOC and AddOutlines
-// fields of the creator are set to true (enabled by default).
+// fields of the creator are set to true (enabled by default). Furthermore, TOCs
+// and outlines without content are skipped. TOC and outline content is
+// added automatically when using the chapter component. TOCs and outlines can
+// also be set externally, using the SetTOC and SetOutlineTree methods.
+// Finalize should only be called once, after all draw calls have taken place,
+// as it will return immediately if the creator instance has been finalized.
 func (c *Creator) Finalize() error {
+	if c.finalized {
+		return nil
+	}
+
 	totPages := len(c.pages)
 
 	// Estimate number of additional generated pages and update TOC.
@@ -615,10 +624,8 @@ func (c *Creator) Draw(d Drawable) error {
 
 // Write output of creator to io.Writer interface.
 func (c *Creator) Write(ws io.Writer) error {
-	if !c.finalized {
-		if err := c.Finalize(); err != nil {
-			return err
-		}
+	if err := c.Finalize(); err != nil {
+		return err
 	}
 
 	pdfWriter := model.NewPdfWriter()
