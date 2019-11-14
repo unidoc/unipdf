@@ -7,7 +7,9 @@ package model
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -379,16 +381,27 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	return font.container
 }
 
-// NewPdfFontFromTTFFile loads a TTF font and returns a PdfFont type that can be used in text
-// styling functions.
-// Uses a WinAnsiTextEncoder and loads only character codes 32-255.
+// NewPdfFontFromTTFFile is a wrapper around NewPdfFontFromTTF.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		common.Log.Debug("ERROR: reading TTF font file: %v", err)
+		return nil, err
+	}
+
+	return NewPdfFontFromTTF(f)
+}
+
+// NewPdfFontFromTTF loads a TTF font and returns a PdfFont type that can be
+// used in text styling functions.
+// Uses a WinAnsiTextEncoder and loads only character codes 32-255.
+func NewPdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
 	const minCode = textencoding.CharCode(32)
 	const maxCode = textencoding.CharCode(255)
 
-	ttf, err := fonts.TtfParseFile(filePath)
+	ttf, err := fonts.TtfParse(r)
 	if err != nil {
-		common.Log.Debug("ERROR: loading ttf font: %v", err)
+		common.Log.Debug("ERROR: loading TTF font: %v", err)
 		return nil, err
 	}
 
@@ -457,9 +470,15 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	descriptor.ItalicAngle = core.MakeFloat(float64(ttf.ItalicAngle))
 	descriptor.MissingWidth = core.MakeFloat(k * float64(ttf.Widths[0]))
 
-	ttfBytes, err := ioutil.ReadFile(filePath)
+	// Rewind because previous call to fonts.TtfParse moved the file offset.
+	if _, err := r.Seek(0, io.SeekStart); err != nil {
+		common.Log.Debug("ERROR: Unable to rewind font reader: %v", err)
+		return nil, err
+	}
+
+	ttfBytes, err := ioutil.ReadAll(r)
 	if err != nil {
-		common.Log.Debug("ERROR: Unable to read file contents: %v", err)
+		common.Log.Debug("ERROR: Unable to read font contents: %v", err)
 		return nil, err
 	}
 
