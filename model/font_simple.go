@@ -381,7 +381,9 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 	return font.container
 }
 
-// NewPdfFontFromTTFFile is a wrapper around NewPdfFontFromTTF.
+// NewPdfFontFromTTFFile loads a TTF font file and returns a PdfFont type
+// that can be used in text styling functions.
+// Uses a WinAnsiTextEncoder and loads only character codes 32-255.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
