@@ -388,6 +388,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 		common.Log.Debug("ERROR: reading TTF font file: %v", err)
 		return nil, err
 	}
+	defer f.Close()
 
 	return NewPdfFontFromTTF(f)
 }
