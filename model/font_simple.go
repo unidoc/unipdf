@@ -6,6 +6,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -402,7 +403,12 @@ func NewPdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
 	const minCode = textencoding.CharCode(32)
 	const maxCode = textencoding.CharCode(255)
 
-	ttf, err := fonts.TtfParse(r)
+	ttfBytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		common.Log.Debug("ERROR: Unable to read font contents: %v", err)
+		return nil, err
+	}
+	ttf, err := fonts.TtfParse(bytes.NewReader(ttfBytes))
 	if err != nil {
 		common.Log.Debug("ERROR: loading TTF font: %v", err)
 		return nil, err
@@ -472,18 +478,6 @@ func NewPdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
 		k * float64(ttf.Ymin), k * float64(ttf.Xmax), k * float64(ttf.Ymax)})
 	descriptor.ItalicAngle = core.MakeFloat(float64(ttf.ItalicAngle))
 	descriptor.MissingWidth = core.MakeFloat(k * float64(ttf.Widths[0]))
-
-	// Rewind because previous call to fonts.TtfParse moved the file offset.
-	if _, err := r.Seek(0, io.SeekStart); err != nil {
-		common.Log.Debug("ERROR: Unable to rewind font reader: %v", err)
-		return nil, err
-	}
-
-	ttfBytes, err := ioutil.ReadAll(r)
-	if err != nil {
-		common.Log.Debug("ERROR: Unable to read font contents: %v", err)
-		return nil, err
-	}
 
 	stream, err := core.MakeStream(ttfBytes, core.NewFlateEncoder())
 	if err != nil {
