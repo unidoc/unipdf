@@ -155,7 +155,12 @@ func (tl *TOCLine) SetLink(page int64, x, y float64) {
 	tl.linkY = y
 	tl.linkPage = page
 
-	tl.SetStyle(tl.sp.defaultLinkStyle)
+	// Set the color of the line components to the default link color.
+	linkColor := tl.sp.defaultLinkStyle.Color
+	tl.Number.Style.Color = linkColor
+	tl.Title.Style.Color = linkColor
+	tl.Separator.Style.Color = linkColor
+	tl.Page.Style.Color = linkColor
 }
 
 // getLineLink returns a new annotation if the line has a link set.
