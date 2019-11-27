@@ -197,7 +197,18 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 		switch encoderName {
 		case "Identity-H", "Identity-V":
 			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
-		case "UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniGB-UTF16-H", "UniGB-UTF16-V":
+		case
+			// Reference: https://www.adobe.com/content/dam/acom/en/devnet/font/pdfs/5094.CJK_CID.pdf
+			// Adobe-GB1-4, Adobe-GB1-5
+			"UniGB-UTF16-H", "UniGB-UTF16-V",
+			// Adobe-CNS1-4, Adobe-CNS1-5
+			"UniCNS-UTF16-H", "UniCNS-UTF16-V",
+			// Adobe-Japan1-4, Adobe-Japan1-5, Adobe-Japan1-6
+			"UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniJIS2004-UTF16-H",
+			// Adobe-Japan2-0
+			"UniHojo-UTF16-H", "UniHojo-UTF16-V",
+			// Adobe-Korea1-2
+			"UniKS-UTF16-H", "UniKS-UTF16-V":
 			font.encoder = textencoding.NewUTF16TextEncoder(encoderName)
 		default:
 			common.Log.Debug("Unhandled cmap %q", encoderName)
