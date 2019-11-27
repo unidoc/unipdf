@@ -194,9 +194,12 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 
 	encoderName, ok := core.GetNameVal(d.Get("Encoding"))
 	if ok {
-		if encoderName == "Identity-H" || encoderName == "Identity-V" {
+		switch encoderName {
+		case "Identity-H", "Identity-V":
 			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
-		} else {
+		case "UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniGB-UTF16-H", "UniGB-UTF16-V":
+			font.encoder = textencoding.NewUTF16TextEncoder(encoderName)
+		default:
 			common.Log.Debug("Unhandled cmap %q", encoderName)
 		}
 	}
