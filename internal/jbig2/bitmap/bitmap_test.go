@@ -1130,3 +1130,54 @@ func TestSubtract(t *testing.T) {
 		assert.Equal(t, expected, d.Data)
 	})
 }
+
+// TestNewUnpadded test the NewUnpaddedBitmap function.
+func TestNewUnpadded(t *testing.T) {
+	t.Run("Valid", func(t *testing.T) {
+		// having the data without padding of width: 13 and height: 4
+		// Then there should be (13 * 4)+7 >> 3 bytes = 7
+		// with the following data
+		// 00110100 01011010 01011101 01001010 01110001 01111010 11110000
+		data := []byte{0x34, 0x5A, 0x5D, 0x4A, 0x71, 0x7A, 0xF0}
+		// as the result it should be now:
+		// 00110100 01011000
+		// 01001011 10101000
+		// 00101001 11000000
+		// 10111101 01111000
+		bm, err := NewWithUnpaddedData(13, 4, data)
+		require.NoError(t, err)
+
+		expected := []byte{0x34, 0x58, 0x4B, 0xA8, 0x29, 0xC0, 0xBD, 0x78}
+		if assert.Len(t, bm.Data, 8) {
+			assert.Equal(t, expected, bm.Data)
+		}
+	})
+
+	t.Run("TooFewBytes", func(t *testing.T) {
+		// having the data wihout padding of width 13 and height 4
+		// with insufficient number of bytes - at least 7.
+		data := make([]byte, 6)
+		_, err := NewWithUnpaddedData(13, 4, data)
+		assert.Error(t, err)
+	})
+
+	t.Run("TooManyBytes", func(t *testing.T) {
+		// having the data without padding of width: 13 and height: 4
+		// Then there should be (13 * 4)+7 >> 3 bytes = 7
+		// with the following data
+		// 00110100 01011010 01011101 01001010 01110001 01111010 11110000
+		data := []byte{0x34, 0x5A, 0x5D, 0x4A, 0x71, 0x7A, 0xF0, 0x00}
+		// as the result it should be now:
+		// 00110100 01011000
+		// 01001011 10101000
+		// 00101001 11000000
+		// 10111101 01111000
+		bm, err := NewWithUnpaddedData(13, 4, data)
+		require.NoError(t, err)
+
+		expected := []byte{0x34, 0x58, 0x4B, 0xA8, 0x29, 0xC0, 0xBD, 0x78}
+		if assert.Len(t, bm.Data, 8) {
+			assert.Equal(t, expected, bm.Data)
+		}
+	})
+}

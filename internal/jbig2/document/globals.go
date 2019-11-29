@@ -6,15 +6,8 @@
 package document
 
 import (
-	"errors"
-
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
-)
-
-// Common errors definitions.
-var (
-	ErrNoGlobalsYet  = errors.New("no global segment added yet")
-	ErrNoGlobalFound = errors.New("no global segment found")
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // Globals store segments that aren't associated to a page.
@@ -23,21 +16,25 @@ var (
 // These segments will be decoded on demand, all results are stored in the document.
 type Globals map[int]*segments.Header
 
+// AddSegment adds the segment to the globals store.
+func (g Globals) AddSegment(segmentNumber int, segment *segments.Header) {
+	g[segmentNumber] = segment
+}
+
 // GetSegment gets the global segment header.
 func (g Globals) GetSegment(segmentNumber int) (*segments.Header, error) {
+	const processName = "Globals.GetSegment"
+	if g == nil {
+		return nil, errors.Error(processName, "globals not defined")
+	}
+
 	if len(g) == 0 {
-		return nil, ErrNoGlobalsYet
+		return nil, errors.Error(processName, "globals are empty")
 	}
 
 	v, ok := g[segmentNumber]
 	if !ok {
-		return nil, ErrNoGlobalFound
+		return nil, errors.Error(processName, "segment not found")
 	}
-
 	return v, nil
-}
-
-// AddSegment adds the segment to the globals store.
-func (g Globals) AddSegment(segmentNumber int, segment *segments.Header) {
-	g[segmentNumber] = segment
 }

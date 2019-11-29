@@ -16,12 +16,13 @@ import (
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-// TestDocument tests the jbig2.Document decoding.
-func TestDocument(t *testing.T) {
+// TestDecodeDocument test the DecodeDocument function.
+func TestDecodeDocument(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	}
 
 	t.Run("AnnexH", func(t *testing.T) {
@@ -82,20 +83,19 @@ func TestDocument(t *testing.T) {
 			0x00, 0x00, 0x00, 0x00, 0x14, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}
 
+		r := reader.New(data)
 		// create the document
-		d, err := NewDocument(data)
+		d, err := DecodeDocument(r, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint32(3), d.NumberOfPages)
 		assert.Equal(t, segments.OSequential, d.OrganizationType)
 		assert.Equal(t, false, d.GBUseExtTemplate)
 
-		p1 := d.Pages[1]
-		require.NoError(t, err)
-
-		t.Run("Segment#0", func(t *testing.T) {
-			s1 := p1.GetSegment(0)
-			require.NotNil(t, s1)
+		t.Run("Segment#1", func(t *testing.T) {
+			// the 0'th segment should be stored in the globals
+			s1, err := d.GetGlobalSegment(0)
+			require.NoError(t, err)
 
 			seg, err := s1.GetSegmentData()
 			require.NoError(t, err)
@@ -117,8 +117,12 @@ func TestDocument(t *testing.T) {
 			assert.True(t, pLetter.Equals(symbol), fmt.Sprintf("P decoded: %s - Should be: %s", pLetter, symbol))
 		})
 
-		t.Run("Segment#1", func(t *testing.T) {
-			h := p1.GetSegment(1)
+		p1 := d.Pages[1]
+		require.NoError(t, err)
+
+		t.Run("Segment#2", func(t *testing.T) {
+			h, err := p1.GetSegment(1)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -137,8 +141,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#3", func(t *testing.T) {
-			h := p1.GetSegment(2)
-			require.NotNil(t, h)
+			h, err := p1.GetSegment(2)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -158,8 +162,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#4", func(t *testing.T) {
-			h := p1.GetSegment(3)
-			require.NotNil(t, 3)
+			h, err := p1.GetSegment(3)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -188,8 +192,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#5", func(t *testing.T) {
-			h := p1.GetSegment(4)
-			require.NotNil(t, h)
+			h, err := p1.GetSegment(4)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -204,8 +208,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#6", func(t *testing.T) {
-			h := p1.GetSegment(5)
-			require.NotNil(t, h)
+			h, err := p1.GetSegment(5)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -219,8 +223,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#7", func(t *testing.T) {
-			header := p1.GetSegment(6)
-			require.NotNil(t, header)
+			header, err := p1.GetSegment(6)
+			require.NoError(t, err)
 
 			seg, err := header.GetSegmentData()
 			require.NoError(t, err)
@@ -243,8 +247,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#8", func(t *testing.T) {
-			h := p1.GetSegment(7)
-			require.NotNil(t, h)
+			h, err := p1.GetSegment(7)
+			require.NoError(t, err)
 
 			assert.Equal(t, segments.TEndOfPage, h.Type)
 		})
@@ -258,8 +262,8 @@ func TestDocument(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Run("Segment#9", func(t *testing.T) {
-			h := p2.GetSegment(8)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(8)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -269,8 +273,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#10", func(t *testing.T) {
-			h := p2.GetSegment(9)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(9)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -287,8 +291,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#11", func(t *testing.T) {
-			h := p2.GetSegment(10)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(10)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -315,8 +319,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#12", func(t *testing.T) {
-			h := p2.GetSegment(11)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(11)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -332,8 +336,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#13", func(t *testing.T) {
-			h := p2.GetSegment(12)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(12)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -348,8 +352,8 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#14", func(t *testing.T) {
-			h := p2.GetSegment(13)
-			require.NotNil(t, h)
+			h, err := p2.GetSegment(13)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -377,7 +381,8 @@ func TestDocument(t *testing.T) {
 		require.NotNil(t, p3)
 
 		t.Run("Segment#16", func(t *testing.T) {
-			h := p3.GetSegment(15)
+			h, err := p3.GetSegment(15)
+			require.NoError(t, err)
 
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
@@ -390,7 +395,11 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#17", func(t *testing.T) {
-			h := p3.GetSegment(16)
+			// this segment is not associated with any page
+			// thus it should be stored within globals
+			h, err := d.GetGlobalSegment(16)
+			require.NoError(t, err)
+
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -405,7 +414,9 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#18", func(t *testing.T) {
-			h := p3.GetSegment(17)
+			h, err := p3.GetSegment(17)
+			require.NoError(t, err)
+
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -427,7 +438,9 @@ func TestDocument(t *testing.T) {
 		})
 
 		t.Run("Segment#19", func(t *testing.T) {
-			h := p3.GetSegment(18)
+			h, err := p3.GetSegment(18)
+			require.NoError(t, err)
+
 			seg, err := h.GetSegmentData()
 			require.NoError(t, err)
 
@@ -462,7 +475,7 @@ func TestDocument(t *testing.T) {
 			0x27, 0xF2, 0xB5, 0x3D, 0x4E, 0x37, 0xEF, 0x79, 0x5C, 0xC5, 0x50, 0x6D, 0xFF, 0xAC,
 		}
 
-		gdoc, err := NewDocument(globalsData)
+		gdoc, err := DecodeDocument(reader.New(globalsData), nil)
 		require.NoError(t, err)
 
 		data := []byte{
@@ -486,10 +499,185 @@ func TestDocument(t *testing.T) {
 		}
 
 		// get the document
-		d, err := NewDocumentWithGlobals(data, gdoc.GlobalSegments)
+		d, err := DecodeDocument(reader.New(data), gdoc.GlobalSegments)
 		require.NoError(t, err)
 
 		assert.Len(t, d.GlobalSegments, 1)
+	})
+}
+
+// TestEncodeDocument tests the Encode method of the jbig2 Document.
+func TestEncodeDocument(t *testing.T) {
+	t.Run("Generic", func(t *testing.T) {
+		// this test should check jbig2 encode generic method.
+		t.Run("FullHeaders", func(t *testing.T) {
+			d := InitEncodeDocument(true)
+
+			// add two pages, both encoded using generic method
+			// where second uses duplicate line removal
+			err := d.AddGenericPage(bitmap.TstImageBitmap(), false)
+			require.NoError(t, err)
+
+			// add the second page using generic method with duplicated line removal.
+			err = d.AddGenericPage(bitmap.TstImageBitmap(), true)
+			require.NoError(t, err)
+
+			data, err := d.Encode()
+			require.NoError(t, err)
+
+			// decode the
+			decoded, err := DecodeDocument(reader.New(data))
+			require.NoError(t, err)
+
+			// number of pages is known
+			assert.False(t, decoded.NumberOfPagesUnknown)
+			// there should be two pages
+			assert.Equal(t, uint32(2), decoded.NumberOfPages)
+			// decoded document should have a flag of full headers
+			assert.True(t, decoded.FullHeaders)
+
+			t.Run("NoDuplicatedLinesRemoval", func(t *testing.T) {
+				// get page 1 and check if the data is equal to the 'encodeBitmapData'
+				pageOne, err := decoded.GetPage(1)
+				require.NoError(t, err)
+
+				// page one should contain 3 segments
+				pOne, ok := pageOne.(*Page)
+				require.True(t, ok)
+
+				// page info, generic region, end of page
+				assert.Equal(t, 3, len(pOne.Segments))
+
+				// page one bitmap should be equal to the bitmap.TstImageBitmap
+				bm, err := pageOne.GetBitmap()
+				require.NoError(t, err)
+
+				assert.Equal(t, bitmap.TstImageBitmapData(), bm.Data, bm.String())
+			})
+
+			t.Run("DuplicatedLinesRemoval", func(t *testing.T) {
+				// get page two
+				pageTwo, err := decoded.GetPage(2)
+				require.NoError(t, err)
+
+				// it must *Page
+				pTwo, ok := pageTwo.(*Page)
+				require.True(t, ok)
+
+				// there should also be page info, generic region, end of page segments
+				assert.Equal(t, 3, len(pTwo.Segments))
+
+				// second bitmap data should also equal to the bitmap TstImage
+				bm, err := pTwo.GetBitmap()
+				require.NoError(t, err)
+
+				assert.Equal(t, bitmap.TstImageBitmapData(), bm.Data, bm.String())
+			})
+		})
+
+		t.Run("PDFMode", func(t *testing.T) {
+			bitmaps := []*bitmap.Bitmap{bitmap.TstFrameBitmap(), bitmap.TstImageBitmap()}
+			names := []string{"Frame", "TstImage"}
+			t.Run("DuplicateLineRemoval", func(t *testing.T) {
+				for i, name := range names {
+					t.Run(name, func(t *testing.T) {
+						d := InitEncodeDocument(false)
+						// get the copy of the source bitmap
+						sbm := bitmaps[i].Copy()
+
+						// add one page encoded using generic method that uses duplicate line removal
+						err := d.AddGenericPage(sbm, true)
+						require.NoError(t, err)
+
+						// enocode the data
+						data, err := d.Encode()
+						require.NoError(t, err)
+
+						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
+						// decode the
+						decoded, err := DecodeDocument(reader.New(data))
+						require.NoError(t, err)
+
+						assert.False(t, decoded.FullHeaders)
+						// no file header determines that the number of pages is unknown
+						assert.True(t, decoded.NumberOfPagesUnknown)
+						assert.Equal(t, uint32(1), decoded.NumberOfPages)
+
+						// get the first page from the document
+						pager, err := decoded.GetPage(1)
+						require.NoError(t, err)
+
+						p, ok := pager.(*Page)
+						require.True(t, ok)
+
+						// there should be only two segments in the page:
+						// page information and generic region
+						assert.Equal(t, 2, len(p.Segments))
+
+						bm, err := p.GetBitmap()
+						require.NoError(t, err)
+
+						assert.Equal(t, sbm.Data, bm.Data)
+					})
+				}
+			})
+
+			t.Run("NoDuplicateLineRemoval", func(t *testing.T) {
+				for i, name := range names {
+					t.Run(name, func(t *testing.T) {
+						d := InitEncodeDocument(false)
+						// get the source bitmap
+						sbm := bitmaps[i].Copy()
+						// add one page encoded using generic method that doesn't use duplicate line removal
+						err := d.AddGenericPage(sbm, false)
+						require.NoError(t, err)
+
+						// enocode the data
+						data, err := d.Encode()
+						require.NoError(t, err)
+
+						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
+						// decode the
+						decoded, err := DecodeDocument(reader.New(data))
+						require.NoError(t, err)
+
+						assert.False(t, decoded.FullHeaders)
+						// no file header determines that the number of pages is unknown
+						assert.True(t, decoded.NumberOfPagesUnknown)
+						assert.Equal(t, uint32(1), decoded.NumberOfPages)
+
+						// get the first page from the document
+						pager, err := decoded.GetPage(1)
+						require.NoError(t, err)
+
+						p, ok := pager.(*Page)
+						require.True(t, ok)
+
+						// there should be only two segments in the page:
+						// page information and generic region
+						assert.Equal(t, 2, len(p.Segments))
+
+						// get the bitmap from the page
+						bm, err := p.GetBitmap()
+						require.NoError(t, err)
+
+						assert.Equal(t, sbm.Data, bm.Data)
+					})
+				}
+			})
+
+			t.Run("TooManyPages", func(t *testing.T) {
+				d := InitEncodeDocument(false)
+
+				// add one page to encode
+				err := d.AddGenericPage(bitmap.TstImageBitmap(), false)
+				require.NoError(t, err)
+
+				// trying to add any other second page should result with an error
+				err = d.AddGenericPage(bitmap.TstImageBitmap(), false)
+				assert.Error(t, err)
+			})
+		})
 	})
 }
 

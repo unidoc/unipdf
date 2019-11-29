@@ -6,6 +6,7 @@
 package segments
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strings"
@@ -13,7 +14,9 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // PageInformationSegment represents the segment type Page Information 7.4.8.
@@ -42,6 +45,56 @@ type PageInformationSegment struct {
 	MaxStripeSize uint16
 }
 
+// Encode implements SegmentEncoder interface.
+func (p *PageInformationSegment) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "PageInformationSegment.Encode"
+	tm := make([]byte, 4)
+
+	// encode page bitmap width 7.4.8.1
+	binary.BigEndian.PutUint32(tm, uint32(p.PageBMWidth))
+	n, err = w.Write(tm)
+	if err != nil {
+		return n, errors.Wrap(err, processName, "width")
+	}
+
+	// encode page bitmap height 7.4.8.2
+	binary.BigEndian.PutUint32(tm, uint32(p.PageBMHeight))
+	var temp int
+	temp, err = w.Write(tm)
+	if err != nil {
+		return temp + n, errors.Wrap(err, processName, "height")
+	}
+	n += temp
+
+	// encode page x resolution - 7.4.8.3
+	binary.BigEndian.PutUint32(tm, uint32(p.ResolutionX))
+	temp, err = w.Write(tm)
+	if err != nil {
+		return temp + n, errors.Wrap(err, processName, "x resolution")
+	}
+	n += temp
+
+	// encode page y resolution - 7.4.8.4
+	binary.BigEndian.PutUint32(tm, uint32(p.ResolutionY))
+	if temp, err = w.Write(tm); err != nil {
+		return temp + n, errors.Wrap(err, processName, "y resolution")
+	}
+	n += temp
+
+	// page flags - 7.4.8.5
+	if err = p.encodeFlags(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n++
+
+	// page striping information - 7.4.8.6
+	if temp, err = p.encodeStripingInformation(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += temp
+	return n, nil
+}
+
 // Init implements Segmenter interface.
 func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) error {
 	p.r = r
@@ -62,6 +115,19 @@ func (p *PageInformationSegment) CombinationOperatorOverrideAllowed() bool {
 // DefaultPixelValue returns page segment default pixel.
 func (p *PageInformationSegment) DefaultPixelValue() uint8 {
 	return p.defaultPixelValue
+}
+
+// Size returns the byte size of the page information segment data.
+// The page information segment is composed of:
+// - bitmap width 			- 4 bytes
+// - bitmap height 			- 4 bytes
+// - x resolution 			- 4 bytes
+// - y resolution 			- 4 bytes
+// - flags 					- 1 byte
+// - stripping information 	- 2 bytes
+// Total 19 bytes
+func (p *PageInformationSegment) Size() int {
+	return 19
 }
 
 // String implements Stringer interface.
@@ -90,6 +156,81 @@ func (p *PageInformationSegment) checkInput() error {
 		}
 	}
 	return nil
+}
+
+func (p *PageInformationSegment) encodeFlags(w writer.BinaryWriter) (err error) {
+	const processName = "encodeFlags"
+	// reserved bits
+	if err = w.SkipBits(1); err != nil {
+		return errors.Wrap(err, processName, "reserved bit")
+	}
+	// combination operator override
+	var bit int
+	if p.CombinationOperatorOverrideAllowed() {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "combination operator overridden")
+	}
+
+	// requires auxiliary buffer
+	bit = 0
+	if p.requiresAuxiliaryBuffer {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "requires auxiliary buffer")
+	}
+
+	// default page combination operator - 2 bits
+	if err = w.WriteBit((int(p.combinationOperator) >> 1) & 0x01); err != nil {
+		return errors.Wrap(err, processName, "combination operator first bit")
+	}
+	if err = w.WriteBit(int(p.combinationOperator) & 0x01); err != nil {
+		return errors.Wrap(err, processName, "combination operator second bit")
+	}
+
+	// default page pixel value
+	bit = int(p.defaultPixelValue)
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "default page pixel value")
+	}
+
+	// contains refinement
+	bit = 0
+	if p.mightContainRefinements {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "contains refinement")
+	}
+
+	// page is eventually lossless
+	bit = 0
+	if p.IsLossless {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return errors.Wrap(err, processName, "page is eventually lossless")
+	}
+	return nil
+}
+
+func (p *PageInformationSegment) encodeStripingInformation(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeStripingInformation"
+	if !p.IsStripe {
+		// if there is no page striping write two empty bytes
+		if n, err = w.Write([]byte{0x00, 0x00}); err != nil {
+			return 0, errors.Wrap(err, processName, "no striping")
+		}
+		return n, nil
+	}
+	temp := make([]byte, 2)
+	binary.BigEndian.PutUint16(temp, p.MaxStripeSize|1<<15)
+	if n, err = w.Write(temp); err != nil {
+		return 0, errors.Wrapf(err, processName, "striping: %d", p.MaxStripeSize)
+	}
+	return n, nil
 }
 
 func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {

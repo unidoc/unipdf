@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package writer
 
 import (
@@ -13,11 +18,8 @@ const (
 	maxInt    = int(^uint(0) >> 1)
 )
 
-// compile time check for Buffer to implement BinaryWriter, DataGetter interface.
-var (
-	_ BinaryWriter = &Buffer{}
-	_ DataGetter   = &Buffer{}
-)
+// compile time check for Buffer to implement BinaryWriter interface.
+var _ BinaryWriter = &Buffer{}
 
 // Buffer is the Writer implementation that works on expandable data slices.
 type Buffer struct {

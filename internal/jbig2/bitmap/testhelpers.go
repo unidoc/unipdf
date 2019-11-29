@@ -1,0 +1,107 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
+package bitmap
+
+import (
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
+)
+
+var (
+	frameBitmap *Bitmap
+	imageBitmap *Bitmap
+)
+
+// encodeDataBitmap is the data used to create bitmap for  the encoding process.
+// The bitmap has 50 pix width and and 21 height.
+//
+//            1        2        3        4        5        6         7
+//
+//                111111 11112222 22222233 33333333 44444444 44
+//     01234567 89012345 67890123 45678901 23456789 01234567 89
+//
+//  0  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+//  1  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+//  2  00111110 01111000 00100111 11000010 00100111 10010001 00000000
+//  3  00100010 01001000 00100001 00000011 00100100 10010001 00000000
+//  4  00100010 01001000 00100001 00000010 10100100 10010101 00000000
+//  5  00100010 01001000 00100001 00000010 01100100 10011011 00000000
+//  6  00111100 01111000 00100001 00000010 00100111 10010001 00000000
+//  7  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+//  8  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+//  9  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 10  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 11  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 12  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 13  00000000 00000000 01111111 11111000 00000000 00000000 00000000
+// 14  00000000 00000000 01111111 11111000 00000000 00000000 00000000
+// 15  00000000 00000000 01100011 00011000 00000000 00000000 00000000
+// 16  00000000 00000000 01100011 00011000 00000000 00000000 00000000
+// 17  00000000 00000000 01100011 00011000 00000000 00000000 00000000
+// 18  00000000 00000000 01111111 11111000 00000000 00000000 00000000
+// 19  00000000 00000000 00010101 01010000 00000000 00000000 00000000
+// 20  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 21  00000000 00000000 00000000 00000000 00000000 00000000 00000000/
+var encodeBitmapData = []byte{
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x3E, 0x78, 0x27, 0xC2, 0x27, 0x91, 0x00,
+	0x22, 0x48, 0x21, 0x03, 0x24, 0x91, 0x00,
+	0x22, 0x48, 0x21, 0x02, 0xA4, 0x95, 0x00,
+	0x22, 0x48, 0x21, 0x02, 0x64, 0x9B, 0x00,
+	0x3C, 0x78, 0x21, 0x02, 0x27, 0x91, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x7F, 0xF8, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x7F, 0xF8, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x63, 0x18, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x63, 0x18, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x63, 0x18, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x7F, 0xF8, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x15, 0x50, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+
+func init() {
+	const processName = "bitmaps.initialization"
+	// prepare frame bitmap
+	frameBitmap = New(50, 40)
+	var err error
+	frameBitmap, err = frameBitmap.AddBorder(2, 1)
+	if err != nil {
+		panic(errors.Wrap(err, processName, "frameBitmap"))
+	}
+
+	// prepare image bitmap
+	imageBitmap, err = NewWithData(50, 22, encodeBitmapData)
+	if err != nil {
+		panic(errors.Wrap(err, processName, "imageBitmap"))
+	}
+}
+
+// TstFrameBitmap gets the test frame bitmap
+func TstFrameBitmap() *Bitmap {
+	return frameBitmap.Copy()
+}
+
+// TstFrameBitmapData gets the test frame bitmap data
+func TstFrameBitmapData() []byte {
+	return frameBitmap.Data
+}
+
+// TstImageBitmap gets the test image bitmap
+func TstImageBitmap() *Bitmap {
+	return imageBitmap.Copy()
+}
+
+// TstImageBitmapData gets the test image bitmap data
+func TstImageBitmapData() []byte {
+	return imageBitmap.Data
+}

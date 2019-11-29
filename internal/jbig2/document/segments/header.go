@@ -43,7 +43,7 @@ type Header struct {
 func NewHeader(d Documenter, r reader.StreamReader, offset int64, organizationType OrganizationType) (*Header, error) {
 	h := &Header{Reader: r}
 	if err := h.parse(d, r, offset, organizationType); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "NewHeader", "")
 	}
 	return h, nil
 }
@@ -88,8 +88,27 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 // Encode encodes the jbi2 header structure to the provided 'w' BinaryWriter.
 func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 	const processName = "Header.Write"
+	var tw writer.BinaryWriter
+
 	// For safety Finish the current byte in the 'w'.
 	w.FinishByte()
+	// check if the header contains any data
+	if h.SegmentData != nil {
+		se, ok := h.SegmentData.(SegmentEncoder)
+		if !ok {
+			return 0, errors.Errorf(processName, "Segment: %T doesn't implement SegmentEncoder interface", h.SegmentData)
+		}
+
+		// create temporary writer for the segment data
+		tw = writer.BufferedMSB()
+
+		// encode the segment data
+		n, err = se.Encode(tw)
+		if err != nil {
+			return 0, errors.Wrap(err, processName, "")
+		}
+		h.SegmentDataLength = uint64(n)
+	}
 
 	// the header contains following bitwise parts:
 	// [SegmentNumber] - 4 byte uint32
@@ -102,12 +121,13 @@ func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 		h.PageAssociationFieldSize = true
 	}
 
-	// 7.2.2 Segment number
 	var temp int
-	n, err = h.writeSegmentNumber(w)
+	// 7.2.2 Segment number
+	temp, err = h.writeSegmentNumber(w)
 	if err != nil {
 		return 0, errors.Wrap(err, processName, "")
 	}
+	n += temp
 
 	// 7.2.3 Segment header flags
 	if err = h.writeFlags(w); err != nil {
@@ -142,6 +162,16 @@ func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 		return 0, errors.Wrap(err, processName, "")
 	}
 	n += temp
+
+	// compute header length
+	h.HeaderLength = int64(n) - int64(h.SegmentDataLength)
+
+	// if the segment contains any data writer it into the 'w' writer
+	if tw != nil {
+		if _, err = w.Write(tw.Data()); err != nil {
+			return n, errors.Wrap(err, processName, "write segment data")
+		}
+	}
 	return n, nil
 }
 
@@ -165,6 +195,12 @@ func (h *Header) String() string {
 	return sb.String()
 }
 
+/**
+
+Header private methods
+
+*/
+
 // pageSize returns the size of the segment page association field.:w
 func (h *Header) pageSize() uint {
 	if h.PageAssociation <= 255 {
@@ -178,6 +214,7 @@ func (h *Header) parse(
 	d Documenter, r reader.StreamReader,
 	offset int64, organizationType OrganizationType,
 ) (err error) {
+	const processName = "parse"
 	common.Log.Trace("[SEGMENT-HEADER][PARSE] Begins")
 	defer func() {
 		if err != nil {
@@ -189,45 +226,44 @@ func (h *Header) parse(
 
 	_, err = r.Seek(offset, io.SeekStart)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "seek start")
 	}
 
 	// 7.2.2 Segment Number.
 	if err = h.readSegmentNumber(r); err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	// 7.2.3 Segment header flags.
 	if err = h.readHeaderFlags(r); err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	// 7.2.4 Amount of referred-to segment.
 	var countOfRTS uint64
 	countOfRTS, err = h.readNumberOfReferredToSegments(r)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	// 7.2.5 Refered-tp segment numbers.
 	h.RTSNumbers, err = h.readReferedToSegmentNumbers(r, int(countOfRTS))
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	// 7.2.6 Segment page association.
 	err = h.readSegmentPageAssociation(d, r, countOfRTS, h.RTSNumbers...)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	if h.Type != TEndOfFile {
 		// 7.2.7 Segment data length (Contains the length of the data).
 		if err = h.readSegmentDataLength(r); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 	}
-
 	h.readDataStartOffset(r, organizationType)
 	h.readHeaderLength(r, offset)
 
@@ -237,11 +273,12 @@ func (h *Header) parse(
 
 // readSegmentNumber reads the segment number.
 func (h *Header) readSegmentNumber(r reader.StreamReader) error {
+	const processName = "readSegmentNumber"
 	// 7.2.2
 	b := make([]byte, 4)
 	_, err := r.Read(b)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "")
 	}
 
 	// BigEndian number
@@ -251,10 +288,11 @@ func (h *Header) readSegmentNumber(r reader.StreamReader) error {
 
 // readHeaderFlags reads the header flag values.
 func (h *Header) readHeaderFlags(r reader.StreamReader) error {
+	const processName = "readHeaderFlags"
 	// 7.2.3
 	bit, err := h.Reader.ReadBit()
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "retain flag")
 	}
 
 	// Bit 7: Retain Flag
@@ -264,7 +302,7 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 
 	bit, err = h.Reader.ReadBit()
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "page association")
 	}
 
 	// Bit 6: Size of the page association field
@@ -275,7 +313,7 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 	// Bit 5-0 Contains the values (between 0 - 62 with gaps) for segment types
 	tp, err := h.Reader.ReadBits(6)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "segment type")
 	}
 	h.Type = Type(int(tp))
 
@@ -284,10 +322,11 @@ func (h *Header) readHeaderFlags(r reader.StreamReader) error {
 
 // readNumberOfReferredToSegments gets the amount of referred-to segments.
 func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, error) {
+	const processName = "readNumberOfReferredToSegments"
 	// 7.2.4
 	countOfRTS, err := r.ReadBits(3)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, processName, "count of rts")
 	}
 	countOfRTS &= 0xf
 	var retainBit []byte
@@ -298,7 +337,7 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 		for i := 0; i <= 4; i++ {
 			b, err := r.ReadBit()
 			if err != nil {
-				return 0, err
+				return 0, errors.Wrap(err, processName, "short format")
 			}
 			retainBit[i] = byte(b)
 		}
@@ -317,7 +356,7 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 		for i = 0; i < arrayLength; i++ {
 			b, err := r.ReadBit()
 			if err != nil {
-				return 0, err
+				return 0, errors.Wrap(err, processName, "long format")
 			}
 			retainBit[i] = byte(b)
 		}
@@ -328,6 +367,7 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 // readReferedToSegmentNumbers gathers all segment numbers of referred-to segments. The
 // segment itself is in rtSegments the array.
 func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS int) ([]int, error) {
+	const processName = "readReferedToSegmentNumbers"
 	// 7.2.5
 	rtsNumbers := make([]int, countOfRTS)
 
@@ -340,7 +380,7 @@ func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS i
 		for i := 0; i < countOfRTS; i++ {
 			bits, err = r.ReadBits(byte(h.referenceSize()) << 3)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, processName, "'%d' refered segment number", i)
 			}
 			rtsNumbers[i] = int(bits & math.MaxInt32)
 		}
@@ -372,26 +412,34 @@ func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader,
 	if countOfRTS == 0 {
 		return nil
 	}
-	var page Pager
+
+	// map the related segment headers from the pages.
 	// check if the page number is different than 0 - 'Globals' are stored under '0'
 	if h.PageAssociation != 0 {
-		page, err = d.GetPage(h.PageAssociation)
+		page, err := d.GetPage(h.PageAssociation)
 		if err != nil {
 			return errors.Wrap(err, processName, "associated page not found")
 		}
+
+		var relatedSegmentNumber int
+		for i := uint64(0); i < countOfRTS; i++ {
+			relatedSegmentNumber = rtsNumbers[i]
+			h.RTSegments[i], err = page.GetSegment(relatedSegmentNumber)
+			if err != nil {
+				var er error
+				h.RTSegments[i], er = d.GetGlobalSegment(relatedSegmentNumber)
+				if er != nil {
+					return errors.Wrapf(err, processName, "reference segment not found at page: '%d' nor in globals", h.PageAssociation)
+				}
+			}
+		}
+		return nil
 	}
 
 	for i := uint64(0); i < countOfRTS; i++ {
-		if page != nil {
-			h.RTSegments[i], err = page.GetSegment(rtsNumbers[i])
-			if err != nil {
-				return errors.Wrapf(err, processName, "segment: '%d' at page: '%d' not found", rtsNumbers[i])
-			}
-		} else {
-			h.RTSegments[i], err = d.GetGlobalSegment(rtsNumbers[i])
-			if err != nil {
-				return errors.Wrapf(err, processName, "global segment: '%d' not found", rtsNumbers[i])
-			}
+		h.RTSegments[i], err = d.GetGlobalSegment(rtsNumbers[i])
+		if err != nil {
+			return errors.Wrapf(err, processName, "global segment: '%d' not found", rtsNumbers[i])
 		}
 	}
 	return nil

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/unidoc/unipdf/common"
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 var coderDebugFlag bool
@@ -54,8 +54,8 @@ func TestEncoder(t *testing.T) {
 
 	assert.Equal(t, 30, e.outbufUsed)
 	buf := &bytes.Buffer{}
-	n, err := e.toBuffer(buf)
-	assert.Equal(t, 30, n)
+	n, err := e.WriteTo(buf)
+	assert.Equal(t, int64(30), n)
 
 	require.NoError(t, err)
 

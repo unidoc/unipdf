@@ -20,28 +20,98 @@ import (
 // Page represents JBIG2 Page structure.
 // It contains all the included segments header definitions mapped to
 // their number relation to the document and the resultant page bitmap.
+// NOTE: page numeration starts from 1 and the association to 0'th page means the segments
+// are associated to global segments.
 type Page struct {
 	// Segments relation of the page number to their structures.
 	Segments []*segments.Header
-
 	// PageNumber defines this page number.
-	// NOTE: page numeration starts from 1.
 	PageNumber int
-
 	// Bitmap represents the page image.
 	Bitmap *bitmap.Bitmap
 
+	// Page parameters
 	FinalHeight int
 	FinalWidth  int
 	ResolutionX int
 	ResolutionY int
 
+	IsLossless bool
+
 	// Document is a relation to page's document
 	Document *Document
+	// FirstSegmentNumber defines first segment number for given page
+	FirstSegmentNumber int
 }
 
-// Encode encodes all segments located on the given page and writes the results to the 'w' BinaryWriter.
+// AddEndOfPageSegment adds the end of page segment.
+func (p *Page) AddEndOfPageSegment() {
+	seg := &segments.Header{
+		SegmentNumber:   p.nextSegmentNumber(),
+		Type:            segments.TEndOfPage,
+		PageAssociation: p.PageNumber,
+	}
+	p.Segments = append(p.Segments, seg)
+}
+
+// AddGenericRegion adds the generic region to the page context.
+// 'bm' 					- bitmap containing data to encode
+// 'xloc' 					- x location of the generic region
+// 'yloc'					- y location of the generic region
+// 'template'				- generic region template
+// 'tp'						- is the generic region type
+// 'duplicateLineRemoval'	- is the flag that defines if the generic region segment should remove duplicated lines
+func (p *Page) AddGenericRegion(bm *bitmap.Bitmap, xloc, yloc, template int, tp segments.Type, duplicateLineRemoval bool) error {
+	const processName = "Page.AddGenericRegion"
+	// create generic region segment
+	genReg := &segments.GenericRegion{}
+	if err := genReg.InitEncode(bm, xloc, yloc, template, duplicateLineRemoval); err != nil {
+		return errors.Wrap(err, processName, "")
+	}
+	// create segment header for the generic region
+	genRegSegmentHeader := &segments.Header{
+		SegmentNumber:   p.nextSegmentNumber(),
+		Type:            segments.TImmediateGenericRegion,
+		PageAssociation: p.PageNumber,
+		SegmentData:     genReg,
+	}
+	p.Segments = append(p.Segments, genRegSegmentHeader)
+	return nil
+}
+
+// AddPageInformationSegment adds the page information segment to the page segments.
+func (p *Page) AddPageInformationSegment() {
+	// prepare page info segment data
+	pageInfo := &segments.PageInformationSegment{
+		PageBMWidth:  p.FinalWidth,
+		PageBMHeight: p.FinalHeight,
+		ResolutionX:  p.ResolutionX,
+		ResolutionY:  p.ResolutionY,
+		IsLossless:   p.IsLossless,
+	}
+
+	// and the page info header
+	pageInfoHeader := &segments.Header{
+		SegmentNumber:     p.nextSegmentNumber(),
+		PageAssociation:   p.PageNumber,
+		SegmentDataLength: uint64(pageInfo.Size()),
+		SegmentData:       pageInfo,
+		Type:              segments.TPageInformation,
+	}
+	p.Segments = append(p.Segments, pageInfoHeader)
+}
+
+// Encode encodes segments into provided 'w' writer.
 func (p *Page) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "Page.Encode"
+
+	var temp int
+	for _, seg := range p.Segments {
+		if temp, err = seg.Encode(w); err != nil {
+			return n, errors.Wrap(err, processName, "")
+		}
+		n += temp
+	}
 	return n, nil
 }
 
@@ -64,18 +134,23 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return p.Bitmap, nil
 }
 
 // GetSegment implements segments.Pager interface.
 func (p *Page) GetSegment(number int) (*segments.Header, error) {
+	const processName = "Page.GetSegment"
+
 	for _, h := range p.Segments {
 		if h.SegmentNumber == uint32(number) {
 			return h, nil
 		}
 	}
-	return nil, errors.Error("Page.GetSegment", "segment not found")
+	containedIDS := make([]uint32, len(p.Segments))
+	for i, h := range p.Segments {
+		containedIDS[i] = h.SegmentNumber
+	}
+	return nil, errors.Errorf(processName, "segment with number: '%d' not found in the page: '%d'. Known segment numbers: %v", number, p.PageNumber, containedIDS)
 }
 
 // String implements Stringer interface.
@@ -267,28 +342,20 @@ func (p *Page) encodeSegment(w writer.BinaryWriter, segmentNumber int) (n int, e
 		return n, errors.Wrap(err, processName, "")
 	}
 
-	var encoded []byte
-	if seg.SegmentData != nil {
-		if se, ok := seg.SegmentData.(segments.SegmentEncoder); ok {
-			encoded, err = se.Encode()
-			if err != nil {
-				return 0, errors.Wrap(err, processName, "")
-			}
-		}
-	}
-	seg.SegmentDataLength = uint64(len(encoded))
-	if n, err = seg.Encode(w); err != nil {
-		return 0, errors.Wrap(err, processName, "")
-	}
-	if encoded != nil {
-		var nd int
-		nd, err = w.Write(encoded)
-		if err != nil {
-			return n, errors.Wrap(err, processName, "")
-		}
-		n += nd
+	n, err = seg.Encode(w)
+	if err != nil {
+		return 0, errors.Wrapf(err, processName, "page: '%d'", p.PageNumber)
 	}
 	return n, nil
+}
+
+// firstSegmentNumber gets the number of the first segment in the page.
+func (p *Page) firstSegmentNumber() (first uint32, err error) {
+	const processName = "firstSegmentNumber"
+	if len(p.Segments) == 0 {
+		return first, errors.Errorf(processName, "no segments found in the page '%d'", p.PageNumber)
+	}
+	return p.Segments[0].SegmentNumber, nil
 }
 
 func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
@@ -416,4 +483,17 @@ func (p *Page) getResolutionY() (int, error) {
 	}
 	p.ResolutionY = pi.ResolutionY
 	return p.ResolutionY, nil
+}
+
+// lastSegmentNumber gets the number of the last segment in the page.
+func (p *Page) lastSegmentNumber() (last uint32, err error) {
+	const processName = "lastSegmentNumber"
+	if len(p.Segments) == 0 {
+		return last, errors.Errorf(processName, "no segments found in the page '%d'", p.PageNumber)
+	}
+	return p.Segments[len(p.Segments)-1].SegmentNumber, nil
+}
+
+func (p *Page) nextSegmentNumber() uint32 {
+	return p.Document.nextSegmentNumber()
 }

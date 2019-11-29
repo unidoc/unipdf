@@ -12,7 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // BenchmarkDecodeJBIG2Files benchmarks the decoding process of  jbig2 encoded images stored within pdf files.
@@ -20,10 +21,10 @@ import (
 // Then the function extracts the images and starts subBenchmarks for each image.
 func BenchmarkDecodeJBIG2Files(b *testing.B) {
 	b.Helper()
-	dirName := os.Getenv(EnvDirectory)
+	dirName := os.Getenv(EnvJBIG2Directory)
 	require.NotEmpty(b, dirName, "No Environment variable 'UNIDOC_JBIG2_TESTDATA' found")
 
-	filenames, err := readFileNames(dirName)
+	filenames, err := readFileNames(dirName, "pdf")
 	require.NoError(b, err)
 	require.NotEmpty(b, filenames, "no files found within provided directory")
 
@@ -35,7 +36,7 @@ func BenchmarkDecodeJBIG2Files(b *testing.B) {
 			for _, image := range images {
 				b.Run(fmt.Sprintf("Page#%d/Image#%d-%d", image.pageNo, image.idx, len(image.jbig2Data)), func(b *testing.B) {
 					for n := 0; n < b.N; n++ {
-						d, err := jbig2.NewDocumentWithGlobals(image.jbig2Data, image.globals)
+						d, err := document.DecodeDocument(reader.New(image.jbig2Data), image.globals)
 						require.NoError(b, err)
 
 						p, err := d.GetPage(1)

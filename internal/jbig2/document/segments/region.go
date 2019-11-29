@@ -6,6 +6,7 @@
 package segments
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strings"
@@ -13,7 +14,9 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // RegionSegment is the model representing base jbig2 segment region - see 7.4.1.
@@ -34,6 +37,70 @@ type RegionSegment struct {
 // NewRegionSegment creates new Region segment model.
 func NewRegionSegment(r reader.StreamReader) *RegionSegment {
 	return &RegionSegment{r: r}
+}
+
+// compile time check for the SegmentEncoder interface.
+var _ SegmentEncoder = &RegionSegment{}
+
+// Encode implements the SegmentEncoder interface.
+func (r *RegionSegment) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "RegionSegment.Encode"
+	// the region segment encodes as follows:
+	// segment bitmap width 		- big endian uint32
+	// segment bitmap height 		- big endian uint32
+	// segment bitmap x location 	- big endian uint32
+	// segment bitmap y location	- big endian uint32
+	// segment flags 				- 1 byte - 5 empty bits + 3 combination operator
+
+	// prepare 4 bytes temporary slice.
+	temp := make([]byte, 4)
+
+	// encode region segment width
+	binary.BigEndian.PutUint32(temp, r.BitmapWidth)
+	n, err = w.Write(temp)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "Width")
+	}
+
+	// encode region segment height
+	binary.BigEndian.PutUint32(temp, r.BitmapHeight)
+	var tempCount int
+	tempCount, err = w.Write(temp)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "Height")
+	}
+	n += tempCount
+
+	// encode region segment x location
+	binary.BigEndian.PutUint32(temp, r.XLocation)
+	tempCount, err = w.Write(temp)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "XLocation")
+	}
+	n += tempCount
+
+	// encode region segment y location
+	binary.BigEndian.PutUint32(temp, r.YLocation)
+	tempCount, err = w.Write(temp)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "YLocation")
+	}
+	n += tempCount
+
+	// the region segment flags is composed of:
+	// 5 zero bits + 3 bits for the external combination operator
+	if err = w.WriteByte(byte(r.CombinaionOperator) & 0x07); err != nil {
+		return 0, errors.Wrap(err, processName, "combination operator")
+	}
+	n++
+	return n, nil
+}
+
+// Size returns the bytewise size of the region segment.
+func (r *RegionSegment) Size() int {
+	// width + height + xlocation + ylocation + flags = 17
+	// 4 + 4 + 4 + 4 + 1 = 17
+	return 17
 }
 
 // String implements the Stringer interface.

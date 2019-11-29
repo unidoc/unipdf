@@ -6,9 +6,8 @@
 package segments
 
 import (
-	"errors"
-
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
 // document is a testing structure that implements Documenter interface.
@@ -23,16 +22,16 @@ func (d *document) GetPage(i int) (Pager, error) {
 	if i <= len(d.pages)-1 {
 		return d.pages[i], nil
 	}
-	return nil, errors.New("No Such page")
+	return nil, errors.Error("GetPage", "No Such page")
 }
 
 // GetGlobalSegment implements Documenter interface.
-func (d *document) GetGlobalSegment(i int) *Header {
+func (d *document) GetGlobalSegment(i int) (*Header, error) {
 	i--
 	if i <= len(d.globals)-1 {
-		return d.globals[i]
+		return d.globals[i], nil
 	}
-	return nil
+	return nil, errors.Errorf("GetGlobalSegment", "segment: '%d' not found", i)
 }
 
 // page is a testing structure that implements Pager interface.
@@ -42,12 +41,12 @@ type page struct {
 }
 
 // GetSegment implements Pager interface.
-func (p *page) GetSegment(i int) *Header {
+func (p *page) GetSegment(i int) (*Header, error) {
 	i--
 	if i <= len(p.segments)-1 {
-		return p.segments[i]
+		return p.segments[i], nil
 	}
-	return nil
+	return nil, errors.Errorf("GetSegment", "can't find segment: '%d'", i)
 }
 
 // GetBitmap implements Pager interface.

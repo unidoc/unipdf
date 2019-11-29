@@ -9,6 +9,7 @@ import (
 	"archive/zip"
 	"crypto/md5"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"image/jpeg"
 	"io"
@@ -21,8 +22,38 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/primitives"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 )
+
+// register basic image drivers - gif, jpeg, png
+import (
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+)
+
+const (
+	// EnvJBIG2Directory is the environment variable that should contain directory path
+	// to the jbig2 encoded test files.
+	EnvJBIG2Directory = "UNIDOC_JBIG2_TESTDATA"
+	// EnvImageDirectory is the environment variable that should contain directory path
+	// to the images used for the encoding processes.
+	EnvImageDirectory = "UNIDOC_JBIG2_TEST_IMAGES"
+)
+
+var (
+	// jbig2UpdateGoldens is the runtime flag that states that the md5 hashes
+	// for each decoded testcase image should be updated.
+	jbig2UpdateGoldens bool
+	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'.
+	keepImageFiles bool
+)
+
+func init() {
+	flag.BoolVar(&jbig2UpdateGoldens, "jbig2-update-goldens", false, "updates the golden file hashes on the run")
+	flag.BoolVar(&keepImageFiles, "jbig2-store-images", false, "stores the images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+}
 
 type extractedImage struct {
 	jbig2Data []byte
@@ -31,7 +62,7 @@ type extractedImage struct {
 	pageNo    int
 	idx       int
 	hash      string
-	globals   primitives.Globals
+	globals   document.Globals
 }
 
 func (e *extractedImage) fullName() string {
@@ -193,10 +224,13 @@ func rawFileName(filename string) string {
 	return filename
 }
 
-func readFileNames(dirname string) ([]string, error) {
+func readFileNames(dirname, suffix string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".pdf") {
+		if !info.IsDir() {
+			if suffix != "" && !strings.HasSuffix(info.Name(), suffix) {
+				return nil
+			}
 			files = append(files, info.Name())
 		}
 		return nil

@@ -27,10 +27,8 @@ type Writer struct {
 	msb bool
 }
 
-var (
-	_ BinaryWriter = &Writer{}
-	_ DataGetter   = &Writer{}
-)
+// compile time check for the BinaryWriter interface.
+var _ BinaryWriter = &Writer{}
 
 // New creates new writer for the provided data.
 func New(data []byte) *Writer {

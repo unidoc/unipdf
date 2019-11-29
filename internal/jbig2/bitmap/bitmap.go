@@ -13,6 +13,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
@@ -53,7 +54,6 @@ type Bitmap struct {
 
 	// The XResolution and YResolution are the
 	// image resolution parameters at width and height.
-	// This value is optional and is rarely used.
 	XResolution, YResolution int
 }
 
@@ -84,6 +84,22 @@ func NewWithData(width, height int, data []byte) (*Bitmap, error) {
 	bm.Data = data
 	if len(data) < height*bm.RowStride {
 		return nil, errors.Errorf(processName, "invalid data length: %d - should be: %d", len(data), height*bm.RowStride)
+	}
+	return bm, nil
+}
+
+// NewWithUnpaddedData creates new bitmap with provided 'width', 'height' and the byte slice 'data' that doesn't
+// contains paddings on the last byte of each row.
+// This function adds the padding to the bitmap data.
+func NewWithUnpaddedData(width, height int, data []byte) (*Bitmap, error) {
+	const processName = "NewWithUnpaddedData"
+	bm := newBitmap(width, height)
+	bm.Data = data
+	if dataLen := ((width * height) + 7) >> 3; len(data) < dataLen {
+		return nil, errors.Errorf(processName, "invalid data length: '%d'. The data should contain at least: '%d' bytes", len(data), dataLen)
+	}
+	if err := bm.addPadBits(); err != nil {
+		return nil, errors.Wrap(err, processName, "")
 	}
 	return bm, nil
 }
@@ -520,6 +536,48 @@ func (b *Bitmap) addBorderGeneral(left, right, top, bot int, val int) (*Bitmap, 
 		return nil, errors.Wrap(err, processName, "copy")
 	}
 	return bd, nil
+}
+
+// addPadBits creates new data byte slice that contains extra padding on the last byte for each row.
+func (b *Bitmap) addPadBits() (err error) {
+	const processName = "addPadBits"
+	endbits := b.Width % 8
+	if endbits == 0 {
+		// no partial words
+		return nil
+	}
+	fullBytes := b.Width / 8
+	//	mask := rmaskByte[endbits]
+
+	r := reader.New(b.Data)
+	data := make([]byte, b.Height*b.RowStride)
+	w := writer.NewMSB(data)
+	temp := make([]byte, fullBytes)
+	var (
+		i, j int
+		bits uint64
+	)
+	for i = 0; i < b.Height; i++ {
+		// iterate over full bytes
+		for j = 0; j < fullBytes; j++ {
+			if _, err = r.Read(temp); err != nil {
+				return errors.Wrap(err, processName, "full byte")
+			}
+			if _, err = w.Write(temp); err != nil {
+				return errors.Wrap(err, processName, "full bytes")
+			}
+		}
+		// read unused bits
+		if bits, err = r.ReadBits(byte(endbits)); err != nil {
+			return errors.Wrap(err, processName, "skipping bits")
+		}
+
+		if err = w.WriteByte(byte(bits) << (8 - endbits)); err != nil {
+			return errors.Wrap(err, processName, "last byte")
+		}
+	}
+	b.Data = w.Data()
+	return nil
 }
 
 func (b *Bitmap) clearAll() error {

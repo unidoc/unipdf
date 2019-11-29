@@ -24,9 +24,5 @@ type BinaryWriter interface {
 	BitWriter
 	io.Writer
 	io.ByteWriter
-}
-
-// DataGetter is the interface used for getting the stored Data from the writers.
-type DataGetter interface {
 	Data() []byte
 }

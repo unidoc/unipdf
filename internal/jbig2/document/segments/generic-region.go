@@ -14,7 +14,10 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/mmr"
+	enc "github.com/unidoc/unipdf/v3/internal/jbig2/encoder/arithmetic"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // GenericRegion represents a generic region segment.
@@ -61,16 +64,75 @@ func NewGenericRegion(r reader.StreamReader) *GenericRegion {
 	return &GenericRegion{RegionSegment: NewRegionSegment(r), r: r}
 }
 
-// Encode implements SegmentEncoder interface.
-func (g *GenericRegion) Encode() (encoded []byte, err error) {
-	return encoded, nil
-}
+// compile time check for the SegmentEncoder interface.
+var _ SegmentEncoder = &GenericRegion{}
 
-// Init implements Segmenter interface.
-func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
-	g.RegionSegment = NewRegionSegment(r)
-	g.r = r
-	return g.parseHeader()
+// Encode implements SegmentEncoder interface.
+func (g *GenericRegion) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "GenericRegion.Encode"
+	if g.Bitmap == nil {
+		return 0, errors.Error(processName, "provided nil bitmap")
+	}
+
+	// at first encode the region segment.
+	i, err := g.RegionSegment.Encode(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "RegionSegment")
+	}
+	n += i
+
+	// skip 4 reserved bits
+	if err = w.SkipBits(4); err != nil {
+		return n, errors.Wrap(err, processName, "skip reserved bits")
+	}
+	var bit int
+	if g.IsTPGDon {
+		bit = 1
+	}
+
+	// Write TPGDON bit
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "tpgdon")
+	}
+	bit = 0
+
+	// write two bits of the gb template
+	if err = w.WriteBit(int(g.GBTemplate>>1) & 0x01); err != nil {
+		return n, errors.Wrap(err, processName, "first gbtemplate bit")
+	}
+	if err = w.WriteBit(int(g.GBTemplate) & 0x01); err != nil {
+		return n, errors.Wrap(err, processName, "second gbtemplate bit")
+	}
+
+	// encode mmr flag
+	if g.UseMMR {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "use MMR bit")
+	}
+	n++
+
+	// write GB At pixels
+	if i, err = g.writeGBAtPixels(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += i
+
+	// encode the region using arithmetic encoder
+	ctx := enc.New()
+	if err = ctx.EncodeBitmap(g.Bitmap, g.Bitmap.Width, g.Bitmap.Height, g.IsTPGDon); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	ctx.Final()
+
+	// write the encoded bitmap value to the 'w' writer
+	var n64 int64
+	if n64, err = ctx.WriteTo(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += int(n64)
+	return n, nil
 }
 
 // GetRegionBitmap gets the bitmap for the generic region segment.
@@ -148,6 +210,69 @@ func (g *GenericRegion) GetRegionInfo() *RegionSegment {
 	return g.RegionSegment
 }
 
+// Init implements Segmenter interface.
+func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
+	g.RegionSegment = NewRegionSegment(r)
+	g.r = r
+	return g.parseHeader()
+}
+
+// InitEncode initializes the generic region for the provided bitmap 'bm', it's 'xLoc', 'yLoc' locations and if it has to remove duplicated lines.
+func (g *GenericRegion) InitEncode(bm *bitmap.Bitmap, xLoc, yLoc, template int, duplicateLineRemoval bool) error {
+	const processName = "GenericRegion.InitEncode"
+	if bm == nil {
+		return errors.Error(processName, "provided nil bitmap")
+	}
+	if xLoc < 0 || yLoc < 0 {
+		return errors.Error(processName, "x and y location must be greater than 0")
+	}
+	g.Bitmap = bm
+	g.GBTemplate = byte(template)
+	// use the default GB template 0 with 4 at pixel bytes
+	switch g.GBTemplate {
+	case 0:
+		g.GBAtX = []int8{3, -3, 2, -2}
+		g.GBAtY = []int8{-1, -1, -2, -2}
+	case 1:
+		g.GBAtX = []int8{3}
+		g.GBAtY = []int8{-1}
+	case 2, 3:
+		g.GBAtX = []int8{2}
+		g.GBAtY = []int8{-1}
+	default:
+		return errors.Errorf(processName, "provided template: '%d' not in valid range {0,1,2,3}", template)
+	}
+	g.RegionSegment = &RegionSegment{
+		BitmapHeight: uint32(bm.Height),
+		BitmapWidth:  uint32(bm.Width),
+		XLocation:    uint32(xLoc),
+		YLocation:    uint32(yLoc),
+	}
+	g.IsTPGDon = duplicateLineRemoval
+	return nil
+}
+
+// Size returns the byte size of the generic region.
+func (g *GenericRegion) Size() int {
+	// region size + flags + 2 * gb pixel size
+	return g.RegionSegment.Size() + 1 + 2*len(g.GBAtX)
+}
+
+// String implements Stringer interface.
+func (g *GenericRegion) String() string {
+	sb := &strings.Builder{}
+
+	sb.WriteString("\n[GENERIC REGION]\n")
+	sb.WriteString(g.RegionSegment.String() + "\n")
+	sb.WriteString(fmt.Sprintf("\t- UseExtTemplates: %v\n", g.UseExtTemplates))
+	sb.WriteString(fmt.Sprintf("\t- IsTPGDon: %v\n", g.IsTPGDon))
+	sb.WriteString(fmt.Sprintf("\t- GBTemplate: %d\n", g.GBTemplate))
+	sb.WriteString(fmt.Sprintf("\t- IsMMREncoded: %v\n", g.IsMMREncoded))
+	sb.WriteString(fmt.Sprintf("\t- GBAtX: %v\n", g.GBAtX))
+	sb.WriteString(fmt.Sprintf("\t- GBAtY: %v\n", g.GBAtY))
+	sb.WriteString(fmt.Sprintf("\t- GBAtOverride: %v\n", g.GBAtOverride))
+	return sb.String()
+}
 func (g *GenericRegion) parseHeader() (err error) {
 	common.Log.Trace("[GENERIC-REGION] ParsingHeader...")
 	defer func() {
@@ -265,6 +390,7 @@ func (g *GenericRegion) decodeSLTP() (int, error) {
 }
 
 func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
+	const processName = "decodeLine"
 	byteIndex := g.Bitmap.GetByteIndex(0, line)
 	idx := byteIndex - g.Bitmap.RowStride
 
@@ -281,10 +407,11 @@ func (g *GenericRegion) decodeLine(line, width, paddedWidth int) error {
 	case 3:
 		return g.decodeTemplate3(line, width, paddedWidth, byteIndex, idx)
 	}
-	return fmt.Errorf("invalid GBTemplate provided: %d", g.GBTemplate)
+	return errors.Errorf(processName, "invalid GBTemplate provided: %d", g.GBTemplate)
 }
 
 func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex, idx int) (err error) {
+	const processName = "decodeTemplate0a"
 	var (
 		context, overriddenContext int
 		line1, line2               int
@@ -295,7 +422,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 	if line >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 1")
 		}
 		line1 = int(temp)
 	}
@@ -303,7 +430,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 	if line >= 2 {
 		temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 2")
 		}
 		line2 = int(temp) << 6
 	}
@@ -329,7 +456,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 0")
 				}
 				line1 |= int(temp)
 			}
@@ -342,7 +469,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(index)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 1")
 				}
 				line2 |= (int(temp) << 6)
 			} else {
@@ -363,7 +490,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 			var bit int
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
 			if err != nil {
-				return err
+				return errors.Wrap(err, processName, "")
 			}
 
 			result |= byte(bit) << uint(toShift)
@@ -371,7 +498,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		byteIndex++
@@ -381,6 +508,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 }
 
 func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex, idx int) (err error) {
+	const processName = "decodeTemplate0b"
 	var (
 		context, overriddenContext int
 		line1, line2               int
@@ -391,7 +519,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 	if line >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 1")
 		}
 		line1 = int(temp)
 	}
@@ -399,7 +527,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 	if line >= 2 {
 		temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 2")
 		}
 		line2 = int(temp) << 6
 	}
@@ -425,7 +553,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 0")
 				}
 				line1 |= int(temp)
 			}
@@ -437,7 +565,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 1")
 				}
 				line2 |= (int(temp) << 6)
 			}
@@ -456,7 +584,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 			var bit int
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
 			if err != nil {
-				return err
+				return errors.Wrap(err, processName, "")
 			}
 
 			result |= byte(bit << uint(toShift))
@@ -464,7 +592,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		byteIndex++
@@ -474,6 +602,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 }
 
 func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex, idx int) (err error) {
+	const processName = "decodeTemplate1"
 	var (
 		context, overriddenContext int
 		line1, line2               int
@@ -484,7 +613,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 	if line >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 1")
 		}
 
 		line1 = int(temp)
@@ -493,7 +622,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 	if line >= 2 {
 		temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 2")
 		}
 		line2 = int(temp) << 5
 	}
@@ -520,7 +649,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 0")
 				}
 				line1 |= int(temp)
 			}
@@ -532,7 +661,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "line > 1")
 				}
 				line2 |= (int(temp) << 5)
 			}
@@ -548,7 +677,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
 			if err != nil {
-				return err
+				return errors.Wrap(err, processName, "")
 			}
 
 			result |= byte(bit) << uint(7-minorX)
@@ -557,7 +686,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		byteIndex++
@@ -567,6 +696,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 }
 
 func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byteIndex, idx int) (err error) {
+	const processName = "decodeTemplate2"
 	var (
 		context, overriddenContext int
 		line1, line2               int
@@ -577,7 +707,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 	if lineNumber >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "lineNumber >= 1")
 		}
 		line1 = int(temp)
 	}
@@ -585,7 +715,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 	if lineNumber >= 2 {
 		temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "lineNumber >= 2")
 		}
 		line2 = int(temp) << 4
 	}
@@ -612,7 +742,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "lineNumber > 0")
 				}
 				line1 |= int(temp)
 			}
@@ -624,7 +754,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx - g.Bitmap.RowStride + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "lineNumber > 1")
 				}
 				line2 |= (int(temp) << 4)
 			}
@@ -642,7 +772,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
 			if err != nil {
-				return err
+				return errors.Wrap(err, processName, "")
 			}
 
 			result |= byte(bit << uint(7-minorX))
@@ -650,7 +780,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		byteIndex++
@@ -660,6 +790,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 }
 
 func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex, idx int) (err error) {
+	const processName = "decodeTemplate3"
 	var (
 		context, overriddenContext int
 		line1                      int
@@ -670,7 +801,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 	if line >= 1 {
 		temp, err = g.Bitmap.GetByte(idx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, processName, "line >= 1")
 		}
 		line1 = int(temp)
 	}
@@ -697,7 +828,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(idx + 1)
 				if err != nil {
-					return err
+					return errors.Wrap(err, processName, "inner - line >= 1")
 				}
 				line1 |= int(temp)
 			}
@@ -713,7 +844,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 
 			bit, err = g.arithDecoder.DecodeBit(g.cx)
 			if err != nil {
-				return err
+				return errors.Wrap(err, processName, "")
 			}
 
 			result |= byte(bit) << byte(7-minorX)
@@ -721,7 +852,7 @@ func (g *GenericRegion) decodeTemplate3(line, width, paddedWidth int, byteIndex,
 		}
 
 		if err := g.Bitmap.SetByte(byteIndex, result); err != nil {
-			return err
+			return errors.Wrap(err, processName, "")
 		}
 
 		byteIndex++
@@ -745,12 +876,13 @@ func (g *GenericRegion) getPixel(x, y int) int8 {
 }
 
 func (g *GenericRegion) updateOverrideFlags() error {
+	const processName = "updateOverrideFlags"
 	if g.GBAtX == nil || g.GBAtY == nil {
 		return nil
 	}
 
 	if len(g.GBAtX) != len(g.GBAtY) {
-		return fmt.Errorf("incosistent AT pixel. Amount of 'x' pixels: %d, Amount of 'y' pixels: %d", len(g.GBAtX), len(g.GBAtY))
+		return errors.Errorf(processName, "incosistent AT pixel. Amount of 'x' pixels: %d, Amount of 'y' pixels: %d", len(g.GBAtX), len(g.GBAtY))
 	}
 
 	g.GBAtOverride = make([]bool, len(g.GBAtX))
@@ -1003,20 +1135,21 @@ func (g *GenericRegion) overrideAtTemplate3(ctx, x, y, result, minorX int) int {
 }
 
 func (g *GenericRegion) readGBAtPixels(numberOfGbAt int) error {
+	const processName = "readGBAtPixels"
 	g.GBAtX = make([]int8, numberOfGbAt)
 	g.GBAtY = make([]int8, numberOfGbAt)
 
 	for i := 0; i < numberOfGbAt; i++ {
 		b, err := g.r.ReadByte()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, processName, "X at i: '%d'", i)
 		}
 
 		g.GBAtX[i] = int8(b)
 
 		b, err = g.r.ReadByte()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, processName, "Y at i: '%d'", i)
 		}
 		g.GBAtY[i] = int8(b)
 	}
@@ -1087,18 +1220,34 @@ func (g *GenericRegion) setParametersMMR(
 
 }
 
-// String implements Stringer interface
-func (g *GenericRegion) String() string {
-	sb := &strings.Builder{}
+func (g *GenericRegion) writeGBAtPixels(w writer.BinaryWriter) (n int, err error) {
+	const processName = "writeGBAtPixels"
+	if g.UseMMR {
+		return 0, nil
+	}
+	pairNumber := 1
+	if g.GBTemplate == 0 {
+		pairNumber = 4
+	} else if g.UseExtTemplates {
+		pairNumber = 12
+	}
+	if len(g.GBAtX) != pairNumber {
+		return 0, errors.Errorf(processName, "gb at pair number doesn't match to GBAtX slice len")
+	}
+	if len(g.GBAtY) != pairNumber {
+		return 0, errors.Errorf(processName, "gb at pair number doesn't match to GBAtY slice len")
+	}
 
-	sb.WriteString("\n[GENERIC REGION]\n")
-	sb.WriteString(g.RegionSegment.String() + "\n")
-	sb.WriteString(fmt.Sprintf("\t- UseExtTemplates: %v\n", g.UseExtTemplates))
-	sb.WriteString(fmt.Sprintf("\t- IsTPGDon: %v\n", g.IsTPGDon))
-	sb.WriteString(fmt.Sprintf("\t- GBTemplate: %d\n", g.GBTemplate))
-	sb.WriteString(fmt.Sprintf("\t- IsMMREncoded: %v\n", g.IsMMREncoded))
-	sb.WriteString(fmt.Sprintf("\t- GBAtX: %v\n", g.GBAtX))
-	sb.WriteString(fmt.Sprintf("\t- GBAtY: %v\n", g.GBAtY))
-	sb.WriteString(fmt.Sprintf("\t- GBAtOverride: %v\n", g.GBAtOverride))
-	return sb.String()
+	// write all the at pixels to te 'w' writer
+	for i := 0; i < pairNumber; i++ {
+		if err = w.WriteByte(byte(g.GBAtX[i])); err != nil {
+			return n, errors.Wrap(err, processName, "write GBAtX")
+		}
+		n++
+		if err = w.WriteByte(byte(g.GBAtY[i])); err != nil {
+			return n, errors.Wrap(err, processName, "write GBAtY")
+		}
+		n++
+	}
+	return n, nil
 }

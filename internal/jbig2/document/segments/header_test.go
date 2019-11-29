@@ -67,7 +67,7 @@ func TestWriteHeader(t *testing.T) {
 		}
 		w := writer.BufferedMSB()
 
-		n, err := initial.Write(w)
+		n, err := initial.Encode(w)
 		require.NoError(t, err)
 		assert.Equal(t, 14, n)
 
@@ -93,7 +93,7 @@ func TestWriteHeader(t *testing.T) {
 		// as the 'SegmentDataLength' = 64 the source data needs 64 bytes of empty data to
 		// read the header properly.
 		r := reader.New(append(w.Data(), make([]byte, 64)...))
-		d := &document{pages: []Pager{&page{}, &page{}}}
+		d := &document{pages: []Pager{&page{segments: []*Header{{}, {}, {}, {}, {}}}, &page{}}}
 
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestWriteHeader(t *testing.T) {
 		}
 		w := writer.BufferedMSB()
 
-		n, err := initial.Write(w)
+		n, err := initial.Encode(w)
 		require.NoError(t, err)
 
 		// the data should look like:
@@ -155,7 +155,8 @@ func TestWriteHeader(t *testing.T) {
 
 		// check if the decoder would decode that header.
 		r := reader.New(append(w.Data(), make([]byte, 64)...))
-		d := &document{pages: []Pager{&page{}, &page{}}}
+		p := &page{segments: make([]*Header, 7)}
+		d := &document{pages: []Pager{&page{}, p}}
 
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -187,7 +188,7 @@ func TestWriteHeader(t *testing.T) {
 		}
 		w := writer.BufferedMSB()
 
-		n, err := initial.Write(w)
+		n, err := initial.Encode(w)
 		require.NoError(t, err)
 
 		// the data should look like:
@@ -236,7 +237,14 @@ func TestWriteHeader(t *testing.T) {
 		r := reader.New(append(w.Data(), make([]byte, 64)...))
 		// initialize testing document with the page no 256
 		d := &document{pages: make([]Pager, 257)}
-		d.pages[256] = &page{}
+		// initialize page segments
+		p := &page{segments: make([]*Header, 65537+256)}
+		// fill the page with segments
+		for i := 0; i < 256; i++ {
+			p.segments[65536+i] = &Header{}
+		}
+		// set the document's page to 'p'
+		d.pages[255] = p
 
 		// try to decode the header.
 		h, err := NewHeader(d, r, 0, OSequential)

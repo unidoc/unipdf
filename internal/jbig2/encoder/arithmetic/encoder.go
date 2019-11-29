@@ -6,6 +6,7 @@
 package arithmetic
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -59,15 +60,21 @@ func (e *Encoder) Init() {
 	e.iaidctx = nil
 }
 
+// DataSize returns the size of encoded data
+func (e *Encoder) DataSize() int {
+	return e.datasize()
+}
+
 const tpgdCTX = 0x9b25
 
 // EncodeBitmap encodes packed data used for the Leptonica's 1bpp packed format image.
 func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemoval bool) error {
 	var (
-		ltp, sltp  uint8
-		c1, c2, c3 uint16
-		b1, b2, b3 byte
-		x          int
+		ltp, sltp                       uint8
+		c1, c2, c3                      uint16
+		b1, b2, b3                      byte
+		x, thisLineIndex, lastLineIndex int
+		thisLine, lastLine              []byte
 	)
 
 	for y := 0; y < bm.Height; y++ {
@@ -83,7 +90,13 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 			b2 = bm.Data[(y-1)*bm.RowStride]
 			// check if the last row was not the same as this one.
 			if duplicateLineRemoval {
-				if bm.Data[y*bm.RowStride] == bm.Data[(y-1)*bm.RowStride] {
+				// get this line slice data
+				thisLineIndex = y * bm.RowStride
+				thisLine = bm.Data[thisLineIndex : thisLineIndex+bm.RowStride]
+				//get last line slice data
+				lastLineIndex = (y - 1) * bm.RowStride
+				lastLine = bm.Data[lastLineIndex : lastLineIndex+bm.RowStride]
+				if bytes.Equal(thisLine, lastLine) {
 					sltp = ltp ^ 1
 					ltp = 1
 				} else {
@@ -175,6 +188,7 @@ func (e *Encoder) EncodeIAID(symbolCodeLength, value int) (err error) {
 	return nil
 }
 
+// EncodeInteger encodes the integer 'value' for the given class 'proc'.
 func (e *Encoder) EncodeInteger(proc Class, value int) (err error) {
 	if err = e.encodeInteger(proc, value); err != nil {
 		return errors.Wrap(err, "EncodeInteger", "")
@@ -418,8 +432,8 @@ func (e *Encoder) codeLPS(ctx *codingContext, ctxNum uint32, qe uint16, i byte) 
 }
 
 // returns the number of ybtes of output in the given context
-func (e *Encoder) datasize() uint {
-	return uint(outputBufferSize*len(e.outputChunks) + e.outbufUsed)
+func (e *Encoder) datasize() int {
+	return int(outputBufferSize*len(e.outputChunks) + e.outbufUsed)
 }
 
 // emit a byte from the compressor by appending to the current

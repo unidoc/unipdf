@@ -15,6 +15,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // TestDecodeGenericRegion tests the decode process of the jbig2 Generic Region.
@@ -59,7 +60,7 @@ func TestDecodeGenericRegion(t *testing.T) {
 			bm, err := s.GetRegionBitmap()
 			require.NoError(t, err)
 
-			isTestingFrame(t, bm)
+			assert.Equal(t, bitmap.TstFrameBitmapData(), bm.Data)
 		})
 
 		t.Run("S-5th", func(t *testing.T) {
@@ -96,27 +97,105 @@ func TestDecodeGenericRegion(t *testing.T) {
 			b, err := s.GetRegionBitmap()
 			require.NoError(t, err)
 
-			isTestingFrame(t, b)
+			assert.Equal(t, bitmap.TstFrameBitmapData(), b.Data)
 		})
 	})
 }
 
-func isTestingFrame(t *testing.T, b *bitmap.Bitmap) {
-	assert.Equal(t, 44, b.Height)
-	assert.Equal(t, 54, b.Width)
+// TestEncodeGenericRegion tests the Encode method of the generic region.
+func TestEncodeGenericRegion(t *testing.T) {
+	t.Run("NoDuplicateRemoval", func(t *testing.T) {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		genericRegion := &GenericRegion{}
+		h := &Header{SegmentNumber: 11, PageAssociation: 2, Type: TImmediateGenericRegion, SegmentData: genericRegion}
+		// prepare image of size 54x44
+		// with the frame of size '2'
+		bm := bitmap.TstFrameBitmap()
 
-	for y := 0; y < b.Height; y++ {
-		for x := 0; x < b.Width; x++ {
-			pix := b.GetPixel(x, y)
+		// initialize the generic region encode method
+		err := genericRegion.InitEncode(bm, 0, 0, 0, false)
+		require.NoError(t, err)
 
-			// first two and last two rows are set to '1'
-			if y == 0 || y == 1 || y == b.Height-1 || y == b.Height-2 {
-				assert.Equal(t, true, pix)
-			} else if x == 0 || x == 1 || x == b.Width-1 || x == b.Width-2 {
-				assert.Equal(t, true, pix)
-			} else {
-				assert.Equal(t, false, pix)
-			}
-		}
-	}
+		// prepare writer
+		w := writer.BufferedMSB()
+
+		// encode the generic region header
+		n, err := h.Encode(w)
+		require.NoError(t, err)
+
+		assert.Equal(t, len(w.Data()), n)
+
+		r := reader.New(w.Data())
+		d := &document{}
+		hd, err := NewHeader(d, r, 0, OSequential)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint32(11), hd.SegmentNumber)
+		assert.Equal(t, uint64(46), hd.SegmentDataLength)
+		assert.Equal(t, 2, hd.PageAssociation)
+		assert.Equal(t, TImmediateGenericRegion, hd.Type)
+
+		sg, err := hd.GetSegmentData()
+		require.NoError(t, err)
+
+		s, ok := sg.(*GenericRegion)
+		require.True(t, ok)
+
+		assert.Equal(t, uint32(44), s.RegionSegment.BitmapHeight)
+		assert.Equal(t, uint32(54), s.RegionSegment.BitmapWidth)
+		assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
+		assert.Equal(t, false, s.IsTPGDon)
+		assert.Equal(t, byte(0), s.GBTemplate)
+
+		bm, err = s.GetRegionBitmap()
+		require.NoError(t, err)
+
+		assert.Equal(t, bitmap.TstFrameBitmapData(), bm.Data)
+	})
+
+	t.Run("DuplicateRemoval", func(t *testing.T) {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+		genericRegion := &GenericRegion{}
+		h := &Header{SegmentNumber: 11, PageAssociation: 2, Type: TImmediateGenericRegion, SegmentData: genericRegion}
+		bm := bitmap.TstFrameBitmap()
+		// initialize the generic region encode method
+		err := genericRegion.InitEncode(bm, 0, 0, 0, true)
+		require.NoError(t, err)
+
+		w := writer.BufferedMSB()
+
+		// encode the header
+		n, err := h.Encode(w)
+		require.NoError(t, err)
+
+		// check the number of bytes written match the 'n' number.
+		assert.Equal(t, len(w.Data()), n)
+
+		r := reader.New(w.Data())
+		d := &document{}
+		hd, err := NewHeader(d, r, 0, OSequential)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint32(11), hd.SegmentNumber)
+		assert.Equal(t, uint64(35), hd.SegmentDataLength)
+		assert.Equal(t, 2, hd.PageAssociation)
+		assert.Equal(t, TImmediateGenericRegion, hd.Type)
+
+		sg, err := hd.GetSegmentData()
+		require.NoError(t, err)
+
+		s, ok := sg.(*GenericRegion)
+		require.True(t, ok)
+
+		assert.Equal(t, uint32(44), s.RegionSegment.BitmapHeight)
+		assert.Equal(t, uint32(54), s.RegionSegment.BitmapWidth)
+		assert.Equal(t, bitmap.CmbOpOr, s.RegionSegment.CombinaionOperator)
+		assert.Equal(t, true, s.IsTPGDon)
+		assert.Equal(t, byte(0), s.GBTemplate)
+
+		bm, err = s.GetRegionBitmap()
+		require.NoError(t, err)
+
+		assert.Equal(t, bitmap.TstFrameBitmapData(), bm.Data)
+	})
 }
