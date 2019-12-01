@@ -1,9 +1,13 @@
+github.com/adrg/strutil v0.0.0-20191201094625-c11d54f1dd86 h1:Wz4tC7IdwJW30eyUWHMORfgUhlJt8omKZzR+pMCxp3Y=
+github.com/adrg/strutil v0.0.0-20191201094625-c11d54f1dd86/go.mod h1:pXRr2+IyX5AEPAF5icj/EeTaiflPSD2hvGjnguilZgE=
+github.com/adrg/sysfont v0.0.0-20191201181944-8865240f983c h1:rA9g3adUH1W7wSEwd+FPI6bM4Re6OZ5RrcjP83Mudqc=
+github.com/adrg/sysfont v0.0.0-20191201181944-8865240f983c/go.mod h1:KguyZMFwD0kf2AJguqYHGAGqTCvKT9AhXAmBGc/aepc=
+github.com/adrg/xdg v0.2.0 h1:VGW6H5ZPKbgYJmMt5x1x7WMdHdboypdL2sSM5jnsGQ4=
+github.com/adrg/xdg v0.2.0/go.mod h1:ZuOshBmzV4Ta+s23hdfFZnBsdzmoR3US0d7ErpqSbTQ=
 github.com/boombuler/barcode v1.0.0 h1:s1TvRnXwL2xJRaccrdcBQMZxq6X7DvsMogtmJeHDdrc=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/flopp/go-findfont v0.0.0-20190424081857-5592ff8eef0e h1:25Ob/5j1ZHZAkQYptmqdZb9uIjcVcGOWtLllYYGzQYs=
-github.com/flopp/go-findfont v0.0.0-20190424081857-5592ff8eef0e/go.mod h1:IOE5a/919uJLUrsF48h4y96LcOEjPWbZkMEAMPQDEnQ=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83 h1:saj5dTV7eQ1wFg/gVZr1SfbkOmg8CYO9R8frHgQiyR4=
 github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83/go.mod h1:xaGEIRenAiJcGgd9p62zbiP4993KaV3PdjczwGnP50I=

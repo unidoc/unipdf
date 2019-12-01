@@ -1,8 +1,8 @@
 module github.com/unidoc/unipdf/v3
 
 require (
+	github.com/adrg/sysfont v0.0.0-20191201181944-8865240f983c
 	github.com/boombuler/barcode v1.0.0
-	github.com/flopp/go-findfont v0.0.0-20190424081857-5592ff8eef0e
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83
 	github.com/stretchr/testify v1.3.0

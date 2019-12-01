@@ -3,7 +3,7 @@ package render
 import (
 	"errors"
 
-	"github.com/flopp/go-findfont"
+	"github.com/adrg/sysfont"
 	"github.com/unidoc/unipdf/v3/common"
 	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
@@ -57,6 +57,9 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 
 	textState := ctx.TextState()
 	fontCache := map[string]*context.TextFont{}
+	fontFinder := sysfont.NewFinder(&sysfont.FinderOpts{
+		Extensions: []string{".ttf", ".ttc"},
+	})
 
 	processor := pdfcontent.NewContentStreamProcessor(*operations)
 	processor.AddHandler(pdfcontent.HandlerConditionEnumAllOperands, "",
@@ -982,24 +985,35 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 				}
 
 				if textFont == nil {
-					for _, name := range []string{baseFont, "Helvetica"} {
+					// Treat cases such as: OPEIOA+ArialMT
+					if len(baseFont) > 7 && baseFont[6] == '+' {
+						baseFont = baseFont[7:]
+					}
+
+					substitutes := []string{baseFont, "Times New Roman", "Arial", "DejaVu Sans"}
+					for _, name := range substitutes {
 						common.Log.Debug("DEBUG: searching system font `%s`", name)
 
+						// Check if font is cached.
 						if textFont, ok = fontCache[name]; ok {
 							break
 						}
 
-						fontPath, err := findfont.Find(name)
-						if err != nil {
+						// Find font or suitable alternative.
+						fontInfo := fontFinder.Match(name)
+						if fontInfo == nil {
 							common.Log.Debug("could not find font file %s", name)
 							continue
 						}
 
-						textFont, err = context.NewTextFontFromPath(fontPath, fontSize)
+						// Load matched font.
+						textFont, err = context.NewTextFontFromPath(fontInfo.Filename, fontSize)
 						if err != nil {
+							common.Log.Debug("could not load font file %s", fontInfo.Filename)
 							continue
 						}
 
+						// Update font cache.
 						fontCache[name] = textFont
 						break
 					}
@@ -1010,6 +1024,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					return errors.New("could not find any suitable font")
 				}
 
+				// Set font.
 				textState.ProcTf(textFont.WithSize(fontSize, pdfFont))
 
 			// ---------------------------- //

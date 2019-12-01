@@ -62,6 +62,10 @@ func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
 }
 
 func (tf *TextFont) WithSize(size float64, originalFont *model.PdfFont) *TextFont {
+	if size <= 1 {
+		size = 10
+	}
+
 	return &TextFont{
 		Font:     tf.Font,
 		Face:     truetype.NewFace(tf.ttf, &truetype.Options{Size: size}),
