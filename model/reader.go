@@ -347,8 +347,8 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		}
 
 		// Resolve the reference to next
-		if nextObj := dict.Get("Next"); nextObj != nil {
-			nextObj = core.ResolveReference(nextObj)
+		nextObj := core.ResolveReference(dict.Get("Next"))
+		if nextObj != nil && nextObj != container {
 			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
 				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
 				if err != nil {

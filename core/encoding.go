@@ -442,7 +442,7 @@ func (enc *FlateEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		rowLength := int(enc.Columns)
 		rows := len(data) / rowLength
 		if len(data)%rowLength != 0 {
-			common.Log.Error("Invalid column length")
+			common.Log.Error("Invalid row length")
 			return nil, errors.New("invalid row length")
 		}
 
@@ -589,7 +589,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
+		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			if dp, isDict := obj.(*PdfObjectDictionary); isDict {
 				decodeParams = dp
@@ -1750,7 +1750,7 @@ func newCCITTFaxEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfO
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
+		obj := TraceToDirectObject(encDict.Get("DecodeParms"))
 		if obj != nil {
 			switch t := obj.(type) {
 			case *PdfObjectDictionary:
@@ -1974,8 +1974,8 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:             enc.Rows,
-		EncodedByteAlign: enc.EncodedByteAlign,
+		Rows:                   enc.Rows,
+		EncodedByteAlign:       enc.EncodedByteAlign,
 	}
 
 	return encoder.Encode(pixels), nil

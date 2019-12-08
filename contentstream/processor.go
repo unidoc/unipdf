@@ -7,6 +7,7 @@ package contentstream
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -141,7 +142,7 @@ func (proc *ContentStreamProcessor) getColorspace(name string, resources *model.
 
 	// Otherwise unsupported.
 	common.Log.Debug("Unknown colorspace requested: %s", name)
-	return nil, errors.New("unsupported colorspace")
+	return nil, fmt.Errorf("unsupported colorspace: %s", name)
 }
 
 // Get initial color for a given colorspace.

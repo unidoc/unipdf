@@ -38,8 +38,7 @@ creating and reading, processing PDF files. The library is written and supported
 - CCITTFaxDecode decoding and encoding support
 - JBIG2 decoding support
 
-Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples
-as well as [documented examples](https://unidoc.io/examples) on our website.
+Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples.
 
 Contact us if you need any specific examples.
 
@@ -97,7 +96,7 @@ These activities include:
  * creating/manipulating documents for users in a web/server/cloud application
  * shipping unipdf with a closed source product
 
-Please see [pricing](http://unidoc.io/pricing) to purchase a commercial license or contact sales at sales@unidoc.io
+Please see [pricing](https://unidoc.io/unipdf/#unipdf-pricing) to purchase a commercial license or contact sales at sales@unidoc.io
 for more info.
 
 ## Getting Rid of the Watermark - Get a License

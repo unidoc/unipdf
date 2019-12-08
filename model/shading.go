@@ -141,7 +141,7 @@ func newPdfShadingFromPdfObject(obj core.PdfObject) (*PdfShading, error) {
 	shading := &PdfShading{}
 
 	var dict *core.PdfObjectDictionary
-	if indObj, isInd := obj.(*core.PdfIndirectObject); isInd {
+	if indObj, isInd := core.GetIndirect(obj); isInd {
 		shading.container = indObj
 
 		d, ok := indObj.PdfObject.(*core.PdfObjectDictionary)
@@ -151,10 +151,10 @@ func newPdfShadingFromPdfObject(obj core.PdfObject) (*PdfShading, error) {
 		}
 
 		dict = d
-	} else if streamObj, isStream := obj.(*core.PdfObjectStream); isStream {
+	} else if streamObj, isStream := core.GetStream(obj); isStream {
 		shading.container = streamObj
 		dict = streamObj.PdfObjectDictionary
-	} else if d, isDict := obj.(*core.PdfObjectDictionary); isDict {
+	} else if d, isDict := core.GetDict(obj); isDict {
 		shading.container = d
 		dict = d
 	} else {
