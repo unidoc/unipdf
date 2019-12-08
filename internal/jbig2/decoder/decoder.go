@@ -6,10 +6,11 @@
 package decoder
 
 import (
-	"errors"
+	"image"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -27,6 +28,17 @@ func (d *Decoder) DecodePage(pageNumber int) ([]byte, error) {
 	return d.decodePage(pageNumber)
 }
 
+// DecodePageImage decodes page with 'pageNumber' from the document and stores it's result
+// within go image.Image.
+func (d *Decoder) DecodePageImage(pageNumber int) (image.Image, error) {
+	const processName = "decoder.DecodePageImage"
+	i, err := d.decodePageImage(pageNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return i, nil
+}
+
 // DecodeNextPage decodes next jbig2 encoded page and returns decoded byte stream
 func (d *Decoder) DecodeNextPage() ([]byte, error) {
 	d.currentDecodedPage++
@@ -34,25 +46,38 @@ func (d *Decoder) DecodeNextPage() ([]byte, error) {
 	return d.decodePage(pageNumber)
 }
 
+// PageNumber returns
+func (d *Decoder) PageNumber() (int, error) {
+	const processName = "Decoder.PageNumber"
+	if d.document == nil {
+		return 0, errors.Error(processName, "decoder not initialized yet")
+	}
+	return int(d.document.NumberOfPages), nil
+}
+
 func (d *Decoder) decodePage(pageNumber int) ([]byte, error) {
+	const processName = "decodePage"
 	if pageNumber < 0 {
-		return nil, errors.New("invalid page number")
+		return nil, errors.Errorf(processName, "invalid page number: '%d'", pageNumber)
 	}
 
 	if pageNumber > int(d.document.NumberOfPages) {
-		return nil, errors.New("no more images to decode")
+		return nil, errors.Errorf(processName, "page: '%d' not found in the decoder", pageNumber)
 	}
 
+	// get the page from the document.
 	page, err := d.document.GetPage(pageNumber)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "")
 	}
 
+	// get bitmap from this page.
 	bm, err := page.GetBitmap()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "")
 	}
 
+	// inverse the color if required.
 	if d.parameters.Color == bitmap.Chocolate {
 		bm.InverseData()
 	}
@@ -61,6 +86,30 @@ func (d *Decoder) decodePage(pageNumber int) ([]byte, error) {
 		return bm.Data, nil
 	}
 	return bm.GetUnpaddedData()
+}
+
+func (d *Decoder) decodePageImage(pageNumber int) (image.Image, error) {
+	const processName = "decodePageImage"
+	if pageNumber < 0 {
+		return nil, errors.Errorf(processName, "invalid page number: '%d'", pageNumber)
+	}
+
+	if pageNumber > int(d.document.NumberOfPages) {
+		return nil, errors.Errorf(processName, "page: '%d' not found in the decoder", pageNumber)
+	}
+
+	// get the page from the document.
+	page, err := d.document.GetPage(pageNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+
+	// get bitmap from this page.
+	bm, err := page.GetBitmap()
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return bm.ToImage(), nil
 }
 
 // Decode prepares decoder for the jbig2 encoded 'input' data,

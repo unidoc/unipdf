@@ -7,7 +7,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/binary"
 	"image"
 	"image/color"
 	"math"
@@ -52,6 +51,7 @@ JBIG2Encoder/Decoder
 // matches to single class, thus the compression is better, but the result might become lossy.
 // In order to store multiple image documents use the 'FileMode' which allows to store more pages within single jbig2 document.
 type JBIG2Encoder struct {
+	JBIG2Document
 	// Globals are the JBIG2 global segments.
 	Globals document.Globals
 	// IsChocolateData defines if the data is encoded such that
@@ -60,7 +60,6 @@ type JBIG2Encoder struct {
 	// Naming convention taken from: 'https://en.wikipedia.org/wiki/Binary_image#Interpretation'
 	IsChocolateData bool
 	// Document defines the JBIG2 Encoded document
-	Document *JBIG2Document
 
 	// DefaultPageSettings are the settings parameters used by the jbig2 encoder.
 	DefaultPageSettings JBIG2PageSettings
@@ -73,6 +72,40 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		parameters.Color = bitmap.Chocolate
 	}
 	return jbig2.DecodeBytes(encoded, parameters, enc.Globals)
+}
+
+// DecodeImages decodes the page images from the jbig2 'encoded' data input.
+// The jbig2 document may contain multiple pages, thus the function can return multiple
+// images. The images order corresponds to the page number.
+func (enc *JBIG2Encoder) DecodeImages(encoded []byte) ([]image.Image, error) {
+	const processName = "JBIG2Encoder.DecodeImages"
+	parameters := decoder.Parameters{UnpaddedData: true}
+	if enc.IsChocolateData {
+		parameters.Color = bitmap.Chocolate
+	}
+	// create decoded document.
+	d, err := decoder.Decode(encoded, parameters, enc.Globals)
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+
+	// get page number in the document.
+	pageNumber, err := d.PageNumber()
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+
+	// decode all images
+	images := []image.Image{}
+	var img image.Image
+	for i := 1; i <= pageNumber; i++ {
+		img, err = d.DecodePageImage(i)
+		if err != nil {
+			return nil, errors.Wrapf(err, processName, "page: '%d'", i)
+		}
+		images = append(images, img)
+	}
+	return images, nil
 }
 
 // DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.
@@ -137,8 +170,7 @@ func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, processName, "convert input image to jbig2 img")
 	}
-	enc.Document = &JBIG2Document{}
-	if err = enc.Document.AddPageImage(jimg, enc.DefaultPageSettings); err != nil {
+	if err = enc.AddPageImage(jimg, enc.DefaultPageSettings); err != nil {
 		return nil, errors.Wrap(err, processName, "")
 	}
 
@@ -362,8 +394,7 @@ func (j *JBIG2Image) toBitmap() (b *bitmap.Bitmap, err error) {
 
 // GoImageToJBIG2 creates a binary image on the base of 'i' golang image.Image.
 // The 'bwThreshold' value should be in range (0.0, 1.0). The threshold checks if the grayscaled
-// pixel (uint) value is greater or smaller than 'bwThreshold' * 255. Thus the lower the threshold, the more
-// probable black color would be.
+// pixel (uint) value is greater or smaller than 'bwThreshold' * 255. Pixels inside the range will be white, and the others will be black
 // If the 'bwThreshold' is equal to 0.0 then it's value would be set on the base of it's histogram using Triangle method.
 // For more information go to:
 // 	https://www.mathworks.com/matlabcentral/fileexchange/28047-gray-image-thresholding-using-the-triangle-method
@@ -392,47 +423,22 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 func bwToJBIG2Image(i *image.Gray) *JBIG2Image {
 	bounds := i.Bounds()
 	// compute the rowstride - number of bytes in the row.
-	rowStride := (bounds.Dx() + 7) >> 3
+	bm := bitmap.New(bounds.Dx(), bounds.Dy())
 	ji := &JBIG2Image{Height: bounds.Dy(), Width: bounds.Dx(), HasPadding: true}
 	// allocate the byte slice data
-	data := make([]byte, rowStride*ji.Height)
-	// prepare the counters for the current byte bitCounter and the rowLength.
-	bitCounter := 7
-	rowLength := bounds.Dx()
-	var (
-		// bt is the current byte data
-		bt byte
-		// dIndex defines the index counter in the destination 'data'
-		dIndex int
-	)
-
-	// iterate over gray pixels in the 'i' image
-	// and set bit by bit to the JBIG2Image data.
-	for j := 0; j < len(i.Pix); j++ {
-		pix := byte(i.Pix[j])
-		// check if the pixel is black or white
-		// where black pixel would be stored as '1' bit
-		// and the white as '0' bit.
-		if pix != 255 {
-			bt |= 1 << bitCounter
-		} else {
-			bt &= ^(1 << bitCounter)
-		}
-		bitCounter--
-		rowLength--
-		// store the byte if the row or byte bits counter is 0
-		if rowLength == 0 || bitCounter == 0 {
-			bitCounter = 7
-			data[dIndex] = bt
-			dIndex++
-			bt = 0
-			if rowLength == 0 {
-				// reset the row bit counter
-				rowLength = bounds.Dx()
+	var pix color.Gray
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			pix = i.GrayAt(x, y)
+			// check if the pixel is black or white
+			// where black pixel would be stored as '1' bit
+			// and the white as '0' bit.
+			if pix.Y == 0 {
+				bm.SetPixel(x, y, 1)
 			}
 		}
 	}
-	ji.Data = data
+	ji.Data = bm.Data
 	return ji
 }
 
@@ -579,25 +585,19 @@ func autoThresholdTriangle(histogram [256]int) uint8 {
 
 func blackOrWhite(c, threshold uint8) uint8 {
 	if c < threshold {
-		return 0 // black
+		return 255
 	}
-	return 255 // white
+	return 0
 }
 
 func gray16ImageToBlackWhite(img *image.Gray16, th uint8) *image.Gray {
 	bounds := img.Bounds()
 	d := image.NewGray(bounds)
-	temp := make([]byte, 2)
-	var (
-		pix  uint16
-		pix8 uint8
-	)
-	for i := 0; i < len(img.Pix); i += 2 {
-		temp[0] = img.Pix[i]
-		temp[1] = img.Pix[i+1]
-		pix = binary.BigEndian.Uint16(temp)
-		pix8 = uint8(pix / 256)
-		d.Pix[i/2] = blackOrWhite(pix8, th)
+	for x := 0; x < bounds.Dx(); x++ {
+		for y := 0; y < bounds.Dy(); y++ {
+			pix := img.Gray16At(x, y)
+			d.SetGray(x, y, color.Gray{blackOrWhite(uint8(pix.Y/256), th)})
+		}
 	}
 	return d
 }
@@ -612,8 +612,11 @@ func grayImageHistogram(img *image.Gray) (histogram [256]int) {
 func grayImageToBlackWhite(img *image.Gray, th uint8) *image.Gray {
 	bounds := img.Bounds()
 	d := image.NewGray(bounds)
-	for i := 0; i < len(img.Pix); i++ {
-		d.Pix[i] = blackOrWhite(img.Pix[i], th)
+	for x := 0; x < bounds.Dx(); x++ {
+		for y := 0; y < bounds.Dy(); y++ {
+			c := img.GrayAt(x, y)
+			d.SetGray(x, y, color.Gray{blackOrWhite(c.Y, th)})
+		}
 	}
 	return d
 }
@@ -645,10 +648,6 @@ func imgToGray(i image.Image) *image.Gray {
 		}
 	}
 	return g
-}
-
-func isBlackWhite(i image.Image) bool {
-	return true
 }
 
 func isGrayBlackWhite(img *image.Gray) bool {

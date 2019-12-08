@@ -6,10 +6,9 @@
 package jbig2
 
 import (
-	"errors"
-
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -25,15 +24,16 @@ func DecodeBytes(encoded []byte, parameters decoder.Parameters, globals ...docum
 
 // DecodeGlobals decodes globally defined data segments from the provided 'encoded' byte slice.
 func DecodeGlobals(encoded []byte) (document.Globals, error) {
+	const processName = "DecodeGlobals"
 	r := reader.New(encoded)
 
 	doc, err := document.DecodeDocument(r)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, processName, "")
 	}
 
 	if doc.GlobalSegments == nil {
-		return nil, errors.New("no global segments found")
+		return nil, errors.Error(processName, "no global segments found")
 	}
 	return doc.GlobalSegments, nil
 }

@@ -28,6 +28,10 @@ func TestGoImageToJBIG2Image(t *testing.T) {
 		t.Skip("flag -jbig2-store-images not set")
 	}
 
+	if testing.Verbose() {
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
+	}
+
 	dirName := os.Getenv(EnvImageDirectory)
 	if dirName == "" {
 		t.Skipf("no environment variable: '%s' provided", EnvImageDirectory)
