@@ -116,6 +116,7 @@ func (r *RegionSegment) String() string {
 
 // parseHeader parses the RegionSegment header.
 func (r *RegionSegment) parseHeader() error {
+	const processName = "parseHeader"
 	common.Log.Trace("[REGION][PARSE-HEADER] Begin")
 	defer func() {
 		common.Log.Trace("[REGION][PARSE-HEADER] Finished")
@@ -123,34 +124,36 @@ func (r *RegionSegment) parseHeader() error {
 
 	temp, err := r.r.ReadBits(32)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "width")
 	}
 	r.BitmapWidth = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "height")
 	}
 	r.BitmapHeight = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "x location")
 	}
 	r.XLocation = uint32(temp & math.MaxUint32)
 
 	temp, err = r.r.ReadBits(32)
 	if err != nil {
-		return err
+		return errors.Wrap(err, processName, "y location")
 	}
 	r.YLocation = uint32(temp & math.MaxUint32)
 
 	// Bit 3-7
-	r.r.ReadBits(5) // dirty read
+	if _, err = r.r.ReadBits(5); err != nil {
+		return errors.Wrap(err, processName, "diry read")
+	}
 
 	// Bit 0-2
 	if err = r.readCombinationOperator(); err != nil {
-		return err
+		return errors.Wrap(err, processName, "combination operator")
 	}
 	return nil
 }

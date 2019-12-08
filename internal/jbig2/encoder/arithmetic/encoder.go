@@ -80,9 +80,8 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 	for y := 0; y < bm.Height; y++ {
 		// reset the bits context values for each row.
 		// the temple used by the coder is fixed as '0' with the floating bits in the default locations.
-		c1, c2, c3 = 0, 0, 0
 		// reset the byte values which are the values of the upper rows.
-		b1, b2, b3 = 0, 0, 0
+		b1, b2 = 0, 0
 		if y >= 2 {
 			b1 = bm.Data[(y-2)*bm.RowStride]
 		}
@@ -488,13 +487,11 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	prev := uint32(1)
 	var i int
 
-	for {
+	for ; ; i++ {
 		if intEncRange[i].bot <= value && intEncRange[i].top >= value {
 			break
 		}
-		i++
 	}
-
 	if value < 0 {
 		value = -value
 	}
@@ -509,6 +506,21 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 
 		data >>= 1
 		if prev&0x100 > 0 {
+			prev = (((prev << 1) | uint32(v)) & 0x1ff) | 0x100
+		} else {
+			prev = (prev << 1) | uint32(v)
+		}
+	}
+
+	// move the data value
+	value <<= (32 - intEncRange[i].intBits)
+	for j := uint8(0); j < intEncRange[i].intBits; j++ {
+		v := uint8((value & 0x80000000) >> 31)
+		if err := e.encodeBit(ctx, prev, v); err != nil {
+			return errors.Wrap(err, processName, "move data to the top of word")
+		}
+		value <<= 1
+		if prev&0x100 != 0 {
 			prev = (((prev << 1) | uint32(v)) & 0x1ff) | 0x100
 		} else {
 			prev = (prev << 1) | uint32(v)

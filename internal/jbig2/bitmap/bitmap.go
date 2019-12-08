@@ -830,12 +830,10 @@ func (b *Bitmap) equivalent(s *Bitmap) bool {
 	return true
 }
 
-func (b *Bitmap) getBit(n int) uint8 {
-	return b.Data[(n>>3)>>uint(7-(n&7))] & 1
-}
-
 func (b *Bitmap) inverseData() {
-	b.RasterOperation(0, 0, b.Width, b.Height, PixNotDst, nil, 0, 0)
+	if err := b.RasterOperation(0, 0, b.Width, b.Height, PixNotDst, nil, 0, 0); err != nil {
+		common.Log.Debug("Inverse data failed: '%v'", err)
+	}
 	// flip the color interpretation
 	if b.Color == Chocolate {
 		b.Color = Vanilla

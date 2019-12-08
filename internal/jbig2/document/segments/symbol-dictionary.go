@@ -547,7 +547,7 @@ func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
 				if s.sdHuffDecodeHeightSelection == 3 {
 					dwNr++
 				}
-				t, err := huffman.GetStandardTable(2)
+				t, err := s.getUserTable(dwNr)
 				if err != nil {
 					return 0, err
 				}

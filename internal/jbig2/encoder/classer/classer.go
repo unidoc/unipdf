@@ -140,7 +140,9 @@ func (c *Classer) AddPageComponents(inputPage *bitmap.Bitmap, boxas *bitmap.Boxe
 	}
 
 	// TODO: jbGetULCorners(classer, pixs, boxax)
-	c.GetULCorners(inputPage, boxas)
+	if err = c.GetULCorners(inputPage, boxas); err != nil {
+		return errors.Wrap(err, processName, "")
+	}
 	n := len(*boxas)
 	c.BaseIndex += n
 	c.ComponentsNumber.AddInt(n)
@@ -278,28 +280,28 @@ func (c *Classer) classifyRankHouseOne(boxa *bitmap.Boxes, pixa, bms1, bms2 *bit
 				}
 				break
 			}
+		}
 
-			if !found {
-				c.ClassIDs.AddInt(nt)
-				c.PageNumbers.AddInt(c.PagesProcessed)
-				bitmaps := &bitmap.Bitmaps{}
-				bm, err = pixa.GetBitmap(i)
-				if err != nil {
-					return errors.Wrap(err, processName, "!found")
-				}
-				bitmaps.Values = append(bitmaps.Values, bm)
-				wt, ht := bm.Width, bm.Height
-				c.TemplatesSize[uint64(ht)*uint64(wt)] = nt
-				box, err := boxa.Get(i)
-				if err != nil {
-					return errors.Wrap(err, processName, "!found")
-				}
-				bitmaps.AddBox(box)
-				c.ClassInstances.AddBitmaps(bitmaps)
-				c.CentroidPointsTemplates.AddPoint(x1, y1)
-				c.UndilatedTemplates.AddBitmap(bm1)
-				c.DilatedTemplates.AddBitmap(bm2)
+		if !found {
+			c.ClassIDs.AddInt(nt)
+			c.PageNumbers.AddInt(c.PagesProcessed)
+			bitmaps := &bitmap.Bitmaps{}
+			bm, err = pixa.GetBitmap(i)
+			if err != nil {
+				return errors.Wrap(err, processName, "!found")
 			}
+			bitmaps.Values = append(bitmaps.Values, bm)
+			wt, ht := bm.Width, bm.Height
+			c.TemplatesSize[uint64(ht)*uint64(wt)] = nt
+			box, err := boxa.Get(i)
+			if err != nil {
+				return errors.Wrap(err, processName, "!found")
+			}
+			bitmaps.AddBox(box)
+			c.ClassInstances.AddBitmaps(bitmaps)
+			c.CentroidPointsTemplates.AddPoint(x1, y1)
+			c.UndilatedTemplates.AddBitmap(bm1)
+			c.DilatedTemplates.AddBitmap(bm2)
 		}
 	}
 	return nil
@@ -476,7 +478,9 @@ func (c *Classer) ClassifyCorrelation(boxa *bitmap.Boxes, pixas *bitmap.Bitmaps)
 			(*pta)[i] = bitmap.Point{X: float32(bm.Width) / float32(2), Y: float32(bm.Height) / float32(2)}
 		}
 	}
-	c.CentroidPoints.Add(pta)
+	if err = c.CentroidPoints.Add(pta); err != nil {
+		return errors.Wrap(err, processName, "")
+	}
 	// GOTO: jbclass.c:1143
 	var (
 		area, area1, area2 int
@@ -549,7 +553,7 @@ func (c *Classer) ClassifyCorrelation(boxa *bitmap.Boxes, pixas *bitmap.Bitmaps)
 				}
 
 				if score >= float64(threshold) != overThreshold {
-					return errors.Errorf(processName, "debug Correlation score Mismatch between correlation / threshold. Comparison: %0.4f(%0.4f, %d) >= %0.4f(%0.4f) vs %b",
+					return errors.Errorf(processName, "debug Correlation score Mismatch between correlation / threshold. Comparison: %0.4f(%0.4f, %d) >= %0.4f(%0.4f) vs %v",
 						score, score*float64(area1)*float64(area2), count, threshold, threshold*float32(area1)*float32(area2), overThreshold)
 				}
 			}

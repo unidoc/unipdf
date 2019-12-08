@@ -98,8 +98,7 @@ func (d *Document) AddGenericPage(bm *bitmap.Bitmap, duplicateLineRemoval bool) 
 		FinalWidth:  bm.Width,
 		IsLossless:  true,
 	}
-	d.NumberOfPages++
-	page.PageNumber = int(d.NumberOfPages)
+	page.PageNumber = int(d.nextPageNumber())
 	d.Pages[page.PageNumber] = page
 
 	// add page information segment.
@@ -223,7 +222,9 @@ func (d *Document) GetGlobalSegment(i int) (*segments.Header, error) {
 func (d *Document) GetNumberOfPages() (uint32, error) {
 	if d.NumberOfPagesUnknown || d.NumberOfPages == 0 {
 		if len(d.Pages) == 0 {
-			d.mapData()
+			if err := d.mapData(); err != nil {
+				return 0, errors.Wrap(err, "Document.GetNumberOfPages", "")
+			}
 		}
 		return uint32(len(d.Pages)), nil
 	}

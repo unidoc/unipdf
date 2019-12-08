@@ -18,28 +18,20 @@ import (
 type SubstreamReader struct {
 	// stream position
 	streamPos uint64
-
 	// wrapped stream reader
 	wrapped StreamReader
-
 	// The position in the wrapped stream at which the window starts. Offset is an absolute value.
 	offset uint64
-
 	// The length of the window. Length is an relative value.
 	length uint64
-
 	// A buffer which is used to improve read performance.
 	buffer []byte
-
 	// Location of the first byte in the buffer with respect to the start of the stream.
 	bufferBase uint64
-
 	// Location of the last byte in the buffer with respect to the start of the stream.
 	bufferTop uint64
-
 	// unread bits are stored here
 	cache byte
-
 	// number of unread bits in cache
 	bits byte
 
@@ -207,12 +199,7 @@ func (s *SubstreamReader) Seek(offset int64, whence int) (int64, error) {
 	default:
 		return 0, errors.New("reader.SubstreamReader.Seek invalid whence")
 	}
-
-	if s.streamPos < 0 {
-		return 0, errors.New("reader.Substream.Seek negative position")
-	}
 	s.bits = 0
-
 	return int64(s.streamPos), nil
 }
 

@@ -293,7 +293,6 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate0(
 
 		if currentLine > 0 && currentLine <= g.ReferenceBitmap.Height {
 			var tempVal int
-			temp = 0
 			if refReadNextByte {
 				temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride + yOffset)
 				if err != nil {
@@ -448,9 +447,7 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate1(
 		}
 
 		if currentLine > 0 && currentLine <= g.ReferenceBitmap.Height {
-			temp = 0
 			var tempVal int
-
 			if refReadNextByte {
 				temp, err = g.ReferenceBitmap.GetByte(refByteIndex - refRowStride + yOffset)
 				if err != nil {
@@ -906,10 +903,6 @@ func (g *GenericRefinementRegion) setParameters(
 
 	if arithmDecoder != nil {
 		g.arithDecode = arithmDecoder
-	}
-
-	if regionHeight < 0 {
-		common.Log.Debug("[GENERIC-REF-REGION] setParameters with region height < 0")
 	}
 
 	g.TemplateID = grTemplate

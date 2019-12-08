@@ -19,8 +19,7 @@ type Reader struct {
 	in           []byte
 	cache        byte  // unread bits are stored here
 	bits         byte  // number of unread bits in cache
-	r, w         int64 // buf read and write positions
-	err          error
+	r            int64 // buf read positions
 	lastByte     int
 	lastRuneSize int
 

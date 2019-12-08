@@ -109,7 +109,9 @@ func TestSeeker(t *testing.T) {
 	t.Run("SeekStart", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			r := New(data)
-			r.Seek(3, io.SeekStart)
+			_, err := r.Seek(3, io.SeekStart)
+			require.NoError(t, err)
+
 			b, err := r.ReadByte()
 			assert.Equal(t, nil, err)
 			assert.Equal(t, data[3], b)

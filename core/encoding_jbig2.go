@@ -120,11 +120,10 @@ func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 // to encode given image.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	const processName = "JBIG2Encoder.EncodeBytes"
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil, errors.Errorf(processName, "input 'data' not defined")
 	}
-	buf := bytes.NewBuffer(data)
-	i, _, err := image.Decode(buf)
+	i, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, errors.Wrap(err, processName, "decode input image")
 	}
@@ -210,12 +209,8 @@ func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
 	}
 }
 
-func newJBIG2Decoder() *JBIG2Encoder {
-	return &JBIG2Encoder{}
-}
-
-func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
-	const processName = "newJBIG2EncoderFromStream"
+func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
+	const processName = "newJBIG2DecoderFromStream"
 	encoder := &JBIG2Encoder{}
 	encDict := streamObj.PdfObjectDictionary
 	if encDict == nil {
@@ -230,7 +225,6 @@ func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			switch t := obj.(type) {
 			case *PdfObjectDictionary:
 				decodeParams = t
-				break
 			case *PdfObjectArray:
 				if t.Len() == 1 {
 					if dp, ok := GetDict(t.Get(0)); ok {
@@ -433,8 +427,12 @@ func bwToJBIG2Image(i *image.Gray) *JBIG2Image {
 			// check if the pixel is black or white
 			// where black pixel would be stored as '1' bit
 			// and the white as '0' bit.
+
+			// the pix is color.Black if it's Y value is '0'.
 			if pix.Y == 0 {
-				bm.SetPixel(x, y, 1)
+				if err := bm.SetPixel(x, y, 1); err != nil {
+					common.Log.Debug("can't set pixel at bitmap: %v", bm)
+				}
 			}
 		}
 	}
@@ -451,7 +449,6 @@ JBIG2Page
 // JBIG2Page defines the JBIG2 page which contains the segment definitions.
 type JBIG2Page struct {
 	Settings JBIG2PageSettings
-	p        *document.Page
 }
 
 // JBIG2PageSettings contains the parameters and settings used by the JBIG2Encoder

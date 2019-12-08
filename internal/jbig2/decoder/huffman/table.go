@@ -7,7 +7,6 @@ package huffman
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
@@ -113,12 +112,4 @@ func maxInt(x, y int32) int32 {
 		return x
 	}
 	return y
-}
-
-func codeTableToString(codeTable []*Code) string {
-	sb := strings.Builder{}
-	for _, c := range codeTable {
-		sb.WriteString(c.String() + "\n")
-	}
-	return sb.String()
 }

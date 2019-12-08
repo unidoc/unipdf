@@ -238,17 +238,6 @@ func readFileNames(dirname, suffix string) ([]string, error) {
 	return files, err
 }
 
-func readJBIGZippedFiles(dirname string) ([]string, error) {
-	var files []string
-	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".zip") {
-			files = append(files, info.Name())
-		}
-		return nil
-	})
-	return files, err
-}
-
 func readPDF(f *os.File, password ...string) (*model.PdfReader, error) {
 	pdfReader, err := model.NewPdfReader(f)
 	if err != nil {

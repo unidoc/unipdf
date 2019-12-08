@@ -137,6 +137,26 @@ func (p *Page) GetBitmap() (bm *bitmap.Bitmap, err error) {
 	return p.Bitmap, nil
 }
 
+// GetHeight gets the page height.
+func (p *Page) GetHeight() (int, error) {
+	return p.getHeight()
+}
+
+// GetResolutionX gets the 'x' resolution of the page.
+func (p *Page) GetResolutionX() (int, error) {
+	return p.getResolutionX()
+}
+
+// GetResolutionY gets the 'y' resolution of the page.
+func (p *Page) GetResolutionY() (int, error) {
+	return p.getResolutionY()
+}
+
+// GetWidth gets the page width.
+func (p *Page) GetWidth() (int, error) {
+	return p.getWidth()
+}
+
 // GetSegment implements segments.Pager interface.
 func (p *Page) GetSegment(number int) (*segments.Header, error) {
 	const processName = "Page.GetSegment"
@@ -244,7 +264,7 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 					return errors.Wrap(err, processName, "")
 				}
 			}
-			break
+			return nil
 		}
 	}
 	return nil
@@ -315,10 +335,6 @@ func (p *Page) clearSegmentData() {
 	}
 }
 
-func (p *Page) clearPageData() {
-	p.Bitmap = nil
-}
-
 // countRegions counts the region segments in the Page.
 func (p *Page) countRegions() int {
 	var regionCount int
@@ -334,29 +350,29 @@ func (p *Page) countRegions() int {
 
 // encodeSegment encodes the segment data and segment header for given 'segmentNumber'.
 // Then the function writes it's encoded data into 'w' writer.
-func (p *Page) encodeSegment(w writer.BinaryWriter, segmentNumber int) (n int, err error) {
-	const processName = "encodeSegment"
-	// get the segment for given 'segmentNumber'
-	seg, err := p.GetSegment(segmentNumber)
-	if err != nil {
-		return n, errors.Wrap(err, processName, "")
-	}
-
-	n, err = seg.Encode(w)
-	if err != nil {
-		return 0, errors.Wrapf(err, processName, "page: '%d'", p.PageNumber)
-	}
-	return n, nil
-}
+// func (p *Page) encodeSegment(w writer.BinaryWriter, segmentNumber int) (n int, err error) {
+//	const processName = "encodeSegment"
+//	// get the segment for given 'segmentNumber'
+//	seg, err := p.GetSegment(segmentNumber)
+//	if err != nil {
+//		return n, errors.Wrap(err, processName, "")
+//	}
+//
+// 	n, err = seg.Encode(w)
+// 	if err != nil {
+// 		return 0, errors.Wrapf(err, processName, "page: '%d'", p.PageNumber)
+// 	}
+// 	return n, nil
+// }
 
 // firstSegmentNumber gets the number of the first segment in the page.
-func (p *Page) firstSegmentNumber() (first uint32, err error) {
-	const processName = "firstSegmentNumber"
-	if len(p.Segments) == 0 {
-		return first, errors.Errorf(processName, "no segments found in the page '%d'", p.PageNumber)
-	}
-	return p.Segments[0].SegmentNumber, nil
-}
+// func (p *Page) firstSegmentNumber() (first uint32, err error) {
+// 	const processName = "firstSegmentNumber"
+// 	if len(p.Segments) == 0 {
+// 		return first, errors.Errorf(processName, "no segments found in the page '%d'", p.PageNumber)
+// 	}
+// 	return p.Segments[0].SegmentNumber, nil
+// }
 
 func (p *Page) fitsPage(i *segments.PageInformationSegment, regionBitmap *bitmap.Bitmap) bool {
 	return p.countRegions() == 1 &&

@@ -96,9 +96,11 @@ func (p *PageInformationSegment) Encode(w writer.BinaryWriter) (n int, err error
 }
 
 // Init implements Segmenter interface.
-func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) error {
+func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) (err error) {
 	p.r = r
-	p.parseHeader()
+	if err = p.parseHeader(); err != nil {
+		return errors.Wrap(err, "PageInformationSegment.Init", "")
+	}
 	return nil
 }
 
@@ -231,11 +233,6 @@ func (p *PageInformationSegment) encodeStripingInformation(w writer.BinaryWriter
 		return 0, errors.Wrapf(err, processName, "striping: %d", p.MaxStripeSize)
 	}
 	return n, nil
-}
-
-func (p *PageInformationSegment) init(header *Header, r *reader.Reader) error {
-	p.r = r
-	return nil
 }
 
 func (p *PageInformationSegment) parseHeader() (err error) {
@@ -433,8 +430,4 @@ func (p *PageInformationSegment) readWidthAndHeight() error {
 	}
 	p.PageBMHeight = int(tempInt & math.MaxInt32)
 	return nil
-}
-
-func newPageInformation(h *Header) *PageInformationSegment {
-	return &PageInformationSegment{}
 }

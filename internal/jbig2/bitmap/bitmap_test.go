@@ -195,15 +195,15 @@ func TestBitmap(t *testing.T) {
 			// the width of 20 would have some padding
 			bm := New(20, 2)
 
-			bm.SetPixel(17, 0, 1)
-			bm.SetPixel(19, 0, 1)
+			assert.NoError(t, bm.SetPixel(17, 0, 1))
+			assert.NoError(t, bm.SetPixel(19, 0, 1))
 
-			bm.SetPixel(3, 1, 1)
-			bm.SetPixel(4, 1, 1)
+			assert.NoError(t, bm.SetPixel(3, 1, 1))
+			assert.NoError(t, bm.SetPixel(4, 1, 1))
 
-			bm.SetPixel(9, 1, 1)
-			bm.SetPixel(12, 1, 1)
-			bm.SetPixel(19, 1, 1)
+			assert.NoError(t, bm.SetPixel(9, 1, 1))
+			assert.NoError(t, bm.SetPixel(12, 1, 1))
+			assert.NoError(t, bm.SetPixel(19, 1, 1))
 
 			// row stride should be 3
 			// padding at last byte of row is 4
@@ -247,7 +247,7 @@ func TestBitmap(t *testing.T) {
 				bm := New(2196, 3)
 				for x := 0; x < bm.Width; x++ {
 					for y := 0; y < bm.Height; y++ {
-						bm.SetPixel(x, y, 1)
+						assert.NoError(t, bm.SetPixel(x, y, 1))
 					}
 				}
 
@@ -267,15 +267,13 @@ func TestBitmap(t *testing.T) {
 				// the width of 20 would have some padding
 				bm := New(19, 2)
 
-				bm.SetPixel(16, 0, 1)
-				bm.SetPixel(18, 0, 1)
-
-				bm.SetPixel(3, 1, 1)
-				bm.SetPixel(4, 1, 1)
-
-				bm.SetPixel(9, 1, 1)
-				bm.SetPixel(12, 1, 1)
-				bm.SetPixel(18, 1, 1)
+				assert.NoError(t, bm.SetPixel(16, 0, 1))
+				assert.NoError(t, bm.SetPixel(18, 0, 1))
+				assert.NoError(t, bm.SetPixel(3, 1, 1))
+				assert.NoError(t, bm.SetPixel(4, 1, 1))
+				assert.NoError(t, bm.SetPixel(9, 1, 1))
+				assert.NoError(t, bm.SetPixel(12, 1, 1))
+				assert.NoError(t, bm.SetPixel(18, 1, 1))
 
 				unpadded, err := bm.GetUnpaddedData()
 				require.NoError(t, err)

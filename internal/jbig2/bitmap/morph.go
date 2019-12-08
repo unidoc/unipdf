@@ -160,10 +160,10 @@ func MorphSequence(src *Bitmap, sequence ...MorphProcess) (*Bitmap, error) {
 func (bm *Bitmap) centroid(centTab, sumTab []int) (Point, error) {
 	pt := Point{}
 	bm.setPadBits(0)
-	if centTab == nil || len(centTab) == 0 {
+	if len(centTab) == 0 {
 		centTab = makePixelCentroidTab8()
 	}
-	if sumTab == nil || len(sumTab) == 0 {
+	if len(sumTab) == 0 {
 		sumTab = makePixelSumTab8()
 	}
 	var xsum, ysum, pixsum, rowsum, i, j int
@@ -550,7 +550,7 @@ func morphSequence(s *Bitmap, sequence ...MorphProcess) (d *Bitmap, err error) {
 	if s == nil {
 		return nil, errors.Error(processName, "morphSequence source bitmap not defined")
 	}
-	if sequence == nil || len(sequence) == 0 {
+	if len(sequence) == 0 {
 		return nil, errors.Error(processName, "morphSequence, sequence not defined")
 	}
 

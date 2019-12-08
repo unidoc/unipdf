@@ -396,10 +396,6 @@ func (h *HalftoneRegion) renderPattern(grayScaleValues [][]int) (err error) {
 	return nil
 }
 
-func newHalftoneRegion(r *reader.Reader) *HalftoneRegion {
-	return &HalftoneRegion{r: r, RegionSegment: NewRegionSegment(r)}
-}
-
 func findMSB(n int) int {
 	if n == 0 {
 		return 0

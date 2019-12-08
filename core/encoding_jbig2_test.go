@@ -20,12 +20,13 @@ import (
 func TestImageToJBIG2Image(t *testing.T) {
 	t.Run("BlackWhite", func(t *testing.T) {
 		// having a test black white image of a frame.
+		// The frame has a width of 2 bits.
 		g := image.NewGray(image.Rect(0, 0, 50, 50))
 		bounds := g.Bounds()
 		bm := bitmap.New(50, 50)
 		setPix := func(x, y int) {
 			g.SetGray(x, y, color.Gray{})
-			bm.SetPixel(x, y, 1)
+			assert.NoError(t, bm.SetPixel(x, y, 1))
 		}
 		for x := 0; x < bounds.Dx(); x++ {
 			for y := 0; y < bounds.Dy(); y++ {

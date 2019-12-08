@@ -39,9 +39,7 @@ type GenericRegion struct {
 	IsTPGDon        bool
 	GBTemplate      byte
 	IsMMREncoded    bool
-
-	inlineImage, unknownLength bool
-	UseMMR                     bool
+	UseMMR          bool
 
 	// Generic region segment AT flags, 7.4.6.3
 	GBAtX        []int8

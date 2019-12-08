@@ -43,7 +43,7 @@ func TestCorrelationThreshold(t *testing.T) {
 				}
 			}
 			match[col][bitIndex] = struct{}{}
-			tp.SetPixel(bitIndex, col, 0)
+			assert.NoError(t, tp.SetPixel(bitIndex, col, 0))
 			count--
 		}
 		// downcount contains the amount of the pixels
