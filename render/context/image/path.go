@@ -21,13 +21,13 @@ func flattenPath(p raster.Path) [][]transform.Point {
 			}
 			x := unfix(p[i+1])
 			y := unfix(p[i+2])
-			path = append(path, transform.Point{x, y})
+			path = append(path, transform.NewPoint(x, y))
 			cx, cy = x, y
 			i += 4
 		case 1:
 			x := unfix(p[i+1])
 			y := unfix(p[i+2])
-			path = append(path, transform.Point{x, y})
+			path = append(path, transform.NewPoint(x, y))
 			cx, cy = x, y
 			i += 4
 		case 2:

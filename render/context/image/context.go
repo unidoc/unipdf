@@ -236,7 +236,7 @@ func (dc *Context) MoveTo(x, y float64) {
 	}
 
 	x, y = dc.Transform(x, y)
-	p := transform.Point{x, y}
+	p := transform.NewPoint(x, y)
 	fp := fixedPoint(p)
 
 	dc.strokePath.Start(fp)
@@ -253,7 +253,7 @@ func (dc *Context) LineTo(x, y float64) {
 		dc.MoveTo(x, y)
 	} else {
 		x, y = dc.Transform(x, y)
-		p := transform.Point{x, y}
+		p := transform.NewPoint(x, y)
 		fp := fixedPoint(p)
 
 		dc.strokePath.Add1(fp)
@@ -272,8 +272,8 @@ func (dc *Context) QuadraticTo(x1, y1, x2, y2 float64) {
 
 	x1, y1 = dc.Transform(x1, y1)
 	x2, y2 = dc.Transform(x2, y2)
-	p1 := transform.Point{x1, y1}
-	p2 := transform.Point{x2, y2}
+	p1 := transform.NewPoint(x1, y1)
+	p2 := transform.NewPoint(x2, y2)
 	fp1 := fixedPoint(p1)
 	fp2 := fixedPoint(p2)
 

@@ -28,7 +28,7 @@ func quadraticBezier(x0, y0, x1, y1, x2, y2 float64) []transform.Point {
 	for i := 0; i < n; i++ {
 		t := float64(i) / d
 		x, y := quadratic(x0, y0, x1, y1, x2, y2, t)
-		result[i] = transform.Point{x, y}
+		result[i] = transform.NewPoint(x, y)
 	}
 	return result
 }
@@ -57,7 +57,7 @@ func cubicBezier(x0, y0, x1, y1, x2, y2, x3, y3 float64) []transform.Point {
 	for i := 0; i < n; i++ {
 		t := float64(i) / d
 		x, y := cubic(x0, y0, x1, y1, x2, y2, x3, y3, t)
-		result[i] = transform.Point{x, y}
+		result[i] = transform.NewPoint(x, y)
 	}
 	return result
 }
