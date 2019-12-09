@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	_ "image/jpeg"
 	"math"
 	"strings"
 

@@ -19,6 +19,7 @@ var (
 	defaultStrokeStyle = newSolidPattern(color.Black)
 )
 
+// Context represents an image rendering context.
 type Context struct {
 	width         int
 	height        int
@@ -110,60 +111,29 @@ func (dc *Context) LineWidth() float64 {
 	return dc.lineWidth
 }
 
-// LineWidth sets the line width of the context.
+// SetLineWidth sets the line width of the context.
 func (dc *Context) SetLineWidth(lineWidth float64) {
 	dc.lineWidth = lineWidth
 }
 
+// SetLineCap sets the line cap style.
 func (dc *Context) SetLineCap(lineCap context.LineCap) {
 	dc.lineCap = lineCap
 }
 
-func (dc *Context) SetLineCapRound() {
-	dc.lineCap = context.LineCapRound
-}
-
-func (dc *Context) SetLineCapButt() {
-	dc.lineCap = context.LineCapButt
-}
-
-func (dc *Context) SetLineCapSquare() {
-	dc.lineCap = context.LineCapSquare
-}
-
+// SetLineJoin sets the line join style.
 func (dc *Context) SetLineJoin(lineJoin context.LineJoin) {
 	dc.lineJoin = lineJoin
 }
 
-func (dc *Context) SetLineJoinRound() {
-	dc.lineJoin = context.LineJoinRound
-}
-
-func (dc *Context) SetLineJoinBevel() {
-	dc.lineJoin = context.LineJoinBevel
-}
-
+// SetFillRule sets the fill rule.
 func (dc *Context) SetFillRule(fillRule context.FillRule) {
 	dc.fillRule = fillRule
 }
 
-func (dc *Context) SetFillRuleWinding() {
-	dc.fillRule = context.FillRuleWinding
-}
-
-func (dc *Context) SetFillRuleEvenOdd() {
-	dc.fillRule = context.FillRuleEvenOdd
-}
-
-func (dc *Context) Matrix() transform.Matrix {
-	return dc.matrix
-}
-
-func (dc *Context) SetMatrix(m transform.Matrix) {
-	dc.matrix = m
-}
-
-// Color Setters
+// -----------------
+// - Color Setters -
+// -----------------
 
 func (dc *Context) setFillAndStrokeColor(c color.Color) {
 	dc.color = c
@@ -190,7 +160,7 @@ func (dc *Context) SetColor(c color.Color) {
 	dc.setFillAndStrokeColor(c)
 }
 
-// SetStrokeColor sets the current color for stroking operations.
+// SetStrokeRGBA sets the current color for stroking operations.
 // r, g, b, a values must be in range 0-1.
 func (dc *Context) SetStrokeRGBA(r, g, b, a float64) {
 	color := color.NRGBA{
@@ -202,7 +172,7 @@ func (dc *Context) SetStrokeRGBA(r, g, b, a float64) {
 	dc.strokePattern = newSolidPattern(color)
 }
 
-// SetFillColor sets the current color for fill operations.
+// SetFillRGBA sets the current color for fill operations.
 // r, g, b, a values must be in range 0-1.
 func (dc *Context) SetFillRGBA(r, g, b, a float64) {
 	color := color.NRGBA{
@@ -254,7 +224,9 @@ func (dc *Context) SetRGB(r, g, b float64) {
 	dc.SetRGBA(r, g, b, 1)
 }
 
-// Path Manipulation
+// ---------------------
+// - Path Manipulation -
+// ---------------------
 
 // MoveTo starts a new subpath within the current path starting at the
 // specified point.
@@ -365,7 +337,9 @@ func (dc *Context) NewSubPath() {
 	dc.hasCurrent = false
 }
 
-// Path Drawing
+// ----------------
+// - Path Drawing -
+// ----------------
 
 func (dc *Context) capper() raster.Capper {
 	switch dc.lineCap {
@@ -534,7 +508,9 @@ func (dc *Context) ResetClip() {
 	dc.mask = nil
 }
 
-// Convenient Drawing Functions
+// ----------------------
+// - Drawing Operations -
+// ----------------------
 
 // Clear fills the entire image with the current color.
 func (dc *Context) Clear() {
@@ -558,11 +534,13 @@ func (dc *Context) DrawPoint(x, y, r float64) {
 	dc.Pop()
 }
 
+// DrawLine draws the line described by points x1,y1 and x2,y2.
 func (dc *Context) DrawLine(x1, y1, x2, y2 float64) {
 	dc.MoveTo(x1, y1)
 	dc.LineTo(x2, y2)
 }
 
+// DrawRectangle draws a rectangle of size w,h at position x,y.
 func (dc *Context) DrawRectangle(x, y, w, h float64) {
 	dc.NewSubPath()
 	dc.MoveTo(x, y)
@@ -572,6 +550,7 @@ func (dc *Context) DrawRectangle(x, y, w, h float64) {
 	dc.ClosePath()
 }
 
+// DrawRoundedRectangle draws a rounded rectangle of size w,h at position x,y.
 func (dc *Context) DrawRoundedRectangle(x, y, w, h, r float64) {
 	x0, x1, x2, x3 := x, x+r, x+w-r, x+w
 	y0, y1, y2, y3 := y, y+r, y+h-r, y+h
@@ -588,6 +567,13 @@ func (dc *Context) DrawRoundedRectangle(x, y, w, h, r float64) {
 	dc.ClosePath()
 }
 
+// DrawArc draws an arc described by r, angle1, angle2 at position x,y.
+func (dc *Context) DrawArc(x, y, r, angle1, angle2 float64) {
+	dc.DrawEllipticalArc(x, y, r, r, angle1, angle2)
+}
+
+// DrawEllipticalArc draws an elliptical arc described by r, angle1, angle2 at
+// position x,y.
 func (dc *Context) DrawEllipticalArc(x, y, rx, ry, angle1, angle2 float64) {
 	const n = 16
 	for i := 0; i < n; i++ {
@@ -614,23 +600,21 @@ func (dc *Context) DrawEllipticalArc(x, y, rx, ry, angle1, angle2 float64) {
 	}
 }
 
+// DrawEllipse draws an ellipse of size rx,ry at position x,y.
 func (dc *Context) DrawEllipse(x, y, rx, ry float64) {
 	dc.NewSubPath()
 	dc.DrawEllipticalArc(x, y, rx, ry, 0, 2*math.Pi)
 	dc.ClosePath()
 }
 
-func (dc *Context) DrawArc(x, y, r, angle1, angle2 float64) {
-	dc.DrawEllipticalArc(x, y, r, r, angle1, angle2)
-}
-
+// DrawCircle draws a circle of radius r at position x,y.
 func (dc *Context) DrawCircle(x, y, r float64) {
 	dc.NewSubPath()
 	dc.DrawEllipticalArc(x, y, r, r, 0, 2*math.Pi)
 	dc.ClosePath()
 }
 
-func (dc *Context) DrawRegularPolygon(n int, x, y, r, rotation float64) {
+func (dc *Context) drawRegularPolygon(n int, x, y, r, rotation float64) {
 	angle := 2 * math.Pi / float64(n)
 	rotation -= math.Pi / 2
 	if n%2 == 0 {
@@ -670,8 +654,11 @@ func (dc *Context) DrawImageAnchored(im image.Image, x, y int, ax, ay float64) {
 	}
 }
 
-// Text Functions
+// -------------------
+// - Text Operations -
+// -------------------
 
+// TextState returns the current text state.
 func (dc *Context) TextState() *context.TextState {
 	return dc.textState
 }
@@ -741,7 +728,19 @@ func (dc *Context) MeasureString(s string) (w, h float64) {
 	return float64(a >> 6), dc.textState.Tf.Size
 }
 
-// Transformation Matrix Operations
+// ------------------------------------
+// - Transformation Matrix Operations -
+// ------------------------------------
+
+// Matrix returns the current transformation matrix.
+func (dc *Context) Matrix() transform.Matrix {
+	return dc.matrix
+}
+
+// SetMatrix modifies the transformation matrix.
+func (dc *Context) SetMatrix(m transform.Matrix) {
+	dc.matrix = m
+}
 
 // Identity resets the current transformation matrix to the identity matrix.
 // This results in no translating, scaling, rotating, or shearing.
@@ -802,7 +801,9 @@ func (dc *Context) Transform(x, y float64) (tx, ty float64) {
 	return dc.matrix.Transform(x, y)
 }
 
-// Stack
+// --------------------
+// - Stack operations -
+// --------------------
 
 // Push saves the current state of the context for later retrieval. These
 // can be nested.
