@@ -6,6 +6,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
+// Context defines operations for rendering to a particular target.
 type Context interface {
 	// ----------------------------- //
 	// - Graphics state operations - //
