@@ -33,8 +33,8 @@ type Context struct {
 	strokePattern context.Pattern
 	strokePath    raster.Path
 	fillPath      raster.Path
-	start         Point
-	current       Point
+	start         transform.Point
+	current       transform.Point
 	hasCurrent    bool
 	dashes        []float64
 	dashOffset    float64
@@ -285,12 +285,15 @@ func (dc *Context) SetRGB(r, g, b float64) {
 // specified point.
 func (dc *Context) MoveTo(x, y float64) {
 	if dc.hasCurrent {
-		dc.fillPath.Add1(dc.start.Fixed())
+		dc.fillPath.Add1(fixedPoint(dc.start))
 	}
+
 	x, y = dc.Transform(x, y)
-	p := Point{x, y}
-	dc.strokePath.Start(p.Fixed())
-	dc.fillPath.Start(p.Fixed())
+	p := transform.Point{x, y}
+	fp := fixedPoint(p)
+
+	dc.strokePath.Start(fp)
+	dc.fillPath.Start(fp)
 	dc.start = p
 	dc.current = p
 	dc.hasCurrent = true
@@ -303,9 +306,11 @@ func (dc *Context) LineTo(x, y float64) {
 		dc.MoveTo(x, y)
 	} else {
 		x, y = dc.Transform(x, y)
-		p := Point{x, y}
-		dc.strokePath.Add1(p.Fixed())
-		dc.fillPath.Add1(p.Fixed())
+		p := transform.Point{x, y}
+		fp := fixedPoint(p)
+
+		dc.strokePath.Add1(fp)
+		dc.fillPath.Add1(fp)
 		dc.current = p
 	}
 }
@@ -317,12 +322,16 @@ func (dc *Context) QuadraticTo(x1, y1, x2, y2 float64) {
 	if !dc.hasCurrent {
 		dc.MoveTo(x1, y1)
 	}
+
 	x1, y1 = dc.Transform(x1, y1)
 	x2, y2 = dc.Transform(x2, y2)
-	p1 := Point{x1, y1}
-	p2 := Point{x2, y2}
-	dc.strokePath.Add2(p1.Fixed(), p2.Fixed())
-	dc.fillPath.Add2(p1.Fixed(), p2.Fixed())
+	p1 := transform.Point{x1, y1}
+	p2 := transform.Point{x2, y2}
+	fp1 := fixedPoint(p1)
+	fp2 := fixedPoint(p2)
+
+	dc.strokePath.Add2(fp1, fp2)
+	dc.fillPath.Add2(fp1, fp2)
 	dc.current = p2
 }
 
@@ -338,10 +347,10 @@ func (dc *Context) CubicTo(x1, y1, x2, y2, x3, y3 float64) {
 	x1, y1 = dc.Transform(x1, y1)
 	x2, y2 = dc.Transform(x2, y2)
 	x3, y3 = dc.Transform(x3, y3)
-	points := CubicBezier(x0, y0, x1, y1, x2, y2, x3, y3)
-	previous := dc.current.Fixed()
+	points := cubicBezier(x0, y0, x1, y1, x2, y2, x3, y3)
+	previous := fixedPoint(dc.current)
 	for _, p := range points[1:] {
-		f := p.Fixed()
+		f := fixedPoint(p)
 		if f == previous {
 			// TODO: this fixes some rendering issues but not all
 			continue
@@ -357,8 +366,9 @@ func (dc *Context) CubicTo(x1, y1, x2, y2, x3, y3 float64) {
 // of the current subpath. If there is no current point, this is a no-op.
 func (dc *Context) ClosePath() {
 	if dc.hasCurrent {
-		dc.strokePath.Add1(dc.start.Fixed())
-		dc.fillPath.Add1(dc.start.Fixed())
+		fp := fixedPoint(dc.start)
+		dc.strokePath.Add1(fp)
+		dc.fillPath.Add1(fp)
 		dc.current = dc.start
 	}
 }
@@ -375,7 +385,7 @@ func (dc *Context) ClearPath() {
 // point after this operation.
 func (dc *Context) NewSubPath() {
 	if dc.hasCurrent {
-		dc.fillPath.Add1(dc.start.Fixed())
+		dc.fillPath.Add1(fixedPoint(dc.start))
 	}
 	dc.hasCurrent = false
 }
@@ -425,7 +435,7 @@ func (dc *Context) fill(painter raster.Painter) {
 	if dc.hasCurrent {
 		path = make(raster.Path, len(dc.fillPath))
 		copy(path, dc.fillPath)
-		path.Add1(dc.start.Fixed())
+		path.Add1(fixedPoint(dc.start))
 	}
 	r := dc.rasterizer
 	r.UseNonZeroWinding = dc.fillRule == context.FillRuleWinding
@@ -696,7 +706,7 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 		Dst:  im,
 		Src:  image.NewUniform(dc.color),
 		Face: dc.textState.Tf.Face,
-		Dot:  fixp(x, y),
+		Dot:  fixedPoint(transform.NewPoint(x, y)),
 	}
 	// based on Drawer.DrawString() in golang.org/x/image/font/font.go
 	prevC := rune(-1)

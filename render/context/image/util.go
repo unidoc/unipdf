@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/golang/freetype/truetype"
+	"github.com/unidoc/unipdf/v3/internal/transform"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
@@ -104,10 +105,10 @@ func parseHexColor(x string) (r, g, b, a int) {
 	return
 }
 
-func fixp(x, y float64) fixed.Point26_6 {
+func fixedPoint(p transform.Point) fixed.Point26_6 {
 	return fixed.Point26_6{
-		X: fix(x),
-		Y: fix(y),
+		X: fix(p.X),
+		Y: fix(p.Y),
 	}
 }
 

@@ -4,12 +4,13 @@ import (
 	"math"
 
 	"github.com/golang/freetype/raster"
+	"github.com/unidoc/unipdf/v3/internal/transform"
 	"golang.org/x/image/math/fixed"
 )
 
-func flattenPath(p raster.Path) [][]Point {
-	var result [][]Point
-	var path []Point
+func flattenPath(p raster.Path) [][]transform.Point {
+	var result [][]transform.Point
+	var path []transform.Point
 	var cx, cy float64
 	for i := 0; i < len(p); {
 		switch p[i] {
@@ -20,13 +21,13 @@ func flattenPath(p raster.Path) [][]Point {
 			}
 			x := unfix(p[i+1])
 			y := unfix(p[i+2])
-			path = append(path, Point{x, y})
+			path = append(path, transform.Point{x, y})
 			cx, cy = x, y
 			i += 4
 		case 1:
 			x := unfix(p[i+1])
 			y := unfix(p[i+2])
-			path = append(path, Point{x, y})
+			path = append(path, transform.Point{x, y})
 			cx, cy = x, y
 			i += 4
 		case 2:
@@ -34,7 +35,7 @@ func flattenPath(p raster.Path) [][]Point {
 			y1 := unfix(p[i+2])
 			x2 := unfix(p[i+3])
 			y2 := unfix(p[i+4])
-			points := QuadraticBezier(cx, cy, x1, y1, x2, y2)
+			points := quadraticBezier(cx, cy, x1, y1, x2, y2)
 			path = append(path, points...)
 			cx, cy = x2, y2
 			i += 6
@@ -45,7 +46,7 @@ func flattenPath(p raster.Path) [][]Point {
 			y2 := unfix(p[i+4])
 			x3 := unfix(p[i+5])
 			y3 := unfix(p[i+6])
-			points := CubicBezier(cx, cy, x1, y1, x2, y2, x3, y3)
+			points := cubicBezier(cx, cy, x1, y1, x2, y2, x3, y3)
 			path = append(path, points...)
 			cx, cy = x3, y3
 			i += 8
@@ -59,8 +60,8 @@ func flattenPath(p raster.Path) [][]Point {
 	return result
 }
 
-func dashPath(paths [][]Point, dashes []float64, offset float64) [][]Point {
-	var result [][]Point
+func dashPath(paths [][]transform.Point, dashes []float64, offset float64) [][]transform.Point {
+	var result [][]transform.Point
 	if len(dashes) == 0 {
 		return paths
 	}
@@ -96,7 +97,7 @@ func dashPath(paths [][]Point, dashes []float64, offset float64) [][]Point {
 			}
 		}
 
-		var segment []Point
+		var segment []transform.Point
 		segment = append(segment, previous)
 		for pathIndex < len(path) {
 			dashLength := dashes[dashIndex]
@@ -129,12 +130,12 @@ func dashPath(paths [][]Point, dashes []float64, offset float64) [][]Point {
 	return result
 }
 
-func rasterPath(paths [][]Point) raster.Path {
+func rasterPath(paths [][]transform.Point) raster.Path {
 	var result raster.Path
 	for _, path := range paths {
 		var previous fixed.Point26_6
 		for i, point := range path {
-			f := point.Fixed()
+			f := fixedPoint(point)
 			if i == 0 {
 				result.Start(f)
 			} else {
