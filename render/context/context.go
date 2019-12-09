@@ -164,12 +164,12 @@ type Context interface {
 	DrawRectangle(x, y, w, h float64)
 
 	// DrawImage draws the specified image at the specified point.
-	DrawImage(im image.Image, x, y int)
+	DrawImage(image image.Image, x, y int)
 
 	// DrawImageAnchored draws the specified image at the specified anchor point.
 	// The anchor point is x - w * ax, y - h * ay, where w, h is the size of the
 	// image. Use ax=0.5, ay=0.5 to center the image at the specified point.
-	DrawImageAnchored(im image.Image, x, y int, ax, ay float64)
+	DrawImageAnchored(image image.Image, x, y int, ax, ay float64)
 
 	// ------------------- //
 	// - Misc operations - //

@@ -20,7 +20,7 @@ var (
 type renderer struct {
 }
 
-func (r renderer) renderPage(page *model.PdfPage, ctx context.Context) error {
+func (r renderer) renderPage(ctx context.Context, page *model.PdfPage) error {
 	contents, err := page.GetAllContentStreams()
 	if err != nil {
 		return err
@@ -46,10 +46,10 @@ func (r renderer) renderPage(page *model.PdfPage, ctx context.Context) error {
 	ctx.SetLineWidth(1.0)
 	ctx.SetRGBA(0, 0, 0, 1)
 
-	return r.renderContentStream(contents, page.Resources, ctx)
+	return r.renderContentStream(ctx, contents, page.Resources)
 }
 
-func (r renderer) renderContentStream(contents string, resources *model.PdfPageResources, ctx context.Context) error {
+func (r renderer) renderContentStream(ctx context.Context, contents string, resources *model.PdfPageResources) error {
 	operations, err := pdfcontent.NewContentStreamParser(contents).Parse()
 	if err != nil {
 		return err
@@ -712,7 +712,7 @@ func (r renderer) renderContentStream(contents string, resources *model.PdfPageR
 					}
 
 					// Process the content stream in the Form object.
-					err = r.renderContentStream(string(formContent), formResources, ctx)
+					err = r.renderContentStream(ctx, string(formContent), formResources)
 					if err != nil {
 						return err
 					}

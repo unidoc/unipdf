@@ -5,17 +5,17 @@ import (
 )
 
 type TextState struct {
-	Tc float64   // Character spacing.
-	Tw float64   // Word spacing.
-	Th float64   // Horizontal scaling.
-	Tl float64   // Leading.
-	Tf *TextFont // Font
-	Ts float64   // Text rise.
-
+	Tc  float64          // Character spacing.
+	Tw  float64          // Word spacing.
+	Th  float64          // Horizontal scaling.
+	Tl  float64          // Leading.
+	Tf  *TextFont        // Font
+	Ts  float64          // Text rise.
 	Tm  transform.Matrix // Text matrix.
 	Tlm transform.Matrix // Text line matrix.
 }
 
+// NewTextState returns a new TextState instance.
 func NewTextState() *TextState {
 	return &TextState{
 		Th:  100,

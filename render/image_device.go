@@ -14,10 +14,12 @@ import (
 	imagectx "github.com/unidoc/unipdf/v3/render/context/image"
 )
 
+// ImageDevice is used to render PDF pages to image targets.
 type ImageDevice struct {
 	renderer
 }
 
+// NewImageDevice returns a new image device.
 func NewImageDevice() *ImageDevice {
 	return &ImageDevice{}
 }
@@ -29,13 +31,14 @@ func (d *ImageDevice) render(page *model.PdfPage) (*imagectx.Context, error) {
 	}
 
 	ctx := imagectx.NewContext(int(mbox.Width()), int(mbox.Height()))
-	if err := d.renderPage(page, ctx); err != nil {
+	if err := d.renderPage(ctx, page); err != nil {
 		return nil, err
 	}
 
 	return ctx, nil
 }
 
+// Render converts the specified PDF page into an image and returns the result.
 func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 	ctx, err := d.render(page)
 	if err != nil {
@@ -45,6 +48,8 @@ func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 	return ctx.Image(), nil
 }
 
+// RenderToPath converts the specified PDF page into an image and saves the
+// result at the specified location.
 func (d *ImageDevice) RenderToPath(page *model.PdfPage, outputPath string) error {
 	image, err := d.Render(page)
 	if err != nil {
