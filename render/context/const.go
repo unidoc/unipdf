@@ -31,3 +31,9 @@ const (
 type Pattern interface {
 	ColorAt(x, y int) color.Color
 }
+
+// Gradient.
+type Gradient interface {
+	Pattern
+	AddColorStop(offset float64, color color.Color)
+}

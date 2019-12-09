@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/jpeg"
+	"image/png"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -43,7 +46,7 @@ func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 }
 
 func (d *ImageDevice) RenderToPath(page *model.PdfPage, outputPath string) error {
-	ctx, err := d.render(page)
+	image, err := d.Render(page)
 	if err != nil {
 		return err
 	}
@@ -55,10 +58,30 @@ func (d *ImageDevice) RenderToPath(page *model.PdfPage, outputPath string) error
 
 	switch extension {
 	case ".png":
-		return ctx.SavePNG(outputPath)
+		return savePNG(outputPath, image)
 	case ".jpg", ".jpeg":
-		return ctx.SaveJPG(outputPath, 100)
+		return saveJPG(outputPath, image, 100)
 	}
 
 	return fmt.Errorf("unrecognized output file type: %s", extension)
+}
+
+func savePNG(path string, image image.Image) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return png.Encode(file, image)
+}
+
+func saveJPG(path string, image image.Image, quality int) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return jpeg.Encode(file, image, &jpeg.Options{Quality: quality})
 }

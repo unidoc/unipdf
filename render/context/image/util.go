@@ -4,77 +4,17 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	"image/jpeg"
 	_ "image/jpeg"
-	"image/png"
-	"io/ioutil"
 	"math"
-	"os"
 	"strings"
 
-	"github.com/golang/freetype/truetype"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 
-	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
 
-func Radians(degrees float64) float64 {
+func degreesToRadians(degrees float64) float64 {
 	return degrees * math.Pi / 180
-}
-
-func Degrees(radians float64) float64 {
-	return radians * 180 / math.Pi
-}
-
-func LoadImage(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	im, _, err := image.Decode(file)
-	return im, err
-}
-
-func LoadPNG(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	return png.Decode(file)
-}
-
-func SavePNG(path string, im image.Image) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return png.Encode(file, im)
-}
-
-func LoadJPG(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	return jpeg.Decode(file)
-}
-
-func SaveJPG(path string, im image.Image, quality int) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var opt jpeg.Options
-	opt.Quality = quality
-
-	return jpeg.Encode(file, im, &opt)
 }
 
 func imageToRGBA(src image.Image) *image.RGBA {
@@ -126,25 +66,4 @@ func unfix(x fixed.Int26_6) float64 {
 		return -(float64(x>>shift) + float64(x&mask)/64)
 	}
 	return 0
-}
-
-// LoadFontFace is a helper function to load the specified font file with
-// the specified point size. Note that the returned `font.Face` objects
-// are not thread safe and cannot be used in parallel across goroutines.
-// You can usually just use the Context.LoadFontFace function instead of
-// this package-level function.
-func LoadFontFace(path string, points float64) (font.Face, error) {
-	fontBytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	f, err := truetype.Parse(fontBytes)
-	if err != nil {
-		return nil, err
-	}
-	face := truetype.NewFace(f, &truetype.Options{
-		Size: points,
-		// Hinting: font.HintingFull,
-	})
-	return face, nil
 }

@@ -8,13 +8,13 @@ import (
 	"github.com/unidoc/unipdf/v3/render/context"
 )
 
-type RepeatOp int
+type repeatOp int
 
 const (
-	RepeatBoth RepeatOp = iota
-	RepeatX
-	RepeatY
-	RepeatNone
+	repeatBoth repeatOp = iota
+	repeatX
+	repeatY
+	repeatNone
 )
 
 // Solid Pattern
@@ -26,28 +26,28 @@ func (p *solidPattern) ColorAt(x, y int) color.Color {
 	return p.color
 }
 
-func NewSolidPattern(color color.Color) context.Pattern {
+func newSolidPattern(color color.Color) context.Pattern {
 	return &solidPattern{color: color}
 }
 
 // Surface Pattern
 type surfacePattern struct {
 	im image.Image
-	op RepeatOp
+	op repeatOp
 }
 
 func (p *surfacePattern) ColorAt(x, y int) color.Color {
 	b := p.im.Bounds()
 	switch p.op {
-	case RepeatX:
+	case repeatX:
 		if y >= b.Dy() {
 			return color.Transparent
 		}
-	case RepeatY:
+	case repeatY:
 		if x >= b.Dx() {
 			return color.Transparent
 		}
-	case RepeatNone:
+	case repeatNone:
 		if x >= b.Dx() || y >= b.Dy() {
 			return color.Transparent
 		}
@@ -57,7 +57,7 @@ func (p *surfacePattern) ColorAt(x, y int) color.Color {
 	return p.im.At(x, y)
 }
 
-func NewSurfacePattern(im image.Image, op RepeatOp) context.Pattern {
+func newSurfacePattern(im image.Image, op repeatOp) context.Pattern {
 	return &surfacePattern{im: im, op: op}
 }
 

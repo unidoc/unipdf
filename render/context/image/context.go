@@ -4,9 +4,6 @@ import (
 	"errors"
 	"image"
 	"image/color"
-	"image/jpeg"
-	"image/png"
-	"io"
 	"math"
 
 	"github.com/golang/freetype/raster"
@@ -18,8 +15,8 @@ import (
 )
 
 var (
-	defaultFillStyle   = NewSolidPattern(color.White)
-	defaultStrokeStyle = NewSolidPattern(color.Black)
+	defaultFillStyle   = newSolidPattern(color.White)
+	defaultStrokeStyle = newSolidPattern(color.Black)
 )
 
 type Context struct {
@@ -93,28 +90,6 @@ func (dc *Context) Width() int {
 // Height returns the height of the image in pixels.
 func (dc *Context) Height() int {
 	return dc.height
-}
-
-// SavePNG encodes the image as a PNG and writes it to disk.
-func (dc *Context) SavePNG(path string) error {
-	return SavePNG(path, dc.im)
-}
-
-// SaveJPG encodes the image as a JPG and writes it to disk.
-func (dc *Context) SaveJPG(path string, quality int) error {
-	return SaveJPG(path, dc.im, quality)
-}
-
-// EncodePNG encodes the image as a PNG and writes it to the provided io.Writer.
-func (dc *Context) EncodePNG(w io.Writer) error {
-	return png.Encode(w, dc.im)
-}
-
-// EncodeJPG encodes the image as a JPG and writes it to the provided io.Writer
-// in JPEG 4:2:0 baseline format with the given options.
-// Default parameters are used if a nil *jpeg.Options is passed.
-func (dc *Context) EncodeJPG(w io.Writer, o *jpeg.Options) error {
-	return jpeg.Encode(w, dc.im, o)
 }
 
 // SetDash sets the current dash pattern to use. Call with zero arguments to
@@ -192,8 +167,8 @@ func (dc *Context) SetMatrix(m transform.Matrix) {
 
 func (dc *Context) setFillAndStrokeColor(c color.Color) {
 	dc.color = c
-	dc.fillPattern = NewSolidPattern(c)
-	dc.strokePattern = NewSolidPattern(c)
+	dc.fillPattern = newSolidPattern(c)
+	dc.strokePattern = newSolidPattern(c)
 }
 
 // SetFillStyle sets current fill style
@@ -224,7 +199,7 @@ func (dc *Context) SetStrokeRGBA(r, g, b, a float64) {
 		uint8(b * 255),
 		uint8(a * 255),
 	}
-	dc.strokePattern = NewSolidPattern(color)
+	dc.strokePattern = newSolidPattern(color)
 }
 
 // SetFillColor sets the current color for fill operations.
@@ -237,7 +212,7 @@ func (dc *Context) SetFillRGBA(r, g, b, a float64) {
 		uint8(a * 255),
 	}
 	dc.color = color
-	dc.fillPattern = NewSolidPattern(color)
+	dc.fillPattern = newSolidPattern(color)
 }
 
 // SetHexColor sets the current color using a hex string. The leading pound
@@ -603,13 +578,13 @@ func (dc *Context) DrawRoundedRectangle(x, y, w, h, r float64) {
 	dc.NewSubPath()
 	dc.MoveTo(x1, y0)
 	dc.LineTo(x2, y0)
-	dc.DrawArc(x2, y1, r, Radians(270), Radians(360))
+	dc.DrawArc(x2, y1, r, degreesToRadians(270), degreesToRadians(360))
 	dc.LineTo(x3, y2)
-	dc.DrawArc(x2, y2, r, Radians(0), Radians(90))
+	dc.DrawArc(x2, y2, r, degreesToRadians(0), degreesToRadians(90))
 	dc.LineTo(x1, y3)
-	dc.DrawArc(x1, y2, r, Radians(90), Radians(180))
+	dc.DrawArc(x1, y2, r, degreesToRadians(90), degreesToRadians(180))
 	dc.LineTo(x0, y1)
-	dc.DrawArc(x1, y1, r, Radians(180), Radians(270))
+	dc.DrawArc(x1, y1, r, degreesToRadians(180), degreesToRadians(270))
 	dc.ClosePath()
 }
 

@@ -30,11 +30,6 @@ func (s stops) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type Gradient interface {
-	context.Pattern
-	AddColorStop(offset float64, color color.Color)
-}
-
 // Linear Gradient
 type linearGradient struct {
 	x0, y0, x1, y1 float64
@@ -78,7 +73,7 @@ func (g *linearGradient) AddColorStop(offset float64, color color.Color) {
 	sort.Sort(g.stops)
 }
 
-func NewLinearGradient(x0, y0, x1, y1 float64) Gradient {
+func newLinearGradient(x0, y0, x1, y1 float64) context.Gradient {
 	g := &linearGradient{
 		x0: x0, y0: y0,
 		x1: x1, y1: y1,
@@ -145,7 +140,7 @@ func (g *radialGradient) AddColorStop(offset float64, color color.Color) {
 	sort.Sort(g.stops)
 }
 
-func NewRadialGradient(x0, y0, r0, x1, y1, r1 float64) Gradient {
+func newRadialGradient(x0, y0, r0, x1, y1, r1 float64) context.Gradient {
 	c0 := circle{x0, y0, r0}
 	c1 := circle{x1, y1, r1}
 	cd := circle{x1 - x0, y1 - y0, r1 - r0}
