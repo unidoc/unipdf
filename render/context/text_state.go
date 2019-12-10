@@ -4,6 +4,10 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
+// TextState holds a representation of a PDF text state. The text state
+// processes different text related operations which may occur in PDF content
+// streams. It is used as a part of a renderding context in order to manipulate
+// and display text.
 type TextState struct {
 	Tc  float64          // Character spacing.
 	Tw  float64          // Word spacing.
@@ -24,25 +28,48 @@ func NewTextState() *TextState {
 	}
 }
 
+// ProcTm processes a `Tm` operation, which sets the current text matrix.
+//
+// See section 9.4.2 "Text Positioning Operators" and
+// Table 108 (pp. 257-258 PDF32000_2008).
 func (ts *TextState) ProcTm(a, b, c, d, e, f float64) {
 	ts.Tm = transform.NewMatrix(a, b, c, d, e, -f)
 	ts.Tlm = ts.Tm.Clone()
 }
 
+// ProcTd processes a `Td` operation, which advances the text state to a new
+// line with offsets `tx`,`ty`.
+//
+// See section 9.4.2 "Text Positioning Operators" and
+// Table 108 (pp. 257-258 PDF32000_2008).
 func (ts *TextState) ProcTd(tx, ty float64) {
 	ts.Tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, -ty))
 	ts.Tm = ts.Tlm.Clone()
 }
 
+// ProcTD processes a `TD` operation, which advances the text state to a new
+// line with offsets `tx`,`ty`.
+//
+// See section 9.4.2 "Text Positioning Operators" and
+// Table 108 (pp. 257-258 PDF32000_2008).
 func (ts *TextState) ProcTD(tx, ty float64) {
 	ts.Tl = -ty
 	ts.ProcTd(tx, ty)
 }
 
+// ProcTStar processes a `T*` operation, which advances the text state to a
+// new line.
+//
+// See section 9.4.2 "Text Positioning Operators" and
+// Table 108 (pp. 257-258 PDF32000_2008).
 func (ts *TextState) ProcTStar() {
 	ts.ProcTd(0, -ts.Tl)
 }
 
+// ProcTj processes a `Tj` operation, which displays a text string.
+//
+// See section 9.4.3 "Text Showing Operators" and
+// Table 209 (pp. 258-259 PDF32000_2008).
 func (ts *TextState) ProcTj(data []byte, ctx Context) {
 	tfs := ts.Tf.Size
 	th := ts.Th / 100.0
@@ -88,25 +115,42 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 	}
 }
 
+// ProcQ processes a `'` operation, which advances the text state to a new line
+// and then displays a text string.
+//
+// See section 9.4.3 "Text Showing Operators" and
+// Table 209 (pp. 258-259 PDF32000_2008).
 func (ts *TextState) ProcQ(data []byte, ctx Context) {
 	ts.ProcTStar()
 	ts.ProcTj(data, ctx)
 }
 
+// ProcDQ processes a `''` operation, which advances the text state to a new
+// line and then displays a text string using aw and ac as word and character
+// spacing.
+//
+// See section 9.4.3 "Text Showing Operators" and
+// Table 209 (pp. 258-259 PDF32000_2008).
 func (ts *TextState) ProcDQ(data []byte, aw, ac float64, ctx Context) {
 	ts.Tw = aw
 	ts.Tc = ac
 	ts.ProcQ(data, ctx)
 }
 
+// ProcTf processes a `Tf` operation which sets the font and its size.
+//
+// See section 9.3 "Text State Parameters and Operators" and
+// Table 105 (pp. 251-252 PDF32000_2008).
 func (ts *TextState) ProcTf(font *TextFont) {
 	ts.Tf = font
 }
 
+// Translate translates the current text matrix with `tx`,`ty`.
 func (ts *TextState) Translate(tx, ty float64) {
 	ts.Tm.Concat(transform.TranslationMatrix(tx, ty))
 }
 
+// Reset resets both the text matrix and the line matrix.
 func (ts *TextState) Reset() {
 	ts.Tm = transform.IdentityMatrix()
 	ts.Tlm = transform.IdentityMatrix()
