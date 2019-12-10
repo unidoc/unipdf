@@ -10,6 +10,8 @@ import (
 	"golang.org/x/image/font"
 )
 
+// TextFont represents a font used to draw text to a target, through a
+// rendering context.
 type TextFont struct {
 	Font *model.PdfFont
 	Face font.Face
@@ -19,6 +21,8 @@ type TextFont struct {
 	origFont *model.PdfFont
 }
 
+// NewTextFont returns a new text font instance based on the specified PDF font
+// and the specified font size.
 func NewTextFont(font *model.PdfFont, size float64) (*TextFont, error) {
 	descriptor := font.FontDescriptor()
 	if descriptor == nil {
@@ -52,6 +56,8 @@ func NewTextFont(font *model.PdfFont, size float64) (*TextFont, error) {
 	}, nil
 }
 
+// NewTextFontFromPath returns a new text font instance based on the specified
+// font file and the specified font size.
 func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
 	font, err := model.NewPdfFontFromTTFFile(filePath)
 	if err != nil {
@@ -61,6 +67,8 @@ func NewTextFontFromPath(filePath string, size float64) (*TextFont, error) {
 	return NewTextFont(font, size)
 }
 
+// WithSize returns a new text font instance based on the current text font,
+// with the specified font size.
 func (tf *TextFont) WithSize(size float64, originalFont *model.PdfFont) *TextFont {
 	if size <= 1 {
 		size = 10
@@ -75,6 +83,8 @@ func (tf *TextFont) WithSize(size float64, originalFont *model.PdfFont) *TextFon
 	}
 }
 
+// BytesToCharcodes converts the specified byte data to character codes, using
+// the encapsulated PDF font instance.
 func (tf *TextFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	if tf.origFont != nil {
 		return tf.origFont.BytesToCharcodes(data)
@@ -83,6 +93,8 @@ func (tf *TextFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	return tf.Font.BytesToCharcodes(data)
 }
 
+// CharcodesToUnicode converts the specified character codes to a slice of
+// runes, using the encapsulated PDF font instance.
 func (tf *TextFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
 	if tf.origFont != nil {
 		return tf.origFont.CharcodesToUnicode(charcodes)
@@ -91,6 +103,8 @@ func (tf *TextFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune
 	return tf.Font.CharcodesToUnicode(charcodes)
 }
 
+// GetCharMetrics returns the metrics of the specified character code. The
+// character metrics are calculated by the internal PDF font.
 func (tf *TextFont) GetCharMetrics(code textencoding.CharCode) (float64, float64, bool) {
 	if tf.origFont != nil {
 		if metrics, ok := tf.origFont.GetCharMetrics(code); ok && metrics.Wx != 0 {
