@@ -319,7 +319,12 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return err
 				}
 
-				rgbColor := color.(*model.PdfColorDeviceRGB)
+				rgbColor, ok := color.(*model.PdfColorDeviceRGB)
+				if !ok {
+					common.Log.Debug("Error converting color")
+					return err
+				}
+
 				ctx.SetRGBA(rgbColor.R(), rgbColor.G(), rgbColor.B(), 1)
 				ctx.Stroke()
 			// Close and stroke.
@@ -330,7 +335,14 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return err
 				}
 
-				rgbColor := color.(*model.PdfColorDeviceRGB)
+				rgbColor, ok := color.(*model.PdfColorDeviceRGB)
+				if !ok {
+					common.Log.Debug("Error converting color")
+					return err
+				}
+
+				ctx.ClosePath()
+				ctx.NewSubPath()
 				ctx.SetRGBA(rgbColor.R(), rgbColor.G(), rgbColor.B(), 1)
 				ctx.Stroke()
 			// Fill path using non-zero winding number rule.
@@ -1014,6 +1026,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 						}
 
 						// Update font cache.
+						common.Log.Debug("Substituting font %s with %s (%s)", baseFont, fontInfo.Name, fontInfo.Filename)
 						fontCache[name] = textFont
 						break
 					}
