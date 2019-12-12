@@ -10,6 +10,7 @@ import (
 	"image/color"
 
 	"github.com/golang/freetype/raster"
+
 	"github.com/unidoc/unipdf/v3/render/context"
 )
 

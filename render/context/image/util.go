@@ -12,9 +12,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/unidoc/unipdf/v3/internal/transform"
-
 	"golang.org/x/image/math/fixed"
+
+	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
 func degreesToRadians(degrees float64) float64 {

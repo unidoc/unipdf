@@ -9,8 +9,9 @@ import (
 	"math"
 
 	"github.com/golang/freetype/raster"
-	"github.com/unidoc/unipdf/v3/internal/transform"
 	"golang.org/x/image/math/fixed"
+
+	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
 func flattenPath(p raster.Path) [][]transform.Point {

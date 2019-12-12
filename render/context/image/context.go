@@ -12,11 +12,13 @@ import (
 	"math"
 
 	"github.com/golang/freetype/raster"
-	"github.com/unidoc/unipdf/v3/internal/transform"
-	"github.com/unidoc/unipdf/v3/render/context"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/f64"
+
+	"github.com/unidoc/unipdf/v3/render/context"
+
+	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
 var (
