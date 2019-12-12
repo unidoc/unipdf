@@ -1,9 +1,9 @@
-github.com/adrg/strutil v0.0.0-20191201094625-c11d54f1dd86 h1:Wz4tC7IdwJW30eyUWHMORfgUhlJt8omKZzR+pMCxp3Y=
-github.com/adrg/strutil v0.0.0-20191201094625-c11d54f1dd86/go.mod h1:pXRr2+IyX5AEPAF5icj/EeTaiflPSD2hvGjnguilZgE=
-github.com/adrg/sysfont v0.0.0-20191201181944-8865240f983c h1:rA9g3adUH1W7wSEwd+FPI6bM4Re6OZ5RrcjP83Mudqc=
-github.com/adrg/sysfont v0.0.0-20191201181944-8865240f983c/go.mod h1:KguyZMFwD0kf2AJguqYHGAGqTCvKT9AhXAmBGc/aepc=
-github.com/adrg/xdg v0.2.0 h1:VGW6H5ZPKbgYJmMt5x1x7WMdHdboypdL2sSM5jnsGQ4=
-github.com/adrg/xdg v0.2.0/go.mod h1:ZuOshBmzV4Ta+s23hdfFZnBsdzmoR3US0d7ErpqSbTQ=
+github.com/adrg/strutil v0.1.0 h1:IOQnSOAjbE17+7l1lw4rXgX6JuSeJGdZa7BucTMV3Qg=
+github.com/adrg/strutil v0.1.0/go.mod h1:pXRr2+IyX5AEPAF5icj/EeTaiflPSD2hvGjnguilZgE=
+github.com/adrg/sysfont v0.1.0 h1:vOk13USVkciGOJj9sPT9Gl9zfHUT2HZgsBnwS1Je4Q8=
+github.com/adrg/sysfont v0.1.0/go.mod h1:DzISco90USPZJ+lmtpuz1SOTn1fih6YyB0KG2TEP/0U=
+github.com/adrg/xdg v0.2.1 h1:VSVdnH7cQ7V+B33qSJHTCRlNgra1607Q8PzEmnvb2Ic=
+github.com/adrg/xdg v0.2.1/go.mod h1:ZuOshBmzV4Ta+s23hdfFZnBsdzmoR3US0d7ErpqSbTQ=
 github.com/boombuler/barcode v1.0.0 h1:s1TvRnXwL2xJRaccrdcBQMZxq6X7DvsMogtmJeHDdrc=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
