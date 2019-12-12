@@ -136,9 +136,9 @@ func (dc *Context) SetFillRule(fillRule context.FillRule) {
 	dc.fillRule = fillRule
 }
 
-// -----------------
-// - Color Setters -
-// -----------------
+//
+// Color setters
+//
 
 func (dc *Context) setFillAndStrokeColor(c color.Color) {
 	dc.color = c
@@ -229,9 +229,9 @@ func (dc *Context) SetRGB(r, g, b float64) {
 	dc.SetRGBA(r, g, b, 1)
 }
 
-// ---------------------
-// - Path Manipulation -
-// ---------------------
+//
+// Path manipulation
+//
 
 // MoveTo starts a new subpath within the current path starting at the
 // specified point.
@@ -342,9 +342,9 @@ func (dc *Context) NewSubPath() {
 	dc.hasCurrent = false
 }
 
-// ----------------
-// - Path Drawing -
-// ----------------
+//
+// Path drawing
+//
 
 func (dc *Context) capper() raster.Capper {
 	switch dc.lineCap {
@@ -513,9 +513,9 @@ func (dc *Context) ResetClip() {
 	dc.mask = nil
 }
 
-// ----------------------
-// - Drawing Operations -
-// ----------------------
+//
+// Drawing operations
+//
 
 // Clear fills the entire image with the current color.
 func (dc *Context) Clear() {
@@ -659,9 +659,9 @@ func (dc *Context) DrawImageAnchored(im image.Image, x, y int, ax, ay float64) {
 	}
 }
 
-// -------------------
-// - Text Operations -
-// -------------------
+//
+// Text operations
+//
 
 // TextState returns the current text state.
 func (dc *Context) TextState() *context.TextState {
@@ -733,9 +733,9 @@ func (dc *Context) MeasureString(s string) (w, h float64) {
 	return float64(a >> 6), dc.textState.Tf.Size
 }
 
-// ------------------------------------
-// - Transformation Matrix Operations -
-// ------------------------------------
+//
+// Transformation matrix operations
+//
 
 // Matrix returns the current transformation matrix.
 func (dc *Context) Matrix() transform.Matrix {
@@ -806,9 +806,9 @@ func (dc *Context) Transform(x, y float64) (tx, ty float64) {
 	return dc.matrix.Transform(x, y)
 }
 
-// --------------------
-// - Stack operations -
-// --------------------
+//
+// Stack operations
+//
 
 // Push saves the current state of the context for later retrieval. These
 // can be nested.

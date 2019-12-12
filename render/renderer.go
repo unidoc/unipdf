@@ -71,9 +71,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
 			common.Log.Debug("Processing %s", op.Operand)
 			switch op.Operand {
-			// ---------------------------- //
-			// - Graphics stage operators - //
-			// ---------------------------- //
+			//
+			// Graphics stage operators
+			//
 
 			// Push current graphics state to the stack.
 			case "q":
@@ -239,9 +239,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 				common.Log.Debug("GS dict: %s", extdict.String())
 
-			// ------------------ //
-			// - Path operators - //
-			// ------------------ //
+			//
+			// Path operators
+			//
 
 			// Move to.
 			case "m":
@@ -312,9 +312,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				ctx.DrawRectangle(xywh[0], xywh[1], xywh[2], xywh[3])
 				ctx.NewSubPath()
 
-			// ---------------------------- //
-			// - Path painting operators. - //
-			// ---------------------------- //
+			//
+			// Path painting operators
+			//
 
 			// Set path stroke.
 			case "S":
@@ -490,9 +490,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 			case "n":
 				ctx.ClearPath()
 
-			// ------------------------- //
-			// Clipping path operators - //
-			// ------------------------- //
+			//
+			// Path clipping operators
+			//
 
 			// Modify current clipping path using non-zero winding rule.
 			case "W":
@@ -509,9 +509,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				ctx.SetFillRule(context.FillRuleEvenOdd)
 				ctx.ClipPreserve()
 
-			// ------------------- //
-			// - Color operators - //
-			// ------------------- //
+			//
+			// Color operators
+			//
 
 			// Set RGB non-stroking color.
 			case "rg":
@@ -626,9 +626,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 				ctx.SetStrokeRGBA(rgbColor.R(), rgbColor.G(), rgbColor.B(), 1)
 
-			// ------------------- //
-			// - Image operators - //
-			// ------------------- //
+			//
+			// Image operators
+			//
 
 			// Display xobjects.
 			case "Do":
@@ -762,9 +762,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				ctx.DrawImageAnchored(goImg, 0, 0, 0, 1)
 				ctx.Pop()
 
-			// ------------------ //
-			// - Text operators - //
-			// ------------------ //
+			//
+			// Text operators
+			//
 
 			// Begin text.
 			case "BT":
@@ -1045,14 +1045,14 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				// Set font.
 				textState.ProcTf(textFont.WithSize(fontSize, pdfFont))
 
-			// ---------------------------- //
-			// - Marked content operators - //
-			// ---------------------------- //
+			//
+			// Marked content operators
+			//
 
-			case "BMC":
+			// Begin a marked-content sequence.
+			case "BMC", "BDC":
 				textState.Reset()
-			case "BDC":
-				textState.Reset()
+			// End a marked-content sequence.
 			case "EMC":
 				textState.Reset()
 			default:

@@ -13,9 +13,9 @@ import (
 
 // Context defines operations for rendering to a particular target.
 type Context interface {
-	// ----------------------------- //
-	// - Graphics state operations - //
-	// ----------------------------- //
+	//
+	// Graphics state operations
+	//
 
 	// Push adds the current context state on the stack.
 	Push()
@@ -23,9 +23,9 @@ type Context interface {
 	// Pop removes the most recent context state from the stack.
 	Pop()
 
-	// --------------------- //
-	// - Matrix operations - //
-	// --------------------- //
+	//
+	// Matrix operations
+	//
 
 	// Matrix returns the current transformation matrix.
 	Matrix() transform.Matrix
@@ -44,9 +44,9 @@ type Context interface {
 	// Rotation occurs about the origin. Angle is specified in radians.
 	Rotate(angle float64)
 
-	// ------------------- //
-	// - Path operations - //
-	// ------------------- //
+	//
+	// Path operations
+	//
 
 	// MoveTo starts a new subpath within the current path starting at
 	// the specified point.
@@ -83,9 +83,9 @@ type Context interface {
 	// ResetClip clears the clipping region.
 	ResetClip()
 
-	// ------------------------- //
-	// - Line style operations - //
-	// ------------------------- //
+	//
+	// Line style operations
+	//
 
 	// LineWidth returns the current line width.
 	LineWidth() float64
@@ -106,9 +106,9 @@ type Context interface {
 	// stroking dashed paths.
 	SetDashOffset(offset float64)
 
-	// ------------------------------ //
-	// - Fill and stroke operations - //
-	// ------------------------------ //
+	//
+	// Fill and stroke operations
+	//
 
 	// Fill fills the current path with the current color. Open subpaths
 	// are implicity closed.
@@ -149,9 +149,9 @@ type Context interface {
 	// SetStrokeStyle sets current stroke pattern.
 	SetStrokeStyle(pattern Pattern)
 
-	// ------------------- //
-	// - Text operations - //
-	// ------------------- //
+	//
+	// Text operations
+	//
 
 	// TextState returns the current text state.
 	TextState() *TextState
@@ -162,9 +162,9 @@ type Context interface {
 	// Measure string returns the width and height of the specified string.
 	MeasureString(s string) (w, h float64)
 
-	// ------------------- //
-	// - Draw operations - //
-	// ------------------- //
+	//
+	// Draw operations
+	//
 
 	// DrawRectangle draws the specified rectangle.
 	DrawRectangle(x, y, w, h float64)
@@ -177,9 +177,9 @@ type Context interface {
 	// image. Use ax=0.5, ay=0.5 to center the image at the specified point.
 	DrawImageAnchored(image image.Image, x, y int, ax, ay float64)
 
-	// ------------------- //
-	// - Misc operations - //
-	// ------------------- //
+	//
+	// Misc operations
+	//
 
 	// Width returns the width of the rendering area.
 	Height() int
