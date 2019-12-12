@@ -10,7 +10,7 @@ import (
 
 	"github.com/adrg/sysfont"
 	"github.com/unidoc/unipdf/v3/common"
-	pdfcontent "github.com/unidoc/unipdf/v3/contentstream"
+	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
@@ -55,7 +55,7 @@ func (r renderer) renderPage(ctx context.Context, page *model.PdfPage) error {
 }
 
 func (r renderer) renderContentStream(ctx context.Context, contents string, resources *model.PdfPageResources) error {
-	operations, err := pdfcontent.NewContentStreamParser(contents).Parse()
+	operations, err := contentstream.NewContentStreamParser(contents).Parse()
 	if err != nil {
 		return err
 	}
@@ -66,9 +66,9 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 		Extensions: []string{".ttf", ".ttc"},
 	})
 
-	processor := pdfcontent.NewContentStreamProcessor(*operations)
-	processor.AddHandler(pdfcontent.HandlerConditionEnumAllOperands, "",
-		func(op *pdfcontent.ContentStreamOperation, gs pdfcontent.GraphicsState, resources *model.PdfPageResources) error {
+	processor := contentstream.NewContentStreamProcessor(*operations)
+	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
+		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState, resources *model.PdfPageResources) error {
 			common.Log.Debug("Processing %s", op.Operand)
 			switch op.Operand {
 			// ---------------------------- //
@@ -741,7 +741,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return errRange
 				}
 
-				iimg, ok := op.Params[0].(*pdfcontent.ContentStreamInlineImage)
+				iimg, ok := op.Params[0].(*contentstream.ContentStreamInlineImage)
 				if !ok {
 					return nil
 				}
