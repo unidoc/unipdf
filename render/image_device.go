@@ -39,7 +39,9 @@ func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 	}
 
 	// Render page.
-	ctx := imagectx.NewContext(int(mbox.Width()), int(mbox.Height()))
+	width, height := mbox.Llx+mbox.Width(), mbox.Lly+mbox.Height()
+
+	ctx := imagectx.NewContext(int(width), int(height))
 	if err := d.renderPage(ctx, page); err != nil {
 		return nil, err
 	}
@@ -48,8 +50,8 @@ func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 	img := ctx.Image()
 	if box := page.CropBox; box != nil {
 		// Calculate crop bounds and crop start position.
-		cropBounds := image.Rect(0, 0, int(box.Urx), int(box.Ury-box.Lly))
-		cropStart := image.Pt(int(box.Llx), int(mbox.Height()-box.Ury))
+		cropBounds := image.Rect(0, 0, int(box.Width()), int(box.Height()))
+		cropStart := image.Pt(int(box.Llx), int(height-box.Ury))
 
 		// Crop image.
 		cropImg := image.NewRGBA(cropBounds)
