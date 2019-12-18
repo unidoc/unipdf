@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/draw"
 	"image/jpeg"
 	"image/png"
 	"os"
@@ -29,28 +30,36 @@ func NewImageDevice() *ImageDevice {
 	return &ImageDevice{}
 }
 
-func (d *ImageDevice) render(page *model.PdfPage) (*imagectx.Context, error) {
+// Render converts the specified PDF page into an image and returns the result.
+func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
+	// Get page dimensions.
 	mbox, err := page.GetMediaBox()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := imagectx.NewContext(int(mbox.Width()), int(mbox.Height()))
+	// Render page.
+	width, height := mbox.Llx+mbox.Width(), mbox.Lly+mbox.Height()
+
+	ctx := imagectx.NewContext(int(width), int(height))
 	if err := d.renderPage(ctx, page); err != nil {
 		return nil, err
 	}
 
-	return ctx, nil
-}
+	// Apply crop box, if one exists.
+	img := ctx.Image()
+	if box := page.CropBox; box != nil {
+		// Calculate crop bounds and crop start position.
+		cropBounds := image.Rect(0, 0, int(box.Width()), int(box.Height()))
+		cropStart := image.Pt(int(box.Llx), int(height-box.Ury))
 
-// Render converts the specified PDF page into an image and returns the result.
-func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
-	ctx, err := d.render(page)
-	if err != nil {
-		return nil, err
+		// Crop image.
+		cropImg := image.NewRGBA(cropBounds)
+		draw.Draw(cropImg, cropBounds, img, cropStart, draw.Src)
+		img = cropImg
 	}
 
-	return ctx.Image(), nil
+	return img, nil
 }
 
 // RenderToPath converts the specified PDF page into an image and saves the
