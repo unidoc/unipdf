@@ -9,11 +9,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
-	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
 	pdfcore "github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/parseutils"
 )
 
 // PSParser is a basic Postscript parser.
@@ -145,54 +146,17 @@ func (p *PSParser) skipSpaces() (int, error) {
 // Numeric objects.
 // Integer or Real numbers.
 func (p *PSParser) parseNumber() (PSObject, error) {
-	isFloat := false
-	allowSigns := true
-	numStr := ""
-	for {
-		common.Log.Trace("Parsing number \"%s\"", numStr)
-		bb, err := p.reader.Peek(1)
-		if err == io.EOF {
-			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
-			// encoded object streams that the object is at the end.
-			// In other cases, we will get the EOF error elsewhere at any rate.
-			break // Handle like EOF
-		}
-		if err != nil {
-			common.Log.Debug("PS ERROR: %s", err)
-			return nil, err
-		}
-		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
-			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := p.reader.ReadByte()
-			numStr += string(b)
-			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if pdfcore.IsDecimalDigit(bb[0]) {
-			b, _ := p.reader.ReadByte()
-			numStr += string(b)
-		} else if bb[0] == '.' {
-			b, _ := p.reader.ReadByte()
-			numStr += string(b)
-			isFloat = true
-		} else if bb[0] == 'e' {
-			// Exponential number format.
-			// TODO: Is this supported in PS?
-			b, _ := p.reader.ReadByte()
-			numStr += string(b)
-			isFloat = true
-			allowSigns = true
-		} else {
-			break
-		}
+	num, err := parseutils.ParseNumber(p.reader)
+	if err != nil {
+		return nil, err
 	}
-
-	if isFloat {
-		fVal, err := strconv.ParseFloat(numStr, 64)
-		o := MakeReal(fVal)
-		return o, err
+	switch num := num.(type) {
+	case float64:
+		return MakeReal(num), nil
+	case int64:
+		return MakeInteger(int(num)), nil
 	}
-	intVal, err := strconv.ParseInt(numStr, 10, 64)
-	o := MakeInteger(int(intVal))
-	return o, err
+	return nil, fmt.Errorf("unhandled number type %T", num)
 }
 
 // Parse bool object.
