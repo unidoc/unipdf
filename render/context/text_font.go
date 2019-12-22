@@ -122,3 +122,16 @@ func (tf *TextFont) GetCharMetrics(code textencoding.CharCode) (float64, float64
 	metrics, ok := tf.Font.GetCharMetrics(code)
 	return metrics.Wx, metrics.Wy, ok
 }
+
+// GetRuneMetrics returns the metrics of the specified rune. The character
+// metrics are calculated by the internal PDF font.
+func (tf *TextFont) GetRuneMetrics(r rune) (float64, float64, bool) {
+	if tf.origFont != nil {
+		if metrics, ok := tf.origFont.GetRuneMetrics(r); ok && metrics.Wx != 0 {
+			return metrics.Wx, metrics.Wy, true
+		}
+	}
+
+	metrics, ok := tf.Font.GetRuneMetrics(r)
+	return metrics.Wx, metrics.Wy, ok
+}

@@ -80,9 +80,8 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 	th := ts.Th / 100.0
 	stateMatrix := transform.NewMatrix(tfs*th, 0, 0, tfs, 0, ts.Ts)
 
-	charcodes := ts.Tf.BytesToCharcodes(data)
-	runes := ts.Tf.CharcodesToUnicode(charcodes)
-	for i, r := range runes {
+	runes := ts.Tf.CharcodesToUnicode(ts.Tf.BytesToCharcodes(data))
+	for _, r := range runes {
 		if r == '\x00' {
 			continue
 		}
@@ -105,7 +104,7 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 
 		// Calculate rune spacing.
 		var w float64
-		if wX, _, ok := ts.Tf.GetCharMetrics(charcodes[i]); ok {
+		if wX, _, ok := ts.Tf.GetRuneMetrics(r); ok {
 			w = wX * 0.001 * tfs
 		} else {
 			w, _ = ctx.MeasureString(string(r))
