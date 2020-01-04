@@ -864,3 +864,10 @@ func newStandandTextEncoder(t *testing.T) textencoding.SimpleEncoder {
 	}
 	return enc
 }
+
+func TestNewFontFromFile(t *testing.T) {
+	_, err := model.NewPdfFontFromTTFFile("testdata/font/OpenSans-Regular.ttf")
+	if err != nil {
+		t.Fatalf("Failed to load font from file. err=%v", err)
+	}
+}

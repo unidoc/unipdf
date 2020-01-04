@@ -316,7 +316,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 
 		if !isOperand {
 			// Not an operand.. Read key value properties..
-			param, ok := obj.(*core.PdfObjectName)
+			param, ok := core.GetName(obj)
 			if !ok {
 				common.Log.Debug("Invalid inline image property (expecting name) - %T", obj)
 				return nil, fmt.Errorf("invalid inline image property (expecting name) - %T", obj)

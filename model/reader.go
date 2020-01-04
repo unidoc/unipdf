@@ -298,7 +298,7 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 
 	common.Log.Trace("Outline root dict: %v", dict)
 
-	outlineTree, _, err := r.buildOutlineTree(outlineRoot, nil, nil)
+	outlineTree, _, err := r.buildOutlineTree(outlineRoot, nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,12 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 // Parent, Prev are the parent or previous node in the hierarchy.
 // The function returns the corresponding tree node and the last node which is used
 // for setting the Last pointer of the tree node structures.
-func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
+func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeNode, prev *PdfOutlineTreeNode, visited map[core.PdfObject]struct{}) (*PdfOutlineTreeNode, *PdfOutlineTreeNode, error) {
+	if visited == nil {
+		visited = map[core.PdfObject]struct{}{}
+	}
+	visited[obj] = struct{}{}
+
 	container, isInd := obj.(*core.PdfIndirectObject)
 	if !isInd {
 		return nil, nil, fmt.Errorf("outline container not an indirect object %T", obj)
@@ -336,7 +341,7 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		if firstObj := dict.Get("First"); firstObj != nil {
 			firstObj = core.ResolveReference(firstObj)
 			if !core.IsNullObject(firstObj) {
-				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil)
+				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil, visited)
 				if err != nil {
 					common.Log.Debug("DEBUG: could not build outline item tree: %v. Skipping node children.", err)
 				} else {
@@ -348,9 +353,9 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 
 		// Resolve the reference to next
 		nextObj := core.ResolveReference(dict.Get("Next"))
-		if nextObj != nil && nextObj != container {
+		if _, processed := visited[nextObj]; nextObj != nil && nextObj != container && !processed {
 			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
-				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode)
+				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode, visited)
 				if err != nil {
 					common.Log.Debug("DEBUG: could not build outline tree for Next node: %v. Skipping node.", err)
 				} else {
@@ -375,7 +380,7 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		firstObj = core.ResolveReference(firstObj)
 		firstObjDirect := core.TraceToDirectObject(firstObj)
 		if _, isNull := firstObjDirect.(*core.PdfObjectNull); !isNull && firstObjDirect != nil {
-			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil)
+			first, last, err := r.buildOutlineTree(firstObj, &outline.PdfOutlineTreeNode, nil, visited)
 			if err != nil {
 				common.Log.Debug("DEBUG: could not build outline tree: %v. Skipping node children.", err)
 			} else {
