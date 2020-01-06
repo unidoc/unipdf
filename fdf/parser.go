@@ -19,7 +19,6 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
-	"github.com/unidoc/unipdf/v3/internal/parseutils"
 )
 
 // Regular Expressions for parsing and identifying object signatures.
@@ -213,19 +212,7 @@ func (parser *fdfParser) parseName() (core.PdfObjectName, error) {
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (parser *fdfParser) parseNumber() (core.PdfObject, error) {
-	num, err := parseutils.ParseNumber(parser.reader)
-	if err != nil {
-		return nil, err
-	}
-	switch num := num.(type) {
-	case float64:
-		o := core.PdfObjectFloat(num)
-		return &o, nil
-	case int64:
-		o := core.PdfObjectInteger(num)
-		return &o, nil
-	}
-	return nil, fmt.Errorf("unhandled number type %T", num)
+	return core.ParseNumber(parser.reader)
 }
 
 // A string starts with '(' and ends with ')'.

@@ -15,7 +15,6 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
-	"github.com/unidoc/unipdf/v3/internal/parseutils"
 )
 
 // cMapParser parses CMap character to unicode mapping files.
@@ -393,17 +392,19 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 
 // parseDict parseNumber a PDF number.
 func (p *cMapParser) parseNumber() (cmapObject, error) {
-	num, err := parseutils.ParseNumber(p.reader)
+	o, err := core.ParseNumber(p.reader)
 	if err != nil {
 		return nil, err
 	}
-	switch num := num.(type) {
-	case float64:
-		return cmapFloat{num}, nil
-	case int64:
-		return cmapInt{num}, nil
+
+	switch o := o.(type) {
+	case *core.PdfObjectFloat:
+		return cmapFloat{float64(*o)}, nil
+	case *core.PdfObjectInteger:
+		return cmapInt{int64(*o)}, nil
 	}
-	return nil, fmt.Errorf("unhandled number type %T", num)
+
+	return nil, fmt.Errorf("unhandled number type %T", o)
 }
 
 // parseOperand parses an operand, which is a text command represented by a word.

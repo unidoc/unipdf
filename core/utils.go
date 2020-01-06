@@ -6,10 +6,14 @@
 package core
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
 )
@@ -373,4 +377,92 @@ func flattenObject(obj PdfObject, depth int) PdfObject {
 		sort.Slice((*t).keys, func(i, j int) bool { return (*t).keys[i] < (*t).keys[j] })
 	}
 	return obj
+}
+
+// ParseNumber parses a numeric objects from a buffered stream.
+// Section 7.3.3.
+// Integer or Float.
+//
+// An integer shall be written as one or more decimal digits optionally
+// preceded by a sign. The value shall be interpreted as a signed
+// decimal integer and shall be converted to an integer object.
+//
+// A real value shall be written as one or more decimal digits with an
+// optional sign and a leading, trailing, or embedded PERIOD (2Eh)
+// (decimal point). The value shall be interpreted as a real number
+// and shall be converted to a real object.
+//
+// Regarding exponential numbers: 7.3.3 Numeric Objects:
+// A conforming writer shall not use the PostScript syntax for numbers
+// with non-decimal radices (such as 16#FFFE) or in exponential format
+// (such as 6.02E23).
+// Nonetheless, we sometimes get numbers with exponential format, so
+// we will support it in the reader (no confusion with other types, so
+// no compromise).
+func ParseNumber(buf *bufio.Reader) (PdfObject, error) {
+	isFloat := false
+	allowSigns := true
+	var r bytes.Buffer
+	for {
+		if common.Log.IsLogLevel(common.LogLevelTrace) {
+			common.Log.Trace("Parsing number \"%s\"", r.String())
+		}
+		bb, err := buf.Peek(1)
+		if err == io.EOF {
+			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
+			// encoded object streams that the object is at the end.
+			// In other cases, we will get the EOF error elsewhere at any rate.
+			break // Handle like EOF
+		}
+		if err != nil {
+			common.Log.Debug("ERROR %s", err)
+			return nil, err
+		}
+		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
+			// Only appear in the beginning, otherwise serves as a delimiter.
+			b, _ := buf.ReadByte()
+			r.WriteByte(b)
+			allowSigns = false // Only allowed in beginning, and after e (exponential).
+		} else if IsDecimalDigit(bb[0]) {
+			b, _ := buf.ReadByte()
+			r.WriteByte(b)
+		} else if bb[0] == '.' {
+			b, _ := buf.ReadByte()
+			r.WriteByte(b)
+			isFloat = true
+		} else if bb[0] == 'e' || bb[0] == 'E' {
+			// Exponential number format.
+			b, _ := buf.ReadByte()
+			r.WriteByte(b)
+			isFloat = true
+			allowSigns = true
+		} else {
+			break
+		}
+	}
+
+	var o PdfObject
+	if isFloat {
+		fVal, err := strconv.ParseFloat(r.String(), 64)
+		if err != nil {
+			common.Log.Debug("Error parsing number %v err=%v. Using 0.0. Output may be incorrect", r.String(), err)
+			fVal = 0.0
+			err = nil
+		}
+
+		objFloat := PdfObjectFloat(fVal)
+		o = &objFloat
+	} else {
+		intVal, err := strconv.ParseInt(r.String(), 10, 64)
+		if err != nil {
+			common.Log.Debug("Error parsing number %v err=%v. Using 0. Output may be incorrect", r.String(), err)
+			intVal = 0
+			err = nil
+		}
+
+		objInt := PdfObjectInteger(intVal)
+		o = &objInt
+	}
+
+	return o, nil
 }

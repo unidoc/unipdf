@@ -14,7 +14,6 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	pdfcore "github.com/unidoc/unipdf/v3/core"
-	"github.com/unidoc/unipdf/v3/internal/parseutils"
 )
 
 // PSParser is a basic Postscript parser.
@@ -146,17 +145,19 @@ func (p *PSParser) skipSpaces() (int, error) {
 // Numeric objects.
 // Integer or Real numbers.
 func (p *PSParser) parseNumber() (PSObject, error) {
-	num, err := parseutils.ParseNumber(p.reader)
+	o, err := pdfcore.ParseNumber(p.reader)
 	if err != nil {
 		return nil, err
 	}
-	switch num := num.(type) {
-	case float64:
-		return MakeReal(num), nil
-	case int64:
-		return MakeInteger(int(num)), nil
+
+	switch o := o.(type) {
+	case *pdfcore.PdfObjectFloat:
+		return MakeReal(float64(*o)), nil
+	case *pdfcore.PdfObjectInteger:
+		return MakeInteger(int(*o)), nil
 	}
-	return nil, fmt.Errorf("unhandled number type %T", num)
+
+	return nil, fmt.Errorf("unhandled number type %T", o)
 }
 
 // Parse bool object.
