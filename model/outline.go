@@ -151,7 +151,7 @@ func (oi *OutlineItem) Items() []*OutlineItem {
 func (oi *OutlineItem) ToPdfOutlineItem() (*PdfOutlineItem, int64) {
 	// Create outline item.
 	currItem := NewPdfOutlineItem()
-	currItem.Title = core.MakeString(oi.Title)
+	currItem.Title = core.MakeEncodedString(oi.Title, true)
 	currItem.Dest = oi.Dest.ToPdfObject()
 
 	// Create outline items.
