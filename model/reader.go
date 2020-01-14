@@ -414,19 +414,21 @@ func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err
 			return
 		}
 
-		if item, isItem := node.context.(*PdfOutlineItem); isItem {
+		item, isItem := node.context.(*PdfOutlineItem)
+		if isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + item.Title.Str()
+			title := strings.Repeat(" ", depth*2) + item.Title.Decoded()
 			*titleList = append(*titleList, title)
-			if item.Next != nil {
-				flattenFunc(item.Next, outlineList, titleList, depth)
-			}
 		}
 
 		if node.First != nil {
 			title := strings.Repeat(" ", depth*2) + "+"
 			*titleList = append(*titleList, title)
 			flattenFunc(node.First, outlineList, titleList, depth+1)
+		}
+
+		if isItem && item.Next != nil {
+			flattenFunc(item.Next, outlineList, titleList, depth)
 		}
 	}
 	flattenFunc(r.outlineTree, &outlineNodeList, &flattenedTitleList, 0)
