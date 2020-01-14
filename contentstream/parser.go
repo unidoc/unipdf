@@ -191,67 +191,7 @@ func (csp *ContentStreamParser) parseName() (core.PdfObjectName, error) {
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (csp *ContentStreamParser) parseNumber() (core.PdfObject, error) {
-	isFloat := false
-	allowSigns := true
-	numStr := ""
-	for {
-		common.Log.Trace("Parsing number \"%s\"", numStr)
-		bb, err := csp.reader.Peek(1)
-		if err == io.EOF {
-			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
-			// encoded object streams that the object is at the end.
-			// In other cases, we will get the EOF error elsewhere at any rate.
-			break // Handle like EOF
-		}
-		if err != nil {
-			common.Log.Error("ERROR %s", err)
-			return nil, err
-		}
-		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
-			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := csp.reader.ReadByte()
-			numStr += string(b)
-			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if core.IsDecimalDigit(bb[0]) {
-			b, _ := csp.reader.ReadByte()
-			numStr += string(b)
-		} else if bb[0] == '.' {
-			b, _ := csp.reader.ReadByte()
-			numStr += string(b)
-			isFloat = true
-		} else if bb[0] == 'e' {
-			// Exponential number format.
-			b, _ := csp.reader.ReadByte()
-			numStr += string(b)
-			isFloat = true
-			allowSigns = true
-		} else {
-			break
-		}
-	}
-
-	var o core.PdfObject
-	if isFloat {
-		fVal, err := strconv.ParseFloat(numStr, 64)
-		if err != nil {
-			common.Log.Debug("Error parsing number %q err=%v. Using 0.0. Output may be incorrect", numStr, err)
-			fVal = 0.0
-		}
-
-		objFloat := core.PdfObjectFloat(fVal)
-		o = &objFloat
-	} else {
-		intVal, err := strconv.ParseInt(numStr, 10, 64)
-		if err != nil {
-			common.Log.Debug("Error parsing integer %q err=%v. Using 0. Output may be incorrect", numStr, err)
-			intVal = 0
-		}
-
-		objInt := core.PdfObjectInteger(intVal)
-		o = &objInt
-	}
-
-	return o, nil
+	return core.ParseNumber(csp.reader)
 }
 
 // A string starts with '(' and ends with ')'.
