@@ -185,8 +185,10 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 	return item, nil
 }
 
-// Get the outer object of the tree node (Outline or OutlineItem).
-func (n *PdfOutlineTreeNode) getOuter() PdfModel {
+// GetContext returns the context of the outline tree node, which is either a
+// *PdfOutline or a *PdfOutlineItem. The method returns null for uninitialized
+// tree nodes.
+func (n *PdfOutlineTreeNode) GetContext() PdfModel {
 	if outline, isOutline := n.context.(*PdfOutline); isOutline {
 		return outline
 	}
@@ -200,12 +202,12 @@ func (n *PdfOutlineTreeNode) getOuter() PdfModel {
 
 // GetContainingPdfObject returns the container of the outline tree node (indirect object).
 func (n *PdfOutlineTreeNode) GetContainingPdfObject() core.PdfObject {
-	return n.getOuter().GetContainingPdfObject()
+	return n.GetContext().GetContainingPdfObject()
 }
 
 // ToPdfObject returns the PDF representation of the outline tree node.
 func (n *PdfOutlineTreeNode) ToPdfObject() core.PdfObject {
-	return n.getOuter().ToPdfObject()
+	return n.GetContext().ToPdfObject()
 }
 
 // GetContainingPdfObject returns the container of the outline (indirect object).
@@ -225,12 +227,11 @@ func (o *PdfOutline) ToPdfObject() core.PdfObject {
 	}
 
 	if o.Last != nil {
-		dict.Set("Last", o.Last.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[o.Last.getOuter()]
+		dict.Set("Last", o.Last.GetContext().GetContainingPdfObject())
 	}
 
 	if o.Parent != nil {
-		dict.Set("Parent", o.Parent.getOuter().GetContainingPdfObject())
+		dict.Set("Parent", o.Parent.GetContext().GetContainingPdfObject())
 	}
 
 	if o.Count != nil {
@@ -284,16 +285,13 @@ func (oi *PdfOutlineItem) ToPdfObject() core.PdfObject {
 		dict.Set("First", oi.First.ToPdfObject())
 	}
 	if oi.Prev != nil {
-		dict.Set("Prev", oi.Prev.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[oi.Prev.getOuter()]
+		dict.Set("Prev", oi.Prev.GetContext().GetContainingPdfObject())
 	}
 	if oi.Last != nil {
-		dict.Set("Last", oi.Last.getOuter().GetContainingPdfObject())
-		// PdfObjectConverterCache[oi.Last.getOuter()]
+		dict.Set("Last", oi.Last.GetContext().GetContainingPdfObject())
 	}
 	if oi.Parent != nil {
-		dict.Set("Parent", oi.Parent.getOuter().GetContainingPdfObject())
-		//PdfObjectConverterCache[oi.Parent.getOuter()]
+		dict.Set("Parent", oi.Parent.GetContext().GetContainingPdfObject())
 	}
 
 	return container
