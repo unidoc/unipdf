@@ -12,9 +12,9 @@ import (
 // OutlineDest represents the destination of an outline item.
 // It holds the page and the position on the page an outline item points to.
 type OutlineDest struct {
-	Page int64
-	X    float64
-	Y    float64
+	Page int64   `json:"page"`
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
 }
 
 // NewOutlineDest returns a new outline destination which can be used
@@ -41,7 +41,7 @@ func (od OutlineDest) ToPdfObject() core.PdfObject {
 // Outline represents a PDF outline dictionary (Table 152 - p. 376).
 // Currently, the Outline object can only be used to construct PDF outlines.
 type Outline struct {
-	items []*OutlineItem
+	Entries []*OutlineItem `json:"entries"`
 }
 
 // NewOutline returns a new outline instance.
@@ -49,25 +49,28 @@ func NewOutline() *Outline {
 	return &Outline{}
 }
 
+func NewOutlineFromOutlineTree(node *PdfOutlineTreeNode) {
+}
+
 // Add appends a top level outline item to the outline.
 func (o *Outline) Add(item *OutlineItem) {
-	o.items = append(o.items, item)
+	o.Entries = append(o.Entries, item)
 }
 
 // Insert adds a top level outline item in the outline,
 // at the specified index.
 func (o *Outline) Insert(index uint, item *OutlineItem) {
-	l := uint(len(o.items))
+	l := uint(len(o.Entries))
 	if index > l {
 		index = l
 	}
 
-	o.items = append(o.items[:index], append([]*OutlineItem{item}, o.items[index:]...)...)
+	o.Entries = append(o.Entries[:index], append([]*OutlineItem{item}, o.Entries[index:]...)...)
 }
 
 // Items returns all children outline items.
 func (o *Outline) Items() []*OutlineItem {
-	return o.items
+	return o.Entries
 }
 
 // ToPdfOutline returns a low level PdfOutline object, based on the current
@@ -80,7 +83,7 @@ func (o *Outline) ToPdfOutline() *PdfOutline {
 	var outlineItems []*PdfOutlineItem
 	var prev *PdfOutlineItem
 
-	for _, item := range o.items {
+	for _, item := range o.Entries {
 		outlineItem, _ := item.ToPdfOutlineItem()
 		outlineItem.Parent = &outline.PdfOutlineTreeNode
 
@@ -111,10 +114,9 @@ func (o *Outline) ToPdfObject() core.PdfObject {
 
 // OutlineItem represents a PDF outline item dictionary (Table 153 - pp. 376 - 377).
 type OutlineItem struct {
-	Title string
-	Dest  OutlineDest
-
-	items []*OutlineItem
+	Title   string         `json:"title"`
+	Dest    OutlineDest    `json:"dest"`
+	Entries []*OutlineItem `json:"entries"`
 }
 
 // NewOutlineItem returns a new outline item instance.
@@ -127,23 +129,23 @@ func NewOutlineItem(title string, dest OutlineDest) *OutlineItem {
 
 // Add appends an outline item as a child of the current outline item.
 func (oi *OutlineItem) Add(item *OutlineItem) {
-	oi.items = append(oi.items, item)
+	oi.Entries = append(oi.Entries, item)
 }
 
 // Insert adds an outline item as a child of the current outline item,
 // at the specified index.
 func (oi *OutlineItem) Insert(index uint, item *OutlineItem) {
-	l := uint(len(oi.items))
+	l := uint(len(oi.Entries))
 	if index > l {
 		index = l
 	}
 
-	oi.items = append(oi.items[:index], append([]*OutlineItem{item}, oi.items[index:]...)...)
+	oi.Entries = append(oi.Entries[:index], append([]*OutlineItem{item}, oi.Entries[index:]...)...)
 }
 
 // Items returns all children outline items.
 func (oi *OutlineItem) Items() []*OutlineItem {
-	return oi.items
+	return oi.Entries
 }
 
 // ToPdfOutlineItem returns a low level PdfOutlineItem object,
@@ -159,7 +161,7 @@ func (oi *OutlineItem) ToPdfOutlineItem() (*PdfOutlineItem, int64) {
 	var lenDescendants int64
 	var prev *PdfOutlineItem
 
-	for _, item := range oi.items {
+	for _, item := range oi.Entries {
 		outlineItem, lenChildren := item.ToPdfOutlineItem()
 		outlineItem.Parent = &currItem.PdfOutlineTreeNode
 
