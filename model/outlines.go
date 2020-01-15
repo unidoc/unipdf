@@ -186,7 +186,7 @@ func (r *PdfReader) newPdfOutlineItemFromIndirectObject(container *core.PdfIndir
 }
 
 // GetContext returns the context of the outline tree node, which is either a
-// *PdfOutline or a *PdfOutlineItem. The method returns null for uninitialized
+// *PdfOutline or a *PdfOutlineItem. The method returns nil for uninitialized
 // tree nodes.
 func (n *PdfOutlineTreeNode) GetContext() PdfModel {
 	if outline, isOutline := n.context.(*PdfOutline); isOutline {
