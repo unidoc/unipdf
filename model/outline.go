@@ -204,6 +204,12 @@ func (o *Outline) ToPdfOutline() *PdfOutline {
 	return outline
 }
 
+// ToOutlineTree returns a low level PdfOutlineTreeNode object, based on
+// the current instance.
+func (o *Outline) ToOutlineTree() *PdfOutlineTreeNode {
+	return &o.ToPdfOutline().PdfOutlineTreeNode
+}
+
 // ToPdfObject returns a PDF object representation of the outline.
 func (o *Outline) ToPdfObject() core.PdfObject {
 	return o.ToPdfOutline().ToPdfObject()
