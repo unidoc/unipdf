@@ -6,9 +6,6 @@
 package model
 
 import (
-	"errors"
-
-	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 )
 
@@ -97,56 +94,6 @@ type Outline struct {
 // NewOutline returns a new outline instance.
 func NewOutline() *Outline {
 	return &Outline{}
-}
-
-// NewOutlineFromReaderOutline returns a new outline from the outline tree of
-// the passed in reader.
-func NewOutlineFromReaderOutline(r *PdfReader) (*Outline, error) {
-	if r == nil {
-		return nil, errors.New("cannot create outline from nil reader")
-	}
-
-	outlineTree := r.GetOutlineTree()
-	if outlineTree == nil {
-		return nil, errors.New("the specified reader does not have an outline tree")
-	}
-
-	var traverseFunc func(node *PdfOutlineTreeNode, entries *[]*OutlineItem)
-	traverseFunc = func(node *PdfOutlineTreeNode, entries *[]*OutlineItem) {
-		if node == nil {
-			return
-		}
-		if node.context == nil {
-			common.Log.Debug("ERROR: missing outline entry context")
-			return
-		}
-
-		// Check if node is an outline item.
-		var entry *OutlineItem
-		if item, ok := node.context.(*PdfOutlineItem); ok {
-			entry = NewOutlineItem(item.Title.Decoded(), newOutlineDestFromPdfObject(item.Dest, r))
-			*entries = append(*entries, entry)
-
-			// Traverse next node.
-			if item.Next != nil {
-				traverseFunc(item.Next, entries)
-			}
-		}
-
-		// Check if node has children.
-		if node.First != nil {
-			if entry != nil {
-				entries = &entry.Entries
-			}
-
-			// Traverse node children.
-			traverseFunc(node.First, entries)
-		}
-	}
-
-	outline := NewOutline()
-	traverseFunc(outlineTree, &outline.Entries)
-	return outline, nil
 }
 
 // Add appends a top level outline item to the outline.
