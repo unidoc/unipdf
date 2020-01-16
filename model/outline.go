@@ -66,8 +66,8 @@ func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) OutlineDest {
 	// Extract destination coordinates.
 	if destArrLen == 5 {
 		if xyz, ok := core.GetName(destArr.Get(1)); ok && xyz.String() == "XYZ" {
-			dest.X, _ = core.GetFloatVal(destArr.Get(2))
-			dest.Y, _ = core.GetFloatVal(destArr.Get(3))
+			dest.X, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(2)))
+			dest.Y, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(3)))
 		}
 	}
 
