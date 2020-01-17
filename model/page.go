@@ -386,7 +386,7 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 		}
 
 		if obj := dict.Get("MediaBox"); obj != nil {
-			arr, ok := obj.(*core.PdfObjectArray)
+			arr, ok := core.GetArray(obj)
 			if !ok {
 				return nil, errors.New("invalid media box")
 			}
