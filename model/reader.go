@@ -39,6 +39,8 @@ type PdfReader struct {
 	// For tracking traversal (cache).
 	traversed map[core.PdfObject]struct{}
 	rs        io.ReadSeeker
+
+	Extensions Extensions
 }
 
 // NewPdfReader returns a new PdfReader for an input io.ReadSeeker interface. Can be used to read PDF from
@@ -253,6 +255,14 @@ func (r *PdfReader) loadStructure() error {
 	r.AcroForm, err = r.loadForms()
 	if err != nil {
 		return err
+	}
+
+	if obj := catalog.Get("Extensions"); obj != nil {
+		if dict, ok := core.GetDict(obj); ok {
+			if err := r.Extensions.loadFromDict(dict); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
