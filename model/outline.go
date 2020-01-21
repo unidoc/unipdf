@@ -67,7 +67,7 @@ func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) (*OutlineDest, 
 	// Extract magnification mode.
 	mode, ok := core.GetNameVal(destArr.Get(1))
 	if !ok {
-		common.Log.Debug("invalid outline destination zoom mode: %v", destArr.Get(1))
+		common.Log.Debug("invalid outline destination magnification mode: %v", destArr.Get(1))
 		return dest, nil
 	}
 

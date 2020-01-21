@@ -69,8 +69,5 @@ func TestGetOutlines(t *testing.T) {
 	require.NoError(t, err)
 	dstJson, err := json.Marshal(dstOutline)
 	require.NoError(t, err)
-
-	t.Log(string(srcJson))
-	t.Log(string(dstJson))
 	require.Equal(t, srcJson, dstJson)
 }
