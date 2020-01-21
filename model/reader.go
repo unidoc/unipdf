@@ -463,8 +463,25 @@ func (r *PdfReader) GetOutlines() (*Outline, error) {
 		// Check if node is an outline item.
 		var entry *OutlineItem
 		if item, ok := node.context.(*PdfOutlineItem); ok {
-			entry = NewOutlineItem(item.Title.Decoded(),
-				newOutlineDestFromPdfObject(item.Dest, r))
+			// Search for outline destination object.
+			destObj := item.Dest
+			if (destObj == nil || core.IsNullObject(destObj)) && item.A != nil {
+				if actionDict, ok := core.GetDict(item.A); ok {
+					destObj, _ = core.GetArray(actionDict.Get("D"))
+				}
+			}
+
+			// Parse outline destination object.
+			var dest OutlineDest
+			if destObj != nil && !core.IsNullObject(destObj) {
+				if d, err := newOutlineDestFromPdfObject(destObj, r); err == nil {
+					dest = *d
+				} else {
+					common.Log.Debug("WARN: could not parse outline dest (%v): %v", destObj, err)
+				}
+			}
+
+			entry = NewOutlineItem(item.Title.Decoded(), dest)
 			*entries = append(*entries, entry)
 
 			// Traverse next node.
