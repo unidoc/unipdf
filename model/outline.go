@@ -6,6 +6,10 @@
 package model
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 )
 
@@ -13,8 +17,10 @@ import (
 // It holds the page and the position on the page an outline item points to.
 type OutlineDest struct {
 	Page int64   `json:"page"`
+	Mode string  `json:"mode"`
 	X    float64 `json:"x"`
 	Y    float64 `json:"y"`
+	Zoom float64 `json:"zoom"`
 }
 
 // NewOutlineDest returns a new outline destination which can be used
@@ -22,6 +28,7 @@ type OutlineDest struct {
 func NewOutlineDest(page int64, x, y float64) OutlineDest {
 	return OutlineDest{
 		Page: page,
+		Mode: "XYZ",
 		X:    x,
 		Y:    y,
 	}
@@ -29,29 +36,21 @@ func NewOutlineDest(page int64, x, y float64) OutlineDest {
 
 // newOutlineDestFromPdfObject creates a new outline destination from the
 // specified PDF object.
-func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) OutlineDest {
-	dest := OutlineDest{}
-
+func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) (*OutlineDest, error) {
+	// Validate input PDF object.
 	destArr, ok := core.GetArray(o)
 	if !ok {
-		return dest
+		return nil, errors.New("outline destination object must be an array")
 	}
 
-	// Covered destination formats:
-	// [pageObj|pageNum /Fit]
-	// [pageObj|pageNum /FitB]
-	// [pageObj|pageNum /FitH top]
-	// [pageObj|pageNum /FitV left]
-	// [pageObj|pageNum /FitBH top]
-	// [pageObj|pageNum /XYZ x y zoom]
-	// [pageObj|pageNum /FitR left bottom right top]
-	// See section 12.3.2.2 "Explicit Destinations" (page 374).
 	destArrLen := destArr.Len()
 	if destArrLen < 2 {
-		return dest
+		return nil, fmt.Errorf("invalid outline destination array length: %d", destArrLen)
 	}
 
 	// Extract page number.
+	dest := &OutlineDest{Mode: "Fit"}
+
 	pageObj := destArr.Get(0)
 	if pageInd, ok := core.GetIndirect(pageObj); ok {
 		// Page object is provided. Identify page number using the reader.
@@ -61,34 +60,90 @@ func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) OutlineDest {
 	} else if pageNum, ok := core.GetIntVal(pageObj); ok {
 		// Page number is provided.
 		dest.Page = int64(pageNum)
+	} else {
+		return nil, fmt.Errorf("invalid outline destination page: %T", pageObj)
 	}
 
-	// Extract destination coordinates.
-	if destArrLen == 5 {
-		if xyz, ok := core.GetName(destArr.Get(1)); ok && xyz.String() == "XYZ" {
+	// Extract magnification mode.
+	mode, ok := core.GetNameVal(destArr.Get(1))
+	if !ok {
+		common.Log.Debug("invalid outline destination zoom mode: %v", destArr.Get(1))
+		return dest, nil
+	}
+
+	// Parse magnification mode parameters.
+	// See section 12.3.2.2 "Explicit Destinations" (page 374).
+	switch mode {
+	// [pageObj|pageNum /Fit]
+	// [pageObj|pageNum /FitB]
+	case "Fit", "FitB":
+	// [pageObj|pageNum /FitH top]
+	// [pageObj|pageNum /FitBH top]
+	case "FitH", "FitBH":
+		if destArrLen > 2 {
+			dest.Y, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(2)))
+		}
+	// [pageObj|pageNum /FitV left]
+	// [pageObj|pageNum /FitBV left]
+	case "FitV", "FitBV":
+		if destArrLen > 2 {
+			dest.X, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(2)))
+		}
+	// [pageObj|pageNum /XYZ x y zoom]
+	case "XYZ":
+		if destArrLen > 4 {
 			dest.X, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(2)))
 			dest.Y, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(3)))
+			dest.Zoom, _ = core.GetNumberAsFloat(core.TraceToDirectObject(destArr.Get(4)))
 		}
+	default:
+		mode = "Fit"
+	}
+
+	dest.Mode = mode
+	return dest, nil
+}
+
+// ToPdfObject returns a PDF object representation of the outline destination.
+func (od OutlineDest) ToPdfObject() core.PdfObject {
+	if od.Page < 0 || od.Mode == "" {
+		return core.MakeNull()
+	}
+
+	dest := core.MakeArray(
+		core.MakeInteger(od.Page),
+		core.MakeName(od.Mode),
+	)
+
+	// See section 12.3.2.2 "Explicit Destinations" (page 374).
+	switch od.Mode {
+	// [pageObj|pageNum /Fit]
+	// [pageObj|pageNum /FitB]
+	case "Fit", "FitB":
+	// [pageObj|pageNum /FitH top]
+	// [pageObj|pageNum /FitBH top]
+	case "FitH", "FitBH":
+		dest.Append(core.MakeFloat(od.Y))
+	// [pageObj|pageNum /FitV left]
+	// [pageObj|pageNum /FitBV left]
+	case "FitV", "FitBV":
+		dest.Append(core.MakeFloat(od.X))
+	// [pageObj|pageNum /XYZ x y zoom]
+	case "XYZ":
+		dest.Append(core.MakeFloat(od.X))
+		dest.Append(core.MakeFloat(od.Y))
+		dest.Append(core.MakeFloat(od.Zoom))
+	default:
+		dest.Set(1, core.MakeName("Fit"))
 	}
 
 	return dest
 }
 
-// ToPdfObject returns a PDF object representation of the outline destination.
-func (od OutlineDest) ToPdfObject() core.PdfObject {
-	return core.MakeArray(
-		core.MakeInteger(od.Page),
-		core.MakeName("XYZ"),
-		core.MakeFloat(od.X),
-		core.MakeFloat(od.Y),
-		core.MakeFloat(0),
-	)
-}
-
 // Outline represents a PDF outline dictionary (Table 152 - p. 376).
 // Currently, the Outline object can only be used to construct PDF outlines.
 type Outline struct {
-	Entries []*OutlineItem `json:"entries"`
+	Entries []*OutlineItem `json:"entries,omitempty"`
 }
 
 // NewOutline returns a new outline instance.
@@ -166,7 +221,7 @@ func (o *Outline) ToPdfObject() core.PdfObject {
 type OutlineItem struct {
 	Title   string         `json:"title"`
 	Dest    OutlineDest    `json:"dest"`
-	Entries []*OutlineItem `json:"entries"`
+	Entries []*OutlineItem `json:"entries,omitempty"`
 }
 
 // NewOutlineItem returns a new outline item instance.
