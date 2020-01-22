@@ -1162,7 +1162,7 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 		}
 
 		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
-		offset += buflen
+		offset += buflen - 4
 	}
 
 	common.Log.Debug("Error: EOF marker was not found.")
