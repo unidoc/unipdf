@@ -114,8 +114,7 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 		tx := (w + ts.Tc + tw) * th
 
 		// Generate new text matrix.
-		ts.Tm = tm
-		ts.Translate(tx, 0)
+		ts.Tm = transform.TranslationMatrix(tx, 0).Mult(tm)
 	}
 }
 
