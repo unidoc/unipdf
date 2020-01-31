@@ -55,3 +55,10 @@ func hexToRune(shex cmapHexString) rune {
 	}
 	return runes[0]
 }
+
+func min(i, j int) int {
+	if i < j {
+		return i
+	}
+	return j
+}
