@@ -31,6 +31,13 @@ type SignatureHandler interface {
 	Sign(sig *PdfSignature, digest Hasher) error
 }
 
+// SignatureHandlerEx interface defines the extended functionality for PDF signature handlers, which
+// need to be capable of validating digital signatures and signing PDF documents.
+type SignatureHandlerEx interface {
+	SignatureHandler
+	ValidateEx(sig *PdfSignature, digest Hasher, r *PdfReader) (SignatureValidationResult, error)
+}
+
 // SignatureValidationResult defines the response from the signature validation handler.
 type SignatureValidationResult struct {
 	// List of errors when validating the signature.
@@ -185,7 +192,13 @@ func (r *PdfReader) ValidateSignatures(handlers []SignatureHandler) ([]Signature
 			digest.Write(data)
 		}
 
-		result, err := pair.handler.Validate(pair.sig, digest)
+		var result SignatureValidationResult
+		if exHandler, ok := pair.handler.(SignatureHandlerEx); ok {
+			result, err = exHandler.ValidateEx(pair.sig, digest, r)
+		} else {
+			result, err = pair.handler.Validate(pair.sig, digest)
+		}
+
 		if err != nil {
 			return nil, err
 		}
