@@ -1,6 +1,7 @@
 module github.com/unidoc/unipdf/v3
 
 require (
+	github.com/a5i/pkcs7 v0.0.0-20200202012429-da98ca17c440
 	github.com/boombuler/barcode v1.0.0
 	github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83
 	github.com/stretchr/testify v1.3.0
@@ -12,3 +13,5 @@ require (
 	golang.org/x/text v0.3.2
 	golang.org/x/tools v0.0.0-20190606174628-0139d5756a7d // indirect
 )
+
+go 1.13

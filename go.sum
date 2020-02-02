@@ -1,3 +1,5 @@
+github.com/a5i/pkcs7 v0.0.0-20200202012429-da98ca17c440 h1:gBjA0vfiX/RORR3zqvl5QygymkINZb9yY5aPJMjnQ4Q=
+github.com/a5i/pkcs7 v0.0.0-20200202012429-da98ca17c440/go.mod h1:u9azZx470XnyCDKQ8zXuhxyTum0uF+zpjeTiuy9F1ak=
 github.com/boombuler/barcode v1.0.0 h1:s1TvRnXwL2xJRaccrdcBQMZxq6X7DvsMogtmJeHDdrc=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
