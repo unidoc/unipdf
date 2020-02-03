@@ -12,6 +12,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/cmap/bcmaps"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 )
 
@@ -22,6 +23,8 @@ const (
 	// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
 	MissingCodeRune = textencoding.MissingCodeRune
 )
+
+var predefinedCMapCache = map[string]*CMap{}
 
 // CharCode is a character code or Unicode
 // rune is int32 https://golang.org/doc/go1#rune
@@ -173,6 +176,58 @@ func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
 	})
 	return cmap, nil
+}
+
+func IsPredefinedCMap(name string) bool {
+	return bcmaps.AssetExists(name)
+}
+
+func LoadPredefinedCMap(name string) (*CMap, error) {
+	// Load cmap.
+	cmap, err := loadPredefinedCMap(name)
+	if err != nil {
+		return nil, err
+	}
+	if cmap.usecmap == "" {
+		return cmap, nil
+	}
+
+	// Load base cmap.
+	base, err := loadPredefinedCMap(cmap.usecmap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add CID ranges.
+	for charcode, cid := range base.codeToCID {
+		if _, ok := cmap.codeToCID[charcode]; !ok {
+			cmap.codeToCID[charcode] = cid
+		}
+	}
+
+	// Add codespaces.
+	for _, codespace := range base.codespaces {
+		cmap.codespaces = append(cmap.codespaces, codespace)
+	}
+
+	sort.Slice(cmap.codespaces, func(i, j int) bool {
+		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
+	})
+
+	return cmap, nil
+}
+
+func loadPredefinedCMap(name string) (*CMap, error) {
+	if cmap, ok := predefinedCMapCache[name]; ok {
+		return cmap, nil
+	}
+
+	cmapData, err := bcmaps.Asset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return LoadCmapFromDataCID(cmapData)
 }
 
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
