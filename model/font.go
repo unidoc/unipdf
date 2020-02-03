@@ -6,6 +6,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -439,8 +440,15 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 //   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
-	runeList, numHits, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
-	return string(runeList), numHits, numMisses
+	runes, _, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
+
+	var buffer bytes.Buffer
+	for _, r := range runes {
+		buffer.WriteString(textencoding.RuneToString(r))
+	}
+
+	str := buffer.String()
+	return str, len([]rune(str)), numMisses
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
