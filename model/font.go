@@ -369,6 +369,13 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 // BytesToCharcodes converts the bytes in a PDF string to character codes.
 func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
+
+	if type0, ok := font.context.(*pdfFontType0); ok && type0.codeToCID != nil {
+		if charcodes, ok := type0.bytesToCharcodes(data); ok {
+			return charcodes
+		}
+	}
+
 	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
@@ -396,6 +403,13 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 	runes := make([]rune, 0, len(charcodes))
 	numMisses = 0
 	for _, code := range charcodes {
+		if type0, ok := font.context.(*pdfFontType0); ok {
+			if r, ok := type0.charcodeToUnicode(code); ok {
+				runes = append(runes, r)
+				continue
+			}
+		}
+
 		if font.baseFields().toUnicodeCmap != nil {
 			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
 			if ok {
@@ -403,15 +417,16 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 				continue
 			}
 		}
+
 		// Fall back to encoding.
 		encoder := font.Encoder()
 		if encoder != nil {
-			r, ok := encoder.CharcodeToRune(code)
-			if ok {
+			if r, ok := encoder.CharcodeToRune(code); ok {
 				runes = append(runes, r)
 				continue
 			}
 		}
+
 		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
@@ -728,6 +743,19 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 			return d, font, err
 		}
 		font.toUnicodeCmap = codemap
+	} else if subtype == "CIDFontType0" || subtype == "CIDFontType2" {
+		si, err := cmap.NewCIDSystemInfo(d.Get("CIDSystemInfo"))
+		if err != nil {
+			return d, font, err
+		}
+
+		cmapName := fmt.Sprintf("%s-%s-UCS2", si.Registry, si.Ordering)
+		if cmap.IsPredefinedCMap(cmapName) {
+			font.toUnicodeCmap, err = cmap.LoadPredefinedCMap(cmapName)
+			if err != nil {
+				common.Log.Debug("WARN: could not load predefined CMap %s: %v", cmapName, err)
+			}
+		}
 	}
 
 	return d, font, nil

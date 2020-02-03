@@ -15,6 +15,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 
+	"github.com/unidoc/unipdf/v3/internal/cmap"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model/internal/fonts"
 )
@@ -104,6 +105,7 @@ type pdfFontType0 struct {
 	encoder        textencoding.TextEncoder
 	Encoding       core.PdfObject
 	DescendantFont *PdfFont // Can be either CIDFontType0 or CIDFontType2 font.
+	codeToCID      *cmap.CMap
 }
 
 // pdfFontType0FromSkeleton returns a pdfFontType0 with its common fields initalized.
@@ -146,6 +148,61 @@ func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
+func (font *pdfFontType0) bytesToCharcodes(data []byte) ([]textencoding.CharCode, bool) {
+	if font.codeToCID == nil {
+		return nil, false
+	}
+
+	codes, ok := font.codeToCID.BytesToCharcodes(data)
+	if !ok {
+		return nil, false
+	}
+
+	charcodes := make([]textencoding.CharCode, len(codes))
+	for i, code := range codes {
+		charcodes[i] = textencoding.CharCode(code)
+	}
+
+	return charcodes, true
+}
+
+func (font *pdfFontType0) charcodeToUnicode(charcode textencoding.CharCode) (rune, bool) {
+	if font.toUnicodeCmap != nil {
+		return font.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(charcode))
+	}
+	if font.DescendantFont == nil {
+		return cmap.MissingCodeRune, false
+	}
+
+	descendantCMap := font.DescendantFont.baseFields().toUnicodeCmap
+	if descendantCMap == nil {
+		return cmap.MissingCodeRune, false
+	}
+
+	switch descendantCMap.Name() {
+	case "Adobe-Japan1-UCS2", "Adobe-CNS1-UCS2", "Adobe-GB1-UCS2", "Adobe-Korea1-UCS2":
+	default:
+		return cmap.MissingCodeRune, false
+	}
+
+	var found bool
+	var cid cmap.CharCode
+	if font.encoder != nil {
+		if r, ok := font.encoder.CharcodeToRune(charcode); ok {
+			cid = cmap.CharCode(r)
+			found = true
+		}
+	}
+	if !found && font.codeToCID != nil {
+		cid, found = font.codeToCID.CharcodeToCID(cmap.CharCode(charcode))
+	}
+	if !found {
+		return cmap.MissingCodeRune, false
+	}
+
+	return descendantCMap.CharcodeToUnicode(cid)
+}
+
 // ToPdfObject converts the font to a PDF representation.
 func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
@@ -172,7 +229,6 @@ func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 // newPdfFontType0FromPdfObject makes a pdfFontType0 based on the input `d` in base.
 // If a problem is encountered, an error is returned.
 func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon) (*pdfFontType0, error) {
-
 	// DescendantFonts.
 	arr, ok := core.GetArray(d.Get("DescendantFonts"))
 	if !ok {
@@ -192,28 +248,19 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 	font := pdfFontType0FromSkeleton(base)
 	font.DescendantFont = df
 
-	encoderName, ok := core.GetNameVal(d.Get("Encoding"))
-	if ok {
-		switch encoderName {
-		case "Identity-H", "Identity-V":
+	if encoderName, ok := core.GetNameVal(d.Get("Encoding")); ok {
+		if encoderName == "Identity-H" || encoderName == "Identity-V" {
 			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
-		case
-			// Reference: https://www.adobe.com/content/dam/acom/en/devnet/font/pdfs/5094.CJK_CID.pdf
-			// Adobe-GB1-4, Adobe-GB1-5
-			"UniGB-UTF16-H", "UniGB-UTF16-V",
-			// Adobe-CNS1-4, Adobe-CNS1-5
-			"UniCNS-UTF16-H", "UniCNS-UTF16-V",
-			// Adobe-Japan1-4, Adobe-Japan1-5, Adobe-Japan1-6
-			"UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniJIS2004-UTF16-H",
-			// Adobe-Japan2-0
-			"UniHojo-UTF16-H", "UniHojo-UTF16-V",
-			// Adobe-Korea1-2
-			"UniKS-UTF16-H", "UniKS-UTF16-V":
-			font.encoder = textencoding.NewUTF16TextEncoder(encoderName)
-		default:
+		} else if cmap.IsPredefinedCMap(encoderName) {
+			font.codeToCID, err = cmap.LoadPredefinedCMap(encoderName)
+			if err != nil {
+				common.Log.Debug("WARN: could not load predefined CMap %s: %v", encoderName, err)
+			}
+		} else {
 			common.Log.Debug("Unhandled cmap %q", encoderName)
 		}
 	}
+
 	return font, nil
 }
 
