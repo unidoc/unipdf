@@ -225,6 +225,9 @@ func LoadPredefinedCMap(name string) (*CMap, error) {
 	return cmap, nil
 }
 
+// loadPredefinedCMap loads an embedded CMap from the bcmaps package, specified
+// by name.
+// TODO: make predefinedCMapCache thread-safe.
 func loadPredefinedCMap(name string) (*CMap, error) {
 	if cmap, ok := predefinedCMapCache[name]; ok {
 		return cmap, nil
