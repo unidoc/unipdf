@@ -16,6 +16,8 @@ func TestIsPredefinedCMap(t *testing.T) {
 	cmaps := bcmaps.AssetNames()
 	for _, cmap := range cmaps {
 		require.True(t, IsPredefinedCMap(cmap))
+		_, err := bcmaps.Asset(cmap)
+		require.NoError(t, err)
 	}
 }
 
