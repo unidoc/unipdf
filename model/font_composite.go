@@ -148,6 +148,8 @@ func (font pdfFontType0) Encoder() textencoding.TextEncoder {
 	return font.encoder
 }
 
+// bytesToCharcodes attempts to convert the specified byte slice to charcodes,
+// based on the font's charcode to CID CMap.
 func (font *pdfFontType0) bytesToCharcodes(data []byte) ([]textencoding.CharCode, bool) {
 	if font.codeToCID == nil {
 		return nil, false
@@ -166,7 +168,9 @@ func (font *pdfFontType0) bytesToCharcodes(data []byte) ([]textencoding.CharCode
 	return charcodes, true
 }
 
+// charcodeToUnicode attempts to convert the specified charcode to a Unicode rune.
 func (font *pdfFontType0) charcodeToUnicode(charcode textencoding.CharCode) (rune, bool) {
+	// If font contains a Unicode conversion CMap, use it.
 	if font.toUnicodeCmap != nil {
 		return font.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(charcode))
 	}
@@ -174,6 +178,7 @@ func (font *pdfFontType0) charcodeToUnicode(charcode textencoding.CharCode) (run
 		return cmap.MissingCodeRune, false
 	}
 
+	// Check character collection of descendant font.
 	descendantCMap := font.DescendantFont.baseFields().toUnicodeCmap
 	if descendantCMap == nil {
 		return cmap.MissingCodeRune, false
@@ -185,21 +190,19 @@ func (font *pdfFontType0) charcodeToUnicode(charcode textencoding.CharCode) (run
 		return cmap.MissingCodeRune, false
 	}
 
-	var found bool
+	// Map charcode to CID.
 	var cid cmap.CharCode
-	if font.encoder != nil {
-		if r, ok := font.encoder.CharcodeToRune(charcode); ok {
-			cid = cmap.CharCode(r)
-			found = true
+	if _, ok := font.encoder.(textencoding.IdentityEncoder); ok {
+		cid = cmap.CharCode(charcode)
+	} else if font.codeToCID != nil {
+		if cid, ok = font.codeToCID.CharcodeToCID(cmap.CharCode(charcode)); !ok {
+			return cmap.MissingCodeRune, false
 		}
-	}
-	if !found && font.codeToCID != nil {
-		cid, found = font.codeToCID.CharcodeToCID(cmap.CharCode(charcode))
-	}
-	if !found {
+	} else {
 		return cmap.MissingCodeRune, false
 	}
 
+	// Map CID to Unicode rune.
 	return descendantCMap.CharcodeToUnicode(cid)
 }
 

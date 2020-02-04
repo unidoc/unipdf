@@ -369,7 +369,6 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 // BytesToCharcodes converts the bytes in a PDF string to character codes.
 func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
-
 	if type0, ok := font.context.(*pdfFontType0); ok && type0.codeToCID != nil {
 		if charcodes, ok := type0.bytesToCharcodes(data); ok {
 			return charcodes
@@ -400,19 +399,19 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 // CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
 // information about hits and misses from the reverse mapping process.
 func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
+	fontBase := font.baseFields()
 	runes := make([]rune, 0, len(charcodes))
 	numMisses = 0
 	for _, code := range charcodes {
-		if type0, ok := font.context.(*pdfFontType0); ok {
-			if r, ok := type0.charcodeToUnicode(code); ok {
+		if fontBase.toUnicodeCmap != nil {
+			if r, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
 				runes = append(runes, r)
 				continue
 			}
 		}
 
-		if font.baseFields().toUnicodeCmap != nil {
-			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
-			if ok {
+		if type0, ok := font.context.(*pdfFontType0); ok {
+			if r, ok := type0.charcodeToUnicode(code); ok {
 				runes = append(runes, r)
 				continue
 			}
@@ -429,7 +428,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 
 		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
 			"\tfont=%s\n\tencoding=%s",
-			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
+			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++
 		runes = append(runes, cmap.MissingCodeRune)
 	}
