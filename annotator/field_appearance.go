@@ -269,6 +269,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 	encoder := font.Encoder()
 	if encoder == nil {
+		common.Log.Debug("WARN: font encoder is nil. Assuming identity encoder. Output may be incorrect.")
 		encoder = textencoding.NewIdentityTextEncoder("Identity-H")
 	}
 
