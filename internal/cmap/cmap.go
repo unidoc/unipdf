@@ -47,6 +47,8 @@ type fbRange struct {
 	r0    rune
 }
 
+// CIDSystemInfo contains information for identifying the character collection
+// used by a CID font.
 // CIDSystemInfo=Dict("Registry": Adobe, "Ordering": Korea1, "Supplement": 0, )
 type CIDSystemInfo struct {
 	Registry   string
@@ -178,10 +180,16 @@ func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 	return cmap, nil
 }
 
+// IsPredefinedCMap returns true if the specified CMap name is a predefined
+// CJK CMap. The predefined CMaps are bundled with the package and can be loaded
+// using the LoadPredefinedCMap function.
+// See section 9.7.5.2 "Predefined CMaps" (page 273, Table 118).
 func IsPredefinedCMap(name string) bool {
 	return bcmaps.AssetExists(name)
 }
 
+// LoadPredefinedCMap loads a predefined CJK CMap by name.
+// See section 9.7.5.2 "Predefined CMaps" (page 273, Table 118).
 func LoadPredefinedCMap(name string) (*CMap, error) {
 	// Load cmap.
 	cmap, err := loadPredefinedCMap(name)
@@ -277,9 +285,9 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (rune, bool) {
 }
 
 // CharcodeToCID maps the specified character code to a character identifier.
-// If the provided charcode has no available mapping, the second return will
-// be false. The returned CID can be mapped to a Unicode character using a
-// Unicode CMap.
+// If the provided charcode has no available mapping, the second return value
+// is false. The returned CID can be mapped to a Unicode character using a
+// Unicode conversion CMap.
 func (cmap *CMap) CharcodeToCID(code CharCode) (CharCode, bool) {
 	cid, ok := cmap.codeToCID[code]
 	return cid, ok
