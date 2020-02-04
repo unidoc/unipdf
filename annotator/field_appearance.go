@@ -14,6 +14,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -267,6 +268,10 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		resources.SetFontByName(*fontname, fontobj)
 	}
 	encoder := font.Encoder()
+	if encoder == nil {
+		encoder = textencoding.NewIdentityTextEncoder("Identity-H")
+	}
+
 	fdescriptor, err := font.GetFontDescriptor()
 	if err != nil {
 		common.Log.Debug("Error: Unable to get font descriptor")
