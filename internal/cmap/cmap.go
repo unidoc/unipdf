@@ -13,7 +13,6 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/cmap/bcmaps"
-	"github.com/unidoc/unipdf/v3/internal/textencoding"
 )
 
 const (
@@ -21,10 +20,8 @@ const (
 	maxCodeLen = 4
 
 	// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
-	MissingCodeRune = textencoding.MissingCodeRune
+	MissingCodeRune = '\ufffd' // �
 )
-
-var predefinedCMapCache = map[string]*CMap{}
 
 // CharCode is a character code or Unicode
 // rune is int32 https://golang.org/doc/go1#rune
@@ -104,16 +101,18 @@ type CMap struct {
 	// For regular cmaps.
 	codespaces []Codespace
 
-	// Used by charcode -> CID cmaps (ctype 1).
-	codeToCID map[CharCode]CharCode
+	// Used by ctype 1 CMaps.
+	codeToCID map[CharCode]CharCode // charcode -> CID
+	cidToCode map[CharCode]CharCode // CID -> charcode
 
-	// Used by CID -> Unicode cmaps (ctype 2).
-	codeToUnicode map[CharCode]rune
+	// Used by ctype 1 CMaps.
+	codeToUnicode map[CharCode]rune // CID -> Unicode
+	unicodeToCode map[rune]CharCode // Unicode -> CID
 }
 
 // NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
 func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
-	return &CMap{
+	cmap := &CMap{
 		name:  "Adobe-Identity-UCS",
 		ctype: 2,
 		nbits: 16,
@@ -123,8 +122,14 @@ func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
 			Supplement: 0,
 		},
 		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
-		codeToUnicode: codeToUnicode,
+		codeToCID:     make(map[CharCode]CharCode),
+		cidToCode:     make(map[CharCode]CharCode),
+		codeToUnicode: make(map[CharCode]rune),
+		unicodeToCode: make(map[rune]CharCode),
 	}
+
+	cmap.computeInverseMappings()
+	return cmap
 }
 
 // newCMap returns an initialized CMap.
@@ -136,7 +141,9 @@ func newCMap(isSimple bool) *CMap {
 	return &CMap{
 		nbits:         nbits,
 		codeToCID:     make(map[CharCode]CharCode),
+		cidToCode:     make(map[CharCode]CharCode),
 		codeToUnicode: make(map[CharCode]rune),
+		unicodeToCode: make(map[rune]CharCode),
 	}
 }
 
@@ -173,10 +180,8 @@ func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
 		common.Log.Debug("ERROR: No codespaces. cmap=%s", cmap)
 		return nil, ErrBadCMap
 	}
-	// We need to sort codespaces so that we check shorter codes first.
-	sort.Slice(cmap.codespaces, func(i, j int) bool {
-		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
-	})
+
+	cmap.computeInverseMappings()
 	return cmap, nil
 }
 
@@ -197,6 +202,7 @@ func LoadPredefinedCMap(name string) (*CMap, error) {
 		return nil, err
 	}
 	if cmap.usecmap == "" {
+		cmap.computeInverseMappings()
 		return cmap, nil
 	}
 
@@ -218,27 +224,36 @@ func LoadPredefinedCMap(name string) (*CMap, error) {
 		cmap.codespaces = append(cmap.codespaces, codespace)
 	}
 
-	sort.Slice(cmap.codespaces, func(i, j int) bool {
-		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
-	})
-
+	cmap.computeInverseMappings()
 	return cmap, nil
 }
 
 // loadPredefinedCMap loads an embedded CMap from the bcmaps package, specified
 // by name.
-// TODO: make predefinedCMapCache thread-safe.
 func loadPredefinedCMap(name string) (*CMap, error) {
-	if cmap, ok := predefinedCMapCache[name]; ok {
-		return cmap, nil
-	}
-
 	cmapData, err := bcmaps.Asset(name)
 	if err != nil {
 		return nil, err
 	}
 
 	return LoadCmapFromDataCID(cmapData)
+}
+
+func (cmap *CMap) computeInverseMappings() {
+	// Generate CID -> charcode map.
+	for code, cid := range cmap.codeToCID {
+		cmap.cidToCode[cid] = code
+	}
+
+	// Generate Unicode -> CID map.
+	for cid, r := range cmap.codeToUnicode {
+		cmap.unicodeToCode[r] = cid
+	}
+
+	// Sort codespaces in order for shorter codes to be checked first.
+	sort.Slice(cmap.codespaces, func(i, j int) bool {
+		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
+	})
 }
 
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
@@ -287,6 +302,13 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (rune, bool) {
 	return MissingCodeRune, false
 }
 
+// RuneToCID maps the specified rune to a character identifier. If the provided
+// rune has no available mapping, the second return value is false.
+func (cmap *CMap) RuneToCID(r rune) (CharCode, bool) {
+	cid, ok := cmap.unicodeToCode[r]
+	return cid, ok
+}
+
 // CharcodeToCID maps the specified character code to a character identifier.
 // If the provided charcode has no available mapping, the second return value
 // is false. The returned CID can be mapped to a Unicode character using a
@@ -294,6 +316,13 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (rune, bool) {
 func (cmap *CMap) CharcodeToCID(code CharCode) (CharCode, bool) {
 	cid, ok := cmap.codeToCID[code]
 	return cid, ok
+}
+
+// CIDToCode maps the specified character identified to a character code. If
+// the provided CID has no available mapping, the second return value is false.
+func (cmap *CMap) CIDToCharcode(cid CharCode) (CharCode, bool) {
+	code, ok := cmap.cidToCode[cid]
+	return code, ok
 }
 
 // BytesToCharcodes attempts to convert the entire byte array `data` to a list
