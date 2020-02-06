@@ -410,13 +410,6 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			}
 		}
 
-		if type0, ok := font.context.(*pdfFontType0); ok {
-			if r, ok := type0.charcodeToUnicode(code); ok {
-				runes = append(runes, r)
-				continue
-			}
-		}
-
 		// Fall back to encoding.
 		encoder := font.Encoder()
 		if encoder != nil {

@@ -168,44 +168,6 @@ func (font *pdfFontType0) bytesToCharcodes(data []byte) ([]textencoding.CharCode
 	return charcodes, true
 }
 
-// charcodeToUnicode attempts to convert the specified charcode to a Unicode rune.
-func (font *pdfFontType0) charcodeToUnicode(charcode textencoding.CharCode) (rune, bool) {
-	// If font contains a Unicode conversion CMap, use it.
-	if font.toUnicodeCmap != nil {
-		return font.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(charcode))
-	}
-	if font.DescendantFont == nil {
-		return cmap.MissingCodeRune, false
-	}
-
-	// Check character collection of descendant font.
-	descendantCMap := font.DescendantFont.baseFields().toUnicodeCmap
-	if descendantCMap == nil {
-		return cmap.MissingCodeRune, false
-	}
-
-	switch descendantCMap.Name() {
-	case "Adobe-Japan1-UCS2", "Adobe-CNS1-UCS2", "Adobe-GB1-UCS2", "Adobe-Korea1-UCS2":
-	default:
-		return cmap.MissingCodeRune, false
-	}
-
-	// Map charcode to CID.
-	var cid cmap.CharCode
-	if _, ok := font.encoder.(textencoding.IdentityEncoder); ok {
-		cid = cmap.CharCode(charcode)
-	} else if font.codeToCID != nil {
-		if cid, ok = font.codeToCID.CharcodeToCID(cmap.CharCode(charcode)); !ok {
-			return cmap.MissingCodeRune, false
-		}
-	} else {
-		return cmap.MissingCodeRune, false
-	}
-
-	// Map CID to Unicode rune.
-	return descendantCMap.CharcodeToUnicode(cid)
-}
-
 // ToPdfObject converts the font to a PDF representation.
 func (font *pdfFontType0) ToPdfObject() core.PdfObject {
 	if font.container == nil {
@@ -251,7 +213,8 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 	font := pdfFontType0FromSkeleton(base)
 	font.DescendantFont = df
 
-	if encoderName, ok := core.GetNameVal(d.Get("Encoding")); ok {
+	encoderName, ok := core.GetNameVal(d.Get("Encoding"))
+	if ok {
 		if encoderName == "Identity-H" || encoderName == "Identity-V" {
 			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
 		} else if cmap.IsPredefinedCMap(encoderName) {
@@ -261,6 +224,13 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 			}
 		} else {
 			common.Log.Debug("Unhandled cmap %q", encoderName)
+		}
+	}
+
+	if cidToUnicode := df.baseFields().toUnicodeCmap; cidToUnicode != nil {
+		if dfn := cidToUnicode.Name(); dfn == "Adobe-CNS1-UCS2" || dfn == "Adobe-GB1-UCS2" ||
+			dfn == "Adobe-Japan1-UCS2" || dfn == "Adobe-Korea1-UCS2" {
+			font.encoder = textencoding.NewCMapEncoder(encoderName, font.codeToCID, cidToUnicode)
 		}
 	}
 
