@@ -124,7 +124,7 @@ func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
 		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
 		codeToCID:     make(map[CharCode]CharCode),
 		cidToCode:     make(map[CharCode]CharCode),
-		codeToUnicode: make(map[CharCode]rune),
+		codeToUnicode: codeToUnicode,
 		unicodeToCode: make(map[rune]CharCode),
 	}
 
@@ -318,7 +318,7 @@ func (cmap *CMap) CharcodeToCID(code CharCode) (CharCode, bool) {
 	return cid, ok
 }
 
-// CIDToCode maps the specified character identified to a character code. If
+// CIDToCharcode maps the specified character identified to a character code. If
 // the provided CID has no available mapping, the second return value is false.
 func (cmap *CMap) CIDToCharcode(cid CharCode) (CharCode, bool) {
 	code, ok := cmap.cidToCode[cid]
