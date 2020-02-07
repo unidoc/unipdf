@@ -242,14 +242,14 @@ func loadPredefinedCMap(name string) (*CMap, error) {
 func (cmap *CMap) computeInverseMappings() {
 	// Generate CID -> charcode map.
 	for code, cid := range cmap.codeToCID {
-		if c, ok := cmap.cidToCode[cid]; !ok || (ok && c < code) {
+		if c, ok := cmap.cidToCode[cid]; !ok || (ok && c > code) {
 			cmap.cidToCode[cid] = code
 		}
 	}
 
 	// Generate Unicode -> CID map.
 	for cid, r := range cmap.codeToUnicode {
-		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c < cid) {
+		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c > cid) {
 			cmap.unicodeToCode[r] = cid
 		}
 	}
