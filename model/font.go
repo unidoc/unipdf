@@ -6,6 +6,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -365,78 +366,15 @@ func newPdfFontFromPdfObject(fontObj core.PdfObject, allowType0 bool) (*PdfFont,
 	return font, nil
 }
 
-// CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
-//
-// 9.10 Extraction of Text Content (page 292)
-// The process of finding glyph descriptions in OpenType fonts by a conforming reader shall be the following:
-// • For Type 1 fonts using “CFF” tables, the process shall be as described in 9.6.6.2, "Encodings
-//   for Type 1 Fonts".
-// • For TrueType fonts using “glyf” tables, the process shall be as described in 9.6.6.4,
-//   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
-//   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
-//   encoding and use the glyph indices as character codes, as described following Table 118.
-func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
-	common.Log.Trace("CharcodeBytesToUnicode: data=[% 02x]=%#q", data, data)
-
-	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
-	if font.baseFields().isCIDFont() {
-		if len(data) == 1 {
-			data = []byte{0, data[0]}
-		}
-		if len(data)%2 != 0 {
-			common.Log.Debug("ERROR: Padding data=%+v to even length", data)
-			data = append(data, 0)
-		}
-		for i := 0; i < len(data); i += 2 {
-			b := uint16(data[i])<<8 | uint16(data[i+1])
-			charcodes = append(charcodes, textencoding.CharCode(b))
-		}
-	} else {
-		for _, b := range data {
-			charcodes = append(charcodes, textencoding.CharCode(b))
-		}
-	}
-
-	charstrings := make([]string, 0, len(charcodes))
-	numMisses := 0
-	for _, code := range charcodes {
-		if font.baseFields().toUnicodeCmap != nil {
-			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
-			if ok {
-				charstrings = append(charstrings, string(r))
-				continue
-			}
-		}
-		// Fall back to encoding
-		if encoder := font.Encoder(); encoder != nil {
-			r, ok := encoder.CharcodeToRune(code)
-			if ok {
-				charstrings = append(charstrings, textencoding.RuneToString(r))
-				continue
-			}
-
-			common.Log.Debug("ERROR: No rune. code=0x%04x data=[% 02x]=%#q charcodes=[% 04x] CID=%t\n"+
-				"\tfont=%s\n\tencoding=%s",
-				code, data, data, charcodes, font.baseFields().isCIDFont(), font, encoder)
-			numMisses++
-			charstrings = append(charstrings, string(cmap.MissingCodeRune))
-		}
-	}
-
-	if numMisses != 0 {
-		common.Log.Debug("ERROR: Couldn't convert to unicode. Using input. data=%#q=[% 02x]\n"+
-			"\tnumChars=%d numMisses=%d\n"+
-			"\tfont=%s",
-			string(data), data, len(charcodes), numMisses, font)
-	}
-
-	out := strings.Join(charstrings, "")
-	return out, len([]rune(out)), numMisses
-}
-
 // BytesToCharcodes converts the bytes in a PDF string to character codes.
 func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	common.Log.Trace("BytesToCharcodes: data=[% 02x]=%#q", data, data)
+	if type0, ok := font.context.(*pdfFontType0); ok && type0.codeToCID != nil {
+		if charcodes, ok := type0.bytesToCharcodes(data); ok {
+			return charcodes
+		}
+	}
+
 	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
 		if len(data) == 1 {
@@ -458,40 +396,32 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	return charcodes
 }
 
-// CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
-// How it works:
-//  1) Use the ToUnicode CMap if there is one.
-//  2) Use the underlying font's encoding.
-func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
-	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
-	return strlist
-}
-
 // CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
 // information about hits and misses from the reverse mapping process.
 func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
+	fontBase := font.baseFields()
 	runes := make([]rune, 0, len(charcodes))
 	numMisses = 0
 	for _, code := range charcodes {
-		if font.baseFields().toUnicodeCmap != nil {
-			r, ok := font.baseFields().toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code))
-			if ok {
+		if fontBase.toUnicodeCmap != nil {
+			if r, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
 				runes = append(runes, r)
 				continue
 			}
 		}
+
 		// Fall back to encoding.
 		encoder := font.Encoder()
 		if encoder != nil {
-			r, ok := encoder.CharcodeToRune(code)
-			if ok {
+			if r, ok := encoder.CharcodeToRune(code); ok {
 				runes = append(runes, r)
 				continue
 			}
 		}
+
 		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
 			"\tfont=%s\n\tencoding=%s",
-			code, charcodes, font.baseFields().isCIDFont(), font, encoder)
+			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++
 		runes = append(runes, cmap.MissingCodeRune)
 	}
@@ -504,6 +434,37 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 	}
 
 	return runes, len(runes), numMisses
+}
+
+// CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
+//
+// 9.10 Extraction of Text Content (page 292)
+// The process of finding glyph descriptions in OpenType fonts by a conforming reader shall be the following:
+// • For Type 1 fonts using “CFF” tables, the process shall be as described in 9.6.6.2, "Encodings
+//   for Type 1 Fonts".
+// • For TrueType fonts using “glyf” tables, the process shall be as described in 9.6.6.4,
+//   "Encodings for TrueType Fonts". Since this process sometimes produces ambiguous results,
+//   conforming writers, instead of using a simple font, shall use a Type 0 font with an Identity-H
+//   encoding and use the glyph indices as character codes, as described following Table 118.
+func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
+	runes, _, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
+
+	var buffer bytes.Buffer
+	for _, r := range runes {
+		buffer.WriteString(textencoding.RuneToString(r))
+	}
+
+	str := buffer.String()
+	return str, len([]rune(str)), numMisses
+}
+
+// CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
+// How it works:
+//  1) Use the ToUnicode CMap if there is one.
+//  2) Use the underlying font's encoding.
+func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
+	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
+	return strlist
 }
 
 // ToPdfObject converts the PdfFont object to its PDF representation.
@@ -774,6 +735,19 @@ func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDict
 			return d, font, err
 		}
 		font.toUnicodeCmap = codemap
+	} else if subtype == "CIDFontType0" || subtype == "CIDFontType2" {
+		si, err := cmap.NewCIDSystemInfo(d.Get("CIDSystemInfo"))
+		if err != nil {
+			return d, font, err
+		}
+
+		cmapName := fmt.Sprintf("%s-%s-UCS2", si.Registry, si.Ordering)
+		if cmap.IsPredefinedCMap(cmapName) {
+			font.toUnicodeCmap, err = cmap.LoadPredefinedCMap(cmapName)
+			if err != nil {
+				common.Log.Debug("WARN: could not load predefined CMap %s: %v", cmapName, err)
+			}
+		}
 	}
 
 	return d, font, nil
