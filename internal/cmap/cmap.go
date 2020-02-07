@@ -105,7 +105,7 @@ type CMap struct {
 	codeToCID map[CharCode]CharCode // charcode -> CID
 	cidToCode map[CharCode]CharCode // CID -> charcode
 
-	// Used by ctype 1 CMaps.
+	// Used by ctype 2 CMaps.
 	codeToUnicode map[CharCode]rune // CID -> Unicode
 	unicodeToCode map[rune]CharCode // Unicode -> CID
 }
