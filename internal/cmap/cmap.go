@@ -242,12 +242,16 @@ func loadPredefinedCMap(name string) (*CMap, error) {
 func (cmap *CMap) computeInverseMappings() {
 	// Generate CID -> charcode map.
 	for code, cid := range cmap.codeToCID {
-		cmap.cidToCode[cid] = code
+		if c, ok := cmap.cidToCode[cid]; !ok || (ok && c < code) {
+			cmap.cidToCode[cid] = code
+		}
 	}
 
 	// Generate Unicode -> CID map.
 	for cid, r := range cmap.codeToUnicode {
-		cmap.unicodeToCode[r] = cid
+		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c < cid) {
+			cmap.unicodeToCode[r] = cid
+		}
 	}
 
 	// Sort codespaces in order for shorter codes to be checked first.
