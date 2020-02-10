@@ -411,6 +411,12 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 							skipBytes = []byte{}
 							skipBytes = append(skipBytes, c)
 							state = 1
+						} else if c == 'E' {
+							// Allow cases where EI is not preceded by whitespace.
+							// The extra parsing after EI<ws> should be sufficient
+							// in order to decide if the image stream ended.
+							skipBytes = append(skipBytes, c)
+							state = 2
 						} else {
 							im.stream = append(im.stream, c)
 						}
