@@ -361,6 +361,8 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 				im.Interpolate = valueObj
 			case "W", "Width":
 				im.Width = valueObj
+			case "Length", "Subtype", "Type":
+				common.Log.Debug("Ignoring inline parameter %s", *param)
 			default:
 				return nil, fmt.Errorf("unknown inline image parameter %s", *param)
 			}

@@ -104,6 +104,7 @@ func (chap *Chapter) NewSubchapter(title string) *Chapter {
 
 // SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
 func (chap *Chapter) SetShowNumbering(show bool) {
+	chap.showNumbering = show
 	chap.heading.SetText(chap.headingText())
 }
 

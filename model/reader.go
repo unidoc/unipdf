@@ -399,6 +399,9 @@ func (r *PdfReader) GetOutlineTree() *PdfOutlineTreeNode {
 }
 
 // GetOutlinesFlattened returns a flattened list of tree nodes and titles.
+// NOTE: for most use cases, it is recommended to use the high-level GetOutlines
+// method instead, which also provides information regarding the destination
+// of the outline items.
 func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, error) {
 	var outlineNodeList []*PdfOutlineTreeNode
 	var flattenedTitleList []string
@@ -414,13 +417,11 @@ func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err
 			return
 		}
 
-		if item, isItem := node.context.(*PdfOutlineItem); isItem {
+		item, isItem := node.context.(*PdfOutlineItem)
+		if isItem {
 			*outlineList = append(*outlineList, &item.PdfOutlineTreeNode)
-			title := strings.Repeat(" ", depth*2) + item.Title.Str()
+			title := strings.Repeat(" ", depth*2) + item.Title.Decoded()
 			*titleList = append(*titleList, title)
-			if item.Next != nil {
-				flattenFunc(item.Next, outlineList, titleList, depth)
-			}
 		}
 
 		if node.First != nil {
@@ -428,9 +429,81 @@ func (r *PdfReader) GetOutlinesFlattened() ([]*PdfOutlineTreeNode, []string, err
 			*titleList = append(*titleList, title)
 			flattenFunc(node.First, outlineList, titleList, depth+1)
 		}
+
+		if isItem && item.Next != nil {
+			flattenFunc(item.Next, outlineList, titleList, depth)
+		}
 	}
 	flattenFunc(r.outlineTree, &outlineNodeList, &flattenedTitleList, 0)
 	return outlineNodeList, flattenedTitleList, nil
+}
+
+// GetOutlines returns a high-level Outline object, based on the outline tree
+// of the reader.
+func (r *PdfReader) GetOutlines() (*Outline, error) {
+	if r == nil {
+		return nil, errors.New("cannot create outline from nil reader")
+	}
+
+	outlineTree := r.GetOutlineTree()
+	if outlineTree == nil {
+		return nil, errors.New("the specified reader does not have an outline tree")
+	}
+
+	var traverseFunc func(node *PdfOutlineTreeNode, entries *[]*OutlineItem)
+	traverseFunc = func(node *PdfOutlineTreeNode, entries *[]*OutlineItem) {
+		if node == nil {
+			return
+		}
+		if node.context == nil {
+			common.Log.Debug("ERROR: missing outline entry context")
+			return
+		}
+
+		// Check if node is an outline item.
+		var entry *OutlineItem
+		if item, ok := node.context.(*PdfOutlineItem); ok {
+			// Search for outline destination object.
+			destObj := item.Dest
+			if (destObj == nil || core.IsNullObject(destObj)) && item.A != nil {
+				if actionDict, ok := core.GetDict(item.A); ok {
+					destObj, _ = core.GetArray(actionDict.Get("D"))
+				}
+			}
+
+			// Parse outline destination object.
+			var dest OutlineDest
+			if destObj != nil && !core.IsNullObject(destObj) {
+				if d, err := newOutlineDestFromPdfObject(destObj, r); err == nil {
+					dest = *d
+				} else {
+					common.Log.Debug("WARN: could not parse outline dest (%v): %v", destObj, err)
+				}
+			}
+
+			entry = NewOutlineItem(item.Title.Decoded(), dest)
+			*entries = append(*entries, entry)
+
+			// Traverse next node.
+			if item.Next != nil {
+				traverseFunc(item.Next, entries)
+			}
+		}
+
+		// Check if node has children.
+		if node.First != nil {
+			if entry != nil {
+				entries = &entry.Entries
+			}
+
+			// Traverse node children.
+			traverseFunc(node.First, entries)
+		}
+	}
+
+	outline := NewOutline()
+	traverseFunc(outlineTree, &outline.Entries)
+	return outline, nil
 }
 
 // loadForms loads the AcroForm.
