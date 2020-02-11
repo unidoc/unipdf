@@ -1137,16 +1137,17 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
 	var buflen int64 = 2048
 
-	for offset < fSize {
+	for offset < fSize-4 {
 		if fSize <= (buflen + offset) {
 			buflen = fSize - offset
 		}
 
 		// Move back enough (as we need to read forward).
-		at, err := parser.rs.Seek(-offset-buflen, io.SeekEnd)
+		_, err := parser.rs.Seek(-offset-buflen, io.SeekEnd)
 		if err != nil {
 			return err
 		}
+		common.Log.Debug("At: %d", at)
 
 		// Read the data.
 		b1 := make([]byte, buflen)
@@ -1164,12 +1165,8 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
 		}
-		if at == 0 {
-			// Already reached beginning of file.
-			break
-		}
 
-		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
+		common.Log.Debug("Warning1: EOF marker not found! - continue seeking")
 		offset += buflen - 4
 	}
 
@@ -1609,10 +1606,10 @@ func NewParserFromString(txt string) *PdfParser {
 	bufReader := bytes.NewReader([]byte(txt))
 
 	parser := &PdfParser{
-		ObjCache:                              objectCache{},
-		rs:                                    bufReader,
-		reader:                                bufio.NewReader(bufReader),
-		fileSize:                              int64(len(txt)),
+		ObjCache: objectCache{},
+		rs:       bufReader,
+		reader:   bufio.NewReader(bufReader),
+		fileSize: int64(len(txt)),
 		streamLengthReferenceLookupInProgress: map[int64]bool{},
 	}
 	parser.xrefs.ObjectMap = make(map[int]XrefObject)
@@ -1624,8 +1621,8 @@ func NewParserFromString(txt string) *PdfParser {
 // An error is returned on failure.
 func NewParser(rs io.ReadSeeker) (*PdfParser, error) {
 	parser := &PdfParser{
-		rs:                                    rs,
-		ObjCache:                              make(objectCache),
+		rs:       rs,
+		ObjCache: make(objectCache),
 		streamLengthReferenceLookupInProgress: map[int64]bool{},
 	}
 
