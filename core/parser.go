@@ -1143,14 +1143,18 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 		}
 
 		// Move back enough (as we need to read forward).
-		_, err := parser.rs.Seek(-offset-buflen, io.SeekEnd)
+		at, err := parser.rs.Seek(-offset-buflen, io.SeekEnd)
 		if err != nil {
 			return err
 		}
 
 		// Read the data.
 		b1 := make([]byte, buflen)
-		parser.rs.Read(b1)
+		_, err = parser.rs.Read(b1)
+		if err != nil {
+			return err
+		}
+
 		common.Log.Trace("Looking for EOF marker: \"%s\"", string(b1))
 		ind := reEOF.FindAllStringIndex(string(b1), -1)
 		if ind != nil {
@@ -1159,6 +1163,10 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 			common.Log.Trace("Ind: % d", ind)
 			parser.rs.Seek(-offset-buflen+int64(lastInd[0]), io.SeekEnd)
 			return nil
+		}
+		if at == 0 {
+			// Already reached beginning of file.
+			break
 		}
 
 		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
