@@ -1137,7 +1137,7 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
 	var buflen int64 = 2048
 
-	for offset < fSize {
+	for offset < fSize-4 {
 		if fSize <= (buflen + offset) {
 			buflen = fSize - offset
 		}
