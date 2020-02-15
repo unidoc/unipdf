@@ -1,13 +1,17 @@
+<<<<<<< HEAD
 /*
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.md', which is part of this source code package.
  */
 
+=======
+>>>>>>> sync commit
 package sighandler
 
 import (
 	"bytes"
 	"crypto"
+<<<<<<< HEAD
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -20,12 +24,23 @@ import (
 
 	"github.com/unidoc/pkcs7"
 	"github.com/unidoc/timestamp"
+=======
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/asn1"
+	"errors"
+	"fmt"
+	"hash"
+
+>>>>>>> sync commit
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
 // docTimeStamp DocTimeStamp signature handler.
 type docTimeStamp struct {
+<<<<<<< HEAD
 	timestampServerURL string
 	hashAlgorithm      crypto.Hash
 }
@@ -38,6 +53,15 @@ func NewDocTimeStamp(timestampServerURL string, hashAlgorithm crypto.Hash) (mode
 		timestampServerURL: timestampServerURL,
 		hashAlgorithm:      hashAlgorithm,
 	}, nil
+=======
+	signFunc SignFunc
+}
+
+// NewDocTimeStamp creates a new DocTimeStamp signature handler.
+// Both parameters may be nil for the signature validation.
+func NewDocTimeStamp() (model.SignatureHandler, error) {
+	return &docTimeStamp{}, nil
+>>>>>>> sync commit
 }
 
 // InitSignature initialises the PdfSignature.
@@ -47,7 +71,12 @@ func (a *docTimeStamp) InitSignature(sig *model.PdfSignature) error {
 	sig.Filter = core.MakeName("Adobe.PPKLite")
 	sig.SubFilter = core.MakeName("ETSI.RFC3161")
 	sig.Reference = nil
+<<<<<<< HEAD
 	digest, err := a.NewDigest(sig)
+=======
+
+	digest, err := handler.NewDigest(sig)
+>>>>>>> sync commit
 	if err != nil {
 		return err
 	}
@@ -88,6 +117,7 @@ func (a *docTimeStamp) NewDigest(sig *model.PdfSignature) (model.Hasher, error) 
 	return bytes.NewBuffer(nil), nil
 }
 
+<<<<<<< HEAD
 type timestampInfo struct {
 	Version        int
 	Policy         asn1.RawValue
@@ -119,10 +149,16 @@ func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
 func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
 	p7, err := pkcs7.Parse(signed)
+=======
+// Validate validates PdfSignature.
+func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
+	certificate, err := a.getCertificate(sig)
+>>>>>>> sync commit
 	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
 
+<<<<<<< HEAD
 	if err = p7.Verify(); err != nil {
 		return model.SignatureValidationResult{}, err
 	}
@@ -149,10 +185,27 @@ func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (m
 		GeneralizedTime: tsInfo.GeneralizedTime,
 	}
 	return res, nil
+=======
+	signed := sig.Contents.Bytes()
+	var sigHash []byte
+	if _, err := asn1.Unmarshal(signed, &sigHash); err != nil {
+		return model.SignatureValidationResult{}, err
+	}
+	h, ok := digest.(hash.Hash)
+	if !ok {
+		return model.SignatureValidationResult{}, errors.New("hash type error")
+	}
+	ha, _ := getHashFromSignatureAlgorithm(certificate.SignatureAlgorithm)
+	if err := rsa.VerifyPKCS1v15(certificate.PublicKey.(*rsa.PublicKey), ha, h.Sum(nil), sigHash); err != nil {
+		return model.SignatureValidationResult{}, err
+	}
+	return model.SignatureValidationResult{IsSigned: true, IsVerified: true}, nil
+>>>>>>> sync commit
 }
 
 // Sign sets the Contents fields for the PdfSignature.
 func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error {
+<<<<<<< HEAD
 	buffer := digest.(*bytes.Buffer)
 	h := a.hashAlgorithm.New()
 
@@ -194,11 +247,39 @@ func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error 
 	}
 
 	_, err = asn1.Unmarshal(body, &ci)
+=======
+	var data []byte
+	var err error
+
+	if a.signFunc != nil {
+		data, err = a.signFunc(sig, digest)
+		if err != nil {
+			return err
+		}
+	} else {
+		h, ok := digest.(hash.Hash)
+		if !ok {
+			return errors.New("hash type error")
+		}
+		ha, _ := getHashFromSignatureAlgorithm(a.certificate.SignatureAlgorithm)
+
+		data, err = rsa.SignPKCS1v15(rand.Reader, a.privateKey, ha, h.Sum(nil))
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err = asn1.Marshal(data)
+>>>>>>> sync commit
 	if err != nil {
 		return err
 	}
 
+<<<<<<< HEAD
 	sig.Contents = core.MakeHexString(string(ci.Content.FullBytes))
+=======
+	sig.Contents = core.MakeHexString(string(data))
+>>>>>>> sync commit
 	return nil
 }
 

@@ -9,16 +9,20 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ocsp"
 	"golang.org/x/crypto/pkcs12"
 
 	"github.com/unidoc/unipdf/v3/annotator"
@@ -1004,6 +1008,74 @@ func TestAppenderSignPage4(t *testing.T) {
 		return
 	}
 
+	certData, err := ioutil.ReadFile(`/Users/alekseipavliukov/Downloads/tsa.crt`)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	block, _ := pem.Decode(certData)
+
+	cCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	data, err := ioutil.ReadFile(`/Users/alekseipavliukov/Downloads/cacert.pem`)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	//r, err := timestamp.ParseRequest(data)
+	//if err != nil {
+	//	t.Errorf("Fail: %v\n", err)
+	//	return
+	//}
+	//log.Println(r)
+	//
+	//resp, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewReader(data))
+	//if err != nil {
+	//	t.Errorf("Fail: %v\n", err)
+	//	return
+	//}
+	//data, _ = ioutil.ReadAll(resp.Body)
+	//s := string(data)
+	//log.Println(s)
+
+	block, _ = pem.Decode(data)
+
+	issuer, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	log.Println(issuer)
+	//issuer.RawSubject = data
+	data, err = ocsp.CreateRequest(cCert, issuer, &ocsp.RequestOptions{Hash: crypto.SHA1})
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	resp, err := http.Post("http://www.freetsa.org:2560", "application/timestamp-query", bytes.NewReader(data))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	data, _ = ioutil.ReadAll(resp.Body)
+	ioutil.WriteFile(`/Users/alekseipavliukov/Downloads/data.ocsp`, data, os.ModePerm)
+	s := string(data)
+	log.Println(s)
+
+	resp2, err := ocsp.ParseResponse(data, issuer)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	log.Println(resp2)
+
 	handler, err := sighandler.NewAdobePKCS7Detached(privateKey.(*rsa.PrivateKey), cert)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -1403,6 +1475,7 @@ func TestAppenderSignMultipleAppearances(t *testing.T) {
 
 func TestValidatePAdESSignature(t *testing.T) {
 
+	validateFile(t, "/Users/alekseipavliukov/Downloads/signed2.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado-LT.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado-T.pdf")
