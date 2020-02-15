@@ -119,7 +119,7 @@ func (r *PdfReader) ValidateSignatures(handlers []SignatureHandler) ([]Signature
 			continue
 		}
 		if d, found := core.GetDict(f.V); found {
-			if name, ok := core.GetNameVal(d.Get("Type")); ok && name == "Sig" {
+			if name, ok := core.GetNameVal(d.Get("Type")); ok && (name == "Sig" || name == "DocTimeStamp") {
 				ind, found := core.GetIndirect(f.V)
 				if !found {
 					common.Log.Debug("ERROR: Signature container is nil")

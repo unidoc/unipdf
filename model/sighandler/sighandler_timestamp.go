@@ -3,27 +3,39 @@ package sighandler
 import (
 	"bytes"
 	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"hash"
+	"io"
+	"io/ioutil"
+	"net/http"
 
+	"github.com/a5i/pkcs7"
+	"github.com/digitorus/timestamp"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
 // docTimeStamp DocTimeStamp signature handler.
 type docTimeStamp struct {
-	signFunc SignFunc
+	timestampServerURL string
+	signFunc           SignFunc
+	hashAlgorithm      crypto.Hash
+	emptySignatureLen  int
 }
 
 // NewDocTimeStamp creates a new DocTimeStamp signature handler.
 // Both parameters may be nil for the signature validation.
-func NewDocTimeStamp() (model.SignatureHandler, error) {
-	return &docTimeStamp{}, nil
+// The timestampServerURL parameter can be empty string for the signature validation.
+// The signatureLen parameter can be 0 for the signature validation.
+func NewDocTimeStamp(timestampServerURL string, signatureLen int) (model.SignatureHandler, error) {
+	return &docTimeStamp{
+		timestampServerURL: timestampServerURL,
+		emptySignatureLen:  signatureLen,
+		hashAlgorithm:      crypto.SHA512,
+	}, nil
 }
 
 // InitSignature initialises the PdfSignature.
@@ -75,58 +87,113 @@ func (a *docTimeStamp) NewDigest(sig *model.PdfSignature) (model.Hasher, error) 
 	return bytes.NewBuffer(nil), nil
 }
 
+type timestampInfo struct {
+	Version        int
+	Policy         asn1.RawValue
+	MessageImprint struct {
+		HashAlgorithm pkix.AlgorithmIdentifier
+		HashedMessage []byte
+	}
+}
+
+func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
+	switch {
+	case oid.Equal(pkcs7.OIDDigestAlgorithmSHA1), oid.Equal(pkcs7.OIDDigestAlgorithmECDSASHA1),
+		oid.Equal(pkcs7.OIDDigestAlgorithmDSA), oid.Equal(pkcs7.OIDDigestAlgorithmDSASHA1),
+		oid.Equal(pkcs7.OIDEncryptionAlgorithmRSA):
+		return crypto.SHA1, nil
+	case oid.Equal(pkcs7.OIDDigestAlgorithmSHA256), oid.Equal(pkcs7.OIDDigestAlgorithmECDSASHA256):
+		return crypto.SHA256, nil
+	case oid.Equal(pkcs7.OIDDigestAlgorithmSHA384), oid.Equal(pkcs7.OIDDigestAlgorithmECDSASHA384):
+		return crypto.SHA384, nil
+	case oid.Equal(pkcs7.OIDDigestAlgorithmSHA512), oid.Equal(pkcs7.OIDDigestAlgorithmECDSASHA512):
+		return crypto.SHA512, nil
+	}
+	return crypto.Hash(0), pkcs7.ErrUnsupportedAlgorithm
+}
+
 // Validate validates PdfSignature.
 func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
-	certificate, err := a.getCertificate(sig)
+	signed := sig.Contents.Bytes()
+	p7, err := pkcs7.Parse(signed)
 	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
 
-	signed := sig.Contents.Bytes()
-	var sigHash []byte
-	if _, err := asn1.Unmarshal(signed, &sigHash); err != nil {
+	if err = p7.Verify(); err != nil {
 		return model.SignatureValidationResult{}, err
 	}
-	h, ok := digest.(hash.Hash)
-	if !ok {
-		return model.SignatureValidationResult{}, errors.New("hash type error")
-	}
-	ha, _ := getHashFromSignatureAlgorithm(certificate.SignatureAlgorithm)
-	if err := rsa.VerifyPKCS1v15(certificate.PublicKey.(*rsa.PublicKey), ha, h.Sum(nil), sigHash); err != nil {
+
+	var tsInfo timestampInfo
+
+	_, err = asn1.Unmarshal(p7.Content, &tsInfo)
+	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
-	return model.SignatureValidationResult{IsSigned: true, IsVerified: true}, nil
+
+	hAlg, err := getHashForOID(tsInfo.MessageImprint.HashAlgorithm.Algorithm)
+	if err != nil {
+		return model.SignatureValidationResult{}, err
+	}
+	h := hAlg.New()
+	buffer := digest.(*bytes.Buffer)
+
+	h.Write(buffer.Bytes())
+	sm := h.Sum(nil)
+	bytes.Equal(sm, tsInfo.MessageImprint.HashedMessage)
+
+	return model.SignatureValidationResult{IsSigned: true, IsVerified: bytes.Equal(sm, tsInfo.MessageImprint.HashedMessage)}, nil
 }
 
 // Sign sets the Contents fields for the PdfSignature.
 func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error {
-	var data []byte
-	var err error
-
-	if a.signFunc != nil {
-		data, err = a.signFunc(sig, digest)
-		if err != nil {
-			return err
-		}
-	} else {
-		h, ok := digest.(hash.Hash)
-		if !ok {
-			return errors.New("hash type error")
-		}
-		ha, _ := getHashFromSignatureAlgorithm(a.certificate.SignatureAlgorithm)
-
-		data, err = rsa.SignPKCS1v15(rand.Reader, a.privateKey, ha, h.Sum(nil))
-		if err != nil {
-			return err
-		}
+	if a.emptySignatureLen <= 0 {
+		sig.Contents = core.MakeHexString(string(make([]byte, 8192)))
+		return nil
 	}
 
-	data, err = asn1.Marshal(data)
+	buffer := digest.(*bytes.Buffer)
+
+	h := crypto.SHA512.New()
+	io.Copy(h, buffer)
+	//h.Write([]byte("test message"))
+	s := h.Sum(nil)
+
+	r := timestamp.Request{
+		HashAlgorithm:   crypto.SHA512,
+		HashedMessage:   s,
+		Certificates:    true,
+		Extensions:      nil,
+		ExtraExtensions: nil,
+	}
+	data, err := r.Marshal()
 	if err != nil {
 		return err
 	}
 
-	sig.Contents = core.MakeHexString(string(data))
+	resp, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http status code wiats 200 got %d", resp.StatusCode)
+	}
+
+	var ci struct {
+		Version asn1.RawValue
+		Content asn1.RawValue
+	}
+
+	_, err = asn1.Unmarshal(body, &ci)
+	if err != nil {
+		return err
+	}
+
+	sig.Contents = core.MakeHexString(string(ci.Content.FullBytes))
 	return nil
 }
 

@@ -911,6 +911,7 @@ func TestAppenderMergePage3(t *testing.T) {
 }
 
 func validateFile(t *testing.T, fileName string) {
+	t.Helper()
 	t.Logf("Validating %s", fileName)
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -926,7 +927,9 @@ func validateFile(t *testing.T, fileName string) {
 	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
 	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
 	handler3, _ := sighandler.NewEmptyEtsiPAdESDetached(0)
-	handlers := []model.SignatureHandler{handler, handler2, handler3}
+	handler4, _ := sighandler.NewDocTimeStamp("", 0)
+
+	handlers := []model.SignatureHandler{handler, handler2, handler3, handler4}
 
 	res, err := reader.ValidateSignatures(handlers)
 	if err != nil {
@@ -1474,7 +1477,10 @@ func TestAppenderSignMultipleAppearances(t *testing.T) {
 
 func TestValidatePAdESSignature(t *testing.T) {
 
-	validateFile(t, "/Users/alekseipavliukov/Downloads/signed2.pdf")
+	validateFile(t, "./testdata/dss/pades-5-signatures-and-1-document-timestamp.pdf")
+	validateFile(t, "./testdata/dss/Test.signed_Certipost-2048-SHA512.extended-LTA.pdf")
+	//return
+
 	validateFile(t, "./testdata/dss/doc-firmado.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado-LT.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado-T.pdf")
@@ -1485,7 +1491,7 @@ func TestValidatePAdESSignature(t *testing.T) {
 	//validateFile(t, "./testdata/dss/hello_signed_INCSAVE_signed_EDITED.pdf")
 
 	validateFile(t, "./testdata/dss/modified_after_signature.pdf")
-	validateFile(t, "./testdata/dss/pades-5-signatures-and-1-document-timestamp.pdf")
+
 	validateFile(t, "./testdata/dss/PAdES-LTA.pdf")
 	validateFile(t, "./testdata/dss/pdf-signed-original.pdf")
 	validateFile(t, "./testdata/dss/pkcs7.pdf")
@@ -1526,7 +1532,7 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		return
 	}
 
-	handler, err := sighandler.NewAEtsiPAdESDetached(privateKey.(*rsa.PrivateKey), cert)
+	handler, err := sighandler.NewEtsiPAdESDetached(privateKey.(*rsa.PrivateKey), cert)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1556,12 +1562,66 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		return
 	}
 
-	err = appender.WriteToFile(tempFile("appender_sign_page_4.pdf"))
+	outFile := tempFile("appender_sign_page_4.pdf")
+	err = appender.WriteToFile(outFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	validateFile(t, tempFile("appender_sign_page_4.pdf"))
+	validateFile(t, outFile)
+
+	f2, err := os.Open(outFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f2.Close()
+	pdf2, err := model.NewPdfReader(f2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err = model.NewPdfAppender(pdf2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", 8192)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	signature = model.NewPdfSignature(handler)
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	sigField = model.NewPdfFieldSignature(signature)
+	sigField.T = core.MakeString("Signature2")
+	sigField.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
+
+	if err = appender.Sign(1, sigField); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	outFile = tempFile("appender_sign_page_4_timestamp.pdf")
+	err = appender.WriteToFile(outFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	validateFile(t, outFile)
+
 }
 
 func TestAppenderExternalSignature(t *testing.T) {
