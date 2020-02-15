@@ -4,6 +4,10 @@ github.com/boombuler/barcode v1.0.0 h1:s1TvRnXwL2xJRaccrdcBQMZxq6X7DvsMogtmJeHDd
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/digitorus/pkcs7 v0.0.0-20180112093143-228ee0211bba h1:Ouns2rXLXNEzOBKC8jocFrHsYTGYnHj5zW1mm+QpgHo=
+github.com/digitorus/pkcs7 v0.0.0-20180112093143-228ee0211bba/go.mod h1:p2IZ9yq2kEKGFr3rfpYxaaOzB0VdLbF8VkZReEIpJmU=
+github.com/digitorus/timestamp v0.0.0-20180925120404-d9edc1ea1dbc h1:6hctaGb4g0F774NhigOWgGmzHWbkc+vQCnRa4h74G1Y=
+github.com/digitorus/timestamp v0.0.0-20180925120404-d9edc1ea1dbc/go.mod h1:Nrb/3jYV11CzJupvmh9oMHCb2BJNY/jpam4w4r21YbI=
 github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83 h1:saj5dTV7eQ1wFg/gVZr1SfbkOmg8CYO9R8frHgQiyR4=
 github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83/go.mod h1:xaGEIRenAiJcGgd9p62zbiP4993KaV3PdjczwGnP50I=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

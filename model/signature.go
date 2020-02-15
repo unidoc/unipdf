@@ -121,6 +121,23 @@ func NewPdfSignature(handler SignatureHandler) *PdfSignature {
 	return sig
 }
 
+// NewPdfDocTimestampSignature creates a new PdfSignature object for timestamp signing.
+func NewPdfDocTimestampSignature(handler SignatureHandler) *PdfSignature {
+	sig := &PdfSignature{
+		Type:    core.MakeName("DocTimeStamp"),
+		Handler: handler,
+	}
+
+	dict := &pdfSignDictionary{
+		PdfObjectDictionary: core.MakeDict(),
+		handler:             &handler,
+		signature:           sig,
+	}
+
+	sig.container = core.MakeIndirectObject(dict)
+	return sig
+}
+
 // GetContainingPdfObject implements interface PdfModel.
 func (sig *PdfSignature) GetContainingPdfObject() core.PdfObject {
 	return sig.container

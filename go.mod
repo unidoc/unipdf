@@ -3,6 +3,8 @@ module github.com/unidoc/unipdf/v3
 require (
 	github.com/a5i/pkcs7 v0.0.0-20200202012429-da98ca17c440
 	github.com/boombuler/barcode v1.0.0
+	github.com/digitorus/pkcs7 v0.0.0-20180112093143-228ee0211bba // indirect
+	github.com/digitorus/timestamp v0.0.0-20180925120404-d9edc1ea1dbc
 	github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
