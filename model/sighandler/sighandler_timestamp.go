@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"crypto"
 <<<<<<< HEAD
+<<<<<<< HEAD
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -27,19 +28,30 @@ import (
 =======
 	"crypto/rand"
 	"crypto/rsa"
+=======
+>>>>>>> add timestamp signature handler
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"hash"
+	"io"
+	"io/ioutil"
+	"net/http"
 
+<<<<<<< HEAD
 >>>>>>> sync commit
+=======
+	"github.com/a5i/pkcs7"
+	"github.com/digitorus/timestamp"
+>>>>>>> add timestamp signature handler
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
 // docTimeStamp DocTimeStamp signature handler.
 type docTimeStamp struct {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	timestampServerURL string
 	hashAlgorithm      crypto.Hash
@@ -55,13 +67,30 @@ func NewDocTimeStamp(timestampServerURL string, hashAlgorithm crypto.Hash) (mode
 	}, nil
 =======
 	signFunc SignFunc
+=======
+	timestampServerURL string
+	signFunc           SignFunc
+	hashAlgorithm      crypto.Hash
+	emptySignatureLen  int
+>>>>>>> add timestamp signature handler
 }
 
 // NewDocTimeStamp creates a new DocTimeStamp signature handler.
 // Both parameters may be nil for the signature validation.
+<<<<<<< HEAD
 func NewDocTimeStamp() (model.SignatureHandler, error) {
 	return &docTimeStamp{}, nil
 >>>>>>> sync commit
+=======
+// The timestampServerURL parameter can be empty string for the signature validation.
+// The signatureLen parameter can be 0 for the signature validation.
+func NewDocTimeStamp(timestampServerURL string, signatureLen int) (model.SignatureHandler, error) {
+	return &docTimeStamp{
+		timestampServerURL: timestampServerURL,
+		emptySignatureLen:  signatureLen,
+		hashAlgorithm:      crypto.SHA512,
+	}, nil
+>>>>>>> add timestamp signature handler
 }
 
 // InitSignature initialises the PdfSignature.
@@ -118,6 +147,9 @@ func (a *docTimeStamp) NewDigest(sig *model.PdfSignature) (model.Hasher, error) 
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add timestamp signature handler
 type timestampInfo struct {
 	Version        int
 	Policy         asn1.RawValue
@@ -125,8 +157,11 @@ type timestampInfo struct {
 		HashAlgorithm pkix.AlgorithmIdentifier
 		HashedMessage []byte
 	}
+<<<<<<< HEAD
 	SerialNumber    asn1.RawValue
 	GeneralizedTime time.Time
+=======
+>>>>>>> add timestamp signature handler
 }
 
 func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
@@ -145,6 +180,7 @@ func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
 	return crypto.Hash(0), pkcs7.ErrUnsupportedAlgorithm
 }
 
+<<<<<<< HEAD
 // Validate validates PdfSignature.
 func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
@@ -166,10 +202,17 @@ func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (m
 	var tsInfo timestampInfo
 
 	_, err = asn1.Unmarshal(p7.Content, &tsInfo)
+=======
+// Validate validates PdfSignature.
+func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (model.SignatureValidationResult, error) {
+	signed := sig.Contents.Bytes()
+	p7, err := pkcs7.Parse(signed)
+>>>>>>> add timestamp signature handler
 	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
 
+<<<<<<< HEAD
 	hAlg, err := getHashForOID(tsInfo.MessageImprint.HashAlgorithm.Algorithm)
 	if err != nil {
 		return model.SignatureValidationResult{}, err
@@ -189,22 +232,41 @@ func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (m
 	signed := sig.Contents.Bytes()
 	var sigHash []byte
 	if _, err := asn1.Unmarshal(signed, &sigHash); err != nil {
+=======
+	if err = p7.Verify(); err != nil {
+>>>>>>> add timestamp signature handler
 		return model.SignatureValidationResult{}, err
 	}
-	h, ok := digest.(hash.Hash)
-	if !ok {
-		return model.SignatureValidationResult{}, errors.New("hash type error")
-	}
-	ha, _ := getHashFromSignatureAlgorithm(certificate.SignatureAlgorithm)
-	if err := rsa.VerifyPKCS1v15(certificate.PublicKey.(*rsa.PublicKey), ha, h.Sum(nil), sigHash); err != nil {
+
+	var tsInfo timestampInfo
+
+	_, err = asn1.Unmarshal(p7.Content, &tsInfo)
+	if err != nil {
 		return model.SignatureValidationResult{}, err
 	}
+
+	hAlg, err := getHashForOID(tsInfo.MessageImprint.HashAlgorithm.Algorithm)
+	if err != nil {
+		return model.SignatureValidationResult{}, err
+	}
+<<<<<<< HEAD
 	return model.SignatureValidationResult{IsSigned: true, IsVerified: true}, nil
 >>>>>>> sync commit
+=======
+	h := hAlg.New()
+	buffer := digest.(*bytes.Buffer)
+
+	h.Write(buffer.Bytes())
+	sm := h.Sum(nil)
+	bytes.Equal(sm, tsInfo.MessageImprint.HashedMessage)
+
+	return model.SignatureValidationResult{IsSigned: true, IsVerified: bytes.Equal(sm, tsInfo.MessageImprint.HashedMessage)}, nil
+>>>>>>> add timestamp signature handler
 }
 
 // Sign sets the Contents fields for the PdfSignature.
 func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	buffer := digest.(*bytes.Buffer)
 	h := a.hashAlgorithm.New()
@@ -250,36 +312,68 @@ func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error 
 =======
 	var data []byte
 	var err error
+=======
+	if a.emptySignatureLen <= 0 {
+		sig.Contents = core.MakeHexString(string(make([]byte, 8192)))
+		return nil
+	}
+>>>>>>> add timestamp signature handler
 
-	if a.signFunc != nil {
-		data, err = a.signFunc(sig, digest)
-		if err != nil {
-			return err
-		}
-	} else {
-		h, ok := digest.(hash.Hash)
-		if !ok {
-			return errors.New("hash type error")
-		}
-		ha, _ := getHashFromSignatureAlgorithm(a.certificate.SignatureAlgorithm)
+	buffer := digest.(*bytes.Buffer)
 
-		data, err = rsa.SignPKCS1v15(rand.Reader, a.privateKey, ha, h.Sum(nil))
-		if err != nil {
-			return err
-		}
+	h := crypto.SHA512.New()
+	io.Copy(h, buffer)
+	//h.Write([]byte("test message"))
+	s := h.Sum(nil)
+
+	r := timestamp.Request{
+		HashAlgorithm:   crypto.SHA512,
+		HashedMessage:   s,
+		Certificates:    true,
+		Extensions:      nil,
+		ExtraExtensions: nil,
+	}
+	data, err := r.Marshal()
+	if err != nil {
+		return err
 	}
 
+	resp, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http status code wiats 200 got %d", resp.StatusCode)
+	}
+
+	var ci struct {
+		Version asn1.RawValue
+		Content asn1.RawValue
+	}
+
+<<<<<<< HEAD
 	data, err = asn1.Marshal(data)
 >>>>>>> sync commit
+=======
+	_, err = asn1.Unmarshal(body, &ci)
+>>>>>>> add timestamp signature handler
 	if err != nil {
 		return err
 	}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	sig.Contents = core.MakeHexString(string(ci.Content.FullBytes))
 =======
 	sig.Contents = core.MakeHexString(string(data))
 >>>>>>> sync commit
+=======
+	sig.Contents = core.MakeHexString(string(ci.Content.FullBytes))
+>>>>>>> add timestamp signature handler
 	return nil
 }
 

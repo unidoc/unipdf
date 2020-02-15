@@ -6,10 +6,8 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/a5i/pkcs7"
@@ -45,7 +43,7 @@ func NewEmptyEtsiPAdESDetached(signatureLen int) (model.SignatureHandler, error)
 
 // NewAEtsiPAdESDetached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
 // Both parameters may be nil for the signature validation.
-func NewAEtsiPAdESDetached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
+func NewEtsiPAdESDetached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
 	return &etsiPAdES{
 		certificate: certificate,
 		privateKey:  privateKey,
@@ -138,11 +136,6 @@ func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *
 			vri = &v
 		}
 	}
-	log.Println(vriKey)
-	//ioutil.WriteFile("./test.p7", signed, os.ModePerm)
-	signedS := base64.StdEncoding.EncodeToString(signed)
-	//signedS = "-----BEGIN PKCS7-----\n"+ signedS + "\n-----END PKCS7-----"
-	log.Println(signedS)
 
 	p7, err := pkcs7.Parse(signed)
 	if err != nil {
