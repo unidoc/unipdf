@@ -2,12 +2,16 @@ package sighandler
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/a5i/pkcs7"
@@ -93,14 +97,48 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 		return err
 	}
 
+	config := pkcs7.SignerInfoConfig{}
+	h := crypto.SHA1.New()
+	h.Write(a.certificate.Raw)
+
+	var signingCertificate struct {
+		Seq struct {
+			Seq struct {
+				Value []byte
+			}
+		}
+	}
+
+	signingCertificate.Seq.Seq.Value = h.Sum(nil)
+
+	//var signingCertificate2 struct{
+	//	Seq struct{
+	//		Seq struct{
+	//			Value []byte
+	//		}
+	//	}
+	//}
+	//
+	//signingCertificate2.Seq.Seq.Value = signingCertificate.Seq.Seq.Value
+
+	config.ExtraSignedAttributes = append(config.ExtraSignedAttributes, pkcs7.Attribute{
+		Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 12},
+		Value: signingCertificate,
+	})
+
+	//config.ExtraSignedAttributes = append(config.ExtraSignedAttributes, pkcs7.Attribute{
+	//	Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 47},
+	//	Value: signingCertificate2,
+	//})
 	// Add the signing cert and private key
-	if err := signedData.AddSigner(a.certificate, a.privateKey, pkcs7.SignerInfoConfig{}); err != nil {
+	if err := signedData.AddSigner(a.certificate, a.privateKey, config); err != nil {
 		return err
 	}
 
 	// Call Detach() is you want to remove content from the signature
 	// and generate an S/MIME detached signature
 	signedData.Detach()
+
 	// Finish() to obtain the signature bytes
 	detachedSignature, err := signedData.Finish()
 	if err != nil {
@@ -127,6 +165,8 @@ func (a *etsiPAdES) Validate(sig *model.PdfSignature, digest model.Hasher) (mode
 // ValidateEx validates PdfSignature with additional information.
 func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *model.PdfReader) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
+	signedS := base64.StdEncoding.EncodeToString(signed)
+	log.Print(signedS)
 	h := sha1.New()
 	h.Write(signed)
 	vriKey := strings.ToUpper(hex.EncodeToString(h.Sum(nil)))
@@ -175,6 +215,10 @@ func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *
 			vriOCSPs = append(vriOCSPs, res)
 		}
 	}
+
+	//for _, res := range vriOCSPs {
+	//	res.CheckSignatureFrom(p7.)
+	//}
 
 	buffer := digest.(*bytes.Buffer)
 	p7.Content = buffer.Bytes()

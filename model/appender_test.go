@@ -1508,9 +1508,11 @@ func TestValidatePAdESSignature(t *testing.T) {
 
 }
 
-func TestAppenderSignPAdESPage4(t *testing.T) {
-	// TODO move to reader_test.go
+func TestAppenderSignPAdES(t *testing.T) {
+
 	validateFile(t, testPdfSignedPDFDocument)
+
+	// PAdES baseline signature B-B level
 
 	f1, err := os.Open(testPdfFile1)
 	if err != nil {
@@ -1530,8 +1532,10 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		return
 	}
 
-	f, _ := ioutil.ReadFile(testPKS12Key)
+	f, _ := ioutil.ReadFile(testPKS12Key) //`D:\downloads\user_a_rsa.p12`)
+
 	privateKey, cert, err := pkcs12.Decode(f, testPKS12KeyPassword)
+	//cert.OCSPServer
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1562,6 +1566,14 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		core.MakeInteger(0),
 	)
 
+	appender.SetExtension("ESIC", model.Extension{
+		BaseVersion: core.Version{
+			Major: 1,
+			Minor: 7,
+		},
+		ExtensionLevel: 1,
+	})
+
 	if err = appender.Sign(1, sigField); err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1574,6 +1586,8 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		return
 	}
 	validateFile(t, outFile)
+
+	// PAdES baseline signature B-T level
 
 	f2, err := os.Open(outFile)
 	if err != nil {
@@ -1619,7 +1633,7 @@ func TestAppenderSignPAdESPage4(t *testing.T) {
 		return
 	}
 
-	outFile = tempFile("appender_sign_page_4_timestamp.pdf")
+	outFile = tempFile("appender-sign-timestamp.pdf")
 	err = appender.WriteToFile(outFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
