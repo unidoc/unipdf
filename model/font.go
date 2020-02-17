@@ -467,6 +467,59 @@ func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []run
 	return strlist
 }
 
+// RunesToCharcodeBytes maps the provided runes to charcode bytes and it
+// returns the resulting slice of bytes, along with the number of runes which
+// could not be converted. If the number of misses is 0, all runes were
+// successfully converted.
+func (font *PdfFont) RunesToCharcodeBytes(data []rune) ([]byte, int) {
+	// Create collection of encoders used for rune to charcode mapping:
+	// - if the font has a to Unicode CMap, use it first.
+	// - if the font has an encoder, use it as a fallback.
+	var encoders []textencoding.TextEncoder
+	if toUnicode := font.baseFields().toUnicodeCmap; toUnicode != nil {
+		encoders = append(encoders, textencoding.NewCMapEncoder("", nil, toUnicode))
+	}
+	if encoder := font.Encoder(); encoder != nil {
+		encoders = append(encoders, encoder)
+	}
+
+	var buffer bytes.Buffer
+	var numMisses int
+	for _, r := range data {
+		// Attempt to encode the current rune using each of the encoders,
+		// falling back to the next one in case of failure.
+		var encoded bool
+		for _, encoder := range encoders {
+			if encBytes := encoder.Encode(string(r)); len(encBytes) > 0 {
+				buffer.Write(encBytes)
+				encoded = true
+				break
+			}
+		}
+
+		if !encoded {
+			common.Log.Debug("ERROR: failed to map rune `%+q` to charcode", r)
+			numMisses++
+		}
+	}
+
+	if numMisses != 0 {
+		common.Log.Debug("ERROR: could not convert all runes to charcodes.\n"+
+			"\tnumRunes=%d numMisses=%d\n"+
+			"\tfont=%s encoders=%+v", len(data), numMisses, font, encoders)
+	}
+
+	return buffer.Bytes(), numMisses
+}
+
+// StringToCharcodeBytes maps the provided string runes to charcode bytes and
+// it returns the resulting slice of bytes, along with the number of runes
+// which could not be converted. If the number of misses is 0, all string runes
+// were successfully converted.
+func (font *PdfFont) StringToCharcodeBytes(str string) ([]byte, int) {
+	return font.RunesToCharcodeBytes([]rune(str))
+}
+
 // ToPdfObject converts the PdfFont object to its PDF representation.
 func (font *PdfFont) ToPdfObject() core.PdfObject {
 	if font.context == nil {
