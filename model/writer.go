@@ -180,6 +180,8 @@ type PdfWriter struct {
 
 	// Cache of objects traversed while resolving references.
 	traversed map[core.PdfObject]struct{}
+
+	extensions Extensions
 }
 
 // NewPdfWriter initializes a new PdfWriter.
@@ -393,6 +395,11 @@ func (w *PdfWriter) copyObjects() {
 func (w *PdfWriter) SetVersion(majorVersion, minorVersion int) {
 	w.majorVersion = majorVersion
 	w.minorVersion = minorVersion
+}
+
+// SetExtension sets the extension information.
+func (w *PdfWriter) SetExtension(name string, extension Extension) {
+	w.extensions.setExtension(name, extension)
 }
 
 // SetOCProperties sets the optional content properties.
@@ -945,6 +952,10 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if !w.extensions.isEmpty() {
+		w.catalog.Set("Extensions", w.extensions.toDict())
 	}
 
 	// Form fields.

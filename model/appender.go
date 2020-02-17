@@ -45,6 +45,8 @@ type PdfAppender struct {
 
 	prevRevisionSize int64
 	written          bool
+
+	extensions Extensions
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -520,6 +522,11 @@ func (a *PdfAppender) ReplaceAcroForm(acroForm *PdfAcroForm) {
 	a.acroForm = acroForm
 }
 
+// SetExtension sets the extension information.
+func (a *PdfAppender) SetExtension(name string, extension Extension) {
+	a.extensions.setExtension(name, extension)
+}
+
 // Write writes the Appender output to io.Writer.
 // It can only be called once and further invocations will result in an error.
 func (a *PdfAppender) Write(w io.Writer) error {
@@ -565,6 +572,21 @@ func (a *PdfAppender) Write(w io.Writer) error {
 			writer.catalog.Set(key, obj)
 		}
 	}
+
+	extensions := NewExtensions()
+
+	if !a.Reader.Extensions.isEmpty() {
+		extensions.merge(a.Reader.Extensions)
+	}
+
+	if !a.extensions.isEmpty() {
+		extensions.merge(a.extensions)
+	}
+
+	if !extensions.isEmpty() {
+		writer.extensions = extensions
+	}
+
 	if a.acroForm != nil {
 		writer.catalog.Set("AcroForm", a.acroForm.ToPdfObject())
 		a.updateObjectsDeep(a.acroForm.ToPdfObject(), nil)
