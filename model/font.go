@@ -7,7 +7,6 @@ package model
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sort"
@@ -484,7 +483,6 @@ func (font *PdfFont) RunesToCharcodeBytes(data []rune) ([]byte, int) {
 		encoders = append(encoders, encoder)
 	}
 
-	convBuf := make([]byte, 2)
 	var buffer bytes.Buffer
 	var numMisses int
 	for _, r := range data {
@@ -492,9 +490,8 @@ func (font *PdfFont) RunesToCharcodeBytes(data []rune) ([]byte, int) {
 		// falling back to the next one in case of failure.
 		var encoded bool
 		for _, encoder := range encoders {
-			if c, ok := encoder.RuneToCharcode(r); ok {
-				binary.BigEndian.PutUint16(convBuf, uint16(c))
-				buffer.Write(convBuf)
+			if encBytes := encoder.Encode(string(r)); len(encBytes) > 0 {
+				buffer.Write(encBytes)
 				encoded = true
 				break
 			}
