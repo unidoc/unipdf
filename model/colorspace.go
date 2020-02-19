@@ -2407,6 +2407,10 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	samples := img.GetSamples()
 	N := cs.Base.GetNumComponents()
 
+	if N < 1 {
+		return Image{}, fmt.Errorf("bad base colorspace NumComponents=%d", N)
+	}
+
 	var baseSamples []uint32
 	// Convert the indexed data to base color map data.
 	for i := 0; i < len(samples); i++ {
