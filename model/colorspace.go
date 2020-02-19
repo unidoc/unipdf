@@ -2415,9 +2415,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 		index := int(samples[i])
 		common.Log.Trace("Indexed: index=%d N=%d lut=%d", index, N, len(cs.colorLookup))
 		// Ensure does not go out of bounds.
-		if index*N > len(cs.colorLookup) {
+		if (index+1)*N > len(cs.colorLookup) {
 			// Clip to the end value.
-			index = len(cs.colorLookup) / N
+			index = len(cs.colorLookup)/N - 1
 			common.Log.Trace("Clipping to index: %d", index)
 			if index < 0 {
 				common.Log.Debug("ERROR: Can't clip index. Is PDF file damaged?")
