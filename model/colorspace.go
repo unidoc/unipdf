@@ -2217,8 +2217,9 @@ func (cs *PdfColorspaceSpecialPattern) ImageToRGB(img Image) (Image, error) {
 	return img, errors.New("invalid colorspace for image (pattern)")
 }
 
-// PdfColorspaceSpecialIndexed is an indexed color space is a lookup table, where the input element is an index to the
-// lookup table and the output is a color defined in the lookup table in the Base colorspace.
+// PdfColorspaceSpecialIndexed is an indexed color space is a lookup table, where the input element
+// is an index to the lookup table and the output is a color defined in the lookup table in the Base
+// colorspace.
 // [/Indexed base hival lookup]
 type PdfColorspaceSpecialIndexed struct {
 	Base   PdfColorspace
@@ -2232,9 +2233,7 @@ type PdfColorspaceSpecialIndexed struct {
 
 // NewPdfColorspaceSpecialIndexed returns a new Indexed color.
 func NewPdfColorspaceSpecialIndexed() *PdfColorspaceSpecialIndexed {
-	cs := &PdfColorspaceSpecialIndexed{}
-	cs.HiVal = 255
-	return cs
+	return &PdfColorspaceSpecialIndexed{HiVal: 255}
 }
 
 func (cs *PdfColorspaceSpecialIndexed) String() string {
@@ -2401,9 +2400,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	baseImage.Height = img.Height
 	baseImage.Width = img.Width
 	baseImage.alphaData = img.alphaData
-	baseImage.BitsPerComponent = img.BitsPerComponent
+	baseImage.BitsPerComponent = 8 // cs.Base.BitsPerComponent
 	baseImage.hasAlpha = img.hasAlpha
-	baseImage.ColorComponents = img.ColorComponents
+	baseImage.ColorComponents = cs.Base.GetNumComponents()
 
 	samples := img.GetSamples()
 	N := cs.Base.GetNumComponents()
@@ -2413,12 +2412,12 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	for i := 0; i < len(samples); i++ {
 		// Each data point represents an index location.
 		// For each entry there are N values.
-		index := int(samples[i]) * N
+		index := int(samples[i])
 		common.Log.Trace("Indexed: index=%d N=%d lut=%d", index, N, len(cs.colorLookup))
 		// Ensure does not go out of bounds.
-		if index+N-1 >= len(cs.colorLookup) {
+		if index*N > len(cs.colorLookup) {
 			// Clip to the end value.
-			index = len(cs.colorLookup) - N - 1
+			index = len(cs.colorLookup) / N
 			common.Log.Trace("Clipping to index: %d", index)
 			if index < 0 {
 				common.Log.Debug("ERROR: Can't clip index. Is PDF file damaged?")
@@ -2426,7 +2425,7 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 			}
 		}
 
-		cvals := cs.colorLookup[index : index+N]
+		cvals := cs.colorLookup[index*N : (index+1)*N]
 		common.Log.Trace("C Vals: % d", cvals)
 		for _, val := range cvals {
 			baseSamples = append(baseSamples, uint32(val))
