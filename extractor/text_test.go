@@ -567,7 +567,7 @@ var textLocTests = []textLocTest{
 			},
 			2: pageContents{
 				termBBox: map[string]model.PdfRectangle{
-					"atrium": r(414.5, 113.5, 435.5, 121.0),
+					"atrium": r(452.78, 407.76, 503.78, 416.26),
 				},
 			},
 			3: pageContents{

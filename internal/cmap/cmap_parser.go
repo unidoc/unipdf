@@ -35,6 +35,11 @@ func (cmap *CMap) parse() error {
 				if err != nil {
 					return err
 				}
+			case begincidrange:
+				err := cmap.parseCIDRange()
+				if err != nil {
+					return err
+				}
 			case beginbfchar:
 				err := cmap.parseBfchar()
 				if err != nil {
@@ -88,7 +93,6 @@ func (cmap *CMap) parse() error {
 					return err
 				}
 			}
-
 		}
 		prev = o
 	}
@@ -353,6 +357,82 @@ func (cmap *CMap) parseCodespaceRange() error {
 	if len(cmap.codespaces) == 0 {
 		common.Log.Debug("ERROR: No codespaces in cmap.")
 		return ErrBadCMap
+	}
+
+	return nil
+}
+
+// parseCIDRange parses the CID range section of a CMap.
+func (cmap *CMap) parseCIDRange() error {
+	for {
+		// Parse character code interval start.
+		o, err := cmap.parseObject()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		hexStart, ok := o.(cmapHexString)
+		if !ok {
+			if op, isOperand := o.(cmapOperand); isOperand {
+				if op.Operand == endcidrange {
+					return nil
+				}
+				return errors.New("cid interval start must be a hex string")
+			}
+		}
+		charcodeStart := hexToCharCode(hexStart)
+
+		// Parse character code interval end.
+		o, err = cmap.parseObject()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		hexEnd, ok := o.(cmapHexString)
+		if !ok {
+			return errors.New("cid interval end must be a hex string")
+		}
+		if len(hexStart.b) != len(hexEnd.b) {
+			return errors.New("unequal number of bytes in range")
+		}
+
+		charcodeEnd := hexToCharCode(hexEnd)
+		if charcodeStart > charcodeEnd {
+			common.Log.Debug("ERROR: invalid CID range. start=0x%02x end=0x%02x", charcodeStart, charcodeEnd)
+			return ErrBadCMap
+		}
+
+		// Parse interval start CID.
+		o, err = cmap.parseObject()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		cidStart, ok := o.(cmapInt)
+		if !ok {
+			return errors.New("cid start value must be an decimal number")
+		}
+		if cidStart.val < 0 {
+			return errors.New("invalid cid start value")
+		}
+
+		// Fill charcode to CID map.
+		cid := cidStart.val
+		for charcode := charcodeStart; charcode <= charcodeEnd; charcode++ {
+			cmap.codeToCID[charcode] = CharCode(cid)
+			cid++
+		}
+
+		common.Log.Trace("CID range: <0x%X> <0x%X> %d", charcodeStart, charcodeEnd, cidStart.val)
 	}
 
 	return nil
