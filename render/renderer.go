@@ -243,7 +243,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 			// Move to.
 			case "m":
 				if len(op.Params) != 2 {
-					return errRange
+					common.Log.Debug("WARN: error while processing `m` operator: %s. Output may be incorrect.", errRange)
+					return nil
 				}
 
 				xy, err := core.GetNumbersAsFloat(op.Params)
@@ -256,7 +257,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 			// Line to.
 			case "l":
 				if len(op.Params) != 2 {
-					return errRange
+					common.Log.Debug("WARN: error while processing `l` operator: %s. Output may be incorrect.", errRange)
+					return nil
 				}
 
 				xy, err := core.GetNumbersAsFloat(op.Params)
