@@ -16,6 +16,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/extractor"
 	"github.com/unidoc/unipdf/v3/model"
@@ -46,7 +48,7 @@ var knownExtrImgsHashes = map[string]string{
 	"f856baf7ffcd96003b6bda800171cb0e5680f78e.pdf": "a9505d8c22f1fd063fbe0b05aa33a5fc",
 	"201c20676fe8da14a8130852c91ed58b48cba8fb.pdf": "ffcb78d126c04be9ca2497bb43b6e964",
 	"f0152456494aa09e5cf82c4afe9ecd2fdc2e8d72.pdf": "d0e68157aaa7f9f4406807512db3e676",
-	"d95643acea1ec3f6215bda35e4cd89dbd8898c44.pdf": "1739aed3e1cbfa5e98f8d7fef17a614b",
+	"d95643acea1ec3f6215bda35e4cd89dbd8898c44.pdf": "b4c7c2ae9671af69f71e9965e9cf67e8",
 	"110d793aeaa7accbe40b5ab9db249d5a103d3b50.pdf": "a57e347edddfd3f6032b85553b3537cd",
 	"d15a0aa289524619a971188372dd05fb712f1b2c.pdf": "380907273bb8ea64943d986491d827ec",
 	"932e0dfa52c20ffe83b8178fb98296a0dab177d1.pdf": "b44d8b073f99ac3db28d7951e3c7d970",
@@ -93,7 +95,7 @@ func TestExtractImages(t *testing.T) {
 
 		knownHash, has := knownExtrImgsHashes[file.Name()]
 		if has {
-			require.Equal(t, knownHash, hash)
+			assert.Equal(t, knownHash, hash)
 			matchcount++
 		} else {
 			t.Logf("%s - hash: %s not in the list of known hashes", file.Name(), hash)
