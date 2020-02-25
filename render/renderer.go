@@ -1050,10 +1050,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 
 			// Begin a marked-content sequence.
 			case "BMC", "BDC":
-				textState.Reset()
 			// End a marked-content sequence.
 			case "EMC":
-				textState.Reset()
 			default:
 				common.Log.Debug("ERROR: unsupported operand: %s", op.Operand)
 			}
