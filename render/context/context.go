@@ -60,6 +60,10 @@ type Context interface {
 	// current point.
 	CubicTo(x1, y1, x2, y2, x3, y3 float64)
 
+	// QuadraticTo adds a quadratic bezier curve to the current path starting
+	// at the current point.
+	QuadraticTo(x1, y1, x2, y2 float64)
+
 	// NewSubPath starts a new subpath within the current path.
 	NewSubPath()
 

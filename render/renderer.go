@@ -90,7 +90,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 
 				m := transform.NewMatrix(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
-				common.Log.Debug("Graphics state matrix: %+v\n", m)
+				common.Log.Debug("Graphics state matrix: %+v", m)
 				ctx.SetMatrix(ctx.Matrix().Mult(m))
 
 				// TODO: Take angle into account for line widths (8.4.3.2 Line Width).
@@ -281,7 +281,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
 				ctx.CubicTo(cbp[0], cbp[1], cbp[2], cbp[3], cbp[4], cbp[5])
 			// Cubic bezier.
-			case "v":
+			case "v", "y":
 				if len(op.Params) != 4 {
 					return errRange
 				}
@@ -292,7 +292,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
-				ctx.CubicTo(0, 0, cbp[0], cbp[1], cbp[2], cbp[3])
+				ctx.QuadraticTo(cbp[0], cbp[1], cbp[2], cbp[3])
 			// Close current subpath.
 			case "h":
 				ctx.ClosePath()
