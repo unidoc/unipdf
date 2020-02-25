@@ -2400,7 +2400,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	baseImage.Height = img.Height
 	baseImage.Width = img.Width
 	baseImage.alphaData = img.alphaData
-	baseImage.BitsPerComponent = 8 // cs.Base.BitsPerComponent
+	// TODO(peterwilliams97): Add support for other BitsPerComponent values.
+	// See https://github.com/unidoc/unipdf/issues/260
+	baseImage.BitsPerComponent = 8
 	baseImage.hasAlpha = img.hasAlpha
 	baseImage.ColorComponents = cs.Base.GetNumComponents()
 
