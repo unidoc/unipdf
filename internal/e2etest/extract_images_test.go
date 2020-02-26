@@ -54,6 +54,7 @@ var knownExtrImgsHashes = map[string]string{
 	"932e0dfa52c20ffe83b8178fb98296a0dab177d1.pdf": "b44d8b073f99ac3db28d7951e3c7d970",
 	"60a8c28da5c23081834adac4170755904d8c4166.pdf": "9167f381d5eed7a2e5fd10eca567c519",
 	"e51296be2615b9389482c9c16505286619b6cf36.pdf": "ec6e1f6297dd1cbda6ccba39e0c7d3d2",
+	"d3dd65300785dcf2114663397e475376bac88e75.pdf": "ea848ed888176368e697f577934f0452", // From unipdf#258.
 }
 
 func TestExtractImages(t *testing.T) {
