@@ -13,6 +13,7 @@ import (
 type IntSlice []int
 
 // NewIntSlice creates new integer slice.
+//noinspection GoUnusedExportedFunction
 func NewIntSlice(i int) *IntSlice {
 	sl := IntSlice(make([]int, i))
 	return &sl
@@ -23,7 +24,7 @@ func (i *IntSlice) Add(v int) error {
 	if i == nil {
 		return errors.Error("IntSlice.Add", "slice not defined")
 	}
-	(*i) = append((*i), v)
+	*i = append(*i, v)
 	return nil
 }
 
@@ -43,7 +44,7 @@ func (i IntSlice) Get(index int) (int, error) {
 	return i[index], nil
 }
 
-// Size returns the size of the intslice.
+// Size returns the size of the int slice.
 func (i IntSlice) Size() int {
 	return len(i)
 }

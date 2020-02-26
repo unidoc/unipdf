@@ -207,7 +207,7 @@ func (h *HalftoneRegion) computeGrayScalePlanes(grayScalePlanes []*bitmap.Bitmap
 					if err != nil {
 						return nil, err
 					}
-					shifted := (bv >> uint(7-i&7))
+					shifted := bv >> uint(7-i&7)
 					and1 := shifted & 1
 					multiplier := 1 << uint(j)
 					v := int(and1) * multiplier
@@ -414,7 +414,7 @@ func (h *HalftoneRegion) shiftAndFill(value int) int {
 		bitPosition := int(math.Log(float64(findMSB(value))) / math.Log(2))
 		l := 31 - bitPosition
 		for i := 1; i < l; i++ {
-			value |= (1 << uint(31-i))
+			value |= 1 << uint(31-i)
 		}
 	}
 	return value

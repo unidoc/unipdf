@@ -28,10 +28,12 @@ const (
 	JB2Generic JBIG2CompressionType = iota
 	// JB2SymbolCorrelation is the JBIG2 compression type that uses symbol dictionary and text region encoding procedure
 	// with the correlation classification.
+	// NOT IMPLEMENTED YET.
 	JB2SymbolCorrelation
 	// JB2SymbolRankHaus is the JBIG2 compression type that uses symbol dictionary and text region encoding procedure
 	// with the rank hausdorff classification. RankHausMode uses the rank Hausdorff method that classifies the input images.
 	// It is more robust, more susceptible to confusing components that should be in different classes.
+	// NOT IMPLEMENTED YET.
 	JB2SymbolRankHaus
 )
 
@@ -45,7 +47,7 @@ JBIG2Encoder/Decoder
 // provided images (best used document scans) in multiple way. By default it uses single page generic
 // encoder. It allows to store lossless data as a single segment. In order to obtain better compression results
 // the encoder allows to encode the input in a lossy or lossless way with a component (symbol) mode. It divides the image into components.
-// Then checks if any component is 'simillar' to the others and maps them together. The symbol classes are stored
+// Then checks if any component is 'similar' to the others and maps them together. The symbol classes are stored
 // in the dictionary. Then the encoder creates text regions which uses the related symbol classes to fill it's space.
 // The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
 // matches to single class, thus the compression is better, but the result might become lossy.
@@ -62,7 +64,7 @@ type JBIG2Encoder struct {
 	// Document defines the JBIG2 Encoded document
 
 	// DefaultPageSettings are the settings parameters used by the jbig2 encoder.
-	DefaultPageSettings JBIG2PageSettings
+	DefaultPageSettings JBIG2EncoderSettings
 }
 
 // DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
@@ -96,6 +98,7 @@ func (enc *JBIG2Encoder) DecodeImages(encoded []byte) ([]image.Image, error) {
 	}
 
 	// decode all images
+	//noinspection GoPreferNilSlice
 	images := []image.Image{}
 	var img image.Image
 	for i := 1; i <= pageNumber; i++ {
@@ -164,7 +167,7 @@ func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 
 func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
 	const processName = "encodeImage"
-	// conver the input into jbig2 image
+	// convert the input into jbig2 image
 	jimg, err := GoImageToJBIG2(i, 0.5)
 	if err != nil {
 		return nil, errors.Wrap(err, processName, "convert input image to jbig2 img")
@@ -245,6 +248,7 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			globalsStream, ok := globals.(*PdfObjectStream)
 			if !ok {
 				err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
+				//noinspection GoNilness
 				common.Log.Debug("ERROR: %s", err.Error())
 				return nil, err
 			}
@@ -280,7 +284,7 @@ type JBIG2Document struct {
 
 // AddPageImage adds the page with the image 'img' to the document 'd' in order to encode it jbig2 document.
 // The 'settings' defines what encoding type should be used by the encoder.
-func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2PageSettings) (err error) {
+func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2EncoderSettings) (err error) {
 	const processName = "JBIG2Document.AddPageImage"
 	if d == nil {
 		return errors.Error(processName, "JBIG2Document is nil")
@@ -418,7 +422,7 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 
 func bwToJBIG2Image(i *image.Gray) *JBIG2Image {
 	bounds := i.Bounds()
-	// compute the rowstride - number of bytes in the row.
+	// compute the rowStride - number of bytes in the row.
 	bm := bitmap.New(bounds.Dx(), bounds.Dy())
 	ji := &JBIG2Image{Height: bounds.Dy(), Width: bounds.Dx(), HasPadding: true}
 	// allocate the byte slice data
@@ -442,52 +446,46 @@ func bwToJBIG2Image(i *image.Gray) *JBIG2Image {
 	return ji
 }
 
-/**
-
-JBIG2Page
-
-*/
-
-// JBIG2Page defines the JBIG2 page which contains the segment definitions.
-type JBIG2Page struct {
-	Settings JBIG2PageSettings
-}
-
-// JBIG2PageSettings contains the parameters and settings used by the JBIG2Encoder
-type JBIG2PageSettings struct {
-	// ResolutionX defines the 'x' axis input image resolution - used for single page encoding.
-	ResolutionX int
-	// ResolutionY defines the 'y' axis input image resolution - used for single page encoding.
-	ResolutionY int
-	// Threshold defines the threshold of the image corelation for
-	// non generic compression.
-	// Best results in range [0.7 - 0.98] - the less the better the compression would be
-	// but the more lossy.
-	// Default value: 0.95
-	Threshold float64
-	// Compression defines the compression type used for encoding the page.
+// JBIG2EncoderSettings contains the parameters and settings used by the JBIG2Encoder.
+// Current version works only on JB2Generic compression.
+type JBIG2EncoderSettings struct {
+	// Compression is the setting that defines the compression type used for encoding the page.
 	Compression JBIG2CompressionType
 	// DuplicatedLinesRemoval code generic region in a way such that if the lines are duplicated the encoder
 	// doesn't store it twice.
 	DuplicatedLinesRemoval bool
 	// DefaultPixelValue is the bit value initial for every pixel in the page.
 	DefaultPixelValue uint8
+	// ResolutionX optional setting that defines the 'x' axis input image resolution - used for single page encoding.
+	ResolutionX int
+	// ResolutionY optional setting that defines the 'y' axis input image resolution - used for single page encoding.
+	ResolutionY int
+	// Threshold defines the threshold of the image correlation for
+	// non Generic compression.
+	// User only for JB2SymbolCorrelation and JB2SymbolRankHaus methods.
+	// Best results in range [0.7 - 0.98] - the less the better the compression would be
+	// but the more lossy.
+	// Default value: 0.95
+	Threshold float64
 }
 
 // Validate validates the page settings for the JBIG2 encoder.
-func (s JBIG2PageSettings) Validate() error {
+func (s JBIG2EncoderSettings) Validate() error {
 	const processName = "validateEncoder"
 	if s.Threshold < 0 || s.Threshold > 1.0 {
 		return errors.Errorf(processName, "provided threshold value: '%v' must be in range [0.0, 1.0]", s.Threshold)
 	}
 	if s.ResolutionX < 0 {
-		return errors.Errorf(processName, "provided x resoulution: '%d' must be positive value", s.ResolutionX)
+		return errors.Errorf(processName, "provided x resolution: '%d' must be positive or zero value", s.ResolutionX)
 	}
 	if s.ResolutionY < 0 {
-		return errors.Errorf(processName, "provided y resoulution: '%d' must be positive value", s.ResolutionY)
+		return errors.Errorf(processName, "provided y resolution: '%d' must be positive or zero value", s.ResolutionY)
 	}
 	if s.DefaultPixelValue != 0 && s.DefaultPixelValue != 1 {
 		return errors.Errorf(processName, "default pixel value: '%d' must be a value for the bit: {0,1}", s.DefaultPixelValue)
+	}
+	if s.Compression != JB2Generic {
+		return errors.Errorf(processName, "provided compression is not implemented yet")
 	}
 	return nil
 }
@@ -499,7 +497,7 @@ private functions
 */
 
 func autoThresholdTriangle(histogram [256]int) uint8 {
-	var min, dmax, max, min2 int
+	var min, dMax, max, min2 int
 	// find the min and the max of the histogram
 	for i := 0; i < len(histogram); i++ {
 		if histogram[i] > 0 {
@@ -521,9 +519,9 @@ func autoThresholdTriangle(histogram [256]int) uint8 {
 	}
 
 	for i := 0; i < 256; i++ {
-		if histogram[i] > dmax {
+		if histogram[i] > dMax {
 			max = i
-			dmax = histogram[i]
+			dMax = histogram[i]
 		}
 	}
 
@@ -595,7 +593,7 @@ func gray16ImageToBlackWhite(img *image.Gray16, th uint8) *image.Gray {
 	for x := 0; x < bounds.Dx(); x++ {
 		for y := 0; y < bounds.Dy(); y++ {
 			pix := img.Gray16At(x, y)
-			d.SetGray(x, y, color.Gray{blackOrWhite(uint8(pix.Y/256), th)})
+			d.SetGray(x, y, color.Gray{Y: blackOrWhite(uint8(pix.Y/256), th)})
 		}
 	}
 	return d
@@ -614,7 +612,7 @@ func grayImageToBlackWhite(img *image.Gray, th uint8) *image.Gray {
 	for x := 0; x < bounds.Dx(); x++ {
 		for y := 0; y < bounds.Dy(); y++ {
 			c := img.GrayAt(x, y)
-			d.SetGray(x, y, color.Gray{blackOrWhite(c.Y, th)})
+			d.SetGray(x, y, color.Gray{Y: blackOrWhite(c.Y, th)})
 		}
 	}
 	return d
@@ -681,7 +679,7 @@ func rgbImageToBlackWhite(i image.Image, th uint8) *image.Gray {
 			// get the grayscale color value
 			cg = gray.GrayAt(x, y)
 			// set the black/white pixel at 'x', 'y'
-			gray.SetGray(x, y, color.Gray{blackOrWhite(cg.Y, th)})
+			gray.SetGray(x, y, color.Gray{Y: blackOrWhite(cg.Y, th)})
 		}
 	}
 	return gray

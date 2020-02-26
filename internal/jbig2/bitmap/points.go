@@ -25,7 +25,7 @@ func (p *Points) Add(pt *Points) error {
 	if pt == nil {
 		return errors.Error(processName, "argument points not defined")
 	}
-	*p = append(*p, (*pt)...)
+	*p = append(*p, *pt...)
 	return nil
 }
 

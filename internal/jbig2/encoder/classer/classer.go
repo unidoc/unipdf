@@ -207,7 +207,6 @@ func (c *Classer) getULCorners(s *bitmap.Bitmap, boxa *bitmap.Boxes) error {
 	}
 
 	n := len(*boxa)
-	sumTab := bitmap.MakePixelSumTab8()
 	var (
 		index, iClass, idelX, idelY int
 		x1, y1, x2, y2              float32
@@ -251,7 +250,7 @@ func (c *Classer) getULCorners(s *bitmap.Bitmap, boxa *bitmap.Boxes) error {
 			return errors.Wrap(err, processName, "UndilatedTemplates.Get(iClass)")
 		}
 
-		pt, err = finalAlignmentPositioning(s, x, y, idelX, idelY, t, sumTab)
+		pt, err = finalAlignmentPositioning(s, x, y, idelX, idelY, t)
 		if err != nil {
 			return errors.Wrap(err, processName, "")
 		}

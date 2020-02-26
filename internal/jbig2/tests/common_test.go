@@ -11,7 +11,10 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	_ "image/gif"
 	"image/jpeg"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"os"
 	"path/filepath"
@@ -26,11 +29,6 @@ import (
 )
 
 // register basic image drivers - gif, jpeg, png
-import (
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
-)
 
 const (
 	// EnvJBIG2Directory is the environment variable that should contain directory path

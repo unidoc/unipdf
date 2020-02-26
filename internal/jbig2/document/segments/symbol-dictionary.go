@@ -231,7 +231,6 @@ func (s *SymbolDictionary) encodeSymbols(w writer.BinaryWriter) (n int, err erro
 		return 0, errors.Wrap(err, processName, "initial")
 	}
 	mapping := map[*bitmap.Bitmap]int{}
-	// TODO: check if this doesn't brake up global idx definitions
 	for i, bm := range symbols.Values {
 		mapping[bm] = i
 	}
@@ -276,7 +275,7 @@ func (s *SymbolDictionary) encodeSymbols(w writer.BinaryWriter) (n int, err erro
 				}
 				// increase current width class
 				wc += deltaWidth
-				if err = ectx.EncodeBitmap(bm, width, height, false); err != nil {
+				if err = ectx.EncodeBitmap(bm, false); err != nil {
 					return 0, errors.Wrapf(err, processName, "Height: %d Width: %d", height, width)
 				}
 				idx := mapping[bm]
@@ -806,7 +805,7 @@ func (s *SymbolDictionary) decodeThroughTextRegion(symbolWidth, heightClassHeigh
 	}
 
 	s.textRegion.setParameters(s.arithmeticDecoder, s.IsHuffmanEncoded, true, symbolWidth,
-		heightClassHeight, numberOfRefinementAggregationInstances, 1, (s.numberOfImportedSymbols + s.numberOfDecodedSymbols),
+		heightClassHeight, numberOfRefinementAggregationInstances, 1, s.numberOfImportedSymbols+s.numberOfDecodedSymbols,
 		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, s.SdrTemplate, s.SdrATX, s.SdrATY, s.sbSymbols, s.sbSymCodeLen)
 	return s.addSymbol(s.textRegion)
 }

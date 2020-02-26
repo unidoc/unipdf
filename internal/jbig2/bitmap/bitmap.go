@@ -598,7 +598,6 @@ func (b *Bitmap) clipRectangle(box, boxClipped *image.Rectangle) (clipped *Bitma
 		return nil, errors.Error(processName, "provided nil 'box'")
 	}
 	w, h := b.Width, b.Height
-	// TODO: fix the ClipBoxRectangle 'Max + Min'
 	clippedTemp, err := ClipBoxToRectangle(box, w, h)
 	if err != nil {
 		common.Log.Warning("'box' doesn't overlap bitmap 'b': %v", err)
@@ -979,7 +978,7 @@ func (b *Bitmap) setAll() error {
 }
 
 func (b *Bitmap) setBit(index int) {
-	b.Data[(index >> 3)] |= (0x80 >> uint(index&7))
+	b.Data[(index >> 3)] |= 0x80 >> uint(index&7)
 }
 
 func (b *Bitmap) setPadBits(val int) {
@@ -1045,7 +1044,7 @@ func (b *Bitmap) setEightPartlyBytes(index, fullBytesNumber int, eb uint64) (err
 	for i := 1; i <= fullBytesNumber; i++ {
 		// eb >> 7 * 8 = 56
 		// 4 + 7 - 7
-		shift = (64 - i*8)
+		shift = 64 - i*8
 		temp = byte(eb >> shift & 0xff)
 		common.Log.Trace("temp: %08b, index: %d, idx: %d, fullBytesNumber: %d, shift: %d", temp, index, index+i-1, fullBytesNumber, shift)
 		if err = b.SetByte(index+i-1, temp); err != nil {

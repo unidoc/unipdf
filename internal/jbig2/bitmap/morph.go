@@ -253,7 +253,6 @@ func closeBrick(d, s *Bitmap, hSize, vSize int) (*Bitmap, error) {
 }
 
 func closeSafeBrick(d, s *Bitmap, hSize, vSize int) (*Bitmap, error) {
-	// TODO: leptonica/src/morph.c:949
 	const processName = "closeSafeBrick"
 	if s == nil {
 		return nil, errors.Error(processName, "source is nil")
@@ -446,7 +445,6 @@ func erode(d, s *Bitmap, sel *Selection) (*Bitmap, error) {
 }
 
 func erodeBrick(d, s *Bitmap, hSize, vSize int) (*Bitmap, error) {
-	// TODO: leptonica/src/morph.c:748
 	const processName = "erodeBrick"
 	if s == nil {
 		return nil, errors.Error(processName, "source not defined")

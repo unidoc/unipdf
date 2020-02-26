@@ -30,8 +30,8 @@ type Encoder struct {
 	// number of bytes used in outbuf
 	outbufUsed int
 	context    *codingContext
-	intctx     [13]*codingContext
-	iaidctx    *codingContext
+	intCtx     [13]*codingContext
+	iaidCtx    *codingContext
 }
 
 // New creates new initialized arithmetic encoder.
@@ -51,24 +51,24 @@ func (e *Encoder) Init() {
 	e.b = 0
 	e.outbufUsed = 0
 	e.outbuf = make([]byte, outputBufferSize)
-	for i := 0; i < len(e.intctx); i++ {
-		e.intctx[i] = newContext(512)
+	for i := 0; i < len(e.intCtx); i++ {
+		e.intCtx[i] = newContext(512)
 	}
-	e.iaidctx = nil
+	e.iaidCtx = nil
 }
 
 // DataSize returns the size of encoded data
 func (e *Encoder) DataSize() int {
-	return e.datasize()
+	return e.dataSize()
 }
 
 const tpgdCTX = 0x9b25
 
 // EncodeBitmap encodes packed data used for the 1bpp packed format image.
-func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemoval bool) error {
+func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, duplicateLineRemoval bool) error {
 	common.Log.Trace("Encode Bitmap [%dx%d], %s", bm.Width, bm.Height, bm)
 	var (
-		ltp, sltp                       uint8
+		ltp, sLtp                       uint8
 		c1, c2, c3                      uint16
 		b1, b2, b3                      byte
 		x, thisLineIndex, lastLineIndex int
@@ -90,21 +90,21 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 				// get this line slice data
 				thisLineIndex = y * bm.RowStride
 				thisLine = bm.Data[thisLineIndex : thisLineIndex+bm.RowStride]
-				//get last line slice data
+				// get last line slice data
 				lastLineIndex = (y - 1) * bm.RowStride
 				lastLine = bm.Data[lastLineIndex : lastLineIndex+bm.RowStride]
 				if bytes.Equal(thisLine, lastLine) {
-					sltp = ltp ^ 1
+					sLtp = ltp ^ 1
 					ltp = 1
 				} else {
-					sltp = ltp
+					sLtp = ltp
 					ltp = 0
 				}
 			}
 		}
 
 		if duplicateLineRemoval {
-			if err := e.encodeBit(e.context, tpgdCTX, sltp); err != nil {
+			if err := e.encodeBit(e.context, tpgdCTX, sLtp); err != nil {
 				return err
 			}
 			if ltp != 0 {
@@ -123,10 +123,10 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 		c3 = 0
 
 		for x = 0; x < bm.Width; x++ {
-			tval := uint32(c1<<11 | c2<<4 | c3)
+			tVal := uint32(c1<<11 | c2<<4 | c3)
 			v := (b3 & 0x80) >> 7
 
-			err := e.encodeBit(e.context, tval, v)
+			err := e.encodeBit(e.context, tVal, v)
 			if err != nil {
 				return err
 			}
@@ -179,7 +179,7 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 
 // EncodeIAID encodes the integer ID 'value'. The symbol code length is the binary length of the value.
 func (e *Encoder) EncodeIAID(symbolCodeLength, value int) (err error) {
-	common.Log.Trace("Encode IAID. SymbolCodeLenght: '%d', Value: '%d'", symbolCodeLength, value)
+	common.Log.Trace("Encode IAID. SymbolCodeLength: '%d', Value: '%d'", symbolCodeLength, value)
 	if err = e.encodeIAID(symbolCodeLength, value); err != nil {
 		return errors.Wrap(err, "EncodeIAID", "")
 	}
@@ -219,30 +219,30 @@ func (e *Encoder) Flush() {
 // Refine encodes the refinement of an exemplar to a bitmap.
 // It encodes the differences between the template and the target image.
 // The values 'ox, oy' are limited to [-1, 0, 1].
-func (e *Encoder) Refine(itempl, itarget *bitmap.Bitmap, ox, oy int) error {
-	for y := 0; y < itarget.Height; y++ {
+func (e *Encoder) Refine(iTemp, iTarget *bitmap.Bitmap, ox, oy int) error {
+	for y := 0; y < iTarget.Height; y++ {
 		var x int
-		temply := y + oy
+		templateY := y + oy
 		var (
 			c1, c2, c3, c4, c5 uint16
 			b1, b2, b3, b4, b5 byte
 		)
-		if temply >= 1 && (temply-1) < itempl.Height {
-			b1 = itempl.Data[(temply-1)*itempl.RowStride]
+		if templateY >= 1 && (templateY-1) < iTemp.Height {
+			b1 = iTemp.Data[(templateY-1)*iTemp.RowStride]
 		}
 
-		if temply >= 0 && temply < itempl.Height {
-			b2 = itempl.Data[temply*itempl.RowStride]
+		if templateY >= 0 && templateY < iTemp.Height {
+			b2 = iTemp.Data[templateY*iTemp.RowStride]
 		}
 
-		if temply >= -1 && temply+1 < itempl.Height {
-			b3 = itempl.Data[(temply+1)*itempl.RowStride]
+		if templateY >= -1 && templateY+1 < iTemp.Height {
+			b3 = iTemp.Data[(templateY+1)*iTemp.RowStride]
 		}
 
 		if y >= 1 {
-			b4 = itarget.Data[(y-1)*itarget.RowStride]
+			b4 = iTarget.Data[(y-1)*iTarget.RowStride]
 		}
-		b5 = itarget.Data[y*itarget.RowStride]
+		b5 = iTarget.Data[y*iTarget.RowStride]
 
 		shiftOffset := uint(6 + ox)
 		c1 = uint16(b1 >> shiftOffset)
@@ -258,11 +258,11 @@ func (e *Encoder) Refine(itempl, itarget *bitmap.Bitmap, ox, oy int) error {
 
 		b4 <<= 2
 
-		for x = 0; x < itarget.Width; x++ {
-			tval := (c1 << 10) | (c2 << 7) | (c3 << 4) | (c4 << 1) | c5
+		for x = 0; x < iTarget.Width; x++ {
+			tVal := (c1 << 10) | (c2 << 7) | (c3 << 4) | (c4 << 1) | c5
 			v := b5 >> 7
 
-			err := e.encodeBit(e.context, uint32(tval), v)
+			err := e.encodeBit(e.context, uint32(tVal), v)
 			if err != nil {
 				return err
 			}
@@ -282,14 +282,14 @@ func (e *Encoder) Refine(itempl, itarget *bitmap.Bitmap, ox, oy int) error {
 			wordNo := x/8 + 1
 			if m == 5+ox {
 				b1, b2, b3 = 0, 0, 0
-				if wordNo < itempl.RowStride && temply >= 1 && (temply-1) < itempl.Height {
-					b1 = itempl.Data[(temply-1)*itempl.RowStride+wordNo]
+				if wordNo < iTemp.RowStride && templateY >= 1 && (templateY-1) < iTemp.Height {
+					b1 = iTemp.Data[(templateY-1)*iTemp.RowStride+wordNo]
 				}
-				if wordNo < itempl.RowStride && temply >= 0 && temply < itempl.Height {
-					b2 = itempl.Data[temply*itempl.RowStride+wordNo]
+				if wordNo < iTemp.RowStride && templateY >= 0 && templateY < iTemp.Height {
+					b2 = iTemp.Data[templateY*iTemp.RowStride+wordNo]
 				}
-				if wordNo < itempl.RowStride && temply >= -1 && (temply+1) < itempl.Height {
-					b3 = itempl.Data[(temply+1)*itempl.RowStride+wordNo]
+				if wordNo < iTemp.RowStride && templateY >= -1 && (templateY+1) < iTemp.Height {
+					b3 = iTemp.Data[(templateY+1)*iTemp.RowStride+wordNo]
 				}
 			} else {
 				b1 <<= 1
@@ -299,8 +299,8 @@ func (e *Encoder) Refine(itempl, itarget *bitmap.Bitmap, ox, oy int) error {
 
 			if m == 5 && y >= 1 {
 				b4 = 0
-				if wordNo < itarget.RowStride {
-					b4 = itarget.Data[(y-1)*itarget.RowStride+wordNo]
+				if wordNo < iTarget.RowStride {
+					b4 = iTarget.Data[(y-1)*iTarget.RowStride+wordNo]
 				}
 			} else {
 				b4 <<= 1
@@ -308,8 +308,8 @@ func (e *Encoder) Refine(itempl, itarget *bitmap.Bitmap, ox, oy int) error {
 
 			if m == 7 {
 				b5 = 0
-				if wordNo < itarget.RowStride {
-					b5 = itarget.Data[y*itarget.RowStride+wordNo]
+				if wordNo < iTarget.RowStride {
+					b5 = iTarget.Data[y*iTarget.RowStride+wordNo]
 				}
 			} else {
 				b5 <<= 1
@@ -331,7 +331,7 @@ func (e *Encoder) Reset() {
 	e.ct = 12
 	e.bp = -1
 	e.b = 0
-	e.iaidctx = nil
+	e.iaidCtx = nil
 	e.context = newContext(maxCtx)
 }
 
@@ -360,24 +360,24 @@ func (e *Encoder) WriteTo(w io.Writer) (int64, error) {
 	return total, nil
 }
 
-func (e *Encoder) byteout() {
+func (e *Encoder) byteOut() {
 	if e.b == 0xff {
-		e.rblock()
+		e.rBlock()
 		return
 	}
 
 	if e.c < 0x8000000 {
-		e.lblock()
+		e.lBlock()
 		return
 	}
 	e.b++
 
 	if e.b != 0xff {
-		e.lblock()
+		e.lBlock()
 		return
 	}
 	e.c &= 0x7ffffff
-	e.rblock()
+	e.rBlock()
 }
 
 // code0 as defined in Figure E.5.
@@ -431,9 +431,9 @@ func (e *Encoder) codeLPS(ctx *codingContext, ctxNum uint32, qe uint16, i byte) 
 	e.renormalize()
 }
 
-// returns the number of ybtes of output in the given context
-func (e *Encoder) datasize() int {
-	return int(outputBufferSize*len(e.outputChunks) + e.outbufUsed)
+// returns the number of bytes of output in the given context
+func (e *Encoder) dataSize() int {
+	return outputBufferSize*len(e.outputChunks) + e.outbufUsed
 }
 
 // emit a byte from the compressor by appending to the current
@@ -476,7 +476,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 		return errors.Errorf(processName, "arithmetic encoder - invalid integer value: '%d'", value)
 	}
 
-	ctx := e.intctx[proc]
+	ctx := e.intCtx[proc]
 	prev := uint32(1)
 	var i int
 
@@ -490,6 +490,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	}
 	value -= int(intEncRange[i].delta)
 
+	//noinspection GoRedundantConversion
 	data := uint8(intEncRange[i].data)
 	for j := uint8(0); j < intEncRange[i].bits; j++ {
 		v := data & 1
@@ -506,7 +507,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	}
 
 	// move the data value
-	value <<= (32 - intEncRange[i].intBits)
+	value <<= 32 - intEncRange[i].intBits
 	for j := uint8(0); j < intEncRange[i].intBits; j++ {
 		v := uint8((value & 0x80000000) >> 31)
 		if err := e.encodeBit(ctx, prev, v); err != nil {
@@ -522,20 +523,21 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	return nil
 }
 
-func (e *Encoder) encodeIAID(symcodelen, value int) error {
-	if e.iaidctx == nil {
-		e.iaidctx = newContext(1 << uint(symcodelen))
+func (e *Encoder) encodeIAID(symCodeLen, value int) error {
+	if e.iaidCtx == nil {
+		e.iaidCtx = newContext(1 << uint(symCodeLen))
 	}
 
-	mask := uint32(1<<uint32(symcodelen+1)) - 1
-	value <<= uint(32 - symcodelen)
+	mask := uint32(1<<uint32(symCodeLen+1)) - 1
+	//noinspection GoRedundantConversion
+	value <<= uint(32 - symCodeLen)
 	prev := uint32(1)
 
-	for i := 0; i < symcodelen; i++ {
-		tval := prev & mask
+	for i := 0; i < symCodeLen; i++ {
+		tVal := prev & mask
 		v := uint8((value & 0x80000000) >> 31)
 
-		if err := e.encodeBit(e.iaidctx, tval, v); err != nil {
+		if err := e.encodeBit(e.iaidCtx, tVal, v); err != nil {
 			return err
 		}
 		prev = (prev << 1) | uint32(v)
@@ -545,8 +547,7 @@ func (e *Encoder) encodeIAID(symcodelen, value int) error {
 }
 
 func (e *Encoder) encodeOOB(proc Class) error {
-	// NOTE: jbig2arith.cc:370
-	ctx := e.intctx[proc]
+	ctx := e.intCtx[proc]
 
 	err := e.encodeBit(ctx, 1, 1)
 	if err != nil {
@@ -575,10 +576,10 @@ func (e *Encoder) flush() {
 	e.setBits()
 
 	e.c <<= e.ct
-	e.byteout()
+	e.byteOut()
 
 	e.c <<= e.ct
-	e.byteout()
+	e.byteOut()
 	e.emit()
 
 	if e.b != 0xff {
@@ -593,7 +594,7 @@ func (e *Encoder) flush() {
 	e.emit()
 }
 
-func (e *Encoder) lblock() {
+func (e *Encoder) lBlock() {
 	if e.bp >= 0 {
 		e.emit()
 	}
@@ -603,7 +604,7 @@ func (e *Encoder) lblock() {
 	e.ct = 8
 }
 
-func (e *Encoder) rblock() {
+func (e *Encoder) rBlock() {
 	if e.bp >= 0 {
 		e.emit()
 	}
@@ -619,7 +620,7 @@ func (e *Encoder) renormalize() {
 		e.c <<= 1
 		e.ct--
 		if e.ct == 0 {
-			e.byteout()
+			e.byteOut()
 		}
 		if (e.a & 0x8000) != 0 {
 			break

@@ -16,7 +16,6 @@ import (
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -682,71 +681,71 @@ func TestEncodeDocument(t *testing.T) {
 		})
 	})
 
-	t.Run("Classified", func(t *testing.T) {
-		t.Run("PDFMode", func(t *testing.T) {
-			scales := []int{2, 4}
-			for _, scale := range scales {
-				t.Run(fmt.Sprintf("SinglePageX%d", scale), func(t *testing.T) {
-					p := bitmap.TstWordBitmap(t, scale)
-					common.Log.Debug("Page: \n%s", p)
-					d := InitEncodeDocument(false)
-					err := d.AddClassifiedPage(p, classer.Correlation)
-					require.NoError(t, err)
-
-					// Encode the page
-					data, err := d.Encode()
-					require.NoError(t, err)
-
-					dc, err := DecodeDocument(reader.New(data))
-					require.NoError(t, err)
-
-					// there should be a single page
-					assert.Equal(t, uint32(1), dc.NumberOfPages)
-					// there should also be globals
-					if assert.NotNil(t, dc.GlobalSegments) {
-						// the globals should contain a single segment - symbol dictionary
-						assert.Len(t, dc.GlobalSegments.Segments, 1)
-						sd, err := dc.GlobalSegments.GetSymbolDictionary()
-						require.NoError(t, err)
-						assert.Equal(t, segments.TSymbolDictionary, sd.Type)
-						assert.Equal(t, 0, sd.PageAssociation)
-					}
-
-					// get first page
-					p2, err := dc.GetPage(1)
-					require.NoError(t, err)
-
-					page, ok := p2.(*Page)
-					require.True(t, ok)
-
-					// this page should contain 2 segments
-					if assert.Len(t, page.Segments, 2) {
-						for i, seg := range page.Segments {
-							switch i {
-							case 0:
-								// the first should be page info
-								assert.Equal(t, uint32(1), seg.SegmentNumber)
-								assert.Equal(t, segments.TPageInformation, seg.Type)
-							case 1:
-								// the second should be text region
-								assert.Equal(t, uint32(2), seg.SegmentNumber)
-								assert.Equal(t, segments.TImmediateTextRegion, seg.Type)
-								// it should also relates to the first segment
-
-								if assert.Len(t, seg.RTSegments, 1) {
-									assert.Equal(t, seg.RTSNumbers[0], 0)
-								}
-							}
-						}
-					}
-					res, err := page.GetBitmap()
-					require.NoError(t, err)
-
-					assert.True(t, res.Equals(p), res.String())
-				})
-			}
-		})
-	})
+	// t.Run("Classified", func(t *testing.T) {
+	// 	t.Run("PDFMode", func(t *testing.T) {
+	// 		scales := []int{2, 4}
+	// 		for _, scale := range scales {
+	// 			t.Run(fmt.Sprintf("SinglePageX%d", scale), func(t *testing.T) {
+	// 				p := bitmap.TstWordBitmap(t, scale)
+	// 				common.Log.Debug("Page: \n%s", p)
+	// 				d := InitEncodeDocument(false)
+	// 				err := d.AddClassifiedPage(p, classer.Correlation)
+	// 				require.NoError(t, err)
+	//
+	// 				// Encode the page
+	// 				data, err := d.Encode()
+	// 				require.NoError(t, err)
+	//
+	// 				dc, err := DecodeDocument(reader.New(data))
+	// 				require.NoError(t, err)
+	//
+	// 				// there should be a single page
+	// 				assert.Equal(t, uint32(1), dc.NumberOfPages)
+	// 				// there should also be globals
+	// 				if assert.NotNil(t, dc.GlobalSegments) {
+	// 					// the globals should contain a single segment - symbol dictionary
+	// 					assert.Len(t, dc.GlobalSegments.Segments, 1)
+	// 					sd, err := dc.GlobalSegments.GetSymbolDictionary()
+	// 					require.NoError(t, err)
+	// 					assert.Equal(t, segments.TSymbolDictionary, sd.Type)
+	// 					assert.Equal(t, 0, sd.PageAssociation)
+	// 				}
+	//
+	// 				// get first page
+	// 				p2, err := dc.GetPage(1)
+	// 				require.NoError(t, err)
+	//
+	// 				page, ok := p2.(*Page)
+	// 				require.True(t, ok)
+	//
+	// 				// this page should contain 2 segments
+	// 				if assert.Len(t, page.Segments, 2) {
+	// 					for i, seg := range page.Segments {
+	// 						switch i {
+	// 						case 0:
+	// 							// the first should be page info
+	// 							assert.Equal(t, uint32(1), seg.SegmentNumber)
+	// 							assert.Equal(t, segments.TPageInformation, seg.Type)
+	// 						case 1:
+	// 							// the second should be text region
+	// 							assert.Equal(t, uint32(2), seg.SegmentNumber)
+	// 							assert.Equal(t, segments.TImmediateTextRegion, seg.Type)
+	// 							// it should also relates to the first segment
+	//
+	// 							if assert.Len(t, seg.RTSegments, 1) {
+	// 								assert.Equal(t, seg.RTSNumbers[0], 0)
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 				res, err := page.GetBitmap()
+	// 				require.NoError(t, err)
+	//
+	// 				assert.True(t, res.Equals(p), res.String())
+	// 			})
+	// 		}
+	// 	})
+	// })
 }
 
 func getFrame(t *testing.T) *bitmap.Bitmap {

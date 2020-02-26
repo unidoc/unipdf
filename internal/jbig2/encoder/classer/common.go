@@ -35,19 +35,9 @@ const (
 	MaxCompHeight = 120
 )
 
-// AccumulateComposites ...
-// [in] 	'classes' 	one slice of bitmaps for each class.
-// [out]	'samples' 	number of samples used to build each composite.
-// [out]	'centroids'	centroids of bordered composites.
-func AccumulateComposites(classes [][]*bitmap.Bitmap, samples *[]float64, centroids *[]bitmap.Point) ([]*bitmap.Bitmap, error) {
-	// TODO: jbclass.c:1656
-	return nil, nil
-}
-
-// finalAligmentPositioning gets the best match position for the provided arguments.
-// NOTE: jbclass.c:2519
-func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitmap.Bitmap, sumtab []int) (pt image.Point, err error) {
-	const processName = "finalAligmentPositioning"
+// finalAlignmentPositioning gets the best match position for the provided arguments.
+func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitmap.Bitmap) (pt image.Point, err error) {
+	const processName = "finalAlignmentPositioning"
 	if s == nil {
 		return pt, errors.Error(processName, "source not provided")
 	}
@@ -58,7 +48,7 @@ func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitm
 	w, h := t.Width, t.Height
 	bx, by := x-iDelX-JbAddedPixels, y-iDelY-JbAddedPixels
 
-	common.Log.Debug("x: '%d', y: '%d', w: '%d', h: '%d', bx: '%d', by: '%d'", x, y, w, h, bx, by)
+	common.Log.Trace("x: '%d', y: '%d', w: '%d', h: '%d', bx: '%d', by: '%d'", x, y, w, h, bx, by)
 	box, err := bitmap.Rect(bx, by, w, h)
 	if err != nil {
 		return pt, errors.Wrap(err, processName, "")
@@ -101,7 +91,7 @@ const (
 	Correlation
 )
 
-// TwoByTwoWalk ...
+// TwoByTwoWalk is the slice of values for classified encoding.
 var TwoByTwoWalk = []int{
 	0, 0,
 	0, 1,

@@ -20,7 +20,7 @@ const (
 	// IADT used to decode the T coordinate of the second and subsequent
 	// symbol instances in a strip.
 	IADT
-	// IADW used to decode the difference in witdh between two symbols in
+	// IADW used to decode the difference in width between two symbols in
 	// a height class
 	IADW
 	// IAEX used to decode export flags.

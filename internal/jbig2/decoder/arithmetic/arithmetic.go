@@ -89,7 +89,7 @@ func (d *Decoder) DecodeBit(stats *DecoderStats) (int, error) {
 			return 0, err
 		}
 	} else {
-		d.c -= (uint64(qeValue) << 16)
+		d.c -= uint64(qeValue) << 16
 
 		if (d.a & 0x8000) == 0 {
 			bit = d.mpsExchange(stats, icx)
@@ -232,7 +232,7 @@ func (d *Decoder) init() error {
 	}
 
 	d.b = b
-	d.c = (uint64(b) << 16)
+	d.c = uint64(b) << 16
 
 	if err = d.readByte(); err != nil {
 		return err

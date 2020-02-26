@@ -125,7 +125,7 @@ func reduceRankBinary2Level1(s, d *Bitmap, level int, tab []byte, wpl int) (err 
 			word2 = binary.BigEndian.Uint32(bytes2)
 
 			word2 |= word1
-			word2 |= (word2 << 1)
+			word2 |= word2 << 1
 
 			word2 &= 0xaaaaaaaa
 			word1 = word2 | (word2 << 7)
@@ -185,9 +185,9 @@ func reduceRankBinary2Level2(s, d *Bitmap, level int, tab []byte, wpl int) (err 
 			word2 = binary.BigEndian.Uint32(bytes2)
 
 			word3 = word1 & word2
-			word3 |= (word3 << 1)
+			word3 |= word3 << 1
 			word4 = word1 | word2
-			word4 &= (word4 << 1)
+			word4 &= word4 << 1
 			word2 = word3 | word4
 
 			word2 &= 0xaaaaaaaa
@@ -250,9 +250,9 @@ func reduceRankBinary2Level3(s, d *Bitmap, level int, tab []byte, wpl int) (err 
 			word2 = binary.BigEndian.Uint32(bytes2)
 
 			word3 = word1 & word2
-			word3 |= (word3 << 1)
+			word3 |= word3 << 1
 			word4 = word1 | word2
-			word4 &= (word4 << 1)
+			word4 &= word4 << 1
 			word2 = word3 & word4
 
 			word2 &= 0xaaaaaaaa
@@ -315,7 +315,7 @@ func reduceRankBinary2Level4(s, d *Bitmap, level int, tab []byte, wpl int) (err 
 			word2 = binary.BigEndian.Uint32(bytes2)
 
 			word2 &= word1
-			word2 &= (word2 << 1)
+			word2 &= word2 << 1
 
 			word2 &= 0xaaaaaaaa
 			word1 = word2 | (word2 << 7)

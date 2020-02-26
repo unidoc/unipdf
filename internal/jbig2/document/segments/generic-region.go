@@ -119,7 +119,7 @@ func (g *GenericRegion) Encode(w writer.BinaryWriter) (n int, err error) {
 
 	// encode the region using arithmetic encoder
 	ctx := enc.New()
-	if err = ctx.EncodeBitmap(g.Bitmap, g.Bitmap.Width, g.Bitmap.Height, g.IsTPGDon); err != nil {
+	if err = ctx.EncodeBitmap(g.Bitmap, g.IsTPGDon); err != nil {
 		return n, errors.Wrap(err, processName, "")
 	}
 	ctx.Final()
@@ -469,7 +469,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 				if err != nil {
 					return errors.Wrap(err, processName, "line > 1")
 				}
-				line2 |= (int(temp) << 6)
+				line2 |= int(temp) << 6
 			} else {
 				line2 |= 0
 			}
@@ -565,7 +565,7 @@ func (g *GenericRegion) decodeTemplate0b(line, width, paddedWidth int, byteIndex
 				if err != nil {
 					return errors.Wrap(err, processName, "line > 1")
 				}
-				line2 |= (int(temp) << 6)
+				line2 |= int(temp) << 6
 			}
 		}
 
@@ -661,7 +661,7 @@ func (g *GenericRegion) decodeTemplate1(line, width, paddedWidth int, byteIndex,
 				if err != nil {
 					return errors.Wrap(err, processName, "line > 1")
 				}
-				line2 |= (int(temp) << 5)
+				line2 |= int(temp) << 5
 			}
 		}
 
@@ -754,7 +754,7 @@ func (g *GenericRegion) decodeTemplate2(lineNumber, width, paddedWidth int, byte
 				if err != nil {
 					return errors.Wrap(err, processName, "lineNumber > 1")
 				}
-				line2 |= (int(temp) << 4)
+				line2 |= int(temp) << 4
 			}
 		}
 

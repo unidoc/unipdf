@@ -15,11 +15,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 )
 
 // TestImageEncodeDecodeJBIG2 tests the encode and decode process for the JBIG2 encoder.
+//noinspection ALL
 func TestImageEncodeDecodeJBIG2(t *testing.T) {
 	dirName := os.Getenv(EnvImageDirectory)
 	if dirName == "" {
@@ -49,6 +51,7 @@ func TestImageEncodeDecodeJBIG2(t *testing.T) {
 		// read the file
 		f, err := getFile(dirName, fileName)
 		require.NoError(t, err)
+		//noinspection ALL
 		defer f.Close()
 
 		// try to read the file as image.
@@ -78,7 +81,7 @@ func TestImageEncodeDecodeJBIG2(t *testing.T) {
 			// create the encoder
 			e := &core.JBIG2Encoder{}
 			e.FileMode = true
-			err = e.AddPageImage(jimg, core.JBIG2PageSettings{DuplicatedLinesRemoval: true})
+			err = e.AddPageImage(jimg, core.JBIG2EncoderSettings{DuplicatedLinesRemoval: true})
 			require.NoError(t, err)
 
 			data, err := e.Encode()

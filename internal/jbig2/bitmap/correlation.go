@@ -311,7 +311,7 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 
 			for x = 1; x < rowBytes2; x++ {
 				byte1 = bm1.Data[row1Index+x]
-				byte2 = (bm2.Data[row2Index+x]>>idelX | bm2.Data[row2Index+x-1]<<(8-idelX))
+				byte2 = bm2.Data[row2Index+x]>>idelX | bm2.Data[row2Index+x-1]<<(8-idelX)
 				andByte = byte1 & byte2
 				count += tab[andByte]
 			}

@@ -112,7 +112,7 @@ func seedfillBinaryLow4(s, m *Bitmap, h, wpl int) (err error) {
 				if err != nil {
 					return errors.Wrap(err, processName, "j > 0")
 				}
-				bt |= (btLeft << 7)
+				bt |= btLeft << 7
 			}
 			bt &= mask
 
@@ -158,7 +158,7 @@ func seedfillBinaryLow4(s, m *Bitmap, h, wpl int) (err error) {
 				if btRight, err = s.GetByte(lineS + j + 1); err != nil {
 					return errors.Wrap(err, processName, "reverse j < wpl - 1")
 				}
-				bt |= (btRight >> 7)
+				bt |= btRight >> 7
 			}
 			bt &= mask
 
@@ -206,7 +206,7 @@ func seedfillBinaryLow8(s, m *Bitmap, h, wpl int) (err error) {
 				if btAbove, err = s.GetByte(lineS - s.RowStride + j); err != nil {
 					return errors.Wrap(err, processName, "i > 0 byte")
 				}
-				bt |= (btAbove | (btAbove << 1) | (btAbove >> 1))
+				bt |= btAbove | (btAbove << 1) | (btAbove >> 1)
 				if j > 0 {
 					if temp, err = s.GetByte(lineS - s.RowStride + j - 1); err != nil {
 						return errors.Wrap(err, processName, "i > 0 && j > 0 byte")
@@ -263,7 +263,7 @@ func seedfillBinaryLow8(s, m *Bitmap, h, wpl int) (err error) {
 				if btBelow, err = s.GetByte(lineS + s.RowStride + j); err != nil {
 					return errors.Wrap(err, processName, "i < h - 1 -> get source byte")
 				}
-				bt |= (btBelow | (btBelow << 1) | btBelow>>1)
+				bt |= btBelow | (btBelow << 1) | btBelow>>1
 				if j > 0 {
 					if temp, err = s.GetByte(lineS + s.RowStride + j - 1); err != nil {
 						return errors.Wrap(err, processName, "i < h-1 & j > 0 -> get source byte")

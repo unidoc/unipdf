@@ -158,13 +158,13 @@ func (c *Classer) classifyCorrelation(boxa *bitmap.Boxes, pixas *bitmap.Bitmaps,
 				if err != nil {
 					return errors.Wrap(err, processName, "debugCorrelationScore")
 				}
-				count = int(math.Sqrt(float64(score) * float64(area1) * float64(area2)))
-				testCount = int(math.Sqrt(float64(testScore) * float64(area1) * float64(area2)))
-				if (score >= float64(threshold)) != (testScore >= float64(threshold)) {
+				count = int(math.Sqrt(score * float64(area1) * float64(area2)))
+				testCount = int(math.Sqrt(testScore * float64(area1) * float64(area2)))
+				if (score >= threshold) != (testScore >= threshold) {
 					return errors.Errorf(processName, "debug Correlation score mismatch - %d(%0.4f, %v) vs %d(%0.4f, %v) %0.4f", count, score, score >= float64(threshold), testCount, testScore, testScore >= float64(threshold), score-testScore)
 				}
 
-				if score >= float64(threshold) != overThreshold {
+				if score >= threshold != overThreshold {
 					return errors.Errorf(processName, "debug Correlation score Mismatch between correlation / threshold. Comparison: %0.4f(%0.4f, %d) >= %0.4f(%0.4f) vs %v",
 						score, score*float64(area1)*float64(area2), count, threshold, float32(threshold)*float32(area1)*float32(area2), overThreshold)
 				}
@@ -184,7 +184,7 @@ func (c *Classer) classifyCorrelation(boxa *bitmap.Boxes, pixas *bitmap.Bitmaps,
 						return errors.Wrap(err, processName, "KeepClassInstances - i")
 					}
 					if bitmaps, err = c.ClassInstances.GetBitmaps(iclass); err != nil {
-						return errors.Wrap(err, processName, "KeepClassInstances - iclass")
+						return errors.Wrap(err, processName, "KeepClassInstances - iClass")
 					}
 					bitmaps.AddBitmap(bm)
 					if box, err = boxa.Get(i); err != nil {

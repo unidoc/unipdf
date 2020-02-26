@@ -65,7 +65,7 @@ func bitPattern(v, l int32) string {
 	result := make([]rune, l)
 
 	for i := int32(1); i <= l; i++ {
-		temp = (v >> uint(l-i) & 1)
+		temp = v >> uint(l-i) & 1
 		if temp != 0 {
 			result[i-1] = '1'
 		} else {

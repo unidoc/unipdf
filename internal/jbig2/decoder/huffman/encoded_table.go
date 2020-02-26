@@ -86,7 +86,7 @@ func (e *EncodedTable) parseTable() error {
 		rangeLen = int32(temp)
 
 		codeTable = append(codeTable, NewCode(prefLen, rangeLen, rangeLow, false))
-		curRangeLow += (1 << uint(rangeLen))
+		curRangeLow += 1 << uint(rangeLen)
 	}
 
 	// Annex B.2 6)

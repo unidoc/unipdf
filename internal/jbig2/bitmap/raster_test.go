@@ -69,7 +69,7 @@ func TestRasterOperation(t *testing.T) {
 						}
 					case PixNotDst:
 						for i, bt := range dest.Data {
-							assert.Equal(t, (^tocheck[i]), bt)
+							assert.Equal(t, ^tocheck[i], bt)
 						}
 					}
 				})
@@ -366,7 +366,7 @@ func TestRasterOperation(t *testing.T) {
 							case PixSrc:
 								shouldBe = src.Data[i]
 							case PixNotSrc:
-								shouldBe = (^src.Data[i])
+								shouldBe = ^src.Data[i]
 							case PixSrcOrDst:
 								shouldBe = src.Data[i] | destDataCopy[i]
 							case PixSrcAndDst:

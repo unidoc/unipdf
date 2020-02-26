@@ -1710,7 +1710,7 @@ var (
 )
 
 func combinePartial(d, s, m byte) byte {
-	return ((d & ^(m)) | (s & m))
+	return (d & ^(m)) | (s & m)
 }
 
 type shift int

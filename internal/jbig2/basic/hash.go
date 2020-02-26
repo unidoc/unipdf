@@ -6,7 +6,7 @@
 package basic
 
 // IntsMap is a wrapper over the map[uint64][]int.
-// The 'key' colissions are stored under subsequent slice positions.
+// The 'key' collisions are stored under subsequent slice positions.
 type IntsMap map[uint64][]int
 
 // Add adds the 'value' to the ints map at the 'key'.
@@ -35,7 +35,7 @@ func (i IntsMap) GetSlice(key uint64) ([]int, bool) {
 	return v, true
 }
 
-// Delete delets the 'key' records.
+// Delete delete the 'key' records.
 func (i IntsMap) Delete(key uint64) {
 	delete(i, key)
 }

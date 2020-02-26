@@ -711,10 +711,10 @@ func (g *GenericRefinementRegion) decodeTemplate(
 			return err
 		}
 
-		c1 = (((c1 << 1) | 0x01&int16(w1>>7)) & 0x07)
-		c2 = (((c2 << 1) | 0x01&int16(w2>>7)) & 0x07)
-		c3 = (((c3 << 1) | 0x01&int16(w3>>7)) & 0x07)
-		c4 = (((c4 << 1) | 0x01&int16(w4>>7)) & 0x07)
+		c1 = ((c1 << 1) | 0x01&int16(w1>>7)) & 0x07
+		c2 = ((c2 << 1) | 0x01&int16(w2>>7)) & 0x07
+		c3 = ((c3 << 1) | 0x01&int16(w3>>7)) & 0x07
+		c4 = ((c4 << 1) | 0x01&int16(w4>>7)) & 0x07
 		c5 = int16(bit)
 
 		if (x-int(g.ReferenceDX))%8 == 5 {
