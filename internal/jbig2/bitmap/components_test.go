@@ -1288,6 +1288,78 @@ func TestGetComponents(t *testing.T) {
 		_, _, err := b.GetComponents(ComponentConn, 12, 8)
 		assert.Error(t, err)
 	})
+	// TODO: Get a bitmap with the symbols on the edge. Check if
+
+	t.Run("NoEmptyFrame", func(t *testing.T) {
+		// In this scenario the bitmap is filled with the letters
+		// directly from the left edge to the right edge.
+		bm := TstWordBitmap(t, 2)
+
+		sm, _, err := bm.GetComponents(ComponentConn, 100, 100)
+		require.NoError(t, err)
+
+		for i, symbol := range sm.Values {
+			switch i {
+			case 0:
+				// letter D
+				d := TstDSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 1:
+				// letter O
+				d := TstOSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 2:
+				// letter I
+				d := TstISymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 3:
+				// letter T
+				d := TstTSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 4:
+				// letter N
+				d := TstNSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 5:
+				// letter O
+				d := TstOSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 6:
+				// letter W
+				d := TstWSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 7:
+				// letter O
+				d := TstOSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 8:
+				// letter R
+				d := TstRSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 9:
+				// letter N
+				d := TstNSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 10:
+				// letter E
+				d := TstESymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 11:
+				// letter V
+				d := TstVSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 12:
+				// letter E
+				d := TstESymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			case 13:
+				// letter R
+				d := TstRSymbol(t, 2)
+				assert.Equal(t, d.Data, symbol.Data)
+			}
+		}
+
+	})
 }
 
 // TestWordMaskByDilation tests the WordMaskByDilation function.

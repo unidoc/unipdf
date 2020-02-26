@@ -107,3 +107,105 @@ func TestSelectBitmapsBySize(t *testing.T) {
 		})
 	})
 }
+
+// TestBitmaps_SortByHeight tests the SortByHeight function for the bitmaps 'b'
+func TestBitmaps_SortByHeight(t *testing.T) {
+	bms := &Bitmaps{}
+	bms.AddBitmap(New(10, 20))
+	bms.AddBitmap(New(5, 18))
+	bms.AddBitmap(New(2, 30))
+	bms.AddBitmap(New(40, 20))
+
+	bms.SortByHeight()
+	assert.Equal(t, 18, bms.Values[0].Height)
+	assert.Equal(t, 20, bms.Values[1].Height)
+	assert.Equal(t, 20, bms.Values[2].Height)
+	assert.Equal(t, 30, bms.Values[3].Height)
+}
+
+// TestBitmaps_SortByWidth tests the SortByHeight function for the bitmaps 'b'
+func TestBitmaps_SortByWidth(t *testing.T) {
+	bms := &Bitmaps{}
+	bms.AddBitmap(New(10, 20))
+	bms.AddBitmap(New(5, 18))
+	bms.AddBitmap(New(2, 30))
+	bms.AddBitmap(New(40, 20))
+
+	bms.SortByWidth()
+	assert.Equal(t, 2, bms.Values[0].Width)
+	assert.Equal(t, 5, bms.Values[1].Width)
+	assert.Equal(t, 10, bms.Values[2].Width)
+	assert.Equal(t, 40, bms.Values[3].Width)
+}
+
+func TestBitmaps_GroupByHeight(t *testing.T) {
+	bms := &Bitmaps{}
+	bms.AddBitmap(New(10, 20))
+	bms.AddBitmap(New(5, 18))
+	bms.AddBitmap(New(2, 30))
+	bms.AddBitmap(New(40, 20))
+	bms.AddBitmap(New(2, 20))
+	bms.AddBitmap(New(3, 20))
+	bms.AddBitmap(New(3, 18))
+
+	ba, err := bms.GroupByHeight()
+	require.NoError(t, err)
+
+	require.Len(t, ba.Values, 3)
+	for i, bmst := range ba.Values {
+		var height, length int
+		switch i {
+		case 0:
+			height = 18
+			length = 2
+		case 1:
+			height = 20
+			length = 4
+		case 2:
+			height = 30
+			length = 1
+		}
+		assert.Len(t, bmst.Values, length)
+		assert.Equal(t, height, bmst.Values[0].Height)
+	}
+}
+
+func TestBitmaps_GroupByWidth(t *testing.T) {
+	bms := &Bitmaps{}
+	bms.AddBitmap(New(10, 20))
+	bms.AddBitmap(New(5, 18))
+	bms.AddBitmap(New(2, 30))
+	bms.AddBitmap(New(40, 20))
+	bms.AddBitmap(New(2, 20))
+	bms.AddBitmap(New(3, 20))
+	bms.AddBitmap(New(3, 18))
+
+	// 2 x 2, 2 x 3, 1 x 5, 1 x 10, 1 x 40
+	// there should be 5 groups.
+	ba, err := bms.GroupByWidth()
+	require.NoError(t, err)
+
+	require.Len(t, ba.Values, 5)
+	for i, bmst := range ba.Values {
+		var width, length int
+		switch i {
+		case 0:
+			width = 2
+			length = 2
+		case 1:
+			width = 3
+			length = 2
+		case 2:
+			width = 5
+			length = 1
+		case 3:
+			width = 10
+			length = 1
+		case 4:
+			width = 40
+			length = 1
+		}
+		assert.Len(t, bmst.Values, length)
+		assert.Equal(t, width, bmst.Values[0].Width)
+	}
+}

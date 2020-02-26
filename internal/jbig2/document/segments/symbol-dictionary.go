@@ -6,6 +6,7 @@
 package segments
 
 import (
+	"encoding/binary"
 	"fmt"
 	"image"
 	"math"
@@ -16,7 +17,10 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
+	encoder "github.com/unidoc/unipdf/v3/internal/jbig2/encoder/arithmetic"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // SymbolDictionary is the model for the JBIG2 Symbol Dictionary Segment - see 7.4.2.
@@ -24,30 +28,30 @@ type SymbolDictionary struct {
 	r reader.StreamReader
 
 	// Symbol Dictionary flags, 7.4.2.1.1
-	sdrTemplate                 int8
-	sdTemplate                  int8
+	SdrTemplate                 int8
+	SdTemplate                  int8
 	isCodingContextRetained     bool
 	isCodingContextUsed         bool
-	sdHuffAggInstanceSelection  int8
-	sdHuffBMSizeSelection       int8
-	sdHuffDecodeWidthSelection  int8
-	sdHuffDecodeHeightSelection int8
-	useRefinementAggregation    bool
-	isHuffmanEncoded            bool
+	SdHuffAggInstanceSelection  bool
+	SdHuffBMSizeSelection       int8
+	SdHuffDecodeWidthSelection  int8
+	SdHuffDecodeHeightSelection int8
+	UseRefinementAggregation    bool
+	IsHuffmanEncoded            bool
 
 	// Symbol Dictionary AT flags 7.4.2.1.2
-	sdATX []int8
-	sdATY []int8
+	SdATX []int8
+	SdATY []int8
 
 	// Symbol Dictionary refinement AT flags 7.4.2.1.3
-	sdrATX []int8
-	sdrATY []int8
+	SdrATX []int8
+	SdrATY []int8
 
 	// Number of exported symbols, 7.4.2.1.4
-	numberOfExportedSymbols uint32
+	NumberOfExportedSymbols uint32
 
 	// Number of new symbols 7.4.2.1.5
-	numberOfNewSymbols uint32
+	NumberOfNewSymbols uint32
 
 	// Further parameters
 	Header                  *Header
@@ -83,16 +87,409 @@ type SymbolDictionary struct {
 
 	cxIAID       *arithmetic.DecoderStats
 	sbSymCodeLen int8
+
+	// encoder parameters
+	symbols         *bitmap.Bitmaps
+	symbolList      []int
+	symbolMap       map[int]int
+	unborderSymbols bool
 }
 
-// NumberOfExportedSymbols defines how many symbols are being exported by this SymbolDictionary.
-func (s *SymbolDictionary) NumberOfExportedSymbols() uint32 {
-	return s.numberOfExportedSymbols
+// InitEncode initializes the symbol dictionary for the encode method.
+func (s *SymbolDictionary) InitEncode(symbols *bitmap.Bitmaps, symbolList []int, symbolMap map[int]int, unborderSymbols bool) error {
+	const processName = "SymbolDictionary.InitEncode"
+	s.SdATX = []int8{3, -3, 2, -2}
+	s.SdATY = []int8{-1, -1, -2, -2}
+	s.symbols = symbols
+	s.symbolList = make([]int, len(symbolList))
+	copy(s.symbolList, symbolList)
+	// the symbols and symbollist should have the same length
+	if len(s.symbolList) != s.symbols.Size() {
+		return errors.Error(processName, "symbols and symbolList of different size")
+	}
+	s.NumberOfNewSymbols = uint32(symbols.Size())
+	s.NumberOfExportedSymbols = uint32(symbols.Size())
+	s.symbolMap = symbolMap
+	s.unborderSymbols = unborderSymbols
+	return nil
 }
 
-// NumberOfNewSymbols returns the amount of new symbols defined by the Symbol Dictionary.
-func (s *SymbolDictionary) NumberOfNewSymbols() uint32 {
-	return s.numberOfNewSymbols
+// BorderSize is the constant border size for symbols.
+const BorderSize = 6
+
+// Encode encodes the symbol dictionary structure into 'w' writer. Returns
+// number of bytes written and the error if occurs.
+func (s *SymbolDictionary) Encode(w writer.BinaryWriter) (n int, err error) {
+	const processName = "SymbolDictionary.Encode"
+	if s == nil {
+		return 0, errors.Error(processName, "symbol dictionary not defined")
+	}
+	// Flags
+	if n, err = s.encodeFlags(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+
+	// AT Flags
+	tmp, err := s.encodeATFlags(w)
+	if err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += tmp
+
+	// Refinement AT Flags
+	if tmp, err = s.encodeRefinementATFlags(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += tmp
+
+	// SDNUMEXSYM SDNUMNEWSYM
+	if tmp, err = s.encodeNumSyms(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += tmp
+
+	// encode all the symbols set for given symbol dictionary
+	if tmp, err = s.encodeSymbols(w); err != nil {
+		return n, errors.Wrap(err, processName, "")
+	}
+	n += tmp
+
+	return n, nil
+}
+
+func (s *SymbolDictionary) encodeATFlags(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeATFlags"
+	if s.IsHuffmanEncoded || s.SdTemplate != 0 {
+		return 0, nil
+	}
+	// if sdTemplate is 0 then there are eight bytes of at flags
+	max := 4
+	if s.SdTemplate != 0 {
+		// otherwise there is only sdAtX0 and sdAtY0
+		max = 1
+	}
+	for i := 0; i < max; i++ {
+		if err = w.WriteByte(byte(s.SdATX[i])); err != nil {
+			return n, errors.Wrapf(err, processName, "SdATX[%d]", i)
+		}
+		n++
+
+		if err = w.WriteByte(byte(s.SdATY[i])); err != nil {
+			return n, errors.Wrapf(err, processName, "SdATY[%d]", i)
+		}
+		n++
+	}
+	return n, nil
+}
+
+func (s *SymbolDictionary) encodeRefinementATFlags(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeRefinementATFlags"
+	if !s.UseRefinementAggregation || s.SdrTemplate != 0 {
+		// no refinement aggregation AT flags
+		return 0, nil
+	}
+	for i := 0; i < 2; i++ {
+		if err = w.WriteByte(byte(s.SdrATX[i])); err != nil {
+			return n, errors.Wrapf(err, processName, "SdrATX[%d]", i)
+		}
+		n++
+
+		if err = w.WriteByte(byte(s.SdrATY[i])); err != nil {
+			return n, errors.Wrapf(err, processName, "SdrATY[%d]", i)
+		}
+		n++
+	}
+	return n, nil
+}
+
+func (s *SymbolDictionary) encodeNumSyms(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeNumSyms"
+
+	// SDNUMEXSYMS
+	temp := make([]byte, 4)
+	binary.BigEndian.PutUint32(temp, s.NumberOfExportedSymbols)
+	if n, err = w.Write(temp); err != nil {
+		return n, errors.Wrap(err, processName, "exported symbols")
+	}
+
+	// SDNUMNEWSYMS
+	binary.BigEndian.PutUint32(temp, s.NumberOfNewSymbols)
+	tmp, err := w.Write(temp)
+	if err != nil {
+		return n, errors.Wrap(err, processName, "new symbols")
+	}
+	return n + tmp, nil
+}
+
+func (s *SymbolDictionary) encodeSymbols(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeSymbol"
+	ectx := encoder.New()
+	ectx.Init()
+
+	symbols, err := s.symbols.SelectByIndexes(s.symbolList)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "initial")
+	}
+	mapping := map[*bitmap.Bitmap]int{}
+	// TODO: check if this doesn't brake up global idx definitions
+	for i, bm := range symbols.Values {
+		mapping[bm] = i
+	}
+
+	// sort symbols by height.
+	symbols.SortByHeight()
+
+	// heightClassIndexes and symbol numbers
+	var hcHeight, number int
+
+	// group the symbols by height.
+	symHeights, err := symbols.GroupByHeight()
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "")
+	}
+
+	// iterate over the height classes.
+	for _, heightSymbols := range symHeights.Values {
+		height := heightSymbols.Values[0].Height
+		deltaHeight := height - hcHeight
+		if err = ectx.EncodeInteger(encoder.IADH, deltaHeight); err != nil {
+			return 0, errors.Wrapf(err, processName, "IADH for dh: '%d'", deltaHeight)
+		}
+		hcHeight = height
+		// group the symbols by width now
+		symWidths, err := heightSymbols.GroupByWidth()
+		if err != nil {
+			return 0, errors.Wrapf(err, processName, "height: '%d'", height)
+		}
+
+		// define the width class
+		var wc int
+		for _, widthSymbols := range symWidths.Values {
+			// iterate over all symbols with given width
+			for _, bm := range widthSymbols.Values {
+				// get the width of the first symbol.
+				width := bm.Width
+				// encode the width difference
+				deltaWidth := width - wc
+				if err = ectx.EncodeInteger(encoder.IADW, deltaWidth); err != nil {
+					return 0, errors.Wrapf(err, processName, "IADW for dw: '%d'", deltaWidth)
+				}
+				// increase current width class
+				wc += deltaWidth
+				if err = ectx.EncodeBitmap(bm, width, height, false); err != nil {
+					return 0, errors.Wrapf(err, processName, "Height: %d Width: %d", height, width)
+				}
+				idx := mapping[bm]
+				s.symbolMap[idx] = number
+				number++
+			}
+		}
+		if err = ectx.EncodeOOB(encoder.IADW); err != nil {
+			return 0, errors.Wrap(err, processName, "IADW")
+		}
+	}
+
+	// // iterate over all symbols in the list
+	// for i := 0; i < len(s.symbolList); {
+	// 	height, err := s.bmHeight(i)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	common.Log.Debug("Symbol:'%d' Height:'%d'", i, height)
+	// 	// clear the height class indexes.
+	// 	hc = []int{s.symbolList[i]}
+	// 	var j int
+	// 	for j = i + 1; j < len(s.symbolList); j++ {
+	// 		tempHeight, err := s.bmHeight(s.symbolList[j])
+	// 		if err != nil {
+	// 			return 0, err
+	// 		}
+	// 		if tempHeight != height {
+	// 			break
+	// 		}
+	// 		hc = append(hc, s.symbolList[j])
+	//
+	// 	}
+	// 	// all the symbols from i to j-1 are within a single height class.
+	//
+	// 	// sort the results by the width
+	// 	sort.Slice(hc, intSliceSorter(hc, s.symbols.WidthSorter()))
+	//
+	// 	deltaHeight := height - hcHeight
+	// 	if err = ectx.EncodeInteger(encoder.IADH, deltaHeight); err != nil {
+	// 		return 0, errors.Wrapf(err, processName, "IADH for dh: '%d'", deltaHeight)
+	// 	}
+	// 	hcHeight = height
+	// 	var symWidth int
+	// 	for _, symNumber := range hc {
+	// 		width, err := s.bmWidth(symNumber)
+	// 		if err != nil {
+	// 			return 0, err
+	// 		}
+	// 		common.Log.Trace("Width: '%d'", width)
+	// 		deltaWidth := width - symWidth
+	// 		symWidth += deltaWidth
+	// 		if err = ectx.EncodeInteger(encoder.IADW, deltaWidth); err != nil {
+	// 			return 0, errors.Wrapf(err, processName, "IADW for dw: '%d'", deltaWidth)
+	// 		}
+	// 		unbordered, err := s.getSymbol(symNumber)
+	// 		if err != nil {
+	// 			return 0, errors.Wrap(err, processName, "getting unbordered symbol")
+	// 		}
+	// 		// clear the border if required
+	// 		if s.unborderSymbols {
+	// 			unbordered, err = unbordered.RemoveBorder(BorderSize)
+	// 			if err != nil {
+	// 				return 0, errors.Wrapf(err, processName, "symbol: '%d'", symNumber)
+	// 			}
+	// 		}
+	// 		unbordered.SetPadBits(0)
+	// 		// encode the symbol into arithmetic encoder context
+	// 		if err = ectx.EncodeBitmap(unbordered, unbordered.Width, unbordered.Height, false); err != nil {
+	// 			return 0, errors.Wrapf(err, processName, "symbol: '%d'", symNumber)
+	// 		}
+	// 		s.symbolMap[symNumber] = number
+	// 		number++
+	// 	}
+	// 	// encode OOB
+	// 	if err = ectx.EncodeOOB(encoder.IADW); err != nil {
+	// 		return 0, errors.Wrap(err, processName, "")
+	// 	}
+	// 	i = j
+	// }
+
+	// encode runlength of exported symbols
+	if err = ectx.EncodeInteger(encoder.IAEX, 0); err != nil {
+		return 0, errors.Wrap(err, processName, "exported symbols")
+	}
+	if err = ectx.EncodeInteger(encoder.IAEX, len(s.symbolList)); err != nil {
+		return 0, errors.Wrap(err, processName, "number of symbols")
+	}
+	ectx.Final()
+	temp, err := ectx.WriteTo(w)
+	if err != nil {
+		return 0, errors.Wrap(err, processName, "writing encoder context to 'w' writer")
+	}
+	return int(temp), nil
+}
+
+func (s *SymbolDictionary) getSymbol(i int) (*bitmap.Bitmap, error) {
+	const processName = "getSymbol"
+	bm, err := s.symbols.GetBitmap(s.symbolList[i])
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "can't get symbol")
+	}
+	return bm, nil
+}
+
+func (s *SymbolDictionary) encodeFlags(w writer.BinaryWriter) (n int, err error) {
+	const processName = "encodeFlags"
+	// skip three bits
+	if err = w.SkipBits(3); err != nil {
+		return 0, errors.Wrap(err, processName, "empty bits")
+	}
+	var bit int
+	// write sdrtemplate flag
+	if s.SdrTemplate > 0 {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdrtemplate")
+	}
+	// write first sdtemplate bit
+	bit = 0
+	if s.SdTemplate > 1 {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdtemplate")
+	}
+	// write second sdtemplate bit.
+	bit = 0
+	if s.SdTemplate == 1 || s.SdTemplate == 3 {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdtemplate")
+	}
+	// bitmap coding context retained
+	bit = 0
+	if s.isCodingContextRetained {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "coding context retained")
+	}
+	// bitmap coding context used
+	bit = 0
+	if s.isCodingContextUsed {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "coding context used")
+	}
+	// sdhuffagginst
+	bit = 0
+	if s.SdHuffAggInstanceSelection {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffagginst")
+	}
+	//	sdhuffbmsize
+	bit = int(s.SdHuffBMSizeSelection)
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffbmsize")
+	}
+	// sdhuffwidth
+	bit = 0
+	if s.SdHuffDecodeWidthSelection > 1 {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffwidth")
+	}
+	bit = 0
+	switch s.SdHuffDecodeWidthSelection {
+	case 1, 3:
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffwidth")
+	}
+	// sdhuff height
+	bit = 0
+	if s.SdHuffDecodeHeightSelection > 1 {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffheight")
+	}
+	bit = 0
+	switch s.SdHuffDecodeHeightSelection {
+	case 1, 3:
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuffheight")
+	}
+	// SdRefAgg
+	bit = 0
+	if s.UseRefinementAggregation {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdrefagg")
+	}
+	// SdHuff
+	bit = 0
+	if s.IsHuffmanEncoded {
+		bit = 1
+	}
+	if err = w.WriteBit(bit); err != nil {
+		return n, errors.Wrap(err, processName, "sdhuff")
+	}
+	return 2, nil
 }
 
 // GetDictionary gets the decoded dictionary symbols as a bitmap slice.
@@ -100,27 +497,28 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 	common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary begins...")
 	defer func() {
 		common.Log.Trace("[SYMBOL-DICTIONARY] GetDictionary finished")
+		common.Log.Trace("[SYMBOL-DICTIONARY] Dictionary. \nEx: '%s', \nnew:'%s'", s.exportSymbols, s.newSymbols)
 	}()
 
 	if s.exportSymbols == nil {
 		var err error
-		if s.useRefinementAggregation {
+		if s.UseRefinementAggregation {
 			s.sbSymCodeLen = s.getSbSymCodeLen()
 		}
 
-		if !s.isHuffmanEncoded {
+		if !s.IsHuffmanEncoded {
 			if err = s.setCodingStatistics(); err != nil {
 				return nil, err
 			}
 		}
 
 		// 6.5.5. 1)
-		s.newSymbols = make([]*bitmap.Bitmap, s.numberOfNewSymbols)
+		s.newSymbols = make([]*bitmap.Bitmap, s.NumberOfNewSymbols)
 
 		// 6.5.5. 2)
 		var newSymbolsWidth []int
-		if s.isHuffmanEncoded && !s.useRefinementAggregation {
-			newSymbolsWidth = make([]int, s.numberOfNewSymbols)
+		if s.IsHuffmanEncoded && !s.UseRefinementAggregation {
+			newSymbolsWidth = make([]int, s.NumberOfNewSymbols)
 		}
 
 		if err = s.setSymbolsArray(); err != nil {
@@ -132,7 +530,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 		s.numberOfDecodedSymbols = 0
 
 		// 6.5.5 4 a)
-		for s.numberOfDecodedSymbols < s.numberOfNewSymbols {
+		for s.numberOfDecodedSymbols < s.NumberOfNewSymbols {
 			// 6.5.5 4 b)
 			temp, err = s.decodeHeightClassDeltaHeight()
 			if err != nil {
@@ -153,7 +551,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 					return nil, err
 				}
 
-				if differenceWidth == int64(math.MaxInt64) || s.numberOfDecodedSymbols >= s.numberOfNewSymbols {
+				if differenceWidth == int64(math.MaxInt64) || s.numberOfDecodedSymbols >= s.NumberOfNewSymbols {
 					break
 				}
 
@@ -161,8 +559,8 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 				totalWidth += symbolWidth
 
 				//* 4 c) ii)
-				if !s.isHuffmanEncoded || s.useRefinementAggregation {
-					if !s.useRefinementAggregation {
+				if !s.IsHuffmanEncoded || s.UseRefinementAggregation {
+					if !s.UseRefinementAggregation {
 						// 6.5.8.1 - Directly coded
 						err = s.decodeDirectlyThroughGenericRegion(symbolWidth, uint32(heightClassHeight))
 						if err != nil {
@@ -175,7 +573,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 							return nil, err
 						}
 					}
-				} else if s.isHuffmanEncoded && !s.useRefinementAggregation {
+				} else if s.IsHuffmanEncoded && !s.UseRefinementAggregation {
 					// 4 c) iii)
 					newSymbolsWidth[s.numberOfDecodedSymbols] = int(symbolWidth)
 				}
@@ -183,9 +581,9 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 			}
 
 			// 6.5.5 4 d)
-			if s.isHuffmanEncoded && !s.useRefinementAggregation {
+			if s.IsHuffmanEncoded && !s.UseRefinementAggregation {
 				var bmSize int64
-				if s.sdHuffBMSizeSelection == 0 {
+				if s.SdHuffBMSizeSelection == 0 {
 					var st huffman.Tabler
 					st, err = huffman.GetStandardTable(1)
 					if err != nil {
@@ -238,57 +636,47 @@ func (s *SymbolDictionary) Init(h *Header, r reader.StreamReader) error {
 	return s.parseHeader()
 }
 
-// IsHuffmanEncoded defines if the segment is encoded using huffman tables.
-func (s *SymbolDictionary) IsHuffmanEncoded() bool {
-	return s.isHuffmanEncoded
-}
-
 // String implements the Stringer interface.
 func (s *SymbolDictionary) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString("\n[SYMBOL-DICTIONARY]\n")
-	sb.WriteString(fmt.Sprintf("\t- sdrTemplate %v\n", s.sdrTemplate))
-	sb.WriteString(fmt.Sprintf("\t- sdTemplate %v\n", s.sdTemplate))
+	sb.WriteString(fmt.Sprintf("\t- SdrTemplate %v\n", s.SdrTemplate))
+	sb.WriteString(fmt.Sprintf("\t- SdTemplate %v\n", s.SdTemplate))
 	sb.WriteString(fmt.Sprintf("\t- isCodingContextRetained %v\n", s.isCodingContextRetained))
 	sb.WriteString(fmt.Sprintf("\t- isCodingContextUsed %v\n", s.isCodingContextUsed))
-	sb.WriteString(fmt.Sprintf("\t- sdHuffAggInstanceSelection %v\n", s.sdHuffAggInstanceSelection))
-	sb.WriteString(fmt.Sprintf("\t- sdHuffBMSizeSelection %v\n", s.sdHuffBMSizeSelection))
-	sb.WriteString(fmt.Sprintf("\t- sdHuffDecodeWidthSelection %v\n", s.sdHuffDecodeWidthSelection))
-	sb.WriteString(fmt.Sprintf("\t- sdHuffDecodeHeightSelection %v\n", s.sdHuffDecodeHeightSelection))
-	sb.WriteString(fmt.Sprintf("\t- useRefinementAggregation %v\n", s.useRefinementAggregation))
-	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded %v\n", s.isHuffmanEncoded))
-	sb.WriteString(fmt.Sprintf("\t- sdATX %v\n", s.sdATX))
-	sb.WriteString(fmt.Sprintf("\t- sdATY %v\n", s.sdATY))
-	sb.WriteString(fmt.Sprintf("\t- sdrATX %v\n", s.sdrATX))
-	sb.WriteString(fmt.Sprintf("\t- sdrATY %v\n", s.sdrATY))
-	sb.WriteString(fmt.Sprintf("\t- numberOfExportedSymbols %v\n", s.numberOfExportedSymbols))
-	sb.WriteString(fmt.Sprintf("\t- numberOfNewSymbols %v\n", s.numberOfNewSymbols))
+	sb.WriteString(fmt.Sprintf("\t- SdHuffAggInstanceSelection %v\n", s.SdHuffAggInstanceSelection))
+	sb.WriteString(fmt.Sprintf("\t- SdHuffBMSizeSelection %v\n", s.SdHuffBMSizeSelection))
+	sb.WriteString(fmt.Sprintf("\t- SdHuffDecodeWidthSelection %v\n", s.SdHuffDecodeWidthSelection))
+	sb.WriteString(fmt.Sprintf("\t- SdHuffDecodeHeightSelection %v\n", s.SdHuffDecodeHeightSelection))
+	sb.WriteString(fmt.Sprintf("\t- UseRefinementAggregation %v\n", s.UseRefinementAggregation))
+	sb.WriteString(fmt.Sprintf("\t- isHuffmanEncoded %v\n", s.IsHuffmanEncoded))
+	sb.WriteString(fmt.Sprintf("\t- SdATX %v\n", s.SdATX))
+	sb.WriteString(fmt.Sprintf("\t- SdATY %v\n", s.SdATY))
+	sb.WriteString(fmt.Sprintf("\t- SdrATX %v\n", s.SdrATX))
+	sb.WriteString(fmt.Sprintf("\t- SdrATY %v\n", s.SdrATY))
+	sb.WriteString(fmt.Sprintf("\t- NumberOfExportedSymbols %v\n", s.NumberOfExportedSymbols))
+	sb.WriteString(fmt.Sprintf("\t- NumberOfNewSymbols %v\n", s.NumberOfNewSymbols))
 	sb.WriteString(fmt.Sprintf("\t- numberOfImportedSymbols %v\n", s.numberOfImportedSymbols))
 	sb.WriteString(fmt.Sprintf("\t- numberOfDecodedSymbols %v\n", s.numberOfDecodedSymbols))
 	return sb.String()
 }
 
-// UseRefinementAggregation defines if the SymbolDictionary uses refinement aggregation.
-func (s *SymbolDictionary) UseRefinementAggregation() bool {
-	return s.useRefinementAggregation
-}
-
 func (s *SymbolDictionary) checkInput() error {
-	if s.sdHuffDecodeHeightSelection == 2 {
-		common.Log.Debug("Symbol Dictionary Decode Heigh Selection: %d value not permitted", s.sdHuffDecodeHeightSelection)
+	if s.SdHuffDecodeHeightSelection == 2 {
+		common.Log.Debug("Symbol Dictionary Decode Heigh Selection: %d value not permitted", s.SdHuffDecodeHeightSelection)
 	}
 
-	if s.sdHuffDecodeWidthSelection == 2 {
-		common.Log.Debug("Symbol Dictionary Decode Width Selection: %d value not permitted", s.sdHuffDecodeWidthSelection)
+	if s.SdHuffDecodeWidthSelection == 2 {
+		common.Log.Debug("Symbol Dictionary Decode Width Selection: %d value not permitted", s.SdHuffDecodeWidthSelection)
 	}
 
-	if s.isHuffmanEncoded {
-		if s.sdTemplate != 0 {
-			common.Log.Debug("SDTemplate = %d (should be 0)", s.sdTemplate)
+	if s.IsHuffmanEncoded {
+		if s.SdTemplate != 0 {
+			common.Log.Debug("SDTemplate = %d (should be 0)", s.SdTemplate)
 		}
 
-		if !s.useRefinementAggregation {
-			if !s.useRefinementAggregation {
+		if !s.UseRefinementAggregation {
+			if !s.UseRefinementAggregation {
 				if s.isCodingContextRetained {
 					common.Log.Debug("IsCodingContextRetained = true (should be false)")
 					s.isCodingContextRetained = false
@@ -301,32 +689,32 @@ func (s *SymbolDictionary) checkInput() error {
 			}
 		}
 	} else {
-		if s.sdHuffBMSizeSelection != 0 {
-			common.Log.Debug("sdHuffBMSizeSelection should be 0")
-			s.sdHuffBMSizeSelection = 0
+		if s.SdHuffBMSizeSelection != 0 {
+			common.Log.Debug("SdHuffBMSizeSelection should be 0")
+			s.SdHuffBMSizeSelection = 0
 		}
 
-		if s.sdHuffDecodeWidthSelection != 0 {
-			common.Log.Debug("sdHuffDecodeWidthSelection should be 0")
-			s.sdHuffDecodeWidthSelection = 0
+		if s.SdHuffDecodeWidthSelection != 0 {
+			common.Log.Debug("SdHuffDecodeWidthSelection should be 0")
+			s.SdHuffDecodeWidthSelection = 0
 		}
 
-		if s.sdHuffDecodeHeightSelection != 0 {
-			common.Log.Debug("sdHuffDecodeHeightSelection should be 0")
-			s.sdHuffDecodeHeightSelection = 0
-		}
-	}
-
-	if !s.useRefinementAggregation {
-		if s.sdrTemplate != 0 {
-			common.Log.Debug("SDRTemplate = %d (should be 0)", s.sdrTemplate)
-			s.sdrTemplate = 0
+		if s.SdHuffDecodeHeightSelection != 0 {
+			common.Log.Debug("SdHuffDecodeHeightSelection should be 0")
+			s.SdHuffDecodeHeightSelection = 0
 		}
 	}
 
-	if !s.isHuffmanEncoded || !s.useRefinementAggregation {
-		if s.sdHuffAggInstanceSelection != 0 {
-			common.Log.Debug("sdHuffAggInstanceSelection = %d (should be 0)", s.sdHuffAggInstanceSelection)
+	if !s.UseRefinementAggregation {
+		if s.SdrTemplate != 0 {
+			common.Log.Debug("SDRTemplate = %d (should be 0)", s.SdrTemplate)
+			s.SdrTemplate = 0
+		}
+	}
+
+	if !s.IsHuffmanEncoded || !s.UseRefinementAggregation {
+		if s.SdHuffAggInstanceSelection {
+			common.Log.Debug("SdHuffAggInstanceSelection = %d (should be 0)", s.SdHuffAggInstanceSelection)
 		}
 	}
 	return nil
@@ -339,6 +727,7 @@ func (s *SymbolDictionary) addSymbol(region Regioner) error {
 	}
 	s.newSymbols[s.numberOfDecodedSymbols] = symbol
 	s.sbSymbols = append(s.sbSymbols, symbol)
+	common.Log.Trace("[SYMBOL DICTIONARY] Added symbol: %s", symbol)
 	return nil
 }
 
@@ -372,7 +761,7 @@ func (s *SymbolDictionary) decodeAggregate(symbolWidth, heightClassHeight uint32
 	)
 
 	//  6.5.8.2.1.
-	if s.isHuffmanEncoded {
+	if s.IsHuffmanEncoded {
 		numberOfRefinementAggregationInstances, err = s.huffDecodeRefAggNInst()
 		if err != nil {
 			return err
@@ -416,9 +805,9 @@ func (s *SymbolDictionary) decodeThroughTextRegion(symbolWidth, heightClassHeigh
 		return err
 	}
 
-	s.textRegion.setParameters(s.arithmeticDecoder, s.isHuffmanEncoded, true, symbolWidth,
+	s.textRegion.setParameters(s.arithmeticDecoder, s.IsHuffmanEncoded, true, symbolWidth,
 		heightClassHeight, numberOfRefinementAggregationInstances, 1, (s.numberOfImportedSymbols + s.numberOfDecodedSymbols),
-		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, s.sdrTemplate, s.sdrATX, s.sdrATY, s.sbSymbols, s.sbSymCodeLen)
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, s.SdrTemplate, s.SdrATX, s.SdrATY, s.sbSymbols, s.sbSymCodeLen)
 	return s.addSymbol(s.textRegion)
 }
 
@@ -428,7 +817,7 @@ func (s *SymbolDictionary) decodeRefinedSymbol(symbolWidth, heightClassHeight ui
 		rdx, rdy int32
 	)
 
-	if s.isHuffmanEncoded {
+	if s.IsHuffmanEncoded {
 		// 2) - 4)
 		v, err := s.r.ReadBits(byte(s.sbSymCodeLen))
 		if err != nil {
@@ -491,7 +880,7 @@ func (s *SymbolDictionary) decodeRefinedSymbol(symbolWidth, heightClassHeight ui
 		return err
 	}
 
-	if s.isHuffmanEncoded {
+	if s.IsHuffmanEncoded {
 		// Make sure that the processed bytes are equal to the value read in step 5.
 		s.r.Align()
 	}
@@ -514,7 +903,7 @@ func (s *SymbolDictionary) decodeNewSymbols(symWidth, hcHeight uint32, ibo *bitm
 			s.cx = arithmetic.NewStats(65536, 1)
 		}
 	}
-	s.genericRefinementRegion.setParameters(s.cx, s.arithmeticDecoder, s.sdrTemplate, symWidth, hcHeight, ibo, rdx, rdy, false, s.sdrATX, s.sdrATY)
+	s.genericRefinementRegion.setParameters(s.cx, s.arithmeticDecoder, s.SdrTemplate, symWidth, hcHeight, ibo, rdx, rdy, false, s.SdrATX, s.SdrATY)
 	return s.addSymbol(s.genericRefinementRegion)
 }
 
@@ -522,13 +911,13 @@ func (s *SymbolDictionary) decodeDirectlyThroughGenericRegion(symWidth, hcHeight
 	if s.genericRegion == nil {
 		s.genericRegion = NewGenericRegion(s.r)
 	}
-	s.genericRegion.setParametersWithAt(false, byte(s.sdTemplate), false, false, s.sdATX, s.sdATY, symWidth, hcHeight, s.cx, s.arithmeticDecoder)
+	s.genericRegion.setParametersWithAt(false, byte(s.SdTemplate), false, false, s.SdATX, s.SdATY, symWidth, hcHeight, s.cx, s.arithmeticDecoder)
 	return s.addSymbol(s.genericRegion)
 }
 
 func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
-	if s.isHuffmanEncoded {
-		switch s.sdHuffDecodeWidthSelection {
+	if s.IsHuffmanEncoded {
+		switch s.SdHuffDecodeWidthSelection {
 		case 0:
 			t, err := huffman.GetStandardTable(2)
 			if err != nil {
@@ -544,7 +933,7 @@ func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
 		case 3:
 			if s.dwTable == nil {
 				var dwNr int
-				if s.sdHuffDecodeHeightSelection == 3 {
+				if s.SdHuffDecodeHeightSelection == 3 {
 					dwNr++
 				}
 				t, err := s.getUserTable(dwNr)
@@ -569,7 +958,7 @@ func (s *SymbolDictionary) decodeDifferenceWidth() (int64, error) {
 }
 
 func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
-	if s.isHuffmanEncoded {
+	if s.IsHuffmanEncoded {
 		return s.decodeHeightClassDeltaHeightWithHuffman()
 	}
 
@@ -584,7 +973,7 @@ func (s *SymbolDictionary) decodeHeightClassDeltaHeight() (int64, error) {
 // decodeHeightClassDeltaHeightWithHuffman - 6.5.6 decodes the symbol dictionary
 // when the height class is encoded using huffman tables.
 func (s *SymbolDictionary) decodeHeightClassDeltaHeightWithHuffman() (int64, error) {
-	switch s.sdHuffDecodeHeightSelection {
+	switch s.SdHuffDecodeHeightSelection {
 	case 0:
 		t, err := huffman.GetStandardTable(4)
 		if err != nil {
@@ -647,9 +1036,9 @@ func (s *SymbolDictionary) decodeHeightClassCollectiveBitmap(
 // getSbSymCodeLen 6.5.8.2.3 sets the SBSYMCODES variable.
 func (s *SymbolDictionary) getSbSymCodeLen() int8 {
 	first := int8(math.Ceil(
-		math.Log(float64(s.numberOfImportedSymbols+s.numberOfNewSymbols)) / math.Log(2)))
+		math.Log(float64(s.numberOfImportedSymbols+s.NumberOfNewSymbols)) / math.Log(2)))
 
-	if s.isHuffmanEncoded && first < 1 {
+	if s.IsHuffmanEncoded && first < 1 {
 		return 1
 	}
 
@@ -661,12 +1050,12 @@ func (s *SymbolDictionary) getToExportFlags() ([]int, error) {
 		currentExportFlag int
 		exRunLength       int32
 		err               error
-		totalNewSymbols   = int32(s.numberOfImportedSymbols + s.numberOfNewSymbols)
+		totalNewSymbols   = int32(s.numberOfImportedSymbols + s.NumberOfNewSymbols)
 		exportFlags       = make([]int, totalNewSymbols)
 	)
 
 	for exportIndex := int32(0); exportIndex < totalNewSymbols; exportIndex += exRunLength {
-		if s.isHuffmanEncoded {
+		if s.IsHuffmanEncoded {
 			t, err := huffman.GetStandardTable(1)
 			if err != nil {
 				return nil, err
@@ -725,11 +1114,11 @@ func (s *SymbolDictionary) huffDecodeBmSize() (int64, error) {
 			err  error
 		)
 
-		if s.sdHuffDecodeHeightSelection == 3 {
+		if s.SdHuffDecodeHeightSelection == 3 {
 			bmNr++
 		}
 
-		if s.sdHuffDecodeWidthSelection == 3 {
+		if s.SdHuffDecodeWidthSelection == 3 {
 			bmNr++
 		}
 
@@ -742,38 +1131,36 @@ func (s *SymbolDictionary) huffDecodeBmSize() (int64, error) {
 }
 
 func (s *SymbolDictionary) huffDecodeRefAggNInst() (int64, error) {
-	if s.sdHuffAggInstanceSelection == 0 {
+	if !s.SdHuffAggInstanceSelection {
 		t, err := huffman.GetStandardTable(1)
 		if err != nil {
 			return 0, err
 		}
 		return t.Decode(s.r)
-	} else if s.sdHuffAggInstanceSelection == 1 {
-		if s.aggInstTable == nil {
-			var (
-				aggregationInstanceNumber int
-				err                       error
-			)
-			if s.sdHuffDecodeHeightSelection == 3 {
-				aggregationInstanceNumber++
-			}
-
-			if s.sdHuffDecodeWidthSelection == 3 {
-				aggregationInstanceNumber++
-			}
-
-			if s.sdHuffBMSizeSelection == 3 {
-				aggregationInstanceNumber++
-			}
-
-			s.aggInstTable, err = s.getUserTable(aggregationInstanceNumber)
-			if err != nil {
-				return 0, err
-			}
-		}
-		return s.aggInstTable.Decode(s.r)
 	}
-	return 0, nil
+	if s.aggInstTable == nil {
+		var (
+			aggregationInstanceNumber int
+			err                       error
+		)
+		if s.SdHuffDecodeHeightSelection == 3 {
+			aggregationInstanceNumber++
+		}
+
+		if s.SdHuffDecodeWidthSelection == 3 {
+			aggregationInstanceNumber++
+		}
+
+		if s.SdHuffBMSizeSelection == 3 {
+			aggregationInstanceNumber++
+		}
+
+		s.aggInstTable, err = s.getUserTable(aggregationInstanceNumber)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return s.aggInstTable.Decode(s.r)
 }
 
 func (s *SymbolDictionary) parseHeader() (err error) {
@@ -846,14 +1233,14 @@ func (s *SymbolDictionary) readRegionFlags() error {
 	if err != nil {
 		return err
 	}
-	s.sdrTemplate = int8(bit)
+	s.SdrTemplate = int8(bit)
 
 	//* Bit 10 - 11 - SDTemplate
 	bits, err = s.r.ReadBits(2)
 	if err != nil {
 		return err
 	}
-	s.sdTemplate = int8(bits & 0xf)
+	s.SdTemplate = int8(bits & 0xf)
 
 	// Bit 9 - isCodingContextRetained
 	bit, err = s.r.ReadBit()
@@ -873,33 +1260,35 @@ func (s *SymbolDictionary) readRegionFlags() error {
 		s.isCodingContextUsed = true
 	}
 
-	// Bit 7 - sdHuffAggInstanceSelection
+	// Bit 7 - SdHuffAggInstanceSelection
 	bit, err = s.r.ReadBit()
 	if err != nil {
 		return err
 	}
-	s.sdHuffBMSizeSelection = int8(bit)
+	if bit == 1 {
+		s.SdHuffAggInstanceSelection = true
+	}
 
-	// Bit 6 - sdHuffBMSizeSelection
+	// Bit 6 - SdHuffBMSizeSelection
 	bit, err = s.r.ReadBit()
 	if err != nil {
 		return err
 	}
-	s.sdHuffBMSizeSelection = int8(bit)
+	s.SdHuffBMSizeSelection = int8(bit)
 
-	// Bit 4 - 5 - sdHuffDecodeWidthSelection
+	// Bit 4 - 5 - SdHuffDecodeWidthSelection
 	bits, err = s.r.ReadBits(2)
 	if err != nil {
 		return err
 	}
-	s.sdHuffDecodeWidthSelection = int8(bits & 0xf)
+	s.SdHuffDecodeWidthSelection = int8(bits & 0xf)
 
-	// Bit 2 - 3 - sdHuffDecodeWidthSelection
+	// Bit 2 - 3 - SdHuffDecodeWidthSelection
 	bits, err = s.r.ReadBits(2)
 	if err != nil {
 		return err
 	}
-	s.sdHuffDecodeHeightSelection = int8(bits & 0xf)
+	s.SdHuffDecodeHeightSelection = int8(bits & 0xf)
 
 	// Bit 1
 	bit, err = s.r.ReadBit()
@@ -907,7 +1296,7 @@ func (s *SymbolDictionary) readRegionFlags() error {
 		return err
 	}
 	if bit == 1 {
-		s.useRefinementAggregation = true
+		s.UseRefinementAggregation = true
 	}
 
 	// Bit 0
@@ -916,14 +1305,14 @@ func (s *SymbolDictionary) readRegionFlags() error {
 		return err
 	}
 	if bit == 1 {
-		s.isHuffmanEncoded = true
+		s.IsHuffmanEncoded = true
 	}
 	return nil
 }
 
 func (s *SymbolDictionary) readAtPixels(pixelsNumber int) error {
-	s.sdATX = make([]int8, pixelsNumber)
-	s.sdATY = make([]int8, pixelsNumber)
+	s.SdATX = make([]int8, pixelsNumber)
+	s.SdATY = make([]int8, pixelsNumber)
 	var (
 		b   byte
 		err error
@@ -934,19 +1323,19 @@ func (s *SymbolDictionary) readAtPixels(pixelsNumber int) error {
 		if err != nil {
 			return err
 		}
-		s.sdATX[i] = int8(b)
+		s.SdATX[i] = int8(b)
 		b, err = s.r.ReadByte()
 		if err != nil {
 			return err
 		}
-		s.sdATY[i] = int8(b)
+		s.SdATY[i] = int8(b)
 	}
 	return nil
 }
 
 func (s *SymbolDictionary) readRefinementAtPixels(numberOfAtPixels int) error {
-	s.sdrATX = make([]int8, numberOfAtPixels)
-	s.sdrATY = make([]int8, numberOfAtPixels)
+	s.SdrATX = make([]int8, numberOfAtPixels)
+	s.SdrATY = make([]int8, numberOfAtPixels)
 	var (
 		b   byte
 		err error
@@ -957,12 +1346,12 @@ func (s *SymbolDictionary) readRefinementAtPixels(numberOfAtPixels int) error {
 		if err != nil {
 			return err
 		}
-		s.sdrATX[i] = int8(b)
+		s.SdrATX[i] = int8(b)
 		b, err = s.r.ReadByte()
 		if err != nil {
 			return err
 		}
-		s.sdrATY[i] = int8(b)
+		s.SdrATY[i] = int8(b)
 	}
 	return nil
 }
@@ -972,7 +1361,7 @@ func (s *SymbolDictionary) readNumberOfExportedSymbols() error {
 	if err != nil {
 		return err
 	}
-	s.numberOfExportedSymbols = uint32(bits & math.MaxUint32)
+	s.NumberOfExportedSymbols = uint32(bits & math.MaxUint32)
 	return nil
 }
 
@@ -981,7 +1370,7 @@ func (s *SymbolDictionary) readNumberOfNewSymbols() error {
 	if err != nil {
 		return err
 	}
-	s.numberOfNewSymbols = uint32(bits & math.MaxUint32)
+	s.NumberOfNewSymbols = uint32(bits & math.MaxUint32)
 	return nil
 }
 
@@ -1004,18 +1393,18 @@ func (s *SymbolDictionary) retrieveImportSymbols() error {
 				return fmt.Errorf("related segment with index: %d getDictionary failed. %s", h.SegmentNumber, err.Error())
 			}
 			s.importSymbols = append(s.importSymbols, relatedDict...)
-			s.numberOfImportedSymbols += dict.numberOfExportedSymbols
+			s.numberOfImportedSymbols += dict.NumberOfExportedSymbols
 		}
 	}
 	return nil
 }
 
 func (s *SymbolDictionary) setAtPixels() error {
-	if s.isHuffmanEncoded {
+	if s.IsHuffmanEncoded {
 		return nil
 	}
 	index := 1
-	if s.sdTemplate == 0 {
+	if s.SdTemplate == 0 {
 		index = 4
 	}
 
@@ -1045,7 +1434,7 @@ func (s *SymbolDictionary) setCodingStatistics() error {
 		s.cxIAEX = arithmetic.NewStats(512, 1)
 	}
 
-	if s.useRefinementAggregation && s.cxIAID == nil {
+	if s.UseRefinementAggregation && s.cxIAID == nil {
 		s.cxIAID = arithmetic.NewStats(1<<uint(s.sbSymCodeLen), 1)
 		s.cxIARDX = arithmetic.NewStats(512, 1)
 		s.cxIARDY = arithmetic.NewStats(512, 1)
@@ -1066,13 +1455,16 @@ func (s *SymbolDictionary) setCodingStatistics() error {
 }
 
 func (s *SymbolDictionary) setExportedSymbols(toExportFlags []int) {
-	for i := uint32(0); i < s.numberOfImportedSymbols+s.numberOfNewSymbols; i++ {
+	for i := uint32(0); i < s.numberOfImportedSymbols+s.NumberOfNewSymbols; i++ {
 		if toExportFlags[i] == 1 {
+			var symbol *bitmap.Bitmap
 			if i < s.numberOfImportedSymbols {
-				s.exportSymbols = append(s.exportSymbols, s.importSymbols[i])
+				symbol = s.importSymbols[i]
 			} else {
-				s.exportSymbols = append(s.exportSymbols, s.newSymbols[i-s.numberOfImportedSymbols])
+				symbol = s.newSymbols[i-s.numberOfImportedSymbols]
 			}
+			common.Log.Trace("[SYMBOL-DICTIONARY] Add ExportedSymbol: '%s'", symbol)
+			s.exportSymbols = append(s.exportSymbols, symbol)
 		}
 	}
 }
@@ -1086,7 +1478,7 @@ func (s *SymbolDictionary) setInSyms() error {
 }
 
 func (s *SymbolDictionary) setRefinementAtPixels() error {
-	if !s.useRefinementAggregation || s.sdrTemplate != 0 {
+	if !s.UseRefinementAggregation || s.SdrTemplate != 0 {
 		return nil
 	}
 
@@ -1098,14 +1490,14 @@ func (s *SymbolDictionary) setRefinementAtPixels() error {
 
 func (s *SymbolDictionary) setRetainedCodingContexts(sd *SymbolDictionary) {
 	s.arithmeticDecoder = sd.arithmeticDecoder
-	s.isHuffmanEncoded = sd.isHuffmanEncoded
-	s.useRefinementAggregation = sd.useRefinementAggregation
-	s.sdTemplate = sd.sdTemplate
-	s.sdrTemplate = sd.sdrTemplate
-	s.sdATX = sd.sdATX
-	s.sdATY = sd.sdATY
-	s.sdrATX = sd.sdrATX
-	s.sdrATY = sd.sdrATY
+	s.IsHuffmanEncoded = sd.IsHuffmanEncoded
+	s.UseRefinementAggregation = sd.UseRefinementAggregation
+	s.SdTemplate = sd.SdTemplate
+	s.SdrTemplate = sd.SdrTemplate
+	s.SdATX = sd.SdATX
+	s.SdATY = sd.SdATY
+	s.SdrATX = sd.SdrATX
+	s.SdrATY = sd.SdrATY
 	s.cx = sd.cx
 }
 

@@ -16,6 +16,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
@@ -103,17 +104,17 @@ func TestDecodeDocument(t *testing.T) {
 			sd, ok := seg.(*segments.SymbolDictionary)
 			require.True(t, ok)
 
-			assert.True(t, sd.IsHuffmanEncoded())
-			assert.False(t, sd.UseRefinementAggregation())
-			assert.Equal(t, uint32(1), sd.NumberOfExportedSymbols())
-			assert.Equal(t, uint32(1), sd.NumberOfNewSymbols())
+			assert.True(t, sd.IsHuffmanEncoded)
+			assert.False(t, sd.UseRefinementAggregation)
+			assert.Equal(t, uint32(1), sd.NumberOfExportedSymbols)
+			assert.Equal(t, uint32(1), sd.NumberOfNewSymbols)
 
 			bm, err := sd.GetDictionary()
 			require.NoError(t, err)
 			require.Len(t, bm, 1)
 
 			pLetter := bm[0]
-			symbol := pSymbol(t)
+			symbol := bitmap.TstPSymbol(t)
 			assert.True(t, pLetter.Equals(symbol), fmt.Sprintf("P decoded: %s - Should be: %s", pLetter, symbol))
 		})
 
@@ -155,8 +156,8 @@ func TestDecodeDocument(t *testing.T) {
 
 			require.Len(t, dict, 2)
 
-			c := cSymbol(t)
-			a := aSymbol(t)
+			c := bitmap.TstCSymbol(t)
+			a := bitmap.TstASymbol(t)
 			assert.True(t, dict[0].Equals(c))
 			assert.True(t, dict[1].Equals(a))
 		})
@@ -178,15 +179,15 @@ func TestDecodeDocument(t *testing.T) {
 			assert.Equal(t, 37, bm.Width)
 
 			expected := bitmap.New(37, 8)
-			err = bitmap.Blit(cSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 8, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 8, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(pSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstPSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 23, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 23, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
 			assert.True(t, expected.Equals(bm))
 		})
@@ -286,8 +287,8 @@ func TestDecodeDocument(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Len(t, dict, 2)
-			assert.True(t, cSymbol(t).Equals(dict[0]))
-			assert.True(t, aSymbol(t).Equals(dict[1]))
+			assert.True(t, bitmap.TstCSymbol(t).Equals(dict[0]))
+			assert.True(t, bitmap.TstASymbol(t).Equals(dict[1]))
 		})
 
 		t.Run("Segment#11", func(t *testing.T) {
@@ -304,15 +305,15 @@ func TestDecodeDocument(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := bitmap.New(37, 8)
-			err = bitmap.Blit(cSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 8, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 8, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(pSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstPSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 23, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 23, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
 
 			assert.True(t, expected.Equals(bm))
@@ -410,7 +411,7 @@ func TestDecodeDocument(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, dict, 1)
 
-			assert.True(t, dict[0].Equals(aSymbol(t)))
+			assert.True(t, dict[0].Equals(bitmap.TstASymbol(t)))
 		})
 
 		t.Run("Segment#18", func(t *testing.T) {
@@ -428,12 +429,12 @@ func TestDecodeDocument(t *testing.T) {
 
 			require.Len(t, dict, 3)
 
-			assert.True(t, dict[0].Equals(aSymbol(t)))
-			assert.True(t, dict[1].Equals(cSymbol(t)))
+			assert.True(t, dict[0].Equals(bitmap.TstASymbol(t)))
+			assert.True(t, dict[1].Equals(bitmap.TstCSymbol(t)))
 			expected := bitmap.New(14, 6)
 
-			require.NoError(t, bitmap.Blit(aSymbol(t), expected, 0, 0, bitmap.CmbOpOr))
-			require.NoError(t, bitmap.Blit(cSymbol(t), expected, 8, 0, bitmap.CmbOpOr))
+			require.NoError(t, bitmap.Blit(bitmap.TstASymbol(t), expected, 0, 0, bitmap.CmbOpOr))
+			require.NoError(t, bitmap.Blit(bitmap.TstCSymbol(t), expected, 8, 0, bitmap.CmbOpOr))
 			assert.True(t, dict[2].Equals(expected), expected.String())
 		})
 
@@ -451,15 +452,15 @@ func TestDecodeDocument(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := bitmap.New(37, 8)
-			err = bitmap.Blit(cSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 0, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 8, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 8, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(pSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstPSymbol(t), expected, 16, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(aSymbol(t), expected, 23, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstASymbol(t), expected, 23, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
-			err = bitmap.Blit(cSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
+			err = bitmap.Blit(bitmap.TstCSymbol(t), expected, 31, 0, bitmap.CmbOpOr)
 			require.NoError(t, err)
 
 			assert.True(t, expected.Equals(bm))
@@ -502,12 +503,13 @@ func TestDecodeDocument(t *testing.T) {
 		d, err := DecodeDocument(reader.New(data), gdoc.GlobalSegments)
 		require.NoError(t, err)
 
-		assert.Len(t, d.GlobalSegments, 1)
+		assert.Len(t, d.GlobalSegments.Segments, 1)
 	})
 }
 
 // TestEncodeDocument tests the Encode method of the jbig2 Document.
 func TestEncodeDocument(t *testing.T) {
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	t.Run("Generic", func(t *testing.T) {
 		// this test should check jbig2 encode generic method.
 		t.Run("FullHeaders", func(t *testing.T) {
@@ -523,7 +525,7 @@ func TestEncodeDocument(t *testing.T) {
 			require.NoError(t, err)
 
 			data, err := d.Encode()
-			require.NoError(t, err)
+			require.NoError(t, err, "%v", d.Pages)
 
 			// decode the
 			decoded, err := DecodeDocument(reader.New(data))
@@ -679,74 +681,72 @@ func TestEncodeDocument(t *testing.T) {
 			})
 		})
 	})
-}
 
-func pSymbol(t *testing.T) *bitmap.Bitmap {
-	t.Helper()
-	symbol := bitmap.New(5, 8)
-	require.NoError(t, symbol.SetPixel(0, 0, 1))
-	require.NoError(t, symbol.SetPixel(1, 0, 1))
-	require.NoError(t, symbol.SetPixel(2, 0, 1))
-	require.NoError(t, symbol.SetPixel(3, 0, 1))
-	require.NoError(t, symbol.SetPixel(4, 1, 1))
-	require.NoError(t, symbol.SetPixel(0, 1, 1))
-	require.NoError(t, symbol.SetPixel(4, 2, 1))
-	require.NoError(t, symbol.SetPixel(0, 2, 1))
-	require.NoError(t, symbol.SetPixel(4, 3, 1))
-	require.NoError(t, symbol.SetPixel(0, 3, 1))
-	require.NoError(t, symbol.SetPixel(0, 4, 1))
-	require.NoError(t, symbol.SetPixel(1, 4, 1))
-	require.NoError(t, symbol.SetPixel(2, 4, 1))
-	require.NoError(t, symbol.SetPixel(3, 4, 1))
-	require.NoError(t, symbol.SetPixel(0, 5, 1))
-	require.NoError(t, symbol.SetPixel(0, 6, 1))
-	require.NoError(t, symbol.SetPixel(0, 7, 1))
-	return symbol
-}
+	t.Run("Classified", func(t *testing.T) {
+		t.Run("PDFMode", func(t *testing.T) {
+			scales := []int{2, 4}
+			for _, scale := range scales {
+				t.Run(fmt.Sprintf("SinglePageX%d", scale), func(t *testing.T) {
+					p := bitmap.TstWordBitmap(t, scale)
+					common.Log.Debug("Page: \n%s", p)
+					d := InitEncodeDocument(false)
+					err := d.AddClassifiedPage(p, classer.Correlation)
+					require.NoError(t, err)
 
-func aSymbol(t *testing.T) *bitmap.Bitmap {
-	t.Helper()
-	a := bitmap.New(6, 6)
-	require.NoError(t, a.SetPixel(1, 0, 1))
-	require.NoError(t, a.SetPixel(2, 0, 1))
-	require.NoError(t, a.SetPixel(3, 0, 1))
-	require.NoError(t, a.SetPixel(4, 0, 1))
-	require.NoError(t, a.SetPixel(5, 1, 1))
-	require.NoError(t, a.SetPixel(1, 2, 1))
-	require.NoError(t, a.SetPixel(2, 2, 1))
-	require.NoError(t, a.SetPixel(3, 2, 1))
-	require.NoError(t, a.SetPixel(4, 2, 1))
-	require.NoError(t, a.SetPixel(5, 2, 1))
-	require.NoError(t, a.SetPixel(0, 3, 1))
-	require.NoError(t, a.SetPixel(5, 3, 1))
-	require.NoError(t, a.SetPixel(0, 4, 1))
-	require.NoError(t, a.SetPixel(5, 4, 1))
-	require.NoError(t, a.SetPixel(1, 5, 1))
-	require.NoError(t, a.SetPixel(2, 5, 1))
-	require.NoError(t, a.SetPixel(3, 5, 1))
-	require.NoError(t, a.SetPixel(4, 5, 1))
-	require.NoError(t, a.SetPixel(5, 5, 1))
-	return a
-}
+					// Encode the page
+					data, err := d.Encode()
+					require.NoError(t, err)
 
-func cSymbol(t *testing.T) *bitmap.Bitmap {
-	t.Helper()
-	c := bitmap.New(6, 6)
-	require.NoError(t, c.SetPixel(1, 0, 1))
-	require.NoError(t, c.SetPixel(2, 0, 1))
-	require.NoError(t, c.SetPixel(3, 0, 1))
-	require.NoError(t, c.SetPixel(4, 0, 1))
-	require.NoError(t, c.SetPixel(0, 1, 1))
-	require.NoError(t, c.SetPixel(5, 1, 1))
-	require.NoError(t, c.SetPixel(0, 2, 1))
-	require.NoError(t, c.SetPixel(0, 3, 1))
-	require.NoError(t, c.SetPixel(0, 4, 1))
-	require.NoError(t, c.SetPixel(5, 4, 1))
-	require.NoError(t, c.SetPixel(1, 5, 1))
-	require.NoError(t, c.SetPixel(2, 5, 1))
-	require.NoError(t, c.SetPixel(3, 5, 1))
-	require.NoError(t, c.SetPixel(4, 5, 1))
-	return c
+					dc, err := DecodeDocument(reader.New(data))
+					require.NoError(t, err)
+
+					// there should be a single page
+					assert.Equal(t, uint32(1), dc.NumberOfPages)
+					// there should also be globals
+					if assert.NotNil(t, dc.GlobalSegments) {
+						// the globals should contain a single segment - symbol dictionary
+						assert.Len(t, dc.GlobalSegments.Segments, 1)
+						sd, err := dc.GlobalSegments.GetSymbolDictionary()
+						require.NoError(t, err)
+						assert.Equal(t, segments.TSymbolDictionary, sd.Type)
+						assert.Equal(t, 0, sd.PageAssociation)
+					}
+
+					// get first page
+					p2, err := dc.GetPage(1)
+					require.NoError(t, err)
+
+					page, ok := p2.(*Page)
+					require.True(t, ok)
+
+					// this page should contain 2 segments
+					if assert.Len(t, page.Segments, 2) {
+						for i, seg := range page.Segments {
+							switch i {
+							case 0:
+								// the first should be page info
+								assert.Equal(t, uint32(1), seg.SegmentNumber)
+								assert.Equal(t, segments.TPageInformation, seg.Type)
+							case 1:
+								// the second should be text region
+								assert.Equal(t, uint32(2), seg.SegmentNumber)
+								assert.Equal(t, segments.TImmediateTextRegion, seg.Type)
+								// it should also relates to the first segment
+
+								if assert.Len(t, seg.RTSegments, 1) {
+									assert.Equal(t, seg.RTSNumbers[0], 0)
+								}
+							}
+						}
+					}
+					res, err := page.GetBitmap()
+					require.NoError(t, err)
+
+					assert.True(t, res.Equals(p), res.String())
+				})
+			}
+		})
+	})
 }
 
 func getFrame(t *testing.T) *bitmap.Bitmap {

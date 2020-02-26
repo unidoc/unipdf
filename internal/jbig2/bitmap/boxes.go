@@ -158,7 +158,7 @@ func (b *Boxes) selectWithIndicator(na *basic.NumSlice) (d *Boxes, err error) {
 
 // ClipBoxToRectangle clips the image.Rectangle 'box' for the provided wi, hi which are rectangle representing image.
 // The UL corner of the 'box' is assumed to be at (0,0) and LR at ('wi' - 1, 'hi' - 1)
-func ClipBoxToRectangle(box *image.Rectangle, wi, hi int) (clipped *image.Rectangle, err error) {
+func ClipBoxToRectangle(box *image.Rectangle, wi, hi int) (out *image.Rectangle, err error) {
 	const processName = "ClipBoxToRectangle"
 	if box == nil {
 		return nil, errors.Error(processName, "'box' not defined")
@@ -166,7 +166,7 @@ func ClipBoxToRectangle(box *image.Rectangle, wi, hi int) (clipped *image.Rectan
 	if box.Min.X >= wi || box.Min.Y >= hi || box.Max.X <= 0 || box.Max.Y <= 0 {
 		return nil, errors.Error(processName, "'box' outside rectangle")
 	}
-	out := &(*box)
+	out = &(*box)
 	if out.Min.X < 0 {
 		out.Max.X += out.Min.X
 		out.Min.X = 0
@@ -188,4 +188,25 @@ func ClipBoxToRectangle(box *image.Rectangle, wi, hi int) (clipped *image.Rectan
 		out.Max.Y = hi
 	}
 	return out, nil
+}
+
+// Rect create new rectangle box with the negative coordinates rules.
+func Rect(x, y, w, h int) (*image.Rectangle, error) {
+	const processName = "bitmap.Rect"
+	if x < 0 {
+		w = w + x
+		x = 0
+		if w <= 0 {
+			return nil, errors.Errorf(processName, "x:'%d' < 0 and w: '%d' <= 0", x, w)
+		}
+	}
+	if y < 0 {
+		h = h + y
+		y = 0
+		if h <= 0 {
+			return nil, errors.Error(processName, "y < 0 and box off +quad")
+		}
+	}
+	box := image.Rect(x, y, x+w, y+h)
+	return &box, nil
 }

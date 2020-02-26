@@ -60,7 +60,7 @@ func TestWriteHeader(t *testing.T) {
 		// the associated page number may fit in a single byte - the page association flag should be false.
 		initial := &Header{
 			PageAssociation:   1,
-			RTSNumbers:        []int{2, 3, 4},
+			RTSegments:        []*Header{{SegmentNumber: 2}, {SegmentNumber: 3}, {SegmentNumber: 4}},
 			SegmentDataLength: 64,
 			SegmentNumber:     2,
 			Type:              TImmediateTextRegion,
@@ -120,6 +120,9 @@ func TestWriteHeader(t *testing.T) {
 			SegmentNumber:     257,
 			Type:              TIntermediateGenericRegion, // 36
 		}
+		for _, nm := range initial.RTSNumbers {
+			initial.RTSegments = append(initial.RTSegments, &Header{SegmentNumber: uint32(nm)})
+		}
 		w := writer.BufferedMSB()
 
 		n, err := initial.Encode(w)
@@ -176,15 +179,15 @@ func TestWriteHeader(t *testing.T) {
 		//
 		initial := &Header{
 			PageAssociation:   256,
-			RTSNumbers:        make([]int, 256), // the size > 4
+			RTSegments:        make([]*Header, 256), // the size > 4
 			SegmentDataLength: 64,
 			SegmentNumber:     65536,
 			Type:              TIntermediateGenericRegion, // 36
 		}
 
 		// seed the refered to segment numbers.
-		for i := 0; i < 256; i++ {
-			initial.RTSNumbers[i] = i + int(initial.SegmentNumber)
+		for i := uint32(0); i < 256; i++ {
+			initial.RTSegments[i] = &Header{SegmentNumber: i + initial.SegmentNumber}
 		}
 		w := writer.BufferedMSB()
 

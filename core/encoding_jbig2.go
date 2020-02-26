@@ -49,11 +49,11 @@ JBIG2Encoder/Decoder
 // in the dictionary. Then the encoder creates text regions which uses the related symbol classes to fill it's space.
 // The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
 // matches to single class, thus the compression is better, but the result might become lossy.
-// In order to store multiple image documents use the 'FileMode' which allows to store more pages within single jbig2 document.
+// In order to store multiple image pages use the 'FileMode' which allows to store more pages within single jbig2 document.
 type JBIG2Encoder struct {
 	JBIG2Document
 	// Globals are the JBIG2 global segments.
-	Globals document.Globals
+	Globals *document.Globals
 	// IsChocolateData defines if the data is encoded such that
 	// binary data '1' means black and '0' white.
 	// otherwise the data is called vanilla.
@@ -278,7 +278,7 @@ type JBIG2Document struct {
 	d        *document.Document
 }
 
-// AddPageImage adds the page with the image 'img' to the document 'd'.
+// AddPageImage adds the page with the image 'img' to the document 'd' in order to encode it jbig2 document.
 // The 'settings' defines what encoding type should be used by the encoder.
 func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2PageSettings) (err error) {
 	const processName = "JBIG2Document.AddPageImage"
@@ -310,7 +310,7 @@ func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2PageSettings
 	return nil
 }
 
-// Encode encodes whole document and stores as the byte slice data.
+// Encode encodes previously prepare jbig2 document and stores it as the byte slice.
 func (d *JBIG2Document) Encode() (data []byte, err error) {
 	const processName = "JBIG2Document.Encode"
 	if d.d == nil {
@@ -342,10 +342,9 @@ JBIG2Image
 
 */
 
-// JBIG2Image is the image structure used by the jbig2 encoder.
-// This image should be used as one bit per component as the jbig2 accepts only binary images.
-// In order to create binary image use the model.Image.ToJBIG2() method or use GoImageToJBIG2 function.
-// If the image data contains the row bytes padding set the HasPadding to true.
+// JBIG2Image is the image structure used by the jbig2 encoder. It's Data must be in a
+// 1 bit per component and 1 component per pixel (1bpp). In order to create binary image
+// use GoImageToJBIG2 function. If the image data contains the row bytes padding set the HasPadding to true.
 type JBIG2Image struct {
 	// Width and Height defines the image boundaries.
 	Width, Height int
@@ -387,7 +386,10 @@ func (j *JBIG2Image) toBitmap() (b *bitmap.Bitmap, err error) {
 }
 
 // GoImageToJBIG2 creates a binary image on the base of 'i' golang image.Image.
-// The 'bwThreshold' value should be in range (0.0, 1.0). The threshold checks if the grayscaled
+// If the image is not a black/white image then the function converts provided input into
+// JBIG2Image with 1bpp. For non grayscale images the function performs the conversion to the grayscale temp image.
+// Then it checks the value of the gray image value if it's within bounds of the black white threshold.
+// This 'bwThreshold' value should be in range (0.0, 1.0). The threshold checks if the grayscaled
 // pixel (uint) value is greater or smaller than 'bwThreshold' * 255. Pixels inside the range will be white, and the others will be black
 // If the 'bwThreshold' is equal to 0.0 then it's value would be set on the base of it's histogram using Triangle method.
 // For more information go to:

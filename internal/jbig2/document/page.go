@@ -11,10 +11,21 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 
+	"github.com/unidoc/unipdf/v3/internal/jbig2/basic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
+)
+
+// EncodingMethod defines the method of encoding for given page,
+type EncodingMethod int
+
+// enums that defines encoding method.
+const (
+	GenericEM EncodingMethod = iota
+	CorrelationEM
+	RankHausEM
 )
 
 // Page represents JBIG2 Page structure.
@@ -42,12 +53,13 @@ type Page struct {
 	Document *Document
 	// FirstSegmentNumber defines first segment number for given page
 	FirstSegmentNumber int
+	// EncodingMethod defines
+	EncodingMethod EncodingMethod
 }
 
 // AddEndOfPageSegment adds the end of page segment.
 func (p *Page) AddEndOfPageSegment() {
 	seg := &segments.Header{
-		SegmentNumber:   p.nextSegmentNumber(),
 		Type:            segments.TEndOfPage,
 		PageAssociation: p.PageNumber,
 	}
@@ -70,7 +82,6 @@ func (p *Page) AddGenericRegion(bm *bitmap.Bitmap, xloc, yloc, template int, tp 
 	}
 	// create segment header for the generic region
 	genRegSegmentHeader := &segments.Header{
-		SegmentNumber:   p.nextSegmentNumber(),
 		Type:            segments.TImmediateGenericRegion,
 		PageAssociation: p.PageNumber,
 		SegmentData:     genReg,
@@ -92,7 +103,6 @@ func (p *Page) AddPageInformationSegment() {
 
 	// and the page info header
 	pageInfoHeader := &segments.Header{
-		SegmentNumber:     p.nextSegmentNumber(),
 		PageAssociation:   p.PageNumber,
 		SegmentDataLength: uint64(pageInfo.Size()),
 		SegmentData:       pageInfo,
@@ -101,10 +111,49 @@ func (p *Page) AddPageInformationSegment() {
 	p.Segments = append(p.Segments, pageInfoHeader)
 }
 
+// addTextRegionSegment adds text region segment to the given page.
+// arguments:
+// - referredTo is the referred to segments header
+// - globalSymbolsMap 	- is the mapping between global symbols id and their classes.
+// - localSymbolsMap 	- is the mapping between this page exclusive symbols id and their' classes.
+// - comps 				- are the components numbers for this page.
+// - inLL 				- is the slice of the lower-left corners of the boxes for each symbol
+// - symbols 			- the slice of symbols
+// - assignments 		-
+func (p *Page) addTextRegionSegment(referredTo []*segments.Header, globalSymbolsMap, localSymbolsMap map[int]int, comps []int, inLL *bitmap.Points, symbols *bitmap.Bitmaps, classIDs *basic.IntSlice, boxes *bitmap.Boxes, symbits, sbNumInstances int) {
+	textRegion := &segments.TextRegion{NumberOfSymbols: uint32(sbNumInstances)}
+	textRegion.InitEncode(globalSymbolsMap, localSymbolsMap, comps, inLL, symbols, classIDs, boxes, p.FinalWidth, p.FinalHeight, symbits)
+
+	textRegionHeader := &segments.Header{
+		RTSegments:      referredTo,
+		SegmentData:     textRegion,
+		PageAssociation: p.PageNumber,
+		Type:            segments.TImmediateTextRegion,
+	}
+
+	// if the text region referes only to global symbol dictionary
+	// it shold be stored just after page information segment
+	tp := segments.TPageInformation
+	if localSymbolsMap != nil {
+		// otherwise store it after local symbol dictionary
+		tp = segments.TSymbolDictionary
+	}
+
+	var index int
+	for ; index < len(p.Segments); index++ {
+		if p.Segments[index].Type == tp {
+			index++
+			break
+		}
+	}
+	p.Segments = append(p.Segments, nil)
+	copy(p.Segments[index+1:], p.Segments[index:])
+	p.Segments[index] = textRegionHeader
+}
+
 // Encode encodes segments into provided 'w' writer.
 func (p *Page) Encode(w writer.BinaryWriter) (n int, err error) {
 	const processName = "Page.Encode"
-
 	var temp int
 	for _, seg := range p.Segments {
 		if temp, err = seg.Encode(w); err != nil {

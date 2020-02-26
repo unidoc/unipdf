@@ -613,3 +613,56 @@ func TestBufferWriteByte(t *testing.T) {
 		})
 	})
 }
+
+// TestWriteBits tests the WriteBits function.
+func TestWriteBits(t *testing.T) {
+	t.Run("NonMSB", func(t *testing.T) {
+		b := &Buffer{}
+
+		// having empty buffered MSB.
+		n, err := b.WriteBits(0xb, 4)
+		require.NoError(t, err)
+		assert.Zero(t, n)
+
+		assert.Len(t, b.data, 1)
+		assert.Equal(t, byte(0xb), b.data[0])
+
+		n, err = b.WriteBits(0xdf, 8)
+		require.NoError(t, err)
+		assert.Equal(t, 1, n)
+
+		if assert.Len(t, b.data, 2) {
+			assert.Equal(t, byte(0xd), b.data[1])
+			assert.Equal(t, byte(0xfb), b.data[0])
+		}
+	})
+
+	t.Run("MSB", func(t *testing.T) {
+		b := BufferedMSB()
+
+		n, err := b.WriteBits(0xf, 4)
+		require.NoError(t, err)
+
+		assert.Zero(t, n)
+
+		// the output now should be
+		// 11110000
+		//     ^
+		if assert.Len(t, b.data, 1) {
+			assert.Equal(t, byte(0xf0), b.data[0], "%08b", b.data[0])
+		}
+
+		// write 10111 = 0x17, 5
+		n, err = b.WriteBits(0x17, 5)
+		require.NoError(t, err)
+
+		// current output should be
+		// 11111011 10000000
+		//           ^
+		if assert.Len(t, b.data, 2) {
+			assert.Equal(t, byte(0xfb), b.data[0])
+			assert.Equal(t, byte(0x80), b.data[1])
+			assert.Equal(t, uint8(1), b.bitIndex)
+		}
+	})
+}

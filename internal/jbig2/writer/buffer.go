@@ -160,6 +160,27 @@ func (b *Buffer) WriteBit(bit int) error {
 	return nil
 }
 
+// WriteBits writes 'bits' values of a specific 'number' into the writer.Buffer.
+func (b *Buffer) WriteBits(bits uint64, number int) (n int, err error) {
+	const processName = "Buffer.WriterBits"
+	if number < 0 || number > 64 {
+		return 0, errors.Errorf(processName, "bits number must be in range <0,64>, is: '%d'", number)
+	}
+	var bit int
+	for i := 0; i < number; i++ {
+		if b.msb {
+			bit = int((bits >> (number - 1 - i)) & 0x1)
+		} else {
+			bit = int(bits & 0x1)
+			bits >>= 1
+		}
+		if err = b.WriteBit(bit); err != nil {
+			return n, errors.Wrapf(err, processName, "bit: %d", i)
+		}
+	}
+	return number / 8, nil
+}
+
 func (b *Buffer) byteCapacity() int {
 	currentCapacity := len(b.data) - b.byteIndex
 	if b.bitIndex != 0 {

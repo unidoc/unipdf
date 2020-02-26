@@ -45,10 +45,10 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		s, ok := sg.(*SymbolDictionary)
 		require.True(t, ok)
 
-		assert.True(t, s.isHuffmanEncoded)
-		assert.False(t, s.useRefinementAggregation)
-		assert.Equal(t, uint32(1), s.numberOfExportedSymbols)
-		assert.Equal(t, uint32(1), s.numberOfNewSymbols)
+		assert.True(t, s.IsHuffmanEncoded)
+		assert.False(t, s.UseRefinementAggregation)
+		assert.Equal(t, uint32(1), s.NumberOfExportedSymbols)
+		assert.Equal(t, uint32(1), s.NumberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
@@ -86,10 +86,10 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		s, ok := sg.(*SymbolDictionary)
 		require.True(t, ok)
 
-		assert.True(t, s.isHuffmanEncoded)
-		assert.False(t, s.useRefinementAggregation)
-		assert.Equal(t, uint32(2), s.numberOfExportedSymbols)
-		assert.Equal(t, uint32(2), s.numberOfNewSymbols)
+		assert.True(t, s.IsHuffmanEncoded)
+		assert.False(t, s.UseRefinementAggregation)
+		assert.Equal(t, uint32(2), s.NumberOfExportedSymbols)
+		assert.Equal(t, uint32(2), s.NumberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
@@ -128,16 +128,16 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		s, ok := sg.(*SymbolDictionary)
 		require.True(t, ok)
 
-		assert.False(t, s.isHuffmanEncoded)
-		assert.Equal(t, int8(2), s.sdTemplate)
+		assert.False(t, s.IsHuffmanEncoded)
+		assert.Equal(t, int8(2), s.SdTemplate)
 		assert.Equal(t, false, s.isCodingContextUsed)
 		assert.Equal(t, false, s.isCodingContextRetained)
 
-		assert.Equal(t, int8(2), s.sdATX[0])
-		assert.Equal(t, int8(-1), s.sdATY[0])
+		assert.Equal(t, int8(2), s.SdATX[0])
+		assert.Equal(t, int8(-1), s.SdATY[0])
 
-		assert.Equal(t, uint32(2), s.numberOfExportedSymbols)
-		assert.Equal(t, uint32(2), s.numberOfNewSymbols)
+		assert.Equal(t, uint32(2), s.NumberOfExportedSymbols)
+		assert.Equal(t, uint32(2), s.NumberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)
@@ -189,22 +189,22 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 		s, ok := sg.(*SymbolDictionary)
 		require.True(t, ok)
 
-		assert.False(t, s.isHuffmanEncoded)
-		assert.False(t, s.useRefinementAggregation)
-		assert.Equal(t, int8(2), s.sdTemplate)
+		assert.False(t, s.IsHuffmanEncoded)
+		assert.False(t, s.UseRefinementAggregation)
+		assert.Equal(t, int8(2), s.SdTemplate)
 		assert.False(t, s.isCodingContextUsed)
 		assert.False(t, s.isCodingContextRetained)
 
-		if assert.Len(t, s.sdATX, 1) {
-			assert.Equal(t, s.sdATX[0], int8(2))
+		if assert.Len(t, s.SdATX, 1) {
+			assert.Equal(t, s.SdATX[0], int8(2))
 		}
 
-		if assert.Len(t, s.sdATY, 1) {
-			assert.Equal(t, s.sdATY[0], int8(-1))
+		if assert.Len(t, s.SdATY, 1) {
+			assert.Equal(t, s.SdATY[0], int8(-1))
 		}
 
-		assert.Equal(t, uint32(1), s.numberOfExportedSymbols)
-		assert.Equal(t, uint32(1), s.numberOfNewSymbols)
+		assert.Equal(t, uint32(1), s.NumberOfExportedSymbols)
+		assert.Equal(t, uint32(1), s.NumberOfNewSymbols)
 
 		bm, err := s.GetDictionary()
 		require.NoError(t, err)

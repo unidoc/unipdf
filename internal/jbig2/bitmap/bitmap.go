@@ -385,6 +385,11 @@ func (b *Bitmap) SetDefaultPixel() {
 	}
 }
 
+// SetPadBits sets the pad bits for the current bitmap.
+func (b *Bitmap) SetPadBits(value int) {
+	b.setPadBits(value)
+}
+
 // SizesEqual checks if the bitmaps are of the same size.
 func (b *Bitmap) SizesEqual(s *Bitmap) bool {
 	if b == s {

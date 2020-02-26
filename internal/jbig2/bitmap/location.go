@@ -54,4 +54,6 @@ const (
 	SizeSelectIfLTE
 	// SizeSelectIfGTE is the size comparison used to save the value if it's less more or equal to threshold.
 	SizeSelectIfGTE
+	// SizeSelectIfEQ is the size comparison used to save the values if it's equal to threshold.
+	SizeSelectIfEQ
 )

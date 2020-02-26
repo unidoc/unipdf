@@ -14,7 +14,7 @@ import (
 
 // DecodeBytes decodes jbig2 'encode' byte slice data, with provided 'parameters' and optional 'globals'.
 // The function decodes only a single page from the given input.
-func DecodeBytes(encoded []byte, parameters decoder.Parameters, globals ...document.Globals) ([]byte, error) {
+func DecodeBytes(encoded []byte, parameters decoder.Parameters, globals ...*document.Globals) ([]byte, error) {
 	d, err := decoder.Decode(encoded, parameters, globals...)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func DecodeBytes(encoded []byte, parameters decoder.Parameters, globals ...docum
 }
 
 // DecodeGlobals decodes globally defined data segments from the provided 'encoded' byte slice.
-func DecodeGlobals(encoded []byte) (document.Globals, error) {
+func DecodeGlobals(encoded []byte) (*document.Globals, error) {
 	const processName = "DecodeGlobals"
 	r := reader.New(encoded)
 

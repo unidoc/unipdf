@@ -41,3 +41,37 @@ const (
 	// IARI used to decode the Ri bit of symbol instances.
 	IARI
 )
+
+// String implements fmt.Stringer interface.
+func (c Class) String() string {
+	switch c {
+	case IAAI:
+		return "IAAI"
+	case IADH:
+		return "IADH"
+	case IADS:
+		return "IADS"
+	case IADT:
+		return "IADT"
+	case IADW:
+		return "IADW"
+	case IAEX:
+		return "IAEX"
+	case IAFS:
+		return "IAFS"
+	case IAIT:
+		return "IAIT"
+	case IARDH:
+		return "IARDH"
+	case IARDW:
+		return "IARDW"
+	case IARDX:
+		return "IARDX"
+	case IARDY:
+		return "IARDY"
+	case IARI:
+		return "IARI"
+	default:
+		return "UNKNOWN"
+	}
+}

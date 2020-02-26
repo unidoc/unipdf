@@ -15,9 +15,6 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
-// CoderDebugging is the variable used to debug the encoder.
-var CoderDebugging bool
-
 // Encoder is the jbig2 arithmetic encoder context.
 type Encoder struct {
 	c     uint32
@@ -44,7 +41,7 @@ func New() *Encoder {
 	return e
 }
 
-// Init initializaes a new context
+// Init initializes a new context.
 func (e *Encoder) Init() {
 	e.context = newContext(maxCtx)
 	e.a = 0x8000
@@ -67,8 +64,9 @@ func (e *Encoder) DataSize() int {
 
 const tpgdCTX = 0x9b25
 
-// EncodeBitmap encodes packed data used for the Leptonica's 1bpp packed format image.
+// EncodeBitmap encodes packed data used for the 1bpp packed format image.
 func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemoval bool) error {
+	common.Log.Trace("Encode Bitmap [%dx%d], %s", bm.Width, bm.Height, bm)
 	var (
 		ltp, sltp                       uint8
 		c1, c2, c3                      uint16
@@ -179,8 +177,9 @@ func (e *Encoder) EncodeBitmap(bm *bitmap.Bitmap, mx, my int, duplicateLineRemov
 	return nil
 }
 
-// EncodeIAID encodes the integer ID value.
+// EncodeIAID encodes the integer ID 'value'. The symbol code length is the binary length of the value.
 func (e *Encoder) EncodeIAID(symbolCodeLength, value int) (err error) {
+	common.Log.Trace("Encode IAID. SymbolCodeLenght: '%d', Value: '%d'", symbolCodeLength, value)
 	if err = e.encodeIAID(symbolCodeLength, value); err != nil {
 		return errors.Wrap(err, "EncodeIAID", "")
 	}
@@ -189,6 +188,7 @@ func (e *Encoder) EncodeIAID(symbolCodeLength, value int) (err error) {
 
 // EncodeInteger encodes the integer 'value' for the given class 'proc'.
 func (e *Encoder) EncodeInteger(proc Class, value int) (err error) {
+	common.Log.Trace("Encode Integer:'%d' with Class: '%s'", value, proc)
 	if err = e.encodeInteger(proc, value); err != nil {
 		return errors.Wrap(err, "EncodeInteger", "")
 	}
@@ -197,6 +197,7 @@ func (e *Encoder) EncodeInteger(proc Class, value int) (err error) {
 
 // EncodeOOB encodes out of band value for given class process.
 func (e *Encoder) EncodeOOB(proc Class) (err error) {
+	common.Log.Trace("Encode OOB with Class: '%s'", proc)
 	if err = e.encodeOOB(proc); err != nil {
 		return errors.Wrap(err, "EncodeOOB", "")
 	}
@@ -438,9 +439,6 @@ func (e *Encoder) datasize() int {
 // emit a byte from the compressor by appending to the current
 // output buffer. If the buffer is full, allocate a new one.
 func (e *Encoder) emit() {
-	if CoderDebugging {
-		common.Log.Debug("Emit: %02X", e.b)
-	}
 	if e.outbufUsed == outputBufferSize {
 		e.outputChunks = append(e.outputChunks, e.outbuf)
 		e.outbuf = make([]byte, outputBufferSize)
@@ -452,7 +450,6 @@ func (e *Encoder) emit() {
 }
 
 func (e *Encoder) encodeBit(ctx *codingContext, ctxNum uint32, d uint8) error {
-	// NOTE: jbig2arith.cc:238
 	const processName = "Encoder.encodeBit"
 	e.ec++
 
@@ -463,10 +460,7 @@ func (e *Encoder) encodeBit(ctx *codingContext, ctxNum uint32, d uint8) error {
 	i := ctx.context[ctxNum]
 	mps := ctx.mps(ctxNum)
 	qe := stateTable[i].qe
-
-	if CoderDebugging {
-		common.Log.Debug("EC: %d\t D: %d\t I: %d\t MPS: %d\t QE: %04X\t  A: %04X\t C: %08X\t CT: %d\t B: %02X\t BP: %d", e.ec, d, i, mps, qe, e.a, e.c, e.ct, e.b, e.bp)
-	}
+	common.Log.Trace("EC: %d\t D: %d\t I: %d\t MPS: %d\t QE: %04X\t  A: %04X\t C: %08X\t CT: %d\t B: %02X\t BP: %d", e.ec, d, i, mps, qe, e.a, e.c, e.ct, e.b, e.bp)
 
 	if d == 0 {
 		e.code0(ctx, ctxNum, qe, i)
@@ -477,7 +471,6 @@ func (e *Encoder) encodeBit(ctx *codingContext, ctxNum uint32, d uint8) error {
 }
 
 func (e *Encoder) encodeInteger(proc Class, value int) error {
-	// NOTE: jbig2arith.cc:381
 	const processName = "Encoder.encodeInteger"
 	if value > 2000000000 || value < -2000000000 {
 		return errors.Errorf(processName, "arithmetic encoder - invalid integer value: '%d'", value)
@@ -530,7 +523,6 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 }
 
 func (e *Encoder) encodeIAID(symcodelen, value int) error {
-	// NOTE: jbig2arith.cc:426
 	if e.iaidctx == nil {
 		e.iaidctx = newContext(1 << uint(symcodelen))
 	}

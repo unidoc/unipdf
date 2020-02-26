@@ -19,8 +19,7 @@ type Component int
 
 // Component enum definitions.
 const (
-	_ Component = iota
-	ComponentConn
+	ComponentConn Component = iota
 	ComponentCharacters
 	ComponentWords
 )
@@ -86,7 +85,7 @@ func (b *Bitmap) GetComponents(components Component, maxWidth, maxHeight int) (b
 			return nil, nil, errors.Wrap(err, processName, "characters preprocessing")
 		}
 		if common.Log.IsLogLevel(common.LogLevelTrace) {
-			common.Log.Trace("ComponentCharactes bitmap after closing: %s", temp.String())
+			common.Log.Trace("ComponentCharacters bitmap after closing: %s", temp.String())
 		}
 		tempBitmaps := &Bitmaps{}
 		boxes, err = temp.ConnComponents(tempBitmaps, 8)
@@ -138,11 +137,13 @@ func (b *Bitmap) GetComponents(components Component, maxWidth, maxHeight int) (b
 		}
 	}
 
+	// common.Log.Debug("Bitmaps Before: %s", bitmaps)
 	bitmaps, err = bitmaps.SelectBySize(maxWidth, maxHeight, LocSelectIfBoth, SizeSelectIfLTE)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, processName, "")
 	}
 
+	// common.Log.Debug("Bitmaps: %s", bitmaps)
 	boxes, err = boxes.SelectBySize(maxWidth, maxHeight, LocSelectIfBoth, SizeSelectIfLTE)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, processName, "")

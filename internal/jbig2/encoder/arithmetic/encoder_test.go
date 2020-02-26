@@ -7,20 +7,16 @@ package arithmetic
 
 import (
 	"bytes"
-	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
-var coderDebugFlag bool
 
-func init() {
-	flag.BoolVar(&coderDebugFlag, "encoder-debug", false, "Shows debug logs for the jbig2 arithmetic encoder")
-}
 
 // TestEncoder tests the encoder using the standard H.2 test sequence.
 func TestEncoder(t *testing.T) {
@@ -32,12 +28,6 @@ func TestEncoder(t *testing.T) {
 
 	e := &Encoder{}
 	e.Init()
-
-	if coderDebugFlag {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
-
-		CoderDebugging = true
-	}
 
 	prev := uint32(0)
 	for _, b := range testSequence {
@@ -67,4 +57,60 @@ func TestEncoder(t *testing.T) {
 		}
 	}
 
+}
+
+// TestEncodeInteger tests the encode integer function.
+func TestEncodeInteger(t *testing.T) {
+	e := New()
+	err := e.EncodeInteger(IADT, 5)
+	require.NoError(t, err)
+
+	err = e.EncodeInteger(IADH, 10)
+	require.NoError(t, err)
+
+	err = e.EncodeOOB(IADH)
+	require.NoError(t, err)
+
+	err = e.EncodeOOB(IADT)
+	require.NoError(t, err)
+	e.Final()
+
+	buf := &bytes.Buffer{}
+	_, err = e.WriteTo(buf)
+	require.NoError(t, err)
+
+	r := reader.New(buf.Bytes())
+
+	dec, err := arithmetic.New(r)
+	require.NoError(t, err)
+
+	dt, err := dec.DecodeInt(arithmetic.NewStats(512, 1))
+	require.NoError(t, err)
+
+	dh, err := dec.DecodeInt(arithmetic.NewStats(512, 1))
+	require.NoError(t, err)
+
+	assert.Equal(t, 5, int(dt))
+	assert.Equal(t, 10, int(dh))
+}
+
+func TestEncoder_EncodeIAID(t *testing.T) {
+	e := New()
+	err := e.EncodeIAID(3, 4)
+	require.NoError(t, err)
+
+	buf := &bytes.Buffer{}
+	e.Final()
+	// write to buffer
+	_, err = e.WriteTo(buf)
+	require.NoError(t, err)
+
+	r := reader.New(buf.Bytes())
+	d, err := arithmetic.New(r)
+	require.NoError(t, err)
+
+	v, err := d.DecodeIAID(3, arithmetic.NewStats(512, 0))
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(4), v)
 }

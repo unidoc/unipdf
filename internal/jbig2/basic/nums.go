@@ -9,6 +9,45 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
+// IntSlice is the integer slice that contains panic safe methods.
+type IntSlice []int
+
+// NewIntSlice creates new integer slice.
+func NewIntSlice(i int) *IntSlice {
+	sl := IntSlice(make([]int, i))
+	return &sl
+}
+
+// Add adds the integer 'v' to the slice
+func (i *IntSlice) Add(v int) error {
+	if i == nil {
+		return errors.Error("IntSlice.Add", "slice not defined")
+	}
+	(*i) = append((*i), v)
+	return nil
+}
+
+// Copy creates a copy of given int slice.
+func (i *IntSlice) Copy() *IntSlice {
+	cp := IntSlice(make([]int, len(*i)))
+	copy(cp, *i)
+	return &cp
+}
+
+// Get gets the integer at 'index'.
+// Returns error if the index is out of range or given integer doesn't exists.
+func (i IntSlice) Get(index int) (int, error) {
+	if index > len(i)-1 {
+		return 0, errors.Errorf("IntSlice.Get", "index: %d out of range", index)
+	}
+	return i[index], nil
+}
+
+// Size returns the size of the intslice.
+func (i IntSlice) Size() int {
+	return len(i)
+}
+
 // NewNumSlice creates a new NumSlice pointer.
 func NewNumSlice(i int) *NumSlice {
 	arr := NumSlice(make([]float32, i))

@@ -62,7 +62,7 @@ type extractedImage struct {
 	pageNo    int
 	idx       int
 	hash      string
-	globals   document.Globals
+	globals   *document.Globals
 }
 
 func (e *extractedImage) fullName() string {

@@ -356,12 +356,16 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 	}
 
 	// define the initial value limits for the 'x' and 'y' in the 'rect' bounding box.
-	rect := image.Rect(100000, 100000, 0, 0)
+	var rect *image.Rectangle
+	rect, err = Rect(100000, 100000, 0, 0)
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
 
-	if err = pushFillSegmentBoundingBox(stack, x, x, y, 1, yMax, &rect); err != nil {
+	if err = pushFillSegmentBoundingBox(stack, x, x, y, 1, yMax, rect); err != nil {
 		return nil, errors.Wrap(err, processName, "initial push")
 	}
-	if err = pushFillSegmentBoundingBox(stack, x, x, y+1, -1, yMax, &rect); err != nil {
+	if err = pushFillSegmentBoundingBox(stack, x, x, y+1, -1, yMax, rect); err != nil {
 		return nil, errors.Wrap(err, processName, "2nd initial push")
 	}
 
@@ -408,7 +412,7 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 			xStart = x + 1
 			// check if there is a leak on left side
 			if xStart < out.xLeft-1 {
-				if err = pushFillSegmentBoundingBox(stack, xStart, out.xLeft-1, out.y, -out.dy, yMax, &rect); err != nil {
+				if err = pushFillSegmentBoundingBox(stack, xStart, out.xLeft-1, out.y, -out.dy, yMax, rect); err != nil {
 					return nil, errors.Wrap(err, processName, "leak on left side")
 				}
 			}
@@ -423,13 +427,13 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 			}
 
 			// push the x,y bb
-			if err = pushFillSegmentBoundingBox(stack, xStart, x-1, out.y, out.dy, yMax, &rect); err != nil {
+			if err = pushFillSegmentBoundingBox(stack, xStart, x-1, out.y, out.dy, yMax, rect); err != nil {
 				return nil, errors.Wrap(err, processName, "normal push")
 			}
 
 			// check if there is a leak on the right side
 			if x > out.xRight+1 {
-				if err = pushFillSegmentBoundingBox(stack, out.xRight+1, x-1, out.y, -out.dy, yMax, &rect); err != nil {
+				if err = pushFillSegmentBoundingBox(stack, out.xRight+1, x-1, out.y, -out.dy, yMax, rect); err != nil {
 					return nil, errors.Wrap(err, processName, "leak on right side")
 				}
 			}
@@ -446,7 +450,7 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 	}
 	rect.Max.X++
 	rect.Max.Y++
-	return &rect, nil
+	return rect, nil
 }
 
 func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Rectangle, err error) {
@@ -494,7 +498,6 @@ func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 		// - to the left of out.xLeft - 1
 		// - between out.xLeft and out.xRight
 		// - to the right of the out.xRight +1
-		//
 		for x = out.xLeft - 1; x >= 0 && s.GetPixel(x, y); x-- {
 			if err = s.SetPixel(x, y, 0); err != nil {
 				return nil, errors.Wrap(err, processName, "1st set")
@@ -503,26 +506,46 @@ func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 
 		// check if the pixel at 'out.xLeft' was off and wasn't cleared.
 		if x >= out.xLeft-1 {
-			for x = x + 1; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
-			}
-			xStart = x
+			for {
+				// skip the bits until 'ON' pixel is found.
+				for x = x + 1; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
+				}
+				xStart = x
 
-			if !(x <= out.xRight+1 && x <= xMax) {
-				// continue the external for loop
-				// and get next item out of the stack
-				continue
-			}
-		} else {
-			xStart = x + 1
-			// check if there is a leak on left side
-			// possible when the 'x' was < out.xLeft
-			if xStart < out.xLeft {
-				if err = pushFillSegmentBoundingBox(stack, xStart, out.xLeft-1, out.y, -out.dy, yMax, &rect); err != nil {
-					return nil, errors.Wrap(err, processName, "leak on left side")
+				// if x > out.xRight+1 || x > xMax {
+				if !(x <= out.xRight+1 && x <= xMax) {
+					break
+				}
+
+				for ; x <= xMax && s.GetPixel(x, y); x++ {
+					if err = s.SetPixel(x, y, 0); err != nil {
+						return nil, errors.Wrap(err, processName, "2nd set")
+					}
+				}
+
+				// push the x,y bb
+				if err = pushFillSegmentBoundingBox(stack, xStart, x-1, out.y, out.dy, yMax, &rect); err != nil {
+					return nil, errors.Wrap(err, processName, "normal push")
+				}
+
+				// check if there is a leak on the right side
+				if x > out.xRight {
+					if err = pushFillSegmentBoundingBox(stack, out.xRight+1, x-1, out.y, -out.dy, yMax, &rect); err != nil {
+						return nil, errors.Wrap(err, processName, "leak on right side")
+					}
 				}
 			}
-			x = out.xLeft
+			continue
 		}
+		xStart = x + 1
+		// check if there is a leak on left side
+		// possible when the 'x' was < out.xLeft
+		if xStart < out.xLeft {
+			if err = pushFillSegmentBoundingBox(stack, xStart, out.xLeft-1, out.y, -out.dy, yMax, &rect); err != nil {
+				return nil, errors.Wrap(err, processName, "leak on left side")
+			}
+		}
+		x = out.xLeft
 
 		for {
 			for ; x <= xMax && s.GetPixel(x, y); x++ {
@@ -548,7 +571,8 @@ func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 			}
 			xStart = x
 
-			if x > out.xRight+1 || x > xMax {
+			// if x > out.xRight+1 || x > xMax {
+			if !(x <= out.xRight+1 && x <= xMax) {
 				break
 			}
 		}

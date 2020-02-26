@@ -89,7 +89,15 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 	const processName = "Header.Write"
 	var tw writer.BinaryWriter
-
+	common.Log.Trace("[SEGMENT-HEADER][ENCODE] Begins")
+	defer func() {
+		if err != nil {
+			common.Log.Trace("[SEGMENT-HEADER][ENCODE] Failed. %v", err)
+		} else {
+			common.Log.Trace("[SEGMENT-HEADER] %v", h)
+			common.Log.Trace("[SEGMENT-HEADER][ENCODE] Finished")
+		}
+	}()
 	// For safety Finish the current byte in the 'w'.
 	w.FinishByte()
 	// check if the header contains any data
@@ -539,6 +547,13 @@ func (h *Header) writeReferredToCount(w writer.BinaryWriter) (n int, err error) 
 	const processName = "writeReferredToCount"
 	// the referred to count segment is one byte long if there are up to maximum of 4
 	// referred to other headers.
+
+	// copy the segment numbers from the refered to slice
+	h.RTSNumbers = make([]int, len(h.RTSegments))
+	for i, seg := range h.RTSegments {
+		h.RTSNumbers[i] = int(seg.SegmentNumber)
+	}
+
 	// if the refered to count is <= 4 the header uses short format
 	if len(h.RTSNumbers) <= 4 {
 		// use the short format

@@ -115,7 +115,7 @@ func (d *Decoder) decodePageImage(pageNumber int) (image.Image, error) {
 // Decode prepares decoder for the jbig2 encoded 'input' data,
 // with optional 'parameters' and optional Globally encoded
 // data segments - 'globals'.
-func Decode(input []byte, parameters Parameters, globals ...document.Globals) (*Decoder, error) {
+func Decode(input []byte, parameters Parameters, globals ...*document.Globals) (*Decoder, error) {
 	r := reader.New(input)
 
 	doc, err := document.DecodeDocument(r, globals...)
@@ -124,4 +124,10 @@ func Decode(input []byte, parameters Parameters, globals ...document.Globals) (*
 	}
 
 	return &Decoder{inputReader: r, document: doc, parameters: parameters}, nil
+}
+
+// Parameters are the paramters used by the jbig2 decoder.
+type Parameters struct {
+	UnpaddedData bool
+	Color        bitmap.Color
 }

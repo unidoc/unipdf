@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/unidoc/unipdf/v3/common"
+
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
@@ -140,6 +141,31 @@ func (w *Writer) WriteBit(bit int) error {
 		return w.writeBit(uint8(bit))
 	}
 	return errors.Error("WriteBit", "invalid bit value")
+}
+
+// WriteBits writes the 'bits' of the specific 'number' into writer.
+func (w *Writer) WriteBits(bits uint64, number int) (n int, err error) {
+	const processName = "Writer.WriterBits"
+	if number < 0 || number > 64 {
+		return 0, errors.Errorf(processName, "bits number must be in range <0,64>, is: '%d'", number)
+	}
+	if number == 0 {
+		return 0, nil
+	}
+
+	var bit int
+	for i := 0; i < number; i++ {
+		if w.msb {
+			bit = int((bits >> (number - 1 - i)) & 0x1)
+		} else {
+			bit = int(bits & 0x1)
+			bits >>= 1
+		}
+		if err = w.WriteBit(bit); err != nil {
+			return n, errors.Wrapf(err, processName, "bit: %d", i)
+		}
+	}
+	return number / 8, nil
 }
 
 func (w *Writer) byteCapacity() int {

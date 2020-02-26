@@ -9,14 +9,13 @@ import (
 	"image"
 	"math"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
 )
 
-const (
-	// JbAddedPixels is the size of the border added around pix of each c.c. for further processing.
-	JbAddedPixels = 6
-)
+// JbAddedPixels is the size of the border added around pix of each c.c. for further processing.
+const JbAddedPixels = 6
 
 // For PixHausTest, PixRankHausTest and PixCorrelationScore
 // the values should be or greater.
@@ -45,20 +44,6 @@ func AccumulateComposites(classes [][]*bitmap.Bitmap, samples *[]float64, centro
 	return nil, nil
 }
 
-// CorrelationInit is the initialization function
-// used for unsupervised classification of the collections
-// of connected components. Uses correlation classification with components.
-func CorrelationInit(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
-	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 1)
-}
-
-// CorrelationInitWithoutComponents is the initialization function
-// used for unsupervised classification of the collections
-// of connected components. Uses correlation classification without components.
-func CorrelationInitWithoutComponents(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32) (*Classer, error) {
-	return correlationInitInternal(components, maxWidth, maxHeight, thresh, weightFactor, 0)
-}
-
 // finalAligmentPositioning gets the best match position for the provided arguments.
 // NOTE: jbclass.c:2519
 func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitmap.Bitmap, sumtab []int) (pt image.Point, err error) {
@@ -72,9 +57,15 @@ func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitm
 
 	w, h := t.Width, t.Height
 	bx, by := x-iDelX-JbAddedPixels, y-iDelY-JbAddedPixels
-	box := image.Rect(bx, by, bx+w, by+h)
-	d, _, err := s.ClipRectangle(&box)
+
+	common.Log.Debug("x: '%d', y: '%d', w: '%d', h: '%d', bx: '%d', by: '%d'", x, y, w, h, bx, by)
+	box, err := bitmap.Rect(bx, by, w, h)
 	if err != nil {
+		return pt, errors.Wrap(err, processName, "")
+	}
+	d, _, err := s.ClipRectangle(box)
+	if err != nil {
+		common.Log.Error("Can't clip rectangle: %v", box)
 		return pt, errors.Wrap(err, processName, "")
 	}
 	r := bitmap.New(d.Width, d.Height)
@@ -101,66 +92,16 @@ func finalAlignmentPositioning(s *bitmap.Bitmap, x, y, iDelX, iDelY int, t *bitm
 	return pt, nil
 }
 
-// TemplatesFromComposites ...
-// returns 8 bpp templates for each class, or NULL on error
-func TemplatesFromComposites(classCopmosits []*bitmap.Bitmap, samplesNumber []float64) ([]*bitmap.Bitmap, error) {
-	// TODO: jbclass.c:1746
-	return nil, nil
-}
-
 // Method is the encoding method used enum.
 type Method int
 
-// Enum definitions of the encoding methods.
+// enum definitions of the encoding methods.
 const (
 	RankHaus Method = iota
 	Correlation
 )
 
-func correlationInitInternal(components bitmap.Component, maxWidth, maxHeight int, thresh, weightFactor float32, keepComponents int) (*Classer, error) {
-	const processName = "correlationInitInternal"
-	if components > bitmap.ComponentWords || components < 0 {
-		return nil, errors.Error(processName, "invalid jbig2 component")
-	}
-	if thresh < 0.4 || thresh > 0.98 {
-		return nil, errors.Error(processName, "jbig2 encoder thresh not in range [0.4 - 0.98]")
-	}
-	if weightFactor < 0.0 || weightFactor > 1.0 {
-		return nil, errors.Error(processName, "jbig2 encoder weight factor not in range [0.0 - 1.0]")
-	}
-	// if max width is not defined get the value from the constants.
-	if maxWidth == 0 {
-		switch components {
-		case bitmap.ComponentConn:
-			maxWidth = MaxConnCompWidth
-		case bitmap.ComponentCharacters:
-			maxWidth = MaxCharCompWidth
-		case bitmap.ComponentWords:
-			maxWidth = MaxWordCompWidth
-		default:
-			return nil, errors.Errorf(processName, "invalid components provided: %v", components)
-		}
-	}
-	// if max height is not defined take the 'MaxCompHeight' value.
-	if maxHeight == 0 {
-		maxHeight = MaxCompHeight
-	}
-
-	classer, err := New(Correlation, components)
-	if err != nil {
-		return nil, errors.Wrap(err, processName, "can't create classer")
-	}
-	classer.MaxWidth = maxWidth
-	classer.MaxHeight = maxHeight
-	classer.Thresh = thresh
-	classer.WeightFactor = weightFactor
-	classer.TemplatesSize = map[uint64]int{}
-	classer.KeepClassInstances = keepComponents != 0
-	return classer, nil
-}
-
 // TwoByTwoWalk ...
-// TODO: jbclass.c:2364
 var TwoByTwoWalk = []int{
 	0, 0,
 	0, 1,
