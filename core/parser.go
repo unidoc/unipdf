@@ -286,69 +286,7 @@ func (parser *PdfParser) parseName() (PdfObjectName, error) {
 // we will support it in the reader (no confusion with other types, so
 // no compromise).
 func (parser *PdfParser) parseNumber() (PdfObject, error) {
-	isFloat := false
-	allowSigns := true
-	var r bytes.Buffer
-	for {
-		common.Log.Trace("Parsing number \"%s\"", r.String())
-		bb, err := parser.reader.Peek(1)
-		if err == io.EOF {
-			// GH: EOF handling.  Handle EOF like end of line.  Can happen with
-			// encoded object streams that the object is at the end.
-			// In other cases, we will get the EOF error elsewhere at any rate.
-			break // Handle like EOF
-		}
-		if err != nil {
-			common.Log.Debug("ERROR %s", err)
-			return nil, err
-		}
-		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
-			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := parser.reader.ReadByte()
-			r.WriteByte(b)
-			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if IsDecimalDigit(bb[0]) {
-			b, _ := parser.reader.ReadByte()
-			r.WriteByte(b)
-		} else if bb[0] == '.' {
-			b, _ := parser.reader.ReadByte()
-			r.WriteByte(b)
-			isFloat = true
-		} else if bb[0] == 'e' || bb[0] == 'E' {
-			// Exponential number format.
-			b, _ := parser.reader.ReadByte()
-			r.WriteByte(b)
-			isFloat = true
-			allowSigns = true
-		} else {
-			break
-		}
-	}
-
-	var o PdfObject
-	if isFloat {
-		fVal, err := strconv.ParseFloat(r.String(), 64)
-		if err != nil {
-			common.Log.Debug("Error parsing number %v err=%v. Using 0.0. Output may be incorrect", r.String(), err)
-			fVal = 0.0
-			err = nil
-		}
-
-		objFloat := PdfObjectFloat(fVal)
-		o = &objFloat
-	} else {
-		intVal, err := strconv.ParseInt(r.String(), 10, 64)
-		if err != nil {
-			common.Log.Debug("Error parsing number %v err=%v. Using 0. Output may be incorrect", r.String(), err)
-			intVal = 0
-			err = nil
-		}
-
-		objInt := PdfObjectInteger(intVal)
-		o = &objInt
-	}
-
-	return o, nil
+	return ParseNumber(parser.reader)
 }
 
 // A string starts with '(' and ends with ')'.
@@ -1197,9 +1135,9 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 	var offset int64
 
 	// Define an buffer length in terms of how many bytes to read from the end of the file.
-	var buflen int64 = 1000
+	var buflen int64 = 2048
 
-	for offset < fSize {
+	for offset < fSize-4 {
 		if fSize <= (buflen + offset) {
 			buflen = fSize - offset
 		}
@@ -1224,7 +1162,7 @@ func (parser *PdfParser) seekToEOFMarker(fSize int64) error {
 		}
 
 		common.Log.Debug("Warning: EOF marker not found! - continue seeking")
-		offset += buflen
+		offset += buflen - 4
 	}
 
 	common.Log.Debug("Error: EOF marker was not found.")

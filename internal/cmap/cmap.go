@@ -12,15 +12,20 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
-	"github.com/unidoc/unipdf/v3/internal/textencoding"
+	"github.com/unidoc/unipdf/v3/internal/cmap/bcmaps"
+)
+
+const (
+	// Maximum number of possible bytes per code.
+	maxCodeLen = 4
+
+	// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
+	MissingCodeRune = '\ufffd' // �
 )
 
 // CharCode is a character code or Unicode
 // rune is int32 https://golang.org/doc/go1#rune
 type CharCode uint32
-
-// Maximum number of possible bytes per code.
-const maxCodeLen = 4
 
 // Codespace represents a single codespace range used in the CMap.
 type Codespace struct {
@@ -29,89 +34,23 @@ type Codespace struct {
 	High     CharCode
 }
 
+type charRange struct {
+	code0 CharCode
+	code1 CharCode
+}
+type fbRange struct {
+	code0 CharCode
+	code1 CharCode
+	r0    rune
+}
+
+// CIDSystemInfo contains information for identifying the character collection
+// used by a CID font.
 // CIDSystemInfo=Dict("Registry": Adobe, "Ordering": Korea1, "Supplement": 0, )
 type CIDSystemInfo struct {
 	Registry   string
 	Ordering   string
 	Supplement int
-}
-
-// CMap represents a character code to unicode mapping used in PDF files.
-// References:
-//  https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
-//  https://github.com/adobe-type-tools/cmap-resources/releases
-type CMap struct {
-	*cMapParser
-
-	name       string
-	nbits      int // 8 bits for simple fonts, 16 bits for CID fonts.
-	ctype      int
-	version    string
-	usecmap    string // Base this cmap on `usecmap` if `usecmap` is not empty.
-	systemInfo CIDSystemInfo
-
-	// For regular cmaps.
-	codespaces []Codespace
-
-	// For ToUnicode (ctype 2) cmaps.
-	codeToUnicode map[CharCode]rune
-}
-
-// NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
-func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
-	return &CMap{
-		name:  "Adobe-Identity-UCS",
-		ctype: 2,
-		nbits: 16,
-		systemInfo: CIDSystemInfo{
-			Registry:   "Adobe",
-			Ordering:   "UCS",
-			Supplement: 0,
-		},
-		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
-		codeToUnicode: codeToUnicode,
-	}
-}
-
-// String returns a human readable description of `cmap`.
-func (cmap *CMap) String() string {
-	si := cmap.systemInfo
-	parts := []string{
-		fmt.Sprintf("nbits:%d", cmap.nbits),
-		fmt.Sprintf("type:%d", cmap.ctype),
-	}
-	if cmap.version != "" {
-		parts = append(parts, fmt.Sprintf("version:%s", cmap.version))
-	}
-	if cmap.usecmap != "" {
-		parts = append(parts, fmt.Sprintf("usecmap:%#q", cmap.usecmap))
-	}
-	parts = append(parts, fmt.Sprintf("systemInfo:%s", si.String()))
-	if len(cmap.codespaces) > 0 {
-		parts = append(parts, fmt.Sprintf("codespaces:%d", len(cmap.codespaces)))
-	}
-	if len(cmap.codeToUnicode) > 0 {
-		parts = append(parts, fmt.Sprintf("codeToUnicode:%d", len(cmap.codeToUnicode)))
-	}
-	return fmt.Sprintf("CMAP{%#q %s}", cmap.name, strings.Join(parts, " "))
-}
-
-// newCMap returns an initialized CMap.
-func newCMap(isSimple bool) *CMap {
-	nbits := 16
-	if isSimple {
-		nbits = 8
-	}
-	return &CMap{
-		nbits:         nbits,
-		codeToUnicode: make(map[CharCode]rune),
-	}
-}
-
-// String returns a human readable description of `info`.
-// It looks like "Adobe-Japan2-000".
-func (info *CIDSystemInfo) String() string {
-	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
 }
 
 // NewCIDSystemInfo returns the CIDSystemInfo encoded in PDFObject `obj`.
@@ -139,24 +78,193 @@ func NewCIDSystemInfo(obj core.PdfObject) (info CIDSystemInfo, err error) {
 	}, nil
 }
 
-// Name returns the name of the CMap.
-func (cmap *CMap) Name() string {
-	return cmap.name
+// String returns a human readable description of `info`.
+// It looks like "Adobe-Japan2-000".
+func (info *CIDSystemInfo) String() string {
+	return fmt.Sprintf("%s-%s-%03d", info.Registry, info.Ordering, info.Supplement)
 }
 
-// Type returns the CMap type.
-func (cmap *CMap) Type() int {
-	return cmap.ctype
+// CMap represents a character code to unicode mapping used in PDF files.
+// References:
+//  https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/5411.ToUnicode.pdf
+//  https://github.com/adobe-type-tools/cmap-resources/releases
+type CMap struct {
+	*cMapParser
+
+	name       string
+	nbits      int // 8 bits for simple fonts, 16 bits for CID fonts.
+	ctype      int
+	version    string
+	usecmap    string // Base this cmap on `usecmap` if `usecmap` is not empty.
+	systemInfo CIDSystemInfo
+
+	// For regular cmaps.
+	codespaces []Codespace
+
+	// Used by ctype 1 CMaps.
+	codeToCID map[CharCode]CharCode // charcode -> CID
+	cidToCode map[CharCode]CharCode // CID -> charcode
+
+	// Used by ctype 2 CMaps.
+	codeToUnicode map[CharCode]rune // CID -> Unicode
+	unicodeToCode map[rune]CharCode // Unicode -> CID
 }
 
-// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
-const MissingCodeRune = textencoding.MissingCodeRune
+// NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
+func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
+	cmap := &CMap{
+		name:  "Adobe-Identity-UCS",
+		ctype: 2,
+		nbits: 16,
+		systemInfo: CIDSystemInfo{
+			Registry:   "Adobe",
+			Ordering:   "UCS",
+			Supplement: 0,
+		},
+		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
+		codeToCID:     make(map[CharCode]CharCode),
+		cidToCode:     make(map[CharCode]CharCode),
+		codeToUnicode: codeToUnicode,
+		unicodeToCode: make(map[rune]CharCode),
+	}
+
+	cmap.computeInverseMappings()
+	return cmap
+}
+
+// newCMap returns an initialized CMap.
+func newCMap(isSimple bool) *CMap {
+	nbits := 16
+	if isSimple {
+		nbits = 8
+	}
+	return &CMap{
+		nbits:         nbits,
+		codeToCID:     make(map[CharCode]CharCode),
+		cidToCode:     make(map[CharCode]CharCode),
+		codeToUnicode: make(map[CharCode]rune),
+		unicodeToCode: make(map[rune]CharCode),
+	}
+}
+
+// LoadCmapFromDataCID parses the in-memory cmap `data` and returns the resulting CMap.
+// It is a convenience function.
+func LoadCmapFromDataCID(data []byte) (*CMap, error) {
+	return LoadCmapFromData(data, false)
+}
+
+// LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
+// If `isSimple` is true, it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
+//
+// 9.10.3 ToUnicode CMaps (page 293).
+func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
+	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
+
+	cmap := newCMap(isSimple)
+	cmap.cMapParser = newCMapParser(data)
+
+	// In debugging it may help to see the data being parsed.
+	// fmt.Println("===============*******===========")
+	// fmt.Printf("%s\n", string(data))
+	// fmt.Println("===============&&&&&&&===========")
+
+	err := cmap.parse()
+	if err != nil {
+		return nil, err
+	}
+	if len(cmap.codespaces) == 0 {
+		if cmap.usecmap != "" {
+			return cmap, nil
+		}
+
+		common.Log.Debug("ERROR: No codespaces. cmap=%s", cmap)
+		return nil, ErrBadCMap
+	}
+
+	cmap.computeInverseMappings()
+	return cmap, nil
+}
+
+// IsPredefinedCMap returns true if the specified CMap name is a predefined
+// CJK CMap. The predefined CMaps are bundled with the package and can be loaded
+// using the LoadPredefinedCMap function.
+// See section 9.7.5.2 "Predefined CMaps" (page 273, Table 118).
+func IsPredefinedCMap(name string) bool {
+	return bcmaps.AssetExists(name)
+}
+
+// LoadPredefinedCMap loads a predefined CJK CMap by name.
+// See section 9.7.5.2 "Predefined CMaps" (page 273, Table 118).
+func LoadPredefinedCMap(name string) (*CMap, error) {
+	// Load cmap.
+	cmap, err := loadPredefinedCMap(name)
+	if err != nil {
+		return nil, err
+	}
+	if cmap.usecmap == "" {
+		cmap.computeInverseMappings()
+		return cmap, nil
+	}
+
+	// Load base cmap.
+	base, err := loadPredefinedCMap(cmap.usecmap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add CID ranges.
+	for charcode, cid := range base.codeToCID {
+		if _, ok := cmap.codeToCID[charcode]; !ok {
+			cmap.codeToCID[charcode] = cid
+		}
+	}
+
+	// Add codespaces.
+	for _, codespace := range base.codespaces {
+		cmap.codespaces = append(cmap.codespaces, codespace)
+	}
+
+	cmap.computeInverseMappings()
+	return cmap, nil
+}
+
+// loadPredefinedCMap loads an embedded CMap from the bcmaps package, specified
+// by name.
+func loadPredefinedCMap(name string) (*CMap, error) {
+	cmapData, err := bcmaps.Asset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return LoadCmapFromDataCID(cmapData)
+}
+
+func (cmap *CMap) computeInverseMappings() {
+	// Generate CID -> charcode map.
+	for code, cid := range cmap.codeToCID {
+		if c, ok := cmap.cidToCode[cid]; !ok || (ok && c > code) {
+			cmap.cidToCode[cid] = code
+		}
+	}
+
+	// Generate Unicode -> CID map.
+	for cid, r := range cmap.codeToUnicode {
+		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c > cid) {
+			cmap.unicodeToCode[r] = cid
+		}
+	}
+
+	// Sort codespaces in order for shorter codes to be checked first.
+	sort.Slice(cmap.codespaces, func(i, j int) bool {
+		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
+	})
+}
 
 // CharcodeBytesToUnicode converts a byte array of charcodes to a unicode string representation.
 // It also returns a bool flag to tell if the conversion was successful.
 // NOTE: This only works for ToUnicode cmaps.
 func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
-	charcodes, matched := cmap.bytesToCharcodes(data)
+	charcodes, matched := cmap.BytesToCharcodes(data)
 	if !matched {
 		common.Log.Debug("ERROR: CharcodeBytesToUnicode. Not in codespaces. data=[% 02x] cmap=%s",
 			data, cmap)
@@ -198,13 +306,37 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (rune, bool) {
 	return MissingCodeRune, false
 }
 
-// bytesToCharcodes attempts to convert the entire byte array `data` to a list of character codes
-// from the ranges specified by `cmap`'s codespaces.
+// RuneToCID maps the specified rune to a character identifier. If the provided
+// rune has no available mapping, the second return value is false.
+func (cmap *CMap) RuneToCID(r rune) (CharCode, bool) {
+	cid, ok := cmap.unicodeToCode[r]
+	return cid, ok
+}
+
+// CharcodeToCID maps the specified character code to a character identifier.
+// If the provided charcode has no available mapping, the second return value
+// is false. The returned CID can be mapped to a Unicode character using a
+// Unicode conversion CMap.
+func (cmap *CMap) CharcodeToCID(code CharCode) (CharCode, bool) {
+	cid, ok := cmap.codeToCID[code]
+	return cid, ok
+}
+
+// CIDToCharcode maps the specified character identified to a character code. If
+// the provided CID has no available mapping, the second return value is false.
+func (cmap *CMap) CIDToCharcode(cid CharCode) (CharCode, bool) {
+	code, ok := cmap.cidToCode[cid]
+	return code, ok
+}
+
+// BytesToCharcodes attempts to convert the entire byte array `data` to a list
+// of character codes from the ranges specified by `cmap`'s codespaces.
 // Returns:
 //      character code sequence (if there is a match complete match)
 //      matched?
-// NOTE: A partial list of character codes will be returned if a complete match is not possible.
-func (cmap *CMap) bytesToCharcodes(data []byte) ([]CharCode, bool) {
+// NOTE: A partial list of character codes will be returned if a complete match
+//       is not possible.
+func (cmap *CMap) BytesToCharcodes(data []byte) ([]CharCode, bool) {
 	var charcodes []CharCode
 	if cmap.nbits == 8 {
 		for _, b := range data {
@@ -222,6 +354,52 @@ func (cmap *CMap) bytesToCharcodes(data []byte) ([]CharCode, bool) {
 		i += n
 	}
 	return charcodes, true
+}
+
+// Name returns the name of the CMap.
+func (cmap *CMap) Name() string {
+	return cmap.name
+}
+
+// Type returns the CMap type.
+func (cmap *CMap) Type() int {
+	return cmap.ctype
+}
+
+// Nbits returns 8 bits for simple font CMaps and 16 bits for CID font CMaps.
+func (cmap *CMap) NBits() int {
+	return cmap.nbits
+}
+
+// String returns a human readable description of `cmap`.
+func (cmap *CMap) String() string {
+	si := cmap.systemInfo
+	parts := []string{
+		fmt.Sprintf("nbits:%d", cmap.nbits),
+		fmt.Sprintf("type:%d", cmap.ctype),
+	}
+	if cmap.version != "" {
+		parts = append(parts, fmt.Sprintf("version:%s", cmap.version))
+	}
+	if cmap.usecmap != "" {
+		parts = append(parts, fmt.Sprintf("usecmap:%#q", cmap.usecmap))
+	}
+	parts = append(parts, fmt.Sprintf("systemInfo:%s", si.String()))
+	if len(cmap.codespaces) > 0 {
+		parts = append(parts, fmt.Sprintf("codespaces:%d", len(cmap.codespaces)))
+	}
+	if len(cmap.codeToUnicode) > 0 {
+		parts = append(parts, fmt.Sprintf("codeToUnicode:%d", len(cmap.codeToUnicode)))
+	}
+	return fmt.Sprintf("CMAP{%#q %s}", cmap.name, strings.Join(parts, " "))
+}
+
+// Bytes returns the raw bytes of a PDF CMap corresponding to `cmap`.
+func (cmap *CMap) Bytes() []byte {
+	common.Log.Trace("cmap.Bytes: cmap=%s", cmap.String())
+	body := cmap.toBfData()
+	whole := strings.Join([]string{cmapHeader, body, cmapTrailer}, "\n")
+	return []byte(whole)
 }
 
 // matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces.
@@ -254,60 +432,6 @@ func (cmap *CMap) inCodespace(code CharCode, numBytes int) bool {
 		}
 	}
 	return false
-}
-
-// LoadCmapFromDataCID parses the in-memory cmap `data` and returns the resulting CMap.
-// It is a convenience function.
-func LoadCmapFromDataCID(data []byte) (*CMap, error) {
-	return LoadCmapFromData(data, false)
-}
-
-// LoadCmapFromData parses the in-memory cmap `data` and returns the resulting CMap.
-// If `isSimple` is true, it uses 1-byte encodings, otherwise it uses the codespaces in the cmap.
-//
-// 9.10.3 ToUnicode CMaps (page 293).
-func LoadCmapFromData(data []byte, isSimple bool) (*CMap, error) {
-	common.Log.Trace("LoadCmapFromData: isSimple=%t", isSimple)
-
-	cmap := newCMap(isSimple)
-	cmap.cMapParser = newCMapParser(data)
-
-	// In debugging it may help to see the data being parsed.
-	// fmt.Println("===============*******===========")
-	// fmt.Printf("%s\n", string(data))
-	// fmt.Println("===============&&&&&&&===========")
-
-	err := cmap.parse()
-	if err != nil {
-		return nil, err
-	}
-	if len(cmap.codespaces) == 0 {
-		common.Log.Debug("ERROR: No codespaces. cmap=%s", cmap)
-		return nil, ErrBadCMap
-	}
-	// We need to sort codespaces so that we check shorter codes first.
-	sort.Slice(cmap.codespaces, func(i, j int) bool {
-		return cmap.codespaces[i].Low < cmap.codespaces[j].Low
-	})
-	return cmap, nil
-}
-
-// Bytes returns the raw bytes of a PDF CMap corresponding to `cmap`.
-func (cmap *CMap) Bytes() []byte {
-	common.Log.Trace("cmap.Bytes: cmap=%s", cmap.String())
-	body := cmap.toBfData()
-	whole := strings.Join([]string{cmapHeader, body, cmapTrailer}, "\n")
-	return []byte(whole)
-}
-
-type charRange struct {
-	code0 CharCode
-	code1 CharCode
-}
-type fbRange struct {
-	code0 CharCode
-	code1 CharCode
-	r0    rune
 }
 
 // toBfData returns the bfchar and bfrange sections of a CMap text file.
@@ -404,10 +528,3 @@ end
 end
 `
 )
-
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-	return j
-}
