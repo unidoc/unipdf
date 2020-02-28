@@ -157,9 +157,9 @@ func MorphSequence(src *Bitmap, sequence ...MorphProcess) (*Bitmap, error) {
 	return morphSequence(src, sequence...)
 }
 
-func (bm *Bitmap) centroid(centTab, sumTab []int) (Point, error) {
+func (b *Bitmap) centroid(centTab, sumTab []int) (Point, error) {
 	pt := Point{}
-	bm.setPadBits(0)
+	b.setPadBits(0)
 	if len(centTab) == 0 {
 		centTab = makePixelCentroidTab8()
 	}
@@ -168,11 +168,11 @@ func (bm *Bitmap) centroid(centTab, sumTab []int) (Point, error) {
 	}
 	var xsum, ysum, pixsum, rowsum, i, j int
 	var bt byte
-	for i = 0; i < bm.Height; i++ {
-		line := bm.RowStride * i
+	for i = 0; i < b.Height; i++ {
+		line := b.RowStride * i
 		rowsum = 0
-		for j = 0; j < bm.RowStride; j++ {
-			bt = bm.Data[line+j]
+		for j = 0; j < b.RowStride; j++ {
+			bt = b.Data[line+j]
 			if bt != 0 {
 				rowsum += sumTab[bt]
 				xsum += centTab[bt] + j*8*sumTab[bt]
