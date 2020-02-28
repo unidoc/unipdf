@@ -1056,7 +1056,7 @@ func (b *Bitmap) setEightPartlyBytes(index, fullBytesNumber int, eb uint64) (err
 		return nil
 	}
 	shift -= 8
-	temp = byte(eb>>uint(shift)&0xff) << padding
+	temp = byte(eb>>uint(shift)&0xff) << uint(padding)
 	if err = b.SetByte(index+fullBytesNumber, temp); err != nil {
 		return errors.Wrap(err, processName, "padded")
 	}

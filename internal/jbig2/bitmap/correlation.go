@@ -115,7 +115,7 @@ func CorrelationScore(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, ma
 			}
 		} else {
 			for y = loRow; y < hiRow; y, row1, row2 = y+1, row1+bm1.RowStride, row2+bm2.RowStride {
-				bt1, bt2 = bm1.Data[row1], bm2.Data[row2]>>idelX
+				bt1, bt2 = bm1.Data[row1], bm2.Data[row2]>>uint(idelX)
 				andByte = bt1 & bt2
 				count += tab[andByte]
 				for x = 1; x < rowBytes1; x++ {
@@ -131,8 +131,8 @@ func CorrelationScore(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, ma
 			for y = loRow; y < hiRow; y, row1, row2 = y+1, row1+bm1.RowStride, row2+bm2.RowStride {
 				for x = 0; x < rowBytes1; x++ {
 					bt1 = bm1.Data[row1+x]
-					bt2 = bm2.Data[row2+x] << -idelX
-					bt2 |= bm2.Data[row2+x+1] >> (8 + idelX)
+					bt2 = bm2.Data[row2+x] << uint(-idelX)
+					bt2 |= bm2.Data[row2+x+1] >> uint(8+idelX)
 					andByte = bt1 & bt2
 					count += tab[andByte]
 				}
@@ -141,13 +141,13 @@ func CorrelationScore(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, ma
 			for y = loRow; y < hiRow; y, row1, row2 = y+1, row1+bm1.RowStride, row2+bm2.RowStride {
 				for x = 0; x < rowBytes1-1; x++ {
 					bt1 = bm1.Data[row1+x]
-					bt2 = bm2.Data[row2+x] << -idelX
-					bt2 |= bm2.Data[row2+x+1] >> (8 + idelX)
+					bt2 = bm2.Data[row2+x] << uint(-idelX)
+					bt2 |= bm2.Data[row2+x+1] >> uint(8+idelX)
 					andByte = bt1 & bt2
 					count += tab[andByte]
 				}
 				bt1 = bm1.Data[row1+x]
-				bt2 = bm2.Data[row2+x] << -idelX
+				bt2 = bm2.Data[row2+x] << uint(-idelX)
 				andByte = bt1 & bt2
 				count += tab[andByte]
 			}
@@ -305,19 +305,19 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 	case idelX > 0 && rowBytes2 < rowBytes1:
 		for y = loRow; y < hiRow; y, row1Index, row2Index = y+1, row1Index+bm1.RowStride, row2Index+bm2.RowStride {
 			byte1 = bm1.Data[row1Index]
-			byte2 = bm2.Data[row2Index] >> idelX
+			byte2 = bm2.Data[row2Index] >> uint(idelX)
 			andByte = byte1 & byte2
 			count += tab[andByte]
 
 			for x = 1; x < rowBytes2; x++ {
 				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index+x]>>idelX | bm2.Data[row2Index+x-1]<<(8-idelX)
+				byte2 = bm2.Data[row2Index+x]>>uint(idelX) | bm2.Data[row2Index+x-1]<<uint(8-idelX)
 				andByte = byte1 & byte2
 				count += tab[andByte]
 			}
 
 			byte1 = bm1.Data[row1Index+x]
-			byte2 = bm2.Data[row2Index+x-1] << (8 - idelX)
+			byte2 = bm2.Data[row2Index+x-1] << uint(8-idelX)
 			andByte = byte1 & byte2
 			count += tab[andByte]
 
@@ -330,15 +330,15 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 	case idelX > 0 && rowBytes2 >= rowBytes1:
 		for y = loRow; y < hiRow; y, row1Index, row2Index = y+1, row1Index+bm1.RowStride, row2Index+bm2.RowStride {
 			byte1 = bm1.Data[row1Index]
-			byte2 = bm2.Data[row2Index] >> idelX
+			byte2 = bm2.Data[row2Index] >> uint(idelX)
 
 			andByte = byte1 & byte2
 			count += tab[andByte]
 
 			for x = 1; x < rowBytes1; x++ {
 				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index+x] >> idelX
-				byte2 |= bm2.Data[row2Index+x-1] << (8 - idelX)
+				byte2 = bm2.Data[row2Index+x] >> uint(idelX)
+				byte2 |= bm2.Data[row2Index+x-1] << uint(8-idelX)
 				andByte = byte1 & byte2
 				count += tab[andByte]
 			}
@@ -352,8 +352,8 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 		for y = loRow; y < hiRow; y, row1Index, row2Index = y+1, row1Index+bm1.RowStride, row2Index+bm2.RowStride {
 			for x = 0; x < rowBytes1; x++ {
 				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index+x] << -idelX
-				byte2 |= bm2.Data[row2Index+x+1] >> (8 + idelX)
+				byte2 = bm2.Data[row2Index+x] << uint(-idelX)
+				byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
 				andByte = byte1 & byte2
 				count += tab[andByte]
 			}
@@ -368,14 +368,14 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 		for y = loRow; y < hiRow; y, row1Index, row2Index = y+1, row1Index+bm1.RowStride, row2Index+bm2.RowStride {
 			for x = 0; x < rowBytes1; x++ {
 				byte1 = bm1.Data[row1Index+x]
-				byte2 = bm2.Data[row2Index+x] << -idelX
-				byte2 |= bm2.Data[row2Index+x+1] >> (8 + idelX)
+				byte2 = bm2.Data[row2Index+x] << uint(-idelX)
+				byte2 |= bm2.Data[row2Index+x+1] >> uint(8+idelX)
 				andByte = byte1 & byte2
 				count += tab[andByte]
 			}
 
 			byte1 = bm1.Data[row1Index+x]
-			byte2 = bm2.Data[row2Index+x] << -idelX
+			byte2 = bm2.Data[row2Index+x] << uint(-idelX)
 			andByte = byte1 & byte2
 			count += tab[andByte]
 
@@ -394,19 +394,19 @@ func CorrelationScoreThresholded(bm1, bm2 *Bitmap, area1, area2 int, delX, delY 
 	return false, nil
 }
 
-// Haustest does the Hausdorff 2-way check for the provided bitmaps.
+// HausTest does the Hausdorff 2-way check for the provided bitmaps.
 // Parameters:
 //	p1			- new not dilated bitmap
 //	p2			- new dilated bitmap
 //  p3			- exemplar not dilated bitmap
 //	p4			- exemplar dilated bitmap
-//	delX, delY	- component centroid differenece for 'x' and 'y' coordinates.
+//	delX, delY	- component centroid difference for 'x' and 'y' coordinates.
 //	maxDiffW	- maximum width difference of 'p1' and 'p2'
 // 	maxDiffH	- maximum height difference of 'p1' and 'p2'
 // The centroid difference is used to align two images to the nearest integer for each check.
 // It checks if the dilated image of one contains all the pixels of the undilated image of the other.
-func Haustest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH int) (bool, error) {
-	const processName = "Haustest"
+func HausTest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH int) (bool, error) {
+	const processName = "HausTest"
 
 	// do a short check if the size is out of possible difference.
 	wi, hi := p1.Width, p1.Height
@@ -446,20 +446,20 @@ func Haustest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH int
 	return pt.Zero(), nil
 }
 
-// RankHausTest does the test of the Hausdorf ranked check.
+// RankHausTest does the test of the Hausdorff ranked check.
 // Parameters:
 //	p1			- new bitmap, not dilated
 //	p2			- new bitmap, dilated
 //	p3			-u exemplar bitmap, not dilated
 //	p4			- exemplar bitmap, dilated
-//	delX, delY	- component centroid differenece for 'x' and 'y' coordinates
+//	delX, delY	- component centroid difference for 'x' and 'y' coordinates
 //	maxDiffW	- maximum Width difference of 'p1' and 'p2'
 // 	maxDiffH	- maximum Height difference of 'p1' and 'p2'
 //	area1		- 'ON' - fg - pixels area of the 'p1' bitmap
 // 	area3		- 'ON' - fg - pixels area of the 'p3' bitmap
 //	rank		- rank value of the test
 //	tab8		- table of the pixel sums for a single byte.
-// The 'rank' value is beign converted to a number of pixels by multiplication with the number of undilated images.
+// The 'rank' value is being converted to a number of pixels by multiplication with the number of undilated images.
 // The centroid difference is used for alignment of the images.
 // The rank Hausdorff checks if dilated image of one contains the rank fraction pixels of the undilated image of the other in both directions.
 func RankHausTest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH, area1, area3 int, rank float32, tab8 []int) (match bool, err error) {
@@ -481,17 +481,17 @@ func RankHausTest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH
 	thresh3 := int(float32(area3)*(1.0-rank) + 0.5)
 
 	// round the difference of the centroid locations.
-	var idelX, idelY int
+	var iDelX, iDelY int
 	if delX >= 0 {
-		idelX = int(delX + 0.5)
+		iDelX = int(delX + 0.5)
 	} else {
-		idelX = int(delX - 0.5)
+		iDelX = int(delX - 0.5)
 	}
 
 	if delY >= 0 {
-		idelY = int(delY + 0.5)
+		iDelY = int(delY + 0.5)
 	} else {
-		idelY = int(delY - 0.5)
+		iDelY = int(delY - 0.5)
 	}
 
 	// do the 1-direction hausdorff check, if every pixel in 'p1' is within a dilation distance of some pixel in 'p3'.
@@ -499,7 +499,7 @@ func RankHausTest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH
 	if err = t.RasterOperation(0, 0, wi, hi, PixSrc, p1, 0, 0); err != nil {
 		return false, errors.Wrap(err, processName, "p1 -SRC-> t")
 	}
-	if err = t.RasterOperation(idelX, idelY, wi, hi, PixNotSrcAndDst, p4, 0, 0); err != nil {
+	if err = t.RasterOperation(iDelX, iDelY, wi, hi, PixNotSrcAndDst, p4, 0, 0); err != nil {
 		return false, errors.Wrap(err, processName, "t & !p4")
 	}
 
@@ -514,7 +514,7 @@ func RankHausTest(p1, p2, p3, p4 *Bitmap, delX, delY float32, maxDiffW, maxDiffH
 
 	// now do a 1-direction hausdorff checking that every pixel of 'p3' is within dilation distance of some pixel in 'p1'.
 	// (p2 entirely covers p3)
-	if err = t.RasterOperation(idelX, idelY, wt, ht, PixSrc, p3, 0, 0); err != nil {
+	if err = t.RasterOperation(iDelX, iDelY, wt, ht, PixSrc, p3, 0, 0); err != nil {
 		return false, errors.Wrap(err, processName, "p3 -SRC-> t")
 	}
 	if err = t.RasterOperation(0, 0, wt, ht, PixNotSrcAndDst, p2, 0, 0); err != nil {

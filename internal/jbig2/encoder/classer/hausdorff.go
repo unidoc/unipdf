@@ -107,7 +107,7 @@ func (c *Classer) classifyRankHouseOne(boxa *bitmap.Boxes, pixa, bms1, bms2 *bit
 			if err != nil {
 				return errors.Wrap(err, processName, "CentroidTemplates")
 			}
-			testVal, err = bitmap.Haustest(bm1, bm2, bm3, bm4, x1-x2, y1-y2, MaxDiffWidth, MaxDiffHeight)
+			testVal, err = bitmap.HausTest(bm1, bm2, bm3, bm4, x1-x2, y1-y2, MaxDiffWidth, MaxDiffHeight)
 			if err != nil {
 				return errors.Wrap(err, processName, "")
 			}
