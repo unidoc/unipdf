@@ -61,8 +61,6 @@ type JBIG2Encoder struct {
 	// otherwise the data is called vanilla.
 	// Naming convention taken from: 'https://en.wikipedia.org/wiki/Binary_image#Interpretation'
 	IsChocolateData bool
-	// Document defines the JBIG2 Encoded document
-
 	// DefaultPageSettings are the settings parameters used by the jbig2 encoder.
 	DefaultPageSettings JBIG2EncoderSettings
 }
@@ -160,9 +158,6 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 
 // UpdateParams updates the parameter values of the encoder.
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
-	if decode := params.Get("Decode"); decode != nil {
-		enc.setChocolateData(decode)
-	}
 }
 
 func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
@@ -178,38 +173,6 @@ func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
 
 	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
 	return nil, ErrNoJBIG2Decode
-}
-
-// setChocolateData sets the chocolate data flag when the pdf stream object contains the 'Decode' object.
-// Decode object ( PDF32000:2008 7.10.2 Type 0 (Sampled) Functions).
-// NOTE: this function is a temporary helper until the samples handle Decode function.
-func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
-	arr, ok := decode.(*PdfObjectArray)
-	if !ok {
-		common.Log.Debug("JBIG2Encoder - Decode is not an array. %T", decode)
-		return
-	}
-
-	// (PDF32000:2008 Table 39) The array should be of 2 x n size.
-	// For binary images n stands for 1bit, thus the array should contain 2 numbers.
-	vals, err := arr.GetAsFloat64Slice()
-	if err != nil {
-		common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
-		return
-	}
-
-	if len(vals) != 2 {
-		return
-	}
-
-	first, second := int(vals[0]), int(vals[1])
-	if first == 1 && second == 0 {
-		enc.IsChocolateData = true
-	} else if first == 0 && second == 1 {
-		enc.IsChocolateData = false
-	} else {
-		common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
-	}
 }
 
 func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
@@ -260,11 +223,6 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			}
 		}
 	}
-
-	// Inverse the bits on the 'Decode [1.0 0.0]' function (PDF32000:2008 7.10.2)
-	if decode := streamObj.Get("Decode"); decode != nil {
-		encoder.setChocolateData(decode)
-	}
 	return encoder, nil
 }
 
@@ -310,6 +268,8 @@ func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2EncoderSetti
 		return errors.Error(processName, "symbol correlation encoding not implemented yet")
 	case JB2SymbolRankHaus:
 		return errors.Error(processName, "symbol rank haus encoding not implemented yet")
+	default:
+		return errors.Error(processName, "provided invalid compression")
 	}
 	return nil
 }

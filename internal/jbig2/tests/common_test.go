@@ -225,6 +225,9 @@ func rawFileName(filename string) string {
 func readFileNames(dirname, suffix string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !info.IsDir() {
 			if suffix != "" && !strings.HasSuffix(info.Name(), suffix) {
 				return nil

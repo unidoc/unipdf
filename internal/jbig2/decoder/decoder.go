@@ -77,10 +77,8 @@ func (d *Decoder) decodePage(pageNumber int) ([]byte, error) {
 		return nil, errors.Wrap(err, processName, "")
 	}
 
-	// inverse the color if required.
-	if d.parameters.Color == bitmap.Chocolate {
-		bm.InverseData()
-	}
+	// inverse the color by default.
+	bm.InverseData()
 
 	if !d.parameters.UnpaddedData {
 		return bm.Data, nil
@@ -126,7 +124,7 @@ func Decode(input []byte, parameters Parameters, globals ...*document.Globals) (
 	return &Decoder{inputReader: r, document: doc, parameters: parameters}, nil
 }
 
-// Parameters are the paramters used by the jbig2 decoder.
+// Parameters are the parameters used by the jbig2 decoder.
 type Parameters struct {
 	UnpaddedData bool
 	Color        bitmap.Color
