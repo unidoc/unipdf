@@ -242,7 +242,7 @@ func (p *PageInformationSegment) parseHeader() (err error) {
 		if err != nil {
 			str += " with error " + err.Error()
 		} else {
-			str += " succesfully"
+			str += " successfully"
 		}
 		common.Log.Trace(str)
 	}()

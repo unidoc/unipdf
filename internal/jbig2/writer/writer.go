@@ -156,7 +156,7 @@ func (w *Writer) WriteBits(bits uint64, number int) (n int, err error) {
 	var bit int
 	for i := 0; i < number; i++ {
 		if w.msb {
-			bit = int((bits >> (number - 1 - i)) & 0x1)
+			bit = int((bits >> uint(number-1-i)) & 0x1)
 		} else {
 			bit = int(bits & 0x1)
 			bits >>= 1

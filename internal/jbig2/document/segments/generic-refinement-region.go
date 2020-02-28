@@ -169,7 +169,7 @@ func (g *GenericRefinementRegion) getGrReference() (*bitmap.Bitmap, error) {
 
 	r, ok := s.(Regioner)
 	if !ok {
-		return nil, fmt.Errorf("Refered to Segment is not a Regioner: %T", s)
+		return nil, fmt.Errorf("referred to Segment is not a Regioner: %T", s)
 	}
 	return r.GetRegionBitmap()
 }
@@ -484,11 +484,12 @@ func (g *GenericRefinementRegion) decodeTypicalPredictedLineTemplate1(
 			var bit int
 			bitmapValue := (grReferenceValue >> 4) & 0x1ff
 
-			if bitmapValue == 0x1ff {
+			switch bitmapValue {
+			case 0x1ff:
 				bit = 1
-			} else if bitmapValue == 0x00 {
+			case 0x00:
 				bit = 0
-			} else {
+			default:
 				g.cx.SetIndex(int32(context))
 				bit, err = g.arithDecode.DecodeBit(g.cx)
 				if err != nil {

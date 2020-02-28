@@ -32,7 +32,8 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 		srcIdx := srcLineStartIdx
 		dstIdx := dstLineStartIdx
 
-		if srcLineStartIdx == srcLineEndIdx {
+		switch {
+		case srcLineStartIdx == srcLineEndIdx:
 			pixels, err := src.GetByte(srcIdx)
 			if err != nil {
 				return nil, err
@@ -44,7 +45,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 			if err != nil {
 				return nil, err
 			}
-		} else if upShift == 0 {
+		case upShift == 0:
 			for x := srcLineStartIdx; x <= srcLineEndIdx; x++ {
 				value, err := src.GetByte(srcIdx)
 				if err != nil {
@@ -63,7 +64,7 @@ func Extract(roi image.Rectangle, src *Bitmap) (*Bitmap, error) {
 
 				dstIdx++
 			}
-		} else {
+		default:
 			err := copyLine(src, dst, uint(upShift), uint(downShift), padding, srcLineStartIdx, srcLineEndIdx, usePadding, srcIdx, dstIdx)
 			if err != nil {
 				return nil, err

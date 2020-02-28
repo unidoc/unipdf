@@ -25,14 +25,14 @@ const (
 )
 
 // ConnComponents is a top level call for decomposing the bitmap 'b' by creating components.
-// Each component is a part of bitmap where each pixel is connected with at least one neighbour.
-// The 'connectivity' is the number of possible directions where the pixel neighbours could be found. The only
+// Each component is a part of bitmap where each pixel is connected with at least one neighbor.
+// The 'connectivity' is the number of possible directions where the pixel neighbors could be found. The only
 // possible values it could take is 4 and 8.
-// The connectivity 4 checks the neighbours at top, bottom, left and right, where connectivity 8 checks also upper left, upper right,
+// The connectivity 4 checks the neighbors at top, bottom, left and right, where connectivity 8 checks also upper left, upper right,
 // bottom left and bottom right.
 // The 'bms' is an optional argument. If it's not nil the components created by the function are added to the 'bms' Bitmaps.
-// It sets up 2 temporary bitmaps and for each connectected components that is located in raster order, it erease the c.c from one bitmap
-// then uses the bounding box to extract component from the 'two' bitmap using XOR operation, and finaly erease the compononent from the second bm.
+// It sets up 2 temporary bitmaps and for each connected components that is located in raster order, it erase the c.c from one bitmap
+// then uses the bounding box to extract component from the 'two' bitmap using XOR operation, and finally erase the component from the second bm.
 // Returns bounding boxes of the components. If the bitmaps 'bms' are provided the boxes are added to it's Boxes variable.
 func (b *Bitmap) ConnComponents(bms *Bitmaps, connectivity int) (boxa *Boxes, err error) {
 	const processName = "Bitmap.ConnComponents"
@@ -103,22 +103,22 @@ func (b *Bitmap) GetComponents(components Component, maxWidth, maxHeight int) (b
 	case ComponentWords:
 		redFactor := 1
 		var bm *Bitmap
-		if b.XResolution <= 200 {
+		switch {
+		case b.XResolution <= 200:
 			bm = b
-		} else if b.XResolution <= 400 {
+		case b.XResolution <= 400:
 			redFactor = 2
 			bm, err = reduceRankBinaryCascade(b, 1, 0, 0, 0)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, processName, "word preprocess - xres<=400")
 			}
-		} else {
+		default:
 			redFactor = 4
 			bm, err = reduceRankBinaryCascade(b, 1, 1, 0, 0)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, processName, "word preprocess - xres > 400")
 			}
 		}
-
 		mask, _, err := wordMaskByDilation(bm)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, processName, "word preprocess")

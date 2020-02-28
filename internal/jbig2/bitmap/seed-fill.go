@@ -15,7 +15,7 @@ import (
 // maxIterations is a constant used to prevent infitite loops.
 const maxIterations = 5000
 
-// seedfillBinary is an algorithm that fills the resultant 'd' bitmap
+// seedFillBinary is an algorithm that fills the resultant 'd' bitmap
 // with the values from 's' bitmap, expanded in the boundaries of the 'm' bitmap.
 // The connectivity defines on how many directions should the 'ON' pixel check
 // if it has any other 'ONE' neighbor.
@@ -23,7 +23,7 @@ const maxIterations = 5000
 // connectivity 8 checks also the corners.
 // See more at: http://www.vincent-net.com/luc/papers/93ieeeip_recons.pdf.
 // If the 'd' is not provided, the function creates one.
-func seedfillBinary(d, s, m *Bitmap, connectivity int) (*Bitmap, error) {
+func seedFillBinary(d, s, m *Bitmap, connectivity int) (*Bitmap, error) {
 	const processName = "seedFillBinary"
 
 	if s == nil {
@@ -400,7 +400,7 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 		// check if the out.xLeft pixel was off and was not cleared.
 		if x >= out.xLeft {
 			// skip the bits to the next 'ON' bit in the provided bounds
-			for x = x + 1; x <= out.xRight && x <= xMax && !s.GetPixel(x, y); x++ {
+			for x++; x <= out.xRight && x <= xMax && !s.GetPixel(x, y); x++ {
 			}
 			xStart = x
 
@@ -439,7 +439,7 @@ func seedFillStack4BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 			}
 
 			// skip to the next 'OFF' bit.
-			for x = x + 1; x <= out.xRight && x <= xMax && !s.GetPixel(x, y); x++ {
+			for x++; x <= out.xRight && x <= xMax && !s.GetPixel(x, y); x++ {
 			}
 			xStart = x
 
@@ -508,7 +508,7 @@ func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 		if x >= out.xLeft-1 {
 			for {
 				// skip the bits until 'ON' pixel is found.
-				for x = x + 1; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
+				for x++; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
 				}
 				xStart = x
 
@@ -567,7 +567,7 @@ func seedFillStack8BB(s *Bitmap, stack *basic.Stack, x, y int) (box *image.Recta
 			}
 
 			// skip the bits until 'ON' pixel is found.
-			for x = x + 1; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
+			for x++; x <= out.xRight+1 && x <= xMax && !s.GetPixel(x, y); x++ {
 			}
 			xStart = x
 

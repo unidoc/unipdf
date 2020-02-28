@@ -121,8 +121,8 @@ func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 	// the header contains following bitwise parts:
 	// [SegmentNumber] - 4 byte uint32
 	// [segment header flags] - 1 byte
-	// [refered-to count and retention flags] 1 or more bytes
-	// [refered-to segment numbers] 1 or more bytes
+	// [referred-to count and retention flags] 1 or more bytes
+	// [referred-to segment numbers] 1 or more bytes
 	// [segment page association] - 1 or more bytes
 	// [segment data length] - 4 bytes - uint32
 	if h.pageSize() == 4 {
@@ -243,7 +243,7 @@ func (h *Header) parse(
 	}
 
 	// 7.2.3 Segment header flags.
-	if err = h.readHeaderFlags(r); err != nil {
+	if err = h.readHeaderFlags(); err != nil {
 		return errors.Wrap(err, processName, "")
 	}
 
@@ -254,8 +254,8 @@ func (h *Header) parse(
 		return errors.Wrap(err, processName, "")
 	}
 
-	// 7.2.5 Refered-tp segment numbers.
-	h.RTSNumbers, err = h.readReferedToSegmentNumbers(r, int(countOfRTS))
+	// 7.2.5 referred-tp segment numbers.
+	h.RTSNumbers, err = h.readReferredToSegmentNumbers(r, int(countOfRTS))
 	if err != nil {
 		return errors.Wrap(err, processName, "")
 	}
@@ -295,7 +295,7 @@ func (h *Header) readSegmentNumber(r reader.StreamReader) error {
 }
 
 // readHeaderFlags reads the header flag values.
-func (h *Header) readHeaderFlags(r reader.StreamReader) error {
+func (h *Header) readHeaderFlags() error {
 	const processName = "readHeaderFlags"
 	// 7.2.3
 	bit, err := h.Reader.ReadBit()
@@ -372,10 +372,10 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 	return countOfRTS, nil
 }
 
-// readReferedToSegmentNumbers gathers all segment numbers of referred-to segments. The
+// readReferredToSegmentNumbers gathers all segment numbers of referred-to segments. The
 // segment itself is in rtSegments the array.
-func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS int) ([]int, error) {
-	const processName = "readReferedToSegmentNumbers"
+func (h *Header) readReferredToSegmentNumbers(r reader.StreamReader, countOfRTS int) ([]int, error) {
+	const processName = "readReferredToSegmentNumbers"
 	// 7.2.5
 	rtsNumbers := make([]int, countOfRTS)
 
@@ -388,7 +388,7 @@ func (h *Header) readReferedToSegmentNumbers(r reader.StreamReader, countOfRTS i
 		for i := 0; i < countOfRTS; i++ {
 			bits, err = r.ReadBits(byte(h.referenceSize()) << 3)
 			if err != nil {
-				return nil, errors.Wrapf(err, processName, "'%d' refered segment number", i)
+				return nil, errors.Wrapf(err, processName, "'%d' referred segment number", i)
 			}
 			rtsNumbers[i] = int(bits & math.MaxInt32)
 		}
@@ -467,7 +467,7 @@ func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
 }
 
 // readDataStartOffset sets the offset of the current reader if
-// the organisation type is OSequential.
+// the organization type is OSequential.
 func (h *Header) readDataStartOffset(r reader.StreamReader, organizationType OrganizationType) {
 	if organizationType == OSequential {
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())
@@ -481,11 +481,12 @@ func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {
 // referenceSize returns the size of the segment reference for this segment. Segments can only refer to previous
 // segments, so the bits needed is determined by the number of this segment.
 func (h *Header) referenceSize() uint {
-	if h.SegmentNumber <= 255 {
+	switch {
+	case h.SegmentNumber <= 255:
 		return 1
-	} else if h.SegmentNumber <= 65535 {
+	case h.SegmentNumber <= 65535:
 		return 2
-	} else {
+	default:
 		return 4
 	}
 }
@@ -548,13 +549,13 @@ func (h *Header) writeReferredToCount(w writer.BinaryWriter) (n int, err error) 
 	// the referred to count segment is one byte long if there are up to maximum of 4
 	// referred to other headers.
 
-	// copy the segment numbers from the refered to slice
+	// copy the segment numbers from the referred to slice
 	h.RTSNumbers = make([]int, len(h.RTSegments))
 	for i, seg := range h.RTSegments {
 		h.RTSNumbers[i] = int(seg.SegmentNumber)
 	}
 
-	// if the refered to count is <= 4 the header uses short format
+	// if the referred to count is <= 4 the header uses short format
 	if len(h.RTSNumbers) <= 4 {
 		// use the short format
 		var bt byte

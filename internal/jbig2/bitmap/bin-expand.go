@@ -85,11 +85,10 @@ func expandBinaryFactor4(d, s *Bitmap) (err error) {
 						return errors.Wrapf(err, processName, "Different rowstrides. K: %d", k)
 					}
 				}
-			} else {
-				if err = d.setFourBytes(index, expanded); err != nil {
-					return errors.Wrap(err, processName, "")
-				}
+			} else if err = d.setFourBytes(index, expanded); err != nil {
+				return errors.Wrap(err, processName, "")
 			}
+
 			if err = d.setFourBytes(lineD+j*4, tabExpand4x[s.Data[lineS+j]]); err != nil {
 				return errors.Wrap(err, processName, "")
 			}

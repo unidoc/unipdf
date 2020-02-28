@@ -70,7 +70,7 @@ func TestEncodePageInformationSegment(t *testing.T) {
 		0x00, 0x00, 0x00, 0x01,
 		// 11000000 - segment flags
 		0x30,
-		// segment refered to count and flags
+		// segment referred to count and flags
 		0x00,
 		// page association
 		0x01,

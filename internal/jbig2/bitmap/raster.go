@@ -63,7 +63,7 @@ const (
 //
 // PixClr, PixSet, PixNotPixDst operate only on the 'dest'.
 //
-// The other 14 invlove both 'src' and 'dest' bitmaps and depends on the bit values of either just the src or the
+// The other 14 involve both 'src' and 'dest' bitmaps and depends on the bit values of either just the src or the
 // both 'src' and 'dest'.
 // Out of these 14 operators there are only 12 unique logical combinations. ~(s) ^ d) == ~(s ^ d) == s ^ ~(d).
 // Parameters:
@@ -166,11 +166,12 @@ func rasterOpLow(dest *Bitmap, dx, dy int, dw, dh int, op RasterOperator, src *B
 
 	// dispatch to aligned or non-aligned blitters.
 	var err error
-	if dx&7 == 0 && sx&7 == 0 {
+	switch {
+	case dx&7 == 0 && sx&7 == 0:
 		err = rasterOpByteAlignedLow(dest, dx, dy, dw, dh, op, src, sx, sy)
-	} else if dx&7 == sx&7 {
+	case dx&7 == sx&7:
 		err = rasterOpVAlignedLow(dest, dx, dy, dw, dh, op, src, sx, sy)
-	} else {
+	default:
 		err = rasterOpGeneralLow(dest, dx, dy, dw, dh, op, src, sx, sy)
 	}
 	if err != nil {

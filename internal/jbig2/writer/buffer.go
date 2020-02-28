@@ -169,7 +169,7 @@ func (b *Buffer) WriteBits(bits uint64, number int) (n int, err error) {
 	var bit int
 	for i := 0; i < number; i++ {
 		if b.msb {
-			bit = int((bits >> (number - 1 - i)) & 0x1)
+			bit = int((bits >> uint(number-1-i)) & 0x1)
 		} else {
 			bit = int(bits & 0x1)
 			bits >>= 1
@@ -214,37 +214,33 @@ func (b *Buffer) grow(n int) {
 		m++
 	}
 	c := cap(b.data)
-	// common.Log.Trace("data before grow: %v", b.data)
-	if n <= c/2-m {
-		// reslice only
+	switch {
+	case n <= c/2-m:
 		common.Log.Trace("[Buffer] grow - reslice only. Len: '%d', Cap: '%d', n: '%d'", len(b.data), cap(b.data), n)
 		common.Log.Trace(" n <= c / 2 -m. C: '%d', m: '%d'", c, m)
 		copy(b.data, b.data[b.fullOffset():])
-	} else if c > maxInt-c-n {
-		panic("buffer too large")
-	} else {
+	case c > maxInt-c-n:
+		common.Log.Error("BUFFER too large")
+		return
+	default:
 		// not enough space, need to allocate new slice.
-		// common.Log.Trace("[Buffer] grow - allocate new slice. Len: '%d', Cap: '%d', N: '%d'", len(b.data), cap(b.data), n)
 		buf := make([]byte, 2*c+n)
 		copy(buf, b.data)
 		b.data = buf
 	}
-	//	common.Log.Trace("data after grow: %v", b.data)
-	//	common.Log.Trace("[Buffer] b.data[:m+n]. m: '%d', n:'%d'", m, n)
 	b.data = b.data[:m+n]
-	//	common.Log.Trace("[Buffer] grown data. Len: '%d', Cap: '%d'", len(b.data), cap(b.data))
-	//	common.Log.Trace("[Buffer] b.data after grow: '%v'", b.data)
 }
 
 func (b *Buffer) writeByte(bt byte) {
-	if b.bitIndex == 0 {
+	switch {
+	case b.bitIndex == 0:
 		b.data[b.byteIndex] = bt
 		b.byteIndex++
-	} else if b.msb {
+	case b.msb:
 		b.data[b.byteIndex] |= bt >> b.bitIndex
 		b.byteIndex++
 		b.data[b.byteIndex] = byte(uint16(bt) << (8 - b.bitIndex) & 0xff)
-	} else {
+	default:
 		b.data[b.byteIndex] |= byte(uint16(bt) << b.bitIndex & 0xff)
 		b.byteIndex++
 		b.data[b.byteIndex] = bt >> (8 - b.bitIndex)

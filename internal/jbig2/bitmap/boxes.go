@@ -194,14 +194,14 @@ func ClipBoxToRectangle(box *image.Rectangle, wi, hi int) (out *image.Rectangle,
 func Rect(x, y, w, h int) (*image.Rectangle, error) {
 	const processName = "bitmap.Rect"
 	if x < 0 {
-		w = w + x
+		w += x
 		x = 0
 		if w <= 0 {
 			return nil, errors.Errorf(processName, "x:'%d' < 0 and w: '%d' <= 0", x, w)
 		}
 	}
 	if y < 0 {
-		h = h + y
+		h += y
 		y = 0
 		if h <= 0 {
 			return nil, errors.Error(processName, "y < 0 and box off +quad")

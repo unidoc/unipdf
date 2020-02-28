@@ -277,7 +277,7 @@ func (g *GenericRegion) parseHeader() (err error) {
 		if err != nil {
 			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished with error. %v", err)
 		} else {
-			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished Succesfully...")
+			common.Log.Trace("[GENERIC-REGION] ParsingHeader Finished Successfully...")
 		}
 	}()
 	var (
@@ -462,7 +462,7 @@ func (g *GenericRegion) decodeTemplate0a(line, width, paddedWidth int, byteIndex
 
 		if line > 1 {
 			index := idx - g.Bitmap.RowStride + 1
-			line2 = line2 << 8
+			line2 <<= 8
 
 			if nextByte < width {
 				temp, err = g.Bitmap.GetByte(index)
@@ -1171,14 +1171,14 @@ func (g *GenericRegion) setParameters(isMMREncoded bool, dataOffset, dataLength 
 
 func (g *GenericRegion) setParametersWithAt(
 	isMMREncoded bool,
-	SDTemplate byte,
+	sdTemplate byte,
 	isTPGDon, useSkip bool,
 	sDAtX, sDAtY []int8,
 	symWidth, hcHeight uint32,
 	cx *arithmetic.DecoderStats, a *arithmetic.Decoder,
 ) {
 	g.IsMMREncoded = isMMREncoded
-	g.GBTemplate = SDTemplate
+	g.GBTemplate = sdTemplate
 	g.IsTPGDon = isTPGDon
 	g.GBAtX = sDAtX
 	g.GBAtY = sDAtY

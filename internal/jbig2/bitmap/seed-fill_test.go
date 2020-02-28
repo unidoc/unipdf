@@ -87,27 +87,27 @@ func TestSeedfillBinary(t *testing.T) {
 
 	t.Run("Invalid", func(t *testing.T) {
 		t.Run("NilSource", func(t *testing.T) {
-			_, err = seedfillBinary(nil, nil, m, 4)
+			_, err = seedFillBinary(nil, nil, m, 4)
 			assert.Error(t, err)
 		})
 
 		t.Run("NilMask", func(t *testing.T) {
-			_, err = seedfillBinary(nil, s, nil, 4)
+			_, err = seedFillBinary(nil, s, nil, 4)
 			assert.Error(t, err)
 		})
 
 		t.Run("Connectivity", func(t *testing.T) {
-			_, err = seedfillBinary(nil, s, m, 3)
+			_, err = seedFillBinary(nil, s, m, 3)
 			assert.Error(t, err)
 		})
 	})
 
 	t.Run("Connectivity4", func(t *testing.T) {
-		// The seedfillBinary with 4 - connectivity checks the connection
+		// The seedFillBinary with 4 - connectivity checks the connection
 		// of the 'ONE' pixels in four directions only (above, bottom, left, right).
 		// In our example that constraint doesn't allow the pixels to go to the lower part
 		// of the mask as it is connected using corner direction.
-		d, err := seedfillBinary(nil, s, m, 4)
+		d, err := seedFillBinary(nil, s, m, 4)
 		require.NoError(t, err)
 
 		// The result would be a part of the 'mask' data
@@ -143,11 +143,11 @@ func TestSeedfillBinary(t *testing.T) {
 	})
 
 	t.Run("Connectivity8", func(t *testing.T) {
-		// The 8 - connectivity seedfillBinary checks the connectivity
+		// The 8 - connectivity seedFillBinary checks the connectivity
 		// of the 'ONE' pixels in eight direction (all possible).
 		// That affects the pixels on the corners too. Thus filling the
 		// image with a limiting mask, should fill whole mask.
-		d, err := seedfillBinary(nil, s, m, 8)
+		d, err := seedFillBinary(nil, s, m, 8)
 		require.NoError(t, err)
 
 		// The result data should look like full mask:

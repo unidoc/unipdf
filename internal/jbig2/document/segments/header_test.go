@@ -55,7 +55,7 @@ func TestDecodeHeader(t *testing.T) {
 func TestWriteHeader(t *testing.T) {
 	t.Run("ReferenceSize#1", func(t *testing.T) {
 		// the header with reference size '1' have it's segment number within the range (0, 255>
-		// it is refered to under 4 segments - this means that their values are represented
+		// it is referred to under 4 segments - this means that their values are represented
 		// in the uint8 - byte format.
 		// the associated page number may fit in a single byte - the page association flag should be false.
 		initial := &Header{
@@ -110,8 +110,8 @@ func TestWriteHeader(t *testing.T) {
 		// the reference size is equal to '2' when the segment has a number at least 256
 		// and at most 65535.
 		// this example has also referred to symbols number greater than 4 - which
-		// enforces the refered to count segment to be more than a byte long and the
-		// refered to segments to be of uint16 size.
+		// enforces the referred to count segment to be more than a byte long and the
+		// referred to segments to be of uint16 size.
 		//
 		initial := &Header{
 			PageAssociation:   2,
@@ -134,12 +134,12 @@ func TestWriteHeader(t *testing.T) {
 		// 00100100 - 0x24 - segment flags
 		// there should be 4+ceil((len(rts) + 1) / 8) bytes = 4 + ceil((5+1)/8) = 5 bytes.
 		// 11100000 00000000 00000000 00000101 00000000 - 0xE0, 0x00, 0x00, 0x05, 0x00 - number of related segments and retain flags
-		// the refered to numbers should be of 16bits size each.
+		// the referred to numbers should be of 16bits size each.
 		// 00000000 00000010 - 0x00, 0x02
 		// 00000000 00000011 - 0x00, 0x03
 		// 00000000 00000100 - 0x00, 0x04
 		// 00000000 00000101 - 0x00, 0x05
-		// 00000000 00000110 - 0x00, 0x06 - refered to segment numbers
+		// 00000000 00000110 - 0x00, 0x06 - referred to segment numbers
 		// 00000010 - 0x02 - segment page association
 		// 00000000 00000000 00000000 01000000 - 0x00, 0x00, 0x00, 0x40 - segment data length
 		//
@@ -174,7 +174,7 @@ func TestWriteHeader(t *testing.T) {
 	t.Run("ReferenceSize#4", func(t *testing.T) {
 		// the reference size is equal to '4' when the segment has a number at least 65536.
 		// this example has also referred to symbols number greater than 255 - which
-		// enforces the refered to count segment to be more than a byte long and the refered to segment numbers
+		// enforces the referred to count segment to be more than a byte long and the referred to segment numbers
 		// to be of uint32 size.
 		//
 		initial := &Header{
@@ -185,7 +185,7 @@ func TestWriteHeader(t *testing.T) {
 			Type:              TIntermediateGenericRegion, // 36
 		}
 
-		// seed the refered to segment numbers.
+		// seed the referred to segment numbers.
 		for i := uint32(0); i < 256; i++ {
 			initial.RTSegments[i] = &Header{SegmentNumber: i + initial.SegmentNumber}
 		}
@@ -201,12 +201,12 @@ func TestWriteHeader(t *testing.T) {
 		// there should be 4+ceil((len(rts) + 1) / 8) bytes = 4 + ceil((256+1)/8) = 4 + 33 = 37 bytes.
 		// 11100000 00000000 00000001 00000000 - 0xE0, 0x00, 0x01, 0x00 - number of related segments
 		// 37 * 00000000 (0x00) - retain flags
-		// the refered to numbers should be of 32bits size each.
-		// 00000000 00000001 00000000 00000001 - the first refered to segment number
+		// the referred to numbers should be of 32bits size each.
+		// 00000000 00000001 00000000 00000001 - the first referred to segment number
 		// 00000000 00000001 00000000 00000010
 		// 00000000 00000001 00000000 00000011
 		// ...................................
-		// 00000000 00000001 00000001 00000000 - the last refered to segment number
+		// 00000000 00000001 00000001 00000000 - the last referred to segment number
 		// 00000000 00000000 00000001 00000000 - 0x00, 0x00, 0x01, 0x00 - segment page association
 		// 00000000 00000000 00000000 01000000 - 0x00, 0x00, 0x00, 0x40 - segment data length
 		//

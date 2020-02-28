@@ -31,7 +31,7 @@ var fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 type Document struct {
 	// Pages contains all pages of this document.
 	Pages map[int]*Page
-	// NumberOfPagesUnknown defines if the ammount of the pages is known.
+	// NumberOfPagesUnknown defines if the amout of the pages is known.
 	NumberOfPagesUnknown bool
 	// NumberOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if NumberOfPagesUnknown is true.
 	NumberOfPages uint32
@@ -41,7 +41,7 @@ type Document struct {
 	InputStream reader.StreamReader
 	// GlobalSegments contains all segments that aren't associated with a page.
 	GlobalSegments *Globals
-	// OrganisationType is the document segment organization.
+	// OrganizationType is the document segment organization.
 	OrganizationType segments.OrganizationType
 
 	// Encoder variables
@@ -324,7 +324,9 @@ func (d *Document) addSymbolDictionary(
 	const processName = "addSymbolDictionary"
 	// add symbolTable
 	sd := &segments.SymbolDictionary{}
-	sd.InitEncode(symbols, symbolList, symbolMap, unborderSymbols)
+	if err := sd.InitEncode(symbols, symbolList, symbolMap, unborderSymbols); err != nil {
+		return nil, err
+	}
 
 	sh := &segments.Header{
 		Type:            segments.TSymbolDictionary,
@@ -387,7 +389,7 @@ func (d *Document) completeSymbols() (err error) {
 		symbolsUsed[n]++
 	}
 
-	multiuseSymbols := []int{}
+	var multiuseSymbols []int
 	for i := 0; i < d.Classer.UndilatedTemplates.Size(); i++ {
 		if symbolsUsed[i] == 0 {
 			return errors.Error(processName, "no symbols instances found for given class? ")
@@ -398,7 +400,7 @@ func (d *Document) completeSymbols() (err error) {
 	}
 	d.globalSymbolsNumber = len(multiuseSymbols)
 
-	// build page compononents map for page number to the list of connected components for that page.
+	// build page components map for page number to the list of connected components for that page.
 	var pageNum, symNum int
 	for i := 0; i < d.Classer.ComponentPageNumbers.Size(); i++ {
 		pageNum, err = d.Classer.ComponentPageNumbers.Get(i)
@@ -594,9 +596,9 @@ func (d *Document) encodeFileHeader(w writer.BinaryWriter) (n int, err error) {
 
 	// file header flags one byte field
 	// where:
-	//	0th bit - file organisation type - '1' for sequential, '0' for random-access
+	//	0th bit - file organization type - '1' for sequential, '0' for random-access
 	// 	1st bit - unknown number of pages - '1' if true
-	// this encoder stores only sequential organisation type with known number of pages
+	// this encoder stores only sequential organization type with known number of pages
 	// thus file header flags are equal to 0x01 byte
 	if err = w.WriteByte(0x01); err != nil {
 		return n, errors.Wrap(err, processName, "flags")
@@ -726,7 +728,7 @@ func (d *Document) parseFileHeader() error {
 	}
 
 	// D.4.2 Header flag (1 byte)
-	// Bit 3-7 are reserverd and must be 0
+	// Bit 3-7 are reserved and must be 0
 	_, err = d.InputStream.ReadBits(5)
 	if err != nil {
 		return errors.Wrap(err, processName, "reserved bits")
@@ -750,10 +752,10 @@ func (d *Document) parseFileHeader() error {
 		d.NumberOfPagesUnknown = false
 	}
 
-	// Bit 0 - Indicates file organisation type.
+	// Bit 0 - Indicates file organization type.
 	b, err = d.InputStream.ReadBit()
 	if err != nil {
-		return errors.Wrap(err, processName, "organisation type")
+		return errors.Wrap(err, processName, "organization type")
 	}
 	d.OrganizationType = segments.OrganizationType(b)
 

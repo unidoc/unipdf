@@ -103,11 +103,10 @@ type TextRegion struct {
 	// is a slice of symbols
 	symbols *bitmap.Bitmaps
 	// assignments contain the 'symbols' indexes based on the symbol number from components.
-	assignments                                 *basic.IntSlice
-	stripWidth, symBits, baseIndex, refineLevel int
-	unborderSymbols                             bool
-	boxes                                       *bitmap.Boxes
-	source                                      *bitmap.Bitmaps
+	assignments         *basic.IntSlice
+	stripWidth, symBits int
+
+	boxes *bitmap.Boxes
 }
 
 // Compile time checks for the TextRegion interfaces implementation.
@@ -241,18 +240,17 @@ func (t *TextRegion) blit(ib *bitmap.Bitmap, tc int64) error {
 		s, tc = tc, s
 	}
 
-	if t.ReferenceCorner != 1 {
-		if t.ReferenceCorner == 0 {
-			// BL
-			tc -= int64(ib.Height - 1)
-		} else if t.ReferenceCorner == 2 {
-			// BR
-			tc -= int64(ib.Height - 1)
-			s -= int64(ib.Width - 1)
-		} else if t.ReferenceCorner == 3 {
-			// TR
-			s -= int64(ib.Width - 1)
-		}
+	switch t.ReferenceCorner {
+	case 0:
+		// BL
+		tc -= int64(ib.Height - 1)
+	case 2:
+		// BR
+		tc -= int64(ib.Height - 1)
+		s -= int64(ib.Width - 1)
+	case 3:
+		// TR
+		s -= int64(ib.Width - 1)
 	}
 
 	err := bitmap.Blit(ib, t.RegionBitmap, int(s), int(tc), t.CombinationOperator)
@@ -1101,7 +1099,7 @@ func (t *TextRegion) initSymbols() error {
 
 			sd, ok := s.(*SymbolDictionary)
 			if !ok {
-				return errors.Error(processName, "Refered To Segment is not a SymbolDictionary")
+				return errors.Error(processName, "referred To Segment is not a SymbolDictionary")
 			}
 
 			sd.cxIAID = t.cxIAID
@@ -1449,41 +1447,41 @@ func (t *TextRegion) setContexts(
 // setParameters sets the text region segment parameters.
 func (t *TextRegion) setParameters(
 	arithmeticDecoder *arithmetic.Decoder,
-	IsHuffmanEncoded, sbRefine bool, sbw, sbh uint32,
-	sbNumInstances uint32, SbStrips int8, sbNumSyms uint32,
+	isHuffmanEncoded, sbRefine bool, sbw, sbh uint32,
+	sbNumInstances uint32, sbStrips int8, sbNumSyms uint32,
 	sbDefaultPixel int8, sbCombinationOperator bitmap.CombinationOperator,
-	transposed int8, refCorner int16, SbdsOffset, SbHuffFS, SbHuffDS, SbHuffDT, SbHuffRDWidth,
-	SbHuffRDHeight, SbHuffRDX, SbHuffRDY, SbHuffRSize, SbrTemplate int8,
-	SbrATX, SbrATY []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int8,
+	transposed int8, refCorner int16, sbdsOffset, sbHuffFS, sbHuffDS, sbHuffDT, sbHuffRDWidth,
+	sbHuffRDHeight, sbHuffRDX, sbHuffRDY, sbHuffRSize, sbrTemplate int8,
+	sbrAtx, sbrAty []int8, sbSyms []*bitmap.Bitmap, sbSymCodeLen int8,
 ) {
 	t.arithmDecoder = arithmeticDecoder
 
-	t.IsHuffmanEncoded = IsHuffmanEncoded
+	t.IsHuffmanEncoded = isHuffmanEncoded
 	t.UseRefinement = sbRefine
 
 	t.RegionInfo.BitmapWidth = sbw
 	t.RegionInfo.BitmapHeight = sbh
 
 	t.NumberOfSymbolInstances = sbNumInstances
-	t.SbStrips = SbStrips
+	t.SbStrips = sbStrips
 	t.NumberOfSymbols = sbNumSyms
 	t.DefaultPixel = sbDefaultPixel
 	t.CombinationOperator = sbCombinationOperator
 	t.IsTransposed = transposed
 	t.ReferenceCorner = refCorner
-	t.SbdsOffset = SbdsOffset
+	t.SbdsOffset = sbdsOffset
 
-	t.SbHuffFS = SbHuffFS
-	t.SbHuffDS = SbHuffDS
-	t.SbHuffDT = SbHuffDT
-	t.SbHuffRDWidth = SbHuffRDWidth
-	t.SbHuffRDHeight = SbHuffRDHeight
-	t.SbHuffRDX = SbHuffRDX
-	t.SbHuffRDY = SbHuffRDY
+	t.SbHuffFS = sbHuffFS
+	t.SbHuffDS = sbHuffDS
+	t.SbHuffDT = sbHuffDT
+	t.SbHuffRDWidth = sbHuffRDWidth
+	t.SbHuffRDHeight = sbHuffRDHeight
+	t.SbHuffRDX = sbHuffRDX
+	t.SbHuffRDY = sbHuffRDY
 
-	t.SbrTemplate = SbrTemplate
-	t.SbrATX = SbrATX
-	t.SbrATY = SbrATY
+	t.SbrTemplate = sbrTemplate
+	t.SbrATX = sbrAtx
+	t.SbrATY = sbrAty
 
 	t.Symbols = sbSyms
 	t.symbolCodeLength = sbSymCodeLen

@@ -107,7 +107,7 @@ func (b *Bitmaps) GetBox(i int) (*image.Rectangle, error) {
 	return b.Boxes[i], nil
 }
 
-// GroupByHeight groups bitmaps by height sorted from the lowest to the heighest.
+// GroupByHeight groups bitmaps by height sorted from the lowest to the highest.
 func (b *Bitmaps) GroupByHeight() (*BitmapsArray, error) {
 	const processName = "GroupByHeight"
 	if len(b.Values) == 0 {
@@ -131,7 +131,7 @@ func (b *Bitmaps) GroupByHeight() (*BitmapsArray, error) {
 	return a, nil
 }
 
-// GroupByWidth groups bitmaps by height sorted from the lowest to the heighest.
+// GroupByWidth groups bitmaps by height sorted from the lowest to the highest.
 func (b *Bitmaps) GroupByWidth() (*BitmapsArray, error) {
 	const processName = "GroupByWidth"
 	if len(b.Values) == 0 {

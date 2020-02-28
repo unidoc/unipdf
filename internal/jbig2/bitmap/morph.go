@@ -23,7 +23,7 @@ const (
 )
 
 // MorphBC defines current morph boundary condition used by the morph functions.
-// By defualt it is set to 'AsymetricMorphBC'.
+// By default it is set to 'AsymetricMorphBC'.
 var MorphBC BoundaryCondition
 
 // MorphOperation is an enum that wraps the morph operations.
