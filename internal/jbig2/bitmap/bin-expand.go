@@ -79,7 +79,7 @@ func expandBinaryFactor4(d, s *Bitmap) (err error) {
 			// thus setting two bytes might set byte on the next row.
 			if diff != 0 && (j+1)*4 > d.RowStride {
 				for k = diff; k > 0; k-- {
-					temp = byte((expanded >> (k * 8)) & 0xff)
+					temp = byte((expanded >> uint(k*8)) & 0xff)
 					iindex = index + (diff - k)
 					if err = d.SetByte(iindex, temp); err != nil {
 						return errors.Wrapf(err, processName, "Different rowstrides. K: %d", k)

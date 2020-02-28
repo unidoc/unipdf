@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/unidoc/unipdf/v3/common"
 )
 
 // TestBufferFinishByte tests the FinishByte method of the Buffer.
@@ -56,14 +54,13 @@ func TestBufferFinishByte(t *testing.T) {
 
 // TestBufferSkipBits tests the SkipBits method.
 func TestBufferSkipBits(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	t.Run("Negative", func(t *testing.T) {
 		t.Run("OutOfRange", func(t *testing.T) {
 			b := BufferedMSB()
 			// make space for the 4 bytes
 			b.expandIfNeeded(4)
 
-			// assumming that there are 2 bytes and 2 bits
+			// assuming that there are 2 bytes and 2 bits
 			b.byteIndex = 2
 			b.bitIndex = 2
 			// the index should be at position:

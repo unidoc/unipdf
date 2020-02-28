@@ -430,7 +430,7 @@ func (b *Bitmap) ThresholdPixelSum(thresh int, tab8 []int) (above bool, err erro
 
 	fullBytes := b.Width >> 3
 	endBits := b.Width & 7
-	endMask := byte(0xff << (8 - endBits))
+	endMask := byte(0xff << uint(8-endBits))
 	var (
 		i, j, lineIndex, count int
 		bt                     byte
@@ -480,7 +480,7 @@ func (b *Bitmap) Zero() bool {
 	endBits := b.Width & 7
 	var endMask byte
 	if endBits != 0 {
-		endMask = byte(0xff << (8 - endBits))
+		endMask = byte(0xff << uint(8-endBits))
 	}
 
 	var line, i, j int
@@ -577,7 +577,7 @@ func (b *Bitmap) addPadBits() (err error) {
 			return errors.Wrap(err, processName, "skipping bits")
 		}
 
-		if err = w.WriteByte(byte(bits) << (8 - endbits)); err != nil {
+		if err = w.WriteByte(byte(bits) << uint(8-endbits)); err != nil {
 			return errors.Wrap(err, processName, "last byte")
 		}
 	}
@@ -1045,7 +1045,7 @@ func (b *Bitmap) setEightPartlyBytes(index, fullBytesNumber int, eb uint64) (err
 		// eb >> 7 * 8 = 56
 		// 4 + 7 - 7
 		shift = 64 - i*8
-		temp = byte(eb >> shift & 0xff)
+		temp = byte(eb >> uint(shift) & 0xff)
 		common.Log.Trace("temp: %08b, index: %d, idx: %d, fullBytesNumber: %d, shift: %d", temp, index, index+i-1, fullBytesNumber, shift)
 		if err = b.SetByte(index+i-1, temp); err != nil {
 			return errors.Wrap(err, processName, "fullByte")
@@ -1056,7 +1056,7 @@ func (b *Bitmap) setEightPartlyBytes(index, fullBytesNumber int, eb uint64) (err
 		return nil
 	}
 	shift -= 8
-	temp = byte(eb>>shift&0xff) << padding
+	temp = byte(eb>>uint(shift)&0xff) << padding
 	if err = b.SetByte(index+fullBytesNumber, temp); err != nil {
 		return errors.Wrap(err, processName, "padded")
 	}

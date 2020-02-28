@@ -22,7 +22,7 @@ import (
 // TestDecodeDocument test the DecodeDocument function.
 func TestDecodeDocument(t *testing.T) {
 	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
+		common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 	}
 
 	t.Run("AnnexH", func(t *testing.T) {
@@ -508,7 +508,6 @@ func TestDecodeDocument(t *testing.T) {
 
 // TestEncodeDocument tests the Encode method of the jbig2 Document.
 func TestEncodeDocument(t *testing.T) {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 	t.Run("Generic", func(t *testing.T) {
 		// this test should check jbig2 encode generic method.
 		t.Run("FullHeaders", func(t *testing.T) {

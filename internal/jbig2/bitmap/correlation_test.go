@@ -12,8 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/unidoc/unipdf/v3/common"
 )
 
 func TestCorrelationThreshold(t *testing.T) {
@@ -202,7 +200,6 @@ func TestCorrelationThreshold(t *testing.T) {
 	})
 
 	t.Run("ShiftedRight", func(t *testing.T) {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 		t.Run("Minor", func(t *testing.T) {
 			// Let's createa a 100x100 bitmap with an internal 80x80 block.
 			//

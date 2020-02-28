@@ -98,18 +98,18 @@ func CorrelationScore(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, ma
 	case idelX > 0:
 		if rowBytes2 < rowBytes1 {
 			for y = loRow; y < hiRow; y, row1, row2 = y+1, row1+bm1.RowStride, row2+bm2.RowStride {
-				bt1, bt2 = bm1.Data[row1], bm2.Data[row2]>>idelX
+				bt1, bt2 = bm1.Data[row1], bm2.Data[row2]>>uint(idelX)
 				andByte = bt1 & bt2
 				count += tab[andByte]
 
 				for x = 1; x < rowBytes2; x++ {
-					bt1, bt2 = bm1.Data[row1+x], (bm2.Data[row2+x]>>idelX)|(bm2.Data[row2+x-1]<<(8-idelX))
+					bt1, bt2 = bm1.Data[row1+x], (bm2.Data[row2+x]>>uint(idelX))|(bm2.Data[row2+x-1]<<uint(8-idelX))
 					andByte = bt1 & bt2
 					count += tab[andByte]
 				}
 
 				bt1 = bm1.Data[row1+x]
-				bt2 = bm2.Data[row2+x-1] << (8 - idelX)
+				bt2 = bm2.Data[row2+x-1] << uint(8-idelX)
 				andByte = bt1 & bt2
 				count += tab[andByte]
 			}
@@ -120,7 +120,7 @@ func CorrelationScore(bm1, bm2 *Bitmap, area1, area2 int, delX, delY float32, ma
 				count += tab[andByte]
 				for x = 1; x < rowBytes1; x++ {
 					bt1 = bm1.Data[row1+x]
-					bt2 = (bm2.Data[row2+x] >> idelX) | (bm2.Data[row2+x-1] << (8 - idelX))
+					bt2 = (bm2.Data[row2+x] >> uint(idelX)) | (bm2.Data[row2+x-1] << uint(8-idelX))
 					andByte = bt1 & bt2
 					count += tab[andByte]
 				}

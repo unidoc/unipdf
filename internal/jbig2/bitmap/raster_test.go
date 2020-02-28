@@ -18,10 +18,6 @@ import (
 
 // TestRasterOperation tests the RasterOperation function.
 func TestRasterOperation(t *testing.T) {
-	if testing.Verbose() {
-		common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-	}
-
 	type operatorName struct {
 		Operator RasterOperator
 		Name     string
@@ -76,12 +72,11 @@ func TestRasterOperation(t *testing.T) {
 			}
 
 			t.Run("WithLwBits", func(t *testing.T) {
-				common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
 				for _, op := range operators {
 					t.Run(op.Name, func(t *testing.T) {
 						data := []byte{0xff, 0xfd, 0xfa, 0xf3, 0xac, 0xbc, 0xdc, 0xaf}
-						tocheck := make([]byte, 8)
-						copy(tocheck, data)
+						toCheck := make([]byte, 8)
+						copy(toCheck, data)
 
 						dest, err := NewWithData(7, 8, data)
 						require.NoError(t, err)
@@ -95,15 +90,15 @@ func TestRasterOperation(t *testing.T) {
 						switch op.Operator {
 						case PixClr:
 							for i, bt := range dest.Data {
-								assert.Equal(t, combinePartial(tocheck[i], 0x00, mask), bt)
+								assert.Equal(t, combinePartial(toCheck[i], 0x00, mask), bt)
 							}
 						case PixSet:
 							for i, bt := range dest.Data {
-								assert.Equal(t, combinePartial(tocheck[i], 0xff, mask), bt)
+								assert.Equal(t, combinePartial(toCheck[i], 0xff, mask), bt)
 							}
 						case PixNotDst:
 							for i, bt := range dest.Data {
-								assert.Equal(t, combinePartial(tocheck[i], ^tocheck[i], mask), bt)
+								assert.Equal(t, combinePartial(toCheck[i], ^toCheck[i], mask), bt)
 							}
 						}
 					})

@@ -760,8 +760,6 @@ func TestGetComponents(t *testing.T) {
 	bm, err := NewWithData(50, 22, data)
 	require.NoError(t, err)
 
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelTrace))
-
 	t.Run("ComponentConn", func(t *testing.T) {
 		t.Run("Max12-8", func(t *testing.T) {
 			// the highest component is 12 bits wide and 8bits tall.
