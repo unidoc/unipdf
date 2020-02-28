@@ -48,7 +48,7 @@ func (ts *TextState) ProcTm(a, b, c, d, e, f float64) {
 // See section 9.4.2 "Text Positioning Operators" and
 // Table 108 (pp. 257-258 PDF32000_2008).
 func (ts *TextState) ProcTd(tx, ty float64) {
-	ts.Tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, -ty))
+	ts.Tlm.Concat(transform.TranslationMatrix(tx, -ty))
 	ts.Tm = ts.Tlm.Clone()
 }
 
@@ -114,8 +114,7 @@ func (ts *TextState) ProcTj(data []byte, ctx Context) {
 		tx := (w + ts.Tc + tw) * th
 
 		// Generate new text matrix.
-		ts.Tm = tm
-		ts.Translate(tx, 0)
+		ts.Tm = transform.TranslationMatrix(tx, 0).Mult(tm)
 	}
 }
 
@@ -151,7 +150,7 @@ func (ts *TextState) ProcTf(font *TextFont) {
 
 // Translate translates the current text matrix with `tx`,`ty`.
 func (ts *TextState) Translate(tx, ty float64) {
-	ts.Tm.Concat(transform.TranslationMatrix(tx, ty))
+	ts.Tm = transform.TranslationMatrix(tx, ty).Mult(ts.Tm)
 }
 
 // Reset resets both the text matrix and the line matrix.

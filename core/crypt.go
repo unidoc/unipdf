@@ -218,8 +218,8 @@ func decodeEncryptStd(d *security.StdEncryptDict, ed *PdfObjectDictionary) error
 func decodeCryptFilter(cf *crypto.FilterDict, d *PdfObjectDictionary) error {
 	// If Type present, should be CryptFilter.
 	if typename, ok := d.Get("Type").(*PdfObjectName); ok {
-		if string(*typename) != "CryptFilter" {
-			return fmt.Errorf("CF dict type != CryptFilter (%s)", typename)
+		if cfType := string(*typename); cfType != "CryptFilter" {
+			common.Log.Debug("Invalid CF dict type: %s (should be CryptFilter)", cfType)
 		}
 	}
 

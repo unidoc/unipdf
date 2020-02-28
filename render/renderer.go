@@ -90,7 +90,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 
 				m := transform.NewMatrix(fv[0], fv[1], fv[2], fv[3], fv[4], fv[5])
-				common.Log.Debug("Graphics state matrix: %+v\n", m)
+				common.Log.Debug("Graphics state matrix: %+v", m)
 				ctx.SetMatrix(ctx.Matrix().Mult(m))
 
 				// TODO: Take angle into account for line widths (8.4.3.2 Line Width).
@@ -243,7 +243,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 			// Move to.
 			case "m":
 				if len(op.Params) != 2 {
-					return errRange
+					common.Log.Debug("WARN: error while processing `m` operator: %s. Output may be incorrect.", errRange)
+					return nil
 				}
 
 				xy, err := core.GetNumbersAsFloat(op.Params)
@@ -256,7 +257,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 			// Line to.
 			case "l":
 				if len(op.Params) != 2 {
-					return errRange
+					common.Log.Debug("WARN: error while processing `l` operator: %s. Output may be incorrect.", errRange)
+					return nil
 				}
 
 				xy, err := core.GetNumbersAsFloat(op.Params)
@@ -279,7 +281,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
 				ctx.CubicTo(cbp[0], cbp[1], cbp[2], cbp[3], cbp[4], cbp[5])
 			// Cubic bezier.
-			case "v":
+			case "v", "y":
 				if len(op.Params) != 4 {
 					return errRange
 				}
@@ -290,7 +292,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				}
 
 				common.Log.Debug("Cubic bezier params: %+v", cbp)
-				ctx.CubicTo(0, 0, cbp[0], cbp[1], cbp[2], cbp[3])
+				ctx.QuadraticTo(cbp[0], cbp[1], cbp[2], cbp[3])
 			// Close current subpath.
 			case "h":
 				ctx.ClosePath()
@@ -1048,10 +1050,8 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 
 			// Begin a marked-content sequence.
 			case "BMC", "BDC":
-				textState.Reset()
 			// End a marked-content sequence.
 			case "EMC":
-				textState.Reset()
 			default:
 				common.Log.Debug("ERROR: unsupported operand: %s", op.Operand)
 			}

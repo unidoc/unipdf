@@ -113,25 +113,27 @@ func (tf *TextFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune
 // GetCharMetrics returns the metrics of the specified character code. The
 // character metrics are calculated by the internal PDF font.
 func (tf *TextFont) GetCharMetrics(code textencoding.CharCode) (float64, float64, bool) {
-	if tf.origFont != nil {
-		if metrics, ok := tf.origFont.GetCharMetrics(code); ok && metrics.Wx != 0 {
-			return metrics.Wx, metrics.Wy, true
-		}
+	if metrics, ok := tf.Font.GetCharMetrics(code); ok && metrics.Wx != 0 {
+		return metrics.Wx, metrics.Wy, ok
+	}
+	if tf.origFont == nil {
+		return 0, 0, false
 	}
 
-	metrics, ok := tf.Font.GetCharMetrics(code)
-	return metrics.Wx, metrics.Wy, ok
+	metrics, ok := tf.origFont.GetCharMetrics(code)
+	return metrics.Wx, metrics.Wy, ok && metrics.Wx != 0
 }
 
 // GetRuneMetrics returns the metrics of the specified rune. The character
 // metrics are calculated by the internal PDF font.
 func (tf *TextFont) GetRuneMetrics(r rune) (float64, float64, bool) {
-	if tf.origFont != nil {
-		if metrics, ok := tf.origFont.GetRuneMetrics(r); ok && metrics.Wx != 0 {
-			return metrics.Wx, metrics.Wy, true
-		}
+	if metrics, ok := tf.Font.GetRuneMetrics(r); ok && metrics.Wx != 0 {
+		return metrics.Wx, metrics.Wy, ok
+	}
+	if tf.origFont == nil {
+		return 0, 0, false
 	}
 
-	metrics, ok := tf.Font.GetRuneMetrics(r)
-	return metrics.Wx, metrics.Wy, ok
+	metrics, ok := tf.origFont.GetRuneMetrics(r)
+	return metrics.Wx, metrics.Wy, ok && metrics.Wx != 0
 }

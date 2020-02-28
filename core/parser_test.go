@@ -479,6 +479,76 @@ func TestStreamParsing(t *testing.T) {
 	// TODO
 }
 
+func TestEOFParsing(t *testing.T) {
+	testcases := []struct {
+		Min       int
+		Increment int
+		Max       int
+		Suffix    string
+		ShouldErr bool
+	}{
+		{
+			Min:       0,
+			Increment: 1,
+			Max:       30,
+			Suffix:    "",
+			ShouldErr: true,
+		},
+		{
+			Min:       0,
+			Increment: 1,
+			Max:       30,
+			Suffix:    "%%EOF",
+			ShouldErr: false,
+		},
+		{
+			Min:       0,
+			Increment: 1,
+			Max:       30,
+			Suffix:    "%%EOF\n",
+			ShouldErr: false,
+		},
+		{
+			Min:       0,
+			Increment: 1,
+			Max:       30,
+			Suffix:    "%EOF\n",
+			ShouldErr: true,
+		},
+		{
+			Min:       1010,
+			Increment: 1,
+			Max:       1040,
+			Suffix:    "%%EOF\n",
+			ShouldErr: false,
+		},
+		{
+			Min:       2000,
+			Increment: 1,
+			Max:       2040,
+			Suffix:    "%%EOF",
+			ShouldErr: false,
+		},
+	}
+	for _, tcase := range testcases {
+		for i := tcase.Min; i < tcase.Max; i += tcase.Increment {
+			b := make([]byte, i)
+			for j := 0; j < i; j++ {
+				b[j] = ' '
+			}
+			b = append(b, []byte(tcase.Suffix)...)
+
+			parser := makeParserForText(string(b))
+			err := parser.seekToEOFMarker(int64(len(b)))
+			if tcase.ShouldErr {
+				require.NotNil(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		}
+	}
+}
+
 func TestIndirectObjParsing1(t *testing.T) {
 	testcases := []struct {
 		description string

@@ -9,6 +9,7 @@ import (
 	"errors"
 )
 
+// CMap parser errors.
 var (
 	ErrBadCMap        = errors.New("bad cmap")
 	ErrBadCMapComment = errors.New("comment should start with %")
