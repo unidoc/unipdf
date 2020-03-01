@@ -313,7 +313,6 @@ func (p *Page) createNormalPage(i *segments.PageInformationSegment) error {
 					return errors.Wrap(err, processName, "")
 				}
 			}
-			return nil
 		}
 	}
 	return nil

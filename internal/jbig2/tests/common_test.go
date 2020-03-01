@@ -40,17 +40,24 @@ const (
 )
 
 var (
-	// jbig2UpdateGoldens is the runtime flag that states that the md5 hashes
-	// for each decoded testcase image should be updated.
-	jbig2UpdateGoldens bool
+	// updateGoldens is the runtime flag that states that the md5 hashes
+	// for each decoded test case image should be updated.
+	updateGoldens bool
 	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
 	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'.
 	keepImageFiles bool
+	// logToFile is the flag that allows to log the trace values to the file.
+	logToFile bool
+	// keepEncodedFile is the runtime flag that is used to keep the jbig2 encoded images
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'
+	keepEncodedFile bool
 )
 
 func init() {
-	flag.BoolVar(&jbig2UpdateGoldens, "jbig2-update-goldens", false, "updates the golden file hashes on the run")
+	flag.BoolVar(&updateGoldens, "jbig2-update-goldens", false, "updates the golden file hashes on the run")
 	flag.BoolVar(&keepImageFiles, "jbig2-store-images", false, "stores the images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+	flag.BoolVar(&keepEncodedFile, "jbig2-store-encoded", false, "stores the jbig2 encoded images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+	flag.BoolVar(&logToFile, "jbig2-log-to-file", false, "logs trace messages into file localized at `os.TempDir`/unipdf/jbig2 directory")
 }
 
 type extractedImage struct {
@@ -229,7 +236,7 @@ func readFileNames(dirname, suffix string) ([]string, error) {
 			return err
 		}
 		if !info.IsDir() {
-			if suffix != "" && !strings.HasSuffix(info.Name(), suffix) {
+			if suffix != "" && !strings.HasSuffix(strings.ToLower(info.Name()), suffix) {
 				return nil
 			}
 			files = append(files, info.Name())

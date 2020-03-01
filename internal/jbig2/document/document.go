@@ -665,7 +665,6 @@ func (d *Document) mapData() error {
 
 	// type 51 is the EndOfFile segment kind
 	for kind != 51 && !reachedEOF {
-
 		// get new segment
 		segment, err := segments.NewHeader(d, d.InputStream, offset, d.OrganizationType)
 		if err != nil {
