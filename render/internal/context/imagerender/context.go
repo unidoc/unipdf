@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package image
+package imagerender
 
 import (
 	"errors"
@@ -16,9 +16,8 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/f64"
 
-	"github.com/unidoc/unipdf/v3/render/context"
-
 	"github.com/unidoc/unipdf/v3/internal/transform"
+	"github.com/unidoc/unipdf/v3/render/internal/context"
 )
 
 var (

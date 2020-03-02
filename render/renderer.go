@@ -14,7 +14,7 @@ import (
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
-	"github.com/unidoc/unipdf/v3/render/context"
+	"github.com/unidoc/unipdf/v3/render/internal/context"
 
 	"github.com/unidoc/unipdf/v3/internal/transform"
 )
@@ -252,6 +252,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return err
 				}
 
+				common.Log.Debug("Move to: %v", xy)
 				ctx.NewSubPath()
 				ctx.MoveTo(xy[0], xy[1])
 			// Line to.
@@ -842,6 +843,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return err
 				}
 
+				common.Log.Debug("Td: %v", fv)
 				textState.ProcTd(fv[0], fv[1])
 			// Move to the next line with specified offsets.
 			case "TD":
@@ -854,6 +856,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 					return err
 				}
 
+				common.Log.Debug("TD: %v", fv)
 				textState.ProcTD(fv[0], fv[1])
 			// Move to the start of the next line.
 			case "T*":
@@ -915,7 +918,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 				if !ok {
 					return errType
 				}
-				common.Log.Debug("Tj string: %s", string(charcodes))
+				common.Log.Debug("Tj string: `%s`", string(charcodes))
 
 				textState.ProcTj(charcodes, ctx)
 			// Show array of text strings.

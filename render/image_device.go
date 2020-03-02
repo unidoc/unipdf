@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/model"
-	imagectx "github.com/unidoc/unipdf/v3/render/context/image"
+	"github.com/unidoc/unipdf/v3/render/internal/context/imagerender"
 )
 
 // ImageDevice is used to render PDF pages to image targets.
@@ -41,7 +41,7 @@ func (d *ImageDevice) Render(page *model.PdfPage) (image.Image, error) {
 	// Render page.
 	width, height := mbox.Llx+mbox.Width(), mbox.Lly+mbox.Height()
 
-	ctx := imagectx.NewContext(int(width), int(height))
+	ctx := imagerender.NewContext(int(width), int(height))
 	if err := d.renderPage(ctx, page); err != nil {
 		return nil, err
 	}

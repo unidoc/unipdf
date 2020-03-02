@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package image
+package imagerender
 
 import (
 	"image"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/freetype/raster"
 
-	"github.com/unidoc/unipdf/v3/render/context"
+	"github.com/unidoc/unipdf/v3/render/internal/context"
 )
 
 type repeatOp int
