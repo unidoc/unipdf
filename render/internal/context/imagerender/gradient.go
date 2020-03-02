@@ -3,14 +3,14 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package image
+package imagerender
 
 import (
 	"image/color"
 	"math"
 	"sort"
 
-	"github.com/unidoc/unipdf/v3/render/context"
+	"github.com/unidoc/unipdf/v3/render/internal/context"
 )
 
 type stop struct {

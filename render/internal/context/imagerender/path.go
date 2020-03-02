@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package image
+package imagerender
 
 import (
 	"math"
