@@ -21,9 +21,26 @@ func IdentityMatrix() Matrix {
 	return NewMatrix(1, 0, 0, 1, 0, 0)
 }
 
-// TranslationMatrix returns a matrix that translates by `tx`, `ty`.
+// TranslationMatrix returns a matrix that translates by `tx`,`ty`.
 func TranslationMatrix(tx, ty float64) Matrix {
 	return NewMatrix(1, 0, 0, 1, tx, ty)
+}
+
+// ScaleMatrix returns a matrix that scales by `x`,`y`.
+func ScaleMatrix(x, y float64) Matrix {
+	return NewMatrix(x, 0, 0, y, 0, 0)
+}
+
+// RotationMatrix returns a matrix that rotates by angle `angle`, specified in radians.
+func RotationMatrix(angle float64) Matrix {
+	c := math.Cos(angle)
+	s := math.Sin(angle)
+	return NewMatrix(c, s, -s, c, 0, 0)
+}
+
+// ShearMatrix returns a matrix that shears `x`,`y`.
+func ShearMatrix(x, y float64) Matrix {
+	return NewMatrix(1, y, x, 1, 0, 0)
 }
 
 // NewMatrix returns an affine transform matrix laid out in homogenous coordinates as
@@ -74,17 +91,35 @@ func (m Matrix) Mult(b Matrix) Matrix {
 	return m
 }
 
-// Translate appends a translation of `dx`,`dy` to `m`.
+// Translate appends a translation of `x`,`y` to `m`.
 // m.Translate(dx, dy) is equivalent to m.Concat(NewMatrix(1, 0, 0, 1, dx, dy))
-func (m *Matrix) Translate(dx, dy float64) {
-	m[6] += dx
-	m[7] += dy
-	m.clampRange()
+func (m *Matrix) Translate(x, y float64) {
+	m.Concat(TranslationMatrix(x, y))
 }
 
 // Translation returns the translation part of `m`.
 func (m *Matrix) Translation() (float64, float64) {
 	return m[6], m[7]
+}
+
+// Scale scales the current matrix by `x`,`y`.
+func (m *Matrix) Scale(x, y float64) {
+	m.Concat(ScaleMatrix(x, y))
+}
+
+// Rotate rotates the current matrix by angle `angle`, specified in radians.
+func (m *Matrix) Rotate(angle float64) {
+	m.Concat(RotationMatrix(angle))
+}
+
+// Shear shears the current matrix by `x',`y`.
+func (m *Matrix) Shear(x, y float64) {
+	m.Concat(ShearMatrix(x, y))
+}
+
+// Clone returns a copy of the current matrix.
+func (m *Matrix) Clone() Matrix {
+	return NewMatrix(m[0], m[1], m[3], m[4], m[6], m[7])
 }
 
 // Transform returns coordinates `x`,`y` transformed by `m`.
