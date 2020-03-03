@@ -74,6 +74,11 @@ func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	return jbig2.DecodeBytes(encoded, parameters, enc.Globals)
 }
 
+// DecodeGlobals decodes 'encoded' byte stream and returns their Globally defined segments ('Globals').
+func (enc *JBIG2Encoder) DecodeGlobals(encoded []byte) (*document.Globals, error) {
+	return jbig2.DecodeGlobals(encoded)
+}
+
 // DecodeImages decodes the page images from the jbig2 'encoded' data input.
 // The jbig2 document may contain multiple pages, thus the function can return multiple
 // images. The images order corresponds to the page number.
@@ -114,7 +119,7 @@ func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 	return enc.DecodeBytes(streamObj.Stream)
 }
 
-// EncodeBytes encodes the passed slice in slice of bytes into JBIG2.
+// EncodeBytes encodes slice of bytes into JBIG2 encoding format.
 // The input 'data' must be an image. In order to Decode it a user is responsible to
 // load the codec ('png', 'jpg').
 // Returns jbig2 single page encoded document byte slice. The encoder uses DefaultPageSettings
