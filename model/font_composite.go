@@ -340,6 +340,9 @@ func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	if err != nil {
 		return nil, err
 	}
+	if fontWidths == nil {
+		fontWidths = map[textencoding.CharCode]float64{}
+	}
 	font.widths = fontWidths
 
 	return font, nil
@@ -494,6 +497,9 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	fontWidths, err := parseCIDFontWidthsArray(font.W)
 	if err != nil {
 		return nil, err
+	}
+	if fontWidths == nil {
+		fontWidths = map[textencoding.CharCode]float64{}
 	}
 	font.widths = fontWidths
 
