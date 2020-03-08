@@ -57,6 +57,8 @@ const testImageFile1 = "./testdata/logo.png"
 const testImageFile2 = "./testdata/signature.png"
 const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
+const testRobotoItalicTTFFile = "./testdata/roboto/Roboto-Italic.ttf"
+const testRobotoBoldItalicTTFFile = "./testdata/roboto/Roboto-BoldItalic.ttf"
 const testWts11TTFFile = "./testdata/wts11.ttf"
 const testImageFileCCITT = "./testdata/p3_0.png"
 
@@ -2977,6 +2979,99 @@ func TestCreatorStable(t *testing.T) {
 	h2 := writePDF()
 	if h1 != h2 {
 		t.Fatal("output is not stable")
+	}
+}
+
+func TestHtmlParagraph(t *testing.T) {
+	c := New()
+
+	html := `
+<style>
+table {
+  width: 100%;
+}
+
+th {
+  height: 50px;
+}
+</style>
+
+<b>Bold <i>BoldItalic</i></b> <i>Italic</i> <br/>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip <i>ex ea commodo consequat</i>.
+<b>Done!</b><br/><br/>
+<div style="background-color:#ffdddd;boreder-style:solid;border-width:0.5;border-color:black;">
+<p>Paragraph #1</p><p style="color:blue;text-align:center">Paragraph #2</p>
+</div>
+<br/><br/>
+<p>Paragraph #3</p>
+<br/>
+<table style="width:100%">
+  <tr>
+    <th align="center">Firstname</th>
+    <th align="center">Lastname</th>
+    <th align="center">Age</th>
+  </tr>
+  <tr>
+    <td>Jill</td>
+    <td>Smith</td>
+    <td>50</td>
+  </tr>
+  <tr>
+    <td>Eve</td>
+    <td>Jackson</td>
+    <td style="color:white;text-align:center;background-color:#ee3344;"><b><i>94</i></b></td>
+  </tr>
+  <tr>
+    <td>Jan</td>
+    <td>Bill</td>
+    <td style="color:red;text-align:center;background-color:#eeeeee;">
+44
+
+<table style="color:green;text-align:center"><tr><td>1</td></tr><tr><td>2</td></tr></table>
+	</td>
+  </tr>
+</table>
+`
+	// <table><tr><td>1</td></tr><tr><td>2</td></tr></table>
+	hp := c.NewHTMLParagraph()
+
+	roboto, err := model.NewPdfFontFromTTFFile(testRobotoRegularTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoBold, err := model.NewPdfFontFromTTFFile(testRobotoBoldTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoItalic, err := model.NewPdfFontFromTTFFile(testRobotoItalicTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoBoldItalic, err := model.NewPdfFontFromTTFFile(testRobotoBoldItalicTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	hp.SetRegularFont(roboto)
+	hp.SetBoldFont(robotoBold)
+	hp.SetItalicFont(robotoItalic)
+	hp.SetBoldItalicFont(robotoBoldItalic)
+
+	if err := hp.Append(html); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.Draw(hp)
+
+	outFile := tempFile("html_content.pdf")
+	if err := c.WriteToFile(outFile); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
 	}
 }
 
