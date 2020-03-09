@@ -316,7 +316,7 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 
 		if !isOperand {
 			// Not an operand.. Read key value properties..
-			param, ok := obj.(*core.PdfObjectName)
+			param, ok := core.GetName(obj)
 			if !ok {
 				common.Log.Debug("Invalid inline image property (expecting name) - %T", obj)
 				return nil, fmt.Errorf("invalid inline image property (expecting name) - %T", obj)
@@ -361,6 +361,8 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 				im.Interpolate = valueObj
 			case "W", "Width":
 				im.Width = valueObj
+			case "Length", "Subtype", "Type":
+				common.Log.Debug("Ignoring inline parameter %s", *param)
 			default:
 				return nil, fmt.Errorf("unknown inline image parameter %s", *param)
 			}
@@ -409,6 +411,12 @@ func (csp *ContentStreamParser) ParseInlineImage() (*ContentStreamInlineImage, e
 							skipBytes = []byte{}
 							skipBytes = append(skipBytes, c)
 							state = 1
+						} else if c == 'E' {
+							// Allow cases where EI is not preceded by whitespace.
+							// The extra parsing after EI<ws> should be sufficient
+							// in order to decide if the image stream ended.
+							skipBytes = append(skipBytes, c)
+							state = 2
 						} else {
 							im.stream = append(im.stream, c)
 						}

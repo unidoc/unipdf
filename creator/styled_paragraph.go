@@ -96,7 +96,7 @@ func (p *StyledParagraph) appendChunk(chunk *TextChunk) *TextChunk {
 
 // Append adds a new text chunk to the paragraph.
 func (p *StyledParagraph) Append(text string) *TextChunk {
-	chunk := newTextChunk(text, p.defaultStyle)
+	chunk := NewTextChunk(text, p.defaultStyle)
 	return p.appendChunk(chunk)
 }
 
@@ -107,7 +107,7 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 		index = l
 	}
 
-	chunk := newTextChunk(text, p.defaultStyle)
+	chunk := NewTextChunk(text, p.defaultStyle)
 	p.chunks = append(p.chunks[:index], append([]*TextChunk{chunk}, p.chunks[index:]...)...)
 	p.wrapText()
 
@@ -118,7 +118,7 @@ func (p *StyledParagraph) Insert(index uint, text string) *TextChunk {
 // The text parameter represents the text that is displayed and the url
 // parameter sets the destionation of the link.
 func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
-	chunk := newTextChunk(text, p.defaultLinkStyle)
+	chunk := NewTextChunk(text, p.defaultLinkStyle)
 	chunk.annotation = newExternalLinkAnnotation(url)
 	return p.appendChunk(chunk)
 }
@@ -130,7 +130,7 @@ func (p *StyledParagraph) AddExternalLink(text, url string) *TextChunk {
 // The zoom of the destination page is controlled with the zoom
 // parameter. Pass in 0 to keep the current zoom value.
 func (p *StyledParagraph) AddInternalLink(text string, page int64, x, y, zoom float64) *TextChunk {
-	chunk := newTextChunk(text, p.defaultLinkStyle)
+	chunk := NewTextChunk(text, p.defaultLinkStyle)
 	chunk.annotation = newInternalLinkAnnotation(page-1, x, y, zoom)
 	return p.appendChunk(chunk)
 }
@@ -745,6 +745,9 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			var encStr []byte
 			for _, rn := range chunk.Text {
+				if r == '\u000A' { // LF
+					continue
+				}
 				if rn == ' ' {
 					if len(encStr) > 0 {
 						cc.Add_rg(r, g, b).
@@ -761,6 +764,10 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 					chunkWidths[k] += spaceWidth * fontSize
 				} else {
+					if _, ok := enc.RuneToCharcode(rn); !ok {
+						common.Log.Debug("unsupported rune in text encoding: %#x (%c)", rn, rn)
+						continue
+					}
 					encStr = append(encStr, enc.Encode(string(rn))...)
 				}
 			}

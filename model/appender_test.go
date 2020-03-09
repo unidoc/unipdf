@@ -20,8 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pkcs12"
 
-	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/annotator"
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/sighandler"
@@ -1072,8 +1072,9 @@ func TestAppenderSignMultiple(t *testing.T) {
 			t.Fatalf("page annotations != %d (got %d)", i, len(annotations))
 		}
 		for j, annot := range annotations {
-			t.Logf("i=%d Annots page object equal? %v == %v?", j, pdfReader.PageList[0].GetContainingPdfObject(), annot.P)
-			require.Equal(t, pdfReader.PageList[0].GetContainingPdfObject(), annot.P)
+			annotPage := core.ResolveReference(annot.P)
+			t.Logf("i=%d Annots page object equal? %v == %v?", j, pdfReader.PageList[0].GetContainingPdfObject(), annotPage)
+			require.Equal(t, pdfReader.PageList[0].GetContainingPdfObject(), annotPage)
 		}
 
 		appender, err := model.NewPdfAppender(pdfReader)
@@ -1314,8 +1315,9 @@ func TestAppenderSignMultipleAppearances(t *testing.T) {
 			t.Fatalf("page annotations != %d (got %d)", i, len(annotations))
 		}
 		for j, annot := range annotations {
-			t.Logf("i=%d Annots page object equal? %v == %v?", j, pdfReader.PageList[0].GetContainingPdfObject(), annot.P)
-			require.Equal(t, pdfReader.PageList[0].GetContainingPdfObject(), annot.P)
+			annotPage := core.ResolveReference(annot.P)
+			t.Logf("i=%d Annots page object equal? %v == %v?", j, pdfReader.PageList[0].GetContainingPdfObject(), annotPage)
+			require.Equal(t, pdfReader.PageList[0].GetContainingPdfObject(), annotPage)
 		}
 
 		appender, err := model.NewPdfAppender(pdfReader)

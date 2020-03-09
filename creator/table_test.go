@@ -525,3 +525,55 @@ func TestTableSubtables(t *testing.T) {
 		t.Fatalf("Fail: %v\n", err)
 	}
 }
+
+func TestTableParagraphLinks(t *testing.T) {
+	c := New()
+
+	// First page.
+	c.NewPage()
+	table := c.NewTable(2)
+
+	// Add internal link cells.
+	cell := table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	p := c.NewStyledParagraph()
+	p.Append("Internal link")
+	cell.SetContent(p)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	p = c.NewStyledParagraph()
+	p.AddInternalLink("link to second page", 2, 0, 0, 0)
+	cell.SetContent(p)
+
+	// Add external link cells.
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	p = c.NewStyledParagraph()
+	p.Append("External link")
+	cell.SetContent(p)
+
+	cell = table.NewCell()
+	cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+	p = c.NewStyledParagraph()
+	p.AddExternalLink("link to UniPDF", "https://github.com/unidoc/unipdf")
+	cell.SetContent(p)
+
+	if err := c.Draw(table); err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	// Second page.
+	c.NewPage()
+
+	p = c.NewStyledParagraph()
+	p.Append("Page 2").Style.FontSize = 24
+
+	if err := c.Draw(p); err != nil {
+		t.Fatalf("Error drawing: %v", err)
+	}
+
+	if err := c.WriteToFile(tempFile("table_paragraph_links.pdf")); err != nil {
+		t.Fatalf("Fail: %v\n", err)
+	}
+}

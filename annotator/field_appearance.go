@@ -14,6 +14,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -245,7 +246,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")
@@ -267,6 +268,11 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		resources.SetFontByName(*fontname, fontobj)
 	}
 	encoder := font.Encoder()
+	if encoder == nil {
+		common.Log.Debug("WARN: font encoder is nil. Assuming identity encoder. Output may be incorrect.")
+		encoder = textencoding.NewIdentityTextEncoder("Identity-H")
+	}
+
 	fdescriptor, err := font.GetFontDescriptor()
 	if err != nil {
 		common.Log.Debug("Error: Unable to get font descriptor")
@@ -565,7 +571,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")
@@ -940,7 +946,7 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 
 	// If fontname not set need to make a new font or use one defined in the resources.
 	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil {
+	if fontname == nil || dr == nil {
 		// Font not set, revert to Helvetica with name "Helv".
 		fontname = core.MakeName("Helv")
 		helv, err := model.NewStandard14Font("Helvetica")

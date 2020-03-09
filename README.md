@@ -12,14 +12,16 @@ creating and reading, processing PDF files. The library is written and supported
 
 ## Features
 
-- [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go)
+- [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_report.go). Example output: [unidoc-report.pdf](https://github.com/unidoc/unipdf-examples/blob/v3/report/unidoc-report.pdf).
+- [Table PDF reports](https://github.com/unidoc/unipdf-examples/blob/v3/report/pdf_tables.go). Example output: [unipdf-tables.pdf](https://github.com/unidoc/unipdf-examples/blob/v3/report/unipdf-tables.pdf).
 - [Invoice creation](https://unidoc.io/news/simple-invoices)
-- Advanced table generation in the creator with subtable support
 - Paragraph in creator handling multiple styles within the same paragraph
 - [Merge PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_merge.go)
 - [Split PDF pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_split.go) and change page order
 - [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/v3/pages/pdf_rotate.go)
 - [Extract text from PDF files](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_extract_text.go)
+- [Text extraction support with size, position and formatting info](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_text_locations.go)
+- [PDF to CSV](https://github.com/unidoc/unipdf-examples/blob/v3/text/pdf_to_csv.go) illustrates extracting tabular data from PDF.
 - [Extract images](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_extract_images.go) with coordinates
 - [Images to PDF](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_images_to_pdf.go)
 - [Add images to pages](https://github.com/unidoc/unipdf-examples/blob/v3/image/pdf_add_image_to_page.go)
@@ -34,17 +36,11 @@ creating and reading, processing PDF files. The library is written and supported
 - [Protect PDF files with a password](https://github.com/unidoc/unipdf-examples/blob/v3/security/pdf_protect.go)
 - [Digital signing validation and signing](https://github.com/unidoc/unipdf-examples/tree/v3/signatures)
 - CCITTFaxDecode decoding and encoding support
+- JBIG2 decoding support
 
-Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples
-as well as [documented examples](https://unidoc.io/examples) on our website.
+Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples.
 
 Contact us if you need any specific examples.
-
-## News
-- unidoc has been renamed to unipdf and is maintained under https://github.com/unidoc/unipdf
-- The old repository remains under https://github.com/unidoc/unidoc for backwards compatibility and will be read-only.
-All development is under the unipdf repository.
-- The initial release of unipdf v3.0.0 is compatible with Go modules from the start.
 
 ## Installation
 With modules:
@@ -100,7 +96,7 @@ These activities include:
  * creating/manipulating documents for users in a web/server/cloud application
  * shipping unipdf with a closed source product
 
-Please see [pricing](http://unidoc.io/pricing) to purchase a commercial license or contact sales at sales@unidoc.io
+Please see [pricing](https://unidoc.io/unipdf/#unipdf-pricing) to purchase a commercial license or contact sales at sales@unidoc.io
 for more info.
 
 ## Getting Rid of the Watermark - Get a License
@@ -109,10 +105,18 @@ To use unipdf in your projects, you need to get a license.
 
 Get your license on [https://unidoc.io](https://unidoc.io).
 
-To load your license, simply do:
+The easiest way to load your license is through environment variables, for example:
+```bash
+export UNIPDF_CUSTOMER_NAME=UniDoc
+export UNIPDF_LICENSE_PATH=/path/to/licenses/UniDoc.txt
+```
+
+Alternatively you can load the license in code, simply do:
 ```go
-unidocLicenseKey := "... your license here ..."
-err := license.SetLicenseKey(unidocLicenseKey)
+licenseKey := "... your license here ..."
+customerName := `name of license holder`
+
+err := license.SetLicenseKey(licenseKey, customerName)
 if err != nil {
     fmt.Printf("Error loading license: %v\n", err)
     os.Exit(1)

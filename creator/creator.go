@@ -20,6 +20,8 @@ import (
 // content onto imported PDF pages, etc.
 type Creator struct {
 	pages      []*model.PdfPage
+	pageBlocks map[*model.PdfPage]*Block
+
 	activePage *model.PdfPage
 
 	pagesize PageSize
@@ -116,6 +118,7 @@ type margins struct {
 func New() *Creator {
 	c := &Creator{}
 	c.pages = []*model.PdfPage{}
+	c.pageBlocks = map[*model.PdfPage]*Block{}
 	c.SetPageSize(PageSizeLetter)
 
 	m := 0.1 * c.pageWidth
@@ -288,10 +291,11 @@ func (c *Creator) initContext() {
 }
 
 // NewPage adds a new Page to the Creator and sets as the active Page.
-func (c *Creator) NewPage() {
+func (c *Creator) NewPage() *model.PdfPage {
 	page := c.newPage()
 	c.pages = append(c.pages, page)
 	c.context.Page++
+	return page
 }
 
 // AddPage adds the specified page to the creator.
@@ -342,9 +346,25 @@ func (c *Creator) Context() DrawContext {
 	return c.context
 }
 
-// Call before writing out. Takes care of adding headers and footers, as well
-// as generating front Page and table of contents.
-func (c *Creator) finalize() error {
+// Finalize renders all blocks to the creator pages. In addition, it takes care
+// of adding headers and footers, as well as generating the front page,
+// table of contents and outlines.
+// Finalize is automatically called before writing the document out. Calling the
+// method manually can be useful when adding external pages to the creator,
+// using the AddPage method, as it renders all creator blocks to the added
+// pages, without having to write the document out.
+// NOTE: TOC and outlines are generated only if the AddTOC and AddOutlines
+// fields of the creator are set to true (enabled by default). Furthermore, TOCs
+// and outlines without content are skipped. TOC and outline content is
+// added automatically when using the chapter component. TOCs and outlines can
+// also be set externally, using the SetTOC and SetOutlineTree methods.
+// Finalize should only be called once, after all draw calls have taken place,
+// as it will return immediately if the creator instance has been finalized.
+func (c *Creator) Finalize() error {
+	if c.finalized {
+		return nil
+	}
+
 	totPages := len(c.pages)
 
 	// Estimate number of additional generated pages and update TOC.
@@ -479,6 +499,8 @@ func (c *Creator) finalize() error {
 
 	for idx, page := range c.pages {
 		c.setActivePage(page)
+
+		// Draw page header.
 		if c.drawHeaderFunc != nil {
 			// Prepare a block to draw on.
 			// Header is drawn on the top of the page. Has width of the page, but height limited to
@@ -490,12 +512,14 @@ func (c *Creator) finalize() error {
 			}
 			c.drawHeaderFunc(headerBlock, args)
 			headerBlock.SetPos(0, 0)
-			err := c.Draw(headerBlock)
-			if err != nil {
+
+			if err := c.Draw(headerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing header: %v", err)
 				return err
 			}
 		}
+
+		// Draw page footer.
 		if c.drawFooterFunc != nil {
 			// Prepare a block to draw on.
 			// Footer is drawn on the bottom of the page. Has width of the page, but height limited
@@ -507,16 +531,25 @@ func (c *Creator) finalize() error {
 			}
 			c.drawFooterFunc(footerBlock, args)
 			footerBlock.SetPos(0, c.pageHeight-footerBlock.height)
-			err := c.Draw(footerBlock)
-			if err != nil {
+
+			if err := c.Draw(footerBlock); err != nil {
 				common.Log.Debug("ERROR: drawing footer: %v", err)
 				return err
 			}
 		}
+
+		// Draw page blocks.
+		block, ok := c.pageBlocks[page]
+		if !ok {
+			continue
+		}
+		if err := block.drawToPage(page); err != nil {
+			common.Log.Debug("ERROR: drawing page %d blocks: %v", idx+1, err)
+			return err
+		}
 	}
 
 	c.finalized = true
-
 	return nil
 }
 
@@ -546,8 +579,12 @@ func (c *Creator) MoveDown(dy float64) {
 	c.context.Y += dy
 }
 
-// Draw draws the Drawable widget to the document.  This can span over 1 or more pages. Additional
-// pages are added if the contents go over the current Page.
+// Draw processes the specified Drawable widget and generates blocks that can
+// be rendered to the output document. The generated blocks can span over one
+// or more pages. Additional pages are added if the contents go over the current
+// page. Each generated block is assigned to the creator page it will be
+// rendered to. In order to render the generated blocks to the creator pages,
+// call Finalize, Write or WriteToFile.
 func (c *Creator) Draw(d Drawable) error {
 	if c.getActivePage() == nil {
 		// Add a new Page if none added already.
@@ -559,15 +596,21 @@ func (c *Creator) Draw(d Drawable) error {
 		return err
 	}
 
-	for idx, blk := range blocks {
+	for idx, block := range blocks {
 		if idx > 0 {
 			c.NewPage()
 		}
 
-		p := c.getActivePage()
-		err := blk.drawToPage(p)
-		if err != nil {
-			return err
+		page := c.getActivePage()
+		if pageBlock, ok := c.pageBlocks[page]; ok {
+			if err := pageBlock.mergeBlocks(block); err != nil {
+				return err
+			}
+			if err := mergeResources(block.resources, pageBlock.resources); err != nil {
+				return err
+			}
+		} else {
+			c.pageBlocks[page] = block
 		}
 	}
 
@@ -581,8 +624,8 @@ func (c *Creator) Draw(d Drawable) error {
 
 // Write output of creator to io.Writer interface.
 func (c *Creator) Write(ws io.Writer) error {
-	if !c.finalized {
-		c.finalize()
+	if err := c.Finalize(); err != nil {
+		return err
 	}
 
 	pdfWriter := model.NewPdfWriter()

@@ -7,7 +7,6 @@ package creator
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -261,79 +260,18 @@ func (p *Paragraph) wrapText() error {
 		return nil
 	}
 
-	var line []rune
-	lineWidth := 0.0
-	p.textLines = nil
+	chunk := NewTextChunk(p.text, TextStyle{
+		Font:     p.textFont,
+		FontSize: p.fontSize,
+	})
 
-	runes := []rune(p.text)
-	var widths []float64
-
-	for _, r := range runes {
-		// Newline wrapping.
-		if r == '\u000A' { // LF
-			// Moves to next line.
-			p.textLines = append(p.textLines, string(line))
-			line = nil
-			lineWidth = 0
-			widths = nil
-			continue
-		}
-
-		metrics, found := p.textFont.GetRuneMetrics(r)
-		if !found {
-			common.Log.Debug("ERROR: Rune char metrics not found! rune=0x%04x=%c font=%s %#q",
-				r, r, p.textFont.BaseFont(), p.textFont.Subtype())
-			common.Log.Trace("Font: %#v", p.textFont)
-			common.Log.Trace("Encoder: %#v", p.textFont.Encoder())
-			return errors.New("glyph char metrics missing")
-		}
-
-		w := p.fontSize * metrics.Wx
-		if lineWidth+w > p.wrapWidth*1000.0 {
-			// Goes out of bounds: Wrap.
-			// Breaks on the character.
-			idx := -1
-			for i := len(line) - 1; i >= 0; i-- {
-				if line[i] == ' ' { // TODO: What about other space glyphs like controlHT?
-					idx = i
-					break
-				}
-			}
-			if idx > 0 {
-				// Back up to last space.
-				p.textLines = append(p.textLines, string(line[0:idx+1]))
-
-				// Remainder of line.
-				line = append(line[idx+1:], r)
-				widths = append(widths[idx+1:], w)
-				lineWidth = sum(widths)
-
-			} else {
-				p.textLines = append(p.textLines, string(line))
-				line = []rune{r}
-				widths = []float64{w}
-				lineWidth = w
-			}
-		} else {
-			line = append(line, r)
-			lineWidth += w
-			widths = append(widths, w)
-		}
-	}
-	if len(line) > 0 {
-		p.textLines = append(p.textLines, string(line))
+	lines, err := chunk.Wrap(p.wrapWidth)
+	if err != nil {
+		return err
 	}
 
+	p.textLines = lines
 	return nil
-}
-
-// sum returns the sums of the elements in `widths`.
-func sum(widths []float64) float64 {
-	total := 0.0
-	for _, w := range widths {
-		total += w
-	}
-	return total
 }
 
 // GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
@@ -489,8 +427,10 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 		enc := p.textFont.Encoder()
 
 		var encoded []byte
-		isCID := p.textFont.IsCID()
 		for _, r := range runes {
+			if r == '\u000A' { // LF
+				continue
+			}
 			if r == ' ' { // TODO: What about \t and other spaces.
 				if len(encoded) > 0 {
 					objs = append(objs, core.MakeStringFromBytes(encoded))
@@ -498,19 +438,11 @@ func drawParagraphOnBlock(blk *Block, p *Paragraph, ctx DrawContext) (DrawContex
 				}
 				objs = append(objs, core.MakeFloat(-spaceWidth))
 			} else {
-				code, ok := enc.RuneToCharcode(r)
-				if !ok {
-					err := fmt.Errorf("unsupported rune in text encoding: %#x (%c)", r, r)
-					common.Log.Debug("%s", err)
-					return ctx, err
+				if _, ok := enc.RuneToCharcode(r); !ok {
+					common.Log.Debug("unsupported rune in text encoding: %#x (%c)", r, r)
+					continue
 				}
-				// TODO(dennwc): this should not be done manually; encoder should do this
-				if isCID {
-					hi, lo := code>>8, code&0xff
-					encoded = append(encoded, byte(hi), byte(lo))
-				} else {
-					encoded = append(encoded, byte(code))
-				}
+				encoded = append(encoded, enc.Encode(string(r))...)
 			}
 		}
 		if len(encoded) > 0 {

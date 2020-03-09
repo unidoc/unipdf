@@ -125,7 +125,7 @@ func (r *PdfReader) newPdfPageFromDict(p *core.PdfObjectDictionary) (*PdfPage, e
 		page.LastModified = &lastmod
 	}
 
-	if obj := d.Get("Resources"); obj != nil {
+	if obj := d.Get("Resources"); obj != nil && !core.IsNullObject(obj) {
 		dict, ok := core.GetDict(obj)
 		if !ok {
 			return nil, fmt.Errorf("invalid resource dictionary (%T)", obj)
@@ -386,7 +386,7 @@ func (p *PdfPage) GetMediaBox() (*PdfRectangle, error) {
 		}
 
 		if obj := dict.Get("MediaBox"); obj != nil {
-			arr, ok := obj.(*core.PdfObjectArray)
+			arr, ok := core.GetArray(obj)
 			if !ok {
 				return nil, errors.New("invalid media box")
 			}
@@ -736,7 +736,7 @@ func (p *PdfPage) AddContentStreamByString(contentStr string) error {
 	if p.Contents == nil {
 		// If not set, place it directly.
 		p.Contents = stream
-	} else if contArray, isArray := core.TraceToDirectObject(p.Contents).(*core.PdfObjectArray); isArray {
+	} else if contArray, isArray := core.GetArray(p.Contents); isArray {
 		// If an array of content streams, append it.
 		contArray.Append(stream)
 	} else {
@@ -905,7 +905,7 @@ func newPdfPageResourcesColorspacesFromPdfObject(obj core.PdfObject) (*PdfPageRe
 		obj = indObj.PdfObject
 	}
 
-	dict, ok := obj.(*core.PdfObjectDictionary)
+	dict, ok := core.GetDict(obj)
 	if !ok {
 		return nil, errors.New("CS attribute type error")
 	}

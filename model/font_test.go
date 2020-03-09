@@ -580,6 +580,19 @@ func (f *fontFragmentTest) check(t *testing.T) {
 		t.Errorf("Some codes not decoded %s. font=%s numMisses=%d", f, font, numMisses)
 		return
 	}
+
+	// Test test encoding.
+	// Encode previously decoded text and then decode the result.
+	// The decoded result `decodedText` should be the same with the original
+	// result `actualText`.
+	encoded, numMisses := font.StringToCharcodeBytes(actualText)
+	require.Equal(t, numMisses, 0)
+	encoded = core.MakeStringFromBytes(encoded).Bytes()
+
+	decodedText, _, numMisses := font.CharcodeBytesToUnicode(encoded)
+	require.Equal(t, numMisses, 0)
+	require.Equal(t, actualText, decodedText)
+
 	if actualText != f.expected {
 		t.Errorf("Incorrect decoding. %s encoding=%s\nexpected=%q\n  actual=%q",
 			f, font.Encoder(), f.expected, actualText)
@@ -863,4 +876,11 @@ func newStandandTextEncoder(t *testing.T) textencoding.SimpleEncoder {
 		t.Fatalf("Error: %v", err)
 	}
 	return enc
+}
+
+func TestNewFontFromFile(t *testing.T) {
+	_, err := model.NewPdfFontFromTTFFile("testdata/font/OpenSans-Regular.ttf")
+	if err != nil {
+		t.Fatalf("Failed to load font from file. err=%v", err)
+	}
 }

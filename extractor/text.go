@@ -47,6 +47,8 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 		return nil, numChars, numMisses, err
 	}
 	pt.computeViews()
+	procBuf(pt)
+
 	return pt, numChars, numMisses, err
 }
 
@@ -59,7 +61,8 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	pageText := &PageText{}
 	state := newTextState()
 	fontStack := fontStacker{}
-	var to *textObject
+	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &fontStack)
+	var inTextObj bool
 
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
@@ -100,16 +103,31 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					state.tfont = fontStack.pop()
 				}
 			case "BT": // Begin text
-				// Begin a text object, initializing the text matrix, Tm, and the text line matrix,
-				// Tlm, to the identity matrix. Text objects shall not be nested; a second BT shall
-				// not appear before an ET.
-				if to != nil {
+				// Begin a text object, initializing the text matrix, Tm, and
+				// the text line matrix, Tlm, to the identity matrix. Text
+				// objects shall not be nested. A second BT shall not appear
+				// before an ET. However, if that happens, all existing marks
+				// are added to the  page marks, in order to avoid losing content.
+				if inTextObj {
 					common.Log.Debug("BT called while in a text object")
+					pageText.marks = append(pageText.marks, to.marks...)
 				}
+				inTextObj = true
 				to = newTextObject(e, resources, gs, &state, &fontStack)
 			case "ET": // End Text
+				// End text object, discarding text matrix. If the current
+				// text object contains text marks, they are added to the
+				// page text marks collection.
+				// The ET operator should always have a matching BT operator.
+				// However, if ET appears outside of a text object, the behavior
+				// does not change: the text matrices are discarded and all
+				// existing marks in the text object are added to the page marks.
+				if !inTextObj {
+					common.Log.Debug("ET called outside of a text object")
+				}
+				inTextObj = false
 				pageText.marks = append(pageText.marks, to.marks...)
-				to = nil
+				to.reset()
 			case "T*": // Move to start of next text line
 				to.nextLine()
 			case "Td": // Move text location
@@ -200,10 +218,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				}
 				to.setCharSpacing(y)
 			case "Tf": // Set font.
-				if to == nil {
-					// This is needed for 26-Hazard-Thermal-environment.pdf
-					to = newTextObject(e, resources, gs, &state, &fontStack)
-				}
 				if ok, err := to.checkOp(op, 2, true); !ok {
 					common.Log.Debug("ERROR: Tf err=%v", err)
 					return err
@@ -657,6 +671,14 @@ func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentst
 	}
 }
 
+// reset sets the text matrix `Tm` and the text line matrix `Tlm` of the text
+// object to the identity matrix. In addition, the marks collection is cleared.
+func (to *textObject) reset() {
+	to.tm = transform.IdentityMatrix()
+	to.tlm = transform.IdentityMatrix()
+	to.marks = nil
+}
+
 // renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
@@ -937,6 +959,11 @@ type TextMarkArray struct {
 	marks []TextMark
 }
 
+// Append appends `mark` to the mark array.
+func (ma *TextMarkArray) Append(mark TextMark) {
+	ma.marks = append(ma.marks, mark)
+}
+
 // String returns a string describing `ma`.
 func (ma TextMarkArray) String() string {
 	n := len(ma.marks)
@@ -1173,14 +1200,46 @@ var (
 // sortPosition sorts a text list by its elements' positions on a page.
 // Sorting is by orientation then top to bottom, left to right when page is orientated so that text
 // is horizontal.
+// Text is considered to be on different lines if the lines' orientedStart.Y differs by more than `tol`.
 func (pt *PageText) sortPosition(tol float64) {
+	if len(pt.marks) == 0 {
+		return
+	}
+
+	// For grouping data vertically into lines, it is necessary to have the data presorted by
+	// descending y position.
 	sort.SliceStable(pt.marks, func(i, j int) bool {
 		ti, tj := pt.marks[i], pt.marks[j]
 		if ti.orient != tj.orient {
 			return ti.orient < tj.orient
 		}
-		if math.Abs(ti.orientedStart.Y-tj.orientedStart.Y) > tol {
-			return ti.orientedStart.Y > tj.orientedStart.Y
+		return ti.orientedStart.Y >= tj.orientedStart.Y
+	})
+
+	// Cluster the marks into y-clusters by relative y proximity. Each cluster is our guess of what
+	// makes up a line of text.
+	clusters := make([]int, len(pt.marks))
+	cluster := 0
+	clusters[0] = cluster
+	for i := 1; i < len(pt.marks); i++ {
+		if pt.marks[i-1].orient != pt.marks[i].orient {
+			cluster++
+		} else {
+			if pt.marks[i-1].orientedStart.Y-pt.marks[i].orientedStart.Y > tol {
+				cluster++
+			}
+		}
+		clusters[i] = cluster
+	}
+
+	// Sort by y-cluster and x.
+	sort.SliceStable(pt.marks, func(i, j int) bool {
+		ti, tj := pt.marks[i], pt.marks[j]
+		if ti.orient != tj.orient {
+			return ti.orient < tj.orient
+		}
+		if clusters[i] != clusters[j] {
+			return clusters[i] < clusters[j]
 		}
 		return ti.orientedStart.X < tj.orientedStart.X
 	})

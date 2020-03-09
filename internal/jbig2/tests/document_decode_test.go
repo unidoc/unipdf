@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/model"
 )
 
 // EnvDirectory is the environment variable that should contain directory path
@@ -27,7 +26,7 @@ var (
 	// for each decoded testcase image should be updated.
 	jbig2UpdateGoldens bool
 	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
-	// within the temporary directory: os.TempDir()/unipdf/jbig2
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'.
 	keepImageFiles bool
 )
 
@@ -40,7 +39,7 @@ func init() {
 // Requires environmental variable 'UNIDOC_JBIG2_TESTDATA' that contains the jbig2 testdata.
 // Decoded images are stored within zipped archive files - that has the same name as the pdf file.
 // In order to check the decoded images this function creates also the directory 'goldens'
-// which would have json files for each 'pdf' input, containing valid flags.
+// which would have json files for each 'pdf' input, containing valid image hashes.
 // If the 'jbig2-update-goldens' runtime flag is provided, the test function updates all the 'hashes'
 // for the decoded jbig2 images in related 'golden' files.
 // In order to check the decoded images use 'jbig2-store-images' flag, then the function would store them
@@ -72,31 +71,10 @@ func TestDecodeJBIG2Files(t *testing.T) {
 		}
 	}()
 
-	passwords := make(map[string]string)
-
 	for _, filename := range filenames {
 		rawName := rawFileName(filename)
 		t.Run(rawName, func(t *testing.T) {
-			// get the file
-			f, err := getFile(dirName, filename)
-			require.NoError(t, err)
-			defer f.Close()
-
-			var reader *model.PdfReader
-			password, ok := passwords[filename]
-			if ok {
-				// read the pdf with the password
-				reader, err = readPDF(f, password)
-			} else {
-				reader, err = readPDF(f)
-			}
-			if err != nil {
-				if err.Error() != "EOF not found" {
-					require.NoError(t, err)
-				}
-			}
-
-			numPages, err := reader.GetNumPages()
+			images, err := extractImages(dirName, filename)
 			require.NoError(t, err)
 
 			// create zipped file
@@ -109,21 +87,10 @@ func TestDecodeJBIG2Files(t *testing.T) {
 			zw := zip.NewWriter(w)
 			defer zw.Close()
 
-			var allHashes []fileHash
+			err = writeExtractedImages(zw, images...)
+			require.NoError(t, err)
 
-			for pageNo := 1; pageNo <= numPages; pageNo++ {
-				page, err := reader.GetPage(pageNo)
-				require.NoError(t, err)
-
-				images, err := extractImagesOnPage(filepath.Join(dirName, rawName), page)
-				require.NoError(t, err)
-
-				hashes, err := writeExtractedImages(zw, rawName, pageNo, images...)
-				require.NoError(t, err)
-
-				allHashes = append(allHashes, hashes...)
-			}
-			checkGoldenFiles(t, dirName, rawName, allHashes...)
+			checkGoldenFiles(t, dirName, rawName, images...)
 		})
 	}
 }

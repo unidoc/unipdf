@@ -8,6 +8,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -304,26 +305,29 @@ func (cs *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) 
 
 // ImageToRGB convert 1-component grayscale data to 3-component RGB.
 func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
-	rgbImage := img
+	data := make([]byte, 3*img.Width*img.Height)
+	for y := 0; y < int(img.Height); y++ {
+		for x := 0; x < int(img.Width); x++ {
+			color, err := img.ColorAt(x, y)
+			if err != nil {
+				return img, err
+			}
+			r, g, b, _ := color.RGBA()
 
-	samples := img.GetSamples()
-	common.Log.Trace("DeviceGray-ToRGB Samples: % d", samples)
-
-	lenSamples := len(samples)
-	rgbSamples := make([]uint32, 3*lenSamples)
-
-	for i := 0; i < lenSamples; i++ {
-		grayVal := samples[i] * 255 / uint32(math.Pow(2, float64(img.BitsPerComponent))-1)
-		rgbSamples[3*i], rgbSamples[3*i+1], rgbSamples[3*i+2] = grayVal, grayVal, grayVal
+			idx := (y*int(img.Width) + x) * 3
+			data[idx], data[idx+1], data[idx+2] = uint8(r>>8), uint8(g>>8), uint8(b>>8)
+		}
 	}
 
+	rgbImage := img
 	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
-	rgbImage.SetSamples(rgbSamples)
+	rgbImage.Data = data
+	rgbImage.decode = nil
 
 	common.Log.Trace("DeviceGray -> RGB")
-	common.Log.Trace("samples: %v", samples)
-	common.Log.Trace("RGB samples: %v", rgbSamples)
+	common.Log.Trace("samples: %v", img.Data)
+	common.Log.Trace("RGB samples: %v", rgbImage.Data)
 	common.Log.Trace("%v -> %v", img, rgbImage)
 
 	return rgbImage, nil
@@ -651,57 +655,54 @@ func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) 
 func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 	rgbImage := img
 
-	samples := img.GetSamples()
-
 	common.Log.Trace("CMYK -> RGB")
-	common.Log.Trace("image bpc: %d, color comps: %d", img.BitsPerComponent, img.ColorComponents)
-	common.Log.Trace("Len data: %d, len samples: %d", len(img.Data), len(samples))
+	common.Log.Trace("Image BPC: %d, Color components: %d", img.BitsPerComponent, img.ColorComponents)
+	common.Log.Trace("Len data: %d", len(img.Data))
 	common.Log.Trace("Height: %d, Width: %d", img.Height, img.Width)
-	if len(samples)%4 != 0 {
-		//common.Log.Debug("samples: % d", samples)
-		common.Log.Debug("Input image: %#v", img)
-		common.Log.Debug("CMYK -> RGB fail, len samples: %d", len(samples))
-		return img, errors.New("CMYK data not a multiple of 4")
-	}
 
 	decode := img.decode
 	if decode == nil {
 		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
 	}
 	if len(decode) != 8 {
-		common.Log.Debug("Invalid decode array (%d): % .3f", len(decode), decode)
+		common.Log.Debug("Invalid decode array (%d): %.3f", len(decode), decode)
 		return img, errors.New("invalid decode array")
 	}
-	common.Log.Trace("Decode array: % f", decode)
+	common.Log.Trace("Decode array: %f", decode)
 
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 	common.Log.Trace("MaxVal: %f", maxVal)
-	var rgbSamples []uint32
-	for i := 0; i < len(samples); i += 4 {
-		// Normalized c, m, y, k values.
-		c := interpolate(float64(samples[i]), 0, maxVal, decode[0], decode[1])
-		m := interpolate(float64(samples[i+1]), 0, maxVal, decode[2], decode[3])
-		y := interpolate(float64(samples[i+2]), 0, maxVal, decode[4], decode[5])
-		k := interpolate(float64(samples[i+3]), 0, maxVal, decode[6], decode[7])
 
-		c = c*(1-k) + k
-		m = m*(1-k) + k
-		y = y*(1-k) + k
+	data := make([]byte, 3*img.Width*img.Height)
+	for l := 0; l < int(img.Height); l++ {
+		for x := 0; x < int(img.Width); x++ {
+			col, err := img.ColorAt(x, l)
+			if err != nil {
+				return img, err
+			}
+			cmyk, ok := col.(color.CMYK)
+			if !ok {
+				return img, errors.New("")
+			}
 
-		r := 1 - c
-		g := 1 - m
-		b := 1 - y
+			// Normalized c, m, y, k values.
+			c := interpolate(float64(cmyk.C), 0, maxVal, decode[0], decode[1])
+			m := interpolate(float64(cmyk.M), 0, maxVal, decode[2], decode[3])
+			y := interpolate(float64(cmyk.Y), 0, maxVal, decode[4], decode[5])
+			k := interpolate(float64(cmyk.K), 0, maxVal, decode[6], decode[7])
 
-		// Convert to uint32 format.
-		R := uint32(r * maxVal)
-		G := uint32(g * maxVal)
-		B := uint32(b * maxVal)
-		//common.Log.Trace("(%f,%f,%f,%f) -> (%f,%f,%f) [%d,%d,%d]", c, m, y, k, r, g, b, R, G, B)
+			r := uint8(float64(1-(c*(1-k)+k)) * maxVal)
+			g := uint8(float64(1-(m*(1-k)+k)) * maxVal)
+			b := uint8(float64(1-(y*(1-k)+k)) * maxVal)
 
-		rgbSamples = append(rgbSamples, R, G, B)
+			idx := (l*int(img.Width) + x) * 3
+			data[idx], data[idx+1], data[idx+2] = r, g, b
+		}
 	}
-	rgbImage.SetSamples(rgbSamples)
+
+	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
+	rgbImage.Data = data
 
 	return rgbImage, nil
 }
@@ -2216,8 +2217,9 @@ func (cs *PdfColorspaceSpecialPattern) ImageToRGB(img Image) (Image, error) {
 	return img, errors.New("invalid colorspace for image (pattern)")
 }
 
-// PdfColorspaceSpecialIndexed is an indexed color space is a lookup table, where the input element is an index to the
-// lookup table and the output is a color defined in the lookup table in the Base colorspace.
+// PdfColorspaceSpecialIndexed is an indexed color space is a lookup table, where the input element
+// is an index to the lookup table and the output is a color defined in the lookup table in the Base
+// colorspace.
 // [/Indexed base hival lookup]
 type PdfColorspaceSpecialIndexed struct {
 	Base   PdfColorspace
@@ -2231,9 +2233,7 @@ type PdfColorspaceSpecialIndexed struct {
 
 // NewPdfColorspaceSpecialIndexed returns a new Indexed color.
 func NewPdfColorspaceSpecialIndexed() *PdfColorspaceSpecialIndexed {
-	cs := &PdfColorspaceSpecialIndexed{}
-	cs.HiVal = 255
-	return cs
+	return &PdfColorspaceSpecialIndexed{HiVal: 255}
 }
 
 func (cs *PdfColorspaceSpecialIndexed) String() string {
@@ -2400,24 +2400,30 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	baseImage.Height = img.Height
 	baseImage.Width = img.Width
 	baseImage.alphaData = img.alphaData
-	baseImage.BitsPerComponent = img.BitsPerComponent
+	// TODO(peterwilliams97): Add support for other BitsPerComponent values.
+	// See https://github.com/unidoc/unipdf/issues/260
+	baseImage.BitsPerComponent = 8
 	baseImage.hasAlpha = img.hasAlpha
-	baseImage.ColorComponents = img.ColorComponents
+	baseImage.ColorComponents = cs.Base.GetNumComponents()
 
 	samples := img.GetSamples()
 	N := cs.Base.GetNumComponents()
+
+	if N < 1 {
+		return Image{}, fmt.Errorf("bad base colorspace NumComponents=%d", N)
+	}
 
 	var baseSamples []uint32
 	// Convert the indexed data to base color map data.
 	for i := 0; i < len(samples); i++ {
 		// Each data point represents an index location.
 		// For each entry there are N values.
-		index := int(samples[i]) * N
+		index := int(samples[i])
 		common.Log.Trace("Indexed: index=%d N=%d lut=%d", index, N, len(cs.colorLookup))
 		// Ensure does not go out of bounds.
-		if index+N-1 >= len(cs.colorLookup) {
+		if (index+1)*N > len(cs.colorLookup) {
 			// Clip to the end value.
-			index = len(cs.colorLookup) - N - 1
+			index = len(cs.colorLookup)/N - 1
 			common.Log.Trace("Clipping to index: %d", index)
 			if index < 0 {
 				common.Log.Debug("ERROR: Can't clip index. Is PDF file damaged?")
@@ -2425,7 +2431,7 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 			}
 		}
 
-		cvals := cs.colorLookup[index : index+N]
+		cvals := cs.colorLookup[index*N : (index+1)*N]
 		common.Log.Trace("C Vals: % d", cvals)
 		for _, val := range cvals {
 			baseSamples = append(baseSamples, uint32(val))

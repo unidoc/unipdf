@@ -58,7 +58,7 @@ func NewPdfPageResourcesFromDict(dict *core.PdfObjectDictionary) (*PdfPageResour
 	if obj := dict.Get("XObject"); obj != nil {
 		r.XObject = obj
 	}
-	if obj := dict.Get("Font"); obj != nil {
+	if obj := core.ResolveReference(dict.Get("Font")); obj != nil {
 		r.Font = obj
 	}
 	if obj := dict.Get("ProcSet"); obj != nil {
@@ -335,11 +335,7 @@ func (r *PdfPageResources) SetColorspaceByName(keyName core.PdfObjectName, cs Pd
 // HasXObjectByName checks if an XObject with a specified keyName is defined.
 func (r *PdfPageResources) HasXObjectByName(keyName core.PdfObjectName) bool {
 	obj, _ := r.GetXObjectByName(keyName)
-	if obj != nil {
-		return true
-	}
-
-	return false
+	return obj != nil
 }
 
 // GenerateXObjectName generates an unused XObject name that can be used for
@@ -362,10 +358,10 @@ type XObjectType int
 // XObject types.
 const (
 	XObjectTypeUndefined XObjectType = iota
-	XObjectTypeImage     XObjectType = iota
-	XObjectTypeForm      XObjectType = iota
-	XObjectTypePS        XObjectType = iota
-	XObjectTypeUnknown   XObjectType = iota
+	XObjectTypeImage
+	XObjectTypeForm
+	XObjectTypePS
+	XObjectTypeUnknown
 )
 
 // GetXObjectByName returns the XObject with the specified keyName and the object type.

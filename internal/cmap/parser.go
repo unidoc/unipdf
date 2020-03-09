@@ -392,49 +392,19 @@ func (p *cMapParser) parseDict() (cmapDict, error) {
 
 // parseDict parseNumber a PDF number.
 func (p *cMapParser) parseNumber() (cmapObject, error) {
-	isFloat := false
-	allowSigns := true
-
-	numStr := bytes.Buffer{}
-	for {
-		bb, err := p.reader.Peek(1)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if allowSigns && (bb[0] == '-' || bb[0] == '+') {
-			// Only appear in the beginning, otherwise serves as a delimiter.
-			b, _ := p.reader.ReadByte()
-			numStr.WriteByte(b)
-			allowSigns = false // Only allowed in beginning, and after e (exponential).
-		} else if core.IsDecimalDigit(bb[0]) {
-			b, _ := p.reader.ReadByte()
-			numStr.WriteByte(b)
-		} else if bb[0] == '.' {
-			b, _ := p.reader.ReadByte()
-			numStr.WriteByte(b)
-			isFloat = true
-		} else if bb[0] == 'e' {
-			// Exponential number format.
-			b, _ := p.reader.ReadByte()
-			numStr.WriteByte(b)
-			isFloat = true
-			allowSigns = true
-		} else {
-			break
-		}
+	o, err := core.ParseNumber(p.reader)
+	if err != nil {
+		return nil, err
 	}
 
-	if isFloat {
-		fVal, err := strconv.ParseFloat(numStr.String(), 64)
-		o := cmapFloat{fVal}
-		return o, err
+	switch o := o.(type) {
+	case *core.PdfObjectFloat:
+		return cmapFloat{float64(*o)}, nil
+	case *core.PdfObjectInteger:
+		return cmapInt{int64(*o)}, nil
 	}
-	intVal, err := strconv.ParseInt(numStr.String(), 10, 64)
-	o := cmapInt{intVal}
-	return o, err
+
+	return nil, fmt.Errorf("unhandled number type %T", o)
 }
 
 // parseOperand parses an operand, which is a text command represented by a word.
