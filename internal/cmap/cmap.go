@@ -366,6 +366,11 @@ func (cmap *CMap) Type() int {
 	return cmap.ctype
 }
 
+// Nbits returns 8 bits for simple font CMaps and 16 bits for CID font CMaps.
+func (cmap *CMap) NBits() int {
+	return cmap.nbits
+}
+
 // String returns a human readable description of `cmap`.
 func (cmap *CMap) String() string {
 	si := cmap.systemInfo

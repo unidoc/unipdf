@@ -249,8 +249,18 @@ type pdfCIDFontType0 struct {
 	encoder textencoding.TextEncoder
 
 	// Table 117 – Entries in a CIDFont dictionary (page 269)
-	CIDSystemInfo *core.PdfObjectDictionary // (Required) Dictionary that defines the character
-	// collection of the CIDFont. See Table 116.
+	// (Required) Dictionary that defines the character collection of the CIDFont.
+	// See Table 116.
+	CIDSystemInfo *core.PdfObjectDictionary
+
+	// Glyph metrics fields (optional).
+	DW  core.PdfObject // default glyph width.
+	W   core.PdfObject // glyph widths array.
+	DW2 core.PdfObject // default glyph metrics for CID fonts used for vertical writing.
+	W2  core.PdfObject // glyph metrics for CID fonts used for vertical writing.
+
+	widths       map[textencoding.CharCode]float64
+	defaultWidth float64
 }
 
 // pdfCIDFontType0FromSkeleton returns a pdfCIDFontType0 with its common fields initalized.
@@ -277,12 +287,17 @@ func (font pdfCIDFontType0) Encoder() textencoding.TextEncoder {
 // GetRuneMetrics returns the character metrics for the specified rune.
 // A bool flag is returned to indicate whether or not the entry was found.
 func (font pdfCIDFontType0) GetRuneMetrics(r rune) (fonts.CharMetrics, bool) {
-	return fonts.CharMetrics{}, true
+	return fonts.CharMetrics{Wx: font.defaultWidth}, true
 }
 
 // GetCharMetrics returns the char metrics for character code `code`.
 func (font pdfCIDFontType0) GetCharMetrics(code textencoding.CharCode) (fonts.CharMetrics, bool) {
-	return fonts.CharMetrics{}, true
+	width := font.defaultWidth
+	if w, ok := font.widths[code]; ok {
+		width = w
+	}
+
+	return fonts.CharMetrics{Wx: width}, true
 }
 
 // ToPdfObject converts the pdfCIDFontType0 to a PDF representation.
@@ -308,6 +323,28 @@ func newPdfCIDFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	}
 	font.CIDSystemInfo = obj
 
+	// Optional attributes.
+	font.DW = d.Get("DW")
+	font.W = d.Get("W")
+	font.DW2 = d.Get("DW2")
+	font.W2 = d.Get("W2")
+
+	// Get font default glyph width.
+	font.defaultWidth = 1000.0
+	if dw, err := core.GetNumberAsFloat(font.DW); err == nil {
+		font.defaultWidth = dw
+	}
+
+	// Parse glyph widths array, if one is present.
+	fontWidths, err := parseCIDFontWidthsArray(font.W)
+	if err != nil {
+		return nil, err
+	}
+	if fontWidths == nil {
+		fontWidths = map[textencoding.CharCode]float64{}
+	}
+	font.widths = fontWidths
+
 	return font, nil
 }
 
@@ -322,12 +359,19 @@ type pdfCIDFontType2 struct {
 	// These fields are specific to Type 0 fonts.
 	encoder textencoding.TextEncoder
 
+	// Table 117 – Entries in a CIDFont dictionary (page 269)
+	// Dictionary that defines the character collection of the CIDFont (required).
+	// See Table 116.
 	CIDSystemInfo *core.PdfObjectDictionary
-	DW            core.PdfObject
-	W             core.PdfObject
-	DW2           core.PdfObject
-	W2            core.PdfObject
-	CIDToGIDMap   core.PdfObject
+
+	// Glyph metrics fields (optional).
+	DW  core.PdfObject // default glyph width.
+	W   core.PdfObject // glyph widths array.
+	DW2 core.PdfObject // default glyph metrics for CID fonts used for vertical writing.
+	W2  core.PdfObject // glyph metrics for CID fonts used for vertical writing.
+
+	// CIDs to glyph indices mapping (optional).
+	CIDToGIDMap core.PdfObject
 
 	widths       map[textencoding.CharCode]float64
 	defaultWidth float64
@@ -443,58 +487,84 @@ func newPdfCIDFontType2FromPdfObject(d *core.PdfObjectDictionary, base *fontComm
 	font.W2 = d.Get("W2")
 	font.CIDToGIDMap = d.Get("CIDToGIDMap")
 
-	if arr2, ok := core.GetArray(font.W); ok {
-		font.widths = make(map[textencoding.CharCode]float64)
-		for i := 0; i < arr2.Len()-1; i++ {
-			obj0 := (*arr2).Get(i)
-			n, ok0 := core.GetIntVal(obj0)
-			if !ok0 {
-				return nil, fmt.Errorf("Bad font W obj0: i=%d %#v", i, obj0)
-			}
-			i++
-			if i > arr2.Len()-1 {
-				return nil, fmt.Errorf("Bad font W array: arr2=%+v", arr2)
-			}
-			obj1 := (*arr2).Get(i)
-			switch obj1.(type) {
-			case *core.PdfObjectArray:
-				arr, _ := core.GetArray(obj1)
-				if widths, err := arr.ToFloat64Array(); err == nil {
-					for j := 0; j < len(widths); j++ {
-						font.widths[textencoding.CharCode(n+j)] = widths[j]
-					}
-				} else {
-					return nil, fmt.Errorf("Bad font W array obj1: i=%d %#v", i, obj1)
-				}
-			case *core.PdfObjectInteger:
-				n1, ok1 := core.GetIntVal(obj1)
-				if !ok1 {
-					return nil, fmt.Errorf("Bad font W int obj1: i=%d %#v", i, obj1)
-				}
-				i++
-				if i > arr2.Len()-1 {
-					return nil, fmt.Errorf("Bad font W array: arr2=%+v", arr2)
-				}
-				obj2 := (*arr2).Get(i)
-				v, err := core.GetNumberAsFloat(obj2)
-				if err != nil {
-					return nil, fmt.Errorf("Bad font W int obj2: i=%d %#v", i, obj2)
-				}
-				for j := n; j <= n1; j++ {
-					font.widths[textencoding.CharCode(j)] = v
-				}
-			default:
-				return nil, fmt.Errorf("Bad font W obj1 type: i=%d %#v", i, obj1)
-			}
-		}
-	}
-	if defaultWidth, err := core.GetNumberAsFloat(font.DW); err == nil {
-		font.defaultWidth = defaultWidth
-	} else {
-		font.defaultWidth = 1000.0
+	// Get font default glyph width.
+	font.defaultWidth = 1000.0
+	if dw, err := core.GetNumberAsFloat(font.DW); err == nil {
+		font.defaultWidth = dw
 	}
 
+	// Parse glyph widths array, if one is present.
+	fontWidths, err := parseCIDFontWidthsArray(font.W)
+	if err != nil {
+		return nil, err
+	}
+	if fontWidths == nil {
+		fontWidths = map[textencoding.CharCode]float64{}
+	}
+	font.widths = fontWidths
+
 	return font, nil
+}
+
+func parseCIDFontWidthsArray(w core.PdfObject) (map[textencoding.CharCode]float64, error) {
+	if w == nil {
+		return nil, nil
+	}
+
+	wArr, ok := core.GetArray(w)
+	if !ok {
+		return nil, nil
+	}
+
+	fontWidths := map[textencoding.CharCode]float64{}
+	wArrLen := wArr.Len()
+	for i := 0; i < wArrLen-1; i++ {
+		obj0 := wArr.Get(i)
+		n, ok0 := core.GetIntVal(obj0)
+		if !ok0 {
+			return nil, fmt.Errorf("Bad font W obj0: i=%d %#v", i, obj0)
+		}
+		i++
+		if i > wArrLen-1 {
+			return nil, fmt.Errorf("Bad font W array: arr2=%+v", wArr)
+		}
+
+		obj1 := wArr.Get(i)
+		switch obj1.(type) {
+		case *core.PdfObjectArray:
+			arr, _ := core.GetArray(obj1)
+			if widths, err := arr.ToFloat64Array(); err == nil {
+				for j := 0; j < len(widths); j++ {
+					fontWidths[textencoding.CharCode(n+j)] = widths[j]
+				}
+			} else {
+				return nil, fmt.Errorf("Bad font W array obj1: i=%d %#v", i, obj1)
+			}
+		case *core.PdfObjectInteger:
+			n1, ok1 := core.GetIntVal(obj1)
+			if !ok1 {
+				return nil, fmt.Errorf("Bad font W int obj1: i=%d %#v", i, obj1)
+			}
+			i++
+			if i > wArrLen-1 {
+				return nil, fmt.Errorf("Bad font W array: arr2=%+v", wArr)
+			}
+
+			obj2 := wArr.Get(i)
+			v, err := core.GetNumberAsFloat(obj2)
+			if err != nil {
+				return nil, fmt.Errorf("Bad font W int obj2: i=%d %#v", i, obj2)
+			}
+
+			for j := n; j <= n1; j++ {
+				fontWidths[textencoding.CharCode(j)] = v
+			}
+		default:
+			return nil, fmt.Errorf("Bad font W obj1 type: i=%d %#v", i, obj1)
+		}
+	}
+
+	return fontWidths, nil
 }
 
 // NewCompositePdfFontFromTTFFile loads a composite font from a TTF font file. Composite fonts can

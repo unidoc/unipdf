@@ -490,6 +490,13 @@ func (t *ttfParser) ParseCmap() error {
 		}
 	}
 
+	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
+	if offset10 != 0 {
+		if err := t.parseCmapVersion(offset10); err != nil {
+			return err
+		}
+	}
+
 	// Latin font support based on (3,1) table encoding.
 	if offset31 != 0 {
 		if err := t.parseCmapSubtable31(offset31); err != nil {
@@ -497,12 +504,6 @@ func (t *ttfParser) ParseCmap() error {
 		}
 	}
 
-	// Many non-Latin fonts (including asian fonts) use subtable (1,0).
-	if offset10 != 0 {
-		if err := t.parseCmapVersion(offset10); err != nil {
-			return err
-		}
-	}
 	if offset31 == 0 && offset10 == 0 {
 		common.Log.Debug("ttfParser.ParseCmap. No 31 or 10 table.")
 	}

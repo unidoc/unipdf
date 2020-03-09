@@ -32,6 +32,13 @@ func NewCMapEncoder(baseName string, codeToCID, cidToUnicode *cmap.CMap) CMapEnc
 
 // Encode converts the Go unicode string to a PDF encoded string.
 func (enc CMapEncoder) Encode(str string) []byte {
+	if enc.cidToUnicode == nil {
+		return []byte{}
+	}
+
+	if enc.cidToUnicode.NBits() == 8 {
+		return encodeString8bit(enc, str)
+	}
 	return encodeString16bit(enc, str)
 }
 
