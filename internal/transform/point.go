@@ -47,12 +47,25 @@ func (p Point) Rotate(theta float64) Point {
 	return Point{r * cos, r * sin}
 }
 
-// transformByMatrix mutates and transforms `p` by the affine transformation `m`.
-func (p *Point) transformByMatrix(m Matrix) {
-	p.X, p.Y = m.Transform(p.X, p.Y)
+// Distance returns the distance between `a` and `b`.
+func (a Point) Distance(b Point) float64 {
+	return math.Hypot(a.X-b.X, a.Y-b.Y)
+}
+
+// Interpolate does linear interpolation between point `a` and `b` for value `t`.
+func (a Point) Interpolate(b Point, t float64) Point {
+	return Point{
+		X: (1-t)*a.X + t*b.X,
+		Y: (1-t)*a.Y + t*b.Y,
+	}
 }
 
 // String returns a string describing `p`.
 func (p Point) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)", p.X, p.Y)
+}
+
+// transformByMatrix mutates and transforms `p` by the affine transformation `m`.
+func (p *Point) transformByMatrix(m Matrix) {
+	p.X, p.Y = m.Transform(p.X, p.Y)
 }
