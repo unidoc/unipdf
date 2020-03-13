@@ -3,6 +3,7 @@ module github.com/unidoc/unipdf/v3
 require (
 	github.com/adrg/sysfont v0.1.0
 	github.com/boombuler/barcode v1.0.0
+	github.com/ericchiang/css v0.0.0-20171210184639-f08e94f04ef6
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83

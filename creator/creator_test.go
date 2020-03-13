@@ -2986,25 +2986,17 @@ func TestHtmlParagraph(t *testing.T) {
 	c := New()
 
 	html := `
-<style>
-table {
-  width: 100%;
-}
 
-th {
-  height: 50px;
-}
-</style>
-
-<b>Bold <i>BoldItalic</i></b> <i>Italic</i> <br/>
+<div> <p><b>Bold <i>BoldItalic</i></b> <i>Italic</i> <br/>
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip <i>ex ea commodo consequat</i>.
-<b>Done!</b><br/><br/>
-<div style="background-color:#ffdddd;boreder-style:solid;border-width:0.5;border-color:black;">
-<p>Paragraph #1</p><p style="color:blue;text-align:center">Paragraph #2</p>
+<b>Done!</b><br/><br/></p></div>
+<div id="text" style="background-color:#eeeeee;border-style:solid;border-width:0.5;border-color:black;padding-bottom:4;padding-left:4;padding-right:4">
+<p>Paragraph #1</p>  <p style="color:blue;text-align:center">Paragraph #2</p>
+<p style="color:green;text-align:right">Paragraph #2</p>
 </div>
 <br/><br/>
-<p>Paragraph #3</p>
+<p>Paragraph #4</p>
 <br/>
 <table style="width:100%">
   <tr>
@@ -3034,7 +3026,6 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 </table>
 `
 	// <table><tr><td>1</td></tr><tr><td>2</td></tr></table>
-	hp := c.NewHTMLParagraph()
 
 	roboto, err := model.NewPdfFontFromTTFFile(testRobotoRegularTTFFile)
 	if err != nil {
@@ -3056,6 +3047,8 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
+
+	hp := c.NewHTMLParagraph()
 	hp.SetRegularFont(roboto)
 	hp.SetBoldFont(robotoBold)
 	hp.SetItalicFont(robotoItalic)
@@ -3067,6 +3060,56 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 	}
 
 	c.Draw(hp)
+	c.NewPage()
+
+	hp1 := c.NewHTMLParagraph()
+	hp1.SetRegularFont(roboto)
+	hp1.SetBoldFont(robotoBold)
+	hp1.SetItalicFont(robotoItalic)
+	hp1.SetBoldItalicFont(robotoBoldItalic)
+	hp1.AddCSS(`#text {
+		margin-left: 15;
+		margin-right: 15;
+		margin-top: -5;
+		margin-bottom: -5;
+	}
+	i { color: #666; }
+	`)
+	if err := hp1.Append(html); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	//c.Draw(hp)
+
+	ch1 := c.NewChapter("Test Chapter")
+
+	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+	p.SetMargins(0, 0, 10, 0)
+
+	ch1.Add(p)
+	ch1.Add(hp1)
+	subchap1 := ch1.NewSubchapter("The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
+	subchap1.SetMargins(0, 0, 5, 0)
+
+	subchap1.Add(hp)
+
+	table := c.NewTable(2) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.4, 0.6)
+
+	cell := table.NewCell()
+	cell.SetContent(hp)
+	cell = table.NewCell()
+	cell.SetContent(hp1)
+
+	ch1.Add(table)
+
+	c.Draw(ch1)
 
 	outFile := tempFile("html_content.pdf")
 	if err := c.WriteToFile(outFile); err != nil {

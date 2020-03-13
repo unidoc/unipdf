@@ -837,3 +837,43 @@ func (c *Creator) NewImageFromFile(path string) (*Image, error) {
 func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	return newImageFromGoImage(goimg)
 }
+
+// NewHTMLParagraph creates a new HTML paragraph.
+// Default attributes:
+// Font: Helvetica,
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Text color: black
+//
+// NewHTMLParagraph supports the next HTML tags:
+// style, div, table, tr, td, th, p, br, b, i.
+// Tags "table, tr" haven't support CSS styles yet.
+//
+// It supports a subset of CSS properties:
+// text-align: center, left, right, justify.
+// border-width - float type without units.
+// border-color: blue, black, green, red, white, yellow, #xxx, #xxxxxx.
+// border-style: solid, dashed, double.
+// color: blue, black, green, red, white, yellow, #xxx, #xxxxxx.
+// background-color: blue, black, green, red, white, yellow, #xxx, #xxxxxx.
+// padding-left - float type without units.
+// padding-right - float type without units.
+// padding-top - float type without units.
+// padding-bottom - float type without units.
+// margin-left - float type without units.
+// margin-right - float type without units.
+// margin-top - float type without units.
+// margin-bottom - float type without units.
+//
+// The tag "p" has align attribute support with values center, left, right, justify.
+//
+// NewHTMLParagraph supports embedded and independent styles.
+// Example
+// hp := c.NewHTMLParagraph()
+// hp.AddCSS(`i { color: #666; }`)
+// hp.Append(`<p style="color:blue;">Hello <i>World</i>!</p>`)
+//
+// NewHTMLParagraph can be used with Chapter, SubChapter, Table's cell.
+func (c *Creator) NewHTMLParagraph() *HTMLParagraph {
+	return newHTMLParagraph(c.NewTextStyle())
+}

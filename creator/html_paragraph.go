@@ -7,21 +7,38 @@ package creator
 
 import (
 	"bytes"
-	"log"
 	"math"
 	"strconv"
 	"strings"
 
+	cssSelector "github.com/ericchiang/css"
+	"github.com/vanng822/css"
+	"golang.org/x/net/html"
+
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/model"
-	"github.com/vanng822/css"
-	"golang.org/x/net/html"
 )
+
+type htmlMargin struct {
+	marginLeft   float64
+	marginRight  float64
+	marginTop    float64
+	marginBottom float64
+}
+
+type htmlPadding struct {
+	paddingLeft   float64
+	paddingRight  float64
+	paddingTop    float64
+	paddingBottom float64
+}
 
 // htmlElementStyle is one element only style
 type htmlElementStyle struct {
 	// block style
+	htmlMargin
+	htmlPadding
 
 	// Background
 	backgroundColor *model.PdfColorDeviceRGB
@@ -61,69 +78,97 @@ func (style *htmlBlockStyle) getOrCreateElementStyle() *htmlElementStyle {
 	return style.ElementStyle
 }
 
+func (style *htmlBlockStyle) addCSSStyle(tag, property, value string) {
+	switch property {
+	case "text-align":
+		switch value {
+		case "center":
+			style.TextAlignment = TextAlignmentCenter
+		case "left":
+			style.TextAlignment = TextAlignmentLeft
+		case "right":
+			style.TextAlignment = TextAlignmentRight
+		case "justify":
+			style.TextAlignment = TextAlignmentJustify
+		}
+	case "border-width":
+		es := style.getOrCreateElementStyle()
+		w, _ := strconv.ParseFloat(value, 64)
+		es.borderWidthBottom = w
+		es.borderWidthLeft = w
+		es.borderWidthRight = w
+		es.borderWidthTop = w
+	case "border-color":
+		es := style.getOrCreateElementStyle()
+		c := getRGBColorFromHTML(value)
+		es.borderColorBottom = model.NewPdfColorDeviceRGB(c.ToRGB())
+		es.borderColorLeft = es.borderColorBottom
+		es.borderColorRight = es.borderColorBottom
+		es.borderColorTop = es.borderColorBottom
+	case "border-style":
+		es := style.getOrCreateElementStyle()
+		switch value {
+		case "solid":
+			es.borderLineStyle = draw.LineStyleSolid
+			es.borderStyleTop = CellBorderStyleSingle
+			es.borderStyleRight = CellBorderStyleSingle
+			es.borderStyleBottom = CellBorderStyleSingle
+			es.borderStyleLeft = CellBorderStyleSingle
+		case "dashed":
+			es.borderLineStyle = draw.LineStyleDashed
+			es.borderStyleTop = CellBorderStyleSingle
+			es.borderStyleRight = CellBorderStyleSingle
+			es.borderStyleBottom = CellBorderStyleSingle
+			es.borderStyleLeft = CellBorderStyleSingle
+		case "double":
+			es.borderLineStyle = draw.LineStyleSolid
+			es.borderStyleTop = CellBorderStyleDouble
+			es.borderStyleRight = CellBorderStyleDouble
+			es.borderStyleBottom = CellBorderStyleDouble
+			es.borderStyleLeft = CellBorderStyleDouble
+		default:
+			es.borderStyleTop = CellBorderStyleNone
+			es.borderStyleRight = CellBorderStyleNone
+			es.borderStyleBottom = CellBorderStyleNone
+			es.borderStyleLeft = CellBorderStyleNone
+		}
+	case "color":
+		style.Color = getRGBColorFromHTML(value)
+	case "background-color":
+		es := style.getOrCreateElementStyle()
+		c := getRGBColorFromHTML(value)
+		es.backgroundColor = model.NewPdfColorDeviceRGB(c.ToRGB())
+	case "padding-left":
+		es := style.getOrCreateElementStyle()
+		es.paddingLeft, _ = strconv.ParseFloat(value, 64)
+	case "padding-right":
+		es := style.getOrCreateElementStyle()
+		es.paddingRight, _ = strconv.ParseFloat(value, 64)
+	case "padding-top":
+		es := style.getOrCreateElementStyle()
+		es.paddingTop, _ = strconv.ParseFloat(value, 64)
+	case "padding-bottom":
+		es := style.getOrCreateElementStyle()
+		es.paddingBottom, _ = strconv.ParseFloat(value, 64)
+	case "margin-left":
+		es := style.getOrCreateElementStyle()
+		es.marginLeft, _ = strconv.ParseFloat(value, 64)
+	case "margin-right":
+		es := style.getOrCreateElementStyle()
+		es.marginRight, _ = strconv.ParseFloat(value, 64)
+	case "margin-top":
+		es := style.getOrCreateElementStyle()
+		es.marginTop, _ = strconv.ParseFloat(value, 64)
+	case "margin-bottom":
+		es := style.getOrCreateElementStyle()
+		es.marginBottom, _ = strconv.ParseFloat(value, 64)
+	}
+}
+
 func (style *htmlBlockStyle) addEmbeddedCSS(tag string, csstext string) {
 	ss := css.ParseBlock(csstext)
 	for _, s := range ss {
-		switch s.Property {
-		case "text-align":
-			switch s.Value {
-			case "center":
-				style.TextAlignment = TextAlignmentCenter
-			case "left":
-				style.TextAlignment = TextAlignmentLeft
-			case "right":
-				style.TextAlignment = TextAlignmentRight
-			case "justify":
-				style.TextAlignment = TextAlignmentJustify
-			}
-		case "border-width":
-			es := style.getOrCreateElementStyle()
-			w, _ := strconv.ParseFloat(s.Value, 64)
-			es.borderWidthBottom = w
-			es.borderWidthLeft = w
-			es.borderWidthRight = w
-			es.borderWidthTop = w
-		case "border-color":
-			es := style.getOrCreateElementStyle()
-			c := getRGBColorFromHTML(s.Value)
-			es.borderColorBottom = model.NewPdfColorDeviceRGB(c.ToRGB())
-			es.borderColorLeft = es.borderColorBottom
-			es.borderColorRight = es.borderColorBottom
-			es.borderColorTop = es.borderColorBottom
-		case "border-style":
-			es := style.getOrCreateElementStyle()
-			switch s.Value {
-			case "solid":
-				es.borderLineStyle = draw.LineStyleSolid
-				es.borderStyleTop = CellBorderStyleSingle
-				es.borderStyleRight = CellBorderStyleSingle
-				es.borderStyleBottom = CellBorderStyleSingle
-				es.borderStyleLeft = CellBorderStyleSingle
-			case "dashed":
-				es.borderLineStyle = draw.LineStyleDashed
-				es.borderStyleTop = CellBorderStyleSingle
-				es.borderStyleRight = CellBorderStyleSingle
-				es.borderStyleBottom = CellBorderStyleSingle
-				es.borderStyleLeft = CellBorderStyleSingle
-			case "double":
-				es.borderLineStyle = draw.LineStyleSolid
-				es.borderStyleTop = CellBorderStyleDouble
-				es.borderStyleRight = CellBorderStyleDouble
-				es.borderStyleBottom = CellBorderStyleDouble
-				es.borderStyleLeft = CellBorderStyleDouble
-			default:
-				es.borderStyleTop = CellBorderStyleNone
-				es.borderStyleRight = CellBorderStyleNone
-				es.borderStyleBottom = CellBorderStyleNone
-				es.borderStyleLeft = CellBorderStyleNone
-			}
-		case "color":
-			style.Color = getRGBColorFromHTML(s.Value)
-		case "background-color":
-			es := style.getOrCreateElementStyle()
-			c := getRGBColorFromHTML(s.Value)
-			es.backgroundColor = model.NewPdfColorDeviceRGB(c.ToRGB())
-		}
+		style.addCSSStyle(tag, s.Property, s.Value)
 	}
 }
 
@@ -199,14 +244,15 @@ type htmlTable struct {
 }
 
 func (t *htmlTable) generateContent() {
-	if t.table == nil {
-		t.table = newTable(t.maxColIndex)
-		for _, row := range t.rows {
-			for _, cell := range row.cells {
-				c := t.table.NewCell()
-				if cell.block != nil {
-					c.SetContent(cell.block)
-				}
+	if t.table != nil {
+		return
+	}
+	t.table = newTable(t.maxColIndex)
+	for _, row := range t.rows {
+		for _, cell := range row.cells {
+			c := t.table.NewCell()
+			if cell.block != nil {
+				c.SetContent(cell.block)
 			}
 		}
 	}
@@ -273,7 +319,7 @@ type htmlBlock struct {
 }
 
 func newHTMLBlock(parent *htmlBlock, style htmlBlockStyle) *htmlBlock {
-	b := htmlBlock{
+	return &htmlBlock{
 		owner:            parent.owner,
 		parent:           parent,
 		tableStack:       parent.tableStack,
@@ -282,13 +328,19 @@ func newHTMLBlock(parent *htmlBlock, style htmlBlockStyle) *htmlBlock {
 		currentParagraph: nil,
 		style:            style,
 	}
-	return &b
 }
 
 var ignoreReplacer = strings.NewReplacer("\r", "", "\n", "", "\t", " ")
 
 func (b *htmlBlock) parseNodeStyle(node *html.Node) htmlBlockStyle {
 	style := b.styleStack.currentStyle()
+
+	if cssStyles, found := b.owner.cssStylessByNode[node]; found {
+		for _, cssStyle := range cssStyles {
+			style.addCSSStyle(node.Data, cssStyle.Property, cssStyle.Value)
+		}
+	}
+
 	for _, attr := range node.Attr {
 		switch attr.Key {
 		case "style":
@@ -309,15 +361,30 @@ func (b *htmlBlock) parseNodeStyle(node *html.Node) htmlBlockStyle {
 	return style
 }
 
+func isElementNode(node *html.Node, tag string) bool {
+	if node == nil {
+		return false
+	}
+	if node.Type != html.ElementNode {
+		return false
+	}
+	return node.Data == tag
+}
+
 func (b *htmlBlock) processNode(node *html.Node) error {
 	newB := b
-
 	switch node.Type {
 	case html.TextNode:
 		text := ignoreReplacer.Replace(node.Data)
 		if text == "" {
 			return nil
 		}
+
+		isSpaces := strings.Count(text, " ") == len(text)
+		if isSpaces && isElementNode(node.NextSibling, "p") {
+			return nil
+		}
+
 		p, created := b.getCurrentOrCreateParagraph()
 		if created {
 			b.currentParagraph.alignment = b.styleStack.currentStyle().TextAlignment
@@ -325,10 +392,8 @@ func (b *htmlBlock) processNode(node *html.Node) error {
 		p.Append(text).Style = b.styleStack.currentStyle().TextStyle
 		return nil
 	case html.ElementNode:
-
 		switch node.Data {
 		case "style":
-			log.Println(node)
 			return nil
 		case "script":
 			return nil
@@ -378,10 +443,6 @@ func (b *htmlBlock) processNode(node *html.Node) error {
 			b.currentParagraph.alignment = b.styleStack.currentStyle().TextAlignment
 			b.elements = append(b.elements, b.currentParagraph)
 		case "br":
-			//b.currentParagraph = newStyledParagraph(b.styleStack.currentStyle().TextStyle)
-			//b.currentParagraph.alignment = b.styleStack.currentStyle().TextAlignment
-			//b.elements = append(b.elements, b.currentParagraph)
-			//b.currentParagraph.Append("\n")
 			p, created := b.getCurrentOrCreateParagraph()
 			if created {
 				b.currentParagraph.alignment = b.styleStack.currentStyle().TextAlignment
@@ -389,10 +450,20 @@ func (b *htmlBlock) processNode(node *html.Node) error {
 				p.Append("\n")
 			}
 		case "b":
+			style := b.parseNodeStyle(node)
+			b.styleStack.pushStyle(style)
+			defer b.styleStack.popStyle()
 			b.styleStack.pushStyle(b.styleStack.addBold())
 			defer b.styleStack.popStyle()
 		case "i":
+			style := b.parseNodeStyle(node)
+			b.styleStack.pushStyle(style)
+			defer b.styleStack.popStyle()
 			b.styleStack.pushStyle(b.styleStack.addItalic())
+			defer b.styleStack.popStyle()
+		default:
+			style := b.parseNodeStyle(node)
+			b.styleStack.pushStyle(style)
 			defer b.styleStack.popStyle()
 		}
 	}
@@ -405,11 +476,18 @@ func (b *htmlBlock) processNode(node *html.Node) error {
 	return nil
 }
 
+type htmlCSSRule struct {
+	rule     *css.CSSRule
+	selector *cssSelector.Selector
+}
+
 // HTMLParagraph  allow to use simple HTML markup to generate content.
 type HTMLParagraph struct {
-	blocks     []*htmlBlock
-	tableStack htmlTableStack
-	styleStack htmlStyleStack
+	blocks           []*htmlBlock
+	tableStack       htmlTableStack
+	styleStack       htmlStyleStack
+	cssRules         []htmlCSSRule
+	cssStylessByNode map[*html.Node][]*css.CSSStyleDeclaration
 }
 
 func (b *htmlBlock) getCurrentOrCreateParagraph() (*StyledParagraph, bool) {
@@ -430,30 +508,50 @@ func (b *htmlBlock) Width() float64 {
 	for _, e := range b.elements {
 		w = math.Max(w, e.Width())
 	}
+	if es := b.style.ElementStyle; es != nil {
+		w += es.marginLeft + es.marginRight + es.paddingLeft + es.paddingRight
+	}
 	return w
 }
 
 // Height returns the height of the Drawable.
 func (b *htmlBlock) Height() float64 {
+	if es := b.style.ElementStyle; es != nil && es.height != nil {
+		return *es.height
+	}
 	var h float64
 	for _, e := range b.elements {
-		h = math.Max(h, e.Height())
+		h += e.Height()
+	}
+	if es := b.style.ElementStyle; es != nil {
+		h += es.marginTop + es.marginBottom + es.paddingTop + es.paddingBottom
 	}
 	return h
 }
 
+// SetWidth sets the width of the block.
 func (b *htmlBlock) SetWidth(w float64) {
 	b.style.getOrCreateElementStyle().width = &w
+}
+
+// SetHeight sets the height of the block.
+func (b *htmlBlock) SetHeight(h float64) {
+	b.style.getOrCreateElementStyle().height = &h
 }
 
 // GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
 // over multiple pages. Implements the Drawable interface.
 func (b *htmlBlock) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	var blocks []*Block
-
+	origCtx := ctx
 	if es := b.style.ElementStyle; es != nil {
+		ctx.Y += es.marginTop
+		ctx.Height -= es.marginTop + es.marginBottom
+		ctx.X += es.marginLeft
+		ctx.Width -= es.marginLeft + es.marginRight
+
 		blockCtx := ctx
-		blockCtx.Height = 0.0
+		blockCtx.Height = es.paddingTop + es.paddingBottom
 		for _, e := range b.elements {
 			blockCtx.Height += e.Height()
 		}
@@ -501,6 +599,11 @@ func (b *htmlBlock) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		if err != nil {
 			common.Log.Debug("ERROR: %v", err)
 		}
+
+		ctx.Y += es.paddingTop
+		ctx.Height -= es.paddingTop + es.paddingBottom
+		ctx.X += es.paddingLeft
+		ctx.Width -= es.paddingLeft + es.paddingRight
 	}
 
 	for _, e := range b.elements {
@@ -521,23 +624,21 @@ func (b *htmlBlock) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 
 		blocks = append(blocks, newBlocks[1:]...)
 	}
-	return blocks, ctx, nil
-}
+	ctx.X = origCtx.X
+	ctx.Width = origCtx.Width
+	if es := b.style.ElementStyle; es != nil {
+		ctx.Y += es.marginBottom
+	}
 
-// NewHTMLParagraph creates a new html paragraph.
-// Default attributes:
-// Font: Helvetica,
-// Font size: 10
-// Encoding: WinAnsiEncoding
-// Wrap: enabled
-// Text color: black
-func (c *Creator) NewHTMLParagraph() *HTMLParagraph {
-	return newHTMLParagraph(c.NewTextStyle())
+	return blocks, ctx, nil
 }
 
 func newHTMLParagraph(baseStyle TextStyle) *HTMLParagraph {
 	hp := HTMLParagraph{}
 	hp.styleStack.RegularStyle = baseStyle
+	hp.SetBoldFont(baseStyle.Font)
+	hp.SetBoldItalicFont(baseStyle.Font)
+	hp.SetItalicFont(baseStyle.Font)
 	return &hp
 }
 
@@ -572,6 +673,8 @@ func (h *HTMLParagraph) Append(htmlCode string) error {
 	if err != nil {
 		return err
 	}
+	h.addDocumentCSS(doc)
+	h.processCSSRules(doc)
 	newB := htmlBlock{
 		owner:      h,
 		parent:     nil,
@@ -580,6 +683,48 @@ func (h *HTMLParagraph) Append(htmlCode string) error {
 	}
 	h.blocks = append(h.blocks, &newB)
 	return newB.processNode(doc)
+}
+
+// AddCSS adds CSS to the paragraph.
+func (h *HTMLParagraph) AddCSS(cssText string) error {
+	ss := css.Parse(cssText)
+	rules := ss.GetCSSRuleList()
+	for _, r := range rules {
+		sel, err := cssSelector.Compile(r.Style.SelectorText)
+		if err != nil {
+			return err
+		}
+		h.cssRules = append(h.cssRules, htmlCSSRule{
+			rule:     r,
+			selector: sel,
+		})
+	}
+	return nil
+}
+
+func (h *HTMLParagraph) addDocumentCSS(node *html.Node) error {
+	if node.Type == html.ElementNode && node.Data == "style" && node.FirstChild != nil {
+		if err := h.AddCSS(node.FirstChild.Data); err != nil {
+			return err
+		}
+	}
+	for next := node.FirstChild; next != nil; next = next.NextSibling {
+		if err := h.addDocumentCSS(next); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *HTMLParagraph) processCSSRules(doc *html.Node) {
+	h.cssStylessByNode = make(map[*html.Node][]*css.CSSStyleDeclaration)
+	for _, r := range h.cssRules {
+		for _, node := range r.selector.Select(doc) {
+			for _, style := range r.rule.Style.Styles {
+				h.cssStylessByNode[node] = append(h.cssStylessByNode[node], style)
+			}
+		}
+	}
 }
 
 var stdHTMLColors = map[string]Color{
@@ -602,7 +747,7 @@ func getRGBColorFromHTML(color string) Color {
 // over multiple pages. Implements the Drawable interface.
 func (h *HTMLParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	var blocks []*Block
-	origCtx := ctx
+	//origCtx := ctx
 	for _, e := range h.blocks {
 		var newBlocks []*Block
 		var err error
@@ -621,5 +766,30 @@ func (h *HTMLParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawConte
 
 		blocks = append(blocks, newBlocks[1:]...)
 	}
-	return blocks, origCtx, nil
+	return blocks, ctx, nil
+}
+
+// Width returns the width of the Drawable.
+func (h *HTMLParagraph) Width() float64 {
+	var width float64
+	for _, b := range h.blocks {
+		width = math.Max(width, b.Width())
+	}
+	return width
+}
+
+// Height returns the height of the Drawable.
+func (h *HTMLParagraph) Height() float64 {
+	var height float64
+	for _, b := range h.blocks {
+		height += b.Height()
+	}
+	return height
+}
+
+// SetWidth sets the width of the block.
+func (h *HTMLParagraph) SetWidth(w float64) {
+	for _, b := range h.blocks {
+		b.SetWidth(w)
+	}
 }
