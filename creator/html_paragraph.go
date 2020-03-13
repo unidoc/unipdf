@@ -747,7 +747,6 @@ func getRGBColorFromHTML(color string) Color {
 // over multiple pages. Implements the Drawable interface.
 func (h *HTMLParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	var blocks []*Block
-	//origCtx := ctx
 	for _, e := range h.blocks {
 		var newBlocks []*Block
 		var err error

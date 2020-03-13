@@ -873,7 +873,7 @@ func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 // hp.AddCSS(`i { color: #666; }`)
 // hp.Append(`<p style="color:blue;">Hello <i>World</i>!</p>`)
 //
-// NewHTMLParagraph can be used with Chapter, SubChapter, Table's cell.
+// NewHTMLParagraph can be placed inside Chapter, SubChapter, Table's cells.
 func (c *Creator) NewHTMLParagraph() *HTMLParagraph {
 	return newHTMLParagraph(c.NewTextStyle())
 }
