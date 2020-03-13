@@ -2372,7 +2372,12 @@ func (enc *MultiEncoder) AddEncoder(encoder StreamEncoder) {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-	dict.Set("Filter", MakeName(enc.GetFilterName()))
+
+	names := make([]PdfObject, len(enc.encoders))
+	for i, e := range enc.encoders {
+		names[i] = MakeName(e.GetFilterName())
+	}
+	dict.Set("Filter", MakeArray(names...))
 
 	// Pass all values from children, except Filter and DecodeParms.
 	for _, encoder := range enc.encoders {
