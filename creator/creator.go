@@ -838,14 +838,14 @@ func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	return newImageFromGoImage(goimg)
 }
 
-// NewHTMLParagraph creates a new HTML paragraph.
+// NewHTMLContent creates a new HTML paragraph.
 // Default attributes:
 // Font: Helvetica,
 // Font size: 10
 // Encoding: WinAnsiEncoding
 // Text color: black
 //
-// NewHTMLParagraph supports the next HTML tags:
+// NewHTMLContent supports the next HTML tags:
 // style, div, table, tr, td, th, p, br, b, i.
 // Tags "table, tr" haven't support CSS styles yet.
 //
@@ -867,13 +867,13 @@ func (c *Creator) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 //
 // The tag "p" has align attribute support with values center, left, right, justify.
 //
-// NewHTMLParagraph supports embedded and independent styles.
+// NewHTMLContent supports embedded and independent styles.
 // Example
-// hp := c.NewHTMLParagraph()
+// hp := c.NewHTMLContent()
 // hp.AddCSS(`i { color: #666; }`)
 // hp.Append(`<p style="color:blue;">Hello <i>World</i>!</p>`)
 //
-// NewHTMLParagraph can be placed inside Chapter, SubChapter, Table's cells.
-func (c *Creator) NewHTMLParagraph() *HTMLParagraph {
+// NewHTMLContent can be placed inside Chapter, SubChapter, Table's cells.
+func (c *Creator) NewHTMLContent() *HTMLContent {
 	return newHTMLParagraph(c.NewTextStyle())
 }

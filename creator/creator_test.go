@@ -2982,7 +2982,7 @@ func TestCreatorStable(t *testing.T) {
 	}
 }
 
-func TestHtmlParagraph(t *testing.T) {
+func TestHtmlContent(t *testing.T) {
 	c := New()
 
 	html := `
@@ -2997,6 +2997,7 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 </div>
 <br/><br/>
 <p>Paragraph #4</p>
+<img src="./testdata/logo.png">
 <br/>
 <table style="width:100%">
   <tr>
@@ -3048,11 +3049,23 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 		return
 	}
 
-	hp := c.NewHTMLParagraph()
+	hp := c.NewHTMLContent()
 	hp.SetRegularFont(roboto)
 	hp.SetBoldFont(robotoBold)
 	hp.SetItalicFont(robotoItalic)
 	hp.SetBoldItalicFont(robotoBoldItalic)
+	hp.SetImageLoadCallback(func(path string) *Image {
+		imgData, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		img, err := c.NewImageFromData(imgData)
+		if err != nil {
+			return nil
+		}
+		img.ScaleToWidth(15)
+		return img
+	})
 
 	if err := hp.Append(html); err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -3062,7 +3075,7 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 	c.Draw(hp)
 	c.NewPage()
 
-	hp1 := c.NewHTMLParagraph()
+	hp1 := c.NewHTMLContent()
 	hp1.SetRegularFont(roboto)
 	hp1.SetBoldFont(robotoBold)
 	hp1.SetItalicFont(robotoItalic)

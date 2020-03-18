@@ -354,7 +354,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				// Add diff to last row.
 				table.rowHeights[cell.row+cell.rowspan-2] += diffh
 			}
-		case *HTMLParagraph:
+		case *HTMLContent:
 			t.SetWidth(w - cell.indent)
 			newh := t.Height()
 			if newh > h {
@@ -566,7 +566,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 					// Add a bit of space from the bottom border of the cell.
 					vertOffset -= lineCapHeight * 0.5
 				}
-			case *HTMLParagraph:
+			case *HTMLContent:
 				cw = w
 			case *Table:
 				cw = w
@@ -968,7 +968,7 @@ func (cell *TableCell) SetContent(vd VectorDrawable) error {
 		cell.content = vd
 	case *htmlBlock:
 		cell.content = vd
-	case *HTMLParagraph:
+	case *HTMLContent:
 		cell.content = vd
 	default:
 		common.Log.Debug("ERROR: unsupported cell content type %T", vd)

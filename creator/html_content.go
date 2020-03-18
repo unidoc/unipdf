@@ -308,7 +308,7 @@ func (st *htmlTableStack) popTable() *htmlTable {
 }
 
 type htmlBlock struct {
-	owner      *HTMLParagraph
+	owner      *HTMLContent
 	parent     *htmlBlock
 	tableStack *htmlTableStack
 	styleStack *htmlStyleStack
@@ -331,6 +331,15 @@ func newHTMLBlock(parent *htmlBlock, style htmlBlockStyle) *htmlBlock {
 }
 
 var ignoreReplacer = strings.NewReplacer("\r", "", "\n", "", "\t", " ")
+
+func getAttributeValue(node *html.Node, attr string) string {
+	for _, a := range node.Attr {
+		if a.Key == attr {
+			return a.Val
+		}
+	}
+	return ""
+}
 
 func (b *htmlBlock) parseNodeStyle(node *html.Node) htmlBlockStyle {
 	style := b.styleStack.currentStyle()
@@ -442,6 +451,18 @@ func (b *htmlBlock) processNode(node *html.Node) error {
 			b.currentParagraph = newStyledParagraph(b.styleStack.currentStyle().TextStyle)
 			b.currentParagraph.alignment = b.styleStack.currentStyle().TextAlignment
 			b.elements = append(b.elements, b.currentParagraph)
+		case "img":
+			//imgB := newHTMLBlock(b, b.styleStack.currentStyle())
+			//b.elements = append(b.elements, imgB)
+			b.currentParagraph = nil
+			//style := imgB.parseNodeStyle(node)
+			//newB.style = style
+			src := getAttributeValue(node, "src")
+			if img := b.owner.getImage(src); img != nil {
+				imgCopy := *img
+				//newB.elements = []VectorDrawable{&imgCopy}
+				b.elements = append(b.elements, &imgCopy)
+			}
 		case "br":
 			p, created := b.getCurrentOrCreateParagraph()
 			if created {
@@ -481,13 +502,15 @@ type htmlCSSRule struct {
 	selector *cssSelector.Selector
 }
 
-// HTMLParagraph  allow to use simple HTML markup to generate content.
-type HTMLParagraph struct {
-	blocks           []*htmlBlock
-	tableStack       htmlTableStack
-	styleStack       htmlStyleStack
-	cssRules         []htmlCSSRule
-	cssStylessByNode map[*html.Node][]*css.CSSStyleDeclaration
+// HTMLContent  allow to use simple HTML markup to generate content.
+type HTMLContent struct {
+	blocks            []*htmlBlock
+	tableStack        htmlTableStack
+	styleStack        htmlStyleStack
+	cssRules          []htmlCSSRule
+	cssStylessByNode  map[*html.Node][]*css.CSSStyleDeclaration
+	images            map[string]*Image
+	loadImageCallback func(string) *Image
 }
 
 func (b *htmlBlock) getCurrentOrCreateParagraph() (*StyledParagraph, bool) {
@@ -609,10 +632,18 @@ func (b *htmlBlock) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	for _, e := range b.elements {
 		var newBlocks []*Block
 		var err error
+		var addY float64
+		switch v := e.(type) {
+		case *Image:
+			v.SetPos(ctx.X, ctx.Y)
+			v.ScaleToWidth(ctx.Width)
+			addY = v.Height()
+		}
 		newBlocks, ctx, err = e.GeneratePageBlocks(ctx)
 		if err != nil {
 			return nil, ctx, err
 		}
+		ctx.Y += addY
 		if len(newBlocks) < 1 {
 			continue
 		}
@@ -633,8 +664,8 @@ func (b *htmlBlock) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	return blocks, ctx, nil
 }
 
-func newHTMLParagraph(baseStyle TextStyle) *HTMLParagraph {
-	hp := HTMLParagraph{}
+func newHTMLParagraph(baseStyle TextStyle) *HTMLContent {
+	hp := HTMLContent{}
 	hp.styleStack.RegularStyle = baseStyle
 	hp.SetBoldFont(baseStyle.Font)
 	hp.SetBoldItalicFont(baseStyle.Font)
@@ -642,33 +673,58 @@ func newHTMLParagraph(baseStyle TextStyle) *HTMLParagraph {
 	return &hp
 }
 
+// SetImage sets an image for the path.
+func (h *HTMLContent) SetImage(path string, img *Image) {
+	if h.images == nil {
+		h.images = make(map[string]*Image)
+	}
+	h.images[path] = img
+}
+
+// SetGetImageCallback set a callback for load images.
+func (h *HTMLContent) SetImageLoadCallback(callback func(string) *Image) {
+	h.loadImageCallback = callback
+}
+
+func (h *HTMLContent) getImage(path string) *Image {
+	if img, ok := h.images[path]; ok {
+		return img
+	}
+	if h.loadImageCallback != nil {
+		img := h.loadImageCallback(path)
+		h.SetImage(path, img)
+		return img
+	}
+	return nil
+}
+
 // SetRegularStyle sets the default text style.
-func (h *HTMLParagraph) SetRegularStyle(style TextStyle) {
+func (h *HTMLContent) SetRegularStyle(style TextStyle) {
 	h.styleStack.RegularStyle = style
 }
 
 // SetRegularFont sets the font for the default text style.
-func (h *HTMLParagraph) SetRegularFont(font *model.PdfFont) {
+func (h *HTMLContent) SetRegularFont(font *model.PdfFont) {
 	h.styleStack.RegularStyle.Font = font
 }
 
 // SetBoldFont sets the font for the bold text style.
-func (h *HTMLParagraph) SetBoldFont(font *model.PdfFont) {
+func (h *HTMLContent) SetBoldFont(font *model.PdfFont) {
 	h.styleStack.BoldFont = font
 }
 
 // SetItalicFont sets the font for the italic text style.
-func (h *HTMLParagraph) SetItalicFont(font *model.PdfFont) {
+func (h *HTMLContent) SetItalicFont(font *model.PdfFont) {
 	h.styleStack.ItalicFont = font
 }
 
 // SetBoldItalicFont sets the font for the bold and italic together text style.
-func (h *HTMLParagraph) SetBoldItalicFont(font *model.PdfFont) {
+func (h *HTMLContent) SetBoldItalicFont(font *model.PdfFont) {
 	h.styleStack.BoldItalicFont = font
 }
 
 // Append adds html to paragraph.
-func (h *HTMLParagraph) Append(htmlCode string) error {
+func (h *HTMLContent) Append(htmlCode string) error {
 	doc, err := html.Parse(bytes.NewBufferString(htmlCode))
 	if err != nil {
 		return err
@@ -686,7 +742,7 @@ func (h *HTMLParagraph) Append(htmlCode string) error {
 }
 
 // AddCSS adds CSS to the paragraph.
-func (h *HTMLParagraph) AddCSS(cssText string) error {
+func (h *HTMLContent) AddCSS(cssText string) error {
 	ss := css.Parse(cssText)
 	rules := ss.GetCSSRuleList()
 	for _, r := range rules {
@@ -702,7 +758,7 @@ func (h *HTMLParagraph) AddCSS(cssText string) error {
 	return nil
 }
 
-func (h *HTMLParagraph) addDocumentCSS(node *html.Node) error {
+func (h *HTMLContent) addDocumentCSS(node *html.Node) error {
 	if node.Type == html.ElementNode && node.Data == "style" && node.FirstChild != nil {
 		if err := h.AddCSS(node.FirstChild.Data); err != nil {
 			return err
@@ -716,7 +772,7 @@ func (h *HTMLParagraph) addDocumentCSS(node *html.Node) error {
 	return nil
 }
 
-func (h *HTMLParagraph) processCSSRules(doc *html.Node) {
+func (h *HTMLContent) processCSSRules(doc *html.Node) {
 	h.cssStylessByNode = make(map[*html.Node][]*css.CSSStyleDeclaration)
 	for _, r := range h.cssRules {
 		for _, node := range r.selector.Select(doc) {
@@ -745,7 +801,7 @@ func getRGBColorFromHTML(color string) Color {
 
 // GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
 // over multiple pages. Implements the Drawable interface.
-func (h *HTMLParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+func (h *HTMLContent) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	var blocks []*Block
 	for _, e := range h.blocks {
 		var newBlocks []*Block
@@ -769,7 +825,7 @@ func (h *HTMLParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawConte
 }
 
 // Width returns the width of the Drawable.
-func (h *HTMLParagraph) Width() float64 {
+func (h *HTMLContent) Width() float64 {
 	var width float64
 	for _, b := range h.blocks {
 		width = math.Max(width, b.Width())
@@ -778,7 +834,7 @@ func (h *HTMLParagraph) Width() float64 {
 }
 
 // Height returns the height of the Drawable.
-func (h *HTMLParagraph) Height() float64 {
+func (h *HTMLContent) Height() float64 {
 	var height float64
 	for _, b := range h.blocks {
 		height += b.Height()
@@ -787,7 +843,7 @@ func (h *HTMLParagraph) Height() float64 {
 }
 
 // SetWidth sets the width of the block.
-func (h *HTMLParagraph) SetWidth(w float64) {
+func (h *HTMLContent) SetWidth(w float64) {
 	for _, b := range h.blocks {
 		b.SetWidth(w)
 	}

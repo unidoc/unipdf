@@ -140,7 +140,7 @@ func (chap *Chapter) Add(d Drawable) error {
 	}
 
 	switch d.(type) {
-	case *Paragraph, *StyledParagraph, *Image, *Block, *Table, *PageBreak, *Chapter, *HTMLParagraph:
+	case *Paragraph, *StyledParagraph, *Image, *Block, *Table, *PageBreak, *Chapter, *HTMLContent:
 		chap.contents = append(chap.contents, d)
 	default:
 		common.Log.Debug("Unsupported: %T", d)
