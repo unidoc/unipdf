@@ -865,9 +865,6 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		trm:           trm,
 		end:           end,
 		count:         to.e.textCount,
-		trm:           trm,
-		end:           end,
-		count:         to.e.textCount,
 	}
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
@@ -917,17 +914,6 @@ func (tm textMark) ToTextMark() TextMark {
 	}
 }
 
-// ToTextMark returns the public view of `tm`.
-func (tm textMark) ToTextMark() TextMark {
-	return TextMark{
-		Text:     tm.text,
-		Original: tm.original,
-		BBox:     tm.bbox,
-		Font:     tm.font,
-		FontSize: tm.fontsize,
-	}
-}
-
 // PageText represents the layout of text on a device page.
 type PageText struct {
 	marks     []textMark // Texts and their positions on a PDF page.
@@ -946,17 +932,9 @@ func (pt PageText) String() string {
 	return strings.Join(parts, "\n")
 }
 
-// TextMark is the public view of a textMark.
-// Currently this is the text contents and a bounding box.
-// TODO(peterwilliams97): Do we still need TextMark? It is a subset of TextComponent.
-type TextMark struct {
-	BBox model.PdfRectangle
-	Text string
-}
-
-// Marks are the TextMark's that correspond to pt.Text()
-func (pt PageText) Marks() []TextMark {
-	return pt.viewMarks
+// length returns the number of elements in `pt.marks`.
+func (pt PageText) length() int {
+	return len(pt.marks)
 }
 
 // Text returns the extracted page text.
