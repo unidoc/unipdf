@@ -526,7 +526,7 @@ func TestEncodeDocument(t *testing.T) {
 			require.NoError(t, err, "%v", d.Pages)
 
 			// decode the
-			decoded, err := DecodeDocument(reader.New(data))
+			decoded, err := DecodeDocument(reader.New(data), nil)
 			require.NoError(t, err)
 
 			// number of pages is known
@@ -595,7 +595,7 @@ func TestEncodeDocument(t *testing.T) {
 
 						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
 						// decode the
-						decoded, err := DecodeDocument(reader.New(data))
+						decoded, err := DecodeDocument(reader.New(data), nil)
 						require.NoError(t, err)
 
 						assert.False(t, decoded.FullHeaders)
@@ -638,7 +638,7 @@ func TestEncodeDocument(t *testing.T) {
 
 						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
 						// decode the
-						decoded, err := DecodeDocument(reader.New(data))
+						decoded, err := DecodeDocument(reader.New(data), nil)
 						require.NoError(t, err)
 
 						assert.False(t, decoded.FullHeaders)

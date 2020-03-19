@@ -59,7 +59,7 @@ func (DummyLogger) IsLogLevel(level LogLevel) bool {
 // LogLevel is the verbosity level for logging.
 type LogLevel int
 
-// defines log level enum where the most important logs have the lowest values.
+// Defines log level enum where the most important logs have the lowest values.
 // I.e. level error = 0 and level trace = 5
 const (
 	LogLevelTrace   LogLevel = 5
@@ -137,16 +137,7 @@ func (l ConsoleLogger) Trace(format string, args ...interface{}) {
 // output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
 //noinspection GoUnhandledErrorResult
 func (l ConsoleLogger) output(f io.Writer, prefix string, format string, args ...interface{}) {
-	_, file, line, ok := runtime.Caller(2)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		file = filepath.Base(file)
-	}
-
-	src := fmt.Sprintf("%s %s:%d ", prefix, file, line) + format + "\n"
-	fmt.Fprintf(f, src, args...)
+	output(f, prefix, format, args...)
 }
 
 var Log Logger = DummyLogger{}
@@ -228,6 +219,10 @@ func (l WriterLogger) Trace(format string, args ...interface{}) {
 // output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
 //noinspection GoUnhandledErrorResult
 func (l WriterLogger) output(f io.Writer, prefix string, format string, args ...interface{}) {
+	output(f, prefix, format, args)
+}
+
+func output(f io.Writer, prefix string, format string, args ...interface{}) {
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		file = "???"

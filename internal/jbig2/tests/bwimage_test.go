@@ -89,7 +89,7 @@ func TestGoImageToJBIG2Image(t *testing.T) {
 		}
 	}()
 
-	thresholds := []float64{0.0, 0.25, 0.5, 0.75}
+	thresholds := []float64{core.JB2ImageAutoThreshold, 0.25, 0.5, 0.75}
 	names := []string{"auto", "63", "127", "191"}
 
 	buf := &bytes.Buffer{}

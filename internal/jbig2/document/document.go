@@ -84,12 +84,8 @@ type Document struct {
 
 // DecodeDocument decodes provided document based on the provided 'input' data stream
 // and with optional Global defined segments 'globals'.
-func DecodeDocument(input reader.StreamReader, globals ...*Globals) (*Document, error) {
-	var globalsMap *Globals
-	if len(globals) == 1 {
-		globalsMap = globals[0]
-	}
-	return decodeWithGlobals(input, globalsMap)
+func DecodeDocument(input reader.StreamReader, globals *Globals) (*Document, error) {
+	return decodeWithGlobals(input, globals)
 }
 
 // InitEncodeDocument initializes the jbig2 document for the encoding process.

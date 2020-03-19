@@ -44,7 +44,7 @@ func TestImageToJBIG2Image(t *testing.T) {
 		}
 
 		// execute GoImageToJBIG2 and check jbig2 images.
-		jb2, err := GoImageToJBIG2(g, 0)
+		jb2, err := GoImageToJBIG2(g, JB2ImageAutoThreshold)
 		require.NoError(t, err)
 
 		assert.Equal(t, jb2.Data, bm.Data)

@@ -165,7 +165,7 @@ func extractImagesInContentStream(filename, contents string, resources *model.Pd
 			extracted := &extractedImage{
 				pdfImage:  ximg,
 				jbig2Data: xobj.Stream,
-				globals:   enc.Globals,
+				globals:   enc.Globals.ToDocumentGlobals(),
 			}
 
 			extractedImages = append(extractedImages, extracted)

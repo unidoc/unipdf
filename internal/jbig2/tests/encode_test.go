@@ -119,7 +119,7 @@ func TestImageEncodeDecodeJBIG2(t *testing.T) {
 			defer zw.Close()
 
 			// convert the input image into jbig2 1bpp acceptable binary image.
-			jimg, err := core.GoImageToJBIG2(img, 0.0)
+			jimg, err := core.GoImageToJBIG2(img, core.JB2ImageAutoThreshold)
 			require.NoError(t, err)
 
 			// create the encoder
