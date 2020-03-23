@@ -124,8 +124,7 @@ func TestImageEncodeDecodeJBIG2(t *testing.T) {
 
 			// create the encoder
 			e := &core.JBIG2Encoder{}
-			e.FileMode = true
-			err = e.AddPageImage(jimg, core.JBIG2EncoderSettings{DuplicatedLinesRemoval: true})
+			err = e.AddPageImage(jimg, &core.JBIG2EncoderSettings{DuplicatedLinesRemoval: true, FileMode: true})
 			require.NoError(t, err)
 
 			data, err := e.Encode()

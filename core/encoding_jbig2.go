@@ -57,7 +57,7 @@ const (
 // The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
 // matches to single class, thus the compression is better, but the result might become lossy.
 type JBIG2Encoder struct {
-	JBIG2Document
+	d *document.Document
 	// Globals are the JBIG2 global segments.
 	Globals jbig2.Globals
 	// IsChocolateData defines if the data is encoded such that
@@ -69,12 +69,48 @@ type JBIG2Encoder struct {
 	DefaultPageSettings JBIG2EncoderSettings
 }
 
+// AddPageImage adds the page with the image 'img' to the encoder context in order to encode it jbig2 document.
+// The 'settings' defines what encoding type should be used by the encoder.
+func (enc *JBIG2Encoder) AddPageImage(img *JBIG2Image, settings *JBIG2EncoderSettings) (err error) {
+	const processName = "JBIG2Document.AddPageImage"
+	if enc == nil {
+		return errors.Error(processName, "JBIG2Document is nil")
+	}
+	if settings == nil {
+		settings = &enc.DefaultPageSettings
+	}
+	if enc.d == nil {
+		enc.d = document.InitEncodeDocument(settings.FileMode)
+	}
+
+	if err = settings.Validate(); err != nil {
+		return errors.Wrap(err, processName, "")
+	}
+
+	// convert input 'img' to the bitmap.Bitmap
+	b, err := img.toBitmap()
+	if err != nil {
+		return errors.Wrap(err, processName, "")
+	}
+
+	switch settings.Compression {
+	case JB2Generic:
+		if err = enc.d.AddGenericPage(b, settings.DuplicatedLinesRemoval); err != nil {
+			return errors.Wrap(err, processName, "")
+		}
+	case JB2SymbolCorrelation:
+		return errors.Error(processName, "symbol correlation encoding not implemented yet")
+	case JB2SymbolRankHaus:
+		return errors.Error(processName, "symbol rank haus encoding not implemented yet")
+	default:
+		return errors.Error(processName, "provided invalid compression")
+	}
+	return nil
+}
+
 // DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	parameters := decoder.Parameters{UnpaddedData: true}
-	if enc.IsChocolateData {
-		parameters.Color = bitmap.Chocolate
-	}
 	return jbig2.DecodeBytes(encoded, parameters, enc.Globals)
 }
 
@@ -89,9 +125,6 @@ func (enc *JBIG2Encoder) DecodeGlobals(encoded []byte) (jbig2.Globals, error) {
 func (enc *JBIG2Encoder) DecodeImages(encoded []byte) ([]image.Image, error) {
 	const processName = "JBIG2Encoder.DecodeImages"
 	parameters := decoder.Parameters{UnpaddedData: true}
-	if enc.IsChocolateData {
-		parameters.Color = bitmap.Chocolate
-	}
 	// create decoded document.
 	d, err := decoder.Decode(encoded, parameters, enc.Globals.ToDocumentGlobals())
 	if err != nil {
@@ -144,6 +177,26 @@ func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoded, nil
 }
 
+// EncodeImage encodes 'img' golang image.Image into jbig2 encoded bytes document using default encoder settings.
+func (enc *JBIG2Encoder) EncodeImage(img image.Image) ([]byte, error) {
+	return enc.encodeImage(img)
+}
+
+// Encode encodes previously prepare jbig2 document and stores it as the byte slice.
+func (enc *JBIG2Encoder) Encode() (data []byte, err error) {
+	const processName = "JBIG2Document.Encode"
+	if enc.d == nil {
+		return nil, errors.Errorf(processName, "document input data not defined")
+	}
+	enc.d.FullHeaders = enc.DefaultPageSettings.FileMode
+	// encode the document
+	data, err = enc.d.Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return data, nil
+}
+
 // GetFilterName returns the name of the encoding filter.
 func (enc *JBIG2Encoder) GetFilterName() string {
 	return StreamEncodingFilterNameJBIG2
@@ -157,10 +210,6 @@ func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-	if enc.IsChocolateData {
-		// /Decode[1.0 0.0] - see note in the 'setChocolateData' method.
-		dict.Set("Decode", MakeArray(MakeFloat(1.0), MakeFloat(0.0)))
-	}
 	dict.Set("Filter", MakeName(enc.GetFilterName()))
 	return dict
 }
@@ -172,16 +221,14 @@ func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
 	const processName = "encodeImage"
 	// convert the input into jbig2 image
-	jimg, err := GoImageToJBIG2(i, JB2ImageAutoThreshold)
+	jbig2Image, err := GoImageToJBIG2(i, JB2ImageAutoThreshold)
 	if err != nil {
 		return nil, errors.Wrap(err, processName, "convert input image to jbig2 img")
 	}
-	if err = enc.AddPageImage(jimg, enc.DefaultPageSettings); err != nil {
+	if err = enc.AddPageImage(jbig2Image, &enc.DefaultPageSettings); err != nil {
 		return nil, errors.Wrap(err, processName, "")
 	}
-
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
-	return nil, ErrNoJBIG2Decode
+	return enc.Encode()
 }
 
 func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
@@ -233,69 +280,6 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		}
 	}
 	return encoder, nil
-}
-
-//
-// JBIG2Document
-//
-
-// JBIG2Document defines the JBIG2 document which contains pages to encode.
-type JBIG2Document struct {
-	// FileMode defines if the jbig2 encoder should return full jbig2 file instead of
-	// shortened pdf mode. This adds the file header to the jbig2 definition.
-	FileMode bool
-	d        *document.Document
-}
-
-// AddPageImage adds the page with the image 'img' to the document 'd' in order to encode it jbig2 document.
-// The 'settings' defines what encoding type should be used by the encoder.
-func (d *JBIG2Document) AddPageImage(img *JBIG2Image, settings JBIG2EncoderSettings) (err error) {
-	const processName = "JBIG2Document.AddPageImage"
-	if d == nil {
-		return errors.Error(processName, "JBIG2Document is nil")
-	}
-	if d.d == nil {
-		d.d = document.InitEncodeDocument(d.FileMode)
-	}
-
-	if err = settings.Validate(); err != nil {
-		return errors.Wrap(err, processName, "")
-	}
-
-	// convert input 'img' to the bitmap.Bitmap
-	b, err := img.toBitmap()
-	if err != nil {
-		return errors.Wrap(err, processName, "")
-	}
-
-	switch settings.Compression {
-	case JB2Generic:
-		if err = d.d.AddGenericPage(b, settings.DuplicatedLinesRemoval); err != nil {
-			return errors.Wrap(err, processName, "")
-		}
-	case JB2SymbolCorrelation:
-		return errors.Error(processName, "symbol correlation encoding not implemented yet")
-	case JB2SymbolRankHaus:
-		return errors.Error(processName, "symbol rank haus encoding not implemented yet")
-	default:
-		return errors.Error(processName, "provided invalid compression")
-	}
-	return nil
-}
-
-// Encode encodes previously prepare jbig2 document and stores it as the byte slice.
-func (d *JBIG2Document) Encode() (data []byte, err error) {
-	const processName = "JBIG2Document.Encode"
-	if d.d == nil {
-		return nil, errors.Errorf(processName, "document input data not defined")
-	}
-	d.d.FullHeaders = d.FileMode
-	// encode the document
-	data, err = d.d.Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, processName, "")
-	}
-	return data, nil
 }
 
 //
@@ -405,6 +389,9 @@ func bwToJBIG2Image(i *image.Gray) *JBIG2Image {
 // JBIG2EncoderSettings contains the parameters and settings used by the JBIG2Encoder.
 // Current version works only on JB2Generic compression.
 type JBIG2EncoderSettings struct {
+	// FileMode defines if the jbig2 encoder should return full jbig2 file instead of
+	// shortened pdf mode. This adds the file header to the jbig2 definition.
+	FileMode bool
 	// Compression is the setting that defines the compression type used for encoding the page.
 	Compression JBIG2CompressionType
 	// DuplicatedLinesRemoval code generic region in a way such that if the lines are duplicated the encoder
