@@ -36,11 +36,9 @@ const (
 	JB2SymbolRankHaus
 )
 
-const (
-	// JB2ImageAutoThreshold is the const value used by the 'GoImageToJBIG2Image function' used to set auto threshold
-	// for the histogram.
-	JB2ImageAutoThreshold = -1.0
-)
+// JB2ImageAutoThreshold is the const value used by the 'GoImageToJBIG2Image function' used to set auto threshold
+// for the histogram.
+const JB2ImageAutoThreshold = -1.0
 
 //
 // JBIG2Encoder/Decoder
