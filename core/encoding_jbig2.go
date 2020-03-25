@@ -67,6 +67,11 @@ type JBIG2Encoder struct {
 	DefaultPageSettings JBIG2EncoderSettings
 }
 
+// NewJBIG2Encoder creates a new JBIG2Encoder.
+func NewJBIG2Encoder() *JBIG2Encoder {
+	return &JBIG2Encoder{}
+}
+
 // AddPageImage adds the page with the image 'img' to the encoder context in order to encode it jbig2 document.
 // The 'settings' defines what encoding type should be used by the encoder.
 func (enc *JBIG2Encoder) AddPageImage(img *JBIG2Image, settings *JBIG2EncoderSettings) (err error) {
