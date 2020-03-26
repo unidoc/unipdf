@@ -362,16 +362,16 @@ type DefaultImageHandler struct{}
 func (ih DefaultImageHandler) NewImageFromGoImage(goimg goimage.Image) (*Image, error) {
 	b := goimg.Bounds()
 
-	var m *goimage.RGBA
+	var m *goimage.NRGBA
 	switch t := goimg.(type) {
 	case *goimage.Gray, *goimage.Gray16:
 		return ih.NewGrayImageFromGoImage(goimg)
-	case *goimage.RGBA:
+	case *goimage.NRGBA:
 		m = t
 	default:
-		// Speed up jpeg encoding by converting to RGBA first.
+		// Speed up jpeg encoding by converting to NRGBA first.
 		// Will not be required once the golang image/jpeg package is optimized.
-		m = goimage.NewRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
+		m = goimage.NewNRGBA(goimage.Rect(0, 0, b.Dx(), b.Dy()))
 		draw.Draw(m, m.Bounds(), goimg, b.Min, draw.Src)
 		b = m.Bounds()
 	}
