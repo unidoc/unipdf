@@ -74,7 +74,7 @@ func (b *Bitmap) GetComponents(components Component, maxWidth, maxHeight int) (b
 
 	switch components {
 	case ComponentConn:
-		// no preprocessing
+		// no pre-processing
 		bitmaps = &Bitmaps{}
 		if boxes, err = b.ConnComponents(bitmaps, 8); err != nil {
 			return nil, nil, errors.Wrap(err, processName, "no preprocessing")
@@ -137,13 +137,11 @@ func (b *Bitmap) GetComponents(components Component, maxWidth, maxHeight int) (b
 		}
 	}
 
-	// common.Log.Debug("Bitmaps Before: %s", bitmaps)
 	bitmaps, err = bitmaps.SelectBySize(maxWidth, maxHeight, LocSelectIfBoth, SizeSelectIfLTE)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, processName, "")
 	}
 
-	// common.Log.Debug("Bitmaps: %s", bitmaps)
 	boxes, err = boxes.SelectBySize(maxWidth, maxHeight, LocSelectIfBoth, SizeSelectIfLTE)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, processName, "")
@@ -267,6 +265,7 @@ func (b *Bitmap) connComponentsBitmapsBB(bma *Bitmaps, connectivity int) (boxa *
 	bma.Boxes = *boxa
 	return boxa, nil
 }
+
 func wordMaskByDilation(s *Bitmap) (mask *Bitmap, dilationSize int, err error) {
 	const processName = "Bitmap.wordMaskByDilation"
 	if s == nil {
@@ -333,16 +332,16 @@ func wordMaskByDilation(s *Bitmap) (mask *Bitmap, dilationSize int, err error) {
 		}
 	}
 
-	// NOTE: the resolution here is assumed to be  the 'Width' of the
-	xres := s.XResolution
-	if xres == 0 {
-		xres = 150
+	// NOTE: the resolution here is assumed to be the 'Width' of the bitmap.
+	xResolution := s.XResolution
+	if xResolution == 0 {
+		xResolution = 150
 	}
-	if xres > 110 {
+	if xResolution > 110 {
 		iBest++
 	}
 	if iBest < 2 {
-		common.Log.Trace("setting iBest to minium allowable")
+		common.Log.Trace("JBIG2 setting iBest to minimum allowable")
 		iBest = 2
 	}
 
@@ -350,6 +349,5 @@ func wordMaskByDilation(s *Bitmap) (mask *Bitmap, dilationSize int, err error) {
 	if mask, err = closeBrick(nil, s, iBest+1, 1); err != nil {
 		return nil, 0, errors.Wrap(err, processName, "getting mask failed")
 	}
-
 	return mask, dilationSize, nil
 }

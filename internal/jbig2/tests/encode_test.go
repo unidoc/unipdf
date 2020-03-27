@@ -26,7 +26,6 @@ import (
 )
 
 // TestImageEncodeDecodeJBIG2 tests the encode and decode process for the JBIG2 encoder.
-//noinspection ALL
 func TestImageEncodeDecodeJBIG2(t *testing.T) {
 	dirName := os.Getenv(EnvImageDirectory)
 	if dirName == "" {
@@ -95,7 +94,6 @@ func TestImageEncodeDecodeJBIG2(t *testing.T) {
 		// read the file
 		f, err := getFile(dirName, fileName)
 		require.NoError(t, err)
-		//noinspection ALL
 		defer f.Close()
 
 		// try to read the file as image.

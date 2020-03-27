@@ -141,7 +141,6 @@ func (c *ClassedPoints) GetIntYByClass(i int) (int, error) {
 }
 
 // GroupByY groups provided intSlice into ClassedPoints based on their 'Y'.
-//noinspection GoNilness
 func (c *ClassedPoints) GroupByY() ([]*ClassedPoints, error) {
 	const processName = "ClassedPoints.GroupByY"
 	if err := c.validateIntSlice(); err != nil {

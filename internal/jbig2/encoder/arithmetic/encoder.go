@@ -490,8 +490,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	}
 	value -= int(intEncRange[i].delta)
 
-	//noinspection GoRedundantConversion
-	data := uint8(intEncRange[i].data)
+	data := intEncRange[i].data
 	for j := uint8(0); j < intEncRange[i].bits; j++ {
 		v := data & 1
 		if err := e.encodeBit(ctx, prev, v); err != nil {
@@ -529,7 +528,6 @@ func (e *Encoder) encodeIAID(symCodeLen, value int) error {
 	}
 
 	mask := uint32(1<<uint32(symCodeLen+1)) - 1
-	//noinspection GoRedundantConversion
 	value <<= uint(32 - symCodeLen)
 	prev := uint32(1)
 

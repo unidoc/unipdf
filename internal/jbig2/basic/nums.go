@@ -13,7 +13,6 @@ import (
 type IntSlice []int
 
 // NewIntSlice creates new integer slice.
-//noinspection GoUnusedExportedFunction
 func NewIntSlice(i int) *IntSlice {
 	sl := IntSlice(make([]int, i))
 	return &sl

@@ -86,7 +86,7 @@ func (l ConsoleLogger) IsLogLevel(level LogLevel) bool {
 	return l.LogLevel >= level
 }
 
-// Error logs 'Error' message.
+// Error logs error message.
 func (l ConsoleLogger) Error(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelError {
 		prefix := "[ERROR] "
@@ -94,7 +94,7 @@ func (l ConsoleLogger) Error(format string, args ...interface{}) {
 	}
 }
 
-// Warning logs 'warning' message.
+// Warning logs warning message.
 func (l ConsoleLogger) Warning(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelWarning {
 		prefix := "[WARNING] "
@@ -102,7 +102,7 @@ func (l ConsoleLogger) Warning(format string, args ...interface{}) {
 	}
 }
 
-// Notice logs 'Notice' message.
+// Notice logs notice message.
 func (l ConsoleLogger) Notice(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelNotice {
 		prefix := "[NOTICE] "
@@ -110,7 +110,7 @@ func (l ConsoleLogger) Notice(format string, args ...interface{}) {
 	}
 }
 
-// Info logs 'Info' message.
+// Info logs info message.
 func (l ConsoleLogger) Info(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelInfo {
 		prefix := "[INFO] "
@@ -118,7 +118,7 @@ func (l ConsoleLogger) Info(format string, args ...interface{}) {
 	}
 }
 
-// Debug logs 'Debug' message.
+// Debug logs debug message.
 func (l ConsoleLogger) Debug(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelDebug {
 		prefix := "[DEBUG] "
@@ -126,7 +126,7 @@ func (l ConsoleLogger) Debug(format string, args ...interface{}) {
 	}
 }
 
-// Trace logs 'Trace' message.
+// Trace logs trace message.
 func (l ConsoleLogger) Trace(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelTrace {
 		prefix := "[TRACE] "
@@ -135,7 +135,6 @@ func (l ConsoleLogger) Trace(format string, args ...interface{}) {
 }
 
 // output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
-//noinspection GoUnhandledErrorResult
 func (l ConsoleLogger) output(f io.Writer, prefix string, format string, args ...interface{}) {
 	logToWriter(f, prefix, format, args...)
 }
@@ -216,8 +215,7 @@ func (l WriterLogger) Trace(format string, args ...interface{}) {
 	}
 }
 
-// output writes `format`, `args` log message prefixed by the source file name, line and `prefix`
-//noinspection GoUnhandledErrorResult
+// logToWriter writes `format`, `args` log message prefixed by the source file name, line and `prefix`
 func (l WriterLogger) logToWriter(f io.Writer, prefix string, format string, args ...interface{}) {
 	logToWriter(f, prefix, format, args)
 }

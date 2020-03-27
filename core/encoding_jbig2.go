@@ -141,7 +141,6 @@ func (enc *JBIG2Encoder) DecodeImages(encoded []byte) ([]image.Image, error) {
 	}
 
 	// decode all images
-	//noinspection GoPreferNilSlice
 	images := []image.Image{}
 	var img image.Image
 	for i := 1; i <= pageNumber; i++ {
@@ -270,7 +269,6 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			globalsStream, ok := globals.(*PdfObjectStream)
 			if !ok {
 				err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
-				//noinspection GoNilness
 				common.Log.Debug("ERROR: %s", err.Error())
 				return nil, err
 			}
