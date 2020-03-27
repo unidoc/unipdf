@@ -112,4 +112,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 * [Apache Java PDFBox JBIG2 Decoder](https://github.com/apache/pdfbox-jbig2), Apache License 2.0.
-    - Used as a base for the JBIG2 image decoder.
+    In order to achieve full support for the JBIG2 Decoder, it was necessary to implement all possible decoding
+    combinations defined in the JBIG2 standard, aka ITU T.88 and ISO/IEC 14492.
+    With a lack of Golang JBIG2 Open Source package, we’ve decided that it would be best to base our own implementation
+    on some solid and reliable library.
+    The Apache PDFBox JBIG2 library fulfilled all our requirements. It has a really good quality of the code along with
+    the detailed comments on each function and class. It also implemented  MMR, Huffman tables and arithmetic
+    decompressors along with all JBIG2 segments.
+
+* [AGL JBIG2 Encoder](https://github.com/agl/jbig2enc), Apache License 2.0.
+    The complexity and lack of comprehensive documentation for the JBIG2 encoding process, lead us to look at the
+    AGL JBIG2 Encoder library. At the moment of implementing our encoder it was the only Open Source JBIG2 encoder.
+    It’s a C++ based library that implements both lossless and lossy encoding methods, where most of the image
+    operations are done using DanBloomberg Leptonica library.
+
+    The core encoding processes in the UniPDF JBIG2 Encoder were based on that well documented and solid library
+
+
+* [DanBloomberg Leptonica](https://github.com/DanBloomberg/leptonica), The 2-Clause BSD License,
+    DanBloomberg Leptonica is an amazing C/C++ Open Source library. It provides raster operations, binary expansion and
+    reduction, JBIG2 component creators, correlation scoring and a lot more perfectly commented image operation functions.
+    That library was used as a very solid base for our image operation algorithms used by the JBIG2 Encoder.

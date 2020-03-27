@@ -63,6 +63,43 @@ func TestReader(t *testing.T) {
 	_, err = r.Read(s)
 	require.NoError(t, err)
 	assert.True(t, bytes.Equal(s, []byte{0x80, 0x8f}))
+
+	t.Run("ReadBits", func(t *testing.T) {
+		// having the data:
+		// 11110000 11011011
+		data := []byte{0xf0, 0xdb}
+		r := New(data)
+
+		bits, err := r.ReadBits(4)
+		require.NoError(t, err)
+
+		assert.Equal(t, byte(0xf), byte(bits))
+
+		bt, err := r.ReadByte()
+		require.NoError(t, err)
+
+		assert.Equal(t, byte(0xd), bt)
+
+		bit, err := r.ReadBit()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, bit)
+
+		bit, err = r.ReadBit()
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, bit)
+
+		bit, err = r.ReadBit()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, bit)
+
+		bit, err = r.ReadBit()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, bit)
+	})
 }
 
 // TestSeeker test the Reader Seek methods.
@@ -72,7 +109,9 @@ func TestSeeker(t *testing.T) {
 	t.Run("SeekStart", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			r := New(data)
-			r.Seek(3, io.SeekStart)
+			_, err := r.Seek(3, io.SeekStart)
+			require.NoError(t, err)
+
 			b, err := r.ReadByte()
 			assert.Equal(t, nil, err)
 			assert.Equal(t, data[3], b)

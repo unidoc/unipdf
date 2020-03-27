@@ -1,43 +1,28 @@
-/*
- * This file is subject to the terms and conditions defined in
- * file 'LICENSE.md', which is part of this source code package.
- */
-
 package jbig2
 
 import (
-	"errors"
+	"sort"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/segments"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 )
 
-// Common errors definitions.
-var (
-	ErrNoGlobalsYet  = errors.New("no global segment added yet")
-	ErrNoGlobalFound = errors.New("no global segment found")
-)
-
-// Globals store segments that aren't associated to a page.
-// If the data is embedded in another format, for example PDF, this
-// segments might be stored separately in the file.
-// This segments will be decoded on demand, all results are stored in the document.
+// Globals is the v3 mapping of the jbig2 segments to header mapping.
 type Globals map[int]*segments.Header
 
-// GetSegment gets the global segment header.
-func (g Globals) GetSegment(segmentNumber int) (*segments.Header, error) {
-	if len(g) == 0 {
-		return nil, ErrNoGlobalsYet
+// ToDocumentGlobals converts 'jbig2.Globals' into '*document.Globals'
+func (g Globals) ToDocumentGlobals() *document.Globals {
+	if g == nil {
+		return nil
 	}
-
-	v, ok := g[segmentNumber]
-	if !ok {
-		return nil, ErrNoGlobalFound
+	headers := []*segments.Header{}
+	// add all segments to the slice.
+	for _, segment := range g {
+		headers = append(headers, segment)
 	}
-
-	return v, nil
-}
-
-// AddSegment adds the segment to the globals store.
-func (g Globals) AddSegment(segmentNumber int, segment *segments.Header) {
-	g[segmentNumber] = segment
+	// sort by the segment number value
+	sort.Slice(headers, func(i, j int) bool {
+		return headers[i].SegmentNumber < headers[j].SegmentNumber
+	})
+	return &document.Globals{Segments: headers}
 }

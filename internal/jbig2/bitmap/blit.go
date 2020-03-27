@@ -124,7 +124,9 @@ func blitShifted(
 			register = (register | (uint16(newByte) & 0xff)) << uint(shiftVal2)
 
 			newByte = byte(register >> 8)
-			dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op))
+			if err = dst.SetByte(dstIdx, combineBytes(oldByte, newByte, op)); err != nil {
+				return err
+			}
 			dstIdx++
 
 			register <<= uint(shiftVal1)

@@ -1,5 +1,7 @@
 module github.com/unidoc/unipdf/v3
 
+go 1.11
+
 require (
 	github.com/adrg/sysfont v0.1.0
 	github.com/boombuler/barcode v1.0.0
