@@ -988,10 +988,6 @@ func TestBitmap(t *testing.T) {
 
 	})
 
-	t.Run("ConnComponents", func(t *testing.T) {
-
-	})
-
 	t.Run("ThresholdPixelSum", func(t *testing.T) {
 		// Having a bitmap 100x100 with randomly distributed 10 pixel per row
 		bm := New(100, 100)

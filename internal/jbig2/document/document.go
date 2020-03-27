@@ -782,40 +782,6 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 	return false, nil
 }
 
-// func (d *Document) uniteTemplatesWithIndexes(firstTempIndex, secondTempIndex int) error {
-// 	if len(d.Classer.Pixat) < firstTempIndex || len(d.Classer.Pixat) < secondTempIndex {
-// 		return errors.New("index doesn't point to template array")
-// 	}
-// 	for i, class := range d.Classer.ClassIDs {
-// 		if class == secondTempIndex {
-// 			d.Classer.ClassIDs[i] = firstTempIndex
-// 		}
-// 	}
-//
-// 	var (
-// 		endPix *bitmap.Bitmap
-// 		//		copiedPix *bitmap.Bitmap
-// 		//		boxa      []*image.Rectangle
-// 	)
-//
-// 	index := len(d.Classer.Pixat) - 1
-// 	if index != secondTempIndex {
-// 		endPix = d.Classer.Pixat[index]
-// 		d.Classer.Pixat[secondTempIndex] = endPix
-//
-// 		for i, class := range d.Classer.ClassIDs {
-// 			if class == index {
-// 				d.Classer.ClassIDs[i] = secondTempIndex
-// 			}
-// 		}
-// 	}
-//
-// 	// remove the bitmap
-// 	d.Classer.Pixat = append(d.Classer.Pixat[:index], d.Classer.Pixat[index+1:]...)
-// 	d.Classer.NClass--
-// 	return nil
-// }
-
 func decodeWithGlobals(input reader.StreamReader, globals *Globals) (*Document, error) {
 	d := &Document{
 		Pages:                make(map[int]*Page),
