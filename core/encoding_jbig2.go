@@ -217,6 +217,7 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 }
 
 // UpdateParams updates the parameter values of the encoder.
+// The body of this method is empty but required to implement StreamEncoder interface.
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 }
 

@@ -152,7 +152,7 @@ type WriterLogger struct {
 	Output   io.Writer
 }
 
-// NewWriterLogger creates new writer logger.
+// NewWriterLogger creates new 'writer' logger.
 func NewWriterLogger(logLevel LogLevel, writer io.Writer) *WriterLogger {
 	logger := WriterLogger{
 		Output:   writer,
@@ -167,7 +167,7 @@ func (l WriterLogger) IsLogLevel(level LogLevel) bool {
 	return l.LogLevel >= level
 }
 
-// Error logs 'Error' message.
+// Error logs error message.
 func (l WriterLogger) Error(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelError {
 		prefix := "[ERROR] "
@@ -175,7 +175,7 @@ func (l WriterLogger) Error(format string, args ...interface{}) {
 	}
 }
 
-// Warning logs 'warning' message.
+// Warning logs warning message.
 func (l WriterLogger) Warning(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelWarning {
 		prefix := "[WARNING] "
@@ -183,7 +183,7 @@ func (l WriterLogger) Warning(format string, args ...interface{}) {
 	}
 }
 
-// Notice logs 'Notice' message.
+// Notice logs notice message.
 func (l WriterLogger) Notice(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelNotice {
 		prefix := "[NOTICE] "
@@ -191,7 +191,7 @@ func (l WriterLogger) Notice(format string, args ...interface{}) {
 	}
 }
 
-// Info logs 'Info' message.
+// Info logs info message.
 func (l WriterLogger) Info(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelInfo {
 		prefix := "[INFO] "
@@ -199,7 +199,7 @@ func (l WriterLogger) Info(format string, args ...interface{}) {
 	}
 }
 
-// Debug logs 'Debug' message.
+// Debug logs debug message.
 func (l WriterLogger) Debug(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelDebug {
 		prefix := "[DEBUG] "
@@ -207,7 +207,7 @@ func (l WriterLogger) Debug(format string, args ...interface{}) {
 	}
 }
 
-// Trace logs 'Trace' message.
+// Trace logs trace message.
 func (l WriterLogger) Trace(format string, args ...interface{}) {
 	if l.LogLevel >= LogLevelTrace {
 		prefix := "[TRACE] "
