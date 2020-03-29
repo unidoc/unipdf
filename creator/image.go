@@ -181,7 +181,10 @@ func (img *Image) makeXObject() error {
 func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	if img.xobj == nil {
 		// Build the XObject Image if not already prepared.
-		img.makeXObject()
+		if err := img.makeXObject(); err != nil {
+			return nil, ctx, err
+		}
+
 	}
 
 	var blocks []*Block

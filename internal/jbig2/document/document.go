@@ -98,7 +98,7 @@ func (d *Document) AddGenericPage(bm *bitmap.Bitmap, duplicateLineRemoval bool) 
 	const processName = "Document.AddGenericPage"
 	// check if this is PDFMode and there is already a page
 	if !d.FullHeaders && d.NumberOfPages != 0 {
-		return errors.Error(processName, "document already contains page. FileMode disallows addoing more than one page")
+		return errors.Error(processName, "document already contains page. FileMode disallows adding more than one page")
 	}
 	// initialize page
 	page := &Page{

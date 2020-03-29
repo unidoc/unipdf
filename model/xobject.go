@@ -242,8 +242,24 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	encoder core.StreamEncoder) (*XObjectImage, error) {
 	xobj := NewXObjectImage()
 
-	if encoder == nil {
+	// Width and height.
+	imWidth := img.Width
+	imHeight := img.Height
+	xobj.Width = &imWidth
+	xobj.Height = &imHeight
+
+	// Bits.
+	xobj.BitsPerComponent = &img.BitsPerComponent
+
+	switch e := encoder.(type) {
+	case nil:
 		encoder = core.NewRawEncoder()
+	case core.EncodeImageParamsSetter:
+		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+		e.SetEncodeImageParams(img.GetCoreParams())
+		bitsPerComponent := int64(1)
+		xobj.BitsPerComponent = &bitsPerComponent
+		cs = NewPdfColorspaceDeviceGray()
 	}
 
 	encoded, err := encoder.EncodeBytes(img.Data)
@@ -254,15 +270,6 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 
 	xobj.Filter = encoder
 	xobj.Stream = encoded
-
-	// Width and height.
-	imWidth := img.Width
-	imHeight := img.Height
-	xobj.Width = &imWidth
-	xobj.Height = &imHeight
-
-	// Bits.
-	xobj.BitsPerComponent = &img.BitsPerComponent
 
 	// Guess colorspace if not explicitly set.
 	if cs == nil {
@@ -284,6 +291,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		// Has same width and height as original and stored in same
 		// bits per component (1 component, hence the DeviceGray channel).
 		smask := NewXObjectImage()
+
 		smask.Filter = encoder
 		encoded, err := encoder.EncodeBytes(img.alphaData)
 		if err != nil {
@@ -291,7 +299,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 			return nil, err
 		}
 		smask.Stream = encoded
-		smask.BitsPerComponent = &img.BitsPerComponent
+		smask.BitsPerComponent = xobj.BitsPerComponent
 		smask.Width = &img.Width
 		smask.Height = &img.Height
 		smask.ColorSpace = NewPdfColorspaceDeviceGray()
@@ -448,6 +456,13 @@ func NewXObjectImageFromStream(stream *core.PdfObjectStream) (*XObjectImage, err
 
 // SetImage updates XObject Image with new image data.
 func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
+	var isJBIG2 bool
+	switch e := ximg.Filter.(type) {
+	case *core.JBIG2Encoder:
+		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+		e.SetEncodeImageParams(img.GetCoreParams())
+		isJBIG2 = true
+	}
 	encoded, err := ximg.Filter.EncodeBytes(img.Data)
 	if err != nil {
 		return err
@@ -463,7 +478,16 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	ximg.Height = &h
 
 	bpc := img.BitsPerComponent
+	if isJBIG2 {
+		bpc = 1
+	}
 	ximg.BitsPerComponent = &bpc
+
+	if isJBIG2 {
+		// JBIG2 Image must be a DeviceGray result
+		ximg.ColorSpace = NewPdfColorspaceDeviceGray()
+		return nil
+	}
 
 	// Guess colorspace if not explicitly set.
 	if cs == nil {
@@ -493,6 +517,19 @@ func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
 	}
 
 	ximg.Filter = encoder
+	switch e := encoder.(type) {
+	case *core.JBIG2Encoder:
+		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+		e.SetEncodeImageParams(core.ImageParameters{
+			ColorComponents:  ximg.ColorSpace.GetNumComponents(),
+			BitsPerComponent: int(*ximg.BitsPerComponent),
+			Width:            int(*ximg.Width),
+			Height:           int(*ximg.Height),
+		})
+		bpc := int64(1)
+		ximg.BitsPerComponent = &bpc
+		ximg.ColorSpace = NewPdfColorspaceDeviceGray()
+	}
 	encoded, err = encoder.EncodeBytes(decoded)
 	if err != nil {
 		return err

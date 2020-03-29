@@ -3,3 +3,4 @@ jbig2files
 .test
 *.jbig2
 .envrc
+.env

@@ -50,6 +50,16 @@ func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
 	}
 }
 
+// GetCoreParams returns core.ImageParameters.
+func (img *Image) GetCoreParams() core.ImageParameters {
+	return core.ImageParameters{
+		ColorComponents:  img.ColorComponents,
+		BitsPerComponent: int(img.BitsPerComponent),
+		Width:            int(img.Width),
+		Height:           int(img.Height),
+	}
+}
+
 // GetSamples converts the raw byte slice into samples which are stored in a uint32 bit array.
 // Each sample is represented by BitsPerComponent consecutive bits in the raw data.
 // NOTE: The method resamples the image byte data before returning the result and
@@ -292,6 +302,15 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 
 	img.Data = data
 	img.BitsPerComponent = int64(targetBitsPerComponent)
+}
+
+// ToJBIG2Image converts unipdf Image to the core.JBIG2Image.
+func (img *Image) ToJBIG2Image() (*core.JBIG2Image, error) {
+	goImg, err := img.ToGoImage()
+	if err != nil {
+		return nil, err
+	}
+	return core.GoImageToJBIG2(goImg, core.JB2ImageAutoThreshold)
 }
 
 // ToGoImage converts the unidoc Image to a golang Image structure.
