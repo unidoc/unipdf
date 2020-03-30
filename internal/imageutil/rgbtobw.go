@@ -1,4 +1,4 @@
-package bitmap
+package imageutil
 
 import (
 	"image"
@@ -129,6 +129,11 @@ func ImgToGray(i image.Image) *image.Gray {
 		}
 	}
 	return g
+}
+
+// IsGrayImgBlackAndWhite checks if provided gray image is BlackAndWhite - Binary image.
+func IsGrayImgBlackAndWhite(i *image.Gray) bool {
+	return isGrayBlackWhite(i)
 }
 
 func blackOrWhite(c, threshold uint8) uint8 {

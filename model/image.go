@@ -19,6 +19,8 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/sampling"
 )
 
@@ -354,6 +356,49 @@ func (img *Image) ToGoImage() (goimage.Image, error) {
 	}
 
 	return imgout, nil
+}
+
+// ToBinaryImage converts an image into binary (bi-level) image. Binary images
+// are composed of single bits per pixel (only black or white). If provided image
+// has more color components than it would be converted into binary image using
+// histogram auto threshold function.
+func (img *Image) ToBinaryImage() error {
+	// check if  given image is already a binary image (1 bit per component - 1 color component - the size of the data
+	// is equal to the multiplication of width and height.
+	if img.ColorComponents == 1 && img.BitsPerComponent == 1 {
+		return nil
+	}
+	i, err := img.ToGoImage()
+	if err != nil {
+		return err
+	}
+	gray := imageutil.ImgToGray(i)
+	// check if 'img' is already a binary image.
+	if !imageutil.IsGrayImgBlackAndWhite(gray) {
+		threshold := imageutil.AutoThresholdTriangle(imageutil.GrayImageHistogram(gray))
+		gray = imageutil.ImgToBinary(i, threshold)
+	}
+	// use JBIG2 bitmap as the temporary binary data converter - by default it uses
+	tmpBM := bitmap.New(int(img.Width), int(img.Height))
+	for y := 0; y < tmpBM.Height; y++ {
+		for x := 0; x < tmpBM.Width; x++ {
+			c := gray.GrayAt(x, y)
+			// set only the white pixel - c.Y != 0
+			if c.Y != 0 {
+				if err = tmpBM.SetPixel(x, y, 1); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	unpaddedData, err := tmpBM.GetUnpaddedData()
+	if err != nil {
+		return err
+	}
+	img.BitsPerComponent = 1
+	img.ColorComponents = 1
+	img.Data = unpaddedData
+	return nil
 }
 
 // ImageHandler interface implements common image loading and processing tasks.

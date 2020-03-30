@@ -10,6 +10,7 @@ import (
 	"image/color"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
@@ -57,7 +58,6 @@ type JBIG2Encoder struct {
 	// Params stores image encode parameters.
 	// These values are required to be set for the 'EncodeBytes' method.
 	Params ImageParameters
-
 	// Encode Page and Decode parameters
 	d *document.Document
 	// Globals are the JBIG2 global segments.
@@ -171,16 +171,12 @@ func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 // to encode given image.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	const processName = "JBIG2Encoder.EncodeBytes"
-	b, err := bitmap.NewWithInput(&bitmap.CreateInput{
-		Width:               enc.Params.Width,
-		Height:              enc.Params.Height,
-		BitsPerComponent:    enc.Params.BitsPerComponent,
-		ColorComponents:     enc.Params.ColorComponents,
-		Data:                data,
-		BlackWhiteThreshold: enc.DefaultPageSettings.BlackWhiteThreshold,
-	})
+	if enc.Params.ColorComponents != 1 || enc.Params.BitsPerComponent != 1 {
+		return nil, errors.Errorf(processName, "provided invalid input image. JBIG2 Encoder requires binary images data")
+	}
+	b, err := bitmap.NewWithUnpaddedData(enc.Params.Width, enc.Params.Height, data)
 	if err != nil {
-		return nil, errors.Wrap(err, processName, "")
+		return nil, err
 	}
 	settings := enc.DefaultPageSettings
 	if err = settings.Validate(); err != nil {
@@ -417,9 +413,9 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 	var th uint8
 	if bwThreshold == JB2ImageAutoThreshold {
 		// autoThreshold using triangle method
-		gray := bitmap.ImgToGray(i)
-		histogram := bitmap.GrayImageHistogram(gray)
-		th = bitmap.AutoThresholdTriangle(histogram)
+		gray := imageutil.ImgToGray(i)
+		histogram := imageutil.GrayImageHistogram(gray)
+		th = imageutil.AutoThresholdTriangle(histogram)
 		i = gray
 	} else if bwThreshold > 1.0 || bwThreshold < 0.0 {
 		// check if bwThreshold is unknown - set to 0.0 is not in the allowed range.
@@ -427,7 +423,7 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 	} else {
 		th = uint8(255 * bwThreshold)
 	}
-	gray := bitmap.ImgToBinary(i, th)
+	gray := imageutil.ImgToBinary(i, th)
 	return bwToJBIG2Image(gray), nil
 }
 
@@ -481,8 +477,6 @@ type JBIG2EncoderSettings struct {
 	// but the more lossy.
 	// Default value: 0.95
 	Threshold float64
-	// BlackWhiteThreshold is the threshold used to convert non binary images to the binary representation.
-	BlackWhiteThreshold float64
 }
 
 // Validate validates the page settings for the JBIG2 encoder.

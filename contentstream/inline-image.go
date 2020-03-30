@@ -34,6 +34,13 @@ type ContentStreamInlineImage struct {
 
 // NewInlineImageFromImage makes a new content stream inline image object from an image.
 func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*ContentStreamInlineImage, error) {
+	if encoder == nil {
+		encoder = core.NewRawEncoder()
+	}
+	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
+		e.SetEncodeImageParams(img.GetCoreParams())
+	}
+
 	inlineImage := ContentStreamInlineImage{}
 	if img.ColorComponents == 1 {
 		inlineImage.ColorSpace = core.MakeName("G") // G short for DeviceGray
@@ -48,16 +55,6 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 	inlineImage.BitsPerComponent = core.MakeInteger(img.BitsPerComponent)
 	inlineImage.Width = core.MakeInteger(img.Width)
 	inlineImage.Height = core.MakeInteger(img.Height)
-
-	switch e := encoder.(type) {
-	case nil:
-		encoder = core.NewRawEncoder()
-	case *core.JBIG2Encoder:
-		common.Log.Trace("Provided JBIG2Encoder - changing image to monochrome")
-		e.SetEncodeImageParams(img.GetCoreParams())
-		inlineImage.BitsPerComponent = core.MakeInteger(1)
-		inlineImage.ColorSpace = core.MakeName("G")
-	}
 
 	encoded, err := encoder.EncodeBytes(img.Data)
 	if err != nil {

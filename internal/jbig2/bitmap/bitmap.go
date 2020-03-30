@@ -545,7 +545,7 @@ func (b *Bitmap) addBorderGeneral(left, right, top, bot int, val int) (*Bitmap, 
 
 // addPadBits creates new data byte slice that contains extra padding on the last byte for each row.
 func (b *Bitmap) addPadBits() (err error) {
-	const processName = "addPadBits"
+	const processName = "bitmap.addPadBits"
 	endbits := b.Width % 8
 	if endbits == 0 {
 		// no partial words
@@ -559,18 +559,16 @@ func (b *Bitmap) addPadBits() (err error) {
 	w := writer.NewMSB(data)
 	temp := make([]byte, fullBytes)
 	var (
-		i, j int
+		i    int
 		bits uint64
 	)
 	for i = 0; i < b.Height; i++ {
 		// iterate over full bytes
-		for j = 0; j < fullBytes; j++ {
-			if _, err = r.Read(temp); err != nil {
-				return errors.Wrap(err, processName, "full byte")
-			}
-			if _, err = w.Write(temp); err != nil {
-				return errors.Wrap(err, processName, "full bytes")
-			}
+		if _, err = r.Read(temp); err != nil {
+			return errors.Wrap(err, processName, "full byte")
+		}
+		if _, err = w.Write(temp); err != nil {
+			return errors.Wrap(err, processName, "full bytes")
 		}
 		// read unused bits
 		if bits, err = r.ReadBits(byte(endbits)); err != nil {

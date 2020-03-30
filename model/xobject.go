@@ -251,15 +251,11 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	// Bits.
 	xobj.BitsPerComponent = &img.BitsPerComponent
 
-	switch e := encoder.(type) {
-	case nil:
+	if encoder == nil {
 		encoder = core.NewRawEncoder()
-	case core.EncodeImageParamsSetter:
-		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+	}
+	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
 		e.SetEncodeImageParams(img.GetCoreParams())
-		bitsPerComponent := int64(1)
-		xobj.BitsPerComponent = &bitsPerComponent
-		cs = NewPdfColorspaceDeviceGray()
 	}
 
 	encoded, err := encoder.EncodeBytes(img.Data)
@@ -456,12 +452,8 @@ func NewXObjectImageFromStream(stream *core.PdfObjectStream) (*XObjectImage, err
 
 // SetImage updates XObject Image with new image data.
 func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
-	var isJBIG2 bool
-	switch e := ximg.Filter.(type) {
-	case *core.JBIG2Encoder:
-		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+	if e, ok := ximg.Filter.(core.EncodeImageParamsSetter); ok {
 		e.SetEncodeImageParams(img.GetCoreParams())
-		isJBIG2 = true
 	}
 	encoded, err := ximg.Filter.EncodeBytes(img.Data)
 	if err != nil {
@@ -478,16 +470,7 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	ximg.Height = &h
 
 	bpc := img.BitsPerComponent
-	if isJBIG2 {
-		bpc = 1
-	}
 	ximg.BitsPerComponent = &bpc
-
-	if isJBIG2 {
-		// JBIG2 Image must be a DeviceGray result
-		ximg.ColorSpace = NewPdfColorspaceDeviceGray()
-		return nil
-	}
 
 	// Guess colorspace if not explicitly set.
 	if cs == nil {
@@ -517,18 +500,13 @@ func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
 	}
 
 	ximg.Filter = encoder
-	switch e := encoder.(type) {
-	case *core.JBIG2Encoder:
-		common.Log.Info("Provided JBIG2Encoder - changing image to monochrome")
+	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
 		e.SetEncodeImageParams(core.ImageParameters{
 			ColorComponents:  ximg.ColorSpace.GetNumComponents(),
 			BitsPerComponent: int(*ximg.BitsPerComponent),
 			Width:            int(*ximg.Width),
 			Height:           int(*ximg.Height),
 		})
-		bpc := int64(1)
-		ximg.BitsPerComponent = &bpc
-		ximg.ColorSpace = NewPdfColorspaceDeviceGray()
 	}
 	encoded, err = encoder.EncodeBytes(decoded)
 	if err != nil {

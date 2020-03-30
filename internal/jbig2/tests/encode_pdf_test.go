@@ -103,6 +103,10 @@ func TestImageEncodeJBIG2PDF(t *testing.T) {
 				img, err := c.NewImageFromFile(filepath.Join(dirName, fileName))
 				require.NoError(t, err)
 
+				// conver an image to binary image
+				err = img.ToBinaryImage()
+				require.NoError(t, err)
+
 				img.ScaleToWidth(612.0)
 
 				e := core.NewJBIG2Encoder()
@@ -119,7 +123,8 @@ func TestImageEncodeJBIG2PDF(t *testing.T) {
 				// c.SetPageSize(creator.PageSize{img.Width() * 1.2, img.Height() * 1.2})
 				img.SetPos(0, 0)
 
-				_ = c.Draw(img)
+				err = c.Draw(img)
+				require.NoError(t, err)
 
 				err = c.Write(buf)
 				require.NoError(t, err)
