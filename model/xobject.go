@@ -487,16 +487,6 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	return nil
 }
 
-// GetParamsDict returns *core.PdfObjectDictionary with a set of basic image parameters.
-func (ximg *XObjectImage) GetParamsDict() *core.PdfObjectDictionary {
-	params := core.MakeDict()
-	params.Set("Width", core.MakeInteger(*ximg.Width))
-	params.Set("Height", core.MakeInteger(*ximg.Height))
-	params.Set("ColorComponents", core.MakeInteger(int64(ximg.ColorSpace.GetNumComponents())))
-	params.Set("BitsPerComponent", core.MakeInteger(*ximg.BitsPerComponent))
-	return params
-}
-
 // SetFilter sets compression filter. Decodes with current filter sets and
 // encodes the data with the new filter.
 func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
@@ -507,7 +497,7 @@ func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
 	}
 
 	ximg.Filter = encoder
-	encoder.UpdateParams(ximg.GetParamsDict())
+	encoder.UpdateParams(ximg.getParamsDict())
 	encoded, err = encoder.EncodeBytes(decoded)
 	if err != nil {
 		return err
@@ -610,4 +600,14 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 	stream.Stream = ximg.Stream
 
 	return stream
+}
+
+// getParamsDict returns *core.PdfObjectDictionary with a set of basic image parameters.
+func (ximg *XObjectImage) getParamsDict() *core.PdfObjectDictionary {
+	params := core.MakeDict()
+	params.Set("Width", core.MakeInteger(*ximg.Width))
+	params.Set("Height", core.MakeInteger(*ximg.Height))
+	params.Set("ColorComponents", core.MakeInteger(int64(ximg.ColorSpace.GetNumComponents())))
+	params.Set("BitsPerComponent", core.MakeInteger(*ximg.BitsPerComponent))
+	return params
 }

@@ -313,13 +313,12 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			}
 		}
 	}
-	// if no decode params provided end fast.
+	// if no decode params provided - end fast.
 	if decodeParams == nil {
 		return encoder, nil
 	}
 	// set image parameters.
 	encoder.UpdateParams(decodeParams)
-	// check if the
 	globals := decodeParams.Get("JBIG2Globals")
 	if globals == nil {
 		return encoder, nil

@@ -104,7 +104,7 @@ func TestImageEncodeJBIG2PDF(t *testing.T) {
 				require.NoError(t, err)
 
 				// conver an image to binary image
-				err = img.ToBinaryImage()
+				err = img.ConvertToBinary()
 				require.NoError(t, err)
 
 				img.ScaleToWidth(612.0)

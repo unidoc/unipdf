@@ -158,11 +158,11 @@ func (img *Image) GetMargins() (float64, float64, float64, float64) {
 	return img.margins.left, img.margins.right, img.margins.top, img.margins.bottom
 }
 
-// ToBinaryImage converts img data into Binary image (Bi-level image).
+// ConvertToBinary converts current image data into binary (Bi-level image) format.
 // If provided image is RGB or GrayScale the function converts it into binary image
 // using histogram auto threshold method.
-func (img *Image) ToBinaryImage() error {
-	return img.img.ToBinaryImage()
+func (img *Image) ConvertToBinary() error {
+	return img.img.ConvertToBinary()
 }
 
 // makeXObject makes the encoded XObject Image that will be used in the PDF.
