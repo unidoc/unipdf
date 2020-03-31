@@ -240,6 +240,16 @@ func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder core.StreamE
 // If `encoder` is nil, uses raw encoding (none).
 func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace,
 	encoder core.StreamEncoder) (*XObjectImage, error) {
+	if encoder == nil {
+		encoder = core.NewRawEncoder()
+	}
+	encoder.UpdateParams(img.GetParamsDict())
+
+	encoded, err := encoder.EncodeBytes(img.Data)
+	if err != nil {
+		common.Log.Debug("Error with encoding: %v", err)
+		return nil, err
+	}
 	xobj := NewXObjectImage()
 
 	// Width and height.
@@ -248,21 +258,9 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	xobj.Width = &imWidth
 	xobj.Height = &imHeight
 
-	// Bits.
-	xobj.BitsPerComponent = &img.BitsPerComponent
-
-	if encoder == nil {
-		encoder = core.NewRawEncoder()
-	}
-	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
-		e.SetEncodeImageParams(img.GetCoreParams())
-	}
-
-	encoded, err := encoder.EncodeBytes(img.Data)
-	if err != nil {
-		common.Log.Debug("Error with encoding: %v", err)
-		return nil, err
-	}
+	// Bits per Component.
+	imBPC := img.BitsPerComponent
+	xobj.BitsPerComponent = &imBPC
 
 	xobj.Filter = encoder
 	xobj.Stream = encoded
@@ -452,9 +450,8 @@ func NewXObjectImageFromStream(stream *core.PdfObjectStream) (*XObjectImage, err
 
 // SetImage updates XObject Image with new image data.
 func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
-	if e, ok := ximg.Filter.(core.EncodeImageParamsSetter); ok {
-		e.SetEncodeImageParams(img.GetCoreParams())
-	}
+	// update image parameters of the filter encoder.
+	ximg.Filter.UpdateParams(img.GetParamsDict())
 	encoded, err := ximg.Filter.EncodeBytes(img.Data)
 	if err != nil {
 		return err
@@ -490,6 +487,16 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	return nil
 }
 
+// GetParamsDict returns *core.PdfObjectDictionary with a set of basic image parameters.
+func (ximg *XObjectImage) GetParamsDict() *core.PdfObjectDictionary {
+	params := core.MakeDict()
+	params.Set("Width", core.MakeInteger(*ximg.Width))
+	params.Set("Height", core.MakeInteger(*ximg.Height))
+	params.Set("ColorComponents", core.MakeInteger(int64(ximg.ColorSpace.GetNumComponents())))
+	params.Set("BitsPerComponent", core.MakeInteger(*ximg.BitsPerComponent))
+	return params
+}
+
 // SetFilter sets compression filter. Decodes with current filter sets and
 // encodes the data with the new filter.
 func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
@@ -500,14 +507,7 @@ func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
 	}
 
 	ximg.Filter = encoder
-	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
-		e.SetEncodeImageParams(core.ImageParameters{
-			ColorComponents:  ximg.ColorSpace.GetNumComponents(),
-			BitsPerComponent: int(*ximg.BitsPerComponent),
-			Width:            int(*ximg.Width),
-			Height:           int(*ximg.Height),
-		})
-	}
+	encoder.UpdateParams(ximg.GetParamsDict())
 	encoded, err = encoder.EncodeBytes(decoded)
 	if err != nil {
 		return err

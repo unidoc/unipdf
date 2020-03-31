@@ -69,24 +69,6 @@ type StreamEncoder interface {
 	DecodeStream(streamObj *PdfObjectStream) ([]byte, error)
 }
 
-// EncodeImageParamsSetter is the Encoder interface that allows to set the parameters for the encoder.
-type EncodeImageParamsSetter interface {
-	SetEncodeImageParams(params ImageParameters)
-}
-
-// ImageParameters is a structure used by the 'EncodeImageParamsSetter' that allows to set image parameters
-// for the encoder.
-type ImageParameters struct {
-	// ColorComponents defines the number of color components for provided image.
-	ColorComponents int
-	// BitsPerComponent is the number of bits that stores per color component
-	BitsPerComponent int
-	// Width is the width of the image to encode
-	Width int
-	// Height is the height of the image to encode.
-	Height int
-}
-
 // FlateEncoder represents Flate encoding.
 type FlateEncoder struct {
 	Predictor        int
@@ -1920,8 +1902,8 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:             enc.Rows,
-		EncodedByteAlign: enc.EncodedByteAlign,
+		Rows:                   enc.Rows,
+		EncodedByteAlign:       enc.EncodedByteAlign,
 	}
 
 	pixels, err := encoder.Decode(encoded)
@@ -1992,8 +1974,8 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 		EndOfBlock:             enc.EndOfBlock,
 		BlackIs1:               enc.BlackIs1,
 		DamagedRowsBeforeError: enc.DamagedRowsBeforeError,
-		Rows:             enc.Rows,
-		EncodedByteAlign: enc.EncodedByteAlign,
+		Rows:                   enc.Rows,
+		EncodedByteAlign:       enc.EncodedByteAlign,
 	}
 
 	return encoder.Encode(pixels), nil

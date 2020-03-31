@@ -37,9 +37,7 @@ func NewInlineImageFromImage(img model.Image, encoder core.StreamEncoder) (*Cont
 	if encoder == nil {
 		encoder = core.NewRawEncoder()
 	}
-	if e, ok := encoder.(core.EncodeImageParamsSetter); ok {
-		e.SetEncodeImageParams(img.GetCoreParams())
-	}
+	encoder.UpdateParams(img.GetParamsDict())
 
 	inlineImage := ContentStreamInlineImage{}
 	if img.ColorComponents == 1 {

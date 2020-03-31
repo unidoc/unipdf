@@ -55,9 +55,16 @@ const JB2ImageAutoThreshold = -1.0
 // The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
 // matches to single class, thus the compression is better, but the result might become lossy.
 type JBIG2Encoder struct {
-	// Params stores image encode parameters.
 	// These values are required to be set for the 'EncodeBytes' method.
-	Params ImageParameters
+	// ColorComponents defines the number of color components for provided image.
+	ColorComponents int
+	// BitsPerComponent is the number of bits that stores per color component
+	BitsPerComponent int
+	// Width is the width of the image to encode
+	Width int
+	// Height is the height of the image to encode.
+	Height int
+
 	// Encode Page and Decode parameters
 	d *document.Document
 	// Globals are the JBIG2 global segments.
@@ -171,10 +178,10 @@ func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 // to encode given image.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	const processName = "JBIG2Encoder.EncodeBytes"
-	if enc.Params.ColorComponents != 1 || enc.Params.BitsPerComponent != 1 {
+	if enc.ColorComponents != 1 || enc.BitsPerComponent != 1 {
 		return nil, errors.Errorf(processName, "provided invalid input image. JBIG2 Encoder requires binary images data")
 	}
-	b, err := bitmap.NewWithUnpaddedData(enc.Params.Width, enc.Params.Height, data)
+	b, err := bitmap.NewWithUnpaddedData(enc.Width, enc.Height, data)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +210,7 @@ func (enc *JBIG2Encoder) EncodeImage(img image.Image) ([]byte, error) {
 	return enc.encodeImage(img)
 }
 
-// EncodeJBIG2Image encodes 'img' JBIG2Image into jbig2 encoded bytes stream using default encoder settings..
+// EncodeJBIG2Image encodes 'img' into jbig2 encoded bytes stream, using default encoder settings.
 func (enc *JBIG2Encoder) EncodeJBIG2Image(img *JBIG2Image) ([]byte, error) {
 	const processName = "core.EncodeJBIG2Image"
 	if err := enc.AddPageImage(img, &enc.DefaultPageSettings); err != nil {
@@ -249,28 +256,20 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
 	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
 	if err == nil {
-		enc.Params.BitsPerComponent = int(bpc)
+		enc.BitsPerComponent = int(bpc)
 	}
 	width, err := GetNumberAsInt64(params.Get("Width"))
 	if err == nil {
-		enc.Params.Width = int(width)
+		enc.Width = int(width)
 	}
 	height, err := GetNumberAsInt64(params.Get("Height"))
 	if err == nil {
-		enc.Params.Height = int(height)
+		enc.Height = int(height)
 	}
 	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
 	if err == nil {
-		enc.Params.ColorComponents = int(colorComponents)
+		enc.ColorComponents = int(colorComponents)
 	}
-}
-
-// compile time check for the EncodeImageParamsSetter interface implementation.
-var _ EncodeImageParamsSetter = &JBIG2Encoder{}
-
-// SetEncodeImageParams implements EncodeImageParamsSetter interface.
-func (enc *JBIG2Encoder) SetEncodeImageParams(params ImageParameters) {
-	enc.Params = params
 }
 
 func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
@@ -318,33 +317,26 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 	if decodeParams == nil {
 		return encoder, nil
 	}
-	if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
-		var err error
-
-		globalsStream, ok := globals.(*PdfObjectStream)
-		if !ok {
-			err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
-			common.Log.Debug("ERROR: %v", err)
-			return nil, err
-		}
-		encoder.Globals, err = jbig2.DecodeGlobals(globalsStream.Stream)
-		if err != nil {
-			err = errors.Wrap(err, processName, "corrupted jbig2 encoded data")
-			common.Log.Debug("ERROR: %v", err)
-			return nil, err
-		}
+	// set image parameters.
+	encoder.UpdateParams(decodeParams)
+	// check if the
+	globals := decodeParams.Get("JBIG2Globals")
+	if globals == nil {
+		return encoder, nil
 	}
-	if k, err := GetNumberAsInt64(decodeParams.Get("Height")); err == nil {
-		encoder.Params.Height = int(k)
+	// decode and set JBIG2 Globals.
+	var err error
+	globalsStream, ok := globals.(*PdfObjectStream)
+	if !ok {
+		err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
+		common.Log.Debug("ERROR: %v", err)
+		return nil, err
 	}
-	if k, err := GetNumberAsInt64(decodeParams.Get("Width")); err == nil {
-		encoder.Params.Width = int(k)
-	}
-	if k, err := GetNumberAsInt64(decodeParams.Get("BitsPerComponent")); err == nil {
-		encoder.Params.BitsPerComponent = int(k)
-	}
-	if k, err := GetNumberAsInt64(decodeParams.Get("ColorsComponent")); err == nil {
-		encoder.Params.ColorComponents = int(k)
+	encoder.Globals, err = jbig2.DecodeGlobals(globalsStream.Stream)
+	if err != nil {
+		err = errors.Wrap(err, processName, "corrupted jbig2 encoded data")
+		common.Log.Debug("ERROR: %v", err)
+		return nil, err
 	}
 	return encoder, nil
 }

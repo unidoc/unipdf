@@ -52,14 +52,14 @@ func (img *Image) AlphaMap(mapFunc AlphaMapFunc) {
 	}
 }
 
-// GetCoreParams returns core.ImageParameters.
-func (img *Image) GetCoreParams() core.ImageParameters {
-	return core.ImageParameters{
-		ColorComponents:  img.ColorComponents,
-		BitsPerComponent: int(img.BitsPerComponent),
-		Width:            int(img.Width),
-		Height:           int(img.Height),
-	}
+// GetParamsDict returns *core.PdfObjectDictionary with a set of basic image parameters.
+func (img *Image) GetParamsDict() *core.PdfObjectDictionary {
+	params := core.MakeDict()
+	params.Set("Width", core.MakeInteger(img.Width))
+	params.Set("Height", core.MakeInteger(img.Height))
+	params.Set("ColorComponents", core.MakeInteger(int64(img.ColorComponents)))
+	params.Set("BitsPerComponent", core.MakeInteger(img.BitsPerComponent))
+	return params
 }
 
 // GetSamples converts the raw byte slice into samples which are stored in a uint32 bit array.
@@ -306,7 +306,7 @@ func (img *Image) Resample(targetBitsPerComponent int64) {
 	img.BitsPerComponent = int64(targetBitsPerComponent)
 }
 
-// ToJBIG2Image converts unipdf Image to the core.JBIG2Image.
+// ToJBIG2Image converts current image to the core.JBIG2Image image.
 func (img *Image) ToJBIG2Image() (*core.JBIG2Image, error) {
 	goImg, err := img.ToGoImage()
 	if err != nil {
