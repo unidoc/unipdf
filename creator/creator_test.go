@@ -57,6 +57,8 @@ const testImageFile1 = "./testdata/logo.png"
 const testImageFile2 = "./testdata/signature.png"
 const testRobotoRegularTTFFile = "./testdata/roboto/Roboto-Regular.ttf"
 const testRobotoBoldTTFFile = "./testdata/roboto/Roboto-Bold.ttf"
+const testRobotoItalicTTFFile = "./testdata/roboto/Roboto-Italic.ttf"
+const testRobotoBoldItalicTTFFile = "./testdata/roboto/Roboto-BoldItalic.ttf"
 const testWts11TTFFile = "./testdata/wts11.ttf"
 const testImageFileCCITT = "./testdata/p3_0.png"
 
@@ -2977,6 +2979,155 @@ func TestCreatorStable(t *testing.T) {
 	h2 := writePDF()
 	if h1 != h2 {
 		t.Fatal("output is not stable")
+	}
+}
+
+func TestHtmlContent(t *testing.T) {
+	c := New()
+
+	html := `
+
+<div> <p><b>Bold <i>BoldItalic</i></b> <i>Italic</i> <br/>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip <i>ex ea commodo consequat</i>.
+<b>Done!</b><br/><br/></p></div>
+<div id="text" style="background-color:#eeeeee;border-style:solid;border-width:0.5;border-color:black;padding-bottom:4;padding-left:4;padding-right:4">
+<p>Paragraph #1</p>  <p style="color:blue;text-align:center">Paragraph #2</p>
+<p style="color:green;text-align:right">Paragraph #2</p>
+</div>
+<br/><br/>
+<p>Paragraph #4</p>
+<img src="./testdata/logo.png">
+<br/>
+<table style="width:100%">
+  <tr>
+    <th align="center">Firstname</th>
+    <th align="center">Lastname</th>
+    <th align="center">Age</th>
+  </tr>
+  <tr>
+    <td>Jill</td>
+    <td>Smith</td>
+    <td>50</td>
+  </tr>
+  <tr>
+    <td>Eve</td>
+    <td>Jackson</td>
+    <td style="color:white;text-align:center;background-color:#ee3344;"><b><i>94</i></b></td>
+  </tr>
+  <tr>
+    <td>Jan</td>
+    <td>Bill</td>
+    <td style="color:red;text-align:center;background-color:#eeeeee;">
+44
+
+<table style="color:green;text-align:center"><tr><td>1</td></tr><tr><td>2</td></tr></table>
+	</td>
+  </tr>
+</table>
+`
+	// <table><tr><td>1</td></tr><tr><td>2</td></tr></table>
+
+	roboto, err := model.NewPdfFontFromTTFFile(testRobotoRegularTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoBold, err := model.NewPdfFontFromTTFFile(testRobotoBoldTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoItalic, err := model.NewPdfFontFromTTFFile(testRobotoItalicTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	robotoBoldItalic, err := model.NewPdfFontFromTTFFile(testRobotoBoldItalicTTFFile)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	hp := c.NewHTMLContent()
+	hp.SetRegularFont(roboto)
+	hp.SetBoldFont(robotoBold)
+	hp.SetItalicFont(robotoItalic)
+	hp.SetBoldItalicFont(robotoBoldItalic)
+	hp.SetImageLoadCallback(func(path string) *Image {
+		imgData, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		img, err := c.NewImageFromData(imgData)
+		if err != nil {
+			return nil
+		}
+		img.ScaleToWidth(15)
+		return img
+	})
+
+	if err := hp.Append(html); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	c.Draw(hp)
+	c.NewPage()
+
+	hp1 := c.NewHTMLContent()
+	hp1.SetRegularFont(roboto)
+	hp1.SetBoldFont(robotoBold)
+	hp1.SetItalicFont(robotoItalic)
+	hp1.SetBoldItalicFont(robotoBoldItalic)
+	hp1.AddCSS(`#text {
+		margin-left: 15;
+		margin-right: 15;
+		margin-top: -5;
+		margin-bottom: -5;
+	}
+	i { color: #666; }
+	`)
+	if err := hp1.Append(html); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	//c.Draw(hp)
+
+	ch1 := c.NewChapter("Test Chapter")
+
+	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " +
+		"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
+		"aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " +
+		"eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt " +
+		"mollit anim id est laborum.")
+	p.SetMargins(0, 0, 10, 0)
+
+	ch1.Add(p)
+	ch1.Add(hp1)
+	subchap1 := ch1.NewSubchapter("The fundamentals of the mastery of the most genious experiment of all times in modern world history. The story of the maker and the maker bot and the genius cow.")
+	subchap1.SetMargins(0, 0, 5, 0)
+
+	subchap1.Add(hp)
+
+	table := c.NewTable(2) // Mx4 table
+	// Default, equal column sizes (4x0.25)...
+	table.SetColumnWidths(0.4, 0.6)
+
+	cell := table.NewCell()
+	cell.SetContent(hp)
+	cell = table.NewCell()
+	cell.SetContent(hp1)
+
+	ch1.Add(table)
+
+	c.Draw(ch1)
+
+	outFile := tempFile("html_content.pdf")
+	if err := c.WriteToFile(outFile); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
 	}
 }
 
