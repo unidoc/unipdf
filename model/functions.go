@@ -306,10 +306,10 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	for i := 0; i < len(x); i++ {
 		xi := x[i]
 
+		// See section 7.10.2 Type 0 (Sampled) Functions (pp. 93-94 PDF32000_2008).
 		xip := math.Min(math.Max(xi, f.Domain[2*i]), f.Domain[2*i+1])
-
 		ei := interpolate(xip, f.Domain[2*i], f.Domain[2*i+1], encode[2*i], encode[2*i+1])
-		eip := math.Min(math.Max(ei, 0), float64(f.Size[i]))
+		eip := math.Min(math.Max(ei, 0), float64(f.Size[i]-1))
 		// eip represents coordinate into the data table.
 		// At this point it is real values.
 
@@ -325,7 +325,6 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 			index = f.Size[i] - 1
 		}
 		indices = append(indices, index)
-
 	}
 
 	// Calculate the index
