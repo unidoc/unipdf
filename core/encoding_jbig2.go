@@ -6,11 +6,11 @@
 package core
 
 import (
-	"bytes"
 	"image"
 	"image/color"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
@@ -55,6 +55,17 @@ const JB2ImageAutoThreshold = -1.0
 // The similarity is defined by the 'Threshold' variable (default: 0.95). The less the value is, the more components
 // matches to single class, thus the compression is better, but the result might become lossy.
 type JBIG2Encoder struct {
+	// These values are required to be set for the 'EncodeBytes' method.
+	// ColorComponents defines the number of color components for provided image.
+	ColorComponents int
+	// BitsPerComponent is the number of bits that stores per color component
+	BitsPerComponent int
+	// Width is the width of the image to encode
+	Width int
+	// Height is the height of the image to encode.
+	Height int
+
+	// Encode Page and Decode parameters
 	d *document.Document
 	// Globals are the JBIG2 global segments.
 	Globals jbig2.Globals
@@ -69,7 +80,9 @@ type JBIG2Encoder struct {
 
 // NewJBIG2Encoder creates a new JBIG2Encoder.
 func NewJBIG2Encoder() *JBIG2Encoder {
-	return &JBIG2Encoder{}
+	return &JBIG2Encoder{
+		d: document.InitEncodeDocument(false),
+	}
 }
 
 // AddPageImage adds the page with the image 'img' to the encoder context in order to encode it jbig2 document.
@@ -165,23 +178,45 @@ func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 // to encode given image.
 func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	const processName = "JBIG2Encoder.EncodeBytes"
-	if len(data) == 0 {
-		return nil, errors.Errorf(processName, "input 'data' not defined")
+	if enc.ColorComponents != 1 || enc.BitsPerComponent != 1 {
+		return nil, errors.Errorf(processName, "provided invalid input image. JBIG2 Encoder requires binary images data")
 	}
-	i, _, err := image.Decode(bytes.NewReader(data))
+	b, err := bitmap.NewWithUnpaddedData(enc.Width, enc.Height, data)
 	if err != nil {
-		return nil, errors.Wrap(err, processName, "decode input image")
+		return nil, err
 	}
-	encoded, err := enc.encodeImage(i)
-	if err != nil {
+	settings := enc.DefaultPageSettings
+	if err = settings.Validate(); err != nil {
 		return nil, errors.Wrap(err, processName, "")
 	}
-	return encoded, nil
+
+	switch settings.Compression {
+	case JB2Generic:
+		if err = enc.d.AddGenericPage(b, settings.DuplicatedLinesRemoval); err != nil {
+			return nil, errors.Wrap(err, processName, "")
+		}
+	case JB2SymbolCorrelation:
+		return nil, errors.Error(processName, "symbol correlation encoding not implemented yet")
+	case JB2SymbolRankHaus:
+		return nil, errors.Error(processName, "symbol rank haus encoding not implemented yet")
+	default:
+		return nil, errors.Error(processName, "provided invalid compression")
+	}
+	return enc.Encode()
 }
 
 // EncodeImage encodes 'img' golang image.Image into jbig2 encoded bytes document using default encoder settings.
 func (enc *JBIG2Encoder) EncodeImage(img image.Image) ([]byte, error) {
 	return enc.encodeImage(img)
+}
+
+// EncodeJBIG2Image encodes 'img' into jbig2 encoded bytes stream, using default encoder settings.
+func (enc *JBIG2Encoder) EncodeJBIG2Image(img *JBIG2Image) ([]byte, error) {
+	const processName = "core.EncodeJBIG2Image"
+	if err := enc.AddPageImage(img, &enc.DefaultPageSettings); err != nil {
+		return nil, errors.Wrap(err, processName, "")
+	}
+	return enc.Encode()
 }
 
 // Encode encodes previously prepare jbig2 document and stores it as the byte slice.
@@ -217,8 +252,24 @@ func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
 }
 
 // UpdateParams updates the parameter values of the encoder.
-// The body of this method is empty but required to implement StreamEncoder interface.
+// Implements StreamEncoder interface.
 func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
+	bpc, err := GetNumberAsInt64(params.Get("BitsPerComponent"))
+	if err == nil {
+		enc.BitsPerComponent = int(bpc)
+	}
+	width, err := GetNumberAsInt64(params.Get("Width"))
+	if err == nil {
+		enc.Width = int(width)
+	}
+	height, err := GetNumberAsInt64(params.Get("Height"))
+	if err == nil {
+		enc.Height = int(height)
+	}
+	colorComponents, err := GetNumberAsInt64(params.Get("ColorComponents"))
+	if err == nil {
+		enc.ColorComponents = int(colorComponents)
+	}
 }
 
 func (enc *JBIG2Encoder) encodeImage(i image.Image) ([]byte, error) {
@@ -262,24 +313,29 @@ func newJBIG2DecoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 			}
 		}
 	}
-
-	if decodeParams != nil {
-		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
-			var err error
-
-			globalsStream, ok := globals.(*PdfObjectStream)
-			if !ok {
-				err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
-				common.Log.Debug("ERROR: %s", err.Error())
-				return nil, err
-			}
-			encoder.Globals, err = jbig2.DecodeGlobals(globalsStream.Stream)
-			if err != nil {
-				err = errors.Wrap(err, processName, "corrupted jbig2 encoded data")
-				common.Log.Debug("ERROR: %s", err)
-				return nil, err
-			}
-		}
+	// if no decode params provided - end fast.
+	if decodeParams == nil {
+		return encoder, nil
+	}
+	// set image parameters.
+	encoder.UpdateParams(decodeParams)
+	globals := decodeParams.Get("JBIG2Globals")
+	if globals == nil {
+		return encoder, nil
+	}
+	// decode and set JBIG2 Globals.
+	var err error
+	globalsStream, ok := globals.(*PdfObjectStream)
+	if !ok {
+		err = errors.Error(processName, "jbig2.Globals stream should be an Object Stream")
+		common.Log.Debug("ERROR: %v", err)
+		return nil, err
+	}
+	encoder.Globals, err = jbig2.DecodeGlobals(globalsStream.Stream)
+	if err != nil {
+		err = errors.Wrap(err, processName, "corrupted jbig2 encoded data")
+		common.Log.Debug("ERROR: %v", err)
+		return nil, err
 	}
 	return encoder, nil
 }
@@ -348,9 +404,9 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 	var th uint8
 	if bwThreshold == JB2ImageAutoThreshold {
 		// autoThreshold using triangle method
-		gray := bitmap.ImgToGray(i)
-		histogram := bitmap.GrayImageHistogram(gray)
-		th = bitmap.AutoThresholdTriangle(histogram)
+		gray := imageutil.ImgToGray(i)
+		histogram := imageutil.GrayImageHistogram(gray)
+		th = imageutil.AutoThresholdTriangle(histogram)
 		i = gray
 	} else if bwThreshold > 1.0 || bwThreshold < 0.0 {
 		// check if bwThreshold is unknown - set to 0.0 is not in the allowed range.
@@ -358,7 +414,7 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 	} else {
 		th = uint8(255 * bwThreshold)
 	}
-	gray := bitmap.ImgToBinary(i, th)
+	gray := imageutil.ImgToBinary(i, th)
 	return bwToJBIG2Image(gray), nil
 }
 
