@@ -296,7 +296,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -331,7 +331,7 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -431,9 +431,12 @@ func (p *StyledParagraph) wrapText() error {
 				common.Log.Debug("Rune char metrics not found! %v\n", r)
 				return errors.New("glyph char metrics missing")
 			}
-
 			w := style.FontSize * metrics.Wx
-			charWidth := w + style.CharSpacing*1000.0
+
+			charWidth := w
+			if r != ' ' {
+				charWidth = w + style.CharSpacing*1000.0
+			}
 
 			if lineWidth+w > p.wrapWidth*1000.0 {
 				// Goes out of bounds: Wrap.
