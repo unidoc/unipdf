@@ -540,7 +540,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				}
 
 				// Account for the top offset the paragraph adds.
-				vertOffset = lineCapHeight - t.defaultStyle.FontSize*t.lineHeight
+				vertOffset = lineCapHeight - lineHeight
 
 				switch cell.verticalAlignment {
 				case CellVerticalAlignmentTop:

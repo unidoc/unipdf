@@ -592,13 +592,19 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Add the fonts of all chunks to the page resources.
 	var fonts [][]core.PdfObjectName
 
-	for _, line := range p.lines {
+	var yOffset float64
+	for i, line := range p.lines {
 		var fontLine []core.PdfObjectName
 
 		for _, chunk := range line {
+			style := chunk.Style
+			if i == 0 && style.FontSize > yOffset {
+				yOffset = style.FontSize
+			}
+
 			fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 
-			err := blk.resources.SetFontByName(fontName, chunk.Style.Font.ToPdfObject())
+			err := blk.resources.SetFontByName(fontName, style.Font.ToPdfObject())
 			if err != nil {
 				return ctx, err
 			}
@@ -614,7 +620,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 
-	yPos := ctx.PageHeight - ctx.Y - defaultFontSize*p.lineHeight
+	yPos := ctx.PageHeight - ctx.Y - yOffset*p.lineHeight
 	cc.Translate(ctx.X, yPos)
 
 	if p.angle != 0 {
