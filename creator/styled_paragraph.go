@@ -206,9 +206,7 @@ func (p *StyledParagraph) Width() float64 {
 // Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
 // within the container. Does not include Margins.
 func (p *StyledParagraph) Height() float64 {
-	if p.lines == nil || len(p.lines) == 0 {
-		p.wrapText()
-	}
+	p.wrapText()
 
 	var height float64
 	for _, line := range p.lines {
@@ -296,7 +294,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -331,7 +329,7 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -425,15 +423,19 @@ func (p *StyledParagraph) wrapText() error {
 				widths = nil
 				continue
 			}
+			isSpace := r == ' '
 
 			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
 				common.Log.Debug("Rune char metrics not found! %v\n", r)
 				return errors.New("glyph char metrics missing")
 			}
-
 			w := style.FontSize * metrics.Wx
-			charWidth := w + style.CharSpacing*1000.0
+
+			charWidth := w
+			if !isSpace {
+				charWidth = w + style.CharSpacing*1000.0
+			}
 
 			if lineWidth+w > p.wrapWidth*1000.0 {
 				// Goes out of bounds: Wrap.
@@ -441,10 +443,12 @@ func (p *StyledParagraph) wrapText() error {
 				// TODO: when goes outside: back up to next space,
 				// otherwise break on the character.
 				idx := -1
-				for j := len(part) - 1; j >= 0; j-- {
-					if part[j] == ' ' {
-						idx = j
-						break
+				if !isSpace {
+					for j := len(part) - 1; j >= 0; j-- {
+						if part[j] == ' ' {
+							idx = j
+							break
+						}
 					}
 				}
 
@@ -462,9 +466,15 @@ func (p *StyledParagraph) wrapText() error {
 						lineWidth += width
 					}
 				} else {
-					lineWidth = charWidth
-					part = []rune{r}
-					widths = []float64{charWidth}
+					if isSpace {
+						lineWidth = 0
+						part = []rune{}
+						widths = []float64{}
+					} else {
+						lineWidth = charWidth
+						part = []rune{r}
+						widths = []float64{charWidth}
+					}
 				}
 
 				line = append(line, &TextChunk{
@@ -589,13 +599,19 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Add the fonts of all chunks to the page resources.
 	var fonts [][]core.PdfObjectName
 
-	for _, line := range p.lines {
+	var yOffset float64
+	for i, line := range p.lines {
 		var fontLine []core.PdfObjectName
 
 		for _, chunk := range line {
+			style := chunk.Style
+			if i == 0 && style.FontSize > yOffset {
+				yOffset = style.FontSize
+			}
+
 			fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 
-			err := blk.resources.SetFontByName(fontName, chunk.Style.Font.ToPdfObject())
+			err := blk.resources.SetFontByName(fontName, style.Font.ToPdfObject())
 			if err != nil {
 				return ctx, err
 			}
@@ -611,7 +627,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 
-	yPos := ctx.PageHeight - ctx.Y - defaultFontSize*p.lineHeight
+	yPos := ctx.PageHeight - ctx.Y - yOffset*p.lineHeight
 	cc.Translate(ctx.X, yPos)
 
 	if p.angle != 0 {

@@ -68,6 +68,7 @@ func (tc *TextChunk) Wrap(width float64) ([]string, error) {
 			widths = nil
 			continue
 		}
+		isSpace := r == ' '
 
 		metrics, found := style.Font.GetRuneMetrics(r)
 		if !found {
@@ -77,21 +78,29 @@ func (tc *TextChunk) Wrap(width float64) ([]string, error) {
 			common.Log.Trace("Encoder: %#v", style.Font.Encoder())
 			return nil, errors.New("glyph char metrics missing")
 		}
-
 		w := style.FontSize * metrics.Wx
-		charWidth := w + style.CharSpacing*1000.0
+
+		charWidth := w
+		if !isSpace {
+			charWidth = w + style.CharSpacing*1000.0
+		}
+
 		if lineWidth+w > width*1000.0 {
 			// Goes out of bounds. Break on the character.
 			idx := -1
-			for i := len(line) - 1; i >= 0; i-- {
-				if line[i] == ' ' {
-					idx = i
-					break
+			if !isSpace {
+				for i := len(line) - 1; i >= 0; i-- {
+					if line[i] == ' ' {
+						idx = i
+						break
+					}
 				}
 			}
+
+			text := string(line)
 			if idx > 0 {
 				// Back up to last space.
-				lines = append(lines, strings.TrimRightFunc(string(line[0:idx+1]), unicode.IsSpace))
+				text = string(line[0 : idx+1])
 
 				// Remainder of line.
 				line = append(line[idx+1:], r)
@@ -102,11 +111,18 @@ func (tc *TextChunk) Wrap(width float64) ([]string, error) {
 					lineWidth += width
 				}
 			} else {
-				lines = append(lines, strings.TrimRightFunc(string(line), unicode.IsSpace))
-				line = []rune{r}
-				widths = []float64{charWidth}
-				lineWidth = charWidth
+				if isSpace {
+					line = []rune{}
+					widths = []float64{}
+					lineWidth = 0
+				} else {
+					line = []rune{r}
+					widths = []float64{charWidth}
+					lineWidth = charWidth
+				}
 			}
+
+			lines = append(lines, strings.TrimRightFunc(text, unicode.IsSpace))
 		} else {
 			line = append(line, r)
 			lineWidth += charWidth

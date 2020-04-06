@@ -8,6 +8,7 @@ package creator
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -860,4 +861,27 @@ func TestStyledParagraphTableVerticalAlignment(t *testing.T) {
 
 	// Write output file.
 	testWriteAndRender(t, c, "styled_paragraph_table_vertical_align.pdf")
+}
+
+func TestStyledParagraphCharacterSpaceWrapping(t *testing.T) {
+	c := New()
+	var posX, posY, width float64 = 10, 10, 120
+
+	// Draw paragraph.
+	p := c.NewStyledParagraph()
+	p.SetPos(posX, posY)
+	p.SetWidth(width)
+
+	chunk := p.Append("s o m e t e x t s o m e t e x t s o m e t e x t s o m e t e x t s o m e t e x t")
+	chunk.Style.FontSize = 8
+	chunk.Style.CharSpacing = 5
+	require.NoError(t, c.Draw(p))
+
+	// Draw border.
+	border := c.NewRectangle(posX, posY, p.Width(), p.Height())
+	border.SetBorderColor(ColorRed)
+	require.NoError(t, c.Draw(border))
+
+	// Write output file.
+	testWriteAndRender(t, c, "styled_paragraph_character_space_wrapping.pdf")
 }

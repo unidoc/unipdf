@@ -186,10 +186,7 @@ func (p *Paragraph) Width() float64 {
 // Height returns the height of the Paragraph. The height is calculated based on the input text and
 // how it is wrapped within the container. Does not include Margins.
 func (p *Paragraph) Height() float64 {
-	if p.textLines == nil || len(p.textLines) == 0 {
-		p.wrapText()
-	}
-
+	p.wrapText()
 	return float64(len(p.textLines)) * p.lineHeight * p.fontSize
 }
 
