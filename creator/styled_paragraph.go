@@ -423,6 +423,7 @@ func (p *StyledParagraph) wrapText() error {
 				widths = nil
 				continue
 			}
+			isSpace := r == ' '
 
 			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
@@ -432,7 +433,7 @@ func (p *StyledParagraph) wrapText() error {
 			w := style.FontSize * metrics.Wx
 
 			charWidth := w
-			if r != ' ' {
+			if !isSpace {
 				charWidth = w + style.CharSpacing*1000.0
 			}
 
@@ -442,10 +443,12 @@ func (p *StyledParagraph) wrapText() error {
 				// TODO: when goes outside: back up to next space,
 				// otherwise break on the character.
 				idx := -1
-				for j := len(part) - 1; j >= 0; j-- {
-					if part[j] == ' ' {
-						idx = j
-						break
+				if !isSpace {
+					for j := len(part) - 1; j >= 0; j-- {
+						if part[j] == ' ' {
+							idx = j
+							break
+						}
 					}
 				}
 
@@ -463,9 +466,15 @@ func (p *StyledParagraph) wrapText() error {
 						lineWidth += width
 					}
 				} else {
-					lineWidth = charWidth
-					part = []rune{r}
-					widths = []float64{charWidth}
+					if isSpace {
+						lineWidth = 0
+						part = []rune{}
+						widths = []float64{}
+					} else {
+						lineWidth = charWidth
+						part = []rune{r}
+						widths = []float64{charWidth}
+					}
 				}
 
 				line = append(line, &TextChunk{
