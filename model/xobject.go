@@ -606,7 +606,9 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 func (ximg *XObjectImage) getParamsDict() *core.PdfObjectDictionary {
 	params := core.MakeDict()
 	params.Set("Width", core.MakeInteger(*ximg.Width))
+	params.Set("Columns", core.MakeInteger(*ximg.Width))
 	params.Set("Height", core.MakeInteger(*ximg.Height))
+	params.Set("Rows", core.MakeInteger(*ximg.Height))
 	params.Set("ColorComponents", core.MakeInteger(int64(ximg.ColorSpace.GetNumComponents())))
 	params.Set("BitsPerComponent", core.MakeInteger(*ximg.BitsPerComponent))
 	return params
