@@ -61,12 +61,9 @@ func scaleImage(stream *core.PdfObjectStream, scale float64) error {
 		return err
 	}
 
-	// Update image encoder
+	// Update quality and predictor parameters. All other image parameters would be updated in the SetImage method of the
+	// xObjectImage
 	encoderParams := core.MakeDict()
-	encoderParams.Set("ColorComponents", core.MakeInteger(int64(i.ColorComponents)))
-	encoderParams.Set("BitsPerComponent", core.MakeInteger(i.BitsPerComponent))
-	encoderParams.Set("Width", core.MakeInteger(i.Width))
-	encoderParams.Set("Height", core.MakeInteger(i.Height))
 	encoderParams.Set("Quality", core.MakeInteger(100))
 	encoderParams.Set("Predictor", core.MakeInteger(1))
 
