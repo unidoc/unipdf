@@ -71,7 +71,7 @@ func NewEncoderFromStream(streamObj *PdfObjectStream) (StreamEncoder, error) {
 	case StreamEncodingFilterNameCCITTFax:
 		return newCCITTFaxEncoderFromStream(streamObj, nil)
 	case StreamEncodingFilterNameJBIG2:
-		return newJBIG2EncoderFromStream(streamObj, nil)
+		return newJBIG2DecoderFromStream(streamObj, nil)
 	case StreamEncodingFilterNameJPX:
 		return NewJPXEncoder(), nil
 	}

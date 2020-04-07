@@ -19,8 +19,7 @@ type Reader struct {
 	in           []byte
 	cache        byte  // unread bits are stored here
 	bits         byte  // number of unread bits in cache
-	r, w         int64 // buf read and write positions
-	err          error
+	r            int64 // buf read positions
 	lastByte     int
 	lastRuneSize int
 
@@ -162,8 +161,8 @@ func (r *Reader) ReadByte() (byte, error) {
 	return r.readUnalignedByte()
 }
 
-// ReadUnsignedInt reads the unsigned uint32 from the reader.
-func (r *Reader) ReadUnsignedInt() (uint32, error) {
+// ReadUint32 implements StreamReader interface.
+func (r *Reader) ReadUint32() (uint32, error) {
 	ub := make([]byte, 4)
 
 	_, err := r.Read(ub)

@@ -117,7 +117,7 @@ func (i *InternalNode) String() string {
 	return b.String()
 }
 
-func (i *InternalNode) append(c *Code) error {
+func (i *InternalNode) append(c *Code) (err error) {
 	// ignore unused codes
 	if c.prefixLength == 0 {
 		return nil
@@ -163,12 +163,16 @@ func (i *InternalNode) append(c *Code) error {
 			if i.one == nil {
 				i.one = newInternalNode(i.depth + 1)
 			}
-			i.one.(*InternalNode).append(c)
+			if err = i.one.(*InternalNode).append(c); err != nil {
+				return err
+			}
 		} else {
 			if i.zero == nil {
 				i.zero = newInternalNode(i.depth + 1)
 			}
-			i.zero.(*InternalNode).append(c)
+			if err = i.zero.(*InternalNode).append(c); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

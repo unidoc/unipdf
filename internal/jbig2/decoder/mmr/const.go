@@ -5,16 +5,6 @@
 
 package mmr
 
-type compression int
-
-const (
-	compFaxG3 compression = iota
-	compFaxG4
-	compMmr
-	compRle
-	compFaxG3_2d
-)
-
 type mmrCode int
 
 const (
@@ -29,15 +19,10 @@ const (
 	codeVL3
 	codeExt2D
 	codeExt1D
-	codeEol
-	codeEOF
-	codeMax mmrCode = mmrCode(12)
 )
 
 // Constants used be the MMR decoder.
 const (
-	noMask  = 0xFFFF
-	inComp  = -4
 	EOF     = -3
 	invalid = -2
 	EOL     = -1
@@ -46,9 +31,6 @@ const (
 	firstLevelTablemask  = (1 << firstLevelTableSize) - 1
 	secondLevelTableSize = 5
 	secondLevelTableMask = (1 << secondLevelTableSize) - 1
-
-	maxWhiteRun = 2500
-	maxBlackRun = 2500
 )
 
 var (

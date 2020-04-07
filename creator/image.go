@@ -158,6 +158,13 @@ func (img *Image) GetMargins() (float64, float64, float64, float64) {
 	return img.margins.left, img.margins.right, img.margins.top, img.margins.bottom
 }
 
+// ConvertToBinary converts current image data into binary (Bi-level image) format.
+// If provided image is RGB or GrayScale the function converts it into binary image
+// using histogram auto threshold method.
+func (img *Image) ConvertToBinary() error {
+	return img.img.ConvertToBinary()
+}
+
 // makeXObject makes the encoded XObject Image that will be used in the PDF.
 func (img *Image) makeXObject() error {
 	encoder := img.encoder
@@ -181,7 +188,10 @@ func (img *Image) makeXObject() error {
 func (img *Image) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	if img.xobj == nil {
 		// Build the XObject Image if not already prepared.
-		img.makeXObject()
+		if err := img.makeXObject(); err != nil {
+			return nil, ctx, err
+		}
+
 	}
 
 	var blocks []*Block

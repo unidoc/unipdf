@@ -36,7 +36,6 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
 )
 
 // Stream encoding filter names.
@@ -1982,180 +1981,6 @@ func (enc *CCITTFaxEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	return encoder.Encode(pixels), nil
 }
 
-// JBIG2Encoder is the jbig2 image encoder (WIP)/decoder.
-type JBIG2Encoder struct {
-	// Globals are the JBIG2 global segments.
-	Globals jbig2.Globals
-	// IsChocolateData defines if the data is encoded such that
-	// binary data '1' means black and '0' white.
-	// otherwise the data is called vanilla.
-	// Naming convention taken from: 'https://en.wikipedia.org/wiki/Binary_image#Interpretation'
-	IsChocolateData bool
-}
-
-// NewJBIG2Encoder returns a new instance of JBIG2Encoder.
-func NewJBIG2Encoder() *JBIG2Encoder {
-	return &JBIG2Encoder{}
-}
-
-// setChocolateData sets the chocolate data flag when the pdf stream object contains the 'Decode' object.
-// Decode object ( PDF32000:2008 7.10.2 Type 0 (Sampled) Functions).
-// NOTE: this function is a temporary helper until the samples handle Decode function.
-func (enc *JBIG2Encoder) setChocolateData(decode PdfObject) {
-	arr, ok := decode.(*PdfObjectArray)
-	if !ok {
-		common.Log.Debug("JBIG2Encoder - Decode is not an array. %T", decode)
-		return
-	}
-
-	// (PDF32000:2008 Table 39) The array should be of 2 x n size.
-	// For binary images n stands for 1bit, thus the array should contain 2 numbers.
-	vals, err := arr.GetAsFloat64Slice()
-	if err != nil {
-		common.Log.Debug("JBIG2Encoder unsupported Decode value. %s", arr.String())
-		return
-	}
-
-	if len(vals) != 2 {
-		return
-	}
-
-	first, second := int(vals[0]), int(vals[1])
-	if first == 1 && second == 0 {
-		enc.IsChocolateData = true
-	} else if first == 0 && second == 1 {
-		enc.IsChocolateData = false
-	} else {
-		common.Log.Debug("JBIG2Encoder unsupported DecodeParams->Decode value: %s", arr.String())
-	}
-}
-
-func newJBIG2EncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObjectDictionary) (*JBIG2Encoder, error) {
-	encoder := NewJBIG2Encoder()
-	encDict := streamObj.PdfObjectDictionary
-	if encDict == nil {
-		// No encoding dictionary.
-		return encoder, nil
-	}
-
-	// If decodeParams not provided, see if we can get from the stream.
-	if decodeParams == nil {
-		obj := encDict.Get("DecodeParms")
-		if obj != nil {
-			switch t := obj.(type) {
-			case *PdfObjectDictionary:
-				decodeParams = t
-				break
-			case *PdfObjectArray:
-				if t.Len() == 1 {
-					if dp, ok := GetDict(t.Get(0)); ok {
-						decodeParams = dp
-					}
-				}
-			default:
-				common.Log.Error("DecodeParams not a dictionary %#v", obj)
-				return nil, errors.New("invalid DecodeParms")
-			}
-		}
-	}
-
-	if decodeParams != nil {
-		if globals := decodeParams.Get("JBIG2Globals"); globals != nil {
-			globalsStream, ok := GetStream(globals)
-			if !ok {
-				err := errors.New("the Globals stream should be an Object Stream")
-				common.Log.Debug("ERROR: %s", err.Error())
-				return nil, err
-			}
-
-			gdoc, err := jbig2.NewDocument(globalsStream.Stream)
-			if err != nil {
-				err = fmt.Errorf("decoding global stream failed. %s", err.Error())
-				common.Log.Debug("ERROR: %s", err)
-				return nil, err
-			}
-			encoder.Globals = gdoc.GlobalSegments
-		}
-	}
-
-	// Inverse the bits on the 'Decode [1.0 0.0]' function (PDF32000:2008 7.10.2)
-	if decode := streamObj.Get("Decode"); decode != nil {
-		encoder.setChocolateData(decode)
-	}
-	return encoder, nil
-}
-
-// GetFilterName returns the name of the encoding filter.
-func (enc *JBIG2Encoder) GetFilterName() string {
-	return StreamEncodingFilterNameJBIG2
-}
-
-// MakeDecodeParams makes a new instance of an encoding dictionary based on the current encoder settings.
-func (enc *JBIG2Encoder) MakeDecodeParams() PdfObject {
-	return MakeDict()
-}
-
-// MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
-func (enc *JBIG2Encoder) MakeStreamDict() *PdfObjectDictionary {
-	dict := MakeDict()
-	if enc.IsChocolateData {
-		// /Decode[1.0 0.0] - see note in the 'setChocolateData' method.
-		dict.Set("Decode", MakeArray(MakeFloat(1.0), MakeFloat(0.0)))
-	}
-	dict.Set("Filter", MakeName(enc.GetFilterName()))
-	return dict
-}
-
-// UpdateParams updates the parameter values of the encoder.
-func (enc *JBIG2Encoder) UpdateParams(params *PdfObjectDictionary) {
-	if decode := params.Get("Decode"); decode != nil {
-		enc.setChocolateData(decode)
-	}
-}
-
-// DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
-func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	// create new JBIG2 document.
-	doc, err := jbig2.NewDocumentWithGlobals(encoded, enc.Globals)
-	if err != nil {
-		return nil, err
-	}
-
-	// the jbig2 PDF document should have only one page, where page numeration
-	// starts from '1'.
-	page, err := doc.GetPage(1)
-	if err != nil {
-		return nil, err
-	}
-	if page == nil {
-		err = errors.New("jbig2 corrupted data. Page#1 not found")
-		common.Log.Debug("ERROR: %s", err.Error())
-		return nil, err
-	}
-
-	// Get the page bitmap data.
-	bm, err := page.GetBitmap()
-	if err != nil {
-		return nil, err
-	}
-	bm.GetVanillaData()
-
-	// By default the bitmap data contains the rowstride padding.
-	// In order to get rid of the rowstride padding use the bitmap.GetUnpaddedData method.
-	return bm.GetUnpaddedData()
-}
-
-// DecodeStream decodes a JBIG2 encoded stream and returns the result as a slice of bytes.
-func (enc *JBIG2Encoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) {
-	return enc.DecodeBytes(streamObj.Stream)
-}
-
-// EncodeBytes encodes the passed slice in slice of bytes into JBIG2.
-func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
-	common.Log.Debug("Error: Attempting to use unsupported encoding %s", enc.GetFilterName())
-	return data, ErrNoJBIG2Decode
-}
-
 // JPXEncoder implements JPX encoder/decoder (dummy, for now)
 // FIXME: implement
 type JPXEncoder struct{}
@@ -2372,7 +2197,12 @@ func (enc *MultiEncoder) AddEncoder(encoder StreamEncoder) {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-	dict.Set("Filter", MakeName(enc.GetFilterName()))
+
+	names := make([]PdfObject, len(enc.encoders))
+	for i, e := range enc.encoders {
+		names[i] = MakeName(e.GetFilterName())
+	}
+	dict.Set("Filter", MakeArray(names...))
 
 	// Pass all values from children, except Filter and DecodeParms.
 	for _, encoder := range enc.encoders {

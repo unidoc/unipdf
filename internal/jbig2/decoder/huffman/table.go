@@ -7,7 +7,6 @@ package huffman
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
@@ -66,7 +65,7 @@ func bitPattern(v, l int32) string {
 	result := make([]rune, l)
 
 	for i := int32(1); i <= l; i++ {
-		temp = (v >> uint(l-i) & 1)
+		temp = v >> uint(l-i) & 1
 		if temp != 0 {
 			result[i-1] = '1'
 		} else {
@@ -113,12 +112,4 @@ func maxInt(x, y int32) int32 {
 		return x
 	}
 	return y
-}
-
-func codeTableToString(codeTable []*Code) string {
-	sb := strings.Builder{}
-	for _, c := range codeTable {
-		sb.WriteString(c.String() + "\n")
-	}
-	return sb.String()
 }

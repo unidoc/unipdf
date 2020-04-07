@@ -9,8 +9,12 @@ import (
 	"archive/zip"
 	"crypto/md5"
 	"encoding/hex"
+	"flag"
 	"fmt"
+	_ "image/gif"
 	"image/jpeg"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,8 +25,40 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2"
+	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 )
+
+// register basic image drivers - gif, jpeg, png
+
+const (
+	// EnvJBIG2Directory is the environment variable that should contain directory path
+	// to the jbig2 encoded test files.
+	EnvJBIG2Directory = "UNIDOC_JBIG2_TESTDATA"
+	// EnvImageDirectory is the environment variable that should contain directory path
+	// to the images used for the encoding processes.
+	EnvImageDirectory = "UNIDOC_JBIG2_TEST_IMAGES"
+)
+
+var (
+	// updateGoldens is the runtime flag that states that the md5 hashes
+	// for each decoded test case image should be updated.
+	updateGoldens bool
+	// keepImageFiles is the runtime flag that is used to keep the decoded jbig2 images
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'.
+	keepImageFiles bool
+	// logToFile is the flag that allows to log the trace values to the file.
+	logToFile bool
+	// keepEncodedFile is the runtime flag that is used to keep the jbig2 encoded images
+	// within the temporary directory: 'os.TempDir()/unipdf/jbig2'
+	keepEncodedFile bool
+)
+
+func init() {
+	flag.BoolVar(&updateGoldens, "jbig2-update-goldens", false, "updates the golden file hashes on the run")
+	flag.BoolVar(&keepImageFiles, "jbig2-store-images", false, "stores the images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+	flag.BoolVar(&keepEncodedFile, "jbig2-store-encoded", false, "stores the jbig2 encoded images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+	flag.BoolVar(&logToFile, "jbig2-log-to-file", false, "logs trace messages into file localized at `os.TempDir`/unipdf/jbig2 directory")
+}
 
 type extractedImage struct {
 	jbig2Data []byte
@@ -31,7 +67,7 @@ type extractedImage struct {
 	pageNo    int
 	idx       int
 	hash      string
-	globals   jbig2.Globals
+	globals   *document.Globals
 }
 
 func (e *extractedImage) fullName() string {
@@ -129,7 +165,7 @@ func extractImagesInContentStream(filename, contents string, resources *model.Pd
 			extracted := &extractedImage{
 				pdfImage:  ximg,
 				jbig2Data: xobj.Stream,
-				globals:   enc.Globals,
+				globals:   enc.Globals.ToDocumentGlobals(),
 			}
 
 			extractedImages = append(extractedImages, extracted)
@@ -193,21 +229,16 @@ func rawFileName(filename string) string {
 	return filename
 }
 
-func readFileNames(dirname string) ([]string, error) {
+func readFileNames(dirname, suffix string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".pdf") {
-			files = append(files, info.Name())
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	return files, err
-}
-
-func readJBIGZippedFiles(dirname string) ([]string, error) {
-	var files []string
-	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".zip") {
+		if !info.IsDir() {
+			if suffix != "" && !strings.HasSuffix(strings.ToLower(info.Name()), suffix) {
+				return nil
+			}
 			files = append(files, info.Name())
 		}
 		return nil

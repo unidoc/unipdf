@@ -33,7 +33,8 @@ func TestArithmeticDecoder(t *testing.T) {
 	if assert.NoError(t, err) {
 		cx := NewStats(512, 0)
 		for i := 0; i < 256; i++ {
-			a.DecodeBit(cx)
+			_, err := a.DecodeBit(cx)
+			assert.NoError(t, err)
 		}
 	}
 }
