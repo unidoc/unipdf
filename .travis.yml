@@ -30,6 +30,7 @@ script:
   - go test -v ./...
   - find $TMPDIR -maxdepth 1 -name "*.pdf" -print0 | xargs -t -n 1 -0 gs -dNOPAUSE -dBATCH -sDEVICE=nullpage -sPDFPassword=password -dPDFSTOPONERROR -dPDFSTOPONWARNING
   - go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...
+  - ./.travis/cross_build.sh
   - ./.travis/build_examples.sh
 after_success:
   - bash <(curl -s https://codecov.io/bash)
