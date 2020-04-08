@@ -508,7 +508,7 @@ func (e *Encoder) encodeInteger(proc Class, value int) error {
 	// move the data value
 	value <<= 32 - intEncRange[i].intBits
 	for j := uint8(0); j < intEncRange[i].intBits; j++ {
-		v := uint8((value & 0x80000000) >> 31)
+		v := uint8((uint32(value) & 0x80000000) >> 31)
 		if err := e.encodeBit(ctx, prev, v); err != nil {
 			return errors.Wrap(err, processName, "move data to the top of word")
 		}
@@ -533,7 +533,7 @@ func (e *Encoder) encodeIAID(symCodeLen, value int) error {
 
 	for i := 0; i < symCodeLen; i++ {
 		tVal := prev & mask
-		v := uint8((value & 0x80000000) >> 31)
+		v := uint8((uint32(value) & 0x80000000) >> 31)
 
 		if err := e.encodeBit(e.iaidCtx, tVal, v); err != nil {
 			return err
