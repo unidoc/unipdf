@@ -98,9 +98,7 @@ func (img *Image) ConvertToBinary() error {
 func (img *Image) GetParamsDict() *core.PdfObjectDictionary {
 	params := core.MakeDict()
 	params.Set("Width", core.MakeInteger(img.Width))
-	params.Set("Columns", core.MakeInteger(img.Width))
 	params.Set("Height", core.MakeInteger(img.Height))
-	params.Set("Rows", core.MakeInteger(img.Height))
 	params.Set("ColorComponents", core.MakeInteger(int64(img.ColorComponents)))
 	params.Set("BitsPerComponent", core.MakeInteger(img.BitsPerComponent))
 	return params

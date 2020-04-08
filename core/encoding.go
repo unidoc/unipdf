@@ -1843,6 +1843,8 @@ func (enc *CCITTFaxEncoder) UpdateParams(params *PdfObjectDictionary) {
 
 	if columns, err := GetNumberAsInt64(params.Get("Columns")); err == nil {
 		enc.Columns = int(columns)
+	} else if columns, err = GetNumberAsInt64(params.Get("Width")); err == nil {
+		enc.Columns = int(columns)
 	}
 
 	if blackIs1, err := GetNumberAsInt64(params.Get("BlackIs1")); err == nil {
@@ -1877,6 +1879,8 @@ func (enc *CCITTFaxEncoder) UpdateParams(params *PdfObjectDictionary) {
 	}
 
 	if rows, err := GetNumberAsInt64(params.Get("Rows")); err == nil {
+		enc.Rows = int(rows)
+	} else if rows, err = GetNumberAsInt64(params.Get("Height")); err == nil {
 		enc.Rows = int(rows)
 	}
 
