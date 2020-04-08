@@ -62,7 +62,7 @@ EOF
 
 # Build file.
 for os in "linux" "darwin" "windows"; do
-    for arch in "amd64"; do
+    for arch in "386" "amd64"; do
         build $os $arch
     done
 done
