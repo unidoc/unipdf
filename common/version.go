@@ -12,11 +12,11 @@ import (
 
 const releaseYear = 2020
 const releaseMonth = 4
-const releaseDay = 7
-const releaseHour = 23
-const releaseMin = 40
+const releaseDay = 8
+const releaseHour = 13
+const releaseMin = 2
 
 // Version holds version information, when bumping this make sure to bump the released at stamp also.
-const Version = "3.6.0"
+const Version = "3.6.1"
 
 var ReleasedAt = time.Date(releaseYear, releaseMonth, releaseDay, releaseHour, releaseMin, 0, 0, time.UTC)
