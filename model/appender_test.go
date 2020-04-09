@@ -920,7 +920,8 @@ func validateFile(t *testing.T, fileName string) {
 
 	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
 	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
-	handlers := []model.SignatureHandler{handler, handler2}
+	handler3, _ := sighandler.NewDocTimeStamp("", 0)
+	handlers := []model.SignatureHandler{handler, handler2, handler3}
 
 	res, err := reader.ValidateSignatures(handlers)
 	if err != nil {
@@ -1576,4 +1577,62 @@ func TestAppenderAttemptMultiWrite(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Second invokation of appender.Write should yield an error")
 	}
+}
+
+func TestAppenderTimestampSign(t *testing.T) {
+
+	f1, err := os.Open(testPdfFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f1.Close()
+	pdf1, err := model.NewPdfReader(f1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err := model.NewPdfAppender(pdf1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", 8192)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature field and appearance.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test Appender")
+	signature.SetReason("TestAppenderSignPage4")
+	signature.SetDate(time.Now(), "")
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	sigField := model.NewPdfFieldSignature(signature)
+	sigField.T = core.MakeString("Signature1")
+	sigField.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
+
+	if err = appender.Sign(1, sigField); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = appender.WriteToFile(tempFile("appender-sign-timestamp.pdf"))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	validateFile(t, tempFile("appender-sign-timestamp.pdf"))
 }
