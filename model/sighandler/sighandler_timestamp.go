@@ -12,8 +12,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/digitorus/timestamp"
-	"github.com/gunnsth/pkcs7"
+	"github.com/unidoc/pkcs7"
+	"github.com/unidoc/timestamp"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )

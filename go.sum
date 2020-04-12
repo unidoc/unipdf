@@ -8,10 +8,6 @@ github.com/boombuler/barcode v1.0.0 h1:s1TvRnXwL2xJRaccrdcBQMZxq6X7DvsMogtmJeHDd
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/digitorus/pkcs7 v0.0.0-20200320092839-808436b6f6d1 h1:V1cgDSp4Kq4eMCfazhWyqi2Js7BijkgPnp4Yej9CD9I=
-github.com/digitorus/pkcs7 v0.0.0-20200320092839-808436b6f6d1/go.mod h1:p2IZ9yq2kEKGFr3rfpYxaaOzB0VdLbF8VkZReEIpJmU=
-github.com/digitorus/timestamp v0.0.0-20200327110745-e9e21c1c39c6 h1:xhOyERz1wEvl+bqq73IlALoHTw8dpK1Tr4c+0JQWOfk=
-github.com/digitorus/timestamp v0.0.0-20200327110745-e9e21c1c39c6/go.mod h1:IKw2TcDeMaZrNjpdq7gPc7I+a21+Sn34bUqWrTc70Hs=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 h1:DACJavvAHhabrF08vX0COfcOBJRhZ8lUbR+ZWIs0Y5g=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/gunnsth/pkcs7 v0.0.0-20181213175627-3cffc6fbfe83 h1:saj5dTV7eQ1wFg/gVZr1SfbkOmg8CYO9R8frHgQiyR4=
@@ -21,6 +17,10 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df h1:1RV3lxQ6L6xGFNhngpP9iMjJPSwvH3p17JNbK9u5274=
+github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df/go.mod h1:UEzOZUEpJfDpywVJMUT8QiugqEZC29pDq7kdIZhWCr8=
+github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a h1:RLtvUhe4DsUDl66m7MJ8OqBjq8jpWBXPK6/RKtqeTkc=
+github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a/go.mod h1:j+qMWZVpZFTvDey3zxUkSgPJZEX33tDgU/QIA0IzCUw=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5 h1:58fnuSXlxZmFdJyvtTFVmVhcMLU6v5fEb/ok4wyqtNU=
 golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
