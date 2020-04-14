@@ -356,7 +356,7 @@ func (t *ttfParser) ParseHmtx() error {
 		t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
 		t.Skip(2) // lsb
 	}
-	if t.numberOfHMetrics < t.numGlyphs {
+	if t.numberOfHMetrics < t.numGlyphs && t.numberOfHMetrics > 0 {
 		lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
 		for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
 			t.rec.Widths = append(t.rec.Widths, lastWidth)
