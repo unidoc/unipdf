@@ -21,6 +21,11 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+var (
+	errType  = errors.New("type check error")
+	errRange = errors.New("range check error")
+)
+
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // It takes into account character encodings in the PDF file, which are decoded by
 // CharcodeBytesToUnicode.
@@ -291,18 +296,28 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				to.setHorizScaling(y)
-
 			case "Do":
 				// Handle XObjects by recursing through form XObjects.
-				name := *op.Params[0].(*core.PdfObjectName)
-				_, xtype := resources.GetXObjectByName(name)
+				if len(op.Params) == 0 {
+					common.Log.Debug("ERROR: expected XObject name operand for Do operator. Got %+v.", op.Params)
+					return errRange
+				}
+
+				// Get XObject name.
+				name, ok := core.GetName(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: invalid Do operator XObject name operand: %+v.", op.Params[0])
+					return errType
+				}
+
+				_, xtype := resources.GetXObjectByName(*name)
 				if xtype != model.XObjectTypeForm {
 					break
 				}
 				// Only process each form once.
-				formResult, ok := e.formResults[string(name)]
+				formResult, ok := e.formResults[name.String()]
 				if !ok {
-					xform, err := resources.GetXObjectFormByName(name)
+					xform, err := resources.GetXObjectFormByName(*name)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
 						return err
@@ -323,7 +338,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 						return err
 					}
 					formResult = textResult{*tList, numChars, numMisses}
-					e.formResults[string(name)] = formResult
+					e.formResults[name.String()] = formResult
 				}
 
 				pageText.marks = append(pageText.marks, formResult.pageText.marks...)

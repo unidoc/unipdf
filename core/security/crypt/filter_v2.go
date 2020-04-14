@@ -21,7 +21,8 @@ func init() {
 func NewFilterV2(length int) Filter {
 	f, err := newFilterV2(FilterDict{Length: length})
 	if err != nil {
-		panic(err)
+		common.Log.Error("ERROR: could not create RC4 V2 crypt filter: %v", err)
+		return filterV2{length: length}
 	}
 	return f
 }

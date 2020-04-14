@@ -17,18 +17,21 @@ import (
 	"hash"
 	"io"
 	"math"
+
+	"github.com/unidoc/unipdf/v3/common"
 )
 
 var _ StdHandler = stdHandlerR6{}
 
 // newAESCipher creates a new AES block cipher.
-// The size of a buffer should be exactly 16, 24 or 32 bytes, in other cases the function will panic.
-func newAESCipher(b []byte) cipher.Block {
+// The size of a buffer should be exactly 16, 24 or 32 bytes.
+func newAESCipher(b []byte) (cipher.Block, error) {
 	c, err := aes.NewCipher(b)
 	if err != nil {
-		panic(err)
+		common.Log.Error("ERROR: could not create AES cipher: %v", err)
+		return nil, err
 	}
-	return c
+	return c, nil
 }
 
 // NewHandlerR6 creates a new standard security handler for R=5 and R=6.
@@ -112,7 +115,10 @@ func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permission
 	ekey = ekey[:32]
 
 	// intermediate key
-	ikey := sh.alg2b(d.R, data, pass, ukey)
+	ikey, err := sh.alg2b(d.R, data, pass, ukey)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	ac, err := aes.NewCipher(ikey[:32])
 	if err != nil {
@@ -138,10 +144,10 @@ func (sh stdHandlerR6) alg2a(d *StdEncryptDict, pass []byte) ([]byte, Permission
 // alg2bR5 computes a hash for R=5, used in a deprecated extension.
 // It's used the same way as a hash described in Algorithm 2.B, but it doesn't use the original password
 // and the user key to calculate the hash.
-func alg2bR5(data []byte) []byte {
+func alg2bR5(data []byte) ([]byte, error) {
 	h := sha256.New()
 	h.Write(data)
-	return h.Sum(nil)
+	return h.Sum(nil), nil
 }
 
 // repeat repeats first n bytes of buf until the end of the buffer.
@@ -156,7 +162,7 @@ func repeat(buf []byte, n int) {
 
 // alg2b computes a hash for R=6.
 // 7.6.4.3.3 Algorithm 2.B (page 83)
-func alg2b(data, pwd, userKey []byte) []byte {
+func alg2b(data, pwd, userKey []byte) ([]byte, error) {
 	var (
 		s256, s384, s512 hash.Hash
 	)
@@ -169,7 +175,7 @@ func alg2b(data, pwd, userKey []byte) []byte {
 
 	buf := make([]byte, 64*(127+64+48))
 
-	round := func(rnd int) (E []byte) {
+	round := func(rnd int) ([]byte, error) {
 		// step a: repeat pass+K 64 times
 		n := len(pwd) + len(K) + len(userKey)
 		part := buf[:n]
@@ -177,16 +183,21 @@ func alg2b(data, pwd, userKey []byte) []byte {
 		i += copy(part[i:], K[:])
 		i += copy(part[i:], userKey)
 		if i != n {
-			panic("wrong size")
+			common.Log.Error("ERROR: unexpected round input size.")
+			return nil, errors.New("wrong size")
 		}
 		K1 := buf[:n*64]
 		repeat(K1, n)
 
 		// step b: encrypt K1 with AES-128 CBC
-		ac := newAESCipher(K[0:16])
+		ac, err := newAESCipher(K[0:16])
+		if err != nil {
+			return nil, err
+		}
+
 		cbc := cipher.NewCBCEncrypter(ac, K[16:32])
 		cbc.CryptBlocks(K1, K1)
-		E = K1
+		E := K1
 
 		// step c: use 16 bytes of E as big-endian int, select the next hash
 		b := 0
@@ -214,11 +225,15 @@ func alg2b(data, pwd, userKey []byte) []byte {
 		h.Write(E)
 		K = h.Sum(hbuf[:0])
 
-		return E
+		return E, nil
 	}
 
 	for i := 0; ; {
-		E := round(i)
+		E, err := round(i)
+		if err != nil {
+			return nil, err
+		}
+
 		b := uint8(E[len(E)-1])
 		// from the spec, it appears that i should be incremented after
 		// the test, but that doesn't match what Adobe does
@@ -227,11 +242,11 @@ func alg2b(data, pwd, userKey []byte) []byte {
 			break
 		}
 	}
-	return K[:32]
+	return K[:32], nil
 }
 
 // alg2b computes a hash for R=5 and R=6.
-func (sh stdHandlerR6) alg2b(R int, data, pwd, userKey []byte) []byte {
+func (sh stdHandlerR6) alg2b(R int, data, pwd, userKey []byte) ([]byte, error) {
 	if R == 5 {
 		return alg2bR5(data)
 	}
@@ -256,7 +271,10 @@ func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error 
 	i := copy(str, upass)
 	i += copy(str[i:], valSalt)
 
-	h := sh.alg2b(d.R, str, upass, nil)
+	h, err := sh.alg2b(d.R, str, upass, nil)
+	if err != nil {
+		return err
+	}
 
 	U := make([]byte, len(h)+len(valSalt)+len(keySalt))
 	i = copy(U, h[:32])
@@ -271,9 +289,15 @@ func (sh stdHandlerR6) alg8(d *StdEncryptDict, ekey []byte, upass []byte) error 
 	i = len(upass)
 	i += copy(str[i:], keySalt)
 
-	h = sh.alg2b(d.R, str, upass, nil)
+	h, err = sh.alg2b(d.R, str, upass, nil)
+	if err != nil {
+		return err
+	}
 
-	ac := newAESCipher(h[:32])
+	ac, err := newAESCipher(h[:32])
+	if err != nil {
+		return err
+	}
 
 	iv := make([]byte, aes.BlockSize)
 	cbc := cipher.NewCBCEncrypter(ac, iv)
@@ -307,7 +331,10 @@ func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error 
 	i += copy(str[i:], valSalt)
 	i += copy(str[i:], userKey)
 
-	h := sh.alg2b(d.R, str, opass, userKey)
+	h, err := sh.alg2b(d.R, str, opass, userKey)
+	if err != nil {
+		return err
+	}
 
 	O := make([]byte, len(h)+len(valSalt)+len(keySalt))
 	i = copy(O, h[:32])
@@ -323,9 +350,15 @@ func (sh stdHandlerR6) alg9(d *StdEncryptDict, ekey []byte, opass []byte) error 
 	i += copy(str[i:], keySalt)
 	// i += len(userKey)
 
-	h = sh.alg2b(d.R, str, opass, userKey)
+	h, err = sh.alg2b(d.R, str, opass, userKey)
+	if err != nil {
+		return err
+	}
 
-	ac := newAESCipher(h[:32])
+	ac, err := newAESCipher(h[:32])
+	if err != nil {
+		return err
+	}
 
 	iv := make([]byte, aes.BlockSize)
 	cbc := cipher.NewCBCEncrypter(ac, iv)
@@ -368,7 +401,10 @@ func (sh stdHandlerR6) alg10(d *StdEncryptDict, ekey []byte) error {
 	}
 
 	// step f: encrypt permissions
-	ac := newAESCipher(ekey[:32])
+	ac, err := newAESCipher(ekey[:32])
+	if err != nil {
+		return err
+	}
 
 	ecb := newECBEncrypter(ac)
 	ecb.CryptBlocks(Perms, Perms)
@@ -386,7 +422,11 @@ func (sh stdHandlerR6) alg11(d *StdEncryptDict, upass []byte) ([]byte, error) {
 	i := copy(str, upass)
 	i += copy(str[i:], d.U[32:40]) // user Validation Salt
 
-	h := sh.alg2b(d.R, str, upass, nil)
+	h, err := sh.alg2b(d.R, str, upass, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	h = h[:32]
 	if !bytes.Equal(h, d.U[:32]) {
 		return nil, nil
@@ -408,7 +448,11 @@ func (sh stdHandlerR6) alg12(d *StdEncryptDict, opass []byte) ([]byte, error) {
 	i += copy(str[i:], d.O[32:40]) // owner Validation Salt
 	i += copy(str[i:], d.U[0:48])
 
-	h := sh.alg2b(d.R, str, opass, d.U[0:48])
+	h, err := sh.alg2b(d.R, str, opass, d.U[0:48])
+	if err != nil {
+		return nil, err
+	}
+
 	h = h[:32]
 	if !bytes.Equal(h, d.O[:32]) {
 		return nil, nil
