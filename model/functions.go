@@ -341,7 +341,13 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	// Output values.
 	var outputs []float64
 	for j := 0; j < f.NumOutputs; j++ {
-		rj := f.data[m+j]
+		rjIdx := m + j
+		if rjIdx >= len(f.data) {
+			common.Log.Debug("WARN: not enough input samples to determine output values. Output may be incorrect.")
+			continue
+		}
+
+		rj := f.data[rjIdx]
 		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(f.BitsPerSample)), decode[2*j], decode[2*j+1])
 		yj := math.Min(math.Max(rjp, f.Range[2*j]), f.Range[2*j+1])
 		outputs = append(outputs, yj)
