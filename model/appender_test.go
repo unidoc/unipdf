@@ -7,6 +7,7 @@ package model_test
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -1580,7 +1581,6 @@ func TestAppenderAttemptMultiWrite(t *testing.T) {
 }
 
 func TestAppenderTimestampSign(t *testing.T) {
-
 	f1, err := os.Open(testPdfFile1)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -1599,7 +1599,7 @@ func TestAppenderTimestampSign(t *testing.T) {
 		return
 	}
 
-	handler, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", 8192)
+	handler, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1782,7 +1782,7 @@ func TestSignatureAppearanceWithTimestamp(t *testing.T) {
 		return
 	}
 
-	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", 8192)
+	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
