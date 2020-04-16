@@ -191,7 +191,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				to.nextLine()
 				return to.showText(charcodes)
 			case `"`: // Set word and character spacing, move to next line, and show text.
-				if ok, err := to.checkOp(op, 1, true); !ok {
+				if ok, err := to.checkOp(op, 3, true); !ok {
 					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
 				}

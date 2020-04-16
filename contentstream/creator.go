@@ -825,7 +825,7 @@ func (cc *ContentCreator) Add_quote(textstr core.PdfObjectString) *ContentCreato
 	return cc
 }
 
-// Add_quotes appends "''" operand to the content stream:
+// Add_quotes appends `"` operand to the content stream:
 // Move to next line and show a string, using `aw` and `ac` as word
 // and character spacing respectively.
 //
@@ -833,7 +833,7 @@ func (cc *ContentCreator) Add_quote(textstr core.PdfObjectString) *ContentCreato
 // Table 209 (pp. 258-259 PDF32000_2008).
 func (cc *ContentCreator) Add_quotes(textstr core.PdfObjectString, aw, ac float64) *ContentCreator {
 	op := ContentStreamOperation{}
-	op.Operand = "''"
+	op.Operand = `"`
 	op.Params = makeParamsFromFloats([]float64{aw, ac})
 	op.Params = append(op.Params, makeParamsFromStrings([]core.PdfObjectString{textstr})...)
 	cc.operands = append(cc.operands, &op)
