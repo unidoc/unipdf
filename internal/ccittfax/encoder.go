@@ -412,6 +412,11 @@ func seekChangingElem(row []byte, currElem int) int {
 	if currElem >= len(row) {
 		return currElem
 	}
+	if currElem < -1 {
+		// A current element of -1 means white color starting prior to first element (0).
+		// Should not be able to go any further left than that.
+		currElem = -1
+	}
 
 	var color byte
 	if currElem > -1 {
