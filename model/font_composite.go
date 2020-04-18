@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"sort"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -575,12 +576,13 @@ func parseCIDFontWidthsArray(w core.PdfObject) (map[textencoding.CharCode]float6
 // TODO: May be extended in the future to support a larger variety of CMaps and vertical fonts.
 // NOTE: For simple fonts, use NewPdfFontFromTTFFile.
 func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
-	ttfBytes, err := ioutil.ReadFile(filePath)
+	f, err := os.Open(filePath)
 	if err != nil {
-		common.Log.Debug("ERROR: while reading ttf font: %v", err)
+		common.Log.Debug("ERROR: opening file: %v", err)
 		return nil, err
 	}
-	return NewCompositePdfFontFromTTF(bytes.NewReader(ttfBytes))
+	defer f.Close()
+	return NewCompositePdfFontFromTTF(f)
 }
 
 // NewCompositePdfFontFromTTF loads a composite TTF font. Composite fonts can
@@ -589,8 +591,14 @@ func NewCompositePdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 // It is represented by a Type0 Font with an underlying CIDFontType2 and an Identity-H encoding map.
 // TODO: May be extended in the future to support a larger variety of CMaps and vertical fonts.
 // NOTE: For simple fonts, use NewPdfFontFromTTF.
-func NewCompositePdfFontFromTTF(rs io.ReadSeeker) (*PdfFont, error) {
-	ttf, err := fonts.TtfParse(rs)
+func NewCompositePdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
+	ttfBytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		common.Log.Debug("ERROR: Unable to read font contents: %v", err)
+		return nil, err
+	}
+
+	ttf, err := fonts.TtfParse(bytes.NewReader(ttfBytes))
 	if err != nil {
 		common.Log.Debug("ERROR: while loading ttf font: %v", err)
 		return nil, err
