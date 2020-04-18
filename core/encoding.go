@@ -1144,6 +1144,7 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 
 	// Draw the data on the image..
 	if enc.BitsPerComponent < 8 {
+		// TODO(kucjac) enable bits per component < 8
 		enc.BitsPerComponent = 8
 	}
 

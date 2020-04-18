@@ -308,11 +308,11 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	data := make([]byte, 3*img.Width*img.Height)
 	for y := 0; y < int(img.Height); y++ {
 		for x := 0; x < int(img.Width); x++ {
-			color, err := img.ColorAt(x, y)
+			c, err := img.ColorAt(x, y)
 			if err != nil {
 				return img, err
 			}
-			r, g, b, _ := color.RGBA()
+			r, g, b, _ := c.RGBA()
 
 			idx := (y*int(img.Width) + x) * 3
 			data[idx], data[idx+1], data[idx+2] = uint8(r>>8), uint8(g>>8), uint8(b>>8)
@@ -324,6 +324,7 @@ func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
 	rgbImage.ColorComponents = 3
 	rgbImage.Data = data
 	rgbImage.decode = nil
+	rgbImage.setBytesPerLine()
 
 	common.Log.Trace("DeviceGray -> RGB")
 	common.Log.Trace("samples: %v", img.Data)
@@ -497,8 +498,9 @@ func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 		val := uint32(grayValue * maxVal)
 		graySamples = append(graySamples, val)
 	}
-	grayImage.SetSamples(graySamples)
 	grayImage.ColorComponents = 1
+	grayImage.setBytesPerLine()
+	grayImage.SetSamples(graySamples)
 
 	return grayImage, nil
 }
@@ -702,6 +704,7 @@ func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
 
 	rgbImage.BitsPerComponent = 8
 	rgbImage.ColorComponents = 3
+	rgbImage.setBytesPerLine()
 	rgbImage.Data = data
 
 	return rgbImage, nil
@@ -983,8 +986,9 @@ func (cs *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
 
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
-	rgbImage.SetSamples(rgbSamples)
 	rgbImage.ColorComponents = 3
+	rgbImage.setBytesPerLine()
+	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
 }
@@ -1332,8 +1336,9 @@ func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
-	rgbImage.SetSamples(rgbSamples)
 	rgbImage.ColorComponents = 3
+	rgbImage.setBytesPerLine()
+	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
 }
@@ -1718,8 +1723,9 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
-	rgbImage.SetSamples(rgbSamples)
 	rgbImage.ColorComponents = 3
+	rgbImage.setBytesPerLine()
+	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
 }
@@ -2394,15 +2400,12 @@ func (cs *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, err
 
 // ImageToRGB convert an indexed image to RGB.
 func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
-	//baseImage := img
 	// Make a new representation of the image to be converted with the base colorspace.
 	baseImage := Image{}
 	baseImage.Height = img.Height
 	baseImage.Width = img.Width
 	baseImage.alphaData = img.alphaData
-	// TODO(peterwilliams97): Add support for other BitsPerComponent values.
-	// See https://github.com/unidoc/unipdf/issues/260
-	baseImage.BitsPerComponent = 8
+	baseImage.BitsPerComponent = img.BitsPerComponent
 	baseImage.hasAlpha = img.hasAlpha
 	baseImage.ColorComponents = cs.Base.GetNumComponents()
 
@@ -2437,8 +2440,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 			baseSamples = append(baseSamples, uint32(val))
 		}
 	}
-	baseImage.SetSamples(baseSamples)
 	baseImage.ColorComponents = N
+	baseImage.setBytesPerLine()
+	baseImage.SetSamples(baseSamples)
 
 	common.Log.Trace("Input samples: %d", samples)
 	common.Log.Trace("-> Output samples: %d", baseSamples)
@@ -2663,8 +2667,9 @@ func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 		}
 	}
 	common.Log.Trace("Samples out: %d", len(altSamples))
-	altImage.SetSamples(altSamples)
 	altImage.ColorComponents = cs.AlternateSpace.GetNumComponents()
+	altImage.setBytesPerLine()
+	altImage.SetSamples(altSamples)
 
 	// Set the image's decode parameters for interpretation in the alternative CS.
 	altImage.decode = altDecode
@@ -2879,6 +2884,7 @@ func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 			altSamples = append(altSamples, altComponent)
 		}
 	}
+	altImage.setBytesPerLine()
 	altImage.SetSamples(altSamples)
 
 	// Convert to RGB via the alternate colorspace.

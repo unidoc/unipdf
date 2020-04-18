@@ -126,8 +126,7 @@ func (enc *JBIG2Encoder) AddPageImage(img *JBIG2Image, settings *JBIG2EncoderSet
 
 // DecodeBytes decodes a slice of JBIG2 encoded bytes and returns the results.
 func (enc *JBIG2Encoder) DecodeBytes(encoded []byte) ([]byte, error) {
-	parameters := decoder.Parameters{UnpaddedData: true}
-	return jbig2.DecodeBytes(encoded, parameters, enc.Globals)
+	return jbig2.DecodeBytes(encoded, decoder.Parameters{}, enc.Globals)
 }
 
 // DecodeGlobals decodes 'encoded' byte stream and returns their Globally defined segments ('Globals').
@@ -140,9 +139,8 @@ func (enc *JBIG2Encoder) DecodeGlobals(encoded []byte) (jbig2.Globals, error) {
 // images. The images order corresponds to the page number.
 func (enc *JBIG2Encoder) DecodeImages(encoded []byte) ([]image.Image, error) {
 	const processName = "JBIG2Encoder.DecodeImages"
-	parameters := decoder.Parameters{UnpaddedData: true}
 	// create decoded document.
-	d, err := decoder.Decode(encoded, parameters, enc.Globals.ToDocumentGlobals())
+	d, err := decoder.Decode(encoded, decoder.Parameters{}, enc.Globals.ToDocumentGlobals())
 	if err != nil {
 		return nil, errors.Wrap(err, processName, "")
 	}
@@ -181,9 +179,19 @@ func (enc *JBIG2Encoder) EncodeBytes(data []byte) ([]byte, error) {
 	if enc.ColorComponents != 1 || enc.BitsPerComponent != 1 {
 		return nil, errors.Errorf(processName, "provided invalid input image. JBIG2 Encoder requires binary images data")
 	}
-	b, err := bitmap.NewWithUnpaddedData(enc.Width, enc.Height, data)
-	if err != nil {
-		return nil, err
+	var (
+		b   *bitmap.Bitmap
+		err error
+	)
+	// check if provided input data contains padding at each row
+	isUnpadded := (enc.Width * enc.Height) == len(data)
+	if isUnpadded {
+		b, err = bitmap.NewWithUnpaddedData(enc.Width, enc.Height, data)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		b, err = bitmap.NewWithData(enc.Width, enc.Height, data)
 	}
 	settings := enc.DefaultPageSettings
 	if err = settings.Validate(); err != nil {
