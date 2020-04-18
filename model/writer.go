@@ -135,13 +135,18 @@ type PdfWriter struct {
 	pages       *core.PdfIndirectObject
 	objects     []core.PdfObject            // Objects to write.
 	objectsMap  map[core.PdfObject]struct{} // Quick lookup table.
-	writer      *bufio.Writer
-	writePos    int64 // Represents the current position within output file.
 	outlines    []*core.PdfIndirectObject
 	outlineTree *PdfOutlineTreeNode
 	catalog     *core.PdfObjectDictionary
 	fields      []core.PdfObject
 	infoObj     *core.PdfIndirectObject
+
+	// `writer` is the buffered writer for writing, `writePos` tracks the current writing
+	// position, needed to generate cross-reference tables, `werr` is the first error
+	// encountered during writing. All writes after the first error become no-ops.
+	writer   *bufio.Writer
+	writePos int64 // Represents the current position within output file.
+	werr     error
 
 	// Encryption
 	crypter     *core.PdfCrypt
@@ -789,7 +794,7 @@ func (w *PdfWriter) writeObject(num int, obj core.PdfObject) {
 		return
 	}
 
-	w.writer.WriteString(obj.WriteString())
+	w.writeString(obj.WriteString())
 }
 
 // Update all the object numbers prior to writing.
@@ -906,23 +911,23 @@ func (w *PdfWriter) Encrypt(userPass, ownerPass []byte, options *EncryptOptions)
 }
 
 // Wrapper function to handle writing out string.
-func (w *PdfWriter) writeString(s string) error {
-	n, err := w.writer.WriteString(s)
-	if err != nil {
-		return err
+func (w *PdfWriter) writeString(s string) {
+	if w.werr != nil {
+		return
 	}
+	n, err := w.writer.WriteString(s)
 	w.writePos += int64(n)
-	return nil
+	w.werr = err
 }
 
 // Wrapper function to handle writing out bytes.
-func (w *PdfWriter) writeBytes(bb []byte) error {
-	n, err := w.writer.Write(bb)
-	if err != nil {
-		return err
+func (w *PdfWriter) writeBytes(bb []byte) {
+	if w.werr != nil {
+		return
 	}
+	n, err := w.writer.Write(bb)
 	w.writePos += int64(n)
-	return nil
+	w.werr = err
 }
 
 // Write writes out the PDF.
@@ -1220,7 +1225,9 @@ func (w *PdfWriter) Write(writer io.Writer) error {
 	w.writeString(outStr)
 	w.writeString("%%EOF\n")
 
-	w.writer.Flush()
+	if w.werr == nil {
+		w.werr = w.writer.Flush()
+	}
 
-	return nil
+	return w.werr
 }

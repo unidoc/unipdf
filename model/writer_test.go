@@ -7,6 +7,7 @@ package model
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"testing"
 
@@ -103,4 +104,26 @@ func TestReadWriteAnnotations(t *testing.T) {
 
 		checkAnnots(reader, false)
 	}
+}
+
+// erroringWriter errors on write for testing.
+type erroringWriter struct{}
+
+// Write returns error on writing.
+func (w *erroringWriter) Write(_ []byte) (int, error) {
+	return 0, errors.New("error")
+}
+
+// TestWriterErrorHandling tests error handling of the writer.
+// https://github.com/unidoc/unipdf/issues/316
+func TestWriterErrorHandling(t *testing.T) {
+	w := NewPdfWriter()
+	page := NewPdfPage()
+	err := w.AddPage(page)
+	require.NoError(t, err)
+
+	// Errors in writing should be passed up.
+	out := erroringWriter{}
+	err = w.Write(&out)
+	require.Error(t, err)
 }
