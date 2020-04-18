@@ -385,6 +385,7 @@ func (font *pdfFontSimple) ToPdfObject() core.PdfObject {
 // NewPdfFontFromTTFFile loads a TTF font file and returns a PdfFont type
 // that can be used in text styling functions.
 // Uses a WinAnsiTextEncoder and loads only character codes 32-255.
+// NOTE: For composite fonts such as used in symbolic languages, use NewCompositePdfFontFromTTFFile.
 func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -399,6 +400,7 @@ func NewPdfFontFromTTFFile(filePath string) (*PdfFont, error) {
 // NewPdfFontFromTTF loads a TTF font and returns a PdfFont type that can be
 // used in text styling functions.
 // Uses a WinAnsiTextEncoder and loads only character codes 32-255.
+// NOTE: For composite fonts such as used in symbolic languages, use NewCompositePdfFontFromTTF.
 func NewPdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
 	const minCode = textencoding.CharCode(32)
 	const maxCode = textencoding.CharCode(255)
