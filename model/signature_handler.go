@@ -49,6 +49,7 @@ type SignatureValidationResult struct {
 	// TODO: Also add flags to indicate whether the signature covers the entire file, or the entire portion of
 	// a revision (if incremental updates used).
 
+	// GeneralizedTime is the time at which the time-stamp token has been created by the TSA (RFC 3161).
 	GeneralizedTime time.Time
 }
 
