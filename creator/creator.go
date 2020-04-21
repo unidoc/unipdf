@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -62,6 +63,10 @@ type Creator struct {
 	// Forms.
 	acroForm *model.PdfAcroForm
 
+	// Page labels.
+	pageLabels core.PdfObject
+
+	// Optimizer.
 	optimizer model.Optimizer
 
 	// Default fonts used by all components instantiated through the creator.
@@ -80,6 +85,14 @@ func (c *Creator) SetForms(form *model.PdfAcroForm) error {
 // generation of outlines done by the creator for the relevant components.
 func (c *Creator) SetOutlineTree(outlineTree *model.PdfOutlineTreeNode) {
 	c.externalOutline = outlineTree
+}
+
+// SetPageLabels adds the specified page labels to the PDF file generated
+// by the creator. See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+// NOTE: for existing PDF files, the page label ranges object can be obtained
+// using the model.PDFReader's GetPageLabels method.
+func (c *Creator) SetPageLabels(pageLabels core.PdfObject) {
+	c.pageLabels = pageLabels
 }
 
 // FrontpageFunctionArgs holds the input arguments to a front page drawing function.
@@ -645,6 +658,11 @@ func (c *Creator) Write(ws io.Writer) error {
 		pdfWriter.AddOutlineTree(c.externalOutline)
 	} else if c.outline != nil && c.AddOutlines {
 		pdfWriter.AddOutlineTree(&c.outline.ToPdfOutline().PdfOutlineTreeNode)
+	}
+
+	// Page labels.
+	if c.pageLabels != nil {
+		pdfWriter.SetPageLabels(c.pageLabels)
 	}
 
 	// Pdf Writer access hook. Can be used to encrypt, etc. via the PdfWriter instance.
