@@ -426,6 +426,18 @@ func (w *PdfWriter) SetNamedDestinations(names core.PdfObject) error {
 	return w.addObjects(names)
 }
 
+// SetPageLabels sets the PageLabels entry in the PDF catalog.
+// See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+func (w *PdfWriter) SetPageLabels(pageLabels core.PdfObject) error {
+	if pageLabels == nil {
+		return nil
+	}
+
+	common.Log.Trace("Setting catalog PageLabels...")
+	w.catalog.Set("PageLabels", pageLabels)
+	return w.addObjects(pageLabels)
+}
+
 // SetOptimizer sets the optimizer to optimize PDF before writing.
 func (w *PdfWriter) SetOptimizer(optimizer Optimizer) {
 	w.optimizer = optimizer
