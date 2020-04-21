@@ -108,6 +108,12 @@ type CMap struct {
 	// Used by ctype 2 CMaps.
 	codeToUnicode map[CharCode]rune // CID -> Unicode
 	unicodeToCode map[rune]CharCode // Unicode -> CID
+
+	// cached contains the raw CMap data. It is used by the Bytes method in
+	// order to avoid generating the data for every call.
+	// NOTE: While it is not currently required, a cache invalidation mechanism
+	// might be needed in the future.
+	cached []byte
 }
 
 // NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
@@ -397,9 +403,14 @@ func (cmap *CMap) String() string {
 // Bytes returns the raw bytes of a PDF CMap corresponding to `cmap`.
 func (cmap *CMap) Bytes() []byte {
 	common.Log.Trace("cmap.Bytes: cmap=%s", cmap.String())
-	body := cmap.toBfData()
-	whole := strings.Join([]string{cmapHeader, body, cmapTrailer}, "\n")
-	return []byte(whole)
+	if len(cmap.cached) > 0 {
+		return cmap.cached
+	}
+
+	cmap.cached = []byte(strings.Join([]string{
+		cmapHeader, cmap.toBfData(), cmapTrailer,
+	}, "\n"))
+	return cmap.cached
 }
 
 // matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces.
