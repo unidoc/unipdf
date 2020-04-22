@@ -34,7 +34,6 @@ import (
 	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
-	pdf "github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
 )
 
@@ -2987,7 +2986,7 @@ func TestPageLabels(t *testing.T) {
 	require.NoError(t, err)
 	defer f.Close()
 
-	reader, err := pdf.NewPdfReader(f)
+	reader, err := model.NewPdfReader(f)
 	require.NoError(t, err)
 	numPages, err := reader.GetNumPages()
 	require.NoError(t, err)
@@ -3026,10 +3025,10 @@ func TestPageLabels(t *testing.T) {
 	require.NoError(t, err)
 
 	// Read output file.
-	reader, err = pdf.NewPdfReader(bytes.NewReader(outBuf.Bytes()))
+	reader, err = model.NewPdfReader(bytes.NewReader(outBuf.Bytes()))
 	require.NoError(t, err)
 
-	// Retrieve page labels and compare them with the generated page labels.
+	// Retrieve page labels and compare them to the generated page labels.
 	pageLabels, err := reader.GetPageLabels()
 	require.NoError(t, err)
 	require.Equal(t, core.EqualObjects(genPageLabels, pageLabels), true)
