@@ -150,7 +150,11 @@ func (a *docTimeStamp) Validate(sig *model.PdfSignature, digest model.Hasher) (m
 func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	buffer := digest.(*bytes.Buffer)
 	h := a.hashAlgorithm.New()
-	io.Copy(h, buffer)
+
+	if _, err := io.Copy(h, buffer); err != nil {
+		return err
+	}
+
 	s := h.Sum(nil)
 	r := timestamp.Request{
 		HashAlgorithm:   a.hashAlgorithm,
