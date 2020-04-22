@@ -765,6 +765,25 @@ func (r *PdfReader) GetNamedDestinations() (core.PdfObject, error) {
 	return obj, nil
 }
 
+// GetPageLabels returns the PageLabels entry in the PDF catalog.
+// See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+func (r *PdfReader) GetPageLabels() (core.PdfObject, error) {
+	obj := core.ResolveReference(r.catalog.Get("PageLabels"))
+	if obj == nil {
+		return nil, nil
+	}
+
+	// Resolve references.
+	if !r.isLazy {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return obj, nil
+}
+
 // Inspect inspects the object types, subtypes and content in the PDF file returning a map of
 // object type to number of instances of each.
 func (r *PdfReader) Inspect() (map[string]int, error) {
