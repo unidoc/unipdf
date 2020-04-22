@@ -34,6 +34,7 @@ import (
 	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
+	pdf "github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
 )
 
@@ -2978,6 +2979,60 @@ func TestCreatorStable(t *testing.T) {
 	if h1 != h2 {
 		t.Fatal("output is not stable")
 	}
+}
+
+func TestPageLabels(t *testing.T) {
+	// Read input file.
+	f, err := os.Open(testPdfTemplatesFile1)
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := pdf.NewPdfReader(f)
+	require.NoError(t, err)
+	numPages, err := reader.GetNumPages()
+	require.NoError(t, err)
+
+	// Add input file pages to a new creator instance.
+	c := New()
+	nums := core.MakeArray()
+	for i := 0; i < numPages; i++ {
+		page, err := reader.GetPage(i + 1)
+		require.NoError(t, err)
+
+		err = c.AddPage(page)
+		require.NoError(t, err)
+
+		// Generate a page range for each page.
+		// If page index is even, show page label using Roman uppercase numerals.
+		// Otherwise, show page label using decimal Arabic numerals.
+		labelStyle := "R"
+		if i%2 != 0 {
+			labelStyle = "D"
+		}
+		pageRange := core.MakeDict()
+		pageRange.Set(*core.MakeName("S"), core.MakeName(labelStyle))
+		nums.Append(core.MakeInteger(int64(i)))
+		nums.Append(pageRange)
+	}
+
+	// Create page labels dictionary and add it to the creator.
+	genPageLabels := core.MakeDict()
+	genPageLabels.Set(*core.MakeName("Nums"), nums)
+	c.SetPageLabels(genPageLabels)
+
+	// Write output file to buffer.
+	outBuf := bytes.NewBuffer(nil)
+	err = c.Write(outBuf)
+	require.NoError(t, err)
+
+	// Read output file.
+	reader, err = pdf.NewPdfReader(bytes.NewReader(outBuf.Bytes()))
+	require.NoError(t, err)
+
+	// Retrieve page labels and compare them with the generated page labels.
+	pageLabels, err := reader.GetPageLabels()
+	require.NoError(t, err)
+	require.Equal(t, core.EqualObjects(genPageLabels, pageLabels), true)
 }
 
 var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")

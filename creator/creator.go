@@ -662,7 +662,10 @@ func (c *Creator) Write(ws io.Writer) error {
 
 	// Page labels.
 	if c.pageLabels != nil {
-		pdfWriter.SetPageLabels(c.pageLabels)
+		if err := pdfWriter.SetPageLabels(c.pageLabels); err != nil {
+			common.Log.Debug("ERROR: Could not set page labels: %v", err)
+			return err
+		}
 	}
 
 	// Pdf Writer access hook. Can be used to encrypt, etc. via the PdfWriter instance.
