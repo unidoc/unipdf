@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package sighandler
 
 import (
@@ -180,7 +185,7 @@ func (a *docTimeStamp) Sign(sig *model.PdfSignature, digest model.Hasher) error 
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http status code wiats 200 got %d", resp.StatusCode)
+		return fmt.Errorf("http status code not ok (got %d)", resp.StatusCode)
 	}
 
 	var ci struct {
