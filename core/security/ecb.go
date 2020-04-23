@@ -5,7 +5,11 @@
 
 package security
 
-import "crypto/cipher"
+import (
+	"crypto/cipher"
+
+	"github.com/unidoc/unipdf/v3/common"
+)
 
 // ecb implements an Electronic Codebook encryption mode.
 // This mode is used to compute or validate document permissions for R=6.
@@ -31,10 +35,12 @@ func (x *ecbEncrypter) BlockSize() int { return x.blockSize }
 
 func (x *ecbEncrypter) CryptBlocks(dst, src []byte) {
 	if len(src)%x.blockSize != 0 {
-		panic("crypto/cipher: input not full blocks")
+		common.Log.Error("ERROR: ECB encrypt: input not full blocks")
+		return
 	}
 	if len(dst) < len(src) {
-		panic("crypto/cipher: output smaller than input")
+		common.Log.Error("ERROR: ECB encrypt: output smaller than input")
+		return
 	}
 	for len(src) > 0 {
 		x.b.Encrypt(dst, src[:x.blockSize])
@@ -53,10 +59,12 @@ func (x *ecbDecrypter) BlockSize() int { return x.blockSize }
 
 func (x *ecbDecrypter) CryptBlocks(dst, src []byte) {
 	if len(src)%x.blockSize != 0 {
-		panic("crypto/cipher: input not full blocks")
+		common.Log.Error("ERROR: ECB decrypt: input not full blocks")
+		return
 	}
 	if len(dst) < len(src) {
-		panic("crypto/cipher: output smaller than input")
+		common.Log.Error("ERROR: ECB decrypt: output smaller than input")
+		return
 	}
 	for len(src) > 0 {
 		x.b.Decrypt(dst, src[:x.blockSize])

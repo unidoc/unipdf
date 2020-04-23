@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -47,6 +48,9 @@ type SignatureValidationResult struct {
 	// TODO(gunnsth): Add more fields such as ability to access the certificate information (name, CN, etc).
 	// TODO: Also add flags to indicate whether the signature covers the entire file, or the entire portion of
 	// a revision (if incremental updates used).
+
+	// GeneralizedTime is the time at which the time-stamp token has been created by the TSA (RFC 3161).
+	GeneralizedTime time.Time
 }
 
 func (v SignatureValidationResult) String() string {
@@ -88,7 +92,9 @@ func (v SignatureValidationResult) String() string {
 	} else {
 		buf.WriteString("Trusted: Untrusted certificate\n")
 	}
-
+	if !v.GeneralizedTime.IsZero() {
+		buf.WriteString(fmt.Sprintf("GeneralizedTime: %s\n", v.GeneralizedTime.String()))
+	}
 	return buf.String()
 }
 

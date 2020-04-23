@@ -86,5 +86,5 @@ var validOperands = map[string]struct{}{
 	"W*":  struct{}{},
 	"y":   struct{}{},
 	`'`:   struct{}{},
-	`''`:  struct{}{},
+	`"`:   struct{}{},
 }

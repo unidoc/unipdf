@@ -887,7 +887,7 @@ func (r renderer) renderContentStream(ctx context.Context, contents string, reso
 
 				textState.ProcQ(charcodes, ctx)
 			// Move to the next line and show text string.
-			case `''`:
+			case `"`:
 				if len(op.Params) != 3 {
 					return errRange
 				}

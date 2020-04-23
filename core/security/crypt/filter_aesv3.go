@@ -23,7 +23,8 @@ func init() {
 func NewFilterAESV3() Filter {
 	f, err := newFilterAESV3(FilterDict{})
 	if err != nil {
-		panic(err)
+		common.Log.Error("ERROR: could not create AES V3 crypt filter: %v", err)
+		return filterAESV3{}
 	}
 	return f
 }
