@@ -244,29 +244,28 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		cc.AddOperand(*op)
 	}
 
-	// If fontname not set need to make a new font or use one defined in the resources.
-	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil || dr == nil {
-		// Font not set, revert to Helvetica with name "Helv".
-		fontname = core.MakeName("Helv")
-		helv, err := model.NewStandard14Font("Helvetica")
-		if err != nil {
-			return nil, err
+	// If the font name is not set or not found in the form resources, use
+	// the default fallback font (Helvetica).
+	var fontObj core.PdfObject
+	if dr != nil && fontname != nil {
+		if fObj, has := dr.GetFontByName(*fontname); has {
+			if font, err = model.NewPdfFontFromPdfObject(fObj); err != nil {
+				common.Log.Debug("ERROR: could not load appearance font: %v", err)
+				return nil, err
+			}
+			fontObj = fObj
 		}
-		font = helv
-		resources.SetFontByName(*fontname, helv.ToPdfObject())
-	} else {
-		fontobj, has := dr.GetFontByName(*fontname)
-		if !has {
-			return nil, errors.New("font not in DR")
-		}
-		font, err = model.NewPdfFontFromPdfObject(fontobj)
-		if err != nil {
-			common.Log.Debug("ERROR loading default appearance font: %v", err)
-			return nil, err
-		}
-		resources.SetFontByName(*fontname, fontobj)
 	}
+	if fontObj == nil {
+		// Font not found. Reverting to Helvetica with name `Helv`.
+		if font, err = model.NewStandard14Font("Helvetica"); err != nil {
+			return nil, err
+		}
+		fontname = core.MakeName("Helv")
+		fontObj = font.ToPdfObject()
+	}
+	resources.SetFontByName(*fontname, fontObj)
+
 	encoder := font.Encoder()
 	if encoder == nil {
 		common.Log.Debug("WARN: font encoder is nil. Assuming identity encoder. Output may be incorrect.")

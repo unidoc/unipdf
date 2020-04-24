@@ -263,33 +263,40 @@ func (form *PdfAcroForm) fill(provider FieldValueProvider, appGen FieldAppearanc
 	}
 
 	for _, field := range form.AllFields() {
-		fname := field.PartialName()
-		if len(fname) == 0 {
+		// Try finding the field in the provider field map using its partial
+		// name. If not found, try finding it by its full name.
+		partialName := field.PartialName()
+		valObj, found := objMap[partialName]
+		if !found {
+			if fullName, err := field.FullName(); err == nil {
+				valObj, found = objMap[fullName]
+			}
+		}
+		if !found {
+			common.Log.Debug("WARN: form field %s not found in the provider. Skipping.", partialName)
 			continue
 		}
 
-		if valObj, has := objMap[fname]; has {
-			err := fillFieldValue(field, valObj)
+		// Fill field with the provided value.
+		if err := fillFieldValue(field, valObj); err != nil {
+			return err
+		}
+
+		// Generate field appearance based on the specified settings.
+		if appGen == nil {
+			continue
+		}
+
+		for _, annot := range field.Annotations {
+			// appGen generates the appearance based on the form/field/annotation and other settings
+			// depending on the implementation (for example may only generate appearance if none set).
+			apDict, err := appGen.GenerateAppearanceDict(form, field, annot)
 			if err != nil {
 				return err
 			}
 
-			// Generate field appearance based on the specified settings.
-			if appGen == nil {
-				continue
-			}
-
-			for _, annot := range field.Annotations {
-				// appGen generates the appearance based on the form/field/annotation and other settings
-				// depending on the implementation (for example may only generate appearance if none set).
-				apDict, err := appGen.GenerateAppearanceDict(form, field, annot)
-				if err != nil {
-					return err
-				}
-
-				annot.AP = apDict
-				annot.ToPdfObject()
-			}
+			annot.AP = apDict
+			annot.ToPdfObject()
 		}
 	}
 
