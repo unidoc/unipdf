@@ -373,21 +373,20 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		case *Division:
 			div := t
 
-			ctx := DrawContext{
-				X:     xrel,
-				Y:     yrel,
-				Width: w,
-			}
+			c := ctx
+			c.X = xrel
+			c.Y = yrel
+			c.Width = w
 
 			// Mock call to generate page blocks.
-			divBlocks, updCtx, err := div.GeneratePageBlocks(ctx)
+			divBlocks, _, err := div.GeneratePageBlocks(c)
 			if err != nil {
 				return nil, ctx, err
 			}
 
 			if len(divBlocks) > 1 {
 				// Wraps across page, make cell reach all the way to bottom of current page.
-				newh := ctx.Height - h
+				newh := c.Height - h
 				if newh > h {
 					diffh := newh - h
 					// Add diff to last row.
@@ -395,10 +394,8 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 				}
 			}
 
-			newh := div.Height() + div.margins.top + div.margins.bottom
-			_ = updCtx
-
 			// Get available width and height.
+			newh := div.Height() + div.margins.top + div.margins.bottom
 			if newh > h {
 				diffh := newh - h
 				// Add diff to last row.
