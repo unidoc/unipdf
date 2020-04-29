@@ -601,6 +601,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 		}
 
 		ctx.Y += h
+		ctx.Height -= h
 
 		// Resume previous state after headers have been rendered.
 		if drawingHeaders && cellIdx+1 > endHeaderCell {
@@ -626,6 +627,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 	ctx.Width = origCtx.Width
 	// Add the bottom margin.
 	ctx.Y += table.margins.bottom
+	ctx.Height -= table.margins.bottom
 
 	return blocks, ctx, nil
 }
