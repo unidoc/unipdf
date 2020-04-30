@@ -40,7 +40,7 @@ func TestInvoiceSimple(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
-		Heading: "Bill To",
+		Heading: "Bill to",
 		Name:    "Jane Doe",
 		Street:  "9 Elm Street",
 		City:    "London",
@@ -128,7 +128,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
-		Heading: "John Doe",
+		Heading: "JOHN DOE",
 		Street:  "8 Elm Street",
 		City:    "Cambridge",
 		Zip:     "CB14DH",
@@ -138,14 +138,17 @@ func TestInvoiceAdvanced(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
-		Heading: "Bill To",
-		Name:    "Jane Doe",
-		Street:  "9 Elm Street",
-		City:    "London",
-		Zip:     "LB15FH",
-		Country: "United Kingdom",
-		Phone:   "xxx-xxx-xxxx",
-		Email:   "janedoe@email.com",
+		Heading:   "JANE DOE",
+		Name:      "Jane Doe and Associates",
+		Street:    "Suite #134569",
+		Street2:   "1960 W CHELSEA AVE STE 2006R",
+		City:      "ALLENTOWN",
+		State:     "PA",
+		Zip:       "18104",
+		Country:   "United States",
+		Phone:     "xxx-xxx-xxxx",
+		Email:     "janedoe@email.com",
+		Separator: " ",
 	})
 
 	// Customize address styles.

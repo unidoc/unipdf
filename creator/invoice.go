@@ -25,7 +25,8 @@ type InvoiceAddress struct {
 	Email   string
 
 	// Separator defines the separator between different address components,
-	// such as the city, state and zip code. Default: ", ".
+	// such as the city, state and zip code. It defaults to ", " when the
+	// field is an empty string.
 	Separator string
 }
 
