@@ -103,7 +103,9 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 
 		// Addresses.
 		sellerAddress: &InvoiceAddress{},
-		buyerAddress:  &InvoiceAddress{},
+		buyerAddress: &InvoiceAddress{
+			Heading: "Bill to",
+		},
 
 		// Styles.
 		defaultStyle: defaultStyle,
