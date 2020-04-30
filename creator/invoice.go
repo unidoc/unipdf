@@ -11,6 +11,7 @@ import "fmt"
 // in an invoice. It is used for the seller and buyer information in the
 // invoice template.
 type InvoiceAddress struct {
+	Heading string
 	Name    string
 	Street  string
 	Zip     string
@@ -158,7 +159,7 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	}
 
 	i.dueDate = [2]*InvoiceCell{
-		i.newCell("Date", i.infoProps),
+		i.newCell("Due Date", i.infoProps),
 		i.newCell("", i.infoProps),
 	}
 
@@ -536,14 +537,14 @@ func (i *Invoice) setCellBorder(cell *TableCell, invoiceCell *InvoiceCell) {
 	cell.SetBorderColor(invoiceCell.BorderColor)
 }
 
-func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*StyledParagraph {
+func (i *Invoice) drawAddress(addr *InvoiceAddress) []*StyledParagraph {
 	var paragraphs []*StyledParagraph
 
 	// Address title.
-	if title != "" {
+	if addr.Heading != "" {
 		titleParagraph := newStyledParagraph(i.addressHeadingStyle)
 		titleParagraph.SetMargins(0, 0, 0, 7)
-		titleParagraph.Append(title)
+		titleParagraph.Append(addr.Heading)
 
 		paragraphs = append(paragraphs, titleParagraph)
 	}
@@ -561,7 +562,7 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 		city += addr.Zip
 	}
 
-	if name != "" {
+	if addr.Name != "" {
 		addressParagraph.Append(addr.Name + "\n")
 	}
 	if addr.Street != "" {
@@ -727,10 +728,9 @@ func (i *Invoice) generateInformationBlocks(ctx DrawContext) ([]*Block, DrawCont
 	separatorParagraph := newStyledParagraph(i.defaultStyle)
 	separatorParagraph.SetMargins(0, 0, 0, 20)
 
-	addrParagraphs := i.drawAddress(i.sellerAddress.Name, "", i.sellerAddress)
+	addrParagraphs := i.drawAddress(i.sellerAddress)
 	addrParagraphs = append(addrParagraphs, separatorParagraph)
-	addrParagraphs = append(addrParagraphs,
-		i.drawAddress("Bill to", i.buyerAddress.Name, i.buyerAddress)...)
+	addrParagraphs = append(addrParagraphs, i.drawAddress(i.buyerAddress)...)
 
 	addrDivision := newDivision()
 	for _, addrParagraph := range addrParagraphs {
