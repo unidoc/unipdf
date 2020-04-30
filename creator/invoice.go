@@ -23,6 +23,10 @@ type InvoiceAddress struct {
 	Country string
 	Phone   string
 	Email   string
+
+	// Separator defines the separator between different address components,
+	// such as the city, state and zip code. Default: ", ".
+	Separator string
 }
 
 // InvoiceCellProps holds all style properties for an invoice cell.
@@ -57,6 +61,7 @@ type Invoice struct {
 	// Invoice addresses.
 	buyerAddress  *InvoiceAddress
 	sellerAddress *InvoiceAddress
+	addrSeparator string
 
 	// Invoice information.
 	number  [2]*InvoiceCell
@@ -106,14 +111,20 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 		title: "INVOICE",
 
 		// Addresses.
-		sellerAddress: &InvoiceAddress{},
-		buyerAddress: &InvoiceAddress{
-			Heading: "Bill to",
-		},
+		addrSeparator: ", ",
 
 		// Styles.
 		defaultStyle: defaultStyle,
 		headingStyle: headingStyle,
+	}
+
+	// Addresses.
+	i.sellerAddress = &InvoiceAddress{
+		Separator: i.addrSeparator,
+	}
+	i.buyerAddress = &InvoiceAddress{
+		Heading:   "Bill to",
+		Separator: i.addrSeparator,
 	}
 
 	// Default colors.
@@ -559,16 +570,21 @@ func (i *Invoice) drawAddress(addr *InvoiceAddress) []*StyledParagraph {
 	addressParagraph := newStyledParagraph(i.addressStyle)
 	addressParagraph.SetLineHeight(1.2)
 
+	separator := addr.Separator
+	if separator == "" {
+		separator = i.addrSeparator
+	}
+
 	locality := addr.City
 	if addr.State != "" {
 		if locality != "" {
-			locality += " "
+			locality += separator
 		}
 		locality += addr.State
 	}
 	if addr.Zip != "" {
 		if locality != "" {
-			locality += " "
+			locality += separator
 		}
 		locality += addr.Zip
 	}
