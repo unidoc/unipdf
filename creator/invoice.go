@@ -5,7 +5,9 @@
 
 package creator
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // InvoiceAddress contains contact information that can be displayed
 // in an invoice. It is used for the seller and buyer information in the
@@ -14,8 +16,10 @@ type InvoiceAddress struct {
 	Heading string
 	Name    string
 	Street  string
+	Street2 string
 	Zip     string
 	City    string
+	State   string
 	Country string
 	Phone   string
 	Email   string
@@ -555,13 +559,18 @@ func (i *Invoice) drawAddress(addr *InvoiceAddress) []*StyledParagraph {
 	addressParagraph := newStyledParagraph(i.addressStyle)
 	addressParagraph.SetLineHeight(1.2)
 
-	city := addr.City
-	if addr.Zip != "" {
-		if city != "" {
-			city += ", "
+	locality := addr.City
+	if addr.State != "" {
+		if locality != "" {
+			locality += " "
 		}
-
-		city += addr.Zip
+		locality += addr.State
+	}
+	if addr.Zip != "" {
+		if locality != "" {
+			locality += " "
+		}
+		locality += addr.Zip
 	}
 
 	if addr.Name != "" {
@@ -570,8 +579,11 @@ func (i *Invoice) drawAddress(addr *InvoiceAddress) []*StyledParagraph {
 	if addr.Street != "" {
 		addressParagraph.Append(addr.Street + "\n")
 	}
-	if city != "" {
-		addressParagraph.Append(city + "\n")
+	if addr.Street2 != "" {
+		addressParagraph.Append(addr.Street2 + "\n")
+	}
+	if locality != "" {
+		addressParagraph.Append(locality + "\n")
 	}
 	if addr.Country != "" {
 		addressParagraph.Append(addr.Country + "\n")
