@@ -30,7 +30,7 @@ func TestInvoiceSimple(t *testing.T) {
 
 	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
-		Name:    "John Doe",
+		Heading: "John Doe",
 		Street:  "8 Elm Street",
 		City:    "Cambridge",
 		Zip:     "CB14DH",
@@ -40,6 +40,7 @@ func TestInvoiceSimple(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
+		Heading: "Bill To",
 		Name:    "Jane Doe",
 		Street:  "9 Elm Street",
 		City:    "London",
@@ -127,7 +128,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
-		Name:    "John Doe",
+		Heading: "John Doe",
 		Street:  "8 Elm Street",
 		City:    "Cambridge",
 		Zip:     "CB14DH",
@@ -137,6 +138,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
+		Heading: "Bill To",
 		Name:    "Jane Doe",
 		Street:  "9 Elm Street",
 		City:    "London",
