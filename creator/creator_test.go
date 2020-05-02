@@ -682,30 +682,26 @@ func TestParagraphChinese(t *testing.T) {
 	}
 
 	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
 
 	for _, line := range lines {
 		p := creator.NewParagraph(line)
-
 		p.SetFont(font)
 
 		err = creator.Draw(p)
-		if err != nil {
-			t.Errorf("Fail: %v\n", err)
-			return
-		}
+		require.NoError(t, err)
 	}
+
+	// Subset the composite font to reduce file size.  Note is done at the end when all runes have
+	// been registered.
+	err = font.SubsetRegistered()
+	require.NoError(t, err)
 
 	testWriteAndRender(t, creator, "2_p_nihao.pdf")
 	fname := tempFile("2_p_nihao.pdf")
 	st, err := os.Stat(fname)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
+
 	t.Logf("output size: %d (%d MB)", st.Size(), st.Size()/1024/1024)
 }
 
@@ -714,10 +710,7 @@ func TestParagraphUnicode(t *testing.T) {
 	creator := New()
 
 	font, err := model.NewCompositePdfFontFromTTFFile(testFreeSansTTFFile)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
 
 	texts := []string{
 		"Testing of letters \u010c,\u0106,\u0160,\u017d,\u0110",
@@ -755,11 +748,11 @@ func TestParagraphUnicode(t *testing.T) {
 		p.SetFont(font)
 
 		err = creator.Draw(p)
-		if err != nil {
-			t.Errorf("Fail: %v\n", err)
-			return
-		}
+		require.NoError(t, err)
 	}
+
+	err = font.SubsetRegistered()
+	require.NoError(t, err)
 
 	testWriteAndRender(t, creator, "2_p_multi.pdf")
 }

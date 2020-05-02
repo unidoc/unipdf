@@ -40,6 +40,28 @@ type PdfFont struct {
 	context pdfFont // The underlying font: Type0, Type1, Truetype, etc..
 }
 
+// SubsetRegistered subsets the font to only the glyphs that have been registered by the encoder.
+// NOTE: This only works on fonts that support subsetting. For unsupported fonts this is a no-op, although a debug
+//   message is emitted.  Currently supported fonts are embedded Truetype CID fonts (type 0).
+func (font *PdfFont) SubsetRegistered() error {
+	switch t := font.context.(type) {
+	case *pdfFontType0:
+		err := t.subsetRegistered()
+		if err != nil {
+			return err
+		}
+		if t.container != nil {
+			if t.encoder != nil {
+				t.encoder.ToPdfObject() // Forced update of encoder object.
+			}
+			t.ToPdfObject() // Forced update of object.
+		}
+	default:
+		common.Log.Debug("Font %T does not support subsetting", t)
+	}
+	return nil
+}
+
 // GetFontDescriptor returns the font descriptor for `font`.
 func (font PdfFont) GetFontDescriptor() (*PdfFontDescriptor, error) {
 	return font.context.getFontDescriptor(), nil
@@ -651,7 +673,6 @@ type fontCommon struct {
 // It is for use in font ToPdfObject functions.
 // NOTE: The returned dict's "Subtype" field is set to `subtype` if `base` doesn't have a subtype.
 func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDictionary {
-
 	if subtype != "" && base.subtype != "" && subtype != base.subtype {
 		common.Log.Debug("ERROR: asPdfObjectDictionary. Overriding subtype to %#q %s", subtype, base)
 	} else if subtype == "" && base.subtype == "" {
@@ -672,7 +693,7 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 		d.Set("ToUnicode", base.toUnicode)
 	} else if base.toUnicodeCmap != nil {
 		data := base.toUnicodeCmap.Bytes()
-		o, err := core.MakeStream(data, nil)
+		o, err := core.MakeStream(data, core.NewFlateEncoder())
 		if err != nil {
 			common.Log.Debug("MakeStream failed. err=%v", err)
 		} else {
