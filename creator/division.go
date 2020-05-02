@@ -112,7 +112,7 @@ func (div *Division) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext,
 		ctx.X += div.margins.left
 		ctx.Y += div.margins.top
 		ctx.Width -= div.margins.left + div.margins.right
-		ctx.Height -= div.margins.top
+		ctx.Height -= div.margins.top + div.margins.bottom
 	}
 
 	// Set the inline mode of the division to the context.

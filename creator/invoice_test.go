@@ -30,7 +30,7 @@ func TestInvoiceSimple(t *testing.T) {
 
 	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
-		Name:    "John Doe",
+		Heading: "John Doe",
 		Street:  "8 Elm Street",
 		City:    "Cambridge",
 		Zip:     "CB14DH",
@@ -40,6 +40,7 @@ func TestInvoiceSimple(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
+		Heading: "Bill to",
 		Name:    "Jane Doe",
 		Street:  "9 Elm Street",
 		City:    "London",
@@ -127,7 +128,7 @@ func TestInvoiceAdvanced(t *testing.T) {
 
 	// Set invoice addresses.
 	invoice.SetSellerAddress(&InvoiceAddress{
-		Name:    "John Doe",
+		Heading: "JOHN DOE",
 		Street:  "8 Elm Street",
 		City:    "Cambridge",
 		Zip:     "CB14DH",
@@ -137,13 +138,17 @@ func TestInvoiceAdvanced(t *testing.T) {
 	})
 
 	invoice.SetBuyerAddress(&InvoiceAddress{
-		Name:    "Jane Doe",
-		Street:  "9 Elm Street",
-		City:    "London",
-		Zip:     "LB15FH",
-		Country: "United Kingdom",
-		Phone:   "xxx-xxx-xxxx",
-		Email:   "janedoe@email.com",
+		Heading:   "JANE DOE",
+		Name:      "Jane Doe and Associates",
+		Street:    "Suite #134569",
+		Street2:   "1960 W CHELSEA AVE STE 2006R",
+		City:      "ALLENTOWN",
+		State:     "PA",
+		Zip:       "18104",
+		Country:   "United States",
+		Phone:     "xxx-xxx-xxxx",
+		Email:     "janedoe@email.com",
+		Separator: " ",
 	})
 
 	// Customize address styles.
@@ -198,9 +203,12 @@ func TestInvoiceAdvanced(t *testing.T) {
 	invoice.SetTotal("$85.00")
 
 	// Set invoice content sections.
-	invoice.SetNotes("Notes", "Thank you for your business.")
-	invoice.SetTerms("Terms and conditions", "Full refund for 60 days after purchase.")
-	invoice.AddSection("Custom section", "This is a custom section.")
+	invoice.SetNotes("NOTES", "Thank you for your business.")
+	invoice.SetTerms("I. TERMS OF PAYMENT", "Net 30 days on all invoices. In addition, Buyer shall pay all sales, use, customs, excise or other taxes presently or hereafter payable in regards to this transaction, and Buyer shall reimburse Seller for any such taxes or charges paid by the Seller.\nSeller shall have the continuing right to approve Buyer’s credit. Seller may at any time demand advance payment, additional security or guarantee of prompt payment. If Buyer refuses to give the payment, security or guarantee demanded, Seller may terminate the Agreement, refuse to deliver any undelivered goods and Buyer shall immediately become liable to Seller for the unpaid price of all goods delivered & for damages as provided in Paragraph V below. Buyer agrees to pay Seller cost of collection of overdue invoices, including reasonable attorney’s fees incurred by Seller in collecting said sums. F.O.B. point shall be point of SHIP TO on face hereof.")
+	invoice.AddSection("II. DELIVERY, TOLERANCES, WEIGHT", "Upon due tender of goods for delivery at the F.O.B. point all risk of loss or damage and other incident of ownership pass to Buyer, but Seller retains a security interest in the goods until purchase price is paid. All deliveries are subject to weight at shipping point which shall govern.")
+	invoice.AddSection("III. WARRANTIES", "Seller warrants that goods sold hereunder are merchantable UNLESS manufactured in conformance with Buyer’s particular specification, and that Seller conveys good title thereto. IN NO EVENT WILL SELLER BE LIABLE FOR CONSEQUENTIAL DAMAGES EVEN IF CUSTOMER HAS NOT BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. EXCEPT FOR THE EXPRESS WARRANTY STATED IN THIS PARAGRAPH IV, SELLER GRANTS NO WARRANTIES, EITHER EXPRESS OR IMPLIED HEREIN, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, AND THIS STATED EXPRESS WARRANTY IS IN LIEU OF ALL LIABILITIES OR OBLIGATIONS OF SELLER FOR DAMAGES INCLUDING BUT NOT LIMITED TO, CONSEQUENTIAL DAMAGES OCCURRING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF ANY GOODS SOLD HEREUNDER. Seller specifically does not warrant the accuracy of sufficiency of any advice or recommendations given to Buyer in connection with the sale of goods hereunder.")
+	invoice.AddSection("IV. FORCE MAJEURE", "Seller shall not be liable for any damages resulting from: any delay or failure of performance arising from any cause not reasonably within Seller’s control; accidents to, breakdowns or mechanical failure of machinery or equipment, however caused; strikes or other labor troubles, shortage of labor, transportation, raw materials, energy sources, or failure of ususal means of supply; fire; flood; war, declared or undeclared; insurrection; riots; acts of God or the public enemy; or priorities, allocations or limitations or other acts required or requested by Federal, State or local governments or any of their sub-divisions, bureaus or agencies. Seller may, at its option, cancel this Agreement or delay performance hereunder for any period reasonably necessary due to any of the foregoing, during which time this Agreement shall remain in full force and effect. Seller shall have the further right to then allocate its available goods between its own uses and its customers in such manner as Seller may consider equitable.")
+	invoice.AddSection("V. PATENT INDEMNITY", "Seller shall defend and hold Buyer harmless for any action against Seller based in a claim that Buyer’s sale or use of goods normally offered for sale by Seller, supplied by Seller hereunder, and while in the form, state or conditions supplies constitutes infringement of any United States letters patent; provided Seller shall receive prompt written notice of the claim or action, and Buyer shall give Seller authority, information and assistance at Seller’s expense. Buyer shall defend and hold Seller harmless for any action against Seller or its suppliers based in a claim that the manufacture or sale of goods hereunder constitutes infringement of any United States letters patent, if such goods were manufactured pursuant to Buyer’s designs, specifications and /or formulae, and were not normally offered for sale by Seller; provided Buyer shall receive prompt written notice of the claim or action and Seller shall give Buyer authority, information and assistance at Buyer’s expense. Buyer and Seller agree that the foregoing constitutes the parties’ entire liability for claims or actions based on patent infringement.")
 
 	// Customize note styles.
 	noteStyle := invoice.NoteStyle()
