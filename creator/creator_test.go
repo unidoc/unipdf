@@ -684,11 +684,9 @@ func TestParagraphChinese(t *testing.T) {
 	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
 	require.NoError(t, err)
 
-	// Subset the font right before write. Embeds only the subset of the runes/glyphs that are actually used
-	// (and have been referenced right prior to write). Reduces font size.
-	creator.SetPdfWriterAccessFunc(func(*model.PdfWriter) error {
-		return font.SubsetRegistered()
-	})
+	// Enable font subsetting for the composite font - embed only needed glyphs
+	// (much smaller file size for large fonts).
+	creator.EnableFontSubsetting(font)
 
 	for _, line := range lines {
 		p := creator.NewParagraph(line)
@@ -713,11 +711,8 @@ func TestParagraphUnicode(t *testing.T) {
 	font, err := model.NewCompositePdfFontFromTTFFile(testFreeSansTTFFile)
 	require.NoError(t, err)
 
-	// Subset the font right before write. Embeds only the subset of the runes/glyphs that are actually used
-	// (and have been referenced).
-	creator.SetPdfWriterAccessFunc(func(*model.PdfWriter) error {
-		return font.SubsetRegistered()
-	})
+	// Enable font subsetting for the composite font - embed only needed glyphs.
+	creator.EnableFontSubsetting(font)
 
 	texts := []string{
 		"Testing of letters \u010c,\u0106,\u0160,\u017d,\u0110",
