@@ -69,6 +69,9 @@ type Creator struct {
 	// Optimizer.
 	optimizer model.Optimizer
 
+	// Fonts that have been enabled for subsetting prior to write.
+	subsetFonts []*model.PdfFont
+
 	// Default fonts used by all components instantiated through the creator.
 	defaultFontRegular *model.PdfFont
 	defaultFontBold    *model.PdfFont
@@ -668,6 +671,16 @@ func (c *Creator) Write(ws io.Writer) error {
 		}
 	}
 
+	if c.subsetFonts != nil {
+		for _, font := range c.subsetFonts {
+			err := font.SubsetRegistered()
+			if err != nil {
+				common.Log.Debug("ERROR: Could not subset font: %v", err)
+				return err
+			}
+		}
+	}
+
 	// Pdf Writer access hook. Can be used to encrypt, etc. via the PdfWriter instance.
 	if c.pdfWriterAccessFunc != nil {
 		err := c.pdfWriterAccessFunc(&pdfWriter)
@@ -708,6 +721,13 @@ func (c *Creator) Write(ws io.Writer) error {
 //
 func (c *Creator) SetPdfWriterAccessFunc(pdfWriterAccessFunc func(writer *model.PdfWriter) error) {
 	c.pdfWriterAccessFunc = pdfWriterAccessFunc
+}
+
+// EnableFontSubsetting enables font subsetting for `font` when the creator output is written to file.
+// Embeds only the subset of the runes/glyphs that are actually used to display the file.
+// Subsetting can reduce the size of fonts significantly.
+func (c *Creator) EnableFontSubsetting(font *model.PdfFont) {
+	c.subsetFonts = append(c.subsetFonts, font)
 }
 
 // WriteToFile writes the Creator output to file specified by path.

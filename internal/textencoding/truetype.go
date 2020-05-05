@@ -25,14 +25,38 @@ type GID uint16
 // Corresponds to Identity-H CMap and Identity encoding.
 type TrueTypeFontEncoder struct {
 	runeToGIDMap map[rune]GID
+
+	// runes registered by encoder for tracking what runes are used for subsetting.
+	registeredMap map[rune]struct{}
+}
+
+// SubsetRegistered subsets `enc` to only registered runes (that have been registered via encoding).
+func (enc *TrueTypeFontEncoder) SubsetRegistered() {
+	common.Log.Info("TTF Subset: Pruning")
+	for r := range enc.runeToGIDMap {
+		if _, has := enc.registeredMap[r]; !has {
+			delete(enc.runeToGIDMap, r)
+		}
+	}
+}
+
+// RegisteredRunes returns the slice of runes that have been registered as used by the encoder.
+func (enc *TrueTypeFontEncoder) RegisteredRunes() []rune {
+	runes := make([]rune, len(enc.registeredMap))
+	i := 0
+	for r := range enc.registeredMap {
+		runes[i] = r
+		i++
+	}
+	return runes
 }
 
 // NewTrueTypeFontEncoder creates a new text encoder for TTF fonts with a runeToGlyphIndexMap that
 // has been preloaded from the font file.
 // The new instance is preloaded with a CMapIdentityH (Identity-H) CMap which maps 2-byte charcodes
 // to CIDs (glyph index).
-func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
-	return TrueTypeFontEncoder{
+func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) *TrueTypeFontEncoder {
+	return &TrueTypeFontEncoder{
 		runeToGIDMap: runeToGIDMap,
 	}
 }
@@ -41,7 +65,7 @@ func NewTrueTypeFontEncoder(runeToGIDMap map[rune]GID) TrueTypeFontEncoder {
 const ttEncoderMaxNumEntries = 10
 
 // String returns a string that describes `enc`.
-func (enc TrueTypeFontEncoder) String() string {
+func (enc *TrueTypeFontEncoder) String() string {
 	parts := []string{
 		fmt.Sprintf("%d entries", len(enc.runeToGIDMap)),
 	}
@@ -67,18 +91,18 @@ func (enc TrueTypeFontEncoder) String() string {
 }
 
 // Encode converts the Go unicode string to a PDF encoded string.
-func (enc TrueTypeFontEncoder) Encode(str string) []byte {
+func (enc *TrueTypeFontEncoder) Encode(str string) []byte {
 	return encodeString16bit(enc, str)
 }
 
 // Decode converts PDF encoded string to a Go unicode string.
-func (enc TrueTypeFontEncoder) Decode(raw []byte) string {
+func (enc *TrueTypeFontEncoder) Decode(raw []byte) string {
 	return decodeString16bit(enc, raw)
 }
 
 // GlyphToCharcode returns character code matching the glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
+func (enc *TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if len(glyph) == 7 && glyph[0:3] == "uni" {
 		var unicode uint16
@@ -99,12 +123,16 @@ func (enc TrueTypeFontEncoder) GlyphToCharcode(glyph GlyphName) (CharCode, bool)
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
+func (enc *TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 	glyphIndex, ok := enc.runeToGIDMap[r]
 	if !ok {
 		common.Log.Debug("Missing rune %d (%+q) from encoding", r, r)
 		return 0, false
 	}
+	if enc.registeredMap == nil {
+		enc.registeredMap = map[rune]struct{}{}
+	}
+	enc.registeredMap[r] = struct{}{} // Register use (subsetting).
 	// Identity : charcode <-> glyphIndex
 	// TODO(dennwc): Here charcode is probably the same as CID.
 	// TODO(dennwc): Find out what are the alternative mappings (enc.cmap?).
@@ -115,7 +143,7 @@ func (enc TrueTypeFontEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
+func (enc *TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	// TODO: Make a reverse map stored.
 	for r, gid := range enc.runeToGIDMap {
 		// Identity : glyphIndex <-> charcode
@@ -129,7 +157,7 @@ func (enc TrueTypeFontEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 }
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
-func (enc TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
+func (enc *TrueTypeFontEncoder) ToPdfObject() core.PdfObject {
 	// TODO(dennwc): reasonable question: why it have to implement this interface then?
 	return core.MakeNull()
 }
