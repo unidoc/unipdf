@@ -684,8 +684,9 @@ func (i *Invoice) drawInformation() *Table {
 	return table
 }
 
-func (i *Invoice) drawTotals() *Table {
-	table := newTable(2)
+func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	table := newTable(4)
+	table.SetMargins(0, 0, 10, 10)
 
 	totals := [][2]*InvoiceCell{i.subtotal}
 	totals = append(totals, i.totals...)
@@ -696,6 +697,7 @@ func (i *Invoice) drawTotals() *Table {
 		if value.Value == "" {
 			continue
 		}
+		table.SkipCells(2)
 
 		// Add description.
 		cell := table.NewCell()
@@ -720,7 +722,7 @@ func (i *Invoice) drawTotals() *Table {
 		cell.SetContent(p)
 	}
 
-	return table
+	return table.GeneratePageBlocks(ctx)
 }
 
 func (i *Invoice) generateHeaderBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
@@ -816,20 +818,6 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			cell.SetContent(paragraph)
 		}
 	}
-
-	return table.GeneratePageBlocks(ctx)
-}
-
-func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	table := newTable(2)
-	table.SetMargins(0, 0, 5, 40)
-	table.SkipCells(1)
-
-	totalsTable := i.drawTotals()
-	totalsTable.SetMargins(0, 0, 5, 0)
-
-	cell := table.NewCell()
-	cell.SetContent(totalsTable)
 
 	return table.GeneratePageBlocks(ctx)
 }
