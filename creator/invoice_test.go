@@ -62,9 +62,12 @@ func TestInvoiceSimple(t *testing.T) {
 
 	// Set invoice totals.
 	invoice.SetSubtotal("$100.00")
-	invoice.AddTotalLine("Tax (10%)", "$10.00")
 	invoice.AddTotalLine("Shipping", "$5.00")
-	invoice.SetTotal("$115.00")
+	invoice.AddTotalLine("Tax (10%)", "$10.00")
+	for i := 0; i < 10; i++ {
+		invoice.AddTotalLine(fmt.Sprintf("Extra tax #%d", i+1), "$10.00")
+	}
+	invoice.SetTotal("$215.00")
 
 	// Set invoice content sections.
 	invoice.SetNotes("Notes", "Thank you for your business.")
