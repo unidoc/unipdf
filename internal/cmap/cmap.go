@@ -459,25 +459,35 @@ func (cmap *CMap) toBfData() string {
 	}
 	sort.Slice(codes, func(i, j int) bool { return codes[i] < codes[j] })
 
-	// charRanges is a list of the contiguous character code ranges in `codes`.
+	// Generate CMap character code ranges.
+	// The code ranges are intervals of consecutive charcodes (c1 = c0 + 1)
+	// mapping to consecutive runes.
+	// Start with a range consisting of the current character code for both ends
+	// of the interval. Check if the next character is consecutive to the upper
+	// end of the interval and if it maps to the next rune. If so, increase the
+	// interval to the right. Otherwise, append the current range to the
+	// character ranges slice and start over. Continue the process until all
+	// character codes have been mapped to code ranges.
 	var charRanges []charRange
-	c0, c1 := codes[0], codes[0]+1
+	currCharRange := charRange{codes[0], codes[0]}
+	prevRune := cmap.codeToUnicode[codes[0]]
 	for _, c := range codes[1:] {
-		if c != c1 {
-			charRanges = append(charRanges, charRange{c0, c1})
-			c0 = c
+		currRune := cmap.codeToUnicode[c]
+		if c == currCharRange.code1+1 && currRune == prevRune+1 {
+			currCharRange.code1 = c
+		} else {
+			charRanges = append(charRanges, currCharRange)
+			currCharRange.code0, currCharRange.code1 = c, c
 		}
-		c1 = c + 1
+		prevRune = currRune
 	}
-	if c1 > c0 {
-		charRanges = append(charRanges, charRange{c0, c1})
-	}
+	charRanges = append(charRanges, currCharRange)
 
 	// fbChars is a list of single character ranges. fbRanges is a list of multiple character ranges.
 	var fbChars []CharCode
 	var fbRanges []fbRange
 	for _, cr := range charRanges {
-		if cr.code0+1 == cr.code1 {
+		if cr.code0 == cr.code1 {
 			fbChars = append(fbChars, cr.code0)
 		} else {
 			fbRanges = append(fbRanges, fbRange{
@@ -512,7 +522,7 @@ func (cmap *CMap) toBfData() string {
 			for j := 0; j < n; j++ {
 				rng := fbRanges[i*maxBfEntries+j]
 				r := rng.r0
-				lines = append(lines, fmt.Sprintf("<%04x><%04x> <%04x>", rng.code0, rng.code1-1, r))
+				lines = append(lines, fmt.Sprintf("<%04x><%04x> <%04x>", rng.code0, rng.code1, r))
 			}
 			lines = append(lines, "endbfrange")
 		}
