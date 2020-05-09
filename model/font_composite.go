@@ -210,10 +210,14 @@ func (font *pdfFontType0) subsetRegistered() error {
 		common.Log.Debug("Missing font descriptor")
 		return nil
 	}
+	if font.encoder == nil {
+		common.Log.Debug("No encoder - subsetting ignored")
+		return nil
+	}
 
 	stream, ok := core.GetStream(cidfnt.fontDescriptor.FontFile2)
 	if !ok {
-		common.Log.Debug("Embedded font object not found -- ABORT subsseting")
+		common.Log.Debug("Embedded font object not found -- ABORT subsetting")
 		return errors.New("fontfile2 not found")
 	}
 	decoded, err := core.DecodeStream(stream)
@@ -227,18 +231,31 @@ func (font *pdfFontType0) subsetRegistered() error {
 		return err
 	}
 
-	tenc, ok := font.encoder.(*textencoding.TrueTypeFontEncoder)
-	if !ok {
-		return fmt.Errorf("unsupported encoder for subsetting: %T", cidfnt.encoder)
+	var runes []rune
+	var subset *unitype.Font
+	switch tenc := font.encoder.(type) {
+	case *textencoding.TrueTypeFontEncoder:
+		// Means the font has been loaded from TTF file.
+		runes = tenc.RegisteredRunes()
+		subset, err = fnt.SubsetKeepRunes(runes)
+		if err != nil {
+			common.Log.Debug("ERROR: %v", err)
+			return err
+		}
+		// Reduce the encoder also.
+		tenc.SubsetRegistered()
+	case *textencoding.IdentityEncoder:
+		// IdentityEncoder typically means font was parsed from PDF file.
+		runes = tenc.RegisteredRunes()
+		subset, err = fnt.SubsetKeepRunes(runes)
+		if err != nil {
+			common.Log.Debug("ERROR: %v", err)
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported encoder for subsetting: %T", font.encoder)
 	}
 
-	runes := tenc.RegisteredRunes()
-	subset, err := fnt.SubsetKeepRunes(runes)
-	if err != nil {
-		return err
-	}
-	// Reduce the encoder also.
-	tenc.SubsetRegistered()
 	var buf bytes.Buffer
 	err = subset.Write(&buf)
 	if err != nil {
@@ -249,7 +266,7 @@ func (font *pdfFontType0) subsetRegistered() error {
 	if font.toUnicodeCmap != nil {
 		codeToUnicode := make(map[cmap.CharCode]rune, len(runes))
 		for _, r := range runes {
-			cc, ok := tenc.RuneToCharcode(r)
+			cc, ok := font.encoder.RuneToCharcode(r)
 			if !ok {
 				continue
 			}

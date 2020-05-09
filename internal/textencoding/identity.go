@@ -16,44 +16,69 @@ import (
 // IdentityEncoder represents an 2-byte identity encoding
 type IdentityEncoder struct {
 	baseName string
+
+	// runes registered by encoder for tracking what runes are used for subsetting.
+	registeredMap map[rune]struct{}
 }
 
 // NewIdentityTextEncoder returns a new IdentityEncoder based on predefined
 // encoding `baseName` and difference map `differences`.
-func NewIdentityTextEncoder(baseName string) IdentityEncoder {
-	return IdentityEncoder{baseName}
+func NewIdentityTextEncoder(baseName string) *IdentityEncoder {
+	return &IdentityEncoder{
+		baseName: baseName,
+	}
+}
+
+// RegisteredRunes returns the slice of runes that have been registered as used by the encoder.
+func (enc *IdentityEncoder) RegisteredRunes() []rune {
+	runes := make([]rune, len(enc.registeredMap))
+	i := 0
+	for r := range enc.registeredMap {
+		runes[i] = r
+		i++
+	}
+	return runes
 }
 
 // String returns a string that describes `enc`.
-func (enc IdentityEncoder) String() string {
+func (enc *IdentityEncoder) String() string {
 	return enc.baseName
 }
 
 // Encode converts the Go unicode string to a PDF encoded string.
-func (enc IdentityEncoder) Encode(str string) []byte {
+func (enc *IdentityEncoder) Encode(str string) []byte {
 	return encodeString16bit(enc, str)
 }
 
 // Decode converts PDF encoded string to a Go unicode string.
-func (enc IdentityEncoder) Decode(raw []byte) string {
+func (enc *IdentityEncoder) Decode(raw []byte) string {
 	return decodeString16bit(enc, raw)
 }
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) RuneToCharcode(r rune) (CharCode, bool) {
+func (enc *IdentityEncoder) RuneToCharcode(r rune) (CharCode, bool) {
+	if enc.registeredMap == nil {
+		enc.registeredMap = map[rune]struct{}{}
+	}
+	enc.registeredMap[r] = struct{}{} // Register use (subsetting).
+
 	return CharCode(r), true
 }
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) CharcodeToRune(code CharCode) (rune, bool) {
+func (enc *IdentityEncoder) CharcodeToRune(code CharCode) (rune, bool) {
+	if enc.registeredMap == nil {
+		enc.registeredMap = map[rune]struct{}{}
+	}
+	enc.registeredMap[rune(code)] = struct{}{}
 	return rune(code), true
 }
 
 // RuneToGlyph returns the glyph name for rune `r`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
+func (enc *IdentityEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 	if r == ' ' {
 		return "space", true
 	}
@@ -63,7 +88,7 @@ func (enc IdentityEncoder) RuneToGlyph(r rune) (GlyphName, bool) {
 
 // GlyphToRune returns the rune corresponding to glyph name `glyph`.
 // The bool return flag is true if there was a match, and false otherwise.
-func (enc IdentityEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
+func (enc *IdentityEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 	// String with "uniXXXX" format where XXXX is the hexcode.
 	if glyph == "space" {
 		return ' ', true
@@ -78,7 +103,7 @@ func (enc IdentityEncoder) GlyphToRune(glyph GlyphName) (rune, bool) {
 }
 
 // ToPdfObject returns a nil as it is not truly a PDF object and should not be attempted to store in file.
-func (enc IdentityEncoder) ToPdfObject() core.PdfObject {
+func (enc *IdentityEncoder) ToPdfObject() core.PdfObject {
 	if enc.baseName != "" {
 		return core.MakeName(enc.baseName)
 	}
