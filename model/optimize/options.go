@@ -14,4 +14,6 @@ type Options struct {
 	UseObjectStreams                bool
 	CombineIdenticalIndirectObjects bool
 	CompressStreams                 bool
+	CleanFonts                      bool
+	CleanContentstream              bool
 }
