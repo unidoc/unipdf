@@ -12,6 +12,12 @@ import (
 // New creates a optimizers chain from options.
 func New(options Options) *Chain {
 	chain := new(Chain)
+	if options.CleanFonts {
+		chain.Append(new(CleanFonts))
+	}
+	if options.CleanContentstream {
+		chain.Append(new(CleanContentstream))
+	}
 	if options.ImageUpperPPI > 0 {
 		imageOptimizer := new(ImagePPI)
 		imageOptimizer.ImageUpperPPI = options.ImageUpperPPI
