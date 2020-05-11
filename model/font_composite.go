@@ -246,8 +246,13 @@ func (font *pdfFontType0) subsetRegistered() error {
 		tenc.SubsetRegistered()
 	case *textencoding.IdentityEncoder:
 		// IdentityEncoder typically means font was parsed from PDF file.
+		// TODO: These are not actual runes... but glyph ids ? Very confusing.
 		runes = tenc.RegisteredRunes()
-		subset, err = fnt.SubsetKeepRunes(runes)
+		indices := make([]unitype.GlyphIndex, len(runes))
+		for i, r := range runes {
+			indices[i] = unitype.GlyphIndex(r)
+		}
+		subset, err = fnt.SubsetKeepIndices(indices)
 		if err != nil {
 			common.Log.Debug("ERROR: %v", err)
 			return err
@@ -279,7 +284,12 @@ func (font *pdfFontType0) subsetRegistered() error {
 	if err != nil {
 		return err
 	}
-	cidfnt.fontDescriptor.FontFile2 = stream
+	if curstr, ok := core.GetStream(cidfnt.fontDescriptor.FontFile2); ok {
+		// Replace the current stream (keep same object).
+		*curstr = *stream
+	} else {
+		cidfnt.fontDescriptor.FontFile2 = stream
+	}
 
 	// Set subset name.
 	tag := genSubsetTag()
@@ -351,6 +361,7 @@ func newPdfFontType0FromPdfObject(d *core.PdfObjectDictionary, base *fontCommon)
 
 	encoderName, ok := core.GetNameVal(d.Get("Encoding"))
 	if ok {
+		// TODO: Identity-H maps 16-bit character codes straight to glyph index (don't need actual runes).
 		if encoderName == "Identity-H" || encoderName == "Identity-V" {
 			font.encoder = textencoding.NewIdentityTextEncoder(encoderName)
 		} else if cmap.IsPredefinedCMap(encoderName) {
