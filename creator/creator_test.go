@@ -33,6 +33,7 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/extractor"
 	"github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
 )
@@ -696,12 +697,31 @@ func TestParagraphChinese(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	testWriteAndRender(t, creator, "2_p_nihao.pdf")
-	fname := tempFile("2_p_nihao.pdf")
+	fname := testWrite(t, creator, "2_p_nihao.pdf")
 	st, err := os.Stat(fname)
 	require.NoError(t, err)
+	t.Logf("output size: %d (%.2f MB)", st.Size(), float64(st.Size())/1024/1024)
 
-	t.Logf("output size: %d (%d MB)", st.Size(), st.Size()/1024/1024)
+	// Check if text is extracted correctly (tests the ToUnicode map).
+	f, err := os.Open(fname)
+	require.NoError(t, err)
+	defer f.Close()
+	r, err := model.NewPdfReaderLazy(f)
+	require.NoError(t, err)
+	p, err := r.GetPage(1)
+	require.NoError(t, err)
+	e, err := extractor.New(p)
+	require.NoError(t, err)
+	text, err := e.ExtractText()
+	require.NoError(t, err)
+	expected := strings.Join(lines, "\n")
+	if len(text) > len(expected) {
+		// Trim off extra license data.
+		text = text[:len(expected)]
+	}
+	require.Equal(t, expected, text)
+
+	testRender(t, fname)
 }
 
 // Test paragraph with composite font and various unicode characters.
@@ -3113,14 +3133,20 @@ func hashFile(file string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func testWriteAndRender(t *testing.T, c *Creator, pname string) {
+func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
+	pname = testWrite(t, c, pname)
+	testRender(t, pname)
+	return pname
+}
+
+func testWrite(t *testing.T, c *Creator, pname string) string {
 	pname = tempFile(pname)
 	err := c.WriteToFile(pname)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
-		return
+		return pname
 	}
-	testRender(t, pname)
+	return pname
 }
 
 func testRender(t *testing.T, pdfPath string) {
