@@ -569,7 +569,7 @@ func (table *Table) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, 
 			case CellHorizontalAlignmentRight:
 				if w > cw {
 					ctx.X = ctx.X + w - cw - cell.indent
-					ctx.Width = cw
+					ctx.Width -= cell.indent
 				}
 			}
 
