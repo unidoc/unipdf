@@ -119,8 +119,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				}
 				inTextObj = true
 
-				gs.CTM = parentCTM.Mult(gs.CTM)
-				to = newTextObject(e, resources, gs, &state, &fontStack)
+				graphicsState := gs
+				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
+				to = newTextObject(e, resources, graphicsState, &state, &fontStack)
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
