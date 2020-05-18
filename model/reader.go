@@ -507,6 +507,61 @@ func (r *PdfReader) GetOutlines() (*Outline, error) {
 	return outline, nil
 }
 
+// RepairAcroForm attempts to rebuild the AcroForm fields using the widget
+// annotations present in the document pages.
+func (r *PdfReader) RepairAcroForm() error {
+	var fields []*PdfField
+	fieldCache := map[*core.PdfIndirectObject]struct{}{}
+	for _, page := range r.PageList {
+		annotations, err := page.GetAnnotations()
+		if err != nil {
+			return err
+		}
+
+		for _, annotation := range annotations {
+			var field *PdfField
+			switch t := annotation.GetContext().(type) {
+			case *PdfAnnotationWidget:
+				if t.parent != nil {
+					field = t.parent
+					break
+				}
+				if parentObj, ok := core.GetIndirect(t.Parent); ok {
+					field, err = r.newPdfFieldFromIndirectObject(parentObj, nil)
+					if err == nil {
+						break
+					}
+					common.Log.Debug("WARN: could not parse form field %+v: %v", parentObj, err)
+				}
+				if t.container != nil {
+					field, err = r.newPdfFieldFromIndirectObject(t.container, nil)
+					if err == nil {
+						break
+					}
+					common.Log.Debug("WARN: could not parse form field %+v: %v", t.container, err)
+				}
+			}
+			if field == nil {
+				continue
+			}
+			if _, ok := fieldCache[field.container]; ok {
+				continue
+			}
+			fieldCache[field.container] = struct{}{}
+			fields = append(fields, field)
+		}
+	}
+
+	if len(fields) == 0 {
+		return nil
+	}
+	if r.AcroForm == nil {
+		r.AcroForm = NewPdfAcroForm()
+	}
+	r.AcroForm.Fields = &fields
+	return nil
+}
+
 // loadForms loads the AcroForm.
 func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
