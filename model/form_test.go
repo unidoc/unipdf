@@ -172,7 +172,7 @@ func TestRepairAcroForm(t *testing.T) {
 
 	original := *reader.AcroForm.Fields
 	reader.AcroForm.Fields = nil
-	require.NoError(t, reader.RepairAcroForm())
+	require.NoError(t, reader.RepairAcroForm(nil))
 	repaired := *reader.AcroForm.Fields
 	require.ElementsMatch(t, original, repaired)
 }
