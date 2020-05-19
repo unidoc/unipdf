@@ -16,12 +16,6 @@ import (
 	"github.com/unidoc/unipdf/v3/core/security"
 )
 
-// AcroFormRepairOptions contains options for rebuilding the AcroForm. It is
-// used by the reader's RepairAcroForm method.
-// NOTE: Added in order to allow future configuration of the AcroForm repair process.
-type AcroFormRepairOptions struct {
-}
-
 // PdfReader represents a PDF file reader. It is a frontend to the lower level parsing mechanism and provides
 // a higher level access to work with PDF structure and information, such as the page structure etc.
 type PdfReader struct {
@@ -513,11 +507,16 @@ func (r *PdfReader) GetOutlines() (*Outline, error) {
 	return outline, nil
 }
 
+// AcroFormRepairOptions contains options for rebuilding the AcroForm.
+type AcroFormRepairOptions struct {
+}
+
 // RepairAcroForm attempts to rebuild the AcroForm fields using the widget
-// annotations present in the document pages.
-// NOTE: the opts parameter is not used currently as the repair process does
-// not have any configuration options yet. The parameter has been added in
-// order to allow future configuration, without causing breaking changes.
+// annotations present in the document pages. Pass nil for the opts parameter
+// in order to use the default options.
+// NOTE: Currently, the opts parameter is declared in order to enable adding
+// future options, but passing nil will always result in the default options
+// being used.
 func (r *PdfReader) RepairAcroForm(opts *AcroFormRepairOptions) error {
 	var fields []*PdfField
 	fieldCache := map[*core.PdfIndirectObject]struct{}{}
