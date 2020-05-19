@@ -428,8 +428,8 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 	numMisses = 0
 	for _, code := range charcodes {
 		if fontBase.toUnicodeCmap != nil {
-			if r, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
-				runes = append(runes, r)
+			if s, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
+				runes = append(runes, []rune(s)...)
 				continue
 			}
 		}

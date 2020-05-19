@@ -48,8 +48,8 @@ func (enc CMapEncoder) Decode(raw []byte) string {
 		if codes, ok := enc.codeToCID.BytesToCharcodes(raw); ok {
 			var buf bytes.Buffer
 			for _, code := range codes {
-				r, _ := enc.CharcodeToRune(CharCode(code))
-				buf.WriteRune(r)
+				s, _ := enc.charcodeToString(CharCode(code))
+				buf.WriteString(s)
 			}
 
 			return buf.String()
@@ -87,8 +87,13 @@ func (enc CMapEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
 func (enc CMapEncoder) CharcodeToRune(code CharCode) (rune, bool) {
+	s, ok := enc.charcodeToString(code)
+	return ([]rune(s))[0], ok
+}
+
+func (enc CMapEncoder) charcodeToString(code CharCode) (string, bool) {
 	if enc.cidToUnicode == nil {
-		return MissingCodeRune, false
+		return MissingCodeString, false
 	}
 
 	// Map charcode to CID. If charcode to CID CMap is nil, assume Identity encoding.
@@ -96,7 +101,7 @@ func (enc CMapEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	if enc.codeToCID != nil {
 		var ok bool
 		if cid, ok = enc.codeToCID.CharcodeToCID(cmap.CharCode(code)); !ok {
-			return MissingCodeRune, false
+			return MissingCodeString, false
 		}
 	}
 
