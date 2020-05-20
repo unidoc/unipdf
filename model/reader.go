@@ -570,6 +570,45 @@ func (r *PdfReader) RepairAcroForm(opts *AcroFormRepairOptions) error {
 	return nil
 }
 
+// AcroFormNeedsRepair returns true if the document contains widget annotations
+// linked to fields which are not referenced in the AcroForm. The AcroForm can
+// be repaired using the RepairAcroForm method of the reader.
+func (r *PdfReader) AcroFormNeedsRepair() (bool, error) {
+	var fields []*PdfField
+	if r.AcroForm != nil {
+		fields = r.AcroForm.AllFields()
+	}
+
+	fieldMap := make(map[*PdfField]struct{}, len(fields))
+	for _, field := range fields {
+		fieldMap[field] = struct{}{}
+	}
+
+	for _, page := range r.PageList {
+		annotations, err := page.GetAnnotations()
+		if err != nil {
+			return false, err
+		}
+
+		for _, annotation := range annotations {
+			widget, ok := annotation.GetContext().(*PdfAnnotationWidget)
+			if !ok {
+				continue
+			}
+
+			field := widget.Field()
+			if field == nil {
+				return true, nil
+			}
+			if _, ok := fieldMap[field]; !ok {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // loadForms loads the AcroForm.
 func (r *PdfReader) loadForms() (*PdfAcroForm, error) {
 	if r.parser.GetCrypter() != nil && !r.parser.IsAuthenticated() {
