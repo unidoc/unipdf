@@ -698,7 +698,7 @@ func (to *textObject) reset() {
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
 	charcodes := font.BytesToCharcodes(data)
-	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
+	runeSlices, numChars, numMisses := font.CharcodesToRuneSlices(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -717,18 +717,17 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
+	//  common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runeSlices, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
 
-	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+	// common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, drunes)
 
-	for i, r := range runes {
-		// TODO(peterwilliams97): Need to find and fix cases where this happens.
-		if r == '\x00' {
+	for i, r := range runeSlices {
+		if len(r) == 1 && r[0] == '\x00' {
 			continue
 		}
 
@@ -742,14 +741,14 @@ func (to *textObject) renderText(data []byte) error {
 
 		// w is the unscaled movement at the end of a word.
 		w := 0.0
-		if r == ' ' {
+		if string(r) == " " {
 			w = state.tw
 		}
 
 		m, ok := font.GetCharMetrics(code)
 		if !ok {
 			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%+q %s", code, r, r, font)
-			return errors.New("no char metrics")
+			return fmt.Errorf("no char metrics: font=%s code=%d", font.String(), code)
 		}
 
 		// c is the character size in unscaled text units.

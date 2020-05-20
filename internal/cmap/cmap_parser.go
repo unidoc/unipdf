@@ -105,7 +105,8 @@ func (cmap *CMap) parse() error {
 func (cmap *CMap) parseName() error {
 	name := ""
 	done := false
-	for i := 0; i < 10 && !done; i++ {
+	// /Users/peter/testdata/programming/pdf_text/columns/Berg.pdf
+	for i := 0; i < 20 && !done; i++ {
 		o, err := cmap.parseObject()
 		if err != nil {
 			return err
@@ -487,11 +488,7 @@ func (cmap *CMap) parseBfchar() error {
 			return ErrBadCMap
 		}
 
-		if ligature, ok := StringToLigature[string(target)]; ok {
-			cmap.codeToUnicode[code] = string(ligature)
-		} else {
-			cmap.codeToUnicode[code] = string(target)
-		}
+		cmap.codeToUnicode[code] = string(target)
 	}
 
 	return nil
@@ -565,18 +562,17 @@ func (cmap *CMap) parseBfrange() error {
 				if !ok {
 					return errors.New("non-hex string in array")
 				}
-				r := hexToRunes(hexs)
-				cmap.codeToUnicode[code] = string(r)
+				runes := hexToRunes(hexs)
+				cmap.codeToUnicode[code] = string(runes)
 			}
 
 		case cmapHexString:
 			// <codeFrom> <codeTo> <dst>, maps [from,to] to [dst,dst+to-from].
-			// XXX(peterwilliams97): Do we need to do this with multi-rune entries? I guess we
-			// would increment the last rune?
-			r := hexToRune(v)
+			runes := hexToRunes(v)
+			n := len(runes)
 			for code := srcCodeFrom; code <= srcCodeTo; code++ {
-				cmap.codeToUnicode[code] = string(r)
-				r++
+				cmap.codeToUnicode[code] = string(runes)
+				runes[n-1]++
 			}
 		default:
 			common.Log.Debug("ERROR: Unexpected type %T", o)
@@ -585,61 +581,4 @@ func (cmap *CMap) parseBfrange() error {
 	}
 
 	return nil
-}
-
-// ligatureToString is a map from ligature runes to their constituent characters.
-// https://en.wikipedia.org/wiki/Typographic_ligature#Ligatures_in_Unicode_(Latin_alphabets)
-// FIXME(peterwilliams97): I copied this here from glyphs_glyphlist.go to avoid a circular
-// dependency. Where should it go?
-var ligatureToString = map[rune]string{
-	'Ꜳ':          "AA",
-	'ꜳ':          "aa",
-	'Ꜵ':          "aa",
-	'ꜵ':          "ao",
-	'Ꜷ':          "AU",
-	'ꜷ':          "au",
-	'Ꜽ':          "AY",
-	'ꜽ':          "ay",
-	'\U0001f670': "et",
-	'ﬀ':          "ff",
-	'ﬃ':          "ffi",
-	'ﬄ':          "ffl",
-	'ﬁ':          "fi",
-	'ﬂ':          "fl",
-	'Œ':          "OE",
-	'œ':          "oe",
-	'Ꝏ':          "OO",
-	'ꝏ':          "oo",
-	'ẞ':          "fs",
-	'ß':          "fz",
-	'ﬆ':          "st",
-	'ﬅ':          "ſt",
-	'Ꜩ':          "TZ",
-	'ꜩ':          "tz",
-	'ᵫ':          "ue",
-	'Ꝡ':          "VY",
-	'ꝡ':          "vy",
-	// Reverse of ligatureMap
-	0xe000: "ft",
-	0xe001: "fj",
-	0xe002: "fb",
-	0xe003: "fh",
-	0xe004: "fk",
-	0xe005: "tt",
-	0xe006: "tf",
-	0xe007: "ffj",
-	0xe008: "ffb",
-	0xe009: "ffh",
-	0xe00a: "ffk",
-	0xe00b: "T_h",
-}
-
-var StringToLigature = reverseLigatures(ligatureToString)
-
-func reverseLigatures(l2s map[rune]string) map[string]rune {
-	s2l := make(map[string]rune, len(l2s))
-	for l, s := range l2s {
-		s2l[s] = l
-	}
-	return s2l
 }

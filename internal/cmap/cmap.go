@@ -265,6 +265,10 @@ func (cmap *CMap) computeInverseMappings() {
 
 	// Generate Unicode -> CID map.
 	for cid, s := range cmap.codeToUnicode {
+		// The CMap entries can be empty e.g. dobe_supplement_iso32000_1.pdf
+		if len(s) == 0 {
+			continue
+		}
 		r := rune0(s)
 		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c > cid) {
 			cmap.unicodeToCode[r] = cid
@@ -481,10 +485,8 @@ func (cmap *CMap) toBfData() string {
 	var charRanges []charRange
 	currCharRange := charRange{codes[0], codes[0]}
 	prevRune := rune0(cmap.codeToUnicode[codes[0]])
-	// fmt.Printf("      code=0x%04x prevRune=%q=0x%04x\n", codes[0], prevRune, prevRune)
 	for _, c := range codes[1:] {
 		currRune := rune0(cmap.codeToUnicode[c])
-		// fmt.Printf("%4d: code=0x%04x currRune=%q=0x%04x\n", i+1, c, currRune, currRune)
 		if c == currCharRange.code1+1 && currRune == prevRune+1 {
 			currCharRange.code1 = c
 		} else {
