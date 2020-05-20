@@ -176,3 +176,36 @@ func TestRepairAcroForm(t *testing.T) {
 	repaired := *reader.AcroForm.Fields
 	require.ElementsMatch(t, original, repaired)
 }
+
+func TestAcroFormNeedsRepair(t *testing.T) {
+	f, err := os.Open("./testdata/OoPdfFormExample.pdf")
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := NewPdfReader(f)
+	require.NoError(t, err)
+
+	// Original AcroForm repair status check.
+	needsRepair, err := reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, false)
+
+	// Nil AcroForm repair status check.
+	reader.AcroForm = nil
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, true)
+
+	// Repaired AcroForm repair status check.
+	require.NoError(t, reader.RepairAcroForm(nil))
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, false)
+
+	// Missing AcroForm fields repair status check.
+	fields := (*reader.AcroForm.Fields)[1:]
+	reader.AcroForm.Fields = &fields
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, true)
+}
