@@ -168,16 +168,12 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	if !ok {
 		return nil, errors.New("invalid Rect")
 	}
-	rect, err := array.ToFloat64Array()
+	rect, err := model.NewPdfRectangle(*array)
 	if err != nil {
 		return nil, err
 	}
-	if len(rect) != 4 {
-		return nil, errors.New("len(Rect) != 4")
-	}
-
-	width := rect[2] - rect[0]
-	height := rect[3] - rect[1]
+	width := rect.Width()
+	height := rect.Height()
 
 	if mkDict, has := core.GetDict(wa.MK); has {
 		bsDict, _ := core.GetDict(wa.BS)
