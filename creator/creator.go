@@ -481,6 +481,13 @@ func (c *Creator) Finalize() error {
 		adjustOutlineDest = func(item *model.OutlineItem) {
 			item.Dest.Page += int64(genpages)
 
+			// Get page indirect object.
+			if page := int(item.Dest.Page); page >= 0 && page < len(c.pages) {
+				item.Dest.PageObj = c.pages[page].GetPageAsIndirectObject()
+			} else {
+				common.Log.Debug("WARN: could not get page container for page %d", page)
+			}
+
 			// Reverse the Y axis of the destination coordinates.
 			// The user passes in the annotation coordinates as if
 			// position 0, 0 is at the top left of the page.
@@ -501,15 +508,19 @@ func (c *Creator) Finalize() error {
 
 		// Add outline TOC item.
 		if c.AddTOC {
-			var tocPage int64
+			var tocPage int
 			if hasFrontPage {
 				tocPage = 1
 			}
 
-			c.outline.Insert(0, model.NewOutlineItem(
-				"Table of Contents",
-				model.NewOutlineDest(tocPage, 0, c.pageHeight),
-			))
+			// Create TOC outline item.
+			dest := model.NewOutlineDest(int64(tocPage), 0, c.pageHeight)
+			if tocPage >= 0 && tocPage < len(c.pages) {
+				dest.PageObj = c.pages[tocPage].GetPageAsIndirectObject()
+			} else {
+				common.Log.Debug("WARN: could not get page container for page %d", tocPage)
+			}
+			c.outline.Insert(0, model.NewOutlineItem("Table of Contents", dest))
 		}
 	}
 
