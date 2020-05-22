@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	goimage "image"
@@ -1040,11 +1041,31 @@ func TestSubchapters(t *testing.T) {
 
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile(tempFile("3_subchapters.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	// Finalize creator in order to get final version of the outlines.
+	require.NoError(t, c.Finalize())
+
+	// Get outline data as JSON.
+	srcJson, err := json.Marshal(c.outline)
+	require.NoError(t, err)
+
+	// Write output file.
+	outputPath := tempFile("3_subchapters.pdf")
+	require.NoError(t, c.WriteToFile(outputPath))
+
+	// Read output file.
+	outputFile, err := os.Open(outputPath)
+	require.NoError(t, err)
+	defer outputFile.Close()
+
+	reader, err := model.NewPdfReader(outputFile)
+	require.NoError(t, err)
+
+	// Compare outlines JSON data.
+	dstOutline, err := reader.GetOutlines()
+	require.NoError(t, err)
+	dstJson, err := json.Marshal(dstOutline)
+	require.NoError(t, err)
+	require.Equal(t, srcJson, dstJson)
 }
 
 // Test creating and drawing a table.
