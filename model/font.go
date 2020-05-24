@@ -422,14 +422,28 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 
 // CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
 // information about hits and misses from the reverse mapping process.
+// NOTE: The number of runes returned may be greater than the number of charcodes.
+// TODO(peterwilliams97): Deprecate?
 func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
+	runeSlices, numHits, numMisses := font.CharcodesToRuneSlices(charcodes)
+	var runes []rune
+	for _, r := range runeSlices {
+		runes = append(runes, r...)
+	}
+	return runes, numHits, numMisses
+}
+
+// CharcodesToRuneSlices returns the unicode strings corresponding to `charcodes` as rune slices.
+// The int return is the number of unconvereted codes.
+// NOTE: The number of rune slices returned is equal to the number of charcodes
+func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([][]rune, int, int) {
 	fontBase := font.baseFields()
-	runes := make([]rune, 0, len(charcodes))
-	numMisses = 0
+	runeSlices := make([][]rune, 0, len(charcodes))
+	numMisses := 0
 	for _, code := range charcodes {
 		if fontBase.toUnicodeCmap != nil {
-			if r, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
-				runes = append(runes, r)
+			if s, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
+				runeSlices = append(runeSlices, []rune(s))
 				continue
 			}
 		}
@@ -438,7 +452,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 		encoder := font.Encoder()
 		if encoder != nil {
 			if r, ok := encoder.CharcodeToRune(code); ok {
-				runes = append(runes, r)
+				runeSlices = append(runeSlices, []rune{r})
 				continue
 			}
 		}
@@ -447,7 +461,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++
-		runes = append(runes, cmap.MissingCodeRune)
+		runeSlices = append(runeSlices, []rune{cmap.MissingCodeRune})
 	}
 
 	if numMisses != 0 {
@@ -457,7 +471,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			len(charcodes), numMisses, font)
 	}
 
-	return runes, len(runes), numMisses
+	return runeSlices, len(runeSlices), numMisses
 }
 
 // CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
