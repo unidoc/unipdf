@@ -101,17 +101,18 @@ func (tm *textMark) String() string {
 	return fmt.Sprintf("serial=%d %.2f fontsize=%.2f \"%s\"",
 		tm.serial, tm.PdfRectangle, tm.fontsize, tm.text)
 }
+
 func (tm *textMark) bbox() model.PdfRectangle {
 	return tm.PdfRectangle
 }
 
 // Width returns the width of `tm`.text in the text direction.
-func (tm textMark) Width() float64 {
+func (tm *textMark) Width() float64 {
 	return math.Abs(tm.orientedStart.X - tm.orientedEnd.X)
 }
 
 // ToTextMark returns the public view of `tm`.
-func (tm textMark) ToTextMark() TextMark {
+func (tm *textMark) ToTextMark() TextMark {
 	return TextMark{
 		count:    int64(tm.serial),
 		Text:     tm.text,

@@ -663,7 +663,7 @@ type textObject struct {
 	state     *textState
 	tm        transform.Matrix // Text matrix. For the character pointer.
 	tlm       transform.Matrix // Text line matrix. For the start of line pointer.
-	marks     []textMark       // Text marks get written here.
+	marks     []*textMark      // Text marks get written here.
 }
 
 // newTextState returns a default textState.
@@ -812,7 +812,7 @@ func (to *textObject) renderText(data []byte) error {
 			}
 		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
-		to.marks = append(to.marks, mark)
+		to.marks = append(to.marks, &mark)
 
 		// update the text matrix by the displacement of the text location.
 		to.tm.Concat(td)
@@ -859,9 +859,9 @@ func isTextSpace(text string) bool {
 
 // PageText represents the layout of text on a device page.
 type PageText struct {
-	marks     []textMark // Texts and their positions on a PDF page.
-	viewText  string     // Extracted page text.
-	viewMarks []TextMark // Public view of `marks`.
+	marks     []*textMark // Texts and their positions on a PDF page.
+	viewText  string      // Extracted page text.
+	viewMarks []TextMark  // Public view of `marks`.
 	pageSize  model.PdfRectangle
 }
 

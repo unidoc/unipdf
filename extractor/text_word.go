@@ -18,44 +18,45 @@ import (
 // textWord represents a word. It's a sequence of textMarks that are close enough toghether in the
 // reading direction and doesn't have any space textMarks.
 type textWord struct {
-	serial             int        // Sequence number for debugging.
-	model.PdfRectangle            // Bounding box (union of `marks` bounding boxes).
-	depth              float64    // Distance from bottom of word to top of page.
-	marks              []textMark // Marks in this word.
-	fontsize           float64    // Largest fontsize in `marks` w
+	serial             int         // Sequence number for debugging.
+	model.PdfRectangle             // Bounding box (union of `marks` bounding boxes).
+	depth              float64     // Distance from bottom of word to top of page.
+	marks              []*textMark // Marks in this word.
+	fontsize           float64     // Largest fontsize in `marks` w
 	spaceAfter         bool
 }
 
 // makeTextPage builds a word list from `marks`, the textMarks on a page.
-// `pageSize` is used to calculate the words` depths depth on the page
-func makeTextWords(marks []textMark, pageSize model.PdfRectangle) []*textWord {
+// `pageSize` is used to calculate the words` depths depth on the page.
+func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	var words []*textWord
-	var cursor *textWord
+	var newWord *textWord // The word being built.
 
-	// addWord adds `cursor` to `words` and resets it to nil
-	addWord := func() {
-		if cursor != nil {
-			if !isTextSpace(cursor.text()) {
-				words = append(words, cursor)
+	// addNewWord adds `newWord` to `words` and resets `newWord` to nil.
+	addNewWord := func() {
+		if newWord != nil {
+			if !isTextSpace(newWord.text()) {
+				words = append(words, newWord)
 			}
-			cursor = nil
+			newWord = nil
 		}
 	}
 
 	for _, tm := range marks {
 		isSpace := isTextSpace(tm.text)
-		if cursor == nil && !isSpace {
-			cursor = newTextWord([]textMark{tm}, pageSize)
+		if newWord == nil && !isSpace {
+			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
 		}
 		if isSpace {
-			addWord()
+			addNewWord()
 			continue
 		}
 
-		depthGap := pageSize.Ury - tm.Lly - cursor.depth
-		readingGap := tm.Llx - cursor.Urx
-		fontsize := cursor.fontsize
+		depthGap := getDepth(pageSize, tm) - newWord.depth
+		readingGap := gapReading(tm, newWord)
+
+		fontsize := newWord.fontsize
 
 		// These are the conditions for `tm` to be from a new word.
 		// - Change in reading position is larger than a space which we guess to be 0.11*fontsize.
@@ -64,20 +65,20 @@ func makeTextWords(marks []textMark, pageSize model.PdfRectangle) []*textWord {
 		sameWord := -0.19*fontsize <= readingGap && readingGap <= 0.11*fontsize &&
 			math.Abs(depthGap) <= 0.04*fontsize
 		if !sameWord {
-			addWord()
-			cursor = newTextWord([]textMark{tm}, pageSize)
+			addNewWord()
+			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
 		}
 
-		cursor.addMark(tm, pageSize)
+		newWord.addMark(tm, pageSize)
 	}
-	addWord()
+	addNewWord()
 	return words
 }
 
 // newTextWord creates a textWords containing `marks`.
 // `pageSize` is used to calculate the word's depth on the page.
-func newTextWord(marks []textMark, pageSize model.PdfRectangle) *textWord {
+func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 	r := marks[0].PdfRectangle
 	fontsize := marks[0].fontsize
 	for _, tm := range marks[1:] {
@@ -111,7 +112,7 @@ func (w *textWord) bbox() model.PdfRectangle {
 
 // addMark adds textMark `tm` to word `w`.
 // `pageSize` is used to calculate the word's depth on the page.
-func (w *textWord) addMark(tm textMark, pageSize model.PdfRectangle) {
+func (w *textWord) addMark(tm *textMark, pageSize model.PdfRectangle) {
 	w.marks = append(w.marks, tm)
 	w.PdfRectangle = rectUnion(w.PdfRectangle, tm.PdfRectangle)
 	if tm.fontsize > w.fontsize {

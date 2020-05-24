@@ -19,7 +19,7 @@ import (
 type paraList []*textPara
 
 // makeTextPage builds a paraList from `marks`, the textMarks on a page.
-func makeTextPage(marks []textMark, pageSize model.PdfRectangle, rot int) paraList {
+func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraList {
 	common.Log.Trace("makeTextPage: %d elements pageSize=%.2f", len(marks), pageSize)
 
 	// Break the marks into words

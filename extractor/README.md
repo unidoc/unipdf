@@ -5,7 +5,7 @@ understand the code you may wish to recombine this in the orginal `text.go`.
 
 BASIC IDEAS
 -----------
-There are two directions
+There are two [directions](https://www.w3.org/International/questions/qa-scripts.en#directions)s\.
 
 - *reading*
 - *depth*
@@ -34,7 +34,7 @@ WHERE TO START
 
 * A page's `textMark`s are obtained from its contentstream.
 * The `textMark`s are divided into `textWord`s.
-* The `textWord`s are grouped into depth bins with each the contents of each bin sorted by reading direction.
+* The `textWord`s are grouped into depth bins with the contents of each bin sorted by reading direction.
 * The page area is divided into rectangular regions, one for each paragraph.
 * The words in of each rectangular region are aranged inot`textLine`s. Each rectangular region and
 its constituent lines is a `textPara`.

@@ -48,6 +48,11 @@ type bounded interface {
 	bbox() model.PdfRectangle
 }
 
+// getDepth returns the depth of `a` on a page of size `pageSize`.
+func getDepth(pageSize model.PdfRectangle, a bounded) float64 {
+	return pageSize.Ury - a.bbox().Lly
+}
+
 // diffReading returns `a` - `b` in the reading direction.
 func diffReading(a, b bounded) float64 {
 	return a.bbox().Llx - b.bbox().Llx
@@ -91,11 +96,6 @@ func bboxDepth(b bounded) float64 {
 // readingOverlapLeft returns true is the left of `word` is in within `para` or delta to its right
 func readingOverlapLeft(para *textStrata, word *textWord, delta float64) bool {
 	return para.Urx <= word.Llx && word.Llx < para.Urx+delta
-}
-
-// readingOverlaplapRight returns true is the left of `word` is in within `para` but at least delta from its left
-func readingOverlaplapRight(para *textStrata, word *textWord, delta float64) bool {
-	return para.Llx+delta < word.Llx && word.Llx <= para.Urx
 }
 
 // readingOverlapPlusGap returns true if `word` overlaps [para.Llx-maxIntraReadingGap, para.Urx+maxIntraReadingGap]
