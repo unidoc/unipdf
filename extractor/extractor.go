@@ -14,6 +14,7 @@ type Extractor struct {
 	// stream contents and resources for page
 	contents  string
 	resources *model.PdfPageResources
+	mediaBox  model.PdfRectangle
 
 	// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
 	// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
@@ -27,11 +28,12 @@ type Extractor struct {
 	accessCount int64
 
 	// textCount is an incrementing number used to identify XYTest objects.
-	textCount int64
+	textCount int
 }
 
 // New returns an Extractor instance for extracting content from the input PDF page.
 func New(page *model.PdfPage) (*Extractor, error) {
+	serial.reset()
 	contents, err := page.GetAllContentStreams()
 	if err != nil {
 		return nil, err
@@ -42,9 +44,14 @@ func New(page *model.PdfPage) (*Extractor, error) {
 	// fmt.Printf("%s\n", contents)
 	// fmt.Println("========================= ::: =========================")
 
+	mediaBox, err := page.GetMediaBox()
+	if err != nil {
+		return nil, err
+	}
 	e := &Extractor{
 		contents:    contents,
 		resources:   page.Resources,
+		mediaBox:    *mediaBox,
 		fontCache:   map[string]fontEntry{},
 		formResults: map[string]textResult{},
 	}

@@ -124,7 +124,7 @@ func (ctx *imageExtractContext) processOperand(op *contentstream.ContentStreamOp
 		name, ok := core.GetName(op.Params[0])
 		if !ok {
 			common.Log.Debug("ERROR: Type")
-			return errTypeCheck
+			return core.ErrTypeError
 		}
 
 		_, xtype := resources.GetXObjectByName(*name)
