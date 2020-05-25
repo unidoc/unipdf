@@ -31,6 +31,7 @@ type TrueTypeFontEncoder struct {
 }
 
 // SubsetRegistered subsets `enc` to only registered runes (that have been registered via encoding).
+// NOTE: Make sure to call this soon before writing (once all needed runes have been registered).
 func (enc *TrueTypeFontEncoder) SubsetRegistered() {
 	common.Log.Info("TTF Subset: Pruning")
 	for r := range enc.runeToGIDMap {

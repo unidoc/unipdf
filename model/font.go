@@ -43,6 +43,8 @@ type PdfFont struct {
 // SubsetRegistered subsets the font to only the glyphs that have been registered by the encoder.
 // NOTE: This only works on fonts that support subsetting. For unsupported fonts this is a no-op, although a debug
 //   message is emitted.  Currently supported fonts are embedded Truetype CID fonts (type 0).
+// NOTE: Make sure to call this soon before writing (once all needed runes have been registered).
+// If using package creator, use its EnableFontSubsetting method instead.
 func (font *PdfFont) SubsetRegistered() error {
 	switch t := font.context.(type) {
 	case *pdfFontType0:
