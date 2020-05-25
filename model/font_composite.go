@@ -127,6 +127,9 @@ func (font *pdfFontType0) baseFields() *fontCommon {
 }
 
 func (font *pdfFontType0) getFontDescriptor() *PdfFontDescriptor {
+	if font.fontDescriptor == nil && font.DescendantFont != nil {
+		return font.DescendantFont.FontDescriptor()
+	}
 	return font.fontDescriptor
 }
 
@@ -222,6 +225,7 @@ func (font *pdfFontType0) subsetRegistered() error {
 	}
 	decoded, err := core.DecodeStream(stream)
 	if err != nil {
+		common.Log.Debug("Decode error: %v", err)
 		return err
 	}
 
@@ -252,10 +256,22 @@ func (font *pdfFontType0) subsetRegistered() error {
 		for i, r := range runes {
 			indices[i] = unitype.GlyphIndex(r)
 		}
+
 		subset, err = fnt.SubsetKeepIndices(indices)
 		if err != nil {
 			common.Log.Debug("ERROR: %v", err)
 			return err
+		}
+	case textencoding.SimpleEncoder:
+		// Simple encoding, bytes are 0-255
+		charcodes := tenc.Charcodes()
+		for _, c := range charcodes {
+			r, ok := tenc.CharcodeToRune(c)
+			if !ok {
+				common.Log.Debug("ERROR: unable convert charcode to rune: %d", c)
+				continue
+			}
+			runes = append(runes, r)
 		}
 	default:
 		return fmt.Errorf("unsupported encoder for subsetting: %T", font.encoder)
@@ -264,6 +280,7 @@ func (font *pdfFontType0) subsetRegistered() error {
 	var buf bytes.Buffer
 	err = subset.Write(&buf)
 	if err != nil {
+		common.Log.Debug("ERROR: %v", err)
 		return err
 	}
 
@@ -282,8 +299,10 @@ func (font *pdfFontType0) subsetRegistered() error {
 
 	stream, err = core.MakeStream(buf.Bytes(), core.NewFlateEncoder())
 	if err != nil {
+		common.Log.Debug("ERROR: %v", err)
 		return err
 	}
+	stream.Set("Length1", core.MakeInteger(int64(buf.Len())))
 	if curstr, ok := core.GetStream(cidfnt.fontDescriptor.FontFile2); ok {
 		// Replace the current stream (keep same object).
 		*curstr = *stream

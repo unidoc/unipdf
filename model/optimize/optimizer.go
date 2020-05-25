@@ -12,8 +12,8 @@ import (
 // New creates a optimizers chain from options.
 func New(options Options) *Chain {
 	chain := new(Chain)
-	if options.CleanFonts {
-		chain.Append(new(CleanFonts))
+	if options.CleanFonts || options.SubsetFonts {
+		chain.Append(&CleanFonts{Subset: options.SubsetFonts})
 	}
 	if options.CleanContentstream {
 		chain.Append(new(CleanContentstream))

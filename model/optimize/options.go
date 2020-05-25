@@ -15,5 +15,6 @@ type Options struct {
 	CombineIdenticalIndirectObjects bool
 	CompressStreams                 bool
 	CleanFonts                      bool
+	SubsetFonts                     bool
 	CleanContentstream              bool
 }
