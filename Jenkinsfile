@@ -92,7 +92,7 @@ node {
             echo "Pulling unipdf-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
 
-            # Use replace directive to use disk version of unipdf.
+            // Use replace directive to use disk version of unipdf.
             sh 'echo "replace github.com/unidoc/unipdf/v3 => ../unipdf" >>go.mod'
             
             // Dependencies for examples.
