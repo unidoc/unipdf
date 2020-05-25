@@ -39,3 +39,8 @@ WHERE TO START
 * The words in of each rectangular region are aranged inot`textLine`s. Each rectangular region and
 its constituent lines is a `textPara`.
 * The `textPara`s are sorted into reading order.
+
+
+TODO
+====
+Remove serial code.

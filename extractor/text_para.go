@@ -38,6 +38,7 @@ func (p *textPara) String() string {
 	return fmt.Sprintf("serial=%d %.2f %d lines", p.serial, p.PdfRectangle, len(p.lines))
 }
 
+// bbox makes textPara implement the `bounded` interface.
 func (p *textPara) bbox() model.PdfRectangle {
 	return p.PdfRectangle
 }

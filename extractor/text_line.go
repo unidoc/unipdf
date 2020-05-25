@@ -45,6 +45,7 @@ func (l *textLine) String() string {
 		l.serial, l.depth, l.PdfRectangle, l.fontsize, l.text())
 }
 
+// bbox makes textLine implementethe `bounded` interface.
 func (l *textLine) bbox() model.PdfRectangle {
 	return l.PdfRectangle
 }

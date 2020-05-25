@@ -10,6 +10,10 @@ const (
 	// Size of depth bins in points
 	depthBinPoints = 6
 
+	// Variation in line depth as a fraction of font size. +lineDepthR for subscripts, -lineDepthR for
+	// superscripts
+	lineDepthR = 0.5
+
 	// All constants that end in R are relative to font size.
 
 	// Max difference in font sizes allowed within a word.
@@ -25,18 +29,18 @@ const (
 	// into the para.
 	maxIntraReadingGapR = 0.3
 	// Max diffrence in font size for word and para for the above case
-	maxIntraReadingFontTol = 0.6 // maxIntraReadingGapR
+	maxIntraReadingFontTol = 0.6
 
 	// Minimum spacing between paras in the reading direction.
 	minInterReadingGapR = 1.0
 	// Max diffrence in font size for word and para for the above case
-	minInterReadingFontTol = 0.1 // minInterReadingGapR
+	minInterReadingFontTol = 0.1
 
 	// Maximum inter-word spacing.
-	maxIntraWordGapR = 1.5
+	maxIntraWordGapR = 1.4
 
 	// Maximum overlap between characters allowd within a line
-	maxIntraLineOverlapR = 0.5
+	maxIntraLineOverlapR = 0.46
 
 	// Maximum spacing between characters within a line.
 	maxIntraLineGapR = 0.03

@@ -102,6 +102,7 @@ func (tm *textMark) String() string {
 		tm.serial, tm.PdfRectangle, tm.fontsize, tm.text)
 }
 
+// bbox makes textMark implement the `bounded` interface.
 func (tm *textMark) bbox() model.PdfRectangle {
 	return tm.PdfRectangle
 }

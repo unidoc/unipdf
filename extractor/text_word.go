@@ -106,6 +106,7 @@ func (w *textWord) String() string {
 		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text())
 }
 
+// bbox makes textWord implement the `bounded` interface.
 func (w *textWord) bbox() model.PdfRectangle {
 	return w.PdfRectangle
 }
