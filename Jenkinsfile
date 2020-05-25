@@ -22,7 +22,7 @@ node {
     sh "mkdir -p ${env.GOBIN}"
     sh "mkdir -p ${env.TMPDIR}"
 
-    dir("${GOPATH}/src/github.com/unidoc/unipdf") {
+    dir("${WORKSPACE}/unipdf") {
         sh 'go version'
 
         stage('Checkout') {
@@ -74,7 +74,7 @@ node {
         }
     }
 
-    dir("${GOPATH}/src/github.com/unidoc/unipdf-examples") {
+    dir("${WORKSPACE}/unipdf-examples") {
         stage('Build examples') {
             // Output environment variables (useful for debugging).
             sh("printenv")
@@ -91,6 +91,9 @@ node {
 
             echo "Pulling unipdf-examples on branch ${examplesBranch}"
             git url: 'https://github.com/unidoc/unidoc-examples.git', branch: examplesBranch
+
+            # Use replace directive to use disk version of unipdf.
+            sh 'echo "replace github.com/unidoc/unipdf/v3 => ../unipdf" >>go.mod'
             
             // Dependencies for examples.
             sh './build_examples.sh'
