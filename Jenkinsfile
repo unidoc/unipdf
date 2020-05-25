@@ -34,6 +34,7 @@ node {
             // Get linter and other build tools.
             sh 'go get golang.org/x/lint/golint'
             sh 'go get github.com/tebeka/go2xunit'
+            sh 'go get github.com/t-yuki/gocover-cobertura'
         }
 
         stage('Linting') {
