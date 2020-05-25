@@ -13,7 +13,12 @@ import (
 	"github.com/unidoc/unipdf/v3/core"
 )
 
-// IdentityEncoder represents an 2-byte identity encoding
+// IdentityEncoder represents an 2-byte identity encoding.
+// NOTE: In many cases this is just used to encode/decode to glyph index and does not have a unicode
+//  meaning, except via the ToUnicode maps.
+// TODO: The use of runes as indicators for glyph indices and not-utf8 runes is not good and confusing.
+//  Might be better to combine the Identity encoder with a ToUnicode map and keep track of the actual
+//  runes and character codes, CMaps together.
 type IdentityEncoder struct {
 	baseName string
 
@@ -57,6 +62,7 @@ func (enc *IdentityEncoder) Decode(raw []byte) string {
 
 // RuneToCharcode converts rune `r` to a PDF character code.
 // The bool return flag is true if there was a match, and false otherwise.
+// TODO: Here the `r` is an actual rune.
 func (enc *IdentityEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 	if enc.registeredMap == nil {
 		enc.registeredMap = map[rune]struct{}{}
@@ -68,10 +74,13 @@ func (enc *IdentityEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 
 // CharcodeToRune converts PDF character code `code` to a rune.
 // The bool return flag is true if there was a match, and false otherwise.
+// TODO: Here the `r` is not necessarily an actual rune but a glyph index (unless both).
 func (enc *IdentityEncoder) CharcodeToRune(code CharCode) (rune, bool) {
 	if enc.registeredMap == nil {
 		enc.registeredMap = map[rune]struct{}{}
 	}
+
+	// TODO: The rune(code) is confusing and is not an actual utf8 rune.
 	enc.registeredMap[rune(code)] = struct{}{}
 	return rune(code), true
 }
