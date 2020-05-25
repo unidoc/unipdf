@@ -47,7 +47,7 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
-	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, 0)
+	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, transform.IdentityMatrix(), 0)
 	if err != nil {
 		return nil, numChars, numMisses, err
 	}
@@ -60,7 +60,7 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 // extractPageText returns the text contents of content stream `e` and resouces `resources` as a
 // PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, parentCTM transform.Matrix, level int) (
 	*PageText, int, int, error) {
 	common.Log.Trace("extractPageText: level=%d", level)
 	pageText := &PageText{}
@@ -118,7 +118,10 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
-				to = newTextObject(e, resources, gs, &state, &fontStack)
+
+				graphicsState := gs
+				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
+				to = newTextObject(e, resources, graphicsState, &state, &fontStack)
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
@@ -331,8 +334,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					if formResources == nil {
 						formResources = resources
 					}
+
 					tList, numChars, numMisses, err := e.extractPageText(string(formContent),
-						formResources, level+1)
+						formResources, parentCTM.Mult(gs.CTM), level+1)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
 						return err
@@ -1134,7 +1138,7 @@ func (tm TextMark) String() string {
 func (pt *PageText) computeViews() {
 	fontHeight := pt.height()
 	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := minFloat(fontHeight*0.2, 5.0)
+	tol := minFloat(fontHeight*0.19, 5.0)
 	common.Log.Trace("ToTextLocation: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
 	// Uncomment the 2 following Debug statements to see the effects of sorting.
 	// common.Log.Debug("computeViews: Before sorting %s", pt)
