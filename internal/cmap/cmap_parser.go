@@ -480,7 +480,12 @@ func (cmap *CMap) parseBfchar() error {
 			common.Log.Debug("ERROR: Unexpected operand. %#v", v)
 			return ErrBadCMap
 		case cmapHexString:
-			target = hexToRune(v)
+			runes := hexToRunes(v)
+			if len(runes) == 1 {
+				target = runes[0]
+			} else {
+				common.Log.Debug("ERROR: Unexpected runes %#v -> %#v", v, runes)
+			}
 		case cmapName:
 			common.Log.Debug("ERROR: Unexpected name. %#v", v)
 			target = MissingCodeRune
