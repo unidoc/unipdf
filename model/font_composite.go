@@ -830,7 +830,17 @@ func NewCompositePdfFontFromTTF(r io.ReadSeeker) (*PdfFont, error) {
 		encoder:  ttf.NewEncoder(),
 	}
 
-	type0.toUnicodeCmap = ttf.MakeToUnicode()
+	// Generate CMap for the Type 0 font, which is the inverse of ttf.Chars.
+	if len(ttf.Chars) > 0 {
+		codeToUnicode := make(map[cmap.CharCode]rune, len(ttf.Chars))
+		for r, gid := range ttf.Chars {
+			cid := cmap.CharCode(gid)
+			if rn, ok := codeToUnicode[cid]; !ok || (ok && rn > r) {
+				codeToUnicode[cid] = r
+			}
+		}
+		type0.toUnicodeCmap = cmap.NewToUnicodeCMap(codeToUnicode)
+	}
 
 	// Build Font.
 	font := PdfFont{

@@ -343,6 +343,12 @@ type PdfAnnotationWidget struct {
 	processing bool // Used in ToPdfObject serialization to avoid infinite loops for merged-in annots.
 }
 
+// Field returns the parent form field of the widget annotation, if one exists.
+// NOTE: the method returns nil if the parent form field has not been parsed.
+func (widget *PdfAnnotationWidget) Field() *PdfField {
+	return widget.parent
+}
+
 // PdfAnnotationWatermark represents Watermark annotations.
 // (Section 12.5.6.22).
 type PdfAnnotationWatermark struct {
