@@ -60,8 +60,8 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	common.Log.Trace("extractPageText: level=%d", level)
 	pageText := &PageText{pageSize: e.mediaBox}
 	state := newTextState(e.mediaBox)
-	fontStack := fontStacker{}
-	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &fontStack)
+	var savedStates stateStack
+	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &savedStates)
 	var inTextObj bool
 
 	// Uncomment the following 3 statements to log the content stream.
@@ -84,28 +84,22 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 
 			operand := op.Operand
 
+			common.Log.Info("&&& op=%s", op)
+
 			switch operand {
 			case "q":
-				if !fontStack.empty() {
-					common.Log.Trace("Save font state: %s\n%s",
-						fontStack.peek(), fontStack.String())
-					fontStack.push(fontStack.peek())
-				}
-				if state.tfont != nil {
-					common.Log.Trace("Save font state: %s\n→%s\n%s",
-						fontStack.peek(), state.tfont, fontStack.String())
-					fontStack.push(state.tfont)
-				}
+				savedStates.push(&state)
+				// common.Log.Info("Save state: stack=%d\n %s", len(savedStates), state.String())
 			case "Q":
-				if !fontStack.empty() {
-					common.Log.Trace("Restore font state: %s\n→%s\n%s",
-						fontStack.peek(), fontStack.get(-2), fontStack.String())
-					fontStack.pop()
-				}
-				if len(fontStack) >= 2 {
-					common.Log.Trace("Restore font state: %s\n→%s\n%s",
-						state.tfont, fontStack.peek(), fontStack.String())
-					state.tfont = fontStack.pop()
+				common.Log.Info("Restore state: %s", savedStates.String())
+				if !savedStates.empty() {
+					// oldState := state
+					state = *savedStates.top()
+					// common.Log.Info("Restore state: stack=%d\n %s\n→%s",
+					// 	len(savedStates), oldState.String(), state.String())
+					if len(savedStates) >= 2 {
+						savedStates.pop()
+					}
 				}
 			case "BT": // Begin text
 				// Begin a text object, initializing the text matrix, Tm, and
@@ -118,7 +112,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
-				to = newTextObject(e, resources, gs, &state, &fontStack)
+				to = newTextObject(e, resources, gs, &state, &savedStates)
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
@@ -459,6 +453,7 @@ func (to *textObject) setCharSpacing(x float64) {
 		return
 	}
 	to.state.tc = x
+	common.Log.Info("setCharSpacing: %.2f state=%s", to.state.String())
 }
 
 // setFont "Tf". Set font.
@@ -466,21 +461,22 @@ func (to *textObject) setFont(name string, size float64) error {
 	if to == nil {
 		return nil
 	}
+	to.state.tfs = size
 	font, err := to.getFont(name)
-	if err == nil {
-		to.state.tfont = font
-		if len(*to.fontStack) == 0 {
-			to.fontStack.push(font)
-		} else {
-			(*to.fontStack)[len(*to.fontStack)-1] = font
+	if err != nil {
+		if err == model.ErrFontNotSupported {
+			// TODO(peterwilliams97): Do we need to handle this case in a special way?
+			return err
 		}
-	} else if err == model.ErrFontNotSupported {
-		// TODO(peterwilliams97): Do we need to handle this case in a special way?
-		return err
-	} else {
 		return err
 	}
-	to.state.tfs = size
+	to.state.tfont = font
+	if to.savedStates.empty() {
+		to.savedStates.push(to.state)
+	} else {
+		to.savedStates.top().tfont = to.state.tfont
+	}
+
 	return nil
 }
 
@@ -555,67 +551,56 @@ func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParam
 	return true, nil
 }
 
-// fontStacker is the PDF font stack implementation.
-type fontStacker []*model.PdfFont
+// stateStack is the PDF textState stack implementation.
+type stateStack []*textState
 
-// String returns a string describing the current state of the font stack.
-func (fontStack *fontStacker) String() string {
-	parts := []string{"---- font stack"}
-	for i, font := range *fontStack {
+// String returns a string describing the current state of the textState stack.
+func (savedStates *stateStack) String() string {
+	parts := []string{fmt.Sprintf("---- font stack: %d", len(*savedStates))}
+	for i, state := range *savedStates {
 		s := "<nil>"
-		if font != nil {
-			s = font.String()
+		if state != nil {
+			s = state.String()
 		}
 		parts = append(parts, fmt.Sprintf("\t%2d: %s", i, s))
 	}
 	return strings.Join(parts, "\n")
 }
 
-// push pushes `font` onto the font stack.
-func (fontStack *fontStacker) push(font *model.PdfFont) {
-	*fontStack = append(*fontStack, font)
+// push pushes a copy of `state` onto the textState stack.
+func (savedStates *stateStack) push(state *textState) {
+	s := *state
+	*savedStates = append(*savedStates, &s)
 }
 
-// pop pops and returns the element on the top of the font stack if there is one or nil if there isn't.
-func (fontStack *fontStacker) pop() *model.PdfFont {
-	if fontStack.empty() {
+// pop pops and returns a copy of the last state on the textState stack there is one or nil if
+// there isn't.
+func (savedStates *stateStack) pop() *textState {
+	if savedStates.empty() {
 		return nil
 	}
-	font := (*fontStack)[len(*fontStack)-1]
-	*fontStack = (*fontStack)[:len(*fontStack)-1]
-	return font
+	state := *(*savedStates)[len(*savedStates)-1]
+	*savedStates = (*savedStates)[:len(*savedStates)-1]
+	return &state
 }
 
-// peek returns the element on the top of the font stack if there is one or nil if there isn't.
-func (fontStack *fontStacker) peek() *model.PdfFont {
-	if fontStack.empty() {
+// top returns the last saved state if there is one or nil if there isn't.
+// NOTE: The return is a pointer. Modifying it will modify the stack.
+func (savedStates *stateStack) top() *textState {
+	if savedStates.empty() {
 		return nil
 	}
-	return (*fontStack)[len(*fontStack)-1]
+	return (*savedStates)[savedStates.size()-1]
 }
 
-// get returns the `idx`'th element of the font stack if there is one or nil if there isn't.
-//  idx = 0: bottom of font stack
-//  idx = len(fontstack) - 1: top of font stack
-//  idx = -n is same as dx = len(fontstack) - n, so fontstack.get(-1) is same as fontstack.peek()
-func (fontStack *fontStacker) get(idx int) *model.PdfFont {
-	if idx < 0 {
-		idx += fontStack.size()
-	}
-	if idx < 0 || idx > fontStack.size()-1 {
-		return nil
-	}
-	return (*fontStack)[idx]
+// empty returns true if the textState stack is empty.
+func (savedStates *stateStack) empty() bool {
+	return len(*savedStates) == 0
 }
 
-// empty returns true if the font stack is empty.
-func (fontStack *fontStacker) empty() bool {
-	return len(*fontStack) == 0
-}
-
-// size returns the number of elements in the font stack.
-func (fontStack *fontStacker) size() int {
-	return len(*fontStack)
+// size returns the number of elements in the textState stack.
+func (savedStates *stateStack) size() int {
+	return len(*savedStates)
 }
 
 // 9.3 Text State Parameters and Operators (page 243)
@@ -639,6 +624,16 @@ type textState struct {
 	numMisses int
 }
 
+// String returns a description of `state`.
+func (state *textState) String() string {
+	fontName := "[NOT SET]"
+	if state.tfont != nil {
+		fontName = state.tfont.BaseFont()
+	}
+	return fmt.Sprintf("tc=%.2f tw=%.2f tfs=%.2f font=%q",
+		state.tc, state.tw, state.tfs, fontName)
+}
+
 // 9.4.1 General (page 248)
 // A PDF text object consists of operators that may show text strings, move the text position, and
 // set text state and certain other parameters. In addition, two parameters may be specified only
@@ -656,14 +651,14 @@ type textState struct {
 
 // textObject represents a PDF text object.
 type textObject struct {
-	e         *Extractor
-	resources *model.PdfPageResources
-	gs        contentstream.GraphicsState
-	fontStack *fontStacker
-	state     *textState
-	tm        transform.Matrix // Text matrix. For the character pointer.
-	tlm       transform.Matrix // Text line matrix. For the start of line pointer.
-	marks     []*textMark      // Text marks get written here.
+	e           *Extractor
+	resources   *model.PdfPageResources
+	gs          contentstream.GraphicsState
+	state       *textState
+	savedStates *stateStack
+	tm          transform.Matrix // Text matrix. For the character pointer.
+	tlm         transform.Matrix // Text line matrix. For the start of line pointer.
+	marks       []*textMark      // Text marks get written here.
 }
 
 // newTextState returns a default textState.
@@ -677,15 +672,15 @@ func newTextState(mediaBox model.PdfRectangle) textState {
 
 // newTextObject returns a default textObject.
 func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentstream.GraphicsState,
-	state *textState, fontStack *fontStacker) *textObject {
+	state *textState, savedStates *stateStack) *textObject {
 	return &textObject{
-		e:         e,
-		resources: resources,
-		gs:        gs,
-		fontStack: fontStack,
-		state:     state,
-		tm:        transform.IdentityMatrix(),
-		tlm:       transform.IdentityMatrix(),
+		e:           e,
+		resources:   resources,
+		gs:          gs,
+		savedStates: savedStates,
+		state:       state,
+		tm:          transform.IdentityMatrix(),
+		tlm:         transform.IdentityMatrix(),
 	}
 }
 
@@ -746,7 +741,7 @@ func (to *textObject) renderText(data []byte) error {
 		0, tfs,
 		0, state.trise)
 
-	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runeSlices)
+	common.Log.Info("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runeSlices)
 
 	for i, r := range runeSlices {
 		if len(r) == 1 && r[0] == '\x00' {
@@ -780,6 +775,8 @@ func (to *textObject) renderText(data []byte) error {
 		// t is the displacement of the text cursor when the character is rendered.
 		t0 := transform.Point{X: (c.X*tfs + w) * th}
 		t := transform.Point{X: (c.X*tfs + state.tc + w) * th}
+		common.Log.Info("tfs=%.2f tc=%.2f tw=%.2f th=%.2f", tfs, state.tc, state.tw, th)
+		common.Log.Info("dx,dy=%.3f t0=%.2f t=%.2f", c, t0, t)
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
@@ -787,8 +784,12 @@ func (to *textObject) renderText(data []byte) error {
 		td := translationMatrix(t)
 		end := to.gs.CTM.Mult(to.tm).Mult(td0)
 
-		common.Log.Trace("end:\n\tCTM=%s\n\t tm=%s\n\ttd0=%s\n\t → %s xlat=%s",
-			to.gs.CTM, to.tm, td0, end, translation(end))
+		common.Log.Info("end:\n\tCTM=%s\n\t tm=%s\n"+
+			"\t td=%s xlat=%s\n"+
+			"\ttd0=%s\n\t → %s xlat=%s",
+			to.gs.CTM, to.tm,
+			td, translation(to.gs.CTM.Mult(to.tm).Mult(td)),
+			td0, end, translation(end))
 
 		mark, onPage := to.newTextMark(
 			string(r),
@@ -1067,11 +1068,11 @@ var spaceMark = TextMark{
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
 // empty.
 func (to *textObject) getCurrentFont() *model.PdfFont {
-	if to.fontStack.empty() {
+	if to.savedStates.empty() {
 		common.Log.Debug("ERROR: No font defined. Using default.")
 		return model.DefaultFont()
 	}
-	return to.fontStack.peek()
+	return to.savedStates.top().tfont
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it

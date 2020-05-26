@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
 )
@@ -32,10 +33,19 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	var words []*textWord
 	var newWord *textWord // The word being built.
 
+	var a, b, c bool
+	var readingGap float64
+
 	// addNewWord adds `newWord` to `words` and resets `newWord` to nil.
 	addNewWord := func() {
 		if newWord != nil {
 			if !isTextSpace(newWord.text()) {
+				// common.Log.Info("a=%5t b=%5t c=%5t", a, b, c)
+				common.Log.Info("a=%5t b=%5t c=%5t readingGap=%.2f %q",
+					a, b, c, newWord.PdfRectangle, newWord.text())
+				for i, tm := range newWord.marks {
+					fmt.Printf("%d: %s\n", i, tm.String())
+				}
 				words = append(words, newWord)
 			}
 			newWord = nil
@@ -43,6 +53,7 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	}
 
 	for _, tm := range marks {
+		a, b, c = false, false, false
 		isSpace := isTextSpace(tm.text)
 		if newWord == nil && !isSpace {
 			newWord = newTextWord([]*textMark{tm}, pageSize)
@@ -54,7 +65,7 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 		}
 
 		depthGap := getDepth(pageSize, tm) - newWord.depth
-		readingGap := gapReading(tm, newWord)
+		readingGap = gapReading(tm, newWord)
 
 		fontsize := newWord.fontsize
 
@@ -64,7 +75,12 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 		// - Change in depth is too large to be just a leading adjustment.
 		sameWord := -0.19*fontsize <= readingGap && readingGap <= 0.11*fontsize &&
 			math.Abs(depthGap) <= 0.04*fontsize
+		a = -0.19*fontsize <= readingGap
+		b = readingGap <= 0.11*fontsize
+		c = math.Abs(depthGap) <= 0.04*fontsize
 		if !sameWord {
+			common.Log.Info("gap=%.2f word=%.2f tm=%.2f", readingGap,
+				newWord.PdfRectangle, tm.PdfRectangle)
 			addNewWord()
 			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue

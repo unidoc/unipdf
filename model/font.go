@@ -444,6 +444,7 @@ func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([
 		if fontBase.toUnicodeCmap != nil {
 			if s, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
 				runeSlices = append(runeSlices, []rune(s))
+				common.Log.Info("CharcodesToRuneSlices1: code=%d s=`%s`", code, s)
 				continue
 			}
 		}
@@ -453,11 +454,13 @@ func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([
 		if encoder != nil {
 			if r, ok := encoder.CharcodeToRune(code); ok {
 				runeSlices = append(runeSlices, []rune{r})
+				common.Log.Info("CharcodesToRuneSlices2: code=%d s=%q encoder=%s",
+					code, string(r), encoder.String())
 				continue
 			}
 		}
 
-		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
+		common.Log.Error("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++

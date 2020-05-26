@@ -44,12 +44,13 @@ func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraL
 func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 	var paraStratas []*textStrata
 
-	// Move words from `page` to paras until there no words left in page.
-	// Iterate through page in depth bin order.
-	// For each `page` bin, move words until is empty. This will likely move words from other
-	// `page` bins to para bins.
-	// Some bins are emptied before they iterated to.
-	// If a bin is not empty then at least one para is built starting from it
+	// We move words from `page` to paras until there no words left in page.
+	// We do this by iterating through `page` in depth bin order and, for each surving bin (see
+	// below),  creating a paragraph with seed word, `words[0]` in the code below.
+	// We then move words from around the `para` region from `page` to `para` .
+	// This may empty some page bins before we iterate to them
+	// Some bins are emptied before they iterated to (seee "surving bin" above).
+	// If a `page` survives until it is iterated to then at least one `para` will be built around it.
 
 	cnt := 0
 	for _, depthIdx := range page.depthIndexes() {
@@ -60,7 +61,8 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 			// in the bins in and below `depthIdx`.
 			para := newTextStrata(pageHeight)
 
-			// words[0] is the leftmost word from bins near `depthIdx`.
+			// words[0] is the leftmost word from the bins in and a few lines below `depthIdx`. We
+			// seed 'para` with this word.
 			firstReadingIdx := page.firstReadingIndex(depthIdx)
 			words := page.getStratum(firstReadingIdx)
 			moveWord(firstReadingIdx, page, para, words[0])

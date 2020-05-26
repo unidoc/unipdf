@@ -93,6 +93,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
 	}
 
+	common.Log.Info("newTextMark: %s", tm.String())
+
 	return tm, onPage
 }
 
