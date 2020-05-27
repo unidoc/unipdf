@@ -90,10 +90,11 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 	}
 	serial.mark++
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
-		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
+		common.Log.Debug("ERROR: Zero width text. tm=%s", tm.String())
 	}
-
-	common.Log.Info("newTextMark: %s", tm.String())
+	if verbose {
+		common.Log.Info("newTextMark: start=%.2f end=%.2f %s", start, end, tm.String())
+	}
 
 	return tm, onPage
 }

@@ -8,6 +8,7 @@ package extractor
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/unidoc/unipdf/v3/model"
 )
@@ -35,7 +36,17 @@ func newTextPara(strata *textStrata) *textPara {
 
 // String returns a description of `p`.
 func (p *textPara) String() string {
-	return fmt.Sprintf("serial=%d %.2f %d lines", p.serial, p.PdfRectangle, len(p.lines))
+	return fmt.Sprintf("serial=%d %.2f %d lines\n%s\n-------------",
+		p.serial, p.PdfRectangle, len(p.lines), p.text())
+}
+
+// text returns the text  of the lines in `p`.
+func (p *textPara) text() string {
+	parts := make([]string, len(p.lines))
+	for i, line := range p.lines {
+		parts[i] = line.text()
+	}
+	return strings.Join(parts, "\n")
 }
 
 // bbox makes textPara implement the `bounded` interface.
@@ -98,9 +109,13 @@ func composePara(strata *textStrata) *textPara {
 				// remove `leftWord` from `strata`[`leftDepthIdx`], and append it to `line`.
 				line.moveWord(strata, leftDepthIdx, leftWord)
 				lastWord = leftWord
+				// // TODO(peterwilliams97): Replace lastWord with line.words[len(line.words)-1] ???
+				// if lastWord != line.words[len(line.words)-1] {
+				// 	panic("ddd")
+				// }
 			}
 
-			line.compose()
+			line.mergeWordFragments()
 			// add the line
 			para.lines = append(para.lines, line)
 		}

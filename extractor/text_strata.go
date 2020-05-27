@@ -10,6 +10,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -111,13 +112,14 @@ func (s *textStrata) depthIndexes() []int {
 // and applies `moveWord`(depthIdx, s,para w) to them.
 // If `detectOnly` is true, don't appy moveWord.
 // If `freezeDepth` is true, don't update minDepth and maxDepth in scan as words are added.
-func (s *textStrata) scanBand(para *textStrata,
+func (s *textStrata) scanBand(title string, para *textStrata,
 	readingOverlap func(para *textStrata, word *textWord) bool,
 	minDepth, maxDepth, fontTol float64,
 	detectOnly, freezeDepth bool) int {
 	fontsize := para.fontsize
 	lineDepth := lineDepthR * fontsize
 	n := 0
+	// var newWords []*textWord
 	for _, depthIdx := range s.depthBand(minDepth-lineDepth, maxDepth+lineDepth) {
 		for _, word := range s.bins[depthIdx] {
 			if !(minDepth-lineDepth <= word.depth && word.depth <= maxDepth+lineDepth) {
@@ -132,6 +134,7 @@ func (s *textStrata) scanBand(para *textStrata,
 			if !detectOnly {
 				moveWord(depthIdx, s, para, word)
 			}
+			// newWords = append(newWords, word)
 			n++
 			if !freezeDepth {
 				if word.depth < minDepth {
@@ -147,6 +150,14 @@ func (s *textStrata) scanBand(para *textStrata,
 			if detectOnly {
 				break
 			}
+		}
+	}
+	if verbose {
+		if len(title) > 0 {
+			common.Log.Info("scanBand: %s para=%.2f", title, para.PdfRectangle)
+			// for i, word := range newWords {
+			// 	fmt.Printf("%4d: %s\n", i, word)
+			// }
 		}
 	}
 	return n

@@ -43,4 +43,19 @@ its constituent lines is a `textPara`.
 
 TODO
 ====
-Remove serial code.
+Remove serial code????
+Reinstate rotated text handling.
+Reinstate hyphen suppression.
+Reinstate hyphen diacritic composition.
+Reinstate duplicate text removal
+Get these files working:
+		challenging-modified.pdf
+		transitions_test.pdf
+
+
+TEST FILES
+---------
+bruce.pdf for char spacing save/restore.
+
+challenging-modified.pdf
+transitions_test.pdf

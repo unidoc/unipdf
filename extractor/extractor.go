@@ -16,8 +16,8 @@ type Extractor struct {
 	resources *model.PdfPageResources
 	mediaBox  model.PdfRectangle
 
-	// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFont's from
-	// PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFont's.
+	// fontCache is a simple LRU cache that is used to prevent redundant constructions of PdfFonts
+	// from PDF objects. NOTE: This is not a conventional glyph cache. It only caches PdfFonts.
 	fontCache map[string]fontEntry
 
 	// text results from running extractXYText on forms within the page.

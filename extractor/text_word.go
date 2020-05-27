@@ -24,7 +24,7 @@ type textWord struct {
 	depth              float64     // Distance from bottom of word to top of page.
 	marks              []*textMark // Marks in this word.
 	fontsize           float64     // Largest fontsize in `marks` w
-	spaceAfter         bool
+	spaceAfter         bool        // Is this word followed by a space?
 }
 
 // makeTextPage builds a word list from `marks`, the textMarks on a page.
@@ -33,19 +33,28 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	var words []*textWord
 	var newWord *textWord // The word being built.
 
-	var a, b, c bool
+	if verbose {
+		common.Log.Info("makeTextWords: %d marks", len(marks))
+	}
+
+	// var a, b, c bool
 	var readingGap float64
+
+	// biggest := &textWord{}
 
 	// addNewWord adds `newWord` to `words` and resets `newWord` to nil.
 	addNewWord := func() {
 		if newWord != nil {
 			if !isTextSpace(newWord.text()) {
-				// common.Log.Info("a=%5t b=%5t c=%5t", a, b, c)
-				common.Log.Info("a=%5t b=%5t c=%5t readingGap=%.2f %q",
-					a, b, c, newWord.PdfRectangle, newWord.text())
-				for i, tm := range newWord.marks {
-					fmt.Printf("%d: %s\n", i, tm.String())
-				}
+				// extra := ""
+				// if area(newWord) > area(biggest) {
+				// 	biggest = newWord
+				// 	extra = fmt.Sprintf(" XXX %.2f", area(newWord))
+				// }
+				// common.Log.Info("%5t %5t %5t %s%s", a, b, c, newWord.String(), extra)
+				// // for i, tm := range newWord.marks {
+				// // 	fmt.Printf("%4d: %s\n", i, tm.String())
+				// // }
 				words = append(words, newWord)
 			}
 			newWord = nil
@@ -53,7 +62,7 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	}
 
 	for _, tm := range marks {
-		a, b, c = false, false, false
+		// a, b, c = false, false, false
 		isSpace := isTextSpace(tm.text)
 		if newWord == nil && !isSpace {
 			newWord = newTextWord([]*textMark{tm}, pageSize)
@@ -75,12 +84,12 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 		// - Change in depth is too large to be just a leading adjustment.
 		sameWord := -0.19*fontsize <= readingGap && readingGap <= 0.11*fontsize &&
 			math.Abs(depthGap) <= 0.04*fontsize
-		a = -0.19*fontsize <= readingGap
-		b = readingGap <= 0.11*fontsize
-		c = math.Abs(depthGap) <= 0.04*fontsize
+		// a = -0.19*fontsize <= readingGap
+		// b = readingGap <= 0.11*fontsize
+		// c = math.Abs(depthGap) <= 0.04*fontsize
 		if !sameWord {
-			common.Log.Info("gap=%.2f word=%.2f tm=%.2f", readingGap,
-				newWord.PdfRectangle, tm.PdfRectangle)
+			// common.Log.Info("gap=%.2f word=%.2f tm=%.2f", readingGap,
+			// 	newWord.PdfRectangle, tm.PdfRectangle)
 			addNewWord()
 			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
@@ -118,7 +127,7 @@ func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 
 // String returns a description of `w.
 func (w *textWord) String() string {
-	return fmt.Sprintf("serial=%d base=%.2f %.2f fontsize=%.2f \"%s\"",
+	return fmt.Sprintf("serial=%d %.2f %.2f fontsize=%.2f \"%s\"",
 		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text())
 }
 
@@ -146,19 +155,19 @@ func (w *textWord) len() int {
 	return utf8.RuneCountInString(w.text())
 }
 
-func (w *textWord) merge(word *textWord) {
+// absorb combines `word` into `w`.
+func (w *textWord) absorb(word *textWord) {
 	w.PdfRectangle = rectUnion(w.PdfRectangle, word.PdfRectangle)
 	w.marks = append(w.marks, word.marks...)
 }
 
+// text returns the text in `w`.
 func (w *textWord) text() string {
-	var parts []string
-	for _, tm := range w.marks {
-		for _, r := range tm.text {
-			parts = append(parts, textencoding.RuneToString(r))
-		}
+	texts := make([]string, len(w.marks))
+	for i, tm := range w.marks {
+		texts[i] = tm.text
 	}
-	return strings.Join(parts, "")
+	return strings.Join(texts, "")
 }
 
 // font returns the fontID of the `idx`th rune in text.
@@ -176,21 +185,8 @@ func (w *textWord) font(idx int) string {
 	panic("no match")
 }
 
-func baseRange(words []*textWord) (minDepth, maxDepth float64) {
-	for i, w := range words {
-		depth := w.depth
-		if i == 0 {
-			minDepth = depth
-			maxDepth = depth
-		} else if depth < minDepth {
-			minDepth = depth
-		} else if depth > maxDepth {
-			maxDepth = depth
-		}
-	}
-	return
-}
-
+// removeWord returns `words` with `word` removed.
+// TODO(peterwilliams97): Optimize
 func removeWord(words []*textWord, word *textWord) []*textWord {
 	for i, w := range words {
 		if w == word {
@@ -200,6 +196,7 @@ func removeWord(words []*textWord, word *textWord) []*textWord {
 	panic("word not in words")
 }
 
+// removeWord returns `word` with `word[idx]` removed.
 func removeWordAt(words []*textWord, idx int) []*textWord {
 	n := len(words)
 	copy(words[idx:], words[idx+1:])

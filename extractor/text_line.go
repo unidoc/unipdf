@@ -41,7 +41,7 @@ func newTextLine(p *textStrata, depthIdx int) *textLine {
 
 // String returns a description of `l`.
 func (l *textLine) String() string {
-	return fmt.Sprintf("serial=%d base=%.2f %.2f fontsize=%.2f %q",
+	return fmt.Sprintf("serial=%d %.2f %.2f fontsize=%.2f \"%s\"",
 		l.serial, l.depth, l.PdfRectangle, l.fontsize, l.text())
 }
 
@@ -50,7 +50,7 @@ func (l *textLine) bbox() model.PdfRectangle {
 	return l.PdfRectangle
 }
 
-// texts returns the extracted text contained in line..
+// text returns the extracted text contained in line..
 func (l *textLine) text() string {
 	var words []string
 	for _, w := range l.words {
@@ -60,6 +60,31 @@ func (l *textLine) text() string {
 		}
 	}
 	return strings.Join(words, "")
+}
+
+// toTextMarks returns the TextMarks contained in `l`.text().
+// `offset` is used to give the TextMarks the correct Offset values.
+func (l *textLine) toTextMarks(offset *int) []TextMark {
+	var marks []TextMark
+	addMark := func(mark TextMark) {
+		mark.Offset = *offset
+		marks = append(marks, mark)
+		*offset += len(mark.Text)
+	}
+	addSpaceMark := func(spaceChar string) {
+		mark := spaceMark
+		mark.Text = spaceChar
+		addMark(mark)
+	}
+	for _, word := range l.words {
+		for _, tm := range word.marks {
+			addMark(tm.ToTextMark())
+		}
+		if word.spaceAfter {
+			addSpaceMark(" ")
+		}
+	}
+	return marks
 }
 
 // moveWord removes `word` from p.bins[bestWordDepthIdx] and adds it to `l`.
@@ -77,7 +102,8 @@ func (l *textLine) moveWord(s *textStrata, depthIdx int, word *textWord) {
 	s.removeWord(depthIdx, word)
 }
 
-func (l *textLine) compose() {
+// mergeWordFragments merges the word fragments in the words in `l`.
+func (l *textLine) mergeWordFragments() {
 	fontsize := l.fontsize
 	if len(l.words) > 1 {
 		maxGap := maxIntraLineGapR * fontsize
@@ -94,7 +120,7 @@ func (l *textLine) compose() {
 				doMerge = true
 			}
 			if doMerge {
-				lastMerged.merge(word)
+				lastMerged.absorb(word)
 			} else {
 				merged = append(merged, word)
 			}
@@ -103,7 +129,6 @@ func (l *textLine) compose() {
 	}
 
 	// check for hyphen at end of line
-	//~ need to check for other chars used as hyphens
 	r, _ := utf8.DecodeLastRuneInString(l.text())
 	l.hyphenated = r == '-'
 }

@@ -52,6 +52,9 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 	// Some bins are emptied before they iterated to (seee "surving bin" above).
 	// If a `page` survives until it is iterated to then at least one `para` will be built around it.
 
+	if verbose {
+		common.Log.Info("dividePage")
+	}
 	cnt := 0
 	for _, depthIdx := range page.depthIndexes() {
 		changed := false
@@ -66,6 +69,9 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 			firstReadingIdx := page.firstReadingIndex(depthIdx)
 			words := page.getStratum(firstReadingIdx)
 			moveWord(firstReadingIdx, page, para, words[0])
+			if verbose {
+				common.Log.Info("words[0]=%s", words[0].String())
+			}
 
 			// The following 3 numbers define whether words should be added to `para`.
 			minInterReadingGap := minInterReadingGapR * para.fontsize
@@ -79,14 +85,14 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 
 				// Add words that are within maxIntraDepthGap of `para` in the depth direction.
 				// i.e. Stretch para in the depth direction, vertically for English text.
-				if page.scanBand(para, partial(readingOverlapPlusGap, 0),
+				if page.scanBand("veritcal", para, partial(readingOverlapPlusGap, 0),
 					para.minDepth()-maxIntraDepthGap, para.maxDepth()+maxIntraDepthGap,
 					maxIntraDepthFontTolR, false, false) > 0 {
 					changed = true
 				}
 				// Add words that are within maxIntraReadingGap of `para` in the reading direction.
 				// i.e. Stretch para in the reading direction, horizontall for English text.
-				if page.scanBand(para, partial(readingOverlapPlusGap, maxIntraReadingGap),
+				if page.scanBand("horizontal", para, partial(readingOverlapPlusGap, maxIntraReadingGap),
 					para.minDepth(), para.maxDepth(),
 					maxIntraReadingFontTol, false, false) > 0 {
 					changed = true
@@ -112,13 +118,13 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 
 				// If there are words to the left of `para`, add them.
 				// We need to limit the number of word
-				n := page.scanBand(para, partial(readingOverlapLeft, minInterReadingGap),
+				n := page.scanBand("", para, partial(readingOverlapLeft, minInterReadingGap),
 					para.minDepth(), para.maxDepth(),
 					minInterReadingFontTol, true, false)
 				if n > 0 {
 					r := (para.maxDepth() - para.minDepth()) / para.fontsize
 					if (n > 1 && float64(n) > 0.3*r) || n <= 5 {
-						if page.scanBand(para, partial(readingOverlapLeft, minInterReadingGap),
+						if page.scanBand("other", para, partial(readingOverlapLeft, minInterReadingGap),
 							para.minDepth(), para.maxDepth(),
 							minInterReadingFontTol, false, true) > 0 {
 							changed = true
@@ -136,24 +142,26 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 	return paraStratas
 }
 
-// writeText write the text in `pt` to `w`.``
+// writeText writes the text in `paras` to `w`.
 func (paras paraList) writeText(w io.Writer) {
 	for ip, para := range paras {
 		for il, line := range para.lines {
 			s := line.text()
 			n := len(s)
 			n0 := n
-			if (il < len(para.lines)-1 || ip < len(paras)-1) && line.hyphenated {
-				// Line ending with hyphen. Remove it
-				n--
-				r := []rune(s)
-				r = r[:len(r)-1]
-				s = string(r)
+			if false {
+				// TODO(peterwilliams97): Reinstate hyphen removal.
+				if (il < len(para.lines)-1 || ip < len(paras)-1) && line.hyphenated {
+					// Line ending with hyphen. Remove it.
+					n--
+					r := []rune(s)
+					r = r[:len(r)-1]
+					s = string(r)
+				}
 			}
-
 			w.Write([]byte(s))
 			if n < n0 {
-				// We removed the hyphend from the end of the line so we don't need a line ending.
+				// We removed the hyphen from the end of the line so we don't need a line ending.
 				continue
 			}
 			if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
@@ -165,6 +173,49 @@ func (paras paraList) writeText(w io.Writer) {
 		}
 		w.Write([]byte("\n"))
 	}
+}
+
+// toTextMarks creates the TextMarkArray corresponding to the extracted text created by
+// paras `paras`.writeText().
+func (paras paraList) toTextMarks() []TextMark {
+	offset := 0
+	var marks []TextMark
+	addMark := func(mark TextMark) {
+		mark.Offset = offset
+		marks = append(marks, mark)
+		offset += len(mark.Text)
+	}
+	addSpaceMark := func(spaceChar string) {
+		mark := spaceMark
+		mark.Text = spaceChar
+		addMark(mark)
+	}
+	for _, para := range paras {
+		for il, line := range para.lines {
+			lineMarks := line.toTextMarks(&offset)
+			marks = append(marks, lineMarks...)
+			// TODO(peterwilliams97): Reinstate hyphen suppression.
+			// for iw, word := range line.words {
+			// 	for _, tm := range word.marks {
+			// 		addMark(tm.ToTextMark())
+			// 	}
+			// 	if iw < len(line.words)-1 {
+			// 		addSpaceMark(" ")
+			// 	}
+			// }
+			if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+				// Next line is the same depth so it's the same line as this one in the extracted text
+				addSpaceMark(" ")
+				continue
+			}
+			addSpaceMark("\n")
+		}
+		addSpaceMark("\n")
+	}
+	if len(marks) > 1 {
+		marks = marks[:len(marks)-1]
+	}
+	return marks
 }
 
 // sortReadingOrder sorts `paras` in reading order.

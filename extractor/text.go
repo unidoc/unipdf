@@ -17,9 +17,12 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
 )
+
+const verbose = false
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // It takes into account character encodings in the PDF file, which are decoded by
@@ -64,6 +67,12 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &savedStates)
 	var inTextObj bool
 
+	if level > 5 {
+		err := errors.New("stack overflow")
+		common.Log.Debug("ERROR: extractPageText. recursion level=%d err=%w", level, err)
+		return pageText, state.numChars, state.numMisses, err
+	}
+
 	// Uncomment the following 3 statements to log the content stream.
 	// common.Log.Info("contents* %d -----------------------------", len(contents))
 	// fmt.Println(contents)
@@ -72,7 +81,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
-		common.Log.Debug("ERROR: extractPageText parse failed. err=%v", err)
+		common.Log.Debug("ERROR: extractPageText parse failed. err=%w", err)
 		return pageText, state.numChars, state.numMisses, err
 	}
 
@@ -84,14 +93,18 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 
 			operand := op.Operand
 
-			common.Log.Info("&&& op=%s", op)
+			if verbose {
+				common.Log.Info("&&& op=%s", op)
+			}
 
 			switch operand {
 			case "q":
 				savedStates.push(&state)
 				// common.Log.Info("Save state: stack=%d\n %s", len(savedStates), state.String())
 			case "Q":
-				common.Log.Info("Restore state: %s", savedStates.String())
+				if verbose {
+					common.Log.Info("Restore state: %s", savedStates.String())
+				}
 				if !savedStates.empty() {
 					// oldState := state
 					state = *savedStates.top()
@@ -232,7 +245,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				err = to.setFont(name, size)
-				if err != nil {
+				to.invalidFont = err == model.ErrType3FontNotSupported ||
+					(err != nil && strings.Contains(err.Error(), "unsupported font encoding:"))
+				if err != nil && !to.invalidFont {
 					return err
 				}
 			case "Tm": // Set text matrix.
@@ -453,7 +468,9 @@ func (to *textObject) setCharSpacing(x float64) {
 		return
 	}
 	to.state.tc = x
-	common.Log.Info("setCharSpacing: %.2f state=%s", to.state.String())
+	if verbose {
+		common.Log.Info("setCharSpacing: %.2f state=%s", to.state.String())
+	}
 }
 
 // setFont "Tf". Set font.
@@ -659,6 +676,7 @@ type textObject struct {
 	tm          transform.Matrix // Text matrix. For the character pointer.
 	tlm         transform.Matrix // Text line matrix. For the start of line pointer.
 	marks       []*textMark      // Text marks get written here.
+	invalidFont bool             // Flag that gets set true when we can't handle the current font.
 }
 
 // newTextState returns a default textState.
@@ -713,6 +731,10 @@ func (to *textObject) logCursor() {
 // It extracts textMarks based the charcodes in `data` and the currect text and graphics states
 // are tracked in `to`.
 func (to *textObject) renderText(data []byte) error {
+	if to.invalidFont {
+		common.Log.Debug("renderText: Invalid font. Not processing.")
+		return nil
+	}
 	font := to.getCurrentFont()
 	charcodes := font.BytesToCharcodes(data)
 	runeSlices, numChars, numMisses := font.CharcodesToRuneSlices(charcodes)
@@ -740,8 +762,9 @@ func (to *textObject) renderText(data []byte) error {
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
-
-	common.Log.Info("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runeSlices)
+	if verbose {
+		common.Log.Info("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runeSlices)
+	}
 
 	for i, r := range runeSlices {
 		if len(r) == 1 && r[0] == '\x00' {
@@ -775,8 +798,10 @@ func (to *textObject) renderText(data []byte) error {
 		// t is the displacement of the text cursor when the character is rendered.
 		t0 := transform.Point{X: (c.X*tfs + w) * th}
 		t := transform.Point{X: (c.X*tfs + state.tc + w) * th}
-		common.Log.Info("tfs=%.2f tc=%.2f tw=%.2f th=%.2f", tfs, state.tc, state.tw, th)
-		common.Log.Info("dx,dy=%.3f t0=%.2f t=%.2f", c, t0, t)
+		if verbose {
+			common.Log.Info("tfs=%.2f tc=%.2f tw=%.2f th=%.2f", tfs, state.tc, state.tw, th)
+			common.Log.Info("dx,dy=%.3f t0=%.2f t=%.2f", c, t0, t)
+		}
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
@@ -784,15 +809,17 @@ func (to *textObject) renderText(data []byte) error {
 		td := translationMatrix(t)
 		end := to.gs.CTM.Mult(to.tm).Mult(td0)
 
-		common.Log.Info("end:\n\tCTM=%s\n\t tm=%s\n"+
-			"\t td=%s xlat=%s\n"+
-			"\ttd0=%s\n\t → %s xlat=%s",
-			to.gs.CTM, to.tm,
-			td, translation(to.gs.CTM.Mult(to.tm).Mult(td)),
-			td0, end, translation(end))
+		if verbose {
+			common.Log.Info("end:\n\tCTM=%s\n\t tm=%s\n"+
+				"\t td=%s xlat=%s\n"+
+				"\ttd0=%s\n\t → %s xlat=%s",
+				to.gs.CTM, to.tm,
+				td, translation(to.gs.CTM.Mult(to.tm).Mult(td)),
+				td0, end, translation(end))
+		}
 
 		mark, onPage := to.newTextMark(
-			string(r),
+			textencoding.ExpandLigatures(r),
 			trm,
 			translation(end),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
@@ -904,6 +931,7 @@ func (pt *PageText) computeViews() {
 	b := new(bytes.Buffer)
 	paras.writeText(b)
 	pt.viewText = b.String()
+	pt.viewMarks = paras.toTextMarks()
 }
 
 // TextMarkArray is a collection of TextMarks.
@@ -940,7 +968,11 @@ func (ma *TextMarkArray) Len() int {
 	return len(ma.marks)
 }
 
-// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offset < `end`.
+// RangeOffset returns the TextMarks in `ma` that overlap text[start:end] in the extracted text.
+// These are tm: `start` <= tm.Offset + len(tm.Text) && tm.Offset < `end` where
+// `start` and `end` are offsets in the extracted text.
+// NOTE: TextMarks can contain multiple characters. e.g. "ffi" for the ﬃ ligature so the first and
+// last elements of the returned TextMarkArray may only partially overlap text[start:end].
 func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if ma == nil {
 		return nil, errors.New("ma==nil")
@@ -959,7 +991,7 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 		end = ma.marks[n-1].Offset + 1
 	}
 
-	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset >= start })
+	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset+len(ma.marks[i].Text)-1 >= start })
 	if !(0 <= iStart && iStart < n) {
 		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
 			start, iStart, n, ma.marks[0], ma.marks[n-1])
@@ -973,7 +1005,8 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	}
 	if iEnd <= iStart {
 		// This should never happen.
-		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
+		return nil, fmt.Errorf("iEnd <= iStart: start=%d end=%d iStart=%d iEnd=%d",
+			start, end, iStart, iEnd)
 	}
 	return &TextMarkArray{marks: ma.marks[iStart:iEnd]}, nil
 }
@@ -1054,7 +1087,7 @@ func (tm TextMark) String() string {
 	if tm.Meta {
 		meta = " *M*"
 	}
-	return fmt.Sprintf("{@%04d TextMark: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}",
+	return fmt.Sprintf("{@%04d TextMark: %d %q=%02x (%6.2f, %6.2f) (%6.2f, %6.2f) %s%s}",
 		tm.count, tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 

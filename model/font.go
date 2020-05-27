@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -444,7 +445,7 @@ func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([
 		if fontBase.toUnicodeCmap != nil {
 			if s, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
 				runeSlices = append(runeSlices, []rune(s))
-				common.Log.Info("CharcodesToRuneSlices1: code=%d s=`%s`", code, s)
+				// common.Log.Info("CharcodesToRuneSlices1: code=%d s=`%s`", code, s)
 				continue
 			}
 		}
@@ -454,13 +455,13 @@ func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([
 		if encoder != nil {
 			if r, ok := encoder.CharcodeToRune(code); ok {
 				runeSlices = append(runeSlices, []rune{r})
-				common.Log.Info("CharcodesToRuneSlices2: code=%d s=%q encoder=%s",
-					code, string(r), encoder.String())
+				// common.Log.Info("CharcodesToRuneSlices2: code=%d s=%q encoder=%s",
+				// 	code, string(r), encoder.String())
 				continue
 			}
 		}
 
-		common.Log.Error("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
+		common.Log.Debug("ERROR: No rune. code=0x%04x charcodes=[% 04x] CID=%t\n"+
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++
@@ -489,14 +490,8 @@ func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	runes, _, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
-
-	var buffer bytes.Buffer
-	for _, r := range runes {
-		buffer.WriteString(textencoding.RuneToString(r))
-	}
-
-	str := buffer.String()
-	return str, len([]rune(str)), numMisses
+	str := textencoding.ExpandLigatures(runes)
+	return str, utf8.RuneCountInString(str), numMisses
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
