@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"unicode/utf8"
+	"unicode"
 
 	"github.com/unidoc/unipdf/v3/model"
 )
@@ -60,6 +60,7 @@ func (l *textLine) text() string {
 		}
 	}
 	return strings.Join(words, "")
+
 }
 
 // toTextMarks returns the TextMarks contained in `l`.text().
@@ -129,6 +130,16 @@ func (l *textLine) mergeWordFragments() {
 	}
 
 	// check for hyphen at end of line
-	r, _ := utf8.DecodeLastRuneInString(l.text())
-	l.hyphenated = r == '-'
+	runes := []rune(l.text())
+	l.hyphenated = len(runes) >= 4 &&
+		unicode.Is(unicode.Hyphen, runes[len(runes)-1]) &&
+		!unicode.IsSpace(runes[len(runes)-2])
+	// if l.hyphenated {
+	// 	// fmt.Fprintf(os.Stderr, "\n%q ", l.text())
+	// 	common.Log.Info("### %d %q\n\t%q:%t\n\t%q:%t",
+	// 		len(runes), l.text(),
+	// 		runes[len(runes)-1], unicode.Is(unicode.Hyphen, runes[len(runes)-1]),
+	// 		runes[len(runes)-2], !unicode.IsSpace(runes[len(runes)-2]),
+	// 	)
+	// }
 }

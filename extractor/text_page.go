@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"unicode"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
@@ -142,25 +143,24 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 	return paraStratas
 }
 
+const doHyphens = true
+
 // writeText writes the text in `paras` to `w`.
 func (paras paraList) writeText(w io.Writer) {
 	for ip, para := range paras {
 		for il, line := range para.lines {
 			s := line.text()
-			n := len(s)
-			n0 := n
-			if false {
-				// TODO(peterwilliams97): Reinstate hyphen removal.
-				if (il < len(para.lines)-1 || ip < len(paras)-1) && line.hyphenated {
+			reduced := false
+			if doHyphens {
+				if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
 					// Line ending with hyphen. Remove it.
-					n--
-					r := []rune(s)
-					r = r[:len(r)-1]
-					s = string(r)
+					runes := []rune(s)
+					s = string(runes[:len(runes)-1])
+					reduced = true
 				}
 			}
 			w.Write([]byte(s))
-			if n < n0 {
+			if reduced {
 				// We removed the hyphen from the end of the line so we don't need a line ending.
 				continue
 			}
@@ -190,30 +190,42 @@ func (paras paraList) toTextMarks() []TextMark {
 		mark.Text = spaceChar
 		addMark(mark)
 	}
-	for _, para := range paras {
+	for ip, para := range paras {
 		for il, line := range para.lines {
 			lineMarks := line.toTextMarks(&offset)
 			marks = append(marks, lineMarks...)
-			// TODO(peterwilliams97): Reinstate hyphen suppression.
-			// for iw, word := range line.words {
-			// 	for _, tm := range word.marks {
-			// 		addMark(tm.ToTextMark())
-			// 	}
-			// 	if iw < len(line.words)-1 {
-			// 		addSpaceMark(" ")
-			// 	}
-			// }
-			if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+			reduced := false
+			if doHyphens {
+				if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
+					tm := marks[len(marks)-1]
+					r := []rune(tm.Text)
+					if unicode.IsSpace(r[len(r)-1]) {
+						panic(tm)
+					}
+					if len(r) == 1 {
+						marks = marks[:len(marks)-1]
+						offset = marks[len(marks)-1].Offset + len(marks[len(marks)-1].Text)
+					} else {
+						s := string(r[:len(r)-1])
+						offset += len(s) - len(tm.Text)
+						tm.Text = s
+					}
+					reduced = true
+				}
+			}
+			if reduced {
+				continue
+			}
+			if il != len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
 				// Next line is the same depth so it's the same line as this one in the extracted text
 				addSpaceMark(" ")
 				continue
 			}
 			addSpaceMark("\n")
 		}
-		addSpaceMark("\n")
-	}
-	if len(marks) > 1 {
-		marks = marks[:len(marks)-1]
+		if ip != len(paras)-1 {
+			addSpaceMark("\n")
+		}
 	}
 	return marks
 }

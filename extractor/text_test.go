@@ -758,12 +758,18 @@ func testTermMarks(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 
 		if len(mark0.Text) <= len(term) {
 			if !startWith(term, mark0.Text) {
+				for i, tm := range spanMarks {
+					fmt.Printf("%4d: %s\n", i, tm)
+				}
 				t.Fatalf("mark0 is not a prefix for term=%s=text[%d:%d]=%02x mark0=%v",
 					show, ofs0, ofs1, text[ofs0:ofs1], mark0)
 			}
 		}
 		if len(mark1.Text) <= len(term) {
 			if !endsWith(term, mark1.Text) {
+				for i, tm := range spanMarks {
+					fmt.Printf("%4d: %s\n", i, tm)
+				}
 				t.Fatalf("mark1 is not a suffix for term=%s=text[%d:%d]=%v mark1=%v",
 					show, ofs0, ofs1, text[ofs0:ofs1], mark1)
 			}

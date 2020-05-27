@@ -45,7 +45,6 @@ TODO
 ====
 Remove serial code????
 Reinstate rotated text handling.
-Reinstate hyphen suppression.
 Reinstate hyphen diacritic composition.
 Reinstate duplicate text removal
 Get these files working:
