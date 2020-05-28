@@ -119,7 +119,7 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	fontsize := para.fontsize
 	lineDepth := lineDepthR * fontsize
 	n := 0
-	// var newWords []*textWord
+	var newWords []*textWord
 	for _, depthIdx := range s.depthBand(minDepth-lineDepth, maxDepth+lineDepth) {
 		for _, word := range s.bins[depthIdx] {
 			if !(minDepth-lineDepth <= word.depth && word.depth <= maxDepth+lineDepth) {
@@ -134,7 +134,7 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 			if !detectOnly {
 				moveWord(depthIdx, s, para, word)
 			}
-			// newWords = append(newWords, word)
+			newWords = append(newWords, word)
 			n++
 			if !freezeDepth {
 				if word.depth < minDepth {
@@ -155,9 +155,9 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	if verbose {
 		if len(title) > 0 {
 			common.Log.Info("scanBand: %s para=%.2f", title, para.PdfRectangle)
-			// for i, word := range newWords {
-			// 	fmt.Printf("%4d: %s\n", i, word)
-			// }
+			for i, word := range newWords {
+				fmt.Printf("%4d: %s\n", i, word)
+			}
 		}
 	}
 	return n

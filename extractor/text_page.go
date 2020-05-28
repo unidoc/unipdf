@@ -6,6 +6,7 @@
 package extractor
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"sort"
@@ -35,9 +36,23 @@ func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraL
 	for i, para := range paraStratas {
 		paras[i] = composePara(para)
 	}
+	if verbose {
+		common.Log.Info("unsorted=========----------=====")
+		for i, para := range paraStratas {
+			paras[i] = composePara(para)
+			common.Log.Info("paras[%d]=%.2f%q", i, paras[i].PdfRectangle, paras[i].text())
+		}
+	}
 
 	// Sort the paras into reading order.
 	paras.sortReadingOrder()
+	if verbose {
+		common.Log.Info("sorted-----------=========")
+		for i := range paras {
+			common.Log.Info("paras[%d]=%q", i, paras[i].text())
+			common.Log.Info("paras[%d]=%.2f%q", i, paras[i].PdfRectangle, paras[i].text())
+		}
+	}
 	return paras
 }
 
@@ -257,31 +272,57 @@ func (paras paraList) sortReadingOrder() {
 func (paras paraList) adjMatrix() [][]bool {
 	n := len(paras)
 	adj := make([][]bool, n)
+	reasons := make([][]string, n)
 	for i := range paras {
 		adj[i] = make([]bool, n)
+		reasons[i] = make([]string, n)
 		for j := range paras {
-			adj[i][j] = i != j && paras.before(i, j)
+			if i == j {
+				continue
+			}
+			adj[i][j], reasons[i][j] = paras.before(i, j)
+		}
+	}
+	if verbose {
+		common.Log.Info("adjMatrix =======")
+		for i := 0; i < n; i++ {
+			a := paras[i]
+			fmt.Printf("%4d: %q %.2f\n", i, truncate(a.text(), 50), a.PdfRectangle)
+			for j := 0; j < n; j++ {
+				if i == j {
+					continue
+				}
+				if !adj[i][j] {
+					continue
+				}
+				b := paras[j]
+				fmt.Printf("%8d: %10s %q %.2f\n", j,
+					reasons[i][j], truncate(b.text(), 40), b.PdfRectangle)
+
+			}
 		}
 	}
 	return adj
 }
 
 // before defines an ordering over `paras`.
+// before returns true if `a` comes before `b`.
 // 1. Line segment `a` comes before line segment `b` if their ranges of x-coordinates overlap and if
 //    line segment `a` is above line segment `b` on the page.
 // 2. Line segment `a` comes before line segment `b` if `a` is entirely to the left of `b` and if
-//    there does not exist a line segment `c` whose y-coordinates  are between `a` and `b` and whose
+//    there does not exist a line segment `c` whose y-coordinates are between `a` and `b` and whose
 //    range of x coordinates overlaps both `a` and `b`.
 // From Thomas M. Breuel "High Performance Document Layout Analysis"
-func (paras paraList) before(i, j int) bool {
+func (paras paraList) before(i, j int) (bool, string) {
 	a, b := paras[i], paras[j]
 	// Breuel's rule 1
-	if overlappedX(a, b) && a.Ury > b.Ury {
-		return true
+	if overlappedX(a, b) && a.Lly > b.Lly {
+		return true, "above"
 	}
+
 	// Breuel's rule 2
 	if !(a.eBBox.Urx < b.eBBox.Llx) {
-		return false
+		return false, "NOT left"
 	}
 	for k, c := range paras {
 		if k == i || k == j {
@@ -296,10 +337,10 @@ func (paras paraList) before(i, j int) bool {
 			continue
 		}
 		if overlappedX(a, c) && overlappedX(c, b) {
-			return false
+			return false, "Y intervening"
 		}
 	}
-	return true
+	return true, "TO LEFT"
 }
 
 // overlappedX returns true if `r0` and `r1` overlap on the x-axis. !@#$ There is another version
