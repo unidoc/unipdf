@@ -21,7 +21,7 @@ type Extractor struct {
 	fontCache map[string]fontEntry
 
 	// text results from running extractXYText on forms within the page.
-	// TODO(peterwilliams): Cache this map accross all pages in a PDF to speed up processig.
+	// TODO(peterwilliams97): Cache this map accross all pages in a PDF to speed up processing.
 	formResults map[string]textResult
 
 	// accessCount is used to set fontEntry.access to an incrementing number.

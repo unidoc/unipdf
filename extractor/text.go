@@ -24,6 +24,10 @@ import (
 
 const verbose = false
 
+// maxFormStack is the maximum form stack recursion depth. It has to be low enough to avoid a stack
+// overflow and high enough to accomodate customers' PDFs
+const maxFormStack 10
+
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // It takes into account character encodings in the PDF file, which are decoded by
 // CharcodeBytesToUnicode.
@@ -67,8 +71,8 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &savedStates)
 	var inTextObj bool
 
-	if level > 5 {
-		err := errors.New("stack overflow")
+	if level > maxFormStack {
+		err := errors.New("form stack overflow")
 		common.Log.Debug("ERROR: extractPageText. recursion level=%d err=%w", level, err)
 		return pageText, state.numChars, state.numMisses, err
 	}
@@ -245,8 +249,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				err = to.setFont(name, size)
-				to.invalidFont = err == model.ErrType3FontNotSupported ||
-					(err != nil && strings.Contains(err.Error(), "unsupported font encoding:"))
+				to.invalidFont = unsupportedFontErr(err)
 				if err != nil && !to.invalidFont {
 					return err
 				}
@@ -364,6 +367,24 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	return pageText, state.numChars, state.numMisses, err
 }
 
+// unsupportedFontErr returns true if `err` indicated that the selected font or encoding is not supported.
+func unsupportedFontErr(err error) bool {
+	if err == model.ErrFontNotSupported ||
+		err == model.ErrType1CFontNotSupported ||
+		err == model.ErrType3FontNotSupported ||
+		err == model.ErrTTCmapNotSupported {
+		return true
+	}
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "unsupported font encoding:") ||
+		strings.Contains(errStr, "unexpected subtable format:") ||
+		strings.Contains(errStr, "fonts based on PostScript outlines are not supported")
+}
+
+// textResult is used for holding results of PDF form processig
 type textResult struct {
 	pageText  PageText
 	numChars  int
@@ -1101,11 +1122,15 @@ var spaceMark = TextMark{
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
 // empty.
 func (to *textObject) getCurrentFont() *model.PdfFont {
-	if to.savedStates.empty() {
+	var font *model.PdfFont
+	if !to.savedStates.empty() {
+		font = to.savedStates.top().tfont
+	}
+	if font == nil {
 		common.Log.Debug("ERROR: No font defined. Using default.")
 		return model.DefaultFont()
 	}
-	return to.savedStates.top().tfont
+	return font
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it

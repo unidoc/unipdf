@@ -51,6 +51,10 @@ Get these files working:
 		challenging-modified.pdf
 		transitions_test.pdf
 
+### radical.txt
+Evaluate the potential impact of each
+s t r a t e g y u s i n g t h e V i s i o n /
+
 
 TEST FILES
 ---------
