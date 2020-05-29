@@ -67,7 +67,7 @@ func (enc CMapEncoder) RuneToCharcode(r rune) (CharCode, bool) {
 	}
 
 	// Map rune to CID.
-	cid, ok := enc.cidToUnicode.RuneToCID(r)
+	cid, ok := enc.cidToUnicode.StringToCID(string(r))
 	if !ok {
 		return 0, false
 	}
