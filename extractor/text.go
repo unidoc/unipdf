@@ -721,14 +721,14 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	//  common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runeSlices, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.2f", spaceWidth, runeSlices, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
 
-	// common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, drunes)
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(runeSlices))
 
 	for i, r := range runeSlices {
 		if len(r) == 1 && r[0] == '\x00' {

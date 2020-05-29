@@ -110,7 +110,6 @@ type CMap struct {
 
 	// Used by ctype 2 CMaps.
 	codeToUnicode map[CharCode]string // CID -> Unicode string
-	// XXXX(peterwilliams97): Should unicodeToCode be the inverse of codeToUnicode?
 	unicodeToCode map[string]CharCode // Unicode rune -> CID
 
 	// cached contains the raw CMap data. It is used by the Bytes method in
