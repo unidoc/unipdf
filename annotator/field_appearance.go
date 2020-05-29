@@ -13,6 +13,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
+	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
@@ -175,12 +176,14 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	width := rect.Width()
 	height := rect.Height()
 
+	var rotation float64
 	if mkDict, has := core.GetDict(wa.MK); has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
 			return nil, err
 		}
+		rotation, _ = core.GetNumberAsFloat(mkDict.Get("R"))
 	}
 
 	// Get and process the default appearance string (DA) operands.
@@ -192,6 +195,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 
 	cc := contentstream.NewContentCreator()
+
 	if style.BorderSize > 0 {
 		drawRect(cc, style, width, height)
 	}
@@ -205,6 +209,28 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	cc.Add_BMC("Tx")
 	cc.Add_q()
+
+	bboxWidth, bboxHeight := width, height
+	if rotation != 0 {
+		// Calculate bounding box before rotation.
+		revRotation := -rotation
+		bbox := draw.Path{Points: []draw.Point{
+			draw.NewPoint(0, 0).Rotate(revRotation),
+			draw.NewPoint(width, 0).Rotate(revRotation),
+			draw.NewPoint(0, height).Rotate(revRotation),
+			draw.NewPoint(width, height).Rotate(revRotation),
+		}}.GetBoundingBox()
+
+		// Update width and height, as the appearance is generated based on
+		// the bounding of the annotation with no rotation.
+		width = bbox.Width
+		height = bbox.Height
+
+		// Apply rotation.
+		cc.RotateDeg(rotation)
+		cc.Translate(bbox.X, bbox.Y)
+	}
+
 	// Graphic state changes.
 	cc.Add_BT()
 
@@ -461,7 +487,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
-	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	apDict := core.MakeDict()
