@@ -320,8 +320,8 @@ func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
 	return MissingCodeString, false
 }
 
-// RuneToCID maps the specified rune to a character identifier. If the provided
-// rune has no available mapping, the second return value is false.
+// StringToCID maps the specified string to a character identifier. If the provided
+// string has no available mapping, the bool return value is false.
 func (cmap *CMap) StringToCID(s string) (CharCode, bool) {
 	cid, ok := cmap.unicodeToCode[s]
 	return cid, ok

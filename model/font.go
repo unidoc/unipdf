@@ -420,10 +420,10 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	return charcodes
 }
 
-// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
+// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except it returns more statistical
 // information about hits and misses from the reverse mapping process.
 // NOTE: The number of runes returned may be greater than the number of charcodes.
-// TODO(peterwilliams97): Deprecate?
+// TODO(peterwilliams97): Deprecate in v4 and use only CharcodesToRuneSlices()
 func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
 	runeSlices, numHits, numMisses := font.CharcodesToRuneSlices(charcodes)
 	var runes []rune
@@ -434,7 +434,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 }
 
 // CharcodesToRuneSlices returns the unicode strings corresponding to `charcodes` as rune slices.
-// The int return is the number of unconvereted codes.
+// The int returns are the number of rune slices and the number of unconvereted codes.
 // NOTE: The number of rune slices returned is equal to the number of charcodes
 func (font *PdfFont) CharcodesToRuneSlices(charcodes []textencoding.CharCode) ([][]rune, int, int) {
 	fontBase := font.baseFields()
