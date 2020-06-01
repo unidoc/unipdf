@@ -6,9 +6,11 @@
 package extractor
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"sort"
-	"strings"
+	"unicode"
 
 	"github.com/unidoc/unipdf/v3/model"
 )
@@ -22,6 +24,7 @@ type textPara struct {
 	model.PdfRectangle                    // Bounding box.
 	eBBox              model.PdfRectangle // Extented ounding box needed to compute reading order.
 	lines              []*textLine        // Paragraph text gets broken into lines.
+	table              *textTable
 }
 
 // newTextPara returns a textPara with the same bouding rectangle as `strata`.
@@ -42,16 +45,157 @@ func (p *textPara) String() string {
 
 // text returns the text  of the lines in `p`.
 func (p *textPara) text() string {
-	parts := make([]string, len(p.lines))
-	for i, line := range p.lines {
-		parts[i] = line.text()
+	w := new(bytes.Buffer)
+	p.writeText(w)
+	return w.String()
+}
+
+// writeText writes the text of `p` including tables to `w`.
+func (p *textPara) writeText(w io.Writer) {
+	if p.table != nil {
+		for y := 0; y < p.table.h; y++ {
+			for x := 0; x < p.table.w; x++ {
+				cell := p.table.cells[y*p.table.w+x]
+				cell.writeCellText(w)
+				w.Write([]byte(" "))
+			}
+			w.Write([]byte("\n"))
+		}
+	} else {
+		p.writeCellText(w)
+		w.Write([]byte("\n"))
 	}
-	return strings.Join(parts, "\n")
+}
+
+// writeCellText writes the text of `p` not including tables to `w`.
+func (p *textPara) writeCellText(w io.Writer) {
+	// w := new(bytes.Buffer)
+	para := p
+	for il, line := range para.lines {
+		s := line.text()
+		reduced := false
+		if doHyphens {
+			if line.hyphenated && il != len(para.lines)-1 {
+				// Line ending with hyphen. Remove it.
+				runes := []rune(s)
+				s = string(runes[:len(runes)-1])
+				reduced = true
+			}
+		}
+		w.Write([]byte(s))
+		if reduced {
+			// We removed the hyphen from the end of the line so we don't need a line ending.
+			continue
+		}
+		if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+			// Next line is the same depth so it's the same line as this one in the extracted text
+			w.Write([]byte(" "))
+			continue
+		}
+		if il < len(para.lines)-1 {
+			w.Write([]byte("\n"))
+		}
+	}
+}
+
+// toTextMarks creates the TextMarkArray corresponding to the extracted text created by
+// paras `p`.writeText().
+func (p *textPara) toTextMarks(offset *int) []TextMark {
+	var marks []TextMark
+	addMark := func(mark TextMark) {
+		mark.Offset = *offset
+		marks = append(marks, mark)
+		*offset += len(mark.Text)
+	}
+	addSpaceMark := func(spaceChar string) {
+		mark := spaceMark
+		mark.Text = spaceChar
+		addMark(mark)
+	}
+	if p.table != nil {
+		for y := 0; y < p.table.h; y++ {
+			for x := 0; x < p.table.w; x++ {
+				cell := p.table.cells[y*p.table.w+x]
+				cellMarks := cell.toCellTextMarks(offset)
+				marks = append(marks, cellMarks...)
+				addSpaceMark(" ")
+			}
+			addSpaceMark("\n")
+		}
+	} else {
+		marks = p.toCellTextMarks(offset)
+		addSpaceMark("\n")
+	}
+	return marks
+}
+
+// toTextMarks creates the TextMarkArray corresponding to the extracted text created by
+// paras `paras`.writeCellText().
+func (p *textPara) toCellTextMarks(offset *int) []TextMark {
+	var marks []TextMark
+	addMark := func(mark TextMark) {
+		mark.Offset = *offset
+		marks = append(marks, mark)
+		*offset += len(mark.Text)
+	}
+	addSpaceMark := func(spaceChar string) {
+		mark := spaceMark
+		mark.Text = spaceChar
+		addMark(mark)
+	}
+	para := p
+
+	for il, line := range para.lines {
+		lineMarks := line.toTextMarks(offset)
+		marks = append(marks, lineMarks...)
+		reduced := false
+		if doHyphens {
+			if line.hyphenated && il != len(para.lines)-1 {
+				tm := marks[len(marks)-1]
+				r := []rune(tm.Text)
+				if unicode.IsSpace(r[len(r)-1]) {
+					panic(tm)
+				}
+				if len(r) == 1 {
+					marks = marks[:len(marks)-1]
+					*offset = marks[len(marks)-1].Offset + len(marks[len(marks)-1].Text)
+				} else {
+					s := string(r[:len(r)-1])
+					*offset += len(s) - len(tm.Text)
+					tm.Text = s
+				}
+				reduced = true
+			}
+		}
+		if reduced {
+			continue
+		}
+		if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+			// Next line is the same depth so it's the same line as this one in the extracted text
+			addSpaceMark(" ")
+			continue
+		}
+		if il < len(para.lines)-1 {
+			addSpaceMark("\n")
+		}
+	}
+
+	addSpaceMark("\n")
+
+	return marks
 }
 
 // bbox makes textPara implement the `bounded` interface.
 func (p *textPara) bbox() model.PdfRectangle {
 	return p.PdfRectangle
+}
+
+// fontsize return the para's fontsize which we take to be the first line's fontsize
+func (p *textPara) fontsize() float64 {
+	if len(p.lines) == 0 {
+		panic(p)
+	}
+	return p.lines[0].fontsize
 }
 
 // composePara builds a textPara from the words in `strata`.
@@ -124,5 +268,8 @@ func composePara(strata *textStrata) *textPara {
 	sort.Slice(para.lines, func(i, j int) bool {
 		return diffDepthReading(para.lines[i], para.lines[j]) < 0
 	})
+	if len(para.lines) == 0 {
+		panic(para)
+	}
 	return para
 }

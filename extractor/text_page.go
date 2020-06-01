@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"sort"
 	"unicode"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -36,21 +35,26 @@ func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraL
 	for i, para := range paraStratas {
 		paras[i] = composePara(para)
 	}
-	if verbose {
+	if verbose || true {
 		common.Log.Info("unsorted=========----------=====")
-		for i, para := range paraStratas {
-			paras[i] = composePara(para)
-			common.Log.Info("paras[%d]=%.2f%q", i, paras[i].PdfRectangle, paras[i].text())
+		for i, para := range paras {
+			common.Log.Info("paras[%d]=%.2f%q", i, para.PdfRectangle, truncate(paras[i].text(), 200))
 		}
 	}
 
+	paras.computeEBBoxes()
+	paras = paras.extractTables()
+
 	// Sort the paras into reading order.
 	paras.sortReadingOrder()
-	if verbose {
-		common.Log.Info("sorted-----------=========")
-		for i := range paras {
-			common.Log.Info("paras[%d]=%q", i, paras[i].text())
-			common.Log.Info("paras[%d]=%.2f%q", i, paras[i].PdfRectangle, paras[i].text())
+	if verbose || true {
+		common.Log.Info("para sorted in reading order -----------=========")
+		for i, para := range paras {
+			tab := ""
+			if para.table != nil {
+				tab = fmt.Sprintf("[%dx%d]", para.table.w, para.table.h)
+			}
+			fmt.Printf("%4d: %6.2f %s %q\n", i, para.PdfRectangle, tab, truncate(para.text(), 50))
 		}
 	}
 	return paras
@@ -101,6 +105,10 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 
 				// Add words that are within maxIntraDepthGap of `para` in the depth direction.
 				// i.e. Stretch para in the depth direction, vertically for English text.
+				if verbose {
+					common.Log.Info("para depth %.2f - %.2f maxIntraDepthGap=%.2f ",
+						para.minDepth(), para.maxDepth(), maxIntraDepthGap)
+				}
 				if page.scanBand("veritcal", para, partial(readingOverlapPlusGap, 0),
 					para.minDepth()-maxIntraDepthGap, para.maxDepth()+maxIntraDepthGap,
 					maxIntraDepthFontTolR, false, false) > 0 {
@@ -159,34 +167,39 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 }
 
 const doHyphens = true
+const useTables = true
 
 // writeText writes the text in `paras` to `w`.
 func (paras paraList) writeText(w io.Writer) {
 	for ip, para := range paras {
-		for il, line := range para.lines {
-			s := line.text()
-			reduced := false
-			if doHyphens {
-				if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
-					// Line ending with hyphen. Remove it.
-					runes := []rune(s)
-					s = string(runes[:len(runes)-1])
-					reduced = true
+		if useTables {
+			para.writeText(w)
+		} else {
+			for il, line := range para.lines {
+				s := line.text()
+				reduced := false
+				if doHyphens {
+					if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
+						// Line ending with hyphen. Remove it.
+						runes := []rune(s)
+						s = string(runes[:len(runes)-1])
+						reduced = true
+					}
 				}
-			}
-			w.Write([]byte(s))
-			if reduced {
-				// We removed the hyphen from the end of the line so we don't need a line ending.
-				continue
-			}
-			if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
-				// Next line is the same depth so it's the same line as this one in the extracted text
-				w.Write([]byte(" "))
-				continue
+				w.Write([]byte(s))
+				if reduced {
+					// We removed the hyphen from the end of the line so we don't need a line ending.
+					continue
+				}
+				if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+					// Next line is the same depth so it's the same line as this one in the extracted text
+					w.Write([]byte(" "))
+					continue
+				}
+				w.Write([]byte("\n"))
 			}
 			w.Write([]byte("\n"))
 		}
-		w.Write([]byte("\n"))
 	}
 }
 
@@ -206,40 +219,45 @@ func (paras paraList) toTextMarks() []TextMark {
 		addMark(mark)
 	}
 	for ip, para := range paras {
-		for il, line := range para.lines {
-			lineMarks := line.toTextMarks(&offset)
-			marks = append(marks, lineMarks...)
-			reduced := false
-			if doHyphens {
-				if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
-					tm := marks[len(marks)-1]
-					r := []rune(tm.Text)
-					if unicode.IsSpace(r[len(r)-1]) {
-						panic(tm)
+		if useTables {
+			paraMarks := para.toTextMarks(&offset)
+			marks = append(marks, paraMarks...)
+		} else {
+			for il, line := range para.lines {
+				lineMarks := line.toTextMarks(&offset)
+				marks = append(marks, lineMarks...)
+				reduced := false
+				if doHyphens {
+					if line.hyphenated && (il != len(para.lines)-1 || ip != len(paras)-1) {
+						tm := marks[len(marks)-1]
+						r := []rune(tm.Text)
+						if unicode.IsSpace(r[len(r)-1]) {
+							panic(tm)
+						}
+						if len(r) == 1 {
+							marks = marks[:len(marks)-1]
+							offset = marks[len(marks)-1].Offset + len(marks[len(marks)-1].Text)
+						} else {
+							s := string(r[:len(r)-1])
+							offset += len(s) - len(tm.Text)
+							tm.Text = s
+						}
+						reduced = true
 					}
-					if len(r) == 1 {
-						marks = marks[:len(marks)-1]
-						offset = marks[len(marks)-1].Offset + len(marks[len(marks)-1].Text)
-					} else {
-						s := string(r[:len(r)-1])
-						offset += len(s) - len(tm.Text)
-						tm.Text = s
-					}
-					reduced = true
 				}
+				if reduced {
+					continue
+				}
+				if il != len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
+					// Next line is the same depth so it's the same line as this one in the extracted text
+					addSpaceMark(" ")
+					continue
+				}
+				addSpaceMark("\n")
 			}
-			if reduced {
-				continue
+			if ip != len(paras)-1 {
+				addSpaceMark("\n")
 			}
-			if il != len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
-				// Next line is the same depth so it's the same line as this one in the extracted text
-				addSpaceMark(" ")
-				continue
-			}
-			addSpaceMark("\n")
-		}
-		if ip != len(paras)-1 {
-			addSpaceMark("\n")
 		}
 	}
 	return marks
@@ -251,20 +269,9 @@ func (paras paraList) sortReadingOrder() {
 	if len(paras) <= 1 {
 		return
 	}
-	paras.computeEBBoxes()
-	// Pre-sort by reading direction then depth
-	sort.Slice(paras, func(i, j int) bool {
-		return diffReadingDepth(paras[i], paras[j]) < 0
-	})
-
 	adj := paras.adjMatrix()
 	order := topoOrder(adj)
-	// `order` now contains the reading order. Set paras to that order.
-	sorted := make(paraList, len(paras))
-	for i, k := range order {
-		sorted[i] = paras[k]
-	}
-	copy(paras, sorted)
+	paras.reorder(order)
 }
 
 // adjMatrix creates an adjacency matrix for the DAG of connections over `paras`.
@@ -283,7 +290,7 @@ func (paras paraList) adjMatrix() [][]bool {
 			adj[i][j], reasons[i][j] = paras.before(i, j)
 		}
 	}
-	if verbose {
+	if verbose && false {
 		common.Log.Info("adjMatrix =======")
 		for i := 0; i < n; i++ {
 			a := paras[i]
@@ -316,7 +323,7 @@ func (paras paraList) adjMatrix() [][]bool {
 func (paras paraList) before(i, j int) (bool, string) {
 	a, b := paras[i], paras[j]
 	// Breuel's rule 1
-	if overlappedX(a, b) && a.Lly > b.Lly {
+	if overlappedXPara(a, b) && a.Lly > b.Lly {
 		return true, "above"
 	}
 
@@ -336,7 +343,7 @@ func (paras paraList) before(i, j int) (bool, string) {
 		if !(lo < c.Lly && c.Lly < hi) {
 			continue
 		}
-		if overlappedX(a, c) && overlappedX(c, b) {
+		if overlappedXPara(a, c) && overlappedXPara(c, b) {
 			return false, "Y intervening"
 		}
 	}
@@ -345,16 +352,8 @@ func (paras paraList) before(i, j int) (bool, string) {
 
 // overlappedX returns true if `r0` and `r1` overlap on the x-axis. !@#$ There is another version
 // of this!
-func overlappedX(r0, r1 *textPara) bool {
-	return overlappedX01(r0, r1) || overlappedX01(r1, r0)
-}
-
-func overlappedX01(r0, r1 *textPara) bool {
+func overlappedXPara(r0, r1 *textPara) bool {
 	return overlappedXRect(r0.eBBox, r1.eBBox)
-}
-
-func overlappedXRect(r0, r1 model.PdfRectangle) bool {
-	return (r0.Llx <= r1.Llx && r1.Llx <= r0.Urx) || (r0.Llx <= r1.Urx && r1.Urx <= r0.Urx)
 }
 
 // computeEBBoxes computes the eBBox fields in the elements of `paras`.
@@ -433,4 +432,13 @@ func topoOrder(adj [][]bool) []int {
 		order[i], order[n-1-i] = order[n-1-i], order[i]
 	}
 	return order
+}
+
+// reorder reorders `para` to the order in `order`.
+func (paras paraList) reorder(order []int) {
+	sorted := make(paraList, len(paras))
+	for i, k := range order {
+		sorted[i] = paras[k]
+	}
+	copy(paras, sorted)
 }

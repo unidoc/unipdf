@@ -69,7 +69,7 @@ func (s *textStrata) sort() {
 
 // minDepth returns the minimum depth that words in `s` touch.
 func (s *textStrata) minDepth() float64 {
-	return s.pageHeight - s.Ury
+	return s.pageHeight - (s.Ury - s.fontsize)
 }
 
 // maxDepth returns the maximum depth that words in `s` touch.
@@ -119,6 +119,7 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	fontsize := para.fontsize
 	lineDepth := lineDepthR * fontsize
 	n := 0
+	minDepth0, maxDepth0 := minDepth, maxDepth
 	var newWords []*textWord
 	for _, depthIdx := range s.depthBand(minDepth-lineDepth, maxDepth+lineDepth) {
 		for _, word := range s.bins[depthIdx] {
@@ -154,7 +155,11 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	}
 	if verbose {
 		if len(title) > 0 {
-			common.Log.Info("scanBand: %s para=%.2f", title, para.PdfRectangle)
+			common.Log.Info("scanBand: %s [%.2f %.2f]->[%.2f %.2f]  para=%.2f",
+				title,
+				minDepth0, maxDepth0,
+				minDepth, maxDepth,
+				para.PdfRectangle)
 			for i, word := range newWords {
 				fmt.Printf("%4d: %s\n", i, word)
 			}
