@@ -1154,7 +1154,12 @@ func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
 	}
 
 	x := 0
-	y := 0
+	var i int
+	for y := 0; y < enc.Height; y++ {
+		for i := 0; i < bytesPerLine; i++ {
+
+		}
+	}
 	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
 		var c gocolor.Color
 		if enc.ColorComponents == 1 {

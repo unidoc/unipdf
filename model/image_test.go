@@ -545,22 +545,21 @@ func BenchmarkColorAtFull(b *testing.B) {
 			Name:             "CMYK",
 		},
 	}
+	img := &Image{}
 
 	for _, suite := range suites {
+		img.Width = 1024
+		img.Height = 1024
+		img.BitsPerComponent = suite.BitsPerComponent
+		img.ColorComponents = suite.ColorComponents
+		img.setBytesPerLine()
+		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
 		b.Run(suite.Name, func(b *testing.B) {
-			img := &Image{
-				Width:            1024,
-				Height:           1024,
-				BitsPerComponent: suite.BitsPerComponent,
-				ColorComponents:  suite.ColorComponents,
-			}
-			img.setBytesPerLine()
-			img.Data = make([]byte, img.BytesPerLine*int(img.Height))
 			for n := 0; n < b.N; n++ {
 				for y := 0; y < int(img.Height); y++ {
 					for x := 0; x < int(img.Width); x++ {
-						_, err := img.ColorAt(x, y)
-						require.NoError(b, err)
+						img.ColorAt(x, y)
 					}
 				}
 			}
@@ -593,19 +592,18 @@ func BenchmarkColorAtRGB(b *testing.B) {
 	}
 
 	for _, suite := range suites {
-		b.Run(suite.Name, func(b *testing.B) {
-			img.Width = 1024
-			img.Height = 1024
-			img.BitsPerComponent = suite.BitsPerComponent
-			img.ColorComponents = suite.ColorComponents
+		img.Width = 1024
+		img.Height = 1024
+		img.BitsPerComponent = suite.BitsPerComponent
+		img.ColorComponents = suite.ColorComponents
 
-			img.setBytesPerLine()
-			img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		img.setBytesPerLine()
+		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		b.Run(suite.Name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				for y := 0; y < int(img.Height); y++ {
 					for x := 0; x < int(img.Width); x++ {
-						_, err := suite.ColorAtFunc(x, y)
-						require.NoError(b, err)
+						suite.ColorAtFunc(x, y)
 					}
 				}
 			}
@@ -627,39 +625,110 @@ func BenchmarkColorAtGray(b *testing.B) {
 			BitsPerComponent: 1,
 			ColorComponents:  1,
 			Name:             "1BPC",
-			ColorAtFunc:      img.getGrayscaleBitColorAt,
+			ColorAtFunc:      img.grayscaleBitColorAt,
 		},
 		{
 			BitsPerComponent: 4,
 			ColorComponents:  1,
 			Name:             "4BPC",
-			ColorAtFunc:      img.getGrayscaleQBitColorAt,
+			ColorAtFunc:      img.grayscaleQBitColorAt,
 		},
 		{
 			BitsPerComponent: 8,
 			ColorComponents:  1,
 			Name:             "8BPC",
-			ColorAtFunc:      img.getGrayscale8bitColorAt,
+			ColorAtFunc:      img.grayscale8bitColorAt,
 		},
 	}
 
 	for _, suite := range suites {
-		b.Run(suite.Name, func(b *testing.B) {
-			img.Width = 1024
-			img.Height = 1024
-			img.BitsPerComponent = suite.BitsPerComponent
-			img.ColorComponents = suite.ColorComponents
+		img.Width = 1024
+		img.Height = 1024
+		img.BitsPerComponent = suite.BitsPerComponent
+		img.ColorComponents = suite.ColorComponents
 
-			img.setBytesPerLine()
-			img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		img.setBytesPerLine()
+		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		b.Run(suite.Name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				for y := 0; y < int(img.Height); y++ {
 					for x := 0; x < int(img.Width); x++ {
-						_, err := suite.ColorAtFunc(x, y)
-						require.NoError(b, err)
+						suite.ColorAtFunc(x, y)
 					}
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkColorAtRGB8BPC(b *testing.B) {
+	img := &Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 3
+	img.setBytesPerLine()
+	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		for y := 0; y < int(img.Height); y++ {
+			for x := 0; x < int(img.Width); x++ {
+				_, _ = img.rgb8BPCColorAt(x, y)
+			}
+		}
+	}
+}
+
+func BenchmarkColorAtFullRGB8BPC(b *testing.B) {
+	img := &Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 3
+	img.setBytesPerLine()
+	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		for y := 0; y < int(img.Height); y++ {
+			for x := 0; x < int(img.Width); x++ {
+				_, _ = img.ColorAt(x, y)
+			}
+		}
+	}
+}
+
+func BenchmarkColorAtGray8BPC(b *testing.B) {
+	img := &Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 1
+	img.setBytesPerLine()
+	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		for y := 0; y < int(img.Height); y++ {
+			for x := 0; x < int(img.Width); x++ {
+				_, _ = img.grayscale8bitColorAt(x, y)
+			}
+		}
+	}
+}
+
+func BenchmarkColorAtFullGray8BPC(b *testing.B) {
+	img := &Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 1
+	img.setBytesPerLine()
+	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		for y := 0; y < int(img.Height); y++ {
+			for x := 0; x < int(img.Width); x++ {
+				_, _ = img.ColorAt(x, y)
+			}
+		}
 	}
 }

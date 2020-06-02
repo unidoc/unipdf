@@ -483,7 +483,6 @@ func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
 	} else {
 		ximg.ColorSpace = cs
 	}
-
 	return nil
 }
 
