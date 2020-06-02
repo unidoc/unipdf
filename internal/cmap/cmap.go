@@ -22,7 +22,7 @@ const (
 	// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
 	MissingCodeRune = '\ufffd' // �
 
-	// MissingCodeRune replaces strings that can't be decoded.
+	// MissingCodeString replaces strings that can't be decoded.
 	MissingCodeString = string(MissingCodeRune)
 )
 

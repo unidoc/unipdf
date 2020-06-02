@@ -424,14 +424,14 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 // information about hits and misses from the reverse mapping process.
 // NOTE: The number of runes returned may be greater than the number of charcodes.
 // TODO(peterwilliams97): Deprecate in v4 and use only CharcodesToStrings()
-func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (text string, numHits, numMisses int) {
+func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
 	texts, numHits, numMisses := font.CharcodesToStrings(charcodes)
-	return strings.Join(texts, ""), numHits, numMisses
+	return []rune(strings.Join(texts, "")), numHits, numMisses
 }
 
 // CharcodesToStrings returns the unicode strings corresponding to `charcodes`.
 // The int returns are the number of strings and the number of unconvereted codes.
-// NOTE: The number of stringss returned is equal to the number of charcodes
+// NOTE: The number of strings returned is equal to the number of charcodes
 func (font *PdfFont) CharcodesToStrings(charcodes []textencoding.CharCode) ([]string, int, int) {
 	fontBase := font.baseFields()
 	texts := make([]string, 0, len(charcodes))
@@ -496,9 +496,9 @@ func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 // How it works:
 //  1) Use the ToUnicode CMap if there is one.
 //  2) Use the underlying font's encoding.
-func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) string {
-	text, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
-	return text
+func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
+	runes, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
+	return runes
 }
 
 // RunesToCharcodeBytes maps the provided runes to charcode bytes and it
