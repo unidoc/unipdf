@@ -702,7 +702,7 @@ func (to *textObject) reset() {
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
 	charcodes := font.BytesToCharcodes(data)
-	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
+	texts, numChars, numMisses := font.CharcodesToStrings(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -721,18 +721,18 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.2f", spaceWidth, texts, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
 
-	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(texts))
 
-	for i, r := range runes {
-		// TODO(peterwilliams97): Need to find and fix cases where this happens.
-		if r == '\x00' {
+	for i, text := range texts {
+		r := []rune(text)
+		if len(r) == 1 && r[0] == '\x00' {
 			continue
 		}
 
@@ -746,14 +746,14 @@ func (to *textObject) renderText(data []byte) error {
 
 		// w is the unscaled movement at the end of a word.
 		w := 0.0
-		if r == ' ' {
+		if string(r) == " " {
 			w = state.tw
 		}
 
 		m, ok := font.GetCharMetrics(code)
 		if !ok {
 			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%+q %s", code, r, r, font)
-			return errors.New("no char metrics")
+			return fmt.Errorf("no char metrics: font=%s code=%d", font.String(), code)
 		}
 
 		// c is the character size in unscaled text units.
@@ -774,7 +774,7 @@ func (to *textObject) renderText(data []byte) error {
 		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.tm).Mult(to.gs.CTM))
 
 		mark := to.newTextMark(
-			string(r),
+			text,
 			trm,
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
