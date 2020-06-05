@@ -283,13 +283,12 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		return nil, err
 	}
 
-	fontsizeDef := height * style.AutoFontSizeFraction
 	font := apFont.Font
 	fontsize := apFont.Size
 	fontname := core.MakeName(apFont.Name)
 	autosize := fontsize == 0
 	if autosize {
-		fontsize = fontsizeDef
+		fontsize = height * style.AutoFontSizeFraction
 	}
 
 	// Add appearance font to resources.
@@ -568,13 +567,12 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 		return nil, err
 	}
 
-	fontsizeDef := height * style.AutoFontSizeFraction
 	font := apFont.Font
-	fontsize := apFont.Size
 	fontname := core.MakeName(apFont.Name)
+	fontsize := apFont.Size
 	autosize := fontsize == 0
 	if autosize {
-		fontsize = fontsizeDef
+		fontsize = height * style.AutoFontSizeFraction
 	}
 
 	// Add appearance font to resources.
@@ -896,13 +894,12 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 		return nil, err
 	}
 
-	fontsizeDef := height * style.AutoFontSizeFraction
 	font := apFont.Font
 	fontsize := apFont.Size
 	fontname := core.MakeName(apFont.Name)
 	autosize := fontsize == 0
 	if autosize {
-		fontsize = fontsizeDef
+		fontsize = height * style.AutoFontSizeFraction
 	}
 
 	// Add appearance font to resources.
@@ -1138,7 +1135,7 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 	}
 
 	apFont := fallbackFont
-	if !forceReplace || fallbackFont == nil {
+	if !forceReplace || apFont == nil {
 		// Check if font name was found in the DA stream and search it in the resources.
 		if dr != nil && fontName != "" {
 			if obj, ok := dr.GetFontByName(*core.MakeName(fontName)); ok {
