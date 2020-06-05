@@ -277,7 +277,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	cc.Add_BT()
 
 	// Process DA operands.
-	apFont, err := style.processDA(ftxt.PdfField, daOps, dr, cc)
+	apFont, err := style.processDA(ftxt.PdfField, daOps, dr, resources, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -288,11 +288,6 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	autosize := fontsize == 0
 	if autosize {
 		fontsize = height * style.AutoFontSizeFraction
-	}
-
-	// Add appearance font to resources.
-	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -560,7 +555,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	cc.Add_BT()
 
 	// Process DA operands.
-	apFont, err := style.processDA(ftxt.PdfField, daOps, dr, cc)
+	apFont, err := style.processDA(ftxt.PdfField, daOps, dr, resources, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -571,11 +566,6 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	autosize := fontsize == 0
 	if autosize {
 		fontsize = height * style.AutoFontSizeFraction
-	}
-
-	// Add appearance font to resources.
-	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -883,7 +873,7 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	cc.Add_BT()
 
 	// Process DA operands.
-	apFont, err := style.processDA(field, daOps, dr, cc)
+	apFont, err := style.processDA(field, daOps, dr, resources, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -894,11 +884,6 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	autosize := fontsize == 0
 	if autosize {
 		fontsize = height * style.AutoFontSizeFraction
-	}
-
-	// Add appearance font to resources.
-	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -1085,7 +1070,7 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 // in the default appearance. The method returns the font to be used when
 // generating the appearance of the field.
 func (style *AppearanceStyle) processDA(field *model.PdfField,
-	daOps *contentstream.ContentStreamOperations, dr *model.PdfPageResources,
+	daOps *contentstream.ContentStreamOperations, dr, resources *model.PdfPageResources,
 	cc *contentstream.ContentCreator) (*AppearanceFont, error) {
 	// Check for fallback fonts.
 	var fallbackFont *AppearanceFont
@@ -1157,9 +1142,13 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 	}
 
 	// Add appearance font to the form resources (DR).
-	fontNameObj := *core.MakeName(apFont.Name)
-	if dr != nil && !dr.HasFontByName(fontNameObj) {
-		dr.SetFontByName(fontNameObj, apFont.Font.ToPdfObject())
+	apFontName := *core.MakeName(apFont.Name)
+	apFontObj := apFont.Font.ToPdfObject()
+	if dr != nil && !dr.HasFontByName(apFontName) {
+		dr.SetFontByName(apFontName, apFontObj)
+	}
+	if resources != nil && !resources.HasFontByName(apFontName) {
+		resources.SetFontByName(apFontName, apFontObj)
 	}
 
 	return apFont, nil
