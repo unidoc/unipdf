@@ -31,10 +31,6 @@ func NewCustomSimpleTextEncoder(encoding, differences map[CharCode]GlyphName) (S
 	if len(encoding) == 0 {
 		return nil, errors.New("empty custom encoding")
 	}
-
-	// common.Log.Info("NewCustomSimpleTextEncoder:\n\tencoding=%v\n\tdifferences=%v",
-	// 	encoding, differences)
-
 	const baseName = "custom"
 	baseEncoding := make(map[byte]rune)
 	for code, glyph := range encoding {
@@ -69,7 +65,6 @@ func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (
 }
 
 func newSimpleEncoderFromMap(name string, encoding map[byte]rune) SimpleEncoder {
-	// common.Log.Info("newSimpleEncoderFromMap: %q", name)
 	se := &simpleEncoding{
 		baseName: name,
 		decode:   encoding,
