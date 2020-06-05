@@ -293,12 +293,8 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	}
 
 	// Add appearance font to resources.
-	fontObj := font.ToPdfObject()
 	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, fontObj)
-	}
-	if dr != nil && !dr.HasFontByName(*fontname) {
-		dr.SetFontByName(*fontname, fontObj)
+		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -582,12 +578,8 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	}
 
 	// Add appearance font to resources.
-	fontObj := font.ToPdfObject()
 	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, fontObj)
-	}
-	if dr != nil && !dr.HasFontByName(*fontname) {
-		dr.SetFontByName(*fontname, fontObj)
+		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -914,12 +906,8 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	}
 
 	// Add appearance font to resources.
-	fontObj := font.ToPdfObject()
 	if !resources.HasFontByName(*fontname) {
-		resources.SetFontByName(*fontname, fontObj)
-	}
-	if dr != nil && !dr.HasFontByName(*fontname) {
-		dr.SetFontByName(*fontname, fontObj)
+		resources.SetFontByName(*fontname, font.ToPdfObject())
 	}
 
 	encoder := font.Encoder()
@@ -1149,42 +1137,41 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 		}
 	}
 
-	// If forced replacement has been specified, return the fallback font.
-	if forceReplace && fallbackFont != nil {
-		return fallbackFont, nil
-	}
-
-	// Check if font name was found in the DA stream and search it in the resources.
-	if dr != nil && fontName != "" {
-		if obj, ok := dr.GetFontByName(*core.MakeName(fontName)); ok {
-			font, err := model.NewPdfFontFromPdfObject(obj)
-			if err == nil {
-				return &AppearanceFont{
-					Name: fontName,
-					Font: font,
-					Size: fontSize,
-				}, nil
+	apFont := fallbackFont
+	if !forceReplace || fallbackFont == nil {
+		// Check if font name was found in the DA stream and search it in the resources.
+		if dr != nil && fontName != "" {
+			if obj, ok := dr.GetFontByName(*core.MakeName(fontName)); ok {
+				if font, err := model.NewPdfFontFromPdfObject(obj); err == nil {
+					apFont = &AppearanceFont{Name: fontName, Font: font, Size: fontSize}
+				} else {
+					common.Log.Debug("ERROR: could not load appearance font: %v", err)
+				}
 			}
-			common.Log.Debug("ERROR: could not load appearance font: %v", err)
+		}
+
+		// Use fallback font, if one was specified.
+		if apFont == nil && fallbackFont != nil {
+			apFont = fallbackFont
+		}
+
+		// Use default fallback font (Helvetica).
+		if apFont == nil {
+			font, err := model.NewStandard14Font("Helvetica")
+			if err != nil {
+				return nil, err
+			}
+			apFont = &AppearanceFont{Name: "Helv", Font: font, Size: fontSize}
 		}
 	}
 
-	// Use fallback font, if one was specified.
-	if fallbackFont != nil {
-		return fallbackFont, nil
+	// Add appearance font to the form resources (DR).
+	fontNameObj := *core.MakeName(apFont.Name)
+	if dr != nil && !dr.HasFontByName(fontNameObj) {
+		dr.SetFontByName(fontNameObj, apFont.Font.ToPdfObject())
 	}
 
-	// Return default fallback font (Helvetica).
-	font, err := model.NewStandard14Font("Helvetica")
-	if err != nil {
-		return nil, err
-	}
-
-	return &AppearanceFont{
-		Name: "Helv",
-		Font: font,
-		Size: fontSize,
-	}, nil
+	return apFont, nil
 }
 
 // WrapContentStream ensures that the entire content stream for a `page` is wrapped within q ... Q operands.
