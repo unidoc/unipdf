@@ -218,8 +218,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	if err != nil {
 		return nil, err
 	}
-	width := rect.Width()
-	height := rect.Height()
+	width, height := rect.Width(), rect.Height()
 
 	var rotation float64
 	if mkDict, has := core.GetDict(wa.MK); has {
@@ -518,8 +517,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	if err != nil {
 		return nil, err
 	}
-	width := rect.Width()
-	height := rect.Height()
+	width, height := rect.Width(), rect.Height()
 
 	if mkDict, has := core.GetDict(wa.MK); has {
 		bsDict, _ := core.GetDict(wa.BS)
@@ -704,8 +702,6 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 // genFieldCheckboxAppearance generates an appearance dictionary for a widget annotation `wa` referenced by
 // a button field `fbtn` with form resources `dr` (DR).
 func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFieldButton, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
-	// TODO(dennwc): unused parameters
-
 	// Get bounding Rect.
 	array, ok := core.GetArray(wa.Rect)
 	if !ok {
@@ -715,8 +711,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 	if err != nil {
 		return nil, err
 	}
-	width := rect.Width()
-	height := rect.Height()
+	width, height := rect.Width(), rect.Height()
 
 	common.Log.Debug("Checkbox, wa BS: %v", wa.BS)
 
@@ -818,8 +813,7 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 	if err != nil {
 		return nil, err
 	}
-	width := rect.Width()
-	height := rect.Height()
+	width, height := rect.Width(), rect.Height()
 
 	common.Log.Debug("Choice, wa BS: %v", wa.BS)
 
