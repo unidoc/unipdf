@@ -7,11 +7,13 @@ package extractor
 
 // The follow constant configure debugging.
 const (
-	verbose      = false
-	verboseGeom  = false
-	verbosePage  = false
-	verbosePara  = false
-	verboseTable = false
+	verbose         = false
+	verboseGeom     = false
+	verbosePage     = false
+	verbosePara     = false
+	verboseParaLine = verbosePara && true
+	verboseParaWord = verboseParaLine && false
+	verboseTable    = false
 )
 
 // The following constants control the approaches used in the code.

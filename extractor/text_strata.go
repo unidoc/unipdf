@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
@@ -128,27 +129,20 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 			if !(minDepth-lineDepth <= word.depth && word.depth <= maxDepth+lineDepth) {
 				continue
 			}
+
 			if !readingOverlap(para, word) {
 				continue
 			}
 			fontRatio1 := math.Abs(word.fontsize-fontsize) / fontsize
 			fontRatio2 := word.fontsize / fontsize
-
 			fontRatio := math.Min(fontRatio1, fontRatio2)
 			if fontTol > 0 {
 				if fontRatio > fontTol {
 					continue
 				}
 			}
-			if fontTol <= 0 {
-				panic(fontTol)
-			}
+
 			if !detectOnly {
-				// if !para.isHomogenous(word) {
-				// 	panic(fmt.Errorf("not homogeneous fontTol=%.2f ratio=%.2f (%.2f->%.2f)\n\tpara=%s\n\tword=%s",
-				// 		fontTol, fontRatio, fontsize, word.fontsize,
-				// 		para.String(), word.String()))
-				// }
 				moveWord(depthIdx, s, para, word)
 			}
 			newWords = append(newWords, word)
@@ -171,17 +165,33 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	}
 	if verbose {
 		if len(title) > 0 {
-			common.Log.Info("scanBand: %s [%.2f %.2f]->[%.2f %.2f] para=%.2f fontsize=%.2f",
+			common.Log.Info("scanBand: %s [%.2f %.2f]->[%.2f %.2f] para=%.2f fontsize=%.2f %q",
 				title,
 				minDepth0, maxDepth0,
 				minDepth, maxDepth,
-				para.PdfRectangle, para.fontsize)
+				para.PdfRectangle, para.fontsize, truncate(para.text(), 20))
 			for i, word := range newWords {
-				fmt.Printf("%4d: %s\n", i, word)
+				// fmt.Printf("%4d: %s\n", i, word)
+				fmt.Printf("  %q", word.text())
+				if i >= 5 {
+					break
+				}
+			}
+			if len(newWords) > 0 {
+				fmt.Println()
 			}
 		}
 	}
 	return n
+}
+
+func (para *textStrata) text() string {
+	words := para.allWords()
+	texts := make([]string, len(words))
+	for i, w := range words {
+		texts[i] = w.text()
+	}
+	return strings.Join(texts, " ")
 }
 
 // stratumBand returns the words in s.bins[depthIdx] w: minDepth <= w.depth <= maxDepth.
@@ -327,5 +337,71 @@ func (s *textStrata) removeWord(depthIdx int, word *textWord) {
 		delete(s.bins, depthIdx)
 	} else {
 		s.bins[depthIdx] = words
+	}
+}
+
+// mergeStratas merges paras less than a character width to the left of a stata;
+func mergeStratas(paras []*textStrata) []*textStrata {
+	if len(paras) <= 1 {
+		return paras
+	}
+	if verbose {
+		common.Log.Info("mergeStratas:")
+	}
+	sort.Slice(paras, func(i, j int) bool {
+		pi, pj := paras[i], paras[j]
+		ai := pi.Width() * pi.Height()
+		aj := pj.Width() * pj.Height()
+		if ai != aj {
+			return ai > aj
+		}
+		if pi.Height() != pj.Height() {
+			return pi.Height() > pj.Height()
+		}
+		return i < j
+	})
+	merged := []*textStrata{paras[0]}
+	absorbed := map[int]bool{0: true}
+	numAbsorbed := 0
+	for i0 := 0; i0 < len(paras); i0++ {
+		if _, ok := absorbed[i0]; ok {
+			continue
+		}
+		para0 := paras[i0]
+		for i1 := i0 + 1; i1 < len(paras); i1++ {
+			if _, ok := absorbed[i0]; ok {
+				continue
+			}
+			para1 := paras[i1]
+			r := para0.PdfRectangle
+			r.Llx -= para0.fontsize * 0.99
+			if rectContainsRect(r, para1.PdfRectangle) {
+				para0.absorb(para1)
+				absorbed[i1] = true
+				numAbsorbed++
+			}
+		}
+		merged = append(merged, para0)
+		absorbed[i0] = true
+	}
+
+	if len(paras) != len(merged)+numAbsorbed {
+		common.Log.Info("mergeStratas: %d->%d absorbed=%d", len(paras), len(merged), numAbsorbed)
+		panic("wrong")
+	}
+	return merged
+}
+
+// absorb combines `word` into `w`.
+func (s *textStrata) absorb(strata *textStrata) {
+	var absorbed []string
+	for depthIdx, words := range strata.bins {
+		for _, word := range words {
+			moveWord(depthIdx, strata, s, word)
+			absorbed = append(absorbed, word.text())
+		}
+	}
+	if verbose {
+		common.Log.Info("absorb: %d %q", len(absorbed), absorbed)
 	}
 }

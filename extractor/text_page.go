@@ -26,10 +26,11 @@ func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraL
 	page := makeTextStrata(words, pageSize.Ury)
 	// Divide the page into rectangular regions for each paragraph and creata a textStrata for each one.
 	paraStratas := dividePage(page, pageSize.Ury)
+	paraStratas = mergeStratas(paraStratas)
 	// Arrange the contents of each para into lines
 	paras := make(paraList, len(paraStratas))
 	for i, para := range paraStratas {
-		paras[i] = composePara(para)
+		paras[i] = para.composePara()
 	}
 
 	paras.log("unsorted")
@@ -130,25 +131,26 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 				// 		3. Document search
 
 				// If there are words to the left of `para`, add them.
-				// We need to limit the number of word
+				// We need to limit the number of words.
+				otherTol := minInterReadingFontTol
+				// otherTol = 0.7
 				n := page.scanBand("", para, partial(readingOverlapLeft, minInterReadingGap),
 					para.minDepth(), para.maxDepth(),
-					minInterReadingFontTol, true, false)
+					otherTol, true, false)
 				if n > 0 {
 					r := (para.maxDepth() - para.minDepth()) / para.fontsize
-					if (n > 1 && float64(n) > 0.3*r) || n <= 5 {
+					if (n > 1 && float64(n) > 0.3*r) || n <= 10 {
 						if page.scanBand("other", para, partial(readingOverlapLeft, minInterReadingGap),
 							para.minDepth(), para.maxDepth(),
-							minInterReadingFontTol, false, true) > 0 {
+							otherTol, false, true) > 0 {
 							changed = true
 						}
 					}
 				}
 			}
 
-			// Sort the words in `para`'s bins in the reading direction.
-			para.sort()
 			if verbosePage {
+				para.sort()
 				common.Log.Info("para=%s", para.String())
 			}
 			paraStratas = append(paraStratas, para)
@@ -163,7 +165,7 @@ func (paras paraList) writeText(w io.Writer) {
 	for ip, para := range paras {
 		para.writeText(w)
 		if ip != len(paras)-1 {
-			if isZero(para.depth() - paras[ip+1].depth()) {
+			if sameLine(para, paras[ip+1]) {
 				w.Write([]byte(" "))
 			} else {
 				w.Write([]byte("\n"))
@@ -184,7 +186,7 @@ func (paras paraList) toTextMarks() []TextMark {
 		paraMarks := para.toTextMarks(&offset)
 		marks = append(marks, paraMarks...)
 		if ip != len(paras)-1 {
-			if isZero(para.depth() - paras[ip+1].depth()) {
+			if sameLine(para, paras[ip+1]) {
 				marks = appendSpaceMark(marks, &offset, " ")
 			} else {
 				marks = appendSpaceMark(marks, &offset, "\n")
@@ -195,6 +197,11 @@ func (paras paraList) toTextMarks() []TextMark {
 	marks = appendSpaceMark(marks, &offset, "\n")
 	marks = appendSpaceMark(marks, &offset, "\n")
 	return marks
+}
+
+// sameLine returms true if `para1` and `para2` are on the same line.
+func sameLine(para1, para2 *textPara) bool {
+	return isZero(para1.depth() - para2.depth())
 }
 
 func (paras paraList) toTables() []TextTable {

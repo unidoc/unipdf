@@ -43,7 +43,7 @@ func newTextLine(p *textStrata, depthIdx int) *textLine {
 
 // String returns a description of `l`.
 func (l *textLine) String() string {
-	return fmt.Sprintf("serial=%d %.2f %.2f fontsize=%.2f \"%s\"",
+	return fmt.Sprintf("serial=%d %.2f %6.2f fontsize=%.2f \"%s\"",
 		l.serial, l.depth, l.PdfRectangle, l.fontsize, l.text())
 }
 

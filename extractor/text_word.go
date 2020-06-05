@@ -127,7 +127,7 @@ func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 
 // String returns a description of `w.
 func (w *textWord) String() string {
-	return fmt.Sprintf("serial=%d %.2f %.2f fontsize=%.2f \"%s\"",
+	return fmt.Sprintf("serial=%d %.2f %6.2f fontsize=%.2f \"%s\"",
 		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text())
 }
 

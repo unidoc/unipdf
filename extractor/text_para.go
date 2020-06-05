@@ -48,7 +48,7 @@ func (p *textPara) String() string {
 	if p.table != nil {
 		table = fmt.Sprintf("[%dx%d] ", p.table.w, p.table.h)
 	}
-	return fmt.Sprintf("serial=%d %.2f %s%d lines %q",
+	return fmt.Sprintf("serial=%d %6.2f %s%d lines %q",
 		p.serial, p.PdfRectangle, table, len(p.lines), truncate(p.text(), 50))
 }
 
@@ -205,7 +205,9 @@ func (p *textPara) fontsize() float64 {
 
 // composePara builds a textPara from the words in `strata`.
 // It does this by arranging the words in `strata` into lines.
-func composePara(strata *textStrata) *textPara {
+func (strata *textStrata) composePara() *textPara {
+	// Sort the words in `para`'s bins in the reading direction.
+	strata.sort()
 	para := newTextPara(strata)
 
 	// build the lines
@@ -220,8 +222,8 @@ func composePara(strata *textStrata) *textPara {
 			line := newTextLine(strata, firstReadingIdx)
 			lastWord := words[0]
 
-			// compute the search range
-			// this is based on word0, the first word in the `firstReadingIdx` bin.
+			// Compute the search range.
+			// This is based on word0, the first word in the `firstReadingIdx` bin.
 			fontSize := strata.fontsize
 			minDepth := word0.depth - lineDepthR*fontSize
 			maxDepth := word0.depth + lineDepthR*fontSize
@@ -278,12 +280,16 @@ func composePara(strata *textStrata) *textPara {
 	}
 	if verbosePara {
 		common.Log.Info("!!! para=%s", para.String())
-		for i, line := range para.lines {
-			fmt.Printf("%4d: %s\n", i, line)
-			for j, word := range line.words {
-				fmt.Printf("%8d: %s\n", j, word)
-				for k, mark := range word.marks {
-					fmt.Printf("%12d: %s\n", k, mark)
+		if verboseParaLine {
+			for i, line := range para.lines {
+				fmt.Printf("%4d: %s\n", i, line.String())
+				if verboseParaWord {
+					for j, word := range line.words {
+						fmt.Printf("%8d: %s\n", j, word.String())
+						for k, mark := range word.marks {
+							fmt.Printf("%12d: %s\n", k, mark.String())
+						}
+					}
 				}
 			}
 		}
