@@ -22,8 +22,6 @@ import (
 	"github.com/unidoc/unipdf/v3/model"
 )
 
-const verbose = false
-
 // maxFormStack is the maximum form stack recursion depth. It has to be low enough to avoid a stack
 // overflow and high enough to accomodate customers' PDFs
 const maxFormStack = 10
@@ -49,7 +47,7 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
-	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, 0)
+	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, transform.IdentityMatrix(), 0)
 	if err != nil {
 		return nil, numChars, numMisses, err
 	}
@@ -62,7 +60,8 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 // extractPageText returns the text contents of content stream `e` and resouces `resources` as a
 // PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources,
+	parentCTM transform.Matrix, level int) (
 	*PageText, int, int, error) {
 	common.Log.Trace("extractPageText: level=%d", level)
 	pageText := &PageText{pageSize: e.mediaBox}
@@ -97,7 +96,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 
 			operand := op.Operand
 
-			if verbose {
+			if verboseGeom {
 				common.Log.Info("&&& op=%s", op)
 			}
 
@@ -106,7 +105,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				savedStates.push(&state)
 				// common.Log.Info("Save state: stack=%d\n %s", len(savedStates), state.String())
 			case "Q":
-				if verbose {
+				if verboseGeom {
 					common.Log.Info("Restore state: %s", savedStates.String())
 				}
 				if !savedStates.empty() {
@@ -129,7 +128,10 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
-				to = newTextObject(e, resources, gs, &state, &savedStates)
+				graphicsState := gs
+				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
+				to = newTextObject(e, resources, graphicsState, &state, &savedStates)
+
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
@@ -343,8 +345,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					if formResources == nil {
 						formResources = resources
 					}
+
 					tList, numChars, numMisses, err := e.extractPageText(string(formContent),
-						formResources, level+1)
+						formResources, parentCTM.Mult(gs.CTM), level+1)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
 						return err
@@ -489,8 +492,8 @@ func (to *textObject) setCharSpacing(x float64) {
 		return
 	}
 	to.state.tc = x
-	if verbose {
-		common.Log.Info("setCharSpacing: %.2f state=%s", to.state.String())
+	if verboseGeom {
+		common.Log.Info("setCharSpacing: %.2f state=%s", x, to.state.String())
 	}
 }
 
@@ -758,7 +761,7 @@ func (to *textObject) renderText(data []byte) error {
 	}
 	font := to.getCurrentFont()
 	charcodes := font.BytesToCharcodes(data)
-	runeSlices, numChars, numMisses := font.CharcodesToRuneSlices(charcodes)
+	texts, numChars, numMisses := font.CharcodesToStrings(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -777,17 +780,20 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runeSlices, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.2f", spaceWidth, texts, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
-	if verbose {
-		common.Log.Info("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runeSlices)
+	if verboseGeom {
+		common.Log.Info("renderText: %d codes=%+v texts=%q", len(charcodes), charcodes, texts)
 	}
 
-	for i, r := range runeSlices {
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(texts))
+
+	for i, text := range texts {
+		r := []rune(text)
 		if len(r) == 1 && r[0] == '\x00' {
 			continue
 		}
@@ -819,7 +825,7 @@ func (to *textObject) renderText(data []byte) error {
 		// t is the displacement of the text cursor when the character is rendered.
 		t0 := transform.Point{X: (c.X*tfs + w) * th}
 		t := transform.Point{X: (c.X*tfs + state.tc + w) * th}
-		if verbose {
+		if verboseGeom {
 			common.Log.Info("tfs=%.2f tc=%.2f tw=%.2f th=%.2f", tfs, state.tc, state.tw, th)
 			common.Log.Info("dx,dy=%.3f t0=%.2f t=%.2f", c, t0, t)
 		}
@@ -830,7 +836,7 @@ func (to *textObject) renderText(data []byte) error {
 		td := translationMatrix(t)
 		end := to.gs.CTM.Mult(to.tm).Mult(td0)
 
-		if verbose {
+		if verboseGeom {
 			common.Log.Info("end:\n\tCTM=%s\n\t tm=%s\n"+
 				"\t td=%s xlat=%s\n"+
 				"\ttd0=%s\n\t → %s xlat=%s",
@@ -865,7 +871,7 @@ func (to *textObject) renderText(data []byte) error {
 
 		// update the text matrix by the displacement of the text location.
 		to.tm.Concat(td)
-		if i != len(runeSlices)-1 {
+		if i != len(texts)-1 {
 			to.logCursor()
 		}
 	}
@@ -908,10 +914,11 @@ func isTextSpace(text string) bool {
 
 // PageText represents the layout of text on a device page.
 type PageText struct {
-	marks     []*textMark // Texts and their positions on a PDF page.
-	viewText  string      // Extracted page text.
-	viewMarks []TextMark  // Public view of `marks`.
-	pageSize  model.PdfRectangle
+	marks      []*textMark        // Texts and their positions on a PDF page.
+	viewText   string             // Extracted page text.
+	viewMarks  []TextMark         // Public view of text marks`.
+	viewTables []TextTable        // Public view of text table`.
+	pageSize   model.PdfRectangle // Page size. Used to calculate depth.
 }
 
 // String returns a string describing `pt`.
@@ -942,6 +949,11 @@ func (pt PageText) Marks() *TextMarkArray {
 	return &TextMarkArray{marks: pt.viewMarks}
 }
 
+// Tables returns the tables extracted from the page.
+func (pt PageText) Tables() []TextTable {
+	return pt.viewTables
+}
+
 // computeViews processes the page TextMarks sorting by position and populates `pt.viewText` and
 // `pt.viewMarks` which represent the text and marks in the order which it is read on the page.
 // The comments above the TextMark definition describe how to use the []TextMark to
@@ -953,6 +965,7 @@ func (pt *PageText) computeViews() {
 	paras.writeText(b)
 	pt.viewText = b.String()
 	pt.viewMarks = paras.toTextMarks()
+	pt.viewTables = paras.toTables()
 }
 
 // TextMarkArray is a collection of TextMarks.
@@ -1117,6 +1130,13 @@ var spaceMark = TextMark{
 	Text:     "[X]",
 	Original: " ",
 	Meta:     true,
+}
+
+// TextTable represents a table.
+// Cells are ordered top-to-bottom, left-to-right.
+type TextTable struct {
+	W, H  int
+	Cells [][]string
 }
 
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is

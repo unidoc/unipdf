@@ -170,6 +170,19 @@ func (w *textWord) text() string {
 	return strings.Join(texts, "")
 }
 
+// toTextMarks returns the TextMarks contained in `w`.text().
+// `offset` is used to give the TextMarks the correct Offset values.
+func (w *textWord) toTextMarks(offset *int) []TextMark {
+	var marks []TextMark
+	for _, tm := range w.marks {
+		marks = appendTextMark(marks, offset, tm.ToTextMark())
+	}
+	if len(w.text()) > 0 && len(marks) == 0 {
+		panic(w.text())
+	}
+	return marks
+}
+
 // font returns the fontID of the `idx`th rune in text.
 // compute on creation? !@#$
 func (w *textWord) font(idx int) string {

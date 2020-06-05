@@ -105,7 +105,7 @@ func (cmap *CMap) parse() error {
 func (cmap *CMap) parseName() error {
 	name := ""
 	done := false
-	// /Users/peter/testdata/programming/pdf_text/columns/Berg.pdf
+	// NOTE(peterwilliams97): We need up to 20 iterations of this loop for some PDFs I have seen.
 	for i := 0; i < 20 && !done; i++ {
 		o, err := cmap.parseObject()
 		if err != nil {

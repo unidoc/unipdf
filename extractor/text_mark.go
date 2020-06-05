@@ -21,11 +21,6 @@ type textMark struct {
 	model.PdfRectangle                  // Bounding box.
 	text               string           // The text (decoded via ToUnicode).
 	original           string           // Original text (decoded).
-	orient             int              // The text orientation in degrees. This is the current TRM rounded to 10°.
-	orientedStart      transform.Point  // Left of text in orientation where text is horizontal.
-	orientedEnd        transform.Point  // Right of text in orientation where text is horizontal.
-	height             float64          // Text height.
-	spaceWidth         float64          // Best guess at the width of a space in the font the text was rendered with.
 	font               *model.PdfFont   // The font the mark was drawn with.
 	fontsize           float64          // The font size the mark was drawn with.
 	charspacing        float64          // TODO (peterwilliams97: Should this be exposed in TextMark?
@@ -74,25 +69,20 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 	bbox = clipped
 
 	tm := textMark{
-		text:          text,
-		orient:        orient,
-		PdfRectangle:  bbox,
-		orientedStart: start.Rotate(theta),
-		orientedEnd:   end.Rotate(theta),
-		height:        math.Abs(height),
-		spaceWidth:    spaceWidth,
-		font:          font,
-		fontsize:      height,
-		charspacing:   charspacing,
-		trm:           trm,
-		end:           end,
-		serial:        serial.mark,
+		text:         text,
+		PdfRectangle: bbox,
+		font:         font,
+		fontsize:     height,
+		charspacing:  charspacing,
+		trm:          trm,
+		end:          end,
+		serial:       serial.mark,
 	}
 	serial.mark++
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. tm=%s", tm.String())
 	}
-	if verbose {
+	if verboseGeom {
 		common.Log.Info("newTextMark: start=%.2f end=%.2f %s", start, end, tm.String())
 	}
 
@@ -110,11 +100,6 @@ func (tm *textMark) bbox() model.PdfRectangle {
 	return tm.PdfRectangle
 }
 
-// Width returns the width of `tm`.text in the text direction.
-func (tm *textMark) Width() float64 {
-	return math.Abs(tm.orientedStart.X - tm.orientedEnd.X)
-}
-
 // ToTextMark returns the public view of `tm`.
 func (tm *textMark) ToTextMark() TextMark {
 	return TextMark{
@@ -125,6 +110,23 @@ func (tm *textMark) ToTextMark() TextMark {
 		Font:     tm.font,
 		FontSize: tm.fontsize,
 	}
+}
+
+// appendTextMark appends `mark` to `marks` and updates `offset`, the offset of `mark` in the extracted
+// text.
+func appendTextMark(marks []TextMark, offset *int, mark TextMark) []TextMark {
+	mark.Offset = *offset
+	marks = append(marks, mark)
+	*offset += len(mark.Text)
+	return marks
+}
+
+// appendSpaceMark appends a spaceMark with space character `space` to `marks` and updates `offset`,
+// the offset of `mark` in the extracted text.
+func appendSpaceMark(marks []TextMark, offset *int, spaceChar string) []TextMark {
+	mark := spaceMark
+	mark.Text = spaceChar
+	return appendTextMark(marks, offset, mark)
 }
 
 // nearestMultiple return the integer multiple of `m` that is closest to `x`.

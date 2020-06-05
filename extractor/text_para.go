@@ -12,8 +12,13 @@ import (
 	"sort"
 	"unicode"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
 )
+
+// paraList is a sequence of textPara. We use it so often that it is convenient to have its own
+// type so we can have methods on it.
+type paraList []*textPara
 
 // textPara is a group of words in a rectangular region of a page that get read together.
 // An peragraph in a document might span multiple pages. This is the paragraph framgent on one page.
@@ -22,7 +27,7 @@ import (
 type textPara struct {
 	serial             int                // Sequence number for debugging.
 	model.PdfRectangle                    // Bounding box.
-	eBBox              model.PdfRectangle // Extented ounding box needed to compute reading order.
+	eBBox              model.PdfRectangle // Extended bounding box needed to compute reading order.
 	lines              []*textLine        // Paragraph text gets broken into lines.
 	table              *textTable
 }
@@ -39,8 +44,8 @@ func newTextPara(strata *textStrata) *textPara {
 
 // String returns a description of `p`.
 func (p *textPara) String() string {
-	return fmt.Sprintf("serial=%d %.2f %d lines\n%s\n-------------",
-		p.serial, p.PdfRectangle, len(p.lines), p.text())
+	return fmt.Sprintf("serial=%d %.2f %d lines %q",
+		p.serial, p.PdfRectangle, len(p.lines), truncate(p.text(), 50))
 }
 
 // text returns the text  of the lines in `p`.
@@ -52,47 +57,21 @@ func (p *textPara) text() string {
 
 // writeText writes the text of `p` including tables to `w`.
 func (p *textPara) writeText(w io.Writer) {
-	if p.table != nil {
-		for y := 0; y < p.table.h; y++ {
-			for x := 0; x < p.table.w; x++ {
-				cell := p.table.cells[y*p.table.w+x]
-				cell.writeCellText(w)
-				w.Write([]byte(" "))
-			}
-			w.Write([]byte("\n"))
-		}
-	} else {
+	if p.table == nil {
 		p.writeCellText(w)
-		w.Write([]byte("\n"))
+		return
 	}
-}
-
-// writeCellText writes the text of `p` not including tables to `w`.
-func (p *textPara) writeCellText(w io.Writer) {
-	// w := new(bytes.Buffer)
-	para := p
-	for il, line := range para.lines {
-		s := line.text()
-		reduced := false
-		if doHyphens {
-			if line.hyphenated && il != len(para.lines)-1 {
-				// Line ending with hyphen. Remove it.
-				runes := []rune(s)
-				s = string(runes[:len(runes)-1])
-				reduced = true
+	for y := 0; y < p.table.h; y++ {
+		for x := 0; x < p.table.w; x++ {
+			cell := p.table.get(x, y)
+			if cell == nil {
+				w.Write([]byte("\t"))
+			} else {
+				cell.writeCellText(w)
 			}
-		}
-		w.Write([]byte(s))
-		if reduced {
-			// We removed the hyphen from the end of the line so we don't need a line ending.
-			continue
-		}
-		if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
-			// Next line is the same depth so it's the same line as this one in the extracted text
 			w.Write([]byte(" "))
-			continue
 		}
-		if il < len(para.lines)-1 {
+		if y < p.table.h-1 {
 			w.Write([]byte("\n"))
 		}
 	}
@@ -101,88 +80,101 @@ func (p *textPara) writeCellText(w io.Writer) {
 // toTextMarks creates the TextMarkArray corresponding to the extracted text created by
 // paras `p`.writeText().
 func (p *textPara) toTextMarks(offset *int) []TextMark {
+	if p.table == nil {
+		return p.toCellTextMarks(offset)
+	}
 	var marks []TextMark
-	addMark := func(mark TextMark) {
-		mark.Offset = *offset
-		marks = append(marks, mark)
-		*offset += len(mark.Text)
-	}
-	addSpaceMark := func(spaceChar string) {
-		mark := spaceMark
-		mark.Text = spaceChar
-		addMark(mark)
-	}
-	if p.table != nil {
-		for y := 0; y < p.table.h; y++ {
-			for x := 0; x < p.table.w; x++ {
-				cell := p.table.cells[y*p.table.w+x]
+	for y := 0; y < p.table.h; y++ {
+		for x := 0; x < p.table.w; x++ {
+			cell := p.table.get(x, y)
+			if cell == nil {
+				marks = appendSpaceMark(marks, offset, "\t")
+			} else {
 				cellMarks := cell.toCellTextMarks(offset)
 				marks = append(marks, cellMarks...)
-				addSpaceMark(" ")
 			}
-			addSpaceMark("\n")
+			marks = appendSpaceMark(marks, offset, " ")
 		}
-	} else {
-		marks = p.toCellTextMarks(offset)
-		addSpaceMark("\n")
+		if y < p.table.h-1 {
+			marks = appendSpaceMark(marks, offset, "\n")
+		}
 	}
 	return marks
 }
 
-// toTextMarks creates the TextMarkArray corresponding to the extracted text created by
+// writeCellText writes the text of `p` not including tables to `w`.
+func (p *textPara) writeCellText(w io.Writer) {
+	for il, line := range p.lines {
+		lineText := line.text()
+		reduced := doHyphens && line.hyphenated && il != len(p.lines)-1
+		if reduced { // Line ending with hyphen. Remove it.
+			lineText = removeLastRune(lineText)
+		}
+		w.Write([]byte(lineText))
+		if !(reduced || il == len(p.lines)-1) {
+			w.Write([]byte(getSpace(line.depth, p.lines[il+1].depth)))
+		}
+	}
+}
+
+// toCellTextMarks creates the TextMarkArray corresponding to the extracted text created by
 // paras `paras`.writeCellText().
 func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 	var marks []TextMark
-	addMark := func(mark TextMark) {
-		mark.Offset = *offset
-		marks = append(marks, mark)
-		*offset += len(mark.Text)
-	}
-	addSpaceMark := func(spaceChar string) {
-		mark := spaceMark
-		mark.Text = spaceChar
-		addMark(mark)
-	}
-	para := p
-
-	for il, line := range para.lines {
+	for il, line := range p.lines {
 		lineMarks := line.toTextMarks(offset)
-		marks = append(marks, lineMarks...)
-		reduced := false
-		if doHyphens {
-			if line.hyphenated && il != len(para.lines)-1 {
-				tm := marks[len(marks)-1]
-				r := []rune(tm.Text)
-				if unicode.IsSpace(r[len(r)-1]) {
-					panic(tm)
-				}
-				if len(r) == 1 {
-					marks = marks[:len(marks)-1]
-					*offset = marks[len(marks)-1].Offset + len(marks[len(marks)-1].Text)
-				} else {
-					s := string(r[:len(r)-1])
-					*offset += len(s) - len(tm.Text)
-					tm.Text = s
-				}
-				reduced = true
+		reduced := doHyphens && line.hyphenated && il != len(p.lines)-1
+		if reduced { // Line ending with hyphen. Remove it.
+			if len([]rune(line.text())) < minHyphenation {
+				panic(line.text())
 			}
+			if len(lineMarks) < 1 {
+				panic(line.text())
+			}
+			lineMarks = removeLastTextMarkRune(lineMarks, offset)
 		}
-		if reduced {
-			continue
-		}
-		if il < len(para.lines)-1 && isZero(line.depth-para.lines[il+1].depth) {
-			// Next line is the same depth so it's the same line as this one in the extracted text
-			addSpaceMark(" ")
-			continue
-		}
-		if il < len(para.lines)-1 {
-			addSpaceMark("\n")
+		marks = append(marks, lineMarks...)
+		if !(reduced || il == len(p.lines)-1) {
+			marks = appendSpaceMark(marks, offset, getSpace(line.depth, p.lines[il+1].depth))
 		}
 	}
-
-	addSpaceMark("\n")
-
 	return marks
+}
+
+func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
+	tm := marks[len(marks)-1]
+	runes := []rune(tm.Text)
+	if unicode.IsSpace(runes[len(runes)-1]) {
+		panic(tm)
+	}
+	if len(runes) == 1 {
+		marks = marks[:len(marks)-1]
+		tm1 := marks[len(marks)-1]
+		*offset = tm1.Offset + len(tm1.Text)
+	} else {
+		text := removeLastRune(tm.Text)
+		*offset += len(text) - len(tm.Text)
+		tm.Text = text
+	}
+	return marks
+}
+
+func removeLastRune(text string) string {
+	runes := []rune(text)
+	if len(runes) < 2 {
+		panic(text)
+	}
+	return string(runes[:len(runes)-1])
+}
+
+// getSpace returns the space to insert between lines of depth `depth1` and `depth2`.
+// Next line is the same depth so it's the same line as this one in the extracted text
+func getSpace(depth1, depth2 float64) string {
+	eol := !isZero(depth1 - depth2)
+	if eol {
+		return "\n"
+	}
+	return " "
 }
 
 // bbox makes textPara implement the `bounded` interface.
@@ -271,5 +263,42 @@ func composePara(strata *textStrata) *textPara {
 	if len(para.lines) == 0 {
 		panic(para)
 	}
+	if verbosePara {
+		common.Log.Info("!!! para=%s", para.String())
+		for i, line := range para.lines {
+			fmt.Printf("%4d: %s\n", i, line)
+			for j, word := range line.words {
+				fmt.Printf("%8d: %s\n", j, word)
+				for k, mark := range word.marks {
+					fmt.Printf("%12d: %s\n", k, mark)
+				}
+			}
+		}
+	}
 	return para
+}
+
+// log logs the contents of `paras`.
+func (paras paraList) log(title string) {
+	if !verbosePage {
+		return
+	}
+	common.Log.Info("%8s: %d paras =======-------=======", title, len(paras))
+	for i, para := range paras {
+		if para == nil {
+			continue
+		}
+		text := para.text()
+		tabl := "  "
+		if para.table != nil {
+			tabl = fmt.Sprintf("[%dx%d]", para.table.w, para.table.h)
+		}
+		fmt.Printf("%4d: %6.2f %s %q\n", i, para.PdfRectangle, tabl, truncate(text, 50))
+		if len(text) == 0 {
+			panic("empty")
+		}
+		if para.table != nil && len(para.table.cells) == 0 {
+			panic(para)
+		}
+	}
 }

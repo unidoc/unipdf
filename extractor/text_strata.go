@@ -38,14 +38,14 @@ func makeTextStrata(words []*textWord, pageHeight float64) *textStrata {
 
 // newTextStrata returns an empty textStrata with page height `pageHeight`.
 func newTextStrata(pageHeight float64) *textStrata {
-	bins := textStrata{
-		serial:       serial.bins,
+	strata := textStrata{
+		serial:       serial.strata,
 		bins:         map[int][]*textWord{},
 		PdfRectangle: model.PdfRectangle{Urx: -1.0, Ury: -1.0},
 		pageHeight:   pageHeight,
 	}
-	serial.bins++
-	return &bins
+	serial.strata++
+	return &strata
 }
 
 // String returns a description of `s`.
@@ -57,7 +57,9 @@ func (s *textStrata) String() string {
 			texts = append(texts, w.text())
 		}
 	}
-	return fmt.Sprintf("serial=%d %d %q", s.serial, len(texts), texts)
+	// return fmt.Sprintf("serial=%d %d %q", s.serial, )
+	return fmt.Sprintf("serial=%d %.2f fontsize=%.2f %d %q",
+		s.serial, s.PdfRectangle, s.fontsize, len(texts), texts)
 }
 
 // sort sorts the words in each bin in `s` in the reading direction.
@@ -129,10 +131,24 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 			if !readingOverlap(para, word) {
 				continue
 			}
-			if fontTol > 0 && math.Abs(word.fontsize-fontsize) > fontTol*fontsize {
-				continue
+			fontRatio1 := math.Abs(word.fontsize-fontsize) / fontsize
+			fontRatio2 := word.fontsize / fontsize
+
+			fontRatio := math.Min(fontRatio1, fontRatio2)
+			if fontTol > 0 {
+				if fontRatio > fontTol {
+					continue
+				}
+			}
+			if fontTol <= 0 {
+				panic(fontTol)
 			}
 			if !detectOnly {
+				// if !para.isHomogenous(word) {
+				// 	panic(fmt.Errorf("not homogeneous fontTol=%.2f ratio=%.2f (%.2f->%.2f)\n\tpara=%s\n\tword=%s",
+				// 		fontTol, fontRatio, fontsize, word.fontsize,
+				// 		para.String(), word.String()))
+				// }
 				moveWord(depthIdx, s, para, word)
 			}
 			newWords = append(newWords, word)
@@ -155,11 +171,11 @@ func (s *textStrata) scanBand(title string, para *textStrata,
 	}
 	if verbose {
 		if len(title) > 0 {
-			common.Log.Info("scanBand: %s [%.2f %.2f]->[%.2f %.2f]  para=%.2f",
+			common.Log.Info("scanBand: %s [%.2f %.2f]->[%.2f %.2f] para=%.2f fontsize=%.2f",
 				title,
 				minDepth0, maxDepth0,
 				minDepth, maxDepth,
-				para.PdfRectangle)
+				para.PdfRectangle, para.fontsize)
 			for i, word := range newWords {
 				fmt.Printf("%4d: %s\n", i, word)
 			}
@@ -269,6 +285,36 @@ func moveWord(depthIdx int, page, para *textStrata, word *textWord) {
 	}
 	para.bins[depthIdx] = append(para.bins[depthIdx], word)
 	page.removeWord(depthIdx, word)
+}
+
+func (s *textStrata) allWords() []*textWord {
+	var wordList []*textWord
+	for _, words := range s.bins {
+		wordList = append(wordList, words...)
+	}
+	return wordList
+}
+
+func (s *textStrata) isHomogenous(w *textWord) bool {
+	words := s.allWords()
+	words = append(words, w)
+	if len(words) == 0 {
+		return true
+	}
+	minFont := words[0].fontsize
+	maxFont := minFont
+	for _, w := range words {
+		if w.fontsize < minFont {
+			minFont = w.fontsize
+		} else if w.fontsize > maxFont {
+			maxFont = w.fontsize
+		}
+	}
+	if maxFont/minFont > 1.3 {
+		common.Log.Error("font size range: %.2f - %.2f = %.1fx", minFont, maxFont, maxFont/minFont)
+		return false
+	}
+	return true
 }
 
 // removeWord removes `word`from `s`.bins[`depthIdx`].

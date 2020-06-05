@@ -62,3 +62,54 @@ bruce.pdf for char spacing save/restore.
 
 challenging-modified.pdf
 transitions_test.pdf
+
+
+Code Restructure?
+-----------------
+```
+	type textPara struct {
+		serial             int                // Sequence number for debugging.
+		model.PdfRectangle                    // Bounding box.
+		w, h   int
+		cells []textCell
+	}
+
+	type textCell struct {
+		serial             int                // Sequence number for debugging.
+		model.PdfRectangle                    // Bounding box.
+		eBBox              model.PdfRectangle // Extended bounding box needed to compute reading order.
+		lines              []*textLine        // Paragraph text gets broken into lines.
+	}
+```
+
+  x     x    x      x     x     x
+  x
+  x     x
+  x
+  x     x           x
+  x
+  x
+
+1. Compute all row candidates
+     alignedY  No intervening paras
+2. Compute all column candidates
+     alignedX  No intervening paras
+
+Table candidate
+1. Top row fully populated
+2. Left column fully populated
+3. All cells in table are aligned with 1 top row element and 1 left column candidate
+4. Mininum number of cells must be filled
+
+Computation time
+1. Row candidates  O(N)
+   Sort top to bottom, left to right
+   Search
+2. Column candidates O(N)
+   Sort left to right, top to bottom
+   Search
+3. Find intersections  O(N^2)
+   For each row
+      Find columns that start at row -> table candiates
+   Sort table candidates by w x h descending
+4. Test each candidate O(N^4)

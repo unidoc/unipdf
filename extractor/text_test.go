@@ -175,7 +175,7 @@ func TestTermMarksFiles(t *testing.T) {
 	if !doStress {
 		t.Skip("skipping stress test")
 	}
-	common.Log.Info("Running text stress tests. go test --short to skip these.")
+	common.Log.Info("Running text stress tests.")
 	if len(corpusFolder) == 0 && !forceTest {
 		t.Log("Corpus folder not set - skipping")
 		return
@@ -736,6 +736,11 @@ func testTermMarks(t *testing.T, text string, textMarks *TextMarkArray, n int) {
 			ofs1d = len(text)
 		}
 		show := fmt.Sprintf("<%s|%s|%s>", text[ofs0d:ofs0], text[ofs0:ofs1], text[ofs1:ofs1d])
+		{
+			show = fmt.Sprintf("%q", show)
+			runes := []rune(show)
+			show = string(runes[1 : len(runes)-1])
+		}
 
 		// Get TextMarks spanning `term` with RangeOffset().
 		spanArray, err := textMarks.RangeOffset(ofs0, ofs1)
@@ -783,6 +788,7 @@ func startWith(str, sub string) bool {
 		if strings.HasPrefix(str, sub[n:]) {
 			return true
 		}
+		// common.Log.Error("!startsWith: str=%q sub=%q sub[%d:]=%q", str, sub, n, sub[n:])
 	}
 	return false
 }

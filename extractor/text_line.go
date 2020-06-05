@@ -20,9 +20,11 @@ type textLine struct {
 	model.PdfRectangle             // Bounding box (union of `marks` bounding boxes).
 	depth              float64     // Distance from bottom of line to top of page.
 	words              []*textWord // Words in this line.
-	fontsize           float64
-	hyphenated         bool
+	fontsize           float64     // Largest word font size.
+	hyphenated         bool        // Does line have at least minHyphenation runes and end in a hyphen.
 }
+
+const minHyphenation = 4
 
 // newTextLine creates a line with font and bbox size of `w`, removes `w` from p.bins[bestWordDepthIdx] and adds it to the line
 func newTextLine(p *textStrata, depthIdx int) *textLine {
@@ -60,30 +62,21 @@ func (l *textLine) text() string {
 		}
 	}
 	return strings.Join(words, "")
-
 }
 
 // toTextMarks returns the TextMarks contained in `l`.text().
 // `offset` is used to give the TextMarks the correct Offset values.
 func (l *textLine) toTextMarks(offset *int) []TextMark {
 	var marks []TextMark
-	addMark := func(mark TextMark) {
-		mark.Offset = *offset
-		marks = append(marks, mark)
-		*offset += len(mark.Text)
-	}
-	addSpaceMark := func(spaceChar string) {
-		mark := spaceMark
-		mark.Text = spaceChar
-		addMark(mark)
-	}
 	for _, word := range l.words {
-		for _, tm := range word.marks {
-			addMark(tm.ToTextMark())
-		}
+		wordMarks := word.toTextMarks(offset)
+		marks = append(marks, wordMarks...)
 		if word.spaceAfter {
-			addSpaceMark(" ")
+			marks = appendSpaceMark(marks, offset, " ")
 		}
+	}
+	if len(l.text()) > 0 && len(marks) == 0 {
+		panic(l.text())
 	}
 	return marks
 }
@@ -130,16 +123,13 @@ func (l *textLine) mergeWordFragments() {
 	}
 
 	// check for hyphen at end of line
-	runes := []rune(l.text())
-	l.hyphenated = len(runes) >= 4 &&
+	l.hyphenated = isHyphenated(l.text())
+}
+
+// isHyphenated returns true if `text` is a hyphenated word.
+func isHyphenated(text string) bool {
+	runes := []rune(text)
+	return len(runes) >= minHyphenation &&
 		unicode.Is(unicode.Hyphen, runes[len(runes)-1]) &&
 		!unicode.IsSpace(runes[len(runes)-2])
-	// if l.hyphenated {
-	// 	// fmt.Fprintf(os.Stderr, "\n%q ", l.text())
-	// 	common.Log.Info("### %d %q\n\t%q:%t\n\t%q:%t",
-	// 		len(runes), l.text(),
-	// 		runes[len(runes)-1], unicode.Is(unicode.Hyphen, runes[len(runes)-1]),
-	// 		runes[len(runes)-2], !unicode.IsSpace(runes[len(runes)-2]),
-	// 	)
-	// }
 }

@@ -19,11 +19,11 @@ import (
 var serial serialState
 
 type serialState struct {
-	mark int
-	word int
-	bins int
-	line int
-	para int
+	mark   int
+	word   int
+	strata int
+	line   int
+	para   int
 }
 
 func (serial *serialState) reset() {
@@ -65,15 +65,25 @@ func diffReading(a, b bounded) float64 {
 	return a.bbox().Llx - b.bbox().Llx
 }
 
-// func boundedUnion(objs ...bounded) model.PdfRectangle {
-// 	rect := objs[0].bbox()
-// 	for _, r := range objs[1:] {
-// 		rect = rectUnion(rect, r.bbox())
-// 	}
-// 	return rect
-// }
+func boundedUnion(objs ...bounded) model.PdfRectangle {
+	rect := objs[0].bbox()
+	for _, r := range objs[1:] {
+		rect = rectUnion(rect, r.bbox())
+	}
+	return rect
+}
 
-// diffDepth returns `a` - `b` in the depth direction..
+// rectContainsBounded returns true if `a` contains `b`.
+func rectContainsBounded(a model.PdfRectangle, b bounded) bool {
+	return rectContainsRect(a, b.bbox())
+}
+
+// rectContainsRect returns true if `a` contains `b`.
+func rectContainsRect(a, b model.PdfRectangle) bool {
+	return a.Llx <= b.Llx && b.Urx <= a.Urx && a.Lly <= b.Lly && b.Ury <= a.Ury
+}
+
+// diffDepth returns `a` - `b` in the depth direction.
 func diffDepth(a, b bounded) float64 {
 	return bboxDepth(a) - bboxDepth(b)
 }
@@ -150,4 +160,20 @@ func overlappedXRect(r0, r1 model.PdfRectangle) bool {
 // overlappedYRect returns true if `r0` and `r1` overlap in the y direction.
 func overlappedYRect(r0, r1 model.PdfRectangle) bool {
 	return (r0.Lly <= r1.Lly && r1.Lly <= r0.Ury) || (r0.Lly <= r1.Ury && r1.Ury <= r0.Ury)
+}
+
+// minInt return the lesser of `a` and `b`.
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// maxInt return the greater of `a` and `b`.
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
