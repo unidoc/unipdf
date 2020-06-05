@@ -718,6 +718,7 @@ var extractReferenceTests = []extractReference{
 	extractReference{"women.pdf", 20},
 	extractReference{"status.pdf", 2},
 	extractReference{"recognition.pdf", 1},
+	extractReference{"eu.pdf", 5},
 }
 
 // extractReference describes a PDF file and page number.

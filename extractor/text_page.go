@@ -160,10 +160,19 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 
 // writeText writes the text in `paras` to `w`.
 func (paras paraList) writeText(w io.Writer) {
-	for _, para := range paras {
+	for ip, para := range paras {
 		para.writeText(w)
-		w.Write([]byte("\n\n"))
+		if ip != len(paras)-1 {
+			if isZero(para.depth() - paras[ip+1].depth()) {
+				w.Write([]byte(" "))
+			} else {
+				w.Write([]byte("\n"))
+				w.Write([]byte("\n"))
+			}
+		}
 	}
+	w.Write([]byte("\n"))
+	w.Write([]byte("\n"))
 }
 
 // toTextMarks creates the TextMarkArray corresponding to the extracted text created by
@@ -171,12 +180,20 @@ func (paras paraList) writeText(w io.Writer) {
 func (paras paraList) toTextMarks() []TextMark {
 	offset := 0
 	var marks []TextMark
-	for _, para := range paras {
+	for ip, para := range paras {
 		paraMarks := para.toTextMarks(&offset)
 		marks = append(marks, paraMarks...)
-		marks = appendSpaceMark(marks, &offset, "\n")
-		marks = appendSpaceMark(marks, &offset, "\n")
+		if ip != len(paras)-1 {
+			if isZero(para.depth() - paras[ip+1].depth()) {
+				marks = appendSpaceMark(marks, &offset, " ")
+			} else {
+				marks = appendSpaceMark(marks, &offset, "\n")
+				marks = appendSpaceMark(marks, &offset, "\n")
+			}
+		}
 	}
+	marks = appendSpaceMark(marks, &offset, "\n")
+	marks = appendSpaceMark(marks, &offset, "\n")
 	return marks
 }
 

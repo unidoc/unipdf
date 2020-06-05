@@ -10,9 +10,25 @@ import (
 	"math"
 	"path/filepath"
 	"runtime"
-
-	"github.com/unidoc/unipdf/v3/model"
 )
+
+// serial is used to add serial numbers to all text* instances.
+var serial serialState
+
+// serialState keeps serial number for text* structs.
+type serialState struct {
+	mark   int // textMark
+	word   int // textWord
+	strata int // textStrata
+	line   int // textLine
+	para   int // textPara
+}
+
+// reset resets `serial` to all zeros.
+func (serial *serialState) reset() {
+	var empty serialState
+	*serial = empty
+}
 
 // TOL is the tolerance for coordinates to be consideted equal. It is big enough to cover all
 // rounding errors and small enough that TOL point differences on a page aren't visible.
@@ -23,44 +39,23 @@ func isZero(x float64) bool {
 	return math.Abs(x) < TOL
 }
 
-// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
-func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
-	return model.PdfRectangle{
-		Llx: math.Min(b1.Llx, b2.Llx),
-		Lly: math.Min(b1.Lly, b2.Lly),
-		Urx: math.Max(b1.Urx, b2.Urx),
-		Ury: math.Max(b1.Ury, b2.Ury),
+// minInt return the lesser of `a` and `b`.
+func minInt(a, b int) int {
+	if a < b {
+		return a
 	}
+	return b
 }
 
-// rectIntersection returns the largest axis-aligned rectangle that is contained by `b1` and `b2`.
-func rectIntersection(b1, b2 model.PdfRectangle) (model.PdfRectangle, bool) {
-	if !intersects(b1, b2) {
-		return model.PdfRectangle{}, false
+// maxInt return the greater of `a` and `b`.
+func maxInt(a, b int) int {
+	if a > b {
+		return a
 	}
-	return model.PdfRectangle{
-		Llx: math.Max(b1.Llx, b2.Llx),
-		Urx: math.Min(b1.Urx, b2.Urx),
-		Lly: math.Max(b1.Lly, b2.Lly),
-		Ury: math.Min(b1.Ury, b2.Ury),
-	}, true
+	return b
 }
 
-// intersects returns true if `r0` and `r1` overlap in the x and y axes.
-func intersects(b1, b2 model.PdfRectangle) bool {
-	return intersectsX(b1, b2) && intersectsY(b1, b2)
-}
-
-// intersectsX returns true if `r0` and `r1` overlap in the x axis.
-func intersectsX(b1, b2 model.PdfRectangle) bool {
-	return b1.Llx <= b2.Urx && b2.Llx <= b1.Urx
-}
-
-// intersectsY returns true if `r0` and `r1` overlap in the y axis.
-func intersectsY(b1, b2 model.PdfRectangle) bool {
-	return b1.Lly <= b2.Ury && b2.Lly <= b1.Ury
-}
-
+// fileLine printed out a file:line string for the caller `skip` levels up the call stack.
 func fileLine(skip int, doSecond bool) string {
 	_, file, line, ok := runtime.Caller(skip + 1)
 	if !ok {

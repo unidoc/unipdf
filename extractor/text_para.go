@@ -44,8 +44,12 @@ func newTextPara(strata *textStrata) *textPara {
 
 // String returns a description of `p`.
 func (p *textPara) String() string {
-	return fmt.Sprintf("serial=%d %.2f %d lines %q",
-		p.serial, p.PdfRectangle, len(p.lines), truncate(p.text(), 50))
+	table := ""
+	if p.table != nil {
+		table = fmt.Sprintf("[%dx%d] ", p.table.w, p.table.h)
+	}
+	return fmt.Sprintf("serial=%d %.2f %s%d lines %q",
+		p.serial, p.PdfRectangle, table, len(p.lines), truncate(p.text(), 50))
 }
 
 // text returns the text  of the lines in `p`.
@@ -53,6 +57,13 @@ func (p *textPara) text() string {
 	w := new(bytes.Buffer)
 	p.writeText(w)
 	return w.String()
+}
+
+func (p *textPara) depth() float64 {
+	if len(p.lines) > 0 {
+		return p.lines[0].depth
+	}
+	return p.table.get(0, 0).depth()
 }
 
 // writeText writes the text of `p` including tables to `w`.
@@ -141,6 +152,7 @@ func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 	return marks
 }
 
+// removeLastTextMarkRune removes the last run from `marks`.
 func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
 	tm := marks[len(marks)-1]
 	runes := []rune(tm.Text)
@@ -159,6 +171,7 @@ func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
 	return marks
 }
 
+// removeLastRune removes the last run from `text`.
 func removeLastRune(text string) string {
 	runes := []rune(text)
 	if len(runes) < 2 {
