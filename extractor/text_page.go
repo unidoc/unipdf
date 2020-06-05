@@ -162,7 +162,7 @@ func dividePage(page *textStrata, pageHeight float64) []*textStrata {
 func (paras paraList) writeText(w io.Writer) {
 	for _, para := range paras {
 		para.writeText(w)
-		w.Write([]byte("\n"))
+		w.Write([]byte("\n\n"))
 	}
 }
 
@@ -174,6 +174,7 @@ func (paras paraList) toTextMarks() []TextMark {
 	for _, para := range paras {
 		paraMarks := para.toTextMarks(&offset)
 		marks = append(marks, paraMarks...)
+		marks = appendSpaceMark(marks, &offset, "\n")
 		marks = appendSpaceMark(marks, &offset, "\n")
 	}
 	return marks

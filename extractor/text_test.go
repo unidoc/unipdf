@@ -41,8 +41,9 @@ const (
 var (
 	// forceTest should be set to true to force running all tests.
 	// NOTE: Setting environment variable UNIDOC_EXTRACT_FORCETEST = 1 sets this to true.
-	forceTest    = os.Getenv("UNIDOC_EXTRACT_FORCETEST") == "1"
-	corpusFolder = os.Getenv("UNIDOC_EXTRACT_TESTDATA")
+	forceTest       = os.Getenv("UNIDOC_EXTRACT_FORCETEST") == "1"
+	corpusFolder    = os.Getenv("UNIDOC_EXTRACT_TESTDATA")
+	referenceFolder = filepath.Join(corpusFolder, "reference")
 )
 
 // doStress is set to true to run stress tests with the -extractor-stresstest command line option.
@@ -181,6 +182,18 @@ func TestTermMarksFiles(t *testing.T) {
 		return
 	}
 	testTermMarksFiles(t)
+}
+
+// TestTextExtractionReference compares the text extracted from pages of PDF files to reference text
+// files.
+func TestTextExtractionReference(t *testing.T) {
+	if len(corpusFolder) == 0 && !forceTest {
+		t.Log("Corpus folder not set - skipping")
+		return
+	}
+	for _, er := range extractReferenceTests {
+		er.runTest(t)
+	}
 }
 
 // fileExtractionTests are PDF file names and terms we expect to find on specified pages of those
@@ -339,7 +352,6 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 	}
 	pageText := map[int]string{}
 	for pageNum := 1; pageNum <= numPages; pageNum++ {
-
 		page, err := pdfReader.GetPage(pageNum)
 		if err != nil {
 			t.Fatalf("GetPage failed. filename=%q page=%d err=%v", filename, pageNum, err)
@@ -697,6 +709,77 @@ func tryTestTermMarksFile(t *testing.T, filename string, lazy bool) {
 	}
 }
 
+// extractReferenceTests compare text extracted from a page of a PDF file to a reference text file.
+var extractReferenceTests = []extractReference{
+	extractReference{"ChapterK.pdf", 1},
+	extractReference{"Garnaut.pdf", 1},
+	extractReference{"rise.pdf", 2},
+	extractReference{"pioneer.pdf", 1},
+	extractReference{"women.pdf", 20},
+	extractReference{"status.pdf", 2},
+	extractReference{"recognition.pdf", 1},
+}
+
+// extractReference describes a PDF file and page number.
+type extractReference struct {
+	filename string
+	pageNum  int
+}
+
+// runTest runs the test described by `er`. It checks that the text extracted from the page of the
+// PDF matches the reference text file.
+func (er extractReference) runTest(t *testing.T) {
+	compareExtractedTextToReference(t, er.pdfPath(), er.pageNum, er.textPath())
+}
+
+// pdfPath returns the path of the PDF file for test `er`.
+func (er extractReference) pdfPath() string {
+	return filepath.Join(corpusFolder, er.filename)
+}
+
+// textPath returns the path of the text reference file for test `er`.
+func (er extractReference) textPath() string {
+	pageStr := fmt.Sprintf("page%03d", er.pageNum)
+	return changeDirExt(referenceFolder, er.filename, pageStr, ".txt")
+}
+
+// compareExtractedTextToReference extracts text from (1-offset) page `pageNum` of PDF `filename`
+// and checks that it matches the text in reference file `textPath`.
+func compareExtractedTextToReference(t *testing.T, filename string, pageNum int, textPath string) {
+	f, err := os.Open(filename)
+	if err != nil {
+		common.Log.Info("Couldn't open. skipping. filename=%q err=%v", filename, err)
+		return
+	}
+	defer f.Close()
+	pdfReader, err := openPdfReader(f, true)
+	if err != nil {
+		common.Log.Info("openPdfReader failed. skipping. filename=%q err=%v", filename, err)
+		return
+	}
+	expectedText, err := readTextFile(textPath)
+	if err != nil {
+		common.Log.Info("readTextFile failed. skipping. textPath=%q err=%v", textPath, err)
+		return
+	}
+
+	desc := fmt.Sprintf("filename=%q pageNum=%d", filename, pageNum)
+	page, err := pdfReader.GetPage(pageNum)
+	if err != nil {
+		common.Log.Info("GetPage failed. skipping. %s err=%v", desc, err)
+		return
+	}
+	actualText, _ := pageTextAndMarks(t, desc, page)
+
+	actualText = reduceSpaces(norm.NFKC.String(actualText))
+	expectedText = reduceSpaces(norm.NFKC.String(expectedText))
+	if actualText != expectedText {
+		common.Log.Info("actual   =====================\n%s\n=====================", actualText)
+		common.Log.Info("expected =====================\n%s\n=====================", expectedText)
+		t.Fatalf("Text mismatch filename=%q page=%d", filename, pageNum)
+	}
+}
+
 // testTermMarksMulti checks that textMarks.RangeOffset() finds the TextMarks in `textMarks`
 // corresponding to some substrings of `text` with lengths 1-20.
 func testTermMarksMulti(t *testing.T, text string, textMarks *TextMarkArray) {
@@ -888,7 +971,7 @@ func pageTextAndMarks(t *testing.T, desc string, page *model.PdfPage) (string, *
 	text := pageText.Text()
 	textMarks := pageText.Marks()
 
-	{ // Some extra debugging to see how the code works. Not needed by test.
+	if false { // Some extra debugging to see how the code works. Not needed by test.
 		common.Log.Debug("text=>>>%s<<<\n", text)
 		common.Log.Debug("textMarks=%s %q", textMarks, desc)
 		for i, tm := range textMarks.Elements() {
@@ -946,7 +1029,7 @@ func checkFileExists(filepath string) bool {
 
 // sortedKeys returns the keys of `m` as a sorted slice.
 func sortedKeys(m map[int][]string) []int {
-	keys := []int{}
+	keys := make([]int, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
@@ -1086,4 +1169,33 @@ func (l *markupList) saveOutputPdf() {
 	if err != nil {
 		l.t.Fatalf("WriteFile failed. metaPath=%q err=%v", metaPath, err)
 	}
+}
+
+// changeDirExt inserts `qualifier` into `filename` before its extension then changes its
+// directory to `dirName` and extrension to `extName`,
+func changeDirExt(dirName, filename, qualifier, extName string) string {
+	if dirName == "" {
+		return ""
+	}
+	base := filepath.Base(filename)
+	ext := filepath.Ext(base)
+	base = base[:len(base)-len(ext)]
+	if len(qualifier) > 0 {
+		base = fmt.Sprintf("%s.%s", base, qualifier)
+	}
+	filename = fmt.Sprintf("%s%s", base, extName)
+	path := filepath.Join(dirName, filename)
+	common.Log.Debug("changeDirExt(%q,%q,%q)->%q", dirName, base, extName, path)
+	return path
+}
+
+// readTextFile return the contents of `filename` as a string.
+func readTextFile(filename string) (string, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	b, err := ioutil.ReadAll(f)
+	return string(b), err
 }

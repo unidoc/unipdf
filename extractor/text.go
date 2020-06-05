@@ -103,16 +103,12 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 			switch operand {
 			case "q":
 				savedStates.push(&state)
-				// common.Log.Info("Save state: stack=%d\n %s", len(savedStates), state.String())
 			case "Q":
 				if verboseGeom {
 					common.Log.Info("Restore state: %s", savedStates.String())
 				}
 				if !savedStates.empty() {
-					// oldState := state
 					state = *savedStates.top()
-					// common.Log.Info("Restore state: stack=%d\n %s\n→%s",
-					// 	len(savedStates), oldState.String(), state.String())
 					if len(savedStates) >= 2 {
 						savedStates.pop()
 					}
@@ -128,6 +124,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
+
 				graphicsState := gs
 				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
 				to = newTextObject(e, resources, graphicsState, &state, &savedStates)
