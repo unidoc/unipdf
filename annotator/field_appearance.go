@@ -139,6 +139,9 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 		common.Log.Trace("Already populated - ignoring")
 		return appDict, nil
 	}
+	if form.DR == nil {
+		form.DR = model.NewPdfPageResources()
+	}
 
 	// Generate the appearance.
 	switch t := field.GetContext().(type) {
@@ -288,7 +291,15 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	if autosize {
 		fontsize = fontsizeDef
 	}
-	resources.SetFontByName(*fontname, font.ToPdfObject())
+
+	// Add appearance font to resources.
+	fontObj := font.ToPdfObject()
+	if !resources.HasFontByName(*fontname) {
+		resources.SetFontByName(*fontname, fontObj)
+	}
+	if dr != nil && !dr.HasFontByName(*fontname) {
+		dr.SetFontByName(*fontname, fontObj)
+	}
 
 	encoder := font.Encoder()
 	if encoder == nil {
@@ -569,7 +580,15 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	if autosize {
 		fontsize = fontsizeDef
 	}
-	resources.SetFontByName(*fontname, font.ToPdfObject())
+
+	// Add appearance font to resources.
+	fontObj := font.ToPdfObject()
+	if !resources.HasFontByName(*fontname) {
+		resources.SetFontByName(*fontname, fontObj)
+	}
+	if dr != nil && !dr.HasFontByName(*fontname) {
+		dr.SetFontByName(*fontname, fontObj)
+	}
 
 	encoder := font.Encoder()
 	if encoder == nil {
@@ -893,7 +912,15 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	if autosize {
 		fontsize = fontsizeDef
 	}
-	resources.SetFontByName(*fontname, font.ToPdfObject())
+
+	// Add appearance font to resources.
+	fontObj := font.ToPdfObject()
+	if !resources.HasFontByName(*fontname) {
+		resources.SetFontByName(*fontname, fontObj)
+	}
+	if dr != nil && !dr.HasFontByName(*fontname) {
+		dr.SetFontByName(*fontname, fontObj)
+	}
 
 	encoder := font.Encoder()
 	if encoder == nil {
@@ -1107,16 +1134,18 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 	// Iterate over the DA operands and extract the font, if specified.
 	var fontName string
 	var fontSize float64
-	for _, op := range *daOps {
-		switch op.Operand {
-		case "Tf":
-			if len(op.Params) != 2 {
-				continue
+	if daOps != nil {
+		for _, op := range *daOps {
+			switch op.Operand {
+			case "Tf":
+				if len(op.Params) != 2 {
+					continue
+				}
+				fontName, _ = core.GetNameVal(op.Params[0])
+				fontSize, _ = core.GetNumberAsFloat(op.Params[1])
+			default:
+				cc.AddOperand(*op)
 			}
-			fontName, _ = core.GetNameVal(op.Params[0])
-			fontSize, _ = core.GetNumberAsFloat(op.Params[1])
-		default:
-			cc.AddOperand(*op)
 		}
 	}
 
