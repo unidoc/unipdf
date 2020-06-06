@@ -11,10 +11,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"strings"
 
-	"github.com/a5i/pkcs7"
+	"github.com/unidoc/pkcs7"
+	"github.com/unidoc/timestamp"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 	"golang.org/x/crypto/ocsp"
@@ -134,10 +138,79 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	if err := signedData.AddSigner(a.certificate, a.privateKey, config); err != nil {
 		return err
 	}
-
 	// Call Detach() is you want to remove content from the signature
 	// and generate an S/MIME detached signature
 	signedData.Detach()
+	// OIDAttributeMessageDigest
+	//signedData.GetSignedData().SignerInfos[0].
+
+	err = func() error {
+		h := crypto.SHA512.New()
+		var mDigest []byte = signedData.GetSignedData().SignerInfos[0].EncryptedDigest
+		for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
+			if a.Type.Equal(pkcs7.OIDAttributeMessageDigest) {
+				mDigest = a.Value.Bytes
+			}
+		}
+
+		h.Write(mDigest)
+		s := h.Sum(nil)
+		r := timestamp.Request{
+			HashAlgorithm:   crypto.SHA512,
+			HashedMessage:   s,
+			Certificates:    true,
+			Extensions:      nil,
+			ExtraExtensions: nil,
+		}
+		data, err := r.Marshal()
+		if err != nil {
+			return err
+		}
+
+		resp, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewBuffer(data))
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("http status code not ok (got %d)", resp.StatusCode)
+		}
+
+		var ci struct {
+			Version asn1.RawValue
+			Content asn1.RawValue
+		}
+
+		var tsInfo timestampInfo
+		_, err = asn1.Unmarshal(ci.Content.FullBytes, &tsInfo)
+		if err != nil {
+			return err
+		}
+
+		_, err = asn1.Unmarshal(body, &ci)
+		if err != nil {
+			return err
+		}
+
+		signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
+			Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
+			Value: &tsInfo,
+		}})
+
+		//signedData.GetSignedData().SignerInfos[0].UnauthenticatedAttributes[0].Value = ci.Content
+
+		return nil
+	}()
+
+	if err != nil {
+		return err
+	}
 
 	// Finish() to obtain the signature bytes
 	detachedSignature, err := signedData.Finish()

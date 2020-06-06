@@ -926,14 +926,9 @@ func validateFile(t *testing.T, fileName string) {
 
 	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
 	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
-<<<<<<< HEAD
 	handler3, _ := sighandler.NewDocTimeStamp("", 0)
 	handler4, _ := sighandler.NewEmptyEtsiPAdESDetached(0)
-=======
-	handler3, _ := sighandler.NewEmptyEtsiPAdESDetached(0)
-	handler4, _ := sighandler.NewDocTimeStamp("", 0)
 
->>>>>>> add timestamp signature handler
 	handlers := []model.SignatureHandler{handler, handler2, handler3, handler4}
 
 	res, err := reader.ValidateSignatures(handlers)
@@ -1510,7 +1505,7 @@ func TestValidatePAdESSignature(t *testing.T) {
 
 func TestAppenderSignPAdES(t *testing.T) {
 
-	validateFile(t, testPdfSignedPDFDocument)
+	validateFile(t, "/Users/alekseipavliukov/projects/unipdf/model/testdata/dss/PAdES-LTA.pdf")
 
 	// PAdES baseline signature B-B level
 
@@ -1532,7 +1527,7 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	f, _ := ioutil.ReadFile(testPKS12Key) //`D:\downloads\user_a_rsa.p12`)
+	f, _ := ioutil.ReadFile("./testdata/LTV/mydomain.com.p12") //`D:\downloads\user_a_rsa.p12`)
 
 	privateKey, cert, err := pkcs12.Decode(f, testPKS12KeyPassword)
 	//cert.OCSPServer
@@ -1607,15 +1602,17 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", 8192)
+	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
 	signature = model.NewPdfSignature(handler)
+	signature.SetDate(time.Now().UTC(), "")
 
 	if err := signature.Initialize(); err != nil {
+		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
