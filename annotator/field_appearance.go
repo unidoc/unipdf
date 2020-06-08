@@ -1100,25 +1100,29 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 	var fontSize float64
 	if daOps != nil {
 		for _, op := range *daOps {
-			switch op.Operand {
-			case "Tf":
-				if len(op.Params) != 2 {
-					continue
+			if op.Operand == "Tf" && len(op.Params) == 2 {
+				if name, ok := core.GetNameVal(op.Params[0]); ok {
+					fontName = name
 				}
-				fontName, _ = core.GetNameVal(op.Params[0])
-				fontSize, _ = core.GetNumberAsFloat(op.Params[1])
-			default:
-				cc.AddOperand(*op)
+				if size, err := core.GetNumberAsFloat(op.Params[1]); err == nil {
+					fontSize = size
+				}
+				continue
 			}
+			cc.AddOperand(*op)
 		}
 	}
 
-	apFont := fallbackFont
-	if !forceReplace || apFont == nil {
+	var apFont *AppearanceFont
+	var apFontObj core.PdfObject
+	if forceReplace && fallbackFont != nil {
+		apFont = fallbackFont
+	} else {
 		// Check if font name was found in the DA stream and search it in the resources.
 		if dr != nil && fontName != "" {
 			if obj, ok := dr.GetFontByName(*core.MakeName(fontName)); ok {
 				if font, err := model.NewPdfFontFromPdfObject(obj); err == nil {
+					apFontObj = obj
 					apFont = &AppearanceFont{Name: fontName, Font: font, Size: fontSize}
 				} else {
 					common.Log.Debug("ERROR: could not load appearance font: %v", err)
@@ -1143,7 +1147,9 @@ func (style *AppearanceStyle) processDA(field *model.PdfField,
 
 	// Add appearance font to the form resources (DR).
 	apFontName := *core.MakeName(apFont.Name)
-	apFontObj := apFont.Font.ToPdfObject()
+	if apFontObj == nil {
+		apFontObj = apFont.Font.ToPdfObject()
+	}
 	if dr != nil && !dr.HasFontByName(apFontName) {
 		dr.SetFontByName(apFontName, apFontObj)
 	}
