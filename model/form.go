@@ -331,12 +331,12 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 			if len(t.String()) == 0 {
 				return nil
 			}
-			common.Log.Debug("Unexpected string for button/choice field. Converting to name: '%s'", t.String())
+
 			name := core.MakeName(t.String())
 			for _, wa := range f.Annotations {
 				wa.AS = name
 			}
-			f.V = name
+			f.V = val
 		default:
 			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
 			f.V = val
