@@ -317,26 +317,28 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 		default:
 			common.Log.Debug("ERROR: Unsupported text field V type: %T (%#v)", t, t)
 		}
-	case *PdfFieldButton, *PdfFieldChoice:
-		switch t := val.(type) {
-		case *core.PdfObjectName:
-			if len(t.String()) == 0 {
-				return nil
-			}
-			for _, wa := range f.Annotations {
-				wa.AS = val
-			}
-			f.V = val
-		case *core.PdfObjectString:
-			if len(t.String()) == 0 {
-				return nil
-			}
-
-			name := core.MakeName(t.String())
+	case *PdfFieldButton:
+		// See section 12.7.4.2.3 "Check Boxes" (pp. 440-441 PDF32000_2008).
+		switch val.(type) {
+		case *core.PdfObjectName, *core.PdfObjectString:
+			name := core.MakeName(val.String())
 			for _, wa := range f.Annotations {
 				wa.AS = name
 			}
+			f.V = name
+		default:
+			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
 			f.V = val
+		}
+	case *PdfFieldChoice:
+		// See section 12.7.4.4 "Choice Fields" (pp. 444-446 PDF32000_2008).
+		switch val.(type) {
+		case *core.PdfObjectName, *core.PdfObjectString:
+			name := core.MakeName(val.String())
+			for _, wa := range f.Annotations {
+				wa.AS = name
+			}
+			f.V = core.MakeString(val.String())
 		default:
 			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
 			f.V = val
