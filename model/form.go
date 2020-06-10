@@ -320,12 +320,16 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 	case *PdfFieldButton:
 		// See section 12.7.4.2.3 "Check Boxes" (pp. 440-441 PDF32000_2008).
 		switch val.(type) {
-		case *core.PdfObjectName, *core.PdfObjectString:
-			name := core.MakeName(val.String())
-			for _, wa := range f.Annotations {
-				wa.AS = name
+		case *core.PdfObjectName:
+			if len(val.String()) > 0 {
+				f.V = val
+				setFieldAnnotAS(f, val)
 			}
-			f.V = name
+		case *core.PdfObjectString:
+			if len(val.String()) > 0 {
+				f.V = core.MakeName(val.String())
+				setFieldAnnotAS(f, f.V)
+			}
 		default:
 			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
 			f.V = val
@@ -333,12 +337,16 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 	case *PdfFieldChoice:
 		// See section 12.7.4.4 "Choice Fields" (pp. 444-446 PDF32000_2008).
 		switch val.(type) {
-		case *core.PdfObjectName, *core.PdfObjectString:
-			name := core.MakeName(val.String())
-			for _, wa := range f.Annotations {
-				wa.AS = name
+		case *core.PdfObjectName:
+			if len(val.String()) > 0 {
+				f.V = core.MakeString(val.String())
+				setFieldAnnotAS(f, val)
 			}
-			f.V = core.MakeString(val.String())
+		case *core.PdfObjectString:
+			if len(val.String()) > 0 {
+				f.V = val
+				setFieldAnnotAS(f, core.MakeName(val.String()))
+			}
 		default:
 			common.Log.Debug("ERROR: UNEXPECTED %s -> %v", f.PartialName(), val)
 			f.V = val
@@ -348,4 +356,12 @@ func fillFieldValue(f *PdfField, val core.PdfObject) error {
 	}
 
 	return nil
+}
+
+// setFieldAnnotAS sets the appearance stream of the field annotations to `val`.
+func setFieldAnnotAS(f *PdfField, val core.PdfObject) {
+	for _, wa := range f.Annotations {
+		wa.AS = val
+		wa.ToPdfObject()
+	}
 }
