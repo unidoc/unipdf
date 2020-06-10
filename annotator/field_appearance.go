@@ -821,18 +821,21 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 		}
 	}
 
+	// See section 12.7.4.4 "Choice Fields" (pp. 444-446 PDF32000_2008).
 	dchoiceapp := core.MakeDict()
 	for _, optObj := range fch.Opt.Elements() {
+		if optArr, ok := core.GetArray(optObj); ok && optArr.Len() == 2 {
+			optObj = optArr.Get(1)
+		}
+
 		var optstr string
 		if opt, ok := core.GetString(optObj); ok {
+			optstr = opt.Decoded()
+		} else if opt, ok := core.GetName(optObj); ok {
 			optstr = opt.String()
 		} else {
-			if opt, ok := core.GetName(optObj); ok {
-				optstr = opt.String()
-			} else {
-				common.Log.Debug("ERROR: Opt not a name/string - %T", optObj)
-				return nil, errors.New("not a name/string")
-			}
+			common.Log.Debug("ERROR: Opt not a name/string - %T", optObj)
+			return nil, errors.New("not a name/string")
 		}
 
 		if len(optstr) > 0 {

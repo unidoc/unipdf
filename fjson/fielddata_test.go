@@ -148,6 +148,7 @@ func TestJSONExtractAndFill(t *testing.T) {
 	fieldDataExp, err := LoadFromJSONFile("./testdata/advancedform.json")
 	require.NoError(t, err)
 	jsonDataExp, err := fieldDataExp.JSON()
+	require.NoError(t, err)
 
 	// Check templates for equality.
 	require.Equal(t, jsonDataExp, jsonData)
@@ -184,6 +185,7 @@ func TestJSONExtractAndFill(t *testing.T) {
 	fieldDataExp, err = LoadFromJSON(bytes.NewReader(jsonBytes))
 	require.NoError(t, err)
 	jsonDataExp, err = fieldDataExp.JSON()
+	require.NoError(t, err)
 
 	// Fill test PDF form fields and write to buffer.
 	f, err := os.Open(inputFilePath)
@@ -212,6 +214,47 @@ func TestJSONExtractAndFill(t *testing.T) {
 	fieldData, err = LoadFromPDF(bytes.NewReader(buf.Bytes()))
 	require.NoError(t, err)
 	jsonData, err = fieldData.JSON()
+	require.NoError(t, err)
+
+	// Check field data for equality.
+	require.Equal(t, jsonDataExp, jsonData)
+}
+
+func TestJSONFillAndExtract(t *testing.T) {
+	// Read JSON fill data.
+	fieldDataExp, err := LoadFromJSONFile("./testdata/mixedfields.json")
+	require.NoError(t, err)
+	jsonDataExp, err := fieldDataExp.JSON()
+	require.NoError(t, err)
+
+	// Fill test PDF form fields and write to buffer.
+	f, err := os.Open("./testdata/mixedfields.pdf")
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := model.NewPdfReader(f)
+	require.NoError(t, err)
+
+	err = reader.AcroForm.Fill(fieldDataExp)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	writer := model.NewPdfWriter()
+	for i := range reader.PageList {
+		err := writer.AddPage(reader.PageList[i])
+		require.NoError(t, err)
+	}
+
+	err = writer.SetForms(reader.AcroForm)
+	require.NoError(t, err)
+	err = writer.Write(&buf)
+	require.NoError(t, err)
+
+	// Load field data from buffer.
+	fieldData, err := LoadFromPDF(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	jsonData, err := fieldData.JSON()
+	require.NoError(t, err)
 
 	// Check field data for equality.
 	require.Equal(t, jsonDataExp, jsonData)
