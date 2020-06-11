@@ -47,6 +47,7 @@ type PdfAppender struct {
 	written          bool
 
 	extensions Extensions
+	dss        *DSS
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -427,6 +428,10 @@ func (a *PdfAppender) RemovePage(pageNum int) {
 	a.pages = append(a.pages[0:pageIndex], a.pages[pageNum:]...)
 }
 
+func (a *PdfAppender) SetDSS(dss *DSS) {
+	a.dss = dss
+}
+
 // replaceObject registers `replacement` as a replacement for `obj` in the appended revision.
 // If an indirect object/stream it will maintain the same object number in the following
 // revision.
@@ -590,6 +595,12 @@ func (a *PdfAppender) Write(w io.Writer) error {
 	if a.acroForm != nil {
 		writer.catalog.Set("AcroForm", a.acroForm.ToPdfObject())
 		a.updateObjectsDeep(a.acroForm.ToPdfObject(), nil)
+	}
+
+	if a.dss != nil {
+		dss := core.MakeIndirectObject(a.dss.toDict())
+		writer.catalog.Set("DSS", dss)
+		a.updateObjectsDeep(dss, nil)
 	}
 
 	a.addNewObject(writer.infoObj)

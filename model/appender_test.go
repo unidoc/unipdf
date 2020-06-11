@@ -10,6 +10,8 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
+	"net/url"
+
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -23,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
-	"golang.org/x/crypto/pkcs12"
+	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/unidoc/unipdf/v3/annotator"
 	"github.com/unidoc/unipdf/v3/common"
@@ -1507,6 +1509,8 @@ func TestAppenderSignPAdES(t *testing.T) {
 
 	validateFile(t, "/Users/alekseipavliukov/projects/unipdf/model/testdata/dss/PAdES-LTA.pdf")
 
+	validateFile(t, testPdfSignedPDFDocument)
+
 	// PAdES baseline signature B-B level
 
 	f1, err := os.Open(testPdfFile1)
@@ -1527,20 +1531,62 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	f, _ := ioutil.ReadFile("./testdata/LTV/mydomain.com.p12") //`D:\downloads\user_a_rsa.p12`)
-
-	privateKey, cert, err := pkcs12.Decode(f, testPKS12KeyPassword)
+	f, _ := ioutil.ReadFile("/Users/alekseipavliukov/Downloads/tester4.p12") //`D:\downloads\user_a_rsa.p12`)
+	//	f, _ := ioutil.ReadFile(testPKS12Key) //`D:\downloads\user_a_rsa.p12`)
+	blocks, err := pkcs12.ToPEM(f, testPKS12KeyPassword)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	log.Print(blocks)
+	privateKey, cert, chain, err := pkcs12.DecodeChain(f, testPKS12KeyPassword)
 	//cert.OCSPServer
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
+	//data, err := ocsp.CreateRequest(cert, chain[0], &ocsp.RequestOptions{Hash: crypto.SHA1})
+	//if err != nil {
+	//	t.Errorf("Fail: %v\n", err)
+	//	return
+	//}
+	//
+	//resp, err := http.Post("http://localhost:80/ejbca/publicweb/status/ocsp", "application/ocsp-request", bytes.NewReader(data))
+	//if err != nil {
+	//	t.Errorf("Fail: %v\n", err)
+	//	return
+	//}
+	//defer resp.Body.Close()
+	//data, _ = ioutil.ReadAll(resp.Body)
+	//OCSPResponse, err := ocsp.ParseResponseForCert(data, nil, chain[0])
+	//if err != nil {
+	//	t.Errorf("Fail: %v\n", err)
+	//	return
+	//}
+
+	//ocsp.Good
+
+	reqURL, err := url.Parse("http://127.0.0.1/ejbca/publicweb/webdist/certdist?cmd=crl&format=PEM")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	q := reqURL.Query()
+	q.Add("issuer", fmt.Sprintf("UID=%s,CN=%s,O=%s", cert.Issuer.Names[0].Value, cert.Issuer.Names[1].Value, cert.Issuer.Names[2].Value))
+	reqURL.RawQuery = q.Encode()
+
 	handler, err := sighandler.NewEtsiPAdESDetached(privateKey.(*rsa.PrivateKey), cert)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
+	handler.AddCACerts(chain)
+	handler.AddCRLDistributionPoints([]string{reqURL.String()})
+	handler.AddOCSPServer([]string{"http://localhost:80/ejbca/publicweb/status/ocsp"})
+
+	// /Users/alekseipavliukov/Downloads/ManagementCA.pem
+	// /Users/alekseipavliukov/Downloads/ManagementCA-chain.pem
 
 	// Create signature field and appearance.
 	signature := model.NewPdfSignature(handler)
@@ -1574,8 +1620,29 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
+	buffer := bytes.NewBuffer(nil)
+	err = appender.Write(buffer)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	pdf2, err := model.NewPdfReader(bytes.NewReader(buffer.Bytes()))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender2, err := model.NewPdfAppender(pdf2)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender2.SetDSS(handler.GetDSS())
+
 	outFile := tempFile("appender_sign_page_4.pdf")
-	err = appender.WriteToFile(outFile)
+	err = appender2.WriteToFile(outFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1590,7 +1657,7 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 	defer f2.Close()
-	pdf2, err := model.NewPdfReader(f2)
+	pdf2, err = model.NewPdfReader(f2)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
@@ -1602,13 +1669,14 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
+	handlerTS, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
+
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 
-	signature = model.NewPdfSignature(handler)
+	signature = model.NewPdfSignature(handlerTS)
 	signature.SetDate(time.Now().UTC(), "")
 
 	if err := signature.Initialize(); err != nil {

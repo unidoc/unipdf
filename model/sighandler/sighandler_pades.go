@@ -37,12 +37,25 @@ type etsiPAdES struct {
 
 	emptySignature    bool
 	emptySignatureLen int
+
+	dss                   *model.DSS
+	caCerts               []*x509.Certificate
+	crlDistributionPoints []string
+	ocspServers           []string
+}
+
+type padesSignatureHandler interface {
+	model.SignatureHandler
+	GetDSS() *model.DSS
+	AddCACerts(caCerts []*x509.Certificate)
+	AddCRLDistributionPoints([]string)
+	AddOCSPServer([]string)
 }
 
 // NewEmptyEtsiPAdESDetached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
 // signature handler. The generated signature is empty and of size signatureLen.
 // The signatureLen parameter can be 0 for the signature validation.
-func NewEmptyEtsiPAdESDetached(signatureLen int) (model.SignatureHandler, error) {
+func NewEmptyEtsiPAdESDetached(signatureLen int) (padesSignatureHandler, error) {
 	return &etsiPAdES{
 		emptySignature:    true,
 		emptySignatureLen: signatureLen,
@@ -51,11 +64,27 @@ func NewEmptyEtsiPAdESDetached(signatureLen int) (model.SignatureHandler, error)
 
 // NewAEtsiPAdESDetached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
 // Both parameters may be nil for the signature validation.
-func NewEtsiPAdESDetached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (model.SignatureHandler, error) {
+func NewEtsiPAdESDetached(privateKey *rsa.PrivateKey, certificate *x509.Certificate) (padesSignatureHandler, error) {
 	return &etsiPAdES{
 		certificate: certificate,
 		privateKey:  privateKey,
 	}, nil
+}
+
+func (a *etsiPAdES) GetDSS() *model.DSS {
+	return a.dss
+}
+
+func (a *etsiPAdES) AddCACerts(caCerts []*x509.Certificate) {
+	a.caCerts = append(a.caCerts, caCerts...)
+}
+
+func (a *etsiPAdES) AddCRLDistributionPoints(dp []string) {
+	a.crlDistributionPoints = append(a.crlDistributionPoints, dp...)
+}
+
+func (a *etsiPAdES) AddOCSPServer(servers []string) {
+	a.ocspServers = append(a.ocspServers, servers...)
 }
 
 // InitSignature initialises the PdfSignature.
@@ -69,6 +98,8 @@ func (a *etsiPAdES) InitSignature(sig *model.PdfSignature) error {
 		}
 	}
 
+	a.dss = new(model.DSS)
+	a.dss.VRI = make(map[string]model.DSSCerts)
 	handler := *a
 	sig.Handler = &handler
 	sig.Filter = core.MakeName("Adobe.PPKLite")
@@ -80,7 +111,111 @@ func (a *etsiPAdES) InitSignature(sig *model.PdfSignature) error {
 		return err
 	}
 	digest.Write([]byte("calculate the Contents field size"))
-	return handler.Sign(sig, digest)
+	err = handler.Sign(sig, digest)
+	return err
+}
+
+func (a *etsiPAdES) makeCRLRequest(server string) ([]byte, error) {
+	resp, err := http.Get(server)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
+
+func (a *etsiPAdES) makeCRLRequests() ([]*core.PdfObjectStream, error) {
+	var res []*core.PdfObjectStream
+	for _, server := range a.crlDistributionPoints {
+		data, err := a.makeCRLRequest(server)
+		if err != nil {
+			return nil, err
+		}
+		s, err := core.MakeStream(data, core.NewRawEncoder())
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, s)
+	}
+	return res, nil
+}
+
+func (a *etsiPAdES) makeOCSPRequest(server string, cert *x509.Certificate, caCert *x509.Certificate) ([]byte, error) {
+	data, err := ocsp.CreateRequest(cert, caCert, &ocsp.RequestOptions{Hash: crypto.SHA1})
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Post(server, "application/ocsp-request", bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, _ = ioutil.ReadAll(resp.Body)
+	_, err = ocsp.ParseResponseForCert(data, nil, caCert)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (a *etsiPAdES) makeOCSPRequests() ([]*core.PdfObjectStream, error) {
+	var res []*core.PdfObjectStream
+	for _, server := range a.ocspServers {
+		data, err := a.makeOCSPRequest(server, a.certificate, a.caCerts[0])
+		if err != nil {
+			return nil, err
+		}
+		s, err := core.MakeStream(data, core.NewRawEncoder())
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, s)
+	}
+	return res, nil
+}
+
+func (a *etsiPAdES) makeTimestampRequest(server string, encryptedDigest []byte) (asn1.RawValue, error) {
+	h := crypto.SHA512.New()
+	h.Write(encryptedDigest)
+	s := h.Sum(nil)
+	r := timestamp.Request{
+		HashAlgorithm:   crypto.SHA512,
+		HashedMessage:   s,
+		Certificates:    true,
+		Extensions:      nil,
+		ExtraExtensions: nil,
+	}
+	data, err := r.Marshal()
+	if err != nil {
+		return asn1.RawValue{}, err
+	}
+
+	resp, err := http.Post(server, "application/timestamp-query", bytes.NewBuffer(data))
+	if err != nil {
+		return asn1.RawValue{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return asn1.RawValue{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return asn1.RawValue{}, fmt.Errorf("http status code not ok (got %d)", resp.StatusCode)
+	}
+
+	var ci struct {
+		Version asn1.RawValue
+		Content asn1.RawValue
+	}
+
+	_, err = asn1.Unmarshal(body, &ci)
+	if err != nil {
+		return asn1.RawValue{}, err
+	}
+
+	return ci.Content, nil
 }
 
 // Sign sets the Contents fields for the PdfSignature.
@@ -138,79 +273,28 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	if err := signedData.AddSigner(a.certificate, a.privateKey, config); err != nil {
 		return err
 	}
+
 	// Call Detach() is you want to remove content from the signature
 	// and generate an S/MIME detached signature
 	signedData.Detach()
 	// OIDAttributeMessageDigest
 	//signedData.GetSignedData().SignerInfos[0].
 
-	err = func() error {
-		h := crypto.SHA512.New()
-		var mDigest []byte = signedData.GetSignedData().SignerInfos[0].EncryptedDigest
-		for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
-			if a.Type.Equal(pkcs7.OIDAttributeMessageDigest) {
-				mDigest = a.Value.Bytes
-			}
-		}
-
-		h.Write(mDigest)
-		s := h.Sum(nil)
-		r := timestamp.Request{
-			HashAlgorithm:   crypto.SHA512,
-			HashedMessage:   s,
-			Certificates:    true,
-			Extensions:      nil,
-			ExtraExtensions: nil,
-		}
-		data, err := r.Marshal()
-		if err != nil {
-			return err
-		}
-
-		resp, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewBuffer(data))
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("http status code not ok (got %d)", resp.StatusCode)
-		}
-
-		var ci struct {
-			Version asn1.RawValue
-			Content asn1.RawValue
-		}
-
-		var tsInfo timestampInfo
-		_, err = asn1.Unmarshal(ci.Content.FullBytes, &tsInfo)
-		if err != nil {
-			return err
-		}
-
-		_, err = asn1.Unmarshal(body, &ci)
-		if err != nil {
-			return err
-		}
-
-		signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
-			Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
-			Value: &tsInfo,
-		}})
-
-		//signedData.GetSignedData().SignerInfos[0].UnauthenticatedAttributes[0].Value = ci.Content
-
-		return nil
-	}()
-
-	if err != nil {
-		return err
-	}
+	//mDigest := signedData.GetSignedData().SignerInfos[0].EncryptedDigest
+	//for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
+	//	if a.Type.Equal(pkcs7.OIDAttributeMessageDigest) {
+	//		mDigest = a.Value.Bytes
+	//	}
+	//}
+	//tsInfo, err := a.makeTimestampRequest("https://freetsa.org/tsr", mDigest)
+	//
+	//signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
+	//	Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
+	//	Value: tsInfo,
+	//}})
+	//if err != nil {
+	//	return err
+	//}
 
 	// Finish() to obtain the signature bytes
 	detachedSignature, err := signedData.Finish()
@@ -222,6 +306,27 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	copy(data, detachedSignature)
 
 	sig.Contents = core.MakeHexString(string(data))
+
+	h = sha1.New()
+	h.Write(detachedSignature)
+	key := strings.ToUpper(hex.EncodeToString(h.Sum(nil)))
+	stream, err := core.MakeStream(a.certificate.Raw, core.NewRawEncoder())
+	if err != nil {
+		return err
+	}
+	a.dss.Certs = append(a.dss.Certs, stream)
+	OCSPs, err := a.makeOCSPRequests()
+	if err != nil {
+		return err
+	}
+	a.dss.OCSPs = OCSPs
+	CLRs, err := a.makeCRLRequests()
+	if err != nil {
+		return err
+	}
+	a.dss.CLRs = CLRs
+	a.dss.VRI[key] = a.dss.DSSCerts
+
 	return nil
 }
 

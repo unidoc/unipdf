@@ -20,6 +20,7 @@ import (
 
 	"github.com/unidoc/pkcs7"
 	"github.com/unidoc/timestamp"
+
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
@@ -48,6 +49,7 @@ func (a *docTimeStamp) InitSignature(sig *model.PdfSignature) error {
 	sig.SubFilter = core.MakeName("ETSI.RFC3161")
 	sig.Reference = nil
 	digest, err := a.NewDigest(sig)
+
 	if err != nil {
 		return err
 	}

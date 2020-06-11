@@ -10,11 +10,14 @@ openssl req -new -sha256 \
         <(printf "\n[SAN]\nsubjectAltName=DNS:mydomain.com,DNS:www.mydomain.com")) \
     -out mydomain.com.csr
 
-openssl req -in mydomain.com.csr -noout -text
+#openssl req -in mydomain.com.csr -noout -text
+#
+#openssl x509 -req -in mydomain.com.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out mydomain.com.crt -days 500 -sha256
+#
+#
+#openssl x509 -in mydomain.com.crt -text -noout
+#
+#openssl pkcs12 -export -out mydomain.com.p12 -inkey mydomain.com.key -in mydomain.com.crt -certfile rootCA.crt
 
-openssl x509 -req -in mydomain.com.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out mydomain.com.crt -days 500 -sha256
 
-
-openssl x509 -in mydomain.com.crt -text -noout
-
-openssl pkcs12 -export -out mydomain.com.p12 -inkey mydomain.com.key -in mydomain.com.crt -certfile rootCA.crt
+# openssl ocsp -issuer ManagementCA.pem -CAfile ManagementCA-chain.pem -cert newfile.crt.pem -req_text -url http://localhost:80/ejbca/publicweb/status/ocsp
