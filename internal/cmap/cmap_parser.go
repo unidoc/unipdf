@@ -105,7 +105,8 @@ func (cmap *CMap) parse() error {
 func (cmap *CMap) parseName() error {
 	name := ""
 	done := false
-	for i := 0; i < 10 && !done; i++ {
+	// NOTE(peterwilliams97): We need up to 20 iterations of this loop for some PDFs I have seen.
+	for i := 0; i < 20 && !done; i++ {
 		o, err := cmap.parseObject()
 		if err != nil {
 			return err
@@ -141,7 +142,6 @@ func (cmap *CMap) parseName() error {
 // parseType parses a cmap type and adds it to `cmap`.
 // cmap names are defined like this: /CMapType 1 def
 func (cmap *CMap) parseType() error {
-
 	ctype := 0
 	done := false
 	for i := 0; i < 3 && !done; i++ {
@@ -171,7 +171,6 @@ func (cmap *CMap) parseType() error {
 // We don't need the version. We do this to eat up the version code in the cmap definition
 // to reduce unhandled parse object warnings.
 func (cmap *CMap) parseVersion() error {
-
 	version := ""
 	done := false
 	for i := 0; i < 3 && !done; i++ {
@@ -471,7 +470,7 @@ func (cmap *CMap) parseBfchar() error {
 			}
 			return err
 		}
-		var target rune
+		var target []rune
 		switch v := o.(type) {
 		case cmapOperand:
 			if v.Operand == endbfchar {
@@ -480,21 +479,16 @@ func (cmap *CMap) parseBfchar() error {
 			common.Log.Debug("ERROR: Unexpected operand. %#v", v)
 			return ErrBadCMap
 		case cmapHexString:
-			runes := hexToRunes(v)
-			if len(runes) == 1 {
-				target = runes[0]
-			} else {
-				common.Log.Debug("ERROR: Unexpected runes %#v -> %#v", v, runes)
-			}
+			target = hexToRunes(v)
 		case cmapName:
 			common.Log.Debug("ERROR: Unexpected name. %#v", v)
-			target = MissingCodeRune
+			target = []rune{MissingCodeRune}
 		default:
 			common.Log.Debug("ERROR: Unexpected type. %#v", o)
 			return ErrBadCMap
 		}
 
-		cmap.codeToUnicode[code] = target
+		cmap.codeToUnicode[code] = string(target)
 	}
 
 	return nil
@@ -568,16 +562,17 @@ func (cmap *CMap) parseBfrange() error {
 				if !ok {
 					return errors.New("non-hex string in array")
 				}
-				r := hexToRune(hexs)
-				cmap.codeToUnicode[code] = r
+				runes := hexToRunes(hexs)
+				cmap.codeToUnicode[code] = string(runes)
 			}
 
 		case cmapHexString:
 			// <codeFrom> <codeTo> <dst>, maps [from,to] to [dst,dst+to-from].
-			r := hexToRune(v)
+			runes := hexToRunes(v)
+			n := len(runes)
 			for code := srcCodeFrom; code <= srcCodeTo; code++ {
-				cmap.codeToUnicode[code] = r
-				r++
+				cmap.codeToUnicode[code] = string(runes)
+				runes[n-1]++
 			}
 		default:
 			common.Log.Debug("ERROR: Unexpected type %T", o)

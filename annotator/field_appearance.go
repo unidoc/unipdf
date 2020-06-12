@@ -13,13 +13,14 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
+	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
 // FieldAppearance implements interface model.FieldAppearanceGenerator and generates appearance streams
-// for fields taking into account what value is in the field.  A common use case is for generating the
+// for fields taking into account what value is in the field. A common use case is for generating the
 // appearance stream prior to flattening fields.
 //
 // If `OnlyIfMissing` is true, the field appearance is generated only for fields that do not have an
@@ -35,6 +36,7 @@ type FieldAppearance struct {
 type AppearanceStyle struct {
 	// How much of Rect height to fill when autosizing text.
 	AutoFontSizeFraction float64
+
 	// CheckmarkRune is a rune used for check mark in checkboxes (for ZapfDingbats font).
 	CheckmarkRune rune
 
@@ -51,6 +53,47 @@ type AppearanceStyle struct {
 
 	// Allow field MK appearance characteristics to override style settings.
 	AllowMK bool
+
+	// Fonts holds appearance styles for fonts.
+	Fonts *AppearanceFontStyle
+}
+
+// AppearanceFontStyle defines font style characteristics for form fields,
+// used in the filling/flattening process.
+type AppearanceFontStyle struct {
+	// Fallback represents a global font fallback, used for fields which do
+	// not specify a font in their default appearance (DA). The fallback is
+	// also used if there is a font specified in the DA, but it is not
+	// found in the AcroForm resources (DR).
+	Fallback *AppearanceFont
+
+	// FieldFallbacks defines font fallbacks for specific fields. The map keys
+	// represent the names of the fields (which can be specified by their
+	// partial or full names). Specific field fallback fonts take precedence
+	// over the global font fallback.
+	FieldFallbacks map[string]*AppearanceFont
+
+	// ForceReplace forces the replacement of fonts in the filling/flattening
+	// process, even if the default appearance (DA) specify a valid font.
+	// If no fallback font is provided, setting this field has no effect.
+	ForceReplace bool
+}
+
+// AppearanceFont represents a font used for generating the appearance of a
+// field in the filling/flattening process.
+type AppearanceFont struct {
+	// Name represents the name of the font which will be added to the
+	// AcroForm resources (DR).
+	Name string
+
+	// Font represents the actual font used for the field appearance.
+	Font *model.PdfFont
+
+	// Size represents the size of the font used for the field appearance.
+	// If size is 0, a default font size will be used.
+	// The default font size is calculated using the available annotation
+	// height and the AutoFontSizeFraction of the AppearanceStyle.
+	Size float64
 }
 
 type quadding int
@@ -95,6 +138,9 @@ func (fa FieldAppearance) GenerateAppearanceDict(form *model.PdfAcroForm, field 
 	if has && fa.OnlyIfMissing && (!isText || !fa.RegenerateTextFields) {
 		common.Log.Trace("Already populated - ignoring")
 		return appDict, nil
+	}
+	if form.DR == nil {
+		form.DR = model.NewPdfPageResources()
 	}
 
 	// Generate the appearance.
@@ -172,26 +218,26 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	if err != nil {
 		return nil, err
 	}
-	width := rect.Width()
-	height := rect.Height()
+	width, height := rect.Width(), rect.Height()
 
+	var rotation float64
 	if mkDict, has := core.GetDict(wa.MK); has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
 			return nil, err
 		}
+		rotation, _ = core.GetNumberAsFloat(mkDict.Get("R"))
 	}
 
 	// Get and process the default appearance string (DA) operands.
-	da := getDA(ftxt.PdfField)
-	csp := contentstream.NewContentStreamParser(da)
-	daOps, err := csp.Parse()
+	daOps, err := contentstream.NewContentStreamParser(getDA(ftxt.PdfField)).Parse()
 	if err != nil {
 		return nil, err
 	}
 
 	cc := contentstream.NewContentCreator()
+
 	if style.BorderSize > 0 {
 		drawRect(cc, style, width, height)
 	}
@@ -205,62 +251,44 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	cc.Add_BMC("Tx")
 	cc.Add_q()
+
+	bboxWidth, bboxHeight := width, height
+	if rotation != 0 {
+		// Calculate bounding box before rotation.
+		revRotation := -rotation
+		bbox := draw.Path{Points: []draw.Point{
+			draw.NewPoint(0, 0).Rotate(revRotation),
+			draw.NewPoint(width, 0).Rotate(revRotation),
+			draw.NewPoint(0, height).Rotate(revRotation),
+			draw.NewPoint(width, height).Rotate(revRotation),
+		}}.GetBoundingBox()
+
+		// Update width and height, as the appearance is generated based on
+		// the bounding of the annotation with no rotation.
+		width = bbox.Width
+		height = bbox.Height
+
+		// Apply rotation.
+		cc.RotateDeg(rotation)
+		cc.Translate(bbox.X, bbox.Y)
+	}
+
 	// Graphic state changes.
 	cc.Add_BT()
 
-	// Add DA operands.
-	var fontsize float64
-	var fontname *core.PdfObjectName
-	var font *model.PdfFont
-	autosize := true
-
-	fontsizeDef := height * style.AutoFontSizeFraction
-	for _, op := range *daOps {
-		// When Tf specified with font size is 0, it means we should set on our own based on the Rect (autosize).
-		if op.Operand == "Tf" && len(op.Params) == 2 {
-			if name, ok := core.GetName(op.Params[0]); ok {
-				fontname = name
-			}
-			num, err := core.GetNumberAsFloat(op.Params[1])
-			if err == nil {
-				fontsize = num
-			} else {
-				common.Log.Debug("ERROR invalid font size: %v", op.Params[1])
-			}
-			if fontsize == 0 {
-				// Use default if zero.
-				fontsize = fontsizeDef
-			} else {
-				// Disable autosize when font size (>0) explicitly specified.
-				autosize = false
-			}
-			// Skip over (set fontsize in code below).
-			continue
-		}
-		cc.AddOperand(*op)
+	// Process DA operands.
+	apFont, hasTf, err := style.processDA(ftxt.PdfField, daOps, dr, resources, cc)
+	if err != nil {
+		return nil, err
 	}
 
-	// If the font name is not set or not found in the form resources, use
-	// the default fallback font (Helvetica).
-	var fontObj core.PdfObject
-	if dr != nil && fontname != nil {
-		if fObj, has := dr.GetFontByName(*fontname); has {
-			if font, err = model.NewPdfFontFromPdfObject(fObj); err != nil {
-				common.Log.Debug("ERROR: could not load appearance font: %v", err)
-				return nil, err
-			}
-			fontObj = fObj
-		}
+	font := apFont.Font
+	fontsize := apFont.Size
+	fontname := core.MakeName(apFont.Name)
+	autosize := fontsize == 0
+	if autosize && hasTf {
+		fontsize = height * style.AutoFontSizeFraction
 	}
-	if fontObj == nil {
-		// Font not found. Reverting to Helvetica with name `Helv`.
-		if font, err = model.NewStandard14Font("Helvetica"); err != nil {
-			return nil, err
-		}
-		fontname = core.MakeName("Helv")
-		fontObj = font.ToPdfObject()
-	}
-	resources.SetFontByName(*fontname, fontObj)
 
 	encoder := font.Encoder()
 	if encoder == nil {
@@ -461,7 +489,7 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
-	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	apDict := core.MakeDict()
@@ -480,16 +508,11 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	if !ok {
 		return nil, errors.New("invalid Rect")
 	}
-	rect, err := array.ToFloat64Array()
+	rect, err := model.NewPdfRectangle(*array)
 	if err != nil {
 		return nil, err
 	}
-	if len(rect) != 4 {
-		return nil, errors.New("len(Rect) != 4")
-	}
-
-	width := rect[2] - rect[0]
-	height := rect[3] - rect[1]
+	width, height := rect.Width(), rect.Height()
 
 	if mkDict, has := core.GetDict(wa.MK); has {
 		bsDict, _ := core.GetDict(wa.BS)
@@ -510,9 +533,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	boxwidth := float64(width) / float64(maxLen)
 
 	// Get and process the default appearance string (DA) operands.
-	da := getDA(ftxt.PdfField)
-	csp := contentstream.NewContentStreamParser(da)
-	daOps, err := csp.Parse()
+	daOps, err := contentstream.NewContentStreamParser(getDA(ftxt.PdfField)).Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -529,68 +550,28 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
+
 	// Graphic state changes.
 	cc.Add_BT()
 
-	// Add DA operands.
-	var fontsize float64
-	var fontname *core.PdfObjectName
-	var font *model.PdfFont
-	autosize := true
-
-	fontsizeDef := height * style.AutoFontSizeFraction
-	for _, op := range *daOps {
-		// If TF specified and font size is 0, it means we should set on our own based on the Rect.
-		if op.Operand == "Tf" && len(op.Params) == 2 {
-			if name, ok := core.GetName(op.Params[0]); ok {
-				fontname = name
-			}
-			num, err := core.GetNumberAsFloat(op.Params[1])
-			if err == nil {
-				fontsize = num
-			} else {
-				common.Log.Debug("ERROR invalid font size: %v", op.Params[1])
-			}
-			if fontsize == 0 {
-				// Use default if zero.
-				fontsize = fontsizeDef
-			} else {
-				// Disable autosize when font size (>0) explicitly specified.
-				autosize = false
-			}
-			// Skip over (set fontsize in code below).
-			continue
-		}
-		cc.AddOperand(*op)
+	// Process DA operands.
+	apFont, hasTf, err := style.processDA(ftxt.PdfField, daOps, dr, resources, cc)
+	if err != nil {
+		return nil, err
 	}
 
-	// If fontname not set need to make a new font or use one defined in the resources.
-	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil || dr == nil {
-		// Font not set, revert to Helvetica with name "Helv".
-		fontname = core.MakeName("Helv")
-		helv, err := model.NewStandard14Font("Helvetica")
-		if err != nil {
-			return nil, err
-		}
-		font = helv
-		resources.SetFontByName(*fontname, helv.ToPdfObject())
-		cc.Add_Tf(*fontname, fontsizeDef)
-	} else {
-		fontobj, has := dr.GetFontByName(*fontname)
-		if !has {
-			return nil, errors.New("font not in DR")
-		}
-		font, err = model.NewPdfFontFromPdfObject(fontobj)
-		if err != nil {
-			common.Log.Debug("ERROR loading default appearance font: %v", err)
-			return nil, err
-		}
-		resources.SetFontByName(*fontname, fontobj)
+	font := apFont.Font
+	fontname := core.MakeName(apFont.Name)
+	fontsize := apFont.Size
+	autosize := fontsize == 0
+	if autosize && hasTf {
+		fontsize = height * style.AutoFontSizeFraction
 	}
+
 	encoder := font.Encoder()
 	if encoder == nil {
-		common.Log.Debug("ERROR - Encoder is nil - can expect bad results")
+		common.Log.Debug("WARN: font encoder is nil. Assuming identity encoder. Output may be incorrect.")
+		encoder = textencoding.NewIdentityTextEncoder("Identity-H")
 	}
 
 	var text string
@@ -711,25 +692,18 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 // genFieldCheckboxAppearance generates an appearance dictionary for a widget annotation `wa` referenced by
 // a button field `fbtn` with form resources `dr` (DR).
 func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFieldButton, dr *model.PdfPageResources, style AppearanceStyle) (*core.PdfObjectDictionary, error) {
-	// TODO(dennwc): unused parameters
-
 	// Get bounding Rect.
 	array, ok := core.GetArray(wa.Rect)
 	if !ok {
 		return nil, errors.New("invalid Rect")
 	}
-	rect, err := array.ToFloat64Array()
+	rect, err := model.NewPdfRectangle(*array)
 	if err != nil {
 		return nil, err
 	}
-	if len(rect) != 4 {
-		return nil, errors.New("len(Rect) != 4")
-	}
+	width, height := rect.Width(), rect.Height()
 
 	common.Log.Debug("Checkbox, wa BS: %v", wa.BS)
-
-	width := rect[2] - rect[0]
-	height := rect[3] - rect[1]
 
 	zapfdb, err := model.NewStandard14Font("ZapfDingbats")
 	if err != nil {
@@ -825,26 +799,16 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 	if !ok {
 		return nil, errors.New("invalid Rect")
 	}
-	rect, err := array.ToFloat64Array()
+	rect, err := model.NewPdfRectangle(*array)
 	if err != nil {
 		return nil, err
 	}
-	if len(rect) != 4 {
-		return nil, errors.New("len(Rect) != 4")
-	}
+	width, height := rect.Width(), rect.Height()
 
 	common.Log.Debug("Choice, wa BS: %v", wa.BS)
 
-	width := rect[2] - rect[0]
-	height := rect[3] - rect[1]
-
 	// Get and process the default appearance string (DA) operands.
-	da := core.MakeString("")
-	if form.DA != nil {
-		da, _ = core.GetString(form.DA)
-	}
-	csp := contentstream.NewContentStreamParser(da.String())
-	daOps, err := csp.Parse()
+	daOps, err := contentstream.NewContentStreamParser(getDA(fch.PdfField)).Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -857,22 +821,25 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 		}
 	}
 
+	// See section 12.7.4.4 "Choice Fields" (pp. 444-446 PDF32000_2008).
 	dchoiceapp := core.MakeDict()
 	for _, optObj := range fch.Opt.Elements() {
+		if optArr, ok := core.GetArray(optObj); ok && optArr.Len() == 2 {
+			optObj = optArr.Get(1)
+		}
+
 		var optstr string
 		if opt, ok := core.GetString(optObj); ok {
+			optstr = opt.Decoded()
+		} else if opt, ok := core.GetName(optObj); ok {
 			optstr = opt.String()
 		} else {
-			if opt, ok := core.GetName(optObj); ok {
-				optstr = opt.String()
-			} else {
-				common.Log.Debug("ERROR: Opt not a name/string - %T", optObj)
-				return nil, errors.New("not a name/string")
-			}
+			common.Log.Debug("ERROR: Opt not a name/string - %T", optObj)
+			return nil, errors.New("not a name/string")
 		}
 
 		if len(optstr) > 0 {
-			xform, err := makeComboboxTextXObjForm(width, height, optstr, style, daOps, form.DR)
+			xform, err := makeComboboxTextXObjForm(fch.PdfField, width, height, optstr, style, daOps, form.DR)
 			if err != nil {
 				return nil, err
 			}
@@ -888,7 +855,9 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 }
 
 // Make a text-based XObj Form.
-func makeComboboxTextXObjForm(width, height float64, text string, style AppearanceStyle, daOps *contentstream.ContentStreamOperations, dr *model.PdfPageResources) (*model.XObjectForm, error) {
+func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
+	text string, style AppearanceStyle, daOps *contentstream.ContentStreamOperations,
+	dr *model.PdfPageResources) (*model.XObjectForm, error) {
 	resources := model.NewPdfPageResources()
 
 	cc := contentstream.NewContentCreator()
@@ -906,63 +875,25 @@ func makeComboboxTextXObjForm(width, height float64, text string, style Appearan
 	// Graphic state changes.
 	cc.Add_BT()
 
-	// Add DA operands.
-	var fontsize float64
-	var fontname *core.PdfObjectName
-	var font *model.PdfFont
-	var err error
-	autosize := true
-
-	fontsizeDef := height * style.AutoFontSizeFraction
-	for _, op := range *daOps {
-		// When Tf specified with font size is 0, it means we should set on our own based on the Rect (autosize).
-		if op.Operand == "Tf" && len(op.Params) == 2 {
-			if name, ok := core.GetName(op.Params[0]); ok {
-				fontname = name
-			}
-			num, err := core.GetNumberAsFloat(op.Params[1])
-			if err == nil {
-				fontsize = num
-			} else {
-				common.Log.Debug("ERROR invalid font size: %v", op.Params[1])
-			}
-			if fontsize == 0 {
-				// Use default if zero.
-				fontsize = fontsizeDef
-			} else {
-				// Disable autosize when font size (>0) explicitly specified.
-				autosize = false
-			}
-			// Skip over (set fontsize in code below).
-			continue
-		}
-		cc.AddOperand(*op)
+	// Process DA operands.
+	apFont, hasTf, err := style.processDA(field, daOps, dr, resources, cc)
+	if err != nil {
+		return nil, err
 	}
 
-	// If fontname not set need to make a new font or use one defined in the resources.
-	// e.g. Helv commonly used for Helvetica.
-	if fontname == nil || dr == nil {
-		// Font not set, revert to Helvetica with name "Helv".
-		fontname = core.MakeName("Helv")
-		helv, err := model.NewStandard14Font("Helvetica")
-		if err != nil {
-			return nil, err
-		}
-		font = helv
-		resources.SetFontByName(*fontname, helv.ToPdfObject())
-	} else {
-		fontobj, has := dr.GetFontByName(*fontname)
-		if !has {
-			return nil, errors.New("font not in DR")
-		}
-		font, err = model.NewPdfFontFromPdfObject(fontobj)
-		if err != nil {
-			common.Log.Debug("ERROR loading default appearance font: %v", err)
-			return nil, err
-		}
-		resources.SetFontByName(*fontname, fontobj)
+	font := apFont.Font
+	fontsize := apFont.Size
+	fontname := core.MakeName(apFont.Name)
+	autosize := fontsize == 0
+	if autosize && hasTf {
+		fontsize = height * style.AutoFontSizeFraction
 	}
+
 	encoder := font.Encoder()
+	if encoder == nil {
+		common.Log.Debug("WARN: font encoder is nil. Assuming identity encoder. Output may be incorrect.")
+		encoder = textencoding.NewIdentityTextEncoder("Identity-H")
+	}
 
 	// If no text, no appearance needed.
 	if len(text) == 0 {
@@ -1134,6 +1065,105 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	}
 
 	return nil
+}
+
+// processDA adds the operands found in the field default appearance stream to
+// the provided content stream creator. It also provides a fallback font, based
+// on the configuration of the AppearanceStyle, if no valid font is specified
+// in the default appearance. The method returns the font to be used when
+// generating the appearance of the field and a boolean value specifying if
+// the DA stream contains any Tf operands.
+func (style *AppearanceStyle) processDA(field *model.PdfField,
+	daOps *contentstream.ContentStreamOperations, dr, resources *model.PdfPageResources,
+	cc *contentstream.ContentCreator) (*AppearanceFont, bool, error) {
+	// Check for fallback fonts.
+	var fallbackFont *AppearanceFont
+	var forceReplace bool
+	if style.Fonts != nil {
+		// Use global fallback, if one is specified.
+		if style.Fonts.Fallback != nil {
+			fallbackFont = style.Fonts.Fallback
+		}
+
+		// Use field fallback, if one is specified.
+		if fieldFallbacks := style.Fonts.FieldFallbacks; fieldFallbacks != nil {
+			if fbFont, ok := fieldFallbacks[field.PartialName()]; ok {
+				fallbackFont = fbFont
+			} else if fullName, err := field.FullName(); err == nil {
+				if fbFont, ok := fieldFallbacks[fullName]; ok {
+					fallbackFont = fbFont
+				}
+			}
+		}
+
+		forceReplace = style.Fonts.ForceReplace
+	}
+
+	// Iterate over the DA operands and extract the font, if specified.
+	var fontName string
+	var fontSize float64
+	var hasTf bool
+	if daOps != nil {
+		for _, op := range *daOps {
+			if op.Operand == "Tf" && len(op.Params) == 2 {
+				if name, ok := core.GetNameVal(op.Params[0]); ok {
+					fontName = name
+				}
+				if size, err := core.GetNumberAsFloat(op.Params[1]); err == nil {
+					fontSize = size
+				}
+				hasTf = true
+				continue
+			}
+			cc.AddOperand(*op)
+		}
+	}
+
+	var apFont *AppearanceFont
+	var apFontObj core.PdfObject
+	if forceReplace && fallbackFont != nil {
+		apFont = fallbackFont
+	} else {
+		// Check if font name was found in the DA stream and search it in the resources.
+		if dr != nil && fontName != "" {
+			if obj, ok := dr.GetFontByName(*core.MakeName(fontName)); ok {
+				if font, err := model.NewPdfFontFromPdfObject(obj); err == nil {
+					apFontObj = obj
+					apFont = &AppearanceFont{Name: fontName, Font: font, Size: fontSize}
+				} else {
+					common.Log.Debug("ERROR: could not load appearance font: %v", err)
+				}
+			}
+		}
+
+		// Use fallback font, if one was specified.
+		if apFont == nil && fallbackFont != nil {
+			apFont = fallbackFont
+		}
+
+		// Use default fallback font (Helvetica).
+		if apFont == nil {
+			font, err := model.NewStandard14Font("Helvetica")
+			if err != nil {
+				return nil, false, err
+			}
+			apFont = &AppearanceFont{Name: "Helv", Font: font, Size: fontSize}
+		}
+	}
+
+	// Add appearance font to the form resources (DR).
+	apFontName := *core.MakeName(apFont.Name)
+	if apFontObj == nil {
+		apFontObj = apFont.Font.ToPdfObject()
+	}
+	if dr != nil && !dr.HasFontByName(apFontName) {
+		dr.SetFontByName(apFontName, apFontObj)
+	}
+	if resources != nil && !resources.HasFontByName(apFontName) {
+		resources.SetFontByName(apFontName, apFontObj)
+	}
+
+	return apFont, hasTf, nil
 }
 
 // WrapContentStream ensures that the entire content stream for a `page` is wrapped within q ... Q operands.

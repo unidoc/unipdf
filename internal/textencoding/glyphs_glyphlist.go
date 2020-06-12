@@ -18,7 +18,13 @@ import (
 )
 
 // MissingCodeRune is the rune returned when there is no matching glyph. It was previously '?'.
-const MissingCodeRune = '\ufffd' // �
+const (
+	// MissingCodeRune replaces runes that can't be decoded. .
+	MissingCodeRune = '\ufffd' // �
+
+	// MissingCodeString replaces strings that can't be decoded.
+	MissingCodeString = string(MissingCodeRune)
+)
 
 // GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
 // TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
