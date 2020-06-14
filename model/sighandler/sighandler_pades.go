@@ -35,8 +35,8 @@ type etsiPAdES struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
 
-	emptySignature    bool
-	emptySignatureLen int
+	emptySignature bool
+	isInitializing bool
 
 	dss                   *model.DSS
 	caCerts               []*x509.Certificate
@@ -53,12 +53,10 @@ type padesSignatureHandler interface {
 }
 
 // NewEmptyEtsiPAdESDetached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
-// signature handler. The generated signature is empty and of size signatureLen.
-// The signatureLen parameter can be 0 for the signature validation.
-func NewEmptyEtsiPAdESDetached(signatureLen int) (padesSignatureHandler, error) {
+// signature handler.
+func NewEmptyEtsiPAdESDetached() (padesSignatureHandler, error) {
 	return &etsiPAdES{
-		emptySignature:    true,
-		emptySignatureLen: signatureLen,
+		emptySignature: true,
 	}, nil
 }
 
@@ -111,7 +109,9 @@ func (a *etsiPAdES) InitSignature(sig *model.PdfSignature) error {
 		return err
 	}
 	digest.Write([]byte("calculate the Contents field size"))
+	handler.isInitializing = true
 	err = handler.Sign(sig, digest)
+	handler.isInitializing = false
 	return err
 }
 
@@ -220,15 +220,6 @@ func (a *etsiPAdES) makeTimestampRequest(server string, encryptedDigest []byte) 
 
 // Sign sets the Contents fields for the PdfSignature.
 func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
-	if a.emptySignature {
-		sigLen := a.emptySignatureLen
-		if sigLen <= 0 {
-			sigLen = 8192
-		}
-
-		sig.Contents = core.MakeHexString(string(make([]byte, sigLen)))
-		return nil
-	}
 
 	buffer := digest.(*bytes.Buffer)
 	signedData, err := pkcs7.NewSignedData(buffer.Bytes())
@@ -270,7 +261,8 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	//	Value: signingCertificate2,
 	//})
 	// Add the signing cert and private key
-	if err := signedData.AddSigner(a.certificate, a.privateKey, config); err != nil {
+
+	if err := signedData.AddSignerChain(a.certificate, a.privateKey, a.caCerts, config); err != nil {
 		return err
 	}
 
@@ -280,21 +272,21 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	// OIDAttributeMessageDigest
 	//signedData.GetSignedData().SignerInfos[0].
 
-	//mDigest := signedData.GetSignedData().SignerInfos[0].EncryptedDigest
-	//for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
-	//	if a.Type.Equal(pkcs7.OIDAttributeMessageDigest) {
-	//		mDigest = a.Value.Bytes
-	//	}
-	//}
-	//tsInfo, err := a.makeTimestampRequest("https://freetsa.org/tsr", mDigest)
-	//
-	//signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
-	//	Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
-	//	Value: tsInfo,
-	//}})
-	//if err != nil {
-	//	return err
-	//}
+	mDigest := signedData.GetSignedData().SignerInfos[0].EncryptedDigest
+	for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
+		if a.Type.Equal(pkcs7.OIDAttributeMessageDigest) {
+			mDigest = a.Value.Bytes
+		}
+	}
+	tsInfo, err := a.makeTimestampRequest("https://freetsa.org/tsr", mDigest)
+
+	signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
+		Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
+		Value: tsInfo,
+	}})
+	if err != nil {
+		return err
+	}
 
 	// Finish() to obtain the signature bytes
 	detachedSignature, err := signedData.Finish()
@@ -302,10 +294,14 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 		return err
 	}
 
-	data := make([]byte, 8192)
+	data := make([]byte, len(detachedSignature)+1024*2)
 	copy(data, detachedSignature)
 
 	sig.Contents = core.MakeHexString(string(data))
+
+	if a.isInitializing {
+		return nil
+	}
 
 	h = sha1.New()
 	h.Write(detachedSignature)

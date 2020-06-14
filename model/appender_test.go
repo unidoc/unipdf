@@ -929,7 +929,7 @@ func validateFile(t *testing.T, fileName string) {
 	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
 	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
 	handler3, _ := sighandler.NewDocTimeStamp("", 0)
-	handler4, _ := sighandler.NewEmptyEtsiPAdESDetached(0)
+	handler4, _ := sighandler.NewEmptyEtsiPAdESDetached()
 
 	handlers := []model.SignatureHandler{handler, handler2, handler3, handler4}
 
@@ -1507,7 +1507,7 @@ func TestValidatePAdESSignature(t *testing.T) {
 
 func TestAppenderSignPAdES(t *testing.T) {
 
-	validateFile(t, "/Users/alekseipavliukov/projects/unipdf/model/testdata/dss/PAdES-LTA.pdf")
+	//validateFile(t, "/Users/alekseipavliukov/projects/unipdf/model/testdata/dss/PAdES-LTA.pdf")
 
 	validateFile(t, testPdfSignedPDFDocument)
 
@@ -1531,7 +1531,7 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	f, _ := ioutil.ReadFile("/Users/alekseipavliukov/Downloads/tester4.p12") //`D:\downloads\user_a_rsa.p12`)
+	f, _ := ioutil.ReadFile("/home/lexa/Downloads/tester1.p12") //`D:\downloads\user_a_rsa.p12`)
 	//	f, _ := ioutil.ReadFile(testPKS12Key) //`D:\downloads\user_a_rsa.p12`)
 	blocks, err := pkcs12.ToPEM(f, testPKS12KeyPassword)
 	if err != nil {
