@@ -316,6 +316,11 @@ var fileExtractionTests = []struct {
 				`The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",`},
 		},
 	},
+	{filename: "Saudi.pdf",
+		pageTerms: map[int][]string{
+			10: []string{"الله"},
+		},
+	},
 	// TODO(peterwilliams97): Reinstate these 2 tests when diacritic combination is fixed.
 	// {filename: "Ito_Formula.pdf",
 	// 	pageTerms: map[int][]string{

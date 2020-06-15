@@ -221,7 +221,7 @@ func (l WriterLogger) logToWriter(f io.Writer, prefix string, format string, arg
 }
 
 func logToWriter(f io.Writer, prefix string, format string, args ...interface{}) {
-	_, file, line, ok := runtime.Caller(2)
+	_, file, line, ok := runtime.Caller(3)
 	if !ok {
 		file = "???"
 		line = 0

@@ -275,7 +275,7 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	outlineRootObj := core.ResolveReference(outlinesObj)
 	common.Log.Trace("Outline root: %v", outlineRootObj)
 
-	if _, isNull := outlineRootObj.(*core.PdfObjectNull); isNull {
+	if isNull := core.IsNullObject(outlineRootObj); isNull {
 		common.Log.Trace("Outline root is null - no outlines")
 		return nil, nil
 	}
