@@ -218,7 +218,7 @@ var fileExtractionTests = []struct {
 	// {filename: "000026.pdf",
 	// 	pageTerms: map[int][]string{
 	// 		1: []string{"Fresh Flower",
-	// 			"Care & Handling ",
+	// 			"Care & Handling",
 	// 		},
 	// 	},
 	// },
