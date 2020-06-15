@@ -8,12 +8,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 
@@ -24,13 +22,6 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
-const (
-	PAdESBaselineB = iota
-	PAdESBaselineT
-	PAdESBaselineLT
-	PAdESBaselineLTA
-)
-
 type etsiPAdES struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
@@ -39,17 +30,19 @@ type etsiPAdES struct {
 	isInitializing bool
 
 	dss                   *model.DSS
-	caCerts               []*x509.Certificate
+	caCert                *x509.Certificate
 	crlDistributionPoints []string
 	ocspServers           []string
+	timestampServerURL    string
 }
 
 type padesSignatureHandler interface {
 	model.SignatureHandler
 	GetDSS() *model.DSS
-	AddCACerts(caCerts []*x509.Certificate)
-	AddCRLDistributionPoints([]string)
-	AddOCSPServer([]string)
+	SetCACert(*x509.Certificate)
+	AddCRLDistributionPoints(...string)
+	AddOCSPServers(...string)
+	SetTimestampServerURL(string)
 }
 
 // NewEmptyEtsiPAdESDetached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
@@ -73,16 +66,20 @@ func (a *etsiPAdES) GetDSS() *model.DSS {
 	return a.dss
 }
 
-func (a *etsiPAdES) AddCACerts(caCerts []*x509.Certificate) {
-	a.caCerts = append(a.caCerts, caCerts...)
+func (a *etsiPAdES) SetCACert(caCert *x509.Certificate) {
+	a.caCert = caCert
 }
 
-func (a *etsiPAdES) AddCRLDistributionPoints(dp []string) {
+func (a *etsiPAdES) AddCRLDistributionPoints(dp ...string) {
 	a.crlDistributionPoints = append(a.crlDistributionPoints, dp...)
 }
 
-func (a *etsiPAdES) AddOCSPServer(servers []string) {
+func (a *etsiPAdES) AddOCSPServers(servers ...string) {
 	a.ocspServers = append(a.ocspServers, servers...)
+}
+
+func (a *etsiPAdES) SetTimestampServerURL(timestampServerURL string) {
+	a.timestampServerURL = timestampServerURL
 }
 
 // InitSignature initialises the PdfSignature.
@@ -159,9 +156,12 @@ func (a *etsiPAdES) makeOCSPRequest(server string, cert *x509.Certificate, caCer
 }
 
 func (a *etsiPAdES) makeOCSPRequests() ([]*core.PdfObjectStream, error) {
+	if a.caCert == nil {
+		return nil, nil
+	}
 	var res []*core.PdfObjectStream
 	for _, server := range a.ocspServers {
-		data, err := a.makeOCSPRequest(server, a.certificate, a.caCerts[0])
+		data, err := a.makeOCSPRequest(server, a.certificate, a.caCert)
 		if err != nil {
 			return nil, err
 		}
@@ -241,36 +241,23 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 
 	signingCertificate.Seq.Seq.Value = h.Sum(nil)
 
-	//var signingCertificate2 struct{
-	//	Seq struct{
-	//		Seq struct{
-	//			Value []byte
-	//		}
-	//	}
-	//}
-	//
-	//signingCertificate2.Seq.Seq.Value = signingCertificate.Seq.Seq.Value
-
 	config.ExtraSignedAttributes = append(config.ExtraSignedAttributes, pkcs7.Attribute{
 		Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 12},
 		Value: signingCertificate,
 	})
 
-	//config.ExtraSignedAttributes = append(config.ExtraSignedAttributes, pkcs7.Attribute{
-	//	Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 47},
-	//	Value: signingCertificate2,
-	//})
-	// Add the signing cert and private key
+	var chain []*x509.Certificate
+	if a.caCert != nil {
+		chain = []*x509.Certificate{a.caCert}
+	}
 
-	if err := signedData.AddSignerChain(a.certificate, a.privateKey, a.caCerts, config); err != nil {
+	if err := signedData.AddSignerChain(a.certificate, a.privateKey, chain, config); err != nil {
 		return err
 	}
 
 	// Call Detach() is you want to remove content from the signature
 	// and generate an S/MIME detached signature
 	signedData.Detach()
-	// OIDAttributeMessageDigest
-	//signedData.GetSignedData().SignerInfos[0].
 
 	mDigest := signedData.GetSignedData().SignerInfos[0].EncryptedDigest
 	for _, a := range signedData.GetSignedData().SignerInfos[0].AuthenticatedAttributes {
@@ -278,7 +265,7 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 			mDigest = a.Value.Bytes
 		}
 	}
-	tsInfo, err := a.makeTimestampRequest("https://freetsa.org/tsr", mDigest)
+	tsInfo, err := a.makeTimestampRequest(a.timestampServerURL, mDigest)
 
 	signedData.GetSignedData().SignerInfos[0].SetUnauthenticatedAttributes([]pkcs7.Attribute{{
 		Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14},
@@ -311,11 +298,13 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 		return err
 	}
 	a.dss.Certs = append(a.dss.Certs, stream)
+
 	OCSPs, err := a.makeOCSPRequests()
 	if err != nil {
 		return err
 	}
 	a.dss.OCSPs = OCSPs
+
 	CLRs, err := a.makeCRLRequests()
 	if err != nil {
 		return err
@@ -339,8 +328,7 @@ func (a *etsiPAdES) Validate(sig *model.PdfSignature, digest model.Hasher) (mode
 // ValidateEx validates PdfSignature with additional information.
 func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *model.PdfReader) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
-	signedS := base64.StdEncoding.EncodeToString(signed)
-	log.Print(signedS)
+
 	h := sha1.New()
 	h.Write(signed)
 	vriKey := strings.ToUpper(hex.EncodeToString(h.Sum(nil)))

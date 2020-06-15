@@ -10,11 +10,10 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
-	"net/url"
-
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/pkcs12"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
-	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/unidoc/unipdf/v3/annotator"
 	"github.com/unidoc/unipdf/v3/common"
@@ -55,6 +53,7 @@ const testPdfAcroFormFile1 = "./testdata/OoPdfFormExample.pdf"
 const testPdfSignedPDFDocument = "./testdata/SampleSignedPDFDocument.pdf"
 
 const testPKS12Key = "./testdata/certificate.p12"
+const testPAdESPKS12Key = "./testdata/dss/tester1.p12"
 const testPKS12KeyPassword = "password"
 
 func tempFile(name string) string {
@@ -1481,7 +1480,6 @@ func TestValidatePAdESSignature(t *testing.T) {
 
 	validateFile(t, "./testdata/dss/pades-5-signatures-and-1-document-timestamp.pdf")
 	validateFile(t, "./testdata/dss/Test.signed_Certipost-2048-SHA512.extended-LTA.pdf")
-	//return
 
 	validateFile(t, "./testdata/dss/doc-firmado.pdf")
 	validateFile(t, "./testdata/dss/doc-firmado-LT.pdf")
@@ -1490,7 +1488,7 @@ func TestValidatePAdESSignature(t *testing.T) {
 	validateFile(t, "./testdata/dss/DSS-1683.pdf")
 
 	validateFile(t, "./testdata/dss/hello_signed_INCSAVE_signed.pdf")
-	//validateFile(t, "./testdata/dss/hello_signed_INCSAVE_signed_EDITED.pdf")
+	validateFile(t, "./testdata/dss/hello_signed_INCSAVE_signed_EDITED.pdf")
 
 	validateFile(t, "./testdata/dss/modified_after_signature.pdf")
 
@@ -1507,11 +1505,18 @@ func TestValidatePAdESSignature(t *testing.T) {
 
 func TestAppenderSignPAdES(t *testing.T) {
 
-	//validateFile(t, "/Users/alekseipavliukov/projects/unipdf/model/testdata/dss/PAdES-LTA.pdf")
+	pass := os.Getenv("TINYCERT_USER_PASS")
+	if len(pass) == 0 {
+		t.Skip(`
+To run this test
+	1. Register on https://www.tinycert.org.
+	2. Set TINYCERT_USER_PASS environment variable.
+	3. Copy your tinycert private certificate to ./testdata/tinycert/cert.pfx.
+	4. Copy your CA certificate to ./testdata/tinycert/cacert.pem.
+`)
+	}
 
 	validateFile(t, testPdfSignedPDFDocument)
-
-	// PAdES baseline signature B-B level
 
 	f1, err := os.Open(testPdfFile1)
 	if err != nil {
@@ -1531,62 +1536,39 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	f, _ := ioutil.ReadFile("/home/lexa/Downloads/tester1.p12") //`D:\downloads\user_a_rsa.p12`)
-	//	f, _ := ioutil.ReadFile(testPKS12Key) //`D:\downloads\user_a_rsa.p12`)
-	blocks, err := pkcs12.ToPEM(f, testPKS12KeyPassword)
+	f, _ := ioutil.ReadFile("./testdata/tinycert/cert.pfx")
+
+	blocks, err := pkcs12.ToPEM(f, pass)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 	log.Print(blocks)
-	privateKey, cert, chain, err := pkcs12.DecodeChain(f, testPKS12KeyPassword)
-	//cert.OCSPServer
+
+	privateKey, cert, err := pkcs12.Decode(f, pass)
+
+	caCertF, _ := ioutil.ReadFile("./testdata/tinycert/cacert.pem")
+
+	certDERBlock, _ := pem.Decode(caCertF)
+
+	cacert, err := x509.ParseCertificate(certDERBlock.Bytes)
+
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-
-	//data, err := ocsp.CreateRequest(cert, chain[0], &ocsp.RequestOptions{Hash: crypto.SHA1})
-	//if err != nil {
-	//	t.Errorf("Fail: %v\n", err)
-	//	return
-	//}
-	//
-	//resp, err := http.Post("http://localhost:80/ejbca/publicweb/status/ocsp", "application/ocsp-request", bytes.NewReader(data))
-	//if err != nil {
-	//	t.Errorf("Fail: %v\n", err)
-	//	return
-	//}
-	//defer resp.Body.Close()
-	//data, _ = ioutil.ReadAll(resp.Body)
-	//OCSPResponse, err := ocsp.ParseResponseForCert(data, nil, chain[0])
-	//if err != nil {
-	//	t.Errorf("Fail: %v\n", err)
-	//	return
-	//}
-
-	//ocsp.Good
-
-	reqURL, err := url.Parse("http://127.0.0.1/ejbca/publicweb/webdist/certdist?cmd=crl&format=PEM")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	q := reqURL.Query()
-	q.Add("issuer", fmt.Sprintf("UID=%s,CN=%s,O=%s", cert.Issuer.Names[0].Value, cert.Issuer.Names[1].Value, cert.Issuer.Names[2].Value))
-	reqURL.RawQuery = q.Encode()
 
 	handler, err := sighandler.NewEtsiPAdESDetached(privateKey.(*rsa.PrivateKey), cert)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	handler.AddCACerts(chain)
-	handler.AddCRLDistributionPoints([]string{reqURL.String()})
-	handler.AddOCSPServer([]string{"http://localhost:80/ejbca/publicweb/status/ocsp"})
-
-	// /Users/alekseipavliukov/Downloads/ManagementCA.pem
-	// /Users/alekseipavliukov/Downloads/ManagementCA-chain.pem
+	// Add certificate verification servers for LTV signature.
+	handler.SetCACert(cacert)
+	handler.AddCRLDistributionPoints(cert.CRLDistributionPoints...)
+	handler.AddOCSPServers(cert.OCSPServer...)
+	timestampServerURL := "https://freetsa.org/tsr"
+	handler.SetTimestampServerURL(timestampServerURL)
 
 	// Create signature field and appearance.
 	signature := model.NewPdfSignature(handler)
@@ -1641,15 +1623,13 @@ func TestAppenderSignPAdES(t *testing.T) {
 
 	appender2.SetDSS(handler.GetDSS())
 
-	outFile := tempFile("appender_sign_page_4.pdf")
+	outFile := tempFile("appender_sign_page_pades.pdf")
 	err = appender2.WriteToFile(outFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 	validateFile(t, outFile)
-
-	// PAdES baseline signature B-T level
 
 	f2, err := os.Open(outFile)
 	if err != nil {
@@ -1669,7 +1649,7 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	handlerTS, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
+	handlerTS, err := sighandler.NewDocTimeStamp(timestampServerURL, crypto.SHA512)
 
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
@@ -1698,14 +1678,13 @@ func TestAppenderSignPAdES(t *testing.T) {
 		return
 	}
 
-	outFile = tempFile("appender-sign-timestamp.pdf")
+	outFile = tempFile("appender_sign_pades_timestamp.pdf")
 	err = appender.WriteToFile(outFile)
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
 	validateFile(t, outFile)
-
 }
 
 func TestAppenderExternalSignature(t *testing.T) {
