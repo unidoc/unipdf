@@ -45,6 +45,8 @@ type PdfAppender struct {
 
 	prevRevisionSize int64
 	written          bool
+
+	dss *DSS
 }
 
 func getPageResources(p *PdfPage) map[core.PdfObjectName]core.PdfObject {
@@ -570,6 +572,12 @@ func (a *PdfAppender) Write(w io.Writer) error {
 		a.updateObjectsDeep(a.acroForm.ToPdfObject(), nil)
 	}
 
+	if a.dss != nil {
+		dss := core.MakeIndirectObject(a.dss.toDict())
+		writer.catalog.Set("DSS", dss)
+		a.updateObjectsDeep(dss, nil)
+	}
+
 	a.addNewObject(writer.infoObj)
 	a.addNewObject(writer.root)
 
@@ -831,4 +839,8 @@ func (a *PdfAppender) WriteToFile(outputPath string) error {
 	}
 	defer fWrite.Close()
 	return a.Write(fWrite)
+}
+
+func (a *PdfAppender) SetDSS(dss *DSS) {
+	a.dss = dss
 }
