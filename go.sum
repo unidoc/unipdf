@@ -36,10 +36,6 @@ github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df h1:1RV3lxQ6L6xGFNhngp
 github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df/go.mod h1:UEzOZUEpJfDpywVJMUT8QiugqEZC29pDq7kdIZhWCr8=
 github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a h1:RLtvUhe4DsUDl66m7MJ8OqBjq8jpWBXPK6/RKtqeTkc=
 github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a/go.mod h1:j+qMWZVpZFTvDey3zxUkSgPJZEX33tDgU/QIA0IzCUw=
-github.com/unidoc/unitype v0.1.0 h1:6zJYMl8XdwFBD45Cmg8Ge13WyE92jwLuK1tk2IsRb9s=
-github.com/unidoc/unitype v0.1.0/go.mod h1:mafyug7zYmDOusqa7G0dJV45qp4b6TDAN+pHN7ZUIBU=
-github.com/unidoc/unitype v0.1.1-0.20200524232639-77d42b645b02 h1:zVMJh0ehLc0amGBcqIh7HWikIGXGBGpmW+Lvz1YVYH8=
-github.com/unidoc/unitype v0.1.1-0.20200524232639-77d42b645b02/go.mod h1:mafyug7zYmDOusqa7G0dJV45qp4b6TDAN+pHN7ZUIBU=
 github.com/unidoc/unitype v0.2.0 h1:N+ZKjwz8UDU0qa1IYzstDLffvQEctFo+bo6b6ZqW+9M=
 github.com/unidoc/unitype v0.2.0/go.mod h1:mafyug7zYmDOusqa7G0dJV45qp4b6TDAN+pHN7ZUIBU=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
