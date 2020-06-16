@@ -110,28 +110,51 @@ func (i *Image) Optimize(objects []core.PdfObject) (optimizedObjects []core.PdfO
 			common.Log.Warning("Error decode the image stream %s")
 			continue
 		}
-		encoder := core.NewDCTEncoder()
-		encoder.ColorComponents = img.ColorComponents
-		encoder.Quality = i.ImageQuality
-		encoder.BitsPerComponent = img.BitsPerComponent
-		encoder.Width = img.Width
-		encoder.Height = img.Height
-		streamData, err := encoder.EncodeBytes(data)
+		dctenc := core.NewDCTEncoder()
+		dctenc.ColorComponents = img.ColorComponents
+		dctenc.Quality = i.ImageQuality
+		dctenc.BitsPerComponent = img.BitsPerComponent
+		dctenc.Width = img.Width
+		dctenc.Height = img.Height
+		streamData, err := dctenc.EncodeBytes(data)
 		if err != nil {
+			common.Log.Debug("ERROR: %v", err)
 			return nil, err
 		}
+
+		var filter core.StreamEncoder
+		filter = dctenc
+
+		// Check if combining with FlateEncoding improves things further.
+		{
+			flate := core.NewFlateEncoder()
+			multienc := core.NewMultiEncoder()
+			multienc.AddEncoder(flate)
+			multienc.AddEncoder(dctenc)
+
+			encoded, err := multienc.EncodeBytes(data)
+			if err != nil {
+				return nil, err
+			}
+			if len(encoded) < len(streamData) {
+				common.Log.Debug("Multi enc improves: %d to %d (orig %d)",
+					len(streamData), len(encoded), len(stream.Stream))
+				streamData = encoded
+				filter = multienc
+			}
+		}
+
 		originalSize := len(stream.Stream)
 		if originalSize < len(streamData) {
+			// Worse - ignoring.
 			continue
 		}
 		newStream := &core.PdfObjectStream{Stream: streamData}
 		newStream.PdfObjectReference = stream.PdfObjectReference
 		newStream.PdfObjectDictionary = core.MakeDict()
-		newStream.PdfObjectDictionary.Merge(stream.PdfObjectDictionary)
-		fn := core.PdfObjectName(encoder.GetFilterName())
-		newStream.PdfObjectDictionary.Set(core.PdfObjectName("Filter"), &fn)
-		ln := core.PdfObjectInteger(int64(len(streamData)))
-		newStream.PdfObjectDictionary.Set(core.PdfObjectName("Length"), &ln)
+		newStream.Merge(stream.PdfObjectDictionary)
+		newStream.Merge(filter.MakeStreamDict())
+		newStream.Set("Length", core.MakeInteger(int64(len(streamData))))
 		replaceTable[stream] = newStream
 		images[index].Stream = newStream
 	}
