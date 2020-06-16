@@ -50,6 +50,7 @@ func (font *PdfFont) SubsetRegistered() error {
 	case *pdfFontType0:
 		err := t.subsetRegistered()
 		if err != nil {
+			common.Log.Debug("Subset error: %v", err)
 			return err
 		}
 		if t.container != nil {
@@ -401,6 +402,7 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 
 	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
+		// Identity only?
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
 		}
@@ -413,6 +415,7 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	} else {
+		// Simple font: byte -> charcode.
 		for _, b := range data {
 			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
@@ -755,8 +758,7 @@ func (base fontCommon) isCIDFont() bool {
 // newFontBaseFieldsFromPdfObject returns `fontObj` as a dictionary the common fields from that
 // dictionary in the fontCommon return.  If there is a problem an error is returned.
 // The fontCommon is the group of fields common to all PDF fonts.
-func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon,
-	error) {
+func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon, error) {
 	font := &fontCommon{}
 
 	if obj, ok := fontObj.(*core.PdfIndirectObject); ok {
