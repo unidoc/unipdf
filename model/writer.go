@@ -272,8 +272,9 @@ func NewPdfWriter() PdfWriter {
 // fills objectToObjectCopyMap to replace the old object to the copy of object if needed.
 // Parameter objectToObjectCopyMap is needed to replace object references to its copies.
 // Because many objects can contain references to another objects like pages to images.
-// If a skip map is provided and the writer is not set to append mode, pages
-// which are not present in the catalog and their fields are added to the map.
+// If a skip map is provided and the writer is not set to append mode, the
+// children objects of pages which are not present in the catalog are added to
+// the map and the page dictionaries are replaced with null objects.
 func (w *PdfWriter) copyObject(obj core.PdfObject,
 	objectToObjectCopyMap map[core.PdfObject]core.PdfObject,
 	skipMap map[core.PdfObject]struct{}, skip bool) core.PdfObject {
@@ -307,6 +308,9 @@ func (w *PdfWriter) copyObject(obj core.PdfObject,
 		objectToObjectCopyMap[obj] = newObj
 		streamObj.PdfObjectDictionary = w.copyObject(t.PdfObjectDictionary, objectToObjectCopyMap, skipMap, skip).(*core.PdfObjectDictionary)
 	case *core.PdfObjectDictionary:
+		// Check if the object is a page dictionary and search it the writer
+		// pages. If not found, replace it with a null object and add the
+		// chain of children objects to the skip map.
 		var unused bool
 		if skipUnusedPages && !skip {
 			if dictType, _ := core.GetNameVal(t.Get("Type")); dictType == "Page" {
@@ -323,6 +327,7 @@ func (w *PdfWriter) copyObject(obj core.PdfObject,
 			dictObj.Set(key, w.copyObject(t.Get(key), objectToObjectCopyMap, skipMap, skip))
 		}
 
+		// If an unused page dictionary is found, replace it with a null object.
 		if unused {
 			newObj = core.MakeNull()
 			skip = false
