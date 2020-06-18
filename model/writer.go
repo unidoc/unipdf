@@ -308,9 +308,9 @@ func (w *PdfWriter) copyObject(obj core.PdfObject,
 		objectToObjectCopyMap[obj] = newObj
 		streamObj.PdfObjectDictionary = w.copyObject(t.PdfObjectDictionary, objectToObjectCopyMap, skipMap, skip).(*core.PdfObjectDictionary)
 	case *core.PdfObjectDictionary:
-		// Check if the object is a page dictionary and search it the writer
-		// pages. If not found, replace it with a null object and add the
-		// chain of children objects to the skip map.
+		// Check if the object is a page dictionary and search it in the
+		// writer pages. If not found, replace it with a null object and add
+		// the chain of children objects to the skip map.
 		var unused bool
 		if skipUnusedPages && !skip {
 			if dictType, _ := core.GetNameVal(t.Get("Type")); dictType == "Page" {

@@ -3067,6 +3067,77 @@ func TestPageLabels(t *testing.T) {
 	require.Equal(t, core.EqualObjects(genPageLabels, pageLabels), true)
 }
 
+func TestReferencedPageDestinations(t *testing.T) {
+	testPages := func(buf *bytes.Buffer, expectedPages, expectedNullDestPages int) {
+		reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+		require.NoError(t, err)
+
+		// Check number of pages in catalog.
+		numPages, err := reader.GetNumPages()
+		require.NoError(t, err)
+		require.Equal(t, expectedPages, numPages)
+
+		// Check outline destionation pages.
+		outlines, err := reader.GetOutlines()
+		require.NoError(t, err)
+
+		var nullDestPages int
+		var validDestPages int
+		for _, entry := range outlines.Entries {
+			pageObj := entry.Dest.PageObj
+			require.NotNil(t, pageObj)
+
+			if core.IsNullObject(entry.Dest.PageObj) {
+				nullDestPages++
+				continue
+			}
+
+			_, _, err := reader.PageFromIndirectObject(pageObj)
+			require.NoError(t, err)
+			validDestPages++
+		}
+
+		require.Equal(t, expectedPages, validDestPages)
+		require.Equal(t, expectedNullDestPages, nullDestPages)
+	}
+
+	// Generate and test input file.
+	c := New()
+	c.AddTOC = true
+
+	numPages := 10
+	for i := 0; i < numPages; i++ {
+		chapter := c.NewChapter(fmt.Sprintf("Chapter %d", i+1))
+		paragraph := c.NewParagraph(fmt.Sprintf("Content for chapter %d", i+1))
+		chapter.Add(paragraph)
+		require.NoError(t, c.Draw(chapter))
+
+		if i < numPages-1 {
+			c.NewPage()
+		}
+	}
+
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+	testPages(buf, 11, 0)
+
+	// Generate and test split input file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	writer := model.NewPdfWriter()
+	for i, page := range reader.PageList {
+		if i%2 == 0 {
+			require.NoError(t, writer.AddPage(page))
+		}
+	}
+	writer.AddOutlineTree(reader.GetOutlineTree())
+
+	buf = bytes.NewBuffer(nil)
+	require.NoError(t, writer.Write(buf))
+	testPages(buf, 6, 5)
+}
+
 var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
 
 // renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
