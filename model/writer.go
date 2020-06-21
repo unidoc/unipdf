@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"sort"
@@ -21,7 +20,6 @@ import (
 	"time"
 
 	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/common/license"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/core/security"
 	"github.com/unidoc/unipdf/v3/core/security/crypt"
@@ -65,12 +63,7 @@ func SetPdfCreationDate(creationDate time.Time) {
 }
 
 func getPdfCreator() string {
-	if len(pdfCreator) > 0 {
-		return pdfCreator
-	}
-
-	// Return default.
-	return "UniDoc - http://unidoc.io"
+	return pdfCreator
 }
 
 // SetPdfCreator sets the Creator attribute of the output PDF.
@@ -97,13 +90,7 @@ func SetPdfModifiedDate(modifiedDate time.Time) {
 }
 
 func getPdfProducer() string {
-	licenseKey := license.GetLicenseKey()
-	if len(pdfProducer) > 0 && (licenseKey.IsLicensed() || flag.Lookup("test.v") != nil) {
-		return pdfProducer
-	}
-
-	// Return default.
-	return fmt.Sprintf("UniDoc v%s (%s) - http://unidoc.io", getUniDocVersion(), licenseKey.TypeToString())
+	return pdfProducer
 }
 
 // SetPdfProducer sets the Producer attribute of the output PDF.
@@ -194,6 +181,7 @@ func NewPdfWriter() PdfWriter {
 	w.objectsMap = map[core.PdfObject]struct{}{}
 	w.objects = []core.PdfObject{}
 	w.pendingObjects = map[core.PdfObject][]*core.PdfObjectDictionary{}
+	
 	w.traversed = map[core.PdfObject]struct{}{}
 
 	// PDF Version. Can be changed if using more advanced features in PDF.
@@ -650,33 +638,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 }
 
 func procPage(p *PdfPage) {
-	lk := license.GetLicenseKey()
-	if lk != nil && lk.IsLicensed() {
-		return
-	}
-
-	// Add font, if needed.
-	fontName := core.PdfObjectName("UF1")
-	if !p.Resources.HasFontByName(fontName) {
-		p.Resources.SetFontByName(fontName, DefaultFont().ToPdfObject())
-	}
-
-	var ops []string
-	ops = append(ops, "q")
-	ops = append(ops, "BT")
-	ops = append(ops, fmt.Sprintf("/%s 14 Tf", fontName.String()))
-	ops = append(ops, "1 0 0 rg")
-	ops = append(ops, "10 10 Td")
-	s := "Unlicensed UniDoc - Get a license on https://unidoc.io"
-	ops = append(ops, fmt.Sprintf("(%s) Tj", s))
-	ops = append(ops, "ET")
-	ops = append(ops, "Q")
-	contentstr := strings.Join(ops, "\n")
-
-	p.AddContentStreamByString(contentstr)
-
-	// Update page object.
-	p.ToPdfObject()
+	return
 }
 
 // AddOutlineTree adds outlines to a PDF file.
@@ -945,12 +907,6 @@ func (w *PdfWriter) writeBytes(bb []byte) {
 // Write writes out the PDF.
 func (w *PdfWriter) Write(writer io.Writer) error {
 	common.Log.Trace("Write()")
-
-	lk := license.GetLicenseKey()
-	if lk == nil || !lk.IsLicensed() {
-		fmt.Printf("Unlicensed copy of unidoc\n")
-		fmt.Printf("To get rid of the watermark - Please get a license on https://unidoc.io\n")
-	}
 
 	// Outlines.
 	if w.outlineTree != nil {
