@@ -683,7 +683,6 @@ func TestParagraphChinese(t *testing.T) {
 		"河上白云",
 	}
 
-
 	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
 	require.NoError(t, err)
 
@@ -721,7 +720,6 @@ func TestParagraphChinese(t *testing.T) {
 		// Trim off extra license data.
 		text = text[:len(expected)]
 	}
-
 	require.Equal(t, expected, text)
 
 	testRender(t, fname)
