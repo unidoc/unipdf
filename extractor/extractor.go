@@ -6,6 +6,8 @@
 package extractor
 
 import (
+	"fmt"
+
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -46,7 +48,7 @@ func New(page *model.PdfPage) (*Extractor, error) {
 
 	mediaBox, err := page.GetMediaBox()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extractor requires mediaBox. %w", err)
 	}
 	e := &Extractor{
 		contents:    contents,

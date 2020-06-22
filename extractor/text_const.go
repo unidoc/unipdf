@@ -11,7 +11,7 @@ const (
 	verboseGeom     = false
 	verbosePage     = false
 	verbosePara     = false
-	verboseParaLine = verbosePara && true
+	verboseParaLine = verbosePara && false
 	verboseParaWord = verboseParaLine && false
 	verboseTable    = false
 )
