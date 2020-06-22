@@ -70,7 +70,7 @@ func procBuf(pt *PageText) {
 	buf.WriteString(pt.viewText)
 
 	s := "- [Unlicensed UniDoc - Get a license on https://unidoc.io]"
-	if buf.Len() > 100 {
+	if buf.Len() > 102 {
 		s = "... [Truncated - Unlicensed UniDoc - Get a license on https://unidoc.io]"
 		buf.Truncate(buf.Len() - 100)
 	}
