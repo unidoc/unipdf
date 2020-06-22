@@ -52,9 +52,7 @@ var doStress bool
 func init() {
 	flag.BoolVar(&doStress, "extractor-stresstest", false, "Run text extractor stress tests.")
 	common.SetLogger(common.NewConsoleLogger(common.LogLevelInfo))
-	if flag.Lookup("test.v") != nil || true {
-		isTesting = true
-	}
+	isTesting = true
 }
 
 // TestTextExtractionFragments tests text extraction on the PDF fragments in `fragmentTests`.

@@ -104,6 +104,9 @@ type simpleEncoding struct {
 	// one byte encoding: CharCode <-> byte
 	encode map[rune]byte
 	decode map[byte]rune
+
+	// runes registered by encoder for tracking what runes are used for subsetting.
+	registeredMap map[rune]struct{}
 }
 
 // Encode converts the Go unicode string to a PDF encoded string.
@@ -214,6 +217,10 @@ func (enc *simpleEncoding) Charcodes() []CharCode {
 
 func (enc *simpleEncoding) RuneToCharcode(r rune) (CharCode, bool) {
 	b, ok := enc.encode[r]
+	if enc.registeredMap == nil {
+		enc.registeredMap = map[rune]struct{}{}
+	}
+	enc.registeredMap[r] = struct{}{} // Register use (subsetting).
 	return CharCode(b), ok
 }
 
@@ -223,6 +230,10 @@ func (enc *simpleEncoding) CharcodeToRune(code CharCode) (rune, bool) {
 	}
 	b := byte(code)
 	r, ok := enc.decode[b]
+	if enc.registeredMap == nil {
+		enc.registeredMap = map[rune]struct{}{}
+	}
+	enc.registeredMap[r] = struct{}{} // Register use (subsetting).
 	return r, ok
 }
 

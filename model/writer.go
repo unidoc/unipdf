@@ -133,6 +133,7 @@ func SetPdfTitle(title string) {
 type PdfWriter struct {
 	root        *core.PdfIndirectObject
 	pages       *core.PdfIndirectObject
+	pagesMap    map[core.PdfObject]struct{} // Pages lookup table.
 	objects     []core.PdfObject            // Objects to write.
 	objectsMap  map[core.PdfObject]struct{} // Quick lookup table.
 	outlines    []*core.PdfIndirectObject
@@ -256,6 +257,7 @@ func NewPdfWriter() PdfWriter {
 	pages.PdfObject = pagedict
 
 	w.pages = &pages
+	w.pagesMap = map[core.PdfObject]struct{}{}
 	w.addObject(w.pages)
 
 	catalogDict.Set("Pages", &pages)
@@ -270,114 +272,143 @@ func NewPdfWriter() PdfWriter {
 // fills objectToObjectCopyMap to replace the old object to the copy of object if needed.
 // Parameter objectToObjectCopyMap is needed to replace object references to its copies.
 // Because many objects can contain references to another objects like pages to images.
-func copyObject(obj core.PdfObject, objectToObjectCopyMap map[core.PdfObject]core.PdfObject) core.PdfObject {
+// If a skip map is provided and the writer is not set to append mode, the
+// children objects of pages which are not present in the catalog are added to
+// the map and the page dictionaries are replaced with null objects.
+func (w *PdfWriter) copyObject(obj core.PdfObject,
+	objectToObjectCopyMap map[core.PdfObject]core.PdfObject,
+	skipMap map[core.PdfObject]struct{}, skip bool) core.PdfObject {
 	if newObj, ok := objectToObjectCopyMap[obj]; ok {
 		return newObj
 	}
 
+	newObj := obj
+	skipUnusedPages := !w.appendMode && skipMap != nil
 	switch t := obj.(type) {
 	case *core.PdfObjectArray:
-		newObj := &core.PdfObjectArray{}
+		arrObj := core.MakeArray()
+		newObj = arrObj
 		objectToObjectCopyMap[obj] = newObj
 		for _, val := range t.Elements() {
-			newObj.Append(copyObject(val, objectToObjectCopyMap))
+			arrObj.Append(w.copyObject(val, objectToObjectCopyMap, skipMap, skip))
 		}
-		return newObj
 	case *core.PdfObjectStreams:
-		newObj := &core.PdfObjectStreams{PdfObjectReference: t.PdfObjectReference}
+		streamsObj := &core.PdfObjectStreams{PdfObjectReference: t.PdfObjectReference}
+		newObj = streamsObj
 		objectToObjectCopyMap[obj] = newObj
 		for _, val := range t.Elements() {
-			newObj.Append(copyObject(val, objectToObjectCopyMap))
+			streamsObj.Append(w.copyObject(val, objectToObjectCopyMap, skipMap, skip))
 		}
-		return newObj
 	case *core.PdfObjectStream:
-		newObj := &core.PdfObjectStream{
+		streamObj := &core.PdfObjectStream{
 			Stream:             t.Stream,
 			PdfObjectReference: t.PdfObjectReference,
 		}
+		newObj = streamObj
 		objectToObjectCopyMap[obj] = newObj
-		newObj.PdfObjectDictionary = copyObject(t.PdfObjectDictionary, objectToObjectCopyMap).(*core.PdfObjectDictionary)
-		return newObj
+		streamObj.PdfObjectDictionary = w.copyObject(t.PdfObjectDictionary, objectToObjectCopyMap, skipMap, skip).(*core.PdfObjectDictionary)
 	case *core.PdfObjectDictionary:
-		newObj := core.MakeDict()
+		// Check if the object is a page dictionary and search it in the
+		// writer pages. If not found, replace it with a null object and add
+		// the chain of children objects to the skip map.
+		var unused bool
+		if skipUnusedPages && !skip {
+			if dictType, _ := core.GetNameVal(t.Get("Type")); dictType == "Page" {
+				_, ok := w.pagesMap[t]
+				skip = !ok
+				unused = skip
+			}
+		}
+
+		dictObj := core.MakeDict()
+		newObj = dictObj
 		objectToObjectCopyMap[obj] = newObj
 		for _, key := range t.Keys() {
-			val := t.Get(key)
-			newObj.Set(key, copyObject(val, objectToObjectCopyMap))
+			dictObj.Set(key, w.copyObject(t.Get(key), objectToObjectCopyMap, skipMap, skip))
 		}
-		return newObj
+
+		// If an unused page dictionary is found, replace it with a null object.
+		if unused {
+			newObj = core.MakeNull()
+			skip = false
+		}
 	case *core.PdfIndirectObject:
-		newObj := &core.PdfIndirectObject{
+		indObj := &core.PdfIndirectObject{
 			PdfObjectReference: t.PdfObjectReference,
 		}
+		newObj = indObj
 		objectToObjectCopyMap[obj] = newObj
-		newObj.PdfObject = copyObject(t.PdfObject, objectToObjectCopyMap)
-		return newObj
+		indObj.PdfObject = w.copyObject(t.PdfObject, objectToObjectCopyMap, skipMap, skip)
 	case *core.PdfObjectString:
-		newObj := &core.PdfObjectString{}
-		*newObj = *t
+		strObj := *t
+		newObj = &strObj
 		objectToObjectCopyMap[obj] = newObj
-		return newObj
 	case *core.PdfObjectName:
-		newObj := core.PdfObjectName(*t)
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		nameObj := core.PdfObjectName(*t)
+		newObj = &nameObj
+		objectToObjectCopyMap[obj] = newObj
 	case *core.PdfObjectNull:
-		newObj := core.PdfObjectNull{}
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		newObj = core.MakeNull()
+		objectToObjectCopyMap[obj] = newObj
 	case *core.PdfObjectInteger:
-		newObj := core.PdfObjectInteger(*t)
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		intObj := core.PdfObjectInteger(*t)
+		newObj = &intObj
+		objectToObjectCopyMap[obj] = newObj
 	case *core.PdfObjectReference:
-		newObj := core.PdfObjectReference(*t)
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		refObj := core.PdfObjectReference(*t)
+		newObj = &refObj
+		objectToObjectCopyMap[obj] = newObj
 	case *core.PdfObjectFloat:
-		newObj := core.PdfObjectFloat(*t)
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		floatObj := core.PdfObjectFloat(*t)
+		newObj = &floatObj
+		objectToObjectCopyMap[obj] = newObj
 	case *core.PdfObjectBool:
-		newObj := core.PdfObjectBool(*t)
-		objectToObjectCopyMap[obj] = &newObj
-		return &newObj
+		boolObj := core.PdfObjectBool(*t)
+		newObj = &boolObj
+		objectToObjectCopyMap[obj] = newObj
 	case *pdfSignDictionary:
-		newObj := &pdfSignDictionary{
+		sigObj := &pdfSignDictionary{
 			PdfObjectDictionary: core.MakeDict(),
 			handler:             t.handler,
 			signature:           t.signature,
 		}
+		newObj = sigObj
 		objectToObjectCopyMap[obj] = newObj
 		for _, key := range t.Keys() {
-			val := t.Get(key)
-			newObj.Set(key, copyObject(val, objectToObjectCopyMap))
+			sigObj.Set(key, w.copyObject(t.Get(key), objectToObjectCopyMap, skipMap, skip))
 		}
-		return newObj
 	default:
 		common.Log.Info("TODO(a5i): implement copyObject for %+v", obj)
 	}
-	// return other objects as is
-	return obj
+
+	if skipUnusedPages && skip {
+		skipMap[obj] = struct{}{}
+	}
+
+	return newObj
 }
 
 // copyObjects makes objects copy and set as working.
 func (w *PdfWriter) copyObjects() {
 	objectToObjectCopyMap := make(map[core.PdfObject]core.PdfObject)
-	objects := make([]core.PdfObject, len(w.objects))
+	objects := make([]core.PdfObject, 0, len(w.objects))
 	objectsMap := make(map[core.PdfObject]struct{}, len(w.objects))
-	for i, obj := range w.objects {
-		newObject := copyObject(obj, objectToObjectCopyMap)
-		objects[i] = newObject
+	skipMap := make(map[core.PdfObject]struct{})
+	for _, obj := range w.objects {
+		newObject := w.copyObject(obj, objectToObjectCopyMap, skipMap, false)
+		if _, ok := skipMap[obj]; ok {
+			continue
+		}
+		objects = append(objects, newObject)
 		objectsMap[newObject] = struct{}{}
 	}
 
 	w.objects = objects
 	w.objectsMap = objectsMap
-	w.infoObj = copyObject(w.infoObj, objectToObjectCopyMap).(*core.PdfIndirectObject)
-	w.root = copyObject(w.root, objectToObjectCopyMap).(*core.PdfIndirectObject)
+	w.infoObj = w.copyObject(w.infoObj, objectToObjectCopyMap, nil, false).(*core.PdfIndirectObject)
+	w.root = w.copyObject(w.root, objectToObjectCopyMap, nil, false).(*core.PdfIndirectObject)
 	if w.encryptObj != nil {
-		w.encryptObj = copyObject(w.encryptObj, objectToObjectCopyMap).(*core.PdfIndirectObject)
+		w.encryptObj = w.copyObject(w.encryptObj, objectToObjectCopyMap, nil, false).(*core.PdfIndirectObject)
 	}
 
 	// Update replace map.
@@ -631,6 +662,8 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 		return errors.New("invalid Pages Kids obj (not an array)")
 	}
 	kids.Append(pageObj)
+	w.pagesMap[pDict] = struct{}{}
+
 	pageCount, ok := core.GetInt(pagesDict.Get("Count"))
 	if !ok {
 		return errors.New("invalid Pages Count object (not an integer)")

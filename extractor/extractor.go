@@ -44,14 +44,14 @@ func New(page *model.PdfPage) (*Extractor, error) {
 	// fmt.Printf("%s\n", contents)
 	// fmt.Println("========================= ::: =========================")
 
-	mediaBox, err := page.GetMediaBox()
-	if err != nil {
-		return nil, err
-	}
+	return NewFromContents(contents, page.Resources)
+}
+
+// NewFromContents creates a new extractor from contents and page resources.
+func NewFromContents(contents string, resources *model.PdfPageResources) (*Extractor, error) {
 	e := &Extractor{
 		contents:    contents,
-		resources:   page.Resources,
-		mediaBox:    *mediaBox,
+		resources:   resources,
 		fontCache:   map[string]fontEntry{},
 		formResults: map[string]textResult{},
 	}

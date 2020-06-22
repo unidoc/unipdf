@@ -466,7 +466,11 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 				common.Log.Trace("showTextAdjusted: Bad string arg. o=%s args=%+v", o, args)
 				return core.ErrTypeError
 			}
-			to.renderText(charcodes)
+			err := to.renderText(charcodes)
+			if err != nil {
+				common.Log.Debug("Render text error: %v", err)
+				return err
+			}
 		default:
 			common.Log.Debug("ERROR: showTextAdjusted. Unexpected type (%T) args=%+v", o, args)
 			return core.ErrTypeError
@@ -795,6 +799,7 @@ func (to *textObject) renderText(data []byte) error {
 			continue
 		}
 
+		// TODO(gunnsth): Assuming 1:1 charcode[i] <-> rune[i] mapping.
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
@@ -858,6 +863,8 @@ func (to *textObject) renderText(data []byte) error {
 		} else if font.Encoder() == nil {
 			common.Log.Debug("ERROR: No encoding. font=%s", font)
 		} else {
+			// TODO: This lookup seems confusing. Went from bytes <-> charcodes already.
+			// NOTE: This is needed to register runes by the font encoder - for subsetting (optimization).
 			original, ok := font.Encoder().CharcodeToRune(code)
 			if ok {
 				mark.original = string(original)
