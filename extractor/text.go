@@ -24,7 +24,7 @@ import (
 
 // maxFormStack is the maximum form stack recursion depth. It has to be low enough to avoid a stack
 // overflow and high enough to accomodate customers' PDFs
-const maxFormStack = 10
+const maxFormStack = 20
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // It takes into account character encodings in the PDF file, which are decoded by
@@ -46,13 +46,15 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 }
 
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
+// TODO(peterwilliams97): The stats complicate this function signature and aren't very useful.
+//                        Replace with a function like Extract() (*PageText, error)
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, transform.IdentityMatrix(), 0)
 	if err != nil {
 		return nil, numChars, numMisses, err
 	}
 	pt.computeViews()
-	// procBuf(pt)
+	procBuf(pt)
 
 	return pt, numChars, numMisses, err
 }
@@ -101,12 +103,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 			}
 
 			switch operand {
-			case "q":
+			case "q": //Push current graphics state to the stack.
 				savedStates.push(&state)
-			case "Q":
-				if verboseGeom {
-					common.Log.Info("Restore state: %s", savedStates.String())
-				}
+			case "Q": // // Pop graphics state from the stack.
 				if !savedStates.empty() {
 					state = *savedStates.top()
 					if len(savedStates) >= 2 {
@@ -128,7 +127,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				graphicsState := gs
 				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
 				to = newTextObject(e, resources, graphicsState, &state, &savedStates)
-
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
@@ -434,7 +432,6 @@ func (to *textObject) setTextMatrix(f []float64) {
 	a, b, c, d, tx, ty := f[0], f[1], f[2], f[3], f[4], f[5]
 	to.tm = transform.NewMatrix(a, b, c, d, tx, ty)
 	to.tlm = to.tm
-	to.logCursor()
 }
 
 // showText "Tj". Show a text string.
@@ -459,18 +456,13 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			}
 			td := translationMatrix(transform.Point{X: dx, Y: dy})
 			to.tm.Concat(td)
-			to.logCursor()
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
 			if !ok {
 				common.Log.Trace("showTextAdjusted: Bad string arg. o=%s args=%+v", o, args)
 				return core.ErrTypeError
 			}
-			err := to.renderText(charcodes)
-			if err != nil {
-				common.Log.Debug("Render text error: %v", err)
-				return err
-			}
+			to.renderText(charcodes)
 		default:
 			common.Log.Debug("ERROR: showTextAdjusted. Unexpected type (%T) args=%+v", o, args)
 			return core.ErrTypeError
@@ -733,23 +725,6 @@ func (to *textObject) reset() {
 	to.tm = transform.IdentityMatrix()
 	to.tlm = transform.IdentityMatrix()
 	to.marks = nil
-	to.logCursor()
-}
-
-// logCursor is for debugging only. Remove !@#$
-func (to *textObject) logCursor() {
-	return
-	state := to.state
-	tfs := state.tfs
-	th := state.th / 100.0
-	stateMatrix := transform.NewMatrix(
-		tfs*th, 0,
-		0, tfs,
-		0, state.trise)
-	trm := to.gs.CTM.Mult(to.tm).Mult(stateMatrix)
-	cur := translation(trm)
-	common.Log.Info("showTrm: %s cur=%.2f tm=%.2f CTM=%.2f",
-		fileLine(1, false), cur, to.tm, to.gs.CTM)
 }
 
 // renderText processes and renders byte array `data` for extraction purposes.
@@ -799,7 +774,6 @@ func (to *textObject) renderText(data []byte) error {
 			continue
 		}
 
-		// TODO(gunnsth): Assuming 1:1 charcode[i] <-> rune[i] mapping.
 		code := charcodes[i]
 		// The location of the text on the page in device coordinates is given by trm, the text
 		// rendering matrix.
@@ -875,9 +849,6 @@ func (to *textObject) renderText(data []byte) error {
 
 		// update the text matrix by the displacement of the text location.
 		to.tm.Concat(td)
-		if i != len(texts)-1 {
-			to.logCursor()
-		}
 	}
 
 	return nil
@@ -920,8 +891,8 @@ func isTextSpace(text string) bool {
 type PageText struct {
 	marks      []*textMark        // Texts and their positions on a PDF page.
 	viewText   string             // Extracted page text.
-	viewMarks  []TextMark         // Public view of text marks`.
-	viewTables []TextTable        // Public view of text table`.
+	viewMarks  []TextMark         // Public view of text marks.
+	viewTables []TextTable        // Public view of text tables.
 	pageSize   model.PdfRectangle // Page size. Used to calculate depth.
 }
 
@@ -969,7 +940,7 @@ func (pt *PageText) computeViews() {
 	paras.writeText(b)
 	pt.viewText = b.String()
 	pt.viewMarks = paras.toTextMarks()
-	pt.viewTables = paras.toTables()
+	pt.viewTables = paras.tables()
 }
 
 // TextMarkArray is a collection of TextMarks.
@@ -1089,7 +1060,6 @@ func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
 //      bbox, ok := spanMarks.BBox()
 //      // handle errors
 type TextMark struct {
-	count int64
 	// Text is the extracted text. It has been decoded to Unicode via ToUnicode().
 	Text string
 	// Original is the text in the PDF. It has not been decoded like `Text`.
@@ -1109,6 +1079,8 @@ type TextMark struct {
 	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
+	// For debugging
+	count int64
 }
 
 // String returns a string describing `tm`.
@@ -1138,6 +1110,8 @@ var spaceMark = TextMark{
 
 // TextTable represents a table.
 // Cells are ordered top-to-bottom, left-to-right.
+// Cells[y] is the (0-offset) y'th row in the table.
+// Cells[y][x] is the (0-offset) x'th column in the table.
 type TextTable struct {
 	W, H  int
 	Cells [][]string

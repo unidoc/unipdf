@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"unicode"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
@@ -29,14 +28,20 @@ type textPara struct {
 	model.PdfRectangle                    // Bounding box.
 	eBBox              model.PdfRectangle // Extended bounding box needed to compute reading order.
 	lines              []*textLine        // Paragraph text gets broken into lines.
-	table              *textTable
+	table              *textTable         // A table in which the cells which textParas.
+	isCell             bool               // Is this para a cell in a textTable>
+	// The unique highest para completely below this that overlaps it in the y-direction, if one exists.
+	right *textPara
+	// The unique highest para completely below `this that overlaps it in the x-direction, if one exists.
+	below *textPara
 }
 
-// newTextPara returns a textPara with the same bouding rectangle as `strata`.
-func newTextPara(strata *textStrata) *textPara {
+// makeTextPara returns a textPara with bounding rectangle `bbox`.
+func makeTextPara(bbox model.PdfRectangle, lines []*textLine) *textPara {
 	para := textPara{
 		serial:       serial.para,
-		PdfRectangle: strata.PdfRectangle,
+		PdfRectangle: bbox,
+		lines:        lines,
 	}
 	serial.para++
 	return &para
@@ -117,7 +122,7 @@ func (p *textPara) toTextMarks(offset *int) []TextMark {
 func (p *textPara) writeCellText(w io.Writer) {
 	for il, line := range p.lines {
 		lineText := line.text()
-		reduced := doHyphens && line.hyphenated && il != len(p.lines)-1
+		reduced := doHyphens && line.endsInHyphen() && il != len(p.lines)-1
 		if reduced { // Line ending with hyphen. Remove it.
 			lineText = removeLastRune(lineText)
 		}
@@ -134,14 +139,8 @@ func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 	var marks []TextMark
 	for il, line := range p.lines {
 		lineMarks := line.toTextMarks(offset)
-		reduced := doHyphens && line.hyphenated && il != len(p.lines)-1
+		reduced := doHyphens && line.endsInHyphen() && il != len(p.lines)-1
 		if reduced { // Line ending with hyphen. Remove it.
-			if len([]rune(line.text())) < minHyphenation {
-				panic(line.text())
-			}
-			if len(lineMarks) < 1 {
-				panic(line.text())
-			}
 			lineMarks = removeLastTextMarkRune(lineMarks, offset)
 		}
 		marks = append(marks, lineMarks...)
@@ -156,9 +155,6 @@ func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
 	tm := marks[len(marks)-1]
 	runes := []rune(tm.Text)
-	if unicode.IsSpace(runes[len(runes)-1]) {
-		panic(tm)
-	}
 	if len(runes) == 1 {
 		marks = marks[:len(marks)-1]
 		tm1 := marks[len(marks)-1]
@@ -174,9 +170,6 @@ func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
 // removeLastRune removes the last run from `text`.
 func removeLastRune(text string) string {
 	runes := []rune(text)
-	if len(runes) < 2 {
-		panic(text)
-	}
 	return string(runes[:len(runes)-1])
 }
 
@@ -195,89 +188,85 @@ func (p *textPara) bbox() model.PdfRectangle {
 	return p.PdfRectangle
 }
 
-// fontsize return the para's fontsize which we take to be the first line's fontsize
+// fontsize return the para's fontsize which we take to be the first line's fontsize.
+// Caller must check that `p` has at least one line.
 func (p *textPara) fontsize() float64 {
-	if len(p.lines) == 0 {
-		panic(p)
-	}
 	return p.lines[0].fontsize
 }
 
-// composePara builds a textPara from the words in `strata`.
-// It does this by arranging the words in `strata` into lines.
-func (strata *textStrata) composePara() *textPara {
-	// Sort the words in `para`'s bins in the reading direction.
-	strata.sort()
-	para := newTextPara(strata)
+// arrangeText arranges the word fragments (textWords) in `b` into lines and words.
+// The lines are groups of textWords of similar depths.
+// The textWords in each line are sorted in reading order and those that start whole words (as
+// opposed to word fragments) have their `newWord` flag set to true.
+func (b *wordBag) arrangeText() *textPara {
+	// Sort the words in `b`'s bins in the reading direction.
+	b.sort()
 
-	// build the lines
-	for _, depthIdx := range strata.depthIndexes() {
-		for !strata.empty(depthIdx) {
+	var lines []*textLine
 
-			// words[0] is the leftmost word from bins near `depthIdx`.
-			firstReadingIdx := strata.firstReadingIndex(depthIdx)
-			// create a new line
-			words := strata.getStratum(firstReadingIdx)
-			word0 := words[0]
-			line := newTextLine(strata, firstReadingIdx)
-			lastWord := words[0]
+	// Build the lines by iterating through the words from top to bottom.
+	// In the current implementation, we do this by emptying the word bins in increasing depth order.
+	for _, depthIdx := range b.depthIndexes() {
+		for !b.empty(depthIdx) {
 
-			// Compute the search range.
-			// This is based on word0, the first word in the `firstReadingIdx` bin.
-			fontSize := strata.fontsize
-			minDepth := word0.depth - lineDepthR*fontSize
-			maxDepth := word0.depth + lineDepthR*fontSize
-			maxIntraWordGap := maxIntraWordGapR * fontSize
+			// firstWord is the left-most word near the top of the bin with index `depthIdx`. As we
+			// are scanning down `b`, this is the  left-most word near the top of the `b`
+			firstReadingIdx := b.firstReadingIndex(depthIdx)
+			firstWord := b.firstWord(firstReadingIdx)
+			// Create a new line.
+			line := newTextLine(b, firstReadingIdx)
 
+			// Compute the search range based on `b` first word fontsize
+			minDepth := firstWord.depth - lineDepthR*b.fontsize
+			maxDepth := firstWord.depth + lineDepthR*b.fontsize
+			maxIntraWordGap := maxIntraWordGapR * b.fontsize
+			maxIntraLineOverlap := maxIntraLineOverlapR * b.fontsize
+
+			// Find the rest of the words in the line that starts with `firstWord`
+			// Search down from `minDepth`, half a line above `firstWord` to `maxDepth`, half a line
+			// below `firstWord` for the leftmost word to the right of the last word in `line`.
 		remainingWords:
-			// find the rest of the words in this line
 			for {
-				// Search for `leftWord`, the left-most word w: minDepth <= w.depth <= maxDepth.
-				var leftWord *textWord
-				leftDepthIdx := 0
-				for _, depthIdx := range strata.depthBand(minDepth, maxDepth) {
-					words := strata.stratumBand(depthIdx, minDepth, maxDepth)
-					if len(words) == 0 {
+				var nextWord *textWord // The next word to add to `line` if there is one.
+				nextDepthIdx := 0      // nextWord's depthIndex
+				// We start with this highest remaining word
+				for _, depthIdx := range b.depthBand(minDepth, maxDepth) {
+					word := b.highestword(depthIdx, minDepth, maxDepth)
+					if word == nil {
 						continue
 					}
-					word := words[0]
-					gap := gapReading(word, lastWord)
-					if gap < -maxIntraLineOverlapR*fontSize {
+					gap := gapReading(word, line.words[len(line.words)-1])
+					if gap < -maxIntraLineOverlap { // Reverted too far to left. Can't be same line.
 						break remainingWords
 					}
-					// No `leftWord` or `word` to the left of `leftWord`.
-					if gap < maxIntraWordGap {
-						if leftWord == nil || diffReading(word, leftWord) < 0 {
-							leftDepthIdx = depthIdx
-							leftWord = word
-						}
+					if gap > maxIntraWordGap { // Advanced too far too right. Might not be same line.
+						continue
 					}
+					if nextWord != nil && diffReading(word, nextWord) >= 0 { // Not leftmost world
+						continue
+					}
+					nextWord = word
+					nextDepthIdx = depthIdx
 				}
-				if leftWord == nil {
+				if nextWord == nil { // No more words in this line.
 					break
 				}
-
-				// remove `leftWord` from `strata`[`leftDepthIdx`], and append it to `line`.
-				line.moveWord(strata, leftDepthIdx, leftWord)
-				lastWord = leftWord
-				// // TODO(peterwilliams97): Replace lastWord with line.words[len(line.words)-1] ???
-				// if lastWord != line.words[len(line.words)-1] {
-				// 	panic("ddd")
-				// }
+				// remove `nextWord` from `b` and append it to `line`.
+				line.pullWord(b, nextWord, nextDepthIdx)
 			}
 
-			line.mergeWordFragments()
-			// add the line
-			para.lines = append(para.lines, line)
+			line.markWordBoundaries()
+			lines = append(lines, line)
+
 		}
 	}
 
-	sort.Slice(para.lines, func(i, j int) bool {
-		return diffDepthReading(para.lines[i], para.lines[j]) < 0
+	sort.Slice(lines, func(i, j int) bool {
+		return diffDepthReading(lines[i], lines[j]) < 0
 	})
-	if len(para.lines) == 0 {
-		panic(para)
-	}
+
+	para := makeTextPara(b.PdfRectangle, lines)
+
 	if verbosePara {
 		common.Log.Info("!!! para=%s", para.String())
 		if verboseParaLine {
@@ -313,11 +302,5 @@ func (paras paraList) log(title string) {
 			tabl = fmt.Sprintf("[%dx%d]", para.table.w, para.table.h)
 		}
 		fmt.Printf("%4d: %6.2f %s %q\n", i, para.PdfRectangle, tabl, truncate(text, 50))
-		if len(text) == 0 {
-			panic("empty")
-		}
-		if para.table != nil && len(para.table.cells) == 0 {
-			panic(para)
-		}
 	}
 }

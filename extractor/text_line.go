@@ -7,7 +7,6 @@ package extractor
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"unicode"
 
@@ -21,15 +20,12 @@ type textLine struct {
 	depth              float64     // Distance from bottom of line to top of page.
 	words              []*textWord // Words in this line.
 	fontsize           float64     // Largest word font size.
-	hyphenated         bool        // Does line have at least minHyphenation runes and end in a hyphen.
 }
 
-const minHyphenation = 4
-
-// newTextLine creates a line with font and bbox size of `w`, removes `w` from p.bins[bestWordDepthIdx] and adds it to the line
-func newTextLine(p *textStrata, depthIdx int) *textLine {
-	words := p.getStratum(depthIdx)
-	word := words[0]
+// newTextLine creates a line with the font and bbox size of the first word in `b`, removes the word
+// from `b` and adds it to the line.
+func newTextLine(b *wordBag, depthIdx int) *textLine {
+	word := b.firstWord(depthIdx)
 	line := textLine{
 		serial:       serial.line,
 		PdfRectangle: word.PdfRectangle,
@@ -37,7 +33,7 @@ func newTextLine(p *textStrata, depthIdx int) *textLine {
 		depth:        word.depth,
 	}
 	serial.line++
-	line.moveWord(p, depthIdx, word)
+	line.pullWord(b, word, depthIdx)
 	return &line
 }
 
@@ -52,14 +48,14 @@ func (l *textLine) bbox() model.PdfRectangle {
 	return l.PdfRectangle
 }
 
-// text returns the extracted text contained in line..
+// text returns the extracted text contained in line.
 func (l *textLine) text() string {
 	var words []string
 	for _, w := range l.words {
-		words = append(words, w.text())
-		if w.spaceAfter {
+		if w.newWord {
 			words = append(words, " ")
 		}
+		words = append(words, w.text)
 	}
 	return strings.Join(words, "")
 }
@@ -68,23 +64,26 @@ func (l *textLine) text() string {
 // `offset` is used to give the TextMarks the correct Offset values.
 func (l *textLine) toTextMarks(offset *int) []TextMark {
 	var marks []TextMark
-	for _, word := range l.words {
-		wordMarks := word.toTextMarks(offset)
-		marks = append(marks, wordMarks...)
-		if word.spaceAfter {
+	for _, w := range l.words {
+		if w.newWord {
 			marks = appendSpaceMark(marks, offset, " ")
 		}
-	}
-	if len(l.text()) > 0 && len(marks) == 0 {
-		panic(l.text())
+		wordMarks := w.toTextMarks(offset)
+		marks = append(marks, wordMarks...)
 	}
 	return marks
 }
 
-// moveWord removes `word` from p.bins[bestWordDepthIdx] and adds it to `l`.
-// `l.PdfRectangle` is increased to bound the new word
-// `l.fontsize` is the largest of the fontsizes of the words in line
-func (l *textLine) moveWord(s *textStrata, depthIdx int, word *textWord) {
+// pullWord removes `word` from bag and appends it to `l`.
+func (l *textLine) pullWord(bag *wordBag, word *textWord, depthIdx int) {
+	l.appendWord(word)
+	bag.removeWord(word, depthIdx)
+}
+
+// appendWord appends `word` to `l`.
+// `l.PdfRectangle` is increased to bound the new word.
+// `l.fontsize` is the largest of the fontsizes of the words in line.
+func (l *textLine) appendWord(word *textWord) {
 	l.words = append(l.words, word)
 	l.PdfRectangle = rectUnion(l.PdfRectangle, word.PdfRectangle)
 	if word.fontsize > l.fontsize {
@@ -93,42 +92,35 @@ func (l *textLine) moveWord(s *textStrata, depthIdx int, word *textWord) {
 	if word.depth > l.depth {
 		l.depth = word.depth
 	}
-	s.removeWord(depthIdx, word)
 }
 
-// mergeWordFragments merges the word fragments in the words in `l`.
-func (l *textLine) mergeWordFragments() {
-	fontsize := l.fontsize
-	if len(l.words) > 1 {
-		maxGap := maxIntraLineGapR * fontsize
-		fontTol := maxIntraWordFontTolR * fontsize
-		merged := []*textWord{l.words[0]}
-
-		for _, word := range l.words[1:] {
-			lastMerged := merged[len(merged)-1]
-			doMerge := false
-			if gapReading(word, lastMerged) >= maxGap {
-				lastMerged.spaceAfter = true
-			} else if lastMerged.font(lastMerged.len()-1) == word.font(0) &&
-				math.Abs(lastMerged.fontsize-word.fontsize) < fontTol {
-				doMerge = true
-			}
-			if doMerge {
-				lastMerged.absorb(word)
-			} else {
-				merged = append(merged, word)
-			}
+// markWordBoundaries marks the word fragments that are the first fragments in whole words.
+func (l *textLine) markWordBoundaries() {
+	maxGap := maxIntraLineGapR * l.fontsize
+	for i, w := range l.words[1:] {
+		if gapReading(w, l.words[i]) >= maxGap {
+			w.newWord = true
 		}
-		l.words = merged
+	}
+}
+
+// endsInHyphen returns true if `l` has at least minHyphenation runes and end in a hyphen.
+func (l *textLine) endsInHyphen() bool {
+	// Computing l.text() is a little expensive so we filter out simple cases first.
+	lastWord := l.words[len(l.words)-1]
+	runes := []rune(lastWord.text)
+	if !unicode.Is(unicode.Hyphen, runes[len(runes)-1]) {
+		return false
+	}
+	if lastWord.newWord && endsInHyphen(runes) {
+		return true
 	}
 
-	// check for hyphen at end of line
-	l.hyphenated = isHyphenated(l.text())
+	return endsInHyphen([]rune(l.text()))
 }
 
-// isHyphenated returns true if `text` is a hyphenated word.
-func isHyphenated(text string) bool {
-	runes := []rune(text)
+// endsInHyphen returns true if `runes` ends with a hyphenated word.
+func endsInHyphen(runes []rune) bool {
 	return len(runes) >= minHyphenation &&
 		unicode.Is(unicode.Hyphen, runes[len(runes)-1]) &&
 		!unicode.IsSpace(runes[len(runes)-2])

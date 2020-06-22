@@ -44,10 +44,22 @@ func New(page *model.PdfPage) (*Extractor, error) {
 	// fmt.Printf("%s\n", contents)
 	// fmt.Println("========================= ::: =========================")
 
-	return NewFromContents(contents, page.Resources)
+	mediaBox, err := page.GetMediaBox()
+	if err != nil {
+		return nil, err
+	}
+	e := &Extractor{
+		contents:    contents,
+		resources:   page.Resources,
+		mediaBox:    *mediaBox,
+		fontCache:   map[string]fontEntry{},
+		formResults: map[string]textResult{},
+	}
+	return e, nil
 }
 
 // NewFromContents creates a new extractor from contents and page resources.
+// XXX(peterwilliams97). Does anyone use this?
 func NewFromContents(contents string, resources *model.PdfPageResources) (*Extractor, error) {
 	e := &Extractor{
 		contents:    contents,

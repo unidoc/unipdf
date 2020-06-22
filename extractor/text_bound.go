@@ -3,13 +3,6 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-/*
-  Mods:
-	depth -> depth
-	textStrata -> stratum
-	textPara -> para
-*/
-
 package extractor
 
 import (
@@ -34,13 +27,6 @@ import (
 type bounded interface {
 	bbox() model.PdfRectangle
 }
-
-// func center(a bounded) transform.Point {
-// 	box := a.bbox()
-// 	return transform.Point{
-// 		X: 0.5 * (box.Llx + box.Urx),
-// 		Y: 0.5 * (box.Lly + box.Ury)}
-// }
 
 // getDepth returns the depth of `a` on a page of size `pageSize`.
 func getDepth(pageSize model.PdfRectangle, a bounded) float64 {
@@ -106,20 +92,20 @@ func bboxDepth(b bounded) float64 {
 }
 
 // readingOverlapLeft returns true is the left of `word` is in within `para` or delta to its right
-func readingOverlapLeft(para *textStrata, word *textWord, delta float64) bool {
+func readingOverlapLeft(para *wordBag, word *textWord, delta float64) bool {
 	return para.Urx <= word.Llx && word.Llx < para.Urx+delta
 }
 
 // readingOverlapPlusGap returns true if `word` overlaps [para.Llx-maxIntraReadingGap, para.Urx+maxIntraReadingGap]
 // in the reading direction.
-func readingOverlapPlusGap(para *textStrata, word *textWord, maxIntraReadingGap float64) bool {
+func readingOverlapPlusGap(para *wordBag, word *textWord, maxIntraReadingGap float64) bool {
 	return word.Llx < para.Urx+maxIntraReadingGap && para.Llx-maxIntraReadingGap < word.Urx
 }
 
-// partial return 'overlap`(*textStrata, *textWord, `param`) bool.
-func partial(overlap func(*textStrata, *textWord, float64) bool,
-	param float64) func(*textStrata, *textWord) bool {
-	return func(para *textStrata, word *textWord) bool {
+// partial return 'overlap`(*wordBag, *textWord, `param`) bool.
+func partial(overlap func(*wordBag, *textWord, float64) bool,
+	param float64) func(*wordBag, *textWord) bool {
+	return func(para *wordBag, word *textWord) bool {
 		return overlap(para, word, param)
 	}
 }
@@ -131,22 +117,12 @@ func overlapped(a, b bounded) bool {
 
 // overlappedX returns true if `a` and `b` overlap in the x direction.
 func overlappedX(a, b bounded) bool {
-	return overlappedXRect(a.bbox(), b.bbox())
+	return intersectsX(a.bbox(), b.bbox())
 }
 
 // overlappedY returns true if `a` and `b` overlap in the y direction.
 func overlappedY(a, b bounded) bool {
-	return overlappedYRect(a.bbox(), b.bbox())
-}
-
-// overlappedXRect returns true if `r0` and `r1` overlap in the x direction.
-func overlappedXRect(r0, r1 model.PdfRectangle) bool {
-	return (r0.Llx <= r1.Llx && r1.Llx <= r0.Urx) || (r0.Llx <= r1.Urx && r1.Urx <= r0.Urx)
-}
-
-// overlappedYRect returns true if `r0` and `r1` overlap in the y direction.
-func overlappedYRect(r0, r1 model.PdfRectangle) bool {
-	return (r0.Lly <= r1.Lly && r1.Lly <= r0.Ury) || (r0.Lly <= r1.Ury && r1.Ury <= r0.Ury)
+	return intersectsY(a.bbox(), b.bbox())
 }
 
 // rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
@@ -178,11 +154,11 @@ func intersects(b1, b2 model.PdfRectangle) bool {
 }
 
 // intersectsX returns true if `r0` and `r1` overlap in the x axis.
-func intersectsX(b1, b2 model.PdfRectangle) bool {
-	return b1.Llx <= b2.Urx && b2.Llx <= b1.Urx
+func intersectsX(r0, r1 model.PdfRectangle) bool {
+	return r1.Llx <= r0.Urx && r0.Llx <= r1.Urx
 }
 
 // intersectsY returns true if `r0` and `r1` overlap in the y axis.
-func intersectsY(b1, b2 model.PdfRectangle) bool {
-	return b1.Lly <= b2.Ury && b2.Lly <= b1.Ury
+func intersectsY(r0, r1 model.PdfRectangle) bool {
+	return r0.Lly <= r1.Ury && r1.Lly <= r0.Ury
 }

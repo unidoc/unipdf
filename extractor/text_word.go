@@ -9,52 +9,49 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/unidoc/unipdf/v3/common"
-	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
-// textWord represents a word. It's a sequence of textMarks that are close enough toghether in the
-// reading direction and doesn't have any space textMarks.
+// textWord represents a word fragment.
+// makeTextWords() shows how textWords are created.
+// We don't see whole words until textWords are eventually sorted into textLines  in
+// wordBag.arrangeText(). textLines are slices of textWord that define whole words by the
+//  newWord marker on those fragments that start whole words.
+//  - A textLine is the textWords at similar depths sorted in reading order.
+//  - All textWords, w, in the textLine that start whole words have w.newWord = true
 type textWord struct {
 	serial             int         // Sequence number for debugging.
 	model.PdfRectangle             // Bounding box (union of `marks` bounding boxes).
-	depth              float64     // Distance from bottom of word to top of page.
+	depth              float64     // Distance from bottom of this word to the top of the page.
+	text               string      // The word fragment text.
 	marks              []*textMark // Marks in this word.
-	fontsize           float64     // Largest fontsize in `marks` w
-	spaceAfter         bool        // Is this word followed by a space?
+	fontsize           float64     // Largest fontsize in the word.
+	newWord            bool        // Is this word fragemet the start of  a new word?
 }
 
-// makeTextPage builds a word list from `marks`, the textMarks on a page.
+// makeTextPage combines `marks`, the textMarks on a page, into word fragments.
 // `pageSize` is used to calculate the words` depths depth on the page.
+// Algorithm:
+//  1. `marks` are in the order they were rendered in the PDF.
+//  2. Successive marks are combined into a word fragment unless
+//      One mark is a space character.
+//      They are separated by more than maxWordAdvanceR*fontsize in the reading direction
+//      They are not within the location allowed by horizontal and vertical variations allowed by
+//       reasonable kerning and leading.
+// TODO(peterwilliams97): Check for overlapping textWords for cases such as diacritics, bolding by
+//                       repeating and others.
 func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
-	var words []*textWord
+	var words []*textWord // The words.
 	var newWord *textWord // The word being built.
-
-	if verbose {
-		common.Log.Info("makeTextWords: %d marks", len(marks))
-	}
-
-	// var a, b, c bool
-	var readingGap float64
-
-	// biggest := &textWord{}
 
 	// addNewWord adds `newWord` to `words` and resets `newWord` to nil.
 	addNewWord := func() {
 		if newWord != nil {
-			if !isTextSpace(newWord.text()) {
-				// extra := ""
-				// if area(newWord) > area(biggest) {
-				// 	biggest = newWord
-				// 	extra = fmt.Sprintf(" XXX %.2f", area(newWord))
-				// }
-				// common.Log.Info("%5t %5t %5t %s%s", a, b, c, newWord.String(), extra)
-				// // for i, tm := range newWord.marks {
-				// // 	fmt.Printf("%4d: %s\n", i, tm.String())
-				// // }
+			text := newWord.computeText()
+			if !isTextSpace(text) {
+				newWord.text = text
 				words = append(words, newWord)
 			}
 			newWord = nil
@@ -62,7 +59,6 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	}
 
 	for _, tm := range marks {
-		// a, b, c = false, false, false
 		isSpace := isTextSpace(tm.text)
 		if newWord == nil && !isSpace {
 			newWord = newTextWord([]*textMark{tm}, pageSize)
@@ -73,31 +69,23 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 			continue
 		}
 
-		depthGap := getDepth(pageSize, tm) - newWord.depth
-		readingGap = gapReading(tm, newWord)
-
 		fontsize := newWord.fontsize
+		depthGap := math.Abs(getDepth(pageSize, tm)-newWord.depth) / fontsize
+		readingGap := gapReading(tm, newWord) / fontsize
 
 		// These are the conditions for `tm` to be from a new word.
-		// - Change in reading position is larger than a space which we guess to be 0.11*fontsize.
+		// - Gap between words in reading position is larger than a space.
 		// - Change in reading position is too negative to be just a kerning adjustment.
 		// - Change in depth is too large to be just a leading adjustment.
-		sameWord := -0.19*fontsize <= readingGap && readingGap <= 0.11*fontsize &&
-			math.Abs(depthGap) <= 0.04*fontsize
-		// a = -0.19*fontsize <= readingGap
-		// b = readingGap <= 0.11*fontsize
-		// c = math.Abs(depthGap) <= 0.04*fontsize
-		if !sameWord {
-			// common.Log.Info("gap=%.2f word=%.2f tm=%.2f", readingGap,
-			// 	newWord.PdfRectangle, tm.PdfRectangle)
+		if readingGap >= maxWordAdvanceR || !(-maxKerningR <= readingGap && depthGap <= maxLeadingR) {
 			addNewWord()
 			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
 		}
-
 		newWord.addMark(tm, pageSize)
 	}
 	addNewWord()
+
 	return words
 }
 
@@ -112,13 +100,12 @@ func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 			fontsize = tm.fontsize
 		}
 	}
-	depth := pageSize.Ury - r.Lly
 
 	word := textWord{
 		serial:       serial.word,
 		PdfRectangle: r,
 		marks:        marks,
-		depth:        depth,
+		depth:        pageSize.Ury - r.Lly,
 		fontsize:     fontsize,
 	}
 	serial.word++
@@ -128,7 +115,7 @@ func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 // String returns a description of `w.
 func (w *textWord) String() string {
 	return fmt.Sprintf("serial=%d %.2f %6.2f fontsize=%.2f \"%s\"",
-		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text())
+		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text)
 }
 
 // bbox makes textWord implement the `bounded` interface.
@@ -145,14 +132,6 @@ func (w *textWord) addMark(tm *textMark, pageSize model.PdfRectangle) {
 		w.fontsize = tm.fontsize
 	}
 	w.depth = pageSize.Ury - w.PdfRectangle.Lly
-	if w.depth < 0 {
-		panic(w.depth)
-	}
-}
-
-// len returns the number of runes in `w`.
-func (w *textWord) len() int {
-	return utf8.RuneCountInString(w.text())
 }
 
 // absorb combines `word` into `w`.
@@ -162,7 +141,7 @@ func (w *textWord) absorb(word *textWord) {
 }
 
 // text returns the text in `w`.
-func (w *textWord) text() string {
+func (w *textWord) computeText() string {
 	texts := make([]string, len(w.marks))
 	for i, tm := range w.marks {
 		texts[i] = tm.text
@@ -177,28 +156,11 @@ func (w *textWord) toTextMarks(offset *int) []TextMark {
 	for _, tm := range w.marks {
 		marks = appendTextMark(marks, offset, tm.ToTextMark())
 	}
-	if len(w.text()) > 0 && len(marks) == 0 {
-		panic(w.text())
-	}
 	return marks
 }
 
-// font returns the fontID of the `idx`th rune in text.
-// compute on creation? !@#$
-func (w *textWord) font(idx int) string {
-	numChars := 0
-	for _, tm := range w.marks {
-		for _, r := range tm.text {
-			numChars += len(textencoding.RuneToString(r))
-			if numChars > idx {
-				return fmt.Sprintf("%s:%.3f", tm.font, tm.fontsize)
-			}
-		}
-	}
-	panic("no match")
-}
-
 // removeWord returns `words` with `word` removed.
+// Caller must check that `words` contains `word`,
 // TODO(peterwilliams97): Optimize
 func removeWord(words []*textWord, word *textWord) []*textWord {
 	for i, w := range words {
@@ -206,7 +168,8 @@ func removeWord(words []*textWord, word *textWord) []*textWord {
 			return removeWordAt(words, i)
 		}
 	}
-	panic("word not in words")
+	common.Log.Error("removeWord: words doesn't contain word=%s", word)
+	return nil
 }
 
 // removeWord returns `word` with `word[idx]` removed.

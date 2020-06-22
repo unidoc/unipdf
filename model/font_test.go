@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	common.SetLogger(common.NewConsoleLogger(common.LogLevelInfo))
+	common.SetLogger(common.NewConsoleLogger(common.LogLevelDebug))
 }
 
 var simpleFontDicts = []string{

@@ -18,7 +18,6 @@ const (
 
 // The following constants control the approaches used in the code.
 const (
-	useTables = true
 	doHyphens = true
 	useEBBox  = false
 )
@@ -34,24 +33,29 @@ const (
 
 	// All constants that end in R are relative to font size.
 
+	maxWordAdvanceR = 0.11
+
+	maxKerningR = 0.19
+	maxLeadingR = 0.04
+
 	// Max difference in font sizes allowed within a word.
-	maxIntraWordFontTolR = 0.05
+	maxIntraWordFontTolR = 0.04
 
 	// Maximum gap between a word and a para in the depth direction for which we pull the word
 	// into the para, as a fraction of the font size.
 	maxIntraDepthGapR = 1.0
 	// Max diffrence in font size for word and para for the above case
-	maxIntraDepthFontTolR = 0.05
+	maxIntraDepthFontTolR = 0.04
 
 	// Maximum gap between a word and a para in the reading direction for which we pull the word
 	// into the para.
 	maxIntraReadingGapR = 0.4
 	// Max diffrence in font size for word and para for the above case
-	maxIntraReadingFontTol = 0.6
+	maxIntraReadingFontTol = 0.7
 
 	// Minimum spacing between paras in the reading direction.
 	minInterReadingGapR = 1.0
-	// Max diffrence in font size for word and para for the above case
+	// Max difference in font size for word and para for the above case
 	minInterReadingFontTol = 0.1
 
 	// Maximum inter-word spacing.
@@ -61,5 +65,12 @@ const (
 	maxIntraLineOverlapR = 0.46
 
 	// Maximum spacing between characters within a line.
-	maxIntraLineGapR = 0.03
+	maxIntraLineGapR = 0.02
+
+	minHyphenation = 4
+
+	//
+	topWordRangeR = 4.0
+	// minimum number of cells in a textTable
+	minTableParas = 6
 )
