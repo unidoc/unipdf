@@ -28,7 +28,7 @@ type textWord struct {
 	text               string      // The word fragment text.
 	marks              []*textMark // Marks in this word.
 	fontsize           float64     // Largest fontsize in the word.
-	newWord            bool        // Is this word fragemet the start of  a new word?
+	newWord            bool        // Is this word fragment the start of  a new word?
 }
 
 // makeTextPage combines `marks`, the textMarks on a page, into word fragments.

@@ -146,12 +146,8 @@ func (b *wordBag) scanBand(title string, para *wordBag,
 	return n
 }
 
-// highestword returns the hight word in b.bins[depthIdx] w: minDepth <= w.depth <= maxDepth.
-func (b *wordBag) highestword(depthIdx int, minDepth, maxDepth float64) *textWord {
-	if len(b.bins) == 0 {
-		panic("bbbin")
-		return nil
-	}
+// highestWord returns the hight word in b.bins[depthIdx] w: minDepth <= w.depth <= maxDepth.
+func (b *wordBag) highestWord(depthIdx int, minDepth, maxDepth float64) *textWord {
 	for _, word := range b.bins[depthIdx] {
 		if minDepth <= word.depth && word.depth <= maxDepth {
 			return word
@@ -165,7 +161,6 @@ func (b *wordBag) depthBand(minDepth, maxDepth float64) []int {
 	if len(b.bins) == 0 {
 		return nil
 	}
-
 	return b.depthRange(b.getDepthIdx(minDepth), b.getDepthIdx(maxDepth))
 }
 
@@ -219,11 +214,12 @@ func (b *wordBag) empty(depthIdx int) bool {
 	return !ok
 }
 
+// firstWord returns the first word in reading order in bin `depthIdx`.
 func (b *wordBag) firstWord(depthIdx int) *textWord {
 	return b.bins[depthIdx][0]
 }
 
-// stratum returns a copy of `p`.bins[`depthIdx`].
+// stratum returns a copy of `b`.bins[`depthIdx`].
 // stratum is guaranteed to return a non-nil value. It must be called with a valid depth index.
 // NOTE: We need to return a copy because remove() and other functions manipulate the array
 // underlying the slice.

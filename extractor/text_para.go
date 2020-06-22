@@ -231,7 +231,7 @@ func (b *wordBag) arrangeText() *textPara {
 				nextDepthIdx := 0      // nextWord's depthIndex
 				// We start with this highest remaining word
 				for _, depthIdx := range b.depthBand(minDepth, maxDepth) {
-					word := b.highestword(depthIdx, minDepth, maxDepth)
+					word := b.highestWord(depthIdx, minDepth, maxDepth)
 					if word == nil {
 						continue
 					}

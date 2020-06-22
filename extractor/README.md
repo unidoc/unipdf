@@ -22,14 +22,24 @@ HOW TEXT IS EXTRACTED
 * The `textWords`s are grouped into `textParas`s based on their bounding boxes' proximities to other
  textWords.
 * The `textWord`s in each `textPara` are arranged into `textLine`s (`textWord`s of similar depth).
-* Within each `textLine`, `textWord`s are sorted in reading order each one that starts a whole word is marked.
+* Within each `textLine`, `textWord`s are sorted in reading order and each one that starts a whole
+word is marked.
 See `textLine.text()`.
 * `textPara.writeCellText()` shows how to extract the paragraph text from this arrangment.
 * All the `textPara`s on a page are checked to see if they are arranged as cells within a table and,
-if they are, they are combined into `textTable`s and a textPara containing the textTable replaces the
+if they are, they are combined into `textTable`s and a `textPara` containing the `textTable` replaces
 the `textPara`s containing the cells.
-* The textParas, some of which may be tables, in sorted into reading order (the order in which they
+* The `textPara`s, some of which may be tables, are sorted into reading order (the order in which they
 are reading, not in the reading directions).
+
+
+The entire order of extracted text from a page is expressed in `paraList.writeText()` which
+
+* Iterates through the `textParas1, which are sorted in reading.
+* For each `textPara` with a table, iterates through through the table cell `textPara`s.
+* For each (top level or table cell) `textPara` iterates through the `textLine`s.
+* For each `textLine` iterates through the `textWord`s inserting a space before each one that has
+ the `newWord` flag set.
 
 
 ### `textWord` creation
@@ -54,4 +64,4 @@ TODO
 * Reinstate  diacritic composition.
 * Reinstate duplicate text removal.
 * Reinstate creater_test.go extraction test.
-
+* Come up with a better name for _reading_ direction,
