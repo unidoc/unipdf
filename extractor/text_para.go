@@ -21,15 +21,16 @@ type paraList []*textPara
 
 // textPara is a group of words in a rectangular region of a page that get read together.
 // An peragraph in a document might span multiple pages. This is the paragraph framgent on one page.
-// We start by finding paragraph regions on a page, then we break the words into the textPara into
-// textLines.
+// textParas can be tables in which case the content is in `table`, otherwise the content is in `lines`.
+// textTable cells are textParas so this gives one level of recursion
 type textPara struct {
 	serial             int                // Sequence number for debugging.
 	model.PdfRectangle                    // Bounding box.
 	eBBox              model.PdfRectangle // Extended bounding box needed to compute reading order.
-	lines              []*textLine        // Paragraph text gets broken into lines.
-	table              *textTable         // A table in which the cells which textParas.
-	isCell             bool               // Is this para a cell in a textTable>
+	lines              []*textLine        // The lines in the paragraph. (nil for the table case)
+	table              *textTable         // The table contained in this region if there is one. nil otherwise
+	// The following fields are used for detecting and extracting tables.
+	isCell bool // Is this para a cell in a textTable?
 	// The unique highest para completely below this that overlaps it in the y-direction, if one exists.
 	right *textPara
 	// The unique highest para completely below `this that overlaps it in the x-direction, if one exists.
@@ -57,17 +58,14 @@ func (p *textPara) String() string {
 		p.serial, p.PdfRectangle, table, len(p.lines), truncate(p.text(), 50))
 }
 
-// text returns the text  of the lines in `p`.
-func (p *textPara) text() string {
-	w := new(bytes.Buffer)
-	p.writeText(w)
-	return w.String()
-}
-
+// depth returns the paragraph's depth. which is the depth of its top line.
+// We return the top line depth because textPara depth is used to tell if 2 paras have the same
+// depth. English readers compare paragraph depths by their top lines.
 func (p *textPara) depth() float64 {
 	if len(p.lines) > 0 {
 		return p.lines[0].depth
 	}
+	// Use the top left cell of the table if there is one
 	return p.table.get(0, 0).depth()
 }
 
@@ -199,8 +197,7 @@ func (p *textPara) fontsize() float64 {
 // The textWords in each line are sorted in reading order and those that start whole words (as
 // opposed to word fragments) have their `newWord` flag set to true.
 func (b *wordBag) arrangeText() *textPara {
-	// Sort the words in `b`'s bins in the reading direction.
-	b.sort()
+	b.sort() // Sort the words in `b`'s bins in the reading direction.
 
 	var lines []*textLine
 
@@ -257,7 +254,6 @@ func (b *wordBag) arrangeText() *textPara {
 
 			line.markWordBoundaries()
 			lines = append(lines, line)
-
 		}
 	}
 
@@ -303,4 +299,12 @@ func (paras paraList) log(title string) {
 		}
 		fmt.Printf("%4d: %6.2f %s %q\n", i, para.PdfRectangle, tabl, truncate(text, 50))
 	}
+}
+
+// text returns the text  of the lines in `p`.
+// NOTE: For debugging only/
+func (p *textPara) text() string {
+	w := new(bytes.Buffer)
+	p.writeText(w)
+	return w.String()
 }

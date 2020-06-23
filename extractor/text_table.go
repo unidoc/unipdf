@@ -13,10 +13,21 @@ import (
 	"github.com/unidoc/unipdf/v3/model"
 )
 
+// textTable is a table of `w` x `h` textPara cells.
 type textTable struct {
-	model.PdfRectangle
-	w, h  int
-	cells map[uint64]*textPara
+	model.PdfRectangle                      // Bounding rectangle.
+	w, h               int                  // w=number of columns. h=number of rows.
+	cells              map[uint64]*textPara // The cells
+}
+
+// String returns a description of `t`.
+func (t *textTable) String() string {
+	return fmt.Sprintf("%d x %d", t.w, t.h)
+}
+
+// bbox makes textLine implement the `bounded` interface.
+func (t *textTable) bbox() model.PdfRectangle {
+	return t.PdfRectangle
 }
 
 // extractTables converts the`paras` that are table cells to tables containing those cells.
@@ -27,22 +38,17 @@ func (paras paraList) extractTables() paraList {
 	if len(paras) < minTableParas {
 		return paras
 	}
-
 	tables := paras.findTables()
-
 	if verboseTable {
 		common.Log.Info("combined tables %d ================", len(tables))
 		for i, t := range tables {
 			t.log(fmt.Sprintf("combined %d", i))
 		}
 	}
-
-	paras = paras.applyTables(tables)
-
-	return paras
+	return paras.applyTables(tables)
 }
 
-// findTables returns all the 2x2 table candidateds in `paras`.
+// findTables returns all the tables  in `paras`.
 func (paras paraList) findTables() []*textTable {
 	paras.addNeighbours()
 	// Pre-sort by reading direction then depth
@@ -72,17 +78,17 @@ func (paras paraList) findTables() []*textTable {
 	return tables
 }
 
-// Attempr to build the smallest possible table fragment of 2 x 2 cells.
-// If it can be built then return it. Otherwise return nil.
+// isAtom atempts to build the smallest possible table fragment of 2 x 2 cells.
+// If a table can be built then it is returned. Otherwise nil is returned.
 // The smallest possible table is
 //   a b
 //   c d
 // where
-//   a is `para`
-//   b is immediately to the right of a and overlaps it in the y axis
-//   c is immediately below a and ooverlaps it in the x axis
-//   d is immediately to the right of c and overlaps it in the x axis and
-//        immediately below b and ooverlaps it in the y axis
+//   a is `para`.
+//   b is immediately to the right of a and overlaps it in the y axis.
+//   c is immediately below a and overlaps it in the x axis.
+//   d is immediately to the right of c and overlaps it in the y axis and
+//        immediately below b and ooverlaps it in the s axis.
 //   None of a, b, c or d are cells in existing tables.
 func (para *textPara) isAtom() *textTable {
 	a := para
@@ -97,7 +103,7 @@ func (para *textPara) isAtom() *textTable {
 	return nil
 }
 
-// newTable returns a table containg the a, b, c, d elements from isAtom().
+// newTable returns a table containing the a, b, c, d elements from isAtom().
 func newTableAtom(a, b, c, d *textPara) *textTable {
 	t := &textTable{w: 2, h: 2, cells: map[uint64]*textPara{}}
 	t.put(0, 0, a)
@@ -107,6 +113,11 @@ func newTableAtom(a, b, c, d *textPara) *textTable {
 	return t
 }
 
+// growTable grows `t` to the largest w x h it can while remaining a valid table.
+// It repeatedly tries to extend by one row and/or column
+//    - down and right, then
+//    - down, then
+//    - right.
 func (t *textTable) growTable() {
 	growDown := func(down paraList) {
 		t.h++
@@ -150,6 +161,7 @@ func (t *textTable) growTable() {
 	}
 }
 
+// getDown returns the row of cells below `t` if they are a valid extension to `t` or nil if they aren't.
 func (t *textTable) getDown() paraList {
 	cells := make(paraList, t.w)
 	for x := 0; x < t.w; x++ {
@@ -167,6 +179,8 @@ func (t *textTable) getDown() paraList {
 	return cells
 }
 
+// getRight returns the column of cells to the right `t` if they are a valid extension to `t` or nil
+// if they aren't.
 func (t *textTable) getRight() paraList {
 	cells := make(paraList, t.h)
 	for y := 0; y < t.h; y++ {
@@ -184,7 +198,7 @@ func (t *textTable) getRight() paraList {
 	return cells
 }
 
-// applyTables replaces the paras that re  cells in `tables` with paras containing the tables in
+// applyTables replaces the paras that are cells in `tables` with paras containing the tables in
 //`tables`. This, of course, reduces the number of paras.
 func (paras paraList) applyTables(tables []*textTable) paraList {
 	consumed := map[*textPara]struct{}{}
@@ -214,20 +228,7 @@ func (t *textTable) markCells() {
 	}
 }
 
-func (t *textTable) log(title string) {
-	if !verboseTable {
-		return
-	}
-	common.Log.Info("~~~ %s: %s: %d x %d\n      %6.2f", title, fileLine(1, false),
-		t.w, t.h, t.PdfRectangle)
-	for y := 0; y < t.h; y++ {
-		for x := 0; x < t.w; x++ {
-			p := t.get(x, y)
-			fmt.Printf("%4d %2d: %6.2f %q\n", x, y, p.PdfRectangle, truncate(p.text(), 50))
-		}
-	}
-}
-
+// newTablePara returns a textPara containing `t`.
 func (t *textTable) newTablePara() *textPara {
 	bbox := t.computeBbox()
 	para := textPara{
@@ -241,6 +242,7 @@ func (t *textTable) newTablePara() *textPara {
 	return &para
 }
 
+// computeBbox computes and returns the bounding box of `t`.
 func (t *textTable) computeBbox() model.PdfRectangle {
 	r := t.get(0, 0).PdfRectangle
 	for x := 1; x < t.w; x++ {
@@ -266,26 +268,32 @@ func (t *textTable) toTextTable() TextTable {
 	return TextTable{W: t.w, H: t.h, Cells: cells}
 }
 
-func cellIndex(x, y int) uint64 {
-	return uint64(x)*0x1000000 + uint64(y)
-}
-
+// get returns the cell at `x`, `y`.
 func (t *textTable) get(x, y int) *textPara {
 	return t.cells[cellIndex(x, y)]
 }
 
+// put sets the cell at `x`, `y` to `cell`.
 func (t *textTable) put(x, y int, cell *textPara) {
 	t.cells[cellIndex(x, y)] = cell
 }
 
-func (t *textTable) del(x, y int) {
-	delete(t.cells, cellIndex(x, y))
+// cellIndex returns a number that will be different for different `x` and `y` for any table found
+// in a PDF which will less than 2^32 wide and hight.
+func cellIndex(x, y int) uint64 {
+	return uint64(x)*0x1000000 + uint64(y)
 }
 
-func (t *textTable) bbox() model.PdfRectangle {
-	return t.PdfRectangle
-}
-
-func (t *textTable) String() string {
-	return fmt.Sprintf("%d x %d", t.w, t.h)
+func (t *textTable) log(title string) {
+	if !verboseTable {
+		return
+	}
+	common.Log.Info("~~~ %s: %d x %d\n      %6.2f", title,
+		t.w, t.h, t.PdfRectangle)
+	for y := 0; y < t.h; y++ {
+		for x := 0; x < t.w; x++ {
+			p := t.get(x, y)
+			fmt.Printf("%4d %2d: %6.2f %q\n", x, y, p.PdfRectangle, truncate(p.text(), 50))
+		}
+	}
 }

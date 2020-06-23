@@ -6,10 +6,7 @@
 package extractor
 
 import (
-	"fmt"
 	"math"
-	"path/filepath"
-	"runtime"
 	"sort"
 )
 
@@ -54,23 +51,6 @@ func maxInt(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// fileLine printed out a file:line string for the caller `skip` levels up the call stack.
-func fileLine(skip int, doSecond bool) string {
-	_, file, line, ok := runtime.Caller(skip + 1)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		file = filepath.Base(file)
-	}
-	depth := fmt.Sprintf("%s:%-4d", file, line)
-	if !doSecond {
-		return depth
-	}
-	_, _, line2, _ := runtime.Caller(skip + 2)
-	return fmt.Sprintf("%s:%-4d", depth, line2)
 }
 
 // addNeighbours fills out the below and right fields of the paras in `paras`.
@@ -147,12 +127,14 @@ func (paras paraList) yNeighbours() map[*textPara][]int {
 	return paras.eventNeighbours(events)
 }
 
+// event is an entry or exit from an interval while scanning.
 type event struct {
-	z     float64
-	enter bool
-	i     int
+	z     float64 // Coordinate in the scanning direction.
+	enter bool    // True if entering the interval, false it leaving.
+	i     int     // Index of the interval
 }
 
+// eventNeighbours returns a map {para: indexes of paras that overlap para in `events`}.
 func (paras paraList) eventNeighbours(events []event) map[*textPara][]int {
 	sort.Slice(events, func(i, j int) bool {
 		ei, ej := events[i], events[j]

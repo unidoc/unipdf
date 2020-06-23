@@ -38,19 +38,6 @@ func diffReading(a, b bounded) float64 {
 	return a.bbox().Llx - b.bbox().Llx
 }
 
-func boundedUnion(objs ...bounded) model.PdfRectangle {
-	rect := objs[0].bbox()
-	for _, r := range objs[1:] {
-		rect = rectUnion(rect, r.bbox())
-	}
-	return rect
-}
-
-// rectContainsBounded returns true if `a` contains `b`.
-func rectContainsBounded(a model.PdfRectangle, b bounded) bool {
-	return rectContainsRect(a, b.bbox())
-}
-
 // rectContainsRect returns true if `a` contains `b`.
 func rectContainsRect(a, b model.PdfRectangle) bool {
 	return a.Llx <= b.Llx && b.Urx <= a.Urx && a.Lly <= b.Lly && b.Ury <= a.Ury
@@ -108,21 +95,6 @@ func partial(overlap func(*wordBag, *textWord, float64) bool,
 	return func(para *wordBag, word *textWord) bool {
 		return overlap(para, word, param)
 	}
-}
-
-// overlapped returns true if `a` and `b` overlap.
-func overlapped(a, b bounded) bool {
-	return overlappedX(a, b) && overlappedY(a, b)
-}
-
-// overlappedX returns true if `a` and `b` overlap in the x direction.
-func overlappedX(a, b bounded) bool {
-	return intersectsX(a.bbox(), b.bbox())
-}
-
-// overlappedY returns true if `a` and `b` overlap in the y direction.
-func overlappedY(a, b bounded) bool {
-	return intersectsY(a.bbox(), b.bbox())
 }
 
 // rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.

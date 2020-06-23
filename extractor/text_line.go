@@ -43,7 +43,7 @@ func (l *textLine) String() string {
 		l.serial, l.depth, l.PdfRectangle, l.fontsize, l.text())
 }
 
-// bbox makes textLine implementethe `bounded` interface.
+// bbox makes textLine implement the `bounded` interface.
 func (l *textLine) bbox() model.PdfRectangle {
 	return l.PdfRectangle
 }
@@ -104,7 +104,10 @@ func (l *textLine) markWordBoundaries() {
 	}
 }
 
-// endsInHyphen returns true if `l` has at least minHyphenation runes and end in a hyphen.
+// endsInHyphen attempts to detect words that are split between lines
+// IT currently returns true if `l` ends in a hyphen and its last minHyphenation runes don't coataib
+// a space.
+// TODO(peterwilliams97): Figure out a better heuristic
 func (l *textLine) endsInHyphen() bool {
 	// Computing l.text() is a little expensive so we filter out simple cases first.
 	lastWord := l.words[len(l.words)-1]
@@ -115,7 +118,6 @@ func (l *textLine) endsInHyphen() bool {
 	if lastWord.newWord && endsInHyphen(runes) {
 		return true
 	}
-
 	return endsInHyphen([]rune(l.text()))
 }
 
