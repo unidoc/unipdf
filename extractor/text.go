@@ -1148,8 +1148,10 @@ type TextMark struct {
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
 	// FillColor is the fill color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
 	FillColor color.Color
 	// StrokeColor is the stroke color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
 	StrokeColor color.Color
 }
 
