@@ -870,7 +870,7 @@ type textMark struct {
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
-	fillColor     color.Color        // Text file color.
+	fillColor     color.Color        // Text fill color.
 	strokeColor   color.Color        // Text stroke color.
 }
 

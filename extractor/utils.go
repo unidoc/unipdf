@@ -105,7 +105,7 @@ func pdfColorToGoColor(space model.PdfColorspace, c model.PdfColor) color.Color 
 
 	conv, err := space.ColorToRGB(c)
 	if err != nil {
-		common.Log.Debug("WARN: could not convert color %v (%v) to RGB: %s", space, c, err)
+		common.Log.Debug("WARN: could not convert color %v (%v) to RGB: %s", c, space, err)
 		return color.Black
 	}
 	rgb, ok := conv.(*model.PdfColorDeviceRGB)
