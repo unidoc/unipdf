@@ -8,6 +8,7 @@ package extractor
 import (
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 	"sort"
 	"strings"
@@ -81,9 +82,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
 			resources *model.PdfPageResources) error {
-
 			operand := op.Operand
-
 			switch operand {
 			case "q":
 				if !fontStack.empty() {
@@ -348,6 +347,14 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				pageText.marks = append(pageText.marks, formResult.pageText.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
+			case "rg", "g", "k", "cs", "sc", "scn":
+				// Set non-stroking color/colorspace.
+				to.gs.ColorspaceNonStroking = gs.ColorspaceNonStroking
+				to.gs.ColorNonStroking = gs.ColorNonStroking
+			case "RG", "G", "K", "CS", "SC", "SCN":
+				// Set stroking color/colorspace.
+				to.gs.ColorspaceStroking = gs.ColorspaceStroking
+				to.gs.ColorStroking = gs.ColorStroking
 			}
 			return nil
 		})
@@ -702,6 +709,16 @@ func (to *textObject) reset() {
 	to.marks = nil
 }
 
+// getFillColor returns the fill color of the text object.
+func (to *textObject) getFillColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceNonStroking, to.gs.ColorNonStroking)
+}
+
+// getStrokeColor returns the stroke color of the text object.
+func (to *textObject) getStrokeColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceStroking, to.gs.ColorStroking)
+}
+
 // renderText processes and renders byte array `data` for extraction purposes.
 func (to *textObject) renderText(data []byte) error {
 	font := to.getCurrentFont()
@@ -733,6 +750,9 @@ func (to *textObject) renderText(data []byte) error {
 		0, state.trise)
 
 	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(texts))
+
+	fillColor := to.getFillColor()
+	strokeColor := to.getStrokeColor()
 
 	for i, text := range texts {
 		r := []rune(text)
@@ -784,7 +804,9 @@ func (to *textObject) renderText(data []byte) error {
 			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
 			font,
-			to.state.tc)
+			to.state.tc,
+			fillColor,
+			strokeColor)
 		if font == nil {
 			common.Log.Debug("ERROR: No font.")
 		} else if font.Encoder() == nil {
@@ -848,13 +870,16 @@ type textMark struct {
 	trm           transform.Matrix   // The current text rendering matrix (TRM above).
 	end           transform.Point    // The end of character device coordinates.
 	count         int64              // To help with reading debug logs.
+	fillColor     color.Color        // Text file color.
+	strokeColor   color.Color        // Text stroke color.
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
 // and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
 // space in the font the text is rendered in device coordinates.
 func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
-	spaceWidth float64, font *model.PdfFont, charspacing float64) textMark {
+	spaceWidth float64, font *model.PdfFont, charspacing float64,
+	fillColor, strokeColor color.Color) textMark {
 	to.e.textCount++
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, 10)
@@ -891,6 +916,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		trm:           trm,
 		end:           end,
 		count:         to.e.textCount,
+		fillColor:     fillColor,
+		strokeColor:   strokeColor,
 	}
 	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
 		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
@@ -932,11 +959,13 @@ func (tm textMark) Width() float64 {
 // ToTextMark returns the public view of `tm`.
 func (tm textMark) ToTextMark() TextMark {
 	return TextMark{
-		Text:     tm.text,
-		Original: tm.original,
-		BBox:     tm.bbox,
-		Font:     tm.font,
-		FontSize: tm.fontsize,
+		Text:        tm.text,
+		Original:    tm.original,
+		BBox:        tm.bbox,
+		Font:        tm.font,
+		FontSize:    tm.fontsize,
+		FillColor:   tm.fillColor,
+		StrokeColor: tm.strokeColor,
 	}
 }
 
@@ -1118,6 +1147,10 @@ type TextMark struct {
 	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
+	// FillColor is the fill color of the text.
+	FillColor color.Color
+	// StrokeColor is the stroke color of the text.
+	StrokeColor color.Color
 }
 
 // String returns a string describing `tm`.
