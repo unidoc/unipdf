@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -192,12 +193,49 @@ func (p *textPara) fontsize() float64 {
 	return p.lines[0].fontsize
 }
 
+// removeDuplicates removes duplicate word fragments such as those used for bolding.
+func (b *wordBag) removeDuplicates() {
+	for _, depthIdx := range b.depthIndexes() {
+		word := b.bins[depthIdx][0]
+		delta := maxDuplicateWordR * word.fontsize
+		minDepth := word.depth
+		for _, idx := range b.depthBand(minDepth, minDepth+delta) {
+			duplicates := map[*textWord]struct{}{}
+			words := b.bins[idx]
+			for _, w := range words {
+				if w != word && w.text == word.text &&
+					math.Abs(w.Llx-word.Llx) < delta &&
+					math.Abs(w.Urx-word.Urx) < delta &&
+					math.Abs(w.Lly-word.Lly) < delta &&
+					math.Abs(w.Ury-word.Ury) < delta {
+					duplicates[w] = struct{}{}
+				}
+			}
+			if len(duplicates) > 0 {
+				i := 0
+				for _, w := range words {
+					if _, ok := duplicates[w]; !ok {
+						words[i] = w
+						i++
+					}
+				}
+				b.bins[idx] = words[:len(words)-len(duplicates)]
+				if len(b.bins[idx]) == 0 {
+					delete(b.bins, idx)
+				}
+			}
+		}
+	}
+}
+
 // arrangeText arranges the word fragments (textWords) in `b` into lines and words.
 // The lines are groups of textWords of similar depths.
 // The textWords in each line are sorted in reading order and those that start whole words (as
 // opposed to word fragments) have their `newWord` flag set to true.
 func (b *wordBag) arrangeText() *textPara {
 	b.sort() // Sort the words in `b`'s bins in the reading direction.
+
+	b.removeDuplicates()
 
 	var lines []*textLine
 
@@ -255,6 +293,10 @@ func (b *wordBag) arrangeText() *textPara {
 			line.markWordBoundaries()
 			lines = append(lines, line)
 		}
+	}
+
+	if len(lines) == 0 {
+		return nil
 	}
 
 	sort.Slice(lines, func(i, j int) bool {

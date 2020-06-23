@@ -67,9 +67,12 @@ const (
 	// Maximum spacing between characters within a line.
 	maxIntraLineGapR = 0.02
 
+	// Max difference in coordinates of duplicated textWords.
+	maxDuplicateWordR = 0.2
+
 	minHyphenation = 4
 
-	//
+	// The distance we look down from the top of a wordBag for the leftmost word.
 	topWordRangeR = 4.0
 	// minimum number of cells in a textTable
 	minTableParas = 6

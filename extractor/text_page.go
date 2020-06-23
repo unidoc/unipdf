@@ -58,9 +58,12 @@ func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraL
 	paraWords = mergWordBags(paraWords)
 
 	// Arrange the contents of each paragraph wordBag into lines and the lines into whole words.
-	paras := make(paraList, len(paraWords))
-	for i, para := range paraWords {
-		paras[i] = para.arrangeText()
+	paras := make(paraList, 0, len(paraWords))
+	for _, bag := range paraWords {
+		para := bag.arrangeText()
+		if para != nil {
+			paras = append(paras, para)
+		}
 	}
 
 	// Find paras that are cells in tables, convert the tables to paras and remove the cell paras.

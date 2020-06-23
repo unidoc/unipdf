@@ -719,6 +719,7 @@ var extractReferenceTests = []extractReference{
 	{"eu.pdf", 5},
 	{"we-dms.pdf", 1},
 	{"Productivity.pdf", 1},
+	{"Nuance.pdf", 1},
 }
 
 // extractReference describes a PDF file and page number.
