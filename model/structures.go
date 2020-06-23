@@ -22,8 +22,8 @@ import (
 // PdfRectangle is a definition of a rectangle.
 type PdfRectangle struct {
 	Llx float64 // Lower left corner (ll).
-	Urx float64 // Upper right corner (ur).
 	Lly float64
+	Urx float64 // Upper right corner (ur).
 	Ury float64
 }
 
