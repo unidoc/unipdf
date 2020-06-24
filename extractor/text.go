@@ -12,7 +12,6 @@ import (
 	"math"
 	"sort"
 	"strings"
-	"unicode"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
@@ -875,16 +874,6 @@ func translationMatrix(p transform.Point) transform.Matrix {
 func (to *textObject) moveTo(tx, ty float64) {
 	to.tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, ty))
 	to.tm = to.tlm
-}
-
-// isTextSpace returns true if `text` contains nothing but space code points.
-func isTextSpace(text string) bool {
-	for _, r := range text {
-		if !unicode.IsSpace(r) {
-			return false
-		}
-	}
-	return true
 }
 
 // PageText represents the layout of text on a device page.

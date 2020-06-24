@@ -18,8 +18,10 @@ const (
 
 // The following constants control the approaches used in the code.
 const (
-	doHyphens = true
-	useEBBox  = false
+	doHyphens           = true
+	doRemoveDuplicates  = true
+	doCombineDiacritics = true
+	useEBBox            = false
 )
 
 // The following constants are the tuning parameter for text extracton
@@ -67,13 +69,18 @@ const (
 	// Maximum spacing between characters within a line.
 	maxIntraLineGapR = 0.02
 
-	// Max difference in coordinates of duplicated textWords.
+	// Maximum difference in coordinates of duplicated textWords.
 	maxDuplicateWordR = 0.2
 
+	// Maximum distance from a character to its diacritic marks as a fraction of the character size.
+	diacriticRadiusR = 0.5
+
+	// Minimum number of rumes in the first half of a hyphenated word
 	minHyphenation = 4
 
 	// The distance we look down from the top of a wordBag for the leftmost word.
 	topWordRangeR = 4.0
-	// minimum number of cells in a textTable
+
+	// Minimum number of cells in a textTable
 	minTableParas = 6
 )

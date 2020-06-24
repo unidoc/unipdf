@@ -12,6 +12,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/model"
+	"golang.org/x/text/unicode/norm"
 )
 
 // textWord represents a word fragment.
@@ -59,13 +60,35 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	}
 
 	for _, tm := range marks {
-		isSpace := isTextSpace(tm.text)
-		if newWord == nil && !isSpace {
-			newWord = newTextWord([]*textMark{tm}, pageSize)
-			continue
+		if doCombineDiacritics {
+			// Combine diacritic marks into neighbourimg non-diacritics marks.
+			if newWord != nil && len(newWord.marks) > 0 {
+				prev := newWord.marks[len(newWord.marks)-1]
+				text, isDiacritic := combiningDiacritic(tm.text)
+				prevText, prevDiacritic := combiningDiacritic(prev.text)
+				if isDiacritic && !prevDiacritic && prev.inDiacriticArea(tm) {
+					newWord.addDiacritic(text)
+					continue
+				}
+				if prevDiacritic && !isDiacritic && tm.inDiacriticArea(prev) {
+					// If the previous mark was the diacritic, merge it into this mark and re-append it
+					newWord.marks = newWord.marks[:len(newWord.marks)-1]
+					newWord.addMark(tm, pageSize)
+					newWord.addDiacritic(prevText)
+					continue
+				}
+			}
 		}
+
+		// Check for spaces between words.
+		isSpace := isTextSpace(tm.text)
 		if isSpace {
 			addNewWord()
+			continue
+		}
+
+		if newWord == nil && !isSpace {
+			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
 		}
 
@@ -87,6 +110,15 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	addNewWord()
 
 	return words
+}
+
+// inDiacriticArea returns true if `diacritic` is in the area where it could be a diacritic of `tm`.
+func (tm *textMark) inDiacriticArea(diacritic *textMark) bool {
+	dLlx := tm.Llx - diacritic.Llx
+	dUrx := tm.Urx - diacritic.Urx
+	dLly := tm.Lly - diacritic.Lly
+	return math.Abs(dLlx+dUrx) < tm.Width()*diacriticRadiusR &&
+		math.Abs(dLly) < tm.Height()*diacriticRadiusR
 }
 
 // newTextWord creates a textWords containing `marks`.
@@ -123,7 +155,7 @@ func (w *textWord) bbox() model.PdfRectangle {
 	return w.PdfRectangle
 }
 
-// addMark adds textMark `tm` to word `w`.
+// addMark adds textMark `tm` to  `w`.
 // `pageSize` is used to calculate the word's depth on the page.
 func (w *textWord) addMark(tm *textMark, pageSize model.PdfRectangle) {
 	w.marks = append(w.marks, tm)
@@ -132,6 +164,14 @@ func (w *textWord) addMark(tm *textMark, pageSize model.PdfRectangle) {
 		w.fontsize = tm.fontsize
 	}
 	w.depth = pageSize.Ury - w.PdfRectangle.Lly
+}
+
+// addDiacritic adds combining diacritic `text` `tm` to `w`.
+// It adds the diacritic to the last mark and doesn't update the size
+func (w *textWord) addDiacritic(text string) {
+	lastMark := w.marks[len(w.marks)-1]
+	lastMark.text = lastMark.text + text
+	lastMark.text = norm.NFKC.String(lastMark.text)
 }
 
 // absorb combines `word` into `w`.

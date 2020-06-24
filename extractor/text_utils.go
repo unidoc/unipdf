@@ -8,6 +8,7 @@ package extractor
 import (
 	"math"
 	"sort"
+	"unicode"
 )
 
 // serial is used to add serial numbers to all text* instances.
@@ -178,3 +179,71 @@ func (paras paraList) eventNeighbours(events []event) map[*textPara][]int {
 	}
 	return paraNeighbors
 }
+
+// isTextSpace returns true if `text` contains nothing but space code points.
+func isTextSpace(text string) bool {
+	for _, r := range text {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// combiningDiacritic returns the combining version of `text` if text contains a single uncombined
+// diacritic rune.
+func combiningDiacritic(text string) (string, bool) {
+	runes := []rune(text)
+	if len(runes) != 1 {
+		return "", false
+	}
+	combining, isDiacritic := diacriticsToCombining[runes[0]]
+	return combining, isDiacritic
+}
+
+var (
+	// diacriticsToCombining is a map of diacritic runes to their combining diacritic equivalents.
+	// These values were  copied from  (https://svn.apache.org/repos/asf/pdfbox/trunk/pdfbox/src/main/java/org/apache/pdfbox/text/TextPosition.java)
+	diacriticsToCombining = map[rune]string{
+		0x0060: "\u0300", //   ` -> ò
+		0x02CB: "\u0300", //   ˋ -> ò
+		0x0027: "\u0301", //   ' -> ó
+		0x00B4: "\u0301", //   ´ -> ó
+		0x02B9: "\u0301", //   ʹ -> ó
+		0x02CA: "\u0301", //   ˊ -> ó
+		0x005E: "\u0302", //   ^ -> ô
+		0x02C6: "\u0302", //   ˆ -> ô
+		0x007E: "\u0303", //   ~ -> õ
+		0x02DC: "\u0303", //   ˜ -> õ
+		0x00AF: "\u0304", //   ¯ -> ō
+		0x02C9: "\u0304", //   ˉ -> ō
+		0x02D8: "\u0306", //   ˘ -> ŏ
+		0x02D9: "\u0307", //   ˙ -> ȯ
+		0x00A8: "\u0308", //   ¨ -> ö
+		0x00B0: "\u030A", //   ° -> o̊
+		0x02DA: "\u030A", //   ˚ -> o̊
+		0x02BA: "\u030B", //   ʺ -> ő
+		0x02DD: "\u030B", //   ˝ -> ő
+		0x02C7: "\u030C", //   ˇ -> ǒ
+		0x02C8: "\u030D", //   ˈ -> o̍
+		0x0022: "\u030E", //   " -> o̎
+		0x02BB: "\u0312", //   ʻ -> o̒
+		0x02BC: "\u0313", //   ʼ -> o̓
+		0x0486: "\u0313", //   ҆ -> o̓
+		0x055A: "\u0313", //   ՚ -> o̓
+		0x02BD: "\u0314", //   ʽ -> o̔
+		0x0485: "\u0314", //   ҅ -> o̔
+		0x0559: "\u0314", //   ՙ -> o̔
+		0x02D4: "\u031D", //   ˔ -> o̝
+		0x02D5: "\u031E", //   ˕ -> o̞
+		0x02D6: "\u031F", //   ˖ -> o̟
+		0x02D7: "\u0320", //   ˗ -> o̠
+		0x02B2: "\u0321", //   ʲ -> o̡
+		0x00B8: "\u0327", //   ¸ -> o̧
+		0x02CC: "\u0329", //   ˌ -> o̩
+		0x02B7: "\u032B", //   ʷ -> o̫
+		0x02CD: "\u0331", //   ˍ -> o̱
+		0x005F: "\u0332", //   _ -> o̲
+		0x204E: "\u0359", //   ⁎ -> o͙
+	}
+)

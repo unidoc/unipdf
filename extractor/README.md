@@ -10,7 +10,6 @@ In English text,
 - the *reading* direction is left to right, increasing X in the PDF coordinate system.
 - the *depth* directon is top to bottom, decreasing Y in the PDF coordinate system.
 
-
 HOW TEXT IS EXTRACTED
 ---------------------
 
@@ -62,8 +61,7 @@ TODO
 * Remove serial code?
 * Remove verbose* logging?
 * Reinstate rotated text handling.
-* Reinstate  diacritic composition.
-* Reinstate duplicate text removal.
-* Come up with a better name for *reading* direction.
+* Come up with a better name for *reading* direction. Scanning direction? [Word order](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2694615/)?
 * Get R to L text extraction working.
 * Get top to bottom text extraction working.
+* Remove TM from ligature map.

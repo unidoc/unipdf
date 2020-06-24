@@ -289,7 +289,7 @@ func mergWordBags(paraWords []*wordBag) []*wordBag {
 			}
 			para1 := paraWords[i1]
 			r := para0.PdfRectangle
-			r.Llx -= para0.fontsize * 0.99
+			r.Llx -= para0.fontsize
 			if rectContainsRect(r, para1.PdfRectangle) {
 				para0.absorb(para1)
 				absorbed[i1] = struct{}{}

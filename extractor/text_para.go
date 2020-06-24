@@ -70,6 +70,13 @@ func (p *textPara) depth() float64 {
 	return p.table.get(0, 0).depth()
 }
 
+// text is a convenience function that returns the text `p` including tables.
+func (p *textPara) text() string {
+	w := new(bytes.Buffer)
+	p.writeText(w)
+	return w.String()
+}
+
 // writeText writes the text of `p` including tables to `w`.
 func (p *textPara) writeText(w io.Writer) {
 	if p.table == nil {
@@ -133,7 +140,7 @@ func (p *textPara) writeCellText(w io.Writer) {
 }
 
 // toCellTextMarks creates the TextMarkArray corresponding to the extracted text created by
-// paras `paras`.writeCellText().
+// paras `p`.writeCellText().
 func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 	var marks []TextMark
 	for il, line := range p.lines {
@@ -150,7 +157,7 @@ func (p *textPara) toCellTextMarks(offset *int) []TextMark {
 	return marks
 }
 
-// removeLastTextMarkRune removes the last run from `marks`.
+// removeLastTextMarkRune removes the last rune from `marks`.
 func removeLastTextMarkRune(marks []TextMark, offset *int) []TextMark {
 	tm := marks[len(marks)-1]
 	runes := []rune(tm.Text)
@@ -235,7 +242,9 @@ func (b *wordBag) removeDuplicates() {
 func (b *wordBag) arrangeText() *textPara {
 	b.sort() // Sort the words in `b`'s bins in the reading direction.
 
-	b.removeDuplicates()
+	if doRemoveDuplicates {
+		b.removeDuplicates()
+	}
 
 	var lines []*textLine
 
@@ -341,12 +350,4 @@ func (paras paraList) log(title string) {
 		}
 		fmt.Printf("%4d: %6.2f %s %q\n", i, para.PdfRectangle, tabl, truncate(text, 50))
 	}
-}
-
-// text returns the text  of the lines in `p`.
-// NOTE: For debugging only/
-func (p *textPara) text() string {
-	w := new(bytes.Buffer)
-	p.writeText(w)
-	return w.String()
 }
