@@ -8,9 +8,12 @@ package extractor
 import (
 	"bytes"
 	"fmt"
+	"image/color"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/common/license"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/model"
 )
 
 // RenderMode specifies the text rendering mode (Tmode), which determines whether showing text shall cause
@@ -91,4 +94,30 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n]
+}
+
+// pdfColorToGoColor converts the specified color to a Go color, using the
+// provided colorspace. If unsuccessful, color.Black is returned.
+func pdfColorToGoColor(space model.PdfColorspace, c model.PdfColor) color.Color {
+	if space == nil || c == nil {
+		return color.Black
+	}
+
+	conv, err := space.ColorToRGB(c)
+	if err != nil {
+		common.Log.Debug("WARN: could not convert color %v (%v) to RGB: %s", c, space, err)
+		return color.Black
+	}
+	rgb, ok := conv.(*model.PdfColorDeviceRGB)
+	if !ok {
+		common.Log.Debug("WARN: converted color is not in the RGB colorspace: %v", conv)
+		return color.Black
+	}
+
+	return color.NRGBA{
+		R: uint8(rgb.R() * 255),
+		G: uint8(rgb.G() * 255),
+		B: uint8(rgb.B() * 255),
+		A: uint8(255),
+	}
 }

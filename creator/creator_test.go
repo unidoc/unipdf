@@ -3138,6 +3138,74 @@ func TestReferencedPageDestinations(t *testing.T) {
 	testPages(buf, 6, 5)
 }
 
+func TestExtractTextColor(t *testing.T) {
+	red := ColorRGBFrom8bit(255, 0, 0)
+	green := ColorRGBFrom8bit(0, 255, 0)
+	blue := ColorRGBFrom8bit(0, 0, 255)
+
+	// Test data.
+	type textMark struct {
+		text  string
+		color Color
+	}
+
+	lines := [][]textMark{
+		[]textMark{
+			textMark{text: "a", color: red},
+			textMark{text: "b", color: green},
+			textMark{text: "c", color: blue},
+		},
+		[]textMark{
+			textMark{text: "x", color: green},
+			textMark{text: "y", color: blue},
+			textMark{text: "z", color: red},
+		},
+	}
+
+	// Create output file.
+	c := New()
+
+	for _, line := range lines {
+		p := c.NewStyledParagraph()
+		for _, mark := range line {
+			p.Append(mark.text).Style.Color = mark.color
+		}
+		require.NoError(t, c.Draw(p))
+	}
+
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+
+	// Extract output file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	for _, page := range reader.PageList {
+		ex, err := extractor.New(page)
+		require.NoError(t, err)
+
+		pageText, _, _, err := ex.ExtractPageText()
+		require.NoError(t, err)
+		marks := pageText.Marks().Elements()
+
+		for i, line := range lines {
+			lenLine := len(line)
+			for j, inMark := range line {
+				outMark := marks[i*lenLine+i+j]
+				outR, outG, outB, _ := outMark.FillColor.RGBA()
+
+				// Compare the fill color of the input mark with the one
+				// of the extracted mark.
+				inR, inG, inB := inMark.color.ToRGB()
+				require.Equal(t, inMark.text, outMark.Text)
+				require.Equal(t, uint32(inR*255), outR>>8)
+				require.Equal(t, uint32(inG*255), outG>>8)
+				require.Equal(t, uint32(inB*255), outB>>8)
+			}
+		}
+	}
+}
+
 var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
 
 // renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
