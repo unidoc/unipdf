@@ -151,6 +151,7 @@ func TestTextExtractionFiles(t *testing.T) {
 		return
 	}
 	for _, test := range fileExtractionTests {
+		// TODO(peterwilliams97): Remove non-lazy test.
 		testExtractFileOptions(t, test.filename, test.pageTerms, false)
 		testExtractFileOptions(t, test.filename, test.pageTerms, true)
 	}
@@ -278,8 +279,7 @@ var fileExtractionTests = []struct {
 	// close to the preceeding letters.
 	{filename: "/rfc6962.txt.pdf",
 		pageTerms: map[int][]string{
-			4: {
-				"timestamps for certificates they then don’t log",
+			4: {"timestamps for certificates they then don’t log",
 				`The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",`},
 		},
 	},
@@ -291,17 +291,17 @@ var fileExtractionTests = []struct {
 	// TODO(peterwilliams97): Reinstate these 2 tests when diacritic combination is fixed.
 	// {filename: "Ito_Formula.pdf",
 	// 	pageTerms: map[int][]string{
-	// 		1: []string{
-	// 			"In the Itô stochastic calculus",
+	// 		1: {"In the Itô stochastic calculus",
 	// 			"In standard, non-stochastic calculus, one computes a derivative"},
-	// 		2: []string{"Financial Economics Itô’s Formula"},
+	// 		2: {"Financial Economics Itô’s Formula"},
 	// 	},
 	// },
-	// {filename: "thanh.pdf",
-	// 	pageTerms: map[int][]string{
-	// 		1: []string{"Hàn Thé̂ Thành"},
-	// 	},
-	// },
+	{filename: "thanh.pdf",
+		pageTerms: map[int][]string{
+			1: {"Hàn Thế Thành"},
+			6: {"Petr Olšák"},
+		},
+	},
 }
 
 // testExtractFile tests the ExtractTextWithStats text extractor on `filename` and compares the
@@ -313,7 +313,7 @@ func testExtractFileOptions(t *testing.T, filename string, pageTerms map[int][]s
 		if forceTest {
 			t.Fatalf("filepath=%q does not exist", filepath)
 		}
-		t.Logf("%s not found", filepath)
+		t.Logf("%q not found", filepath)
 		return
 	}
 
