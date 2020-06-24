@@ -112,6 +112,15 @@ func (tm *textMark) ToTextMark() TextMark {
 	}
 }
 
+// inDiacriticArea returns true if `diacritic` is in the area where it could be a diacritic of `tm`.
+func (tm *textMark) inDiacriticArea(diacritic *textMark) bool {
+	dLlx := tm.Llx - diacritic.Llx
+	dUrx := tm.Urx - diacritic.Urx
+	dLly := tm.Lly - diacritic.Lly
+	return math.Abs(dLlx+dUrx) < tm.Width()*diacriticRadiusR &&
+		math.Abs(dLly) < tm.Height()*diacriticRadiusR
+}
+
 // appendTextMark appends `mark` to `marks` and updates `offset`, the offset of `mark` in the extracted
 // text.
 func appendTextMark(marks []TextMark, offset *int, mark TextMark) []TextMark {

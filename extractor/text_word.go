@@ -60,23 +60,21 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 	}
 
 	for _, tm := range marks {
-		if doCombineDiacritics {
+		if doCombineDiacritics && newWord != nil && len(newWord.marks) > 0 {
 			// Combine diacritic marks into neighbourimg non-diacritics marks.
-			if newWord != nil && len(newWord.marks) > 0 {
-				prev := newWord.marks[len(newWord.marks)-1]
-				text, isDiacritic := combiningDiacritic(tm.text)
-				prevText, prevDiacritic := combiningDiacritic(prev.text)
-				if isDiacritic && !prevDiacritic && prev.inDiacriticArea(tm) {
-					newWord.addDiacritic(text)
-					continue
-				}
-				if prevDiacritic && !isDiacritic && tm.inDiacriticArea(prev) {
-					// If the previous mark was the diacritic, merge it into this mark and re-append it
-					newWord.marks = newWord.marks[:len(newWord.marks)-1]
-					newWord.addMark(tm, pageSize)
-					newWord.addDiacritic(prevText)
-					continue
-				}
+			prev := newWord.marks[len(newWord.marks)-1]
+			text, isDiacritic := combiningDiacritic(tm.text)
+			prevText, prevDiacritic := combiningDiacritic(prev.text)
+			if isDiacritic && !prevDiacritic && prev.inDiacriticArea(tm) {
+				newWord.addDiacritic(text)
+				continue
+			}
+			if prevDiacritic && !isDiacritic && tm.inDiacriticArea(prev) {
+				// If the previous mark was the diacritic, merge it into this mark and re-append it
+				newWord.marks = newWord.marks[:len(newWord.marks)-1]
+				newWord.appendMark(tm, pageSize)
+				newWord.addDiacritic(prevText)
+				continue
 			}
 		}
 
@@ -105,20 +103,11 @@ func makeTextWords(marks []*textMark, pageSize model.PdfRectangle) []*textWord {
 			newWord = newTextWord([]*textMark{tm}, pageSize)
 			continue
 		}
-		newWord.addMark(tm, pageSize)
+		newWord.appendMark(tm, pageSize)
 	}
 	addNewWord()
 
 	return words
-}
-
-// inDiacriticArea returns true if `diacritic` is in the area where it could be a diacritic of `tm`.
-func (tm *textMark) inDiacriticArea(diacritic *textMark) bool {
-	dLlx := tm.Llx - diacritic.Llx
-	dUrx := tm.Urx - diacritic.Urx
-	dLly := tm.Lly - diacritic.Lly
-	return math.Abs(dLlx+dUrx) < tm.Width()*diacriticRadiusR &&
-		math.Abs(dLly) < tm.Height()*diacriticRadiusR
 }
 
 // newTextWord creates a textWords containing `marks`.
@@ -155,9 +144,9 @@ func (w *textWord) bbox() model.PdfRectangle {
 	return w.PdfRectangle
 }
 
-// addMark adds textMark `tm` to  `w`.
+// appendMark adds textMark `tm` to  `w`.
 // `pageSize` is used to calculate the word's depth on the page.
-func (w *textWord) addMark(tm *textMark, pageSize model.PdfRectangle) {
+func (w *textWord) appendMark(tm *textMark, pageSize model.PdfRectangle) {
 	w.marks = append(w.marks, tm)
 	w.PdfRectangle = rectUnion(w.PdfRectangle, tm.PdfRectangle)
 	if tm.fontsize > w.fontsize {
@@ -212,7 +201,7 @@ func removeWord(words []*textWord, word *textWord) []*textWord {
 	return nil
 }
 
-// removeWord returns `word` with `word[idx]` removed.
+// removeWord returns `words` with `words[idx]` removed.
 func removeWordAt(words []*textWord, idx int) []*textWord {
 	n := len(words)
 	copy(words[idx:], words[idx+1:])
