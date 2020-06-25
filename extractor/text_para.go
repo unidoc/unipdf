@@ -35,6 +35,8 @@ type textPara struct {
 	right *textPara
 	// The unique highest para completely below `this that overlaps it in the x-direction, if one exists.
 	below *textPara
+	left  *textPara
+	above *textPara
 }
 
 // makeTextPara returns a textPara with bounding rectangle `bbox`.
@@ -311,7 +313,7 @@ func (b *wordBag) arrangeText() *textPara {
 	para := makeTextPara(b.PdfRectangle, lines)
 
 	if verbosePara {
-		common.Log.Info("!!! para=%s", para.String())
+		common.Log.Info("arrangeText !!! para=%s", para.String())
 		if verboseParaLine {
 			for i, line := range para.lines {
 				fmt.Printf("%4d: %s\n", i, line.String())

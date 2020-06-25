@@ -43,6 +43,28 @@ func maxInt(a, b int) int {
 func (paras paraList) addNeighbours() {
 	paraNeighbours := paras.yNeighbours()
 	for _, para := range paras {
+		var left *textPara
+		dup := false
+		for _, k := range paraNeighbours[para] {
+			b := paras[k]
+			if b.Urx <= para.Llx {
+				if left == nil {
+					left = b
+				} else {
+					if b.Llx > left.Llx {
+						left = b
+						dup = false
+					} else if b.Llx == left.Llx {
+						dup = true
+					}
+				}
+			}
+		}
+		if !dup {
+			para.left = left
+		}
+	}
+	for _, para := range paras {
 		var right *textPara
 		dup := false
 		for _, k := range paraNeighbours[para] {
@@ -66,6 +88,28 @@ func (paras paraList) addNeighbours() {
 	}
 
 	paraNeighbours = paras.xNeighbours()
+	for _, para := range paras {
+		var above *textPara
+		dup := false
+		for _, i := range paraNeighbours[para] {
+			b := paras[i]
+			if b.Lly >= para.Ury {
+				if above == nil {
+					above = b
+				} else {
+					if b.Ury < above.Ury {
+						above = b
+						dup = false
+					} else if b.Ury == above.Ury {
+						dup = true
+					}
+				}
+			}
+		}
+		if !dup {
+			para.above = above
+		}
+	}
 	for _, para := range paras {
 		var below *textPara
 		dup := false

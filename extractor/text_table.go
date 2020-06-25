@@ -94,13 +94,18 @@ func (para *textPara) isAtom() *textTable {
 	a := para
 	b := para.right
 	c := para.below
-	if b != nil && !b.isCell && c != nil && !c.isCell {
-		d := b.below
-		if d != nil && !d.isCell && d == c.right {
-			return newTableAtom(a, b, c, d)
-		}
+	if !(b != nil && !b.isCell && c != nil && !c.isCell) {
+		return nil
 	}
-	return nil
+	d := b.below
+	if !(d != nil && !d.isCell && d == c.right) {
+		return nil
+	}
+
+	if b.left != a || c.above != a || d.left != c || d.above != b {
+		return nil
+	}
+	return newTableAtom(a, b, c, d)
 }
 
 // newTable returns a table containing the a, b, c, d elements from isAtom().
