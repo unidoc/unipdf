@@ -58,7 +58,6 @@ The entire order of extracted text from a page is expressed in `paraList.writeTe
 TODO
 -----
 
-* Remove `verbose*` logging?
 * Handle diagonal text.
 * Get R to L text extraction working.
 * Get top to bottom text extraction working.
