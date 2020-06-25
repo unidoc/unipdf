@@ -74,33 +74,32 @@ func TestTextExtractionFragments(t *testing.T) {
         `,
 			text: "Hello World!\nDoink",
 		},
-		// TODO(peterwilliams97): Reinstate rotated text tests.
-		// {
-		// 	name: "landscape",
-		// 	contents: `
-		// BT
-		// /UniDocCourier 24 Tf
-		// 0 1 -1 0 0 0 Tm
-		// (Hello World!)Tj
-		// 0 -10 Td
-		// (Doink)Tj
-		// ET
-		// `,
-		// 	text: "Hello World!\nDoink",
-		// },
-		// {
-		// 	name: "180 degree rotation",
-		// 	contents: `
-		// BT
-		// /UniDocCourier 24 Tf
-		// -1 0 0 -1 0 0 Tm
-		// (Hello World!)Tj
-		// 0 -10 Td
-		// (Doink)Tj
-		// ET
-		// `,
-		// 	text: "Hello World!\nDoink",
-		// },
+		{
+			name: "landscape",
+			contents: `
+		BT
+		/UniDocCourier 24 Tf
+		0 1 -1 0 0 0 Tm
+		(Hello World!)Tj
+		0 -25 Td
+		(Doink)Tj
+		ET
+		`,
+			text: "Hello World!\nDoink",
+		},
+		{
+			name: "180 degree rotation",
+			contents: `
+		BT
+		/UniDocCourier 24 Tf
+		-1 0 0 -1 0 0 Tm
+		(Hello World!)Tj
+		0 -25 Td
+		(Doink)Tj
+		ET
+		`,
+			text: "Hello World!\nDoink",
+		},
 		{
 			name: "Helvetica",
 			contents: `
@@ -213,7 +212,6 @@ var fileExtractionTests = []struct {
 			},
 		},
 	},
-	// TODO(peterwilliams97): Reinstate rotation handling and this text.
 	{filename: "000026.pdf",
 		pageTerms: map[int][]string{
 			1: {"Fresh Flower",
@@ -358,7 +356,6 @@ func extractPageTexts(t *testing.T, filename string, lazy bool) (int, map[int]st
 		if err != nil {
 			t.Fatalf("ExtractTextWithStats failed. filename=%q page=%d err=%v", filename, pageNum, err)
 		}
-		// TODO(peterwilliams97): Improve text extraction space insertion so we don't need reduceSpaces.
 		pageText[pageNum] = reduceSpaces(text)
 	}
 	return numPages, pageText
@@ -461,8 +458,9 @@ var textLocTests = []textLocTest{
 					"result is a set of Type 1 fonts that is similar to the Blue Sky fonts",
 					"provide Vietnamese letters with the same quality of outlines and hints",
 					"Vietnamese letters and VNR fonts",
-					"Vietnamese accents can be divided into three the Czech and Polish version of CMR fonts",
-					"kinds of diacritic marks: tone, vowel and consonant. about 2 years until the ﬁrst version",
+					"Vietnamese accents can be divided into",
+					"kinds of diacritic marks: tone, vowel and consonant.",
+					"about 2 years until the first version was released",
 				},
 				termBBox: map[string]model.PdfRectangle{
 					"the Blue Sky fonts":                       r(358.0, 532.5, 439.0, 542.5),
@@ -595,10 +593,6 @@ func (c pageContents) testPageTextAndMarks(t *testing.T, l *markupList, desc str
 	// 1) Check that all expected terms are found in `text`.
 	for i, term := range c.terms {
 		common.Log.Debug("%d: %q", i, term)
-		// TODO(peterwilliams97): Reinstate these tests when than.pdf is working again
-		if i == 3 || i == 4 {
-			continue
-		}
 		if !strings.Contains(text, term) {
 			t.Fatalf("text doesn't contain %q. %s", term, desc)
 		}
@@ -657,10 +651,7 @@ func testTermMarksFiles(t *testing.T) {
 	}
 	for i, filename := range pathList {
 		// 4865ab395ed664c3ee17.pdf is a corrupted file in the test corpus.
-		// TODO(peterwilliams97): Get the other 2 PDFs to pass.
-		if strings.Contains(filename, "4865ab395ed664c3ee17.pdf") ||
-			strings.Contains(filename, "challenging-modified.pdf") ||
-			strings.Contains(filename, "transitions_test.pdf") {
+		if strings.Contains(filename, "4865ab395ed664c3ee17.pdf") {
 			continue
 		}
 		common.Log.Info("%4d of %d: %q", i+1, len(pathList), filename)

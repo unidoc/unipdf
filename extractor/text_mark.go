@@ -92,8 +92,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 			Ury: bbox.Urx}
 	case 180:
 		orientedBBox = model.PdfRectangle{
-			Llx: bbox.Llx,
-			Urx: bbox.Urx,
+			Llx: orientedMBox.Urx - bbox.Llx,
+			Urx: orientedMBox.Urx - bbox.Urx,
 			Lly: orientedMBox.Ury - bbox.Lly,
 			Ury: orientedMBox.Ury - bbox.Ury}
 	case 270:
