@@ -38,7 +38,7 @@ import (
 // 3) Detect textParas arranged as cells in a table and convert each one to a textPara containing a
 //    textTable.
 // 4) Sort the textParas in reading order.
-func makeTextPage(marks []*textMark, pageSize model.PdfRectangle, rot int) paraList {
+func makeTextPage(marks []*textMark, pageSize model.PdfRectangle) paraList {
 	common.Log.Trace("makeTextPage: %d elements pageSize=%.2f", len(marks), pageSize)
 	if len(marks) == 0 {
 		return nil

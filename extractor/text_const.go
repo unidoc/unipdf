@@ -26,6 +26,8 @@ const (
 
 // The following constants are the tuning parameter for text extracton
 const (
+	// Change in angle of text in degrees that we treat as a different orientatiom/
+	orientationGranularity = 10
 	// Size of depth bins in points
 	depthBinPoints = 6
 

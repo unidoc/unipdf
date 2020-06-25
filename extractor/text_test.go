@@ -214,13 +214,13 @@ var fileExtractionTests = []struct {
 		},
 	},
 	// TODO(peterwilliams97): Reinstate rotation handling and this text.
-	// {filename: "000026.pdf",
-	// 	pageTerms: map[int][]string{
-	// 		1: []string{"Fresh Flower",
-	// 			"Care & Handling",
-	// 		},
-	// 	},
-	// },
+	{filename: "000026.pdf",
+		pageTerms: map[int][]string{
+			1: {"Fresh Flower",
+				"Care & Handling",
+			},
+		},
+	},
 	{filename: "search_sim_key.pdf",
 		pageTerms: map[int][]string{
 			2: {"A cryptographic scheme which enables searching",
@@ -228,7 +228,7 @@ var fileExtractionTests = []struct {
 			},
 		},
 	},
-	{filename: "Theil_inequality.pdf",
+	{filename: "Theil_inequality.pdf", // 270° rotated file.
 		pageTerms: map[int][]string{
 			1: {"London School of Economics and Political Science"},
 			4: {"The purpose of this paper is to set Theil’s approach"},
@@ -273,10 +273,6 @@ var fileExtractionTests = []struct {
 			1: {"entropy of a system of n identical resonators in a stationary radiation field"},
 		},
 	},
-	// Case where combineDiacritics was combining ' and " with preceeding letters.
-	// NOTE(peterwilliams97): Part of the reason this test fails is that we don't currently read
-	// Type0:CIDFontType0 font metrics and assume zero displacemet so that we place the ' and " too
-	// close to the preceeding letters.
 	{filename: "/rfc6962.txt.pdf",
 		pageTerms: map[int][]string{
 			4: {"timestamps for certificates they then don’t log",
@@ -288,15 +284,14 @@ var fileExtractionTests = []struct {
 			10: {"الله"},
 		},
 	},
-	// TODO(peterwilliams97): Reinstate these 2 tests when diacritic combination is fixed.
-	// {filename: "Ito_Formula.pdf",
-	// 	pageTerms: map[int][]string{
-	// 		1: {"In the Itô stochastic calculus",
-	// 			"In standard, non-stochastic calculus, one computes a derivative"},
-	// 		2: {"Financial Economics Itô’s Formula"},
-	// 	},
-	// },
-	{filename: "thanh.pdf",
+	{filename: "Ito_Formula.pdf", // 90° rotated with diacritics in different textMarks to base.
+		pageTerms: map[int][]string{
+			1: {"In the Itô stochastic calculus",
+				"In standard, non-stochastic calculus, one computes a derivative"},
+			2: {"Financial Economics Itô’s Formula"},
+		},
+	},
+	{filename: "thanh.pdf", // Diacritics in different textMarks to base.
 		pageTerms: map[int][]string{
 			1: {"Hàn Thế Thành"},
 			6: {"Petr Olšák"},

@@ -17,15 +17,17 @@ import (
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	serial             int              // Sequence number for debugging.
-	model.PdfRectangle                  // Bounding box.
-	text               string           // The text (decoded via ToUnicode).
-	original           string           // Original text (decoded).
-	font               *model.PdfFont   // The font the mark was drawn with.
-	fontsize           float64          // The font size the mark was drawn with.
-	charspacing        float64          // TODO (peterwilliams97: Should this be exposed in TextMark?
-	trm                transform.Matrix // The current text rendering matrix (TRM above).
-	end                transform.Point  // The end of character device coordinates.
+	serial             int                // Sequence number for debugging.
+	model.PdfRectangle                    // Bounding box oriented so character base is at bottom
+	orient             int                // Orientation
+	text               string             // The text (decoded via ToUnicode).
+	original           string             // Original text (decoded).
+	font               *model.PdfFont     // The font the mark was drawn with.
+	fontsize           float64            // The font size the mark was drawn with.
+	charspacing        float64            // TODO (peterwilliams97: Should this be exposed in TextMark?
+	trm                transform.Matrix   // The current text rendering matrix (TRM above).
+	end                transform.Point    // The end of character device coordinates.
+	originaBBox        model.PdfRectangle // Bounding box without orientation correction.
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
@@ -34,7 +36,7 @@ type textMark struct {
 func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
 	spaceWidth float64, font *model.PdfFont, charspacing float64) (textMark, bool) {
 	theta := trm.Angle()
-	orient := nearestMultiple(theta, 10)
+	orient := nearestMultiple(theta, orientationGranularity)
 	var height float64
 	if orient%180 != 90 {
 		height = trm.ScalingFactorY()
@@ -51,7 +53,12 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		bbox.Ury -= height
 	case 270:
 		bbox.Urx += height
+	case 0:
+		bbox.Ury += height
 	default:
+		// This is a hack to capture diagonal text.
+		// TODO(peterwilliams97): Extract diagonal text.
+		orient = 0
 		bbox.Ury += height
 	}
 	if bbox.Llx > bbox.Urx {
@@ -68,20 +75,52 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 	}
 	bbox = clipped
 
+	// The orientedBBox is bbox rotated and translated so the base of the character is at Lly.
+	orientedBBox := bbox
+	orientedMBox := to.e.mediaBox
+
+	switch orient % 360 {
+	case 90:
+		orientedMBox.Urx, orientedMBox.Ury = orientedMBox.Ury, orientedMBox.Urx
+		orientedBBox = model.PdfRectangle{
+			Llx: orientedMBox.Urx - bbox.Ury,
+			Urx: orientedMBox.Urx - bbox.Lly,
+			Lly: bbox.Llx,
+			Ury: bbox.Urx}
+	case 180:
+		orientedBBox = model.PdfRectangle{
+			Llx: bbox.Llx,
+			Urx: bbox.Urx,
+			Lly: orientedMBox.Ury - bbox.Lly,
+			Ury: orientedMBox.Ury - bbox.Ury}
+	case 270:
+		orientedMBox.Urx, orientedMBox.Ury = orientedMBox.Ury, orientedMBox.Urx
+		orientedBBox = model.PdfRectangle{
+			Llx: bbox.Ury,
+			Urx: bbox.Lly,
+			Lly: orientedMBox.Ury - bbox.Llx,
+			Ury: orientedMBox.Ury - bbox.Urx}
+	}
+	if orientedBBox.Llx > orientedBBox.Urx {
+		orientedBBox.Llx, orientedBBox.Urx = orientedBBox.Urx, orientedBBox.Llx
+	}
+	if orientedBBox.Lly > orientedBBox.Ury {
+		orientedBBox.Lly, orientedBBox.Ury = orientedBBox.Ury, orientedBBox.Lly
+	}
+
 	tm := textMark{
 		text:         text,
-		PdfRectangle: bbox,
+		PdfRectangle: orientedBBox,
+		originaBBox:  bbox,
 		font:         font,
 		fontsize:     height,
 		charspacing:  charspacing,
 		trm:          trm,
 		end:          end,
+		orient:       orient,
 		serial:       serial.mark,
 	}
 	serial.mark++
-	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
-		common.Log.Debug("ERROR: Zero width text. tm=%s", tm.String())
-	}
 	if verboseGeom {
 		common.Log.Info("newTextMark: start=%.2f end=%.2f %s", start, end, tm.String())
 	}
@@ -106,7 +145,7 @@ func (tm *textMark) ToTextMark() TextMark {
 		count:    int64(tm.serial),
 		Text:     tm.text,
 		Original: tm.original,
-		BBox:     tm.PdfRectangle,
+		BBox:     tm.originaBBox,
 		Font:     tm.font,
 		FontSize: tm.fontsize,
 	}

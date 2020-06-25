@@ -59,9 +59,9 @@ TODO
 -----
 
 * Remove serial code?
-* Remove verbose* logging?
-* Reinstate rotated text handling.
+* Remove `verbose*` logging?
 * Come up with a better name for *reading* direction. Scanning direction? [Word order](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2694615/)?
+* Handle diagonal text.
 * Get R to L text extraction working.
 * Get top to bottom text extraction working.
 * Remove TM from ligature map.

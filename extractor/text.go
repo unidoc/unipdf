@@ -838,8 +838,7 @@ func (to *textObject) renderText(data []byte) error {
 		} else {
 			// TODO: This lookup seems confusing. Went from bytes <-> charcodes already.
 			// NOTE: This is needed to register runes by the font encoder - for subsetting (optimization).
-			original, ok := font.Encoder().CharcodeToRune(code)
-			if ok {
+			if original, ok := font.Encoder().CharcodeToRune(code); ok {
 				mark.original = string(original)
 			}
 		}
@@ -923,8 +922,25 @@ func (pt PageText) Tables() []TextTable {
 // The comments above the TextMark definition describe how to use the []TextMark to
 // maps substrings of the page text to locations on the PDF page.
 func (pt *PageText) computeViews() {
-	common.Log.Trace("ToTextLocation: %d elements", len(pt.marks))
-	paras := makeTextPage(pt.marks, pt.pageSize, 0)
+	// Extract text paragraphs one orientation at a time.
+	// If there are texts with several orientations on a page then the all the text of the same
+	// orientation gets extracted togther.
+	var paras paraList
+	n := len(pt.marks)
+	for orient := 0; orient < 360 && n > 0; orient += 90 {
+		marks := make([]*textMark, 0, len(pt.marks)-n)
+		for _, tm := range pt.marks {
+			if tm.orient == orient {
+				marks = append(marks, tm)
+			}
+		}
+		if len(marks) > 0 {
+			parasOrient := makeTextPage(marks, pt.pageSize)
+			paras = append(paras, parasOrient...)
+			n -= len(marks)
+		}
+	}
+	// Build the public viewable fields from the paraLis
 	b := new(bytes.Buffer)
 	paras.writeText(b)
 	pt.viewText = b.String()
