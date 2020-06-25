@@ -21,11 +21,10 @@ import (
 type paraList []*textPara
 
 // textPara is a group of words in a rectangular region of a page that get read together.
-// An peragraph in a document might span multiple pages. This is the paragraph framgent on one page.
+// A paragraph in a document might span multiple pages. This is the paragraph fragment on one page.
 // textParas can be tables in which case the content is in `table`, otherwise the content is in `lines`.
 // textTable cells are textParas so this gives one level of recursion
 type textPara struct {
-	serial             int                // Sequence number for debugging.
 	model.PdfRectangle                    // Bounding box.
 	eBBox              model.PdfRectangle // Extended bounding box needed to compute reading order.
 	lines              []*textLine        // The lines in the paragraph. (nil for the table case)
@@ -40,13 +39,7 @@ type textPara struct {
 
 // makeTextPara returns a textPara with bounding rectangle `bbox`.
 func makeTextPara(bbox model.PdfRectangle, lines []*textLine) *textPara {
-	para := textPara{
-		serial:       serial.para,
-		PdfRectangle: bbox,
-		lines:        lines,
-	}
-	serial.para++
-	return &para
+	return &textPara{PdfRectangle: bbox, lines: lines}
 }
 
 // String returns a description of `p`.
@@ -55,8 +48,8 @@ func (p *textPara) String() string {
 	if p.table != nil {
 		table = fmt.Sprintf("[%dx%d] ", p.table.w, p.table.h)
 	}
-	return fmt.Sprintf("serial=%d %6.2f %s%d lines %q",
-		p.serial, p.PdfRectangle, table, len(p.lines), truncate(p.text(), 50))
+	return fmt.Sprintf("%6.2f %s%d lines %q",
+		p.PdfRectangle, table, len(p.lines), truncate(p.text(), 50))
 }
 
 // depth returns the paragraph's depth. which is the depth of its top line.

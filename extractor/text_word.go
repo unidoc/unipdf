@@ -23,7 +23,6 @@ import (
 //  - A textLine is the textWords at similar depths sorted in reading order.
 //  - All textWords, w, in the textLine that start whole words have w.newWord = true
 type textWord struct {
-	serial             int         // Sequence number for debugging.
 	model.PdfRectangle             // Bounding box (union of `marks` bounding boxes).
 	depth              float64     // Distance from bottom of this word to the top of the page.
 	text               string      // The word fragment text.
@@ -122,21 +121,18 @@ func newTextWord(marks []*textMark, pageSize model.PdfRectangle) *textWord {
 		}
 	}
 
-	word := textWord{
-		serial:       serial.word,
+	return &textWord{
 		PdfRectangle: r,
 		marks:        marks,
 		depth:        pageSize.Ury - r.Lly,
 		fontsize:     fontsize,
 	}
-	serial.word++
-	return &word
 }
 
 // String returns a description of `w`.
 func (w *textWord) String() string {
-	return fmt.Sprintf("serial=%d %.2f %6.2f fontsize=%.2f \"%s\"",
-		w.serial, w.depth, w.PdfRectangle, w.fontsize, w.text)
+	return fmt.Sprintf("%.2f %6.2f fontsize=%.2f \"%s\"",
+		w.depth, w.PdfRectangle, w.fontsize, w.text)
 }
 
 // bbox makes textWord implement the `bounded` interface.

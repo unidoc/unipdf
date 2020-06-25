@@ -22,7 +22,6 @@ import (
 // In the current implementation, wordBag is a list of word fragment bins arranged by their depth on
 // a page with the word fragments  in each bin are sorted in reading order.
 type wordBag struct {
-	serial             int     // Sequence number for debugging.
 	model.PdfRectangle         // Bounding box of all the textWord in the wordBag.
 	fontsize           float64 // The size of the largest font in the wordBag.
 	// The following fields are for the current bin based implementation
@@ -48,13 +47,11 @@ func newWordBag(word *textWord, pageHeight float64) *wordBag {
 	depthIdx := depthIndex(word.depth)
 	words := []*textWord{word}
 	bag := wordBag{
-		serial:       serial.wordBag,
 		bins:         map[int][]*textWord{depthIdx: words},
 		PdfRectangle: word.PdfRectangle,
 		fontsize:     word.fontsize,
 		pageHeight:   pageHeight,
 	}
-	serial.wordBag++
 	return &bag
 }
 
@@ -67,8 +64,7 @@ func (b *wordBag) String() string {
 			texts = append(texts, w.text)
 		}
 	}
-	return fmt.Sprintf("serial=%d %.2f fontsize=%.2f %d %q",
-		b.serial, b.PdfRectangle, b.fontsize, len(texts), texts)
+	return fmt.Sprintf("%.2f fontsize=%.2f %d %q", b.PdfRectangle, b.fontsize, len(texts), texts)
 }
 
 // scanBand scans the bins for words w:

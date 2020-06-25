@@ -15,7 +15,6 @@ import (
 
 // textLine repesents words on the same line within a textPara.
 type textLine struct {
-	serial             int         // Sequence number for debugging.
 	model.PdfRectangle             // Bounding box (union of `marks` bounding boxes).
 	depth              float64     // Distance from bottom of line to top of page.
 	words              []*textWord // Words in this line.
@@ -27,20 +26,18 @@ type textLine struct {
 func newTextLine(b *wordBag, depthIdx int) *textLine {
 	word := b.firstWord(depthIdx)
 	line := textLine{
-		serial:       serial.line,
 		PdfRectangle: word.PdfRectangle,
 		fontsize:     word.fontsize,
 		depth:        word.depth,
 	}
-	serial.line++
 	line.pullWord(b, word, depthIdx)
 	return &line
 }
 
 // String returns a description of `l`.
 func (l *textLine) String() string {
-	return fmt.Sprintf("serial=%d %.2f %6.2f fontsize=%.2f \"%s\"",
-		l.serial, l.depth, l.PdfRectangle, l.fontsize, l.text())
+	return fmt.Sprintf("%.2f %6.2f fontsize=%.2f \"%s\"",
+		l.depth, l.PdfRectangle, l.fontsize, l.text())
 }
 
 // bbox makes textLine implement the `bounded` interface.

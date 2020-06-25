@@ -11,24 +11,6 @@ import (
 	"unicode"
 )
 
-// serial is used to add serial numbers to all text* instances.
-var serial serialState
-
-// serialState keeps serial number for text* structs.
-type serialState struct {
-	mark    int // textMark
-	word    int // textWord
-	wordBag int // wordBag
-	line    int // textLine
-	para    int // textPara
-}
-
-// reset resets `serial` to all zeros.
-func (serial *serialState) reset() {
-	var empty serialState
-	*serial = empty
-}
-
 // TOL is the tolerance for coordinates to be consideted equal. It is big enough to cover all
 // rounding errors and small enough that TOL point differences on a page aren't visible.
 const TOL = 1.0e-6

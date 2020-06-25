@@ -17,7 +17,6 @@ import (
 // textMark represents text drawn on a page and its position in device coordinates.
 // All dimensions are in device coordinates.
 type textMark struct {
-	serial             int                // Sequence number for debugging.
 	model.PdfRectangle                    // Bounding box oriented so character base is at bottom
 	orient             int                // Orientation
 	text               string             // The text (decoded via ToUnicode).
@@ -118,20 +117,16 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		trm:          trm,
 		end:          end,
 		orient:       orient,
-		serial:       serial.mark,
 	}
-	serial.mark++
 	if verboseGeom {
 		common.Log.Info("newTextMark: start=%.2f end=%.2f %s", start, end, tm.String())
 	}
-
 	return tm, onPage
 }
 
 // String returns a description of `tm`.
 func (tm *textMark) String() string {
-	return fmt.Sprintf("serial=%d %.2f fontsize=%.2f \"%s\"",
-		tm.serial, tm.PdfRectangle, tm.fontsize, tm.text)
+	return fmt.Sprintf("%.2f fontsize=%.2f \"%s\"", tm.PdfRectangle, tm.fontsize, tm.text)
 }
 
 // bbox makes textMark implement the `bounded` interface.
@@ -142,7 +137,6 @@ func (tm *textMark) bbox() model.PdfRectangle {
 // ToTextMark returns the public view of `tm`.
 func (tm *textMark) ToTextMark() TextMark {
 	return TextMark{
-		count:    int64(tm.serial),
 		Text:     tm.text,
 		Original: tm.original,
 		BBox:     tm.originaBBox,

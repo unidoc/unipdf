@@ -1065,7 +1065,7 @@ func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
 //      bbox, ok := spanMarks.BBox()
 //      // handle errors
 type TextMark struct {
-	// Text is the extracted text. It has been decoded to Unicode via ToUnicode().
+	// Text is the extracted text.
 	Text string
 	// Original is the text in the PDF. It has not been decoded like `Text`.
 	Original string
@@ -1084,8 +1084,6 @@ type TextMark struct {
 	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
-	// For debugging
-	count int64
 }
 
 // String returns a string describing `tm`.
@@ -1102,8 +1100,8 @@ func (tm TextMark) String() string {
 	if tm.Meta {
 		meta = " *M*"
 	}
-	return fmt.Sprintf("{@%04d TextMark: %d %q=%02x (%6.2f, %6.2f) (%6.2f, %6.2f) %s%s}",
-		tm.count, tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
+	return fmt.Sprintf("{TextMark: %d %q=%02x (%6.2f, %6.2f) (%6.2f, %6.2f) %s%s}",
+		tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
 // spaceMark is a special TextMark used for spaces.
@@ -1119,7 +1117,15 @@ var spaceMark = TextMark{
 // Cells[y][x] is the (0-offset) x'th column in the table.
 type TextTable struct {
 	W, H  int
-	Cells [][]string
+	Cells [][]TableCell
+}
+
+// TableCell is a cell in a TextTable.
+type TableCell struct {
+	// Text is the extracted text.
+	Text string
+	// Marks returns the TextMarks corresponding to the text in Text.
+	Marks TextMarkArray
 }
 
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is

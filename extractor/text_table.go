@@ -231,15 +231,11 @@ func (t *textTable) markCells() {
 // newTablePara returns a textPara containing `t`.
 func (t *textTable) newTablePara() *textPara {
 	bbox := t.computeBbox()
-	para := textPara{
-		serial:       serial.para,
+	return &textPara{
 		PdfRectangle: bbox,
 		eBBox:        bbox,
 		table:        t,
 	}
-	t.log(fmt.Sprintf("newTablePara: serial=%d", para.serial))
-	serial.para++
-	return &para
 }
 
 // computeBbox computes and returns the bounding box of `t`.
@@ -258,11 +254,14 @@ func (t *textTable) computeBbox() model.PdfRectangle {
 
 // toTextTable returns the TextTable corresponding to `t`.
 func (t *textTable) toTextTable() TextTable {
-	cells := make([][]string, t.h)
+	cells := make([][]TableCell, t.h)
 	for y := 0; y < t.h; y++ {
-		cells[y] = make([]string, t.w)
+		cells[y] = make([]TableCell, t.w)
 		for x := 0; x < t.w; x++ {
-			cells[y][x] = t.get(x, y).text()
+			c := t.get(x, y)
+			cells[y][x].Text = c.text()
+			offset := 0
+			cells[y][x].Marks.marks = c.toTextMarks(&offset)
 		}
 	}
 	return TextTable{W: t.w, H: t.h, Cells: cells}

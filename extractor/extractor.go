@@ -35,7 +35,6 @@ type Extractor struct {
 
 // New returns an Extractor instance for extracting content from the input PDF page.
 func New(page *model.PdfPage) (*Extractor, error) {
-	serial.reset()
 	contents, err := page.GetAllContentStreams()
 	if err != nil {
 		return nil, err
@@ -61,7 +60,6 @@ func New(page *model.PdfPage) (*Extractor, error) {
 }
 
 // NewFromContents creates a new extractor from contents and page resources.
-// XXX(peterwilliams97). Does anyone use this?
 func NewFromContents(contents string, resources *model.PdfPageResources) (*Extractor, error) {
 	e := &Extractor{
 		contents:    contents,
