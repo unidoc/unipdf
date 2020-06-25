@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 	"sort"
 	"strings"
@@ -94,7 +95,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
 			resources *model.PdfPageResources) error {
-
 			operand := op.Operand
 
 			if verboseGeom {
@@ -353,6 +353,14 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				pageText.marks = append(pageText.marks, formResult.pageText.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
+			case "rg", "g", "k", "cs", "sc", "scn":
+				// Set non-stroking color/colorspace.
+				to.gs.ColorspaceNonStroking = gs.ColorspaceNonStroking
+				to.gs.ColorNonStroking = gs.ColorNonStroking
+			case "RG", "G", "K", "CS", "SC", "SCN":
+				// Set stroking color/colorspace.
+				to.gs.ColorspaceStroking = gs.ColorspaceStroking
+				to.gs.ColorStroking = gs.ColorStroking
 			}
 			return nil
 		})
@@ -726,6 +734,16 @@ func (to *textObject) reset() {
 	to.marks = nil
 }
 
+// getFillColor returns the fill color of the text object.
+func (to *textObject) getFillColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceNonStroking, to.gs.ColorNonStroking)
+}
+
+// getStrokeColor returns the stroke color of the text object.
+func (to *textObject) getStrokeColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceStroking, to.gs.ColorStroking)
+}
+
 // renderText processes and renders byte array `data` for extraction purposes.
 // It extracts textMarks based the charcodes in `data` and the currect text and graphics states
 // are tracked in `to`.
@@ -766,6 +784,9 @@ func (to *textObject) renderText(data []byte) error {
 	}
 
 	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(texts))
+
+	fillColor := to.getFillColor()
+	strokeColor := to.getStrokeColor()
 
 	for i, text := range texts {
 		r := []rune(text)
@@ -826,12 +847,15 @@ func (to *textObject) renderText(data []byte) error {
 			translation(end),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
 			font,
-			to.state.tc)
+			to.state.tc,
+			fillColor,
+			strokeColor)
+
 		if !onPage {
 			common.Log.Debug("Text mark outside page. Skipping")
 			continue
 		}
-		if font == nil {
+if font == nil {
 			common.Log.Debug("ERROR: No font.")
 		} else if font.Encoder() == nil {
 			common.Log.Debug("ERROR: No encoding. font=%s", font)
@@ -874,6 +898,14 @@ func (to *textObject) moveTo(tx, ty float64) {
 	to.tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, ty))
 	to.tm = to.tlm
 }
+
+
+
+
+
+
+
+
 
 // PageText represents the layout of text on a device page.
 type PageText struct {
@@ -1084,6 +1116,12 @@ type TextMark struct {
 	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
+	// FillColor is the fill color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
+	FillColor color.Color
+	// StrokeColor is the stroke color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
+	StrokeColor color.Color
 }
 
 // String returns a string describing `tm`.

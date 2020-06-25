@@ -7,6 +7,7 @@ package extractor
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -27,13 +28,16 @@ type textMark struct {
 	trm                transform.Matrix   // The current text rendering matrix (TRM above).
 	end                transform.Point    // The end of character device coordinates.
 	originaBBox        model.PdfRectangle // Bounding box without orientation correction.
+	fillColor          color.Color        // Text fill color.
+	strokeColor        color.Color        // Text stroke color.
 }
 
 // newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
 // and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
 // space in the font the text is rendered in device coordinates.
 func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
-	spaceWidth float64, font *model.PdfFont, charspacing float64) (textMark, bool) {
+	spaceWidth float64, font *model.PdfFont, charspacing float64,
+	fillColor, strokeColor color.Color) (textMark, bool) {
 	theta := trm.Angle()
 	orient := nearestMultiple(theta, orientationGranularity)
 	var height float64
@@ -117,6 +121,8 @@ func (to *textObject) newTextMark(text string, trm transform.Matrix, end transfo
 		trm:          trm,
 		end:          end,
 		orient:       orient,
+		fillColor:    fillColor,
+		strokeColor:  strokeColor,
 	}
 	if verboseGeom {
 		common.Log.Info("newTextMark: start=%.2f end=%.2f %s", start, end, tm.String())
