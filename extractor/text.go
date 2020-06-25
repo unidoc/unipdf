@@ -855,7 +855,7 @@ func (to *textObject) renderText(data []byte) error {
 			common.Log.Debug("Text mark outside page. Skipping")
 			continue
 		}
-if font == nil {
+		if font == nil {
 			common.Log.Debug("ERROR: No font.")
 		} else if font.Encoder() == nil {
 			common.Log.Debug("ERROR: No encoding. font=%s", font)
@@ -898,14 +898,6 @@ func (to *textObject) moveTo(tx, ty float64) {
 	to.tlm.Concat(transform.NewMatrix(1, 0, 0, 1, tx, ty))
 	to.tm = to.tlm
 }
-
-
-
-
-
-
-
-
 
 // PageText represents the layout of text on a device page.
 type PageText struct {
@@ -1144,9 +1136,11 @@ func (tm TextMark) String() string {
 
 // spaceMark is a special TextMark used for spaces.
 var spaceMark = TextMark{
-	Text:     "[X]",
-	Original: " ",
-	Meta:     true,
+	Text:        "[X]",
+	Original:    " ",
+	Meta:        true,
+	FillColor:   color.White,
+	StrokeColor: color.White,
 }
 
 // TextTable represents a table.

@@ -143,11 +143,13 @@ func (tm *textMark) bbox() model.PdfRectangle {
 // ToTextMark returns the public view of `tm`.
 func (tm *textMark) ToTextMark() TextMark {
 	return TextMark{
-		Text:     tm.text,
-		Original: tm.original,
-		BBox:     tm.originaBBox,
-		Font:     tm.font,
-		FontSize: tm.fontsize,
+		Text:        tm.text,
+		Original:    tm.original,
+		BBox:        tm.originaBBox,
+		Font:        tm.font,
+		FontSize:    tm.fontsize,
+		FillColor:   tm.fillColor,
+		StrokeColor: tm.strokeColor,
 	}
 }
 

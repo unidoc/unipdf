@@ -196,6 +196,9 @@ func (p *textPara) fontsize() float64 {
 // removeDuplicates removes duplicate word fragments such as those used for bolding.
 func (b *wordBag) removeDuplicates() {
 	for _, depthIdx := range b.depthIndexes() {
+		if len(b.bins[depthIdx]) == 0 {
+			continue
+		}
 		word := b.bins[depthIdx][0]
 		delta := maxDuplicateWordR * word.fontsize
 		minDepth := word.depth
