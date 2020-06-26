@@ -258,11 +258,12 @@ func (b *wordBag) arrangeText() *textPara {
 			// Create a new line.
 			line := newTextLine(b, firstReadingIdx)
 
-			// Compute the search range based on `b` first word fontsize
-			minDepth := firstWord.depth - lineDepthR*b.fontsize
-			maxDepth := firstWord.depth + lineDepthR*b.fontsize
-			maxIntraWordGap := maxIntraWordGapR * b.fontsize
-			maxIntraLineOverlap := maxIntraLineOverlapR * b.fontsize
+			// Compute the search range based on `b` first word fontsize.
+			fontsize := firstWord.fontsize
+			minDepth := firstWord.depth - lineDepthR*fontsize
+			maxDepth := firstWord.depth + lineDepthR*fontsize
+			maxIntraWordGap := maxIntraWordGapR * fontsize
+			maxIntraLineOverlap := maxIntraLineOverlapR * fontsize
 
 			// Find the rest of the words in the line that starts with `firstWord`
 			// Search down from `minDepth`, half a line above `firstWord` to `maxDepth`, half a line
