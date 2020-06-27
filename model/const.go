@@ -7,6 +7,9 @@ package model
 
 import (
 	"errors"
+	"fmt"
+
+	"github.com/unidoc/unipdf/v3/core"
 )
 
 // Errors when parsing/loading data in PDF.
@@ -18,8 +21,8 @@ var (
 	errRangeError               = errors.New("range check error")
 	ErrEncrypted                = errors.New("file needs to be decrypted first")
 	ErrNoFont                   = errors.New("font not defined")
-	ErrFontNotSupported         = errors.New("unsupported font")
-	ErrType1CFontNotSupported   = errors.New("Type1C fonts are not currently supported")
-	ErrType3FontNotSupported    = errors.New("Type3 fonts are not currently supported")
-	ErrTTCmapNotSupported       = errors.New("unsupported TrueType cmap format")
+	ErrFontNotSupported         = fmt.Errorf("unsupported font (%w)", core.ErrNotSupported)
+	ErrType1CFontNotSupported   = fmt.Errorf("Type1C fonts are not currently supported (%w)", core.ErrNotSupported)
+	ErrType3FontNotSupported    = fmt.Errorf("Type3 fonts are not currently supported (%w)", core.ErrNotSupported)
+	ErrTTCmapNotSupported       = fmt.Errorf("unsupported TrueType cmap format (%w)", core.ErrNotSupported)
 )

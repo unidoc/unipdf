@@ -245,7 +245,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				err = to.setFont(name, size)
-				to.invalidFont = unsupportedFontErr(err)
+				to.invalidFont = errors.Is(err, core.ErrNotSupported)
 				if err != nil && !to.invalidFont {
 					return err
 				}
@@ -370,23 +370,6 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 		common.Log.Debug("ERROR: Processing: err=%v", err)
 	}
 	return pageText, state.numChars, state.numMisses, err
-}
-
-// unsupportedFontErr returns true if `err` indicated that the selected font or encoding is not supported.
-func unsupportedFontErr(err error) bool {
-	if err == model.ErrFontNotSupported ||
-		err == model.ErrType1CFontNotSupported ||
-		err == model.ErrType3FontNotSupported ||
-		err == model.ErrTTCmapNotSupported {
-		return true
-	}
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	return strings.Contains(errStr, "unsupported font encoding:") ||
-		strings.Contains(errStr, "unexpected subtable format:") ||
-		strings.Contains(errStr, "fonts based on PostScript outlines are not supported")
 }
 
 // textResult is used for holding results of PDF form processig
