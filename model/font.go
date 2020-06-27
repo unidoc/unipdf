@@ -702,10 +702,9 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 	if base.toUnicode != nil {
 		d.Set("ToUnicode", base.toUnicode)
 	} else if base.toUnicodeCmap != nil {
-		data := base.toUnicodeCmap.Bytes()
-		o, err := core.MakeStream(data, core.NewFlateEncoder())
+		o, err := base.toUnicodeCmap.Stream()
 		if err != nil {
-			common.Log.Debug("MakeStream failed. err=%v", err)
+			common.Log.Debug("WARN: could not get CMap stream. err=%v", err)
 		} else {
 			d.Set("ToUnicode", o)
 		}

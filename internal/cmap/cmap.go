@@ -112,11 +112,18 @@ type CMap struct {
 	codeToUnicode map[CharCode]string // CID -> Unicode string
 	unicodeToCode map[string]CharCode // Unicode rune -> CID
 
-	// cached contains the raw CMap data. It is used by the Bytes method in
-	// order to avoid generating the data for every call.
-	// NOTE: While it is not currently required, a cache invalidation mechanism
-	// might be needed in the future.
-	cached []byte
+	// cachedBytes contains the raw CMap data. It is used by the Bytes
+	// method in order to avoid generating the data for each call.
+	// NOTE: While it is not currently required, a cache invalidation
+	// mechanism might be needed in the future.
+	cachedBytes []byte
+
+	// cachedStream is a Flate encoded stream containing the raw CMap data.
+	// It is used by the Stream method in order to avoid generating the
+	// stream for each call.
+	// NOTE: While it is not currently required, a cache invalidation
+	// mechanism might be needed in the future.
+	cachedStream *core.PdfObjectStream
 }
 
 // NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToRune` arg.
@@ -380,7 +387,7 @@ func (cmap *CMap) Type() int {
 	return cmap.ctype
 }
 
-// Nbits returns 8 bits for simple font CMaps and 16 bits for CID font CMaps.
+// NBits returns 8 bits for simple font CMaps and 16 bits for CID font CMaps.
 func (cmap *CMap) NBits() int {
 	return cmap.nbits
 }
@@ -411,14 +418,29 @@ func (cmap *CMap) String() string {
 // Bytes returns the raw bytes of a PDF CMap corresponding to `cmap`.
 func (cmap *CMap) Bytes() []byte {
 	common.Log.Trace("cmap.Bytes: cmap=%s", cmap.String())
-	if len(cmap.cached) > 0 {
-		return cmap.cached
+	if len(cmap.cachedBytes) > 0 {
+		return cmap.cachedBytes
 	}
 
-	cmap.cached = []byte(strings.Join([]string{
+	cmap.cachedBytes = []byte(strings.Join([]string{
 		cmapHeader, cmap.toBfData(), cmapTrailer,
 	}, "\n"))
-	return cmap.cached
+	return cmap.cachedBytes
+}
+
+// Stream returns a Flate encoded stream containing the raw CMap data.
+func (cmap *CMap) Stream() (*core.PdfObjectStream, error) {
+	if cmap.cachedStream != nil {
+		return cmap.cachedStream, nil
+	}
+
+	stream, err := core.MakeStream(cmap.Bytes(), core.NewFlateEncoder())
+	if err != nil {
+		return nil, err
+	}
+
+	cmap.cachedStream = stream
+	return cmap.cachedStream, nil
 }
 
 // matchCode attempts to match the byte array `data` with a character code in `cmap`'s codespaces.
