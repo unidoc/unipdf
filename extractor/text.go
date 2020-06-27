@@ -102,9 +102,9 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 			}
 
 			switch operand {
-			case "q": //Push current graphics state to the stack.
+			case "q": // Push current graphics state to the stack.
 				savedStates.push(&state)
-			case "Q": // // Pop graphics state from the stack.
+			case "Q": // Pop graphics state from the stack.
 				if !savedStates.empty() {
 					state = *savedStates.top()
 					if len(savedStates) >= 2 {

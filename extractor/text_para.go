@@ -21,7 +21,7 @@ import (
 type paraList []*textPara
 
 // textPara is a group of words in a rectangular region of a page that get read together.
-// A paragraph in a document might span multiple pages. This is the paragraph fragment on one page.
+// A paragraph in a document might span multiple pages. This is a paragraph fragment on one page.
 // textParas can be tables in which case the content is in `table`, otherwise the content is in `lines`.
 // textTable cells are textParas so this gives one level of recursion
 type textPara struct {
@@ -31,12 +31,14 @@ type textPara struct {
 	table              *textTable         // The table contained in this region if there is one. nil otherwise
 	// The following fields are used for detecting and extracting tables.
 	isCell bool // Is this para a cell in a textTable?
-	// The unique highest para completely below this that overlaps it in the y-direction, if one exists.
+	// The unique highest para completely to the left of this that overlaps it in the y-direction, if one exists..
+	left *textPara
+	// The unique highest para completely to the right of this that overlaps it in the y-direction, if one exists.
 	right *textPara
-	// The unique highest para completely below `this that overlaps it in the x-direction, if one exists.
-	below *textPara
-	left  *textPara
+	// The unique highest para completely above this that overlaps it in the x-direction, if one exists.
 	above *textPara
+	// The unique highest para completely below this that overlaps it in the x-direction, if one exists.
+	below *textPara
 }
 
 // makeTextPara returns a textPara with bounding rectangle `bbox`.
