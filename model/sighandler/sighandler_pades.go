@@ -62,22 +62,27 @@ func NewEtsiPAdESDetached(privateKey *rsa.PrivateKey, certificate *x509.Certific
 	}, nil
 }
 
+// GetDSS returns a DSS Pdf dictionary (ETSI TS 102 778-4 V1.1.1).
 func (a *etsiPAdES) GetDSS() *model.DSS {
 	return a.dss
 }
 
+// SetCACert sets the certificate of the root certificate authority.
 func (a *etsiPAdES) SetCACert(caCert *x509.Certificate) {
 	a.caCert = caCert
 }
 
+// AddCRLDistributionPoints adds URLs of CRL distribution points.
 func (a *etsiPAdES) AddCRLDistributionPoints(dp ...string) {
 	a.crlDistributionPoints = append(a.crlDistributionPoints, dp...)
 }
 
+// AddOCSPServers adds URLs of OCSP servers.
 func (a *etsiPAdES) AddOCSPServers(servers ...string) {
 	a.ocspServers = append(a.ocspServers, servers...)
 }
 
+// SetTimestampServerURL sets the URL of a timestamp server.
 func (a *etsiPAdES) SetTimestampServerURL(timestampServerURL string) {
 	a.timestampServerURL = timestampServerURL
 }
