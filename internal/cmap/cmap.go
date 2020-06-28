@@ -21,6 +21,9 @@ const (
 
 	// MissingCodeRune replaces runes that can't be decoded. '\ufffd' = �. Was '?'.
 	MissingCodeRune = '\ufffd' // �
+
+	// MissingCodeString replaces strings that can't be decoded.
+	MissingCodeString = string(MissingCodeRune)
 )
 
 // CharCode is a character code or Unicode
@@ -41,7 +44,7 @@ type charRange struct {
 type fbRange struct {
 	code0 CharCode
 	code1 CharCode
-	r0    rune
+	r0    string
 }
 
 // CIDSystemInfo contains information for identifying the character collection
@@ -106,8 +109,8 @@ type CMap struct {
 	cidToCode map[CharCode]CharCode // CID -> charcode
 
 	// Used by ctype 2 CMaps.
-	codeToUnicode map[CharCode]rune // CID -> Unicode
-	unicodeToCode map[rune]CharCode // Unicode -> CID
+	codeToUnicode map[CharCode]string // CID -> Unicode string
+	unicodeToCode map[string]CharCode // Unicode rune -> CID
 
 	// cached contains the raw CMap data. It is used by the Bytes method in
 	// order to avoid generating the data for every call.
@@ -116,8 +119,13 @@ type CMap struct {
 	cached []byte
 }
 
-// NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToUnicode` arg.
-func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
+// NewToUnicodeCMap returns an identity CMap with codeToUnicode matching the `codeToRune` arg.
+func NewToUnicodeCMap(codeToRune map[CharCode]rune) *CMap {
+	codeToUnicode := make(map[CharCode]string, len(codeToRune))
+	for code, r := range codeToRune {
+		codeToUnicode[code] = string(r)
+	}
+
 	cmap := &CMap{
 		name:  "Adobe-Identity-UCS",
 		ctype: 2,
@@ -128,13 +136,14 @@ func NewToUnicodeCMap(codeToUnicode map[CharCode]rune) *CMap {
 			Supplement: 0,
 		},
 		codespaces:    []Codespace{{Low: 0, High: 0xffff}},
-		codeToCID:     make(map[CharCode]CharCode),
-		cidToCode:     make(map[CharCode]CharCode),
 		codeToUnicode: codeToUnicode,
-		unicodeToCode: make(map[rune]CharCode),
+		unicodeToCode: make(map[string]CharCode, len(codeToRune)),
+		codeToCID:     make(map[CharCode]CharCode, len(codeToRune)),
+		cidToCode:     make(map[CharCode]CharCode, len(codeToRune)),
 	}
 
 	cmap.computeInverseMappings()
+
 	return cmap
 }
 
@@ -148,8 +157,8 @@ func newCMap(isSimple bool) *CMap {
 		nbits:         nbits,
 		codeToCID:     make(map[CharCode]CharCode),
 		cidToCode:     make(map[CharCode]CharCode),
-		codeToUnicode: make(map[CharCode]rune),
-		unicodeToCode: make(map[rune]CharCode),
+		codeToUnicode: make(map[CharCode]string),
+		unicodeToCode: make(map[string]CharCode),
 	}
 }
 
@@ -254,9 +263,9 @@ func (cmap *CMap) computeInverseMappings() {
 	}
 
 	// Generate Unicode -> CID map.
-	for cid, r := range cmap.codeToUnicode {
-		if c, ok := cmap.unicodeToCode[r]; !ok || (ok && c > cid) {
-			cmap.unicodeToCode[r] = cid
+	for cid, s := range cmap.codeToUnicode {
+		if c, ok := cmap.unicodeToCode[s]; !ok || (ok && c > cid) {
+			cmap.unicodeToCode[s] = cid
 		}
 	}
 
@@ -277,19 +286,18 @@ func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
 		return "", 0
 	}
 
-	var (
-		parts   []rune
-		missing []CharCode
-	)
-	for _, code := range charcodes {
+	parts := make([]string, len(charcodes))
+	var missing []CharCode
+	for i, code := range charcodes {
 		s, ok := cmap.codeToUnicode[code]
 		if !ok {
 			missing = append(missing, code)
-			s = MissingCodeRune
+			s = MissingCodeString
 		}
-		parts = append(parts, s)
+		parts[i] = s
 	}
-	unicode := string(parts)
+	unicode := strings.Join(parts, "")
+
 	if len(missing) > 0 {
 		common.Log.Debug("ERROR: CharcodeBytesToUnicode. Not in map.\n"+
 			"\tdata=[% 02x]=%#q\n"+
@@ -305,17 +313,17 @@ func (cmap *CMap) CharcodeBytesToUnicode(data []byte) (string, int) {
 // CharcodeToUnicode converts a single character code `code` to a unicode string.
 // If `code` is not in the unicode map, '�' is returned.
 // NOTE: CharcodeBytesToUnicode is typically more efficient.
-func (cmap *CMap) CharcodeToUnicode(code CharCode) (rune, bool) {
+func (cmap *CMap) CharcodeToUnicode(code CharCode) (string, bool) {
 	if s, ok := cmap.codeToUnicode[code]; ok {
 		return s, true
 	}
-	return MissingCodeRune, false
+	return MissingCodeString, false
 }
 
-// RuneToCID maps the specified rune to a character identifier. If the provided
-// rune has no available mapping, the second return value is false.
-func (cmap *CMap) RuneToCID(r rune) (CharCode, bool) {
-	cid, ok := cmap.unicodeToCode[r]
+// StringToCID maps the specified string to a character identifier. If the provided
+// string has no available mapping, the bool return value is false.
+func (cmap *CMap) StringToCID(s string) (CharCode, bool) {
+	cid, ok := cmap.unicodeToCode[s]
 	return cid, ok
 }
 
@@ -453,7 +461,7 @@ func (cmap *CMap) toBfData() string {
 	}
 
 	// codes is a sorted list of the codeToUnicode keys.
-	var codes []CharCode
+	codes := make([]CharCode, 0, len(cmap.codeToUnicode))
 	for code := range cmap.codeToUnicode {
 		codes = append(codes, code)
 	}
@@ -473,7 +481,7 @@ func (cmap *CMap) toBfData() string {
 	prevRune := cmap.codeToUnicode[codes[0]]
 	for _, c := range codes[1:] {
 		currRune := cmap.codeToUnicode[c]
-		if c == currCharRange.code1+1 && currRune == prevRune+1 {
+		if c == currCharRange.code1+1 && lastRune(currRune) == lastRune(prevRune)+1 {
 			currCharRange.code1 = c
 		} else {
 			charRanges = append(charRanges, currCharRange)
@@ -508,8 +516,8 @@ func (cmap *CMap) toBfData() string {
 			lines = append(lines, fmt.Sprintf("%d beginbfchar", n))
 			for j := 0; j < n; j++ {
 				code := fbChars[i*maxBfEntries+j]
-				r := cmap.codeToUnicode[code]
-				lines = append(lines, fmt.Sprintf("<%04x> <%04x>", code, r))
+				s := cmap.codeToUnicode[code]
+				lines = append(lines, fmt.Sprintf("<%04x> %s", code, hexCode(s)))
 			}
 			lines = append(lines, "endbfchar")
 		}
@@ -521,13 +529,29 @@ func (cmap *CMap) toBfData() string {
 			lines = append(lines, fmt.Sprintf("%d beginbfrange", n))
 			for j := 0; j < n; j++ {
 				rng := fbRanges[i*maxBfEntries+j]
-				r := rng.r0
-				lines = append(lines, fmt.Sprintf("<%04x><%04x> <%04x>", rng.code0, rng.code1, r))
+				lines = append(lines, fmt.Sprintf("<%04x><%04x> %s",
+					rng.code0, rng.code1, hexCode(rng.r0)))
 			}
 			lines = append(lines, "endbfrange")
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// lastRune returns the last rune in `s`.
+func lastRune(s string) rune {
+	runes := []rune(s)
+	return runes[len(runes)-1]
+}
+
+// hexCode return the CMap hex code for `s`.
+func hexCode(s string) string {
+	runes := []rune(s)
+	codes := make([]string, len(runes))
+	for i, r := range runes {
+		codes[i] = fmt.Sprintf("%04x", r)
+	}
+	return fmt.Sprintf("<%s>", strings.Join(codes, ""))
 }
 
 const (
