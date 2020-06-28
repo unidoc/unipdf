@@ -841,6 +841,7 @@ func (a *PdfAppender) WriteToFile(outputPath string) error {
 	return a.Write(fWrite)
 }
 
+// SetDSS sets a DSS Pdf dictionary (ETSI TS 102 778-4 V1.1.1) to append to the Pdf.
 func (a *PdfAppender) SetDSS(dss *DSS) {
 	a.dss = dss
 }
