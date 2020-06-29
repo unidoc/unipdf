@@ -47,7 +47,7 @@ func New(page *model.PdfPage) (*Extractor, error) {
 
 	mediaBox, err := page.GetMediaBox()
 	if err != nil {
-		return nil, fmt.Errorf("extractor requires mediaBox. %w", err)
+		return nil, fmt.Errorf("extractor requires mediaBox. %v", err)
 	}
 	e := &Extractor{
 		contents:    contents,

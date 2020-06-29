@@ -55,7 +55,7 @@ func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (
 	fnc, ok := simple[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
-		return nil, fmt.Errorf("unsupported font encoding: %q (%w)", baseName, core.ErrNotSupported)
+		return nil, fmt.Errorf("unsupported font encoding: %q (%v)", baseName, core.ErrNotSupported)
 	}
 	enc := fnc()
 	if len(differences) != 0 {

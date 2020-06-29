@@ -20,6 +20,7 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
+	"golang.org/x/xerrors"
 )
 
 // maxFormStack is the maximum form stack recursion depth. It has to be low enough to avoid a stack
@@ -74,7 +75,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 
 	if level > maxFormStack {
 		err := errors.New("form stack overflow")
-		common.Log.Debug("ERROR: extractPageText. recursion level=%d err=%w", level, err)
+		common.Log.Debug("ERROR: extractPageText. recursion level=%d err=%v", level, err)
 		return pageText, state.numChars, state.numMisses, err
 	}
 
@@ -86,7 +87,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
 	if err != nil {
-		common.Log.Debug("ERROR: extractPageText parse failed. err=%w", err)
+		common.Log.Debug("ERROR: extractPageText parse failed. err=%v", err)
 		return pageText, state.numChars, state.numMisses, err
 	}
 
@@ -245,7 +246,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				err = to.setFont(name, size)
-				to.invalidFont = errors.Is(err, core.ErrNotSupported)
+				to.invalidFont = xerrors.Is(err, core.ErrNotSupported)
 				if err != nil && !to.invalidFont {
 					return err
 				}
