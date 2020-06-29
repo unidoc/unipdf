@@ -489,10 +489,6 @@ func (to *textObject) setFont(name string, size float64) error {
 	to.state.tfs = size
 	font, err := to.getFont(name)
 	if err != nil {
-		if err == model.ErrFontNotSupported {
-			// TODO(peterwilliams97): Do we need to handle this case in a special way?
-			return err
-		}
 		return err
 	}
 	to.state.tfont = font
