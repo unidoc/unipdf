@@ -598,14 +598,7 @@ func (c pageContents) testPageTextAndMarks(t *testing.T, l *markupList, desc str
 		}
 	}
 
-	// XXX(peterwilliams97): The new text extraction changes TextMark contents. From now on we
-	// only test their behaviour, not their implementation.
-	// // 2) Check that all expected TextMarks are in `textMarks`.
-	// offsetMark := marksMap(textMarks)
-	// for i, tm := range c.marks {
-	// 	common.Log.Debug("%d: %v", i, tm)
-	// 	checkContains(t, desc, offsetMark, tm)
-	// }
+	// 2) is missing for historical reasons.
 
 	// 3) Check that locationsIndex() finds TextMarks in `textMarks` corresponding to some
 	//   substrings of `text`.
@@ -650,10 +643,6 @@ func testTermMarksFiles(t *testing.T) {
 		t.Fatalf("Glob(%q) failed. err=%v", pattern, err)
 	}
 	for i, filename := range pathList {
-		// 4865ab395ed664c3ee17.pdf is a corrupted file in the test corpus.
-		if strings.Contains(filename, "4865ab395ed664c3ee17.pdf") {
-			continue
-		}
 		common.Log.Info("%4d of %d: %q", i+1, len(pathList), filename)
 		tryTestTermMarksFile(t, filename, true)
 	}
