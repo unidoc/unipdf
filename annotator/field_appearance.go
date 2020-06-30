@@ -497,8 +497,10 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 		return nil, err
 	}
 	width, height := rect.Width(), rect.Height()
+	bboxWidth, bboxHeight := width, height
 
-	if mkDict, has := core.GetDict(wa.MK); has {
+	mkDict, has := core.GetDict(wa.MK)
+	if has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
@@ -534,6 +536,11 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 	}
 	cc.Add_BMC("Tx")
 	cc.Add_q()
+
+	// Apply rotation if present.
+	// Update width and height, as the appearance is generated based on
+	// the bounding of the annotation with no rotation.
+	width, height = style.applyRotation(mkDict, width, height, cc)
 
 	// Graphic state changes.
 	cc.Add_BT()
@@ -664,7 +671,7 @@ func genFieldTextCombAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFi
 
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
-	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	apDict := core.MakeDict()
