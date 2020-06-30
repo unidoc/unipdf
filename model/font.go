@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -485,14 +486,8 @@ func (font *PdfFont) CharcodesToStrings(charcodes []textencoding.CharCode) ([]st
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	runes, _, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
-
-	var buffer bytes.Buffer
-	for _, r := range runes {
-		buffer.WriteString(textencoding.RuneToString(r))
-	}
-
-	str := buffer.String()
-	return str, len([]rune(str)), numMisses
+	str := textencoding.ExpandLigatures(runes)
+	return str, utf8.RuneCountInString(str), numMisses
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.

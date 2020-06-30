@@ -41,22 +41,6 @@ func toFloatXY(objs []core.PdfObject) (x, y float64, err error) {
 	return floats[0], floats[1], nil
 }
 
-// minFloat returns the lesser of `a` and `b`.
-func minFloat(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// maxFloat returns the greater of `a` and `b`.
-func maxFloat(a, b float64) float64 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func procBuf(pt *PageText) {
 	if isTesting {
 		return
@@ -73,7 +57,7 @@ func procBuf(pt *PageText) {
 	buf.WriteString(pt.viewText)
 
 	s := "- [Unlicensed UniDoc - Get a license on https://unidoc.io]"
-	if buf.Len() > 100 {
+	if buf.Len() > 102 {
 		s = "... [Truncated - Unlicensed UniDoc - Get a license on https://unidoc.io]"
 		buf.Truncate(buf.Len() - 100)
 	}

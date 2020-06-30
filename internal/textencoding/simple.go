@@ -7,6 +7,7 @@ package textencoding
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"sync"
 	"unicode/utf8"
@@ -54,7 +55,7 @@ func NewSimpleTextEncoder(baseName string, differences map[CharCode]GlyphName) (
 	fnc, ok := simple[baseName]
 	if !ok {
 		common.Log.Debug("ERROR: NewSimpleTextEncoder. Unknown encoding %q", baseName)
-		return nil, errors.New("unsupported font encoding")
+		return nil, fmt.Errorf("unsupported font encoding: %q (%v)", baseName, core.ErrNotSupported)
 	}
 	enc := fnc()
 	if len(differences) != 0 {

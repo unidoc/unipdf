@@ -16,14 +16,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/unidoc/unitype"
-
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
-
 	"github.com/unidoc/unipdf/v3/internal/cmap"
 	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/model/internal/fonts"
+	"github.com/unidoc/unitype"
 )
 
 /*
@@ -685,7 +683,7 @@ func parseCIDFontWidthsArray(w core.PdfObject) (map[textencoding.CharCode]float6
 	fontWidths := map[textencoding.CharCode]float64{}
 	wArrLen := wArr.Len()
 	for i := 0; i < wArrLen-1; i++ {
-		obj0 := wArr.Get(i)
+		obj0 := core.TraceToDirectObject(wArr.Get(i))
 		n, ok0 := core.GetIntVal(obj0)
 		if !ok0 {
 			return nil, fmt.Errorf("Bad font W obj0: i=%d %#v", i, obj0)
@@ -695,7 +693,7 @@ func parseCIDFontWidthsArray(w core.PdfObject) (map[textencoding.CharCode]float6
 			return nil, fmt.Errorf("Bad font W array: arr2=%+v", wArr)
 		}
 
-		obj1 := wArr.Get(i)
+		obj1 := core.TraceToDirectObject(wArr.Get(i))
 		switch obj1.(type) {
 		case *core.PdfObjectArray:
 			arr, _ := core.GetArray(obj1)
