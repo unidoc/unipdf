@@ -804,7 +804,8 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 		return nil, err
 	}
 
-	if mkDict, has := core.GetDict(wa.MK); has {
+	mkDict, has := core.GetDict(wa.MK)
+	if has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
@@ -830,7 +831,7 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 		}
 
 		if len(optstr) > 0 {
-			xform, err := makeComboboxTextXObjForm(fch.PdfField, width, height, optstr, style, daOps, form.DR)
+			xform, err := makeComboboxTextXObjForm(fch.PdfField, width, height, optstr, style, daOps, form.DR, mkDict)
 			if err != nil {
 				return nil, err
 			}
@@ -848,8 +849,9 @@ func genFieldComboboxAppearance(form *model.PdfAcroForm, wa *model.PdfAnnotation
 // Make a text-based XObj Form.
 func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	text string, style AppearanceStyle, daOps *contentstream.ContentStreamOperations,
-	dr *model.PdfPageResources) (*model.XObjectForm, error) {
+	dr *model.PdfPageResources, mkDict *core.PdfObjectDictionary) (*model.XObjectForm, error) {
 	resources := model.NewPdfPageResources()
+	bboxWidth, bboxHeight := width, height
 
 	cc := contentstream.NewContentCreator()
 	if style.BorderSize > 0 {
@@ -865,6 +867,11 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 	cc.Add_q()
 	// Graphic state changes.
 	cc.Add_BT()
+
+	// Apply rotation if present.
+	// Update width and height, as the appearance is generated based on
+	// the bounding of the annotation with no rotation.
+	width, height = style.applyRotation(mkDict, width, height, cc)
 
 	// Process DA operands.
 	apFont, hasTf, err := style.processDA(field, daOps, dr, resources, cc)
@@ -941,7 +948,7 @@ func makeComboboxTextXObjForm(field *model.PdfField, width, height float64,
 
 	xform := model.NewXObjectForm()
 	xform.Resources = resources
-	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+	xform.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 	xform.SetContentStream(cc.Bytes(), defStreamEncoder())
 
 	return xform, nil
