@@ -219,15 +219,15 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 		return nil, err
 	}
 	width, height := rect.Width(), rect.Height()
+	bboxWidth, bboxHeight := width, height
 
-	var rotation float64
-	if mkDict, has := core.GetDict(wa.MK); has {
+	mkDict, has := core.GetDict(wa.MK)
+	if has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, nil)
 		if err != nil {
 			return nil, err
 		}
-		rotation, _ = core.GetNumberAsFloat(mkDict.Get("R"))
 	}
 
 	// Get and process the default appearance string (DA) operands.
@@ -252,26 +252,10 @@ func genFieldTextAppearance(wa *model.PdfAnnotationWidget, ftxt *model.PdfFieldT
 	cc.Add_BMC("Tx")
 	cc.Add_q()
 
-	bboxWidth, bboxHeight := width, height
-	if rotation != 0 {
-		// Calculate bounding box before rotation.
-		revRotation := -rotation
-		bbox := draw.Path{Points: []draw.Point{
-			draw.NewPoint(0, 0).Rotate(revRotation),
-			draw.NewPoint(width, 0).Rotate(revRotation),
-			draw.NewPoint(0, height).Rotate(revRotation),
-			draw.NewPoint(width, height).Rotate(revRotation),
-		}}.GetBoundingBox()
-
-		// Update width and height, as the appearance is generated based on
-		// the bounding of the annotation with no rotation.
-		width = bbox.Width
-		height = bbox.Height
-
-		// Apply rotation.
-		cc.RotateDeg(rotation)
-		cc.Translate(bbox.X, bbox.Y)
-	}
+	// Apply rotation if present.
+	// Update width and height, as the appearance is generated based on
+	// the bounding of the annotation with no rotation.
+	width, height = style.applyRotation(mkDict, width, height, cc)
 
 	// Graphic state changes.
 	cc.Add_BT()
@@ -1065,6 +1049,36 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	}
 
 	return nil
+}
+
+func (style *AppearanceStyle) applyRotation(mkDict *core.PdfObjectDictionary,
+	width, height float64, cc *contentstream.ContentCreator) (float64, float64) {
+	if !style.AllowMK {
+		return width, height
+	}
+	if mkDict == nil {
+		return width, height
+	}
+
+	rotation, _ := core.GetNumberAsFloat(mkDict.Get("R"))
+	if rotation == 0 {
+		return width, height
+	}
+
+	// Calculate bounding box before rotation.
+	revRotation := -rotation
+	bbox := draw.Path{Points: []draw.Point{
+		draw.NewPoint(0, 0).Rotate(revRotation),
+		draw.NewPoint(width, 0).Rotate(revRotation),
+		draw.NewPoint(0, height).Rotate(revRotation),
+		draw.NewPoint(width, height).Rotate(revRotation),
+	}}.GetBoundingBox()
+
+	// Apply rotation.
+	cc.RotateDeg(rotation)
+	cc.Translate(bbox.X, bbox.Y)
+
+	return bbox.Width, bbox.Height
 }
 
 // processDA adds the operands found in the field default appearance stream to
