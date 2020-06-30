@@ -1072,6 +1072,9 @@ func (style *AppearanceStyle) applyAppearanceCharacteristics(mkDict *core.PdfObj
 	return nil
 }
 
+// applyRotation applies the rotation specified by the MK dictionary,
+// if present. The method returns the width and height of the annotation
+// rectangle with no rotation.
 func (style *AppearanceStyle) applyRotation(mkDict *core.PdfObjectDictionary,
 	width, height float64, cc *contentstream.ContentCreator) (float64, float64) {
 	if !style.AllowMK {
@@ -1081,6 +1084,7 @@ func (style *AppearanceStyle) applyRotation(mkDict *core.PdfObjectDictionary,
 		return width, height
 	}
 
+	// Extract rotation from the MK dictionary.
 	rotation, _ := core.GetNumberAsFloat(mkDict.Get("R"))
 	if rotation == 0 {
 		return width, height
