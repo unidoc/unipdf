@@ -686,6 +686,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		return nil, err
 	}
 	width, height := rect.Width(), rect.Height()
+	bboxWidth, bboxHeight := width, height
 
 	common.Log.Debug("Checkbox, wa BS: %v", wa.BS)
 
@@ -694,7 +695,8 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		return nil, err
 	}
 
-	if mkDict, has := core.GetDict(wa.MK); has {
+	mkDict, has := core.GetDict(wa.MK)
+	if has {
 		bsDict, _ := core.GetDict(wa.BS)
 		err := style.applyAppearanceCharacteristics(mkDict, bsDict, zapfdb)
 		if err != nil {
@@ -715,6 +717,11 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 			style2.BorderSize = 0.2
 			drawAlignmentReticle(cc, style2, width, height)
 		}
+
+		// Apply rotation if present.
+		// Update width and height, as the appearance is generated based on
+		// the bounding of the annotation with no rotation.
+		width, height = style.applyRotation(mkDict, width, height, cc)
 
 		fontsize := style.AutoFontSizeFraction * height
 
@@ -751,7 +758,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 
 		xformOn.Resources = model.NewPdfPageResources()
 		xformOn.Resources.SetFontByName("ZaDb", zapfdb.ToPdfObject())
-		xformOn.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+		xformOn.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 		xformOn.SetContentStream(cc.Bytes(), defStreamEncoder())
 	}
 
@@ -761,7 +768,7 @@ func genFieldCheckboxAppearance(wa *model.PdfAnnotationWidget, fbtn *model.PdfFi
 		if style.BorderSize > 0 {
 			drawRect(cc, style, width, height)
 		}
-		xformOff.BBox = core.MakeArrayFromFloats([]float64{0, 0, width, height})
+		xformOff.BBox = core.MakeArrayFromFloats([]float64{0, 0, bboxWidth, bboxHeight})
 		xformOff.SetContentStream(cc.Bytes(), defStreamEncoder())
 	}
 
