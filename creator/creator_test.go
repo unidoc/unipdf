@@ -14,15 +14,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	goimage "image"
-	"image/png"
-	"io"
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,6 +33,8 @@ import (
 	"github.com/unidoc/unipdf/v3/extractor"
 	"github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
+
+	"github.com/unidoc/unipdf/v3/internal/testutils"
 )
 
 func init() {
@@ -1045,7 +1043,7 @@ func TestSubchapters(t *testing.T) {
 	require.NoError(t, c.Finalize())
 
 	// Get outline data as JSON.
-	srcJson, err := json.Marshal(c.outline)
+	srcJSON, err := json.Marshal(c.outline)
 	require.NoError(t, err)
 
 	// Write output file.
@@ -1063,9 +1061,9 @@ func TestSubchapters(t *testing.T) {
 	// Compare outlines JSON data.
 	dstOutline, err := reader.GetOutlines()
 	require.NoError(t, err)
-	dstJson, err := json.Marshal(dstOutline)
+	dstJSON, err := json.Marshal(dstOutline)
 	require.NoError(t, err)
-	require.Equal(t, srcJson, dstJson)
+	require.Equal(t, srcJSON, dstJSON)
 }
 
 // Test creating and drawing a table.
@@ -3206,92 +3204,9 @@ func TestExtractTextColor(t *testing.T) {
 	}
 }
 
-var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
-
-// renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
-// PNG images will be named xxx-N.png where N is the number of page, starting from 1.
-func renderPDFToPNGs(pdfPath string, dpi int, outpathTpl string) error {
-	if dpi == 0 {
-		dpi = 100
-	}
-	if _, err := exec.LookPath("gs"); err != nil {
-		return errRenderNotSupported
-	}
-	return exec.Command("gs", "-sDEVICE=pngalpha", "-o", outpathTpl, fmt.Sprintf("-r%d", dpi), pdfPath).Run()
-}
-
-func readPNG(file string) (goimage.Image, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return png.Decode(f)
-}
-
-func comparePNGFiles(file1, file2 string) (bool, error) {
-	// fast path - compare hashes
-	h1, err := hashFile(file1)
-	if err != nil {
-		return false, err
-	}
-	h2, err := hashFile(file2)
-	if err != nil {
-		return false, err
-	}
-	if h1 == h2 {
-		return true, nil
-	}
-	// slow path - compare pixel by pixel
-	img1, err := readPNG(file1)
-	if err != nil {
-		return false, err
-	}
-	img2, err := readPNG(file2)
-	if err != nil {
-		return false, err
-	}
-	if img1.Bounds() != img2.Bounds() {
-		return false, nil
-	}
-	return compareImages(img1, img2)
-}
-
-func compareImages(img1, img2 goimage.Image) (bool, error) {
-	rect := img1.Bounds()
-	diff := 0
-	for x := 0; x < rect.Size().X; x++ {
-		for y := 0; y < rect.Size().Y; y++ {
-			r1, g1, b1, _ := img1.At(x, y).RGBA()
-			r2, g2, b2, _ := img2.At(x, y).RGBA()
-			if r1 != r2 || g1 != g2 || b1 != b2 {
-				diff++
-			}
-		}
-	}
-
-	diffFraction := float64(diff) / float64(rect.Dx()*rect.Dy())
-	if diffFraction > 0.0001 {
-		fmt.Printf("diff fraction: %v (%d)\n", diffFraction, diff)
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func hashFile(file string) (string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	h := md5.New()
-	_, err = io.Copy(h, f)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
+//
+// Rendering test helpers.
+//
 
 func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
 	pname = testWrite(t, c, pname)
@@ -3301,8 +3216,7 @@ func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
 
 func testWrite(t *testing.T, c *Creator, pname string) string {
 	pname = tempFile(pname)
-	err := c.WriteToFile(pname)
-	if err != nil {
+	if err := c.WriteToFile(pname); err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return pname
 	}
@@ -3313,6 +3227,7 @@ func testRender(t *testing.T, pdfPath string) {
 	if baselineRenderPath == "" {
 		t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
 	}
+
 	// Set to true to create the baseline.
 	saveBaseline := false
 
@@ -3323,59 +3238,5 @@ func testRender(t *testing.T, pdfPath string) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	tplName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
-	t.Run("render", func(t *testing.T) {
-		imgPathPrefix := filepath.Join(tempDir, tplName)
-		imgPathTpl := imgPathPrefix + "-%d.png"
-		// will emit /tmp/dir/template-x.png for each page x.
-		err := renderPDFToPNGs(pdfPath, 0, imgPathTpl)
-		if err != nil {
-			t.Skip(err)
-		}
-		for i := 1; true; i++ {
-			imgPath := fmt.Sprintf("%s-%d.png", imgPathPrefix, i)
-			expImgPath := filepath.Join(baselineRenderPath, fmt.Sprintf("%s-%d_exp.png", tplName, i))
-
-			if _, err := os.Stat(imgPath); err != nil {
-				break
-			}
-			t.Logf("%s", expImgPath)
-			if _, err := os.Stat(expImgPath); os.IsNotExist(err) {
-				if saveBaseline {
-					t.Logf("Copying %s -> %s", imgPath, expImgPath)
-					copyFile(imgPath, expImgPath)
-					continue
-				}
-				break
-			}
-
-			t.Run(fmt.Sprintf("page%d", i), func(t *testing.T) {
-				t.Logf("Comparing %s vs %s", imgPath, expImgPath)
-				ok, err := comparePNGFiles(imgPath, expImgPath)
-				if os.IsNotExist(err) {
-					t.Fatal("image file missing")
-				} else if !ok {
-					t.Fatal("wrong page rendered")
-				}
-			})
-		}
-	})
-}
-
-// copyFile copies file from src to dst.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
+	testutils.RunRenderTest(t, pdfPath, tempDir, baselineRenderPath, saveBaseline)
 }
