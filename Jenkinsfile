@@ -7,6 +7,7 @@ node {
     env.PATH="${root}/bin:${env.GOBIN}:${env.PATH}"
     env.UNIDOC_EXTRACT_FORCETEST="1"
     env.UNIDOC_E2E_FORCE_TESTS="1"
+    env.UNIDOC_RENDERTEST_FORMFILL_FORCETEST="1"
     env.UNIDOC_EXTRACT_TESTDATA="/home/jenkins/corpus/unidoc-extractor-testdata"
     env.UNIDOC_RENDERTEST_BASELINE_PATH="/home/jenkins/corpus/unidoc-creator-render-testdata-upd2"
     env.UNIDOC_PASSTHROUGH_TESTDATA="/home/jenkins/corpus/unidoc-e2e-testdata"
@@ -15,6 +16,8 @@ node {
     env.UNIDOC_EXTRACT_IMAGES_TESTDATA="/home/jenkins/corpus/unidoc-e2e-extract-images-testdata"
     env.UNIDOC_JBIG2_TESTDATA="/home/jenkins/corpus/jbig2-testdata"
     env.UNIDOC_FDFMERGE_TESTDATA="/home/jenkins/corpus/fdfmerge-testdata"
+    env.UNIDOC_RENDERTEST_FORMFILL_TESTDATA="/home/jenkins/corpus/unidoc-form-fill-render-testdata"
+    env.UNIDOC_RENDERTEST_FORMFILL_BASELINE="/home/jenkins/corpus/unidoc-form-fill-render-baseline"
     env.UNIDOC_GS_BIN_PATH="/usr/bin/gs"
     env.CGO_ENABLED="0"
 
@@ -95,7 +98,7 @@ node {
 
             // Use replace directive to use disk version of unipdf.
             sh 'echo "replace github.com/unidoc/unipdf/v3 => ../unipdf" >>go.mod'
-            
+
             // Dependencies for examples.
             sh './build_examples.sh'
         }
