@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/fdf"
 	"github.com/unidoc/unipdf/v3/fjson"
 	"github.com/unidoc/unipdf/v3/model"
 
@@ -27,9 +28,9 @@ func init() {
 
 // TestFormFillRender tests the form fill/flatten process using the test data
 // in a provided corpus directory. The corpus directory should contain
-// (name.pdf, name.json) pairs of files. The filled output files are rendered
-// to PNG images and compared to counterpart golden images found in a provided
-// baseline directory.
+// (name.pdf, name.json) or (name.pdf, name.fdf) pairs of files. The filled
+// output files are rendered to PNG images and compared to counterpart golden
+// images found in a provided baseline directory.
 // The test input parameters are specified through environment variables:
 //  - UNIDOC_RENDERTEST_FORMFILL_TESTDATA
 //    The test corpus directory. If not provided, the test is skipped.
@@ -63,10 +64,22 @@ func TestFormFillRender(t *testing.T) {
 	saveBaseline := os.Getenv("UNIDOC_RENDERTEST_FORMFILL_SAVE_BASELINE") == "1"
 
 	// Get input file list.
+	type providerFunc func(tplPath string) (model.FieldValueProvider, error)
+
 	type formFillInput struct {
 		filename string
 		pdfPath  string
-		jsonPath string
+		tplPath  string
+		provider providerFunc
+	}
+
+	providerMap := map[string]providerFunc{
+		".json": func(tplPath string) (model.FieldValueProvider, error) {
+			return fjson.LoadFromJSONFile(tplPath)
+		},
+		".fdf": func(tplPath string) (model.FieldValueProvider, error) {
+			return fdf.LoadFromPath(tplPath)
+		},
 	}
 
 	files, err := ioutil.ReadDir(renderInputPath)
@@ -75,9 +88,10 @@ func TestFormFillRender(t *testing.T) {
 	var fillInputs []*formFillInput
 	for _, file := range files {
 		basename := file.Name()
-
 		ext := filepath.Ext(basename)
-		if ext != ".json" {
+
+		provider, ok := providerMap[ext]
+		if !ok {
 			continue
 		}
 		filename := strings.TrimSuffix(basename, ext)
@@ -85,7 +99,8 @@ func TestFormFillRender(t *testing.T) {
 		fillInputs = append(fillInputs, &formFillInput{
 			filename: filename,
 			pdfPath:  filepath.Join(renderInputPath, filename+".pdf"),
-			jsonPath: filepath.Join(renderInputPath, basename),
+			tplPath:  filepath.Join(renderInputPath, basename),
+			provider: provider,
 		})
 	}
 
@@ -120,7 +135,10 @@ func TestFormFillRender(t *testing.T) {
 			outputPath = filepath.Join(tempDir, outputPath+".pdf")
 			appearance.OnlyIfMissing = !regenerate
 
-			testWriteFilledForm(t, fi.pdfPath, fi.jsonPath, outputPath, flatten, appearance)
+			provider, err := fi.provider(fi.tplPath)
+			require.NoError(t, err)
+
+			testWriteFilledForm(t, fi.pdfPath, provider, outputPath, flatten, appearance)
 			testutils.RunRenderTest(t, outputPath, tempDir, renderBaselinePath, saveBaseline)
 		}
 
@@ -138,12 +156,8 @@ func TestFormFillRender(t *testing.T) {
 	}
 }
 
-func testWriteFilledForm(t *testing.T, pdfPath, jsonPath, outputPath string,
-	flatten bool, appearance model.FieldAppearanceGenerator) {
-	// Load JSON template.
-	jsonData, err := fjson.LoadFromJSONFile(jsonPath)
-	require.NoError(t, err)
-
+func testWriteFilledForm(t *testing.T, pdfPath string, provider model.FieldValueProvider,
+	outputPath string, flatten bool, appearance model.FieldAppearanceGenerator) {
 	// Open input file.
 	inputFile, err := os.Open(pdfPath)
 	require.NoError(t, err)
@@ -155,7 +169,7 @@ func testWriteFilledForm(t *testing.T, pdfPath, jsonPath, outputPath string,
 	require.NotNil(t, reader.AcroForm)
 
 	// Fill form fields.
-	require.NoError(t, reader.AcroForm.FillWithAppearance(jsonData, appearance))
+	require.NoError(t, reader.AcroForm.FillWithAppearance(provider, appearance))
 
 	// Flatten form fields.
 	if flatten {
