@@ -28,7 +28,7 @@ func BenchmarkAlg2b(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = alg2b(data, pass, user)
+		alg2b(data, pass, user)
 	}
 }
 

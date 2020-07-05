@@ -5,19 +5,29 @@
 
 package creator
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // InvoiceAddress contains contact information that can be displayed
 // in an invoice. It is used for the seller and buyer information in the
 // invoice template.
 type InvoiceAddress struct {
+	Heading string
 	Name    string
 	Street  string
+	Street2 string
 	Zip     string
 	City    string
+	State   string
 	Country string
 	Phone   string
 	Email   string
+
+	// Separator defines the separator between different address components,
+	// such as the city, state and zip code. It defaults to ", " when the
+	// field is an empty string.
+	Separator string
 }
 
 // InvoiceCellProps holds all style properties for an invoice cell.
@@ -52,6 +62,7 @@ type Invoice struct {
 	// Invoice addresses.
 	buyerAddress  *InvoiceAddress
 	sellerAddress *InvoiceAddress
+	addrSeparator string
 
 	// Invoice information.
 	number  [2]*InvoiceCell
@@ -101,12 +112,20 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 		title: "INVOICE",
 
 		// Addresses.
-		sellerAddress: &InvoiceAddress{},
-		buyerAddress:  &InvoiceAddress{},
+		addrSeparator: ", ",
 
 		// Styles.
 		defaultStyle: defaultStyle,
 		headingStyle: headingStyle,
+	}
+
+	// Addresses.
+	i.sellerAddress = &InvoiceAddress{
+		Separator: i.addrSeparator,
+	}
+	i.buyerAddress = &InvoiceAddress{
+		Heading:   "Bill to",
+		Separator: i.addrSeparator,
 	}
 
 	// Default colors.
@@ -158,7 +177,7 @@ func newInvoice(defaultStyle, headingStyle TextStyle) *Invoice {
 	}
 
 	i.dueDate = [2]*InvoiceCell{
-		i.newCell("Date", i.infoProps),
+		i.newCell("Due Date", i.infoProps),
 		i.newCell("", i.infoProps),
 	}
 
@@ -536,14 +555,14 @@ func (i *Invoice) setCellBorder(cell *TableCell, invoiceCell *InvoiceCell) {
 	cell.SetBorderColor(invoiceCell.BorderColor)
 }
 
-func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*StyledParagraph {
+func (i *Invoice) drawAddress(addr *InvoiceAddress) []*StyledParagraph {
 	var paragraphs []*StyledParagraph
 
 	// Address title.
-	if title != "" {
+	if addr.Heading != "" {
 		titleParagraph := newStyledParagraph(i.addressHeadingStyle)
 		titleParagraph.SetMargins(0, 0, 0, 7)
-		titleParagraph.Append(title)
+		titleParagraph.Append(addr.Heading)
 
 		paragraphs = append(paragraphs, titleParagraph)
 	}
@@ -552,23 +571,36 @@ func (i *Invoice) drawAddress(title, name string, addr *InvoiceAddress) []*Style
 	addressParagraph := newStyledParagraph(i.addressStyle)
 	addressParagraph.SetLineHeight(1.2)
 
-	city := addr.City
-	if addr.Zip != "" {
-		if city != "" {
-			city += ", "
-		}
-
-		city += addr.Zip
+	separator := addr.Separator
+	if separator == "" {
+		separator = i.addrSeparator
 	}
 
-	if name != "" {
+	locality := addr.City
+	if addr.State != "" {
+		if locality != "" {
+			locality += separator
+		}
+		locality += addr.State
+	}
+	if addr.Zip != "" {
+		if locality != "" {
+			locality += separator
+		}
+		locality += addr.Zip
+	}
+
+	if addr.Name != "" {
 		addressParagraph.Append(addr.Name + "\n")
 	}
 	if addr.Street != "" {
 		addressParagraph.Append(addr.Street + "\n")
 	}
-	if city != "" {
-		addressParagraph.Append(city + "\n")
+	if addr.Street2 != "" {
+		addressParagraph.Append(addr.Street2 + "\n")
+	}
+	if locality != "" {
+		addressParagraph.Append(locality + "\n")
 	}
 	if addr.Country != "" {
 		addressParagraph.Append(addr.Country + "\n")
@@ -652,8 +684,9 @@ func (i *Invoice) drawInformation() *Table {
 	return table
 }
 
-func (i *Invoice) drawTotals() *Table {
-	table := newTable(2)
+func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
+	table := newTable(4)
+	table.SetMargins(0, 0, 10, 10)
 
 	totals := [][2]*InvoiceCell{i.subtotal}
 	totals = append(totals, i.totals...)
@@ -664,6 +697,7 @@ func (i *Invoice) drawTotals() *Table {
 		if value.Value == "" {
 			continue
 		}
+		table.SkipCells(2)
 
 		// Add description.
 		cell := table.NewCell()
@@ -688,7 +722,7 @@ func (i *Invoice) drawTotals() *Table {
 		cell.SetContent(p)
 	}
 
-	return table
+	return table.GeneratePageBlocks(ctx)
 }
 
 func (i *Invoice) generateHeaderBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
@@ -727,10 +761,9 @@ func (i *Invoice) generateInformationBlocks(ctx DrawContext) ([]*Block, DrawCont
 	separatorParagraph := newStyledParagraph(i.defaultStyle)
 	separatorParagraph.SetMargins(0, 0, 0, 20)
 
-	addrParagraphs := i.drawAddress(i.sellerAddress.Name, "", i.sellerAddress)
+	addrParagraphs := i.drawAddress(i.sellerAddress)
 	addrParagraphs = append(addrParagraphs, separatorParagraph)
-	addrParagraphs = append(addrParagraphs,
-		i.drawAddress("Bill to", i.buyerAddress.Name, i.buyerAddress)...)
+	addrParagraphs = append(addrParagraphs, i.drawAddress(i.buyerAddress)...)
 
 	addrDivision := newDivision()
 	for _, addrParagraph := range addrParagraphs {
@@ -785,20 +818,6 @@ func (i *Invoice) generateLineBlocks(ctx DrawContext) ([]*Block, DrawContext, er
 			cell.SetContent(paragraph)
 		}
 	}
-
-	return table.GeneratePageBlocks(ctx)
-}
-
-func (i *Invoice) generateTotalBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
-	table := newTable(2)
-	table.SetMargins(0, 0, 5, 40)
-	table.SkipCells(1)
-
-	totalsTable := i.drawTotals()
-	totalsTable.SetMargins(0, 0, 5, 0)
-
-	cell := table.NewCell()
-	cell.SetContent(totalsTable)
 
 	return table.GeneratePageBlocks(ctx)
 }

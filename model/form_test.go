@@ -6,6 +6,7 @@
 package model
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -159,4 +160,52 @@ endobj
 `
 	_ = raw
 	t.Skip("Not implemented yet")
+}
+
+func TestRepairAcroForm(t *testing.T) {
+	f, err := os.Open("./testdata/OoPdfFormExample.pdf")
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := NewPdfReader(f)
+	require.NoError(t, err)
+
+	original := *reader.AcroForm.Fields
+	reader.AcroForm.Fields = nil
+	require.NoError(t, reader.RepairAcroForm(nil))
+	repaired := *reader.AcroForm.Fields
+	require.ElementsMatch(t, original, repaired)
+}
+
+func TestAcroFormNeedsRepair(t *testing.T) {
+	f, err := os.Open("./testdata/OoPdfFormExample.pdf")
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := NewPdfReader(f)
+	require.NoError(t, err)
+
+	// Original AcroForm repair status check.
+	needsRepair, err := reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, false)
+
+	// Nil AcroForm repair status check.
+	reader.AcroForm = nil
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, true)
+
+	// Repaired AcroForm repair status check.
+	require.NoError(t, reader.RepairAcroForm(nil))
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, false)
+
+	// Missing AcroForm fields repair status check.
+	fields := (*reader.AcroForm.Fields)[1:]
+	reader.AcroForm.Fields = &fields
+	needsRepair, err = reader.AcroFormNeedsRepair()
+	require.NoError(t, err)
+	require.Equal(t, needsRepair, true)
 }

@@ -128,7 +128,7 @@ func (ts *TextState) ProcQ(data []byte, ctx Context) {
 	ts.ProcTj(data, ctx)
 }
 
-// ProcDQ processes a `''` operation, which advances the text state to a new
+// ProcDQ processes a `"` operation, which advances the text state to a new
 // line and then displays a text string using aw and ac as word and character
 // spacing.
 //

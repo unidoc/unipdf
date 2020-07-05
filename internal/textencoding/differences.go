@@ -191,11 +191,12 @@ func (enc *differencesEncoding) ToPdfObject() core.PdfObject {
 	dict := core.MakeDict()
 	dict.Set("Type", core.MakeName("Encoding"))
 	dict.Set("BaseEncoding", enc.base.ToPdfObject())
-	diff := toFontDifferences(enc.differences)
-	if diff == nil {
-		// this should never happen, because the constructor checks if it is empty
-		panic("differences should not be nil")
+
+	if diff := toFontDifferences(enc.differences); diff != nil {
+		dict.Set("Differences", diff)
+	} else {
+		common.Log.Debug("WARN: font Differences array is nil. Output may be incorrect.")
 	}
-	dict.Set("Differences", diff)
+
 	return core.MakeIndirectObject(dict)
 }

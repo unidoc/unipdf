@@ -950,7 +950,6 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 			return nil, err
 		}
 		encoded = e
-
 	}
 
 	bufReader := bytes.NewReader(encoded)
@@ -2094,6 +2093,9 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 
 // GetFilterName returns the names of the underlying encoding filters,
 // separated by spaces.
+// Note: This is just a string, should not be used in /Filter dictionary entry. Use GetFilterArray for that.
+// TODO(v4): Refactor to GetFilter() which can be used for /Filter (either Name or Array), this can be
+//  renamed to String() as a pretty string to use in debugging etc.
 func (enc *MultiEncoder) GetFilterName() string {
 	name := ""
 	for idx, encoder := range enc.encoders {
@@ -2103,6 +2105,16 @@ func (enc *MultiEncoder) GetFilterName() string {
 		}
 	}
 	return name
+}
+
+// GetFilterArray returns the names of the underlying encoding filters in an array that
+// can be used as /Filter entry.
+func (enc *MultiEncoder) GetFilterArray() *PdfObjectArray {
+	names := make([]PdfObject, len(enc.encoders))
+	for i, e := range enc.encoders {
+		names[i] = MakeName(e.GetFilterName())
+	}
+	return MakeArray(names...)
 }
 
 // MakeDecodeParams makes a new instance of an encoding dictionary based on
@@ -2137,12 +2149,7 @@ func (enc *MultiEncoder) AddEncoder(encoder StreamEncoder) {
 // MakeStreamDict makes a new instance of an encoding dictionary for a stream object.
 func (enc *MultiEncoder) MakeStreamDict() *PdfObjectDictionary {
 	dict := MakeDict()
-
-	names := make([]PdfObject, len(enc.encoders))
-	for i, e := range enc.encoders {
-		names[i] = MakeName(e.GetFilterName())
-	}
-	dict.Set("Filter", MakeArray(names...))
+	dict.Set("Filter", enc.GetFilterArray())
 
 	// Pass all values from children, except Filter and DecodeParms.
 	for _, encoder := range enc.encoders {

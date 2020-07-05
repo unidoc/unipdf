@@ -11,6 +11,7 @@
 package textencoding
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -18,7 +19,13 @@ import (
 )
 
 // MissingCodeRune is the rune returned when there is no matching glyph. It was previously '?'.
-const MissingCodeRune = '\ufffd' // �
+const (
+	// MissingCodeRune replaces runes that can't be decoded. .
+	MissingCodeRune = '\ufffd' // �
+
+	// MissingCodeString replaces strings that can't be decoded.
+	MissingCodeString = string(MissingCodeRune)
+)
 
 // GlyphToRune returns the rune corresponding to glyph `glyph` if there is one.
 // TODO: Can we return a string here? e.g. When we are extracting text, we want to get "ffi"
@@ -77,6 +84,16 @@ func RuneToGlyph(r rune) (GlyphName, bool) {
 	return glyph, ok
 }
 
+// ExpandLigatures returns `runes` as a string with ligatures expanded
+func ExpandLigatures(runes []rune) string {
+	var buffer bytes.Buffer
+	for _, r := range runes {
+		s := RuneToString(r)
+		buffer.WriteString(s)
+	}
+	return buffer.String()
+}
+
 // RuneToString converts rune `r` to a string. It unpacks `ligatures`.
 func RuneToString(r rune) string {
 	if s, ok := ligatureToString[r]; ok {
@@ -131,8 +148,6 @@ var ligatureToString = map[rune]string{
 	'œ':          "oe",
 	'Ꝏ':          "OO",
 	'ꝏ':          "oo",
-	'ẞ':          "fs",
-	'ß':          "fz",
 	'ﬆ':          "st",
 	'ﬅ':          "ſt",
 	'Ꜩ':          "TZ",

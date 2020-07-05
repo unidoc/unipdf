@@ -85,9 +85,10 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 		var annots []*PdfAnnotation
 
 		// Wrap the content streams.
-		err := appgen.WrapContentStream(page)
-		if err != nil {
-			return err
+		if appgen != nil {
+			if err := appgen.WrapContentStream(page); err != nil {
+				return err
+			}
 		}
 
 		annotations, err := page.GetAnnotations()

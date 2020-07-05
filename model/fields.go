@@ -212,7 +212,7 @@ func (f *PdfField) FullName() (string, error) {
 func (f *PdfField) PartialName() string {
 	partial := ""
 	if f.T != nil {
-		partial = f.T.Str()
+		partial = f.T.Decoded()
 	} else {
 		common.Log.Debug("Field missing T field (incompatible)")
 	}
@@ -698,8 +698,14 @@ func (r *PdfReader) newPdfFieldFromIndirectObject(container *core.PdfIndirectObj
 				return nil, ErrTypeCheck
 			}
 
-			// Widget annotations contain key Subtype with value equal to /Widget. Otherwise are assumed to be fields.
-			if name, has := core.GetName(dict.Get("Subtype")); has && *name == "Widget" {
+			// Widget annotations contain key Subtype with value equal to /Widget.
+			// Otherwise, fields are assumed. Also check for cases in which
+			// a widget annotation is the single child of a field and is
+			// embedded within the form field instead of being present in the
+			// Kids array. In this case, first parse the field and then the
+			// widget annotation.
+			_, hasFT := core.GetName(dict.Get("FT"))
+			if name, has := core.GetName(dict.Get("Subtype")); has && !hasFT && *name == "Widget" {
 				annot, err := r.newPdfAnnotationFromIndirectObject(container)
 				if err != nil {
 					common.Log.Debug("Error loading widget annotation for field: %v", err)

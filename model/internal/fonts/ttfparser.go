@@ -209,7 +209,8 @@ func (t *ttfParser) Parse() (TtfType, error) {
 	}
 	if version == "OTTO" {
 		// See https://docs.microsoft.com/en-us/typography/opentype/spec/otff
-		return TtfType{}, errors.New("fonts based on PostScript outlines are not supported")
+		return TtfType{}, fmt.Errorf("fonts based on PostScript outlines are not supported (%v)",
+			core.ErrNotSupported)
 	}
 	if version != "\x00\x01\x00\x00" && version != "true" {
 		// This is not an error. In the font_test.go example axes.txt we see version "true".
@@ -356,7 +357,7 @@ func (t *ttfParser) ParseHmtx() error {
 		t.rec.Widths = append(t.rec.Widths, t.ReadUShort())
 		t.Skip(2) // lsb
 	}
-	if t.numberOfHMetrics < t.numGlyphs {
+	if t.numberOfHMetrics < t.numGlyphs && t.numberOfHMetrics > 0 {
 		lastWidth := t.rec.Widths[t.numberOfHMetrics-1]
 		for j := t.numberOfHMetrics; j < t.numGlyphs; j++ {
 			t.rec.Widths = append(t.rec.Widths, lastWidth)
@@ -376,7 +377,7 @@ func (t *ttfParser) parseCmapSubtable31(offset31 int64) error {
 	t.f.Seek(int64(t.tables["cmap"])+offset31, os.SEEK_SET)
 	format := t.ReadUShort()
 	if format != 4 {
-		return fmt.Errorf("unexpected subtable format: %d", format)
+		return fmt.Errorf("unexpected subtable format: %d (%v)", format, core.ErrNotSupported)
 	}
 	t.Skip(2 * 2) // length, language
 	segCount := int(t.ReadUShort() / 2)

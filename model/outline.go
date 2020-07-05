@@ -16,11 +16,12 @@ import (
 // OutlineDest represents the destination of an outline item.
 // It holds the page and the position on the page an outline item points to.
 type OutlineDest struct {
-	Page int64   `json:"page"`
-	Mode string  `json:"mode"`
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Zoom float64 `json:"zoom"`
+	PageObj *core.PdfIndirectObject `json:"-"`
+	Page    int64                   `json:"page"`
+	Mode    string                  `json:"mode"`
+	X       float64                 `json:"x"`
+	Y       float64                 `json:"y"`
+	Zoom    float64                 `json:"zoom"`
 }
 
 // NewOutlineDest returns a new outline destination which can be used
@@ -56,10 +57,18 @@ func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) (*OutlineDest, 
 		// Page object is provided. Identify page number using the reader.
 		if _, pageNum, err := r.PageFromIndirectObject(pageInd); err == nil {
 			dest.Page = int64(pageNum - 1)
+		} else {
+			common.Log.Debug("WARN: could not get page index for page %+v", pageInd)
 		}
-	} else if pageNum, ok := core.GetIntVal(pageObj); ok {
-		// Page number is provided.
-		dest.Page = int64(pageNum)
+		dest.PageObj = pageInd
+	} else if pageIdx, ok := core.GetIntVal(pageObj); ok {
+		// Page index is provided. Get indirect object to page.
+		if pageIdx >= 0 && pageIdx < len(r.PageList) {
+			dest.PageObj = r.PageList[pageIdx].GetPageAsIndirectObject()
+		} else {
+			common.Log.Debug("WARN: could not get page container for page %d", pageIdx)
+		}
+		dest.Page = int64(pageIdx)
 	} else {
 		return nil, fmt.Errorf("invalid outline destination page: %T", pageObj)
 	}
@@ -106,14 +115,22 @@ func newOutlineDestFromPdfObject(o core.PdfObject, r *PdfReader) (*OutlineDest, 
 
 // ToPdfObject returns a PDF object representation of the outline destination.
 func (od OutlineDest) ToPdfObject() core.PdfObject {
-	if od.Page < 0 || od.Mode == "" {
+	if (od.PageObj == nil && od.Page < 0) || od.Mode == "" {
 		return core.MakeNull()
 	}
 
-	dest := core.MakeArray(
-		core.MakeInteger(od.Page),
-		core.MakeName(od.Mode),
-	)
+	// Add destination page.
+	dest := core.MakeArray()
+	if od.PageObj != nil {
+		// Internal outline.
+		dest.Append(od.PageObj)
+	} else {
+		// External outline.
+		dest.Append(core.MakeInteger(od.Page))
+	}
+
+	// Add destination mode.
+	dest.Append(core.MakeName(od.Mode))
 
 	// See section 12.3.2.2 "Explicit Destinations" (page 374).
 	switch od.Mode {
@@ -180,10 +197,11 @@ func (o *Outline) ToPdfOutline() *PdfOutline {
 
 	// Create outline items.
 	var outlineItems []*PdfOutlineItem
+	var lenDescendants int64
 	var prev *PdfOutlineItem
 
 	for _, item := range o.Entries {
-		outlineItem, _ := item.ToPdfOutlineItem()
+		outlineItem, lenChildren := item.ToPdfOutlineItem()
 		outlineItem.Parent = &outline.PdfOutlineTreeNode
 
 		if prev != nil {
@@ -192,15 +210,18 @@ func (o *Outline) ToPdfOutline() *PdfOutline {
 		}
 
 		outlineItems = append(outlineItems, outlineItem)
+		lenDescendants += lenChildren
 		prev = outlineItem
 	}
 
 	// Add outline linked list properties.
 	lenOutlineItems := int64(len(outlineItems))
+	lenDescendants += int64(lenOutlineItems)
+
 	if lenOutlineItems > 0 {
 		outline.First = &outlineItems[0].PdfOutlineTreeNode
 		outline.Last = &outlineItems[lenOutlineItems-1].PdfOutlineTreeNode
-		outline.Count = &lenOutlineItems
+		outline.Count = &lenDescendants
 	}
 
 	return outline

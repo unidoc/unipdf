@@ -11,6 +11,7 @@ import (
 	"github.com/golang/freetype/raster"
 	"golang.org/x/image/math/fixed"
 
+	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 )
 
@@ -57,7 +58,8 @@ func flattenPath(p raster.Path) [][]transform.Point {
 			cx, cy = x3, y3
 			i += 8
 		default:
-			panic("bad path")
+			common.Log.Debug("WARN: invalid path: %v", p)
+			return result
 		}
 	}
 	if len(path) > 0 {

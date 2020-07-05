@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -576,4 +578,39 @@ func TestTableParagraphLinks(t *testing.T) {
 	if err := c.WriteToFile(tempFile("table_paragraph_links.pdf")); err != nil {
 		t.Fatalf("Fail: %v\n", err)
 	}
+}
+
+func TestTableHorizontalCellAlign(t *testing.T) {
+	font, err := model.NewStandard14Font(model.HelveticaName)
+	require.NoError(t, err)
+	fontBold, err := model.NewStandard14Font(model.HelveticaBoldName)
+	require.NoError(t, err)
+
+	c := New()
+	table := c.NewTable(3)
+
+	drawCell := func(text string, font *model.PdfFont, align CellHorizontalAlignment) {
+		p := c.NewStyledParagraph()
+		p.Append(text).Style.Font = font
+
+		cell := table.NewCell()
+		cell.SetBorder(CellBorderSideAll, CellBorderStyleSingle, 1)
+		cell.SetHorizontalAlignment(align)
+		cell.SetContent(p)
+	}
+
+	// Draw table header.
+	drawCell("Align left", fontBold, CellHorizontalAlignmentLeft)
+	drawCell("Align center", fontBold, CellHorizontalAlignmentCenter)
+	drawCell("Align right", fontBold, CellHorizontalAlignmentRight)
+
+	// Draw table content.
+	for i := 100; i < 200; i++ {
+		drawCell(fmt.Sprintf("Product #%d", i), font, CellHorizontalAlignmentLeft)
+		drawCell(fmt.Sprintf("Quantity #%d", i), font, CellHorizontalAlignmentCenter)
+		drawCell(fmt.Sprintf("Total: #%d.%d", i, 200-i), font, CellHorizontalAlignmentRight)
+	}
+
+	require.NoError(t, c.Draw(table))
+	testWriteAndRender(t, c, "table_horizontal_cell_align.pdf")
 }

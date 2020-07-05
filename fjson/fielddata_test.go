@@ -9,9 +9,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -131,4 +133,129 @@ func TestFillPDFForm(t *testing.T) {
 	if data != data2 {
 		t.Fatalf("%s != %s", data, data2)
 	}
+}
+
+func TestJSONExtractAndFill(t *testing.T) {
+	inputFilePath := "./testdata/advancedform.pdf"
+
+	// Export JSON template from PDF.
+	fieldData, err := LoadFromPDFFile(inputFilePath)
+	require.NoError(t, err)
+	jsonData, err := fieldData.JSON()
+	require.NoError(t, err)
+
+	// Load expected template from JSON file.
+	fieldDataExp, err := LoadFromJSONFile("./testdata/advancedform.json")
+	require.NoError(t, err)
+	jsonDataExp, err := fieldDataExp.JSON()
+	require.NoError(t, err)
+
+	// Check templates for equality.
+	require.Equal(t, jsonDataExp, jsonData)
+
+	// Unmarshal and set template test field data.
+	var fields []*struct {
+		Name    string   `json:"name"`
+		Value   string   `json:"value"`
+		Options []string `json:"options"`
+	}
+	err = json.Unmarshal([]byte(jsonDataExp), &fields)
+	require.NoError(t, err)
+
+	// Some fields in the input file are read-only. Skip those.
+	readOnlyMap := map[int]struct{}{
+		0: {}, 1: {}, 28: {}, 29: {}, 30: {}, 38: {}, 46: {}, 54: {}, 62: {}, 79: {},
+	}
+
+	for i, field := range fields {
+		if _, ok := readOnlyMap[i]; ok {
+			continue
+		}
+
+		if len(field.Options) > 0 {
+			field.Value = field.Options[1]
+		} else {
+			field.Value = strconv.Itoa(i)
+		}
+	}
+
+	// Generate expected filled JSON data.
+	jsonBytes, err := json.Marshal(fields)
+	require.NoError(t, err)
+	fieldDataExp, err = LoadFromJSON(bytes.NewReader(jsonBytes))
+	require.NoError(t, err)
+	jsonDataExp, err = fieldDataExp.JSON()
+	require.NoError(t, err)
+
+	// Fill test PDF form fields and write to buffer.
+	f, err := os.Open(inputFilePath)
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := model.NewPdfReader(f)
+	require.NoError(t, err)
+
+	err = reader.AcroForm.Fill(fieldDataExp)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	writer := model.NewPdfWriter()
+	for i := range reader.PageList {
+		err := writer.AddPage(reader.PageList[i])
+		require.NoError(t, err)
+	}
+
+	err = writer.SetForms(reader.AcroForm)
+	require.NoError(t, err)
+	err = writer.Write(&buf)
+	require.NoError(t, err)
+
+	// Load field data from buffer.
+	fieldData, err = LoadFromPDF(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	jsonData, err = fieldData.JSON()
+	require.NoError(t, err)
+
+	// Check field data for equality.
+	require.Equal(t, jsonDataExp, jsonData)
+}
+
+func TestJSONFillAndExtract(t *testing.T) {
+	// Read JSON fill data.
+	fieldDataExp, err := LoadFromJSONFile("./testdata/mixedfields.json")
+	require.NoError(t, err)
+	jsonDataExp, err := fieldDataExp.JSON()
+	require.NoError(t, err)
+
+	// Fill test PDF form fields and write to buffer.
+	f, err := os.Open("./testdata/mixedfields.pdf")
+	require.NoError(t, err)
+	defer f.Close()
+
+	reader, err := model.NewPdfReader(f)
+	require.NoError(t, err)
+
+	err = reader.AcroForm.Fill(fieldDataExp)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	writer := model.NewPdfWriter()
+	for i := range reader.PageList {
+		err := writer.AddPage(reader.PageList[i])
+		require.NoError(t, err)
+	}
+
+	err = writer.SetForms(reader.AcroForm)
+	require.NoError(t, err)
+	err = writer.Write(&buf)
+	require.NoError(t, err)
+
+	// Load field data from buffer.
+	fieldData, err := LoadFromPDF(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	jsonData, err := fieldData.JSON()
+	require.NoError(t, err)
+
+	// Check field data for equality.
+	require.Equal(t, jsonDataExp, jsonData)
 }
